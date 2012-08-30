@@ -20,6 +20,6 @@ REAL_HOME=`dirname "$PRG"`
 # make it fully qualified
 REAL_HOME=`cd "$REAL_HOME" && pwd`
 
-WEBKIT_LION_PRODUCT_PATH=$REAL_HOME/../WebKit/WebKitBuild
+WEBKIT_LION_PRODUCT_PATH=$REAL_HOME/../WebKitBuild
 
-$REAL_HOME/../WebKit/Tools/BuildSlaveSupport/build-launcher-app --no-sign --build-dir-10-7 $WEBKIT_LION_PRODUCT_PATH
+$REAL_HOME/../Tools/BuildSlaveSupport/build-launcher-app --no-sign --build-dir-10-7 $WEBKIT_LION_PRODUCT_PATH

@@ -27,6 +27,4 @@ export TIMELAPSE_HOME=$REAL_HOME/../
 mkdir -p $TIMELAPSE_SERIALIZED_RECORDING_DIR
 
 # for now, always run in debug mode
-$TIMELAPSE_HOME/bin/kill-proxy
-$TIMELAPSE_HOME/bin/disable-safari-proxy
-$TIMELAPSE_HOME/WebKit/Tools/Scripts/run-safari
+$TIMELAPSE_HOME/Tools/Scripts/run-safari

@@ -22,11 +22,8 @@ REAL_HOME=`cd "$REAL_HOME" && pwd`
 
 export TIMELAPSE_SERIALIZED_RECORDING_DIR=/tmp/timelapse-recording-$(date "+%m%d-%H%M%S")
 export TIMELAPSE_SERIALIZED_RECORDING_FILENAME=$TIMELAPSE_SERIALIZED_RECORDING_DIR/recording.json
-export TIMELAPSE_HOME=$REAL_HOME/../
 
 mkdir -p $TIMELAPSE_SERIALIZED_RECORDING_DIR
 
 # for now, always run in debug mode
-$TIMELAPSE_HOME/bin/kill-proxy
-$TIMELAPSE_HOME/bin/disable-safari-proxy
-$TIMELAPSE_HOME/WebKit/Tools/Scripts/run-safari --debug
+$REAL_HOME/../Tools/Scripts/run-safari --debug

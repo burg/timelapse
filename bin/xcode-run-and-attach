@@ -33,8 +33,8 @@ XCODE_RUNNING=$(ps -cu $USER | grep Xcode)
 if [ ! -n "$XCODE_RUNNING" ]
 then
     echo "Launching Xcode... (waiting 15 seconds)"
-    open $REAL_HOME/../WebKit/Source/WebCore/WebCore.xcodeproj
-    open $REAL_HOME/../WebKit/Source/JavaScriptCore/JavaScriptCore.xcodeproj
+    open $REAL_HOME/../Source/WebCore/WebCore.xcodeproj
+    open $REAL_HOME/../Source/JavaScriptCore/JavaScriptCore.xcodeproj
     sleep 15
 fi
 

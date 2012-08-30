@@ -21,8 +21,8 @@ REAL_HOME=`dirname "$PRG"`
 REAL_HOME=`cd "$REAL_HOME" && pwd`
 
 
-$REAL_HOME/../WebKit/Tools/Scripts/build-webkit --debug --timelapse --inspector-frontend
+$REAL_HOME/../Tools/Scripts/build-webkit --debug --timelapse --inspector-frontend
 
 # bug: must touch inspector.js to have changes rebuilt
-touch $REAL_HOME/../WebKit/Source/WebCore/inspector/front-end/inspector.js
-$REAL_HOME/../WebKit/Tools/Scripts/build-webkit --timelapse --inspector-frontend
+touch $REAL_HOME/../Source/WebCore/inspector/front-end/inspector.js
+$REAL_HOME/../Tools/Scripts/build-webkit --timelapse --inspector-frontend

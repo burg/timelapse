@@ -25,7 +25,7 @@ REAL_HOME=`dirname "$PRG"`
 REAL_HOME=`cd "$REAL_HOME" && pwd`
 
 # the grep will remove setenv spew from stdout.
-$REAL_HOME/../WebKit/Tools/Scripts/build-webkit $BUILD_ARGS | grep -v setenv
+$REAL_HOME/../Tools/Scripts/build-webkit $BUILD_ARGS | grep -v setenv
 
 COMPILE_EXIT_STATUS=${PIPESTATUS[0]}
 
