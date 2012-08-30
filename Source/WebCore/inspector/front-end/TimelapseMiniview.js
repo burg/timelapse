@@ -157,9 +157,6 @@ WebInspector.TimelapseMiniview.prototype = {
 	var anchorSlider = new WebInspector.TimelapseMiniviewSlider(this, "anchor", false);
 	this.element.appendChild(anchorSlider.element);
 
-	var breakpointSlider = new WebInspector.TimelapseMiniviewBreakpointSlider(this);
-	this.element.appendChild(breakpointSlider.element);
-
 	this._leftZoomGlassPane = document.createElement("div");
 	this._leftZoomGlassPane.className = "timelapse-miniview-glasspane";
 	this.element.appendChild(this._leftZoomGlassPane);
@@ -189,7 +186,6 @@ WebInspector.TimelapseMiniview.prototype = {
 	    previous: previousSlider,
 	    tentative: tentativeSlider,
 	    anchor: anchorSlider,
-	    breakpoint: breakpointSlider,
 	    leftZoom: leftZoomSlider,
 	    rightZoom: rightZoomSlider
 	};
@@ -439,7 +435,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	var finishRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
 	var currentRecordIndex = this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex);
 
-	this.sliders.breakpoint.hide();
+	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
 	this.sliders.playback.show();
 
 	this.sliders.previous.setPosition(this.calculator.computeMiniviewPercentage(startRecord.mark.timestamp),
@@ -521,10 +517,9 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onBreakpointPaused: function(eventData)
     {
-	this.sliders.breakpoint.update();
-	this.sliders.breakpoint.position = this.sliders.playback.position;
-	this.sliders.playback.hide();
-	this.sliders.breakpoint.show();
+	this.sliders.playback.element.addStyleClass("breakpoint-slider");
+	this.sliders.playback.element.removeStyleClass("playback-pulse");
+	this.sliders.playback.enable();
     },
 
     _onBreakpointRecordsChanged: function(eventData)
@@ -708,8 +703,6 @@ WebInspector.TimelapseMiniview.prototype = {
 
         while (node) {
 	    if (node === this.sliders.playback.element)
-		break;
-	    if (node === this.sliders.breakpoint.element)
 		break;
 	    if (node === this.sliders.leftZoom.element)
 		break;
@@ -936,6 +929,9 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 	if (!this._enabled || !this._adjustable)
 	    return;
 
+	if (this.element.hasStyleClass("breakpoint-slider"))
+	    this.element.removeStyleClass("breakpoint-slider");
+
 	this.element.classList.add("slider-dragging");
 
 	WebInspector.elementDragStart(this.element, this._sliderDragging.bind(this), this._endSliderDragging.bind(this), event, "col-resize");
@@ -968,27 +964,6 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 };
 
 WebInspector.TimelapseMiniviewSlider.prototype.__proto__ = WebInspector.Object.prototype;
-
-
-/**
- * @constructor
- * @extends {WebInspector.TimelapseMiniviewSlider}
- */
-WebInspector.TimelapseMiniviewBreakpointSlider = function(miniview)
-{
-    WebInspector.TimelapseMiniviewSlider.call(this, miniview, "breakpoint", false);
-
-    this.element.classList.add("breakpoint-blink");
-};
-
-WebInspector.TimelapseMiniviewBreakpointSlider.prototype = {
-    update: function()
-    {
-	this.breakpoint = WebInspector.timelapseBreakpointTracker.currentBreakpoint;
-    }
-};
-
-WebInspector.TimelapseMiniviewBreakpointSlider.prototype.__proto__ = WebInspector.TimelapseMiniviewSlider.prototype;
 
 
 /**

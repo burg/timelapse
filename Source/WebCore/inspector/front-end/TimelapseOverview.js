@@ -107,6 +107,7 @@ WebInspector.TimelapseOverview.prototype = {
 					     this._onPlaybackSliderDragStart, this);
 	playbackSlider.addEventListener(WebInspector.TimelapseOverviewSlider.EventTypes.DragEnd,
 					     this._onPlaybackSliderDragEnd, this);
+	playbackSlider.element.addEventListener("contextmenu", this._onPlaybackSliderContextMenu, this);
 	this._timelineContainer.appendChild(playbackSlider.element);
 	var previousSlider = new WebInspector.TimelapseOverviewSlider(this, "previous", false);
 	this._timelineContainer.appendChild(previousSlider.element);
@@ -115,16 +116,12 @@ WebInspector.TimelapseOverview.prototype = {
 	var anchorSlider = new WebInspector.TimelapseOverviewSlider(this, "anchor", false);
 	this._timelineContainer.appendChild(anchorSlider.element);
 	// TODO: click, contextmenu events for anchor?
-	var breakpointSlider = new WebInspector.TimelapseOverviewSlider(this, "breakpoint", false);
-	this._timelineContainer.appendChild(breakpointSlider.element);
-	breakpointSlider.element.addEventListener("contextmenu", this._onBreakpointSliderContextMenu, this);
 
 	this.sliders = {
 	    playback: playbackSlider,
 	    previous: previousSlider,
 	    tentative: tentativeSlider,
-	    anchor: anchorSlider,
-	    breakpoint: breakpointSlider
+	    anchor: anchorSlider
 	};
 
 	this._categoryTimelines = {};
@@ -331,15 +328,12 @@ WebInspector.TimelapseOverview.prototype = {
 	/* reposition the sliders within the overview. */
 	var allRecords = this._model.allRecords;
 
-	/* playback or breakpoint cursor (depending on whether paused) */
+	/* playback cursor */
 	var markIdx = this._model.currentMarkIndex;
 	var recordIdx = this._model.recordIndexFromMarkIndex(markIdx);
 	var percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
 
-	if (WebInspector.debuggerModel.isPaused())
-	    this.sliders.breakpoint.setPosition(percent, true);
-	else
-	    this.sliders.playback.setPosition(percent, true);
+	this.sliders.playback.setPosition(percent, true);
 
 	/* anchor slider */
 	var anchor = this._presentationModel.anchor;
@@ -630,8 +624,6 @@ WebInspector.TimelapseOverview.prototype = {
         while (node) {
 	    if (node === this.sliders.playback.element)
 		break;
-	    if (node === this.sliders.breakpoint.element)
-		break;
             else if (node === this.element) {
 		if (this.calculator.zoomInterval == 1.0)
 		    break;
@@ -744,9 +736,10 @@ WebInspector.TimelapseOverview.prototype = {
 	this._model.replayUpToMarkIndex(targetRecord.mark.index);
     },
 
-    _onBreakpointSliderContextMenu: function(event)
+    _onPlaybackSliderContextMenu: function(event)
     {
-	WebInspector.timelapseBreakpointTracker.currentBreakpoint.contextMenu(event);	
+	if (WebInspector.timelapseModel.breakpointPaused)
+	    WebInspector.timelapseBreakpointTracker.currentBreakpoint.contextMenu(event);	
     },
     
     _onZoomChanged: function()
@@ -822,8 +815,8 @@ WebInspector.TimelapseOverview.prototype = {
 	var finishRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
 	var currentRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex)];
 
-	this.sliders.breakpoint.hide();
-	this.sliders.playback.show();
+	this.sliders.playback.element.addStyleClass("playback-slider");
+	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
 
 	this.sliders.previous.setPosition(this.calculator.computeOverviewPercentage(startRecord.mark.timestamp), true);
 	this.sliders.previous.show();
@@ -912,9 +905,10 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onBreakpointPaused: function()
     {
-	this.sliders.breakpoint.position = this.sliders.playback.position;
-	this.sliders.playback.hide();
-	this.sliders.breakpoint.show();
+	this.sliders.playback.element.addStyleClass("breakpoint-slider");
+	this.sliders.playback.element.removeStyleClass("playback-pulse");
+	this.sliders.playback.resetPosition();
+	this.sliders.playback.enable();
 
 	this._messagePanel.classList.add("hidden");
 
@@ -1343,6 +1337,12 @@ WebInspector.TimelapseOverviewSlider.prototype = {
 	}
     },
 
+    resetPosition: function()
+    {
+	this._lastRefreshedPosition = 0.0;
+	this.setPosition(this._position, true);
+    },
+
     resetResolution: function()
     {
 	this.minimumResolution = this.defaultMinimumResolution;
@@ -1432,6 +1432,9 @@ WebInspector.TimelapseOverviewSlider.prototype = {
     {
 	if (!this._enabled || !this._adjustable)
 	    return;
+
+	if (this.element.hasStyleClass("breakpoint-slider"))
+	    this.element.removeStyleClass("breakpoint-slider");
 
 	this.element.classList.add("slider-dragging");
 

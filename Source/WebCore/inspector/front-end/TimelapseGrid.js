@@ -100,13 +100,10 @@ WebInspector.TimelapseGrid = function() {
     var playbackSlider = new WebInspector.TimelapseGridSlider(this, "playback", true);
     playbackSlider.addEventListener(sliderEventNames.DragStart, this._onGridDragStart, this);
     playbackSlider.addEventListener(sliderEventNames.DragEnd, this._onGridDragEnd, this);
+    playbackSlider.element.addEventListener("contextmenu", this._onPlaybackSliderContextMenu.bind(this));
     this._addSlider(playbackSlider);
     this._addSlider(new WebInspector.TimelapseGridSlider(this, "previous", false));
     this._addSlider(new WebInspector.TimelapseGridSlider(this, "tentative", false));
-
-    var breakpointSlider = new WebInspector.TimelapseGridSlider(this, "breakpoint", false);
-    breakpointSlider.element.addEventListener("contextmenu", this._onBreakpointSliderContextMenu.bind(this));
-    this._addSlider(breakpointSlider);
 
     var modelEventNames = WebInspector.TimelapseModel.EventTypes;
     this._model.addEventListener(modelEventNames.RecordingDidStart, this._onRecordingDidStart, this);
@@ -427,8 +424,8 @@ WebInspector.TimelapseGrid.prototype = {
 
     _onPlaybackDidStart: function()
     {
-	this.sliders.breakpoint.hide();
 	this.sliders.playback.hide();
+	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
 
 	var startNode = this._recordGridNodes[this._model.replayStartMarkIndex];
 	this.sliders.previous.placeBefore(startNode);
@@ -479,12 +476,14 @@ WebInspector.TimelapseGrid.prototype = {
     {
 	var position = this._recordGridNodes[this._model.currentMarkIndex];
 
-	this.sliders.breakpoint.placeBefore(position);
-	this.sliders.playback.hide();
+	this.sliders.playback.placeBefore(position);
+	this.sliders.playback.element.addStyleClass("breakpoint-slider");
+	this.sliders.playback.element.removeStyleClass("playback-pulse");
+	this.sliders.playback.show();
+	this.sliders.playback.reveal();
+
 	this.sliders.previous.show();
 	this.sliders.tentative.show();
-	this.sliders.breakpoint.show();
-	this.sliders.breakpoint.reveal();
     },
 
     _onCircleSelected: function(event)
@@ -542,6 +541,7 @@ WebInspector.TimelapseGrid.prototype = {
 
     _onGridDragStart: function(event)
     {
+	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
 	this.sliders.playback.addEventListener(WebInspector.TimelapseGridSlider.EventTypes.Dragging,
 							 this._onGridDragging, this);
 
@@ -642,9 +642,10 @@ WebInspector.TimelapseGrid.prototype = {
 	}
     },
 
-    _onBreakpointSliderContextMenu: function(event)
+    _onPlaybackSliderContextMenu: function(event)
     {
-	WebInspector.timelapseBreakpointTracker.currentBreakpoint.contextMenu(event);	
+	if (WebInspector.timelapseModel.breakpointPaused)
+	    WebInspector.timelapseBreakpointTracker.currentBreakpoint.contextMenu(event);	
     },
 
     _autoScrollDelay: 100, /* milliseconds between autoscrolls */
