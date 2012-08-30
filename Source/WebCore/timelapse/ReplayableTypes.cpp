@@ -46,6 +46,7 @@ const char* DispatchAsyncEvent = "DispatchAsyncEvent";
 const char* EnableCache = "EnableCache";
 const char* EndSentinel = "EndSentinel";
 const char* HandleAccessKey = "HandleAccessKey";
+const char* HandleContextMenu = "HandleContextMenu";
 const char* HandleKeyPress = "HandleKeyPress";
 const char* HandleMouseMove = "HandleMouseMove";
 const char* HandleMousePress = "HandleMousePress";
