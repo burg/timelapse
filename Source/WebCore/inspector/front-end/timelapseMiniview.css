@@ -56,6 +56,10 @@ div.timelapse-miniview {
     cursor: col-resize;
 }
 
+.timelapse-miniview-slider:not(.adjustable) .timelapse-slider-band {
+    pointer-events: none;
+}
+
 .slider-dragging {
     -webkit-transition: none;
 }

@@ -273,20 +273,13 @@ WebInspector.TimelapsePanel.prototype = {
             this.disabled = true;
         }, setAnchorButton);
         this._model.addEventListener(eventNames.PlaybackDidStart, function() {
-	    this.disabled = !WebInspector.timelapsePresentationModel.anchor.enabled();
+	    this.disabled = true;
+	}, setAnchorButton);
+        this._model.addEventListener(eventNames.PlaybackStopped, function() {
+	    this.disabled = true;
 	}, setAnchorButton);
 	this._model.addEventListener(eventNames.BreakpointPaused, function() {
 	    this.disabled = false;
-	}, setAnchorButton);
-
-	var anchor = this._presentationModel.anchor;
-	var anchorEvents = WebInspector.TimelapseAnchor.EventTypes;
-        anchor.addEventListener(anchorEvents.AnchorSet, function() {
-            this.toggled = true;
-        }, setAnchorButton);
-	anchor.addEventListener(anchorEvents.AnchorRemoved, function() {
-            this.toggled = false;
-	    this.disabled = !WebInspector.timelapseModel.breakpointPaused;
 	}, setAnchorButton);
 	
         //the replay-to-anchor button
@@ -309,25 +302,27 @@ WebInspector.TimelapsePanel.prototype = {
 	}, anchorButton);
         this._model.addEventListener(eventNames.InputPaused, function() {
 	    this.toggled = WebInspector.timelapsePresentationModel.replayingToAnchor;
-	    this.disabled = !WebInspector.timelapsePresentationModel.anchor.enabled();
+	    this.disabled = !WebInspector.timelapsePresentationModel.anchorManager.hasAnchor();
 	}, anchorButton);
         this._model.addEventListener(eventNames.PlaybackStopped, function() {
 	    this.toggled = false;
-	    this.disabled = !WebInspector.timelapsePresentationModel.anchor.enabled();
+	    this.disabled = !WebInspector.timelapsePresentationModel.anchorManager.hasAnchor();
 	}, anchorButton);
 	this._model.addEventListener(eventNames.BreakpointPaused, function() {
 	    this.toggled = false;
-	    this.disabled = !WebInspector.timelapsePresentationModel.anchor.enabled();
+	    this.disabled = !WebInspector.timelapsePresentationModel.anchorManager.hasAnchor();
 	}, anchorButton);
 	this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.DebuggerPaused, function() {
 	    this.toggled = false;
 	}, anchorButton);
 
+	var anchor = this._presentationModel.anchorManager;
+	var anchorEvents = WebInspector.TimelapseAnchorManager.EventTypes;
         anchor.addEventListener(anchorEvents.AnchorSet, function() {
             this.disabled = false;
         }, anchorButton);
 	anchor.addEventListener(anchorEvents.AnchorRemoved, function() {
-            this.disabled = true;
+            this.disabled = !WebInspector.timelapsePresentationModel.anchorManager.hasAnchor();
 	}, anchorButton);
 
         //the record button
@@ -485,7 +480,7 @@ WebInspector.TimelapsePanel.prototype = {
             timelinePanel.clearButton.disabled = true;
         }
     },
-    
+
     _recordingDidStop: function() {
 	this._recordingView.detach();
 	this._replayingView.show(this.sidebarElement);
@@ -501,19 +496,13 @@ WebInspector.TimelapsePanel.prototype = {
 
     _setAnchorButtonClicked: function()
     {
-	var anchor = this._presentationModel.anchor;
-
-	if (anchor.enabled())
-	    anchor.removeAnchor();
-
-	else if (WebInspector.timelapseModel.breakpointPaused)
-	    anchor.setAnchor();
+	if (this._model.breakpointPaused)
+	    this._presentationModel.anchorManager.setAnchor();
     },
 
     _replayToAnchorButtonClicked: function()
     {
-	var anchor = this._presentationModel.anchor;
-	anchor.replayToAnchor();
+	this._presentationModel.anchorManager.replayToAnchor();
     },
 
     startHidePopoverTimer: function(event)

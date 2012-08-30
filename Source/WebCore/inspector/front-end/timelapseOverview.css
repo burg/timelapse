@@ -241,6 +241,10 @@ div.timelapse-overview-timeline {
     background-color: rgba(255,0,0,0.1);
 }
 
+.anchor-slider {
+    pointer-events: none;
+}
+
 .anchor-slider .timelapse-slider-band {
     background-color: rgba(0, 0, 0, 0.3);
     border: 0;
