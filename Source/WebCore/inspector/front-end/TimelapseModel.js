@@ -239,8 +239,6 @@ WebInspector.TimelapseModel.prototype = {
     replayDebuggerWalk: function(markIndex, hitIndex, debuggerWalk)
     {
 	this._debuggerWalk = debuggerWalk.slice();
-	this._targetHitIndex = hitIndex;
-	this._replayingToBreakpoint = true;
 
 	if (this._replaying && this._currentMarkIndex == markIndex) {
 	    // Workaround: currently there is no way to force replay up to the current mark index.

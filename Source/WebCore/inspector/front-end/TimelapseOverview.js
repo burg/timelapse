@@ -63,10 +63,10 @@ WebInspector.TimelapseOverview = function()
 
     this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
 
-    var anchor = WebInspector.timelapsePresentationModel.anchor;
-    var anchorEventNames = WebInspector.TimelapseAnchor.EventTypes;
-    anchor.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
-    anchor.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
+    var anchorManager = WebInspector.timelapsePresentationModel.anchorManager;
+    var anchorEventNames = WebInspector.TimelapseAnchorManager.EventTypes;
+    anchorManager.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
+    anchorManager.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
 
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
@@ -113,15 +113,13 @@ WebInspector.TimelapseOverview.prototype = {
 	this._timelineContainer.appendChild(previousSlider.element);
 	var tentativeSlider = new WebInspector.TimelapseOverviewSlider(this, "tentative", false);
 	this._timelineContainer.appendChild(tentativeSlider.element);
-	var anchorSlider = new WebInspector.TimelapseOverviewSlider(this, "anchor", false);
-	this._timelineContainer.appendChild(anchorSlider.element);
 	// TODO: click, contextmenu events for anchor?
 
 	this.sliders = {
 	    playback: playbackSlider,
 	    previous: previousSlider,
 	    tentative: tentativeSlider,
-	    anchor: anchorSlider
+	    anchor: []
 	};
 
 	this._categoryTimelines = {};
@@ -336,12 +334,15 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.playback.setPosition(percent, true);
 
 	/* anchor slider */
-	var anchor = this._presentationModel.anchor;
-	if (anchor.markIndex) {
+	var anchorManager = this._presentationModel.anchorManager;
+	var anchors = anchorManager.anchors;
+	for (var i = 0; i < anchors.length; i++) {
+	    var anchor = anchorManager.anchors[i];
 	    markIdx = anchor.markIndex;
 	    recordIdx = this._model.recordIndexFromMarkIndex(markIdx);
 	    percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
-	    this.sliders.anchor.setPosition(percent, true);
+	    this.sliders.anchor[i].setPosition(percent, true);
+	    this.sliders.anchor[i].show();
 	}
 
 	/* always update the position, but don't necessarily make them visible. */
@@ -656,7 +657,10 @@ WebInspector.TimelapseOverview.prototype = {
 		y: timeline.element.boxInWindow().y + highlightCoords.top + highlightCoords.radius + 1
 	    };
 	    WebInspector.panels.timelapse.popover.show(records, popupPosition);
-	};
+	}
+	else {
+	    WebInspector.panels.timelapse.popover.hide();
+	}
     },
 
     _overviewPanningEnd: function(event)
@@ -935,20 +939,20 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onAnchorSet: function(event)
     {
-	var markIdx = event.data.newLocation.markIndex;
-	var recordIdx = this._model.recordIndexFromMarkIndex(markIdx);
-
-	var allRecords = this._model.allRecords;
-	var percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
-	this.sliders.anchor.setPosition(percent, true);
-	this.sliders.anchor.show();
+	var anchorSlider = new WebInspector.TimelapseOverviewSlider(this, "anchor", false);
+	this._timelineContainer.appendChild(anchorSlider.element);
+	this.sliders.anchor.push(anchorSlider);
+	this._updateSliderPositions();
 
 	WebInspector.panels.timelapse.popover.refresh();
     },
 
     _onAnchorRemoved: function()
     {
-	this.sliders.anchor.hide();
+	var anchorSlider = this.sliders.anchor.pop();
+	anchorSlider.dispose();
+	this._updateSliderPositions();
+
 	WebInspector.panels.timelapse.popover.refresh();
     }
 };

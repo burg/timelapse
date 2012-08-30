@@ -123,10 +123,10 @@ WebInspector.TimelapseGrid = function() {
 
     this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
 
-    var anchor = WebInspector.timelapsePresentationModel.anchor;
-    var anchorEventNames = WebInspector.TimelapseAnchor.EventTypes;
-    anchor.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
-    anchor.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
+    var anchorManager = WebInspector.timelapsePresentationModel.anchorManager;
+    var anchorEventNames = WebInspector.TimelapseAnchorManager.EventTypes;
+    anchorManager.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
+    anchorManager.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
 
     this.reset();
 };
@@ -706,14 +706,12 @@ WebInspector.TimelapseGrid.prototype = {
 
     _onAnchorSet: function(event)
     {
-	if (event.data.oldLocation && event.data.oldLocation.markIndex)
-	    this.refreshRecordGridNode(event.data.oldLocation.markIndex);
-	this.refreshRecordGridNode(event.data.newLocation.markIndex);
+	this.refreshRecordGridNode(event.data.markIndex);
     },
 
     _onAnchorRemoved: function(event)
     {
-	this.refreshRecordGridNode(event.data.location.markIndex);
+	this.refreshRecordGridNode(event.data.markIndex);
     }
 };
 
@@ -1016,16 +1014,12 @@ WebInspector.TimelapseGridNode.prototype = {
     {
 	this._gutterCell.removeChildren();
 
-	var anchor = WebInspector.timelapsePresentationModel.anchor;
-	if (!anchor.location || anchor.location.markIndex != this._record.mark.index)
+	var anchor = WebInspector.timelapsePresentationModel.anchorManager.anchorAtMarkIndex(this._record.mark.index);
+	if (!anchor)
 	    return;
 
 	var anchorButton = document.createElement("div");
 	anchorButton.className = "timelapse-button-icon timelapse-anchor-button toggled";
-
-	anchorButton.addEventListener("click", function() {
-		WebInspector.timelapsePresentationModel.anchor.removeAnchor();
-	    });
 
 	this._gutterCell.appendChild(anchorButton);
     },

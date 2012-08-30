@@ -59,10 +59,10 @@ WebInspector.TimelapseMiniview = function()
 
     this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
 
-    var anchor = WebInspector.timelapsePresentationModel.anchor;
-    var anchorEventNames = WebInspector.TimelapseAnchor.EventTypes;
-    anchor.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
-    anchor.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
+    var anchorManager = WebInspector.timelapsePresentationModel.anchorManager;
+    var anchorEventNames = WebInspector.TimelapseAnchorManager.EventTypes;
+    anchorManager.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
+    anchorManager.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
 
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
@@ -154,9 +154,6 @@ WebInspector.TimelapseMiniview.prototype = {
 	var tentativeSlider = new WebInspector.TimelapseMiniviewSlider(this, "tentative", false);
 	this.element.appendChild(tentativeSlider.element);
 
-	var anchorSlider = new WebInspector.TimelapseMiniviewSlider(this, "anchor", false);
-	this.element.appendChild(anchorSlider.element);
-
 	this._leftZoomGlassPane = document.createElement("div");
 	this._leftZoomGlassPane.className = "timelapse-miniview-glasspane";
 	this.element.appendChild(this._leftZoomGlassPane);
@@ -185,7 +182,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	    playback: playbackSlider,
 	    previous: previousSlider,
 	    tentative: tentativeSlider,
-	    anchor: anchorSlider,
+	    anchor: [],
 	    leftZoom: leftZoomSlider,
 	    rightZoom: rightZoomSlider
 	};
@@ -527,21 +524,37 @@ WebInspector.TimelapseMiniview.prototype = {
 	this._scheduleRefresh();
     },
 
+    _updateAnchorSliders: function()
+    {
+	var anchorManager = this._presentationModel.anchorManager;
+	var anchors = anchorManager.anchors;
+	for (var i = 0; i < anchors.length; i++) {
+	    var anchor = anchorManager.anchors[i];
+	    var markIndex = anchor.markIndex;
+	    var timestamp = this._model.timestampFromMarkIndex(markIndex);
+	    var percent = 0.0;
+	    if (markIndex > 0)
+		percent = this.calculator.computeMiniviewPercentage(timestamp);
+
+	    this.sliders.anchor[i].setPosition(percent, true);
+	}
+    },
+
     _onAnchorSet: function(event)
     {
-	var markIndex = event.data.newLocation.markIndex;
-	var timestamp = this._model.timestampFromMarkIndex(markIndex);
+	var anchorSlider = new WebInspector.TimelapseMiniviewSlider(this, "anchor", false);
+	this.element.appendChild(anchorSlider.element);
+	this.sliders.anchor.push(anchorSlider);
 
-	var percent = 0.0;
-	if (markIndex > 0)
-            percent = this.calculator.computeMiniviewPercentage(timestamp);
-
-	this.sliders.anchor.setPosition(percent, true);
+	this._updateAnchorSliders();
     },
 
     _onAnchorRemoved: function()
     {
-	this.sliders.anchor.hide();
+	var anchorSlider = this.sliders.anchor.pop();
+	anchorSlider.dispose();
+
+	this._updateAnchorSliders();
     },
 
     _onZoomChanged: function()
