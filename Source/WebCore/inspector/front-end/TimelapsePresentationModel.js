@@ -37,10 +37,8 @@ WebInspector.TimelapsePresentationModel = function()
 {
     WebInspector.Object.call(this);
     this._model = WebInspector.timelapseModel;
-    this.anchor = new WebInspector.TimelapseAnchor();
 
-    this._replayingToAnchor = false;
-
+    this.anchorManager = new WebInspector.TimelapseAnchorManager();
     this.breakpointLinkifier = new WebInspector.Linkifier();
     this.calculator = new WebInspector.TimelapseCalculator();
 
@@ -48,7 +46,6 @@ WebInspector.TimelapsePresentationModel = function()
     this._model.addEventListener(eventNames.RecordingDidStart, this._recordingDidStart, this);
     this._model.addEventListener(eventNames.RecordingDidStop, this._recordingDidStop, this);
     this._model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
-    this._model.addEventListener(eventNames.InputPaused, this._inputPaused, this);
     this._model.addEventListener(eventNames.BreakpointPaused, this._breakpointPaused, this);
     this._model.addEventListener(eventNames.BreakpointHit, this._breakpointsChanged, this);
 
@@ -118,8 +115,9 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this._matchedRecords = [];
 	this._matchedRecordsAreStale = false;
 	this._breakpointRecordsAreStale = true;
+	this._replayingToAnchor = false;
+	this.anchorManager.reset();
 	this.calculator.reset();
-	this.anchor.removeAnchor();
     },
 
     // Private API (callbacks)
@@ -162,12 +160,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
             records[i].matches = catEnabledByRecordType[records[i].type];
 
 	this._matchedRecordsAreStale = true;
-    },
-
-    _inputPaused: function()
-    {
-	if (!this.anchor._breakpointLocation)
-	    this._replayingToAnchor = false;
     },
 
     _breakpointPaused: function()
@@ -335,16 +327,14 @@ WebInspector.TimelapsePresentationModel.prototype = {
 			row.appendChild(document.createElement("td"));
 
 		    var indexExplored = WebInspector.timelapseBreakpointTracker.exploredIndex(record.mark.index);
-		    var anchorLocation = WebInspector.timelapsePresentationModel.anchor.location;
-		    var isAnchoredLocation = (anchorLocation && anchorLocation.markIndex == record.mark.index
-			&& anchorLocation.hitIndex == j);
+		    var isAnchoredLocation = WebInspector.timelapsePresentationModel.anchorManager.anchorAtLocation(record.mark.index, j);
 		    var isCurrentBreakpoint = record.mark.index == WebInspector.timelapseModel.currentMarkIndex
 			&& j == WebInspector.timelapseModel.currentHitIndex;
 
 		    if (isAnchoredLocation) {
-			var anchorButton = createButtonInTD("timelapse-anchor-button toggled", function() {
-			    WebInspector.timelapsePresentationModel.anchor.removeAnchor();
-			});
+			var anchorButton = createButtonInTD("timelapse-anchor-button toggled", function(markIndex, hitIndex) {
+			    WebInspector.timelapsePresentationModel.anchorManager.removeAnchor(markIndex, hitIndex);
+			}.bind(anchorButton, record.mark.index, j));
 			row.appendChild(anchorButton);
 		    }
 		    else
@@ -463,85 +453,134 @@ WebInspector.TimelapsePresentationModel.prototype = {
 
 WebInspector.TimelapsePresentationModel.prototype.__proto__ = WebInspector.Object.prototype;
 
-
-WebInspector.TimelapseAnchor = function()
+/**
+ * @constructor
+ */
+WebInspector.TimelapseAnchorManager = function()
 {
     WebInspector.Object.call(this);
 
-    this._debuggerWalk = [];
+    this._model = WebInspector.timelapseModel;
 
-    var model = WebInspector.timelapseModel;
     var modelEvents = WebInspector.TimelapseModel.EventTypes;
+    this._model.addEventListener(modelEvents.BreakpointHit, this._breakpointHit, this);
 
-    model.addEventListener(modelEvents.BreakpointHit, this._breakpointHit, this);
-    model.addEventListener(modelEvents.RecordingDidStart, this.removeAnchor, this);
+    var debuggerModel = WebInspector.debuggerModel;
+    var debugEvents = WebInspector.DebuggerModel.Events;
+    debuggerModel.addEventListener(debugEvents.DebuggerStepOver, this._debuggerStepOver, this);
+    debuggerModel.addEventListener(debugEvents.DebuggerStepInto, this._debuggerStepInto, this);
+    debuggerModel.addEventListener(debugEvents.DebuggerStepOut, this._debuggerStepOut, this);
 
-    WebInspector.debuggerModel.addEventListener(WebInspector.DebuggerModel.Events.DebuggerStepOver, this._debuggerStepOver, this);
-    WebInspector.debuggerModel.addEventListener(WebInspector.DebuggerModel.Events.DebuggerStepInto, this._debuggerStepInto, this);
-    WebInspector.debuggerModel.addEventListener(WebInspector.DebuggerModel.Events.DebuggerStepOut, this._debuggerStepOut, this);
+    this.reset();
 };
 
-WebInspector.TimelapseAnchor.EventTypes = {
+WebInspector.TimelapseAnchorManager.EventTypes = {
     AnchorSet: "TimelapseAnchorSet",
     AnchorRemoved: "TimelapseAnchorRemoved"
 };
 
-WebInspector.TimelapseAnchor.prototype = {
-    get location()
+WebInspector.TimelapseAnchorManager.prototype = {
+    get anchors()
     {
-	return this._location;
+	return this._anchors;
     },
 
-    enabled: function()
+    anchorAtMarkIndex: function(markIndex) {
+	var index = binarySearch(markIndex, this._anchors, function(a, b) { return a - b.markIndex; });
+	return (index >= 0);
+    },
+
+    anchorAtLocation: function(markIndex, hitIndex) {
+	var location = {
+	    markIndex: markIndex,
+	    hitIndex: hitIndex
+	}
+	var index = binarySearch(location, this._anchors, this._locationComparator);
+	return (index >= 0) ? this._anchors[index] : false;
+    },
+
+    hasAnchor: function()
     {
-	return !!this._location;
+	return !!this._anchors.length;
     },
 
     setAnchor: function()
     {
-	var markIndex = WebInspector.timelapseModel.currentMarkIndex;
-	var hitIndex = WebInspector.timelapseModel.currentHitIndex;
+	var markIndex = this._model.currentMarkIndex;
+	var hitIndex = this._model.currentHitIndex;
+	var debuggerWalk = this._debuggerWalkRecord.slice();
 
-	this._debuggerWalk = this._debuggerWalkRecord.slice();
+	var anchor = new WebInspector.TimelapseAnchor(markIndex, hitIndex, debuggerWalk);
+	var index = binarySearch(anchor, this._anchors, this._locationComparator);
 
-	var oldLocation;
-	if (this._location)
-	    oldLocation = this._location;
-
-	this._location = {
-	    markIndex: markIndex,
-	    hitIndex: hitIndex
-	};
-
-	var eventData = {
-	    oldLocation: oldLocation,
-	    newLocation: this._location
-	};
-
-	if (oldLocation && oldLocation.markIndex == markIndex
-	    && oldLocation.hitIndex == hitIndex)
-	    this.removeAnchor();
+	// For now, only maintain one anchor per breakpoint hit.
+	if (index >= 0)
+	    this.removeAnchor(markIndex, hitIndex);
 	else
-	    this.dispatchEventToListeners(WebInspector.TimelapseAnchor.EventTypes.AnchorSet, eventData);
+	    index = -(index + 1);
+
+	this._anchors.splice(index, 0, anchor);
+
+	this.dispatchEventToListeners(WebInspector.TimelapseAnchorManager.EventTypes.AnchorSet, anchor.location);
     },
 
     replayToAnchor: function()
     {
-	WebInspector.timelapsePresentationModel._replayingToAnchor = true;
-	WebInspector.timelapseModel.replayDebuggerWalk(this._location.markIndex, this._location.hitIndex, this._debuggerWalk);
+	// current playback point
+	var location = {
+	    markIndex: this._model.currentMarkIndex,
+	    hitIndex: this._model.currentHitIndex
+	}
+
+	var index = binarySearch(location, this._anchors, this._locationComparator);
+	if (index < 0)
+	    index = -(index + 1);
+
+	// Since there is currently no easy way to compare debugger walks, the only case where we
+	// can replay to an anchor on the current hit index is if the recorded walk is length 0 and
+	// the anchor's walk is length > 0.
+	var anchorAtLocation = this._anchors[index] && this._locationComparator(location, this._anchors[index]) == 0;
+	var noWalkRecord = this._debuggerWalkRecord.length == 0;
+	var nonzeroAnchorWalk = this._anchors[index] && this._anchors[index].debuggerWalk.length > 0;
+
+	if (index >= this._anchors.length)
+	    this._anchors[0].replayToAnchor();
+	else if (!anchorAtLocation || (noWalkRecord && nonzeroAnchorWalk))
+	    this._anchors[index].replayToAnchor();
+	else if (index == this._anchors.length - 1)
+	    this._anchors[0].replayToAnchor();
+	else
+	    this._anchors[index+1].replayToAnchor();
     },
 
-    removeAnchor: function()
+    removeAnchor: function(markIndex, hitIndex)
     {
-	/* removeAnchor should be idempotent until lifetime management is better */
-	if (!this._location)
+	var location = {
+	    markIndex: markIndex || this._model.currentMarkIndex,
+	    hitIndex: hitIndex || this._model.currentHitIndex
+	}
+
+	var index = binarySearch(location, this._anchors, this._locationComparator);
+	if (index < 0)
 	    return;
 
-	var eventData = { location: this._location };
-	this._location = null;
-	this._debuggerWalk = [];
+	this._anchors.splice(index, 1);
 
-	this.dispatchEventToListeners(WebInspector.TimelapseAnchor.EventTypes.AnchorRemoved, eventData);
+	this.dispatchEventToListeners(WebInspector.TimelapseAnchorManager.EventTypes.AnchorRemoved, location);
+    },
+
+    reset: function()
+    {
+	this._anchors = [];
+	this._debuggerWalkRecord = [];
+    },
+
+    _locationComparator: function(a, b)
+    {
+	if (a.markIndex == b.markIndex)
+	    return a.hitIndex - b.hitIndex;
+	else
+	    return a.markIndex - b.markIndex;
     },
 
     _breakpointHit: function()
@@ -551,7 +590,7 @@ WebInspector.TimelapseAnchor.prototype = {
 
     _debuggerStepOver: function()
     {
-	if (!WebInspector.timelapseModel.replaying)
+	if (!this._model.replaying)
 	    return;
 
 	var stepOver = WebInspector.debuggerModel.stepOver.bind(WebInspector.debuggerModel);
@@ -560,7 +599,7 @@ WebInspector.TimelapseAnchor.prototype = {
 
     _debuggerStepInto: function()
     {
-	if (!WebInspector.timelapseModel.replaying)
+	if (!this._model.replaying)
 	    return;
 
 	var stepInto = WebInspector.debuggerModel.stepInto.bind(WebInspector.debuggerModel);
@@ -569,7 +608,7 @@ WebInspector.TimelapseAnchor.prototype = {
 
     _debuggerStepOut: function()
     {
-	if (!WebInspector.timelapseModel.replaying)
+	if (!this._model.replaying)
 	    return;
 
 	var stepOut = WebInspector.debuggerModel.stepOut.bind(WebInspector.debuggerModel);
@@ -577,8 +616,48 @@ WebInspector.TimelapseAnchor.prototype = {
     }
 };
 
-WebInspector.TimelapseAnchor.prototype.__proto__ = WebInspector.Object.prototype;
+WebInspector.TimelapseAnchorManager.prototype.__proto__ = WebInspector.Object.prototype;
 
+/**
+ * @constructor
+ */
+WebInspector.TimelapseAnchor = function(markIndex, hitIndex, debuggerWalk)
+{
+    this._markIndex = markIndex;
+    this._hitIndex = hitIndex;
+    this._debuggerWalk = debuggerWalk;
+};
+
+WebInspector.TimelapseAnchor.prototype = {
+    get location()
+    {
+	return {
+	    markIndex: this._markIndex,
+	    hitIndex: this._hitIndex
+	};
+    },
+
+    get markIndex()
+    {
+	return this._markIndex;
+    },
+
+    get hitIndex()
+    {
+	return this._hitIndex;
+    },
+
+    get debuggerWalk()
+    {
+	return this._debuggerWalk;
+    },
+
+    replayToAnchor: function()
+    {
+	WebInspector.timelapsePresentationModel._replayingToAnchor = true;
+	WebInspector.timelapseModel.replayDebuggerWalk(this._markIndex, this._hitIndex, this._debuggerWalk);
+    }
+};
 
 /**
  * @constructor

@@ -100,13 +100,10 @@ WebInspector.TimelapseGrid = function() {
     var playbackSlider = new WebInspector.TimelapseGridSlider(this, "playback", true);
     playbackSlider.addEventListener(sliderEventNames.DragStart, this._onGridDragStart, this);
     playbackSlider.addEventListener(sliderEventNames.DragEnd, this._onGridDragEnd, this);
+    playbackSlider.element.addEventListener("contextmenu", this._onPlaybackSliderContextMenu.bind(this));
     this._addSlider(playbackSlider);
     this._addSlider(new WebInspector.TimelapseGridSlider(this, "previous", false));
     this._addSlider(new WebInspector.TimelapseGridSlider(this, "tentative", false));
-
-    var breakpointSlider = new WebInspector.TimelapseGridSlider(this, "breakpoint", false);
-    breakpointSlider.element.addEventListener("contextmenu", this._onBreakpointSliderContextMenu.bind(this));
-    this._addSlider(breakpointSlider);
 
     var modelEventNames = WebInspector.TimelapseModel.EventTypes;
     this._model.addEventListener(modelEventNames.RecordingDidStart, this._onRecordingDidStart, this);
@@ -126,10 +123,10 @@ WebInspector.TimelapseGrid = function() {
 
     this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
 
-    var anchor = WebInspector.timelapsePresentationModel.anchor;
-    var anchorEventNames = WebInspector.TimelapseAnchor.EventTypes;
-    anchor.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
-    anchor.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
+    var anchorManager = WebInspector.timelapsePresentationModel.anchorManager;
+    var anchorEventNames = WebInspector.TimelapseAnchorManager.EventTypes;
+    anchorManager.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
+    anchorManager.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
 
     this.reset();
 };
@@ -427,8 +424,8 @@ WebInspector.TimelapseGrid.prototype = {
 
     _onPlaybackDidStart: function()
     {
-	this.sliders.breakpoint.hide();
 	this.sliders.playback.hide();
+	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
 
 	var startNode = this._recordGridNodes[this._model.replayStartMarkIndex];
 	this.sliders.previous.placeBefore(startNode);
@@ -479,12 +476,14 @@ WebInspector.TimelapseGrid.prototype = {
     {
 	var position = this._recordGridNodes[this._model.currentMarkIndex];
 
-	this.sliders.breakpoint.placeBefore(position);
-	this.sliders.playback.hide();
+	this.sliders.playback.placeBefore(position);
+	this.sliders.playback.element.addStyleClass("breakpoint-slider");
+	this.sliders.playback.element.removeStyleClass("playback-pulse");
+	this.sliders.playback.show();
+	this.sliders.playback.reveal();
+
 	this.sliders.previous.show();
 	this.sliders.tentative.show();
-	this.sliders.breakpoint.show();
-	this.sliders.breakpoint.reveal();
     },
 
     _onCircleSelected: function(event)
@@ -542,6 +541,7 @@ WebInspector.TimelapseGrid.prototype = {
 
     _onGridDragStart: function(event)
     {
+	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
 	this.sliders.playback.addEventListener(WebInspector.TimelapseGridSlider.EventTypes.Dragging,
 							 this._onGridDragging, this);
 
@@ -642,9 +642,10 @@ WebInspector.TimelapseGrid.prototype = {
 	}
     },
 
-    _onBreakpointSliderContextMenu: function(event)
+    _onPlaybackSliderContextMenu: function(event)
     {
-	WebInspector.timelapseBreakpointTracker.currentBreakpoint.contextMenu(event);	
+	if (WebInspector.timelapseModel.breakpointPaused)
+	    WebInspector.timelapseBreakpointTracker.currentBreakpoint.contextMenu(event);	
     },
 
     _autoScrollDelay: 100, /* milliseconds between autoscrolls */
@@ -705,14 +706,12 @@ WebInspector.TimelapseGrid.prototype = {
 
     _onAnchorSet: function(event)
     {
-	if (event.data.oldLocation && event.data.oldLocation.markIndex)
-	    this.refreshRecordGridNode(event.data.oldLocation.markIndex);
-	this.refreshRecordGridNode(event.data.newLocation.markIndex);
+	this.refreshRecordGridNode(event.data.markIndex);
     },
 
     _onAnchorRemoved: function(event)
     {
-	this.refreshRecordGridNode(event.data.location.markIndex);
+	this.refreshRecordGridNode(event.data.markIndex);
     }
 };
 
@@ -1015,16 +1014,12 @@ WebInspector.TimelapseGridNode.prototype = {
     {
 	this._gutterCell.removeChildren();
 
-	var anchor = WebInspector.timelapsePresentationModel.anchor;
-	if (!anchor.location || anchor.location.markIndex != this._record.mark.index)
+	var anchor = WebInspector.timelapsePresentationModel.anchorManager.anchorAtMarkIndex(this._record.mark.index);
+	if (!anchor)
 	    return;
 
 	var anchorButton = document.createElement("div");
 	anchorButton.className = "timelapse-button-icon timelapse-anchor-button toggled";
-
-	anchorButton.addEventListener("click", function() {
-		WebInspector.timelapsePresentationModel.anchor.removeAnchor();
-	    });
 
 	this._gutterCell.appendChild(anchorButton);
     },
