@@ -37,6 +37,7 @@
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
+#include "NetworkProxy.h"
 #include "Page.h"
 #include "ProgressTracker.h"
 #include "ResourceError.h"
@@ -160,7 +161,7 @@ void ResourceLoader::start()
     }
 
     if (!m_reachedTerminalState)
-        m_handle = ResourceHandle::create(m_frame->loader()->networkingContext(), m_request, this, m_defersLoading, m_options.sniffContent == SniffContent);
+        m_handle = m_frame->page()->networkProxy()->createResourceHandle(m_frame->loader()->networkingContext(), m_request, this, m_defersLoading, m_options.sniffContent == SniffContent);
 }
 
 void ResourceLoader::setDefersLoading(bool defers)

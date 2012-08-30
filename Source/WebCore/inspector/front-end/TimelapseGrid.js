@@ -1,0 +1,1134 @@
+/*
+ * Copyright (C) 2011 Brian J. Burg <burg@cs.washington.edu>
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ *     * Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above
+ * copyright notice, this list of conditions and the following disclaimer
+ * in the documentation and/or other materials provided with the
+ * distribution.
+ *     * Neither the name of Google Inc. nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+WebInspector.TimelapseGrid = function() {
+    /* column definitions */
+    var columns = {
+	gutter: {},
+	index: {},
+	category: {},
+	type: {},
+	timestamp: {},
+	preview: {}
+    };
+
+    columns.gutter.title = " ";
+    columns.gutter.sortable = false;
+    columns.gutter.width = "100px";
+    columns.gutter.aligned = "center";
+
+    columns.index.title = " ";
+    columns.index.sortable = true;
+    columns.index.width = "5%";
+    columns.index.aligned = "right";
+    columns.index.sort = "ascending";
+
+    columns.category.title = " ";
+    columns.category.sortable = true;
+    columns.category.width = "1%";
+
+    columns.type.title = "What Happened?";
+    columns.type.sortable = true;
+    columns.type.width = "20%";
+    columns.type.aligned = "right";
+
+    columns.timestamp.title = "When?";
+    columns.timestamp.sortable = true;
+    columns.timestamp.width = "10%";
+    
+    columns.preview.title = "Input Preview";
+    columns.preview.sortable = true;
+    columns.preview.width = "auto";
+
+    /* call to super with the constructed columns. */
+    WebInspector.DataGrid.call(this, columns);
+
+    this._highlightedNodes = {};
+    this._sliders = {};
+    this._model = WebInspector.timelapseModel;
+    this._presentationModel = WebInspector.timelapsePresentationModel;
+    this._sortingFunctions = {
+	index: WebInspector.TimelapseGridNode.IndexComparator,
+	category: WebInspector.TimelapseGridNode.CatComparator,
+	type: WebInspector.TimelapseGridNode.TypeComparator,
+	timestamp: WebInspector.TimelapseGridNode.TimestampComparator,
+	preview: WebInspector.TimelapseGridNode.PreviewComparator
+    };
+    this.resizeMethod = WebInspector.DataGrid.ResizeMethod.Last;
+
+    this.element.classList.add("timelapse-inputs-grid");
+    var order = this._presentationModel.categoryOrder;
+    for (var i = 0; i < order.length; i++) {
+	var key = order[i];
+	var category = this._presentationModel.categories[key];
+	this.element.classList.add("filter-" + category.name);
+    }
+
+    // TODO: does this comment even make sense? It's copied from DataGrid
+    // Event listeners need to be added _after_ we attach to the document, so that owner document is properly update.
+    this.addEventListener("sorting changed", this._onSortingChanged, this);
+    this.scrollContainer.addEventListener("scroll", this._updateOffscreenRows.bind(this));
+
+    var sliderEventNames = WebInspector.TimelapseGridSlider.EventTypes;
+    var playbackSlider = new WebInspector.TimelapseGridSlider(this, "playback", true);
+    playbackSlider.addEventListener(sliderEventNames.DragStart, this._onGridDragStart, this);
+    playbackSlider.addEventListener(sliderEventNames.DragEnd, this._onGridDragEnd, this);
+    this._addSlider(playbackSlider);
+    this._addSlider(new WebInspector.TimelapseGridSlider(this, "previous", false));
+    this._addSlider(new WebInspector.TimelapseGridSlider(this, "tentative", false));
+
+    var breakpointSlider = new WebInspector.TimelapseGridSlider(this, "breakpoint", false);
+    breakpointSlider.element.addEventListener("contextmenu", this._onBreakpointSliderContextMenu.bind(this));
+    this._addSlider(breakpointSlider);
+
+    var modelEventNames = WebInspector.TimelapseModel.EventTypes;
+    this._model.addEventListener(modelEventNames.RecordingDidStart, this._onRecordingDidStart, this);
+    this._model.addEventListener(modelEventNames.RecordingDidStop, this._onRecordingDidStop, this);
+    this._model.addEventListener(modelEventNames.RecordAdded, this._onRecordAdded, this);
+    this._model.addEventListener(modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
+    this._model.addEventListener(modelEventNames.PlaybackStopped, this._onPlaybackStopped, this);
+    this._model.addEventListener(modelEventNames.InputPaused, this._onInputPaused, this);
+    this._model.addEventListener(modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
+
+    var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
+    this._presentationModel.addEventListener(presEventNames.FilterChanged, this._onFilterChanged, this);
+    this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
+    this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
+    this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
+    this._presentationModel.addEventListener(presEventNames.CircleSelected, this._onCircleSelected, this);
+
+    this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
+
+    var anchor = WebInspector.timelapsePresentationModel.anchor;
+    var anchorEventNames = WebInspector.TimelapseAnchor.EventTypes;
+    anchor.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
+    anchor.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
+
+    this.reset();
+};
+
+WebInspector.TimelapseGrid.DefaultRefreshDelay = 150;
+
+WebInspector.TimelapseGrid.prototype = {
+    // Public API
+    get sliders()
+    {
+	return this._sliders;
+    },
+
+    wasShown: function()
+    {
+	this._updateOffscreenRows();
+	this._scheduleRefresh();
+    },
+
+    reset: function()
+    {
+	this._refreshDelay = WebInspector.TimelapseGrid.DefaultRefreshDelay;
+	this._pendingRecords = [];
+	this._recordGridNodes = {};
+	this._invalidateVisibleRows();
+	this.rootNode().removeChildren();
+
+	for (var key in this.sliders) {
+	    var slider = this.sliders[key];
+	    slider.clear();
+	}
+    },
+
+    refresh: function()
+    {
+	/* timer management */
+	this._needsRefresh = false;
+	if (this._refreshTimeout) {
+	    clearTimeout(this._refreshTimeout);
+	    delete this._refreshTimeout;
+	}
+
+	// save position
+        var wasScrolledToLastRow = this.isScrolledToLastRow();
+
+	var newNode;
+	// create new rows for pending records, update table.
+	for (var i = 0; i < this._pendingRecords.length; i++) {
+	    newNode = this._createRecordGridNode(this._pendingRecords[i]);
+	    this.rootNode().appendChild(newNode);
+	    newNode.refreshRecord();
+	}
+
+	this._pendingRecords = [];
+	
+	if (this._model.recording)
+	    return;
+
+	this.updateWidths();
+	this._invalidateVisibleRows();
+
+	for (var key in this.sliders) {
+	    var slider = this.sliders[key];
+	    if (slider)
+	    slider.refresh();
+	}
+
+	// restore position
+	if (wasScrolledToLastRow)
+	    this.scrollToLastRow();
+    },
+
+    refreshRecordGridNode: function(markIndex)
+    {
+	var node = this._recordGridNodes[markIndex];
+	node.refreshRecord.call(node);
+    },
+
+    // These are used by shortcut handlers
+    replayToNextNode: function(markIndex)
+    {
+	if (typeof markIndex != "number")
+	    markIndex = this._model.currentMarkIndex;
+	var nextIndex = this.nextVisibleIndex(markIndex);
+	if (nextIndex)
+	    this._replayToIndex(nextIndex);
+    },
+
+    replayToPreviousNode: function(markIndex)
+    {
+	if (typeof markIndex != "number")
+	    markIndex = this._model.currentMarkIndex;
+	var previousIndex = this.previousVisibleIndex(markIndex);
+	if (previousIndex)
+	    this._replayToIndex(previousIndex);
+    },
+
+    nextVisibleIndex: function(markIndex)
+    {
+	var nextIndex = markIndex + 1;
+	var lastRecord = this._model.allRecords[this._model.allRecords.length-1];
+	var lastIndex = lastRecord.mark.index;
+
+	while (nextIndex <= lastIndex) {
+	    var node = this._recordGridNodes[nextIndex];
+
+	    if (!node || node.isFilteredOut())
+		nextIndex++;
+	    else
+		return nextIndex;
+	}
+	return null;
+    },
+
+    previousVisibleIndex: function(markIndex)
+    {
+	var previousIndex = markIndex - 1;
+
+	while (previousIndex > 0) {
+	    var node = this._recordGridNodes[previousIndex];
+
+	    if (!node || node.isFilteredOut())
+		previousIndex--;
+	    else
+		return previousIndex;
+	}
+	return null;
+    },
+
+    // Private API (helpers)
+    _clearHighlight: function(classSuffix)
+    {
+	var className = "highlight-" + classSuffix;
+	if (!this._highlightedNodes[className])
+	    return;
+
+	this._highlightedNodes[className]._element.classList.remove(className);
+	delete this._highlightedNodes[className];
+    },
+
+    _addSlider: function(slider) {
+	this._sliders[slider.name] = slider;
+	this.scrollContainer.appendChild(slider.element);
+    },
+
+    _removeSlider: function(slider) {
+	if (this._sliders[slider.name])
+	    delete this._sliders[slider.name];
+
+	if (slider.element.parentElement === this.scrollContainer)
+	    this.scrollContainer.removeChild(slider.element);
+    },
+
+    _onSortingChanged: function()
+    {
+	this._sortItems();
+	this.refresh();
+    },
+
+    _sortItems: function()
+    {
+        var sortingFunction = this._sortingFunctions[this.sortColumnIdentifier];
+        if (!sortingFunction)
+            return;
+
+        this.sortNodes(sortingFunction, this.sortOrder === "descending");
+	this._updateOffscreenRows();
+    },
+
+    _createRecordGridNode: function(record)
+    {
+	var node = new WebInspector.TimelapseGridNode(this, record);
+	this._recordGridNodes[record.mark.index] = node;
+	return node;
+    },
+
+    _scheduleRefresh: function()
+    {
+	if (this._needsRefresh)
+	    return;
+
+	this._needsRefresh = true;
+
+	if (!this._refreshTimeout)
+	    this._refreshTimeout = setTimeout(this.refresh.bind(this), this._refreshDelay);
+    },
+
+    _refreshIfNeeded: function()
+    {
+	if (this._needsRefresh)	
+	    this.refresh();
+    },
+
+    _replayToIndex: function(markIndex)
+    {
+	this._model.replayUpToMarkIndex(markIndex);
+    },
+
+    _updateZoomInterval: function()
+    {
+    	var records = this._model.allRecords;
+	var calculator = this._presentationModel.calculator;
+	var startTs = calculator.computeMiniviewTimestamp(calculator.zoomLeft);
+	var endTs = calculator.computeMiniviewTimestamp(calculator.zoomRight);
+	var i = 0;
+
+	/* update records before zoom interval */
+	for (i = 0; i < records.length; i++) {
+	    var record = records[i];
+	    if (record.mark.timestamp >= startTs)
+		break;
+	    if (!this._recordGridNodes[record.mark.index])
+		continue;
+	    this._recordGridNodes[record.mark.index].element.classList.add("hidden");
+	}
+
+	/* update records within zoom interval */
+	for (; i < records.length; i++) {
+	    var record = records[i];
+	    if (record.mark.timestamp >= endTs)
+		break;
+	    if (!this._recordGridNodes[record.mark.index])
+		continue;
+	    
+	    if (record.matches)
+		this._recordGridNodes[record.mark.index].element.classList.remove("hidden");
+	    else
+		this._recordGridNodes[record.mark.index].element.classList.add("hidden");
+	}
+
+	/* update records after zoom interval */
+	for (; i < records.length; i++) {
+	    var record = records[i];
+	    if (!this._recordGridNodes[record.mark.index])
+		continue;
+	    this._recordGridNodes[record.mark.index].element.classList.add("hidden");
+	}
+    },
+
+    // Private API (callbacks)
+    _onZoomChanged: function(event)
+    {
+	this._updateZoomInterval();
+	this._updateOffscreenRows();
+	this._scheduleRefresh();
+    },
+
+    _onFilterChanged: function(eventData)
+    {
+	this._sortItems();
+	this._updateZoomInterval();
+
+	/* update category filter classes */
+	var order = this._presentationModel.categoryOrder;
+	for (var i = 0; i < order.length; i++) {
+	    var key = order[i];
+	    var category = this._presentationModel.categories[key];
+	    if (category.disabled)
+		this.element.classList.remove("filter-" + category.name);
+	    else
+		this.element.classList.add("filter-" + category.name);
+
+	    /* if the selected row is in the toggled category, then deselect it. */
+	    if (this.selected) {
+		var selectedNode = this.selectedNode;
+		if (this._presentationModel.recordStyles[selectedNode.record.type].category.disabled)
+		    selectedNode.deselect();
+	    }
+	}
+
+	this._updateOffscreenRows();
+	this._scheduleRefresh();
+    },
+
+
+    _onRecordingDidStart: function()
+    {
+	this.reset();
+	this.sliders.playback.disable();
+    },
+
+
+    _onRecordingDidStop: function()
+    {
+	this._sortItems();
+	this._updateOffscreenRows();
+	this.refresh();
+
+	var node = this._recordGridNodes[this._model.currentMarkIndex];
+	this.sliders.playback.placeAfter(node);
+	this.sliders.playback.enable();
+	this.sliders.playback.show();
+	node.reveal();
+    },
+
+    _onPlaybackDidStart: function()
+    {
+	this.sliders.breakpoint.hide();
+	this.sliders.playback.hide();
+
+	var startNode = this._recordGridNodes[this._model.replayStartMarkIndex];
+	this.sliders.previous.placeBefore(startNode);
+	this.sliders.previous.show();
+
+	var finishNode = this._recordGridNodes[this._model.replayFinishMarkIndex];
+	this.sliders.tentative.placeBefore(finishNode);
+	this.sliders.tentative.show();
+    },
+
+    _onInputPaused: function()
+    {
+	this.sliders.previous.hide();
+	this.sliders.tentative.hide();
+
+	var node = this._recordGridNodes[this._model.currentMarkIndex];
+	this.sliders.playback.placeBefore(node, true);
+	this.sliders.playback.element.removeStyleClass("playback-pulse");
+	this.sliders.playback.enable();
+
+	if (!WebInspector.debuggerModel.isPaused())
+	    this.sliders.playback.show();
+    },
+
+    _onPlaybackStopped: function()
+    {
+	this.sliders.previous.hide();
+	this.sliders.tentative.hide();
+
+	var node = this._recordGridNodes[this._model.currentMarkIndex];
+	this.sliders.playback.placeBefore(node, true);
+	this.sliders.playback.element.removeStyleClass("playback-pulse");
+	this.sliders.playback.enable();
+
+	if (!WebInspector.debuggerModel.isPaused())
+	    this.sliders.playback.show();
+    },
+
+    _onRecordAdded: function(event)
+    {
+	var record = event.data;
+
+	this._pendingRecords.push(record);
+        this._scheduleRefresh();
+    },
+
+    _onBreakpointPaused: function(eventData)
+    {
+	var position = this._recordGridNodes[this._model.currentMarkIndex];
+
+	this.sliders.breakpoint.placeBefore(position);
+	this.sliders.playback.hide();
+	this.sliders.previous.show();
+	this.sliders.tentative.show();
+	this.sliders.breakpoint.show();
+	this.sliders.breakpoint.reveal();
+    },
+
+    _onCircleSelected: function(event)
+    {
+	var records = event.data.records;
+	// attempt to reveal first and last rows, so it matches the popup
+	this._recordGridNodes[records[0].mark.index].reveal();
+	this._recordGridNodes[records[records.length-1].mark.index].reveal();
+    },
+
+    _onPreviewStarted: function()
+    {
+	var position = this._recordGridNodes[this._model.currentMarkIndex];
+
+	this.sliders.previous.placeBefore(position);
+	this.sliders.previous.show();
+	this.sliders.tentative.placeBefore(position);
+	this.sliders.tentative.show();
+    },
+
+    _onPreviewStopped: function()
+    {
+	this.sliders.playback.hide();
+	this.sliders.previous.hide();
+	this.sliders.tentative.hide();
+    },
+
+    _onPreviewChanged: function(event)
+    {
+	var record = event.data;
+	var node = this._recordGridNodes[record.mark.index];
+
+	if (!node.isFilteredOut()) {
+	    this._sliders.tentative.placeBefore(node);
+	    node.reveal();
+	    this._invalidateVisibleRows();
+	}
+    },
+
+    _invalidateVisibleRows: function()
+    {
+	this._visibleRowsAreStale = true;
+    },
+
+    get visibleRows()
+    {
+	// this has been deoptimized. It used to only ask for nodes matching
+	// .revealed:not(.offscreen), but the query returned incorrect results.
+	if (this._visibleRowsAreStale) {
+	    this._visibleRowsAreStale = false;
+	    this._visibleRows = this.scrollContainer.querySelectorAll(".revealed");
+	}
+	return this._visibleRows;
+    },
+
+    _onGridDragStart: function(event)
+    {
+	this.sliders.playback.addEventListener(WebInspector.TimelapseGridSlider.EventTypes.Dragging,
+							 this._onGridDragging, this);
+
+	this._dragStartOffset = event.data;
+	this._cancelAutoScroll();
+
+	var position = this.sliders.playback.position;
+	// HACK: this will clear any .after-node style.
+	this.sliders.playback.placeBefore(position.node);
+
+	this._presentationModel.startPreviewing();
+    },
+
+    _onGridDragEnd: function()
+    {
+	this.sliders.playback.removeEventListener(WebInspector.TimelapseGridSlider.EventTypes.Dragging,
+							 this._onGridDragging);
+
+	delete this._dragStartOffset;
+
+	this._cancelAutoScroll();
+	var targetRecord = this._presentationModel.previewedRecord;
+	this._presentationModel.stopPreviewing();
+
+	var position = this.sliders.playback.position;
+	if (position.before)
+	    this._replayToIndex(targetRecord.mark.index);
+	else
+	    this._replayToNextNode(targetRecord.mark.index);
+    },
+
+    _onGridDragging: function(eventData)
+    {
+ 	var offsetTop = eventData.data;
+	var rows = this.visibleRows;
+	var i = 0;
+
+	for (i = 0; i < rows.length; i++) {
+	    // check whether dragging slider is within this row,
+	    // and if so, reposition tentative slider.
+	    var row = rows[i];
+	    var node = this.dataGridNodeFromNode(row);
+	
+	    var isBelowRowTop = (offsetTop >= row.offsetTop);
+	    var isAboveRowBottom = (offsetTop <= row.offsetTop + row.offsetHeight);
+	    var isAboveRowMidpoint = (offsetTop <= row.offsetTop + row.offsetHeight/2);
+
+	    if (!(isBelowRowTop && isAboveRowBottom))
+		continue;
+
+	    var newPosition = {
+		node: node,
+		before: isAboveRowMidpoint
+	    };
+
+	    var currentPosition = this.sliders.tentative.position;
+
+	    if (currentPosition.node != newPosition.node ||
+		currentPosition.before != newPosition.before) {		
+
+		if (isAboveRowMidpoint)
+		    this._presentationModel.previewRecord(node._record);
+		else {
+		    var nextMarkIndex = this.nextVisibleIndex(node._record.mark.index);
+		    if (!nextMarkIndex)
+			return;
+
+		    var nextRecordIndex = this._model.recordIndexFromMarkIndex(nextMarkIndex);
+		    this._presentationModel.previewRecord(this._model.allRecords[nextRecordIndex]);
+		}
+	    }
+
+	    var container = this.scrollContainer;
+
+	    // if positioned within or before first row, then scroll up.
+	    var isScrolledToTop = (container.scrollTop == 0);
+	    var isScrolledToBottom = (container.scrollHeight == container.scrollTop + container.offsetHeight);
+	    var withinFirstVisibleRow = (offsetTop < container.scrollTop + row.offsetHeight);
+	    var withinLastVisibleRow = (offsetTop > container.scrollTop + container.clientHeight - row.offsetHeight);
+	    var closeToDragStartOffset = (Math.abs(offsetTop - this._dragStartOffset) < 5);
+	    var scrollGranularity = row.offsetHeight/2;
+
+	    if (!isScrolledToTop && withinFirstVisibleRow && !closeToDragStartOffset) {
+		container.scrollTop -= scrollGranularity;
+		this._invalidateVisibleRows();
+		this._startAutoScroll(eventData);
+	    }
+
+	    // if positioned within or beyond last visible row, then scroll down.
+	    if (!isScrolledToBottom && withinLastVisibleRow && !closeToDragStartOffset) {
+		container.scrollTop += scrollGranularity;
+		this._invalidateVisibleRows();
+		this._startAutoScroll(eventData);
+	    }
+
+	    // do not inspect any more rows if we found the one which the slider is over.
+	    break;
+	}
+    },
+
+    _onBreakpointSliderContextMenu: function(event)
+    {
+	WebInspector.timelapseBreakpointTracker.currentBreakpoint.contextMenu(event);	
+    },
+
+    _autoScrollDelay: 100, /* milliseconds between autoscrolls */
+
+    _cancelAutoScroll: function()
+    {
+	if (!this._autoScrollTimer)
+	    return;
+
+	clearTimeout(this._autoScrollTimer);
+	delete this._autoScrollTimer;
+    },
+
+    _startAutoScroll: function(eventData)
+    {
+	this._cancelAutoScroll();
+	this._autoScrollTimer = setTimeout(this._onGridDragging.bind(this, eventData), this._autoScrollDelay);
+    },
+
+    _updateOffscreenRows: function()
+    {
+        var dataTableBody = this.dataTableBody;
+        var rows = dataTableBody.children;
+        var recordsCount = rows.length;
+        if (recordsCount < 2)
+            return;  // Filler row only.
+
+        var visibleTop = this.scrollContainer.scrollTop;
+        var visibleBottom = visibleTop + this.scrollContainer.offsetHeight;
+
+        var rowHeight = 0;
+
+        // Filler is at recordsCount - 1.
+        var unfilteredRowIndex = 0;
+        for (var i = 0; i < recordsCount - 1; ++i) {
+            var row = rows[i];
+
+            var dataGridNode = this.dataGridNodeFromNode(row);
+            if (dataGridNode.isFilteredOut()) {
+                row.removeStyleClass("offscreen");
+                continue;
+            }
+
+            if (!rowHeight)
+                rowHeight = row.offsetHeight;
+
+            var rowIsVisible = unfilteredRowIndex * rowHeight < visibleBottom && (unfilteredRowIndex + 1) * rowHeight > visibleTop;
+            if (rowIsVisible !== row.rowIsVisible) {
+                if (rowIsVisible)
+                    row.removeStyleClass("offscreen");
+                else
+                    row.addStyleClass("offscreen");
+                row.rowIsVisible = rowIsVisible;
+            }
+            unfilteredRowIndex++;
+        }
+    },
+
+    _onAnchorSet: function(event)
+    {
+	if (event.data.oldLocation && event.data.oldLocation.markIndex)
+	    this.refreshRecordGridNode(event.data.oldLocation.markIndex);
+	this.refreshRecordGridNode(event.data.newLocation.markIndex);
+    },
+
+    _onAnchorRemoved: function(event)
+    {
+	this.refreshRecordGridNode(event.data.location.markIndex);
+    }
+};
+
+WebInspector.TimelapseGrid.prototype.__proto__ = WebInspector.DataGrid.prototype;
+
+/**
+ * @constructor
+ * @extends {WebInspector.Object}
+ */
+WebInspector.TimelapseGridSlider = function(grid, name, adjustable)
+{
+    WebInspector.Object.call(this);
+    this._adjustable = adjustable;
+    this.name = name;
+    this._position = { node: null, before: true };
+
+    this.element = document.createElement("div");
+    this.element.className = "timelapse-grid-slider " + name + "-slider";
+
+    this._horizontalBarElement = document.createElement("div");
+    this._horizontalBarElement.className = "timelapse-slider-band";
+    this.element.appendChild(this._horizontalBarElement);
+
+    if (this._adjustable) {
+	this.element.classList.add("adjustable");
+	this.element.addEventListener("mousedown", this._startSliderDragging.bind(this), false);
+    }
+
+    var wrapper = this._wedgeWrapperElement = document.createElement("div");
+    wrapper.className = "timelapse-slider-wedge-wrapper";
+    var wedgeBorder = document.createElement("div");
+    wedgeBorder.className = "timelapse-slider-wedge-border";
+    wrapper.appendChild(wedgeBorder);
+    var wedge = document.createElement("div");
+    wedge.className = "timelapse-slider-wedge";
+    wrapper.appendChild(wedge);
+    this.element.appendChild(wrapper);
+
+    this._grid = grid;
+    // if the grid is dragged, refresh to make sure snap to first row is accurate
+    this._grid.addEventListener("width changed", this.refresh.bind(this));
+    this.clear();
+    this.enable();
+};
+
+WebInspector.TimelapseGridSlider.EventTypes = {
+    Dragging: "TimelapseSliderDragging",
+    DragStart: "TimelapseSliderDragStart",
+    DragEnd: "TimelapseSliderDragEnd"
+};
+
+WebInspector.TimelapseGridSlider.prototype =  {
+    clear: function()
+    {
+	this.element.classList.add("hidden");
+	this.disable();
+    },
+
+    placeBefore: function(gridNode)
+    {
+	this.setPosition(gridNode, true);
+    },
+
+    placeAfter: function(gridNode)
+    {
+	this.setPosition(gridNode, false);
+    },
+
+    setPosition: function(gridNode, beforeInput)
+    {
+	this._position.node = gridNode;
+	this._position.before = beforeInput;
+
+	if (beforeInput) {
+	    this.element.classList.add("before-node");
+	    this.element.classList.remove("after-node");
+	} else {
+	    this.element.classList.remove("before-node");
+	    this.element.classList.add("after-node");
+	}
+	this.refresh();
+    },
+
+    get position()
+    {
+	return this._position;
+    },
+
+    show: function()
+    {
+	this.element.classList.remove("hidden");
+	// this will force positioning of wedge/band to be flush with column
+	this.refresh();
+    },
+
+    hide: function()
+    {
+	this.element.classList.add("hidden");
+	if (this._currentAnimation)
+	    this._currentAnimation.cancel();
+    },
+
+    disable: function()
+    {
+	this._enabled = false;
+	this.element.classList.add("disabled");
+    },
+
+    enable: function()
+    {
+	this._enabled = true;
+	this.element.classList.remove("disabled");
+    },
+
+    reveal: function()
+    {
+	if (this._position && this._position.node)
+	    this._position.node.reveal();
+    },
+
+    dispose: function()
+    {
+	this.element.parentElement.removeChild(this.element);
+    },
+
+    refresh: function()
+    {
+	var firstColumnWidth = this._grid.columnPixelWidthsMap["gutter"];
+	if (this._wedgeWrapperElement)
+	    this._wedgeWrapperElement.style.left = firstColumnWidth - this._wedgeWrapperElement.offsetWidth + "px";
+
+	this._horizontalBarElement.style.left = firstColumnWidth + "px";
+
+	var node = this._position.node;
+	if (!node)
+	    return;
+
+	/* if the actual row is filtered out, try to set at next/prev visible. 
+	 * If that fails, just set at top of table */
+	if (node.isFilteredOut()) {
+	    var prevMarkIndex = this._grid.previousVisibleIndex(node.record.mark.index);
+	    var nextMarkIndex = this._grid.nextVisibleIndex(node.record.mark.index);
+	    if (!prevMarkIndex) {
+		this.element.style.top = "0px";
+		return;
+	    } else if (!nextMarkIndex) {
+		var prevNode = this._grid._recordGridNodes[prevMarkIndex];
+		this.element.style.top = prevNode.element.offsetTop + prevNode.element.offsetHeight + "px";
+		return;
+	    }
+
+	    node = this._grid._recordGridNodes[prevMarkIndex];
+	}
+
+	this.element.style.top = node.element.offsetTop + "px";
+    },
+
+    _computeAbsOffsetTop: function(event)
+    {
+	var parent = this.element.parentElement; // should be data grid
+	var dragPoint = event.clientY - parent.totalOffsetTop() - (this.element.offsetHeight/2);
+	var topMinimum = parent.clientTop;
+	var bottomMaximum = topMinimum + parent.clientHeight - this.element.offsetHeight;
+	return parent.scrollTop + Number.constrain(dragPoint, topMinimum, bottomMaximum);
+    },
+
+    _startSliderDragging: function(event)
+    {
+	if (!this._enabled || !this._adjustable)
+	    return;
+
+	this.element.classList.add("slider-dragging");
+	var offsetTop = this._computeAbsOffsetTop(event);
+
+	WebInspector.elementDragStart(this.element, this._sliderDragging.bind(this), this._endSliderDragging.bind(this), event, "col-resize");
+	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.EventTypes.DragStart, offsetTop);
+    },
+
+    _sliderDragging: function(event)
+    {
+	if (!this._enabled || !this._adjustable)
+	    return;
+	
+	var offsetTop = this._computeAbsOffsetTop(event);
+	this.element.style.top = offsetTop + "px";
+	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.EventTypes.Dragging, offsetTop);
+	event.preventDefault();
+    },
+
+    _endSliderDragging: function(event)
+    {	
+	if (!this._enabled || !this._adjustable)
+	    return;
+
+	WebInspector.elementDragEnd(event);
+	delete this._visibleRows;
+
+	this.element.classList.remove("slider-dragging");
+	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.EventTypes.DragEnd);
+    }
+};
+
+WebInspector.TimelapseGridSlider.prototype.__proto__ = WebInspector.Object.prototype;
+
+/**
+ * @constructor
+ * @extends {WebInspector.DataGridNode}
+ */
+WebInspector.TimelapseGridNode = function(parentView, record)
+{
+    WebInspector.DataGridNode.call(this, {});
+    this._parentView = parentView;
+    this._record = record;
+};
+
+WebInspector.TimelapseGridNode.prototype = {
+    get record()
+    {
+	return this._record;
+    },
+
+    createCells: function()
+    {
+	var category = WebInspector.timelapsePresentationModel.recordStyles[this._record.type].category;
+
+        // Out of sight, out of mind: create nodes offscreen to save on render tree update times when running updateOffscreenRows()
+        this._element.addStyleClass("offscreen");
+	this._element.addStyleClass("timelapse-category-" + category.name);
+	this._gutterCell = this._createDivInTD("gutter");
+        this._indexCell = this._createDivInTD("index");
+	this._categoryCell = this._createDivInTD("category");
+        this._typeCell = this._createDivInTD("type");
+        this._timestampCell = this._createDivInTD("timestamp");
+        this._previewCell = this._createDivInTD("preview");
+	this._element.addEventListener("dblclick", this._replayToThisNode.bind(this), false);
+    },
+
+    isFilteredOut: function()
+    {
+        return !!WebInspector.timelapsePresentationModel.recordStyles[this._record.type].category.disabled || this.element.classList.contains("hidden");
+    },
+
+    highlight: function(classSuffix)
+    {
+	var className = "highlight-" + classSuffix;
+	if (this._element.classList.contains(className))
+	    return;
+
+	this.dataGrid.clearHighlight(classSuffix);
+	this.dataGrid._highlightedNodes[className] = this;
+	this._element.classList.add(className);
+    },
+
+    select: function() {
+	if (this.selected)
+	    return;
+	
+	// let the model know that the row is selected, but paint the change immediately.
+	WebInspector.timelapsePresentationModel.selectInput(this._record.mark.index);
+        WebInspector.DataGridNode.prototype.select.apply(this, arguments);
+    },
+
+    get selectable()
+    {
+        return !this.isFilteredOut();
+    },
+
+    _replayToThisNode: function() {
+	WebInspector.timelapseModel.replayUpToMarkIndex(this._record.mark.index);
+    },
+
+    _createDivInTD: function(columnIdentifier)
+    {
+        var td = document.createElement("td");
+        td.className = "timelapse-column-" + columnIdentifier;
+        var div = document.createElement("div");
+        td.appendChild(div);
+        this._element.appendChild(td);
+        return div;
+    },
+
+    refreshRecord: function()
+    {
+	this._refreshGutterCell();
+	this._refreshIndexCell();
+	this._refreshCategoryCell();
+	this._refreshTypeCell();
+	this._refreshTimestampCell();
+	this._refreshPreviewCell();
+	
+	this._element.addStyleClass("timelapse-table-item");
+	var categoryName = WebInspector.timelapsePresentationModel.recordStyles[this._record.type].category.name;
+	if (!this._element.hasStyleClass("timelapse-category-" + categoryName)) {
+            this._element.removeMatchingStyleClasses("timelapse-category-\\w+");
+            this._element.addStyleClass("timelapse-category-" + categoryName);
+        }
+    },
+
+    _refreshGutterCell: function()
+    {
+	this._gutterCell.removeChildren();
+
+	var anchor = WebInspector.timelapsePresentationModel.anchor;
+	if (!anchor.location || anchor.location.markIndex != this._record.mark.index)
+	    return;
+
+	var anchorButton = document.createElement("div");
+	anchorButton.className = "timelapse-button-icon timelapse-anchor-button toggled";
+
+	anchorButton.addEventListener("click", function() {
+		WebInspector.timelapsePresentationModel.anchor.removeAnchor();
+	    });
+
+	this._gutterCell.appendChild(anchorButton);
+    },
+
+    _refreshIndexCell: function()
+    {
+	this._indexCell.removeChildren();
+	this._indexCell.appendChild(document.createTextNode(this._record.mark.index));
+	this._indexCell.title = "Input Action #" + this._record.mark.index;
+    },
+
+    _refreshCategoryCell: function()
+    {
+	this._categoryCell.removeChildren();
+	// FIXME: is this necessary?
+	this._categoryCell.appendChild(document.createTextNode(" "));
+	var category = WebInspector.timelapsePresentationModel.recordStyles[this._record.type].category;
+	this._categoryCell.title = "Category: " + category.title;
+    },
+
+    _refreshTypeCell: function()
+    {
+    	this._typeCell.removeChildren();
+	this._typeCell.setTextAndTitle(WebInspector.timelapsePresentationModel.recordStyles[this._record.type].title);
+    },
+
+    _refreshTimestampCell: function()
+    {
+    	this._timestampCell.removeChildren();
+	this._timestampCell.setTextAndTitle(WebInspector.timelapsePresentationModel.calculator.formatElapsedValue(this._record.mark.timestamp));
+    },
+
+    _refreshPreviewCell: function()
+    {
+    	this._previewCell.removeChildren();
+	var preview = WebInspector.TimelapseAgent.RecordPreview[this._record.type](this._record.data);
+	if (this._record.type == "ReceiveResource" || this._record.type == "StartPageLoad") {
+	    var url = preview;
+	    var isExternal = !WebInspector.resourceForURL(url);
+	    var link = WebInspector.linkifyURLAsNode(url,
+						     WebInspector.displayNameForURL(url),
+						     "timelapse-html-resource-link",
+						     isExternal);
+	    this._previewCell.appendChild(link);
+	}
+	else
+	    this._previewCell.setTextAndTitle(preview);
+    }
+};
+
+WebInspector.TimelapseGridNode.prototype.__proto__ = WebInspector.DataGridNode.prototype;
+
+
+WebInspector.TimelapseGridNode.CatComparator = function(a,b)
+{
+    var aCat = WebInspector.timelapsePresentationModel.recordStyles[a._record.type].category.name;
+    var bCat = WebInspector.timelapsePresentationModel.recordStyles[b._record.type].category.name;
+    if (aCat > bCat)
+	return 1;
+    if (bCat > aCat)
+	return -1;
+    return 0;
+};
+
+WebInspector.TimelapseGridNode.TypeComparator = function(a,b)
+{
+    var aType = a._record.type;
+    var bType = b._record.type;
+    if (aType > bType)
+	return 1;
+    if (bType > aType)
+	return -1;
+    return 0;
+};
+
+WebInspector.TimelapseGridNode.IndexComparator = function(a,b)
+{
+    var aIndex = a._record.mark.index;
+    var bIndex = b._record.mark.index;
+    if (aIndex > bIndex)
+	return 1;
+    if (bIndex > aIndex)
+	return -1;
+    return 0;
+};
+
+WebInspector.TimelapseGridNode.TimestampComparator = function(a,b)
+{
+    var aTimestamp = a._record.mark.timestamp;
+    var bTimestamp = b._record.mark.timestamp;
+    if (aTimestamp > bTimestamp)
+	return 1;
+    if (bTimestamp > aTimestamp)
+	return -1;
+    return 0;
+};
+
+WebInspector.TimelapseGridNode.PreviewComparator = function(a,b)
+{
+    var aPreview = WebInspector.TimelapseAgent.RecordPreview[a._record.type](a._record.data);
+    var bPreview = WebInspector.TimelapseAgent.RecordPreview[b._record.type](b._record.data);
+    if (aPreview > bPreview)
+	return 1;
+    if (bPreview > aPreview)
+	return -1;
+    return 0;
+};

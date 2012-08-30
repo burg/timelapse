@@ -730,6 +730,14 @@ AC_ARG_ENABLE(datalist,
               [],[enable_datalist="yes"])
 AC_MSG_RESULT([$enable_datalist])
 
+# check whether to enable Timelapse debugging support
+AC_MSG_CHECKING([whether to enable Timelapse feature support])
+AC_ARG_ENABLE(timelapse,
+              AC_HELP_STRING([--enable-timelapse],
+                             [enable Timelapse support [default=no]]),
+              [],[enable_timelapse="no"])
+AC_MSG_RESULT([$enable_timelapse])
+
 # check whether to enable HTML5 iframe seamless attribute support
 AC_MSG_CHECKING([whether to enable HTML5 iframe seamless attribute support])
 AC_ARG_ENABLE(iframe-seamless,
@@ -1419,6 +1427,7 @@ AM_CONDITIONAL([ENABLE_FILTERS],[test "$enable_filters" = "yes"])
 AM_CONDITIONAL([ENABLE_GEOLOCATION], [test "$enable_geolocation" = "yes"])
 AM_CONDITIONAL([ENABLE_MATHML], [test "$enable_mathml" = "yes"])
 AM_CONDITIONAL([ENABLE_MHTML], [test "$enable_mhtml" = "yes"])
+AM_CONDITIONAL([ENABLE_TIMELAPSE], [test "$enable_timelapse" = "yes"])
 AM_CONDITIONAL([ENABLE_VIDEO],[test "$enable_video" = "yes"])
 AM_CONDITIONAL([ENABLE_MEDIA_SOURCE],[test "$enable_media_source" = "yes"])
 AM_CONDITIONAL([ENABLE_MEDIA_STATISTICS],[test "$enable_media_statistics" = "yes"])
@@ -1531,6 +1540,7 @@ Features:
  HTML5 FileSystem API support                             : $enable_file_system
  HTML5 iframe seamless attribute support                  : $enable_iframe_seamless
  HTML5 meter element support                              : $enable_meter_tag
+ Timelapse debugging support                              : $enable_timelapse
  HTML5 microdata support                                  : $enable_microdata
  HTML5 progress element support                           : $enable_progress_tag
  HTML5 track element support                              : $enable_video_track

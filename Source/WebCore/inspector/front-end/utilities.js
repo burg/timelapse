@@ -368,6 +368,41 @@ Object.defineProperty(Array.prototype, "binaryIndexOf",
     }
 });
 
+function binarySearchNearest(key, array, comparator, distancefn)
+{
+    var first = 0;
+    var last = array.length - 1;
+    
+    while (first <= last) {
+	var mid = (first + last) >> 1;
+	var c = comparator(key, array[mid]);
+	if (c > 0)
+	    first = mid + 1;
+	else if (c < 0)
+	last = mid - 1;
+	else
+	    return mid;
+    }
+    
+    var dLeft = distancefn(key, array[first]);
+    var dRight = distancefn(key, array[last]);
+    return (dRight <= dLeft) ? last : first;
+}
+
+Object.defineProperty(Array.prototype, "nearestBinaryIndexOf",
+{
+    /**
+     * @this {Array.<*>}
+     * @param {function(*, *):number} comparator
+     * @param {function(*, *):number} distancefn
+     */
+    value: function(value, comparator, distancefn)
+    {
+        var result = binarySearchNearest(value, this, comparator, distancefn);
+        return result >= 0 ? result : -1;
+    }
+});
+
 /**
  * @param {*} anObject
  * @param {Array.<*>} aList

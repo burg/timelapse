@@ -27,6 +27,7 @@
 #include "config.h"
 #include "RenderObject.h"
 
+#include "AsyncEventProxy.h"
 #include "AXObjectCache.h"
 #include "Chrome.h"
 #include "ContentData.h"
@@ -222,7 +223,7 @@ RenderObject::RenderObject(Node* node)
 RenderObject::~RenderObject()
 {
 #ifndef NDEBUG
-    ASSERT(!m_hasAXObject);
+    //ASSERT(!m_hasAXObject);
     renderObjectCounter.decrement();
 #endif
 }
@@ -1910,7 +1911,7 @@ void RenderObject::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
 
     if (oldStyle && !areCursorsEqual(oldStyle, style())) {
         if (Frame* frame = this->frame())
-            frame->eventHandler()->dispatchFakeMouseMoveEventSoon();
+            frame->page()->asyncEventProxy()->dispatchFakeMouseMoveEventSoon(frame);
     }
 }
 

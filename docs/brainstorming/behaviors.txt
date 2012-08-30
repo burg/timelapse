@@ -1,0 +1,75 @@
+New Questions - Issues
+======================
+- Did we looked at any traces to create a statistical output about the usage of the below mentioned properties? (I didn't, Kivanc)
+- Are we still going to do this (to show that they are properties used frequently and that is why developers might care).
+    . I am aware that some of the properties are so general that they will be on almost every page, just trying to follow up our initial conversation with James and our initial thoughts.
+
+Below is a brainstorming list of behaviors that Timelapse might want to support eventually, as well
+as comments.  This version is a digested version of an email conversation from early January 2011.
+
+TODO: Still need to pull in comments on each others' ideas from the email thread.
+
+- Filter on updates ( / accesses) to a particular object
+    Kivanc: Seems a good one but maybe too low level (I might be wrong, I have little knowledge about web debugging) for the class project?
+- Filter on updates to a particular DOM node
+    Kivanc: I think this might be a very frequent searched feature and good for our class project.
+- Filter on implicit eval to field name? That weird quirk JS papers are fond of pointing out, where x.f actually evaluates to x[f.toString()] or some such.
+    Kivanc: Maybe too detailed at this level? How frequent does this create a problem? 
+- Filter by field accesses being punted up the prototype chain (possibly filter by number of prototype punts)
+    Brian: It would be nice to have a general-purpose visualization for looking at object prototype
+    hierarchies.  Similarly, you could tint variables by their scope (local, captured, global, etc).
+    Kivanc: I do agree that visualization of the object prototype hierarchies would be extremely cool. Though I am not sure how much implementation (and time) it would require. Can we provide this as design sketch (i.e., there is something but does not actually coded) for the project just to get feedback about the idea? 
+- Filter by other JS semantics oddities; I'm not aware of any, but it seems like the sort of thing you'd want in your back pocket, though not necessarily a go-to debugging tool.
+- Filter by style changes
+    Brian: This is equivalent to filtering by specific DOM API calls + filtering by specific DOM
+    node, I think.. That said it would be nice to package up these API calls into more
+    understandable/intuitive names.
+    Kivanc: Might be interesting for the class project.
+- Filter by creation of new DOM node
+    Kivanc: Is this something that happens frequent (after the page loads for the first time)? Is this related to memory?
+- Filter by XMLHttpRequest()
+- Filter by timer fire
+    Kivanc: Might be interesting for debugging in animated content. 
+- Filter by write to prototype object's field - i.e., if some object is used as a prototype for another object and is subsequently modified, that modification passes this filter.
+    Kivanc: Might be too complex (or low level) for the class project?
+- As a sort of multipass filter, applying some filter to events that occur as the result of an eval, so it's possible to narrow focus into state changes from an eval
+    Brian: This is tricky, unless we transitively follow what event listeners the eval'd code added,
+    functions created, etc.  It should be easy to scope the actual _code_ run by eval, though.
+    Kivanc: I think 'eval' would only get things tricky (more than needed). There is also the other perspective that most of the web debuggers might be really interested in debugging eval. I don't know how frequent it is used, or how frequent it is used by good developers?
+- Filter by getElementByName() or whatever (can you tell I haven't written JS in a long time?)
+- Filter causal chains of events: a timer fires as a result of a set timer call in an earlier event that occurred as the result of a mouseover event, the hook for which was set up by .... you get the idea.  Intervening events (such as unrelated timers, mouseovers on other elements, etc.) would be omitted.
+    Colin: This was the sort of thing my team at MS always wished we had for debugging programs written using asynchronous promises.
+- Filter by familiarity (my code vs library code)
+    Kivanc: Tricky to specify familiar vs. unfamiliar code
+    Colin: Possible source specifications:
+            + inline HTML (origin is page domain)
+            + script tag in HTML (origin is hosting domain / file - note the discrepancy between
+              this and the same-origin-policy's treatment of this)
+            + generated and eval'ed (origin is same as parent)
+    Kivanc: Again, might be interesting and good for class project.
+- Filter DOM updates to a specific subtree of the document
+- Changes to event listeners
+- Reach some line of code (not sure we can use a data conditional though-- what if user rewrote an equals method?)
+- Changes to global object (new properties, added properties, deleted properties)
+    Kivanc: too low lever for class project?
+- Restrict to arbitrary time period (say, lifetime of object or DOM node, or user-defined)
+- Restrict to only visible DOM nodes (this would be hard, but cool :))
+    Kivanc: too complex for class project? :-) I also agree that it is cool!
+
+Kivanc: In summary, I propose the following filters for the class project:
+- Filter on updates ( / accesses) to a particular object
+- Filter by style changes
+- Filter by timer fire
+- Filter by familiarity (my code vs library code)
+and as bonus not an implementation but as a design
+- Filter by field accesses being punted up the prototype chain (possibly filter by number of prototype punts)
+    Brian: It would be nice to have a general-purpose visualization for looking at object prototype
+    hierarchies.  Similarly, you could tint variables by their scope (local, captured, global, etc).
+ 
+General implementation thoughts:
+It would be nice if these filters were literally composable filters, so filter sets could be saved,
+exported/imported, combined arbitrarily.  Things will get tricky if any of the filters don't commute
+with others; in that case we'd have to deal with ordering issues.
+    Kivanc: Is this an issue for our HCI project? (I am well aware that this is an important decision, just asking to grasp the limits of the project)
+    Brian: I'm sure there's a whole CHI paper out there for ways on annotating/collaborating with
+    traces, but that's a subsequent project. :P

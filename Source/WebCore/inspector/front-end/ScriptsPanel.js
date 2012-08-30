@@ -291,7 +291,9 @@ WebInspector.ScriptsPanel.prototype = {
 
         this._updateDebuggerButtons();
 
-        WebInspector.inspectorView.setCurrentPanel(this);
+	if (WebInspector.inspectorView.currentPanel().name != "timelapse" || !WebInspector.timelapseModel.inputLocked)
+            WebInspector.inspectorView.setCurrentPanel(this);
+
         this.sidebarPanes.callstack.update(details.callFrames);
 
         if (details.reason === WebInspector.DebuggerModel.BreakReason.DOM) {
@@ -739,7 +741,7 @@ WebInspector.ScriptsPanel.prototype = {
 
         this._clearInterface();
 
-        DebuggerAgent.stepOver();
+	WebInspector.debuggerModel.stepOver();
     },
 
     _stepIntoClicked: function()
@@ -752,7 +754,7 @@ WebInspector.ScriptsPanel.prototype = {
 
         this._clearInterface();
 
-        DebuggerAgent.stepInto();
+	WebInspector.debuggerModel.stepInto();
     },
 
     _stepOutClicked: function()
@@ -765,7 +767,7 @@ WebInspector.ScriptsPanel.prototype = {
 
         this._clearInterface();
 
-        DebuggerAgent.stepOut();
+	WebInspector.debuggerModel.stepOut();
     },
 
     _toggleBreakpointsClicked: function(event)

@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Copyright (C) 2006 Apple Computer, Inc.  All rights reserved.
+# Copyright (C) 2006, 2007, 2008, 2009 Apple Inc.  All rights reserved.
 # Copyright (C) 2006 Mark Rowe <opendarwin.org@bdash.net.nz>.  All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -12,7 +12,7 @@
 # 2.  Redistributions in binary form must reproduce the above copyright
 #     notice, this list of conditions and the following disclaimer in the
 #     documentation and/or other materials provided with the distribution. 
-# 3.  Neither the name of Apple Computer, Inc. ("Apple") nor the names of
+# 3.  Neither the name of Apple Inc. ("Apple") nor the names of
 #     its contributors may be used to endorse or promote products derived
 #     from this software without specific prior written permission. 
 #
@@ -33,11 +33,43 @@ use strict;
 
 use FindBin;
 use lib "$FindBin::Bin/../Scripts";
+use Cwd 'realpath';
+use Getopt::Long;
 use webkitdirs;
+use VCSUtils;
+
+my $branch;
+my $nosign;
+my $leopardProductDir;
+my $productDir;
+my $revision;
+my $tigerProductDir;
+my $snowLeopardProductDir;
+my $lionProductDir;
+
+GetOptions('no-sign' => \$nosign,
+           'branch=s' => \$branch,
+           'revision=i' => \$revision,
+           'build-dir=s' => \$productDir,
+           'build-dir-10-4=s' => \$tigerProductDir,
+           'build-dir-10-5=s' => \$leopardProductDir,
+           'build-dir-10-6=s', => \$snowLeopardProductDir,
+           'build-dir-10-7=s', => \$lionProductDir,
+    );
+
+$branch = currentBranch() unless defined($branch);
+$revision = currentRevision() unless defined($revision);
+$productDir = baseProductDir() unless defined($productDir);
+setBaseProductDir($productDir);
+
+my $configuration = configuration();
 
 my @xcodeBuildArguments = XcodeOptions();
+unshift @xcodeBuildArguments, "SYMROOT=$productDir";
+unshift @xcodeBuildArguments, "OBJROOT=$productDir";
+
 my $nightlyLauncherTemplatePath = "$FindBin::Bin/../WebKitLauncher";
-my $nightlyLauncherStagingPath = productDir() . "/WebKit.app";
+my $nightlyLauncherStagingPath = "$productDir/$configuration/WebKit.app";
 
 sub buildNightlyLauncher
 {
@@ -56,6 +88,9 @@ sub currentRevision
         my $gitLog = `cd $sourceDir && LC_ALL=C git log --grep='git-svn-id: ' -n 1 | grep git-svn-id:`;
         (my $revision) = ($gitLog =~ m/ +git-svn-id: .+@(\d+) /g);
         return $revision;
+    } elsif (isHgDirectory($sourceDir)) {
+	chomp (my $revision = `cd $sourceDir && hg id -i`);
+	return $revision;
     }
 }
 
@@ -63,6 +98,12 @@ sub currentBranch
 {
     my $sourceDir = sourceDir();
     my ($url, $branch);
+    
+    if (isHgDirectory($sourceDir)) {
+        chomp($branch = `cd $sourceDir && hg id -b`);
+	return $branch;
+    }
+    
     if (isSVNDirectory($sourceDir)) {
         my $svnInfo = `LC_ALL=C svn info $sourceDir | grep URL:`;
         ($url) = ($svnInfo =~ m/URL: (.+)/g);
@@ -70,22 +111,22 @@ sub currentBranch
         my $gitLog = `cd $sourceDir && LC_ALL=C git log --grep='git-svn-id: ' -n 1 | grep git-svn-id:`;
         ($url) = ($gitLog =~ m/ +git-svn-id: (.+)@\d+ /g);
     }
+
     ($branch) = ($url =~ m/\/webkit\/(trunk|branches\/[^\/]+)/);
     die "Unable to determine current SVN branch in $sourceDir" unless (defined $branch);
     $branch =~ s/^branches\///;
+
     return $branch;
 }
 
 sub copyNightlyLauncher
 {
-    my $revision = currentRevision();
-    my $branch = currentBranch();
-
     my $infoPlist = "$nightlyLauncherStagingPath/Contents/Info.plist";
     my $versionFile = "$nightlyLauncherStagingPath/Contents/Resources/VERSION";
     my $branchFile = "$nightlyLauncherStagingPath/Contents/Resources/BRANCH";
     my $data;
-    open(IN, $infoPlist) or die "Couldn't open Info.plist in built application for reading";
+
+    open(IN, $infoPlist) or die "Couldn't open Info.plist in built application for reading (at $infoPlist)";
     {
         undef $/;
         $data = <IN>;
@@ -104,17 +145,51 @@ sub copyNightlyLauncher
     print OUT "$branch\n";
     close(OUT);
 
-    my @frameworks = ("JavaScriptCore", "WebCore", "WebKit");
+    my @systemVersions;
+    push @systemVersions, "10.5" if defined $leopardProductDir;
+    push @systemVersions, "10.6" if defined $snowLeopardProductDir;
+    push @systemVersions, "10.7" if defined $lionProductDir;
+
+    for my $systemVersion (@systemVersions) {
+        my $frameworksPath = "$nightlyLauncherStagingPath/Contents/Frameworks/$systemVersion";
+        mkdir($frameworksPath);
+        symlink("../Sparkle.framework", "$frameworksPath/Sparkle.framework");
+    }
+
+    my @frameworks = ("JavaScriptCore", "WebCore", "WebKit", "WebKit2");
     for my $framework (@frameworks) {
-        system("ditto", productDir() . "/$framework.framework", "$nightlyLauncherStagingPath/Contents/Resources/$framework.framework") == 0 or die "Failed copying $framework.framework into $nightlyLauncherStagingPath";
+        for my $systemVersion (@systemVersions) { 
+            if ($systemVersion eq "10.5") {
+                next if $framework eq "WebKit2";
+
+                my $leopardFramework = "$leopardProductDir/$configuration/$framework.framework";
+                system("ditto", $leopardFramework, "$nightlyLauncherStagingPath/Contents/Frameworks/10.5/$framework.framework") == 0 or die "Failed copying $leopardFramework into $nightlyLauncherStagingPath";
+            } elsif ($systemVersion eq "10.6") {
+                my $snowLeopardFramework = "$snowLeopardProductDir/$configuration/$framework.framework";
+                system("ditto", $snowLeopardFramework, "$nightlyLauncherStagingPath/Contents/Frameworks/10.6/$framework.framework") == 0 or die "Failed copying $snowLeopardFramework into $nightlyLauncherStagingPath";
+            } elsif ($systemVersion eq "10.7") {
+                my $lionFramework = "$lionProductDir/$configuration/$framework.framework";
+                system("ditto", $lionFramework, "$nightlyLauncherStagingPath/Contents/Frameworks/10.7/$framework.framework") == 0 or die "Failed copying $lionFramework into $nightlyLauncherStagingPath";
+            }
+        }
+    }
+
+    for my $systemVersion (@systemVersions) {
+        my $infoPlistWithoutExtension = "$nightlyLauncherStagingPath/Contents/Frameworks/$systemVersion/WebKit.framework/Resources/Info";
+        system("defaults", "write", $infoPlistWithoutExtension, "CFBundleShortVersionString", "r$revision");
+        system("chmod", "go=r", "$infoPlistWithoutExtension.plist");
     }
 }
 
-my $b = currentBranch();
-my $r = currentRevision();
-print "Branch: ", $b, "\n";
-print "Revision: ", $r, "\n";
+sub signNightlyLauncher
+{
+    my @codeSigningArguments = ("codesign", "-f", "-s", "Developer ID Application: Apple Inc. - SAFARI");
+    system(@codeSigningArguments, $nightlyLauncherStagingPath) == 0 or die "Failed to sign $nightlyLauncherStagingPath";
+    system(@codeSigningArguments, "$nightlyLauncherStagingPath/Contents/Frameworks/Sparkle.framework/Resources/relaunch") == 0 or die "Failed to sign $nightlyLauncherStagingPath/Contents/Frameworks/Sparkle.framework/Resources/relaunch";
+}
 
 chdirWebKit();
 buildNightlyLauncher();
 copyNightlyLauncher();
+signNightlyLauncher() unless $nosign;
+

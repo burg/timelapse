@@ -32,7 +32,14 @@
 #include "StructureChain.h"
 #include <wtf/HashSet.h>
 #include <wtf/OwnPtr.h>
+#include <wtf/RefPtr.h>
+#include <wtf/PassRefPtr.h>
 #include <wtf/RandomNumber.h>
+
+#if ENABLE(TIMELAPSE)
+#include <wtf/timelapse/DeterminismLog.h>
+#include "RiggedWeakRandom.h"
+#endif
 
 namespace JSC {
 
@@ -141,11 +148,18 @@ namespace JSC {
         WriteBarrier<Structure> m_internalFunctionStructure;
 
         Debugger* m_debugger;
-
+#if ENABLE(TIMELAPSE)
+        RefPtr<DeterminismLog> m_determinismLog;
+#endif
+        
         OwnPtr<JSGlobalObjectRareData> m_rareData;
 
+#if ENABLE(TIMELAPSE)
+        RiggedWeakRandom m_weakRandom;
+#else
         WeakRandom m_weakRandom;
-
+#endif
+        
         SymbolTable m_symbolTable;
 
         bool m_evalEnabled;
@@ -281,6 +295,10 @@ namespace JSC {
         Debugger* debugger() const { return m_debugger; }
         void setDebugger(Debugger* debugger) { m_debugger = debugger; }
 
+#if ENABLE(TIMELAPSE)
+        PassRefPtr<DeterminismLog> determinismLog() const { return m_determinismLog; }
+        JS_EXPORT_PRIVATE void configureDeterminism(PassRefPtr<DeterminismLog>);
+#endif
         const GlobalObjectMethodTable* globalObjectMethodTable() const { return m_globalObjectMethodTable; }
 
         static bool allowsAccessFrom(const JSGlobalObject*, ExecState*) { return true; }

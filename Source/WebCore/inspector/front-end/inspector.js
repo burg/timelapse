@@ -55,6 +55,8 @@ var WebInspector = {
             this.panels.scripts = new WebInspector.ScriptsPanel();
         if (hiddenPanels.indexOf("timeline") === -1)
             this.panels.timeline = new WebInspector.TimelinePanel();
+        if (hiddenPanels.indexOf("timelapse") === -1)
+            this.panels.timelapse = new WebInspector.TimelapsePanel();
         if (hiddenPanels.indexOf("profiles") === -1)
             this.panels.profiles = new WebInspector.ProfilesPanel();
         if (hiddenPanels.indexOf("audits") === -1)
@@ -74,16 +76,23 @@ var WebInspector = {
         this._dockToggleButton.addEventListener("click", this._toggleAttach.bind(this), false);
         this._updateDockButtonState();
 
-        var anchoredStatusBar = document.getElementById("anchored-status-bar-items");
-        anchoredStatusBar.appendChild(this._dockToggleButton.element);
+        var anchoredStatusBarLeft = document.getElementById("anchored-status-bar-items-left");
+	var anchoredStatusBarRight = document.getElementById("anchored-status-bar-items-right");
+        anchoredStatusBarLeft.appendChild(this._dockToggleButton.element);
 
         this._toggleConsoleButton = new WebInspector.StatusBarButton(WebInspector.UIString("Show console."), "console-status-bar-item");
         this._toggleConsoleButton.addEventListener("click", this._toggleConsoleButtonClicked.bind(this), false);
-        anchoredStatusBar.appendChild(this._toggleConsoleButton.element);
+        anchoredStatusBarLeft.appendChild(this._toggleConsoleButton.element);
 
         if (this.panels.elements)
-            anchoredStatusBar.appendChild(this.panels.elements.nodeSearchButton.element);
-        anchoredStatusBar.appendChild(this.settingsController.statusBarItem);
+            anchoredStatusBarLeft.appendChild(this.panels.elements.nodeSearchButton.element);
+
+	if (this.panels.timelapse) {
+	    anchoredStatusBarRight.appendChild(this.panels.timelapse.statusMessage);
+	    anchoredStatusBarRight.appendChild(this.panels.timelapse.globalLockButton.element);
+	}
+
+        anchoredStatusBarRight.appendChild(this.settingsController.statusBarItem)
     },
 
     _updateDockButtonState: function()
@@ -437,6 +446,9 @@ WebInspector._doLoadedDoneWithCapabilities = function()
 
     this.cssModel = new WebInspector.CSSStyleModel();
     this.timelineManager = new WebInspector.TimelineManager();
+    this.timelapseModel = new WebInspector.TimelapseModel();
+    this.timelapseBreakpointTracker = new WebInspector.TimelapseBreakpointTracker();
+    this.timelapsePresentationModel = new WebInspector.TimelapsePresentationModel();
     this.userAgentSupport = new WebInspector.UserAgentSupport();
     InspectorBackend.registerDatabaseDispatcher(new WebInspector.DatabaseDispatcher());
     InspectorBackend.registerDOMStorageDispatcher(new WebInspector.DOMStorageDispatcher());

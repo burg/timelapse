@@ -276,7 +276,7 @@ static inline bool readBooleanPreference(CFStringRef key)
 
 unsigned initializeMaximumHTTPConnectionCountPerHost()
 {
-    static const unsigned preferredConnectionCount = 6;
+    static const unsigned preferredConnectionCount = 20;
 
     // Always set the connection count per host, even when pipelining.
     unsigned maximumHTTPConnectionCountPerHost = wkInitializeMaximumHTTPConnectionCountPerHost(preferredConnectionCount);

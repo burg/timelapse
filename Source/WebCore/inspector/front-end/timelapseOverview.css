@@ -1,0 +1,262 @@
+.timelapse-overview {
+    position: absolute;
+    height: 170px;
+    left: 105px;
+    right: 14px;
+    top: 5px;
+}
+
+.timelapse-overview-message {
+    position: absolute;
+    top: 21px;
+    bottom: 10px;
+    left: -8px;
+    right: -8px;
+    z-index: 1000;
+    font-weight: bold;
+    font-size: 18pt;
+    color: #666;
+    background-color: rgba(255, 255, 255, 0.7);
+    line-height: 120px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.timelapse-overview-message:not(.hidden) {
+    -webkit-animation-name: message-fade-in;
+    -webkit-animation-duration: 0.2s;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-fill-mode: forwards;
+    -webkit-timing-function: ease-out;
+}
+
+.timelapse-overview-message.hidden {
+    display: block !important;
+    -webkit-animation-name: message-fade-out;
+    -webkit-animation-duration: 0.2s;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-fill-mode: forwards;
+    -webkit-timing-function: ease-out;
+}
+
+@-webkit-keyframes message-fade-in {
+    0% { opacity: 0; z-index: 0; display: none; }
+    10% { opacity: 0.1; z-index: 1000; display: block; }
+    100% { opacity: 1; }
+}
+
+@-webkit-keyframes message-fade-out {
+    0% { opacity: 1.0; z-index: 1000; }
+    90% { opacity: 0.1; }
+    100% { opacity: 0; z-index: 0; display: none; }
+}
+
+.timelapse-overview-message:not(.hidden):hover {
+    text-decoration: underline;
+    color: #a04010;
+}
+
+.timelapse-overview .resources-dividers-label-bar {
+    position: absolute;
+    top: -20px;
+    height: 20px;
+    left: 0;
+    right: 0;
+
+    box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.2);
+    background: -webkit-gradient(linear, left top, left bottom, from(#f5f5f5), to(#e0e0e0));
+    margin-left: -1px;
+    margin-right: -1px;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+}
+
+div.timelapse-overview-timelines {
+    position: absolute;
+    top: 20px;
+    height: 122px;
+    left: 0;
+    right: 0;
+    border: 1px solid #bbb;
+    border-radius: 2px;
+    cursor: -webkit-grab;
+}
+
+div.timelapse-overview-timeline.disabled {
+    background-color: #e5e5e5;
+    background-image: -webkit-repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(255, 255, 255, .5) 10px, rgba(255, 255, 255, .5) 20px);
+}
+
+/* Next two rules are an  ugly hack to emulate :first-of-class. See 
+ * http://stackoverflow.com/questions/2717480/css-selector-for-first-element-with-class/ */
+.timelapse-overview-timelines > .timelapse-overview-timeline {
+    border-top: none;
+}
+
+.timelapse-overview-timelines > .timelapse-overview-timeline ~ .timelapse-overview-timeline {
+    border-top: 1px dotted #ddd;
+}
+
+div.timelapse-overview-timeline {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    height: 30px; /* should match the above */
+    -webkit-transition: all .3s ease-in;
+}
+
+.timelapse-category-userinput .timelapse-column-category {
+    background-color: rgb(20, 170, 70);
+}
+
+.timelapse-category-network .timelapse-column-category {
+    background-color: rgb(200, 150, 0);
+}
+
+.timelapse-category-timer .timelapse-column-category {
+    background-color: rgb(200, 30, 30);
+}
+
+.timelapse-category-system .timelapse-column-category {
+    background-color: rgb(10, 55, 230);
+}
+
+.timelapse-overview-slider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    opacity: 0.8;
+    z-index: 750;
+}
+
+/* the keyframes are defined in timelapsePanel.css */
+.timelapse-overview-slider.playback-pulse div {
+    -webkit-animation: playback-pulse 1s infinite;
+}
+
+.timelapse-overview-slider .timelapse-slider-band {
+    top: 0;
+    bottom: 0;
+    position: absolute;
+    margin-left: -1px;
+    border-left: 1px solid rgba(0,0,0,0.8);
+    border-right: 1px solid rgba(0,0,0,0.8);
+    width: 4px;
+    z-index: 801;
+    pointer-events: none;
+}
+
+.timelapse-overview-slider .timelapse-slider-wedge-wrapper {
+    display: none; /* by default; adjustable per class */
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    overflow: hidden;
+    bottom: -9px;
+    left: -9px;
+    -webkit-transform: rotate(-90deg);
+    border-left: 1px solid #333;
+}
+
+.timelapse-overview-slider .timelapse-slider-wedge-border {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    bottom: 0px;
+    width: 10px;
+    z-index: 201;
+}
+
+.timelapse-overview-slider.adjustable .timelapse-slider-wedge-wrapper {
+    cursor: n-resize;
+    display: block;
+    z-index: 800;
+}
+
+.timelapse-overview-slider.adjustable .timelapse-slider-band {
+    cursor: col-resize;
+    bottom: -1px;
+    border-bottom: 1px solid transparent;
+}
+
+.timelapse-overview-slider .timelapse-slider-wedge {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    -webkit-transform: rotate(45deg);
+    border: 1px solid #000;
+    left: -14px;
+    z-index: 200;
+}
+
+.timelapse-overview-slider.disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+
+.playback-slider .timelapse-slider-band,
+.playback-slider .timelapse-slider-wedge {
+    background-color: rgba(255, 0, 0, 1);
+}
+
+/* this matches the color defined in timelapsePanel.css */
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-band,
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge {
+    -webkit-animation-name: breakpoint-blink;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+    -webkit-animation-timing-function: cubic-bezier(1.0,0.0,0.0,1.0);
+    background-color: rgba(10, 55, 230, 1);
+}
+
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge-wrapper {
+    display: block;
+   -webkit-transform-origin: 100% 100%;
+    height: 12px;
+    width: 15px;
+    bottom: 0;
+    left: -8px;
+    border-left: none;
+}
+
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge {
+    left: -7px;
+    top: -4px;
+}
+
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge-border {
+    display: block;
+    border: 1px solid rgba(0, 0, 0, 0.9);
+    border-right: none;
+}
+
+.previous-slider .timelapse-slider-band {
+    background-color: rgba(150, 0, 0, 0.3);
+    border: 0;
+}
+
+.tentative-slider .timelapse-slider-band {
+    border-left: 1px dashed #f00;
+    border-right: 1px dashed #f00;
+    background-color: rgba(255,0,0,0.1);
+}
+
+.anchor-slider .timelapse-slider-band {
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 0;
+}
+
+.anchor-slider .timelapse-slider-icon {
+    position: absolute;
+    bottom: -20px;
+    left: -7px;
+    width: 16px;
+    height: 16px;
+    background-color: rgba(0, 0, 0, 0.5);
+    -webkit-mask-image: url(Images/timelapseAnchor.png);
+}
+
+.timelapse-overview-slider.slider-dragging {
+    opacity: 0.6;
+    -webkit-transition: none;
+}

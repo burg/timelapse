@@ -61,6 +61,7 @@
 #include "InspectorResourceAgent.h"
 #include "InspectorState.h"
 #include "InspectorTimelineAgent.h"
+#include "InspectorTimelapseAgent.h"
 #include "InspectorWebGLAgent.h"
 #include "InspectorWorkerAgent.h"
 #include "InstrumentingAgents.h"
@@ -112,6 +113,11 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     OwnPtr<InspectorDOMStorageAgent> domStorageAgentPtr(InspectorDOMStorageAgent::create(m_instrumentingAgents.get(), m_state.get()));
     InspectorDOMStorageAgent* domStorageAgent = domStorageAgentPtr.get();
     m_agents.append(domStorageAgentPtr.release());
+
+#if ENABLE(TIMELAPSE)
+    m_agents.append(InspectorTimelapseAgent::create(m_instrumentingAgents.get(), m_state.get(), page));
+#endif    
+
     m_agents.append(InspectorMemoryAgent::create(m_instrumentingAgents.get(), m_state.get(), m_page, m_domAgent));
     m_agents.append(InspectorTimelineAgent::create(m_instrumentingAgents.get(), pageAgent, m_state.get(), InspectorTimelineAgent::PageInspector,
        inspectorClient));

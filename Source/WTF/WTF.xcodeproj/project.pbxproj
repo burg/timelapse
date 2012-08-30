@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0FD81AC5154FB22E00983E72 /* FastBitVector.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FD81AC4154FB22E00983E72 /* FastBitVector.h */; settings = {ATTRIBUTES = (); }; };
 		143F611F1565F0F900DB514A /* RAMSize.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 143F611D1565F0F900DB514A /* RAMSize.cpp */; };
 		143F61201565F0F900DB514A /* RAMSize.h in Headers */ = {isa = PBXBuildFile; fileRef = 143F611E1565F0F900DB514A /* RAMSize.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		0FD81AC5154FB22E00983E72 /* FastBitVector.h in Headers */ = {isa = PBXBuildFile; fileRef = 0FD81AC4154FB22E00983E72 /* FastBitVector.h */; settings = {ATTRIBUTES = (); }; };
 		4330F38F15745B0500AAFA8F /* URLString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4330F38E15745B0500AAFA8F /* URLString.cpp */; };
 		4F0321BC156AA8D1006EBAF6 /* BitArray.h in Headers */ = {isa = PBXBuildFile; fileRef = 4F0321BB156AA8D1006EBAF6 /* BitArray.h */; };
 		A876DBD8151816E500DADB95 /* Platform.h in Headers */ = {isa = PBXBuildFile; fileRef = A876DBD7151816E500DADB95 /* Platform.h */; };
@@ -242,12 +242,16 @@
 		A8A47486151A825B004123FF /* WTFThreadData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A8A4737A151A825B004123FF /* WTFThreadData.cpp */; };
 		A8A47487151A825B004123FF /* WTFThreadData.h in Headers */ = {isa = PBXBuildFile; fileRef = A8A4737B151A825B004123FF /* WTFThreadData.h */; };
 		A8A4748C151A8264004123FF /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = A8A4748B151A8264004123FF /* config.h */; };
+		C4BF297E15D0376000A31893 /* ActionSerializer.h in Headers */ = {isa = PBXBuildFile; fileRef = C4BF297D15D0376000A31893 /* ActionSerializer.h */; };
+		C4CE976115CEFC4A009C5D85 /* DeterminismLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4CE975C15CEFC4A009C5D85 /* DeterminismLog.cpp */; };
+		C4CE976215CEFC4A009C5D85 /* DeterminismLog.h in Headers */ = {isa = PBXBuildFile; fileRef = C4CE975D15CEFC4A009C5D85 /* DeterminismLog.h */; };
+		C4CE976515CEFC4A009C5D85 /* ReplayableAction.h in Headers */ = {isa = PBXBuildFile; fileRef = C4CE976015CEFC4A009C5D85 /* ReplayableAction.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0FD81AC4154FB22E00983E72 /* FastBitVector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FastBitVector.h; sourceTree = "<group>"; };
 		143F611D1565F0F900DB514A /* RAMSize.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RAMSize.cpp; sourceTree = "<group>"; };
 		143F611E1565F0F900DB514A /* RAMSize.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RAMSize.h; sourceTree = "<group>"; };
-		0FD81AC4154FB22E00983E72 /* FastBitVector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FastBitVector.h; sourceTree = "<group>"; };
 		4330F38E15745B0500AAFA8F /* URLString.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = URLString.cpp; sourceTree = "<group>"; };
 		4F0321BB156AA8D1006EBAF6 /* BitArray.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BitArray.h; sourceTree = "<group>"; };
 		5D247B6214689B8600E78B76 /* libWTF.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libWTF.a; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -490,6 +494,10 @@
 		A8A4737A151A825B004123FF /* WTFThreadData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WTFThreadData.cpp; sourceTree = "<group>"; };
 		A8A4737B151A825B004123FF /* WTFThreadData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WTFThreadData.h; sourceTree = "<group>"; };
 		A8A4748B151A8264004123FF /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		C4BF297D15D0376000A31893 /* ActionSerializer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ActionSerializer.h; path = timelapse/ActionSerializer.h; sourceTree = "<group>"; };
+		C4CE975C15CEFC4A009C5D85 /* DeterminismLog.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DeterminismLog.cpp; path = timelapse/DeterminismLog.cpp; sourceTree = "<group>"; };
+		C4CE975D15CEFC4A009C5D85 /* DeterminismLog.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DeterminismLog.h; path = timelapse/DeterminismLog.h; sourceTree = "<group>"; };
+		C4CE976015CEFC4A009C5D85 /* ReplayableAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayableAction.h; path = timelapse/ReplayableAction.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -702,6 +710,7 @@
 				A8A47339151A825B004123FF /* threads */,
 				A8A4733E151A825B004123FF /* ThreadSafeRefCounted.h */,
 				A8A4733F151A825B004123FF /* ThreadSpecific.h */,
+				C4CE974C15CEFA42009C5D85 /* timelapse */,
 				A8A47341151A825B004123FF /* TypedArrayBase.h */,
 				A8A47342151A825B004123FF /* TypeTraits.cpp */,
 				A8A47343151A825B004123FF /* TypeTraits.h */,
@@ -856,6 +865,17 @@
 				A8A4736E151A825B004123FF /* URLSegments.h */,
 			);
 			path = src;
+			sourceTree = "<group>";
+		};
+		C4CE974C15CEFA42009C5D85 /* timelapse */ = {
+			isa = PBXGroup;
+			children = (
+				C4BF297D15D0376000A31893 /* ActionSerializer.h */,
+				C4CE975C15CEFC4A009C5D85 /* DeterminismLog.cpp */,
+				C4CE975D15CEFC4A009C5D85 /* DeterminismLog.h */,
+				C4CE976015CEFC4A009C5D85 /* ReplayableAction.h */,
+			);
+			name = timelapse;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1041,6 +1061,9 @@
 				A8A4748C151A8264004123FF /* config.h in Headers */,
 				143F61201565F0F900DB514A /* RAMSize.h in Headers */,
 				0FD81AC5154FB22E00983E72 /* FastBitVector.h in Headers */,
+				C4CE976215CEFC4A009C5D85 /* DeterminismLog.h in Headers */,
+				C4CE976515CEFC4A009C5D85 /* ReplayableAction.h in Headers */,
+				C4BF297E15D0376000A31893 /* ActionSerializer.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1188,6 +1211,7 @@
 				A8A4747B151A825B004123FF /* URLSegments.cpp in Sources */,
 				A8A47486151A825B004123FF /* WTFThreadData.cpp in Sources */,
 				143F611F1565F0F900DB514A /* RAMSize.cpp in Sources */,
+				C4CE976115CEFC4A009C5D85 /* DeterminismLog.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

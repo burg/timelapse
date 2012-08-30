@@ -34,6 +34,14 @@
 #include <wtf/HashSet.h>
 #include <wtf/StdLibExtras.h>
 
+#if ENABLE(TIMELAPSE)
+#include "DeterminismController.h"
+#include "ReplayableTypes.h"
+#include "TimerCreated.h"
+#include <wtf/timelapse/DeterminismLog.h>
+#include <wtf/timelapse/ReplayableAction.h>
+#endif
+
 using namespace std;
 
 namespace WebCore {
@@ -70,9 +78,35 @@ DOMTimer::DOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> 
     , m_originalInterval(interval)
     , m_shouldForwardUserGesture(shouldForwardUserGesture(interval, m_nestingLevel))
 {
+#if ENABLE(TIMELAPSE)
+    m_shouldScheduleNormally = true;
+    if (scriptExecutionContext()->isDocument()) {
+        Document* document = static_cast<Document*>(scriptExecutionContext());
+        if (document->page() && document->page()->determinismController()) {
+            DeterminismController* controller = document->page()->determinismController();
+            if (controller->capturing(document)) {
+                controller->determinismLog()->append(new TimerCreated(m_timeoutId, document));
+            } else if (controller->replaying(document)) {
+                ReplayableAction* loggedAction = controller->determinismLog()->currentAction(ReplayableTypes::TimerCreated);
+                TimerCreated* action = static_cast<TimerCreated*>(loggedAction);
+                m_timeoutId = action->timerId();
+                m_shouldScheduleNormally = false;
+
+                // check that this timer was created in the same Document as originally observed.
+                ASSERT(action->document(document->page()) == document);
+            }
+        }
+    }
+#endif
+    
     scriptExecutionContext()->addTimeout(m_timeoutId, this);
 
     double intervalMilliseconds = intervalClampedToMinimum(interval, context->minimumTimerInterval());
+
+#if ENABLE(TIMELAPSE)
+    if (!m_shouldScheduleNormally)
+        return;
+#endif
     if (singleShot)
         startOneShot(intervalMilliseconds);
     else
@@ -129,6 +163,9 @@ void DOMTimer::fired()
         if (repeatInterval() && repeatInterval() < minimumInterval) {
             m_nestingLevel++;
             if (m_nestingLevel >= maxTimerNestingLevel)
+#if ENABLE(TIMELAPSE)
+                if (m_shouldScheduleNormally)
+#endif
                 augmentRepeatInterval(minimumInterval - repeatInterval());
         }
 
@@ -140,13 +177,23 @@ void DOMTimer::fired()
         return;
     }
 
+#if ENABLE(TIMELAPSE)
+    //prevent deletion if in replay mode, since the isActive() will never be true.
+    //it will (hopefully) get cleaned by destroyContext()
+    //TODO: another option is to explicitly log timer deletion, if too many are retained.
+    if (m_shouldScheduleNormally) {
+#endif
     // Delete timer before executing the action for one-shot timers.
     OwnPtr<ScheduledAction> action = m_action.release();
 
     // No access to member variables after this point.
     delete this;
-
     action->execute(context);
+#if ENABLE(TIMELAPSE)
+    } else {
+        m_action->execute(context);
+    }
+#endif
 
     InspectorInstrumentation::didFireTimer(cookie);
 
@@ -170,6 +217,10 @@ void DOMTimer::stop()
 
 void DOMTimer::adjustMinimumTimerInterval(double oldMinimumTimerInterval)
 {
+#if ENABLE(TIMELAPSE)
+    if (!m_shouldScheduleNormally)
+        return;
+#endif
     if (m_nestingLevel < maxTimerNestingLevel)
         return;
 

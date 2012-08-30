@@ -113,6 +113,7 @@
 #include <WebCore/SharedBuffer.h>
 #include <WebCore/SubstituteData.h>
 #include <WebCore/TextIterator.h>
+#include <WebCore/UserInputProxy.h>
 #include <WebCore/markup.h>
 #include <runtime/JSLock.h>
 #include <runtime/JSValue.h>
@@ -1325,8 +1326,7 @@ static bool handleMouseEvent(const WebMouseEvent& mouseEvent, WebPage* page, boo
             if (isContextClick(platformMouseEvent))
                 page->corePage()->contextMenuController()->clearContextMenu();
 #endif
-
-            bool handled = frame->eventHandler()->handleMousePressEvent(platformMouseEvent);
+            bool handled = page->corePage()->userInputProxy()->handleMousePressEvent(platformMouseEvent);
 #if ENABLE(CONTEXT_MENUS)
             if (isContextClick(platformMouseEvent))
                 handled = handleContextMenuEvent(platformMouseEvent, page);
@@ -1335,11 +1335,11 @@ static bool handleMouseEvent(const WebMouseEvent& mouseEvent, WebPage* page, boo
             return handled;
         }
         case PlatformEvent::MouseReleased:
-            return frame->eventHandler()->handleMouseReleaseEvent(platformMouseEvent);
+            return page->corePage()->userInputProxy()->handleMouseReleaseEvent(platformMouseEvent);
         case PlatformEvent::MouseMoved:
             if (onlyUpdateScrollbars)
-                return frame->eventHandler()->passMouseMovedEventToScrollbars(platformMouseEvent);
-            return frame->eventHandler()->mouseMoved(platformMouseEvent);
+                return page->corePage()->userInputProxy()->handleMouseMoveOnScrollbarEvent(platformMouseEvent);
+            return page->corePage()->userInputProxy()->handleMouseMoveEvent(platformMouseEvent);
         default:
             ASSERT_NOT_REACHED();
             return false;
@@ -1402,7 +1402,7 @@ static bool handleWheelEvent(const WebWheelEvent& wheelEvent, Page* page)
         return false;
 
     PlatformWheelEvent platformWheelEvent = platform(wheelEvent);
-    return frame->eventHandler()->handleWheelEvent(platformWheelEvent);
+    return page->userInputProxy()->handleWheelEvent(platformWheelEvent);
 }
 
 void WebPage::wheelEvent(const WebWheelEvent& wheelEvent)
@@ -1427,7 +1427,7 @@ static bool handleKeyEvent(const WebKeyboardEvent& keyboardEvent, Page* page)
 
     if (keyboardEvent.type() == WebEvent::Char && keyboardEvent.isSystemKey())
         return page->focusController()->focusedOrMainFrame()->eventHandler()->handleAccessKey(platform(keyboardEvent));
-    return page->focusController()->focusedOrMainFrame()->eventHandler()->keyEvent(platform(keyboardEvent));
+    return page->userInputProxy()->handleKeyPressEvent(platform(keyboardEvent));
 }
 
 void WebPage::keyEvent(const WebKeyboardEvent& keyboardEvent)
@@ -1588,12 +1588,12 @@ void WebPage::touchEventSyncForTesting(const WebTouchEvent& touchEvent, bool& ha
 
 void WebPage::scroll(Page* page, ScrollDirection direction, ScrollGranularity granularity)
 {
-    page->focusController()->focusedOrMainFrame()->eventHandler()->scrollRecursively(direction, granularity);
+    page->userInputProxy()->scrollRecursively(direction, granularity);
 }
 
 void WebPage::logicalScroll(Page* page, ScrollLogicalDirection direction, ScrollGranularity granularity)
 {
-    page->focusController()->focusedOrMainFrame()->eventHandler()->logicalScrollRecursively(direction, granularity);
+    page->userInputProxy()->scrollRecursivelyLogical(direction, granularity);
 }
 
 void WebPage::scrollBy(uint32_t scrollDirection, uint32_t scrollGranularity)
@@ -1613,7 +1613,7 @@ void WebPage::centerSelectionInVisibleArea()
 
 void WebPage::setActive(bool isActive)
 {
-    m_page->focusController()->setActive(isActive);
+    m_page->userInputProxy()->focusSetActive(isActive);
 
 #if PLATFORM(MAC)    
     // Tell all our plug-in views that the window focus changed.
@@ -1681,7 +1681,7 @@ void WebPage::viewWillEndLiveResize()
 
 void WebPage::setFocused(bool isFocused)
 {
-    m_page->focusController()->setFocused(isFocused);
+    m_page->userInputProxy()->focusSetFocused(isFocused);
 }
 
 void WebPage::setInitialFocus(bool forward, bool isKeyboardEventValid, const WebKeyboardEvent& event)

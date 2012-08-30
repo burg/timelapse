@@ -1,0 +1,143 @@
+div.timelapse-miniview {
+    position: absolute;
+    height: 30px;
+    left: 105px;
+    right: 15px;
+    top: 170px;
+}
+
+.timelapse-miniview-glasspane {
+    background-color: rgba(0,0,0,0.2);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: auto;
+    right: 100%;
+    bottom: 0;
+}
+
+.timelapse-miniview-slider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    opacity: 0.8;
+    z-index: 750;
+}
+
+.timelapse-miniview-slider.adjustable {
+}
+
+/* the keyframes are defined in timelapsePanel.css */
+.timelapse-miniview-slider.playback-pulse div {
+    -webkit-animation: playback-pulse 1s infinite;
+}
+
+/* this definition matches the one in timelapsePanel.css */
+.timelapse-miniview-slider.breakpoint-blink div {
+    -webkit-animation-name: breakpoint-blink;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+    -webkit-animation-timing-function: cubic-bezier(1.0,0.0,0.0,1.0);
+}
+
+.timelapse-miniview-slider .timelapse-slider-band {
+    position: absolute;
+    border-left: 1px solid rgba(0,0,0,0.8);
+    border-right: 1px solid rgba(0,0,0,0.8);
+    z-index: 801;
+    top: -1px;
+    bottom: -1px;
+    width: 5px;
+    border-radius: 3px;
+}
+
+.timelapse-miniview-slider.adjustable .timelapse-slider-band {
+    box-shadow: 0px 0px 2px rgba(255, 255, 255, 0.5);
+    cursor: col-resize;
+}
+
+.slider-dragging {
+    -webkit-transition: none;
+}
+
+.timelapse-miniview-slider.disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+
+.timelapse-miniview-slider.tentative-slider .timelapse-slider-band {
+    border: 1px dashed #f00;
+    background-color: rgba(255,0,0,0.1);
+}
+
+.timelapse-miniview-slider.anchor-slider .timelapse-slider-band {
+    background-color: rgba(0,0,0,0,3);
+}
+
+/* this matches the color defined in timelapsePanel.css */
+.timelapse-miniview-slider.breakpoint-slider .timelapse-slider-band {
+    background-color: rgba(10, 55, 230, 1);
+}
+
+.timelapse-miniview-slider.slider-dragging {
+    opacity: 0.6;
+}
+
+.timelapse-miniview-slider.zoom-slider.left {
+    margin-left: -5px;
+}
+
+.timelapse-miniview-slider.zoom-slider.right {
+    margin-left: -3px;
+}
+
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-band {
+    background-color: rgba(0, 0, 0, 0.7);
+    box-shadow: none;
+    border: none !important;
+    width: 1px;
+    top: 0px;
+    bottom: 0px;
+    border-radius: 0;
+    left: 4px;
+}
+
+.timelapse-miniview-slider.zoom-slider.slider-dragging {
+    opacity: 0.9;
+}
+
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-handlebar-bottom,
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-handlebar-top {
+    width: 5px;
+    height: 9px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid #333;
+    position: absolute;
+    left: 2px;
+}
+
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-handlebar-top {
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    top: -9px;
+    cursor: s-resize;
+}
+
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-handlebar-bottom {
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 2px;
+    border-bottom-right-radius: 2px;
+    bottom: -9px;
+    cursor: n-resize;
+}
+
+.timelapse-zoom-selector {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(125, 173, 217, 0.5);
+    z-index: 250;
+}

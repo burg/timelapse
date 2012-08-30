@@ -28,7 +28,7 @@
 
 #include <WebKit2/WKBase.h>
 
-#if ENABLE(INSPECTOR)
+#if defined (ENABLE_INSPECTOR) && ENABLE_INSPECTOR 
 
 #ifndef __cplusplus
 #include <stdbool.h>

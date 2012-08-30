@@ -42,6 +42,11 @@
 #include "SVGDocument.h"
 #endif
 
+#if ENABLE(TIMELAPSE)
+#include "GetDocumentCookie.h"
+#include <wtf/timelapse/DeterminismLog.h>
+#endif
+
 #include <wtf/GetPtr.h>
 
 using namespace JSC;
@@ -108,6 +113,34 @@ JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Document* documen
     return wrapper;
 }
 
+#if ENABLE(TIMELAPSE)
+// A custom document.cookie binding that handles Timelapse memoization.
+JSValue JSDocument::cookie(ExecState* exec) const
+{
+    String cookie;
+    ExceptionCode ec = 0;
+    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+
+    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+        if (log->capturing()) {
+            cookie = impl()->cookie(ec);
+            log->append(new GetDocumentCookie(cookie, ec));
+        } else if (log->replaying()) {
+            GetDocumentCookie* action = static_cast<GetDocumentCookie*>(log->currentAction(ReplayableTypes::GetDocumentCookie));
+            cookie = action->cookie();
+            ec = action->exceptionCode();
+        }
+    } else {
+        //if no determinism, obtain the normal way.
+        cookie = impl()->cookie(ec);
+    }
+    //convert and send the cookie result to JS-land
+    JSC::JSValue result = jsString(exec, cookie);
+    setDOMException(exec, ec);
+    return result;
+}    
+#endif
+    
 #if ENABLE(TOUCH_EVENTS)
 JSValue JSDocument::createTouchList(ExecState* exec)
 {

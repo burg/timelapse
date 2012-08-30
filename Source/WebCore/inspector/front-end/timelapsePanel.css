@@ -1,0 +1,650 @@
+.toggle-record-status-bar-item .glyph {
+    -webkit-mask-position: -288px 0;
+}
+
+/* override .status-bar-item > .glyph rule */
+button.pause-playback-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+/* the play and pause buttons are too big in proportion to other icons. */
+/* unscaled:    -webkit-mask-position: -160px -48px; */
+    -webkit-mask-size: 288px;
+    -webkit-mask-position: -141px -41px;
+}
+
+/* override .status-bar-item > .glyph rule */
+button.play-playback-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+/* the play and pause buttons are too big in proportion to other icons. */
+/* unscaled:    -webkit-mask-position: -128px -48px; */
+    -webkit-mask-size: 288px;
+    -webkit-mask-position: -114px -41px;
+}
+
+button.replay-to-anchor-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+}
+
+button.set-anchor-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: 0 -24px;
+}
+
+.reset-playback-status-bar-item .glyph {
+    -webkit-mask-position: 0 0;
+}
+
+/* override .status-bar-item > .glyph rule */
+button.timelapse-locked-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+/* the play and pause buttons are too big in proportion to other icons. */
+/* unscaled:    -webkit-mask-position: -128px -48px; */
+    -webkit-mask-size: 288px;
+    -webkit-mask-position: -114px -41px;
+}
+
+button.breakpoint-radar-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: -32px -24px;
+}
+
+.timelapse-button-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background-color: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+}
+
+.timelapse-button-icon:hover {
+    background-color: rgba(200, 100, 0, 0.6);
+}
+
+.toggled .timelapse-button-icon,
+.toggled.timelapse-button-icon {
+    background-color: rgb(66, 129, 235) !important;
+}
+
+.timelapse-anchor-button {
+    -webkit-mask-image: url(Images/timelapseAnchor.png);    
+}
+
+.timelapse-jump-button {
+    -webkit-mask-image: url(Images/timelapseJumpButton.png);
+}
+
+.timelapse-inputs-grid .timelapse-anchor-button {
+    margin-right: 6px;
+}
+
+.timelapse-recording-message {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 20px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 12pt;
+    color: #666;
+    cursor: pointer;
+}
+
+.timelapse-recording-message:hover {
+    text-decoration: underline;
+    color: #a04010;
+}
+
+.message-pulse {
+    -webkit-animation-name: message-pulse;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+}
+
+
+#timelapse-recording-view .timelapse-scrollview {
+    position: absolute;
+    height: 30px;
+    left: 50px;
+    right: 50px;
+    top: 60px;
+}
+
+/* grid styles are nearly verbatim from networkLogView.css */
+
+#timelapse-replaying-view {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.timelapse-inputs-grid.data-grid {
+    border: none;
+    position: absolute;
+    top: 210px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    font-size: 11px;
+}
+
+#timelapse-replaying-view.compacted .timelapse-inputs-grid {
+    display: none;
+}
+
+.timelapse-inputs-grid.data-grid .data-container {
+    padding-right: 15px;
+}
+
+.timelapse-inputs-grid.data-grid table.data {
+    -webkit-background-size: 1px 52px;
+    background-image: -webkit-gradient(linear, left top, left bottom, from(rgba(0, 0, 0, 0)), color-stop(0.5, rgba(0, 0, 0, 0)), color-stop(0.5, rgba(0, 0, 0, 0.05)), to(rgba(0, 0, 0, 0.05)));
+    font-size: 11px;
+}
+
+.timelapse-inputs-grid.data-grid.small table.data {
+    -webkit-background-size: 1px 42px;
+}
+
+
+.timelapse-inputs-grid.data-grid td {
+    line-height: 20px;
+    height: 26px;
+    border-right: 1px solid rgb(210, 210, 210);
+    vertical-align: middle;
+}
+
+.timelapse-inputs-grid.data-grid.small td {
+    height: 17px;
+}
+
+.timelapse-inputs-grid.data-grid th {
+    border-top: 1px solid rgb(64%, 64%, 64%);
+    border-bottom: 1px solid rgb(64%, 64%, 64%);
+    height: 30px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.timelapse-inputs-grid.data-grid.small th {
+    height: 22px;
+}
+
+.timelapse-inputs-grid.data-grid th, .timelapse-inputs-grid.data-grid th.sort-descending, .timelapse-inputs-grid.data-grid th.sort-ascending {
+    background: -webkit-gradient(linear, left top, left bottom, from(rgb(236, 236, 236)), to(rgb(217, 217, 217)));
+}
+
+.timelapse-inputs-grid.data-grid .data-container {
+    top: 31px;
+}
+
+.timelapse-inputs-grid.data-grid.small .data-container {
+    top: 23px;
+}
+
+
+.timelapse-inputs-grid.data-grid select {
+    -webkit-appearance: none;
+    background-color: transparent;
+    border: none;
+    width: 100%;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.timelapse-inputs-grid.data-grid.small tr.offscreen {
+    height: 21px;
+}
+
+.timelapse-inputs-grid.data-grid tr.offscreen {
+    height: 26px;
+}
+
+.timelapse-inputs-grid.data-grid tr.offscreen td {
+    display: none;
+}
+
+.timelapse-inputs-grid.data-grid tr.filler {
+    background-color: white;
+}
+
+.timelapse-inputs-grid.data-grid tr:not(.filler) td.timelapse-column-type {
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.timelapse-inputs-grid.data-grid td.timelapse-column-type:hover {
+    text-decoration: underline;
+}
+
+.timelapse-inputs-grid.data-grid td.timelapse-column-gutter {
+    background-color: #fff; /* to match the panel's background color */
+    text-align: right;
+}
+
+.timelapse-inputs-grid.data-grid td.timelapse-column-category {
+    opacity: 0.5;
+}
+
+.timelapse-inputs-grid.data-grid td.timelapse-column-index,
+.timelapse-inputs-grid.data-grid td.timelapse-column-type,
+.timelapse-inputs-grid.data-grid td.timelapse-column-timestamp,
+.timelapse-inputs-grid.data-grid td.timelapse-column-preview {
+    background-color: rgba(0, 0, 0, 0.07);
+}
+
+.timelapse-inputs-grid.data-grid td.timelapse-column-timestamp {
+    text-align: right;
+}
+
+.timelapse-inputs-grid.data-grid td.timelapse-column-type,
+.timelapse-inputs-grid.data-grid td.timelapse-column-index  {
+    text-align: center;
+}
+
+.timelapse-inputs-grid.data-grid th.sortable:active {
+    background-image: none !important;
+}
+
+.timelapse-inputs-grid.data-grid .index-column,
+.timelapse-inputs-grid.data-grid .type-column,
+.timelapse-inputs-grid.data-grid .timestamp-column {
+    text-align: center;
+}
+
+.timelapse-inputs-grid.data-grid table.header .gutter-column,
+.timelapse-inputs-grid.data-grid table.header th.corner {
+    visibility: hidden;
+}
+
+.timelapse-inputs-grid.data-grid table.data tr.revealed.timelapse-table-item {
+    display: none;
+}
+
+.timelapse-inputs-grid.data-grid.filter-userinput table.data tr.revealed.timelapse-category-userinput,
+.timelapse-inputs-grid.data-grid.filter-network table.data tr.revealed.timelapse-category-network,
+.timelapse-inputs-grid.data-grid.filter-timer table.data tr.revealed.timelapse-category-timer,
+.timelapse-inputs-grid.data-grid.filter-system table.data tr.revealed.timelapse-category-system {
+    display: table-row;
+}
+
+.timelapse-inputs-grid.data-grid table.data tr {
+    border-top: 1px solid none;
+    border-bottom: 1px solid none;
+}
+
+.timelapse-inputs-grid.data-grid table.data tr.revealed.highlight-select {
+    background-color: rgba(56, 121, 217, 0.2);
+    border-top: 1px dotted rgba(56, 121, 217, 0.4);
+    border-bottom: 1px dotted rgba(56, 121, 217, 0.4);
+    height: 24px;
+}
+
+.timelapse-grid-slider {
+    position: absolute;
+    left: 0;
+    right: 0;
+    opacity: 0.8;
+    z-index: 750;
+}
+
+.timelapse-grid-slider .timelapse-slider-band {
+    right: 14px;
+    position: absolute;
+    border-top: 1px solid rgba(0,0,0,0.8);
+    border-bottom: 1px solid rgba(0,0,0,0.8);
+    margin-left: 1px;
+    height: 4px;
+}
+
+.timelapse-grid-slider .timelapse-slider-wedge-wrapper {
+    display: none;
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    overflow: hidden;
+    top: -8px;
+    border-left: 1px solid #333;
+    margin-left: 12px;
+}
+
+.timelapse-grid-slider.adjustable .timelapse-slider-wedge-wrapper {
+    display: block;
+    z-index: 800;
+    cursor: row-resize;
+}
+
+.timelapse-grid-slider.adjustable .timelapse-slider-band {
+    cursor: row-resize;
+}
+
+
+.timelapse-grid-slider.breakpoint-slider .timelapse-slider-wedge-border {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    bottom: 0px;
+    width: 20px;
+    z-index: 201;
+}
+
+.timelapse-grid-slider .timelapse-slider-wedge {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    -webkit-transform: rotate(45deg);
+    border: 1px solid #000;
+    left: -14px;
+    z-index: 200;
+}
+
+.timelapse-grid-slider.disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+
+.timelapse-grid-slider.after-node {
+    /* should be the height of a single table row */
+    margin-top: 22px;
+}
+
+.timelapse-grid-slider.playback-slider .timelapse-slider-band {
+    z-index: 801;
+}
+
+.timelapse-grid-slider.playback-slider .timelapse-slider-band, 
+.timelapse-grid-slider.playback-slider .timelapse-slider-wedge {
+    background-color: rgba(255, 0, 0, 1);
+}
+
+@-webkit-keyframes message-pulse {
+    0%   { color: #444; }
+    50%  { color: #888; }
+    100% { color: #444; }
+}
+
+@-webkit-keyframes playback-pulse {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+@-webkit-keyframes breakpoint-blink {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.8; }
+    100% { opacity: 1; }
+}
+
+.timelapse-grid-slider.playback-pulse div {
+    -webkit-animation-name: playback-pulse;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+}
+
+.timelapse-grid-slider.breakpoint-slider .timelapse-slider-band,
+.timelapse-grid-slider.breakpoint-slider .timelapse-slider-wedge {
+    background-color: rgba(10, 55, 230, 1);
+    -webkit-animation-name: breakpoint-blink;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+    -webkit-animation-timing-function: cubic-bezier(1.0,0.0,0.0,1.0);
+}
+
+.timelapse-grid-slider.breakpoint-slider .timelapse-slider-wedge-wrapper {
+    display: block;
+    height: 12px;
+    width: 36px;
+    top: -4px;
+    margin-left: 11px;
+    border-left: none;
+}
+
+.timelapse-grid-slider.breakpoint-slider .timelapse-slider-wedge {
+    left: -20px;
+    top: -14px;
+    border: 1px solid #000;
+    width: 40px;
+    height: 40px;
+}
+
+.timelapse-grid-slider.breakpoint-slider .timelapse-slider-wedge-border {
+    display: block;
+    border: 1px solid rgba(0, 0, 120, 1);
+    border-right: none;
+}
+
+.timelapse-grid-slider.tentative-slider .timelapse-slider-band,
+.timelapse-grid-slider.previous-slider .timelapse-slider-band {
+    border-left-width: 0px;
+    border-right-width: 0px;
+    height: 0px;
+}
+
+.timelapse-grid-slider.tentative-slider.before-node .timelapse-slider-band {
+    border-top: 1px solid rgba(0, 0, 0, 0.5);
+    border-bottom: 4px dashed rgba(255, 0, 0, 1);
+}
+
+.timelapse-grid-slider.tentative-slider.after-node .timelapse-slider-band {
+    border-top: 4px dashed rgba(255, 0, 0, 1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.timelapse-grid-slider.previous-slider.before-node .timelapse-slider-band {
+    border-top: 1px solid rgba(0, 0, 0, 0.5);
+    border-bottom: 4px solid rgba(255, 0, 0, 0.5);
+}
+
+.timelapse-grid-slider.previous-slider.after-node .timelapse-slider-band {
+    border-top: 4px solid rgba(255, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+div.timelapse-timeline-labels {
+    top: 25px;
+    left: 5px;
+    bottom: 0;
+    position: absolute;
+}
+
+div.timelapse-timeline-label-wrapper {
+    position: absolute;
+    left: 0;
+    width: 85px;
+    height: 24px;
+    margin: 3px 5px 2px 5px;
+    border-radius: 5px;
+    background-clip: border-box;
+    -webkit-transition: all .4s ease-in;
+}
+
+div.timelapse-timeline-label:hover {
+    opacity: 0.75;
+}
+
+div.timelapse-timeline-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    cursor: pointer;
+    border: 1px solid #555;
+    border-radius: 3px;
+    background-image: url(Images/statusbarBackground.png);
+    background-repeat: repeat-x;
+    background-position-y: -1px;
+    box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.09);
+    opacity: 0.85;
+    -webkit-transition: opacity .2s linear;
+    vertical-align: middle;
+    line-height: 20px;
+    text-align: center;
+    font-weight: bold;
+}
+
+div.timelapse-timeline-label-wrapper.disabled {
+    opacity: 1;
+    background-color: #aaa !important;
+    color: #333 !important;
+}
+
+.timelapse-popover {
+    position: absolute;
+    z-index: 1000;
+    background: #fff;
+    border: 2px solid #999;
+    pointer-events: none;
+    box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.3);
+}
+
+.timelapse-popover .content {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    pointer-events: auto;
+    overflow: auto;
+    -webkit-user-select: text;
+}
+
+.timelapse-popover .content.fixed-height {
+    overflow: hidden;
+}
+
+.timelapse-popover,
+.timelapse-overview-popover-table th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.timelapse-popover,
+.timelapse-overview-popover-table th:last-child {
+    border-top-right-radius: 12px;
+}
+
+.timelapse-popover,
+.timelapse-overview-popover-table tr:last-child td:first-child {
+    border-bottom-left-radius: 12px;
+}
+
+.timelapse-popover,
+.timelapse-overview-popover-table tr:last-child td:last-child {
+    border-bottom-right-radius: 12px;
+}
+
+.timelapse-popover .arrow {
+    position: absolute;
+    width: 19px;
+    height: 19px;
+    margin-left: -1px;
+    margin-top: 0;
+    top: -20px;
+    background-image: url(Images/timelapsePopoverArrows.png);;
+}
+
+ .timelapse-overview-popover-table {
+     border-collapse: collapse; 
+}
+
+.timelapse-overview-popover-table th,
+.timelapse-overview-popover-table td {
+    text-align: center;
+}
+
+.timelapse-overview-popover-table tr {
+    height: 29px;
+}
+
+.timelapse-overview-popover-table td {
+    padding-top: 5px;
+    padding-bottom: 3px;
+}
+
+.timelapse-overview-popover-table th:first-child,
+.timelapse-overview-popover-table td:first-child {
+    padding-left: 15px;
+    padding-right: 10px;
+}
+
+.timelapse-overview-popover-table th:last-child {
+    padding: 0 10px;
+}
+
+.timelapse-overview-popover-table td:last-child {
+    padding-right: 15px;
+}
+
+.timelapse-overview-popover-table .text-cell {
+    padding-left: 10px;
+    text-align: left;
+}
+
+.timelapse-overview-popover-table th {
+    font-size: larger;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.timelapse-overview-popover-table th:first-child {
+    border-right: 1px solid #ddd;
+}
+
+
+.timelapse-overview-popover-table .row-with-count {
+    border-top: 1px solid #ddd;
+}
+
+.timelapse-overview-popover-table .row-with-count td:first-child {
+    background-color: #f5f5f5;
+    border-right: 2px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+.timelapse-overview-popover-table td:nth-child(2) {
+    padding-left: 10px;
+}
+
+.timelapse-overview-popover-table tr.header-row {
+    background: -webkit-gradient(linear, left top, left bottom, from(#f2f2f2), to(#d9d9d9));
+    border-bottom: 1px solid #ccc;
+}
+
+.timelapse-overview-popover-table tr:last-child td:first-child {
+    border-bottom: none;
+}
+
+.timelapse-overview-popover-table tr:hover:not(.header-row) {
+    background-color: #f5f5f5;
+}
+
+.timelapse-overview-popover-table tr:hover:not(.header-row) td:first-child, 
+.timelapse-overview-popover-table tr:hover:not(.header-row) td:last-child {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.timelapse-overview-popover-table tr.row-with-count:hover:not(.header-row) td:first-child {
+    background-color: #e0e0e0;
+}
+
+.timelapse-overview-popover-table:not(.timelapse-category-breakpoint) tr.selected {
+    background: rgba(255,0,0,0.1);
+}
+
+.timelapse-overview-popover-table.timelapse-category-breakpoint tr.selected {
+    background: rgba(0,0,255,0.1);
+    font-weight: bold;
+}
+
+.timelapse-overview-popover-table .selected .timelapse-breakpoint-link {
+    font-weight: bold;
+}
+
+.timelapse-overview-popover-table .disabled .timelapse-breakpoint-link {
+    font-style: italic;
+}

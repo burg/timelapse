@@ -969,6 +969,7 @@ SET(WebCore_SOURCES
     inspector/InspectorState.cpp
     inspector/InspectorStyleSheet.cpp
     inspector/InspectorStyleTextEditor.cpp
+    inspector/InspectorTimelapseAgent.cpp
     inspector/InspectorTimelineAgent.cpp
     inspector/InspectorValues.cpp
     inspector/InspectorWebGLAgent.cpp
@@ -981,6 +982,7 @@ SET(WebCore_SOURCES
     inspector/ScriptArguments.cpp
     inspector/ScriptCallFrame.cpp
     inspector/ScriptCallStack.cpp
+    inspector/TimelapseTickFactory.cpp
     inspector/TimelineRecordFactory.cpp
     inspector/WorkerConsoleAgent.cpp
     inspector/WorkerDebuggerAgent.cpp

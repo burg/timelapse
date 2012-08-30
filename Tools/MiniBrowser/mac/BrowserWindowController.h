@@ -63,6 +63,10 @@
 
 - (IBAction)dumpSourceToConsole:(id)sender;
 
+- (IBAction)toggleInspectorMode:(id)sender;
+- (IBAction)toggleJavaScriptDebugging:(id)sender;
+- (IBAction)toggleJavaScriptProfiling:(id)sender;
+
 - (IBAction)find:(id)sender;
 
 @end

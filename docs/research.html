@@ -1,0 +1,84 @@
+---
+layout: info
+title: Timelapse&#58; Interactive Record/Replay for the Web
+---
+<h3>Background</h3>
+<p>
+Reproducing program behavior can be thought of as two phases:
+behavior <em>demonstration</em> (interacting with a program), and
+behavior <em>investigation</em> (using debugging tools). In most
+development environments, these two activities are tightly
+coupled. During debugging, the same behavior must be re-demonstrated
+throughout investigation as the means of investigation (breakpoints,
+print statements, etc) changes. Re-demonstration is often
+time-consuming, boring, and error-prone. Lastly, coupling forces
+demonstration and investigation to be done at the same time by the
+same person.
+</p><p>
+One approach to decoupling is generally referred to as program
+record-replay: a demonstration can be recorded once, and replayed many
+times as needed during investigation. However, existing tools for
+record/replay can't be integrated with other developer tools, or
+record and replay the behavior of the <em>entire browser</em> instead
+of just the web application it executes.
+</p>
+<h3>Timelapse</h3>
+<p>
+Timelapse is an infrastructure and developer tool that implements
+record/replay for the web. It can record and replay at the level of
+individual web applications/pages. It adapts implementation techniques
+from the virtual machine literature. Timelapse tightly integrates
+deterministic record/replay technology into the browser. It also
+includes a new developer tool to visualize the recording and control
+its playback.
+</p><p>
+Timelapse's design goals are as follows:
+
+<h4>Exact deterministic record/replay</h4>  Timelapse can
+record and replay program executions exactly, meaning that for each
+execution, the order and contents of program inputs are exactly the
+same. This ensures that the program will execute deterministically,
+reproducing the exact same DOM and JavaScript behavior every time.
+
+<h4>Low performance impacts</h4>  Timelapse can record and
+replay executions without perturbing the performance characteristics
+of the original program. This is important, because developers will
+not use tools that excessively slow down their workflow. It also
+means that Timelapse recordings can be used for performance debugging.
+
+<h4>Self-contained recordings</h4>  The recordings that
+Timelapse records are self-contained, and can be saved to disk or
+transmitted to other computers for later replay. No matter who plays
+the recording, the exact same recorded behavior will be
+replicated. Replaying does not have any external effects; network
+traffic is not sent to 3rd parties on replay.
+
+<h4>Integration with other tools</h4> Reproducing behavior is
+a subtask for many debugging tasks. Timelapse is integrated with other
+debugging tools so that it can accelerate existing workflows. It can
+be used in conjuction with familiar tools such as the element
+inspector, breakpoints, and the console.
+</p>
+
+<h3>Implementation</h3>
+<p>
+The Timelapse tool is implemented in the WebKit browser toolkit and
+currently runs on recent builds of Mac Safari. It integrates
+extensively with the Web Inspector debugging suite that is built into
+WebKit. More details are available from the project links above.
+</p>
+
+<h3>User Study</h3>
+<p>
+In order to discover important use cases and requirements of the
+developer tool, we performed a formative user study where professional
+developers used Timelapse in realistic debugging scenarios. Work is
+currently underway to better support the use cases that were
+identified during the study.
+</p>
+
+<h3>Results</h3>
+<p>A preliminary description of Timelapse's infrastructure, developer
+  tool, and user study have been submitted for peer review. A draft of
+  our submission is available upon request.
+</p>

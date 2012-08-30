@@ -1,0 +1,66 @@
+/* sans-serif fonts look better on screen. */
+@media screen { body { font-family: sans-serif; } }
+/* serif fonts look better on paper. */
+@media print { body { font-family: serif; } }
+
+/* for something that is a literal note, or should be noticed */
+.note, .notice {
+    background-color: #ffe;
+    border: 2px dotted brown;
+    margin: 1em 3em;
+    padding: 1em;
+}
+.note:before {
+    content: "Note: "; 
+    display: block; 
+    font-weight: bold; 
+    margin-bottom: 0.5em; 
+}
+
+/* Generates a custom label with styling identical to Note: as above */
+.notice *:first-child {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 0.5em;
+}
+
+h2 {
+    border-top: 2px solid black;
+    margin-top: 1em;
+    margin-bottom: 1em;
+    padding: 0.3em 0.5em 0.2em 1.5em; /* top, right, bottom, left */
+    text-indent: -1em;
+}
+
+#footer {
+    border-top: 2px solid black;
+    text-align: center;
+    font-size: 75%; /* relative to "containing element" */
+    margin-top: 1em;
+}
+#footer p { 
+    margin: .1em 0 0;
+}
+
+dt {
+    font-weight: 900;
+    margin-top: 0.6em;
+}
+
+ol { list-style-type: lower-alpha; }
+ol ol { list-style-type: decimal; }
+ol ol ol { list-style-type: lower-roman; }
+ol li { margin-bottom: .5em; }
+dl.commands {
+    border: 1px solid black;
+    padding: 0.3em;
+}
+
+.nobr { white-space: nowrap; }
+
+.example ul { list-style-type: none; }
+
+pre { padding: .4em; }
+pre, tt, code { font-family: monospace; }
+
+@media print { h3 { margin-left: 1em; } h2 { padding-left: 1em; } }

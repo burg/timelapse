@@ -64,7 +64,9 @@ namespace WebCore {
         int rawDeltaX() const { return m_rawDelta.x(); }
         int rawDeltaY() const { return m_rawDelta.y(); }
         Granularity granularity() const { return m_granularity; }
-
+#if ENABLE(TIMELAPSE)
+        const IntPoint& unscaledPageLocation() const { return m_unscaledPageLocation; }
+#endif
         bool webkitDirectionInvertedFromDevice() const { return m_directionInvertedFromDevice; }
         // Needed for Objective-C legacy support
         bool isHorizontal() const { return m_wheelDelta.x(); }
@@ -81,6 +83,9 @@ namespace WebCore {
 
         IntPoint m_wheelDelta;
         IntPoint m_rawDelta;
+#if ENABLE(TIMELAPSE)
+        IntPoint m_unscaledPageLocation;
+#endif
         Granularity m_granularity;
         bool m_directionInvertedFromDevice;
     };

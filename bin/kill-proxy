@@ -1,0 +1,23 @@
+#!/bin/bash
+
+PROXY_PORT=8888
+COMMAND_PORT=3400
+PORTS_TO_CHECK="$PROXY_PORT $COMMAND_PORT"
+
+for PORT in $PORTS_TO_CHECK
+do
+    lsof -i :${PORT} -a -u $USER 2>/dev/null | grep LISTEN | tail -1 | while read line
+    do
+	set $line
+	COMMAND=$1
+	PID=$2
+	LSOF_USER=$3
+	echo "Sending SIGINT to process $COMMAND($PID) to make port $PORT available."
+	kill -SIGINT $PID
+	# wait for the process to die
+	while kill -0 $PID 2>/dev/null
+	do
+	    sleep 0.1
+	done
+    done
+done

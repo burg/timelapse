@@ -1,0 +1,9 @@
+---
+layout: none
+permalink: .htaccess
+---
+ order deny,allow
+   deny from none
+   allow from all
+
+Redirect 301 /homes/burg/timelapse /homes/burg/projects/timelapse

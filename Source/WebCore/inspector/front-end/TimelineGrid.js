@@ -194,4 +194,4 @@ WebInspector.TimelineGrid.prototype = {
     {
         this._dividersElement.style.top = scrollTop + "px";
     }
-}
+};

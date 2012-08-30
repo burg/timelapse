@@ -1,0 +1,1030 @@
+/*
+ *  Copyright (C) 2012, Brian Burg.
+ *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1.  Redistributions of source code must retain the above copyright
+ *     notice, this list of conditions and the following disclaimer.
+ * 2.  Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ * 3.  Neither the name of the University of Washington nor the names of
+ *     its contributors may be used to endorse or promote products derived
+ *     from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+/**
+ * @constructor
+ * @extends {WebInspector.View}
+ */
+WebInspector.TimelapseMiniview = function()
+{
+    WebInspector.View.call(this);
+    this.registerRequiredCSS("timelapseMiniview.css");
+
+    this._model = WebInspector.timelapseModel;
+    this._presentationModel = WebInspector.timelapsePresentationModel;
+   
+    var eventNames = WebInspector.TimelapseModel.EventTypes;
+    this._model.addEventListener(eventNames.RecordingDidStart, this._onRecordingDidStart, this);
+    this._model.addEventListener(eventNames.RecordingDidStop, this._onRecordingDidStop, this);
+    this._model.addEventListener(eventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
+    this._model.addEventListener(eventNames.PlaybackStopped, this._onPlaybackStopped, this);
+    this._model.addEventListener(eventNames.InputPaused, this._onInputPaused, this);
+    this._model.addEventListener(eventNames.InputHit, this._onInputHit, this);
+    this._model.addEventListener(eventNames.BreakpointPaused, this._onBreakpointPaused, this);
+    this._model.addEventListener(eventNames.BreakpointHit, this._onBreakpointRecordsChanged, this);
+    this._model.addEventListener(eventNames.RecordAdded, this._scheduleRefresh, this);
+
+    this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.FilterChanged, this._onFilterChanged, this);
+    this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.PreviewStarted, this._onPreviewStarted, this);
+    this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.PreviewStopped, this._onPreviewStopped, this);
+    this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.PreviewChanged, this._onPreviewChanged, this);
+
+    this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
+
+    var anchor = WebInspector.timelapsePresentationModel.anchor;
+    var anchorEventNames = WebInspector.TimelapseAnchor.EventTypes;
+    anchor.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
+    anchor.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
+
+    WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._onBreakpointRecordsChanged, this);
+    WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
+    WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
+
+    this._initializeView();	
+};
+
+WebInspector.TimelapseMiniview.EdgeSnapDistance = 0.02; /* percent */
+WebInspector.TimelapseMiniview.MinSelectableSize = 0.005; /* percent */
+WebInspector.TimelapseMiniview.MinAnimationDelta = 0.5; /* seconds? */
+WebInspector.TimelapseMiniview.WindowScrollSpeedFactor = 0.001;
+WebInspector.TimelapseMiniview.WindowZoomSpeedFactor = 0.001;
+
+WebInspector.TimelapseMiniview.prototype = {
+    // Public API
+    reset: function()
+    {
+	this._updateZoomLeft();
+	this._updateZoomRight();
+	this.sliders.playback.clear();
+	this._resetTimelines();
+	this._previousMaxValue = 0;
+	this._autosizeCanvas();
+	this._clearGraph();
+    },
+
+    wasShown: function()
+    {
+	this._refreshIfNeeded();
+	this._updateZoomLeft();
+	this._updateZoomRight();
+    },
+
+    onResize: function()
+    {
+	this._updateZoomLeft();
+	this._updateZoomRight();
+	this._autosizeCanvas();
+	this._drawGraph();
+    },
+
+    get calculator()
+    {
+	return this._presentationModel.calculator;
+    },
+
+    refresh: function()
+    {
+	this._recomputeTimelines();
+	this._drawGraph();
+	this.sliders.playback.refresh();
+    },
+
+    // Private API helpers
+
+    _graphBorderWidth: 1,
+
+    _autosizeCanvas: function()
+    {
+	this._canvas.width = this.element.clientWidth;
+    	this._canvas.style.width = this.element.clientWidth + 'px';
+	this._canvas.height = this.element.clientHeight;
+	this._canvas.style.height = this.element.clientHeight + 'px';
+    },
+
+    _initializeView: function()
+    {
+	this.element.className = "timelapse-miniview";
+	this.element.tabIndex = 1;
+	this.element.addEventListener("mousedown", this._onMiniviewClicked.bind(this), false);
+	this.element.addEventListener("dblclick", this._onMiniviewDoubleClicked.bind(this), true);
+	this.element.addEventListener("mousewheel", this._onMiniviewMousewheel.bind(this), true);
+	
+	this._canvas = document.createElement("canvas");
+	this._canvas.className = "timelapse-miniview-canvas";
+	this.element.appendChild(this._canvas);
+
+	var playbackSlider = new WebInspector.TimelapseMiniviewSlider(this, "playback", true);
+	playbackSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart,
+					     this._onPlaybackSliderDragStart, this);
+	playbackSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd,
+					     this._onPlaybackSliderDragEnd, this);
+	this.element.appendChild(playbackSlider.element);
+
+	var previousSlider = new WebInspector.TimelapseMiniviewSlider(this, "previous", false);
+	this.element.appendChild(previousSlider.element);
+
+	var tentativeSlider = new WebInspector.TimelapseMiniviewSlider(this, "tentative", false);
+	this.element.appendChild(tentativeSlider.element);
+
+	var anchorSlider = new WebInspector.TimelapseMiniviewSlider(this, "anchor", false);
+	this.element.appendChild(anchorSlider.element);
+
+	var breakpointSlider = new WebInspector.TimelapseMiniviewBreakpointSlider(this);
+	this.element.appendChild(breakpointSlider.element);
+
+	this._leftZoomGlassPane = document.createElement("div");
+	this._leftZoomGlassPane.className = "timelapse-miniview-glasspane";
+	this.element.appendChild(this._leftZoomGlassPane);
+
+	this._rightZoomGlassPane = document.createElement("div");
+	this._rightZoomGlassPane.className = "timelapse-miniview-glasspane";
+	this.element.appendChild(this._rightZoomGlassPane);
+
+	var leftZoomSlider = new WebInspector.TimelapseMiniviewSlider(this, "zoom", true, true);
+	leftZoomSlider.element.classList.add("left");
+	leftZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart,
+					     this._onZoomSliderDragStart.bind(this, "leftZoom"));
+	leftZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd,
+					     this._onZoomSliderDragEnd.bind(this, "leftZoom"));
+	this.element.appendChild(leftZoomSlider.element);
+
+	var rightZoomSlider = new WebInspector.TimelapseMiniviewSlider(this, "zoom", true, true);
+	rightZoomSlider.element.classList.add("right");
+	rightZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart,
+					     this._onZoomSliderDragStart.bind(this, "rightZoom"));
+	rightZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd,
+					     this._onZoomSliderDragEnd.bind(this, "rightZoom"));
+	this.element.appendChild(rightZoomSlider.element);
+
+	this.sliders = {
+	    playback: playbackSlider,
+	    previous: previousSlider,
+	    tentative: tentativeSlider,
+	    anchor: anchorSlider,
+	    breakpoint: breakpointSlider,
+	    leftZoom: leftZoomSlider,
+	    rightZoom: rightZoomSlider
+	};
+
+	this.reset();
+    },
+
+    _binsPerTimeline: 100,
+
+    _scheduleRefresh: function()
+    {
+	window.webkitRequestAnimationFrame(this.refresh.bind(this));
+    },
+
+    _refreshIfNeeded: function()
+    {
+	this._scheduleRefresh();
+    },
+
+    _resetTimelines: function()
+    {
+	function createEmptyTimeline() {
+	    return { maxIndex: -1, data: [] };
+	}
+
+	this._timelines = {};
+	var order = this._presentationModel.categoryOrder;
+	for (var i = 0; i < order.length; i++) {
+	    var key = order[i];
+	    var category = this._presentationModel.categories[key];
+	    this._timelines[category.name] = createEmptyTimeline();
+	}
+	this._timelines["all"] = createEmptyTimeline();
+    },
+
+    _recomputeTimelines: function()
+    {
+	// Create sparse arrays with 101 cells each to fill with counts for a given category.
+	function markPercentagesForRecord(record)
+	{
+	    var category = this._presentationModel.recordStyles[record.type].category;
+	    var percent = Math.floor(100.0 * this.calculator.computeMiniviewPercentage(record.mark.timestamp));
+	    var percentile = Number.constrain(percent, 0, 99);
+
+	    if (!this._timelines[category.name].data[percentile])
+		this._timelines[category.name].data[percentile] = 1;
+	    else
+		this._timelines[category.name].data[percentile] += 1;
+
+	    if (!this._timelines.all.data[percentile])
+		this._timelines.all.data[percentile] = 1;
+	    else
+		this._timelines.all.data[percentile] += 1;
+	}
+
+	// Create sparse arrays with 101 cells each to fill with counts for a given category.
+	function markPercentagesForBreakpointRecord(record)
+	{
+	    var category = this._presentationModel.recordStyles[record.type].category;
+	    var percent = Math.floor(100.0 * this.calculator.computeMiniviewPercentage(record.mark.timestamp));
+	    var percentile = Number.constrain(percent, 0, 99);
+
+	    if (!this._timelines[category.name].data[percentile])
+		this._timelines[category.name].data[percentile] = record.hits.length;
+	    else
+		this._timelines[category.name].data[percentile] += record.hits.length;
+
+	    if (!this._timelines.all.data[percentile])
+		this._timelines.all.data[percentile] = 1;
+	    else
+		this._timelines.all.data[percentile] += 1;
+	}
+
+	this._resetTimelines();
+	this._model.allRecords.map(markPercentagesForRecord.bind(this));
+	this._presentationModel.breakpointRecords.map(markPercentagesForBreakpointRecord.bind(this));
+	
+	for (var key in this._timelines) {
+	    var timeline = this._timelines[key];
+	    var highMark = 0;
+	    for (var i = 0; i < timeline.data.length; i++) {
+		if (timeline.data[i] > highMark && i < timeline.data.length*0.9) {
+		    highMark = timeline.data[i];
+		    timeline.maxIndex = i;
+		}
+	    }
+	}
+    },
+
+    _clearGraph: function(ctx)
+    {
+	if (typeof ctx === "undefined")
+	    ctx = this._canvas.getContext("2d");
+
+	var availHeight = this._canvas.height;
+	var availWidth = this._canvas.width;
+
+	ctx.fillStyle = "#fff";
+	ctx.clearRect(0, 0, availWidth, availHeight);
+	/* draw border */
+	ctx.strokeStyle = "#666";
+	ctx.lineWidth = this._graphBorderWidth;
+	ctx.beginPath();
+	ctx.moveTo(0, 0);
+	ctx.lineTo(availWidth, 0);
+	ctx.lineTo(availWidth, availHeight);
+	ctx.lineTo(0, availHeight);
+	ctx.lineTo(0, 0);
+	ctx.stroke();
+
+	ctx.save();
+	ctx.translate(this._graphBorderWidth, this._graphBorderWidth);
+	availHeight -= this._graphBorderWidth*2;
+	availWidth -= this._graphBorderWidth*2; 
+
+	/* draw 1/3, 2/3 */
+	var shouldDrawLabels = this._timelines && this._timelines.all.data.length > 0;
+	if (shouldDrawLabels)
+	    var maxValue = this._previousMaxValue || this._timelines.all.data[this._timelines.all.maxIndex];
+
+	ctx.strokeStyle = "#e5e5e5";
+	ctx.fillStyle="#888";
+	ctx.font = "8px Lucida Console, sans-serif";
+	ctx.textAlign = "right";
+	ctx.lineWidth = 1.0;
+	var height = Math.floor(availHeight*0.33)+0.5;
+	ctx.beginPath();
+	ctx.moveTo(0, height);
+	ctx.lineTo(availWidth, height);
+ 	ctx.stroke();
+	if (shouldDrawLabels)
+	    ctx.fillText(Math.ceil(maxValue*0.66), availWidth-5, height+2, 15);
+	height = Math.floor(availHeight*0.66)+0.5;
+	ctx.beginPath();
+	ctx.moveTo(0, height);
+	ctx.lineTo(availWidth, height);
+	ctx.stroke();
+	if (shouldDrawLabels)
+	    ctx.fillText(Math.floor(maxValue*0.33), availWidth-5, height+2, 15);
+
+	ctx.restore();
+    },
+
+    _drawGraph: function()
+    {
+	var ctx = this._canvas.getContext('2d');
+	this._clearGraph(ctx);
+
+	if (!this._timelines)
+	    return;
+
+	ctx.save();
+	ctx.translate(this._graphBorderWidth, this._graphBorderWidth);
+
+	var pointCount = this._binsPerTimeline;
+	var availHeight = this._canvas.height - this._graphBorderWidth*2;
+	var availWidth = this._canvas.width - this._graphBorderWidth*2;
+	var offsetPerPoint = availWidth / pointCount;
+	var maxValue = this._previousMaxValue || this._timelines.all.data[this._timelines.all.maxIndex];
+
+	/* draw allRecords bars */
+	function drawLineGraph(data, name) {
+	    ctx.lineJoin = "round";
+	    ctx.beginPath();
+	    ctx.moveTo(0, availHeight);
+	    var highMark = 0;
+	    for (var i = 0; i < pointCount; i++) {
+		var dataPoint = (i == 0) ? (data[i]||0)/2 : ((data[i-1]||0)
+							     +(data[i]||0))/2;
+		if (dataPoint > highMark && i < pointCount*0.9)
+		    highMark = dataPoint;
+		var percent = dataPoint / maxValue;
+		var pointX = offsetPerPoint*i+offsetPerPoint/2;
+		var pointY = availHeight * (1-percent);
+		ctx.lineTo(pointX, pointY);
+	    }
+	    ctx.lineTo(availWidth, availHeight);
+	    ctx.lineTo(0, availHeight);
+	    ctx.closePath();
+	    ctx.fill();
+
+	    if (name === "all")
+		this._previousMaxValue = highMark;
+	}
+	
+	var currentData = this._timelines.all.data.slice();
+	ctx.fillStyle = "rgba(0,0,0,0.3)";
+	drawLineGraph.call(this, currentData, "all");
+
+	/* first, substract values for all disabled categories */
+	var order = this._presentationModel.categoryOrder;
+	for (var i = 0; i < order.length; i++) {
+	    var key = order[i];
+	    var category = this._presentationModel.categories[key];
+	    if (!category.disabled)
+		continue;
+
+	    var catData = this._timelines[category.name].data;
+	    for (var j = 0; j < catData.length; j++)
+		if (catData[j])
+		    currentData[j] -= catData[j];
+	}
+
+
+	/* then, go back and paint those that remain (and substract them) */
+	for (i = 0; i < order.length; i++) {
+	    var key = order[i];
+	    var category = this._presentationModel.categories[key];
+	    var rgb = category.color.rgb;
+	    var rgba = WebInspector.Color.fromRGBA(rgb[0],
+						   rgb[1],
+						   rgb[2],
+						   0.8);
+	    ctx.fillStyle = rgba.toString();
+	    drawLineGraph.call(this, currentData, category.name);
+
+	    /* overpainting disabled categories ensures same alpha blending look */
+	    if (category.disabled)
+		continue;
+	    
+	    var catData = this._timelines[category.name].data;
+	    for (var j = 0; j < catData.length; j++)
+		if (catData[j])
+		    currentData[j] -= catData[j];
+	}
+
+	ctx.restore();
+    },
+
+    // Private API (callbacks)
+    _onRecordingDidStart: function()
+    {
+	this.reset();
+	this.sliders.playback.disable();
+	this.sliders.playback.setPosition(1.0, true);
+    },
+
+    _onRecordingDidStop: function()
+    {
+	this.sliders.playback.enable();
+    },
+
+    _onPlaybackDidStart: function()
+    {
+	var allRecords = this._model.allRecords;
+	var startRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
+	var finishRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
+	var currentRecordIndex = this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex);
+
+	this.sliders.breakpoint.hide();
+	this.sliders.playback.show();
+
+	this.sliders.previous.setPosition(this.calculator.computeMiniviewPercentage(startRecord.mark.timestamp),
+					  true);
+	this.sliders.previous.show();
+	this.sliders.tentative.setPosition(this.calculator.computeMiniviewPercentage(finishRecord.mark.timestamp),
+					  true);
+	this.sliders.tentative.show();
+	this.sliders.playback.disable();
+	this.sliders.playback.element.addStyleClass("playback-pulse");
+	this.sliders.playback.minimumResolution = (this._model.fastReplaying) ? 10.0 : 1.0;
+
+	if (currentRecordIndex != -1) {
+    	    var currentRecord = allRecords[currentRecordIndex];
+	    this.sliders.playback.setPosition(this.calculator.computeMiniviewPercentage(currentRecord.mark.timestamp), true);	
+	} else {
+	    this.sliders.playback.setPosition(0.0, true);
+	}
+    },
+
+    _onPlaybackStopped: function()
+    {
+	this.sliders.playback.resetResolution();
+	this.sliders.playback.element.removeStyleClass("playback-pulse");
+	this.sliders.playback.enable();
+	this.sliders.previous.hide();
+	this.sliders.tentative.hide();
+    },
+
+    _onInputPaused: function()
+    {
+	var allRecords = this._model.allRecords;
+	var recordIndex = this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex);
+	
+	if (recordIndex != -1) {
+	    var percent = this.calculator.computeMiniviewPercentage(allRecords[recordIndex].mark.timestamp);
+	    this.sliders.playback.setPosition(percent, true);
+	}
+
+	this.sliders.previous.hide();
+	this.sliders.tentative.hide();
+
+	this.sliders.playback.resetResolution();
+	this.sliders.playback.element.removeStyleClass("playback-pulse");
+	this.sliders.playback.enable();
+    },
+
+
+    _onInputHit: function(event)
+    {
+	var markIndex = event.data;
+	var recordIndex = this._model.recordIndexFromMarkIndex(markIndex);
+
+	// don't animate if this mark has no corresponding record (aka, not a user-visible mark)
+	if (recordIndex == -1)
+	    return;
+
+	var allRecords = this._model.allRecords;
+	var percent = 0.0;
+	if (markIndex > 0)
+            percent = this.calculator.computeMiniviewPercentage(allRecords[recordIndex].mark.timestamp);
+
+	this.sliders.playback.setPosition(percent, true);
+
+	// don't animate if this is close to or at the end.
+	if (percent > 0.99 || recordIndex == allRecords.length-1)
+	    return;
+
+	var nextRecord = allRecords[recordIndex+1];
+	var curRecordTime = (recordIndex > 0) ? allRecords[recordIndex].mark.timestamp 
+	                                      : this.calculator.minimumBoundary;
+
+	var timeDelta = nextRecord.mark.timestamp - curRecordTime;
+	if (timeDelta > WebInspector.TimelapseMiniview.MinAnimationDelta) {
+	    var nextRecordPosition = this.calculator.computeMiniviewPercentage(nextRecord.mark.timestamp);
+	    this.sliders.playback.animateTo(nextRecordPosition, timeDelta);
+	}
+    },
+
+    _onBreakpointPaused: function(eventData)
+    {
+	this.sliders.breakpoint.update();
+	this.sliders.breakpoint.position = this.sliders.playback.position;
+	this.sliders.playback.hide();
+	this.sliders.breakpoint.show();
+    },
+
+    _onBreakpointRecordsChanged: function(eventData)
+    {
+	this._scheduleRefresh();
+    },
+
+    _onAnchorSet: function(event)
+    {
+	var markIndex = event.data.newLocation.markIndex;
+	var timestamp = this._model.timestampFromMarkIndex(markIndex);
+
+	var percent = 0.0;
+	if (markIndex > 0)
+            percent = this.calculator.computeMiniviewPercentage(timestamp);
+
+	this.sliders.anchor.setPosition(percent, true);
+    },
+
+    _onAnchorRemoved: function()
+    {
+	this.sliders.anchor.hide();
+    },
+
+    _onZoomChanged: function()
+    {
+	this._potentialMarkBounds = false;
+	this._updateZoomLeft();
+	this._updateZoomRight();
+    },
+
+    _onFilterChanged: function()
+    {
+	this._potentialMarkBounds = false;
+	this._updateZoomLeft();
+	this._updateZoomRight();
+	this._drawGraph();
+    },
+
+    _onPreviewStarted: function()
+    {
+	this.sliders.previous.setPosition(this.sliders.playback.position);
+	this.sliders.previous.show();
+	this.sliders.tentative.setPosition(this.sliders.playback.position);
+	this.sliders.tentative.show();
+    },
+
+    _onPreviewStopped: function()
+    {
+	this.sliders.previous.hide();
+	this.sliders.tentative.hide();
+    },
+
+    _onPreviewChanged: function(event)
+    {
+	var record = event.data;
+	var percent = this._presentationModel.calculator.computeMiniviewPercentage(record.mark.timestamp);
+	this.sliders.tentative.setPosition(percent, true);
+    },
+
+    _onPlaybackSliderDragStart: function(event)
+    {
+	this.sliders.playback.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.Moved,
+					      this._onPlaybackSliderDragged,
+					      this);
+
+	this._presentationModel.startPreviewing();
+    },
+
+    _onPlaybackSliderDragged: function(event)
+    {
+	var calculator = this._presentationModel.calculator;
+	var position = this.sliders.playback.position;
+    	var timestamp = calculator.computeMiniviewTimestamp(position);
+
+	function timestampAndRecordComparator(ts, record) {
+	    var record_ts = record.mark.timestamp;
+	    if (record_ts > ts) return -1;
+	    if (record_ts < ts) return 1;
+	    return 0;
+	}
+
+	function timeDistanceFunction(ts, record) {
+	    if (!record)
+		return Number.POSITIVE_INFINITY;
+
+	    return Math.abs(ts - record.mark.timestamp);
+	}
+
+	var records = this._model.allRecords;
+	var idx = records.nearestBinaryIndexOf(timestamp, timestampAndRecordComparator, timeDistanceFunction);
+	var recordPosition = Math.floor(calculator.computeMiniviewPercentage(records[idx].mark.timestamp));
+	var prevRecordPosition = (idx == 0) ? 0.0
+                                            : calculator.computeMiniviewPercentage(records[idx-1].mark.timestamp);
+	var nextRecordPosition = (idx == records.length-1) ? 1.0
+                                                           : calculator.computeMiniviewPercentage(records[idx+1].mark.timestamp);
+	var minBounds = recordPosition - (recordPosition - prevRecordPosition)/2.0;
+	var maxBounds = recordPosition - (recordPosition - nextRecordPosition)/2.0;
+
+	// this is used to short-circuit searching for the nearest record if it's
+	// within the space "owned" by current nearest record. So, the nearest record
+	// is only recomputed when moving more than halfway away from
+	// this record to the next one
+	this._potentialMarkBounds = {min: minBounds, max: maxBounds};
+
+	this._presentationModel.previewRecord(records[idx]);
+    },
+
+    _onPlaybackSliderDragEnd: function(event)
+    {
+	this.sliders.playback.removeEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.Moved,
+						 this._onPlaybackSliderDragged,
+						 this);
+
+	var targetRecord = this._presentationModel.previewedRecord;
+	this._presentationModel.stopPreviewing();
+	this._model.replayUpToMarkIndex(targetRecord.mark.index);
+    },
+
+    _onZoomSliderDragStart: function(zoomSide, event)
+    {
+	this.sliders[zoomSide].addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.Moved,
+						this._onZoomSliderDragged.bind(this, zoomSide), this);
+    },
+
+    _onZoomSliderDragged: function(zoomSide, event)
+    {
+	var snapDistance = WebInspector.TimelapseMiniview.EdgeSnapDistance;
+	var minSelectableSize = WebInspector.TimelapseMiniview.MinSelectableSize;
+	if (zoomSide === "leftZoom") {
+	    var start = this.sliders.leftZoom.position;
+	    // Glue to edge
+	    if (start < snapDistance)
+		start = 0;
+	    // don't cross over
+	    else if (start >= this.sliders.rightZoom.position - minSelectableSize)
+	        start = this.sliders.rightZoom.position - minSelectableSize;
+
+	    this._presentationModel.calculator.zoomLeft = start;	    
+	} else {
+	    var end = this.sliders.rightZoom.position;
+	    // Glue to edge
+	    if (end > 1.0 - snapDistance)
+		end = 1.0;
+	    // don't cross over
+	    else if (end < this.sliders.leftZoom.position + minSelectableSize)
+                end = this.sliders.leftZoom.position + minSelectableSize;
+
+	    this._presentationModel.calculator.zoomRight = end;
+	}
+    },
+
+    _onZoomSliderDragEnd: function(zoomSide, event)
+    {
+	this.sliders[zoomSide].addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.Moved,
+						  this._onZoomSliderDragged.bind(this, zoomSide), this);
+    },
+
+    rulerAdjustment: 4, /* pixels */
+
+    _updateZoomLeft: function()
+    {
+	this.sliders.leftZoom.setPosition(this._presentationModel.calculator.zoomLeft, true);
+	this._leftZoomGlassPane.style.left = 0;
+	var width = this.sliders.leftZoom.element.offsetLeft;
+	if (width > 0)
+	    width += this.rulerAdjustment;
+	this._leftZoomGlassPane.style.width = Math.max(0, width) + "px";
+    },
+
+    _updateZoomRight: function()
+    {
+	this.sliders.rightZoom.setPosition(this._presentationModel.calculator.zoomRight, true);
+	this._rightZoomGlassPane.style.left = (this.sliders.rightZoom.element.offsetLeft + this.rulerAdjustment) + "px";
+	this._rightZoomGlassPane.style.right = 0;
+    },
+
+    _onMiniviewClicked: function(event)
+    {
+	var node = event.target;
+
+        while (node) {
+	    if (node === this.sliders.playback.element)
+		break;
+	    if (node === this.sliders.breakpoint.element)
+		break;
+	    if (node === this.sliders.leftZoom.element)
+		break;
+	    if (node === this.sliders.rightZoom.element)
+		break;
+            else if (node === this.element) {
+                var position = (event.pageX - this.element.offsetLeft) / this.element.clientWidth;
+                this._zoomSelector = new WebInspector.TimelapseMiniview.ZoomSelector(this.element, position, event);
+                WebInspector.elementDragStart(null, this._zoomSelectorDragging.bind(this), this._endZoomSelectorDragging.bind(this), event, "ew-resize");
+                break;
+	    }
+            node = node.parentNode;
+	}
+    },
+
+    _zoomSelectorDragging: function(event)
+    {
+        this._zoomSelector._updatePosition((event.pageX - this.element.offsetLeft) / this.element.clientWidth);
+        event.preventDefault();
+    },
+
+    _endZoomSelectorDragging: function(event)
+    {
+        WebInspector.elementDragEnd(event);
+        var zoom = this._zoomSelector._close((event.pageX - this.element.offsetLeft) / this.element.clientWidth);
+	var minSize = WebInspector.TimelapseMiniview.MinSelectableSize;
+        delete this._zoomSelector;
+        if (zoom.end - zoom.start < minSize)
+            if (1.0 - zoom.end > minSize)
+                zoom.end = zoom.start +  minSize;
+            else
+                zoom.start = zoom.end -  minSize;
+
+	this._presentationModel.calculator.setZoomInterval(zoom.start, zoom.end);
+    },
+
+    _onMiniviewDoubleClicked: function()
+    {
+	this._presentationModel.calculator.setZoomInterval(0.0, 1.0);
+    },
+
+    _onMiniviewMousewheel: function(event)
+    {
+	var zoomLeft = this._presentationModel.calculator.zoomLeft;
+	var zoomRight = this._presentationModel.calculator.zoomRight;
+	var zoomInterval = this._presentationModel.calculator.zoomInterval;
+
+        if (typeof event.wheelDeltaX === "number" && 
+	    event.wheelDeltaX && zoomInterval != 1.0) {
+	    var delta = event.wheelDeltaX * WebInspector.TimelapseMiniview.WindowScrollSpeedFactor;
+	    zoomLeft = Number.constrain(zoomLeft - delta, 0.0, 1.0 - zoomInterval);
+	    zoomRight = Number.constrain(zoomRight - delta, zoomInterval, 1.0);
+        }
+
+        if (typeof event.wheelDeltaY === "number" && event.wheelDeltaY) {
+	    var delta = event.wheelDeltaY * WebInspector.TimelapseMiniview.WindowZoomSpeedFactor;
+	    /* calculate zoom adjustment from right side, and paste to left.
+	     can't do naive scaling on LHS if it is near zero.  */
+	    var zoomDelta = zoomRight - zoomRight * (1.0 + delta);
+	    zoomLeft = Number.constrain(zoomLeft + zoomDelta, 0.0, zoomRight);
+	    zoomRight = Number.constrain(zoomRight - zoomDelta, zoomLeft, 1.0);
+        }
+
+	this._presentationModel.calculator.setZoomInterval(zoomLeft, zoomRight);
+    }
+
+};
+
+WebInspector.TimelapseMiniview.prototype.__proto__ = WebInspector.View.prototype;
+
+/**
+ * @constructor
+ * @extends {WebInspector.Object}
+ */
+WebInspector.TimelapseMiniviewSlider = function(miniview, name, adjustable, handlebars)
+{
+    WebInspector.Object.call(this);
+    this._adjustable = adjustable;
+
+    this.element = document.createElement("div");
+    this.element.className = "timelapse-miniview-slider " + name + "-slider";
+
+    this._verticalBarElement = document.createElement("div");
+    this._verticalBarElement.className = "timelapse-slider-band";
+    this.element.appendChild(this._verticalBarElement);
+
+    if (!!handlebars) {
+	var handlebarBottom = document.createElement("div");
+	handlebarBottom.className = "timelapse-slider-handlebar-bottom";
+	this.element.appendChild(handlebarBottom);
+	var handlebarTop = document.createElement("div");
+	handlebarTop.className = "timelapse-slider-handlebar-top";
+	this.element.appendChild(handlebarTop);
+    }
+
+    if (this._adjustable) {
+	this.element.classList.add("adjustable");
+	this.element.addEventListener("mousedown", this._startSliderDragging.bind(this), false);
+    }
+
+    this._miniview = miniview;
+    this.clear();
+    this.enable();
+};
+
+WebInspector.TimelapseMiniviewSlider.EventTypes = {
+    Moved: "TimelapseSliderMoved",
+    DragStart: "TimelapseSliderDragStart",
+    DragEnd: "TimelapseSliderDragEnd"
+};
+
+WebInspector.TimelapseMiniviewSlider.prototype = {
+    clear: function()
+    {
+	this._lastRefreshedPosition = 0.0;
+	this.element.classList.add("hidden");
+	this.disable();
+    },
+
+    minimumResolution: 1.0, /* in pixels */
+    defaultMinimumResolution: 1.0,
+
+    /* percent is a value between 0 and 1. */
+    setPosition: function(percent, suppressEvents)
+    {
+	this._position = Number.constrain(percent, 0.0, 1.0);
+	this.element.classList.remove("hidden");
+
+	this.cancelAnimation();
+	this.refresh();
+	
+	if (!suppressEvents) {
+	    this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.EventTypes.Moved);
+	}
+    },
+
+    resetResolution: function()
+    {
+	this.minimumResolution = this.defaultMinimumResolution;
+    },
+
+    animateTo: function(position, duration)
+    {
+	animations = [
+	    {
+		element: this.element, 
+		start: {left: this.position * 100.0},
+		end: {left: position * 100.0},
+		timingFunction: WebInspector.TimingFunctions.Linear
+	    }
+	];
+
+	this.cancelAnimation();
+	this._currentAnimation = WebInspector.animateStyle(animations, duration * 1000.0,
+							   this.cancelAnimation.bind(this));
+    },
+
+    cancelAnimation: function()
+    {
+	if (!this._currentAnimation)
+	    return;
+
+	this._currentAnimation.cancel();
+	delete this._currentAnimation;
+    },
+
+    get position()
+    {
+	return this._position;
+    },
+
+    set position(pos)
+    {
+	this.setPosition(pos, false);
+    },
+
+    show: function()
+    {
+	this.element.classList.remove("hidden");
+    },
+
+    hide: function()
+    {
+	this.element.classList.add("hidden");
+	if (this._currentAnimation)
+	    this._currentAnimation.cancel();
+    },
+
+    disable: function()
+    {
+	this._enabled = false;
+	this.element.classList.add("disabled");
+    },
+
+    enable: function()
+    {
+	this._enabled = true;
+	this.element.classList.remove("disabled");
+    },
+
+    dispose: function()
+    {
+	this.element.parentElement.removeChild(this.element);
+    },
+
+    refresh: function()
+    {
+	var parentWidth = this.element.parentElement.clientWidth;
+	var rightMaximum = (parentWidth - this._verticalBarElement.offsetWidth) / parentWidth;
+
+	/* if the difference between last painted position and new
+	 position is less than the minimum resolution (in pixels),
+	 then don't force a refresh. */
+	var delta = Math.abs(parentWidth * (this._position - this._lastRefreshedPosition));
+	if (delta < this.minimumResolution)
+	    return;
+
+	this._lastRefreshedPosition = Number.constrain(this.position, 0.0, rightMaximum);
+	this.element.style.left = this._lastRefreshedPosition * 100.0 + "%";
+    },
+
+    _startSliderDragging: function(event)
+    {
+	if (!this._enabled || !this._adjustable)
+	    return;
+
+	this.element.classList.add("slider-dragging");
+
+	WebInspector.elementDragStart(this.element, this._sliderDragging.bind(this), this._endSliderDragging.bind(this), event, "col-resize");
+	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart);
+    },
+
+    _sliderDragging: function(event)
+    {
+	if (!this._enabled || !this._adjustable)
+	    return;
+
+	var parent = this.element.parentElement; // should be heatmap container
+	var dragPoint = event.clientX - parent.totalOffsetLeft() - (this.element.offsetWidth/2);
+	var leftMinimum = parent.clientLeft;
+	var rightMaximum = leftMinimum + parent.clientWidth - this.element.offsetWidth;
+	dragPoint = Number.constrain(dragPoint, leftMinimum, rightMaximum - this._verticalBarElement.offsetWidth);
+	this.setPosition(dragPoint / (rightMaximum - leftMinimum));
+	event.preventDefault();
+    },
+
+    _endSliderDragging: function(event)
+    {	
+	if (!this._enabled || !this._adjustable)
+	    return;
+
+	WebInspector.elementDragEnd(event);
+	this.element.classList.remove("slider-dragging");
+	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd);
+    }
+};
+
+WebInspector.TimelapseMiniviewSlider.prototype.__proto__ = WebInspector.Object.prototype;
+
+
+/**
+ * @constructor
+ * @extends {WebInspector.TimelapseMiniviewSlider}
+ */
+WebInspector.TimelapseMiniviewBreakpointSlider = function(miniview)
+{
+    WebInspector.TimelapseMiniviewSlider.call(this, miniview, "breakpoint", false);
+
+    this.element.classList.add("breakpoint-blink");
+};
+
+WebInspector.TimelapseMiniviewBreakpointSlider.prototype = {
+    update: function()
+    {
+	this.breakpoint = WebInspector.timelapseBreakpointTracker.currentBreakpoint;
+    }
+};
+
+WebInspector.TimelapseMiniviewBreakpointSlider.prototype.__proto__ = WebInspector.TimelapseMiniviewSlider.prototype;
+
+
+/**
+ * @constructor
+ */
+WebInspector.TimelapseMiniview.ZoomSelector = function(parent, position, event)
+{
+    this._startPosition = position;
+    this._width = parent.offsetWidth;
+    this.element = document.createElement("div");
+    this.element.className = "timelapse-zoom-selector";
+    this.element.style.left = this._startPosition * 100.0 + "%";
+    this.element.style.right = (1.0 - this._startPosition) * 100.0 + "%";
+    parent.appendChild(this.element);
+};
+
+WebInspector.TimelapseMiniview.ZoomSelector.prototype = {
+    _close: function(position)
+    {
+        this.element.parentNode.removeChild(this.element);
+        return this._startPosition < position
+	? {start: this._startPosition, end: position}
+	: {start: position, end: this._startPosition};
+    },
+
+    _updatePosition: function(position)
+    {
+        position = Math.max(0, Math.min(position, this._width));
+        if (position < this._startPosition) {
+            this.element.style.left = position * 100.0 + "%";
+            this.element.style.right = (1.0 - this._startPosition) * 100.0 + "%";
+        } else {
+            this.element.style.left = this._startPosition * 100.0 + "%";
+            this.element.style.right = (1.0 - position) * 100.0 + "%";
+        }
+    }
+};
+
+

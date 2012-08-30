@@ -44,6 +44,7 @@
 #include "HTMLFormElement.h"
 #include "HistoryItem.h"
 #include "InspectorInstrumentation.h"
+#include "NetworkProxy.h"
 #include "Page.h"
 #include "ResourceError.h"
 #include "ResourceHandle.h"
@@ -618,7 +619,7 @@ bool MainResourceLoader::loadNow(ResourceRequest& r)
     else if (shouldLoadEmpty || frameLoader()->client()->representationExistsForURLScheme(url.protocol()))
         handleEmptyLoad(url, !shouldLoadEmpty);
     else
-        m_handle = ResourceHandle::create(m_frame->loader()->networkingContext(), r, this, false, true);
+        m_handle = m_frame->page()->networkProxy()->createResourceHandle(m_frame->loader()->networkingContext(), r, this, false, true);
 
     return false;
 }

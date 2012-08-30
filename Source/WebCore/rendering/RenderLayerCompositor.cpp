@@ -63,6 +63,7 @@
 
 #if !LOG_DISABLED
 #include <wtf/CurrentTime.h>
+#include "Logging.h"
 #endif
 
 #ifndef NDEBUG

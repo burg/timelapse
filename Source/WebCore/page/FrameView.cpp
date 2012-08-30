@@ -27,6 +27,7 @@
 #include "config.h"
 #include "FrameView.h"
 
+#include "AsyncEventProxy.h"
 #include "AXObjectCache.h"
 #include "BackForwardController.h"
 #include "CachedResourceLoader.h"
@@ -1742,7 +1743,7 @@ void FrameView::scrollPositionChangedViaPlatformWidget()
 void FrameView::scrollPositionChanged()
 {
     frame()->eventHandler()->sendScrollEvent();
-    frame()->eventHandler()->dispatchFakeMouseMoveEventSoon();
+    frame()->page()->asyncEventProxy()->dispatchFakeMouseMoveEventSoon(frame());
 
 #if USE(ACCELERATED_COMPOSITING)
     if (RenderView* root = rootRenderer(this)) {

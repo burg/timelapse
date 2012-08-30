@@ -117,6 +117,7 @@ my (
     $svgSupport,
     $systemMallocSupport,
     $tiledBackingStoreSupport,
+    $timelapseSupport,
     $touchEventsSupport,
     $touchIconLoadingSupport,
     $undoManagerSupport,
@@ -353,6 +354,9 @@ my @features = (
 
     { option => "tiled-backing-store", desc => "Toggle Tiled Backing Store support",
       define => "WTF_USE_TILED_BACKING_STORE", default => isQt(), value => \$tiledBackingStoreSupport },
+
+    { option => "timelapse", desc => "Toggle Timelapse support",
+      define => "ENABLE_TIMELAPSE", default => 0, value => \$timelapseSupport },
 
     { option => "touch-events", desc => "Toggle Touch Events support",
       define => "ENABLE_TOUCH_EVENTS", default => (isQt() || isBlackBerry() || isEfl()), value => \$touchEventsSupport },

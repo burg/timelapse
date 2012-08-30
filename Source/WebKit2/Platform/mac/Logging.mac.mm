@@ -28,7 +28,7 @@
 
 namespace WebKit {
 
-#ifndef NDEBUG
+#if !LOG_DISABLED
 
 void initializeLogChannel(WTFLogChannel* channel)
 {
@@ -44,6 +44,6 @@ void initializeLogChannel(WTFLogChannel* channel)
         channel->state = WTFLogChannelOn;
 }
 
-#endif
+#endif // !LOG_DISABLED
 
 } // namespace WebKit

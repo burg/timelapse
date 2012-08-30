@@ -25,6 +25,9 @@
 
 #import "BrowserWindowController.h"
 
+#import <WebKit2/WKInspector.h>
+#import <WebKit2/WKPageGroup.h>
+#import <WebKit2/WKPreferencesPrivate.h>
 #import <WebKit2/WKPagePrivate.h>
 #import <WebKit2/WKStringCF.h>
 #import <WebKit2/WKURLCF.h>
@@ -109,6 +112,12 @@
         [menuItem setTitle:[_webView window] ? @"Remove Web View" : @"Insert Web View"];
     else if (action == @selector(toggleZoomMode:))
         [menuItem setState:_zoomTextOnly ? NSOnState : NSOffState];
+    else if (action == @selector(toggleInspectorMode:))
+        [menuItem setState:WKInspectorIsVisible(WKPageGetInspector(_webView.pageRef)) ? NSOnState : NSOffState];
+    else if (action == @selector(toggleJavaScriptDebugging:))
+        [menuItem setState:WKInspectorIsDebuggingJavaScript(WKPageGetInspector(_webView.pageRef)) ? NSOnState : NSOffState];
+    else if (action == @selector(toggleJavaScriptProfiling:))
+        [menuItem setState:WKInspectorIsProfilingJavaScript(WKPageGetInspector(_webView.pageRef)) ? NSOnState : NSOffState];
     return YES;
 }
 
@@ -240,6 +249,31 @@
         double currentPageZoom = WKPageGetPageZoomFactor(_webView.pageRef);
         WKPageSetPageAndTextZoomFactors(_webView.pageRef, 1, currentPageZoom);
     }
+}
+
+- (IBAction)toggleInspectorMode:(id)sender
+{
+    WKPageGroupRef m_pageGroupRef = WKPageGetPageGroup(_webView.pageRef);
+    WKPreferencesRef m_preferences = WKPageGroupGetPreferences(m_pageGroupRef);
+    if (WKInspectorIsVisible(WKPageGetInspector(_webView.pageRef))) {
+        WKPreferencesSetDeveloperExtrasEnabled(m_preferences, false);
+        WKInspectorClose(WKPageGetInspector(_webView.pageRef));
+    } else {
+        WKPreferencesSetDeveloperExtrasEnabled(m_preferences, true);
+        WKInspectorShow(WKPageGetInspector(_webView.pageRef));
+    }
+}
+
+- (IBAction)toggleJavaScriptDebugging:(id)sender
+{
+    if (WKInspectorIsVisible(WKPageGetInspector(_webView.pageRef)))
+        WKInspectorToggleJavaScriptDebugging(WKPageGetInspector(_webView.pageRef));
+}
+
+- (IBAction)toggleJavaScriptProfiling:(id)sender
+{
+    if (WKInspectorIsVisible(WKPageGetInspector(_webView.pageRef)))
+        WKInspectorToggleJavaScriptProfiling(WKPageGetInspector(_webView.pageRef));
 }
 
 - (IBAction)dumpSourceToConsole:(id)sender

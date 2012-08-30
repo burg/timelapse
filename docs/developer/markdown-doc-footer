@@ -1,0 +1,15 @@
+<style type="text/css">
+@import url(../css/style.css);
+@import url(../css/shCore.css);
+@import url(../css/shThemeDefault.css);
+</style>
+
+<script type="text/javascript" src="../js/shCore.js"></script>
+<script type="text/javascript" src="../js/shBrushJScript.js"></script>
+<script type="text/javascript" src="../js/shBrushCpp.js"></script>
+<script type="text/javascript">
+     SyntaxHighlighter.all()
+</script>
+
+</body>
+</html>

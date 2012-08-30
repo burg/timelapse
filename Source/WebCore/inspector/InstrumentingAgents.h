@@ -50,6 +50,7 @@ class InspectorFileSystemAgent;
 class InspectorProfilerAgent;
 class InspectorResourceAgent;
 class InspectorRuntimeAgent;
+class InspectorTimelapseAgent;
 class InspectorTimelineAgent;
 class InspectorWorkerAgent;
 class InspectorWebGLAgent;
@@ -70,6 +71,9 @@ public:
         , m_inspectorResourceAgent(0)
         , m_inspectorRuntimeAgent(0)
         , m_pageRuntimeAgent(0)
+#if ENABLE(TIMELAPSE)
+        , m_inspectorTimelapseAgent(0)
+#endif
         , m_inspectorTimelineAgent(0)
         , m_inspectorDOMStorageAgent(0)
 #if ENABLE(SQL_DATABASE)
@@ -116,6 +120,11 @@ public:
 
     PageRuntimeAgent* pageRuntimeAgent() const { return m_pageRuntimeAgent; }
     void setPageRuntimeAgent(PageRuntimeAgent* agent) { m_pageRuntimeAgent = agent; }
+
+#if ENABLE(TIMELAPSE)
+    InspectorTimelapseAgent* inspectorTimelapseAgent() const { return m_inspectorTimelapseAgent; }
+    void setInspectorTimelapseAgent(InspectorTimelapseAgent* agent) { m_inspectorTimelapseAgent = agent; }
+#endif
 
     InspectorTimelineAgent* inspectorTimelineAgent() const { return m_inspectorTimelineAgent; }
     void setInspectorTimelineAgent(InspectorTimelineAgent* agent) { m_inspectorTimelineAgent = agent; }
@@ -166,6 +175,9 @@ private:
     InspectorResourceAgent* m_inspectorResourceAgent;
     InspectorRuntimeAgent* m_inspectorRuntimeAgent;
     PageRuntimeAgent* m_pageRuntimeAgent;
+#if ENABLE(TIMELAPSE)
+    InspectorTimelapseAgent* m_inspectorTimelapseAgent;
+#endif
     InspectorTimelineAgent* m_inspectorTimelineAgent;
     InspectorDOMStorageAgent* m_inspectorDOMStorageAgent;
 #if ENABLE(SQL_DATABASE)

@@ -77,6 +77,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <script type="text/javascript" src="ResourceTreeModel.js"></script>
     <script type="text/javascript" src="ResourceUtils.js"></script>
     <script type="text/javascript" src="ResourceType.js"></script>
+    <script type="text/javascript" src="TimelapseModel.js"></script>
     <script type="text/javascript" src="TimelineManager.js"></script>
     <script type="text/javascript" src="TimelineModel.js"></script>
     <script type="text/javascript" src="UserAgentSupport.js"></script>
@@ -200,6 +201,14 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <script type="text/javascript" src="TimelinePresentationModel.js"></script>
     <script type="text/javascript" src="TimelinePanel.js"></script>
     <script type="text/javascript" src="TimelineOverviewPane.js"></script>
+    <script type="text/javascript" src="TimelapseAgent.js"></script>
+    <script type="text/javascript" src="TimelapseBreakpointTracker.js"></script>
+    <script type="text/javascript" src="TimelapsePresentationModel.js"></script>
+    <script type="text/javascript" src="TimelapseOverview.js"></script>
+    <script type="text/javascript" src="TimelapseScrollview.js"></script>
+    <script type="text/javascript" src="TimelapseMiniview.js"></script>
+    <script type="text/javascript" src="TimelapseGrid.js"></script>    
+    <script type="text/javascript" src="TimelapsePanel.js"></script>
     <script type="text/javascript" src="TimelineFrameController.js"></script>
     <script type="text/javascript" src="TestController.js"></script>
     <script type="text/javascript" src="Dialog.js"></script>
@@ -235,7 +244,16 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         </div>
     </div>
     <div id="main">
-        <div id="main-status-bar" class="status-bar"><div id="anchored-status-bar-items"><div id="counters"><div id="error-warning-count" class="hidden"></div></div></div></div>
+        <div id="main-status-bar" class="status-bar">
+            <div id="anchored-status-bar-items">
+	        <div id="anchored-status-bar-items-left"></div>
+		<div id="anchored-status-bar-items-right">
+                    <div id="counters">
+                        <div id="error-warning-count" class="hidden"></div>
+	            </div>
+                </div>
+            </div>
+        </div>
     </div>
     <div id="drawer"></div>
 </body>

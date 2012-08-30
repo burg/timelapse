@@ -1,0 +1,125 @@
+---
+layout: default
+title: Project Home
+---
+<div class="row">
+<div class="span7 well">
+<h3>What is Timelapse?</h3>
+  <p>Timelapse is a tool suite that simplifies capturing and
+  investigating behavior in web applications. Timelapse captures
+  interactions with a web application and creates an exact execution
+  recording. A debugging tool can visualize and re-execute the
+  captured interactions at will. Developers can use standard debugging
+  tools on the re-executing program to better understand what
+  happened. This tool implemented as an extension to the
+  the <a href="http://trac.webkit.org/wiki/WebInspector">Web Inspector
+  suite</a> (used
+  by <a href="http://code.google.com/chrome/devtools/docs/overview.html">Chrome</a>
+  and <a href="http://developer.apple.com/library/safari/#documentation/appleapplications/Conceptual/Safari_Developer_Guide/2SafariDeveloperTools/SafariDeveloperTools.html#//apple_ref/doc/uid/TP40007874-CH3-SW1">Safari</a>).</p>
+<p>
+  Timelapse is based on deterministic record/replay technology from
+  the virtual machine literature. It is also a foundation for research
+  into topics such as omniscient debugging, interactive code coverage
+  tools, and benchmark/test synthesis. For more details on the
+  research behind Timelapse, see
+  the <a href="{{site.baseurl}}/research.html">Research
+  page</a>.
+</p>
+</div>
+<div class="span4">
+<p>
+<br/><br/>
+Timelapse is an open source research project. It is based on
+current and past research conducted
+at <a href="http://cs.washington.edu">CSE</a>
+(<a href="http://www.washington.edu">University of Washington</a>) and
+at <a href="http://sss.cs.purdue.edu">S3</a> (<a href="http://cs.purdue.edu">Purdue University</a>).
+</p>
+<p>The project leader is
+  <a href="http://cs.washington.edu/homes/burg/">Brian Burg
+  (<a href="https://www.twitter.com/brrian">@brrian</a>). However,
+  contributions are welcome from anyone.
+</p>
+<p>  <a href="http://www.cs.washington.edu/"><img alt="Computer Science and Engineering, University of Washington" src="images/uwcse-logo.jpg"/></a>
+  <a href="http://sss.cs.purdue.edu/"><img alt="S3 Lab, Purdue University" src="images/sss-logo.jpg"/></a>
+</p>
+</div>
+</div>
+<div class="row">
+<div class="span6">
+  <h3>Supported platforms</h3> 
+ 
+  <p>Timelapse is currently designed to work with the Mac Safari
+  browser. Primary development of Timelapse takes place on the
+  Darwin/OS X port of WebKit. Details of cross-platform support are on
+  the <a href="{{site.baseurl}}/faq.html">FAQ page</a>. </p>
+
+  <h3 id="collaboration">Collaboration and bug reports</h3> 
+
+  <p>If you are interested in collaborating, or are considering using
+  Timelapse for your research but have questions, feel free to send an
+  email.</p>
+
+  <p>A paper describing Timelapse's user interface, infrastructure,
+  evaluation, and a user study is in submission. The paper will be
+  available shortly. Our user study materials
+  are <a href="{{site.baseurl}}/timelapse-study-materials.tar.gz">freely
+  available</a>.</p>
+
+  <p>For UW CSE and research collaborators, ask to be added to the
+  timelapse developers mailing list (timelapse@cs). If you would like
+  to contact Brian, the primary developer, his email is burg@cs.</p>
+
+  <p>Reporting bugs is best done
+  on <a href="https://bitbucket.org/burg/timelapse/issues">bitbucket</a>
+  or by direct email. The <a href="{{site.baseurl}}/faq.html">FAQ
+  page</a> has more information on bug reporting and ways that you
+  can contribute.</p>
+
+  <h3 id="implementation">Implementation</h3> 
+ 
+  <p>The proof-of concept implementation of Timelapse is an
+  unofficial, experimental fork of WebKit. Accordingly, most of the
+  source is licensed under the same terms as WebKit itself
+  (parts <a href="http://www.webkit.org/coding/lgpl-license.html">LGPL</a>,
+  parts <a href="http://www.webkit.org/coding/bsd-license.html">BSD</a>). New
+  code is typically under a BSD-style license.</p>
+
+  <p>We use <a href="http://mercurial.selenic.com/">Mercurial</a> for
+  version control. The public repository is hosted
+  on <a href="https://bitbucket.org">bitbucket.org</a>
+  under <a href="https://bitbucket.org/burg/timelapse">burg/timelapse</a>.
+  </p>
+
+  <p>We do not publicly post Timelapse-enabled versions of Safari at this
+  time. Prebuilt binaries are available on request. To obtain and
+  build Timelapse yourself, please consult the documentation pages for
+  <a href="{{site.baseurl}}/developer/repository.html">repositories</a>
+  and <a href=="{{site.baseurl}}/developer/build.html">building</a>.</p>
+
+    
+</div>
+<div class="span6">
+<h2>New on the blog</h2>
+{% for post in site.posts limit:1 %}
+<article>
+<a href="{{site.baseurl}}{{post.url}}"><h3>
+<span class="label date">{{ post.date | date:"%b %d, %Y"}}</span> {{ post.title }}</h3></a>
+{{post.content | truncate:1000}} <a href="{{site.baseurl}}{{post.url}}">[<strong>read more</strong>]</a>
+{% endfor %}
+
+<h2>Older Posts</h2>
+{% for post in site.posts offset:1 limit:5 %}
+<article>
+<a href="{{site.baseurl}}{{post.url}}"><h3>
+<span class="label date">{{ post.date | date:"%b %d, %Y"}}</span> {{ post.title }}</h3>
+</a>
+
+{% if post.summary %}
+<p>{{ post.summary }}</p>
+{% endif %}
+<hr />
+</article>
+{% endfor %}
+
+</div></div>

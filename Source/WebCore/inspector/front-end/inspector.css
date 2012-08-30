@@ -330,6 +330,10 @@ body.compact #search {
     background-position-x: -32px;
 }
 
+.toolbar-item.timelapse .toolbar-icon {
+    background-image: url(Images/timelapseIcon.png);
+}
+
 .toolbar-small .toolbar-item.resources .toolbar-icon {
     background-position-x: -24px;
 }
@@ -481,9 +485,40 @@ body.drawer-visible #main-panels {
     z-index: 12;
 }
 
-.status-bar > div {
+.status-bar > div { /* applies to .anchored-status-bar-items */
     display: inline-block;
     vertical-align: top;
+}
+
+#anchored-status-bar-items-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    line-height: 24px;
+}
+ 
+#timelapse-status {
+    display: inline-block;
+    border-image-source: url(Images/statusbarButtons.png);
+    border-image-slice: 0 0 0 5;
+    border-width: 0px 1px;
+    padding: 0px 4px 0px 6px;
+}
+
+/* this must be more specific that the general status bar style to change
+    the sprite map. But, position must not be overspecific so it can be changed. */
+button.timelapse-lock-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: -288px -48px;
+}
+
+button.timelapse-lock-status-bar-item.toggled-on > .glyph {
+    -webkit-mask-position: -256px -48px;
+}
+
+button.timelapse-record-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: -192px -48px;
 }
 
 .status-bar-item {
@@ -583,8 +618,7 @@ button.dock-status-bar-item.status-bar-item.toggled-right .glyph {
 }
 
 button.settings-status-bar-item {
-    position: absolute;
-    right: 0;
+    margin-right: -2px;
 }
 
 .settings-status-bar-item .glyph {
@@ -604,13 +638,9 @@ body.port-qt #dock-status-bar-item {
 }
 
 #counters {
-    position: absolute;
-    right: 32px;
-    top: 0;
     cursor: pointer;
-    padding: 6px 2px 6px 0px;
     font-size: 10px;
-    height: 19px;
+    display: inline-block;
 }
 
 #error-warning-count {
@@ -1733,11 +1763,11 @@ body.inactive .panel-enabler-view button:not(.status-bar-item), .panel-enabler-v
 }
 
 button.enable-toggle-status-bar-item .glyph {
-    -webkit-mask-position: -192px 0;
+    -webkit-mask-position: -195px 0;
 }
 
 button.enable-toggle-status-bar-item.toggled-on .glyph {
-    -webkit-mask-position: -96px -24px;
+    -webkit-mask-position: -95px -24px;
 }
 
 button.edit-source-status-bar-item .glyph {

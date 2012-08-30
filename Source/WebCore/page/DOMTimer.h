@@ -53,10 +53,10 @@ namespace WebCore {
         // This allows the minimum allowable interval time to be changed in response
         // to events like moving a tab to the background.
         void adjustMinimumTimerInterval(double oldMinimumTimerInterval);
+        virtual void fired();
 
     private:
         DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>, int interval, bool singleShot);
-        virtual void fired();
 
         double intervalClampedToMinimum(int timeout, double minimumTimerInterval) const;
 
@@ -70,6 +70,9 @@ namespace WebCore {
         OwnPtr<ScheduledAction> m_action;
         int m_originalInterval;
         bool m_shouldForwardUserGesture;
+#if ENABLE(TIMELAPSE)
+        bool m_shouldScheduleNormally;
+#endif
         static double s_minDefaultTimerInterval;
     };
 
