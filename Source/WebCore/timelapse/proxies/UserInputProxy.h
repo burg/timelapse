@@ -53,6 +53,7 @@ public:
     static PassOwnPtr<UserInputProxy> create(Page*);
     virtual ~UserInputProxy() {}
 
+    bool handleContextMenuEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay = false);
     bool handleMousePressEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay = false);
     bool handleMouseReleaseEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay = false);
     bool handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay = false);

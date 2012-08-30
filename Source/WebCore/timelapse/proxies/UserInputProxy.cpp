@@ -39,6 +39,7 @@
 #include "FocusSetActive.h"
 #include "FocusSetFocused.h"
 #include "Frame.h"
+#include "HandleContextMenu.h"
 #include "HandleKeyPress.h"
 #include "HandleMouseMove.h"
 #include "HandleMousePress.h"
@@ -63,6 +64,25 @@ UserInputProxy::UserInputProxy(Page* page)
 PassOwnPtr<UserInputProxy> UserInputProxy::create(Page* page)
 {
     return adoptPtr(new UserInputProxy(page));
+}
+
+bool UserInputProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
+{
+#if ENABLE(TIMELAPSE)
+    if (!fromReplay && m_mode == Replaying)
+        return true;
+
+    if (m_mode == Capturing && m_page->determinismController()) {
+        HandleContextMenu* action = new HandleContextMenu(mouseEvent);
+        m_page->determinismController()->capturePageInput(action);
+    }
+#else
+    UNUSED_PARAM(fromReplay);
+#endif // ENABLE(TIMELAPSE)
+
+    // do dispatch
+    // FIXME: Should not always dispatch through the main frame. See Issue #20.
+    return m_page->mainFrame()->eventHandler()->sendContextMenuEvent(mouseEvent);
 }
 
 bool UserInputProxy::handleMousePressEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)

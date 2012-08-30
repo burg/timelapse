@@ -677,6 +677,8 @@
 		2292B27C1356669400CF11EF /* ImageBufferDataCG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2292B27B1356669400CF11EF /* ImageBufferDataCG.cpp */; };
 		22BD9F7F1353625C009BD102 /* ImageBufferData.h in Headers */ = {isa = PBXBuildFile; fileRef = 22BD9F7D1353625C009BD102 /* ImageBufferData.h */; };
 		22BD9F81135364FE009BD102 /* ImageBufferDataCG.h in Headers */ = {isa = PBXBuildFile; fileRef = 22BD9F80135364FE009BD102 /* ImageBufferDataCG.h */; };
+		2346D66615F02F46008E6EF0 /* HandleContextMenu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2346D66415F02F46008E6EF0 /* HandleContextMenu.cpp */; };
+		2346D66715F02F46008E6EF0 /* HandleContextMenu.h in Headers */ = {isa = PBXBuildFile; fileRef = 2346D66515F02F46008E6EF0 /* HandleContextMenu.h */; };
 		24AA568D13CC94CE00E902F6 /* DOMSVGAltGlyphItemElementInternal.h in Copy Generated Headers */ = {isa = PBXBuildFile; fileRef = 24D912A313CA977D00D21915 /* DOMSVGAltGlyphItemElementInternal.h */; };
 		24AA568E13CC950900E902F6 /* DOMSVGAltGlyphItemElement.h in Copy Generated Headers */ = {isa = PBXBuildFile; fileRef = 24D912A113CA977D00D21915 /* DOMSVGAltGlyphItemElement.h */; };
 		24AA569013CC952F00E902F6 /* DOMSVGAltGlyphDefElement.h in Copy Generated Headers */ = {isa = PBXBuildFile; fileRef = 24D9129B13CA975A00D21915 /* DOMSVGAltGlyphDefElement.h */; };
@@ -7749,6 +7751,8 @@
 		2292B27B1356669400CF11EF /* ImageBufferDataCG.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ImageBufferDataCG.cpp; sourceTree = "<group>"; };
 		22BD9F7D1353625C009BD102 /* ImageBufferData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageBufferData.h; sourceTree = "<group>"; };
 		22BD9F80135364FE009BD102 /* ImageBufferDataCG.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageBufferDataCG.h; sourceTree = "<group>"; };
+		2346D66415F02F46008E6EF0 /* HandleContextMenu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HandleContextMenu.cpp; path = timelapse/actions/user/HandleContextMenu.cpp; sourceTree = "<group>"; };
+		2346D66515F02F46008E6EF0 /* HandleContextMenu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HandleContextMenu.h; path = timelapse/actions/user/HandleContextMenu.h; sourceTree = "<group>"; };
 		2442BBF81194C9D300D49469 /* HashChangeEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HashChangeEvent.h; sourceTree = "<group>"; };
 		24D9128F13CA951E00D21915 /* JSSVGAltGlyphDefElement.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSSVGAltGlyphDefElement.cpp; sourceTree = "<group>"; };
 		24D9129013CA951E00D21915 /* JSSVGAltGlyphDefElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSSVGAltGlyphDefElement.h; sourceTree = "<group>"; };
@@ -20868,6 +20872,8 @@
 				C4AEC3C315EED383007076B6 /* FocusSetActive.h */,
 				C4AEC3C415EED383007076B6 /* FocusSetFocused.cpp */,
 				C4AEC3C515EED383007076B6 /* FocusSetFocused.h */,
+				2346D66415F02F46008E6EF0 /* HandleContextMenu.cpp */,
+				2346D66515F02F46008E6EF0 /* HandleContextMenu.h */,
 				C4AEC3C615EED383007076B6 /* HandleKeyPress.cpp */,
 				C4AEC3C715EED383007076B6 /* HandleKeyPress.h */,
 				C4AEC3C815EED383007076B6 /* HandleMouseBase.cpp */,
@@ -25548,6 +25554,7 @@
 				C4AEC3EE15EED3A0007076B6 /* DisableCache.h in Headers */,
 				C4AEC3F015EED3A0007076B6 /* DispatchEventBase.h in Headers */,
 				C4AEC3F115EED3A0007076B6 /* EnableCache.h in Headers */,
+				2346D66715F02F46008E6EF0 /* HandleContextMenu.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -28644,6 +28651,7 @@
 				C4AEC3E615EED383007076B6 /* NavigateToPage.cpp in Sources */,
 				C4AEC3E815EED383007076B6 /* ScrollPage.cpp in Sources */,
 				C4AEC3EF15EED3A0007076B6 /* DispatchEventBase.cpp in Sources */,
+				2346D66615F02F46008E6EF0 /* HandleContextMenu.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
