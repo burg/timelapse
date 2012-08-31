@@ -44,7 +44,6 @@ namespace WebCore {
 
 void HandleContextMenu::dispatch(DeterminismController* controller)
 {
-    ASSERT(controller->page());
     ASSERT(sealed());
 
     controller->page()->userInputProxy()->handleContextMenuEvent(platformEvent(), true);
