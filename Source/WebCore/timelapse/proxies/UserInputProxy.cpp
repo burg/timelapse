@@ -81,7 +81,7 @@ bool UserInputProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent
 #endif // ENABLE(TIMELAPSE)
 
     // do dispatch
-    // TODO: should not always be dispatched through mainFrame; see handleContextMenuEvent in WebKit2/WebPage.cpp
+    // FIXME: Should not always dispatch through the main frame. See Issue #20.
     return m_page->mainFrame()->eventHandler()->sendContextMenuEvent(mouseEvent);
 }
 
