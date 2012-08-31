@@ -56,6 +56,7 @@ const char* InitializeFocus = "InitializeFocus";
 const char* ReceivedResourceResponse = "ReceivedResourceResponse";
 const char* NavigateToPage = "NavigateToPage";
 const char* ScrollPage = "ScrollPage";
+const char* SendResizeEvent = "SendResizeEvent";
 const char* SetCookieSeed = "SetCookieSeed";
 const char* TimerCreated = "TimerCreated";
 const char* TimerFired = "TimerFired";

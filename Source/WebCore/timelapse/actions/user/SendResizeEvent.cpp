@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
+ *  Copyright (C) 2011, Jake Bailey.
  *  Copyright (C) 2011, University of Washington. All rights reserved.
  *
  *
@@ -29,40 +29,49 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ReplayableTypes_h
-#define ReplayableTypes_h
+#include "config.h"
 
 #if ENABLE(TIMELAPSE)
 
+#include "SendResizeEvent.h"
+
+#include "DeterminismController.h"
+#include "Frame.h"
+#include "DOMWindow.h"
+#include <wtf/Assertions.h>
+#include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringConcatenate.h>
+#include <wtf/timelapse/ActionSerializer.h>
+
 namespace WebCore {
 
-namespace ReplayableTypes {
-extern const char* BeginSentinel;
-extern const char* FocusSetActive;
-extern const char* FocusSetFocused;
-extern const char* DisableCache;
-extern const char* DispatchAsyncEvent;
-extern const char* EnableCache;
-extern const char* EndSentinel;
-extern const char* HandleAccessKey;
-extern const char* HandleContextMenu;
-extern const char* HandleKeyPress;
-extern const char* HandleMouseMove;
-extern const char* HandleMousePress;
-extern const char* HandleMouseRelease;
-extern const char* HandleWheelEvent;
-extern const char* InitializeFocus;
-extern const char* ReceivedResourceResponse;
-extern const char* NavigateToPage;
-extern const char* ScrollPage;
-extern const char* SendResizeEvent;
-extern const char* SetCookieSeed;
-extern const char* TimerCreated;
-extern const char* TimerFired;
-} // namespace ReplayableTypes
+SendResizeEvent::SendResizeEvent(const IntSize& size)
+    : DispatchableAction(ReplayableTypes::SendResizeEvent)
+    , m_size(size) {}
+
+void SendResizeEvent::dispatch(DeterminismController* controller)
+{
+    ASSERT(sealed());
+
+    controller->page()->mainFrame()->domWindow()->resizeTo((float) m_size.width(), (float) m_size.height());
+    controller->didDispatch(this);
+}
+
+String SendResizeEvent::toString() const
+{
+    StringBuilder sb;
+    sb.append(makeString("Resize("));
+    sb.append(makeString("size=[", String::number(m_size.width()), ",", String::number(m_size.height()), "];"));
+    sb.append(")");
+    return sb.toString();
+}
+
+void SendResizeEvent::serialize(ActionSerializer* serializer) const
+{
+    serializer->putInt("width", m_size.width());
+    serializer->putInt("height", m_size.height());
+}
 
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
-
-#endif // ReplayableTypes_h

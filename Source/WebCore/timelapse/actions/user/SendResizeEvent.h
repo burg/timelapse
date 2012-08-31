@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2012, Jake Bailey.
+ *  Copyright (C) 2012, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,40 +29,40 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ReplayableTypes_h
-#define ReplayableTypes_h
+#ifndef SendResizeEvent_h
+#define SendResizeEvent_h
 
 #if ENABLE(TIMELAPSE)
 
+#include "DispatchableAction.h"
+#include "IntSize.h"
+#include "ReplayableTypes.h"
+#include <wtf/timelapse/ReplayableAction.h>
+
 namespace WebCore {
 
-namespace ReplayableTypes {
-extern const char* BeginSentinel;
-extern const char* FocusSetActive;
-extern const char* FocusSetFocused;
-extern const char* DisableCache;
-extern const char* DispatchAsyncEvent;
-extern const char* EnableCache;
-extern const char* EndSentinel;
-extern const char* HandleAccessKey;
-extern const char* HandleContextMenu;
-extern const char* HandleKeyPress;
-extern const char* HandleMouseMove;
-extern const char* HandleMousePress;
-extern const char* HandleMouseRelease;
-extern const char* HandleWheelEvent;
-extern const char* InitializeFocus;
-extern const char* ReceivedResourceResponse;
-extern const char* NavigateToPage;
-extern const char* ScrollPage;
-extern const char* SendResizeEvent;
-extern const char* SetCookieSeed;
-extern const char* TimerCreated;
-extern const char* TimerFired;
-} // namespace ReplayableTypes
+class SendResizeEvent : public DispatchableAction {
 
-} // namespace WebCore
+public:
+    SendResizeEvent(const IntSize& size);
+    virtual ~SendResizeEvent() {}
+
+    const IntSize& size() const { return m_size; }
+
+    // DispatchableAction API
+    virtual void dispatch(DeterminismController*) OVERRIDE;
+
+    // ReplayableAction API
+    virtual String toString() const OVERRIDE;
+    virtual size_t memorySize() const OVERRIDE { return sizeof(SendResizeEvent); }
+    void serialize(WTF::ActionSerializer*) const OVERRIDE;
+
+private:
+    IntSize m_size;
+};
+
+} //namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
 
-#endif // ReplayableTypes_h
+#endif // SendResizeEvent_h

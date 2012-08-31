@@ -50,6 +50,7 @@
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollPage.h"
+#include "SendResizeEvent.h"
 #include <wtf/PassOwnPtr.h>
 
 /* We must always define these symbols even if Timelapse support is
@@ -276,6 +277,23 @@ void UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, 
 
     m_page->focusController()->focusedOrMainFrame()->eventHandler()->logicalScrollRecursively(direction, granularity, static_cast<Node*>(0));
 }        
+
+void UserInputProxy::sendResizeEvent(const IntSize& size, bool fromReplay)
+    {
+#if ENABLE(TIMELAPSE)
+        if (!fromReplay && m_mode == Replaying)
+            return;
+        
+        if (m_mode == Capturing && m_page->determinismController()) {
+            SendResizeEvent* action = new SendResizeEvent(size);
+            m_page->determinismController()->capturePageInput(action);
+        }
+#else
+        UNUSED_PARAM(fromReplay);
+#endif // ENABLE(TIMELAPSE)
+        
+        m_page->mainFrame()->eventHandler()->sendResizeEvent();
+    }
 
 } // namespace WebCore
 
