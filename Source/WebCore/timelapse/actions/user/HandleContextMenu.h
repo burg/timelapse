@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
+ *  Copyright (C) 2012, Jake Bailey.
  *  Copyright (C) 2012, University of Washington. All rights reserved.
  *
  *
