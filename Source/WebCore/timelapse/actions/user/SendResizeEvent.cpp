@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2012, Jake Bailey.
+ *  Copyright (C) 2012, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,35 +33,50 @@
 
 #if ENABLE(TIMELAPSE)
 
-#include "ReplayableTypes.h"
+#include "SendResizeEvent.h"
+
+#include "DeterminismController.h"
+#include "DispatchEventBase.h"
+#include "Frame.h"
+#include "UserInputProxy.h"
+#include <wtf/Assertions.h>
+#include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringConcatenate.h>
+#include <wtf/timelapse/ActionSerializer.h>
 
 namespace WebCore {
 
-namespace ReplayableTypes {
-const char* BeginSentinel = "BeginSentinel";
-const char* FocusSetActive = "FocusSetActive";
-const char* FocusSetFocused = "FocusSetFocused";
-const char* DisableCache = "DisableCache";
-const char* DispatchAsyncEvent = "DispatchAsyncEvent";
-const char* EnableCache = "EnableCache";
-const char* EndSentinel = "EndSentinel";
-const char* HandleAccessKey = "HandleAccessKey";
-const char* HandleContextMenu = "HandleContextMenu";
-const char* HandleKeyPress = "HandleKeyPress";
-const char* HandleMouseMove = "HandleMouseMove";
-const char* HandleMousePress = "HandleMousePress";
-const char* HandleMouseRelease = "HandleMouseRelease";
-const char* HandleWheelEvent = "HandleWheelEvent";
-const char* InitializeFocus = "InitializeFocus";
-const char* InitializeWindow = "InitializeWindow";
-const char* ReceivedResourceResponse = "ReceivedResourceResponse";
-const char* NavigateToPage = "NavigateToPage";
-const char* ScrollPage = "ScrollPage";
-const char* SendResizeEvent = "SendResizeEvent";
-const char* SetCookieSeed = "SetCookieSeed";
-const char* TimerCreated = "TimerCreated";
-const char* TimerFired = "TimerFired";
-} // namespace ReplayableTypes
+SendResizeEvent::SendResizeEvent(const Frame* frame)
+    : DispatchableAction(ReplayableTypes::SendResizeEvent)
+    , m_width(frame->document()->domWindow()->outerWidth())
+    , m_height(frame->document()->domWindow()->outerHeight())
+    , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(frame->document())) {}
+
+void SendResizeEvent::dispatch(DeterminismController* controller)
+{
+    ASSERT(sealed());
+
+    Document* document = SerializedEventTarget::documentFromFrameIndex(controller->page(), m_frameIndex);
+
+    document->domWindow()->resizeTo((float) m_width, (float) m_height);
+    controller->page()->userInputProxy()->sendResizeEvent(document->frame(), true);
+    controller->didDispatch(this);
+}
+
+String SendResizeEvent::toString() const
+{
+    StringBuilder sb;
+    sb.append(makeString("Resize("));
+    sb.append(makeString("size=[", String::number(m_width), ",", String::number(m_height), "];"));
+    sb.append(")");
+    return sb.toString();
+}
+
+void SendResizeEvent::serialize(ActionSerializer* serializer) const
+{
+    serializer->putInt("width", m_width);
+    serializer->putInt("height", m_height);
+}
 
 } // namespace WebCore
 

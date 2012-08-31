@@ -65,6 +65,7 @@ public:
     void focusSetFocused(bool focused, bool fromReplay = false);
     void scrollRecursively(ScrollDirection, ScrollGranularity, bool fromReplay = false);
     void scrollRecursivelyLogical(ScrollLogicalDirection, ScrollGranularity, bool fromReplay = false);
+    void sendResizeEvent(const Frame* frame, bool fromReplay = false);
 
 private:
     UserInputProxy(Page*);

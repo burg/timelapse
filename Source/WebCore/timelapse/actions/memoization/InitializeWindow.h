@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2012, Jake Bailey.
+ *  Copyright (C) 2012, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,40 +29,45 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#ifndef InitializeWindow_h
+#define InitializeWindow_h
 
 #if ENABLE(TIMELAPSE)
 
+#include "DispatchableAction.h"
+#include "Frame.h"
+#include "Page.h"
 #include "ReplayableTypes.h"
 
 namespace WebCore {
 
-namespace ReplayableTypes {
-const char* BeginSentinel = "BeginSentinel";
-const char* FocusSetActive = "FocusSetActive";
-const char* FocusSetFocused = "FocusSetFocused";
-const char* DisableCache = "DisableCache";
-const char* DispatchAsyncEvent = "DispatchAsyncEvent";
-const char* EnableCache = "EnableCache";
-const char* EndSentinel = "EndSentinel";
-const char* HandleAccessKey = "HandleAccessKey";
-const char* HandleContextMenu = "HandleContextMenu";
-const char* HandleKeyPress = "HandleKeyPress";
-const char* HandleMouseMove = "HandleMouseMove";
-const char* HandleMousePress = "HandleMousePress";
-const char* HandleMouseRelease = "HandleMouseRelease";
-const char* HandleWheelEvent = "HandleWheelEvent";
-const char* InitializeFocus = "InitializeFocus";
-const char* InitializeWindow = "InitializeWindow";
-const char* ReceivedResourceResponse = "ReceivedResourceResponse";
-const char* NavigateToPage = "NavigateToPage";
-const char* ScrollPage = "ScrollPage";
-const char* SendResizeEvent = "SendResizeEvent";
-const char* SetCookieSeed = "SetCookieSeed";
-const char* TimerCreated = "TimerCreated";
-const char* TimerFired = "TimerFired";
-} // namespace ReplayableTypes
+    class DeterminismController;
 
-} // namespace WebCore
+class InitializeWindow : public DispatchableAction { 
+
+public:
+    InitializeWindow(Page* page, unsigned dispatchCount, const PositionMark& mark)
+    : DispatchableAction(ReplayableTypes::InitializeWindow, dispatchCount, mark)
+    , m_width(page->mainFrame()->document()->domWindow()->outerWidth())
+    , m_height(page->mainFrame()->document()->domWindow()->outerHeight()) {}
+
+    virtual ~InitializeWindow() {};
+
+    // DispatchableAction API
+    virtual void dispatch(DeterminismController*) OVERRIDE;
+
+    // ReplayableAction API
+    virtual String toString() const OVERRIDE;
+    size_t memorySize() const OVERRIDE { return sizeof(InitializeWindow); }
+    void serialize(WTF::ActionSerializer*) const OVERRIDE;
+  
+private:
+    int m_width;
+    int m_height;
+};
+
+} //namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
+
+#endif // InitializeWindow_h

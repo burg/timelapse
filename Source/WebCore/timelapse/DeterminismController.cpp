@@ -48,6 +48,7 @@
 #include "FrameTree.h"
 #include "JSONActionSerializer.h"
 #include "InitializeFocus.h"
+#include "InitializeWindow.h"
 #include "InspectorInstrumentation.h"
 #include "KURL.h"
 #include "Location.h"
@@ -209,6 +210,7 @@ void DeterminismController::beginCapturing(const PositionMark& mark)
     m_cacheController->disableCache();
     captureAction(new DisableCache(m_domEventDispatchCount, m_currentMark));
     captureAction(new InitializeFocus(m_page, m_domEventDispatchCount, m_currentMark));
+    captureAction(new InitializeWindow(m_page, m_domEventDispatchCount, m_currentMark));
     // attempt to pull reasonable values here to save in the log, and 
     // also to use for the initial refresh.
     Frame* mainFrame = m_page->mainFrame();
