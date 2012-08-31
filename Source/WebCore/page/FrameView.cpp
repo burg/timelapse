@@ -68,6 +68,7 @@
 #include "Settings.h"
 #include "StyleResolver.h"
 #include "TextResourceDecoder.h"
+#include "UserInputProxy.h"
 
 #include <wtf/CurrentTime.h>
 #include <wtf/TemporaryChange.h>
@@ -2490,11 +2491,15 @@ void FrameView::performPostLayoutTasks()
         m_lastViewportSize = currentSize;
         m_lastZoomFactor = currentZoomFactor;
         if (resized) {
-            m_frame->eventHandler()->sendResizeEvent();
+            Page* page = m_frame->page();
+            if (page)
+                page->userInputProxy()->sendResizeEvent(m_frame.get());
+            else
+                m_frame->eventHandler()->sendResizeEvent();
 
 #if ENABLE(INSPECTOR)
             if (InspectorInstrumentation::hasFrontends()) {
-                if (Page* page = m_frame->page()) {
+                if (page) {
                     if (page->mainFrame() == m_frame) {
                         if (InspectorClient* inspectorClient = page->inspectorController()->inspectorClient())
                             inspectorClient->didResizeMainFrame(m_frame.get());
