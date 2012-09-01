@@ -53,9 +53,12 @@ public:
     static PassOwnPtr<NetworkProxy> create(Page*);
     virtual ~NetworkProxy() {}
 
+#if ENABLE(TIMELAPSE)
     HandleContext handleContextById(int);
     void removeHandleById(int);
     DeterminismController* controller() const;
+#endif // ENABLE(TIMELAPSE)
+
     PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, bool, bool);
 
 private:

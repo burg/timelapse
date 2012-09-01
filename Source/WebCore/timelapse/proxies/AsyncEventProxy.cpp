@@ -46,6 +46,8 @@
 
 namespace WebCore {
 
+#if ENABLE(TIMELAPSE)
+
 #if !LOG_DISABLED
 static void dumpEventDispatchInfo(RefPtr<Event> event, RefPtr<EventTarget> eventTarget, bool wasIgnored)
 {
@@ -70,7 +72,6 @@ static void dumpEventDispatchInfo(RefPtr<Event> event, RefPtr<EventTarget> event
 }
 #endif // !LOG_DISABLED
 
-#if ENABLE(TIMELAPSE)
 static bool isCapturableEventType(const AtomicString&)
 {
     return false;

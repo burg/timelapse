@@ -79,8 +79,8 @@ static DispatchableAction* popDispatchAction(PassRefPtr<DeterminismLog> log)
 static void dumpEventDispatchInfo(const Event& event, DOMWindow* window, Node* node, int eventCount, bool wasIgnored)
 {
     if (node)
-        LOG(Timelapse, "%-30s %s event %4d@: type=%s, target=%d/node[%p] %s\n", "[DeterminismController]",
-            (wasIgnored) ? "REJECT" : "ACCEPT",
+        LOG(Timelapse, "%-30s %s DOM event %4d@: type=%s, target=%d/node[%p] %s\n", "[DeterminismController]",
+            (wasIgnored) ? "Unrelated" : "Dispatching",
             eventCount,
             event.type().string().utf8().data(),
             SerializedEventTarget::frameIndexFromDocument((node->inDocument()) ? node->document() : node->ownerDocument()),
@@ -89,7 +89,7 @@ static void dumpEventDispatchInfo(const Event& event, DOMWindow* window, Node* n
 
     else if (window)
         LOG(Timelapse, "%-30s %s event %4d@: type=%s, target=%d/window[%p] %s\n", "[DeterminismController]",
-            (wasIgnored) ? "REJECT" : "ACCEPT",
+            (wasIgnored) ? "Unrelated" : "Dispatching",
             eventCount,
             event.type().string().utf8().data(),
             SerializedEventTarget::frameIndexFromDocument(window->document()),

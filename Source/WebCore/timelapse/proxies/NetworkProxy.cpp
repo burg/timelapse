@@ -60,6 +60,7 @@ PassOwnPtr<NetworkProxy> NetworkProxy::create(Page* page)
     return adoptPtr(new NetworkProxy(page));
 }
 
+#if ENABLE(TIMELAPSE)
 HandleContext NetworkProxy::handleContextById(int id)
 {
     return m_replayHandleMap.get(id);
@@ -74,6 +75,7 @@ DeterminismController* NetworkProxy::controller() const
 {
     return m_page->determinismController();
 }
+#endif // ENABLE(TIMELAPSE)
 
 PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff)
 {
