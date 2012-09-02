@@ -456,6 +456,12 @@ public:
     // Used to set the device scale factor.
     void setBackingScaleFactor(const CppArgumentList&, CppVariant*);
 
+    // Retrieves the text surrounding a position in a text node.
+    // Expects the first argument to be a text node, the second and third to be
+    // point coordinates relative to the node and the fourth the maximum text
+    // length to retrieve.
+    void textSurroundingNode(const CppArgumentList&, CppVariant*);
+
 public:
     // The following methods are not exposed to JavaScript.
     void setWorkQueueFrozen(bool frozen) { m_workQueue.setFrozen(frozen); }

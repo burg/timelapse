@@ -20,7 +20,7 @@
  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
  * OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef GraphicsContext3D_h
@@ -91,14 +91,12 @@ const Platform3DObject NullPlatform3DObject = 0;
 #include <CoreGraphics/CGContext.h>
 #endif
 
-#if PLATFORM(BLACKBERRY)
-#include <GLES2/gl2.h>
-#endif
-
 namespace WebCore {
 class DrawingBuffer;
 class Extensions3D;
-#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(QT) || PLATFORM(EFL)
+#if USE(OPENGL_ES_2)
+class Extensions3DOpenGLES;
+#else
 class Extensions3DOpenGL;
 #endif
 #if PLATFORM(QT)
@@ -512,7 +510,7 @@ public:
     PlatformLayer* platformLayer() const;
 #endif
 #elif PLATFORM(EFL)
-    PlatformGraphicsContext3D platformGraphicsContext3D() const;
+    PlatformGraphicsContext3D platformGraphicsContext3D();
     Platform3DObject platformTexture() const { return m_texture; }
 #if USE(ACCELERATED_COMPOSITING)
     PlatformLayer* platformLayer() const;
@@ -924,12 +922,18 @@ public:
     // in particular stencil and antialias, and determine which could or
     // could not be honored based on the capabilities of the OpenGL
     // implementation.
+    void validateDepthStencil(const char* packedDepthStencilExtension);
     void validateAttributes();
 
     // Read rendering results into a pixel array with the same format as the
     // backbuffer.
     void readRenderingResults(unsigned char* pixels, int pixelsSize);
     void readPixelsAndConvertToBGRAIfNecessary(int x, int y, int width, int height, unsigned char* pixels);
+#endif
+
+#if PLATFORM(BLACKBERRY)
+    void logFrameBufferStatus(int line);
+    void readPixelsIMG(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Denum type, void* data);
 #endif
 
     bool reshapeFBOs(const IntSize&);
@@ -944,6 +948,11 @@ public:
 #if PLATFORM(MAC)
     CGLContextObj m_contextObj;
     RetainPtr<WebGLLayer> m_webGLLayer;
+#elif PLATFORM(BLACKBERRY)
+#if USE(ACCELERATED_COMPOSITING)
+    RefPtr<PlatformLayer> m_compositingLayer;
+#endif
+    void* m_context;
 #endif
 
 #if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(QT) || PLATFORM(EFL) || PLATFORM(BLACKBERRY)
@@ -955,16 +964,27 @@ public:
     HashMap<Platform3DObject, ShaderSourceEntry> m_shaderSourceMap;
 
     ANGLEWebKitBridge m_compiler;
+#endif
 
+#if PLATFORM(BLACKBERRY) || (PLATFORM(QT) && defined(QT_OPENGL_ES_2))
+    friend class Extensions3DOpenGLES;
+    OwnPtr<Extensions3DOpenGLES> m_extensions;
+#elif !PLATFORM(CHROMIUM)
     friend class Extensions3DOpenGL;
     OwnPtr<Extensions3DOpenGL> m_extensions;
+#endif
+    friend class Extensions3DOpenGLCommon;
 
     Attributes m_attrs;
     Vector<Vector<float> > m_vertexArray;
 
-    GC3Duint m_texture, m_compositorTexture;
+    GC3Duint m_texture;
+#if !PLATFORM(BLACKBERRY)
+    GC3Duint m_compositorTexture;
+#endif
     GC3Duint m_fbo;
-#if USE(OPENGL_ES_2)
+
+#if !PLATFORM(BLACKBERRY)
     GC3Duint m_depthBuffer;
     GC3Duint m_stencilBuffer;
 #endif
@@ -985,10 +1005,16 @@ public:
 
     // Errors raised by synthesizeGLError().
     ListHashSet<GC3Denum> m_syntheticErrors;
+
+#if PLATFORM(BLACKBERRY)
+    bool m_isImaginationHardware;
 #endif
 
+#if !PLATFORM(BLACKBERRY)
     friend class GraphicsContext3DPrivate;
     OwnPtr<GraphicsContext3DPrivate> m_private;
+#endif
+    bool systemAllowsMultisamplingOnATICards() const;
 };
 
 } // namespace WebCore

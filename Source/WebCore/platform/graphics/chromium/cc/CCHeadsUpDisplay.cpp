@@ -31,11 +31,9 @@
 #include "GraphicsContext3D.h"
 #include "LayerRendererChromium.h"
 #include "PlatformCanvas.h"
-#include "TextureManager.h"
 #include "cc/CCDebugRectHistory.h"
 #include "cc/CCFrameRateCounter.h"
 #include "cc/CCLayerTreeHostImpl.h"
-#include <public/WebGraphicsContext3D.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -69,13 +67,8 @@ bool CCHeadsUpDisplay::showDebugRects(const CCLayerTreeSettings& settings) const
 void CCHeadsUpDisplay::draw(CCLayerTreeHostImpl* layerTreeHostImpl)
 {
     CCRenderer* layerRenderer = layerTreeHostImpl->layerRenderer();
-    WebKit::WebGraphicsContext3D* context = layerTreeHostImpl->context()->context3D();
-    if (!context) {
-        // FIXME: Implement this path for software compositing.
-        return;
-    }
     if (!m_hudTexture)
-        m_hudTexture = ManagedTexture::create(layerRenderer->implTextureManager());
+        m_hudTexture = CCScopedTexture::create(layerTreeHostImpl->resourceProvider());
 
     const CCLayerTreeSettings& settings = layerTreeHostImpl->settings();
     // Use a fullscreen texture only if we need to...
@@ -88,7 +81,7 @@ void CCHeadsUpDisplay::draw(CCLayerTreeHostImpl* layerTreeHostImpl)
         hudSize.setHeight(128);
     }
 
-    if (!m_hudTexture->reserve(hudSize, GraphicsContext3D::RGBA))
+    if (!m_hudTexture->id() && !m_hudTexture->allocate(CCRenderer::ImplPool, hudSize, GraphicsContext3D::RGBA, CCResourceProvider::TextureUsageAny))
         return;
 
     // Render pixels into the texture.
@@ -103,27 +96,11 @@ void CCHeadsUpDisplay::draw(CCLayerTreeHostImpl* layerTreeHostImpl)
     // Upload to GL.
     {
         PlatformCanvas::AutoLocker locker(&canvas);
-
-        m_hudTexture->bindTexture(layerTreeHostImpl->context(), layerRenderer->implTextureAllocator());
-        bool uploadedViaMap = false;
-        if (layerRenderer->capabilities().usingMapSub) {
-            uint8_t* pixelDest = static_cast<uint8_t*>(context->mapTexSubImage2DCHROMIUM(GraphicsContext3D::TEXTURE_2D, 0, 0, 0, hudSize.width(), hudSize.height(), GraphicsContext3D::RGBA, GraphicsContext3D::UNSIGNED_BYTE, Extensions3DChromium::WRITE_ONLY));
-
-            if (pixelDest) {
-                uploadedViaMap = true;
-                memcpy(pixelDest, locker.pixels(), hudSize.width() * hudSize.height() * 4);
-                context->unmapTexSubImage2DCHROMIUM(pixelDest);
-            }
-        }
-
-        if (!uploadedViaMap) {
-            GLC(context, context->texImage2D(GraphicsContext3D::TEXTURE_2D, 0, GraphicsContext3D::RGBA, canvas.size().width(), canvas.size().height(), 0, GraphicsContext3D::RGBA, GraphicsContext3D::UNSIGNED_BYTE, locker.pixels()));
-        }
+        IntRect rect(IntPoint(0, 0), hudSize);
+        layerTreeHostImpl->resourceProvider()->upload(m_hudTexture->id(), locker.pixels(), rect, rect, rect);
     }
 
     layerRenderer->drawHeadsUpDisplay(m_hudTexture.get(), hudSize);
-
-    m_hudTexture->unreserve();
 }
 
 void CCHeadsUpDisplay::drawHudContents(GraphicsContext* context, CCLayerTreeHostImpl* layerTreeHostImpl, const CCLayerTreeSettings& settings, const IntSize& hudSize)

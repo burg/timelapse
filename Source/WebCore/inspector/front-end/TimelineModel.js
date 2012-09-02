@@ -35,6 +35,7 @@
 WebInspector.TimelineModel = function()
 {
     this._records = [];
+    this._stringPool = new StringPool();
     this._minimumRecordTime = -1;
     this._maximumRecordTime = -1;
     this._collectionEnabled = false;
@@ -44,6 +45,7 @@ WebInspector.TimelineModel = function()
 
 WebInspector.TimelineModel.RecordType = {
     Root: "Root",
+    Program: "Program",
     EventDispatch: "EventDispatch",
 
     BeginFrame: "BeginFrame",
@@ -62,10 +64,12 @@ WebInspector.TimelineModel.RecordType = {
     XHRLoad: "XHRLoad",
     EvaluateScript: "EvaluateScript",
 
-    TimeStamp: "TimeStamp",
-
     MarkLoad: "MarkLoad",
     MarkDOMContent: "MarkDOMContent",
+
+    TimeStamp: "TimeStamp",
+    Time: "Time",
+    TimeEnd: "TimeEnd",
 
     ScheduleResourceRequest: "ScheduleResourceRequest",
     ResourceSendRequest: "ResourceSendRequest",
@@ -149,6 +153,7 @@ WebInspector.TimelineModel.prototype = {
 
     _addRecord: function(record)
     {
+        this._stringPool.internObjectStrings(record);
         this._records.push(record);
         this._updateBoundaries(record);
         this.dispatchEventToListeners(WebInspector.TimelineModel.Events.RecordAdded, record);
@@ -211,6 +216,7 @@ WebInspector.TimelineModel.prototype = {
     reset: function()
     {
         this._records = [];
+        this._stringPool.reset();
         this._minimumRecordTime = -1;
         this._maximumRecordTime = -1;
         this.dispatchEventToListeners(WebInspector.TimelineModel.Events.RecordsCleared);

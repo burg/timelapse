@@ -5,8 +5,6 @@
 # See 'Tools/qmake/README' for an overview of the build system
 # -------------------------------------------------------------------
 
-load(features)
-
 # All external modules should include WTF headers by prefixing with "wtf" (#include <wtf/some/thing.h>).
 INCLUDEPATH += $$PWD
 
@@ -24,13 +22,6 @@ haveQt(5) {
             error("To build QtWebKit with Qt 5 you need ICU")
         }
     }
-}
-
-v8 {
-    !haveQt(5): error("To build QtWebKit+V8 you need to use Qt 5")
-    DEFINES *= WTF_USE_V8=1
-    INCLUDEPATH += $${ROOT_WEBKIT_DIR}/Source/WebKit/qt/v8/ForwardingHeaders
-    QT += v8-private declarative
 }
 
 linux-*:contains(DEFINES, WTF_USE_GSTREAMER=1) {

@@ -48,12 +48,18 @@ namespace WebKit {
 
 class DownloadProxy;
 class WebApplicationCacheManagerProxy;
+#if ENABLE(BATTERY_STATUS)
+class WebBatteryManagerProxy;
+#endif
 class WebCookieManagerProxy;
 class WebDatabaseManagerProxy;
 class WebGeolocationManagerProxy;
 class WebIconDatabase;
 class WebKeyValueStorageManagerProxy;
 class WebMediaCacheManagerProxy;
+#if ENABLE(NETWORK_INFO)
+class WebNetworkInfoManagerProxy;
+#endif
 class WebNotificationManagerProxy;
 class WebPageGroup;
 class WebPageProxy;
@@ -103,7 +109,6 @@ public:
     DownloadProxy* download(WebPageProxy* initiatingPage, const WebCore::ResourceRequest&);
 
     void setInjectedBundleInitializationUserData(PassRefPtr<APIObject> userData) { m_injectedBundleInitializationUserData = userData; }
-    APIObject* injectedBundleInitializationUserData() const { return m_injectedBundleInitializationUserData.get(); }
 
     void postMessageToInjectedBundle(const String&, APIObject*);
 
@@ -155,12 +160,18 @@ public:
     static HashSet<String, CaseFoldingHash> pdfAndPostScriptMIMETypes();
 
     WebApplicationCacheManagerProxy* applicationCacheManagerProxy() const { return m_applicationCacheManagerProxy.get(); }
+#if ENABLE(BATTERY_STATUS)
+    WebBatteryManagerProxy* batteryManagerProxy() const { return m_batteryManagerProxy.get(); }
+#endif
     WebCookieManagerProxy* cookieManagerProxy() const { return m_cookieManagerProxy.get(); }
     WebDatabaseManagerProxy* databaseManagerProxy() const { return m_databaseManagerProxy.get(); }
     WebGeolocationManagerProxy* geolocationManagerProxy() const { return m_geolocationManagerProxy.get(); }
     WebIconDatabase* iconDatabase() const { return m_iconDatabase.get(); }
     WebKeyValueStorageManagerProxy* keyValueStorageManagerProxy() const { return m_keyValueStorageManagerProxy.get(); }
     WebMediaCacheManagerProxy* mediaCacheManagerProxy() const { return m_mediaCacheManagerProxy.get(); }
+#if ENABLE(NETWORK_INFO)
+    WebNetworkInfoManagerProxy* networkInfoManagerProxy() const { return m_networkInfoManagerProxy.get(); }
+#endif
     WebNotificationManagerProxy* notificationManagerProxy() const { return m_notificationManagerProxy.get(); }
     WebPluginSiteDataManager* pluginSiteDataManager() const { return m_pluginSiteDataManager.get(); }
     WebResourceCacheManagerProxy* resourceCacheManagerProxy() const { return m_resourceCacheManagerProxy.get(); }
@@ -300,12 +311,18 @@ private:
     double m_memorySamplerInterval;
 
     RefPtr<WebApplicationCacheManagerProxy> m_applicationCacheManagerProxy;
+#if ENABLE(BATTERY_STATUS)
+    RefPtr<WebBatteryManagerProxy> m_batteryManagerProxy;
+#endif
     RefPtr<WebCookieManagerProxy> m_cookieManagerProxy;
     RefPtr<WebDatabaseManagerProxy> m_databaseManagerProxy;
     RefPtr<WebGeolocationManagerProxy> m_geolocationManagerProxy;
     RefPtr<WebIconDatabase> m_iconDatabase;
     RefPtr<WebKeyValueStorageManagerProxy> m_keyValueStorageManagerProxy;
     RefPtr<WebMediaCacheManagerProxy> m_mediaCacheManagerProxy;
+#if ENABLE(NETWORK_INFO)
+    RefPtr<WebNetworkInfoManagerProxy> m_networkInfoManagerProxy;
+#endif
     RefPtr<WebNotificationManagerProxy> m_notificationManagerProxy;
     RefPtr<WebPluginSiteDataManager> m_pluginSiteDataManager;
     RefPtr<WebResourceCacheManagerProxy> m_resourceCacheManagerProxy;

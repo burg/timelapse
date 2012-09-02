@@ -29,27 +29,27 @@
 """Handle messages from the Manager and executes actual tests."""
 
 import logging
-import os
-import sys
 import threading
 import time
 
-from webkitpy.common.host import Host
-from webkitpy.layout_tests.controllers import manager_worker_broker
 from webkitpy.layout_tests.controllers import single_test_runner
 from webkitpy.layout_tests.models import test_expectations
 from webkitpy.layout_tests.models import test_results
-from webkitpy.layout_tests.views import metered_stream
 
 
 _log = logging.getLogger(__name__)
 
 
-class Worker(manager_worker_broker.AbstractWorker):
-    def __init__(self, worker_connection, worker_number, results_directory, options):
-        super(Worker, self).__init__(worker_connection, worker_number)
+class Worker(object):
+    def __init__(self, caller, results_directory, options):
+        self._caller = caller
+        self._worker_number = caller.worker_number
+        self._name = caller.name
         self._results_directory = results_directory
         self._options = options
+
+        # The remaining fields are initialized in start()
+        self._host = None
         self._port = None
         self._batch_size = None
         self._batch_count = None
@@ -57,78 +57,35 @@ class Worker(manager_worker_broker.AbstractWorker):
         self._driver = None
         self._tests_run_file = None
         self._tests_run_filename = None
-        self._log_messages = []
-        self._logger = None
-        self._log_handler = None
 
     def __del__(self):
-        self.cleanup()
+        self.stop()
 
-    def safe_init(self):
-        """This method should only be called when it is is safe for the mixin
-        to create state that can't be Pickled.
+    def start(self):
+        """This method is called when the object is starting to be used and it is safe
+        for the object to create state that does not need to be pickled (usually this means
+        it is called in a child process)."""
+        self._host = self._caller.host
+        self._filesystem = self._host.filesystem
+        self._port = self._host.port_factory.get(self._options.platform, self._options)
 
-        This routine exists so that the mixin can be created and then marshaled
-        across into a child process."""
-        self._filesystem = self._port.host.filesystem
         self._batch_count = 0
         self._batch_size = self._options.batch_size or 0
         tests_run_filename = self._filesystem.join(self._results_directory, "tests_run%d.txt" % self._worker_number)
         self._tests_run_file = self._filesystem.open_text_file_for_writing(tests_run_filename)
 
-    def _set_up_logging(self):
-        self._logger = logging.getLogger()
-
-        # The unix multiprocessing implementation clones the MeteredStream log handler
-        # into the child process, so we need to remove it to avoid duplicate logging.
-        for h in self._logger.handlers:
-            # log handlers don't have names until python 2.7.
-            if getattr(h, 'name', '') == metered_stream.LOG_HANDLER_NAME:
-                self._logger.removeHandler(h)
-                break
-
-        self._logger.setLevel(logging.DEBUG if self._options.verbose else logging.INFO)
-        self._log_handler = _WorkerLogHandler(self)
-        self._logger.addHandler(self._log_handler)
-
-    def run(self, host, set_up_logging):
-        if not host:
-            host = Host()
-
-        # FIXME: this should move into manager_worker_broker.py.
-        if set_up_logging:
-            self._set_up_logging()
-
-        options = self._options
-        self._port = host.port_factory.get(options.platform, options)
-
-        self.safe_init()
-        try:
-            _log.debug("%s starting" % self._name)
-            super(Worker, self).run()
-        finally:
-            self.kill_driver()
-            _log.debug("%s exiting" % self._name)
-            self.cleanup()
-            self._worker_connection.post_message('done', self._log_messages)
-
-    def handle_test_list(self, src, list_name, test_list):
+    def handle(self, name, source, test_list_name, test_inputs):
+        assert name == 'test_list'
         start_time = time.time()
-        num_tests = 0
-        for test_input in test_list:
-            self._update_test_input(test_input)
+        for test_input in test_inputs:
             self._run_test(test_input)
-            num_tests += 1
-            self._worker_connection.yield_to_broker()
-
         elapsed_time = time.time() - start_time
-        self._worker_connection.post_message('finished_list', list_name, num_tests, elapsed_time)
-
-    def handle_stop(self, src):
-        self.stop_handling_messages()
+        self._caller.post('finished_test_list', test_list_name, len(test_inputs), elapsed_time)
 
     def _update_test_input(self, test_input):
-        test_input.reference_files = self._port.reference_files(test_input.test_name)
+        if test_input.reference_files is None:
+            # Lazy initialization.
+            test_input.reference_files = self._port.reference_files(test_input.test_name)
         if test_input.reference_files:
             test_input.should_run_pixel_test = True
         elif self._options.pixel_tests:
@@ -140,31 +97,26 @@ class Worker(manager_worker_broker.AbstractWorker):
             test_input.should_run_pixel_test = False
 
     def _run_test(self, test_input):
-        test_timeout_sec = self.timeout(test_input)
+        self._update_test_input(test_input)
+        test_timeout_sec = self._timeout(test_input)
         start = time.time()
-        self._worker_connection.post_message('started_test', test_input, test_timeout_sec)
+        self._caller.post('started_test', test_input, test_timeout_sec)
 
-        result = self.run_test_with_timeout(test_input, test_timeout_sec)
+        result = self._run_test_with_timeout(test_input, test_timeout_sec)
 
         elapsed_time = time.time() - start
-        log_messages = self._log_messages
-        self._log_messages = []
-        self._worker_connection.post_message('finished_test', result, elapsed_time, log_messages)
+        self._caller.post('finished_test', result, elapsed_time)
 
-        self.clean_up_after_test(test_input, result)
+        self._clean_up_after_test(test_input, result)
 
-    def cleanup(self):
+    def stop(self):
         _log.debug("%s cleaning up" % self._name)
-        self.kill_driver()
+        self._kill_driver()
         if self._tests_run_file:
             self._tests_run_file.close()
             self._tests_run_file = None
-        if self._log_handler and self._logger:
-            self._logger.removeHandler(self._log_handler)
-        self._log_handler = None
-        self._logger = None
 
-    def timeout(self, test_input):
+    def _timeout(self, test_input):
         """Compute the appropriate timeout value for a test."""
         # The DumpRenderTree watchdog uses 2.5x the timeout; we want to be
         # larger than that. We also add a little more padding if we're
@@ -180,18 +132,21 @@ class Worker(manager_worker_broker.AbstractWorker):
         thread_timeout_sec = driver_timeout_sec + thread_padding_sec
         return thread_timeout_sec
 
-    def kill_driver(self):
-        if self._driver:
+    def _kill_driver(self):
+        # Be careful about how and when we kill the driver; if driver.stop()
+        # raises an exception, this routine may get re-entered via __del__.
+        driver = self._driver
+        self._driver = None
+        if driver:
             _log.debug("%s killing driver" % self._name)
-            self._driver.stop()
-            self._driver = None
+            driver.stop()
 
-    def run_test_with_timeout(self, test_input, timeout):
+    def _run_test_with_timeout(self, test_input, timeout):
         if self._options.run_singly:
             return self._run_test_in_another_thread(test_input, timeout)
         return self._run_test_in_this_thread(test_input)
 
-    def clean_up_after_test(self, test_input, result):
+    def _clean_up_after_test(self, test_input, result):
         self._batch_count += 1
         test_name = test_input.test_name
         self._tests_run_file.write(test_name + "\n")
@@ -199,7 +154,7 @@ class Worker(manager_worker_broker.AbstractWorker):
         if result.failures:
             # Check and kill DumpRenderTree if we need to.
             if any([f.driver_needs_restart() for f in result.failures]):
-                self.kill_driver()
+                self._kill_driver()
                 # Reset the batch count since the shell just bounced.
                 self._batch_count = 0
 
@@ -213,7 +168,7 @@ class Worker(manager_worker_broker.AbstractWorker):
             _log.debug("%s %s passed" % (self._name, test_name))
 
         if self._batch_size > 0 and self._batch_count >= self._batch_size:
-            self.kill_driver()
+            self._kill_driver()
             self._batch_count = 0
 
     def _run_test_in_another_thread(self, test_input, thread_timeout_sec):
@@ -239,7 +194,7 @@ class Worker(manager_worker_broker.AbstractWorker):
                 self.result = None
 
             def run(self):
-                self.result = worker.run_single_test(driver, test_input)
+                self.result = worker._run_single_test(driver, test_input)
 
         thread = SingleTestThread()
         thread.start()
@@ -271,21 +226,11 @@ class Worker(manager_worker_broker.AbstractWorker):
         Returns: a TestResult object.
         """
         if self._driver and self._driver.has_crashed():
-            self.kill_driver()
+            self._kill_driver()
         if not self._driver:
             self._driver = self._port.create_driver(self._worker_number)
-        return self.run_single_test(self._driver, test_input)
+        return self._run_single_test(self._driver, test_input)
 
-    def run_single_test(self, driver, test_input):
+    def _run_single_test(self, driver, test_input):
         return single_test_runner.run_single_test(self._port, self._options,
             test_input, driver, self._name)
-
-
-class _WorkerLogHandler(logging.Handler):
-    def __init__(self, worker):
-        logging.Handler.__init__(self)
-        self._worker = worker
-        self._pid = os.getpid()
-
-    def emit(self, record):
-        self._worker._log_messages.append(record)

@@ -737,6 +737,9 @@ WebInspector.ProfilesPanel.prototype = {
         return title;
     },
 
+    /**
+     * @param {string} query
+     */
     performSearch: function(query)
     {
         this.searchCanceled();
@@ -752,6 +755,7 @@ WebInspector.ProfilesPanel.prototype = {
         function updateMatchesCount()
         {
             WebInspector.searchController.updateSearchMatchesCount(this._totalSearchMatches, this);
+            WebInspector.searchController.updateCurrentMatchIndex(this._currentSearchResultIndex, this);
             matchesCountUpdateTimeout = null;
         }
 
@@ -833,9 +837,11 @@ WebInspector.ProfilesPanel.prototype = {
             showFirstResult = true;
         }
 
+        WebInspector.searchController.updateCurrentMatchIndex(this._currentSearchResultIndex, this);
+
         if (currentView !== this.visibleView) {
             this.showView(currentView);
-            WebInspector.searchController.focusSearchField();
+            WebInspector.searchController.showSearchField();
         }
 
         if (showFirstResult)
@@ -866,9 +872,11 @@ WebInspector.ProfilesPanel.prototype = {
             showLastResult = true;
         }
 
+        WebInspector.searchController.updateCurrentMatchIndex(this._currentSearchResultIndex, this);
+
         if (currentView !== this.visibleView) {
             this.showView(currentView);
-            WebInspector.searchController.focusSearchField();
+            WebInspector.searchController.showSearchField();
         }
 
         if (showLastResult)

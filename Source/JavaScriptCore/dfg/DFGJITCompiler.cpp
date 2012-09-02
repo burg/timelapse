@@ -153,7 +153,6 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
         unsigned returnAddressOffset = linkBuffer.returnAddressOffset(m_exceptionChecks[i].m_call);
         codeOrigins[i].codeOrigin = record.m_codeOrigin;
         codeOrigins[i].callReturnOffset = returnAddressOffset;
-        record.m_token.assertCodeOriginIndex(i);
     }
     
     m_codeBlock->setNumberOfStructureStubInfos(m_propertyAccesses.size());
@@ -172,6 +171,7 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
 #endif
         info.patch.dfg.deltaCallToSlowCase = differenceBetweenCodePtr(callReturnLocation, linkBuffer.locationOf(m_propertyAccesses[i].m_slowPathGenerator->label()));
         info.patch.dfg.deltaCallToDone = differenceBetweenCodePtr(callReturnLocation, linkBuffer.locationOf(m_propertyAccesses[i].m_done));
+        info.patch.dfg.deltaCallToStorageLoad = differenceBetweenCodePtr(callReturnLocation, linkBuffer.locationOf(m_propertyAccesses[i].m_propertyStorageLoad));
         info.patch.dfg.baseGPR = m_propertyAccesses[i].m_baseGPR;
 #if USE(JSVALUE64)
         info.patch.dfg.valueGPR = m_propertyAccesses[i].m_valueGPR;
@@ -179,7 +179,7 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
         info.patch.dfg.valueTagGPR = m_propertyAccesses[i].m_valueTagGPR;
         info.patch.dfg.valueGPR = m_propertyAccesses[i].m_valueGPR;
 #endif
-        info.patch.dfg.scratchGPR = m_propertyAccesses[i].m_scratchGPR;
+        m_propertyAccesses[i].m_usedRegisters.copyInfo(info.patch.dfg.usedRegisters);
         info.patch.dfg.registersFlushed = m_propertyAccesses[i].m_registerMode == PropertyAccessRecord::RegistersFlushed;
     }
     
@@ -188,7 +188,9 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
         CallLinkInfo& info = m_codeBlock->callLinkInfo(i);
         info.callType = m_jsCalls[i].m_callType;
         info.isDFG = true;
-        info.callReturnLocation = CodeLocationLabel(linkBuffer.locationOf(m_jsCalls[i].m_slowCall));
+        info.bytecodeIndex = m_jsCalls[i].m_codeOrigin.bytecodeIndex;
+        linkBuffer.link(m_jsCalls[i].m_slowCall, FunctionPtr((m_globalData->getCTIStub(info.callType == CallLinkInfo::Construct ? linkConstructThunkGenerator : linkCallThunkGenerator)).code().executableAddress()));
+        info.callReturnLocation = linkBuffer.locationOfNearCall(m_jsCalls[i].m_slowCall);
         info.hotPathBegin = linkBuffer.locationOf(m_jsCalls[i].m_targetToCheck);
         info.hotPathOther = linkBuffer.locationOfNearCall(m_jsCalls[i].m_fastCall);
     }
@@ -203,11 +205,14 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
             codeBlock()->watchpoint(exit.m_watchpointIndex).correctLabels(linkBuffer);
     }
     
+    codeBlock()->minifiedDFG().setOriginalGraphSize(m_graph.size());
     codeBlock()->shrinkToFit(CodeBlock::LateShrink);
 }
 
 bool JITCompiler::compile(JITCode& entry)
 {
+    SamplingRegion samplingRegion("DFG Backend");
+
     setStartOfCode();
     compileEntry();
     SpeculativeJIT speculative(*this);
@@ -241,6 +246,8 @@ bool JITCompiler::compile(JITCode& entry)
 
 bool JITCompiler::compileFunction(JITCode& entry, MacroAssemblerCodePtr& entryWithArityCheck)
 {
+    SamplingRegion samplingRegion("DFG Backend");
+    
     setStartOfCode();
     compileEntry();
 
@@ -274,7 +281,8 @@ bool JITCompiler::compileFunction(JITCode& entry, MacroAssemblerCodePtr& entryWi
     move(stackPointerRegister, GPRInfo::argumentGPR0);
     poke(GPRInfo::callFrameRegister, OBJECT_OFFSETOF(struct JITStackFrame, callFrame) / sizeof(void*));
 
-    CallBeginToken token = beginCall();
+    CallBeginToken token;
+    beginCall(CodeOrigin(0), token);
     Call callRegisterFileCheck = call();
     notifyCall(callRegisterFileCheck, CodeOrigin(0), token);
     jump(fromRegisterFileCheck);
@@ -291,7 +299,7 @@ bool JITCompiler::compileFunction(JITCode& entry, MacroAssemblerCodePtr& entryWi
     branch32(AboveOrEqual, GPRInfo::regT1, TrustedImm32(m_codeBlock->numParameters())).linkTo(fromArityCheck, this);
     move(stackPointerRegister, GPRInfo::argumentGPR0);
     poke(GPRInfo::callFrameRegister, OBJECT_OFFSETOF(struct JITStackFrame, callFrame) / sizeof(void*));
-    token = beginCall();
+    beginCall(CodeOrigin(0), token);
     Call callArityCheck = call();
     notifyCall(callArityCheck, CodeOrigin(0), token);
     move(GPRInfo::regT0, GPRInfo::callFrameRegister);

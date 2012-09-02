@@ -46,6 +46,7 @@
 
 namespace JSC {
 
+class JumpReplacementWatchpoint;
 class LinkBuffer;
 class RepatchBuffer;
 class Watchpoint;
@@ -277,6 +278,7 @@ public:
         friend class AbstractMacroAssembler;
         friend class DFG::CorrectableJumpPoint;
         friend class Jump;
+        friend class JumpReplacementWatchpoint;
         friend class MacroAssemblerCodeRef;
         friend class LinkBuffer;
         friend class Watchpoint;
@@ -288,6 +290,36 @@ public:
 
         Label(AbstractMacroAssembler<AssemblerType>* masm)
             : m_label(masm->m_assembler.label())
+        {
+        }
+        
+        bool isSet() const { return m_label.isSet(); }
+    private:
+        AssemblerLabel m_label;
+    };
+    
+    // ConvertibleLoadLabel:
+    //
+    // A ConvertibleLoadLabel records a loadPtr instruction that can be patched to an addPtr
+    // so that:
+    //
+    // loadPtr(Address(a, i), b)
+    //
+    // becomes:
+    //
+    // addPtr(TrustedImmPtr(i), a, b)
+    class ConvertibleLoadLabel {
+        template<class TemplateAssemblerType>
+        friend class AbstractMacroAssembler;
+        friend class LinkBuffer;
+        
+    public:
+        ConvertibleLoadLabel()
+        {
+        }
+        
+        ConvertibleLoadLabel(AbstractMacroAssembler<AssemblerType>* masm)
+            : m_label(masm->m_assembler.labelIgnoringWatchpoints())
         {
         }
         
@@ -562,6 +594,11 @@ public:
         result.m_label = m_assembler.labelIgnoringWatchpoints();
         return result;
     }
+#else
+    Label labelIgnoringWatchpoints()
+    {
+        return label();
+    }
 #endif
     
     Label label()
@@ -671,6 +708,16 @@ protected:
     static void* readPointer(CodeLocationDataLabelPtr dataLabelPtr)
     {
         return AssemblerType::readPointer(dataLabelPtr.dataLocation());
+    }
+    
+    static void replaceWithLoad(CodeLocationConvertibleLoad label)
+    {
+        AssemblerType::replaceWithLoad(label.dataLocation());
+    }
+    
+    static void replaceWithAddressComputation(CodeLocationConvertibleLoad label)
+    {
+        AssemblerType::replaceWithAddressComputation(label.dataLocation());
     }
 };
 

@@ -77,23 +77,18 @@ protected:
     virtual void createTextureUpdaterIfNeeded() = 0;
 
     // Set invalidations to be potentially repainted during update().
-    void invalidateRect(const IntRect& layerRect);
+    void invalidateContentRect(const IntRect& contentRect);
 
     // Reset state on tiles that will be used for updating the layer.
     void resetUpdateState();
 
-    void setTexturePrioritiesInRect(const CCPriorityCalculator&, const IntRect& visibleLayerRect);
+    // Prepare data needed to update textures that intersect with contentRect.
+    void updateContentRect(CCTextureUpdater&, const IntRect& contentRect, const CCOcclusionTracker*);
 
-    // Prepare data needed to update textures that intersect with layerRect.
-    void updateLayerRect(CCTextureUpdater&, const IntRect& layerRect, const CCOcclusionTracker*);
+    // After preparing an update, returns true if more painting is needed.
+    bool needsIdlePaint(const IntRect& visibleContentRect);
 
-    // Same as above, but this will try to paint additional surrounding content if idle.
-    void idleUpdateLayerRect(CCTextureUpdater&, const IntRect& layerRect, const CCOcclusionTracker*);
-
-    // After preparing an update, returns true if more pre-painting is needed.
-    bool needsIdlePaint(const IntRect& layerRect);
-
-    IntRect idlePaintRect(const IntRect& visibleLayerRect);
+    IntRect idlePaintRect(const IntRect& visibleContentRect);
 
     bool skipsDraw() const { return m_skipsDraw; }
 
@@ -108,6 +103,8 @@ private:
 
     bool tileOnlyNeedsPartialUpdate(UpdatableTile*);
     bool tileNeedsBufferedUpdate(UpdatableTile*);
+
+    void setTexturePrioritiesInRect(const CCPriorityCalculator&, const IntRect& visibleContentRect);
 
     void updateTiles(bool idle, int left, int top, int right, int bottom, CCTextureUpdater&, const CCOcclusionTracker*);
 

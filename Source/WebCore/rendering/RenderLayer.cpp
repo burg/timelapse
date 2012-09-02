@@ -842,7 +842,11 @@ void RenderLayer::updateLayerPosition()
             // FIXME: Composited layers ignore pagination, so about the best we can do is make sure they're offset into the appropriate column.
             // They won't split across columns properly.
             LayoutSize columnOffset;
-            parent()->renderer()->adjustForColumns(columnOffset, localPoint);
+            if (!parent()->renderer()->hasColumns() && parent()->renderer()->isRoot() && renderer()->view()->hasColumns())
+                renderer()->view()->adjustForColumns(columnOffset, localPoint);
+            else
+                parent()->renderer()->adjustForColumns(columnOffset, localPoint);
+
             localPoint += columnOffset;
         }
 
@@ -1087,6 +1091,16 @@ void RenderLayer::setFilterBackendNeedsRepaintingInRect(const LayoutRect& rect, 
     }
     
     ASSERT_NOT_REACHED();
+}
+
+bool RenderLayer::hasAncestorWithFilterOutsets() const
+{
+    for (const RenderLayer* curr = this; curr; curr = curr->parent()) {
+        RenderBoxModelObject* renderer = curr->renderer();
+        if (renderer->style()->hasFilterOutsets())
+            return true;
+    }
+    return false;
 }
 #endif
     
@@ -1605,8 +1619,8 @@ IntSize RenderLayer::clampScrollOffset(const IntSize& scrollOffset) const
     RenderBox* box = renderBox();
     ASSERT(box);
 
-    int maxX = scrollWidth() - box->clientWidth();
-    int maxY = scrollHeight() - box->clientHeight();
+    int maxX = scrollWidth() - box->pixelSnappedClientWidth();
+    int maxY = scrollHeight() - box->pixelSnappedClientHeight();
 
     int x = min(max(scrollOffset.width(), 0), maxX);
     int y = min(max(scrollOffset.height(), 0), maxY);
@@ -2428,7 +2442,7 @@ int RenderLayer::scrollWidth() const
     ASSERT(renderBox());
     if (m_scrollDimensionsDirty)
         const_cast<RenderLayer*>(this)->computeScrollDimensions();
-    return snapSizeToPixel(m_scrollSize.width(), renderBox()->clientLeft());
+    return snapSizeToPixel(m_scrollSize.width(), renderBox()->clientLeft() + renderBox()->x());
 }
 
 int RenderLayer::scrollHeight() const
@@ -2436,7 +2450,7 @@ int RenderLayer::scrollHeight() const
     ASSERT(renderBox());
     if (m_scrollDimensionsDirty)
         const_cast<RenderLayer*>(this)->computeScrollDimensions();
-    return snapSizeToPixel(m_scrollSize.height(), renderBox()->clientTop());
+    return snapSizeToPixel(m_scrollSize.height(), renderBox()->clientTop() + renderBox()->y());
 }
 
 LayoutUnit RenderLayer::overflowTop() const
@@ -2523,6 +2537,8 @@ void RenderLayer::updateScrollbarsAfterLayout()
             setHasHorizontalScrollbar(hasHorizontalOverflow);
         if (box->hasAutoVerticalScrollbar())
             setHasVerticalScrollbar(hasVerticalOverflow);
+
+        updateSelfPaintingLayer();
 
 #if ENABLE(DASHBOARD_SUPPORT)
         // Force an update since we know the scrollbars have changed things.
@@ -3903,7 +3919,7 @@ void RenderLayer::calculateClipRects(const RenderLayer* rootLayer, RenderRegion*
         clipRects.setOverflowClipRect(clipRects.posClipRect());
     
     // Update the clip rects that will be passed to child layers.
-    if (renderer()->hasOverflowClip() || renderer()->hasClip()) {
+    if (renderer()->hasClipOrOverflowClip()) {
         // This layer establishes a clip of some kind.
 
         // This offset cannot use convertToLayerCoords, because sometimes our rootLayer may be across
@@ -3990,7 +4006,7 @@ void RenderLayer::calculateRects(const RenderLayer* rootLayer, RenderRegion* reg
     layerBounds = LayoutRect(offset, size());
 
     // Update the clip rects that will be passed to child layers.
-    if (renderer()->hasOverflowClip() || renderer()->hasClip()) {
+    if (renderer()->hasClipOrOverflowClip()) {
         // This layer establishes a clip of some kind.
         if (renderer()->hasOverflowClip()) {
             foregroundRect.intersect(toRenderBox(renderer())->overflowClipRect(offset, region, relevancy));
@@ -4730,6 +4746,7 @@ bool RenderLayer::shouldBeNormalFlowOnly() const
 bool RenderLayer::shouldBeSelfPaintingLayer() const
 {
     return !isNormalFlowOnly()
+        || hasOverlayScrollbars()
         || renderer()->hasReflection()
         || renderer()->hasMask()
         || renderer()->isTableRow()
@@ -4740,7 +4757,7 @@ bool RenderLayer::shouldBeSelfPaintingLayer() const
         || renderer()->isRenderIFrame();
 }
 
-void RenderLayer::updateSelfPaintingLayerAfterStyleChange(const RenderStyle*)
+void RenderLayer::updateSelfPaintingLayer()
 {
     bool isSelfPaintingLayer = shouldBeSelfPaintingLayer();
     if (m_isSelfPaintingLayer == isSelfPaintingLayer)
@@ -4835,9 +4852,11 @@ void RenderLayer::styleChanged(StyleDifference, const RenderStyle* oldStyle)
         m_marquee = 0;
     }
 
-    updateSelfPaintingLayerAfterStyleChange(oldStyle);
     updateStackingContextsAfterStyleChange(oldStyle);
     updateScrollbarsAfterStyleChange(oldStyle);
+    // Overlay scrollbars can make this layer self-painting so we need
+    // to recompute the bit once scrollbars have been updated.
+    updateSelfPaintingLayer();
 
     if (!hasReflection() && m_reflection)
         removeReflection();

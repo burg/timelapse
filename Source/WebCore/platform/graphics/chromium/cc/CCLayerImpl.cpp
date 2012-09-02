@@ -71,7 +71,7 @@ CCLayerImpl::CCLayerImpl(int id)
     , m_isContainerForFixedPositionLayers(false)
     , m_fixedToContainerLayer(false)
     , m_pageScaleDelta(1)
-    , m_targetRenderSurface(0)
+    , m_renderTarget(0)
     , m_drawDepth(0)
     , m_drawOpacity(0)
     , m_drawOpacityIsAnimating(false)
@@ -85,7 +85,7 @@ CCLayerImpl::CCLayerImpl(int id)
     , m_layerAnimationController(CCLayerAnimationController::create(this))
 {
     ASSERT(CCProxy::isImplThread());
-    ASSERT(m_layerId >= 0);
+    ASSERT(m_layerId > 0);
 }
 
 CCLayerImpl::~CCLayerImpl()
@@ -133,7 +133,7 @@ void CCLayerImpl::createRenderSurface()
 {
     ASSERT(!m_renderSurface);
     m_renderSurface = adoptPtr(new CCRenderSurface(this));
-    setTargetRenderSurface(m_renderSurface.get());
+    setRenderTarget(this);
 }
 
 bool CCLayerImpl::descendantDrawsContent()
@@ -145,12 +145,19 @@ bool CCLayerImpl::descendantDrawsContent()
     return false;
 }
 
-PassOwnPtr<CCSharedQuadState> CCLayerImpl::createSharedQuadState() const
+PassOwnPtr<CCSharedQuadState> CCLayerImpl::createSharedQuadState(int id) const
 {
-    return CCSharedQuadState::create(quadTransform(), drawTransform(), visibleLayerRect(), m_scissorRect, drawOpacity(), opaque());
+    WebTransformationMatrix quadTransformation = drawTransform();
+    if (!contentBounds().isEmpty() && !bounds().isEmpty()) {
+        quadTransformation.scaleNonUniform(bounds().width() / static_cast<double>(contentBounds().width()),
+                                           bounds().height() / static_cast<double>(contentBounds().height()));
+        quadTransformation.translate(-contentBounds().width() / 2.0, -contentBounds().height() / 2.0);
+    }
+
+    return CCSharedQuadState::create(id, quadTransformation, m_visibleContentRect, m_scissorRect, m_drawOpacity, m_opaque);
 }
 
-void CCLayerImpl::willDraw(CCRenderer*, CCGraphicsContext*)
+void CCLayerImpl::willDraw(CCResourceProvider*)
 {
 #ifndef NDEBUG
     // willDraw/didDraw must be matched.
@@ -159,7 +166,7 @@ void CCLayerImpl::willDraw(CCRenderer*, CCGraphicsContext*)
 #endif
 }
 
-void CCLayerImpl::didDraw()
+void CCLayerImpl::didDraw(CCResourceProvider*)
 {
 #ifndef NDEBUG
     ASSERT(m_betweenWillDrawAndDidDraw);
@@ -172,11 +179,11 @@ void CCLayerImpl::appendDebugBorderQuad(CCQuadCuller& quadList, const CCSharedQu
     if (!hasDebugBorders())
         return;
 
-    IntRect layerRect(IntPoint(), contentBounds());
-    quadList.append(CCDebugBorderDrawQuad::create(sharedQuadState, layerRect, debugBorderColor(), debugBorderWidth()));
+    IntRect contentRect(IntPoint(), contentBounds());
+    quadList.append(CCDebugBorderDrawQuad::create(sharedQuadState, contentRect, debugBorderColor(), debugBorderWidth()));
 }
 
-unsigned CCLayerImpl::contentsTextureId() const
+CCResourceProvider::ResourceId CCLayerImpl::contentsResourceId() const
 {
     ASSERT_NOT_REACHED();
     return 0;
@@ -235,17 +242,6 @@ const IntRect CCLayerImpl::getDrawRect() const
     return mappedRect;
 }
 
-WebTransformationMatrix CCLayerImpl::quadTransform() const
-{
-    WebTransformationMatrix quadTransformation = drawTransform();
-
-    float offsetX = -0.5 * bounds().width();
-    float offsetY = -0.5 * bounds().height();
-    quadTransformation.translate(offsetX, offsetY);
-
-    return quadTransformation;
-}
-
 void CCLayerImpl::writeIndent(TextStream& ts, int indent)
 {
     for (int i = 0; i != indent; ++i)
@@ -260,9 +256,9 @@ void CCLayerImpl::dumpLayerProperties(TextStream& ts, int indent) const
     writeIndent(ts, indent);
     ts << "bounds: " << bounds().width() << ", " << bounds().height() << "\n";
 
-    if (m_targetRenderSurface) {
+    if (m_renderTarget) {
         writeIndent(ts, indent);
-        ts << "targetRenderSurface: " << m_targetRenderSurface->name() << "\n";
+        ts << "renderTarget: " << m_renderTarget->m_layerId << "\n";
     }
 
     writeIndent(ts, indent);
@@ -613,7 +609,7 @@ void CCLayerImpl::setDoubleSided(bool doubleSided)
 Region CCLayerImpl::visibleContentOpaqueRegion() const
 {
     if (opaque())
-        return visibleLayerRect();
+        return visibleContentRect();
     return Region();
 }
 

@@ -169,6 +169,11 @@ bool InputType::isRangeControl() const
     return false;
 }
 
+bool InputType::shouldSaveAndRestoreFormControlState() const
+{
+    return true;
+}
+
 FormControlState InputType::saveFormControlState() const
 {
     String currentValue = element()->value();
@@ -417,6 +422,12 @@ void InputType::handleWheelEvent(WheelEvent*)
 {
 }
 
+#if ENABLE(TOUCH_EVENTS)
+void InputType::handleTouchEvent(TouchEvent*)
+{
+}
+#endif
+
 void InputType::forwardEvent(Event*)
 {
 }
@@ -442,11 +453,10 @@ void InputType::createShadowSubtree()
 
 void InputType::destroyShadowSubtree()
 {
-    ElementShadow* shadow = element()->shadow();
-    if (!shadow)
+    ShadowRoot* root = element()->userAgentShadowRoot();
+    if (!root)
         return;
 
-    ShadowRoot* root = shadow->oldestShadowRoot();
     root->removeAllChildren();
 
     // It's ok to clear contents of all other ShadowRoots because they must have
@@ -873,10 +883,23 @@ void InputType::subtreeHasChanged()
 {
 }
 
+#if ENABLE(TOUCH_EVENTS)
+bool InputType::hasTouchEventHandler() const
+{
+    return false;
+}
+#endif
+
 String InputType::defaultToolTip() const
 {
     return String();
 }
+
+#if ENABLE(DATALIST)
+void InputType::listAttributeTargetChanged()
+{
+}
+#endif
 
 bool InputType::supportsIndeterminateAppearance() const
 {

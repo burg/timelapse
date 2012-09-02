@@ -38,7 +38,7 @@ class HTMLTableRowElement;
 
 class HTMLTableRowsCollection : public HTMLCollection {
 public:
-    static PassOwnPtr<HTMLTableRowsCollection> create(Element*);
+    static PassRefPtr<HTMLTableRowsCollection> create(Element*);
 
     static HTMLTableRowElement* rowAfter(HTMLTableElement*, HTMLTableRowElement*);
     static HTMLTableRowElement* lastRow(HTMLTableElement*);
@@ -46,7 +46,7 @@ public:
 private:
     HTMLTableRowsCollection(Element*);
 
-    virtual Element* itemAfter(Node*) const OVERRIDE;
+    virtual Element* itemAfter(unsigned& offsetInArray, Element*) const OVERRIDE;
 };
 
 } // namespace

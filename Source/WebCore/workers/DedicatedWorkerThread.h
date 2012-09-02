@@ -41,16 +41,16 @@ namespace WebCore {
 
     class DedicatedWorkerThread : public WorkerThread {
     public:
-        static PassRefPtr<DedicatedWorkerThread> create(const KURL& scriptURL, const String& userAgent, const String& sourceCode, WorkerLoaderProxy&, WorkerObjectProxy&, WorkerThreadStartMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType);
+        static PassRefPtr<DedicatedWorkerThread> create(const KURL& scriptURL, const String& userAgent, const GroupSettings*, const String& sourceCode, WorkerLoaderProxy&, WorkerObjectProxy&, WorkerThreadStartMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType);
         WorkerObjectProxy& workerObjectProxy() const { return m_workerObjectProxy; }
         ~DedicatedWorkerThread();
 
     protected:
-        virtual PassRefPtr<WorkerContext> createWorkerContext(const KURL&, const String& userAgent, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType);
+        virtual PassRefPtr<WorkerContext> createWorkerContext(const KURL&, const String& userAgent, PassOwnPtr<GroupSettings>, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType);
         virtual void runEventLoop();
 
     private:
-        DedicatedWorkerThread(const KURL&, const String& userAgent, const String& sourceCode, WorkerLoaderProxy&, WorkerObjectProxy&, WorkerThreadStartMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType);
+        DedicatedWorkerThread(const KURL&, const String& userAgent, const GroupSettings*, const String& sourceCode, WorkerLoaderProxy&, WorkerObjectProxy&, WorkerThreadStartMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType);
 
         WorkerObjectProxy& m_workerObjectProxy;
     };

@@ -109,6 +109,7 @@
 #include "Logging.h"
 #include "MediaQueryList.h"
 #include "MediaQueryMatcher.h"
+#include "MemoryInstrumentation.h"
 #include "MouseEventWithHitTestResults.h"
 #include "NameNodeList.h"
 #include "NestingLevelIncrementer.h"
@@ -156,6 +157,7 @@
 #include "UndoManager.h"
 #include "UserContentURLPattern.h"
 #include "WebKitNamedFlow.h"
+#include "WebKitNamedFlowCollection.h"
 #include "XMLDocumentParser.h"
 #include "XMLHttpRequest.h"
 #include "XMLNSNames.h"
@@ -214,6 +216,10 @@
 
 #if ENABLE(LINK_PRERENDER)
 #include "Prerenderer.h"
+#endif
+
+#if ENABLE(TEXT_AUTOSIZING)
+#include "TextAutosizer.h"
 #endif
 
 using namespace std;
@@ -516,6 +522,9 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
 #if ENABLE(LINK_PRERENDER)
     m_prerenderer = Prerenderer::create(this);
 #endif
+#if ENABLE(TEXT_AUTOSIZING)
+    m_textAutosizer = TextAutosizer::create(this);
+#endif
     m_visuallyOrdered = false;
     m_bParsing = false;
     m_wellFormed = false;
@@ -556,7 +565,13 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
 
     static int docID = 0;
     m_docID = docID++;
-    
+
+    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(m_nodeListCounts); i++)
+        m_nodeListCounts[i] = 0;
+
+    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(m_collections); i++)
+        m_collections[i] = 0;
+
     InspectorCounters::incrementCounter(InspectorCounters::DocumentCounter);
 }
 
@@ -569,6 +584,19 @@ static void histogramMutationEventUsage(const unsigned short& listenerTypes)
     HistogramSupport::histogramEnumeration("DOMAPI.PerDocumentMutationEventUsage.DOMNodeInsertedIntoDocument", static_cast<bool>(listenerTypes & Document::DOMNODEINSERTEDINTODOCUMENT_LISTENER), 2);
     HistogramSupport::histogramEnumeration("DOMAPI.PerDocumentMutationEventUsage.DOMCharacterDataModified", static_cast<bool>(listenerTypes & Document::DOMCHARACTERDATAMODIFIED_LISTENER), 2);
 }
+
+#if ENABLE(FULLSCREEN_API)
+static bool isAttributeOnAllOwners(const WebCore::QualifiedName& attribute, const HTMLFrameOwnerElement* owner)
+{
+    if (!owner)
+        return true;
+    do {
+        if (!owner->hasAttribute(attribute))
+            return false;
+    } while ((owner = owner->document()->ownerElement()));
+    return true;
+}
+#endif
 
 Document::~Document()
 {
@@ -604,6 +632,9 @@ Document::~Document()
     if (m_styleSheets)
         m_styleSheets->documentDestroyed();
 
+    if (m_namedFlows)
+        m_namedFlows->documentDestroyed();
+
     if (m_elemSheet)
         m_elemSheet->clearOwnerNode();
     if (m_pageUserSheet)
@@ -636,6 +667,14 @@ Document::~Document()
     // as well as Node. See a comment on TreeScope.h for the reason.
     if (hasRareData())
         clearRareData();
+
+    ASSERT(!m_listsInvalidatedAtDocument.size());
+
+    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(m_nodeListCounts); i++)
+        ASSERT(!m_nodeListCounts[i]);
+
+    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(m_collections); i++)
+        ASSERT(!m_collections[i]);
 
     m_document = 0;
 
@@ -793,7 +832,6 @@ void Document::setDocType(PassRefPtr<DocumentType> docType)
     if (m_docType) {
         this->adoptIfNeeded(m_docType.get());
 #if ENABLE(LEGACY_VIEWPORT_ADAPTION)
-        ASSERT(m_viewportArguments.type == ViewportArguments::Implicit);
         if (m_docType->publicId().startsWith("-//wapforum//dtd xhtml mobile 1.", /* caseSensitive */ false))
             processViewport("width=device-width, height=device-height", ViewportArguments::XHTMLMobileProfile);
 #endif
@@ -1105,43 +1143,25 @@ bool Document::cssGridLayoutEnabled() const
 
 #if ENABLE(CSS_REGIONS)
 
-static bool validFlowName(const String& flowName)
-{
-    if (equalIgnoringCase(flowName, "auto")
-        || equalIgnoringCase(flowName, "default")
-        || equalIgnoringCase(flowName, "inherit")
-        || equalIgnoringCase(flowName, "initial")
-        || equalIgnoringCase(flowName, "none"))
-        return false;
-    return true;
-}
-
 PassRefPtr<WebKitNamedFlow> Document::webkitGetFlowByName(const String& flowName)
-{
-    return webkitGetFlowByName(flowName, CheckFlowNameForInvalidValues);
-}
-
-PassRefPtr<WebKitNamedFlow> Document::webkitGetFlowByName(const String& flowName, FlowNameCheck flowNameCheck)
 {
     if (!cssRegionsEnabled() || !renderer())
         return 0;
 
-    if (flowNameCheck == CheckFlowNameForInvalidValues) {
-        if (flowName.isEmpty() || !validFlowName(flowName))
-            return 0;
+    // It's possible to have pending styles not applied that affect the existing flows.
+    updateStyleIfNeeded();
 
-        // Make a slower check for invalid flow name.
-        CSSParser parser(document());
-        if (!parser.parseFlowThread(flowName))
-            return 0;
-    }
-
-    if (RenderView* view = renderer()->view())
-        return view->flowThreadController()->ensureRenderFlowThreadWithName(flowName)->ensureNamedFlow();
-    return 0;
+    return namedFlows()->flowByName(flowName);
 }
-
 #endif
+
+WebKitNamedFlowCollection* Document::namedFlows()
+{
+    if (!m_namedFlows)
+        m_namedFlows = WebKitNamedFlowCollection::create(this);
+
+    return m_namedFlows.get();
+}
 
 PassRefPtr<Element> Document::createElementNS(const String& namespaceURI, const String& qualifiedName, ExceptionCode& ec)
 {
@@ -2073,6 +2093,11 @@ void Document::detach()
     ASSERT(attached());
     ASSERT(!m_inPageCache);
 
+#if ENABLE(POINTER_LOCK)
+    if (page())
+        page()->pointerLockController()->documentDetached(this);
+#endif
+
     if (this == topDocument())
         clearAXObjectCache();
 
@@ -2676,6 +2701,7 @@ void Document::setURL(const KURL& url)
     m_url = newURL;
     m_documentURI = m_url.string();
     updateBaseURL();
+    contextFeatures()->urlDidChange(this);
 }
 
 void Document::updateBaseURL()
@@ -3853,21 +3879,49 @@ void Document::setCSSTarget(Element* n)
         n->setNeedsStyleRecalc();
 }
 
-void Document::registerDynamicSubtreeNodeList(DynamicSubtreeNodeList* list)
+void Document::registerNodeListCache(DynamicNodeListCacheBase* list)
 {
-    m_listsInvalidatedAtDocument.add(list);
+    if (list->type() != InvalidCollectionType)
+        m_nodeListCounts[InvalidateOnIdNameAttrChange]++;
+    m_nodeListCounts[list->invalidationType()]++;
+    if (list->isRootedAtDocument())
+        m_listsInvalidatedAtDocument.add(list);
 }
 
-void Document::unregisterDynamicSubtreeNodeList(DynamicSubtreeNodeList* list)
+void Document::unregisterNodeListCache(DynamicNodeListCacheBase* list)
 {
-    m_listsInvalidatedAtDocument.remove(list);
+    if (list->type() != InvalidCollectionType)
+        m_nodeListCounts[InvalidateOnIdNameAttrChange]--;
+    m_nodeListCounts[list->invalidationType()]--;
+    if (list->isRootedAtDocument()) {
+        ASSERT(m_listsInvalidatedAtDocument.contains(list));
+        m_listsInvalidatedAtDocument.remove(list);
+    }
 }
 
-void Document::clearNodeListCaches()
+bool Document::shouldInvalidateNodeListCaches(const QualifiedName* attrName) const
 {
-    HashSet<DynamicSubtreeNodeList*>::iterator end = m_listsInvalidatedAtDocument.end();
-    for (HashSet<DynamicSubtreeNodeList*>::iterator it = m_listsInvalidatedAtDocument.begin(); it != end; ++it)
-        (*it)->invalidateCache();
+    if (attrName) {
+        for (int type = DoNotInvalidateOnAttributeChanges + 1; type < numNodeListInvalidationTypes; type++) {
+            if (m_nodeListCounts[type] && DynamicNodeListCacheBase::shouldInvalidateTypeOnAttributeChange(static_cast<NodeListInvalidationType>(type), *attrName))
+                return true;
+        }
+        return false;
+    }
+
+    for (int type = 0; type < numNodeListInvalidationTypes; type++) {
+        if (m_nodeListCounts[type])
+            return true;
+    }
+
+    return false;
+}
+
+void Document::invalidateNodeListCaches(const QualifiedName* attrName)
+{
+    HashSet<DynamicNodeListCacheBase*>::iterator end = m_listsInvalidatedAtDocument.end();
+    for (HashSet<DynamicNodeListCacheBase*>::iterator it = m_listsInvalidatedAtDocument.begin(); it != end; ++it)
+        (*it)->invalidateCache(attrName);
 }
 
 void Document::attachNodeIterator(NodeIterator* ni)
@@ -4580,7 +4634,7 @@ KURL Document::openSearchDescriptionURL()
     if (!head())
         return KURL();
 
-    HTMLCollection* children = head()->children();
+    RefPtr<HTMLCollection> children = head()->children();
     for (unsigned i = 0; Node* child = children->item(i); i++) {
         if (!child->hasTagName(linkTag))
             continue;
@@ -4698,81 +4752,113 @@ bool Document::hasSVGRootNode() const
 }
 #endif
 
-HTMLCollection* Document::cachedCollection(CollectionType type)
+// FIXME: This caching mechanism should be merged that of DynamicNodeList in NodeRareData.
+PassRefPtr<HTMLCollection> Document::cachedCollection(CollectionType type)
 {
     ASSERT(static_cast<unsigned>(type) < NumUnnamedDocumentCachedTypes);
-    if (!m_collections[type])
-        m_collections[type] = HTMLCollection::create(this, type);
-    return m_collections[type].get();
+    if (m_collections[type])
+        return m_collections[type];
+
+    RefPtr<HTMLCollection> collection;
+    if (type == DocAll)
+        collection = HTMLAllCollection::create(this);
+    else
+        collection = HTMLCollection::create(this, type);
+    m_collections[type] = collection.get();
+
+    return collection.release();
 }
 
-HTMLCollection* Document::images()
+void Document::removeCachedHTMLCollection(HTMLCollection* collection, CollectionType type)
+{
+    ASSERT_UNUSED(collection, m_collections[type] == collection);
+    m_collections[type] = 0;
+}
+
+PassRefPtr<HTMLCollection> Document::images()
 {
     return cachedCollection(DocImages);
 }
 
-HTMLCollection* Document::applets()
+PassRefPtr<HTMLCollection> Document::applets()
 {
     return cachedCollection(DocApplets);
 }
 
-HTMLCollection* Document::embeds()
+PassRefPtr<HTMLCollection> Document::embeds()
 {
     return cachedCollection(DocEmbeds);
 }
 
-HTMLCollection* Document::plugins()
+PassRefPtr<HTMLCollection> Document::plugins()
 {
     // This is an alias for embeds() required for the JS DOM bindings.
     return cachedCollection(DocEmbeds);
 }
 
-HTMLCollection* Document::objects()
+PassRefPtr<HTMLCollection> Document::objects()
 {
     return cachedCollection(DocObjects);
 }
 
-HTMLCollection* Document::scripts()
+PassRefPtr<HTMLCollection> Document::scripts()
 {
     return cachedCollection(DocScripts);
 }
 
-HTMLCollection* Document::links()
+PassRefPtr<HTMLCollection> Document::links()
 {
     return cachedCollection(DocLinks);
 }
 
-HTMLCollection* Document::forms()
+PassRefPtr<HTMLCollection> Document::forms()
 {
     return cachedCollection(DocForms);
 }
 
-HTMLCollection* Document::anchors()
+PassRefPtr<HTMLCollection> Document::anchors()
 {
     return cachedCollection(DocAnchors);
 }
 
-HTMLAllCollection* Document::all()
+PassRefPtr<HTMLCollection> Document::all()
 {
-    if (!m_collections[DocAll])
-        m_collections[DocAll] = HTMLAllCollection::create(this);
-    return static_cast<HTMLAllCollection*>(m_collections[DocAll].get());
+    return cachedCollection(DocAll);
 }
 
-HTMLCollection* Document::windowNamedItems(const AtomicString& name)
+PassRefPtr<HTMLCollection> Document::windowNamedItems(const AtomicString& name)
 {
-    OwnPtr<HTMLNameCollection>& collection = m_windowNamedItemCollections.add(name.impl(), nullptr).iterator->second;
-    if (!collection)
-        collection = HTMLNameCollection::create(this, WindowNamedItems, name);
-    return collection.get();
+    NamedCollectionMap::AddResult result = m_windowNamedItemCollections.add(name, 0);
+    if (!result.isNewEntry)
+        return result.iterator->second;
+
+    RefPtr<HTMLNameCollection> collection = HTMLNameCollection::create(this, WindowNamedItems, name);
+    result.iterator->second = collection.get();
+    return collection.release();
 }
 
-HTMLCollection* Document::documentNamedItems(const AtomicString& name)
+PassRefPtr<HTMLCollection> Document::documentNamedItems(const AtomicString& name)
 {
-    OwnPtr<HTMLNameCollection>& collection = m_documentNamedItemCollections.add(name.impl(), nullptr).iterator->second;
-    if (!collection)
-        collection = HTMLNameCollection::create(this, DocumentNamedItems, name);
-    return collection.get();
+    NamedCollectionMap::AddResult result = m_documentNamedItemCollections.add(name, 0);
+    if (!result.isNewEntry)
+        return result.iterator->second;
+
+    RefPtr<HTMLNameCollection> collection = HTMLNameCollection::create(this, DocumentNamedItems, name);
+    result.iterator->second = collection.get();
+    return collection.release();
+}
+
+// FIXME: This caching mechanism should be merged that of DynamicNodeList in NodeRareData.
+void Document::removeWindowNamedItemCache(HTMLCollection* collection, const AtomicString& name)
+{
+    ASSERT_UNUSED(collection, m_windowNamedItemCollections.get(name) == collection);
+    m_windowNamedItemCollections.remove(name);
+}
+
+void Document::removeDocumentNamedItemCache(HTMLCollection* collection, const AtomicString& name)
+{
+    ASSERT_UNUSED(collection, m_documentNamedItemCollections.get(name) == collection);
+    m_documentNamedItemCollections.remove(name);
 }
 
 void Document::finishedParsing()
@@ -4830,8 +4916,31 @@ PassRefPtr<XPathResult> Document::evaluate(const String& expression,
     return m_xpathEvaluator->evaluate(expression, contextNode, resolver, type, result, ec);
 }
 
-const Vector<IconURL>& Document::iconURLs() const
+const Vector<IconURL>& Document::iconURLs()
 {
+    m_iconURLs.clear();
+
+    if (!head() || !(head()->children()))
+        return m_iconURLs;
+
+    // Include any icons where type = link, rel = "shortcut icon".
+    RefPtr<HTMLCollection> children = head()->children();
+    unsigned int length = children->length();
+    for (unsigned int i = 0; i < length; ++i) {
+        Node* child = children->item(i);
+        if (!child->hasTagName(linkTag))
+            continue;
+        HTMLLinkElement* linkElement = static_cast<HTMLLinkElement*>(child);
+        if (linkElement->iconType() != Favicon)
+            continue;
+        if (linkElement->href().isEmpty())
+            continue;
+
+        // Put it at the front to ensure that icons seen later take precedence as required by the spec.
+        IconURL newURL(linkElement->href(), linkElement->iconSizes(), linkElement->type(), linkElement->iconType());
+        m_iconURLs.prepend(newURL);
+    }
+
     return m_iconURLs;
 }
 
@@ -4842,7 +4951,6 @@ void Document::addIconURL(const String& url, const String& mimeType, const Strin
 
     // FIXME - <rdar://problem/4727645> - At some point in the future, we might actually honor the "mimeType"
     IconURL newURL(KURL(ParsedURLString, url), sizes, mimeType, iconType);
-    m_iconURLs.append(newURL);
 
     if (Frame* f = frame()) {
         IconURL iconURL = f->loader()->icon()->iconURL(iconType);
@@ -4855,7 +4963,7 @@ void Document::setUseSecureKeyboardEntryWhenActive(bool usesSecureKeyboard)
 {
     if (m_useSecureKeyboardEntryWhenActive == usesSecureKeyboard)
         return;
-        
+
     m_useSecureKeyboardEntryWhenActive = usesSecureKeyboard;
     m_frame->selection()->updateSecureKeyboardEntryIfActive();
 }
@@ -5279,15 +5387,7 @@ MediaCanStartListener* Document::takeAnyMediaCanStartListener()
 bool Document::fullScreenIsAllowedForElement(Element* element) const
 {
     ASSERT(element);
-    while (HTMLFrameOwnerElement* ownerElement = element->document()->ownerElement()) {
-        if (!ownerElement->isFrameElementBase())
-            continue;
-
-        if (!static_cast<HTMLFrameElementBase*>(ownerElement)->allowFullScreen())
-            return false;
-        element = ownerElement;
-    }
-    return true;
+    return isAttributeOnAllOwners(webkitallowfullscreenAttr, element->document()->ownerElement());
 }
 
 void Document::requestFullScreenForElement(Element* element, unsigned short flags, FullScreenCheckType checkType)
@@ -5310,7 +5410,7 @@ void Document::requestFullScreenForElement(Element* element, unsigned short flag
 
         // The context object's node document, or an ancestor browsing context's document does not have
         // the fullscreen enabled flag set.
-        if (checkType == EnforceIFrameAllowFulScreenRequirement && !fullScreenIsAllowedForElement(element))
+        if (checkType == EnforceIFrameAllowFullScreenRequirement && !fullScreenIsAllowedForElement(element))
             break;
 
         // The context object's node document fullscreen element stack is not empty and its top element
@@ -5496,19 +5596,7 @@ bool Document::webkitFullscreenEnabled() const
     // browsing context's documents have their fullscreen enabled flag set, or false otherwise.
 
     // Top-level browsing contexts are implied to have their allowFullScreen attribute set.
-    HTMLFrameOwnerElement* owner = ownerElement();
-    if (!owner)
-        return true;
-
-    do {
-        if (!owner->isFrameElementBase())
-            continue;
-
-        if (!static_cast<HTMLFrameElementBase*>(owner)->allowFullScreen())
-            return false;
-    } while ((owner = owner->document()->ownerElement()));
-
-    return true;        
+    return isAttributeOnAllOwners(webkitallowfullscreenAttr, ownerElement());
 }
 
 void Document::webkitWillEnterFullScreenForElement(Element* element)
@@ -5930,7 +6018,7 @@ PassRefPtr<NodeList> Document::getItems(const String& typeNames)
     // In this case we need to create an unique string identifier to map such request in the cache.
     String localTypeNames = typeNames.isNull() ? MicroDataItemList::undefinedItemType() : typeNames;
 
-    return ensureRareData()->ensureNodeLists(this)->addCacheWithName<MicroDataItemList>(this, DynamicNodeList::MicroDataItemListType, localTypeNames);
+    return ensureRareData()->ensureNodeLists()->addCacheWithName<MicroDataItemList>(this, DynamicNodeList::MicroDataItemListType, localTypeNames);
 }
 #endif
 
@@ -5994,6 +6082,42 @@ void Document::adjustFloatRectForScrollAndAbsoluteZoomAndFrameScale(FloatRect& r
 void Document::setContextFeatures(PassRefPtr<ContextFeatures> features)
 {
     m_contextFeatures = features;
+}
+
+void Document::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo<Document> info(memoryObjectInfo, this, MemoryInstrumentation::DOM);
+    info.visitBaseClass<ContainerNode>(this);
+    info.addVector(m_customFonts);
+    info.addString(m_documentURI);
+    info.addString(m_baseTarget);
+    if (m_pageGroupUserSheets)
+        info.addVector(*m_pageGroupUserSheets.get());
+    if (m_userSheets)
+        info.addVector(*m_userSheets.get());
+    info.addHashSet(m_nodeIterators);
+    info.addHashSet(m_ranges);
+    info.addListHashSet(m_styleSheetCandidateNodes);
+    info.addString(m_preferredStylesheetSet);
+    info.addString(m_selectedStylesheetSet);
+    info.addString(m_title.string());
+    info.addString(m_rawTitle.string());
+    info.addString(m_xmlEncoding);
+    info.addString(m_xmlVersion);
+    info.addString(m_contentLanguage);
+    info.addHashMap(m_documentNamedItemCollections);
+    info.addHashMap(m_windowNamedItemCollections);
+#if ENABLE(DASHBOARD_SUPPORT)
+    info.addVector(m_dashboardRegions);
+#endif
+    info.addHashMap(m_cssCanvasElements);
+    info.addVector(m_iconURLs);
+    info.addHashSet(m_documentSuspensionCallbackElements);
+    info.addHashSet(m_mediaVolumeCallbackElements);
+    info.addHashSet(m_privateBrowsingStateChangedElements);
+    info.addHashMap(m_elementsByAccessKey);
+    info.addHashSet(m_mediaCanStartListeners);
+    info.addVector(m_pendingTasks);
 }
 
 #if ENABLE(UNDO_MANAGER)

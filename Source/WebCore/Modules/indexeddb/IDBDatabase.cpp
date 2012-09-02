@@ -190,7 +190,7 @@ void IDBDatabase::deleteObjectStore(const String& name, ExceptionCode& ec)
 PassRefPtr<IDBVersionChangeRequest> IDBDatabase::setVersion(ScriptExecutionContext* context, const String& version, ExceptionCode& ec)
 {
     if (version.isNull()) {
-        ec = IDBDatabaseException::IDB_TYPE_ERR;
+        ec = NATIVE_TYPE_ERR;
         return 0;
     }
 
@@ -207,7 +207,8 @@ PassRefPtr<IDBVersionChangeRequest> IDBDatabase::setVersion(ScriptExecutionConte
 PassRefPtr<IDBTransaction> IDBDatabase::transaction(ScriptExecutionContext* context, PassRefPtr<DOMStringList> prpStoreNames, const String& modeString, ExceptionCode& ec)
 {
     RefPtr<DOMStringList> storeNames = prpStoreNames;
-    if (!storeNames || storeNames->isEmpty()) {
+    ASSERT(storeNames.get());
+    if (storeNames->isEmpty()) {
         ec = IDBDatabaseException::IDB_INVALID_ACCESS_ERR;
         return 0;
     }

@@ -53,6 +53,7 @@ my (
     $cssBoxDecorationBreakSupport,
     $cssExclusionsSupport,
     $cssFiltersSupport,
+    $cssImageOrientationSupport,
     $cssImageResolutionSupport,
     $cssRegionsSupport,
     $cssShadersSupport,
@@ -62,11 +63,11 @@ my (
     $datalistSupport,
     $detailsSupport,
     $deviceOrientationSupport,
+    $dialogElementSupport,
     $directoryUploadSupport,
     $downloadAttributeSupport,
     $fileSystemSupport,
     $filtersSupport,
-    $fontBoostingSupport,
     $ftpDirSupport,
     $fullscreenAPISupport,
     $gamepadSupport,
@@ -116,6 +117,7 @@ my (
     $svgFontsSupport,
     $svgSupport,
     $systemMallocSupport,
+    $textAutosizingSupport,
     $tiledBackingStoreSupport,
     $timelapseSupport,
     $touchEventsSupport,
@@ -166,6 +168,9 @@ my @features = (
     { option => "css-box-decoration-break", desc => "Toggle CSS box-decoration-break support",
       define => "ENABLE_CSS_BOX_DECORATION_BREAK", default => 1, value => \$cssBoxDecorationBreakSupport },
 
+    { option => "css-image-orientation", desc => "Toggle CSS image-orientation support",
+      define => "ENABLE_CSS_IMAGE_ORIENTATION", default => 0, value => \$cssImageOrientationSupport },
+
     { option => "css-image-resolution", desc => "Toggle CSS image-resolution support",
       define => "ENABLE_CSS_IMAGE_RESOLUTION", default => 0, value => \$cssImageResolutionSupport },
 
@@ -176,10 +181,10 @@ my @features = (
       define => "ENABLE_CSS_SHADERS", default => isAppleMacWebKit(), value => \$cssShadersSupport },
 
     { option => "css-variables", desc => "Toggle CSS Variable support",
-      define => "ENABLE_CSS_VARIABLES", default => 0, value => \$cssVariablesSupport },
+      define => "ENABLE_CSS_VARIABLES", default => isEfl(), value => \$cssVariablesSupport },
 
     { option => "custom-scheme-handler", desc => "Toggle Custom Scheme Handler support",
-      define => "ENABLE_CUSTOM_SCHEME_HANDLER", default => 0, value => \$customSchemeHandlerSupport },
+      define => "ENABLE_CUSTOM_SCHEME_HANDLER", default => (isBlackBerry() || isEfl()), value => \$customSchemeHandlerSupport },
 
     { option => "datalist", desc => "Toggle Datalist support",
       define => "ENABLE_DATALIST", default => isEfl(), value => \$datalistSupport },
@@ -193,7 +198,10 @@ my @features = (
     { option => "device-orientation", desc => "Toggle Device Orientation support",
       define => "ENABLE_DEVICE_ORIENTATION", default => isBlackBerry(), value => \$deviceOrientationSupport },
 
-    { option => "directory-upload", desc => "Toogle Directory Upload support",
+    { option => "dialog", desc => "Toggle Dialog Element support",
+      define => "ENABLE_DIALOG_ELEMENT", default => 0, value => \$dialogElementSupport },
+
+    { option => "directory-upload", desc => "Toggle Directory Upload support",
       define => "ENABLE_DIRECTORY_UPLOAD", default => 0, value => \$directoryUploadSupport },
 
     { option => "download-attribute", desc => "Toggle Download Attribute support",
@@ -204,9 +212,6 @@ my @features = (
 
     { option => "filters", desc => "Toggle Filters support",
       define => "ENABLE_FILTERS", default => (isAppleWebKit() || isGtk() || isQt() || isEfl() || isBlackBerry()), value => \$filtersSupport },
-
-    { option => "font-boosting", desc => "Toggle Font Boosting support",
-      define => "ENABLE_FONT_BOOSTING", default => 0, value => \$fontBoostingSupport },
 
     { option => "ftpdir", desc => "Toggle FTP Directory support",
       define => "ENABLE_FTPDIR", default => !isWinCE(), value => \$ftpDirSupport },
@@ -290,10 +295,10 @@ my @features = (
       define => "ENABLE_METER_TAG", default => !isAppleWinWebKit(), value => \$meterTagSupport },
 
     { option => "mhtml", desc => "Toggle MHTML support",
-      define => "ENABLE_MHTML", default => 0, value => \$mhtmlSupport },
+      define => "ENABLE_MHTML", default => isGtk(), value => \$mhtmlSupport },
 
     { option => "microdata", desc => "Toggle Microdata support",
-      define => "ENABLE_MICRODATA", default => 0, value => \$microdataSupport },
+      define => "ENABLE_MICRODATA", default => (isEfl() || isBlackBerry()), value => \$microdataSupport },
 
     { option => "mutation-observers", desc => "Toggle Mutation Observers support",
       define => "ENABLE_MUTATION_OBSERVERS", default => 1, value => \$mutationObserversSupport },
@@ -320,7 +325,7 @@ my @features = (
       define => "ENABLE_QUOTA", default => 0, value => \$quotaSupport },
 
     { option => "register-protocol-handler", desc => "Toggle Register Protocol Handler support",
-      define => "ENABLE_REGISTER_PROTOCOL_HANDLER", default => isEfl(), value => \$registerProtocolHandlerSupport },
+      define => "ENABLE_REGISTER_PROTOCOL_HANDLER", default => (isBlackBerry() || isEfl()), value => \$registerProtocolHandlerSupport },
 
     { option => "request-animation-frame", desc => "Toggle Request Animation Frame support",
       define => "ENABLE_REQUEST_ANIMATION_FRAME", default => (isAppleMacWebKit() || isGtk() || isEfl() || isBlackBerry()), value => \$requestAnimationFrameSupport },
@@ -338,7 +343,7 @@ my @features = (
       define => "ENABLE_SQL_DATABASE", default => 1, value => \$sqlDatabaseSupport },
 
     { option => "style-scoped", desc => "Toggle Style Scoped support",
-      define => "ENABLE_STYLE_SCOPED", default => 0, value => \$styleScopedSupport },
+      define => "ENABLE_STYLE_SCOPED", default => isBlackBerry(), value => \$styleScopedSupport },
 
     { option => "svg", desc => "Toggle SVG support",
       define => "ENABLE_SVG", default => 1, value => \$svgSupport },
@@ -351,6 +356,9 @@ my @features = (
 
     { option => "system-malloc", desc => "Toggle system allocator instead of TCmalloc",
       define => "USE_SYSTEM_MALLOC", default => isWinCE(), value => \$systemMallocSupport },
+
+    { option => "text-autosizing", desc => "Toggle Text Autosizing support",
+      define => "ENABLE_TEXT_AUTOSIZING", default => 0, value => \$textAutosizingSupport },
 
     { option => "tiled-backing-store", desc => "Toggle Tiled Backing Store support",
       define => "WTF_USE_TILED_BACKING_STORE", default => isQt(), value => \$tiledBackingStoreSupport },

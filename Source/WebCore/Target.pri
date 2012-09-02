@@ -10,7 +10,7 @@ TARGET = WebCore
 include(WebCore.pri)
 
 WEBKIT += wtf
-!v8: WEBKIT += javascriptcore
+WEBKIT += javascriptcore
 
 CONFIG += staticlib
 
@@ -70,339 +70,172 @@ SOURCES += \
     bindings/generic/ActiveDOMCallback.cpp \
     bindings/generic/RuntimeEnabledFeatures.cpp
 
-v8 {
-    include($$PWD/../JavaScriptCore/yarr/yarr.pri)
+SOURCES += \
+     bindings/ScriptControllerBase.cpp \
+     bindings/js/CallbackFunction.cpp \
+     bindings/js/DOMObjectHashTableMap.cpp \
+     bindings/js/DOMWrapperWorld.cpp \
+     bindings/js/Dictionary.cpp \
+     bindings/js/GCController.cpp \
+     bindings/js/JSArrayBufferCustom.cpp \
+     bindings/js/JSAttrCustom.cpp \
+     bindings/js/JSBlobCustom.cpp \
+     bindings/js/JSCDATASectionCustom.cpp \
+     bindings/js/JSCSSFontFaceRuleCustom.cpp \
+     bindings/js/JSCSSImportRuleCustom.cpp \
+     bindings/js/JSCSSMediaRuleCustom.cpp \
+     bindings/js/JSCSSPageRuleCustom.cpp \
+     bindings/js/JSCSSRuleCustom.cpp \
+     bindings/js/JSCSSRuleListCustom.cpp \
+     bindings/js/JSCSSStyleDeclarationCustom.cpp \
+     bindings/js/JSCSSStyleRuleCustom.cpp \
+     bindings/js/JSCSSValueCustom.cpp \
+     bindings/js/JSCallbackData.cpp \
+     bindings/js/JSCanvasRenderingContext2DCustom.cpp \
+     bindings/js/JSCanvasRenderingContextCustom.cpp \
+     bindings/js/JSClipboardCustom.cpp \
+     bindings/js/JSConsoleCustom.cpp \
+     bindings/js/JSCoordinatesCustom.cpp \
+     bindings/js/JSCustomVoidCallback.cpp \
+     bindings/js/JSCustomXPathNSResolver.cpp \
+     bindings/js/JSDictionary.cpp \
+     bindings/js/JSDOMBinding.cpp \
+     bindings/js/JSDOMFormDataCustom.cpp \
+     bindings/js/JSDOMGlobalObject.cpp \
+     bindings/js/JSDOMImplementationCustom.cpp \
+     bindings/js/JSDOMMimeTypeArrayCustom.cpp \
+     bindings/js/JSDOMPluginArrayCustom.cpp \
+     bindings/js/JSDOMPluginCustom.cpp \
+     bindings/js/JSDOMStringListCustom.cpp \
+     bindings/js/JSDOMStringMapCustom.cpp \
+     bindings/js/JSDOMTokenListCustom.cpp \
+     bindings/js/JSDOMWindowBase.cpp \
+     bindings/js/JSDOMWindowCustom.cpp \
+     bindings/js/JSDOMWindowShell.cpp \
+     bindings/js/JSDOMWindowWebAudioCustom.cpp \
+     bindings/js/JSDOMWindowWebSocketCustom.cpp \
+     bindings/js/JSDOMWrapper.cpp \
+     bindings/js/JSDataViewCustom.cpp \
+     bindings/js/JSDesktopNotificationsCustom.cpp \
+     bindings/js/JSDeviceMotionEventCustom.cpp \
+     bindings/js/JSDeviceOrientationEventCustom.cpp \
+     bindings/js/JSDocumentCustom.cpp \
+     bindings/js/JSElementCustom.cpp \
+     bindings/js/JSErrorHandler.cpp \
+     bindings/js/JSEventCustom.cpp \
+     bindings/js/JSEventListener.cpp \
+     bindings/js/JSEventTargetCustom.cpp \
+     bindings/js/JSExceptionBase.cpp \
+     bindings/js/JSFileReaderCustom.cpp \
+     bindings/js/JSFloat32ArrayCustom.cpp \
+     bindings/js/JSFloat64ArrayCustom.cpp \
+     bindings/js/JSGeolocationCustom.cpp \
+     bindings/js/JSHTMLAllCollectionCustom.cpp \
+     bindings/js/JSHTMLAppletElementCustom.cpp \
+     bindings/js/JSHTMLCanvasElementCustom.cpp \
+     bindings/js/JSHTMLCollectionCustom.cpp \
+     bindings/js/JSHTMLDocumentCustom.cpp \
+     bindings/js/JSHTMLElementCustom.cpp \
+     bindings/js/JSHTMLEmbedElementCustom.cpp \
+     bindings/js/JSHTMLFormElementCustom.cpp \
+     bindings/js/JSHTMLFrameElementCustom.cpp \
+     bindings/js/JSHTMLFrameSetElementCustom.cpp \
+     bindings/js/JSHTMLInputElementCustom.cpp \
+     bindings/js/JSHTMLLinkElementCustom.cpp \
+     bindings/js/JSHTMLMediaElementCustom.cpp \
+     bindings/js/JSHTMLObjectElementCustom.cpp \
+     bindings/js/JSHTMLOptionsCollectionCustom.cpp \
+     bindings/js/JSHTMLOutputElementCustom.cpp \
+     bindings/js/JSHTMLSelectElementCustom.cpp \
+     bindings/js/JSHTMLStyleElementCustom.cpp \
+     bindings/js/JSHistoryCustom.cpp \
+     bindings/js/JSImageConstructor.cpp \
+     bindings/js/JSImageDataCustom.cpp \
+     bindings/js/JSInjectedScriptHostCustom.cpp \
+     bindings/js/JSInjectedScriptManager.cpp \
+     bindings/js/JSInspectorFrontendHostCustom.cpp \
+     bindings/js/JSInt16ArrayCustom.cpp \
+     bindings/js/JSInt32ArrayCustom.cpp \
+     bindings/js/JSInt8ArrayCustom.cpp \
+     bindings/js/JSLazyEventListener.cpp \
+     bindings/js/JSLocationCustom.cpp \
+     bindings/js/JSMainThreadExecState.cpp \
+     bindings/js/JSMediaListCustom.cpp \
+     bindings/js/JSMemoryInfoCustom.cpp \
+     bindings/js/JSMessageChannelCustom.cpp \
+     bindings/js/JSMessageEventCustom.cpp \
+     bindings/js/JSMessagePortCustom.cpp \
+     bindings/js/JSMessagePortCustom.h \
+     bindings/js/JSMutationCallbackCustom.cpp \
+     bindings/js/JSMutationObserverCustom.cpp \
+     bindings/js/JSNamedNodeMapCustom.cpp \
+     bindings/js/JSNodeCustom.cpp \
+     bindings/js/JSNodeFilterCondition.cpp \
+     bindings/js/JSNodeFilterCustom.cpp \
+     bindings/js/JSNodeIteratorCustom.cpp \
+     bindings/js/JSNodeListCustom.cpp \
+     bindings/js/JSNotificationCustom.cpp \
+     bindings/js/JSPluginElementFunctions.cpp \
+     bindings/js/JSPopStateEventCustom.cpp \
+     bindings/js/JSProcessingInstructionCustom.cpp \
+     bindings/js/JSRequestAnimationFrameCallbackCustom.cpp \
+     bindings/js/JSScriptProfileNodeCustom.cpp \
+     bindings/js/JSStorageCustom.cpp \
+     bindings/js/JSStyleSheetCustom.cpp \
+     bindings/js/JSStyleSheetListCustom.cpp \
+     bindings/js/JSTextCustom.cpp \
+     bindings/js/JSTouchCustom.cpp \
+     bindings/js/JSTouchListCustom.cpp \
+     bindings/js/JSTreeWalkerCustom.cpp \
+     bindings/js/JSUint16ArrayCustom.cpp \
+     bindings/js/JSUint32ArrayCustom.cpp \
+     bindings/js/JSUint8ArrayCustom.cpp \
+     bindings/js/JSUint8ClampedArrayCustom.cpp \
+     bindings/js/JSWebKitAnimationCustom.cpp \
+     bindings/js/JSWebKitAnimationListCustom.cpp \
+     bindings/js/JSWebKitCSSKeyframeRuleCustom.cpp \
+     bindings/js/JSWebKitCSSKeyframesRuleCustom.cpp \
+     bindings/js/JSWebKitPointCustom.cpp \
+     bindings/js/JSXMLHttpRequestCustom.cpp \
+     bindings/js/JSXMLHttpRequestUploadCustom.cpp \
+     bindings/js/JSXPathResultCustom.cpp \
+     bindings/js/PageScriptDebugServer.cpp \
+     bindings/js/ScheduledAction.cpp \
+     bindings/js/ScriptCachedFrameData.cpp \
+     bindings/js/ScriptCallStackFactory.cpp \
+     bindings/js/ScriptController.cpp \
+     bindings/js/ScriptControllerQt.cpp \
+     bindings/js/ScriptDebugServer.cpp \
+     bindings/js/ScriptEventListener.cpp \
+     bindings/js/ScriptFunctionCall.cpp \
+     bindings/js/ScriptGCEvent.cpp \
+     bindings/js/ScriptObject.cpp \
+     bindings/js/ScriptProfile.cpp \
+     bindings/js/ScriptState.cpp \
+     bindings/js/ScriptValue.cpp \
+     bindings/js/SerializedScriptValue.cpp \
+     bridge/IdentifierRep.cpp \
+     bridge/NP_jsobject.cpp \
+     bridge/c/CRuntimeObject.cpp \
+     bridge/c/c_class.cpp \
+     bridge/c/c_instance.cpp \
+     bridge/c/c_runtime.cpp \
+     bridge/c/c_utility.cpp \
+     bridge/jsc/BridgeJSC.cpp \
+     bridge/npruntime.cpp \
+     bridge/qt/qt_class.cpp \
+     bridge/qt/qt_instance.cpp \
+     bridge/qt/qt_pixmapruntime.cpp \
+     bridge/runtime_array.cpp \
+     bridge/runtime_method.cpp \
+     bridge/runtime_object.cpp \
+     bridge/runtime_root.cpp \
+     testing/js/WebCoreTestSupport.cpp
 
-    SOURCES += \
-        platform/qt/PlatformSupportQt.cpp \
-        bindings/generic/BindingSecurityBase.cpp \
-        \
-        bindings/v8/WorldContextHandle.cpp \
-        bindings/v8/V8IsolatedContext.cpp \
-        bindings/v8/custom/V8HistoryCustom.cpp \
-        bindings/v8/custom/V8PopStateEventCustom.cpp \
-        bindings/v8/ScriptGCEvent.cpp
-
-    SOURCES += \
-        bindings/v8/custom/V8ArrayBufferCustom.cpp \
-        bindings/v8/custom/V8ArrayBufferViewCustom.cpp \
-        bindings/v8/custom/V8BlobCustom.cpp \
-        bindings/v8/custom/V8CustomXPathNSResolver.cpp \
-        bindings/v8/custom/V8DataViewCustom.cpp \
-        bindings/v8/custom/V8DeviceMotionEventCustom.cpp \
-        bindings/v8/custom/V8DeviceOrientationEventCustom.cpp \
-        bindings/v8/custom/V8Float32ArrayCustom.cpp \
-        bindings/v8/custom/V8Float64ArrayCustom.cpp \
-        bindings/v8/custom/V8Int8ArrayCustom.cpp \
-        bindings/v8/custom/V8Int16ArrayCustom.cpp \
-        bindings/v8/custom/V8Int32ArrayCustom.cpp \
-        bindings/v8/custom/V8Uint8ArrayCustom.cpp \
-        bindings/v8/custom/V8Uint16ArrayCustom.cpp \
-        bindings/v8/custom/V8Uint32ArrayCustom.cpp \
-        bindings/v8/custom/V8Uint8ClampedArrayCustom.cpp \
-        \
-        bindings/v8/DateExtension.cpp \
-        bindings/v8/DOMData.cpp \
-        bindings/v8/DOMDataStore.cpp \
-        bindings/v8/NPV8Object.cpp \
-        bindings/v8/NPObjectWrapper.cpp \
-        bindings/v8/Dictionary.cpp \
-        bindings/v8/PageScriptDebugServer.cpp \
-        bindings/v8/RetainedDOMInfo.cpp \
-        bindings/v8/ScheduledAction.cpp \
-        bindings/v8/ScopedDOMDataStore.cpp \
-        bindings/v8/ScriptCachedFrameData.cpp \
-        bindings/v8/ScriptCallStackFactory.cpp \
-        bindings/ScriptControllerBase.cpp \
-        bindings/v8/ScriptController.cpp \
-        bindings/v8/ScriptControllerQt.cpp \
-        bindings/v8/ScriptEventListener.cpp \
-        bindings/v8/ScriptFunctionCall.cpp \
-        bindings/v8/ScriptInstance.cpp \
-        bindings/v8/ScriptObject.cpp \
-        bindings/v8/ScriptScope.cpp \
-        bindings/v8/ScriptState.cpp \
-        bindings/v8/ScriptValue.cpp \
-        bindings/v8/StaticDOMDataStore.cpp \
-        bindings/v8/SerializedScriptValue.cpp \
-        bindings/v8/V8AbstractEventListener.cpp \
-        bindings/v8/V8Binding.cpp \
-        bindings/v8/V8BindingPerContextData.cpp \
-        bindings/v8/V8Collection.cpp \
-        bindings/v8/V8DOMMap.cpp \
-        bindings/v8/V8DOMWrapper.cpp \
-        bindings/v8/V8EventListener.cpp \
-        bindings/v8/V8EventListenerList.cpp \
-        bindings/v8/V8GCController.cpp \
-        bindings/v8/V8GCForContextDispose.cpp \
-        bindings/v8/V8Helpers.cpp \
-        bindings/v8/V8HiddenPropertyName.cpp \
-        bindings/v8/IsolatedWorld.cpp \
-        bindings/v8/V8LazyEventListener.cpp \
-        bindings/v8/V8NPObject.cpp \
-        bindings/v8/V8NPUtils.cpp \
-        bindings/v8/V8NodeFilterCondition.cpp \
-        bindings/v8/V8Proxy.cpp \
-        bindings/v8/V8RecursionScope.cpp \
-        bindings/v8/V8Utilities.cpp \
-        bindings/v8/V8WindowErrorHandler.cpp \
-        bindings/v8/V8WorkerContextEventListener.cpp \
-        bindings/v8/WorkerContextExecutionProxy.cpp \
-        bindings/v8/WorkerScriptDebugServer.cpp \
-        bindings/v8/WorkerScriptController.cpp \
-        \
-        bindings/v8/V8DOMWindowShell.cpp \
-        bindings/v8/DOMWrapperWorld.cpp \
-        \
-        bindings/v8/npruntime.cpp \
-        \
-        bindings/v8/custom/V8CSSRuleCustom.cpp \
-        bindings/v8/custom/V8CSSStyleDeclarationCustom.cpp \
-        bindings/v8/custom/V8CSSValueCustom.cpp \
-        bindings/v8/custom/V8CanvasRenderingContext2DCustom.cpp \
-        bindings/v8/custom/V8ClipboardCustom.cpp \
-        bindings/v8/custom/V8CoordinatesCustom.cpp \
-        bindings/v8/custom/V8ImageDataCustom.cpp \
-        bindings/v8/custom/V8InjectedScriptHostCustom.cpp \
-        bindings/v8/custom/V8InjectedScriptManager.cpp \
-        bindings/v8/custom/V8InspectorFrontendHostCustom.cpp \
-        bindings/v8/custom/V8DOMStringMapCustom.cpp
-
-    SOURCES += \
-        bindings/v8/custom/V8CustomSQLStatementErrorCallback.cpp \
-        bindings/v8/custom/V8CustomVoidCallback.cpp \
-        bindings/v8/custom/V8DOMFormDataCustom.cpp \
-        bindings/v8/custom/V8DOMWindowCustom.cpp \
-        bindings/v8/custom/V8DedicatedWorkerContextCustom.cpp \
-        bindings/v8/custom/V8DocumentCustom.cpp \
-        bindings/v8/custom/V8DocumentLocationCustom.cpp \
-        bindings/v8/custom/V8EventCustom.cpp \
-        bindings/v8/custom/V8FileReaderCustom.cpp \
-        bindings/v8/custom/V8HTMLAllCollectionCustom.cpp
-
-    SOURCES += \
-        bindings/v8/custom/V8HTMLCanvasElementCustom.cpp \
-        bindings/v8/custom/V8HTMLCollectionCustom.cpp \
-        bindings/v8/custom/V8HTMLDocumentCustom.cpp \
-        bindings/v8/custom/V8HTMLElementCustom.cpp \
-        bindings/v8/custom/V8HTMLFormElementCustom.cpp \
-        bindings/v8/custom/V8HTMLFrameElementCustom.cpp \
-        bindings/v8/custom/V8HTMLFrameSetElementCustom.cpp \
-        bindings/v8/custom/V8HTMLImageElementConstructor.cpp \
-        bindings/v8/custom/V8HTMLInputElementCustom.cpp \
-        bindings/v8/custom/V8HTMLLinkElementCustom.cpp \
-        bindings/v8/custom/V8HTMLMediaElementCustom.cpp \
-        bindings/v8/custom/V8HTMLOptionsCollectionCustom.cpp \
-        bindings/v8/custom/V8HTMLOutputElementCustom.cpp \
-        bindings/v8/custom/V8HTMLPlugInElementCustom.cpp \
-        bindings/v8/custom/V8HTMLSelectElementCustom.cpp \
-        bindings/v8/custom/V8LocationCustom.cpp \
-        bindings/v8/custom/V8MessageChannelConstructor.cpp \
-        bindings/v8/custom/V8MessagePortCustom.cpp \
-        bindings/v8/custom/V8MessageEventCustom.cpp \
-        bindings/v8/custom/V8MutationCallbackCustom.cpp \
-        bindings/v8/custom/V8NamedNodeMapCustom.cpp \
-        bindings/v8/custom/V8NamedNodesCollection.cpp \
-        bindings/v8/custom/V8NodeCustom.cpp \
-        bindings/v8/custom/V8NodeListCustom.cpp \
-        bindings/v8/custom/V8PerformanceCustom.cpp \
-        bindings/v8/custom/V8PerformanceEntryCustom.cpp \
-        bindings/v8/custom/V8SQLResultSetRowListCustom.cpp \
-        bindings/v8/custom/V8SQLTransactionCustom.cpp \
-        bindings/v8/custom/V8WebSocketCustom.cpp \
-        \
-        bindings/v8/custom/V8StorageCustom.cpp \
-        bindings/v8/custom/V8StyleSheetCustom.cpp \
-        bindings/v8/custom/V8StyleSheetListCustom.cpp \
-        bindings/v8/custom/V8WebKitAnimationCustom.cpp \
-        bindings/v8/custom/V8WebKitMutationObserverCustom.cpp \
-        bindings/v8/custom/V8WebKitPointConstructor.cpp \
-        bindings/v8/custom/V8WorkerContextCustom.cpp \
-        bindings/v8/custom/V8WorkerCustom.cpp \
-        bindings/v8/custom/V8XMLHttpRequestConstructor.cpp \
-        bindings/v8/custom/V8XMLHttpRequestCustom.cpp \
-        \
-        bindings/v8/custom/V8SVGDocumentCustom.cpp \
-        bindings/v8/custom/V8SVGElementCustom.cpp \
-        bindings/v8/custom/V8SVGLengthCustom.cpp \
-        bindings/v8/custom/V8SVGPathSegCustom.cpp \
-        \
-        bindings/v8/specialization/V8BindingState.cpp\
-        \
-        bindings/v8/custom/V8NotificationCustom.cpp \
-        bindings/v8/custom/V8NotificationCenterCustom.cpp \
-        bindings/v8/custom/V8ConsoleCustom.cpp \
-        bindings/v8/custom/V8SQLTransactionSyncCustom.cpp \
-        bindings/v8/V8WorkerContextErrorHandler.cpp \
-        testing/v8/WebCoreTestSupport.cpp
+haveQt(5) {
+    SOURCES += bridge/qt/qt_runtime.cpp
 } else {
-    SOURCES += \
-        bindings/ScriptControllerBase.cpp \
-        bindings/js/CallbackFunction.cpp \
-        bindings/js/DOMObjectHashTableMap.cpp \
-        bindings/js/DOMWrapperWorld.cpp \
-        bindings/js/Dictionary.cpp \
-        bindings/js/GCController.cpp \
-        bindings/js/JSArrayBufferCustom.cpp \
-        bindings/js/JSAttrCustom.cpp \
-        bindings/js/JSBlobCustom.cpp \
-        bindings/js/JSCDATASectionCustom.cpp \
-        bindings/js/JSCSSFontFaceRuleCustom.cpp \
-        bindings/js/JSCSSImportRuleCustom.cpp \
-        bindings/js/JSCSSMediaRuleCustom.cpp \
-        bindings/js/JSCSSPageRuleCustom.cpp \
-        bindings/js/JSCSSRuleCustom.cpp \
-        bindings/js/JSCSSRuleListCustom.cpp \
-        bindings/js/JSCSSStyleDeclarationCustom.cpp \
-        bindings/js/JSCSSStyleRuleCustom.cpp \
-        bindings/js/JSCSSValueCustom.cpp \
-        bindings/js/JSCallbackData.cpp \
-        bindings/js/JSCanvasRenderingContext2DCustom.cpp \
-        bindings/js/JSCanvasRenderingContextCustom.cpp \
-        bindings/js/JSClipboardCustom.cpp \
-        bindings/js/JSConsoleCustom.cpp \
-        bindings/js/JSCoordinatesCustom.cpp \
-        bindings/js/JSCustomVoidCallback.cpp \
-        bindings/js/JSCustomXPathNSResolver.cpp \
-        bindings/js/JSDictionary.cpp \
-        bindings/js/JSDOMBinding.cpp \
-        bindings/js/JSDOMFormDataCustom.cpp \
-        bindings/js/JSDOMGlobalObject.cpp \
-        bindings/js/JSDOMImplementationCustom.cpp \
-        bindings/js/JSDOMMimeTypeArrayCustom.cpp \
-        bindings/js/JSDOMPluginArrayCustom.cpp \
-        bindings/js/JSDOMPluginCustom.cpp \
-        bindings/js/JSDOMStringListCustom.cpp \
-        bindings/js/JSDOMStringMapCustom.cpp \
-        bindings/js/JSDOMTokenListCustom.cpp \
-        bindings/js/JSDOMWindowBase.cpp \
-        bindings/js/JSDOMWindowCustom.cpp \
-        bindings/js/JSDOMWindowShell.cpp \
-        bindings/js/JSDOMWindowWebAudioCustom.cpp \
-        bindings/js/JSDOMWindowWebSocketCustom.cpp \
-        bindings/js/JSDOMWrapper.cpp \
-        bindings/js/JSDataViewCustom.cpp \
-        bindings/js/JSDesktopNotificationsCustom.cpp \
-        bindings/js/JSDeviceMotionEventCustom.cpp \
-        bindings/js/JSDeviceOrientationEventCustom.cpp \
-        bindings/js/JSDocumentCustom.cpp \
-        bindings/js/JSElementCustom.cpp \
-        bindings/js/JSErrorHandler.cpp \
-        bindings/js/JSEventCustom.cpp \
-        bindings/js/JSEventListener.cpp \
-        bindings/js/JSEventTargetCustom.cpp \
-        bindings/js/JSExceptionBase.cpp \
-        bindings/js/JSFileReaderCustom.cpp \
-        bindings/js/JSFloat32ArrayCustom.cpp \
-        bindings/js/JSFloat64ArrayCustom.cpp \
-        bindings/js/JSGeolocationCustom.cpp \
-        bindings/js/JSHTMLAllCollectionCustom.cpp \
-        bindings/js/JSHTMLAppletElementCustom.cpp \
-        bindings/js/JSHTMLCanvasElementCustom.cpp \
-        bindings/js/JSHTMLCollectionCustom.cpp \
-        bindings/js/JSHTMLDocumentCustom.cpp \
-        bindings/js/JSHTMLElementCustom.cpp \
-        bindings/js/JSHTMLEmbedElementCustom.cpp \
-        bindings/js/JSHTMLFormElementCustom.cpp \
-        bindings/js/JSHTMLFrameElementCustom.cpp \
-        bindings/js/JSHTMLFrameSetElementCustom.cpp \
-        bindings/js/JSHTMLInputElementCustom.cpp \
-        bindings/js/JSHTMLLinkElementCustom.cpp \
-        bindings/js/JSHTMLMediaElementCustom.cpp \
-        bindings/js/JSHTMLObjectElementCustom.cpp \
-        bindings/js/JSHTMLOptionsCollectionCustom.cpp \
-        bindings/js/JSHTMLOutputElementCustom.cpp \
-        bindings/js/JSHTMLSelectElementCustom.cpp \
-        bindings/js/JSHTMLStyleElementCustom.cpp \
-        bindings/js/JSHistoryCustom.cpp \
-        bindings/js/JSImageConstructor.cpp \
-        bindings/js/JSImageDataCustom.cpp \
-        bindings/js/JSInjectedScriptHostCustom.cpp \
-        bindings/js/JSInjectedScriptManager.cpp \
-        bindings/js/JSInspectorFrontendHostCustom.cpp \
-        bindings/js/JSInt16ArrayCustom.cpp \
-        bindings/js/JSInt32ArrayCustom.cpp \
-        bindings/js/JSInt8ArrayCustom.cpp \
-        bindings/js/JSLazyEventListener.cpp \
-        bindings/js/JSLocationCustom.cpp \
-        bindings/js/JSMainThreadExecState.cpp \
-        bindings/js/JSMediaListCustom.cpp \
-        bindings/js/JSMemoryInfoCustom.cpp \
-        bindings/js/JSMessageChannelCustom.cpp \
-        bindings/js/JSMessageEventCustom.cpp \
-        bindings/js/JSMessagePortCustom.cpp \
-        bindings/js/JSMessagePortCustom.h \
-        bindings/js/JSMutationCallbackCustom.cpp \
-        bindings/js/JSNamedNodeMapCustom.cpp \
-        bindings/js/JSNodeCustom.cpp \
-        bindings/js/JSNodeFilterCondition.cpp \
-        bindings/js/JSNodeFilterCustom.cpp \
-        bindings/js/JSNodeIteratorCustom.cpp \
-        bindings/js/JSNodeListCustom.cpp \
-        bindings/js/JSNotificationCustom.cpp \
-        bindings/js/JSPluginElementFunctions.cpp \
-        bindings/js/JSPopStateEventCustom.cpp \
-        bindings/js/JSProcessingInstructionCustom.cpp \
-        bindings/js/JSRequestAnimationFrameCallbackCustom.cpp \
-        bindings/js/JSScriptProfileNodeCustom.cpp \
-        bindings/js/JSStorageCustom.cpp \
-        bindings/js/JSStyleSheetCustom.cpp \
-        bindings/js/JSStyleSheetListCustom.cpp \
-        bindings/js/JSTextCustom.cpp \
-        bindings/js/JSTouchCustom.cpp \
-        bindings/js/JSTouchListCustom.cpp \
-        bindings/js/JSTreeWalkerCustom.cpp \
-        bindings/js/JSUint16ArrayCustom.cpp \
-        bindings/js/JSUint32ArrayCustom.cpp \
-        bindings/js/JSUint8ArrayCustom.cpp \
-        bindings/js/JSUint8ClampedArrayCustom.cpp \
-        bindings/js/JSWebKitAnimationCustom.cpp \
-        bindings/js/JSWebKitAnimationListCustom.cpp \
-        bindings/js/JSWebKitCSSKeyframeRuleCustom.cpp \
-        bindings/js/JSWebKitCSSKeyframesRuleCustom.cpp \
-        bindings/js/JSWebKitMutationObserverCustom.cpp \
-        bindings/js/JSWebKitPointCustom.cpp \
-        bindings/js/JSXMLHttpRequestCustom.cpp \
-        bindings/js/JSXMLHttpRequestUploadCustom.cpp \
-        bindings/js/JSXPathResultCustom.cpp \
-        bindings/js/PageScriptDebugServer.cpp \
-        bindings/js/ScheduledAction.cpp \
-        bindings/js/ScriptCachedFrameData.cpp \
-        bindings/js/ScriptCallStackFactory.cpp \
-        bindings/js/ScriptController.cpp \
-        bindings/js/ScriptControllerQt.cpp \
-        bindings/js/ScriptDebugServer.cpp \
-        bindings/js/ScriptEventListener.cpp \
-        bindings/js/ScriptFunctionCall.cpp \
-        bindings/js/ScriptGCEvent.cpp \
-        bindings/js/ScriptObject.cpp \
-        bindings/js/ScriptProfile.cpp \
-        bindings/js/ScriptState.cpp \
-        bindings/js/ScriptValue.cpp \
-        bindings/js/SerializedScriptValue.cpp \
-        bridge/IdentifierRep.cpp \
-        bridge/NP_jsobject.cpp \
-        bridge/c/CRuntimeObject.cpp \
-        bridge/c/c_class.cpp \
-        bridge/c/c_instance.cpp \
-        bridge/c/c_runtime.cpp \
-        bridge/c/c_utility.cpp \
-        bridge/jsc/BridgeJSC.cpp \
-        bridge/npruntime.cpp \
-        bridge/qt/qt_class.cpp \
-        bridge/qt/qt_instance.cpp \
-        bridge/qt/qt_pixmapruntime.cpp \
-        bridge/runtime_array.cpp \
-        bridge/runtime_method.cpp \
-        bridge/runtime_object.cpp \
-        bridge/runtime_root.cpp \
-        testing/js/WebCoreTestSupport.cpp
-
-    haveQt(5) {
-        SOURCES += bridge/qt/qt_runtime.cpp
-    } else {
-        SOURCES += bridge/qt/qt_runtime_qt4.cpp
-    }
+    SOURCES += bridge/qt/qt_runtime_qt4.cpp
 }
 
 SOURCES += \
@@ -427,6 +260,12 @@ SOURCES += \
     Modules/filesystem/FileWriterSync.cpp \
     Modules/filesystem/LocalFileSystem.cpp \
     Modules/filesystem/WorkerContextFileSystem.cpp \
+    Modules/notifications/DOMWindowNotifications.cpp \
+    Modules/notifications/Notification.cpp \
+    Modules/notifications/NotificationCenter.cpp \
+    Modules/notifications/NotificationController.cpp \
+    Modules/notifications/WorkerContextNotifications.cpp \
+    Modules/protocolhandler/NavigatorRegisterProtocolHandler.cpp \
     css/CSSAspectRatioValue.cpp \
     css/CSSBorderImageSliceValue.cpp \
     css/CSSBorderImage.cpp \
@@ -505,6 +344,7 @@ SOURCES += \
     css/WebKitCSSSVGDocumentValue.cpp \
     css/WebKitCSSShaderValue.cpp \
     css/WebKitCSSTransformValue.cpp \
+    css/WrapShapeFunctions.cpp \
     dom/ActiveDOMObject.cpp \
     dom/Attr.cpp \
     dom/BeforeTextInsertedEvent.cpp \
@@ -567,6 +407,8 @@ SOURCES += \
     dom/ExceptionCodePlaceholder.cpp \
     dom/GenericEventQueue.cpp \
     dom/IconURL.cpp \
+    dom/IdTargetObserver.cpp \
+    dom/IdTargetObserverRegistry.cpp \
     dom/KeyboardEvent.cpp \
     dom/MessageChannel.cpp \
     dom/MessageEvent.cpp \
@@ -576,6 +418,7 @@ SOURCES += \
     dom/MouseEvent.cpp \
     dom/MouseRelatedEvent.cpp \
     dom/MutationEvent.cpp \
+    dom/MutationObserver.cpp \
     dom/MutationObserverInterestGroup.cpp \
     dom/MutationObserverRegistration.cpp \
     dom/MutationRecord.cpp \
@@ -630,8 +473,8 @@ SOURCES += \
     dom/UserTypingGestureIndicator.cpp \
     dom/ViewportArguments.cpp \
     dom/WebKitAnimationEvent.cpp \
-    dom/WebKitMutationObserver.cpp \
     dom/WebKitNamedFlow.cpp \
+    dom/WebKitNamedFlowCollection.cpp \
     dom/WebKitTransitionEvent.cpp \
     dom/WheelEvent.cpp \
     dom/WindowEventContext.cpp \
@@ -748,6 +591,7 @@ SOURCES += \
     html/HTMLCollection.cpp \
     html/HTMLDListElement.cpp \
     html/HTMLDataListElement.cpp \
+    html/HTMLDialogElement.cpp \
     html/HTMLDirectoryElement.cpp \
     html/HTMLDetailsElement.cpp \
     html/HTMLDivElement.cpp \
@@ -878,6 +722,7 @@ SOURCES += \
     html/shadow/HTMLContentElement.cpp \
     html/shadow/HTMLShadowElement.cpp \
     html/shadow/InsertionPoint.cpp \
+    html/shadow/ImageInnerElement.cpp \
     html/shadow/MediaControls.cpp \
     html/shadow/MediaControlRootElement.cpp \
     html/shadow/MeterShadowElement.cpp \
@@ -999,11 +844,6 @@ SOURCES += \
     loader/SubresourceLoader.cpp \
     loader/TextResourceDecoder.cpp \
     loader/ThreadableLoader.cpp \
-    notifications/DOMWindowNotifications.cpp \
-    notifications/Notification.cpp \
-    notifications/NotificationCenter.cpp \
-    notifications/NotificationController.cpp \
-    notifications/WorkerContextNotifications.cpp \
     page/animation/AnimationBase.cpp \
     page/animation/AnimationController.cpp \
     page/animation/CompositeAnimation.cpp \
@@ -1040,7 +880,6 @@ SOURCES += \
     page/MouseEventWithHitTestResults.cpp \
     page/Navigator.cpp \
     page/NavigatorBase.cpp \
-    page/NavigatorRegisterProtocolHandler.cpp \
     page/OriginAccessEntry.cpp \
     page/Page.cpp \
     page/PageGroup.cpp \
@@ -1074,7 +913,6 @@ SOURCES += \
     platform/animation/Animation.cpp \
     platform/animation/AnimationList.cpp \
     platform/Arena.cpp \
-    platform/text/Base64.cpp \
     platform/text/BidiContext.cpp \
     platform/text/DateTimeFormat.cpp \
     platform/text/Hyphenation.cpp \
@@ -1118,6 +956,8 @@ SOURCES += \
     platform/graphics/Gradient.cpp \
     platform/graphics/GraphicsContext.cpp \
     platform/graphics/GraphicsLayer.cpp \
+    platform/graphics/GraphicsLayerAnimation.cpp \
+    platform/graphics/GraphicsLayerTransform.cpp \
     platform/graphics/GraphicsTypes.cpp \
     platform/graphics/Image.cpp \
     platform/graphics/ImageBuffer.cpp \
@@ -1166,7 +1006,7 @@ SOURCES += \
     platform/LinkHash.cpp \
     platform/Logging.cpp \
     platform/MemoryPressureHandler.cpp \
-    platform/MemoryUsageSupport.cpp \
+    platform/qt/MemoryUsageSupportQt.cpp \
     platform/MIMETypeRegistry.cpp \
     platform/mock/DeviceMotionClientMock.cpp \
     platform/mock/DeviceOrientationClientMock.cpp \
@@ -1431,150 +1271,83 @@ HEADERS += \
     bindings/generic/ActiveDOMCallback.h \
     bindings/generic/RuntimeEnabledFeatures.h
 
-v8 {
-    HEADERS += \
-        bindings/v8/custom/V8CustomVoidCallback.h \
-        bindings/v8/custom/V8CustomXPathNSResolver.h \
-        bindings/v8/custom/V8HTMLImageElementConstructor.h \
-        bindings/v8/custom/V8HTMLSelectElementCustom.h \
-        bindings/v8/custom/V8NamedNodesCollection.h \
-        \
-        bindings/v8/DateExtension.h \
-        bindings/v8/DOMData.h \
-        bindings/v8/DOMDataStore.h \
-        bindings/v8/DOMWrapperWorld.h \
-        bindings/v8/IsolatedWorld.h \
-        bindings/v8/npruntime_impl.h \
-        bindings/v8/npruntime_priv.h \
-        bindings/v8/NPV8Object.h \
-        bindings/v8/NPObjectWrapper.h \
-        bindings/v8/OwnHandle.h \
-        bindings/v8/PageScriptDebugServer.h \
-        bindings/v8/RetainedDOMInfo.h \
-        bindings/v8/RetainedObjectInfo.h \
-        bindings/v8/SafeAllocation.h \
-        bindings/v8/ScheduledAction.h \
-        bindings/v8/ScopedDOMDataStore.h \
-        bindings/v8/ScriptCachedFrameData.h \
-        bindings/v8/ScriptController.h \
-        bindings/v8/ScriptEventListener.h \
-        bindings/v8/ScriptFunctionCall.h \
-        bindings/v8/ScriptInstance.h \
-        bindings/v8/ScriptObject.h \
-        bindings/v8/ScriptProfile.h \
-        bindings/v8/ScriptProfiler.h \
-        bindings/v8/ScriptScope.h \
-        bindings/v8/ScriptSourceCode.h \
-        bindings/v8/ScriptState.h \
-        bindings/v8/ScriptValue.h \
-        bindings/v8/ScriptWrappable.h \
-        bindings/v8/SerializedScriptValue.h \
-        bindings/v8/SharedPersistent.h \
-        bindings/v8/StaticDOMDataStore.h \
-        bindings/v8/V8AbstractEventListener.h \
-        bindings/v8/V8Binding.h \
-        bindings/v8/V8Collection.h \
-        bindings/v8/V8DOMMap.h \
-        bindings/v8/V8DOMWindowShell.h \
-        bindings/v8/V8DOMWrapper.h \
-        bindings/v8/V8EventListener.h \
-        bindings/v8/V8EventListenerList.h \
-        bindings/v8/V8GCController.h \
-        bindings/v8/V8Helpers.h \
-        bindings/v8/V8HiddenPropertyName.h \
-        bindings/v8/V8IsolatedContext.h \
-        bindings/v8/V8LazyEventListener.h \
-        bindings/v8/V8NodeFilterCondition.h \
-        bindings/v8/V8NPObject.h \
-        bindings/v8/V8NPUtils.h \
-        bindings/v8/V8Proxy.h \
-        bindings/v8/V8RecursionScope.h \
-        bindings/v8/V8Utilities.h \
-        bindings/v8/V8WindowErrorHandler.h \
-        bindings/v8/V8WorkerContextEventListener.h \
-        bindings/v8/WorkerContextExecutionProxy.h \
-        bindings/v8/WorkerScriptDebugServer.h \
-        bindings/v8/WorkerScriptController.h \
-        bindings/v8/WorldContextHandle.h
-} else {
-    HEADERS += \
-        bindings/js/CachedScriptSourceProvider.h \
-        bindings/js/CallbackFunction.h \
-        bindings/js/GCController.h \
-        bindings/js/DOMObjectHashTableMap.h \
-        bindings/js/DOMWrapperWorld.h \
-        bindings/js/JSArrayBufferViewHelper.h \
-        bindings/js/JSCSSStyleDeclarationCustom.h \
-        bindings/js/JSCallbackData.h \
-        bindings/js/JSCustomVoidCallback.h \
-        bindings/js/JSCustomXPathNSResolver.h \
-        bindings/js/JSDictionary.h \
-        bindings/js/JSDOMBinding.h \
-        bindings/js/JSDOMGlobalObject.h \
-        bindings/js/JSDOMStringMapCustom.h \
-        bindings/js/JSDOMWindowBase.h \
-        bindings/js/JSDOMWindowCustom.h \
-        bindings/js/JSDOMWindowShell.h \
-        bindings/js/JSDOMWrapper.h \
-        bindings/js/JSErrorHandler.h \
-        bindings/js/JSEventListener.h \
-        bindings/js/JSHTMLAppletElementCustom.h \
-        bindings/js/JSHTMLEmbedElementCustom.h \
-        bindings/js/JSHTMLInputElementCustom.h \
-        bindings/js/JSHTMLObjectElementCustom.h \
-        bindings/js/JSHTMLSelectElementCustom.h \
-        bindings/js/JSHistoryCustom.h \
-        bindings/js/JSImageConstructor.h \
-        bindings/js/JSLazyEventListener.h \
-        bindings/js/JSLocationCustom.h \
-        bindings/js/JSNodeCustom.h \
-        bindings/js/JSNodeFilterCondition.h \
-        bindings/js/JSPluginElementFunctions.h \
-        bindings/js/JSStorageCustom.h \
-        bindings/js/JSWorkerContextBase.h \
-        bindings/js/JavaScriptCallFrame.h \
-        bindings/js/PageScriptDebugServer.h \
-        bindings/js/ScheduledAction.h \
-        bindings/js/ScriptCachedFrameData.h \
-        bindings/js/ScriptController.h \
-        bindings/js/ScriptDebugServer.h \
-        bindings/js/ScriptEventListener.h \
-        bindings/js/ScriptFunctionCall.h \
-        bindings/js/ScriptGCEvent.h \
-        bindings/js/ScriptHeapSnapshot.h \
-        bindings/js/ScriptObject.h \
-        bindings/js/ScriptProfile.h \
-        bindings/js/ScriptProfileNode.h \
-        bindings/js/ScriptProfiler.h \
-        bindings/js/ScriptSourceCode.h \
-        bindings/js/ScriptSourceProvider.h \
-        bindings/js/ScriptState.h \
-        bindings/js/ScriptValue.h \
-        bindings/js/ScriptWrappable.h \
-        bindings/js/SerializedScriptValue.h \
-        bindings/js/StringSourceProvider.h \
-        bindings/js/WebCoreJSClientData.h \
-        bindings/js/WorkerScriptController.h \
-        bindings/js/WorkerScriptDebugServer.h \
-        bridge/Bridge.h \
-        bridge/c/CRuntimeObject.h \
-        bridge/c/c_class.h \
-        bridge/c/c_instance.h \
-        bridge/c/c_runtime.h \
-        bridge/c/c_utility.h \
-        bridge/jsc/BridgeJSC.h \
-        bridge/IdentifierRep.h \
-        bridge/NP_jsobject.h \
-        bridge/qt/qt_class.h \
-        bridge/qt/qt_instance.h \
-        bridge/qt/qt_runtime.h \
-        bridge/qt/qt_pixmapruntime.h \
-        bridge/runtime_array.h \
-        bridge/runtime_method.h \
-        bridge/runtime_object.h \
-        bridge/runtime_root.h \
-        plugins/npruntime.h
-}
+HEADERS += \
+    bindings/js/CachedScriptSourceProvider.h \
+    bindings/js/CallbackFunction.h \
+    bindings/js/GCController.h \
+    bindings/js/DOMObjectHashTableMap.h \
+    bindings/js/DOMWrapperWorld.h \
+    bindings/js/JSArrayBufferViewHelper.h \
+    bindings/js/JSCSSStyleDeclarationCustom.h \
+    bindings/js/JSCallbackData.h \
+    bindings/js/JSCustomVoidCallback.h \
+    bindings/js/JSCustomXPathNSResolver.h \
+    bindings/js/JSDictionary.h \
+    bindings/js/JSDOMBinding.h \
+    bindings/js/JSDOMGlobalObject.h \
+    bindings/js/JSDOMStringMapCustom.h \
+    bindings/js/JSDOMWindowBase.h \
+    bindings/js/JSDOMWindowCustom.h \
+    bindings/js/JSDOMWindowShell.h \
+    bindings/js/JSDOMWrapper.h \
+    bindings/js/JSErrorHandler.h \
+    bindings/js/JSEventListener.h \
+    bindings/js/JSHTMLAppletElementCustom.h \
+    bindings/js/JSHTMLEmbedElementCustom.h \
+    bindings/js/JSHTMLInputElementCustom.h \
+    bindings/js/JSHTMLObjectElementCustom.h \
+    bindings/js/JSHTMLSelectElementCustom.h \
+    bindings/js/JSHistoryCustom.h \
+    bindings/js/JSImageConstructor.h \
+    bindings/js/JSLazyEventListener.h \
+    bindings/js/JSLocationCustom.h \
+    bindings/js/JSNodeCustom.h \
+    bindings/js/JSNodeFilterCondition.h \
+    bindings/js/JSPluginElementFunctions.h \
+    bindings/js/JSStorageCustom.h \
+    bindings/js/JSWorkerContextBase.h \
+    bindings/js/JavaScriptCallFrame.h \
+    bindings/js/PageScriptDebugServer.h \
+    bindings/js/ScheduledAction.h \
+    bindings/js/ScriptCachedFrameData.h \
+    bindings/js/ScriptController.h \
+    bindings/js/ScriptDebugServer.h \
+    bindings/js/ScriptEventListener.h \
+    bindings/js/ScriptFunctionCall.h \
+    bindings/js/ScriptGCEvent.h \
+    bindings/js/ScriptHeapSnapshot.h \
+    bindings/js/ScriptObject.h \
+    bindings/js/ScriptProfile.h \
+    bindings/js/ScriptProfileNode.h \
+    bindings/js/ScriptProfiler.h \
+    bindings/js/ScriptSourceCode.h \
+    bindings/js/ScriptSourceProvider.h \
+    bindings/js/ScriptState.h \
+    bindings/js/ScriptValue.h \
+    bindings/js/ScriptWrappable.h \
+    bindings/js/SerializedScriptValue.h \
+    bindings/js/StringSourceProvider.h \
+    bindings/js/WebCoreJSClientData.h \
+    bindings/js/WorkerScriptController.h \
+    bindings/js/WorkerScriptDebugServer.h \
+    bridge/Bridge.h \
+    bridge/c/CRuntimeObject.h \
+    bridge/c/c_class.h \
+    bridge/c/c_instance.h \
+    bridge/c/c_runtime.h \
+    bridge/c/c_utility.h \
+    bridge/jsc/BridgeJSC.h \
+    bridge/IdentifierRep.h \
+    bridge/NP_jsobject.h \
+    bridge/qt/qt_class.h \
+    bridge/qt/qt_instance.h \
+    bridge/qt/qt_runtime.h \
+    bridge/qt/qt_pixmapruntime.h \
+    bridge/runtime_array.h \
+    bridge/runtime_method.h \
+    bridge/runtime_object.h \
+    bridge/runtime_root.h \
+    plugins/npruntime.h
 
 HEADERS += \
     Modules/geolocation/Geolocation.h \
@@ -1586,6 +1359,13 @@ HEADERS += \
     Modules/geolocation/PositionError.h \
     Modules/geolocation/PositionErrorCallback.h \
     Modules/geolocation/PositionOptions.h \
+    \
+    Modules/notifications/DOMWindowNotifications.h \
+    Modules/notifications/Notification.h \
+    Modules/notifications/NotificationCenter.h \
+    Modules/notifications/NotificationClient.h \
+    Modules/notifications/NotificationController.h \
+    Modules/notifications/WorkerContextNotifications.h \
     \
     Modules/webdatabase/AbstractDatabase.h \
     Modules/webdatabase/ChangeVersionWrapper.h \
@@ -1691,6 +1471,7 @@ HEADERS += \
     css/WebKitCSSSVGDocumentValue.h \
     css/WebKitCSSShaderValue.h \
     css/WebKitCSSTransformValue.h \
+    css/WrapShapeFunctions.h \
     dom/ActiveDOMObject.h \
     dom/Attr.h \
     dom/Attribute.h \
@@ -1749,6 +1530,8 @@ HEADERS += \
     dom/ExceptionBase.h \
     dom/ExceptionCode.h \
     dom/FragmentScriptingPermission.h \
+    dom/IdTargetObserver.h \
+    dom/IdTargetObserverRegistry.h \
     dom/KeyboardEvent.h \
     dom/MemoryInstrumentation.h \
     dom/MessageChannel.h \
@@ -1760,6 +1543,7 @@ HEADERS += \
     dom/MouseRelatedEvent.h \
     dom/MutationCallback.h \
     dom/MutationEvent.h \
+    dom/MutationObserver.h \
     dom/MutationObserverRegistration.h \
     dom/MutationRecord.h \
     dom/NamedNodeMap.h \
@@ -1808,8 +1592,8 @@ HEADERS += \
     dom/UserGestureIndicator.h \
     dom/ViewportArguments.h \
     dom/WebKitAnimationEvent.h \
-    dom/WebKitMutationObserver.h \
     dom/WebKitNamedFlow.h \
+    dom/WebKitNamedFlowCollection.h \
     dom/WebKitTransitionEvent.h \
     dom/WheelEvent.h \
     editing/AlternativeTextController.h \
@@ -1917,6 +1701,7 @@ HEADERS += \
     html/HTMLButtonElement.h \
     html/HTMLCanvasElement.h \
     html/HTMLCollection.h \
+    html/HTMLDialogElement.h \
     html/HTMLDirectoryElement.h \
     html/HTMLDetailsElement.h \
     html/HTMLDivElement.h \
@@ -2151,12 +1936,6 @@ HEADERS += \
     mathml/MathMLInlineContainerElement.h \
     mathml/MathMLMathElement.h \
     mathml/MathMLTextElement.h \
-    notifications/DOMWindowNotifications.h \
-    notifications/Notification.h \
-    notifications/NotificationCenter.h \
-    notifications/NotificationClient.h \
-    notifications/NotificationController.h \
-    notifications/WorkerContextNotifications.h \
     page/animation/AnimationBase.h \
     page/animation/AnimationController.h \
     page/animation/CompositeAnimation.h \
@@ -2270,6 +2049,8 @@ HEADERS += \
     platform/graphics/filters/LightSource.h \
     platform/graphics/filters/SourceAlpha.h \
     platform/graphics/filters/SourceGraphic.h \
+    platform/graphics/filters/arm/NEONHelpers.h \
+    platform/graphics/filters/arm/FEBlendNEON.h \
     platform/graphics/filters/arm/FECompositeArithmeticNEON.h \
     platform/graphics/filters/arm/FEGaussianBlurNEON.h \
     platform/graphics/filters/arm/FELightingNEON.h \
@@ -2290,7 +2071,9 @@ HEADERS += \
     platform/graphics/Gradient.h \
     platform/graphics/GraphicsContext.h \
     platform/graphics/GraphicsLayer.h \
+    platform/graphics/GraphicsLayerAnimation.h \
     platform/graphics/GraphicsLayerClient.h \
+    platform/graphics/GraphicsLayerTransform.h \
     platform/graphics/GraphicsTypes.h \
     platform/graphics/GraphicsTypes3D.h \
     platform/graphics/Image.h \
@@ -2307,12 +2090,19 @@ HEADERS += \
     platform/graphics/Region.h \
     platform/graphics/RoundedRect.h \
     platform/graphics/qt/FontCustomPlatformData.h \
+    platform/graphics/qt/NativeImageQt.h \
     platform/graphics/qt/StillImageQt.h \
     platform/graphics/qt/TransparencyLayer.h \
     platform/graphics/SegmentedFontData.h \
     platform/graphics/ShadowBlur.h \
     platform/graphics/SimpleFontData.h \
     platform/graphics/surfaces/GraphicsSurface.h \
+    platform/graphics/texmap/GraphicsLayerTextureMapper.h \
+    platform/graphics/texmap/TextureMapper.h \
+    platform/graphics/texmap/TextureMapperBackingStore.h \
+    platform/graphics/texmap/TextureMapperImageBuffer.h \
+    platform/graphics/texmap/TextureMapperLayer.h \
+    platform/graphics/texmap/TextureMapperPlatformLayer.h \
     platform/graphics/Tile.h \
     platform/graphics/TiledBackingStore.h \
     platform/graphics/TiledBackingStoreClient.h \
@@ -2413,7 +2203,6 @@ HEADERS += \
     platform/sql/SQLiteStatement.h \
     platform/sql/SQLiteTransaction.h \
     platform/sql/SQLValue.h \
-    platform/text/Base64.h \
     platform/text/BidiContext.h \
     platform/text/DateTimeFormat.h \
     platform/text/DecodeEscapeSequences.h \
@@ -2923,6 +2712,11 @@ SOURCES += \
     platform/graphics/qt/PathQt.cpp \
     platform/graphics/qt/PatternQt.cpp \
     platform/graphics/qt/StillImageQt.cpp \
+    platform/graphics/texmap/GraphicsLayerTextureMapper.cpp \
+    platform/graphics/texmap/TextureMapper.cpp \
+    platform/graphics/texmap/TextureMapperBackingStore.cpp \
+    platform/graphics/texmap/TextureMapperImageBuffer.cpp \
+    platform/graphics/texmap/TextureMapperLayer.cpp \
     platform/network/MIMESniffing.cpp \
     platform/network/qt/CredentialStorageQt.cpp \
     platform/network/qt/ResourceHandleQt.cpp \
@@ -3081,20 +2875,16 @@ contains(DEFINES, ENABLE_SQL_DATABASE=1) {
         Modules/webdatabase/SQLTransactionCoordinator.cpp \
         Modules/webdatabase/SQLTransactionSync.cpp \
 
-    !v8 {
-        SOURCES += \
-            bindings/js/JSCustomSQLStatementErrorCallback.cpp \
-            bindings/js/JSSQLResultSetRowListCustom.cpp \
-            bindings/js/JSSQLTransactionCustom.cpp \
-            bindings/js/JSSQLTransactionSyncCustom.cpp
-    }
+    SOURCES += \
+        bindings/js/JSCustomSQLStatementErrorCallback.cpp \
+        bindings/js/JSSQLResultSetRowListCustom.cpp \
+        bindings/js/JSSQLTransactionCustom.cpp \
+        bindings/js/JSSQLTransactionSyncCustom.cpp
 }
 
 contains(DEFINES, ENABLE_INDEXED_DATABASE=1) {
-    !v8 {
-        HEADERS += \
-            bindings/js/IDBBindingUtilities.h \
-    }
+    HEADERS += \
+        bindings/js/IDBBindingUtilities.h \
 
     HEADERS += \
         Modules/indexeddb/IDBAny.h \
@@ -3123,12 +2913,10 @@ contains(DEFINES, ENABLE_INDEXED_DATABASE=1) {
         Modules/indexeddb/IDBTransaction.h \
         Modules/indexeddb/IDBTransactionBackendInterface.h
 
-    !v8 {
-        SOURCES += \
-            bindings/js/IDBBindingUtilities.cpp \
-            bindings/js/JSIDBAnyCustom.cpp \
-            bindings/js/JSIDBKeyCustom.cpp
-    }
+    SOURCES += \
+        bindings/js/IDBBindingUtilities.cpp \
+        bindings/js/JSIDBAnyCustom.cpp \
+        bindings/js/JSIDBKeyCustom.cpp
 
     SOURCES += \
         Modules/indexeddb/DOMWindowIndexedDatabase.cpp \
@@ -3223,15 +3011,14 @@ contains(DEFINES, ENABLE_ICONDATABASE=1) {
 }
 
 contains(DEFINES, ENABLE_WORKERS=1) {
-    !v8 {
-        SOURCES += \
-            bindings/js/JSDedicatedWorkerContextCustom.cpp \
-            bindings/js/JSWorkerContextBase.cpp \
-            bindings/js/JSWorkerContextCustom.cpp \
-            bindings/js/JSWorkerCustom.cpp \
-            bindings/js/WorkerScriptController.cpp \
-            bindings/js/WorkerScriptDebugServer.cpp
-    }
+    SOURCES += \
+        bindings/js/JSDedicatedWorkerContextCustom.cpp \
+        bindings/js/JSWorkerContextBase.cpp \
+        bindings/js/JSWorkerContextCustom.cpp \
+        bindings/js/JSWorkerCustom.cpp \
+        bindings/js/WorkerScriptController.cpp \
+        bindings/js/WorkerScriptDebugServer.cpp
+
     SOURCES += \
         loader/WorkerThreadableLoader.cpp \
         page/WorkerNavigator.cpp \
@@ -3249,10 +3036,9 @@ contains(DEFINES, ENABLE_WORKERS=1) {
 }
 
 contains(DEFINES, ENABLE_SHARED_WORKERS=1) {
-    !v8 {
-        SOURCES += \
-            bindings/js/JSSharedWorkerCustom.cpp
-    }
+    SOURCES += \
+        bindings/js/JSSharedWorkerCustom.cpp
+
     SOURCES += \
         workers/DefaultSharedWorkerRepository.cpp \
         workers/SharedWorker.cpp \
@@ -3385,13 +3171,8 @@ contains(DEFINES, ENABLE_FULLSCREEN_API=1) {
 }
 
 contains(DEFINES, ENABLE_XSLT=1) {
-    v8 {
-        SOURCES += \
-            bindings/v8/custom/V8XSLTProcessorCustom.cpp
-    } else {
-         SOURCES += \
-            bindings/js/JSXSLTProcessorCustom.cpp
-    }
+    SOURCES += \
+        bindings/js/JSXSLTProcessorCustom.cpp
 
     SOURCES += xml/XMLTreeViewer.cpp
     HEADERS += xml/XMLTreeViewer.h
@@ -3457,7 +3238,6 @@ contains(DEFINES, ENABLE_FILTERS=1) {
         platform/graphics/filters/SourceAlpha.cpp \
         platform/graphics/filters/SourceGraphic.cpp \
         platform/graphics/filters/arm/FELightingNEON.cpp \
-        platform/graphics/filters/arm/FEGaussianBlurNEON.cpp \
 }
 
 contains(DEFINES, ENABLE_MATHML=1) {
@@ -3500,7 +3280,7 @@ contains(DEFINES, HAVE_QRAWFONT=1) {
         platform/graphics/qt/FontQt4.cpp
 }
 
-contains(DEFINES, ENABLE_FONT_BOOSTING=1) {
+contains(DEFINES, ENABLE_TEXT_AUTOSIZING=1) {
     SOURCES += # FIXME!
 }
 
@@ -3517,21 +3297,12 @@ contains(DEFINES, ENABLE_DEVICE_ORIENTATION=1) {
         platform/qt/DeviceOrientationProviderQt.cpp
 }
 
-contains(DEFINES, ENABLE_GEOLOCATION=1) {
-    v8 {
-        SOURCES += \
-            bindings/v8/custom/V8GeolocationCustom.cpp
-    }
-}
-
 contains(DEFINES, ENABLE_SVG=1) {
-    !v8 {
-        SOURCES += \
-    # TODO: this-one-is-not-auto-added! FIXME! tmp/SVGElementFactory.cpp \
-            bindings/js/JSSVGElementInstanceCustom.cpp \
-            bindings/js/JSSVGLengthCustom.cpp \
-            bindings/js/JSSVGPathSegCustom.cpp
-    }
+    SOURCES += \
+# TODO: this-one-is-not-auto-added! FIXME! tmp/SVGElementFactory.cpp \
+        bindings/js/JSSVGElementInstanceCustom.cpp \
+        bindings/js/JSSVGLengthCustom.cpp \
+        bindings/js/JSSVGPathSegCustom.cpp
 
     SOURCES += \
         css/SVGCSSComputedStyleDeclaration.cpp \
@@ -3770,40 +3541,22 @@ contains(DEFINES, ENABLE_SVG=1) {
 }
 
 contains(DEFINES, ENABLE_JAVASCRIPT_DEBUGGER=1) {
-    v8 {
-        SOURCES += \
-            bindings/v8/ScriptDebugServer.cpp \
-            bindings/v8/ScriptProfiler.cpp \
-            bindings/v8/ScriptHeapSnapshot.cpp \
-            bindings/v8/JavaScriptCallFrame.cpp \
-            bindings/v8/custom/V8ScriptProfileCustom.cpp \
-            bindings/v8/custom/V8JavaScriptCallFrameCustom.cpp \
-            bindings/v8/custom/V8ScriptProfileNodeCustom.cpp \
-            bindings/v8/ScriptProfileNode.cpp \
-            bindings/v8/ScriptProfile.cpp
-    } else {
-        SOURCES += \
-            bindings/js/JSJavaScriptCallFrameCustom.cpp \
-            bindings/js/ScriptProfiler.cpp \
-            bindings/js/JavaScriptCallFrame.cpp
-    }
+    SOURCES += \
+        bindings/js/JSJavaScriptCallFrameCustom.cpp \
+        bindings/js/ScriptProfiler.cpp \
+        bindings/js/JavaScriptCallFrame.cpp
 }
 
 
 contains(DEFINES, ENABLE_VIDEO_TRACK=1) {
-    v8 {
-        SOURCES += \
-            bindings/v8/custom/V8TrackEventCustom.cpp
-    } else {
-        SOURCES += \
-            bindings/js/JSTextTrackCueCustom.cpp \
-            bindings/js/JSTextTrackCustom.cpp \
-            bindings/js/JSTextTrackCustom.h \
-            bindings/js/JSTrackCustom.cpp \
-            bindings/js/JSTrackCustom.h \
-            bindings/js/JSTrackEventCustom.cpp \
-            bindings/js/JSTextTrackListCustom.cpp
-    }
+    SOURCES += \
+        bindings/js/JSTextTrackCueCustom.cpp \
+        bindings/js/JSTextTrackCustom.cpp \
+        bindings/js/JSTextTrackCustom.h \
+        bindings/js/JSTrackCustom.cpp \
+        bindings/js/JSTrackCustom.h \
+        bindings/js/JSTrackEventCustom.cpp \
+        bindings/js/JSTextTrackListCustom.cpp
 }
 
 contains(DEFINES, ENABLE_WEB_SOCKETS=1) {
@@ -3842,10 +3595,8 @@ contains(DEFINES, ENABLE_WEB_SOCKETS=1) {
         platform/network/SocketStreamHandleBase.cpp \
         platform/network/qt/SocketStreamHandleQt.cpp
 
-    !v8 {
-        SOURCES += \
-            bindings/js/JSWebSocketCustom.cpp
-    }
+    SOURCES += \
+        bindings/js/JSWebSocketCustom.cpp
 
     contains(DEFINES, ENABLE_WORKERS=1) {
         HEADERS += \
@@ -3887,19 +3638,9 @@ contains(DEFINES, ENABLE_WEBGL=1) {
         html/canvas/WebGLTexture.h \
         html/canvas/WebGLUniformLocation.h \
         html/canvas/WebGLVertexArrayObjectOES.h \
-        platform/graphics/ANGLEWebKitBridge.h \
-        platform/graphics/Extensions3D.h \
-        platform/graphics/GraphicsContext3D.h \
-        platform/graphics/gpu/DrawingBuffer.h \
-        platform/graphics/qt/Extensions3DQt.h
 
-    v8 {
-        SOURCES += \
-            bindings/v8/custom/V8WebGLRenderingContextCustom.cpp
-    } else {
-        SOURCES += \
-            bindings/js/JSWebGLRenderingContextCustom.cpp
-    }
+    SOURCES += \
+        bindings/js/JSWebGLRenderingContextCustom.cpp
 
     SOURCES += \
         html/canvas/CanvasContextAttributes.cpp \
@@ -3929,154 +3670,221 @@ contains(DEFINES, ENABLE_WEBGL=1) {
         html/canvas/OESVertexArrayObject.cpp \
         html/canvas/WebGLTexture.cpp \
         html/canvas/WebGLUniformLocation.cpp \
-        html/canvas/WebGLVertexArrayObjectOES.cpp \
+        html/canvas/WebGLVertexArrayObjectOES.cpp
+}
+
+contains(DEFINES, WTF_USE_3D_GRAPHICS=1) {
+    HEADERS += \
+        platform/graphics/ANGLEWebKitBridge.h \
+        platform/graphics/Extensions3D.h \
+        platform/graphics/GraphicsContext3D.h \
+        platform/graphics/gpu/DrawingBuffer.h \
+        platform/graphics/gpu/Texture.h \
+        platform/graphics/gpu/TilingData.h \
+        platform/graphics/opengl/Extensions3DOpenGL.h \
+        platform/graphics/texmap/TextureMapperGL.h \
+        platform/graphics/texmap/TextureMapperShaderManager.h
+
+    SOURCES += \
         platform/graphics/ANGLEWebKitBridge.cpp \
         platform/graphics/GraphicsContext3D.cpp \
         platform/graphics/gpu/DrawingBuffer.cpp \
         platform/graphics/gpu/qt/DrawingBufferQt.cpp \
-        platform/graphics/qt/GraphicsContext3DQt.cpp
+        platform/graphics/gpu/Texture.cpp \
+        platform/graphics/gpu/TilingData.cpp \
+        platform/graphics/opengl/GraphicsContext3DOpenGLCommon.cpp \
+        platform/graphics/opengl/Extensions3DOpenGLCommon.cpp \
+        platform/graphics/qt/GraphicsContext3DQt.cpp \
+        platform/graphics/texmap/TextureMapperGL.cpp \
+        platform/graphics/texmap/TextureMapperShaderManager.cpp
 
     INCLUDEPATH += $$PWD/platform/graphics/gpu
 
     contains(QT_CONFIG, opengl) | contains(QT_CONFIG, opengles2) {
         !contains(QT_CONFIG, opengles2) {
-            SOURCES += platform/graphics/opengl/GraphicsContext3DOpenGL.cpp
+            SOURCES += \
+               platform/graphics/opengl/GraphicsContext3DOpenGL.cpp \
+               platform/graphics/opengl/Extensions3DOpenGL.cpp
         } else {
-            SOURCES += platform/graphics/opengl/GraphicsContext3DOpenGLES.cpp
+            SOURCES += \
+               platform/graphics/opengl/GraphicsContext3DOpenGLES.cpp \
+               platform/graphics/opengl/Extensions3DOpenGLES.cpp
         }
 
         HEADERS += platform/graphics/opengl/Extensions3DOpenGL.h
 
         SOURCES += \
-            platform/graphics/opengl/Extensions3DOpenGL.cpp \
+            platform/graphics/opengl/Extensions3DOpenGLCommon.cpp \
             platform/graphics/opengl/GraphicsContext3DOpenGLCommon.cpp
+    }
 
-        ANGLE_DIR = $$replace(PWD, "WebCore", "ThirdParty/ANGLE")
+    ANGLE_DIR = $$replace(PWD, "WebCore", "ThirdParty/ANGLE")
 
-        INCLUDEPATH += $$ANGLE_DIR/src $$ANGLE_DIR/include
+    INCLUDEPATH += \
+        $$ANGLE_DIR/src \
+        $$ANGLE_DIR/src/compiler/preprocessor/new \
+        $$ANGLE_DIR/include
 
-        ANGLE_HEADERS += \
-            $$ANGLE_DIR/src/compiler/BaseTypes.h \
-            $$ANGLE_DIR/src/compiler/BuiltInFunctionEmulator.h \
-            $$ANGLE_DIR/src/compiler/Common.h \
-            $$ANGLE_DIR/src/compiler/ConstantUnion.h \
-            $$ANGLE_DIR/src/compiler/debug.h \
-            $$ANGLE_DIR/src/compiler/DetectRecursion.h \
-            $$ANGLE_DIR/src/compiler/ExtensionBehavior.h \
-            $$ANGLE_DIR/src/compiler/ForLoopUnroll.h \
-            $$ANGLE_DIR/src/compiler/glslang.h \
-            $$ANGLE_DIR/src/compiler/glslang_tab.h \
-            $$ANGLE_DIR/src/compiler/InfoSink.h \
-            $$ANGLE_DIR/src/compiler/InitializeDll.h \
-            $$ANGLE_DIR/src/compiler/InitializeGlobals.h \
-            $$ANGLE_DIR/src/compiler/Initialize.h \
-            $$ANGLE_DIR/src/compiler/InitializeParseContext.h \
-            $$ANGLE_DIR/src/compiler/intermediate.h \
-            $$ANGLE_DIR/src/compiler/localintermediate.h \
-            $$ANGLE_DIR/src/compiler/MMap.h \
-            $$ANGLE_DIR/src/compiler/MapLongVariableNames.h \
-            $$ANGLE_DIR/src/compiler/osinclude.h \
-            $$ANGLE_DIR/src/compiler/preprocessor/atom.h \
-            $$ANGLE_DIR/src/compiler/preprocessor/compile.h \
-            $$ANGLE_DIR/src/compiler/preprocessor/cpp.h \
-            $$ANGLE_DIR/src/compiler/preprocessor/length_limits.h \
-            $$ANGLE_DIR/src/compiler/preprocessor/memory.h \
-            $$ANGLE_DIR/src/compiler/preprocessor/parser.h \
-            $$ANGLE_DIR/src/compiler/preprocessor/preprocess.h \
-            $$ANGLE_DIR/src/compiler/preprocessor/scanner.h \
-            $$ANGLE_DIR/src/compiler/preprocessor/slglobals.h \
-            $$ANGLE_DIR/src/compiler/preprocessor/symbols.h \
-            $$ANGLE_DIR/src/compiler/preprocessor/tokens.h \
-            $$ANGLE_DIR/src/compiler/OutputESSL.h \
-            $$ANGLE_DIR/src/compiler/OutputGLSL.h \
-            $$ANGLE_DIR/src/compiler/OutputGLSLBase.h \
-            $$ANGLE_DIR/src/compiler/OutputHLSL.h \
-            $$ANGLE_DIR/src/compiler/ParseHelper.h \
-            $$ANGLE_DIR/src/compiler/PoolAlloc.h \
-            $$ANGLE_DIR/src/compiler/QualifierAlive.h \
-            $$ANGLE_DIR/src/compiler/RemoveTree.h \
-            $$ANGLE_DIR/src/compiler/SearchSymbol.h \
-            $$ANGLE_DIR/src/compiler/ShHandle.h \
-            $$ANGLE_DIR/src/compiler/SymbolTable.h \
-            $$ANGLE_DIR/src/compiler/TranslatorESSL.h \
-            $$ANGLE_DIR/src/compiler/TranslatorGLSL.h \
-            $$ANGLE_DIR/src/compiler/TranslatorHLSL.h \
-            $$ANGLE_DIR/src/compiler/Types.h \
-            $$ANGLE_DIR/src/compiler/UnfoldSelect.h \
-            $$ANGLE_DIR/src/compiler/util.h \
-            $$ANGLE_DIR/src/compiler/ValidateLimitations.h \
-            $$ANGLE_DIR/src/compiler/VariableInfo.h \
-            $$ANGLE_DIR/src/compiler/VersionGLSL.h
+    ANGLE_HEADERS += \
+        $$ANGLE_DIR/src/compiler/BaseTypes.h \
+        $$ANGLE_DIR/src/compiler/BuiltInFunctionEmulator.h \
+        $$ANGLE_DIR/src/compiler/Common.h \
+        $$ANGLE_DIR/src/compiler/ConstantUnion.h \
+        $$ANGLE_DIR/src/compiler/debug.h \
+        $$ANGLE_DIR/src/compiler/depgraph/DependencyGraph.h \
+        $$ANGLE_DIR/src/compiler/depgraph/DependencyGraphBuilder.h \
+        $$ANGLE_DIR/src/compiler/depgraph/DependencyGraphOutput.h \
+        $$ANGLE_DIR/src/compiler/DetectDiscontinuity.h \
+        $$ANGLE_DIR/src/compiler/DetectRecursion.h \
+        $$ANGLE_DIR/src/compiler/Diagnostics.h \
+        $$ANGLE_DIR/src/compiler/DirectiveHandler.h \
+        $$ANGLE_DIR/src/compiler/ExtensionBehavior.h \
+        $$ANGLE_DIR/src/compiler/ForLoopUnroll.h \
+        $$ANGLE_DIR/src/compiler/glslang.h \
+        $$ANGLE_DIR/src/compiler/InfoSink.h \
+        $$ANGLE_DIR/src/compiler/InitializeDll.h \
+        $$ANGLE_DIR/src/compiler/InitializeGlobals.h \
+        $$ANGLE_DIR/src/compiler/Initialize.h \
+        $$ANGLE_DIR/src/compiler/InitializeParseContext.h \
+        $$ANGLE_DIR/src/compiler/intermediate.h \
+        $$ANGLE_DIR/src/compiler/localintermediate.h \
+        $$ANGLE_DIR/src/compiler/MMap.h \
+        $$ANGLE_DIR/src/compiler/MapLongVariableNames.h \
+        $$ANGLE_DIR/src/compiler/osinclude.h \
+        $$ANGLE_DIR/src/compiler/Pragma.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/atom.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/compile.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/cpp.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/length_limits.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/memory.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/Diagnostics.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/DirectiveHandler.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/DirectiveParser.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/Input.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/Lexer.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/Macro.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/MacroExpander.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/Preprocessor.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/SourceLocation.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/Token.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/Tokenizer.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/parser.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/preprocess.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/scanner.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/slglobals.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/symbols.h \
+        $$ANGLE_DIR/src/compiler/preprocessor/tokens.h \
+        $$ANGLE_DIR/src/compiler/OutputESSL.h \
+        $$ANGLE_DIR/src/compiler/OutputGLSL.h \
+        $$ANGLE_DIR/src/compiler/OutputGLSLBase.h \
+        $$ANGLE_DIR/src/compiler/OutputHLSL.h \
+        $$ANGLE_DIR/src/compiler/ParseHelper.h \
+        $$ANGLE_DIR/src/compiler/PoolAlloc.h \
+        $$ANGLE_DIR/src/compiler/QualifierAlive.h \
+        $$ANGLE_DIR/src/compiler/RemoveTree.h \
+        $$ANGLE_DIR/src/compiler/RenameFunction.h \
+        $$ANGLE_DIR/src/compiler/SearchSymbol.h \
+        $$ANGLE_DIR/src/compiler/ShHandle.h \
+        $$ANGLE_DIR/src/compiler/SymbolTable.h \
+        $$ANGLE_DIR/src/compiler/timing/RestrictFragmentShaderTiming.h \
+        $$ANGLE_DIR/src/compiler/timing/RestrictVertexShaderTiming.h \
+        $$ANGLE_DIR/src/compiler/TranslatorESSL.h \
+        $$ANGLE_DIR/src/compiler/TranslatorGLSL.h \
+        $$ANGLE_DIR/src/compiler/TranslatorHLSL.h \
+        $$ANGLE_DIR/src/compiler/Types.h \
+        $$ANGLE_DIR/src/compiler/UnfoldShortCircuit.h \
+        $$ANGLE_DIR/src/compiler/util.h \
+        $$ANGLE_DIR/src/compiler/ValidateLimitations.h \
+        $$ANGLE_DIR/src/compiler/VariableInfo.h \
+        $$ANGLE_DIR/src/compiler/VersionGLSL.h
 
-        HEADERS += $$ANGLE_HEADERS
+    HEADERS += $$ANGLE_HEADERS
 
-        ANGLE_SOURCES += \
-            $$ANGLE_DIR/src/compiler/BuiltInFunctionEmulator.cpp \
-            $$ANGLE_DIR/src/compiler/CodeGenGLSL.cpp \
-            $$ANGLE_DIR/src/compiler/Compiler.cpp \
-            $$ANGLE_DIR/src/compiler/debug.cpp \
-            $$ANGLE_DIR/src/compiler/DetectRecursion.cpp \
-            $$ANGLE_DIR/src/compiler/ForLoopUnroll.cpp \
-            $$ANGLE_DIR/src/compiler/glslang_lex.cpp \
-            $$ANGLE_DIR/src/compiler/glslang_tab.cpp \
-            $$ANGLE_DIR/src/compiler/InfoSink.cpp \
-            $$ANGLE_DIR/src/compiler/Initialize.cpp \
-            $$ANGLE_DIR/src/compiler/InitializeDll.cpp \
-            $$ANGLE_DIR/src/compiler/Intermediate.cpp \
-            $$ANGLE_DIR/src/compiler/intermOut.cpp \
-            $$ANGLE_DIR/src/compiler/IntermTraverse.cpp \
-            $$ANGLE_DIR/src/compiler/MapLongVariableNames.cpp \
-            $$ANGLE_DIR/src/compiler/ossource_posix.cpp \
-            $$ANGLE_DIR/src/compiler/OutputESSL.cpp \
-            $$ANGLE_DIR/src/compiler/OutputGLSL.cpp \
-            $$ANGLE_DIR/src/compiler/OutputGLSLBase.cpp \
-            $$ANGLE_DIR/src/compiler/OutputHLSL.cpp \
-            $$ANGLE_DIR/src/compiler/parseConst.cpp \
-            $$ANGLE_DIR/src/compiler/ParseHelper.cpp \
-            $$ANGLE_DIR/src/compiler/PoolAlloc.cpp \
-            $$ANGLE_DIR/src/compiler/QualifierAlive.cpp \
-            $$ANGLE_DIR/src/compiler/RemoveTree.cpp \
-            $$ANGLE_DIR/src/compiler/SearchSymbol.cpp \
-            $$ANGLE_DIR/src/compiler/ShaderLang.cpp \
-            $$ANGLE_DIR/src/compiler/SymbolTable.cpp \
-            $$ANGLE_DIR/src/compiler/TranslatorESSL.cpp \
-            $$ANGLE_DIR/src/compiler/TranslatorGLSL.cpp \
-            $$ANGLE_DIR/src/compiler/TranslatorHLSL.cpp \
-            $$ANGLE_DIR/src/compiler/UnfoldSelect.cpp \
-            $$ANGLE_DIR/src/compiler/util.cpp \
-            $$ANGLE_DIR/src/compiler/ValidateLimitations.cpp \
-            $$ANGLE_DIR/src/compiler/VariableInfo.cpp \
-            $$ANGLE_DIR/src/compiler/VersionGLSL.cpp
+    ANGLE_SOURCES += \
+        $$ANGLE_DIR/src/compiler/BuiltInFunctionEmulator.cpp \
+        $$ANGLE_DIR/src/compiler/CodeGenGLSL.cpp \
+        $$ANGLE_DIR/src/compiler/Compiler.cpp \
+        $$ANGLE_DIR/src/compiler/debug.cpp \
+        $$ANGLE_DIR/src/compiler/depgraph/DependencyGraph.cpp \
+        $$ANGLE_DIR/src/compiler/depgraph/DependencyGraphBuilder.cpp \
+        $$ANGLE_DIR/src/compiler/depgraph/DependencyGraphOutput.cpp \
+        $$ANGLE_DIR/src/compiler/depgraph/DependencyGraphTraverse.cpp \
+        $$ANGLE_DIR/src/compiler/DetectDiscontinuity.cpp \
+        $$ANGLE_DIR/src/compiler/DetectRecursion.cpp \
+        $$ANGLE_DIR/src/compiler/Diagnostics.cpp \
+        $$ANGLE_DIR/src/compiler/DirectiveHandler.cpp \
+        $$ANGLE_DIR/src/compiler/ForLoopUnroll.cpp \
+        $$ANGLE_DIR/src/compiler/InfoSink.cpp \
+        $$ANGLE_DIR/src/compiler/Initialize.cpp \
+        $$ANGLE_DIR/src/compiler/InitializeDll.cpp \
+        $$ANGLE_DIR/src/compiler/InitializeParseContext.cpp \ 
+        $$ANGLE_DIR/src/compiler/Intermediate.cpp \
+        $$ANGLE_DIR/src/compiler/intermOut.cpp \
+        $$ANGLE_DIR/src/compiler/IntermTraverse.cpp \
+        $$ANGLE_DIR/src/compiler/MapLongVariableNames.cpp \
+        $$ANGLE_DIR/src/compiler/ossource_posix.cpp \
+        $$ANGLE_DIR/src/compiler/OutputESSL.cpp \
+        $$ANGLE_DIR/src/compiler/OutputGLSL.cpp \
+        $$ANGLE_DIR/src/compiler/OutputGLSLBase.cpp \
+        $$ANGLE_DIR/src/compiler/OutputHLSL.cpp \
+        $$ANGLE_DIR/src/compiler/parseConst.cpp \
+        $$ANGLE_DIR/src/compiler/ParseHelper.cpp \
+        $$ANGLE_DIR/src/compiler/PoolAlloc.cpp \
+        $$ANGLE_DIR/src/compiler/QualifierAlive.cpp \
+        $$ANGLE_DIR/src/compiler/RemoveTree.cpp \
+        $$ANGLE_DIR/src/compiler/SearchSymbol.cpp \
+        $$ANGLE_DIR/src/compiler/ShaderLang.cpp \
+        $$ANGLE_DIR/src/compiler/SymbolTable.cpp \
+        $$ANGLE_DIR/src/compiler/timing/RestrictFragmentShaderTiming.cpp \
+        $$ANGLE_DIR/src/compiler/timing/RestrictVertexShaderTiming.cpp \
+        $$ANGLE_DIR/src/compiler/TranslatorESSL.cpp \
+        $$ANGLE_DIR/src/compiler/TranslatorGLSL.cpp \
+        $$ANGLE_DIR/src/compiler/TranslatorHLSL.cpp \
+        $$ANGLE_DIR/src/compiler/UnfoldShortCircuit.cpp \
+        $$ANGLE_DIR/src/compiler/util.cpp \
+        $$ANGLE_DIR/src/compiler/ValidateLimitations.cpp \
+        $$ANGLE_DIR/src/compiler/VariableInfo.cpp \
+        $$ANGLE_DIR/src/compiler/VersionGLSL.cpp
 
-        SOURCES += \
-            $$ANGLE_DIR/src/compiler/preprocessor/atom.c \
-            $$ANGLE_DIR/src/compiler/preprocessor/cpp.c \
-            $$ANGLE_DIR/src/compiler/preprocessor/cppstruct.c \
-            $$ANGLE_DIR/src/compiler/preprocessor/memory.c \
-            $$ANGLE_DIR/src/compiler/preprocessor/scanner.c \
-            $$ANGLE_DIR/src/compiler/preprocessor/symbols.c \
-            $$ANGLE_DIR/src/compiler/preprocessor/tokens.c
+    SOURCES += \
+        $$ANGLE_DIR/src/compiler/preprocessor/atom.c \
+        $$ANGLE_DIR/src/compiler/preprocessor/cpp.c \
+        $$ANGLE_DIR/src/compiler/preprocessor/cppstruct.c \
+        $$ANGLE_DIR/src/compiler/preprocessor/memory.c \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/DiagnosticsBase.cpp \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/DirectiveHandlerBase.cpp \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/DirectiveParser.cpp \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/Input.cpp \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/Lexer.cpp \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/Macro.cpp \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/MacroExpander.cpp \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/Preprocessor.cpp \
+        $$ANGLE_DIR/src/compiler/preprocessor/new/Token.cpp \
+        $$ANGLE_DIR/src/compiler/preprocessor/scanner.c \
+        $$ANGLE_DIR/src/compiler/preprocessor/symbols.c \
+        $$ANGLE_DIR/src/compiler/preprocessor/tokens.c
 
-        *g++* {
-            ANGLE_CFLAGS += -Wno-unused-variable
-            ANGLE_CFLAGS += -Wno-missing-noreturn
-            ANGLE_CFLAGS += -Wno-unused-function
-            ANGLE_CFLAGS += -Wno-reorder
-            ANGLE_CFLAGS += -Wno-error
+    *g++* {
+        ANGLE_CFLAGS += -Wno-unused-variable
+        ANGLE_CFLAGS += -Wno-missing-noreturn
+        ANGLE_CFLAGS += -Wno-unused-function
+        ANGLE_CFLAGS += -Wno-reorder
+        ANGLE_CFLAGS += -Wno-error
 
-            angle_cxx.commands = $$QMAKE_CXX -c $(CXXFLAGS) $$ANGLE_CFLAGS $(INCPATH) ${QMAKE_FILE_IN} -o ${QMAKE_FILE_OUT}
-            angle_cxx.output = ${QMAKE_VAR_OBJECTS_DIR}${QMAKE_FILE_BASE}$$QMAKE_EXT_OBJ
-            anglc_cxx.dependency_type = TYPE_C
-            angle_cxx.depends = $$ANGLE_HEADERS
-            angle_cxx.input = ANGLE_SOURCES
-            QMAKE_EXTRA_COMPILERS += angle_cxx
-        } else {
-            SOURCES += $$ANGLE_SOURCES
-        }
+        angle_cxx.commands = $$QMAKE_CXX -c $(CXXFLAGS) $$ANGLE_CFLAGS $(INCPATH) ${QMAKE_FILE_IN} -o ${QMAKE_FILE_OUT}
+        angle_cxx.output = ${QMAKE_VAR_OBJECTS_DIR}${QMAKE_FILE_BASE}$$QMAKE_EXT_OBJ
+        anglc_cxx.dependency_type = TYPE_C
+        angle_cxx.depends = $$ANGLE_HEADERS
+        angle_cxx.input = ANGLE_SOURCES
+        QMAKE_EXTRA_COMPILERS += angle_cxx
+    } else {
+        SOURCES += $$ANGLE_SOURCES
     }
 
     CONFIG += opengl-shims
+    INCLUDEPATH += platform/graphics/gpu
 }
+
 
 contains(DEFINES, ENABLE_MHTML=1) {
 
@@ -4132,42 +3940,6 @@ win32:!win32-g++*:contains(QMAKE_HOST.arch, x86_64):{
    }
 }
 
-contains(CONFIG, texmap) {
-    HEADERS += \
-        platform/graphics/texmap/GraphicsLayerTextureMapper.h \
-        platform/graphics/texmap/LayerTransform.h \
-        platform/graphics/texmap/TextureMapper.h \
-        platform/graphics/texmap/TextureMapperAnimation.h \
-        platform/graphics/texmap/TextureMapperBackingStore.h \
-        platform/graphics/texmap/TextureMapperImageBuffer.h \
-        platform/graphics/texmap/TextureMapperLayer.h \
-        platform/graphics/texmap/TextureMapperPlatformLayer.h
-
-    SOURCES += \
-        platform/graphics/texmap/LayerTransform.cpp \
-        platform/graphics/texmap/TextureMapper.cpp \
-        platform/graphics/texmap/TextureMapperAnimation.cpp \
-        platform/graphics/texmap/TextureMapperBackingStore.cpp \
-        platform/graphics/texmap/TextureMapperImageBuffer.cpp \
-        platform/graphics/texmap/TextureMapperLayer.cpp \
-        platform/graphics/texmap/GraphicsLayerTextureMapper.cpp
-
-    contains(DEFINES, WTF_USE_TEXTURE_MAPPER_GL=1) {
-        HEADERS += \
-            platform/graphics/texmap/TextureMapperGL.h \
-            platform/graphics/texmap/TextureMapperShaderManager.h
-
-        SOURCES += \
-            platform/graphics/texmap/TextureMapperGL.cpp \
-            platform/graphics/texmap/TextureMapperShaderManager.cpp
-
-        CONFIG += opengl-shims
-    }
-} else {
-    HEADERS += platform/graphics/qt/GraphicsLayerQt.h
-    SOURCES += platform/graphics/qt/GraphicsLayerQt.cpp
-}
-
 contains(CONFIG, opengl-shims) {
     HEADERS += platform/graphics/OpenGLShims.h
     SOURCES += platform/graphics/OpenGLShims.cpp
@@ -4178,6 +3950,9 @@ contains(DEFINES, WTF_USE_GRAPHICS_SURFACE=1) {
     mac {
         SOURCES += platform/graphics/surfaces/mac/GraphicsSurfaceMac.cpp
         INCLUDEPATH += /System/Library/Frameworks/CoreFoundation.framework/Headers
+    }
+    contains(DEFINES, HAVE_XCOMPOSITE=1)  {
+        SOURCES += platform/graphics/surfaces/qt/GraphicsSurfaceGLX.cpp
     }
 }
 

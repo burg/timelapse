@@ -69,6 +69,7 @@
 #include "WorkerThread.h"
 #include "XMLHttpRequest.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/ThreadSpecific.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -905,6 +906,8 @@ void InspectorInstrumentation::consoleCountImpl(InstrumentingAgents* instrumenti
 
 void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents* instrumentingAgents, const String& title)
 {
+    if (InspectorTimelineAgent* timelineAgent = instrumentingAgents->inspectorTimelineAgent())
+        timelineAgent->time(title);
     if (InspectorConsoleAgent* consoleAgent = instrumentingAgents->inspectorConsoleAgent())
         consoleAgent->startTiming(title);
 }
@@ -913,6 +916,8 @@ void InspectorInstrumentation::stopConsoleTimingImpl(InstrumentingAgents* instru
 {
     if (InspectorConsoleAgent* consoleAgent = instrumentingAgents->inspectorConsoleAgent())
         consoleAgent->stopTiming(title, stack);
+    if (InspectorTimelineAgent* timelineAgent = instrumentingAgents->inspectorTimelineAgent())
+        timelineAgent->timeEnd(title);
 }
 
 void InspectorInstrumentation::consoleTimeStampImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ScriptArguments> arguments)
@@ -1206,6 +1211,22 @@ void InspectorInstrumentation::didFireAnimationFrameImpl(const InspectorInstrume
 {
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didFireAnimationFrame();
+}
+
+InspectorTimelineAgent* InspectorInstrumentation::timelineAgentForOrphanEvents()
+{
+    return *threadSpecificTimelineAgentForOrphanEvents();
+}
+
+void InspectorInstrumentation::setTimelineAgentForOrphanEvents(InspectorTimelineAgent* inspectorTimelineAgent)
+{
+    *threadSpecificTimelineAgentForOrphanEvents() = inspectorTimelineAgent;
+}
+
+WTF::ThreadSpecific<InspectorTimelineAgent*>& InspectorInstrumentation::threadSpecificTimelineAgentForOrphanEvents()
+{
+    AtomicallyInitializedStatic(WTF::ThreadSpecific<InspectorTimelineAgent*>*, instance = new WTF::ThreadSpecific<InspectorTimelineAgent*>());
+    return *instance;
 }
 
 InspectorTimelineAgent* InspectorInstrumentation::retrieveTimelineAgent(const InspectorInstrumentationCookie& cookie)

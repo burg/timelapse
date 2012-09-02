@@ -41,6 +41,7 @@
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "InspectorClientEfl.h"
+#include "InspectorController.h"
 #include "IntSize.h"
 #include "JSDOMBinding.h"
 #include "JSDOMWindow.h"
@@ -52,7 +53,7 @@
 #include "PopupMenuClient.h"
 #include "ProgressTracker.h"
 #include "RefPtrCairo.h"
-#include "RenderTheme.h"
+#include "RenderThemeEfl.h"
 #include "ResourceHandle.h"
 #include "Settings.h"
 #include "c_instance.h"
@@ -100,6 +101,10 @@
 
 #if ENABLE(INPUT_TYPE_COLOR)
 #include "ColorChooserClient.h"
+#endif
+
+#if ENABLE(REGISTER_PROTOCOL_HANDLER) || ENABLE(CUSTOM_SCHEME_HANDLER)
+#include "RegisterProtocolHandlerClientEfl.h"
 #endif
 
 static const float zoomMinimum = 0.05;
@@ -344,6 +349,9 @@ struct _Ewk_View_Private_Data {
     SoupSession* soupSession;
     const char* cursorGroup;
     Evas_Object* cursorObject;
+#if ENABLE(INSPECTOR)
+    Evas_Object* inspectorView;
+#endif
 #ifdef HAVE_ECORE_X
     bool isUsingEcoreX;
 #endif
@@ -730,8 +738,9 @@ static Ewk_View_Private_Data* _ewk_view_priv_new(Ewk_View_Smart_Data* smartData)
     pageClients.chromeClient = new WebCore::ChromeClientEfl(smartData->self);
     pageClients.editorClient = new WebCore::EditorClientEfl(smartData->self);
     pageClients.dragClient = new WebCore::DragClientEfl;
-    pageClients.inspectorClient = new WebCore::InspectorClientEfl;
-
+#if ENABLE(INSPECTOR)
+    pageClients.inspectorClient = new WebCore::InspectorClientEfl(smartData->self);
+#endif
     priv->page = adoptPtr(new WebCore::Page(pageClients));
 
 #if ENABLE(DEVICE_ORIENTATION)
@@ -749,7 +758,11 @@ static Ewk_View_Private_Data* _ewk_view_priv_new(Ewk_View_Smart_Data* smartData)
 #endif
 
 #if ENABLE(BATTERY_STATUS)
-    WebCore::provideBatteryTo(priv->page.get(), new WebCore::BatteryClientEfl);
+    WebCore::provideBatteryTo(priv->page.get(), new BatteryClientEfl(smartData->self));
+#endif
+
+#if ENABLE(REGISTER_PROTOCOL_HANDLER) || ENABLE(CUSTOM_SCHEME_HANDLER)
+    WebCore::provideRegisterProtocolHandlerTo(priv->page.get(), new WebCore::RegisterProtocolHandlerClientEfl(smartData->self));
 #endif
 
     priv->pageSettings = priv->page->settings();
@@ -784,6 +797,7 @@ static Ewk_View_Private_Data* _ewk_view_priv_new(Ewk_View_Smart_Data* smartData)
 #if ENABLE(FULLSCREEN_API)
     priv->pageSettings->setFullScreenEnabled(true);
 #endif
+    priv->pageSettings->setInteractiveFormValidationEnabled(true);
 
     url = priv->pageSettings->userStyleSheetLocation();
     priv->settings.userStylesheet = eina_stringshare_add(url.string().utf8().data());
@@ -1371,12 +1385,8 @@ void ewk_view_theme_set(Evas_Object* ewkView, const char* path)
     if (!eina_stringshare_replace(&priv->settings.theme, path))
         return;
 
-    WebCore::FrameView* view = priv->mainFrame->view();
-    if (view) {
-        view->setEdjeTheme(WTF::String(path));
-        priv->page->theme()->themeChanged();
-    }
-
+    WebCore::RenderThemeEfl* theme = static_cast<WebCore::RenderThemeEfl*>(priv->page->theme());
+    theme->setThemePath(path);
 }
 
 const char* ewk_view_theme_get(const Evas_Object* ewkView)
@@ -4359,6 +4369,48 @@ void ewk_view_setting_should_display_text_descriptions_set(Evas_Object *ewkView,
         priv->pageSettings->setShouldDisplayTextDescriptions(enable);
         priv->settings.shouldDisplayTextDescriptions = enable;
     }
+#endif
+}
+
+void ewk_view_web_inspector_show(const Evas_Object* ewkView)
+{
+#if ENABLE(INSPECTOR)
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData);
+    EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv);
+
+    priv->page->inspectorController()->show();
+#endif
+}
+
+void ewk_view_web_inspector_close(const Evas_Object* ewkView)
+{
+#if ENABLE(INSPECTOR)
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData);
+    EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv);
+
+    priv->page->inspectorController()->close();
+#endif
+}
+
+Evas_Object* ewk_view_web_inspector_view_get(const Evas_Object* ewkView)
+{
+#if ENABLE(INSPECTOR)
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, 0);
+    EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, 0);
+
+    return priv->inspectorView;
+#else
+    return 0;
+#endif
+}
+
+void ewk_view_web_inspector_view_set(Evas_Object* ewkView, Evas_Object* inspectorView)
+{
+#if ENABLE(INSPECTOR)
+    EWK_VIEW_SD_GET(ewkView, smartData);
+    EWK_VIEW_PRIV_GET(smartData, priv);
+
+    priv->inspectorView = inspectorView;
 #endif
 }
 

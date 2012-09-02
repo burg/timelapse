@@ -25,7 +25,9 @@
 #include "LayerTreeCoordinatorProxy.h"
 #include "NativeWebKeyboardEvent.h"
 #include "NativeWebMouseEvent.h"
+#if ENABLE(TOUCH_EVENTS)
 #include "NativeWebTouchEvent.h"
+#endif
 #include "NativeWebWheelEvent.h"
 #include "NotImplemented.h"
 #include "WebContext.h"
@@ -360,7 +362,7 @@ void QRawWebView::paint(const QMatrix4x4& transform, float opacity, unsigned pai
 
     WebCore::FloatRect rect(0, 0, d->m_size.width(), d->m_size.height());
 
-    renderer->paintToCurrentGLContext(transform, opacity, rect, paintFlags);
+    renderer->paintToCurrentGLContext(transform, opacity, transform.mapRect(rect), paintFlags);
 }
 
 void QRawWebView::sendKeyEvent(QKeyEvent* event)
@@ -378,7 +380,9 @@ void QRawWebView::sendWheelEvent(QWheelEvent* event)
     d->m_webPageProxy->handleWheelEvent(WebKit::NativeWebWheelEvent(event, QTransform()));
 }
 
+#if ENABLE(TOUCH_EVENTS)
 void QRawWebView::sendTouchEvent(QTouchEvent* event)
 {
     d->m_webPageProxy->handleTouchEvent(WebKit::NativeWebTouchEvent(event, QTransform()));
 }
+#endif

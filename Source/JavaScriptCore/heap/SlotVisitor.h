@@ -41,7 +41,7 @@ public:
     void donate()
     {
         ASSERT(m_isInParallelMode);
-        if (Options::numberOfGCMarkers == 1)
+        if (Options::numberOfGCMarkers() == 1)
             return;
         
         donateKnownParallel();
@@ -70,12 +70,11 @@ private:
 
     void donateKnownParallel();
 
-    CopiedBlock* m_copyBlock;
+    CopiedAllocator m_copiedAllocator;
 };
 
 inline SlotVisitor::SlotVisitor(MarkStackThreadSharedData& shared)
     : MarkStack(shared)
-    , m_copyBlock(0)
 {
 }
 

@@ -27,22 +27,32 @@
 
 #include "cc/CCRenderPassDrawQuad.h"
 
+using WebKit::WebCompositorQuad;
+
 namespace WebCore {
 
-PassOwnPtr<CCRenderPassDrawQuad> CCRenderPassDrawQuad::create(const CCSharedQuadState* sharedQuadState, const IntRect& quadRect, const CCRenderPass* renderPass, bool isReplica, const WebKit::WebFilterOperations& filters, const WebKit::WebFilterOperations& backgroundFilters, unsigned maskTextureId)
+PassOwnPtr<CCRenderPassDrawQuad> CCRenderPassDrawQuad::create(const WebKit::WebCompositorSharedQuadState* sharedQuadState, const IntRect& quadRect, int renderPassId, bool isReplica, const WebKit::WebTransformationMatrix& drawTransform, const WebKit::WebFilterOperations& filters, const WebKit::WebFilterOperations& backgroundFilters, CCResourceProvider::ResourceId maskResourceId, const IntRect& contentsChangedSinceLastFrame)
 {
-    return adoptPtr(new CCRenderPassDrawQuad(sharedQuadState, quadRect, renderPass, isReplica, filters, backgroundFilters, maskTextureId));
+    return adoptPtr(new CCRenderPassDrawQuad(sharedQuadState, quadRect, renderPassId, isReplica, drawTransform, filters, backgroundFilters, maskResourceId, contentsChangedSinceLastFrame));
 }
 
-CCRenderPassDrawQuad::CCRenderPassDrawQuad(const CCSharedQuadState* sharedQuadState, const IntRect& quadRect, const CCRenderPass* renderPass, bool isReplica, const WebKit::WebFilterOperations& filters, const WebKit::WebFilterOperations& backgroundFilters, unsigned maskTextureId)
-    : CCDrawQuad(sharedQuadState, CCDrawQuad::RenderPass, quadRect)
-    , m_renderPass(renderPass)
+CCRenderPassDrawQuad::CCRenderPassDrawQuad(const WebKit::WebCompositorSharedQuadState* sharedQuadState, const IntRect& quadRect, int renderPassId, bool isReplica, const WebKit::WebTransformationMatrix& drawTransform, const WebKit::WebFilterOperations& filters, const WebKit::WebFilterOperations& backgroundFilters, CCResourceProvider::ResourceId maskResourceId, const IntRect& contentsChangedSinceLastFrame)
+    : WebCompositorQuad(sharedQuadState, WebCompositorQuad::RenderPass, quadRect)
+    , m_renderPassId(renderPassId)
     , m_isReplica(isReplica)
+    , m_drawTransform(drawTransform)
     , m_filters(filters)
     , m_backgroundFilters(backgroundFilters)
-    , m_maskTextureId(maskTextureId)
+    , m_maskResourceId(maskResourceId)
+    , m_contentsChangedSinceLastFrame(contentsChangedSinceLastFrame)
 {
-    ASSERT(m_renderPass);
+    ASSERT(m_renderPassId > 0);
+}
+
+const CCRenderPassDrawQuad* CCRenderPassDrawQuad::materialCast(const WebKit::WebCompositorQuad* quad)
+{
+    ASSERT(quad->material() == WebCompositorQuad::RenderPass);
+    return static_cast<const CCRenderPassDrawQuad*>(quad);
 }
 
 }

@@ -64,6 +64,7 @@ namespace WebCore {
     extern WTFLogChannel LogTimelapse;
     extern WTFLogChannel LogWebAudio;
     extern WTFLogChannel LogCompositing;
+    extern WTFLogChannel LogGamepad;
 
     void initializeLoggingChannelsIfNecessary();
     WTFLogChannel* getChannelFromName(const String& channelName);

@@ -17,18 +17,19 @@
 */
 
 #include "config.h"
-
 #include "GraphicsContext3D.h"
 
-#include "WebGLObject.h"
-#include "CanvasRenderingContext.h"
+#if USE(OPENGL_ES_2)
+#include "Extensions3DOpenGLES.h"
+#else
 #include "Extensions3DOpenGL.h"
+#endif
 #include "GraphicsContext.h"
 #include "GraphicsSurface.h"
-#include "HTMLCanvasElement.h"
 #include "HostWindow.h"
 #include "ImageBuffer.h"
 #include "ImageData.h"
+#include "NativeImageQt.h"
 #include "NotImplemented.h"
 #include "OpenGLShims.h"
 #include "QWebPageClient.h"
@@ -40,11 +41,11 @@
 #include <wtf/UnusedParam.h>
 #include <wtf/text/CString.h>
 
-#if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER) && USE(TEXTURE_MAPPER_GL)
+#if USE(TEXTURE_MAPPER_GL)
 #include <texmap/TextureMapperGL.h>
 #endif
 
-#if ENABLE(WEBGL)
+#if USE(3D_GRAPHICS)
 
 namespace WebCore {
 
@@ -57,7 +58,7 @@ typedef char GLchar;
 #endif
 
 class GraphicsContext3DPrivate
-#if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER)
+#if USE(ACCELERATED_COMPOSITING)
         : public TextureMapperPlatformLayer
 #endif
 {
@@ -65,7 +66,7 @@ public:
     GraphicsContext3DPrivate(GraphicsContext3D*, HostWindow*);
     ~GraphicsContext3DPrivate();
 
-#if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER)
+#if USE(ACCELERATED_COMPOSITING)
     virtual void paintToTextureMapper(TextureMapper*, const FloatRect& target, const TransformationMatrix&, float opacity, BitmapTexture* mask);
 #endif
 #if USE(GRAPHICS_SURFACE)
@@ -97,6 +98,13 @@ bool GraphicsContext3D::isGLES2Compliant() const
     return false;
 #endif
 }
+
+#if !USE(OPENGL_ES_2)
+void GraphicsContext3D::releaseShaderCompiler()
+{
+    notImplemented();
+}
+#endif
 
 GraphicsContext3DPrivate::GraphicsContext3DPrivate(GraphicsContext3D* context, HostWindow* hostWindow)
     : m_context(context)
@@ -153,7 +161,7 @@ static inline quint32 swapBgrToRgb(quint32 pixel)
     return ((pixel << 16) & 0xff0000) | ((pixel >> 16) & 0xff) | (pixel & 0xff00ff00);
 }
 
-#if USE(ACCELERATED_COMPOSITING) && USE(TEXTURE_MAPPER)
+#if USE(ACCELERATED_COMPOSITING)
 void GraphicsContext3DPrivate::paintToTextureMapper(TextureMapper* textureMapper, const FloatRect& targetRect, const TransformationMatrix& matrix, float opacity, BitmapTexture* mask)
 {
     blitMultisampleFramebufferAndRestoreContext();
@@ -461,7 +469,7 @@ bool GraphicsContext3D::makeContextCurrent()
 void GraphicsContext3D::paintToCanvas(const unsigned char* imagePixels, int imageWidth, int imageHeight,
                                       int canvasWidth, int canvasHeight, QPainter* context)
 {
-    QImage image(imagePixels, imageWidth, imageHeight, QImage::Format_ARGB32_Premultiplied);
+    QImage image(imagePixels, imageWidth, imageHeight, NativeImageQt::defaultFormatForAlphaEnabledImages());
     context->save();
     context->translate(0, imageHeight);
     context->scale(1, -1);
@@ -488,23 +496,16 @@ bool GraphicsContext3D::getImageData(Image* image,
     if (!image)
         return false;
 
-    QImage qtImage;
+    QImage nativeImage;
     // Is image already loaded? If not, load it.
     if (image->data())
-        qtImage = QImage::fromData(reinterpret_cast<const uchar*>(image->data()->data()), image->data()->size());
-    else {
-        QPixmap* nativePixmap = image->nativeImageForCurrentFrame();
-#if HAVE(QT5)
-        // With QPA, we can avoid a deep copy.
-        qtImage = *nativePixmap->handle()->buffer();
-#else
-        // This might be a deep copy, depending on other references to the pixmap.
-        qtImage = nativePixmap->toImage();
-#endif
-    }
+        nativeImage = QImage::fromData(reinterpret_cast<const uchar*>(image->data()->data()), image->data()->size());
+    else
+        nativeImage = *image->nativeImageForCurrentFrame();
+
 
     AlphaOp alphaOp = AlphaDoNothing;
-    switch (qtImage.format()) {
+    switch (nativeImage.format()) {
     case QImage::Format_RGB32:
         // For opaque images, we should not premultiply or unmultiply alpha.
         break;
@@ -518,7 +519,7 @@ bool GraphicsContext3D::getImageData(Image* image,
         break;
     default:
         // The image has a format that is not supported in packPixels. We have to convert it here.
-        qtImage = qtImage.convertToFormat(premultiplyAlpha ? QImage::Format_ARGB32_Premultiplied : QImage::Format_ARGB32);
+        nativeImage = nativeImage.convertToFormat(premultiplyAlpha ? QImage::Format_ARGB32_Premultiplied : QImage::Format_ARGB32);
         break;
     }
 
@@ -529,7 +530,7 @@ bool GraphicsContext3D::getImageData(Image* image,
 
     outputVector.resize(packedSize);
 
-    return packPixels(qtImage.bits(), SourceFormatBGRA8, image->width(), image->height(), 0, format, type, alphaOp, outputVector.data());
+    return packPixels(nativeImage.constBits(), SourceFormatBGRA8, image->width(), image->height(), 0, format, type, alphaOp, outputVector.data());
 }
 
 void GraphicsContext3D::setContextLostCallback(PassOwnPtr<ContextLostCallback>)
@@ -542,4 +543,4 @@ void GraphicsContext3D::setErrorMessageCallback(PassOwnPtr<ErrorMessageCallback>
 
 }
 
-#endif // ENABLE(WEBGL)
+#endif // USE(3D_GRAPHICS)

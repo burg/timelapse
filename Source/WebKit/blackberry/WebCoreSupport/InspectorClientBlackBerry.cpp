@@ -53,9 +53,10 @@ void InspectorClientBlackBerry::hideHighlight()
     m_webPagePrivate->setInspectorOverlayClient(0);
 }
 
-void InspectorClientBlackBerry::openInspectorFrontend(InspectorController*)
+InspectorFrontendChannel* InspectorClientBlackBerry::openInspectorFrontend(InspectorController*)
 {
     notImplemented();
+    return 0;
 }
 
 void InspectorClientBlackBerry::closeInspectorFrontend()
@@ -83,6 +84,23 @@ void InspectorClientBlackBerry::clearBrowserCache()
 void InspectorClientBlackBerry::clearBrowserCookies()
 {
     m_webPagePrivate->m_client->clearCookies();
+}
+
+bool InspectorClientBlackBerry::canOverrideDeviceMetrics()
+{
+    return true;
+}
+
+void InspectorClientBlackBerry::overrideDeviceMetrics(int width, int height, float fontScaleFactor, bool)
+{
+    // Note: when width and height = 0, and fontScaleFactor = 1, this is the signal for restoring to default size.
+    m_webPagePrivate->applySizeOverride(width, height);
+    m_webPagePrivate->setTextZoomFactor(fontScaleFactor);
+}
+
+bool InspectorClientBlackBerry::supportsFrameInstrumentation()
+{
+    return true;
 }
 
 void InspectorClientBlackBerry::updateInspectorStateCookie(const String& cookie)

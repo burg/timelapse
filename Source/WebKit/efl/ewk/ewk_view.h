@@ -46,6 +46,8 @@
  *  - "icon,received", void: main frame received an icon.
  *  - "inputmethod,changed", Eina_Bool: reports that input method was changed and
  *    it gives a boolean value whether it's enabled or not as an argument.
+ *  - "inspector,view,close", Evas_Object*: request to close the view for web inspector.
+ *  - "inspector,view,create", void: request to create the new view for web inspector.
  *  - "js,windowobject,clear", void: Report that the JS window object has been cleared.
  *  - "link,hover,in", const char *link[2]: reports mouse is over a link.
  *    It gives the url in link[0] and link's title in link[1] as an argument.
@@ -582,7 +584,7 @@ EAPI void   ewk_tile_unused_cache_auto_flush(Ewk_Tile_Unused_Cache *tuc);
  *
  * @param api class definition to set, all members with the
  *        exception of @a Evas_Smart_Class->data may be overridden, must
- *        @b not be @c 0
+ *        @b not be @c NULL
  *
  * @note @a Evas_Smart_Class->data is used to implement type checking and
  *       is not supposed to be changed/overridden. If you need extra
@@ -603,7 +605,7 @@ EAPI Eina_Bool    ewk_view_base_smart_set(Ewk_View_Smart_Class *api);
  *
  * @param api class definition to set, all members with the
  *        exception of @a Evas_Smart_Class->data may be overridden, must
- *        @b not be @c 0
+ *        @b not be @c NULL
  *
  * @note @a Evas_Smart_Class->data is used to implement type checking and
  *       is not supposed to be changed/overridden. If you need extra
@@ -623,7 +625,7 @@ EAPI Eina_Bool    ewk_view_single_smart_set(Ewk_View_Smart_Class *api);
  *
  * @param api class definition to set, all members with the
  *        exception of @a Evas_Smart_Class->data may be overridden, must
- *        @b not be @c 0
+ *        @b not be @c NULL
  *
  * @note @a Evas_Smart_Class->data is used to implement type checking and
  *       is not supposed to be changed/overridden. If you need extra
@@ -649,7 +651,7 @@ EAPI Eina_Bool    ewk_view_tiled_smart_set(Ewk_View_Smart_Class *api);
  *
  * @param e canvas object where to create the view object
  *
- * @return view object on success or @c 0 on failure
+ * @return view object on success or @c NULL on failure
  *
  * @see ewk_view_uri_set()
  */
@@ -667,7 +669,7 @@ EAPI Evas_Object *ewk_view_single_add(Evas *e);
  *
  * @param e canvas object where to create the view object
  *
- * @return the view object on success or @c 0 on failure
+ * @return the view object on success or @c NULL on failure
  *
  * @see ewk_view_uri_set()
  */
@@ -678,7 +680,7 @@ EAPI Evas_Object *ewk_view_tiled_add(Evas *e);
  *
  * @param o the view object to get the cache object
  *
- * @return the cache object of unused tiles or @c 0 on failure
+ * @return the cache object of unused tiles or @c NULL on failure
  */
 EAPI Ewk_Tile_Unused_Cache *ewk_view_tiled_unused_cache_get(const Evas_Object *o);
 
@@ -689,7 +691,7 @@ EAPI Ewk_Tile_Unused_Cache *ewk_view_tiled_unused_cache_get(const Evas_Object *o
  * The tiles from one view will not be used by the other!
  * This is just to limit the group with amount of unused memory.
  *
- * @note If @c 0 is provided as a @a cache, then a new one is created.
+ * @note If @c NULL is provided as a @a cache, then a new one is created.
  *
  * @param o the view object to set the cache object
  * @param the cache object of unused tiles
@@ -717,9 +719,9 @@ EAPI void         ewk_view_fixed_layout_size_set(Evas_Object *o, Evas_Coord w, E
  * Gets fixed layout size.
  *
  * @param o view object to get fixed layout size
- * @param w the pointer to store fixed width, returns @c 0 on failure or if there is no
+ * @param w the pointer to store fixed width, returns @c NULL on failure or if there is no
  *        fixed layout in use
- * @param h the pointer to store fixed height, returns @c 0 on failure or if there is no
+ * @param h the pointer to store fixed height, returns @c NULL on failure or if there is no
  *        fixed layout in use
  */
 EAPI void         ewk_view_fixed_layout_size_get(const Evas_Object *o, Evas_Coord *w, Evas_Coord *h);
@@ -732,7 +734,7 @@ EAPI void         ewk_view_fixed_layout_size_get(const Evas_Object *o, Evas_Coor
  * use this one.
  *
  * @param o view object to change theme
- * @param path theme path, may be @c 0 to reset to the default theme
+ * @param path theme path, may be @c NULL to reset to the default theme
  */
 EAPI void         ewk_view_theme_set(Evas_Object *o, const char *path);
 
@@ -743,7 +745,7 @@ EAPI void         ewk_view_theme_set(Evas_Object *o, const char *path);
  *
  * @param o view object to get theme path
  *
- * @return the theme path, may be @c 0 if not set
+ * @return the theme path, may be @c NULL if not set
  */
 EAPI const char  *ewk_view_theme_get(const Evas_Object *o);
 
@@ -752,7 +754,7 @@ EAPI const char  *ewk_view_theme_get(const Evas_Object *o);
  *
  * @param o view object to get main frame
  *
- * @return frame smart object or @c 0 if none yet
+ * @return frame smart object or @c NULL if none yet
  */
 EAPI Evas_Object *ewk_view_frame_main_get(const Evas_Object *o);
 
@@ -761,7 +763,7 @@ EAPI Evas_Object *ewk_view_frame_main_get(const Evas_Object *o);
  *
  * @param o view object to get focused frame
  *
- * @return frame smart object or @c 0 if none yet
+ * @return frame smart object or @c NULL if none yet
  */
 EAPI Evas_Object *ewk_view_frame_focused_get(const Evas_Object *o);
 
@@ -783,7 +785,7 @@ EAPI Eina_Bool    ewk_view_uri_set(Evas_Object *o, const char *uri);
  *
  * @param o view object to get current uri.
  *
- * @return current uri on success or @c 0 on failure
+ * @return current uri on success or @c NULL on failure
  */
 EAPI const char  *ewk_view_uri_get(const Evas_Object *o);
 
@@ -795,7 +797,7 @@ EAPI const char  *ewk_view_uri_get(const Evas_Object *o);
  *
  * @param o view object to get current title
  *
- * @return current title on success or @c 0 on failure
+ * @return current title on success or @c NULL on failure
  */
 EAPI const Ewk_Text_With_Direction  *ewk_view_title_get(const Evas_Object *o);
 
@@ -860,7 +862,7 @@ EAPI void         ewk_view_bg_color_get(const Evas_Object *o, int *r, int *g, in
  *
  * @param o view object to get selected text
  *
- * @return a newly allocated string or @c 0 if nothing is selected or on failure
+ * @return a newly allocated string or @c NULL if nothing is selected or on failure
  */
 EAPI char        *ewk_view_selection_get(const Evas_Object *o);
 
@@ -1139,7 +1141,7 @@ EAPI Eina_Bool    ewk_view_history_enable_set(Evas_Object *o, Eina_Bool enable);
  * @param o view object to get navigation history
  *
  * @return the history instance handle associated with this
- *         view on succes or @c 0 on failure (including when the history
+ *         view on succes or @c NULL on failure (including when the history
  *         navigation is not enabled with ewk_view_history_enable_set())
  *
  * @see ewk_view_history_enable_set()
@@ -1845,7 +1847,7 @@ EAPI Eina_Bool    ewk_view_setting_caret_browsing_set(Evas_Object *o, Eina_Bool 
  * @param o view object to get the current encoding
  *
  * @return @c eina_strinshare containing the current encoding, or
- *         @c 0 if it's not set
+ *         @c NULL if it's not set
  */
 EAPI const char  *ewk_view_setting_encoding_custom_get(const Evas_Object *o);
 
@@ -1853,7 +1855,7 @@ EAPI const char  *ewk_view_setting_encoding_custom_get(const Evas_Object *o);
  * Sets the encoding and reloads the page.
  *
  * @param o view to set the encoding
- * @param encoding the new encoding to set or @c 0 to restore the default one
+ * @param encoding the new encoding to set or @c NULL to restore the default one
  *
  * @return @c EINA_TRUE on success @c EINA_FALSE otherwise
  */
@@ -1865,7 +1867,7 @@ EAPI Eina_Bool    ewk_view_setting_encoding_custom_set(Evas_Object *o, const cha
  * @param o view object to get the default encoding
  *
  * @return @c eina_strinshare containing the default encoding, or
- *         @c 0 if it's not set
+ *         @c NULL if it's not set
  */
 EAPI const char  *ewk_view_setting_encoding_default_get(const Evas_Object *o);
 
@@ -2035,7 +2037,7 @@ EAPI Eina_Bool    ewk_view_setting_local_storage_set(Evas_Object *o, Eina_Bool e
  * @param o view object to get the database path to the local storage feature
  *
  * @return @c eina_stringshare containing the database path to the local storage feature, or
- *         @c 0 if it's not set
+ *         @c NULL if it's not set
  *
  * @sa ewk_view_setting_local_storage_database_path_set
  */
@@ -2230,7 +2232,7 @@ EAPI Eina_Bool ewk_view_setting_enable_hyperlink_auditing_set(Evas_Object *o, Ei
  *
  * @param o view object to get the internal data
  *
- * @return the internal data of @a o, or @c 0 on failure
+ * @return the internal data of @a o, or @c NULL on failure
  */
 EAPI Ewk_View_Smart_Data *ewk_view_smart_data_get(const Evas_Object *o);
 
@@ -2303,7 +2305,7 @@ EAPI Eina_Bool ewk_view_paint_contents(Ewk_View_Private_Data *priv, cairo_t *cr,
 /**
  * Gets the attributes of the viewport meta tag.
  *
- * Properties are returned in the respective pointers. Passing @c 0 to any of
+ * Properties are returned in the respective pointers. Passing @c NULL to any of
  * these pointers will make that property to not be returned.
  *
  * @param o view object to get the viewport attributes
@@ -2643,6 +2645,53 @@ EAPI Eina_Bool    ewk_view_setting_web_audio_get(const Evas_Object *o);
  * @return @c EINA_TRUE on success or @c EINA_FALSE on failure
  */
 EAPI Eina_Bool    ewk_view_setting_web_audio_set(Evas_Object *o, Eina_Bool enable);
+
+/**
+ * Show the web inspector to debug a web page.
+ *
+ * The following signals are emiited.
+ * "inspector,view,create" and "inspector,view,close"
+ * The first one will be called to request the view for web inspector on view that will be inspected.
+ * This callback should create the view for web inspector and set the view with ewk_view_web_inspector_view_set().
+ * The second one will be called to close the view for web inspector on view having the web inspector after disconnecting frontend
+ * This callback should remove the view for web inspector.
+ *
+ * When the view having the web inspector is removed,
+ * please emit the "inspector,view,destroy" signal on view for web inspector.
+ *
+ * @param o The view to show the web inspector.
+ *
+ * @see ewk_view_web_inspector_close()
+ * @see ewk_view_web_inspector_view_set()
+ */
+EAPI void ewk_view_web_inspector_show(const Evas_Object *o);
+
+/**
+ * Close the web inspector view
+ *
+ * @param o The view to close the web inspector.
+ *
+ * @see ewk_view_web_inspector_show()
+ * @see ewk_view_web_inspector_view_get()
+ */
+EAPI void ewk_view_web_inspector_close(const Evas_Object *o);
+
+/**
+ * Get the view of web inspector.
+ *
+ * @param o The view that is inspected.
+ *
+ * @return view object on success or @c NULL on failure
+ */
+EAPI Evas_Object* ewk_view_web_inspector_view_get(const Evas_Object *o);
+
+/**
+ * Set the view of web inspector.
+ *
+ * @param o The view that is inspected.
+ * @param inspector_view The view of web inspector.
+ */
+EAPI void ewk_view_web_inspector_view_set(Evas_Object *o, Evas_Object *inspector_view);
 
 #ifdef __cplusplus
 }

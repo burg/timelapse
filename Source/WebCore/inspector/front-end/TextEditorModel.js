@@ -48,6 +48,15 @@ WebInspector.TextRange.createFromLocation = function(line, column)
     return new WebInspector.TextRange(line, column, line, column);
 }
 
+/**
+ * @param {Object} serializedTextRange
+ * @return {WebInspector.TextRange}
+ */
+WebInspector.TextRange.fromObject = function (serializedTextRange)
+{
+    return new WebInspector.TextRange(serializedTextRange.startLine, serializedTextRange.startColumn, serializedTextRange.endLine, serializedTextRange.endColumn);
+}
+
 WebInspector.TextRange.prototype = {
     /**
      * @return {boolean}
@@ -87,6 +96,36 @@ WebInspector.TextRange.prototype = {
     clone: function()
     {
         return new WebInspector.TextRange(this.startLine, this.startColumn, this.endLine, this.endColumn);
+    },
+
+    /**
+     * @return {Object}
+     */
+    serializeToObject: function()
+    {
+        var serializedTextRange = {};
+        serializedTextRange.startLine = this.startLine;
+        serializedTextRange.startColumn = this.startColumn;
+        serializedTextRange.endLine = this.endLine;
+        serializedTextRange.endColumn = this.endColumn;
+        return serializedTextRange;
+    },
+
+    /**
+     * @param {WebInspector.TextRange} other
+     * @return {number}
+     */
+    compareTo: function(other)
+    {
+        if (this.startLine > other.startLine)
+            return 1;
+        if (this.startLine < other.startLine)
+            return -1;
+        if (this.startColumn > other.startColumn)
+            return 1;
+        if (this.startColumn < other.startColumn)
+            return -1;
+        return 0;
     }
 }
 
@@ -140,9 +179,17 @@ WebInspector.TextEditorModel.prototype = {
     /**
      * @return {string}
      */
-    get text()
+    text: function()
     {
         return this._lines.join(this._lineBreak);
+    },
+
+    /**
+     * @return {WebInspector.TextRange}
+     */
+    range: function()
+    {
+        return new WebInspector.TextRange(0, 0, this._lines.length - 1, this._lines[this._lines.length - 1].length);
     },
 
     /**
@@ -179,7 +226,7 @@ WebInspector.TextEditorModel.prototype = {
     setText: function(text)
     {
         text = text || "";
-        var range = new WebInspector.TextRange(0, 0, this._lines.length - 1, this._lines[this._lines.length - 1].length);
+        var range = this.range();
         this._lineBreak = /\r\n/.test(text) ? "\r\n" : "\n";
         var newRange = this._innerSetText(range, text);
         this.dispatchEventToListeners(WebInspector.TextEditorModel.Events.TextChanged, { oldRange: range, newRange: newRange});
@@ -333,7 +380,7 @@ WebInspector.TextEditorModel.prototype = {
     copyRange: function(range)
     {
         if (!range)
-            range = new WebInspector.TextRange(0, 0, this._lines.length - 1, this._lines[this._lines.length - 1].length);
+            range = this.range();
 
         var clip = [];
         if (range.startLine === range.endLine) {

@@ -197,6 +197,9 @@ void CodeBlock::printGetByIdOp(ExecState* exec, int location, Vector<Instruction
     case op_get_by_id:
         op = "get_by_id";
         break;
+    case op_get_by_id_out_of_line:
+        op = "get_by_id_out_of_line";
+        break;
     case op_get_by_id_self:
         op = "get_by_id_self";
         break;
@@ -1033,6 +1036,7 @@ void CodeBlock::dump(ExecState* exec, const Vector<Instruction>::const_iterator&
             break;
         }
         case op_get_by_id:
+        case op_get_by_id_out_of_line:
         case op_get_by_id_self:
         case op_get_by_id_proto:
         case op_get_by_id_chain:
@@ -1059,6 +1063,10 @@ void CodeBlock::dump(ExecState* exec, const Vector<Instruction>::const_iterator&
             printPutByIdOp(exec, location, it, "put_by_id");
             break;
         }
+        case op_put_by_id_out_of_line: {
+            printPutByIdOp(exec, location, it, "put_by_id_out_of_line");
+            break;
+        }
         case op_put_by_id_replace: {
             printPutByIdOp(exec, location, it, "put_by_id_replace");
             break;
@@ -1071,8 +1079,16 @@ void CodeBlock::dump(ExecState* exec, const Vector<Instruction>::const_iterator&
             printPutByIdOp(exec, location, it, "put_by_id_transition_direct");
             break;
         }
+        case op_put_by_id_transition_direct_out_of_line: {
+            printPutByIdOp(exec, location, it, "put_by_id_transition_direct_out_of_line");
+            break;
+        }
         case op_put_by_id_transition_normal: {
             printPutByIdOp(exec, location, it, "put_by_id_transition_normal");
+            break;
+        }
+        case op_put_by_id_transition_normal_out_of_line: {
+            printPutByIdOp(exec, location, it, "put_by_id_transition_normal_out_of_line");
             break;
         }
         case op_put_by_id_generic: {
@@ -2010,16 +2026,16 @@ void CodeBlock::visitWeakReferences(SlotVisitor& visitor)
     performTracingFixpointIteration(visitor);
 }
 
-void CodeBlock::finalizeUnconditionally()
-{
 #if ENABLE(JIT)
 #if ENABLE(JIT_VERBOSE_OSR)
-    static const bool verboseUnlinking = true;
+static const bool verboseUnlinking = true;
 #else
-    static const bool verboseUnlinking = false;
+static const bool verboseUnlinking = false;
 #endif
 #endif // ENABLE(JIT)
     
+void CodeBlock::finalizeUnconditionally()
+{
 #if ENABLE(LLINT)
     Interpreter* interpreter = m_globalData->interpreter;
     // interpreter->classicEnabled() returns true if the old C++ interpreter is enabled. If that's enabled
@@ -2029,7 +2045,9 @@ void CodeBlock::finalizeUnconditionally()
             Instruction* curInstruction = &instructions()[m_propertyAccessInstructions[i]];
             switch (interpreter->getOpcodeID(curInstruction[0].u.opcode)) {
             case op_get_by_id:
+            case op_get_by_id_out_of_line:
             case op_put_by_id:
+            case op_put_by_id_out_of_line:
                 if (!curInstruction[4].u.structure || Heap::isMarked(curInstruction[4].u.structure.get()))
                     break;
                 if (verboseUnlinking)
@@ -2039,6 +2057,8 @@ void CodeBlock::finalizeUnconditionally()
                 break;
             case op_put_by_id_transition_direct:
             case op_put_by_id_transition_normal:
+            case op_put_by_id_transition_direct_out_of_line:
+            case op_put_by_id_transition_normal_out_of_line:
                 if (Heap::isMarked(curInstruction[4].u.structure.get())
                     && Heap::isMarked(curInstruction[6].u.structure.get())
                     && Heap::isMarked(curInstruction[7].u.structureChain.get()))
@@ -2121,28 +2141,10 @@ void CodeBlock::finalizeUnconditionally()
         for (size_t size = m_structureStubInfos.size(), i = 0; i < size; ++i) {
             StructureStubInfo& stubInfo = m_structureStubInfos[i];
             
-            AccessType accessType = static_cast<AccessType>(stubInfo.accessType);
-            
             if (stubInfo.visitWeakReferences())
                 continue;
             
-            if (verboseUnlinking)
-                dataLog("Clearing structure cache (kind %d) in %p.\n", stubInfo.accessType, this);
-            
-            if (isGetByIdAccess(accessType)) {
-                if (getJITCode().jitType() == JITCode::DFGJIT)
-                    DFG::dfgResetGetByID(repatchBuffer, stubInfo);
-                else
-                    JIT::resetPatchGetById(repatchBuffer, &stubInfo);
-            } else {
-                ASSERT(isPutByIdAccess(accessType));
-                if (getJITCode().jitType() == JITCode::DFGJIT)
-                    DFG::dfgResetPutByID(repatchBuffer, stubInfo);
-                else 
-                    JIT::resetPatchPutById(repatchBuffer, &stubInfo);
-            }
-            
-            stubInfo.reset();
+            resetStubInternal(repatchBuffer, stubInfo);
         }
 
         for (size_t size = m_methodCallLinkInfos.size(), i = 0; i < size; ++i) {
@@ -2177,6 +2179,40 @@ void CodeBlock::finalizeUnconditionally()
     }
 #endif
 }
+
+#if ENABLE(JIT)
+void CodeBlock::resetStub(StructureStubInfo& stubInfo)
+{
+    if (stubInfo.accessType == access_unset)
+        return;
+    
+    RepatchBuffer repatchBuffer(this);
+    resetStubInternal(repatchBuffer, stubInfo);
+}
+
+void CodeBlock::resetStubInternal(RepatchBuffer& repatchBuffer, StructureStubInfo& stubInfo)
+{
+    AccessType accessType = static_cast<AccessType>(stubInfo.accessType);
+    
+    if (verboseUnlinking)
+        dataLog("Clearing structure cache (kind %d) in %p.\n", stubInfo.accessType, this);
+    
+    if (isGetByIdAccess(accessType)) {
+        if (getJITCode().jitType() == JITCode::DFGJIT)
+            DFG::dfgResetGetByID(repatchBuffer, stubInfo);
+        else
+            JIT::resetPatchGetById(repatchBuffer, &stubInfo);
+    } else {
+        ASSERT(isPutByIdAccess(accessType));
+        if (getJITCode().jitType() == JITCode::DFGJIT)
+            DFG::dfgResetPutByID(repatchBuffer, stubInfo);
+        else 
+            JIT::resetPatchPutById(repatchBuffer, &stubInfo);
+    }
+    
+    stubInfo.reset();
+}
+#endif
 
 void CodeBlock::stronglyVisitStrongReferences(SlotVisitor& visitor)
 {
@@ -2478,6 +2514,8 @@ void CodeBlock::shrinkToFit(ShrinkMode shrinkMode)
         m_dfgData->speculationRecovery.shrinkToFit();
         m_dfgData->weakReferences.shrinkToFit();
         m_dfgData->transitions.shrinkToFit();
+        m_dfgData->minifiedDFG.prepareAndShrink();
+        m_dfgData->variableEventStream.shrinkToFit();
     }
 #endif
 }
@@ -2771,7 +2809,7 @@ bool CodeBlock::shouldOptimizeNow()
     dumpValueProfiles();
 #endif
 
-    if (m_optimizationDelayCounter >= Options::maximumOptimizationDelay)
+    if (m_optimizationDelayCounter >= Options::maximumOptimizationDelay())
         return true;
     
     unsigned numberOfLiveNonArgumentValueProfiles;
@@ -2782,9 +2820,9 @@ bool CodeBlock::shouldOptimizeNow()
     dataLog("Profile hotness: %lf, %lf\n", (double)numberOfLiveNonArgumentValueProfiles / numberOfValueProfiles(), (double)numberOfSamplesInProfiles / ValueProfile::numberOfBuckets / numberOfValueProfiles());
 #endif
 
-    if ((!numberOfValueProfiles() || (double)numberOfLiveNonArgumentValueProfiles / numberOfValueProfiles() >= Options::desiredProfileLivenessRate)
-        && (!totalNumberOfValueProfiles() || (double)numberOfSamplesInProfiles / ValueProfile::numberOfBuckets / totalNumberOfValueProfiles() >= Options::desiredProfileFullnessRate)
-        && static_cast<unsigned>(m_optimizationDelayCounter) + 1 >= Options::minimumOptimizationDelay)
+    if ((!numberOfValueProfiles() || (double)numberOfLiveNonArgumentValueProfiles / numberOfValueProfiles() >= Options::desiredProfileLivenessRate())
+        && (!totalNumberOfValueProfiles() || (double)numberOfSamplesInProfiles / ValueProfile::numberOfBuckets / totalNumberOfValueProfiles() >= Options::desiredProfileFullnessRate())
+        && static_cast<unsigned>(m_optimizationDelayCounter) + 1 >= Options::minimumOptimizationDelay())
         return true;
     
     ASSERT(m_optimizationDelayCounter < std::numeric_limits<uint8_t>::max());
@@ -2845,7 +2883,7 @@ void CodeBlock::dumpValueProfiles()
         dataLog("   bc = %d: %u\n", profile->m_bytecodeOffset, profile->m_counter);
     }
 }
-#endif
+#endif // ENABLE(VERBOSE_VALUE_PROFILE)
 
 size_t CodeBlock::predictedMachineCodeSize()
 {
@@ -2902,6 +2940,31 @@ bool CodeBlock::usesOpcode(OpcodeID opcodeID)
     }
     
     return false;
+}
+
+UString CodeBlock::nameForRegister(int registerNumber)
+{
+    SymbolTable::iterator end = m_symbolTable->end();
+    for (SymbolTable::iterator ptr = m_symbolTable->begin(); ptr != end; ++ptr) {
+        if (ptr->second.getIndex() == registerNumber)
+            return UString(ptr->first);
+    }
+    if (needsActivation() && registerNumber == activationRegister())
+        return "activation";
+    if (registerNumber == thisRegister())
+        return "this";
+    if (usesArguments()) {
+        if (registerNumber == argumentsRegister())
+            return "arguments";
+        if (unmodifiedArgumentsRegister(argumentsRegister()) == registerNumber)
+            return "real arguments";
+    }
+    if (registerNumber < 0) {
+        int argumentPosition = -registerNumber;
+        argumentPosition -= RegisterFile::CallFrameHeaderSize + 1;
+        return String::format("arguments[%3d]", argumentPosition - 1).impl();
+    }
+    return "";
 }
 
 } // namespace JSC

@@ -263,9 +263,12 @@ String BitmapImage::filenameExtension() const
 size_t BitmapImage::frameCount()
 {
     if (!m_haveFrameCount) {
-        m_haveFrameCount = true;
         m_frameCount = m_source.frameCount();
-        didDecodeProperties();
+        // If decoder is not initialized yet, m_source.frameCount() returns 0.
+        if (m_frameCount) {
+            didDecodeProperties();
+            m_haveFrameCount = true;
+        }
     }
     return m_frameCount;
 }
@@ -301,7 +304,7 @@ NativeImagePtr BitmapImage::frameAtIndex(size_t index)
 bool BitmapImage::frameIsCompleteAtIndex(size_t index)
 {
     if (!ensureFrameIsCached(index))
-        return true; // Why would an invalid index return true here?
+        return false;
     return m_frames[index].m_isComplete;
 }
 
@@ -319,8 +322,10 @@ NativeImagePtr BitmapImage::nativeImageForCurrentFrame()
 
 bool BitmapImage::frameHasAlphaAtIndex(size_t index)
 {
+    // When a frame has not finished decoding, always mark it as having alpha.
+    // See ImageSource::framehasAlphaAtIndex for explanation of why incomplete images claim to have alpha.
     if (!ensureFrameIsCached(index))
-        return true; // Why does an invalid index mean alpha?
+        return true;
     return m_frames[index].m_hasAlpha;
 }
 
@@ -557,12 +562,5 @@ Color BitmapImage::solidColor() const
 {
     return m_solidColor;
 }
-
-#if !USE(CG)
-void BitmapImage::draw(GraphicsContext* ctx, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator op, RespectImageOrientationEnum)
-{
-    draw(ctx, dstRect, srcRect, styleColorSpace, op);
-}
-#endif
 
 }

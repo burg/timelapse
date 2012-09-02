@@ -26,6 +26,7 @@
 #define HTMLInputElement_h
 
 #include "HTMLTextFormControlElement.h"
+#include "ImageLoaderClient.h"
 #include "StepRange.h"
 
 namespace WebCore {
@@ -38,8 +39,9 @@ class HTMLOptionElement;
 class Icon;
 class InputType;
 class KURL;
+class ListAttributeTargetObserver;
 
-class HTMLInputElement : public HTMLTextFormControlElement {
+class HTMLInputElement : public HTMLTextFormControlElement, public ImageLoaderClientBase<HTMLInputElement> {
 public:
     static PassRefPtr<HTMLInputElement> create(const QualifiedName&, Document*, HTMLFormElement*, bool createdByParser);
     virtual ~HTMLInputElement();
@@ -121,6 +123,7 @@ public:
 #if ENABLE(INPUT_SPEECH)
     HTMLElement* speechButtonElement() const;
 #endif
+    HTMLElement* sliderThumbElement() const;
     virtual HTMLElement* placeholderElement() const;
 
     bool checked() const { return m_isChecked; }
@@ -233,6 +236,7 @@ public:
 
 #if ENABLE(DATALIST)
     HTMLElement* list() const;
+    void listAttributeTargetChanged();
 #endif
 
     HTMLInputElement* checkedRadioButtonForGroup() const;
@@ -296,6 +300,7 @@ private:
 
     virtual const AtomicString& formControlType() const;
 
+    virtual bool shouldSaveAndRestoreFormControlState() const OVERRIDE;
     virtual FormControlState saveFormControlState() const OVERRIDE;
     virtual void restoreFormControlState(const FormControlState&) OVERRIDE;
 
@@ -357,9 +362,9 @@ private:
     
     virtual void subtreeHasChanged();
 
-
 #if ENABLE(DATALIST)
     HTMLDataListElement* dataList() const;
+    void resetListAttributeTargetObserver();
 #endif
     void parseMaxLengthAttribute(const Attribute&);
     void updateValueIfNeeded();
@@ -390,7 +395,11 @@ private:
     bool m_valueAttributeWasUpdatedAfterParsing : 1;
     bool m_wasModifiedByUser : 1;
     bool m_canReceiveDroppedFiles : 1;
+    bool m_hasTouchEventHandler: 1;
     OwnPtr<InputType> m_inputType;
+#if ENABLE(DATALIST)
+    OwnPtr<ListAttributeTargetObserver> m_listAttributeTargetObserver;
+#endif
 };
 
 } //namespace

@@ -24,7 +24,6 @@
 #include "BackForwardListImpl.h"
 #include "BackingStoreClient.h"
 #include "BackingStore_p.h"
-#include "Base64.h"
 #include "Chrome.h"
 #include "ChromeClientBlackBerry.h"
 #include "ClientExtension.h"
@@ -825,6 +824,14 @@ void FrameLoaderClientBlackBerry::dispatchDidFirstVisuallyNonEmptyLayout()
 
     readyToRender(true);
 
+    // For FrameLoadTypeSame or FrameLoadTypeStandard load, the layout timer can be fired which can call
+    // dispatchDidFirstVisuallyNonEmptyLayout() after the load Finished state, in which case the web page
+    // will have no chance to zoom to initial scale. So we should give it a chance, otherwise the scale of
+    // the web page can be incorrect.
+    FrameLoadType frameLoadType = m_frame->loader()->loadType();
+    if (m_webPagePrivate->loadState() == WebPagePrivate::Finished && (frameLoadType == FrameLoadTypeSame || frameLoadType == FrameLoadTypeStandard))
+        m_webPagePrivate->setShouldZoomToInitialScaleAfterLoadFinished(true);
+
     if (m_webPagePrivate->shouldZoomToInitialScaleOnLoad()) {
         m_webPagePrivate->zoomToInitialScaleOnLoad(); // Set the proper zoom level first.
         m_webPagePrivate->m_backingStore->d->clearVisibleZoom(); // Clear the visible zoom since we're explicitly rendering+blitting below.
@@ -1060,12 +1067,12 @@ void FrameLoaderClientBlackBerry::restoreViewState()
 
     m_webPagePrivate->m_shouldReflowBlock = viewState.shouldReflowBlock;
 
-    // Will restore updates to backingstore guaranteed!
-    if (!m_webPagePrivate->zoomAboutPoint(scale, m_frame->view()->scrollPosition(), true /* enforceScaleClamping */, true /*forceRendering*/, true /*isRestoringZoomLevel*/)) {
-        // If we're already at that scale, then we should still force rendering since
-        // our scroll position changed.
-        m_webPagePrivate->m_backingStore->d->renderVisibleContents();
+    bool didZoom = m_webPagePrivate->zoomAboutPoint(scale, m_frame->view()->scrollPosition(), true /* enforceScaleClamping */, true /*forceRendering*/, true /*isRestoringZoomLevel*/);
+    // If we're already at that scale, then we should still force rendering
+    // since our scroll position changed.
+    m_webPagePrivate->m_backingStore->d->resumeScreenAndBackingStoreUpdates(BackingStore::RenderAndBlit);
 
+    if (!didZoom) {
         // We need to notify the client of the scroll position and content size change(s) above even if we didn't scale.
         m_webPagePrivate->notifyTransformedContentsSizeChanged();
         m_webPagePrivate->notifyTransformedScrollChanged();

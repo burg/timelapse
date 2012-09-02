@@ -40,6 +40,7 @@
 #include "JSValue.h"
 #include "Operands.h"
 #include "SpeculatedType.h"
+#include "StructureSet.h"
 #include "ValueProfile.h"
 
 namespace JSC { namespace DFG {
@@ -631,7 +632,15 @@ struct Node {
 
     bool hasStructureTransitionData()
     {
-        return op() == PutStructure || op() == PhantomPutStructure;
+        switch (op()) {
+        case PutStructure:
+        case PhantomPutStructure:
+        case AllocatePropertyStorage:
+        case ReallocatePropertyStorage:
+            return true;
+        default:
+            return false;
+        }
     }
     
     StructureTransitionData& structureTransitionData()
@@ -707,7 +716,7 @@ struct Node {
         ASSERT(m_virtualRegister != InvalidVirtualRegister);
         return m_virtualRegister;
     }
-
+    
     void setVirtualRegister(VirtualRegister virtualRegister)
     {
         ASSERT(hasResult());

@@ -32,7 +32,7 @@
 
 namespace WebCore {
 
-class TextureAllocator;
+class CCResourceProvider;
 class TextureCopier;
 class TextureUploader;
 
@@ -41,14 +41,14 @@ public:
     CCTextureUpdater();
     ~CCTextureUpdater();
 
-    void appendUpdate(LayerTextureUpdater::Texture*, const IntRect& sourceRect, const IntRect& destRect);
+    void appendFullUpdate(LayerTextureUpdater::Texture*, const IntRect& sourceRect, const IntRect& destRect);
     void appendPartialUpdate(LayerTextureUpdater::Texture*, const IntRect& sourceRect, const IntRect& destRect);
     void appendCopy(unsigned sourceTexture, unsigned destTexture, const IntSize&);
 
     bool hasMoreUpdates() const;
 
     // Update some textures.
-    void update(CCGraphicsContext*, TextureAllocator*, TextureCopier*, TextureUploader*, size_t count);
+    void update(CCResourceProvider*, TextureCopier*, TextureUploader*, size_t count);
 
     void clear();
 
@@ -68,7 +68,7 @@ private:
     static void appendUpdate(LayerTextureUpdater::Texture*, const IntRect& sourceRect, const IntRect& destRect, Vector<UpdateEntry>&);
 
     size_t m_entryIndex;
-    Vector<UpdateEntry> m_entries;
+    Vector<UpdateEntry> m_fullEntries;
     Vector<UpdateEntry> m_partialEntries;
     Vector<CopyEntry> m_copyEntries;
 };

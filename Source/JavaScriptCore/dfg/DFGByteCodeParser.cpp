@@ -99,7 +99,7 @@ private:
     bool handleConstantInternalFunction(bool usesResult, int resultOperand, InternalFunction*, int registerOffset, int argumentCountIncludingThis, SpeculatedType prediction, CodeSpecializationKind);
     void handleGetByOffset(
         int destinationOperand, SpeculatedType, NodeIndex base, unsigned identifierNumber,
-        bool useInlineStorage, size_t offset);
+        PropertyOffset);
     void handleGetById(
         int destinationOperand, SpeculatedType, NodeIndex base, unsigned identifierNumber,
         const GetByIdStatus&);
@@ -871,7 +871,7 @@ private:
         // care about when the outcome of the division is not an integer, which
         // is what the special fast case counter tells us.
         
-        if (!m_inlineStackTop->m_profiledBlock->likelyToTakeSpecialFastCase(m_currentIndex)
+        if (!m_inlineStackTop->m_profiledBlock->couldTakeSpecialFastCase(m_currentIndex)
             && !m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, Overflow)
             && !m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, NegativeZero))
             return nodeIndex;
@@ -1273,7 +1273,7 @@ bool ByteCodeParser::handleInlining(bool usesResult, int callTarget, NodeIndex c
     unsigned depth = 0;
     for (InlineStackEntry* entry = m_inlineStackTop; entry; entry = entry->m_caller) {
         ++depth;
-        if (depth >= Options::maximumInliningDepth)
+        if (depth >= Options::maximumInliningDepth())
             return false; // Depth exceeded.
         
         if (entry->executable() == executable)
@@ -1630,25 +1630,20 @@ bool ByteCodeParser::handleConstantInternalFunction(
 
 void ByteCodeParser::handleGetByOffset(
     int destinationOperand, SpeculatedType prediction, NodeIndex base, unsigned identifierNumber,
-    bool useInlineStorage, size_t offset)
+    PropertyOffset offset)
 {
     NodeIndex propertyStorage;
-    size_t offsetOffset;
-    if (useInlineStorage) {
+    if (isInlineOffset(offset))
         propertyStorage = base;
-        ASSERT(!(sizeof(JSObject) % sizeof(EncodedJSValue)));
-        offsetOffset = sizeof(JSObject) / sizeof(EncodedJSValue);
-    } else {
+    else
         propertyStorage = addToGraph(GetPropertyStorage, base);
-        offsetOffset = 0;
-    }
     set(destinationOperand,
         addToGraph(
             GetByOffset, OpInfo(m_graph.m_storageAccessData.size()), OpInfo(prediction),
             propertyStorage));
         
     StorageAccessData storageAccessData;
-    storageAccessData.offset = offset + offsetOffset;
+    storageAccessData.offset = indexRelativeToBase(offset);
     storageAccessData.identifierNumber = identifierNumber;
     m_graph.m_storageAccessData.append(storageAccessData);
 }
@@ -1677,7 +1672,6 @@ void ByteCodeParser::handleGetById(
                 
     addToGraph(CheckStructure, OpInfo(m_graph.addStructureSet(getByIdStatus.structureSet())), base);
     
-    bool useInlineStorage;
     if (!getByIdStatus.chain().isEmpty()) {
         Structure* currentStructure = getByIdStatus.structureSet().singletonStructure();
         JSObject* currentObject = 0;
@@ -1686,9 +1680,7 @@ void ByteCodeParser::handleGetById(
             currentStructure = getByIdStatus.chain()[i];
             base = addStructureTransitionCheck(currentObject, currentStructure);
         }
-        useInlineStorage = currentStructure->isUsingInlineStorage();
-    } else
-        useInlineStorage = getByIdStatus.structureSet().allAreUsingInlinePropertyStorage();
+    }
     
     // Unless we want bugs like https://bugs.webkit.org/show_bug.cgi?id=88783, we need to
     // ensure that the base of the original get_by_id is kept alive until we're done with
@@ -1707,8 +1699,7 @@ void ByteCodeParser::handleGetById(
     }
     
     handleGetByOffset(
-        destinationOperand, prediction, base, identifierNumber, useInlineStorage,
-        getByIdStatus.offset());
+        destinationOperand, prediction, base, identifierNumber, getByIdStatus.offset());
 }
 
 void ByteCodeParser::prepareToParseBlock()
@@ -2161,7 +2152,10 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             NodeIndex property = get(currentInstruction[2].u.operand);
             NodeIndex value = get(currentInstruction[3].u.operand);
 
-            addToGraph(PutByVal, base, property, value);
+            addVarArgChild(base);
+            addVarArgChild(property);
+            addVarArgChild(value);
+            addToGraph(Node::VarArg, PutByVal, OpInfo(0), OpInfo(0));
 
             NEXT_OPCODE(op_put_by_val);
         }
@@ -2172,7 +2166,8 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             
             SpeculatedType prediction = getPrediction();
             
-            ASSERT(interpreter->getOpcodeID(getInstruction->u.opcode) == op_get_by_id);
+            ASSERT(interpreter->getOpcodeID(getInstruction->u.opcode) == op_get_by_id
+                   || interpreter->getOpcodeID(getInstruction->u.opcode) == op_get_by_id_out_of_line);
             
             NodeIndex base = get(getInstruction[2].u.operand);
             unsigned identifier = m_inlineStackTop->m_identifierRemap[getInstruction[3].u.operand];
@@ -2225,7 +2220,8 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             addToGraph(PutScopedVar, OpInfo(slot), getScopeChain, get(source));
             NEXT_OPCODE(op_put_scoped_var);
         }
-        case op_get_by_id: {
+        case op_get_by_id:
+        case op_get_by_id_out_of_line: {
             SpeculatedType prediction = getPredictionWithoutOSRExit();
             
             NodeIndex base = get(currentInstruction[2].u.operand);
@@ -2241,8 +2237,11 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             NEXT_OPCODE(op_get_by_id);
         }
         case op_put_by_id:
+        case op_put_by_id_out_of_line:
         case op_put_by_id_transition_direct:
-        case op_put_by_id_transition_normal: {
+        case op_put_by_id_transition_normal:
+        case op_put_by_id_transition_direct_out_of_line:
+        case op_put_by_id_transition_normal_out_of_line: {
             NodeIndex value = get(currentInstruction[3].u.operand);
             NodeIndex base = get(currentInstruction[1].u.operand);
             unsigned identifierNumber = m_inlineStackTop->m_identifierRemap[currentInstruction[2].u.operand];
@@ -2259,25 +2258,19 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             
             if (!hasExitSite && putByIdStatus.isSimpleReplace()) {
                 addToGraph(CheckStructure, OpInfo(m_graph.addStructureSet(putByIdStatus.oldStructure())), base);
-                size_t offsetOffset;
                 NodeIndex propertyStorage;
-                if (putByIdStatus.oldStructure()->isUsingInlineStorage()) {
+                if (isInlineOffset(putByIdStatus.offset()))
                     propertyStorage = base;
-                    ASSERT(!(sizeof(JSObject) % sizeof(EncodedJSValue)));
-                    offsetOffset = sizeof(JSObject) / sizeof(EncodedJSValue);
-                } else {
+                else
                     propertyStorage = addToGraph(GetPropertyStorage, base);
-                    offsetOffset = 0;
-                }
                 addToGraph(PutByOffset, OpInfo(m_graph.m_storageAccessData.size()), propertyStorage, base, value);
                 
                 StorageAccessData storageAccessData;
-                storageAccessData.offset = putByIdStatus.offset() + offsetOffset;
+                storageAccessData.offset = indexRelativeToBase(putByIdStatus.offset());
                 storageAccessData.identifierNumber = identifierNumber;
                 m_graph.m_storageAccessData.append(storageAccessData);
             } else if (!hasExitSite
                        && putByIdStatus.isSimpleTransition()
-                       && putByIdStatus.oldStructure()->propertyStorageCapacity() == putByIdStatus.newStructure()->propertyStorageCapacity()
                        && structureChainIsStillValid(
                            direct,
                            putByIdStatus.oldStructure(),
@@ -2299,25 +2292,38 @@ bool ByteCodeParser::parseBlock(unsigned limit)
                     }
                 }
                 ASSERT(putByIdStatus.oldStructure()->transitionWatchpointSetHasBeenInvalidated());
-                addToGraph(
-                    PutStructure,
-                    OpInfo(
-                        m_graph.addStructureTransitionData(
-                            StructureTransitionData(
-                                putByIdStatus.oldStructure(),
-                                putByIdStatus.newStructure()))),
-                    base);
                 
-                size_t offsetOffset;
                 NodeIndex propertyStorage;
-                if (putByIdStatus.newStructure()->isUsingInlineStorage()) {
-                    propertyStorage = base;
-                    ASSERT(!(sizeof(JSObject) % sizeof(EncodedJSValue)));
-                    offsetOffset = sizeof(JSObject) / sizeof(EncodedJSValue);
+                StructureTransitionData* transitionData =
+                    m_graph.addStructureTransitionData(
+                        StructureTransitionData(
+                            putByIdStatus.oldStructure(),
+                            putByIdStatus.newStructure()));
+
+                if (putByIdStatus.oldStructure()->outOfLineCapacity()
+                    != putByIdStatus.newStructure()->outOfLineCapacity()) {
+                    
+                    // If we're growing the property storage then it must be because we're
+                    // storing into the out-of-line storage.
+                    ASSERT(!isInlineOffset(putByIdStatus.offset()));
+                    
+                    if (!putByIdStatus.oldStructure()->outOfLineCapacity()) {
+                        propertyStorage = addToGraph(
+                            AllocatePropertyStorage, OpInfo(transitionData), base);
+                    } else {
+                        propertyStorage = addToGraph(
+                            ReallocatePropertyStorage, OpInfo(transitionData),
+                            base, addToGraph(GetPropertyStorage, base));
+                    }
                 } else {
-                    propertyStorage = addToGraph(GetPropertyStorage, base);
-                    offsetOffset = 0;
+                    if (isInlineOffset(putByIdStatus.offset()))
+                        propertyStorage = base;
+                    else
+                        propertyStorage = addToGraph(GetPropertyStorage, base);
                 }
+                
+                addToGraph(PutStructure, OpInfo(transitionData), base);
+                
                 addToGraph(
                     PutByOffset,
                     OpInfo(m_graph.m_storageAccessData.size()),
@@ -2326,7 +2332,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
                     value);
                 
                 StorageAccessData storageAccessData;
-                storageAccessData.offset = putByIdStatus.offset() + offsetOffset;
+                storageAccessData.offset = indexRelativeToBase(putByIdStatus.offset());
                 storageAccessData.identifierNumber = identifierNumber;
                 m_graph.m_storageAccessData.append(storageAccessData);
             } else {
@@ -2738,8 +2744,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
                 } else {
                     handleGetByOffset(
                         currentInstruction[1].u.operand, prediction, globalObject,
-                        identifierNumber, status.structure()->isUsingInlineStorage(),
-                        status.offset());
+                        identifierNumber, status.offset());
                 }
                 
                 m_globalResolveNumber++; // Skip over the unused global resolve info.
@@ -3341,6 +3346,7 @@ bool ByteCodeParser::parse()
 
 bool parse(ExecState* exec, Graph& graph)
 {
+    SamplingRegion samplingRegion("DFG Parsing");
 #if DFG_DEBUG_LOCAL_DISBALE
     UNUSED_PARAM(exec);
     UNUSED_PARAM(graph);

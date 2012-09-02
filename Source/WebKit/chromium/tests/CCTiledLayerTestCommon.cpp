@@ -40,10 +40,9 @@ FakeLayerTextureUpdater::Texture::~Texture()
 {
 }
 
-void FakeLayerTextureUpdater::Texture::updateRect(CCGraphicsContext*, TextureAllocator* allocator, const IntRect&, const IntRect&)
+void FakeLayerTextureUpdater::Texture::updateRect(CCResourceProvider* resourceProvider, const IntRect&, const IntRect&)
 {
-    if (allocator)
-        texture()->acquireBackingTexture(allocator);
+    texture()->acquireBackingTexture(resourceProvider);
     m_layer->updateRect();
 }
 
@@ -68,7 +67,7 @@ void FakeLayerTextureUpdater::prepareToUpdate(const IntRect& contentRect, const 
     m_prepareCount++;
     m_lastUpdateRect = contentRect;
     if (!m_rectToInvalidate.isEmpty()) {
-        m_layer->invalidateRect(m_rectToInvalidate);
+        m_layer->invalidateContentRect(m_rectToInvalidate);
         m_rectToInvalidate = IntRect();
         m_layer = 0;
     }
@@ -118,7 +117,24 @@ void FakeTiledLayerChromium::setNeedsDisplayRect(const FloatRect& rect)
 
 void FakeTiledLayerChromium::update(CCTextureUpdater& updater, const CCOcclusionTracker* occlusion)
 {
-    updateLayerRect(updater, visibleLayerRect(), occlusion);
+    updateContentRect(updater, visibleContentRect(), occlusion);
+}
+
+void FakeTiledLayerChromium::setTexturePriorities(const CCPriorityCalculator& calculator)
+{
+    // Ensure there is always a target render surface available. If none has been
+    // set (the layer is an orphan for the test), then just set a surface on itself.
+    bool missingTargetRenderSurface = !renderTarget();
+
+    if (missingTargetRenderSurface)
+        createRenderSurface();
+
+    TiledLayerChromium::setTexturePriorities(calculator);
+
+    if (missingTargetRenderSurface) {
+        clearRenderSurface();
+        setRenderTarget(0);
+    }
 }
 
 FakeTiledLayerWithScaledBounds::FakeTiledLayerWithScaledBounds(CCPrioritizedTextureManager* textureManager)

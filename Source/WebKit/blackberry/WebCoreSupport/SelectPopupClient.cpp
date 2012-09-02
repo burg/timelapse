@@ -144,7 +144,7 @@ String SelectPopupClient::htmlSource()
 
 void SelectPopupClient::setValueAndClosePopup(int, const String& stringValue)
 {
-
+    ASSERT(m_element);
     ASSERT(m_size == stringValue.length());
 
     if (m_size > 0) {
@@ -168,7 +168,8 @@ void SelectPopupClient::setValueAndClosePopup(int, const String& stringValue)
     // Force repaint because we do not send mouse events to the select element
     // and the element doesn't automatically repaint itself.
     m_element->dispatchFormControlChangeEvent();
-    m_element->renderer()->repaint();
+    if (m_element->renderer())
+        m_element->renderer()->repaint();
     closePopup();
 }
 

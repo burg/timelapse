@@ -39,6 +39,7 @@ del interfaceName=HTMLModElement
 details conditional=DETAILS
 dfn interfaceName=HTMLElement
 dir interfaceName=HTMLDirectoryElement
+dialog conditional=DIALOG_ELEMENT, contextConditional=dialogElement
 div
 dl interfaceName=HTMLDListElement
 dt interfaceName=HTMLElement
@@ -67,6 +68,7 @@ i interfaceName=HTMLElement
 iframe interfaceName=HTMLIFrameElement
 image mapToTagName=img
 img interfaceName=HTMLImageElement, constructorNeedsFormElement
+webkitInnerImage interfaceName=HTMLElement, noConstructor
 input constructorNeedsFormElement, constructorNeedsCreatedByParser
 intent conditional=WEB_INTENTS_TAG
 ins interfaceName=HTMLModElement

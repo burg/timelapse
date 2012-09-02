@@ -43,13 +43,9 @@ public:
     static PassRefPtr<WebCore::IDBObjectStoreBackendInterface> create(PassOwnPtr<WebIDBObjectStore>);
     virtual ~IDBObjectStoreBackendProxy();
 
-    virtual String name() const;
-    virtual WebCore::IDBKeyPath keyPath() const;
-    virtual PassRefPtr<WebCore::DOMStringList> indexNames() const;
-    virtual bool autoIncrement() const;
-
     virtual void get(PassRefPtr<WebCore::IDBKeyRange>, PassRefPtr<WebCore::IDBCallbacks>, WebCore::IDBTransactionBackendInterface*, WebCore::ExceptionCode&);
     virtual void put(PassRefPtr<WebCore::SerializedScriptValue>, PassRefPtr<WebCore::IDBKey>, PutMode, PassRefPtr<WebCore::IDBCallbacks>, WebCore::IDBTransactionBackendInterface*, WebCore::ExceptionCode&);
+    virtual void putWithIndexKeys(PassRefPtr<WebCore::SerializedScriptValue>, PassRefPtr<WebCore::IDBKey>, PutMode, PassRefPtr<WebCore::IDBCallbacks>, WebCore::IDBTransactionBackendInterface*, const WTF::Vector<WTF::String>&, const WTF::Vector<IndexKeys>&, WebCore::ExceptionCode&);
     virtual void deleteFunction(PassRefPtr<WebCore::IDBKeyRange>, PassRefPtr<WebCore::IDBCallbacks>, WebCore::IDBTransactionBackendInterface*, WebCore::ExceptionCode&);
     virtual void clear(PassRefPtr<WebCore::IDBCallbacks>, WebCore::IDBTransactionBackendInterface*, WebCore::ExceptionCode&);
 

@@ -19,6 +19,8 @@
 #include "config.h"
 #include "WebPage.h"
 
+#include "AboutData.h"
+#include "AboutTemplate.html.cpp"
 #include "ApplicationCacheStorage.h"
 #include "AutofillManager.h"
 #include "BackForwardController.h"
@@ -48,13 +50,13 @@
 #include "DragClientBlackBerry.h"
 // FIXME: We should be using DumpRenderTreeClient, but I'm not sure where we should
 // create the DRT_BB object. See PR #120355.
-#if ENABLE_DRT
+#if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
 #include "DumpRenderTreeBlackBerry.h"
 #endif
 #include "EditorClientBlackBerry.h"
 #include "FocusController.h"
 #include "FrameLoaderClientBlackBerry.h"
-#if ENABLE_DRT
+#if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
 #include "GeolocationClientMock.h"
 #endif
 #include "GeolocationControllerClientBlackBerry.h"
@@ -155,8 +157,11 @@
 #include <BlackBerryPlatformMouseEvent.h>
 #include <BlackBerryPlatformScreen.h>
 #include <BlackBerryPlatformSettings.h>
+#include <BlackBerryPlatformWebKitCredits.h>
+#include <BuildInformation.h>
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/JSContextRef.h>
+#include <JavaScriptCore/JSStringRef.h>
 #include <SharedPointer.h>
 #include <sys/keycodes.h>
 #include <unicode/ustring.h> // platform ICU
@@ -329,6 +334,7 @@ void WebPage::autofillTextField(const string& item)
 WebPagePrivate::WebPagePrivate(WebPage* webPage, WebPageClient* client, const IntRect& rect)
     : m_webPage(webPage)
     , m_client(client)
+    , m_inspectorClient(0)
     , m_page(0) // Initialized by init.
     , m_mainFrame(0) // Initialized by init.
     , m_currentContextNode(0)
@@ -336,6 +342,7 @@ WebPagePrivate::WebPagePrivate(WebPage* webPage, WebPageClient* client, const In
     , m_visible(false)
     , m_activationState(ActivationActive)
     , m_shouldResetTilesWhenShown(false)
+    , m_shouldZoomToInitialScaleAfterLoadFinished(false)
     , m_userScalable(true)
     , m_userPerformedManualZoom(false)
     , m_userPerformedManualScroll(false)
@@ -403,7 +410,6 @@ WebPagePrivate::WebPagePrivate(WebPage* webPage, WebPageClient* client, const In
     , m_updateDelegatedOverlaysDispatched(false)
     , m_deferredTasksTimer(this, &WebPagePrivate::deferredTasksTimerFired)
     , m_selectPopup(0)
-    , m_parentPopup(0)
     , m_autofillManager(AutofillManager::create(this))
 {
     static bool isInitialized = false;
@@ -453,7 +459,7 @@ WebPagePrivate::~WebPagePrivate()
     delete m_touchEventHandler;
     m_touchEventHandler = 0;
 
-#if ENABLE_DRT
+#if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
     delete m_dumpRenderTree;
     m_dumpRenderTree = 0;
 #endif
@@ -487,9 +493,8 @@ void WebPagePrivate::init(const WebString& pageGroupName)
 #if ENABLE(DRAG_SUPPORT)
     dragClient = new DragClientBlackBerry();
 #endif
-    InspectorClientBlackBerry* inspectorClient = 0;
 #if ENABLE(INSPECTOR)
-    inspectorClient = new InspectorClientBlackBerry(this);
+    m_inspectorClient = new InspectorClientBlackBerry(this);
 #endif
 
     FrameLoaderClientBlackBerry* frameLoaderClient = new FrameLoaderClientBlackBerry();
@@ -499,10 +504,10 @@ void WebPagePrivate::init(const WebString& pageGroupName)
     pageClients.contextMenuClient = contextMenuClient;
     pageClients.editorClient = editorClient;
     pageClients.dragClient = dragClient;
-    pageClients.inspectorClient = inspectorClient;
+    pageClients.inspectorClient = m_inspectorClient;
 
     m_page = new Page(pageClients);
-#if ENABLE_DRT
+#if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
     if (getenv("drtRun")) {
         // In case running in DumpRenderTree mode set the controller to mock provider.
         GeolocationClientMock* mock = new GeolocationClientMock();
@@ -519,7 +524,7 @@ void WebPagePrivate::init(const WebString& pageGroupName)
 #endif
 
 #if ENABLE(BATTERY_STATUS)
-    WebCore::provideBatteryTo(m_page, new WebCore::BatteryClientBlackBerry);
+    WebCore::provideBatteryTo(m_page, new WebCore::BatteryClientBlackBerry(this));
 #endif
 
 #if ENABLE(MEDIA_STREAM)
@@ -567,7 +572,6 @@ void WebPagePrivate::init(const WebString& pageGroupName)
     m_page->settings()->setTextReflowEnabled(m_webSettings->textReflowMode() == WebSettings::TextReflowEnabled);
 #endif
 
-    m_page->settings()->setUseHixie76WebSocketProtocol(false);
     m_page->settings()->setInteractiveFormValidationEnabled(true);
     m_page->settings()->setAllowUniversalAccessFromFileURLs(false);
     m_page->settings()->setAllowFileAccessFromFileURLs(false);
@@ -614,6 +618,84 @@ private:
         webPagePrivate->m_mainFrame->script()->executeIfJavaScriptURL(webPagePrivate->m_cachedManualScript, DoNotReplaceDocumentIfJavaScriptURL);
     }
 };
+
+bool WebPagePrivate::loadAbout(const char* aboutURL)
+{
+    if (strncasecmp(aboutURL, "about:", 6))
+        return false;
+
+    // First 6 chars are "about:".
+    String aboutWhat(aboutURL + 6);
+
+    String result;
+
+    if (equalIgnoringCase(aboutWhat, "credits")) {
+        result.append(writeHeader("Credits"));
+        result.append(String("<style> .about {padding:14px;} </style>"));
+        result.append(String(BlackBerry::Platform::WEBKITCREDITS));
+        result.append(String("</body></html>"));
+    } else if (aboutWhat.startsWith("cache?query=", false)) {
+        BlackBerry::Platform::Client* client = BlackBerry::Platform::Client::get();
+        ASSERT(client);
+        std::string key(aboutWhat.substring(12, aboutWhat.length() - 12).utf8().data()); // 12 is length of "cache?query=".
+        result.append(String("<html><head><title>BlackBerry Browser Disk Cache</title></head><body>"));
+        result.append(String(key.data()));
+        result.append(String("<hr>"));
+        result.append(String(client->generateHtmlFragmentForCacheHeaders(key).data()));
+        result.append(String("</body></html>"));
+    } else if (equalIgnoringCase(aboutWhat, "cache")) {
+        BlackBerry::Platform::Client* client = BlackBerry::Platform::Client::get();
+        ASSERT(client);
+        result.append(String("<html><head><title>BlackBerry Browser Disk Cache</title></head><body>"));
+        result.append(String(client->generateHtmlFragmentForCacheKeys().data()));
+        result.append(String("</body></html>"));
+#if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
+    } else if (equalIgnoringCase(aboutWhat, "cache/disable")) {
+        BlackBerry::Platform::Client* client = BlackBerry::Platform::Client::get();
+        ASSERT(client);
+        client->setDiskCacheEnabled(false);
+        result.append(String("<html><head><title>BlackBerry Browser Disk Cache</title></head><body>Http disk cache is disabled.</body></html>"));
+    } else if (equalIgnoringCase(aboutWhat, "cache/enable")) {
+        BlackBerry::Platform::Client* client = BlackBerry::Platform::Client::get();
+        ASSERT(client);
+        client->setDiskCacheEnabled(true);
+        result.append(String("<html><head><title>BlackBerry Browser Disk Cache</title></head><body>Http disk cache is enabled.</body></html>"));
+    } else if (equalIgnoringCase(aboutWhat, "cookie")) {
+        result.append(String("<html><head><title>BlackBerry Browser cookie information</title></head><body>"));
+        result.append(cookieManager().generateHtmlFragmentForCookies());
+        result.append(String("</body></html>"));
+    } else if (equalIgnoringCase(aboutWhat, "version")) {
+        result.append(writeHeader("Version"));
+        result.append(String("<div class='box'><div class='box-title'>Build Time</div><br>"));
+        result.append(String(BlackBerry::Platform::BUILDTIME));
+        result.append(String("</div><br><div style='font-size:10px;text-align:center;'>Also see the <A href='about:build'>build information</A>.</body></html>"));
+    } else if (BlackBerry::Platform::debugSetting() > 0 && equalIgnoringCase(aboutWhat, "config")) {
+        result = configPage();
+    } else if (BlackBerry::Platform::debugSetting() > 0 && equalIgnoringCase(aboutWhat, "build")) {
+        result.append(writeHeader("Build"));
+        result.append(String("<div class='box'><div class='box-title'>Basic</div><table>"));
+        result.append(String("<tr><td>Built On:  </td><td>"));
+        result.append(String(BlackBerry::Platform::BUILDCOMPUTER));
+        result.append(String("</td></tr>"));
+        result.append(String("<tr><td>Build User:  </td><td>"));
+        result.append(String(BlackBerry::Platform::BUILDUSER));
+        result.append(String("</td></tr>"));
+        result.append(String("<tr><td>Build Time:  </td><td>"));
+        result.append(String(BlackBerry::Platform::BUILDTIME));
+        result.append(String("</table></div><br>"));
+        result.append(String(BlackBerry::Platform::BUILDINFO_WEBKIT));
+        result.append(String(BlackBerry::Platform::BUILDINFO_PLATFORM));
+        result.append(String(BlackBerry::Platform::BUILDINFO_LIBWEBVIEW));
+        result.append(String("</body></html>"));
+    } else if (equalIgnoringCase(aboutWhat, "memory")) {
+        result = memoryPage();
+#endif
+    } else
+        return false;
+
+    loadString(result.latin1().data(), aboutURL, "text/html");
+    return true;
+}
 
 void WebPagePrivate::load(const char* url, const char* networkToken, const char* method, Platform::NetworkRequest::CachePolicy cachePolicy, const char* data, size_t dataLength, const char* const* headers, size_t headersLength, bool isInitial, bool mustHandleInternally, bool forceDownload, const char* overrideContentType, const char* suggestedSaveName)
 {
@@ -665,6 +747,8 @@ void WebPagePrivate::load(const char* url, const char* networkToken, const char*
 
 void WebPage::load(const char* url, const char* networkToken, bool isInitial)
 {
+    if (d->loadAbout(url))
+        return;
     d->load(url, networkToken, "GET", Platform::NetworkRequest::UseProtocolCachePolicy, 0, 0, 0, 0, isInitial, false);
 }
 
@@ -849,6 +933,87 @@ bool WebPage::executeJavaScriptInIsolatedWorld(const char* script, JavaScriptDat
     return d->executeJavaScriptInIsolatedWorld(sourceCode, returnType, returnValue);
 }
 
+bool WebPage::executeJavaScriptFunction(const std::vector<std::string> &function, const std::vector<std::string> &args, JavaScriptDataType& returnType, WebString& returnValue)
+{
+    if (!d->m_mainFrame)
+        return false;
+    JSC::Bindings::RootObject* root = d->m_mainFrame->script()->bindingRootObject();
+    if (!root)
+        return false;
+    JSC::ExecState* exec = root->globalObject()->globalExec();
+    JSGlobalContextRef ctx = toGlobalRef(exec);
+
+    WTF::Vector<JSStringRef> argList(args.size());
+    WTF::Vector<JSValueRef> argListRef(args.size());
+    for (unsigned i = 0; i < args.size(); ++i) {
+        JSStringRef str = JSStringCreateWithUTF8CString(args[i].c_str());
+        argList[i] = str;
+        JSValueRef strRef = JSValueMakeString(ctx, str);
+        argListRef[i] = strRef;
+    }
+
+    JSValueRef windowObjectValue = windowObject();
+    JSObjectRef obj = JSValueToObject(ctx, windowObjectValue, 0);
+    JSObjectRef thisObject = obj;
+    for (unsigned i = 0; i < function.size(); ++i) {
+        JSStringRef str = JSStringCreateWithUTF8CString(function[i].c_str());
+        thisObject = obj;
+        obj = JSValueToObject(ctx, JSObjectGetProperty(ctx, obj, str, 0), 0);
+        JSStringRelease(str);
+        if (!obj)
+            break;
+    }
+
+    JSObjectRef functionObject = obj;
+    JSValueRef result = 0;
+    if (functionObject && thisObject)
+        result = JSObjectCallAsFunction(ctx, functionObject, thisObject, args.size(), argListRef.data(), 0);
+
+    for (unsigned i = 0; i < args.size(); ++i)
+        JSStringRelease(argList[i]);
+
+    JSC::JSValue value = toJS(exec, result);
+
+    if (!value) {
+        returnType = JSException;
+        return false;
+    }
+
+    JSType type = JSValueGetType(ctx, result);
+
+    switch (type) {
+    case kJSTypeNull:
+        returnType = JSNull;
+        break;
+    case kJSTypeBoolean:
+        returnType = JSBoolean;
+        break;
+    case kJSTypeNumber:
+        returnType = JSNumber;
+        break;
+    case kJSTypeString:
+        returnType = JSString;
+        break;
+    case kJSTypeObject:
+        returnType = JSObject;
+        break;
+    case kJSTypeUndefined:
+    default:
+        returnType = JSUndefined;
+        break;
+    }
+
+    if (returnType == JSBoolean || returnType == JSNumber || returnType == JSString || returnType == JSObject) {
+        JSStringRef stringRef = JSValueToStringCopy(ctx, result, 0);
+        size_t bufferSize = JSStringGetMaximumUTF8CStringSize(stringRef);
+        WTF::Vector<char> buffer(bufferSize);
+        JSStringGetUTF8CString(stringRef, buffer.data(), bufferSize);
+        returnValue = WebString::fromUtf8(buffer.data());
+    }
+
+    return true;
+}
+
 void WebPagePrivate::stopCurrentLoad()
 {
     // This function should contain all common code triggered by WebPage::load
@@ -967,10 +1132,14 @@ void WebPagePrivate::setLoadState(LoadState state)
                     Platform::createMethodCallMessage(&WebPagePrivate::destroyLayerResources, this));
             }
 #endif
+            // Suspend screen update to avoid ui thread blitting while resetting backingstore.
+            m_backingStore->d->suspendScreenAndBackingStoreUpdates();
+
             m_previousContentsSize = IntSize();
             m_backingStore->d->resetRenderQueue();
             m_backingStore->d->resetTiles(true /* resetBackground */);
             m_backingStore->d->setScrollingOrZooming(false, false /* shouldBlit */);
+            m_shouldZoomToInitialScaleAfterLoadFinished = false;
             m_userPerformedManualZoom = false;
             m_userPerformedManualScroll = false;
             m_shouldUseFixedDesktopMode = false;
@@ -995,14 +1164,13 @@ void WebPagePrivate::setLoadState(LoadState state)
                 frameLoadType = m_mainFrame->loader()->loadType();
             if (!((m_didRestoreFromPageCache && documentHasViewportArguments) || (frameLoadType == FrameLoadTypeReload || frameLoadType == FrameLoadTypeReloadFromOrigin))) {
                 m_viewportArguments = ViewportArguments();
+                m_userScalable = m_webSettings->isUserScalable();
+                resetScales();
 
                 // At the moment we commit a new load, set the viewport arguments
                 // to any fallback values. If there is a meta viewport in the
                 // content it will overwrite the fallback arguments soon.
                 dispatchViewportPropertiesDidChange(m_userViewportArguments);
-
-                m_userScalable = m_webSettings->isUserScalable();
-                resetScales();
             } else {
                 IntSize virtualViewport = recomputeVirtualViewportFromViewportArguments();
                 m_webPage->setVirtualViewportSize(virtualViewport.width(), virtualViewport.height());
@@ -1037,6 +1205,8 @@ void WebPagePrivate::setLoadState(LoadState state)
             // we report to the client could make our current scroll position invalid.
             setScrollPosition(IntPoint::zero());
             notifyTransformedScrollChanged();
+
+            m_backingStore->d->resumeScreenAndBackingStoreUpdates(BackingStore::None);
 
             // Paints the visible backingstore as white. Note it is important we do
             // this strictly after re-setting the scroll position to origin and resetting
@@ -1088,8 +1258,6 @@ bool WebPagePrivate::shouldZoomAboutPoint(double scale, const FloatPoint&, bool 
     *clampedScale = scale;
 
     if (currentScale() == scale) {
-        // Make sure backingstore updates resume from pinch zoom in the case where the final zoom level doesn't change.
-        m_backingStore->d->resumeScreenAndBackingStoreUpdates(BackingStore::None);
         m_client->zoomChanged(m_webPage->isMinZoomed(), m_webPage->isMaxZoomed(), !shouldZoomOnEscape(), currentScale());
         return false;
     }
@@ -1185,7 +1353,6 @@ bool WebPagePrivate::zoomAboutPoint(double unclampedScale, const FloatPoint& anc
 
     // Clear window to make sure there are no artifacts.
     if (shouldRender) {
-        m_backingStore->d->clearWindow();
         // Resume all screen updates to the backingstore and render+blit visible contents to screen.
         m_backingStore->d->resumeScreenAndBackingStoreUpdates(BackingStore::RenderAndBlit);
     } else {
@@ -1282,6 +1449,7 @@ void WebPagePrivate::unscheduleZoomAboutPoint()
 void WebPagePrivate::zoomAboutPointTimerFired(Timer<WebPagePrivate>*)
 {
     zoomAboutPoint(m_delayedZoomArguments.scale, m_delayedZoomArguments.anchor, m_delayedZoomArguments.enforceScaleClamping, m_delayedZoomArguments.forceRendering);
+    m_backingStore->d->resumeScreenAndBackingStoreUpdates(m_delayedZoomArguments.forceRendering ? BackingStore::RenderAndBlit : BackingStore::None);
 }
 
 void WebPagePrivate::setNeedsLayout()
@@ -1615,9 +1783,10 @@ void WebPagePrivate::layoutFinished()
 
     m_nestedLayoutFinishedCount++;
 
-    if (shouldZoomToInitialScaleOnLoad())
+    if (shouldZoomToInitialScaleOnLoad()) {
         zoomToInitialScaleOnLoad();
-    else if (loadState() != None)
+        m_shouldZoomToInitialScaleAfterLoadFinished = false;
+    } else if (loadState() != None)
         notifyTransformedContentsSizeChanged();
 
     m_nestedLayoutFinishedCount--;
@@ -1650,19 +1819,6 @@ void WebPagePrivate::layoutFinished()
             }
         }
     }
-}
-
-bool WebPagePrivate::shouldZoomToInitialScaleOnLoad() const
-{
-    // For FrameLoadTypeSame or FrameLoadTypeStandard load, the layout timer can be fired which can call dispatchDidFirstVisuallyNonEmptyLayout()
-    // after the load Finished state, in which case the web page will have no chance to zoom to initial scale. So we should give it a chance,
-    // otherwise the scale of the web page can be incorrect.
-    FrameLoadType frameLoadType = FrameLoadTypeStandard;
-    if (m_mainFrame && m_mainFrame->loader())
-        frameLoadType = m_mainFrame->loader()->loadType();
-    if (m_loadState == Committed || (m_loadState == Finished && (frameLoadType == FrameLoadTypeSame || frameLoadType == FrameLoadTypeStandard)))
-        return true;
-    return false;
 }
 
 void WebPagePrivate::zoomToInitialScaleOnLoad()
@@ -2225,7 +2381,7 @@ bool WebPagePrivate::authenticationChallenge(const KURL& url, const ProtectionSp
     WebString username;
     WebString password;
 
-#if ENABLE_DRT
+#if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
     if (m_dumpRenderTree)
         return m_dumpRenderTree->didReceiveAuthenticationChallenge(inputCredential);
 #endif
@@ -2251,6 +2407,11 @@ bool WebPagePrivate::authenticationChallenge(const KURL& url, const ProtectionSp
 PageClientBlackBerry::SaveCredentialType WebPagePrivate::notifyShouldSaveCredential(bool isNew)
 {
     return static_cast<PageClientBlackBerry::SaveCredentialType>(m_client->notifyShouldSaveCredential(isNew));
+}
+
+void WebPagePrivate::syncProxyCredential(const WebCore::Credential& credential)
+{
+    m_client->syncProxyCredential(credential.user().utf8().data(), credential.password().utf8().data());
 }
 
 void WebPagePrivate::notifyPopupAutofillDialog(const Vector<String>& candidates, const WebCore::IntRect& screenRect)
@@ -2304,9 +2465,6 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
         }
     }
 
-    if (!nodeAllowSelectionOverride && !node->canStartSelection())
-        context.resetFlag(Platform::WebContext::IsSelectable);
-
     if (node->isHTMLElement()) {
         HTMLImageElement* imageElement = 0;
         HTMLMediaElement* mediaElement = 0;
@@ -2350,9 +2508,18 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
             context.setText(curText->wholeText().utf8().data());
     }
 
+    bool canStartSelection = node->canStartSelection();
+
     if (node->isElementNode()) {
         Element* element = static_cast<Element*>(node->shadowAncestorNode());
         if (DOMSupport::isTextBasedContentEditableElement(element)) {
+            if (!canStartSelection) {
+                // Input fields host node is by spec non-editable unless the field itself has content editable enabled.
+                // Enable selection if the shadow tree for the input field is selectable.
+                Node* nodeUnderFinger = m_touchEventHandler->lastFatFingersResult().isValid() ? m_touchEventHandler->lastFatFingersResult().node(FatFingersResult::ShadowContentAllowed) : 0;
+                if (nodeUnderFinger)
+                    canStartSelection = nodeUnderFinger->canStartSelection();
+            }
             context.setFlag(Platform::WebContext::IsInput);
             if (element->hasTagName(HTMLNames::inputTag))
                 context.setFlag(Platform::WebContext::IsSingleLine);
@@ -2364,6 +2531,9 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
                 context.setText(elementText.utf8().data());
         }
     }
+
+    if (!nodeAllowSelectionOverride && !canStartSelection)
+        context.resetFlag(Platform::WebContext::IsSelectable);
 
     if (node->isFocusable())
         context.setFlag(Platform::WebContext::IsFocusable);
@@ -2989,20 +3159,25 @@ IntRect WebPagePrivate::blockZoomRectForNode(Node* node)
     clipToTransformedContentsRect(blockRect);
 
 #if DEBUG_BLOCK_ZOOM
-    // Re-paint the backingstore to screen to erase other annotations.
-    m_backingStore->d->resumeScreenAndBackingStoreUpdates(BackingStore::Blit);
+    if (!m_backingStore->d->isSuspended()) {
+        // Re-paint the backingstore to screen to erase other annotations.
+        if (m_backingStore->d->shouldDirectRenderingToWindow())
+            m_backingStore->d->renderVisibleContents();
+        else
+            m_backingStore->d->blitVisibleContents();
 
-    // Render a black square over the calculated block and a gray square over the original block for visual inspection.
-    originalRect = mapToTransformed(originalRect);
-    clipToTransformedContentsRect(originalRect);
-    IntRect renderRect = mapFromTransformedContentsToTransformedViewport(blockRect);
-    IntRect originalRenderRect = mapFromTransformedContentsToTransformedViewport(originalRect);
-    IntSize viewportSize = transformedViewportSize();
-    renderRect.intersect(IntRect(0, 0, viewportSize.width(), viewportSize.height()));
-    originalRenderRect.intersect(IntRect(0, 0, viewportSize.width(), viewportSize.height()));
-    m_backingStore->d->clearWindow(renderRect, 0, 0, 0);
-    m_backingStore->d->clearWindow(originalRenderRect, 120, 120, 120);
-    m_backingStore->d->invalidateWindow(renderRect);
+        // Render a black square over the calculated block and a gray square over the original block for visual inspection.
+        originalRect = mapToTransformed(originalRect);
+        clipToTransformedContentsRect(originalRect);
+        IntRect renderRect = mapFromTransformedContentsToTransformedViewport(blockRect);
+        IntRect originalRenderRect = mapFromTransformedContentsToTransformedViewport(originalRect);
+        IntSize viewportSize = transformedViewportSize();
+        renderRect.intersect(IntRect(0, 0, viewportSize.width(), viewportSize.height()));
+        originalRenderRect.intersect(IntRect(0, 0, viewportSize.width(), viewportSize.height()));
+        m_backingStore->d->clearWindow(renderRect, 0, 0, 0);
+        m_backingStore->d->clearWindow(originalRenderRect, 120, 120, 120);
+        m_backingStore->d->invalidateWindow(renderRect);
+    }
 #endif
 
     return blockRect;
@@ -3084,7 +3259,6 @@ void WebPagePrivate::zoomBlock()
     }
 
     notifyTransformChanged();
-    m_backingStore->d->clearWindow();
     m_backingStore->d->resumeScreenAndBackingStoreUpdates(BackingStore::RenderAndBlit);
     m_client->zoomChanged(m_webPage->isMinZoomed(), m_webPage->isMaxZoomed(), !shouldZoomOnEscape(), currentScale());
 }
@@ -3456,6 +3630,15 @@ IntSize WebPagePrivate::recomputeVirtualViewportFromViewportArguments()
     int deviceHeight = Platform::Graphics::Screen::primaryScreen()->height();
     ViewportAttributes result = computeViewportAttributes(m_viewportArguments, desktopWidth, deviceWidth, deviceHeight, m_webSettings->devicePixelRatio(), m_defaultLayoutSize);
     m_page->setDeviceScaleFactor(result.devicePixelRatio);
+
+    setUserScalable(m_userScalable && result.userScalable);
+    if (result.initialScale > 0)
+        setInitialScale(result.initialScale * result.devicePixelRatio);
+    if (result.minimumScale > 0)
+        setMinimumScale(result.minimumScale * result.devicePixelRatio);
+    if (result.maximumScale > 0)
+        setMaximumScale(result.maximumScale * result.devicePixelRatio);
+
     return IntSize(result.layoutSize.width(), result.layoutSize.height());
 }
 
@@ -3497,14 +3680,6 @@ void WebPagePrivate::dispatchViewportPropertiesDidChange(const ViewportArguments
         m_viewportArguments.width = ViewportArguments::ValueDeviceWidth;
     if (!m_viewportArguments.height)
         m_viewportArguments.height = ViewportArguments::ValueDeviceHeight;
-
-    setUserScalable(arguments.userScalable == ViewportArguments::ValueAuto ? true : arguments.userScalable);
-    if (arguments.initialScale > 0)
-        setInitialScale(arguments.initialScale);
-    if (arguments.minimumScale > 0)
-        setMinimumScale(arguments.minimumScale);
-    if (arguments.maximumScale > 0)
-        setMaximumScale(arguments.maximumScale);
 
     IntSize virtualViewport = recomputeVirtualViewportFromViewportArguments();
     m_webPage->setVirtualViewportSize(virtualViewport.width(), virtualViewport.height());
@@ -4033,37 +4208,7 @@ bool WebPagePrivate::handleWheelEvent(PlatformWheelEvent& wheelEvent)
 bool WebPage::touchEvent(const Platform::TouchEvent& event)
 {
 #if DEBUG_TOUCH_EVENTS
-    switch (event.m_type) {
-    case Platform::TouchEvent::TouchEnd:
-        Platform::log(Platform::LogLevelCritical, "WebPage::touchEvent Touch End");
-        break;
-    case Platform::TouchEvent::TouchStart:
-        Platform::log(Platform::LogLevelCritical, "WebPage::touchEvent Touch Start");
-        break;
-    case Platform::TouchEvent::TouchMove:
-        Platform::log(Platform::LogLevelCritical, "WebPage::touchEvent Touch Move");
-        break;
-    case Platform::TouchEvent::TouchCancel:
-        Platform::log(Platform::LogLevelCritical, "WebPage::touchCancel Touch Cancel");
-        break;
-    }
-
-    for (unsigned i = 0; i < event.m_points.size(); i++) {
-        switch (event.m_points[i].m_state) {
-        case Platform::TouchPoint::TouchPressed:
-            Platform::log(Platform::LogLevelCritical, "WebPage::touchEvent %d Touch Pressed (%d, %d)", event.m_points[i].m_id, event.m_points[i].m_pos.x(), event.m_points[i].m_pos.y());
-            break;
-        case Platform::TouchPoint::TouchReleased:
-            Platform::log(Platform::LogLevelCritical, "WebPage::touchEvent %d Touch Released (%d, %d)", event.m_points[i].m_id, event.m_points[i].m_pos.x(), event.m_points[i].m_pos.y());
-            break;
-        case Platform::TouchPoint::TouchMoved:
-            Platform::log(Platform::LogLevelCritical, "WebPage::touchEvent %d Touch Moved (%d, %d)", event.m_points[i].m_id, event.m_points[i].m_pos.x(), event.m_points[i].m_pos.y());
-            break;
-        case Platform::TouchPoint::TouchStationary:
-            Platform::log(Platform::LogLevelCritical, "WebPage::touchEvent %d Touch Stationary (%d, %d)", event.m_points[i].m_id, event.m_points[i].m_pos.x(), event.m_points[i].m_pos.y());
-            break;
-        }
-    }
+    BBLOG(LogLevelCritical, "%s", event.toString().c_str());
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
@@ -5167,7 +5312,7 @@ bool WebPage::findNextString(const char* text, bool forward, bool caseSensitive,
 
 void WebPage::runLayoutTests()
 {
-#if ENABLE_DRT
+#if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
     // FIXME: do we need API to toggle this?
     d->m_page->settings()->setDeveloperExtrasEnabled(true);
 
@@ -5659,7 +5804,10 @@ void WebPage::onCertificateStoreLocationSet(const WebString& caPath)
 
 void WebPage::enableWebInspector()
 {
-    d->m_page->inspectorController()->connectFrontend();
+    if (!d->m_inspectorClient)
+        return;
+
+    d->m_page->inspectorController()->connectFrontend(d->m_inspectorClient);
     d->m_page->settings()->setDeveloperExtrasEnabled(true);
 }
 
@@ -6083,7 +6231,7 @@ void WebPagePrivate::destroyCompositor()
 {
     // m_compositor is a RefPtr, so it may live on beyond this point.
     // Disconnect the compositor from us
-    m_compositor->setPage(0);
+    m_compositor->detach();
     m_compositor.clear();
     m_ownedContext.clear();
 }
@@ -6572,11 +6720,6 @@ PagePopupBlackBerry* WebPage::popup()
     return d->m_selectPopup;
 }
 
-void WebPagePrivate::setParentPopup(PagePopupBlackBerry* webPopup)
-{
-    m_parentPopup = webPopup;
-}
-
 void WebPagePrivate::setInspectorOverlayClient(WebCore::InspectorOverlay::InspectorOverlayClient* inspectorOverlayClient)
 {
     if (inspectorOverlayClient) {
@@ -6595,5 +6738,17 @@ void WebPagePrivate::setInspectorOverlayClient(WebCore::InspectorOverlay::Inspec
     }
 }
 
+void WebPagePrivate::applySizeOverride(int overrideWidth, int overrideHeight)
+{
+    m_client->requestUpdateViewport(overrideWidth, overrideHeight);
+}
+
+void WebPagePrivate::setTextZoomFactor(float textZoomFactor)
+{
+    if (!m_mainFrame)
+        return;
+
+    m_mainFrame->setTextZoomFactor(textZoomFactor);
+}
 }
 }

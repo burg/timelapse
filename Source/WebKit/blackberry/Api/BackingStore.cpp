@@ -77,9 +77,6 @@ namespace WebKit {
 
 const int s_renderTimerTimeout = 1.0;
 WebPage* BackingStorePrivate::s_currentBackingStoreOwner = 0;
-Platform::Graphics::Buffer* BackingStorePrivate::s_overScrollImage = 0;
-std::string BackingStorePrivate::s_overScrollImagePath;
-Platform::IntSize BackingStorePrivate::s_overScrollImageSize;
 
 typedef std::pair<int, int> Divisor;
 typedef Vector<Divisor> DivisorList;
@@ -199,8 +196,9 @@ Platform::IntSize BackingStoreGeometry::backingStoreSize() const
 }
 
 BackingStorePrivate::BackingStorePrivate()
-    : m_suspendScreenUpdates(false)
-    , m_suspendBackingStoreUpdates(false)
+    : m_suspendScreenUpdates(0)
+    , m_suspendBackingStoreUpdates(0)
+    , m_resumeOperation(BackingStore::None)
     , m_suspendRenderJobs(false)
     , m_suspendRegularRenderJobs(false)
     , m_isScrollingOrZooming(false)
@@ -282,12 +280,18 @@ bool BackingStorePrivate::isOpenGLCompositing() const
 
 void BackingStorePrivate::suspendScreenAndBackingStoreUpdates()
 {
-    m_suspendBackingStoreUpdates = true;
+    if (m_suspendScreenUpdates) {
+        BlackBerry::Platform::log(BlackBerry::Platform::LogLevelInfo,
+            "Screen and backingstore already suspended, increasing suspend counter.");
+    }
+
+    ++m_suspendBackingStoreUpdates;
 
     // Make sure the user interface thread gets the message before we proceed
     // because blitContents can be called from this thread and it must honor
     // this flag.
-    m_suspendScreenUpdates = true;
+    ++m_suspendScreenUpdates;
+
     BlackBerry::Platform::userInterfaceThreadMessageClient()->syncToCurrentMessage();
 
 #if USE(ACCELERATED_COMPOSITING)
@@ -297,14 +301,42 @@ void BackingStorePrivate::suspendScreenAndBackingStoreUpdates()
 
 void BackingStorePrivate::resumeScreenAndBackingStoreUpdates(BackingStore::ResumeUpdateOperation op)
 {
-    m_suspendBackingStoreUpdates = false;
+    ASSERT(m_suspendScreenUpdates);
+    ASSERT(m_suspendBackingStoreUpdates);
+
+    // Both variables are similar except for the timing of setting them.
+    ASSERT(m_suspendScreenUpdates == m_suspendBackingStoreUpdates);
+
+    if (!m_suspendScreenUpdates || !m_suspendBackingStoreUpdates) {
+        BlackBerry::Platform::logAlways(BlackBerry::Platform::LogLevelCritical,
+            "Call mismatch: Screen and backingstore haven't been suspended, therefore won't resume!");
+        return;
+    }
+
+    // Out of all nested resume calls, resume with the maximum-impact operation.
+    if (op == BackingStore::RenderAndBlit
+        || (m_resumeOperation == BackingStore::None && op == BackingStore::Blit))
+        m_resumeOperation = op;
+
+    if (m_suspendScreenUpdates >= 2 && m_suspendBackingStoreUpdates >= 2) { // we're still suspended
+        BlackBerry::Platform::log(BlackBerry::Platform::LogLevelInfo,
+            "Screen and backingstore still suspended, decreasing suspend counter.");
+        --m_suspendBackingStoreUpdates;
+        --m_suspendScreenUpdates;
+        return;
+    }
+
+    --m_suspendBackingStoreUpdates;
+
+    op = m_resumeOperation;
+    m_resumeOperation = BackingStore::None;
 
 #if USE(ACCELERATED_COMPOSITING)
     if (op != BackingStore::None) {
         if (isOpenGLCompositing() && !isActive()) {
             m_webPage->d->setCompositorDrawsRootLayer(true);
             m_webPage->d->setNeedsOneShotDrawingSynchronization();
-            m_suspendScreenUpdates = false;
+            --m_suspendScreenUpdates;
             BlackBerry::Platform::userInterfaceThreadMessageClient()->syncToCurrentMessage();
             return;
         }
@@ -325,7 +357,7 @@ void BackingStorePrivate::resumeScreenAndBackingStoreUpdates(BackingStore::Resum
     // Make sure the user interface thread gets the message before we proceed
     // because blitContents can be called from the user interface thread and
     // it must honor this flag.
-    m_suspendScreenUpdates = false;
+    --m_suspendScreenUpdates;
     BlackBerry::Platform::userInterfaceThreadMessageClient()->syncToCurrentMessage();
 
     // Do some blitting if necessary.
@@ -1219,52 +1251,6 @@ void BackingStorePrivate::copyPreviousContentsToBackSurfaceOfTile(const Platform
     }
 }
 
-bool BackingStorePrivate::ensureOverScrollImage()
-{
-    std::string path = m_webPage->settings()->overScrollImagePath().utf8();
-    if (path == "")
-        return false;
-
-    if (s_overScrollImage && path == s_overScrollImagePath)
-        return true;
-
-    std::string imagePath = Platform::Client::get()->getApplicationLocalDirectory() + path;
-
-    SkBitmap bitmap;
-    if (!SkImageDecoder::DecodeFile(imagePath.c_str(), &bitmap)) {
-        BlackBerry::Platform::log(BlackBerry::Platform::LogLevelCritical,
-                    "BackingStorePrivate::ensureOverScrollImage could not decode overscroll image: %s", imagePath.c_str());
-        return false;
-    }
-
-    destroyBuffer(s_overScrollImage);
-    s_overScrollImage = createBuffer(Platform::IntSize(bitmap.width(), bitmap.height()), Platform::Graphics::TemporaryBuffer);
-
-    SkCanvas* canvas = Platform::Graphics::lockBufferDrawable(s_overScrollImage);
-    if (!canvas) {
-        destroyBuffer(s_overScrollImage);
-        s_overScrollImage = 0;
-        return false;
-    }
-
-    SkPaint paint;
-    paint.setXfermodeMode(SkXfermode::kSrc_Mode);
-    paint.setFlags(SkPaint::kAntiAlias_Flag);
-    paint.setFilterBitmap(true);
-
-    SkRect rect = SkRect::MakeXYWH(0, 0, bitmap.width(), bitmap.height());
-    canvas->save();
-    canvas->drawBitmapRect(bitmap, 0, rect, &paint);
-    canvas->restore();
-
-    Platform::Graphics::releaseBufferDrawable(s_overScrollImage);
-
-    s_overScrollImageSize = Platform::IntSize(bitmap.width(), bitmap.height());
-    s_overScrollImagePath = path;
-
-    return true;
-}
-
 void BackingStorePrivate::paintDefaultBackground(const Platform::IntRect& contents,
                                                  const WebCore::TransformationMatrix& transformation,
                                                  bool flush)
@@ -1273,11 +1259,8 @@ void BackingStorePrivate::paintDefaultBackground(const Platform::IntRect& conten
     Platform::IntPoint origin = contents.location();
     Platform::IntRect contentsClipped = contents;
 
-
     // We have to paint the default background in the case of overzoom and
     // make sure it is invalidated.
-    Color color(m_webPage->settings()->overZoomColor());
-
     Platform::IntRectRegion overScrollRegion
             = Platform::IntRectRegion::subtractRegions(Platform::IntRect(contentsClipped), contentsRect);
 
@@ -1294,21 +1277,13 @@ void BackingStorePrivate::paintDefaultBackground(const Platform::IntRect& conten
             overScrollRect.intersect(Platform::IntRect(Platform::IntPoint(0, 0), surfaceSize()));
         }
 
-        if (ensureOverScrollImage()) {
-            // Tile the image on the window region.
-            Platform::IntRect dstRect;
-            for (int y = overScrollRect.y(); y < overScrollRect.y() + overScrollRect.height(); y += dstRect.height()) {
-                for (int x = overScrollRect.x(); x < overScrollRect.x() + overScrollRect.width(); x += dstRect.width()) {
-                    Platform::IntRect imageRect = Platform::IntRect(Platform::IntPoint(x - (x % s_overScrollImageSize.width()),
-                            y - (y % s_overScrollImageSize.height())), s_overScrollImageSize);
-                    dstRect = imageRect;
-                    dstRect.intersect(overScrollRect);
-                    Platform::IntRect srcRect = Platform::IntRect(x - imageRect.x(), y - imageRect.y(), dstRect.width(), dstRect.height());
-                    blitToWindow(dstRect, s_overScrollImage, srcRect, false, 255);
-                }
-            }
-        } else
+        if (m_webPage->settings()->isEnableDefaultOverScrollBackground()) {
+            fillWindow(BlackBerry::Platform::Graphics::DefaultBackgroundPattern,
+                overScrollRect, overScrollRect.location(), 1.0 /*contentsScale*/);
+        } else {
+            Color color(m_webPage->settings()->overScrollColor());
             clearWindow(overScrollRect, color.red(), color.green(), color.blue(), color.alpha());
+        }
     }
 }
 
@@ -1426,7 +1401,8 @@ void BackingStorePrivate::blitContents(const Platform::IntRect& dstRect,
 #if DEBUG_CHECKERBOARD
                 blitCheckered = true;
 #endif
-                checkerWindow(dstRect, checkeredRects.at(i).location(), transformation.a());
+                fillWindow(BlackBerry::Platform::Graphics::CheckerboardPattern,
+                    dstRect, checkeredRects.at(i).location(), transformation.a());
             }
         }
 
@@ -1485,7 +1461,8 @@ void BackingStorePrivate::blitContents(const Platform::IntRect& dstRect,
 #if DEBUG_CHECKERBOARD
                 blitCheckered = true;
 #endif
-                checkerWindow(dirtyRectT, contentsOrigin, transformation.a());
+                fillWindow(BlackBerry::Platform::Graphics::CheckerboardPattern,
+                    dirtyRectT, contentsOrigin, transformation.a());
             }
 
             // Blit the visible buffer here if we have visible zoom jobs.
@@ -1890,10 +1867,6 @@ void BackingStorePrivate::clearVisibleZoom()
 
 void BackingStorePrivate::resetTiles(bool resetBackground)
 {
-    // We need to reset m_hasBlitJobs to prevent ui thread from
-    // drawing checkerboard unintentionally. See RIM PR #161867.
-    m_hasBlitJobs = false;
-
     BackingStoreGeometry* currentState = frontState();
     TileMap currentMap = currentState->tileMap();
 
@@ -2511,9 +2484,10 @@ void BackingStorePrivate::blitToWindow(const Platform::IntRect& dstRect,
 
 }
 
-void BackingStorePrivate::checkerWindow(const Platform::IntRect& dstRect,
-                                        const Platform::IntPoint& contentsOrigin,
-                                        double contentsScale)
+void BackingStorePrivate::fillWindow(Platform::Graphics::FillPattern pattern,
+                                     const Platform::IntRect& dstRect,
+                                     const Platform::IntPoint& contentsOrigin,
+                                     double contentsScale)
 {
     ASSERT(BlackBerry::Platform::userInterfaceThreadMessageClient()->isCurrentThread());
 
@@ -2523,11 +2497,9 @@ void BackingStorePrivate::checkerWindow(const Platform::IntRect& dstRect,
     BlackBerry::Platform::Graphics::Buffer* dstBuffer = buffer();
     ASSERT(dstBuffer);
     if (!dstBuffer)
-        BlackBerry::Platform::log(BlackBerry::Platform::LogLevelWarn, "Empty window buffer, couldn't checkerWindow");
+        BlackBerry::Platform::log(BlackBerry::Platform::LogLevelWarn, "Empty window buffer, couldn't fillWindow");
 
-    Color color(m_webPage->settings()->backgroundColor());
-    unsigned char alpha = color.alpha();
-    BlackBerry::Platform::Graphics::checkerBuffer(dstBuffer, dstRect, contentsOrigin, contentsScale, alpha);
+    BlackBerry::Platform::Graphics::fillBuffer(dstBuffer, pattern, dstRect, contentsOrigin, contentsScale);
 }
 
 void BackingStorePrivate::invalidateWindow()
@@ -2581,30 +2553,6 @@ void BackingStorePrivate::invalidateWindow(const Platform::IntRect& dst)
     m_currentWindowBackBuffer = (m_currentWindowBackBuffer + 1) % 2;
     if (Window* window = m_webPage->client()->window())
         window->post(dstRect);
-}
-
-void BackingStorePrivate::clearWindow()
-{
-    if (!BlackBerry::Platform::userInterfaceThreadMessageClient()->isCurrentThread() && !shouldDirectRenderingToWindow()) {
-        typedef void (BlackBerry::WebKit::BackingStorePrivate::*FunctionType)();
-        BlackBerry::Platform::userInterfaceThreadMessageClient()->dispatchMessage(
-            BlackBerry::Platform::createMethodCallMessage<FunctionType, BackingStorePrivate>(
-                &BackingStorePrivate::clearWindow, this));
-        return;
-    }
-
-    BlackBerry::Platform::Graphics::Buffer* dstBuffer = buffer();
-    ASSERT(dstBuffer);
-    if (!dstBuffer)
-        BlackBerry::Platform::log(BlackBerry::Platform::LogLevelWarn, "Empty window buffer, couldn't clearWindow");
-
-    windowFrontBufferState()->clearBlittedRegion();
-    windowBackBufferState()->addBlittedRegion(Platform::IntRect(
-        Platform::IntPoint(0, 0), surfaceSize()));
-
-    Color color(m_webPage->settings()->backgroundColor());
-    BlackBerry::Platform::Graphics::clearBuffer(dstBuffer,
-        color.red(), color.green(), color.blue(), color.alpha());
 }
 
 void BackingStorePrivate::clearWindow(const Platform::IntRect& rect,

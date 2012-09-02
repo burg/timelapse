@@ -68,13 +68,15 @@
 
 #if OS(DARWIN)
 #include <public/mac/WebThemeEngine.h>
-#elif OS(UNIX) && !OS(ANDROID)
-#include "WebFontInfo.h"
+#elif OS(UNIX)
 #include "WebFontRenderStyle.h"
-#include <public/linux/WebThemeEngine.h>
-#elif OS(ANDROID)
+#if OS(ANDROID)
 #include <public/android/WebThemeEngine.h>
-#endif
+#else
+#include "WebFontInfo.h"
+#include <public/linux/WebThemeEngine.h>
+#endif // OS(ANDROID)
+#endif // elif OS(UNIX)
 
 #include "NativeImageSkia.h"
 
@@ -257,45 +259,22 @@ void PlatformSupport::getFontFamilyForCharacters(const UChar* characters, size_t
 
 void PlatformSupport::getRenderStyleForStrike(const char* font, int sizeAndStyle, FontRenderStyle* result)
 {
-#if !OS(ANDROID)
     WebFontRenderStyle style;
 
-    if (WebKit::Platform::current()->sandboxSupport())
+#if OS(ANDROID)
+    style.setDefaults();
+#else
+    if (!font || !*font)
+        style.setDefaults(); // It's probably a webfont. Take the system defaults.
+    else if (WebKit::Platform::current()->sandboxSupport())
         WebKit::Platform::current()->sandboxSupport()->getRenderStyleForStrike(font, sizeAndStyle, &style);
     else
         WebFontInfo::renderStyleForStrike(font, sizeAndStyle, &style);
+#endif
 
     style.toFontRenderStyle(result);
-#endif
 }
 #endif
-
-// Databases ------------------------------------------------------------------
-
-PlatformFileHandle PlatformSupport::databaseOpenFile(const String& vfsFileName, int desiredFlags)
-{
-    return webKitPlatformSupport()->databaseOpenFile(WebString(vfsFileName), desiredFlags);
-}
-
-int PlatformSupport::databaseDeleteFile(const String& vfsFileName, bool syncDir)
-{
-    return webKitPlatformSupport()->databaseDeleteFile(WebString(vfsFileName), syncDir);
-}
-
-long PlatformSupport::databaseGetFileAttributes(const String& vfsFileName)
-{
-    return webKitPlatformSupport()->databaseGetFileAttributes(WebString(vfsFileName));
-}
-
-long long PlatformSupport::databaseGetFileSize(const String& vfsFileName)
-{
-    return webKitPlatformSupport()->databaseGetFileSize(WebString(vfsFileName));
-}
-
-long long PlatformSupport::databaseGetSpaceAvailableForOrigin(const String& originIdentifier)
-{
-    return webKitPlatformSupport()->databaseGetSpaceAvailableForOrigin(originIdentifier);
-}
 
 // Indexed Database -----------------------------------------------------------
 

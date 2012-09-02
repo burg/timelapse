@@ -1,3 +1,242 @@
+2012-07-18  Antoine Labour  <piman@chromium.org>
+
+        [chromium] Introduce CCResourceProvider, replacing TextureAllocator and hiding textures from clients to allow transport
+        https://bugs.webkit.org/show_bug.cgi?id=91044
+
+        Reviewed by Adrienne Walker.
+
+        This does several things:
+        - Add a CCResourceProvider class, that hides textures and the 3D context
+        from layers (except those that need it). Instead layers manage
+        "resources". In the future, resources are expected to be transportable
+        to a "parent" CCResourceProvider to allow flattening of nested
+        compositors.
+        - Replace texture ids by resource ids in DrawQuads (allowing them to be
+        serializable).
+        - Replace TextureAllocator uses by the CCResourceProvider class.
+        - Upload of data is done through the CCResourceProvider instead of
+        explicit GL calls.
+        - External textures are wrapped into a resource at draw time (see
+        caveat/FIXME in CCTextureLayerImpl).
+        - Rendering with the resources is done through an explicit
+        beginRenderFrom/endRenderFrom that exposes the texture only between that
+        pair.
+        - Merge all the LayerTextureSubImage instances (one per layer), into a
+        single instance on the CCResourceProvider.
+
+        Added CCResourceProviderTest, the refactoring is covered by existing tests.
+
+        * chromium/public/WebCompositorTextureQuad.h:
+        (WebCompositorTextureQuad):
+        (WebKit::WebCompositorTextureQuad::resourceId):
+        * chromium/public/WebCompositorTileQuad.h:
+        (WebCompositorTileQuad):
+        (WebKit::WebCompositorTileQuad::resourceId):
+
+2012-07-18  Alexandre Elias  <aelias@google.com>
+
+        [chromium] Ubercomp: add id to SharedQuadState
+        https://bugs.webkit.org/show_bug.cgi?id=91670
+
+        Reviewed by Adrienne Walker.
+
+        This assigns an integer ID to SharedQuadState objects and a
+        corresponding ID to quads.  This ID is unique only within a
+        RenderPass and currently is just set to the index in the shared quad
+        state list.  This is redundant with the pointer and exists to
+        simplify serialization.
+
+        I found out that pointer rewriting within a pickler is blocked by
+        pointers to memory being const there, so the reassignment will have to
+        be performed in the application layer anyway.  In that case, it's
+        simplest to add some ID integers.
+
+        * chromium/public/WebCompositorQuad.h:
+        (WebKit::WebCompositorQuad::sharedQuadStateId):
+        (WebCompositorQuad):
+        * chromium/public/WebCompositorSharedQuadState.h:
+        (WebCompositorSharedQuadState):
+
+2012-07-18  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Another Chromium Windows build fix attempt after r123014.
+
+        * chromium/public/Platform.h:
+
+2012-07-18  Mark Pilgrim  <pilgrim@chromium.org>
+
+        [Chromium] Call SQLiteFileSystem-related functions directly
+        https://bugs.webkit.org/show_bug.cgi?id=91631
+
+        Reviewed by Adam Barth.
+
+        Part of a refactoring series. See tracking bug 82948.
+        
+        * chromium/public/Platform.h:
+        (Platform):
+        (WebKit::Platform::databaseOpenFile):
+        (WebKit::Platform::databaseDeleteFile):
+        (WebKit::Platform::databaseGetFileAttributes):
+        (WebKit::Platform::databaseGetFileSize):
+        (WebKit::Platform::databaseGetSpaceAvailableForOrigin):
+
+2012-07-18  Sailesh Agrawal  <sail@chromium.org>
+
+        Chromium Mac: Add TEXTURE_RECTANGLE_ARB support to CCVideoLayerImpl
+        https://bugs.webkit.org/show_bug.cgi?id=91169
+
+        Reviewed by Adrienne Walker.
+
+        Added a "orientation" field to WebCompositorIOSurfaceQuad. This is used at draw time to flip the texture if necessary.
+
+        * chromium/public/WebCompositorIOSurfaceQuad.h: Added orientation field to the constructor.
+        (WebKit::WebCompositorIOSurfaceQuad::orientation):
+        (WebCompositorIOSurfaceQuad): The new orientation field should be set to Flipped if the texture should be flipped when drawing.
+
+2012-07-13  Tony Payne  <tpayne@chromium.org>
+
+        Remove Widget from screenColorProfile
+        https://bugs.webkit.org/show_bug.cgi?id=91300
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/Platform.h:
+        (Platform): Updated comment to reflect that we no longer have a type param.
+
+2012-07-11  Alexandre Elias  <aelias@google.com>
+
+        [chromium] Move compositor quads to Platform/chromium/public
+        https://bugs.webkit.org/show_bug.cgi?id=90582
+
+        Reviewed by Adrienne Walker.
+
+        This moves CCSharedQuadState, CCDrawQuad, and all but two CC*DrawQuad
+        classes to the WebKit namespace, as a first step to pushing them
+        across the process boundary for the ubercompositor.
+
+        - The intent is to serialize the class hierarchy using the same
+        mechanism as WebInputEvent.  In order to do this, there are three
+        requirements: pure POD data, a method returning size, and a packing
+        pragma.
+
+        - Private data members are fine with this kind of serializer, and a
+        default constructor is not needed.  Because of that, we can maintain
+        the same encapsulation and convenient APIs (behind
+        WEBKIT_IMPLEMENTATION) as the original classes.  To ease the
+        transition, the original WebCore headers still exist and typedef to
+        the new classes.
+
+        - However, SharedQuadState will be serialized using the normal
+        IPC_STRUCT_TRAITS macro, so I made its members public.  A custom
+        serializer (on quad lists) will maintain the pointers from quads to
+        SharedQuadStates.
+
+        - I converted the Material casting mechanism to materialCast() methods
+        living in the derived classes.  That way, the WebCompositorQuad header
+        doesn't need to know about all its derived classes.
+
+        - Quad classes not yet transitioned can still be used in
+        non-ubercompositor mode.  CCRenderPassDrawQuad and CCYUVVideoDrawQuad
+        are currently non-POD and I left them in their original files.
+
+        This approach is the best I've found so far, since it preserves all
+        WebCore-facing APIs and avoids unnecessary code duplication (new quad
+        types or members can be added by modifying only one place).  There
+        also should not be an unreasonable amount of custom serializer code
+        required.
+
+        * Platform.gypi:
+        * chromium/public/WebCompositorQuad.h: Copied from Source/WebCore/platform/graphics/chromium/cc/CCDrawQuad.h.
+        (WebKit):
+        (WebCompositorQuad):
+        (WebKit::WebCompositorQuad::quadRect):
+        (WebKit::WebCompositorQuad::quadTransform):
+        (WebKit::WebCompositorQuad::layerTransform):
+        (WebKit::WebCompositorQuad::layerRect):
+        (WebKit::WebCompositorQuad::scissorRect):
+        (WebKit::WebCompositorQuad::opacity):
+        (WebKit::WebCompositorQuad::needsBlending):
+        (WebKit::WebCompositorQuad::isLayerAxisAlignedIntRect):
+        (WebKit::WebCompositorQuad::quadVisibleRect):
+        (WebKit::WebCompositorQuad::isDebugQuad):
+        (WebKit::WebCompositorQuad::material):
+        (WebKit::WebCompositorQuad::sharedQuadState):
+        (WebKit::WebCompositorQuad::setSharedQuadState):
+        * chromium/public/WebCompositorSharedQuadState.h: Copied from Source/WebCore/platform/graphics/chromium/cc/CCSolidColorDrawQuad.h.
+        (WebKit):
+        (WebCompositorSharedQuadState):
+        * chromium/public/WebCompositorSolidColorQuad.h: Copied from Source/WebCore/platform/graphics/chromium/cc/CCSolidColorDrawQuad.h.
+        (WebKit):
+        (WebCompositorSolidColorQuad):
+        (WebKit::WebCompositorSolidColorQuad::color):
+        * chromium/public/WebCompositorTextureQuad.h: Copied from Source/WebCore/platform/graphics/chromium/cc/CCTextureDrawQuad.h.
+        (WebKit):
+        (WebCompositorTextureQuad):
+        (WebKit::WebCompositorTextureQuad::uvRect):
+        (WebKit::WebCompositorTextureQuad::textureId):
+        (WebKit::WebCompositorTextureQuad::premultipliedAlpha):
+        (WebKit::WebCompositorTextureQuad::flipped):
+
+2012-07-05  Ian Vollick  <vollick@chromium.org>
+
+        [chromium] Create a WebKit::Web* wrapper for the cc animation classes
+        https://bugs.webkit.org/show_bug.cgi?id=90303
+
+        Reviewed by James Robinson.
+
+        * Platform.gypi:
+        * chromium/public/WebAnimation.h: Added.
+        (WebCore):
+        (WebKit):
+        (WebAnimation):
+        (WebKit::WebAnimation::WebAnimation):
+        (WebKit::WebAnimation::~WebAnimation):
+        * chromium/public/WebAnimationCurve.h: Added.
+        (WebCore):
+        (WebKit):
+        (WebAnimationCurve):
+        (WebKit::WebAnimationCurve::~WebAnimationCurve):
+        (WebKit::WebAnimationCurve::WebAnimationCurve):
+        * chromium/public/WebFloatAnimationCurve.h: Added.
+        (WebCore):
+        (WebKit):
+        (WebFloatAnimationCurve):
+        (WebKit::WebFloatAnimationCurve::WebFloatAnimationCurve):
+        (WebKit::WebFloatAnimationCurve::~WebFloatAnimationCurve):
+        * chromium/public/WebFloatKeyframe.h: Added.
+        (WebKit):
+        (WebKit::WebFloatKeyframe::WebFloatKeyframe):
+        (WebFloatKeyframe):
+        * chromium/public/WebTransformAnimationCurve.h: Added.
+        (WebCore):
+        (WebKit):
+        (WebTransformAnimationCurve):
+        (WebKit::WebTransformAnimationCurve::WebTransformAnimationCurve):
+        (WebKit::WebTransformAnimationCurve::~WebTransformAnimationCurve):
+        * chromium/public/WebTransformKeyframe.h: Added.
+        (WebKit):
+        (WebKit::WebTransformKeyframe::WebTransformKeyframe):
+        (WebTransformKeyframe):
+
+2012-07-03  Alex Sakhartchouk  <alexst@chromium.org>
+
+        [chromium] Avoid calling getUniformLocation??() in the compositor startup
+        https://bugs.webkit.org/show_bug.cgi?id=90217
+
+        Reviewed by Adrienne Walker.
+
+        Adding an entry point for bindUniformLocationCHROMIUM.
+
+        * chromium/public/WebGraphicsContext3D.h:
+        (WebGraphicsContext3D):
+        (WebKit::WebGraphicsContext3D::bindUniformLocationCHROMIUM):
+
+2012-07-03  Tony Chang  <tony@chromium.org>
+
+        [chromium] Unreviewed, update .gitignore to handle VS2010 files.
+
+        * Platform.gyp/.gitignore:
+
 2012-07-02  Tommy Widenflycht  <tommyw@google.com>
 
         MediaStream API: Update MediaStreamTrackList to match the specification

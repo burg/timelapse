@@ -62,7 +62,7 @@
 #include <wtf/text/CString.h>
 
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
-#include "NotificationClientEfl.h"
+#include "NotificationPresenterClientEfl.h"
 #endif
 
 #if ENABLE(SQL_DATABASE)
@@ -628,65 +628,26 @@ bool ChromeClientEfl::supportsFullScreenForElement(const WebCore::Element* eleme
 
 void ChromeClientEfl::enterFullScreenForElement(WebCore::Element* element)
 {
+    // Keep a reference to the element to use it later in
+    // exitFullScreenForElement().
+    m_fullScreenElement = element;
+
     element->document()->webkitWillEnterFullScreenForElement(element);
     element->document()->webkitDidEnterFullScreenForElement(element);
 }
 
-void ChromeClientEfl::exitFullScreenForElement(WebCore::Element* element)
+void ChromeClientEfl::exitFullScreenForElement(WebCore::Element*)
 {
-    element->document()->webkitWillExitFullScreenForElement(element);
-    element->document()->webkitDidExitFullScreenForElement(element);
+    // The element passed into this function is not reliable, i.e. it could
+    // be null. In addition the parameter may be disappearing in the future.
+    // So we use the reference to the element we saved above.
+    ASSERT(m_fullScreenElement);
+
+    m_fullScreenElement->document()->webkitWillExitFullScreenForElement(m_fullScreenElement.get());
+    m_fullScreenElement->document()->webkitDidExitFullScreenForElement(m_fullScreenElement.get());
+
+    m_fullScreenElement.clear();
 }
 #endif
-
-#if ENABLE(REGISTER_PROTOCOL_HANDLER) || ENABLE(CUSTOM_SCHEME_HANDLER)
-static Ewk_Custom_Handler_Data* customHandlerDataCreate(Evas_Object* ewkView, const char* scheme, const char* baseURL, const char* url)
-{
-    Ewk_Custom_Handler_Data* data = new Ewk_Custom_Handler_Data;
-    data->ewkView = ewkView;
-    data->scheme = eina_stringshare_add(scheme);
-    data->base_url = eina_stringshare_add(baseURL);
-    data->url = eina_stringshare_add(url);
-    return data;
-}
-
-static void customHandlerDataDelete(Ewk_Custom_Handler_Data* data)
-{
-    eina_stringshare_del(data->scheme);
-    eina_stringshare_del(data->base_url);
-    eina_stringshare_del(data->url);
-    delete data;
-}
-
-#if ENABLE(REGISTER_PROTOCOL_HANDLER)
-void ChromeClientEfl::registerProtocolHandler(const String& scheme, const String& baseURL, const String& url, const String& title)
-{
-    Ewk_Custom_Handler_Data* data = customHandlerDataCreate(m_view, scheme.utf8().data(), baseURL.utf8().data(), url.utf8().data());
-    data->title = eina_stringshare_add(title.utf8().data());
-    ewk_custom_handler_register_protocol_handler(data);
-    eina_stringshare_del(data->title);
-    customHandlerDataDelete(data);
-}
-#endif
-
-#if ENABLE(CUSTOM_SCHEME_HANDLER)
-ChromeClient::CustomHandlersState ChromeClientEfl::isProtocolHandlerRegistered(const String& scheme, const String& baseURL, const String& url)
-{
-    Ewk_Custom_Handler_Data* data = customHandlerDataCreate(m_view, scheme.utf8().data(), baseURL.utf8().data(), url.utf8().data());
-    ChromeClient::CustomHandlersState result = static_cast<CustomHandlersState>(ewk_custom_handler_register_protocol_handler(data));
-    customHandlerDataDelete(data);
-
-    return result;
-}
-
-void ChromeClientEfl::unregisterProtocolHandler(const String& scheme, const String& baseURL, const String& url)
-{
-    Ewk_Custom_Handler_Data* data = customHandlerDataCreate(m_view, scheme.utf8().data(), baseURL.utf8().data(), url.utf8().data());
-    ewk_custom_handler_register_protocol_handler(data);
-    customHandlerDataDelete(data);
-}
-#endif
-
-#endif // ENABLE(REGISTER_PROTOCOL_HANDLER) || ENABLE(CUSTOM_SCHEME_HANDLER)
 
 }

@@ -19,7 +19,7 @@
 
 #include "config.h"
 
-#if ENABLE(WEBGL) || USE(ACCELERATED_COMPOSITING)
+#if USE(3D_GRAPHICS) || USE(ACCELERATED_COMPOSITING)
 
 #include "GraphicsContext3DPrivate.h"
 
@@ -51,7 +51,7 @@ GraphicsContext3D::~GraphicsContext3D()
 {
 }
 
-PlatformGraphicsContext3D GraphicsContext3D::platformGraphicsContext3D() const
+PlatformGraphicsContext3D GraphicsContext3D::platformGraphicsContext3D()
 {
     return m_private->platformGraphicsContext3D();
 }
@@ -857,4 +857,4 @@ bool GraphicsContext3D::isResourceSafe()
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGL)
+#endif // USE(3D_GRAPHICS)

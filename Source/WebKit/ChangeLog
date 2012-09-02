@@ -1,3 +1,234 @@
+2012-07-18  Yong Li  <yoli@rim.com>
+
+        [BlackBerry] Move about: URL handling out of WebCore
+        https://bugs.webkit.org/show_bug.cgi?id=91541
+
+        Reviewed by Rob Buis.
+
+        AboutData.cpp is moved from WebCoreSupport to WebKitSupport.
+
+        * PlatformBlackBerry.cmake:
+
+2012-07-18  Thiago Marcos P. Santos  <thiago.santos@intel.com>
+
+        [CMake] Make gtest a shared library
+        https://bugs.webkit.org/show_bug.cgi?id=90973
+
+        Reviewed by Daniel Bates.
+
+        No need to link with gtest dependencies now since it is a shared library.
+
+        * PlatformEfl.cmake:
+
+2012-07-17  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Move codes related to theme setting from Widget to RenderTheme
+        https://bugs.webkit.org/show_bug.cgi?id=89842
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * CMakeLists.txt: Added html/shadow to WebKit_INCLUDE_DIRECTORIES.
+
+2012-07-16  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        Add RegisterProtocolHandlerClient to the Modules/protocolhandler
+        https://bugs.webkit.org/show_bug.cgi?id=90940
+
+        Reviewed by Hajime Morita.
+
+        As a step to let protocol handler be moved to the modules, RegisterProtocolHandlerClient needs
+        to be added to the Modules/protocolhandler. Because ChromeClient has some virtual functions for
+        protocol handlers, virtual functions should be moved to RegisterProtocolHandlerClient.
+
+        * PlatformEfl.cmake: Add RegisterProtocolHandlerEfl files and include path.
+
+2012-07-16  Joshua Netterfield  <jnetterfield@rim.com>
+
+        [BlackBerry] Upstream WebGL Code
+        https://bugs.webkit.org/show_bug.cgi?id=91143
+
+        Reviewed by Rob Buis.
+
+        This patch includes BlackBerry-specific fixes for anti-aliasing, logging, and shader compilation.
+
+        * PlatformBlackBerry.cmake: Define WTF_USE_OPENGL_ES_2 on WebGL-enabled builds.
+
+2012-07-16  Frederik Gladhorn  <frederik.gladhorn@nokia.com>
+
+        Add accessible for QWebView.
+        https://bugs.webkit.org/show_bug.cgi?id=91073
+
+        Reviewed by Simon Hausmann.
+
+        Add classes to enable accessibility on the widget level.
+
+        * WebKit.pri:
+        * WebKit1.pro:
+
+2012-07-15  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        [EFL] Move files guarded by #ifdef to existing file list.
+        https://bugs.webkit.org/show_bug.cgi?id=91336
+
+        Reviewed by Ryosuke Niwa.
+
+        Some EFL files are already guared by #ifdef. So, cmake files doesn't need to guard
+        them again. In addition, some files are missing #ifdef guard its header files. 
+
+        * PlatformEfl.cmake:
+
+2012-07-13  Thiago Marcos P. Santos  <thiago.santos@intel.com>
+
+        [CMake] Proper handling of ENABLE_API_TESTS build option
+        https://bugs.webkit.org/show_bug.cgi?id=91221
+
+        Reviewed by Rob Buis.
+
+        Build unit tests only if ENABLE_API_TESTS is set.
+
+        * PlatformEfl.cmake:
+
+2012-07-12  Simon Hausmann  <simon.hausmann@nokia.com>
+
+        Typo in path in generate-webkitversion.pl
+        https://bugs.webkit.org/show_bug.cgi?id=90883
+
+        Reviewed by Mark Rowe.
+
+        Correct default path to version config file. In practice it wasn't a problem because only the Qt
+        build system seems to use the script right now and passes the path to the version file as a
+        command line parameter.
+
+        * scripts/generate-webkitversion.pl:
+
+2012-07-11  Crystal Zhang  <haizhang@rim.com>
+
+        [BlackBerry] Implement Date/Time picker
+        https://bugs.webkit.org/show_bug.cgi?id=90911
+
+        Reviewed by Rob Buis.
+
+        Add files into make file.
+
+        * PlatformBlackBerry.cmake:
+
+2012-07-09  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL] Battery status code needs refactoring to be reused in WebKit2
+        https://bugs.webkit.org/show_bug.cgi?id=90760
+
+        Reviewed by Hajime Morita.
+
+        Add BatteryClientEfl to PlatformEfl.cmake.
+
+        * PlatformEfl.cmake:
+
+2012-07-08  Kihong Kwon  <kihong.kwon@samsung.com>
+
+        [EFL] Change notifications directory path of WebKit_INCLUDE_DIRECTORIES in the PlatformEfl.cmake
+        https://bugs.webkit.org/show_bug.cgi?id=90650
+
+        Reviewed by Laszlo Gombos.
+
+        Change directory path for including notifications of WebCore
+        from WebCore/notifications to WebCore/Modules/notifications
+
+        * PlatformEfl.cmake:
+
+2012-07-07  Thiago Marcos P. Santos  <thiago.santos@intel.com>
+
+        [EFL][CMake] Remove non-existent include directory
+        https://bugs.webkit.org/show_bug.cgi?id=90605
+
+        Reviewed by Kentaro Hara.
+
+        * PlatformEfl.cmake:
+
+2012-07-06  Thiago Marcos P. Santos  <thiago.santos@intel.com>
+
+        [EFL][CMake] Move gtest sources to an upper level
+        https://bugs.webkit.org/show_bug.cgi?id=90602
+
+        Reviewed by Chang Shu.
+
+        Removed gtest since it is now built as a separated component.
+        This will allow us to share it with WebKit 2 API tests.
+
+        * PlatformEfl.cmake:
+
+2012-07-06  Seokju Kwon  <seokju.kwon@samsung.com>
+
+        [EFL] Add Web Inspector to WebKit-EFL
+        https://bugs.webkit.org/show_bug.cgi?id=83865
+
+        Reviewed by Pavel Feldman.
+
+        EFL port implementation for Web Inspector.
+        Prepare Web Inspector resources.
+
+        * PlatformEfl.cmake:
+
+2012-07-05  Kihong Kwon  <kihong.kwon@samsung.com>
+
+        [EFL] Change class name from NotificationClientEfl to NotificationPresenterClientEfl.
+        https://bugs.webkit.org/show_bug.cgi?id=90542
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        NotificationClientEfl.cpp is changed to NotificationPresenterClientEfl.cpp
+        to be in line with other ports(qt, chromium, gtk).
+
+        * PlatformEfl.cmake:
+
+2012-07-04  Tor Arne Vestbø  <tor.arne.vestbo@nokia.com>
+
+        [Qt] Remove a few un-needed load(features) after r121777
+
+        The features are computed by configure.pro and cached in .qmake.cache.
+
+        Reviewed by Jocelyn Turcotte.
+
+        * WebKit1.pro:
+
+2012-07-04  Tor Arne Vestbø  <tor.arne.vestbo@nokia.com>
+
+        [Qt] Fix broken OR-operator in project file
+
+        Qmake expects |, not ||. The result was that the block was entered, even
+        if none of the two defines were set to 1.
+
+        Reviewed by Jocelyn Turcotte.
+
+        * WebKit1.pri:
+
+2012-07-03  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL] Move BatteryClientEfl from WebKit to WebCore
+        https://bugs.webkit.org/show_bug.cgi?id=90063
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Move BatteryClientEfl class from WebKit to WebCore
+        so that it can be reused in WebKit2.
+
+        * PlatformEfl.cmake:
+
+2012-07-02  Xiaobo Wang  <xbwang@torchmobile.com.cn>
+
+        [BlackBerry] Use PUBLIC_BUILD to enable/disable DRT
+        https://bugs.webkit.org/show_bug.cgi?id=90271
+
+        Reviewed by George Staikos.
+
+        RIM PR #154707
+
+        Currently DRT code will be compiled only if ENABLE_DRT is set, and it's not
+        defined by default.
+        We should enable DRT by default unless PUBLIC_BUILD is set. In this way we don't
+        need to rebuild webkit before running DRT.
+
+        * PlatformBlackBerry.cmake:
+
 2012-07-02  Thiago Marcos P. Santos  <thiago.santos@intel.com>
 
         [EFL][CMake] Integrate API unit tests with CTest

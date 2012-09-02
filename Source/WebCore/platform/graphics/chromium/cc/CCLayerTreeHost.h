@@ -51,9 +51,7 @@ class CCLayerChromium;
 class CCLayerTreeHostImpl;
 class CCLayerTreeHostImplClient;
 class CCTextureUpdater;
-class ManagedTexture;
 class Region;
-class TextureAllocator;
 class CCPrioritizedTextureManager;
 struct CCRenderingStats;
 struct CCScrollAndScaleSet;
@@ -96,6 +94,7 @@ struct CCLayerTreeSettings {
             , maxPartialTextureUpdates(std::numeric_limits<size_t>::max())
             , defaultTileSize(IntSize(256, 256))
             , maxUntiledLayerSize(IntSize(512, 512))
+            , minimumOcclusionTrackingSize(IntSize(160, 160))
     { }
 
     bool acceleratePainting;
@@ -112,6 +111,7 @@ struct CCLayerTreeSettings {
     size_t maxPartialTextureUpdates;
     IntSize defaultTileSize;
     IntSize maxUntiledLayerSize;
+    IntSize minimumOcclusionTrackingSize;
 };
 
 // Provides information on an Impl's rendering capabilities back to the CCLayerTreeHost
@@ -181,7 +181,7 @@ public:
     void willCommit() { m_client->willCommit(); }
     void didCommitAndDrawFrame() { m_client->didCommitAndDrawFrame(); }
     void didCompleteSwapBuffers() { m_client->didCompleteSwapBuffers(); }
-    void deleteContentsTexturesOnImplThread(TextureAllocator*);
+    void deleteContentsTexturesOnImplThread(CCResourceProvider*);
     virtual void acquireLayerTextures();
     // Returns false if we should abort this frame due to initialization failure.
     bool initializeLayerRendererIfNeeded();
@@ -278,14 +278,16 @@ private:
 
     void initializeLayerRenderer();
 
-    enum PaintType { PaintVisible, PaintIdle };
-    static void update(LayerChromium*, PaintType, CCTextureUpdater&, const CCOcclusionTracker*);
-    void paintLayerContents(const LayerList&, PaintType, CCTextureUpdater&);
-    void paintMasksForRenderSurface(LayerChromium*, PaintType, CCTextureUpdater&);
+    static void update(LayerChromium*, CCTextureUpdater&, const CCOcclusionTracker*);
+    bool paintLayerContents(const LayerList&, CCTextureUpdater&);
+    bool paintMasksForRenderSurface(LayerChromium*, CCTextureUpdater&);
 
     void updateLayers(LayerChromium*, CCTextureUpdater&);
 
-    void prioritizeTextures(const LayerList& updateList);
+    void prioritizeTextures(const LayerList&, CCOverdrawMetrics&); 
+    void setPrioritiesForSurfaces(size_t surfaceMemoryBytes);
+    void setPrioritiesForLayers(const LayerList&);
+    size_t calculateMemoryForRenderSurfaces(const LayerList& updateList);
 
     void animateLayers(double monotonicTime);
     bool animateLayersRecursive(LayerChromium* current, double monotonicTime);
@@ -309,6 +311,7 @@ private:
 
     RefPtr<LayerChromium> m_rootLayer;
     OwnPtr<CCPrioritizedTextureManager> m_contentsTextureManager;
+    OwnPtr<CCPrioritizedTexture> m_surfaceMemoryPlaceholder;
 
     CCLayerTreeSettings m_settings;
 
@@ -323,7 +326,8 @@ private:
 
     float m_pageScaleFactor;
     float m_minPageScaleFactor, m_maxPageScaleFactor;
-    bool m_triggerIdlePaints;
+    bool m_triggerIdleUpdates;
+
     SkColor m_backgroundColor;
     bool m_hasTransparentBackground;
 

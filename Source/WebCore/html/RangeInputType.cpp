@@ -49,6 +49,12 @@
 #include <wtf/MathExtras.h>
 #include <wtf/PassOwnPtr.h>
 
+#if ENABLE(TOUCH_EVENTS)
+#include "Touch.h"
+#include "TouchEvent.h"
+#include "TouchList.h"
+#endif
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -90,6 +96,11 @@ void RangeInputType::setValueAsDecimal(const Decimal& newValue, TextFieldEventBe
     element()->setValue(serialize(newValue), eventBehavior);
 }
 
+bool RangeInputType::typeMismatchFor(const String& value) const
+{
+    return !value.isEmpty() && !isfinite(parseToDoubleForNumberType(value));
+}
+
 bool RangeInputType::supportsRequired() const
 {
     return false;
@@ -126,13 +137,41 @@ void RangeInputType::handleMouseDownEvent(MouseEvent* event)
     if (event->button() != LeftButton || !targetNode)
         return;
     ASSERT(element()->shadow());
-    if (targetNode != element() && !targetNode->isDescendantOf(element()->shadow()->oldestShadowRoot()))
+    if (targetNode != element() && !targetNode->isDescendantOf(element()->userAgentShadowRoot()))
         return;
     SliderThumbElement* thumb = sliderThumbElementOf(element());
     if (targetNode == thumb)
         return;
     thumb->dragFrom(event->absoluteLocation());
 }
+
+#if ENABLE(TOUCH_EVENTS)
+#if ENABLE(TOUCH_SLIDER)
+void RangeInputType::handleTouchEvent(TouchEvent* event)
+{
+    if (element()->disabled() || element()->readOnly())
+        return;
+
+    if (event->type() == eventNames().touchendEvent) {
+        event->setDefaultHandled();
+        return;
+    }
+
+    TouchList* touches = event->targetTouches();
+    if (touches->length() == 1) {
+        Touch* touch = touches->item(0);
+        SliderThumbElement* thumb = sliderThumbElementOf(element());
+        thumb->setPositionFromPoint(touch->absoluteLocation());
+        event->setDefaultHandled();
+    }
+}
+
+bool RangeInputType::hasTouchEventHandler() const
+{
+    return true;
+}
+#endif
+#endif
 
 void RangeInputType::handleKeydownEvent(KeyboardEvent* event)
 {
@@ -205,7 +244,7 @@ void RangeInputType::createShadowSubtree()
     RefPtr<HTMLElement> container = SliderContainerElement::create(document);
     container->appendChild(track.release(), ec);
     container->appendChild(TrackLimiterElement::create(document), ec);
-    element()->shadow()->oldestShadowRoot()->appendChild(container.release(), ec);
+    element()->userAgentShadowRoot()->appendChild(container.release(), ec);
 }
 
 RenderObject* RangeInputType::createRenderer(RenderArena* arena, RenderStyle*) const
@@ -271,5 +310,17 @@ bool RangeInputType::shouldRespectListAttribute()
 {
     return InputType::themeSupportsDataListUI(this);
 }
+
+HTMLElement* RangeInputType::sliderThumbElement() const
+{
+    return sliderThumbElementOf(element());
+}
+
+#if ENABLE(DATALIST)
+void RangeInputType::listAttributeTargetChanged()
+{
+    element()->setNeedsStyleRecalc();
+}
+#endif
 
 } // namespace WebCore

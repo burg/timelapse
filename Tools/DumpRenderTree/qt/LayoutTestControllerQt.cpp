@@ -94,10 +94,8 @@ void LayoutTestController::reset()
     DumpRenderTreeSupportQt::resetGeolocationMock(m_drt->webPage());
     setIconDatabaseEnabled(false);
     clearAllDatabases();
-#if QT_VERSION >= 0x040800
     // The default state for DRT is to block third-party cookies, mimicing the Mac port
     setAlwaysAcceptCookies(false);
-#endif
     emit hidePage();
 }
 
@@ -256,12 +254,6 @@ QString LayoutTestController::pathToLocalResource(const QString& url)
     }
 
     return url;
-}
-
-void LayoutTestController::dumpConfigurationForViewport(int deviceDPI, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight)
-{
-    QString res = DumpRenderTreeSupportQt::viewportAsText(m_drt->webPage(), deviceDPI, QSize(deviceWidth, deviceHeight), QSize(availableWidth, availableHeight));
-    fputs(qPrintable(res), stdout);
 }
 
 void LayoutTestController::dumpEditingCallbacks()
@@ -678,8 +670,6 @@ void LayoutTestController::overridePreference(const QString& name, const QVarian
         settings->setAttribute(QWebSettings::CSSGridLayoutEnabled, value.toBool());
     else if (name == "WebKitHyperlinkAuditingEnabled")
         settings->setAttribute(QWebSettings::HyperlinkAuditingEnabled, value.toBool());
-    else if (name == "WebKitHixie76WebSocketProtocolEnabled")
-        DumpRenderTreeSupportQt::setHixie76WebSocketProtocolEnabled(m_topLoadingFrame->page(), value.toBool());
     else if (name == "WebKitAcceleratedCompositingEnabled")
         settings->setAttribute(QWebSettings::AcceleratedCompositingEnabled, value.toBool());
     else
@@ -985,7 +975,6 @@ void LayoutTestController::setTextDirection(const QString& directionName)
         m_drt->webPage()->triggerAction(QWebPage::SetTextDirectionLeftToRight);
 }
 
-#if QT_VERSION >= 0x040800
 void LayoutTestController::setAlwaysAcceptCookies(bool accept)
 {
     QWebSettings* globalSettings = QWebSettings::globalSettings();
@@ -1005,7 +994,6 @@ void LayoutTestController::setAlwaysBlockCookies(bool block)
     else
         globalSettings->setThirdPartyCookiePolicy(QWebSettings::AlwaysAllowThirdPartyCookies);
 }
-#endif
 
 const unsigned LayoutTestController::maxViewWidth = 800;
 const unsigned LayoutTestController::maxViewHeight = 600;

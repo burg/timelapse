@@ -42,11 +42,12 @@ class CCDebugRectHistory;
 class CCFontAtlas;
 class CCFrameRateCounter;
 class CCHeadsUpDisplay;
-class CCPageScaleAnimation;
 class CCLayerImpl;
 class CCLayerTreeHostImplTimeSourceAdapter;
+class CCPageScaleAnimation;
+class CCRenderPassDrawQuad;
+class CCResourceProvider;
 class LayerRendererChromium;
-class TextureAllocator;
 struct LayerRendererCapabilities;
 
 // CCLayerTreeHost->CCProxy callback interface.
@@ -84,7 +85,7 @@ public:
     struct FrameData {
         Vector<IntRect> occludingScreenSpaceRects;
         CCRenderPassList renderPasses;
-        CCRenderPassList skippedPasses;
+        CCRenderPassIdHashMap renderPassesById;
         CCLayerList* renderSurfaceLayerList;
         CCLayerList willDrawLayers;
     };
@@ -126,7 +127,6 @@ public:
     bool isContextLost();
     CCRenderer* layerRenderer() { return m_layerRenderer.get(); }
     const LayerRendererCapabilities& layerRendererCapabilities() const;
-    TextureAllocator* contentsTextureAllocator() const;
 
     bool swapBuffers();
 
@@ -176,9 +176,37 @@ public:
 
     CCFrameRateCounter* fpsCounter() const { return m_fpsCounter.get(); }
     CCDebugRectHistory* debugRectHistory() const { return m_debugRectHistory.get(); }
+    CCResourceProvider* resourceProvider() const { return m_resourceProvider.get(); }
 
-    // Removes all render passes for which we have cached textures, and which did not change their content.
-    static void removePassesWithCachedTextures(CCRenderPassList& passes, CCRenderPassList& skippedPasses);
+    class CullRenderPassesWithCachedTextures {
+    public:
+        bool shouldRemoveRenderPass(const CCRenderPassDrawQuad&, const FrameData&) const;
+
+        // Iterates from the root first, in order to remove the surfaces closest
+        // to the root with cached textures, and all surfaces that draw into
+        // them.
+        size_t renderPassListBegin(const CCRenderPassList& list) const { return list.size() - 1; }
+        size_t renderPassListEnd(const CCRenderPassList&) const { return 0 - 1; }
+        size_t renderPassListNext(size_t it) const { return it - 1; }
+
+        CullRenderPassesWithCachedTextures(CCRenderer& renderer) : m_renderer(renderer) { }
+    private:
+        CCRenderer& m_renderer;
+    };
+
+    class CullRenderPassesWithNoQuads {
+    public:
+        bool shouldRemoveRenderPass(const CCRenderPassDrawQuad&, const FrameData&) const;
+
+        // Iterates in draw order, so that when a surface is removed, and its
+        // target becomes empty, then its target can be removed also.
+        size_t renderPassListBegin(const CCRenderPassList&) const { return 0; }
+        size_t renderPassListEnd(const CCRenderPassList& list) const { return list.size(); }
+        size_t renderPassListNext(size_t it) const { return it + 1; }
+    };
+
+    template<typename RenderPassCuller>
+    static void removeRenderPasses(RenderPassCuller, FrameData&);
 
 protected:
     CCLayerTreeHostImpl(const CCLayerTreeSettings&, CCLayerTreeHostImplClient*);
@@ -216,8 +244,6 @@ private:
     void setBackgroundTickingEnabled(bool);
     IntSize contentSize() const;
 
-    static void removeRenderPassesRecursive(CCRenderPassList& passes, size_t bottomPass, const CCRenderPass* firstToRemove, CCRenderPassList& skippedPasses);
-
     void sendDidLoseContextRecursive(CCLayerImpl*);
     void clearRenderSurfaces();
     bool ensureRenderSurfaceLayerList();
@@ -226,6 +252,7 @@ private:
     void dumpRenderSurfaces(TextStream&, int indent, const CCLayerImpl*) const;
 
     OwnPtr<CCGraphicsContext> m_context;
+    OwnPtr<CCResourceProvider> m_resourceProvider;
     OwnPtr<CCRenderer> m_layerRenderer;
     OwnPtr<CCLayerImpl> m_rootLayerImpl;
     CCLayerImpl* m_rootScrollLayerImpl;

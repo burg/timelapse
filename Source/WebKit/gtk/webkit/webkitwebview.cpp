@@ -118,6 +118,10 @@
 #include "DeviceOrientationClientGtk.h"
 #endif
 
+#if ENABLE(REGISTER_PROTOCOL_HANDLER)
+#include "RegisterProtocolHandlerClientGtk.h"
+#endif
+
 /**
  * SECTION:webkitwebview
  * @short_description: The central class of the WebKitGTK+ API
@@ -3438,10 +3442,6 @@ static void webkit_web_view_update_settings(WebKitWebView* webView)
     coreSettings->setWebAudioEnabled(settingsPrivate->enableWebAudio);
 #endif
 
-#if ENABLE(WEB_SOCKETS)
-    coreSettings->setUseHixie76WebSocketProtocol(false);
-#endif
-
 #if ENABLE(SMOOTH_SCROLLING)
     coreSettings->setEnableScrollAnimator(settingsPrivate->enableSmoothScrolling);
 #endif
@@ -3632,6 +3632,10 @@ static void webkit_web_view_init(WebKitWebView* webView)
 #if ENABLE(MEDIA_STREAM)
     priv->userMediaClient = adoptPtr(new UserMediaClientGtk);
     WebCore::provideUserMediaTo(priv->corePage, priv->userMediaClient.get());
+#endif
+
+#if ENABLE(REGISTER_PROTOCOL_HANDLER)
+    WebCore::provideRegisterProtocolHandlerTo(priv->corePage, new WebKit::RegisterProtocolHandlerClient);
 #endif
 
     if (DumpRenderTreeSupportGtk::dumpRenderTreeModeEnabled()) {
@@ -5228,7 +5232,8 @@ GdkPixbuf* webkit_web_view_try_get_favicon_pixbuf(WebKitWebView* webView, guint 
  * webkit_web_view_get_dom_document:
  * @web_view: a #WebKitWebView
  * 
- * Returns: (transfer none): the #WebKitDOMDocument currently loaded in the @web_view
+ * Returns: (transfer none): the #WebKitDOMDocument currently loaded in
+ * the main frame of the @web_view or %NULL if no document is loaded
  *
  * Since: 1.3.1
  **/
@@ -5237,15 +5242,7 @@ webkit_web_view_get_dom_document(WebKitWebView* webView)
 {
     g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), 0);
 
-    Frame* coreFrame = core(webView)->mainFrame();
-    if (!coreFrame)
-        return 0;
-
-    Document* doc = coreFrame->document();
-    if (!doc)
-        return 0;
-
-    return kit(doc);
+    return webkit_web_frame_get_dom_document(webView->priv->mainFrame);
 }
 
 GtkMenu* webkit_web_view_get_context_menu(WebKitWebView* webView)

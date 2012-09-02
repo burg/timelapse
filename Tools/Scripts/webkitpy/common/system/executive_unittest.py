@@ -28,6 +28,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import errno
 import signal
 import subprocess
 import sys
@@ -77,8 +78,6 @@ def command_line(cmd, *args):
 class ExecutiveTest(unittest.TestCase):
     def assert_interpreter_for_content(self, intepreter, content):
         fs = MockFileSystem()
-        file_path = None
-        file_interpreter = None
 
         tempfile, temp_name = fs.open_binary_tempfile('')
         tempfile.write(content)
@@ -165,7 +164,12 @@ class ExecutiveTest(unittest.TestCase):
             self.assertTrue(process.wait() in (0, 1))
         else:
             expected_exit_code = -signal.SIGKILL
-            self.assertEqual(process.wait(), expected_exit_code)
+            try:
+                self.assertEqual(process.wait(), expected_exit_code)
+            except OSError, e:
+                # FIXME: This seems to fail sometimes this way when the test is being run in parallel with other tests.
+                assert(e.errno == errno.ECHILD)
+
         # Killing again should fail silently.
         executive.kill_process(process.pid)
 

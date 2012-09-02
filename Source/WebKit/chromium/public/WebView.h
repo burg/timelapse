@@ -317,28 +317,16 @@ public:
 
     // Callback methods when a drag-and-drop operation is trying to drop
     // something on the WebView.
-    // FIXME: Remove this method after chromium changes catch up.
-    virtual WebDragOperation dragTargetDragEnter(
-        const WebDragData&,
-        const WebPoint& clientPoint, const WebPoint& screenPoint,
-        WebDragOperationsMask operationsAllowed) = 0;
     virtual WebDragOperation dragTargetDragEnter(
         const WebDragData&,
         const WebPoint& clientPoint, const WebPoint& screenPoint,
         WebDragOperationsMask operationsAllowed,
         int keyModifiers) = 0;
-    // FIXME: Remove this method after chromium changes catch up.
-    virtual WebDragOperation dragTargetDragOver(
-        const WebPoint& clientPoint, const WebPoint& screenPoint,
-        WebDragOperationsMask operationsAllowed) = 0;
     virtual WebDragOperation dragTargetDragOver(
         const WebPoint& clientPoint, const WebPoint& screenPoint,
         WebDragOperationsMask operationsAllowed,
         int keyModifiers) = 0;
     virtual void dragTargetDragLeave() = 0;
-    // FIXME: Remove this method after chromium changes catch up.
-    virtual void dragTargetDrop(
-        const WebPoint& clientPoint, const WebPoint& screenPoint) = 0;
     virtual void dragTargetDrop(
         const WebPoint& clientPoint, const WebPoint& screenPoint,
         int keyModifiers) = 0;
@@ -457,6 +445,8 @@ public:
     virtual void transferActiveWheelFlingAnimation(const WebActiveWheelFlingParameters&) = 0;
 
     virtual bool setEditableSelectionOffsets(int start, int end) = 0;
+
+    virtual bool isSelectionEditable() const = 0;
 
     // Fills in a WebRenderingStats struct containing information about the state of the compositor.
     // This call is relatively expensive in threaded mode as it blocks on the compositor thread.

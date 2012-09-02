@@ -75,10 +75,10 @@ void PopupMenuMac::populate()
     if (!client()->shouldPopOver())
         [m_popup.get() addItemWithTitle:@""];
 
-#ifndef BUILDING_ON_LEOPARD
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
     TextDirection menuTextDirection = client()->menuStyle().textDirection();
     [m_popup.get() setUserInterfaceLayoutDirection:menuTextDirection == LTR ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft];
-#endif // !defined(BUILDING_ON_LEOPARD)
+#endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 
     ASSERT(client());
     int size = client()->listSize();
@@ -98,7 +98,7 @@ void PopupMenuMac::populate()
                 [attributes setObject:font forKey:NSFontAttributeName];
             }
 
-#ifndef BUILDING_ON_LEOPARD
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
             RetainPtr<NSMutableParagraphStyle> paragraphStyle(AdoptNS, [[NSParagraphStyle defaultParagraphStyle] mutableCopy]);
             [paragraphStyle.get() setAlignment:menuTextDirection == LTR ? NSLeftTextAlignment : NSRightTextAlignment];
             NSWritingDirection writingDirection = style.textDirection() == LTR ? NSWritingDirectionLeftToRight : NSWritingDirectionRightToLeft;
@@ -109,7 +109,7 @@ void PopupMenuMac::populate()
                 [attributes setObject:writingDirectionArray.get() forKey:NSWritingDirectionAttributeName];
             }
             [attributes setObject:paragraphStyle.get() forKey:NSParagraphStyleAttributeName];
-#endif // !defined(BUILDING_ON_LEOPARD)
+#endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
 
             // FIXME: Add support for styling the foreground and background colors.
             // FIXME: Find a way to customize text color when an item is highlighted.
@@ -119,6 +119,9 @@ void PopupMenuMac::populate()
             [m_popup.get() addItemWithTitle:@""];
             NSMenuItem *menuItem = [m_popup.get() lastItem];
             [menuItem setAttributedTitle:string];
+            // We set the title as well as the attributed title here. The attributed title will be displayed in the menu,
+            // but typeahead will use the non-attributed string that doesn't contain any leading or trailing whitespace.
+            [menuItem setTitle:[[string string] stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]]];
             [menuItem setEnabled:client()->itemIsEnabled(i)];
             [menuItem setToolTip:client()->itemToolTip(i)];
             [string release];

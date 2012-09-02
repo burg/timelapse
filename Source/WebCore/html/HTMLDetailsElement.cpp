@@ -112,7 +112,7 @@ void HTMLDetailsElement::createShadowSubtree()
 {
     ASSERT(!shadow());
 
-    RefPtr<ShadowRoot> root = ShadowRoot::create(this, ShadowRoot::CreatingUserAgentShadowRoot);
+    RefPtr<ShadowRoot> root = ShadowRoot::create(this, ShadowRoot::UserAgentShadowRoot);
     root->appendChild(DetailsSummaryElement::create(document()), ASSERT_NO_EXCEPTION, true);
     root->appendChild(DetailsContentElement::create(document()), ASSERT_NO_EXCEPTION, true);
 }
@@ -124,7 +124,7 @@ Element* HTMLDetailsElement::findMainSummary() const
             return toElement(child);
     }
 
-    return static_cast<DetailsSummaryElement*>(shadow()->oldestShadowRoot()->firstChild())->fallbackSummary();
+    return static_cast<DetailsSummaryElement*>(userAgentShadowRoot()->firstChild())->fallbackSummary();
 }
 
 void HTMLDetailsElement::parseAttribute(const Attribute& attribute)

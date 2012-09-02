@@ -63,6 +63,11 @@ public:
         m_assembler.addl_im(imm.m_value, address.m_ptr);
     }
     
+    void add32(AbsoluteAddress address, RegisterID dest)
+    {
+        m_assembler.addl_mr(address.m_ptr, dest);
+    }
+    
     void add64(TrustedImm32 imm, AbsoluteAddress address)
     {
         m_assembler.addl_im(imm.m_value, address.m_ptr);
@@ -78,7 +83,7 @@ public:
     {
         m_assembler.orl_im(imm.m_value, address.m_ptr);
     }
-
+    
     void sub32(TrustedImm32 imm, AbsoluteAddress address)
     {
         m_assembler.subl_im(imm.m_value, address.m_ptr);
@@ -87,6 +92,13 @@ public:
     void load32(const void* address, RegisterID dest)
     {
         m_assembler.movl_mr(address, dest);
+    }
+
+    ConvertibleLoadLabel convertibleLoadPtr(Address address, RegisterID dest)
+    {
+        ConvertibleLoadLabel result = ConvertibleLoadLabel(this);
+        m_assembler.movl_mr(address.offset, address.base, dest);
+        return result;
     }
 
     void addDouble(AbsoluteAddress address, FPRegisterID dest)

@@ -635,21 +635,14 @@ WebInspector.ResourcesPanel.prototype = {
         this.storageViewStatusBarItemsContainer.style.left = width + "px";
     },
 
+    /**
+     * @param {string} query
+     */
     performSearch: function(query)
     {
         this._resetSearchResults();
         var regex = WebInspector.SourceFrame.createSearchRegex(query);
         var totalMatchesCount = 0;
-
-        function searchInEditedResource(treeElement)
-        {
-            var resource = treeElement.representedObject;
-            if (resource.history.length == 0)
-                return;
-            var matchesCount = countRegexMatches(regex, resource.content)
-            treeElement.searchMatchesFound(matchesCount);
-            totalMatchesCount += matchesCount;
-        }
 
         function callback(error, result)
         {
@@ -667,8 +660,6 @@ WebInspector.ResourcesPanel.prototype = {
                     if (!resource)
                         continue;
 
-                    if (resource.history.length > 0)
-                        continue; // Skip edited resources.
                     this._findTreeElementForResource(resource).searchMatchesFound(searchResult.matchesCount);
                     totalMatchesCount += searchResult.matchesCount;
                 }
@@ -681,7 +672,6 @@ WebInspector.ResourcesPanel.prototype = {
                 this.jumpToNextSearchResult();
         }
 
-        this._forAllResourceTreeElements(searchInEditedResource.bind(this));
         PageAgent.searchInResources(regex.source, !regex.ignoreCase, true, callback.bind(this));
     },
 
@@ -714,7 +704,7 @@ WebInspector.ResourcesPanel.prototype = {
         // At first show view for treeElement.
         if (searchResult.treeElement !== this.sidebarTree.selectedTreeElement) {
             this.showResource(searchResult.treeElement.representedObject);
-            WebInspector.searchController.focusSearchField();
+            WebInspector.searchController.showSearchField();
         }
 
         function callback(searchId)

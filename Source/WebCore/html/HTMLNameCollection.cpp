@@ -33,13 +33,25 @@ namespace WebCore {
 using namespace HTMLNames;
 
 HTMLNameCollection::HTMLNameCollection(Document* document, CollectionType type, const AtomicString& name)
-    : HTMLCollection(document, type)
+    : HTMLCollection(document, type, DoNotSupportItemBefore)
     , m_name(name)
 {
 }
 
-Element* HTMLNameCollection::itemAfter(Node* previous) const
+HTMLNameCollection::~HTMLNameCollection()
 {
+    ASSERT(base());
+    ASSERT(base()->isDocumentNode());
+    ASSERT(type() == WindowNamedItems || type() == DocumentNamedItems);
+    if (type() == WindowNamedItems)
+        static_cast<Document*>(base())->removeWindowNamedItemCache(this, m_name);
+    else
+        static_cast<Document*>(base())->removeDocumentNamedItemCache(this, m_name);
+}
+
+Element* HTMLNameCollection::itemAfter(unsigned& offsetInArray, Element* previous) const
+{
+    ASSERT_UNUSED(offsetInArray, !offsetInArray);
     ASSERT(previous != base());
 
     Node* current;

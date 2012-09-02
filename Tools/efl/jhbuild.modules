@@ -51,7 +51,8 @@
     </branch>
   </autotools>
 
-  <autotools id="pixman" autogen-sh="configure">
+  <autotools id="pixman" autogen-sh="configure"
+             autogenargs="--enable-gtk=no">
     <branch module="releases/pixman-0.24.0.tar.gz" version="0.24.0"
             repo="cairographics.org"
             hash="sha256:a5647c7158f103eedff5fba799018f4169f6b26b573ab7685812ebc9a1c5d2e4"
@@ -70,10 +71,10 @@
   </autotools>
 
   <autotools id="libffi" autogen-sh="configure">
-    <branch module="/pub/libffi/libffi-3.0.10.tar.gz" version="3.0.10"
+    <branch module="/pub/libffi/libffi-3.0.11.tar.gz" version="3.0.11"
              repo="sourceware.org"
-             hash="sha256:f01eb9027e9eb56aeaeef636649877756d475d714ef8b47f627f65bc5f3b492f"
-             md5sum="79390673f5d07a8fb342bc09b5055b6f"/>
+             hash="sha256:70bfb01356360089aa97d3e71e3edf05d195599fd822e922e50d46a0055a6283"
+             md5sum="f69b9693227d976835b4857b1ba7d0e3"/>
   </autotools>
 
   <tarball id="freetype6">
@@ -144,9 +145,10 @@
     <dependencies>
       <dep package="glib-networking"/>
     </dependencies>
-    <branch module="libsoup" version="2.39.2"
-            repo="git.gnome.org"
-            tag="LIBSOUP_2_39_2"/>
+    <branch module="/pub/gnome/sources/libsoup/2.39/libsoup-2.39.4.1.tar.xz" version="2.39.4.1"
+            repo="ftp.gnome.org"
+            hash="sha256:0740c3f6e393d31f87f166f0c6d11de5ebaa013d382c59ed924a1384c575612e"
+            md5sum="895ed1e0c949a2ce50aeaeb58661bfc3"/>
   </autotools>
 
   <autotools id="fontconfig" autogen-sh="configure">

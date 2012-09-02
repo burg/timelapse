@@ -33,7 +33,6 @@
 #include "NodeRenderingContext.h"
 #include "RenderText.h"
 #include "TextBreakIterator.h"
-#include "WebKitMutationObserver.h"
 
 using namespace std;
 
@@ -95,9 +94,9 @@ unsigned CharacterData::parserAppendData(const UChar* data, unsigned dataLength,
 
 void CharacterData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    memoryObjectInfo->reportObjectInfo(this, MemoryInstrumentation::DOM);
-    Node::reportMemoryUsage(memoryObjectInfo);
-    memoryObjectInfo->reportString(m_data);
+    MemoryClassInfo<CharacterData> info(memoryObjectInfo, this, MemoryInstrumentation::DOM);
+    info.visitBaseClass<Node>(this);
+    info.addString(m_data);
 }
 
 void CharacterData::appendData(const String& data, ExceptionCode&)

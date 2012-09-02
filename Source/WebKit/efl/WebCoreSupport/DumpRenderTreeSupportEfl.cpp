@@ -47,6 +47,7 @@
 #include <JSElement.h>
 #include <JavaScriptCore/OpaqueJSString.h>
 #include <MemoryCache.h>
+#include <MutationObserver.h>
 #include <PageGroup.h>
 #include <PrintContext.h>
 #include <RenderTreeAsText.h>
@@ -55,7 +56,6 @@
 #include <ScriptValue.h>
 #include <Settings.h>
 #include <TextIterator.h>
-#include <WebKitMutationObserver.h>
 #include <bindings/js/GCController.h>
 #include <history/HistoryItem.h>
 #include <workers/WorkerThread.h>
@@ -520,6 +520,18 @@ bool DumpRenderTreeSupportEfl::isTargetItem(const Ewk_History_Item* ewkHistoryIt
     return historyItem->isTargetItem();
 }
 
+void DumpRenderTreeSupportEfl::evaluateInWebInspector(const Evas_Object* ewkView, long callId, const String& script)
+{
+#if ENABLE(INSPECTOR)
+    WebCore::Page* page = EWKPrivate::corePage(ewkView);
+    if (!page)
+        return;
+
+    if (page->inspectorController())
+        page->inspectorController()->evaluateForTestInFrontend(callId, script);
+#endif
+}
+
 void DumpRenderTreeSupportEfl::evaluateScriptInIsolatedWorld(const Evas_Object* ewkFrame, int worldID, JSObjectRef globalObject, const String& script)
 {
     WebCore::Frame* coreFrame = EWKPrivate::coreFrame(ewkFrame);
@@ -577,27 +589,10 @@ void DumpRenderTreeSupportEfl::setMockScrollbarsEnabled(bool enable)
     WebCore::Settings::setMockScrollbarsEnabled(enable);
 }
 
-void DumpRenderTreeSupportEfl::dumpConfigurationForViewport(Evas_Object* ewkView, int deviceDPI, const WebCore::IntSize& deviceSize, const WebCore::IntSize& availableSize)
-{
-    WebCore::Page* page = EWKPrivate::corePage(ewkView);
-
-    if (!page)
-        return;
-    WebCore::ViewportArguments arguments = page->mainFrame()->document()->viewportArguments();
-    WebCore::ViewportAttributes attributes = computeViewportAttributes(arguments,
-            /* default layout width for non-mobile pages */ 980,
-            deviceSize.width(), deviceSize.height(),
-            deviceDPI / WebCore::ViewportArguments::deprecatedTargetDPI,
-            availableSize);
-    restrictMinimumScaleFactorToViewportSize(attributes, availableSize);
-    restrictScaleFactorToInitialScaleIfNotUserScalable(attributes);
-    fprintf(stdout, "viewport size %dx%d scale %f with limits [%f, %f] and userScalable %f\n", static_cast<int>(attributes.layoutSize.width()), static_cast<int>(attributes.layoutSize.height()), attributes.initialScale, attributes.minimumScale, attributes.maximumScale, attributes.userScalable);
-}
-
 void DumpRenderTreeSupportEfl::deliverAllMutationsIfNecessary()
 {
 #if ENABLE(MUTATION_OBSERVERS)
-    WebCore::WebKitMutationObserver::deliverAllMutations();
+    WebCore::MutationObserver::deliverAllMutations();
 #endif
 }
 

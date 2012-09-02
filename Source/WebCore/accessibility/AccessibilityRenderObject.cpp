@@ -1363,7 +1363,7 @@ String AccessibilityRenderObject::title() const
     if (isInputTag) {
         HTMLInputElement* input = static_cast<HTMLInputElement*>(node);
         if (input->isTextButton())
-            return input->value();
+            return input->valueWithDefault();
     }
     
     if (isInputTag || AccessibilityObject::isARIAInput(ariaRoleAttribute()) || isControl()) {
@@ -2424,7 +2424,7 @@ AccessibilityObject* AccessibilityRenderObject::accessibilityParentForImageMap(H
 void AccessibilityRenderObject::getDocumentLinks(AccessibilityChildrenVector& result)
 {
     Document* document = m_renderer->document();
-    HTMLCollection* links = document->links();
+    RefPtr<HTMLCollection> links = document->links();
     for (unsigned i = 0; Node* curr = links->item(i); i++) {
         RenderObject* obj = curr->renderer();
         if (obj) {

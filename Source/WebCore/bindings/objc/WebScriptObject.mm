@@ -50,6 +50,7 @@
 #import <runtime/JSLock.h>
 #import <runtime/Completion.h>
 #import <runtime/Completion.h>
+#import <wtf/TCSpinLock.h>
 #import <wtf/Threading.h>
 
 
@@ -60,16 +61,24 @@ using namespace WebCore;
 namespace WebCore {
 
 static NSMapTable* JSWrapperCache;
+static SpinLock spinLock = SPINLOCK_INITIALIZER;
 
 NSObject* getJSWrapper(JSObject* impl)
 {
+    ASSERT(isMainThread());
+    SpinLockHolder holder(&spinLock);
+
     if (!JSWrapperCache)
         return nil;
-    return static_cast<NSObject*>(NSMapGet(JSWrapperCache, impl));
+    NSObject* wrapper = static_cast<NSObject*>(NSMapGet(JSWrapperCache, impl));
+    return wrapper ? [[wrapper retain] autorelease] : nil;
 }
 
 void addJSWrapper(NSObject* wrapper, JSObject* impl)
 {
+    ASSERT(isMainThread());
+    SpinLockHolder holder(&spinLock);
+
     if (!JSWrapperCache)
         JSWrapperCache = createWrapperCache();
     NSMapInsert(JSWrapperCache, impl, wrapper);
@@ -77,15 +86,27 @@ void addJSWrapper(NSObject* wrapper, JSObject* impl)
 
 void removeJSWrapper(JSObject* impl)
 {
+    SpinLockHolder holder(&spinLock);
+
     if (!JSWrapperCache)
         return;
     NSMapRemove(JSWrapperCache, impl);
 }
 
+static void removeJSWrapperIfRetainCountOne(NSObject* wrapper, JSObject* impl)
+{
+    SpinLockHolder holder(&spinLock);
+
+    if (!JSWrapperCache)
+        return;
+    if ([wrapper retainCount] == 1)
+        NSMapRemove(JSWrapperCache, impl);
+}
+
 id createJSWrapper(JSC::JSObject* object, PassRefPtr<JSC::Bindings::RootObject> origin, PassRefPtr<JSC::Bindings::RootObject> root)
 {
     if (id wrapper = getJSWrapper(object))
-        return [[wrapper retain] autorelease];
+        return wrapper;
     return [[[WebScriptObject alloc] _initWithJSObject:object originRootObject:origin rootObject:root] autorelease];
 }
 
@@ -223,13 +244,19 @@ static void _didExecute(WebScriptObject *obj)
     return jsCast<JSDOMWindowBase*>(root->globalObject())->allowsAccessFrom(_private->originRootObject->globalObject());
 }
 
+- (oneway void)release
+{
+    // If we're releasing the last reference to this object, remove if from the map.
+    if (_private->imp)
+        WebCore::removeJSWrapperIfRetainCountOne(self, _private->imp);
+
+    [super release];
+}
+
 - (void)dealloc
 {
     if (WebCoreObjCScheduleDeallocateOnMainThread([WebScriptObject class], self))
         return;
-
-    if (_private->imp)
-        WebCore::removeJSWrapper(_private->imp);
 
     if (_private->rootObject && _private->rootObject->isValid())
         _private->rootObject->gcUnprotect(_private->imp);
@@ -503,6 +530,9 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
 
 - (JSObjectRef)JSObject
 {
+    ExecState* exec = [self _rootObject]->globalObject()->globalExec();
+    
+    JSLockHolder lock(exec);
     if (![self _isSafeScript])
         return NULL;
 

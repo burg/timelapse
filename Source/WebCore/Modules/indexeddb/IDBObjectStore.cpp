@@ -252,9 +252,6 @@ PassRefPtr<IDBIndex> IDBObjectStore::createIndex(const String& name, const Strin
 
 PassRefPtr<IDBIndex> IDBObjectStore::createIndex(const String& name, PassRefPtr<DOMStringList> keyPath, const Dictionary& options, ExceptionCode& ec)
 {
-    // FIXME: Binding code for DOMString[] should not match null. http://webkit.org/b/84217
-    if (!keyPath)
-        return createIndex(name, IDBKeyPath("null"), options, ec);
     return createIndex(name, IDBKeyPath(*keyPath), options, ec);
 }
 
@@ -275,7 +272,7 @@ PassRefPtr<IDBIndex> IDBObjectStore::createIndex(const String& name, const IDBKe
         return 0;
     }
     if (name.isNull()) {
-        ec = IDBDatabaseException::IDB_TYPE_ERR;
+        ec = NATIVE_TYPE_ERR;
         return 0;
     }
     if (m_metadata.indexes.contains(name)) {
@@ -290,7 +287,7 @@ PassRefPtr<IDBIndex> IDBObjectStore::createIndex(const String& name, const IDBKe
     options.get("multiEntry", multiEntry);
 
     if (keyPath.type() == IDBKeyPath::ArrayType && multiEntry) {
-        ec = IDBDatabaseException::IDB_NOT_SUPPORTED_ERR;
+        ec = IDBDatabaseException::IDB_INVALID_ACCESS_ERR;
         return 0;
     }
 
@@ -392,7 +389,7 @@ PassRefPtr<IDBRequest> IDBObjectStore::openCursor(ScriptExecutionContext* contex
 PassRefPtr<IDBRequest> IDBObjectStore::openCursor(ScriptExecutionContext* context, PassRefPtr<IDBKeyRange> range, unsigned short direction, ExceptionCode& ec)
 {
     IDB_TRACE("IDBObjectStore::openCursor");
-    DEFINE_STATIC_LOCAL(String, consoleMessage, ("Numeric direction values are deprecated in IDBObjectStore.openCursor. Use\"next\", \"nextunique\", \"prev\", or \"prevunique\"."));
+    DEFINE_STATIC_LOCAL(String, consoleMessage, ("Numeric direction values are deprecated in IDBObjectStore.openCursor. Use \"next\", \"nextunique\", \"prev\", or \"prevunique\"."));
     context->addConsoleMessage(JSMessageSource, LogMessageType, WarningMessageLevel, consoleMessage);
     const String& directionString = IDBCursor::directionToString(direction, ec);
     if (ec)
@@ -406,7 +403,7 @@ PassRefPtr<IDBRequest> IDBObjectStore::openCursor(ScriptExecutionContext* contex
     RefPtr<IDBKeyRange> keyRange = IDBKeyRange::only(key, ec);
     if (ec)
         return 0;
-    return openCursor(context, keyRange.release(), ec);
+    return openCursor(context, keyRange.release(), direction, ec);
 }
 
 PassRefPtr<IDBRequest> IDBObjectStore::openCursor(ScriptExecutionContext* context, PassRefPtr<IDBKey> key, unsigned short direction, ExceptionCode& ec)

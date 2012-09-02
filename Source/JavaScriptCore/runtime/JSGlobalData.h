@@ -129,6 +129,10 @@ namespace JSC {
 #if ENABLE(DFG_JIT)
     class ConservativeRoots;
 
+#if COMPILER(MSVC)
+#pragma warning(push)
+#pragma warning(disable: 4200) // Disable "zero-sized array in struct/union" warning
+#endif
     struct ScratchBuffer {
         ScratchBuffer()
             : m_activeLength(0)
@@ -151,6 +155,9 @@ namespace JSC {
         size_t m_activeLength;
         void* m_buffer[0];
     };
+#if COMPILER(MSVC)
+#pragma warning(pop)
+#endif
 #endif
 
     class JSGlobalData : public ThreadSafeRefCounted<JSGlobalData> {
@@ -394,6 +401,13 @@ namespace JSC {
 #if CPU(X86) && ENABLE(JIT)
         unsigned m_timeoutCount;
 #endif
+
+        unsigned m_newStringsSinceLastHashConst;
+
+        static const unsigned s_minNumberOfNewStringsToHashConst = 100;
+
+        bool haveEnoughNewStringsToHashConst() { return m_newStringsSinceLastHashConst > s_minNumberOfNewStringsToHashConst; }
+        void resetNewStringsSinceLastHashConst() { m_newStringsSinceLastHashConst = 0; }
 
 #define registerTypedArrayFunction(type, capitalizedType) \
         void registerTypedArrayDescriptor(const capitalizedType##Array*, const TypedArrayDescriptor& descriptor) \

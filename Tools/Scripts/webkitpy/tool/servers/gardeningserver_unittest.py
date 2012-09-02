@@ -183,7 +183,7 @@ class GardeningServerTest(unittest.TestCase):
         self._post_to_path("/rollout?revision=2314&reason=MOCK+rollout+reason", expected_stderr=expected_stderr, expected_stdout=expected_stdout)
 
     def test_rebaselineall(self):
-        expected_stderr = "MOCK run_command: ['echo', 'rebaseline-all'], cwd=/mock-checkout, input={\"user-scripts/another-test.html\":{\"%s\": [%s]}}\n"
+        expected_stderr = "MOCK run_command: ['echo', 'rebaseline-json'], cwd=/mock-checkout, input={\"user-scripts/another-test.html\":{\"%s\": [%s]}}\n"
         expected_stdout = "== Begin Response ==\nsuccess\n== End Response ==\n"
         server = MockServer()
 
@@ -200,7 +200,7 @@ class GardeningServerTest(unittest.TestCase):
 
     def test_rebaseline_new_port(self):
         builders._exact_matches = {"MOCK builder": {"port_name": "test-mac-leopard", "specifiers": set(["mock-specifier"]), "move_overwritten_baselines_to": ["mock-port-fallback", "mock-port-fallback2"]}}
-        expected_stderr = 'MOCK run_command: [\'echo\', \'rebaseline-all\'], cwd=/mock-checkout, input={"user-scripts/another-test.html":{"MOCK builder": ["txt","png"]}}\n'
+        expected_stderr = 'MOCK run_command: [\'echo\', \'rebaseline-json\'], cwd=/mock-checkout, input={"user-scripts/another-test.html":{"MOCK builder": ["txt","png"]}}\n'
         expected_stdout = "== Begin Response ==\nsuccess\n== End Response ==\n"
         self._post_to_path("/rebaselineall", body='{"user-scripts/another-test.html":{"MOCK builder": ["txt","png"]}}', expected_stderr=expected_stderr, expected_stdout=expected_stdout)
 

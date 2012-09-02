@@ -1,3 +1,745 @@
+2012-07-19  Jakob Petsovits  <jpetsovits@rim.com>
+
+        [BlackBerry] Allow nested suspend/resume screen & backingstore calls.
+        https://bugs.webkit.org/show_bug.cgi?id=91644
+        RIM PR 174365
+
+        Reviewed by Adam Treat and Antonio Gomes.
+
+        We expose suspendScreenAndBackingStoreUpdates() to the
+        outside API, but also use it internally when reacting
+        to a number of happenings, i.e. zooming, viewport resize,
+        resetting view state on Committed state or when restoring
+        it from previous pages, etc.
+
+        These two can clash. For instance, if we get a suspend
+        call from outside that suspends us for app inactivity,
+        or we are told to suspend because the main target surface
+        is not available at the time, and while being suspended
+        we try to rotate, finish loading a page, the we'll end up
+        resuming operations even though we shouldn't.
+
+        This patch changes the suspend flag to be a counter
+        instead, allowing nested suspend/resume calls and making
+        suspend/resume more robust this way. It also changes
+        several call sites to make sure suspend/resume calls are
+        paired up correctly.
+
+        * Api/BackingStore.cpp:
+        (BlackBerry::WebKit::BackingStorePrivate::BackingStorePrivate):
+        (BlackBerry::WebKit::BackingStorePrivate::suspendScreenAndBackingStoreUpdates):
+        (BlackBerry::WebKit::BackingStorePrivate::resumeScreenAndBackingStoreUpdates):
+        * Api/BackingStore_p.h:
+        (BackingStorePrivate):
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::shouldZoomAboutPoint):
+        (BlackBerry::WebKit::WebPagePrivate::zoomAboutPointTimerFired):
+        (BlackBerry::WebKit::WebPagePrivate::blockZoomRectForNode):
+        * WebCoreSupport/FrameLoaderClientBlackBerry.cpp:
+        (WebCore::FrameLoaderClientBlackBerry::restoreViewState):
+
+2012-07-18  Yong Li  <yoli@rim.com>
+
+        [BlackBerry] Move about: URL handling out of WebCore
+        https://bugs.webkit.org/show_bug.cgi?id=91541
+
+        Reviewed by Rob Buis.
+
+        Move about URL handling code to WebKit/blackberry. Now when WebPage is asked to load an about URL,
+        it directly calls loadString() with the generated source.
+
+        Also move AboutData.h/cpp from WebCoreSupport to WebKitSupport and change their namespace from WebCore
+        to BlackBerry::WebKit.
+
+        The change is very mechanical except "procss total memory usage" in about:memory now only accounts used
+        bytes and ignore free spaces in malloc.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::loadAbout):
+        (WebKit):
+        (BlackBerry::WebKit::WebPage::load):
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+        * WebKitSupport/AboutData.cpp: Renamed from Source/WebKit/blackberry/WebCoreSupport/AboutData.cpp.
+        (WebKit):
+        (BlackBerry::WebKit::writeFeatures):
+        (BlackBerry::WebKit::numberToHTMLTr):
+        (BlackBerry::WebKit::bool):
+        (BlackBerry::WebKit::configPage):
+        (BlackBerry::WebKit::cacheTypeStatisticToHTMLTr):
+        (BlackBerry::WebKit::dumpJSCTypeCountSetToTableHTML):
+        (BlackBerry::WebKit::memoryPage):
+        * WebKitSupport/AboutData.h: Renamed from Source/WebKit/blackberry/WebCoreSupport/AboutData.h.
+        (WebKit):
+
+2012-07-17  Jakob Petsovits  <jpetsovits@rim.com>
+
+        [BlackBerry] Remove unnecessary clearWindow() calls and the method itself
+        https://bugs.webkit.org/show_bug.cgi?id=91540
+        RIM PR 174365
+
+        Reviewed by Adam Treat.
+
+        If we resume the backingstore right afterwards with
+        RenderAndBlit then that'll fill the whole visible area
+        with content, making a clearWindow() call unnecessary.
+        This call is a remnant from ages ago, and is well suited
+        to disappear into nothingness.
+
+        (There is still a clearWindow() call, with rect argument,
+        which we continue using. This commit only removes the
+        rect-less version.)
+
+        * Api/BackingStore.cpp:
+        * Api/BackingStore_p.h:
+        (BackingStorePrivate):
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::zoomAboutPoint):
+        (BlackBerry::WebKit::WebPagePrivate::zoomBlock):
+
+2012-07-17  Vivek Galatage  <vivekgalatage@gmail.com>
+
+        Web Inspector: refactor InspectorController::connectFrontend() to accept InspectorFrontendChannel.
+        https://bugs.webkit.org/show_bug.cgi?id=91196
+
+        Reviewed by Pavel Feldman.
+
+        Refactoring InspectorClients. InspectorClient::openInspectorFrontend
+        now returning the InspectorFrontendChannel.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::WebPagePrivate):
+        (BlackBerry::WebKit::WebPagePrivate::init):
+        (BlackBerry::WebKit::WebPage::enableWebInspector):
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+        * WebCoreSupport/InspectorClientBlackBerry.cpp:
+        (WebCore::InspectorClientBlackBerry::openInspectorFrontend):
+        * WebCoreSupport/InspectorClientBlackBerry.h:
+        (InspectorClientBlackBerry):
+
+2012-07-17  Chris Guan  <chris.guan@torchmobile.com.cn>
+
+        [BlackBerry] Enable registerProtocolHandler for Blackberry
+        https://bugs.webkit.org/show_bug.cgi?id=90422
+
+        Reviewed by George Staikos.
+
+        Implements APIs were added in Custom Scheme Handler specification
+        which is at http://dev.w3.org/html5/spec/Overview.html#custom-handlers.
+
+        Test cases:
+        fast/dom/register-protocol-handler.html
+        fast/dom/unregister-protocol-handler.html
+
+        * Api/WebPageClient.h:
+        * WebCoreSupport/ChromeClientBlackBerry.cpp:
+        (WebCore::ChromeClientBlackBerry::isProtocolHandlerRegistered):
+        (WebCore::ChromeClientBlackBerry::unregisterProtocolHandler):
+        (WebCore::ChromeClientBlackBerry::registerProtocolHandler):
+        * WebCoreSupport/ChromeClientBlackBerry.h:
+        (ChromeClientBlackBerry):
+
+2012-07-16  Benjamin C Meyer  <bmeyer@rim.com>
+
+        Any webpage can crash webkit via qnx.callExtensionMethod assuming 'this' is the 'qnx' object.
+        https://bugs.webkit.org/show_bug.cgi?id=91419
+
+        Run the following in inspector to crash WebKit
+
+        qnx.callExtensionMethod.apply(window, []);
+
+        In the c++ that handles the function it assumes that when callExtensionMethod
+        is called that 'this' is the object 'qnx'.  The qnx object has a hidden
+        variable that the code casts and uses, but when 'this' is not qnx such as the
+        example this will cause a crash.  Any website can insert the above JavaScript
+        to cause the crash.
+
+        Reviewed by Yong Li.
+
+        * WebCoreSupport/ClientExtension.cpp:
+        (clientExtensionMethod):
+
+2012-07-16  Yong Li  <yoli@rim.com>
+
+        [BlackBerry] Improve about:memory page
+        https://bugs.webkit.org/show_bug.cgi?id=87676
+
+        Reviewed by Rob Buis.
+
+        Add a table for process memory usage summary for easy read.
+
+        * WebCoreSupport/AboutData.cpp:
+        (WebCore::memoryPage):
+
+2012-07-16  Kihong Kwon  <kihong.kwon@samsung.com>
+
+        Remove setController from BatteryClient
+        https://bugs.webkit.org/show_bug.cgi?id=90944
+
+        Reviewed by Adam Barth.
+
+        BatteryClient doesn't need to keep m_controller,
+        because BatteryController can be accessed using BatteryController::from().
+        Remove m_controller and Add webPagePrivate to BatteryClientBlackBerry.
+        And change all m_controller to BatteryController::from.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::init):
+        * WebCoreSupport/BatteryClientBlackBerry.cpp:
+        (WebCore::BatteryClientBlackBerry::BatteryClientBlackBerry):
+        (WebCore::BatteryClientBlackBerry::onLevelChange):
+        (WebCore::BatteryClientBlackBerry::onChargingChange):
+        (WebCore::BatteryClientBlackBerry::onChargingTimeChange):
+        (WebCore::BatteryClientBlackBerry::onDischargingTimeChange):
+        * WebCoreSupport/BatteryClientBlackBerry.h:
+        (BatteryClientBlackBerry):
+
+2012-07-16  Yongxin Dai  <yodai@rim.com>
+
+        [BlackBerry] Text selection with touch hold does not start on text field in some cases
+        https://bugs.webkit.org/show_bug.cgi?id=91267
+
+        Reviewed by Antonio Gomes.
+
+        Input fields host node is by spec non-editable unless the field itself has content editable enabled.
+        We enable selection if the shadow tree for the input field is selectable.
+        PR # 173450
+
+        Reviewed Internally by Mike Fenton.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::webContext):
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::webContext):
+
+2012-07-15  Jonathan Dong  <jonathan.dong@torchmobile.com.cn>
+
+        [BlackBerry] Move icon database to application data directory.
+        https://bugs.webkit.org/show_bug.cgi?id=91195
+
+        Reviewed by Rob Buis.
+
+        RIM PR: 156852
+        Create icon database in application data directory instead of
+        database or local storage directory, by doing this we can make
+        things easier when clearing database or local storage data files.
+
+        Internally reviewed by Charles Wei <charles.wei@torchmobile.com.cn>
+
+        * WebCoreSupport/IconDatabaseClientBlackBerry.cpp:
+        (WebCore::IconDatabaseClientBlackBerry::initIconDatabase):
+
+2012-07-13  Xianzhu Wang  <wangxianzhu@chromium.org>
+
+        Move WebCore/platform/text/Base64 to WTF/wtf/text
+        https://bugs.webkit.org/show_bug.cgi?id=91162
+
+        Reviewed by Adam Barth.
+
+        * Api/WebKitTextCodec.cpp:
+        (BlackBerry::WebKit::base64DecodePolicyForWTF):
+        (BlackBerry::WebKit::base64Decode):
+        (BlackBerry::WebKit::base64EncodePolicyForWTF):
+        (BlackBerry::WebKit::base64Encode):
+        * Api/WebSettings.cpp:
+        (BlackBerry::WebKit::WebSettings::setUserStyleSheetString):
+        * WebCoreSupport/FrameLoaderClientBlackBerry.cpp:
+
+2012-07-13  George Staikos  <staikos@webkit.org>
+
+        [BlackBerry] Fix crash due to unguarded use of renderer in select
+        popup.
+        https://bugs.webkit.org/show_bug.cgi?id=91287
+
+        Reviewed by Rob Buis.
+
+        No known testcase for this.  Found in the wild.
+
+        * WebCoreSupport/SelectPopupClient.cpp:
+        (WebCore::SelectPopupClient::setValueAndClosePopup):
+
+2012-07-13  Mike Fenton  <mifenton@rim.com>
+
+        [BlackBerry] Add support for attributes to define keyboard and enter key type on the Virtual Keyboard
+        https://bugs.webkit.org/show_bug.cgi?id=91248
+
+        Reviewed by Antonio Gomes.
+
+        PR 174733.
+
+        Add data-blackberry-virtual-keyboard-type and
+        data-blackberry-virtual-keyboard-enter-key to
+        enable configuration of the desired virtual keyboard
+        using element attributes.
+
+        Reviewed Internally by Gen Mak.
+
+        * Api/WebPageClient.h:
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::convertStringToKeyboardType):
+        (WebKit):
+        (BlackBerry::WebKit::keyboardTypeAttribute):
+        (BlackBerry::WebKit::convertStringToKeyboardEnterKeyType):
+        (BlackBerry::WebKit::keyboardEnterKeyTypeAttribute):
+        (BlackBerry::WebKit::InputHandler::setElementFocused):
+
+2012-07-13  Jacky Jiang  <zhajiang@rim.com>
+
+        [BlackBerry] resetBitmapZoomScale called while zooming preventing pinch zoom
+        https://bugs.webkit.org/show_bug.cgi?id=91247
+
+        Reviewed by Antonio Gomes.
+
+        PR: 175432
+        On yahoo.com, the web page stopped zooming while trying to pinch as
+        WebPageClient::resetBitmapZoomScale(double) was being called by
+        WebPagePrivate::zoomToInitialScaleOnLoad() after load finished.
+        And also yahoo.com was keeping updating layout, which made it really
+        bad that zoomToInitialScaleOnLoad() was called many times when load
+        finished and the load type was FrameLoadTypeStandard or FrameLoadTypeSame.
+        As we only care about the situation that dispatchDidFirstVisuallyNonEmptyLayout()
+        happens after load finished, we can move the code to that method and
+        set a flag for WebPage layoutFinished() and zoomToInitialScaleOnLoad()
+        instead. In this way, we can ensure that the flag is only enabled when
+        dispatchDidFirstVisuallyNonEmptyLayout() is called after load finished
+        and get rid of calling zoomToInitialScaleOnLoad() lots of times when
+        keeping updating layout in such kind of situation.
+
+        Internally reviewed by Arvid Nilsson
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::WebPagePrivate):
+        (BlackBerry::WebKit::WebPagePrivate::setLoadState):
+        (BlackBerry::WebKit::WebPagePrivate::layoutFinished):
+        * Api/WebPage_p.h:
+        (BlackBerry::WebKit::WebPagePrivate::shouldZoomToInitialScaleOnLoad):
+        (BlackBerry::WebKit::WebPagePrivate::setShouldZoomToInitialScaleAfterLoadFinished):
+        (WebPagePrivate):
+        * WebCoreSupport/FrameLoaderClientBlackBerry.cpp:
+        (WebCore::FrameLoaderClientBlackBerry::dispatchDidFirstVisuallyNonEmptyLayout):
+
+2012-07-13  Jakob Petsovits  <jpetsovits@rim.com>
+
+        [BlackBerry] Use fillBuffer() instead of a user-defined background image.
+        https://bugs.webkit.org/show_bug.cgi?id=91180
+        RIM PR 171458
+
+        Reviewed by Rob Buis.
+        Internally reviewed by Andrew Lo.
+
+        By using Platform::Graphics::fillBuffer() to fill the
+        overscroll area, we save graphics memory for the buffer
+        that the background image was occupying.
+
+        Also adapt checkerboard drawing as it is now done using
+        fillBuffer() which replaces checkerBuffer().
+
+        In the same go, use the opportunity of the WebSettings
+        API change to make it more consistent, renaming the
+        OverZoomColor setting to OverScrollColor.
+
+        * Api/BackingStore.cpp:
+        (WebKit):
+        (BlackBerry::WebKit::BackingStorePrivate::paintDefaultBackground):
+        (BlackBerry::WebKit::BackingStorePrivate::blitContents):
+        (BlackBerry::WebKit::BackingStorePrivate::fillWindow):
+        * Api/BackingStore_p.h:
+        (BackingStorePrivate):
+        * Api/WebSettings.cpp:
+        (WebKit):
+        (BlackBerry::WebKit::WebSettings::standardSettings):
+        (BlackBerry::WebKit::WebSettings::overScrollColor):
+        (BlackBerry::WebKit::WebSettings::setOverScrollColor):
+        (BlackBerry::WebKit::WebSettings::isEnableDefaultOverScrollBackground):
+        (BlackBerry::WebKit::WebSettings::setEnableDefaultOverScrollBackground):
+        * Api/WebSettings.h:
+
+2012-07-13  Joshua Netterfield  <jnetterfield@rim.com>
+
+        [BlackBerry] Update about:* pages
+        https://bugs.webkit.org/show_bug.cgi?id=91121
+
+        Reviewed by Yong Li.
+
+        Update the about:config pages, and improve the aesthetics of the about:build, about:version, about:credits, about:memory, about:config, and similar pages.
+
+        No new tests, because there is no new funtionality.
+
+        * WebCoreSupport/AboutData.cpp:
+        (WebCore):
+        (WebCore::writeFeatures):
+        (WebCore::numberToHTMLTr): Converted to template function, added bool specialization to write "true" and "false" instead of "1" and "0"
+        (WebCore::configPage):
+        (WebCore::memoryPage):
+        * WebCoreSupport/AboutTemplate.html.cpp: Template for BlackBerry about:* pages.
+
+2012-07-12  Benjamin C Meyer  <bmeyer@rim.com>
+
+        WebPage::executeJavaScriptFunction crashes when there is an exception
+        https://bugs.webkit.org/show_bug.cgi?id=91098
+        RIM PR #149294
+
+        When there is an exception currently the code tries to get the string of
+        the exception via JSValueToStringCopy to pass back, but this cases a
+        crash inside JavaScriptCore, so change it to simply return false and not
+        set the return value with the exception string.
+
+        Reviewed by George Staikos.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPage::executeJavaScriptFunction):
+
+2012-07-12  Pawel Chomicki  <pchomicki@rim.com>
+
+        [BlackBerry] WebPage::touchEvent() should use Platform::TouchEvent's toString() for debugging.
+        https://bugs.webkit.org/show_bug.cgi?id=91002
+
+        Reviewed by Antonio Gomes.
+        Reviewed internally by Genevieve Mak.
+
+        Updated DEBUG_TOUCH_EVENTS section of touchEvent method to utilize
+        Platform::TouchEvent's toString method.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPage::touchEvent):
+
+2012-07-12  Jonathan Dong  <jonathan.dong@torchmobile.com.cn>
+
+        [BlackBerry] Cannot use digest proxy auth and NTLM auth at the same time
+        https://bugs.webkit.org/show_bug.cgi?id=91054
+
+        Reviewed by George Staikos.
+
+        Implemented interface function syncProxyCredential() derived
+        from class PageClientBlackBerry.
+
+        Internally reviewed by Jason Liu <jason.liu@torchmobile.com.cn>
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::syncProxyCredential):
+        (WebKit):
+        * Api/WebPageClient.h:
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+
+2012-07-11  Mike Lattanzio  <mlattanzio@rim.com>
+
+        [BlackBerry] UserViewportArguments are not properly respected.
+        https://bugs.webkit.org/show_bug.cgi?id=91005
+
+        Reviewed by Rob Buis.
+
+        PR# 170088.
+        Move scale and zooming reset on Committed before applying
+        the user viewport to avoid overriding it immediately.
+
+        Internal review by Konrad Piascik, Jacky Jiang.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::setLoadState):
+
+2012-07-11  Crystal Zhang  <haizhang@rim.com>
+
+        [BlackBerry] Implement Date/Time picker
+        https://bugs.webkit.org/show_bug.cgi?id=90911
+
+        Reviewed by Rob Buis.
+
+        Implement HTML Date/Time picker, also should delete popup when closing popup.
+
+        * WebCoreSupport/ChromeClientBlackBerry.cpp:
+        (WebCore::ChromeClientBlackBerry::closePagePopup):
+        * WebCoreSupport/DatePickerClient.cpp: Added.
+        (WebCore):
+        (WebCore::DatePickerClient::DatePickerClient):
+        (WebCore::DatePickerClient::~DatePickerClient):
+        (WebCore::DatePickerClient::generateHTML):
+        (WebCore::DatePickerClient::closePopup):
+        (WebCore::DatePickerClient::contentSize):
+        (WebCore::DatePickerClient::htmlSource):
+        (WebCore::DatePickerClient::setValueAndClosePopup):
+        (WebCore::DatePickerClient::didClosePopup):
+        (WebCore::DatePickerClient::writeDocument):
+        * WebCoreSupport/DatePickerClient.h: Added.
+        (WebKit):
+        (WebCore):
+        (DatePickerClient):
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::openDatePopup):
+
+2012-07-10  Adam Barth  <abarth@webkit.org>
+
+        WebCore::Settings for Hixie76 WebSocket protocol doesn't do anything and should be removed
+        https://bugs.webkit.org/show_bug.cgi?id=90910
+
+        Reviewed by Eric Seidel.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::init):
+
+2012-07-10  Adam Barth  <abarth@webkit.org>
+
+        LayoutTestController.dumpConfigurationForViewport should move to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=45652
+
+        Reviewed by Eric Seidel.
+
+        * WebKitSupport/DumpRenderTreeSupport.cpp:
+        * WebKitSupport/DumpRenderTreeSupport.h:
+        (DumpRenderTreeSupport):
+
+2012-07-09  Yong Li  <yoli@rim.com>
+
+        [BlackBerry] PagePopupBlackBerry::closePopup() should always clear the pointer in WebPagePrivate
+        https://bugs.webkit.org/show_bug.cgi?id=90817
+
+        Reviewed by Rob Buis.
+
+        PR# 174085.
+        PagePopupBlackBerry::closePopup() should always clear the pointer in WebPagePrivate to avoid crashes.
+        This patch also removes unused variable m_parentPopup and its setter.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::WebPagePrivate): Remove m_parentPopup.
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+        * WebCoreSupport/ChromeClientBlackBerry.cpp:
+        (WebCore::ChromeClientBlackBerry::closePagePopup):
+        * WebCoreSupport/PagePopupBlackBerry.cpp:
+        (WebCore::PagePopupBlackBerry::init): Remove the setParentPopup() call.
+        (WebCore::PagePopupBlackBerry::closePopup): Clear the reference in WebPagePrivate.
+        * WebCoreSupport/SelectPopupClient.cpp:
+        (WebCore::SelectPopupClient::setValueAndClosePopup): Add an assert for valid m_element.
+
+2012-07-09  Mike Lattanzio  <mlattanzio@rim.com>
+
+        [BlackBerry] meta viewport initial-scale doesn't factor in device pixel ratio
+        https://bugs.webkit.org/show_bug.cgi?id=90575
+
+        Reviewed by Rob Buis.
+
+        Refactor meta viewport handling to multiply the developer
+        specified scale properties by the devicePixelRatio. This
+        required moving the setting of these values until after
+        the call to computeViewportAttributes.
+
+        This fixes an isssue where content wider than the meta viewport
+        would case a zoom-out-to-fit scenario because we misinterpreted
+        the specified initial-scale.
+
+        New test to verify wide content doesn't affect initial-scale:
+        ManualTests/blackberry/meta-viewport-initial-scale-wide-content.html
+
+        Internal review from Konrad Piascik, Arvid Nilsson.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::recomputeVirtualViewportFromViewportArguments):
+        (BlackBerry::WebKit::WebPagePrivate::dispatchViewportPropertiesDidChange):
+
+2012-07-07  George Staikos  <staikos@webkit.org>
+
+        Detach animation clients properly if we clear the web page pointer.
+        https://bugs.webkit.org/show_bug.cgi?id=90730
+
+        Reviewed by Adam Treat.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::destroyCompositor):
+        * Api/WebPageCompositor.cpp:
+        (BlackBerry::WebKit::WebPageCompositorPrivate::WebPageCompositorPrivate):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::~WebPageCompositorPrivate):
+        (WebKit):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::detach):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::setPage):
+        * Api/WebPageCompositor_p.h:
+        (WebPageCompositorPrivate):
+
+2012-07-06  Max Feil  <mfeil@rim.com>
+
+        [BlackBerry] exitFullScreenForElement() is not working for fullscreen elements in iframes
+        https://bugs.webkit.org/show_bug.cgi?id=90327
+
+        Reviewed by Antonio Gomes.
+
+        Fix exit fullscreen problem for elements in iframes. The
+        exitFullScreenForElement() call is passed a null element in
+        this case, instead of the original element which entered
+        fullscreen. If you look in Document.cpp you can see the
+        exitFullScreenForElement() call being made on the topDocument
+        (which has a null m_fullScreenElement) instead of the iframe's
+        document.
+
+        The Chromium and Windows ports get around this problem by
+        storing either the fullscreen element or its frame during
+        enterFullScreenForElement(), so I will bring the BlackBerry port
+        in line with this. See also bug 89817.
+
+        * WebCoreSupport/ChromeClientBlackBerry.cpp:
+        (WebCore::ChromeClientBlackBerry::enterFullScreenForElement):
+        (WebCore::ChromeClientBlackBerry::exitFullScreenForElement):
+        * WebCoreSupport/ChromeClientBlackBerry.h:
+        (ChromeClientBlackBerry):
+
+2012-07-06  Benjamin C Meyer  <bmeyer@rim.com>
+
+        Add an API to explicitly call a JavaScript function with args.
+        https://bugs.webkit.org/show_bug.cgi?id=90694
+
+        Currently the Blackberry port doesn't expose the JavaScript
+        engine to 3rd parties so they rely upon executeJavaScript
+        which can be slower than necessary and unsafe as eval is used.
+        This new API provides a way to explicitly call a specific
+        JavaScript function with a list of args preventing the case
+        where an argument comes from a untrusted source and tries to
+        escape the arg list to take control of the JavaScript engine.
+
+        In the future if the Blackberry port introduces a formal
+        way to interact with the JavaScript engine this function should
+        be removed.
+
+        PR 149294
+
+        Reviewed by Unreviewed
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPage::executeJavaScriptFunction):
+        (WebKit):
+        * Api/WebPage.h:
+
+2012-07-05  Charles Wei  <charles.wei@torchmobile.com.cn>
+
+        [BlackBerry] Fix the build error introduced by enabling CUSTOM_THEME_HANDLER
+        https://bugs.webkit.org/show_bug.cgi?id=90588
+
+        Reviewed by Rob Buis.
+
+        Fix the build error introduced by enabling CUSTOM_THEME_HANDLER.
+        * WebCoreSupport/ChromeClientBlackBerry.cpp:
+        (WebCore::ChromeClientBlackBerry::isProtocolHandlerRegistered):
+
+2012-07-04  Hanna Ma  <Hanma@rim.com>
+
+        [BlackBerry] Implement device metrics for blackberry.
+        https://bugs.webkit.org/show_bug.cgi?id=90494
+        RIM PR #159034
+
+        Reviewed by Rob Buis.
+
+        Implement calls to the application to change the device metrics for
+        the web inspector.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::applySizeOverride):
+        (WebKit):
+        (BlackBerry::WebKit::WebPagePrivate::setTextZoomFactor):
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+        * WebCoreSupport/InspectorClientBlackBerry.cpp:
+        (WebCore::InspectorClientBlackBerry::InspectorClientBlackBerry):
+        (WebCore::InspectorClientBlackBerry::canOverrideDeviceMetrics):
+        (WebCore):
+        (WebCore::InspectorClientBlackBerry::overrideDeviceMetrics):
+        (WebCore::InspectorClientBlackBerry::supportsFrameInstrumentation):
+        * WebCoreSupport/InspectorClientBlackBerry.h:
+        (InspectorClientBlackBerry):
+
+2012-07-03  Leo Yang  <leo.yang@torchmobile.com.cn>
+
+        [BlackBerry] Checkerboard shown when clicking on error page buttons
+        https://bugs.webkit.org/show_bug.cgi?id=90152
+        RIM PR #161867
+
+        Reviewed by George Staikos.
+
+        r121514 just made the race occur in lower possibility but can't avoid it.
+        This path is using another approach to fix the problem. When we are resetting
+        backingstore while committing a page we need to suspend backingstore and
+        screen update to make sure no other threads can update backingstore and screen.
+
+        * Api/BackingStore.cpp:
+        (BlackBerry::WebKit::BackingStorePrivate::resetTiles):
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::setLoadState):
+
+2012-07-03  George Staikos  <staikos@webkit.org>
+
+        [BlackBerry] Enable Custom Scheme Handlers for BlackBerry.
+        https://bugs.webkit.org/show_bug.cgi?id=90422
+
+        Reviewed by Rob Buis.
+
+        * WebCoreSupport/ChromeClientBlackBerry.cpp:
+        (WebCore):
+        (WebCore::ChromeClientBlackBerry::isProtocolHandlerRegistered):
+        (WebCore::ChromeClientBlackBerry::unregisterProtocolHandler):
+        * WebCoreSupport/ChromeClientBlackBerry.h:
+        (ChromeClientBlackBerry):
+
+2012-07-03  George Staikos  <staikos@webkit.org>
+
+        [BlackBerry] Enable RegisterProtocolHandler for BlackBerry.
+        https://bugs.webkit.org/show_bug.cgi?id=90422
+
+        Reviewed by Rob Buis.
+
+        * WebCoreSupport/ChromeClientBlackBerry.cpp:
+        (WebCore):
+        (WebCore::ChromeClientBlackBerry::registerProtocolHandler):
+        * WebCoreSupport/ChromeClientBlackBerry.h:
+        (ChromeClientBlackBerry):
+
+2012-07-03  Jan Keromnes  <janx@linux.com>
+
+        Web Inspector: WebInspector.TextViewer should be renamed WebInspector.TextEditor
+        https://bugs.webkit.org/show_bug.cgi?id=89939
+
+        Reviewed by Vsevolod Vlasov.
+
+        * WebCoreSupport/inspectorBB.html:
+
+2012-07-02  Xiaobo Wang  <xbwang@torchmobile.com.cn>
+
+        [BlackBerry] Use PUBLIC_BUILD to enable/disable DRT
+        https://bugs.webkit.org/show_bug.cgi?id=90271
+
+        Reviewed by George Staikos.
+
+        RIM PR #154707
+
+        Currently DRT code will be compiled only if ENABLE_DRT is set, and it's not
+        defined by default.
+        We should enable DRT by default unless PUBLIC_BUILD is set. In this way we don't
+        need to rebuild webkit before running DRT.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::~WebPagePrivate):
+        (BlackBerry::WebKit::WebPagePrivate::init):
+        (BlackBerry::WebKit::WebPagePrivate::authenticationChallenge):
+        (BlackBerry::WebKit::WebPage::runLayoutTests):
+        * WebCoreSupport/ChromeClientBlackBerry.cpp:
+        (WebCore::ChromeClientBlackBerry::addMessageToConsole):
+        (WebCore::ChromeClientBlackBerry::runJavaScriptAlert):
+        (WebCore::ChromeClientBlackBerry::runJavaScriptConfirm):
+        (WebCore::ChromeClientBlackBerry::runJavaScriptPrompt):
+        (WebCore::ChromeClientBlackBerry::createWindow):
+        (WebCore::ChromeClientBlackBerry::runBeforeUnloadConfirmPanel):
+        (WebCore::ChromeClientBlackBerry::setStatusbarText):
+        (WebCore::ChromeClientBlackBerry::exceededDatabaseQuota):
+        (WebCore::ChromeClientBlackBerry::keyboardUIMode):
+
+2012-07-02  George Staikos  <staikos@webkit.org>
+
+        [BlackBerry] Implement cancelVibration, and make sure it's canceled on
+        destruction.
+        https://bugs.webkit.org/show_bug.cgi?id=90406
+
+        Reviewed by Rob Buis.
+
+        * WebCoreSupport/VibrationClientBlackBerry.cpp:
+        (WebCore::VibrationClientBlackBerry::cancelVibration):
+        (WebCore::VibrationClientBlackBerry::vibrationDestroyed):
+
 2012-07-02  Benjamin Poulain  <bpoulain@apple.com>
 
         Do not do any logging initialization when logging is disabled

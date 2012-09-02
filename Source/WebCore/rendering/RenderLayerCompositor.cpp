@@ -638,7 +638,7 @@ RenderLayer* RenderLayerCompositor::enclosingNonStackingClippingLayer(const Rend
         if (curr->isStackingContext())
             return 0;
 
-        if (curr->renderer()->hasOverflowClip() || curr->renderer()->hasClip())
+        if (curr->renderer()->hasClipOrOverflowClip())
             return curr;
     }
     return 0;
@@ -1611,8 +1611,7 @@ bool RenderLayerCompositor::clippedByAncestor(RenderLayer* layer) const
 // into the hierarchy between this layer and its children in the z-order hierarchy.
 bool RenderLayerCompositor::clipsCompositingDescendants(const RenderLayer* layer) const
 {
-    return layer->hasCompositingDescendant() &&
-           (layer->renderer()->hasOverflowClip() || layer->renderer()->hasClip());
+    return layer->hasCompositingDescendant() && layer->renderer()->hasClipOrOverflowClip();
 }
 
 // Return true if there is an ancestor layer that is fixed positioned to the view.
@@ -1755,10 +1754,10 @@ bool RenderLayerCompositor::requiresCompositingForAnimation(RenderObject* render
     if (AnimationController* animController = renderer->animation()) {
         return (animController->isRunningAnimationOnRenderer(renderer, CSSPropertyOpacity) && inCompositingMode())
 #if ENABLE(CSS_FILTERS)
-#if !defined(BUILDING_ON_SNOW_LEOPARD) && !defined(BUILDING_ON_LION)
+#if !PLATFORM(MAC) || (!PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080)
             // <rdar://problem/10907251> - WebKit2 doesn't support CA animations of CI filters on Lion and below
             || animController->isRunningAnimationOnRenderer(renderer, CSSPropertyWebkitFilter)
-#endif // !SNOW_LEOPARD && !LION
+#endif // !PLATFORM(MAC) || (!PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080)
 #endif // CSS_FILTERS
             || animController->isRunningAnimationOnRenderer(renderer, CSSPropertyWebkitTransform);
     }
@@ -1912,7 +1911,7 @@ void RenderLayerCompositor::documentBackgroundColorDidChange()
         return;
 
     GraphicsLayer* graphicsLayer = backing->graphicsLayer();
-    if (!graphicsLayer->client()->shouldUseTileCache(graphicsLayer))
+    if (!graphicsLayer->client()->usingTileCache(graphicsLayer))
         return;
 
     Color backgroundColor = m_renderView->frameView()->documentBackgroundColor();

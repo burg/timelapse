@@ -24,7 +24,7 @@ LIST(APPEND WebKit_INCLUDE_DIRECTORIES
     "${WEBKIT_DIR}/blackberry/WebKitSupport"
     "${CMAKE_SOURCE_DIR}/Source" # For JavaScriptCore API headers
 )
-IF (ENABLE_DRT)
+IF (NOT PUBLIC_BUILD)
     LIST(APPEND WebKit_INCLUDE_DIRECTORIES
         # needed for DRT for now
         "${JAVASCRIPTCORE_DIR}/wtf"
@@ -68,7 +68,6 @@ LIST(APPEND WebKit_SOURCES
     blackberry/Api/WebSettings.cpp
     blackberry/Api/WebString.cpp
     blackberry/Api/WebViewportArguments.cpp
-    blackberry/WebCoreSupport/AboutData.cpp
     blackberry/WebCoreSupport/AutofillManager.cpp
     blackberry/WebCoreSupport/CacheClientBlackBerry.cpp
     blackberry/WebCoreSupport/ChromeClientBlackBerry.cpp
@@ -91,6 +90,8 @@ LIST(APPEND WebKit_SOURCES
     blackberry/WebCoreSupport/VibrationClientBlackBerry.cpp
     blackberry/WebCoreSupport/PagePopupBlackBerry.cpp
     blackberry/WebCoreSupport/SelectPopupClient.cpp
+    blackberry/WebCoreSupport/DatePickerClient.cpp
+    blackberry/WebKitSupport/AboutData.cpp
     blackberry/WebKitSupport/BackingStoreCompositingSurface.cpp
     blackberry/WebKitSupport/BackingStoreTile.cpp
     blackberry/WebKitSupport/BackingStoreClient.cpp
@@ -107,8 +108,8 @@ LIST(APPEND WebKit_SOURCES
     blackberry/WebKitSupport/FatFingers.cpp
 )
 
-
 IF (ENABLE_WEBGL)
+    ADD_DEFINITIONS (-DWTF_USE_OPENGL_ES_2=1)
     LIST(APPEND WebKit_INCLUDE_DIRECTORIES
         ${OPENGL_INCLUDE_DIR}
         ${THIRDPARTY_DIR}/ANGLE/src
@@ -119,7 +120,7 @@ IF (ENABLE_WEBGL)
     )
 ENDIF (ENABLE_WEBGL)
 
-IF (ENABLE_DRT)
+IF (NOT PUBLIC_BUILD)
     # DumpRenderTree sources
     LIST(APPEND WebKit_SOURCES
         blackberry/WebKitSupport/DumpRenderTreeSupport.cpp
@@ -204,7 +205,7 @@ FILE(GLOB BBWebKit_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/blackberry/Api/*.h")
 
 INSTALL(FILES ${BBWebKit_HEADERS} DESTINATION usr/include/browser/webkit)
 
-IF (ENABLE_DRT)
+IF (NOT PUBLIC_BUILD)
     INSTALL(FILES ${TOOLS_DIR}/DumpRenderTree/blackberry/DumpRenderTreeBlackBerry.h
             DESTINATION usr/include/browser/webkit)
 ENDIF ()

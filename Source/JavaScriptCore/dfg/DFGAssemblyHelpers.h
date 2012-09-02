@@ -46,12 +46,13 @@ public:
     AssemblyHelpers(JSGlobalData* globalData, CodeBlock* codeBlock)
         : m_globalData(globalData)
         , m_codeBlock(codeBlock)
-        , m_baselineCodeBlock(codeBlock->baselineVersion())
+        , m_baselineCodeBlock(codeBlock ? codeBlock->baselineVersion() : 0)
     {
-        ASSERT(m_codeBlock);
-        ASSERT(m_baselineCodeBlock);
-        ASSERT(!m_baselineCodeBlock->alternative());
-        ASSERT(m_baselineCodeBlock->getJITType() == JITCode::BaselineJIT);
+        if (m_codeBlock) {
+            ASSERT(m_baselineCodeBlock);
+            ASSERT(!m_baselineCodeBlock->alternative());
+            ASSERT(m_baselineCodeBlock->getJITType() == JITCode::BaselineJIT);
+        }
     }
     
     CodeBlock* codeBlock() { return m_codeBlock; }
@@ -182,7 +183,7 @@ public:
         move(TrustedImmPtr(scratchBuffer->activeLengthPtr()), GPRInfo::regT0);
         storePtr(TrustedImmPtr(scratchSize), GPRInfo::regT0);
 
-#if CPU(X86_64) || CPU(ARM_THUMB2)
+#if CPU(X86_64) || CPU(ARM)
         move(TrustedImmPtr(argument), GPRInfo::argumentGPR1);
         move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
         GPRReg scratch = selectScratchGPR(GPRInfo::argumentGPR0, GPRInfo::argumentGPR1);

@@ -27,7 +27,6 @@
 #include "cc/CCLayerTreeHost.h"
 
 #include "LayerChromium.h"
-#include "ManagedTexture.h"
 #include "Region.h"
 #include "TraceEvent.h"
 #include "TreeSynchronizer.h"
@@ -85,7 +84,7 @@ CCLayerTreeHost::CCLayerTreeHost(CCLayerTreeHostClient* client, const CCLayerTre
     , m_pageScaleFactor(1)
     , m_minPageScaleFactor(1)
     , m_maxPageScaleFactor(1)
-    , m_triggerIdlePaints(true)
+    , m_triggerIdleUpdates(true)
     , m_backgroundColor(SK_ColorWHITE)
     , m_hasTransparentBackground(false)
     , m_partialTextureUpdateRequests(0)
@@ -152,7 +151,8 @@ void CCLayerTreeHost::initializeLayerRenderer()
     // Update m_settings based on partial update capability.
     m_settings.maxPartialTextureUpdates = min(m_settings.maxPartialTextureUpdates, m_proxy->maxPartialTextureUpdates());
 
-    m_contentsTextureManager = CCPrioritizedTextureManager::create(0, 0, m_proxy->layerRendererCapabilities().maxTextureSize);
+    m_contentsTextureManager = CCPrioritizedTextureManager::create(0, m_proxy->layerRendererCapabilities().maxTextureSize, CCRenderer::ContentPool);
+    m_surfaceMemoryPlaceholder = m_contentsTextureManager->createTexture(IntSize(), GraphicsContext3D::RGBA);
 
     m_layerRendererInitialized = true;
 
@@ -197,11 +197,11 @@ CCLayerTreeHost::RecreateResult CCLayerTreeHost::recreateContext()
     return RecreateFailedAndGaveUp;
 }
 
-void CCLayerTreeHost::deleteContentsTexturesOnImplThread(TextureAllocator* allocator)
+void CCLayerTreeHost::deleteContentsTexturesOnImplThread(CCResourceProvider* resourceProvider)
 {
     ASSERT(CCProxy::isImplThread());
     if (m_layerRendererInitialized)
-        m_contentsTextureManager->clearAllMemory(allocator);
+        m_contentsTextureManager->clearAllMemory(resourceProvider);
 }
 
 void CCLayerTreeHost::acquireLayerTextures()
@@ -230,7 +230,7 @@ void CCLayerTreeHost::beginCommitOnImplThread(CCLayerTreeHostImpl* hostImpl)
     ASSERT(CCProxy::isImplThread());
     TRACE_EVENT0("cc", "CCLayerTreeHost::commitTo");
 
-    m_contentsTextureManager->reduceMemory(hostImpl->contentsTextureAllocator());
+    m_contentsTextureManager->reduceMemory(hostImpl->resourceProvider());
 }
 
 // This function commits the CCLayerTreeHost to an impl tree. When modifying
@@ -288,9 +288,9 @@ void CCLayerTreeHost::didLoseContext()
 
 bool CCLayerTreeHost::compositeAndReadback(void *pixels, const IntRect& rect)
 {
-    m_triggerIdlePaints = false;
+    m_triggerIdleUpdates = false;
     bool ret = m_proxy->compositeAndReadback(pixels, rect);
-    m_triggerIdlePaints = true;
+    m_triggerIdleUpdates = true;
     return ret;
 }
 
@@ -443,10 +443,10 @@ bool CCLayerTreeHost::initializeLayerRendererIfNeeded()
 }
 
 
-void CCLayerTreeHost::updateLayers(CCTextureUpdater& updater, size_t contentsMemoryLimitBytes)
+void CCLayerTreeHost::updateLayers(CCTextureUpdater& updater, size_t memoryAllocationLimitBytes)
 {
     ASSERT(m_layerRendererInitialized);
-    ASSERT(contentsMemoryLimitBytes);
+    ASSERT(memoryAllocationLimitBytes);
 
     if (!rootLayer())
         return;
@@ -454,7 +454,7 @@ void CCLayerTreeHost::updateLayers(CCTextureUpdater& updater, size_t contentsMem
     if (viewportSize().isEmpty())
         return;
 
-    m_contentsTextureManager->setMemoryAllocationLimitBytes(contentsMemoryLimitBytes);
+    m_contentsTextureManager->setMaxMemoryLimitBytes(memoryAllocationLimitBytes);
 
     updateLayers(rootLayer(), updater);
 }
@@ -490,27 +490,27 @@ void CCLayerTreeHost::updateLayers(LayerChromium* rootLayer, CCTextureUpdater& u
     // Reset partial texture update requests.
     m_partialTextureUpdateRequests = 0;
 
-    prioritizeTextures(updateList);
-
-    paintLayerContents(updateList, PaintVisible, updater);
-    if (!m_triggerIdlePaints)
-        return;
-
-    // The second (idle) paint will be a no-op in layers where painting already occured above.
-    // FIXME: This pass can be merged with the visible pass now that textures
-    //        are prioritized above.
-    paintLayerContents(updateList, PaintIdle, updater);
+    bool needMoreUpdates = paintLayerContents(updateList, updater);
+    if (m_triggerIdleUpdates && needMoreUpdates)
+        setNeedsCommit();
 
     for (size_t i = 0; i < updateList.size(); ++i)
         updateList[i]->clearRenderSurface();
 }
 
-void CCLayerTreeHost::prioritizeTextures(const LayerList& updateList)
+void CCLayerTreeHost::setPrioritiesForSurfaces(size_t surfaceMemoryBytes)
+{
+    // Surfaces have a place holder for their memory since they are managed
+    // independantly but should still be tracked and reduce other memory usage.
+    m_surfaceMemoryPlaceholder->setTextureManager(m_contentsTextureManager.get());
+    m_surfaceMemoryPlaceholder->setRequestPriority(CCPriorityCalculator::renderSurfacePriority());
+    m_surfaceMemoryPlaceholder->setToSelfManagedMemoryPlaceholder(surfaceMemoryBytes);
+}
+
+void CCLayerTreeHost::setPrioritiesForLayers(const LayerList& updateList)
 {
     // Use BackToFront since it's cheap and this isn't order-dependent.
     typedef CCLayerIterator<LayerChromium, Vector<RefPtr<LayerChromium> >, RenderSurfaceChromium, CCLayerIteratorActions::BackToFront> CCLayerIteratorType;
-
-    m_contentsTextureManager->clearPriorities();
 
     CCPriorityCalculator calculator;
     CCLayerIteratorType end = CCLayerIteratorType::end(&updateList);
@@ -524,44 +524,80 @@ void CCLayerTreeHost::prioritizeTextures(const LayerList& updateList)
                 it->replicaLayer()->maskLayer()->setTexturePriorities(calculator);
         }
     }
+}
+
+void CCLayerTreeHost::prioritizeTextures(const LayerList& renderSurfaceLayerList, CCOverdrawMetrics& metrics)
+{
+    m_contentsTextureManager->clearPriorities();
+
+    size_t memoryForRenderSurfacesMetric = calculateMemoryForRenderSurfaces(renderSurfaceLayerList);
+
+    setPrioritiesForLayers(renderSurfaceLayerList);
+    setPrioritiesForSurfaces(memoryForRenderSurfacesMetric);
+
+    metrics.didUseContentsTextureMemoryBytes(m_contentsTextureManager->memoryAboveCutoffBytes());
+    metrics.didUseRenderSurfaceTextureMemoryBytes(memoryForRenderSurfacesMetric);
 
     m_contentsTextureManager->prioritizeTextures();
 }
 
-// static
-void CCLayerTreeHost::update(LayerChromium* layer, PaintType paintType, CCTextureUpdater& updater, const CCOcclusionTracker* occlusion)
+size_t CCLayerTreeHost::calculateMemoryForRenderSurfaces(const LayerList& updateList)
 {
-    ASSERT(layer);
-    ASSERT(PaintVisible == paintType || PaintIdle == paintType);
-    if (PaintVisible == paintType)
-        layer->update(updater, occlusion);
-    else
-        layer->idleUpdate(updater, occlusion);
+    size_t readbackBytes = 0;
+    size_t maxBackgroundTextureBytes = 0;
+    size_t contentsTextureBytes = 0;
+
+    // Start iteration at 1 to skip the root surface as it does not have a texture cost.
+    for (size_t i = 1; i < updateList.size(); ++i) {
+        LayerChromium* renderSurfaceLayer = updateList[i].get();
+        RenderSurfaceChromium* renderSurface = renderSurfaceLayer->renderSurface();
+
+        size_t bytes = CCTexture::memorySizeBytes(renderSurface->contentRect().size(), GraphicsContext3D::RGBA);
+        contentsTextureBytes += bytes;
+
+        if (renderSurfaceLayer->backgroundFilters().isEmpty())
+            continue;
+
+        if (bytes > maxBackgroundTextureBytes)
+            maxBackgroundTextureBytes = bytes;
+        if (!readbackBytes)
+            readbackBytes = CCTexture::memorySizeBytes(m_deviceViewportSize, GraphicsContext3D::RGBA);
+    }
+    return readbackBytes + maxBackgroundTextureBytes + contentsTextureBytes;
 }
 
-void CCLayerTreeHost::paintMasksForRenderSurface(LayerChromium* renderSurfaceLayer, PaintType paintType, CCTextureUpdater& updater)
+bool CCLayerTreeHost::paintMasksForRenderSurface(LayerChromium* renderSurfaceLayer, CCTextureUpdater& updater)
 {
     // Note: Masks and replicas only exist for layers that own render surfaces. If we reach this point
     // in code, we already know that at least something will be drawn into this render surface, so the
     // mask and replica should be painted.
 
+    bool needMoreUpdates = false;
     LayerChromium* maskLayer = renderSurfaceLayer->maskLayer();
-    if (maskLayer)
-        update(maskLayer, paintType, updater, 0);
+    if (maskLayer) {
+        maskLayer->update(updater, 0);
+        needMoreUpdates |= maskLayer->needMoreUpdates();
+    }
 
     LayerChromium* replicaMaskLayer = renderSurfaceLayer->replicaLayer() ? renderSurfaceLayer->replicaLayer()->maskLayer() : 0;
-    if (replicaMaskLayer)
-        update(replicaMaskLayer, paintType, updater, 0);
+    if (replicaMaskLayer) {
+        replicaMaskLayer->update(updater, 0);
+        needMoreUpdates |= replicaMaskLayer->needMoreUpdates();
+    }
+    return needMoreUpdates;
 }
 
-void CCLayerTreeHost::paintLayerContents(const LayerList& renderSurfaceLayerList, PaintType paintType, CCTextureUpdater& updater)
+bool CCLayerTreeHost::paintLayerContents(const LayerList& renderSurfaceLayerList, CCTextureUpdater& updater)
 {
     // Use FrontToBack to allow for testing occlusion and performing culling during the tree walk.
     typedef CCLayerIterator<LayerChromium, Vector<RefPtr<LayerChromium> >, RenderSurfaceChromium, CCLayerIteratorActions::FrontToBack> CCLayerIteratorType;
 
+    bool needMoreUpdates = false;
     bool recordMetricsForFrame = true; // FIXME: In the future, disable this when about:tracing is off.
     CCOcclusionTracker occlusionTracker(IntRect(IntPoint(), deviceViewportSize()), recordMetricsForFrame);
-    occlusionTracker.setMinimumTrackingSize(CCOcclusionTracker::preferredMinimumTrackingSize());
+    occlusionTracker.setMinimumTrackingSize(m_settings.minimumOcclusionTrackingSize);
+
+    prioritizeTextures(renderSurfaceLayerList, occlusionTracker.overdrawMetrics());
 
     CCLayerIteratorType end = CCLayerIteratorType::end(&renderSurfaceLayerList);
     for (CCLayerIteratorType it = CCLayerIteratorType::begin(&renderSurfaceLayerList); it != end; ++it) {
@@ -569,16 +605,19 @@ void CCLayerTreeHost::paintLayerContents(const LayerList& renderSurfaceLayerList
 
         if (it.representsTargetRenderSurface()) {
             ASSERT(it->renderSurface()->drawOpacity() || it->renderSurface()->drawOpacityIsAnimating());
-            paintMasksForRenderSurface(*it, paintType, updater);
+            needMoreUpdates |= paintMasksForRenderSurface(*it, updater);
         } else if (it.representsItself()) {
             ASSERT(!it->bounds().isEmpty());
-            update(*it, paintType, updater, &occlusionTracker);
+            it->update(updater, &occlusionTracker);
+            needMoreUpdates |= it->needMoreUpdates();
         }
 
         occlusionTracker.leaveLayer(it);
     }
 
     occlusionTracker.overdrawMetrics().recordMetrics(this);
+
+    return needMoreUpdates;
 }
 
 static LayerChromium* findFirstScrollableLayer(LayerChromium* layer)

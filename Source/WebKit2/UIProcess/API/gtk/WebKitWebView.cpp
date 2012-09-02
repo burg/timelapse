@@ -29,6 +29,7 @@
 #include "WebKitContextMenuPrivate.h"
 #include "WebKitEnumTypes.h"
 #include "WebKitError.h"
+#include "WebKitFormClient.h"
 #include "WebKitFullscreenClient.h"
 #include "WebKitHitTestResultPrivate.h"
 #include "WebKitJavascriptResultPrivate.h"
@@ -88,6 +89,9 @@ enum {
     RUN_FILE_CHOOSER,
 
     CONTEXT_MENU,
+    CONTEXT_MENU_DISMISSED,
+
+    SUBMIT_FORM,
 
     LAST_SIGNAL
 };
@@ -324,6 +328,7 @@ static void webkitWebViewConstructed(GObject* object)
     attachResourceLoadClientToView(webView);
     attachFullScreenClientToView(webView);
     attachContextMenuClientToView(webView);
+    attachFormClientToView(webView);
 
     WebPageProxy* page = webkitWebViewBaseGetPage(webViewBase);
     priv->backForwardList = adoptGRef(webkitBackForwardListCreate(WKPageGetBackForwardList(toAPI(page))));
@@ -1043,6 +1048,49 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
                      WEBKIT_TYPE_CONTEXT_MENU,
                      GDK_TYPE_EVENT | G_SIGNAL_TYPE_STATIC_SCOPE,
                      WEBKIT_TYPE_HIT_TEST_RESULT);
+
+    /**
+     * WebKitWebView::context-menu-dismissed:
+     * @web_view: the #WebKitWebView on which the signal is emitted
+     *
+     * Emitted after #WebKitWebView::context-menu signal, if the context menu is shown,
+     * to notify that the context menu is dismissed.
+     */
+    signals[CONTEXT_MENU_DISMISSED] =
+        g_signal_new("context-menu-dismissed",
+                     G_TYPE_FROM_CLASS(webViewClass),
+                     G_SIGNAL_RUN_LAST,
+                     G_STRUCT_OFFSET(WebKitWebViewClass, context_menu_dismissed),
+                     0, 0,
+                     g_cclosure_marshal_VOID__VOID,
+                     G_TYPE_NONE, 0);
+
+    /**
+     * WebKitWebView::submit-form:
+     * @web_view: the #WebKitWebView on which the signal is emitted
+     * @request: a #WebKitFormSubmissionRequest
+     *
+     * This signal is emitted when a form is about to be submitted. The @request
+     * argument passed contains information about the text fields of the form. This
+     * is typically used to store login information that can be used later to
+     * pre-fill the form.
+     * The form will not be submitted until webkit_form_submission_request_submit() is called.
+     *
+     * It is possible to handle the form submission request asynchronously, by
+     * simply calling g_object_ref() on the @request argument and calling
+     * webkit_form_submission_request_submit() when done to continue with the form submission.
+     * If the last reference is removed on a #WebKitFormSubmissionRequest and the
+     * form has not been submitted, webkit_form_submission_request_submit() will be called.
+     */
+    signals[SUBMIT_FORM] =
+        g_signal_new("submit-form",
+                     G_TYPE_FROM_CLASS(webViewClass),
+                     G_SIGNAL_RUN_LAST,
+                     G_STRUCT_OFFSET(WebKitWebViewClass, submit_form),
+                     0, 0,
+                     g_cclosure_marshal_VOID__OBJECT,
+                     G_TYPE_NONE, 1,
+                     WEBKIT_TYPE_FORM_SUBMISSION_REQUEST);
 }
 
 static bool updateReplaceContentStatus(WebKitWebView* webView, WebKitLoadEvent loadEvent)
@@ -1233,7 +1281,7 @@ void webkitWebViewResourceLoadStarted(WebKitWebView* webView, WKFrameRef wkFrame
 
     WebKitWebViewPrivate* priv = webView->priv;
     WebKitWebResource* resource = webkitWebResourceCreate(wkFrame, request, isMainResource);
-    if (WKFrameIsMainFrame(wkFrame) && isMainResource)
+    if (WKFrameIsMainFrame(wkFrame) && (isMainResource || !priv->mainResource))
         priv->mainResource = resource;
     priv->loadingResourcesMap.set(resourceIdentifier, adoptGRef(resource));
     g_signal_emit(webView, signals[RESOURCE_LOAD_STARTED], 0, resource, request);
@@ -1338,6 +1386,11 @@ static void webkitWebViewCreateAndAppendInputMethodsMenuItem(WebKitWebView* webV
     webkit_context_menu_insert(contextMenu, menuItem, unicodeMenuItemPosition);
 }
 
+static void contextMenuDismissed(GtkMenuShell*, WebKitWebView* webView)
+{
+    g_signal_emit(webView, signals[CONTEXT_MENU_DISMISSED], 0, NULL);
+}
+
 void webkitWebViewPopulateContextMenu(WebKitWebView* webView, WKArrayRef wkProposedMenu, WKHitTestResultRef wkHitTestResult)
 {
     WebKitWebViewBase* webViewBase = WEBKIT_WEB_VIEW_BASE(webView);
@@ -1360,8 +1413,15 @@ void webkitWebViewPopulateContextMenu(WebKitWebView* webView, WKArrayRef wkPropo
     webkitContextMenuPopulate(contextMenu.get(), contextMenuItems);
     contextMenuProxy->populate(contextMenuItems);
 
+    g_signal_connect(contextMenuProxy->gtkMenu(), "deactivate", G_CALLBACK(contextMenuDismissed), webView);
+
     // Clear the menu to make sure it's useless after signal emission.
     webkit_context_menu_remove_all(contextMenu.get());
+}
+
+void webkitWebViewSubmitFormRequest(WebKitWebView* webView, WebKitFormSubmissionRequest* request)
+{
+    g_signal_emit(webView, signals[SUBMIT_FORM], 0, request);
 }
 
 /**

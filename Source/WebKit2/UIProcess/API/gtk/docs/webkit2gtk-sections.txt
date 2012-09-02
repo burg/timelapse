@@ -27,6 +27,7 @@ WebKitCacheModel
 webkit_web_context_get_default
 webkit_web_context_get_cache_model
 webkit_web_context_set_cache_model
+webkit_web_context_clear_cache
 webkit_web_context_download_uri
 webkit_web_context_get_cookie_manager
 webkit_web_context_set_additional_plugins_directory
@@ -268,6 +269,10 @@ webkit_settings_get_media_playback_allows_inline
 webkit_settings_set_media_playback_allows_inline
 webkit_settings_get_draw_compositing_indicators
 webkit_settings_set_draw_compositing_indicators
+webkit_settings_get_enable_site_specific_quirks
+webkit_settings_set_enable_site_specific_quirks
+webkit_settings_get_enable_page_cache
+webkit_settings_set_enable_page_cache
 
 <SUBSECTION Standard>
 WebKitSettingsClass
@@ -310,6 +315,7 @@ webkit_uri_response_get_uri
 webkit_uri_response_get_status_code
 webkit_uri_response_get_content_length
 webkit_uri_response_get_mime_type
+webkit_uri_response_get_https_status
 
 <SUBSECTION Standard>
 WebKitURIResponseClass
@@ -631,7 +637,9 @@ webkit_find_controller_get_type
 <SECTION>
 <FILE>WebKitCookieManager</FILE>
 WebKitCookieManager
+WebKitCookiePersistentStorage
 WebKitCookieAcceptPolicy
+webkit_cookie_manager_set_persistent_storage
 webkit_cookie_manager_set_accept_policy
 webkit_cookie_manager_get_accept_policy
 webkit_cookie_manager_get_accept_policy_finish
@@ -805,4 +813,24 @@ WEBKIT_CONTEXT_MENU_ITEM_GET_CLASS
 <SUBSECTION Private>
 WebKitContextMenuItemPrivate
 webkit_context_menu_item_get_type
+</SECTION>
+
+<SECTION>
+<FILE>WebKitFormSubmissionRequest</FILE>
+WebKitFormSubmissionRequest
+webkit_form_submission_request_get_text_fields
+webkit_form_submission_request_submit
+
+<SUBSECTION Standard>
+WebKitFormSubmissionRequestClass
+WEBKIT_TYPE_FORM_SUBMISSION_REQUEST
+WEBKIT_FORM_SUBMISSION_REQUEST
+WEBKIT_IS_FORM_SUBMISSION_REQUEST
+WEBKIT_FORM_SUBMISSION_REQUEST_CLASS
+WEBKIT_IS_FORM_SUBMISSION_REQUEST_CLASS
+WEBKIT_FORM_SUBMISSION_REQUEST_GET_CLASS
+
+<SUBSECTION Private>
+WebKitFormSubmissionRequestPrivate
+webkit_form_submission_request_get_type
 </SECTION>

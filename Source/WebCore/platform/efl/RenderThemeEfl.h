@@ -161,6 +161,11 @@ public:
 
     virtual void adjustSliderThumbSize(RenderStyle*, Element*) const;
 
+#if ENABLE(DATALIST)
+    virtual IntSize sliderTickSize() const OVERRIDE;
+    virtual int sliderTickOffsetFromTrackCenter() const OVERRIDE;
+#endif
+
     virtual bool paintSliderThumb(RenderObject*, const PaintInfo&, const IntRect&);
 
     virtual void adjustInnerSpinButtonStyle(StyleResolver*, RenderStyle*, Element*) const;
@@ -196,6 +201,8 @@ public:
     virtual bool paintMediaCurrentTime(RenderObject*, const PaintInfo&, const IntRect&);
 #endif
 
+    void setThemePath(const String&);
+    String themePath() { return m_themePath; }
 protected:
     static float defaultFontSize;
 
@@ -225,6 +232,8 @@ private:
     Color m_mediaPanelColor;
     Color m_mediaSliderColor;
 #endif
+
+    String m_themePath;
     Ecore_Evas* m_canvas;
     Evas_Object* m_edje;
 

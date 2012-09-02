@@ -152,18 +152,19 @@ HTMLTableRowElement* HTMLTableRowsCollection::lastRow(HTMLTableElement* table)
 // table to get at the collection cache. Order of argument evaluation is undefined and can
 // differ between compilers.
 HTMLTableRowsCollection::HTMLTableRowsCollection(Element* table)
-    : HTMLCollection(table, TableRows)
+    : HTMLCollection(table, TableRows, DoNotSupportItemBefore)
 {
     ASSERT(table->hasTagName(tableTag));
 }
 
-PassOwnPtr<HTMLTableRowsCollection> HTMLTableRowsCollection::create(Element* table)
+PassRefPtr<HTMLTableRowsCollection> HTMLTableRowsCollection::create(Element* table)
 {
-    return adoptPtr(new HTMLTableRowsCollection(table));
+    return adoptRef(new HTMLTableRowsCollection(table));
 }
 
-Element* HTMLTableRowsCollection::itemAfter(Node* previous) const
+Element* HTMLTableRowsCollection::itemAfter(unsigned& offsetInArray, Element* previous) const
 {
+    ASSERT_UNUSED(offsetInArray, !offsetInArray);
     ASSERT(!previous || (previous->isHTMLElement() && toHTMLElement(previous)->hasLocalName(trTag)));
     return rowAfter(static_cast<HTMLTableElement*>(base()), static_cast<HTMLTableRowElement*>(previous));
 }

@@ -53,6 +53,7 @@
       'ENABLE_DATA_TRANSFER_ITEMS=1',
       'ENABLE_DETAILS=1',
       'ENABLE_DEVICE_ORIENTATION=1',
+      'ENABLE_DIALOG_ELEMENT=1',
       'ENABLE_DIRECTORY_UPLOAD=1',
       'ENABLE_DOWNLOAD_ATTRIBUTE=1',
       'ENABLE_ENCRYPTED_MEDIA=1',
@@ -68,6 +69,7 @@
       'ENABLE_INPUT_TYPE_DATE=1',
       'ENABLE_JAVASCRIPT_DEBUGGER=1',
       'ENABLE_LEGACY_CSS_VENDOR_PREFIXES=0',
+      'ENABLE_LEGACY_VIEWPORT_ADAPTION=1',
       'ENABLE_LEGACY_WEBKIT_BLOB_BUILDER=1',
       'ENABLE_LINK_PREFETCH=1',
       'ENABLE_LINK_PRERENDER=1',
@@ -92,9 +94,11 @@
       'ENABLE_STYLE_SCOPED=1',
       'ENABLE_SVG=<(enable_svg)',
       'ENABLE_SVG_FONTS=<(enable_svg)',
+      'ENABLE_TEXT_AUTOSIZING=1',
       'ENABLE_TOUCH_ADJUSTMENT=1',
       'ENABLE_TOUCH_EVENTS=<(enable_touch_events)',
       'ENABLE_TOUCH_ICON_LOADING=<(enable_touch_icon_loading)',
+      'ENABLE_TOUCH_SLIDER=1',
       'ENABLE_V8_SCRIPT_DEBUG_SERVER=1',
       'ENABLE_VIDEO=1',
       'ENABLE_VIDEO_TRACK=1',
@@ -126,6 +130,7 @@
       'enable_touch_events%': 1,
       'enable_touch_icon_loading%' : 0,
       'enable_mutation_observers%': 1,
+      'use_harfbuzz_ng%': 0,
     },
     'use_accelerated_compositing%': '<(use_accelerated_compositing)',
     'enable_skia_text%': '<(enable_skia_text)',
@@ -135,7 +140,6 @@
       ['OS=="android"', {
         'feature_defines': [
           'ENABLE_CALENDAR_PICKER=0',
-          'ENABLE_FONT_BOOSTING=1',
           'ENABLE_INPUT_SPEECH=0',
           'ENABLE_INPUT_TYPE_COLOR=0',
           'ENABLE_INPUT_TYPE_DATETIME=1',
@@ -151,6 +155,7 @@
           'ENABLE_ORIENTATION_EVENTS=1',
           'ENABLE_OVERFLOW_SCROLLING=1',
           'ENABLE_PAGE_POPUP=0',
+          'ENABLE_PRINTING=0',
           # FIXME: Disable once the linking error has been resolved.
           # https://bugs.webkit.org/show_bug.cgi?id=88636
           'ENABLE_SHARED_WORKERS=1',
@@ -161,7 +166,6 @@
       }, { # OS!="android"
         'feature_defines': [
           'ENABLE_CALENDAR_PICKER=1',
-          'ENABLE_FONT_BOOSTING=0',
           'ENABLE_INPUT_SPEECH=1',
           'ENABLE_INPUT_TYPE_COLOR=1',
           'ENABLE_JAVASCRIPT_I18N_API=1',
@@ -172,6 +176,7 @@
           'ENABLE_ORIENTATION_EVENTS=0',
           'ENABLE_OVERFLOW_SCROLLING=0',
           'ENABLE_PAGE_POPUP=1',
+          'ENABLE_PRINTING=1',
           'ENABLE_SHARED_WORKERS=1',
           'ENABLE_WEB_AUDIO=1',
         ],
@@ -203,6 +208,11 @@
         'feature_defines': [
           'ENABLE_RUBBER_BANDING=1',
           'WTF_USE_SKIA_ON_MAC_CHROMIUM=1',
+        ],
+      }],
+      ['use_harfbuzz_ng==1', {
+        'feature_defines': [
+          'WTF_USE_HARFBUZZ_NG=1',
         ],
       }],
     ],

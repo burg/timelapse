@@ -57,6 +57,12 @@
 #include "WebKitCSSTransformValue.h"
 #include "WebKitFontFamilyNames.h"
 
+#if ENABLE(CSS_EXCLUSIONS)
+#include "CSSWrapShapes.h"
+#include "WrapShapeFunctions.h"
+#include "WrapShapes.h"
+#endif
+
 #if ENABLE(CSS_SHADERS)
 #include "CustomFilterNumberParameter.h"
 #include "CustomFilterOperation.h"
@@ -124,6 +130,9 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyFontVariant,
     CSSPropertyFontWeight,
     CSSPropertyHeight,
+#if ENABLE(CSS_IMAGE_ORIENTATION)
+    CSSPropertyImageOrientation,
+#endif
     CSSPropertyImageRendering,
 #if ENABLE(CSS_IMAGE_RESOLUTION)
     CSSPropertyImageResolution,
@@ -1769,6 +1778,10 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             if (style->borderFit() == BorderFitBorder)
                 return cssValuePool().createIdentifierValue(CSSValueBorder);
             return cssValuePool().createIdentifierValue(CSSValueLines);
+#if ENABLE(CSS_IMAGE_ORIENTATION)
+        case CSSPropertyImageOrientation:
+            return cssValuePool().createValue(style->imageOrientation());
+#endif
         case CSSPropertyImageRendering:
             return CSSPrimitiveValue::create(style->imageRendering());
 #if ENABLE(CSS_IMAGE_RESOLUTION)
@@ -1856,8 +1869,14 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             return zoomAdjustedPixelValueForLength(maxWidth, style.get());
         }
         case CSSPropertyMinHeight:
+            // FIXME: For flex-items, min-height:auto should compute to min-content.
+            if (style->minHeight().isAuto())
+                return zoomAdjustedPixelValue(0, style.get());
             return zoomAdjustedPixelValueForLength(style->minHeight(), style.get());
         case CSSPropertyMinWidth:
+            // FIXME: For flex-items, min-width:auto should compute to min-content.
+            if (style->minWidth().isAuto())
+                return zoomAdjustedPixelValue(0, style.get());
             return zoomAdjustedPixelValueForLength(style->minWidth(), style.get());
         case CSSPropertyOpacity:
             return cssValuePool().createValue(style->opacity(), CSSPrimitiveValue::CSS_NUMBER);
@@ -2359,11 +2378,11 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyWebkitShapeInside:
             if (!style->wrapShapeInside())
                 return cssValuePool().createIdentifierValue(CSSValueAuto);
-            return cssValuePool().createValue(style->wrapShapeInside());
+            return valueForWrapShape(style->wrapShapeInside());
         case CSSPropertyWebkitShapeOutside:
             if (!style->wrapShapeOutside())
                 return cssValuePool().createIdentifierValue(CSSValueAuto);
-            return cssValuePool().createValue(style->wrapShapeOutside());
+            return valueForWrapShape(style->wrapShapeOutside());
         case CSSPropertyWebkitWrapThrough:
             return cssValuePool().createValue(style->wrapThrough());
 #endif

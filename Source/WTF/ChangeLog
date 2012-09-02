@@ -1,3 +1,408 @@
+2012-07-18  Yong Li  <yoli@rim.com>
+
+        [BlackBerry] Implement currentTime() and monotonicallyIncreasingTime() for OS(QNX)
+        https://bugs.webkit.org/show_bug.cgi?id=91659
+
+        Reviewed by Rob Buis.
+
+        Implement currentTime() and monotonicallyIncreasingTime() for OS(QNX) with clock_gettime().
+
+        * wtf/CurrentTime.cpp:
+        (WTF):
+        (WTF::currentTime):
+        (WTF::monotonicallyIncreasingTime):
+
+2012-07-18  Tom Sepez  <tsepez@chromium.org>
+
+        OOB read of stack buffer below DoubleToStringConverter::CreateExponentialRepresentation() in debug builds
+        https://bugs.webkit.org/show_bug.cgi?id=91642
+
+        Reviewed by Abhishek Arya.
+
+        * wtf/dtoa/double-conversion.cc:
+        (DoubleToStringConverter::CreateExponentialRepresentation): NUL-terminate string buffer before passing it to StringBuilder::AddSubstring()
+        
+2012-07-18  Michael Saboff  <msaboff@apple.com>
+
+        Make TextCodecLatin1 handle 8 bit data without converting to UChar's
+        https://bugs.webkit.org/show_bug.cgi?id=90319
+
+        Reviewed by Oliver Hunt.
+
+        * wtf/text/StringImpl.h:
+        (StringImpl): Exported LChar variant of adopt().
+        * wtf/text/WTFString.h:
+        (WTF::String::createUninitialized): Exported LChar variant.
+
+2012-07-18  Rob Buis  <rbuis@rim.com>
+
+        Alignment crash in MIMESniffer
+        https://bugs.webkit.org/show_bug.cgi?id=89787
+
+        Reviewed by Yong Li.
+
+        PR 169064
+
+        Change isPointerTypeAlignmentOkay so calling it does not require ifdefs.
+
+        * wtf/StdLibExtras.h:
+        (isPointerTypeAlignmentOkay):
+
+2012-07-17  Gabor Ballabas  <gaborb@inf.u-szeged.hu>
+
+        [Qt][V8] Remove the V8 related codepaths and configuration
+        https://bugs.webkit.org/show_bug.cgi?id=90863
+
+        Reviewed by Simon Hausmann.
+
+        * WTF.pri:
+
+2012-07-17  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r122834.
+        http://trac.webkit.org/changeset/122834
+        https://bugs.webkit.org/show_bug.cgi?id=91492
+
+        it broke the chromium (Requested by kkristof on #webkit).
+
+        * WTF.pri:
+
+2012-07-17  Gabor Ballabas  <gaborb@inf.u-szeged.hu>
+
+        [Qt][V8] Remove the V8 related codepaths and configuration
+        https://bugs.webkit.org/show_bug.cgi?id=90863
+
+        Reviewed by Simon Hausmann.
+
+        * WTF.pri:
+
+2012-07-16  Hajime Morrita  <morrita@chromium.org>
+
+        WebCore needs WEBCORE_TESTING macro to mark methods being exported for testing.
+        https://bugs.webkit.org/show_bug.cgi?id=90764
+
+        Reviewed by Adam Barth.
+
+        Added USE(EXPORT_MACROS_FOR_TESTING) and enabled it on GTK and Windows.
+
+        * wtf/ExportMacros.h:
+        * wtf/Platform.h:
+
+2012-07-16  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed build fix.
+
+        * wtf/FastMalloc.cpp:
+        (WTF::TCMalloc_ThreadCache::CreateCacheIfNecessary):
+
+2012-07-16  Adam Treat  <atreat@rim.com>
+
+        [BlackBerry] Use newer version of platform API to implement callOnMainThread
+        https://bugs.webkit.org/show_bug.cgi?id=91404
+
+        Reviewed by Yong Li.
+
+        Right now we're using an outdated API that involves a virtual function call for no reason.
+        Use the new API that is much more direct and to the point.
+
+        * wtf/blackberry/MainThreadBlackBerry.cpp:
+        (WTF::scheduleDispatchFunctionsOnMainThread):
+
+2012-07-14  Filip Pizlo  <fpizlo@apple.com>
+
+        Unreviewed, build fix.
+
+        * wtf/Assertions.cpp:
+        * wtf/Platform.h:
+        * wtf/unicode/icu/CollatorICU.cpp:
+        (WTF::Collator::userDefault):
+
+2012-07-13  Xianzhu Wang  <wangxianzhu@chromium.org>
+
+        Move WebCore/platform/text/Base64 to WTF/wtf/text
+        https://bugs.webkit.org/show_bug.cgi?id=91162
+
+        Reviewed by Adam Barth.
+
+        * GNUmakefile.list.am:
+        * WTF.gypi:
+        * WTF.pro:
+        * WTF.vcproj/WTF.vcproj:
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/CMakeLists.txt:
+        * wtf/text/Base64.cpp: Renamed from Source/WebCore/platform/text/Base64.cpp.
+        (WTF):
+        (WTF::base64Encode):
+        (WTF::base64Decode):
+        (WTF::base64DecodeInternal):
+        * wtf/text/Base64.h: Renamed from Source/WebCore/platform/text/Base64.h.
+        (WTF):
+        (WTF::base64Encode):
+
+2012-07-12  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Add API to get HTTPS status to WebKit2 GTK+
+        https://bugs.webkit.org/show_bug.cgi?id=91100
+
+        Reviewed by Martin Robinson.
+
+        Add support for GByteArray.
+
+        * wtf/gobject/GRefPtr.cpp:
+        (WTF::refGPtr):
+        (WTF):
+        (WTF::derefGPtr):
+        * wtf/gobject/GRefPtr.h:
+        (WTF):
+        * wtf/gobject/GTypedefs.h:
+
+2012-07-12  Maciej Stachowiak  <mjs@apple.com>
+
+        Document ListHashSet iteration guarantees
+        https://bugs.webkit.org/show_bug.cgi?id=91106
+
+        Reviewed by Eric Seidel.
+
+        * wtf/ListHashSet.h:
+        (WTF): Expand class comment to document this.
+
+2012-07-11  Mark Rowe  <mrowe@apple.com>
+
+        <http://webkit.org/b/91024> Build against the latest SDK when targeting older OS X versions.
+
+        Reviewed by Dan Bernstein.
+
+        The deployment target is already set to the version that we're targeting, and it's that setting
+        which determines which functionality from the SDK is available to us.
+
+        * Configurations/Base.xcconfig:
+
+2012-07-11  Mark Rowe  <mrowe@apple.com>
+
+        Replace definitions of BUILDING_ON / TARGETING macros with macros that will error when used.
+
+        Part of <http://webkit.org/b/91015> Remove BUILDING_ON / TARGETING macros in favor of system availability macros.
+
+        Reviewed by Anders Carlsson.
+
+        * wtf/Platform.h:
+
+2012-07-11  Mark Rowe  <mrowe@apple.com>
+
+        Switch a few cases that care about the SDK over to checking __MAC_OS_X_VERSION_MAX_ALLOWED so that things build.
+
+        Part of <http://webkit.org/b/91015> Remove BUILDING_ON / TARGETING macros in favor of system availability macros
+
+        Reviewed by Filip Pizlo.
+
+        * wtf/FastMalloc.cpp:
+        (WTF::TCMalloc_ThreadCache::CreateCacheIfNecessary): The SDK we're building against determines how many elements
+        the structure is declared as having.
+
+2012-07-11  Mark Rowe  <mrowe@apple.com>
+
+        <http://webkit.org/b/91015> Remove BUILDING_ON / TARGETING macros in favor of system availability macros
+
+        This removal was handled by a script that translates the relevant macros in to the equivalent checks
+        using the system availability macros.
+
+        Reviewed by Filip Pizlo.
+
+        * wtf/Assertions.cpp:
+        * wtf/FastMalloc.cpp:
+        * wtf/Platform.h:
+        * wtf/ThreadingPthreads.cpp:
+        * wtf/unicode/icu/CollatorICU.cpp:
+
+2012-07-11  Anders Carlsson  <andersca@apple.com>
+
+        Add -Wtautological-compare and -Wsign-compare warning flags
+        https://bugs.webkit.org/show_bug.cgi?id=90994
+
+        Reviewed by Mark Rowe.
+
+        * Configurations/Base.xcconfig:
+
+2012-07-10  Jocelyn Turcotte  <jocelyn.turcotte@nokia.com>
+
+        Re-enable __declspec(dl{import,export}) for MinGW when using EXPORT_MACROS
+        https://bugs.webkit.org/show_bug.cgi?id=90612
+
+        Reviewed by Csaba Osztrogonác.
+
+        MinGW was switched to use auto import/export of symbols on r44184.
+        From my understanding of the documentation, MinGW will not auto-export symbols
+        unless there are no explicit __declspec(dlexport) in the DLL already.
+
+        The issues that originally made us rely on the auto-import feature of MinGW
+        should now be resolved with the EXPORT_MACROS work. This patch re-enables them.
+
+        It also removes the GCC check for internal symbols hiding as the visibility should
+        already be hidden by default for both MSVC and GCC on Windows anyway.
+
+        * wtf/ExportMacros.h:
+
+2012-07-09  No'am Rosenthal  <noam.rosenthal@nokia.com>
+
+        Shared code that is guarded with ENABLE(WEBGL) should be guarded with USE()
+        https://bugs.webkit.org/show_bug.cgi?id=90506
+
+        Reviewed by Martin Robinson.
+
+        Made USE(3D_GRAPHICS) default to true when ENABLE(WEBGL) is true.
+        Also updated the Qt default to always use TEXTURE_MAPPER, and to use TEXTURE_MAPPER_GL when
+        3D_GRAPHICS is used.
+
+        * wtf/Platform.h:
+
+2012-07-08  Laszlo Gombos  <laszlo.1.gombos@nokia.com>
+
+        Introduce a build flag for low quality JPEG images
+        https://bugs.webkit.org/show_bug.cgi?id=90748
+
+        Reviewed by Adam Barth.
+
+        Turn on the newly introduced flags for android.
+
+        * wtf/Platform.h:
+
+2012-07-05  Filip Pizlo  <fpizlo@apple.com>
+
+        INLINE_ARM_FUNCTION(thingy) should make thingy be thumb2 if we're using thumb2
+        https://bugs.webkit.org/show_bug.cgi?id=90644
+
+        Reviewed by Mark Hahnenberg.
+        
+        Fix breakage introduced in http://trac.webkit.org/changeset/121885
+
+        * wtf/InlineASM.h:
+
+2012-07-05  Zoltan Herczeg  <zherczeg@webkit.org>
+
+        Port DFG JIT to traditional ARM
+        https://bugs.webkit.org/show_bug.cgi?id=90198
+
+        Reviewed by Filip Pizlo.
+
+        Enabling DFG JIT on ARM systems with 32 bit instruction set.
+
+        * wtf/InlineASM.h:
+        * wtf/Platform.h:
+
+2012-07-04  Andy Wingo  <wingo@igalia.com>
+
+        [GTK] Enable parallel GC
+        https://bugs.webkit.org/show_bug.cgi?id=90568
+
+        Reviewed by Martin Robinson.
+
+        * wtf/Platform.h: Add GTK to the ENABLE_PARALLEL_GC party.
+
+2012-07-04  Tor Arne Vestbø  <tor.arne.vestbo@nokia.com>
+
+        [Qt] Get rid of un-needed QT += declarative for Qt 5
+
+        The declarative module has been renamed to quick1 in Qt 5, and the
+        engine-only module for Qt 5 is named 'qml'. For many of the instances
+        we could just remove 'declarative', since the project file was only
+        used for Qt5/WebKit2 builds. In the other cases the module was wrapped
+        in a haveQt(4) scope.
+
+        Reviewed by Csaba Osztrogonác.
+
+        * WTF.pri:
+
+2012-07-03  Yong Li  <yoli@rim.com>
+
+        [BlackBerry] Turn on DFGJIT in Platform.h
+        https://bugs.webkit.org/show_bug.cgi?id=90482
+
+        Set ENABLE_DFG_JIT for PLATFORM(BLACKBERRY).
+
+        Reviewed by Rob Buis.
+
+        * wtf/Platform.h:
+
+2012-07-03  Tony Chang  <tony@chromium.org>
+
+        [chromium] Unreviewed, update .gitignore to handle VS2010 files.
+
+        * WTF.gyp/.gitignore:
+
+2012-07-03  Tor Arne Vestbø  <tor.arne.vestbo@nokia.com>
+
+        [Qt] Make use of .qmake.cache for caching features
+
+        Instead of loading() features from the files that need them (and re-running
+        a bunch of checks), we now run feature detection as part of configure.pro,
+        and have build-webkit write the computed feature-defines and CONFIG to
+        .qmake.cache, which is then loaded by qmake _before_ even defaults_pre
+        when building WebKit.pro.
+
+        At some point we'll be able to selectivly prevent running of config tests
+        in configure.pro, which means we don't need a separate code-path for
+        the build-webkit --help case.
+
+        We should also move the code in build-webkit that now uses .webkit.config
+        to detect clean builds, to use .qmake.cache, since we now store the same
+        thing there.
+
+        Original patch by Oswald Buddenhagen <oswald.buddenhagen@nokia.com>
+
+        Reviewed by Tor Arne Vestbø.
+
+        * WTF.pri:
+
+2012-07-03  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r121766.
+        http://trac.webkit.org/changeset/121766
+        https://bugs.webkit.org/show_bug.cgi?id=90465
+
+        It caused flakey build errors on the bots (Requested by Ossy
+        on #webkit).
+
+        * WTF.pri:
+
+2012-07-03  Tor Arne Vestbø  <tor.arne.vestbo@nokia.com>
+
+        [Qt] Make use of .qmake.cache for caching features
+
+        Instead of loading() features from the files that need them (and re-running
+        a bunch of checks), we now run feature detection as part of configure.pro,
+        and have build-webkit write the computed feature-defines and CONFIG to
+        .qmake.cache, which is then loaded by qmake _before_ even defaults_pre
+        when building WebKit.pro.
+
+        At some point we'll be able to selectivly prevent running of config tests
+        in configure.pro, which means we don't need a separate code-path for
+        the build-webkit --help case.
+
+        We should also move the code in build-webkit that now uses .webkit.config
+        to detect clean builds, to use .qmake.cache, since we now store the same
+        thing there.
+
+        Original patch by Oswald Buddenhagen <oswald.buddenhagen@nokia.com>
+
+        Reviewed by Tor Arne Vestbø.
+
+        * WTF.pri:
+
+2012-07-03  Jocelyn Turcotte  <jocelyn.turcotte@nokia.com>  Joel Dillon <joel.dillon@codethink.co.uk>
+
+        [Qt][Win] Fix broken QtWebKit5.lib linking
+        https://bugs.webkit.org/show_bug.cgi?id=88321
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Instead of letting a module's headers know which other modules depend on them,
+        have depending modules define explicitely that they want its symbols exported too.
+
+        JavaScriptCore should then be compiled with both BUILDING_JavaScriptCore and
+        STATICALLY_LINKED_WITH_WTF.
+
+        * wtf/ExportMacros.h:
+
 2012-06-29  Tony Chang  <tony@chromium.org>
 
         Unreviewed, rolling out r121572.

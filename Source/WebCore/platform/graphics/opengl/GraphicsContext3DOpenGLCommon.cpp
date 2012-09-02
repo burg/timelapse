@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2012 ChangSeok Oh <shivamidow@gmail.com>
+ * Copyright (C) 2012 Research In Motion Limited. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,11 +28,16 @@
 
 #include "config.h"
 
-#if ENABLE(WEBGL)
+#if USE(3D_GRAPHICS)
 
 #include "GraphicsContext3D.h"
 
+#include "CanvasRenderingContext.h"
+#if USE(OPENGL_ES_2)
+#include "Extensions3DOpenGLES.h"
+#else
 #include "Extensions3DOpenGL.h"
+#endif
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 #include "ImageData.h"
@@ -49,39 +56,24 @@
 #include <wtf/UnusedParam.h>
 #include <wtf/text/CString.h>
 
-#if PLATFORM(MAC)
+#if USE(OPENGL_ES_2)
+#include "OpenGLESShims.h"
+#elif PLATFORM(MAC)
 #include <OpenGL/gl.h>
 #elif PLATFORM(GTK) || PLATFORM(EFL) || PLATFORM(QT)
 #include "OpenGLShims.h"
 #endif
 
+#if PLATFORM(BLACKBERRY)
+#include <BlackBerryPlatformLog.h>
+#endif
+
 namespace WebCore {
 
-static bool systemAllowsMultisamplingOnATICards()
-{
-#if PLATFORM(MAC)
-#if !defined(BUILDING_ON_SNOW_LEOPARD) && !defined(BUILDING_ON_LION)
-    return true;
-#else
-    ASSERT(isMainThread());
-    static SInt32 version;
-    if (!version) {
-        if (Gestalt(gestaltSystemVersion, &version) != noErr)
-            return false;
-    }
-    // See https://bugs.webkit.org/show_bug.cgi?id=77922 for more details
-    return version >= 0x1072;
-#endif // SNOW_LEOPARD and LION
-#else
-    return false;
-#endif // PLATFORM(MAC)
-}
-
-void GraphicsContext3D::validateAttributes()
+void GraphicsContext3D::validateDepthStencil(const char* packedDepthStencilExtension)
 {
     Extensions3D* extensions = getExtensions();
     if (m_attrs.stencil) {
-        const char* packedDepthStencilExtension = isGLES2Compliant() ? "GL_OES_packed_depth_stencil" : "GL_EXT_packed_depth_stencil";
         if (extensions->supports(packedDepthStencilExtension)) {
             extensions->ensureEnabled(packedDepthStencilExtension);
             // Force depth if stencil is true.
@@ -128,8 +120,13 @@ void GraphicsContext3D::paintRenderingResultsToCanvas(ImageBuffer* imageBuffer, 
         }
     }
 
+#if PLATFORM(BLACKBERRY)
+    paintToCanvas(pixels.get(), m_currentWidth, m_currentHeight,
+                  imageBuffer->internalSize().width(), imageBuffer->internalSize().height(), imageBuffer->context(), true);
+#else
     paintToCanvas(pixels.get(), m_currentWidth, m_currentHeight,
                   imageBuffer->internalSize().width(), imageBuffer->internalSize().height(), imageBuffer->context()->platformContext());
+#endif
 }
 
 bool GraphicsContext3D::paintCompositedResultsToCanvas(ImageBuffer*)
@@ -169,11 +166,27 @@ void GraphicsContext3D::prepareTexture()
 
     ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_fbo);
     ::glActiveTexture(GL_TEXTURE0);
+#if PLATFORM(BLACKBERRY)
+    if (!platformTexture()) {
+        GLuint tex = 0;
+        ::glGenTextures(1, &tex);
+        ::glBindTexture(GL_TEXTURE_2D, tex);
+        ::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        ::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        ::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        ::glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        ::glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_currentWidth, m_currentHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+        m_compositingLayer->setTextureID(tex);
+    }
+    ::glBindTexture(GL_TEXTURE_2D, platformTexture());
+#else
     ::glBindTexture(GL_TEXTURE_2D, m_compositorTexture);
+#endif
     ::glCopyTexImage2D(GL_TEXTURE_2D, 0, m_internalColorFormat, 0, 0, m_currentWidth, m_currentHeight, 0);
     ::glBindTexture(GL_TEXTURE_2D, m_boundTexture0);
     ::glActiveTexture(m_activeTexture);
-    ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_boundFBO);
+    if (m_boundFBO != m_fbo)
+        ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_boundFBO);
     ::glFinish();
     m_layerComposited = true;
 }
@@ -333,7 +346,11 @@ void GraphicsContext3D::bindFramebuffer(GC3Denum target, Platform3DObject buffer
     if (buffer)
         fbo = buffer;
     else
+#if PLATFORM(BLACKBERRY)
+        fbo = m_fbo;
+#else
         fbo = (m_attrs.antialias ? m_multisampleFBO : m_fbo);
+#endif
     if (fbo != m_boundFBO) {
         ::glBindFramebufferEXT(target, fbo);
         m_boundFBO = fbo;
@@ -439,35 +456,10 @@ void GraphicsContext3D::compileShader(Platform3DObject shader)
     ASSERT(shader);
     makeContextCurrent();
 
-    int GLshaderType;
-    ANGLEShaderType shaderType;
+    String translatedShaderSource = m_extensions->getTranslatedShaderSourceANGLE(shader);
 
-    glGetShaderiv(shader, SHADER_TYPE, &GLshaderType);
-    
-    if (GLshaderType == VERTEX_SHADER)
-        shaderType = SHADER_TYPE_VERTEX;
-    else if (GLshaderType == FRAGMENT_SHADER)
-        shaderType = SHADER_TYPE_FRAGMENT;
-    else
-        return; // Invalid shader type.
-
-    HashMap<Platform3DObject, ShaderSourceEntry>::iterator result = m_shaderSourceMap.find(shader);
-
-    if (result == m_shaderSourceMap.end())
+    if (!translatedShaderSource.length())
         return;
-
-    ShaderSourceEntry& entry = result->second;
-
-    String translatedShaderSource;
-    String shaderInfoLog;
-
-    bool isValid = m_compiler.validateShaderSource(entry.source.utf8().data(), shaderType, translatedShaderSource, shaderInfoLog);
-
-    entry.log = shaderInfoLog;
-    entry.isValid = isValid;
-
-    if (!isValid)
-        return; // Shader didn't validate, don't move forward with compiling translated source.
 
     int translatedShaderLength = translatedShaderSource.length();
 
@@ -481,33 +473,60 @@ void GraphicsContext3D::compileShader(Platform3DObject shader)
     int GLCompileSuccess;
     
     ::glGetShaderiv(shader, COMPILE_STATUS, &GLCompileSuccess);
+
+    // Populate the shader log
+    GLint length = 0;
+    ::glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+
+    if (length) {
+        HashMap<Platform3DObject, GraphicsContext3D::ShaderSourceEntry>::iterator result = m_shaderSourceMap.find(shader);
+        GraphicsContext3D::ShaderSourceEntry& entry = result->second;
+
+        GLsizei size = 0;
+        OwnArrayPtr<GLchar> info = adoptArrayPtr(new GLchar[length]);
+        ::glGetShaderInfoLog(shader, length, &size, info.get());
+
+        entry.log = info.get();
+    }
     
     // ASSERT that ANGLE generated GLSL will be accepted by OpenGL.
     ASSERT(GLCompileSuccess == GL_TRUE);
+#if PLATFORM(BLACKBERRY)
+    if (GLCompileSuccess != GL_TRUE)
+        BlackBerry::Platform::log(BlackBerry::Platform::LogLevelWarn, "The shader validated, but didn't compile.\n");
+#endif
 }
 
 void GraphicsContext3D::copyTexImage2D(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height, GC3Dint border)
 {
     makeContextCurrent();
+#if !PLATFORM(BLACKBERRY)
     if (m_attrs.antialias && m_boundFBO == m_multisampleFBO) {
         resolveMultisamplingIfNecessary(IntRect(x, y, width, height));
         ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_fbo);
     }
+#endif
     ::glCopyTexImage2D(target, level, internalformat, x, y, width, height, border);
+#if !PLATFORM(BLACKBERRY)
     if (m_attrs.antialias && m_boundFBO == m_multisampleFBO)
         ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_multisampleFBO);
+#endif
 }
 
 void GraphicsContext3D::copyTexSubImage2D(GC3Denum target, GC3Dint level, GC3Dint xoffset, GC3Dint yoffset, GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height)
 {
     makeContextCurrent();
+#if !PLATFORM(BLACKBERRY)
     if (m_attrs.antialias && m_boundFBO == m_multisampleFBO) {
         resolveMultisamplingIfNecessary(IntRect(x, y, width, height));
         ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_fbo);
     }
+#endif
     ::glCopyTexSubImage2D(target, level, xoffset, yoffset, x, y, width, height);
+#if !PLATFORM(BLACKBERRY)
     if (m_attrs.antialias && m_boundFBO == m_multisampleFBO)
         ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_multisampleFBO);
+#endif
 }
 
 void GraphicsContext3D::cullFace(GC3Denum mode)
@@ -788,29 +807,6 @@ void GraphicsContext3D::polygonOffset(GC3Dfloat factor, GC3Dfloat units)
 {
     makeContextCurrent();
     ::glPolygonOffset(factor, units);
-}
-
-void GraphicsContext3D::readPixels(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Denum type, void* data)
-{
-    // FIXME: remove the two glFlush calls when the driver bug is fixed, i.e.,
-    // all previous rendering calls should be done before reading pixels.
-    makeContextCurrent();
-    ::glFlush();
-    if (m_attrs.antialias && m_boundFBO == m_multisampleFBO) {
-        resolveMultisamplingIfNecessary(IntRect(x, y, width, height));
-        ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_fbo);
-        ::glFlush();
-    }
-    ::glReadPixels(x, y, width, height, format, type, data);
-    if (m_attrs.antialias && m_boundFBO == m_multisampleFBO)
-        ::glBindFramebufferEXT(GraphicsContext3D::FRAMEBUFFER, m_multisampleFBO);
-}
-
-void GraphicsContext3D::releaseShaderCompiler()
-{
-    // FIXME: This is not implemented on desktop OpenGL. We need to have ifdefs for the different GL variants.
-    makeContextCurrent();
-    notImplemented();
 }
 
 void GraphicsContext3D::sampleCoverage(GC3Dclampf value, GC3Dboolean invert)
@@ -1386,13 +1382,6 @@ bool GraphicsContext3D::layerComposited() const
     return m_layerComposited;
 }
 
-Extensions3D* GraphicsContext3D::getExtensions()
-{
-    if (!m_extensions)
-        m_extensions = adoptPtr(new Extensions3DOpenGL(this));
-    return m_extensions.get();
 }
 
-}
-
-#endif // ENABLE(WEBGL)
+#endif // USE(3D_GRAPHICS)

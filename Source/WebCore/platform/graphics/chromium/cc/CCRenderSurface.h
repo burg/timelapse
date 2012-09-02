@@ -31,8 +31,7 @@
 
 #include "FloatRect.h"
 #include "IntRect.h"
-#include "TextureManager.h"
-#include <public/WebFilterOperations.h>
+#include "cc/CCSharedQuadState.h"
 #include <public/WebTransformationMatrix.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/text/WTFString.h>
@@ -42,10 +41,8 @@ namespace WebCore {
 class CCDamageTracker;
 class CCQuadCuller;
 class CCRenderPass;
-class CCSharedQuadState;
 class CCLayerImpl;
 class LayerRendererChromium;
-class ManagedTexture;
 class TextStream;
 
 class CCRenderSurface {
@@ -53,15 +50,6 @@ class CCRenderSurface {
 public:
     explicit CCRenderSurface(CCLayerImpl*);
     virtual ~CCRenderSurface();
-
-    virtual bool prepareContentsTexture(LayerRendererChromium*);
-    void releaseContentsTexture();
-    bool hasValidContentsTexture() const;
-    virtual bool hasCachedContentsTexture() const;
-
-    bool prepareBackgroundTexture(LayerRendererChromium*);
-    void releaseBackgroundTexture();
-    bool hasValidBackgroundTexture() const;
 
     String name() const;
     void dumpSurface(TextStream&, int indent) const;
@@ -73,12 +61,6 @@ public:
 
     float drawOpacity() const { return m_drawOpacity; }
     void setDrawOpacity(float opacity) { m_drawOpacity = opacity; }
-
-    void setFilters(const WebKit::WebFilterOperations& filters) { m_filters = filters; }
-    const WebKit::WebFilterOperations& filters() const { return m_filters; }
-
-    void setBackgroundFilters(const WebKit::WebFilterOperations& filters) { m_backgroundFilters = filters; }
-    const WebKit::WebFilterOperations& backgroundFilters() const { return m_backgroundFilters; }
 
     void setNearestAncestorThatMovesPixels(CCRenderSurface* surface) { m_nearestAncestorThatMovesPixels = surface; }
     const CCRenderSurface* nearestAncestorThatMovesPixels() const { return m_nearestAncestorThatMovesPixels; }
@@ -116,7 +98,7 @@ public:
     void setScissorRect(const IntRect& scissorRect) { m_scissorRect = scissorRect; }
     const IntRect& scissorRect() const { return m_scissorRect; }
 
-    virtual bool contentsChanged() const;
+    bool contentsChanged() const;
 
     void setContentRect(const IntRect&);
     const IntRect& contentRect() const { return m_contentRect; }
@@ -124,16 +106,7 @@ public:
     void clearLayerList() { m_layerList.clear(); }
     Vector<CCLayerImpl*>& layerList() { return m_layerList; }
 
-    ManagedTexture* contentsTexture() const { return m_contentsTexture.get(); }
-    ManagedTexture* backgroundTexture() const { return m_backgroundTexture.get(); }
-
     int owningLayerId() const;
-    CCRenderSurface* targetRenderSurface() const;
-
-    bool hasReplica() const;
-
-    bool hasMask() const;
-    bool replicaHasMask() const;
 
     void resetPropertyChangedFlag() { m_surfacePropertyChanged = false; }
     bool surfacePropertyChanged() const;
@@ -141,10 +114,10 @@ public:
 
     CCDamageTracker* damageTracker() const { return m_damageTracker.get(); }
 
-    PassOwnPtr<CCSharedQuadState> createSharedQuadState() const;
-    PassOwnPtr<CCSharedQuadState> createReplicaSharedQuadState() const;
+    PassOwnPtr<CCSharedQuadState> createSharedQuadState(int id) const;
+    PassOwnPtr<CCSharedQuadState> createReplicaSharedQuadState(int id) const;
 
-    void appendQuads(CCQuadCuller&, CCSharedQuadState*, bool forReplica, const CCRenderPass*);
+    void appendQuads(CCQuadCuller&, CCSharedQuadState*, bool forReplica, int renderPassId);
 
     FloatRect computeRootScissorRectInCurrentSurface(const FloatRect& rootScissorRect) const;
 
@@ -154,9 +127,6 @@ private:
     // Uses this surface's space.
     IntRect m_contentRect;
     bool m_surfacePropertyChanged;
-
-    OwnPtr<ManagedTexture> m_contentsTexture;
-    OwnPtr<ManagedTexture> m_backgroundTexture;
 
     float m_drawOpacity;
     bool m_drawOpacityIsAnimating;
@@ -168,8 +138,6 @@ private:
     WebKit::WebTransformationMatrix m_replicaScreenSpaceTransform;
     bool m_targetSurfaceTransformsAreAnimating;
     bool m_screenSpaceTransformsAreAnimating;
-    WebKit::WebFilterOperations m_filters;
-    WebKit::WebFilterOperations m_backgroundFilters;
 
     // Uses the space of the surface's target surface.
     IntRect m_clipRect;

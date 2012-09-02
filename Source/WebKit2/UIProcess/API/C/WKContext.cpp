@@ -170,6 +170,15 @@ WKApplicationCacheManagerRef WKContextGetApplicationCacheManager(WKContextRef co
     return toAPI(toImpl(contextRef)->applicationCacheManagerProxy());
 }
 
+WKBatteryManagerRef WKContextGetBatteryManager(WKContextRef contextRef)
+{
+#if ENABLE(BATTERY_STATUS)
+    return toAPI(toImpl(contextRef)->batteryManagerProxy());
+#else
+    return 0;
+#endif
+}
+
 WKDatabaseManagerRef WKContextGetDatabaseManager(WKContextRef contextRef)
 {
     return toAPI(toImpl(contextRef)->databaseManagerProxy());
@@ -178,6 +187,15 @@ WKDatabaseManagerRef WKContextGetDatabaseManager(WKContextRef contextRef)
 WKGeolocationManagerRef WKContextGetGeolocationManager(WKContextRef contextRef)
 {
     return toAPI(toImpl(contextRef)->geolocationManagerProxy());
+}
+
+WKNetworkInfoManagerRef WKContextGetNetworkInfoManager(WKContextRef contextRef)
+{
+#if ENABLE(NETWORK_INFO)
+    return toAPI(toImpl(contextRef)->networkInfoManagerProxy());
+#else
+    return 0;
+#endif
 }
 
 WKIconDatabaseRef WKContextGetIconDatabase(WKContextRef contextRef)

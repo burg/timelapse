@@ -38,9 +38,7 @@
 #include "TestShell.h"
 #include "WebAnimationController.h"
 #include "WebBindings.h"
-#include "WebWorkerInfo.h"
 #include "WebConsoleMessage.h"
-#include "platform/WebData.h"
 #include "WebDeviceOrientation.h"
 #include "WebDeviceOrientationClientMock.h"
 #include "WebDocument.h"
@@ -58,12 +56,15 @@
 #include "WebPrintParams.h"
 #include "WebScriptSource.h"
 #include "WebSecurityPolicy.h"
-#include "platform/WebSerializedScriptValue.h"
 #include "WebSettings.h"
-#include "platform/WebSize.h"
-#include "platform/WebURL.h"
+#include "WebSurroundingText.h"
 #include "WebView.h"
 #include "WebViewHost.h"
+#include "WebWorkerInfo.h"
+#include "platform/WebData.h"
+#include "platform/WebSerializedScriptValue.h"
+#include "platform/WebSize.h"
+#include "platform/WebURL.h"
 #include "v8/include/v8.h"
 #include "webkit/support/webkit_support.h"
 #include <algorithm>
@@ -72,8 +73,8 @@
 #include <cstdlib>
 #include <limits>
 #include <sstream>
-#include <wtf/text/WTFString.h>
 #include <wtf/OwnArrayPtr.h>
+#include <wtf/text/WTFString.h>
 
 #if OS(LINUX) || OS(ANDROID)
 #include "linux/WebFontRendering.h"
@@ -275,7 +276,8 @@ LayoutTestController::LayoutTestController(TestShell* shell)
     bindMethod("setFixedLayoutSize", &LayoutTestController::setFixedLayoutSize);
     bindMethod("selectionAsMarkup", &LayoutTestController::selectionAsMarkup);
     bindMethod("setHasCustomFullScreenBehavior", &LayoutTestController::setHasCustomFullScreenBehavior);
-    
+    bindMethod("textSurroundingNode", &LayoutTestController::textSurroundingNode);
+
     // The fallback method is called when an unknown method is invoked.
     bindFallbackMethod(&LayoutTestController::fallbackMethod);
 
@@ -1578,8 +1580,6 @@ void LayoutTestController::overridePreference(const CppArgumentList& arguments, 
         prefs->allowDisplayOfInsecureContent = cppVariantToBool(value);
     else if (key == "WebKitAllowRunningInsecureContent")
         prefs->allowRunningOfInsecureContent = cppVariantToBool(value);
-    else if (key == "WebKitHixie76WebSocketProtocolEnabled")
-        prefs->hixie76WebSocketProtocolEnabled = cppVariantToBool(value);
     else if (key == "WebKitCSSCustomFilterEnabled")
         prefs->cssCustomFilterEnabled = cppVariantToBool(value);
     else if (key == "WebKitWebAudioEnabled") {
@@ -2343,3 +2343,27 @@ void LayoutTestController::setPointerLockWillFailSynchronously(const CppArgument
     result->setNull();
 }
 #endif
+
+void LayoutTestController::textSurroundingNode(const CppArgumentList& arguments, CppVariant* result)
+{
+    result->setNull();
+    if (arguments.size() < 4 || !arguments[0].isObject() || !arguments[1].isNumber() || !arguments[2].isNumber() || !arguments[3].isNumber())
+        return;
+
+    WebNode node;
+    if (!WebBindings::getNode(arguments[0].value.objectValue, &node))
+        return;
+
+    if (node.isNull() || !node.isTextNode())
+        return;
+
+    WebPoint point(arguments[1].toInt32(), arguments[2].toInt32());
+    unsigned maxLength = arguments[3].toInt32();
+
+    WebSurroundingText surroundingText;
+    surroundingText.initialize(node, point, maxLength);
+    if (surroundingText.isNull())
+        return;
+
+    result->set(surroundingText.textContent().utf8());
+}

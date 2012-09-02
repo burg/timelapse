@@ -49,7 +49,10 @@ echo ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select tr
 
 curl http://src.chromium.org/svn/trunk/src/build/install-build-deps.sh > install-build-deps.sh
 bash install-build-deps.sh --no-prompt
-sudo apt-get install xvfb screen zip -y
+sudo apt-get install xvfb screen git-svn zip -y
+
+# install-build-deps.sh will install flashplugin-installer, which causes some plug-in tests to crash.
+sudo apt-get remove flashplugin-installer -y
 
 cd /mnt
 sudo mkdir -p git
@@ -66,6 +69,19 @@ cat >> .git/config <<EOF
 	username = $3
 	password = $4
 EOF
+
+if [[ $1 == "commit-queue" ]];then
+cat >> .git/config <<EOF
+[svn-remote "svn"]
+	url = http://svn.webkit.org/repository/webkit
+	fetch = trunk:refs/remotes/origin/master
+[user]
+	email = commit-queue@webkit.org
+	name = Commit Queue
+[merge "changelog"]
+	driver = perl $PWD/Tools/Scripts/resolve-ChangeLogs --merge-driver %O %B %A
+EOF
+fi
 
 cd ~/tools
 echo "screen -t kr ./start-queue.sh" $1 $2 > screen-config

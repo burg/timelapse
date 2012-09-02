@@ -1790,10 +1790,9 @@ $methodInCode
     if (!protocolErrors->length()) {
         $agentField->$methodName(&error$agentCallParams);
 
-        if (!error.length()) {
-${responseCook}        }
+${responseCook}
     }
-    sendResponse(callId, result, String::format("Some arguments of method '%s' can't be processed", "$domainName.$methodName"), protocolErrors, error);
+    sendResponse(callId, result, commandNames[$commandNameIndex], protocolErrors, error);
 }
 """)
 
@@ -1888,6 +1887,8 @@ $virtualSetters
 
     enum MethodNames {
 $methodNamesEnumContent
+
+        kMethodNamesEnumSize
     };
 
     static const char* commandNames[];
@@ -1951,7 +1952,7 @@ $fieldDeclarations
     static PassRefPtr<InspectorObject> getObject(InspectorObject* object, const String& name, bool* valueFound, InspectorArray* protocolErrors);
     static PassRefPtr<InspectorArray> getArray(InspectorObject* object, const String& name, bool* valueFound, InspectorArray* protocolErrors);
 
-    void sendResponse(long callId, PassRefPtr<InspectorObject> result, const String& errorMessage, PassRefPtr<InspectorArray> protocolErrors, ErrorString invocationError);
+    void sendResponse(long callId, PassRefPtr<InspectorObject> result, const char* commandName, PassRefPtr<InspectorArray> protocolErrors, ErrorString invocationError);
 
 };
 
@@ -1975,7 +1976,7 @@ void InspectorBackendDispatcherImpl::dispatch(const String& message)
         static CallHandler handlers[] = {
 $messageHandlers
         };
-        size_t length = sizeof(commandNames) / sizeof(commandNames[0]);
+        size_t length = WTF_ARRAY_LENGTH(commandNames);
         for (size_t i = 0; i < length; ++i)
             dispatchMap.add(commandNames[i], handlers[i]);
     }
@@ -2024,9 +2025,10 @@ $messageHandlers
     ((*this).*it->second)(callId, messageObject.get());
 }
 
-void InspectorBackendDispatcherImpl::sendResponse(long callId, PassRefPtr<InspectorObject> result, const String& errorMessage, PassRefPtr<InspectorArray> protocolErrors, ErrorString invocationError)
+void InspectorBackendDispatcherImpl::sendResponse(long callId, PassRefPtr<InspectorObject> result, const char* commandName, PassRefPtr<InspectorArray> protocolErrors, ErrorString invocationError)
 {
     if (protocolErrors->length()) {
+        String errorMessage = String::format("Some arguments of method '%s' can't be processed", commandName);
         reportProtocolError(&callId, InvalidParams, errorMessage, protocolErrors);
         return;
     }
@@ -2167,6 +2169,7 @@ bool InspectorBackendDispatcher::getCommandName(const String& message, String* r
     return true;
 }
 
+COMPILE_ASSERT(static_cast<int>(InspectorBackendDispatcher::kMethodNamesEnumSize) == WTF_ARRAY_LENGTH(InspectorBackendDispatcher::commandNames), command_name_array_problem);
 
 } // namespace WebCore
 
@@ -2686,7 +2689,9 @@ class Generator:
     def process_command(json_command, domain_name, agent_field_name, agent_interface_name):
         json_command_name = json_command["name"]
 
-        Generator.method_name_enum_list.append("        k%s_%sCmd," % (domain_name, json_command["name"]))
+        cmd_enum_name = "k%s_%sCmd" % (domain_name, json_command["name"])
+
+        Generator.method_name_enum_list.append("        %s," % cmd_enum_name)
         Generator.method_handler_list.append("            &InspectorBackendDispatcherImpl::%s_%s," % (domain_name, json_command_name))
         Generator.backend_method_declaration_list.append("    void %s_%s(long callId, InspectorObject* requestMessageObject);" % (domain_name, json_command_name))
 
@@ -2805,6 +2810,9 @@ class Generator:
 
             response_cook_text = join(response_cook_list, "")
 
+            if len(response_cook_text) != 0:
+                response_cook_text = "        if (!error.length()) {\n" + response_cook_text + "        }"
+
         Generator.backend_method_implementation_list.append(Templates.backend_method.substitute(None,
             domainName=domain_name, methodName=json_command_name,
             agentField="m_" + agent_field_name,
@@ -2812,7 +2820,8 @@ class Generator:
             methodOutCode=method_out_code,
             agentCallParams=join(agent_call_param_list, ""),
             requestMessageObject=request_message_param,
-            responseCook=response_cook_text))
+            responseCook=response_cook_text,
+            commandNameIndex=cmd_enum_name))
         Generator.backend_method_name_declaration_list.append("    \"%s.%s\"," % (domain_name, json_command_name))
 
         Generator.backend_js_domain_initializer_list.append("InspectorBackend.registerCommand(\"%s.%s\", [%s], %s);\n" % (domain_name, json_command_name, js_parameters_text, js_reply_list))
@@ -2945,18 +2954,46 @@ def flatten_list(input):
     return res
 
 
+# A writer that only updates file if it actually changed to better support incremental build.
+class SmartOutput:
+    def __init__(self, file_name):
+        self.file_name_ = file_name
+        self.output_ = ""
+
+    def write(self, text):
+        self.output_ += text
+
+    def close(self):
+        text_changed = True
+
+        try:
+            read_file = open(self.file_name_, "r")
+            old_text = read_file.read()
+            read_file.close()
+            text_changed = old_text != self.output_
+        except:
+            # Ignore, just overwrite by default
+            pass
+
+        if text_changed:
+            print "    writing " + self.file_name_
+            out_file = open(self.file_name_, "w")
+            out_file.write(self.output_)
+            out_file.close()
+
+
 Generator.go()
 
-backend_h_file = open(output_header_dirname + "/InspectorBackendDispatcher.h", "w")
-backend_cpp_file = open(output_cpp_dirname + "/InspectorBackendDispatcher.cpp", "w")
+backend_h_file = SmartOutput(output_header_dirname + "/InspectorBackendDispatcher.h")
+backend_cpp_file = SmartOutput(output_cpp_dirname + "/InspectorBackendDispatcher.cpp")
 
-frontend_h_file = open(output_header_dirname + "/InspectorFrontend.h", "w")
-frontend_cpp_file = open(output_cpp_dirname + "/InspectorFrontend.cpp", "w")
+frontend_h_file = SmartOutput(output_header_dirname + "/InspectorFrontend.h")
+frontend_cpp_file = SmartOutput(output_cpp_dirname + "/InspectorFrontend.cpp")
 
-typebuilder_h_file = open(output_header_dirname + "/InspectorTypeBuilder.h", "w")
-typebuilder_cpp_file = open(output_cpp_dirname + "/InspectorTypeBuilder.cpp", "w")
+typebuilder_h_file = SmartOutput(output_header_dirname + "/InspectorTypeBuilder.h")
+typebuilder_cpp_file = SmartOutput(output_cpp_dirname + "/InspectorTypeBuilder.cpp")
 
-backend_js_file = open(output_cpp_dirname + "/InspectorBackendCommands.js", "w")
+backend_js_file = SmartOutput(output_cpp_dirname + "/InspectorBackendCommands.js")
 
 
 backend_h_file.write(Templates.backend_h.substitute(None,
@@ -2998,5 +3035,8 @@ backend_cpp_file.close()
 
 frontend_h_file.close()
 frontend_cpp_file.close()
+
+typebuilder_h_file.close()
+typebuilder_cpp_file.close()
 
 backend_js_file.close()

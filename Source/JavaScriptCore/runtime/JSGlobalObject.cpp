@@ -122,7 +122,7 @@ JSGlobalObject::JSGlobalObject(JSGlobalData& globalData, Structure* structure, c
 #if ENABLE(TIMELAPSE)
     , m_weakRandom(RiggedWeakRandom())
 #else
-    , m_weakRandom(Options::forceWeakRandomSeed ? Options::forcedWeakRandomSeed : static_cast<unsigned>(randomNumber() * (std::numeric_limits<unsigned>::max() + 1.0)))
+    , m_weakRandom(Options::forceWeakRandomSeed() ? Options::forcedWeakRandomSeed() : static_cast<unsigned>(randomNumber() * (std::numeric_limits<unsigned>::max() + 1.0)))
 #endif
     , m_evalEnabled(true)
     , m_globalObjectMethodTable(globalObjectMethodTable ? globalObjectMethodTable : &s_globalObjectMethodTable)

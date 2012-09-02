@@ -126,6 +126,8 @@ public:
     virtual void scrollChanged(const Platform::IntPoint&) const = 0;
     virtual void zoomChanged(bool isMinZoomed, bool isMaxZoomed, bool isAtInitialZoom, double newZoom) const = 0;
 
+    virtual void requestUpdateViewport(int width, int height) = 0;
+
     virtual void setPageTitle(const unsigned short* title, unsigned titleLength) = 0;
 
     virtual Platform::Graphics::Window* window() const = 0;
@@ -133,7 +135,7 @@ public:
     virtual void notifyContentRendered(const Platform::IntRect&) = 0;
     virtual void resizeSurfaceIfNeeded() = 0;
 
-    virtual void inputFocusGained(Platform::BlackBerryInputType, int inputStyle) = 0;
+    virtual void inputFocusGained(Platform::BlackBerryInputType, int inputStyle, Platform::VirtualKeyboardType, Platform::VirtualKeyboardEnterKeyType) = 0;
     virtual void inputFocusLost() = 0;
     virtual void inputTextChanged() = 0;
     virtual void inputSelectionChanged(unsigned selectionStart, unsigned selectionEnd) = 0;
@@ -213,6 +215,7 @@ public:
     virtual void setPreventsScreenIdleDimming(bool noDimming) = 0;
     virtual bool authenticationChallenge(const unsigned short* realm, unsigned int realmLength, WebString& username, WebString& password) = 0;
     virtual SaveCredentialType notifyShouldSaveCredential(bool isNew) = 0;
+    virtual void syncProxyCredential(const WebString& username, const WebString& password) = 0;
     virtual void notifyPopupAutofillDialog(const std::vector<std::string>&, const Platform::IntRect&) = 0;
     virtual void notifyDismissAutofillDialog() = 0;
 
@@ -256,6 +259,16 @@ public:
     virtual bool hasKeyboardFocus() = 0;
     virtual bool createPopupWebView(const Platform::IntRect&) = 0;
     virtual void closePopupWebView() = 0;
+
+    // Match with ChromeClient::CustomHandlersState.
+    enum ProtocolHandlersState {
+        ProtocolHandlersNew,
+        ProtocolHandlersRegistered,
+        ProtocolHandlersDeclined
+    };
+    virtual void registerProtocolHandler(const WebString& /*scheme*/, const WebString& /*baseURL*/, const WebString& /*url*/, const WebString& /*title*/) = 0;
+    virtual ProtocolHandlersState isProtocolHandlerRegistered(const WebString& /*scheme*/, const WebString& /*baseURL*/, const WebString& /*url*/) = 0;
+    virtual void unregisterProtocolHandler(const WebString& /*scheme*/, const WebString& /*baseURL*/, const WebString& /*url*/) = 0;
 };
 } // namespace WebKit
 } // namespace BlackBerry

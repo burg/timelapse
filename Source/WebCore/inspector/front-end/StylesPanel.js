@@ -33,11 +33,11 @@
  */
 WebInspector.StylesUISourceCodeProvider = function()
 {
-    WebInspector.resourceTreeModel.addEventListener(WebInspector.ResourceTreeModel.EventTypes.CachedResourcesLoaded, this._initialize, this);
-    WebInspector.resourceTreeModel.addEventListener(WebInspector.ResourceTreeModel.EventTypes.WillLoadCachedResources, this._reset, this);
-    WebInspector.resourceTreeModel.addEventListener(WebInspector.ResourceTreeModel.EventTypes.MainFrameNavigated, this._reset, this);
-
+    /**
+     * @type {Array.<WebInspector.UISourceCode>}
+     */
     this._uiSourceCodes = [];
+    WebInspector.resourceTreeModel.addEventListener(WebInspector.ResourceTreeModel.EventTypes.ResourceAdded, this._resourceAdded, this);
 }
 
 WebInspector.StylesUISourceCodeProvider.prototype = {
@@ -49,11 +49,8 @@ WebInspector.StylesUISourceCodeProvider.prototype = {
         return this._uiSourceCodes;
     },
 
-    _initialize: function()
+    _populate: function()
     {
-        if (this._initialized)
-            return;
-
         function populateFrame(frame)
         {
             for (var i = 0; i < frame.childFrames.length; ++i)
@@ -63,10 +60,8 @@ WebInspector.StylesUISourceCodeProvider.prototype = {
             for (var i = 0; i < resources.length; ++i)
                 this._resourceAdded({data:resources[i]});
         }
-        populateFrame.call(this, WebInspector.resourceTreeModel.mainFrame);
 
-        WebInspector.resourceTreeModel.addEventListener(WebInspector.ResourceTreeModel.EventTypes.ResourceAdded, this._resourceAdded, this);
-        this._initialized = true;
+        populateFrame.call(this, WebInspector.resourceTreeModel.mainFrame);
     },
 
     _resourceAdded: function(event)
@@ -79,9 +74,10 @@ WebInspector.StylesUISourceCodeProvider.prototype = {
         this.dispatchEventToListeners(WebInspector.UISourceCodeProvider.Events.UISourceCodeAdded, uiSourceCode);
     },
 
-    _reset: function()
+    reset: function()
     {
         this._uiSourceCodes = [];
+        this._populate();
     }
 }
 
@@ -97,23 +93,57 @@ WebInspector.StyleSource = function(resource)
     WebInspector.UISourceCode.call(this, resource.url, resource, resource);
 }
 
+WebInspector.StyleSource.updateTimeout = 200;
+
 WebInspector.StyleSource.prototype = {
+    /**
+     * @return {boolean}
+     */
+    isEditable: function()
+    {
+        return true;
+    },
+
     /**
      * @param {function(?string)} callback
      */
     workingCopyCommitted: function(callback)
     {  
-        WebInspector.cssModel.resourceBinding().setStyleContent(this, this.workingCopy(), true, callback);
+        this._commitIncrementalEdit(true, callback);
     },
 
     workingCopyChanged: function()
-    {  
-        function commitIncrementalEdit()
-        {
-            WebInspector.cssModel.resourceBinding().setStyleContent(this, this.workingCopy(), false, function() {});
-        }
-        const updateTimeout = 200;
-        this._incrementalUpdateTimer = setTimeout(commitIncrementalEdit.bind(this), updateTimeout);
+    {
+        this._callOrSetTimeout(this._commitIncrementalEdit.bind(this, false, function() {}));
+    },
+
+    /**
+     * @param {function(?string)} callback
+     */
+    _callOrSetTimeout: function(callback)
+    {
+        // FIXME: Extensions tests override updateTimeout because extensions don't have any control over applying changes to domain specific bindings.   
+        if (WebInspector.StyleSource.updateTimeout >= 0)
+            this._incrementalUpdateTimer = setTimeout(callback, WebInspector.StyleSource.updateTimeout);
+        else
+            callback(null);
+    },
+
+    /**
+     * @param {boolean} majorChange
+     * @param {function(?string)} callback
+     */
+    _commitIncrementalEdit: function(majorChange, callback)
+    {
+        this._clearIncrementalUpdateTimer();
+        WebInspector.cssModel.resourceBinding().setStyleContent(this, this.workingCopy(), majorChange, callback);
+    },
+
+    _clearIncrementalUpdateTimer: function()
+    {
+        if (this._incrementalUpdateTimer)
+            clearTimeout(this._incrementalUpdateTimer);
+        delete this._incrementalUpdateTimer;
     }
 }
 
@@ -171,7 +201,7 @@ WebInspector.StyleSourceFrame.prototype = {
 
     afterTextChanged: function(oldRange, newRange)
     {
-        this._styleSource.setWorkingCopy(this.textModel.text);
+        this._styleSource.setWorkingCopy(this.textModel.text());
     },
 
     _didEditContent: function(error)
@@ -181,13 +211,6 @@ WebInspector.StyleSourceFrame.prototype = {
             return;
         }
         delete this._isCommittingEditing;
-    },
-
-    _clearIncrementalUpdateTimer: function()
-    {
-        if (this._incrementalUpdateTimer)
-            clearTimeout(this._incrementalUpdateTimer);
-        delete this._incrementalUpdateTimer;
     },
 
     /**

@@ -1,3 +1,392 @@
+2012-07-19  Kihong Kwon  <kihong.kwon@samsung.com>
+
+        [EFL] Enable interactive form validation
+        https://bugs.webkit.org/show_bug.cgi?id=91711
+
+        Reviewed by Ryosuke Niwa.
+
+        Enable interactive form validation on the Efl.
+        This makes we can validate data at form elements.
+        In addition, it is already enabled in the DRT.
+
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new):
+
+2012-07-18  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL] Add central error management to EFL port
+        https://bugs.webkit.org/show_bug.cgi?id=91598
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Make use of ErrorsEfl header from WebCore in
+        EFL's FrameLoaderClient now that we have
+        a central place for errors.
+
+        * WebCoreSupport/FrameLoaderClientEfl.cpp:
+        (WebCore::FrameLoaderClientEfl::cancelledError):
+        (WebCore::FrameLoaderClientEfl::blockedError):
+        (WebCore::FrameLoaderClientEfl::cannotShowURLError):
+        (WebCore::FrameLoaderClientEfl::interruptedForPolicyChangeError):
+        (WebCore::FrameLoaderClientEfl::cannotShowMIMETypeError):
+        (WebCore::FrameLoaderClientEfl::fileDoesNotExistError):
+        (WebCore::FrameLoaderClientEfl::pluginWillHandleLoadError):
+        (WebCore::FrameLoaderClientEfl::shouldFallBack):
+
+2012-07-18  Seokju Kwon  <seokju.kwon@samsung.com>
+
+        [EFL][DRT] Add support for Web Inspector in WebKit-EFL DRT
+        https://bugs.webkit.org/show_bug.cgi?id=87935
+
+        Reviewed by Andreas Kling.
+
+        Add implementation of DumpRenderTreeSupportEfl::evaluateInWebInspector().
+        Some scripts for test should be evaluated in frontend.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::evaluateInWebInspector):
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+
+2012-07-17  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL] Replace 0 by NULL in public headers documentation
+        https://bugs.webkit.org/show_bug.cgi?id=91470
+
+        Reviewed by Dirk Pranke.
+
+        Use NULL instead of 0 for pointer types in public
+        C headers.
+
+        * ewk/ewk_contextmenu.h:
+        * ewk/ewk_cookies.h:
+        * ewk/ewk_frame.h:
+        * ewk/ewk_intent.h:
+        * ewk/ewk_intent_request.h:
+        * ewk/ewk_network.h:
+        * ewk/ewk_security_origin.h:
+        * ewk/ewk_settings.h:
+        * ewk/ewk_view.h:
+        * ewk/ewk_window_features.h:
+
+2012-07-17  Vivek Galatage  <vivekgalatage@gmail.com>
+
+        Web Inspector: refactor InspectorController::connectFrontend() to accept InspectorFrontendChannel.
+        https://bugs.webkit.org/show_bug.cgi?id=91196
+
+        Reviewed by Pavel Feldman.
+
+        Refactoring InspectorClients. InspectorClient::openInspectorFrontend
+        now returning the InspectorFrontendChannel.
+
+        * WebCoreSupport/InspectorClientEfl.cpp:
+        (WebCore::InspectorClientEfl::openInspectorFrontend):
+        * WebCoreSupport/InspectorClientEfl.h:
+        (InspectorClientEfl):
+
+2012-07-17  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Move codes related to theme setting from Widget to RenderTheme
+        https://bugs.webkit.org/show_bug.cgi?id=89842
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_view_create_for_view): Removed codes which set theme in FrameView.
+        * ewk/ewk_view.cpp:
+        (ewk_view_theme_set): Called RenderThemeEfl::setThemePath instead of setting theme in FrameView.
+
+2012-07-16  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        Add RegisterProtocolHandlerClient to the Modules/protocolhandler
+        https://bugs.webkit.org/show_bug.cgi?id=90940
+
+        Reviewed by Hajime Morita.
+
+        As a step to let protocol handler be moved to the modules, RegisterProtocolHandlerClient needs
+        to be added to the Modules/protocolhandler. Because ChromeClient has some virtual functions for
+        protocol handlers, virtual functions should be moved to RegisterProtocolHandlerClient
+
+        In order to support this, RegisterProtocolHandlerClientEfl class is added and ewk_view registers
+        RegisterProtocolHandlerClientEfl. In addition, existing concrete functions in ChromeClientEfl are moved
+        to RegisterProtocolHandlerClientEfl.
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        (WebCore):
+        * WebCoreSupport/ChromeClientEfl.h:
+        * WebCoreSupport/RegisterProtocolHandlerClientEfl.cpp: Added.
+        (WebCore):
+        (WebCore::customHandlerDataCreate):
+        (WebCore::customHandlerDataDelete):
+        (WebCore::RegisterProtocolHandlerClientEfl::RegisterProtocolHandlerClientEfl):
+        (WebCore::RegisterProtocolHandlerClientEfl::registerProtocolHandler):
+        (WebCore::RegisterProtocolHandlerClientEfl::isProtocolHandlerRegistered):
+        (WebCore::RegisterProtocolHandlerClientEfl::unregisterProtocolHandler):
+        * WebCoreSupport/RegisterProtocolHandlerClientEfl.h: Added.
+        (RegisterProtocolHandlerClientEfl):
+        (WebCore::RegisterProtocolHandlerClientEfl::~RegisterProtocolHandlerClientEfl):
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new):
+
+2012-07-16  Kihong Kwon  <kihong.kwon@samsung.com>
+
+        Remove setController from BatteryClient
+        https://bugs.webkit.org/show_bug.cgi?id=90944
+
+        Reviewed by Adam Barth.
+
+        BatteryClient doesn't need to keep m_controller,
+        because BatteryController can be accessed using BatteryController::from().
+        Remove m_controller and Add ewk view evas object to BatteryClientEfl.
+        And change all m_controller to BatteryController::from.
+
+        * WebCoreSupport/BatteryClientEfl.cpp:
+        (BatteryClientEfl::BatteryClientEfl):
+        (BatteryClientEfl::didChangeBatteryStatus):
+        * WebCoreSupport/BatteryClientEfl.h:
+        (BatteryClientEfl):
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new):
+
+2012-07-15  Kihong Kwon  <kihong.kwon@samsung.com>
+
+        [EFL] Add a API for getting security origin string
+        https://bugs.webkit.org/show_bug.cgi?id=90936
+
+        Reviewed by Ryosuke Niwa.
+
+        Support to change from Ewk_Security_Origin to string on the API level.
+        Add ewk_security_origin_string_get for getting security origin string.
+
+        * ewk/ewk_security_origin.cpp:
+        (_Ewk_Security_Origin):
+        (ewk_security_origin_string_get):
+        (ewk_security_origin_free):
+        (ewk_security_origin_new):
+        * ewk/ewk_security_origin.h:
+
+2012-07-15  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        [EFL] Move files guarded by #ifdef to existing file list.
+        https://bugs.webkit.org/show_bug.cgi?id=91336
+
+        Reviewed by Ryosuke Niwa.
+
+        Some EFL files are already guared by #ifdef. So, cmake files doesn't need to guard
+        them again. In addition, some files are missing #ifdef guard its header files. 
+
+        * WebCoreSupport/DeviceMotionClientEfl.h:
+        * WebCoreSupport/InspectorClientEfl.h:
+        * WebCoreSupport/NetworkInfoClientEfl.h:
+        * WebCoreSupport/VibrationClientEfl.h:
+
+2012-07-13  Kihong Kwon  <kihong.kwon@samsung.com>
+
+        [EFL] Add const to the parameter of getters in ewk_security_origin
+        https://bugs.webkit.org/show_bug.cgi?id=90954
+
+        Reviewed by Kentaro Hara.
+
+        Move initialization of strings for protocol and host to the ewk_security_origin_new method,
+        which allows to add const qualifier for ewk_security_origin_protocol_get and ewk_security_origin_host_get.
+        In addition, add null checks to the getters.
+
+        * ewk/ewk_security_origin.cpp:
+        (ewk_security_origin_protocol_get):
+        (ewk_security_origin_host_get):
+        (ewk_security_origin_new):
+        * ewk/ewk_security_origin.h:
+
+2012-07-13  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        [EFL] Add *explicit* keyword to constructor which has a parameter
+        https://bugs.webkit.org/show_bug.cgi?id=91207
+
+        Reviewed by Zoltan Herczeg.
+
+        Add *explicit* keyword to contructor which has a parameter in order to avoid implicit type conversion.
+
+        * WebCoreSupport/EditorClientEfl.h:
+        (EditorClientEfl):
+        * WebCoreSupport/InspectorClientEfl.h:
+        (InspectorClientEfl):
+        * WebCoreSupport/PageClientEfl.h:
+        (PageClientEfl):
+        * WebCoreSupport/VibrationClientEfl.h:
+        (VibrationClientEfl):
+
+2012-07-10  Adam Barth  <abarth@webkit.org>
+
+        LayoutTestController.dumpConfigurationForViewport should move to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=45652
+
+        Reviewed by Eric Seidel.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+
+2012-07-09  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL] Battery status code needs refactoring to be reused in WebKit2
+        https://bugs.webkit.org/show_bug.cgi?id=90760
+
+        Reviewed by Hajime Morita.
+
+        Add BatteryClientEfl to WebKit, which uses BatteryProviderEfl from
+        WebCore internally.
+
+        * WebCoreSupport/BatteryClientEfl.cpp: Added.
+        (BatteryClientEfl::BatteryClientEfl):
+        (BatteryClientEfl::setController):
+        (BatteryClientEfl::startUpdating):
+        (BatteryClientEfl::stopUpdating):
+        (BatteryClientEfl::batteryControllerDestroyed):
+        (BatteryClientEfl::didChangeBatteryStatus):
+        * WebCoreSupport/BatteryClientEfl.h: Renamed from Source/WebCore/platform/efl/BatteryClientEfl.h.
+        (WebCore):
+        (BatteryClientEfl):
+        (BatteryClientEfl::~BatteryClientEfl):
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new):
+
+2012-07-09  Adam Klein  <adamk@chromium.org>
+
+        Rename WebCore::WebKitMutationObserver to WebCore::MutationObserver
+        https://bugs.webkit.org/show_bug.cgi?id=90810
+
+        Reviewed by Ojan Vafai.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::deliverAllMutationsIfNecessary):
+
+2012-07-09  Krzysztof Czech  <k.czech@samsung.com>
+
+        [EFL] Simplify runTest function by defining default arguments.
+        https://bugs.webkit.org/show_bug.cgi?id=90525
+
+        Reviewed by Chang Shu.
+
+        Default arguments will simplify macro RUN_TEST.
+        Function will only have one mandatory argument, callback test function.
+        Added static modifiers to callback functions.
+
+        * tests/UnitTestUtils/EWKTestBase.h:
+        (EWKTestBase):
+        * tests/test_ewk_view.cpp:
+        (ewkViewEditableGetCb):
+        (TEST):
+        (ewkViewUriGetCb):
+
+2012-07-08  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL] REGRESSION (r122035): fullscreen/exit-full-screen-iframe.html is crashing
+        https://bugs.webkit.org/show_bug.cgi?id=90735
+
+        Reviewed by Antonio Gomes.
+
+        Keep a reference to the Element passed to enterFullScreenForElement() so
+        that we can reuse it later in exitFullScreenForElement(). This is needed
+        because the Element passed to exitFullScreenForElement() may be null.
+        This fixes the crash for the fullscreen/exit-full-screen-iframe.html
+        test introduced in r122035.
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        (WebCore::ChromeClientEfl::enterFullScreenForElement):
+        (WebCore::ChromeClientEfl::exitFullScreenForElement):
+        * WebCoreSupport/ChromeClientEfl.h:
+        (ChromeClientEfl):
+
+2012-07-07  Jinwoo Song  <jinwoo7.song@samsung.com>
+
+        [EFL] Fix build break when Accelerated Compositing is on.
+        https://bugs.webkit.org/show_bug.cgi?id=90718
+
+        Unreviewed build fix.
+
+        ewk_view_accelerated_compositing_XXX APIs are in ewk_view_private.h
+
+        * WebCoreSupport/PageClientEfl.cpp:
+        (PageClientEfl::createEvasObjectForAcceleratedCompositing):
+        (PageClientEfl::acceleratedCompositingContext):
+        * WebCoreSupport/PageClientEfl.h:
+        (PageClientEfl):
+
+2012-07-06  Seokju Kwon  <seokju.kwon@samsung.com>
+
+        [EFL] Add Web Inspector to WebKit-EFL
+        https://bugs.webkit.org/show_bug.cgi?id=83865
+
+        Reviewed by Pavel Feldman.
+
+        EFL port implementation for Web Inspector.
+        Implementation of InspectorClientEfl and InspectorFrontendClientEfl
+        for using the Web Inspector in WebKit-EFL with new EWK APIs.
+
+        * WebCoreSupport/InspectorClientEfl.cpp:
+        (WebCore::notifyWebInspectorDestroy):
+        (WebCore):
+        (InspectorFrontendSettingsEfl):
+        (WebCore::InspectorFrontendSettingsEfl::getProperty):
+        (WebCore::InspectorFrontendSettingsEfl::setProperty):
+        (WebCore::InspectorClientEfl::InspectorClientEfl):
+        (WebCore::InspectorClientEfl::~InspectorClientEfl):
+        (WebCore::InspectorClientEfl::inspectorDestroyed):
+        (WebCore::InspectorClientEfl::openInspectorFrontend):
+        (WebCore::InspectorClientEfl::closeInspectorFrontend):
+        (WebCore::InspectorClientEfl::bringFrontendToFront):
+        (WebCore::InspectorClientEfl::sendMessageToFrontend):
+        (WebCore::InspectorClientEfl::releaseFrontendPage):
+        (WebCore::InspectorClientEfl::inspectorFilesPath):
+        (WebCore::InspectorFrontendClientEfl::InspectorFrontendClientEfl):
+        (WebCore::InspectorFrontendClientEfl::~InspectorFrontendClientEfl):
+        (WebCore::InspectorFrontendClientEfl::localizedStringsURL):
+        (WebCore::InspectorFrontendClientEfl::hiddenPanels):
+        (WebCore::InspectorFrontendClientEfl::bringToFront):
+        (WebCore::InspectorFrontendClientEfl::closeWindow):
+        (WebCore::InspectorFrontendClientEfl::inspectedURLChanged):
+        (WebCore::InspectorFrontendClientEfl::attachWindow):
+        (WebCore::InspectorFrontendClientEfl::detachWindow):
+        (WebCore::InspectorFrontendClientEfl::setAttachedWindowHeight):
+        (WebCore::InspectorFrontendClientEfl::destroyInspectorWindow):
+        * WebCoreSupport/InspectorClientEfl.h:
+        (WebCore):
+        (InspectorClientEfl):
+        (InspectorFrontendClientEfl):
+        (WebCore::InspectorFrontendClientEfl::disconnectInspectorClient):
+        * ewk/ewk_view.cpp:
+        (_Ewk_View_Private_Data):
+        (_ewk_view_priv_new):
+        (ewk_view_web_inspector_show):
+        (ewk_view_web_inspector_close):
+        (ewk_view_web_inspector_view_get):
+        (ewk_view_web_inspector_view_set):
+        * ewk/ewk_view.h:
+
+2012-07-05  Kihong Kwon  <kihong.kwon@samsung.com>
+
+        [EFL] Change class name from NotificationClientEfl to NotificationPresenterClientEfl.
+        https://bugs.webkit.org/show_bug.cgi?id=90542
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Change class name from NotificationClientEfl to NotificationPresenterClientEfl
+        to be in line with other ports.(qt, chromium, blackberry)
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        * WebCoreSupport/NotificationPresenterClientEfl.cpp: Renamed from Source/WebKit/efl/WebCoreSupport/NotificationClientEfl.cpp.
+        (WebCore):
+        (WebCore::NotificationPresenterClientEfl::NotificationPresenterClientEfl):
+        (WebCore::NotificationPresenterClientEfl::~NotificationPresenterClientEfl):
+        (WebCore::NotificationPresenterClientEfl::show):
+        (WebCore::NotificationPresenterClientEfl::cancel):
+        (WebCore::NotificationPresenterClientEfl::notificationObjectDestroyed):
+        (WebCore::NotificationPresenterClientEfl::notificationControllerDestroyed):
+        (WebCore::NotificationPresenterClientEfl::requestPermission):
+        (WebCore::NotificationPresenterClientEfl::checkPermission):
+        (WebCore::NotificationPresenterClientEfl::cancelRequestsForPermission):
+        * WebCoreSupport/NotificationPresenterClientEfl.h: Renamed from Source/WebKit/efl/WebCoreSupport/NotificationClientEfl.h.
+        (WebCore):
+        (NotificationPresenterClientEfl):
+
 2012-07-02  Benjamin Poulain  <bpoulain@apple.com>
 
         Do not do any logging initialization when logging is disabled

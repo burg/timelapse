@@ -20,6 +20,7 @@
 #define WebPage_p_h
 
 #include "ChromeClient.h"
+#include "InspectorClientBlackBerry.h"
 #include "InspectorOverlay.h"
 #if USE(ACCELERATED_COMPOSITING)
 #include "GLES2Context.h"
@@ -96,6 +97,7 @@ public:
     bool handleMouseEvent(WebCore::PlatformMouseEvent&);
     bool handleWheelEvent(WebCore::PlatformWheelEvent&);
 
+    bool loadAbout(const char* aboutURL);
     void load(const char* url, const char* networkToken, const char* method, Platform::NetworkRequest::CachePolicy, const char* data, size_t dataLength, const char* const* headers, size_t headersLength, bool isInitial, bool mustHandleInternally = false, bool forceDownload = false, const char* overrideContentType = "", const char* suggestedSaveName = "");
     void loadString(const char* string, const char* baseURL, const char* mimeType, const char* failingURL = 0);
     bool executeJavaScript(const char* script, JavaScriptDataType& returnType, WebString& returnValue);
@@ -191,6 +193,7 @@ public:
     virtual bool isVisible() const { return m_visible; }
     virtual bool authenticationChallenge(const WebCore::KURL&, const WebCore::ProtectionSpace&, WebCore::Credential&);
     virtual SaveCredentialType notifyShouldSaveCredential(bool);
+    virtual void syncProxyCredential(const WebCore::Credential&);
 
     // Called from within WebKit via ChromeClientBlackBerry.
     void enterFullscreenForNode(WebCore::Node*);
@@ -206,7 +209,12 @@ public:
     void notifyPopupAutofillDialog(const Vector<String>&, const WebCore::IntRect&);
     void notifyDismissAutofillDialog();
 
-    bool shouldZoomToInitialScaleOnLoad() const;
+    bool shouldZoomToInitialScaleOnLoad() const { return loadState() == Committed || m_shouldZoomToInitialScaleAfterLoadFinished; }
+    void setShouldZoomToInitialScaleAfterLoadFinished(bool shouldZoomToInitialScaleAfterLoadFinished)
+    {
+        m_shouldZoomToInitialScaleAfterLoadFinished = shouldZoomToInitialScaleAfterLoadFinished;
+    }
+
     // Called according to our heuristic or from setLoadState depending on whether we have a virtual viewport.
     void zoomToInitialScaleOnLoad();
 
@@ -440,8 +448,12 @@ public:
 
     void setInspectorOverlayClient(WebCore::InspectorOverlay::InspectorOverlayClient*);
 
+    void applySizeOverride(int overrideWidth, int overrideHeight);
+    void setTextZoomFactor(float);
+
     WebPage* m_webPage;
     WebPageClient* m_client;
+    WebCore::InspectorClientBlackBerry* m_inspectorClient;
     WebCore::Page* m_page;
     WebCore::Frame* m_mainFrame;
     RefPtr<WebCore::Node> m_currentContextNode;
@@ -456,6 +468,7 @@ public:
     bool m_visible;
     ActivationStateType m_activationState;
     bool m_shouldResetTilesWhenShown;
+    bool m_shouldZoomToInitialScaleAfterLoadFinished;
     bool m_userScalable;
     bool m_userPerformedManualZoom;
     bool m_userPerformedManualScroll;
@@ -619,8 +632,6 @@ public:
 
     // The popup that opened in this webpage
     WebCore::PagePopupBlackBerry* m_selectPopup;
-    // The popup that owned this webpage
-    WebCore::PagePopupBlackBerry* m_parentPopup;
 
     RefPtr<WebCore::AutofillManager> m_autofillManager;
 protected:

@@ -7,8 +7,6 @@
 TEMPLATE = lib
 TARGET = WebKit1
 
-load(features)
-
 include(WebKit1.pri)
 
 WEBKIT += wtf javascriptcore webcore
@@ -95,6 +93,11 @@ HEADERS += \
     $$PWD/qt/WebCoreSupport/TextCheckerClientQt.h \
     $$PWD/qt/WebCoreSupport/PlatformStrategiesQt.h \
     $$PWD/qt/WebCoreSupport/WebEventConversion.h
+
+haveQt(5): contains(QT_CONFIG,accessibility) {
+    SOURCES += $$PWD/qt/Api/qwebviewaccessible.cpp
+    HEADERS += $$PWD/qt/Api/qwebviewaccessible_p.h 
+}
 
 INCLUDEPATH += \
     $$PWD/qt/Api \

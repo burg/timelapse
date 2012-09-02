@@ -35,6 +35,7 @@
 #include "FrameTestHelpers.h"
 #include "FrameView.h"
 #include "HTMLDocument.h"
+#include "URLTestHelpers.h"
 #include "WebDocument.h"
 #include "WebFrame.h"
 #include "WebFrameClient.h"
@@ -42,11 +43,11 @@
 #include "platform/WebSize.h"
 #include "WebViewClient.h"
 #include "WebViewImpl.h"
-#include <googleurl/src/gurl.h>
 #include <gtest/gtest.h>
 #include <webkit/support/webkit_support.h>
 
 using namespace WebKit;
+using WebKit::URLTestHelpers::toKURL;
 
 namespace {
 
@@ -92,6 +93,29 @@ private:
     TestData m_testData;
 };
 
+class FormChangeWebViewClient : public WebViewClient {
+public:
+    // WebViewClient methods
+    virtual void didChangeFormState(const WebNode& node)
+    {
+        m_focused = node.focused();
+        m_called = true;
+    }
+
+    // Local methods
+    void reset()
+    {
+        m_called = false;
+        m_focused = false;
+    }
+    bool called() { return m_called; }
+    bool focused() { return m_focused; }
+
+private:
+    bool m_called;
+    bool m_focused;
+};
+
 class WebViewTest : public testing::Test {
 public:
     WebViewTest()
@@ -117,7 +141,7 @@ protected:
 
 TEST_F(WebViewTest, FocusIsInactive)
 {
-    FrameTestHelpers::registerMockedURLLoad(m_baseURL, "visible_iframe.html");
+    URLTestHelpers::registerMockedURLFromBaseURL(WebString::fromUTF8(m_baseURL.c_str()), "visible_iframe.html");
     WebView* webView = FrameTestHelpers::createWebViewAndLoad(m_baseURL + "visible_iframe.html");
 
     webView->setFocus(true);
@@ -145,7 +169,7 @@ TEST_F(WebViewTest, FocusIsInactive)
 
 TEST_F(WebViewTest, ActiveState)
 {
-    FrameTestHelpers::registerMockedURLLoad(m_baseURL, "visible_iframe.html");
+    URLTestHelpers::registerMockedURLFromBaseURL(WebString::fromUTF8(m_baseURL.c_str()), "visible_iframe.html");
     WebView* webView = FrameTestHelpers::createWebViewAndLoad(m_baseURL + "visible_iframe.html");
 
     ASSERT_TRUE(webView);
@@ -169,7 +193,7 @@ void WebViewTest::testAutoResize(const WebSize& minAutoResize, const WebSize& ma
 {
     AutoResizeWebViewClient client;
     std::string url = m_baseURL + "specify_size.html?" + pageWidth + ":" + pageHeight;
-    FrameTestHelpers::registerMockedURLLoad(GURL(url), "specify_size.html");
+    URLTestHelpers::registerMockedURLLoad(toKURL(url), "specify_size.html");
     WebView* webView = FrameTestHelpers::createWebViewAndLoad(url, true, 0, &client);
     client.testData().setWebView(webView);
 
@@ -268,7 +292,7 @@ TEST_F(WebViewTest, AutoResizeMaxSize)
 
 void WebViewTest::testTextInputType(WebTextInputType expectedType, const std::string& htmlFile)
 {
-    FrameTestHelpers::registerMockedURLLoad(m_baseURL, htmlFile);
+    URLTestHelpers::registerMockedURLFromBaseURL(WebString::fromUTF8(m_baseURL.c_str()), WebString::fromUTF8(htmlFile.c_str()));
     WebView* webView = FrameTestHelpers::createWebViewAndLoad(m_baseURL + htmlFile);
     webView->setInitialFocus(false);
     EXPECT_EQ(expectedType, webView->textInputType());
@@ -308,7 +332,7 @@ TEST_F(WebViewTest, DISABLED_TextInputType)
 
 TEST_F(WebViewTest, SetEditableSelectionOffsetsAndTextInputInfo)
 {
-    FrameTestHelpers::registerMockedURLLoad(m_baseURL, "input_field_populated.html");
+    URLTestHelpers::registerMockedURLFromBaseURL(WebString::fromUTF8(m_baseURL.c_str()), WebString::fromUTF8("input_field_populated.html"));
     WebView* webView = FrameTestHelpers::createWebViewAndLoad(m_baseURL + "input_field_populated.html");
     webView->setInitialFocus(false);
     webView->setEditableSelectionOffsets(5, 13);
@@ -322,7 +346,7 @@ TEST_F(WebViewTest, SetEditableSelectionOffsetsAndTextInputInfo)
     EXPECT_EQ(-1, info.compositionEnd);
     webView->close();
 
-    FrameTestHelpers::registerMockedURLLoad(m_baseURL, "content_editable_populated.html");
+    URLTestHelpers::registerMockedURLFromBaseURL(WebString::fromUTF8(m_baseURL.c_str()), WebString::fromUTF8("content_editable_populated.html"));
     webView = FrameTestHelpers::createWebViewAndLoad(m_baseURL + "content_editable_populated.html");
     webView->setInitialFocus(false);
     webView->setEditableSelectionOffsets(8, 19);
@@ -334,6 +358,22 @@ TEST_F(WebViewTest, SetEditableSelectionOffsetsAndTextInputInfo)
     EXPECT_EQ(19, info.selectionEnd);
     EXPECT_EQ(-1, info.compositionStart);
     EXPECT_EQ(-1, info.compositionEnd);
+    webView->close();
+}
+
+TEST_F(WebViewTest, FormChange)
+{
+    FormChangeWebViewClient client;
+    client.reset();
+    URLTestHelpers::registerMockedURLFromBaseURL(WebString::fromUTF8(m_baseURL.c_str()), WebString::fromUTF8("input_field_set_value_while_focused.html"));
+    WebView* webView = FrameTestHelpers::createWebViewAndLoad(m_baseURL + "input_field_set_value_while_focused.html", true, 0, &client);
+    EXPECT_TRUE(client.called());
+    EXPECT_TRUE(client.focused());
+    client.reset();
+    URLTestHelpers::registerMockedURLFromBaseURL(WebString::fromUTF8(m_baseURL.c_str()), WebString::fromUTF8("input_field_set_value_while_not_focused.html"));
+    webView = FrameTestHelpers::createWebViewAndLoad(m_baseURL + "input_field_set_value_while_not_focused.html", true, 0, &client);
+    EXPECT_TRUE(client.called());
+    EXPECT_FALSE(client.focused());
     webView->close();
 }
 

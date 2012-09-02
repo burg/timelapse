@@ -39,7 +39,7 @@
 namespace WebCore {
     class DOMDataStore;
     class Node;
-    class MemoryInstrumentation;
+    class MemoryObjectInfo;
 
     template <class KeyType, class ValueType> class AbstractWeakReferenceMap {
     public:
@@ -64,7 +64,7 @@ namespace WebCore {
 
         v8::WeakReferenceCallback weakReferenceCallback() { return m_weakReferenceCallback; }
 
-        virtual void reportMemoryUsage(MemoryInstrumentation*) = 0;
+        virtual void reportMemoryUsage(MemoryObjectInfo*) const = 0;
 
     private:
         v8::WeakReferenceCallback m_weakReferenceCallback;
@@ -134,9 +134,10 @@ namespace WebCore {
             visitor->endMap();
         }
 
-        virtual void reportMemoryUsage(MemoryInstrumentation* instrumentation) OVERRIDE
+        virtual void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const OVERRIDE
         {
-            instrumentation->reportHashMap(m_map, MemoryInstrumentation::Binding);
+            MemoryClassInfo<WeakReferenceMap<KeyType, ValueType> > info(memoryObjectInfo, this, MemoryInstrumentation::Binding);
+            info.addHashMap(m_map);
         }
 
     protected:
@@ -177,7 +178,6 @@ namespace WebCore {
     // This should be called to remove all DOM objects associated with the current thread when it is tearing down.
     void removeAllDOMObjects();
 
-    void enableFasterDOMStoreAccess();
 } // namespace WebCore
 
 #endif // V8DOMMap_h

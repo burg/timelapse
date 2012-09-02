@@ -11,6 +11,7 @@ BUG_QT_SLOW SLOW DEBUG : editing/selection/dump-as-markup.html = PASS
 BUG_QT_SLOW DEBUG : fast/js/array-sort-modifying-tostring.html = TIMEOUT PASS
 BUG_QT_SLOW SLOW DEBUG : fast/overflow/lots-of-sibling-inline-boxes.html = PASS
 BUG_QT_SLOW SLOW DEBUG : fast/js/dfg-inline-function-dot-caller.html = PASS
+BUG_QT_SLOW SLOW DEBUG : fast/js/dfg-poison-fuzz.html = PASS
 
 BUGWK62662 DEBUG : inspector/cookie-parser.html = CRASH PASS
 
@@ -69,16 +70,18 @@ BUGWK86137 : ietestcenter/css3/namespaces/prefix-007.xml = IMAGE
 BUGWK86139 : ietestcenter/css3/namespaces/prefix-010.xml = IMAGE
 BUGWK86142 : ietestcenter/css3/namespaces/syntax-021.xml = IMAGE
 
-BUGWK88198 : svg/stroke/non-scaling-stroke-pattern.svg = PASS IMAGE
-
 // CSS Variables are not yet enabled.
 BUGWK85580 SKIP : fast/css/variables = PASS
+BUGWK85580 SKIP : inspector/styles/variables = PASS
 
 // UndoManager is not yet enabled.
 BUGWK87908 SKIP : editing/undomanager = PASS
 
 // CSS image-resolution is not yet enabled.
 BUGWK85262 SKIP : fast/css/image-resolution = PASS
+
+// CSS image-orientation is not yet enabled.
+BUGWK89052 SKIP : fast/css/image-orientation = PASS
 
 // Needs rebaseline after bug 86441
 // failing new tests
@@ -101,3 +104,21 @@ BUGWK85463 SKIP : editing/inserting/typing-space-to-trigger-smart-link.html = PA
 BUGWK88794 SKIP : webaudio/codec-tests = PASS
 
 BUGWK90007 : http/tests/security/mixedContent/insecure-audio-video-in-main-frame.html = TEXT
+
+// Require rebaseline after bug 88171
+BUGWK88171 : fast/block/float/010.html = TEXT
+BUGWK88171 : css1/formatting_model/floating_elements.html = TEXT
+
+// Text Autosizing is not enabled.
+BUGWK84186 SKIP : fast/text-autosizing = PASS
+
+// Dialog element is not yet enabled.
+BUGWK84635 SKIP : fast/dom/HTMLDialogElement = TEXT
+
+// Skip tests in fast/text/shaping
+BUGWK90951 SKIP : fast/text/shaping = PASS
+
+// Flaky tests
+BUGWK91376 : http/tests/security/sandboxed-iframe-modify-self.html = TEXT PASS
+BUGWK91379 : http/tests/security/contentSecurityPolicy/policy-does-not-affect-child.html = TEXT PASS
+BUGWK91379 : http/tests/security/contentSecurityPolicy/object-src-none-allowed.html = TEXT PASS

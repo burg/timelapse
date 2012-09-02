@@ -38,6 +38,7 @@
 #include "InspectorCounters.h"
 #include "IntRect.h"
 #include "LayoutTypes.h"
+#include "MutationObserver.h"
 #include "PageVisibilityState.h"
 #include "PlatformScreen.h"
 #include "QualifiedName.h"
@@ -47,7 +48,6 @@
 #include "Timer.h"
 #include "TreeScope.h"
 #include "ViewportArguments.h"
-#include "WebKitMutationObserver.h"
 #include <wtf/Deque.h>
 #include <wtf/FixedArray.h>
 #include <wtf/OwnPtr.h>
@@ -79,6 +79,7 @@ class DocumentMarkerController;
 class DocumentParser;
 class DocumentType;
 class DocumentWeakReference;
+class DynamicNodeListCacheBase;
 class EditingText;
 class Element;
 class EntityReference;
@@ -137,6 +138,7 @@ class TextResourceDecoder;
 class TreeWalker;
 class UndoManager;
 class WebKitNamedFlow;
+class WebKitNamedFlowCollection;
 class XMLHttpRequest;
 class XPathEvaluator;
 class XPathExpression;
@@ -173,6 +175,10 @@ class MicroDataItemList;
 class Prerenderer;
 #endif
 
+#if ENABLE(TEXT_AUTOSIZING)
+class TextAutosizer;
+#endif
+
 typedef int ExceptionCode;
 
 enum PageshowEventPersistence {
@@ -181,6 +187,19 @@ enum PageshowEventPersistence {
 };
 
 enum StyleResolverUpdateFlag { RecalcStyleImmediately, DeferRecalcStyle, RecalcStyleIfNeeded };
+
+enum NodeListInvalidationType {
+    DoNotInvalidateOnAttributeChanges = 0,
+    InvalidateOnClassAttrChange,
+    InvalidateOnIdNameAttrChange,
+    InvalidateOnNameAttrChange,
+    InvalidateOnForAttrChange,
+    InvalidateForFormControls,
+    InvalidateOnHRefAttrChange,
+    InvalidateOnItemAttrChange,
+    InvalidateOnAnyAttrChange,
+};
+const int numNodeListInvalidationTypes = InvalidateOnAnyAttrChange + 1;
 
 class Document : public ContainerNode, public TreeScope, public ScriptExecutionContext {
 public:
@@ -328,13 +347,10 @@ public:
 
     bool cssRegionsEnabled() const;
 #if ENABLE(CSS_REGIONS)
-    enum FlowNameCheck {
-        CheckFlowNameForInvalidValues,
-        DoNotCheckFlowNameForInvalidValues
-    };
     PassRefPtr<WebKitNamedFlow> webkitGetFlowByName(const String&);
-    PassRefPtr<WebKitNamedFlow> webkitGetFlowByName(const String&, FlowNameCheck);
 #endif
+
+    WebKitNamedFlowCollection* namedFlows();
 
     bool regionBasedColumnsEnabled() const;
 
@@ -402,19 +418,22 @@ public:
 
     PassRefPtr<Node> adoptNode(PassRefPtr<Node> source, ExceptionCode&);
 
-    HTMLCollection* images();
-    HTMLCollection* embeds();
-    HTMLCollection* plugins(); // an alias for embeds() required for the JS DOM bindings.
-    HTMLCollection* applets();
-    HTMLCollection* links();
-    HTMLCollection* forms();
-    HTMLCollection* anchors();
-    HTMLCollection* objects();
-    HTMLCollection* scripts();
-    HTMLCollection* windowNamedItems(const AtomicString& name);
-    HTMLCollection* documentNamedItems(const AtomicString& name);
+    PassRefPtr<HTMLCollection> images();
+    PassRefPtr<HTMLCollection> embeds();
+    PassRefPtr<HTMLCollection> plugins(); // an alias for embeds() required for the JS DOM bindings.
+    PassRefPtr<HTMLCollection> applets();
+    PassRefPtr<HTMLCollection> links();
+    PassRefPtr<HTMLCollection> forms();
+    PassRefPtr<HTMLCollection> anchors();
+    PassRefPtr<HTMLCollection> objects();
+    PassRefPtr<HTMLCollection> scripts();
+    PassRefPtr<HTMLCollection> all();
+    void removeCachedHTMLCollection(HTMLCollection*, CollectionType);
 
-    HTMLAllCollection* all();
+    PassRefPtr<HTMLCollection> windowNamedItems(const AtomicString& name);
+    PassRefPtr<HTMLCollection> documentNamedItems(const AtomicString& name);
+    void removeWindowNamedItemCache(HTMLCollection*, const AtomicString&);
+    void removeDocumentNamedItemCache(HTMLCollection*, const AtomicString&);
 
     // Other methods (not part of DOM)
     bool isHTMLDocument() const { return m_isHTML; }
@@ -716,9 +735,10 @@ public:
     bool isPendingStyleRecalc() const;
     void styleRecalcTimerFired(Timer<Document>*);
 
-    void registerDynamicSubtreeNodeList(DynamicSubtreeNodeList*);
-    void unregisterDynamicSubtreeNodeList(DynamicSubtreeNodeList*);
-    void clearNodeListCaches();
+    void registerNodeListCache(DynamicNodeListCacheBase*);
+    void unregisterNodeListCache(DynamicNodeListCacheBase*);
+    bool shouldInvalidateNodeListCaches(const QualifiedName* attrName = 0) const;
+    void invalidateNodeListCaches(const QualifiedName* attrName);
 
     void attachNodeIterator(NodeIterator*);
     void detachNodeIterator(NodeIterator*);
@@ -776,7 +796,7 @@ public:
     void addListenerTypeIfNeeded(const AtomicString& eventType);
 
 #if ENABLE(MUTATION_OBSERVERS)
-    bool hasMutationObserversOfType(WebKitMutationObserver::MutationType type) const
+    bool hasMutationObserversOfType(MutationObserver::MutationType type) const
     {
         return m_mutationObserverTypes & type;
     }
@@ -933,7 +953,7 @@ public:
     
     void setHasNodesWithPlaceholderStyle() { m_hasNodesWithPlaceholderStyle = true; }
 
-    const Vector<IconURL>& iconURLs() const;
+    const Vector<IconURL>& iconURLs();
     void addIconURL(const String& url, const String& mimeType, const String& size, IconType);
 
     void setUseSecureKeyboardEntryWhenActive(bool);
@@ -1042,8 +1062,8 @@ public:
     Element* webkitCurrentFullScreenElement() const { return m_fullScreenElement.get(); }
     
     enum FullScreenCheckType {
-        EnforceIFrameAllowFulScreenRequirement,
-        ExemptIFrameAllowFulScreenRequirement,
+        EnforceIFrameAllowFullScreenRequirement,
+        ExemptIFrameAllowFullScreenRequirement,
     };
 
     void requestFullScreenForElement(Element*, unsigned short flags, FullScreenCheckType);
@@ -1130,11 +1150,17 @@ public:
     Prerenderer* prerenderer() { return m_prerenderer.get(); }
 #endif
 
+#if ENABLE(TEXT_AUTOSIZING)
+    TextAutosizer* textAutosizer() { return m_textAutosizer.get(); }
+#endif
+
     void adjustFloatQuadsForScrollAndAbsoluteZoomAndFrameScale(Vector<FloatQuad>&, RenderObject*);
     void adjustFloatRectForScrollAndAbsoluteZoomAndFrameScale(FloatRect&, RenderObject*);
 
     void setContextFeatures(PassRefPtr<ContextFeatures>);
     ContextFeatures* contextFeatures() { return m_contextFeatures.get(); }
+
+    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
 
 protected:
     Document(Frame*, const KURL&, bool isXHTML, bool isHTML);
@@ -1207,7 +1233,7 @@ private:
     PageVisibilityState visibilityState() const;
 #endif
 
-    HTMLCollection* cachedCollection(CollectionType);
+    PassRefPtr<HTMLCollection> cachedCollection(CollectionType);
 
 #if ENABLE(FULLSCREEN_API)
     void clearFullscreenElementStack();
@@ -1395,11 +1421,12 @@ private:
     RefPtr<TextResourceDecoder> m_decoder;
 
     InheritedBool m_designMode;
-    
-    OwnPtr<HTMLCollection> m_collections[NumUnnamedDocumentCachedTypes];
-    HashSet<DynamicSubtreeNodeList*> m_listsInvalidatedAtDocument;
 
-    typedef HashMap<AtomicStringImpl*, OwnPtr<HTMLNameCollection> > NamedCollectionMap;
+    HashSet<DynamicNodeListCacheBase*> m_listsInvalidatedAtDocument;
+    unsigned m_nodeListCounts[numNodeListInvalidationTypes];
+
+    HTMLCollection* m_collections[NumUnnamedDocumentCachedTypes];
+    typedef HashMap<AtomicString, HTMLNameCollection*> NamedCollectionMap;
     NamedCollectionMap m_documentNamedItemCollections;
     NamedCollectionMap m_windowNamedItemCollections;
 
@@ -1495,10 +1522,16 @@ private:
     OwnPtr<Prerenderer> m_prerenderer;
 #endif
 
+#if ENABLE(TEXT_AUTOSIZING)
+    OwnPtr<TextAutosizer> m_textAutosizer;
+#endif
+
     bool m_scheduledTasksAreSuspended;
     
     bool m_visualUpdatesAllowed;
     Timer<Document> m_visualUpdatesSuppressionTimer;
+
+    RefPtr<WebKitNamedFlowCollection> m_namedFlows;
 
 #ifndef NDEBUG
     bool m_didDispatchViewportPropertiesChanged;

@@ -31,12 +31,12 @@ class GraphicsContext3D;
 
 class PageClientEfl {
 public:
-    PageClientEfl(Evas_Object* view);
+    explicit PageClientEfl(Evas_Object* view);
     virtual ~PageClientEfl();
 
 #if USE(ACCELERATED_COMPOSITING)
-    bool createEvasObjectForAcceleratedCompositing(Evas_Native_Surface*, const IntRect&);
-    GraphicsContext3D* acceleratedCompositingContext();
+    bool createEvasObjectForAcceleratedCompositing(Evas_Native_Surface*, const WebCore::IntRect&);
+    WebCore::GraphicsContext3D* acceleratedCompositingContext();
 #endif
 
     Evas_Object* view() { return m_view; }

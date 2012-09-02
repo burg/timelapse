@@ -295,7 +295,7 @@ WebInspector.NetworkLogView.prototype = {
         this._timelineSortSelector.selectedIndex = 0;
         this._updateOffscreenRows();
 
-        this.performSearch(null, true);
+        this.performSearch(null);
     },
 
     _sortByTimeline: function()
@@ -322,7 +322,6 @@ WebInspector.NetworkLogView.prototype = {
     {
         var filterBarElement = document.createElement("div");
         filterBarElement.className = "scope-bar status-bar-item";
-        filterBarElement.id = "network-filter";
 
         /**
          * @param {string} typeName
@@ -442,7 +441,7 @@ WebInspector.NetworkLogView.prototype = {
             selectMultiple = true;
 
         this._filter(e.target, selectMultiple);
-        this.performSearch(null, true);
+        this.performSearch(null);
         this._updateSummaryBar();
     },
 
@@ -1135,20 +1134,19 @@ WebInspector.NetworkLogView.prototype = {
             this._highlightedSubstringChanges = node._highlightMatchedSubstring(this._searchRegExp);
             if (reveal)
                 node.reveal();
-            this._currentMatcRequestrceIndex = matchedRequestIndex;
+            this._currentMatchedRequestIndex = matchedRequestIndex;
         }
         this.dispatchEventToListeners(WebInspector.NetworkLogView.EventTypes.SearchIndexUpdated, this._currentMatchedRequestIndex);
     },
 
-    performSearch: function(searchQuery, sortOrFilterApplied)
+    performSearch: function(searchQuery)
     {
         var newMatchedRequestIndex = 0;
         var currentMatchedRequestId;
         if (this._currentMatchedRequestIndex !== -1)
             currentMatchedRequestId = this._matchedRequests[this._currentMatchedRequestIndex];
 
-        if (!sortOrFilterApplied)
-            this._searchRegExp = createPlainTextSearchRegex(searchQuery, "i");
+        this._searchRegExp = createPlainTextSearchRegex(searchQuery, "i");
 
         this._clearSearchMatchedList();
 
@@ -1165,7 +1163,7 @@ WebInspector.NetworkLogView.prototype = {
         }
 
         this.dispatchEventToListeners(WebInspector.NetworkLogView.EventTypes.SearchCountUpdated, this._matchedRequests.length);
-        this._highlightNthMatchedRequest(newMatchedRequestIndex, !sortOrFilterApplied);
+        this._highlightNthMatchedRequest(newMatchedRequestIndex, false);
     },
 
     jumpToPreviousSearchResult: function()
@@ -1421,9 +1419,9 @@ WebInspector.NetworkPanel.prototype = {
         this._networkLogView.switchToBriefView();
     },
 
-    performSearch: function(searchQuery, sortOrFilterApplied)
+    performSearch: function(searchQuery)
     {
-        this._networkLogView.performSearch(searchQuery, sortOrFilterApplied);
+        this._networkLogView.performSearch(searchQuery);
     },
 
     jumpToPreviousSearchResult: function()
@@ -1448,6 +1446,8 @@ WebInspector.NetworkPanel.prototype = {
     appendApplicableItems: function(contextMenu, target)
     {
         if (!(target instanceof WebInspector.NetworkRequest))
+            return;
+        if (this.visibleView && this.visibleView.isShowing() && this.visibleView.request() === target)
             return;
 
         function reveal()

@@ -26,10 +26,6 @@
 #include "Image.h"
 #include "TextureMapperLayer.h"
 
-#if ENABLE(WEBGL)
-#include "GraphicsContext3D.h"
-#endif
-
 namespace WebCore {
 
 class TextureMapperLayer;
@@ -110,7 +106,7 @@ private:
     bool m_fixedToViewport;
     TextureMapperPlatformLayer* m_contentsLayer;
     FloatRect m_needsDisplayRect;
-    TextureMapperAnimations m_animations;
+    GraphicsLayerAnimations m_animations;
     void animationStartedTimerFired(Timer<GraphicsLayerTextureMapper>*);
     Timer<GraphicsLayerTextureMapper> m_animationStartedTimer;
 };

@@ -66,6 +66,14 @@
 #include "BuiltInPDFView.h"
 #endif
 
+#if ENABLE(BATTERY_STATUS)
+#include "WebBatteryManagerProxy.h"
+#endif
+
+#if ENABLE(NETWORK_INFO)
+#include "WebNetworkInfoManagerProxy.h"
+#endif
+
 #if USE(SOUP)
 #include "WebSoupRequestManagerProxy.h"
 #endif
@@ -130,12 +138,18 @@ WebContext::WebContext(ProcessModel processModel, const String& injectedBundlePa
     , m_memorySamplerEnabled(false)
     , m_memorySamplerInterval(1400.0)
     , m_applicationCacheManagerProxy(WebApplicationCacheManagerProxy::create(this))
+#if ENABLE(BATTERY_STATUS)
+    , m_batteryManagerProxy(WebBatteryManagerProxy::create(this))
+#endif
     , m_cookieManagerProxy(WebCookieManagerProxy::create(this))
     , m_databaseManagerProxy(WebDatabaseManagerProxy::create(this))
     , m_geolocationManagerProxy(WebGeolocationManagerProxy::create(this))
     , m_iconDatabase(WebIconDatabase::create(this))
     , m_keyValueStorageManagerProxy(WebKeyValueStorageManagerProxy::create(this))
     , m_mediaCacheManagerProxy(WebMediaCacheManagerProxy::create(this))
+#if ENABLE(NETWORK_INFO)
+    , m_networkInfoManagerProxy(WebNetworkInfoManagerProxy::create(this))
+#endif
     , m_notificationManagerProxy(WebNotificationManagerProxy::create(this))
     , m_pluginSiteDataManager(WebPluginSiteDataManager::create(this))
     , m_resourceCacheManagerProxy(WebResourceCacheManagerProxy::create(this))
@@ -181,6 +195,11 @@ WebContext::~WebContext()
     m_applicationCacheManagerProxy->invalidate();
     m_applicationCacheManagerProxy->clearContext();
 
+#if ENABLE(BATTERY_STATUS)
+    m_batteryManagerProxy->invalidate();
+    m_batteryManagerProxy->clearContext();
+#endif
+
     m_cookieManagerProxy->invalidate();
     m_cookieManagerProxy->clearContext();
 
@@ -198,6 +217,11 @@ WebContext::~WebContext()
 
     m_mediaCacheManagerProxy->invalidate();
     m_mediaCacheManagerProxy->clearContext();
+
+#if ENABLE(NETWORK_INFO)
+    m_networkInfoManagerProxy->invalidate();
+    m_networkInfoManagerProxy->clearContext();
+#endif
     
     m_notificationManagerProxy->invalidate();
     m_notificationManagerProxy->clearContext();
@@ -306,7 +330,10 @@ void WebContext::ensureWebProcess()
     // Add any platform specific parameters
     platformInitializeWebProcess(parameters);
 
-    m_process->send(Messages::WebProcess::InitializeWebProcess(parameters, WebContextUserMessageEncoder(m_injectedBundleInitializationUserData.get())), 0);
+    RefPtr<APIObject> injectedBundleInitializationUserData = m_injectedBundleClient.getInjectedBundleInitializationUserData(this);
+    if (!injectedBundleInitializationUserData)
+        injectedBundleInitializationUserData = m_injectedBundleInitializationUserData;
+    m_process->send(Messages::WebProcess::InitializeWebProcess(parameters, WebContextUserMessageEncoder(injectedBundleInitializationUserData.get())), 0);
 
     for (size_t i = 0; i != m_pendingMessagesToPostToInjectedBundle.size(); ++i) {
         pair<String, RefPtr<APIObject> >& message = m_pendingMessagesToPostToInjectedBundle[i];
@@ -395,11 +422,17 @@ void WebContext::disconnectProcess(WebProcessProxy* process)
     m_downloads.clear();
 
     m_applicationCacheManagerProxy->invalidate();
+#if ENABLE(BATTERY_STATUS)
+    m_batteryManagerProxy->invalidate();
+#endif
     m_cookieManagerProxy->invalidate();
     m_databaseManagerProxy->invalidate();
     m_geolocationManagerProxy->invalidate();
     m_keyValueStorageManagerProxy->invalidate();
     m_mediaCacheManagerProxy->invalidate();
+#if ENABLE(NETWORK_INFO)
+    m_networkInfoManagerProxy->invalidate();
+#endif
     m_notificationManagerProxy->invalidate();
     m_resourceCacheManagerProxy->invalidate();
 #if USE(SOUP)
@@ -728,6 +761,13 @@ void WebContext::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Mes
         return;
     }
 
+#if ENABLE(BATTERY_STATUS)
+    if (messageID.is<CoreIPC::MessageClassWebBatteryManagerProxy>()) {
+        m_batteryManagerProxy->didReceiveMessage(connection, messageID, arguments);
+        return;
+    }
+#endif
+
     if (messageID.is<CoreIPC::MessageClassWebCookieManagerProxy>()) {
         m_cookieManagerProxy->didReceiveMessage(connection, messageID, arguments);
         return;
@@ -757,6 +797,13 @@ void WebContext::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Mes
         m_mediaCacheManagerProxy->didReceiveMessage(connection, messageID, arguments);
         return;
     }
+
+#if ENABLE(NETWORK_INFO)
+    if (messageID.is<CoreIPC::MessageClassWebNetworkInfoManagerProxy>()) {
+        m_networkInfoManagerProxy->didReceiveMessage(connection, messageID, arguments);
+        return;
+    }
+#endif
     
     if (messageID.is<CoreIPC::MessageClassWebNotificationManagerProxy>()) {
         m_notificationManagerProxy->didReceiveMessage(connection, messageID, arguments);
@@ -810,6 +857,13 @@ void WebContext::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC:
         m_iconDatabase->didReceiveSyncMessage(connection, messageID, arguments, reply);
         return;
     }
+
+#if ENABLE(NETWORK_INFO)
+    if (messageID.is<CoreIPC::MessageClassWebNetworkInfoManagerProxy>()) {
+        m_networkInfoManagerProxy->didReceiveSyncMessage(connection, messageID, arguments, reply);
+        return;
+    }
+#endif
     
     switch (messageID.get<WebContextLegacyMessage::Kind>()) {
         case WebContextLegacyMessage::PostSynchronousMessage: {
@@ -915,9 +969,12 @@ bool WebContext::httpPipeliningEnabled() const
 #endif
 }
 
-void WebContext::getWebCoreStatistics(PassRefPtr<DictionaryCallback> prpCallback)
+void WebContext::getWebCoreStatistics(PassRefPtr<DictionaryCallback> callback)
 {
-    RefPtr<DictionaryCallback> callback = prpCallback;
+    if (!m_process) {
+        callback->invalidate();
+        return;
+    }
     
     uint64_t callbackID = callback->callbackID();
     m_dictionaryCallbacks.set(callbackID, callback.get());

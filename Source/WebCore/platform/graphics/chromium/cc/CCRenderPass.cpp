@@ -37,24 +37,26 @@ using WebKit::WebTransformationMatrix;
 
 namespace WebCore {
 
-PassOwnPtr<CCRenderPass> CCRenderPass::create(CCRenderSurface* targetSurface)
+PassOwnPtr<CCRenderPass> CCRenderPass::create(CCRenderSurface* targetSurface, int id)
 {
-    return adoptPtr(new CCRenderPass(targetSurface));
+    return adoptPtr(new CCRenderPass(targetSurface, id));
 }
 
-CCRenderPass::CCRenderPass(CCRenderSurface* targetSurface)
-    : m_targetSurface(targetSurface)
+CCRenderPass::CCRenderPass(CCRenderSurface* targetSurface, int id)
+    : m_id(id)
+    , m_targetSurface(targetSurface)
     , m_framebufferOutputRect(targetSurface->contentRect())
     , m_hasTransparentBackground(true)
 {
-    ASSERT(m_targetSurface);
+    ASSERT(targetSurface);
+    ASSERT(id > 0);
 }
 
 void CCRenderPass::appendQuadsForLayer(CCLayerImpl* layer, CCOcclusionTrackerImpl* occlusionTracker, bool& hadMissingTiles)
 {
     CCQuadCuller quadCuller(m_quadList, layer, occlusionTracker, layer->hasDebugBorders());
 
-    OwnPtr<CCSharedQuadState> sharedQuadState = layer->createSharedQuadState();
+    OwnPtr<CCSharedQuadState> sharedQuadState = layer->createSharedQuadState(m_sharedQuadStateList.size());
     layer->appendDebugBorderQuad(quadCuller, sharedQuadState.get());
     layer->appendQuads(quadCuller, sharedQuadState.get(), hadMissingTiles);
     m_sharedQuadStateList.append(sharedQuadState.release());
@@ -68,18 +70,18 @@ void CCRenderPass::appendQuadsForRenderSurfaceLayer(CCLayerImpl* layer, const CC
 
     CCRenderSurface* surface = layer->renderSurface();
 
-    OwnPtr<CCSharedQuadState> sharedQuadState = surface->createSharedQuadState();
+    OwnPtr<CCSharedQuadState> sharedQuadState = surface->createSharedQuadState(m_sharedQuadStateList.size());
     bool isReplica = false;
-    surface->appendQuads(quadCuller, sharedQuadState.get(), isReplica, contributingRenderPass);
+    surface->appendQuads(quadCuller, sharedQuadState.get(), isReplica, contributingRenderPass->id());
     m_sharedQuadStateList.append(sharedQuadState.release());
 
-    if (!surface->hasReplica())
+    if (!layer->hasReplica())
         return;
 
     // Add replica after the surface so that it appears below the surface.
-    OwnPtr<CCSharedQuadState> replicaSharedQuadState = surface->createReplicaSharedQuadState();
+    OwnPtr<CCSharedQuadState> replicaSharedQuadState = surface->createReplicaSharedQuadState(m_sharedQuadStateList.size());
     isReplica = true;
-    surface->appendQuads(quadCuller, replicaSharedQuadState.get(), isReplica, contributingRenderPass);
+    surface->appendQuads(quadCuller, replicaSharedQuadState.get(), isReplica, contributingRenderPass->id());
     m_sharedQuadStateList.append(replicaSharedQuadState.release());
 }
 
@@ -92,7 +94,9 @@ void CCRenderPass::appendQuadsToFillScreen(CCLayerImpl* rootLayer, SkColor scree
     if (fillRegion.isEmpty())
         return;
 
-    OwnPtr<CCSharedQuadState> sharedQuadState = rootLayer->createSharedQuadState();
+    // Manually create the quad state for the gutter quads, as the root layer
+    // doesn't have any bounds and so can't generate this itself.
+    OwnPtr<CCSharedQuadState> sharedQuadState = rootLayer->createSharedQuadState(m_sharedQuadStateList.size());
     WebTransformationMatrix transformToLayerSpace = rootLayer->screenSpaceTransform().inverse();
     Vector<IntRect> fillRects = fillRegion.rects();
     for (size_t i = 0; i < fillRects.size(); ++i) {

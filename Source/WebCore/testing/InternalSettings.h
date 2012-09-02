@@ -27,10 +27,14 @@
 #define InternalSettings_h
 
 #include "EditingBehaviorTypes.h"
-#include "FrameDestructionObserver.h"
+#include "RefCountedSupplement.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
+
+#if ENABLE(TEXT_AUTOSIZING)
+#include "IntSize.h"
+#endif
 
 namespace WebCore {
 
@@ -38,15 +42,50 @@ typedef int ExceptionCode;
 
 class Frame;
 class Document;
+class MockPagePopupDriver;
 class Page;
+class PagePopupController;
 class Settings;
 
-class InternalSettings : public RefCounted<InternalSettings>,
-                         public FrameDestructionObserver {
+class InternalSettings : public RefCountedSupplement<Page, InternalSettings> {
 public:
-    static PassRefPtr<InternalSettings> create(Frame*);
+    class Backup {
+    public:
+        Backup(Page*, Settings*);
+        void restoreTo(Page*, Settings*);
+
+        double m_originalPasswordEchoDurationInSeconds;
+        bool m_originalPasswordEchoEnabled;
+        bool m_originalCSSExclusionsEnabled;
+#if ENABLE(SHADOW_DOM)
+        bool m_originalShadowDOMEnabled;
+#endif
+        EditingBehaviorType m_originalEditingBehavior;
+        bool m_originalFixedPositionCreatesStackingContext;
+        bool m_originalSyncXHRInDocumentsEnabled;
+#if ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
+        bool m_originalJavaScriptProfilingEnabled;
+#endif
+        bool m_originalWindowFocusRestricted;
+        bool m_originalDeviceSupportsTouch;
+        bool m_originalDeviceSupportsMouse;
+#if ENABLE(TEXT_AUTOSIZING)
+        bool m_originalTextAutosizingEnabled;
+        IntSize m_originalTextAutosizingWindowSizeOverride;
+#endif
+#if ENABLE(DIALOG_ELEMENT)
+        bool m_originalDialogElementEnabled;
+#endif
+    };
+
+    typedef RefCountedSupplement<Page, InternalSettings> SuperType;
+    static InternalSettings* from(Page*);
 
     virtual ~InternalSettings();
+#if ENABLE(PAGE_POPUP)
+    PagePopupController* pagePopupController();
+#endif
+    void reset();
 
     void setInspectorResourcesDataSizeLimits(int maximumResourcesContentSize, int maximumSingleResourceContentSize, ExceptionCode&);
     void setForceCompositingMode(bool enabled, ExceptionCode&);
@@ -72,6 +111,8 @@ public:
     void setCursiveFontFamily(const String& family, const String& script, ExceptionCode&);
     void setFantasyFontFamily(const String& family, const String& script, ExceptionCode&);
     void setPictographFontFamily(const String& family, const String& script, ExceptionCode&);
+    void setTextAutosizingEnabled(bool enabled, ExceptionCode&);
+    void setTextAutosizingWindowSizeOverride(int width, int height, ExceptionCode&);
     void setEnableScrollAnimator(bool enabled, ExceptionCode&);
     bool scrollAnimatorEnabled(ExceptionCode&);
     void setCSSExclusionsEnabled(bool enabled, ExceptionCode&);
@@ -82,33 +123,29 @@ public:
     void setFixedPositionCreatesStackingContext(bool, ExceptionCode&);
     void setSyncXHRInDocumentsEnabled(bool, ExceptionCode&);
     void setWindowFocusRestricted(bool, ExceptionCode&);
-
-    void restoreTo(Settings*);
-
+    void setDialogElementEnabled(bool, ExceptionCode&);
     void setJavaScriptProfilingEnabled(bool enabled, ExceptionCode&);
-
+    Vector<String> userPreferredLanguages() const;
+    void setUserPreferredLanguages(const Vector<String>&);
+    void setPagination(const String& mode, int gap, ExceptionCode& ec) { setPagination(mode, gap, 0, ec); }
+    void setPagination(const String& mode, int gap, int pageLength, ExceptionCode&);
+    void allowRoundingHacks() const;
+    void setShouldDisplayTrackKind(const String& kind, bool enabled, ExceptionCode&);
+    bool shouldDisplayTrackKind(const String& kind, ExceptionCode&);
+    void setEnableMockPagePopup(bool, ExceptionCode&);
+    String configurationForViewport(float devicePixelRatio, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight, ExceptionCode&);
 private:
-    InternalSettings(Frame*);
+    explicit InternalSettings(Page*);
+    virtual void hostDestroyed() OVERRIDE { m_page = 0; }
 
     Settings* settings() const;
-    Document* document() const;
-    Page* page() const;
+    Page* page() const { return m_page; }
 
-    double m_originalPasswordEchoDurationInSeconds;
-    bool m_originalPasswordEchoEnabled;
-    bool m_originalCSSExclusionsEnabled;
-#if ENABLE(SHADOW_DOM)
-    bool m_originalShadowDOMEnabled;
+    Page* m_page;
+    Backup m_backup;
+#if ENABLE(PAGE_POPUP)
+    OwnPtr<MockPagePopupDriver> m_pagePopupDriver;
 #endif
-    EditingBehaviorType m_originalEditingBehavior;
-    bool m_originalFixedPositionCreatesStackingContext;
-    bool m_originalSyncXHRInDocumentsEnabled;
-#if ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
-    bool m_originalJavaScriptProfilingEnabled;
-#endif
-    bool m_originalWindowFocusRestricted;
-    bool m_originalDeviceSupportsTouch;
-    bool m_originalDeviceSupportsMouse;
 };
 
 } // namespace WebCore

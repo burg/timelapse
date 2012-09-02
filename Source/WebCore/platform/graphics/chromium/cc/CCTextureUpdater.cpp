@@ -39,6 +39,8 @@ using namespace std;
 
 namespace WebCore {
 
+static const int kUploadFlushPeriod = 4;
+
 CCTextureUpdater::CCTextureUpdater()
     : m_entryIndex(0)
 {
@@ -59,9 +61,9 @@ void CCTextureUpdater::appendUpdate(LayerTextureUpdater::Texture* texture, const
     entries.append(entry);
 }
 
-void CCTextureUpdater::appendUpdate(LayerTextureUpdater::Texture* texture, const IntRect& sourceRect, const IntRect& destRect)
+void CCTextureUpdater::appendFullUpdate(LayerTextureUpdater::Texture* texture, const IntRect& sourceRect, const IntRect& destRect)
 {
-    appendUpdate(texture, sourceRect, destRect, m_entries);
+    appendUpdate(texture, sourceRect, destRect, m_fullEntries);
 }
 
 void CCTextureUpdater::appendPartialUpdate(LayerTextureUpdater::Texture* texture, const IntRect& sourceRect, const IntRect& destRect)
@@ -80,26 +82,34 @@ void CCTextureUpdater::appendCopy(unsigned sourceTexture, unsigned destTexture, 
 
 bool CCTextureUpdater::hasMoreUpdates() const
 {
-    return m_entries.size() || m_partialEntries.size() || m_copyEntries.size();
+    return m_fullEntries.size() || m_partialEntries.size() || m_copyEntries.size();
 }
 
-void CCTextureUpdater::update(CCGraphicsContext* context, TextureAllocator* allocator, TextureCopier* copier, TextureUploader* uploader, size_t count)
+void CCTextureUpdater::update(CCResourceProvider* resourceProvider, TextureCopier* copier, TextureUploader* uploader, size_t count)
 {
     size_t index;
 
-    if (m_entries.size() || m_partialEntries.size()) {
+    if (m_fullEntries.size() || m_partialEntries.size()) {
         if (uploader->isBusy())
             return;
 
         uploader->beginUploads();
 
-        size_t maxIndex = min(m_entryIndex + count, m_entries.size());
+        int fullUploadCount = 0;
+        size_t maxIndex = min(m_entryIndex + count, m_fullEntries.size());
         for (index = m_entryIndex; index < maxIndex; ++index) {
-            UpdateEntry& entry = m_entries[index];
-            uploader->uploadTexture(context, entry.texture, allocator, entry.sourceRect, entry.destRect);
+            UpdateEntry& entry = m_fullEntries[index];
+            uploader->uploadTexture(entry.texture, resourceProvider, entry.sourceRect, entry.destRect);
+            fullUploadCount++;
+            if (!(fullUploadCount % kUploadFlushPeriod))
+                resourceProvider->flush();
         }
 
-        bool moreUploads = maxIndex < m_entries.size();
+        // Make sure there are no dangling uploads without a flush.
+        if (fullUploadCount % kUploadFlushPeriod)
+            resourceProvider->flush();
+
+        bool moreUploads = maxIndex < m_fullEntries.size();
 
         ASSERT(m_partialEntries.size() <= count);
         // We need another update batch if the number of updates remaining
@@ -115,26 +125,30 @@ void CCTextureUpdater::update(CCGraphicsContext* context, TextureAllocator* allo
 
         for (index = 0; index < m_partialEntries.size(); ++index) {
             UpdateEntry& entry = m_partialEntries[index];
-            uploader->uploadTexture(context, entry.texture, allocator, entry.sourceRect, entry.destRect);
+            uploader->uploadTexture(entry.texture, resourceProvider, entry.sourceRect, entry.destRect);
+            if (!((index+1) % kUploadFlushPeriod))
+                resourceProvider->flush();
         }
+
+        // Make sure there are no dangling partial uploads without a flush.
+        // Note: We don't need to use (index+1) in this case because index was
+        // incremented at the end of the for loop.
+        if (index % kUploadFlushPeriod)
+            resourceProvider->flush();
 
         uploader->endUploads();
     }
 
     for (index = 0; index < m_copyEntries.size(); ++index) {
         CopyEntry& copyEntry = m_copyEntries[index];
-        copier->copyTexture(context, copyEntry.sourceTexture, copyEntry.destTexture, copyEntry.size);
+        copier->copyTexture(copyEntry.sourceTexture, copyEntry.destTexture, copyEntry.size);
     }
 
     // If we've performed any texture copies, we need to insert a flush here into the compositor context
     // before letting the main thread proceed as it may make draw calls to the source texture of one of
     // our copy operations.
-    if (m_copyEntries.size()) {
-        WebKit::WebGraphicsContext3D* context3d = context->context3D();
-        if (context3d)
-            context3d->flush();
-        // FIXME: Implement this path for software compositing.
-    }
+    if (m_copyEntries.size())
+        copier->flush();
 
     // If no entries left to process, auto-clear.
     clear();
@@ -143,7 +157,7 @@ void CCTextureUpdater::update(CCGraphicsContext* context, TextureAllocator* allo
 void CCTextureUpdater::clear()
 {
     m_entryIndex = 0;
-    m_entries.clear();
+    m_fullEntries.clear();
     m_partialEntries.clear();
     m_copyEntries.clear();
 }

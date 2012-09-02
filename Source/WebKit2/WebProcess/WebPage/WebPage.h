@@ -131,6 +131,7 @@ class WebFrame;
 class WebFullScreenManager;
 class WebImage;
 class WebInspector;
+class WebInspectorClient;
 class WebKeyboardEvent;
 class WebMouseEvent;
 class WebNotificationClient;
@@ -403,6 +404,10 @@ public:
 
     SandboxExtensionTracker& sandboxExtensionTracker() { return m_sandboxExtensionTracker; }
 
+#if PLATFORM(EFL)
+    void setThemePath(const String&);
+#endif
+
 #if PLATFORM(QT)
     void setComposition(const String& text, Vector<WebCore::CompositionUnderline> underlines, uint64_t selectionStart, uint64_t selectionEnd, uint64_t replacementRangeStart, uint64_t replacementRangeEnd);
     void confirmComposition(const String& text, int64_t selectionStart, int64_t selectionLength);
@@ -445,6 +450,7 @@ public:
 
 #elif PLATFORM(GTK)
     void updateAccessibilityTree();
+    bool handleMousePressedEvent(const WebCore::PlatformMouseEvent&);
 #if USE(TEXTURE_MAPPER_GL)
     void widgetMapped(int64_t nativeWindowHandle);
 #endif
@@ -520,7 +526,7 @@ public:
 
     void unmarkAllMisspellings();
     void unmarkAllBadGrammar();
-#if PLATFORM(MAC) && !defined(BUILDING_ON_SNOW_LEOPARD)
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     void handleAlternativeTextUIResult(const String&);
 #endif
 
@@ -528,7 +534,6 @@ public:
     void simulateMouseDown(int button, WebCore::IntPoint, int clickCount, WKEventModifiers, double time);
     void simulateMouseUp(int button, WebCore::IntPoint, int clickCount, WKEventModifiers, double time);
     void simulateMouseMotion(WebCore::IntPoint, double time);
-    String viewportConfigurationAsText(int deviceDPI, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight);
 
 #if ENABLE(CONTEXT_MENUS)
     void contextMenuShowing() { m_isShowingContextMenu = true; }
@@ -872,6 +877,7 @@ private:
 #if ENABLE(PAGE_VISIBILITY_API)
     WebCore::PageVisibilityState m_visibilityState;
 #endif
+    WebInspectorClient* m_inspectorClient;
 };
 
 } // namespace WebKit

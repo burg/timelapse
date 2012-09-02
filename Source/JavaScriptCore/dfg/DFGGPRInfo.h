@@ -26,10 +26,12 @@
 #ifndef DFGGPRInfo_h
 #define DFGGPRInfo_h
 
+#include <wtf/Platform.h>
+
 #if ENABLE(DFG_JIT)
 
-#include <assembler/MacroAssembler.h>
-#include <dfg/DFGRegisterBank.h>
+#include "DFGRegisterBank.h"
+#include "MacroAssembler.h"
 
 namespace JSC { namespace DFG {
 
@@ -273,6 +275,7 @@ public:
     static const GPRReg argumentGPR1 = X86Registers::edx; // regT1
     static const GPRReg nonArgGPR0 = X86Registers::eax; // regT0
     static const GPRReg nonArgGPR1 = X86Registers::ebx; // regT3
+    static const GPRReg nonArgGPR2 = X86Registers::esi; // regT4
     static const GPRReg returnValueGPR = X86Registers::eax; // regT0
     static const GPRReg returnValueGPR2 = X86Registers::edx; // regT1
     static const GPRReg nonPreservedNonReturnGPR = X86Registers::ecx;
@@ -344,6 +347,7 @@ public:
     static const GPRReg argumentGPR5 = X86Registers::r9;  // regT7
     static const GPRReg nonArgGPR0 = X86Registers::eax; // regT0
     static const GPRReg nonArgGPR1 = X86Registers::ebx; // regT3
+    static const GPRReg nonArgGPR2 = X86Registers::r10; // regT8
     static const GPRReg returnValueGPR = X86Registers::eax; // regT0
     static const GPRReg returnValueGPR2 = X86Registers::edx; // regT1
     static const GPRReg nonPreservedNonReturnGPR = X86Registers::esi;
@@ -384,7 +388,7 @@ private:
 
 #endif
 
-#if CPU(ARM_THUMB2)
+#if CPU(ARM)
 #define NUMBER_OF_ARGUMENT_REGISTERS 4
 
 class GPRInfo {
@@ -410,12 +414,13 @@ public:
     static const GPRReg argumentGPR1 = ARMRegisters::r1; // regT1
     static const GPRReg argumentGPR2 = ARMRegisters::r2; // regT2
     // FIXME: r3 is currently used be the MacroAssembler as a temporary - it seems
-    // This could threoretically be a problem if theis is used in code generation
+    // This could threoretically be a problem if this is used in code generation
     // between the arguments being set up, and the call being made. That said,
     // any change introducing a problem here is likely to be immediately apparent!
     static const GPRReg argumentGPR3 = ARMRegisters::r3; // FIXME!
     static const GPRReg nonArgGPR0 = ARMRegisters::r4; // regT3
     static const GPRReg nonArgGPR1 = ARMRegisters::r8; // regT4
+    static const GPRReg nonArgGPR2 = ARMRegisters::r9; // regT5
     static const GPRReg returnValueGPR = ARMRegisters::r0; // regT0
     static const GPRReg returnValueGPR2 = ARMRegisters::r1; // regT1
     static const GPRReg nonPreservedNonReturnGPR = ARMRegisters::r2;

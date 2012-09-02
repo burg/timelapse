@@ -47,6 +47,7 @@
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
 #include "MainResourceLoader.h"
+#include "MemoryInstrumentation.h"
 #include "Page.h"
 #include "PlatformString.h"
 #include "Settings.h"
@@ -335,7 +336,8 @@ void DocumentLoader::commitData(const char* bytes, size_t length)
             m_frame->document()->setBaseURLOverride(m_archive->mainResource()->url());
 #endif
 
-        frameLoader()->receivedFirstData();
+        if (!frameLoader()->isReplacing())
+            frameLoader()->receivedFirstData();
 
         bool userChosen = true;
         String encoding = overrideEncoding();
@@ -353,6 +355,24 @@ void DocumentLoader::commitData(const char* bytes, size_t length)
     m_writer.addData(bytes, length);
 }
 
+void DocumentLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo<DocumentLoader> info(memoryObjectInfo, this, MemoryInstrumentation::Loader);
+    info.addInstrumentedMember(m_frame);
+    info.addInstrumentedMember(m_mainResourceLoader);
+    info.addInstrumentedHashSet(m_subresourceLoaders);
+    info.addInstrumentedHashSet(m_multipartSubresourceLoaders);
+    info.addInstrumentedHashSet(m_plugInStreamLoaders);
+    info.addString(m_pageTitle.string());
+    info.addString(m_overrideEncoding);
+    info.addVector(m_responses);
+    info.addHashMap(m_pendingSubstituteResources);
+    info.addHashSet(m_resourcesClientKnowsAbout);
+    info.addVector(m_resourcesLoadedFromMemoryCacheForClientNotification);
+    info.addString(m_clientRedirectSourceForHistory);
+    info.addInstrumentedMember(m_mainResourceData);
+}
+
 bool DocumentLoader::doesProgressiveLoad(const String& MIMEType) const
 {
     return !frameLoader()->isReplacing() || MIMEType == "text/html";
@@ -366,7 +386,7 @@ void DocumentLoader::receivedData(const char* data, int length)
 
 void DocumentLoader::setupForReplaceByMIMEType(const String& newMIMEType)
 {
-    if (!m_gotFirstByte)
+    if (!mainResourceData())
         return;
     
     String oldMIMEType = m_response.mimeType();

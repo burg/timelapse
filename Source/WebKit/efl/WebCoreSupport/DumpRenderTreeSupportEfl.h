@@ -94,12 +94,11 @@ public:
     static HistoryItemChildrenVector childHistoryItems(const Ewk_History_Item*);
     static String historyItemTarget(const Ewk_History_Item*);
     static bool isTargetItem(const Ewk_History_Item*);
+    static void evaluateInWebInspector(const Evas_Object* ewkView, long callId, const String& script);
     static void evaluateScriptInIsolatedWorld(const Evas_Object* ewkFrame, int worldID, JSObjectRef globalObject, const String& script);
     static JSGlobalContextRef globalContextRefForFrame(const Evas_Object* ewkFrame);
 
     static void setMockScrollbarsEnabled(bool);
-
-    static void dumpConfigurationForViewport(Evas_Object* ewkView, int deviceDPI, const WebCore::IntSize& deviceSize, const WebCore::IntSize& availableSize);
 
     static void deliverAllMutationsIfNecessary();
     static String markerTextForListItem(JSContextRef, JSValueRef nodeObject);

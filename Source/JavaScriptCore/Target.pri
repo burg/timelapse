@@ -67,6 +67,7 @@ SOURCES += \
     bytecode/ResolveGlobalStatus.cpp \
     bytecode/SamplingTool.cpp \
     bytecode/SpeculatedType.cpp \
+    bytecode/StructureStubClearingWatchpoint.cpp \
     bytecode/StructureStubInfo.cpp \
     bytecode/Watchpoint.cpp \
     bytecompiler/BytecodeGenerator.cpp \
@@ -83,6 +84,7 @@ SOURCES += \
     heap/Heap.cpp \
     heap/HeapTimer.cpp \
     heap/IncrementalSweeper.cpp \
+    heap/JITStubRoutineSet.cpp \
     heap/MachineStackMarker.cpp \
     heap/MarkStack.cpp \
     heap/MarkedAllocator.cpp \
@@ -109,6 +111,7 @@ SOURCES += \
     dfg/DFGFixupPhase.cpp \
     dfg/DFGGraph.cpp \
     dfg/DFGJITCompiler.cpp \
+    dfg/DFGMinifiedNode.cpp \
     dfg/DFGNodeFlags.cpp \
     dfg/DFGOperations.cpp \
     dfg/DFGOSREntry.cpp \
@@ -124,6 +127,9 @@ SOURCES += \
     dfg/DFGSpeculativeJIT32_64.cpp \
     dfg/DFGSpeculativeJIT64.cpp \
     dfg/DFGThunks.cpp \
+    dfg/DFGValueSource.cpp \
+    dfg/DFGVariableEvent.cpp \
+    dfg/DFGVariableEventStream.cpp \
     dfg/DFGValidate.cpp \
     dfg/DFGVirtualRegisterAllocationPhase.cpp \
     interpreter/AbstractPC.cpp \
@@ -133,6 +139,7 @@ SOURCES += \
     jit/ExecutableAllocatorFixedVMPool.cpp \
     jit/ExecutableAllocator.cpp \
     jit/HostCallReturnValue.cpp \
+    jit/GCAwareJITStubRoutine.cpp \
     jit/JITArithmetic.cpp \
     jit/JITArithmetic32_64.cpp \
     jit/JITCall.cpp \
@@ -143,7 +150,9 @@ SOURCES += \
     jit/JITOpcodes32_64.cpp \
     jit/JITPropertyAccess.cpp \
     jit/JITPropertyAccess32_64.cpp \
+    jit/JITStubRoutine.cpp \
     jit/JITStubs.cpp \
+    jit/JumpReplacementWatchpoint.cpp \
     jit/ThunkGenerators.cpp \
     parser/Lexer.cpp \
     parser/Nodes.cpp \
@@ -210,6 +219,7 @@ SOURCES += \
     runtime/LiteralParser.cpp \
     runtime/Lookup.cpp \
     runtime/MathObject.cpp \
+    runtime/MemoryStatistics.cpp \
     runtime/NameConstructor.cpp \
     runtime/NameInstance.cpp \
     runtime/NamePrototype.cpp \

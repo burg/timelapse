@@ -765,17 +765,18 @@ void LayoutTestController::setAsynchronousSpellCheckingEnabled(bool)
 
 void LayoutTestController::showWebInspector()
 {
-    notImplemented();
+    ewk_view_web_inspector_show(browser->mainView());
+    browser->waitInspectorLoadFinished();
 }
 
 void LayoutTestController::closeWebInspector()
 {
-    notImplemented();
+    ewk_view_web_inspector_close(browser->mainView());
 }
 
-void LayoutTestController::evaluateInWebInspector(long, JSStringRef)
+void LayoutTestController::evaluateInWebInspector(long callId, JSStringRef script)
 {
-    notImplemented();
+    DumpRenderTreeSupportEfl::evaluateInWebInspector(browser->mainView(), callId, String(script->ustring().impl()));
 }
 
 void LayoutTestController::evaluateScriptInIsolatedWorldAndReturnValue(unsigned, JSObjectRef, JSStringRef)
@@ -831,14 +832,6 @@ void LayoutTestController::authenticateSession(JSStringRef, JSStringRef, JSStrin
 void LayoutTestController::abortModal()
 {
     notImplemented();
-}
-
-void LayoutTestController::dumpConfigurationForViewport(int deviceDPI, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight)
-{
-    DumpRenderTreeSupportEfl::dumpConfigurationForViewport(browser->mainView(),
-            deviceDPI,
-            WebCore::IntSize(deviceWidth, deviceHeight),
-            WebCore::IntSize(availableWidth, availableHeight));
 }
 
 void LayoutTestController::setSerializeHTTPLoads(bool serialize)
@@ -927,4 +920,9 @@ void LayoutTestController::sendWebIntentResponse(JSStringRef response)
 void LayoutTestController::deliverWebIntent(JSStringRef action, JSStringRef type, JSStringRef data)
 {
     DumpRenderTreeSupportEfl::deliverWebIntent(browser->mainFrame(), action, type, data);
+}
+
+void LayoutTestController::setStorageDatabaseIdleInterval(double)
+{
+    notImplemented();
 }

@@ -120,7 +120,6 @@ public slots:
     void dumpResourceResponseMIMETypes();
     void dumpWillCacheResponse();
     void dumpHistoryCallbacks();
-    void dumpConfigurationForViewport(int deviceDPI, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight);
     void setWillSendRequestReturnsNullOnRedirect(bool enabled);
     void setWillSendRequestReturnsNull(bool enabled);
     void setWillSendRequestClearHeader(const QStringList& headers);
@@ -276,10 +275,8 @@ public slots:
     void setTextDirection(const QString& directionName);
     void goBack();
     void setDefersLoading(bool);
-#if QT_VERSION >= 0x040800
     void setAlwaysAcceptCookies(bool);
     void setAlwaysBlockCookies(bool);
-#endif
 
 private slots:
     void processWork();

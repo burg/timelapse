@@ -2,7 +2,7 @@ AC_PREREQ(2.60)
 
 m4_define([webkit_major_version], [1])
 m4_define([webkit_minor_version], [9])
-m4_define([webkit_micro_version], [4])
+m4_define([webkit_micro_version], [5])
 
 # This is the version we'll be using as part of our User-Agent string
 # e.g., AppleWebKit/$(webkit_user_agent_version) ...
@@ -35,13 +35,13 @@ AC_CONFIG_SRCDIR([Source/WebCore/config.h])
 
 dnl # Libtool library version, not to confuse with API version
 dnl # see http://www.gnu.org/software/libtool/manual/html_node/Libtool-versioning.html
-LIBWEBKITGTK_VERSION=14:0:14
+LIBWEBKITGTK_VERSION=15:0:15
 AC_SUBST([LIBWEBKITGTK_VERSION])
 
-LIBJAVASCRIPTCOREGTK_VERSION=13:3:13
+LIBJAVASCRIPTCOREGTK_VERSION=13:4:13
 AC_SUBST([LIBJAVASCRIPTCOREGTK_VERSION])
 
-LIBWEBKIT2GTK_VERSION=15:0:15
+LIBWEBKIT2GTK_VERSION=16:0:16
 AC_SUBST([LIBWEBKIT2GTK_VERSION])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects dist-xz no-dist-gzip tar-ustar])
@@ -373,7 +373,7 @@ CAIRO_REQUIRED_VERSION=1.10
 FONTCONFIG_REQUIRED_VERSION=2.4
 FREETYPE2_REQUIRED_VERSION=9.0
 GLIB_REQUIRED_VERSION=2.32.0
-LIBSOUP_REQUIRED_VERSION=2.37.92
+LIBSOUP_REQUIRED_VERSION=2.39.2
 LIBXML_REQUIRED_VERSION=2.6
 PANGO_REQUIRED_VERSION=1.21.0
 
@@ -527,6 +527,14 @@ AC_ARG_ENABLE(optimizations,
               [if test "$enable_debug" = "yes"; then enable_optimizations="no"; else enable_optimizations="yes"; fi])
 AC_MSG_RESULT([$enable_optimizations])
 
+# check whether to enable unstable features
+AC_MSG_CHECKING([whether to enable unstable features])
+AC_ARG_ENABLE(unstable_features,
+              AC_HELP_STRING([--enable-unstable-features],
+                             [enable unstable features [default=no]]),
+              [],[enable_unstable_features="no"])
+AC_MSG_RESULT([$enable_unstable_features])
+
 found_opengl="no"
 if test "$with_target" = "x11"; then
     AC_CHECK_HEADERS([GL/gl.h], [found_opengl="yes"], [])
@@ -650,7 +658,7 @@ AC_MSG_CHECKING([whether to enable Gamepad support])
 AC_ARG_ENABLE(gamepad,
               AC_HELP_STRING([--enable-gamepad],
                              [enable Gamepad support [default=no]]),
-              [],[enable_gamepad="no"])
+              [],[enable_gamepad=$enable_unstable_features])
 AC_MSG_RESULT([$enable_gamepad])
 
 if test "$enable_gamepad" = "yes" && test "$os_linux" = no; then
@@ -671,7 +679,7 @@ AC_MSG_CHECKING([whether to enable DOM mutation observer support])
 AC_ARG_ENABLE(mutation_observers,
               AC_HELP_STRING([--enable-mutation-observers],
                              [enable DOM mutation observer support [default=no]]),
-              [],[enable_mutation_observers="no"])
+              [],[enable_mutation_observers=$enable_unstable_features])
 AC_MSG_RESULT([$enable_mutation_observers])
 
 # check whether to enable the indexed database API
@@ -764,7 +772,7 @@ AC_MSG_CHECKING([whether to enable HTML5 video track support])
 AC_ARG_ENABLE(video_track,
               AC_HELP_STRING([--enable-video-track],
                              [enable HTML5 video track support [default=no]]),
-              [],[enable_video_track="no"])
+              [],[enable_video_track=$enable_unstable_features])
 AC_MSG_RESULT([$enable_video_track])
 
 # check whether to enable media source support
@@ -796,7 +804,7 @@ AC_MSG_CHECKING([whether to enable media stream support])
 AC_ARG_ENABLE(media_stream,
               AC_HELP_STRING([--enable-media-stream],
                              [enable media stream support (incomplete) [default=no]]),
-              [],[enable_media_stream="no"])
+              [],[enable_media_stream=$enable_unstable_features])
 AC_MSG_RESULT([$enable_media_stream])
 
 # check whether to enable XSLT support
@@ -827,8 +835,8 @@ AC_MSG_RESULT([$enable_mathml])
 AC_MSG_CHECKING([whether to enable MHTML support])
 AC_ARG_ENABLE(mhtml,
               AC_HELP_STRING([--enable-mhtml],
-                             [enable support for MHTML [default=no]]),
-              [],[enable_mhtml="no"])
+                             [enable support for MHTML [default=yes]]),
+              [],[enable_mhtml="yes"])
 AC_MSG_RESULT([$enable_mhtml])
 
 # check whether to enable SVG support
@@ -954,7 +962,7 @@ AC_MSG_CHECKING([whether to enable Web Timing support])
 AC_ARG_ENABLE(web_timing,
               AC_HELP_STRING([--enable-web-timing],
                              [enable support for Web Timing [default=no]]),
-              [],[enable_web_timing="no"])
+              [],[enable_web_timing=$enable_unstable_features])
 AC_MSG_RESULT([$enable_web_timing])
 
 # check whether to enable Blob support
@@ -994,7 +1002,7 @@ AC_MSG_CHECKING([whether to enable CSS3 flexbox support])
 AC_ARG_ENABLE(css3_flexbox,
               AC_HELP_STRING([--enable-css3-flexbox],
                              [enable CSS3 flexbox support [default=no]]),
-              [],[enable_css3_flexbox="no"])
+              [],[enable_css3_flexbox=$enable_unstable_features])
 AC_MSG_RESULT([$enable_css3_flexbox])
 
 # check whether to enable FastMalloc
@@ -1051,7 +1059,7 @@ fi
 AC_MSG_CHECKING([whether to enable link prefetch support])
 AC_ARG_ENABLE([link-prefetch],
   [AS_HELP_STRING([--enable-link-prefetch], [Enable Link prefetch support (default: disabled)])],
-  [],[enable_link_prefetch=no])
+  [],[enable_link_prefetch=$enable_unstable_features])
 AC_MSG_RESULT([$enable_link_prefetch])
 
 # GObject Introspection
@@ -1101,13 +1109,13 @@ AC_ARG_ENABLE(device_orientation,
               [],[enable_device_orientation="no"])
 AC_MSG_RESULT([$enable_device_orientation])
 
-# check whether to enable Font Boosting support
-AC_MSG_CHECKING([whether to enable Font Boosting])
-AC_ARG_ENABLE(font_boosting,
-              AC_HELP_STRING([--enable-font-boosting],
-                             [enable support for Font Boosting (incomplete) [default=no]]),
-              [],[enable_font_boosting="no"])
-AC_MSG_RESULT([$enable_font_boosting])
+# check whether to enable Text Autosizing support
+AC_MSG_CHECKING([whether to enable Text Autosizing])
+AC_ARG_ENABLE(text_autosizing,
+              AC_HELP_STRING([--enable-text-autosizing],
+                             [enable support for Text Autosizing (incomplete) [default=no]]),
+              [],[enable_text_autosizing="no"])
+AC_MSG_RESULT([$enable_text_autosizing])
 
 # check whether to enable CSS Exclusions support
 AC_MSG_CHECKING([whether to enable CSS Exclusions])
@@ -1124,6 +1132,14 @@ AC_ARG_ENABLE(css_regions,
                              [enable support for CSS Regions [default=yes]]),
               [],[enable_css_regions="yes"])
 AC_MSG_RESULT([$enable_css_regions])
+
+# check whether to enable CSS Filters support
+AC_MSG_CHECKING([whether to enable CSS Filters])
+AC_ARG_ENABLE(css_filters,
+              AC_HELP_STRING([--enable-css-filters],
+                             [enable support for CSS Filters [default=no]]),
+              [],[enable_css_filters="no"])
+AC_MSG_RESULT([$enable_css_filters])
 
 G_IR_SCANNER=
 G_IR_COMPILER=
@@ -1398,6 +1414,7 @@ AM_CONDITIONAL([USE_LEVELDB],[test "$enable_indexed_database" = "yes"])
 
 # WebKit feature conditionals
 AM_CONDITIONAL([ENABLE_DEBUG],[test "$enable_debug_features" = "yes"])
+AM_CONDITIONAL([ENABLE_UNSTABLE_FEATURES],[test "$enable_unstable_features" = "yes"])
 AM_CONDITIONAL([ENABLE_WEBGL],[test "$enable_webgl" = "yes"])
 AM_CONDITIONAL([ENABLE_BLOB],[test "$enable_blob" = "yes"])
 AM_CONDITIONAL([ENABLE_LEGACY_WEBKIT_BLOB_BUILDER],[test "$enable_legacy_webkit_blob_builder" = "yes"])
@@ -1462,9 +1479,10 @@ AM_CONDITIONAL([ENABLE_REGISTER_PROTOCOL_HANDLER],[test "$enable_register_protoc
 AM_CONDITIONAL([ENABLE_DEVICE_ORIENTATION],[test "$enable_device_orientation" = "yes"])
 AM_CONDITIONAL([ENABLE_MUTATION_OBSERVERS],[test "$enable_mutation_observers" = "yes"])
 AM_CONDITIONAL([ENABLE_IFRAME_SEAMLESS],[test "$enable_iframe_seamless" = "yes"])
-AM_CONDITIONAL([ENABLE_FONT_BOOSTING],[test "$enable_font_boosting" = "yes"])
+AM_CONDITIONAL([ENABLE_TEXT_AUTOSIZING],[test "$enable_text_autosizing" = "yes"])
 AM_CONDITIONAL([ENABLE_CSS_EXCLUSIONS],[test "$enable_css_exclusions" = "yes"])
 AM_CONDITIONAL([ENABLE_CSS_REGIONS],[test "$enable_css_regions" = "yes"])
+AM_CONDITIONAL([ENABLE_CSS_FILTERS],[test "$enable_css_filters" = "yes"])
 
 # Gtk conditionals
 AM_CONDITIONAL([ENABLE_INTROSPECTION],[test "$enable_introspection" = "yes"])
@@ -1526,12 +1544,12 @@ Features:
  CSS box-decoration-break support                         : $enable_css_box_decoration_break
  CSS Exclusions support                                   : $enable_css_exclusions
  CSS Regions support                                      : $enable_css_regions
+ CSS Filters support                                      : $enable_css_filters
  DeviceOrientation support                                : $enable_device_orientation
  Directory upload                                         : $enable_directory_upload
  DOM mutation observer support                            : $enable_mutation_observers
  Fast Mobile Scrolling                                    : $enable_fast_mobile_scrolling
  Filters support                                          : $enable_filters
- Font Boosting support                                    : $enable_font_boosting
  Fullscreen API support                                   : $enable_fullscreen_api
  Gamepad support                                          : $enable_gamepad
  Geolocation support                                      : $enable_geolocation
@@ -1568,6 +1586,7 @@ Features:
  SQL client-side database storage support                 : $enable_sql_database
  SVG fonts support                                        : $enable_svg_fonts
  SVG support                                              : $enable_svg
+ Text Autosizing support                                  : $enable_text_autosizing
  Touch Icon Loading support                               : $enable_touch_icon_loading
  Web Audio support                                        : $enable_web_audio
  WebGL                                                    : $enable_webgl

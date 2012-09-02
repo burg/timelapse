@@ -26,7 +26,7 @@
 #ifndef Internals_h
 #define Internals_h
 
-#include "FrameDestructionObserver.h"
+#include "ContextDestructionObserver.h"
 #include "NodeList.h"
 #include "PlatformString.h"
 #include <wtf/PassRefPtr.h>
@@ -41,21 +41,22 @@ class DOMStringList;
 class Document;
 class DocumentMarker;
 class Element;
+class Frame;
 class InternalSettings;
 class Node;
+class PagePopupController;
 class Range;
+class ScriptExecutionContext;
 class ShadowRoot;
 class WebKitPoint;
 
 typedef int ExceptionCode;
 
-class Internals : public RefCounted<Internals>,
-                  public FrameDestructionObserver {
+class Internals : public RefCounted<Internals>
+                , public ContextDestructionObserver {
 public:
     static PassRefPtr<Internals> create(Document*);
     virtual ~Internals();
-
-    void reset(Document*);
 
     String elementRenderTreeAsText(Element*, ExceptionCode&);
 
@@ -101,6 +102,9 @@ public:
 #endif
     PassRefPtr<DOMStringList> formControlStateOfPreviousHistoryItem(ExceptionCode&);
     void setFormControlStateOfPreviousHistoryItem(PassRefPtr<DOMStringList>, ExceptionCode&);
+#if ENABLE(PAGE_POPUP)
+    PassRefPtr<PagePopupController> pagePopupController();
+#endif
 
     PassRefPtr<ClientRect> absoluteCaretBounds(Document*, ExceptionCode&);
 
@@ -115,8 +119,9 @@ public:
     String markerDescriptionForNode(Node*, const String& markerType, unsigned index, ExceptionCode&);
 
     void setScrollViewPosition(Document*, long x, long y, ExceptionCode&);
-
-    void setPagination(Document*, const String& mode, int gap, ExceptionCode&);
+    void setPagination(Document* document, const String& mode, int gap, ExceptionCode& ec) { setPagination(document, mode, gap, 0, ec); }
+    void setPagination(Document*, const String& mode, int gap, int pageLength, ExceptionCode&);
+    String configurationForViewport(Document*, float devicePixelRatio, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight, ExceptionCode&);
 
     bool wasLastChangeUserEdit(Element* textField, ExceptionCode&);
     String suggestedValue(Element* inputElement, ExceptionCode&);
@@ -166,7 +171,7 @@ public:
 
     static const char* internalsId;
 
-    InternalSettings* settings() const { return m_settings.get(); }
+    InternalSettings* settings() const;
 
     void setBatteryStatus(Document*, const String& eventType, bool charging, double chargingTime, double dischargingTime, double level, ExceptionCode&);
 
@@ -184,6 +189,7 @@ public:
 #endif
 
     String counterValue(Element*);
+    PassRefPtr<DOMStringList> iconURLs(Document*) const;
 
 #if ENABLE(FULLSCREEN_API)
     void webkitWillEnterFullScreenForElement(Document*, Element*);
@@ -197,10 +203,10 @@ public:
 
 private:
     explicit Internals(Document*);
-    DocumentMarker* markerAt(Node*, const String& markerType, unsigned index, ExceptionCode&);
-    void resetDefaultsToConsistentValues();
+    Document* contextDocument() const;
+    Frame* frame() const;
 
-    RefPtr<InternalSettings> m_settings;
+    DocumentMarker* markerAt(Node*, const String& markerType, unsigned index, ExceptionCode&);
 };
 
 } // namespace WebCore

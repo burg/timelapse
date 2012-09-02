@@ -283,15 +283,8 @@ void RenderObject::addChild(RenderObject* newChild, RenderObject* beforeChild)
         needsTable = !isTable();
     else if (newChild->isTableRow())
         needsTable = !isTableSection();
-    else if (newChild->isTableCell()) {
+    else if (newChild->isTableCell())
         needsTable = !isTableRow();
-        // I'm not 100% sure this is the best way to fix this, but without this
-        // change we recurse infinitely when trying to render the CSS2 test page:
-        // http://www.bath.ac.uk/%7Epy8ieh/internet/eviltests/htmlbodyheadrendering2.html.
-        // See Radar 2925291.
-        if (needsTable && isTableCell() && !children->firstChild() && !newChild->isTableCell())
-            needsTable = false;
-    }
 
     if (needsTable) {
         RenderTable* table;
@@ -303,10 +296,8 @@ void RenderObject::addChild(RenderObject* newChild, RenderObject* beforeChild)
             addChild(table, beforeChild);
         }
         table->addChild(newChild);
-    } else {
-        // Just add it...
+    } else
         children->insertChildNode(this, newChild, beforeChild);
-    }
 
     if (newChild->isText() && newChild->style()->textTransform() == CAPITALIZE)
         toRenderText(newChild)->transformText();
@@ -845,6 +836,11 @@ void RenderObject::drawLineForBoxSide(GraphicsContext* graphicsContext, int x1, 
                                       int adjacentWidth1, int adjacentWidth2, bool antialias)
 {
     int width = (side == BSTop || side == BSBottom ? y2 - y1 : x2 - x1);
+
+    // FIXME: We really would like this check to be an ASSERT as we don't want to draw 0px borders. However
+    // nothing guarantees that the following recursive calls to drawLineForBoxSide will have non-null width.
+    if (!width)
+        return;
 
     if (style == DOUBLE && width < 3)
         style = SOLID;
@@ -1998,7 +1994,7 @@ FloatPoint RenderObject::absoluteToLocal(const FloatPoint& containerPoint, bool 
     return transformState.lastPlanarPoint();
 }
 
-void RenderObject::mapLocalToContainer(RenderBoxModelObject* repaintContainer, bool fixed, bool useTransforms, TransformState& transformState, ApplyContainerFlipOrNot, bool* wasFixed) const
+void RenderObject::mapLocalToContainer(RenderBoxModelObject* repaintContainer, bool fixed, bool useTransforms, TransformState& transformState, ApplyContainerFlipOrNot applyContainerFlip, bool* wasFixed) const
 {
     if (repaintContainer == this)
         return;
@@ -2009,8 +2005,11 @@ void RenderObject::mapLocalToContainer(RenderBoxModelObject* repaintContainer, b
 
     // FIXME: this should call offsetFromContainer to share code, but I'm not sure it's ever called.
     LayoutPoint centerPoint = roundedLayoutPoint(transformState.mappedPoint());
-    if (o->isBox() && o->style()->isFlippedBlocksWritingMode())
-        transformState.move(toRenderBox(o)->flipForWritingModeIncludingColumns(roundedLayoutPoint(transformState.mappedPoint())) - centerPoint);
+    if (applyContainerFlip && o->isBox()) {
+        if (o->style()->isFlippedBlocksWritingMode())
+            transformState.move(toRenderBox(o)->flipForWritingModeIncludingColumns(roundedLayoutPoint(transformState.mappedPoint())) - centerPoint);
+        applyContainerFlip = DoNotApplyContainerFlip;
+    }
 
     LayoutSize columnOffset;
     o->adjustForColumns(columnOffset, roundedLayoutPoint(transformState.mappedPoint()));
@@ -2020,7 +2019,7 @@ void RenderObject::mapLocalToContainer(RenderBoxModelObject* repaintContainer, b
     if (o->hasOverflowClip())
         transformState.move(-toRenderBox(o)->scrolledContentOffset());
 
-    o->mapLocalToContainer(repaintContainer, fixed, useTransforms, transformState, DoNotApplyContainerFlip, wasFixed);
+    o->mapLocalToContainer(repaintContainer, fixed, useTransforms, transformState, applyContainerFlip, wasFixed);
 }
 
 const RenderObject* RenderObject::pushMappingToContainer(const RenderBoxModelObject* ancestorToStopAt, RenderGeometryMap& geometryMap) const
@@ -2190,7 +2189,7 @@ RespectImageOrientationEnum RenderObject::shouldRespectImageOrientation() const
 {
     // Respect the image's orientation if it's being used as a full-page image or it's
     // an <img> and the setting to respect it everywhere is set.
-    return document()->isImageDocument() || (document()->settings() && document()->settings()->shouldRespectImageOrientation() && node() && node()->hasTagName(HTMLNames::imgTag)) ? RespectImageOrientation : DoNotRespectImageOrientation;
+    return document()->isImageDocument() || (document()->settings() && document()->settings()->shouldRespectImageOrientation() && node() && (node()->hasTagName(HTMLNames::imgTag) || node()->hasTagName(HTMLNames::webkitInnerImageTag))) ? RespectImageOrientation : DoNotRespectImageOrientation;
 }
 
 bool RenderObject::hasOutlineAnnotation() const
@@ -2699,7 +2698,16 @@ bool RenderObject::willRenderImage(CachedImage*)
 
     // If we're not in a window (i.e., we're dormant from being put in the b/f cache or in a background tab)
     // then we don't want to render either.
-    return !document()->inPageCache() && !document()->view()->isOffscreen();
+    if (document()->inPageCache() || document()->view()->isOffscreen())
+        return false;
+
+    // If the document is being destroyed or has not been attached, then this
+    // RenderObject will not be rendered.
+    if (!view())
+        return false;
+
+    // If a renderer is outside the viewport, we won't render.
+    return viewRect().intersects(absoluteClippedOverflowRect());
 }
 
 int RenderObject::maximalOutlineSize(PaintPhase p) const

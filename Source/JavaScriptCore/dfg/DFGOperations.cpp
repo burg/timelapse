@@ -28,8 +28,10 @@
 
 #include "Arguments.h"
 #include "CodeBlock.h"
+#include "CopiedSpaceInlineMethods.h"
 #include "DFGOSRExit.h"
 #include "DFGRepatch.h"
+#include "DFGThunks.h"
 #include "HostCallReturnValue.h"
 #include "GetterSetter.h"
 #include "Interpreter.h"
@@ -135,6 +137,62 @@
     HIDE_SYMBOL(function) "\n" \
     ".thumb" "\n" \
     ".thumb_func " THUMB_FUNC_PARAM(function) "\n" \
+    SYMBOL_STRING(function) ":" "\n" \
+        INSTRUCTION_STORE_RETURN_ADDRESS_EJCI "\n" \
+        "b " LOCAL_REFERENCE(function) "WithReturnAddress" "\n" \
+    );
+
+#elif COMPILER(GCC) && CPU(ARM_TRADITIONAL)
+
+#define FUNCTION_WRAPPER_WITH_RETURN_ADDRESS_E(function) \
+    asm ( \
+    ".text" "\n" \
+    ".globl " SYMBOL_STRING(function) "\n" \
+    HIDE_SYMBOL(function) "\n" \
+    INLINE_ARM_FUNCTION(function) \
+    SYMBOL_STRING(function) ":" "\n" \
+        "mov a2, lr" "\n" \
+        "b " LOCAL_REFERENCE(function) "WithReturnAddress" "\n" \
+    );
+
+#define FUNCTION_WRAPPER_WITH_RETURN_ADDRESS_ECI(function) \
+    asm ( \
+    ".text" "\n" \
+    ".globl " SYMBOL_STRING(function) "\n" \
+    HIDE_SYMBOL(function) "\n" \
+    INLINE_ARM_FUNCTION(function) \
+    SYMBOL_STRING(function) ":" "\n" \
+        "mov a4, lr" "\n" \
+        "b " LOCAL_REFERENCE(function) "WithReturnAddress" "\n" \
+    );
+
+// EncodedJSValue in JSVALUE32_64 is a 64-bit integer. When being compiled in ARM EABI, it must be aligned even-numbered register (r0, r2 or [sp]).
+// As a result, return address will be at a 4-byte further location in the following cases.
+#if COMPILER_SUPPORTS(EABI) && CPU(ARM)
+#define INSTRUCTION_STORE_RETURN_ADDRESS_EJI "str lr, [sp, #4]"
+#define INSTRUCTION_STORE_RETURN_ADDRESS_EJCI "str lr, [sp, #8]"
+#else
+#define INSTRUCTION_STORE_RETURN_ADDRESS_EJI "str lr, [sp, #0]"
+#define INSTRUCTION_STORE_RETURN_ADDRESS_EJCI "str lr, [sp, #4]"
+#endif
+
+#define FUNCTION_WRAPPER_WITH_RETURN_ADDRESS_EJI(function) \
+    asm ( \
+    ".text" "\n" \
+    ".globl " SYMBOL_STRING(function) "\n" \
+    HIDE_SYMBOL(function) "\n" \
+    INLINE_ARM_FUNCTION(function) \
+    SYMBOL_STRING(function) ":" "\n" \
+        INSTRUCTION_STORE_RETURN_ADDRESS_EJI "\n" \
+        "b " LOCAL_REFERENCE(function) "WithReturnAddress" "\n" \
+    );
+
+#define FUNCTION_WRAPPER_WITH_RETURN_ADDRESS_EJCI(function) \
+    asm ( \
+    ".text" "\n" \
+    ".globl " SYMBOL_STRING(function) "\n" \
+    HIDE_SYMBOL(function) "\n" \
+    INLINE_ARM_FUNCTION(function) \
     SYMBOL_STRING(function) ":" "\n" \
         INSTRUCTION_STORE_RETURN_ADDRESS_EJCI "\n" \
         "b " LOCAL_REFERENCE(function) "WithReturnAddress" "\n" \
@@ -793,7 +851,6 @@ static void* handleHostCall(ExecState* execCallee, JSValue callee, CodeSpecializ
 
     execCallee->setScopeChain(exec->scopeChain());
     execCallee->setCodeBlock(0);
-    execCallee->clearReturnPC();
 
     if (kind == CodeForCall) {
         CallData callData;
@@ -806,14 +863,14 @@ static void* handleHostCall(ExecState* execCallee, JSValue callee, CodeSpecializ
             execCallee->setCallee(asObject(callee));
             globalData->hostCallReturnValue = JSValue::decode(callData.native.function(execCallee));
             if (globalData->exception)
-                return 0;
+                return globalData->getCTIStub(throwExceptionFromCallSlowPathGenerator).code().executableAddress();
 
             return reinterpret_cast<void*>(getHostCallReturnValue);
         }
     
         ASSERT(callType == CallTypeNone);
         exec->globalData().exception = createNotAFunctionError(exec, callee);
-        return 0;
+        return globalData->getCTIStub(throwExceptionFromCallSlowPathGenerator).code().executableAddress();
     }
 
     ASSERT(kind == CodeForConstruct);
@@ -828,17 +885,17 @@ static void* handleHostCall(ExecState* execCallee, JSValue callee, CodeSpecializ
         execCallee->setCallee(asObject(callee));
         globalData->hostCallReturnValue = JSValue::decode(constructData.native.function(execCallee));
         if (globalData->exception)
-            return 0;
+            return globalData->getCTIStub(throwExceptionFromCallSlowPathGenerator).code().executableAddress();
 
         return reinterpret_cast<void*>(getHostCallReturnValue);
     }
     
     ASSERT(constructType == ConstructTypeNone);
     exec->globalData().exception = createNotAConstructorError(exec, callee);
-    return 0;
+    return globalData->getCTIStub(throwExceptionFromCallSlowPathGenerator).code().executableAddress();
 }
 
-inline void* linkFor(ExecState* execCallee, ReturnAddressPtr returnAddress, CodeSpecializationKind kind)
+inline char* linkFor(ExecState* execCallee, CodeSpecializationKind kind)
 {
     ExecState* exec = execCallee->callerFrame();
     JSGlobalData* globalData = &exec->globalData();
@@ -847,7 +904,7 @@ inline void* linkFor(ExecState* execCallee, ReturnAddressPtr returnAddress, Code
     JSValue calleeAsValue = execCallee->calleeAsValue();
     JSCell* calleeAsFunctionCell = getJSFunction(calleeAsValue);
     if (!calleeAsFunctionCell)
-        return handleHostCall(execCallee, calleeAsValue, kind);
+        return reinterpret_cast<char*>(handleHostCall(execCallee, calleeAsValue, kind));
 
     JSFunction* callee = jsCast<JSFunction*>(calleeAsFunctionCell);
     execCallee->setScopeChain(callee->scopeUnchecked());
@@ -862,7 +919,7 @@ inline void* linkFor(ExecState* execCallee, ReturnAddressPtr returnAddress, Code
         JSObject* error = functionExecutable->compileFor(execCallee, callee->scope(), kind);
         if (error) {
             globalData->exception = createStackOverflowError(exec);
-            return 0;
+            return reinterpret_cast<char*>(globalData->getCTIStub(throwExceptionFromCallSlowPathGenerator).code().executableAddress());
         }
         codeBlock = &functionExecutable->generatedBytecodeFor(kind);
         if (execCallee->argumentCountIncludingThis() < static_cast<size_t>(codeBlock->numParameters()))
@@ -870,27 +927,25 @@ inline void* linkFor(ExecState* execCallee, ReturnAddressPtr returnAddress, Code
         else
             codePtr = functionExecutable->generatedJITCodeFor(kind).addressForCall();
     }
-    CallLinkInfo& callLinkInfo = exec->codeBlock()->getCallLinkInfo(returnAddress);
+    CallLinkInfo& callLinkInfo = exec->codeBlock()->getCallLinkInfo(execCallee->returnPC());
     if (!callLinkInfo.seenOnce())
         callLinkInfo.setSeen();
     else
         dfgLinkFor(execCallee, callLinkInfo, codeBlock, callee, codePtr, kind);
-    return codePtr.executableAddress();
+    return reinterpret_cast<char*>(codePtr.executableAddress());
 }
 
-P_FUNCTION_WRAPPER_WITH_RETURN_ADDRESS_E(operationLinkCall);
-void* DFG_OPERATION operationLinkCallWithReturnAddress(ExecState* execCallee, ReturnAddressPtr returnAddress)
+char* DFG_OPERATION operationLinkCall(ExecState* execCallee)
 {
-    return linkFor(execCallee, returnAddress, CodeForCall);
+    return linkFor(execCallee, CodeForCall);
 }
 
-P_FUNCTION_WRAPPER_WITH_RETURN_ADDRESS_E(operationLinkConstruct);
-void* DFG_OPERATION operationLinkConstructWithReturnAddress(ExecState* execCallee, ReturnAddressPtr returnAddress)
+char* DFG_OPERATION operationLinkConstruct(ExecState* execCallee)
 {
-    return linkFor(execCallee, returnAddress, CodeForConstruct);
+    return linkFor(execCallee, CodeForConstruct);
 }
 
-inline void* virtualFor(ExecState* execCallee, CodeSpecializationKind kind)
+inline char* virtualFor(ExecState* execCallee, CodeSpecializationKind kind)
 {
     ExecState* exec = execCallee->callerFrame();
     JSGlobalData* globalData = &exec->globalData();
@@ -899,7 +954,7 @@ inline void* virtualFor(ExecState* execCallee, CodeSpecializationKind kind)
     JSValue calleeAsValue = execCallee->calleeAsValue();
     JSCell* calleeAsFunctionCell = getJSFunction(calleeAsValue);
     if (UNLIKELY(!calleeAsFunctionCell))
-        return handleHostCall(execCallee, calleeAsValue, kind);
+        return reinterpret_cast<char*>(handleHostCall(execCallee, calleeAsValue, kind));
     
     JSFunction* function = jsCast<JSFunction*>(calleeAsFunctionCell);
     execCallee->setScopeChain(function->scopeUnchecked());
@@ -909,18 +964,18 @@ inline void* virtualFor(ExecState* execCallee, CodeSpecializationKind kind)
         JSObject* error = functionExecutable->compileFor(execCallee, function->scope(), kind);
         if (error) {
             exec->globalData().exception = error;
-            return 0;
+            return reinterpret_cast<char*>(globalData->getCTIStub(throwExceptionFromCallSlowPathGenerator).code().executableAddress());
         }
     }
-    return executable->generatedJITCodeWithArityCheckFor(kind).executableAddress();
+    return reinterpret_cast<char*>(executable->generatedJITCodeWithArityCheckFor(kind).executableAddress());
 }
 
-void* DFG_OPERATION operationVirtualCall(ExecState* execCallee)
+char* DFG_OPERATION operationVirtualCall(ExecState* execCallee)
 {    
     return virtualFor(execCallee, CodeForCall);
 }
 
-void* DFG_OPERATION operationVirtualConstruct(ExecState* execCallee)
+char* DFG_OPERATION operationVirtualConstruct(ExecState* execCallee)
 {
     return virtualFor(execCallee, CodeForConstruct);
 }
@@ -1178,6 +1233,33 @@ size_t DFG_OPERATION operationIsFunction(EncodedJSValue value)
     return jsIsFunctionType(JSValue::decode(value));
 }
 
+void DFG_OPERATION operationReallocateStorageAndFinishPut(ExecState* exec, JSObject* base, Structure* structure, PropertyOffset offset, EncodedJSValue value)
+{
+    JSGlobalData& globalData = exec->globalData();
+    ASSERT(structure->outOfLineCapacity() > base->structure()->outOfLineCapacity());
+    ASSERT(!globalData.heap.storageAllocator().fastPathShouldSucceed(structure->outOfLineCapacity() * sizeof(JSValue)));
+    base->setStructureAndReallocateStorageIfNecessary(globalData, structure);
+    base->putDirectOffset(globalData, offset, JSValue::decode(value));
+}
+
+char* DFG_OPERATION operationAllocatePropertyStorageWithInitialCapacity(ExecState* exec)
+{
+    JSGlobalData& globalData = exec->globalData();
+    void* result;
+    if (!globalData.heap.tryAllocateStorage(initialOutOfLineCapacity * sizeof(JSValue), &result))
+        CRASH();
+    return reinterpret_cast<char*>(result);
+}
+
+char* DFG_OPERATION operationAllocatePropertyStorage(ExecState* exec, size_t newSize)
+{
+    JSGlobalData& globalData = exec->globalData();
+    void* result;
+    if (!globalData.heap.tryAllocateStorage(newSize, &result))
+        CRASH();
+    return reinterpret_cast<char*>(result);
+}
+
 double DFG_OPERATION operationFModOnInts(int32_t a, int32_t b)
 {
     return fmod(a, b);
@@ -1317,6 +1399,17 @@ asm (
 HIDE_SYMBOL(getHostCallReturnValue) "\n"
 ".thumb" "\n"
 ".thumb_func " THUMB_FUNC_PARAM(getHostCallReturnValue) "\n"
+SYMBOL_STRING(getHostCallReturnValue) ":" "\n"
+    "ldr r5, [r5, #-40]" "\n"
+    "mov r0, r5" "\n"
+    "b " LOCAL_REFERENCE(getHostCallReturnValueWithExecState) "\n"
+);
+#elif CPU(ARM_TRADITIONAL)
+asm (
+".text" "\n"
+".globl " SYMBOL_STRING(getHostCallReturnValue) "\n"
+HIDE_SYMBOL(getHostCallReturnValue) "\n"
+INLINE_ARM_FUNCTION(getHostCallReturnValue)
 SYMBOL_STRING(getHostCallReturnValue) ":" "\n"
     "ldr r5, [r5, #-40]" "\n"
     "mov r0, r5" "\n"

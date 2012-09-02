@@ -477,8 +477,11 @@
                 'src/WebTextCheckingCompletionImpl.cpp',
                 'src/WebTextCheckingResult.cpp',
                 'src/WebAccessibilityObject.cpp',
+                'src/WebAnimation.cpp',
                 'src/WebAnimationControllerImpl.cpp',
                 'src/WebAnimationControllerImpl.h',
+                'src/WebAnimationCurveCommon.cpp',
+                'src/WebAnimationCurveCommon.h',
                 'src/WebArrayBuffer.cpp',
                 'src/WebArrayBufferView.cpp',
                 'src/WebBindings.cpp',
@@ -527,6 +530,7 @@
                 'src/WebFileChooserCompletionImpl.h',
                 'src/WebFileSystemCallbacksImpl.cpp',
                 'src/WebFileSystemCallbacksImpl.h',
+                'src/WebFloatAnimationCurve.cpp',
                 'src/WebFontCache.cpp',
                 'src/WebFontDescription.cpp',
                 'src/WebFontImpl.cpp',
@@ -651,6 +655,7 @@
                 'src/WebSurroundingText.cpp',
                 'src/WebTextInputInfo.cpp',
                 'src/WebTextRun.cpp',
+                'src/WebTransformAnimationCurve.cpp',
                 'src/WebURLLoadTiming.cpp',
                 'src/WebScopedUserGesture.cpp',
                 'src/WebTextFieldDecoratorClient.cpp',
@@ -683,6 +688,7 @@
                         ['component=="shared_library"', {
                             'defines': [
                                 'WEBKIT_DLL',
+                                'WEBKIT_IMPLEMENTATION=1',
                             ],
                             'dependencies': [
                                 '../../WebCore/WebCore.gyp/WebCore.gyp:webcore_bindings',
@@ -734,6 +740,7 @@
                                 'tests/PopupMenuTest.cpp',
                                 'tests/RenderTableCellTest.cpp',
                                 'tests/RenderTableRowTest.cpp',
+                                'tests/URLTestHelpers.cpp',
                                 'tests/WebFrameTest.cpp',
                                 'tests/WebPageNewSerializerTest.cpp',
                                 'tests/WebPageSerializerTest.cpp',
@@ -859,6 +866,7 @@
                 ['OS=="android"', {
                     'sources/': [
                         ['include', '^src/linux/WebFontRendering\\.cpp$'],
+                        ['include', '^src/linux/WebFontRenderStyle\\.cpp$'],
                     ],
                 }],
             ],

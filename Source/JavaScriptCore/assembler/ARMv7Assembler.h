@@ -462,28 +462,42 @@ public:
     class LinkRecord {
     public:
         LinkRecord(intptr_t from, intptr_t to, JumpType type, Condition condition)
-            : m_from(from)
-            , m_to(to)
-            , m_type(type)
-            , m_linkType(LinkInvalid)
-            , m_condition(condition)
         {
+            data.realTypes.m_from = from;
+            data.realTypes.m_to = to;
+            data.realTypes.m_type = type;
+            data.realTypes.m_linkType = LinkInvalid;
+            data.realTypes.m_condition = condition;
         }
-        intptr_t from() const { return m_from; }
-        void setFrom(intptr_t from) { m_from = from; }
-        intptr_t to() const { return m_to; }
-        JumpType type() const { return m_type; }
-        JumpLinkType linkType() const { return m_linkType; }
-        void setLinkType(JumpLinkType linkType) { ASSERT(m_linkType == LinkInvalid); m_linkType = linkType; }
-        Condition condition() const { return m_condition; }
+        void operator=(const LinkRecord& other)
+        {
+            data.copyTypes.content[0] = other.data.copyTypes.content[0];
+            data.copyTypes.content[1] = other.data.copyTypes.content[1];
+            data.copyTypes.content[2] = other.data.copyTypes.content[2];
+        }
+        intptr_t from() const { return data.realTypes.m_from; }
+        void setFrom(intptr_t from) { data.realTypes.m_from = from; }
+        intptr_t to() const { return data.realTypes.m_to; }
+        JumpType type() const { return data.realTypes.m_type; }
+        JumpLinkType linkType() const { return data.realTypes.m_linkType; }
+        void setLinkType(JumpLinkType linkType) { ASSERT(data.realTypes.m_linkType == LinkInvalid); data.realTypes.m_linkType = linkType; }
+        Condition condition() const { return data.realTypes.m_condition; }
     private:
-        intptr_t m_from : 31;
-        intptr_t m_to : 31;
-        JumpType m_type : 8;
-        JumpLinkType m_linkType : 8;
-        Condition m_condition : 16;
+        union {
+            struct RealTypes {
+                intptr_t m_from : 31;
+                intptr_t m_to : 31;
+                JumpType m_type : 8;
+                JumpLinkType m_linkType : 8;
+                Condition m_condition : 16;
+            } realTypes;
+            struct CopyTypes {
+                uint32_t content[3];
+            } copyTypes;
+            COMPILE_ASSERT(sizeof(RealTypes) == sizeof(CopyTypes), LinkRecordCopyStructSizeEqualsRealStruct);
+        } data;
     };
-    
+
     ARMv7Assembler()
         : m_indexOfLastWatchpoint(INT_MIN)
         , m_indexOfTailOfLastWatchpoint(INT_MIN)
@@ -1017,6 +1031,12 @@ public:
             m_formatter.oneWordOp5Reg3Imm8(OP_LDR_imm_T2, rt, static_cast<uint8_t>(imm.getUInt10() >> 2));
         else
             m_formatter.twoWordOp12Reg4Reg4Imm12(OP_LDR_imm_T3, rn, rt, imm.getUInt12());
+    }
+    
+    ALWAYS_INLINE void ldrWide8BitImmediate(RegisterID rt, RegisterID rn, uint8_t immediate)
+    {
+        ASSERT(rn != ARMRegisters::pc);
+        m_formatter.twoWordOp12Reg4Reg4Imm12(OP_LDR_imm_T3, rn, rt, immediate);
     }
 
     ALWAYS_INLINE void ldrCompact(RegisterID rt, RegisterID rn, ARMThumbImmediate imm)
@@ -2116,6 +2136,46 @@ public:
     static ptrdiff_t maxJumpReplacementSize()
     {
         return 6;
+    }
+    
+    static void replaceWithLoad(void* instructionStart)
+    {
+        ASSERT(!(bitwise_cast<uintptr_t>(instructionStart) & 1));
+        uint16_t* ptr = reinterpret_cast<uint16_t*>(instructionStart);
+        switch (ptr[0] & 0xFFF0) {
+        case OP_LDR_imm_T3:
+            break;
+        case OP_ADD_imm_T3:
+            ASSERT(!(ptr[1] & 0xF000));
+            ptr[0] &= 0x000F;
+            ptr[0] |= OP_LDR_imm_T3;
+            ptr[1] |= (ptr[1] & 0x0F00) << 4;
+            ptr[1] &= 0xF0FF;
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+        cacheFlush(ptr, sizeof(uint16_t) * 2);
+    }
+
+    static void replaceWithAddressComputation(void* instructionStart)
+    {
+        ASSERT(!(bitwise_cast<uintptr_t>(instructionStart) & 1));
+        uint16_t* ptr = reinterpret_cast<uint16_t*>(instructionStart);
+        switch (ptr[0] & 0xFFF0) {
+        case OP_LDR_imm_T3:
+            ASSERT(!(ptr[1] & 0x0F00));
+            ptr[0] &= 0x000F;
+            ptr[0] |= OP_ADD_imm_T3;
+            ptr[1] |= (ptr[1] & 0xF000) >> 4;
+            ptr[1] &= 0x0FFF;
+            break;
+        case OP_ADD_imm_T3:
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+        cacheFlush(ptr, sizeof(uint16_t) * 2);
     }
 
     unsigned debugOffset() { return m_formatter.debugOffset(); }

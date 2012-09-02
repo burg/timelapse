@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011 Apple, Inc.  All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2009, 2010, 2011, 2012 Apple, Inc.  All rights reserved.
  * Copyright (C) 2009, 2010, 2011 Appcelerator, Inc. All rights reserved.
  * Copyright (C) 2011 Brent Fulgham. All rights reserved.
  *
@@ -4907,13 +4907,6 @@ HRESULT WebView::notifyPreferencesChanged(IWebNotification* notification)
         return hr;
     settings->setLoadsSiteIconsIgnoringImageLoadingSetting(!!enabled);
 
-#if ENABLE(WEB_SOCKETS)
-    hr = prefsPrivate->hixie76WebSocketProtocolEnabled(&enabled);
-    if (FAILED(hr))
-        return hr;
-    settings->setUseHixie76WebSocketProtocol(enabled);
-#endif
-
     hr = prefsPrivate->showsToolTipOverTruncatedText(&enabled);
     if (FAILED(hr))
         return hr;
@@ -6533,6 +6526,15 @@ void WebView::setAcceleratedCompositing(bool accelerated)
         m_backingLayer = nullptr;
         m_isAcceleratedCompositing = false;
     }
+}
+#endif
+
+#if PLATFORM(WIN) && USE(AVFOUNDATION)
+WebCore::GraphicsDeviceAdapter* WebView::graphicsDeviceAdapter() const
+{
+    if (!m_layerTreeHost)
+        return 0;
+    return m_layerTreeHost->graphicsDeviceAdapter();
 }
 #endif
 

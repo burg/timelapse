@@ -16,7 +16,7 @@ public
         $last_prettify_file_count = -1
         $last_prettify_part_count = { "remove" => 0, "add" => 0, "shared" => 0, "binary" => 0, "extract-error" => 0 }
         string = normalize_line_ending(string)
-        str = HEADER + "\n"
+        str = "#{HEADER}<body>\n"
 
         # Just look at the first line to see if it is an SVN revision number as added
         # by webkit-patch for git checkouts.
@@ -24,7 +24,7 @@ public
         string.each_line do |line|
             match = /^Subversion\ Revision: (\d*)$/.match(line)
             unless match.nil?
-                str += "<span class='revision'>" + match[1] + "</span>\n"
+                str << "<span class='revision'>#{match[1]}</span>\n"
                 $svn_revision = match[1].to_i;
             end
             break
@@ -33,7 +33,8 @@ public
         fileDiffs = FileDiff.parse(string)
 
         $last_prettify_file_count = fileDiffs.length
-        str += fileDiffs.collect{ |diff| diff.to_html }.join
+        str << fileDiffs.collect{ |diff| diff.to_html }.join
+        str << "</body></html>"
     end
 
     def self.filename_from_diff_header(line)
@@ -128,6 +129,8 @@ private
 
 
     HEADER =<<EOF
+<html>
+<head>
 <style>
 :link, :visited {
     text-decoration: none;
@@ -483,6 +486,7 @@ div:focus {
 </style>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script> 
 <script src="code-review.js?version=43"></script>
+</head>
 EOF
 
     def self.revisionOrDescription(string)
@@ -560,7 +564,6 @@ EOF
                     filepaths = from_filepath, to_filepath
 
                     binary_contents = filepaths.collect { |filepath| File.exists?(filepath) ? File.read(filepath) : nil }
-
                     @image_urls = binary_contents.collect { |content| (content and not content.empty?) ? "data:image/png;base64," + [content].pack("m") : nil }
                     @image_checksums = binary_contents.collect { |content| FileDiff.read_checksum_from_png(content) }
                 rescue
@@ -582,7 +585,7 @@ EOF
             image_checksum = ""
             if @image_checksum
                 image_checksum = @image_checksum
-            elsif @filename.include? "-expected.png"
+            elsif @filename.include? "-expected.png" and @image_url
                 image_checksum = IMAGE_CHECKSUM_ERROR
             end
 
@@ -607,7 +610,7 @@ EOF
 
                         if image_checksum
                             str += image_checksum
-                        elsif @filename.include? "-expected.png"
+                        elsif @filename.include? "-expected.png" and image_url
                             str += IMAGE_CHECKSUM_ERROR
                         end
 

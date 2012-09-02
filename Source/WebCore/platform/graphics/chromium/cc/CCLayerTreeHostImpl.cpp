@@ -29,7 +29,6 @@
 #include "LayerRendererChromium.h"
 #include "TextStream.h"
 #include "TraceEvent.h"
-#include "TrackingTextureAllocator.h"
 #include "cc/CCActiveGestureAnimation.h"
 #include "cc/CCDamageTracker.h"
 #include "cc/CCDebugRectHistory.h"
@@ -42,6 +41,7 @@
 #include "cc/CCLayerTreeHostCommon.h"
 #include "cc/CCOverdrawMetrics.h"
 #include "cc/CCPageScaleAnimation.h"
+#include "cc/CCPrioritizedTextureManager.h"
 #include "cc/CCRenderPassDrawQuad.h"
 #include "cc/CCSettings.h"
 #include "cc/CCSingleThreadProxy.h"
@@ -122,7 +122,7 @@ CCLayerTreeHostImpl::CCLayerTreeHostImpl(const CCLayerTreeSettings& settings, CC
     , m_deviceScaleFactor(1)
     , m_visible(true)
     , m_contentsTexturesWerePurgedSinceLastCommit(false)
-    , m_memoryAllocationLimitBytes(TextureManager::highLimitBytes(viewportSize()))
+    , m_memoryAllocationLimitBytes(CCPrioritizedTextureManager::defaultMemoryAllocationLimit())
     , m_headsUpDisplay(CCHeadsUpDisplay::create())
     , m_pageScale(1)
     , m_pageScaleDelta(1)
@@ -295,14 +295,16 @@ bool CCLayerTreeHostImpl::calculateRenderPasses(FrameData& frame)
         CCLayerImpl* renderSurfaceLayer = (*frame.renderSurfaceLayerList)[surfaceIndex];
         CCRenderSurface* renderSurface = renderSurfaceLayer->renderSurface();
 
-        OwnPtr<CCRenderPass> pass = CCRenderPass::create(renderSurface);
+        int renderPassId = renderSurfaceLayer->id();
+        OwnPtr<CCRenderPass> pass = CCRenderPass::create(renderSurface, renderPassId);
         surfacePassMap.add(renderSurface, pass.get());
-        frame.renderPasses.append(pass.release());
+        frame.renderPasses.append(pass.get());
+        frame.renderPassesById.add(renderPassId, pass.release());
     }
 
     bool recordMetricsForFrame = true; // FIXME: In the future, disable this when about:tracing is off.
     CCOcclusionTrackerImpl occlusionTracker(enclosingIntRect(m_rootScissorRect), recordMetricsForFrame);
-    occlusionTracker.setMinimumTrackingSize(CCOcclusionTrackerImpl::preferredMinimumTrackingSize());
+    occlusionTracker.setMinimumTrackingSize(m_settings.minimumOcclusionTrackingSize);
 
     if (settings().showOccludingRects)
         occlusionTracker.setOccludingScreenSpaceRectsContainer(&frame.occludingScreenSpaceRects);
@@ -326,8 +328,8 @@ bool CCLayerTreeHostImpl::calculateRenderPasses(FrameData& frame)
         if (it.representsContributingRenderSurface() && !it->renderSurface()->scissorRect().isEmpty()) {
             CCRenderPass* contributingRenderPass = surfacePassMap.get(it->renderSurface());
             pass->appendQuadsForRenderSurfaceLayer(*it, contributingRenderPass, &occlusionTracker);
-        } else if (it.representsItself() && !occlusionTracker.occluded(*it, it->visibleLayerRect()) && !it->visibleLayerRect().isEmpty() && !it->scissorRect().isEmpty()) {
-            it->willDraw(m_layerRenderer.get(), context());
+        } else if (it.representsItself() && !occlusionTracker.occluded(*it, it->visibleContentRect()) && !it->visibleContentRect().isEmpty() && !it->scissorRect().isEmpty()) {
+            it->willDraw(m_resourceProvider.get());
             frame.willDrawLayers.append(*it);
 
             pass->appendQuadsForLayer(*it, &occlusionTracker, hadMissingTiles);
@@ -350,8 +352,9 @@ bool CCLayerTreeHostImpl::calculateRenderPasses(FrameData& frame)
     if (drawFrame)
         occlusionTracker.overdrawMetrics().recordMetrics(this);
 
+    removeRenderPasses(CullRenderPassesWithNoQuads(), frame);
     m_layerRenderer->decideRenderPassAllocationsForFrame(frame.renderPasses);
-    removePassesWithCachedTextures(frame.renderPasses, frame.skippedPasses);
+    removeRenderPasses(CullRenderPassesWithCachedTextures(*m_layerRenderer), frame);
 
     return drawFrame;
 }
@@ -402,18 +405,26 @@ IntSize CCLayerTreeHostImpl::contentSize() const
     return m_rootScrollLayerImpl->children()[0]->contentBounds();
 }
 
-void CCLayerTreeHostImpl::removeRenderPassesRecursive(CCRenderPassList& passes, size_t bottomPass, const CCRenderPass* firstToRemove, CCRenderPassList& skippedPasses)
+static inline CCRenderPass* findRenderPassById(int renderPassId, const CCLayerTreeHostImpl::FrameData& frame)
 {
-    size_t removeIndex = passes.find(firstToRemove);
+    CCRenderPassIdHashMap::const_iterator it = frame.renderPassesById.find(renderPassId);
+    ASSERT(it != frame.renderPassesById.end());
+    return it->second.get();
+}
+
+static void removeRenderPassesRecursive(int removeRenderPassId, CCLayerTreeHostImpl::FrameData& frame)
+{
+    CCRenderPass* removeRenderPass = findRenderPassById(removeRenderPassId, frame);
+    size_t removeIndex = frame.renderPasses.find(removeRenderPass);
 
     // The pass was already removed by another quad - probably the original, and we are the replica.
     if (removeIndex == notFound)
         return;
 
-    OwnPtr<CCRenderPass> removedPass = passes[removeIndex].release();
-    passes.remove(removeIndex);
+    const CCRenderPass* removedPass = frame.renderPasses[removeIndex];
+    frame.renderPasses.remove(removeIndex);
 
-    // Now follow up for all RenderPass quads and remove their render passes recursively.
+    // Now follow up for all RenderPass quads and remove their RenderPasses recursively.
     const CCQuadList& quadList = removedPass->quadList();
     CCQuadList::constBackToFrontIterator quadListIterator = quadList.backToFrontBegin();
     for (; quadListIterator != quadList.backToFrontEnd(); ++quadListIterator) {
@@ -421,20 +432,50 @@ void CCLayerTreeHostImpl::removeRenderPassesRecursive(CCRenderPassList& passes, 
         if (currentQuad->material() != CCDrawQuad::RenderPass)
             continue;
 
-        CCRenderPassDrawQuad* renderPassQuad = static_cast<CCRenderPassDrawQuad*>(currentQuad);
-        const CCRenderPass* nextRenderPass = renderPassQuad->renderPass();
-
-        // Our search is now limited up to the pass that we just removed.
-        // Substitute removeIndex for bottomPass now.
-        removeRenderPassesRecursive(passes, removeIndex, nextRenderPass, skippedPasses);
+        int nextRemoveRenderPassId = CCRenderPassDrawQuad::materialCast(currentQuad)->renderPassId();
+        removeRenderPassesRecursive(nextRemoveRenderPassId, frame);
     }
-    skippedPasses.append(removedPass.release());
 }
 
-void CCLayerTreeHostImpl::removePassesWithCachedTextures(CCRenderPassList& passes, CCRenderPassList& skippedPasses)
+bool CCLayerTreeHostImpl::CullRenderPassesWithCachedTextures::shouldRemoveRenderPass(const CCRenderPassDrawQuad& quad, const FrameData&) const
 {
-    for (int passIndex = passes.size() - 1; passIndex >= 0; --passIndex) {
-        CCRenderPass* currentPass = passes[passIndex].get();
+    return quad.contentsChangedSinceLastFrame().isEmpty() && m_renderer.haveCachedResourcesForRenderPassId(quad.renderPassId());
+}
+
+bool CCLayerTreeHostImpl::CullRenderPassesWithNoQuads::shouldRemoveRenderPass(const CCRenderPassDrawQuad& quad, const FrameData& frame) const
+{
+    const CCRenderPass* renderPass = findRenderPassById(quad.renderPassId(), frame);
+    size_t passIndex = frame.renderPasses.find(renderPass);
+
+    bool renderPassAlreadyRemoved = passIndex == notFound;
+    if (renderPassAlreadyRemoved)
+        return false;
+
+    // If any quad or RenderPass draws into this RenderPass, then keep it.
+    const CCQuadList& quadList = frame.renderPasses[passIndex]->quadList();
+    for (CCQuadList::constBackToFrontIterator quadListIterator = quadList.backToFrontBegin(); quadListIterator != quadList.backToFrontEnd(); ++quadListIterator) {
+        CCDrawQuad* currentQuad = quadListIterator->get();
+
+        if (currentQuad->material() != CCDrawQuad::RenderPass)
+            return false;
+
+        const CCRenderPass* contributingPass = findRenderPassById(CCRenderPassDrawQuad::materialCast(currentQuad)->renderPassId(), frame);
+        if (frame.renderPasses.contains(contributingPass))
+            return false;
+    }
+    return true;
+}
+
+// Defined for linking tests.
+template void CCLayerTreeHostImpl::removeRenderPasses<CCLayerTreeHostImpl::CullRenderPassesWithCachedTextures>(CullRenderPassesWithCachedTextures, FrameData&);
+template void CCLayerTreeHostImpl::removeRenderPasses<CCLayerTreeHostImpl::CullRenderPassesWithNoQuads>(CullRenderPassesWithNoQuads, FrameData&);
+
+// static
+template<typename RenderPassCuller>
+void CCLayerTreeHostImpl::removeRenderPasses(RenderPassCuller culler, FrameData& frame)
+{
+    for (size_t it = culler.renderPassListBegin(frame.renderPasses); it != culler.renderPassListEnd(frame.renderPasses); it = culler.renderPassListNext(it)) {
+        const CCRenderPass* currentPass = frame.renderPasses[it];
         const CCQuadList& quadList = currentPass->quadList();
         CCQuadList::constBackToFrontIterator quadListIterator = quadList.backToFrontBegin();
 
@@ -445,23 +486,18 @@ void CCLayerTreeHostImpl::removePassesWithCachedTextures(CCRenderPassList& passe
                 continue;
 
             CCRenderPassDrawQuad* renderPassQuad = static_cast<CCRenderPassDrawQuad*>(currentQuad);
-            CCRenderSurface* targetSurface = renderPassQuad->renderPass()->targetSurface();
-
-            if (targetSurface->contentsChanged() || !targetSurface->hasCachedContentsTexture())
+            if (!culler.shouldRemoveRenderPass(*renderPassQuad, frame))
                 continue;
 
-            // Reserve the texture immediately. We do not need to pass in layer renderer
-            // since the texture already exists, just needs to be reserved.
-            if (!targetSurface->prepareContentsTexture(0))
-                continue;
-
-            // We are changing the vector in the middle of reverse iteration.
-            // We are guaranteed that any data from iterator to the end will not change.
-            // Capture the iterator position from the end, and restore it after the change.
-            int positionFromEnd = passes.size() - passIndex;
-            removeRenderPassesRecursive(passes, passIndex, renderPassQuad->renderPass(), skippedPasses);
-            passIndex = passes.size() - positionFromEnd;
-            ASSERT(passIndex >= 0);
+            // We are changing the vector in the middle of iteration. Because we
+            // delete render passes that draw into the current pass, we are
+            // guaranteed that any data from the iterator to the end will not
+            // change. So, capture the iterator position from the end of the
+            // list, and restore it after the change.
+            int positionFromEnd = frame.renderPasses.size() - it;
+            removeRenderPassesRecursive(renderPassQuad->renderPassId(), frame);
+            it = frame.renderPasses.size() - positionFromEnd;
+            ASSERT(it >= 0);
         }
     }
 }
@@ -473,6 +509,7 @@ bool CCLayerTreeHostImpl::prepareToDraw(FrameData& frame)
 
     frame.renderSurfaceLayerList = &m_renderSurfaceLayerList;
     frame.renderPasses.clear();
+    frame.renderPassesById.clear();
     frame.renderSurfaceLayerList->clear();
     frame.willDrawLayers.clear();
 
@@ -485,7 +522,7 @@ bool CCLayerTreeHostImpl::prepareToDraw(FrameData& frame)
 
 void CCLayerTreeHostImpl::releaseContentsTextures()
 {
-    contentsTextureAllocator()->deleteAllTextures();
+    m_resourceProvider->deleteOwnedResources(CCRenderer::ContentPool);
     m_contentsTexturesWerePurgedSinceLastCommit = true;
     m_client->setNeedsCommitOnImplThread();
 }
@@ -509,29 +546,18 @@ void CCLayerTreeHostImpl::drawLayers(const FrameData& frame)
     // FIXME: use the frame begin time from the overall compositor scheduler.
     // This value is currently inaccessible because it is up in Chromium's
     // RenderWidget.
-
-    // The root RenderPass is the last one to be drawn.
-    CCRenderPass* rootRenderPass = frame.renderPasses.last().get();
-
     m_fpsCounter->markBeginningOfFrame(currentTime());
-    m_layerRenderer->beginDrawingFrame(rootRenderPass);
 
-    for (size_t i = 0; i < frame.renderPasses.size(); ++i) {
-        CCRenderPass* renderPass = frame.renderPasses[i].get();
+    m_layerRenderer->drawFrame(frame.renderPasses, m_rootScissorRect);
+    if (m_headsUpDisplay->enabled(settings()))
+        m_headsUpDisplay->draw(this);
+    m_layerRenderer->finishDrawingFrame();
 
-        FloatRect rootScissorRectInCurrentSurface = renderPass->targetSurface()->computeRootScissorRectInCurrentSurface(m_rootScissorRect);
-        m_layerRenderer->drawRenderPass(renderPass, rootScissorRectInCurrentSurface);
-
-        renderPass->targetSurface()->damageTracker()->didDrawDamagedArea();
-    }
+    for (unsigned int i = 0; i < frame.renderPasses.size(); i++)
+        frame.renderPasses[i]->targetSurface()->damageTracker()->didDrawDamagedArea();
 
     if (m_debugRectHistory->enabled(settings()))
         m_debugRectHistory->saveDebugRectsForCurrentFrame(m_rootLayerImpl.get(), *frame.renderSurfaceLayerList, frame.occludingScreenSpaceRects, settings());
-
-    if (m_headsUpDisplay->enabled(settings()))
-        m_headsUpDisplay->draw(this);
-
-    m_layerRenderer->finishDrawingFrame();
 
     ++m_sourceAnimationFrameNumber;
 
@@ -542,7 +568,7 @@ void CCLayerTreeHostImpl::drawLayers(const FrameData& frame)
 void CCLayerTreeHostImpl::didDrawAllLayers(const FrameData& frame)
 {
     for (size_t i = 0; i < frame.willDrawLayers.size(); ++i)
-        frame.willDrawLayers[i]->didDraw();
+        frame.willDrawLayers[i]->didDraw(m_resourceProvider.get());
 }
 
 void CCLayerTreeHostImpl::finishAllRendering()
@@ -559,11 +585,6 @@ bool CCLayerTreeHostImpl::isContextLost()
 const LayerRendererCapabilities& CCLayerTreeHostImpl::layerRendererCapabilities() const
 {
     return m_layerRenderer->capabilities();
-}
-
-TextureAllocator* CCLayerTreeHostImpl::contentsTextureAllocator() const
-{
-    return m_layerRenderer ? m_layerRenderer->contentsTextureAllocator() : 0;
 }
 
 bool CCLayerTreeHostImpl::swapBuffers()
@@ -671,8 +692,11 @@ bool CCLayerTreeHostImpl::initializeLayerRenderer(PassOwnPtr<CCGraphicsContext> 
         return false;
     }
 
+    OwnPtr<CCGraphicsContext> contextRef(context);
+    OwnPtr<CCResourceProvider> resourceProvider = CCResourceProvider::create(contextRef.get());
     OwnPtr<LayerRendererChromium> layerRenderer;
-    layerRenderer = LayerRendererChromium::create(this, context3d, textureUploader);
+    if (resourceProvider.get())
+        layerRenderer = LayerRendererChromium::create(this, resourceProvider.get(), textureUploader);
 
     // Since we now have a new context/layerRenderer, we cannot continue to use the old
     // resources (i.e. renderSurfaces and texture IDs).
@@ -682,8 +706,9 @@ bool CCLayerTreeHostImpl::initializeLayerRenderer(PassOwnPtr<CCGraphicsContext> 
     }
 
     m_layerRenderer = layerRenderer.release();
+    m_resourceProvider = resourceProvider.release();
     if (m_layerRenderer)
-        m_context = context;
+        m_context = contextRef.release();
 
     if (!m_visible && m_layerRenderer)
          m_layerRenderer->setVisible(m_visible);
@@ -723,18 +748,6 @@ static void adjustScrollsForPageScaleChange(CCLayerImpl* layerImpl, float pageSc
         adjustScrollsForPageScaleChange(layerImpl->children()[i].get(), pageScaleChange);
 }
 
-static void applyPageScaleDeltaToScrollLayers(CCLayerImpl* layerImpl, float pageScaleDelta)
-{
-    if (!layerImpl)
-        return;
-
-    if (layerImpl->scrollable())
-        layerImpl->setPageScaleDelta(pageScaleDelta);
-
-    for (size_t i = 0; i < layerImpl->children().size(); ++i)
-        applyPageScaleDeltaToScrollLayers(layerImpl->children()[i].get(), pageScaleDelta);
-}
-
 void CCLayerTreeHostImpl::setDeviceScaleFactor(float deviceScaleFactor)
 {
     if (deviceScaleFactor == m_deviceScaleFactor)
@@ -769,7 +782,8 @@ void CCLayerTreeHostImpl::setPageScaleFactorAndLimits(float pageScale, float min
     // Clamp delta to limits and refresh display matrix.
     setPageScaleDelta(m_pageScaleDelta / m_sentPageScaleDelta);
     m_sentPageScaleDelta = 1;
-    applyPageScaleDeltaToScrollLayers(m_rootScrollLayerImpl, m_pageScaleDelta);
+    if (m_rootScrollLayerImpl)
+        m_rootScrollLayerImpl->setPageScaleDelta(m_pageScaleDelta);
 }
 
 void CCLayerTreeHostImpl::setPageScaleDelta(float delta)
@@ -787,7 +801,8 @@ void CCLayerTreeHostImpl::setPageScaleDelta(float delta)
     m_pageScaleDelta = delta;
 
     updateMaxScrollPosition();
-    applyPageScaleDeltaToScrollLayers(m_rootScrollLayerImpl, m_pageScaleDelta);
+    if (m_rootScrollLayerImpl)
+        m_rootScrollLayerImpl->setPageScaleDelta(m_pageScaleDelta);
 }
 
 void CCLayerTreeHostImpl::updateMaxScrollPosition()

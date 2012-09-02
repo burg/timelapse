@@ -45,6 +45,7 @@
 #include "HTMLNames.h"
 #include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
+#include "IdTargetObserver.h"
 #include "InputType.h"
 #include "KeyboardEvent.h"
 #include "LocalizedStrings.h"
@@ -67,11 +68,28 @@
 #include "RuntimeEnabledFeatures.h"
 #endif
 
+#if ENABLE(TOUCH_EVENTS)
+#include "TouchEvent.h"
+#endif
+
 using namespace std;
 
 namespace WebCore {
 
 using namespace HTMLNames;
+
+#if ENABLE(DATALIST)
+class ListAttributeTargetObserver : IdTargetObserver {
+public:
+    static PassOwnPtr<ListAttributeTargetObserver> create(const AtomicString& id, HTMLInputElement*);
+    virtual void idTargetChanged() OVERRIDE;
+
+private:
+    ListAttributeTargetObserver(const AtomicString& id, HTMLInputElement*);
+
+    HTMLInputElement* m_element;
+};
+#endif
 
 // FIXME: According to HTML4, the length attribute's value can be arbitrarily
 // large. However, due to https://bugs.webkit.org/show_bug.cgi?id=14536 things
@@ -98,6 +116,7 @@ HTMLInputElement::HTMLInputElement(const QualifiedName& tagName, Document* docum
     , m_valueAttributeWasUpdatedAfterParsing(false)
     , m_wasModifiedByUser(false)
     , m_canReceiveDroppedFiles(false)
+    , m_hasTouchEventHandler(false)
     , m_inputType(InputType::createText(this))
 {
     ASSERT(hasTagName(inputTag) || hasTagName(isindexTag));
@@ -113,7 +132,7 @@ PassRefPtr<HTMLInputElement> HTMLInputElement::create(const QualifiedName& tagNa
 void HTMLInputElement::createShadowSubtree()
 {
     ASSERT(!shadow());
-    ShadowRoot::create(this, ShadowRoot::CreatingUserAgentShadowRoot, ASSERT_NO_EXCEPTION);
+    ShadowRoot::create(this, ShadowRoot::UserAgentShadowRoot, ASSERT_NO_EXCEPTION);
 
     m_inputType->createShadowSubtree();
 }
@@ -130,6 +149,10 @@ HTMLInputElement::~HTMLInputElement()
     // We should unregister it to avoid accessing a deleted object.
     if (isRadioButton())
         document()->formController()->checkedRadioButtons().removeButton(this);
+#if ENABLE(TOUCH_EVENTS)
+    if (m_hasTouchEventHandler)
+        document()->didRemoveTouchEventHandler();
+#endif
 }
 
 const AtomicString& HTMLInputElement::name() const
@@ -173,6 +196,11 @@ HTMLElement* HTMLInputElement::speechButtonElement() const
     return m_inputType->speechButtonElement();
 }
 #endif
+
+HTMLElement* HTMLInputElement::sliderThumbElement() const
+{
+    return m_inputType->sliderThumbElement();
+}
 
 HTMLElement* HTMLInputElement::placeholderElement() const
 {
@@ -401,6 +429,18 @@ void HTMLInputElement::updateType()
     m_inputType = newType.release();
     m_inputType->createShadowSubtree();
 
+#if ENABLE(TOUCH_EVENTS)
+    bool hasTouchEventHandler = m_inputType->hasTouchEventHandler();
+    if (hasTouchEventHandler != m_hasTouchEventHandler) {
+      if (hasTouchEventHandler) {
+        document()->didAddTouchEventHandler();
+        document()->addListenerType(Document::TOUCH_LISTENER);
+      } else
+        document()->didRemoveTouchEventHandler();
+      m_hasTouchEventHandler = hasTouchEventHandler;
+    }
+#endif
+
     setNeedsWillValidateCheck();
 
     bool willStoreValue = m_inputType->storesValueSeparateFromAttribute();
@@ -503,6 +543,13 @@ void HTMLInputElement::subtreeHasChanged()
 const AtomicString& HTMLInputElement::formControlType() const
 {
     return m_inputType->formControlType();
+}
+
+bool HTMLInputElement::shouldSaveAndRestoreFormControlState() const
+{
+    if (!m_inputType->shouldSaveAndRestoreFormControlState())
+        return false;
+    return HTMLTextFormControlElement::shouldSaveAndRestoreFormControlState();
 }
 
 FormControlState HTMLInputElement::saveFormControlState() const
@@ -651,9 +698,13 @@ void HTMLInputElement::parseAttribute(const Attribute& attribute)
         m_inputType->readonlyAttributeChanged();
     }
 #if ENABLE(DATALIST)
-    else if (attribute.name() == listAttr)
+    else if (attribute.name() == listAttr) {
         m_hasNonEmptyList = !attribute.isEmpty();
-        // FIXME: we need to tell this change to a renderer if the attribute affects the appearance.
+        if (m_hasNonEmptyList) {
+            resetListAttributeTargetObserver();
+            listAttributeTargetChanged();
+        }
+    }
 #endif
 #if ENABLE(INPUT_SPEECH)
     else if (attribute.name() == webkitspeechAttr) {
@@ -1038,6 +1089,14 @@ void HTMLInputElement::defaultEventHandler(Event* evt)
             return;
     }
 
+#if ENABLE(TOUCH_EVENTS)
+    if (evt->isTouchEvent()) {
+        m_inputType->handleTouchEvent(static_cast<TouchEvent*>(evt));
+        if (evt->defaultHandled())
+            return;
+    }
+#endif
+
     if (evt->isKeyboardEvent() && evt->type() == eventNames().keydownEvent) {
         m_inputType->handleKeydownEvent(static_cast<KeyboardEvent*>(evt));
         if (evt->defaultHandled())
@@ -1376,6 +1435,9 @@ Node::InsertionNotificationRequest HTMLInputElement::insertedInto(ContainerNode*
     HTMLTextFormControlElement::insertedInto(insertionPoint);
     if (insertionPoint->inDocument() && !form())
         addToRadioButtonGroup();
+#if ENABLE(DATALIST)
+    resetListAttributeTargetObserver();
+#endif
     return InsertionDone;
 }
 
@@ -1384,6 +1446,10 @@ void HTMLInputElement::removedFrom(ContainerNode* insertionPoint)
     if (insertionPoint->inDocument() && !form())
         removeFromRadioButtonGroup();
     HTMLTextFormControlElement::removedFrom(insertionPoint);
+    ASSERT(!inDocument());
+#if ENABLE(DATALIST)
+    resetListAttributeTargetObserver();
+#endif
 }
 
 void HTMLInputElement::didMoveToNewDocument(Document* oldDocument)
@@ -1454,6 +1520,19 @@ HTMLDataListElement* HTMLInputElement::dataList() const
         return 0;
 
     return static_cast<HTMLDataListElement*>(element);
+}
+
+void HTMLInputElement::resetListAttributeTargetObserver()
+{
+    if (inDocument())
+        m_listAttributeTargetObserver = ListAttributeTargetObserver::create(fastGetAttribute(listAttr), this);
+    else
+        m_listAttributeTargetObserver = nullptr;
+}
+
+void HTMLInputElement::listAttributeTargetChanged()
+{
+    m_inputType->listAttributeTargetChanged();
 }
 
 #endif // ENABLE(DATALIST)
@@ -1723,5 +1802,23 @@ void HTMLInputElement::setWidth(unsigned width)
 {
     setAttribute(widthAttr, String::number(width));
 }
+
+#if ENABLE(DATALIST)
+PassOwnPtr<ListAttributeTargetObserver> ListAttributeTargetObserver::create(const AtomicString& id, HTMLInputElement* element)
+{
+    return adoptPtr(new ListAttributeTargetObserver(id, element));
+}
+
+ListAttributeTargetObserver::ListAttributeTargetObserver(const AtomicString& id, HTMLInputElement* element)
+    : IdTargetObserver(element->treeScope()->idTargetObserverRegistry(), id)
+    , m_element(element)
+{
+}
+
+void ListAttributeTargetObserver::idTargetChanged()
+{
+    m_element->listAttributeTargetChanged();
+}
+#endif
 
 } // namespace

@@ -28,6 +28,7 @@
 
 #include "CCAnimationTestCommon.h"
 #include "CompositorFakeWebGraphicsContext3D.h"
+#include "FakeCCLayerTreeHostClient.h"
 #include "GraphicsContext3D.h"
 #include "GraphicsContext3DPrivate.h"
 #include "GraphicsLayer.h"
@@ -61,31 +62,12 @@ class MockGraphicsLayerClient : public GraphicsLayerClient {
     virtual float deviceScaleFactor() const OVERRIDE { return 2; }
 };
 
-class MockLayerTreeHostClient : public CCLayerTreeHostClient {
-public:
-    virtual void willBeginFrame() OVERRIDE { }
-    virtual void didBeginFrame() OVERRIDE { }
-    virtual void updateAnimations(double frameBeginTime) OVERRIDE { }
-    virtual void layout() OVERRIDE { }
-    virtual void applyScrollAndScale(const IntSize& scrollDelta, float pageScale) OVERRIDE { }
-    virtual PassOwnPtr<WebGraphicsContext3D> createContext3D() OVERRIDE
-    {
-        return CompositorFakeWebGraphicsContext3D::create(WebGraphicsContext3D::Attributes());
-    }
-    virtual void didRecreateContext(bool success) OVERRIDE { }
-    virtual void willCommit() OVERRIDE { }
-    virtual void didCommit() OVERRIDE { }
-    virtual void didCommitAndDrawFrame() OVERRIDE { }
-    virtual void didCompleteSwapBuffers() OVERRIDE { }
-    virtual void scheduleComposite() OVERRIDE { }
-};
-
 class MockLayerTreeHost : public CCLayerTreeHost {
 public:
     static PassOwnPtr<MockLayerTreeHost> create()
     {
         CCLayerTreeSettings settings;
-        OwnPtr<MockLayerTreeHost> layerTreeHost(adoptPtr(new MockLayerTreeHost(new MockLayerTreeHostClient(), settings)));
+        OwnPtr<MockLayerTreeHost> layerTreeHost(adoptPtr(new MockLayerTreeHost(new FakeCCLayerTreeHostClient(), settings)));
         bool success = layerTreeHost->initialize();
         EXPECT_TRUE(success);
         layerTreeHost->setRootLayer(LayerChromium::create());
@@ -254,6 +236,50 @@ TEST_F(GraphicsLayerChromiumTest, createTransformAnimationWithBigRotation)
     m_graphicsLayer->addAnimation(values, boxSize, animation.get(), "", 0);
 
     EXPECT_FALSE(m_platformLayer->layerAnimationController()->hasActiveAnimation());
+}
+
+TEST_F(GraphicsLayerChromiumTest, createTransformAnimationWithRotationInvolvingNegativeAngles)
+{
+    const double duration = 1;
+    WebCore::KeyframeValueList values(AnimatedPropertyWebkitTransform);
+
+    TransformOperations operations1;
+    operations1.operations().append(RotateTransformOperation::create(-330, TransformOperation::ROTATE));
+    values.insert(new TransformAnimationValue(0, &operations1));
+
+    TransformOperations operations2;
+    operations2.operations().append(RotateTransformOperation::create(-320, TransformOperation::ROTATE));
+    values.insert(new TransformAnimationValue(duration, &operations2));
+
+    RefPtr<Animation> animation = Animation::create();
+    animation->setDuration(duration);
+
+    IntSize boxSize;
+    m_graphicsLayer->addAnimation(values, boxSize, animation.get(), "", 0);
+
+    EXPECT_TRUE(m_platformLayer->layerAnimationController()->hasActiveAnimation());
+}
+
+TEST_F(GraphicsLayerChromiumTest, createTransformAnimationWithSmallRotationInvolvingLargeAngles)
+{
+    const double duration = 1;
+    WebCore::KeyframeValueList values(AnimatedPropertyWebkitTransform);
+
+    TransformOperations operations1;
+    operations1.operations().append(RotateTransformOperation::create(270, TransformOperation::ROTATE));
+    values.insert(new TransformAnimationValue(0, &operations1));
+
+    TransformOperations operations2;
+    operations2.operations().append(RotateTransformOperation::create(360, TransformOperation::ROTATE));
+    values.insert(new TransformAnimationValue(duration, &operations2));
+
+    RefPtr<Animation> animation = Animation::create();
+    animation->setDuration(duration);
+
+    IntSize boxSize;
+    m_graphicsLayer->addAnimation(values, boxSize, animation.get(), "", 0);
+
+    EXPECT_TRUE(m_platformLayer->layerAnimationController()->hasActiveAnimation());
 }
 
 TEST_F(GraphicsLayerChromiumTest, createTransformAnimationWithSingularMatrix)

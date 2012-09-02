@@ -35,15 +35,25 @@ import optparse
 import os
 import signal
 import sys
+import traceback
 
 from webkitpy.common.host import Host
-from webkitpy.layout_tests.controllers.manager import Manager
+from webkitpy.common.system import stack_utils
+from webkitpy.layout_tests.controllers.manager import Manager, WorkerException, TestRunInterruptedException
 from webkitpy.layout_tests.models import test_expectations
 from webkitpy.layout_tests.port import port_options
 from webkitpy.layout_tests.views import printing
 
 
 _log = logging.getLogger(__name__)
+
+
+# This mirrors what the shell normally does.
+INTERRUPTED_EXIT_STATUS = signal.SIGINT + 128
+
+# This is a randomly chosen exit code that can be tested against to
+# indicate that an unexpected exception occurred.
+EXCEPTIONAL_EXIT_STATUS = 254
 
 
 def lint(port, options):
@@ -99,9 +109,9 @@ def run(port, options, args, regular_output=sys.stderr, buildbot_output=sys.stdo
     unexpected_result_count = -1
     try:
         manager = Manager(port, options, printer)
-        manager.print_config()
+        printer.print_config()
 
-        printer.print_update("Collecting tests ...")
+        printer.write_update("Collecting tests ...")
         try:
             manager.collect_tests(args)
         except IOError, e:
@@ -109,16 +119,22 @@ def run(port, options, args, regular_output=sys.stderr, buildbot_output=sys.stdo
                 return -1
             raise
 
-        printer.print_update("Checking build ...")
+        printer.write_update("Checking build ...")
         if not port.check_build(manager.needs_servers()):
             _log.error("Build check failed")
             return -1
 
-        printer.print_update("Parsing expectations ...")
+        printer.write_update("Parsing expectations ...")
         manager.parse_expectations()
 
         unexpected_result_count = manager.run()
         _log.debug("Testing completed, Exit status: %d" % unexpected_result_count)
+    except Exception:
+        exception_type, exception_value, exception_traceback = sys.exc_info()
+        if exception_type not in (KeyboardInterrupt, TestRunInterruptedException, WorkerException):
+            print >> sys.stderr, '\n%s raised: %s' % (exception_type.__name__, exception_value)
+            stack_utils.log_traceback(_log.error, exception_traceback)
+        raise
     finally:
         printer.cleanup()
 
@@ -238,6 +254,11 @@ def parse_args(args=None):
             help="Use per-tile painting of composited pages"),
         optparse.make_option("--adb-args", type="string",
             help="Arguments parsed to Android adb, to select device, etc."),
+    ]))
+
+    option_group_definitions.append(("EFL-specific Options", [
+        optparse.make_option("--webprocess-cmd-prefix", type="string",
+            default=False, help="Prefix used when spawning the Web process (Debug mode only)"),
     ]))
 
     option_group_definitions.append(("WebKit Options", [
@@ -399,6 +420,13 @@ def parse_args(args=None):
             help="Don't re-try any tests that produce unexpected results."),
         optparse.make_option("--max-locked-shards", type="int",
             help="Set the maximum number of locked shards"),
+        # For chromium-android to reduce the cost of restarting the driver.
+        # FIXME: Remove the option once per-test arg is supported:
+        # https://bugs.webkit.org/show_bug.cgi?id=91539.
+        optparse.make_option("--shard-ref-tests", action="store_true",
+            help="Run ref tests in dedicated shard(s). Enabled on Android by default."),
+        optparse.make_option("--additional-env-var", type="string", action="append", default=[],
+            help="Passes that environment variable to the tests (--additional-env-var=NAME=VALUE)"),
     ]))
 
     option_group_definitions.append(("Miscellaneous Options", [
@@ -433,8 +461,8 @@ def parse_args(args=None):
     return option_parser.parse_args(args)
 
 
-def main():
-    options, args = parse_args()
+def main(argv=None):
+    options, args = parse_args(argv)
     if options.platform and 'test' in options.platform:
         # It's a bit lame to import mocks into real code, but this allows the user
         # to run tests against the test platform interactively, which is useful for
@@ -443,20 +471,28 @@ def main():
         host = MockHost()
     else:
         host = Host()
-    port = host.port_factory.get(options.platform, options)
+
+    try:
+        port = host.port_factory.get(options.platform, options)
+    except NotImplementedError, e:
+        # FIXME: is this the best way to handle unsupported port names?
+        print >> sys.stderr, str(e)
+        return EXCEPTIONAL_EXIT_STATUS
+    except Exception, e:
+        print >> sys.stderr, '\n%s raised: %s' % (e.__class__.__name__, str(e))
+        traceback.print_exc(file=sys.stderr)
+        raise
+
     logging.getLogger().setLevel(logging.DEBUG if options.verbose else logging.INFO)
     return run(port, options, args)
 
 
 if '__main__' == __name__:
     try:
-        sys.exit(main())
-    except KeyboardInterrupt:
-        # This mirrors what the shell normally does.
-        INTERRUPTED_EXIT_STATUS = signal.SIGINT + 128
-        sys.exit(INTERRUPTED_EXIT_STATUS)
-    except Exception:
-        # This is a randomly chosen exit code that can be tested against to
-        # indicate that an unexpected exception occurred.
-        EXCEPTIONAL_EXIT_STATUS = 254
+        return_code = main()
+    except BaseException, e:
+        if e.__class__ in (KeyboardInterrupt, TestRunInterruptedException):
+            sys.exit(INTERRUPTED_EXIT_STATUS)
         sys.exit(EXCEPTIONAL_EXIT_STATUS)
+
+    sys.exit(return_code)

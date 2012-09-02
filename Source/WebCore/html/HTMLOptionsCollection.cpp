@@ -28,14 +28,14 @@
 namespace WebCore {
 
 HTMLOptionsCollection::HTMLOptionsCollection(Element* select)
-    : HTMLCollection(select, SelectOptions)
+    : HTMLCollection(select, SelectOptions, SupportItemBefore)
 {
     ASSERT(select->hasTagName(HTMLNames::selectTag));
 }
 
-PassOwnPtr<HTMLOptionsCollection> HTMLOptionsCollection::create(Element* select)
+PassRefPtr<HTMLOptionsCollection> HTMLOptionsCollection::create(Element* select)
 {
-    return adoptPtr(new HTMLOptionsCollection(select));
+    return adoptRef(new HTMLOptionsCollection(select));
 }
 
 void HTMLOptionsCollection::add(PassRefPtr<HTMLOptionElement> element, ExceptionCode &ec)

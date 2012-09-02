@@ -40,8 +40,10 @@
 #include "DFGCodeBlocks.h"
 #include "DFGCommon.h"
 #include "DFGExitProfile.h"
+#include "DFGMinifiedGraph.h"
 #include "DFGOSREntry.h"
 #include "DFGOSRExit.h"
+#include "DFGVariableEventStream.h"
 #include "EvalCodeCache.h"
 #include "ExecutionCounter.h"
 #include "ExpressionRangeInfo.h"
@@ -53,6 +55,7 @@
 #include "JITCode.h"
 #include "JITWriteBarrier.h"
 #include "JSGlobalObject.h"
+#include "JumpReplacementWatchpoint.h"
 #include "JumpTable.h"
 #include "LLIntCallLinkInfo.h"
 #include "LazyOperandValueProfile.h"
@@ -101,6 +104,7 @@ namespace JSC {
     class DFGCodeBlocks;
     class ExecState;
     class LLIntOffsetsExtractor;
+    class RepatchBuffer;
 
     inline int unmodifiedArgumentsRegister(int argumentsRegister) { return argumentsRegister - 1; }
 
@@ -202,6 +206,8 @@ namespace JSC {
         {
             return *(binarySearch<StructureStubInfo, unsigned, getStructureStubInfoBytecodeIndex>(m_structureStubInfos.begin(), m_structureStubInfos.size(), bytecodeIndex));
         }
+        
+        void resetStub(StructureStubInfo&);
 
         CallLinkInfo& getCallLinkInfo(ReturnAddressPtr returnAddress)
         {
@@ -326,7 +332,7 @@ namespace JSC {
             return result;
         }
         
-        unsigned appendWatchpoint(const Watchpoint& watchpoint)
+        unsigned appendWatchpoint(const JumpReplacementWatchpoint& watchpoint)
         {
             createDFGDataIfNecessary();
             unsigned result = m_dfgData->watchpoints.size();
@@ -365,7 +371,7 @@ namespace JSC {
             return m_dfgData->speculationRecovery[index];
         }
         
-        Watchpoint& watchpoint(unsigned index)
+        JumpReplacementWatchpoint& watchpoint(unsigned index)
         {
             return m_dfgData->watchpoints[index];
         }
@@ -381,6 +387,18 @@ namespace JSC {
             createDFGDataIfNecessary();
             m_dfgData->transitions.append(
                 WeakReferenceTransition(*globalData(), ownerExecutable(), codeOrigin, from, to));
+        }
+        
+        DFG::MinifiedGraph& minifiedDFG()
+        {
+            createDFGDataIfNecessary();
+            return m_dfgData->minifiedDFG;
+        }
+        
+        DFG::VariableEventStream& variableEventStream()
+        {
+            createDFGDataIfNecessary();
+            return m_dfgData->variableEventStream;
         }
 #endif
 
@@ -560,7 +578,9 @@ namespace JSC {
         void createActivation(CallFrame*);
 
         void clearEvalCache();
-
+        
+        UString nameForRegister(int registerNumber);
+        
         void addPropertyAccessInstruction(unsigned propertyAccessInstruction)
         {
             m_propertyAccessInstructions.append(propertyAccessInstruction);
@@ -671,7 +691,7 @@ namespace JSC {
             if (!numberOfRareCaseProfiles())
                 return false;
             unsigned value = rareCaseProfileForBytecodeOffset(bytecodeOffset)->m_counter;
-            return value >= Options::likelyToTakeSlowCaseMinimumCount && static_cast<double>(value) / m_executionEntryCount >= Options::likelyToTakeSlowCaseThreshold;
+            return value >= Options::likelyToTakeSlowCaseMinimumCount() && static_cast<double>(value) / m_executionEntryCount >= Options::likelyToTakeSlowCaseThreshold();
         }
         
         bool couldTakeSlowCase(int bytecodeOffset)
@@ -679,7 +699,7 @@ namespace JSC {
             if (!numberOfRareCaseProfiles())
                 return false;
             unsigned value = rareCaseProfileForBytecodeOffset(bytecodeOffset)->m_counter;
-            return value >= Options::couldTakeSlowCaseMinimumCount && static_cast<double>(value) / m_executionEntryCount >= Options::couldTakeSlowCaseThreshold;
+            return value >= Options::couldTakeSlowCaseMinimumCount() && static_cast<double>(value) / m_executionEntryCount >= Options::couldTakeSlowCaseThreshold();
         }
         
         RareCaseProfile* addSpecialFastCaseProfile(int bytecodeOffset)
@@ -699,7 +719,15 @@ namespace JSC {
             if (!numberOfRareCaseProfiles())
                 return false;
             unsigned specialFastCaseCount = specialFastCaseProfileForBytecodeOffset(bytecodeOffset)->m_counter;
-            return specialFastCaseCount >= Options::likelyToTakeSlowCaseMinimumCount && static_cast<double>(specialFastCaseCount) / m_executionEntryCount >= Options::likelyToTakeSlowCaseThreshold;
+            return specialFastCaseCount >= Options::likelyToTakeSlowCaseMinimumCount() && static_cast<double>(specialFastCaseCount) / m_executionEntryCount >= Options::likelyToTakeSlowCaseThreshold();
+        }
+        
+        bool couldTakeSpecialFastCase(int bytecodeOffset)
+        {
+            if (!numberOfRareCaseProfiles())
+                return false;
+            unsigned specialFastCaseCount = specialFastCaseProfileForBytecodeOffset(bytecodeOffset)->m_counter;
+            return specialFastCaseCount >= Options::couldTakeSlowCaseMinimumCount() && static_cast<double>(specialFastCaseCount) / m_executionEntryCount >= Options::couldTakeSlowCaseThreshold();
         }
         
         bool likelyToTakeDeepestSlowCase(int bytecodeOffset)
@@ -709,7 +737,7 @@ namespace JSC {
             unsigned slowCaseCount = rareCaseProfileForBytecodeOffset(bytecodeOffset)->m_counter;
             unsigned specialFastCaseCount = specialFastCaseProfileForBytecodeOffset(bytecodeOffset)->m_counter;
             unsigned value = slowCaseCount - specialFastCaseCount;
-            return value >= Options::likelyToTakeSlowCaseMinimumCount && static_cast<double>(value) / m_executionEntryCount >= Options::likelyToTakeSlowCaseThreshold;
+            return value >= Options::likelyToTakeSlowCaseMinimumCount() && static_cast<double>(value) / m_executionEntryCount >= Options::likelyToTakeSlowCaseThreshold();
         }
         
         bool likelyToTakeAnySlowCase(int bytecodeOffset)
@@ -719,7 +747,7 @@ namespace JSC {
             unsigned slowCaseCount = rareCaseProfileForBytecodeOffset(bytecodeOffset)->m_counter;
             unsigned specialFastCaseCount = specialFastCaseProfileForBytecodeOffset(bytecodeOffset)->m_counter;
             unsigned value = slowCaseCount + specialFastCaseCount;
-            return value >= Options::likelyToTakeSlowCaseMinimumCount && static_cast<double>(value) / m_executionEntryCount >= Options::likelyToTakeSlowCaseThreshold;
+            return value >= Options::likelyToTakeSlowCaseMinimumCount() && static_cast<double>(value) / m_executionEntryCount >= Options::likelyToTakeSlowCaseThreshold();
         }
         
         unsigned executionEntryCount() const { return m_executionEntryCount; }
@@ -941,12 +969,12 @@ namespace JSC {
         
         void jitAfterWarmUp()
         {
-            m_llintExecuteCounter.setNewThreshold(Options::thresholdForJITAfterWarmUp, this);
+            m_llintExecuteCounter.setNewThreshold(Options::thresholdForJITAfterWarmUp(), this);
         }
         
         void jitSoon()
         {
-            m_llintExecuteCounter.setNewThreshold(Options::thresholdForJITSoon, this);
+            m_llintExecuteCounter.setNewThreshold(Options::thresholdForJITSoon(), this);
         }
         
         const ExecutionCounter& llintExecuteCounter() const
@@ -977,25 +1005,25 @@ namespace JSC {
         // to avoid thrashing.
         unsigned reoptimizationRetryCounter() const
         {
-            ASSERT(m_reoptimizationRetryCounter <= Options::reoptimizationRetryCounterMax);
+            ASSERT(m_reoptimizationRetryCounter <= Options::reoptimizationRetryCounterMax());
             return m_reoptimizationRetryCounter;
         }
         
         void countReoptimization()
         {
             m_reoptimizationRetryCounter++;
-            if (m_reoptimizationRetryCounter > Options::reoptimizationRetryCounterMax)
-                m_reoptimizationRetryCounter = Options::reoptimizationRetryCounterMax;
+            if (m_reoptimizationRetryCounter > Options::reoptimizationRetryCounterMax())
+                m_reoptimizationRetryCounter = Options::reoptimizationRetryCounterMax();
         }
         
         int32_t counterValueForOptimizeAfterWarmUp()
         {
-            return Options::thresholdForOptimizeAfterWarmUp << reoptimizationRetryCounter();
+            return Options::thresholdForOptimizeAfterWarmUp() << reoptimizationRetryCounter();
         }
         
         int32_t counterValueForOptimizeAfterLongWarmUp()
         {
-            return Options::thresholdForOptimizeAfterLongWarmUp << reoptimizationRetryCounter();
+            return Options::thresholdForOptimizeAfterLongWarmUp() << reoptimizationRetryCounter();
         }
         
         int32_t* addressOfJITExecuteCounter()
@@ -1075,7 +1103,7 @@ namespace JSC {
         // in the baseline code.
         void optimizeSoon()
         {
-            m_jitExecuteCounter.setNewThreshold(Options::thresholdForOptimizeSoon << reoptimizationRetryCounter(), this);
+            m_jitExecuteCounter.setNewThreshold(Options::thresholdForOptimizeSoon() << reoptimizationRetryCounter(), this);
         }
         
         uint32_t osrExitCounter() const { return m_osrExitCounter; }
@@ -1104,12 +1132,12 @@ namespace JSC {
         
         uint32_t exitCountThresholdForReoptimization()
         {
-            return adjustedExitCountThreshold(Options::osrExitCountForReoptimization);
+            return adjustedExitCountThreshold(Options::osrExitCountForReoptimization());
         }
         
         uint32_t exitCountThresholdForReoptimizationFromLoop()
         {
-            return adjustedExitCountThreshold(Options::osrExitCountForReoptimizationFromLoop);
+            return adjustedExitCountThreshold(Options::osrExitCountForReoptimizationFromLoop());
         }
 
         bool shouldReoptimizeNow()
@@ -1210,6 +1238,10 @@ namespace JSC {
             if (!m_rareData)
                 m_rareData = adoptPtr(new RareData);
         }
+
+#if ENABLE(JIT)
+        void resetStubInternal(RepatchBuffer&, StructureStubInfo&);
+#endif
         
         int m_numParameters;
 
@@ -1277,9 +1309,11 @@ namespace JSC {
             Vector<DFG::OSREntryData> osrEntry;
             SegmentedVector<DFG::OSRExit, 8> osrExit;
             Vector<DFG::SpeculationRecovery> speculationRecovery;
-            SegmentedVector<Watchpoint, 1, 0> watchpoints;
+            SegmentedVector<JumpReplacementWatchpoint, 1, 0> watchpoints;
             Vector<WeakReferenceTransition> transitions;
             Vector<WriteBarrier<JSCell> > weakReferences;
+            DFG::VariableEventStream variableEventStream;
+            DFG::MinifiedGraph minifiedDFG;
             bool mayBeExecuting;
             bool isJettisoned;
             bool livenessHasBeenProved; // Initialized and used on every GC.

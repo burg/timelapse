@@ -304,6 +304,13 @@ public:
     {
         m_formatter.oneByteOp(OP_ADD_GvEv, dst, base, offset);
     }
+    
+#if !CPU(X86_64)
+    void addl_mr(const void* addr, RegisterID dst)
+    {
+        m_formatter.oneByteOp(OP_ADD_GvEv, dst, addr);
+    }
+#endif
 
     void addl_rm(RegisterID src, int offset, RegisterID base)
     {
@@ -336,6 +343,11 @@ public:
     void addq_rr(RegisterID src, RegisterID dst)
     {
         m_formatter.oneByteOp64(OP_ADD_EvGv, src, dst);
+    }
+
+    void addq_mr(int offset, RegisterID base, RegisterID dst)
+    {
+        m_formatter.oneByteOp64(OP_ADD_GvEv, dst, base, offset);
     }
 
     void addq_ir(int imm, RegisterID dst)
@@ -442,6 +454,13 @@ public:
     {
         m_formatter.oneByteOp(OP_GROUP3_Ev, GROUP3_OP_NEG, dst);
     }
+
+#if CPU(X86_64)
+    void negq_r(RegisterID dst)
+    {
+        m_formatter.oneByteOp64(OP_GROUP3_Ev, GROUP3_OP_NEG, dst);
+    }
+#endif
 
     void negl_m(int offset, RegisterID base)
     {
@@ -1837,6 +1856,42 @@ public:
     static ptrdiff_t maxJumpReplacementSize()
     {
         return 5;
+    }
+    
+    static void replaceWithLoad(void* instructionStart)
+    {
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(instructionStart);
+#if CPU(X86_64)
+        if ((*ptr & ~15) == PRE_REX)
+            ptr++;
+#endif
+        switch (*ptr) {
+        case OP_MOV_GvEv:
+            break;
+        case OP_LEA:
+            *ptr = OP_MOV_GvEv;
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+    }
+    
+    static void replaceWithAddressComputation(void* instructionStart)
+    {
+        uint8_t* ptr = reinterpret_cast<uint8_t*>(instructionStart);
+#if CPU(X86_64)
+        if ((*ptr & ~15) == PRE_REX)
+            ptr++;
+#endif
+        switch (*ptr) {
+        case OP_MOV_GvEv:
+            *ptr = OP_LEA;
+            break;
+        case OP_LEA:
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
     }
     
     static unsigned getCallReturnOffset(AssemblerLabel call)

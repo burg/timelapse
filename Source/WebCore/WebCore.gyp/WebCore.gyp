@@ -48,6 +48,8 @@
 
     'enable_wexit_time_destructors': 1,
 
+    'use_harfbuzz_ng%': 0,
+
     'webcore_include_dirs': [
       '../',
       '../..',
@@ -59,6 +61,8 @@
       '../Modules/intents',
       '../Modules/indexeddb',
       '../Modules/mediastream',
+      '../Modules/notifications',
+      '../Modules/protocolhandler',
       '../Modules/quota',
       '../Modules/speech',
       '../Modules/webaudio',
@@ -95,7 +99,6 @@
       '../loader/cache',
       '../loader/icon',
       '../mathml',
-      '../notifications',
       '../page',
       '../page/animation',
       '../page/chromium',
@@ -229,6 +232,11 @@
       ['use_x11==1 or OS=="android"', {
         'webcore_include_dirs': [
           '../platform/graphics/harfbuzz',
+        ],
+      }],
+      ['use_x11==1 and use_harfbuzz_ng==1', {
+        'webcore_include_dirs': [
+          '../platform/graphics/harfbuzz/ng',
         ],
       }],
       ['OS=="win" and buildtype=="Official"', {
@@ -503,6 +511,17 @@
           'outputs': [
             '<(SHARED_INTERMEDIATE_DIR)/supplemental_dependency.tmp',
           ],
+          'conditions': [
+            ['OS=="win"', {
+              'variables': {
+                # Using cl instead of cygwin gcc cuts the processing time from
+                # 1m58s to 0m52s.
+                'preprocessor': '--preprocessor "cl.exe /nologo /EP /TP"',
+              },
+            }, {
+              'variables': { 'preprocessor': '', }
+            }],
+          ],
           'action': [
             'perl',
             '-w',
@@ -516,6 +535,7 @@
             '<(SHARED_INTERMEDIATE_DIR)/supplemental_dependency.tmp',
             '--idlAttributesFile',
             '../bindings/scripts/IDLAttributes.txt',
+            '<@(preprocessor)',
           ],
           'message': 'Resolving [Supplemental=XXX] dependencies in all IDL files',
         }
@@ -1047,13 +1067,14 @@
               '--include', '../Modules/indexeddb',
               '--include', '../Modules/intents',
               '--include', '../Modules/mediastream',
+              '--include', '../Modules/notifications',
+              '--include', '../Modules/protocolhandler',
               '--include', '../Modules/webaudio',
               '--include', '../Modules/webdatabase',
               '--include', '../css',
               '--include', '../dom',
               '--include', '../fileapi',
               '--include', '../html',
-              '--include', '../notifications',
               '--include', '../page',
               '--include', '../plugins',
               '--include', '../storage',
@@ -1566,6 +1587,16 @@
             ['exclude', 'Harfbuzz[^/]+\\.(cpp|h)$'],
           ],
         }],
+        ['use_x11==1 and use_harfbuzz_ng==1', {
+          'sources/': [
+            ['exclude', 'platform/graphics/harfbuzz/ComplexTextControllerHarfBuzz\\.cpp$'],
+            ['exclude', 'platform/graphics/harfbuzz/HarfBuzzSkia\\.cpp$'],
+
+            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzNGFace\\.(cpp|h)$'],
+            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzNGFaceSkia\\.cpp$'],
+            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzShaper\\.(cpp|h)$'],
+          ],
+        }],
         ['toolkit_uses_gtk == 1', {
           'sources/': [
             # Cherry-pick files excluded by the broader regular expressions above.
@@ -1648,9 +1679,10 @@
 
             ['include', 'WebKit/mac/WebCoreSupport/WebSystemInterface\\.mm$'],
 
-            # We use LocalizedDateMac.mm instead of LocalizedDateICU.cpp.
+            # We use LocalizedDateMac.cpp with LocaleMac.mm instead of LocalizedDateICU.cpp.
             ['exclude', 'platform/text/LocalizedDateICU\\.cpp$'],
-            ['include', 'platform/text/mac/LocalizedDateMac\\.mm$'],
+            ['include', 'platform/text/mac/LocaleMac\\.mm$'],
+            ['include', 'platform/text/mac/LocalizedDateMac\\.cpp$'],
 
             # The Mac uses platform/mac/KillRingMac.mm instead of the dummy
             # implementation.
@@ -1683,12 +1715,11 @@
             ['exclude', 'platform/graphics/skia/FontCacheSkia\\.cpp$'],
             ['exclude', 'platform/graphics/skia/GlyphPageTreeNodeSkia\\.cpp$'],
             ['exclude', 'platform/graphics/skia/SimpleFontDataSkia\\.cpp$'],
-            ['exclude', 'platform/chromium/DragImageChromiumMac\\.cpp$'],
 
             # Mac uses Harfbuzz-ng.
             ['include', 'platform/graphics/harfbuzz/HarfBuzzShaperBase\\.(cpp|h)$'],
-            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzFaceCoreText\\.cpp$'],
-            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzFace\\.(cpp|h)$'],
+            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzNGFaceCoreText\\.cpp$'],
+            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzNGFace\\.(cpp|h)$'],
             ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzShaper\\.(cpp|h)$'],            
           ],
         },{ # OS!="mac"
@@ -1872,7 +1903,6 @@
       ],
       'dependencies': [
         'webcore_prerequisites',
-        '<(chromium_src_dir)/third_party/v8-i18n/build/all.gyp:v8-i18n',
       ],
       # This is needed for mac because of webkit_system_interface. It'd be nice
       # if this hard dependency could be split off the rest.
@@ -2006,6 +2036,20 @@
           'sources/': [
             ['exclude', 'Gtk\\.cpp$'],
           ],
+        }],
+        ['OS=="android"', {
+          'cflags': [
+            # WebCore does not work with strict aliasing enabled.
+            # https://bugs.webkit.org/show_bug.cgi?id=25864
+            '-fno-strict-aliasing',
+          ],
+        }, { # OS!="android"
+          'dependencies': [
+            # Android doesn't have this third party repository, so can't
+            # include it. It's not used by Android in any case.
+            '<(chromium_src_dir)/third_party/v8-i18n/build/all.gyp:v8-i18n',
+          ],
+          'sources/': [['exclude', 'Android\\.cpp$']]
         }],
         ['OS!="mac"', {
           'sources/': [['exclude', 'Mac\\.(cpp|mm?)$']]

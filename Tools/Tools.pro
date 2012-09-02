@@ -7,8 +7,6 @@
 TEMPLATE = subdirs
 CONFIG += ordered
 
-load(features)
-
 !no_webkit1 {
     SUBDIRS += QtTestBrowser/QtTestBrowser.pro
     SUBDIRS += DumpRenderTree/qt/DumpRenderTree.pro
@@ -16,18 +14,15 @@ load(features)
 }
 
 !no_webkit2 {
+    # WTR's InjectedBundle depends currently on WK1's DumpRenderTreeSupport
+    !no_webkit1: SUBDIRS += WebKitTestRunner/WebKitTestRunner.pro
+
     SUBDIRS += MiniBrowser/qt/MiniBrowser.pro
-    SUBDIRS += WebKitTestRunner/WebKitTestRunner.pro
     SUBDIRS += MiniBrowser/qt/raw/MiniBrowserRaw.pro
 }
 
-# FIXME: with Qt 5 the test plugin cause some trouble during layout tests.
-# See: https://bugs.webkit.org/show_bug.cgi?id=86620
-# Reenable it after we have a fix for this issue.
-!haveQt(5) {
-    !win32:contains(DEFINES, ENABLE_NETSCAPE_PLUGIN_API=1) {
-        SUBDIRS += DumpRenderTree/qt/TestNetscapePlugin/TestNetscapePlugin.pro
-    }
+!win32:contains(DEFINES, ENABLE_NETSCAPE_PLUGIN_API=1) {
+    SUBDIRS += DumpRenderTree/qt/TestNetscapePlugin/TestNetscapePlugin.pro
 }
 
 OTHER_FILES = \
@@ -35,8 +30,7 @@ OTHER_FILES = \
     $$files(Scripts/webkitpy/*.py, true) \
     $$files(Scripts/webkitperl/*.p[l|m], true) \
     qmake/README \
-    qmake/configure.pro \
-    qmake/sync.profile \
+    qmake/configure.* \
     qmake/qt_webkit.pri \
     qmake/config.tests/README \
     qmake/config.tests/fontconfig/* \

@@ -89,7 +89,6 @@ IDBTransaction::IDBTransaction(ScriptExecutionContext* context, PassRefPtr<IDBTr
     , m_contextStopped(false)
 {
     ASSERT(m_backend);
-    ASSERT(m_mode == m_backend->mode());
 
     if (mode == VERSION_CHANGE) {
         // Not active until the callback.
@@ -121,20 +120,6 @@ const String& IDBTransaction::mode() const
     const AtomicString& mode = modeToString(m_mode, ec);
     ASSERT(!ec);
     return mode;
-}
-
-IDBDatabase* IDBTransaction::db() const
-{
-    return m_database.get();
-}
-
-PassRefPtr<DOMError> IDBTransaction::error(ExceptionCode& ec) const
-{
-    if (m_state != Finished) {
-        ec = IDBDatabaseException::IDB_INVALID_STATE_ERR;
-        return 0;
-    }
-    return m_error;
 }
 
 void IDBTransaction::setError(PassRefPtr<DOMError> error)
@@ -214,6 +199,13 @@ void IDBTransaction::abort()
         return;
     m_state = Finishing;
     m_active = false;
+
+    while (!m_requestList.isEmpty()) {
+        IDBRequest* request = *m_requestList.begin();
+        m_requestList.remove(request);
+        request->abort();
+    }
+
     RefPtr<IDBTransaction> selfRef = this;
     if (m_backend)
         m_backend->abort();
@@ -268,11 +260,19 @@ void IDBTransaction::unregisterRequest(IDBRequest* request)
 void IDBTransaction::onAbort()
 {
     ASSERT(m_state != Finished);
-    m_state = Finishing;
-    while (!m_requestList.isEmpty()) {
-        IDBRequest* request = *m_requestList.begin();
-        m_requestList.remove(request);
-        request->abort();
+
+    if (m_state != Finishing) {
+        // FIXME: Propagate true cause from back end (e.g. QuotaError, UnknownError, etc.)
+        setError(DOMError::create(IDBDatabaseException::getErrorName(IDBDatabaseException::UNKNOWN_ERR)));
+
+        // Abort was not triggered by front-end, so outstanding requests must
+        // be aborted now.
+        while (!m_requestList.isEmpty()) {
+            IDBRequest* request = *m_requestList.begin();
+            m_requestList.remove(request);
+            request->abort();
+        }
+        m_state = Finishing;
     }
 
     if (isVersionChange()) {
@@ -318,7 +318,7 @@ IDBTransaction::Mode IDBTransaction::stringToMode(const String& modeString, Exce
         return IDBTransaction::READ_ONLY;
     if (modeString == IDBTransaction::modeReadWrite())
         return IDBTransaction::READ_WRITE;
-    ec = IDBDatabaseException::IDB_TYPE_ERR;
+    ec = NATIVE_TYPE_ERR;
     return IDBTransaction::READ_ONLY;
 }
 
@@ -338,7 +338,7 @@ const AtomicString& IDBTransaction::modeToString(IDBTransaction::Mode mode, Exce
         break;
 
     default:
-        ec = IDBDatabaseException::IDB_TYPE_ERR;
+        ec = NATIVE_TYPE_ERR;
         return IDBTransaction::modeReadOnly();
     }
 }

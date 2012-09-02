@@ -66,7 +66,6 @@
 #include "HitTestResult.h"
 #include "IdentifiersFactory.h"
 #include "InjectedScriptManager.h"
-#include "InspectorClient.h"
 #include "InspectorFrontend.h"
 #include "InspectorHistory.h"
 #include "InspectorPageAgent.h"
@@ -194,11 +193,11 @@ String InspectorDOMAgent::toErrorString(const ExceptionCode& ec)
     return "";
 }
 
-InspectorDOMAgent::InspectorDOMAgent(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent, InspectorClient* client, InspectorState* inspectorState, InjectedScriptManager* injectedScriptManager)
+InspectorDOMAgent::InspectorDOMAgent(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent, InspectorState* inspectorState, InjectedScriptManager* injectedScriptManager, InspectorOverlay* overlay)
     : InspectorBaseAgent<InspectorDOMAgent>("DOM", instrumentingAgents, inspectorState)
     , m_pageAgent(pageAgent)
-    , m_client(client)
     , m_injectedScriptManager(injectedScriptManager)
+    , m_overlay(overlay)
     , m_frontend(0)
     , m_domListener(0)
     , m_lastNodeId(1)
@@ -210,7 +209,6 @@ InspectorDOMAgent::InspectorDOMAgent(InstrumentingAgents* instrumentingAgents, I
 InspectorDOMAgent::~InspectorDOMAgent()
 {
     reset();
-    ASSERT(!m_highlightData || (!m_highlightData->node && !m_highlightData->rect));
     ASSERT(!m_searchingForNode);
 }
 
@@ -268,11 +266,6 @@ Vector<Document*> InspectorDOMAgent::documents()
         result.append(document);
     }
     return result;
-}
-
-Node* InspectorDOMAgent::highlightedNode() const
-{
-    return m_highlightData ? m_highlightData->node.get() : 0;
 }
 
 void InspectorDOMAgent::reset()
@@ -350,6 +343,9 @@ void InspectorDOMAgent::unbind(Node* node, NodeToIdMap* nodesMap)
     }
 
     nodesMap->remove(node);
+    if (m_domListener)
+        m_domListener->didRemoveDOMNode(node);
+
     bool childrenRequested = m_childrenRequested.contains(id);
     if (childrenRequested) {
         // Unbind subtree known to client recursively.
@@ -935,11 +931,11 @@ bool InspectorDOMAgent::handleMousePress()
     if (!m_searchingForNode)
         return false;
 
-    if (m_highlightData && m_highlightData->node) {
-        RefPtr<Node> node = m_highlightData->node;
-        inspect(node.get());
+    if (Node* node = m_overlay->highlightedNode()) {
+        inspect(node);
+        return true;
     }
-    return true;
+    return false;
 }
 
 void InspectorDOMAgent::inspect(Node* node)
@@ -979,16 +975,14 @@ void InspectorDOMAgent::focusNode()
 
 void InspectorDOMAgent::mouseDidMoveOverElement(const HitTestResult& result, unsigned)
 {
-    if (!m_searchingForNode || !m_highlightData)
+    if (!m_searchingForNode)
         return;
 
     Node* node = result.innerNode();
     while (node && node->nodeType() == Node::TEXT_NODE)
         node = node->parentNode();
-    if (node) {
-        m_highlightData->node = node;
-        highlight();
-    }
+    if (node)
+        m_overlay->highlightNode(node);
 }
 
 void InspectorDOMAgent::setSearchingForNode(bool enabled, InspectorObject* highlightConfig)
@@ -1001,8 +995,28 @@ void InspectorDOMAgent::setSearchingForNode(bool enabled, InspectorObject* highl
     else {
         ErrorString error;
         hideHighlight(&error);
-        m_highlightData.clear();
+        m_overlay->clearHighlightData();
     }
+}
+
+bool InspectorDOMAgent::setHighlightDataFromConfig(InspectorObject* highlightConfig)
+{
+    if (!highlightConfig) {
+        m_overlay->clearHighlightData();
+        return false;
+    }
+
+    OwnPtr<HighlightData> highlightData = adoptPtr(new HighlightData());
+    bool showInfo = false; // Default: false (do not show a tooltip).
+    highlightConfig->getBoolean("showInfo", &showInfo);
+    highlightData->showInfo = showInfo;
+    highlightData->content = parseConfigColor("contentColor", highlightConfig);
+    highlightData->contentOutline = parseConfigColor("contentOutlineColor", highlightConfig);
+    highlightData->padding = parseConfigColor("paddingColor", highlightConfig);
+    highlightData->border = parseConfigColor("borderColor", highlightConfig);
+    highlightData->margin = parseConfigColor("marginColor", highlightConfig);
+    m_overlay->setHighlightData(highlightData.release());
+    return true;
 }
 
 void InspectorDOMAgent::setInspectModeEnabled(ErrorString*, bool enabled, const RefPtr<InspectorObject>* highlightConfig)
@@ -1010,39 +1024,13 @@ void InspectorDOMAgent::setInspectModeEnabled(ErrorString*, bool enabled, const 
     setSearchingForNode(enabled, highlightConfig ? highlightConfig->get() : 0);
 }
 
-bool InspectorDOMAgent::setHighlightDataFromConfig(InspectorObject* highlightConfig)
-{
-    if (!highlightConfig) {
-        m_highlightData.clear();
-        return false;
-    }
-
-    m_highlightData = adoptPtr(new HighlightData());
-    bool showInfo = false; // Default: false (do not show a tooltip).
-    highlightConfig->getBoolean("showInfo", &showInfo);
-    m_highlightData->showInfo = showInfo;
-    m_highlightData->content = parseConfigColor("contentColor", highlightConfig);
-    m_highlightData->contentOutline = parseConfigColor("contentOutlineColor", highlightConfig);
-    m_highlightData->padding = parseConfigColor("paddingColor", highlightConfig);
-    m_highlightData->border = parseConfigColor("borderColor", highlightConfig);
-    m_highlightData->margin = parseConfigColor("marginColor", highlightConfig);
-    return true;
-}
-
-void InspectorDOMAgent::highlight()
-{
-    // This method requires m_highlightData to have been filled in by its client.
-    ASSERT(m_highlightData);
-    m_client->highlight();
-}
-
 void InspectorDOMAgent::highlightRect(ErrorString*, int x, int y, int width, int height, const RefPtr<InspectorObject>* color, const RefPtr<InspectorObject>* outlineColor)
 {
-    m_highlightData = adoptPtr(new HighlightData());
-    m_highlightData->rect = adoptPtr(new IntRect(x, y, width, height));
-    m_highlightData->content = parseColor(color);
-    m_highlightData->contentOutline = parseColor(outlineColor);
-    m_client->highlight();
+    OwnPtr<HighlightData> highlightData = adoptPtr(new HighlightData());
+    highlightData->rect = adoptPtr(new IntRect(x, y, width, height));
+    highlightData->content = parseColor(color);
+    highlightData->contentOutline = parseColor(outlineColor);
+    m_overlay->setHighlightData(highlightData.release());
 }
 
 void InspectorDOMAgent::highlightNode(
@@ -1050,12 +1038,9 @@ void InspectorDOMAgent::highlightNode(
     int nodeId,
     const RefPtr<InspectorObject>& highlightConfig)
 {
-    if (Node* node = nodeForId(nodeId)) {
-        if (setHighlightDataFromConfig(highlightConfig.get())) {
-            m_highlightData->node = node;
-            highlight();
-        }
-    }
+    if (Node* node = nodeForId(nodeId))
+        if (setHighlightDataFromConfig(highlightConfig.get()))
+            m_overlay->highlightNode(node);
 }
 
 void InspectorDOMAgent::highlightFrame(
@@ -1066,22 +1051,18 @@ void InspectorDOMAgent::highlightFrame(
 {
     Frame* frame = m_pageAgent->frameForId(frameId);
     if (frame && frame->ownerElement()) {
-        m_highlightData = adoptPtr(new HighlightData());
-        m_highlightData->node = frame->ownerElement();
-        m_highlightData->showInfo = true; // Always show tooltips for frames.
-        m_highlightData->content = parseColor(color);
-        m_highlightData->contentOutline = parseColor(outlineColor);
-        highlight();
+        OwnPtr<HighlightData> highlightData = adoptPtr(new HighlightData());
+        highlightData->node = frame->ownerElement();
+        highlightData->showInfo = true; // Always show tooltips for frames.
+        highlightData->content = parseColor(color);
+        highlightData->contentOutline = parseColor(outlineColor);
+        m_overlay->setHighlightData(highlightData.release());
     }
 }
 
 void InspectorDOMAgent::hideHighlight(ErrorString*)
 {
-    if (m_highlightData) {
-        m_highlightData->node.clear();
-        m_highlightData->rect.clear();
-    }
-    m_client->hideHighlight();
+    m_overlay->hideHighlight();
 }
 
 void InspectorDOMAgent::moveTo(ErrorString* errorString, int nodeId, int targetElementId, const int* const anchorNodeId, int* newNodeId)
@@ -1443,9 +1424,6 @@ void InspectorDOMAgent::didRemoveDOMNode(Node* node)
 
     int parentId = m_documentNodeToIdMap.get(parent);
 
-    if (m_domListener)
-        m_domListener->didRemoveDOMNode(node);
-
     if (!m_childrenRequested.contains(parentId)) {
         // No children are mapped yet -> only notify on changes of hasChildren.
         if (innerChildNodeCount(parent) == 1)
@@ -1511,8 +1489,11 @@ void InspectorDOMAgent::styleAttributeInvalidated(const Vector<Element*>& elemen
 void InspectorDOMAgent::characterDataModified(CharacterData* characterData)
 {
     int id = m_documentNodeToIdMap.get(characterData);
-    if (!id)
+    if (!id) {
+        // Push text node if it is being created.
+        didInsertDOMNode(characterData);
         return;
+    }
     m_frontend->characterDataModified(id, characterData->data());
 }
 
@@ -1594,22 +1575,6 @@ PassRefPtr<TypeBuilder::Runtime::RemoteObject> InspectorDOMAgent::resolveNode(No
         return 0;
 
     return injectedScript.wrapNode(node, objectGroup);
-}
-
-void InspectorDOMAgent::drawHighlight(GraphicsContext& context) const
-{
-    if (!m_highlightData)
-        return;
-
-    DOMNodeHighlighter::drawHighlight(context, m_highlightData->node ? m_highlightData->node->document() : m_document.get(), m_highlightData.get());
-}
-
-void InspectorDOMAgent::getHighlight(Highlight* highlight) const
-{
-    if (!m_highlightData)
-        return;
-
-    DOMNodeHighlighter::getHighlight(m_highlightData->node ? m_highlightData->node->document() : m_document.get(), m_highlightData.get(), highlight);
 }
 
 } // namespace WebCore

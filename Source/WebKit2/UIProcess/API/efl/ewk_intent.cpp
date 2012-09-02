@@ -50,6 +50,24 @@ struct _Ewk_Intent {
     const char* action;
     const char* type;
     const char* service;
+
+    _Ewk_Intent(WKIntentDataRef intentRef)
+        : __ref(1)
+#if ENABLE(WEB_INTENTS)
+        , wkIntent(intentRef)
+#endif
+        , action(0)
+        , type(0)
+        , service(0)
+    { }
+
+    ~_Ewk_Intent()
+    {
+        ASSERT(!__ref);
+        eina_stringshare_del(action);
+        eina_stringshare_del(type);
+        eina_stringshare_del(service);
+    }
 };
 
 #define EWK_INTENT_WK_GET_OR_RETURN(intent, wkIntent_, ...)    \
@@ -79,9 +97,6 @@ void ewk_intent_unref(Ewk_Intent* intent)
     if (--intent->__ref)
         return;
 
-    eina_stringshare_del(intent->action);
-    eina_stringshare_del(intent->type);
-    eina_stringshare_del(intent->service);
     delete intent;
 #endif
 }
@@ -94,6 +109,7 @@ const char* ewk_intent_action_get(const Ewk_Intent* intent)
     WKRetainPtr<WKStringRef> wkAction(AdoptWK, WKIntentDataCopyAction(wkIntent));
     Ewk_Intent* ewkIntent = const_cast<Ewk_Intent*>(intent);
     eina_stringshare_replace(&ewkIntent->action, toImpl(wkAction.get())->string().utf8().data());
+
     return intent->action;
 #else
     return 0;
@@ -108,6 +124,7 @@ const char* ewk_intent_type_get(const Ewk_Intent* intent)
     WKRetainPtr<WKStringRef> wkType(AdoptWK, WKIntentDataCopyType(wkIntent));
     Ewk_Intent* ewkIntent = const_cast<Ewk_Intent*>(intent);
     eina_stringshare_replace(&ewkIntent->type, toImpl(wkType.get())->string().utf8().data());
+
     return intent->type;
 #else
     return 0;
@@ -122,6 +139,7 @@ const char* ewk_intent_service_get(const Ewk_Intent* intent)
     WKRetainPtr<WKURLRef> wkService(AdoptWK, WKIntentDataCopyService(wkIntent));
     Ewk_Intent* ewkIntent = const_cast<Ewk_Intent*>(intent);
     eina_stringshare_replace(&ewkIntent->service, toImpl(wkService.get())->string().utf8().data());
+
     return intent->service;
 #else
     return 0;
@@ -140,6 +158,7 @@ Eina_List* ewk_intent_suggestions_get(const Ewk_Intent* intent)
         WKURLRef wkSuggestion = static_cast<WKURLRef>(WKArrayGetItemAtIndex(wkSuggestions.get(), i));
         listOfSuggestions = eina_list_append(listOfSuggestions, strdup(toImpl(wkSuggestion)->string().utf8().data()));
     }
+
     return listOfSuggestions;
 #else
     return 0;
@@ -156,6 +175,7 @@ char* ewk_intent_extra_get(const Ewk_Intent* intent, const char* key)
     String value = toImpl(wkValue.get())->string();
     if (value.isEmpty())
         return 0;
+
     return strdup(value.utf8().data());
 #else
     return 0;
@@ -175,6 +195,7 @@ Eina_List* ewk_intent_extra_names_get(const Ewk_Intent* intent)
         WKStringRef wkKey = static_cast<WKStringRef>(WKArrayGetItemAtIndex(wkKeys.get(), i));
         listOfKeys = eina_list_append(listOfKeys, strdup(toImpl(wkKey)->string().utf8().data()));
     }
+
     return listOfKeys;
 #else
     return 0;
@@ -186,9 +207,12 @@ Ewk_Intent* ewk_intent_new(WKIntentDataRef intentData)
 {
     EINA_SAFETY_ON_NULL_RETURN_VAL(intentData, 0);
 
-    Ewk_Intent* ewkIntent = static_cast<Ewk_Intent*>(calloc(1, sizeof(Ewk_Intent)));
-    ewkIntent->__ref = 1;
-    ewkIntent->wkIntent = intentData;
-    return ewkIntent;
+    return new Ewk_Intent(intentData);
+}
+
+WKIntentDataRef ewk_intent_WKIntentDataRef_get(const Ewk_Intent* intent)
+{
+    EINA_SAFETY_ON_NULL_RETURN_VAL(intent, 0);
+    return intent->wkIntent.get();
 }
 #endif

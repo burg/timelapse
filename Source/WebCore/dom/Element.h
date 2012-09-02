@@ -268,6 +268,9 @@ public:
 
     ElementShadow* shadow() const;
     ElementShadow* ensureShadow();
+    virtual void willAddAuthorShadowRoot() { }
+
+    ShadowRoot* userAgentShadowRoot() const;
 
     // FIXME: Remove Element::ensureShadowRoot
     // https://bugs.webkit.org/show_bug.cgi?id=77608
@@ -280,6 +283,9 @@ public:
 
     void setStyleAffectedByEmpty();
     bool styleAffectedByEmpty() const;
+
+    void setIsInCanvasSubtree(bool);
+    bool isInCanvasSubtree() const;
 
     AtomicString computeInheritedLanguage() const;
 
@@ -311,6 +317,8 @@ public:
     void didAddAttribute(const Attribute&);
     void didModifyAttribute(const Attribute&);
     void didRemoveAttribute(const QualifiedName&);
+
+    void removeCachedHTMLCollection(HTMLCollection*, CollectionType);
 
     LayoutSize minimumSizeForResizing() const;
     void setMinimumSizeForResizing(const LayoutSize&);
@@ -423,10 +431,10 @@ public:
 
     virtual void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     {
-        memoryObjectInfo->reportObjectInfo(this, MemoryInstrumentation::DOM);
-        ContainerNode::reportMemoryUsage(memoryObjectInfo);
-        memoryObjectInfo->reportInstrumentedObject(m_tagName);
-        memoryObjectInfo->reportInstrumentedPointer(m_attributeData.get());
+        MemoryClassInfo<Element> info(memoryObjectInfo, this, MemoryInstrumentation::DOM);
+        info.visitBaseClass<ContainerNode>(this);
+        info.addInstrumentedMember(m_tagName);
+        info.addInstrumentedMember(m_attributeData.get());
     }
 
 protected:
@@ -447,7 +455,7 @@ protected:
     virtual bool shouldRegisterAsNamedItem() const { return false; }
     virtual bool shouldRegisterAsExtraNamedItem() const { return false; }
 
-    HTMLCollection* ensureCachedHTMLCollection(CollectionType);
+    PassRefPtr<HTMLCollection> ensureCachedHTMLCollection(CollectionType);
     HTMLCollection* cachedHTMLCollection(CollectionType);
 
 private:

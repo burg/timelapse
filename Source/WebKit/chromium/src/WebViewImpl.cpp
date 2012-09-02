@@ -36,6 +36,7 @@
 #include "AutofillPopupMenuClient.h"
 #include "BackForwardListChromium.h"
 #include "BatteryClientImpl.h"
+#include "BatteryController.h"
 #include "CSSValueKeywords.h"
 #include "Chrome.h"
 #include "Color.h"
@@ -164,6 +165,7 @@
 #include <wtf/CurrentTime.h>
 #include <wtf/MainThread.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TemporaryChange.h>
 #include <wtf/Uint8ClampedArray.h>
 
 #if ENABLE(GESTURE_EVENTS)
@@ -426,6 +428,9 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
 #if ENABLE(MEDIA_STREAM)
     , m_userMediaClientImpl(this)
 #endif
+#if ENABLE(REGISTER_PROTOCOL_HANDLER)
+    , m_registerProtocolHandlerClient(RegisterProtocolHandlerClientImpl::create(this))
+#endif
     , m_flingModifier(0)
 {
     // WebKit/win/WebView.cpp does the same thing, except they call the
@@ -455,6 +460,9 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     provideNotification(m_page.get(), notificationPresenterImpl());
 #endif
+#if ENABLE(REGISTER_PROTOCOL_HANDLER)
+    provideRegisterProtocolHandlerTo(m_page.get(), m_registerProtocolHandlerClient.get());
+#endif
 
     provideContextFeaturesTo(m_page.get(), m_featureSwitchClient.get());
     provideDeviceOrientationTo(m_page.get(), m_deviceOrientationClientProxy.get());
@@ -463,6 +471,7 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
 
 #if ENABLE(BATTERY_STATUS)
     provideBatteryTo(m_page.get(), m_batteryClient.get());
+    m_batteryClient->setController(BatteryController::from(m_page.get()));
 #endif
 
     m_page->setGroupName(pageGroupName);
@@ -1760,7 +1769,7 @@ bool WebViewImpl::handleInputEvent(const WebInputEvent& inputEvent)
     if (m_ignoreInputEvents)
         return false;
 
-    m_currentInputEvent = &inputEvent;
+    TemporaryChange<const WebInputEvent*> currentEventChange(m_currentInputEvent, &inputEvent);
 
 #if ENABLE(POINTER_LOCK)
     if (isPointerLocked() && WebInputEvent::isMouseEventType(inputEvent.type)) {
@@ -1798,12 +1807,10 @@ bool WebViewImpl::handleInputEvent(const WebInputEvent& inputEvent)
         node->dispatchMouseEvent(
               PlatformMouseEventBuilder(mainFrameImpl()->frameView(), *static_cast<const WebMouseEvent*>(&inputEvent)),
               eventType, static_cast<const WebMouseEvent*>(&inputEvent)->clickCount);
-        m_currentInputEvent = 0;
         return true;
     }
 
     bool handled = PageWidgetDelegate::handleInputEvent(m_page.get(), *this, inputEvent);
-    m_currentInputEvent = 0;
     return handled;
 }
 
@@ -2139,6 +2146,25 @@ bool WebViewImpl::setEditableSelectionOffsets(int start, int end)
         return false;
 
     return editor->setSelectionOffsets(start, end);
+}
+
+bool WebViewImpl::isSelectionEditable() const
+{
+    const Frame* frame = focusedWebCoreFrame();
+    if (!frame)
+        return false;
+    return frame->selection()->isContentEditable();
+}
+
+WebColor WebViewImpl::backgroundColor() const
+{
+    if (!m_page)
+        return Color::white;
+    FrameView* view = m_page->mainFrame()->view();
+    Color backgroundColor = view->documentBackgroundColor();
+    if (!backgroundColor.isValid())
+        return Color::white;
+    return backgroundColor.rgb();
 }
 
 bool WebViewImpl::caretOrSelectionRange(size_t* location, size_t* length)
@@ -2797,15 +2823,6 @@ WebDragOperation WebViewImpl::dragTargetDragEnter(
     const WebDragData& webDragData,
     const WebPoint& clientPoint,
     const WebPoint& screenPoint,
-    WebDragOperationsMask operationsAllowed)
-{
-    return dragTargetDragEnter(webDragData, clientPoint, screenPoint, operationsAllowed, 0);
-}
-
-WebDragOperation WebViewImpl::dragTargetDragEnter(
-    const WebDragData& webDragData,
-    const WebPoint& clientPoint,
-    const WebPoint& screenPoint,
     WebDragOperationsMask operationsAllowed,
     int keyModifiers)
 {
@@ -2815,14 +2832,6 @@ WebDragOperation WebViewImpl::dragTargetDragEnter(
     m_operationsAllowed = operationsAllowed;
 
     return dragTargetDragEnterOrOver(clientPoint, screenPoint, DragEnter, keyModifiers);
-}
-
-WebDragOperation WebViewImpl::dragTargetDragOver(
-    const WebPoint& clientPoint,
-    const WebPoint& screenPoint,
-    WebDragOperationsMask operationsAllowed)
-{
-    return dragTargetDragOver(clientPoint, screenPoint, operationsAllowed, 0);
 }
 
 WebDragOperation WebViewImpl::dragTargetDragOver(
@@ -2852,12 +2861,6 @@ void WebViewImpl::dragTargetDragLeave()
 
     m_dragOperation = WebDragOperationNone;
     m_currentDragData = 0;
-}
-
-void WebViewImpl::dragTargetDrop(const WebPoint& clientPoint,
-                                 const WebPoint& screenPoint)
-{
-    dragTargetDrop(clientPoint, screenPoint, 0);
 }
 
 void WebViewImpl::dragTargetDrop(const WebPoint& clientPoint,

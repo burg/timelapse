@@ -9,11 +9,6 @@ IF (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_C_FLAGS AND NOT CMAKE_CXX_FLAGS)
 ENDIF ()
 
 # -----------------------------------------------------------------------------
-# Enable CTest for the public API unit testing
-# -----------------------------------------------------------------------------
-ENABLE_TESTING()
-
-# -----------------------------------------------------------------------------
 # Default library type
 # -----------------------------------------------------------------------------
 SET(ENABLE_WEBCORE ON)
@@ -139,6 +134,13 @@ SET(WebCoreTestSupport_LIBRARY_TYPE STATIC)
 # -----------------------------------------------------------------------------
 INCLUDE(OptionsCommon)
 INCLUDE(Options${PORT})
+
+# -----------------------------------------------------------------------------
+# Enable API unit tests and create a target for the test runner
+# -----------------------------------------------------------------------------
+IF (ENABLE_API_TESTS)
+    ENABLE_TESTING()
+ENDIF ()
 
 # -----------------------------------------------------------------------------
 # Install JavaScript shell

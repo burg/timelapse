@@ -182,6 +182,13 @@ void ValidationMessage::requestToHideMessage()
     m_timer->startOneShot(0);
 }
 
+bool ValidationMessage::shadowTreeContains(Node* node) const
+{
+    if (!m_bubble)
+        return false;
+    return m_bubble->treeScope() == node->treeScope();
+}
+
 void ValidationMessage::deleteBubbleTree(Timer<ValidationMessage>*)
 {
     if (m_bubble) {
@@ -189,7 +196,7 @@ void ValidationMessage::deleteBubbleTree(Timer<ValidationMessage>*)
         m_messageBody = 0;
         HTMLElement* host = toHTMLElement(m_element);
         ExceptionCode ec;
-        host->shadow()->oldestShadowRoot()->removeChild(m_bubble.get(), ec);
+        host->userAgentShadowRoot()->removeChild(m_bubble.get(), ec);
         m_bubble = 0;
     }
     m_message = String();

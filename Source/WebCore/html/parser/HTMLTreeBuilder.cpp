@@ -351,13 +351,11 @@ HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser, HTMLDocument* docum
     , m_document(document)
     , m_tree(document, maximumDOMTreeDepth)
     , m_reportErrors(reportErrors)
-    , m_isPaused(false)
     , m_insertionMode(InitialMode)
     , m_originalInsertionMode(InitialMode)
     , m_shouldSkipLeadingNewline(false)
     , m_parser(parser)
     , m_scriptToProcessStartPosition(uninitializedPositionValue1())
-    , m_lastScriptElementStartPosition(TextPosition::belowRangePosition())
     , m_usePreHTML5ParserQuirks(usePreHTML5ParserQuirks)
 {
 }
@@ -370,13 +368,11 @@ HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser, DocumentFragment* f
     , m_document(fragment->document())
     , m_tree(fragment, scriptingPermission, maximumDOMTreeDepth)
     , m_reportErrors(false) // FIXME: Why not report errors in fragments?
-    , m_isPaused(false)
     , m_insertionMode(InitialMode)
     , m_originalInsertionMode(InitialMode)
     , m_shouldSkipLeadingNewline(false)
     , m_parser(parser)
     , m_scriptToProcessStartPosition(uninitializedPositionValue1())
-    , m_lastScriptElementStartPosition(TextPosition::belowRangePosition())
     , m_usePreHTML5ParserQuirks(usePreHTML5ParserQuirks)
 {
     // FIXME: This assertion will become invalid if <http://webkit.org/b/60316> is fixed.
@@ -427,11 +423,11 @@ HTMLTreeBuilder::FragmentParsingContext::~FragmentParsingContext()
 
 PassRefPtr<Element> HTMLTreeBuilder::takeScriptToProcess(TextPosition& scriptStartPosition)
 {
+    ASSERT(m_scriptToProcess);
     // Unpause ourselves, callers may pause us again when processing the script.
     // The HTML5 spec is written as though scripts are executed inside the tree
     // builder.  We pause the parser to exit the tree builder, and then resume
     // before running scripts.
-    m_isPaused = false;
     scriptStartPosition = m_scriptToProcessStartPosition;
     m_scriptToProcessStartPosition = uninitializedPositionValue1();
     return m_scriptToProcess.release();
@@ -1472,21 +1468,9 @@ void HTMLTreeBuilder::processAnyOtherEndTagForInBody(AtomicHTMLToken& token)
     while (1) {
         RefPtr<ContainerNode> node = record->node();
         if (node->hasLocalName(token.name())) {
-            m_tree.generateImpliedEndTags();
-            // FIXME: The ElementRecord pointed to by record might be deleted by
-            // the preceding call. Perhaps we should hold a RefPtr so that it
-            // stays alive for the duration of record's scope.
-            record = 0;
-            if (!m_tree.currentNode()->hasLocalName(token.name())) {
+            m_tree.generateImpliedEndTagsWithExclusion(token.name());
+            if (!m_tree.currentNode()->hasLocalName(token.name()))
                 parseError(token);
-                // FIXME: This is either a bug in the spec, or a bug in our
-                // implementation.  Filed a bug with HTML5:
-                // http://www.w3.org/Bugs/Public/show_bug.cgi?id=10080
-                // We might have already popped the node for the token in
-                // generateImpliedEndTags, just abort.
-                if (!m_tree.openElements()->contains(toElement(node.get())))
-                    return;
-            }
             m_tree.openElements()->popUntilPopped(toElement(node.get()));
             return;
         }
@@ -2129,10 +2113,8 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken& token)
     case TextMode:
         if (token.name() == scriptTag) {
             // Pause ourselves so that parsing stops until the script can be processed by the caller.
-            m_isPaused = true;
             ASSERT(m_tree.currentElement()->hasTagName(scriptTag));
             m_scriptToProcess = m_tree.currentElement();
-            m_scriptToProcessStartPosition = m_lastScriptElementStartPosition;
             m_tree.openElements()->pop();
             if (isParsingFragment() && m_fragmentContext.scriptingPermission() == DisallowScriptingContent)
                 m_scriptToProcess->removeAllChildren();
@@ -2646,9 +2628,7 @@ void HTMLTreeBuilder::processScriptStartTag(AtomicHTMLToken& token)
 
     TextPosition position = m_parser->textPosition();
 
-    ASSERT(position.m_line == m_parser->tokenizer()->lineNumber());
-
-    m_lastScriptElementStartPosition = position;
+    m_scriptToProcessStartPosition = position;
 
     setInsertionMode(TextMode);
 }
@@ -2755,7 +2735,6 @@ void HTMLTreeBuilder::processTokenInForeignContent(AtomicHTMLToken& token)
             adjustSVGTagNameCase(token);
 
         if (token.name() == SVGNames::scriptTag && m_tree.currentNode()->hasTagName(SVGNames::scriptTag)) {
-            m_isPaused = true;
             m_scriptToProcess = m_tree.currentElement();
             m_tree.openElements()->pop();
             return;
