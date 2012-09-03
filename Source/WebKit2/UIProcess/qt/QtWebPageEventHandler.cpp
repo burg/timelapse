@@ -33,7 +33,7 @@
 #include <QGuiApplication>
 #include <QInputMethod>
 #include <QMimeData>
-#include <QtQuick/QQuickCanvas>
+#include <QQuickWindow>
 #include <QStyleHints>
 #include <QTextFormat>
 #include <QTouchEvent>
@@ -427,7 +427,7 @@ void QtWebPageEventHandler::updateTextInputState()
     if (!m_webView->hasActiveFocus())
         return;
 
-    qApp->inputMethod()->update(Qt::ImQueryInput | Qt::ImEnabled);
+    qApp->inputMethod()->update(Qt::ImQueryInput | Qt::ImEnabled | Qt::ImHints);
 
     setInputPanelVisible(editor.isContentEditable);
 }
@@ -562,7 +562,7 @@ void QtWebPageEventHandler::startDrag(const WebCore::DragData& dragData, PassRef
     QPoint globalPosition;
     Qt::DropAction actualDropAction = Qt::IgnoreAction;
 
-    if (QWindow* window = m_webPage->canvas()) {
+    if (QWindow* window = m_webPage->window()) {
         QDrag* drag = new QDrag(window);
         drag->setPixmap(QPixmap::fromImage(dragQImage));
         drag->setMimeData(mimeData);

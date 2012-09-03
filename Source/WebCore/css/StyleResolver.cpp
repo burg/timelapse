@@ -82,6 +82,7 @@
 #include "MatrixTransformOperation.h"
 #include "MediaList.h"
 #include "MediaQueryEvaluator.h"
+#include "MemoryInstrumentation.h"
 #include "NodeRenderStyle.h"
 #include "NodeRenderingContext.h"
 #include "Page.h"
@@ -216,6 +217,8 @@ public:
     static const unsigned maximumIdentifierCount = 4;
     const unsigned* descendantSelectorIdentifierHashes() const { return m_descendantSelectorIdentifierHashes; }
 
+    void reportMemoryUsage(MemoryObjectInfo*) const;
+
 private:
     StyleRule* m_rule;
     CSSSelector* m_selector;
@@ -272,6 +275,8 @@ public:
     const Vector<RuleData>* universalRules() const { return &m_universalRules; }
     const Vector<StyleRulePage*>& pageRules() const { return m_pageRules; }
 
+    void reportMemoryUsage(MemoryObjectInfo*) const;
+
 public:
     RuleSet();
 
@@ -290,6 +295,8 @@ public:
     struct RuleSetSelectorPair {
         RuleSetSelectorPair(CSSSelector* selector, PassOwnPtr<RuleSet> ruleSet) : selector(selector), ruleSet(ruleSet) { }
         RuleSetSelectorPair(const RuleSetSelectorPair& rs) : selector(rs.selector), ruleSet(const_cast<RuleSetSelectorPair*>(&rs)->ruleSet.release()) { }
+        void reportMemoryUsage(MemoryObjectInfo*) const;
+
         CSSSelector* selector;
         OwnPtr<RuleSet> ruleSet;
     };
@@ -728,6 +735,15 @@ void StyleResolver::Features::clear()
     usesLinkRules = false;
 }
 
+void StyleResolver::Features::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo<StyleResolver::Features> info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    info.addHashSet(idsInRules);
+    info.addHashSet(attrsInRules);
+    info.addVector(siblingRules);
+    info.addVector(uncommonAttributeRules);
+}
+
 static StyleSheetContents* parseUASheet(const String& str)
 {
     StyleSheetContents* sheet = StyleSheetContents::create().leakRef(); // leak the sheet on purpose
@@ -870,10 +886,8 @@ void StyleResolver::collectMatchingRules(RuleSet* rules, int& firstRuleIndex, in
         collectMatchingRulesForList(rules->idRules(m_element->idForStyleResolution().impl()), firstRuleIndex, lastRuleIndex, options);
     if (m_element->hasClass()) {
         ASSERT(m_styledElement);
-        const SpaceSplitString& classNames = m_styledElement->classNames();
-        size_t size = classNames.size();
-        for (size_t i = 0; i < size; ++i)
-            collectMatchingRulesForList(rules->classRules(classNames[i].impl()), firstRuleIndex, lastRuleIndex, options);
+        for (size_t i = 0; i < m_styledElement->classNames().size(); ++i)
+            collectMatchingRulesForList(rules->classRules(m_styledElement->classNames()[i].impl()), firstRuleIndex, lastRuleIndex, options);
     }
     const AtomicString& pseudoId = m_element->shadowPseudoId();
     if (!pseudoId.isEmpty()) {
@@ -1296,6 +1310,9 @@ bool StyleResolver::canShareStyleWithControl(StyledElement* element) const
     if (!thisInputElement || !otherInputElement)
         return false;
 
+    if (thisInputElement->fastGetAttribute(typeAttr) != otherInputElement->fastGetAttribute(typeAttr))
+        return false;
+
     if (thisInputElement->isAutofilled() != otherInputElement->isAutofilled())
         return false;
     if (thisInputElement->shouldAppearChecked() != otherInputElement->shouldAppearChecked())
@@ -1356,8 +1373,9 @@ static inline bool attributeStylesEqual(StylePropertySet* a, StylePropertySet* b
     return true;
 }
 
-inline bool elementHasDirectionAuto(Element* element)
+static inline bool elementHasDirectionAuto(Element* element)
 {
+    // FIXME: This line is surprisingly hot, we may wish to inline hasDirectionAuto into StyleResolver.
     return element->isHTMLElement() && toHTMLElement(element)->hasDirectionAuto();
 }
 
@@ -1401,8 +1419,6 @@ bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
         return false;
     if (m_element == m_element->document()->cssTarget())
         return false;
-    if (element->getAttribute(typeAttr) != m_element->getAttribute(typeAttr))
-        return false;
     if (element->fastGetAttribute(XMLNames::langAttr) != m_element->fastGetAttribute(XMLNames::langAttr))
         return false;
     if (element->fastGetAttribute(langAttr) != m_element->fastGetAttribute(langAttr))
@@ -1420,7 +1436,7 @@ bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
         return false;
 #endif
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
     if (element->hasTagName(progressTag)) {
         if (!m_element->hasTagName(progressTag))
             return false;
@@ -2125,8 +2141,10 @@ void StyleResolver::adjustRenderStyle(RenderStyle* style, RenderStyle* parentSty
         if (style->writingMode() != TopToBottomWritingMode && (style->display() == BOX || style->display() == INLINE_BOX))
             style->setWritingMode(TopToBottomWritingMode);
 
-        if (e && e->parentNode() && e->parentNode()->renderer() && e->parentNode()->renderer()->isFlexibleBox())
+        if (e && e->parentNode() && e->parentNode()->renderer() && e->parentNode()->renderer()->isFlexibleBox()) {
+            style->setFloating(NoFloat);
             style->setDisplay(equivalentBlockDisplay(style->display(), style->isFloating(), m_checker.strictParsing()));
+        }
     }
 
     // Make sure our z-index value is only applied if the object is positioned.
@@ -2481,10 +2499,43 @@ RuleData::RuleData(StyleRule* rule, CSSSelector* selector, unsigned position, bo
     SelectorChecker::collectIdentifierHashes(m_selector, m_descendantSelectorIdentifierHashes, maximumIdentifierCount);
 }
 
+void RuleData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo<RuleData> info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+}
+
 RuleSet::RuleSet()
     : m_ruleCount(0)
     , m_autoShrinkToFitEnabled(true)
 {
+}
+
+
+static void reportAtomRuleMap(MemoryClassInfo<RuleSet>* info, const RuleSet::AtomRuleMap& atomicRuleMap)
+{
+    info->addHashMap(atomicRuleMap);
+    for (RuleSet::AtomRuleMap::const_iterator it = atomicRuleMap.begin(); it != atomicRuleMap.end(); ++it)
+        info->addInstrumentedVector(*it->second);
+}
+
+void RuleSet::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo<RuleSet> info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    reportAtomRuleMap(&info, m_idRules);
+    reportAtomRuleMap(&info, m_classRules);
+    reportAtomRuleMap(&info, m_tagRules);
+    reportAtomRuleMap(&info, m_shadowPseudoElementRules);
+    info.addInstrumentedVector(m_linkPseudoClassRules);
+    info.addInstrumentedVector(m_focusPseudoClassRules);
+    info.addInstrumentedVector(m_universalRules);
+    info.addVector(m_pageRules);
+    info.addInstrumentedVector(m_regionSelectorsAndRuleSets);
+}
+
+void RuleSet::RuleSetSelectorPair::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo<RuleSet::RuleSetSelectorPair> info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    info.addInstrumentedMember(ruleSet);
 }
 
 static inline void collectFeaturesFromSelector(StyleResolver::Features& features, const CSSSelector* selector)
@@ -3363,7 +3414,10 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
             for (CSSValueListIterator i = value; i.hasMore(); i.advance()) {
                 CSSValue* item = i.value();
                 if (item->isImageGeneratorValue()) {
-                    m_style->setContent(StyleGeneratedImage::create(static_cast<CSSImageGeneratorValue*>(item)), didSet);
+                    if (item->isGradientValue())
+                        m_style->setContent(StyleGeneratedImage::create(static_cast<CSSGradientValue*>(item)->gradientWithStylesResolved(this).get()), didSet);
+                    else
+                        m_style->setContent(StyleGeneratedImage::create(static_cast<CSSImageGeneratorValue*>(item)), didSet);
                     didSet = true;
 #if ENABLE(CSS_IMAGE_SET)
                 } else if (item->isImageSetValue()) {
@@ -3447,22 +3501,25 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         }
         if (value->isValueList()) {
             CSSValueList* list = static_cast<CSSValueList*>(value);
-            QuotesData* data = QuotesData::create(list->length());
-            if (!data)
-                return; // Out of memory
-            String* quotes = data->data();
-            for (CSSValueListIterator i = list; i.hasMore(); i.advance()) {
-                CSSValue* item = i.value();
-                ASSERT(item->isPrimitiveValue());
-                primitiveValue = static_cast<CSSPrimitiveValue*>(item);
-                ASSERT(primitiveValue->isString());
-                quotes[i.index()] = primitiveValue->getStringValue();
+            RefPtr<QuotesData> quotes = QuotesData::create();
+            for (size_t i = 0; i < list->length(); i += 2) {
+                CSSValue* first = list->itemWithoutBoundsCheck(i);
+                // item() returns null if out of bounds so this is safe.
+                CSSValue* second = list->item(i + 1);
+                if (!second)
+                    continue;
+                ASSERT(first->isPrimitiveValue());
+                ASSERT(second->isPrimitiveValue());
+                String startQuote = static_cast<CSSPrimitiveValue*>(first)->getStringValue();
+                String endQuote = static_cast<CSSPrimitiveValue*>(second)->getStringValue();
+                quotes->addPair(std::make_pair(startQuote, endQuote));
             }
-            m_style->setQuotes(adoptRef(data));
-        } else if (primitiveValue) {
-            ASSERT(primitiveValue->isIdent());
+            m_style->setQuotes(quotes);
+            return;
+        }
+        if (primitiveValue) {
             if (primitiveValue->getIdent() == CSSValueNone)
-                m_style->setQuotes(adoptRef(QuotesData::create(0)));
+                m_style->setQuotes(QuotesData::create());
         }
         return;
     case CSSPropertyFontFamily: {
@@ -4389,8 +4446,11 @@ PassRefPtr<StyleImage> StyleResolver::styleImage(CSSPropertyID property, CSSValu
     if (value->isImageValue())
         return cachedOrPendingFromValue(property, static_cast<CSSImageValue*>(value));
 
-    if (value->isImageGeneratorValue())
+    if (value->isImageGeneratorValue()) {
+        if (value->isGradientValue())
+            return generatedOrPendingFromValue(property, static_cast<CSSGradientValue*>(value)->gradientWithStylesResolved(this).get());
         return generatedOrPendingFromValue(property, static_cast<CSSImageGeneratorValue*>(value));
+    }
 
 #if ENABLE(CSS_IMAGE_SET)
     if (value->isImageSetValue())
@@ -4689,6 +4749,20 @@ static Color colorForCSSValue(int cssValueId)
             return col->color;
     }
     return RenderTheme::defaultTheme()->systemColor(cssValueId);
+}
+
+bool StyleResolver::colorFromPrimitiveValueIsDerivedFromElement(CSSPrimitiveValue* value)
+{
+    int ident = value->getIdent();
+    switch (ident) {
+    case CSSValueWebkitText:
+    case CSSValueWebkitLink:
+    case CSSValueWebkitActivelink:
+    case CSSValueCurrentcolor:
+        return true;
+    default:
+        return false;
+    }
 }
 
 Color StyleResolver::colorFromPrimitiveValue(CSSPrimitiveValue* value, bool forVisitedLink) const
@@ -5556,6 +5630,38 @@ void StyleResolver::loadPendingResources()
     // Start loading the SVG Documents referenced by this style.
     loadPendingSVGDocuments();
 #endif
+}
+
+void StyleResolver::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo<StyleResolver> info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    info.addMember(m_style);
+    info.addInstrumentedMember(m_authorStyle);
+    info.addInstrumentedMember(m_userStyle);
+    info.addInstrumentedMember(m_siblingRuleSet);
+    info.addInstrumentedMember(m_uncommonAttributeRuleSet);
+    info.addHashMap(m_keyframesRuleMap);
+    info.addHashMap(m_matchedPropertiesCache);
+    info.addVector(m_matchedRules);
+
+    // FIXME: Instrument StaticCSSRuleList and add m_ruleList here.
+    info.addHashSet(m_pendingImageProperties);
+    info.addVector(m_viewportDependentMediaQueryResults);
+    info.addHashMap(m_styleRuleToCSSOMWrapperMap);
+    info.addHashSet(m_styleSheetCSSOMWrapperSet);
+#if ENABLE(CSS_FILTERS) && ENABLE(SVG)
+    info.addHashMap(m_pendingSVGDocuments);
+#endif
+#if ENABLE(STYLE_SCOPED)
+    info.addHashMap(m_scopedAuthorStyles);
+    info.addVector(m_scopeStack);
+#endif
+
+    // FIXME: move this to a place where it would be called only once?
+    info.addInstrumentedMember(defaultStyle);
+    info.addInstrumentedMember(defaultQuirksStyle);
+    info.addInstrumentedMember(defaultPrintStyle);
+    info.addInstrumentedMember(defaultViewSourceStyle);
 }
 
 } // namespace WebCore

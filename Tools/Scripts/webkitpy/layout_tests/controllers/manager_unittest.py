@@ -45,7 +45,6 @@ from webkitpy import layout_tests
 from webkitpy.layout_tests import run_webkit_tests
 from webkitpy.layout_tests.controllers import manager
 from webkitpy.layout_tests.controllers.manager import interpret_test_failures,  Manager, natural_sort_key, test_key, TestRunInterruptedException, TestShard
-from webkitpy.layout_tests.models import result_summary
 from webkitpy.layout_tests.models import test_expectations
 from webkitpy.layout_tests.models import test_failures
 from webkitpy.layout_tests.models import test_results
@@ -263,9 +262,7 @@ class ManagerTest(unittest.TestCase):
         run_webkit_tests._set_up_derived_options(port, options)
         printer = printing.Printer(port, options, StringIO.StringIO(), StringIO.StringIO())
         manager = LockCheckingManager(port, options, printer, tester, True)
-        manager.collect_tests(args)
-        manager.parse_expectations()
-        num_unexpected_results = manager.run()
+        num_unexpected_results = manager.run(args)
         printer.cleanup()
         tester.assertEquals(num_unexpected_results, 0)
 
@@ -276,9 +273,7 @@ class ManagerTest(unittest.TestCase):
         run_webkit_tests._set_up_derived_options(port, options)
         printer = printing.Printer(port, options, StringIO.StringIO(), StringIO.StringIO())
         manager = LockCheckingManager(port, options, printer, tester, False)
-        manager.collect_tests(args)
-        manager.parse_expectations()
-        num_unexpected_results = manager.run()
+        num_unexpected_results = manager.run(args)
         printer.cleanup()
         tester.assertEquals(num_unexpected_results, 0)
 
@@ -292,7 +287,7 @@ class ManagerTest(unittest.TestCase):
         manager._test_files = ['foo/bar.html', 'baz.html']
         manager._test_is_slow = lambda test_name: False
 
-        result_summary = ResultSummary(expectations=Mock(), test_files=manager._test_files)
+        result_summary = ResultSummary(Mock(), manager._test_files, 1, set())
         result_summary.unexpected_failures = 100
         result_summary.unexpected_crashes = 50
         result_summary.unexpected_timeouts = 50
@@ -324,7 +319,7 @@ class ManagerTest(unittest.TestCase):
         # Reftests expected to be image mismatch should be respected when pixel_tests=False.
         manager = Manager(port=port, options=MockOptions(pixel_tests=False, exit_after_n_failures=None, exit_after_n_crashes_or_timeouts=None), printer=Mock())
         manager._expectations = expectations
-        result_summary = ResultSummary(expectations=expectations, test_files=[test])
+        result_summary = ResultSummary(expectations, [test], 1, set())
         result = TestResult(test_name=test, failures=[test_failures.FailureReftestMismatchDidNotOccur()])
         manager._update_summary_with_result(result_summary, result)
         self.assertEquals(1, result_summary.expected)
@@ -350,7 +345,7 @@ class ManagerTest(unittest.TestCase):
             host = MockHost()
             port = host.port_factory.get()
             manager = Manager(port, options=MockOptions(test_list=None, http=True), printer=Mock())
-            manager.collect_tests(test_names)
+            manager._collect_tests(test_names)
             return manager
 
         manager = get_manager_with_tests(['fast/html'])
@@ -371,13 +366,13 @@ class ManagerTest(unittest.TestCase):
             host = MockHost()
             port = host.port_factory.get('test-mac-leopard')
             manager = Manager(port, options=MockOptions(test_list=None, http=True), printer=Mock())
-            manager.collect_tests(test_names)
+            manager._collect_tests(test_names)
             return manager
         host = MockHost()
         port = host.port_factory.get('test-mac-leopard')
         tests = ['failures/expected/crash.html']
         expectations = test_expectations.TestExpectations(port, tests)
-        rs = result_summary.ResultSummary(expectations, tests)
+        rs = ResultSummary(expectations, tests, 1, set())
         manager = get_manager_with_tests(tests)
         manager._look_for_new_crash_logs(rs, time.time())
 
@@ -513,7 +508,7 @@ class ResultSummaryTest(unittest.TestCase):
     def get_result_summary(self, port, test_names, expectations_str):
         port.expectations_dict = lambda: {'': expectations_str}
         expectations = test_expectations.TestExpectations(port, test_names)
-        return test_names, result_summary.ResultSummary(expectations, test_names), expectations
+        return test_names, ResultSummary(expectations, test_names, 1, set()), expectations
 
     # FIXME: Use this to test more of summarize_results. This was moved from printing_unittest.py.
     def summarized_results(self, port, expected, passing, flaky, extra_tests=[], extra_expectations=None):

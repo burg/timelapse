@@ -278,23 +278,45 @@ private:
     FormKeyGenerator() { }
 
     typedef HashMap<HTMLFormElement*, AtomicString> FormToKeyMap;
+    typedef HashMap<String, unsigned> FormSignatureToNextIndexMap;
     FormToKeyMap m_formToKeyMap;
-    HashSet<AtomicString> m_existingKeys;
+    FormSignatureToNextIndexMap m_formSignatureToNextIndexMap;
 };
 
-static inline AtomicString createKey(HTMLFormElement* form, unsigned index)
+static inline void recordFormStructure(const HTMLFormElement& form, StringBuilder& builder)
 {
-    ASSERT(form);
-    KURL actionURL = form->getURLAttribute(actionAttr);
+    // 2 is enough to distinguish forms in webkit.org/b/91209#c0
+    const size_t namedControlsToBeRecorded = 2;
+    const Vector<FormAssociatedElement*>& controls = form.associatedElements();
+    builder.append(" [");
+    for (size_t i = 0, namedControls = 0; i < controls.size() && namedControls < namedControlsToBeRecorded; ++i) {
+        if (!controls[i]->isFormControlElementWithState())
+            continue;
+        HTMLFormControlElementWithState* control = static_cast<HTMLFormControlElementWithState*>(controls[i]);
+        if (!ownerFormForState(*control))
+            continue;
+        AtomicString name = control->name();
+        if (name.isEmpty())
+            continue;
+        namedControls++;
+        builder.append(name);
+        builder.append(" ");
+    }
+    builder.append("]");
+}
+
+static inline String formSignature(const HTMLFormElement& form)
+{
+    KURL actionURL = form.getURLAttribute(actionAttr);
     // Remove the query part because it might contain volatile parameters such
     // as a session key.
     actionURL.setQuery(String());
     StringBuilder builder;
     if (!actionURL.isEmpty())
         builder.append(actionURL.string());
-    builder.append(" #");
-    builder.append(String::number(index));
-    return builder.toAtomicString();
+
+    recordFormStructure(form, builder);
+    return builder.toString();
 }
 
 AtomicString FormKeyGenerator::formKey(const HTMLFormControlElementWithState& control)
@@ -308,13 +330,18 @@ AtomicString FormKeyGenerator::formKey(const HTMLFormControlElementWithState& co
     if (it != m_formToKeyMap.end())
         return it->second;
 
-    AtomicString candidateKey;
-    unsigned index = 0;
-    do {
-        candidateKey = createKey(form, index++);
-    } while (!m_existingKeys.add(candidateKey).isNewEntry);
-    m_formToKeyMap.add(form, candidateKey);
-    return candidateKey;
+    String signature = formSignature(*form);
+    ASSERT(!signature.isNull());
+    FormSignatureToNextIndexMap::AddResult result = m_formSignatureToNextIndexMap.add(signature, 0);
+    unsigned nextIndex = result.iterator->second++;
+
+    StringBuilder builder;
+    builder.append(signature);
+    builder.append(" #");
+    builder.append(String::number(nextIndex));
+    AtomicString formKey = builder.toAtomicString();
+    m_formToKeyMap.add(form, formKey);
+    return formKey;
 }
 
 void FormKeyGenerator::willDeleteForm(HTMLFormElement* form)
@@ -325,7 +352,6 @@ void FormKeyGenerator::willDeleteForm(HTMLFormElement* form)
     FormToKeyMap::iterator it = m_formToKeyMap.find(form);
     if (it == m_formToKeyMap.end())
         return;
-    m_existingKeys.remove(it->second);
     m_formToKeyMap.remove(it);
 }
 
@@ -344,7 +370,7 @@ static String formStateSignature()
     // In the legacy version of serialized state, the first item was a name
     // attribute value of a form control. The following string literal should
     // contain some characters which are rarely used for name attribute values.
-    DEFINE_STATIC_LOCAL(String, signature, ("\n\r?% WebKit serialized form state version 6 \n\r=&"));
+    DEFINE_STATIC_LOCAL(String, signature, ("\n\r?% WebKit serialized form state version 7 \n\r=&"));
     return signature;
 }
 

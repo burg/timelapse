@@ -61,11 +61,6 @@ WKContextRef WKContextCreateWithInjectedBundlePath(WKStringRef pathRef)
     return toAPI(context.release().leakRef());
 }
 
-WKContextRef WKContextGetSharedProcessContext()
-{
-    return toAPI(WebContext::sharedProcessContext());
-}
-
 WKContextRef WKContextGetSharedThreadContext()
 {
     return toAPI(WebContext::sharedThreadContext());
@@ -112,7 +107,7 @@ void WKContextGetGlobalStatistics(WKContextStatistics* statistics)
 
     statistics->wkViewCount = webContextStatistics.wkViewCount;
     statistics->wkPageCount = webContextStatistics.wkPageCount;
-    statistics->wkFrameCount = webContextStatistics.wkViewCount;
+    statistics->wkFrameCount = webContextStatistics.wkFrameCount;
 }
 
 void WKContextAddVisitedLink(WKContextRef contextRef, WKStringRef visitedURL)
@@ -181,7 +176,11 @@ WKBatteryManagerRef WKContextGetBatteryManager(WKContextRef contextRef)
 
 WKDatabaseManagerRef WKContextGetDatabaseManager(WKContextRef contextRef)
 {
+#if ENABLE(SQL_DATABASE)
     return toAPI(toImpl(contextRef)->databaseManagerProxy());
+#else
+    return 0;
+#endif
 }
 
 WKGeolocationManagerRef WKContextGetGeolocationManager(WKContextRef contextRef)
@@ -226,6 +225,15 @@ WKPluginSiteDataManagerRef WKContextGetPluginSiteDataManager(WKContextRef contex
 WKResourceCacheManagerRef WKContextGetResourceCacheManager(WKContextRef contextRef)
 {
     return toAPI(toImpl(contextRef)->resourceCacheManagerProxy());
+}
+
+WKVibrationRef WKContextGetVibration(WKContextRef contextRef)
+{
+#if ENABLE(VIBRATION)
+    return toAPI(toImpl(contextRef)->vibrationProxy());
+#else
+    return 0;
+#endif
 }
 
 void WKContextStartMemorySampler(WKContextRef contextRef, WKDoubleRef interval)

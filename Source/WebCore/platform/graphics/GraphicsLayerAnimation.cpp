@@ -18,6 +18,8 @@
  */
 
 #include "config.h"
+
+#if USE(ACCELERATED_COMPOSITING)
 #include "GraphicsLayerAnimation.h"
 
 #include "UnitBezier.h"
@@ -46,6 +48,15 @@ static double normalizedAnimationValue(double runningTime, double duration, Anim
     const double normalized = remainder / duration;
 
     return shouldReverseAnimationValue(direction, loopCount) ? 1 - normalized : normalized;
+}
+
+static double normalizedAnimationValueForFillsForwards(double iterationCount, Animation::AnimationDirection direction)
+{
+    if (direction == Animation::AnimationDirectionNormal)
+        return 1;
+    if (direction == Animation::AnimationDirectionReverse)
+        return 0;
+    return shouldReverseAnimationValue(direction, iterationCount) ? 1 : 0;
 }
 
 static float applyOpacityAnimation(float fromOpacity, float toOpacity, double progress)
@@ -206,14 +217,17 @@ bool GraphicsLayerAnimations::hasRunningAnimations() const
 
 void GraphicsLayerAnimation::apply(Client* client)
 {
-    if (state() == StoppedState)
+    if (!isActive())
         return;
 
     double totalRunningTime = m_state == PausedState ? m_pauseTime : WTF::currentTime() - m_startTime;
     double normalizedValue = normalizedAnimationValue(totalRunningTime, m_animation->duration(), m_animation->direction());
 
-    if (m_animation->iterationCount() != Animation::IterationCountInfinite && totalRunningTime >= m_animation->duration() * m_animation->iterationCount())
+    if (m_animation->iterationCount() != Animation::IterationCountInfinite && totalRunningTime >= m_animation->duration() * m_animation->iterationCount()) {
         setState(StoppedState);
+        if (m_animation->fillsForwards())
+            normalizedValue = normalizedAnimationValueForFillsForwards(m_animation->iterationCount(), m_animation->direction());
+    }
 
     if (!normalizedValue) {
         applyInternal(client, m_keyframes.at(0), m_keyframes.at(1), 0);
@@ -283,3 +297,5 @@ void GraphicsLayerAnimations::apply(GraphicsLayerAnimation::Client* client)
 }
 
 }
+#endif
+

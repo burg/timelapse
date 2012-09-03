@@ -26,15 +26,15 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import sys
 import unittest
 
 from webkitpy.common.system.systemhost_mock import MockSystemHost
 
 from webkitpy.layout_tests.port import Port, Driver, DriverOutput
+from webkitpy.layout_tests.port.server_process_mock import MockServerProcess
 
 # FIXME: remove the dependency on TestWebKitPort
-from webkitpy.layout_tests.port.webkit_unittest import TestWebKitPort
+from webkitpy.layout_tests.port.port_testcase import TestWebKitPort
 
 
 class DriverOutputTest(unittest.TestCase):
@@ -112,7 +112,7 @@ class DriverTest(unittest.TestCase):
     def test_read_block(self):
         port = TestWebKitPort()
         driver = Driver(port, 0, pixel_tests=False)
-        driver._server_process = MockServerProcess([
+        driver._server_process = MockServerProcess(lines=[
             'ActualHash: foobar',
             'Content-Type: my_type',
             'Content-Transfer-Encoding: none',
@@ -127,7 +127,7 @@ class DriverTest(unittest.TestCase):
     def test_read_binary_block(self):
         port = TestWebKitPort()
         driver = Driver(port, 0, pixel_tests=True)
-        driver._server_process = MockServerProcess([
+        driver._server_process = MockServerProcess(lines=[
             'ActualHash: actual',
             'ExpectedHash: expected',
             'Content-Type: image/png',
@@ -145,7 +145,7 @@ class DriverTest(unittest.TestCase):
     def test_read_base64_block(self):
         port = TestWebKitPort()
         driver = Driver(port, 0, pixel_tests=True)
-        driver._server_process = MockServerProcess([
+        driver._server_process = MockServerProcess(lines=[
             'ActualHash: actual',
             'ExpectedHash: expected',
             'Content-Type: image/png',
@@ -233,6 +233,7 @@ class DriverTest(unittest.TestCase):
 
     def test_stop_cleans_up_properly(self):
         port = TestWebKitPort()
+        port._server_process_constructor = MockServerProcess
         driver = Driver(port, 0, pixel_tests=True)
         driver.start(True, [])
         last_tmpdir = port._filesystem.last_tmpdir
@@ -242,49 +243,19 @@ class DriverTest(unittest.TestCase):
 
     def test_two_starts_cleans_up_properly(self):
         port = TestWebKitPort()
+        port._server_process_constructor = MockServerProcess
         driver = Driver(port, 0, pixel_tests=True)
         driver.start(True, [])
         last_tmpdir = port._filesystem.last_tmpdir
         driver._start(True, [])
         self.assertFalse(port._filesystem.isdir(last_tmpdir))
 
-
-class MockServerProcess(object):
-    def __init__(self, lines=None):
-        self.timed_out = False
-        self.lines = lines or []
-        self.crashed = False
-
-    def has_crashed(self):
-        return self.crashed
-
-    def read_stdout_line(self, deadline):
-        return self.lines.pop(0) + "\n"
-
-    def read_stdout(self, deadline, size):
-        first_line = self.lines[0]
-        if size > len(first_line):
-            self.lines.pop(0)
-            remaining_size = size - len(first_line) - 1
-            if not remaining_size:
-                return first_line + "\n"
-            return first_line + "\n" + self.read_stdout(deadline, remaining_size)
-        result = self.lines[0][:size]
-        self.lines[0] = self.lines[0][size:]
-        return result
-
-    def read_either_stdout_or_stderr_line(self, deadline):
-        # FIXME: We should have tests which intermix stderr and stdout lines.
-        return self.read_stdout_line(deadline), None
-
-    def start(self):
-        return
-
-    def stop(self, kill_directly=False):
-        return
-
-    def kill(self):
-        return
+    def test_start_actually_starts(self):
+        port = TestWebKitPort()
+        port._server_process_constructor = MockServerProcess
+        driver = Driver(port, 0, pixel_tests=True)
+        driver.start(True, [])
+        self.assertTrue(driver._server_process.started)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,754 @@
+2012-07-31  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG OSR exit profiling has unusual oversights
+        https://bugs.webkit.org/show_bug.cgi?id=92728
+
+        Reviewed by Geoffrey Garen.
+
+        * dfg/DFGOSRExit.cpp:
+        (JSC::DFG::OSRExit::considerAddingAsFrequentExitSiteSlow):
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::speculationWatchpoint):
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+
+2012-07-31  Chao-ying Fu  <fu@mips.com>
+
+        Add MIPS add32 function
+        https://bugs.webkit.org/show_bug.cgi?id=91522
+
+        Reviewed by Oliver Hunt.
+
+        Add isCompactPtrAlignedAddressOffset.
+        Add a new version of add32 that accepts AbsoluteAddress as inputs.
+
+        * assembler/MacroAssemblerMIPS.h:
+        (JSC::MacroAssemblerMIPS::isCompactPtrAlignedAddressOffset): New.
+        (MacroAssemblerMIPS):
+        (JSC::MacroAssemblerMIPS::add32): Support AbsoluteAddress as inputs.
+
+2012-07-30  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r124123.
+        http://trac.webkit.org/changeset/124123
+        https://bugs.webkit.org/show_bug.cgi?id=92700
+
+        ASSERT crashes terminate webkit Layout tests (Requested by
+        msaboff on #webkit).
+
+        * heap/Heap.cpp:
+        * heap/Heap.h:
+        (Heap):
+        * heap/IncrementalSweeper.cpp:
+        (JSC::IncrementalSweeper::doSweep):
+        (JSC::IncrementalSweeper::startSweeping):
+        (JSC::IncrementalSweeper::IncrementalSweeper):
+        (JSC):
+        * heap/IncrementalSweeper.h:
+        (IncrementalSweeper):
+        * heap/MarkedAllocator.cpp:
+        (JSC::MarkedAllocator::tryAllocateHelper):
+        (JSC::MarkedAllocator::addBlock):
+        * heap/MarkedAllocator.h:
+        (JSC::MarkedAllocator::zapFreeList):
+        * heap/MarkedBlock.cpp:
+        (JSC::MarkedBlock::sweepHelper):
+        * heap/MarkedSpace.cpp:
+        * heap/MarkedSpace.h:
+        (JSC::MarkedSpace::sweep):
+        (JSC):
+        * runtime/JSGlobalData.cpp:
+        (JSC::JSGlobalData::~JSGlobalData):
+
+2012-07-30  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Structures should be swept after all other objects
+        https://bugs.webkit.org/show_bug.cgi?id=92679
+
+        Reviewed by Filip Pizlo.
+
+        In order to get rid of ClassInfo from our objects, we need to be able to safely get the 
+        ClassInfo during the destruction of objects. We'd like to get the ClassInfo out of the 
+        Structure, but currently it is not safe to do so because the order of destruction of objects 
+        is not guaranteed to sweep objects before their corresponding Structure. We can fix this by 
+        sweeping Structures after everything else.
+
+        * heap/Heap.cpp:
+        (JSC::Heap::isSafeToSweepStructures): Add a function that checks if it is safe to sweep Structures.
+        If the Heap's IncrementalSweeper member is null, that means we're shutting down this VM and it is 
+        safe to sweep structures since we'll always do Structures last anyways due to the ordering of 
+        MarkedSpace::forEachBlock.
+        (JSC):
+        (JSC::Heap::didStartVMShutdown): Add this intermediate function to the Heap that ~JSGlobalData now
+        calls rather than calling the two HeapTimer objects individually. This allows the Heap to null out 
+        these pointers after it has invalidated them to prevent accidental use-after-free in the sweep() 
+        calls during lastChanceToFinalize().
+        * heap/Heap.h:
+        (Heap):
+        * heap/HeapTimer.h:
+        (HeapTimer):
+        * heap/IncrementalSweeper.cpp:
+        (JSC::IncrementalSweeper::structuresCanBeSwept): Determines if it is currently safe to sweep Structures.
+        This decision is based on whether we have gotten to the end of the vector of blocks that need sweeping
+        the first time.
+        (JSC):
+        (JSC::IncrementalSweeper::doSweep): We add a second pass over the vector to sweep Structures after we 
+        make our first pass. We now null out the slots as we sweep them so that we can quickly find the 
+        Structures during the second pass.
+        (JSC::IncrementalSweeper::startSweeping): Initialize our new Structure sweeping index.
+        (JSC::IncrementalSweeper::willFinishSweeping): Callback that is called by MarkedSpace::sweep to notify 
+        the IncrementalSweeper that we are going to sweep all of the remaining blocks in the Heap so it can 
+        assume that everything is taken care of in the correct order. Since MarkedSpace::forEachBlock 
+        iterates over the Structure blocks after all other blocks, the ordering property for sweeping Structures holds.
+        (JSC::IncrementalSweeper::IncrementalSweeper): Initialize Structure sweeping index.
+        * heap/IncrementalSweeper.h: Add declarations for new stuff.
+        (IncrementalSweeper):
+        * heap/MarkedAllocator.cpp:
+        (JSC::MarkedAllocator::tryAllocateHelper): We now check if the current block only contains structures and 
+        if so and it isn't safe to sweep Structures according to the Heap, we just return early instead of doing 
+        the normal lazy sweep. If this proves to be too much of a waste in the future we can add an extra clause that 
+        will sweep some number of other blocks in place of the current block to mitigate the cost of the floating 
+        Structure garbage.
+        (JSC::MarkedAllocator::addBlock):
+        * heap/MarkedAllocator.h:
+        (JSC::MarkedAllocator::zapFreeList): When we zap the free list in the MarkedAllocator, the current block is no 
+        longer valid to allocate from, so we set the current block to null.
+        * heap/MarkedBlock.cpp:
+        (JSC::MarkedBlock::sweepHelper): Added a couple assertions to make sure that we weren't trying to sweep Structures
+        at an unsafe time.
+        * heap/MarkedSpace.cpp:
+        (JSC::MarkedSpace::sweep): Notify the IncrementalSweeper that the MarkedSpace will finish all currently remaining sweeping.
+        (JSC): 
+        * heap/MarkedSpace.h:
+        (JSC):
+        * runtime/JSGlobalData.cpp:
+        (JSC::JSGlobalData::~JSGlobalData): Call the new Heap::didStartVMShutdown.
+
+2012-07-29  Filip Pizlo  <fpizlo@apple.com>
+
+        PropertyNameArray::m_shouldCache is only assigned and never used
+        https://bugs.webkit.org/show_bug.cgi?id=92598
+
+        Reviewed by Dan Bernstein.
+
+        * runtime/PropertyNameArray.h:
+        (JSC::PropertyNameArray::PropertyNameArray):
+        (PropertyNameArray):
+
+2012-07-29  Rik Cabanier  <cabanier@adobe.com>
+
+        Add ENABLE_CSS_COMPOSITING flag
+        https://bugs.webkit.org/show_bug.cgi?id=92553
+
+        Reviewed by Dirk Schulze.
+
+        Adds compiler flag CSS_COMPOSITING to build systems to enable CSS blending and compositing. See spec https://dvcs.w3.org/hg/FXTF/rawfile/tip/compositing/index.html
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-07-27  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Split functionality of MarkedAllocator::m_currentBlock
+        https://bugs.webkit.org/show_bug.cgi?id=92550
+
+        Reviewed by Filip Pizlo.
+
+        MarkedAllocator::m_currentBlock serves two purposes right now; it indicates the block that is currently 
+        being used for allocation and the beginning of the list of blocks that need to be swept. We should split 
+        these two functionalities into two separate fields.
+
+        * heap/MarkedAllocator.cpp:
+        (JSC::MarkedAllocator::tryAllocateHelper): Use m_blocksToSweep instead of m_currentBlock as the 
+        initializer/reference of the loop. Only change m_currentBlock when we know what the result will be.
+        (JSC::MarkedAllocator::addBlock): When we add a new block we know that both m_blocksToSweep and 
+        m_currentBlock are null. In order to preserve the invariant that m_currentBlock <= m_blocksToSweep, 
+        we assign both of them to point to the new block.
+        (JSC::MarkedAllocator::removeBlock): We need a separate check to see if the block we're removing is 
+        m_blocksToSweep and if so, advance it to the next block in the list.
+        * heap/MarkedAllocator.h:
+        (MarkedAllocator): Initialize m_blocksToSweep.
+        (JSC::MarkedAllocator::MarkedAllocator):
+        (JSC::MarkedAllocator::reset): We set m_blocksToSweep to be the head of our list. This function is called
+        at the end of a collection, so all of the blocks in our allocator need to be swept. We need to sweep a 
+        block before we can start allocating, so m_currentBlock is set to null. We also set the freeList to 
+        the empty FreeList to emphasize the fact that we can't start allocating until we do some sweeping.
+
+2012-07-27  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Increase inline storage for JSFinalObjects by one
+        https://bugs.webkit.org/show_bug.cgi?id=92526
+
+        Reviewed by Geoffrey Garen.
+
+        Now that we've removed the inheritorID from objects, we can increase our inline storage for JSFinalObjects on 
+        64-bit platforms by 1.
+
+        * llint/LowLevelInterpreter.asm: Change the constant.
+        * runtime/PropertyOffset.h: Change the constant.
+        (JSC):
+
+2012-07-27  Jer Noble  <jer.noble@apple.com>
+
+        Support a rational time class for use by media elements.
+        https://bugs.webkit.org/show_bug.cgi?id=88787
+
+        Re-export WTF::MediaTime from JavaScriptCore.
+
+        Reviewed by Eric Carlson.
+
+        * JavaScriptCore.order:
+        * JavaScriptCore.vcproj/JavaScriptCore/JavaScriptCore.def:
+
+2012-07-26  Filip Pizlo  <fpizlo@apple.com>
+
+        JSObject::reallocateStorageIfNecessary is neither used nor defined
+        https://bugs.webkit.org/show_bug.cgi?id=92417
+
+        Reviewed by Mark Rowe.
+
+        * runtime/JSObject.h:
+        (JSObject):
+
+2012-07-26  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Allocate Structures in a separate part of the Heap
+        https://bugs.webkit.org/show_bug.cgi?id=92420
+
+        Reviewed by Filip Pizlo.
+
+        To fix our issue with destruction/finalization of Structures before their objects, we can move Structures to a separate 
+        part of the Heap that will be swept after all other objects. This first patch will just be separating Structures 
+        out into their own separate MarkedAllocator. Everything else will behave identically.
+
+        * heap/Heap.h: New function to allocate Structures in the Heap.
+        (Heap):
+        (JSC):
+        (JSC::Heap::allocateStructure):
+        * heap/MarkedAllocator.cpp: Pass whether or not we're allocated Structures to the MarkedBlock.
+        (JSC::MarkedAllocator::allocateBlock):
+        * heap/MarkedAllocator.h: Add tracking for whether or not we're allocating only Structures.
+        (JSC::MarkedAllocator::onlyContainsStructures):
+        (MarkedAllocator):
+        (JSC::MarkedAllocator::MarkedAllocator):
+        (JSC::MarkedAllocator::init):
+        * heap/MarkedBlock.cpp: Add tracking for whether or not we're allocating only Structures. We need this to be able to 
+        distinguish the various MarkedBlock types in MarkedSpace::allocatorFor(MarkedBlock*).
+        (JSC::MarkedBlock::create):
+        (JSC::MarkedBlock::MarkedBlock):
+        * heap/MarkedBlock.h:
+        (MarkedBlock):
+        (JSC::MarkedBlock::onlyContainsStructures):
+        (JSC):
+        * heap/MarkedSpace.cpp: Include the new Structure allocator in all the places that all the other allocators are used/modified.
+        (JSC::MarkedSpace::MarkedSpace):
+        (JSC::MarkedSpace::resetAllocators):
+        (JSC::MarkedSpace::canonicalizeCellLivenessData):
+        (JSC::MarkedSpace::isPagedOut):
+        * heap/MarkedSpace.h: Add new MarkedAllocator just for Structures.
+        (MarkedSpace):
+        (JSC::MarkedSpace::allocatorFor):
+        (JSC::MarkedSpace::allocateStructure):
+        (JSC):
+        (JSC::MarkedSpace::forEachBlock):
+        * runtime/Structure.h: Move all of the functions that call allocateCell<Structure> down below the explicit template specialization
+        for allocateCell<Structure>. The new inline specialization for allocateCell directly calls the allocateStructure() function in the
+        Heap.
+        (Structure):
+        (JSC::Structure):
+        (JSC):
+        (JSC::Structure::create):
+        (JSC::Structure::createStructure):
+
+2012-07-26  Filip Pizlo  <fpizlo@apple.com>
+
+        JSArray has methods that are neither used nor defined
+        https://bugs.webkit.org/show_bug.cgi?id=92416
+
+        Reviewed by Simon Fraser.
+
+        * runtime/JSArray.h:
+        (JSArray):
+
+2012-07-26  Zoltan Herczeg  <zherczeg@webkit.org>
+
+        [Qt][ARM]ARMAssembler needs buildfix afert r123417
+        https://bugs.webkit.org/show_bug.cgi?id=92086
+
+        Reviewed by Csaba Osztrogonác.
+
+        The ARM implementation of this should be optimized code path
+        is covered by a non-optimized code path. This patch fixes this,
+        and adds a new function which returns with the offset range.
+
+        * assembler/ARMAssembler.h:
+        (JSC::ARMAssembler::readPointer):
+        (ARMAssembler):
+        (JSC::ARMAssembler::repatchInt32):
+        (JSC::ARMAssembler::repatchCompact):
+        * assembler/MacroAssemblerARM.h:
+        (MacroAssemblerARM):
+        (JSC::MacroAssemblerARM::isCompactPtrAlignedAddressOffset):
+        (JSC::MacroAssemblerARM::load32WithCompactAddressOffsetPatch):
+
+2012-07-25  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Build fix for 32-bit after r123682
+
+        * runtime/JSObject.h: Need to pad out JSObjects on 32-bit so that they're the correct size since
+        we only removed one 4-byte word and we need to be 8-byte aligned.
+        (JSObject):
+
+2012-07-25  Filip Pizlo  <fpizlo@apple.com>
+
+        JSC GC object copying APIs should allow for greater flexibility
+        https://bugs.webkit.org/show_bug.cgi?id=92316
+
+        Reviewed by Mark Hahnenberg.
+
+        It's now the case that visitChildren() methods can directly pin and allocate in new space during copying.
+        They can also do the copying and marking themselves. This new API is only used for JSObjects for now.
+
+        * JavaScriptCore.xcodeproj/project.pbxproj:
+        * heap/MarkStack.cpp:
+        (JSC::SlotVisitor::allocateNewSpaceSlow):
+        (JSC::SlotVisitor::allocateNewSpaceOrPin):
+        (JSC):
+        (JSC::SlotVisitor::copyAndAppend):
+        * heap/MarkStack.h:
+        (MarkStack):
+        (JSC::MarkStack::appendUnbarrieredValue):
+        (JSC):
+        * heap/SlotVisitor.h:
+        * heap/SlotVisitorInlineMethods.h: Added.
+        (JSC):
+        (JSC::SlotVisitor::checkIfShouldCopyAndPinOtherwise):
+        (JSC::SlotVisitor::allocateNewSpace):
+        * runtime/JSObject.cpp:
+        (JSC::JSObject::visitOutOfLineStorage):
+        (JSC):
+        (JSC::JSObject::visitChildren):
+        (JSC::JSFinalObject::visitChildren):
+        * runtime/JSObject.h:
+        (JSObject):
+
+2012-07-25  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Remove JSObject::m_inheritorID
+        https://bugs.webkit.org/show_bug.cgi?id=88378
+
+        Reviewed by Filip Pizlo.
+
+        This is rarely used, and not performance critical (the commonly accessed copy is cached on JSFunction),
+        and most objects don't need an inheritorID (this value is only used if the object is used as a prototype).
+        Instead use a private named value in the object's property storage.
+
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::emitAllocateBasicJSObject): No need m_inheritorID to initialize!
+        * jit/JITInlineMethods.h:
+        (JSC::JIT::emitAllocateBasicJSObject): No need m_inheritorID to initialize!
+        * llint/LowLevelInterpreter.asm: No need m_inheritorID to initialize!
+        * runtime/JSGlobalData.h:
+        (JSGlobalData): Added private name 'm_inheritorIDKey'.
+        * runtime/JSGlobalThis.cpp:
+        (JSC::JSGlobalThis::setUnwrappedObject): resetInheritorID is now passed a JSGlobalData&.
+        * runtime/JSObject.cpp:
+        (JSC::JSObject::visitChildren): No m_inheritorID to be marked.
+        (JSC::JSFinalObject::visitChildren): No m_inheritorID to be marked.
+        (JSC::JSObject::createInheritorID): Store the newly created inheritorID in the property map. Make sure 
+        it's got the DontEnum attribute!!
+        * runtime/JSObject.h:
+        (JSObject):
+        (JSC::JSObject::resetInheritorID): Remove the inheritorID from property storage.
+        (JSC):
+        (JSC::JSObject::inheritorID): Read the inheritorID from property storage.
+
+2012-07-25  Caio Marcelo de Oliveira Filho  <caio.oliveira@openbossa.org>
+
+        Create a specialized pair for use in HashMap iterators
+        https://bugs.webkit.org/show_bug.cgi?id=92137
+
+        Reviewed by Ryosuke Niwa.
+
+        Update a couple of sites that relied on the fact that "contents" of iterators were
+        std::pairs.
+
+        * profiler/Profile.cpp:
+        (JSC): This code kept a vector of the pairs that were the "contents" of the iterators. This
+        is changed to use a KeyValuePair. We make use HashCount's ValueType (which represents only
+        the key) to get the proper key parameter for KeyValuePair.
+        * tools/ProfileTreeNode.h:
+        (ProfileTreeNode): Use HashMap::ValueType to declare the type of the contents of the hash
+        instead of declaring it manually. This will make use of the new KeyValuePair.
+
+2012-07-25  Patrick Gansterer  <paroga@webkit.org>
+
+        REGRESSION(r123505): Date.getYear() returns the same as Date.getFullYear()
+        https://bugs.webkit.org/show_bug.cgi?id=92218
+
+        Reviewed by Csaba Osztrogonác.
+
+        * runtime/DatePrototype.cpp:
+        (JSC::dateProtoFuncGetYear): Added the missing offset of 1900 to the return value.
+
+2012-07-24  Filip Pizlo  <fpizlo@apple.com>
+
+        REGRESSION(r123417): It made tests assert/crash on 32 bit
+        https://bugs.webkit.org/show_bug.cgi?id=92088
+
+        Reviewed by Mark Hahnenberg.
+
+        The pointer arithmetic was wrong, because negative numbers are hard to think about.
+
+        * dfg/DFGRepatch.cpp:
+        (JSC::DFG::emitPutTransitionStub):
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::compileReallocatePropertyStorage):
+
+2012-07-24  Patrick Gansterer  <paroga@webkit.org>
+
+        Store the full year in GregorianDateTime
+        https://bugs.webkit.org/show_bug.cgi?id=92067
+
+        Reviewed by Geoffrey Garen.
+
+        Use the full year instead of the offset from year 1900
+        for the year member variable of GregorianDateTime.
+
+        * runtime/DateConstructor.cpp:
+        (JSC::constructDate):
+        (JSC::dateUTC):
+        * runtime/DateConversion.cpp:
+        (JSC::formatDate):
+        (JSC::formatDateUTCVariant):
+        * runtime/DatePrototype.cpp:
+        (JSC::formatLocaleDate):
+        (JSC::fillStructuresUsingDateArgs):
+        (JSC::dateProtoFuncToISOString):
+        (JSC::dateProtoFuncGetFullYear):
+        (JSC::dateProtoFuncGetUTCFullYear):
+        (JSC::dateProtoFuncSetYear):
+        * runtime/JSDateMath.cpp:
+        (JSC::gregorianDateTimeToMS):
+        (JSC::msToGregorianDateTime):
+
+2012-07-24  Patrick Gansterer  <paroga@webkit.org>
+
+        [WIN] Build fix after r123417.
+
+        * JavaScriptCore.vcproj/JavaScriptCore/JavaScriptCore.def:
+
+2012-07-23  Patrick Gansterer  <paroga@webkit.org>
+
+        Move GregorianDateTime from JSC to WTF namespace
+        https://bugs.webkit.org/show_bug.cgi?id=91948
+
+        Reviewed by Geoffrey Garen.
+
+        Moving GregorianDateTime into the WTF namespace allows us to us to
+        use it in WebCore too. The new class has the same behaviour as the
+        old struct. Only the unused timeZone member has been removed.
+
+        * runtime/DateConstructor.cpp:
+        * runtime/DateConversion.cpp:
+        * runtime/DateConversion.h:
+        * runtime/DateInstance.h:
+        * runtime/DatePrototype.cpp:
+        * runtime/JSDateMath.cpp:
+        * runtime/JSDateMath.h:
+
+2012-07-23  Filip Pizlo  <fpizlo@apple.com>
+
+        Property storage should grow in reverse address direction, to support butterflies
+        https://bugs.webkit.org/show_bug.cgi?id=91788
+
+        Reviewed by Geoffrey Garen.
+
+        Changes property storage to grow to the left, and changes the property storage pointer to point
+        one 8-byte word (i.e. JSValue) to the right of the first value in the storage.
+        
+        Also improved debug support somewhat, by adding a describe() function to the jsc command-line,
+        and a slow mode of object access in LLInt.
+
+        * assembler/ARMv7Assembler.h:
+        (JSC::ARMv7Assembler::repatchCompact):
+        * assembler/MacroAssemblerARMv7.h:
+        (MacroAssemblerARMv7):
+        (JSC::MacroAssemblerARMv7::isCompactPtrAlignedAddressOffset):
+        (JSC::MacroAssemblerARMv7::load32WithCompactAddressOffsetPatch):
+        * assembler/MacroAssemblerX86Common.h:
+        (JSC::MacroAssemblerX86Common::isCompactPtrAlignedAddressOffset):
+        (JSC::MacroAssemblerX86Common::repatchCompact):
+        * assembler/X86Assembler.h:
+        (JSC::X86Assembler::repatchCompact):
+        * bytecode/CodeBlock.cpp:
+        (JSC::dumpStructure):
+        * bytecode/GetByIdStatus.h:
+        (JSC::GetByIdStatus::GetByIdStatus):
+        * dfg/DFGOperations.cpp:
+        * dfg/DFGOperations.h:
+        * dfg/DFGRepatch.cpp:
+        (JSC::DFG::tryCacheGetByID):
+        (JSC::DFG::emitPutTransitionStub):
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::compileAllocatePropertyStorage):
+        (JSC::DFG::SpeculativeJIT::compileReallocatePropertyStorage):
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::callOperation):
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * heap/ConservativeRoots.cpp:
+        (JSC::ConservativeRoots::genericAddPointer):
+        * heap/CopiedSpace.h:
+        (CopiedSpace):
+        * heap/CopiedSpaceInlineMethods.h:
+        (JSC::CopiedSpace::pinIfNecessary):
+        (JSC):
+        * jit/JITPropertyAccess.cpp:
+        (JSC::JIT::compileGetDirectOffset):
+        * jit/JITPropertyAccess32_64.cpp:
+        (JSC::JIT::compileGetDirectOffset):
+        * jit/JITStubs.cpp:
+        (JSC::JITThunks::tryCacheGetByID):
+        * jsc.cpp:
+        (GlobalObject::finishCreation):
+        (functionDescribe):
+        * llint/LLIntCommon.h:
+        * llint/LLIntSlowPaths.cpp:
+        (JSC::LLInt::LLINT_SLOW_PATH_DECL):
+        * llint/LowLevelInterpreter32_64.asm:
+        * llint/LowLevelInterpreter64.asm:
+        * runtime/JSObject.cpp:
+        (JSC::JSObject::visitChildren):
+        (JSC::JSFinalObject::visitChildren):
+        (JSC::JSObject::growOutOfLineStorage):
+        * runtime/JSObject.h:
+        (JSC::JSObject::getDirectLocation):
+        (JSC::JSObject::offsetForLocation):
+        * runtime/JSValue.h:
+        (JSValue):
+        * runtime/PropertyOffset.h:
+        (JSC::offsetInOutOfLineStorage):
+
+2012-07-23  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG is too aggressive in performing the specific value optimization on loads
+        https://bugs.webkit.org/show_bug.cgi?id=92034
+
+        Reviewed by Mark Hahnenberg.
+
+        This ensures that we don't do optimizations based on a structure having a specific
+        value, if there is no way to detect that the value is despecified. This is the
+        case for dictionaries, since despecifying a value in a dictionary does not lead to
+        a transition and so cannot be caught by either structure checks or structure
+        transition watchpoints.
+
+        * bytecode/GetByIdStatus.cpp:
+        (JSC::GetByIdStatus::computeFromLLInt):
+        (JSC::GetByIdStatus::computeForChain):
+        (JSC::GetByIdStatus::computeFor):
+        * bytecode/ResolveGlobalStatus.cpp:
+        (JSC::computeForStructure):
+
+2012-07-23  Filip Pizlo  <fpizlo@apple.com>
+
+        REGRESSION(r123169): It made fast/js/dfg-inline-arguments-use-from-uninlined-code.html fail on 32 bit platforms
+        https://bugs.webkit.org/show_bug.cgi?id=92002
+
+        Reviewed by Mark Hahnenberg.
+        
+        In the process of changing the nature of local variable typing, I forgot to modify one of the places where
+        we glue the DFG's notion of variable prediction to the runtime's notion of variable tagging.
+
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+
+2012-07-23  Simon Fraser  <simon.fraser@apple.com>
+
+        Part 2 of: Implement sticky positioning
+        https://bugs.webkit.org/show_bug.cgi?id=90046
+
+        Reviewed by Ojan Vafai.
+
+        Turn on ENABLE_CSS_STICKY_POSITION.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-07-23  Patrick Gansterer  <paroga@webkit.org>
+
+        Move JSC::parseDate() from DateConversion to JSDateMath
+        https://bugs.webkit.org/show_bug.cgi?id=91982
+
+        Reviewed by Geoffrey Garen.
+
+        Moveing this function into the other files removes the dependency
+        on JSC spcific classes in DateConversion.{cpp|h}.
+
+        * runtime/DateConversion.cpp:
+        * runtime/DateConversion.h:
+        (JSC):
+        * runtime/JSDateMath.cpp:
+        (JSC::parseDate):
+        (JSC):
+        * runtime/JSDateMath.h:
+        (JSC):
+
+2012-07-23  Simon Fraser  <simon.fraser@apple.com>
+
+        Part 1 of: Implement sticky positioning
+        https://bugs.webkit.org/show_bug.cgi?id=90046
+
+        Reviewed by Ojan Vafai.
+
+        Add ENABLE_CSS_STICKY_POSITION, defaulting to off initially.
+        
+        Sort the ENABLE_CSS lines in the file. Make sure all the flags
+        are in FEATURE_DEFINES.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-07-23  Yong Li  <yoli@rim.com>
+
+        [BlackBerry] Implement GCActivityCallback with platform timer
+        https://bugs.webkit.org/show_bug.cgi?id=90175
+
+        Reviewed by Rob Buis.
+
+        Use JSLock when performing GC to avoid assertions.
+
+        * runtime/GCActivityCallbackBlackBerry.cpp:
+        (JSC::DefaultGCActivityCallback::doWork):
+
+2012-07-23  Kent Tamura  <tkent@chromium.org>
+
+        Rename ENABLE_METER_TAG and ENABLE_PROGRESS_TAG to ENABLE_METER_ELEMENT and ENABLE_PROGRESS_ELEMENT respectively
+        https://bugs.webkit.org/show_bug.cgi?id=91941
+
+        Reviewed by Kentaro Hara.
+
+        A flag name for an elmement should be ENABLE_*_ELEMENT.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-07-22  Kent Tamura  <tkent@chromium.org>
+
+        Rename ENABLE_DETAILS to ENABLE_DETAILS_ELEMENT
+        https://bugs.webkit.org/show_bug.cgi?id=91928
+
+        Reviewed by Kentaro Hara.
+
+        A flag name for an elmement should be ENABLE_*_ELEMENT.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-07-21  Patrick Gansterer  <paroga@webkit.org>
+
+        [WIN] Use GetDateFormat and GetTimeFormat instead of strftime
+        https://bugs.webkit.org/show_bug.cgi?id=83436
+
+        Reviewed by Brent Fulgham.
+
+        The MS CRT implementation of strftime calls the same two functions.
+        Using them directly avoids the overhead of parsing the format string and removes
+        the dependency on strftime() for WinCE where this function does not exist.
+
+        * runtime/DatePrototype.cpp:
+        (JSC::formatLocaleDate):
+
+2012-07-20  Kent Tamura  <tkent@chromium.org>
+
+        Rename ENABLE_DATALIST to ENABLE_DATALIST_ELEMENT
+        https://bugs.webkit.org/show_bug.cgi?id=91846
+
+        Reviewed by Kentaro Hara.
+
+        A flag name for an elmement should be ENABLE_*_ELEMENT.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-07-20  Han Shen  <shenhan@google.com>
+
+        [Chromium] Compilation fails under gcc 4.7
+        https://bugs.webkit.org/show_bug.cgi?id=90227
+
+        Reviewed by Tony Chang.
+
+        Disable warnings about c++0x compatibility in gcc newer than 4.6.
+
+        * JavaScriptCore.gyp/JavaScriptCore.gyp:
+
+2012-07-18  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG cell checks should be hoisted
+        https://bugs.webkit.org/show_bug.cgi?id=91717
+
+        Reviewed by Geoffrey Garen.
+
+        The DFG has always had the policy of hoisting array and integer checks to
+        the point of variable assignment. Eventually, we added doubles and booleans
+        to the mix. But cells should really be part of this as well, particularly
+        for 32-bit where accessing a known-type variable is dramatically cheaper
+        than accessing a variable whose types is only predicted but otherwise
+        unproven.
+        
+        This appears to be a definite speed-up for V8 on 32-bit, a possible speed-up
+        for Kraken, and a possible slow-down for V8 on 64-bit (around 0.2% if at
+        all). Any slow-downs can, and should, be addressed by making the hoisting
+        logic cognizant of variables that are never used in a manner that requires
+        type checks, and by sinking argument checks to the point(s) of first use.
+        
+        To make this work I had to change some OSR machinery, and special-case the
+        type predictions of the 'this' argument for constructors. OSR exit normally
+        assumes that arguments are boxed, which happens to be true because the
+        type prediction used for check hoisting is LUB'd with the type of the
+        argument that was passed in - so either the arguments are always stored to
+        with the full tag+payload, or if only the payload is stored then the tag
+        matches whatever the caller would have set. But not so with the 'this'
+        argument for constructors, which is not initialized by the caller. We
+        could make this more precise by having argument types for OSR be inferred
+        using similar machinery to other locals, but I figured that for this patch
+        I should use the surgical fix.
+
+        * assembler/MacroAssemblerX86_64.h:
+        (JSC::MacroAssemblerX86_64::branchTestPtr):
+        (MacroAssemblerX86_64):
+        * assembler/X86Assembler.h:
+        (JSC::X86Assembler::testq_rm):
+        (X86Assembler):
+        * dfg/DFGAbstractState.cpp:
+        (JSC::DFG::AbstractState::initialize):
+        (JSC::DFG::AbstractState::execute):
+        * dfg/DFGDriver.cpp:
+        (JSC::DFG::compile):
+        * dfg/DFGGraph.h:
+        (JSC::DFG::Graph::isCreatedThisArgument):
+        (Graph):
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::checkArgumentTypes):
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGValueSource.h:
+        (JSC::DFG::ValueSource::forSpeculation):
+
+2012-07-19  Filip Pizlo  <fpizlo@apple.com>
+
+        Fast path of storage resize should be removed from property storage reallocation, since it is only useful for arrays
+        https://bugs.webkit.org/show_bug.cgi?id=91796
+
+        Reviewed by Geoffrey Garen.
+
+        * dfg/DFGRepatch.cpp:
+        (JSC::DFG::emitPutTransitionStub):
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::compileReallocatePropertyStorage):
+        * runtime/JSObject.cpp:
+        (JSC::JSObject::growOutOfLineStorage):
+
 2012-07-19  Mark Lam  <mark.lam@apple.com>
 
         Bug fixes and enhancements for OfflineASM annotation system.

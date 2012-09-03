@@ -39,9 +39,7 @@ namespace WebCore {
 class CCActiveGestureAnimation;
 class CCCompletionEvent;
 class CCDebugRectHistory;
-class CCFontAtlas;
 class CCFrameRateCounter;
-class CCHeadsUpDisplay;
 class CCLayerImpl;
 class CCLayerTreeHostImplTimeSourceAdapter;
 class CCPageScaleAnimation;
@@ -49,6 +47,7 @@ class CCRenderPassDrawQuad;
 class CCResourceProvider;
 class LayerRendererChromium;
 struct LayerRendererCapabilities;
+struct CCRenderingStats;
 
 // CCLayerTreeHost->CCProxy callback interface.
 class CCLayerTreeHostImplClient {
@@ -70,17 +69,17 @@ public:
     virtual ~CCLayerTreeHostImpl();
 
     // CCInputHandlerClient implementation
-    virtual CCInputHandlerClient::ScrollStatus scrollBegin(const IntPoint&, CCInputHandlerClient::ScrollInputType);
-    virtual void scrollBy(const IntSize&);
-    virtual void scrollEnd();
-    virtual void pinchGestureBegin();
-    virtual void pinchGestureUpdate(float, const IntPoint&);
-    virtual void pinchGestureEnd();
-    virtual void startPageScaleAnimation(const IntSize& targetPosition, bool anchorPoint, float pageScale, double startTime, double duration);
-    virtual CCActiveGestureAnimation* activeGestureAnimation() { return m_activeGestureAnimation.get(); }
+    virtual CCInputHandlerClient::ScrollStatus scrollBegin(const IntPoint&, CCInputHandlerClient::ScrollInputType) OVERRIDE;
+    virtual void scrollBy(const IntSize&) OVERRIDE;
+    virtual void scrollEnd() OVERRIDE;
+    virtual void pinchGestureBegin() OVERRIDE;
+    virtual void pinchGestureUpdate(float, const IntPoint&) OVERRIDE;
+    virtual void pinchGestureEnd() OVERRIDE;
+    virtual void startPageScaleAnimation(const IntSize& targetPosition, bool anchorPoint, float pageScale, double startTime, double duration) OVERRIDE;
+    virtual CCActiveGestureAnimation* activeGestureAnimation() OVERRIDE { return m_activeGestureAnimation.get(); }
     // To clear an active animation, pass nullptr.
-    virtual void setActiveGestureAnimation(PassOwnPtr<CCActiveGestureAnimation>);
-    virtual void scheduleAnimation();
+    virtual void setActiveGestureAnimation(PassOwnPtr<CCActiveGestureAnimation>) OVERRIDE;
+    virtual void scheduleAnimation() OVERRIDE;
 
     struct FrameData {
         Vector<IntRect> occludingScreenSpaceRects;
@@ -118,10 +117,9 @@ public:
     CCGraphicsContext* context() const;
 
     String layerTreeAsText() const;
-    void setFontAtlas(PassOwnPtr<CCFontAtlas>);
 
     void finishAllRendering();
-    int sourceAnimationFrameNumber() const { return m_sourceAnimationFrameNumber; }
+    int sourceAnimationFrameNumber() const;
 
     bool initializeLayerRenderer(PassOwnPtr<CCGraphicsContext>, TextureUploaderOption);
     bool isContextLost();
@@ -174,6 +172,8 @@ public:
 
     void setNeedsRedraw();
 
+    void renderingStats(CCRenderingStats&) const;
+
     CCFrameRateCounter* fpsCounter() const { return m_fpsCounter.get(); }
     CCDebugRectHistory* debugRectHistory() const { return m_debugRectHistory.get(); }
     CCResourceProvider* resourceProvider() const { return m_resourceProvider.get(); }
@@ -225,7 +225,6 @@ protected:
 
     CCLayerTreeHostImplClient* m_client;
     int m_sourceFrameNumber;
-    int m_sourceAnimationFrameNumber;
 
 private:
     void computeDoubleTapZoomDeltas(CCScrollAndScaleSet* scrollInfo);
@@ -265,8 +264,6 @@ private:
     bool m_visible;
     bool m_contentsTexturesWerePurgedSinceLastCommit;
     size_t m_memoryAllocationLimitBytes;
-
-    OwnPtr<CCHeadsUpDisplay> m_headsUpDisplay;
 
     float m_pageScale;
     float m_pageScaleDelta;

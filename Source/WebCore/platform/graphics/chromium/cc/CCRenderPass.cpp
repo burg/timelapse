@@ -29,6 +29,7 @@
 
 #include "cc/CCLayerImpl.h"
 #include "cc/CCMathUtil.h"
+#include "cc/CCOcclusionTracker.h"
 #include "cc/CCQuadCuller.h"
 #include "cc/CCSharedQuadState.h"
 #include "cc/CCSolidColorDrawQuad.h"
@@ -47,6 +48,7 @@ CCRenderPass::CCRenderPass(CCRenderSurface* targetSurface, int id)
     , m_targetSurface(targetSurface)
     , m_framebufferOutputRect(targetSurface->contentRect())
     , m_hasTransparentBackground(true)
+    , m_hasOcclusionFromOutsideTargetSurface(false)
 {
     ASSERT(targetSurface);
     ASSERT(id > 0);
@@ -54,19 +56,23 @@ CCRenderPass::CCRenderPass(CCRenderSurface* targetSurface, int id)
 
 void CCRenderPass::appendQuadsForLayer(CCLayerImpl* layer, CCOcclusionTrackerImpl* occlusionTracker, bool& hadMissingTiles)
 {
-    CCQuadCuller quadCuller(m_quadList, layer, occlusionTracker, layer->hasDebugBorders());
+    const bool forSurface = false;
+    CCQuadCuller quadCuller(m_quadList, layer, occlusionTracker, layer->hasDebugBorders(), forSurface);
 
     OwnPtr<CCSharedQuadState> sharedQuadState = layer->createSharedQuadState(m_sharedQuadStateList.size());
     layer->appendDebugBorderQuad(quadCuller, sharedQuadState.get());
     layer->appendQuads(quadCuller, sharedQuadState.get(), hadMissingTiles);
     m_sharedQuadStateList.append(sharedQuadState.release());
+
+    m_hasOcclusionFromOutsideTargetSurface |= quadCuller.hasOcclusionFromOutsideTargetSurface();
 }
 
 void CCRenderPass::appendQuadsForRenderSurfaceLayer(CCLayerImpl* layer, const CCRenderPass* contributingRenderPass, CCOcclusionTrackerImpl* occlusionTracker)
 {
     // FIXME: render surface layers should be a CCLayerImpl-derived class and
     // not be handled specially here.
-    CCQuadCuller quadCuller(m_quadList, layer, occlusionTracker, layer->hasDebugBorders());
+    const bool forSurface = true;
+    CCQuadCuller quadCuller(m_quadList, layer, occlusionTracker, layer->hasDebugBorders(), forSurface);
 
     CCRenderSurface* surface = layer->renderSurface();
 
@@ -74,6 +80,8 @@ void CCRenderPass::appendQuadsForRenderSurfaceLayer(CCLayerImpl* layer, const CC
     bool isReplica = false;
     surface->appendQuads(quadCuller, sharedQuadState.get(), isReplica, contributingRenderPass->id());
     m_sharedQuadStateList.append(sharedQuadState.release());
+
+    m_hasOcclusionFromOutsideTargetSurface |= quadCuller.hasOcclusionFromOutsideTargetSurface();
 
     if (!layer->hasReplica())
         return;
@@ -83,6 +91,8 @@ void CCRenderPass::appendQuadsForRenderSurfaceLayer(CCLayerImpl* layer, const CC
     isReplica = true;
     surface->appendQuads(quadCuller, replicaSharedQuadState.get(), isReplica, contributingRenderPass->id());
     m_sharedQuadStateList.append(replicaSharedQuadState.release());
+
+    m_hasOcclusionFromOutsideTargetSurface |= quadCuller.hasOcclusionFromOutsideTargetSurface();
 }
 
 void CCRenderPass::appendQuadsToFillScreen(CCLayerImpl* rootLayer, SkColor screenBackgroundColor, const CCOcclusionTrackerImpl& occlusionTracker)
@@ -97,6 +107,7 @@ void CCRenderPass::appendQuadsToFillScreen(CCLayerImpl* rootLayer, SkColor scree
     // Manually create the quad state for the gutter quads, as the root layer
     // doesn't have any bounds and so can't generate this itself.
     OwnPtr<CCSharedQuadState> sharedQuadState = rootLayer->createSharedQuadState(m_sharedQuadStateList.size());
+    ASSERT(rootLayer->screenSpaceTransform().isInvertible());
     WebTransformationMatrix transformToLayerSpace = rootLayer->screenSpaceTransform().inverse();
     Vector<IntRect> fillRects = fillRegion.rects();
     for (size_t i = 0; i < fillRects.size(); ++i) {

@@ -54,7 +54,7 @@ namespace WebCore {
         virtual Color platformActiveSelectionForegroundColor() const;
         virtual Color platformInactiveSelectionForegroundColor() const;
 
-#if ENABLE(DATALIST)        
+#if ENABLE(DATALIST_ELEMENT)
         virtual IntSize sliderTickSize() const OVERRIDE;
         virtual int sliderTickOffsetFromTrackCenter() const OVERRIDE;
 #endif
@@ -80,7 +80,7 @@ namespace WebCore {
 
         virtual bool popsMenuBySpaceOrReturn() const OVERRIDE { return true; }
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
         virtual bool paintProgressBar(RenderObject*, const PaintInfo&, const IntRect&);
 #endif
 

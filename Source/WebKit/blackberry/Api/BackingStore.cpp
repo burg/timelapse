@@ -209,7 +209,6 @@ BackingStorePrivate::BackingStorePrivate()
     , m_hasBlitJobs(false)
     , m_currentWindowBackBuffer(0)
     , m_preferredTileMatrixDimension(Vertical)
-    , m_blitGeneration(-1)
 #if USE(ACCELERATED_COMPOSITING)
     , m_needsDrawLayersOnCommit(false)
     , m_isDirectRenderingAnimationMessageScheduled(false)
@@ -226,9 +225,6 @@ BackingStorePrivate::BackingStorePrivate()
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
     pthread_mutex_init(&m_mutex, &attr);
     pthread_mutexattr_destroy(&attr);
-
-    pthread_mutex_init(&m_blitGenerationLock, 0);
-    pthread_cond_init(&m_blitGenerationCond, 0);
 }
 
 BackingStorePrivate::~BackingStorePrivate()
@@ -241,8 +237,6 @@ BackingStorePrivate::~BackingStorePrivate()
     delete back;
     m_backState = 0;
 
-    pthread_cond_destroy(&m_blitGenerationCond);
-    pthread_mutex_destroy(&m_blitGenerationLock);
     pthread_mutex_destroy(&m_mutex);
 }
 
@@ -399,8 +393,11 @@ void BackingStorePrivate::repaint(const Platform::IntRect& windowRect,
 #endif
 
         if (immediate) {
-            if (render(rect) && !shouldDirectRenderingToWindow())
-                blitVisibleContents();
+            if (render(rect)) {
+                if (!shouldDirectRenderingToWindow())
+                    blitVisibleContents();
+                m_webPage->d->m_client->notifyContentRendered(rect);
+            }
         } else
             m_renderQueue->addToQueue(RenderQueue::RegularRender, rect);
     }
@@ -921,6 +918,9 @@ void BackingStorePrivate::clearAndUpdateTileOfNotRenderedRegion(const TileIndex&
                                                                 const Platform::IntRect& backingStoreRect,
                                                                 bool update)
 {
+    if (tileNotRenderedRegion.isEmpty())
+        return;
+
     // Intersect the tile with the not rendered region to get the areas
     // of the tile that we need to clear.
     IntRectList tileNotRenderedRegionRects = tileNotRenderedRegion.rects();
@@ -933,17 +933,43 @@ void BackingStorePrivate::clearAndUpdateTileOfNotRenderedRegion(const TileIndex&
             // Add it again as a regular render job.
             m_renderQueue->addToQueue(RenderQueue::RegularRender, tileNotRenderedRegionRect);
         }
-
-        // Find the origin of this tile.
-        Platform::IntPoint origin = originOfTile(index, backingStoreRect);
-
-        // Map to tile coordinates.
-        tileNotRenderedRegionRect.move(-origin.x(), -origin.y());
-
-        // Clear the tile of this region.
-        tile->frontBuffer()->clearRenderedRegion(tileNotRenderedRegionRect);
-        tile->backBuffer()->clearRenderedRegion(tileNotRenderedRegionRect);
     }
+
+    // Find the origin of this tile.
+    Platform::IntPoint origin = originOfTile(index, backingStoreRect);
+
+    // Map to tile coordinates.
+    Platform::IntRectRegion translatedRegion(tileNotRenderedRegion);
+    translatedRegion.move(-origin.x(), -origin.y());
+
+    // If the region in question is already marked as not rendered, return early
+    if (Platform::IntRectRegion::intersectRegions(tile->frontBuffer()->renderedRegion(), translatedRegion).isEmpty())
+        return;
+
+    // Clear the tile of this region. The back buffer region is invalid anyway, but the front
+    // buffer must not be manipulated without synchronization with the compositing thread, or
+    // we have a race.
+    // Instead of using the customary sequence of copy-back, modify and swap, we send a synchronous
+    // message to the compositing thread to avoid the copy-back step and save memory bandwidth.
+    // The trade-off is that the WebKit thread might wait a little longer for the compositing thread
+    // than it would from a waitForCurrentMessage() call.
+
+    ASSERT(Platform::webKitThreadMessageClient()->isCurrentThread());
+    if (!Platform::webKitThreadMessageClient()->isCurrentThread())
+        return;
+
+    Platform::userInterfaceThreadMessageClient()->dispatchSyncMessage(
+        Platform::createMethodCallMessage(&BackingStorePrivate::clearRenderedRegion,
+            this, tile, translatedRegion));
+}
+
+void BackingStorePrivate::clearRenderedRegion(BackingStoreTile* tile, const Platform::IntRectRegion& region)
+{
+    ASSERT(Platform::userInterfaceThreadMessageClient()->isCurrentThread());
+    if (!Platform::userInterfaceThreadMessageClient()->isCurrentThread())
+        return;
+
+    tile->frontBuffer()->clearRenderedRegion(region);
 }
 
 bool BackingStorePrivate::isCurrentVisibleJob(const TileIndex& index, BackingStoreTile* tile, const Platform::IntRect& backingStoreRect) const
@@ -1072,8 +1098,6 @@ bool BackingStorePrivate::render(const Platform::IntRect& rect)
     BackingStoreGeometry* currentState = frontState();
     TileMap currentMap = currentState->tileMap();
 
-    Platform::IntRect dirtyContentsRect;
-
     for (size_t i = 0; i < tileRectList.size(); ++i) {
         TileRect tileRect = tileRectList[i];
         TileIndex index = tileRect.first;
@@ -1083,15 +1107,6 @@ bool BackingStorePrivate::render(const Platform::IntRect& rect)
         // This dirty tile rect is in tile coordinates, but it needs to be in
         // transformed contents coordinates.
         Platform::IntRect dirtyRect = mapFromTilesToTransformedContents(tileRect);
-
-        // If we're not yet committed, then commit now by clearing the rendered region
-        // and setting the committed flag as well as clearing the shift.
-        if (!tile->isCommitted()) {
-            tile->setCommitted(true);
-            tile->frontBuffer()->clearRenderedRegion();
-            tile->backBuffer()->clearRenderedRegion();
-            tile->clearShift();
-        }
 
         // If the tile has been created, but this is the first time we are painting on it
         // then it hasn't been given a default background yet so that we can save time during
@@ -1112,31 +1127,25 @@ bool BackingStorePrivate::render(const Platform::IntRect& rect)
                 continue;
         }
 
-        copyPreviousContentsToBackSurfaceOfTile(dirtyTileRect, tile);
-
         BlackBerry::Platform::Graphics::Buffer* nativeBuffer
             = tile->backBuffer()->nativeBuffer();
 
-        // This code is only needed for EGLImage code path, and only effective if we are swapping the render target.
-        // This combination is only true if there's a GLES2Usage window.
-        // FIXME: Use an EGL fence instead, PR152132
-        Window* window = m_webPage->client()->window();
-        if (window && window->windowUsage() == Window::GLES2Usage) {
-            pthread_mutex_lock(&m_blitGenerationLock);
-            while (m_blitGeneration == tile->backBuffer()->blitGeneration()) {
-                int err = pthread_cond_timedwait(&m_blitGenerationCond, &m_blitGenerationLock, &m_currentBlitEnd);
-                if (err == ETIMEDOUT) {
-                    ++m_blitGeneration;
-                    break;
-                }
-                if (err) {
-                    BlackBerry::Platform::log(BlackBerry::Platform::LogLevelCritical,
-                                              "cond_timedwait failed (%s)", strerror(err));
-                    break;
-                }
-            }
-            pthread_mutex_unlock(&m_blitGenerationLock);
-        }
+        // TODO: This code is only needed for EGLImage code path, but preferrably BackingStore
+        // should not know that, and the synchronization should be in BlackBerry::Platform::Graphics
+        // if possible.
+        if (isOpenGLCompositing())
+            SurfacePool::globalSurfacePool()->waitForBuffer(tile->backBuffer());
+
+        // Modify the buffer only after we've waited for the buffer to become available above.
+
+        // If we're not yet committed, then commit only after the tile has back buffer has been
+        // swapped in so it has some valid content.
+        // Otherwise the compositing thread could pick up the tile while its front buffer is still invalid.
+        bool wasCommitted = tile->isCommitted();
+        if (wasCommitted)
+            copyPreviousContentsToBackSurfaceOfTile(dirtyTileRect, tile);
+        else
+            tile->backBuffer()->clearRenderedRegion();
 
         // FIXME: modify render to take a Vector<IntRect> parameter so we're not recreating
         // GraphicsContext on the stack each time.
@@ -1145,23 +1154,26 @@ bool BackingStorePrivate::render(const Platform::IntRect& rect)
         // Add the newly rendered region to the tile so it can keep track for blits.
         tile->backBuffer()->addRenderedRegion(dirtyTileRect);
 
-        // Check if the contents for this tile's backbuffer are valid when
-        // compared to the front buffer.
-        bool backBufferIsValid = tile->backBuffer()->isRendered(tile->frontBuffer()->renderedRegion());
-
-        // Our current design demands that the backbuffer is valid after any
-        // rendering operation so assert that here. If we hit this assert we
-        // know that we're doing something bad that will result in artifacts.
-        ASSERT(backBufferIsValid);
+        // Thanks to the copyPreviousContentsToBackSurfaceOfTile() call above, we know that
+        // the rendered region of the back buffer contains the rendered region of the front buffer.
+        // Assert this just to make sure.
+        // For previously uncommitted tiles, the front buffer's rendered region is not relevant.
+        ASSERT(!wasCommitted || tile->backBuffer()->isRendered(tile->frontBuffer()->renderedRegion()));
 
         // We will need a swap here because of the shared back buffer.
-        if (backBufferIsValid) {
-            tile->swapBuffers();
-            BlackBerry::Platform::userInterfaceThreadMessageClient()->syncToCurrentMessage();
-            tile->backBuffer()->clearRenderedRegion();
+        tile->swapBuffers();
+
+        if (!wasCommitted) {
+            // Commit the tile only after it has valid front buffer contents. Now, the compositing thread
+            // can finally start blitting this tile.
+            tile->clearShift();
+            tile->setCommitted(true);
         }
 
-        dirtyContentsRect = Platform::unionOfRects(dirtyContentsRect, dirtyRect);
+        // Before clearing the render region, wait for the compositing thread to stop using the
+        // buffer, in order to avoid a race on its rendered region.
+        BlackBerry::Platform::userInterfaceThreadMessageClient()->syncToCurrentMessage();
+        tile->backBuffer()->clearRenderedRegion();
     }
 
     return true;
@@ -1523,6 +1535,12 @@ void BackingStorePrivate::blitContents(const Platform::IntRect& dstRect,
         }
     }
 
+    // TODO: This code is only needed for EGLImage code path, but preferrably BackingStore
+    // should not know that, and the synchronization should be in BlackBerry::Platform::Graphics
+    // if possible.
+    if (isOpenGLCompositing())
+        SurfacePool::globalSurfacePool()->notifyBuffersComposited(blittedTiles);
+
 #if USE(ACCELERATED_COMPOSITING)
     if (WebPageCompositorPrivate* compositor = m_webPage->d->compositor()) {
         WebCore::FloatRect contentsRect = m_webPage->d->mapFromTransformedFloatRect(WebCore::FloatRect(WebCore::IntRect(contents)));
@@ -1590,28 +1608,6 @@ void BackingStorePrivate::blitContents(const Platform::IntRect& dstRect,
 #endif
 
     invalidateWindow(dstRect);
-
-    // This code is only needed for EGLImage code path, and only effective if we are swapping the render target.
-    // This combination is only true if there's a GLES2Usage window.
-    // FIXME: Use an EGL fence instead
-    Window* window = m_webPage->client()->window();
-    if (window && window->windowUsage() == Window::GLES2Usage && !blittedTiles.isEmpty()) {
-        pthread_mutex_lock(&m_blitGenerationLock);
-
-        ++m_blitGeneration;
-        for (unsigned int i = 0; i < blittedTiles.size(); ++i)
-            blittedTiles[i]->setBlitGeneration(m_blitGeneration);
-
-        clock_gettime(CLOCK_REALTIME, &m_currentBlitEnd);
-        m_currentBlitEnd.tv_nsec += 30 * 1000 * 1000;
-        if (m_currentBlitEnd.tv_nsec >= 1000000000L) {
-            m_currentBlitEnd.tv_sec  += 1;
-            m_currentBlitEnd.tv_nsec -= 1000000000L;
-        }
-
-        pthread_mutex_unlock(&m_blitGenerationLock);
-        pthread_cond_signal(&m_blitGenerationCond);
-    }
 }
 
 #if USE(ACCELERATED_COMPOSITING)
@@ -1631,6 +1627,7 @@ void BackingStorePrivate::compositeContents(WebCore::LayerRenderer* layerRendere
 
     BackingStoreGeometry* currentState = frontState();
     TileMap currentMap = currentState->tileMap();
+    Vector<TileBuffer*> compositedTiles;
 
     Platform::IntRectRegion transformedContentsRegion = transformedContents;
     Platform::IntRectRegion backingStoreRegion = currentState->backingStoreRect();
@@ -1670,7 +1667,7 @@ void BackingStorePrivate::compositeContents(WebCore::LayerRenderer* layerRendere
             layerRenderer->drawCheckerboardPattern(transform, m_webPage->d->mapFromTransformedFloatRect(Platform::FloatRect(dirtyRect)));
         else {
             layerRenderer->compositeBuffer(transform, m_webPage->d->mapFromTransformedFloatRect(Platform::FloatRect(wholeRect)), tileBuffer->nativeBuffer(), contentsOpaque, 1.0f);
-
+            compositedTiles.append(tileBuffer);
             // Intersect the rendered region.
             Platform::IntRectRegion notRenderedRegion = Platform::IntRectRegion::subtractRegions(dirtyTileRect, tileBuffer->renderedRegion());
             IntRectList notRenderedRects = notRenderedRegion.rects();
@@ -1678,6 +1675,8 @@ void BackingStorePrivate::compositeContents(WebCore::LayerRenderer* layerRendere
                 layerRenderer->drawCheckerboardPattern(transform, m_webPage->d->mapFromTransformedFloatRect(Platform::FloatRect(notRenderedRects.at(i))));
         }
     }
+
+    SurfacePool::globalSurfacePool()->notifyBuffersComposited(compositedTiles);
 }
 #endif
 
@@ -2214,6 +2213,10 @@ void BackingStorePrivate::createSurfaces()
     swapState();
 
     createVisibleTileBufferForWebPage(m_webPage->d);
+
+    // Don't try to blit to screen unless we have a buffer.
+    if (!buffer())
+        suspendScreenAndBackingStoreUpdates();
 }
 
 void BackingStorePrivate::createVisibleTileBuffer()
@@ -2867,7 +2870,7 @@ Platform::Graphics::Buffer* BackingStorePrivate::buffer() const
 
 #if USE(ACCELERATED_COMPOSITING)
     if (WebPageCompositorPrivate* compositor = m_webPage->d->compositor())
-        return compositor->context()->buffer();
+        return compositor->context() ? compositor->context()->buffer() : 0;
 #endif
 
     return 0;

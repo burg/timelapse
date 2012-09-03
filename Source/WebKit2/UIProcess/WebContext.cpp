@@ -78,6 +78,10 @@
 #include "WebSoupRequestManagerProxy.h"
 #endif
 
+#if ENABLE(VIBRATION)
+#include "WebVibrationProxy.h"
+#endif
+
 #ifndef NDEBUG
 #include <wtf/RefCountedLeakCounter.h>
 #endif
@@ -90,15 +94,6 @@ using namespace WebCore;
 namespace WebKit {
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, webContextCounter, ("WebContext"));
-
-WebContext* WebContext::sharedProcessContext()
-{
-    JSC::initializeThreading();
-    WTF::initializeMainThread();
-    RunLoop::initializeMainRunLoop();
-    static WebContext* context = adoptRef(new WebContext(ProcessModelSharedSecondaryProcess, String())).leakRef();
-    return context;
-}
 
 WebContext* WebContext::sharedThreadContext()
 {
@@ -142,7 +137,9 @@ WebContext::WebContext(ProcessModel processModel, const String& injectedBundlePa
     , m_batteryManagerProxy(WebBatteryManagerProxy::create(this))
 #endif
     , m_cookieManagerProxy(WebCookieManagerProxy::create(this))
+#if ENABLE(SQL_DATABASE)
     , m_databaseManagerProxy(WebDatabaseManagerProxy::create(this))
+#endif
     , m_geolocationManagerProxy(WebGeolocationManagerProxy::create(this))
     , m_iconDatabase(WebIconDatabase::create(this))
     , m_keyValueStorageManagerProxy(WebKeyValueStorageManagerProxy::create(this))
@@ -155,6 +152,9 @@ WebContext::WebContext(ProcessModel processModel, const String& injectedBundlePa
     , m_resourceCacheManagerProxy(WebResourceCacheManagerProxy::create(this))
 #if USE(SOUP)
     , m_soupRequestManagerProxy(WebSoupRequestManagerProxy::create(this))
+#endif
+#if ENABLE(VIBRATION)
+    , m_vibrationProxy(WebVibrationProxy::create(this))
 #endif
 #if PLATFORM(WIN)
     , m_shouldPaintNativeControls(true)
@@ -203,8 +203,10 @@ WebContext::~WebContext()
     m_cookieManagerProxy->invalidate();
     m_cookieManagerProxy->clearContext();
 
+#if ENABLE(SQL_DATABASE)
     m_databaseManagerProxy->invalidate();
     m_databaseManagerProxy->clearContext();
+#endif
     
     m_geolocationManagerProxy->invalidate();
     m_geolocationManagerProxy->clearContext();
@@ -235,6 +237,11 @@ WebContext::~WebContext()
 #if USE(SOUP)
     m_soupRequestManagerProxy->invalidate();
     m_soupRequestManagerProxy->clearContext();
+#endif
+
+#if ENABLE(VIBRATION)
+    m_vibrationProxy->invalidate();
+    m_vibrationProxy->clearContext();
 #endif
 
     invalidateCallbackMap(m_dictionaryCallbacks);
@@ -369,8 +376,10 @@ bool WebContext::shouldTerminate(WebProcessProxy* process)
         return false;
     if (!m_cookieManagerProxy->shouldTerminate(process))
         return false;
+#if ENABLE(SQL_DATABASE)
     if (!m_databaseManagerProxy->shouldTerminate(process))
         return false;
+#endif
     if (!m_keyValueStorageManagerProxy->shouldTerminate(process))
         return false;
     if (!m_mediaCacheManagerProxy->shouldTerminate(process))
@@ -426,7 +435,9 @@ void WebContext::disconnectProcess(WebProcessProxy* process)
     m_batteryManagerProxy->invalidate();
 #endif
     m_cookieManagerProxy->invalidate();
+#if ENABLE(SQL_DATABASE)
     m_databaseManagerProxy->invalidate();
+#endif
     m_geolocationManagerProxy->invalidate();
     m_keyValueStorageManagerProxy->invalidate();
     m_mediaCacheManagerProxy->invalidate();
@@ -437,6 +448,9 @@ void WebContext::disconnectProcess(WebProcessProxy* process)
     m_resourceCacheManagerProxy->invalidate();
 #if USE(SOUP)
     m_soupRequestManagerProxy->invalidate();
+#endif
+#if ENABLE(VIBRATION)
+    m_vibrationProxy->invalidate();
 #endif
 
     // When out of process plug-ins are enabled, we don't want to invalidate the plug-in site data
@@ -773,10 +787,12 @@ void WebContext::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Mes
         return;
     }
 
+#if ENABLE(SQL_DATABASE)
     if (messageID.is<CoreIPC::MessageClassWebDatabaseManagerProxy>()) {
         m_databaseManagerProxy->didReceiveWebDatabaseManagerProxyMessage(connection, messageID, arguments);
         return;
     }
+#endif
 
     if (messageID.is<CoreIPC::MessageClassWebGeolocationManagerProxy>()) {
         m_geolocationManagerProxy->didReceiveMessage(connection, messageID, arguments);
@@ -818,6 +834,13 @@ void WebContext::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Mes
 #if USE(SOUP)
     if (messageID.is<CoreIPC::MessageClassWebSoupRequestManagerProxy>()) {
         m_soupRequestManagerProxy->didReceiveMessage(connection, messageID, arguments);
+        return;
+    }
+#endif
+
+#if ENABLE(VIBRATION)
+    if (messageID.is<CoreIPC::MessageClassWebVibrationProxy>()) {
+        m_vibrationProxy->didReceiveMessage(connection, messageID, arguments);
         return;
     }
 #endif

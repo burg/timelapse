@@ -470,6 +470,13 @@ AC_SUBST(ENCHANT_CFLAGS)
 AC_SUBST(ENCHANT_LIBS)
 fi
 
+if test "$enable_media_stream" = "yes"; then
+   PKG_CHECK_MODULES([FARSTREAM], [farstream-0.1], [have_farstream=yes],
+                     AC_MSG_ERROR([farstream is required to enable media_stream]))
+   AC_SUBST([FARSTREAM_CFLAGS])
+   AC_SUBST([FARSTREAM_LIBS])
+fi
+
 PKG_CHECK_MODULES(GAIL, $GAIL_PC_NAME >= $GAIL_REQUIRED_VERSION)
 AC_SUBST(GAIL_CFLAGS)
 AC_SUBST(GAIL_LIBS)
@@ -1141,6 +1148,14 @@ AC_ARG_ENABLE(css_filters,
               [],[enable_css_filters="no"])
 AC_MSG_RESULT([$enable_css_filters])
 
+# check whether to enable CSS Compositing support
+AC_MSG_CHECKING([whether to enable CSS Compositing])
+AC_ARG_ENABLE(css_compositing,
+              AC_HELP_STRING([--enable-css-compositing],
+                             [enable support for CSS Compositing[default=no]]),
+              [],[enable_css_compositing="no"])
+AC_MSG_RESULT([$enable_css_compositing])
+
 G_IR_SCANNER=
 G_IR_COMPILER=
 G_IR_GENERATE=
@@ -1412,24 +1427,27 @@ AM_CONDITIONAL([USE_OPENGL], [test "$with_acceleration_backend" = "opengl"])
 AM_CONDITIONAL([ENABLE_INDEXED_DATABASE],[test "$enable_indexed_database" = "yes"])
 AM_CONDITIONAL([USE_LEVELDB],[test "$enable_indexed_database" = "yes"])
 
+# Farstream feature conditional
+AM_CONDITIONAL([USE_FARSTREAM], [test "$have_farstream" = "yes"])
+
 # WebKit feature conditionals
 AM_CONDITIONAL([ENABLE_DEBUG],[test "$enable_debug_features" = "yes"])
 AM_CONDITIONAL([ENABLE_UNSTABLE_FEATURES],[test "$enable_unstable_features" = "yes"])
 AM_CONDITIONAL([ENABLE_WEBGL],[test "$enable_webgl" = "yes"])
 AM_CONDITIONAL([ENABLE_BLOB],[test "$enable_blob" = "yes"])
 AM_CONDITIONAL([ENABLE_LEGACY_WEBKIT_BLOB_BUILDER],[test "$enable_legacy_webkit_blob_builder" = "yes"])
-AM_CONDITIONAL([ENABLE_METER_TAG],[test "$enable_meter_tag" = "yes"])
+AM_CONDITIONAL([ENABLE_METER_ELEMENT],[test "$enable_meter_tag" = "yes"])
 AM_CONDITIONAL([ENABLE_MICRODATA],[test "$enable_microdata" = "yes"])
 AM_CONDITIONAL([ENABLE_PAGE_VISIBILITY_API],[test "$enable_page_visibility_api" = "yes"])
-AM_CONDITIONAL([ENABLE_PROGRESS_TAG],[test "$enable_progress_tag" = "yes"])
+AM_CONDITIONAL([ENABLE_PROGRESS_ELEMENT],[test "$enable_progress_tag" = "yes"])
 AM_CONDITIONAL([ENABLE_CHANNEL_MESSAGING],[test "$enable_channel_messaging" = "yes"])
 AM_CONDITIONAL([ENABLE_JAVASCRIPT_DEBUGGER],[test "$enable_javascript_debugger" = "yes"])
 AM_CONDITIONAL([ENABLE_GAMEPAD],[test "$enable_gamepad" = "yes"])
 AM_CONDITIONAL([ENABLE_DIRECTORY_UPLOAD],[test "$enable_directory_upload" = "yes"])
 AM_CONDITIONAL([ENABLE_DATA_TRANSFER_ITEMS],[test "$enable_data_transfer_items" = "yes"])
 AM_CONDITIONAL([ENABLE_SQL_DATABASE],[test "$enable_sql_database" = "yes"])
-AM_CONDITIONAL([ENABLE_DATALIST],[test "$enable_datalist" = "yes"])
-AM_CONDITIONAL([ENABLE_DETAILS],[test "$enable_details" = "yes"])
+AM_CONDITIONAL([ENABLE_DATALIST_ELEMENT],[test "$enable_datalist" = "yes"])
+AM_CONDITIONAL([ENABLE_DETAILS_ELEMENT],[test "$enable_details" = "yes"])
 AM_CONDITIONAL([ENABLE_FAST_MOBILE_SCROLLING],[test "$enable_fast_mobile_scrolling" = "yes"])
 AM_CONDITIONAL([ENABLE_FILE_SYSTEM],[test "$enable_file_system" = "yes"])
 AM_CONDITIONAL([ENABLE_STYLE_SCOPED],[test "$enable_style_scoped" = "yes"])
@@ -1483,6 +1501,7 @@ AM_CONDITIONAL([ENABLE_TEXT_AUTOSIZING],[test "$enable_text_autosizing" = "yes"]
 AM_CONDITIONAL([ENABLE_CSS_EXCLUSIONS],[test "$enable_css_exclusions" = "yes"])
 AM_CONDITIONAL([ENABLE_CSS_REGIONS],[test "$enable_css_regions" = "yes"])
 AM_CONDITIONAL([ENABLE_CSS_FILTERS],[test "$enable_css_filters" = "yes"])
+AM_CONDITIONAL([ENABLE_CSS_COMPOSITING],[test "$enable_css_compositing" = "yes"])
 
 # Gtk conditionals
 AM_CONDITIONAL([ENABLE_INTROSPECTION],[test "$enable_introspection" = "yes"])
@@ -1545,6 +1564,7 @@ Features:
  CSS Exclusions support                                   : $enable_css_exclusions
  CSS Regions support                                      : $enable_css_regions
  CSS Filters support                                      : $enable_css_filters
+ CSS Compositing support                                  : $enable_css_compositing
  DeviceOrientation support                                : $enable_device_orientation
  Directory upload                                         : $enable_directory_upload
  DOM mutation observer support                            : $enable_mutation_observers

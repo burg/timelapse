@@ -997,6 +997,11 @@ public:
         m_formatter.oneByteOp64(OP_TEST_EvGv, src, dst);
     }
 
+    void testq_rm(RegisterID src, int offset, RegisterID base)
+    {
+        m_formatter.oneByteOp64(OP_TEST_EvGv, src, base, offset);
+    }
+
     void testq_i32r(int imm, RegisterID dst)
     {
         m_formatter.oneByteOp64(OP_GROUP3_EvIz, GROUP3_OP_TEST, dst);
@@ -1824,7 +1829,7 @@ public:
     
     static void repatchCompact(void* where, int32_t value)
     {
-        ASSERT(value >= 0);
+        ASSERT(value >= std::numeric_limits<int8_t>::min());
         ASSERT(value <= std::numeric_limits<int8_t>::max());
         setInt8(where, value);
     }

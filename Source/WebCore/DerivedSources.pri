@@ -252,6 +252,7 @@ IDL_BINDINGS += \
     $$PWD/dom/PopStateEvent.idl \
     $$PWD/dom/ProcessingInstruction.idl \
     $$PWD/dom/ProgressEvent.idl \
+    $$PWD/dom/PropertyNodeList.idl \
     $$PWD/dom/RangeException.idl \
     $$PWD/dom/Range.idl \
     $$PWD/dom/RequestAnimationFrameCallback.idl \
@@ -396,6 +397,7 @@ IDL_BINDINGS += \
     $$PWD/html/ImageData.idl \
     $$PWD/html/MediaController.idl \
     $$PWD/html/MediaError.idl \
+    $$PWD/html/MicroDataItemValue.idl \
     $$PWD/html/RadioNodeList.idl \
     $$PWD/html/TextMetrics.idl \
     $$PWD/html/TimeRanges.idl \
@@ -413,6 +415,7 @@ IDL_BINDINGS += \
     $$PWD/page/Console.idl \
     $$PWD/page/Coordinates.idl \
     $$PWD/page/Crypto.idl \
+    $$PWD/page/DOMSecurityPolicy.idl \
     $$PWD/page/DOMSelection.idl \
     $$PWD/page/DOMWindow.idl \
     $$PWD/page/EventSource.idl \
@@ -440,6 +443,7 @@ IDL_BINDINGS += \
     $$PWD/plugins/DOMMimeTypeArray.idl \
     $$PWD/storage/Storage.idl \
     $$PWD/storage/StorageEvent.idl \
+    $$PWD/testing/FastMallocStatistics.idl \
     $$PWD/testing/Internals.idl \
     $$PWD/testing/InternalSettings.idl \
     $$PWD/workers/AbstractWorker.idl \
@@ -616,6 +620,12 @@ contains(DEFINES, ENABLE_VIDEO_TRACK=1) {
     $$PWD/html/track/TextTrackCueList.idl \
     $$PWD/html/track/TextTrackList.idl \
     $$PWD/html/track/TrackEvent.idl \
+}
+
+contains(DEFINES, ENABLE_MEDIA_SOURCE=1) {
+  IDL_BINDINGS += \
+    $$PWD/Modules/mediasource/SourceBuffer.idl \
+    $$PWD/Modules/mediasource/SourceBufferList.idl
 }
 
 mathmlnames.output = MathMLNames.cpp

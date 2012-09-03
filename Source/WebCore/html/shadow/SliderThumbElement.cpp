@@ -113,7 +113,7 @@ void RenderSliderThumb::layout()
 {
     // Do not cast node() to SliderThumbElement. This renderer is used for
     // TrackLimitElement too.
-    HTMLInputElement* input = node()->shadowAncestorNode()->toInputElement();
+    HTMLInputElement* input = node()->shadowHost()->toInputElement();
     bool isVertical = hasVerticalAppearance(input);
 
     double fraction = (sliderPosition(input) * 100).toDouble();
@@ -142,7 +142,7 @@ private:
 
 void RenderSliderContainer::layout()
 {
-    HTMLInputElement* input = node()->shadowAncestorNode()->toInputElement();
+    HTMLInputElement* input = node()->shadowHost()->toInputElement();
     bool isVertical = hasVerticalAppearance(input);
     style()->setBoxOrient(isVertical ? VERTICAL : HORIZONTAL);
     // Sets the concrete height if the height of the <input> is not fixed or a
@@ -156,7 +156,7 @@ void RenderSliderContainer::layout()
                 RenderObject* thumbRenderer = input->sliderThumbElement()->renderer();
                 if (thumbRenderer) {
                     Length height = thumbRenderer->style()->height();
-#if ENABLE(DATALIST)
+#if ENABLE(DATALIST_ELEMENT)
                     if (input && input->list()) {
                         int offsetFromCenter = theme()->sliderTickOffsetFromTrackCenter();
                         int trackHeight = 0;
@@ -214,9 +214,14 @@ bool SliderThumbElement::isEnabledFormControl() const
     return hostInput()->isEnabledFormControl();
 }
 
-bool SliderThumbElement::isReadOnlyFormControl() const
+bool SliderThumbElement::shouldMatchReadOnlySelector() const
 {
-    return hostInput()->isReadOnlyFormControl();
+    return hostInput()->shouldMatchReadOnlySelector();
+}
+
+bool SliderThumbElement::shouldMatchReadWriteSelector() const
+{
+    return hostInput()->shouldMatchReadWriteSelector();
 }
 
 Node* SliderThumbElement::focusDelegate()
@@ -303,7 +308,7 @@ void SliderThumbElement::defaultEventHandler(Event* event)
     // FIXME: Should handle this readonly/disabled check in more general way.
     // Missing this kind of check is likely to occur elsewhere if adding it in each shadow element.
     HTMLInputElement* input = hostInput();
-    if (!input || input->isReadOnlyFormControl() || !input->isEnabledFormControl()) {
+    if (!input || input->readOnly() || !input->isEnabledFormControl()) {
         stopDragging();
         HTMLDivElement::defaultEventHandler(event);
         return;
@@ -331,6 +336,24 @@ void SliderThumbElement::defaultEventHandler(Event* event)
     HTMLDivElement::defaultEventHandler(event);
 }
 
+bool SliderThumbElement::willRespondToMouseMoveEvents()
+{
+    const HTMLInputElement* input = hostInput();
+    if (input && !input->readOnly() && input->isEnabledFormControl() && m_inDragMode)
+        return true;
+
+    return HTMLDivElement::willRespondToMouseMoveEvents();
+}
+
+bool SliderThumbElement::willRespondToMouseClickEvents()
+{
+    const HTMLInputElement* input = hostInput();
+    if (input && !input->readOnly() && input->isEnabledFormControl())
+        return true;
+
+    return HTMLDivElement::willRespondToMouseClickEvents();
+}
+
 void SliderThumbElement::detach()
 {
     if (m_inDragMode) {
@@ -343,8 +366,8 @@ void SliderThumbElement::detach()
 HTMLInputElement* SliderThumbElement::hostInput() const
 {
     // Only HTMLInputElement creates SliderThumbElement instances as its shadow nodes.
-    // So, shadowAncestorNode() must be an HTMLInputElement.
-    return shadowAncestorNode()->toInputElement();
+    // So, shadowHost() must be an HTMLInputElement.
+    return shadowHost()->toInputElement();
 }
 
 static const AtomicString& sliderThumbShadowPseudoId()
@@ -403,7 +426,7 @@ RenderObject* TrackLimiterElement::createRenderer(RenderArena* arena, RenderStyl
 
 const AtomicString& TrackLimiterElement::shadowPseudoId() const
 {
-    HTMLInputElement* input = shadowAncestorNode()->toInputElement();
+    HTMLInputElement* input = shadowHost()->toInputElement();
     if (!input)
         return sliderThumbShadowPseudoId();
 
@@ -453,7 +476,7 @@ const AtomicString& SliderContainerElement::shadowPseudoId() const
     DEFINE_STATIC_LOCAL(const AtomicString, mediaSliderContainer, ("-webkit-media-slider-container"));
     DEFINE_STATIC_LOCAL(const AtomicString, sliderContainer, ("-webkit-slider-container"));
 
-    HTMLInputElement* input = shadowAncestorNode()->toInputElement();
+    HTMLInputElement* input = shadowHost()->toInputElement();
     if (!input)
         return sliderContainer;
 

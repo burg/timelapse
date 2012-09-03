@@ -28,6 +28,7 @@
 
 #include "CSSValueKeywords.h"
 #include "Color.h"
+#include "LayoutTestSupport.h"
 #include "PaintInfo.h"
 #include "PlatformSupport.h"
 #include "RenderMediaControlsChromium.h"
@@ -56,7 +57,7 @@ RenderThemeChromiumAndroid::~RenderThemeChromiumAndroid()
 
 Color RenderThemeChromiumAndroid::systemColor(int cssValueId) const
 {
-    if (PlatformSupport::layoutTestMode() && cssValueId == CSSValueButtonface) {
+    if (isRunningLayoutTest() && cssValueId == CSSValueButtonface) {
         // Match Chromium Linux' button color in layout tests.
         static const Color linuxButtonGrayColor(0xffdddddd);
         return linuxButtonGrayColor;
@@ -77,7 +78,7 @@ String RenderThemeChromiumAndroid::extraDefaultStyleSheet()
 
 void RenderThemeChromiumAndroid::adjustInnerSpinButtonStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
-    if (PlatformSupport::layoutTestMode()) {
+    if (isRunningLayoutTest()) {
         // Match Chromium Linux spin button style in layout tests.
         // FIXME: Consider removing the conditional if a future Android theme matches this.
         IntSize size = PlatformSupport::getThemePartSize(PlatformSupport::PartInnerSpinButton);
@@ -85,6 +86,18 @@ void RenderThemeChromiumAndroid::adjustInnerSpinButtonStyle(StyleResolver*, Rend
         style->setWidth(Length(size.width(), Fixed));
         style->setMinWidth(Length(size.width(), Fixed));
     }
+}
+
+bool RenderThemeChromiumAndroid::paintMediaOverlayPlayButton(RenderObject* object, const PaintInfo& paintInfo, const IntRect& rect)
+{
+#if ENABLE(VIDEO)
+    return RenderMediaControlsChromium::paintMediaControlsPart(MediaOverlayPlayButton, object, paintInfo, rect);
+#else
+    UNUSED_PARAM(object);
+    UNUSED_PARAM(paintInfo);
+    UNUSED_PARAM(rect);
+    return false;
+#endif
 }
 
 int RenderThemeChromiumAndroid::menuListArrowPadding() const

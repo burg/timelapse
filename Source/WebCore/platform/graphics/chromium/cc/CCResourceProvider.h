@@ -44,6 +44,7 @@ namespace WebCore {
 class CCGraphicsContext;
 class CCScopedLockResourceForRead;
 class CCScopedLockResourceForWrite;
+class IntRect;
 class LayerTextureSubImage;
 
 // Thread-safety notes: this class is not thread-safe and can only be called
@@ -85,6 +86,10 @@ public:
     // respect to other contexts.
     void flush();
 
+    // Only flush the command buffer if supported.
+    // Returns true if the shallow flush occurred, false otherwise.
+    bool shallowFlushIfSupported();
+
 private:
     friend class CCScopedLockResourceForRead;
     friend class CCScopedLockResourceForWrite;
@@ -117,6 +122,7 @@ private:
 
     bool m_useTextureStorageExt;
     bool m_useTextureUsageHint;
+    bool m_useShallowFlush;
     OwnPtr<LayerTextureSubImage> m_texSubImage;
     int m_maxTextureSize;
 };

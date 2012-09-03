@@ -52,6 +52,7 @@ SOURCES += \
     accessibility/AccessibilityList.cpp \
     accessibility/AccessibilityListBox.cpp \
     accessibility/AccessibilityListBoxOption.cpp \
+    accessibility/AccessibilityNodeObject.cpp \
     accessibility/AccessibilityProgressIndicator.cpp \
     accessibility/AccessibilityRenderObject.cpp \
     accessibility/AccessibilityScrollbar.cpp \
@@ -72,6 +73,7 @@ SOURCES += \
 
 SOURCES += \
      bindings/ScriptControllerBase.cpp \
+     bindings/js/ArrayValue.cpp \
      bindings/js/CallbackFunction.cpp \
      bindings/js/DOMObjectHashTableMap.cpp \
      bindings/js/DOMWrapperWorld.cpp \
@@ -166,6 +168,7 @@ SOURCES += \
      bindings/js/JSMessageEventCustom.cpp \
      bindings/js/JSMessagePortCustom.cpp \
      bindings/js/JSMessagePortCustom.h \
+     bindings/js/JSMicroDataItemValueCustom.cpp \
      bindings/js/JSMutationCallbackCustom.cpp \
      bindings/js/JSMutationObserverCustom.cpp \
      bindings/js/JSNamedNodeMapCustom.cpp \
@@ -406,10 +409,12 @@ SOURCES += \
     dom/ExceptionBase.cpp \
     dom/ExceptionCodePlaceholder.cpp \
     dom/GenericEventQueue.cpp \
+    dom/GestureEvent.cpp \
     dom/IconURL.cpp \
     dom/IdTargetObserver.cpp \
     dom/IdTargetObserverRegistry.cpp \
     dom/KeyboardEvent.cpp \
+    dom/MemoryInstrumentation.cpp \
     dom/MessageChannel.cpp \
     dom/MessageEvent.cpp \
     dom/MessagePort.cpp \
@@ -439,6 +444,7 @@ SOURCES += \
     dom/PositionIterator.cpp \
     dom/ProcessingInstruction.cpp \
     dom/ProgressEvent.cpp \
+    dom/PropertyNodeList.cpp \
     dom/QualifiedName.cpp \
     dom/Range.cpp \
     dom/RangeException.cpp \
@@ -858,6 +864,7 @@ SOURCES += \
     page/ContentSecurityPolicy.cpp \
     page/ContextMenuController.cpp \
     page/Crypto.cpp \
+    page/DiagnosticLoggingKeys.cpp \
     page/DOMSelection.cpp \
     page/DOMTimer.cpp \
     page/DOMWindow.cpp \
@@ -997,6 +1004,7 @@ SOURCES += \
     platform/KillRingNone.cpp \
     platform/KURL.cpp \
     platform/Language.cpp \
+    platform/LayoutTestSupport.cpp \
     platform/Length.cpp \
     platform/LengthBox.cpp \
     platform/text/LineEnding.cpp \
@@ -1202,6 +1210,7 @@ SOURCES += \
     rendering/style/StyleSurroundData.cpp \
     rendering/style/StyleTransformData.cpp \
     rendering/style/StyleVisualData.cpp \
+    rendering/style/WrapShapes.cpp \
     storage/StorageTask.cpp \
     storage/StorageThread.cpp \
     storage/Storage.cpp \
@@ -1530,6 +1539,7 @@ HEADERS += \
     dom/ExceptionBase.h \
     dom/ExceptionCode.h \
     dom/FragmentScriptingPermission.h \
+    dom/GestureEvent.h \
     dom/IdTargetObserver.h \
     dom/IdTargetObserverRegistry.h \
     dom/KeyboardEvent.h \
@@ -1561,6 +1571,7 @@ HEADERS += \
     dom/PositionIterator.h \
     dom/ProcessingInstruction.h \
     dom/ProgressEvent.h \
+    dom/PropertyNodeList.h \
     dom/QualifiedName.h \
     dom/Range.h \
     dom/RegisteredEventListener.h \
@@ -1949,6 +1960,7 @@ HEADERS += \
     page/ContextMenuController.h \
     page/ContextMenuProvider.h \
     page/Coordinates.h \
+    page/DiagnosticLoggingKeys.h \
     page/DOMSelection.h \
     page/DOMTimer.h \
     page/DOMWindow.h \
@@ -2377,6 +2389,7 @@ HEADERS += \
     rendering/style/StyleVisualData.h \
     rendering/style/SVGRenderStyleDefs.h \
     rendering/style/SVGRenderStyle.h \
+    rendering/style/WrapShapes.h \
     rendering/svg/RenderSVGBlock.h \
     rendering/svg/RenderSVGContainer.h \
     rendering/svg/RenderSVGEllipse.h \
@@ -2637,6 +2650,7 @@ HEADERS += \
     svg/SVGVKernElement.h \
     svg/SVGZoomAndPan.h \
     svg/SVGZoomEvent.h \
+    testing/FastMallocStatistics.h \
     testing/Internals.h \
     testing/InternalSettings.h \
     workers/AbstractWorker.h \
@@ -3001,6 +3015,15 @@ contains(DEFINES, ENABLE_FILE_SYSTEM=1) {
         bindings/js/JSEntryCustom.cpp \
         bindings/js/JSEntrySyncCustom.cpp \
         platform/AsyncFileSystem.cpp
+}
+
+contains(DEFINES, ENABLE_MEDIA_SOURCE=1) {
+    HEADERS += \
+        Modules/mediasource/SourceBuffer.h \
+        Modules/mediasource/SourceBufferList.h
+    SOURCES += \
+        Modules/mediasource/SourceBuffer.cpp \
+        Modules/mediasource/SourceBufferList.cpp
 }
 
 contains(DEFINES, ENABLE_ICONDATABASE=1) {
@@ -3900,6 +3923,13 @@ contains(DEFINES, ENABLE_MHTML=1) {
         loader/archive/mhtml/MHTMLArchive.cpp \
         loader/archive/mhtml/MHTMLParser.cpp \
         page/PageSerializer.cpp
+}
+
+contains(DEFINES, ENABLE_UNDO_MANAGER=1) {
+    SOURCES += \
+        editing/UndoManager.cpp
+    HEADERS += \
+        editing/UndoManager.h
 }
 
 contains(DEFINES, WTF_USE_LIBPNG=1) {

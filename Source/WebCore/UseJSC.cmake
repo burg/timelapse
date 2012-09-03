@@ -22,6 +22,7 @@ IF (PORT MATCHES "BlackBerry")
 ENDIF ()
 
 LIST(APPEND WebCore_SOURCES
+    bindings/js/ArrayValue.cpp
     bindings/js/CallbackFunction.cpp
     bindings/js/DOMObjectHashTableMap.cpp
     bindings/js/DOMWrapperWorld.cpp
@@ -49,7 +50,6 @@ LIST(APPEND WebCore_SOURCES
     bindings/js/JSCoordinatesCustom.cpp
     bindings/js/JSCustomVoidCallback.cpp
     bindings/js/JSCustomXPathNSResolver.cpp
-    bindings/js/JSDeprecatedPeerConnectionCustom.cpp
     bindings/js/JSDictionary.cpp
     bindings/js/JSDOMBinding.cpp
     bindings/js/JSDOMFormDataCustom.cpp
@@ -115,6 +115,7 @@ LIST(APPEND WebCore_SOURCES
     bindings/js/JSMessageChannelCustom.cpp
     bindings/js/JSMessageEventCustom.cpp
     bindings/js/JSMessagePortCustom.cpp
+    bindings/js/JSMicroDataItemValueCustom.cpp
     bindings/js/JSMutationCallbackCustom.cpp
     bindings/js/JSMutationObserverCustom.cpp
     bindings/js/JSNamedNodeMapCustom.cpp

@@ -28,7 +28,6 @@ namespace EWK2UnitTest {
 
 class EWK2UnitTestBase : public ::testing::Test {
 public:
-    void setLoadProgress(float progress) { m_loadProgress = progress; }
     Evas_Object* webView() { return m_webView; }
 
 protected:
@@ -38,12 +37,11 @@ protected:
     virtual void TearDown();
 
     void loadUrlSync(const char* url);
+    void waitUntilTitleChangedTo(const char* expectedTitle);
 
 private:
     Evas_Object* m_webView;
     Ecore_Evas* m_ecoreEvas;
-
-    float m_loadProgress;
 };
 
 } // namespace EWK2UnitTest

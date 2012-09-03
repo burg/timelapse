@@ -222,6 +222,10 @@
 #include "TextAutosizer.h"
 #endif
 
+#if ENABLE(CSP_NEXT)
+#include "DOMSecurityPolicy.h"
+#endif
+
 using namespace std;
 using namespace WTF;
 using namespace Unicode;
@@ -481,7 +485,9 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
     , m_writeRecursionIsTooDeep(false)
     , m_writeRecursionDepth(0)
     , m_wheelEventHandlerCount(0)
+#if ENABLE(TOUCH_EVENTS)
     , m_touchEventHandlerCount(0)
+#endif
 #if ENABLE(UNDO_MANAGER)
     , m_undoManager(0)
 #endif
@@ -660,7 +666,7 @@ Document::~Document()
 
 #if ENABLE(UNDO_MANAGER)
     if (m_undoManager)
-        m_undoManager->undoScopeHostDestroyed();
+        m_undoManager->disconnect();
 #endif
 
     // We must call clearRareData() here since a Document class inherits TreeScope
@@ -1638,6 +1644,15 @@ bool Document::webkitHidden() const
 void Document::dispatchVisibilityStateChangeEvent()
 {
     dispatchEvent(Event::create(eventNames().webkitvisibilitychangeEvent, false, false));
+}
+#endif
+
+#if ENABLE(CSP_NEXT)
+DOMSecurityPolicy* Document::securityPolicy()
+{
+    if (!m_domSecurityPolicy)
+        m_domSecurityPolicy = DOMSecurityPolicy::create(this);
+    return m_domSecurityPolicy.get();
 }
 #endif
 
@@ -3881,7 +3896,7 @@ void Document::setCSSTarget(Element* n)
 
 void Document::registerNodeListCache(DynamicNodeListCacheBase* list)
 {
-    if (list->type() != InvalidCollectionType)
+    if (list->type() != NodeListCollectionType)
         m_nodeListCounts[InvalidateOnIdNameAttrChange]++;
     m_nodeListCounts[list->invalidationType()]++;
     if (list->isRootedAtDocument())
@@ -3890,38 +3905,13 @@ void Document::registerNodeListCache(DynamicNodeListCacheBase* list)
 
 void Document::unregisterNodeListCache(DynamicNodeListCacheBase* list)
 {
-    if (list->type() != InvalidCollectionType)
+    if (list->type() != NodeListCollectionType)
         m_nodeListCounts[InvalidateOnIdNameAttrChange]--;
     m_nodeListCounts[list->invalidationType()]--;
     if (list->isRootedAtDocument()) {
         ASSERT(m_listsInvalidatedAtDocument.contains(list));
         m_listsInvalidatedAtDocument.remove(list);
     }
-}
-
-bool Document::shouldInvalidateNodeListCaches(const QualifiedName* attrName) const
-{
-    if (attrName) {
-        for (int type = DoNotInvalidateOnAttributeChanges + 1; type < numNodeListInvalidationTypes; type++) {
-            if (m_nodeListCounts[type] && DynamicNodeListCacheBase::shouldInvalidateTypeOnAttributeChange(static_cast<NodeListInvalidationType>(type), *attrName))
-                return true;
-        }
-        return false;
-    }
-
-    for (int type = 0; type < numNodeListInvalidationTypes; type++) {
-        if (m_nodeListCounts[type])
-            return true;
-    }
-
-    return false;
-}
-
-void Document::invalidateNodeListCaches(const QualifiedName* attrName)
-{
-    HashSet<DynamicNodeListCacheBase*>::iterator end = m_listsInvalidatedAtDocument.end();
-    for (HashSet<DynamicNodeListCacheBase*>::iterator it = m_listsInvalidatedAtDocument.begin(); it != end; ++it)
-        (*it)->invalidateCache(attrName);
 }
 
 void Document::attachNodeIterator(NodeIterator* ni)
@@ -5854,7 +5844,13 @@ void Document::webkitExitPointerLock()
 
 Element* Document::webkitPointerLockElement() const
 {
-    return page() ? page()->pointerLockController()->element() : 0;
+    if (!page())
+        return 0;
+    if (Element* element = page()->pointerLockController()->element()) {
+        if (element->document() == this)
+            return element;
+    }
+    return 0;
 }
 #endif
 
@@ -5959,19 +5955,33 @@ void Document::didRemoveWheelEventHandler()
 
 void Document::didAddTouchEventHandler()
 {
+#if ENABLE(TOUCH_EVENTS)
     ++m_touchEventHandlerCount;
-    Frame* mainFrame = page() ? page()->mainFrame() : 0;
-    if (mainFrame)
-        mainFrame->notifyChromeClientTouchEventHandlerCountChanged();
+    if (m_touchEventHandlerCount > 1)
+        return;
+    if (Page* page = this->page())
+        page->chrome()->client()->needTouchEvents(true);
+#endif
 }
 
 void Document::didRemoveTouchEventHandler()
 {
-    ASSERT(m_touchEventHandlerCount > 0);
+#if ENABLE(TOUCH_EVENTS)
+    ASSERT(m_touchEventHandlerCount);
     --m_touchEventHandlerCount;
-    Frame* mainFrame = page() ? page()->mainFrame() : 0;
-    if (mainFrame)
-        mainFrame->notifyChromeClientTouchEventHandlerCountChanged();
+    if (m_touchEventHandlerCount)
+        return;
+
+    m_listenerTypes &= ~TOUCH_LISTENER;
+    Page* page = this->page();
+    if (!page)
+        return;
+    for (const Frame* frame = page->mainFrame(); frame; frame = frame->tree()->traverseNext()) {
+        if (frame->document() && frame->document()->touchEventHandlerCount())
+            return;
+    }
+    page->chrome()->client()->needTouchEvents(false);
+#endif
 }
 
 HTMLIFrameElement* Document::seamlessParentIFrame() const
@@ -6087,6 +6097,7 @@ void Document::setContextFeatures(PassRefPtr<ContextFeatures> features)
 void Document::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo<Document> info(memoryObjectInfo, this, MemoryInstrumentation::DOM);
+    info.addInstrumentedMember(m_styleResolver);
     info.visitBaseClass<ContainerNode>(this);
     info.addVector(m_customFonts);
     info.addString(m_documentURI);

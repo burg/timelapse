@@ -96,6 +96,19 @@
             'sources': [
                 '<@(test_runner_files)',
             ],
+            'conditions': [
+                ['toolkit_uses_gtk == 1', {
+                    'defines': [
+                        'WTF_USE_GTK=1',
+                    ],
+                    'dependencies': [
+                        '<(chromium_src_dir)/build/linux/system.gyp:gtk',
+                    ],
+                    'include_dirs': [
+                        '<(source_dir)/WebKit/chromium/public/gtk',
+                    ],
+                }],
+            ],
         },
         {
             'target_name': 'DumpRenderTree',
@@ -424,7 +437,7 @@
                 },
             }],
         }],
-        ['os_posix==1 and OS!="mac" and gcc_version==46', {
+        ['os_posix==1 and OS!="mac" and gcc_version>=46', {
             'target_defaults': {
                 # Disable warnings about c++0x compatibility, as some names (such
                 # as nullptr) conflict with upcoming c++0x types.

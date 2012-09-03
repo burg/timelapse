@@ -32,17 +32,26 @@
 #define MockWebKitPlatformSupport_h
 
 #include <public/Platform.h>
+#include <wtf/OwnPtr.h>
+#include <wtf/PassOwnPtr.h>
 
 class MockWebKitPlatformSupport : public WebKit::Platform {
 public:
-    static WebKit::Platform* create();
+    static PassOwnPtr<MockWebKitPlatformSupport> create();
+    ~MockWebKitPlatformSupport();
 
     virtual void cryptographicallyRandomValues(unsigned char* buffer, size_t length) OVERRIDE;
 
+#if ENABLE(MEDIA_STREAM)
     virtual WebKit::WebMediaStreamCenter* createMediaStreamCenter(WebKit::WebMediaStreamCenterClient*) OVERRIDE;
+#endif // ENABLE(MEDIA_STREAM)
 
 private:
     MockWebKitPlatformSupport();
+
+#if ENABLE(MEDIA_STREAM)
+    OwnPtr<WebKit::WebMediaStreamCenter> m_mockMediaStreamCenter;
+#endif // ENABLE(MEDIA_STREAM)
 };
 
 #endif // MockWebKitPlatformSupport_h

@@ -757,7 +757,7 @@ bool RenderBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& result
 
     // Check our bounds next. For this purpose always assume that we can only be hit in the
     // foreground phase (which is true for replaced elements like images).
-    LayoutRect boundsRect = borderBoxRectInRegion(result.region());
+    LayoutRect boundsRect = borderBoxRectInRegion(pointInContainer.region());
     boundsRect.moveBy(adjustedLocation);
     if (visibleToHitTesting() && action == HitTestForeground && pointInContainer.intersects(boundsRect)) {
         updateHitTestResult(result, pointInContainer.point() - toLayoutSize(adjustedLocation));
@@ -2365,8 +2365,10 @@ LayoutUnit RenderBox::containingBlockLogicalWidthForPositioned(const RenderBoxMo
                 if (isWritingModeRoot()) {
                     LayoutUnit cbPageOffset = offsetFromLogicalTopOfFirstPage - logicalTop();
                     RenderRegion* cbRegion = cb->regionAtBlockOffset(cbPageOffset);
-                    cbRegion = cb->clampToStartAndEndRegions(cbRegion);
-                    boxInfo = cb->renderBoxRegionInfo(cbRegion, cbPageOffset);
+                    if (cbRegion) {
+                        cbRegion = cb->clampToStartAndEndRegions(cbRegion);
+                        boxInfo = cb->renderBoxRegionInfo(cbRegion, cbPageOffset);
+                    }
                 }
             } else if (region && enclosingRenderFlowThread()->isHorizontalWritingMode() == containingBlock->isHorizontalWritingMode()) {
                 RenderRegion* containingBlockRegion = cb->clampToStartAndEndRegions(region);
@@ -2628,11 +2630,13 @@ void RenderBox::computePositionedLogicalWidth(RenderRegion* region, LayoutUnit o
         const RenderBlock* cb = toRenderBlock(containerBlock);
         LayoutUnit cbPageOffset = offsetFromLogicalTopOfFirstPage - logicalTop();
         RenderRegion* cbRegion = cb->regionAtBlockOffset(cbPageOffset);
-        cbRegion = cb->clampToStartAndEndRegions(cbRegion);
-        RenderBoxRegionInfo* boxInfo = cb->renderBoxRegionInfo(cbRegion, cbPageOffset);
-        if (boxInfo) {
-            logicalLeftPos += boxInfo->logicalLeft();
-            setLogicalLeft(logicalLeftPos);
+        if (cbRegion) {
+            cbRegion = cb->clampToStartAndEndRegions(cbRegion);
+            RenderBoxRegionInfo* boxInfo = cb->renderBoxRegionInfo(cbRegion, cbPageOffset);
+            if (boxInfo) {
+                logicalLeftPos += boxInfo->logicalLeft();
+                setLogicalLeft(logicalLeftPos);
+            }
         }
     }
 }
@@ -2950,11 +2954,13 @@ void RenderBox::computePositionedLogicalHeight()
         const RenderBlock* cb = toRenderBlock(containerBlock);
         LayoutUnit cbPageOffset = cb->offsetFromLogicalTopOfFirstPage() - logicalLeft();
         RenderRegion* cbRegion = cb->regionAtBlockOffset(cbPageOffset);
-        cbRegion = cb->clampToStartAndEndRegions(cbRegion);
-        RenderBoxRegionInfo* boxInfo = cb->renderBoxRegionInfo(cbRegion, cbPageOffset);
-        if (boxInfo) {
-            logicalTopPos += boxInfo->logicalLeft();
-            setLogicalTop(logicalTopPos);
+        if (cbRegion) {
+            cbRegion = cb->clampToStartAndEndRegions(cbRegion);
+            RenderBoxRegionInfo* boxInfo = cb->renderBoxRegionInfo(cbRegion, cbPageOffset);
+            if (boxInfo) {
+                logicalTopPos += boxInfo->logicalLeft();
+                setLogicalTop(logicalTopPos);
+            }
         }
     }
 }
@@ -3628,7 +3634,14 @@ void RenderBox::addLayoutOverflow(const LayoutRect& rect)
             else
                 hasTopOverflow = true;
         }
-        
+
+        if (hasColumns() && style()->columnProgression() == ReverseColumnProgression) {
+            if (isHorizontalWritingMode() ^ !style()->hasInlineColumnAxis())
+                hasLeftOverflow = !hasLeftOverflow;
+            else
+                hasTopOverflow = !hasTopOverflow;
+        }
+
         if (!hasTopOverflow)
             overflowRect.shiftYEdgeTo(max(overflowRect.y(), clientBox.y()));
         else

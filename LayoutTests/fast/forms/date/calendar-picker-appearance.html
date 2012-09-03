@@ -8,18 +8,23 @@ function sendKey(input, keyName) {
     input.dispatchEvent(event);
 }
 
+function finishTest() {
+    console.log(pickerWindow.pagePopupController);
+    pickerWindow.document.getElementById('main').removeEventListener('webkitTransitionEnd', finishTest);
+    setTimeout(function() {testRunner.notifyDone();}, 0);
+}
+
 console.log('Check if window.pagePopupController exists for a page-popup window.');
 testRunner.dumpAsText(true);
 testRunner.waitUntilDone();
 if (window.internals)
     internals.settings.setEnableMockPagePopup(true);
 
-sendKey(document.getElementById('date'), 'Down');
+var dateInput = document.getElementById('date');
+dateInput.offsetTop;
+sendKey(dateInput, 'Down');
 var pickerWindow = document.getElementById('mock-page-popup').contentWindow;
-pickerWindow.onresize = function() {
-    console.log(pickerWindow.pagePopupController);
-    testRunner.notifyDone();
-}
+pickerWindow.document.getElementById('main').addEventListener('webkitTransitionEnd', finishTest, false);
 </script>
 </body>
 

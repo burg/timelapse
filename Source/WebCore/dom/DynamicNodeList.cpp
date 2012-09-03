@@ -27,8 +27,26 @@
 #include "Element.h"
 #include "HTMLCollection.h"
 #include "HTMLPropertiesCollection.h"
+#include "PropertyNodeList.h"
 
 namespace WebCore {
+
+Node* DynamicNodeListCacheBase::rootNode() const
+{
+    if ((isRootedAtDocument() || ownerNodeHasItemRefAttribute()) && m_ownerNode->inDocument())
+        return m_ownerNode->document();
+    return m_ownerNode.get();
+}
+
+ALWAYS_INLINE bool DynamicNodeListCacheBase::ownerNodeHasItemRefAttribute() const
+{
+#if ENABLE(MICRODATA)
+    if (m_rootType == NodeListIsRootedAtDocumentIfOwnerHasItemrefAttr)
+        return toElement(ownerNode())->fastHasAttribute(HTMLNames::itemrefAttr);
+#endif
+
+    return false;
+}
 
 void DynamicNodeListCacheBase::invalidateCache() const
 {
@@ -36,7 +54,8 @@ void DynamicNodeListCacheBase::invalidateCache() const
     m_isLengthCacheValid = false;
     m_isItemCacheValid = false;
     m_isNameCacheValid = false;
-    if (type() == InvalidCollectionType)
+    m_isItemRefElementsCacheValid = false;
+    if (type() == NodeListCollectionType)
         return;
 
     const HTMLCollectionCacheBase* cacheBase = static_cast<const HTMLCollectionCacheBase*>(this);
@@ -51,72 +70,14 @@ void DynamicNodeListCacheBase::invalidateCache() const
 #endif
 }
 
-unsigned DynamicSubtreeNodeList::length() const
+unsigned DynamicNodeList::length() const
 {
-    if (isLengthCacheValid())
-        return cachedLength();
-
-    unsigned length = 0;
-    Node* rootNode = this->rootNode();
-
-    for (Node* n = rootNode->firstChild(); n; n = n->traverseNextNode(rootNode))
-        length += n->isElementNode() && nodeMatches(static_cast<Element*>(n));
-
-    setLengthCache(length);
-
-    return length;
+    return lengthCommon();
 }
 
-Node* DynamicSubtreeNodeList::itemForwardsFromCurrent(Node* start, unsigned offset, int remainingOffset) const
+Node* DynamicNodeList::item(unsigned offset) const
 {
-    ASSERT(remainingOffset >= 0);
-    Node* rootNode = this->rootNode();
-    for (Node* n = start; n; n = n->traverseNextNode(rootNode)) {
-        if (n->isElementNode() && nodeMatches(static_cast<Element*>(n))) {
-            if (!remainingOffset) {
-                setItemCache(n, offset);
-                return n;
-            }
-            --remainingOffset;
-        }
-    }
-
-    return 0; // no matching node in this subtree
-}
-
-Node* DynamicSubtreeNodeList::itemBackwardsFromCurrent(Node* start, unsigned offset, int remainingOffset) const
-{
-    ASSERT(remainingOffset < 0);
-    Node* rootNode = this->rootNode();
-    for (Node* n = start; n; n = n->traversePreviousNode(rootNode)) {
-        if (n->isElementNode() && nodeMatches(static_cast<Element*>(n))) {
-            if (!remainingOffset) {
-                setItemCache(n, offset);
-                return n;
-            }
-            ++remainingOffset;
-        }
-    }
-
-    return 0; // no matching node in this subtree
-}
-
-Node* DynamicSubtreeNodeList::item(unsigned offset) const
-{
-    int remainingOffset = offset;
-    Node* start = rootNode()->firstChild();
-    if (isItemCacheValid()) {
-        if (offset == cachedItemOffset())
-            return cachedItem();
-        if (offset > cachedItemOffset() || cachedItemOffset() - offset < offset) {
-            start = cachedItem();
-            remainingOffset -= cachedItemOffset();
-        }
-    }
-
-    if (remainingOffset < 0)
-        return itemBackwardsFromCurrent(start, offset, remainingOffset);
-    return itemForwardsFromCurrent(start, offset, remainingOffset);
+    return itemCommon(offset);
 }
 
 Node* DynamicNodeList::itemWithName(const AtomicString& elementId) const
@@ -124,6 +85,11 @@ Node* DynamicNodeList::itemWithName(const AtomicString& elementId) const
     Node* rootNode = this->rootNode();
 
     if (rootNode->inDocument()) {
+#if ENABLE(MICRODATA)
+        if (rootType() == NodeListIsRootedAtDocumentIfOwnerHasItemrefAttr)
+            static_cast<const PropertyNodeList*>(this)->updateRefElements();
+#endif
+
         Element* element = rootNode->treeScope()->getElementById(elementId);
         if (element && nodeMatches(element) && element->isDescendantOf(rootNode))
             return element;

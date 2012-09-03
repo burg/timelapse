@@ -69,6 +69,11 @@ HTMLFormControlElement::~HTMLFormControlElement()
 {
 }
 
+void HTMLFormControlElement::willAddAuthorShadowRoot()
+{
+    ensureUserAgentShadowRoot();
+}
+
 String HTMLFormControlElement::formEnctype() const
 {
     return FormSubmission::Attributes::parseEncodingType(fastGetAttribute(formenctypeAttr));
@@ -475,6 +480,16 @@ void HTMLFormControlElement::setCustomValidity(const String& error)
 {
     FormAssociatedElement::setCustomValidity(error);
     setNeedsValidityCheck();
+}
+
+bool HTMLFormControlElement::shouldMatchReadOnlySelector() const
+{
+    return readOnly();
+}
+
+bool HTMLFormControlElement::shouldMatchReadWriteSelector() const
+{
+    return !readOnly();
 }
 
 bool HTMLFormControlElement::validationMessageShadowTreeContains(Node* node) const

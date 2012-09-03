@@ -153,8 +153,6 @@ public:
 
     String localizeValue(const String&) const;
 
-    void updateInnerTextValue();
-
     // The value which is drawn by a renderer.
     String visibleValue() const;
     String convertFromVisibleValue(const String&) const;
@@ -234,8 +232,11 @@ public:
     void addSearchResult();
     void onSearch();
 
-#if ENABLE(DATALIST)
+    virtual bool willRespondToMouseClickEvents() OVERRIDE;
+
+#if ENABLE(DATALIST_ELEMENT)
     HTMLElement* list() const;
+    HTMLDataListElement* dataList() const;
     void listAttributeTargetChanged();
 #endif
 
@@ -362,8 +363,7 @@ private:
     
     virtual void subtreeHasChanged();
 
-#if ENABLE(DATALIST)
-    HTMLDataListElement* dataList() const;
+#if ENABLE(DATALIST_ELEMENT)
     void resetListAttributeTargetObserver();
 #endif
     void parseMaxLengthAttribute(const Attribute&);
@@ -387,7 +387,7 @@ private:
     bool m_isActivatedSubmit : 1;
     unsigned m_autocomplete : 2; // AutoCompleteSetting
     bool m_isAutofilled : 1;
-#if ENABLE(DATALIST)
+#if ENABLE(DATALIST_ELEMENT)
     bool m_hasNonEmptyList : 1;
 #endif
     bool m_stateRestored : 1;
@@ -397,10 +397,16 @@ private:
     bool m_canReceiveDroppedFiles : 1;
     bool m_hasTouchEventHandler: 1;
     OwnPtr<InputType> m_inputType;
-#if ENABLE(DATALIST)
+#if ENABLE(DATALIST_ELEMENT)
     OwnPtr<ListAttributeTargetObserver> m_listAttributeTargetObserver;
 #endif
 };
+
+inline bool isHTMLInputElement(Node* node)
+{
+    ASSERT(node);
+    return node->hasTagName(HTMLNames::inputTag);
+}
 
 } //namespace
 #endif

@@ -28,10 +28,8 @@
 
 #include "TraceEvent.h"
 #include "cc/CCDrawQuad.h"
-#include "cc/CCFontAtlas.h"
 #include "cc/CCGraphicsContext.h"
 #include "cc/CCLayerTreeHost.h"
-#include "cc/CCRenderingStats.h"
 #include "cc/CCTextureUpdater.h"
 #include "cc/CCTimer.h"
 #include <wtf/CurrentTime.h>
@@ -173,7 +171,7 @@ bool CCSingleThreadProxy::recreateContext()
 
 void CCSingleThreadProxy::implSideRenderingStats(CCRenderingStats& stats)
 {
-    stats.numFramesSentToScreen = m_layerTreeHostImpl->sourceAnimationFrameNumber();
+    m_layerTreeHostImpl->renderingStats(stats);
 }
 
 const LayerRendererCapabilities& CCSingleThreadProxy::layerRendererCapabilities() const
@@ -266,13 +264,6 @@ void CCSingleThreadProxy::stop()
         m_layerTreeHostImpl.clear();
     }
     m_layerTreeHost = 0;
-}
-
-void CCSingleThreadProxy::setFontAtlas(PassOwnPtr<CCFontAtlas> fontAtlas)
-{
-    ASSERT(isMainThread());
-    DebugScopedSetImplThread impl;
-    m_layerTreeHostImpl->setFontAtlas(fontAtlas);
 }
 
 void CCSingleThreadProxy::postAnimationEventsToMainThreadOnImplThread(PassOwnPtr<CCAnimationEventsVector> events, double wallClockTime)

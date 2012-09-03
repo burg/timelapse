@@ -53,7 +53,7 @@ public:
     void bind(InspectorFrontend*);
     void unbind();
 
-    bool isSameHostAndType(SecurityOrigin*, bool isLocalStorage) const;
+    bool isSameOriginAndType(SecurityOrigin*, bool isLocalStorage) const;
     String id() const { return m_id; }
     StorageArea* storageArea() const { return m_storageArea.get(); }
     Frame* frame() const { return m_frame.get(); }
@@ -66,7 +66,6 @@ private:
     RefPtr<Frame> m_frame;
     InspectorFrontend::DOMStorage* m_frontend;
     String m_id;
-    bool m_reportingChangesToFrontend;
 
     static int s_nextUnusedId;
 };

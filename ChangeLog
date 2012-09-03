@@ -1,3 +1,372 @@
+2012-07-31  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Perf-o-matic: dashboard images are not generated properly from incrementally updated JSON
+        https://bugs.webkit.org/show_bug.cgi?id=92717
+
+        Reviewed by Hajime Morita.
+
+        Sort the values by timestamp. Unfortunately, there isn't a good way of testing this fix.
+
+        * Websites/webkit-perf.appspot.com/models.py:
+        (Runs.chart_params):
+
+2012-07-31  Danilo Cesar Lemes de Paula  <danilo.cesar@collabora.co.uk>
+
+        add Farstream flags/deps to WebKit, for WebRTC
+        https://bugs.webkit.org/show_bug.cgi?id=87524
+
+        Reviewed by Philippe Normand.
+
+        Since Farstream will be used as the backend for GTK's WebRTC, this
+        patch adds it as a dependency to the build system.
+
+        * GNUmakefile.am:
+        * configure.ac:
+
+2012-07-30  Ryosuke Niwa  <rniwa@webkit.org>
+
+        /api/test/runs/chart expires on perf-o-matic
+        https://bugs.webkit.org/show_bug.cgi?id=92714
+
+        Reviewed by Hajime Morita.
+
+        Don't update the entire JSON while generating the dashboard images.
+        This is a bug and not doing this will reduce the server load significantly.
+
+        * Websites/webkit-perf.appspot.com/controller.py:
+        (RunsChartHandler.post):
+
+2012-07-30  Dominik Röttsches  <dominik.rottsches@intel.com>
+
+        Avoid Assertion Failure in HarfBuzzRun::characterIndexForXPosition
+        https://bugs.webkit.org/show_bug.cgi?id=92376
+
+        Reviewed by Tony Chang.
+
+        Added manual test to reliably reproduce assertion failure which is solved by this patch.
+
+        * ManualTests/harfbuzz-mouse-selection-crash.html: Added.
+
+2012-07-29  Vsevolod Vlasov  <vsevik@chromium.org>
+
+        Web Inspector: Resource agent's reference to cached resources should be weak.
+        https://bugs.webkit.org/show_bug.cgi?id=92108
+
+        Reviewed by Pavel Feldman.
+
+        * Source/autotools/symbols.filter:
+
+2012-07-30  Shinya Kawanaka  <shinyak@chromium.org>
+
+        Prohibit having AuthorShadowDOM of input or textarea element for a while and having a flag to enable it in Internals.
+        https://bugs.webkit.org/show_bug.cgi?id=92611
+
+        Reviewed by Hajime Morita.
+
+        * Source/autotools/symbols.filter:
+
+2012-07-30  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r124000.
+        http://trac.webkit.org/changeset/124000
+        https://bugs.webkit.org/show_bug.cgi?id=92632
+
+        seems to have broken chromium Range_InstanceSizeUnknown unit
+        test across many platforms (Requested by tomhudson on
+        #webkit).
+
+        * Source/autotools/symbols.filter:
+
+2012-07-30  Patrick Gansterer  <paroga@webkit.org>
+
+        Replace UnicodeWinCE with UnicodeWchar
+        https://bugs.webkit.org/show_bug.cgi?id=92539
+
+        Reviewed by Ryosuke Niwa.
+
+        UnicodeWinCE never contained WinCE specific code. UnicodeWchar
+        is a replacement for it, which is mainly based on the functions
+        from <wchar.h>. It is ment as a minimal Unicode backend, which
+        can be used very easy and has no external dependencies.
+
+        * Source/cmake/OptionsWinCE.cmake:
+
+2012-07-29  Vsevolod Vlasov  <vsevik@chromium.org>
+
+        Web Inspector: Resource agent's reference to cached resources should be weak.
+        https://bugs.webkit.org/show_bug.cgi?id=92108
+
+        Reviewed by Pavel Feldman.
+
+        * Source/autotools/symbols.filter:
+
+2012-07-29  Rik Cabanier  <cabanier@adobe.com>
+
+        Add ENABLE_CSS_COMPOSITING flag
+        https://bugs.webkit.org/show_bug.cgi?id=92553
+
+        Reviewed by Dirk Schulze.
+
+        Adds compiler flag CSS_COMPOSITING to build systems to enable CSS blending and compositing. See spec https://dvcs.w3.org/hg/FXTF/rawfile/tip/compositing/index.html
+
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+        * configure.ac:
+
+2012-07-27  Kihong Kwon  <kihong.kwon@samsung.com>
+
+        [EFL] Support for HTML media capture
+        https://bugs.webkit.org/show_bug.cgi?id=91842
+
+        Reviewed by Ryosuke Niwa.
+
+        Add HTML media capture feature, and enable that on the Efl port.
+
+        * Source/cmake/OptionsEfl.cmake:
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2012-07-27  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Unreviewed perf-o-matic build fix for dashboard image generation.
+        Also, only show Parser/html5-full-render on the dashboard by default
+        so that it won't take forever to load it.
+
+        * Websites/webkit-perf.appspot.com/controller.py:
+        (schedule_runs_update):
+        (RunsChartHandler.post):
+        * Websites/webkit-perf.appspot.com/models.py:
+        (Runs.chart_params):
+        (DashboardImage.get_image):
+        * Websites/webkit-perf.appspot.com/models_unittest.py:
+        (RunsTest.test_chart_params_with_value):
+
+2012-07-27  Dominik Röttsches  <dominik.rottsches@intel.com>
+
+        [Cairo] Add complex font drawing using HarfbuzzNG
+        https://bugs.webkit.org/show_bug.cgi?id=91864
+
+        Reviewed by Simon Hausmann and Martin Robinson.
+
+        Configuring Freetype backend to use HarfBuzz by default.
+
+        * Source/cmake/FindHarfBuzz.cmake: Added pkgconfig based discovery of HarfBuzz.
+        * Source/cmake/OptionsEfl.cmake: Adding Harfbuzz configuration.
+
+2012-07-26  Dan Bernstein  <mitz@apple.com>
+
+        When Safari 6 is launched via the WebKit Xcode workspace, it does not link against the built frameworks
+        https://bugs.webkit.org/show_bug.cgi?id=92331
+
+        Reviewed by Mark Rowe.
+
+        Changed references to the Safari executable to the SafariForWebKitDevelopment binary.
+
+        * WebKit.xcworkspace/xcshareddata/xcschemes/All Source (target WebProcess).xcscheme:
+        * WebKit.xcworkspace/xcshareddata/xcschemes/All Source.xcscheme:
+
+2012-07-26  Keishi Hattori  <keishi@webkit.org>
+
+        Implement ColorSuggestionPicker page popup
+        https://bugs.webkit.org/show_bug.cgi?id=92109
+
+        Reviewed by Kent Tamura.
+
+        * ManualTests/forms/color-suggestion-picker.html: Added. Tests colorSuggestionPicker.{js,css}
+
+2012-07-26  Zoltan Nyul  <zoltan.nyul@intel.com>
+
+        [EFL] EFL port should use XDG paths
+        https://bugs.webkit.org/show_bug.cgi?id=91719
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Efreet library added.
+
+        * Source/cmake/FindEFL.cmake:
+
+2012-07-26  Kaustubh Atrawalkar  <kaustubh@motorola.com>
+
+        [DRT] LTC:: pageNumberForElementById() could be moved to Internals.
+        https://bugs.webkit.org/show_bug.cgi?id=92091
+
+        Reviewed by Adam Barth.
+
+        Exporting Internals::pageNumber symbols for the Gtk build.
+
+        * Source/autotools/symbols.filter:
+
+2012-07-25  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r123606.
+        http://trac.webkit.org/changeset/123606
+        https://bugs.webkit.org/show_bug.cgi?id=92247
+
+        broke Windows build of Chromium (Requested by tomhudson on
+        #webkit).
+
+        * ManualTests/forms/color-suggestion-picker.html: Removed.
+
+2012-07-25  Keishi Hattori  <keishi@webkit.org>
+
+        Implement ColorSuggestionPicker page popup
+        https://bugs.webkit.org/show_bug.cgi?id=92109
+
+        Reviewed by Kent Tamura.
+
+        * ManualTests/forms/color-suggestion-picker.html: Added. Tests colorSuggestionPicker.{js,css}
+
+2012-07-23  Kent Tamura  <tkent@chromium.org>
+
+        [GTK] Remove unnecessary trailing space in the previous commit.
+
+        * Source/autotools/symbols.filter:
+
+2012-07-23  Kent Tamura  <tkent@chromium.org>
+
+        [GTK] Attempt to fix build
+
+        * Source/autotools/symbols.filter: Export DocumentMarkerController::addTextMatchMarker.
+
+2012-07-23  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r123184, r123195, and r123197.
+        http://trac.webkit.org/changeset/123184
+        http://trac.webkit.org/changeset/123195
+        http://trac.webkit.org/changeset/123197
+        https://bugs.webkit.org/show_bug.cgi?id=92049
+
+        pagecycler regression (Requested by morrita on #webkit).
+
+        * Source/autotools/symbols.filter:
+
+2012-07-23  Roger Fong  <roger_fong@apple.com>
+
+        If select element in Windows is off screen horizontally, 
+        menu is either inappropriately resized or positioned offscreen.
+        https://bugs.webkit.org/show_bug.cgi?id=91913
+        <rdar://problem/7611229>
+
+        Reviewed by Tim Horton.
+
+        Add a manual test to verify that popup menus render in the correct place.
+        
+        * ManualTests/win/select-menu-off-screen.html: Added.
+
+2012-07-23  Simon Fraser  <simon.fraser@apple.com>
+
+        Implement sticky positioning
+        https://bugs.webkit.org/show_bug.cgi?id=90046
+
+        Reviewed by Ojan Vafai.
+
+        Add ENABLE_CSS_STICKY_POSITION, defaulting to off initially.
+        
+        Sort the ENABLE_CSS lines in the file.
+
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2012-07-23  Patrick Gansterer  <paroga@webkit.org>
+
+        [WINCE] Define NOMINMAX in the build system instead of Platform.h
+        https://bugs.webkit.org/show_bug.cgi?id=91938
+
+        Reviewed by Ryosuke Niwa.
+
+        Define it in OptionsWindows.cmake, since NOMINMAX
+        should to be defined for all windows ports.
+
+        * Source/cmake/OptionsWinCE.cmake:
+        * Source/cmake/OptionsWindows.cmake:
+
+2012-07-22  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r123298 and r123301.
+        http://trac.webkit.org/changeset/123298
+        http://trac.webkit.org/changeset/123301
+        https://bugs.webkit.org/show_bug.cgi?id=91953
+
+        We need to think some more about the intricacies of exposing a
+        CMake option for ENABLE_DFG_JIT as this option is specific to
+        the port and architecture. (Requested by dydx on #webkit).
+
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2012-07-22  Daniel Bates  <dbates@webkit.org>
+
+        Fix the Windows CE build after <http://trac.webkit.org/changeset/123298>
+        (https://bugs.webkit.org/show_bug.cgi?id=91939)
+
+        Disable the DFG JIT across all CMake ports (by default) (*). Enabling DFG JIT
+        breaks the Windows CE build as the Windows CE port builds with the JIT disabled
+        (ENABLE_JIT := 0) and hence ENABLE_ASSEMBLER := 0.
+
+        (*) We should look to further discuss with CMake port maintainers about enabling
+        the DFG JIT by default.
+
+        * Source/cmake/WebKitFeatures.cmake:
+
+2012-07-23  Kent Tamura  <tkent@chromium.org>
+
+        Rename ENABLE_METER_TAG and ENABLE_PROGRESS_TAG to ENABLE_METER_ELEMENT and ENABLE_PROGRESS_ELEMENT respectively
+        https://bugs.webkit.org/show_bug.cgi?id=91941
+
+        Reviewed by Kentaro Hara.
+
+        A flag name for an elmement should be ENABLE_*_ELEMENT.
+
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+        * configure.ac:
+
+2012-07-22  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake] Add option for ENABLE_DFG_JIT
+        https://bugs.webkit.org/show_bug.cgi?id=91939
+
+        Reviewed by Daniel Bates.
+
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2012-07-22  Kent Tamura  <tkent@chromium.org>
+
+        Rename ENABLE_DETAILS to ENABLE_DETAILS_ELEMENT
+        https://bugs.webkit.org/show_bug.cgi?id=91928
+
+        Reviewed by Kentaro Hara.
+
+        A flag name for an elmement should be ENABLE_*_ELEMENT.
+
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+        * configure.ac:
+
+2012-07-20  Kent Tamura  <tkent@chromium.org>
+
+        Rename ENABLE_DATALIST to ENABLE_DATALIST_ELEMENT
+        https://bugs.webkit.org/show_bug.cgi?id=91846
+
+        Reviewed by Kentaro Hara.
+
+        A flag name for an elmement should be ENABLE_*_ELEMENT.
+
+        * Source/cmake/OptionsEfl.cmake:
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+        * configure.ac:
+
+2012-07-19  MORITA Hajime  <morrita@google.com>
+
+        [Refactoring] Replace Node's Document pointer with a TreeScope pointer
+        https://bugs.webkit.org/show_bug.cgi?id=59816
+
+        Reviewed by Ryosuke Niwa.
+
+        * Source/autotools/symbols.filter: Added newly exported symbols.
+
 2012-07-19  Christophe Dumez  <christophe.dumez@intel.com>
 
         [EFL] Bump libsoup dependency to v2.39.4.1 to fix cookie issues

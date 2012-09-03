@@ -139,6 +139,10 @@
 #include "IntentData.h"
 #endif
 
+#if ENABLE(VIBRATION)
+#include "WebVibrationClient.h"
+#endif
+
 #if PLATFORM(MAC)
 #include "BuiltInPDFView.h"
 #endif
@@ -289,6 +293,9 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     WebCore::provideNotification(m_page.get(), new WebNotificationClient(this));
 #endif
+#if ENABLE(VIBRATION)
+    WebCore::provideVibrationTo(m_page.get(), new WebVibrationClient(this));
+#endif
 
     // Qt does not yet call setIsInWindow. Until it does, just leave
     // this line out so plug-ins and video will work. Eventually all platforms
@@ -412,6 +419,11 @@ void WebPage::initializeInjectedBundleFullScreenClient(WKBundlePageFullScreenCli
     m_fullScreenClient.initialize(client);
 }
 #endif
+
+void WebPage::initializeInjectedBundleDiagnosticLoggingClient(WKBundlePageDiagnosticLoggingClient* client)
+{
+    m_logDiagnosticMessageClient.initialize(client);
+}
 
 PassRefPtr<Plugin> WebPage::createPlugin(WebFrame* frame, HTMLPlugInElement* pluginElement, const Plugin::Parameters& parameters)
 {
@@ -2079,6 +2091,8 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
 
     settings->setShouldRespectImageOrientation(store.getBoolValueForKey(WebPreferencesKey::shouldRespectImageOrientationKey()));
 
+    settings->setDiagnosticLoggingEnabled(store.getBoolValueForKey(WebPreferencesKey::diagnosticLoggingEnabledKey()));
+
     platformPreferencesDidChange(store);
 
     if (m_drawingArea)
@@ -2137,6 +2151,10 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* evt)
 
     if (command.execute(evt))
         return true;
+
+    // Don't allow text insertion for nodes that cannot edit.
+    if (!frame->editor()->canEdit())
+        return false;
 
     // Don't insert null or control characters as they can result in unexpected behaviour
     if (evt->charCode() < ' ')
@@ -2394,11 +2412,16 @@ void WebPage::countStringMatches(const String& string, uint32_t options, uint32_
 
 void WebPage::didChangeSelectedIndexForActivePopupMenu(int32_t newIndex)
 {
+    changeSelectedIndex(newIndex);
+    m_activePopupMenu = 0;
+}
+
+void WebPage::changeSelectedIndex(int32_t index)
+{
     if (!m_activePopupMenu)
         return;
 
-    m_activePopupMenu->didChangeSelectedIndex(newIndex);
-    m_activePopupMenu = 0;
+    m_activePopupMenu->didChangeSelectedIndex(index);
 }
 
 void WebPage::didChooseFilesForOpenPanel(const Vector<String>& files)

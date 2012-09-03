@@ -56,12 +56,13 @@
 namespace WebCore {
 
 class CCActiveAnimation;
-struct CCAnimationEvent;
 class CCLayerAnimationDelegate;
 class CCLayerImpl;
 class CCLayerTreeHost;
 class CCTextureUpdater;
 class ScrollbarLayerChromium;
+struct CCAnimationEvent;
+struct CCRenderingStats;
 
 // Delegate for handling scroll input for a LayerChromium.
 class LayerChromiumScrollDelegate {
@@ -195,9 +196,6 @@ public:
     void setUseParentBackfaceVisibility(bool useParentBackfaceVisibility) { m_useParentBackfaceVisibility = useParentBackfaceVisibility; }
     bool useParentBackfaceVisibility() const { return m_useParentBackfaceVisibility; }
 
-    void setUsesLayerClipping(bool usesLayerClipping) { m_usesLayerClipping = usesLayerClipping; }
-    bool usesLayerClipping() const { return m_usesLayerClipping; }
-
     virtual void setIsNonCompositedContent(bool);
     bool isNonCompositedContent() const { return m_isNonCompositedContent; }
 
@@ -214,7 +212,7 @@ public:
 
     // These methods typically need to be overwritten by derived classes.
     virtual bool drawsContent() const { return m_isDrawable; }
-    virtual void update(CCTextureUpdater&, const CCOcclusionTracker*) { }
+    virtual void update(CCTextureUpdater&, const CCOcclusionTracker*, CCRenderingStats&) { }
     virtual bool needMoreUpdates() { return false; }
     virtual void setIsMask(bool) { }
     virtual void bindContentsTexture() { }
@@ -236,8 +234,6 @@ public:
     bool drawOpacityIsAnimating() const { return m_drawOpacityIsAnimating; }
     void setDrawOpacityIsAnimating(bool drawOpacityIsAnimating) { m_drawOpacityIsAnimating = drawOpacityIsAnimating; }
 
-    const IntRect& clipRect() const { return m_clipRect; }
-    void setClipRect(const IntRect& clipRect) { m_clipRect = clipRect; }
     LayerChromium* renderTarget() const { ASSERT(!m_renderTarget || m_renderTarget->renderSurface()); return m_renderTarget; }
     void setRenderTarget(LayerChromium* target) { m_renderTarget = target; }
 
@@ -251,7 +247,7 @@ public:
     // root render surface, then this converts to physical pixels).
     const WebKit::WebTransformationMatrix& drawTransform() const { return m_drawTransform; }
     void setDrawTransform(const WebKit::WebTransformationMatrix& matrix) { m_drawTransform = matrix; }
-    // This moves from layer space, with origin the top left to screen space with origin in the top left.
+    // This moves from content space, with origin the top left to screen space with origin in the top left.
     // It converts logical, non-page-scaled pixels to physical pixels.
     const WebKit::WebTransformationMatrix& screenSpaceTransform() const { return m_screenSpaceTransform; }
     void setScreenSpaceTransform(const WebKit::WebTransformationMatrix& matrix) { m_screenSpaceTransform = matrix; }
@@ -351,8 +347,7 @@ private:
     IntRect m_visibleContentRect;
 
     // During drawing, identifies the region outside of which nothing should be drawn.
-    // Currently this is set to layer's clipRect if usesLayerClipping is true, otherwise
-    // it's renderTarget's RenderSurface contentRect.
+    // This is the intersection of the layer's drawableContentRect and damage (if damage tracking is enabled).
     // Uses target surface's space.
     IntRect m_scissorRect;
     IntPoint m_scrollPosition;
@@ -378,7 +373,6 @@ private:
     bool m_masksToBounds;
     bool m_opaque;
     bool m_doubleSided;
-    bool m_usesLayerClipping;
     bool m_isNonCompositedContent;
     bool m_preserves3D;
     bool m_useParentBackfaceVisibility;
@@ -397,9 +391,8 @@ private:
     float m_drawOpacity;
     bool m_drawOpacityIsAnimating;
 
-    // Uses target surface space.
-    IntRect m_clipRect;
     LayerChromium* m_renderTarget;
+
     WebKit::WebTransformationMatrix m_drawTransform;
     WebKit::WebTransformationMatrix m_screenSpaceTransform;
     bool m_drawTransformIsAnimating;

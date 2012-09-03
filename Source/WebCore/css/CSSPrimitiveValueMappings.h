@@ -383,6 +383,9 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ControlPart e)
         case MediaPlayButtonPart:
             m_value.ident = CSSValueMediaPlayButton;
             break;
+        case MediaOverlayPlayButtonPart:
+            m_value.ident = CSSValueMediaOverlayPlayButton;
+            break;
         case MediaMuteButtonPart:
             m_value.ident = CSSValueMediaMuteButton;
             break;
@@ -465,12 +468,12 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ControlPart e)
             m_value.ident = CSSValueRatingLevelIndicator;
             break;
         case ProgressBarPart:
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
             m_value.ident = CSSValueProgressBar;
 #endif
             break;
         case ProgressBarValuePart:
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
             m_value.ident = CSSValueProgressBarValue;
 #endif
             break;
@@ -2032,6 +2035,11 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(EPosition e)
         case FixedPosition:
             m_value.ident = CSSValueFixed;
             break;
+        case StickyPosition:
+#if ENABLE(CSS_STICKY_POSITION)
+            m_value.ident = CSSValueWebkitSticky;
+#endif
+            break;
     }
 }
 
@@ -2046,6 +2054,10 @@ template<> inline CSSPrimitiveValue::operator EPosition() const
             return AbsolutePosition;
         case CSSValueFixed:
             return FixedPosition;
+#if ENABLE(CSS_STICKY_POSITION)
+        case CSSValueWebkitSticky:
+            return StickyPosition;
+#endif
         default:
             ASSERT_NOT_REACHED();
             return StaticPosition;

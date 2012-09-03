@@ -44,7 +44,7 @@
 #include "StringTruncator.h"
 #include "TextControlInnerElements.h"
 
-#if ENABLE(METER_TAG)
+#if ENABLE(METER_ELEMENT)
 #include "HTMLMeterElement.h"
 #include "RenderMeter.h"
 #endif
@@ -53,7 +53,7 @@
 #include "RenderInputSpeech.h"
 #endif
 
-#if ENABLE(DATALIST)
+#if ENABLE(DATALIST_ELEMENT)
 #include "ElementShadow.h"
 #include "HTMLCollection.h"
 #include "HTMLDataListElement.h"
@@ -237,11 +237,11 @@ void RenderTheme::adjustStyle(StyleResolver* styleResolver, RenderStyle* style, 
             return adjustSearchFieldResultsDecorationStyle(styleResolver, style, e);
         case SearchFieldResultsButtonPart:
             return adjustSearchFieldResultsButtonStyle(styleResolver, style, e);
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
         case ProgressBarPart:
             return adjustProgressBarStyle(styleResolver, style, e);
 #endif
-#if ENABLE(METER_TAG)
+#if ENABLE(METER_ELEMENT)
         case MeterPart:
         case RelevancyLevelIndicatorPart:
         case ContinuousCapacityLevelIndicatorPart:
@@ -306,7 +306,7 @@ bool RenderTheme::paint(RenderObject* o, const PaintInfo& paintInfo, const IntRe
 #endif
         case MenulistPart:
             return paintMenuList(o, paintInfo, r);
-#if ENABLE(METER_TAG)
+#if ENABLE(METER_ELEMENT)
         case MeterPart:
         case RelevancyLevelIndicatorPart:
         case ContinuousCapacityLevelIndicatorPart:
@@ -314,7 +314,7 @@ bool RenderTheme::paint(RenderObject* o, const PaintInfo& paintInfo, const IntRe
         case RatingLevelIndicatorPart:
             return paintMeter(o, paintInfo, r);
 #endif
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
         case ProgressBarPart:
             return paintProgressBar(o, paintInfo, r);
 #endif
@@ -329,6 +329,8 @@ bool RenderTheme::paint(RenderObject* o, const PaintInfo& paintInfo, const IntRe
             return paintMediaFullscreenButton(o, paintInfo, r);
         case MediaPlayButtonPart:
             return paintMediaPlayButton(o, paintInfo, r);
+        case MediaOverlayPlayButtonPart:
+            return paintMediaOverlayPlayButton(o, paintInfo, r);
         case MediaMuteButtonPart:
             return paintMediaMuteButton(o, paintInfo, r);
         case MediaSeekBackButtonPart:
@@ -411,14 +413,14 @@ bool RenderTheme::paintBorderOnly(RenderObject* o, const PaintInfo& paintInfo, c
         case DefaultButtonPart:
         case ButtonPart:
         case MenulistPart:
-#if ENABLE(METER_TAG)
+#if ENABLE(METER_ELEMENT)
         case MeterPart:
         case RelevancyLevelIndicatorPart:
         case ContinuousCapacityLevelIndicatorPart:
         case DiscreteCapacityLevelIndicatorPart:
         case RatingLevelIndicatorPart:
 #endif
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
         case ProgressBarPart:
 #endif
         case SliderHorizontalPart:
@@ -458,14 +460,14 @@ bool RenderTheme::paintDecorations(RenderObject* o, const PaintInfo& paintInfo, 
         case DefaultButtonPart:
         case ButtonPart:
         case MenulistPart:
-#if ENABLE(METER_TAG)
+#if ENABLE(METER_ELEMENT)
         case MeterPart:
         case RelevancyLevelIndicatorPart:
         case ContinuousCapacityLevelIndicatorPart:
         case DiscreteCapacityLevelIndicatorPart:
         case RatingLevelIndicatorPart:
 #endif
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
         case ProgressBarPart:
 #endif
         case SliderHorizontalPart:
@@ -826,7 +828,7 @@ bool RenderTheme::isReadOnlyControl(const RenderObject* o) const
     Node* node = o->node();
     if (!node || !node->isElementNode())
         return false;
-    return static_cast<Element*>(node)->isReadOnlyFormControl();
+    return static_cast<Element*>(node)->shouldMatchReadOnlySelector();
 }
 
 bool RenderTheme::isHovered(const RenderObject* o) const
@@ -937,7 +939,7 @@ bool RenderTheme::paintInputFieldSpeechButton(RenderObject* object, const PaintI
 }
 #endif
 
-#if ENABLE(METER_TAG)
+#if ENABLE(METER_ELEMENT)
 void RenderTheme::adjustMeterStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
     style->setBoxShadow(nullptr);
@@ -960,10 +962,14 @@ bool RenderTheme::paintMeter(RenderObject*, const PaintInfo&, const IntRect&)
 
 #endif
 
-#if ENABLE(DATALIST)
+#if ENABLE(DATALIST_ELEMENT)
 void RenderTheme::paintSliderTicks(RenderObject* o, const PaintInfo& paintInfo, const IntRect& rect)
 {
-    HTMLInputElement* input = static_cast<HTMLInputElement*>(o->node()->shadowAncestorNode());
+    Node* node = o->node();
+    if (!node)
+        return;
+
+    HTMLInputElement* input = node->toInputElement();
     if (!input)
         return;
 
@@ -1018,19 +1024,19 @@ void RenderTheme::paintSliderTicks(RenderObject* o, const PaintInfo& paintInfo, 
         if (!input->isValidValue(value))
             continue;
         double parsedValue = parseToDoubleForNumberType(input->sanitizeValue(value));
-        double tickPosition = (parsedValue - min) / (max - min);
-        if (!o->style()->isLeftToRightDirection())
-            tickPosition = 1.0 - tickPosition;
+        double tickFraction = (parsedValue - min) / (max - min);
+        double tickRatio = isHorizontal && o->style()->isLeftToRightDirection() ? tickFraction : 1.0 - tickFraction;
+        double tickPosition = round(tickRegionSideMargin + tickRegionWidth * tickRatio);
         if (isHorizontal)
-            tickRect.setX(floor(tickRegionSideMargin + tickRegionWidth * tickPosition));
+            tickRect.setX(tickPosition);
         else
-            tickRect.setY(floor(tickRegionSideMargin + tickRegionWidth * tickPosition));
+            tickRect.setY(tickPosition);
         paintInfo.context->fillRect(tickRect);
     }
 }
 #endif
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
 double RenderTheme::animationRepeatIntervalForProgressBar(RenderProgress*) const
 {
     return 0;

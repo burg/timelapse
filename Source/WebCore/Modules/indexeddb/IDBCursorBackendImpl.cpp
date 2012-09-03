@@ -37,12 +37,12 @@
 #include "IDBObjectStoreBackendImpl.h"
 #include "IDBRequest.h"
 #include "IDBTracing.h"
-#include "IDBTransactionBackendInterface.h"
+#include "IDBTransactionBackendImpl.h"
 #include "SerializedScriptValue.h"
 
 namespace WebCore {
 
-IDBCursorBackendImpl::IDBCursorBackendImpl(PassRefPtr<IDBBackingStore::Cursor> cursor, IDBCursor::Direction direction, CursorType cursorType, IDBTransactionBackendInterface* transaction, IDBObjectStoreBackendInterface* objectStore)
+IDBCursorBackendImpl::IDBCursorBackendImpl(PassRefPtr<IDBBackingStore::Cursor> cursor, IDBCursor::Direction direction, CursorType cursorType, IDBTransactionBackendImpl* transaction, IDBObjectStoreBackendImpl* objectStore)
     : m_cursor(cursor)
     , m_direction(direction)
     , m_cursorType(cursorType)
@@ -81,17 +81,6 @@ PassRefPtr<SerializedScriptValue> IDBCursorBackendImpl::value() const
     if (m_cursorType == IndexKeyCursor)
       return SerializedScriptValue::nullValue();
     return SerializedScriptValue::createFromWire(m_cursor->value());
-}
-
-void IDBCursorBackendImpl::update(PassRefPtr<SerializedScriptValue> value, PassRefPtr<IDBCallbacks> callbacks, ExceptionCode& ec)
-{
-    IDB_TRACE("IDBCursorBackendImpl::update");
-    ASSERT(m_transaction->mode() != IDBTransaction::READ_ONLY);
-
-    ASSERT(m_cursor);
-    ASSERT(m_cursorType != IndexKeyCursor);
-
-    m_objectStore->put(value, m_cursor->primaryKey(), IDBObjectStoreBackendInterface::CursorUpdate, callbacks, m_transaction.get(), ec);
 }
 
 void IDBCursorBackendImpl::continueFunction(PassRefPtr<IDBKey> prpKey, PassRefPtr<IDBCallbacks> prpCallbacks, ExceptionCode& ec)

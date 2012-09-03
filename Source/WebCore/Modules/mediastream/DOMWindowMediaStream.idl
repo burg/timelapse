@@ -30,9 +30,9 @@ module window {
         Conditional=MEDIA_STREAM,
         Supplemental=DOMWindow
     ] DOMWindowMediaStream {
-        attribute [V8EnabledAtRuntime] DeprecatedPeerConnectionConstructor webkitDeprecatedPeerConnection;
         attribute [V8EnabledAtRuntime] MediaStreamConstructor webkitMediaStream;
         attribute [V8EnabledAtRuntime] PeerConnection00Constructor webkitPeerConnection00;
+        attribute [V8EnabledAtRuntime] RTCPeerConnectionConstructor webkitRTCPeerConnection;
         attribute SessionDescriptionConstructor SessionDescription;
         attribute IceCandidateConstructor IceCandidate;
         attribute MediaStreamEventConstructor MediaStreamEvent;

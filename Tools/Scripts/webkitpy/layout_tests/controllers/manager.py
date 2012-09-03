@@ -46,6 +46,7 @@ import time
 
 from webkitpy.common import message_pool
 from webkitpy.layout_tests.controllers import worker
+from webkitpy.layout_tests.controllers.finder import LayoutTestFinder
 from webkitpy.layout_tests.controllers.test_result_writer import TestResultWriter
 from webkitpy.layout_tests.layout_package import json_layout_results_generator
 from webkitpy.layout_tests.layout_package import json_results_generator
@@ -328,31 +329,11 @@ class Manager(object):
         self._group_stats = {}
         self._worker_stats = {}
         self._current_result_summary = None
+        self._finder = LayoutTestFinder(self._port, self._options)
 
-    def collect_tests(self, args):
-        """Find all the files to test.
-
-        Args:
-          args: list of test arguments from the command line
-
-        """
-        paths = self._strip_test_dir_prefixes(args)
-        if self._options.test_list:
-            paths += self._strip_test_dir_prefixes(read_test_files(self._filesystem, self._options.test_list, self._port.TEST_PATH_SEPARATOR))
-        self._paths = set(paths)
-        self._test_files = self._port.tests(paths)
-
-    def _strip_test_dir_prefixes(self, paths):
-        return [self._strip_test_dir_prefix(path) for path in paths if path]
-
-    def _strip_test_dir_prefix(self, path):
-        # Handle both "LayoutTests/foo/bar.html" and "LayoutTests\foo\bar.html" if
-        # the filesystem uses '\\' as a directory separator.
-        if path.startswith(self.LAYOUT_TESTS_DIRECTORY + self._port.TEST_PATH_SEPARATOR):
-            return path[len(self.LAYOUT_TESTS_DIRECTORY + self._port.TEST_PATH_SEPARATOR):]
-        if path.startswith(self.LAYOUT_TESTS_DIRECTORY + self._filesystem.sep):
-            return path[len(self.LAYOUT_TESTS_DIRECTORY + self._filesystem.sep):]
-        return path
+    def _collect_tests(self, args):
+        self._paths, self._test_files_list = self._finder.find_tests(self._options, args)
+        self._test_files = set(self._test_files_list)
 
     def _is_http_test(self, test):
         return self.HTTP_SUBDIR in test or self.WEBSOCKET_SUBDIR in test
@@ -366,119 +347,19 @@ class Manager(object):
     def _is_perf_test(self, test):
         return self.PERF_SUBDIR == test or (self.PERF_SUBDIR + self._port.TEST_PATH_SEPARATOR) in test
 
-    def parse_expectations(self):
+    def _parse_expectations(self):
         self._expectations = test_expectations.TestExpectations(self._port, self._test_files)
-
-    def _split_into_chunks_if_necessary(self, skipped):
-        if not self._options.run_chunk and not self._options.run_part:
-            return skipped
-
-        # If the user specifies they just want to run a subset of the tests,
-        # just grab a subset of the non-skipped tests.
-        chunk_value = self._options.run_chunk or self._options.run_part
-        test_files = self._test_files_list
-        try:
-            (chunk_num, chunk_len) = chunk_value.split(":")
-            chunk_num = int(chunk_num)
-            assert(chunk_num >= 0)
-            test_size = int(chunk_len)
-            assert(test_size > 0)
-        except AssertionError:
-            _log.critical("invalid chunk '%s'" % chunk_value)
-            return None
-
-        # Get the number of tests
-        num_tests = len(test_files)
-
-        # Get the start offset of the slice.
-        if self._options.run_chunk:
-            chunk_len = test_size
-            # In this case chunk_num can be really large. We need
-            # to make the slave fit in the current number of tests.
-            slice_start = (chunk_num * chunk_len) % num_tests
-        else:
-            # Validate the data.
-            assert(test_size <= num_tests)
-            assert(chunk_num <= test_size)
-
-            # To count the chunk_len, and make sure we don't skip
-            # some tests, we round to the next value that fits exactly
-            # all the parts.
-            rounded_tests = num_tests
-            if rounded_tests % test_size != 0:
-                rounded_tests = (num_tests + test_size - (num_tests % test_size))
-
-            chunk_len = rounded_tests / test_size
-            slice_start = chunk_len * (chunk_num - 1)
-            # It does not mind if we go over test_size.
-
-        # Get the end offset of the slice.
-        slice_end = min(num_tests, slice_start + chunk_len)
-
-        files = test_files[slice_start:slice_end]
-
-        _log.debug('chunk slice [%d:%d] of %d is %d tests' % (slice_start, slice_end, num_tests, (slice_end - slice_start)))
-
-        # If we reached the end and we don't have enough tests, we run some
-        # from the beginning.
-        if slice_end - slice_start < chunk_len:
-            extra = chunk_len - (slice_end - slice_start)
-            _log.debug('   last chunk is partial, appending [0:%d]' % extra)
-            files.extend(test_files[0:extra])
-
-        len_skip_chunk = int(len(files) * len(skipped) / float(len(self._test_files)))
-        skip_chunk_list = list(skipped)[0:len_skip_chunk]
-        skip_chunk = set(skip_chunk_list)
-
-        # FIXME: This is a total hack.
-        # Update expectations so that the stats are calculated correctly.
-        # We need to pass a list that includes the right # of skipped files
-        # to ParseExpectations so that ResultSummary() will get the correct
-        # stats. So, we add in the subset of skipped files, and then
-        # subtract them back out.
-        self._test_files_list = files + skip_chunk_list
-        self._test_files = set(self._test_files_list)
-
-        self.parse_expectations()
-
-        self._test_files = set(files)
-        self._test_files_list = files
-
-        return skip_chunk
 
     # FIXME: This method is way too long and needs to be broken into pieces.
     def prepare_lists_and_print_output(self):
         """Create appropriate subsets of test lists and returns a
         ResultSummary object. Also prints expected test counts.
         """
+        num_all_test_files = len(self._test_files_list)
 
-        # Remove skipped - both fixable and ignored - files from the
-        # top-level list of files to test.
-        found_test_files = set(self._test_files)
-        num_all_test_files = len(self._test_files)
-
-        skipped = self._expectations.get_tests_with_result_type(test_expectations.SKIP)
-        if not self._options.http:
-            skipped.update(set(self._http_tests()))
-
-        if self._options.skipped == 'only':
-            self._test_files = self._test_files.intersection(skipped)
-        elif self._options.skipped == 'default':
-            self._test_files -= skipped
-        elif self._options.skipped == 'ignore':
-            pass  # just to be clear that we're ignoring the skip list.
-
-        if self._options.skip_failing_tests:
-            self._test_files -= self._expectations.get_tests_with_result_type(test_expectations.FAIL)
-            self._test_files -= self._expectations.get_tests_with_result_type(test_expectations.FLAKY)
-
-        # now make sure we're explicitly running any tests passed on the command line.
-        self._test_files.update(found_test_files.intersection(self._paths))
-
-        num_to_run = len(self._test_files)
-        num_skipped = num_all_test_files - num_to_run
-
-        if not num_to_run:
+        tests_to_skip = self._finder.skip_tests(self._paths, self._test_files_list, self._expectations, self._http_tests())
+        self._test_files = set(self._test_files_list) - tests_to_skip
+        if not self._test_files_list:
             _log.critical('No tests to run.')
             return None
 
@@ -490,9 +371,11 @@ class Manager(object):
         else:
             self._test_files_list.sort(key=lambda test: test_key(self._port, test))
 
-        skipped = self._split_into_chunks_if_necessary(skipped)
+        self._test_files_list, tests_in_other_chunks = self._finder.split_into_chunks_if_necessary(self._test_files_list)
+        self._expectations.add_skipped_tests(tests_in_other_chunks)
+        tests_to_skip.update(tests_in_other_chunks)
+        self._tests = set(self._test_files_list)
 
-        # FIXME: It's unclear how --repeat-each and --iterations should interact with chunks?
         if self._options.repeat_each:
             list_with_repetitions = []
             for test in self._test_files_list:
@@ -502,22 +385,11 @@ class Manager(object):
         if self._options.iterations:
             self._test_files_list = self._test_files_list * self._options.iterations
 
-        iterations =  \
-            (self._options.repeat_each if self._options.repeat_each else 1) * \
-            (self._options.iterations if self._options.iterations else 1)
-        result_summary = ResultSummary(self._expectations, self._test_files | skipped, iterations)
+        iterations = self._options.repeat_each * self._options.iterations
+        result_summary = ResultSummary(self._expectations, self._test_files, iterations, tests_to_skip)
 
-        self._printer.print_expected(num_all_test_files, result_summary, self._expectations.get_tests_with_result_type)
-
-        if self._options.skipped != 'ignore':
-            # Note that we don't actually run the skipped tests (they were
-            # subtracted out of self._test_files, above), but we stub out the
-            # results here so the statistics can remain accurate.
-            for test in skipped:
-                result = test_results.TestResult(test)
-                result.type = test_expectations.SKIP
-                for iteration in range(iterations):
-                    result_summary.add(result, expected=True, test_is_slow=self._test_is_slow(test))
+        self._printer.print_found(num_all_test_files, len(self._test_files), self._options.repeat_each, self._options.iterations)
+        self._printer.print_expected(result_summary, self._expectations.get_tests_with_result_type)
 
         return result_summary
 
@@ -833,21 +705,22 @@ class Manager(object):
 
         return result_summary
 
-    def run(self):
-        """Run all our tests on all our test files.
+    def run(self, args):
+        """Run all our tests on all our test files and return the number of unexpected results (0 == success)."""
+        self._printer.write_update("Collecting tests ...")
+        try:
+            self._collect_tests(args)
+        except IOError as e:
+            # This is raised when the --test-list doesn't exist.
+            return -1
 
-        For each test file, we run each test type. If there are any failures,
-        we collect them for reporting.
+        self._printer.write_update("Checking build ...")
+        if not self._port.check_build(self.needs_servers()):
+            _log.error("Build check failed")
+            return -1
 
-        Args:
-          result_summary: a summary object tracking the test results.
-
-        Return:
-          The number of unexpected results (0 == success)
-        """
-        # collect_tests() must have been called first to initialize us.
-        # If we didn't find any files to test, we've errored out already in
-        # prepare_lists_and_print_output().
+        self._printer.write_update("Parsing expectations ...")
+        self._parse_expectations()
 
         result_summary = self._set_up_run()
         if not result_summary:
@@ -868,7 +741,7 @@ class Manager(object):
             _log.info("Retrying %d unexpected failure(s) ..." % len(failures))
             _log.info('')
             self._retrying = True
-            retry_summary = ResultSummary(self._expectations, failures.keys())
+            retry_summary = ResultSummary(self._expectations, failures.keys(), 1, set())
             # Note that we intentionally ignore the return value here.
             self._run_tests(failures.keys(), retry_summary, num_workers=1)
             failures = self._get_failures(retry_summary, include_crashes=True, include_missing=True)
@@ -1153,25 +1026,6 @@ class Manager(object):
         self._worker_stats[worker_name]['num_tests'] += 1
         self._all_results.append(result)
         self._update_summary_with_result(self._current_result_summary, result)
-
-
-def read_test_files(fs, filenames, test_path_separator):
-    tests = []
-    for filename in filenames:
-        try:
-            if test_path_separator != fs.sep:
-                filename = filename.replace(test_path_separator, fs.sep)
-            file_contents = fs.read_text_file(filename).split('\n')
-            for line in file_contents:
-                line = test_expectations.strip_comments(line)
-                if line:
-                    tests.append(line)
-        except IOError, e:
-            if e.errno == errno.ENOENT:
-                _log.critical('')
-                _log.critical('--test-list file "%s" not found' % file)
-            raise
-    return tests
 
 
 # FIXME: These two free functions belong either on manager (since it's the only one

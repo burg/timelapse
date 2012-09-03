@@ -277,6 +277,15 @@ void WebGraphicsLayer::setDrawsContent(bool b)
     didChangeLayerState();
 }
 
+void WebGraphicsLayer::setContentsVisible(bool b)
+{
+    if (contentsAreVisible() == b)
+        return;
+    GraphicsLayer::setContentsVisible(b);
+
+    didChangeLayerState();
+}
+
 void WebGraphicsLayer::setContentsOpaque(bool b)
 {
     if (contentsOpaque() == b)
@@ -320,6 +329,8 @@ void WebGraphicsLayer::setContentsNeedsDisplay()
     setContentsToImage(0);
     setContentsToImage(image.get());
     m_canvasNeedsDisplay = true;
+    if (client())
+        client()->notifySyncRequired(this);
 }
 
 void WebGraphicsLayer::setContentsToCanvas(PlatformLayer* platformLayer)
@@ -468,6 +479,7 @@ void WebGraphicsLayer::syncLayerState()
     m_layerInfo.contentsOpaque = contentsOpaque();
     m_layerInfo.contentsRect = contentsRect();
     m_layerInfo.drawsContent = drawsContent();
+    m_layerInfo.contentsVisible = contentsAreVisible();
     m_layerInfo.mask = toWebLayerID(maskLayer());
     m_layerInfo.masksToBounds = masksToBounds();
     m_layerInfo.opacity = opacity();

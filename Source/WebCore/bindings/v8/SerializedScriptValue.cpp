@@ -412,25 +412,27 @@ public:
         ASSERT(static_cast<const uint8_t*>(arrayBuffer.data()) + arrayBufferView.byteOffset() ==
                static_cast<const uint8_t*>(arrayBufferView.baseAddress()));
 #endif
-        if (arrayBufferView.isByteArray())
+        ArrayBufferView::ViewType type = arrayBufferView.getType();
+
+        if (type == ArrayBufferView::TypeInt8)
             append(ByteArrayTag);
-        else if (arrayBufferView.isUnsignedByteClampedArray())
+        else if (type == ArrayBufferView::TypeUint8Clamped)
             append(UnsignedByteClampedArrayTag);
-        else if (arrayBufferView.isUnsignedByteArray())
+        else if (type == ArrayBufferView::TypeUint8)
             append(UnsignedByteArrayTag);
-        else if (arrayBufferView.isShortArray())
+        else if (type == ArrayBufferView::TypeInt16)
             append(ShortArrayTag);
-        else if (arrayBufferView.isUnsignedShortArray())
+        else if (type == ArrayBufferView::TypeUint16)
             append(UnsignedShortArrayTag);
-        else if (arrayBufferView.isIntArray())
+        else if (type == ArrayBufferView::TypeInt32)
             append(IntArrayTag);
-        else if (arrayBufferView.isUnsignedIntArray())
+        else if (type == ArrayBufferView::TypeUint32)
             append(UnsignedIntArrayTag);
-        else if (arrayBufferView.isFloatArray())
+        else if (type == ArrayBufferView::TypeFloat32)
             append(FloatArrayTag);
-        else if (arrayBufferView.isDoubleArray())
+        else if (type == ArrayBufferView::TypeFloat64)
             append(DoubleArrayTag);
-        else if (arrayBufferView.isDataView())
+        else if (type == ArrayBufferView::TypeDataView)
             append(DataViewTag);
         else
             ASSERT_NOT_REACHED();
@@ -2335,7 +2337,13 @@ void SerializedScriptValue::registerMemoryAllocatedWithCurrentScriptContext()
 
 SerializedScriptValue::~SerializedScriptValue()
 {
-    v8::V8::AdjustAmountOfExternalAllocatedMemory(-m_externallyAllocatedMemory);
+    // If the allocated memory was not registered before, then this class is likely
+    // used in a context other then Worker's onmessage environment and the presence of
+    // current v8 context is not guaranteed. Avoid calling v8 then.
+    if (m_externallyAllocatedMemory) {
+        ASSERT(v8::Isolate::GetCurrent());
+        v8::V8::AdjustAmountOfExternalAllocatedMemory(-m_externallyAllocatedMemory);
+    }
 }
 
 } // namespace WebCore

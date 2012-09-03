@@ -1330,6 +1330,9 @@ Color gradientAverageColor(const Gradient* gradient)
 
 void GraphicsContext::fillPath(const Path& path)
 {
+    if (path.isNull())
+        return;
+
     Color c = m_state.fillGradient
         ? gradientAverageColor(m_state.fillGradient.get())
         : fillColor();
@@ -1369,7 +1372,7 @@ void GraphicsContext::fillPath(const Path& path)
 
 void GraphicsContext::strokePath(const Path& path)
 {
-    if (!m_data->m_opacity)
+    if (path.isNull() || !m_data->m_opacity)
         return;
 
     ScopeDCProvider dcProvider(m_data);
@@ -1492,7 +1495,7 @@ void GraphicsContext::fillRect(const FloatRect& r, const Gradient* gradient)
     GradientFill(dc, tv.data(), tv.size(), mesh.data(), mesh.size(), vertical ? GRADIENT_FILL_RECT_V : GRADIENT_FILL_RECT_H);
 }
 
-AffineTransform GraphicsContext::getCTM() const
+AffineTransform GraphicsContext::getCTM(IncludeDeviceScale) const
 {
     if (paintingDisabled())
         return AffineTransform();

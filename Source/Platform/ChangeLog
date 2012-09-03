@@ -1,3 +1,254 @@
+2012-07-30  Keishi Hattori  <keishi@webkit.org>
+
+        Implement datalist UI for input type color for Chromium
+        https://bugs.webkit.org/show_bug.cgi?id=92075
+
+        Reviewed by Kent Tamura.
+
+        * chromium/public/WebLocalizedString.h: Added OtherColorLabel.
+
+2012-07-30  Adrienne Walker  <enne@google.com>
+
+        [chromium] Wrap ScrollbarLayerChromium in WebScrollbarLayer
+        https://bugs.webkit.org/show_bug.cgi?id=91032
+
+        Reviewed by James Robinson.
+
+        Add WebScrollbarLayer class to the Platform API.
+
+        * Platform.gypi:
+        * chromium/public/WebScrollbarLayer.h: Added.
+        (WebCore):
+        (WebKit):
+        (WebScrollbarLayer):
+        (WebKit::WebScrollbarLayer::WebScrollbarLayer):
+        (WebKit::WebScrollbarLayer::~WebScrollbarLayer):
+        (WebKit::WebScrollbarLayer::operator=):
+
+2012-06-29  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Remove WebTransformationMatrix::mapPoint overrides
+        https://bugs.webkit.org/show_bug.cgi?id=90329
+
+        Reviewed by Adrienne Walker.
+
+        Remove clipping-unaware mapPoint functions from the WebTransformationMatrix interface.
+
+        * chromium/public/WebTransformationMatrix.h:
+        (WebTransformationMatrix):
+
+2012-07-30  John Bates  <jbates@google.com>
+
+        Plumb vsync-enabled flag up to compositor thread and support disable-vsync
+        https://bugs.webkit.org/show_bug.cgi?id=92323
+
+        Reviewed by James Robinson.
+
+        * chromium/public/WebLayerTreeView.h:
+        (WebKit::WebLayerTreeView::Settings::Settings):
+        (Settings):
+
+2012-07-30  Adrienne Walker  <enne@google.com>
+
+        [chromium] Remove dependency on ScrollbarTheme from the compositor
+        https://bugs.webkit.org/show_bug.cgi?id=90528
+
+        Reviewed by James Robinson.
+
+        Flesh out WebScrollbar functions enough to be able to implement
+        the parts of ScrollbarThemeClient that Chromium uses.
+
+        Wrap ScrollbarThemeComposite in the Platform API via two different
+        classes: WebScrollbarThemePainter is the non-threadsafe version that
+        is used to paint parts of a scrollbar into a context. This is intended
+        to only be used on the main thread. WebScrollbarThemeGeometry is the
+        threadsafe version, used to get the location and sizes of scrollbar
+        parts on both threads, so they can be painted on the main thread and
+        composited on the compositor thread.
+
+        Unfortunately, there is no way to enforce these thread safety issues,
+        as other ports use the ScrollbarTheme hierarchy differently than
+        Chromium does. On the bright side, other than painting, the
+        ScrollbarTheme code is largely functional and we can enforce this
+        internally for the Chromium port.
+
+        * Platform.gypi:
+        * chromium/public/WebScrollbar.h:
+        (WebCore):
+        (WebKit):
+        (WebScrollbar):
+        * chromium/public/WebScrollbarThemeGeometry.h: Added.
+        (WebCore):
+        (WebKit):
+        (WebScrollbarThemeGeometry):
+        (WebKit::WebScrollbarThemeGeometry::WebScrollbarThemeGeometry):
+        (WebKit::WebScrollbarThemeGeometry::~WebScrollbarThemeGeometry):
+        (WebKit::WebScrollbarThemeGeometry::operator=):
+        (WebKit::WebScrollbarThemeGeometry::isNull):
+        * chromium/public/WebScrollbarThemePainter.h: Added.
+        (WebCore):
+        (WebKit):
+        (WebScrollbarThemePainter):
+        (WebKit::WebScrollbarThemePainter::WebScrollbarThemePainter):
+        (WebKit::WebScrollbarThemePainter::~WebScrollbarThemePainter):
+        (WebKit::WebScrollbarThemePainter::operator=):
+        (WebKit::WebScrollbarThemePainter::isNull):
+
+2012-07-30  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r124025.
+        http://trac.webkit.org/changeset/124025
+        https://bugs.webkit.org/show_bug.cgi?id=92658
+
+        Causes color-suggestion-picker-appearance layout test to time
+        out on all Chromium platforms (Requested by tomhudson_ on
+        #webkit).
+
+        * chromium/public/WebLocalizedString.h:
+
+2012-07-30  Keishi Hattori  <keishi@webkit.org>
+
+        Implement datalist UI for input type color for Chromium
+        https://bugs.webkit.org/show_bug.cgi?id=92075
+
+        Reviewed by Kent Tamura.
+
+        * chromium/public/WebLocalizedString.h: Added OtherColorLabel.
+
+2012-07-30  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r124004.
+        http://trac.webkit.org/changeset/124004
+        https://bugs.webkit.org/show_bug.cgi?id=92622
+
+        Broke Android build (Requested by keishi on #webkit).
+
+        * chromium/public/WebLocalizedString.h:
+
+2012-07-30  Keishi Hattori  <keishi@webkit.org>
+
+        Implement datalist UI for input type color for Chromium
+        https://bugs.webkit.org/show_bug.cgi?id=92075
+
+        Reviewed by Kent Tamura.
+
+        * chromium/public/WebLocalizedString.h: Added OtherColorLabel.
+
+2012-07-25  Min Qin  <qinmin@chromium.org>
+
+        Upstream declaration of WebGraphicsContext3D::createStreamTextureCHROMIUM() for android
+        https://bugs.webkit.org/show_bug.cgi?id=92308
+
+        Reviewed by Adam Barth.
+
+        For android, we need 2 calls to create and destroy the stream texture.
+        This change adds the interface for these 2 calls.
+        The actual implementation will be in webgraphicscontext3d_in_process_impl and webgraphicscontext3d_command_buffer_impl.
+
+        * chromium/public/WebGraphicsContext3D.h:
+        (WebGraphicsContext3D):
+        (WebKit::WebGraphicsContext3D::createStreamTextureCHROMIUM):
+        (WebKit::WebGraphicsContext3D::destroyStreamTextureCHROMIUM):
+
+2012-07-25  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Update MediaStreamTrack to match the specification
+        https://bugs.webkit.org/show_bug.cgi?id=90180
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/WebMediaStreamDescriptor.h:
+        (WebMediaStreamDescriptor):
+        * chromium/public/WebMediaStreamSource.h:
+        (WebMediaStreamSource):
+
+2012-07-24  Dave Tu  <dtu@chromium.org>
+
+        [chromium] Add time spent painting to GPU benchmarking renderingStats() API.
+        https://bugs.webkit.org/show_bug.cgi?id=90019
+
+        Reviewed by Adrienne Walker.
+
+        * chromium/public/WebRenderingStats.h:
+        (WebRenderingStats):
+        (WebKit::WebRenderingStats::WebRenderingStats):
+
+2012-07-24  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r123499.
+        http://trac.webkit.org/changeset/123499
+        https://bugs.webkit.org/show_bug.cgi?id=92161
+
+        Android fails to compile (Requested by zhenyao on #webkit).
+
+        * chromium/public/WebMediaStreamDescriptor.h:
+        (WebMediaStreamDescriptor):
+        * chromium/public/WebMediaStreamSource.h:
+        (WebMediaStreamSource):
+
+2012-07-24  Leandro Gracia Gil  <leandrogracia@chromium.org>
+
+        [Chromium] Enable conversion between WebFloatRect and gfx::RectF.
+        https://bugs.webkit.org/show_bug.cgi?id=92117
+
+        Reviewed by Adam Barth.
+
+        Introduce WebFloatRect <--> gfx::RectF conversion as we already do with WebRect <--> gfx::Rect.
+
+        * chromium/public/WebFloatRect.h:
+        (WebKit::WebFloatRect::WebFloatRect):
+        (WebFloatRect):
+        (WebKit::WebFloatRect::operator=):
+        (WebKit::WebFloatRect::operator gfx::RectF):
+
+2012-07-24  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Update MediaStreamTrack to match the specification
+        https://bugs.webkit.org/show_bug.cgi?id=90180
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/WebMediaStreamDescriptor.h:
+        (WebMediaStreamDescriptor):
+        * chromium/public/WebMediaStreamSource.h:
+        (WebMediaStreamSource):
+
+2012-07-23  Dave Tu  <dtu@chromium.org>
+
+        [chromium] Add droppedFrameCount to renderingStats.
+        https://bugs.webkit.org/show_bug.cgi?id=91694
+
+        Reviewed by Adrienne Walker.
+
+        * chromium/public/WebRenderingStats.h:
+        (WebRenderingStats):
+        (WebKit::WebRenderingStats::WebRenderingStats):
+
+2012-07-23  Brian Anderson  <brianderson@chromium.org>
+
+        [chromium] Use shallow flushes that don't glFlush
+        https://bugs.webkit.org/show_bug.cgi?id=90325
+
+        Reviewed by Kenneth Russell.
+
+        Adds shallowFlushCHROMIUM to WebGraphicsContext3D.
+
+        * chromium/public/WebGraphicsContext3D.h:
+        (WebGraphicsContext3D):
+        (WebKit::WebGraphicsContext3D::shallowFlushCHROMIUM):
+
+2012-07-23  Tommy Widenflycht  <tommyw@google.com>
+
+        [chromium] MediaStream API: Clean up the MockWebKitPlatformSupport object at shutdown
+        https://bugs.webkit.org/show_bug.cgi?id=91857
+
+        Reviewed by Adam Barth.
+
+        Made Platforms destructor virtual.
+
+        * chromium/public/Platform.h:
+        (WebKit::Platform::~Platform):
+
 2012-07-18  Antoine Labour  <piman@chromium.org>
 
         [chromium] Introduce CCResourceProvider, replacing TextureAllocator and hiding textures from clients to allow transport

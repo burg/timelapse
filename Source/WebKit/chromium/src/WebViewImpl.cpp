@@ -195,6 +195,10 @@ static const int touchPointPadding = 32;
 static const float minScaleDifference = 0.01f;
 static const float doubleTapZoomContentDefaultMargin = 5;
 static const float doubleTapZoomContentMinimumMargin = 2;
+static const double doubleTapZoomAnimationDurationInSeconds = 0.25;
+
+// Constants for zooming in on a focused text field.
+static const double scrollAndScaleAnimationDurationInSeconds = 0.2;
 
 namespace WebKit {
 
@@ -390,6 +394,7 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
     , m_maximumPageScaleFactor(maxPageScaleFactor)
     , m_ignoreViewportTagMaximumScale(false)
     , m_pageScaleFactorIsSet(false)
+    , m_savedPageScaleFactor(0)
     , m_contextMenuAllowed(false)
     , m_doingDragAndDrop(false)
     , m_ignoreInputEvents(false)
@@ -405,6 +410,7 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
     , m_tabsToLinks(false)
     , m_dragScrollTimer(adoptPtr(new DragScrollTimer))
     , m_isCancelingFullScreen(false)
+    , m_benchmarkSupport(this)
 #if USE(ACCELERATED_COMPOSITING)
     , m_rootGraphicsLayer(0)
     , m_isAcceleratedCompositingActive(false)
@@ -519,14 +525,23 @@ void WebViewImpl::handleMouseLeave(Frame& mainFrame, const WebMouseEvent& event)
 
 void WebViewImpl::handleMouseDown(Frame& mainFrame, const WebMouseEvent& event)
 {
-    // If there is a select popup open, close it as the user is clicking on
-    // the page (outside of the popup).  We also save it so we can prevent a
-    // click on the select element from immediately reopening the popup.
+    // If there is a popup open, close it as the user is clicking on the page (outside of the
+    // popup). We also save it so we can prevent a click on an element from immediately
+    // reopening the same popup.
     RefPtr<WebCore::PopupContainer> selectPopup;
+#if ENABLE(PAGE_POPUP)
+    RefPtr<WebPagePopupImpl> pagePopup;
+#endif
     if (event.button == WebMouseEvent::ButtonLeft) {
         selectPopup = m_selectPopup;
-        hideSelectPopup();
+#if ENABLE(PAGE_POPUP)
+        pagePopup = m_pagePopup;
+#endif
+        hidePopups();
         ASSERT(!m_selectPopup);
+#if ENABLE(PAGE_POPUP)
+        ASSERT(!m_pagePopup);
+#endif
     }
 
     m_lastMouseDownPoint = WebPoint(event.x, event.y);
@@ -551,6 +566,14 @@ void WebViewImpl::handleMouseDown(Frame& mainFrame, const WebMouseEvent& event)
         // immediately reopened the select popup.  It needs to be closed.
         hideSelectPopup();
     }
+
+#if ENABLE(PAGE_POPUP)
+    if (m_pagePopup && pagePopup && m_pagePopup->hasSamePopupClient(pagePopup.get())) {
+        // That click triggered a page popup that is the same as the one we just closed.
+        // It needs to be closed.
+        closePagePopup(m_pagePopup.get());
+    }
+#endif
 
     // Dispatch the contextmenu event regardless of if the click was swallowed.
     // On Windows, we handle it on mouse up, not down.
@@ -745,12 +768,17 @@ void WebViewImpl::renderingStats(WebRenderingStats& stats) const
         m_layerTreeView.renderingStats(stats);
 }
 
-void WebViewImpl::startPageScaleAnimation(const IntPoint& scroll, bool useAnchor, float newScale, double durationSec)
+void WebViewImpl::startPageScaleAnimation(const IntPoint& scroll, bool useAnchor, float newScale, double durationInSeconds)
 {
     if (!m_layerTreeView.isNull())
-        m_layerTreeView.startPageScaleAnimation(scroll, useAnchor, newScale, durationSec);
+        m_layerTreeView.startPageScaleAnimation(scroll, useAnchor, newScale, durationInSeconds);
 }
 #endif
+
+WebViewBenchmarkSupport* WebViewImpl::benchmarkSupport()
+{
+    return &m_benchmarkSupport;
+}
 
 bool WebViewImpl::handleKeyEvent(const WebKeyboardEvent& event)
 {
@@ -1073,16 +1101,37 @@ void WebViewImpl::computeScaleAndScrollForHitRect(const WebRect& hitRect, AutoZo
 }
 #endif
 
+void WebViewImpl::animateZoomAroundPoint(const IntPoint& point, AutoZoomType zoomType)
+{
+#if ENABLE(GESTURE_EVENTS)
+    if (!mainFrameImpl())
+        return;
+
+    float scale;
+    WebPoint scroll;
+    computeScaleAndScrollForHitRect(WebRect(point.x(), point.y(), 0, 0), zoomType, scale, scroll);
+
+    bool isDoubleTap = (zoomType == DoubleTap);
+    double durationInSeconds = isDoubleTap ? doubleTapZoomAnimationDurationInSeconds : 0;
+    startPageScaleAnimation(scroll, isDoubleTap, scale, durationInSeconds);
+#endif
+}
+
+void WebViewImpl::zoomToFindInPageRect(const WebRect& rect)
+{
+    animateZoomAroundPoint(IntRect(rect).center(), FindInPage);
+}
+
 void WebViewImpl::numberOfWheelEventHandlersChanged(unsigned numberOfWheelHandlers)
 {
     if (m_client)
         m_client->numberOfWheelEventHandlersChanged(numberOfWheelHandlers);
 }
 
-void WebViewImpl::numberOfTouchEventHandlersChanged(unsigned numberOfTouchHandlers)
+void WebViewImpl::hasTouchEventHandlers(bool hasTouchHandlers)
 {
     if (m_client)
-        m_client->numberOfTouchEventHandlersChanged(numberOfTouchHandlers);
+        m_client->hasTouchEventHandlers(hasTouchHandlers);
 }
 
 #if !OS(DARWIN)
@@ -2071,11 +2120,11 @@ WebTextInputType WebViewImpl::textInputType()
         if (textarea->readOnly() || textarea->disabled())
             return WebTextInputTypeNone;
 
-        return WebTextInputTypeText;
+        return WebTextInputTypeTextArea;
     }
 
     if (node->shouldUseInputMethod())
-        return WebTextInputTypeText;
+        return WebTextInputTypeContentEditable;
 
     return WebTextInputTypeNone;
 }
@@ -2684,6 +2733,33 @@ float WebViewImpl::maximumPageScaleFactor() const
     return m_maximumPageScaleFactor;
 }
 
+void WebViewImpl::saveScrollAndScaleState()
+{
+    m_savedPageScaleFactor = pageScaleFactor();
+    m_savedScrollOffset = mainFrame()->scrollOffset();
+}
+
+void WebViewImpl::restoreScrollAndScaleState()
+{
+    if (!m_savedPageScaleFactor)
+        return;
+
+#if ENABLE(GESTURE_EVENTS)
+    startPageScaleAnimation(IntPoint(m_savedScrollOffset), false, m_savedPageScaleFactor, scrollAndScaleAnimationDurationInSeconds);
+#else
+    setPageScaleFactor(m_savedPageScaleFactor, WebPoint());
+    mainFrame()->setScrollOffset(m_savedScrollOffset);
+#endif
+
+    resetSavedScrollAndScaleState();
+}
+
+void WebViewImpl::resetSavedScrollAndScaleState()
+{
+    m_savedPageScaleFactor = 0;
+    m_savedScrollOffset = IntSize();
+}
+
 WebSize WebViewImpl::fixedLayoutSize() const
 {
     if (!page())
@@ -3217,6 +3293,7 @@ void WebViewImpl::didCommitLoad(bool* isNewNavigation, bool isNavigationWithinPa
         m_pageScaleFactorIsSet = false;
 
     m_gestureAnimation.clear();
+    resetSavedScrollAndScaleState();
 }
 
 void WebViewImpl::layoutUpdated(WebFrameImpl* webframe)
@@ -3478,6 +3555,11 @@ void WebViewImpl::setBackgroundColor(const WebCore::Color& color)
     m_layerTreeView.setBackgroundColor(webDocumentBackgroundColor);
 }
 
+WebCore::GraphicsLayer* WebViewImpl::rootGraphicsLayer()
+{
+    return m_rootGraphicsLayer;
+}
+
 #if ENABLE(REQUEST_ANIMATION_FRAME)
 void WebViewImpl::scheduleAnimation()
 {
@@ -3534,6 +3616,7 @@ void WebViewImpl::setIsAcceleratedCompositingActive(bool active)
         layerTreeViewSettings.showFPSCounter = settingsImpl()->showFPSCounter();
         layerTreeViewSettings.showPlatformLayerTree = settingsImpl()->showPlatformLayerTree();
         layerTreeViewSettings.showPaintRects = settingsImpl()->showPaintRects();
+        layerTreeViewSettings.renderVSyncEnabled = settingsImpl()->renderVSyncEnabled();
         layerTreeViewSettings.forceSoftwareCompositing = settings()->forceSoftwareCompositing();
 
         layerTreeViewSettings.defaultTileSize = settingsImpl()->defaultTileSize();
@@ -3714,6 +3797,12 @@ WebGraphicsContext3D* WebViewImpl::sharedGraphicsContext3D()
         return 0;
 
     return GraphicsContext3DPrivate::extractWebGraphicsContext3D(SharedGraphicsContext3D::get().get());
+}
+
+void WebViewImpl::selectAutofillSuggestionAtIndex(unsigned listIndex)
+{
+    if (m_autofillPopupClient && listIndex < m_autofillPopupClient->getSuggestionsCount())
+        m_autofillPopupClient->valueChanged(listIndex);
 }
 
 void WebViewImpl::setVisibilityState(WebPageVisibilityState visibilityState,

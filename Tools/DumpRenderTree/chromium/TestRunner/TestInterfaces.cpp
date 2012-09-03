@@ -31,27 +31,127 @@
 #include "config.h"
 #include "TestInterfaces.h"
 
+#include "AccessibilityController.h"
+#include "EventSender.h"
 #include "GamepadController.h"
+#include "TextInputController.h"
 #include "platform/WebString.h"
+
+#include <wtf/OwnPtr.h>
 
 using WebKit::WebFrame;
 using WebKit::WebString;
+using WebKit::WebView;
+
+class TestInterfaces::Internal {
+public:
+    Internal();
+    ~Internal();
+
+    void setWebView(WebView*);
+    void setDelegate(TestDelegate*);
+    void bindTo(WebFrame*);
+    void resetAll();
+
+    AccessibilityController* accessibilityController() { return m_accessibilityController.get(); }
+    EventSender* eventSender() { return m_eventSender.get(); }
+
+private:
+    OwnPtr<AccessibilityController> m_accessibilityController;
+    OwnPtr<EventSender> m_eventSender;
+    OwnPtr<GamepadController> m_gamepadController;
+    OwnPtr<TextInputController> m_textInputController;
+};
+
+TestInterfaces::Internal::Internal()
+{
+    m_accessibilityController = adoptPtr(new AccessibilityController());
+    m_eventSender = adoptPtr(new EventSender());
+    m_gamepadController = adoptPtr(new GamepadController());
+    m_textInputController = adoptPtr(new TextInputController());
+}
+
+TestInterfaces::Internal::~Internal()
+{
+    m_accessibilityController->setWebView(0);
+    m_eventSender->setWebView(0);
+    // m_gamepadController doesn't depend on WebView.
+    m_textInputController->setWebView(0);
+
+    // m_accessibilityController doesn't depend on TestDelegate.
+    m_eventSender->setDelegate(0);
+    m_gamepadController->setDelegate(0);
+    // m_textInputController doesn't depend on TestDelegate.
+}
+
+void TestInterfaces::Internal::setWebView(WebView* webView)
+{
+    m_accessibilityController->setWebView(webView);
+    m_eventSender->setWebView(webView);
+    // m_gamepadController doesn't depend on WebView.
+    m_textInputController->setWebView(webView);
+}
+
+void TestInterfaces::Internal::setDelegate(TestDelegate* delegate)
+{
+    // m_accessibilityController doesn't depend on TestDelegate.
+    m_eventSender->setDelegate(delegate);
+    m_gamepadController->setDelegate(delegate);
+    // m_textInputController doesn't depend on TestDelegate.
+}
+
+void TestInterfaces::Internal::bindTo(WebFrame* frame)
+{
+    m_accessibilityController->bindToJavascript(frame, WebString::fromUTF8("accessibilityController"));
+    m_eventSender->bindToJavascript(frame, WebString::fromUTF8("eventSender"));
+    m_gamepadController->bindToJavascript(frame, WebString::fromUTF8("gamepadController"));
+    m_textInputController->bindToJavascript(frame, WebString::fromUTF8("textInputController"));
+}
+
+void TestInterfaces::Internal::resetAll()
+{
+    m_accessibilityController->reset();
+    m_eventSender->reset();
+    m_gamepadController->reset();
+    // m_textInputController doesn't have any state to reset.
+}
 
 TestInterfaces::TestInterfaces()
+    : m_internal(new TestInterfaces::Internal())
 {
-    m_gamepadController = adoptPtr(new GamepadController());
 }
 
 TestInterfaces::~TestInterfaces()
 {
+    delete m_internal;
+}
+
+void TestInterfaces::setWebView(WebView* webView)
+{
+    m_internal->setWebView(webView);
+}
+
+void TestInterfaces::setDelegate(TestDelegate* delegate)
+{
+    m_internal->setDelegate(delegate);
 }
 
 void TestInterfaces::bindTo(WebFrame* frame)
 {
-    m_gamepadController->bindToJavascript(frame, WebString::fromUTF8("gamepadController"));
+    m_internal->bindTo(frame);
 }
 
 void TestInterfaces::resetAll()
 {
-    m_gamepadController->reset();
+    m_internal->resetAll();
+}
+
+AccessibilityController* TestInterfaces::accessibilityController()
+{
+    return m_internal->accessibilityController();
+}
+
+EventSender* TestInterfaces::eventSender()
+{
+    return m_internal->eventSender();
 }

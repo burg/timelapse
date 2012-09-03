@@ -39,7 +39,7 @@
 namespace WebCore {
 
 class CCDamageTracker;
-class CCQuadCuller;
+class CCQuadSink;
 class CCRenderPass;
 class CCLayerImpl;
 class LayerRendererChromium;
@@ -71,17 +71,11 @@ public:
     void setDrawTransform(const WebKit::WebTransformationMatrix& drawTransform) { m_drawTransform = drawTransform; }
     const WebKit::WebTransformationMatrix& drawTransform() const { return m_drawTransform; }
 
-    void setOriginTransform(const WebKit::WebTransformationMatrix& originTransform) { m_originTransform = originTransform; }
-    const WebKit::WebTransformationMatrix& originTransform() const { return m_originTransform; }
-
     void setScreenSpaceTransform(const WebKit::WebTransformationMatrix& screenSpaceTransform) { m_screenSpaceTransform = screenSpaceTransform; }
     const WebKit::WebTransformationMatrix& screenSpaceTransform() const { return m_screenSpaceTransform; }
 
     void setReplicaDrawTransform(const WebKit::WebTransformationMatrix& replicaDrawTransform) { m_replicaDrawTransform = replicaDrawTransform; }
     const WebKit::WebTransformationMatrix& replicaDrawTransform() const { return m_replicaDrawTransform; }
-
-    void setReplicaOriginTransform(const WebKit::WebTransformationMatrix& replicaOriginTransform) { m_replicaOriginTransform = replicaOriginTransform; }
-    const WebKit::WebTransformationMatrix& replicaOriginTransform() const { return m_replicaOriginTransform; }
 
     void setReplicaScreenSpaceTransform(const WebKit::WebTransformationMatrix& replicaScreenSpaceTransform) { m_replicaScreenSpaceTransform = replicaScreenSpaceTransform; }
     const WebKit::WebTransformationMatrix& replicaScreenSpaceTransform() const { return m_replicaScreenSpaceTransform; }
@@ -91,7 +85,6 @@ public:
     bool screenSpaceTransformsAreAnimating() const { return m_screenSpaceTransformsAreAnimating; }
     void setScreenSpaceTransformsAreAnimating(bool animating) { m_screenSpaceTransformsAreAnimating = animating; }
 
-    // Usage: this clipRect should not be used if one of the two conditions is true: (a) clipRect() is empty, or (b) owningLayer->parent()->usesLayerClipping() is false.
     void setClipRect(const IntRect&);
     const IntRect& clipRect() const { return m_clipRect; }
 
@@ -117,7 +110,7 @@ public:
     PassOwnPtr<CCSharedQuadState> createSharedQuadState(int id) const;
     PassOwnPtr<CCSharedQuadState> createReplicaSharedQuadState(int id) const;
 
-    void appendQuads(CCQuadCuller&, CCSharedQuadState*, bool forReplica, int renderPassId);
+    void appendQuads(CCQuadSink&, CCSharedQuadState*, bool forReplica, int renderPassId);
 
     FloatRect computeRootScissorRectInCurrentSurface(const FloatRect& rootScissorRect) const;
 
@@ -131,10 +124,8 @@ private:
     float m_drawOpacity;
     bool m_drawOpacityIsAnimating;
     WebKit::WebTransformationMatrix m_drawTransform;
-    WebKit::WebTransformationMatrix m_originTransform;
     WebKit::WebTransformationMatrix m_screenSpaceTransform;
     WebKit::WebTransformationMatrix m_replicaDrawTransform;
-    WebKit::WebTransformationMatrix m_replicaOriginTransform;
     WebKit::WebTransformationMatrix m_replicaScreenSpaceTransform;
     bool m_targetSurfaceTransformsAreAnimating;
     bool m_screenSpaceTransformsAreAnimating;
@@ -157,6 +148,7 @@ private:
     // For CCLayerIteratorActions
     int m_targetRenderSurfaceLayerIndexHistory;
     int m_currentLayerIndexHistory;
+
     friend struct CCLayerIteratorActions;
 };
 

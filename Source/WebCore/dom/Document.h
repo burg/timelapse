@@ -179,6 +179,10 @@ class Prerenderer;
 class TextAutosizer;
 #endif
 
+#if ENABLE(CSP_NEXT)
+class DOMSecurityPolicy;
+#endif
+
 typedef int ExceptionCode;
 
 enum PageshowEventPersistence {
@@ -414,6 +418,10 @@ public:
     String webkitVisibilityState() const;
     bool webkitHidden() const;
     void dispatchVisibilityStateChangeEvent();
+#endif
+
+#if ENABLE(CSP_NEXT)
+    DOMSecurityPolicy* securityPolicy();
 #endif
 
     PassRefPtr<Node> adoptNode(PassRefPtr<Node> source, ExceptionCode&);
@@ -1125,7 +1133,12 @@ public:
     void didAddWheelEventHandler();
     void didRemoveWheelEventHandler();
 
+#if ENABLE(TOUCH_EVENTS)
     unsigned touchEventHandlerCount() const { return m_touchEventHandlerCount; }
+#else
+    unsigned touchEventHandlerCount() const { return 0; }
+#endif
+
     void didAddTouchEventHandler();
     void didRemoveTouchEventHandler();
 
@@ -1505,7 +1518,9 @@ private:
     unsigned m_writeRecursionDepth;
     
     unsigned m_wheelEventHandlerCount;
+#if ENABLE(TOUCH_EVENTS)
     unsigned m_touchEventHandlerCount;
+#endif
     
 #if ENABLE(UNDO_MANAGER)
     RefPtr<UndoManager> m_undoManager;
@@ -1532,6 +1547,10 @@ private:
     Timer<Document> m_visualUpdatesSuppressionTimer;
 
     RefPtr<WebKitNamedFlowCollection> m_namedFlows;
+
+#if ENABLE(CSP_NEXT)
+    RefPtr<DOMSecurityPolicy> m_domSecurityPolicy;
+#endif
 
 #ifndef NDEBUG
     bool m_didDispatchViewportPropertiesChanged;

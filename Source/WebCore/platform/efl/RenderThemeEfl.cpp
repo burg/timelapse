@@ -339,7 +339,7 @@ bool RenderThemeEfl::paintThemePart(RenderObject* object, FormType type, const P
             msg->val[0] = 0;
         msg->val[1] = 0.1;
         edje_object_message_send(entry->o, EDJE_MESSAGE_FLOAT_SET, 0, msg);
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
     } else if (type == ProgressBar) {
         RenderProgress* renderProgress = toRenderProgress(object);
         Edje_Message_Float_Set* msg;
@@ -566,7 +566,7 @@ const char* RenderThemeEfl::edjeGroupFromFormType(FormType type) const
         W("entry"),
         W("checkbox"),
         W("combo"),
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
         W("progressbar"),
 #endif
         W("search/field"),
@@ -786,7 +786,7 @@ void RenderThemeEfl::adjustSliderThumbSize(RenderStyle* style, Element*) const
 #endif
 }
 
-#if ENABLE(DATALIST)
+#if ENABLE(DATALIST_ELEMENT)
 IntSize RenderThemeEfl::sliderTickSize() const
 {
     // FIXME: We need to set this to the size of one tick mark.
@@ -1034,7 +1034,7 @@ void RenderThemeEfl::systemFont(int propId, FontDescription& fontDescription) co
     fontDescription.setItalic(false);
 }
 
-#if ENABLE(PROGRESS_TAG)
+#if ENABLE(PROGRESS_ELEMENT)
 void RenderThemeEfl::adjustProgressBarStyle(StyleResolver*, RenderStyle* style, Element*) const
 {
     style->setBoxShadow(nullptr);
@@ -1105,7 +1105,9 @@ String RenderThemeEfl::formatMediaControlsCurrentTime(float currentTime, float d
 
 bool RenderThemeEfl::paintMediaFullscreenButton(RenderObject* object, const PaintInfo& info, const IntRect& rect)
 {
-    Node* mediaNode = object->node() ? object->node()->shadowAncestorNode() : 0;
+    Node* mediaNode = object->node() ? object->node()->shadowHost() : 0;
+    if (!mediaNode)
+        mediaNode = object->node();
     if (!mediaNode || (!mediaNode->hasTagName(videoTag)))
         return false;
 
@@ -1117,7 +1119,9 @@ bool RenderThemeEfl::paintMediaFullscreenButton(RenderObject* object, const Pain
 
 bool RenderThemeEfl::paintMediaMuteButton(RenderObject* object, const PaintInfo& info, const IntRect& rect)
 {
-    Node* mediaNode = object->node() ? object->node()->shadowAncestorNode() : 0;
+    Node* mediaNode = object->node() ? object->node()->shadowHost() : 0;
+    if (!mediaNode)
+        mediaNode = object->node();
     if (!mediaNode || !mediaNode->isElementNode() || !static_cast<Element*>(mediaNode)->isMediaElement())
         return false;
 

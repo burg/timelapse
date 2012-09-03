@@ -31,24 +31,31 @@
 #ifndef TestInterfaces_h
 #define TestInterfaces_h
 
-#include <wtf/OwnPtr.h>
-
 namespace WebKit {
 class WebFrame;
+class WebView;
 }
 
-class GamepadController;
+class AccessibilityController;
+class EventSender;
+class TestDelegate;
 
 class TestInterfaces {
 public:
     TestInterfaces();
     ~TestInterfaces();
 
+    void setWebView(WebKit::WebView*);
+    void setDelegate(TestDelegate*);
     void bindTo(WebKit::WebFrame*);
     void resetAll();
 
+    AccessibilityController* accessibilityController();
+    EventSender* eventSender();
+
 private:
-    OwnPtr<GamepadController> m_gamepadController;
+    class Internal;
+    Internal* m_internal;
 };
 
 #endif // TestInterfaces_h

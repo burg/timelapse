@@ -25,6 +25,7 @@
 
 // This all-in-one cpp file cuts down on template bloat to allow us to build our Windows release build.
 
+#include "ArrayValue.cpp"
 #include "CallbackFunction.cpp"
 #include "DOMObjectHashTableMap.cpp"
 #include "DOMWrapperWorld.cpp"
@@ -119,6 +120,7 @@
 #include "JSMessageChannelCustom.cpp"
 #include "JSMessageEventCustom.cpp"
 #include "JSMessagePortCustom.cpp"
+#include "JSMicroDataItemValueCustom.cpp"
 #include "JSMutationCallbackCustom.cpp"
 #include "JSMutationObserverCustom.cpp"
 #include "JSNamedNodeMapCustom.cpp"

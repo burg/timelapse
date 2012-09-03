@@ -23,32 +23,31 @@
 #include "EWK2UnitTestEnvironment.h"
 #include <EWebKit2.h>
 #include <Ecore.h>
+#include <glib-object.h>
 #include <wtf/UnusedParam.h>
 
 extern EWK2UnitTest::EWK2UnitTestEnvironment* environment;
 
 namespace EWK2UnitTest {
 
-static void onLoadProgress(void* userData, Evas_Object* webView, void* eventInfo)
+static void onLoadFinished(void* userData, Evas_Object* webView, void* eventInfo)
 {
     UNUSED_PARAM(webView);
+    UNUSED_PARAM(eventInfo);
 
-    EWK2UnitTestBase* test = static_cast<EWK2UnitTestBase*>(userData);
-    double progress = *static_cast<double*>(eventInfo);
-
-    test->setLoadProgress(progress);
+    bool* loadFinished = static_cast<bool*>(userData);
+    *loadFinished = true;
 }
 
 EWK2UnitTestBase::EWK2UnitTestBase()
-    : m_loadProgress(0)
-    , m_ecoreEvas(0)
+    : m_ecoreEvas(0)
     , m_webView(0)
 {
 }
 
 void EWK2UnitTestBase::SetUp()
 {
-    ASSERT_GT(ecore_evas_init(), 0);
+    ewk_init();
 
     unsigned int width = environment->defaultWidth();
     unsigned int height = environment->defaultHeight();
@@ -73,20 +72,44 @@ void EWK2UnitTestBase::TearDown()
 {
     evas_object_del(m_webView);
     ecore_evas_free(m_ecoreEvas);
-    ecore_evas_shutdown();
+    ewk_shutdown();
 }
 
 void EWK2UnitTestBase::loadUrlSync(const char* url)
 {
-    m_loadProgress = 0;
+    bool loadFinished = false;
 
-    evas_object_smart_callback_add(m_webView, "load,progress", onLoadProgress, this);
+    evas_object_smart_callback_add(m_webView, "load,finished", onLoadFinished, &loadFinished);
     ewk_view_uri_set(m_webView, url);
 
-    while (m_loadProgress != 1)
+    while (!loadFinished)
         ecore_main_loop_iterate();
 
-    evas_object_smart_callback_del(m_webView, "load,progress", onLoadProgress);
+    evas_object_smart_callback_del(m_webView, "load,finished", onLoadFinished);
+}
+
+struct TitleChangedData {
+    CString expectedTitle;
+    bool done;
+};
+
+static void onTitleChanged(void* userData, Evas_Object* webView, void* eventInfo)
+{
+    TitleChangedData* data = static_cast<TitleChangedData*>(userData);
+
+    if (!strcmp(ewk_view_title_get(webView), data->expectedTitle.data()))
+        data->done = true;
+}
+
+void EWK2UnitTestBase::waitUntilTitleChangedTo(const char* expectedTitle)
+{
+    TitleChangedData data = { expectedTitle, false };
+    evas_object_smart_callback_add(m_webView, "title,changed", onTitleChanged, &data);
+
+    while (!data.done)
+        ecore_main_loop_iterate();
+
+    evas_object_smart_callback_del(m_webView, "title,changed", onTitleChanged);
 }
 
 } // namespace EWK2UnitTest

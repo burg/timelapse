@@ -78,7 +78,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-#if ENABLE(DATALIST)
+#if ENABLE(DATALIST_ELEMENT)
 class ListAttributeTargetObserver : IdTargetObserver {
 public:
     static PassOwnPtr<ListAttributeTargetObserver> create(const AtomicString& id, HTMLInputElement*);
@@ -456,7 +456,7 @@ void HTMLInputElement::updateType()
         updateValueIfNeeded();
 
     setFormControlValueMatchesRenderer(false);
-    updateInnerTextValue();
+    m_inputType->updateInnerTextValue();
 
     m_wasModifiedByUser = false;
 
@@ -487,22 +487,6 @@ void HTMLInputElement::updateType()
 
     setNeedsValidityCheck();
     notifyFormStateChanged();
-}
-
-void HTMLInputElement::updateInnerTextValue()
-{
-    if (!isTextField())
-        return;
-
-    if (!suggestedValue().isNull()) {
-        setInnerTextValue(suggestedValue());
-        updatePlaceholderVisibility(false);
-    } else if (!formControlValueMatchesRenderer()) {
-        // Update the renderer value if the formControlValueMatchesRenderer() flag is false.
-        // It protects an unacceptable renderer value from being overwritten with the DOM value.
-        setInnerTextValue(visibleValue());
-        updatePlaceholderVisibility(false);
-    }
 }
 
 void HTMLInputElement::subtreeHasChanged()
@@ -697,7 +681,7 @@ void HTMLInputElement::parseAttribute(const Attribute& attribute)
         HTMLTextFormControlElement::parseAttribute(attribute);
         m_inputType->readonlyAttributeChanged();
     }
-#if ENABLE(DATALIST)
+#if ENABLE(DATALIST_ELEMENT)
     else if (attribute.name() == listAttr) {
         m_hasNonEmptyList = !attribute.isEmpty();
         if (m_hasNonEmptyList) {
@@ -727,7 +711,7 @@ void HTMLInputElement::parseAttribute(const Attribute& attribute)
 #endif
     else
         HTMLTextFormControlElement::parseAttribute(attribute);
-    updateInnerTextValue();
+    m_inputType->updateInnerTextValue();
 }
 
 void HTMLInputElement::finishParsingChildren()
@@ -902,7 +886,7 @@ void HTMLInputElement::copyNonAttributePropertiesFromElement(const Element& sour
     HTMLTextFormControlElement::copyNonAttributePropertiesFromElement(source);
 
     setFormControlValueMatchesRenderer(false);
-    updateInnerTextValue();
+    m_inputType->updateInnerTextValue();
 }
 
 String HTMLInputElement::value() const
@@ -950,7 +934,7 @@ void HTMLInputElement::setSuggestedValue(const String& value)
     setFormControlValueMatchesRenderer(false);
     m_suggestedValue = sanitizeValue(value);
     setNeedsStyleRecalc();
-    updateInnerTextValue();
+    m_inputType->updateInnerTextValue();
 }
 
 void HTMLInputElement::setEditingValue(const String& value)
@@ -1174,6 +1158,15 @@ void HTMLInputElement::defaultEventHandler(Event* evt)
 
     if (!callBaseClassEarly && !evt->defaultHandled())
         HTMLTextFormControlElement::defaultEventHandler(evt);
+}
+
+bool HTMLInputElement::willRespondToMouseClickEvents()
+{
+    // FIXME: Consider implementing willRespondToMouseClickEvents() in InputType if more accurate results are necessary.
+    if (!disabled())
+        return true;
+
+    return HTMLTextFormControlElement::willRespondToMouseClickEvents();
 }
 
 bool HTMLInputElement::isURLAttribute(const Attribute& attribute) const
@@ -1435,7 +1428,7 @@ Node::InsertionNotificationRequest HTMLInputElement::insertedInto(ContainerNode*
     HTMLTextFormControlElement::insertedInto(insertionPoint);
     if (insertionPoint->inDocument() && !form())
         addToRadioButtonGroup();
-#if ENABLE(DATALIST)
+#if ENABLE(DATALIST_ELEMENT)
     resetListAttributeTargetObserver();
 #endif
     return InsertionDone;
@@ -1447,7 +1440,7 @@ void HTMLInputElement::removedFrom(ContainerNode* insertionPoint)
         removeFromRadioButtonGroup();
     HTMLTextFormControlElement::removedFrom(insertionPoint);
     ASSERT(!inDocument());
-#if ENABLE(DATALIST)
+#if ENABLE(DATALIST_ELEMENT)
     resetListAttributeTargetObserver();
 #endif
 }
@@ -1498,8 +1491,7 @@ void HTMLInputElement::selectColorInColorChooser(const Color& color)
 }
 #endif
     
-#if ENABLE(DATALIST)
-
+#if ENABLE(DATALIST_ELEMENT)
 HTMLElement* HTMLInputElement::list() const
 {
     return dataList();
@@ -1534,8 +1526,7 @@ void HTMLInputElement::listAttributeTargetChanged()
 {
     m_inputType->listAttributeTargetChanged();
 }
-
-#endif // ENABLE(DATALIST)
+#endif // ENABLE(DATALIST_ELEMENT)
 
 bool HTMLInputElement::isSteppable() const
 {
@@ -1803,7 +1794,7 @@ void HTMLInputElement::setWidth(unsigned width)
     setAttribute(widthAttr, String::number(width));
 }
 
-#if ENABLE(DATALIST)
+#if ENABLE(DATALIST_ELEMENT)
 PassOwnPtr<ListAttributeTargetObserver> ListAttributeTargetObserver::create(const AtomicString& id, HTMLInputElement* element)
 {
     return adoptPtr(new ListAttributeTargetObserver(id, element));

@@ -109,6 +109,10 @@
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
+#if ENABLE(GESTURE_EVENTS)
+#include "GestureEvent.h"
+#endif
+
 #if ENABLE(INSPECTOR)
 #include "InspectorController.h"
 #endif
@@ -119,6 +123,7 @@
 
 #if ENABLE(MICRODATA)
 #include "HTMLPropertiesCollection.h"
+#include "PropertyNodeList.h"
 #endif
 
 using namespace std;
@@ -962,6 +967,40 @@ unsigned Node::nodeIndex() const
     return count;
 }
 
+template<unsigned type>
+bool shouldInvalidateNodeListCachesForAttr(const unsigned nodeListCounts[], const QualifiedName& attrName)
+{
+    if (nodeListCounts[type] && DynamicNodeListCacheBase::shouldInvalidateTypeOnAttributeChange(static_cast<NodeListInvalidationType>(type), attrName))
+        return true;
+    return shouldInvalidateNodeListCachesForAttr<type + 1>(nodeListCounts, attrName);
+}
+
+template<>
+bool shouldInvalidateNodeListCachesForAttr<numNodeListInvalidationTypes>(const unsigned[], const QualifiedName&)
+{
+    return false;
+}
+
+bool Document::shouldInvalidateNodeListCaches(const QualifiedName* attrName) const
+{
+    if (attrName)
+        return shouldInvalidateNodeListCachesForAttr<DoNotInvalidateOnAttributeChanges + 1>(m_nodeListCounts, *attrName);
+
+    for (int type = 0; type < numNodeListInvalidationTypes; type++) {
+        if (m_nodeListCounts[type])
+            return true;
+    }
+
+    return false;
+}
+
+void Document::invalidateNodeListCaches(const QualifiedName* attrName)
+{
+    HashSet<DynamicNodeListCacheBase*>::iterator end = m_listsInvalidatedAtDocument.end();
+    for (HashSet<DynamicNodeListCacheBase*>::iterator it = m_listsInvalidatedAtDocument.begin(); it != end; ++it)
+        (*it)->invalidateCache(attrName);
+}
+
 void Node::invalidateNodeListCachesInAncestors(const QualifiedName* attrName, Element* attributeOwnerElement)
 {
     if (hasRareData() && (!attrName || isAttributeNode()))
@@ -971,7 +1010,7 @@ void Node::invalidateNodeListCachesInAncestors(const QualifiedName* attrName, El
     if (attrName && !attributeOwnerElement)
         return;
 
-    if (!document()->shouldInvalidateNodeListCaches())
+    if (!document()->shouldInvalidateNodeListCaches(attrName))
         return;
 
     document()->invalidateNodeListCaches(attrName);
@@ -1394,6 +1433,12 @@ bool Node::canStartSelection() const
     return parentOrHostNode() ? parentOrHostNode()->canStartSelection() : true;
 }
 
+Element* Node::shadowHost() const
+{
+    if (ShadowRoot* root = shadowRoot())
+        return root->host();
+    return 0;
+}
 
 Node* Node::shadowAncestorNode() const
 {
@@ -1662,7 +1707,7 @@ bool Node::isDefaultNamespace(const AtomicString& namespaceURIMaybeEmpty) const
 
             if (elem->hasAttributes()) {
                 for (unsigned i = 0; i < elem->attributeCount(); i++) {
-                    Attribute* attr = elem->attributeItem(i);
+                    const Attribute* attr = elem->attributeItem(i);
                     
                     if (attr->localName() == xmlnsAtom)
                         return attr->value() == namespaceURI;
@@ -1746,7 +1791,7 @@ String Node::lookupNamespaceURI(const String &prefix) const
             
             if (elem->hasAttributes()) {
                 for (unsigned i = 0; i < elem->attributeCount(); i++) {
-                    Attribute* attr = elem->attributeItem(i);
+                    const Attribute* attr = elem->attributeItem(i);
                     
                     if (attr->prefix() == xmlnsAtom && attr->localName() == prefix) {
                         if (!attr->value().isEmpty())
@@ -1801,7 +1846,7 @@ String Node::lookupNamespacePrefix(const AtomicString &_namespaceURI, const Elem
     const Element* thisElement = toElement(this);
     if (thisElement->hasAttributes()) {
         for (unsigned i = 0; i < thisElement->attributeCount(); i++) {
-            Attribute* attr = thisElement->attributeItem(i);
+            const Attribute* attr = thisElement->attributeItem(i);
             
             if (attr->prefix() == xmlnsAtom && attr->value() == _namespaceURI
                     && originalElement->lookupNamespaceURI(attr->localName()) == _namespaceURI)
@@ -1950,7 +1995,7 @@ unsigned short Node::compareDocumentPosition(Node* otherNode)
             // the same nodeType are inserted into or removed from the direct container. This would be the case, for example, 
             // when comparing two attributes of the same element, and inserting or removing additional attributes might change 
             // the order between existing attributes.
-            Attribute* attribute = owner1->attributeItem(i);
+            const Attribute* attribute = owner1->attributeItem(i);
             if (attr1->qualifiedName() == attribute->name())
                 return DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC | DOCUMENT_POSITION_FOLLOWING;
             if (attr2->qualifiedName() == attribute->name())
@@ -2592,6 +2637,13 @@ bool Node::dispatchMouseEvent(const PlatformMouseEvent& event, const AtomicStrin
     return EventDispatcher::dispatchEvent(this, MouseEventDispatchMediator::create(MouseEvent::create(eventType, document()->defaultView(), event, detail, relatedTarget)));
 }
 
+#if ENABLE(GESTURE_EVENTS)
+bool Node::dispatchGestureEvent(const PlatformGestureEvent& event)
+{
+    return EventDispatcher::dispatchEvent(this, GestureEventDispatchMediator::create(GestureEvent::create(document()->defaultView(), event)));
+}
+#endif
+
 void Node::dispatchSimulatedClick(PassRefPtr<Event> event, bool sendMouseEvents, bool showPressedLook)
 {
     EventDispatcher::dispatchSimulatedClick(this, event, sendMouseEvents, showPressedLook);
@@ -2701,6 +2753,20 @@ void Node::defaultEventHandler(Event* event)
     }
 }
 
+bool Node::willRespondToMouseMoveEvents()
+{
+    if (disabled())
+        return false;
+    return hasEventListeners(eventNames().mousemoveEvent) || hasEventListeners(eventNames().mouseoverEvent) || hasEventListeners(eventNames().mouseoutEvent);
+}
+
+bool Node::willRespondToMouseClickEvents()
+{
+    if (disabled())
+        return false;
+    return isContentEditable() || hasEventListeners(eventNames().mouseupEvent) || hasEventListeners(eventNames().mousedownEvent) || hasEventListeners(eventNames().clickEvent) || hasEventListeners(eventNames().DOMActivateEvent);
+}
+
 #if ENABLE(MICRODATA)
 DOMSettableTokenList* Node::itemProp()
 {
@@ -2732,6 +2798,10 @@ void Node::setItemType(const String& value)
     ensureRareData()->setItemType(value);
 }
 
+PassRefPtr<PropertyNodeList> Node::propertyNodeList(const String& name)
+{
+    return ensureRareData()->ensureNodeLists()->addCacheWithName<PropertyNodeList>(this, DynamicNodeList::PropertyNodeListType, name);
+}
 #endif
 
 // It's important not to inline removedLastRef, because we don't want to inline the code to

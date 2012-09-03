@@ -42,6 +42,8 @@ BUGWK35824 SKIP : http/tests/cookies/third-party-cookie-relaxing.html = PASS
 
 // CSS Regions support not yet enabled, tracking in a separate EFL bug.
 BUGWK83897 SKIP : fast/regions = PASS
+BUGWK83897 SKIP : inspector/styles/protocol-css-regions-commands.html = PASS
+BUGWK83897 SKIP : inspector/styles/region-style-crash.html = PASS
 
 // Exclusions implementation not complete yet.
 BUGWK83898 SKIP : fast/exclusions = PASS
@@ -58,10 +60,6 @@ BUGWK89052 SKIP : fast/css/image-orientation = PASS
 // This test assumes we cannot play RTSP, but we can.
 BUGWKEFL SKIP : media/unsupported-rtsp.html = TIMEOUT
 
-// Perf tests are really slow in debug builds and there are few benefits in
-// running them.
-WONTFIX SKIP DEBUG : perf = TIMEOUT
-
 // Link prefetch is disabled by default
 BUGWKEFL SKIP : fast/dom/HTMLLinkElement/link-and-subresource-test-nonexistent.html = PASS
 BUGWKEFL SKIP : fast/dom/HTMLLinkElement/link-and-subresource-test.html = PASS
@@ -76,10 +74,19 @@ BUGWKEFL SKIP : http/tests/misc/link-rel-prefetch-and-subresource.html = PASS
 BUGWKEFL SKIP : http/tests/misc/prefetch-purpose.html = PASS
 BUGWKEFL SKIP : loader/reload-subresource-when-type-changes.html = PASS
 
+// Perf tests are really slow in debug builds and there are few benefits in running them.
+WONTFIX SKIP DEBUG : perf = TIMEOUT
+
 // Perf tests are way too slow and some may fail due to timeout.
 WONTFIX : perf/adding-radio-buttons.html = TEXT PASS TIMEOUT
 WONTFIX : perf/array-binary-search.html = TEXT PASS TIMEOUT
+WONTFIX : perf/array-nested-loop.html = TEXT PASS TIMEOUT
 WONTFIX : perf/mouse-event.html = TEXT PASS TIMEOUT
+
+// Rounding issues when running on 32-bits machines.
+WONTFIX X86 : sputnik/Conformance/15_Native_Objects/15.8_Math/15.8.2/15.8.2.16_sin/S15.8.2.16_A7.html = TEXT
+WONTFIX X86 : sputnik/Conformance/15_Native_Objects/15.8_Math/15.8.2/15.8.2.18_tan/S15.8.2.18_A7.html = TEXT
+WONTFIX X86 : svg/css/stars-with-shadow.html = TEXT
 
 // Newly added test which fails on other bots too
 BUGWK85969 : http/tests/loading/post-in-iframe-with-back-navigation.html = TEXT
@@ -169,7 +176,18 @@ BUGWK86081 : loader/navigation-while-deferring-loads.html = TEXT PASS
 BUGWK86082 : security/block-test.html = TEXT PASS
 BUGWK86084 : svg/dom/SVGScriptElement/script-onerror-bubbling.svg = TEXT PASS
 BUGWK60103 : fast/replaced/border-radius-clip.html = TEXT PASS
-BUGWK91366 : fast/forms/number/spin-button-gets-disabled-or-readonly.html = TEXT PASS
+BUGWK91366 : fast/forms/number/number-spinbutton-gets-disabled-or-readonly.html = TEXT PASS
+BUGWK91958 : http/tests/inspector-enabled/injected-script-discard.html = TEXT PASS
+BUGWK92112 : fast/overflow/overflow-height-float-not-removed-crash2.html = CRASH PASS
+BUGWK85615 : http/tests/inspector/resource-har-pages.html = TEXT PASS
+
+// Aborting application cache downloads is flaky.
+BUGWK87633 : http/tests/appcache/abort-cache-onchecking-manifest-404.html = TEXT PASS
+BUGWK87633 : http/tests/appcache/abort-cache-ondownloading-resource-404.html = TEXT PASS
+
+// Tests that sometimes fail on the bot (for GTK and Chromium ports as well).
+BUGWK77631 : fast/multicol/span/span-as-immediate-child-property-removal.html = TEXT PASS
+BUGWK77631 : fast/multicol/span/span-as-immediate-columns-child-removal.html = TEXT PASS
 
 // Several media tests are flaky on the bots
 BUGWKEFL : media/controls-styling.html = TEXT PASS
@@ -189,18 +207,15 @@ BUGWKEFL : media/media-controls-clone.html = TEXT PASS
 //////////////////////////////////////////////////////////////////////////////////////////
 
 // Needs inner spin button to respect -webkit-inner-spin-button style
-BUGWK87619 : fast/forms/number/input-appearance-number-rtl.html = TEXT
-BUGWK87619 : fast/forms/number/input-appearance-spinbutton-disabled-readonly.html = TEXT
-BUGWK87619 : fast/forms/number/input-appearance-spinbutton-layer.html = TEXT
-BUGWK87619 : fast/forms/number/input-number-size.html = TEXT
+BUGWK87619 : fast/forms/number/number-appearance-rtl.html = TEXT
+BUGWK87619 : fast/forms/number/number-appearance-spinbutton-disabled-readonly.html = TEXT
+BUGWK87619 : fast/forms/number/number-appearance-spinbutton-layer.html = TEXT
+BUGWK87619 : fast/forms/number/number-size.html = TEXT
 
 BUGWK83007 : fast/repaint/region-painting-invalidation.html = TEXT IMAGE IMAGE+TEXT MISSING
 
 // Needs to have PNG generated, which currently fails for this case.
 BUGWK83274 : fast/repaint/transform-rotate-and-remove.html = PASS
-
-// Not able to generate a meaningful expected result, since complex font rendering fails.
-BUGWK83275 : fast/text/international/text-spliced-font.html = TEXT IMAGE IMAGE+TEXT MISSING
 
 BUGWK83906 : ietestcenter/css3/grid/grid-column-001.htm = IMAGE
 BUGWK83907 : ietestcenter/css3/grid/grid-column-002.htm = IMAGE
@@ -344,6 +359,13 @@ BUGWK84593 : animations/animation-api-1.html = TEXT
 BUGWKEFL SKIP : storage/indexeddb = PASS
 BUGWKEFL SKIP : http/tests/inspector/indexeddb = PASS
 
+// harfbuzzGetGlyph is producing incorrect results.
+BUGWK91864 : fast/dom/52776.html = TEXT
+BUGWK91864 : fast/text/atsui-negative-spacing-features.html = TEXT
+BUGWK91864 : fast/text/atsui-pointtooffset-calls-cg.html = TEXT
+BUGWK91864 : fast/text/atsui-spacing-features.html = TEXT
+BUGWK91864 : fast/text/international/text-spliced-font.html = MISSING
+
 // Quota API is not supported.
 BUGWKEFL SKIP : storage/storageinfo-missing-arguments.html = PASS
 BUGWKEFL SKIP : storage/storageinfo-no-callbacks.html = PASS
@@ -408,6 +430,7 @@ BUGWK82294 : compositing/iframes/page-cache-layer-tree.html = TEXT
 BUGWK82294 : compositing/iframes/resizer.html = MISSING
 BUGWK82294 : compositing/iframes/scrolling-iframe.html = TEXT
 BUGWK82294 : compositing/images/clip-on-directly-composited-image.html = TEXT
+BUGWK82294 : compositing/layer-creation/animation-overlap-with-children.html = TEXT
 BUGWK82294 : compositing/layer-creation/fixed-position-and-transform.html = TEXT
 BUGWK82294 : compositing/layer-creation/fixed-position-under-transform.html = TEXT
 BUGWK82294 : compositing/layer-creation/overflow-scroll-overlap.html = TEXT
@@ -464,6 +487,10 @@ BUGWK82294 : compositing/visibility/layer-visible-content.html = TEXT
 BUGWK82294 : compositing/visibility/visibility-image-layers-dynamic.html = TEXT
 BUGWK82294 : compositing/layer-creation/no-compositing-for-preserve-3d.html = TEXT
 BUGWK82294 : compositing/columns/composited-in-paginated.html = TEXT
+BUGWK82294 : compositing/geometry/bounds-ignores-hidden-composited-descendant.html = TEXT
+BUGWK82294 : compositing/geometry/bounds-ignores-hidden-dynamic-negzindex.html = TEXT
+BUGWK82294 : compositing/geometry/bounds-ignores-hidden-dynamic.html = TEXT
+BUGWK82294 : compositing/geometry/bounds-ignores-hidden.html = TEXT
 
 // EFL's LayoutTestController does not implement displayInvalidatedRegion
 BUGWK86727 : compositing/plugins/invalidate_rect.html = TEXT
@@ -491,10 +518,6 @@ BUGWK84775 : ietestcenter/css3/multicolumn/column-width-applies-to-013.htm = IMA
 BUGWK84776 : ietestcenter/css3/multicolumn/column-width-applies-to-014.htm = IMAGE
 BUGWK84777 : ietestcenter/css3/multicolumn/column-width-applies-to-015.htm = IMAGE
 BUGWK84778 : ietestcenter/css3/multicolumn/column-width-negative-001.htm = IMAGE
-
-// Tests that sometimes fail on the bot (for GTK and Chromium ports as well)
-BUGWK77631 : fast/multicol/span/span-as-immediate-child-property-removal.html = TEXT PASS
-BUGWK77631 : fast/multicol/span/span-as-immediate-columns-child-removal.html = TEXT PASS
 
 BUGWK72363 : fast/dom/Window/window-postmessage-arrays.html = TEXT
 
@@ -585,17 +608,10 @@ BUGWK79757 : fast/selectors/selection-window-inactive.html = IMAGE
 // Font kerning issue, fails on GTK as well.
 BUGWK76048 : fast/text/font-kerning.html = IMAGE
 
-// Aborting application cache downloads is flaky.
-BUGWK87633 : http/tests/appcache/abort-cache-onchecking-manifest-404.html = TEXT PASS
-BUGWK87633 : http/tests/appcache/abort-cache-ondownloading-resource-404.html = TEXT PASS
-
 // Fails on GTK as well
 BUGWK84678 : fast/spatial-navigation/snav-container-white-space.html = TEXT
 BUGWK84678 : fast/spatial-navigation/snav-fully-aligned-horizontally.html = TEXT
 BUGWK84678 : fast/spatial-navigation/snav-iframe-no-scrollable-content.html = TEXT
-
-// Ligatures rendering issue.
-BUGWK85606 : fast/text/font-variant-ligatures.html = IMAGE
 
 // Off-by-few-pixels issue for this selection reftest, fails on GTK as well.
 BUGWK84701 : fast/block/line-layout/selection-highlight-overlap.html = TEXT IMAGE IMAGE+TEXT
@@ -628,6 +644,13 @@ BUGWK68591 SKIP : fast/mutation/filesystem-callback-delivery.html = PASS
 BUGWK68591 SKIP : http/tests/filesystem = PASS
 BUGWK68591 SKIP : http/tests/security/filesystem-iframe-from-remote.html = PASS
 BUGWK68591 SKIP : http/tests/security/mixedContent/filesystem-url-in-iframe.html = PASS
+
+// The EFL port has no support for the Geolocation
+BUGWK82140 : fast/dom/Geolocation = TEXT
+BUGWK82140 : fast/dom/Window/window-properties-geolocation.html = TEXT
+BUGWK82140 : inspector/geolocation-error.html = TEXT
+BUGWK82140 : inspector/geolocation-success.html = TEXT
+BUGWK82140 : inspector/geolocation-watchPosition.html = TEXT
 
 // EFL's EventSender does not implement contextClick yet
 BUGWK86091 : editing/pasteboard/copy-standalone-image-crash.html = TEXT
@@ -669,6 +692,24 @@ BUGWK86961 : fast/dom/shadow/cppevent-in-shadow.html = CRASH
 
 // Selection problem in Shadow DOM test (passes on GTK)
 BUGWKEFL : fast/dom/shadow/selections-in-shadow.html = TEXT
+
+// Shadow DOM for replaced elements is not rendered correctly yet.
+BUGWK90860 : fast/dom/shadow/shadowdom-for-object-complex-shadow.html = IMAGE
+BUGWK90860 : fast/dom/shadow/shadowdom-for-object-only-shadow.html = IMAGE
+BUGWK90860 : fast/dom/shadow/shadowdom-for-object-without-shadow.html = IMAGE
+BUGWK91485 : fast/dom/shadow/shadowdom-for-textarea-complex-shadow.html = IMAGE
+BUGWK91485 : fast/dom/shadow/shadowdom-for-textarea-only-shadow.html = IMAGE
+BUGWK91485 : fast/dom/shadow/shadowdom-for-textarea-without-shadow.html = IMAGE
+BUGWK91486 : fast/dom/shadow/shadowdom-for-button-complex-shadow.html = IMAGE
+BUGWK91486 : fast/dom/shadow/shadowdom-for-button-only-shadow.html = IMAGE
+BUGWK91486 : fast/dom/shadow/shadowdom-for-button-without-shadow.html = IMAGE
+BUGWK91487 : fast/dom/shadow/shadowdom-for-select-complex-shadow.html = IMAGE
+BUGWK91487 : fast/dom/shadow/shadowdom-for-select-without-shadow.html = IMAGE
+BUGWK91488 : fast/dom/shadow/shadowdom-for-output-only-shadow.html = IMAGE
+BUGWK91489 : fast/dom/shadow/shadowdom-for-fieldset-complex-shadow.html = IMAGE
+BUGWK91489 : fast/dom/shadow/shadowdom-for-fieldset-only-shadow.html = IMAGE
+BUGWK91491 : fast/dom/shadow/shadowdom-for-keygen-complex-shadow.html = IMAGE
+BUGWK91491 : fast/dom/shadow/shadowdom-for-keygen-without-shadow.html = IMAGE
 
 // This test is specific to QuickTime media engine.
 BUGWKEFL SKIP : media/video-does-not-loop.html = PASS
@@ -780,3 +821,12 @@ BUGWK91210 : http/tests/w3c/webperf/approved/navigation-timing/html/test_perform
 BUGWK91210 : http/tests/w3c/webperf/approved/navigation-timing/html/test_timing_xserver_redirect.html = TEXT
 BUGWK91210 : http/tests/w3c/webperf/approved/navigation-timing/html5/test_performance_attributes_exist_in_object.html = TEXT
 BUGWK91210 : http/tests/w3c/webperf/approved/navigation-timing/html5/test_timing_xserver_redirect.html = TEXT
+
+// Failing after r123145 on EFL, GTK and QT.
+BUGWK91843 : http/tests/security/cross-frame-access-put.html = TEXT
+
+// Failing after r123379 on EFL and GTK.
+BUGWK92063 : fast/css/sticky/parsing-position-sticky.html = TEXT
+
+// This test depends on subpixel layout.
+BUGWK92352 : css3/flexbox/flex-rounding.html = TEXT

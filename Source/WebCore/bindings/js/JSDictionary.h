@@ -32,6 +32,7 @@
 
 namespace WebCore {
 
+class ArrayValue;
 class Dictionary;
 class DOMWindow;
 class EventTarget;
@@ -102,9 +103,10 @@ private:
 #if ENABLE(VIDEO_TRACK)
     static void convertValue(JSC::ExecState*, JSC::JSValue, RefPtr<TrackBase>& result);
 #endif
-#if ENABLE(MUTATION_OBSERVERS)
+#if ENABLE(MUTATION_OBSERVERS) || ENABLE(WEB_INTENTS)
     static void convertValue(JSC::ExecState*, JSC::JSValue, HashSet<AtomicString>& result);
 #endif
+    static void convertValue(JSC::ExecState*, JSC::JSValue, ArrayValue& result);
 
     JSC::ExecState* m_exec;
     JSC::JSObject* m_initializerObject;

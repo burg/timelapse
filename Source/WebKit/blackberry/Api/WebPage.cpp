@@ -19,8 +19,6 @@
 #include "config.h"
 #include "WebPage.h"
 
-#include "AboutData.h"
-#include "AboutTemplate.html.cpp"
 #include "ApplicationCacheStorage.h"
 #include "AutofillManager.h"
 #include "BackForwardController.h"
@@ -157,8 +155,6 @@
 #include <BlackBerryPlatformMouseEvent.h>
 #include <BlackBerryPlatformScreen.h>
 #include <BlackBerryPlatformSettings.h>
-#include <BlackBerryPlatformWebKitCredits.h>
-#include <BuildInformation.h>
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/JSContextRef.h>
 #include <JavaScriptCore/JSStringRef.h>
@@ -551,8 +547,9 @@ void WebPagePrivate::init(const WebString& pageGroupName)
     // so that we only get one didChangeSettings() callback when we set the page group name. This causes us
     // to make a copy of the WebSettings since some WebSettings method make use of the page group name.
     // Instead, we shouldn't be storing the page group name in WebSettings.
-    m_webSettings->setDelegate(this);
     m_webSettings->setPageGroupName(pageGroupName);
+    m_webSettings->setDelegate(this);
+    didChangeSettings(m_webSettings);
 
     RefPtr<Frame> newFrame = Frame::create(m_page, /* HTMLFrameOwnerElement* */ 0, frameLoaderClient);
 
@@ -568,22 +565,16 @@ void WebPagePrivate::init(const WebString& pageGroupName)
     m_page->settings()->setCanvasUsesAcceleratedDrawing(true);
     m_page->settings()->setAccelerated2dCanvasEnabled(true);
 #endif
-#if ENABLE(VIEWPORT_REFLOW)
-    m_page->settings()->setTextReflowEnabled(m_webSettings->textReflowMode() == WebSettings::TextReflowEnabled);
-#endif
 
     m_page->settings()->setInteractiveFormValidationEnabled(true);
     m_page->settings()->setAllowUniversalAccessFromFileURLs(false);
     m_page->settings()->setAllowFileAccessFromFileURLs(false);
-    m_page->settings()->setShouldUseCrossOriginProtocolCheck(!m_webSettings->allowCrossSiteRequests());
-    m_page->settings()->setWebSecurityEnabled(!m_webSettings->allowCrossSiteRequests());
 
     m_backingStoreClient = BackingStoreClient::create(m_mainFrame, /* parent frame */ 0, m_webPage);
     // The direct access to BackingStore is left here for convenience since it
     // is owned by BackingStoreClient and then deleted by its destructor.
     m_backingStore = m_backingStoreClient->backingStore();
 
-    m_page->settings()->setSpatialNavigationEnabled(m_webSettings->isSpatialNavigationEnabled());
     blockClickRadius = int(roundf(0.35 * Platform::Graphics::Screen::primaryScreen()->pixelsPerInch(0).width())); // The clicked rectangle area should be a fixed unit of measurement.
 
     m_page->settings()->setDelegateSelectionPaint(true);
@@ -618,84 +609,6 @@ private:
         webPagePrivate->m_mainFrame->script()->executeIfJavaScriptURL(webPagePrivate->m_cachedManualScript, DoNotReplaceDocumentIfJavaScriptURL);
     }
 };
-
-bool WebPagePrivate::loadAbout(const char* aboutURL)
-{
-    if (strncasecmp(aboutURL, "about:", 6))
-        return false;
-
-    // First 6 chars are "about:".
-    String aboutWhat(aboutURL + 6);
-
-    String result;
-
-    if (equalIgnoringCase(aboutWhat, "credits")) {
-        result.append(writeHeader("Credits"));
-        result.append(String("<style> .about {padding:14px;} </style>"));
-        result.append(String(BlackBerry::Platform::WEBKITCREDITS));
-        result.append(String("</body></html>"));
-    } else if (aboutWhat.startsWith("cache?query=", false)) {
-        BlackBerry::Platform::Client* client = BlackBerry::Platform::Client::get();
-        ASSERT(client);
-        std::string key(aboutWhat.substring(12, aboutWhat.length() - 12).utf8().data()); // 12 is length of "cache?query=".
-        result.append(String("<html><head><title>BlackBerry Browser Disk Cache</title></head><body>"));
-        result.append(String(key.data()));
-        result.append(String("<hr>"));
-        result.append(String(client->generateHtmlFragmentForCacheHeaders(key).data()));
-        result.append(String("</body></html>"));
-    } else if (equalIgnoringCase(aboutWhat, "cache")) {
-        BlackBerry::Platform::Client* client = BlackBerry::Platform::Client::get();
-        ASSERT(client);
-        result.append(String("<html><head><title>BlackBerry Browser Disk Cache</title></head><body>"));
-        result.append(String(client->generateHtmlFragmentForCacheKeys().data()));
-        result.append(String("</body></html>"));
-#if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
-    } else if (equalIgnoringCase(aboutWhat, "cache/disable")) {
-        BlackBerry::Platform::Client* client = BlackBerry::Platform::Client::get();
-        ASSERT(client);
-        client->setDiskCacheEnabled(false);
-        result.append(String("<html><head><title>BlackBerry Browser Disk Cache</title></head><body>Http disk cache is disabled.</body></html>"));
-    } else if (equalIgnoringCase(aboutWhat, "cache/enable")) {
-        BlackBerry::Platform::Client* client = BlackBerry::Platform::Client::get();
-        ASSERT(client);
-        client->setDiskCacheEnabled(true);
-        result.append(String("<html><head><title>BlackBerry Browser Disk Cache</title></head><body>Http disk cache is enabled.</body></html>"));
-    } else if (equalIgnoringCase(aboutWhat, "cookie")) {
-        result.append(String("<html><head><title>BlackBerry Browser cookie information</title></head><body>"));
-        result.append(cookieManager().generateHtmlFragmentForCookies());
-        result.append(String("</body></html>"));
-    } else if (equalIgnoringCase(aboutWhat, "version")) {
-        result.append(writeHeader("Version"));
-        result.append(String("<div class='box'><div class='box-title'>Build Time</div><br>"));
-        result.append(String(BlackBerry::Platform::BUILDTIME));
-        result.append(String("</div><br><div style='font-size:10px;text-align:center;'>Also see the <A href='about:build'>build information</A>.</body></html>"));
-    } else if (BlackBerry::Platform::debugSetting() > 0 && equalIgnoringCase(aboutWhat, "config")) {
-        result = configPage();
-    } else if (BlackBerry::Platform::debugSetting() > 0 && equalIgnoringCase(aboutWhat, "build")) {
-        result.append(writeHeader("Build"));
-        result.append(String("<div class='box'><div class='box-title'>Basic</div><table>"));
-        result.append(String("<tr><td>Built On:  </td><td>"));
-        result.append(String(BlackBerry::Platform::BUILDCOMPUTER));
-        result.append(String("</td></tr>"));
-        result.append(String("<tr><td>Build User:  </td><td>"));
-        result.append(String(BlackBerry::Platform::BUILDUSER));
-        result.append(String("</td></tr>"));
-        result.append(String("<tr><td>Build Time:  </td><td>"));
-        result.append(String(BlackBerry::Platform::BUILDTIME));
-        result.append(String("</table></div><br>"));
-        result.append(String(BlackBerry::Platform::BUILDINFO_WEBKIT));
-        result.append(String(BlackBerry::Platform::BUILDINFO_PLATFORM));
-        result.append(String(BlackBerry::Platform::BUILDINFO_LIBWEBVIEW));
-        result.append(String("</body></html>"));
-    } else if (equalIgnoringCase(aboutWhat, "memory")) {
-        result = memoryPage();
-#endif
-    } else
-        return false;
-
-    loadString(result.latin1().data(), aboutURL, "text/html");
-    return true;
-}
 
 void WebPagePrivate::load(const char* url, const char* networkToken, const char* method, Platform::NetworkRequest::CachePolicy cachePolicy, const char* data, size_t dataLength, const char* const* headers, size_t headersLength, bool isInitial, bool mustHandleInternally, bool forceDownload, const char* overrideContentType, const char* suggestedSaveName)
 {
@@ -747,8 +660,6 @@ void WebPagePrivate::load(const char* url, const char* networkToken, const char*
 
 void WebPage::load(const char* url, const char* networkToken, bool isInitial)
 {
-    if (d->loadAbout(url))
-        return;
     d->load(url, networkToken, "GET", Platform::NetworkRequest::UseProtocolCachePolicy, 0, 0, 0, 0, isInitial, false);
 }
 
@@ -1061,6 +972,11 @@ void WebPagePrivate::prepareToDestroy()
 void WebPage::prepareToDestroy()
 {
     d->prepareToDestroy();
+}
+
+bool WebPage::dispatchBeforeUnloadEvent()
+{
+    return d->m_page->mainFrame()->loader()->shouldClose();
 }
 
 static void enableCrossSiteXHRRecursively(Frame* frame)
@@ -2169,7 +2085,6 @@ void WebPagePrivate::notifyTransformedContentsSizeChanged()
     const IntSize size = transformedContentsSize();
     m_backingStore->d->contentsSizeChanged(size);
     m_client->contentsSizeChanged(size);
-    m_selectionHandler->selectionPositionChanged();
 }
 
 void WebPagePrivate::notifyTransformedScrollChanged()
@@ -2440,6 +2355,20 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
     m_currentContextNode = node;
     if (!m_currentContextNode)
         return context;
+
+    // Send an onContextMenu event to the current context ndoe and get the result. Since we've already figured out
+    // which node we want, we can send it directly to the node and not do a hit test. The onContextMenu event doesn't require
+    // mouse positions so we just set the position at (0,0)
+    PlatformMouseEvent mouseEvent(IntPoint(), IntPoint(), PlatformEvent::MouseMoved, 0, NoButton, TouchScreen);
+    if (m_currentContextNode->dispatchMouseEvent(mouseEvent, eventNames().contextmenuEvent, 0)) {
+        context.setFlag(Platform::WebContext::IsOnContextMenuPrevented);
+        return context;
+    }
+
+    // Unpress the mouse button if we're actually getting context.
+    EventHandler* eventHandler = focusedOrMainFrame()->eventHandler();
+    if (eventHandler->mousePressed())
+        eventHandler->setMousePressed(false);
 
     requestLayoutIfNeeded();
 
@@ -2844,10 +2773,6 @@ PassRefPtr<Node> WebPagePrivate::contextNode(TargetDetectionStrategy strategy)
     EventHandler* eventHandler = focusedOrMainFrame()->eventHandler();
     const FatFingersResult lastFatFingersResult = m_touchEventHandler->lastFatFingersResult();
     bool isTouching = lastFatFingersResult.isValid() && strategy == RectBased;
-
-    // Unpress the mouse button always.
-    if (eventHandler->mousePressed())
-        eventHandler->setMousePressed(false);
 
     // Check if we're using LinkToLink and the user is not touching the screen.
     if (m_webSettings->doesGetFocusNodeContext() && !isTouching) {
@@ -3476,7 +3401,7 @@ void WebPagePrivate::updateDelegatedOverlays(bool dispatched)
     if (Platform::webKitThreadMessageClient()->isCurrentThread()) {
         // Must be called on the WebKit thread.
         if (m_selectionHandler->isSelectionActive())
-            m_selectionHandler->selectionPositionChanged(true /* visualChangeOnly */);
+            m_selectionHandler->selectionPositionChanged();
         if (m_inspectorOverlay)
             m_inspectorOverlay->update();
 
@@ -3737,12 +3662,14 @@ void WebPagePrivate::resumeBackingStore()
         m_backingStore->d->orientationChanged(); // Updates tile geometry and creates visible tile buffer.
         m_backingStore->d->resetTiles(true /* resetBackground */);
         m_backingStore->d->updateTiles(false /* updateVisible */, false /* immediate */);
+
         // This value may have changed, so we need to update it.
         directRendering = m_backingStore->d->shouldDirectRenderingToWindow();
-        if (m_backingStore->d->renderVisibleContents() && !m_backingStore->d->isSuspended() && !directRendering)
-            m_backingStore->d->blitVisibleContents();
-
-        m_client->notifyContentRendered(m_backingStore->d->visibleContentsRect());
+        if (m_backingStore->d->renderVisibleContents()) {
+            if (!m_backingStore->d->isSuspended() && !directRendering)
+                m_backingStore->d->blitVisibleContents();
+            m_client->notifyContentRendered(m_backingStore->d->visibleContentsRect());
+        }
     } else {
         if (m_backingStore->d->isOpenGLCompositing())
            setCompositorDrawsRootLayer(false);
@@ -4680,9 +4607,14 @@ void WebPage::setSpellCheckingEnabled(bool enabled)
     static_cast<EditorClientBlackBerry*>(d->m_page->editorClient())->enableSpellChecking(enabled);
 }
 
-void WebPage::spellCheckingRequestProcessed(int32_t id, spannable_string_t* spannableString)
+void WebPage::spellCheckingRequestCancelled(int32_t transactionId)
 {
-    d->m_inputHandler->spellCheckingRequestProcessed(id, spannableString);
+    d->m_inputHandler->spellCheckingRequestCancelled(transactionId);
+}
+
+void WebPage::spellCheckingRequestProcessed(int32_t transactionId, spannable_string_t* spannableString)
+{
+    d->m_inputHandler->spellCheckingRequestProcessed(transactionId, spannableString);
 }
 
 class DeferredTaskSelectionCancelled: public DeferredTask<&WebPagePrivate::m_wouldCancelSelection> {
@@ -4764,6 +4696,13 @@ void WebPage::paste()
     if (d->m_page->defersLoading())
         return;
     d->m_inputHandler->paste();
+}
+
+void WebPage::selectAll()
+{
+    if (d->m_page->defersLoading())
+        return;
+    d->m_inputHandler->selectAll();
 }
 
 void WebPage::setSelection(const Platform::IntPoint& startPoint, const Platform::IntPoint& endPoint)
@@ -5461,13 +5400,12 @@ JSValueRef WebPage::windowObject() const
 // Serialize only the members of HistoryItem which are needed by the client,
 // and copy them into a SharedArray. Also include the HistoryItem pointer which
 // will be used by the client as an opaque reference to identify the item.
-void WebPage::getBackForwardList(SharedArray<BackForwardEntry>& result, unsigned int& resultSize) const
+void WebPage::getBackForwardList(SharedArray<BackForwardEntry>& result) const
 {
     HistoryItemVector entries = static_cast<BackForwardListImpl*>(d->m_page->backForward()->client())->entries();
-    resultSize = entries.size();
-    result.reset(new BackForwardEntry[resultSize]);
+    result.reset(new BackForwardEntry[entries.size()], entries.size());
 
-    for (unsigned i = 0; i < resultSize; ++i) {
+    for (unsigned i = 0; i < entries.size(); ++i) {
         RefPtr<HistoryItem> entry = entries[i];
         BackForwardEntry& resultEntry = result[i];
         resultEntry.url = entry->urlString();
@@ -5953,21 +5891,33 @@ void WebPagePrivate::setCompositor(PassRefPtr<WebPageCompositorPrivate> composit
 {
     using namespace BlackBerry::Platform;
 
+    // We depend on the current thread being the WebKit thread when it's not the Compositing thread.
+    // That seems extremely likely to be the case, but let's assert just to make sure.
+    ASSERT(webKitThreadMessageClient()->isCurrentThread());
+
+    if (m_compositor || m_client->window())
+        m_backingStore->d->suspendScreenAndBackingStoreUpdates();
+
+    // This method call always round-trips on the WebKit thread (see WebPageCompositor::WebPageCompositor() and ~WebPageCompositor()),
+    // and the compositing context must be set on the WebKit thread. How convenient!
+    if (compositingContext != EGL_NO_CONTEXT)
+        BlackBerry::Platform::Graphics::setCompositingContext(compositingContext);
+
     // The m_compositor member has to be modified during a sync call for thread
     // safe access to m_compositor and its refcount.
-    if (!userInterfaceThreadMessageClient()->isCurrentThread()) {
-        // We depend on the current thread being the WebKit thread when it's not the Compositing thread.
-        // That seems extremely likely to be the case, but let's assert just to make sure.
-        ASSERT(webKitThreadMessageClient()->isCurrentThread());
+    userInterfaceThreadMessageClient()->dispatchSyncMessage(createMethodCallMessage(&WebPagePrivate::setCompositorHelper, this, compositor, compositingContext));
 
-        // This method call always round-trips on the WebKit thread (see WebPageCompositor::WebPageCompositor() and ~WebPageCompositor()),
-        // and the compositing context must be set on the WebKit thread. How convenient!
-        if (compositingContext != EGL_NO_CONTEXT)
-            BlackBerry::Platform::Graphics::setCompositingContext(compositingContext);
+    if (m_compositor || m_client->window()) // the new compositor, if one was set
+        m_backingStore->d->resumeScreenAndBackingStoreUpdates(BackingStore::RenderAndBlit);
+}
 
-        userInterfaceThreadMessageClient()->dispatchSyncMessage(createMethodCallMessage(&WebPagePrivate::setCompositor, this, compositor, compositingContext));
-        return;
-    }
+void WebPagePrivate::setCompositorHelper(PassRefPtr<WebPageCompositorPrivate> compositor, EGLContext compositingContext)
+{
+    using namespace BlackBerry::Platform;
+
+    // The m_compositor member has to be modified during a sync call for thread
+    // safe access to m_compositor and its refcount.
+    ASSERT(userInterfaceThreadMessageClient()->isCurrentThread());
 
     m_compositor = compositor;
     if (m_compositor) {
@@ -6472,6 +6422,7 @@ void WebPagePrivate::didChangeSettings(WebSettings* webSettings)
     coreSettings->setDefaultTextEncodingName(webSettings->defaultTextEncodingName().impl());
     coreSettings->setDownloadableBinaryFontsEnabled(webSettings->downloadableBinaryFontsEnabled());
     coreSettings->setSpatialNavigationEnabled(m_webSettings->isSpatialNavigationEnabled());
+    coreSettings->setAsynchronousSpellCheckingEnabled(m_webSettings->isAsynchronousSpellCheckingEnabled());
 
     WebString stylesheetURL = webSettings->userStyleSheetString();
     if (stylesheetURL.isEmpty())

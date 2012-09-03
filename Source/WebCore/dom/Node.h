@@ -88,8 +88,13 @@ class ShadowRoot;
 class TagNodeList;
 class TreeScope;
 
+#if ENABLE(GESTURE_EVENTS)
+class PlatformGestureEvent;
+#endif
+
 #if ENABLE(MICRODATA)
 class HTMLPropertiesCollection;
+class PropertyNodeList;
 #endif
 
 typedef int ExceptionCode;
@@ -223,6 +228,10 @@ public:
     bool hasAttrList() const { return getFlag(HasAttrListFlag); }
     bool hasCustomCallbacks() const { return getFlag(HasCustomCallbacksFlag); }
 
+    // If this node is in a shadow tree, returns its shadow host. Otherwise, returns 0.
+    Element* shadowHost() const;
+    // If this node is in a shadow tree, returns its shadow host. Otherwise, returns this.
+    // Deprecated. Should use shadowHost() and check the return value.
     Node* shadowAncestorNode() const;
     ShadowRoot* shadowRoot() const;
     ShadowRoot* youngestShadowRoot() const;
@@ -568,6 +577,9 @@ public:
     PassRefPtr<NodeList> getElementsByClassName(const String& classNames);
     PassRefPtr<RadioNodeList> radioNodeList(const AtomicString&);
 
+    virtual bool willRespondToMouseMoveEvents();
+    virtual bool willRespondToMouseClickEvents();
+
     PassRefPtr<Element> querySelector(const AtomicString& selectors, ExceptionCode&);
     PassRefPtr<NodeList> querySelectorAll(const AtomicString& selectors, ExceptionCode&);
 
@@ -604,6 +616,9 @@ public:
     bool dispatchKeyEvent(const PlatformKeyboardEvent&);
     bool dispatchWheelEvent(const PlatformWheelEvent&);
     bool dispatchMouseEvent(const PlatformMouseEvent&, const AtomicString& eventType, int clickCount = 0, Node* relatedTarget = 0);
+#if ENABLE(GESTURE_EVENTS)
+    bool dispatchGestureEvent(const PlatformGestureEvent&);
+#endif
     void dispatchSimulatedClick(PassRefPtr<Event> underlyingEvent, bool sendMouseEvents = false, bool showPressedLook = true);
     bool dispatchBeforeLoadEvent(const String& sourceURL);
 
@@ -629,6 +644,7 @@ public:
     DOMSettableTokenList* itemProp();
     DOMSettableTokenList* itemRef();
     DOMSettableTokenList* itemType();
+    PassRefPtr<PropertyNodeList> propertyNodeList(const String&);
 #endif
 
 #if ENABLE(MUTATION_OBSERVERS)

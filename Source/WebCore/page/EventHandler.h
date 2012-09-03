@@ -93,7 +93,7 @@ enum HitTestScrollbars { ShouldHitTestScrollbars, DontHitTestScrollbars };
 class EventHandler {
     WTF_MAKE_NONCOPYABLE(EventHandler);
 public:
-    EventHandler(Frame*);
+    explicit EventHandler(Frame*);
     ~EventHandler();
 
     void clear();
@@ -446,6 +446,11 @@ private:
     TouchTargetMap m_originatingTouchPointTargets;
     bool m_touchPressed;
 #endif
+
+#if ENABLE(GESTURE_EVENTS)
+    RefPtr<Node> m_scrollGestureHandlingNode;
+#endif
+
     double m_maxMouseMovedDuration;
     PlatformEvent::Type m_baseEventType;
 };

@@ -47,8 +47,8 @@ namespace WebCore {
 
 class CCLayerSorter;
 class CCLayerTreeHostImpl;
-class CCQuadCuller;
 class CCRenderer;
+class CCQuadSink;
 class LayerChromium;
 
 class CCLayerImpl : public CCLayerAnimationControllerClient {
@@ -93,9 +93,9 @@ public:
     // the layer is destroyed. To enforce this, any class that overrides
     // willDraw/didDraw must call the base class version.
     virtual void willDraw(CCResourceProvider*);
-    virtual void appendQuads(CCQuadCuller&, const CCSharedQuadState*, bool& hadMissingTiles) { }
+    virtual void appendQuads(CCQuadSink&, const CCSharedQuadState*, bool& hadMissingTiles) { }
     virtual void didDraw(CCResourceProvider*);
-    void appendDebugBorderQuad(CCQuadCuller&, const CCSharedQuadState*) const;
+    void appendDebugBorderQuad(CCQuadSink&, const CCSharedQuadState*) const;
 
     virtual CCResourceProvider::ResourceId contentsResourceId() const;
 
@@ -148,9 +148,6 @@ public:
     void setUseParentBackfaceVisibility(bool useParentBackfaceVisibility) { m_useParentBackfaceVisibility = useParentBackfaceVisibility; }
     bool useParentBackfaceVisibility() const { return m_useParentBackfaceVisibility; }
 
-    void setUsesLayerClipping(bool usesLayerClipping) { m_usesLayerClipping = usesLayerClipping; }
-    bool usesLayerClipping() const { return m_usesLayerClipping; }
-
     void setIsNonCompositedContent(bool isNonCompositedContent) { m_isNonCompositedContent = isNonCompositedContent; }
     bool isNonCompositedContent() const { return m_isNonCompositedContent; }
 
@@ -178,10 +175,6 @@ public:
     bool drawOpacityIsAnimating() const { return m_drawOpacityIsAnimating; }
     void setDrawOpacityIsAnimating(bool drawOpacityIsAnimating) { m_drawOpacityIsAnimating = drawOpacityIsAnimating; }
 
-    // Usage: if this->usesLayerClipping() is false, then this clipRect should not be used.
-    const IntRect& clipRect() const { return m_clipRect; }
-    void setClipRect(const IntRect& rect) { m_clipRect = rect; }
-
     const IntRect& scissorRect() const { return m_scissorRect; }
     void setScissorRect(const IntRect& rect) { m_scissorRect = rect; }
 
@@ -193,9 +186,6 @@ public:
 
     const IntSize& contentBounds() const { return m_contentBounds; }
     void setContentBounds(const IntSize&);
-
-    void setContentsScale(float contentsScale) { m_contentsScale = contentsScale; }
-    float contentsScale() const { return m_contentsScale; }
 
     const IntPoint& scrollPosition() const { return m_scrollPosition; }
     void setScrollPosition(const IntPoint&);
@@ -237,9 +227,6 @@ public:
     bool doubleSided() const { return m_doubleSided; }
     void setDoubleSided(bool);
 
-    // Returns the rect containtaining this layer in the current view's coordinate system.
-    const IntRect getDrawRect() const;
-
     void setTransform(const WebKit::WebTransformationMatrix&);
     bool transformIsAnimating() const;
 
@@ -262,10 +249,12 @@ public:
 
     void setStackingOrderChanged(bool);
 
-    bool layerPropertyChanged() const { return m_layerPropertyChanged; }
+    bool layerPropertyChanged() const { return m_layerPropertyChanged || layerIsAlwaysDamaged(); }
     bool layerSurfacePropertyChanged() const;
 
     void resetAllChangeTrackingForSubtree();
+
+    virtual bool layerIsAlwaysDamaged() const { return false; }
 
     CCLayerAnimationController* layerAnimationController() { return m_layerAnimationController.get(); }
 
@@ -312,7 +301,6 @@ private:
     float m_anchorPointZ;
     IntSize m_bounds;
     IntSize m_contentBounds;
-    float m_contentsScale;
     IntPoint m_scrollPosition;
     bool m_scrollable;
     bool m_shouldScrollOnMainThread;
@@ -343,7 +331,6 @@ private:
     bool m_drawCheckerboardForMissingTiles;
     WebKit::WebTransformationMatrix m_sublayerTransform;
     WebKit::WebTransformationMatrix m_transform;
-    bool m_usesLayerClipping;
     bool m_isNonCompositedContent;
 
     bool m_drawsContent;
@@ -388,12 +375,6 @@ private:
 #ifndef NDEBUG
     bool m_betweenWillDrawAndDidDraw;
 #endif
-
-    // The rect that contributes to the scissor when this layer is drawn.
-    // Inherited by the parent layer and further restricted if this layer masks
-    // to bounds.
-    // Uses target surface's space.
-    IntRect m_clipRect;
 
     // During drawing, identifies the region outside of which nothing should be drawn.
     // Uses target surface's space.

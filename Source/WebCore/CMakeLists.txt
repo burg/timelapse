@@ -48,6 +48,8 @@ SET(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/graphics"
     "${WEBCORE_DIR}/platform/graphics/filters"
     "${WEBCORE_DIR}/platform/graphics/filters/arm"
+    "${WEBCORE_DIR}/platform/graphics/harfbuzz"
+    "${WEBCORE_DIR}/platform/graphics/harfbuzz/ng"
     "${WEBCORE_DIR}/platform/graphics/transforms"
     "${WEBCORE_DIR}/platform/image-decoders"
     "${WEBCORE_DIR}/platform/image-decoders/bmp"
@@ -189,7 +191,6 @@ SET(WebCore_IDL_FILES
     Modules/intents/IntentResultCallback.idl
     Modules/intents/NavigatorIntents.idl
 
-    Modules/mediastream/DeprecatedPeerConnection.idl
     Modules/mediastream/DOMWindowMediaStream.idl
     Modules/mediastream/IceCallback.idl
     Modules/mediastream/IceCandidate.idl
@@ -205,8 +206,8 @@ SET(WebCore_IDL_FILES
     Modules/mediastream/NavigatorUserMediaErrorCallback.idl
     Modules/mediastream/NavigatorUserMediaSuccessCallback.idl
     Modules/mediastream/PeerConnection00.idl
+    Modules/mediastream/RTCPeerConnection.idl
     Modules/mediastream/SessionDescription.idl
-    Modules/mediastream/SignalingCallback.idl
 
     Modules/networkinfo/NavigatorNetworkInfoConnection.idl
     Modules/networkinfo/NetworkInfoConnection.idl
@@ -354,6 +355,7 @@ SET(WebCore_IDL_FILES
     dom/PopStateEvent.idl
     dom/ProcessingInstruction.idl
     dom/ProgressEvent.idl
+    dom/PropertyNodeList.idl
     dom/RangeException.idl
     dom/Range.idl
     dom/RequestAnimationFrameCallback.idl
@@ -464,6 +466,7 @@ SET(WebCore_IDL_FILES
     html/ImageData.idl
     html/MediaController.idl
     html/MediaError.idl
+    html/MicroDataItemValue.idl
     html/RadioNodeList.idl
     html/TextMetrics.idl
     html/TimeRanges.idl
@@ -530,6 +533,7 @@ SET(WebCore_IDL_FILES
     page/Console.idl
     page/Coordinates.idl
     page/Crypto.idl
+    page/DOMSecurityPolicy.idl
     page/DOMSelection.idl
     page/DOMWindow.idl
     page/EventSource.idl
@@ -811,7 +815,6 @@ SET(WebCore_SOURCES
     Modules/intents/IntentRequest.cpp
     Modules/intents/NavigatorIntents.cpp
 
-    Modules/mediastream/DeprecatedPeerConnection.cpp
     Modules/mediastream/IceCandidate.cpp
     Modules/mediastream/LocalMediaStream.cpp
     Modules/mediastream/MediaStream.cpp
@@ -823,6 +826,7 @@ SET(WebCore_SOURCES
     Modules/mediastream/MediaStreamTrackList.cpp
     Modules/mediastream/NavigatorMediaStream.cpp
     Modules/mediastream/PeerConnection00.cpp
+    Modules/mediastream/RTCPeerConnection.cpp
     Modules/mediastream/SessionDescription.cpp
     Modules/mediastream/UserMediaController.cpp
     Modules/mediastream/UserMediaRequest.cpp
@@ -935,6 +939,7 @@ SET(WebCore_SOURCES
     accessibility/AccessibilityMenuListOption.cpp
     accessibility/AccessibilityMenuListPopup.cpp
     accessibility/AccessibilityMockObject.cpp
+    accessibility/AccessibilityNodeObject.cpp
     accessibility/AccessibilityObject.cpp
     accessibility/AccessibilityProgressIndicator.cpp
     accessibility/AccessibilityRenderObject.cpp
@@ -1098,10 +1103,12 @@ SET(WebCore_SOURCES
     dom/ExceptionBase.cpp
     dom/ExceptionCodePlaceholder.cpp
     dom/GenericEventQueue.cpp
+    dom/GestureEvent.cpp
     dom/IconURL.cpp
     dom/IdTargetObserver.cpp
     dom/IdTargetObserverRegistry.cpp
     dom/KeyboardEvent.cpp
+    dom/MemoryInstrumentation.cpp
     dom/MessageChannel.cpp
     dom/MessageEvent.cpp
     dom/MessagePortChannel.cpp
@@ -1130,6 +1137,7 @@ SET(WebCore_SOURCES
     dom/PositionIterator.cpp
     dom/ProcessingInstruction.cpp
     dom/ProgressEvent.cpp
+    dom/PropertyNodeList.cpp
     dom/QualifiedName.cpp
     dom/Range.cpp
     dom/RangeException.cpp
@@ -1622,6 +1630,8 @@ SET(WebCore_SOURCES
     page/ContentSecurityPolicy.cpp
     page/ContextMenuController.cpp
     page/Crypto.cpp
+    page/DiagnosticLoggingKeys.cpp
+    page/DOMSecurityPolicy.cpp
     page/DOMSelection.cpp
     page/DOMTimer.cpp
     page/DOMWindow.cpp
@@ -1702,6 +1712,7 @@ SET(WebCore_SOURCES
     platform/KURL.cpp
     platform/KillRingNone.cpp
     platform/Language.cpp
+    platform/LayoutTestSupport.cpp
     platform/Length.cpp
     platform/LengthBox.cpp
     platform/LinkHash.cpp
@@ -1789,6 +1800,8 @@ SET(WebCore_SOURCES
     platform/graphics/Gradient.cpp
     platform/graphics/GraphicsContext.cpp
     platform/graphics/GraphicsLayer.cpp
+    platform/graphics/GraphicsLayerAnimation.cpp
+    platform/graphics/GraphicsLayerTransform.cpp
     platform/graphics/GraphicsTypes.cpp
     platform/graphics/Image.cpp
     platform/graphics/ImageBuffer.cpp
@@ -1807,6 +1820,7 @@ SET(WebCore_SOURCES
     platform/graphics/SurrogatePairAwareTextIterator.cpp
     platform/graphics/SVGGlyph.cpp
     platform/graphics/TextRun.cpp
+    platform/graphics/TiledBackingStore.cpp
     platform/graphics/WidthIterator.cpp
 
     platform/graphics/filters/CustomFilterGlobalContext.cpp
@@ -1847,6 +1861,11 @@ SET(WebCore_SOURCES
     platform/graphics/filters/arm/FEGaussianBlurNEON.h
     platform/graphics/filters/arm/FELightingNEON.cpp
     platform/graphics/filters/arm/FELightingNEON.h
+
+    platform/graphics/texmap/TextureMapper.cpp
+    platform/graphics/texmap/TextureMapperBackingStore.cpp
+    platform/graphics/texmap/TextureMapperImageBuffer.cpp
+    platform/graphics/texmap/TextureMapperLayer.cpp
 
     platform/graphics/transforms/AffineTransform.cpp
     platform/graphics/transforms/Matrix3DTransformOperation.cpp
@@ -1987,6 +2006,7 @@ SET(WebCore_SOURCES
     rendering/RenderLayer.cpp
     rendering/RenderLayerBacking.cpp
     rendering/RenderLayerCompositor.cpp
+    rendering/RenderLayerFilterInfo.cpp
     rendering/RenderLineBoxList.cpp
     rendering/RenderListBox.cpp
     rendering/RenderListItem.cpp
@@ -2077,6 +2097,7 @@ SET(WebCore_SOURCES
     rendering/style/StyleVisualData.cpp
     rendering/style/SVGRenderStyle.cpp
     rendering/style/SVGRenderStyleDefs.cpp
+    rendering/style/WrapShapes.cpp
 
     rendering/svg/RenderSVGBlock.cpp
     rendering/svg/RenderSVGContainer.cpp
@@ -2623,6 +2644,7 @@ SET(WebCoreTestSupport_IDL_INCLUDES
 )
 
 SET(WebCoreTestSupport_IDL_FILES
+    testing/FastMallocStatistics.idl
     testing/Internals.idl
     testing/InternalSettings.idl
 )
@@ -2631,6 +2653,20 @@ SET(WebCoreTestSupport_SOURCES
     testing/Internals.cpp
     testing/InternalSettings.cpp
 )
+
+IF (ENABLE_MEDIA_SOURCE)
+    LIST(APPEND WebCore_INCLUDE_DIRECTORIES
+        ${WEBCORE_DIR}/Modules/mediasource
+    )
+    LIST(APPEND WebCore_IDL_FILES
+        Modules/mediasource/SourceBuffer.idl
+        Modules/mediasource/SourceBufferList.idl
+    )
+    LIST(APPEND WebCore_SOURCES
+        Modules/mediasource/SourceBuffer.cpp
+        Modules/mediasource/SourceBufferList.cpp
+    )
+ENDIF()
 
 # Modules that the bindings generator scripts may use
 SET(SCRIPTS_RESOLVE_SUPPLEMENTAL

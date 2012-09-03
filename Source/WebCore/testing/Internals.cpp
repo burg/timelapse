@@ -38,6 +38,7 @@
 #include "Element.h"
 #include "ElementShadow.h"
 #include "ExceptionCode.h"
+#include "FastMallocStatistics.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "HTMLContentElement.h"
@@ -55,9 +56,11 @@
 #include "Language.h"
 #include "NodeRenderingContext.h"
 #include "Page.h"
+#include "PrintContext.h"
 #include "Range.h"
 #include "RenderObject.h"
 #include "RenderTreeAsText.h"
+#include "RuntimeEnabledFeatures.h"
 #include "SchemeRegistry.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
@@ -430,6 +433,15 @@ void Internals::setShadowPseudoId(Element* element, const String& id, ExceptionC
     return element->setShadowPseudoId(id, ec);
 }
 
+void Internals::setAuthorShadowDOMForAnyElementEnabled(bool isEnabled)
+{
+#if ENABLE(SHADOW_DOM)
+    RuntimeEnabledFeatures::setAuthorShadowDOMForAnyElementEnabled(isEnabled);
+#else
+    UNUSED_PARAM(isEnabled);
+#endif
+}
+
 String Internals::visiblePlaceholder(Element* element)
 {
     HTMLTextFormControlElement* textControl = toTextFormControl(element);
@@ -622,6 +634,12 @@ String Internals::markerDescriptionForNode(Node* node, const String& markerType,
     if (!marker)
         return String();
     return marker->description();
+}
+
+void Internals::addTextMatchMarker(const Range* range, bool isActive)
+{
+    range->ownerDocument()->updateLayoutIgnorePendingStylesheets();
+    range->ownerDocument()->markers()->addTextMatchMarker(range, isActive);
 }
 
 void Internals::setScrollViewPosition(Document* document, long x, long y, ExceptionCode& ec)
@@ -918,6 +936,17 @@ unsigned Internals::touchEventHandlerCount(Document* document, ExceptionCode& ec
     return document->touchEventHandlerCount();
 }
 
+bool Internals::hasTouchEventListener(Document* document, ExceptionCode& ec)
+{
+    if (!document) {
+        ec = INVALID_ACCESS_ERR;
+        return 0;
+    }
+
+    return document->hasListenerType(Document::TOUCH_LISTENER);
+}
+
+
 PassRefPtr<NodeList> Internals::nodesFromRect(Document* document, int x, int y, unsigned topPadding, unsigned rightPadding,
     unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent, ExceptionCode& ec) const
 {
@@ -1077,6 +1106,19 @@ void Internals::resumeAnimations(Document* document, ExceptionCode& ec) const
     controller->resumeAnimations();
 }
 
+void Internals::garbageCollectDocumentResources(Document* document, ExceptionCode& ec) const
+{
+    if (!document) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+
+    CachedResourceLoader* cachedResourceLoader = document->cachedResourceLoader();
+    if (!cachedResourceLoader)
+        return;
+    cachedResourceLoader->garbageCollectDocumentResources();
+}
+
 void Internals::allowRoundingHacks() const
 {
     settings()->allowRoundingHacks();
@@ -1088,6 +1130,14 @@ String Internals::counterValue(Element* element)
         return String();
 
     return counterValueForElement(element);
+}
+
+int Internals::pageNumber(Element* element, float pageWidth, float pageHeight)
+{
+    if (!element)
+        return 0;
+
+    return PrintContext::pageNumberForElement(element, FloatSize(pageWidth, pageHeight));
 }
 
 PassRefPtr<DOMStringList> Internals::iconURLs(Document* document) const
@@ -1140,6 +1190,11 @@ void Internals::registerURLSchemeAsBypassingContentSecurityPolicy(const String& 
 void Internals::removeURLSchemeRegisteredAsBypassingContentSecurityPolicy(const String& scheme)
 {
     SchemeRegistry::removeURLSchemeRegisteredAsBypassingContentSecurityPolicy(scheme);
+}
+
+PassRefPtr<FastMallocStatistics> Internals::fastMallocStatistics() const
+{
+    return FastMallocStatistics::create();
 }
 
 }
