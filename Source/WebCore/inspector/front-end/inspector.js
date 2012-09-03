@@ -87,6 +87,10 @@ var WebInspector = {
 
         if (this.panels.elements)
             mainStatusBar.insertBefore(this.panels.elements.nodeSearchButton.element, bottomStatusBarContainer);
+	if (this.panels.timelapse) {
+	    mainStatusBar.appendChild(this.panels.timelapse.statusMessage);
+	    mainStatusBar.appendChild(this.panels.timelapse.globalLockButton.element);
+	}
         mainStatusBar.appendChild(this.settingsController.statusBarItem);
     },
 

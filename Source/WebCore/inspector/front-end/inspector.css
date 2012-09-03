@@ -544,6 +544,7 @@ body.drawer-visible #main-panels {
     border-image-slice: 0 0 0 5;
     border-width: 0px 1px;
     padding: 0px 4px 0px 6px;
+    line-height: 2em;
 }
 
 /* this must be more specific that the general status bar style to change
