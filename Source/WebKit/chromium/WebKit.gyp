@@ -277,7 +277,6 @@
                 'public/WebTextInputType.h',
                 'public/WebTextRun.h',
                 'public/WebTimeRange.h',
-                'public/WebTouchCandidatesInfo.h',
                 'public/WebURLLoaderOptions.h',
                 'public/WebUserMediaClient.h',
                 'public/WebUserMediaRequest.h',
@@ -422,6 +421,8 @@
                 'src/InspectorClientImpl.h',
                 'src/InspectorFrontendClientImpl.cpp',
                 'src/InspectorFrontendClientImpl.h',
+                'src/LinkHighlight.cpp',
+                'src/LinkHighlight.h',
                 'src/NonCompositedContentHost.cpp',
                 'src/NonCompositedContentHost.h',
                 'src/PrerendererClientImpl.h',
@@ -603,8 +604,6 @@
                 'src/WebScopedMicrotaskSuppression.cpp',
                 'src/WebScopedUserGesture.cpp',
                 'src/WebScriptController.cpp',
-                'src/WebScrollbarImpl.cpp',
-                'src/WebScrollbarImpl.h',
                 'src/WebScrollbarThemeClientImpl.cpp',
                 'src/WebScrollbarThemeClientImpl.h',
                 'src/WebScrollbarThemePainter.cpp',
@@ -713,6 +712,7 @@
                                 'tests/FrameTestHelpers.cpp',
                                 'tests/LevelDBTest.cpp',
                                 'tests/ListenerLeakTest.cpp',
+                                'tests/LinkHighlightTest.cpp',
                                 'tests/PopupMenuTest.cpp',
                                 'tests/RenderTableCellTest.cpp',
                                 'tests/RenderTableRowTest.cpp',
@@ -737,6 +737,11 @@
                                     'xcode_settings': {
                                       'WARNING_CFLAGS!': ['-Wglobal-constructors'],
                                     },
+                                }],
+                                ['use_libcc_for_compositor==0', {
+                                    'sources': [
+                                        '<@(webkit_compositor_unittest_files)',
+                                    ],
                                 }],
                             ],
                             'msvs_settings': {
@@ -834,7 +839,13 @@
                 }],
                 ['use_libcc_for_compositor==1', {
                     'dependencies': [
-                        '<(chromium_src_dir)/webkit/compositor/compositor.gyp:webkit_compositor',
+                        '<(chromium_src_dir)/webkit/compositor_bindings/compositor_bindings.gyp:webkit_compositor_bindings',
+                    ],
+                    'sources!': [
+                        '../../WebCore/platform/chromium/support/CCThreadImpl.cpp',
+                        '../../WebCore/platform/chromium/support/CCThreadImpl.h',
+                        '../../WebCore/platform/chromium/support/WebCompositorImpl.cpp',
+                        '../../WebCore/platform/chromium/support/WebCompositorImpl.h',
                     ],
                 }, { # else: use_libcc_for_compositor==0
                     'sources': [
@@ -1174,7 +1185,7 @@
                         'input_file': '../../WebCore/inspector/front-end/TimelinePanel.js',
                         'inputs': [
                             '<@(_script_name)',
-                            '<@(webinspector_resources_js_files)',
+                            '<@(webinspector_timeline_js_files)',
                         ],
                         'search_path': '../../WebCore/inspector/front-end',
                         'outputs': ['<(PRODUCT_DIR)/resources/inspector/TimelinePanel.js'],

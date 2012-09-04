@@ -15,6 +15,8 @@ LIST(APPEND WebKit2_SOURCES
     Platform/CoreIPC/unix/ConnectionUnix.cpp
     Platform/CoreIPC/unix/AttachmentUnix.cpp
 
+    Shared/WebMemorySampler.cpp
+
     Shared/API/c/cairo/WKImageCairo.cpp
 
     Shared/API/c/gtk/WKGraphicsContextGtk.cpp
@@ -27,6 +29,8 @@ LIST(APPEND WebKit2_SOURCES
     Shared/efl/NativeWebMouseEventEfl.cpp
     Shared/efl/ProcessExecutablePathEfl.cpp
     Shared/efl/WebEventFactory.cpp
+
+    Shared/linux/WebMemorySamplerLinux.cpp
 
     Shared/soup/PlatformCertificateInfo.cpp
     Shared/soup/WebCoreArgumentCodersSoup.cpp
@@ -55,6 +59,7 @@ LIST(APPEND WebKit2_SOURCES
     UIProcess/API/efl/ewk_intent_service.cpp
     UIProcess/API/efl/ewk_main.cpp
     UIProcess/API/efl/ewk_navigation_policy_decision.cpp
+    UIProcess/API/efl/ewk_popup_menu_item.cpp
     UIProcess/API/efl/ewk_url_request.cpp
     UIProcess/API/efl/ewk_url_response.cpp
     UIProcess/API/efl/ewk_url_scheme_request.cpp
@@ -75,6 +80,7 @@ LIST(APPEND WebKit2_SOURCES
     UIProcess/efl/WebFullScreenManagerProxyEfl.cpp
     UIProcess/efl/WebInspectorProxyEfl.cpp
     UIProcess/efl/WebPageProxyEfl.cpp
+    UIProcess/efl/WebPopupMenuProxyEfl.cpp
     UIProcess/efl/WebPreferencesEfl.cpp
 
     UIProcess/soup/WebCookieManagerProxySoup.cpp
@@ -126,6 +132,7 @@ LIST(APPEND WebKit2_INCLUDE_DIRECTORIES
     "${WEBKIT2_DIR}/UIProcess/API/C/soup"
     "${WEBKIT2_DIR}/UIProcess/API/cpp/efl"
     "${WEBKIT2_DIR}/UIProcess/API/efl"
+    "${WEBKIT2_DIR}/UIProcess/efl"
     "${WEBKIT2_DIR}/UIProcess/soup"
     "${WEBKIT2_DIR}/WebProcess/Downloads/soup"
     "${WEBKIT2_DIR}/WebProcess/efl"
@@ -206,6 +213,7 @@ SET (EWebKit2_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_intent_service.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_main.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_navigation_policy_decision.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_popup_menu_item.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_url_request.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_url_response.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_url_scheme_request.h"

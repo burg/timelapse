@@ -38,10 +38,10 @@
 #include "MessagePort.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptState.h"
+#include "V8AbstractEventListener.h"
 #include "V8ArrayBuffer.h"
 #include "V8Binding.h"
 #include "V8MessagePort.h"
-#include "V8Proxy.h"
 #include "WorkerContext.h"
 #include <v8.h>
 #include <wtf/ArrayBuffer.h>

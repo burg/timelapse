@@ -148,8 +148,7 @@ void ImageLayerChromium::update(CCTextureUpdateQueue& queue, const CCOcclusionTr
         invalidateContentRect(IntRect(IntPoint(), contentBounds()));
         m_needsDisplay = false;
     }
-
-    updateContentRect(queue, visibleContentRect(), occlusion, stats);
+    TiledLayerChromium::update(queue, occlusion, stats);
 }
 
 void ImageLayerChromium::createTextureUpdaterIfNeeded()
@@ -158,7 +157,7 @@ void ImageLayerChromium::createTextureUpdaterIfNeeded()
         return;
 
     m_textureUpdater = ImageLayerTextureUpdater::create();
-    GC3Denum textureFormat = layerTreeHost()->layerRendererCapabilities().bestTextureFormat;
+    GC3Denum textureFormat = layerTreeHost()->rendererCapabilities().bestTextureFormat;
     setTextureFormat(textureFormat);
     setSampledTexelFormat(textureUpdater()->sampledTexelFormat(textureFormat));
 }

@@ -37,17 +37,40 @@
 #include "Dictionary.h"
 #include "EventTarget.h"
 #include "ExceptionBase.h"
+#include "MediaStream.h"
+#include "MediaStreamList.h"
 #include "RTCPeerConnectionHandler.h"
 #include "RTCPeerConnectionHandlerClient.h"
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
+
+class MediaConstraints;
 class RTCConfiguration;
 
 class RTCPeerConnection : public RefCounted<RTCPeerConnection>, public RTCPeerConnectionHandlerClient, public EventTarget, public ActiveDOMObject {
 public:
     static PassRefPtr<RTCPeerConnection> create(ScriptExecutionContext*, const Dictionary& rtcConfiguration, const Dictionary& mediaConstraints, ExceptionCode&);
     ~RTCPeerConnection();
+
+    String readyState() const;
+
+    MediaStreamList* localStreams() const;
+    MediaStreamList* remoteStreams() const;
+    void addStream(const PassRefPtr<MediaStream>, const Dictionary& mediaConstraints, ExceptionCode&);
+    void removeStream(MediaStream*, ExceptionCode&);
+
+    void close(ExceptionCode&);
+
+    DEFINE_ATTRIBUTE_EVENT_LISTENER(open);
+    DEFINE_ATTRIBUTE_EVENT_LISTENER(statechange);
+    DEFINE_ATTRIBUTE_EVENT_LISTENER(addstream);
+    DEFINE_ATTRIBUTE_EVENT_LISTENER(removestream);
+
+    // RTCPeerConnectionHandlerClient
+    virtual void didChangeReadyState(ReadyState) OVERRIDE;
+    virtual void didAddRemoteStream(PassRefPtr<MediaStreamDescriptor>) OVERRIDE;
+    virtual void didRemoveRemoteStream(MediaStreamDescriptor*) OVERRIDE;
 
     // EventTarget
     virtual const AtomicString& interfaceName() const OVERRIDE;
@@ -60,7 +83,7 @@ public:
     using RefCounted<RTCPeerConnection>::deref;
 
 private:
-    RTCPeerConnection(ScriptExecutionContext*, PassRefPtr<RTCConfiguration>, ExceptionCode&);
+    RTCPeerConnection(ScriptExecutionContext*, PassRefPtr<RTCConfiguration>, PassRefPtr<MediaConstraints>, ExceptionCode&);
 
     static PassRefPtr<RTCConfiguration> parseConfiguration(const Dictionary& configuration, ExceptionCode&);
 
@@ -70,6 +93,13 @@ private:
     virtual void refEventTarget() { ref(); }
     virtual void derefEventTarget() { deref(); }
     EventTargetData m_eventTargetData;
+
+    void changeReadyState(ReadyState);
+
+    ReadyState m_readyState;
+
+    RefPtr<MediaStreamList> m_localStreams;
+    RefPtr<MediaStreamList> m_remoteStreams;
 
     OwnPtr<RTCPeerConnectionHandler> m_peerHandler;
 };

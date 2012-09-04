@@ -98,8 +98,9 @@ public:
                 case GetByVal:
                 case PutByVal:
                 case PutByValAlias:
-                case PutByValSafe:
                 case GetArrayLength:
+                case CheckArray:
+                case GetIndexedPropertyStorage:
                 case Phantom:
                     // Don't count these uses.
                     break;
@@ -128,6 +129,50 @@ public:
                     m_graph.nameOfVariableAccessData(variable), variable->voteRatio());
 #endif
             iter->second.m_structure = 0;
+        }
+        
+        // Disable structure check hoisting for variables that cross the OSR entry that
+        // we're currently taking, and where the value currently does not have the
+        // structure we want.
+        
+        for (BlockIndex blockIndex = 0; blockIndex < m_graph.m_blocks.size(); ++blockIndex) {
+            BasicBlock* block = m_graph.m_blocks[blockIndex].get();
+            if (!block)
+                continue;
+            ASSERT(block->isReachable);
+            if (!block->isOSRTarget)
+                continue;
+            if (block->bytecodeBegin != m_graph.m_osrEntryBytecodeIndex)
+                continue;
+            for (size_t i = 0; i < m_graph.m_mustHandleValues.size(); ++i) {
+                int operand = m_graph.m_mustHandleValues.operandForIndex(i);
+                NodeIndex nodeIndex = block->variablesAtHead.operand(operand);
+                if (nodeIndex == NoNode)
+                    continue;
+                VariableAccessData* variable = m_graph[nodeIndex].variableAccessData();
+                HashMap<VariableAccessData*, CheckData>::iterator iter = m_map.find(variable);
+                if (iter == m_map.end())
+                    continue;
+                if (!iter->second.m_structure)
+                    continue;
+                JSValue value = m_graph.m_mustHandleValues[i];
+                if (!value || !value.isCell()) {
+#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
+                    dataLog("Zeroing the structure to hoist for %s because the OSR entry value is not a cell: %s.\n",
+                            m_graph.nameOfVariableAccessData(variable), value.description());
+#endif
+                    iter->second.m_structure = 0;
+                    continue;
+                }
+                if (value.asCell()->structure() != iter->second.m_structure) {
+#if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)
+                    dataLog("Zeroing the structure to hoist for %s because the OSR entry value has structure %p and we wanted %p.\n",
+                            m_graph.nameOfVariableAccessData(variable), value.asCell()->structure(), iter->second.m_structure);
+#endif
+                    iter->second.m_structure = 0;
+                    continue;
+                }
+            }
         }
 
         // Identify the set of variables that are live across a structure clobber.
@@ -215,53 +260,12 @@ public:
                 }
                     
                 case GetByVal:
-                    if (!node.prediction() || !m_graph[node.child1()].prediction() || !m_graph[node.child2()].prediction())
-                        break;
-                    if (!isActionableArraySpeculation(m_graph[node.child1()].prediction()) || !m_graph[node.child2()].shouldSpeculateInteger())
-                        clobber(live);
-                    break;
-                    
                 case PutByVal:
                 case PutByValAlias:
-                case PutByValSafe: {
-                    Edge child1 = m_graph.varArgChild(node, 0);
-                    Edge child2 = m_graph.varArgChild(node, 1);
-                    
-                    if (!m_graph[child1].prediction() || !m_graph[child2].prediction())
-                        break;
-                    if (!m_graph[child2].shouldSpeculateInteger()
-#if USE(JSVALUE32_64)
-                        || m_graph[child1].shouldSpeculateArguments()
-#endif
-                        ) {
-                        clobber(live);
-                        break;
-                    }
-                    if (node.op() != PutByValSafe)
-                        break;
-                    if (m_graph[child1].shouldSpeculateArguments())
-                        break;
-                    if (m_graph[child1].shouldSpeculateInt8Array())
-                        break;
-                    if (m_graph[child1].shouldSpeculateInt16Array())
-                        break;
-                    if (m_graph[child1].shouldSpeculateInt32Array())
-                        break;
-                    if (m_graph[child1].shouldSpeculateUint8Array())
-                        break;
-                    if (m_graph[child1].shouldSpeculateUint8ClampedArray())
-                        break;
-                    if (m_graph[child1].shouldSpeculateUint16Array())
-                        break;
-                    if (m_graph[child1].shouldSpeculateUint32Array())
-                        break;
-                    if (m_graph[child1].shouldSpeculateFloat32Array())
-                        break;
-                    if (m_graph[child1].shouldSpeculateFloat64Array())
+                    if (m_graph.byValIsPure(node))
                         break;
                     clobber(live);
                     break;
-                }
                     
                 case GetMyArgumentsLengthSafe:
                 case GetMyArgumentByValSafe:

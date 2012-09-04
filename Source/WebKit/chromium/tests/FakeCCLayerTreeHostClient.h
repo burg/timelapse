@@ -37,7 +37,7 @@ class FakeCCLayerTreeHostClient : public CCLayerTreeHostClient {
 public:
     virtual void willBeginFrame() OVERRIDE { }
     virtual void didBeginFrame() OVERRIDE { }
-    virtual void updateAnimations(double monotonicFrameBeginTime) OVERRIDE { }
+    virtual void animate(double monotonicFrameBeginTime) OVERRIDE { }
     virtual void layout() OVERRIDE { }
     virtual void applyScrollAndScale(const IntSize& scrollDelta, float pageScale) OVERRIDE { }
 

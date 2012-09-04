@@ -29,6 +29,7 @@
 #include "Color.h"
 #include "Frame.h"
 #include "LayoutTypes.h"
+#include "Pagination.h"
 #include "PaintPhase.h"
 #include "ScrollView.h"
 #include <wtf/Forward.h>
@@ -51,6 +52,8 @@ class RenderEmbeddedObject;
 class RenderLayer;
 class RenderObject;
 class RenderScrollbarPart;
+
+Pagination::Mode paginationModeForRenderStyle(RenderStyle*);
 
 typedef unsigned long long DOMTimeStamp;
 
@@ -194,6 +197,7 @@ public:
     void removeSlowRepaintObject();
     bool hasSlowRepaintObjects() const { return m_slowRepaintObjectCount; }
 
+    // This includes position:fixed and sticky objects.
     typedef HashSet<RenderObject*> FixedObjectSet;
     void addFixedObject(RenderObject*);
     void removeFixedObject(RenderObject*);
@@ -208,8 +212,8 @@ public:
 
     void beginDeferredRepaints();
     void endDeferredRepaints();
-    void checkStopDelayingDeferredRepaints();
-    void stopDelayingDeferredRepaints();
+    void checkFlushDeferredRepaintsAfterLoadComplete();
+    void flushDeferredRepaints();
     void startDeferredRepaintTimer(double delay);
     void resetDeferredRepaintDelay();
 
@@ -261,7 +265,6 @@ public:
     static double currentPaintTimeStamp() { return sCurrentPaintTimeStamp; } // returns 0 if not painting
     
     void updateLayoutAndStyleIfNeededRecursive();
-    void flushDeferredRepaints();
 
     void incrementVisuallyNonEmptyCharacterCount(unsigned);
     void incrementVisuallyNonEmptyPixelCount(const IntSize&);
@@ -347,6 +350,15 @@ public:
 
     void setScrollingPerformanceLoggingEnabled(bool);
 
+    // Page and FrameView both store a Pagination value. Page::pagination() is set only by API,
+    // and FrameView::pagination() is set only by CSS. Page::pagination() will affect all
+    // FrameViews in the page cache, but FrameView::pagination() only affects the current
+    // FrameView. FrameView::pagination() will return m_pagination if it has been set. Otherwise,
+    // it will return Page::pagination() since currently there are no callers that need to
+    // distinguish between the two.
+    const Pagination& pagination() const;
+    void setPagination(const Pagination&);
+
 protected:
     virtual bool scrollContentsFastPath(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect);
     virtual void scrollContentsSlowPath(const IntRect& updateRect);
@@ -369,6 +381,7 @@ private:
     bool contentsInCompositedLayer() const;
 
     void applyOverflowToViewport(RenderObject*, ScrollbarMode& hMode, ScrollbarMode& vMode);
+    void applyPaginationToViewport();
 
     void updateOverflowStatus(bool horizontalOverflow, bool verticalOverflow);
 
@@ -386,23 +399,21 @@ private:
 
     // Override ScrollView methods to do point conversion via renderers, in order to
     // take transforms into account.
-    virtual IntRect convertToContainingView(const IntRect&) const;
-    virtual IntRect convertFromContainingView(const IntRect&) const;
-    virtual IntPoint convertToContainingView(const IntPoint&) const;
-    virtual IntPoint convertFromContainingView(const IntPoint&) const;
+    virtual IntRect convertToContainingView(const IntRect&) const OVERRIDE;
+    virtual IntRect convertFromContainingView(const IntRect&) const OVERRIDE;
+    virtual IntPoint convertToContainingView(const IntPoint&) const OVERRIDE;
+    virtual IntPoint convertFromContainingView(const IntPoint&) const OVERRIDE;
 
     // ScrollableArea interface
-    virtual void invalidateScrollbarRect(Scrollbar*, const IntRect&);
-    virtual bool isActive() const;
-    virtual void getTickmarks(Vector<IntRect>&) const;
-    virtual void scrollTo(const IntSize&);
-    virtual void setVisibleScrollerThumbRect(const IntRect&);
-    virtual bool isOnActivePage() const;
-    virtual ScrollableArea* enclosingScrollableArea() const;
+    virtual void invalidateScrollbarRect(Scrollbar*, const IntRect&) OVERRIDE;
+    virtual bool isActive() const OVERRIDE;
+    virtual void getTickmarks(Vector<IntRect>&) const OVERRIDE;
+    virtual void scrollTo(const IntSize&) OVERRIDE;
+    virtual void setVisibleScrollerThumbRect(const IntRect&) OVERRIDE;
+    virtual bool isOnActivePage() const OVERRIDE;
+    virtual ScrollableArea* enclosingScrollableArea() const OVERRIDE;
     virtual IntRect scrollableAreaBoundingBox() const OVERRIDE;
-
-    void updateScrollableAreaSet();
-
+    virtual bool scrollAnimatorEnabled() const OVERRIDE;
 #if USE(ACCELERATED_COMPOSITING)
     virtual GraphicsLayer* layerForHorizontalScrollbar() const OVERRIDE;
     virtual GraphicsLayer* layerForVerticalScrollbar() const OVERRIDE;
@@ -412,13 +423,14 @@ private:
 #endif
 #endif
 
+    void updateScrollableAreaSet();
+
     virtual void notifyPageThatContentAreaWillPaint() const;
 
-    virtual bool scrollAnimatorEnabled() const;
-
+    bool shouldUseLoadTimeDeferredRepaintDelay() const;
     void deferredRepaintTimerFired(Timer<FrameView>*);
     void doDeferredRepaints();
-    void updateDeferredRepaintDelay();
+    void updateDeferredRepaintDelayAfterRepaint();
     double adjustedDeferredRepaintDelay() const;
 
     bool updateWidgets();
@@ -484,6 +496,8 @@ private:
     bool m_verticalOverflow;    
     RenderObject* m_viewportRenderer;
 
+    Pagination m_pagination;
+
     bool m_wasScrolledByUser;
     bool m_inProgrammaticScroll;
     bool m_safeToPropagateScrollToParent;
@@ -532,7 +546,7 @@ private:
     OwnPtr<ScrollableAreaSet> m_scrollableAreas;
     OwnPtr<FixedObjectSet> m_fixedObjects;
 
-    static double s_deferredRepaintDelay;
+    static double s_normalDeferredRepaintDelay;
     static double s_initialDeferredRepaintDelayDuringLoading;
     static double s_maxDeferredRepaintDelayDuringLoading;
     static double s_deferredRepaintDelayIncrementDuringLoading;

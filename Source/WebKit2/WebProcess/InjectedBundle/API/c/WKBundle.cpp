@@ -260,3 +260,19 @@ void WKBundleSetUserStyleSheetLocation(WKBundleRef bundleRef, WKBundlePageGroupR
 {
     toImpl(bundleRef)->setUserStyleSheetLocation(toImpl(pageGroupRef), toImpl(location)->string());
 }
+
+void WKBundleSetWebNotificationPermission(WKBundleRef bundleRef, WKBundlePageRef pageRef, WKStringRef originStringRef, bool allowed)
+{
+    toImpl(bundleRef)->setWebNotificationPermission(toImpl(pageRef), toImpl(originStringRef)->string(), allowed);
+}
+
+void WKBundleRemoveAllWebNotificationPermissions(WKBundleRef bundleRef, WKBundlePageRef pageRef)
+{
+    toImpl(bundleRef)->removeAllWebNotificationPermissions(toImpl(pageRef));
+}
+
+uint64_t WKBundleGetWebNotificationID(WKBundleRef bundleRef, JSContextRef context, JSValueRef notification)
+{
+    return toImpl(bundleRef)->webNotificationID(context, notification);
+}
+

@@ -29,6 +29,7 @@
 #include "MediaQueryExp.h"
 #include "RenderStyle.h"
 #include "SelectorChecker.h"
+#include "StyleInheritedData.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
@@ -262,7 +263,9 @@ public:
     StyleShader* styleShader(CSSValue*);
     StyleShader* cachedOrPendingStyleShaderFromValue(WebKitCSSShaderValue*);
     bool parseCustomFilterParameterList(CSSValue*, CustomFilterParameterList&);
-    PassRefPtr<CustomFilterParameter> parseCustomFilterNumberParamter(const String& name, CSSValueList*);
+    PassRefPtr<CustomFilterParameter> parseCustomFilterParameter(const String& name, CSSValue*);
+    PassRefPtr<CustomFilterParameter> parseCustomFilterNumberParameter(const String& name, CSSValueList*);
+    PassRefPtr<CustomFilterParameter> parseCustomFilterTransformParameter(const String& name, CSSValueList*);
     PassRefPtr<CustomFilterOperation> createCustomFilterOperation(WebKitCSSFilterValue*);
     void loadPendingShaders();
 #endif
@@ -495,6 +498,7 @@ private:
     bool m_fontDirty;
     bool m_matchAuthorAndUserStyles;
     bool m_sameOriginOnly;
+    bool m_distributedToInsertionPoint;
 
     RefPtr<CSSFontSelector> m_fontSelector;
     Vector<OwnPtr<MediaQueryResult> > m_viewportDependentMediaQueryResults;

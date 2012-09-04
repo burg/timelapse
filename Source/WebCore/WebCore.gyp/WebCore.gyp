@@ -66,8 +66,8 @@
       '../Modules/indexeddb',
       '../Modules/mediasource',
       '../Modules/mediastream',
+      '../Modules/navigatorcontentutils',
       '../Modules/notifications',
-      '../Modules/protocolhandler',
       '../Modules/quota',
       '../Modules/speech',
       '../Modules/webaudio',
@@ -436,6 +436,30 @@
           ],
           'message': 'Validate inspector protocol for backwards compatibility and generate version file',
         }
+      ]
+    },
+    {
+      'target_name': 'inspector_overlay_page',
+      'type': 'none',
+      'actions': [
+        {
+          'action_name': 'generateInspectorOverlayPage',
+          'inputs': [
+            '../inspector/InspectorOverlayPage.html',
+          ],
+          'outputs': [
+            '<(SHARED_INTERMEDIATE_DIR)/webkit/InspectorOverlayPage.h',
+          ],
+          'msvs_cygwin_shell': 0,
+          'action': [
+            '<(perl_exe)',
+            '../inspector/xxd.pl',
+            'InspectorOverlayPage_html',
+            '<@(_inputs)',
+            '<@(_outputs)'
+          ],
+          'message': 'Generating InspectorOverlayPage.h from InspectorOverlayPage.html',
+        },
       ]
     },
     {
@@ -1122,8 +1146,8 @@
               '--include', '../Modules/intents',
               '--include', '../Modules/mediasource',
               '--include', '../Modules/mediastream',
+              '--include', '../Modules/navigatorcontentutils',
               '--include', '../Modules/notifications',
-              '--include', '../Modules/protocolhandler',
               '--include', '../Modules/webaudio',
               '--include', '../Modules/webdatabase',
               '--include', '../css',
@@ -1176,6 +1200,7 @@
       'hard_dependency': 1,
       'dependencies': [
         'webcore_bindings_sources',
+        'inspector_overlay_page',
         'inspector_protocol_sources',
         'injected_script_source',
         'injected_webgl_script_source',
@@ -1306,6 +1331,7 @@
         'debugger_script_source',
         'injected_script_source',
         'injected_webgl_script_source',
+        'inspector_overlay_page',
         'inspector_protocol_sources',
         'webcore_bindings_sources',
         '../../ThirdParty/glu/glu.gyp:libtess',
@@ -1615,7 +1641,6 @@
         ['exclude', 'platform/LinkHash\\.cpp$'],
         ['exclude', 'platform/MIMETypeRegistry\\.cpp$'],
         ['exclude', 'platform/Theme\\.cpp$'],
-        ['exclude', 'platform/graphics/ANGLEWebKitBridge\\.(cpp|h)$'],
         # *NEON.cpp files need special compile options.
         # They are moved to the webcore_arm_neon target.
         ['exclude', 'platform/graphics/filters/arm/.*NEON\\.(cpp|h)'],
@@ -1817,6 +1842,10 @@
         ['OS=="win"', {
           'sources/': [
             ['exclude', 'Posix\\.cpp$'],
+
+            ['include', 'platform/graphics/opentype/OpenTypeTypes\\.h$'],
+            ['include', 'platform/graphics/opentype/OpenTypeVerticalData\\.cpp$'],
+            ['include', 'platform/graphics/opentype/OpenTypeVerticalData\\.h$'],
 
             # The Chromium Win currently uses GlyphPageTreeNodeChromiumWin.cpp from
             # platform/graphics/chromium, included by regex above, instead.

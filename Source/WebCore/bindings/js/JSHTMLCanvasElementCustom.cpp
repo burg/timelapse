@@ -45,7 +45,7 @@ namespace WebCore {
 JSValue JSHTMLCanvasElement::getContext(ExecState* exec)
 {
     HTMLCanvasElement* canvas = static_cast<HTMLCanvasElement*>(impl());
-    const UString& contextId = exec->argument(0).toString(exec)->value(exec);
+    const String& contextId = exec->argument(0).toString(exec)->value(exec);
     RefPtr<CanvasContextAttributes> attrs;
 #if ENABLE(WEBGL)
     if (contextId == "experimental-webgl" || contextId == "webkit-3d") {
@@ -55,26 +55,26 @@ JSValue JSHTMLCanvasElement::getContext(ExecState* exec)
             JSObject* jsAttrs = exec->argument(1).getObject();
             Identifier alpha(exec, "alpha");
             if (jsAttrs->hasProperty(exec, alpha))
-                webGLAttrs->setAlpha(jsAttrs->get(exec, alpha).toBoolean());
+                webGLAttrs->setAlpha(jsAttrs->get(exec, alpha).toBoolean(exec));
             Identifier depth(exec, "depth");
             if (jsAttrs->hasProperty(exec, depth))
-                webGLAttrs->setDepth(jsAttrs->get(exec, depth).toBoolean());
+                webGLAttrs->setDepth(jsAttrs->get(exec, depth).toBoolean(exec));
             Identifier stencil(exec, "stencil");
             if (jsAttrs->hasProperty(exec, stencil))
-                webGLAttrs->setStencil(jsAttrs->get(exec, stencil).toBoolean());
+                webGLAttrs->setStencil(jsAttrs->get(exec, stencil).toBoolean(exec));
             Identifier antialias(exec, "antialias");
             if (jsAttrs->hasProperty(exec, antialias))
-                webGLAttrs->setAntialias(jsAttrs->get(exec, antialias).toBoolean());
+                webGLAttrs->setAntialias(jsAttrs->get(exec, antialias).toBoolean(exec));
             Identifier premultipliedAlpha(exec, "premultipliedAlpha");
             if (jsAttrs->hasProperty(exec, premultipliedAlpha))
-                webGLAttrs->setPremultipliedAlpha(jsAttrs->get(exec, premultipliedAlpha).toBoolean());
+                webGLAttrs->setPremultipliedAlpha(jsAttrs->get(exec, premultipliedAlpha).toBoolean(exec));
             Identifier preserveDrawingBuffer(exec, "preserveDrawingBuffer");
             if (jsAttrs->hasProperty(exec, preserveDrawingBuffer))
-                webGLAttrs->setPreserveDrawingBuffer(jsAttrs->get(exec, preserveDrawingBuffer).toBoolean());
+                webGLAttrs->setPreserveDrawingBuffer(jsAttrs->get(exec, preserveDrawingBuffer).toBoolean(exec));
         }
     }
 #endif
-    CanvasRenderingContext* context = canvas->getContext(ustringToString(contextId), attrs.get());
+    CanvasRenderingContext* context = canvas->getContext(contextId, attrs.get());
     if (!context)
         return jsNull();
     JSValue jsValue = toJS(exec, globalObject(), WTF::getPtr(context));
@@ -105,7 +105,7 @@ JSValue JSHTMLCanvasElement::toDataURL(ExecState* exec)
         }
     }
 
-    JSValue result = jsString(exec, canvas->toDataURL(type, qualityPtr, ec));
+    JSValue result = JSC::jsString(exec, canvas->toDataURL(type, qualityPtr, ec));
     setDOMException(exec, ec);
     return result;
 }

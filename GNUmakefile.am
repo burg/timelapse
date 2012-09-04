@@ -59,6 +59,9 @@ USER_LINGUAS :=
 USE_LINGUAS :=
 MOFILES :=
 ALL_MOFILES :=
+feature_defines_defaults :=
+feature_defines_overrides :=
+feature_defines :=
 dom_binding_idls :=
 wtf_sources :=
 javascriptcore_h_api :=
@@ -70,7 +73,6 @@ javascriptcore_built_nosources :=
 llint_nosources :=
 offlineasm_nosources :=
 webcore_cppflags :=
-webcore_platform_sources :=
 webcore_modules_sources :=
 webcore_sources :=
 webcore_libadd :=
@@ -99,10 +101,8 @@ minibrowser_built_sources :=
 global_cppflags :=
 global_cflags :=
 global_cxxflags :=
-common_webcore_shards_cppflags :=
 JSCORE_GIRSOURCES :=
 WEBKIT_GIRSOURCES :=
-FEATURE_DEFINES :=
 typelibsdir :=
 typelibs_DATA :=
 EXTRA_DIST :=
@@ -154,7 +154,6 @@ endif
 global_cppflags += \
 	-DBUILDING_CAIRO__=1 \
 	-DBUILDING_GTK__=1 \
-	-DBUILDING_SOUP__=1 \
 	-DWTF_CHANGES
 
 if ENABLE_WEBKIT2

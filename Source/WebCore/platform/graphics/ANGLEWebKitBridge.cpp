@@ -32,12 +32,14 @@
 
 namespace WebCore {
 
-ANGLEWebKitBridge::ANGLEWebKitBridge(ShShaderOutput shaderOutput) :
-    builtCompilers(false),
-    m_fragmentCompiler(0),
-    m_vertexCompiler(0),
-    m_shaderOutput(shaderOutput)
+ANGLEWebKitBridge::ANGLEWebKitBridge(ShShaderOutput shaderOutput, ShShaderSpec shaderSpec)
+    : builtCompilers(false)
+    , m_fragmentCompiler(0)
+    , m_vertexCompiler(0)
+    , m_shaderOutput(shaderOutput)
+    , m_shaderSpec(shaderSpec)
 {
+    // This is a no-op if it's already initialized.
     ShInitialize();
 }
 
@@ -66,11 +68,11 @@ void ANGLEWebKitBridge::setResources(ShBuiltInResources resources)
     m_resources = resources;
 }
 
-bool ANGLEWebKitBridge::validateShaderSource(const char* shaderSource, ANGLEShaderType shaderType, String& translatedShaderSource, String& shaderValidationLog)
+bool ANGLEWebKitBridge::validateShaderSource(const char* shaderSource, ANGLEShaderType shaderType, String& translatedShaderSource, String& shaderValidationLog, int extraCompileOptions)
 {
     if (!builtCompilers) {
-        m_fragmentCompiler = ShConstructCompiler(SH_FRAGMENT_SHADER, SH_WEBGL_SPEC, m_shaderOutput, &m_resources);
-        m_vertexCompiler = ShConstructCompiler(SH_VERTEX_SHADER, SH_WEBGL_SPEC, m_shaderOutput, &m_resources);
+        m_fragmentCompiler = ShConstructCompiler(SH_FRAGMENT_SHADER, m_shaderSpec, m_shaderOutput, &m_resources);
+        m_vertexCompiler = ShConstructCompiler(SH_VERTEX_SHADER, m_shaderSpec, m_shaderOutput, &m_resources);
         if (!m_fragmentCompiler || !m_vertexCompiler) {
             cleanupCompilers();
             return false;
@@ -88,7 +90,7 @@ bool ANGLEWebKitBridge::validateShaderSource(const char* shaderSource, ANGLEShad
 
     const char* const shaderSourceStrings[] = { shaderSource };
 
-    bool validateSuccess = ShCompile(compiler, shaderSourceStrings, 1, SH_OBJECT_CODE);
+    bool validateSuccess = ShCompile(compiler, shaderSourceStrings, 1, SH_OBJECT_CODE | extraCompileOptions);
     if (!validateSuccess) {
         int logSize = 0;
         ShGetInfo(compiler, SH_INFO_LOG_LENGTH, &logSize);

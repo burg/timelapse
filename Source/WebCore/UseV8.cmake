@@ -25,7 +25,6 @@ LIST(APPEND WebCore_SOURCES
     bindings/v8/DateExtension.cpp
     bindings/v8/IDBBindingUtilities.cpp
     bindings/v8/IDBCustomBindings.cpp
-    bindings/v8/IsolatedWorld.cpp
     bindings/v8/Dictionary.cpp
     bindings/v8/PageScriptDebugServer.cpp
     bindings/v8/RetainedDOMInfo.cpp
@@ -39,6 +38,7 @@ LIST(APPEND WebCore_SOURCES
     bindings/v8/ScriptGCEvent.cpp
     bindings/v8/ScriptInstance.cpp
     bindings/v8/ScriptObject.cpp
+    bindings/v8/ScriptRunner.cpp
     bindings/v8/ScriptScope.cpp
     bindings/v8/ScriptSourceCode.cpp
     bindings/v8/ScriptState.cpp
@@ -63,7 +63,6 @@ LIST(APPEND WebCore_SOURCES
     bindings/v8/V8ObjectConstructor.cpp
     bindings/v8/V8PerContextData.cpp
     bindings/v8/V8PerIsolateData.cpp
-    bindings/v8/V8Proxy.cpp
     bindings/v8/V8RecursionScope.cpp
     bindings/v8/V8ThrowException.cpp
     bindings/v8/V8Utilities.cpp
@@ -220,6 +219,7 @@ ENDIF ()
 
 LIST(APPEND SCRIPTS_BINDINGS
     ${WEBCORE_DIR}/bindings/scripts/CodeGenerator.pm
+    ${WEBCORE_DIR}/bindings/scripts/CodeGeneratorV8.pm
 )
 
 SET(IDL_INCLUDES "")

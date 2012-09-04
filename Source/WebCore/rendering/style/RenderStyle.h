@@ -35,8 +35,10 @@
 #include "CounterDirectives.h"
 #include "DataRef.h"
 #include "FillLayer.h"
-#include "Font.h"
+#include "FontBaseline.h"
+#include "FontDescription.h"
 #include "GraphicsTypes.h"
+#include "LayoutTypesInlineMethods.h"
 #include "Length.h"
 #include "LengthBox.h"
 #include "LengthFunctions.h"
@@ -53,7 +55,6 @@
 #include "StyleFlexibleBoxData.h"
 #include "StyleGridData.h"
 #include "StyleGridItemData.h"
-#include "StyleInheritedData.h"
 #include "StyleMarqueeData.h"
 #include "StyleMultiColData.h"
 #include "StyleRareInheritedData.h"
@@ -104,11 +105,14 @@ using std::max;
 class BorderData;
 class CounterContent;
 class CursorList;
+class Font;
+class FontMetrics;
 class IntRect;
 class MemoryObjectInfo;
 class Pair;
 class ShadowData;
 class StyleImage;
+class StyleInheritedData;
 class StyleResolver;
 class TransformationMatrix;
 
@@ -436,7 +440,7 @@ public:
     bool hasBackground() const
     {
         Color color = visitedDependentColor(CSSPropertyBackgroundColor);
-        if (color.isValid() && color.alpha() > 0)
+        if (color.isValid() && color.alpha())
             return true;
         return hasBackgroundImage();
     }
@@ -493,10 +497,10 @@ public:
     Length bottom() const { return surround->offset.bottom(); }
 
     // Accessors for positioned object edges that take into account writing mode.
-    Length logicalLeft() const { return surround->offset.logicalLeft(this); }
-    Length logicalRight() const { return surround->offset.logicalRight(this); }
-    Length logicalTop() const { return surround->offset.before(this); }
-    Length logicalBottom() const { return surround->offset.after(this); }
+    Length logicalLeft() const { return surround->offset.logicalLeft(writingMode()); }
+    Length logicalRight() const { return surround->offset.logicalRight(writingMode()); }
+    Length logicalTop() const { return surround->offset.before(writingMode()); }
+    Length logicalBottom() const { return surround->offset.after(writingMode()); }
 
     // Whether or not a positioned element requires normal flow x/y to be computed
     // to determine its position.
@@ -506,7 +510,9 @@ public:
     bool hasStaticBlockPosition(bool horizontal) const { return horizontal ? hasAutoTopAndBottom() : hasAutoLeftAndRight(); }
 
     EPosition position() const { return static_cast<EPosition>(noninherited_flags._position); }
-    bool isOutOfFlowPositioned() const { return position() == AbsolutePosition || position() == FixedPosition; }
+    bool hasOutOfFlowPosition() const { return position() == AbsolutePosition || position() == FixedPosition; }
+    bool hasInFlowPosition() const { return position() == RelativePosition || position() == StickyPosition; }
+    bool hasViewportConstrainedPosition() const { return position() == FixedPosition || position() == StickyPosition; }
     EFloat floating() const { return static_cast<EFloat>(noninherited_flags._floating); }
 
     Length width() const { return m_box->width(); }
@@ -725,24 +731,24 @@ public:
     Length marginBottom() const { return surround->margin.bottom(); }
     Length marginLeft() const { return surround->margin.left(); }
     Length marginRight() const { return surround->margin.right(); }
-    Length marginBefore() const { return surround->margin.before(this); }
-    Length marginAfter() const { return surround->margin.after(this); }
-    Length marginStart() const { return surround->margin.start(this); }
-    Length marginEnd() const { return surround->margin.end(this); }
-    Length marginStartUsing(const RenderStyle* otherStyle) const { return surround->margin.start(otherStyle); }
-    Length marginEndUsing(const RenderStyle* otherStyle) const { return surround->margin.end(otherStyle); }
-    Length marginBeforeUsing(const RenderStyle* otherStyle) const { return surround->margin.before(otherStyle); }
-    Length marginAfterUsing(const RenderStyle* otherStyle) const { return surround->margin.after(otherStyle); }
+    Length marginBefore() const { return surround->margin.before(writingMode()); }
+    Length marginAfter() const { return surround->margin.after(writingMode()); }
+    Length marginStart() const { return surround->margin.start(writingMode(), direction()); }
+    Length marginEnd() const { return surround->margin.end(writingMode(), direction()); }
+    Length marginStartUsing(const RenderStyle* otherStyle) const { return surround->margin.start(otherStyle->writingMode(), otherStyle->direction()); }
+    Length marginEndUsing(const RenderStyle* otherStyle) const { return surround->margin.end(otherStyle->writingMode(), otherStyle->direction()); }
+    Length marginBeforeUsing(const RenderStyle* otherStyle) const { return surround->margin.before(otherStyle->writingMode()); }
+    Length marginAfterUsing(const RenderStyle* otherStyle) const { return surround->margin.after(otherStyle->writingMode()); }
 
     LengthBox paddingBox() const { return surround->padding; }
     Length paddingTop() const { return surround->padding.top(); }
     Length paddingBottom() const { return surround->padding.bottom(); }
     Length paddingLeft() const { return surround->padding.left(); }
     Length paddingRight() const { return surround->padding.right(); }
-    Length paddingBefore() const { return surround->padding.before(this); }
-    Length paddingAfter() const { return surround->padding.after(this); }
-    Length paddingStart() const { return surround->padding.start(this); }
-    Length paddingEnd() const { return surround->padding.end(this); }
+    Length paddingBefore() const { return surround->padding.before(writingMode()); }
+    Length paddingAfter() const { return surround->padding.after(writingMode()); }
+    Length paddingStart() const { return surround->padding.start(writingMode(), direction()); }
+    Length paddingEnd() const { return surround->padding.end(writingMode(), direction()); }
 
     ECursor cursor() const { return static_cast<ECursor>(inherited_flags._cursor_style); }
 
@@ -952,8 +958,11 @@ public:
     ETextSecurity textSecurity() const { return static_cast<ETextSecurity>(rareInheritedData->textSecurity); }
 
     WritingMode writingMode() const { return static_cast<WritingMode>(inherited_flags.m_writingMode); }
+    // Lines have horizontal orientation; modes horizontal-tb or horizontal-bt.
     bool isHorizontalWritingMode() const { return writingMode() == TopToBottomWritingMode || writingMode() == BottomToTopWritingMode; }
+    // Bottom of the line occurs earlier in the block; modes vertical-rl or horizontal-bt.
     bool isFlippedLinesWritingMode() const { return writingMode() == LeftToRightWritingMode || writingMode() == BottomToTopWritingMode; }
+    // Block progression increases in the opposite direction to normal; modes vertical-rl or horizontal-bt.
     bool isFlippedBlocksWritingMode() const { return writingMode() == RightToLeftWritingMode || writingMode() == BottomToTopWritingMode; }
 
 #if ENABLE(CSS_IMAGE_ORIENTATION)
@@ -981,7 +990,7 @@ public:
 #if ENABLE(CSS_COMPOSITING)
     BlendMode blendMode() const { return static_cast<BlendMode>(rareNonInheritedData->m_effectiveBlendMode); }
     void setBlendMode(BlendMode v) { rareNonInheritedData.access()->m_effectiveBlendMode = v; }
-    bool hasBlendMode() const { return static_cast<BlendMode>(rareNonInheritedData->m_effectiveBlendMode) == BlendModeNormal; }
+    bool hasBlendMode() const { return static_cast<BlendMode>(rareNonInheritedData->m_effectiveBlendMode) != BlendModeNormal; }
 #else
     bool hasBlendMode() const { return false; }
 #endif
@@ -1438,22 +1447,31 @@ public:
     void setKerning(SVGLength k) { accessSVGStyle()->setKerning(k); }
 #endif
 
-    void setWrapShapeInside(PassRefPtr<WrapShape> shape)
+    void setWrapShapeInside(PassRefPtr<BasicShape> shape)
     {
         if (rareNonInheritedData->m_wrapShapeInside != shape)
             rareNonInheritedData.access()->m_wrapShapeInside = shape;
     }
-    WrapShape* wrapShapeInside() const { return rareNonInheritedData->m_wrapShapeInside.get(); }
+    BasicShape* wrapShapeInside() const { return rareNonInheritedData->m_wrapShapeInside.get(); }
 
-    void setWrapShapeOutside(PassRefPtr<WrapShape> shape)
+    void setWrapShapeOutside(PassRefPtr<BasicShape> shape)
     {
         if (rareNonInheritedData->m_wrapShapeOutside != shape)
             rareNonInheritedData.access()->m_wrapShapeOutside = shape;
     }
-    WrapShape* wrapShapeOutside() const { return rareNonInheritedData->m_wrapShapeOutside.get(); }
+    BasicShape* wrapShapeOutside() const { return rareNonInheritedData->m_wrapShapeOutside.get(); }
 
-    static WrapShape* initialWrapShapeInside() { return 0; }
-    static WrapShape* initialWrapShapeOutside() { return 0; }
+    static BasicShape* initialWrapShapeInside() { return 0; }
+    static BasicShape* initialWrapShapeOutside() { return 0; }
+
+    void setClipPath(PassRefPtr<BasicShape> shape)
+    {
+        if (rareNonInheritedData->m_clipPath != shape)
+            rareNonInheritedData.access()->m_clipPath = shape;
+    }
+    BasicShape* clipPath() const { return rareNonInheritedData->m_clipPath.get(); }
+
+    static BasicShape* initialClipPath() { return 0; }
 
     Length wrapPadding() const { return rareNonInheritedData->m_wrapPadding; }
     void setWrapPadding(Length wrapPadding) { SET_VAR(rareNonInheritedData, m_wrapPadding, wrapPadding); }
@@ -1747,10 +1765,7 @@ private:
 
     bool isDisplayReplacedType(EDisplay display) const
     {
-        return display == INLINE_BLOCK || display == INLINE_BOX
-#if ENABLE(CSS3_FLEXBOX)
-            || display == INLINE_FLEX
-#endif
+        return display == INLINE_BLOCK || display == INLINE_BOX || display == INLINE_FLEX
             || display == INLINE_TABLE || display == INLINE_GRID;
     }
 

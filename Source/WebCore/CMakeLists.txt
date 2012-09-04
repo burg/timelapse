@@ -8,9 +8,9 @@ SET(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/intents"
     "${WEBCORE_DIR}/Modules/mediasource"
     "${WEBCORE_DIR}/Modules/mediastream"
+    "${WEBCORE_DIR}/Modules/navigatorcontentutils"
     "${WEBCORE_DIR}/Modules/networkinfo"
     "${WEBCORE_DIR}/Modules/notifications"
-    "${WEBCORE_DIR}/Modules/protocolhandler"
     "${WEBCORE_DIR}/Modules/proximity"
     "${WEBCORE_DIR}/Modules/quota"
     "${WEBCORE_DIR}/Modules/vibration"
@@ -222,8 +222,12 @@ SET(WebCore_IDL_FILES
     Modules/mediastream/NavigatorUserMediaErrorCallback.idl
     Modules/mediastream/NavigatorUserMediaSuccessCallback.idl
     Modules/mediastream/PeerConnection00.idl
+    Modules/mediastream/RTCIceCandidate.idl
     Modules/mediastream/RTCPeerConnection.idl
+    Modules/mediastream/RTCSessionDescription.idl
     Modules/mediastream/SessionDescription.idl
+
+    Modules/navigatorcontentutils/NavigatorContentUtils.idl
 
     Modules/networkinfo/NavigatorNetworkInfoConnection.idl
     Modules/networkinfo/NetworkInfoConnection.idl
@@ -233,8 +237,6 @@ SET(WebCore_IDL_FILES
     Modules/notifications/NotificationCenter.idl
     Modules/notifications/NotificationPermissionCallback.idl
     Modules/notifications/WorkerContextNotifications.idl
-
-    Modules/protocolhandler/NavigatorRegisterProtocolHandler.idl
 
     Modules/proximity/DeviceProximityEvent.idl
 
@@ -389,6 +391,7 @@ SET(WebCore_IDL_FILES
     dom/UIEvent.idl
     dom/WebKitAnimationEvent.idl
     dom/WebKitNamedFlow.idl
+    dom/DOMNamedFlowCollection.idl
     dom/WebKitTransitionEvent.idl
     dom/WheelEvent.idl
 
@@ -841,6 +844,7 @@ SET(WebCore_SOURCES
 
     Modules/mediastream/IceCandidate.cpp
     Modules/mediastream/LocalMediaStream.cpp
+    Modules/mediastream/MediaConstraintsImpl.cpp
     Modules/mediastream/MediaStream.cpp
     Modules/mediastream/MediaStreamEvent.cpp
     Modules/mediastream/MediaStreamList.cpp
@@ -850,10 +854,14 @@ SET(WebCore_SOURCES
     Modules/mediastream/MediaStreamTrackList.cpp
     Modules/mediastream/NavigatorMediaStream.cpp
     Modules/mediastream/PeerConnection00.cpp
+    Modules/mediastream/RTCIceCandidate.cpp
     Modules/mediastream/RTCPeerConnection.cpp
+    Modules/mediastream/RTCSessionDescription.cpp
     Modules/mediastream/SessionDescription.cpp
     Modules/mediastream/UserMediaController.cpp
     Modules/mediastream/UserMediaRequest.cpp
+
+    Modules/navigatorcontentutils/NavigatorContentUtils.cpp
 
     Modules/networkinfo/NavigatorNetworkInfoConnection.cpp
     Modules/networkinfo/NetworkInfo.cpp
@@ -865,8 +873,6 @@ SET(WebCore_SOURCES
     Modules/notifications/NotificationController.cpp
     Modules/notifications/Notification.cpp
     Modules/notifications/WorkerContextNotifications.cpp
-
-    Modules/protocolhandler/NavigatorRegisterProtocolHandler.cpp
 
     Modules/proximity/DeviceProximityEvent.cpp
 
@@ -986,7 +992,9 @@ SET(WebCore_SOURCES
     bindings/generic/BindingSecurity.cpp
     bindings/generic/RuntimeEnabledFeatures.cpp
 
+    css/BasicShapeFunctions.cpp
     css/CSSAspectRatioValue.cpp
+    css/CSSBasicShapes.cpp
     css/CSSBorderImage.cpp
     css/CSSBorderImageSliceValue.cpp
     css/CSSCalculationValue.cpp
@@ -1031,7 +1039,6 @@ SET(WebCore_SOURCES
     css/CSSValue.cpp
     css/CSSValueList.cpp
     css/CSSValuePool.cpp
-    css/CSSWrapShapes.cpp
     css/FontFeatureValue.cpp
     css/FontValue.cpp
     css/LengthFunctions.cpp
@@ -1068,7 +1075,6 @@ SET(WebCore_SOURCES
     css/WebKitCSSSVGDocumentValue.cpp
     css/WebKitCSSShaderValue.cpp
     css/WebKitCSSTransformValue.cpp
-    css/WrapShapeFunctions.cpp
 
     dom/ActiveDOMObject.cpp
     dom/Attr.cpp
@@ -1104,6 +1110,7 @@ SET(WebCore_SOURCES
     dom/DOMCoreException.cpp
     dom/DOMError.cpp
     dom/DOMImplementation.cpp
+    dom/DOMNamedFlowCollection.cpp
     dom/DOMStringList.cpp
     dom/DOMStringMap.cpp
     dom/Document.cpp
@@ -1150,6 +1157,7 @@ SET(WebCore_SOURCES
     dom/MutationObserverInterestGroup.cpp
     dom/MutationObserverRegistration.cpp
     dom/MutationRecord.cpp
+    dom/NamedFlowCollection.cpp
     dom/NamedNodeMap.cpp
     dom/NameNodeList.cpp
     dom/Node.cpp
@@ -1204,7 +1212,6 @@ SET(WebCore_SOURCES
     dom/ViewportArguments.cpp
     dom/WebKitAnimationEvent.cpp
     dom/WebKitNamedFlow.cpp
-    dom/WebKitNamedFlowCollection.cpp
     dom/WebKitTransitionEvent.cpp
     dom/WheelEvent.cpp
     dom/WindowEventContext.cpp
@@ -1830,6 +1837,7 @@ SET(WebCore_SOURCES
     platform/graphics/FontFeatureSettings.cpp
     platform/graphics/FractionalLayoutBoxExtent.cpp
     platform/graphics/FractionalLayoutRect.cpp
+    platform/graphics/GeneratedImage.cpp
     platform/graphics/GeneratorGeneratedImage.cpp
     platform/graphics/GlyphPageTreeNode.cpp
     platform/graphics/Gradient.cpp
@@ -1924,7 +1932,9 @@ SET(WebCore_SOURCES
     platform/mediastream/MediaHints.cpp
     platform/mediastream/MediaStreamCenter.cpp
     platform/mediastream/PeerConnection00Handler.cpp
+    platform/mediastream/RTCIceCandidateDescriptor.cpp
     platform/mediastream/RTCPeerConnectionHandler.cpp
+    platform/mediastream/RTCSessionDescriptionDescriptor.cpp
     platform/mediastream/SessionDescriptionDescriptor.cpp
 
     platform/mock/DeviceMotionClientMock.cpp
@@ -2029,7 +2039,6 @@ SET(WebCore_SOURCES
     rendering/RenderFlexibleBox.cpp
     rendering/RenderGrid.cpp
     rendering/RenderFlowThread.cpp
-    rendering/RenderFlowThreadContainer.cpp
     rendering/RenderFrame.cpp
     rendering/RenderFrameBase.cpp
     rendering/RenderFrameSet.cpp
@@ -2086,6 +2095,7 @@ SET(WebCore_SOURCES
     rendering/RenderTextControlMultiLine.cpp
     rendering/RenderTextControlSingleLine.cpp
     rendering/RenderTextFragment.cpp
+    rendering/RenderTextTrackCue.cpp
     rendering/RenderTheme.cpp
     rendering/RenderTreeAsText.cpp
     rendering/RenderVideo.cpp
@@ -2094,6 +2104,7 @@ SET(WebCore_SOURCES
     rendering/RenderWordBreak.cpp
     rendering/RootInlineBox.cpp
     rendering/ScrollBehavior.cpp
+    rendering/WrapShapeInfo.cpp
     rendering/break_lines.cpp
 
     rendering/mathml/RenderMathMLBlock.cpp
@@ -2107,6 +2118,7 @@ SET(WebCore_SOURCES
     rendering/mathml/RenderMathMLSubSup.cpp
     rendering/mathml/RenderMathMLUnderOver.cpp
 
+    rendering/style/BasicShapes.cpp
     rendering/style/ContentData.cpp
     rendering/style/CounterDirectives.cpp
     rendering/style/FillLayer.cpp
@@ -2135,7 +2147,6 @@ SET(WebCore_SOURCES
     rendering/style/StyleVisualData.cpp
     rendering/style/SVGRenderStyle.cpp
     rendering/style/SVGRenderStyleDefs.cpp
-    rendering/style/WrapShapes.cpp
 
     rendering/svg/RenderSVGBlock.cpp
     rendering/svg/RenderSVGContainer.cpp
@@ -2555,18 +2566,18 @@ IF (WTF_USE_3D_GRAPHICS)
     IF (BISON_VERSION EQUAL "2.5")
         # Bison 2.5 can not compile generated glslang.
         # See https://bugs.webkit.org/show_bug.cgi?id=93487
-        LIST(APPEND WebCore_SOURCES
+        LIST(APPEND ANGLESupport_SOURCES
             ${THIRDPARTY_DIR}/ANGLE/src/compiler/glslang_lex.cpp
             ${THIRDPARTY_DIR}/ANGLE/src/compiler/glslang_tab.cpp
         )
     ELSE ()
-        LIST(APPEND WebCore_SOURCES
+        LIST(APPEND ANGLESupport_SOURCES
             ${DERIVED_SOURCES_WEBCORE_DIR}/glslang.cpp
             ${DERIVED_SOURCES_WEBCORE_DIR}/glslang_tab.cpp
         )
     ENDIF ()
 
-    LIST(APPEND WebCore_SOURCES
+    LIST(APPEND ANGLESupport_SOURCES
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/BuiltInFunctionEmulator.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/CodeGenGLSL.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/Compiler.cpp
@@ -2754,6 +2765,15 @@ ADD_CUSTOM_COMMAND(
     COMMAND ${PYTHON_EXECUTABLE} ${WEBCORE_DIR}/inspector/CodeGeneratorInspector.py ${WEBCORE_DIR}/inspector/Inspector.json --output_h_dir "${DERIVED_SOURCES_WEBCORE_DIR}" --output_cpp_dir "${DERIVED_SOURCES_WEBCORE_DIR}"
     VERBATIM)
 LIST(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorBackendDispatcher.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorFrontend.cpp ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorTypeBuilder.cpp)
+
+
+# Generate InspectorOverlayPage.h
+ADD_CUSTOM_COMMAND(
+    OUTPUT ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorOverlayPage.h
+    MAIN_DEPENDENCY inspector/InspectorOverlayPage.html
+    COMMAND ${PERL_EXECUTABLE} ${WEBCORE_DIR}/inspector/xxd.pl InspectorOverlayPage_html ${WEBCORE_DIR}/inspector/InspectorOverlayPage.html ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorOverlayPage.h
+    VERBATIM)
+LIST(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/InspectorOverlayPage.h)
 
 
 # Generate InjectedScriptSource.h
@@ -2945,6 +2965,14 @@ SET_TARGET_PROPERTIES(${WebCoreTestSupport_LIBRARY_NAME} PROPERTIES FOLDER "WebC
 
 ADD_DEPENDENCIES(${WebCore_LIBRARY_NAME} ${JavaScriptCore_LIBRARY_NAME})
 ADD_DEPENDENCIES(${WebCoreTestSupport_LIBRARY_NAME} ${WebCore_LIBRARY_NAME})
+
+IF (WTF_USE_3D_GRAPHICS)
+    SET(ANGLESupport_LIBRARY_NAME ANGLESupport)
+    ADD_LIBRARY(${ANGLESupport_LIBRARY_NAME} STATIC ${ANGLESupport_SOURCES})
+    SET_TARGET_PROPERTIES(${ANGLESupport_LIBRARY_NAME} PROPERTIES FOLDER "WebCore")
+    LIST(APPEND WebCore_LIBRARIES ${ANGLESupport_LIBRARY_NAME})
+    WEBKIT_SET_EXTRA_COMPILER_FLAGS(${ANGLESupport_LIBRARY_NAME} IGNORECXX_WARNINGS)
+ENDIF ()
 
 TARGET_LINK_LIBRARIES(${WebCore_LIBRARY_NAME} ${WebCore_LIBRARIES})
 

@@ -57,12 +57,12 @@ JavaScriptCallFrame* JavaScriptCallFrame::caller()
     return m_caller.get();
 }
 
-JSC::ScopeChainNode* JavaScriptCallFrame::scopeChain() const
+JSC::JSScope* JavaScriptCallFrame::scopeChain() const
 {
     ASSERT(m_isValid);
     if (!m_isValid)
         return 0;
-    return m_debuggerCallFrame.scopeChain();
+    return m_debuggerCallFrame.scope();
 }
 
 JSC::JSGlobalObject* JavaScriptCallFrame::dynamicGlobalObject() const
@@ -78,10 +78,10 @@ String JavaScriptCallFrame::functionName() const
     ASSERT(m_isValid);
     if (!m_isValid)
         return String();
-    UString functionName = m_debuggerCallFrame.calculatedFunctionName();
+    String functionName = m_debuggerCallFrame.calculatedFunctionName();
     if (functionName.isEmpty())
         return String();
-    return ustringToString(functionName);
+    return functionName;
 }
 
 DebuggerCallFrame::Type JavaScriptCallFrame::type() const
@@ -100,8 +100,16 @@ JSObject* JavaScriptCallFrame::thisObject() const
     return m_debuggerCallFrame.thisObject();
 }
 
+ExecState* JavaScriptCallFrame::exec() const
+{
+    ASSERT(m_isValid);
+    if (!m_isValid)
+        return 0;
+    return m_debuggerCallFrame.callFrame();
+}
+
 // Evaluate some JavaScript code in the scope of this frame.
-JSValue JavaScriptCallFrame::evaluate(const UString& script, JSValue& exception) const
+JSValue JavaScriptCallFrame::evaluate(const String& script, JSValue& exception) const
 {
     ASSERT(m_isValid);
     if (!m_isValid)

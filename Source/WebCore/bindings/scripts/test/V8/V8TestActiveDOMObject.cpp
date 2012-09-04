@@ -30,7 +30,6 @@
 #include "V8DOMWrapper.h"
 #include "V8IsolatedContext.h"
 #include "V8Node.h"
-#include "V8Proxy.h"
 #include <wtf/UnusedParam.h>
 
 namespace WebCore {
@@ -180,22 +179,25 @@ bool V8TestActiveDOMObject::HasInstance(v8::Handle<v8::Value> value)
 v8::Handle<v8::Object> V8TestActiveDOMObject::wrapSlow(PassRefPtr<TestActiveDOMObject> impl, v8::Isolate* isolate)
 {
     v8::Handle<v8::Object> wrapper;
-    V8Proxy* proxy = 0;
+    Frame* frame = 0;
     if (impl->frame()) {
-        proxy = impl->frame()->script()->proxy();
-        proxy->windowShell()->initContextIfNeeded();
+        frame = impl->frame();
+        frame->script()->windowShell()->initializeIfNeeded();
     }
 
     // Enter the node's context and create the wrapper in that context.
     v8::Handle<v8::Context> context;
-    if (proxy && !proxy->matchesCurrentContext()) {
-        // For performance, we enter the context only if the currently running context
-        // is different from the context that we are about to enter.
-        context = proxy->context();
-        if (!context.IsEmpty())
-            context->Enter();
+    if (frame) {
+        v8::Handle<v8::Context> underlyingHandle = frame->script()->unsafeHandleToCurrentWorldContext();
+        if (v8::Context::GetCurrent() != underlyingHandle) {
+            // For performance, we enter the context only if the currently running context
+            // is different from the context that we are about to enter.
+            context = v8::Local<v8::Context>::New(underlyingHandle);
+            if (!context.IsEmpty())
+                context->Enter();
+        }
     }
-    wrapper = V8DOMWrapper::instantiateV8Object(proxy, &info, impl.get());
+    wrapper = V8DOMWrapper::instantiateV8Object(frame, &info, impl.get());
     // Exit the node's context if it was entered.
     if (!context.IsEmpty())
         context->Exit();

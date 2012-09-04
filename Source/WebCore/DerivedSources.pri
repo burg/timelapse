@@ -57,6 +57,8 @@ INSPECTOR_JSON = $$PWD/inspector/Inspector.json
 
 INSPECTOR_BACKEND_COMMANDS_QRC = $$PWD/inspector/front-end/InspectorBackendCommands.qrc
 
+INSPECTOR_OVERLAY_PAGE = $$PWD/inspector/InspectorOverlayPage.html
+
 INJECTED_SCRIPT_SOURCE = $$PWD/inspector/InjectedScriptSource.js
 
 INJECTED_SCRIPT_WEBGL_MODULE_SOURCE = $$PWD/inspector/InjectedScriptWebGLModuleSource.js
@@ -139,6 +141,7 @@ IDL_BINDINGS += \
     $$PWD/Modules/quota/StorageInfoQuotaCallback.idl \
     $$PWD/Modules/quota/StorageInfoUsageCallback.idl \
     $$PWD/Modules/webaudio/AudioBuffer.idl \
+    $$PWD/Modules/webaudio/AudioBufferCallback.idl \
     $$PWD/Modules/webaudio/AudioBufferSourceNode.idl \
     $$PWD/Modules/webaudio/AudioChannelMerger.idl \
     $$PWD/Modules/webaudio/AudioChannelSplitter.idl \
@@ -152,11 +155,19 @@ IDL_BINDINGS += \
     $$PWD/Modules/webaudio/AudioParam.idl \
     $$PWD/Modules/webaudio/AudioProcessingEvent.idl \
     $$PWD/Modules/webaudio/AudioSourceNode.idl \
+    $$PWD/Modules/webaudio/BiquadFilterNode.idl \
     $$PWD/Modules/webaudio/ConvolverNode.idl \
     $$PWD/Modules/webaudio/DelayNode.idl \
     $$PWD/Modules/webaudio/DOMWindowWebAudio.idl \
+    $$PWD/Modules/webaudio/DynamicsCompressorNode.idl \
     $$PWD/Modules/webaudio/JavaScriptAudioNode.idl \
+    $$PWD/Modules/webaudio/MediaElementAudioSourceNode.idl \
+    $$PWD/Modules/webaudio/MediaStreamAudioSourceNode.idl \
+    $$PWD/Modules/webaudio/OfflineAudioCompletionEvent.idl \
+    $$PWD/Modules/webaudio/Oscillator.idl \
     $$PWD/Modules/webaudio/RealtimeAnalyserNode.idl \
+    $$PWD/Modules/webaudio/WaveShaperNode.idl \
+    $$PWD/Modules/webaudio/WaveTable.idl \
     $$PWD/Modules/webdatabase/DOMWindowWebDatabase.idl \
     $$PWD/Modules/webdatabase/Database.idl \
     $$PWD/Modules/webdatabase/DatabaseCallback.idl \
@@ -267,6 +278,7 @@ IDL_BINDINGS += \
     $$PWD/dom/UIEvent.idl \
     $$PWD/dom/WebKitAnimationEvent.idl \
     $$PWD/dom/WebKitNamedFlow.idl \
+    $$PWD/dom/DOMNamedFlowCollection.idl \
     $$PWD/dom/WebKitTransitionEvent.idl \
     $$PWD/dom/WheelEvent.idl \
     $$PWD/editing/DOMTransaction.idl \
@@ -772,6 +784,12 @@ inspectorBackendCommands.input = INSPECTOR_BACKEND_COMMANDS_QRC
 inspectorBackendCommands.commands = $$QMAKE_COPY $$toSystemPath($$INSPECTOR_BACKEND_COMMANDS_QRC) ${QMAKE_FUNC_FILE_OUT_PATH}$${QMAKE_DIR_SEP}InspectorBackendCommands.qrc
 inspectorBackendCommands.add_output_to_sources = false
 GENERATORS += inspectorBackendCommands
+
+inspectorOverlayPage.output = InspectorOverlayPage.h
+inspectorOverlayPage.input = INSPECTOR_OVERLAY_PAGE
+inspectorOverlayPage.commands = perl $$PWD/inspector/xxd.pl InspectorOverlayPage_html ${QMAKE_FILE_IN} ${QMAKE_FILE_OUT}
+injectedScriptSource.add_output_to_sources = false
+GENERATORS += inspectorOverlayPage
 
 # GENERATOR 2-a: inspector injected script source compiler
 injectedScriptSource.output = InjectedScriptSource.h

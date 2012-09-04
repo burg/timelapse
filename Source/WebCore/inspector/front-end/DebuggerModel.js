@@ -97,7 +97,8 @@ WebInspector.DebuggerModel.BreakReason = {
     DOM: "DOM",
     EventListener: "EventListener",
     XHR: "XHR",
-    Exception: "exception"
+    Exception: "exception",
+    Assert: "assert"
 }
 
 WebInspector.DebuggerModel.prototype = {

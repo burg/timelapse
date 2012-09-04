@@ -27,7 +27,6 @@
 #ifndef HTMLElementStack_h
 #define HTMLElementStack_h
 
-#include "Element.h"
 #include "HTMLNames.h"
 #include "HTMLStackItem.h"
 #include <wtf/Forward.h>
@@ -101,6 +100,7 @@ public:
     HTMLStackItem* oneBelowTop() const;
     ElementRecord* topRecord() const;
     ElementRecord* find(Element*) const;
+    ElementRecord* furthestBlockForFormattingElement(Element*) const;
     ElementRecord* topmost(const AtomicString& tagName) const;
 
     void insertAbove(PassRefPtr<HTMLStackItem>, ElementRecord*);
@@ -180,15 +180,6 @@ private:
     unsigned m_stackDepth;
 };
     
-inline bool isInHTMLNamespace(const HTMLStackItem* item)
-{
-    // A DocumentFragment takes the place of the document element when parsing
-    // fragments and should be considered in the HTML namespace.
-    return item->namespaceURI() == HTMLNames::xhtmlNamespaceURI
-        || item->isDocumentFragmentNode(); // FIXME: Does this also apply to ShadowRoot?
-}
-
-
 } // namespace WebCore
 
 #endif // HTMLElementStack_h

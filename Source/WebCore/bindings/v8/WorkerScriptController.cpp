@@ -39,7 +39,6 @@
 #include "ScriptSourceCode.h"
 #include "ScriptValue.h"
 #include "V8DOMMap.h"
-#include "V8Proxy.h"
 #include "V8WorkerContext.h"
 #include "WorkerContext.h"
 #include "WorkerContextExecutionProxy.h"
@@ -135,6 +134,7 @@ bool WorkerScriptController::isExecutionForbidden() const
 
 void WorkerScriptController::disableEval()
 {
+    m_proxy->setEvalAllowed(false);
 }
 
 void WorkerScriptController::setException(const ScriptValue& exception)

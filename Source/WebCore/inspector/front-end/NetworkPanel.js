@@ -29,9 +29,6 @@
  */
 
 importScript("RequestView.js");
-importScript("ResourceView.js");
-importScript("FontView.js");
-importScript("ImageView.js");
 importScript("NetworkItemView.js");
 importScript("RequestCookiesView.js");
 importScript("RequestHeadersView.js");
@@ -305,7 +302,7 @@ WebInspector.NetworkLogView.prototype = {
         this._timelineSortSelector.selectedIndex = 0;
         this._updateOffscreenRows();
 
-        this.performSearch(null);
+        this.searchCanceled();
     },
 
     _sortByTimeline: function()
@@ -451,7 +448,7 @@ WebInspector.NetworkLogView.prototype = {
             selectMultiple = true;
 
         this._filter(e.target, selectMultiple);
-        this.performSearch(null);
+        this.searchCanceled();
         this._updateSummaryBar();
     },
 
@@ -1083,6 +1080,7 @@ WebInspector.NetworkLogView.prototype = {
 
     _clearSearchMatchedList: function()
     {
+        delete this._searchRegExp;
         this._matchedRequests = [];
         this._matchedRequestsMap = {};
         this._removeAllHighlights();
@@ -1170,8 +1168,8 @@ WebInspector.NetworkLogView.prototype = {
         if (this._currentMatchedRequestIndex !== -1)
             currentMatchedRequestId = this._matchedRequests[this._currentMatchedRequestIndex];
 
-        this._searchRegExp = createPlainTextSearchRegex(searchQuery, "i");
         this._clearSearchMatchedList();
+        this._searchRegExp = createPlainTextSearchRegex(searchQuery, "i");
 
         var childNodes = this._dataGrid.dataTableBody.childNodes;
         var requestNodes = Array.prototype.slice.call(childNodes, 0, childNodes.length - 1); // drop the filler row.
@@ -1191,7 +1189,8 @@ WebInspector.NetworkLogView.prototype = {
     /**
      * @param {string} query
      */
-    performFilter: function(query) {
+    performFilter: function(query)
+    {
         this._filteredOutRequests.clear();
         var filterRegExp = createPlainTextSearchRegex(query, "i");
         var shownRequests = [];
@@ -1308,7 +1307,6 @@ WebInspector.NetworkPanel = function()
         return this.visibleView;
     }
     WebInspector.GoToLineDialog.install(this, viewGetter.bind(this));
-    WebInspector.ContextMenu.registerProvider(this);
 }
 
 WebInspector.NetworkPanel.prototype = {
@@ -1463,19 +1461,28 @@ WebInspector.NetworkPanel.prototype = {
 
     /**
      * @param {string} searchQuery
-     */    
+     */
     performSearch: function(searchQuery)
     {
         this._networkLogView.performSearch(searchQuery);
     },
-    
+
+    /**
+     * @return {boolean}
+     */
+    canFilter: function()
+    {
+        return true;
+    },
+
     /**
      * @param {string} query
      */    
-    performFilter: function(query){
+    performFilter: function(query)
+    {
         this._networkLogView.performFilter(query);
     },
-    
+
     jumpToPreviousSearchResult: function()
     {
         this._networkLogView.jumpToPreviousSearchResult();
@@ -1515,6 +1522,7 @@ WebInspector.NetworkPanel.prototype.__proto__ = WebInspector.Panel.prototype;
 
 /**
  * @constructor
+ * @implements {WebInspector.TimelineGrid.Calculator}
  */
 WebInspector.NetworkBaseCalculator = function()
 {
@@ -1523,12 +1531,12 @@ WebInspector.NetworkBaseCalculator = function()
 WebInspector.NetworkBaseCalculator.prototype = {
     computePosition: function(time)
     {
-        return (time - this.minimumBoundary) / this.boundarySpan * this._workingArea;
+        return (time - this._minimumBoundary) / this.boundarySpan() * this._workingArea;
     },
 
     computeBarGraphPercentages: function(item)
     {
-        return {start: 0, middle: 0, end: (this._value(item) / this.boundarySpan) * 100};
+        return {start: 0, middle: 0, end: (this._value(item) / this.boundarySpan()) * 100};
     },
 
     computeBarGraphLabels: function(item)
@@ -1537,18 +1545,18 @@ WebInspector.NetworkBaseCalculator.prototype = {
         return {left: label, right: label, tooltip: label};
     },
 
-    get boundarySpan()
+    boundarySpan: function()
     {
-        return this.maximumBoundary - this.minimumBoundary;
+        return this._maximumBoundary - this._minimumBoundary;
     },
 
     updateBoundaries: function(item)
     {
-        this.minimumBoundary = 0;
+        this._minimumBoundary = 0;
 
         var value = this._value(item);
-        if (typeof this.maximumBoundary === "undefined" || value > this.maximumBoundary) {
-            this.maximumBoundary = value;
+        if (typeof this._maximumBoundary === "undefined" || value > this._maximumBoundary) {
+            this._maximumBoundary = value;
             return true;
         }
         return false;
@@ -1556,8 +1564,18 @@ WebInspector.NetworkBaseCalculator.prototype = {
 
     reset: function()
     {
-        delete this.minimumBoundary;
-        delete this.maximumBoundary;
+        delete this._minimumBoundary;
+        delete this._maximumBoundary;
+    },
+
+    maximumBoundary: function()
+    {
+        return this._maximumBoundary;
+    },
+
+    minimumBoundary: function()
+    {
+        return this._minimumBoundary;
     },
 
     _value: function(item)
@@ -1591,17 +1609,17 @@ WebInspector.NetworkTimeCalculator.prototype = {
     computeBarGraphPercentages: function(request)
     {
         if (request.startTime !== -1)
-            var start = ((request.startTime - this.minimumBoundary) / this.boundarySpan) * 100;
+            var start = ((request.startTime - this._minimumBoundary) / this.boundarySpan()) * 100;
         else
             var start = 0;
 
         if (request.responseReceivedTime !== -1)
-            var middle = ((request.responseReceivedTime - this.minimumBoundary) / this.boundarySpan) * 100;
+            var middle = ((request.responseReceivedTime - this._minimumBoundary) / this.boundarySpan()) * 100;
         else
             var middle = (this.startAtZero ? start : 100);
 
         if (request.endTime !== -1)
-            var end = ((request.endTime - this.minimumBoundary) / this.boundarySpan) * 100;
+            var end = ((request.endTime - this._minimumBoundary) / this.boundarySpan()) * 100;
         else
             var end = (this.startAtZero ? middle : 100);
 
@@ -1620,7 +1638,7 @@ WebInspector.NetworkTimeCalculator.prototype = {
         // of a specific event. If startAtZero is set, then this is useless, and we
         // want to return 0.
         if (eventTime !== -1 && !this.startAtZero)
-            return ((eventTime - this.minimumBoundary) / this.boundarySpan) * 100;
+            return ((eventTime - this._minimumBoundary) / this.boundarySpan()) * 100;
 
         return 0;
     },
@@ -1630,8 +1648,8 @@ WebInspector.NetworkTimeCalculator.prototype = {
         if (eventTime === -1 || this.startAtZero)
             return false;
 
-        if (typeof this.maximumBoundary === "undefined" || eventTime > this.maximumBoundary) {
-            this.maximumBoundary = eventTime;
+        if (typeof this._maximumBoundary === "undefined" || eventTime > this._maximumBoundary) {
+            this._maximumBoundary = eventTime;
             return true;
         }
         return false;
@@ -1675,14 +1693,14 @@ WebInspector.NetworkTimeCalculator.prototype = {
         else
             lowerBound = this._lowerBound(request);
 
-        if (lowerBound !== -1 && (typeof this.minimumBoundary === "undefined" || lowerBound < this.minimumBoundary)) {
-            this.minimumBoundary = lowerBound;
+        if (lowerBound !== -1 && (typeof this._minimumBoundary === "undefined" || lowerBound < this._minimumBoundary)) {
+            this._minimumBoundary = lowerBound;
             didChange = true;
         }
 
         var upperBound = this._upperBound(request);
-        if (upperBound !== -1 && (typeof this.maximumBoundary === "undefined" || upperBound > this.maximumBoundary)) {
-            this.maximumBoundary = upperBound;
+        if (upperBound !== -1 && (typeof this._maximumBoundary === "undefined" || upperBound > this._maximumBoundary)) {
+            this._maximumBoundary = upperBound;
             didChange = true;
         }
 
@@ -1907,8 +1925,7 @@ WebInspector.NetworkDataGridNode.prototype = {
         this._nameCell.appendChild(iconElement);
         this._nameCell.appendChild(document.createTextNode(this._fileName()));
 
-
-        var subtitle = WebInspector.displayDomain(this._request.parsedURL.host);
+        var subtitle = this._request.parsedURL.host === WebInspector.inspectedPageDomain ? "" : this._request.parsedURL.host;
 
         if (this._request.parsedURL.path)
             subtitle += this._request.folder;

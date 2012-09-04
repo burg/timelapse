@@ -28,7 +28,7 @@
 
 #if ENABLE(TEXT_AUTOSIZING)
 
-#include "LayoutTypes.h"
+#include "IntSize.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
@@ -50,6 +50,8 @@ public:
     virtual ~TextAutosizer();
 
     bool processSubtree(RenderObject* layoutRoot);
+
+    static float computeAutosizedFontSize(float specifiedSize, float multiplier);
 
 private:
     explicit TextAutosizer(Document*);

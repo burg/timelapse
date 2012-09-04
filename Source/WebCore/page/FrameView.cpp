@@ -102,7 +102,7 @@ double FrameView::sCurrentPaintTimeStamp = 0.0;
 // Should be removed when applications start using runtime configuration.
 #if ENABLE(REPAINT_THROTTLING)
 // Normal delay
-double FrameView::s_deferredRepaintDelay = 0.025;
+double FrameView::s_normalDeferredRepaintDelay = 0.016;
 // Negative value would mean that first few repaints happen without a delay
 double FrameView::s_initialDeferredRepaintDelayDuringLoading = 0;
 // The delay grows on each repaint to this maximum value
@@ -113,7 +113,7 @@ double FrameView::s_deferredRepaintDelayIncrementDuringLoading = 0.5;
 // FIXME: Repaint throttling could be good to have on all platform.
 // The balance between CPU use and repaint frequency will need some tuning for desktop.
 // More hooks may be needed to reset the delay on things like GIF and CSS animations.
-double FrameView::s_deferredRepaintDelay = 0;
+double FrameView::s_normalDeferredRepaintDelay = 0;
 double FrameView::s_initialDeferredRepaintDelayDuringLoading = 0;
 double FrameView::s_maxDeferredRepaintDelayDuringLoading = 0;
 double FrameView::s_deferredRepaintDelayIncrementDuringLoading = 0;
@@ -135,6 +135,33 @@ static RenderLayer::UpdateLayerPositionsFlags updateLayerPositionFlags(RenderLay
     if (isRelayoutingSubtree && layer->isPaginated())
         flags |= RenderLayer::UpdatePagination;
     return flags;
+}
+
+Pagination::Mode paginationModeForRenderStyle(RenderStyle* style)
+{
+    EOverflow overflow = style->overflowY();
+    if (overflow != OPAGEDX && overflow != OPAGEDY)
+        return Pagination::Unpaginated;
+
+    bool isHorizontalWritingMode = style->isHorizontalWritingMode();
+    TextDirection textDirection = style->direction();
+    WritingMode writingMode = style->writingMode();
+
+    // paged-x always corresponds to LeftToRightPaginated or RightToLeftPaginated. If the WritingMode
+    // is horizontal, then we use TextDirection to choose between those options. If the WritingMode
+    // is vertical, then the direction of the verticality dictates the choice.
+    if (overflow == OPAGEDX) {
+        if ((isHorizontalWritingMode && textDirection == LTR) || writingMode == LeftToRightWritingMode)
+            return Pagination::LeftToRightPaginated;
+        return Pagination::RightToLeftPaginated;
+    }
+
+    // paged-y always corresponds to TopToBottomPaginated or BottomToTopPaginated. If the WritingMode
+    // is horizontal, then the direction of the horizontality dictates the choice. If the WritingMode
+    // is vertical, then we use TextDirection to choose between those options. 
+    if (writingMode == TopToBottomWritingMode || (!isHorizontalWritingMode && textDirection == RTL))
+        return Pagination::TopToBottomPaginated;
+    return Pagination::BottomToTopPaginated;
 }
 
 FrameView::FrameView(Frame* frame)
@@ -598,11 +625,39 @@ void FrameView::applyOverflowToViewport(RenderObject* o, ScrollbarMode& hMode, S
             vMode = ScrollbarAuto;
             break;
         default:
-            // Don't set it at all.
+            // Don't set it at all. Values of OPAGEDX and OPAGEDY are handled by applyPaginationToViewPort().
             ;
     }
 
     m_viewportRenderer = o;
+}
+
+void FrameView::applyPaginationToViewport()
+{
+    Document* document = m_frame->document();
+    Node* documentElement = document->documentElement();
+    RenderObject* documentRenderer = documentElement ? documentElement->renderer() : 0;
+    RenderObject* documentOrBodyRenderer = documentRenderer;
+    Node* body = document->body();
+    if (body && body->renderer()) {
+        if (body->hasTagName(bodyTag))
+            documentOrBodyRenderer = documentRenderer->style()->overflowX() == OVISIBLE && documentElement->hasTagName(htmlTag) ? body->renderer() : documentRenderer;
+    }
+
+    Pagination pagination;
+
+    if (!documentOrBodyRenderer) {
+        setPagination(pagination);
+        return;
+    }
+
+    EOverflow overflowY = documentOrBodyRenderer->style()->overflowY();
+    if (overflowY == OPAGEDX || overflowY == OPAGEDY) {
+        pagination.mode = WebCore::paginationModeForRenderStyle(documentOrBodyRenderer->style());
+        pagination.gap = static_cast<unsigned>(documentOrBodyRenderer->style()->columnGap());
+    }
+
+    setPagination(pagination);
 }
 
 void FrameView::calculateScrollbarModesForLayout(ScrollbarMode& hMode, ScrollbarMode& vMode, ScrollbarModesCalculationStrategy strategy)
@@ -752,7 +807,7 @@ bool FrameView::syncCompositingStateForThisFrame(Frame* rootFrameForSync)
 
     // If we sync compositing layers and allow the repaint to be deferred, there is time for a
     // visible flash to occur. Instead, stop the deferred repaint timer and repaint immediately.
-    stopDelayingDeferredRepaints();
+    flushDeferredRepaints();
 
     root->compositor()->flushPendingLayerChanges(rootFrameForSync == m_frame);
 
@@ -998,6 +1053,10 @@ void FrameView::layout(bool allowSubtree)
             InspectorInstrumentation::mediaQueryResultChanged(document);
         } else
             document->evaluateMediaQueryList();
+
+        // If there is any pagination to apply, it will affect the RenderView's style, so we should
+        // take care of that now.
+        applyPaginationToViewport();
 
         // Always ensure our style info is up-to-date. This can happen in situations where
         // the layout beats any sort of style recalc update that needs to occur.
@@ -1466,7 +1525,7 @@ bool FrameView::scrollContentsFastPath(const IntSize& scrollDelta, const IntRect
     FixedObjectSet::const_iterator end = m_fixedObjects->end();
     for (FixedObjectSet::const_iterator it = m_fixedObjects->begin(); it != end; ++it) {
         RenderObject* renderer = *it;
-        if (renderer->style()->position() != FixedPosition)
+        if (!renderer->style()->hasViewportConstrainedPosition())
             continue;
 #if USE(ACCELERATED_COMPOSITING)
         if (renderer->isComposited())
@@ -1934,25 +1993,22 @@ void FrameView::startDeferredRepaintTimer(double delay)
     m_deferredRepaintTimer.startOneShot(delay);
 }
 
-void FrameView::checkStopDelayingDeferredRepaints()
+void FrameView::checkFlushDeferredRepaintsAfterLoadComplete()
 {
-    Document* document = m_frame->document();
-    if (document && (document->parsing() || document->cachedResourceLoader()->requestCount()))
+    if (shouldUseLoadTimeDeferredRepaintDelay())
         return;
-
-    stopDelayingDeferredRepaints();
+    m_deferredRepaintDelay = s_normalDeferredRepaintDelay;
+    flushDeferredRepaints();
 }
-    
-void FrameView::stopDelayingDeferredRepaints()
+
+void FrameView::flushDeferredRepaints()
 {
     if (!m_deferredRepaintTimer.isActive())
         return;
-
     m_deferredRepaintTimer.stop();
-
     doDeferredRepaints();
 }
-    
+
 void FrameView::doDeferredRepaints()
 {
     if (m_disableRepaints)
@@ -1977,21 +2033,32 @@ void FrameView::doDeferredRepaints()
     m_repaintRects.clear();
     m_repaintCount = 0;
     
-    updateDeferredRepaintDelay();
+    updateDeferredRepaintDelayAfterRepaint();
 }
 
-void FrameView::updateDeferredRepaintDelay()
+bool FrameView::shouldUseLoadTimeDeferredRepaintDelay() const
 {
+    // Don't defer after the initial load of the page has been completed.
+    if (m_frame->tree()->top()->loader()->isComplete())
+        return false;
     Document* document = m_frame->document();
-    if (!document || (!document->parsing() && !document->cachedResourceLoader()->requestCount())) {
-        m_deferredRepaintDelay = s_deferredRepaintDelay;
+    if (!document)
+        return false;
+    if (document->parsing())
+        return true;
+    if (document->cachedResourceLoader()->requestCount())
+        return true;
+    return false;
+}
+
+void FrameView::updateDeferredRepaintDelayAfterRepaint()
+{
+    if (!shouldUseLoadTimeDeferredRepaintDelay()) {
+        m_deferredRepaintDelay = s_normalDeferredRepaintDelay;
         return;
     }
-    if (m_deferredRepaintDelay < s_maxDeferredRepaintDelayDuringLoading) {
-        m_deferredRepaintDelay += s_deferredRepaintDelayIncrementDuringLoading;
-        if (m_deferredRepaintDelay > s_maxDeferredRepaintDelayDuringLoading)
-            m_deferredRepaintDelay = s_maxDeferredRepaintDelayDuringLoading;
-    }
+    double incrementedRepaintDelay = m_deferredRepaintDelay + s_deferredRepaintDelayIncrementDuringLoading;
+    m_deferredRepaintDelay = std::min(incrementedRepaintDelay, s_maxDeferredRepaintDelayDuringLoading);
 }
 
 void FrameView::resetDeferredRepaintDelay()
@@ -2054,7 +2121,7 @@ void FrameView::scheduleRelayout()
         return;
     if (!m_frame->document()->shouldScheduleLayout())
         return;
-
+    InspectorInstrumentation::didInvalidateLayout(m_frame.get());
     // When frame flattening is enabled, the contents of the frame could affect the layout of the parent frames.
     // Also invalidate parent frame starting from the owner element of this frame.
     if (m_frame->ownerRenderer() && isInChildFrameWithFrameFlattening())
@@ -2116,6 +2183,7 @@ void FrameView::scheduleRelayoutOfSubtree(RenderObject* relayoutRoot)
             }
         }
     } else if (m_layoutSchedulingEnabled) {
+        InspectorInstrumentation::didInvalidateLayout(m_frame.get());
         int delay = m_frame->document()->minimumLayoutDelay();
         m_layoutRoot = relayoutRoot;
         ASSERT(!m_layoutRoot->container() || !m_layoutRoot->container()->needsLayout());
@@ -2554,6 +2622,30 @@ void FrameView::updateOverflowStatus(bool horizontalOverflow, bool verticalOverf
             m_viewportRenderer->node());
     }
     
+}
+
+const Pagination& FrameView::pagination() const
+{
+    if (m_pagination != Pagination())
+        return m_pagination;
+
+    if (Page* page = m_frame->page()) {
+        if (page->mainFrame() == m_frame)
+            return page->pagination();
+    }
+
+    return m_pagination;
+}
+
+void FrameView::setPagination(const Pagination& pagination)
+{
+    if (m_pagination == pagination)
+        return;
+
+    m_pagination = pagination;
+
+    if (m_frame)
+        m_frame->document()->styleResolverChanged(DeferRecalcStyle);
 }
 
 IntRect FrameView::windowClipRect(bool clipToContents) const
@@ -3052,10 +3144,6 @@ void FrameView::paintContents(GraphicsContext* p, const IntRect& rect)
         p->fillRect(rect, Color(0xFF, 0, 0), ColorSpaceDeviceRGB);
 #endif
 
-    Page* page = m_frame->page();
-    if (page->mainFrame() == m_frame && page->pagination().mode != Page::Pagination::Unpaginated)
-        p->fillRect(rect, baseBackgroundColor(), ColorSpaceDeviceRGB);
-
     bool isTopLevelPainter = !sCurrentPaintTimeStamp;
     if (isTopLevelPainter)
         sCurrentPaintTimeStamp = currentTime();
@@ -3234,14 +3322,6 @@ void FrameView::updateLayoutAndStyleIfNeededRecursive()
     // needs to call layout on parent frame recursively.
     // This assert ensures that parent frames are clean, when child frames finished updating layout and style.
     ASSERT(!needsLayout());
-}
-    
-void FrameView::flushDeferredRepaints()
-{
-    if (!m_deferredRepaintTimer.isActive())
-        return;
-    m_deferredRepaintTimer.stop();
-    doDeferredRepaints();
 }
 
 void FrameView::enableAutoSizeMode(bool enable, const IntSize& minSize, const IntSize& maxSize)
@@ -3492,7 +3572,7 @@ IntPoint FrameView::convertFromContainingView(const IntPoint& parentPoint) const
 // Normal delay
 void FrameView::setRepaintThrottlingDeferredRepaintDelay(double p)
 {
-    s_deferredRepaintDelay = p;
+    s_normalDeferredRepaintDelay = p;
 }
 
 // Negative value would mean that first few repaints happen without a delay

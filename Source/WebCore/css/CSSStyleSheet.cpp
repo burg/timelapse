@@ -37,7 +37,9 @@
 #include "SVGNames.h"
 #include "SecurityOrigin.h"
 #include "StyleRule.h"
+#include "StyleRuleImport.h"
 #include "StyleSheetContents.h"
+#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -149,7 +151,7 @@ void CSSStyleSheet::willMutateRules()
     m_contents->setMutable();
 
     // Any existing CSSOM wrappers need to be connected to the copied child rules.
-    reattachChildRuleCSSOMWrappers();
+    reattachCSSOMWrappers();
 }
 
 void CSSStyleSheet::didMutateRules()
@@ -168,8 +170,11 @@ void CSSStyleSheet::didMutate()
     owner->styleResolverChanged(DeferRecalcStyle);
 }
 
-void CSSStyleSheet::reattachChildRuleCSSOMWrappers()
+void CSSStyleSheet::reattachCSSOMWrappers()
 {
+    if (m_ownerRule)
+        m_ownerRule->reattachStyleSheetContents();
+
     for (unsigned i = 0; i < m_childRuleCSSOMWrappers.size(); ++i) {
         if (!m_childRuleCSSOMWrappers[i])
             continue;
@@ -282,7 +287,10 @@ unsigned CSSStyleSheet::insertRule(const String& ruleString, unsigned index, Exc
     if (!success) {
         ec = HIERARCHY_REQUEST_ERR;
         return 0;
-    }        
+    }
+    if (rule->isImportRule())
+        static_cast<StyleRuleImport*>(rule.get())->requestStyleSheet(rootStyleSheet(), m_contents->parserContext());
+
     if (!m_childRuleCSSOMWrappers.isEmpty())
         m_childRuleCSSOMWrappers.insert(index, RefPtr<CSSRule>());
 
@@ -311,7 +319,14 @@ void CSSStyleSheet::deleteRule(unsigned index, ExceptionCode& ec)
 
 int CSSStyleSheet::addRule(const String& selector, const String& style, int index, ExceptionCode& ec)
 {
-    insertRule(selector + " { " + style + " }", index, ec);
+    StringBuilder text;
+    text.append(selector);
+    text.appendLiteral(" { ");
+    text.append(style);
+    if (!style.isEmpty())
+        text.append(' ');
+    text.append('}');
+    insertRule(text.toString(), index, ec);
     
     // As per Microsoft documentation, always return -1.
     return -1;
@@ -362,11 +377,17 @@ CSSStyleSheet* CSSStyleSheet::parentStyleSheet() const
     return m_ownerRule ? m_ownerRule->parentStyleSheet() : 0; 
 }
 
-Document* CSSStyleSheet::ownerDocument() const
+CSSStyleSheet* CSSStyleSheet::rootStyleSheet() const
 {
     const CSSStyleSheet* root = this;
     while (root->parentStyleSheet())
         root = root->parentStyleSheet();
+    return const_cast<CSSStyleSheet*>(root);
+}
+
+Document* CSSStyleSheet::ownerDocument() const
+{
+    const CSSStyleSheet* root = rootStyleSheet();
     return root->ownerNode() ? root->ownerNode()->document() : 0;
 }
 

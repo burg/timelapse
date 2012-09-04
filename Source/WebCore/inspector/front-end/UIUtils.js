@@ -60,22 +60,38 @@ WebInspector._elementDragStart = function(elementDragStart, elementDrag, element
     if (elementDragStart && !elementDragStart(event))
         return;
 
-    // Install glass pane
-    if (WebInspector._elementDraggingGlassPane)
+    if (WebInspector._elementDraggingGlassPane) {
         WebInspector._elementDraggingGlassPane.dispose();
+        delete WebInspector._elementDraggingGlassPane;
+    }
 
-    WebInspector._elementDraggingGlassPane = new WebInspector.GlassPane();
+    var targetDocument = event.target.ownerDocument;
 
     WebInspector._elementDraggingEventListener = elementDrag;
     WebInspector._elementEndDraggingEventListener = elementDragEnd;
+    WebInspector._mouseOutWhileDraggingTargetDocument = targetDocument;
 
-    var targetDocument = event.target.ownerDocument;
     targetDocument.addEventListener("mousemove", WebInspector._elementDraggingEventListener, true);
     targetDocument.addEventListener("mouseup", WebInspector._elementDragEnd, true);
+    targetDocument.addEventListener("mouseout", WebInspector._mouseOutWhileDragging, true);
 
     targetDocument.body.style.cursor = cursor;
 
     event.preventDefault();
+}
+
+WebInspector._mouseOutWhileDragging = function()
+{
+    WebInspector._unregisterMouseOutWhileDragging();
+    WebInspector._elementDraggingGlassPane = new WebInspector.GlassPane();
+}
+
+WebInspector._unregisterMouseOutWhileDragging = function()
+{
+    if (!WebInspector._mouseOutWhileDraggingTargetDocument)
+        return;
+    WebInspector._mouseOutWhileDraggingTargetDocument.removeEventListener("mouseout", WebInspector._mouseOutWhileDragging, true);
+    delete WebInspector._mouseOutWhileDraggingTargetDocument;
 }
 
 WebInspector._elementDragEnd = function(event)
@@ -83,6 +99,7 @@ WebInspector._elementDragEnd = function(event)
     var targetDocument = event.target.ownerDocument;
     targetDocument.removeEventListener("mousemove", WebInspector._elementDraggingEventListener, true);
     targetDocument.removeEventListener("mouseup", WebInspector._elementDragEnd, true);
+    WebInspector._unregisterMouseOutWhileDragging();
 
     targetDocument.body.style.removeProperty("cursor");
 
@@ -1034,77 +1051,6 @@ WebInspector.revertDomChanges = function(domChanges)
             break;
         }
     }
-}
-
-/**
- * @param {string} imageURL
- * @param {boolean} showDimensions
- * @param {function(Element=)} userCallback
- * @param {Object=} precomputedDimensions
- */
-WebInspector.buildImagePreviewContents = function(imageURL, showDimensions, userCallback, precomputedDimensions)
-{
-    var resource = WebInspector.resourceTreeModel.resourceForURL(imageURL);
-    if (!resource) {
-        userCallback();
-        return;
-    }
-
-    var imageElement = document.createElement("img");
-    imageElement.addEventListener("load", buildContent, false);
-    imageElement.addEventListener("error", errorCallback, false);
-    resource.populateImageSource(imageElement);
-
-    function errorCallback()
-    {
-        // Drop the event parameter when invoking userCallback.
-        userCallback();
-    }
-
-    function buildContent()
-    {
-        var container = document.createElement("table");
-        container.className = "image-preview-container";
-        var naturalWidth = precomputedDimensions ? precomputedDimensions.naturalWidth : imageElement.naturalWidth;
-        var naturalHeight = precomputedDimensions ? precomputedDimensions.naturalHeight : imageElement.naturalHeight;
-        var offsetWidth = precomputedDimensions ? precomputedDimensions.offsetWidth : naturalWidth;
-        var offsetHeight = precomputedDimensions ? precomputedDimensions.offsetHeight : naturalHeight;
-        var description;
-        if (showDimensions) {
-            if (offsetHeight === naturalHeight && offsetWidth === naturalWidth)
-                description = WebInspector.UIString("%d \xd7 %d pixels", offsetWidth, offsetHeight);
-            else
-                description = WebInspector.UIString("%d \xd7 %d pixels (Natural: %d \xd7 %d pixels)", offsetWidth, offsetHeight, naturalWidth, naturalHeight);
-        }
-
-        container.createChild("tr").createChild("td", "image-container").appendChild(imageElement);
-        if (description)
-            container.createChild("tr").createChild("td").createChild("span", "description").textContent = description;
-        userCallback(container);
-    }
-}
-
-/**
- * @param {WebInspector.ContextMenu} contextMenu
- * @param {Node} contextNode
- * @param {Event} event
- */
-WebInspector.populateHrefContextMenu = function(contextMenu, contextNode, event)
-{
-    var anchorElement = event.target.enclosingNodeOrSelfWithClass("webkit-html-resource-link") || event.target.enclosingNodeOrSelfWithClass("webkit-html-external-link");
-    if (!anchorElement)
-        return false;
-
-    var resourceURL = WebInspector.resourceURLForRelatedNode(contextNode, anchorElement.href);
-    if (!resourceURL)
-        return false;
-
-    // Add resource-related actions.
-    contextMenu.appendItem(WebInspector.openLinkExternallyLabel(), WebInspector.openResource.bind(WebInspector, resourceURL, false));
-    if (WebInspector.resourceForURL(resourceURL))
-        contextMenu.appendItem(WebInspector.UIString(WebInspector.useLowerCaseMenuTitles() ? "Open link in Resources panel" : "Open Link in Resources Panel"), WebInspector.openResource.bind(null, resourceURL, true));
-    contextMenu.appendItem(WebInspector.copyLinkAddressLabel(), InspectorFrontendHost.copyText.bind(InspectorFrontendHost, resourceURL));
-    return true;
 }
 
 WebInspector._coalescingLevel = 0;

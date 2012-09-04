@@ -41,6 +41,8 @@ namespace WebCore {
 class CCLayerImpl;
 class CCRenderSurface;
 
+struct CCAppendQuadsData;
+
 // A list of CCDrawQuad objects, sorted internally in front-to-back order.
 class CCQuadList : public Vector<OwnPtr<CCDrawQuad> > {
 public:
@@ -53,13 +55,15 @@ public:
     inline constBackToFrontIterator backToFrontEnd() const { return rend(); }
 };
 
+typedef Vector<OwnPtr<CCSharedQuadState> > CCSharedQuadStateList;
+
 class CCRenderPass {
     WTF_MAKE_NONCOPYABLE(CCRenderPass);
 public:
-    static PassOwnPtr<CCRenderPass> create(CCRenderSurface*, int id);
+    static PassOwnPtr<CCRenderPass> create(int id, IntRect outputRect, const WebKit::WebTransformationMatrix& transformToRootTarget);
 
-    void appendQuadsForLayer(CCLayerImpl*, CCOcclusionTrackerImpl*, bool& hadMissingTiles);
-    void appendQuadsForRenderSurfaceLayer(CCLayerImpl*, const CCRenderPass* contributingRenderPass, CCOcclusionTrackerImpl*);
+    void appendQuadsForLayer(CCLayerImpl*, CCOcclusionTrackerImpl*, CCAppendQuadsData&);
+    void appendQuadsForRenderSurfaceLayer(CCLayerImpl*, const CCRenderPass* contributingRenderPass, CCOcclusionTrackerImpl*, CCAppendQuadsData&);
     void appendQuadsToFillScreen(CCLayerImpl* rootLayer, SkColor screenBackgroundColor, const CCOcclusionTrackerImpl&);
 
     const CCQuadList& quadList() const { return m_quadList; }
@@ -88,14 +92,14 @@ public:
     bool hasOcclusionFromOutsideTargetSurface() const { return m_hasOcclusionFromOutsideTargetSurface; }
     void setHasOcclusionFromOutsideTargetSurface(bool hasOcclusionFromOutsideTargetSurface) { m_hasOcclusionFromOutsideTargetSurface = hasOcclusionFromOutsideTargetSurface; }
 protected:
-    CCRenderPass(CCRenderSurface*, int id);
+    CCRenderPass(int id, IntRect outputRect, const WebKit::WebTransformationMatrix& transformToRootTarget);
 
     int m_id;
     CCQuadList m_quadList;
+    CCSharedQuadStateList m_sharedQuadStateList;
     WebKit::WebTransformationMatrix m_transformToRootTarget;
     IntRect m_outputRect;
     FloatRect m_damageRect;
-    Vector<OwnPtr<CCSharedQuadState> > m_sharedQuadStateList;
     bool m_hasTransparentBackground;
     bool m_hasOcclusionFromOutsideTargetSurface;
     WebKit::WebFilterOperations m_filters;

@@ -35,8 +35,10 @@
 #include "RTCPeerConnection.h"
 
 #include "ArrayValue.h"
+#include "Event.h"
 #include "ExceptionCode.h"
-#include "KURL.h"
+#include "MediaConstraintsImpl.h"
+#include "MediaStreamEvent.h"
 #include "RTCConfiguration.h"
 #include "ScriptExecutionContext.h"
 
@@ -87,16 +89,21 @@ PassRefPtr<RTCConfiguration> RTCPeerConnection::parseConfiguration(const Diction
 
         rtcConfiguration->appendServer(RTCIceServer::create(url, credential));
     }
+
     return rtcConfiguration.release();
 }
 
-PassRefPtr<RTCPeerConnection> RTCPeerConnection::create(ScriptExecutionContext* context, const Dictionary& rtcConfiguration, const Dictionary&, ExceptionCode& ec)
+PassRefPtr<RTCPeerConnection> RTCPeerConnection::create(ScriptExecutionContext* context, const Dictionary& rtcConfiguration, const Dictionary& mediaConstraints, ExceptionCode& ec)
 {
     RefPtr<RTCConfiguration> configuration = parseConfiguration(rtcConfiguration, ec);
     if (ec)
         return 0;
 
-    RefPtr<RTCPeerConnection> peerConnection = adoptRef(new RTCPeerConnection(context, configuration.release(), ec));
+    RefPtr<MediaConstraints> constraints = MediaConstraintsImpl::create(mediaConstraints, ec);
+    if (ec)
+        return 0;
+
+    RefPtr<RTCPeerConnection> peerConnection = adoptRef(new RTCPeerConnection(context, configuration.release(), constraints.release(), ec));
     peerConnection->suspendIfNeeded();
     if (ec)
         return 0;
@@ -104,16 +111,142 @@ PassRefPtr<RTCPeerConnection> RTCPeerConnection::create(ScriptExecutionContext* 
     return peerConnection.release();
 }
 
-RTCPeerConnection::RTCPeerConnection(ScriptExecutionContext* context, PassRefPtr<RTCConfiguration>, ExceptionCode& ec)
+RTCPeerConnection::RTCPeerConnection(ScriptExecutionContext* context, PassRefPtr<RTCConfiguration> configuration, PassRefPtr<MediaConstraints> constraints, ExceptionCode& ec)
     : ActiveDOMObject(context, this)
+    , m_readyState(ReadyStateNew)
+    , m_localStreams(MediaStreamList::create())
+    , m_remoteStreams(MediaStreamList::create())
 {
     m_peerHandler = RTCPeerConnectionHandler::create(this);
-    if (!m_peerHandler || !m_peerHandler->initialize())
+    if (!m_peerHandler || !m_peerHandler->initialize(configuration, constraints))
         ec = NOT_SUPPORTED_ERR;
 }
 
 RTCPeerConnection::~RTCPeerConnection()
 {
+}
+
+String RTCPeerConnection::readyState() const
+{
+    switch (m_readyState) {
+    case ReadyStateNew:
+        return "new";
+    case ReadyStateOpening:
+        return "opening";
+    case ReadyStateActive:
+        return "active";
+    case ReadyStateClosing:
+        return "closing";
+    case ReadyStateClosed:
+        return "closed";
+    }
+
+    ASSERT_NOT_REACHED();
+    return "";
+}
+
+void RTCPeerConnection::addStream(PassRefPtr<MediaStream> prpStream, const Dictionary& mediaConstraints, ExceptionCode& ec)
+{
+    if (m_readyState == ReadyStateClosing || m_readyState == ReadyStateClosed) {
+        ec = INVALID_STATE_ERR;
+        return;
+    }
+
+    RefPtr<MediaStream> stream = prpStream;
+    if (!stream) {
+        ec =  TYPE_MISMATCH_ERR;
+        return;
+    }
+
+    RefPtr<MediaConstraints> constraints = MediaConstraintsImpl::create(mediaConstraints, ec);
+    if (ec)
+        return;
+
+    if (m_localStreams->contains(stream.get()))
+        return;
+
+    m_localStreams->append(stream);
+
+    bool valid = m_peerHandler->addStream(stream->descriptor(), constraints);
+    if (!valid)
+        ec = SYNTAX_ERR;
+}
+
+void RTCPeerConnection::removeStream(MediaStream* stream, ExceptionCode& ec)
+{
+    if (m_readyState == ReadyStateClosed) {
+        ec = INVALID_STATE_ERR;
+        return;
+    }
+
+    if (!stream) {
+        ec = TYPE_MISMATCH_ERR;
+        return;
+    }
+
+    if (!m_localStreams->contains(stream))
+        return;
+
+    m_localStreams->remove(stream);
+
+    m_peerHandler->removeStream(stream->descriptor());
+}
+
+MediaStreamList* RTCPeerConnection::localStreams() const
+{
+    return m_localStreams.get();
+}
+
+MediaStreamList* RTCPeerConnection::remoteStreams() const
+{
+    return m_remoteStreams.get();
+}
+
+void RTCPeerConnection::close(ExceptionCode& ec)
+{
+    if (m_readyState == ReadyStateClosing || m_readyState == ReadyStateClosed) {
+        ec = INVALID_STATE_ERR;
+        return;
+    }
+
+    changeReadyState(ReadyStateClosed);
+    stop();
+}
+
+void RTCPeerConnection::didChangeReadyState(ReadyState newState)
+{
+    ASSERT(scriptExecutionContext()->isContextThread());
+    changeReadyState(newState);
+}
+
+void RTCPeerConnection::didAddRemoteStream(PassRefPtr<MediaStreamDescriptor> streamDescriptor)
+{
+    ASSERT(scriptExecutionContext()->isContextThread());
+
+    if (m_readyState == ReadyStateClosed)
+        return;
+
+    RefPtr<MediaStream> stream = MediaStream::create(scriptExecutionContext(), streamDescriptor);
+    m_remoteStreams->append(stream);
+
+    dispatchEvent(MediaStreamEvent::create(eventNames().addstreamEvent, false, false, stream.release()));
+}
+
+void RTCPeerConnection::didRemoveRemoteStream(MediaStreamDescriptor* streamDescriptor)
+{
+    ASSERT(scriptExecutionContext()->isContextThread());
+    ASSERT(streamDescriptor->owner());
+
+    RefPtr<MediaStream> stream = static_cast<MediaStream*>(streamDescriptor->owner());
+    stream->streamEnded();
+
+    if (m_readyState == ReadyStateClosed)
+        return;
+
+    ASSERT(m_remoteStreams->contains(stream.get()));
+    m_remoteStreams->remove(stream.get());
+
+    dispatchEvent(MediaStreamEvent::create(eventNames().removestreamEvent, false, false, stream.release()));
 }
 
 const AtomicString& RTCPeerConnection::interfaceName() const
@@ -128,7 +261,12 @@ ScriptExecutionContext* RTCPeerConnection::scriptExecutionContext() const
 
 void RTCPeerConnection::stop()
 {
-    // FIXME: Make sure that this object stops posting events and releases resources at this stage.
+    m_readyState = ReadyStateClosed;
+
+    if (m_peerHandler) {
+        m_peerHandler->stop();
+        m_peerHandler.clear();
+    }
 }
 
 EventTargetData* RTCPeerConnection::eventTargetData()
@@ -139,6 +277,30 @@ EventTargetData* RTCPeerConnection::eventTargetData()
 EventTargetData* RTCPeerConnection::ensureEventTargetData()
 {
     return &m_eventTargetData;
+}
+
+void RTCPeerConnection::changeReadyState(ReadyState readyState)
+{
+    if (readyState == m_readyState || m_readyState == ReadyStateClosed)
+        return;
+
+    m_readyState = readyState;
+
+    switch (m_readyState) {
+    case ReadyStateOpening:
+        break;
+    case ReadyStateActive:
+        dispatchEvent(Event::create(eventNames().openEvent, false, false));
+        break;
+    case ReadyStateClosing:
+    case ReadyStateClosed:
+        break;
+    case ReadyStateNew:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+
+    dispatchEvent(Event::create(eventNames().statechangeEvent, false, false));
 }
 
 } // namespace WebCore

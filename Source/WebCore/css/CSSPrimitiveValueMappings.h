@@ -50,6 +50,7 @@
 #include "TextRenderingMode.h"
 #include "ThemeTypes.h"
 #include "UnicodeBidi.h"
+#include "WritingMode.h"
 
 #if ENABLE(CSS_SHADERS)
 #include "CustomFilterOperation.h"
@@ -1146,14 +1147,12 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(EDisplay e)
         case INLINE_BOX:
             m_value.ident = CSSValueWebkitInlineBox;
             break;
-#if ENABLE(CSS3_FLEXBOX)
         case FLEX:
             m_value.ident = CSSValueWebkitFlex;
             break;
         case INLINE_FLEX:
             m_value.ident = CSSValueWebkitInlineFlex;
             break;
-#endif
         case GRID:
             m_value.ident = CSSValueWebkitGrid;
             break;
@@ -1202,8 +1201,6 @@ template<> inline CSSPrimitiveValue::operator EEmptyCell() const
     ASSERT_NOT_REACHED();
     return SHOW;
 }
-
-#if ENABLE(CSS3_FLEXBOX)
 
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(EAlignItems e)
     : CSSValue(PrimitiveClass)
@@ -1409,8 +1406,6 @@ template<> inline CSSPrimitiveValue::operator EFlexWrap() const
     ASSERT_NOT_REACHED();
     return FlexWrapNone;
 }
-
-#endif
 
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(EFloat e)
     : CSSValue(PrimitiveClass)
@@ -1960,6 +1955,12 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(EOverflow e)
         case OOVERLAY:
             m_value.ident = CSSValueOverlay;
             break;
+        case OPAGEDX:
+            m_value.ident = CSSValueWebkitPagedX;
+            break;
+        case OPAGEDY:
+            m_value.ident = CSSValueWebkitPagedY;
+            break;
     }
 }
 
@@ -1978,6 +1979,10 @@ template<> inline CSSPrimitiveValue::operator EOverflow() const
             return OMARQUEE;
         case CSSValueOverlay:
             return OOVERLAY;
+        case CSSValueWebkitPagedX:
+            return OPAGEDX;
+        case CSSValueWebkitPagedY:
+            return OPAGEDY;
     }
 
     ASSERT_NOT_REACHED();

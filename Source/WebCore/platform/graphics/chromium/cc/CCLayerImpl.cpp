@@ -144,9 +144,9 @@ bool CCLayerImpl::descendantDrawsContent()
     return false;
 }
 
-PassOwnPtr<CCSharedQuadState> CCLayerImpl::createSharedQuadState(int id) const
+PassOwnPtr<CCSharedQuadState> CCLayerImpl::createSharedQuadState() const
 {
-    return CCSharedQuadState::create(id, m_drawTransform, m_visibleContentRect, m_drawableContentRect, m_drawOpacity, m_opaque);
+    return CCSharedQuadState::create(m_drawTransform, m_visibleContentRect, m_drawableContentRect, m_drawOpacity, m_opaque);
 }
 
 void CCLayerImpl::willDraw(CCResourceProvider*)
@@ -166,13 +166,13 @@ void CCLayerImpl::didDraw(CCResourceProvider*)
 #endif
 }
 
-void CCLayerImpl::appendDebugBorderQuad(CCQuadSink& quadList, const CCSharedQuadState* sharedQuadState) const
+void CCLayerImpl::appendDebugBorderQuad(CCQuadSink& quadList, const CCSharedQuadState* sharedQuadState, CCAppendQuadsData& appendQuadsData) const
 {
     if (!hasDebugBorders())
         return;
 
     IntRect contentRect(IntPoint(), contentBounds());
-    quadList.append(CCDebugBorderDrawQuad::create(sharedQuadState, contentRect, debugBorderColor(), debugBorderWidth()));
+    quadList.append(CCDebugBorderDrawQuad::create(sharedQuadState, contentRect, debugBorderColor(), debugBorderWidth()), appendQuadsData);
 }
 
 CCResourceProvider::ResourceId CCLayerImpl::contentsResourceId() const
@@ -263,7 +263,7 @@ void CCLayerImpl::dumpLayerProperties(TextStream& ts, int indent) const
 
 void sortLayers(Vector<CCLayerImpl*>::iterator first, Vector<CCLayerImpl*>::iterator end, CCLayerSorter* layerSorter)
 {
-    TRACE_EVENT0("cc", "LayerRendererChromium::sortLayers");
+    TRACE_EVENT0("cc", "CCLayerImpl::sortLayers");
     layerSorter->sort(first, end);
 }
 

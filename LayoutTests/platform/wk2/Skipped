@@ -101,118 +101,9 @@ fast/sub-pixel/size-of-box-with-zoom.html
 fast/sub-pixel/table-rows-no-gaps.html
 fast/sub-pixel/sub-pixel-accumulates-to-layers.html
 
-# CONSOLE MESSAGE: line 0: SVG animation pause API missing!
-# [WK2] SVG animation pause API missing
-# https://bugs.webkit.org/show_bug.cgi?id=63396
-svg/animations/animVal-basics.html
-svg/animations/animate-calcMode-spline-by.html
-svg/animations/animate-calcMode-spline-from-by.html
-svg/animations/animate-calcMode-spline-from-to.html
-svg/animations/animate-calcMode-spline-to.html
-svg/animations/animate-calcMode-spline-values.html
-svg/animations/animate-color-calcMode-discrete.html
-svg/animations/animate-color-fill-currentColor.html
-svg/animations/animate-color-fill-from-by.html
-svg/animations/animate-color-rgba-calcMode-discrete.html
-svg/animations/animate-color-transparent.html
-svg/animations/animate-currentColor.html
-svg/animations/animate-dynamic-update-attributeName.html
-svg/animations/animate-end-attribute.html
-svg/animations/animate-endElement-beginElement.html
-svg/animations/animate-from-to-keyTimes.html
-svg/animations/animate-gradient-transform.html
-svg/animations/animate-inherit-css-property.html
-svg/animations/animate-insert-begin.html
-svg/animations/animate-insert-no-begin.html
-svg/animations/animate-keySplines.html
-svg/animations/animate-mpath-insert.html
-svg/animations/animate-number-calcMode-discrete.html
-svg/animations/animate-number-calcMode-discrete-keyTimes.html
-svg/animations/animate-path-animation-Cc-Ss.html
-svg/animations/animate-path-animation-Ll-Vv-Hh.html
-svg/animations/animate-path-animation-Qq-Tt.html
-svg/animations/animate-path-animation-cC-sS-inverse.html
-svg/animations/animate-path-animation-lL-vV-hH-inverse.html
-svg/animations/animate-path-animation-qQ-tT-inverse.html
-svg/animations/animate-path-nested-transforms.html
-svg/animations/animate-path-to-animation.html
+# [WK2][WTR] svg/animations/animate-text-nested-transforms.html fails
+# https://bugs.webkit.org/show_bug.cgi?id=95191
 svg/animations/animate-text-nested-transforms.html
-svg/animations/animateTransform-pattern-transform.html
-svg/animations/svgangle-animation-deg-to-grad.html
-svg/animations/svgangle-animation-deg-to-rad.html
-svg/animations/svgangle-animation-grad-to-deg.html
-svg/animations/svgangle-animation-grad-to-rad.html
-svg/animations/svgangle-animation-rad-to-deg.html
-svg/animations/svgangle-animation-rad-to-grad.html
-svg/animations/svgboolean-animation-1.html
-svg/animations/svginteger-animation-1.html
-svg/animations/svglength-animation-LengthModeHeight.html
-svg/animations/svglength-animation-LengthModeOther.html
-svg/animations/svglength-animation-LengthModeWidth.html
-svg/animations/svglength-animation-invalid-value-1.html
-svg/animations/svglength-animation-invalid-value-2.html
-svg/animations/svglength-animation-invalid-value-3.html
-svg/animations/svglength-animation-number-to-number.html
-svg/animations/svglength-animation-px-to-cm.html
-svg/animations/svglength-animation-px-to-ems.html
-svg/animations/svglength-animation-px-to-exs.html
-svg/animations/svglength-animation-px-to-in.html
-svg/animations/svglength-animation-px-to-number.html
-svg/animations/svglength-animation-px-to-pc.html
-svg/animations/svglength-animation-px-to-percentage.html
-svg/animations/svglength-animation-px-to-pt.html
-svg/animations/svglength-animation-px-to-px.html
-svg/animations/svglength-animation-unitType.html
-svg/animations/svglength-animation-values.html
-svg/animations/svglengthlist-animation-1.html
-svg/animations/svglengthlist-animation-2.html
-svg/animations/svglengthlist-animation-3.html
-svg/animations/svglengthlist-animation-4.html
-svg/animations/svglengthlist-animation-5.html
-svg/animations/svgnumber-animation-1.html
-svg/animations/svgnumber-animation-2.html
-svg/animations/svgnumber-animation-3.html
-svg/animations/svgnumberlist-animation-1.html
-svg/animations/svgnumberlist-animation-2.html
-svg/animations/svgnumberoptionalnumber-animation-1.html
-svg/animations/svgnumberoptionalnumber-animation-2.html
-svg/animations/svgnumberoptionalnumber-animation-3.html
-svg/animations/svgnumberoptionalnumber-animation-4.html
-svg/animations/svgpath-animation-1.html
-svg/animations/svgpointlist-animation-1.html
-svg/animations/svgpointlist-animation-2.html
-svg/animations/svgPreserveAspectRatio-animation-1.html
-svg/animations/svgrect-animation-1.html
-svg/animations/svgrect-animation-2.html
-svg/animations/svgtransform-animation-1.html
-svg/animations/svgtransform-animation-discrete.html
-svg/animations/svgstring-animation-fallback-to-discrete.html
-svg/text/select-text-svgfont.html
-svg/text/select-textLength-spacing-squeeze-1.svg
-svg/text/select-textLength-spacing-squeeze-2.svg
-svg/text/select-textLength-spacing-squeeze-3.svg
-svg/text/select-textLength-spacing-squeeze-4.svg
-svg/text/select-textLength-spacing-stretch-1.svg
-svg/text/select-textLength-spacing-stretch-2.svg
-svg/text/select-textLength-spacing-stretch-3.svg
-svg/text/select-textLength-spacing-stretch-4.svg
-svg/text/select-textLength-spacingAndGlyphs-squeeze-1.svg
-svg/text/select-textLength-spacingAndGlyphs-squeeze-2.svg
-svg/text/select-textLength-spacingAndGlyphs-squeeze-3.svg
-svg/text/select-textLength-spacingAndGlyphs-squeeze-4.svg
-svg/text/select-textLength-spacingAndGlyphs-stretch-1.svg
-svg/text/select-textLength-spacingAndGlyphs-stretch-2.svg
-svg/text/select-textLength-spacingAndGlyphs-stretch-3.svg
-svg/text/select-textLength-spacingAndGlyphs-stretch-4.svg
-svg/text/select-x-list-1.svg
-svg/text/select-x-list-2.svg
-svg/text/select-x-list-3.svg
-svg/text/select-x-list-4.svg
-svg/text/select-x-list-with-tspans-1.svg
-svg/text/select-x-list-with-tspans-2.svg
-svg/text/select-x-list-with-tspans-3.svg
-svg/text/select-x-list-with-tspans-4.svg
-svg/text/selection-doubleclick.svg
 
 # WebKit2 needs layoutTestController.overridePreference
 # <https://bugs.webkit.org/show_bug.cgi?id=42197>
@@ -644,7 +535,6 @@ http/tests/loading/bad-server-subframe.html
 http/tests/loading/basic.html
 http/tests/loading/deleted-host-in-resource-load-delegate-callback.html
 http/tests/loading/empty-subframe.html
-http/tests/loading/gmail-assert-on-load.html
 http/tests/loading/load-javascript-after-many-xhrs.html
 http/tests/loading/location-hash-reload-cycle.html
 http/tests/loading/nested_bad_objects.php
@@ -660,10 +550,6 @@ http/tests/loading/state-object-security-exception.html
 # <https://bugs.webkit.org/show_bug.cgi?id=44479>
 fast/parser/remove-misnested-iframe-in-beforeload.html
 fast/parser/remove-misnested-iframe-parent-in-beforeload.html
-
-# WebKit2 doesn't support tiled layers
-# <rdar://problem/8735596>
-compositing/tiling/huge-layer-resize.html
 
 # transitions/default-timing-function.html failing on WebKit2 since it was added
 # <https://bugs.webkit.org/show_bug.cgi?id=56531>
@@ -785,10 +671,6 @@ fast/images/support-broken-image-delegate.html
 
 # WebKitTestRunner needs layoutTestController.setWillSendRequestReturnNullOnRedirect
 http/tests/misc/will-send-request-returns-null-on-redirect.html
-
-# WebKitTestRunner needs ReceiveServerRedirectForProvisionalLoadForFrame logging
-http/tests/loading/307-after-303-after-post.html
-http/tests/loading/redirect-methods.html
 
 # WebKitTestrunner needs layoutTestController.dumpSourceAsWebArchive
 webarchive/doctype.html
@@ -1035,6 +917,9 @@ http/tests/security/video-cross-origin-readback.html
 # https://bugs.webkit.org/show_bug.cgi?id=85558
 http/tests/security/contentSecurityPolicy/1.1
 
+# Unexpected redirection happens.
+http/tests/loading/redirect-methods.html
+
 # Should pass now but need to be checked first.
 platform/mac/fast/loader/file-url-mimetypes-2.html
 platform/mac/fast/loader/file-url-mimetypes-3.html
@@ -1138,7 +1023,6 @@ fast/loader/hashchange-event.html
 fast/loader/onhashchange-attribute-listeners.html
 fast/loader/stateobjects/popstate-fires-on-history-traversal.html
 fast/overflow/overflow_hidden.html
-fast/workers/storage/interrupt-database-sync.html
 fast/workers/storage/interrupt-database.html
 fast/workers/storage/use-same-database-in-page-and-workers.html
 fast/xmlhttprequest/xmlhttprequest-nonexistent-file.html
@@ -1400,6 +1284,10 @@ fast/parser/pre-html5-parser-quirks.html
 # [WK2] New fast/events/drag-display-none-element.html fails
 # https://bugs.webkit.org/show_bug.cgi?id=90177
 fast/events/drag-display-none-element.html
+
+# [WK2] New fast/events/tab-focus-link-in-canvas.html fails
+# https://bugs.webkit.org/show_bug.cgi?id=95329
+fast/events/tab-focus-link-in-canvas.html
 
 # Skip tests in fast/text/shaping
 fast/text/shaping

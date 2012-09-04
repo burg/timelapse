@@ -30,6 +30,9 @@
 #include "StringFunctions.h"
 #include "TestInvocation.h"
 #include <WebKit2/WKContextPrivate.h>
+#include <WebKit2/WKNotification.h>
+#include <WebKit2/WKNotificationManager.h>
+#include <WebKit2/WKNotificationPermissionRequest.h>
 #include <WebKit2/WKNumber.h>
 #include <WebKit2/WKPageGroup.h>
 #include <WebKit2/WKPagePrivate.h>
@@ -333,6 +336,10 @@ void TestController::initialize(int argc, const char* argv[])
     };
     WKContextSetInjectedBundleClient(m_context.get(), &injectedBundleClient);
 
+    WKNotificationManagerRef notificationManager = WKContextGetNotificationManager(m_context.get());
+    WKNotificationProvider notificationKit = m_webNotificationProvider.provider();
+    WKNotificationManagerSetProvider(notificationManager, &notificationKit);
+
     if (testPluginDirectory())
         WKContextSetAdditionalPluginsDirectory(m_context.get(), testPluginDirectory());
 
@@ -382,7 +389,7 @@ void TestController::initialize(int argc, const char* argv[])
         0, // shouldInterruptJavaScript
         createOtherPage,
         0, // mouseDidMoveOverElement
-        0, // decidePolicyForNotificationPermissionRequest
+        decidePolicyForNotificationPermissionRequest, // decidePolicyForNotificationPermissionRequest
         0, // unavailablePluginButtonClicked
     };
     WKPageSetPageUIClient(m_mainWebView->page(), &pageUIClient);
@@ -500,6 +507,9 @@ bool TestController::resetStateToConsistentValues()
 
     // Re-set to the default backing scale factor by setting the custom scale factor to 0.
     WKPageSetCustomBackingScaleFactor(m_mainWebView->page(), 0);
+
+    // Reset notification permissions
+    m_webNotificationProvider.reset();
 
     // Reset main page back to about:blank
     m_doneResetting = false;
@@ -625,8 +635,10 @@ void TestController::runTestingServerLoop()
 
 void TestController::run()
 {
-    bool resetDone = resetStateToConsistentValues();
-    ASSERT_UNUSED(resetDone, resetDone);
+    if (!resetStateToConsistentValues()) {
+        TestInvocation::dumpWebProcessUnresponsiveness("Failed to reset to consistent state before the first test");
+        return;
+    }
 
     if (m_usingServerMode)
         runTestingServerLoop();
@@ -746,6 +758,23 @@ WKRetainPtr<WKTypeRef> TestController::didReceiveSynchronousMessageFromInjectedB
             // Forward to WebProcess
             WKPageSetShouldSendEventsSynchronously(mainWebView()->page(), true);
             m_eventSenderProxy->mouseScrollBy(x, y);
+            WKPageSetShouldSendEventsSynchronously(mainWebView()->page(), false);
+            return 0;
+        }
+
+        if (WKStringIsEqualToUTF8CString(subMessageName, "ContinuousMouseScrollBy")) {
+            WKRetainPtr<WKStringRef> xKey = adoptWK(WKStringCreateWithUTF8CString("X"));
+            double x = WKDoubleGetValue(static_cast<WKDoubleRef>(WKDictionaryGetItemForKey(messageBodyDictionary, xKey.get())));
+
+            WKRetainPtr<WKStringRef> yKey = adoptWK(WKStringCreateWithUTF8CString("Y"));
+            double y = WKDoubleGetValue(static_cast<WKDoubleRef>(WKDictionaryGetItemForKey(messageBodyDictionary, yKey.get())));
+
+            WKRetainPtr<WKStringRef> pagedKey = adoptWK(WKStringCreateWithUTF8CString("Paged"));
+            bool paged = static_cast<bool>(WKUInt64GetValue(static_cast<WKUInt64Ref>(WKDictionaryGetItemForKey(messageBodyDictionary, pagedKey.get()))));
+
+            // Forward to WebProcess
+            WKPageSetShouldSendEventsSynchronously(mainWebView()->page(), true);
+            m_eventSenderProxy->continuousMouseScrollBy(x, y, paged);
             WKPageSetShouldSendEventsSynchronously(mainWebView()->page(), false);
             return 0;
         }
@@ -917,6 +946,21 @@ void TestController::processDidCrash()
 
     if (m_shouldExitWhenWebProcessCrashes)
         exit(1);
+}
+
+void TestController::simulateWebNotificationClick(uint64_t notificationID)
+{
+    m_webNotificationProvider.simulateWebNotificationClick(notificationID);
+}
+
+void TestController::decidePolicyForNotificationPermissionRequest(WKPageRef page, WKSecurityOriginRef origin, WKNotificationPermissionRequestRef request, const void* clientInfo)
+{
+    static_cast<TestController*>(const_cast<void*>(clientInfo))->decidePolicyForNotificationPermissionRequest(page, origin, request);
+}
+
+void TestController::decidePolicyForNotificationPermissionRequest(WKPageRef, WKSecurityOriginRef, WKNotificationPermissionRequestRef request)
+{
+    WKNotificationPermissionRequestAllow(request);
 }
 
 } // namespace WTR

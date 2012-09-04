@@ -31,18 +31,17 @@
 #ifndef ScriptController_h
 #define ScriptController_h
 
+#include "FrameLoaderTypes.h"
 #include "ScriptControllerBase.h"
 #include "ScriptInstance.h"
 #include "ScriptValue.h"
 
-#include "V8Proxy.h"
-
 #include <v8.h>
-
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
+#include <wtf/text/TextPosition.h>
 
 struct NPObject;
 
@@ -53,11 +52,24 @@ class Event;
 class Frame;
 class HTMLDocument;
 class HTMLPlugInElement;
-class PagePopupClient;
+class KURL;
 class ScriptSourceCode;
 class ScriptState;
+class SecurityOrigin;
 class V8DOMWindowShell;
+class V8IsolatedContext;
 class Widget;
+
+// Note: although the pointer is raw, the instance is kept alive by a strong
+// reference to the v8 context it contains, which is not made weak until we
+// call world->destroy().
+//
+// FIXME: We want to eventually be holding window shells instead of the
+// IsolatedContext directly.
+// https://bugs.webkit.org/show_bug.cgi?id=94875
+typedef HashMap<int, V8IsolatedContext*> IsolatedWorldMap;
+
+typedef HashMap<int, RefPtr<SecurityOrigin> > IsolatedWorldSecurityOriginMap;
 
 typedef WTF::Vector<v8::Extension*> V8Extensions;
 
@@ -66,9 +78,8 @@ public:
     ScriptController(Frame*);
     ~ScriptController();
 
-    // FIXME: V8Proxy should either be folded into ScriptController
-    // or this accessor should be made JSProxy*
-    V8Proxy* proxy() { return m_proxy.get(); }
+    // FIXME: This should eventually take DOMWrapperWorld argument.
+    // https://bugs.webkit.org/show_bug.cgi?id=94875
     V8DOMWindowShell* windowShell() const { return m_windowShell.get(); }
 
     ScriptValue executeScript(const ScriptSourceCode&);
@@ -88,7 +99,10 @@ public:
     // This function must be called from the main thread. It is safe to call it repeatedly.
     static void initializeThreading();
 
-    // Evaluate a script file in the environment of this proxy.
+    v8::Local<v8::Value> compileAndRunScript(const ScriptSourceCode&);
+
+    // Evaluate JavaScript in the main world.
+    // The caller must hold an execution context.
     ScriptValue evaluate(const ScriptSourceCode&);
 
     // Evaluate JavaScript in a new isolated world. The script gets its own
@@ -147,17 +161,19 @@ public:
     // --- and there is only one VM instance.                        ---
 
     // Returns the frame for the entered context. See comments in
-    // V8Proxy::retrieveFrameForEnteredContext() for more information.
     static Frame* retrieveFrameForEnteredContext();
 
     // Returns the frame for the current context. See comments in
-    // V8Proxy::retrieveFrameForEnteredContext() for more information.
     static Frame* retrieveFrameForCurrentContext();
 
-    // Returns V8 Context of a frame. If none exists, creates
-    // a new context. It is potentially slow and consumes memory.
+    // Returns V8 Context. If none exists, creates a new context.
+    // It is potentially slow and consumes memory.
     static v8::Local<v8::Context> mainWorldContext(Frame*);
     v8::Local<v8::Context> mainWorldContext();
+    v8::Local<v8::Context> currentWorldContext();
+
+    // WARNING! The handle returned by this function might be Disposed() when JavaScript is executed.
+    v8::Persistent<v8::Context> unsafeHandleToCurrentWorldContext();
 
     // Pass command-line flags to the JS engine.
     static void setFlags(const char* string, int length);
@@ -212,9 +228,15 @@ private:
     // For the moment, we have one of these. Soon we will have one per DOMWrapperWorld.
     RefPtr<V8DOMWindowShell> m_windowShell;
 
+    // The isolated worlds we are tracking for this frame. We hold them alive
+    // here so that they can be used again by future calls to
+    // evaluateInIsolatedWorld().
+    IsolatedWorldMap m_isolatedWorlds;
+
+    IsolatedWorldSecurityOriginMap m_isolatedWorldSecurityOrigins;
+
     bool m_paused;
 
-    OwnPtr<V8Proxy> m_proxy;
     typedef HashMap<Widget*, NPObject*> PluginObjectMap;
 
     // A mapping between Widgets and their corresponding script object.

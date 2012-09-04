@@ -37,7 +37,6 @@
 #include "V8Binding.h"
 #include "V8Blob.h"
 #include "V8File.h"
-#include "V8Proxy.h"
 #include "V8Utilities.h"
 #include "WebKitBlobBuilder.h"
 #include <wtf/RefPtr.h>
@@ -80,7 +79,7 @@ v8::Handle<v8::Value> V8Blob::constructorCallback(const v8::Arguments& args)
         return throwTypeError("First argument of the constructor is not of type Array", args.GetIsolate());
 
     String type;
-    String endings = "transparent";
+    String endings = ASCIILiteral("transparent");
 
     if (args.Length() > 1) {
         if (!args[1]->IsObject())

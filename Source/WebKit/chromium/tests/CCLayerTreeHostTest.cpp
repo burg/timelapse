@@ -26,31 +26,27 @@
 
 #include "CCLayerTreeHost.h"
 
+#include "CCGeometryTestUtils.h"
 #include "CCGraphicsContext.h"
 #include "CCLayerTreeHostImpl.h"
 #include "CCOcclusionTrackerTestCommon.h"
 #include "CCSettings.h"
+#include "CCSingleThreadProxy.h"
 #include "CCTextureUpdateQueue.h"
 #include "CCThreadedTest.h"
 #include "CCTimingFunction.h"
 #include "ContentLayerChromium.h"
+#include "ContentLayerChromiumClient.h"
+#include "Extensions3DChromium.h"
+#include "FakeWebCompositorOutputSurface.h"
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <public/Platform.h>
-#include <public/WebThread.h>
 #include <wtf/MainThread.h>
 #include <wtf/OwnArrayPtr.h>
 
 using namespace WebCore;
 using namespace WebKit;
 using namespace WebKitTests;
-using namespace WTF;
-
-#define EXPECT_EQ_RECT(a, b) \
-    EXPECT_EQ(a.x(), b.x()); \
-    EXPECT_EQ(a.y(), b.y()); \
-    EXPECT_EQ(a.width(), b.width()); \
-    EXPECT_EQ(a.height(), b.height());
 
 namespace {
 
@@ -61,7 +57,7 @@ class CCLayerTreeHostTestShortlived1 : public CCLayerTreeHostTest {
 public:
     CCLayerTreeHostTestShortlived1() { }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         // Kill the layerTreeHost immediately.
         m_layerTreeHost->setRootLayer(0);
@@ -70,7 +66,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 };
@@ -80,7 +76,7 @@ class CCLayerTreeHostTestShortlived2 : public CCLayerTreeHostTest {
 public:
     CCLayerTreeHostTestShortlived2() { }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postSetNeedsCommitToMainThread();
 
@@ -91,7 +87,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 };
@@ -103,7 +99,7 @@ class CCLayerTreeHostTestShortlived3 : public CCLayerTreeHostTest {
 public:
     CCLayerTreeHostTestShortlived3() { }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postSetNeedsRedrawToMainThread();
 
@@ -114,7 +110,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 };
@@ -130,19 +126,19 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
     {
         m_numCompleteCommits++;
         if (m_numCompleteCommits == 2)
             endTest();
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl*)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
     {
         if (m_numDraws == 1)
           postSetNeedsCommitToMainThread();
@@ -150,7 +146,7 @@ public:
         postSetNeedsRedrawToMainThread();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
@@ -174,25 +170,25 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postSetNeedsCommitToMainThread();
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         m_numDraws++;
         if (!impl->sourceFrameNumber())
             endTest();
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
     {
         m_numCommits++;
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
         EXPECT_GE(1, m_numCommits);
         EXPECT_GE(1, m_numDraws);
@@ -218,12 +214,12 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         if (!impl->sourceFrameNumber())
             postSetNeedsCommitToMainThread();
@@ -231,12 +227,12 @@ public:
             endTest();
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
     {
         m_numCommits++;
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
         EXPECT_EQ(2, m_numCommits);
         EXPECT_GE(2, m_numDraws);
@@ -267,12 +263,12 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         EXPECT_EQ(0, impl->sourceFrameNumber());
         if (!m_numDraws)
@@ -282,13 +278,13 @@ public:
         m_numDraws++;
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
     {
         EXPECT_EQ(0, m_numDraws);
         m_numCommits++;
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
         EXPECT_GE(2, m_numDraws);
         EXPECT_EQ(1, m_numCommits);
@@ -312,19 +308,19 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         // Only the initial draw should bring us here.
         EXPECT_TRUE(impl->canDraw());
         EXPECT_EQ(0, impl->sourceFrameNumber());
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         if (m_numCommits >= 1) {
             // After the first commit, we should not be able to draw.
@@ -332,7 +328,7 @@ public:
         }
     }
 
-    virtual void didCommit()
+    virtual void didCommit() OVERRIDE
     {
         m_numCommits++;
         if (m_numCommits == 1) {
@@ -348,7 +344,7 @@ public:
             endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
@@ -367,26 +363,26 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postAcquireLayerTextures();
         postSetNeedsRedrawToMainThread(); // should be inhibited without blocking
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         m_numDraws++;
         EXPECT_EQ(m_numDraws, m_numCommits);
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
     {
         m_numCommits++;
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
         EXPECT_EQ(1, m_numCommits);
     }
@@ -413,12 +409,12 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
     {
         m_numCommits++;
         if (m_numCommits == 2)
@@ -431,7 +427,7 @@ public:
         }
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
@@ -452,11 +448,11 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
     }
 
-    virtual void didCommitAndDrawFrame()
+    virtual void didCommitAndDrawFrame() OVERRIDE
     {
         m_numCommits++;
         if (m_numCommits == 1) {
@@ -470,7 +466,7 @@ public:
 
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
@@ -489,7 +485,7 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         // Request a commit (from the main thread), which will trigger the commit flow from the impl side.
         m_layerTreeHost->setNeedsCommit();
@@ -505,7 +501,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
@@ -516,6 +512,63 @@ TEST_F(CCLayerTreeHostTestAbortFrameWhenInvisible, runMultiThread)
 {
     runTest(true);
 }
+
+// Makes sure that setNedsAnimate does not cause the commitRequested() state to be set.
+class CCLayerTreeHostTestSetNeedsAnimateShouldNotSetCommitRequested : public CCLayerTreeHostTest {
+public:
+    CCLayerTreeHostTestSetNeedsAnimateShouldNotSetCommitRequested()
+        : m_numCommits(0)
+    {
+    }
+
+    virtual void beginTest() OVERRIDE
+    {
+        // The tests start up with a commit pending because we give them a root layer.
+        // We need to wait for the commit to happen before doing anything.
+        EXPECT_TRUE(m_layerTreeHost->commitRequested());
+    }
+
+    virtual void animate(double monotonicTime) OVERRIDE
+    {
+        // We skip the first commit becasue its the commit that populates the
+        // impl thread with a tree.
+        if (!m_numCommits)
+            return;
+
+        m_layerTreeHost->setNeedsAnimate();
+        // Right now, commitRequested is going to be true, because during
+        // beginFrame, we force commitRequested to true to prevent requests from
+        // hitting the impl thread. But, when the next didCommit happens, we should
+        // verify that commitRequested has gone back to false.
+    }
+    virtual void didCommit() OVERRIDE
+    {
+        if (!m_numCommits) {
+            EXPECT_FALSE(m_layerTreeHost->commitRequested());
+            m_layerTreeHost->setNeedsAnimate();
+            EXPECT_FALSE(m_layerTreeHost->commitRequested());
+            m_numCommits++;
+        }
+
+        // Verifies that the setNeedsAnimate we made in ::animate did not
+        // trigger commitRequested.
+        EXPECT_FALSE(m_layerTreeHost->commitRequested());
+        endTest();
+    }
+
+    virtual void afterTest() OVERRIDE
+    {
+    }
+
+private:
+    int m_numCommits;
+};
+
+TEST_F(CCLayerTreeHostTestSetNeedsAnimateShouldNotSetCommitRequested, runMultiThread)
+{
+    runTest(true);
+}
+
 
 
 // Trigger a frame with setNeedsCommit. Then, inside the resulting animate
@@ -530,12 +583,12 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postSetNeedsAnimateToMainThread();
     }
 
-    virtual void updateAnimations(double)
+    virtual void animate(double) OVERRIDE
     {
         if (!m_numAnimates) {
             m_layerTreeHost->setNeedsAnimate();
@@ -545,7 +598,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
@@ -570,12 +623,12 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postAddInstantAnimationToMainThread();
     }
 
-    virtual void animateLayers(CCLayerTreeHostImpl* layerTreeHostImpl, double monotonicTime)
+    virtual void animateLayers(CCLayerTreeHostImpl* layerTreeHostImpl, double monotonicTime) OVERRIDE
     {
         if (!m_numAnimates) {
             // The animation had zero duration so layerTreeHostImpl should no
@@ -592,13 +645,13 @@ public:
         endTest();
     }
 
-    virtual void notifyAnimationStarted(double wallClockTime)
+    virtual void notifyAnimationStarted(double wallClockTime) OVERRIDE
     {
         m_receivedAnimationStartedNotification = true;
         m_startTime = wallClockTime;
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
@@ -623,27 +676,27 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postAddAnimationToMainThread();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
-    virtual void animateLayers(CCLayerTreeHostImpl* layerTreeHostImpl, double monotonicTime)
+    virtual void animateLayers(CCLayerTreeHostImpl* layerTreeHostImpl, double monotonicTime) OVERRIDE
     {
         m_startedAnimating = true;
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl*)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
     {
         if (m_startedAnimating)
             endTest();
     }
 
-    virtual bool prepareToDrawOnCCThread(CCLayerTreeHostImpl*)
+    virtual bool prepareToDrawOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
     {
         return false;
     }
@@ -666,7 +719,7 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postAddAnimationToMainThread();
     }
@@ -674,7 +727,7 @@ public:
     // Use willAnimateLayers to set visible false before the animation runs and
     // causes a commit, so we block the second visible animate in single-thread
     // mode.
-    virtual void willAnimateLayers(CCLayerTreeHostImpl* layerTreeHostImpl, double monotonicTime)
+    virtual void willAnimateLayers(CCLayerTreeHostImpl* layerTreeHostImpl, double monotonicTime) OVERRIDE
     {
         if (m_numAnimates < 2) {
             if (!m_numAnimates) {
@@ -687,7 +740,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
@@ -704,12 +757,12 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postAddAnimationToMainThread();
     }
 
-    virtual void animateLayers(CCLayerTreeHostImpl* layerTreeHostImpl, double monotonicTime)
+    virtual void animateLayers(CCLayerTreeHostImpl* layerTreeHostImpl, double monotonicTime) OVERRIDE
     {
         const CCActiveAnimation* animation = m_layerTreeHost->rootLayer()->layerAnimationController()->getActiveAnimation(0, CCActiveAnimation::Opacity);
         if (!animation)
@@ -726,7 +779,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
@@ -742,7 +795,7 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->rootLayer()->setDrawOpacity(1);
         m_layerTreeHost->setViewportSize(IntSize(10, 10), IntSize(10, 10));
@@ -750,7 +803,7 @@ public:
         postAddAnimationToMainThread();
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
     {
         // If the subtree was skipped when preparing to draw, the layer's draw opacity
         // will not have been updated. It should be set to 0 due to the animation.
@@ -759,7 +812,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 };
@@ -782,18 +835,18 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postAddAnimationToMainThread();
     }
 
     // This is guaranteed to be called before CCLayerTreeHostImpl::animateLayers.
-    virtual void willAnimateLayers(CCLayerTreeHostImpl* layerTreeHostImpl, double monotonicTime)
+    virtual void willAnimateLayers(CCLayerTreeHostImpl* layerTreeHostImpl, double monotonicTime) OVERRIDE
     {
         m_layerTreeHostImpl = layerTreeHostImpl;
     }
 
-    virtual void notifyAnimationStarted(double time)
+    virtual void notifyAnimationStarted(double time) OVERRIDE
     {
         EXPECT_TRUE(m_layerTreeHostImpl);
 
@@ -807,7 +860,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
@@ -824,17 +877,17 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postAddInstantAnimationToMainThread();
     }
 
-    virtual void notifyAnimationFinished(double time)
+    virtual void notifyAnimationFinished(double time) OVERRIDE
     {
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
@@ -853,14 +906,14 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->rootLayer()->setScrollable(true);
         m_layerTreeHost->rootLayer()->setScrollPosition(m_initialScroll);
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void layout()
+    virtual void layout() OVERRIDE
     {
         LayerChromium* root = m_layerTreeHost->rootLayer();
         if (!m_layerTreeHost->commitNumber())
@@ -873,7 +926,7 @@ public:
         }
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         CCLayerImpl* root = impl->rootLayer();
         EXPECT_EQ(root->scrollDelta(), IntSize());
@@ -893,14 +946,14 @@ public:
         }
     }
 
-    virtual void applyScrollAndScale(const IntSize& scrollDelta, float scale)
+    virtual void applyScrollAndScale(const IntSize& scrollDelta, float scale) OVERRIDE
     {
         IntPoint position = m_layerTreeHost->rootLayer()->scrollPosition();
         m_layerTreeHost->rootLayer()->setScrollPosition(position + scrollDelta);
         m_scrolls++;
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
         EXPECT_EQ(1, m_scrolls);
     }
@@ -911,7 +964,7 @@ private:
     int m_scrolls;
 };
 
-TEST_F(CCLayerTreeHostTestScrollSimple, DISABLED_runMultiThread)
+TEST_F(CCLayerTreeHostTestScrollSimple, runMultiThread)
 {
     runTest(true);
 }
@@ -925,14 +978,14 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->rootLayer()->setScrollable(true);
         m_layerTreeHost->rootLayer()->setScrollPosition(m_initialScroll);
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void beginCommitOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void beginCommitOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         LayerChromium* root = m_layerTreeHost->rootLayer();
         if (!impl->sourceFrameNumber())
@@ -943,7 +996,7 @@ public:
             EXPECT_EQ(root->scrollPosition(), m_initialScroll + m_scrollAmount + m_scrollAmount);
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         CCLayerImpl* root = impl->rootLayer();
         root->setScrollable(true);
@@ -974,14 +1027,14 @@ public:
         }
     }
 
-    virtual void applyScrollAndScale(const IntSize& scrollDelta, float scale)
+    virtual void applyScrollAndScale(const IntSize& scrollDelta, float scale) OVERRIDE
     {
         IntPoint position = m_layerTreeHost->rootLayer()->scrollPosition();
         m_layerTreeHost->rootLayer()->setScrollPosition(position + scrollDelta);
         m_scrolls++;
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
         EXPECT_EQ(1, m_scrolls);
     }
@@ -1002,7 +1055,7 @@ public:
 
     CCLayerTreeHostTestCommit() { }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->setViewportSize(IntSize(20, 20), IntSize(20, 20));
         m_layerTreeHost->setBackgroundColor(SK_ColorGRAY);
@@ -1011,7 +1064,7 @@ public:
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         EXPECT_EQ(IntSize(20, 20), impl->layoutViewportSize());
         EXPECT_EQ(SK_ColorGRAY, impl->backgroundColor());
@@ -1020,7 +1073,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest() { }
+    virtual void afterTest() OVERRIDE { }
 };
 
 TEST_F(CCLayerTreeHostTestCommit, runTest)
@@ -1038,7 +1091,7 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->rootLayer()->setScrollable(true);
         m_layerTreeHost->rootLayer()->setScrollPosition(IntPoint());
@@ -1052,7 +1105,7 @@ public:
             test->layerTreeHost()->startPageScaleAnimation(IntSize(), false, 1.25, 0);
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         impl->rootLayer()->setScrollable(true);
         impl->rootLayer()->setScrollPosition(IntPoint());
@@ -1065,14 +1118,14 @@ public:
         }
     }
 
-    virtual void applyScrollAndScale(const IntSize& scrollDelta, float scale)
+    virtual void applyScrollAndScale(const IntSize& scrollDelta, float scale) OVERRIDE
     {
         IntPoint position = m_layerTreeHost->rootLayer()->scrollPosition();
         m_layerTreeHost->rootLayer()->setScrollPosition(position + scrollDelta);
         m_layerTreeHost->setPageScaleFactorAndLimits(scale, 0.5, 2);
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         impl->processScrollDeltas();
         // We get one commit before the first draw, and the animation doesn't happen until the second draw.
@@ -1083,7 +1136,7 @@ public:
             postSetNeedsRedrawToMainThread();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
@@ -1104,21 +1157,21 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postSetVisibleToMainThread(false);
         postSetNeedsRedrawToMainThread(); // This is suppressed while we're invisible.
         postSetVisibleToMainThread(true); // Triggers the redraw.
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         EXPECT_TRUE(impl->visible());
         ++m_numDraws;
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
         EXPECT_EQ(1, m_numDraws);
     }
@@ -1132,7 +1185,7 @@ TEST_F(CCLayerTreeHostTestSetVisible, runMultiThread)
     runTest(true);
 }
 
-class TestOpacityChangeLayerDelegate : public ContentLayerDelegate {
+class TestOpacityChangeLayerDelegate : public ContentLayerChromiumClient {
 public:
     TestOpacityChangeLayerDelegate(CCLayerTreeHostTest* test)
         : m_test(test)
@@ -1145,15 +1198,13 @@ public:
         m_test->layerTreeHost()->rootLayer()->setOpacity(0);
     }
 
-    virtual bool preserves3D() { return false; }
-
 private:
     CCLayerTreeHostTest* m_test;
 };
 
 class ContentLayerChromiumWithUpdateTracking : public ContentLayerChromium {
 public:
-    static PassRefPtr<ContentLayerChromiumWithUpdateTracking> create(ContentLayerDelegate *delegate) { return adoptRef(new ContentLayerChromiumWithUpdateTracking(delegate)); }
+    static PassRefPtr<ContentLayerChromiumWithUpdateTracking> create(ContentLayerChromiumClient* client) { return adoptRef(new ContentLayerChromiumWithUpdateTracking(client)); }
 
     int paintContentsCount() { return m_paintContentsCount; }
     void resetPaintContentsCount() { m_paintContentsCount = 0; }
@@ -1165,8 +1216,8 @@ public:
     }
 
 private:
-    explicit ContentLayerChromiumWithUpdateTracking(ContentLayerDelegate* delegate)
-        : ContentLayerChromium(delegate)
+    explicit ContentLayerChromiumWithUpdateTracking(ContentLayerChromiumClient* client)
+        : ContentLayerChromium(client)
         , m_paintContentsCount(0)
     {
         setAnchorPoint(FloatPoint(0, 0));
@@ -1186,7 +1237,7 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->setRootLayer(m_updateCheckLayer);
         m_layerTreeHost->setViewportSize(IntSize(10, 10), IntSize(10, 10));
@@ -1194,12 +1245,12 @@ public:
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
     {
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
         // update() should have been called once.
         EXPECT_EQ(1, m_updateCheckLayer->paintContentsCount());
@@ -1218,7 +1269,7 @@ TEST_F(CCLayerTreeHostTestOpacityChange, runMultiThread)
     runTest(true);
 }
 
-class MockContentLayerDelegate : public ContentLayerDelegate {
+class MockContentLayerChromiumClient : public ContentLayerChromiumClient {
 public:
     bool drawsContent() const { return true; }
     MOCK_CONST_METHOD0(preserves3D, bool());
@@ -1230,12 +1281,12 @@ class CCLayerTreeHostTestDeviceScaleFactorScalesViewportAndLayers : public CCLay
 public:
 
     CCLayerTreeHostTestDeviceScaleFactorScalesViewportAndLayers()
-        : m_rootLayer(ContentLayerChromium::create(&m_delegate))
-        , m_childLayer(ContentLayerChromium::create(&m_delegate))
+        : m_rootLayer(ContentLayerChromium::create(&m_client))
+        , m_childLayer(ContentLayerChromium::create(&m_client))
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->setViewportSize(IntSize(40, 40), IntSize(60, 60));
         m_layerTreeHost->setDeviceScaleFactor(1.5);
@@ -1256,7 +1307,7 @@ public:
         m_layerTreeHost->setRootLayer(m_rootLayer);
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         // Get access to protected methods.
         MockLayerTreeHostImpl* mockImpl = static_cast<MockLayerTreeHostImpl*>(impl);
@@ -1290,7 +1341,7 @@ public:
         ASSERT_EQ(2u, root->renderSurface()->layerList().size());
 
         // The root render surface is the size of the viewport.
-        EXPECT_EQ_RECT(IntRect(0, 0, 60, 60), root->renderSurface()->contentRect());
+        EXPECT_RECT_EQ(IntRect(0, 0, 60, 60), root->renderSurface()->contentRect());
 
         WebTransformationMatrix scaleTransform;
         scaleTransform.scale(impl->deviceScaleFactor());
@@ -1314,14 +1365,14 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
         m_rootLayer.clear();
         m_childLayer.clear();
     }
 
 private:
-    MockContentLayerDelegate m_delegate;
+    MockContentLayerChromiumClient m_client;
     RefPtr<ContentLayerChromium> m_rootLayer;
     RefPtr<ContentLayerChromium> m_childLayer;
 };
@@ -1335,13 +1386,13 @@ TEST_F(CCLayerTreeHostTestDeviceScaleFactorScalesViewportAndLayers, runMultiThre
 class CCLayerTreeHostTestAtomicCommit : public CCLayerTreeHostTest {
 public:
     CCLayerTreeHostTestAtomicCommit()
-        : m_layer(ContentLayerChromiumWithUpdateTracking::create(&m_delegate))
+        : m_layer(ContentLayerChromiumWithUpdateTracking::create(&m_client))
     {
         // Make sure partial texture updates are turned off.
         m_settings.maxPartialTextureUpdates = 0;
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->setRootLayer(m_layer);
         m_layerTreeHost->setViewportSize(IntSize(10, 10), IntSize(10, 10));
@@ -1350,7 +1401,7 @@ public:
         postSetNeedsRedrawToMainThread();
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         CompositorFakeWebGraphicsContext3DWithTextureTracking* context = static_cast<CompositorFakeWebGraphicsContext3DWithTextureTracking*>(impl->context()->context3D());
 
@@ -1384,7 +1435,7 @@ public:
         }
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         CompositorFakeWebGraphicsContext3DWithTextureTracking* context = static_cast<CompositorFakeWebGraphicsContext3DWithTextureTracking*>(impl->context()->context3D());
 
@@ -1399,17 +1450,17 @@ public:
             endTest();
     }
 
-    virtual void layout()
+    virtual void layout() OVERRIDE
     {
         m_layer->setNeedsDisplay();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
 private:
-    MockContentLayerDelegate m_delegate;
+    MockContentLayerChromiumClient m_client;
     RefPtr<ContentLayerChromiumWithUpdateTracking> m_layer;
 };
 
@@ -1433,15 +1484,15 @@ static void setLayerPropertiesForTesting(LayerChromium* layer, LayerChromium* pa
 class CCLayerTreeHostTestAtomicCommitWithPartialUpdate : public CCLayerTreeHostTest {
 public:
     CCLayerTreeHostTestAtomicCommitWithPartialUpdate()
-        : m_parent(ContentLayerChromiumWithUpdateTracking::create(&m_delegate))
-        , m_child(ContentLayerChromiumWithUpdateTracking::create(&m_delegate))
+        : m_parent(ContentLayerChromiumWithUpdateTracking::create(&m_client))
+        , m_child(ContentLayerChromiumWithUpdateTracking::create(&m_client))
         , m_numCommits(0)
     {
         // Allow one partial texture update.
         m_settings.maxPartialTextureUpdates = 1;
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->setRootLayer(m_parent);
         m_layerTreeHost->setViewportSize(IntSize(10, 20), IntSize(10, 20));
@@ -1454,7 +1505,7 @@ public:
         postSetNeedsRedrawToMainThread();
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         CompositorFakeWebGraphicsContext3DWithTextureTracking* context = static_cast<CompositorFakeWebGraphicsContext3DWithTextureTracking*>(impl->context()->context3D());
 
@@ -1506,7 +1557,7 @@ public:
         }
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         CompositorFakeWebGraphicsContext3DWithTextureTracking* context = static_cast<CompositorFakeWebGraphicsContext3DWithTextureTracking*>(impl->context()->context3D());
 
@@ -1525,7 +1576,7 @@ public:
             endTest();
     }
 
-    virtual void layout()
+    virtual void layout() OVERRIDE
     {
         switch (m_numCommits++) {
         case 0:
@@ -1551,12 +1602,12 @@ public:
         }
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
 private:
-    MockContentLayerDelegate m_delegate;
+    MockContentLayerChromiumClient m_client;
     RefPtr<ContentLayerChromiumWithUpdateTracking> m_parent;
     RefPtr<ContentLayerChromiumWithUpdateTracking> m_child;
     int m_numCommits;
@@ -1599,7 +1650,7 @@ class CCLayerTreeHostTestLayerOcclusion : public CCLayerTreeHostTest {
 public:
     CCLayerTreeHostTestLayerOcclusion() { }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         RefPtr<TestLayerChromium> rootLayer = TestLayerChromium::create();
         RefPtr<TestLayerChromium> child = TestLayerChromium::create();
@@ -1625,16 +1676,16 @@ public:
 
         m_layerTreeHost->setRootLayer(rootLayer);
         m_layerTreeHost->setViewportSize(rootLayer->bounds(), rootLayer->bounds());
-        ASSERT_TRUE(m_layerTreeHost->initializeLayerRendererIfNeeded());
+        ASSERT_TRUE(m_layerTreeHost->initializeRendererIfNeeded());
         CCTextureUpdateQueue queue;
         m_layerTreeHost->updateLayers(queue, std::numeric_limits<size_t>::max());
         m_layerTreeHost->commitComplete();
 
-        EXPECT_EQ_RECT(IntRect(), grandChild->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), grandChild->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, grandChild->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, child->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(30, 40, 170, 160), rootLayer->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(30, 40, 170, 160), rootLayer->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, rootLayer->occludedScreenSpace().rects().size());
 
         // If the child layer is opaque, then it adds to the occlusion seen by the rootLayer.
@@ -1647,11 +1698,11 @@ public:
         m_layerTreeHost->updateLayers(queue, std::numeric_limits<size_t>::max());
         m_layerTreeHost->commitComplete();
 
-        EXPECT_EQ_RECT(IntRect(), grandChild->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), grandChild->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, grandChild->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, child->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(30, 30, 170, 170), rootLayer->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(30, 30, 170, 170), rootLayer->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, rootLayer->occludedScreenSpace().rects().size());
 
         // Add a second child to the root layer and the regions should merge
@@ -1665,13 +1716,13 @@ public:
         m_layerTreeHost->updateLayers(queue, std::numeric_limits<size_t>::max());
         m_layerTreeHost->commitComplete();
 
-        EXPECT_EQ_RECT(IntRect(), grandChild->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), grandChild->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, grandChild->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, child->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(30, 30, 170, 170), child2->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(30, 30, 170, 170), child2->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, child2->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(30, 20, 170, 180), rootLayer->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(30, 20, 170, 180), rootLayer->occludedScreenSpace().bounds());
         EXPECT_EQ(2u, rootLayer->occludedScreenSpace().rects().size());
 
         // Move the second child to be sure.
@@ -1685,13 +1736,13 @@ public:
         m_layerTreeHost->updateLayers(queue, std::numeric_limits<size_t>::max());
         m_layerTreeHost->commitComplete();
 
-        EXPECT_EQ_RECT(IntRect(), grandChild->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), grandChild->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, grandChild->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, child->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(30, 30, 170, 170), child2->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(30, 30, 170, 170), child2->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, child2->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 30, 190, 170), rootLayer->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 30, 190, 170), rootLayer->occludedScreenSpace().bounds());
         EXPECT_EQ(2u, rootLayer->occludedScreenSpace().rects().size());
 
         // If the child layer has a mask on it, then it shouldn't contribute to occlusion on stuff below it
@@ -1707,13 +1758,13 @@ public:
         m_layerTreeHost->updateLayers(queue, std::numeric_limits<size_t>::max());
         m_layerTreeHost->commitComplete();
 
-        EXPECT_EQ_RECT(IntRect(), grandChild->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), grandChild->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, grandChild->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, child->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(), child2->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), child2->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, child2->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 70, 190, 130), rootLayer->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 70, 190, 130), rootLayer->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, rootLayer->occludedScreenSpace().rects().size());
 
         // If the child layer with a mask is below child2, then child2 should contribute to occlusion on everything, and child shouldn't contribute to the rootLayer
@@ -1729,13 +1780,13 @@ public:
         m_layerTreeHost->updateLayers(queue, std::numeric_limits<size_t>::max());
         m_layerTreeHost->commitComplete();
 
-        EXPECT_EQ_RECT(IntRect(), child2->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), child2->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, child2->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 70, 190, 130), grandChild->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 70, 190, 130), grandChild->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, grandChild->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 40, 190, 160), child->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 40, 190, 160), child->occludedScreenSpace().bounds());
         EXPECT_EQ(2u, child->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 70, 190, 130), rootLayer->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 70, 190, 130), rootLayer->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, rootLayer->occludedScreenSpace().rects().size());
 
         // If the child layer has a non-opaque drawOpacity, then it shouldn't contribute to occlusion on stuff below it
@@ -1752,13 +1803,13 @@ public:
         m_layerTreeHost->updateLayers(queue, std::numeric_limits<size_t>::max());
         m_layerTreeHost->commitComplete();
 
-        EXPECT_EQ_RECT(IntRect(), grandChild->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), grandChild->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, grandChild->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, child->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(), child2->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), child2->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, child2->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 70, 190, 130), rootLayer->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 70, 190, 130), rootLayer->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, rootLayer->occludedScreenSpace().rects().size());
 
         // If the child layer with non-opaque drawOpacity is below child2, then child2 should contribute to occlusion on everything, and child shouldn't contribute to the rootLayer
@@ -1775,13 +1826,13 @@ public:
         m_layerTreeHost->updateLayers(queue, std::numeric_limits<size_t>::max());
         m_layerTreeHost->commitComplete();
 
-        EXPECT_EQ_RECT(IntRect(), child2->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), child2->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, child2->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 70, 190, 130), grandChild->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 70, 190, 130), grandChild->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, grandChild->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 40, 190, 160), child->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 40, 190, 160), child->occludedScreenSpace().bounds());
         EXPECT_EQ(2u, child->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 70, 190, 130), rootLayer->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 70, 190, 130), rootLayer->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, rootLayer->occludedScreenSpace().rects().size());
 
         // Kill the layerTreeHost immediately.
@@ -1791,7 +1842,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 };
@@ -1802,7 +1853,7 @@ class CCLayerTreeHostTestLayerOcclusionWithFilters : public CCLayerTreeHostTest 
 public:
     CCLayerTreeHostTestLayerOcclusionWithFilters() { }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         RefPtr<TestLayerChromium> rootLayer = TestLayerChromium::create();
         RefPtr<TestLayerChromium> child = TestLayerChromium::create();
@@ -1833,18 +1884,18 @@ public:
 
         m_layerTreeHost->setRootLayer(rootLayer);
         m_layerTreeHost->setViewportSize(rootLayer->bounds(), rootLayer->bounds());
-        ASSERT_TRUE(m_layerTreeHost->initializeLayerRendererIfNeeded());
+        ASSERT_TRUE(m_layerTreeHost->initializeRendererIfNeeded());
         CCTextureUpdateQueue queue;
         m_layerTreeHost->updateLayers(queue, std::numeric_limits<size_t>::max());
         m_layerTreeHost->commitComplete();
 
-        EXPECT_EQ_RECT(IntRect(), child2->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), child2->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, child2->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 70, 190, 130), grandChild->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 70, 190, 130), grandChild->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, grandChild->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 40, 190, 160), child->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 40, 190, 160), child->occludedScreenSpace().bounds());
         EXPECT_EQ(2u, child->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 70, 190, 130), rootLayer->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 70, 190, 130), rootLayer->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, rootLayer->occludedScreenSpace().rects().size());
 
         // If the child layer has a filter that moves pixels/changes alpha, and is below child2, then child should not inherit occlusion from outside its subtree,
@@ -1865,13 +1916,13 @@ public:
         m_layerTreeHost->updateLayers(queue, std::numeric_limits<size_t>::max());
         m_layerTreeHost->commitComplete();
 
-        EXPECT_EQ_RECT(IntRect(), child2->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), child2->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, child2->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(), grandChild->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(), grandChild->occludedScreenSpace().bounds());
         EXPECT_EQ(0u, grandChild->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(30, 40, 170, 160), child->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, child->occludedScreenSpace().rects().size());
-        EXPECT_EQ_RECT(IntRect(10, 70, 190, 130), rootLayer->occludedScreenSpace().bounds());
+        EXPECT_RECT_EQ(IntRect(10, 70, 190, 130), rootLayer->occludedScreenSpace().bounds());
         EXPECT_EQ(1u, rootLayer->occludedScreenSpace().rects().size());
 
         // Kill the layerTreeHost immediately.
@@ -1882,7 +1933,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 };
@@ -1893,7 +1944,7 @@ class CCLayerTreeHostTestManySurfaces : public CCLayerTreeHostTest {
 public:
     CCLayerTreeHostTestManySurfaces() { }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         // We create enough RenderSurfaces that it will trigger Vector reallocation while computing occlusion.
         Region occluded;
@@ -1922,7 +1973,7 @@ public:
 
         m_layerTreeHost->setRootLayer(layers[0].get());
         m_layerTreeHost->setViewportSize(layers[0]->bounds(), layers[0]->bounds());
-        ASSERT_TRUE(m_layerTreeHost->initializeLayerRendererIfNeeded());
+        ASSERT_TRUE(m_layerTreeHost->initializeRendererIfNeeded());
         CCTextureUpdateQueue queue;
         m_layerTreeHost->updateLayers(queue, std::numeric_limits<size_t>::max());
         m_layerTreeHost->commitComplete();
@@ -1930,7 +1981,7 @@ public:
         for (int i = 0; i < numSurfaces-1; ++i) {
             IntRect expectedOcclusion(i+1, i+1, 200-i-1, 200-i-1);
 
-            EXPECT_EQ_RECT(expectedOcclusion, layers[i]->occludedScreenSpace().bounds());
+            EXPECT_RECT_EQ(expectedOcclusion, layers[i]->occludedScreenSpace().bounds());
             EXPECT_EQ(1u, layers[i]->occludedScreenSpace().rects().size());
         }
 
@@ -1941,7 +1992,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 };
@@ -1955,23 +2006,23 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void didCommitAndDrawFrame()
+    virtual void didCommitAndDrawFrame() OVERRIDE
     {
         m_layerTreeHost->loseContext(1);
     }
 
-    virtual void didRecreateOutputSurface(bool succeeded)
+    virtual void didRecreateOutputSurface(bool succeeded) OVERRIDE
     {
         EXPECT_TRUE(succeeded);
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 };
@@ -1989,24 +2040,24 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void didCommitAndDrawFrame()
+    virtual void didCommitAndDrawFrame() OVERRIDE
     {
         m_layerTreeHost->loseContext(10);
     }
 
-    virtual void didRecreateOutputSurface(bool succeeded)
+    virtual void didRecreateOutputSurface(bool succeeded) OVERRIDE
     {
         EXPECT_FALSE(succeeded);
         m_layerTreeHost->finishAllRendering();
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 };
@@ -2023,13 +2074,13 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->rootLayer()->setScrollable(true);
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         CCLayerImpl* root = impl->rootLayer();
         root->setMaxScrollPosition(IntSize(100, 100));
@@ -2051,13 +2102,13 @@ public:
         root->scrollBy(m_scrollAmount);
     }
 
-    virtual void applyScrollAndScale(const IntSize& scrollDelta, float scale)
+    virtual void applyScrollAndScale(const IntSize& scrollDelta, float scale) OVERRIDE
     {
         IntPoint position = m_layerTreeHost->rootLayer()->scrollPosition();
         m_layerTreeHost->rootLayer()->setScrollPosition(position + scrollDelta);
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 private:
@@ -2078,12 +2129,12 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->setNeedsRedraw();
     }
 
-    virtual void didCommitAndDrawFrame()
+    virtual void didCommitAndDrawFrame() OVERRIDE
     {
         if (m_once)
             return;
@@ -2102,13 +2153,13 @@ public:
         endTest();
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         Locker<Mutex> lock(m_mutex);
         ++m_drawCount;
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 private:
@@ -2129,7 +2180,7 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         EXPECT_FALSE(m_addedAnimation);
 
@@ -2148,12 +2199,12 @@ public:
         endTest();
     }
 
-    virtual void didAddAnimation()
+    virtual void didAddAnimation() OVERRIDE
     {
         m_addedAnimation = true;
     }
 
-    virtual void afterTest() { }
+    virtual void afterTest() OVERRIDE { }
 
 private:
     bool m_addedAnimation;
@@ -2235,7 +2286,7 @@ public:
 private:
     const IntSize m_scrollAmount;
     IntSize m_reportedScrollAmount;
-    MockContentLayerDelegate m_mockDelegate;
+    MockContentLayerChromiumClient m_mockDelegate;
     RefPtr<LayerChromium> m_childLayer;
     RefPtr<LayerChromium> m_rootScrollLayer;
 };
@@ -2249,7 +2300,7 @@ class CCLayerTreeHostTestCompositeAndReadbackCleanup : public CCLayerTreeHostTes
 public:
     CCLayerTreeHostTestCompositeAndReadbackCleanup() { }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         LayerChromium* rootLayer = m_layerTreeHost->rootLayer();
 
@@ -2260,7 +2311,7 @@ public:
         endTest();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 };
@@ -2278,7 +2329,7 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->setViewportSize(IntSize(100, 100), IntSize(100, 100));
 
@@ -2298,9 +2349,9 @@ public:
         m_layerTreeHost->setRootLayer(m_rootLayer);
     }
 
-    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* hostImpl)
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* hostImpl) OVERRIDE
     {
-        CCRenderer* renderer = hostImpl->layerRenderer();
+        CCRenderer* renderer = hostImpl->renderer();
         unsigned surface1RenderPassId = hostImpl->rootLayer()->children()[0]->id();
         unsigned surface2RenderPassId = hostImpl->rootLayer()->children()[0]->children()[0]->id();
 
@@ -2322,7 +2373,7 @@ public:
         }
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
         EXPECT_EQ(2, m_rootLayer->paintContentsCount());
         EXPECT_EQ(2, m_surfaceLayer1->paintContentsCount());
@@ -2337,7 +2388,7 @@ public:
     }
 
 private:
-    MockContentLayerDelegate m_mockDelegate;
+    MockContentLayerChromiumClient m_mockDelegate;
     RefPtr<ContentLayerChromiumWithUpdateTracking> m_rootLayer;
     RefPtr<ContentLayerChromiumWithUpdateTracking> m_surfaceLayer1;
     RefPtr<ContentLayerChromiumWithUpdateTracking> m_replicaLayer1;
@@ -2409,11 +2460,13 @@ public:
         return adoptPtr(new EvictionTestLayerImpl(id));
     }
     virtual ~EvictionTestLayerImpl() { }
-    virtual void appendQuads(CCQuadSink&, const CCSharedQuadState*, bool& hadMissingTiles)
+
+    virtual void appendQuads(CCQuadSink& quadSink, CCAppendQuadsData&) OVERRIDE
     {
         ASSERT_TRUE(m_hasTexture);
         ASSERT_NE(0u, layerTreeHostImpl()->resourceProvider()->numResources());
     }
+
     void setHasTexture(bool hasTexture) { m_hasTexture = hasTexture; }
 
 private:
@@ -2464,7 +2517,7 @@ public:
     {
     }
 
-    virtual void beginTest()
+    virtual void beginTest() OVERRIDE
     {
         m_layerTreeHost->setRootLayer(m_layer);
         m_layerTreeHost->setViewportSize(IntSize(10, 20), IntSize(10, 20));
@@ -2477,7 +2530,7 @@ public:
     public:
         EvictTexturesTask(CCLayerTreeHostTestEvictTextures* test) : m_test(test) { }
         virtual ~EvictTexturesTask() { }
-        virtual void run()
+        virtual void run() OVERRIDE
         {
             ASSERT(m_test->m_implForEvictTextures);
             m_test->m_implForEvictTextures->releaseContentsTextures();
@@ -2515,7 +2568,7 @@ public:
     // the beginFrame/commit pair.
     // Commits 5+6 test the path where an eviction happens during the eviction
     // recovery path.
-    virtual void didCommitAndDrawFrame()
+    virtual void didCommitAndDrawFrame() OVERRIDE
     {
         switch (m_numCommits) {
         case 1:
@@ -2544,12 +2597,12 @@ public:
         }
     }
 
-    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl)
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
     {
         m_implForEvictTextures = impl;
     }
 
-    virtual void layout()
+    virtual void layout() OVERRIDE
     {
         ++m_numCommits;
         switch (m_numCommits) {
@@ -2578,18 +2631,203 @@ public:
         m_layer->resetUpdated();
     }
 
-    virtual void afterTest()
+    virtual void afterTest() OVERRIDE
     {
     }
 
 private:
-    MockContentLayerDelegate m_delegate;
+    MockContentLayerChromiumClient m_client;
     RefPtr<EvictionTestLayer> m_layer;
     CCLayerTreeHostImpl* m_implForEvictTextures;
     int m_numCommits;
 };
 
 TEST_F(CCLayerTreeHostTestEvictTextures, runMultiThread)
+{
+    runTest(true);
+}
+
+class CCLayerTreeHostTestLostContextAfterEvictTextures : public CCLayerTreeHostTest {
+public:
+    CCLayerTreeHostTestLostContextAfterEvictTextures()
+        : m_layer(EvictionTestLayer::create())
+        , m_implForEvictTextures(0)
+        , m_numCommits(0)
+    {
+    }
+
+    virtual void beginTest() OVERRIDE
+    {
+        m_layerTreeHost->setRootLayer(m_layer);
+        m_layerTreeHost->setViewportSize(IntSize(10, 20), IntSize(10, 20));
+
+        WebTransformationMatrix identityMatrix;
+        setLayerPropertiesForTesting(m_layer.get(), 0, identityMatrix, FloatPoint(0, 0), FloatPoint(0, 0), IntSize(10, 20), true);
+    }
+
+    class EvictTexturesTask : public WebKit::WebThread::Task {
+    public:
+        EvictTexturesTask(CCLayerTreeHostTestLostContextAfterEvictTextures* test) : m_test(test) { }
+        virtual ~EvictTexturesTask() { }
+        virtual void run() OVERRIDE
+        {
+            m_test->evictTexturesOnImplThread();
+        }
+
+    private:
+        CCLayerTreeHostTestLostContextAfterEvictTextures* m_test;
+    };
+
+    void postEvictTextures()
+    {
+        if (webThread())
+            webThread()->postTask(new EvictTexturesTask(this));
+        else {
+            DebugScopedSetImplThread impl;
+            evictTexturesOnImplThread();
+        }
+    }
+
+    void evictTexturesOnImplThread()
+    {
+        ASSERT(m_implForEvictTextures);
+        m_implForEvictTextures->releaseContentsTextures();
+    }
+
+    // Commit 1: Just commit and draw normally, then at the end, set ourselves
+    // invisible (to prevent a commit that would recreate textures after
+    // eviction, before the context recovery), and post a task that will evict
+    // textures, then cause the context to be lost, and then set ourselves
+    // visible again (to allow commits, since that's what causes context
+    // recovery in single thread).
+    virtual void didCommitAndDrawFrame() OVERRIDE
+    {
+        ++m_numCommits;
+        switch (m_numCommits) {
+        case 1:
+            EXPECT_TRUE(m_layer->updated());
+            m_layerTreeHost->setVisible(false);
+            postEvictTextures();
+            m_layerTreeHost->loseContext(1);
+            m_layerTreeHost->setVisible(true);
+            break;
+        default:
+            break;
+        }
+    }
+
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
+    {
+        m_implForEvictTextures = impl;
+    }
+
+    virtual void didRecreateOutputSurface(bool succeeded) OVERRIDE
+    {
+        EXPECT_TRUE(succeeded);
+        endTest();
+    }
+
+    virtual void afterTest() OVERRIDE
+    {
+    }
+
+private:
+    MockContentLayerChromiumClient m_client;
+    RefPtr<EvictionTestLayer> m_layer;
+    CCLayerTreeHostImpl* m_implForEvictTextures;
+    int m_numCommits;
+};
+
+SINGLE_AND_MULTI_THREAD_TEST_F(CCLayerTreeHostTestLostContextAfterEvictTextures)
+
+class CompositorFakeWebGraphicsContext3DWithEndQueryCausingLostContext : public WebKit::CompositorFakeWebGraphicsContext3D {
+public:
+    static PassOwnPtr<CompositorFakeWebGraphicsContext3DWithEndQueryCausingLostContext> create(Attributes attrs)
+    {
+        return adoptPtr(new CompositorFakeWebGraphicsContext3DWithEndQueryCausingLostContext(attrs));
+    }
+
+    virtual void setContextLostCallback(WebGraphicsContextLostCallback* callback) { m_contextLostCallback = callback; }
+    virtual bool isContextLost() { return m_isContextLost; }
+
+    virtual void beginQueryEXT(GC3Denum, WebGLId) { }
+    virtual void endQueryEXT(GC3Denum)
+    {
+        // Lose context.
+        if (!m_isContextLost) {
+            m_contextLostCallback->onContextLost();
+            m_isContextLost = true;
+        }
+    }
+    virtual void getQueryObjectuivEXT(WebGLId, GC3Denum pname, GC3Duint* params)
+    {
+        // Context is lost. Result will never be available.
+        if (pname == Extensions3DChromium::QUERY_RESULT_AVAILABLE_EXT)
+            *params = 0;
+    }
+
+private:
+    explicit CompositorFakeWebGraphicsContext3DWithEndQueryCausingLostContext(Attributes attrs)
+        : CompositorFakeWebGraphicsContext3D(attrs)
+        , m_contextLostCallback(0)
+        , m_isContextLost(false) { }
+
+    WebGraphicsContextLostCallback* m_contextLostCallback;
+    bool m_isContextLost;
+};
+
+class CCLayerTreeHostTestLostContextWhileUpdatingResources : public CCLayerTreeHostTest {
+public:
+    CCLayerTreeHostTestLostContextWhileUpdatingResources()
+        : m_parent(ContentLayerChromiumWithUpdateTracking::create(&m_client))
+        , m_numChildren(50)
+    {
+        for (int i = 0; i < m_numChildren; i++)
+            m_children.append(ContentLayerChromiumWithUpdateTracking::create(&m_client));
+    }
+
+    virtual PassOwnPtr<WebKit::WebCompositorOutputSurface> createOutputSurface()
+    {
+        return FakeWebCompositorOutputSurface::create(CompositorFakeWebGraphicsContext3DWithEndQueryCausingLostContext::create(WebGraphicsContext3D::Attributes()));
+    }
+
+    virtual void beginTest()
+    {
+        m_layerTreeHost->setRootLayer(m_parent);
+        m_layerTreeHost->setViewportSize(IntSize(m_numChildren, 1), IntSize(m_numChildren, 1));
+
+        WebTransformationMatrix identityMatrix;
+        setLayerPropertiesForTesting(m_parent.get(), 0, identityMatrix, FloatPoint(0, 0), FloatPoint(0, 0), IntSize(m_numChildren, 1), true);
+        for (int i = 0; i < m_numChildren; i++)
+            setLayerPropertiesForTesting(m_children[i].get(), m_parent.get(), identityMatrix, FloatPoint(0, 0), FloatPoint(i, 0), IntSize(1, 1), false);
+
+        postSetNeedsCommitToMainThread();
+    }
+
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl* impl)
+    {
+        endTest();
+    }
+
+    virtual void layout()
+    {
+        m_parent->setNeedsDisplay();
+        for (int i = 0; i < m_numChildren; i++)
+            m_children[i]->setNeedsDisplay();
+    }
+
+    virtual void afterTest()
+    {
+    }
+
+private:
+    MockContentLayerChromiumClient m_client;
+    RefPtr<ContentLayerChromiumWithUpdateTracking> m_parent;
+    int m_numChildren;
+    Vector<RefPtr<ContentLayerChromiumWithUpdateTracking> > m_children;
+};
+
+TEST_F(CCLayerTreeHostTestLostContextWhileUpdatingResources, runMultiThread)
 {
     runTest(true);
 }

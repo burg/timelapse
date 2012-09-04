@@ -143,10 +143,13 @@
 #import <WebCore/JSDocument.h>
 #import <WebCore/JSElement.h>
 #import <WebCore/JSNodeList.h>
+#import <WebCore/JSNotification.h>
 #import <WebCore/Logging.h>
 #import <WebCore/MemoryPressureHandler.h>
 #import <WebCore/MIMETypeRegistry.h>
 #import <WebCore/NodeList.h>
+#import <WebCore/Notification.h>
+#import <WebCore/NotificationController.h>
 #import <WebCore/Page.h>
 #import <WebCore/PageCache.h>
 #import <WebCore/PageGroup.h>
@@ -1136,6 +1139,8 @@ static bool fastDocumentTeardownEnabled()
 #if ENABLE(GLIB_SUPPORT)
     [self _clearGlibLoopObserver];
 #endif
+
+    [[self _notificationProvider] unregisterWebView:self];
 
     [[NSDistributedNotificationCenter defaultCenter] removeObserver:self];
     [[NSNotificationCenter defaultCenter] removeObserver:self];
@@ -2806,22 +2811,22 @@ static PassOwnPtr<Vector<String> > toStringVector(NSArray* patterns)
     if (!page)
         return;
 
-    Page::Pagination pagination = page->pagination();
+    Pagination pagination = page->pagination();
     switch (paginationMode) {
     case WebPaginationModeUnpaginated:
-        pagination.mode = Page::Pagination::Unpaginated;
+        pagination.mode = Pagination::Unpaginated;
         break;
     case WebPaginationModeLeftToRight:
-        pagination.mode = Page::Pagination::LeftToRightPaginated;
+        pagination.mode = Pagination::LeftToRightPaginated;
         break;
     case WebPaginationModeRightToLeft:
-        pagination.mode = Page::Pagination::RightToLeftPaginated;
+        pagination.mode = Pagination::RightToLeftPaginated;
         break;
     case WebPaginationModeTopToBottom:
-        pagination.mode = Page::Pagination::TopToBottomPaginated;
+        pagination.mode = Pagination::TopToBottomPaginated;
         break;
     case WebPaginationModeBottomToTop:
-        pagination.mode = Page::Pagination::BottomToTopPaginated;
+        pagination.mode = Pagination::BottomToTopPaginated;
         break;
     default:
         return;
@@ -2837,15 +2842,15 @@ static PassOwnPtr<Vector<String> > toStringVector(NSArray* patterns)
         return WebPaginationModeUnpaginated;
 
     switch (page->pagination().mode) {
-    case Page::Pagination::Unpaginated:
+    case Pagination::Unpaginated:
         return WebPaginationModeUnpaginated;
-    case Page::Pagination::LeftToRightPaginated:
+    case Pagination::LeftToRightPaginated:
         return WebPaginationModeLeftToRight;
-    case Page::Pagination::RightToLeftPaginated:
+    case Pagination::RightToLeftPaginated:
         return WebPaginationModeRightToLeft;
-    case Page::Pagination::TopToBottomPaginated:
+    case Pagination::TopToBottomPaginated:
         return WebPaginationModeTopToBottom;
-    case Page::Pagination::BottomToTopPaginated:
+    case Pagination::BottomToTopPaginated:
         return WebPaginationModeBottomToTop;
     }
 
@@ -2859,7 +2864,7 @@ static PassOwnPtr<Vector<String> > toStringVector(NSArray* patterns)
     if (!page)
         return;
 
-    Page::Pagination pagination = page->pagination();
+    Pagination pagination = page->pagination();
     pagination.behavesLikeColumns = behavesLikeColumns;
 }
 
@@ -2878,7 +2883,7 @@ static PassOwnPtr<Vector<String> > toStringVector(NSArray* patterns)
     if (!page)
         return;
 
-    Page::Pagination pagination = page->pagination();
+    Pagination pagination = page->pagination();
     pagination.pageLength = pageLength;
 
     page->setPagination(pagination);
@@ -2899,7 +2904,7 @@ static PassOwnPtr<Vector<String> > toStringVector(NSArray* patterns)
     if (!page)
         return;
 
-    Page::Pagination pagination = page->pagination();
+    Pagination pagination = page->pagination();
     pagination.gap = pageGap;
     page->setPagination(pagination);
 }
@@ -4785,7 +4790,7 @@ static NSAppleEventDescriptor* aeDescFromJSValue(ExecState* exec, JSValue jsValu
     if (jsValue.isBoolean())
         return [NSAppleEventDescriptor descriptorWithBoolean:jsValue.asBoolean()];
     if (jsValue.isString())
-        return [NSAppleEventDescriptor descriptorWithString:ustringToString(jsValue.getString(exec))];
+        return [NSAppleEventDescriptor descriptorWithString:jsValue.getString(exec)];
     if (jsValue.isNumber()) {
         double value = jsValue.asNumber();
         int intValue = value;
@@ -6514,15 +6519,10 @@ static void glibContextIterationCallback(CFRunLoopObserverRef, CFRunLoopActivity
 @implementation WebView (WebViewNotification)
 - (void)_setNotificationProvider:(id<WebNotificationProvider>)notificationProvider
 {
-    if (_private) {
+    if (_private && !_private->_notificationProvider) {
         _private->_notificationProvider = notificationProvider;
         [_private->_notificationProvider registerWebView:self];
     }
-}
-
-- (void)_notificationControllerDestroyed
-{
-    [[self _notificationProvider] unregisterWebView:self];
 }
 
 - (id<WebNotificationProvider>)_notificationProvider
@@ -6545,6 +6545,17 @@ static void glibContextIterationCallback(CFRunLoopObserverRef, CFRunLoopActivity
 - (void)_notificationsDidClose:(NSArray *)notificationIDs
 {
     [[self _notificationProvider] webView:self didCloseNotifications:notificationIDs];
+}
+
+- (uint64_t)_notificationIDForTesting:(JSValueRef)jsNotification
+{
+#if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
+    JSContextRef context = [[self mainFrame] globalContext];
+    WebCore::Notification* notification = toNotification(toJS(toJS(context), jsNotification));
+    return static_cast<WebNotificationClient*>(NotificationController::clientFrom(_private->page))->notificationIDForTesting(notification);
+#else
+    return 0;
+#endif
 }
 @end
 

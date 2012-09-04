@@ -236,12 +236,13 @@ public:
     };
 
     void configureTextTrackGroupForLanguage(const TrackGroup&) const;
-    void configureNewTextTracks();
+    void configureTextTracks();
     void configureTextTrackGroup(const TrackGroup&) const;
 
     bool userIsInterestedInThisTrackKind(String) const;
     bool textTracksAreReady() const;
     void configureTextTrackDisplay();
+    void updateClosedCaptionsControls();
 
     // TextTrackClient
     virtual void textTrackReadyStateChanged(TextTrack*);
@@ -354,6 +355,7 @@ protected:
 private:
     void createMediaPlayer();
 
+    virtual bool hasCustomFocusLogic() const OVERRIDE;
     virtual bool supportsFocus() const;
     virtual bool isMouseFocusable() const;
     virtual bool rendererIsNeeded(const NodeRenderingContext&);
@@ -421,6 +423,16 @@ private:
 
     virtual bool mediaPlayerNeedsSiteSpecificHacks() const OVERRIDE;
     virtual String mediaPlayerDocumentHost() const OVERRIDE;
+
+    virtual void mediaPlayerExitFullscreen() OVERRIDE;
+    virtual bool mediaPlayerIsVideo() const OVERRIDE;
+    virtual LayoutRect mediaPlayerContentBoxRect() const OVERRIDE;
+    virtual void mediaPlayerSetSize(const IntSize&) OVERRIDE;
+    virtual void mediaPlayerPause() OVERRIDE;
+    virtual void mediaPlayerPlay() OVERRIDE;
+    virtual bool mediaPlayerIsPaused() const OVERRIDE;
+    virtual HostWindow* mediaPlayerHostWindow() OVERRIDE;
+    virtual IntRect mediaPlayerWindowClipRect() OVERRIDE;
 
 #if PLATFORM(WIN) && USE(AVFOUNDATION)
     virtual GraphicsDeviceAdapter* mediaPlayerGraphicsDeviceAdapter(const MediaPlayer*) const OVERRIDE;
@@ -643,6 +655,7 @@ private:
 
     CueList m_currentlyActiveCues;
     int m_ignoreTrackDisplayUpdate;
+    bool m_disableCaptions;
 #endif
 
 #if ENABLE(WEB_AUDIO)

@@ -64,6 +64,7 @@
 #include "PageVisibilityState.h"
 #include "PeerConnection00.h"
 #include "PlatformCursor.h"
+#include "RTCPeerConnectionHandlerClient.h"
 #include "ReferrerPolicy.h"
 #include "ResourceResponse.h"
 #include "Settings.h"
@@ -108,13 +109,15 @@
 #include "WebTextCheckingResult.h"
 #include "WebTextCheckingType.h"
 #include "WebView.h"
-#include "platform/WebICEOptions.h"
-#include "platform/WebMediaStreamSource.h"
-#include "platform/WebPeerConnection00Handler.h"
-#include "platform/WebPeerConnection00HandlerClient.h"
 #include <public/WebClipboard.h>
 #include <public/WebFileSystem.h>
 #include <public/WebFilterOperation.h>
+#include <public/WebICEOptions.h>
+#include <public/WebMediaStreamSource.h>
+#include <public/WebPeerConnection00Handler.h>
+#include <public/WebPeerConnection00HandlerClient.h>
+#include <public/WebRTCPeerConnectionHandler.h>
+#include <public/WebRTCPeerConnectionHandlerClient.h>
 #include <public/WebReferrerPolicy.h>
 #include <public/WebScrollbar.h>
 #include <public/WebURLResponse.h>
@@ -257,6 +260,8 @@ COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleDocumentMath, DocumentMathRole)
 COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleDocumentNote, DocumentNoteRole);
 COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleDocumentRegion, DocumentRegionRole);
 COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleUserInterfaceTooltip, UserInterfaceTooltipRole);
+COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleToggleButton, ToggleButtonRole);
+COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleCanvas, CanvasRole);
 
 COMPILE_ASSERT_MATCHING_ENUM(WebApplicationCacheHost::Uncached, ApplicationCacheHost::UNCACHED);
 COMPILE_ASSERT_MATCHING_ENUM(WebApplicationCacheHost::Idle, ApplicationCacheHost::IDLE);
@@ -591,6 +596,12 @@ COMPILE_ASSERT_MATCHING_ENUM(WebPeerConnection00HandlerClient::ICEStateConnected
 COMPILE_ASSERT_MATCHING_ENUM(WebPeerConnection00HandlerClient::ICEStateCompleted, PeerConnection00::ICE_COMPLETED);
 COMPILE_ASSERT_MATCHING_ENUM(WebPeerConnection00HandlerClient::ICEStateFailed, PeerConnection00::ICE_FAILED);
 COMPILE_ASSERT_MATCHING_ENUM(WebPeerConnection00HandlerClient::ICEStateClosed, PeerConnection00::ICE_CLOSED);
+
+COMPILE_ASSERT_MATCHING_ENUM(WebRTCPeerConnectionHandlerClient::ReadyStateNew, RTCPeerConnectionHandlerClient::ReadyStateNew);
+COMPILE_ASSERT_MATCHING_ENUM(WebRTCPeerConnectionHandlerClient::ReadyStateOpening, RTCPeerConnectionHandlerClient::ReadyStateOpening);
+COMPILE_ASSERT_MATCHING_ENUM(WebRTCPeerConnectionHandlerClient::ReadyStateActive, RTCPeerConnectionHandlerClient::ReadyStateActive);
+COMPILE_ASSERT_MATCHING_ENUM(WebRTCPeerConnectionHandlerClient::ReadyStateClosing, RTCPeerConnectionHandlerClient::ReadyStateClosing);
+COMPILE_ASSERT_MATCHING_ENUM(WebRTCPeerConnectionHandlerClient::ReadyStateClosed, RTCPeerConnectionHandlerClient::ReadyStateClosed);
 #endif
 
 #if ENABLE(SCRIPTED_SPEECH)

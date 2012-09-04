@@ -86,6 +86,8 @@ using namespace WebCore;
 
 namespace WebKit {
 
+static const double sharedSecondaryProcessShutdownTimeout = 60;
+
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, webContextCounter, ("WebContext"));
 
 PassRefPtr<WebContext> WebContext::create(const String& injectedBundlePath)
@@ -110,6 +112,7 @@ const Vector<WebContext*>& WebContext::allContexts()
 
 WebContext::WebContext(ProcessModel processModel, const String& injectedBundlePath)
     : m_processModel(processModel)
+    , m_haveInitialEmptyProcess(false)
     , m_defaultPageGroup(WebPageGroup::create())
     , m_injectedBundlePath(injectedBundlePath)
     , m_visitedLinkProvider(this)
@@ -255,6 +258,15 @@ void WebContext::initializeDownloadClient(const WKContextDownloadClient* client)
     m_downloadClient.initialize(client);
 }
 
+void WebContext::setProcessModel(ProcessModel processModel)
+{
+    // Guard against API misuse.
+    if (!m_processes.isEmpty())
+        CRASH();
+
+    m_processModel = processModel;
+}
+
 WebProcessProxy* WebContext::deprecatedSharedProcess()
 {
     ASSERT(m_processModel == ProcessModelSharedSecondaryProcess);
@@ -295,21 +307,25 @@ PassRefPtr<WebProcessProxy> WebContext::createNewWebProcess()
 
     WebProcessCreationParameters parameters;
 
-    if (!injectedBundlePath().isEmpty()) {
-        parameters.injectedBundlePath = injectedBundlePath();
+    parameters.injectedBundlePath = injectedBundlePath();
+    if (!parameters.injectedBundlePath.isEmpty())
         SandboxExtension::createHandle(parameters.injectedBundlePath, SandboxExtension::ReadOnly, parameters.injectedBundlePathExtensionHandle);
-    }
+
+    parameters.applicationCacheDirectory = applicationCacheDirectory();
+    if (!parameters.applicationCacheDirectory.isEmpty())
+        SandboxExtension::createHandle(parameters.applicationCacheDirectory, SandboxExtension::ReadWrite, parameters.applicationCacheDirectoryExtensionHandle);
+
+    parameters.databaseDirectory = databaseDirectory();
+    if (!parameters.databaseDirectory.isEmpty())
+        SandboxExtension::createHandle(parameters.databaseDirectory, SandboxExtension::ReadWrite, parameters.databaseDirectoryExtensionHandle);
+
+    parameters.localStorageDirectory = localStorageDirectory();
+    if (!parameters.localStorageDirectory.isEmpty())
+        SandboxExtension::createHandle(parameters.localStorageDirectory, SandboxExtension::ReadWrite, parameters.localStorageDirectoryExtensionHandle);
 
     parameters.shouldTrackVisitedLinks = m_historyClient.shouldTrackVisitedLinks();
     parameters.cacheModel = m_cacheModel;
     parameters.languages = userPreferredLanguages();
-    parameters.applicationCacheDirectory = applicationCacheDirectory();
-    parameters.databaseDirectory = databaseDirectory();
-    parameters.localStorageDirectory = localStorageDirectory();
-
-#if PLATFORM(MAC)
-    parameters.presenterApplicationPid = getpid();
-#endif
 
     copyToVector(m_schemesToRegisterAsEmptyDocument, parameters.urlSchemesRegistererdAsEmptyDocument);
     copyToVector(m_schemesToRegisterAsSecure, parameters.urlSchemesRegisteredAsSecure);
@@ -319,6 +335,8 @@ PassRefPtr<WebProcessProxy> WebContext::createNewWebProcess()
     parameters.shouldUseFontSmoothing = m_shouldUseFontSmoothing;
     
     parameters.iconDatabaseEnabled = !iconDatabasePath().isEmpty();
+
+    parameters.terminationTimeout = (m_processModel == ProcessModelSharedSecondaryProcess) ? sharedSecondaryProcessShutdownTimeout : 0;
 
     parameters.textCheckerState = TextChecker::state();
 
@@ -350,8 +368,13 @@ PassRefPtr<WebProcessProxy> WebContext::createNewWebProcess()
 
 void WebContext::warmInitialProcess()  
 {
-    ASSERT(m_processes.isEmpty());
+    if (m_haveInitialEmptyProcess) {
+        ASSERT(!m_processes.isEmpty());
+        return;
+    }
+
     m_processes.append(createNewWebProcess());
+    m_haveInitialEmptyProcess = true;
 }
 
 void WebContext::enableProcessTermination()
@@ -418,6 +441,14 @@ void WebContext::disconnectProcess(WebProcessProxy* process)
 {
     ASSERT(m_processes.contains(process));
 
+    // FIXME (Multi-WebProcess): All the invalidation calls below are still necessary in multi-process mode, but they should only affect data structures pertaining to the process being disconnected.
+    // Clearing everything causes assertion failures, so it's less trouble to skip that for now.
+    if (m_processModel != ProcessModelSharedSecondaryProcess) {
+        RefPtr<WebProcessProxy> protect(process);
+        m_processes.remove(m_processes.find(process));
+        return;
+    }
+
     m_visitedLinkProvider.processDidClose();
 
     // Invalidate all outstanding downloads.
@@ -457,7 +488,10 @@ void WebContext::disconnectProcess(WebProcessProxy* process)
     m_pluginSiteDataManager->invalidate();
 #endif
 
-    // This can cause the web context to be destroyed.
+    // The vector may have the last reference to process proxy, which in turn may have the last reference to the context.
+    // Since vector elements are destroyed in place, we would recurse into WebProcessProxy destructor
+    // if it were invoked from Vector::remove(). RefPtr delays destruction until it's safe.
+    RefPtr<WebProcessProxy> protect(process);
     m_processes.remove(m_processes.find(process));
 }
 
@@ -469,8 +503,13 @@ PassRefPtr<WebPageProxy> WebContext::createWebPage(PageClient* pageClient, WebPa
         process = m_processes[0];
     } else {
         // FIXME (Multi-WebProcess): Add logic for sharing a process.
-        process = createNewWebProcess();
-        m_processes.append(process);
+        if (m_haveInitialEmptyProcess) {
+            process = m_processes.last();
+            m_haveInitialEmptyProcess = false;
+        } else {
+            process = createNewWebProcess();
+            m_processes.append(process);
+        }
     }
 
     if (!pageGroup)

@@ -99,18 +99,17 @@ class Git(SCM, SVNRepository):
         log("Warning: This machine is 64-bit, but the git binary (%s) does not support 64-bit.\nInstall a 64-bit git for better performance, see:\n%s\n" % (git_path, webkit_dev_thread_url))
 
     @classmethod
-    def in_working_directory(cls, path):
+    def in_working_directory(cls, path, executive=None):
         try:
-            # FIXME: This should use an Executive.
-            return run_command([cls.executable_name, 'rev-parse', '--is-inside-work-tree'], cwd=path, error_handler=Executive.ignore_error).rstrip() == "true"
+            executive = executive or Executive()
+            return executive.run_command([cls.executable_name, 'rev-parse', '--is-inside-work-tree'], cwd=path, error_handler=Executive.ignore_error).rstrip() == "true"
         except OSError, e:
             # The Windows bots seem to through a WindowsError when git isn't installed.
             return False
 
     def find_checkout_root(self, path):
         # "git rev-parse --show-cdup" would be another way to get to the root
-        git_output = self._executive.run_command([self.executable_name, 'rev-parse', '--git-dir'], cwd=(path or "./"))
-        (checkout_root, dot_git) = self._filesystem.split(git_output)
+        checkout_root = self._executive.run_command([self.executable_name, 'rev-parse', '--show-toplevel'], cwd=(path or "./")).strip()
         if not self._filesystem.isabs(checkout_root):  # Sometimes git returns relative paths
             checkout_root = self._filesystem.join(path, checkout_root)
         return checkout_root

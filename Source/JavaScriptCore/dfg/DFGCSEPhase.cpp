@@ -35,9 +35,8 @@ namespace JSC { namespace DFG {
 
 class CSEPhase : public Phase {
 public:
-    CSEPhase(Graph& graph, OptimizationFixpointState fixpointState)
+    CSEPhase(Graph& graph)
         : Phase(graph, "common subexpression elimination")
-        , m_fixpointState(fixpointState)
     {
         // Replacements are used to implement local common subexpression elimination.
         m_replacements.resize(m_graph.size());
@@ -284,8 +283,7 @@ private:
                     return index;
                 break;
             case PutByVal:
-            case PutByValAlias:
-            case PutByValSafe: {
+            case PutByValAlias: {
                 if (!m_graph.byValIsPure(node))
                     return NoNode;
                 if (m_graph.varArgChild(node, 0) == child1 && canonicalize(m_graph.varArgChild(node, 1)) == canonicalize(child2))
@@ -328,7 +326,7 @@ private:
         return false;
     }
 
-    bool checkStructureLoadElimination(const StructureSet& structureSet, NodeIndex child1)
+    bool checkStructureElimination(const StructureSet& structureSet, NodeIndex child1)
     {
         for (unsigned i = m_indexInBlock; i--;) {
             NodeIndex index = m_currentBlock->at(i);
@@ -365,7 +363,6 @@ private:
                 
             case PutByVal:
             case PutByValAlias:
-            case PutByValSafe:
                 if (m_graph.byValIsPure(node)) {
                     // If PutByVal speculates that it's accessing an array with an
                     // integer index, then it's impossible for it to cause a structure
@@ -409,7 +406,6 @@ private:
                 
             case PutByVal:
             case PutByValAlias:
-            case PutByValSafe:
                 if (m_graph.byValIsPure(node)) {
                     // If PutByVal speculates that it's accessing an array with an
                     // integer index, then it's impossible for it to cause a structure
@@ -515,7 +511,6 @@ private:
                 
             case PutByVal:
             case PutByValAlias:
-            case PutByValSafe:
                 if (m_graph.byValIsPure(node)) {
                     // If PutByVal speculates that it's accessing an array with an
                     // integer index, then it's impossible for it to cause a structure
@@ -560,7 +555,6 @@ private:
             case PutByVal:
             case PutByValAlias:
             case GetByVal:
-            case PutByValSafe:
                 if (m_graph.byValIsPure(node)) {
                     // If PutByVal speculates that it's accessing an array with an
                     // integer index, then it's impossible for it to cause a structure
@@ -613,7 +607,6 @@ private:
                 
             case PutByVal:
             case PutByValAlias:
-            case PutByValSafe:
                 if (m_graph.byValIsPure(node)) {
                     // If PutByVal speculates that it's accessing an array with an
                     // integer index, then it's impossible for it to cause a structure
@@ -630,8 +623,37 @@ private:
         }
         return NoNode;
     }
+    
+    bool checkArrayElimination(NodeIndex child1, Array::Mode arrayMode)
+    {
+        for (unsigned i = m_indexInBlock; i--;) {
+            NodeIndex index = m_currentBlock->at(i);
+            if (index == child1) 
+                break;
 
-    NodeIndex getIndexedPropertyStorageLoadElimination(NodeIndex child1, bool hasIntegerIndexPrediction)
+            Node& node = m_graph[index];
+            switch (node.op()) {
+            case PutByOffset:
+            case PutStructure:
+                // Changing the structure or putting to the storage cannot
+                // change the property storage pointer.
+                break;
+                
+            case CheckArray:
+                if (node.child1() == child1 && node.arrayMode() == arrayMode)
+                    return true;
+                break;
+                
+            default:
+                if (m_graph.clobbersWorld(index))
+                    return false;
+                break;
+            }
+        }
+        return false;
+    }
+
+    NodeIndex getIndexedPropertyStorageLoadElimination(NodeIndex child1, Array::Mode arrayMode)
     {
         for (unsigned i = m_indexInBlock; i--;) {
             NodeIndex index = m_currentBlock->at(i);
@@ -641,9 +663,7 @@ private:
             Node& node = m_graph[index];
             switch (node.op()) {
             case GetIndexedPropertyStorage: {
-                SpeculatedType basePrediction = m_graph[node.child2()].prediction();
-                bool nodeHasIntegerIndexPrediction = !(!(basePrediction & SpecInt32) && basePrediction);
-                if (node.child1() == child1 && hasIntegerIndexPrediction == nodeHasIntegerIndexPrediction)
+                if (node.child1() == child1 && node.arrayMode() == arrayMode)
                     return index;
                 break;
             }
@@ -925,17 +945,7 @@ private:
         case ArithMin:
         case ArithMax:
         case ArithSqrt:
-        case GetInt8ArrayLength:
-        case GetInt16ArrayLength:
-        case GetInt32ArrayLength:
-        case GetUint8ArrayLength:
-        case GetUint8ClampedArrayLength:
-        case GetUint16ArrayLength:
-        case GetUint32ArrayLength:
-        case GetFloat32ArrayLength:
-        case GetFloat64ArrayLength:
         case GetCallee:
-        case GetStringLength:
         case StringCharAt:
         case StringCharCodeAt:
         case Int32ToDouble:
@@ -1004,7 +1014,7 @@ private:
             ASSERT(replacement.variableAccessData() == variableAccessData);
             // FIXME: We should be able to remove SetLocals that can exit; we just need
             // to replace them with appropriate type checks.
-            if (m_fixpointState == FixpointNotConverged) {
+            if (m_graph.m_fixpointState == FixpointNotConverged) {
                 // Need to be conservative at this time; if the SetLocal has any chance of performing
                 // any speculations then we cannot do anything.
                 if (variableAccessData->isCaptured()) {
@@ -1093,7 +1103,7 @@ private:
             
         case PutGlobalVar:
         case PutGlobalVarCheck:
-            if (m_fixpointState == FixpointNotConverged)
+            if (m_graph.m_fixpointState == FixpointNotConverged)
                 break;
             eliminate(globalVarStoreElimination(node.registerPointer()));
             break;
@@ -1103,8 +1113,7 @@ private:
                 setReplacement(getByValLoadElimination(node.child1().index(), node.child2().index()));
             break;
             
-        case PutByVal:
-        case PutByValSafe: {
+        case PutByVal: {
             Edge child1 = m_graph.varArgChild(node, 0);
             Edge child2 = m_graph.varArgChild(node, 1);
             if (isActionableMutableArraySpeculation(m_graph[child1].prediction())
@@ -1120,7 +1129,7 @@ private:
             
         case CheckStructure:
         case ForwardCheckStructure:
-            if (checkStructureLoadElimination(node.structureSet(), node.child1().index()))
+            if (checkStructureElimination(node.structureSet(), node.child1().index()))
                 eliminate();
             break;
             
@@ -1131,7 +1140,7 @@ private:
             break;
             
         case PutStructure:
-            if (m_fixpointState == FixpointNotConverged)
+            if (m_graph.m_fixpointState == FixpointNotConverged)
                 break;
             eliminate(putStructureStoreElimination(node.child1().index()), PhantomPutStructure);
             break;
@@ -1141,10 +1150,13 @@ private:
                 eliminate();
             break;
                 
+        case CheckArray:
+            if (checkArrayElimination(node.child1().index(), node.arrayMode()))
+                eliminate();
+            break;
+            
         case GetIndexedPropertyStorage: {
-            SpeculatedType basePrediction = m_graph[node.child2()].prediction();
-            bool nodeHasIntegerIndexPrediction = !(!(basePrediction & SpecInt32) && basePrediction);
-            setReplacement(getIndexedPropertyStorageLoadElimination(node.child1().index(), nodeHasIntegerIndexPrediction));
+            setReplacement(getIndexedPropertyStorageLoadElimination(node.child1().index(), node.arrayMode()));
             break;
         }
 
@@ -1157,7 +1169,7 @@ private:
             break;
             
         case PutByOffset:
-            if (m_fixpointState == FixpointNotConverged)
+            if (m_graph.m_fixpointState == FixpointNotConverged)
                 break;
             eliminate(putByOffsetStoreElimination(m_graph.m_storageAccessData[node.storageAccessDataIndex()].identifierNumber, node.child1().index()));
             break;
@@ -1195,14 +1207,13 @@ private:
     unsigned m_indexInBlock;
     Vector<NodeIndex, 16> m_replacements;
     FixedArray<unsigned, LastNodeType> m_lastSeen;
-    OptimizationFixpointState m_fixpointState;
     bool m_changed; // Only tracks changes that have a substantive effect on other optimizations.
 };
 
-bool performCSE(Graph& graph, OptimizationFixpointState fixpointState)
+bool performCSE(Graph& graph)
 {
     SamplingRegion samplingRegion("DFG CSE Phase");
-    return runPhase<CSEPhase>(graph, fixpointState);
+    return runPhase<CSEPhase>(graph);
 }
 
 } } // namespace JSC::DFG

@@ -114,7 +114,7 @@ enum EBoxSizing { CONTENT_BOX, BORDER_BOX };
 // Random visual rendering model attributes. Not inherited.
 
 enum EOverflow {
-    OVISIBLE, OHIDDEN, OSCROLL, OAUTO, OOVERLAY, OMARQUEE
+    OVISIBLE, OHIDDEN, OSCROLL, OAUTO, OOVERLAY, OMARQUEE, OPAGEDX, OPAGEDY
 };
 
 enum EVerticalAlign {
@@ -128,11 +128,6 @@ enum EClear {
 
 enum ETableLayout {
     TAUTO, TFIXED
-};
-
-// CSS Text Layout Module Level 3: Vertical writing support
-enum WritingMode {
-    TopToBottomWritingMode, RightToLeftWritingMode, LeftToRightWritingMode, BottomToTopWritingMode
 };
 
 enum TextCombine {
@@ -420,9 +415,7 @@ enum EDisplay {
     TABLE_HEADER_GROUP, TABLE_FOOTER_GROUP, TABLE_ROW,
     TABLE_COLUMN_GROUP, TABLE_COLUMN, TABLE_CELL,
     TABLE_CAPTION, BOX, INLINE_BOX,
-#if ENABLE(CSS3_FLEXBOX)
     FLEX, INLINE_FLEX,
-#endif
     GRID, INLINE_GRID,
     NONE
 };

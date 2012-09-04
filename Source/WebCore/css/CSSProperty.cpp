@@ -31,6 +31,8 @@
 #include "CSSVariableValue.h"
 #endif
 
+#include <wtf/text/StringBuilder.h>
+
 namespace WebCore {
 
 struct SameSizeAsCSSProperty {
@@ -53,7 +55,14 @@ String CSSProperty::cssName() const
 
 String CSSProperty::cssText() const
 {
-    return cssName() + ": " + m_value->cssText() + (isImportant() ? " !important" : "") + "; ";
+    StringBuilder result;
+    result.append(cssName());
+    result.appendLiteral(": ");
+    result.append(m_value->cssText());
+    if (isImportant())
+        result.appendLiteral(" !important");
+    result.append(';');
+    return result.toString();
 }
 
 void CSSProperty::wrapValueInCommaSeparatedList()
@@ -552,6 +561,7 @@ bool CSSProperty::isInheritedProperty(CSSPropertyID propertyID)
     case CSSPropertyWebkitBoxPack:
     case CSSPropertyWebkitBoxReflect:
     case CSSPropertyWebkitBoxShadow:
+    case CSSPropertyWebkitClipPath:
     case CSSPropertyWebkitColumnAxis:
     case CSSPropertyWebkitColumnBreakAfter:
     case CSSPropertyWebkitColumnBreakBefore:
@@ -572,7 +582,6 @@ bool CSSProperty::isInheritedProperty(CSSPropertyID propertyID)
 #if ENABLE(CSS_COMPOSITING)
     case CSSPropertyWebkitBlendMode:
 #endif
-#if ENABLE(CSS3_FLEXBOX)
     case CSSPropertyWebkitAlignContent:
     case CSSPropertyWebkitAlignItems:
     case CSSPropertyWebkitAlignSelf:
@@ -585,7 +594,6 @@ bool CSSProperty::isInheritedProperty(CSSPropertyID propertyID)
     case CSSPropertyWebkitFlexWrap:
     case CSSPropertyWebkitJustifyContent:
     case CSSPropertyWebkitOrder:
-#endif
     case CSSPropertyWebkitFontSizeDelta:
     case CSSPropertyWebkitGridColumns:
     case CSSPropertyWebkitGridRows:

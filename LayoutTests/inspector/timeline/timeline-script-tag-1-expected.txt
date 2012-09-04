@@ -3,23 +3,25 @@ Tests the Timeline API instrumentation of an HTML script tag.
 
 
 ParseHTML
+----> InvalidateLayout
 ParseHTML
 ----> EvaluateScript
 --------> TimeStamp : SCRIPT TAG
+----> InvalidateLayout
 EvaluateScript Properties:
 {
-    startTime : <number>
-    data : {
-        url : <string>
-        lineNumber : <number>
-    }
     children : <object>
-    endTime : <number>
-    type : "EvaluateScript"
-    frameId : <string>
-    usedHeapSize : <number>
-    totalHeapSize : <number>
     counters : <object>
+    data : {
+        lineNumber : <number>
+        url : <string>
+    }
+    endTime : <number>
+    frameId : <string>
+    startTime : <number>
+    totalHeapSize : <number>
+    type : "EvaluateScript"
+    usedHeapSize : <number>
 }
 ParseHTML
 

@@ -65,9 +65,7 @@ CookieDatabaseBackingStore::CookieDatabaseBackingStore()
     m_dbTimerClient = new BlackBerry::Platform::GenericTimerClient(this);
     m_dbTimer.setClient(m_dbTimerClient);
 
-    pthread_attr_t threadAttrs;
-    pthread_attr_init(&threadAttrs);
-    createThread("cookie_database", threadAttrs);
+    createThread("cookie_database", pthread_attr_default);
 }
 
 CookieDatabaseBackingStore::~CookieDatabaseBackingStore()
@@ -118,8 +116,8 @@ void CookieDatabaseBackingStore::upgradeTableIfNeeded(const String& databaseFiel
         }
 
         while (statement.step() == SQLResultRow) {
-            DEFINE_STATIC_LOCAL(String, creationTime, ("creationTime"));
-            DEFINE_STATIC_LOCAL(String, protocol, ("protocol"));
+            DEFINE_STATIC_LOCAL(String, creationTime, (ASCIILiteral("creationTime")));
+            DEFINE_STATIC_LOCAL(String, protocol, (ASCIILiteral("protocol")));
             String name = statement.getColumnText(1);
             if (name == creationTime)
                 creationTimeExists = true;

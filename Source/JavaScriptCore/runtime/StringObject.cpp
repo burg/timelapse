@@ -22,6 +22,7 @@
 #include "StringObject.h"
 
 #include "Error.h"
+#include "JSGlobalObject.h"
 #include "PropertyNameArray.h"
 
 namespace JSC {
@@ -137,10 +138,17 @@ void StringObject::getOwnPropertyNames(JSObject* object, ExecState* exec, Proper
     StringObject* thisObject = jsCast<StringObject*>(object);
     int size = thisObject->internalValue()->length();
     for (int i = 0; i < size; ++i)
-        propertyNames.add(Identifier(exec, UString::number(i)));
+        propertyNames.add(Identifier(exec, String::number(i)));
     if (mode == IncludeDontEnumProperties)
         propertyNames.add(exec->propertyNames().length);
     return JSObject::getOwnPropertyNames(thisObject, exec, propertyNames, mode);
+}
+
+StringObject* constructString(ExecState* exec, JSGlobalObject* globalObject, JSValue string)
+{
+    StringObject* object = StringObject::create(exec, globalObject->stringObjectStructure());
+    object->setInternalValue(exec->globalData(), string);
+    return object;
 }
 
 } // namespace JSC

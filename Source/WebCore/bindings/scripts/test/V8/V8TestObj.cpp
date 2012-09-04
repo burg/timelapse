@@ -26,6 +26,7 @@
 #include "DOMStringList.h"
 #include "Dictionary.h"
 #include "ExceptionCode.h"
+#include "Frame.h"
 #include "HTMLNames.h"
 #include "IDBBindingUtilities.h"
 #include "IDBKey.h"
@@ -43,7 +44,6 @@
 #include "V8Document.h"
 #include "V8Float32Array.h"
 #include "V8IsolatedContext.h"
-#include "V8Proxy.h"
 #include "V8SVGDocument.h"
 #include "V8SVGPoint.h"
 #include "V8ScriptProfile.h"
@@ -1676,6 +1676,8 @@ static v8::Handle<v8::Value> overloadedMethodCallback(const v8::Arguments& args)
         return overloadedMethod9Callback(args);
     if ((args.Length() == 1 && (args[0]->IsArray())))
         return overloadedMethod10Callback(args);
+    if (args.Length() < 1)
+        return throwNotEnoughArgumentsError(args.GetIsolate());
     return throwTypeError(0, args.GetIsolate());
 }
 
@@ -1733,6 +1735,8 @@ static v8::Handle<v8::Value> overloadedMethod1Callback(const v8::Arguments& args
         return overloadedMethod11Callback(args);
     if ((args.Length() == 1 && (args[0]->IsNull() || args[0]->IsUndefined() || args[0]->IsString() || args[0]->IsObject())))
         return overloadedMethod12Callback(args);
+    if (args.Length() < 1)
+        return throwNotEnoughArgumentsError(args.GetIsolate());
     return throwTypeError(0, args.GetIsolate());
 }
 
@@ -2320,8 +2324,8 @@ void V8TestObj::installPerContextProperties(v8::Handle<v8::Object> instance, Tes
 v8::Handle<v8::Object> V8TestObj::wrapSlow(PassRefPtr<TestObj> impl, v8::Isolate* isolate)
 {
     v8::Handle<v8::Object> wrapper;
-    V8Proxy* proxy = 0;
-    wrapper = V8DOMWrapper::instantiateV8Object(proxy, &info, impl.get());
+    Frame* frame = 0;
+    wrapper = V8DOMWrapper::instantiateV8Object(frame, &info, impl.get());
     if (UNLIKELY(wrapper.IsEmpty()))
         return wrapper;
     installPerContextProperties(wrapper, impl.get());

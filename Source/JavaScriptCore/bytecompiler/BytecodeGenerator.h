@@ -49,7 +49,7 @@ namespace JSC {
 
     class Identifier;
     class Label;
-    class ScopeChainNode;
+    class JSScope;
 
     class CallArguments {
     public:
@@ -75,6 +75,7 @@ namespace JSC {
         unsigned scopeContextStackSize;
         unsigned switchContextStackSize;
         unsigned forInContextStackSize;
+        unsigned tryContextStackSize;
         unsigned labelScopesSize;
         int finallyDepth;
         int dynamicScopeDepth;
@@ -90,6 +91,22 @@ namespace JSC {
         RefPtr<RegisterID> iterRegister;
         RefPtr<RegisterID> indexRegister;
         RefPtr<RegisterID> propertyRegister;
+    };
+
+    struct TryData {
+        RefPtr<Label> target;
+        unsigned targetScopeDepth;
+    };
+
+    struct TryContext {
+        RefPtr<Label> start;
+        TryData* tryData;
+    };
+
+    struct TryRange {
+        RefPtr<Label> start;
+        RefPtr<Label> end;
+        TryData* tryData;
     };
 
     class ResolveResult {
@@ -244,9 +261,9 @@ namespace JSC {
         JS_EXPORT_PRIVATE static void setDumpsGeneratedCode(bool dumpsGeneratedCode);
         static bool dumpsGeneratedCode();
 
-        BytecodeGenerator(ProgramNode*, ScopeChainNode*, SymbolTable*, ProgramCodeBlock*, CompilationKind);
-        BytecodeGenerator(FunctionBodyNode*, ScopeChainNode*, SymbolTable*, CodeBlock*, CompilationKind);
-        BytecodeGenerator(EvalNode*, ScopeChainNode*, SymbolTable*, EvalCodeBlock*, CompilationKind);
+        BytecodeGenerator(ProgramNode*, JSScope*, SymbolTable*, ProgramCodeBlock*, CompilationKind);
+        BytecodeGenerator(FunctionBodyNode*, JSScope*, SymbolTable*, CodeBlock*, CompilationKind);
+        BytecodeGenerator(EvalNode*, JSScope*, SymbolTable*, EvalCodeBlock*, CompilationKind);
 
         ~BytecodeGenerator();
         
@@ -278,8 +295,6 @@ namespace JSC {
         // register with a refcount of 0 is considered "available", meaning that
         // the next instruction may overwrite it.
         RegisterID* newTemporary();
-
-        RegisterID* highestUsedRegister();
 
         // The same as newTemporary(), but this function returns "suggestion" if
         // "suggestion" is a temporary. This function is helpful in situations
@@ -492,18 +507,22 @@ namespace JSC {
         RegisterID* emitGetPropertyNames(RegisterID* dst, RegisterID* base, RegisterID* i, RegisterID* size, Label* breakTarget);
         RegisterID* emitNextPropertyName(RegisterID* dst, RegisterID* base, RegisterID* i, RegisterID* size, RegisterID* iter, Label* target);
 
-        RegisterID* emitCatch(RegisterID*, Label* start, Label* end);
+        // Start a try block. 'start' must have been emitted.
+        TryData* pushTry(Label* start);
+        // End a try block. 'end' must have been emitted.
+        RegisterID* popTryAndEmitCatch(TryData*, RegisterID* targetRegister, Label* end);
+
         void emitThrow(RegisterID* exc)
         { 
             m_usesExceptions = true;
             emitUnaryNoDstOp(op_throw, exc);
         }
 
-        void emitThrowReferenceError(const UString& message);
+        void emitThrowReferenceError(const String& message);
 
-        void emitPushNewScope(RegisterID* dst, const Identifier& property, RegisterID* value);
+        void emitPushNameScope(const Identifier& property, RegisterID* value, unsigned attributes);
 
-        RegisterID* emitPushScope(RegisterID* scope);
+        RegisterID* emitPushWithScope(RegisterID* scope);
         void emitPopScope();
 
         void emitDebugHook(DebugHookID, int firstLine, int lastLine, int column);
@@ -537,7 +556,7 @@ namespace JSC {
         
         bool isStrictMode() const { return m_codeBlock->isStrictMode(); }
         
-        ScopeChainNode* scopeChain() const { return m_scopeChain.get(); }
+        JSScope* scope() const { return m_scope.get(); }
 
     private:
         friend class Label;
@@ -634,7 +653,9 @@ namespace JSC {
 
         RegisterID* emitInitLazyRegister(RegisterID*);
 
+    public:
         Vector<Instruction>& instructions() { return m_instructions; }
+
         SymbolTable& symbolTable() { return *m_symbolTable; }
 #if ENABLE(BYTECODE_COMMENTS)
         Vector<Comment>& comments() { return m_comments; }
@@ -677,7 +698,7 @@ namespace JSC {
         bool m_shouldEmitProfileHooks;
         bool m_shouldEmitRichSourceInfo;
 
-        Strong<ScopeChainNode> m_scopeChain;
+        Strong<JSScope> m_scope;
         SymbolTable* m_symbolTable;
 
 #if ENABLE(BYTECODE_COMMENTS)
@@ -708,6 +729,10 @@ namespace JSC {
         Vector<ControlFlowContext> m_scopeContextStack;
         Vector<SwitchInfo> m_switchContextStack;
         Vector<ForInContext> m_forInContextStack;
+        Vector<TryContext> m_tryContextStack;
+        
+        Vector<TryRange> m_tryRanges;
+        SegmentedVector<TryData, 8> m_tryData;
 
         int m_firstConstantIndex;
         int m_nextConstantOffset;

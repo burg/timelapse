@@ -32,30 +32,20 @@
 
 namespace WebCore {
 class Scrollbar;
-class ScrollbarLayerChromium;
 }
 
 namespace WebKit {
 
-class WebScrollbarLayer : public WebLayer {
+class WebScrollbarLayer {
 public:
-    WebScrollbarLayer() { }
-    WebScrollbarLayer(const WebScrollbarLayer& layer) : WebLayer(layer) { }
+    // This takes ownership of the provided WebScrollbar and WebScrollbarThemeGeometry.
+    WEBKIT_EXPORT static WebScrollbarLayer* create(WebScrollbar*, WebScrollbarThemePainter, WebScrollbarThemeGeometry*);
+
     virtual ~WebScrollbarLayer() { }
-    WebScrollbarLayer& operator=(const WebScrollbarLayer& layer)
-    {
-        WebLayer::assign(layer);
-        return *this;
-    }
 
-    WEBKIT_EXPORT void setScrollLayer(const WebLayer);
+    virtual WebLayer* layer() = 0;
 
-#if WEBKIT_IMPLEMENTATION
-    static WebScrollbarLayer create(WebCore::Scrollbar*, WebScrollbarThemePainter, PassOwnPtr<WebScrollbarThemeGeometry>);
-    explicit WebScrollbarLayer(const WTF::PassRefPtr<WebCore::ScrollbarLayerChromium>&);
-    WebScrollbarLayer& operator=(const WTF::PassRefPtr<WebCore::ScrollbarLayerChromium>&);
-    operator WTF::PassRefPtr<WebCore::ScrollbarLayerChromium>() const;
-#endif
+    virtual void setScrollLayer(WebLayer*) = 0;
 };
 
 } // namespace WebKit

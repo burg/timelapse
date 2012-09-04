@@ -175,7 +175,7 @@ public:
     Platform::IntPoint scrollPosition() const;
     // Scroll position provided should be in transformed coordinates.
     void setScrollPosition(const Platform::IntPoint&);
-    bool scrollBy(const Platform::IntSize&, bool scrollMainFrame = true);
+    void scrollBy(const Platform::IntSize&);
     void notifyInRegionScrollStopped();
     void setScrollOriginPoint(const Platform::IntPoint&);
 
@@ -188,6 +188,7 @@ public:
     void zoomToInitialScale();
     bool blockZoom(int x, int y);
     void blockZoomAnimationFinished();
+    void resetBlockZoom();
     bool isAtInitialZoom() const;
     bool isMaxZoomed() const;
     bool isMinZoomed() const;
@@ -321,8 +322,6 @@ public:
 #endif
 
     bool defersLoading() const;
-
-    bool willFireTimer();
 
     bool isEnableLocalAccessToAllCookies() const;
     void setEnableLocalAccessToAllCookies(bool);

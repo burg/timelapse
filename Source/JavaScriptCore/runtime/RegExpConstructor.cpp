@@ -249,9 +249,9 @@ void setRegExpConstructorInput(ExecState* exec, JSObject* baseObject, JSValue va
     asRegExpConstructor(baseObject)->setInput(exec, value.toString(exec));
 }
 
-void setRegExpConstructorMultiline(ExecState*, JSObject* baseObject, JSValue value)
+void setRegExpConstructorMultiline(ExecState* exec, JSObject* baseObject, JSValue value)
 {
-    asRegExpConstructor(baseObject)->setMultiline(value.toBoolean());
+    asRegExpConstructor(baseObject)->setMultiline(value.toBoolean(exec));
 }
 
 // ECMA 15.10.4
@@ -271,7 +271,7 @@ JSObject* constructRegExp(ExecState* exec, JSGlobalObject* globalObject, const A
         return asObject(arg0);
     }
 
-    UString pattern = arg0.isUndefined() ? UString("") : arg0.toString(exec)->value(exec);
+    String pattern = arg0.isUndefined() ? String("") : arg0.toString(exec)->value(exec);
     if (exec->hadException())
         return 0;
 

@@ -430,6 +430,8 @@ static AtkRole atkRole(AccessibilityRole role)
         return ATK_ROLE_UNKNOWN;
     case ButtonRole:
         return ATK_ROLE_PUSH_BUTTON;
+    case ToggleButtonRole:
+        return ATK_ROLE_TOGGLE_BUTTON;
     case RadioButtonRole:
         return ATK_ROLE_RADIO_BUTTON;
     case CheckBoxRole:
@@ -499,6 +501,7 @@ static AtkRole atkRole(AccessibilityRole role)
     case WebCoreLinkRole:
     case ImageMapLinkRole:
         return ATK_ROLE_LINK;
+    case CanvasRole:
     case ImageMapRole:
     case ImageRole:
         return ATK_ROLE_IMAGE;
@@ -817,7 +820,7 @@ static GType GetAtkInterfaceTypeFromWAIType(WAIType type)
 
 static bool roleIsTextType(AccessibilityRole role)
 {
-    return role == ParagraphRole || role == HeadingRole || role == DivRole || role == CellRole;
+    return role == ParagraphRole || role == HeadingRole || role == DivRole || role == CellRole || role == ListItemRole;
 }
 
 static guint16 getInterfaceMaskFromObject(AccessibilityObject* coreObject)

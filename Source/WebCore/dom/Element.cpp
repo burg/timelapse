@@ -170,7 +170,7 @@ DEFINE_VIRTUAL_ATTRIBUTE_EVENT_LISTENER(Element, error);
 DEFINE_VIRTUAL_ATTRIBUTE_EVENT_LISTENER(Element, focus);
 DEFINE_VIRTUAL_ATTRIBUTE_EVENT_LISTENER(Element, load);
 
-PassRefPtr<Node> Element::cloneNode(bool deep, ExceptionCode&)
+PassRefPtr<Node> Element::cloneNode(bool deep)
 {
     return deep ? cloneElementWithChildren() : cloneElementWithoutChildren();
 }
@@ -696,6 +696,8 @@ inline void Element::setAttributeInternal(size_t index, const QualifiedName& nam
 
 void Element::attributeChanged(const Attribute& attribute)
 {
+    parseAttribute(attribute);
+
     document()->incDOMTreeVersion();
 
     if (isIdAttributeName(attribute.name())) {
@@ -745,6 +747,34 @@ void Element::attributeChanged(const Attribute& attribute)
         document()->axObjectCache()->childrenChanged(this);
     else if (attrName == aria_invalidAttr)
         document()->axObjectCache()->postNotification(this, AXObjectCache::AXInvalidStatusChanged, true);
+}
+
+void Element::parseAttribute(const Attribute& attribute)
+{
+    if (attribute.name() == classAttr)
+        classAttributeChanged(attribute.value());
+}
+
+void Element::classAttributeChanged(const AtomicString& newClassString)
+{
+    const UChar* characters = newClassString.characters();
+    unsigned length = newClassString.length();
+    unsigned i;
+    for (i = 0; i < length; ++i) {
+        if (isNotHTMLSpace(characters[i]))
+            break;
+    }
+    bool hasClass = i < length;
+    if (hasClass) {
+        const bool shouldFoldCase = document()->inQuirksMode();
+        ensureAttributeData()->setClass(newClassString, shouldFoldCase);
+    } else if (attributeData())
+        mutableAttributeData()->clearClass();
+
+    if (DOMTokenList* classList = optionalClassList())
+        static_cast<ClassList*>(classList)->reset(newClassString);
+
+    setNeedsStyleRecalc();
 }
 
 // Returns true is the given attribute is an event handler.
@@ -1409,20 +1439,14 @@ PassRefPtr<Attr> Element::setAttributeNode(Attr* attr, ExceptionCode& ec)
     ElementAttributeData* attributeData = mutableAttributeData();
 
     size_t index = attributeData->getAttributeItemIndex(attr->qualifiedName());
-    Attribute* oldAttribute = index != notFound ? attributeData->attributeItem(index) : 0;
-
-    if (!oldAttribute) {
-        attributeData->addAttribute(Attribute(attr->qualifiedName(), attr->value()), this);
-        attributeData->setAttr(this, attr->qualifiedName(), attr);
-        return 0;
+    if (index != notFound) {
+        if (oldAttr)
+            oldAttr->detachFromElementWithValue(attributeData->attributeItem(index)->value());
+        else
+            oldAttr = Attr::create(document(), attr->qualifiedName(), attributeData->attributeItem(index)->value());
     }
 
-    if (oldAttr)
-        oldAttr->detachFromElementWithValue(oldAttribute->value());
-    else
-        oldAttr = Attr::create(document(), oldAttribute->name(), oldAttribute->value());
-
-    attributeData->replaceAttribute(index, Attribute(attr->name(), attr->value()), this);
+    setAttributeInternal(index, attr->qualifiedName(), attr->value(), NotInSynchronizationOfLazyAttribute);
     attributeData->setAttr(this, attr->qualifiedName(), attr);
     return oldAttr.release();
 }

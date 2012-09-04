@@ -27,6 +27,7 @@
 
 #include "CCAnimationEvents.h"
 #include "CCGraphicsContext.h"
+#include "CCLayerTreeHostClient.h"
 #include "CCLayerTreeHostCommon.h"
 #include "CCOcclusionTracker.h"
 #include "CCPrioritizedTextureManager.h"
@@ -52,28 +53,6 @@ class CCTextureUpdateQueue;
 class HeadsUpDisplayLayerChromium;
 class Region;
 struct CCScrollAndScaleSet;
-
-class CCLayerTreeHostClient {
-public:
-    virtual void willBeginFrame() = 0;
-    // Marks finishing compositing-related tasks on the main thread. In threaded mode, this corresponds to didCommit().
-    virtual void didBeginFrame() = 0;
-    virtual void updateAnimations(double frameBeginTime) = 0;
-    virtual void layout() = 0;
-    virtual void applyScrollAndScale(const IntSize& scrollDelta, float pageScale) = 0;
-    virtual PassOwnPtr<WebKit::WebCompositorOutputSurface> createOutputSurface() = 0;
-    virtual void didRecreateOutputSurface(bool success) = 0;
-    virtual void willCommit() = 0;
-    virtual void didCommit() = 0;
-    virtual void didCommitAndDrawFrame() = 0;
-    virtual void didCompleteSwapBuffers() = 0;
-
-    // Used only in the single-threaded path.
-    virtual void scheduleComposite() = 0;
-
-protected:
-    virtual ~CCLayerTreeHostClient() { }
-};
 
 struct CCLayerTreeSettings {
     CCLayerTreeSettings()
@@ -115,8 +94,8 @@ struct CCLayerTreeSettings {
 };
 
 // Provides information on an Impl's rendering capabilities back to the CCLayerTreeHost
-struct LayerRendererCapabilities {
-    LayerRendererCapabilities()
+struct RendererCapabilities {
+    RendererCapabilities()
         : bestTextureFormat(0)
         , contextHasCachedFrontBuffer(false)
         , usingPartialSwap(false)
@@ -178,7 +157,7 @@ public:
     void deleteContentsTexturesOnImplThread(CCResourceProvider*);
     virtual void acquireLayerTextures();
     // Returns false if we should abort this frame due to initialization failure.
-    bool initializeLayerRendererIfNeeded();
+    bool initializeRendererIfNeeded();
     void updateLayers(CCTextureUpdateQueue&, size_t contentsMemoryLimitBytes);
 
     CCLayerTreeHostClient* client() { return m_client; }
@@ -200,7 +179,7 @@ public:
 
     void renderingStats(CCRenderingStats&) const;
 
-    const LayerRendererCapabilities& layerRendererCapabilities() const;
+    const RendererCapabilities& rendererCapabilities() const;
 
     // Test only hook
     void loseContext(int numTimes);
@@ -261,6 +240,8 @@ public:
 
     void setFontAtlas(PassOwnPtr<CCFontAtlas>);
 
+    HeadsUpDisplayLayerChromium* hudLayer() const { return m_hudLayer.get(); }
+
 protected:
     CCLayerTreeHost(CCLayerTreeHostClient*, const CCLayerTreeSettings&);
     bool initialize();
@@ -269,7 +250,7 @@ private:
     typedef Vector<RefPtr<LayerChromium> > LayerList;
     typedef Vector<OwnPtr<CCPrioritizedTexture> > TextureList;
 
-    void initializeLayerRenderer();
+    void initializeRenderer();
 
     void update(LayerChromium*, CCTextureUpdateQueue&, const CCOcclusionTracker*);
     bool paintLayerContents(const LayerList&, CCTextureUpdateQueue&);
@@ -297,7 +278,7 @@ private:
     CCRenderingStats m_renderingStats;
 
     OwnPtr<CCProxy> m_proxy;
-    bool m_layerRendererInitialized;
+    bool m_rendererInitialized;
     bool m_contextLost;
     int m_numTimesRecreateShouldFail;
     int m_numFailedRecreateAttempts;

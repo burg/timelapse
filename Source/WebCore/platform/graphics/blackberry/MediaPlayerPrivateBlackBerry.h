@@ -89,6 +89,8 @@ public:
 
     virtual void paint(GraphicsContext*, const IntRect&);
 
+    virtual void paintCurrentFrameInContext(GraphicsContext*, const IntRect&);
+
     virtual bool hasAvailableVideoFrame() const;
 
 #if USE(ACCELERATED_COMPOSITING)
@@ -143,7 +145,6 @@ public:
 private:
     MediaPlayerPrivate(MediaPlayer*);
 
-    FrameView* frameView() const;
     void updateStates();
     String userAgent(const String&) const;
 

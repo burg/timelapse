@@ -41,6 +41,9 @@
 
 #include <BlackBerryPlatformMessage.h>
 
+#define DEFAULT_MAX_LAYOUT_WIDTH 1024
+#define DEFAULT_MAX_LAYOUT_HEIGHT 768
+
 namespace WebCore {
 class AutofillManager;
 class DOMWrapperWorld;
@@ -147,9 +150,9 @@ public:
     WebCore::IntPoint scrollPosition() const;
     WebCore::IntPoint maximumScrollPosition() const;
     void setScrollPosition(const WebCore::IntPoint&);
-    bool scrollBy(int deltaX, int deltaY, bool scrollMainFrame = true);
+    void scrollBy(int deltaX, int deltaY);
 
-    void enqueueRenderingOfClippedContentOfScrollableNodeAfterInRegionScrolling(WebCore::Node*);
+    void enqueueRenderingOfClippedContentOfScrollableAreaAfterInRegionScrolling();
     void notifyInRegionScrollStopped();
     void setScrollOriginPoint(const Platform::IntPoint&);
     void setHasInRegionScrollableAreas(bool);
@@ -406,7 +409,6 @@ public:
 
     // Thread safe.
     void resetCompositingSurface();
-    void drawLayersOnCommit(); // Including backing store blit.
 
     // Compositing thread.
     void setRootLayerCompositingThread(WebCore::LayerCompositingThread*);
@@ -446,7 +448,6 @@ public:
     static WebCore::RenderLayer* enclosingPositionedAncestorOrSelfIfPositioned(WebCore::RenderLayer*);
     static WebCore::RenderLayer* enclosingFixedPositionedAncestorOrSelfIfFixedPositioned(WebCore::RenderLayer*);
 
-    static WebCore::IntSize defaultMaxLayoutSize();
     static const String& defaultUserAgent();
 
     void setVisible(bool);
@@ -461,6 +462,8 @@ public:
 
     void applySizeOverride(int overrideWidth, int overrideHeight);
     void setTextZoomFactor(float);
+
+    WebCore::IntSize screenSize() const;
 
     WebPage* m_webPage;
     WebPageClient* m_client;

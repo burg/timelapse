@@ -30,6 +30,7 @@
 #include "RenderListItem.h"
 #include "RenderListMarker.h"
 #include "RenderStyle.h"
+#include "RenderView.h"
 #include <wtf/StdLibExtras.h>
 
 #ifndef NDEBUG
@@ -535,6 +536,11 @@ PassRefPtr<StringImpl> RenderCounter::originalText() const
     }
 
     return text.impl();
+}
+
+void RenderCounter::updateText()
+{
+    computePreferredLogicalWidths(0);
 }
 
 void RenderCounter::computePreferredLogicalWidths(float lead)

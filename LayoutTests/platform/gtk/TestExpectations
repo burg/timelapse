@@ -36,6 +36,15 @@
 // Tests that require new results.
 //////////////////////////////////////////////////////////////////////////////////////////
 
+BUGWK77754 : fast/inline/left-right-center-inline-alignment-in-ltr-and-rtl-blocks.html = TEXT
+BUGWK77754 : fast/inline/absolute-positioned-inline-in-centred-block.html = TEXT
+BUGWK77754 : fast/css/absolute-child-with-percent-height-inside-relative-parent.html = TEXT
+
+//Require rebaseline after https://bugs.webkit.org/show_bug.cgi?id=80394
+BUGWK80394 : fast/block/margin-collapse/empty-clear-blocks.html = IMAGE+TEXT
+BUGWK80394 : fast/block/float/024.html = IMAGE+TEXT
+BUGWK80394 : fast/block/margin-collapse/025.html = TEXT
+BUGWK80394 : fast/block/margin-collapse/block-inside-inline/025.html = TEXT
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Expected failures
@@ -152,6 +161,7 @@ BUGWKGTK SKIP : fast/dom/DeviceOrientation = TEXT
 
 // Desktop notifications are not supported.
 BUGWKGTK SKIP : fast/notifications = TEXT
+BUGWKGTK SKIP : http/tests/notifications = TEXT
 
 // We lack userscripts support.
 BUGWKGTK SKIP : userscripts = TEXT
@@ -208,6 +218,7 @@ BUGWKGTK SKIP : fast/events/constructors/speech-recognition-event-constructor.ht
 BUGWKGTK SKIP : fast/filesystem = TEXT
 BUGWKGTK SKIP : http/tests/filesystem = TEXT
 BUGWKGTK SKIP : http/tests/security/filesystem-iframe-from-remote.html = TEXT
+BUGWKGTK SKIP : http/tests/security/contentSecurityPolicy/filesystem-urls-match-self.html = TEXT
 BUGWKGTK SKIP : http/tests/security/mixedContent/filesystem-url-in-iframe.html = TEXT
 BUGWKGTK SKIP : http/tests/websocket/tests/hybi/send-file-blob.html = TEXT
 BUGWKGTK SKIP : http/tests/websocket/tests/hybi/send-file-blob-fail.html = TEXT
@@ -218,6 +229,8 @@ BUGWKGTK SKIP : fast/forms/file/input-file-entries.html = TEXT
 // Requires WebP support.
 BUGWKGTK SKIP : fast/canvas/canvas-toDataURL-webp.html = TEXT
 BUGWKGTK SKIP : fast/images/webp-image-decoding.html = TEXT
+BUGWKGTK SKIP : http/tests/images/webp-partial-load.html = TEXT
+BUGWKGTK SKIP : http/tests/images/webp-progressive-load.html = TEXT
 
 // DataTransferItems is not yet implemented.
 BUGWKGTK SKIP : editing/pasteboard/data-transfer-items.html = TEXT
@@ -302,6 +315,10 @@ BUGWKGTK SKIP : css3/filters = TEXT
 // CSS image-set support not yet enabled (needs ENABLE_CSS_IMAGE_SET).
 BUGWKGTK SKIP : fast/css/image-set-parsing.html = TEXT
 BUGWKGTK SKIP : fast/css/image-set-parsing-invalid.html = TEXT
+BUGWKGTK SKIP : fast/css/image-set-setting.html = TEXT
+
+// CSS Sticky Position is not yet enabled
+BUGWKGTK SKIP : fast/css/sticky = IMAGE TEXT PASS
 
 // For now, Web Audio API is disabled
 BUGWKGTK SKIP : webaudio = TEXT
@@ -426,8 +443,6 @@ BUGWK92942 SKIP : fast/events/constructors/device-proximity-event-constructor.ht
 
 BUGWK74297 DEBUG : http/tests/security/cross-origin-xsl-redirect-BLOCKED.html = CRASH PASS
 
-BUGWK85811 DEBUG : fast/events/message-port-close.html = CRASH PASS
-
 BUGWK86443 : plugins/npruntime/delete-plugin-within-getProperty.html = CRASH
 BUGWK86443 DEBUG : plugins/npruntime/delete-plugin-within-invoke.html = CRASH
 
@@ -437,7 +452,8 @@ BUGWK89188 RELEASE : storage/websql/quota-tracking.html = CRASH PASS
 
 BUGWK90589 RELEASE : fast/css/user-drag-none.html = CRASH TIMEOUT
 
-BUGWK93502 : fast/history/nested-visited-test.html = CRASH PASS
+BUGWK93502 DEBUG : fast/history/nested-visited-test.html = CRASH PASS
+BUGWK93502 DEBUG : fast/history/sibling-visited-test.html = CRASH PASS
 
 BUGWK93247 DEBUG : fast/lists/list-marker-remove-crash.html = CRASH
 
@@ -524,8 +540,6 @@ BUGWK89650 : svg/W3C-SVG-1.1/struct-dom-06-b.svg = PASS TEXT
 
 BUGWK80158 : plugins/netscape-plugin-page-cache-works.html = PASS TEXT
 
-BUGWK83790 : media/video-duration-known-after-eos.html = PASS TEXT
-BUGWK83790 : media/media-element-play-after-eos.html = PASS TEXT
 BUGWK83704 : media/event-attributes.html = PASS TEXT
 BUGWK89811 : media/media-blocked-by-beforeload.html = PASS TEXT
 BUGWK84856 : media/media-controller-playback.html = PASS TEXT
@@ -552,6 +566,8 @@ BUGWK93727 RELEASE : fullscreen/full-screen-iframe-not-allowed.html = TEXT PASS
 BUGWK93727 RELEASE : fullscreen/exit-full-screen-iframe.html = TEXT PASS
 BUGWK93727 RELEASE : fullscreen/full-screen-iframe-zIndex.html = TEXT PASS
 BUGWK93727 RELEASE : svg/custom/use-instanceRoot-as-event-target.xhtml = TEXT PASS
+
+BUGWK95430 : fast/layers/scroll-no-visible-content-but-visible-descendant.html = IMAGE PASS
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // End of Flaky tests
@@ -616,7 +632,7 @@ BUGWKGTK : accessibility/aria-scrollbar-role.html = TEXT
 BUGWKGTK : accessibility/aria-text-role.html = TEXT
 BUGWKGTK : accessibility/aria-used-on-image-maps.html = TEXT
 BUGWKGTK : accessibility/button-press-action.html = TEXT
-BUGWKGTK : accessibility/canvas.html = TEXT
+BUGWKGTK : accessibility/canvas-description-and-role.html = TEXT
 BUGWKGTK : accessibility/canvas-fallback-content.html = TEXT
 BUGWKGTK : accessibility/editable-webarea-context-menu-point.html = TEXT
 BUGWKGTK : accessibility/ellipsis-text.html = TEXT
@@ -787,24 +803,17 @@ BUGWKGTK : fast/loader/api-test-go-to-current-back-forward-item.html = TEXT
 BUGWK35300 : http/tests/loading/307-after-303-after-post.html = TEXT
 BUGWK35300 SKIP : http/tests/navigation/post-307-response.html = TEXT
 
-// mouseScrollBy() and continuousMouseScrollBy() are not yet implemented in the GTK EventSender API.
-BUGWK36003 : fast/events/remove-child-onscroll.html = TEXT
-BUGWK36003 : fast/events/platform-wheelevent-in-scrolling-div.html = TEXT
-BUGWK36003 : fast/events/continuous-platform-wheelevent-in-scrolling-div.html = TEXT
-BUGWK36003 : fast/events/wheelevent-direction-inverted-from-device.html = TEXT
-BUGWK36003 : fast/events/wheelevent-in-horizontal-scrollbar-in-rtl.html = TEXT
-BUGWK36003 : fast/events/wheelevent-in-vertical-scrollbar-in-rtl.html = TEXT
-BUGWK36003 : fast/events/scroll-in-scaled-page-with-overflow-hidden.html = TEXT
-BUGWK36003 : fast/events/platform-wheelevent-paging-x-in-non-scrolling-div.html = TEXT
-BUGWK36003 : fast/events/platform-wheelevent-paging-x-in-non-scrolling-page.html = TEXT
-BUGWK36003 : fast/events/platform-wheelevent-paging-x-in-scrolling-div.html = TEXT
-BUGWK36003 : fast/events/platform-wheelevent-paging-x-in-scrolling-page.html = TEXT
-BUGWK36003 : fast/events/platform-wheelevent-paging-xy-in-scrolling-div.html = TEXT
-BUGWK36003 : fast/events/platform-wheelevent-paging-xy-in-scrolling-page.html = TEXT
-BUGWK36003 : fast/events/platform-wheelevent-paging-y-in-non-scrolling-div.html = TEXT
-BUGWK36003 : fast/events/platform-wheelevent-paging-y-in-non-scrolling-page.html = TEXT
-BUGWK36003 : fast/events/platform-wheelevent-paging-y-in-scrolling-div.html = TEXT
-BUGWK36003 : fast/events/platform-wheelevent-paging-y-in-scrolling-page.html = TEXT
+// Paged continuousMouseScrollBy() events are not supported in GTK.
+BUGWKGTK : fast/events/platform-wheelevent-paging-x-in-non-scrolling-div.html = TEXT
+BUGWKGTK : fast/events/platform-wheelevent-paging-x-in-non-scrolling-page.html = TEXT
+BUGWKGTK : fast/events/platform-wheelevent-paging-x-in-scrolling-div.html = TEXT
+BUGWKGTK : fast/events/platform-wheelevent-paging-x-in-scrolling-page.html = TEXT
+BUGWKGTK : fast/events/platform-wheelevent-paging-xy-in-scrolling-div.html = TEXT
+BUGWKGTK : fast/events/platform-wheelevent-paging-xy-in-scrolling-page.html = TEXT
+BUGWKGTK : fast/events/platform-wheelevent-paging-y-in-non-scrolling-div.html = TEXT
+BUGWKGTK : fast/events/platform-wheelevent-paging-y-in-non-scrolling-page.html = TEXT
+BUGWKGTK : fast/events/platform-wheelevent-paging-y-in-scrolling-div.html = TEXT
+BUGWKGTK : fast/events/platform-wheelevent-paging-y-in-scrolling-page.html = TEXT
 
 // Misses setMediaType() implementation
 BUGWKGTK SKIP : fast/media/print-restores-previous-mediatype.html = TIMEOUT
@@ -1014,7 +1023,7 @@ BUGWK53707 : http/tests/security/xss-DENIED-xsl-external-entity-redirect.xml = T
 
 // textInputController.hasGrammarMarker() is not implemented.
 BUGWKGTK : editing/spelling/grammar.html = TEXT
-BUGWKGTK : editing/spelling/grammar-paste.html = TEXT
+BUGWKGTK SKIP : editing/spelling/grammar-paste.html = TEXT
 
 // testRunner::setTextDirection() is not implemented.
 BUGWKGTK : fast/html/set-text-direction.html = TEXT
@@ -1088,7 +1097,6 @@ BUGWK71465 : http/tests/security/xssAuditor/script-tag-with-callbacks.html = TEX
 BUGWK72248 : editing/spelling/spelling-unified-emulation.html = TEXT
 
 BUGWK72363 : fast/dom/Window/window-postmessage-arrays.html = TEXT
-BUGWK84700 : fast/dom/Window/window-postmessage-clone.html = TEXT
 
 BUGWK73003 : editing/spelling/spellcheck-async.html = TEXT
 
@@ -1260,27 +1268,6 @@ BUGWK92100 : accessibility/canvas-accessibilitynodeobject.html = TEXT
 // These tests depend on subpixel layout.
 BUGWK92352 : css3/flexbox/flex-rounding.html = TEXT
 
-BUGWK93073 : mathml/presentation/attributes.xhtml = TEXT
-BUGWK93073 : mathml/presentation/fenced-mi.xhtml = TEXT
-BUGWK93073 : mathml/presentation/fenced.xhtml = TEXT
-BUGWK93073 : mathml/presentation/fractions-vertical-alignment.xhtml = TEXT
-BUGWK93073 : mathml/presentation/fractions.xhtml = TEXT
-BUGWK93073 : mathml/presentation/mo-stretch.html = TEXT
-BUGWK93073 : mathml/presentation/mo.xhtml = TEXT
-BUGWK93073 : mathml/presentation/mroot-pref-width.html = TEXT
-BUGWK93073 : mathml/presentation/over.xhtml = TEXT
-BUGWK93073 : mathml/presentation/roots.xhtml = TEXT
-BUGWK93073 : mathml/presentation/row-alignment.xhtml = TEXT
-BUGWK93073 : mathml/presentation/row.xhtml = TEXT
-BUGWK93073 : mathml/presentation/style.xhtml = TEXT
-BUGWK93073 : mathml/presentation/sub.xhtml = TEXT
-BUGWK93073 : mathml/presentation/subsup.xhtml = TEXT
-BUGWK93073 : mathml/presentation/sup.xhtml = TEXT
-BUGWK93073 : mathml/presentation/tables.xhtml = TEXT
-BUGWK93073 : mathml/presentation/tokenElements.xhtml = TEXT
-BUGWK93073 : mathml/presentation/under.xhtml = TEXT
-BUGWK93073 : mathml/presentation/underover.xhtml = TEXT
-
 BUGWK93976 : fast/css-generated-content/quotes-lang.html = IMAGE
 
 // Tests added by https://bugs.webkit.org/show_bug.cgi?id=89826
@@ -1304,7 +1291,18 @@ BUGWK89663 : editing/deleting/delete-3800834-fix.html = TEXT
 
 BUGWK88727 RELEASE : http/tests/xmlhttprequest/origin-exact-matching.html = TEXT
 
-BUGWK94578 : fast/forms/range/range-hit-test-with-padding.html = TEXT
+BUGWK94952 DEBUG : platform/gtk/scrollbars/overflow-scrollbar-horizontal-wheel-scroll.html = TEXT
+BUGWK94952 DEBUG : scrollbars/scroll-rtl-or-bt-layer.html = TEXT
+
+BUGWK87355 : canvas/philip/tests/2d.text.draw.fontface.notinpage.html = TEXT
+
+BUGWK95428 : media/video-controls-captions.html = TEXT
+
+BUGWK95429 : svg/custom/clamped-masking-clipping.svg = IMAGE
+
+BUGWK94677 : http/tests/security/contentSecurityPolicy/register-bypassing-scheme = TEXT
+
+BUGWK95530 : http/tests/security/inactive-document-with-empty-security-origin.html = TEXT
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // End of Tests failing

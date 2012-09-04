@@ -51,6 +51,7 @@
 #include "FrameView.h"
 #include "GestureEvent.h"
 #include "GraphicsContext.h"
+#include "GraphicsLayerChromium.h"
 #include "HitTestResult.h"
 #include "HostWindow.h"
 #include "HTMLFormElement.h"
@@ -71,6 +72,8 @@
 #include "WheelEvent.h"
 #include <public/Platform.h>
 #include <public/WebClipboard.h>
+#include <public/WebCompositorSupport.h>
+#include <public/WebExternalTextureLayer.h>
 #include <public/WebRect.h>
 #include <public/WebString.h>
 #include <public/WebURL.h>
@@ -366,11 +369,16 @@ void WebPluginContainerImpl::setBackingTextureId(unsigned textureId)
     if (m_textureId == textureId)
         return;
 
-    ASSERT(m_ioSurfaceLayer.isNull());
+    ASSERT(!m_ioSurfaceLayer);
 
-    if (m_textureLayer.isNull())
-        m_textureLayer = WebExternalTextureLayer::create();
-    m_textureLayer.setTextureId(textureId);
+    if (!m_textureLayer) {
+        if (WebCompositorSupport* compositorSupport = Platform::current()->compositorSupport())
+            m_textureLayer = adoptPtr(compositorSupport->createExternalTextureLayer());
+        else
+            m_textureLayer = adoptPtr(WebExternalTextureLayer::create());
+        GraphicsLayerChromium::registerContentsLayer(m_textureLayer->layer());
+    }
+    m_textureLayer->setTextureId(textureId);
 
     // If anyone of the IDs is zero we need to switch between hardware
     // and software compositing. This is done by triggering a style recalc
@@ -390,11 +398,16 @@ void WebPluginContainerImpl::setBackingIOSurfaceId(int width,
     if (ioSurfaceId == m_ioSurfaceId)
         return;
 
-    ASSERT(m_textureLayer.isNull());
+    ASSERT(!m_textureLayer);
 
-    if (m_ioSurfaceLayer.isNull())
-        m_ioSurfaceLayer = WebIOSurfaceLayer::create();
-    m_ioSurfaceLayer.setIOSurfaceProperties(ioSurfaceId, WebSize(width, height));
+    if (!m_ioSurfaceLayer) {
+        if (WebCompositorSupport* compositorSupport = Platform::current()->compositorSupport())
+            m_ioSurfaceLayer = adoptPtr(compositorSupport->createIOSurfaceLayer());
+        else
+            m_ioSurfaceLayer = adoptPtr(WebIOSurfaceLayer::create());
+        GraphicsLayerChromium::registerContentsLayer(m_ioSurfaceLayer->layer());
+    }
+    m_ioSurfaceLayer->setIOSurfaceProperties(ioSurfaceId, WebSize(width, height));
 
     // If anyone of the IDs is zero we need to switch between hardware
     // and software compositing. This is done by triggering a style recalc
@@ -409,11 +422,11 @@ void WebPluginContainerImpl::setBackingIOSurfaceId(int width,
 void WebPluginContainerImpl::commitBackingTexture()
 {
 #if USE(ACCELERATED_COMPOSITING)
-    if (!m_textureLayer.isNull())
-        m_textureLayer.invalidate();
+    if (m_textureLayer)
+        m_textureLayer->layer()->invalidate();
 
-    if (!m_ioSurfaceLayer.isNull())
-        m_ioSurfaceLayer.invalidate();
+    if (m_ioSurfaceLayer)
+        m_ioSurfaceLayer->layer()->invalidate();
 #endif
 }
 
@@ -480,11 +493,11 @@ void WebPluginContainerImpl::zoomLevelChanged(double zoomLevel)
 void WebPluginContainerImpl::setOpaque(bool opaque)
 {
 #if USE(ACCELERATED_COMPOSITING)
-    if (!m_textureLayer.isNull())
-        m_textureLayer.setOpaque(opaque);
+    if (m_textureLayer)
+        m_textureLayer->layer()->setOpaque(opaque);
 
-    if (!m_ioSurfaceLayer.isNull())
-        m_ioSurfaceLayer.setOpaque(opaque);
+    if (m_ioSurfaceLayer)
+        m_ioSurfaceLayer->layer()->setOpaque(opaque);
 #endif
 }
 
@@ -575,9 +588,9 @@ void WebPluginContainerImpl::willDestroyPluginLoadObserver(WebPluginLoadObserver
 WebLayer* WebPluginContainerImpl::platformLayer() const
 {
     if (m_textureId)
-        return const_cast<WebExternalTextureLayer*>(&m_textureLayer);
+        return m_textureLayer->layer();
     if (m_ioSurfaceId)
-        return const_cast<WebIOSurfaceLayer*>(&m_ioSurfaceLayer);
+        return m_ioSurfaceLayer->layer();
     return 0;
 }
 #endif
@@ -627,6 +640,13 @@ WebPluginContainerImpl::WebPluginContainerImpl(WebCore::HTMLPlugInElement* eleme
 
 WebPluginContainerImpl::~WebPluginContainerImpl()
 {
+#if USE(ACCELERATED_COMPOSITING)
+    if (m_textureLayer)
+        GraphicsLayerChromium::unregisterContentsLayer(m_textureLayer->layer());
+    if (m_ioSurfaceLayer)
+        GraphicsLayerChromium::unregisterContentsLayer(m_ioSurfaceLayer->layer());
+#endif
+
     if (m_isAcceptingTouchEvents)
         m_element->document()->didRemoveTouchEventHandler();
 

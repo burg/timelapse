@@ -47,6 +47,7 @@
 #include "ContextFeatures.h"
 #include "CookieJar.h"
 #include "DOMImplementation.h"
+#include "DOMNamedFlowCollection.h"
 #include "DOMSelection.h"
 #include "DOMWindow.h"
 #include "DateComponents.h"
@@ -110,6 +111,7 @@
 #include "MemoryInstrumentation.h"
 #include "MouseEventWithHitTestResults.h"
 #include "NameNodeList.h"
+#include "NamedFlowCollection.h"
 #include "NestingLevelIncrementer.h"
 #include "NewXMLDocumentParser.h"
 #include "NodeFilter.h"
@@ -155,7 +157,6 @@
 #include "UndoManager.h"
 #include "UserContentURLPattern.h"
 #include "WebKitNamedFlow.h"
-#include "WebKitNamedFlowCollection.h"
 #include "XMLDocumentParser.h"
 #include "XMLHttpRequest.h"
 #include "XMLNSNames.h"
@@ -1157,12 +1158,23 @@ PassRefPtr<WebKitNamedFlow> Document::webkitGetFlowByName(const String& flowName
 
     return namedFlows()->flowByName(flowName);
 }
+
+PassRefPtr<DOMNamedFlowCollection> Document::webkitGetNamedFlows()
+{
+    if (!cssRegionsEnabled() || !renderer())
+        return 0;
+
+    updateStyleIfNeeded();
+
+    return namedFlows()->createCSSOMSnapshot();
+}
+
 #endif
 
-WebKitNamedFlowCollection* Document::namedFlows()
+NamedFlowCollection* Document::namedFlows()
 {
     if (!m_namedFlows)
-        m_namedFlows = WebKitNamedFlowCollection::create(this);
+        m_namedFlows = NamedFlowCollection::create(this);
 
     return m_namedFlows.get();
 }
@@ -1184,9 +1196,9 @@ PassRefPtr<Element> Document::createElementNS(const String& namespaceURI, const 
 
 String Document::readyState() const
 {
-    DEFINE_STATIC_LOCAL(const String, loading, ("loading"));
-    DEFINE_STATIC_LOCAL(const String, interactive, ("interactive"));
-    DEFINE_STATIC_LOCAL(const String, complete, ("complete"));
+    DEFINE_STATIC_LOCAL(const String, loading, (ASCIILiteral("loading")));
+    DEFINE_STATIC_LOCAL(const String, interactive, (ASCIILiteral("interactive")));
+    DEFINE_STATIC_LOCAL(const String, complete, (ASCIILiteral("complete")));
 
     switch (m_readyState) {
     case Loading:
@@ -1786,10 +1798,9 @@ bool Document::childNeedsAndNotInStyleRecalc()
 void Document::recalcStyle(StyleChange change)
 {
     // we should not enter style recalc while painting
-    if (view() && view()->isPainting()) {
-        ASSERT(!view()->isPainting());
+    ASSERT(!view() || !view()->isPainting());
+    if (view() && view()->isPainting())
         return;
-    }
     
     if (m_inStyleRecalc)
         return; // Guard against re-entrancy. -dwh
@@ -3051,7 +3062,7 @@ void Document::processHttpEquiv(const String& equiv, const String& content)
                 frameLoader->stopAllLoaders();
                 frame->navigationScheduler()->scheduleLocationChange(securityOrigin(), blankURL(), String());
 
-                DEFINE_STATIC_LOCAL(String, consoleMessage, ("Refused to display document because display forbidden by X-Frame-Options.\n"));
+                DEFINE_STATIC_LOCAL(String, consoleMessage, (ASCIILiteral("Refused to display document because display forbidden by X-Frame-Options.\n")));
                 addConsoleMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, consoleMessage);
             }
         }
@@ -3285,7 +3296,7 @@ bool Document::canReplaceChild(Node* newChild, Node* oldChild)
     return true;
 }
 
-PassRefPtr<Node> Document::cloneNode(bool /*deep*/, ExceptionCode&)
+PassRefPtr<Node> Document::cloneNode(bool /*deep*/)
 {
     // Spec says cloning Document nodes is "implementation dependent"
     // so we do not support it...

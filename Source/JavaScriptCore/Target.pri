@@ -79,6 +79,7 @@ SOURCES += \
     heap/HandleSet.cpp \
     heap/HandleStack.cpp \
     heap/BlockAllocator.cpp \
+    heap/GCThreadSharedData.cpp \
     heap/Heap.cpp \
     heap/HeapTimer.cpp \
     heap/IncrementalSweeper.cpp \
@@ -95,6 +96,7 @@ SOURCES += \
     debugger/Debugger.cpp \
     dfg/DFGAbstractState.cpp \
     dfg/DFGArgumentsSimplificationPhase.cpp \
+    dfg/DFGArrayMode.cpp \
     dfg/DFGAssemblyHelpers.cpp \
     dfg/DFGByteCodeParser.cpp \
     dfg/DFGCapabilities.cpp \
@@ -119,7 +121,6 @@ SOURCES += \
     dfg/DFGOSRExitCompiler32_64.cpp \
     dfg/DFGPhase.cpp \
     dfg/DFGPredictionPropagationPhase.cpp \
-    dfg/DFGRedundantPhiEliminationPhase.cpp \
     dfg/DFGRepatch.cpp \
     dfg/DFGSpeculativeJIT.cpp \
     dfg/DFGSpeculativeJIT32_64.cpp \
@@ -208,7 +209,9 @@ SOURCES += \
     runtime/JSONObject.cpp \
     runtime/JSPropertyNameIterator.cpp \
     runtime/JSSegmentedVariableObject.cpp \
-    runtime/JSStaticScopeObject.cpp \
+    runtime/JSWithScope.cpp \
+    runtime/JSNameScope.cpp \
+    runtime/JSScope.cpp \
     runtime/JSString.cpp \
     runtime/JSStringJoiner.cpp \
     runtime/JSSymbolTableObject.cpp \
@@ -241,7 +244,6 @@ SOURCES += \
     runtime/RegExpPrototype.cpp \
     runtime/RegExpCache.cpp \
     runtime/SamplingCounter.cpp \
-    runtime/ScopeChain.cpp \
     runtime/SmallStrings.cpp \
     runtime/StrictEvalActivation.cpp \
     runtime/StringConstructor.cpp \
@@ -252,7 +254,6 @@ SOURCES += \
     runtime/Structure.cpp \
     runtime/SymbolTable.cpp \
     runtime/TimeoutChecker.cpp \
-    runtime/UString.cpp \
     tools/CodeProfile.cpp \
     tools/CodeProfiling.cpp \
     yarr/YarrJIT.cpp \

@@ -1,3 +1,233 @@
+2012-09-01  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Add MediaStream management to RTCPeerConnection
+        https://bugs.webkit.org/show_bug.cgi?id=95543
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/WebMediaStreamCenter.h:
+        (WebMediaStreamCenter):
+        * chromium/public/WebRTCPeerConnectionHandler.h:
+        (WebKit):
+        (WebRTCPeerConnectionHandler):
+        * chromium/public/WebRTCPeerConnectionHandlerClient.h:
+        (WebKit):
+        (WebRTCPeerConnectionHandlerClient):
+
+2012-08-30  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Revert WebCompositorSupport to raw ptrs, make dtor protected
+        https://bugs.webkit.org/show_bug.cgi?id=95520
+
+        Reviewed by Darin Fisher.
+
+        WebPassOwnPtr<T> isn't quite usable from the chromium side - it needs some more work and isn't worth blocking
+        WebCompositorSupport for. Also, the d'tor for WebCompositorSupport needs to be protected, not private, so it can
+        be implemented.
+
+        * Platform.gypi:
+        * chromium/public/WebCompositorSupport.h:
+        (WebKit):
+        (WebKit::WebCompositorSupport::createLayerTreeView):
+        (WebKit::WebCompositorSupport::createLayer):
+        (WebKit::WebCompositorSupport::createContentLayer):
+        (WebKit::WebCompositorSupport::createExternalTextureLayer):
+        (WebKit::WebCompositorSupport::createIOSurfaceLayer):
+        (WebKit::WebCompositorSupport::createImageLayer):
+        (WebKit::WebCompositorSupport::createSolidColorLayer):
+        (WebKit::WebCompositorSupport::createVideoLayer):
+        (WebKit::WebCompositorSupport::createScrollbarLayer):
+        (WebKit::WebCompositorSupport::createAnimation):
+        (WebKit::WebCompositorSupport::createFloatAnimationCurve):
+        (WebKit::WebCompositorSupport::createTransformAnimationCurve):
+        (WebCompositorSupport):
+        * chromium/public/WebPassOwnPtr.h: Removed.
+
+2012-08-30  James Robinson  <jamesr@chromium.org>
+
+        Chromium win build fix - fix typo in gypi
+
+        * Platform.gypi:
+
+2012-08-27  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Add CompositorSupport interface for constructing compositor classes
+        https://bugs.webkit.org/show_bug.cgi?id=95040
+
+        Reviewed by Darin Fisher.
+
+        Adds a WebCompositorSupport interface as a tear-off of PlatformSupport so the embedder can handle provide
+        implementations of compositor interfaces.
+
+        Adds a new WebPassOwnPtr<> type for use when the caller of an API must take ownership of the provided parameter.
+
+        * Platform.gypi:
+        * chromium/public/Platform.h:
+        (WebKit):
+        (WebKit::Platform::compositorSupport):
+        (Platform):
+        * chromium/public/WebCompositorSupport.h: Added.
+        (WebKit):
+        (WebCompositorSupport):
+        (WebKit::WebCompositorSupport::~WebCompositorSupport):
+
+2012-08-30  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Introduce MediaConstraints
+        https://bugs.webkit.org/show_bug.cgi?id=95198
+
+        Reviewed by Adam Barth.
+
+        Adds WebMediaConstraints.
+
+        * Platform.gypi:
+        * chromium/public/WebMediaConstraints.h: Copied from Source/Platform/chromium/public/WebRTCPeerConnectionHandler.h.
+        (WebCore):
+        (WebKit):
+        (WebMediaConstraints):
+        (WebKit::WebMediaConstraints::WebMediaConstraints):
+        (WebKit::WebMediaConstraints::~WebMediaConstraints):
+        (WebKit::WebMediaConstraints::operator=):
+        * chromium/public/WebRTCPeerConnectionHandler.h:
+        (WebKit):
+        (WebRTCPeerConnectionHandler):
+
+2012-08-27  Ian Vollick  <vollick@chromium.org>
+
+        [chromium] Should accelerate rotations of >= 180 degrees
+        https://bugs.webkit.org/show_bug.cgi?id=94860
+
+        Reviewed by James Robinson.
+
+        When generalizing the keyframe interpolation, it became useful to append an identity transform operation,
+        and to ask a WebTransformOperations object if it isIdentity().
+
+        * chromium/public/WebTransformOperations.h:
+        (WebTransformOperations):
+
+2012-08-24  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Clean up dependencies of WebScrollbar and WebScrollbarLayer
+        https://bugs.webkit.org/show_bug.cgi?id=94996
+
+        Reviewed by Adrienne Walker.
+
+        This moves the WebScrollbarLayer::create factory out of #if WEBKIT_IMPLEMENTATION and expresses it in API terms
+        only so anyone who can get a handle on a WebScrollbar can construct the layer. Also removes the ::create() from
+        WebScrollbar, anyone who currently has access to a WebCore::Scrollbar also has access to WebScrollbarImpl.
+
+        * chromium/public/WebScrollbar.h:
+        (WebScrollbar):
+        * chromium/public/WebScrollbarLayer.h:
+        (WebScrollbarLayer):
+
+2012-08-23  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Convert WebLayerTreeView interface into pure virtual
+        https://bugs.webkit.org/show_bug.cgi?id=94866
+
+        Reviewed by Adrienne Walker.
+
+        This makes the WebLayerTreeView interface pure virtual to provide better insulation from the implementation.
+
+        * chromium/public/WebLayerTreeView.h:
+        (WebKit):
+        (Settings):
+        (WebLayerTreeView):
+        (WebKit::WebLayerTreeView::~WebLayerTreeView):
+
+2012-08-24  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Clean up WebAnimation animationId/groupId generation
+        https://bugs.webkit.org/show_bug.cgi?id=94973
+
+        Reviewed by Adrienne Walker.
+
+        This removes the unused groupId from the public interface and makes the implicit animation id generation a bit
+        clearer.
+
+        * chromium/public/WebAnimation.h:
+        (WebAnimation):
+
+2012-08-24  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Add readyState functionality to RTCPeerConnection
+        https://bugs.webkit.org/show_bug.cgi?id=94813
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/WebRTCPeerConnectionHandler.h:
+        (WebRTCPeerConnectionHandler):
+        * chromium/public/WebRTCPeerConnectionHandlerClient.h:
+        (WebRTCPeerConnectionHandlerClient):
+
+2012-08-23  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Convert WebAnimationCurve subtypes into pure virtual
+        https://bugs.webkit.org/show_bug.cgi?id=94068
+
+        Reviewed by Adrienne Walker.
+
+        This makes the Web*AnimationCurve interfaces pure virtual to provide better insulation from the implementation
+        details of the classes.
+
+        * chromium/public/WebAnimation.h:
+        (WebKit::WebAnimation::WebAnimation):
+        (WebAnimation):
+        * chromium/public/WebAnimationCurve.h:
+        * chromium/public/WebFloatAnimationCurve.h:
+        (WebFloatAnimationCurve):
+        (WebKit::WebFloatAnimationCurve::~WebFloatAnimationCurve):
+        * chromium/public/WebTransformAnimationCurve.h:
+        (WebTransformAnimationCurve):
+        (WebKit::WebTransformAnimationCurve::~WebTransformAnimationCurve):
+
+2012-08-22  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Remove WebLayer::setChildren API
+        https://bugs.webkit.org/show_bug.cgi?id=94749
+
+        Reviewed by Adrienne Walker.
+
+        This is redundant with removeAllChildren() / addChild() and less efficient.
+
+        * chromium/public/WebLayer.h:
+        (WebLayer):
+
+2012-08-22  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Change WebLayer from a concrete type to a pure virtual interface
+        https://bugs.webkit.org/show_bug.cgi?id=94174
+
+        Reviewed by Adrienne Walker.
+
+        This changes WebLayer from a value type to a pure virtual interface and changes Web*Layers from subtypes to
+        standalone types that have a WebLayer. This better isolates the implementation from the interface and, since
+        it's not possible to re-wrap an existing layer, makes cleanup explicit instead of requiring the caller to
+        invoke special cleanup methods before shutdown.
+
+        * chromium/public/WebContentLayer.h:
+        (WebContentLayer):
+        * chromium/public/WebExternalTextureLayer.h:
+        (WebExternalTextureLayer):
+        * chromium/public/WebIOSurfaceLayer.h:
+        (WebIOSurfaceLayer):
+        * chromium/public/WebImageLayer.h:
+        (WebImageLayer):
+        * chromium/public/WebLayer.h:
+        (WebKit):
+        (WebLayer):
+        (WebKit::WebLayer::~WebLayer):
+        * chromium/public/WebScrollableLayer.h: Removed.
+        * chromium/public/WebScrollbarLayer.h:
+        (WebScrollbarLayer):
+        * chromium/public/WebSolidColorLayer.h:
+        (WebKit):
+        (WebSolidColorLayer):
+        (WebKit::WebSolidColorLayer::~WebSolidColorLayer):
+        * chromium/public/WebVideoLayer.h:
+        (WebVideoLayer):
+
 2012-08-21  Benjamin Poulain  <bpoulain@apple.com>
 
         Store CString data in the CStringBuffer to avoid the double indirection

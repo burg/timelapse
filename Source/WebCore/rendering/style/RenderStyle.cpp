@@ -26,6 +26,7 @@
 #include "ContentData.h"
 #include "CursorList.h"
 #include "CSSPropertyNames.h"
+#include "Font.h"
 #include "FontSelector.h"
 #include "MemoryInstrumentation.h"
 #include "QuotesData.h"
@@ -34,12 +35,17 @@
 #include "ScaleTransformOperation.h"
 #include "ShadowData.h"
 #include "StyleImage.h"
+#include "StyleInheritedData.h"
 #include "StyleResolver.h"
 #if ENABLE(TOUCH_EVENTS)
 #include "RenderTheme.h"
 #endif
 #include <wtf/StdLibExtras.h>
 #include <algorithm>
+
+#if ENABLE(TEXT_AUTOSIZING)
+#include "TextAutosizer.h"
+#endif
 
 using namespace std;
 
@@ -449,6 +455,11 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
         if (rareNonInheritedData->m_dashboardRegions != other->rareNonInheritedData->m_dashboardRegions)
             return StyleDifferenceLayout;
 #endif
+
+#if ENABLE(CSS_EXCLUSIONS)
+        if (rareNonInheritedData->m_wrapShapeInside != other->rareNonInheritedData->m_wrapShapeInside)
+            return StyleDifferenceLayout;
+#endif
     }
 
     if (rareInheritedData.get() != other->rareInheritedData.get()) {
@@ -667,9 +678,12 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
         // the parent container. For sure, I will have to revisit this code, but for now I've added this in order 
         // to avoid having diff() == StyleDifferenceEqual where wrap-shapes actually differ.
         // Tracking bug: https://bugs.webkit.org/show_bug.cgi?id=62991
-        if (rareNonInheritedData->m_wrapShapeInside != other->rareNonInheritedData->m_wrapShapeInside
-            || rareNonInheritedData->m_wrapShapeOutside != other->rareNonInheritedData->m_wrapShapeOutside)
+        if (rareNonInheritedData->m_wrapShapeOutside != other->rareNonInheritedData->m_wrapShapeOutside)
             return StyleDifferenceRepaint;
+
+        if (rareNonInheritedData->m_clipPath != other->rareNonInheritedData->m_clipPath)
+            return StyleDifferenceRepaint;
+
 
 #if USE(ACCELERATED_COMPOSITING)
     if (rareNonInheritedData.get() != other->rareNonInheritedData.get()) {
@@ -768,9 +782,7 @@ void RenderStyle::setContent(const String& string, bool add)
             // We attempt to merge with the last ContentData if possible.
             if (lastContent->isText()) {
                 TextContentData* textContent = static_cast<TextContentData*>(lastContent);
-                String text = textContent->text();
-                text += string;
-                textContent->setText(text);
+                textContent->setText(textContent->text() + string);
             } else
                 lastContent->setNext(ContentData::create(string));
 
@@ -1221,7 +1233,7 @@ Length RenderStyle::lineHeight() const
     // too, though this involves messily poking into CalcExpressionLength.
     float multiplier = textAutosizingMultiplier();
     if (multiplier > 1 && lh.isFixed())
-        return Length(lh.value() * multiplier, Fixed);
+        return Length(TextAutosizer::computeAutosizedFontSize(lh.value(), multiplier), Fixed);
 #endif
     return lh;
 }
@@ -1260,8 +1272,7 @@ void RenderStyle::setFontSize(float size)
 #if ENABLE(TEXT_AUTOSIZING)
     float multiplier = textAutosizingMultiplier();
     if (multiplier > 1) {
-        // FIXME: Large font sizes needn't be multiplied as much since they are already more legible.
-        desc.setComputedSize(size * multiplier);
+        desc.setComputedSize(TextAutosizer::computeAutosizedFontSize(size, multiplier));
     }
 #endif
 

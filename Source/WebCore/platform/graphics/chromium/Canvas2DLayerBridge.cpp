@@ -27,12 +27,16 @@
 
 #include "Canvas2DLayerBridge.h"
 
+#include "CCRendererGL.h" // For the GLC() macro.
+#include "Canvas2DLayerManager.h"
 #include "GrContext.h"
 #include "GraphicsContext3D.h"
 #include "GraphicsContext3DPrivate.h"
-#include "LayerRendererChromium.h" // For GLC() macro.
+#include "GraphicsLayerChromium.h"
 #include "TraceEvent.h"
+#include <public/Platform.h>
 #include <public/WebCompositor.h>
+#include <public/WebCompositorSupport.h>
 #include <public/WebGraphicsContext3D.h>
 
 using WebKit::WebExternalTextureLayer;
@@ -53,6 +57,9 @@ Canvas2DLayerBridge::Canvas2DLayerBridge(PassRefPtr<GraphicsContext3D> context, 
     , m_size(size)
     , m_canvas(0)
     , m_context(context)
+    , m_bytesAllocated(0)
+    , m_next(0)
+    , m_prev(0)
 {
     if (m_useDoubleBuffering) {
         m_context->makeContextCurrent();
@@ -69,22 +76,28 @@ Canvas2DLayerBridge::Canvas2DLayerBridge(PassRefPtr<GraphicsContext3D> context, 
             grContext->resetContext();
     }
 
-    m_layer = WebExternalTextureLayer::create(this);
-    m_layer.setTextureId(textureId);
-    m_layer.setRateLimitContext(!WebKit::WebCompositor::threadingEnabled() || m_useDoubleBuffering);
+    if (WebKit::WebCompositorSupport* compositorSupport = WebKit::Platform::current()->compositorSupport())
+        m_layer = adoptPtr(compositorSupport->createExternalTextureLayer(this));
+    else
+        m_layer = adoptPtr(WebKit::WebExternalTextureLayer::create(this));
+
+    m_layer->setTextureId(textureId);
+    m_layer->setRateLimitContext(!WebKit::WebCompositor::threadingEnabled() || m_useDoubleBuffering);
+    GraphicsLayerChromium::registerContentsLayer(m_layer->layer());
 }
 
 Canvas2DLayerBridge::~Canvas2DLayerBridge()
 {
+    GraphicsLayerChromium::unregisterContentsLayer(m_layer->layer());
+    Canvas2DLayerManager::get().layerToBeDestroyed(this);
     if (SkDeferredCanvas* deferred = deferredCanvas())
         deferred->setNotificationClient(0);
-    m_layer.setTextureId(0);
+    m_layer->setTextureId(0);
     if (m_useDoubleBuffering) {
         m_context->makeContextCurrent();
         GLC(m_context.get(), m_context->deleteTexture(m_frontBufferTexture));
         m_context->flush();
     }
-    m_layer.clearClient();
 }
 
 SkDeferredCanvas* Canvas2DLayerBridge::deferredCanvas()
@@ -98,8 +111,37 @@ void Canvas2DLayerBridge::prepareForDraw()
 {
     ASSERT(deferredCanvas());
     if (!m_useDoubleBuffering)
-        m_layer.willModifyTexture();
+        m_layer->willModifyTexture();
     m_context->makeContextCurrent();
+}
+
+void Canvas2DLayerBridge::storageAllocatedForRecordingChanged(size_t bytesAllocated)
+{
+    ASSERT(m_deferralMode == Deferred);
+    intptr_t delta = (intptr_t)bytesAllocated - (intptr_t)m_bytesAllocated;
+    m_bytesAllocated = bytesAllocated;
+    Canvas2DLayerManager::get().layerAllocatedStorageChanged(this, delta);
+}
+
+void Canvas2DLayerBridge::flushedDrawCommands()
+{
+    storageAllocatedForRecordingChanged(deferredCanvas()->storageAllocatedForRecording());
+}
+
+size_t Canvas2DLayerBridge::freeMemoryIfPossible(size_t bytesToFree)
+{
+    ASSERT(deferredCanvas());
+    size_t bytesFreed = deferredCanvas()->freeMemoryIfPossible(bytesToFree);
+    if (bytesFreed)
+        Canvas2DLayerManager::get().layerAllocatedStorageChanged(this, -((intptr_t)bytesFreed));
+    m_bytesAllocated -= bytesFreed;
+    return bytesFreed;
+}
+
+void Canvas2DLayerBridge::flush()
+{
+    ASSERT(deferredCanvas());
+    m_canvas->flush();
 }
 
 SkCanvas* Canvas2DLayerBridge::skCanvas(SkDevice* device)
@@ -148,13 +190,15 @@ WebGraphicsContext3D* Canvas2DLayerBridge::context()
 
 WebKit::WebLayer* Canvas2DLayerBridge::layer()
 {
-    return &m_layer;
+    return m_layer->layer();
 }
 
 void Canvas2DLayerBridge::contextAcquired()
 {
     if (m_deferralMode == NonDeferred && !m_useDoubleBuffering)
-        m_layer.willModifyTexture();
+        m_layer->willModifyTexture();
+    else if (m_deferralMode == Deferred)
+        Canvas2DLayerManager::get().layerDidDraw(this);
 }
 
 unsigned Canvas2DLayerBridge::backBufferTexture()
@@ -167,4 +211,3 @@ unsigned Canvas2DLayerBridge::backBufferTexture()
 }
 
 }
-

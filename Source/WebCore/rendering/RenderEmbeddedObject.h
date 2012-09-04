@@ -28,6 +28,7 @@
 namespace WebCore {
 
 class MouseEvent;
+class TextRun;
 
 // Renderer for embeds and objects, often, but not always, rendered via plug-ins.
 // For example, <embed src="foo.html"> does not invoke a plug-in.
@@ -70,7 +71,7 @@ private:
     virtual void layout();
     virtual void viewCleared();
 
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestPoint& pointInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
+    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
 
     virtual bool scroll(ScrollDirection, ScrollGranularity, float multiplier, Node** stopNode);
     virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier, Node** stopNode);

@@ -162,6 +162,7 @@ public:
     virtual void commitDocumentData(const char* data, size_t length);
     virtual unsigned unloadListenerCount() const;
     virtual bool isProcessingUserGesture() const;
+    virtual bool consumeUserGesture() const;
     virtual bool willSuppressOpenerInNewFrame() const;
     virtual void replaceSelection(const WebString&);
     virtual void insertText(const WebString&);
@@ -169,7 +170,6 @@ public:
     virtual void unmarkText();
     virtual bool hasMarkedText() const;
     virtual WebRange markedRange() const;
-    virtual void setSelectionToRange(const WebRange&) OVERRIDE;
     virtual bool firstRectForCharacterRange(unsigned location, unsigned length, WebRect&) const;
     virtual size_t characterIndexForPoint(const WebPoint&) const;
     virtual bool executeCommand(const WebString&, const WebNode& = WebNode());

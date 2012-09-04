@@ -45,6 +45,13 @@ BUGWK83897 SKIP : fast/regions = PASS
 BUGWK83897 SKIP : inspector/styles/protocol-css-regions-commands.html = PASS
 BUGWK83897 SKIP : inspector/styles/region-style-crash.html = PASS
 
+// Deletion UI is a Mail-ism. We don't need to wory about this. (via Chromium)
+BUGWKEFL SKIP : editing/deleting/deletionUI-single-instance.html = PASS
+BUGWKEFL SKIP : fast/dom/Element/id-in-deletebutton.html = PASS
+
+// This test is out-dated since r95899.
+BUGWK65709 : canvas/philip/tests/2d.drawImage.outsidesource.html = TEXT
+
 // Exclusions implementation not complete yet.
 BUGWK83898 SKIP : fast/exclusions = PASS
 
@@ -77,9 +84,6 @@ WONTFIX X86 : svg/css/stars-with-shadow.html = PASS TEXT
 // Newly added test which fails on other bots too
 BUGWK85969 : http/tests/loading/post-in-iframe-with-back-navigation.html = TEXT
 
-// Padding is broken for range inputs.
-BUGWK94595 : fast/forms/range/range-hit-test-with-padding.html = TEXT
-
 // Missing drag'n'drop support.
 BUGWK86623 : editing/pasteboard/drag-and-drop-image-contenteditable.html = TEXT
 BUGWK86623 : editing/pasteboard/drag-and-drop-inputimage-contenteditable.html = TEXT
@@ -97,7 +101,10 @@ BUGWK86623 : editing/pasteboard/drop-text-events.html = TEXT
 BUGWK86623 : editing/pasteboard/get-data-text-plain-drop.html = TEXT
 BUGWK86623 : fast/dom/shadow/drop-event-for-input-in-shadow.html = TEXT
 BUGWK86623 : fast/dom/shadow/drop-event-in-shadow.html = TEXT
+BUGWK86623 SKIP : fast/events/drag-and-drop-subframe-dataTransfer.html = TEXT
 BUGWK86623 : fast/events/drag-display-none-element.html = TEXT
+BUGWK86623 : fast/events/drag-in-frames.html = TEXT
+BUGWK86623 : fast/events/drag-parent-node.html = TEXT
 BUGWK86623 : http/tests/local/fileapi/file-last-modified-after-delete.html = TEXT
 
 // Missing drag'n'drop, needs baselines
@@ -107,6 +114,16 @@ BUGWK86623 : editing/pasteboard/drag-image-to-contenteditable-in-iframe.html = M
 BUGWK86623 : editing/pasteboard/drop-text-without-selection.html = MISSING
 BUGWK86623 : editing/pasteboard/smart-drag-drop.html = MISSING
 BUGWK86623 : editing/pasteboard/subframe-dragndrop-1.html = MISSING
+
+// CSS Sticky (-webkit-sticky) not supported by EFL.
+BUGWK95182 : fast/css/sticky = IMAGE
+
+// Testcase assumes a thumb width of 12px, default there uses 29px.
+BUGWK95071 : fast/forms/range/slider-in-multi-column.html = TEXT
+BUGWK95071 : fast/forms/range/slider-transformed.html = TEXT
+
+// TestRunner does not implement handleErrorPages()
+BUGWKEFL : fast/history/back-forward-reset-after-error-handling.html = TEXT
 
 // The EFL port has no support for webarchives.
 BUGWKEFL SKIP : webarchive = PASS
@@ -143,11 +160,24 @@ BUGWK84635 SKIP : fast/dom/HTMLDialogElement = TEXT
 BUGWK85532 SKIP : fast/sub-pixel = MISSING
 
 // DeviceOrientation support is not enabled by default.
+BUGWKEFL SKIP : fast/dom/DeviceOrientation = TEXT
+BUGWKEFL SKIP : fast/dom/Window/window-properties-device-orientation.html = TEXT
 BUGWKEFL SKIP : inspector/device-orientation-success.html = TEXT
+
+// EFL port does not enable ORIENTATION_EVENTS
+BUGWK90928 SKIP : fast/dom/Orientation = TEXT
+
+// EFL port does not implement DeviceMotion
+BUGWK95300 SKIP : fast/dom/DeviceMotion = TEXT
+
+// The EFL port has no support for accessibility features
+BUGWKEFL SKIP : accessibility = TEXT
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // CRASHES
 //////////////////////////////////////////////////////////////////////////////////////////
+
+BUGWK94458 DEBUG : http/tests/security/XFrameOptions/x-frame-options-deny-meta-tag-in-body.html = CRASH TEXT
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // FLAKY TESTS
@@ -180,6 +210,7 @@ BUGWKEFL : http/tests/inspector/search/resources-search-match-index.html = TEXT 
 BUGWK93820 : inspector/console/console-format-collections.html = TEXT PASS
 BUGWKEFL : inspector/profiler/heap-snapshot.html = TEXT PASS
 BUGWKEFL : inspector/timeline/timeline-enum-stability.html = TEXT PASS
+BUGWK95066 : inspector/styles/media-queries.html = TEXT PASS
 
 // Aborting application cache downloads is flaky.
 BUGWK87633 : http/tests/appcache/abort-cache-onchecking-manifest-404.html = TEXT PASS
@@ -339,7 +370,7 @@ BUGWK84338 : editing/style/apply-through-end-of-document.html = TEXT
 BUGWK84338 : editing/style/non-inheritable-styles.html = TEXT
 BUGWK84338 : editing/style/smoosh-styles-003.html = TEXT
 BUGWK84338 : fast/events/clipboard-dataTransferItemList.html = TEXT
-BUGWK84338 : fast/forms/plaintext-mode-2.html = TEXT MISSING
+BUGWK84338 : fast/forms/plaintext-mode-2.html = MISSING
 BUGWK84338 : fast/forms/textarea-paste-newline.html = TEXT
 
 // Missing showModalDialog implementation
@@ -432,10 +463,18 @@ BUGWK82294 : compositing/layer-creation/scroll-partial-update.html = TEXT
 BUGWK82294 : compositing/layer-creation/spanOverlapsCanvas.html = TEXT
 BUGWK82294 : compositing/layer-creation/translatez-overlap.html = TEXT
 BUGWK82294 : compositing/overflow/clip-descendents.html = TEXT
+BUGWK82294 SKIP : compositing/overflow/clipping-ancestor-with-accelerated-scrolling-ancestor.html = MISSING
 BUGWK82294 : compositing/overflow/content-gains-scrollbars.html = TEXT
 BUGWK82294 : compositing/overflow/content-loses-scrollbars.html = TEXT
+BUGWK82294 SKIP : compositing/overflow/nested-scrolling.html = MISSING
+BUGWK82294 : compositing/overflow/overflow-auto-with-touch.html = TEXT
+BUGWK82294 SKIP : compositing/overflow/overflow-clip-with-accelerated-scrolling-ancestor.html = MISSING
+BUGWK82294 : compositing/overflow/overflow-overlay-with-touch.html = TEXT
 BUGWK82294 : compositing/overflow/overflow-scrollbar-layers.html = TEXT
+BUGWK82294 SKIP : compositing/overflow/remove-overflow-crash2.html = MISSING
 BUGWK82294 : compositing/overflow/resize-painting.html = TEXT
+BUGWK82294 : compositing/overflow/scrolling-content-clip-to-viewport.html = TEXT
+BUGWK82294 : compositing/overflow/textarea-scroll-touch.html = TEXT
 BUGWK82294 : compositing/plugins/no-backing-store.html = TEXT
 BUGWK82294 : compositing/plugins/small-to-large-composited-plugin.html = TEXT
 BUGWK82294 : compositing/rtl/rtl-absolute-overflow-scrolled.html = TEXT
@@ -492,7 +531,18 @@ BUGWK86730 : compositing/layer-creation/fixed-position-scroll.html = MISSING
 // EFL does not support WebGL
 BUGWK77219 : compositing/backface-visibility/backface-visibility-webgl.html = TEXT
 BUGWK77219 : compositing/visibility/visibility-simple-webgl-layer.html = TEXT
+BUGWK77219 SKIP : compositing/webgl/webgl-background-color.html = MISSING
+BUGWK77219 SKIP : compositing/webgl/webgl-no-alpha.html = MISSING
+BUGWK77219 SKIP : compositing/webgl/webgl-nonpremultiplied-blend.html = MISSING
+BUGWK77219 SKIP : compositing/webgl/webgl-reflection.html = MISSING
+BUGWK77219 SKIP : fast/canvas/webgl = TEXT
 BUGWK77219 : fast/dom/constructed-objects-prototypes.html = TEXT
+BUGWK77219 SKIP : fast/events/constructors/webgl-context-event-constructor.html = TEXT
+BUGWK77219 SKIP : http/tests/canvas/webgl/origin-clean-conformance.html = TEXT
+BUGWK77219 SKIP : http/tests/security/webgl-remote-read-remote-image-allowed-with-credentials.html = TEXT
+BUGWK77219 SKIP : http/tests/security/webgl-remote-read-remote-image-allowed.html = TEXT
+BUGWK77219 SKIP : http/tests/security/webgl-remote-read-remote-image-blocked-no-crossorigin.html = TEXT
+BUGWK77219 : inspector/profiler/webgl/webgl-profiler-api-changes.html = TEXT
 
 BUGWK84759 : ietestcenter/css3/multicolumn/column-containing-block-001.htm = IMAGE
 BUGWK84760 : ietestcenter/css3/multicolumn/column-containing-block-002.htm = IMAGE
@@ -518,12 +568,46 @@ BUGWK88045 : fast/dom/gc-attribute-node.html = TEXT
 // Requires WebP support.
 BUGWKEFL SKIP : fast/canvas/canvas-toDataURL-webp.html = PASS
 BUGWKEFL SKIP : fast/images/webp-image-decoding.html = PASS
+BUGWKEFL SKIP : http/tests/images/webp-partial-load.html = PASS
+BUGWKEFL SKIP : http/tests/images/webp-progressive-load.html = PASS
+
+// Requires MEDIA_SOURCE support.
+BUGWK95296 SKIP : http/tests/media/media-source = TEXT
+
+// Requires ENCRYPTED_MEDIA support.
+BUGWK95297 SKIP : media/encrypted-media = TEXT
+BUGWK95297 SKIP : fast/events/constructors/media-key-event-constructor.html = TEXT
+
+// Requires POINTER_LOCK support.
+BUGWK88080 SKIP : pointer-lock = TEXT
+BUGWK88080 SKIP : http/tests/pointer-lock = TEXT
+
+// EXIF orientation support has not yet been implemented for EFL port
+BUGWK95299 SKIP : fast/images/exif-orientation.html = PASS
+BUGWK95299 SKIP : fast/images/exif-orientation-css.html = PASS
+
+// Requires WEB_AUDIO support.
+BUGWK91738 SKIP : webaudio = TEXT
+
+// Requires MEDIA_STREAM support.
+BUGWK87662 SKIP : fast/mediastream = TEXT
+
+// The EFL port has no support for x-webkit-speech
+BUGWK95302 SKIP : fast/speech = TEXT
+BUGWK95302 SKIP : fast/events/constructors/speech-recognition-event-constructor.html = TEXT
+
+// Requires support for Web notifications
+BUGWK73544 SKIP : fast/notifications = TEXT
+BUGWK73544 SKIP : http/tests/notifications = TEXT
 
 // This tests fails by one on 32 bits machines due to rounding issues.
 BUGWKEFL : fast/css/percentage-non-integer.html = TEXT PASS
 
 // Test is timeouting, passes in all other platforms.
 BUGWKEFL SKIP : fast/css/device-aspect-ratio.html = PASS
+
+// The test is too slow on Debug bot and randomly fails
+BUGWK61932 DEBUG : jquery/manipulation.html = PASS TEXT TIMEOUT
 
 // These test -apple- prefixed CSS properties, which we don't support.
 WONTFIX SKIP : fast/css/apple-prefix.html = TEXT
@@ -543,12 +627,13 @@ BUGWK29359 : fast/css/pseudo-in-range.html = TEXT
 BUGWK29359 : fast/css/pseudo-out-of-range.html = TEXT
 BUGWK29359 : fast/css/pseudo-in-range-invalid-value.html = TEXT
 
+// Tracking corner not being painted for TextArea.
 BUGWK85484 : fast/css/resize-corner-tracking-transformed.html = TEXT
 BUGWK85484 : fast/css/resize-corner-tracking.html = TEXT
+BUGWK85484 : fast/forms/textarea-scroll-height.html = MISSING
+BUGWK85484 : fast/forms/textarea-scrolled-type.html = MISSING
 
 BUGWK85493 : fast/css/square-button-appearance.html = TEXT
-
-BUGWK85494 : fast/css/button-height.html = TEXT
 
 BUGWK73766 : css3/unicode-bidi-isolate-aharon-failing.html = IMAGE IMAGE+TEXT
 
@@ -571,6 +656,7 @@ BUGWK85594 : fast/dom/navigator-detached-no-crash.html = TEXT
 
 // Incorrect rendering results after r115846
 BUGWK85599 : http/tests/navigation/postredirect-basic.html = TEXT
+BUGWK85599 : http/tests/navigation/postredirect-goback1.html = TEXT
 
 // Interferes with the rAF tests that are enabled
 BUGWK85689 SKIP : fast/animation/request-animation-frame-disabled.html = TEXT
@@ -684,16 +770,13 @@ BUGWKEFL : fast/dom/shadow/selections-in-shadow.html = TEXT
 BUGWK90860 : fast/dom/shadow/shadowdom-for-object-complex-shadow.html = IMAGE
 BUGWK90860 : fast/dom/shadow/shadowdom-for-object-only-shadow.html = IMAGE
 BUGWK90860 : fast/dom/shadow/shadowdom-for-object-without-shadow.html = IMAGE
-BUGWK91485 : fast/dom/shadow/shadowdom-for-textarea-complex-shadow.html = IMAGE
-BUGWK91485 : fast/dom/shadow/shadowdom-for-textarea-only-shadow.html = IMAGE
-BUGWK91485 : fast/dom/shadow/shadowdom-for-textarea-without-shadow.html = IMAGE
 BUGWK91487 : fast/dom/shadow/shadowdom-for-select-complex-shadow.html = IMAGE
 BUGWK91487 : fast/dom/shadow/shadowdom-for-select-without-shadow.html = IMAGE
 BUGWK91488 : fast/dom/shadow/shadowdom-for-output-only-shadow.html = IMAGE
 BUGWK91489 : fast/dom/shadow/shadowdom-for-fieldset-complex-shadow.html = IMAGE
 BUGWK91489 : fast/dom/shadow/shadowdom-for-fieldset-only-shadow.html = IMAGE
-BUGWK91491 : fast/dom/shadow/shadowdom-for-keygen-complex-shadow.html = IMAGE
-BUGWK91491 : fast/dom/shadow/shadowdom-for-keygen-without-shadow.html = IMAGE
+BUGWK95439 : fast/dom/shadow/shadowdom-for-textarea-complex-shadow.html = IMAGE
+BUGWK95439 : fast/dom/shadow/shadowdom-for-textarea-with-placeholder.html = IMAGE
 
 // This test is specific to QuickTime media engine.
 BUGWKEFL SKIP : media/video-does-not-loop.html = PASS
@@ -710,6 +793,9 @@ BUGWK86615 : editing/deleting/regional-indicators.html = TEXT
 
 // Custom font loading delaying text drawing on Canvas
 BUGWK87355 : canvas/philip/tests/2d.text.draw.fontface.notinpage.html = TEXT
+
+// Tests failing due to rounding problems in colors inside pixman
+BUGWK49964 : fast/canvas/canvas-fillPath-shadow.html = TEXT
 
 // Missing spell checking support (Efl's port does not support spell checking, Gtk port uses Enchant library https://bugs.webkit.org/show_bug.cgi?id=61787)
 BUGWK86637 : editing/spelling/grammar.html = TEXT
@@ -744,6 +830,82 @@ BUGWK86637 : editing/spelling/spellcheck-paste-disabled.html = TEXT
 BUGWK86637 : editing/spelling/spellcheck-queue.html = TEXT
 BUGWK86637 : editing/spelling/spellcheck-sequencenum.html = TEXT
 BUGWK86637 : editing/spelling/spelling-marker-description.html = TEXT
+
+// These tests probably just needs new baselines.
+BUGWK95489 : tables/mozilla_expected_failures/bugs/97619.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug10140.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug10216.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug104898.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug1055-2.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug14007-2.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug1725.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug2479-5.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug29058-2.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug3166-11.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug3166-12.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug3166-13.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug3166-14.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug3166-16.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug3166-17.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug3166-3.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug3166-4.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug3166-5.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug3166-6.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug3166-9.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug58402-2.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug59252.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug7243.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug85016.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug91057.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/bugs/bug92647-1.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/collapsing_borders/bug41262-1.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/collapsing_borders/bug41262-5.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/core/captions1.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/core/captions2.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/core/captions3.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/core/standards1.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_border-table-cell.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_border-table-column-group.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_border-table-column.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_border-table-quirks.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_border-table-row-group.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_border-table-row.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_border-table.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_fixed-bg.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_layers-hide.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_layers-show.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_position-table-cell.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_position-table-column-group.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_position-table-column.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_position-table-row-group.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/backgr_position-table-row.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_frame_lhs.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_frame_rhs.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_frame_vsides.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_caption.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_caption_bottom.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_caption_hidden.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_caption_hidden_table.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_caption_left.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_caption_right.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_caption_top.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_dirty_reflow_row.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_dirty_reflow_tbody.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_style_reflow_cell.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_style_reflow_cell_sibling.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_style_reflow_row.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_style_reflow_row_sibling.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_style_reflow_table.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_style_reflow_table_caption.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_style_reflow_tbody.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_overflow_style_reflow_tbody_sibling.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_rules_cols.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/table_rules_rows.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/tables_caption_align_left.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/tables_caption_align_right.html = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/x_caption_align_left.xml = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/marvin/x_caption_align_right.xml = TEXT
+BUGWK95489 : tables/mozilla_expected_failures/other/test4.html = TEXT
 
 // Missing test infrastructure, no gamepads available.
 BUGWKEFL : gamepad/gamepad-polling-access.html = TEXT
@@ -819,24 +981,6 @@ BUGWK92352 : css3/flexbox/flex-rounding.html = TEXT
 BUGWK92942 SKIP : fast/dom/Proximity = PASS
 BUGWK92942 SKIP : fast/events/constructors/device-proximity-event-constructor.html = PASS
 
-// These tests are failing after r124512
-BUGWK93073 : mathml/presentation/attributes.xhtml = TEXT
-BUGWK93073 : mathml/presentation/fenced-mi.xhtml = TEXT
-BUGWK93073 : mathml/presentation/fenced.xhtml = TEXT
-BUGWK93073 : mathml/presentation/fractions-vertical-alignment.xhtml = TEXT
-BUGWK93073 : mathml/presentation/fractions.xhtml = TEXT
-BUGWK93073 : mathml/presentation/mo-stretch.html = TEXT
-BUGWK93073 : mathml/presentation/mroot-pref-width.html = TEXT
-BUGWK93073 : mathml/presentation/roots.xhtml = TEXT
-BUGWK93073 : mathml/presentation/row-alignment.xhtml = TEXT
-BUGWK93073 : mathml/presentation/sub.xhtml = TEXT
-BUGWK93073 : mathml/presentation/subsup.xhtml = TEXT
-BUGWK93073 : mathml/presentation/sup.xhtml = TEXT
-BUGWK93073 : mathml/presentation/tables.xhtml = TEXT
-BUGWK93073 : mathml/presentation/tokenElements.xhtml = TEXT
-BUGWK93073 : mathml/presentation/under.xhtml = TEXT
-BUGWK93073 : mathml/presentation/underover.xhtml = TEXT
-
 // Tests are outdated: spaces are not supposed to be collapsed anymore
 // according to spec: http://www.w3.org/TR/2dcontext/#drawing-text-to-the-canvas
 BUGWK61799 : canvas/philip/tests/2d.text.draw.space.collapse.end.html = TEXT
@@ -902,7 +1046,43 @@ BUGWK84037 : fast/text/international/spaces-combined-in-vertical-text.html = TEX
 // New test introduced in r125790 fails
 BUGWK94341 : inspector/timeline/timeline-decode-resize.html = TEXT
 
-// Slider thumb can not be displayed without parent slider.
-BUGWK94334 : fast/forms/range/thumbslider-no-parent-slider.html = MISSING
-
 BUGWK94690 : fast/dom/shadow/shadowdom-dynamic-styling.html = TEXT
+
+// Fails after r126350
+BUGWK94788 : media/track/track-cue-rendering-snap-to-lines-not-set.html = TEXT
+
+// Intrusive theming overrides collide with style-related LayoutTests.
+BUGWK85877 : fast/forms/menulist-narrow-width.html = MISSING
+BUGWK85877 : fast/forms/select-baseline.html = MISSING
+BUGWK85877 : fast/forms/menulist-style-color.html = MISSING
+BUGWK85877 : fast/forms/select-style.html = MISSING
+
+// Test 2 in below test is failing.
+BUGWK94877 : fast/forms/listbox-hit-test-zoomed.html = MISSING
+
+// The text in the popup button is clipped.
+BUGWK94878 : fast/forms/menulist-restrict-line-height.html = MISSING
+
+// Cancel mark in search field is not working.
+BUGWK94880 : fast/forms/search-cancel-button-style-sharing.html = MISSING
+BUGWK94880 : fast/forms/search-rtl.html = MISSING
+
+//Require rebaseline after https://bugs.webkit.org/show_bug.cgi?id=77754
+BUGWK77754 : fast/inline/left-right-center-inline-alignment-in-ltr-and-rtl-blocks.html = TEXT
+BUGWK77754 : fast/inline/absolute-positioned-inline-in-centred-block.html = TEXT
+BUGWK77754 : fast/css/absolute-child-with-percent-height-inside-relative-parent.html = TEXT
+
+// Fails after r127035.
+BUGWK95428 : media/video-controls-captions.html = TEXT
+
+//Require rebaseline after https://bugs.webkit.org/show_bug.cgi?id=80394
+BUGWK80394 : fast/block/margin-collapse/empty-clear-blocks.html = IMAGE+TEXT
+BUGWK80394 : fast/block/float/024.html = IMAGE+TEXT
+BUGWK80394 : fast/block/margin-collapse/025.html = TEXT
+BUGWK80394 : fast/block/margin-collapse/block-inside-inline/025.html = TEXT
+
+// Started failing on JSC ports after r127202.
+BUGWK95530 : http/tests/security/inactive-document-with-empty-security-origin.html = TEXT
+
+// Fails after r127140.
+BUGWK95551 : fast/forms/datalist/input-appearance-range-with-datalist-rtl.html = IMAGE

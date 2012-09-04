@@ -23,7 +23,6 @@
 #include "BackingStore.h"
 #include "BackingStoreClient.h"
 #include "BackingStore_p.h"
-#include "CString.h"
 #include "ColorChooser.h"
 #include "DatabaseTracker.h"
 #include "Document.h"
@@ -69,6 +68,8 @@
 #include <BlackBerryPlatformLog.h>
 #include <BlackBerryPlatformSettings.h>
 #include <BlackBerryPlatformWindow.h>
+
+#include <wtf/text/CString.h>
 
 #define DEBUG_OVERFLOW_DETECTION 0
 
@@ -825,6 +826,12 @@ PassOwnPtr<ColorChooser> ChromeClientBlackBerry::createColorChooser(ColorChooser
     return nullptr;
 }
 
+#if ENABLE(NAVIGATOR_CONTENT_UTILS)
+void ChromeClientBlackBerry::registerProtocolHandler(const String& scheme, const String& baseURL, const String& url, const String& title)
+{
+    m_webPagePrivate->m_client->registerProtocolHandler(scheme, baseURL, url, title);
+}
+
 #if ENABLE(CUSTOM_SCHEME_HANDLER)
 ChromeClient::CustomHandlersState ChromeClientBlackBerry::isProtocolHandlerRegistered(const String& scheme, const String& baseURL, const String& url)
 {
@@ -836,12 +843,6 @@ void ChromeClientBlackBerry::unregisterProtocolHandler(const String& scheme, con
     m_webPagePrivate->m_client->unregisterProtocolHandler(scheme, baseURL, url);
 }
 #endif
-
-#if ENABLE(REGISTER_PROTOCOL_HANDLER)
-void ChromeClientBlackBerry::registerProtocolHandler(const String& scheme, const String& baseURL, const String& url, const String& title)
-{
-    m_webPagePrivate->m_client->registerProtocolHandler(scheme, baseURL, url, title);
-}
 #endif
 
 } // namespace WebCore

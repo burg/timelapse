@@ -141,14 +141,13 @@ fast/text/format-control.html
 fast/url/anchor.html
 http/tests/websocket/tests/hixie76/bad-sub-protocol-non-ascii.html
 
-# layoutTestController.ignoreDesktopNotificationPermissionRequests is unimplemented
+# layoutTestController.ignoreLegacyWebNotificationPermissionRequests is unimplemented
 fast/notifications
 
 # layoutTestController.setScrollbarPolicy is unimplemented
 fast/overflow/scrollbar-restored-and-then-locked.html
 
 # FAIL: Timed out waiting for notifyDone to be called
-http/tests/appcache
 media/video-source-moved.html
 
 # These tests always fail (with and without --singly). It needs investigation.
@@ -326,6 +325,18 @@ compositing/layers-inside-overflow-scroll.html
 # https://bugs.webkit.org/show_bug.cgi?id=89645
 compositing/backface-visibility/backface-visibility-webgl.html
 
+# [Qt][WK2] New compositing test are failing since added in r126663.
+# https://bugs.webkit.org/show_bug.cgi?id=95076
+compositing/overflow/overflow-auto-with-touch-no-overflow.html
+compositing/overflow/overflow-auto-with-touch.html
+compositing/overflow/overflow-hidden-with-touch.html
+compositing/overflow/overflow-overlay-with-touch-no-overflow.html
+compositing/overflow/overflow-overlay-with-touch.html
+compositing/overflow/overflow-scroll-with-touch-no-overflow.html
+compositing/overflow/overflow-visible-with-touch.html
+compositing/overflow/scrolling-content-clip-to-viewport.html
+compositing/overflow/textarea-scroll-touch.html
+
 # [Qt] [WK2] Some fullscreen layout tests are timing out on the bot
 # https://bugs.webkit.org/show_bug.cgi?id=92543
 fullscreen/video-controls-timeline.html
@@ -466,3 +477,7 @@ fast/events/media-focus-in-standalone-media-document.html
 # New http/tests/securitycontentSecurityPolicy/object-src-url-blocked.html introduced in r124371 fails on EFL, GTK, Qt
 # https://bugs.webkit.org/show_bug.cgi?id=92963
 http/tests/security/contentSecurityPolicy/object-src-url-blocked.html
+
+# REGRESSION(r127091): It made layout tests extremely slow
+# https://bugs.webkit.org/show_bug.cgi?id=83038
+http/tests/appcache

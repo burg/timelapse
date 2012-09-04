@@ -183,6 +183,7 @@ WebInspector.ProfileHeader.prototype = {
 /**
  * @constructor
  * @extends {WebInspector.Panel}
+ * @implements {WebInspector.ContextMenu.Provider}
  */
 WebInspector.ProfilesPanel = function()
 {
@@ -247,13 +248,15 @@ WebInspector.ProfilesPanel = function()
         this._registerProfileType(new WebInspector.HeapSnapshotProfileType());
     if (WebInspector.experimentsSettings.nativeMemorySnapshots.isEnabled())
         this._registerProfileType(new WebInspector.NativeMemoryProfileType());
+    if (WebInspector.experimentsSettings.webGLInspection.isEnabled())
+        this._registerProfileType(new WebInspector.WebGLProfileType());
 
     InspectorBackend.registerProfilerDispatcher(new WebInspector.ProfilerDispatcher(this));
 
     this._createFileSelectorElement();
     this.element.addEventListener("contextmenu", this._handleContextMenuEvent.bind(this), true);
 
-    WebInspector.ObjectPropertiesSection.addContextMenuProvider(new WebInspector.RevealInHeapSnapshotContextMenuProvider());
+    WebInspector.ContextMenu.registerProvider(this);
 }
 
 WebInspector.ProfilesPanel.prototype = {
@@ -1074,36 +1077,23 @@ WebInspector.ProfilesPanel.prototype = {
             if (done >= total)
                 this._removeTemporaryProfile(WebInspector.HeapSnapshotProfileType.TypeId);
         }
-    }
-}
+    },
 
-WebInspector.ProfilesPanel.prototype.__proto__ = WebInspector.Panel.prototype;
-
-
-/**
- * @implements {WebInspector.ObjectPropertiesSection.ContextMenuProvider}
- * @constructor
- */
-WebInspector.RevealInHeapSnapshotContextMenuProvider = function()
-{
-}
-
-WebInspector.RevealInHeapSnapshotContextMenuProvider.prototype = {
-    /**
-     * @override
-     * @param {WebInspector.ObjectPropertiesSection} section
+    /** 
      * @param {WebInspector.ContextMenu} contextMenu
+     * @param {Object} target
      */
-    populateContextMenu: function(section, contextMenu)
+    appendApplicableItems: function(contextMenu, target)
     {
-        if (WebInspector.inspectorView.currentPanel() !== WebInspector.ProfilesPanel._instance)
+        if (WebInspector.inspectorView.currentPanel() !== this)
             return;
 
-        var objectId = section.object.objectId;
+        var object = /** @type {WebInspector.RemoteObject} */ target;
+        var objectId = object.objectId;
         if (!objectId)
             return;
 
-        var heapProfiles = WebInspector.ProfilesPanel._instance.getProfiles(WebInspector.HeapSnapshotProfileType.TypeId);
+        var heapProfiles = this.getProfiles(WebInspector.HeapSnapshotProfileType.TypeId);
         if (!heapProfiles.length)
             return;
 
@@ -1114,10 +1104,10 @@ WebInspector.RevealInHeapSnapshotContextMenuProvider.prototype = {
 
         function didReceiveHeapObjectId(viewName, error, result)
         {
-            if (WebInspector.inspectorView.currentPanel() !== WebInspector.ProfilesPanel._instance)
+            if (WebInspector.inspectorView.currentPanel() !== this)
                 return;
             if (!error)
-                WebInspector.ProfilesPanel._instance.showObject(result, viewName);
+                this.showObject(result, viewName);
         }
 
         contextMenu.appendItem(WebInspector.UIString("Reveal in Dominators View"), revealInView.bind(this, "Dominators"));
@@ -1125,6 +1115,7 @@ WebInspector.RevealInHeapSnapshotContextMenuProvider.prototype = {
     }
 }
 
+WebInspector.ProfilesPanel.prototype.__proto__ = WebInspector.Panel.prototype;
 
 /**
  * @constructor
@@ -1328,3 +1319,4 @@ importScript("HeapSnapshotWorkerDispatcher.js");
 importScript("NativeMemorySnapshotView.js");
 importScript("ProfileLauncherView.js");
 importScript("TopDownProfileDataGridTree.js");
+importScript("WebGLProfileView.js");

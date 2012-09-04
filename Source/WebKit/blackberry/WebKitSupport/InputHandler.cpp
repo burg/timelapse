@@ -22,7 +22,6 @@
 #include "BackingStore.h"
 #include "BackingStoreClient.h"
 #include "CSSStyleDeclaration.h"
-#include "CString.h"
 #include "Chrome.h"
 #include "DOMSupport.h"
 #include "DatePickerClient.h"
@@ -68,6 +67,7 @@
 #include <BlackBerryPlatformMisc.h>
 #include <BlackBerryPlatformSettings.h>
 #include <sys/keycodes.h>
+#include <wtf/text/CString.h>
 
 #define ENABLE_INPUT_LOG 0
 #define ENABLE_FOCUS_LOG 0
@@ -135,6 +135,7 @@ InputHandler::InputHandler(WebPagePrivate* page)
     , m_pendingKeyboardVisibilityChange(NoChange)
     , m_delayKeyboardVisibilityChange(false)
 {
+    pthread_mutex_init(&m_sequenceMapMutex, 0);
 }
 
 InputHandler::~InputHandler()
@@ -540,8 +541,8 @@ void InputHandler::requestCheckingOfString(PassRefPtr<WebCore::TextCheckingReque
         return;
     }
 
-    // Check if field explicitly asked for spellchecking.
-    if (DOMSupport::elementSupportsSpellCheck(m_currentFocusElement.get()) != DOMSupport::On) {
+    // Check if the field should be spellchecked.
+    if (!shouldSpellCheckElement(m_currentFocusElement.get())) {
         spellCheckingRequestCancelled(sequenceId, true /* isSequenceId */);
         return;
     }
@@ -581,6 +582,7 @@ void InputHandler::requestCheckingOfString(PassRefPtr<WebCore::TextCheckingReque
         return;
     }
 
+    BlackBerry::Platform::MutexLocker lock(&m_sequenceMapMutex);
     int32_t transactionId = m_webPage->m_client->checkSpellingOfStringAsync(checkingString, paragraphLength);
     free(checkingString);
 
@@ -598,6 +600,7 @@ void InputHandler::requestCheckingOfString(PassRefPtr<WebCore::TextCheckingReque
 
 int32_t InputHandler::convertTransactionIdToSequenceId(int32_t transactionId)
 {
+    BlackBerry::Platform::MutexLocker lock(&m_sequenceMapMutex);
     std::map<int32_t, int32_t>::iterator it = m_sequenceMap.find(transactionId);
 
     if (it == m_sequenceMap.end())
@@ -660,6 +663,7 @@ void InputHandler::spellCheckingRequestProcessed(int32_t transactionId, spannabl
 
 void InputHandler::cancelAllSpellCheckingRequests()
 {
+    BlackBerry::Platform::MutexLocker lock(&m_sequenceMapMutex);
     for (std::map<int32_t, int32_t>::iterator it = m_sequenceMap.begin(); it != m_sequenceMap.end(); ++it)
         spellCheckingRequestCancelled(it->second, true /* isSequenceId */);
     m_sequenceMap.clear();
@@ -672,7 +676,7 @@ void InputHandler::spellCheckingRequestCancelled(int32_t id, bool isSequenceId)
 
     int32_t sequenceId = isSequenceId ? id : convertTransactionIdToSequenceId(id);
     SpellChecker* spellChecker = getSpellChecker();
-    if (!spellChecker) {
+    if (!spellChecker || !sequenceId) {
         SpellingLog(LogLevelWarn, "InputHandler::spellCheckingRequestCancelled failed to cancel the request with sequenceId %d", sequenceId);
         return;
     }
@@ -838,8 +842,8 @@ void InputHandler::setElementFocused(Element* element)
     SpellingLog(LogLevelInfo, "InputHandler::setElementFocused Focusing the field took %f seconds.", timer.elapsed());
 #endif
 
-    // Check if the field explicitly asks for spellchecking.
-    if (DOMSupport::elementSupportsSpellCheck(element) != DOMSupport::On)
+    // Check if the field should be spellchecked.
+    if (!shouldSpellCheckElement(element))
         return;
 
     // Spellcheck the field in its entirety.
@@ -851,9 +855,28 @@ void InputHandler::setElementFocused(Element* element)
 #endif
 }
 
+bool InputHandler::shouldSpellCheckElement(const Element* element) const
+{
+    DOMSupport::AttributeState spellCheckAttr = DOMSupport::elementSupportsSpellCheck(element);
+
+    // Explicitly set to off.
+    if (spellCheckAttr == DOMSupport::Off)
+        return false;
+
+    // Undefined and part of a set of cases which we do not wish to check. This includes user names and email addresses, so we are piggybacking on NoAutocomplete cases.
+    if (spellCheckAttr == DOMSupport::Default && (m_currentFocusElementTextEditMask & NO_AUTO_TEXT))
+        return false;
+
+    return true;
+}
+
 void InputHandler::spellCheckBlock(VisibleSelection& visibleSelection, TextCheckingProcessType textCheckingProcessType)
 {
     if (!isActiveTextEdit())
+        return;
+
+    RefPtr<Range> rangeForSpellChecking = visibleSelection.toNormalizedRange();
+    if (!rangeForSpellChecking || !rangeForSpellChecking->text() || !rangeForSpellChecking->text().length())
         return;
 
     SpellChecker* spellChecker = getSpellChecker();
@@ -861,8 +884,6 @@ void InputHandler::spellCheckBlock(VisibleSelection& visibleSelection, TextCheck
         SpellingLog(LogLevelInfo, "InputHandler::spellCheckBlock Failed to spellcheck the current focused element.");
         return;
     }
-
-    RefPtr<Range> rangeForSpellChecking = visibleSelection.toNormalizedRange();
 
     // If we have a batch request, try to send off the entire block.
     if (textCheckingProcessType == TextCheckingProcessBatch) {
@@ -876,13 +897,16 @@ void InputHandler::spellCheckBlock(VisibleSelection& visibleSelection, TextCheck
     // Since we couldn't check the entire block at once, set up starting and ending markers to fire incrementally.
     VisiblePosition startPos = visibleSelection.visibleStart();
     VisiblePosition startOfCurrentLine = startOfLine(startPos);
-    VisiblePosition endOfCurrentLine = endOfLine(startPos);
+    VisiblePosition endOfCurrentLine = endOfLine(startOfCurrentLine);
 
-    while (startOfCurrentLine != endOfCurrentLine) {
+    while (!isEndOfBlock(startOfCurrentLine)) {
         // Create a selection with the start and end points of the line, and convert to Range to create a SpellCheckRequest.
         rangeForSpellChecking = VisibleSelection(startOfCurrentLine, endOfCurrentLine).toNormalizedRange();
 
-        if (rangeForSpellChecking->text().length() >= MaxSpellCheckingStringLength) {
+        if (rangeForSpellChecking->text().length() < MaxSpellCheckingStringLength) {
+            startOfCurrentLine = nextLinePosition(startOfCurrentLine, startOfCurrentLine.lineDirectionPointForBlockDirectionNavigation());
+            endOfCurrentLine = endOfLine(startOfCurrentLine);
+        } else {
             // Iterate through words from the start of the line to the end.
             rangeForSpellChecking = getRangeForSpellCheckWithFineGranularity(startOfCurrentLine, endOfCurrentLine);
             if (!rangeForSpellChecking) {
@@ -890,12 +914,6 @@ void InputHandler::spellCheckBlock(VisibleSelection& visibleSelection, TextCheck
                 return;
             }
             startOfCurrentLine = VisiblePosition(rangeForSpellChecking->endPosition());
-        } else {
-            startOfCurrentLine = nextLinePosition(startOfCurrentLine, startOfCurrentLine.lineDirectionPointForBlockDirectionNavigation());
-            endOfCurrentLine = endOfLine(startOfCurrentLine);
-            // If we are at the last line, nextLinePosition will return the position at the end of the line. If we're not at the end, wrap with a call to startOfLine to be safe.
-            if (startOfCurrentLine != endOfCurrentLine)
-                startOfCurrentLine = startOfLine(startOfCurrentLine);
         }
 
         SpellingLog(LogLevelInfo, "InputHandler::spellCheckBlock Substring text is '%s', of size %d", rangeForSpellChecking->text().latin1().data(), rangeForSpellChecking->text().length());

@@ -32,13 +32,20 @@
 #define WebRTCPeerConnectionHandler_h
 
 namespace WebKit {
+class WebMediaConstraints;
+class WebMediaStreamDescriptor;
+class WebRTCConfiguration;
 class WebRTCPeerConnectionHandlerClient;
 
 class WebRTCPeerConnectionHandler {
 public:
     virtual ~WebRTCPeerConnectionHandler() { }
 
-    virtual bool initialize() = 0;
+    virtual bool initialize(const WebRTCConfiguration&, const WebMediaConstraints&) = 0;
+
+    virtual bool addStream(const WebMediaStreamDescriptor&, const WebMediaConstraints&) = 0;
+    virtual void removeStream(const WebMediaStreamDescriptor&) = 0;
+    virtual void stop() = 0;
 };
 
 } // namespace WebKit

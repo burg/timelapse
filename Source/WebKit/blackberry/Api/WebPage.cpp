@@ -29,7 +29,6 @@
 #if ENABLE(BATTERY_STATUS)
 #include "BatteryClientBlackBerry.h"
 #endif
-#include "CString.h"
 #include "CachedImage.h"
 #include "Chrome.h"
 #include "ChromeClientBlackBerry.h"
@@ -76,6 +75,7 @@
 #include "InspectorBackendDispatcher.h"
 #include "InspectorClientBlackBerry.h"
 #include "InspectorController.h"
+#include "InspectorInstrumentation.h"
 #include "InspectorOverlay.h"
 #include "JavaScriptDebuggerBlackBerry.h"
 #include "JavaScriptVariant_p.h"
@@ -153,7 +153,6 @@
 
 #include <BlackBerryPlatformDeviceInfo.h>
 #include <BlackBerryPlatformExecutableMessage.h>
-#include <BlackBerryPlatformITPolicy.h>
 #include <BlackBerryPlatformKeyboardEvent.h>
 #include <BlackBerryPlatformMessageClient.h>
 #include <BlackBerryPlatformMouseEvent.h>
@@ -165,6 +164,8 @@
 #include <SharedPointer.h>
 #include <sys/keycodes.h>
 #include <unicode/ustring.h> // platform ICU
+
+#include <wtf/text/CString.h>
 
 #ifndef USER_PROCESSES
 #include <memalloc.h>
@@ -567,8 +568,7 @@ void WebPagePrivate::init(const WebString& pageGroupName)
     m_inRegionScroller = adoptPtr(new InRegionScroller(this));
 
 #if ENABLE(WEBGL)
-    Platform::Settings* settings = Platform::Settings::instance();
-    m_page->settings()->setWebGLEnabled(settings && settings->isWebGLSupported());
+    m_page->settings()->setWebGLEnabled(true);
 #endif
 #if ENABLE(ACCELERATED_2D_CANVAS)
     m_page->settings()->setCanvasUsesAcceleratedDrawing(true);
@@ -742,6 +742,7 @@ bool WebPagePrivate::executeJavaScript(const char* scriptUTF8, JavaScriptDataTyp
     JSC::ExecState* exec = m_mainFrame->script()->globalObject(mainThreadNormalWorld())->globalExec();
     JSGlobalContextRef context = toGlobalRef(exec);
 
+    JSC::JSLockHolder lock(exec);
     JSType type = JSValueGetType(context, toRef(exec, value));
 
     switch (type) {
@@ -1467,46 +1468,23 @@ void WebPagePrivate::deferredTasksTimerFired(WebCore::Timer<WebPagePrivate>*)
     task->perform(this);
 }
 
-bool WebPagePrivate::scrollBy(int deltaX, int deltaY, bool scrollMainFrame)
+void WebPagePrivate::scrollBy(int deltaX, int deltaY)
 {
     IntSize delta(deltaX, deltaY);
-    if (!scrollMainFrame) {
-        // We need to work around the fact that ::map{To,From}Transformed do not
-        // work well with negative values, like a negative width or height of an IntSize.
-        IntSize copiedDelta(IntSize(abs(delta.width()), abs(delta.height())));
-        IntSize untransformedCopiedDelta = mapFromTransformed(copiedDelta);
-        delta = IntSize(
-            delta.width() < 0 ? -untransformedCopiedDelta.width() : untransformedCopiedDelta.width(),
-            delta.height() < 0 ? -untransformedCopiedDelta.height(): untransformedCopiedDelta.height());
-
-        if (m_inRegionScroller->d->scrollBy(delta)) {
-            m_selectionHandler->selectionPositionChanged();
-            // FIXME: We have code in place to handle scrolling and clipping tap highlight
-            // on in-region scrolling. As soon as it is fast enough (i.e. we have it backed by
-            // a backing store), we can reliably make use of it in the real world.
-            // m_touchEventHandler->drawTapHighlight();
-            return true;
-        }
-
-        return false;
-    }
-
     setScrollPosition(scrollPosition() + delta);
-    return true;
 }
 
-bool WebPage::scrollBy(const Platform::IntSize& delta, bool scrollMainFrame)
+void WebPage::scrollBy(const Platform::IntSize& delta)
 {
     d->m_backingStoreClient->setIsClientGeneratedScroll(true);
-    bool b = d->scrollBy(delta.width(), delta.height(), scrollMainFrame);
+    d->scrollBy(delta.width(), delta.height());
     d->m_backingStoreClient->setIsClientGeneratedScroll(false);
-    return b;
 }
 
 void WebPagePrivate::notifyInRegionScrollStopped()
 {
-    if (m_inRegionScroller->d->hasNode()) {
-        enqueueRenderingOfClippedContentOfScrollableNodeAfterInRegionScrolling(m_inRegionScroller->d->node());
+    if (m_inRegionScroller->d->isActive()) {
+        enqueueRenderingOfClippedContentOfScrollableAreaAfterInRegionScrolling();
         m_inRegionScroller->d->reset();
     }
 }
@@ -1516,9 +1494,16 @@ void WebPage::notifyInRegionScrollStopped()
     d->notifyInRegionScrollStopped();
 }
 
-void WebPagePrivate::enqueueRenderingOfClippedContentOfScrollableNodeAfterInRegionScrolling(Node* scrolledNode)
+void WebPagePrivate::enqueueRenderingOfClippedContentOfScrollableAreaAfterInRegionScrolling()
 {
-    ASSERT(scrolledNode);
+    // If no scrolling was even performed, bail out.
+    if (m_inRegionScroller->d->m_needsActiveScrollableAreaCalculation)
+        return;
+
+    InRegionScrollableArea* scrollableArea = static_cast<InRegionScrollableArea*>(m_inRegionScroller->d->activeInRegionScrollableAreas()[0]);
+    ASSERT(scrollableArea);
+    Node* scrolledNode = scrollableArea->layer()->enclosingElement();
+
     if (scrolledNode->isDocumentNode()) {
         Frame* frame = static_cast<const Document*>(scrolledNode)->frame();
         ASSERT(frame);
@@ -1583,10 +1568,11 @@ void WebPagePrivate::updateViewportSize(bool setFixedReportedSize, bool sendResi
     if (!m_backingStore)
         return;
     ASSERT(m_mainFrame->view());
+    IntSize visibleSize = actualVisibleSize();
     if (setFixedReportedSize)
-        m_mainFrame->view()->setFixedReportedSize(actualVisibleSize());
+        m_mainFrame->view()->setFixedReportedSize(visibleSize);
 
-    IntRect frameRect = IntRect(scrollPosition(), viewportSize());
+    IntRect frameRect = IntRect(scrollPosition(), visibleSize);
     if (frameRect != m_mainFrame->view()->frameRect()) {
         m_mainFrame->view()->setFrameRect(frameRect);
         m_mainFrame->view()->adjustViewSize();
@@ -2488,8 +2474,8 @@ IntSize WebPagePrivate::fixedLayoutSize(bool snapToIncrement) const
     const int defaultLayoutHeight = m_defaultLayoutSize.height();
 
     int minWidth = defaultLayoutWidth;
-    int maxWidth = defaultMaxLayoutSize().width();
-    int maxHeight = defaultMaxLayoutSize().height();
+    int maxWidth = DEFAULT_MAX_LAYOUT_WIDTH;
+    int maxHeight = DEFAULT_MAX_LAYOUT_HEIGHT;
 
     // If the load state is none then we haven't actually got anything yet, but we need to layout
     // the entire page so that the user sees the entire page (unrendered) instead of just part of it.
@@ -2572,8 +2558,8 @@ void WebPagePrivate::clearDocumentData(const Document* documentGoingAway)
     if (m_currentBlockZoomAdjustedNode && m_currentBlockZoomAdjustedNode->document() == documentGoingAway)
         m_currentBlockZoomAdjustedNode = 0;
 
-    if (m_inRegionScroller->d->hasNode() && m_inRegionScroller->d->node()->document() == documentGoingAway)
-        m_inRegionScroller->d->reset();
+    if (m_inRegionScroller->d->isActive())
+        m_inRegionScroller->d->clearDocumentData(documentGoingAway);
 
     if (documentGoingAway->frame())
         m_inputHandler->frameUnloaded(documentGoingAway->frame());
@@ -3145,6 +3131,11 @@ void WebPage::blockZoomAnimationFinished()
     d->zoomBlock();
 }
 
+void WebPage::resetBlockZoom()
+{
+    d->resetBlockZoom();
+}
+
 void WebPagePrivate::resetBlockZoom()
 {
     m_currentBlockZoomNode = 0;
@@ -3500,7 +3491,7 @@ IntSize WebPagePrivate::recomputeVirtualViewportFromViewportArguments()
     if (m_viewportArguments == defaultViewportArguments)
         return IntSize();
 
-    int desktopWidth = defaultMaxLayoutSize().width();
+    int desktopWidth = DEFAULT_MAX_LAYOUT_WIDTH;
     int deviceWidth = Platform::Graphics::Screen::primaryScreen()->width();
     int deviceHeight = Platform::Graphics::Screen::primaryScreen()->height();
     ViewportAttributes result = computeViewportAttributes(m_viewportArguments, desktopWidth, deviceWidth, deviceHeight, m_webSettings->devicePixelRatio(), m_defaultLayoutSize);
@@ -3699,27 +3690,11 @@ void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
     if (!m_visible || !m_backingStore->d->isActive())
         setShouldResetTilesWhenShown(true);
 
-    bool needsLayout = false;
     bool hasPendingOrientation = m_pendingOrientation != -1;
 
     if (m_hasPendingSurfaceSizeChange) {
         resizeSurfaceIfNeeded();
         m_hasPendingSurfaceSizeChange = false;
-    }
-    if (!hasPendingOrientation) {
-        // If we are not rotating and we've started a viewport resize with
-        // the Render tree in dirty state (i.e. it needs layout), lets
-        // reset the needsLayout flag for now but set our own 'needsLayout'.
-        //
-        // Reason: calls like ScrollView::setFixedLayoutSize can trigger a layout
-        // if the render tree needs it. We want to avoid it till the viewport resize
-        // is actually done (i.e. ScrollView::setViewportSize gets called
-        // further down the method).
-        if (m_mainFrame->view()->needsLayout()) {
-            m_mainFrame->view()->unscheduleRelayout();
-            m_mainFrame->contentRenderer()->setNeedsLayout(false);
-            needsLayout = true;
-        }
     }
 
     // The window buffers might have been recreated, cleared, moved, etc., so:
@@ -3745,6 +3720,7 @@ void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
     setDefaultLayoutSize(transformedActualVisibleSize);
 
     // Recompute our virtual viewport.
+    bool needsLayout = false;
     static ViewportArguments defaultViewportArguments;
     if (m_viewportArguments != defaultViewportArguments) {
         // We may need to infer the width and height for the viewport with respect to the rotation.
@@ -4105,6 +4081,10 @@ bool WebPage::touchEvent(const Platform::TouchEvent& event)
     if (d->m_page->defersLoading())
         return false;
 
+    // FIXME: this checks if node search on inspector is enabled, though it might not be optimized.
+    if (InspectorInstrumentation::handleMousePress(d->m_mainFrame->page()))
+        return false;
+
     PluginView* pluginView = d->m_fullScreenPluginView.get();
     if (pluginView)
         return d->dispatchTouchEventToFullScreenPlugin(pluginView, event);
@@ -4115,7 +4095,6 @@ bool WebPage::touchEvent(const Platform::TouchEvent& event)
         tEvent.m_points[i].m_screenPos = d->mapFromTransformed(tEvent.m_points[i].m_screenPos);
     }
 
-    Platform::Gesture tapGesture;
     if (event.hasGesture(Platform::Gesture::SingleTap))
         d->m_pluginMayOpenNewTab = true;
     else if (tEvent.m_type == Platform::TouchEvent::TouchStart || tEvent.m_type == Platform::TouchEvent::TouchCancel)
@@ -5292,14 +5271,6 @@ bool WebPage::defersLoading() const
     return d->m_page->defersLoading();
 }
 
-bool WebPage::willFireTimer()
-{
-    if (d->isLoading())
-        return true;
-
-    return d->m_backingStore->d->willFireTimer();
-}
-
 void WebPage::notifyPagePause()
 {
     FOR_EACH_PLUGINVIEW(d->m_pluginViews)
@@ -5504,31 +5475,6 @@ void WebPagePrivate::setCompositorDrawsRootLayer(bool compositorDrawsRootLayer)
 }
 
 #if USE(ACCELERATED_COMPOSITING)
-void WebPagePrivate::drawLayersOnCommit()
-{
-    if (!Platform::userInterfaceThreadMessageClient()->isCurrentThread()) {
-        // This method will only be called when the layer appearance changed due to
-        // animations. And only if we don't need a one shot drawing sync.
-        ASSERT(!needsOneShotDrawingSynchronization());
-
-        if (!m_webPage->isVisible())
-            return;
-
-        m_backingStore->d->willDrawLayersOnCommit();
-
-        Platform::userInterfaceThreadMessageClient()->dispatchMessage(
-            Platform::createMethodCallMessage(&WebPagePrivate::drawLayersOnCommit, this));
-        return;
-    }
-
-#if DEBUG_AC_COMMIT
-    Platform::log(Platform::LogLevelCritical, "%s", WTF_PRETTY_FUNCTION);
-#endif
-
-    if (!m_backingStore->d->shouldDirectRenderingToWindow())
-        m_backingStore->d->blitVisibleContents();
-}
-
 void WebPagePrivate::scheduleRootLayerCommit()
 {
     if (!(m_frameLayers && m_frameLayers->hasLayer()) && !m_overlayLayer)
@@ -5657,6 +5603,8 @@ void WebPagePrivate::commitRootLayer(const IntRect& layoutRectForCompositing,
 
     if (overlayLayer)
         overlayLayer->commitOnCompositingThread();
+
+    scheduleCompositingRun();
 }
 
 bool WebPagePrivate::commitRootLayerIfNeeded()
@@ -5677,7 +5625,9 @@ bool WebPagePrivate::commitRootLayerIfNeeded()
     if (!m_needsCommit)
         return false;
 
-    if (!(m_frameLayers && m_frameLayers->hasLayer()) && !m_overlayLayer)
+    // Don't bail if the layers were removed and we now need a one shot drawing sync as a consequence.
+    if (!(m_frameLayers && m_frameLayers->hasLayer()) && !m_overlayLayer
+     && !m_needsOneShotDrawingSynchronization)
         return false;
 
     FrameView* view = m_mainFrame->view();
@@ -5775,10 +5725,7 @@ void WebPagePrivate::rootLayerCommitTimerFired(Timer<WebPagePrivate>*)
         }
     }
 
-    // If the web page needs layout, the commit will fail.
-    // No need to draw the layers if nothing changed.
-    if (commitRootLayerIfNeeded())
-        drawLayersOnCommit();
+    commitRootLayerIfNeeded();
 }
 
 void WebPagePrivate::resetCompositingSurface()
@@ -5919,9 +5866,6 @@ void WebPagePrivate::resumeRootLayerCommit()
 
     m_suspendRootLayerCommit = false;
     m_needsCommit = true;
-
-    // Recreate layer resources if needed.
-    commitRootLayerIfNeeded();
 }
 
 bool WebPagePrivate::needsOneShotDrawingSynchronization()
@@ -6203,16 +6147,6 @@ void WebPagePrivate::didChangeSettings(WebSettings* webSettings)
     }
 }
 
-IntSize WebPagePrivate::defaultMaxLayoutSize()
-{
-    static IntSize size;
-    if (size.isEmpty())
-        size = IntSize(std::max(1024, Platform::Graphics::Screen::primaryScreen()->landscapeWidth()),
-                       std::max(768, Platform::Graphics::Screen::primaryScreen()->landscapeHeight()));
-
-    return size;
-}
-
 WebString WebPage::textHasAttribute(const WebString& query) const
 {
     if (Document* doc = d->m_page->focusController()->focusedOrMainFrame()->document())
@@ -6260,10 +6194,6 @@ void WebPagePrivate::scheduleCompositingRun()
 
 void WebPage::setWebGLEnabled(bool enabled)
 {
-    if (!Platform::ITPolicy::isWebGLEnabled()) {
-        d->m_page->settings()->setWebGLEnabled(false);
-        return;
-    }
     d->m_page->settings()->setWebGLEnabled(enabled);
 }
 
@@ -6443,6 +6373,11 @@ void WebPagePrivate::restoreHistoryViewState(Platform::IntSize contentsSize, Pla
         notifyTransformedContentsSizeChanged();
         notifyTransformedScrollChanged();
     }
+}
+
+IntSize WebPagePrivate::screenSize() const
+{
+    return Platform::Graphics::Screen::primaryScreen()->size();
 }
 
 }

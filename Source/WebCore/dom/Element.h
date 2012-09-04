@@ -246,6 +246,7 @@ public:
 
     // This method is called whenever an attribute is added, changed or removed.
     virtual void attributeChanged(const Attribute&);
+    virtual void parseAttribute(const Attribute&);
 
     // Only called by the parser immediately after element construction.
     void parserSetAttributes(const Vector<Attribute>&, FragmentScriptingPermission);
@@ -302,7 +303,7 @@ public:
 
     virtual void focus(bool restorePreviousSelection = true);
     virtual void updateFocusAppearance(bool restorePreviousSelection);
-    void blur();
+    virtual void blur();
 
     String innerText();
     String outerText();
@@ -428,6 +429,7 @@ public:
 
     bool hasID() const;
     bool hasClass() const;
+    const SpaceSplitString& classNames() const;
 
     IntSize savedLayerScrollOffset() const;
     void setSavedLayerScrollOffset(const IntSize&);
@@ -461,6 +463,11 @@ protected:
     PassRefPtr<HTMLCollection> ensureCachedHTMLCollection(CollectionType);
     HTMLCollection* cachedHTMLCollection(CollectionType);
 
+    // classAttributeChanged() exists to share code between
+    // parseAttribute (called via setAttribute()) and
+    // svgAttributeChanged (called when element.className.baseValue is set)
+    void classAttributeChanged(const AtomicString& newClassString);
+
 private:
     void updateInvalidAttributes() const;
 
@@ -493,7 +500,7 @@ private:
     
     // cloneNode is private so that non-virtual cloneElementWithChildren and cloneElementWithoutChildren
     // are used instead.
-    virtual PassRefPtr<Node> cloneNode(bool deep, ExceptionCode&);
+    virtual PassRefPtr<Node> cloneNode(bool deep);
     virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren();
 
     QualifiedName m_tagName;
@@ -685,6 +692,13 @@ inline const AtomicString& Element::getNameAttribute() const
 inline void Element::setIdAttribute(const AtomicString& value)
 {
     setAttribute(document()->idAttributeName(), value);
+}
+
+inline const SpaceSplitString& Element::classNames() const
+{
+    ASSERT(hasClass());
+    ASSERT(attributeData());
+    return attributeData()->classNames();
 }
 
 inline size_t Element::attributeCount() const

@@ -39,14 +39,12 @@
 #include "TestNavigationController.h"
 #include "TestShell.h"
 #include "TestWebPlugin.h"
-#include "platform/WebCString.h"
 #include "WebConsoleMessage.h"
 #include "WebContextMenuData.h"
 #include "WebDOMMessageEvent.h"
 #include "WebDataSource.h"
 #include "WebDeviceOrientationClientMock.h"
 #include "WebDocument.h"
-#include "platform/WebDragData.h"
 #include "WebElement.h"
 #include "WebFrame.h"
 #include "WebGeolocationClientMock.h"
@@ -60,22 +58,26 @@
 #include "WebPopupType.h"
 #include "WebPrintParams.h"
 #include "WebRange.h"
-#include "platform/WebRect.h"
 #include "WebScreenInfo.h"
-#include "platform/WebSerializedScriptValue.h"
-#include "platform/WebSize.h"
 #include "WebStorageNamespace.h"
 #include "WebTextCheckingCompletion.h"
 #include "WebTextCheckingResult.h"
 #include "WebUserMediaClientMock.h"
-#include "platform/WebThread.h"
-#include "platform/WebURLRequest.h"
-#include "platform/WebURLResponse.h"
 #include "WebView.h"
+#include "WebViewHostOutputSurface.h"
 #include "WebWindowFeatures.h"
+#include "platform/WebSerializedScriptValue.h"
 #include "skia/ext/platform_canvas.h"
 #include "webkit/support/test_media_stream_client.h"
 #include "webkit/support/webkit_support.h"
+#include <public/WebCString.h>
+#include <public/WebCompositorOutputSurface.h>
+#include <public/WebDragData.h>
+#include <public/WebRect.h>
+#include <public/WebSize.h>
+#include <public/WebThread.h>
+#include <public/WebURLRequest.h>
+#include <public/WebURLResponse.h>
 
 #include <wtf/Assertions.h>
 #include <wtf/PassOwnPtr.h>
@@ -285,11 +287,11 @@ WebStorageNamespace* WebViewHost::createSessionStorageNamespace(unsigned quota)
     return webkit_support::CreateSessionStorageNamespace(quota);
 }
 
-WebKit::WebGraphicsContext3D* WebViewHost::createGraphicsContext3D(const WebKit::WebGraphicsContext3D::Attributes& attributes)
+WebKit::WebCompositorOutputSurface* WebViewHost::createOutputSurface()
 {
     if (!webView())
         return 0;
-    return webkit_support::CreateGraphicsContext3D(attributes, webView());
+    return new WebKit::WebViewHostOutputSurface(adoptPtr(webkit_support::CreateGraphicsContext3D(WebKit::WebGraphicsContext3D::Attributes(), webView())));
 }
 
 void WebViewHost::didAddMessageToConsole(const WebConsoleMessage& message, const WebString& sourceName, unsigned sourceLine)
@@ -1006,12 +1008,12 @@ WebPlugin* WebViewHost::createPlugin(WebFrame* frame, const WebPluginParams& par
     return webkit_support::CreateWebPlugin(frame, params);
 }
 
-WebMediaPlayer* WebViewHost::createMediaPlayer(WebFrame* frame, WebMediaPlayerClient* client)
+WebMediaPlayer* WebViewHost::createMediaPlayer(WebFrame* frame, const WebURL& url, WebMediaPlayerClient* client)
 {
 #if ENABLE(MEDIA_STREAM)
-    return webkit_support::CreateMediaPlayer(frame, client, testMediaStreamClient());
+    return webkit_support::CreateMediaPlayer(frame, url, client, testMediaStreamClient());
 #else
-    return webkit_support::CreateMediaPlayer(frame, client);
+    return webkit_support::CreateMediaPlayer(frame, url, client);
 #endif
 }
 
@@ -1769,6 +1771,12 @@ void WebViewHost::setPendingExtraData(PassOwnPtr<TestShellExtraData> extraData)
     m_pendingExtraData = extraData;
 }
 
+void WebViewHost::setDeviceScaleFactor(float deviceScaleFactor)
+{
+    webView()->setDeviceScaleFactor(deviceScaleFactor);
+    discardBackingStore();
+}
+
 void WebViewHost::setGamepadData(const WebGamepads& pads)
 {
     webkit_support::SetGamepadData(pads);
@@ -1834,7 +1842,13 @@ void WebViewHost::paintRect(const WebRect& rect)
     ASSERT(!m_isPainting);
     ASSERT(canvas());
     m_isPainting = true;
-    webWidget()->paint(canvas(), rect);
+    float deviceScaleFactor = webView()->deviceScaleFactor();
+    int scaledX = static_cast<int>(static_cast<float>(rect.x) * deviceScaleFactor);
+    int scaledY = static_cast<int>(static_cast<float>(rect.y) * deviceScaleFactor);
+    int scaledWidth = static_cast<int>(ceil(static_cast<float>(rect.width) * deviceScaleFactor));
+    int scaledHeight = static_cast<int>(ceil(static_cast<float>(rect.height) * deviceScaleFactor));
+    WebRect deviceRect(scaledX, scaledY, scaledWidth, scaledHeight);
+    webWidget()->paint(canvas(), deviceRect);
     m_isPainting = false;
 }
 
@@ -1904,8 +1918,11 @@ SkCanvas* WebViewHost::canvas()
     if (m_canvas)
         return m_canvas.get();
     WebSize widgetSize = webWidget()->size();
+    float deviceScaleFactor = webView()->deviceScaleFactor();
+    int scaledWidth = static_cast<int>(ceil(static_cast<float>(widgetSize.width) * deviceScaleFactor));
+    int scaledHeight = static_cast<int>(ceil(static_cast<float>(widgetSize.height) * deviceScaleFactor));
     resetScrollRect();
-    m_canvas = adoptPtr(skia::CreateBitmapCanvas(widgetSize.width, widgetSize.height, true));
+    m_canvas = adoptPtr(skia::CreateBitmapCanvas(scaledWidth, scaledHeight, true));
     return m_canvas.get();
 }
 

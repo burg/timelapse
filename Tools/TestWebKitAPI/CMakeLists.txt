@@ -71,8 +71,11 @@ ADD_EXECUTABLE(test_wtf
     ${TESTWEBKITAPI_DIR}/Tests/WTF/CheckedArithmeticOperations.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/Functional.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/HashMap.cpp
+    ${TESTWEBKITAPI_DIR}/Tests/WTF/IntegerToStringConversion.cpp
+    ${TESTWEBKITAPI_DIR}/Tests/WTF/MathExtras.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/MetaAllocator.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/RedBlackTree.cpp
+    ${TESTWEBKITAPI_DIR}/Tests/WTF/SaturatedArithmeticOperations.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/StringBuilder.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/StringImpl.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/StringOperators.cpp

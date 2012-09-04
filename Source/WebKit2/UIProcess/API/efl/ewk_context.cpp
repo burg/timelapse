@@ -25,6 +25,7 @@
 #include "VibrationProvider.h"
 #include "WKAPICast.h"
 #include "WKContextSoup.h"
+#include "WKNumber.h"
 #include "WKRetainPtr.h"
 #include "WKString.h"
 #include "ewk_context_download_client_private.h"
@@ -70,21 +71,31 @@ struct _Ewk_Context {
     WKRetainPtr<WKSoupRequestManagerRef> requestManager;
     URLSchemeHandlerMap urlSchemeHandlers;
 
-    _Ewk_Context(WKContextRef contextRef)
+    _Ewk_Context(WKRetainPtr<WKContextRef> contextRef)
         : context(contextRef)
         , cookieManager(0)
-        , requestManager(WKContextGetSoupRequestManager(contextRef))
+        , requestManager(WKContextGetSoupRequestManager(contextRef.get()))
     {
 #if ENABLE(BATTERY_STATUS)
-        WKBatteryManagerRef wkBatteryManager = WKContextGetBatteryManager(contextRef);
+        WKBatteryManagerRef wkBatteryManager = WKContextGetBatteryManager(contextRef.get());
         batteryProvider = BatteryProvider::create(wkBatteryManager);
 #endif
 
 #if ENABLE(VIBRATION)
-        WKVibrationRef wkVibrationRef = WKContextGetVibration(contextRef);
+        WKVibrationRef wkVibrationRef = WKContextGetVibration(contextRef.get());
         vibrationProvider = VibrationProvider::create(wkVibrationRef);
 #endif
 
+#if ENABLE(MEMORY_SAMPLER)
+        static bool initializeMemorySampler = false;
+        static const char environmentVariable[] = "SAMPLE_MEMORY";
+
+        if (!initializeMemorySampler && getenv(environmentVariable)) {
+            WKRetainPtr<WKDoubleRef> interval(AdoptWK, WKDoubleCreate(0.0));
+            WKContextStartMemorySampler(context.get(), interval.get());
+            initializeMemorySampler = true;
+        }
+#endif
         ewk_context_request_manager_client_attach(this);
         ewk_context_download_client_attach(this);
     }
@@ -198,16 +209,11 @@ void ewk_context_url_scheme_request_received(Ewk_Context* ewkContext, Ewk_Url_Sc
     handler.callback(schemeRequest, handler.userData);
 }
 
-static inline Ewk_Context* createDefaultEwkContext()
-{
-    return new Ewk_Context(WKContextCreate());
-}
-
 Ewk_Context* ewk_context_default_get()
 {
-    static Ewk_Context* defaultContext = createDefaultEwkContext();
+    static Ewk_Context defaultContext(adoptWK(WKContextCreate()));
 
-    return defaultContext;
+    return &defaultContext;
 }
 
 Eina_Bool ewk_context_uri_scheme_register(Ewk_Context* ewkContext, const char* scheme, Ewk_Url_Scheme_Request_Cb callback, void* userData)

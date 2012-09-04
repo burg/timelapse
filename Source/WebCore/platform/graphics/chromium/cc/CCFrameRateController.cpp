@@ -79,9 +79,9 @@ CCFrameRateController::~CCFrameRateController()
 
 void CCFrameRateController::setActive(bool active)
 {
-    TRACE_EVENT1("cc", "CCFrameRateController::setActive", "active", active);
     if (m_active == active)
         return;
+    TRACE_EVENT1("cc", "CCFrameRateController::setActive", "active", active);
     m_active = active;
 
     if (m_isTimeSourceThrottling)
@@ -151,10 +151,10 @@ void CCFrameRateController::didAbortAllPendingFrames()
     m_numFramesPending = 0;
 }
 
-double CCFrameRateController::nextTickTime()
+double CCFrameRateController::nextTickTimeIfActivated()
 {
     if (m_isTimeSourceThrottling)
-        return m_timeSource->nextTickTime();
+        return m_timeSource->nextTickTimeIfActivated();
 
     return monotonicallyIncreasingTime();
 }

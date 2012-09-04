@@ -834,6 +834,14 @@
 #endif
 #endif
 
+#if !defined(ENABLE_SATURATED_LAYOUT_ARITHMETIC)
+#define ENABLE_SATURATED_LAYOUT_ARITHMETIC 0
+#endif
+
+#if ENABLE(ENABLE_SATURATED_LAYOUT_ARITHMETIC) && !ENABLE(ENABLE_SUBPIXEL_LAYOUT)
+#error "ENABLE_SATURATED_LAYOUT_ARITHMETIC requires ENABLE_SUBPIXEL_LAYOUT"
+#endif
+
 #define ENABLE_DEBUG_WITH_BREAKPOINT 0
 #define ENABLE_SAMPLING_COUNTERS 0
 #define ENABLE_SAMPLING_FLAGS 0
@@ -950,11 +958,26 @@
 #endif
 
 /* Ensure that either the JIT or the interpreter has been enabled. */
-#if !defined(ENABLE_CLASSIC_INTERPRETER) && !ENABLE(JIT)
+#if !defined(ENABLE_CLASSIC_INTERPRETER) && !ENABLE(JIT) && !ENABLE(LLINT)
 #define ENABLE_CLASSIC_INTERPRETER 1
 #endif
-#if !(ENABLE(JIT) || ENABLE(CLASSIC_INTERPRETER))
+
+/* If the jit and classic interpreter is not available, enable the LLInt C Loop: */
+#if !ENABLE(JIT) && !ENABLE(CLASSIC_INTERPRETER)
+    #define ENABLE_LLINT 1
+    #define ENABLE_LLINT_C_LOOP 1
+    #define ENABLE_DFG_JIT 0
+#endif
+
+/* Do a sanity check to make sure that we at least have one execution engine in
+   use: */
+#if !(ENABLE(JIT) || ENABLE(CLASSIC_INTERPRETER) || ENABLE(LLINT))
 #error You have to have at least one execution model enabled to build JSC
+#endif
+/* Do a sanity check to make sure that we don't have both the classic interpreter
+   and the llint C loop in use at the same time: */
+#if ENABLE(CLASSIC_INTERPRETER) && ENABLE(LLINT_C_LOOP)
+#error You cannot build both the classic interpreter and the llint C loop together
 #endif
 
 /* Configure the JIT */
@@ -974,11 +997,16 @@
 #define ENABLE_COMPUTED_GOTO_CLASSIC_INTERPRETER 1
 #endif
 
+/* Determine if we need to enable Computed Goto Opcodes or not: */
+#if (HAVE(COMPUTED_GOTO) && ENABLE(LLINT)) || ENABLE(COMPUTED_GOTO_CLASSIC_INTERPRETER)
+#define ENABLE_COMPUTED_GOTO_OPCODES 1
+#endif
+
 /* Regular Expression Tracing - Set to 1 to trace RegExp's in jsc.  Results dumped at exit */
 #define ENABLE_REGEXP_TRACING 0
 
 /* Yet Another Regex Runtime - turned on by default for JIT enabled ports. */
-#if !defined(ENABLE_YARR_JIT) && ENABLE(JIT) && !PLATFORM(CHROMIUM)
+#if !defined(ENABLE_YARR_JIT) && (ENABLE(JIT) || ENABLE(LLINT_C_LOOP)) && !PLATFORM(CHROMIUM)
 #define ENABLE_YARR_JIT 1
 
 /* Setting this flag compares JIT results with interpreter results. */

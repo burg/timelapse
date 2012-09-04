@@ -52,7 +52,6 @@
 #include "WebViewBenchmarkSupportImpl.h"
 #include <public/WebFloatQuad.h>
 #include <public/WebLayer.h>
-#include <public/WebLayerTreeView.h>
 #include <public/WebLayerTreeViewClient.h>
 #include <public/WebPoint.h>
 #include <public/WebRect.h>
@@ -94,7 +93,7 @@ class ContextMenuClientImpl;
 class DeviceOrientationClientProxy;
 class DragScrollTimer;
 class GeolocationClientProxy;
-class WebHelperPluginImpl;
+class LinkHighlight;
 class NonCompositedContentHost;
 class PrerendererClientImpl;
 class SpeechInputClientImpl;
@@ -106,15 +105,17 @@ class WebDevToolsAgentClient;
 class WebDevToolsAgentPrivate;
 class WebFrameImpl;
 class WebGestureEvent;
-class WebPagePopupImpl;
-class WebPrerendererClient;
-class WebViewBenchmarkSupport;
+class WebHelperPluginImpl;
 class WebImage;
 class WebKeyboardEvent;
+class WebLayerTreeView;
 class WebMouseEvent;
 class WebMouseWheelEvent;
+class WebPagePopupImpl;
+class WebPrerendererClient;
 class WebSettingsImpl;
 class WebTouchEvent;
+class WebViewBenchmarkSupport;
 
 class WebViewImpl : public WebView
                   , public WebLayerTreeViewClient
@@ -143,7 +144,7 @@ public:
     virtual void setCompositorSurfaceReady();
     virtual void animate(double);
     virtual void layout(); // Also implements WebLayerTreeViewClient::layout()
-    virtual void paint(WebCanvas*, const WebRect&);
+    virtual void paint(WebCanvas*, const WebRect&, PaintOptions = ReadbackFromCompositorIfAvailable);
     virtual void themeChanged();
     virtual void composite(bool finish);
     virtual void setNeedsRedraw();
@@ -303,11 +304,6 @@ public:
 #endif
     virtual void transferActiveWheelFlingAnimation(const WebActiveWheelFlingParameters&);
     virtual WebViewBenchmarkSupport* benchmarkSupport();
-
-    virtual WebVector<WebFloatQuad> getTouchHighlightQuads(const WebPoint&,
-                                                           int padding,
-                                                           WebTouchCandidatesInfo& outTouchInfo,
-                                                           WebColor& outTapHighlightColor);
 
     // WebLayerTreeViewClient
     virtual void willBeginFrame();
@@ -563,6 +559,8 @@ public:
 
 #if ENABLE(GESTURE_EVENTS)
     void computeScaleAndScrollForHitRect(const WebRect& hitRect, AutoZoomType, float& scale, WebPoint& scroll);
+    WebCore::Node* bestTouchLinkNode(WebCore::IntPoint touchEventLocation);
+    void enableTouchHighlight(WebCore::IntPoint touchEventLocation);
 #endif
     void animateZoomAroundPoint(const WebCore::IntPoint&, AutoZoomType);
 
@@ -585,6 +583,12 @@ public:
     virtual void requestPointerUnlock();
     virtual bool isPointerLocked();
 #endif
+
+#if ENABLE(GESTURE_EVENTS)
+    // Exposed for tests.
+    LinkHighlight* linkHighlight() { return m_linkHighlight.get(); }
+#endif
+
 
 private:
     bool computePageScaleFactorLimits();
@@ -815,8 +819,8 @@ private:
 #if USE(ACCELERATED_COMPOSITING)
     WebCore::IntRect m_rootLayerScrollDamage;
     OwnPtr<NonCompositedContentHost> m_nonCompositedContentHost;
-    WebLayerTreeView m_layerTreeView;
-    WebLayer m_rootLayer;
+    OwnPtr<WebLayerTreeView> m_layerTreeView;
+    WebLayer* m_rootLayer;
     WebCore::GraphicsLayer* m_rootGraphicsLayer;
     bool m_isAcceleratedCompositingActive;
     bool m_compositorCreationFailed;
@@ -845,13 +849,16 @@ private:
 #if ENABLE(MEDIA_STREAM)
     UserMediaClientImpl m_userMediaClientImpl;
 #endif
-#if ENABLE(REGISTER_PROTOCOL_HANDLER)
-    OwnPtr<RegisterProtocolHandlerClientImpl> m_registerProtocolHandlerClient;
+#if ENABLE(NAVIGATOR_CONTENT_UTILS)
+    OwnPtr<NavigatorContentUtilsClientImpl> m_navigatorContentUtilsClient;
 #endif
     OwnPtr<WebCore::ActivePlatformGestureAnimation> m_gestureAnimation;
     WebPoint m_lastWheelPosition;
     WebPoint m_lastWheelGlobalPosition;
     int m_flingModifier;
+#if ENABLE(GESTURE_EVENTS)
+    OwnPtr<LinkHighlight> m_linkHighlight;
+#endif
 };
 
 } // namespace WebKit

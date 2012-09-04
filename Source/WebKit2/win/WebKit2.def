@@ -195,8 +195,8 @@ EXPORTS
         ?lastChild@ComposedShadowTreeWalker@WebCore@@QAEXXZ
         ?next@ComposedShadowTreeWalker@WebCore@@QAEXXZ
         ?previous@ComposedShadowTreeWalker@WebCore@@QAEXXZ
-        ?number@String@WTF@@SA?AV12@I@Z
-        ?number@String@WTF@@SA?AV12@H@Z
+        ?numberToStringImpl@WTF@@YA?AV?$PassRefPtr@VStringImpl@WTF@@@1@H@Z
+        ?numberToStringImpl@WTF@@YA?AV?$PassRefPtr@VStringImpl@WTF@@@1@I@Z
         ?overrideUserPreferredLanguages@WebCore@@YAXABV?$Vector@VString@WTF@@$0A@@WTF@@@Z
         ?numberOfScopedHTMLStyleChildren@Node@WebCore@@QBEIXZ
         ?page@Document@WebCore@@QBEPAVPage@2@XZ
@@ -221,7 +221,7 @@ EXPORTS
         ?setFixedFontFamily@Settings@WebCore@@QAEXABVAtomicString@WTF@@W4UScriptCode@@@Z
         ?setMockScrollbarsEnabled@Settings@WebCore@@SAX_N@Z
         ?setPageScaleFactor@Page@WebCore@@QAEXMABVIntPoint@2@@Z
-        ?setPagination@Page@WebCore@@QAEXABUPagination@12@@Z
+        ?setPagination@Page@WebCore@@QAEXABUPagination@2@@Z
         ?setPictographFontFamily@Settings@WebCore@@QAEXABVAtomicString@WTF@@W4UScriptCode@@@Z
         ?setResourcesDataSizeLimitsFromInternals@InspectorController@WebCore@@QAEXHH@Z
         ?setSansSerifFontFamily@Settings@WebCore@@QAEXABVAtomicString@WTF@@W4UScriptCode@@@Z
@@ -276,7 +276,7 @@ EXPORTS
         ?setAllowsRoundingHacks@TextRun@WebCore@@SAX_N@Z
         ?profilerEnabled@InspectorController@WebCore@@QAE_NXZ
         ?setProfilerEnabled@InspectorController@WebCore@@QAEX_N@Z
-        ?jsStringSlowCase@WebCore@@YA?AVJSValue@JSC@@PAVExecState@3@AAV?$HashMap@PAVStringImpl@WTF@@V?$Weak@VJSString@JSC@@@JSC@@U?$PtrHash@PAVStringImpl@WTF@@@2@U?$HashTraits@PAVStringImpl@WTF@@@2@U?$HashTraits@V?$Weak@VJSString@JSC@@@JSC@@@2@@WTF@@PAVStringImpl@6@@Z        
+        ?jsStringWithCacheSlowCase@WebCore@@YA?AVJSValue@JSC@@PAVExecState@3@AAV?$HashMap@PAVStringImpl@WTF@@V?$Weak@VJSString@JSC@@@JSC@@U?$PtrHash@PAVStringImpl@WTF@@@2@U?$HashTraits@PAVStringImpl@WTF@@@2@U?$HashTraits@V?$Weak@VJSString@JSC@@@JSC@@@2@@WTF@@PAVStringImpl@6@@Z        
         ?registerURLSchemeAsBypassingContentSecurityPolicy@SchemeRegistry@WebCore@@SAXABVString@WTF@@@Z
         ?removeURLSchemeRegisteredAsBypassingContentSecurityPolicy@SchemeRegistry@WebCore@@SAXABVString@WTF@@@Z
         ?iconURLs@Document@WebCore@@QAEABV?$Vector@UIconURL@WebCore@@$0A@@WTF@@XZ

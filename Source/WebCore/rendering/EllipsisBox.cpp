@@ -21,6 +21,7 @@
 #include "EllipsisBox.h"
 
 #include "Document.h"
+#include "Font.h"
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
 #include "InlineTextBox.h"
@@ -120,7 +121,7 @@ void EllipsisBox::paintSelection(GraphicsContext* context, const LayoutPoint& pa
     context->drawHighlightForText(font, RenderBlock::constructTextRun(renderer(), font, m_str, style, TextRun::AllowTrailingExpansion), roundedIntPoint(LayoutPoint(x() + paintOffset.x(), y() + paintOffset.y() + top)), h, c, style->colorSpace());
 }
 
-bool EllipsisBox::nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestPoint&, const LayoutPoint&, LayoutUnit, LayoutUnit)
+bool EllipsisBox::nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint&, LayoutUnit, LayoutUnit)
 {
     return false;
 }

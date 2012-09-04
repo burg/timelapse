@@ -1410,14 +1410,16 @@ sub GenerateFunctionParametersCheck
 
     my @orExpression = ();
     my $numParameters = 0;
+    my $numMandatoryParams = @{$function->parameters};
     foreach my $parameter (@{$function->parameters}) {
         if ($parameter->extendedAttributes->{"Optional"}) {
             push(@orExpression, GenerateParametersCheckExpression($numParameters, $function));
+            $numMandatoryParams--;
         }
         $numParameters++;
     }
     push(@orExpression, GenerateParametersCheckExpression($numParameters, $function));
-    return join(" || ", @orExpression);
+    return ($numMandatoryParams, join(" || ", @orExpression));
 }
 
 sub GenerateOverloadedFunctionCallback
@@ -1434,6 +1436,7 @@ sub GenerateOverloadedFunctionCallback
 
     my $name = $function->signature->name;
     my $conditionalString = $codeGenerator->GenerateConditionalString($function->signature);
+    my $leastNumMandatoryParams = 255;
     push(@implContentDecls, "#if ${conditionalString}\n\n") if $conditionalString;
     push(@implContentDecls, <<END);
 static v8::Handle<v8::Value> ${name}Callback(const v8::Arguments& args)
@@ -1442,9 +1445,14 @@ static v8::Handle<v8::Value> ${name}Callback(const v8::Arguments& args)
 END
 
     foreach my $overload (@{$function->{overloads}}) {
-        my $parametersCheck = GenerateFunctionParametersCheck($overload);
+        my ($numMandatoryParams, $parametersCheck) = GenerateFunctionParametersCheck($overload);
+        $leastNumMandatoryParams = $numMandatoryParams if ($numMandatoryParams < $leastNumMandatoryParams);
         push(@implContentDecls, "    if ($parametersCheck)\n");
         push(@implContentDecls, "        return ${name}$overload->{overloadIndex}Callback(args);\n");
+    }
+    if ($leastNumMandatoryParams >= 1) {
+        push(@implContentDecls, "    if (args.Length() < $leastNumMandatoryParams)\n");
+        push(@implContentDecls, "        return throwNotEnoughArgumentsError(args.GetIsolate());\n");
     }
     push(@implContentDecls, <<END);
     return throwTypeError(0, args.GetIsolate());
@@ -2522,7 +2530,6 @@ sub GenerateImplementation
     AddToImplIncludes("BindingState.h");
     AddToImplIncludes("ContextFeatures.h");
     AddToImplIncludes("RuntimeEnabledFeatures.h");
-    AddToImplIncludes("V8Proxy.h");
     AddToImplIncludes("V8Binding.h");
     AddToImplIncludes("V8DOMWrapper.h");
     AddToImplIncludes("V8IsolatedContext.h");
@@ -3212,11 +3219,10 @@ sub GenerateCallbackImplementation
 
     # - Add default header template
     push(@implFixedHeader, GenerateImplementationContentHeader($dataNode));
-         
+
     AddToImplIncludes("ScriptExecutionContext.h");
     AddToImplIncludes("V8Binding.h");
     AddToImplIncludes("V8Callback.h");
-    AddToImplIncludes("V8Proxy.h");
 
     push(@implContent, "#include <wtf/Assertions.h>\n\n");
     push(@implContent, "namespace WebCore {\n\n");
@@ -3352,25 +3358,24 @@ END
 END
     }
 
-    my $proxyInit;
+    AddToImplIncludes("Frame.h");
+    my $frame = "0";
     if (IsNodeSubType($dataNode)) {
-        AddToImplIncludes("Frame.h");
-        $proxyInit = "impl->document()->frame() ? impl->document()->frame()->script()->proxy() : 0";
         # DocumentType nodes are the only nodes that may have a NULL document.
         if ($interfaceName eq "DocumentType") {
-            $proxyInit = "impl->document() ? ($proxyInit) : 0";
+            $frame = "impl->document() ? impl->document()->frame() : 0";
+        } else {
+            $frame = "impl->document()->frame()";
         }
-    } else {
-        $proxyInit = "0";
     }
     push(@implContent, <<END);
-    V8Proxy* proxy = $proxyInit;
+    Frame* frame = $frame;
 END
 
     if (IsSubType($dataNode, "Document")) {
         push(@implContent, <<END);
-    if (proxy && proxy->windowShell()->context().IsEmpty() && proxy->windowShell()->initContextIfNeeded()) {
-        // initContextIfNeeded may have created a wrapper for the object, retry from the start.
+    if (frame && frame->script()->windowShell()->context().IsEmpty() && frame->script()->windowShell()->initializeIfNeeded()) {
+        // initializeIfNeeded may have created a wrapper for the object, retry from the start.
         return ${className}::wrap(impl.get(), isolate);
     }
 END
@@ -3383,8 +3388,8 @@ END
         AddToImplIncludes("Frame.h");
         push(@implContent, <<END);
     if (impl->frame()) {
-        proxy = impl->frame()->script()->proxy();
-        proxy->windowShell()->initContextIfNeeded();
+        frame = impl->frame();
+        frame->script()->windowShell()->initializeIfNeeded();
     }
 END
     }
@@ -3394,18 +3399,21 @@ END
 
     // Enter the node's context and create the wrapper in that context.
     v8::Handle<v8::Context> context;
-    if (proxy && !proxy->matchesCurrentContext()) {
-        // For performance, we enter the context only if the currently running context
-        // is different from the context that we are about to enter.
-        context = proxy->context();
-        if (!context.IsEmpty())
-            context->Enter();
+    if (frame) {
+        v8::Handle<v8::Context> underlyingHandle = frame->script()->unsafeHandleToCurrentWorldContext();
+        if (v8::Context::GetCurrent() != underlyingHandle) {
+            // For performance, we enter the context only if the currently running context
+            // is different from the context that we are about to enter.
+            context = v8::Local<v8::Context>::New(underlyingHandle);
+            if (!context.IsEmpty())
+                context->Enter();
+        }
     }
 END
     }
 
     push(@implContent, <<END);
-    wrapper = V8DOMWrapper::instantiateV8Object(proxy, &info, impl.get());
+    wrapper = V8DOMWrapper::instantiateV8Object(frame, &info, impl.get());
 END
     if (IsNodeSubType($dataNode) || IsVisibleAcrossOrigins($dataNode)) {
         push(@implContent, <<END);
@@ -3815,7 +3823,7 @@ sub JSValueToNative
     }
 
     if ($type eq "XPathNSResolver") {
-        return "V8DOMWrapper::getXPathNSResolver($value)";
+        return "toXPathNSResolver($value)";
     }
 
     my $arrayType = $codeGenerator->GetArrayType($type);

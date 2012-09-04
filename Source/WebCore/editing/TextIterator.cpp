@@ -28,6 +28,7 @@
 #include "TextIterator.h"
 
 #include "Document.h"
+#include "Font.h"
 #include "Frame.h"
 #include "HTMLElement.h"
 #include "HTMLTextFormControlElement.h"
@@ -213,8 +214,7 @@ static inline bool ignoresContainerClip(Node* node)
     RenderObject* renderer = node->renderer();
     if (!renderer || renderer->isText())
         return false;
-    EPosition position = renderer->style()->position();
-    return position == AbsolutePosition || position == FixedPosition;
+    return renderer->style()->hasOutOfFlowPosition();
 }
 
 static void pushFullyClippedState(BitStack& stack, Node* node)

@@ -45,6 +45,7 @@
 #include "V8DOMMap.h"
 #include "V8DOMWindowShell.h"
 #include "V8DedicatedWorkerContext.h"
+#include "V8GCController.h"
 #include "V8ObjectConstructor.h"
 #include "V8PerContextData.h"
 #include "V8RecursionScope.h"
@@ -85,6 +86,7 @@ static void v8MessageHandler(v8::Handle<v8::Message> message, v8::Handle<v8::Val
 
 WorkerContextExecutionProxy::WorkerContextExecutionProxy(WorkerContext* workerContext)
     : m_workerContext(workerContext)
+    , m_disableEvalPending(false)
 {
     initIsolate();
 }
@@ -134,7 +136,7 @@ void WorkerContextExecutionProxy::initIsolate()
     V8PerIsolateData::ensureInitialized(v8::Isolate::GetCurrent());
 }
 
-bool WorkerContextExecutionProxy::initContextIfNeeded()
+bool WorkerContextExecutionProxy::initializeIfNeeded()
 {
     // Bail out if the context has already been initialized.
     if (!m_context.IsEmpty())
@@ -205,8 +207,13 @@ ScriptValue WorkerContextExecutionProxy::evaluate(const String& script, const St
 {
     v8::HandleScope hs;
 
-    if (!initContextIfNeeded())
+    if (!initializeIfNeeded())
         return ScriptValue();
+
+    if (m_disableEvalPending) {
+        m_context->AllowCodeGenerationFromStrings(false);
+        m_disableEvalPending = false;
+    }
 
     v8::Context::Scope scope(m_context);
 
@@ -240,6 +247,11 @@ ScriptValue WorkerContextExecutionProxy::evaluate(const String& script, const St
         return ScriptValue();
 
     return ScriptValue(result);
+}
+
+void WorkerContextExecutionProxy::setEvalAllowed(bool enable)
+{
+    m_disableEvalPending = !enable;
 }
 
 v8::Local<v8::Value> WorkerContextExecutionProxy::runScript(v8::Handle<v8::Script> script)

@@ -32,10 +32,23 @@
 #define WebRTCPeerConnectionHandlerClient_h
 
 namespace WebKit {
+class WebMediaStreamDescriptor;
 
 class WebRTCPeerConnectionHandlerClient {
 public:
+    enum ReadyState {
+        ReadyStateNew = 1,
+        ReadyStateOpening = 2,
+        ReadyStateActive = 3,
+        ReadyStateClosing = 4,
+        ReadyStateClosed = 5
+    };
+
     virtual ~WebRTCPeerConnectionHandlerClient() { }
+
+    virtual void didChangeReadyState(ReadyState) = 0;
+    virtual void didAddRemoteStream(const WebMediaStreamDescriptor&) = 0;
+    virtual void didRemoveRemoteStream(const WebMediaStreamDescriptor&) = 0;
 };
 
 } // namespace WebKit

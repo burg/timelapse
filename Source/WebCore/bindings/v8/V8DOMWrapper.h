@@ -33,7 +33,6 @@
 
 #include "DOMDataStore.h"
 #include "Event.h"
-#include "IsolatedWorld.h"
 #include "Node.h"
 #include "NodeFilter.h"
 #include "PlatformString.h"
@@ -53,9 +52,7 @@ namespace WebCore {
     class Frame;
     class Node;
     class V8PerContextData;
-    class V8Proxy;
     class WorkerContext;
-    class XPathResolver;
 
     enum ListenerLookupType {
         ListenerFindOnly,
@@ -93,9 +90,6 @@ namespace WebCore {
 
         static PassRefPtr<EventListener> getEventListener(v8::Local<v8::Value> value, bool isAttribute, ListenerLookupType lookup);
 
-        // XPath-related utilities
-        static RefPtr<XPathNSResolver> getXPathNSResolver(v8::Handle<v8::Value> value, V8Proxy* proxy = 0);
-
         // Wrap JS node filter in C++.
         static PassRefPtr<NodeFilter> wrapNativeNodeFilter(v8::Handle<v8::Value>);
 
@@ -125,12 +119,12 @@ namespace WebCore {
         static void setNamedHiddenReference(v8::Handle<v8::Object> parent, const char* name, v8::Handle<v8::Value> child);
         static void setNamedHiddenWindowReference(Frame*, const char*, v8::Handle<v8::Value>);
 
-        static v8::Local<v8::Object> instantiateV8Object(V8Proxy* proxy, WrapperTypeInfo*, void* impl);
+        static v8::Local<v8::Object> instantiateV8Object(Frame*, WrapperTypeInfo*, void*);
 
         static v8::Handle<v8::Object> getCachedWrapper(Node* node)
         {
             ASSERT(isMainThread());
-            if (LIKELY(!IsolatedWorld::count())) {
+            if (LIKELY(!DOMWrapperWorld::isolatedWorldsExist())) {
                 v8::Persistent<v8::Object>* wrapper = node->wrapper();
                 if (LIKELY(!!wrapper))
                     return *wrapper;
@@ -148,7 +142,6 @@ namespace WebCore {
             return domNodeMap.get(node);
         }
     private:
-        static V8PerContextData* perContextData(V8Proxy*);
 #if ENABLE(WORKERS)
         static V8PerContextData* perContextData(WorkerContext*);
 #endif

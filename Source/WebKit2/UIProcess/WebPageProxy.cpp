@@ -183,7 +183,7 @@ WebPageProxy::WebPageProxy(PageClient* pageClient, PassRefPtr<WebProcessProxy> p
     , m_drawsTransparentBackground(false)
     , m_areMemoryCacheClientCallsEnabled(true)
     , m_useFixedLayout(false)
-    , m_paginationMode(Page::Pagination::Unpaginated)
+    , m_paginationMode(Pagination::Unpaginated)
     , m_paginationBehavesLikeColumns(false)
     , m_pageLength(0)
     , m_gapBetweenPages(0)
@@ -897,7 +897,7 @@ void WebPageProxy::executeEditCommand(const String& commandName)
     if (!isValid())
         return;
 
-    DEFINE_STATIC_LOCAL(String, ignoreSpellingCommandName, ("ignoreSpelling"));
+    DEFINE_STATIC_LOCAL(String, ignoreSpellingCommandName, (ASCIILiteral("ignoreSpelling")));
     if (commandName == ignoreSpellingCommandName)
         ++m_pendingLearnOrIgnoreWordMessageCount;
 
@@ -1502,7 +1502,7 @@ void WebPageProxy::setFixedLayoutSize(const IntSize& size)
     m_process->send(Messages::WebPage::SetFixedLayoutSize(size), m_pageID);
 }
 
-void WebPageProxy::setPaginationMode(WebCore::Page::Pagination::Mode mode)
+void WebPageProxy::setPaginationMode(WebCore::Pagination::Mode mode)
 {
     if (mode == m_paginationMode)
         return;
@@ -2918,8 +2918,8 @@ void WebPageProxy::showPopupMenu(const IntRect& rect, uint64_t textDirection, co
 
     protectedActivePopupMenu->showPopupMenu(rect, static_cast<TextDirection>(textDirection), m_pageScaleFactor, items, data, selectedIndex);
 
-    // Since Qt doesn't use a nested mainloop the show the popup and get the answer, we need to keep the client pointer valid.
-#if !PLATFORM(QT)
+    // Since Qt and Efl doesn't use a nested mainloop to show the popup and get the answer, we need to keep the client pointer valid.
+#if !PLATFORM(QT) && !PLATFORM(EFL)
     protectedActivePopupMenu->invalidate();
 #endif
     protectedActivePopupMenu = 0;

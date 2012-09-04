@@ -140,6 +140,7 @@
 #include "ShadowRoot.h"
 #include "SkiaUtils.h"
 #include "SpellChecker.h"
+#include "StyleInheritedData.h"
 #include "SubstituteData.h"
 #include "TextAffinity.h"
 #include "TextIterator.h"
@@ -1189,6 +1190,11 @@ bool WebFrameImpl::isProcessingUserGesture() const
     return ScriptController::processingUserGesture();
 }
 
+bool WebFrameImpl::consumeUserGesture() const
+{
+    return UserGestureIndicator::consumeUserGesture();
+}
+
 bool WebFrameImpl::willSuppressOpenerInNewFrame() const
 {
     return frame()->loader()->suppressOpenerInNewFrame();
@@ -1233,14 +1239,6 @@ bool WebFrameImpl::hasMarkedText() const
 WebRange WebFrameImpl::markedRange() const
 {
     return frame()->editor()->compositionRange();
-}
-
-void WebFrameImpl::setSelectionToRange(const WebRange& range)
-{
-    if (frame()->selection()->isContentEditable()) {
-        RefPtr<Range> replacementRange = PassRefPtr<Range>(range);
-        frame()->selection()->setSelection(VisibleSelection(replacementRange.get(), SEL_DEFAULT_AFFINITY));
-    }
 }
 
 bool WebFrameImpl::firstRectForCharacterRange(unsigned location, unsigned length, WebRect& rect) const

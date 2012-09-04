@@ -15,7 +15,6 @@ http/tests/security/cross-frame-access-put.html
 http/tests/security/mixedContent/insecure-plugin-in-iframe.html
 http/tests/websocket/tests/hixie76/close-before-open.html
 http/tests/websocket/tests/hixie76/close-unref-websocket.html
-http/tests/websocket/tests/hixie76/frame-lengths.html
 http/tests/websocket/tests/hixie76/simple-stress.html
 http/tests/websocket/tests/hixie76/websocket-event-target.html
 jquery/manipulation.html
@@ -119,7 +118,6 @@ compositing
 fast/events/click-count.html
 fast/events/dont-loose-last-event.html
 fast/forms/basic-selects.html
-fast/html/marquee-alternate.html
 http/tests/appcache/auth.html
 http/tests/inspector/extensions-ignore-cache.html
 http/tests/inspector/inspect-element.html

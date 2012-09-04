@@ -18,6 +18,8 @@
             'chromium/MockWebMediaStreamCenter.h',
             'chromium/MockWebPrerenderingSupport.cpp',
             'chromium/MockWebPrerenderingSupport.h',
+            'chromium/MockWebRTCPeerConnectionHandler.cpp',
+            'chromium/MockWebRTCPeerConnectionHandler.h',
             'chromium/MockWebSpeechInputController.cpp',
             'chromium/MockWebSpeechInputController.h',
             'chromium/MockWebSpeechRecognizer.cpp',
@@ -52,6 +54,8 @@
             'chromium/WebUserMediaClientMock.h',
             'chromium/WebViewHost.cpp',
             'chromium/WebViewHost.h',
+            'chromium/WebViewHostOutputSurface.cpp',
+            'chromium/WebViewHostOutputSurface.h',
         ],
         'test_runner_files': [
             'DumpRenderTree.h',

@@ -66,14 +66,14 @@ public:
         WebCompositor::initialize(0);
         m_graphicsLayer = static_pointer_cast<GraphicsLayerChromium>(GraphicsLayer::create(&m_client));
         m_platformLayer = m_graphicsLayer->platformLayer();
-        m_layerTreeView.initialize(&m_layerTreeViewClient, *m_platformLayer, WebLayerTreeView::Settings());
-        m_layerTreeView.setViewportSize(WebSize(1, 1), WebSize(1, 1));
+        m_layerTreeView = adoptPtr(WebLayerTreeView::create(&m_layerTreeViewClient, *m_platformLayer, WebLayerTreeView::Settings()));
+        m_layerTreeView->setViewportSize(WebSize(1, 1), WebSize(1, 1));
     }
 
     virtual ~GraphicsLayerChromiumTest()
     {
         m_graphicsLayer.clear();
-        m_layerTreeView.reset();
+        m_layerTreeView.clear();
         WebCompositor::shutdown();
     }
 
@@ -88,7 +88,7 @@ protected:
 
 private:
     MockWebLayerTreeViewClient m_layerTreeViewClient;
-    WebLayerTreeView m_layerTreeView;
+    OwnPtr<WebLayerTreeView> m_layerTreeView;
     MockGraphicsLayerClient m_client;
 };
 
@@ -96,9 +96,10 @@ TEST_F(GraphicsLayerChromiumTest, updateLayerPreserves3DWithAnimations)
 {
     ASSERT_FALSE(m_platformLayer->hasActiveAnimation());
 
-    WebFloatAnimationCurve curve;
-    curve.add(WebFloatKeyframe(0.0, 0.0));
-    OwnPtr<WebAnimation> floatAnimation(adoptPtr(WebAnimation::create(curve, 1, 1, WebAnimation::TargetPropertyOpacity)));
+    OwnPtr<WebFloatAnimationCurve> curve = adoptPtr(WebFloatAnimationCurve::create());
+    curve->add(WebFloatKeyframe(0.0, 0.0));
+    OwnPtr<WebAnimation> floatAnimation(adoptPtr(WebAnimation::create(*curve, WebAnimation::TargetPropertyOpacity)));
+    int animationId = floatAnimation->id();
     ASSERT_TRUE(m_platformLayer->addAnimation(floatAnimation.get()));
 
     ASSERT_TRUE(m_platformLayer->hasActiveAnimation());
@@ -109,7 +110,7 @@ TEST_F(GraphicsLayerChromiumTest, updateLayerPreserves3DWithAnimations)
     ASSERT_TRUE(m_platformLayer);
 
     ASSERT_TRUE(m_platformLayer->hasActiveAnimation());
-    m_platformLayer->removeAnimation(1);
+    m_platformLayer->removeAnimation(animationId);
     ASSERT_FALSE(m_platformLayer->hasActiveAnimation());
 
     m_graphicsLayer->setPreserves3D(false);

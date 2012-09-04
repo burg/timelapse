@@ -45,7 +45,7 @@ namespace {
 bool animationCanBeTranslated(const KeyframeValueList& values, Animation* animation)
 {
     IntSize boxSize;
-    return createWebAnimation(values, animation, 0, 0, 0, boxSize);
+    return createWebAnimation(values, animation, 0, 0, boxSize);
 }
 
 TEST(AnimationTranslationUtilTest, createOpacityAnimation)
@@ -96,7 +96,7 @@ TEST(AnimationTranslationUtilTest, createTransformAnimationWithBigRotation)
     RefPtr<Animation> animation = Animation::create();
     animation->setDuration(duration);
 
-    EXPECT_FALSE(animationCanBeTranslated(values, animation.get()));
+    EXPECT_TRUE(animationCanBeTranslated(values, animation.get()));
 }
 
 TEST(AnimationTranslationUtilTest, createTransformAnimationWithBigRotationAndEmptyTransformOperationList)
@@ -114,7 +114,7 @@ TEST(AnimationTranslationUtilTest, createTransformAnimationWithBigRotationAndEmp
     RefPtr<Animation> animation = Animation::create();
     animation->setDuration(duration);
 
-    EXPECT_FALSE(animationCanBeTranslated(values, animation.get()));
+    EXPECT_TRUE(animationCanBeTranslated(values, animation.get()));
 }
 
 TEST(AnimationTranslationUtilTest, createTransformAnimationWithRotationInvolvingNegativeAngles)

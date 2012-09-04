@@ -39,7 +39,6 @@
 #include "WebMediaPlayerClient.h"
 #include "WebStreamTextureClient.h"
 #include <public/WebVideoFrameProvider.h>
-#include <public/WebVideoLayer.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 
@@ -50,6 +49,7 @@ namespace WebKit {
 class WebHelperPluginImpl;
 class WebAudioSourceProvider;
 class WebMediaPlayer;
+class WebVideoLayer;
 
 // This class serves as a bridge between WebCore::MediaPlayer and
 // WebKit::WebMediaPlayer.
@@ -205,7 +205,7 @@ private:
     WebCore::MediaPlayer::Preload m_preload;
     RefPtr<WebHelperPluginImpl> m_helperPlugin;
 #if USE(ACCELERATED_COMPOSITING)
-    WebVideoLayer m_videoLayer;
+    OwnPtr<WebVideoLayer> m_videoLayer;
     bool m_supportsAcceleratedCompositing;
     bool m_opaque;
     WebVideoFrameProvider::Client* m_videoFrameProviderClient;

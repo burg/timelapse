@@ -36,12 +36,12 @@
 #include "Protect.h"
 #include "StructureTransitionTable.h"
 #include "JSTypeInfo.h"
-#include "UString.h"
 #include "Watchpoint.h"
 #include "Weak.h"
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
+#include <wtf/text/StringImpl.h>
 
 
 namespace JSC {
@@ -256,8 +256,10 @@ namespace JSC {
                 && offset <= lastValidOffset();
         }
 
+        bool masqueradesAsUndefined(JSGlobalObject* lexicalGlobalObject);
+
         PropertyOffset get(JSGlobalData&, PropertyName);
-        PropertyOffset get(JSGlobalData&, const UString& name);
+        PropertyOffset get(JSGlobalData&, const WTF::String& name);
         JS_EXPORT_PRIVATE PropertyOffset get(JSGlobalData&, PropertyName, unsigned& attributes, JSCell*& specificValue);
 
         bool hasGetterSetterProperties() const { return m_hasGetterSetterProperties; }
@@ -311,6 +313,11 @@ namespace JSC {
         static ptrdiff_t prototypeOffset()
         {
             return OBJECT_OFFSETOF(Structure, m_prototype);
+        }
+
+        static ptrdiff_t globalObjectOffset()
+        {
+            return OBJECT_OFFSETOF(Structure, m_globalObject);
         }
 
         static ptrdiff_t typeInfoFlagsOffset()
@@ -494,7 +501,7 @@ namespace JSC {
         return entry ? entry->offset : invalidOffset;
     }
 
-    inline PropertyOffset Structure::get(JSGlobalData& globalData, const UString& name)
+    inline PropertyOffset Structure::get(JSGlobalData& globalData, const WTF::String& name)
     {
         ASSERT(structure()->classInfo() == &s_info);
         materializePropertyMapIfNecessary(globalData);
@@ -505,6 +512,11 @@ namespace JSC {
         return entry ? entry->offset : invalidOffset;
     }
     
+    inline bool Structure::masqueradesAsUndefined(JSGlobalObject* lexicalGlobalObject)
+    {
+        return typeInfo().masqueradesAsUndefined() && globalObject() == lexicalGlobalObject;
+    }
+
     inline JSValue JSValue::structureOrUndefined() const
     {
         if (isCell())
@@ -555,6 +567,8 @@ namespace JSC {
     ALWAYS_INLINE void MarkStack::internalAppend(JSCell* cell)
     {
         ASSERT(!m_isCheckingForDefaultMarkViolation);
+        if (!cell)
+            return;
 #if ENABLE(GC_VALIDATION)
         validate(cell);
 #endif

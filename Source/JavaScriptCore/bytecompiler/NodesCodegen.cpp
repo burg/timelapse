@@ -34,7 +34,7 @@
 #include "JIT.h"
 #include "JSFunction.h"
 #include "JSGlobalObject.h"
-#include "JSStaticScopeObject.h"
+#include "JSNameScope.h"
 #include "LabelScope.h"
 #include "Lexer.h"
 #include "Operations.h"
@@ -43,7 +43,6 @@
 #include "RegExpCache.h"
 #include "RegExpObject.h"
 #include "SamplingTool.h"
-#include "UStringConcatenate.h"
 #include <wtf/Assertions.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/Threading.h>
@@ -77,7 +76,7 @@ namespace JSC {
 
 // ------------------------------ ThrowableExpressionData --------------------------------
 
-RegisterID* ThrowableExpressionData::emitThrowReferenceError(BytecodeGenerator& generator, const UString& message)
+RegisterID* ThrowableExpressionData::emitThrowReferenceError(BytecodeGenerator& generator, const String& message)
 {
     generator.emitExpressionInfo(divot(), startOffset(), endOffset());
     generator.emitThrowReferenceError(message);
@@ -1757,11 +1756,10 @@ RegisterID* ReturnNode::emitBytecode(BytecodeGenerator& generator, RegisterID* d
 RegisterID* WithNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 {
     generator.emitDebugHook(WillExecuteStatement, firstLine(), lastLine(), column());
-    
-    RefPtr<RegisterID> scope = generator.newTemporary();
-    generator.emitNode(scope.get(), m_expr); // scope must be protected until popped
+
+    RefPtr<RegisterID> scope = generator.emitNode(m_expr);
     generator.emitExpressionInfo(m_divot, m_expressionLength, 0);
-    generator.emitPushScope(scope.get());
+    generator.emitPushWithScope(scope.get());
     RegisterID* result = generator.emitNode(dst, m_statement);
     generator.emitPopScope();
     return result;
@@ -1808,7 +1806,7 @@ static void processClauseList(ClauseListNode* list, Vector<ExpressionNode*, 8>& 
                 typeForTable = SwitchNeither;
                 break;
             }
-            const UString& value = static_cast<StringNode*>(clauseExpression)->value().ustring();
+            const String& value = static_cast<StringNode*>(clauseExpression)->value().ustring();
             if (singleCharacterSwitch &= value.length() == 1) {
                 int32_t intVal = value[0];
                 if (intVal < min_num)
@@ -1970,11 +1968,15 @@ RegisterID* TryNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 
     generator.emitDebugHook(WillExecuteStatement, firstLine(), lastLine(), column());
 
+    ASSERT(m_catchBlock || m_finallyBlock);
+
     RefPtr<Label> tryStartLabel = generator.newLabel();
+    generator.emitLabel(tryStartLabel.get());
+    
     if (m_finallyBlock)
         generator.pushFinallyContext(m_finallyBlock);
+    TryData* tryData = generator.pushTry(tryStartLabel.get());
 
-    generator.emitLabel(tryStartLabel.get());
     generator.emitNode(dst, m_tryBlock);
 
     if (m_catchBlock) {
@@ -1985,14 +1987,23 @@ RegisterID* TryNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
 
         // Uncaught exception path: the catch block.
         RefPtr<Label> here = generator.emitLabel(generator.newLabel().get());
-        RefPtr<RegisterID> exceptionRegister = generator.emitCatch(generator.newTemporary(), tryStartLabel.get(), here.get());
-        generator.emitPushNewScope(exceptionRegister.get(), m_exceptionIdent, exceptionRegister.get());
+        RefPtr<RegisterID> exceptionRegister = generator.popTryAndEmitCatch(tryData, generator.newTemporary(), here.get());
+        
+        if (m_finallyBlock) {
+            // If the catch block throws an exception and we have a finally block, then the finally
+            // block should "catch" that exception.
+            tryData = generator.pushTry(here.get());
+        }
+        
+        generator.emitPushNameScope(m_exceptionIdent, exceptionRegister.get(), DontDelete);
         generator.emitNode(dst, m_catchBlock);
         generator.emitPopScope();
         generator.emitLabel(catchEndLabel.get());
     }
 
     if (m_finallyBlock) {
+        RefPtr<Label> preFinallyLabel = generator.emitLabel(generator.newLabel().get());
+        
         generator.popFinallyContext();
 
         RefPtr<Label> finallyEndLabel = generator.newLabel();
@@ -2002,8 +2013,7 @@ RegisterID* TryNode::emitBytecode(BytecodeGenerator& generator, RegisterID* dst)
         generator.emitJump(finallyEndLabel.get());
 
         // Uncaught exception path: invoke the finally block, then re-throw the exception.
-        RefPtr<Label> here = generator.emitLabel(generator.newLabel().get());
-        RefPtr<RegisterID> tempExceptionRegister = generator.emitCatch(generator.newTemporary(), tryStartLabel.get(), here.get());
+        RefPtr<RegisterID> tempExceptionRegister = generator.popTryAndEmitCatch(tryData, generator.newTemporary(), preFinallyLabel.get());
         generator.emitNode(dst, m_finallyBlock);
         generator.emitThrow(tempExceptionRegister.get());
 

@@ -119,6 +119,7 @@ HEADERS += \
     RefPtrHashMap.h \
     RetainPtr.h \
     SHA1.h \
+    SaturatedArithmetic.h \
     Spectrum.h \
     StackBounds.h \
     StaticConstructors.h \
@@ -134,6 +135,7 @@ HEADERS += \
     text/AtomicStringImpl.h \
     text/Base64.h \
     text/CString.h \
+    text/IntegerToStringConversion.h \
     text/StringBuffer.h \
     text/StringBuilder.h \
     text/StringConcatenate.h \
@@ -217,6 +219,7 @@ SOURCES += \
     text/AtomicString.cpp \
     text/Base64.cpp \
     text/CString.cpp \
+    text/IntegerToStringConversion.cpp \
     text/StringBuilder.cpp \
     text/StringImpl.cpp \
     text/StringStatics.cpp \

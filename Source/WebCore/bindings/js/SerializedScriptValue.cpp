@@ -56,6 +56,7 @@
 #include <limits>
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/APIShims.h>
+#include <runtime/BooleanObject.h>
 #include <runtime/DateInstance.h>
 #include <runtime/Error.h>
 #include <runtime/ExceptionHelpers.h>
@@ -108,6 +109,11 @@ enum SerializationTag {
     ArrayBufferTag = 21,
     ArrayBufferViewTag = 22,
     ArrayBufferTransferTag = 23,
+    TrueObjectTag = 24,
+    FalseObjectTag = 25,
+    StringObjectTag = 26,
+    EmptyStringObjectTag = 27,
+    NumberObjectTag = 28,
     ErrorTag = 255
 };
 
@@ -152,8 +158,10 @@ static unsigned typedArrayElementSize(ArrayBufferViewSubtag tag)
  *
  * Initial version was 1.
  * Version 2. added the ObjectReferenceTag and support for serialization of cyclic graphs.
+ * Version 3. added the FalseObjectTag, TrueObjectTag, NumberObjectTag, StringObjectTag
+ * and EmptyStringObjectTag for serialization of Boolean, Number and String objects.
  */
-static const unsigned int CurrentVersion = 2;
+static const unsigned int CurrentVersion = 3;
 static const unsigned int TerminatorTag = 0xFFFFFFFF;
 static const unsigned int StringPoolTag = 0xFFFFFFFE;
 
@@ -182,10 +190,14 @@ static const unsigned int StringPoolTag = 0xFFFFFFFE;
  *    | OneTag
  *    | FalseTag
  *    | TrueTag
+ *    | FalseObjectTag
+ *    | TrueObjectTag
  *    | DoubleTag <value:double>
+ *    | NumberObjectTag <value:double>
  *    | DateTag <value:double>
  *    | String
  *    | EmptyStringTag
+ *    | EmptyStringObjectTag
  *    | File
  *    | FileList
  *    | ImageData
@@ -199,6 +211,10 @@ static const unsigned int StringPoolTag = 0xFFFFFFFE;
  * String :-
  *      EmptyStringTag
  *      StringTag StringData
+ *
+ * StringObject:
+ *      EmptyStringObjectTag
+ *      StringObjectTag StringData
  *
  * StringData :-
  *      StringPoolTag <cpIndex:IndexType>
@@ -370,7 +386,7 @@ private:
         : CloneBase(exec)
         , m_buffer(out)
         , m_blobURLs(blobURLs)
-        , m_emptyIdentifier(exec, UString("", 0))
+        , m_emptyIdentifier(exec, emptyString())
     {
         write(CurrentVersion);
         fillTransferMap(messagePorts, m_transferredMessagePorts);
@@ -507,12 +523,22 @@ private:
         }
     }
 
-    void dumpString(UString str)
+    void dumpString(String str)
     {
         if (str.isEmpty())
             write(EmptyStringTag);
         else {
             write(StringTag);
+            write(str);
+        }
+    }
+
+    void dumpStringObject(String str)
+    {
+        if (str.isEmpty())
+            write(EmptyStringObjectTag);
+        else {
+            write(StringObjectTag);
             write(str);
         }
     }
@@ -563,7 +589,7 @@ private:
         }
 
         if (value.isString()) {
-            UString str = asString(value)->value(m_exec);
+            String str = asString(value)->value(m_exec);
             dumpString(str);
             return true;
         }
@@ -585,6 +611,27 @@ private:
 
         if (value.isObject()) {
             JSObject* obj = asObject(value);
+            if (obj->inherits(&BooleanObject::s_info)) {
+                if (!startObjectInternal(obj)) // handle duplicates
+                    return true;
+                write(asBooleanObject(value)->internalValue().toBoolean(m_exec) ? TrueObjectTag : FalseObjectTag);
+                return true;
+            }
+            if (obj->inherits(&StringObject::s_info)) {
+                if (!startObjectInternal(obj)) // handle duplicates
+                    return true;
+                String str = asString(asStringObject(value)->internalValue())->value(m_exec);
+                dumpStringObject(str);
+                return true;
+            }
+            if (obj->inherits(&NumberObject::s_info)) {
+                if (!startObjectInternal(obj)) // handle duplicates
+                    return true;
+                write(NumberObjectTag);
+                NumberObject* obj = static_cast<NumberObject*>(asObject(value));
+                write(obj->internalValue().asNumber());
+                return true;
+            }
             if (obj->inherits(&JSFile::s_info)) {
                 write(FileTag);
                 write(toFile(obj));
@@ -629,7 +676,7 @@ private:
                     flags[flagCount++] = 'm';
                 write(RegExpTag);
                 write(regExp->regExp()->pattern());
-                write(UString(flags, flagCount));
+                write(String(flags, flagCount));
                 return true;
             }
             if (obj->inherits(&JSMessagePort::s_info)) {
@@ -745,7 +792,7 @@ private:
 
     void write(const Identifier& ident)
     {
-        UString str = ident.ustring();
+        const String& str = ident.ustring();
         StringConstantPool::AddResult addResult = m_constantPool.add(str.impl(), m_constantPool.size());
         if (!addResult.isNewEntry) {
             write(StringPoolTag);
@@ -771,20 +818,12 @@ private:
             fail();
     }
 
-    void write(const UString& str)
+    void write(const String& str)
     {
         if (str.isNull())
             write(m_emptyIdentifier);
         else
             write(Identifier(m_exec, str));
-    }
-
-    void write(const String& str)
-    {
-        if (str.isEmpty())
-            write(m_emptyIdentifier);
-        else
-            write(Identifier(m_exec, str.impl()));
     }
 
     void write(const File* file)
@@ -990,7 +1029,7 @@ public:
         const uint8_t* start = value.begin();
         const uint8_t* end = value.end();
         const uint32_t length = value.size() / sizeof(UChar);
-        UString str;
+        String str;
         if (!CloneDeserializer::readString(start, end, str, length))
             return String();
 
@@ -1010,7 +1049,7 @@ public:
         uint32_t length;
         if (!readLittleEndian(ptr, end, length) || length >= StringPoolTag)
             return String();
-        UString str;
+        String str;
         if (!readString(ptr, end, str, length))
             return String();
         return String(str.impl());
@@ -1030,7 +1069,7 @@ public:
 
 private:
     struct CachedString {
-        CachedString(const UString& string)
+        CachedString(const String& string)
             : m_string(string)
         {
         }
@@ -1041,10 +1080,11 @@ private:
                 m_jsString = JSC::jsString(exec, m_string);
             return m_jsString;
         }
-        const UString& ustring() { return m_string; }
+        // FIXME: rename to string().
+        const String& ustring() { return m_string; }
 
     private:
-        UString m_string;
+        String m_string;
         JSValue m_jsString;
     };
 
@@ -1193,7 +1233,7 @@ private:
         return read(i);
     }
 
-    static bool readString(const uint8_t*& ptr, const uint8_t* end, UString& str, unsigned length)
+    static bool readString(const uint8_t*& ptr, const uint8_t* end, String& str, unsigned length)
     {
         if (length >= numeric_limits<int32_t>::max() / sizeof(UChar))
             return false;
@@ -1203,7 +1243,7 @@ private:
             return false;
 
 #if ASSUME_LITTLE_ENDIAN
-        str = UString(reinterpret_cast<const UChar*>(ptr), length);
+        str = String(reinterpret_cast<const UChar*>(ptr), length);
         ptr += length * sizeof(UChar);
 #else
         Vector<UChar> buffer;
@@ -1213,7 +1253,7 @@ private:
             readLittleEndian(ptr, end, ch);
             buffer.append(ch);
         }
-        str = UString::adopt(buffer);
+        str = String::adopt(buffer);
 #endif
         return true;
     }
@@ -1248,7 +1288,7 @@ private:
             cachedString = CachedStringRef(&m_constantPool, index);
             return true;
         }
-        UString str;
+        String str;
         if (!readString(m_ptr, m_end, str, length)) {
             fail();
             return false;
@@ -1275,7 +1315,7 @@ private:
 
     void putProperty(JSArray* array, unsigned index, JSValue value)
     {
-        array->putDirectIndex(m_exec, index, value, false);
+        array->putDirectIndex(m_exec, index, value);
     }
 
     void putProperty(JSObject* object, const Identifier& property, JSValue value)
@@ -1398,11 +1438,31 @@ private:
             return jsBoolean(false);
         case TrueTag:
             return jsBoolean(true);
+        case FalseObjectTag: {
+            BooleanObject* obj = BooleanObject::create(m_exec->globalData(), m_globalObject->booleanObjectStructure());
+            obj->setInternalValue(m_exec->globalData(), jsBoolean(false));
+            m_gcBuffer.append(obj);
+            return obj;
+        }
+        case TrueObjectTag: {
+            BooleanObject* obj = BooleanObject::create(m_exec->globalData(), m_globalObject->booleanObjectStructure());
+            obj->setInternalValue(m_exec->globalData(), jsBoolean(true));
+             m_gcBuffer.append(obj);
+            return obj;
+        }
         case DoubleTag: {
             double d;
             if (!read(d))
                 return JSValue();
             return jsNumber(d);
+        }
+        case NumberObjectTag: {
+            double d;
+            if (!read(d))
+                return JSValue();
+            NumberObject* obj = constructNumber(m_exec, m_globalObject, jsNumber(d));
+            m_gcBuffer.append(obj);
+            return obj;
         }
         case DateTag: {
             double d;
@@ -1479,6 +1539,19 @@ private:
         }
         case EmptyStringTag:
             return jsEmptyString(&m_exec->globalData());
+        case StringObjectTag: {
+            CachedStringRef cachedString;
+            if (!readStringData(cachedString))
+                return JSValue();
+            StringObject* obj = constructString(m_exec, m_globalObject, cachedString->jsString(m_exec));
+            m_gcBuffer.append(obj);
+            return obj;
+        }
+        case EmptyStringObjectTag: {
+            StringObject* obj = constructString(m_exec, m_globalObject, jsEmptyString(&m_exec->globalData()));
+            m_gcBuffer.append(obj);
+            return obj;
+        }
         case RegExpTag: {
             CachedStringRef pattern;
             if (!readStringData(pattern))

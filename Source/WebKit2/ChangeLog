@@ -1,3 +1,1777 @@
+2012-09-02  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL][WK2] Keep activePopupMenu to call valueChangedForPopupMenu() outside showPopupMenu()
+        https://bugs.webkit.org/show_bug.cgi?id=95355
+
+        Reviewed by Gyuyoung Kim.
+
+        Efl does not have a proper way to support nested loop so that applications
+        may change value after showPopupMenu() is finished.
+
+        * UIProcess/API/efl/tests/test_ewk2_view.cpp: Improved test case to cover this bug.
+        (selectItemAfterDelayed):
+        (showPopupMenu):
+        * UIProcess/WebPageProxy.cpp:
+        (WebKit::WebPageProxy::showPopupMenu):
+        Guard with !PLATFORM(EFL) to keep the activePopupMenu valid to call valueChangedForPopupMenu
+        outside showPopupMenu().
+
+2012-09-02  Byungwoo Lee  <bw80.lee@gmail.com>
+
+        [EFL] Add missing semicolon at the end of some lines.
+        https://bugs.webkit.org/show_bug.cgi?id=95640
+
+        Reviewed by Gyuyoung Kim.
+
+        EWK_VIEW_PRIV_GET_OR_RETURN macro and other related macro can be used
+        without semicolon, because it ends with a semicolon or complete block.
+        This can make a human mistake about missing semicolon.
+
+        Fixed the macros to require semicolon, and added missing semicolons.
+
+        * UIProcess/API/efl/ewk_view.cpp:
+        (_ewk_view_smart_focus_in):
+        (_ewk_view_smart_focus_out):
+        (_ewk_view_smart_mouse_wheel):
+        (_ewk_view_smart_mouse_down):
+        (_ewk_view_smart_mouse_up):
+        (_ewk_view_smart_mouse_move):
+        (_ewk_view_smart_key_down):
+        (_ewk_view_smart_key_up):
+        (_ewk_view_initialize):
+
+2012-09-01  Sam Weinig  <sam@webkit.org>
+
+        Remove unused member variable from WebProcess.
+
+        Rubber-stamped by Dan Bernstein.
+
+        * WebProcess/WebProcess.h:
+        (WebProcess):
+        Remove m_applicationCachePathExtension.
+
+2012-09-01  Sam Weinig  <sam@webkit.org>
+
+        Use dynamic sandbox extension rather than sandbox parameters for paths provided by the UIProcess
+        https://bugs.webkit.org/show_bug.cgi?id=95651
+
+        Reviewed by Dan Bernstein.
+
+        This is the first step to not relying on the initialization message to initialize
+        the sandbox.
+
+        * Shared/SandboxExtension.h:
+        (SandboxExtension):
+        * Shared/mac/SandboxExtensionMac.mm:
+        (WebKit::SandboxExtension::consumePermanently):
+        Add static version of SandboxExtension::consumePermanently which takes a
+        SandboxExtension::Handle. There is no reason to create a SandboxExtension
+        just to consume it forever.
+
+        * Shared/WebProcessCreationParameters.cpp:
+        (WebKit::WebProcessCreationParameters::encode):
+        (WebKit::WebProcessCreationParameters::decode):
+        * Shared/WebProcessCreationParameters.h:
+        (WebProcessCreationParameters):
+        Add SandboxExtension::Handles for paths we need access to, and remove
+        webInspectorBaseDirectory, which is unused.
+
+        * UIProcess/WebContext.cpp:
+        (WebKit::WebContext::createNewWebProcess):
+        * UIProcess/mac/WebContextMac.mm:
+        (WebKit::WebContext::platformInitializeWebProcess):
+        Create SandboxExtension::Handles for paths we need access to, and move
+        getting the presenterApplicationPid to platformInitializeWebProcess, since
+        it is Mac only.
+
+        * WebProcess/WebProcess.cpp:
+        (WebKit::WebProcess::initializeWebProcess):
+        Move setting the presenterApplicationPid to platformInitializeWebProcess.
+
+        * WebProcess/mac/WebProcessMac.mm:
+        (WebKit::initializeSandbox):
+        (WebKit::WebProcess::platformInitializeWebProcess):
+        Replace the use of sandbox parameters for opening access for necessary paths
+        with permanent consumption of sandbox extensions.
+
+        * WebProcess/com.apple.WebProcess.sb.in:
+        Remove sandbox rules that are now handled via extensions.
+
+2012-08-31  Byungwoo Lee  <bw80.lee@samsung.com>
+
+        Build warning : -Wformat on WebMemorySampler.cpp.
+        https://bugs.webkit.org/show_bug.cgi?id=95550
+
+        Reviewed by Darin Adler.
+
+        Fix build warning.
+        Use String::number instead of String::format.
+
+        * Shared/WebMemorySampler.cpp:
+        (WebKit::WebMemorySampler::appendCurrentMemoryUsageToFile):
+
+2012-08-31  Alexey Proskuryakov  <ap@apple.com>
+
+        [WK2] Use initial process in multi-process mode, too
+        https://bugs.webkit.org/show_bug.cgi?id=95612
+
+        Reviewed by Sam Weinig.
+
+        * UIProcess/WebContext.cpp:
+        (WebKit::WebContext::WebContext):
+        (WebKit::WebContext::warmInitialProcess):
+        (WebKit::WebContext::disconnectProcess):
+        (WebKit::WebContext::createWebPage):
+        * UIProcess/WebContext.h:
+        Added a boolean telling whether the last (normally, the only) process in m_processes
+        is available for use in a new page.
+
+2012-08-31  Alexey Proskuryakov  <ap@apple.com>
+
+        [WK2] WebProcesses should not wait 60 seconds to close in multi-process mode
+        https://bugs.webkit.org/show_bug.cgi?id=95616
+
+        Reviewed by Darin Adler.
+
+        * Shared/ChildProcess.cpp: (WebKit::ChildProcess::ChildProcess):
+        * Shared/ChildProcess.h: (WebKit::ChildProcess::setTerminationTimeout):
+        Expose a setter for timeout instead of taking it at construction time. If a derived
+        class doesn't call the setter, default to 0.
+
+        * PluginProcess/PluginProcess.cpp:
+        (WebKit::PluginProcess::PluginProcess):
+        (WebKit::PluginProcess::initializePluginProcess):
+        Use timeout from initialization message.
+
+        * WebProcess/WebProcess.cpp:
+        (WebKit::WebProcess::WebProcess):
+        (WebKit::WebProcess::initializeWebProcess):
+        Ditto.
+
+        * Shared/Plugins/PluginProcessCreationParameters.cpp:
+        (WebKit::PluginProcessCreationParameters::encode):
+        (WebKit::PluginProcessCreationParameters::decode):
+        * Shared/Plugins/PluginProcessCreationParameters.h:
+        * Shared/WebProcessCreationParameters.cpp:
+        (WebKit::WebProcessCreationParameters::encode):
+        (WebKit::WebProcessCreationParameters::decode):
+        * Shared/WebProcessCreationParameters.h:
+        Funnel timeout across process boundary.
+
+        * UIProcess/Plugins/PluginProcessProxy.cpp: (WebKit::PluginProcessProxy::didFinishLaunching):
+        Pass timeout as initialization message after launch.
+
+        * UIProcess/WebContext.cpp:
+        (WebKit::WebContext::createNewWebProcess): Pass timeout as initialization message
+        (unlike plugin process proxy, web process proxy doesn't wait, and relies on the message
+        being queued).
+        (WebKit::WebContext::disconnectProcess): Skip invalidating global managers when
+        one process quits. We still need to do something, but running this code would just
+        result in assertion failures any time a page was closed.
+
+2012-08-31  Brady Eidson  <beidson@apple.com>
+
+       REGRESSION (r127252): incomplete repaint on Flash element after pinch to zoom
+       <rdar://problem/12217897> and https://bugs.webkit.org/show_bug.cgi?id=95607
+
+       Reviewed by Simon Fraser.
+
+       * WebProcess/Plugins/PluginView.cpp:
+       (WebKit::PluginView::viewGeometryDidChange): Only give the window coordinate clip rect a chance
+         to override the boundsRect() if the page scale factor is 1.
+
+2012-08-31  Tony Chang  <tony@chromium.org>
+
+        Remove ENABLE_CSS3_FLEXBOX compile time flag
+        https://bugs.webkit.org/show_bug.cgi?id=95382
+
+        Reviewed by Ojan Vafai.
+
+        Everyone is already enabling this by default and the spec has stablized.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-08-31  Pratik Solanki  <psolanki@apple.com>
+
+        objc_msgSend and IMP should be cast appropriately before using
+        https://bugs.webkit.org/show_bug.cgi?id=95242
+
+        Reviewed by Benjamin Poulain.
+
+        Follow on fix for Mac EWS - use objc-runtime.h instead of runtime.h so
+        that it finds the declaration for objc_msgSend.
+
+        * UIProcess/API/mac/PDFViewController.mm:
+
+2012-08-31  Jon Lee  <jonlee@apple.com>
+
+        [Tests] Add basic tests to http/tests/notifications
+        https://bugs.webkit.org/show_bug.cgi?id=95493
+        <rdar://problem/12209303>
+
+        Reviewed by Alexey Proskuryakov.
+
+        Simplify the passing of the permission policy to just a boolean instead of converting it
+        back and forth from the NotificationClient::Permission enum.
+
+        * WebProcess/InjectedBundle/API/c/WKBundlePrivate.h: Move the declaration to the section
+        of functions that are TestRunner SPI.
+        * WebProcess/InjectedBundle/InjectedBundle.cpp:
+        (WebKit::InjectedBundle::setWebNotificationPermission): Use a boolean.
+        * WebProcess/Notifications/NotificationPermissionRequestManager.cpp:
+        (WebKit::NotificationPermissionRequestManager::setPermissionLevelForTesting):
+        * WebProcess/Notifications/NotificationPermissionRequestManager.h:
+        (NotificationPermissionRequestManager):
+
+        * win/WebKit2.vcproj: Add WKNotificationPermissionRequest.{h,cpp}.
+        * win/WebKit2Generated.make: Export WKNotificationPermissionRequest.h.
+
+2012-08-31  Balazs Kelemen  <kbalazs@webkit.org>
+
+        [Qt] ASSERT(m_useFixedLayout) in WebPage when using QRawWebView without setting fixed layout
+        https://bugs.webkit.org/show_bug.cgi?id=95557
+
+        Reviewed by Noam Rosenthal.
+
+        Let QRawWebView work with non-fixed layout size.
+
+        * UIProcess/API/qt/raw/qrawwebview.cpp:
+        (QRawWebView::setSize): Also put the member assigment into
+        the point where the new size is ensured to be committed.
+
+2012-08-31  Balazs Kelemen  <kbalazs@webkit.org>
+
+        [Qt] LayerTreeRenderer::callOnMainTread method name is misleading
+        https://bugs.webkit.org/show_bug.cgi?id=95558
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Fix the typo in the function name so callers will really call this
+        and not WTF::callOnMainThread. Renamed to dispatchOnMainThread to
+        make it clear that these things are not the same.
+
+        * UIProcess/CoordinatedGraphics/LayerTreeRenderer.cpp:
+        (WebKit::LayerTreeRenderer::dispatchOnMainThread):
+        (WebKit::LayerTreeRenderer::flushLayerChanges):
+        (WebKit::LayerTreeRenderer::purgeGLResources):
+        * UIProcess/CoordinatedGraphics/LayerTreeRenderer.h:
+        (LayerTreeRenderer):
+
+2012-08-31  Brady Eidson  <beidson@apple.com>
+
+        REGRESSION (127047): Crash in PluginProxy::windowVisibilityChanged when changing tabs
+        <rdar://problem/12211180> and https://bugs.webkit.org/show_bug.cgi?id=95515
+
+        Reviewed by Dan Bernstein.
+
+        Plug-ins created in background tabs don't get initialized until they first become visible,
+        so telling them they are now invisible leads to messaging on behalf of an uninitialized plug-in.
+
+        Many other methods related to visibility and focus only call through if the plug-in is initialized,
+        so setWindowIsVisible should do the same.
+
+        * WebProcess/Plugins/PluginView.cpp:
+        (WebKit::PluginView::setWindowIsVisible): Only tell initialized plug-ins of window visibility changes.
+
+2012-08-31  Milian Wolff  <milian.wolff@kdab.com>
+
+        [Qt] QNX does not support SOCK_SEQPACKET socket type for socketpair in ProcessLauncherQt
+        https://bugs.webkit.org/show_bug.cgi?id=95553
+
+        Reviewed by Simon Hausmann.
+
+        Calling socketpair with SOCK_SEQPACKET socket type fails on QNX with an error 241 (EPROTOTYPE),
+        as can be seen by the following debug output: "Creation of socket failed with errno: 241".
+        A test app shows that SOCK_DGRAM works properly on QNX, thus use it instead of SOCK_SEQPACKET.
+
+        * UIProcess/Launcher/qt/ProcessLauncherQt.cpp:
+
+2012-08-30  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        ~JSNPObject should call invalidate() if it hasn't been called already
+        https://bugs.webkit.org/show_bug.cgi?id=95497
+
+        Reviewed by Geoffrey Garen.
+
+        Finalization is no longer eager, just like destruction, so the original intent behind 
+        this ASSERT in ~JSNPObject is no longer relevant. Therefore, we can just call invalidate() 
+        ourselves in ~JSNPObject.
+
+        * WebProcess/Plugins/Netscape/JSNPObject.cpp:
+        (WebKit::JSNPObject::~JSNPObject):
+
+2012-08-30  Sam Weinig  <sam@webkit.org>
+
+        Allow dynamic mach-lookup extensions in the WebProcess
+        <rdar://problem/12207996>
+
+        Reviewed by Gavin Barraclough.
+
+        Like we allow file read/write dynamic sandbox extensions, we should allow
+        mach-lookup extensions.
+
+        * WebProcess/com.apple.WebProcess.sb.in:
+
+2012-08-30  Geoffrey Garen  <ggaren@apple.com>
+
+        Use one object instead of two for closures, eliminating ScopeChainNode
+        https://bugs.webkit.org/show_bug.cgi?id=95501
+
+        Reviewed by Filip Pizlo.
+
+        Mechanical changes to update for JSC interface change.
+
+2012-08-30  JungJik Lee  <jungjik.lee@samsung.com>
+
+        [EFL][WK2] Add WebMemorySampler feature.
+        https://bugs.webkit.org/show_bug.cgi?id=91214
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Add WebMemorySampler feature to EFL port. WebMemorySampler records memory usage of
+        WebProcess and UI Process and also it records application memory status in real time.
+        Included items on the result are JIT, JS heap, fastmalloc bytes and
+        application memory info from /proc/process_id/statm.
+
+        * PlatformEfl.cmake:
+        * Shared/linux/WebMemorySamplerLinux.cpp: Added.
+        (WebKit):
+        (ApplicationMemoryStats):
+        (WebKit::nextToken):
+        (WebKit::appendKeyValuePair):
+        (WebKit::sampleMemoryAllocatedForApplication):
+        (WebKit::WebMemorySampler::processName):
+        (WebKit::WebMemorySampler::sampleWebKit):
+        (WebKit::WebMemorySampler::sendMemoryPressureEvent):
+        * UIProcess/API/efl/ewk_context.cpp:
+        (_Ewk_Context::_Ewk_Context):
+
+2012-08-30  Pratik Solanki  <psolanki@apple.com>
+
+        objc_msgSend and IMP should be cast appropriately before using
+        https://bugs.webkit.org/show_bug.cgi?id=95242
+
+        Reviewed by Benjamin Poulain.
+
+        Use wtfObjcMsgSend and wtfCallIMP templates which do appropriate casts
+        to a function pointer with right types when calling objc_msgSend and an
+        IMP method directly.
+
+        * UIProcess/API/mac/PDFViewController.mm:
+        (WebKit::PDFViewScrollView_scrollWheel):
+
+2012-08-30  Benjamin Poulain  <bpoulain@apple.com>
+
+        Replace JSC::UString by WTF::String
+        https://bugs.webkit.org/show_bug.cgi?id=95271
+
+        Reviewed by Geoffrey Garen.
+
+        Update to code to switch from UString to String.
+
+        * WebProcess/Plugins/Netscape/JSNPMethod.cpp:
+        (WebKit::JSNPMethod::finishCreation):
+        * WebProcess/Plugins/Netscape/JSNPMethod.h:
+        (WebKit::JSNPMethod::create):
+        (JSNPMethod):
+        * WebProcess/Plugins/Netscape/JSNPObject.cpp:
+        (WebKit::npIdentifierFromIdentifier):
+        * WebProcess/Plugins/Netscape/NPRuntimeObjectMap.cpp:
+        (WebKit::NPRuntimeObjectMap::evaluate):
+        (WebKit::NPRuntimeObjectMap::moveGlobalExceptionToExecState):
+
+2012-08-29  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        JSNPObject doesn't always protect its data when calling into plugin code
+        https://bugs.webkit.org/show_bug.cgi?id=95394
+
+        Reviewed by Brady Eidson.
+
+        We need to use NPRuntimeObjectMap::PluginProtector when calling into plugin code since 
+        there's no telling what the plugin will do, including destroying itself.
+
+        * WebProcess/Plugins/Netscape/JSNPObject.cpp:
+        (WebKit::JSNPObject::getOwnPropertySlot):
+        (WebKit::JSNPObject::getOwnPropertyDescriptor):
+
+2012-08-30  Mike Sierra  <mike.sierra@nokia.com>
+
+        [QT][WK2] webview API doc
+        https://bugs.webkit.org/show_bug.cgi?id=81701
+
+        Reviewed by Simon Hausmann.
+
+        Various improvements and additions to the documentation of the QML WebView element.
+
+        * UIProcess/API/qt/qquickwebview.cpp:
+
+2012-08-29  Kangil Han  <kangil.han@samsung.com>
+
+        [EFL][WK2] Replace PageClientImpl with ewk view in constructor of EflViewportHandler.
+        https://bugs.webkit.org/show_bug.cgi?id=95408
+
+        Reviewed by Gyuyoung Kim.
+
+        To keep consistency of implementation, derived classes(from ewk view) should have view reference.
+        From this, derived classes would have less interference from changes that would happen in port specific classes, i.e. PageClientImpl.
+
+        * UIProcess/API/efl/EflViewportHandler.cpp:
+        (WebKit::EflViewportHandler::EflViewportHandler):
+        (WebKit::EflViewportHandler::drawingArea):
+        (WebKit):
+        (WebKit::EflViewportHandler::updateViewportSize):
+        * UIProcess/API/efl/EflViewportHandler.h:
+        (WebKit::EflViewportHandler::create):
+        (EflViewportHandler):
+        * UIProcess/API/efl/ewk_view.cpp:
+        (_ewk_view_initialize):
+
+2012-08-29  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        [WK2] Use ASCIILiteral hotness for DEFINE_STATIC_LOCAL string
+        https://bugs.webkit.org/show_bug.cgi?id=95318
+
+        Reviewed by Benjamin Poulain.
+
+        As recommended by http://trac.webkit.org/wiki/EfficientStrings,
+        WebKit2 needs to use ASCIILiteral for the string of DEFINE_STATIC_LOCAL.
+
+        * Shared/WebError.cpp:
+        (WebKit::WebError::webKitErrorDomain):
+        * Shared/WebPreferencesStore.cpp:
+        (WebPreferencesKey):
+        * UIProcess/InspectorServer/WebInspectorServer.cpp:
+        (WebKit::WebInspectorServer::didReceiveWebSocketUpgradeHTTPRequest):
+        * UIProcess/InspectorServer/qt/WebInspectorServerQt.cpp:
+        (WebKit::remoteInspectorPagePath):
+        * UIProcess/WebDatabaseManagerProxy.cpp:
+        (WebKit::WebDatabaseManagerProxy::originKey):
+        (WebKit::WebDatabaseManagerProxy::originQuotaKey):
+        (WebKit::WebDatabaseManagerProxy::originUsageKey):
+        (WebKit::WebDatabaseManagerProxy::databaseDetailsKey):
+        (WebKit::WebDatabaseManagerProxy::databaseDetailsNameKey):
+        (WebKit::WebDatabaseManagerProxy::databaseDetailsDisplayNameKey):
+        (WebKit::WebDatabaseManagerProxy::databaseDetailsExpectedUsageKey):
+        (WebKit::WebDatabaseManagerProxy::databaseDetailsCurrentUsageKey):
+        * UIProcess/WebPageProxy.cpp:
+        (WebKit::WebPageProxy::executeEditCommand):
+        * WebProcess/WebCoreSupport/WebEditorClient.cpp:
+        (WebKit::WebEditorClient::didBeginEditing):
+        (WebKit::WebEditorClient::respondToChangedContents):
+        (WebKit::WebEditorClient::respondToChangedSelection):
+        (WebKit::WebEditorClient::didEndEditing):
+        * WebProcess/WebProcess.cpp:
+        (WebKit::getWebCoreMemoryCacheStatistics):
+
+2012-08-29  Luciano Wolf  <luciano.wolf@openbossa.org>
+
+        [Qt][WK2] ApplicationCache LayoutTests failed
+        https://bugs.webkit.org/show_bug.cgi?id=69541
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Returns defaultDiskCacheDirectory when no cache directory was provided.
+        It's used by setOfflineWebApplicationCacheEnabled method that won't work
+        with an invalid cache directory.
+
+        * UIProcess/qt/WebContextQt.cpp:
+        (WebKit::WebContext::applicationCacheDirectory):
+
+2012-08-29  José Dapena Paz  <jdapena@igalia.com>
+
+        [Gtk] Process Gtk 3.4 smooth scroll events properly.
+        https://bugs.webkit.org/show_bug.cgi?id=88070
+
+        Gtk 3.3.18 added smooth scroll events, adding a new scroll direction that
+        provides detailed delta information.
+
+        Added GDK_SMOOTH_SCROLL_MASK to the events listened, and added
+        code to process properly the new direction GDK_SCROLL_SMOOTH and
+        its deltas.
+
+        Reviewed by Martin Robinson.
+
+        * Shared/gtk/WebEventFactory.cpp:
+        (WebKit::WebEventFactory::createWebWheelEvent):
+        * UIProcess/API/gtk/WebKitWebViewBase.cpp:
+        (webkitWebViewBaseRealize):
+
+2012-08-29  Brady Eidson  <beidson@apple.com>
+
+        REGRESSION: Not sending NPP_SetWindow is causing Flash to not throttle itself
+        <rdar://problem/12133021> and https://bugs.webkit.org/show_bug.cgi?id=95274
+
+        Reviewed by Sam Weinig.
+
+        * UIProcess/API/mac/WKView.mm:
+        (-[WKView viewDidMoveToWindow]): Previously we'd only update window visibility when the window is hidden.
+          Now we also update window visibility when the window is shown.
+
+        * WebProcess/Plugins/Netscape/NetscapePlugin.cpp:
+        (WebKit::NetscapePlugin::callSetWindowInvisible): Call set window with a manufactured empty clip rect to tell
+          the plug-in that it is complete hidden.
+        (WebKit):
+        * WebProcess/Plugins/Netscape/NetscapePlugin.h:
+        (NetscapePlugin):
+        * WebProcess/Plugins/Netscape/mac/NetscapePluginMac.mm:
+        (WebKit::NetscapePlugin::windowVisibilityChanged): Call "callSetWindow" or "callSetWindowInvisible" as appropriate.
+
+        * WebProcess/Plugins/PluginView.cpp:
+        (WebKit::PluginView::setWindowIsVisible): Tell the plugin that its visibility changed.
+        (WebKit::PluginView::viewGeometryDidChange): Grab a clip rect that - although incorrect - at least is correct if
+          the PluginView is completely hidden.
+
+2012-08-29  Jon Lee  <jonlee@apple.com>
+
+        Build patch for Qt
+
+        * Target.pri: Missing WKMutableArray.cpp.
+
+2012-08-29  Jon Lee  <jonlee@apple.com>
+
+        Build patch for Qt.
+
+        * Target.pri: Export WKArray and WKMutableArray for Qt.
+
+2012-08-29  Jon Lee  <jonlee@apple.com>
+
+        Added missing exports for Windows.
+
+        * win/WebKit2Generated.make:
+
+2012-08-29  Jon Lee  <jonlee@apple.com>
+
+        Windows build fix.
+
+        * win/WebKit2Generated.make: Export WKNotificationManager.h.
+
+2012-08-29  Jon Lee  <jonlee@apple.com>
+
+        [WK2] Add SPI to retrieve internal IDs for web notifications
+        https://bugs.webkit.org/show_bug.cgi?id=95100
+        <rdar://problem/12180208>
+
+        Reviewed by Alexey Proskuryakov.
+
+        This is work toward providing Mac support for web notifications in DRT and WTR (77969).
+
+        Add function to retrieve the internal ID for a notification. This is needed by tests to support simulating
+        a user click on a notification.
+
+        * DerivedSources.pri: Expose JSNotification.h as private header.
+        * WebProcess/InjectedBundle/API/c/WKBundle.cpp:
+        (WKBundleGetWebNotificationID): Calls into notification manager to get internal ID.
+        * WebProcess/InjectedBundle/API/c/WKBundlePrivate.h: Add WKBundleGetWebNotificationID() to be able
+        retrieve notification ID.
+        * WebProcess/InjectedBundle/InjectedBundle.cpp:
+        (WebKit::InjectedBundle::webNotificationID):
+        (WebKit):
+        * WebProcess/InjectedBundle/InjectedBundle.h:
+        (InjectedBundle):
+        * WebProcess/Notifications/WebNotificationManager.cpp:
+        (WebKit::WebNotificationManager::notificationIDForTesting):
+        (WebKit):
+        * WebProcess/Notifications/WebNotificationManager.h:
+        (WebNotificationManager):
+
+2012-08-28  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Enable the edge distance anti-aliasing for accelerated compositing layers
+        https://bugs.webkit.org/show_bug.cgi?id=95272
+
+        Reviewed by No'am Rosenthal.
+
+        Turn on edge-distance anti-aliasing for GTK+ WebKit2. This
+        improves the quality of layer rendering.
+
+        * WebProcess/WebPage/gtk/LayerTreeHostGtk.cpp:
+        (WebKit::LayerTreeHostGtk::initialize):
+
+2012-08-28  Kangil Han  <kangil.han@samsung.com>
+
+        [WK2] Use explicit constructor in PageClientImpl.
+        https://bugs.webkit.org/show_bug.cgi?id=95170
+
+        Reviewed by Darin Adler.
+
+        Added explicit keyword in constructor of PageClientImpl in order to avoid implicit type conversion.
+
+        * UIProcess/API/gtk/PageClientImpl.h:
+        (PageClientImpl):
+        * UIProcess/API/mac/PageClientImpl.h:
+        (PageClientImpl):
+
+2012-08-28  Rik Cabanier  <cabanier@adobe.com>
+
+        Add ENABLE_CSS_COMPOSITING flag to WebKit2 project
+        https://bugs.webkit.org/show_bug.cgi?id=95227
+
+        Reviewed by Dirk Schulze.
+
+        The WebKit2 project was not updated to compile with the CSS_COMPOSITING flag.
+        This caused crashes when the webkit2 code had to use that flag.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-08-28  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r126914.
+        http://trac.webkit.org/changeset/126914
+        https://bugs.webkit.org/show_bug.cgi?id=95239
+
+        it breaks everything and fixes nothing (Requested by pizlo on
+        #webkit).
+
+        * Platform/CoreIPC/ArgumentCoders.h:
+        * Platform/CoreIPC/Connection.cpp:
+        (CoreIPC::Connection::SyncMessageState::getOrCreate):
+        (CoreIPC::Connection::waitForMessage):
+        (CoreIPC::Connection::processIncomingMessage):
+        * Platform/gtk/WorkQueueGtk.cpp:
+        (WorkQueue::registerEventSourceHandler):
+        (WorkQueue::unregisterEventSourceHandler):
+        * Platform/mac/WorkQueueMac.cpp:
+        (WorkQueue::unregisterMachPortEventHandler):
+        * Shared/Plugins/NPRemoteObjectMap.cpp:
+        (WebKit::NPRemoteObjectMap::pluginDestroyed):
+        * Shared/UserMessageCoders.h:
+        (WebKit::UserMessageEncoder::baseEncode):
+        * Shared/WebPreferencesStore.cpp:
+        (WebKit::valueForKey):
+        (WebKit::WebPreferencesStore::getBoolValueForKey):
+        * Shared/mac/WebCoreArgumentCodersMac.mm:
+        (CoreIPC::::decode):
+        * Shared/qt/ArgumentCodersQt.cpp:
+        (CoreIPC::::decode):
+        * Shared/soup/WebCoreArgumentCodersSoup.cpp:
+        (CoreIPC::::decode):
+        * UIProcess/API/efl/ewk_back_forward_list.cpp:
+        (_Ewk_Back_Forward_List::~_Ewk_Back_Forward_List):
+        * UIProcess/API/efl/ewk_context.cpp:
+        (_Ewk_Context::~_Ewk_Context):
+        * UIProcess/API/efl/ewk_view.cpp:
+        (_ewk_view_priv_loading_resources_clear):
+        * UIProcess/API/gtk/WebKitWebView.cpp:
+        (webkit_web_view_get_subresources):
+        * UIProcess/API/gtk/WebKitWebViewBase.cpp:
+        (webkitWebViewBaseContainerForall):
+        * UIProcess/API/mac/WKPrintingView.mm:
+        (-[WKPrintingView _expectedPreviewCallbackForRect:]):
+        (pageDidDrawToPDF):
+        (-[WKPrintingView _drawPreview:]):
+        * UIProcess/API/mac/WKView.mm:
+        (commandNameForSelector):
+        (-[WKView validateUserInterfaceItem:]):
+        * UIProcess/CoordinatedGraphics/CoordinatedBackingStore.cpp:
+        (WebKit::CoordinatedBackingStore::updateTile):
+        (WebKit::CoordinatedBackingStore::texture):
+        (WebKit::CoordinatedBackingStore::paintToTextureMapper):
+        (WebKit::CoordinatedBackingStore::commitTileOperations):
+        * UIProcess/CoordinatedGraphics/LayerTreeCoordinatorProxy.cpp:
+        (WebKit::LayerTreeCoordinatorProxy::updateTileForLayer):
+        * UIProcess/CoordinatedGraphics/LayerTreeRenderer.cpp:
+        (WebKit::LayerTreeRenderer::adjustPositionForFixedLayers):
+        (WebKit::LayerTreeRenderer::syncCanvas):
+        (WebKit::LayerTreeRenderer::setLayerChildren):
+        (WebKit::LayerTreeRenderer::setLayerFilters):
+        (WebKit::LayerTreeRenderer::setLayerState):
+        (WebKit::LayerTreeRenderer::assignImageToLayer):
+        * UIProcess/GeolocationPermissionRequestManagerProxy.cpp:
+        (WebKit::GeolocationPermissionRequestManagerProxy::invalidateRequests):
+        * UIProcess/InspectorServer/WebInspectorServer.cpp:
+        (WebKit::WebInspectorServer::~WebInspectorServer):
+        (WebKit::WebInspectorServer::registerPage):
+        * UIProcess/InspectorServer/WebSocketServerConnection.cpp:
+        (WebKit::WebSocketServerConnection::sendHTTPResponseHeader):
+        * UIProcess/InspectorServer/qt/WebInspectorServerQt.cpp:
+        (WebKit::WebInspectorServer::buildPageList):
+        * UIProcess/Notifications/NotificationPermissionRequestManagerProxy.cpp:
+        (WebKit::NotificationPermissionRequestManagerProxy::invalidateRequests):
+        * UIProcess/Plugins/PluginProcessProxy.cpp:
+        (WebKit::PluginProcessProxy::pluginProcessCrashedOrFailedToLaunch):
+        * UIProcess/WebContext.cpp:
+        (WebKit::createDictionaryFromHashMap):
+        * UIProcess/WebIconDatabase.cpp:
+        (WebKit::WebIconDatabase::didFinishURLImport):
+        * UIProcess/WebIntentData.cpp:
+        (WebKit::WebIntentData::extras):
+        * UIProcess/WebProcessProxy.cpp:
+        (WebKit::WebProcessProxy::checkURLReceivedFromWebProcess):
+        (WebKit::WebProcessProxy::addBackForwardItem):
+        (WebKit::WebProcessProxy::frameCountInPage):
+        * WebProcess/Geolocation/GeolocationPermissionRequestManager.cpp:
+        (WebKit::GeolocationPermissionRequestManager::cancelRequestForGeolocation):
+        (WebKit::GeolocationPermissionRequestManager::didReceiveGeolocationPermissionDecision):
+        * WebProcess/InjectedBundle/DOM/InjectedBundleNodeHandle.cpp:
+        (WebKit::InjectedBundleNodeHandle::getOrCreate):
+        * WebProcess/InjectedBundle/DOM/InjectedBundleRangeHandle.cpp:
+        (WebKit::InjectedBundleRangeHandle::getOrCreate):
+        * WebProcess/InjectedBundle/InjectedBundleIntent.cpp:
+        (WebKit::InjectedBundleIntent::extras):
+        * WebProcess/Notifications/WebNotificationManager.cpp:
+        (WebKit::WebNotificationManager::policyForOrigin):
+        (WebKit::WebNotificationManager::show):
+        (WebKit::WebNotificationManager::clearNotifications):
+        (WebKit::WebNotificationManager::removeNotificationFromContextMap):
+        * WebProcess/Plugins/Netscape/NPRuntimeObjectMap.cpp:
+        (WebKit::NPRuntimeObjectMap::invalidate):
+        * WebProcess/Plugins/Netscape/NetscapePlugin.cpp:
+        (WebKit::NetscapePlugin::destroyStream):
+        (WebKit::NetscapePlugin::unscheduleTimer):
+        (WebKit::NetscapePlugin::frameDidFinishLoading):
+        (WebKit::NetscapePlugin::frameDidFail):
+        * WebProcess/Plugins/PluginView.cpp:
+        (WebKit::buildHTTPHeaders):
+        (WebKit::PluginView::~PluginView):
+        * WebProcess/WebPage/CoordinatedGraphics/CoordinatedGraphicsLayer.cpp:
+        (WebCore::CoordinatedGraphicsLayer::layerByID):
+        * WebProcess/WebPage/CoordinatedGraphics/LayerTreeCoordinator.cpp:
+        (WebKit::LayerTreeCoordinator::adoptImageBackingStore):
+        (WebKit::LayerTreeCoordinator::releaseImageBackingStore):
+        * WebProcess/WebPage/WebBackForwardListProxy.cpp:
+        (WebKit::WebBackForwardListProxy::removeItem):
+        * WebProcess/WebPage/mac/WebPageMac.mm:
+        (WebKit::commandNameForSelectorName):
+        * WebProcess/WebProcess.cpp:
+        (WebKit::WebProcess::visitedLinkStateChanged):
+        (WebKit::WebProcess::allVisitedLinkStateChanged):
+        (WebKit::WebProcess::focusedWebPage):
+        (WebKit::WebProcess::createWebPage):
+        (WebKit::WebProcess::webPageGroup):
+        (WebKit::fromCountedSetToHashMap):
+        (WebKit::WebProcess::setTextCheckerState):
+
+2012-08-28  Alexey Proskuryakov  <ap@apple.com>
+
+        [WK2] Expose process model as API
+        https://bugs.webkit.org/show_bug.cgi?id=95228
+
+        Reviewed by Jon Honeycutt.
+
+        * UIProcess/API/C/WKAPICast.h:
+        (WebKit::toProcessModel):
+        (WebKit::toAPI):
+        Convert ProcessModel values.
+
+        * UIProcess/API/C/WKContext.cpp:
+        (WKContextSetProcessModel):
+        (WKContextGetProcessModel):
+        * UIProcess/API/C/WKContext.h:
+        * UIProcess/WebContext.cpp: (WebKit::WebContext::setProcessModel):
+        * UIProcess/WebContext.h:
+        Added a setter and a getter. Setting process model is only allowed when there are
+        no processes yet - that's checked with a CRASH to guarantee that clients using
+        production builds of WebKit2 don't misstep.
+
+2012-08-28  Caio Marcelo de Oliveira Filho  <caio.oliveira@openbossa.org>
+
+        Rename first/second to key/value in HashMap iterators
+        https://bugs.webkit.org/show_bug.cgi?id=82784
+
+        Reviewed by Eric Seidel.
+
+        * Platform/CoreIPC/ArgumentCoders.h:
+        * Platform/CoreIPC/Connection.cpp:
+        (CoreIPC::Connection::SyncMessageState::getOrCreate):
+        (CoreIPC::Connection::waitForMessage):
+        (CoreIPC::Connection::processIncomingMessage):
+        * Platform/gtk/WorkQueueGtk.cpp:
+        (WorkQueue::registerEventSourceHandler):
+        (WorkQueue::unregisterEventSourceHandler):
+        * Platform/mac/WorkQueueMac.cpp:
+        (WorkQueue::unregisterMachPortEventHandler):
+        * Shared/Plugins/NPRemoteObjectMap.cpp:
+        (WebKit::NPRemoteObjectMap::pluginDestroyed):
+        * Shared/UserMessageCoders.h:
+        (WebKit::UserMessageEncoder::baseEncode):
+        * Shared/WebPreferencesStore.cpp:
+        (WebKit::valueForKey):
+        (WebKit::WebPreferencesStore::getBoolValueForKey):
+        * Shared/mac/WebCoreArgumentCodersMac.mm:
+        (CoreIPC::::decode):
+        * Shared/qt/ArgumentCodersQt.cpp:
+        (CoreIPC::::decode):
+        * Shared/soup/WebCoreArgumentCodersSoup.cpp:
+        (CoreIPC::::decode):
+        * UIProcess/API/efl/ewk_back_forward_list.cpp:
+        (_Ewk_Back_Forward_List::~_Ewk_Back_Forward_List):
+        * UIProcess/API/efl/ewk_context.cpp:
+        (_Ewk_Context::~_Ewk_Context):
+        * UIProcess/API/efl/ewk_view.cpp:
+        (_ewk_view_priv_loading_resources_clear):
+        * UIProcess/API/gtk/WebKitWebView.cpp:
+        (webkit_web_view_get_subresources):
+        * UIProcess/API/gtk/WebKitWebViewBase.cpp:
+        (webkitWebViewBaseContainerForall):
+        * UIProcess/API/mac/WKPrintingView.mm:
+        (-[WKPrintingView _expectedPreviewCallbackForRect:]):
+        (pageDidDrawToPDF):
+        (-[WKPrintingView _drawPreview:]):
+        * UIProcess/API/mac/WKView.mm:
+        (commandNameForSelector):
+        (-[WKView validateUserInterfaceItem:]):
+        * UIProcess/CoordinatedGraphics/CoordinatedBackingStore.cpp:
+        (WebKit::CoordinatedBackingStore::updateTile):
+        (WebKit::CoordinatedBackingStore::texture):
+        (WebKit::CoordinatedBackingStore::paintToTextureMapper):
+        (WebKit::CoordinatedBackingStore::commitTileOperations):
+        * UIProcess/CoordinatedGraphics/LayerTreeCoordinatorProxy.cpp:
+        (WebKit::LayerTreeCoordinatorProxy::updateTileForLayer):
+        * UIProcess/CoordinatedGraphics/LayerTreeRenderer.cpp:
+        (WebKit::LayerTreeRenderer::adjustPositionForFixedLayers):
+        (WebKit::LayerTreeRenderer::syncCanvas):
+        (WebKit::LayerTreeRenderer::setLayerChildren):
+        (WebKit::LayerTreeRenderer::setLayerFilters):
+        (WebKit::LayerTreeRenderer::setLayerState):
+        (WebKit::LayerTreeRenderer::assignImageToLayer):
+        * UIProcess/GeolocationPermissionRequestManagerProxy.cpp:
+        (WebKit::GeolocationPermissionRequestManagerProxy::invalidateRequests):
+        * UIProcess/InspectorServer/WebInspectorServer.cpp:
+        (WebKit::WebInspectorServer::~WebInspectorServer):
+        (WebKit::WebInspectorServer::registerPage):
+        * UIProcess/InspectorServer/WebSocketServerConnection.cpp:
+        (WebKit::WebSocketServerConnection::sendHTTPResponseHeader):
+        * UIProcess/InspectorServer/qt/WebInspectorServerQt.cpp:
+        (WebKit::WebInspectorServer::buildPageList):
+        * UIProcess/Notifications/NotificationPermissionRequestManagerProxy.cpp:
+        (WebKit::NotificationPermissionRequestManagerProxy::invalidateRequests):
+        * UIProcess/Plugins/PluginProcessProxy.cpp:
+        (WebKit::PluginProcessProxy::pluginProcessCrashedOrFailedToLaunch):
+        * UIProcess/WebContext.cpp:
+        (WebKit::createDictionaryFromHashMap):
+        * UIProcess/WebIconDatabase.cpp:
+        (WebKit::WebIconDatabase::didFinishURLImport):
+        * UIProcess/WebIntentData.cpp:
+        (WebKit::WebIntentData::extras):
+        * UIProcess/WebProcessProxy.cpp:
+        (WebKit::WebProcessProxy::checkURLReceivedFromWebProcess):
+        (WebKit::WebProcessProxy::addBackForwardItem):
+        (WebKit::WebProcessProxy::frameCountInPage):
+        * WebProcess/Geolocation/GeolocationPermissionRequestManager.cpp:
+        (WebKit::GeolocationPermissionRequestManager::cancelRequestForGeolocation):
+        (WebKit::GeolocationPermissionRequestManager::didReceiveGeolocationPermissionDecision):
+        * WebProcess/InjectedBundle/DOM/InjectedBundleNodeHandle.cpp:
+        (WebKit::InjectedBundleNodeHandle::getOrCreate):
+        * WebProcess/InjectedBundle/DOM/InjectedBundleRangeHandle.cpp:
+        (WebKit::InjectedBundleRangeHandle::getOrCreate):
+        * WebProcess/InjectedBundle/InjectedBundleIntent.cpp:
+        (WebKit::InjectedBundleIntent::extras):
+        * WebProcess/Notifications/WebNotificationManager.cpp:
+        (WebKit::WebNotificationManager::policyForOrigin):
+        (WebKit::WebNotificationManager::show):
+        (WebKit::WebNotificationManager::clearNotifications):
+        (WebKit::WebNotificationManager::removeNotificationFromContextMap):
+        * WebProcess/Plugins/Netscape/NPRuntimeObjectMap.cpp:
+        (WebKit::NPRuntimeObjectMap::invalidate):
+        * WebProcess/Plugins/Netscape/NetscapePlugin.cpp:
+        (WebKit::NetscapePlugin::destroyStream):
+        (WebKit::NetscapePlugin::unscheduleTimer):
+        (WebKit::NetscapePlugin::frameDidFinishLoading):
+        (WebKit::NetscapePlugin::frameDidFail):
+        * WebProcess/Plugins/PluginView.cpp:
+        (WebKit::buildHTTPHeaders):
+        (WebKit::PluginView::~PluginView):
+        * WebProcess/WebPage/CoordinatedGraphics/CoordinatedGraphicsLayer.cpp:
+        (WebCore::CoordinatedGraphicsLayer::layerByID):
+        * WebProcess/WebPage/CoordinatedGraphics/LayerTreeCoordinator.cpp:
+        (WebKit::LayerTreeCoordinator::adoptImageBackingStore):
+        (WebKit::LayerTreeCoordinator::releaseImageBackingStore):
+        * WebProcess/WebPage/WebBackForwardListProxy.cpp:
+        (WebKit::WebBackForwardListProxy::removeItem):
+        * WebProcess/WebPage/mac/WebPageMac.mm:
+        (WebKit::commandNameForSelectorName):
+        * WebProcess/WebProcess.cpp:
+        (WebKit::WebProcess::visitedLinkStateChanged):
+        (WebKit::WebProcess::allVisitedLinkStateChanged):
+        (WebKit::WebProcess::focusedWebPage):
+        (WebKit::WebProcess::createWebPage):
+        (WebKit::WebProcess::webPageGroup):
+        (WebKit::fromCountedSetToHashMap):
+        (WebKit::WebProcess::setTextCheckerState):
+
+2012-08-28  Jon Lee  <jonlee@apple.com>
+
+        [WK2] Bugs in maintenance of internal state when user decides whether to grant notification permissions
+        https://bugs.webkit.org/show_bug.cgi?id=95220
+        <rdar://problem/12189895>
+
+        Reviewed by Jessie Berlin.
+
+        A couple of the maps maintained by the request manager should have been cleaned up when the user decided on
+        whether to grant a website permission to post notifications.
+
+        Also, the web process' copy of the permissions was not updated appropriately. This meant that in the
+        permission callback, Notification.permission was not the same value as the permission value included as
+        the first parameter of the callback.
+
+        This first surfaced as part of the work to bring Mac support for web notifications. I have a test that
+        will check for regressions in this area, once all of that has been checked in (bug 77969).
+
+        * WebProcess/Notifications/NotificationPermissionRequestManager.cpp:
+        (WebKit::NotificationPermissionRequestManager::didReceiveNotificationPermissionDecision):
+
+2012-08-28  Jon Lee  <jonlee@apple.com>
+
+        [WK2] Add SPI for injected bundle to manually set permissions
+        https://bugs.webkit.org/show_bug.cgi?id=95127
+        <rdar://problem/12182635>
+
+        Reviewed by Jessie Berlin.
+
+        This is work toward providing Mac support for web notifications in DRT and WTR (77969).
+
+        Add support functions to WebKit2 which maintain the map of permissions to origins for web notifications.
+        For WebKit1 the map is managed by DumpRenderTree.
+
+        * WebProcess/InjectedBundle/InjectedBundle.h: Add TestRunner SPI.
+        * WebProcess/InjectedBundle/InjectedBundle.cpp:
+        (WebKit::InjectedBundle::setWebNotificationPermission):
+        (WebKit::InjectedBundle::removeAllWebNotificationPermissions):
+
+        * WebProcess/InjectedBundle/API/c/WKBundlePrivate.h: Expose as WK API. Also, rearrange the ordering of the
+        functions so that it reflects the same order found in InjectedBundle.h.
+        * WebProcess/InjectedBundle/API/c/WKBundle.cpp:
+
+        * WebProcess/Notifications/NotificationPermissionRequestManager.cpp:
+        (WebKit::NotificationPermissionRequestManager::setPermissionLevelForTesting): Manually set the permission
+        level for an origin.
+        (WebKit::NotificationPermissionRequestManager::removeAllPermissionsForTesting):
+        * WebProcess/Notifications/NotificationPermissionRequestManager.h:
+        (NotificationPermissionRequestManager):
+        * WebProcess/Notifications/WebNotificationManager.cpp:
+        (WebKit::WebNotificationManager::removeAllPermissionsForTesting): Clear the permission map.
+        * WebProcess/Notifications/WebNotificationManager.h: Promote didUpdateNotificationDecision message as public
+        function, so that NotificationPermissionRequestManager can update the permission map.
+
+2012-08-28  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL] WebKit EFL updates view on HTTP 204 response
+        https://bugs.webkit.org/show_bug.cgi?id=95199
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Ignore HTTP responses which have status code equal
+        to 204 (No Content).
+
+        * UIProcess/API/efl/ewk_view_policy_client.cpp:
+        (decidePolicyForResponseCallback):
+
+2012-08-28  Zeno Albisser  <zeno@webkit.org>
+
+        LayerTreeCoordinatorProxy should use uint64_t for surface key.
+        https://bugs.webkit.org/show_bug.cgi?id=95175
+
+        GraphicsSurface tokens are of type uint64_t.
+        Therefore LayerTreeCoordinatorProxy must use the same type to
+        identify a GraphicsSurface/ShareableSurface.
+
+        Reviewed by Noam Rosenthal.
+
+        * Shared/ShareableSurface.h:
+        (WebKit::ShareableSurface::Handle::graphicsSurfaceToken):
+        * UIProcess/CoordinatedGraphics/LayerTreeCoordinatorProxy.cpp:
+        (WebKit::LayerTreeCoordinatorProxy::updateTileForLayer):
+        * UIProcess/CoordinatedGraphics/LayerTreeCoordinatorProxy.h:
+        (LayerTreeCoordinatorProxy):
+
+2012-08-28  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL][WK2] Implement WebPopupMenuProxyEfl to support <select>
+        https://bugs.webkit.org/show_bug.cgi?id=88616
+
+        Reviewed by Gyuyoung Kim.
+
+        Implemented popup menu proxy and interface for Efl.
+
+        Applications should implement popup menu by overriding
+        smart class function to support select tag.
+
+        * PlatformEfl.cmake:
+        * UIProcess/API/efl/EWebKit2.h: Included ewk_popup_menu_item.h
+        * UIProcess/API/efl/PageClientImpl.cpp:
+        (WebKit::PageClientImpl::createPopupMenuProxy):
+        * UIProcess/API/efl/ewk_popup_menu_item.cpp: Added.
+        (_Ewk_Popup_Menu_Item):
+        (_Ewk_Popup_Menu_Item::_Ewk_Popup_Menu_Item):
+        (ewk_popup_menu_item_new):
+        (ewk_popup_menu_item_free):
+        (ewk_popup_menu_item_type_get): Added API to retrieve type of item.
+        (ewk_popup_menu_item_text_get): Added API to retrieve text of item.
+        * UIProcess/API/efl/ewk_popup_menu_item.h: Added.
+        * UIProcess/API/efl/ewk_popup_menu_item_private.h: Added.
+        * UIProcess/API/efl/ewk_view.cpp:
+        (_Ewk_View_Private_Data):
+        (_Ewk_View_Private_Data::_Ewk_View_Private_Data):
+        (_Ewk_View_Private_Data::~_Ewk_View_Private_Data):
+        (ewk_view_popup_menu_request): Added to call popup_menu_show, smart class function.
+        (ewk_view_popup_menu_close): Added API to call popup_menu_hide, smart class function.
+        (ewk_view_popup_menu_select): Added API to change selected index.
+        * UIProcess/API/efl/ewk_view.h:
+        Added smart class function for applications to override.
+        * UIProcess/API/efl/ewk_view_private.h:
+        * UIProcess/API/efl/tests/UnitTestUtils/EWK2UnitTestBase.cpp:
+        (EWK2UnitTest::EWK2UnitTestBase::EWK2UnitTestBase):
+        (EWK2UnitTest::EWK2UnitTestBase::SetUp):
+        (EWK2UnitTest::EWK2UnitTestBase::loadUrlSync):
+        (EWK2UnitTest::EWK2UnitTestBase::waitUntilLoadFinished):
+        Extracted from loadUrlSync for tests using ewk_view_html_string_load to
+        share onLoadFinished.
+        * UIProcess/API/efl/tests/UnitTestUtils/EWK2UnitTestBase.h:
+        (EWK2UnitTest::EWK2UnitTestBase::ewkViewClass):
+        Added ewkViewClass to test smart methods such as popup_menu_show.
+        * UIProcess/API/efl/tests/test_ewk2_view.cpp:
+        (popup_menu_show):
+        (TEST_F): Added a test case for ewk_view_popup_menu_select and related codes.
+        * UIProcess/efl/WebPopupMenuProxyEfl.cpp: Added.
+        (WebKit):
+        (WebKit::WebPopupMenuProxyEfl::WebPopupMenuProxyEfl):
+        (WebKit::WebPopupMenuProxyEfl::showPopupMenu):
+        (WebKit::WebPopupMenuProxyEfl::hidePopupMenu):
+        (WebKit::WebPopupMenuProxyEfl::valueChanged):
+        * UIProcess/efl/WebPopupMenuProxyEfl.h: Added.
+        (WebPopupMenuProxyEfl):
+        (WebKit::WebPopupMenuProxyEfl::create):
+
+2012-08-27  Kangil Han  <kangil.han@samsung.com>
+
+        [EFL][WK2] Fix PageClientImpl layer violation
+        https://bugs.webkit.org/show_bug.cgi?id=94906
+
+        Reviewed by Gyuyoung Kim.
+
+        Given WK2 hierarchy, current PageClientImpl has violated API layer by having WebPageProxy.
+        Subsequently, it has been given WebContext, static singleton object, in its argument unnecessarily.
+        Therefore, this patch moved WebPageProxy from PageClientImpl to Ewk_View_Private_Data.
+        Plus, WebContext was removed from PageClientImpl since it is not needed anymore.
+        As a result, EFL has same form of PageClientImpl with other ports, i.e. gtk+ and mac.
+        From API point of view, nothing has been changed because all things done locally.
+
+        * UIProcess/API/efl/PageClientImpl.cpp:
+        (WebKit::PageClientImpl::PageClientImpl):
+        (WebKit::PageClientImpl::createDrawingAreaProxy):
+        * UIProcess/API/efl/PageClientImpl.h:
+        (WebKit::PageClientImpl::create):
+        (PageClientImpl):
+        * UIProcess/API/efl/ewk_view.cpp:
+        (_Ewk_View_Private_Data):
+        (_ewk_view_smart_focus_in):
+        (_ewk_view_smart_focus_out):
+        (_ewk_view_smart_mouse_wheel):
+        (_ewk_view_smart_mouse_down):
+        (_ewk_view_smart_mouse_up):
+        (_ewk_view_smart_mouse_move):
+        (_ewk_view_smart_key_down):
+        (_ewk_view_smart_key_up):
+        (_ewk_view_smart_calculate):
+        (_ewk_view_smart_color_set):
+        (_ewk_view_initialize):
+        (ewk_view_uri_update):
+        (ewk_view_uri_set):
+        (ewk_view_reload):
+        (ewk_view_reload_bypass_cache):
+        (ewk_view_stop):
+        (ewk_view_title_get):
+        (ewk_view_load_progress_get):
+        (ewk_view_scale_set):
+        (ewk_view_scale_get):
+        (ewk_view_device_pixel_ratio_set):
+        (ewk_view_device_pixel_ratio_get):
+        (ewk_view_theme_set):
+        (ewk_view_back):
+        (ewk_view_forward):
+        (ewk_view_intent_deliver):
+        (ewk_view_back_possible):
+        (ewk_view_forward_possible):
+        (ewk_view_html_string_load):
+        (ewk_view_page_get):
+        (ewk_view_setting_encoding_custom_get):
+        (ewk_view_setting_encoding_custom_set):
+        (ewk_view_text_find):
+        (ewk_view_text_find_highlight_clear):
+
+2012-08-27  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r126836.
+        http://trac.webkit.org/changeset/126836
+        https://bugs.webkit.org/show_bug.cgi?id=95163
+
+        Broke all Apple ports, EFL, and Qt. (Requested by tkent on
+        #webkit).
+
+        * Platform/CoreIPC/ArgumentCoders.h:
+        * Platform/CoreIPC/Connection.cpp:
+        (CoreIPC::Connection::SyncMessageState::getOrCreate):
+        (CoreIPC::Connection::waitForMessage):
+        (CoreIPC::Connection::processIncomingMessage):
+        * Platform/gtk/WorkQueueGtk.cpp:
+        (WorkQueue::registerEventSourceHandler):
+        (WorkQueue::unregisterEventSourceHandler):
+        * Platform/mac/WorkQueueMac.cpp:
+        (WorkQueue::unregisterMachPortEventHandler):
+        * Shared/Plugins/NPRemoteObjectMap.cpp:
+        (WebKit::NPRemoteObjectMap::pluginDestroyed):
+        * Shared/UserMessageCoders.h:
+        (WebKit::UserMessageEncoder::baseEncode):
+        * Shared/WebPreferencesStore.cpp:
+        (WebKit::valueForKey):
+        (WebKit::WebPreferencesStore::getBoolValueForKey):
+        * Shared/mac/WebCoreArgumentCodersMac.mm:
+        (CoreIPC::::decode):
+        * Shared/qt/ArgumentCodersQt.cpp:
+        (CoreIPC::::decode):
+        * Shared/soup/WebCoreArgumentCodersSoup.cpp:
+        (CoreIPC::::decode):
+        * UIProcess/API/efl/ewk_back_forward_list.cpp:
+        (_Ewk_Back_Forward_List::~_Ewk_Back_Forward_List):
+        * UIProcess/API/efl/ewk_context.cpp:
+        (_Ewk_Context::~_Ewk_Context):
+        * UIProcess/API/efl/ewk_view.cpp:
+        (_ewk_view_priv_loading_resources_clear):
+        * UIProcess/API/gtk/WebKitWebView.cpp:
+        (webkit_web_view_get_subresources):
+        * UIProcess/API/gtk/WebKitWebViewBase.cpp:
+        (webkitWebViewBaseContainerForall):
+        * UIProcess/API/mac/WKPrintingView.mm:
+        (-[WKPrintingView _expectedPreviewCallbackForRect:]):
+        (pageDidDrawToPDF):
+        (-[WKPrintingView _drawPreview:]):
+        * UIProcess/API/mac/WKView.mm:
+        (commandNameForSelector):
+        (-[WKView validateUserInterfaceItem:]):
+        * UIProcess/CoordinatedGraphics/CoordinatedBackingStore.cpp:
+        (WebKit::CoordinatedBackingStore::updateTile):
+        (WebKit::CoordinatedBackingStore::texture):
+        (WebKit::CoordinatedBackingStore::paintToTextureMapper):
+        (WebKit::CoordinatedBackingStore::commitTileOperations):
+        * UIProcess/CoordinatedGraphics/LayerTreeCoordinatorProxy.cpp:
+        (WebKit::LayerTreeCoordinatorProxy::updateTileForLayer):
+        * UIProcess/CoordinatedGraphics/LayerTreeRenderer.cpp:
+        (WebKit::LayerTreeRenderer::adjustPositionForFixedLayers):
+        (WebKit::LayerTreeRenderer::syncCanvas):
+        (WebKit::LayerTreeRenderer::setLayerChildren):
+        (WebKit::LayerTreeRenderer::setLayerFilters):
+        (WebKit::LayerTreeRenderer::setLayerState):
+        (WebKit::LayerTreeRenderer::assignImageToLayer):
+        * UIProcess/GeolocationPermissionRequestManagerProxy.cpp:
+        (WebKit::GeolocationPermissionRequestManagerProxy::invalidateRequests):
+        * UIProcess/InspectorServer/WebInspectorServer.cpp:
+        (WebKit::WebInspectorServer::~WebInspectorServer):
+        (WebKit::WebInspectorServer::registerPage):
+        * UIProcess/InspectorServer/WebSocketServerConnection.cpp:
+        (WebKit::WebSocketServerConnection::sendHTTPResponseHeader):
+        * UIProcess/InspectorServer/qt/WebInspectorServerQt.cpp:
+        (WebKit::WebInspectorServer::buildPageList):
+        * UIProcess/Notifications/NotificationPermissionRequestManagerProxy.cpp:
+        (WebKit::NotificationPermissionRequestManagerProxy::invalidateRequests):
+        * UIProcess/Plugins/PluginProcessProxy.cpp:
+        (WebKit::PluginProcessProxy::pluginProcessCrashedOrFailedToLaunch):
+        * UIProcess/WebContext.cpp:
+        (WebKit::createDictionaryFromHashMap):
+        * UIProcess/WebIconDatabase.cpp:
+        (WebKit::WebIconDatabase::didFinishURLImport):
+        * UIProcess/WebIntentData.cpp:
+        (WebKit::WebIntentData::extras):
+        * UIProcess/WebProcessProxy.cpp:
+        (WebKit::WebProcessProxy::checkURLReceivedFromWebProcess):
+        (WebKit::WebProcessProxy::addBackForwardItem):
+        (WebKit::WebProcessProxy::frameCountInPage):
+        * WebProcess/Geolocation/GeolocationPermissionRequestManager.cpp:
+        (WebKit::GeolocationPermissionRequestManager::cancelRequestForGeolocation):
+        (WebKit::GeolocationPermissionRequestManager::didReceiveGeolocationPermissionDecision):
+        * WebProcess/InjectedBundle/DOM/InjectedBundleNodeHandle.cpp:
+        (WebKit::InjectedBundleNodeHandle::getOrCreate):
+        * WebProcess/InjectedBundle/DOM/InjectedBundleRangeHandle.cpp:
+        (WebKit::InjectedBundleRangeHandle::getOrCreate):
+        * WebProcess/InjectedBundle/InjectedBundleIntent.cpp:
+        (WebKit::InjectedBundleIntent::extras):
+        * WebProcess/Notifications/WebNotificationManager.cpp:
+        (WebKit::WebNotificationManager::policyForOrigin):
+        (WebKit::WebNotificationManager::show):
+        (WebKit::WebNotificationManager::clearNotifications):
+        (WebKit::WebNotificationManager::removeNotificationFromContextMap):
+        * WebProcess/Plugins/Netscape/NPRuntimeObjectMap.cpp:
+        (WebKit::NPRuntimeObjectMap::invalidate):
+        * WebProcess/Plugins/Netscape/NetscapePlugin.cpp:
+        (WebKit::NetscapePlugin::destroyStream):
+        (WebKit::NetscapePlugin::unscheduleTimer):
+        (WebKit::NetscapePlugin::frameDidFinishLoading):
+        (WebKit::NetscapePlugin::frameDidFail):
+        * WebProcess/Plugins/PluginView.cpp:
+        (WebKit::buildHTTPHeaders):
+        (WebKit::PluginView::~PluginView):
+        * WebProcess/WebPage/CoordinatedGraphics/CoordinatedGraphicsLayer.cpp:
+        (WebCore::CoordinatedGraphicsLayer::layerByID):
+        * WebProcess/WebPage/CoordinatedGraphics/LayerTreeCoordinator.cpp:
+        (WebKit::LayerTreeCoordinator::adoptImageBackingStore):
+        (WebKit::LayerTreeCoordinator::releaseImageBackingStore):
+        * WebProcess/WebPage/WebBackForwardListProxy.cpp:
+        (WebKit::WebBackForwardListProxy::removeItem):
+        * WebProcess/WebPage/mac/WebPageMac.mm:
+        (WebKit::commandNameForSelectorName):
+        * WebProcess/WebProcess.cpp:
+        (WebKit::WebProcess::visitedLinkStateChanged):
+        (WebKit::WebProcess::allVisitedLinkStateChanged):
+        (WebKit::WebProcess::focusedWebPage):
+        (WebKit::WebProcess::createWebPage):
+        (WebKit::WebProcess::webPageGroup):
+        (WebKit::fromCountedSetToHashMap):
+        (WebKit::WebProcess::setTextCheckerState):
+
+2012-08-27  Caio Marcelo de Oliveira Filho  <caio.oliveira@openbossa.org>
+
+        Rename first/second to key/value in HashMap iterators
+        https://bugs.webkit.org/show_bug.cgi?id=82784
+
+        Reviewed by Eric Seidel.
+
+        * Platform/CoreIPC/ArgumentCoders.h:
+        * Platform/CoreIPC/Connection.cpp:
+        (CoreIPC::Connection::SyncMessageState::getOrCreate):
+        (CoreIPC::Connection::waitForMessage):
+        (CoreIPC::Connection::processIncomingMessage):
+        * Platform/gtk/WorkQueueGtk.cpp:
+        (WorkQueue::registerEventSourceHandler):
+        (WorkQueue::unregisterEventSourceHandler):
+        * Platform/mac/WorkQueueMac.cpp:
+        (WorkQueue::unregisterMachPortEventHandler):
+        * Shared/Plugins/NPRemoteObjectMap.cpp:
+        (WebKit::NPRemoteObjectMap::pluginDestroyed):
+        * Shared/UserMessageCoders.h:
+        (WebKit::UserMessageEncoder::baseEncode):
+        * Shared/WebPreferencesStore.cpp:
+        (WebKit::valueForKey):
+        (WebKit::WebPreferencesStore::getBoolValueForKey):
+        * Shared/mac/WebCoreArgumentCodersMac.mm:
+        (CoreIPC::::decode):
+        * Shared/qt/ArgumentCodersQt.cpp:
+        (CoreIPC::::decode):
+        * Shared/soup/WebCoreArgumentCodersSoup.cpp:
+        (CoreIPC::::decode):
+        * UIProcess/API/efl/ewk_back_forward_list.cpp:
+        (_Ewk_Back_Forward_List::~_Ewk_Back_Forward_List):
+        * UIProcess/API/efl/ewk_context.cpp:
+        (_Ewk_Context::~_Ewk_Context):
+        * UIProcess/API/efl/ewk_view.cpp:
+        (_ewk_view_priv_loading_resources_clear):
+        * UIProcess/API/gtk/WebKitWebView.cpp:
+        (webkit_web_view_get_subresources):
+        * UIProcess/API/gtk/WebKitWebViewBase.cpp:
+        (webkitWebViewBaseContainerForall):
+        * UIProcess/API/mac/WKPrintingView.mm:
+        (-[WKPrintingView _expectedPreviewCallbackForRect:]):
+        (pageDidDrawToPDF):
+        (-[WKPrintingView _drawPreview:]):
+        * UIProcess/API/mac/WKView.mm:
+        (commandNameForSelector):
+        (-[WKView validateUserInterfaceItem:]):
+        * UIProcess/CoordinatedGraphics/CoordinatedBackingStore.cpp:
+        (WebKit::CoordinatedBackingStore::updateTile):
+        (WebKit::CoordinatedBackingStore::texture):
+        (WebKit::CoordinatedBackingStore::paintToTextureMapper):
+        (WebKit::CoordinatedBackingStore::commitTileOperations):
+        * UIProcess/CoordinatedGraphics/LayerTreeCoordinatorProxy.cpp:
+        (WebKit::LayerTreeCoordinatorProxy::updateTileForLayer):
+        * UIProcess/CoordinatedGraphics/LayerTreeRenderer.cpp:
+        (WebKit::LayerTreeRenderer::adjustPositionForFixedLayers):
+        (WebKit::LayerTreeRenderer::syncCanvas):
+        (WebKit::LayerTreeRenderer::setLayerChildren):
+        (WebKit::LayerTreeRenderer::setLayerFilters):
+        (WebKit::LayerTreeRenderer::setLayerState):
+        (WebKit::LayerTreeRenderer::assignImageToLayer):
+        * UIProcess/GeolocationPermissionRequestManagerProxy.cpp:
+        (WebKit::GeolocationPermissionRequestManagerProxy::invalidateRequests):
+        * UIProcess/InspectorServer/WebInspectorServer.cpp:
+        (WebKit::WebInspectorServer::~WebInspectorServer):
+        (WebKit::WebInspectorServer::registerPage):
+        * UIProcess/InspectorServer/WebSocketServerConnection.cpp:
+        (WebKit::WebSocketServerConnection::sendHTTPResponseHeader):
+        * UIProcess/InspectorServer/qt/WebInspectorServerQt.cpp:
+        (WebKit::WebInspectorServer::buildPageList):
+        * UIProcess/Notifications/NotificationPermissionRequestManagerProxy.cpp:
+        (WebKit::NotificationPermissionRequestManagerProxy::invalidateRequests):
+        * UIProcess/Plugins/PluginProcessProxy.cpp:
+        (WebKit::PluginProcessProxy::pluginProcessCrashedOrFailedToLaunch):
+        * UIProcess/WebContext.cpp:
+        (WebKit::createDictionaryFromHashMap):
+        * UIProcess/WebIconDatabase.cpp:
+        (WebKit::WebIconDatabase::didFinishURLImport):
+        * UIProcess/WebIntentData.cpp:
+        (WebKit::WebIntentData::extras):
+        * UIProcess/WebProcessProxy.cpp:
+        (WebKit::WebProcessProxy::checkURLReceivedFromWebProcess):
+        (WebKit::WebProcessProxy::addBackForwardItem):
+        (WebKit::WebProcessProxy::frameCountInPage):
+        * WebProcess/Geolocation/GeolocationPermissionRequestManager.cpp:
+        (WebKit::GeolocationPermissionRequestManager::cancelRequestForGeolocation):
+        (WebKit::GeolocationPermissionRequestManager::didReceiveGeolocationPermissionDecision):
+        * WebProcess/InjectedBundle/DOM/InjectedBundleNodeHandle.cpp:
+        (WebKit::InjectedBundleNodeHandle::getOrCreate):
+        * WebProcess/InjectedBundle/DOM/InjectedBundleRangeHandle.cpp:
+        (WebKit::InjectedBundleRangeHandle::getOrCreate):
+        * WebProcess/InjectedBundle/InjectedBundleIntent.cpp:
+        (WebKit::InjectedBundleIntent::extras):
+        * WebProcess/Notifications/WebNotificationManager.cpp:
+        (WebKit::WebNotificationManager::policyForOrigin):
+        (WebKit::WebNotificationManager::show):
+        (WebKit::WebNotificationManager::clearNotifications):
+        (WebKit::WebNotificationManager::removeNotificationFromContextMap):
+        * WebProcess/Plugins/Netscape/NPRuntimeObjectMap.cpp:
+        (WebKit::NPRuntimeObjectMap::invalidate):
+        * WebProcess/Plugins/Netscape/NetscapePlugin.cpp:
+        (WebKit::NetscapePlugin::destroyStream):
+        (WebKit::NetscapePlugin::unscheduleTimer):
+        (WebKit::NetscapePlugin::frameDidFinishLoading):
+        (WebKit::NetscapePlugin::frameDidFail):
+        * WebProcess/Plugins/PluginView.cpp:
+        (WebKit::buildHTTPHeaders):
+        (WebKit::PluginView::~PluginView):
+        * WebProcess/WebPage/CoordinatedGraphics/CoordinatedGraphicsLayer.cpp:
+        (WebCore::CoordinatedGraphicsLayer::layerByID):
+        * WebProcess/WebPage/CoordinatedGraphics/LayerTreeCoordinator.cpp:
+        (WebKit::LayerTreeCoordinator::adoptImageBackingStore):
+        (WebKit::LayerTreeCoordinator::releaseImageBackingStore):
+        * WebProcess/WebPage/WebBackForwardListProxy.cpp:
+        (WebKit::WebBackForwardListProxy::removeItem):
+        * WebProcess/WebPage/mac/WebPageMac.mm:
+        (WebKit::commandNameForSelectorName):
+        * WebProcess/WebProcess.cpp:
+        (WebKit::WebProcess::visitedLinkStateChanged):
+        (WebKit::WebProcess::allVisitedLinkStateChanged):
+        (WebKit::WebProcess::focusedWebPage):
+        (WebKit::WebProcess::createWebPage):
+        (WebKit::WebProcess::webPageGroup):
+        (WebKit::fromCountedSetToHashMap):
+        (WebKit::WebProcess::setTextCheckerState):
+
+2012-08-27  Simon Fraser  <simon.fraser@apple.com>
+
+        Make Force Repaint work with tiled backing store
+        https://bugs.webkit.org/show_bug.cgi?id=95102
+
+        Reviewed by Dan Bernstein.
+
+        Have forceRepaint() call down to the tiled backing of each FrameView,
+        so they can repaint.
+
+        * WebProcess/WebPage/mac/TiledCoreAnimationDrawingArea.mm:
+        (WebKit::TiledCoreAnimationDrawingArea::forceRepaint):
+
+2012-08-27  Rafael Brandao  <rafael.lobo@openbossa.org>
+
+        [Qt] Fix typo in CoordinatedGraphicsLayer::syncAnimatedProperties
+        https://bugs.webkit.org/show_bug.cgi?id=95085
+
+        Reviewed by Noam Rosenthal.
+
+        * WebProcess/WebPage/CoordinatedGraphics/CoordinatedGraphicsLayer.cpp: The flag should be disabled
+        once we process the sync for animated properties. Previously, it was never disabling it once enabled.
+
+2012-08-27  Philippe Normand  <pnormand@igalia.com>
+
+        [GStreamer][Qt] WebAudio support
+        https://bugs.webkit.org/show_bug.cgi?id=94806
+
+        Reviewed by Simon Hausmann.
+
+        New boolean webAudioEnabled WebSetting to be used at runtime to
+        toggle WebAudio support on or off.
+
+        * UIProcess/API/qt/qwebpreferences.cpp:
+        (QWebPreferencesPrivate::testAttribute):
+        (QWebPreferencesPrivate::setAttribute):
+        (QWebPreferences::webAudioEnabled):
+        (QWebPreferences::setWebAudioEnabled):
+        * UIProcess/API/qt/qwebpreferences_p.h:
+        * UIProcess/API/qt/qwebpreferences_p_p.h:
+
+2012-08-27  Simon Hausmann  <simon.hausmann@nokia.com>
+
+        [Qt][WK2] REGRESSION(r126067): It made qmltests::DoubleTapToZoom::test_basic() fail
+        https://bugs.webkit.org/show_bug.cgi?id=94949
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Use JSON to serialize the client rect for the async evaluateJavaScript call.
+
+        * UIProcess/API/qt/tests/qmltests/WebView/tst_doubleTapToZoom.qml:
+
+2012-08-27  Simon Hausmann  <simon.hausmann@nokia.com>
+
+        [Qt] Fix failing QML2 auto tests due to conflicting signal declaration
+        https://bugs.webkit.org/show_bug.cgi?id=95059
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Don't define a scaleChanged signal when QQuickItem already declares one to notify about changes
+        in the scale property. As it turns out there is not need for declaring a signal in the test case
+        at all.
+
+        * UIProcess/API/qt/tests/qmltests/WebView/tst_doubleTapToZoom.qml:
+        * UIProcess/API/qt/tests/qmltests/WebView/tst_fitToView.qml:
+
+2012-08-27  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        Rename RegisterProtocolHandler API to NavigatorContentUtils
+        https://bugs.webkit.org/show_bug.cgi?id=94920
+
+        Reviewed by Adam Barth.
+
+        Renaming whatever RegisterProtocolHandler-prefixed to NavigatorContentUtils-prefixed.
+
+        * Configurations/FeatureDefines.xcconfig:
+        * WebProcess/WebCoreSupport/WebNavigatorContentUtilsClient.h: Renamed from Source/WebKit2/WebProcess/WebCoreSupport/WebRegisterProtocolHandlerClient.h.
+        (WebKit):
+        (WebNavigatorContentUtilsClient):
+        (WebKit::WebNavigatorContentUtilsClient::~WebNavigatorContentUtilsClient):
+        (WebKit::WebNavigatorContentUtilsClient::isProtocolHandlerRegistered):
+        (WebKit::WebNavigatorContentUtilsClient::unregisterProtocolHandler):
+
+2012-08-25  Vivek Galatage  <vivekgalatage@gmail.com>
+
+        WinCairo Build Broken due to missing export definitions
+        https://bugs.webkit.org/show_bug.cgi?id=95007
+
+        Reviewed by Ryosuke Niwa.
+
+        Export symbols were missing from the def file for WinCairo port. Added
+        these missing symbols to avoid build break
+
+        * win/WebKit2CFLite.def:
+
+2012-08-24  Alexey Proskuryakov  <ap@apple.com>
+
+        <rdar://problem/12157689> REGRESSION: WebProcessProxy destructor is sometimes called recursively
+        https://bugs.webkit.org/show_bug.cgi?id=94997
+
+        Reviewed by Dan Bernstein.
+
+        * UIProcess/WebContext.cpp: (WebKit::WebContext::disconnectProcess): Make sure that
+        we don't try to delete WebProcessProxy while the vector still contains it. Previously,
+        we used RefPtr::clear, which zeroes out the value before destructing, but doing that
+        in every RefPtr destructor would be bad for performance.
+
+2012-08-24  Benjamin Poulain  <bpoulain@apple.com>
+
+        Unify Number to StringImpl conversion
+        https://bugs.webkit.org/show_bug.cgi?id=94879
+
+        Reviewed by Geoffrey Garen.
+
+        * win/WebKit2.def: Update the exported symbols.
+
+2012-08-24  Andras Becsi  <andras.becsi@nokia.com>
+
+        [Qt][WK2] Fix custom device pixel ratio propagation and add QML API tests
+        https://bugs.webkit.org/show_bug.cgi?id=88531
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Defer setting the custom device pixel ratio until the page item has
+        a valid size to make sure that the scale factor reaches the web process.
+
+        QML test based on patch by Alexander Færøy.
+
+        * UIProcess/API/qt/qquickwebview.cpp:
+        (QQuickWebViewPrivate::QQuickWebViewPrivate):
+        (QQuickWebViewPrivate::didRelaunchProcess):
+        (QQuickWebViewPrivate::didChangeContentsSize):
+        (QQuickWebViewFlickablePrivate::didChangeContentsSize):
+        (QQuickWebViewExperimental::devicePixelRatio):
+        (QQuickWebViewExperimental::setDevicePixelRatio):
+        * UIProcess/API/qt/qquickwebview_p.h:
+        * UIProcess/API/qt/qquickwebview_p_p.h:
+        (QQuickWebViewPrivate):
+        * UIProcess/API/qt/tests/qmltests/WebView/tst_devicePixelRatio.qml: Added.
+          Test case for the QML device pixel ratio API.
+
+2012-08-24  Kangil Han  <kangil.han@samsung.com>
+
+        [EFL] Fix compile warning
+        https://bugs.webkit.org/show_bug.cgi?id=94930
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Fixed compile warning.
+
+        * UIProcess/API/efl/ewk_back_forward_list.cpp:
+        (ewk_back_forward_list_n_back_items_copy): NULL used in arithmetic [-Wpointer-arith]
+        (ewk_back_forward_list_n_forward_items_copy): NULL used in arithmetic [-Wpointer-arith]
+
+2012-08-24  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        [EFL][WK2] Back-forward list API needs extension
+        https://bugs.webkit.org/show_bug.cgi?id=94582
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Added several new functions wrapping existing WK2 C back-forward list API
+        and returning list of items preceding or following the current one.
+        Corresponding API unit tests are also added.
+
+        * UIProcess/API/efl/ewk_back_forward_list.cpp:
+        (createEinaList):
+        (ewk_back_forward_list_n_back_items_copy):
+        (ewk_back_forward_list_n_forward_items_copy):
+        * UIProcess/API/efl/ewk_back_forward_list.h:
+        * UIProcess/API/efl/tests/test_ewk2_back_forward_list.cpp:
+        (freeEinaList):
+        (TEST_F):
+
+2012-08-24  Michael Brüning  <michaelbruening@gmail.com>
+
+        [Qt][WK2] Make viewport related experimental.test properties encapsulated.
+        https://bugs.webkit.org/show_bug.cgi?id=88320
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Introducing a new viewport attribute to QWebKitTest to group the viewport related
+        attributes into one QJsonObject. Also adding a static method to convert a QSizeF to
+        a QJsonObject.
+
+        * UIProcess/API/qt/qwebkittest.cpp:
+        (qSizeFToJsonObject):
+        (QWebKitTest::viewport):
+        (QWebKitTest::devicePixelRatio):
+        (QWebKitTest::contentsScale):
+        * UIProcess/API/qt/qwebkittest_p.h:
+        * UIProcess/qt/QtViewportHandler.cpp:
+        (WebKit::QtViewportHandler::viewportAttributesChanged):
+
+2012-08-23  Frederik Gladhorn  <gladhorn@kde.org>
+
+        Make it possible to build WebKit with Python 3 (and 2)
+        https://bugs.webkit.org/show_bug.cgi?id=94814
+
+        Reviewed by Ryosuke Niwa.
+
+        Exceptions need a hack to work with both.
+        string.join was already deprecated in Python 2.
+        Relative imports are no longer supported, use package name instead.
+
+        * Scripts/webkit2/messages.py:
+        * Scripts/webkit2/parser.py:
+
+2012-08-24  Mark Rowe  <mrowe@apple.com>
+
+        <http://webkit.org/b/94910> Copy the entire webkit2 module in to the WebKit2 framework wrapper.
+
+        Reviewed by Dan Bernstein.
+
+        This will allow relative imports within the webkit2 module to be removed in the future without
+        requiring future changes to clients of the module.
+
+        * WebKit2.xcodeproj/project.pbxproj: Remove the webkit2 group from the project, and add it back
+        as a folder reference. This allows the directory and its contents to be copied in to the PrivateHeaders
+        directory. We also need to add a script phase to clean up any .pyc files that may be present in
+        the module.
+
+2012-08-23  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r126542.
+        http://trac.webkit.org/changeset/126542
+        https://bugs.webkit.org/show_bug.cgi?id=94907
+
+        Broke WK2 build on OS X (Requested by tronical_ on #webkit).
+
+        * Scripts/webkit2/messages.py:
+        * Scripts/webkit2/parser.py:
+
+2012-08-23  Frederik Gladhorn  <gladhorn@kde.org>
+
+        Make it possible to build WebKit with Python 3 (and 2)
+        https://bugs.webkit.org/show_bug.cgi?id=94814
+
+        Reviewed by Ryosuke Niwa.
+
+        Exceptions need a hack to work with both.
+        string.join was already deprecated in Python 2.
+        Relative imports are no longer supported, use package name instead.
+
+        * Scripts/webkit2/messages.py:
+        * Scripts/webkit2/parser.py:
+
+2012-08-23  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Change behavior of MasqueradesAsUndefined to better accommodate DFG changes
+        https://bugs.webkit.org/show_bug.cgi?id=93884
+
+        Reviewed by Filip Pizlo.
+
+        With some upcoming changes to the DFG to remove uses of ClassInfo, we will be changing the behavior of  
+        MasqueradesAsUndefined. In order to make this change consistent across all of our execution engines,  
+        we will make this change to MasqueradesAsUndefined as a separate patch. After this patch, MasqueradesAsUndefined  
+        objects will only masquerade as undefined in their original context (i.e. their original JSGlobalObject).  
+        For example, if an object that masquerades as undefined in frame A is passed to frame B, it will not  
+        masquerade as undefined within frame B, but it will continue to masquerade in frame A.
+
+        * WebProcess/Plugins/Netscape/NPRuntimeObjectMap.cpp:
+        (WebKit::NPRuntimeObjectMap::convertJSValueToNPVariant): Passing ExecState to toBoolean call.
+
+2012-08-23  Brady Eidson  <beidson@apple.com>
+
+        REGRESSION (r124815): PDF in frame does not display any more
+        <rdar://problem/12063306> and https://bugs.webkit.org/show_bug.cgi?id=94869
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebProcess/Plugins/PDF/BuiltInPDFView.mm:
+        (WebKit::BuiltInPDFView::initialize): Tell the controller that initialization was successful.
+
+2012-08-23  Mark Rowe  <mrowe@apple.com>
+
+        Make WebKit2 build with the latest version of clang.
+
+        Reviewed by Dan Bernstein.
+
+        * Configurations/Base.xcconfig: Ensure that operator new isn't exported as a weak external symbol.
+
+2012-08-22  Jesus Sanchez-Palencia  <jesus.palencia@openbossa.org>
+
+        [EFL] Use WTF_USE_SOUP instead BUILDING_SOUP__
+        https://bugs.webkit.org/show_bug.cgi?id=94744
+
+        Reviewed by Gustavo Noronha Silva.
+
+        Use #if defined(WTF_USE_SOUP) instead of #if defined(BUILDING_SOUP__)
+        since the former is used everywhere.
+
+        * Shared/API/c/WKBase.h:
+
+2012-08-23  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL][WK2] Free ewk context data on program exit.
+        https://bugs.webkit.org/show_bug.cgi?id=94808
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Make sure the default Ewk_Context gets freed
+        on program exit.
+
+        The patch also fixes leaking of WKContextRef
+        inside Ewk_Context which should have been
+        adopted.
+
+        * UIProcess/API/efl/ewk_context.cpp:
+        (_Ewk_Context::_Ewk_Context):
+        (ewk_context_default_get):
+
+2012-08-23  Adrienne Walker  <enne@google.com>
+
+        Convert ScrollableArea ASSERT_NOT_REACHED virtuals
+        https://bugs.webkit.org/show_bug.cgi?id=93306
+
+        Reviewed by Darin Adler.
+
+        Add implementations where necessary to make derived classes concrete.
+        Add OVERRIDE for ScrollableArea functions.
+
+        * UIProcess/win/WebPopupMenuProxyWin.cpp:
+        (WebKit::WebPopupMenuProxyWin::visibleHeight):
+        (WebKit):
+        (WebKit::WebPopupMenuProxyWin::visibleWidth):
+        (WebKit::WebPopupMenuProxyWin::contentsSize):
+        (WebKit::WebPopupMenuProxyWin::scrollableAreaBoundingBox):
+        * UIProcess/win/WebPopupMenuProxyWin.h:
+        (WebPopupMenuProxyWin):
+        * WebProcess/Plugins/PDF/BuiltInPDFView.h:
+
+2012-08-23  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        [EFL][WK2] ewk_intent_request API test does not free Eina_List
+        https://bugs.webkit.org/show_bug.cgi?id=94809
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        The used Eina_List should be freed due to ewk_intent_suggestions_get() documentation.
+
+        * UIProcess/API/efl/tests/test_ewk2_intents.cpp:
+        (onIntentReceived):
+
+2012-08-23  Andras Becsi  <andras.becsi@nokia.com>
+
+        [Qt][WK2] Helper functions used by the raw webview tests should not be guarded by HAVE_QTQUICK
+
+        Reviewed by Simon Hausmann.
+
+        This fixes the build if the QtQuick module is not present.
+
+        * UIProcess/API/qt/tests/util.cpp:
+        (messageHandler):
+        (suppressDebugOutput):
+        * UIProcess/API/qt/tests/util.h:
+
+2012-08-23  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        REGRESSION(r126306): it broke the plugin process
+        https://bugs.webkit.org/show_bug.cgi?id=94797
+
+        Reviewed by Xan Lopez.
+
+        * GNUmakefile.am:
+
+2012-08-23  Mikhail Pozdnyakov  <mikhail.pozdnyakov@intel.com>
+
+        [WK2] Refactoring: WebBackForwardList getters should be const
+        https://bugs.webkit.org/show_bug.cgi?id=94711
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Before the change were not consistent with each other
+        (WebBackForwardList::entries() was const but WebBackForwardList::currentIndex() was not).
+        Besides having not const getters is not a good practice in C++. (Please read
+        Scott Meyers. Effective C++ (3rd edition). ISBN: 0-321-33487-6.
+        Item 3: 'Use const whenever possible').
+
+        * UIProcess/WebBackForwardList.cpp:
+        (WebKit::WebBackForwardList::backListCount):
+        (WebKit::WebBackForwardList::forwardListCount):
+        (WebKit::WebBackForwardList::backListAsImmutableArrayWithLimit):
+        (WebKit::WebBackForwardList::forwardListAsImmutableArrayWithLimit):
+        * UIProcess/WebBackForwardList.h:
+        (WebKit::WebBackForwardList::currentIndex):
+        (WebBackForwardList):
+
+2012-08-22  Nikhil Bhargava  <nbhargava@google.com>
+
+        Reduce Font.h includes across project -- improves RenderObject.h compile time
+        https://bugs.webkit.org/show_bug.cgi?id=93629
+
+        Reviewed by Eric Seidel.
+
+        Adds includes due to change in RenderStyle.h
+
+        * WebProcess/WebPage/mac/WebPageMac.mm:
+
+2012-08-22  Beth Dakin  <bdakin@apple.com>
+
+        https://bugs.webkit.org/show_bug.cgi?id=94401
+        Add support for making a web site become paginated using overflow: 
+        paged-x | paged-y
+        -and corresponding-
+        <rdar://problem/11831783> 
+
+        Reviewed by Dave Hyatt.
+
+        WebCore::Page::Pagination is now just WebCore::Pagination.
+        * Shared/WebPageCreationParameters.h:
+        (WebPageCreationParameters):
+        * UIProcess/API/C/WKPage.cpp:
+        (WKPageSetPaginationMode):
+        (WKPageGetPaginationMode):
+        * UIProcess/WebPageProxy.cpp:
+        (WebKit::WebPageProxy::WebPageProxy):
+        (WebKit::WebPageProxy::setPaginationMode):
+        * UIProcess/WebPageProxy.h:
+        (WebPageProxy):
+        (WebKit::WebPageProxy::paginationMode):
+        * WebProcess/WebPage/WebPage.cpp:
+        (WebKit::WebPage::setPaginationMode):
+        (WebKit::WebPage::setPaginationBehavesLikeColumns):
+        (WebKit::WebPage::setPageLength):
+        (WebKit::WebPage::setGapBetweenPages):
+        * WebProcess/WebPage/WebPage.h:
+        (WebPage):
+
 2012-08-22  Jer Noble  <jer.noble@apple.com>
 
         Browser menu visible when calling webkitRequestFullscreen after user manually enters full screen mode

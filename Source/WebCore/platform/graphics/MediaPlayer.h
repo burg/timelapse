@@ -32,9 +32,10 @@
 #include "MediaPlayerProxy.h"
 #endif
 
-#include "Document.h"
 #include "IntRect.h"
 #include "KURL.h"
+#include "LayoutTypesInlineMethods.h"
+#include "Timer.h"
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
 #include <wtf/OwnPtr.h>
@@ -56,8 +57,10 @@ class QTMovieVisualContext;
 namespace WebCore {
 
 class AudioSourceProvider;
+class Document;
 class GStreamerGWorld;
 class MediaPlayerPrivateInterface;
+class MediaSource;
 
 // Structure that will hold every native
 // types supported by the current media player.
@@ -98,6 +101,7 @@ class IntSize;
 class MediaPlayer;
 struct MediaPlayerFactory;
 class TimeRanges;
+class HostWindow;
 
 #if PLATFORM(WIN) && USE(AVFOUNDATION)
 struct GraphicsDeviceAdapter;
@@ -189,6 +193,15 @@ public:
     virtual String mediaPlayerReferrer() const { return String(); }
     virtual String mediaPlayerUserAgent() const { return String(); }
     virtual CORSMode mediaPlayerCORSMode() const { return Unspecified; }
+    virtual void mediaPlayerExitFullscreen() { }
+    virtual bool mediaPlayerIsVideo() const { return false; }
+    virtual LayoutRect mediaPlayerContentBoxRect() const { return LayoutRect(); }
+    virtual void mediaPlayerSetSize(const IntSize&) { }
+    virtual void mediaPlayerPause() { }
+    virtual void mediaPlayerPlay() { }
+    virtual bool mediaPlayerIsPaused() const { return true; }
+    virtual HostWindow* mediaPlayerHostWindow() { return 0; }
+    virtual IntRect mediaPlayerWindowClipRect() { return IntRect(); }
 };
 
 class MediaPlayerSupportsTypeClient {

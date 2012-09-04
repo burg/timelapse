@@ -65,7 +65,7 @@ void ScrollbarLayerChromium::pushPropertiesTo(CCLayerImpl* layer)
     CCScrollbarLayerImpl* scrollbarLayer = static_cast<CCScrollbarLayerImpl*>(layer);
 
     if (!scrollbarLayer->scrollbarGeometry())
-        scrollbarLayer->setScrollbarGeometry(adoptPtr(m_geometry->clone()));
+        scrollbarLayer->setScrollbarGeometry(CCScrollbarGeometryFixedThumb::create(adoptPtr(m_geometry->clone())));
 
     scrollbarLayer->setScrollbarData(m_scrollbar.get());
 
@@ -188,7 +188,7 @@ void ScrollbarLayerChromium::setLayerTreeHost(CCLayerTreeHost* host)
 
 void ScrollbarLayerChromium::createTextureUpdaterIfNeeded()
 {
-    m_textureFormat = layerTreeHost()->layerRendererCapabilities().bestTextureFormat;
+    m_textureFormat = layerTreeHost()->rendererCapabilities().bestTextureFormat;
 
     if (!m_backTrackUpdater)
         m_backTrackUpdater = BitmapCanvasLayerTextureUpdater::create(ScrollbarBackgroundPainter::create(m_scrollbar.get(), m_painter, m_geometry.get(), WebKit::WebScrollbar::BackTrackPart));

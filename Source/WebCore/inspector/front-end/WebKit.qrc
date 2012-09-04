@@ -57,6 +57,7 @@
     <file>DOMSyntaxHighlighter.js</file>
     <file>Drawer.js</file>
     <file>ElementsPanel.js</file>
+    <file>ElementsPanelDescriptor.js</file>
     <file>ElementsTreeOutline.js</file>
     <file>EmptyView.js</file>
     <file>EventListenersSidebarPane.js</file>
@@ -110,12 +111,14 @@
     <file>NetworkLog.js</file>
     <file>NetworkManager.js</file>
     <file>NetworkPanel.js</file>
+    <file>NetworkPanelDescriptor.js</file>
     <file>NetworkRequest.js</file>
     <file>Object.js</file>
     <file>ObjectPopoverHelper.js</file>
     <file>ObjectPropertiesSection.js</file>
     <file>Panel.js</file>
     <file>PanelEnablerView.js</file>
+    <file>ParsedURL.js</file>
     <file>Placard.js</file>
     <file>Popover.js</file>
     <file>PresentationConsoleMessageHelper.js</file>
@@ -151,6 +154,7 @@
     <file>ScriptFormatterWorker.js</file>
     <file>ScriptSnippetModel.js</file>
     <file>ScriptsPanel.js</file>
+    <file>ScriptsPanelDescriptor.js</file>
     <file>ScriptsNavigator.js</file>
     <file>ScriptsSearchScope.js</file>
     <file>SearchController.js</file>
@@ -176,6 +180,8 @@
     <file>StatusBarButton.js</file>
     <file>StyleSheetOutlineDialog.js</file>
     <file>StyleSource.js</file>
+    <file>StylesSourceMapping.js</file>
+    <file>StylesUISourceCodeProvider.js</file>
     <file>StylesSidebarPane.js</file>
     <file>TabbedEditorContainer.js</file>
     <file>TabbedPane.js</file>
@@ -206,6 +212,7 @@
     <file>utilities.js</file>
     <file>View.js</file>
     <file>WatchExpressionsSidebarPane.js</file>
+    <file>WebGLProfileView.js</file>
     <file>WorkerManager.js</file>
     <file>WorkersSidebarPane.js</file>
     <file>Workspace.js</file>
@@ -241,6 +248,7 @@
     <file>timelinePanel.css</file>
     <file>timelapsePanel.css</file>
     <file>timelapseOverview.css</file>
+    <file>webGLProfiler.css</file>
     <file>Images/applicationCache.png</file>
     <file>Images/back.png</file>
     <file>Images/breakpointBorder.png</file>
@@ -332,6 +340,7 @@
     <file>Images/splitviewDimple.png</file>
     <file>Images/splitviewDividerBackground.png</file>
     <file>Images/statusbarButtonGlyphs.png</file>
+    <file>Images/statusbarButtonGlyphs2x.png</file>
     <file>Images/statusbarResizerHorizontal.png</file>
     <file>Images/statusbarResizerVertical.png</file>
     <file>Images/successGreenDot.png</file>

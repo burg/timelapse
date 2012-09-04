@@ -261,6 +261,31 @@ const StylePropertyShorthand& webkitAnimationShorthand()
     return webkitAnimationLonghands;
 }
 
+const StylePropertyShorthand& webkitAnimationShorthandForParsing()
+{
+    // When we parse the animation shorthand we need to look for animation-name
+    // last because otherwise it might match against the keywords for fill mode,
+    // timing functions and infinite iteration. This means that animation names
+    // that are the same as keywords (e.g. 'forwards') won't always match in the
+    // shorthand. In that case the authors should be using longhands (or
+    // reconsidering their approach). This is covered by the animations spec
+    // bug: https://www.w3.org/Bugs/Public/show_bug.cgi?id=14790
+    // And in the spec (editor's draft) at:
+    // http://dev.w3.org/csswg/css3-animations/#animation-shorthand-property
+    static const CSSPropertyID animationPropertiesForParsing[] = {
+        CSSPropertyWebkitAnimationDuration,
+        CSSPropertyWebkitAnimationTimingFunction,
+        CSSPropertyWebkitAnimationDelay,
+        CSSPropertyWebkitAnimationIterationCount,
+        CSSPropertyWebkitAnimationDirection,
+        CSSPropertyWebkitAnimationFillMode,
+        CSSPropertyWebkitAnimationName
+    };
+
+    DEFINE_STATIC_LOCAL(StylePropertyShorthand, webkitAnimationLonghandsForParsing, (animationPropertiesForParsing, WTF_ARRAY_LENGTH(animationPropertiesForParsing)));
+    return webkitAnimationLonghandsForParsing;
+}
+
 const StylePropertyShorthand& webkitBorderAfterShorthand()
 {
     static const CSSPropertyID borderAfterProperties[] = { CSSPropertyWebkitBorderAfterWidth, CSSPropertyWebkitBorderAfterStyle, CSSPropertyWebkitBorderAfterColor  };
@@ -307,7 +332,6 @@ const StylePropertyShorthand& webkitColumnRuleShorthand()
     return webkitColumnRuleLonghands;
 }
 
-#if ENABLE(CSS3_FLEXBOX)
 const StylePropertyShorthand& webkitFlexFlowShorthand()
 {
     static const CSSPropertyID flexFlowProperties[] = { CSSPropertyWebkitFlexDirection, CSSPropertyWebkitFlexWrap };
@@ -321,7 +345,6 @@ const StylePropertyShorthand& webkitFlexShorthand()
     DEFINE_STATIC_LOCAL(StylePropertyShorthand, webkitFlexLonghands, (flexProperties, WTF_ARRAY_LENGTH(flexProperties)));
     return webkitFlexLonghands;
 }
-#endif
 
 const StylePropertyShorthand& webkitMarginCollapseShorthand()
 {
@@ -486,12 +509,10 @@ const StylePropertyShorthand& shorthandForProperty(CSSPropertyID propertyID)
         return webkitColumnsShorthand();
     case CSSPropertyWebkitColumnRule:
         return webkitColumnRuleShorthand();
-#if ENABLE(CSS3_FLEXBOX)
     case CSSPropertyWebkitFlex:
         return webkitFlexShorthand();
     case CSSPropertyWebkitFlexFlow:
         return webkitFlexFlowShorthand();
-#endif
     case CSSPropertyWebkitMarginCollapse:
         return webkitMarginCollapseShorthand();
     case CSSPropertyWebkitMarquee:

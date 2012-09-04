@@ -155,6 +155,8 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/dfg/DFGArgumentPosition.h \
 	Source/JavaScriptCore/dfg/DFGArgumentsSimplificationPhase.cpp \
 	Source/JavaScriptCore/dfg/DFGArgumentsSimplificationPhase.h \
+	Source/JavaScriptCore/dfg/DFGArrayMode.cpp \
+	Source/JavaScriptCore/dfg/DFGArrayMode.h \
 	Source/JavaScriptCore/dfg/DFGAssemblyHelpers.cpp \
 	Source/JavaScriptCore/dfg/DFGAssemblyHelpers.h \
 	Source/JavaScriptCore/dfg/DFGBasicBlock.h \
@@ -215,8 +217,6 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/dfg/DFGPhase.h \
 	Source/JavaScriptCore/dfg/DFGPredictionPropagationPhase.cpp \
 	Source/JavaScriptCore/dfg/DFGPredictionPropagationPhase.h \
-	Source/JavaScriptCore/dfg/DFGRedundantPhiEliminationPhase.cpp \
-	Source/JavaScriptCore/dfg/DFGRedundantPhiEliminationPhase.h \
 	Source/JavaScriptCore/dfg/DFGRegisterBank.h \
 	Source/JavaScriptCore/dfg/DFGRegisterSet.h \
 	Source/JavaScriptCore/dfg/DFGRepatch.cpp \
@@ -273,6 +273,8 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/heap/HandleTypes.h \
 	Source/JavaScriptCore/heap/BlockAllocator.cpp \
 	Source/JavaScriptCore/heap/BlockAllocator.h \
+    Source/JavaScriptCore/heap/GCThreadSharedData.cpp \
+    Source/JavaScriptCore/heap/GCThreadSharedData.h \
 	Source/JavaScriptCore/heap/Heap.cpp \
 	Source/JavaScriptCore/heap/Heap.h \
 	Source/JavaScriptCore/heap/JITStubRoutineSet.cpp \
@@ -284,6 +286,7 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/heap/MachineStackMarker.h \
 	Source/JavaScriptCore/heap/MarkStack.cpp \
 	Source/JavaScriptCore/heap/MarkStack.h \
+    Source/JavaScriptCore/heap/MarkStackInlineMethods.h \
 	Source/JavaScriptCore/heap/HeapRootVisitor.h \
 	Source/JavaScriptCore/heap/MarkedAllocator.cpp \
 	Source/JavaScriptCore/heap/MarkedAllocator.h \
@@ -544,8 +547,11 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/runtime/JSPropertyNameIterator.h \
 	Source/JavaScriptCore/runtime/JSSegmentedVariableObject.cpp \
 	Source/JavaScriptCore/runtime/JSSegmentedVariableObject.h \
-	Source/JavaScriptCore/runtime/JSStaticScopeObject.cpp \
-	Source/JavaScriptCore/runtime/JSStaticScopeObject.h \
+	Source/JavaScriptCore/runtime/JSWithScope.cpp \
+	Source/JavaScriptCore/runtime/JSNameScope.cpp \
+	Source/JavaScriptCore/runtime/JSNameScope.h \
+	Source/JavaScriptCore/runtime/JSScope.cpp \
+	Source/JavaScriptCore/runtime/JSScope.h \
 	Source/JavaScriptCore/runtime/JSStringBuilder.h \
 	Source/JavaScriptCore/runtime/JSStringJoiner.cpp \
 	Source/JavaScriptCore/runtime/JSStringJoiner.h \
@@ -624,9 +630,6 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/runtime/RegExpPrototype.h \
 	Source/JavaScriptCore/runtime/SamplingCounter.cpp \
 	Source/JavaScriptCore/runtime/SamplingCounter.h \
-	Source/JavaScriptCore/runtime/ScopeChain.cpp \
-	Source/JavaScriptCore/runtime/ScopeChain.h \
-	Source/JavaScriptCore/runtime/ScopeChainMark.h \
 	Source/JavaScriptCore/runtime/SmallStrings.cpp \
 	Source/JavaScriptCore/runtime/SmallStrings.h \
 	Source/JavaScriptCore/runtime/StorageBarrier.h \
@@ -652,10 +655,6 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/runtime/TimeoutChecker.h \
 	Source/JavaScriptCore/runtime/Tracing.h \
 	Source/JavaScriptCore/runtime/Uint16WithFraction.h \
-	Source/JavaScriptCore/runtime/UString.cpp \
-	Source/JavaScriptCore/runtime/UString.h \
-	Source/JavaScriptCore/runtime/UStringBuilder.h \
-	Source/JavaScriptCore/runtime/UStringConcatenate.h \
 	Source/JavaScriptCore/runtime/WeakGCMap.h \
 	Source/JavaScriptCore/runtime/WeakRandom.h \
 	Source/JavaScriptCore/runtime/WriteBarrier.h \

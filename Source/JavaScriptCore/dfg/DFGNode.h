@@ -33,6 +33,7 @@
 #include "CodeBlock.h"
 #include "CodeOrigin.h"
 #include "DFGAdjacencyList.h"
+#include "DFGArrayMode.h"
 #include "DFGCommon.h"
 #include "DFGNodeFlags.h"
 #include "DFGNodeType.h"
@@ -732,6 +733,40 @@ struct Node {
         return m_opInfo;
     }
     
+    bool hasArrayMode()
+    {
+        switch (op()) {
+        case GetIndexedPropertyStorage:
+        case GetArrayLength:
+        case PutByVal:
+        case PutByValAlias:
+        case GetByVal:
+        case StringCharAt:
+        case StringCharCodeAt:
+        case CheckArray:
+        case ArrayPush:
+        case ArrayPop:
+            return true;
+        default:
+            return false;
+        }
+    }
+    
+    Array::Mode arrayMode()
+    {
+        ASSERT(hasArrayMode());
+        return static_cast<Array::Mode>(m_opInfo);
+    }
+    
+    bool setArrayMode(Array::Mode arrayMode)
+    {
+        ASSERT(hasArrayMode());
+        if (this->arrayMode() == arrayMode)
+            return false;
+        m_opInfo = arrayMode;
+        return true;
+    }
+    
     bool hasVirtualRegister()
     {
         return m_virtualRegister != InvalidVirtualRegister;
@@ -881,12 +916,27 @@ struct Node {
     {
         return isBooleanSpeculation(prediction());
     }
-    
+   
+    bool shouldSpeculateString()
+    {
+        return isStringSpeculation(prediction());
+    }
+ 
     bool shouldSpeculateFinalObject()
     {
         return isFinalObjectSpeculation(prediction());
     }
     
+    bool shouldSpeculateNonStringCell()
+    {
+        return isNonStringCellSpeculation(prediction());
+    }
+
+    bool shouldSpeculateNonStringCellOrOther()
+    {
+        return isNonStringCellOrOtherSpeculation(prediction());
+    }
+
     bool shouldSpeculateFinalObjectOrOther()
     {
         return isFinalObjectOrOtherSpeculation(prediction());

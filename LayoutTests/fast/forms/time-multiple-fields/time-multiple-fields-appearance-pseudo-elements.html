@@ -1,12 +1,21 @@
 <html>
 <head>
-<link rel="stylesheet" type="text/css" href="./resources/time-multiple-fields-appearance.css" />
+<style type="text/css">
+.after:after { content: "[after]"; }
+.before:before { content: "[before]"; }
+.first-letter:first-letter { color: green; font-size: 200%; }
+</style>
 </head>
 <body>
 <ul>
-    <li><input type="time" value="12:34:56" class="after"></li>
-    <li><input type="time" value="12:34:56" class="before"></li>
-    <li><input type="time" value="12:34:56" class="first-letter"></li>
+    <li><input type="time" value="12:34" class="after"></li>
+    <li><input type="time" value="12:34" class="before"></li>
+    <li><input type="time" value="12:34" class="first-letter"></li>
 </ul>
 </body>
+<script>
+if (window.testRunner) {
+    testRunner.dumpAsText(true);
+}
+</script>
 </html>

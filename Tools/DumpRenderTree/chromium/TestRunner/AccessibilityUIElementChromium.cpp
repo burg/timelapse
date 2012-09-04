@@ -204,6 +204,10 @@ static string roleToString(WebAccessibilityRole role)
         return result.append("DocumentRegion");
     case WebAccessibilityRoleUserInterfaceTooltip:
         return result.append("UserInterfaceTooltip");
+    case WebAccessibilityRoleToggleButton:
+        return result.append("ToggleButton");
+    case WebAccessibilityRoleCanvas:
+        return result.append("Canvas");
     default:
         // Also matches WebAccessibilityRoleUnknown.
         return result.append("Unknown");
@@ -545,7 +549,7 @@ void AccessibilityUIElement::hasPopupGetterCallback(CppVariant* result)
 
 void AccessibilityUIElement::isValidGetterCallback(CppVariant* result)
 {
-    result->set(accessibilityObject().isValid());
+    result->set(!accessibilityObject().isDetached());
 }
 
 void AccessibilityUIElement::orientationGetterCallback(CppVariant* result)

@@ -1,8 +1,8 @@
 AC_PREREQ(2.60)
 
 m4_define([webkit_major_version], [1])
-m4_define([webkit_minor_version], [9])
-m4_define([webkit_micro_version], [6])
+m4_define([webkit_minor_version], [11])
+m4_define([webkit_micro_version], [0])
 
 # This is the version we'll be using as part of our User-Agent string
 # e.g., AppleWebKit/$(webkit_user_agent_version) ...
@@ -11,7 +11,7 @@ m4_define([webkit_micro_version], [6])
 m4_define([webkit_user_agent_major_version], [537])
 m4_define([webkit_user_agent_minor_version], [4])
 
-AC_INIT([WebKit],[webkit_major_version.webkit_minor_version.webkit_micro_version],[http://bugs.webkit.org/])
+AC_INIT([WebKitGTK],[webkit_major_version.webkit_minor_version.webkit_micro_version],[http://bugs.webkit.org/])
 
 AC_CONFIG_MACRO_DIR([Source/autotools])
 AC_CONFIG_AUX_DIR([Source/autotools])
@@ -1012,14 +1012,6 @@ AC_ARG_ENABLE(coverage,
               [],[enable_coverage="no"])
 AC_MSG_RESULT([$enable_coverage])
 
-# check whether to enable CSS flaxbox support
-AC_MSG_CHECKING([whether to enable CSS3 flexbox support])
-AC_ARG_ENABLE(css3_flexbox,
-              AC_HELP_STRING([--enable-css3-flexbox],
-                             [enable CSS3 flexbox support [default=no]]),
-              [],[enable_css3_flexbox=$enable_unstable_features])
-AC_MSG_RESULT([$enable_css3_flexbox])
-
 # check whether to enable CSS3 text decoration support
 AC_MSG_CHECKING([whether to enable CSS3 text decoration support])
 AC_ARG_ENABLE(css3_text_decoration,
@@ -1486,7 +1478,6 @@ AM_CONDITIONAL([ENABLE_ORIENTATION_EVENTS],[test "$enable_orientation_events" = 
 AM_CONDITIONAL([ENABLE_SVG],[test "$enable_svg" = "yes"])
 AM_CONDITIONAL([ENABLE_SVG_FONTS],[test "$enable_svg_fonts" = "yes"])
 AM_CONDITIONAL([ENABLE_COVERAGE],[test "$enable_coverage" = "yes"])
-AM_CONDITIONAL([ENABLE_CSS3_FLEXBOX],[test "$enable_css3_flexbox" = "yes"])
 AM_CONDITIONAL([ENABLE_CSS3_TEXT_DECORATION],[test "$enable_css3_text_decoration" = "yes"])
 AM_CONDITIONAL([ENABLE_FAST_MALLOC],[test "$enable_fast_malloc" = "yes"])
 AM_CONDITIONAL([ENABLE_WORKERS],[test "$enable_workers" = "yes"])
@@ -1503,7 +1494,7 @@ AM_CONDITIONAL([ENABLE_LINK_PREFETCH],[test "$enable_link_prefetch" = "yes"])
 AM_CONDITIONAL([ENABLE_ANIMATION_API],[test "$enable_animation_api" = "yes"])
 AM_CONDITIONAL([ENABLE_REQUEST_ANIMATION_FRAME],[test "$enable_request_animation_frame" = "yes"])
 AM_CONDITIONAL([ENABLE_TOUCH_ICON_LOADING],[test "$enable_touch_icon_loading" = "yes"])
-AM_CONDITIONAL([ENABLE_REGISTER_PROTOCOL_HANDLER],[test "$enable_register_protocol_handler" = "yes"])
+AM_CONDITIONAL([ENABLE_NAVIGATOR_CONTENT_UTILS],[test "$enable_navigator_content_utils" = "yes"])
 AM_CONDITIONAL([ENABLE_DEVICE_ORIENTATION],[test "$enable_device_orientation" = "yes"])
 AM_CONDITIONAL([ENABLE_MUTATION_OBSERVERS],[test "$enable_mutation_observers" = "yes"])
 AM_CONDITIONAL([ENABLE_IFRAME_SEAMLESS],[test "$enable_iframe_seamless" = "yes"])
@@ -1573,7 +1564,6 @@ Features:
  CSS Filters support                                      : $enable_css_filters
  CSS Regions support                                      : $enable_css_regions
  CSS box-decoration-break support                         : $enable_css_box_decoration_break
- CSS3 Flexbox support                                     : $enable_css3_flexbox
  CSS3 Text Decoration support                             : $enable_css3_text_decoration
  Color input support                                      : $enable_input_type_color
  DOM mutation observer support                            : $enable_mutation_observers

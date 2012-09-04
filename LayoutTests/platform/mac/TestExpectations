@@ -210,9 +210,6 @@ BUGWK60731 : ietestcenter/css3/grid/grid-column-003.htm = IMAGE
 BUGWK60731 : ietestcenter/css3/grid/grid-items-002.htm = IMAGE
 BUGWK60731 : ietestcenter/css3/grid/grid-items-003.htm = IMAGE
 
-BUGWK85401 : media/video-colorspace-yuv420.html = TEXT
-BUGWK85401 : media/video-colorspace-yuv422.html = TEXT
-
 BUGWK85404 : fast/loader/javascript-url-in-embed.html = TEXT PASS
 
 BUGWK85408 : svg/batik/text/longTextOnPath.svg = TEXT PASS
@@ -246,41 +243,6 @@ BUGWK85565 : fast/css/border-solid-single-edge-antialias.html = IMAGE
 BUGWK85689 SKIP : fast/animation/request-animation-frame-disabled.html = TEXT
 
 // Need rebaseline after https://bugs.webkit.org/show_bug.cgi?id=6033
-BUGWK6033 : css3/filters/add-filter-rendering.html = PASS IMAGE
-BUGWK6033 : css3/filters/blur-filter-page-scroll-parents.html = PASS IMAGE
-BUGWK6033 : css3/filters/blur-filter-page-scroll.html = PASS IMAGE
-BUGWK6033 : css3/filters/crash-filter-change.html = PASS IMAGE
-BUGWK6033 : css3/filters/crash-hw-sw-switch.html = PASS IMAGE
-BUGWK6033 : css3/filters/custom/custom-filter-shader-cache.html = PASS IMAGE
-BUGWK6033 : css3/filters/custom/effect-color-check.html = PASS IMAGE
-BUGWK6033 : css3/filters/custom/effect-custom-combined-missing.html = PASS IMAGE
-BUGWK6033 : css3/filters/custom/effect-custom.html = PASS IMAGE
-BUGWK6033 : css3/filters/custom/effect-custom-parameters.html = PASS IMAGE
-BUGWK6033 : css3/filters/custom/filter-repaint-custom-clipped.html = PASS IMAGE
-BUGWK6033 : css3/filters/custom/filter-repaint-custom-rotated.html = PASS IMAGE
-BUGWK6033 : css3/filters/custom/filter-repaint-custom.html = PASS IMAGE
-BUGWK6033 : css3/filters/custom/invalid-custom-filter-shader.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-blur.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-brightness-clamping.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-brightness.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-combined.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-contrast.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-drop-shadow.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-grayscale.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-hue-rotate.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-invert.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-opacity.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-reference-external.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-reference-hw.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-reference-ordering.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-reference.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-saturate.html = PASS IMAGE
-BUGWK6033 : css3/filters/effect-sepia.html = PASS IMAGE
-BUGWK6033 : css3/filters/filtered-inline.html = PASS IMAGE
-BUGWK6033 : css3/filters/multiple-filters-invalidation.html = PASS IMAGE
-BUGWK6033 : css3/filters/nested-filters.html = PASS IMAGE
-BUGWK6033 : css3/filters/regions-expanding.html = PASS IMAGE
-BUGWK6033 : css3/filters/simple-filter-rendering.html = PASS IMAGE
 BUGWK6033 : svg/filters/color-interpolation-filters.svg = PASS MISSING
 
 // Hits assert https://bugs.webkit.org/show_bug.cgi?id=86208
@@ -298,7 +260,6 @@ BUGWK84167 : editing/selection/iframe.html = TEXT
 BUGWK84167 : editing/selection/inline-table.html = TEXT
 BUGWK84167 : editing/selection/table-caret-3.html = TEXT
 BUGWK84167 : fast/css-generated-content/inline-display-types.html = TEXT
-BUGWK84167 : fast/css-generated-content/nested-tables-with-before-after-content-crash.html = IMAGE+TEXT
 BUGWK84167 : fast/inline-block/001.html = TEXT
 BUGWK84167 : tables/mozilla/bugs/bug2479-2.html = TEXT
 
@@ -383,8 +344,30 @@ BUGWK89826 : fast/css/word-space-extra.html = TEXT
 BUGWK94008 : fast/css/word-spacing-characters.html = IMAGE
 BUGWK94003 : fast/css/word-spacing-characters-complex-text.html = IMAGE
 
-// (r125629): Newly added test css3/filters/custom/filter-fallback-to-software.html failing on mac
-BUGWK94169 : css3/filters/custom/filter-fallback-to-software.html = IMAGE
-
 // (r125790): Newly added test inspector/timeline/timeline-decode-resize.html is failing on mac
 BUGWK94374 : inspector/timeline/timeline-decode-resize.html = TEXT
+
+// Flakey WebGL tests
+BUGWK93560 : fast/canvas/webgl/tex-image-and-sub-image-2d-with-array-buffer-view.html = PASS TEXT
+BUGWK93560 : fast/canvas/webgl/tex-image-and-sub-image-2d-with-image-data-rgb565.html = PASS TEXT
+BUGWK93560 : fast/canvas/webgl/tex-image-and-sub-image-2d-with-image-data-rgba4444.html = PASS TEXT
+BUGWK93560 : fast/canvas/webgl/tex-image-and-sub-image-2d-with-image-data-rgba5551.html = PASS TEXT
+BUGWK93560 : fast/canvas/webgl/tex-image-and-sub-image-2d-with-image-data.html = PASS TEXT
+
+//Require rebaseline after https://bugs.webkit.org/show_bug.cgi?id=77754
+BUGWK77754 : fast/inline/left-right-center-inline-alignment-in-ltr-and-rtl-blocks.html = TEXT
+BUGWK77754 : fast/inline/absolute-positioned-inline-in-centred-block.html = TEXT
+BUGWK77754 : fast/css/absolute-child-with-percent-height-inside-relative-parent.html = TEXT
+
+BUGWK92464 DEBUG : fast/events/tabindex-focus-blur-all.html = CRASH PASS
+
+//Require rebaseline after https://bugs.webkit.org/show_bug.cgi?id=80394
+BUGWK80394 : fast/block/float/024.html = TEXT
+BUGWK80394 : fast/block/margin-collapse/empty-clear-blocks.html = TEXT
+BUGWK80394 : fast/block/margin-collapse/025.html = TEXT
+BUGWK80394 : fast/block/margin-collapse/block-inside-inline/025.html = TEXT
+
+// Asserts in MessagePort::contextDestroyed, but the assert usually gets attributed to later tests.
+BUGWK94458 SKIP : fast/events/message-port-constructor-for-deleted-document.html = PASS
+
+BUGWK95501 SKIP : http/tests/security/inactive-document-with-empty-security-origin.html = TIMEOUT

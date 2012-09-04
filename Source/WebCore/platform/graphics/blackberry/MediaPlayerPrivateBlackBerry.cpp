@@ -27,7 +27,6 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "GraphicsContext.h"
-#include "HTMLMediaElement.h"
 #include "HTMLNames.h"
 #include "HostWindow.h"
 #include "MediaStreamDescriptor.h"
@@ -39,7 +38,8 @@
 #include "TimeRanges.h"
 #include "WebPageClient.h"
 
-#include <BlackBerryPlatformClient.h>
+#include <BlackBerryPlatformSettings.h>
+#include <FrameLoaderClientBlackBerry.h>
 #include <set>
 #include <string>
 #include <wtf/text/CString.h>
@@ -122,8 +122,7 @@ MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer* player)
 MediaPlayerPrivate::~MediaPlayerPrivate()
 {
     if (isFullscreen()) {
-        HTMLMediaElement* element = static_cast<HTMLMediaElement*>(m_webCorePlayer->mediaPlayerClient());
-        element->exitFullscreen();
+        m_webCorePlayer->mediaPlayerClient()->mediaPlayerExitFullscreen();
     }
 #if USE(ACCELERATED_COMPOSITING)
     // Remove media player from platform layer.
@@ -141,7 +140,7 @@ void MediaPlayerPrivate::load(const String& url)
     if (modifiedUrl.startsWith("local://")) {
         KURL kurl = KURL(KURL(), modifiedUrl);
         kurl.setProtocol("file");
-        String tempPath(BlackBerry::Platform::Client::get()->getApplicationLocalDirectory().c_str());
+        String tempPath(BlackBerry::Platform::Settings::instance()->applicationLocalDirectory().c_str());
         tempPath.append(kurl.path());
         kurl.setPath(tempPath);
         modifiedUrl = kurl.string();
@@ -151,9 +150,7 @@ void MediaPlayerPrivate::load(const String& url)
         modifiedUrl = decodeURLEscapeSequences(modifiedUrl);
     }
 
-    void* tabId = 0;
-    if (frameView() && frameView()->hostWindow())
-        tabId = frameView()->hostWindow()->platformPageClient();
+    void* tabId = m_webCorePlayer->mediaPlayerClient()->mediaPlayerHostWindow()->platformPageClient();
 
     deleteGuardedObject(m_platformPlayer);
 #if USE(ACCELERATED_COMPOSITING)
@@ -358,6 +355,11 @@ void MediaPlayerPrivate::paint(GraphicsContext* context, const IntRect& rect)
     return;
 #endif
 
+    paintCurrentFrameInContext(context, rect);
+}
+
+void MediaPlayerPrivate::paintCurrentFrameInContext(GraphicsContext* context, const IntRect& rect)
+{
     if (!hasVideo() || context->paintingDisabled() || !m_webCorePlayer->visible())
         return;
 
@@ -365,7 +367,7 @@ void MediaPlayerPrivate::paint(GraphicsContext* context, const IntRect& rect)
     ASSERT(graphics);
 
     BlackBerry::Platform::IntRect platformRect(rect.x(), rect.y(), rect.width(), rect.height());
-    IntRect clippedRect = frameView()->windowClipRect();
+    IntRect clippedRect = m_webCorePlayer->mediaPlayerClient()->mediaPlayerWindowClipRect();
     BlackBerry::Platform::IntRect platformWindowClipRect(clippedRect.x(), clippedRect.y(), clippedRect.width(), clippedRect.height());
     m_platformPlayer->paint(graphics->canvas(), platformRect, platformWindowClipRect);
 }
@@ -394,39 +396,27 @@ void MediaPlayerPrivate::resizeSourceDimensions()
     if (!m_webCorePlayer)
         return;
 
-    HTMLMediaElement* client = static_cast<HTMLMediaElement*>(m_webCorePlayer->mediaPlayerClient());
-
-    if (!client || !client->isVideo())
-        return;
-
-    RenderObject* o = client->renderer();
-    if (!o)
+    if (!m_webCorePlayer->mediaPlayerClient()->mediaPlayerIsVideo())
         return;
 
     // If we have an HTMLVideoElement but the source has no video, then we need to resize the media element.
     if (!hasVideo()) {
-        IntRect rect = o->enclosingBox()->contentBoxRect();
+        LayoutRect rect = m_webCorePlayer->mediaPlayerClient()->mediaPlayerContentBoxRect();
 
         static const int playbookMinAudioElementWidth = 300;
         static const int playbookMinAudioElementHeight = 32;
         // If the rect dimensions are less than the allowed minimum, use the minimum instead.
-        int newWidth = max(rect.width(), playbookMinAudioElementWidth);
-        int newHeight = max(rect.height(), playbookMinAudioElementHeight);
+        int newWidth = max(rect.width().toInt(), playbookMinAudioElementWidth);
+        int newHeight = max(rect.height().toInt(), playbookMinAudioElementHeight);
 
-        char attrString[12];
-
-        sprintf(attrString, "%d", newWidth);
-        client->setAttribute(HTMLNames::widthAttr, attrString);
-
-        sprintf(attrString, "%d", newHeight);
-        client->setAttribute(HTMLNames::heightAttr, attrString);
+        m_webCorePlayer->mediaPlayerClient()->mediaPlayerSetSize(IntSize(newWidth, newHeight));
     }
 
     // If we don't know what the width and height of the video source is, then we need to set it to something sane.
     if (m_platformPlayer->sourceWidth() && m_platformPlayer->sourceHeight())
         return;
-    IntRect rect = o->enclosingBox()->contentBoxRect();
-    m_platformPlayer->setSourceDimension(rect.width(), rect.height());
+    LayoutRect rect = m_webCorePlayer->mediaPlayerClient()->mediaPlayerContentBoxRect();
+    m_platformPlayer->setSourceDimension(rect.width().toUnsigned(), rect.height().toUnsigned());
 }
 
 void MediaPlayerPrivate::setFullscreenWebPageClient(BlackBerry::WebKit::WebPageClient* client)
@@ -506,8 +496,6 @@ void MediaPlayerPrivate::updateStates()
 
     PlatformPlayer::Error currentError = m_platformPlayer->error();
 
-    HTMLMediaElement* element = static_cast<HTMLMediaElement*>(m_webCorePlayer->mediaPlayerClient());
-
     if (currentError != PlatformPlayer::MediaOK) {
         m_readyState = MediaPlayer::HaveNothing;
         if (currentError == PlatformPlayer::MediaDecodeError)
@@ -544,7 +532,7 @@ void MediaPlayerPrivate::updateStates()
             }
 #endif
             if (isFullscreen())
-                element->exitFullscreen();
+                m_webCorePlayer->mediaPlayerClient()->mediaPlayerExitFullscreen();
             break;
         case PlatformPlayer::MP_STATE_ACTIVE:
 #if USE(ACCELERATED_COMPOSITING)
@@ -603,15 +591,14 @@ void MediaPlayerPrivate::onPauseStateChanged()
     if (!isFullscreen())
         return;
 
-    HTMLMediaElement* element = static_cast<HTMLMediaElement*>(m_webCorePlayer->mediaPlayerClient());
     // Paused state change not due to local controller.
     if (m_platformPlayer->isPaused())
-        element->pause();
+        m_webCorePlayer->mediaPlayerClient()->mediaPlayerPause();
     else {
         // The HMI fullscreen widget has resumed play. Check if the
         // pause timeout occurred.
         m_platformPlayer->processPauseTimeoutIfNecessary();
-        element->play();
+        m_webCorePlayer->mediaPlayerClient()->mediaPlayerPlay();
     }
 }
 
@@ -639,14 +626,12 @@ void MediaPlayerPrivate::onSizeChanged()
 
 void MediaPlayerPrivate::onPlayNotified()
 {
-    if (HTMLMediaElement* element = static_cast<HTMLMediaElement*>(m_webCorePlayer->mediaPlayerClient()))
-        element->play();
+    m_webCorePlayer->mediaPlayerClient()->mediaPlayerPlay();
 }
 
 void MediaPlayerPrivate::onPauseNotified()
 {
-    if (HTMLMediaElement* element = static_cast<HTMLMediaElement*>(m_webCorePlayer->mediaPlayerClient()))
-        element->pause();
+    m_webCorePlayer->mediaPlayerClient()->mediaPlayerPause();
 }
 
 static const int popupDialogInterval = 10;
@@ -721,8 +706,8 @@ bool MediaPlayerPrivate::onAuthenticationNeeded(MMRAuthChallenge& authChallenge)
     Credential credential = CredentialStorage::get(protectionSpace);
     bool isConfirmed = false;
     if (credential.isEmpty()) {
-        if (frameView() && frameView()->hostWindow())
-            isConfirmed = frameView()->hostWindow()->platformPageClient()->authenticationChallenge(url, protectionSpace, credential);
+        isConfirmed = m_webCorePlayer->mediaPlayerClient()->mediaPlayerHostWindow()->platformPageClient()->authenticationChallenge(url, protectionSpace, credential);
+
     } else
         isConfirmed = true;
 
@@ -778,11 +763,7 @@ int MediaPlayerPrivate::showErrorDialog(PlatformPlayer::Error type)
         LOG(Media, "Alert type does not exist.");
         return -1;
     }
-
-    int rc = 0;
-    if (frameView() && frameView()->hostWindow())
-        rc = frameView()->hostWindow()->platformPageClient()->showAlertDialog(atype);
-    return rc;
+    return m_webCorePlayer->mediaPlayerClient()->mediaPlayerHostWindow()->platformPageClient()->showAlertDialog(atype);
 }
 
 static WebMediaStreamSource toWebMediaStreamSource(MediaStreamSource* src)
@@ -812,23 +793,9 @@ WebMediaStreamDescriptor MediaPlayerPrivate::lookupMediaStream(const string& url
     return toWebMediaStreamDescriptor(descriptor);
 }
 
-FrameView* MediaPlayerPrivate::frameView() const
-{
-    // We previously used m_webCorePlayer->frameView(), but this method returns
-    // a null frameView until quite late in the media player initialization,
-    // and starting quite early in the media player destruction (because
-    // it may be set to zero by the destructor in RenderVideo.cpp before
-    // our destructor is called, leaving us unable to clean up child windows
-    // in mmrDisconnect).
-    HTMLMediaElement* element = static_cast<HTMLMediaElement*>(m_webCorePlayer->mediaPlayerClient());
-    return element->document()->view();
-}
-
 BlackBerry::Platform::Graphics::Window* MediaPlayerPrivate::platformWindow()
 {
-    if (frameView() && frameView()->hostWindow())
-        return frameView()->hostWindow()->platformPageClient()->platformWindow();
-    return 0;
+    return m_webCorePlayer->mediaPlayerClient()->mediaPlayerHostWindow()->platformPageClient()->platformWindow();
 }
 
 bool MediaPlayerPrivate::isFullscreen() const
@@ -838,17 +805,12 @@ bool MediaPlayerPrivate::isFullscreen() const
 
 bool MediaPlayerPrivate::isElementPaused() const
 {
-    HTMLMediaElement* element = static_cast<HTMLMediaElement*>(m_webCorePlayer->mediaPlayerClient());
-    if (!element || element->paused())
-        return true;
-    return false;
+    return m_webCorePlayer->mediaPlayerClient()->mediaPlayerIsPaused();
 }
 
 bool MediaPlayerPrivate::isTabVisible() const
 {
-    if (frameView() && frameView()->hostWindow())
-        return frameView()->hostWindow()->platformPageClient()->isVisible();
-    return true;
+    return m_webCorePlayer->mediaPlayerClient()->mediaPlayerHostWindow()->platformPageClient()->isVisible();
 }
 
 #if USE(ACCELERATED_COMPOSITING)

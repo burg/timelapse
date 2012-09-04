@@ -38,7 +38,6 @@
 #include <WebCore/IntRect.h>
 #include <WebCore/KURL.h>
 #include <runtime/JSObject.h>
-#include <runtime/ScopeChain.h>
 #include <utility>
 #include <wtf/text/CString.h>
 
@@ -507,6 +506,20 @@ void NetscapePlugin::callSetWindow()
     m_npWindow.clipRect.bottom = m_npWindow.clipRect.top + m_clipRect.height();
 
     NPP_SetWindow(&m_npWindow);
+    m_hasCalledSetWindow = true;
+}
+
+void NetscapePlugin::callSetWindowInvisible()
+{
+    NPWindow invisibleWindow = m_npWindow;
+    
+    invisibleWindow.window = 0;
+    invisibleWindow.clipRect.top = 0;
+    invisibleWindow.clipRect.left = 0;
+    invisibleWindow.clipRect.bottom = 0;
+    invisibleWindow.clipRect.right = 0;
+    
+    NPP_SetWindow(&invisibleWindow);
     m_hasCalledSetWindow = true;
 }
 

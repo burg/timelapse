@@ -2974,7 +2974,7 @@
                 "name": "paused",
                 "parameters": [
                     { "name": "callFrames", "type": "array", "items": { "$ref": "CallFrame" }, "description": "Call stack the virtual machine stopped on." },
-                    { "name": "reason", "type": "string", "enum": [ "XHR", "DOM", "EventListener", "exception", "other" ], "description": "Pause reason." },
+                    { "name": "reason", "type": "string", "enum": [ "XHR", "DOM", "EventListener", "exception", "assert", "other" ], "description": "Pause reason." },
                     { "name": "data", "type": "object", "optional": true, "description": "Object containing break-specific auxiliary properties." }
                 ],
                 "description": "Fired when the virtual machine stopped on breakpoint or exception or any other stop criteria."
@@ -3287,7 +3287,12 @@
                 "id": "Call",
                 "type": "object",
                 "properties": [
-                    { "name": "functionName", "type": "string" }
+                    { "name": "functionName", "type": "string" },
+                    { "name": "arguments", "type": "array", "items": { "type": "string" } },
+                    { "name": "result", "type": "string", "optional": true },
+                    { "name": "sourceURL", "type": "string", "optional": true },
+                    { "name": "lineNumber", "type": "integer", "optional": true },
+                    { "name": "columnNumber", "type": "integer", "optional": true }
                 ]
             },
             {
@@ -3295,7 +3300,7 @@
                 "type": "object",
                 "properties": [
                     { "name": "id", "$ref": "TraceLogId" },
-                    { "name": "calls", "type": "array", "items": { "$ref": "Call" }}
+                    { "name": "calls", "type": "array", "items": { "$ref": "Call" } }
                 ]
             }
         ],

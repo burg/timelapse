@@ -263,13 +263,22 @@ PassRefPtr<IDBTransaction> IDBDatabase::transaction(ScriptExecutionContext* cont
 
 PassRefPtr<IDBTransaction> IDBDatabase::transaction(ScriptExecutionContext* context, PassRefPtr<DOMStringList> prpStoreNames, unsigned short mode, ExceptionCode& ec)
 {
-    DEFINE_STATIC_LOCAL(String, consoleMessage, ("Numeric transaction modes are deprecated in IDBDatabase.transaction. Use \"readonly\" or \"readwrite\"."));
+    // FIXME: Is this thread-safe?
+    DEFINE_STATIC_LOCAL(String, consoleMessage, (ASCIILiteral("Numeric transaction modes are deprecated in IDBDatabase.transaction. Use \"readonly\" or \"readwrite\".")));
     context->addConsoleMessage(JSMessageSource, LogMessageType, WarningMessageLevel, consoleMessage);
     AtomicString modeString = IDBTransaction::modeToString(IDBTransaction::Mode(mode), ec);
     if (ec)
         return 0;
 
     return transaction(context, prpStoreNames, modeString, ec);
+}
+
+void IDBDatabase::forceClose()
+{
+    ExceptionCode ec = 0;
+    for (HashSet<IDBTransaction*>::iterator it = m_transactions.begin(); it != m_transactions.end(); ++it)
+        (*it)->abort(ec);
+    this->close();
 }
 
 void IDBDatabase::close()

@@ -40,8 +40,10 @@
 #include "TransformOperations.h"
 #include "TranslateTransformOperation.h"
 
+#include <public/Platform.h>
 #include <public/WebAnimation.h>
 #include <public/WebAnimationCurve.h>
+#include <public/WebCompositorSupport.h>
 #include <public/WebFloatAnimationCurve.h>
 #include <public/WebTransformAnimationCurve.h>
 #include <public/WebTransformOperations.h>
@@ -113,6 +115,8 @@ WebTransformOperations toWebTransformOperations(const TransformOperations& trans
             break;
         }
         case TransformOperation::IDENTITY:
+            webTransformOperations.appendIdentity();
+            break;
         case TransformOperation::NONE:
             // Do nothing.
             break;
@@ -123,16 +127,16 @@ WebTransformOperations toWebTransformOperations(const TransformOperations& trans
 }
 
 template <class Value, class Keyframe, class Curve>
-bool appendKeyframeWithStandardTimingFunction(Curve& curve, double keyTime, const Value* value, const Value* lastValue, WebKit::WebAnimationCurve::TimingFunctionType timingFunctionType, const FloatSize&)
+bool appendKeyframeWithStandardTimingFunction(Curve* curve, double keyTime, const Value* value, const Value* lastValue, WebKit::WebAnimationCurve::TimingFunctionType timingFunctionType, const FloatSize&)
 {
-    curve.add(Keyframe(keyTime, value->value()), timingFunctionType);
+    curve->add(Keyframe(keyTime, value->value()), timingFunctionType);
     return true;
 }
 
 template <class Value, class Keyframe, class Curve>
-bool appendKeyframeWithCustomBezierTimingFunction(Curve& curve, double keyTime, const Value* value, const Value* lastValue, double x1, double y1, double x2, double y2, const FloatSize&)
+bool appendKeyframeWithCustomBezierTimingFunction(Curve* curve, double keyTime, const Value* value, const Value* lastValue, double x1, double y1, double x2, double y2, const FloatSize&)
 {
-    curve.add(Keyframe(keyTime, value->value()), x1, y1, x2, y2);
+    curve->add(Keyframe(keyTime, value->value()), x1, y1, x2, y2);
     return true;
 }
 
@@ -145,75 +149,30 @@ bool isRotationType(TransformOperation::OperationType transformType)
         || transformType == TransformOperation::ROTATE_3D;
 }
 
-bool causesRotationOfAtLeast180Degrees(const TransformAnimationValue* value, const TransformAnimationValue* lastValue)
-{
-    if (!lastValue)
-        return false;
-
-    const TransformOperations& operations = *value->value();
-    const TransformOperations& lastOperations = *lastValue->value();
-
-    // We'll be doing matrix interpolation in this case. No risk of incorrect rotations here.
-    if (operations.size() && lastOperations.size() && !operations.operationsMatch(lastOperations))
-        return false;
-
-    size_t numOperations = max(operations.size(), lastOperations.size());
-    for (size_t i = 0; i < numOperations; ++i) {
-        float angle = 0;
-        if (i < operations.size()) {
-            if (!isRotationType(operations.operations()[i]->getOperationType()))
-                continue;
-
-            RotateTransformOperation* rotation = static_cast<RotateTransformOperation*>(operations.operations()[i].get());
-            angle = rotation->angle();
-        }
-
-        float lastAngle = 0;
-        if (i < lastOperations.size()) {
-            if (!isRotationType(lastOperations.operations()[i]->getOperationType()))
-                continue;
-
-            RotateTransformOperation* lastRotation = static_cast<RotateTransformOperation*>(lastOperations.operations()[i].get());
-            lastAngle = lastRotation->angle();
-        }
-
-        if (fabs(angle - lastAngle) >= 180)
-            return true;
-    }
-
-    return false;
-}
-
 template <>
-bool appendKeyframeWithStandardTimingFunction<TransformAnimationValue, WebTransformKeyframe, WebTransformAnimationCurve>(WebTransformAnimationCurve& curve, double keyTime, const TransformAnimationValue* value, const TransformAnimationValue* lastValue, WebKit::WebAnimationCurve::TimingFunctionType timingFunctionType, const FloatSize& boxSize)
+bool appendKeyframeWithStandardTimingFunction<TransformAnimationValue, WebTransformKeyframe, WebTransformAnimationCurve>(WebTransformAnimationCurve* curve, double keyTime, const TransformAnimationValue* value, const TransformAnimationValue* lastValue, WebKit::WebAnimationCurve::TimingFunctionType timingFunctionType, const FloatSize& boxSize)
 {
-    if (causesRotationOfAtLeast180Degrees(value, lastValue))
-        return false;
-
     WebTransformOperations operations = toWebTransformOperations(*value->value(), boxSize);
     if (operations.apply().isInvertible()) {
-        curve.add(WebTransformKeyframe(keyTime, operations), timingFunctionType);
+        curve->add(WebTransformKeyframe(keyTime, operations), timingFunctionType);
         return true;
     }
     return false;
 }
 
 template <>
-bool appendKeyframeWithCustomBezierTimingFunction<TransformAnimationValue, WebTransformKeyframe, WebTransformAnimationCurve>(WebTransformAnimationCurve& curve, double keyTime, const TransformAnimationValue* value, const TransformAnimationValue* lastValue, double x1, double y1, double x2, double y2, const FloatSize& boxSize)
+bool appendKeyframeWithCustomBezierTimingFunction<TransformAnimationValue, WebTransformKeyframe, WebTransformAnimationCurve>(WebTransformAnimationCurve* curve, double keyTime, const TransformAnimationValue* value, const TransformAnimationValue* lastValue, double x1, double y1, double x2, double y2, const FloatSize& boxSize)
 {
-    if (causesRotationOfAtLeast180Degrees(value, lastValue))
-        return false;
-
     WebTransformOperations operations = toWebTransformOperations(*value->value(), boxSize);
     if (operations.apply().isInvertible()) {
-        curve.add(WebTransformKeyframe(keyTime, operations), x1, y1, x2, y2);
+        curve->add(WebTransformKeyframe(keyTime, operations), x1, y1, x2, y2);
         return true;
     }
     return false;
 }
 
 template <class Value, class Keyframe, class Curve>
-PassOwnPtr<WebKit::WebAnimation> createWebAnimation(const KeyframeValueList& valueList, const Animation* animation, size_t animationId, size_t groupId, double timeOffset, WebKit::WebAnimation::TargetProperty targetProperty, const FloatSize& boxSize)
+PassOwnPtr<WebKit::WebAnimation> createWebAnimation(const KeyframeValueList& valueList, const Animation* animation, int animationId, double timeOffset, Curve* curve, WebKit::WebAnimation::TargetProperty targetProperty, const FloatSize& boxSize)
 {
     bool alternate = false;
     bool reverse = false;
@@ -224,8 +183,6 @@ PassOwnPtr<WebKit::WebAnimation> createWebAnimation(const KeyframeValueList& val
         if (direction == Animation::AnimationDirectionReverse || direction == Animation::AnimationDirectionAlternateReverse)
             reverse = true;
     }
-
-    Curve curve;
 
     for (size_t i = 0; i < valueList.size(); i++) {
         size_t index = reverse ? valueList.size() - i - 1 : i;
@@ -284,25 +241,43 @@ PassOwnPtr<WebKit::WebAnimation> createWebAnimation(const KeyframeValueList& val
             return nullptr;
     }
 
-    OwnPtr<WebKit::WebAnimation> anim(adoptPtr(WebKit::WebAnimation::create(curve, animationId, groupId, targetProperty)));
+    OwnPtr<WebKit::WebAnimation> webAnimation;
+    if (WebCompositorSupport* compositorSupport = WebKit::Platform::current()->compositorSupport())
+        webAnimation = adoptPtr(compositorSupport->createAnimation(*curve, targetProperty, animationId));
+    else
+        webAnimation = adoptPtr(WebKit::WebAnimation::create(*curve, targetProperty, animationId));
 
     int iterations = (animation && animation->isIterationCountSet()) ? animation->iterationCount() : 1;
-    anim->setIterations(iterations);
-    anim->setAlternatesDirection(alternate);
+    webAnimation->setIterations(iterations);
+    webAnimation->setAlternatesDirection(alternate);
 
     // If timeOffset > 0, then the animation has started in the past.
-    anim->setTimeOffset(timeOffset);
+    webAnimation->setTimeOffset(timeOffset);
 
-    return anim.release();
+    return webAnimation.release();
 }
 
-PassOwnPtr<WebKit::WebAnimation> createWebAnimation(const KeyframeValueList& values, const Animation* animation, size_t animationId, size_t groupId, double timeOffset, const FloatSize& boxSize)
+PassOwnPtr<WebKit::WebAnimation> createWebAnimation(const KeyframeValueList& values, const Animation* animation, int animationId, double timeOffset, const FloatSize& boxSize)
 {
-    if (values.property() == AnimatedPropertyWebkitTransform)
-        return createWebAnimation<TransformAnimationValue, WebTransformKeyframe, WebTransformAnimationCurve>(values, animation, animationId, groupId, timeOffset, WebKit::WebAnimation::TargetPropertyTransform, FloatSize(boxSize));
 
-    if (values.property() == AnimatedPropertyOpacity)
-        return createWebAnimation<FloatAnimationValue, WebFloatKeyframe, WebFloatAnimationCurve>(values, animation, animationId, groupId, timeOffset, WebKit::WebAnimation::TargetPropertyOpacity, FloatSize());
+
+    if (values.property() == AnimatedPropertyWebkitTransform) {
+        OwnPtr<WebTransformAnimationCurve> curve;
+        if (WebCompositorSupport* compositorSupport = WebKit::Platform::current()->compositorSupport())
+            curve = adoptPtr(compositorSupport->createTransformAnimationCurve());
+        else
+            curve = adoptPtr(WebTransformAnimationCurve::create());
+        return createWebAnimation<TransformAnimationValue, WebTransformKeyframe, WebTransformAnimationCurve>(values, animation, animationId, timeOffset, curve.get(), WebKit::WebAnimation::TargetPropertyTransform, FloatSize(boxSize));
+    }
+
+    if (values.property() == AnimatedPropertyOpacity) {
+        OwnPtr<WebFloatAnimationCurve> curve;
+        if (WebCompositorSupport* compositorSupport = WebKit::Platform::current()->compositorSupport())
+            curve = adoptPtr(compositorSupport->createFloatAnimationCurve());
+        else
+            curve = adoptPtr(WebFloatAnimationCurve::create());
+        return createWebAnimation<FloatAnimationValue, WebFloatKeyframe, WebFloatAnimationCurve>(values, animation, animationId, timeOffset, curve.get(), WebKit::WebAnimation::TargetPropertyOpacity, FloatSize());
+    }
 
     return nullptr;
 }

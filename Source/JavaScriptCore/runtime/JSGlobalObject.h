@@ -30,6 +30,7 @@
 #include "NumberPrototype.h"
 #include "StringPrototype.h"
 #include "StructureChain.h"
+#include "Watchpoint.h"
 #include <wtf/HashSet.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/RefPtr.h>
@@ -83,6 +84,7 @@ namespace JSC {
 
     class JSGlobalObject : public JSSegmentedVariableObject {
     private:
+        typedef JSSegmentedVariableObject Base;
         typedef HashSet<RefPtr<OpaqueJSWeakObjectMap> > WeakMapSet;
 
         struct JSGlobalObjectRareData {
@@ -99,7 +101,7 @@ namespace JSC {
 
         Register m_globalCallFrame[RegisterFile::CallFrameHeaderSize];
 
-        WriteBarrier<ScopeChainNode> m_globalScopeChain;
+        WriteBarrier<JSObject> m_globalThis;
         WriteBarrier<JSObject> m_methodCallDummy;
 
         WriteBarrier<RegExpConstructor> m_regExpConstructor;
@@ -126,6 +128,10 @@ namespace JSC {
         WriteBarrier<RegExpPrototype> m_regExpPrototype;
         WriteBarrier<ErrorPrototype> m_errorPrototype;
 
+        WriteBarrier<Structure> m_withScopeStructure;
+        WriteBarrier<Structure> m_strictEvalActivationStructure;
+        WriteBarrier<Structure> m_activationStructure;
+        WriteBarrier<Structure> m_nameScopeStructure;
         WriteBarrier<Structure> m_argumentsStructure;
         WriteBarrier<Structure> m_arrayStructure;
         WriteBarrier<Structure> m_booleanObjectStructure;
@@ -151,7 +157,7 @@ namespace JSC {
 #if ENABLE(TIMELAPSE)
         RefPtr<DeterminismLog> m_determinismLog;
 #endif
-        
+        RefPtr<WatchpointSet> m_masqueradesAsUndefinedWatchpoint;
         OwnPtr<JSGlobalObjectRareData> m_rareData;
 
 #if ENABLE(TIMELAPSE)
@@ -159,8 +165,6 @@ namespace JSC {
 #else
         WeakRandom m_weakRandom;
 #endif
-        
-        SymbolTable m_symbolTable;
 
         bool m_evalEnabled;
         bool m_experimentsEnabled;
@@ -177,8 +181,6 @@ namespace JSC {
         }
         
     public:
-        typedef JSSegmentedVariableObject Base;
-
         static JSGlobalObject* create(JSGlobalData& globalData, Structure* structure)
         {
             JSGlobalObject* globalObject = new (NotNull, allocateCell<JSGlobalObject>(globalData.heap)) JSGlobalObject(globalData, structure);
@@ -263,6 +265,10 @@ namespace JSC {
 
         JSObject* methodCallDummy() const { return m_methodCallDummy.get(); }
 
+        Structure* withScopeStructure() const { return m_withScopeStructure.get(); }
+        Structure* strictEvalActivationStructure() const { return m_strictEvalActivationStructure.get(); }
+        Structure* activationStructure() const { return m_activationStructure.get(); }
+        Structure* nameScopeStructure() const { return m_nameScopeStructure.get(); }
         Structure* argumentsStructure() const { return m_argumentsStructure.get(); }
         Structure* arrayStructure() const { return m_arrayStructure.get(); }
         Structure* booleanObjectStructure() const { return m_booleanObjectStructure.get(); }
@@ -283,6 +289,8 @@ namespace JSC {
         Structure* regExpMatchesArrayStructure() const { return m_regExpMatchesArrayStructure.get(); }
         Structure* regExpStructure() const { return m_regExpStructure.get(); }
         Structure* stringObjectStructure() const { return m_stringObjectStructure.get(); }
+
+        WatchpointSet* masqueradesAsUndefinedWatchpoint() { return m_masqueradesAsUndefinedWatchpoint.get(); }
 
         void setProfileGroup(unsigned value) { createRareDataIfNeeded(); m_rareData->profileGroup = value; }
         unsigned profileGroup() const
@@ -305,8 +313,6 @@ namespace JSC {
         static bool supportsProfiling(const JSGlobalObject*) { return false; }
         static bool supportsRichSourceInfo(const JSGlobalObject*) { return true; }
 
-        ScopeChainNode* globalScopeChain() { return m_globalScopeChain.get(); }
-
         JS_EXPORT_PRIVATE ExecState* globalExec();
 
         static bool shouldInterruptScript(const JSGlobalObject*) { return true; }
@@ -320,6 +326,7 @@ namespace JSC {
         void resetPrototype(JSGlobalData&, JSValue prototype);
 
         JSGlobalData& globalData() const { return *Heap::heap(this)->globalData(); }
+        JSObject* globalThis() const;
 
         static Structure* createStructure(JSGlobalData& globalData, JSValue prototype)
         {
@@ -342,7 +349,7 @@ namespace JSC {
         unsigned weakRandomInteger() { return m_weakRandom.getUint32(); }
     protected:
 
-        static const unsigned StructureFlags = OverridesGetOwnPropertySlot | OverridesVisitChildren | OverridesGetPropertyNames | JSSegmentedVariableObject::StructureFlags;
+        static const unsigned StructureFlags = OverridesGetOwnPropertySlot | OverridesVisitChildren | OverridesGetPropertyNames | Base::StructureFlags;
 
         struct GlobalPropertyInfo {
             GlobalPropertyInfo(const Identifier& i, JSValue v, unsigned a)
@@ -364,6 +371,7 @@ namespace JSC {
         // FIXME: Fold reset into init.
         JS_EXPORT_PRIVATE void init(JSObject* thisValue);
         void reset(JSValue prototype);
+        void setGlobalThis(JSGlobalData&, JSObject* globalThis);
 
         void createThrowTypeError(ExecState*);
 
@@ -381,7 +389,7 @@ namespace JSC {
     inline bool JSGlobalObject::hasOwnPropertyForWrite(ExecState* exec, PropertyName propertyName)
     {
         PropertySlot slot;
-        if (JSSegmentedVariableObject::getOwnPropertySlot(this, exec, propertyName, slot))
+        if (Base::getOwnPropertySlot(this, exec, propertyName, slot))
             return true;
         bool slotIsWriteable;
         return symbolTableGet(this, propertyName, slot, slotIsWriteable);
@@ -389,7 +397,7 @@ namespace JSC {
 
     inline bool JSGlobalObject::symbolTableHasProperty(PropertyName propertyName)
     {
-        SymbolTableEntry entry = symbolTable().inlineGet(propertyName.publicName());
+        SymbolTableEntry entry = symbolTable()->inlineGet(propertyName.publicName());
         return !entry.isNull();
     }
 
@@ -502,6 +510,16 @@ namespace JSC {
     inline bool JSGlobalObject::isDynamicScope(bool&) const
     {
         return true;
+    }
+
+    inline JSObject* JSScope::globalThis()
+    { 
+        return globalObject()->globalThis();
+    }
+
+    inline JSObject* JSGlobalObject::globalThis() const
+    { 
+        return m_globalThis.get();
     }
 
 } // namespace JSC

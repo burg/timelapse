@@ -19,7 +19,6 @@
                consoleWrite("onSourceEnded()");
                consoleWrite("Setting src attribute to \"\" to trigger a webkitsourceclosed event.");
                video.src = "";
-               endTest();
            }
 
            function onSourceClose()
@@ -32,7 +31,7 @@
            {
                consoleWrite("onLoad()");
                video = document.getElementById('v');
-               mediaSource = new MediaSource();
+               mediaSource = new WebKitMediaSource();
                mediaSource.addEventListener('webkitsourceopen', onSourceOpen);
                mediaSource.addEventListener('webkitsourceended', onSourceEnded);
                mediaSource.addEventListener('webkitsourceclose', onSourceClose);

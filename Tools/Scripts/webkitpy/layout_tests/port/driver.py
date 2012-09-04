@@ -160,14 +160,6 @@ class Driver(object):
 
         crashed = self.has_crashed()
         timed_out = self._server_process.timed_out
-        if text and ('Timed out waiting for final message from web process' in text):
-            # FIXME: This is a hack to work around the issues in https://bugs.webkit.org/show_bug.cgi?id=94505.
-            # We need to either fix the underlying problem in WTR or return a more canonical error.
-            if not timed_out:
-                _log.warning("webprocess timed out but WTR didn't, killing WTR")
-                timed_out = True
-            else:
-                _log.warning("webprocess timed out and so did WTR")
 
         if stop_when_done or crashed or timed_out:
             # We call stop() even if we crashed or timed out in order to get any remaining stdout/stderr output.
@@ -183,7 +175,8 @@ class Driver(object):
 
             # If we don't find a crash log use a placeholder error message instead.
             if not crash_log:
-                crash_log = 'no crash log found for %s:%d.' % (self._crashed_process_name, self._crashed_pid)
+                pid_str = str(self._crashed_pid) if self._crashed_pid else "unknown pid"
+                crash_log = 'no crash log found for %s:%s.' % (self._crashed_process_name, pid_str)
                 # If we were unresponsive append a message informing there may not have been a crash.
                 if self._subprocess_was_unresponsive:
                     crash_log += '  Process failed to become responsive before timing out.'
@@ -314,18 +307,17 @@ class Driver(object):
             # See http://trac.webkit.org/changeset/65537.
             self._crashed_process_name = self._server_process.name()
             self._crashed_pid = self._server_process.pid()
-        elif (error_line.startswith("#CRASHED - WebProcess")
-            or error_line.startswith("#PROCESS UNRESPONSIVE - WebProcess")):
+        elif (error_line.startswith("#CRASHED - ")
+            or error_line.startswith("#PROCESS UNRESPONSIVE - ")):
             # WebKitTestRunner uses this to report that the WebProcess subprocess crashed.
-            pid = None
-            m = re.search('pid (\d+)', error_line)
-            if m:
-                pid = int(m.group(1))
-            self._crashed_process_name = 'WebProcess'
+            match = re.match('#(?:CRASHED|PROCESS UNRESPONSIVE) - (\S+)', error_line)
+            self._crashed_process_name = match.group(1) if match else 'WebProcess'
+            match = re.search('pid (\d+)', error_line)
+            pid = int(match.group(1)) if match else None
             self._crashed_pid = pid
             # FIXME: delete this after we're sure this code is working :)
-            _log.debug('WebProcess crash, pid = %s, error_line = %s' % (str(pid), error_line))
-            if error_line.startswith("#PROCESS UNRESPONSIVE - WebProcess"):
+            _log.debug('%s crash, pid = %s, error_line = %s' % (self._crashed_process_name, str(pid), error_line))
+            if error_line.startswith("#PROCESS UNRESPONSIVE - "):
                 self._subprocess_was_unresponsive = True
                 # We want to show this since it's not a regular crash and probably we don't have a crash log.
                 self.error_from_test += error_line
