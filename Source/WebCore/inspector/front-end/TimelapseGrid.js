@@ -881,13 +881,12 @@ WebInspector.TimelapseGridSlider.prototype =  {
     _startSliderDragging: function(event)
     {
 	if (!this._enabled)
-	    return;
+	    return false;
 
 	this.element.classList.add("slider-dragging");
 	var offsetTop = this._computeAbsOffsetTop(event);
 
 	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.EventTypes.DragStart, offsetTop);
-
 	return true;
     },
 

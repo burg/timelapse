@@ -925,7 +925,7 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
     _startSliderDragging: function(event)
     {
 	if (!this._enabled)
-	    return;
+	    return false;
 
 	if (this.element.hasStyleClass("breakpoint-slider"))
 	    this.element.removeStyleClass("breakpoint-slider");
@@ -933,7 +933,6 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 	this.element.classList.add("slider-dragging");
 
 	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart);
-
 	return true;
     },
 
