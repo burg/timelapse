@@ -630,7 +630,7 @@ WebInspector.TimelapseOverview.prototype = {
 		    break;
 
 		this._lastPanPosition = (event.pageX - this.element.offsetLeft) / this.element.clientWidth;
-                WebInspector.elementDragStart(null, this._overviewPanning.bind(this), this._overviewPanningEnd.bind(this), event, "-webkit-grabbing");
+                WebInspector.installDragHandle(this.element, null, this._overviewPanning.bind(this), this._overviewPanningEnd.bind(this), "-webkit-grabbing");
                 break;
 	    }
             node = node.parentNode;
@@ -665,7 +665,6 @@ WebInspector.TimelapseOverview.prototype = {
 
     _overviewPanningEnd: function(event)
     {
-        WebInspector.elementDragEnd(event);
 	delete this._lastPanPosition;
     },
 
