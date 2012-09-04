@@ -31,6 +31,8 @@
 #ifndef BindingState_h
 #define BindingState_h
 
+#include <wtf/text/WTFString.h>
+
 namespace WebCore {
 
 class DOMWindow;
@@ -53,8 +55,10 @@ Frame* firstFrame(BindingState*);
 // FIXME: When implementing this function for JSC, we need to understand if there
 // are any subtle differences between the currentFrame and the lexicalGlobalObject.
 Frame* currentFrame(BindingState*);
+Document* currentDocument(BindingState*);
 
-void immediatelyReportUnsafeAccessTo(BindingState*, Document* targetDocument);
+// FIXME: This function is redundant with the copy in JSDOMBinding.cpp.
+void printErrorMessageForFrame(Frame*, const String& message);
 
 }
 

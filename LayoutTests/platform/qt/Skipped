@@ -202,6 +202,8 @@ fast/dom/shadow/multiple-shadowroot-adopt.html
 fast/dom/shadow/parent-tree-scope-in-shadow.html
 fast/dom/shadow/selections-in-shadow.html
 fast/dom/shadow/selection-shouldnt-expose-shadow-dom.html
+fast/dom/shadow/shadowdom-dynamic-styling.html
+fast/dom/shadow/shadowdom-for-button.html
 fast/dom/shadow/shadowdom-for-image-alt-update.html
 fast/dom/shadow/shadowdom-for-image-alt.html
 fast/dom/shadow/shadowdom-for-image-content.html
@@ -229,6 +231,7 @@ fast/dom/shadow/shadow-contents-fallback.html
 fast/dom/shadow/shadow-dom-event-dispatching.html
 fast/dom/shadow/shadow-dynamic-style-change-via-mutation-and-selector.html
 fast/dom/shadow/shadow-disable.html
+fast/dom/shadow/shadow-div-reflow.html
 fast/dom/shadow/shadow-element.html
 fast/dom/shadow/shadow-element-rendering-single.html
 fast/dom/shadow/shadow-element-rendering-multiple.html
@@ -271,6 +274,13 @@ fast/dom/shadow/input-with-validation.html
 fast/dom/shadow/input-with-validation-without-shadow.html
 fast/dom/shadow/shadowdom-for-form-associated-element-useragent.html
 fast/dom/shadow/suppress-mutation-events-in-shadow-characterdata.html
+fast/dom/shadow/select-image-with-shadow.html
+fast/dom/shadow/shadowdom-for-meter-dynamic.html
+fast/dom/shadow/shadowdom-for-meter-multiple.html
+fast/dom/shadow/shadowdom-for-meter-with-style.html
+fast/dom/shadow/shadowdom-for-meter-without-appearance.html
+fast/dom/shadow/shadowdom-for-meter-without-shadow-element.html
+fast/dom/shadow/shadowdom-for-meter.html
 
 # Fail until SUBPIXEL_LAYOUT is enabled
 # https://bugs.webkit.org/show_bug.cgi?id=85532
@@ -288,6 +298,7 @@ fast/sub-pixel/position-right-aligns-with-container.html
 fast/sub-pixel/selection/selection-gaps-at-fractional-offsets.html
 fast/sub-pixel/size-of-box-with-zoom.html
 fast/sub-pixel/table-rows-no-gaps.html
+fast/sub-pixel/sub-pixel-accumulates-to-layers.html
 
 # CSS Regions support not yet enabled. http://webkit.org/b/57312
 fast/regions
@@ -545,6 +556,7 @@ fast/forms/file/recover-file-input-in-unposted-form.html
 fast/forms/file/get-file-upload.html
 fast/forms/file/input-file-re-render.html
 fast/forms/file/input-file-write-files.html
+fast/forms/file/selected-files-from-history-state.html
 http/tests/local/blob/send-hybrid-blob.html
 http/tests/local/blob/send-sliced-data-blob.html
 http/tests/local/formdata
@@ -757,6 +769,10 @@ http/tests/cookies/js-get-and-set-http-only-cookie.html
 # https://bugs.webkit.org/show_bug.cgi?id=91218
 http/tests/w3c/webperf/approved/navigation-timing/html/test_performance_attributes_exist_in_object.html
 http/tests/w3c/webperf/approved/navigation-timing/html/test_timing_xserver_redirect.html
+
+# [Qt][GTK] REGRESSION(r126194): http/tests/security/contentSecurityPolicy/register-bypassing-scheme.html fails
+# https://bugs.webkit.org/show_bug.cgi?id=94677
+http/tests/security/contentSecurityPolicy/register-bypassing-scheme.html
 
 # =========================================================================== #
 #       Failing xmlhttprequest tests                                          #
@@ -1535,10 +1551,6 @@ css3/filters/filtered-compositing-descendant.html
 css3/filters/effect-brightness-hw.html
 css3/filters/effect-contrast-hw.html
 
-# [Qt] new test css3/flexbox/line-wrapping.html failing
-# https://bugs.webkit.org/show_bug.cgi?id=72490
-css3/flexbox/line-wrapping.html
-
 # [Qt] New css3/flexbox/flexitem.html fails
 # https://bugs.webkit.org/show_bug.cgi?id=88963
 css3/flexbox/flexitem.html
@@ -2090,11 +2102,6 @@ canvas/philip/tests/2d.gradient.radial.cone.top.html
 canvas/philip/tests/2d.gradient.radial.touch1.html
 canvas/philip/tests/2d.gradient.radial.touch2.html
 canvas/philip/tests/2d.gradient.radial.touch3.html
-canvas/philip/tests/2d.imageData.create1.type.html
-canvas/philip/tests/2d.imageData.create2.type.html
-canvas/philip/tests/2d.imageData.get.type.html
-canvas/philip/tests/2d.imageData.object.round.html
-canvas/philip/tests/2d.imageData.object.wrap.html
 canvas/philip/tests/2d.imageData.put.unchanged.html
 canvas/philip/tests/2d.line.cap.open.html
 canvas/philip/tests/2d.line.join.open.html
@@ -2110,15 +2117,9 @@ canvas/philip/tests/2d.text.draw.baseline.middle.html
 canvas/philip/tests/2d.text.draw.baseline.top.html
 canvas/philip/tests/2d.text.draw.fontface.notinpage.html
 canvas/philip/tests/2d.text.draw.space.collapse.end.html
-canvas/philip/tests/2d.text.draw.space.collapse.nonspace.html
 canvas/philip/tests/2d.text.draw.space.collapse.other.html
 canvas/philip/tests/2d.text.draw.space.collapse.space.html
 canvas/philip/tests/2d.text.draw.space.collapse.start.html
-canvas/philip/tests/2d.text.font.parse.basic.html
-canvas/philip/tests/2d.text.font.parse.complex.html
-canvas/philip/tests/2d.text.font.parse.size.percentage.default.html
-canvas/philip/tests/2d.text.font.parse.size.percentage.html
-canvas/philip/tests/2d.text.font.parse.system.html
 canvas/philip/tests/2d.text.measure.width.space.html
 canvas/philip/tests/2d.transformation.setTransform.skewed.html
 canvas/philip/tests/2d.transformation.transform.skewed.html
@@ -2126,7 +2127,6 @@ canvas/philip/tests/type.prototype.html
 
 # Failing tests after sync with Philip Taylor's upstream tests
 canvas/philip/tests/2d.drawImage.image.incomplete.omitted.html
-canvas/philip/tests/2d.fillStyle.parse.invalid.rgba-6.html
 canvas/philip/tests/2d.fillStyle.parse.rgb-eof.html
 canvas/philip/tests/2d.fillStyle.parse.rgba-eof.html
 canvas/philip/tests/2d.imageData.put.wrongtype.html
@@ -2299,6 +2299,9 @@ css2.1/20110323/inline-table-002a.htm
 css2.1/20110323/inline-table-001.htm
 css2.1/20110323/inline-table-003.htm
 editing/inserting/multiple-lines-selected.html
+
+fast/table/table-row-outline-paint.html
+svg/as-image/animated-svg-repaints-completely-in-hidpi.html
 
 # ============================================================================= #
 # Regressions occured after Qt version update
@@ -2480,10 +2483,6 @@ fast/forms/select/listbox-in-multi-column.html
 # https://bugs.webkit.org/show_bug.cgi?id=75321
 fast/inline/nested-text-descendants.html
 
-# [Qt] new test fast/forms/radio/radio-group.html failing after r104668
-# https://bugs.webkit.org/show_bug.cgi?id=76051
-fast/forms/radio/radio-group.html
-
 # Linecaps wrong for zero length lines
 # https://bugs.webkit.org/show_bug.cgi?id=71820
 # Temporarily skip these tests after r105878 until necessary functionality lands and new results added.
@@ -2577,6 +2576,7 @@ fast/css/empty-cell-baseline.html
 fast/forms/datalist/update-range-with-datalist.html
 fast/multicol/cell-shrinkback.html
 fast/multicol/overflow-into-columngap.html
+fast/overflow/line-clamp-and-columns.html
 fast/table/td-width-fifty-percent-regression.html
 fast/text/descent-clip-in-scaled-page.html
 fast/sub-pixel/block-with-margin-overflow.html
@@ -2665,6 +2665,9 @@ fast/block/float/floats-wrap-inside-inline-003.htm
 fast/multicol/table-row-height-increase.html
 css2.1/20110323/vertical-align-boxes-001.htm
 svg/as-image/svg-intrinsic-size-rectangular-vertical.html
+fast/css/word-spacing-characters.html
+css2.1/20110323/c541-word-sp-001.htm
+
 
 # [Qt] css3/filters/huge-region-composited.html makes css3/filters/huge-region.html crash
 # https://bugs.webkit.org/show_bug.cgi?id=90165
@@ -2718,16 +2721,29 @@ fast/css/widget-region-parser.html
 # https://bugs.webkit.org/show_bug.cgi?id=92914
 touchadjustment/touch-links-longpress.html
 
-# [Qt] REGRESSION(r124729): It made 6 inspector tests fail
-# https://bugs.webkit.org/show_bug.cgi?id=93228
-inspector/debugger/debugger-activation-crash2.html
-inspector/debugger/debugger-set-breakpoint-regex.html
-inspector/debugger/pause-in-internal-script.html
-inspector/debugger/script-formatter-breakpoints.html
-inspector/debugger/set-breakpoint.html
-inspector/debugger/watch-expressions-panel-switch.html
-
 # New tests introduced in r124555 asserts on 32 bit platforms
 # https://bugs.webkit.org/show_bug.cgi?id=93246
 fast/js/dfg-peephole-compare-final-object-to-final-object-or-other-when-both-proven-final-object.html
 fast/js/dfg-compare-final-object-to-final-object-or-other-when-both-proven-final-object.html
+
+# [Qt][GTK] REGRESSION(r125251): It made svg/custom/use-instanceRoot-as-event-target.xhtml assert and flakey
+# https://bugs.webkit.org/show_bug.cgi?id=93812
+svg/custom/use-instanceRoot-as-event-target.xhtml
+
+# https://bugs.webkit.org/show_bug.cgi?id=93897
+fast/profiler/nested-start-and-stop-profiler.html
+
+# New test introduced in r125648 fast/events/autoscroll-in-textarea.html fails
+# https://bugs.webkit.org/show_bug.cgi?id=94076
+fast/events/autoscroll-in-textarea.html
+
+# ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS) is disabled
+fast/forms/time-multiple-fields
+
+# [Qt] New inspector/timeline/timeline-decode-resize.html introduced in r125790 fails
+# https://bugs.webkit.org/show_bug.cgi?id=?????
+inspector/timeline/timeline-decode-resize.html
+
+# [Qt] New fast/forms/range/range-hit-test-with-padding.html introduced in r126132 fails
+# https://bugs.webkit.org/show_bug.cgi?id=?????
+fast/forms/range/range-hit-test-with-padding.html

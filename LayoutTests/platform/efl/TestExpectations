@@ -77,6 +77,9 @@ WONTFIX X86 : svg/css/stars-with-shadow.html = PASS TEXT
 // Newly added test which fails on other bots too
 BUGWK85969 : http/tests/loading/post-in-iframe-with-back-navigation.html = TEXT
 
+// Padding is broken for range inputs.
+BUGWK94595 : fast/forms/range/range-hit-test-with-padding.html = TEXT
+
 // Missing drag'n'drop support.
 BUGWK86623 : editing/pasteboard/drag-and-drop-image-contenteditable.html = TEXT
 BUGWK86623 : editing/pasteboard/drag-and-drop-inputimage-contenteditable.html = TEXT
@@ -146,13 +149,11 @@ BUGWKEFL SKIP : inspector/device-orientation-success.html = TEXT
 // CRASHES
 //////////////////////////////////////////////////////////////////////////////////////////
 
-BUGWK93096 : webintents/web-intents-obj-constructor.html = CRASH
-BUGWK93654 DEBUG : fast/events/keyevent-iframe-removed-crash.html = CRASH
-
 //////////////////////////////////////////////////////////////////////////////////////////
 // FLAKY TESTS
 //////////////////////////////////////////////////////////////////////////////////////////
 
+BUGWK93654 : fast/events/keyevent-iframe-removed-crash.html = CRASH TEXT
 BUGWK85603 : fast/forms/textarea-placeholder-set-attribute.html = TEXT IMAGE PASS
 BUGWK59801 : fast/workers/storage/use-same-database-in-page-and-workers.html = TEXT PASS
 BUGWK83878 : media/track/track-mode.html = TEXT PASS
@@ -169,9 +170,16 @@ BUGWK86082 : security/block-test.html = TEXT PASS
 BUGWK86084 : svg/dom/SVGScriptElement/script-onerror-bubbling.svg = TEXT PASS
 BUGWK60103 : fast/replaced/border-radius-clip.html = TEXT PASS
 BUGWK91366 : fast/forms/number/number-spinbutton-gets-disabled-or-readonly.html = TEXT PASS
-BUGWK91958 : http/tests/inspector-enabled/injected-script-discard.html = TEXT PASS
 BUGWK92112 : fast/overflow/overflow-height-float-not-removed-crash2.html = CRASH PASS
+BUGWK93589 : svg/dom/SVGScriptElement/script-change-externalResourcesRequired-while-loading.svg = TEXT PASS
+
+// Flaky inspector tests
+BUGWK91958 : http/tests/inspector-enabled/injected-script-discard.html = TEXT PASS
 BUGWK85615 : http/tests/inspector/resource-har-pages.html = TEXT PASS
+BUGWKEFL : http/tests/inspector/search/resources-search-match-index.html = TEXT PASS
+BUGWK93820 : inspector/console/console-format-collections.html = TEXT PASS
+BUGWKEFL : inspector/profiler/heap-snapshot.html = TEXT PASS
+BUGWKEFL : inspector/timeline/timeline-enum-stability.html = TEXT PASS
 
 // Aborting application cache downloads is flaky.
 BUGWK87633 : http/tests/appcache/abort-cache-onchecking-manifest-404.html = TEXT PASS
@@ -257,6 +265,7 @@ BUGWK84333 : fast/forms/file/input-file-entries.html = TEXT
 BUGWK84333 : fast/forms/file/input-file-re-render.html = MISSING
 BUGWK84333 : fast/forms/file/input-file-write-files.html = TEXT
 BUGWK84333 : fast/forms/file/recover-file-input-in-unposted-form.html = TEXT
+BUGWK84333 : fast/forms/file/selected-files-from-history-state.html = TEXT
 BUGWK84333 : http/tests/local/blob/send-hybrid-blob.html = TEXT
 BUGWK84333 : http/tests/local/fileapi/file-last-modified.html = TEXT
 BUGWK84333 : http/tests/local/fileapi/send-dragged-file.html = TEXT
@@ -678,9 +687,6 @@ BUGWK90860 : fast/dom/shadow/shadowdom-for-object-without-shadow.html = IMAGE
 BUGWK91485 : fast/dom/shadow/shadowdom-for-textarea-complex-shadow.html = IMAGE
 BUGWK91485 : fast/dom/shadow/shadowdom-for-textarea-only-shadow.html = IMAGE
 BUGWK91485 : fast/dom/shadow/shadowdom-for-textarea-without-shadow.html = IMAGE
-BUGWK91486 : fast/dom/shadow/shadowdom-for-button-complex-shadow.html = IMAGE
-BUGWK91486 : fast/dom/shadow/shadowdom-for-button-only-shadow.html = IMAGE
-BUGWK91486 : fast/dom/shadow/shadowdom-for-button-without-shadow.html = IMAGE
 BUGWK91487 : fast/dom/shadow/shadowdom-for-select-complex-shadow.html = IMAGE
 BUGWK91487 : fast/dom/shadow/shadowdom-for-select-without-shadow.html = IMAGE
 BUGWK91488 : fast/dom/shadow/shadowdom-for-output-only-shadow.html = IMAGE
@@ -813,10 +819,6 @@ BUGWK92352 : css3/flexbox/flex-rounding.html = TEXT
 BUGWK92942 SKIP : fast/dom/Proximity = PASS
 BUGWK92942 SKIP : fast/events/constructors/device-proximity-event-constructor.html = PASS
 
-// Needs rebaseline after https://bugs.webkit.org/show_bug.cgi?id=80219
-BUGWK80219 : fast/box-sizing/box-sizing.html = IMAGE+TEXT
-BUGWK80219 : compositing/overflow/clip-descendents.html = TEXT
-
 // These tests are failing after r124512
 BUGWK93073 : mathml/presentation/attributes.xhtml = TEXT
 BUGWK93073 : mathml/presentation/fenced-mi.xhtml = TEXT
@@ -835,6 +837,14 @@ BUGWK93073 : mathml/presentation/tokenElements.xhtml = TEXT
 BUGWK93073 : mathml/presentation/under.xhtml = TEXT
 BUGWK93073 : mathml/presentation/underover.xhtml = TEXT
 
+// Tests are outdated: spaces are not supposed to be collapsed anymore
+// according to spec: http://www.w3.org/TR/2dcontext/#drawing-text-to-the-canvas
+BUGWK61799 : canvas/philip/tests/2d.text.draw.space.collapse.end.html = TEXT
+BUGWK61799 : canvas/philip/tests/2d.text.draw.space.collapse.other.html = TEXT
+BUGWK61799 : canvas/philip/tests/2d.text.draw.space.collapse.space.html = TEXT
+BUGWK61799 : canvas/philip/tests/2d.text.draw.space.collapse.start.html = TEXT
+BUGWK61799 : canvas/philip/tests/2d.text.measure.width.space.html = TEXT
+
 // JSC doesn't support heap profiling
 BUGWK50485 SKIP : inspector/profiler/heap-snapshot-inspect-dom-wrapper.html = TEXT
 BUGWK50485 SKIP : inspector/profiler/heap-snapshot-comparison-dom-groups-change.html = TEXT
@@ -847,6 +857,9 @@ BUGWK50485 SKIP : inspector/profiler/heap-snapshot-summary-sorting-fields.html =
 BUGWK50485 SKIP : inspector/profiler/heap-snapshot-summary-sorting.html = TEXT
 BUGWK50485 SKIP : inspector/profiler/heap-snapshot-summary-sorting-instances.html = TEXT
 
+// ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS) is disabled
+BUGWK94186 SKIP : fast/forms/time-multiple-fields = PASS
+
 // Require rebaseline after bug 93148
 BUGWK93148 : tables/mozilla_expected_failures/bugs/bug106966.html = TEXT
 BUGWK93148 : tables/mozilla_expected_failures/marvin/table_overflow_hidden_tbody.html = TEXT
@@ -856,12 +869,40 @@ BUGWK93148 : fast/css/nested-layers-with-hover.html = TEXT
 BUGWK92956 : http/tests/security/contentSecurityPolicy/object-src-url-blocked.html = TEXT
 BUGWK93212 : http/tests/incremental/slow-utf8-text.pl = TIMEOUT
 
+BUGWK93976 : fast/css-generated-content/quotes-lang.html = IMAGE
+
 BUGWK93247 DEBUG : fast/lists/list-marker-remove-crash.html = CRASH
 
-// These tests are failing after r124729
-BUGWK93228 : inspector/debugger/debugger-activation-crash2.html = TEXT
-BUGWK93328 : inspector/debugger/debugger-set-breakpoint-regex.html = TEXT
-BUGWK93328 : inspector/debugger/pause-in-internal-script.html = TEXT
-BUGWK93328 : inspector/debugger/script-formatter-breakpoints.html = TEXT
-BUGWK93328 : inspector/debugger/set-breakpoint.html = TEXT
-BUGWK93328 : inspector/debugger/watch-expressions-panel-switch.html = TEXT
+// Require rebaselining after  https://bugs.webkit.org/show_bug.cgi?id=89826
+BUGWK89826 : fast/css/word-space-extra.html = TEXT
+
+// Tests added by https://bugs.webkit.org/show_bug.cgi?id=89826
+BUGWK94008 : fast/css/word-spacing-characters.html = IMAGE
+BUGWK94003 : fast/css/word-spacing-characters-complex-text.html = IMAGE
+// This has always failed on Gtk/Efl - exposed by bug 89826
+BUGWK94009 : css2.1/20110323/c541-word-sp-000.htm = IMAGE
+
+BUGWK94150 : fast/events/autoscroll-in-textarea.html = TEXT
+
+// Requires CSS_COMPOSITING to be turned on
+BUGWK94024 SKIP : css3/compositing = TEXT
+
+// Fails also on GTK
+BUGWK94080 : fast/overflow/line-clamp-and-columns.html = IMAGE
+
+// Failing after 125592
+BUGWK94194 : http/tests/security/frameNavigation/inactive-function-in-popup-navigate-child.html = TEXT
+
+// Alt text should be displayed if src attribute is not set.
+BUGWK94198 : fast/dom/HTMLImageElement/image-alt-text.html = IMAGE
+BUGWK94198 : fast/dom/HTMLInputElement/input-image-alt-text.html = IMAGE
+
+BUGWK84037 : fast/text/international/spaces-combined-in-vertical-text.html = TEXT
+
+// New test introduced in r125790 fails
+BUGWK94341 : inspector/timeline/timeline-decode-resize.html = TEXT
+
+// Slider thumb can not be displayed without parent slider.
+BUGWK94334 : fast/forms/range/thumbslider-no-parent-slider.html = MISSING
+
+BUGWK94690 : fast/dom/shadow/shadowdom-dynamic-styling.html = TEXT

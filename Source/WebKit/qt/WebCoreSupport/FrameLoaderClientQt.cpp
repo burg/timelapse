@@ -372,6 +372,20 @@ void FrameLoaderClientQt::dispatchWillPerformClientRedirect(const KURL& url, dou
     notImplemented();
 }
 
+void FrameLoaderClientQt::dispatchDidNavigateWithinPage()
+{
+    if (!m_webFrame)
+        return;
+
+    FrameLoader* loader = m_frame->loader();
+    bool loaderCompleted = !(loader->activeDocumentLoader() && loader->activeDocumentLoader()->isLoadingInAPISense());
+
+    if (!loaderCompleted)
+        return;
+
+    dispatchDidCommitLoad();
+    dispatchDidFinishLoad();
+}
 
 void FrameLoaderClientQt::dispatchDidChangeLocationWithinPage()
 {
@@ -391,7 +405,7 @@ void FrameLoaderClientQt::dispatchDidPushStateWithinPage()
     if (dumpFrameLoaderCallbacks)
         printf("%s - dispatchDidPushStateWithinPage\n", qPrintable(drtDescriptionSuitableForTestResult(m_frame)));
 
-    notImplemented();
+    dispatchDidNavigateWithinPage();
 }
 
 void FrameLoaderClientQt::dispatchDidReplaceStateWithinPage()
@@ -399,7 +413,7 @@ void FrameLoaderClientQt::dispatchDidReplaceStateWithinPage()
     if (dumpFrameLoaderCallbacks)
         printf("%s - dispatchDidReplaceStateWithinPage\n", qPrintable(drtDescriptionSuitableForTestResult(m_frame)));
 
-    notImplemented();
+    dispatchDidNavigateWithinPage();
 }
 
 void FrameLoaderClientQt::dispatchDidPopStateWithinPage()
@@ -407,7 +421,7 @@ void FrameLoaderClientQt::dispatchDidPopStateWithinPage()
     if (dumpFrameLoaderCallbacks)
         printf("%s - dispatchDidPopStateWithinPage\n", qPrintable(drtDescriptionSuitableForTestResult(m_frame)));
 
-    notImplemented();
+    // No need to call dispatchDidNavigateWithinPage here, it's already been done in loadInSameDocument().
 }
 
 void FrameLoaderClientQt::dispatchWillClose()
@@ -489,7 +503,7 @@ void FrameLoaderClientQt::dispatchDidFinishDocumentLoad()
         printf("%s - didFinishDocumentLoadForFrame\n", qPrintable(drtDescriptionSuitableForTestResult(m_frame)));
 
     if (QWebPagePrivate::drtRun) {
-        int unloadEventCount = m_frame->domWindow()->pendingUnloadEventListeners();
+        int unloadEventCount = m_frame->document()->domWindow()->pendingUnloadEventListeners();
         if (unloadEventCount)
             printf("%s - has %u onunload handler(s)\n", qPrintable(drtDescriptionSuitableForTestResult(m_frame)), unloadEventCount);
     }
@@ -1624,9 +1638,9 @@ PassRefPtr<Widget> FrameLoaderClientQt::createPlugin(const IntSize& pluginSize, 
 
 void FrameLoaderClientQt::redirectDataToPlugin(Widget* pluginWidget)
 {
-    ASSERT(!m_pluginView);
     m_pluginView = static_cast<PluginView*>(pluginWidget);
-    m_hasSentResponseToPlugin = false;
+    if (pluginWidget)
+        m_hasSentResponseToPlugin = false;
 }
 
 PassRefPtr<Widget> FrameLoaderClientQt::createJavaAppletWidget(const IntSize& pluginSize, HTMLAppletElement* element, const KURL& url,

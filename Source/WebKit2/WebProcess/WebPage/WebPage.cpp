@@ -141,6 +141,7 @@
 
 #if ENABLE(WEB_INTENTS)
 #include "IntentData.h"
+#include <WebCore/Intent.h>
 #endif
 
 #if ENABLE(VIBRATION)
@@ -433,8 +434,8 @@ PassRefPtr<Plugin> WebPage::createPlugin(WebFrame* frame, HTMLPlugInElement* plu
     bool blocked;
 
     if (!WebProcess::shared().connection()->sendSync(
-            Messages::WebContext::GetPluginPath(parameters.mimeType, parameters.url.string()), 
-            Messages::WebContext::GetPluginPath::Reply(pluginPath, blocked), 0)) {
+            Messages::WebProcessProxy::GetPluginPath(parameters.mimeType, parameters.url.string()),
+            Messages::WebProcessProxy::GetPluginPath::Reply(pluginPath, blocked), 0)) {
         return 0;
     }
 
@@ -485,7 +486,7 @@ EditorState WebPage::editorState() const
     size_t location = 0;
     size_t length = 0;
 
-    Element* selectionRoot = frame->selection()->rootEditableElement();
+    Element* selectionRoot = frame->selection()->rootEditableElementRespectingShadowTree();
     Element* scope = selectionRoot ? selectionRoot : frame->document()->documentElement();
 
     if (!scope)
@@ -902,6 +903,10 @@ void WebPage::setResizesToContentsUsingLayoutSize(const IntSize& targetLayoutSiz
     m_page->settings()->setAcceleratedCompositingForFixedPositionEnabled(true);
     m_page->settings()->setFixedElementsLayoutRelativeToFrame(true);
     m_page->settings()->setFixedPositionCreatesStackingContext(true);
+#if ENABLE(SMOOTH_SCROLLING)
+    // Ensure we don't do animated scrolling in the WebProcess when scrolling is delegated.
+    m_page->settings()->setEnableScrollAnimator(false);
+#endif
 
     // Always reset even when empty. This also takes care of the relayout.
     setFixedLayoutSize(targetLayoutSize);
@@ -1115,7 +1120,9 @@ void WebPage::setFixedLayoutSize(const IntSize& size)
         return;
 
     view->setFixedLayoutSize(size);
-    view->forceLayout();
+    // Do not force it until the first layout, this would then become our first layout prematurely.
+    if (view->didFirstLayout())
+        view->forceLayout();
 }
 
 void WebPage::setPaginationMode(uint32_t mode)
@@ -1225,7 +1232,11 @@ PassRefPtr<WebImage> WebPage::scaledSnapshotWithOptions(const IntRect& rect, dou
     if (options & SnapshotOptionsExcludeSelectionHighlighting)
         shouldPaintSelection = FrameView::ExcludeSelection;
 
-    frameView->paintContentsForSnapshot(graphicsContext.get(), rect, shouldPaintSelection);
+    FrameView::CoordinateSpaceForSnapshot coordinateSpace = FrameView::DocumentCoordinates;
+    if (options & SnapshotOptionsInViewCoordinates)
+        coordinateSpace = FrameView::ViewCoordinates;
+
+    frameView->paintContentsForSnapshot(graphicsContext.get(), rect, shouldPaintSelection, coordinateSpace);
 
     return snapshot.release();
 }
@@ -1959,6 +1970,12 @@ void WebPage::deliverIntentToFrame(uint64_t frameID, const IntentData& intentDat
 
     frame->deliverIntent(intentData);
 }
+
+void WebPage::deliverCoreIntentToFrame(uint64_t frameID, Intent* coreIntent)
+{
+    if (WebFrame* frame = WebProcess::shared().webFrame(frameID))
+        frame->deliverIntent(coreIntent);
+}
 #endif
 
 void WebPage::preferencesDidChange(const WebPreferencesStore& store)
@@ -2046,6 +2063,9 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     settings->setMockScrollbarsEnabled(store.getBoolValueForKey(WebPreferencesKey::mockScrollbarsEnabledKey()));
     settings->setHyperlinkAuditingEnabled(store.getBoolValueForKey(WebPreferencesKey::hyperlinkAuditingEnabledKey()));
     settings->setRequestAnimationFrameEnabled(store.getBoolValueForKey(WebPreferencesKey::requestAnimationFrameEnabledKey()));
+#if ENABLE(SMOOTH_SCROLLING)
+    settings->setEnableScrollAnimator(store.getBoolValueForKey(WebPreferencesKey::scrollAnimatorEnabledKey()));
+#endif
 
     // <rdar://problem/10697417>: It is necessary to force compositing when accelerate drawing
     // is enabled on Mac so that scrollbars are always in their own layers.

@@ -825,6 +825,14 @@ WebInspector.DOMAgent.prototype = {
     },
 
     /**
+     * @return {WebInspector.DOMDocument?}
+     */
+    existingDocument: function()
+    {
+        return this._document;
+    },
+
+    /**
      * @param {RuntimeAgent.RemoteObjectId} objectId
      * @param {function(?DOMAgent.NodeId)=} callback
      */
@@ -1068,7 +1076,7 @@ WebInspector.DOMAgent.prototype = {
     },
 
     /**
-     * @param {DOMAgent.Node} node
+     * @param {WebInspector.DOMNode} node
      */
     _unbind: function(node)
     {

@@ -440,14 +440,6 @@ public:
         info.addInstrumentedMember(m_attributeData);
     }
 
-#if ENABLE(UNDO_MANAGER)
-    bool undoScope() const;
-    void setUndoScope(bool);
-    PassRefPtr<UndoManager> undoManager();
-    void disconnectUndoManager();
-    void disconnectUndoManagersInSubtree();
-#endif
-
 protected:
     Element(const QualifiedName& tagName, Document* document, ConstructionType type)
         : ContainerNode(document, type)
@@ -501,7 +493,7 @@ private:
     
     // cloneNode is private so that non-virtual cloneElementWithChildren and cloneElementWithoutChildren
     // are used instead.
-    virtual PassRefPtr<Node> cloneNode(bool deep);
+    virtual PassRefPtr<Node> cloneNode(bool deep, ExceptionCode&);
     virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren();
 
     QualifiedName m_tagName;

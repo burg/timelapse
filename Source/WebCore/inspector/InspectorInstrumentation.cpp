@@ -70,7 +70,6 @@
 #include "WorkerThread.h"
 #include "XMLHttpRequest.h"
 #include <wtf/StdLibExtras.h>
-#include <wtf/ThreadSpecific.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -695,7 +694,7 @@ InspectorInstrumentationCookie InspectorInstrumentation::willReceiveResourceResp
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
 
-void InspectorInstrumentation::didReceiveResourceResponseImpl(const InspectorInstrumentationCookie& cookie, unsigned long identifier, DocumentLoader* loader, const ResourceResponse& response)
+void InspectorInstrumentation::didReceiveResourceResponseImpl(const InspectorInstrumentationCookie& cookie, unsigned long identifier, DocumentLoader* loader, const ResourceResponse& response, ResourceLoader* resourceLoader)
 {
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didReceiveResourceResponse();
@@ -705,7 +704,7 @@ void InspectorInstrumentation::didReceiveResourceResponseImpl(const InspectorIns
     if (!instrumentingAgents)
         return;
     if (InspectorResourceAgent* resourceAgent = instrumentingAgents->inspectorResourceAgent())
-        resourceAgent->didReceiveResponse(identifier, loader, response);
+        resourceAgent->didReceiveResponse(identifier, loader, response, resourceLoader);
     if (InspectorConsoleAgent* consoleAgent = instrumentingAgents->inspectorConsoleAgent())
         consoleAgent->didReceiveResponse(identifier, response); // This should come AFTER resource notification, front-end relies on this.
 }
@@ -713,7 +712,7 @@ void InspectorInstrumentation::didReceiveResourceResponseImpl(const InspectorIns
 void InspectorInstrumentation::didReceiveResourceResponseButCanceledImpl(Frame* frame, DocumentLoader* loader, unsigned long identifier, const ResourceResponse& r)
 {
     InspectorInstrumentationCookie cookie = InspectorInstrumentation::willReceiveResourceResponse(frame, identifier, r);
-    InspectorInstrumentation::didReceiveResourceResponse(cookie, identifier, loader, r);
+    InspectorInstrumentation::didReceiveResourceResponse(cookie, identifier, loader, r, 0);
 }
 
 void InspectorInstrumentation::continueAfterXFrameOptionsDeniedImpl(Frame* frame, DocumentLoader* loader, unsigned long identifier, const ResourceResponse& r)
@@ -1228,22 +1227,6 @@ void InspectorInstrumentation::didFireAnimationFrameImpl(const InspectorInstrume
 {
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didFireAnimationFrame();
-}
-
-InspectorTimelineAgent* InspectorInstrumentation::timelineAgentForOrphanEvents()
-{
-    return *threadSpecificTimelineAgentForOrphanEvents();
-}
-
-void InspectorInstrumentation::setTimelineAgentForOrphanEvents(InspectorTimelineAgent* inspectorTimelineAgent)
-{
-    *threadSpecificTimelineAgentForOrphanEvents() = inspectorTimelineAgent;
-}
-
-WTF::ThreadSpecific<InspectorTimelineAgent*>& InspectorInstrumentation::threadSpecificTimelineAgentForOrphanEvents()
-{
-    AtomicallyInitializedStatic(WTF::ThreadSpecific<InspectorTimelineAgent*>*, instance = new WTF::ThreadSpecific<InspectorTimelineAgent*>());
-    return *instance;
 }
 
 void InspectorInstrumentation::registerInstrumentingAgents(InstrumentingAgents* instrumentingAgents)

@@ -193,7 +193,6 @@ sub GetCallbackClassName
 {
     my $className = shift;
 
-    return "JSCustomVoidCallback" if $className eq "VoidCallback";
     return "JS$className";
 }
 
@@ -476,7 +475,8 @@ sub GenerateGetOwnPropertyDescriptorBody
     my @getOwnPropertyDescriptorImpl = ();
     if ($dataNode->extendedAttributes->{"CheckSecurity"}) {
         if ($interfaceName eq "DOMWindow") {
-            push(@implContent, "    if (!thisObject->allowsAccessFrom(exec))\n");
+            $implIncludes{"BindingSecurity.h"} = 1;
+            push(@implContent, "    if (!BindingSecurity::shouldAllowAccessToDOMWindow(exec, jsCast<$className*>(thisObject)->impl()))\n");
         } else {
             push(@implContent, "    if (!shouldAllowAccessToFrame(exec, thisObject->impl()->frame()))\n");
         }
@@ -1769,7 +1769,8 @@ sub GenerateImplementation
                 if ($dataNode->extendedAttributes->{"CheckSecurity"} &&
                     !$attribute->signature->extendedAttributes->{"DoNotCheckSecurity"} &&
                     !$attribute->signature->extendedAttributes->{"DoNotCheckSecurityOnGetter"}) {
-                    push(@implContent, "    if (!castedThis->allowsAccessFrom(exec))\n");
+                    $implIncludes{"BindingSecurity.h"} = 1;
+                    push(@implContent, "    if (!BindingSecurity::shouldAllowAccessToDOMWindow(exec, castedThis->impl()))\n");
                     push(@implContent, "        return jsUndefined();\n");
                 }
 
@@ -1884,7 +1885,8 @@ sub GenerateImplementation
                 push(@implContent, "    ${className}* domObject = jsCast<$className*>(asObject(slotBase));\n");
 
                 if ($dataNode->extendedAttributes->{"CheckSecurity"}) {
-                    push(@implContent, "    if (!domObject->allowsAccessFrom(exec))\n");
+                    $implIncludes{"BindingSecurity.h"} = 1;
+                    push(@implContent, "    if (!BindingSecurity::shouldAllowAccessToDOMWindow(exec, domObject->impl()))\n");
                     push(@implContent, "        return jsUndefined();\n");
                 }
 
@@ -1959,7 +1961,8 @@ sub GenerateImplementation
 
                             if ($dataNode->extendedAttributes->{"CheckSecurity"} && !$attribute->signature->extendedAttributes->{"DoNotCheckSecurity"}) {
                                 if ($interfaceName eq "DOMWindow") {
-                                    push(@implContent, "    if (!jsCast<$className*>(thisObject)->allowsAccessFrom(exec))\n");
+                                    $implIncludes{"BindingSecurity.h"} = 1;
+                                    push(@implContent, "    if (!BindingSecurity::shouldAllowAccessToDOMWindow(exec, jsCast<$className*>(thisObject)->impl()))\n");
                                 } else {
                                     push(@implContent, "    if (!shouldAllowAccessToFrame(exec, jsCast<$className*>(thisObject)->impl()->frame()))\n");
                                 }
@@ -2088,7 +2091,8 @@ sub GenerateImplementation
                 push(@implContent, "{\n");
                 if ($dataNode->extendedAttributes->{"CheckSecurity"}) {
                     if ($interfaceName eq "DOMWindow") {
-                        push(@implContent, "    if (!jsCast<$className*>(thisObject)->allowsAccessFrom(exec))\n");
+                        $implIncludes{"BindingSecurity.h"} = 1;
+                        push(@implContent, "    if (!BindingSecurity::shouldAllowAccessToDOMWindow(exec, jsCast<$className*>(thisObject)->impl()))\n");
                     } else {
                         push(@implContent, "    if (!shouldAllowAccessToFrame(exec, jsCast<$className*>(thisObject)->impl()->frame()))\n");
                     }
@@ -2195,7 +2199,8 @@ sub GenerateImplementation
 
                 if ($dataNode->extendedAttributes->{"CheckSecurity"} and
                     !$function->signature->extendedAttributes->{"DoNotCheckSecurity"}) {
-                    push(@implContent, "    if (!castedThis->allowsAccessFrom(exec))\n");
+                    $implIncludes{"BindingSecurity.h"} = 1;
+                    push(@implContent, "    if (!BindingSecurity::shouldAllowAccessToDOMWindow(exec, castedThis->impl()))\n");
                     push(@implContent, "        return JSValue::encode(jsUndefined());\n");
                 }
 
@@ -2816,7 +2821,9 @@ END
             push(@implContent, "        return true;\n\n");
             push(@implContent, "    RefPtr<$className> protect(this);\n\n");
             push(@implContent, "    JSLockHolder lock(m_data->globalObject()->globalData());\n\n");
-            push(@implContent, "    ExecState* exec = m_data->globalObject()->globalExec();\n");
+            if (@params) {
+                push(@implContent, "    ExecState* exec = m_data->globalObject()->globalExec();\n");
+            }
             push(@implContent, "    MarkedArgumentBuffer args;\n");
 
             foreach my $param (@params) {
@@ -3067,7 +3074,6 @@ sub JSValueToNative
     }
 
     AddToImplIncludes("HTMLOptionElement.h", $conditional) if $type eq "HTMLOptionElement";
-    AddToImplIncludes("JSCustomVoidCallback.h", $conditional) if $type eq "VoidCallback";
     AddToImplIncludes("Event.h", $conditional) if $type eq "Event";
 
     my $arrayType = $codeGenerator->GetArrayType($type);
@@ -3118,7 +3124,6 @@ sub NativeToJSValue
         if (defined $conv) {
             return "jsStringOrNull(exec, $value)" if $conv eq "Null";
             return "jsStringOrUndefined(exec, $value)" if $conv eq "Undefined";
-            return "jsStringOrFalse(exec, $value)" if $conv eq "False";
 
             die "Unknown value for TreatReturnedNullStringAs extended attribute";
         }

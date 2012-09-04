@@ -388,8 +388,13 @@ static bool copyWebCoreFilterOperationsToWebFilterOperations(const FilterOperati
 bool GraphicsLayerChromium::setFilters(const FilterOperations& filters)
 {
     WebFilterOperations webFilters;
-    if (!copyWebCoreFilterOperationsToWebFilterOperations(filters, webFilters))
+    if (!copyWebCoreFilterOperationsToWebFilterOperations(filters, webFilters)) {
+        // Make sure the filters are removed from the platform layer, as they are
+        // going to fallback to software mode.
+        m_layer.setFilters(WebFilterOperations());
+        GraphicsLayer::setFilters(FilterOperations());
         return false;
+    }
     m_layer.setFilters(webFilters);
     return GraphicsLayer::setFilters(filters);
 }
@@ -527,10 +532,10 @@ bool GraphicsLayerChromium::addAnimation(const KeyframeValueList& values, const 
 
     OwnPtr<WebKit::WebAnimation> toAdd(createWebAnimation(values, animation, animationId, groupId, timeOffset, boxSize));
 
-    if (toAdd.get()) {
+    if (toAdd) {
         // Remove any existing animations with the same animation id and target property.
         primaryLayer().removeAnimation(animationId, toAdd->targetProperty());
-        return primaryLayer().addAnimation(*toAdd);
+        return primaryLayer().addAnimation(toAdd.get());
     }
 
     return false;
@@ -736,16 +741,16 @@ void GraphicsLayerChromium::updateLayerPreserves3D()
         m_layer.setContentsScale(contentsScale());
 
         // Move this layer to be a child of the transform layer.
-        if (!m_layer.parent().isNull())
-            m_layer.parent().replaceChild(m_layer, m_transformLayer);
+        if (parent())
+            parent()->platformLayer()->replaceChild(m_layer, m_transformLayer);
         m_transformLayer.addChild(m_layer);
 
         updateChildList();
     } else if (!m_preserves3D && !m_transformLayer.isNull()) {
         // Relace the transformLayer in the parent with this layer.
         m_layer.removeFromParent();
-        if (!m_transformLayer.parent().isNull())
-            m_transformLayer.parent().replaceChild(m_transformLayer, m_layer);
+        if (parent())
+            parent()->platformLayer()->replaceChild(m_transformLayer, m_layer);
 
         m_layer.setAnimationDelegate(this);
         m_transformLayer.transferAnimationsTo(&m_layer);

@@ -22,6 +22,9 @@ BUGWK85262 SKIP : fast/css/image-resolution = PASS
 // CSS image-orientation is not yet enabled.
 BUGWK89052 SKIP : fast/css/image-orientation = PASS
 
+// CSS3 Text Decoration support is not yet enabled (needs ENABLE_CSS3_TEXT_DECORATION).
+BUGWK58491 SKIP : fast/css3-text-decoration = PASS
+
 // Our slow tests, in alphabetical order.
 BUGWK57672 : http/tests/local/fileapi/send-sliced-dragged-file.html = TEXT PASS
 
@@ -242,6 +245,44 @@ BUGWK85565 : fast/css/border-solid-single-edge-antialias.html = IMAGE
 // Interferes with the tests that should pass
 BUGWK85689 SKIP : fast/animation/request-animation-frame-disabled.html = TEXT
 
+// Need rebaseline after https://bugs.webkit.org/show_bug.cgi?id=6033
+BUGWK6033 : css3/filters/add-filter-rendering.html = PASS IMAGE
+BUGWK6033 : css3/filters/blur-filter-page-scroll-parents.html = PASS IMAGE
+BUGWK6033 : css3/filters/blur-filter-page-scroll.html = PASS IMAGE
+BUGWK6033 : css3/filters/crash-filter-change.html = PASS IMAGE
+BUGWK6033 : css3/filters/crash-hw-sw-switch.html = PASS IMAGE
+BUGWK6033 : css3/filters/custom/custom-filter-shader-cache.html = PASS IMAGE
+BUGWK6033 : css3/filters/custom/effect-color-check.html = PASS IMAGE
+BUGWK6033 : css3/filters/custom/effect-custom-combined-missing.html = PASS IMAGE
+BUGWK6033 : css3/filters/custom/effect-custom.html = PASS IMAGE
+BUGWK6033 : css3/filters/custom/effect-custom-parameters.html = PASS IMAGE
+BUGWK6033 : css3/filters/custom/filter-repaint-custom-clipped.html = PASS IMAGE
+BUGWK6033 : css3/filters/custom/filter-repaint-custom-rotated.html = PASS IMAGE
+BUGWK6033 : css3/filters/custom/filter-repaint-custom.html = PASS IMAGE
+BUGWK6033 : css3/filters/custom/invalid-custom-filter-shader.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-blur.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-brightness-clamping.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-brightness.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-combined.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-contrast.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-drop-shadow.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-grayscale.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-hue-rotate.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-invert.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-opacity.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-reference-external.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-reference-hw.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-reference-ordering.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-reference.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-saturate.html = PASS IMAGE
+BUGWK6033 : css3/filters/effect-sepia.html = PASS IMAGE
+BUGWK6033 : css3/filters/filtered-inline.html = PASS IMAGE
+BUGWK6033 : css3/filters/multiple-filters-invalidation.html = PASS IMAGE
+BUGWK6033 : css3/filters/nested-filters.html = PASS IMAGE
+BUGWK6033 : css3/filters/regions-expanding.html = PASS IMAGE
+BUGWK6033 : css3/filters/simple-filter-rendering.html = PASS IMAGE
+BUGWK6033 : svg/filters/color-interpolation-filters.svg = PASS MISSING
+
 // Hits assert https://bugs.webkit.org/show_bug.cgi?id=86208
 BUGWK85308 SKIP : ietestcenter/css3/valuesandunits/units-000.htm = IMAGE
 BUGWK85310 : ietestcenter/css3/valuesandunits/units-010.htm = IMAGE
@@ -300,17 +341,26 @@ BUGWK91505 : platform/mac/plugins/root-object-premature-delete-crash.html = CRAS
 // [Mac] REGRESSION (r122651): fast/text/descent-clip-in-scaled-page.html fails
 BUGWK91552 : fast/text/descent-clip-in-scaled-page.html = IMAGE
 
-// Layout Test css3/filters/custom/custom-filter-animation.html is failing
-BUGWK84813 : css3/filters/custom/custom-filter-animation.html = TEXT
-
-// Needs rebaseline after https://bugs.webkit.org/show_bug.cgi?id=80219
-BUGWK92904 : fast/box-sizing/box-sizing.html = TEXT
-BUGWK92904 : compositing/overflow/clip-descendents.html = TEXT
-
 // Needs rebaseline after https://bugs.webkit.org/show_bug.cig?id=91969
 BUGWK91969 : fast/dom/HTMLProgressElement/progress-bar-value-pseudo-element.html = TEXT
 BUGWK91969 : fast/dom/HTMLProgressElement/progress-writing-mode.html = TEXT
 BUGWK91969 : fast/dom/HTMLProgressElement/indeterminate-progress-001.html = TEXT
+
+// Needs new image to be checked in for all platforms.
+BUGWK93859 : compositing/video/video-controls-layer-creation.html = PASS MISSING
+
+// Needs rebaseline after https://bugs.webkit.org/show_bug.cgi?id=91970
+BUGWK91970 : fast/dom/HTMLMeterElement/meter-appearances-capacity.html
+BUGWK91970 : fast/dom/HTMLMeterElement/meter-appearances-rating-relevancy.html
+BUGWK91970 : fast/dom/HTMLMeterElement/meter-boundary-values.html
+BUGWK91970 : fast/dom/HTMLMeterElement/meter-clone.html
+BUGWK91970 : fast/dom/HTMLMeterElement/meter-element-markup.html
+BUGWK91970 : fast/dom/HTMLMeterElement/meter-element-repaint-on-update-value.html
+BUGWK91970 : fast/dom/HTMLMeterElement/meter-element.html
+BUGWK91970 : fast/dom/HTMLMeterElement/meter-optimums.html
+BUGWK91970 : fast/dom/HTMLMeterElement/meter-styles-changing-pseudo.html
+BUGWK91970 : fast/dom/HTMLMeterElement/meter-styles.html
+BUGWK91970 : fast/dom/HTMLMeterElement/meter-writing-mode.html
 
 // Require rebaseline after bug 93148
 BUGWK93148 : tables/mozilla_expected_failures/bugs/bug106966.html = TEXT
@@ -320,18 +370,21 @@ BUGWK93148 : fast/css/nested-layers-with-hover.html = TEXT
 
 BUGWK93247 DEBUG : fast/lists/list-marker-remove-crash.html = CRASH
 
-// REGRESSION (r124723-r124741): 5 inspector/debugger tests failing on Apple Lion Debug WK1 (Tests)
-BUGWK93387 :  inspector/debugger/script-formatter-breakpoints.html = TEXT
-BUGWK93387 :  inspector/debugger/pause-in-internal-script.html = TEXT
-BUGWK93387 :  inspector/debugger/watch-expressions-panel-switch.html = TEXT
-BUGWK93387 :  inspector/debugger/debugger-activation-crash2.html = TEXT
-BUGWK93387 :  inspector/debugger/debugger-set-breakpoint-regex.html = TEXT
-
-// REGRESSION (r124416): fast/forms/basic-selects.html failing on Lion Debug Tests
-BUGWK93538 : fast/forms/basic-selects.html = TEXT
-
 // (r124484) inspector/device-orientation-success.html failing on Mac ports
 BUGWK93552 : inspector/device-orientation-success.html = TEXT
 
 // (r125185) http/tests/images/jpg-img-partial-load.html timeout on Lion
-BUGWK93636 : http/tests/images/jpg-img-partial-load.html = TIMEOUT
+BUGWK93636 : http/tests/images/jpg-img-partial-load.html = TEXT
+
+// Require rebaselining after  https://bugs.webkit.org/show_bug.cgi?id=89826
+BUGWK89826 : fast/css/word-space-extra.html = TEXT
+
+// Added by bug 89826 
+BUGWK94008 : fast/css/word-spacing-characters.html = IMAGE
+BUGWK94003 : fast/css/word-spacing-characters-complex-text.html = IMAGE
+
+// (r125629): Newly added test css3/filters/custom/filter-fallback-to-software.html failing on mac
+BUGWK94169 : css3/filters/custom/filter-fallback-to-software.html = IMAGE
+
+// (r125790): Newly added test inspector/timeline/timeline-decode-resize.html is failing on mac
+BUGWK94374 : inspector/timeline/timeline-decode-resize.html = TEXT

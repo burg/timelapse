@@ -34,13 +34,13 @@
 
 #if USE(ACCELERATED_COMPOSITING)
 
+#include "CCLayerAnimationController.h"
+#include "CCOcclusionTracker.h"
+#include "CCPrioritizedTexture.h"
 #include "FloatPoint.h"
 #include "Region.h"
 #include "RenderSurfaceChromium.h"
 #include "SkColor.h"
-#include "cc/CCLayerAnimationController.h"
-#include "cc/CCOcclusionTracker.h"
-#include "cc/CCPrioritizedTexture.h"
 
 #include <public/WebFilterOperations.h>
 #include <public/WebTransformationMatrix.h>
@@ -267,9 +267,6 @@ public:
     // Set the priority of all desired textures in this layer.
     virtual void setTexturePriorities(const CCPriorityCalculator&) { }
 
-    void setAlwaysReserveTextures(bool alwaysReserveTextures) { m_alwaysReserveTextures = alwaysReserveTextures; }
-    bool alwaysReserveTextures() const { return m_alwaysReserveTextures; }
-
     bool addAnimation(PassOwnPtr<CCActiveAnimation>);
     void pauseAnimation(int animationId, double timeOffset);
     void removeAnimation(int animationId);
@@ -373,7 +370,6 @@ private:
     bool m_useLCDText;
     bool m_preserves3D;
     bool m_useParentBackfaceVisibility;
-    bool m_alwaysReserveTextures;
     bool m_drawCheckerboardForMissingTiles;
     bool m_forceRenderSurface;
 

@@ -50,14 +50,14 @@
 #include "WebNavigationPolicy.h"
 #include "WebView.h"
 #include "WebViewBenchmarkSupportImpl.h"
-#include "platform/WebFloatQuad.h"
-#include "platform/WebLayer.h"
-#include "platform/WebLayerTreeView.h"
-#include "platform/WebLayerTreeViewClient.h"
-#include "platform/WebPoint.h"
-#include "platform/WebRect.h"
-#include "platform/WebSize.h"
-#include "platform/WebString.h"
+#include <public/WebFloatQuad.h>
+#include <public/WebLayer.h>
+#include <public/WebLayerTreeView.h>
+#include <public/WebLayerTreeViewClient.h>
+#include <public/WebPoint.h>
+#include <public/WebRect.h>
+#include <public/WebSize.h>
+#include <public/WebString.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/RefCounted.h>
 
@@ -162,6 +162,8 @@ public:
     virtual WebTextInputInfo textInputInfo();
     virtual WebTextInputType textInputType();
     virtual bool setEditableSelectionOffsets(int start, int end);
+    virtual bool setCompositionFromExistingText(int compositionStart, int compositionEnd, const WebVector<WebCompositionUnderline>& underlines);
+    virtual void extendSelectionAndDelete(int before, int after);
     virtual bool isSelectionEditable() const;
     virtual WebColor backgroundColor() const;
     virtual bool selectionBounds(WebRect& start, WebRect& end) const;
@@ -391,7 +393,7 @@ public:
     void mouseContextMenu(const WebMouseEvent&);
     void mouseDoubleClick(const WebMouseEvent&);
 
-    bool detectContentIntentOnTouch(const WebPoint&, WebInputEvent::Type);
+    bool detectContentOnTouch(const WebPoint&, WebInputEvent::Type);
     void startPageScaleAnimation(const WebCore::IntPoint& targetPosition, bool useAnchor, float newScale, double durationInSeconds);
 
     void numberOfWheelEventHandlersChanged(unsigned);

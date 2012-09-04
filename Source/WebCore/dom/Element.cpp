@@ -70,6 +70,7 @@
 #include "StyleResolver.h"
 #include "Text.h"
 #include "TextIterator.h"
+#include "UndoManager.h"
 #include "VoidCallback.h"
 #include "WebKitAnimationList.h"
 #include "XMLNSNames.h"
@@ -169,7 +170,7 @@ DEFINE_VIRTUAL_ATTRIBUTE_EVENT_LISTENER(Element, error);
 DEFINE_VIRTUAL_ATTRIBUTE_EVENT_LISTENER(Element, focus);
 DEFINE_VIRTUAL_ATTRIBUTE_EVENT_LISTENER(Element, load);
 
-PassRefPtr<Node> Element::cloneNode(bool deep)
+PassRefPtr<Node> Element::cloneNode(bool deep, ExceptionCode&)
 {
     return deep ? cloneElementWithChildren() : cloneElementWithoutChildren();
 }
@@ -724,26 +725,26 @@ void Element::attributeChanged(const Attribute& attribute)
     const QualifiedName& attrName = attribute.name();
     if (attrName == aria_activedescendantAttr) {
         // any change to aria-activedescendant attribute triggers accessibility focus change, but document focus remains intact
-        document()->axObjectCache()->handleActiveDescendantChanged(renderer());
+        document()->axObjectCache()->handleActiveDescendantChanged(this);
     } else if (attrName == roleAttr) {
         // the role attribute can change at any time, and the AccessibilityObject must pick up these changes
-        document()->axObjectCache()->handleAriaRoleChanged(renderer());
+        document()->axObjectCache()->handleAriaRoleChanged(this);
     } else if (attrName == aria_valuenowAttr) {
         // If the valuenow attribute changes, AX clients need to be notified.
-        document()->axObjectCache()->postNotification(renderer(), AXObjectCache::AXValueChanged, true);
+        document()->axObjectCache()->postNotification(this, AXObjectCache::AXValueChanged, true);
     } else if (attrName == aria_labelAttr || attrName == aria_labeledbyAttr || attrName == altAttr || attrName == titleAttr) {
         // If the content of an element changes due to an attribute change, notify accessibility.
-        document()->axObjectCache()->contentChanged(renderer());
+        document()->axObjectCache()->contentChanged(this);
     } else if (attrName == aria_checkedAttr)
-        document()->axObjectCache()->checkedStateChanged(renderer());
+        document()->axObjectCache()->checkedStateChanged(this);
     else if (attrName == aria_selectedAttr)
-        document()->axObjectCache()->selectedChildrenChanged(renderer());
+        document()->axObjectCache()->selectedChildrenChanged(this);
     else if (attrName == aria_expandedAttr)
-        document()->axObjectCache()->handleAriaExpandedChange(renderer());
+        document()->axObjectCache()->handleAriaExpandedChange(this);
     else if (attrName == aria_hiddenAttr)
-        document()->axObjectCache()->childrenChanged(renderer());
+        document()->axObjectCache()->childrenChanged(this);
     else if (attrName == aria_invalidAttr)
-        document()->axObjectCache()->postNotification(renderer(), AXObjectCache::AXInvalidStatusChanged, true);
+        document()->axObjectCache()->postNotification(this, AXObjectCache::AXInvalidStatusChanged, true);
 }
 
 // Returns true is the given attribute is an event handler.
@@ -998,9 +999,8 @@ void Element::detach()
     if (ElementShadow* shadow = this->shadow()) {
         detachChildrenIfNeeded();
         shadow->detach();
-        detachAsNode();
-    } else
-        ContainerNode::detach();
+    }
+    ContainerNode::detach();
 
     RenderWidget::resumeWidgetHierarchyUpdates();
 }
@@ -2048,6 +2048,11 @@ void Element::willModifyAttribute(const QualifiedName& name, const AtomicString&
         recipients->enqueueMutationRecord(MutationRecord::createAttributes(this, name, oldValue));
 #endif
 
+#if ENABLE(UNDO_MANAGER)
+    if (UndoManager::isRecordingAutomaticTransaction(this))
+        UndoManager::addTransactionStep(AttrChangingDOMTransactionStep::create(this, name, oldValue, newValue));
+#endif
+
 #if ENABLE(INSPECTOR)
     InspectorInstrumentation::willModifyDOMAttr(document(), this, oldValue, newValue);
 #endif
@@ -2214,63 +2219,5 @@ void Element::createMutableAttributeData()
     else
         m_attributeData = m_attributeData->makeMutable();
 }
-
-#if ENABLE(UNDO_MANAGER)
-bool Element::undoScope() const
-{
-    return hasRareData() && elementRareData()->m_undoScope;
-}
-
-void Element::setUndoScope(bool undoScope)
-{
-    ElementRareData* data = ensureElementRareData();
-    data->m_undoScope = undoScope;
-    if (!undoScope)
-        disconnectUndoManager();
-}
-
-PassRefPtr<UndoManager> Element::undoManager()
-{
-    if (!undoScope() || (isContentEditable() && !isRootEditableElement())) {
-        disconnectUndoManager();
-        return 0;
-    }
-    ElementRareData* data = ensureElementRareData();
-    if (!data->m_undoManager)
-        data->m_undoManager = UndoManager::create(this);
-    return data->m_undoManager;
-}
-
-void Element::disconnectUndoManager()
-{
-    if (!hasRareData())
-        return;
-    ElementRareData* data = elementRareData();
-    UndoManager* undoManager = data->m_undoManager.get();
-    if (!undoManager)
-        return;
-    undoManager->clearUndoRedo();
-    undoManager->disconnect();
-    data->m_undoManager.clear();
-}
-
-void Element::disconnectUndoManagersInSubtree()
-{
-    Node* node = firstChild();
-    while (node) {
-        if (node->isElementNode()) {
-            Element* element = toElement(node);
-            if (element->hasRareData() && element->elementRareData()->m_undoManager) {
-                if (!node->isContentEditable()) {
-                    node = node->traverseNextSibling(this);
-                    continue;
-                }
-                element->disconnectUndoManager();
-            }
-        }
-        node = node->traverseNextNode(this);
-    }
-}
-#endif
 
 } // namespace WebCore

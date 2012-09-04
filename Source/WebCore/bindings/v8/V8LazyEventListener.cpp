@@ -100,7 +100,7 @@ v8::Local<v8::Value> V8LazyEventListener::callListenerFunction(ScriptExecutionCo
     if (!frame->script()->canExecuteScripts(AboutToExecuteScript))
         return v8::Local<v8::Value>();
 
-    return frame->script()->proxy()->callFunction(handlerFunction, receiver, 1, parameters);
+    return frame->script()->callFunction(handlerFunction, receiver, 1, parameters);
 }
 
 static v8::Handle<v8::Value> V8LazyEventListenerToString(const v8::Arguments& args)
@@ -124,7 +124,7 @@ void V8LazyEventListener::prepareListenerObject(ScriptExecutionContext* context)
     if (!frame->script()->canExecuteScripts(NotAboutToExecuteScript))
         return;
     // Use the outer scope to hold context.
-    v8::Local<v8::Context> v8Context = worldContext().adjustedContext(frame->script()->proxy());
+    v8::Local<v8::Context> v8Context = worldContext().adjustedContext(frame->script());
     // Bail out if we cannot get the context.
     if (v8Context.IsEmpty())
         return;
@@ -158,7 +158,7 @@ void V8LazyEventListener::prepareListenerObject(ScriptExecutionContext* context)
     code.append("\n};}}}})");
     v8::Handle<v8::String> codeExternalString = v8ExternalString(code);
 
-    v8::Handle<v8::Script> script = V8Proxy::compileScript(codeExternalString, m_sourceURL, m_position);
+    v8::Handle<v8::Script> script = ScriptSourceCode::compileScript(codeExternalString, m_sourceURL, m_position);
     if (script.IsEmpty())
         return;
 
@@ -231,7 +231,7 @@ void V8LazyEventListener::prepareListenerObject(ScriptExecutionContext* context)
         wrappedFunction->Set(v8::String::NewSymbol("toString"), toStringFunction);
     }
 
-    wrappedFunction->SetName(v8::String::New(fromWebCoreString(m_functionName), m_functionName.length()));
+    wrappedFunction->SetName(v8String(m_functionName));
 
     // FIXME: Remove the following comment-outs.
     // See https://bugs.webkit.org/show_bug.cgi?id=85152 for more details.

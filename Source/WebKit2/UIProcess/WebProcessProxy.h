@@ -30,7 +30,6 @@
 #include "PluginInfoStore.h"
 #include "ProcessLauncher.h"
 #include "ResponsivenessTimer.h"
-#include "ThreadLauncher.h"
 #include "WebConnectionToWebProcess.h"
 #include "WebPageProxy.h"
 #include "WebProcessProxyMessages.h"
@@ -56,7 +55,7 @@ class WebContext;
 class WebPageGroup;
 struct WebNavigationDataStore;
 
-class WebProcessProxy : public RefCounted<WebProcessProxy>, CoreIPC::Connection::Client, ResponsivenessTimer::Client, ProcessLauncher::Client, ThreadLauncher::Client, CoreIPC::Connection::QueueClient {
+class WebProcessProxy : public ThreadSafeRefCounted<WebProcessProxy>, CoreIPC::Connection::Client, ResponsivenessTimer::Client, ProcessLauncher::Client,  CoreIPC::Connection::QueueClient {
 public:
     typedef HashMap<uint64_t, RefPtr<WebFrameProxy> > WebFrameProxyMap;
     typedef HashMap<uint64_t, RefPtr<WebBackForwardListItem> > WebBackForwardListItemMap;
@@ -85,6 +84,10 @@ public:
     PassRefPtr<WebPageProxy> createWebPage(PageClient*, WebContext*, WebPageGroup*);
     void addExistingWebPage(WebPageProxy*, uint64_t pageID);
     void removeWebPage(uint64_t pageID);
+
+#if ENABLE(WEB_INTENTS)
+    void removeMessagePortChannel(uint64_t channelID);
+#endif
 
     WebBackForwardListItem* webBackForwardItem(uint64_t itemID) const;
 
@@ -118,7 +121,7 @@ public:
 private:
     explicit WebProcessProxy(PassRefPtr<WebContext>);
 
-    // Initializes the process or thread launcher which will begin launching the process.
+    // Initializes the process launcher which will begin launching the process.
     void connect();
 
     // Called when the web process has crashed or we know that it will terminate soon.
@@ -133,10 +136,20 @@ private:
     
     void shouldTerminate(bool& shouldTerminate);
 
+    // Plugins
+    void getPlugins(CoreIPC::Connection*, uint64_t requestID, bool refresh);
+    void getPluginPath(const String& mimeType, const String& urlString, String& pluginPath, bool& blocked);
 #if ENABLE(PLUGIN_PROCESS)
     void getPluginProcessConnection(const String& pluginPath, PassRefPtr<Messages::WebProcessProxy::GetPluginProcessConnection::DelayedReply>);
     void pluginSyncMessageSendTimedOut(const String& pluginPath);
+#else
+    void didGetSitesWithPluginData(const Vector<String>& sites, uint64_t callbackID);
+    void didClearPluginSiteData(uint64_t callbackID);
 #endif
+
+    void handleGetPlugins(uint64_t requestID, bool refresh);
+    void sendDidGetPlugins(uint64_t requestID, PassOwnPtr<Vector<WebCore::PluginInfo> >);
+
 #if USE(SECURITY_FRAMEWORK)
     void secItemRequest(CoreIPC::Connection*, uint64_t requestID, const SecItemRequestData&);
     void secKeychainItemRequest(CoreIPC::Connection*, uint64_t requestID, const SecKeychainItemRequestData&);
@@ -164,9 +177,6 @@ private:
     // ProcessLauncher::Client
     virtual void didFinishLaunching(ProcessLauncher*, CoreIPC::Connection::Identifier);
 
-    // ThreadLauncher::Client
-    virtual void didFinishLaunching(ThreadLauncher*, CoreIPC::Connection::Identifier);
-
     void didFinishLaunching(CoreIPC::Connection::Identifier);
 
     // History client
@@ -188,7 +198,6 @@ private:
 
     Vector<std::pair<CoreIPC::Connection::OutgoingMessage, unsigned> > m_pendingMessages;
     RefPtr<ProcessLauncher> m_processLauncher;
-    RefPtr<ThreadLauncher> m_threadLauncher;
 
     RefPtr<WebContext> m_context;
 

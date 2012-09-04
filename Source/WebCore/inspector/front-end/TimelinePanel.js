@@ -28,6 +28,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+importScript("MemoryStatistics.js");
+importScript("TimelineModel.js");
+importScript("TimelineOverviewPane.js");
+importScript("TimelinePresentationModel.js");
+importScript("TimelineFrameController.js");
+
 /**
  * @constructor
  * @extends {WebInspector.Panel}
@@ -195,11 +201,6 @@ WebInspector.TimelinePanel.prototype = {
         return this._calculator;
     },
 
-    get toolbarItemLabel()
-    {
-        return WebInspector.UIString("Timeline");
-    },
-
     get statusBarItems()
     {
         return this._statusBarButtons.select("element").concat([
@@ -348,8 +349,31 @@ WebInspector.TimelinePanel.prototype = {
 
     _loadFromFile: function()
     {
-        if (this._operationInProgress)
+        var progressIndicator = this._prepareToLoadTimeline();
+        if (!progressIndicator)
             return;
+        this._model.loadFromFile(this._fileSelectorElement.files[0], progressIndicator);
+        this._createFileSelector();
+    },
+
+    /**
+     * @param {string} url
+     */
+    loadFromURL: function(url)
+    {
+        var progressIndicator = this._prepareToLoadTimeline();
+        if (!progressIndicator)
+            return;
+        this._model.loadFromURL(url, progressIndicator);
+    },
+
+    /**
+     * @return {?WebInspector.ProgressIndicator}
+     */
+    _prepareToLoadTimeline: function()
+    {
+        if (this._operationInProgress)
+            return null;
         if (this.toggleTimelineButton.toggled) {
             this.toggleTimelineButton.toggled = false;
             this._model.stopRecord();
@@ -357,8 +381,7 @@ WebInspector.TimelinePanel.prototype = {
         var progressIndicator = new WebInspector.ProgressIndicator();
         progressIndicator.addEventListener(WebInspector.ProgressIndicator.Events.Done, this._setOperationInProgress.bind(this, null));
         this._setOperationInProgress(progressIndicator);
-        this._model.loadFromFile(this._fileSelectorElement.files[0], progressIndicator);
-        this._createFileSelector();
+        return progressIndicator;
     },
 
     _rootRecord: function()
@@ -572,8 +595,6 @@ WebInspector.TimelinePanel.prototype = {
         this._sidebarBackgroundElement.style.width = width + "px";
         this.onResize();
         this._overviewPane.sidebarResized(width);
-        // Min width = <number of buttons on the left> * 31
-        this._miscStatusBarItems.style.left = Math.max((this._statusBarButtons.length + 3) * 31, width) + "px";
         this._memoryStatistics.setSidebarWidth(width);
         this._timelineGrid.gridHeaderElement.style.left = width + "px";
     },
@@ -585,6 +606,8 @@ WebInspector.TimelinePanel.prototype = {
         this._graphRowsElementWidth = this._graphRowsElement.offsetWidth;
         this._timelineGrid.gridHeaderElement.style.width = this._itemsGraphsElement.offsetWidth + "px";
         this._containerElementHeight = this._containerElement.clientHeight;
+        var minFloatingStatusBarItemsOffset = document.getElementById("panel-status-bar").totalOffsetLeft() + this._statusBarButtons.length * WebInspector.StatusBarButton.width;
+        this._miscStatusBarItems.style.left = Math.max(minFloatingStatusBarItemsOffset, this.splitView.sidebarWidth()) + "px";
     },
 
     _clearPanel: function()
@@ -944,7 +967,12 @@ WebInspector.TimelinePanel.prototype = {
             popover.show(WebInspector.TimelinePresentationModel.generatePopupContentForFrame(frame), anchor);
         } else {
             if (anchor.row && anchor.row._record)
-                popover.show(anchor.row._record.generatePopupContent(), anchor);
+                anchor.row._record.generatePopupContent(showCallback);
+        }
+
+        function showCallback(popupContent)
+        {
+            popover.show(popupContent, anchor);
         }
     },
 

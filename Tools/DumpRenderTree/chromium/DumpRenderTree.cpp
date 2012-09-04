@@ -33,8 +33,8 @@
 
 #include "MockWebKitPlatformSupport.h"
 #include "TestShell.h"
-#include "WebCompositor.h"
 #include "webkit/support/webkit_support.h"
+#include <public/WebCompositor.h>
 #include <v8/include/v8-testing.h>
 #include <v8/include/v8.h>
 #include <wtf/OwnPtr.h>
@@ -252,7 +252,7 @@ int main(int argc, char* argv[])
         shell.callJSGC();
         shell.callJSGC();
 
-        // When we finish the last test, cleanup the LayoutTestController.
+        // When we finish the last test, cleanup the DRTTestRunner.
         // It may have references to not-yet-cleaned up windows. By cleaning up
         // here we help purify reports.
         shell.resetTestController();

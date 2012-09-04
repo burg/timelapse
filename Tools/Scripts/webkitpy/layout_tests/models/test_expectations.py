@@ -45,55 +45,8 @@ _log = logging.getLogger(__name__)
 (PASS, FAIL, TEXT, IMAGE, IMAGE_PLUS_TEXT, AUDIO, TIMEOUT, CRASH, SKIP, WONTFIX,
  SLOW, REBASELINE, MISSING, FLAKY, NOW, NONE) = range(16)
 
-
-def result_was_expected(result, expected_results, test_needs_rebaselining, test_is_skipped):
-    """Returns whether we got a result we were expecting.
-    Args:
-        result: actual result of a test execution
-        expected_results: set of results listed in test_expectations
-        test_needs_rebaselining: whether test was marked as REBASELINE
-        test_is_skipped: whether test was marked as SKIP"""
-    if result in expected_results:
-        return True
-    if result == MISSING and test_needs_rebaselining:
-        return True
-    if result == SKIP and test_is_skipped:
-        return True
-    return False
-
-
-def remove_pixel_failures(expected_results):
-    """Returns a copy of the expected results for a test, except that we
-    drop any pixel failures and return the remaining expectations. For example,
-    if we're not running pixel tests, then tests expected to fail as IMAGE
-    will PASS."""
-    expected_results = expected_results.copy()
-    if IMAGE in expected_results:
-        expected_results.remove(IMAGE)
-        expected_results.add(PASS)
-    if IMAGE_PLUS_TEXT in expected_results:
-        expected_results.remove(IMAGE_PLUS_TEXT)
-        expected_results.add(TEXT)
-    return expected_results
-
-
-def has_pixel_failures(actual_results):
-    return IMAGE in actual_results or IMAGE_PLUS_TEXT in actual_results
-
-
 # FIXME: Perhas these two routines should be part of the Port instead?
 BASELINE_SUFFIX_LIST = ('png', 'wav', 'txt')
-
-
-def suffixes_for_expectations(expectations):
-    suffixes = set()
-    if expectations.intersection(set([TEXT, IMAGE_PLUS_TEXT])):
-        suffixes.add('txt')
-    if expectations.intersection(set([IMAGE, IMAGE_PLUS_TEXT])):
-        suffixes.add('png')
-    if AUDIO in expectations:
-        suffixes.add('wav')
-    return set(suffixes)
 
 
 class ParseError(Exception):
@@ -206,10 +159,14 @@ class TestExpectationParser(object):
         self._allow_rebaseline_modifier = allow_rebaseline_modifier
 
     def parse(self, filename, expectations_string):
-        expectations = TestExpectationParser._tokenize_list(filename, expectations_string)
-        for expectation_line in expectations:
-            self._parse_line(expectation_line)
-        return expectations
+        expectation_lines = []
+        line_number = 0
+        for line in expectations_string.split("\n"):
+            line_number += 1
+            test_expectation = self._tokenize_line(filename, line, line_number)
+            self._parse_line(test_expectation)
+            expectation_lines.append(test_expectation)
+        return expectation_lines
 
     def expectation_for_skipped_test(self, test_name):
         expectation_line = TestExpectationLine()
@@ -231,12 +188,10 @@ class TestExpectationParser(object):
         if not expectation_line.name:
             return
 
-        self._check_modifiers_against_expectations(expectation_line)
-
-        expectation_line.is_file = self._port.test_isfile(expectation_line.name)
-        if not expectation_line.is_file and self._check_path_does_not_exist(expectation_line):
+        if not self._check_test_exists(expectation_line):
             return
 
+        expectation_line.is_file = self._port.test_isfile(expectation_line.name)
         if expectation_line.is_file:
             expectation_line.path = expectation_line.name
         else:
@@ -251,7 +206,14 @@ class TestExpectationParser(object):
         has_wontfix = False
         has_bugid = False
         parsed_specifiers = set()
-        for modifier in expectation_line.modifiers:
+
+        modifiers = [modifier.lower() for modifier in expectation_line.modifiers]
+        expectations = [expectation.lower() for expectation in expectation_line.expectations]
+
+        if self.SLOW_MODIFIER in modifiers and self.TIMEOUT_EXPECTATION in expectations:
+            expectation_line.warnings.append('A test can not be both SLOW and TIMEOUT. If it times out indefinitely, then it should be just TIMEOUT.')
+
+        for modifier in modifiers:
             if modifier in TestExpectations.MODIFIERS:
                 expectation_line.parsed_modifiers.append(modifier)
                 if modifier == self.WONTFIX_MODIFIER:
@@ -268,7 +230,7 @@ class TestExpectationParser(object):
         if not expectation_line.parsed_bug_modifiers and not has_wontfix and not has_bugid:
             expectation_line.warnings.append('Test lacks BUG modifier.')
 
-        if self._allow_rebaseline_modifier and self.REBASELINE_MODIFIER in expectation_line.modifiers:
+        if self._allow_rebaseline_modifier and self.REBASELINE_MODIFIER in modifiers:
             expectation_line.warnings.append('REBASELINE should only be used for running rebaseline.py. Cannot be checked in.')
 
         expectation_line.matching_configurations = self._test_configuration_converter.to_config_set(parsed_specifiers, expectation_line.warnings)
@@ -283,22 +245,17 @@ class TestExpectationParser(object):
             result.add(expectation)
         expectation_line.parsed_expectations = result
 
-    def _check_modifiers_against_expectations(self, expectation_line):
-        if self.SLOW_MODIFIER in expectation_line.modifiers and self.TIMEOUT_EXPECTATION in expectation_line.expectations:
-            expectation_line.warnings.append('A test can not be both SLOW and TIMEOUT. If it times out indefinitely, then it should be just TIMEOUT.')
-
-    def _check_path_does_not_exist(self, expectation_line):
+    def _check_test_exists(self, expectation_line):
         # WebKit's way of skipping tests is to add a -disabled suffix.
         # So we should consider the path existing if the path or the
         # -disabled version exists.
-        if (not self._port.test_exists(expectation_line.name)
-            and not self._port.test_exists(expectation_line.name + '-disabled')):
+        if not self._port.test_exists(expectation_line.name) and not self._port.test_exists(expectation_line.name + '-disabled'):
             # Log a warning here since you hit this case any
             # time you update TestExpectations without syncing
             # the LayoutTests directory
             expectation_line.warnings.append('Path does not exist.')
-            return True
-        return False
+            return False
+        return True
 
     def _collect_matching_tests(self, expectation_line):
         """Convert the test specification to an absolute, normalized
@@ -324,7 +281,7 @@ class TestExpectationParser(object):
             expectation_line.matching_tests.append(expectation_line.path)
 
     @classmethod
-    def _tokenize(cls, filename, expectation_string, line_number):
+    def _tokenize_line(cls, filename, expectation_string, line_number):
         """Tokenizes a line from TestExpectations and returns an unparsed TestExpectationLine instance.
 
         The format of a test expectation line is:
@@ -364,20 +321,9 @@ class TestExpectationParser(object):
         return expectation_line
 
     @classmethod
-    def _tokenize_list(cls, filename, expectations_string):
-        """Returns a list of TestExpectationLines, one for each line in expectations_string."""
-        expectation_lines = []
-        line_number = 0
-        for line in expectations_string.split("\n"):
-            line_number += 1
-            expectation_lines.append(cls._tokenize(filename, line, line_number))
-        return expectation_lines
-
-    @classmethod
     def _split_space_separated(cls, space_separated_string):
         """Splits a space-separated string into an array."""
-        # FIXME: Lower-casing is necessary to support legacy code. Need to eliminate.
-        return [part.strip().lower() for part in space_separated_string.strip().split(' ')]
+        return [part.strip() for part in space_separated_string.strip().split(' ')]
 
 
 class TestExpectationLine(object):
@@ -724,6 +670,52 @@ class TestExpectations(object):
         assert(' ' not in string)  # This only handles one expectation at a time.
         return cls.EXPECTATIONS.get(string.lower())
 
+    @staticmethod
+    def result_was_expected(result, expected_results, test_needs_rebaselining, test_is_skipped):
+        """Returns whether we got a result we were expecting.
+        Args:
+            result: actual result of a test execution
+            expected_results: set of results listed in test_expectations
+            test_needs_rebaselining: whether test was marked as REBASELINE
+            test_is_skipped: whether test was marked as SKIP"""
+        if result in expected_results:
+            return True
+        if result == MISSING and test_needs_rebaselining:
+            return True
+        if result == SKIP and test_is_skipped:
+            return True
+        return False
+
+    @staticmethod
+    def remove_pixel_failures(expected_results):
+        """Returns a copy of the expected results for a test, except that we
+        drop any pixel failures and return the remaining expectations. For example,
+        if we're not running pixel tests, then tests expected to fail as IMAGE
+        will PASS."""
+        expected_results = expected_results.copy()
+        if IMAGE in expected_results:
+            expected_results.remove(IMAGE)
+            expected_results.add(PASS)
+        if IMAGE_PLUS_TEXT in expected_results:
+            expected_results.remove(IMAGE_PLUS_TEXT)
+            expected_results.add(TEXT)
+        return expected_results
+
+    @staticmethod
+    def has_pixel_failures(actual_results):
+        return IMAGE in actual_results or IMAGE_PLUS_TEXT in actual_results
+
+    @staticmethod
+    def suffixes_for_expectations(expectations):
+        suffixes = set()
+        if expectations.intersection(set([TEXT, IMAGE_PLUS_TEXT])):
+            suffixes.add('txt')
+        if expectations.intersection(set([IMAGE, IMAGE_PLUS_TEXT])):
+            suffixes.add('png')
+        if AUDIO in expectations:
+            suffixes.add('wav')
+        return set(suffixes)
+
     def __init__(self, port, tests=None, is_lint_mode=False, include_overrides=True):
         self._full_test_list = tests
         self._test_config = port.test_configuration()
@@ -794,8 +786,8 @@ class TestExpectations(object):
     def matches_an_expected_result(self, test, result, pixel_tests_are_enabled):
         expected_results = self._model.get_expectations(test)
         if not pixel_tests_are_enabled:
-            expected_results = remove_pixel_failures(expected_results)
-        return result_was_expected(result,
+            expected_results = self.remove_pixel_failures(expected_results)
+        return self.result_was_expected(result,
                                    expected_results,
                                    self.is_rebaselining(test),
                                    self._model.has_modifier(test, SKIP))
@@ -857,7 +849,7 @@ class TestExpectations(object):
         def without_rebaseline_modifier(expectation):
             return not (not expectation.is_invalid() and
                         expectation.name in except_these_tests and
-                        "rebaseline" in expectation.modifiers and
+                        'rebaseline' in expectation.parsed_modifiers and
                         filename == expectation.filename)
 
         return TestExpectationSerializer.list_to_string(filter(without_rebaseline_modifier, self._expectations))

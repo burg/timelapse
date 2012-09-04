@@ -42,7 +42,7 @@
  *   when done to continue with the form submission. If the last reference is removed on a
  *   #Ewk_Form_Submission_Request and the form has not been submitted yet,
  *   ewk_form_submission_request_submit() will be called automatically.
- * - "intent,request,new", Ewk_Intent_Request*: reports new Web intent request.
+ * - "intent,request,new", Ewk_Intent*: reports new Web intent request.
  * - "intent,service,register", Ewk_Intent_Service*: reports new Web intent service registration.
  * - "load,error", const Ewk_Web_Error*: reports main frame load failed.
  * - "load,finished", void: reports load finished.
@@ -273,7 +273,7 @@ EAPI Eina_Bool ewk_view_smart_class_set(Ewk_View_Smart_Class *api);
  *
  * @return view object on success or @c NULL on failure
  */
-Evas_Object *ewk_view_smart_add(Evas *e, Evas_Smart *smart, Ewk_Context *context);
+EAPI Evas_Object *ewk_view_smart_add(Evas *e, Evas_Smart *smart, Ewk_Context *context);
 
 /**
  * Creates a new EFL WebKit view object.
@@ -475,7 +475,7 @@ Eina_Bool ewk_view_scale_set(Evas_Object *o, double scaleFactor, int x, int y);
  *
  * @return current scale factor in use on success or @c -1.0 on failure
  */
-double ewk_view_scale_get(const Evas_Object *o);
+EAPI double ewk_view_scale_get(const Evas_Object *o);
 
 /**
  * Queries the ratio between the CSS units and device pixels when the content is unscaled.

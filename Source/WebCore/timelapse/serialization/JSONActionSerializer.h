@@ -34,6 +34,7 @@
 
 #if ENABLE(TIMELAPSE)
 
+#include "InspectorValues.h"
 #include <stdio.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/timelapse/ActionSerializer.h>

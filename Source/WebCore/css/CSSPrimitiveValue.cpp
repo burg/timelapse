@@ -1,6 +1,6 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2012 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -207,15 +207,7 @@ static const AtomicString& valueOrPropertyName(int valueOrPropertyID)
         return keywordString;
     }
 
-    if (valueOrPropertyID >= firstCSSProperty && valueOrPropertyID < firstCSSProperty + numCSSProperties) {
-        static AtomicString* propertyStrings = new AtomicString[numCSSProperties]; // Leaked intentionally.
-        AtomicString& propertyString = propertyStrings[valueOrPropertyID - firstCSSProperty];
-        if (propertyString.isNull())
-            propertyString = getPropertyName(static_cast<CSSPropertyID>(valueOrPropertyID));
-        return propertyString;
-    }
-
-    return nullAtom;
+    return getPropertyNameAtomicString(static_cast<CSSPropertyID>(valueOrPropertyID));
 }
 
 CSSPrimitiveValue::CSSPrimitiveValue(int ident)
@@ -832,12 +824,12 @@ static String formatNumber(double number, const char* suffix, unsigned suffixLen
 {
     DecimalNumber decimal(number);
 
-    StringBuffer<UChar> buffer(decimal.bufferLengthForStringDecimal() + suffixLength);
+    StringBuffer<LChar> buffer(decimal.bufferLengthForStringDecimal() + suffixLength);
     unsigned length = decimal.toStringDecimal(buffer.characters(), buffer.length());
     ASSERT(length + suffixLength == buffer.length());
 
     for (unsigned i = 0; i < suffixLength; ++i)
-        buffer[length + i] = suffix[i];
+        buffer[length + i] = static_cast<LChar>(suffix[i]);
 
     return String::adopt(buffer);
 }
@@ -945,12 +937,9 @@ String CSSPrimitiveValue::customCssText() const
             text = valueOrPropertyName(m_value.ident);
             break;
         case CSS_ATTR: {
-            DEFINE_STATIC_LOCAL(const String, attrParen, ("attr("));
-
             StringBuilder result;
             result.reserveCapacity(6 + m_value.string->length());
-
-            result.append(attrParen);
+            result.appendLiteral("attr(");
             result.append(m_value.string);
             result.append(')');
 
@@ -963,22 +952,21 @@ String CSSPrimitiveValue::customCssText() const
             text += ")";
             break;
         case CSS_COUNTER: {
-            DEFINE_STATIC_LOCAL(const String, counterParen, ("counter("));
-            DEFINE_STATIC_LOCAL(const String, countersParen, ("counters("));
-            DEFINE_STATIC_LOCAL(const String, commaSpace, (", "));
-
             StringBuilder result;
             String separator = m_value.counter->separator();
-            result.append(separator.isEmpty() ? counterParen : countersParen);
+            if (separator.isEmpty())
+                result.appendLiteral("counter(");
+            else
+                result.appendLiteral("counters(");
 
             result.append(m_value.counter->identifier());
             if (!separator.isEmpty()) {
-                result.append(commaSpace);
+                result.appendLiteral(", ");
                 result.append(quoteCSSStringIfNeeded(separator));
             }
             String listStyle = m_value.counter->listStyle();
             if (!listStyle.isEmpty()) {
-                result.append(commaSpace);
+                result.appendLiteral(", ");
                 result.append(listStyle);
             }
             result.append(')');
@@ -987,26 +975,8 @@ String CSSPrimitiveValue::customCssText() const
             break;
         }
         case CSS_RECT: {
-            DEFINE_STATIC_LOCAL(const String, rectParen, ("rect("));
-
             Rect* rectVal = getRectValue();
-            StringBuilder result;
-            result.reserveCapacity(32);
-            result.append(rectParen);
-
-            result.append(rectVal->top()->cssText());
-            result.append(' ');
-
-            result.append(rectVal->right()->cssText());
-            result.append(' ');
-
-            result.append(rectVal->bottom()->cssText());
-            result.append(' ');
-
-            result.append(rectVal->left()->cssText());
-            result.append(')');
-
-            text = result.toString();
+            text = "rect(" + rectVal->top()->cssText() + ' ' + rectVal->right()->cssText() + ' ' + rectVal->bottom()->cssText() + ' ' + rectVal->left()->cssText() + ')';
             break;
         }
         case CSS_QUAD: {
@@ -1031,32 +1001,32 @@ String CSSPrimitiveValue::customCssText() const
         }
         case CSS_RGBCOLOR:
         case CSS_PARSER_HEXCOLOR: {
-            DEFINE_STATIC_LOCAL(const String, commaSpace, (", "));
-            DEFINE_STATIC_LOCAL(const String, rgbParen, ("rgb("));
-            DEFINE_STATIC_LOCAL(const String, rgbaParen, ("rgba("));
-
             RGBA32 rgbColor = m_value.rgbcolor;
             if (m_primitiveUnitType == CSS_PARSER_HEXCOLOR)
                 Color::parseHexColor(m_value.string, rgbColor);
             Color color(rgbColor);
 
-            Vector<UChar> result;
+            Vector<LChar> result;
             result.reserveInitialCapacity(32);
-            if (color.hasAlpha())
-                append(result, rgbaParen);
+            bool colorHasAlpha = color.hasAlpha();
+            if (colorHasAlpha)
+                result.append("rgba(", 5);
             else
-                append(result, rgbParen);
+                result.append("rgb(", 4);
 
             appendNumber(result, static_cast<unsigned char>(color.red()));
-            append(result, commaSpace);
+            result.append(", ", 2);
 
             appendNumber(result, static_cast<unsigned char>(color.green()));
-            append(result, commaSpace);
+            result.append(", ", 2);
 
             appendNumber(result, static_cast<unsigned char>(color.blue()));
-            if (color.hasAlpha()) {
-                append(result, commaSpace);
-                append(result, String::number(color.alpha() / 255.0f));
+            if (colorHasAlpha) {
+                result.append(", ", 2);
+
+                NumberToStringBuffer buffer;
+                const char* alphaString = numberToFixedPrecisionString(color.alpha() / 255.0f, 6, buffer, true);
+                result.append(alphaString, strlen(alphaString));
             }
 
             result.append(')');
@@ -1282,7 +1252,7 @@ void CSSPrimitiveValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObje
     case CSS_VARIABLE_NAME:
 #endif
         // FIXME: detect other cases when m_value is StringImpl*
-        info.addMember(m_value.string);
+        info.addInstrumentedMember(m_value.string);
         break;
     case CSS_COUNTER:
         info.addMember(m_value.counter);

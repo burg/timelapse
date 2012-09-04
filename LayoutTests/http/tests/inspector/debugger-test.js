@@ -6,11 +6,11 @@ InspectorTest.startDebuggerTest = function(callback, quiet)
         InspectorTest._quiet = quiet;
     WebInspector.showPanel("scripts");
 
-    if (WebInspector.panels.scripts._debuggerEnabled)
+    if (WebInspector.debuggerModel.debuggerEnabled())
         startTest();
     else {
         InspectorTest.addSniffer(WebInspector.debuggerModel, "_debuggerWasEnabled", startTest);
-        WebInspector.panels.scripts.toggleDebugging(false);
+        WebInspector.debuggerModel.enableDebugger();
     }
 
     function startTest()
@@ -31,11 +31,11 @@ InspectorTest.finishDebuggerTest = function(callback)
 
     function disableDebugger()
     {
-        if (!scriptsPanel._debuggerEnabled)
+        if (!WebInspector.debuggerModel.debuggerEnabled())
             completeTest();
         else {
             InspectorTest.addSniffer(WebInspector.debuggerModel, "_debuggerWasDisabled", debuggerDisabled);
-            scriptsPanel.toggleDebugging(false);
+            WebInspector.debuggerModel.disableDebugger();
         }
     }
 
@@ -158,8 +158,9 @@ InspectorTest._resumedScript = function()
     }
 };
 
-InspectorTest.showScriptSourceOnScriptsPanel = function(panel, scriptName, callback)
+InspectorTest.showScriptSource = function(scriptName, callback)
 {
+    var panel = WebInspector.panel("scripts");
     var uiSourceCodes = panel._workspace.uiSourceCodes();
     for (var i = 0; i < uiSourceCodes.length; ++i) {
         if (uiSourceCodes[i].parsedURL.lastPathComponent === scriptName) {
@@ -172,12 +173,8 @@ InspectorTest.showScriptSourceOnScriptsPanel = function(panel, scriptName, callb
             return;
         }
     }
-    InspectorTest.addSniffer(panel, "_addUISourceCode", InspectorTest.showScriptSource.bind(InspectorTest, scriptName, callback));
-};
 
-InspectorTest.showScriptSource = function(scriptName, callback)
-{
-    InspectorTest.showScriptSourceOnScriptsPanel(WebInspector.panels.scripts, scriptName, callback)
+    InspectorTest.addSniffer(WebInspector.ScriptsPanel.prototype, "_addUISourceCode", InspectorTest.showScriptSource.bind(InspectorTest, scriptName, callback));
 };
 
 InspectorTest.dumpScriptsNavigator = function(navigator)

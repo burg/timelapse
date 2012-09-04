@@ -102,7 +102,8 @@ enum FloatConversionFlags {
     ShouldTruncateTrailingZeros = 1 << 2
 };
 
-template<bool isSpecialCharacter(UChar)> bool isAllSpecialCharacters(const UChar*, size_t);
+template<bool isSpecialCharacter(UChar), typename CharacterType>
+bool isAllSpecialCharacters(const CharacterType*, size_t);
 
 class String {
 public:
@@ -158,8 +159,8 @@ public:
 
     static String adopt(StringBuffer<LChar>& buffer) { return StringImpl::adopt(buffer); }
     static String adopt(StringBuffer<UChar>& buffer) { return StringImpl::adopt(buffer); }
-    template<size_t inlineCapacity>
-    static String adopt(Vector<UChar, inlineCapacity>& vector) { return StringImpl::adopt(vector); }
+    template<typename CharacterType, size_t inlineCapacity>
+    static String adopt(Vector<CharacterType, inlineCapacity>& vector) { return StringImpl::adopt(vector); }
 
     bool isNull() const { return !m_impl; }
     bool isEmpty() const { return !m_impl || !m_impl->length(); }
@@ -404,6 +405,8 @@ public:
     operator BlackBerry::WebKit::WebString() const;
 #endif
 
+    WTF_EXPORT_STRING_API static String make8BitFrom16BitSource(const UChar*, size_t);
+
     // String::fromUTF8 will return a null string if
     // the input data contains invalid UTF-8 sequences.
     WTF_EXPORT_STRING_API static String fromUTF8(const LChar*, size_t);
@@ -557,7 +560,8 @@ inline void append(Vector<UChar>& vector, const String& string)
     vector.append(string.characters(), string.length());
 }
 
-inline void appendNumber(Vector<UChar>& vector, unsigned char number)
+template<typename CharacterType>
+inline void appendNumber(Vector<CharacterType>& vector, unsigned char number)
 {
     int numberLength = number > 99 ? 3 : (number > 9 ? 2 : 1);
     size_t vectorSize = vector.size();
@@ -577,7 +581,8 @@ inline void appendNumber(Vector<UChar>& vector, unsigned char number)
     }
 }
 
-template<bool isSpecialCharacter(UChar)> inline bool isAllSpecialCharacters(const UChar* characters, size_t length)
+template<bool isSpecialCharacter(UChar), typename CharacterType>
+inline bool isAllSpecialCharacters(const CharacterType* characters, size_t length)
 {
     for (size_t i = 0; i < length; ++i) {
         if (!isSpecialCharacter(characters[i]))
@@ -586,9 +591,17 @@ template<bool isSpecialCharacter(UChar)> inline bool isAllSpecialCharacters(cons
     return true;
 }
 
-template<bool isSpecialCharacter(UChar)> inline bool String::isAllSpecialCharacters() const
+template<bool isSpecialCharacter(UChar)>
+inline bool String::isAllSpecialCharacters() const
 {
-    return WTF::isAllSpecialCharacters<isSpecialCharacter>(characters(), length());
+    size_t len = length();
+
+    if (!len)
+        return true;
+
+    if (is8Bit())
+        return WTF::isAllSpecialCharacters<isSpecialCharacter, LChar>(characters8(), len);
+    return WTF::isAllSpecialCharacters<isSpecialCharacter, UChar>(characters(), len);
 }
 
 // StringHash is the default hash for String

@@ -191,20 +191,11 @@ void RenderRegion::layout()
     // We'll need to expand RenderBoxRegionInfo to also hold left and right overflow values.
 }
 
-void RenderRegion::attachRegion()
+void RenderRegion::installFlowThread()
 {
-    if (documentBeingDestroyed())
-        return;
+    ASSERT(view());
 
-    ASSERT(!m_flowThread);
-    // Initialize the flow thread reference and create the flow thread object if needed.
-    // The flow thread lifetime is influenced by the number of regions attached to it,
-    // and we are attaching the region to the flow thread.
     m_flowThread = view()->flowThreadController()->ensureRenderFlowThreadWithName(style()->regionThread());
-
-    // A region is valid if it is not part of a circular reference, which is checked below
-    // and in RenderNamedFlowThread::addRegionToThread.
-    setIsValid(false);
 
     // By now the flow thread should already be added to the rendering tree,
     // so we go up the rendering parents and check that this region is not part of the same
@@ -216,15 +207,28 @@ void RenderRegion::attachRegion()
             m_parentNamedFlowThread = toRenderNamedFlowThread(parentObject);
             // Do not take into account a region that links a flow with itself. The dependency
             // cannot change, so it is not worth adding it to the list.
-            if (m_flowThread == m_parentNamedFlowThread) {
+            if (m_flowThread == m_parentNamedFlowThread)
                 m_flowThread = 0;
-                // This region is not valid for this flow thread (as being part of a circular dependency).
-                setIsValid(false);
-                return;
-            }
             break;
         }
     }
+}
+
+void RenderRegion::attachRegion()
+{
+    if (documentBeingDestroyed())
+        return;
+    
+    // A region starts off invalid.
+    setIsValid(false);
+
+    // Initialize the flow thread reference and create the flow thread object if needed.
+    // The flow thread lifetime is influenced by the number of regions attached to it,
+    // and we are attaching the region to the flow thread.
+    installFlowThread();
+    
+    if (!m_flowThread)
+        return;
 
     m_flowThread->addRegionToThread(this);
 
@@ -357,6 +361,20 @@ void RenderRegion::restoreRegionObjectsOriginalStyle()
     m_renderObjectRegionStyle.swap(temp);
 }
 
+void RenderRegion::insertedIntoTree()
+{
+    RenderReplaced::insertedIntoTree();
+
+    attachRegion();
+}
+
+void RenderRegion::willBeRemovedFromTree()
+{
+    RenderReplaced::willBeRemovedFromTree();
+
+    detachRegion();
+}
+
 PassRefPtr<RenderStyle> RenderRegion::computeStyleInRegion(const RenderObject* object)
 {
     ASSERT(object);
@@ -399,6 +417,10 @@ void RenderRegion::computeChildrenStyleInRegion(const RenderObject* object)
  
 void RenderRegion::setObjectStyleInRegion(RenderObject* object, PassRefPtr<RenderStyle> styleInRegion, bool objectRegionStyleCached)
 {
+    ASSERT(object->inRenderFlowThread());
+    if (!object->inRenderFlowThread())
+        return;
+
     RefPtr<RenderStyle> objectOriginalStyle = object->style();
     object->setStyleInternal(styleInRegion);
 

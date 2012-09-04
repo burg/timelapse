@@ -32,6 +32,7 @@ if (!window.InspectorFrontendHost) {
 
 /**
  * @constructor
+ * @implements {InspectorFrontendHostAPI}
  */
 WebInspector.InspectorFrontendHostStub = function()
 {
@@ -102,7 +103,7 @@ WebInspector.InspectorFrontendHostStub.prototype = {
 
     hiddenPanels: function()
     {
-        return "";
+        return WebInspector.queryParamsObject["hiddenPanels"] || "";
     },
 
     inspectedURLChanged: function(url)
@@ -179,7 +180,7 @@ WebInspector.InspectorFrontendHostStub.prototype = {
 
     loadResourceSynchronously: function(url)
     {
-        return "";
+        return loadXHR(url);
     },
 
     setZoomFactor: function(zoom)
@@ -192,7 +193,7 @@ WebInspector.InspectorFrontendHostStub.prototype = {
     }
 }
 
-var InspectorFrontendHost = new WebInspector.InspectorFrontendHostStub();
+InspectorFrontendHost = new WebInspector.InspectorFrontendHostStub();
 Preferences.localizeUI = false;
 
 // Default implementation; platforms will override.

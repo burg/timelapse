@@ -175,12 +175,8 @@ void RenderBox::removeFloatingOrPositionedChildFromBlockLists()
         }
     }
 
-    if (isOutOfFlowPositioned()) {
-        for (RenderObject* curr = parent(); curr; curr = curr->parent()) {
-            if (curr->isRenderBlock())
-                toRenderBlock(curr)->removePositionedObject(this);
-        }
-    }
+    if (isOutOfFlowPositioned())
+        RenderBlock::removePositionedObject(this);
 }
 
 void RenderBox::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
@@ -435,6 +431,21 @@ void RenderBox::updateLayerTransform()
     // Transform-origin depends on box size, so we need to update the layer transform after layout.
     if (hasLayer())
         layer()->updateTransform();
+}
+
+LayoutUnit RenderBox::logicalHeightConstrainedByMinMax(LayoutUnit availableHeight)
+{
+    RenderStyle* styleToUse = style();
+    LayoutUnit result = computeLogicalHeightUsing(MainOrPreferredSize, styleToUse->logicalHeight());
+    if (result == -1)
+        result = availableHeight;
+    LayoutUnit minH = computeLogicalHeightUsing(MinSize, styleToUse->logicalMinHeight()); // Leave as -1 if unset.
+    LayoutUnit maxH = styleToUse->logicalMaxHeight().isUndefined() ? result : computeLogicalHeightUsing(MaxSize, styleToUse->logicalMaxHeight());
+    if (maxH == -1)
+        maxH = result;
+    result = min(maxH, result);
+    result = max(minH, result);
+    return result;
 }
 
 IntRect RenderBox::absoluteContentBox() const
@@ -1286,6 +1297,8 @@ void RenderBox::mapLocalToContainer(RenderBoxModelObject* repaintContainer, Tran
         *wasFixed = mode & IsFixed;
     
     LayoutSize containerOffset = offsetFromContainer(o, roundedLayoutPoint(transformState.mappedPoint()));
+    if (mode & SnapOffsetForTransforms)
+        containerOffset = roundedIntSize(containerOffset);
     
     bool preserve3D = mode & UseTransforms && (o->style()->preserves3D() || style()->preserves3D());
     if (mode & UseTransforms && shouldUseTransformFromContainer(o)) {
@@ -1512,7 +1525,7 @@ void RenderBox::computeRectForRepaint(RenderBoxModelObject* repaintContainer, La
             LayoutState* layoutState = v->layoutState();
 
             if (layer() && layer()->transform())
-                rect = layer()->transform()->mapRect(rect);
+                rect = layer()->transform()->mapRect(pixelSnappedIntRect(rect));
 
             if (styleToUse->position() == RelativePosition && layer())
                 rect.move(layer()->relativePositionOffset());
@@ -1551,7 +1564,7 @@ void RenderBox::computeRectForRepaint(RenderBoxModelObject* repaintContainer, La
     // in the parent's coordinate space that encloses us.
     if (layer() && layer()->transform()) {
         fixed = position == FixedPosition;
-        rect = layer()->transform()->mapRect(rect);
+        rect = layer()->transform()->mapRect(pixelSnappedIntRect(rect));
         topLeft = rect.location();
         topLeft.move(locationOffset());
     } else if (position == FixedPosition)
@@ -1981,13 +1994,12 @@ void RenderBox::computeLogicalHeight()
         // grab our cached flexible height.
         // FIXME: Account for block-flow in flexible boxes.
         // https://bugs.webkit.org/show_bug.cgi?id=46418
-        RenderStyle* styleToUse = style();
         if (hasOverrideHeight() && parent()->isFlexibleBoxIncludingDeprecated())
             h = Length(overrideLogicalContentHeight(), Fixed);
         else if (treatAsReplaced)
             h = Length(computeReplacedLogicalHeight(), Fixed);
         else {
-            h = styleToUse->logicalHeight();
+            h = style()->logicalHeight();
             checkMinMaxHeight = true;
         }
 
@@ -2001,17 +2013,9 @@ void RenderBox::computeLogicalHeight()
         }
 
         LayoutUnit heightResult;
-        if (checkMinMaxHeight) {
-            heightResult = computeLogicalHeightUsing(MainOrPreferredSize, styleToUse->logicalHeight());
-            if (heightResult == -1)
-                heightResult = logicalHeight();
-            LayoutUnit minH = computeLogicalHeightUsing(MinSize, styleToUse->logicalMinHeight()); // Leave as -1 if unset.
-            LayoutUnit maxH = styleToUse->logicalMaxHeight().isUndefined() ? heightResult : computeLogicalHeightUsing(MaxSize, styleToUse->logicalMaxHeight());
-            if (maxH == -1)
-                maxH = heightResult;
-            heightResult = min(maxH, heightResult);
-            heightResult = max(minH, heightResult);
-        } else {
+        if (checkMinMaxHeight)
+            heightResult = logicalHeightConstrainedByMinMax(logicalHeight());
+        else {
             // The only times we don't check min/max height are when a fixed length has
             // been given as an override.  Just use that.  The value has already been adjusted
             // for box-sizing.
@@ -2148,10 +2152,7 @@ LayoutUnit RenderBox::computePercentageLogicalHeight(const Length& height)
         cb->computeLogicalHeight();
         result = cb->contentLogicalHeight();
         cb->setLogicalHeight(oldHeight);
-    } else if (cb->isRoot() && isOutOfFlowPositioned())
-        // Match the positioned objects behavior, which is that positioned objects will fill their viewport
-        // always.  Note we could only hit this case by recurring into computePercentageLogicalHeight on a positioned containing block.
-        result = cb->computeContentBoxLogicalHeight(cb->availableLogicalHeight());
+    }
 
     if (result != -1) {
         result = valueForLength(height, result);
@@ -2274,7 +2275,7 @@ LayoutUnit RenderBox::computeReplacedLogicalHeightUsing(SizeType sizeType, Lengt
                 }
             }
             availableHeight = computeContentBoxLogicalHeight(valueForLength(logicalHeight, availableHeight));
-            if (cb->style()->logicalHeight().isFixed())
+            if (cb->isBox() && cb->style()->logicalHeight().isFixed())
                 availableHeight = max<LayoutUnit>(0, availableHeight - toRenderBox(cb)->scrollbarLogicalHeight());
             return availableHeight;
         }

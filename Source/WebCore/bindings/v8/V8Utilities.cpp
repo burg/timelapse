@@ -35,7 +35,6 @@
 #include "Document.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
-#include "GenericBinding.h"
 #include "MessagePort.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptState.h"
@@ -44,10 +43,8 @@
 #include "V8MessagePort.h"
 #include "V8Proxy.h"
 #include "WorkerContext.h"
-#include "WorkerContextExecutionProxy.h"
 #include <v8.h>
 #include <wtf/ArrayBuffer.h>
-#include <wtf/Assertions.h>
 
 namespace WebCore {
 
@@ -107,16 +104,22 @@ bool extractTransferables(v8::Local<v8::Value> value, MessagePortArray& ports, A
         v8::Local<v8::Value> transferrable = transferrables->Get(i);
         // Validation of non-null objects, per HTML5 spec 10.3.3.
         if (isUndefinedOrNull(transferrable)) {
-            V8Proxy::setDOMException(DATA_CLONE_ERR, isolate);
+            setDOMException(INVALID_STATE_ERR, isolate);
             return false;
         }
         // Validation of Objects implementing an interface, per WebIDL spec 4.1.15.
-        if (V8MessagePort::HasInstance(transferrable))
-            ports.append(V8MessagePort::toNative(v8::Handle<v8::Object>::Cast(transferrable)));
-        else if (V8ArrayBuffer::HasInstance(transferrable))
+        if (V8MessagePort::HasInstance(transferrable)) {
+            RefPtr<MessagePort> port = V8MessagePort::toNative(v8::Handle<v8::Object>::Cast(transferrable));
+            // Check for duplicate MessagePorts.
+            if (ports.contains(port)) {
+                setDOMException(INVALID_STATE_ERR, isolate);
+                return false;
+            }
+            ports.append(port.release());
+        } else if (V8ArrayBuffer::HasInstance(transferrable))
             arrayBuffers.append(V8ArrayBuffer::toNative(v8::Handle<v8::Object>::Cast(transferrable)));
         else {
-            V8Proxy::throwTypeError();
+            throwTypeError();
             return false;
         }
     }
@@ -130,7 +133,7 @@ bool getMessagePortArray(v8::Local<v8::Value> value, MessagePortArray& ports, v8
     if (!result)
         return false;
     if (arrayBuffers.size() > 0) {
-        V8Proxy::throwTypeError("MessagePortArray argument must contain only MessagePorts");
+        throwTypeError("MessagePortArray argument must contain only MessagePorts");
         return false;
     }
     return true;
@@ -168,16 +171,6 @@ void transferHiddenDependency(v8::Handle<v8::Object> object,
         createHiddenDependency(object, newValue, cacheIndex);
 }
 
-Frame* callingOrEnteredFrame()
-{
-    return activeFrame(BindingState::instance());
-}
-
-KURL completeURL(const String& relativeURL)
-{
-    return completeURL(BindingState::instance(), relativeURL);
-}
-
 ScriptExecutionContext* getScriptExecutionContext()
 {
 #if ENABLE(WORKERS)
@@ -185,15 +178,12 @@ ScriptExecutionContext* getScriptExecutionContext()
         return controller->workerContext();
 #endif
 
-    if (Frame* frame = currentFrame(BindingState::instance()))
-        return frame->document()->scriptExecutionContext();
-
-    return 0;
+    return currentDocument(BindingState::instance());
 }
 
 void setTypeMismatchException(v8::Isolate* isolate)
 {
-    V8Proxy::setDOMException(TYPE_MISMATCH_ERR, isolate);
+    setDOMException(TYPE_MISMATCH_ERR, isolate);
 }
 
 } // namespace WebCore

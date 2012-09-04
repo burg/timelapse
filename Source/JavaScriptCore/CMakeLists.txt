@@ -39,6 +39,7 @@ SET(JavaScriptCore_SOURCES
     
     assembler/LinkBuffer.cpp
 
+    bytecode/ArrayProfile.cpp
     bytecode/CallLinkInfo.cpp
     bytecode/CallLinkStatus.cpp
     bytecode/CodeBlock.cpp
@@ -129,6 +130,7 @@ SET(JavaScriptCore_SOURCES
     interpreter/CallFrame.cpp
     interpreter/Interpreter.cpp
     interpreter/RegisterFile.cpp
+    interpreter/VMInspector.cpp
 
     jit/ExecutableAllocator.cpp
     jit/HostCallReturnValue.cpp

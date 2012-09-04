@@ -24,12 +24,11 @@
  */
 
 #include "config.h"
-#include "platform/WebLayer.h"
+#include <public/WebLayer.h>
 
-#include "Color.h"
 #include "LayerChromium.h"
 #include "SkMatrix44.h"
-#include "TransformationMatrix.h"
+#include "WebAnimationImpl.h"
 #include "WebLayerImpl.h"
 #include <public/WebFilterOperations.h>
 #include <public/WebFloatPoint.h>
@@ -106,26 +105,6 @@ void WebLayer::invalidateRect(const WebFloatRect& dirtyRect)
 void WebLayer::invalidate()
 {
     m_private->setNeedsDisplay();
-}
-
-WebLayer WebLayer::rootLayer() const
-{
-    return WebLayer(const_cast<LayerChromium*>(m_private->rootLayer()));
-}
-
-WebLayer WebLayer::parent() const
-{
-    return WebLayer(const_cast<LayerChromium*>(m_private->parent()));
-}
-
-size_t WebLayer::numberOfChildren() const
-{
-    return m_private->children().size();
-}
-
-WebLayer WebLayer::childAt(size_t index) const
-{
-    return WebLayer(m_private->children()[index]);
 }
 
 void WebLayer::addChild(const WebLayer& child)
@@ -206,11 +185,6 @@ void WebLayer::setMaskLayer(const WebLayer& maskLayer)
 {
     WebLayer ref = maskLayer;
     m_private->setMaskLayer(ref.unwrap<LayerChromium>());
-}
-
-WebLayer WebLayer::maskLayer() const
-{
-    return WebLayer(m_private->maskLayer());
 }
 
 void WebLayer::setReplicaLayer(const WebLayer& replicaLayer)
@@ -334,9 +308,9 @@ void WebLayer::setAnimationDelegate(WebAnimationDelegate* delegate)
     m_private->setLayerAnimationDelegate(delegate);
 }
 
-bool WebLayer::addAnimation(const WebAnimation& animation)
+bool WebLayer::addAnimation(WebAnimation* animation)
 {
-    return m_private->addAnimation(animation);
+    return m_private->addAnimation(static_cast<WebAnimationImpl*>(animation)->cloneToCCAnimation());
 }
 
 void WebLayer::removeAnimation(int animationId)
@@ -364,16 +338,16 @@ void WebLayer::resumeAnimations(double monotonicTime)
     m_private->resumeAnimations(monotonicTime);
 }
 
+bool WebLayer::hasActiveAnimation()
+{
+    return m_private->hasActiveAnimation();
+}
+
 void WebLayer::transferAnimationsTo(WebLayer* other)
 {
     ASSERT(other);
     if (other)
         other->m_private->setLayerAnimationController(m_private->releaseLayerAnimationController());
-}
-
-void WebLayer::setAlwaysReserveTextures(bool reserve)
-{
-    m_private->setAlwaysReserveTextures(reserve);
 }
 
 void WebLayer::setForceRenderSurface(bool forceRenderSurface)

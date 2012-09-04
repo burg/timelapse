@@ -40,13 +40,13 @@ LIST(APPEND WebCore_SOURCES
     bindings/v8/ScriptInstance.cpp
     bindings/v8/ScriptObject.cpp
     bindings/v8/ScriptScope.cpp
+    bindings/v8/ScriptSourceCode.cpp
     bindings/v8/ScriptState.cpp
     bindings/v8/ScriptValue.cpp
     bindings/v8/SerializedScriptValue.cpp
     bindings/v8/StaticDOMDataStore.cpp
     bindings/v8/V8AbstractEventListener.cpp
     bindings/v8/V8Binding.cpp
-    bindings/v8/V8BindingHelpers.cpp
     bindings/v8/V8Collection.cpp
     bindings/v8/V8DOMConfiguration.cpp,
     bindings/v8/V8DOMMap.cpp
@@ -60,10 +60,12 @@ LIST(APPEND WebCore_SOURCES
     bindings/v8/V8IsolatedContext.cpp
     bindings/v8/V8LazyEventListener.cpp
     bindings/v8/V8NodeFilterCondition.cpp
+    bindings/v8/V8ObjectConstructor.cpp
     bindings/v8/V8PerContextData.cpp
     bindings/v8/V8PerIsolateData.cpp
     bindings/v8/V8Proxy.cpp
     bindings/v8/V8RecursionScope.cpp
+    bindings/v8/V8ThrowException.cpp
     bindings/v8/V8Utilities.cpp
     bindings/v8/V8ValueCache.cpp
     bindings/v8/V8WindowErrorHandler.cpp
@@ -86,7 +88,6 @@ LIST(APPEND WebCore_SOURCES
     bindings/v8/custom/V8ConsoleCustom.cpp
     bindings/v8/custom/V8CoordinatesCustom.cpp
     bindings/v8/custom/V8CustomSQLStatementErrorCallback.cpp
-    bindings/v8/custom/V8CustomVoidCallback.cpp
     bindings/v8/custom/V8CustomXPathNSResolver.cpp
     bindings/v8/custom/V8DOMFormDataCustom.cpp
     bindings/v8/custom/V8DOMStringMapCustom.cpp
@@ -95,8 +96,6 @@ LIST(APPEND WebCore_SOURCES
     bindings/v8/custom/V8DedicatedWorkerContextCustom.cpp
     bindings/v8/custom/V8DeviceMotionEventCustom.cpp
     bindings/v8/custom/V8DeviceOrientationEventCustom.cpp
-    bindings/v8/custom/V8DirectoryEntryCustom.cpp
-    bindings/v8/custom/V8DirectoryEntrySyncCustom.cpp
     bindings/v8/custom/V8DocumentCustom.cpp
     bindings/v8/custom/V8DocumentLocationCustom.cpp
     bindings/v8/custom/V8EntrySyncCustom.cpp
@@ -147,6 +146,7 @@ LIST(APPEND WebCore_SOURCES
     bindings/v8/custom/V8SQLTransactionCustom.cpp
     bindings/v8/custom/V8SQLTransactionSyncCustom.cpp
     bindings/v8/custom/V8StorageCustom.cpp
+    bindings/v8/custom/V8StringResource.cpp
     bindings/v8/custom/V8StyleSheetCustom.cpp
     bindings/v8/custom/V8StyleSheetListCustom.cpp
     bindings/v8/custom/V8WebGLRenderingContextCustom.cpp
@@ -206,6 +206,15 @@ IF (ENABLE_SVG)
         bindings/v8/custom/V8SVGElementCustom.cpp
         bindings/v8/custom/V8SVGLengthCustom.cpp
         bindings/v8/custom/V8SVGPathSegCustom.cpp
+    )
+ENDIF ()
+
+IF (ENABLE_UNDO_MANAGER)
+    LIST(APPEND WebCore_SOURCES
+        bindings/v8/DOMTransaction.cpp
+
+        bindings/v8/custom/V8DOMTransactionCustom.cpp
+        bindings/v8/custom/V8UndoManagerCustom.cpp
     )
 ENDIF ()
 

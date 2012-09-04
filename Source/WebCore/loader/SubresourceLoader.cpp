@@ -123,6 +123,11 @@ PassRefPtr<SubresourceLoader> SubresourceLoader::create(Frame* frame, CachedReso
     return subloader.release();
 }
 
+CachedResource* SubresourceLoader::cachedResource()
+{
+    return m_resource;
+}
+
 void SubresourceLoader::cancelIfNotFinishing()
 {
     if (m_state != Initialized)
@@ -148,6 +153,11 @@ bool SubresourceLoader::init(const ResourceRequest& request)
     ASSERT(!reachedTerminalState());
     m_state = Initialized;
     m_documentLoader->addSubresourceLoader(this);
+    return true;
+}
+
+bool SubresourceLoader::isSubresourceLoader()
+{
     return true;
 }
 

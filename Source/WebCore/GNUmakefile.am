@@ -1,8 +1,5 @@
 include $(srcdir)/Source/WebCore/GNUmakefile.list.am
 
-SVG_FEATURES :=
-HTML_FEATURES :=
-
 WEBCORE_CSS_PROPERTY_NAMES := $(WebCore)/css/CSSPropertyNames.in
 WEBCORE_CSS_VALUE_KEYWORDS := $(WebCore)/css/CSSValueKeywords.in
 
@@ -19,6 +16,7 @@ webcore_cppflags += \
 	-I$(srcdir)/Source/WebCore/Modules/mediastream \
 	-I$(srcdir)/Source/WebCore/Modules/notifications \
 	-I$(srcdir)/Source/WebCore/Modules/protocolhandler \
+	-I$(srcdir)/Source/WebCore/Modules/quota \
 	-I$(srcdir)/Source/WebCore/Modules/webaudio \
 	-I$(srcdir)/Source/WebCore/Modules/webdatabase \
 	-I$(srcdir)/Source/WebCore/Modules/websockets \
@@ -226,7 +224,6 @@ endif # END ENABLE_SQL_DATABASE
 # ----
 if ENABLE_DATALIST_ELEMENT
 FEATURE_DEFINES += ENABLE_DATALIST_ELEMENT=1
-HTML_FEATURES += ENABLE_DATALIST_ELEMENT=1
 webcore_cppflags += -DENABLE_DATALIST_ELEMENT=1
 endif # END ENABLE_DATALIST_ELEMENT
 
@@ -354,7 +351,6 @@ endif # END ENABLE_ORIENTATION_EVENTS
 # ----
 if ENABLE_VIDEO
 FEATURE_DEFINES += ENABLE_VIDEO=1
-HTML_FEATURES += ENABLE_VIDEO=1
 webcore_cppflags += -DENABLE_VIDEO=1
 
 if USE_GSTREAMER
@@ -464,10 +460,6 @@ endif
 if ENABLE_FILTERS
 FEATURE_DEFINES += ENABLE_FILTERS=1
 webcore_cppflags += -DENABLE_FILTERS=1
-if ENABLE_SVG
-SVG_FEATURES += ENABLE_FILTERS=1
-endif
-
 endif # END ENABLE_FILTERS
 
 # ----
@@ -503,10 +495,6 @@ endif # END ENABLE_CSS_FILTERS
 if ENABLE_CSS_COMPOSITING
 FEATURE_DEFINES += ENABLE_CSS_COMPOSITING=1
 webcore_cppflags += -DENABLE_CSS_COMPOSITING=1
-if ENABLE_SVG
-SVG_FEATURES += ENABLE_CSS_COMPOSITING=1
-endif
-
 endif # END ENABLE_CSS_COMPOSITING
 
 # ----
@@ -563,7 +551,6 @@ WEBCORE_CSS_VALUE_KEYWORDS += $(WebCore)/css/SVGCSSValueKeywords.in
 # SVG Features
 if ENABLE_SVG_FONTS
 FEATURE_DEFINES += ENABLE_SVG_FONTS=1
-SVG_FEATURES += ENABLE_SVG_FONTS=1
 webcore_cppflags += -DENABLE_SVG_FONTS=1
 endif
 
@@ -572,14 +559,8 @@ endif # END ENABLE_SVG
 # SVG tag and attribute names (need to pass an extra flag if svg experimental features are enabled)
 DerivedSources/WebCore/SVGNames.cpp: DerivedSources/WebCore/SVGElementFactory.cpp
 DerivedSources/WebCore/JSSVGElementWrapperFactory.cpp: DerivedSources/WebCore/SVGElementFactory.cpp
-
-if SVG_FLAGS
 DerivedSources/WebCore/SVGElementFactory.cpp: $(WebCore)/dom/make_names.pl $(WebCore)/svg/svgtags.in $(WebCore)/svg/svgattrs.in
-	$(AM_V_GEN)$(PERL) -I$(WebCore)/bindings/scripts $< --tags $(WebCore)/svg/svgtags.in --attrs $(WebCore)/svg/svgattrs.in --extraDefines "$(SVG_FEATURES)" --factory --wrapperFactory --outputDir "$(GENSOURCES_WEBCORE)"
-else
-DerivedSources/WebCore/SVGElementFactory.cpp: $(WebCore)/dom/make_names.pl $(WebCore)/svg/svgtags.in $(WebCore)/svg/svgattrs.in
-	$(AM_V_GEN)$(PERL) -I$(WebCore)/bindings/scripts $< --tags $(WebCore)/svg/svgtags.in --attrs $(WebCore)/svg/svgattrs.in --factory --wrapperFactory --outputDir "$(GENSOURCES_WEBCORE)"
-endif # SVG_FLAGS
+	$(AM_V_GEN)$(PERL) -I$(WebCore)/bindings/scripts $< --tags $(WebCore)/svg/svgtags.in --attrs $(WebCore)/svg/svgattrs.in --extraDefines "$(FEATURE_DEFINES)" --factory --wrapperFactory --outputDir "$(GENSOURCES_WEBCORE)"
 
 # end SVG Features
 
@@ -741,6 +722,13 @@ webcore_cppflags += -DENABLE_CSS3_FLEXBOX=1
 endif  # END ENABLE_CSS3_FLEXBOX
 
 # ---
+# CSS3 Text Decoration support
+if ENABLE_CSS3_TEXT_DECORATION
+FEATURE_DEFINES += ENABLE_CSS3_TEXT_DECORATION=1
+webcore_cppflags += -DENABLE_CSS3_TEXT_DECORATION=1
+endif # END ENABLE_CSS3_TEXT_DECORATION
+
+# ---
 # Link prefetch support
 # ---
 if ENABLE_LINK_PREFETCH
@@ -849,13 +837,8 @@ DerivedSources/WebCore/JSHTMLElementWrapperFactory.cpp: DerivedSources/WebCore/H
 DerivedSources/WebCore/HTMLElementFactory.cpp: DerivedSources/WebCore/HTMLElementFactory.h
 DerivedSources/WebCore/HTMLElementFactory.h: DerivedSources/WebCore/HTMLNames.cpp
 DerivedSources/WebCore/HTMLNames.cpp: DerivedSources/WebCore/HTMLNames.h
-if HTML_FLAGS
 DerivedSources/WebCore/HTMLNames.h: $(WebCore)/dom/make_names.pl $(WebCore)/html/HTMLTagNames.in $(WebCore)/html/HTMLAttributeNames.in
-	$(AM_V_GEN)$(PERL) -I$(WebCore)/bindings/scripts $< --tags $(WebCore)/html/HTMLTagNames.in --attrs $(WebCore)/html/HTMLAttributeNames.in --extraDefines "$(HTML_FEATURES)" --factory --wrapperFactory --outputDir "$(GENSOURCES_WEBCORE)"
-else
-DerivedSources/WebCore/HTMLNames.h: $(WebCore)/dom/make_names.pl $(WebCore)/html/HTMLTagNames.in $(WebCore)/html/HTMLAttributeNames.in
-	$(AM_V_GEN)$(PERL) -I$(WebCore)/bindings/scripts $< --tags $(WebCore)/html/HTMLTagNames.in --attrs $(WebCore)/html/HTMLAttributeNames.in --factory --wrapperFactory --outputDir "$(GENSOURCES_WEBCORE)"
-endif # HTML_FLAGS
+	$(AM_V_GEN)$(PERL) -I$(WebCore)/bindings/scripts $< --tags $(WebCore)/html/HTMLTagNames.in --attrs $(WebCore)/html/HTMLAttributeNames.in --extraDefines "$(FEATURE_DEFINES)" --factory --wrapperFactory --outputDir "$(GENSOURCES_WEBCORE)"
 
 
 DerivedSources/WebCore/XMLNSNames.cpp DerivedSources/WebCore/XMLNSNames.h: $(WebCore)/dom/make_names.pl $(WebCore)/xml/xmlnsattrs.in
@@ -913,6 +896,7 @@ IDL_PATH := \
     $(WebCore)/Modules/mediasource \
     $(WebCore)/Modules/mediastream \
     $(WebCore)/Modules/notifications \
+    $(WebCore)/Modules/quota \
     $(WebCore)/Modules/webaudio \
     $(WebCore)/Modules/webdatabase \
     $(WebCore)/Modules/websockets \
@@ -965,6 +949,7 @@ DerivedSources/WebCore/JS%.h: %.idl $(SCRIPTS_FOR_GENERATE_BINDINGS) $(WebCore)/
 $(webkitgtk_sources) $(webkit2_sources) $(webkit2_plugin_process_sources) $(webcore_sources) $(webcoregtk_sources) : | $(supplemental_dependency_file) $(webcore_built_sources)
 
 noinst_LTLIBRARIES += \
+	libWebCorePlatform.la \
 	libWebCoreModules.la \
 	libWebCore.la
 
@@ -975,6 +960,32 @@ $(webcore_lib_for_dep): $(srcdir)/Source/WebCore/GNUmakefile.am $(srcdir)/Source
 
 webcoremodules_lib_for_dep = libWebcoreModules.la
 $(webcoremodules_lib_for_dep): $(srcdir)/Source/WebCore/GNUmakefile.am $(srcdir)/Source/WebCore/GNUmakefile.list.am
+
+webcoreplatform_lib_for_dep = libWebcorePlatform.la
+$(webcoreplatform_lib_for_dep): $(srcdir)/Source/WebCore/GNUmakefile.am $(srcdir)/Source/WebCore/GNUmakefile.list.am
+
+common_webcore_shards_cppflags += \
+	-DBUILDING_WEBKIT \
+	$(global_cppflags) \
+	$(webcore_cppflags) \
+	$(webcoregtk_cppflags) \
+	$(javascriptcore_cppflags) \
+	-fno-strict-aliasing \
+	$(CAIRO_CFLAGS) \
+	$(CLUTTER_CFLAGS) \
+	$(COVERAGE_CFLAGS) \
+	$(ENCHANT_CFLAGS) \
+	$(GAMEPAD_CFLAGS) \
+	$(GEOCLUE_CFLAGS) \
+	$(GLIB_CFLAGS) \
+	$(GSTREAMER_CFLAGS) \
+	$(LIBSOUP_CFLAGS) \
+	$(LIBXML_CFLAGS) \
+	$(LIBXSLT_CFLAGS) \
+	$(SQLITE3_CFLAGS) \
+	$(UNICODE_CFLAGS) \
+	$(XRENDER_CFLAGS) \
+	$(XT_CFLAGS)
 
 nodist_EXTRA_libWebCore_la_SOURCES = \
 	$(webcore_built_nosources)
@@ -994,28 +1005,7 @@ libWebCore_la_CFLAGS = \
 	$(global_cflags)
 
 libWebCore_la_CPPFLAGS = \
-	-DBUILDING_WEBKIT \
-	$(global_cppflags) \
-	$(webcore_cppflags) \
-	$(webcoregtk_cppflags) \
-	$(javascriptcore_cppflags) \
-	-fno-strict-aliasing \
-	$(CAIRO_CFLAGS) \
-	$(CLUTTER_CFLAGS) \
-	$(COVERAGE_CFLAGS) \
-	$(ENCHANT_CFLAGS) \
-	$(GAMEPAD_CFLAGS) \
-	$(GEOCLUE_CFLAGS) \
-	$(GLIB_CFLAGS) \
-	$(GSTREAMER_CFLAGS) \
-	$(LIBSOUP_CFLAGS) \
-	$(LIBXML_CFLAGS) \
-	$(LIBXSLT_CFLAGS) \
-	$(PANGO_CFLAGS) \
-	$(SQLITE3_CFLAGS) \
-	$(UNICODE_CFLAGS) \
-	$(XRENDER_CFLAGS) \
-	$(XT_CFLAGS)
+	$(common_webcore_shards_cppflags)
 
 if TARGET_WIN32
 # PluginPackageWin.cpp needs the symbols from version dll
@@ -1030,6 +1020,21 @@ libWebCoreModules_la_CXXFLAGS = $(libWebCore_la_CXXFLAGS)
 libWebCoreModules_la_CFLAGS = $(libWebCore_la_CFLAGS)
 
 libWebCoreModules_la_CPPFLAGS = $(libWebCore_la_CPPFLAGS)
+
+libWebCorePlatform_la_SOURCES = \
+	$(webcore_platform_sources)
+
+libWebCorePlatform_la_CXXFLAGS = \
+	$(SYMBOL_VISIBILITY_INLINES) \
+	$(global_cxxflags)
+
+libWebCorePlatform_la_CFLAGS = \
+	$(SYMBOL_VISIBILITY) \
+	$(global_cflags)
+
+libWebCorePlatform_la_CPPFLAGS = \
+	$(common_webcore_shards_cppflags) \
+	$(PANGO_CFLAGS)
 
 # We have a different library with only the files that require GTK+. It allows us
 # to build a common WebCore lib and two different gtk WebCore libs depending on
@@ -1051,29 +1056,12 @@ libWebCoreGtk_la_CFLAGS = \
 	$(global_cflags)
 
 libWebCoreGtk_la_CPPFLAGS = \
-	-DBUILDING_WEBKIT \
-	$(global_cppflags) \
-	$(webcore_cppflags) \
-	$(webcoregtk_cppflags) \
-	$(javascriptcore_cppflags) \
-	-fno-strict-aliasing \
+	$(common_webcore_shards_cppflags) \
 	$(HILDON_CPPFLAGS) \
-	$(COVERAGE_CFLAGS) \
-	$(ENCHANT_CFLAGS) \
-	$(FARSTREAM_CFLAGS) \
-	$(GAIL_CFLAGS) \
-	$(GEOCLUE_CFLAGS) \
-	$(GLIB_CFLAGS) \
-	$(GSTREAMER_CFLAGS) \
-	$(GTK_CFLAGS) \
 	$(HILDON_CFLAGS) \
-	$(LIBSOUP_CFLAGS) \
-	$(LIBXML_CFLAGS) \
-	$(LIBXSLT_CFLAGS) \
-	$(SQLITE3_CFLAGS) \
-	$(UNICODE_CFLAGS) \
-	$(XRENDER_CFLAGS) \
-	$(XT_CFLAGS)
+	$(GAIL_CFLAGS) \
+	$(FARSTREAM_CFLAGS)
+
 
 EXTRA_DIST += \
 	$(shell ls $(srcdir)/Source/WebCore/Modules/filesystem/*.idl) \

@@ -129,6 +129,7 @@
 #include "WebDevToolsAgentPrivate.h"
 #include "WebFrameImpl.h"
 #include "WebHelperPluginImpl.h"
+#include "WebHitTestResult.h"
 #include "WebInputElement.h"
 #include "WebInputEvent.h"
 #include "WebInputEventConversion.h"
@@ -266,9 +267,6 @@ static int webInputEventKeyStateToPlatformEventKeyState(int webInputEventKeyStat
 
 WebView* WebView::create(WebViewClient* client)
 {
-    // Keep runtime flag for device motion turned off until it's implemented.
-    WebRuntimeFeatures::enableDeviceMotion(false);
-
     // Pass the WebViewImpl's self-reference to the caller.
     return adoptRef(new WebViewImpl(client)).leakRef();
 }
@@ -2216,6 +2214,58 @@ bool WebViewImpl::setEditableSelectionOffsets(int start, int end)
     return editor->setSelectionOffsets(start, end);
 }
 
+bool WebViewImpl::setCompositionFromExistingText(int compositionStart, int compositionEnd, const WebVector<WebCompositionUnderline>& underlines)
+{
+    const Frame* focused = focusedWebCoreFrame();
+    if (!focused)
+        return false;
+
+    Editor* editor = focused->editor();
+    if (!editor || !editor->canEdit())
+        return false;
+
+    editor->cancelComposition();
+
+    if (compositionStart == compositionEnd)
+        return true;
+
+    size_t location;
+    size_t length;
+    caretOrSelectionRange(&location, &length);
+    editor->setIgnoreCompositionSelectionChange(true);
+    editor->setSelectionOffsets(compositionStart, compositionEnd);
+    String text = editor->selectedText();
+    focused->document()->execCommand("delete", true);
+    editor->setComposition(text, CompositionUnderlineVectorBuilder(underlines), 0, 0);
+    editor->setSelectionOffsets(location, location + length);
+    editor->setIgnoreCompositionSelectionChange(false);
+
+    return true;
+}
+
+void WebViewImpl::extendSelectionAndDelete(int before, int after)
+{
+    const Frame* focused = focusedWebCoreFrame();
+    if (!focused)
+        return;
+
+    Editor* editor = focused->editor();
+    if (!editor || !editor->canEdit())
+        return;
+
+    FrameSelection* selection = focused->selection();
+    if (!selection)
+        return;
+
+    size_t location;
+    size_t length;
+    RefPtr<Range> range = selection->selection().firstRange();
+    if (range && TextIterator::getLocationAndLengthFromRange(selection->rootEditableElement(), range.get(), location, length)) {
+        editor->setSelectionOffsets(max(static_cast<int>(location) - before, 0), location + length + after);
+        focused->document()->execCommand("delete", true);
+    }
+}
+
 bool WebViewImpl::isSelectionEditable() const
 {
     const Frame* frame = focusedWebCoreFrame();
@@ -3855,7 +3905,7 @@ void WebViewImpl::selectAutofillSuggestionAtIndex(unsigned listIndex)
         m_autofillPopupClient->valueChanged(listIndex);
 }
 
-bool WebViewImpl::detectContentIntentOnTouch(const WebPoint& position, WebInputEvent::Type touchType)
+bool WebViewImpl::detectContentOnTouch(const WebPoint& position, WebInputEvent::Type touchType)
 {
     ASSERT(touchType == WebInputEvent::GestureTap || touchType == WebInputEvent::GestureLongPress);
     HitTestResult touchHit = hitTestResultForWindowPos(position);
@@ -3869,7 +3919,7 @@ bool WebViewImpl::detectContentIntentOnTouch(const WebPoint& position, WebInputE
 
     // FIXME: Should we not detect content intents in nodes that have event listeners?
 
-    WebContentDetectionResult content = m_client->detectContentIntentAround(touchHit);
+    WebContentDetectionResult content = m_client->detectContentAround(touchHit);
     if (!content.isValid())
         return false;
 

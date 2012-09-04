@@ -305,12 +305,8 @@ canvas/philip/tests/2d.composite.operation.clear.html
 canvas/philip/tests/2d.composite.operation.darker.html
 canvas/philip/tests/2d.drawImage.broken.html
 canvas/philip/tests/2d.drawImage.image.incomplete.omitted.html
-canvas/philip/tests/2d.fillStyle.parse.invalid.rgba-6.html
 canvas/philip/tests/2d.fillStyle.parse.rgb-eof.html
 canvas/philip/tests/2d.fillStyle.parse.rgba-eof.html
-canvas/philip/tests/2d.imageData.create1.type.html
-canvas/philip/tests/2d.imageData.create2.type.html
-canvas/philip/tests/2d.imageData.get.type.html
 canvas/philip/tests/2d.missingargs.html
 canvas/philip/tests/2d.pattern.image.broken.html
 canvas/philip/tests/2d.pattern.image.incomplete.empty.html
@@ -320,17 +316,6 @@ canvas/philip/tests/2d.text.draw.baseline.hanging.html
 canvas/philip/tests/2d.text.draw.baseline.ideographic.html
 canvas/philip/tests/2d.text.draw.baseline.middle.html
 canvas/philip/tests/2d.text.draw.baseline.top.html
-canvas/philip/tests/2d.text.draw.space.collapse.end.html
-canvas/philip/tests/2d.text.draw.space.collapse.nonspace.html
-canvas/philip/tests/2d.text.draw.space.collapse.other.html
-canvas/philip/tests/2d.text.draw.space.collapse.space.html
-canvas/philip/tests/2d.text.draw.space.collapse.start.html
-canvas/philip/tests/2d.text.font.parse.basic.html
-canvas/philip/tests/2d.text.font.parse.complex.html
-canvas/philip/tests/2d.text.font.parse.size.percentage.html
-canvas/philip/tests/2d.text.font.parse.size.percentage.default.html
-canvas/philip/tests/2d.text.font.parse.system.html
-canvas/philip/tests/2d.text.measure.width.space.html
 canvas/philip/tests/type.prototype.html
 
 # Test takes too long in a debug build
@@ -345,19 +330,6 @@ sputnik/Unicode/Unicode_510/S7.6_A3.1.html
 sputnik/Unicode/Unicode_510/S7.6_A3.2.html
 sputnik/Unicode/Unicode_510/S7.6_A5.3_T1.html
 sputnik/Unicode/Unicode_510/S7.6_A5.3_T2.html
-
-# Tests failing with other ports too.
-# https://bugs.webkit.org/show_bug.cgi?id=40272
-canvas/philip/tests/2d.imageData.object.round.html
-canvas/philip/tests/2d.imageData.object.wrap.html
-
-# These tests are failing for us, but not for Mac. This likely
-# indicates platform specific problems (via GTK+).
-
-# When drawing canvas into itself, WebCore draws canvas's buffer into the same buffer. This
-# results in recursive drawing into cairo surface. We should either use groups when drawing
-# with cairo or copy the buffer every time the HTMLCanvasElement gets repainted.
-canvas/philip/tests/2d.drawImage.self.2.html
 
 # A testcase for this failure is already in cairo tree, but has not yet been fixed.
 # Cairo commit http://cgit.freedesktop.org/cairo/commit/?id=4d4056872db94573183473610ad1d81d5439fdc6

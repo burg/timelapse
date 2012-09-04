@@ -167,8 +167,6 @@ canvas/philip/tests/2d.composite.operation.clear.html
 # drawing model being different than the spec's current model. There is a current
 # effort out to change the spec to the webkit canvas model.
 canvas/philip/tests/2d.composite.operation.darker.html
-canvas/philip/tests/2d.imageData.object.round.html
-canvas/philip/tests/2d.imageData.object.wrap.html
 
 # This canvas test is skipped because it is out of date with respect to
 # the current spec, and the fix for https://bugs.webkit.org/show_bug.cgi?id=65709
@@ -831,6 +829,7 @@ fast/sub-pixel/position-right-aligns-with-container.html
 fast/sub-pixel/selection/selection-gaps-at-fractional-offsets.html
 fast/sub-pixel/size-of-box-with-zoom.html
 fast/sub-pixel/table-rows-no-gaps.html
+fast/sub-pixel/sub-pixel-accumulates-to-layers.html
 
 # No CORS support for media elements is implemented yet.
 http/tests/security/video-cross-origin-readback.html
@@ -961,3 +960,7 @@ platform/mac/plugins/root-object-premature-delete-crash.html
 # This test depends on subpixel layout.
 # https://bugs.webkit.org/show_bug.cgi?id=92352
 css3/flexbox/flex-rounding.html
+
+# ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS) is disabled
+fast/forms/time-multiple-fields
+

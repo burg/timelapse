@@ -27,7 +27,7 @@
 
 #if USE(ACCELERATED_COMPOSITING)
 
-#include "cc/CCRenderSurfaceFilters.h"
+#include "CCRenderSurfaceFilters.h"
 
 #include "FloatSize.h"
 #include "SkBlurImageFilter.h"
@@ -35,6 +35,7 @@
 #include "SkColorMatrixFilter.h"
 #include "SkGpuDevice.h"
 #include "SkGrTexturePixelRef.h"
+#include "SkMagnifierImageFilter.h"
 #include <public/WebFilterOperation.h>
 #include <public/WebFilterOperations.h>
 #include <public/WebGraphicsContext3D.h>
@@ -303,6 +304,7 @@ public:
 
     void swap()
     {
+        m_canvas->flush();
         m_canvas.reset(0);
         m_device.reset(0);
 
@@ -366,6 +368,7 @@ WebKit::WebFilterOperations CCRenderSurfaceFilters::optimize(const WebKit::WebFi
         switch (op.type()) {
         case WebKit::WebFilterOperation::FilterTypeBlur:
         case WebKit::WebFilterOperation::FilterTypeDropShadow:
+        case WebKit::WebFilterOperation::FilterTypeZoom:
             newList.append(op);
             break;
         case WebKit::WebFilterOperation::FilterTypeBrightness:
@@ -423,6 +426,20 @@ SkBitmap CCRenderSurfaceFilters::apply(const WebKit::WebFilterOperations& filter
             canvas->saveLayer(0, &paint);
             canvas->drawBitmap(state.source(), op.dropShadowOffset().x, -op.dropShadowOffset().y);
             canvas->restore();
+            canvas->drawBitmap(state.source(), 0, 0);
+            break;
+        }
+        case WebKit::WebFilterOperation::FilterTypeZoom: {
+            SkPaint paint;
+            SkAutoTUnref<SkImageFilter> zoomFilter(
+                new SkMagnifierImageFilter(
+                    SkRect::MakeXYWH(op.zoomRect().x,
+                                     op.zoomRect().y,
+                                     op.zoomRect().width,
+                                     op.zoomRect().height),
+                    op.amount()));
+            paint.setImageFilter(zoomFilter.get());
+            canvas->saveLayer(0, &paint);
             canvas->drawBitmap(state.source(), 0, 0);
             break;
         }

@@ -1476,6 +1476,7 @@ http/tests/security/xss-DENIED-window-open-javascript-url.html
 # Skip frame flattening tests until it can be tested by this DRT
 # https://bugs.webkit.org/show_bug.cgi?id=32717
 fast/frames/flattening/
+fast/text-autosizing/narrow-iframe-flattened.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=34933
 media/video-display-aspect-ratio.html
@@ -2134,6 +2135,7 @@ fast/sub-pixel/position-right-aligns-with-container.html
 fast/sub-pixel/selection/selection-gaps-at-fractional-offsets.html
 fast/sub-pixel/size-of-box-with-zoom.html
 fast/sub-pixel/table-rows-no-gaps.html
+fast/sub-pixel/sub-pixel-accumulates-to-layers.html
 
 #Battery Status API is not implemented.
 batterystatus
@@ -2160,3 +2162,6 @@ fast/text/shaping
 
 # ENABLE(WIDGET_REGION) is disabled
 fast/css/widget-region-parser.html
+
+# ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS) is disabled
+fast/forms/time-multiple-fields

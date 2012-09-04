@@ -131,7 +131,8 @@ WEBKIT_API void
 webkit_web_context_register_uri_scheme              (WebKitWebContext              *context,
                                                      const gchar                   *scheme,
                                                      WebKitURISchemeRequestCallback callback,
-                                                     gpointer                       user_data);
+                                                     gpointer                       user_data,
+                                                     GDestroyNotify                 user_data_destroy_func);
 
 WEBKIT_API gboolean
 webkit_web_context_get_spell_checking_enabled       (WebKitWebContext              *context);
@@ -139,12 +140,16 @@ webkit_web_context_get_spell_checking_enabled       (WebKitWebContext           
 WEBKIT_API void
 webkit_web_context_set_spell_checking_enabled       (WebKitWebContext              *context,
                                                      gboolean                       enabled);
-WEBKIT_API const gchar *
+WEBKIT_API const gchar * const *
 webkit_web_context_get_spell_checking_languages     (WebKitWebContext              *context);
 
 WEBKIT_API void
 webkit_web_context_set_spell_checking_languages     (WebKitWebContext              *context,
-                                                     const gchar                   *languages);
+                                                     const gchar * const           *languages);
+
+WEBKIT_API void
+webkit_web_context_set_preferred_languages          (WebKitWebContext              *context,
+                                                     const gchar * const           *languages);
 
 G_END_DECLS
 

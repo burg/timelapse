@@ -772,11 +772,8 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/gtk/WebPopupMenuProxyGtk.h \
 	Source/WebKit2/UIProcess/gtk/WebPreferencesGtk.cpp \
 	Source/WebKit2/UIProcess/Launcher/gtk/ProcessLauncherGtk.cpp \
-	Source/WebKit2/UIProcess/Launcher/gtk/ThreadLauncherGtk.cpp \
 	Source/WebKit2/UIProcess/Launcher/ProcessLauncher.cpp \
 	Source/WebKit2/UIProcess/Launcher/ProcessLauncher.h \
-	Source/WebKit2/UIProcess/Launcher/ThreadLauncher.cpp \
-	Source/WebKit2/UIProcess/Launcher/ThreadLauncher.h \
 	Source/WebKit2/UIProcess/Notifications/NotificationPermissionRequest.cpp \
 	Source/WebKit2/UIProcess/Notifications/NotificationPermissionRequest.h \
 	Source/WebKit2/UIProcess/Notifications/NotificationPermissionRequestManagerProxy.cpp \
@@ -964,6 +961,8 @@ webkit2_sources += \
 	Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundleInitialize.h \
 	Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundleInspector.cpp \
 	Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundleInspector.h \
+	Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundleIntent.cpp \
+	Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundleIntent.h \
 	Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundleIntentRequest.cpp \
 	Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundleIntentRequest.h \
 	Source/WebKit2/WebProcess/InjectedBundle/API/c/WKBundleNodeHandle.cpp \
@@ -998,6 +997,8 @@ webkit2_sources += \
 	Source/WebKit2/WebProcess/InjectedBundle/InjectedBundleDOMWindowExtension.h \
 	Source/WebKit2/WebProcess/InjectedBundle/InjectedBundleHitTestResult.cpp \
 	Source/WebKit2/WebProcess/InjectedBundle/InjectedBundleHitTestResult.h \
+	Source/WebKit2/WebProcess/InjectedBundle/InjectedBundleIntent.cpp \
+	Source/WebKit2/WebProcess/InjectedBundle/InjectedBundleIntent.h \
 	Source/WebKit2/WebProcess/InjectedBundle/InjectedBundleIntentRequest.cpp \
 	Source/WebKit2/WebProcess/InjectedBundle/InjectedBundleIntentRequest.h \
 	Source/WebKit2/WebProcess/InjectedBundle/InjectedBundleNavigationAction.cpp \

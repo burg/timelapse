@@ -928,13 +928,8 @@ CustomFilterGlobalContext* RenderView::customFilterGlobalContext()
 void RenderView::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
 {
     RenderBlock::styleDidChange(diff, oldStyle);
-    
-    for (RenderObject* renderer = firstChild(); renderer; renderer = renderer->nextSibling()) {
-        if (renderer->isRenderNamedFlowThread()) {
-            RenderNamedFlowThread* flowRenderer = toRenderNamedFlowThread(renderer);
-            flowRenderer->setStyle(RenderFlowThread::createFlowThreadStyle(style()));
-        }
-    }
+    if (hasRenderNamedFlowThreads())
+        flowThreadController()->styleDidChange();
 }
 
 bool RenderView::hasRenderNamedFlowThreads() const
@@ -961,12 +956,12 @@ void RenderView::setFixedPositionedObjectsNeedLayout()
 {
     ASSERT(m_frameView);
 
-    PositionedObjectsListHashSet* positionedObjects = this->positionedObjects();
+    ListHashSet<RenderBox*>* positionedObjects = this->positionedObjects();
     if (!positionedObjects)
         return;
 
-    PositionedObjectsListHashSet::const_iterator end = positionedObjects->end();
-    for (PositionedObjectsListHashSet::const_iterator it = positionedObjects->begin(); it != end; ++it) {
+    ListHashSet<RenderBox*>::const_iterator end = positionedObjects->end();
+    for (ListHashSet<RenderBox*>::const_iterator it = positionedObjects->begin(); it != end; ++it) {
         RenderBox* currBox = *it;
         currBox->setNeedsLayout(true);
     }

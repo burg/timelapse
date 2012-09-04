@@ -72,9 +72,14 @@ void InjectedBundle::didInitializePageGroup(WKBundleRef bundle, WKBundlePageGrou
     static_cast<InjectedBundle*>(const_cast<void*>(clientInfo))->didInitializePageGroup(pageGroup);
 }
 
-void InjectedBundle::didReceiveMessage(WKBundleRef bundle, WKStringRef messageName, WKTypeRef messageBody, const void *clientInfo)
+void InjectedBundle::didReceiveMessage(WKBundleRef bundle, WKStringRef messageName, WKTypeRef messageBody, const void* clientInfo)
 {
     static_cast<InjectedBundle*>(const_cast<void*>(clientInfo))->didReceiveMessage(messageName, messageBody);
+}
+
+void InjectedBundle::didReceiveMessageToPage(WKBundleRef bundle, WKBundlePageRef page, WKStringRef messageName, WKTypeRef messageBody, const void* clientInfo)
+{
+    static_cast<InjectedBundle*>(const_cast<void*>(clientInfo))->didReceiveMessageToPage(page, messageName, messageBody);
 }
 
 void InjectedBundle::initialize(WKBundleRef bundle, WKTypeRef initializationUserData)
@@ -88,7 +93,8 @@ void InjectedBundle::initialize(WKBundleRef bundle, WKTypeRef initializationUser
         didCreatePage,
         willDestroyPage,
         didInitializePageGroup,
-        didReceiveMessage
+        didReceiveMessage,
+        didReceiveMessageToPage
     };
     WKBundleSetClient(m_bundle, &client);
 
@@ -169,22 +175,29 @@ void InjectedBundle::didReceiveMessage(WKStringRef messageName, WKTypeRef messag
         return;
     }
     if (WKStringIsEqualToUTF8CString(messageName, "CallAddChromeInputFieldCallback")) {
-        m_layoutTestController->callAddChromeInputFieldCallback();
+        m_testRunner->callAddChromeInputFieldCallback();
         return;
     }
     if (WKStringIsEqualToUTF8CString(messageName, "CallRemoveChromeInputFieldCallback")) {
-        m_layoutTestController->callRemoveChromeInputFieldCallback();
+        m_testRunner->callRemoveChromeInputFieldCallback();
         return;
     }
     if (WKStringIsEqualToUTF8CString(messageName, "CallFocusWebViewCallback")) {
-        m_layoutTestController->callFocusWebViewCallback();
+        m_testRunner->callFocusWebViewCallback();
         return;
     }
     if (WKStringIsEqualToUTF8CString(messageName, "CallSetBackingScaleFactorCallback")) {
-        m_layoutTestController->callSetBackingScaleFactorCallback();
+        m_testRunner->callSetBackingScaleFactorCallback();
         return;
     }
 
+    WKRetainPtr<WKStringRef> errorMessageName(AdoptWK, WKStringCreateWithUTF8CString("Error"));
+    WKRetainPtr<WKStringRef> errorMessageBody(AdoptWK, WKStringCreateWithUTF8CString("Unknown"));
+    WKBundlePostMessage(m_bundle, errorMessageName.get(), errorMessageBody.get());
+}
+
+void InjectedBundle::didReceiveMessageToPage(WKBundlePageRef page, WKStringRef messageName, WKTypeRef messageBody)
+{
     WKRetainPtr<WKStringRef> errorMessageName(AdoptWK, WKStringCreateWithUTF8CString("Error"));
     WKRetainPtr<WKStringRef> errorMessageBody(AdoptWK, WKStringCreateWithUTF8CString("Unknown"));
     WKBundlePostMessage(m_bundle, errorMessageName.get(), errorMessageBody.get());
@@ -211,7 +224,7 @@ void InjectedBundle::beginTesting(WKDictionaryRef settings)
     m_repaintRects.clear();
     m_stringBuilder->clear();
 
-    m_layoutTestController = LayoutTestController::create();
+    m_testRunner = TestRunner::create();
     m_gcController = GCController::create();
     m_eventSendingController = EventSendingController::create();
     m_textInputController = TextInputController::create();
@@ -228,7 +241,7 @@ void InjectedBundle::beginTesting(WKDictionaryRef settings)
 
     WKBundleRemoveAllUserContent(m_bundle, m_pageGroup);
 
-    m_layoutTestController->setShouldDumpFrameLoadCallbacks(booleanForKey(settings, "DumpFrameLoadDelegates"));
+    m_testRunner->setShouldDumpFrameLoadCallbacks(booleanForKey(settings, "DumpFrameLoadDelegates"));
 
     page()->prepare();
 

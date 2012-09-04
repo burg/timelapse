@@ -40,6 +40,7 @@
 #include "DOMWindow.h"
 #include "Event.h"
 #include "Frame.h"
+#include "Location.h"
 #include "Logging.h"
 #include "Node.h"
 #include "Page.h"
@@ -68,7 +69,7 @@ static void dumpEventDispatchInfo(RefPtr<Event> event, RefPtr<EventTarget> event
             event->type().string().utf8().data(),
             SerializedEventTarget::frameIndexFromDocument(window->document()),
             (void*)window,
-            window->url().string().utf8().data());
+            window->location()->href().utf8().data());
 }
 #endif // !LOG_DISABLED
 

@@ -20,7 +20,6 @@
 #include "InRegionScrollableArea.h"
 
 #include "Frame.h"
-#include "LayerCompositingThread.h"
 #include "LayerWebKitThread.h"
 #include "RenderBox.h"
 #include "RenderLayer.h"
@@ -39,6 +38,12 @@ InRegionScrollableArea::InRegionScrollableArea()
     , m_layer(0)
     , m_hasWindowVisibleRectCalculated(false)
 {
+}
+
+InRegionScrollableArea::~InRegionScrollableArea()
+{
+    if (m_cachedCompositedScrollableLayer)
+        m_cachedCompositedScrollableLayer->clearOverride();
 }
 
 InRegionScrollableArea::InRegionScrollableArea(WebPagePrivate* webPage, RenderLayer* layer)
@@ -90,7 +95,8 @@ InRegionScrollableArea::InRegionScrollableArea(WebPagePrivate* webPage, RenderLa
         if (m_layer->usesCompositedScrolling()) {
             m_supportsCompositedScrolling = true;
             ASSERT(m_layer->backing()->hasScrollingLayer());
-            m_cachedCompositedScrollableLayer = reinterpret_cast<unsigned>(m_layer->backing()->scrollingLayer()->platformLayer()->layerCompositingThread());
+            m_camouflagedCompositedScrollableLayer = reinterpret_cast<unsigned>(m_layer->backing()->scrollingLayer()->platformLayer());
+            m_cachedCompositedScrollableLayer = m_layer->backing()->scrollingLayer()->platformLayer();
         }
 
         m_overscrollLimitFactor = 0.0;

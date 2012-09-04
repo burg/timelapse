@@ -1530,6 +1530,14 @@
 			Name="bytecode"
 			>
 			<File
+				RelativePath="..\..\bytecode\ArrayProfile.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\bytecode\ArrayProfile.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\bytecode\CallLinkInfo.cpp"
 				>
 			</File>
@@ -2035,6 +2043,14 @@
 			</File>
 			<File
 				RelativePath="..\..\interpreter\RegisterFile.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\interpreter\VMInspector.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\interpreter\VMInspector.h"
 				>
 			</File>
 		</Filter>

@@ -84,7 +84,7 @@ v8::Handle<v8::Value> V8InjectedScriptHost::inspectedObjectCallback(const v8::Ar
         return v8::Undefined();
 
     if (!args[0]->IsInt32())
-        return V8Proxy::throwTypeError("argument has to be an integer", args.GetIsolate());
+        return throwTypeError("argument has to be an integer", args.GetIsolate());
 
     InjectedScriptHost* host = V8InjectedScriptHost::toNative(args.Holder());
     InjectedScriptHost::InspectableObject* object = host->inspectedObject(args[0]->ToInt32()->Value());
@@ -207,7 +207,15 @@ static v8::Handle<v8::Array> getJSListenerFunctions(Document* document, const Ev
         // Hide listeners from other contexts.
         if (context != v8::Context::GetCurrent())
             continue;
-        v8::Local<v8::Object> function = v8Listener->getListenerObject(document);
+        v8::Local<v8::Object> function;
+        {
+            // getListenerObject() may cause JS in the event attribute to get compiled, potentially unsuccessfully.
+            v8::TryCatch block;
+            function = v8Listener->getListenerObject(document);
+            if (block.HasCaught())
+                continue;
+        }
+        ASSERT(!function.IsEmpty());
         v8::Local<v8::Object> listenerEntry = v8::Object::New();
         listenerEntry->Set(v8::String::New("listener"), function);
         listenerEntry->Set(v8::String::New("useCapture"), v8::Boolean::New(listenerInfo.eventListenerVector[i].useCapture));
@@ -245,7 +253,7 @@ v8::Handle<v8::Value> V8InjectedScriptHost::getEventListenersCallback(const v8::
         if (!listeners->Length())
             continue;
         AtomicString eventType = listenersArray[i].eventType;
-        result->Set(v8::String::New(fromWebCoreString(eventType), eventType.length()), listeners);
+        result->Set(v8String(eventType), listeners);
     }
 
     return result;
@@ -289,6 +297,22 @@ v8::Handle<v8::Value> V8InjectedScriptHost::storageIdCallback(const v8::Argument
     if (storage)
         return v8StringOrUndefined(host->storageIdImpl(storage), args.GetIsolate());
     return v8::Undefined();
+}
+
+v8::Handle<v8::Value> V8InjectedScriptHost::evaluateCallback(const v8::Arguments& args)
+{
+    INC_STATS("InjectedScriptHost.evaluate()");
+    if (args.Length() < 1)
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("One argument expected.")));
+
+    v8::Handle<v8::String> expression = args[0]->ToString();
+    if (expression.IsEmpty())
+        return v8::ThrowException(v8::Exception::Error(v8::String::New("The argument must be a string.")));
+
+    v8::Handle<v8::Script> script = v8::Script::Compile(expression);
+    if (script.IsEmpty()) // Return immediately in case of exception to let the caller handle it.
+        return v8::Handle<v8::Value>();
+    return script->Run();
 }
 
 } // namespace WebCore

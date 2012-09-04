@@ -81,7 +81,7 @@ static void serializeFormDataElement(ActionSerializer* serializer, const FormDat
 
 #if ENABLE(BLOB)
     case FormDataElement::encodedBlob:
-        serializer->putString(element.m_blobURL.string());
+        serializer->putString(element.m_url.string());
         return;
 #endif
     }

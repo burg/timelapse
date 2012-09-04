@@ -67,11 +67,6 @@ public:
     // Sets the entire layer as invalid, i.e. needs to update its content.
     WEBKIT_EXPORT void invalidate();
 
-    WEBKIT_EXPORT WebLayer rootLayer() const;
-    WEBKIT_EXPORT WebLayer parent() const;
-    WEBKIT_EXPORT size_t numberOfChildren() const;
-    WEBKIT_EXPORT WebLayer childAt(size_t) const;
-
     WEBKIT_EXPORT void addChild(const WebLayer&);
     WEBKIT_EXPORT void insertChild(const WebLayer&, size_t index);
     WEBKIT_EXPORT void replaceChild(const WebLayer& reference, const WebLayer& newLayer);
@@ -92,8 +87,6 @@ public:
     WEBKIT_EXPORT bool masksToBounds() const;
 
     WEBKIT_EXPORT void setMaskLayer(const WebLayer&);
-    WEBKIT_EXPORT WebLayer maskLayer() const;
-
     WEBKIT_EXPORT void setReplicaLayer(const WebLayer&);
 
     WEBKIT_EXPORT void setOpacity(float);
@@ -152,7 +145,7 @@ public:
     WEBKIT_EXPORT void setAnimationDelegate(WebAnimationDelegate*);
 
     // Returns false if the animation cannot be added.
-    WEBKIT_EXPORT bool addAnimation(const WebAnimation&);
+    WEBKIT_EXPORT bool addAnimation(WebAnimation*);
 
     // Removes all animations with the given id.
     WEBKIT_EXPORT void removeAnimation(int animationId);
@@ -168,13 +161,11 @@ public:
     WEBKIT_EXPORT void suspendAnimations(double monotonicTime);
     WEBKIT_EXPORT void resumeAnimations(double monotonicTime);
 
+    // Returns true if this layer has any active animations - useful for tests.
+    WEBKIT_EXPORT bool hasActiveAnimation();
+
     // Transfers all animations running on the current layer.
     WEBKIT_EXPORT void transferAnimationsTo(WebLayer*);
-
-    // DEPRECATED.
-    // This requests that this layer's compositor-managed textures always be reserved
-    // when determining texture limits.
-    WEBKIT_EXPORT void setAlwaysReserveTextures(bool);
 
     // Forces this layer to use a render surface. There is no benefit in doing
     // so, but this is to facilitate benchmarks and tests.

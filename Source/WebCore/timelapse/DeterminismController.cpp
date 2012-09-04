@@ -50,6 +50,7 @@
 #include "InitializeFocus.h"
 #include "InspectorInstrumentation.h"
 #include "KURL.h"
+#include "Location.h"
 #include "Logging.h"
 #include "MouseEvent.h"
 #include "NavigateToPage.h"
@@ -94,7 +95,7 @@ static void dumpEventDispatchInfo(const Event& event, DOMWindow* window, Node* n
             event.type().string().utf8().data(),
             SerializedEventTarget::frameIndexFromDocument(window->document()),
             (void*)window,
-            window->url().string().utf8().data());
+            window->location()->href().utf8().data());
 }
 #endif // !LOG_DISABLED
 

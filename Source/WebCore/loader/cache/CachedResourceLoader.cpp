@@ -616,7 +616,7 @@ void CachedResourceLoader::printAccessDeniedMessage(const KURL& url) const
         message = "Unsafe attempt to load URL " + url.string() + " from frame with URL " + m_document->url().string() + ". Domains, protocols and ports must match.\n";
 
     // FIXME: provide line number and source URL.
-    frame()->domWindow()->console()->addMessage(OtherMessageSource, LogMessageType, ErrorMessageLevel, message);
+    frame()->document()->domWindow()->console()->addMessage(OtherMessageSource, LogMessageType, ErrorMessageLevel, message);
 }
 
 void CachedResourceLoader::setAutoLoadImages(bool enable)
@@ -883,7 +883,7 @@ void CachedResourceLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo)
     MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::Loader);
     info.addHashMap(m_documentResources);
     for (DocumentResourceMap::const_iterator i = m_documentResources.begin(); i != m_documentResources.end(); ++i) {
-        info.addMember(i->first);
+        info.addInstrumentedMember(i->first);
         info.addInstrumentedMember(i->second);
     }
     info.addHashSet(m_validatedURLs);

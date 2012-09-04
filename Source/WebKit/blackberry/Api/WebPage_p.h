@@ -91,7 +91,7 @@ class WebPagePrivate : public PageClientBlackBerry
 #endif
                      , public Platform::GuardedPointerBase {
 public:
-    enum ViewMode { Mobile, Desktop, FixedDesktop };
+    enum ViewMode { Desktop, FixedDesktop };
     enum LoadState { None /* on instantiation of page */, Provisional, Committed, Finished, Failed };
 
     WebPagePrivate(WebPage*, WebPageClient*, const WebCore::IntRect&);
@@ -150,7 +150,7 @@ public:
     bool scrollBy(int deltaX, int deltaY, bool scrollMainFrame = true);
 
     void enqueueRenderingOfClippedContentOfScrollableNodeAfterInRegionScrolling(WebCore::Node*);
-    void notifyInRegionScrollStatusChanged(bool status);
+    void notifyInRegionScrollStopped();
     void setScrollOriginPoint(const Platform::IntPoint&);
     void setHasInRegionScrollableAreas(bool);
 
@@ -291,7 +291,7 @@ public:
     WebCore::Node* bestNodeForZoomUnderPoint(const WebCore::IntPoint&);
     WebCore::Node* bestChildNodeForClickRect(WebCore::Node* parentNode, const WebCore::IntRect& clickRect);
     WebCore::Node* nodeForZoomUnderPoint(const WebCore::IntPoint&);
-    WebCore::Node* adjustedBlockZoomNodeForZoomLimits(WebCore::Node*);
+    WebCore::Node* adjustedBlockZoomNodeForZoomAndExpandingRatioLimits(WebCore::Node*);
     WebCore::IntRect rectForNode(WebCore::Node*);
     WebCore::IntRect blockZoomRectForNode(WebCore::Node*);
     WebCore::IntRect adjustRectOffsetForFrameOffset(const WebCore::IntRect&, const WebCore::Node*);
@@ -413,13 +413,14 @@ public:
     void commitRootLayer(const WebCore::IntRect&, const WebCore::IntSize&, bool);
     bool isAcceleratedCompositingActive() const { return m_compositor; }
     WebPageCompositorPrivate* compositor() const { return m_compositor.get(); }
-    void setCompositor(PassRefPtr<WebPageCompositorPrivate>, EGLContext compositingContext);
-    void setCompositorHelper(PassRefPtr<WebPageCompositorPrivate>, EGLContext compositingContext);
+    void setCompositor(PassRefPtr<WebPageCompositorPrivate>);
+    void setCompositorHelper(PassRefPtr<WebPageCompositorPrivate>);
     void setCompositorBackgroundColor(const WebCore::Color&);
     bool createCompositor();
     void destroyCompositor();
     void syncDestroyCompositorOnCompositingThread();
-    void destroyLayerResources();
+    void releaseLayerResources();
+    void releaseLayerResourcesCompositingThread();
     void suspendRootLayerCommit();
     void resumeRootLayerCommit();
     void blitVisibleContents();
@@ -613,6 +614,8 @@ public:
     WebString m_cachedColorInput;
     WebCore::KURL m_cachedManualScript;
     bool m_cachedFocused;
+
+    bool m_enableQnxJavaScriptObject;
 
     class DeferredTaskBase {
     public:

@@ -26,6 +26,7 @@
 #include "config.h"
 #include "V8PerIsolateData.h"
 
+#include "ScriptGCEvent.h"
 #include "V8Binding.h"
 
 namespace WebCore {
@@ -82,6 +83,43 @@ void V8PerIsolateData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) con
 
     for (size_t i = 0; i < m_domDataList.size(); i++)
         info.addInstrumentedMember(m_domDataList[i]);
+}
+
+#if ENABLE(INSPECTOR)
+void V8PerIsolateData::visitExternalStrings(ExternalStringVisitor* visitor)
+{
+    v8::HandleScope handleScope;
+    class VisitorImpl : public v8::ExternalResourceVisitor {
+    public:
+        VisitorImpl(ExternalStringVisitor* visitor) : m_visitor(visitor) { }
+        virtual ~VisitorImpl() { }
+        virtual void VisitExternalString(v8::Handle<v8::String> string)
+        {
+            WebCoreStringResource* resource = static_cast<WebCoreStringResource*>(string->GetExternalStringResource());
+            if (resource)
+                resource->visitStrings(m_visitor);
+        }
+    private:
+        ExternalStringVisitor* m_visitor;
+    } v8Visitor(visitor);
+    v8::V8::VisitExternalResources(&v8Visitor);
+}
+#endif
+
+v8::Handle<v8::Value> V8PerIsolateData::constructorOfToString(const v8::Arguments& args)
+{
+    // The DOM constructors' toString functions grab the current toString
+    // for Functions by taking the toString function of itself and then
+    // calling it with the constructor as its receiver. This means that
+    // changes to the Function prototype chain or toString function are
+    // reflected when printing DOM constructors. The only wart is that
+    // changes to a DOM constructor's toString's toString will cause the
+    // toString of the DOM constructor itself to change. This is extremely
+    // obscure and unlikely to be a problem.
+    v8::Handle<v8::Value> value = args.Callee()->Get(v8::String::NewSymbol("toString"));
+    if (!value->IsFunction()) 
+        return v8::String::New("");
+    return v8::Handle<v8::Function>::Cast(value)->Call(args.This(), 0, 0);
 }
 
 } // namespace WebCore

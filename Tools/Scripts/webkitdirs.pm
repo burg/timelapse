@@ -105,6 +105,7 @@ my $forceChromiumUpdate;
 my $isInspectorFrontend;
 my $isWK2;
 my $shouldTargetWebProcess;
+my $shouldUseXPCServiceForWebProcess;
 my $shouldUseGuardMalloc;
 my $xcodeVersion;
 
@@ -1441,6 +1442,18 @@ sub determineShouldTargetWebProcess
     $shouldTargetWebProcess = checkForArgumentAndRemoveFromARGV("--target-web-process");
 }
 
+sub shouldUseXPCServiceForWebProcess
+{
+    determineShouldUseXPCServiceForWebProcess();
+    return $shouldUseXPCServiceForWebProcess;
+}
+
+sub determineShouldUseXPCServiceForWebProcess
+{
+    return if defined($shouldUseXPCServiceForWebProcess);
+    $shouldUseXPCServiceForWebProcess = checkForArgumentAndRemoveFromARGV("--use-web-process-xpc-service");
+}
+
 sub debugger
 {
     determineDebugger();
@@ -1480,6 +1493,9 @@ sub setUpGuardMallocIfNeeded
 
     if ($shouldUseGuardMalloc) {
         appendToEnvironmentVariableList("DYLD_INSERT_LIBRARIES", "/usr/lib/libgmalloc.dylib");
+        if (shouldUseXPCServiceForWebProcess()) {
+            appendToEnvironmentVariableList("__XPC_DYLD_INSERT_LIBRARIES", "/usr/lib/libgmalloc.dylib");
+        }
     }
 }
 
@@ -1921,23 +1937,6 @@ sub autotoolsFlag($$)
     return $prefix . '-' . $feature;
 }
 
-sub getMD5HashForFile($)
-{
-    my $file = shift;
-
-    open(FILE_CONTENTS, $file);
-
-    # Read the whole file.
-    my $contents = "";
-    while (<FILE_CONTENTS>) {
-        $contents .= $_;
-    }
-
-    close(FILE_CONTENTS);
-
-    return md5_hex($contents);
-}
-
 sub runAutogenForAutotoolsProjectIfNecessary($@)
 {
     my ($dir, $prefix, $sourceDir, $project, @buildArgs) = @_;
@@ -1981,7 +1980,7 @@ sub runAutogenForAutotoolsProjectIfNecessary($@)
 
     # Prefix the command with jhbuild run.
     unshift(@buildArgs, "$relSourceDir/autogen.sh");
-    unshift(@buildArgs, "$sourceDir/Tools/gtk/run-with-jhbuild");
+    unshift(@buildArgs, jhbuildWrapperPrefixIfNeeded());
     if (system(@buildArgs) ne 0) {
         die "Calling autogen.sh failed!\n";
     }
@@ -1990,58 +1989,6 @@ sub runAutogenForAutotoolsProjectIfNecessary($@)
 sub getJhbuildPath()
 {
     return join('/', baseProductDir(), "Dependencies");
-}
-
-sub jhbuildConfigurationChanged()
-{
-    foreach my $file (qw(jhbuildrc.md5sum jhbuild.modules.md5sum)) {
-        my $path = join('/', getJhbuildPath(), $file);
-        if (! -e $path) {
-            return 1;
-        }
-
-        # Get the md5 sum of the file we're testing, look in the right platform directory.
-        $file =~ m/(.+)\.md5sum/;
-        my $platformDir = isEfl() ? 'efl' : 'gtk';
-        my $actualFile = join('/', $sourceDir, 'Tools', $platformDir, $1);
-        my $currentSum = getMD5HashForFile($actualFile);
-
-        # Get our previous record.
-        open(PREVIOUS_MD5, $path);
-        chomp(my $previousSum = <PREVIOUS_MD5>);
-        close(PREVIOUS_MD5);
-
-        if ($previousSum ne $currentSum) {
-            return 1;
-        }
-    }
-}
-
-sub saveJhbuildMd5() {
-    my $platform = isEfl() ? 'efl' : 'gtk';
-    # Save md5sum for jhbuild-related files.
-    foreach my $file (qw(jhbuildrc jhbuild.modules)) {
-        my $source = join('/', $sourceDir, "Tools", $platform, $file);
-        my $destination = join('/', getJhbuildPath(), $file);
-        open(SUM, ">$destination" . ".md5sum");
-        print SUM getMD5HashForFile($source);
-        close(SUM);
-    }
-}
-
-sub cleanJhbuild() {
-        # If the configuration changed, dependencies may have been removed.
-        # Since we lack a granular way of uninstalling those we wipe out the
-        # jhbuild root and start from scratch.
-        my $jhbuildPath = getJhbuildPath();
-        if (system("rm -rf $jhbuildPath/Root") ne 0) {
-            die "Cleaning jhbuild root failed!";
-        }
-
-        my $platform = isEfl() ? 'efl' : 'gtk';
-        if (system("perl $sourceDir/Tools/jhbuild/jhbuild-wrapper --$platform clean") ne 0) {
-            die "Cleaning jhbuild modules failed!";
-        }
 }
 
 sub mustReRunAutogen($@)
@@ -2133,33 +2080,19 @@ sub buildAutotoolsProject($@)
     # Enable unstable features when building through build-webkit.
     push @buildArgs, "--enable-unstable-features";
 
-    # We might need to update jhbuild dependencies.
-    my $needUpdate = 0;
-    if (jhbuildConfigurationChanged()) {
-        cleanJhbuild();
-        $needUpdate = 1;
-    }
-
     if (checkForArgumentAndRemoveFromArrayRef("--update-gtk", \@buildArgs)) {
-        $needUpdate = 1;
-    }
-
-    if ($needUpdate) {
         # Force autogen to run, to catch the possibly updated libraries.
         system("rm -f previous-autogen-arguments.txt");
 
         system("perl", "$sourceDir/Tools/Scripts/update-webkitgtk-libs") == 0 or die $!;
     }
 
-    saveJhbuildMd5();
-
     # If GNUmakefile exists, don't run autogen.sh unless its arguments
     # have changed. The makefile should be smart enough to track autotools
     # dependencies and re-run autogen.sh when build files change.
     runAutogenForAutotoolsProjectIfNecessary($dir, $prefix, $sourceDir, $project, @buildArgs);
 
-    my $gtkScriptsPath = "$sourceDir/Tools/gtk";
-    my $runWithJhbuild = "$gtkScriptsPath/run-with-jhbuild";
+    my $runWithJhbuild = jhbuildWrapperPrefixIfNeeded();
     if (system("$runWithJhbuild $make $makeArgs") ne 0) {
         die "\nFailed to build WebKit using '$make'!\n";
     }
@@ -2167,7 +2100,7 @@ sub buildAutotoolsProject($@)
     chdir ".." or die;
 
     if ($project eq 'WebKit' && !isCrossCompilation()) {
-        my @docGenerationOptions = ($runWithJhbuild, "$gtkScriptsPath/generate-gtkdoc", "--skip-html");
+        my @docGenerationOptions = ($runWithJhbuild, "$sourceDir/Tools/gtk/generate-gtkdoc", "--skip-html");
         push(@docGenerationOptions, productDir());
 
         if (system(@docGenerationOptions)) {
@@ -2180,9 +2113,14 @@ sub buildAutotoolsProject($@)
 
 sub jhbuildWrapperPrefixIfNeeded()
 {
-    if (isEfl()) {
-        return File::Spec->catfile(sourceDir(), "Tools", "efl", "run-with-jhbuild");
+    if (-e getJhbuildPath()) {
+        if (isEfl()) {
+            return File::Spec->catfile(sourceDir(), "Tools", "efl", "run-with-jhbuild");
+        } elsif (isGtk()) {
+            return File::Spec->catfile(sourceDir(), "Tools", "gtk", "run-with-jhbuild");
+        }
     }
+
     return "";
 }
 
@@ -2220,15 +2158,6 @@ sub generateBuildSystemFromCMakeProject
     determineArchitecture();
     if ($architecture ne "x86_64" && !isARM()) {
         $ENV{'CXXFLAGS'} = "-march=pentium4 -msse2 -mfpmath=sse " . ($ENV{'CXXFLAGS'} || "");
-    }
-
-    if (isEfl() && jhbuildConfigurationChanged()) {
-        cleanJhbuild();
-        system("perl", "$sourceDir/Tools/Scripts/update-webkitefl-libs") == 0 or die $!;
-    }
-
-    if (isEfl()) {
-        saveJhbuildMd5();
     }
 
     # We call system("cmake @args") instead of system("cmake", @args) so that @args is
@@ -2273,6 +2202,11 @@ sub buildCMakeProjectOrExit($$$$@)
     my $returnCode;
 
     exit(exitStatus(cleanCMakeGeneratedProject())) if $clean;
+
+    if (isEfl() && checkForArgumentAndRemoveFromARGV("--update-efl")) {
+        system("perl", "$sourceDir/Tools/Scripts/update-webkitefl-libs") == 0 or die $!;
+    }
+
 
     $returnCode = exitStatus(generateBuildSystemFromCMakeProject($port, $prefixPath, @cmakeArgs));
     exit($returnCode) if $returnCode;
@@ -2645,49 +2579,6 @@ sub buildChromium($@)
     return $result;
 }
 
-sub chromiumInstall64BitAndroidLinkerIfNeeded
-{
-    my ($androidNdkRoot) = @_;
-
-    # Resolve the toolchain version through glob().
-    my $linkerDirPrefix = glob("$androidNdkRoot/toolchains/arm-linux-androideabi-*/prebuilt/linux-x86");
-
-    my $linkerDirname1 = "$linkerDirPrefix/bin";
-    my $linkerBasename1 = "arm-linux-androideabi-ld";
-    my $linkerDirname2 = "$linkerDirPrefix/arm-linux-androideabi/bin";
-    my $linkerBasename2 = "ld";
-    my $newLinker = "arm-linux-androideabi-ld.e4df3e0a5bb640ccfa2f30ee67fe9b3146b152d6";
-
-    # Do not continue if the new linker is not (yet) available.
-    if (! -e "third_party/aosp/$newLinker") {
-        return;
-    }
-
-    chromiumReplaceAndroidLinkerIfNeeded($linkerDirname1, $linkerBasename1, $newLinker);
-    chromiumReplaceAndroidLinkerIfNeeded($linkerDirname2, $linkerBasename2, $newLinker);
-}
-
-sub chromiumReplaceAndroidLinkerIfNeeded
-{
-    my ($linkerDirname, $linkerBasename, $newLinker) = @_;
-
-    # If the destination directory does not exist, or the linker has already
-    # been installed, replacing it will not be necessary.
-    if (! -d "$linkerDirname" || -e "$linkerDirname/$newLinker") {
-        return;
-    }
-
-    print "Installing 64-bit Android linker in $linkerDirname..\n";
-    system("cp", "third_party/aosp/$newLinker", "$linkerDirname/$newLinker");
-    system("mv", "$linkerDirname/$linkerBasename", "$linkerDirname/$linkerBasename.orig");
-    system("ln", "-s", "$newLinker", "$linkerDirname/$linkerBasename");
-
-    if (! -e "$linkerDirname/$newLinker") {
-        print "Unable to copy the linker.\n";
-        exit 1;
-    }
-}
-
 sub appleApplicationSupportPath
 {
     open INSTALL_DIR, "</proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Apple\ Inc./Apple\ Application\ Support/InstallDir";
@@ -2721,15 +2612,16 @@ sub printHelpAndExitForRunAndDebugWebKitAppIfNeeded
 
     print STDERR <<EOF;
 Usage: @{[basename($0)]} [options] [args ...]
-  --help                Show this help message
-  --no-saved-state      Disable application resume for the session on Mac OS 10.7
-  --guard-malloc        Enable Guard Malloc (Mac OS X only)
+  --help                            Show this help message
+  --no-saved-state                  Disable application resume for the session on Mac OS 10.7
+  --guard-malloc                    Enable Guard Malloc (OS X only)
+  --use-web-process-xpc-service     Launch the Web Process as an XPC Service (OS X only)
 EOF
 
     if ($includeOptionsForDebugging) {
         print STDERR <<EOF;
-  --target-web-process  Debug the web process
-  --use-lldb            Use LLDB
+  --target-web-process              Debug the web process
+  --use-lldb                        Use LLDB
 EOF
     }
 
@@ -2752,6 +2644,12 @@ sub runMacWebKitApp($;$)
     $ENV{WEBKIT_UNSET_DYLD_FRAMEWORK_PATH} = "YES";
 
     setUpGuardMallocIfNeeded();
+
+    if (shouldUseXPCServiceForWebProcess()) {
+        $ENV{__XPC_DYLD_FRAMEWORK_PATH} = $productDir;
+        appendToEnvironmentVariableList("__XPC_DYLD_INSERT_LIBRARIES", File::Spec->catfile($productDir, "WebProcessShim.dylib"));
+        $ENV{WEBKIT_USE_XPC_SERVICE_FOR_WEB_PROCESS} = "YES";
+    }
 
     if (defined($useOpenCommand) && $useOpenCommand == USE_OPEN_COMMAND) {
         return system("open", "-W", "-a", $appPath, "--args", argumentsForRunAndDebugMacWebKitApp());
@@ -2790,9 +2688,18 @@ sub execMacWebKitAppForDebugging($)
 
     my @architectureFlags = ($architectureSwitch, architecture());
     if (!shouldTargetWebProcess()) {
+        if (shouldUseXPCServiceForWebProcess()) {
+            $ENV{__XPC_DYLD_FRAMEWORK_PATH} = $productDir;
+            appendToEnvironmentVariableList("__XPC_DYLD_INSERT_LIBRARIES", File::Spec->catfile($productDir, "WebProcessShim.dylib"));
+            $ENV{WEBKIT_USE_XPC_SERVICE_FOR_WEB_PROCESS} = "YES";
+        }
         print "Starting @{[basename($appPath)]} under $debugger with DYLD_FRAMEWORK_PATH set to point to built WebKit in $productDir.\n";
         exec { $debuggerPath } $debuggerPath, @architectureFlags, $argumentsSeparator, $appPath, argumentsForRunAndDebugMacWebKitApp() or die;
     } else {
+        if (shouldUseXPCServiceForWebProcess()) {
+            die "Targetting the Web Process is not compatible with using an XPC Service for the Web Process at this time.";
+        }
+        
         my $webProcessShimPath = File::Spec->catfile($productDir, "WebProcessShim.dylib");
         my $webProcessPath = File::Spec->catdir($productDir, "WebProcess.app");
         my $webKit2ExecutablePath = File::Spec->catfile($productDir, "WebKit2.framework", "WebKit2");

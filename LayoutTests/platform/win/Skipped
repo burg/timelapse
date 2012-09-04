@@ -959,6 +959,7 @@ http/tests/security/xss-DENIED-window-open-javascript-url.html
 # Skip frame flattening tests until it can be tested by this DRT
 # https://bugs.webkit.org/show_bug.cgi?id=32717
 fast/frames/flattening/
+fast/text-autosizing/narrow-iframe-flattened.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=34933
 media/video-display-aspect-ratio.html
@@ -1746,6 +1747,7 @@ fast/sub-pixel/position-right-aligns-with-container.html
 fast/sub-pixel/selection/selection-gaps-at-fractional-offsets.html
 fast/sub-pixel/size-of-box-with-zoom.html
 fast/sub-pixel/table-rows-no-gaps.html
+fast/sub-pixel/sub-pixel-accumulates-to-layers.html
 
 # No CORS support for media elements is implemented yet.
 http/tests/security/video-cross-origin-readback.html
@@ -1973,3 +1975,12 @@ fast/forms/input-set-composition-scroll.html
 # https://bugs.webkit.org/show_bug.cgi?id=93667
 # Test times out
 fast/forms/select/menulist-popup-crash.html
+
+# This test causes any following plugins test to crash
+plugins/nested-plugin-objects.html
+
+#Require rebaselining after  https://bugs.webkit.org/show_bug.cgi?id=89826
+fast/css/word-space-extra.html
+
+# ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS) is disabled
+fast/forms/time-multiple-fields
