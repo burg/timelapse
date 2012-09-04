@@ -132,7 +132,7 @@
 #include "WebKitCSSFilterValue.h"
 #endif
 
-#if ENABLE(DASHBOARD_SUPPORT)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
 #include "DashboardRegion.h"
 #endif
 
@@ -153,6 +153,7 @@
 #include "StyleCustomFilterProgram.h"
 #include "StylePendingShader.h"
 #include "StyleShader.h"
+#include "WebKitCSSMixFunctionValue.h"
 #include "WebKitCSSShaderValue.h"
 #endif
 
@@ -198,11 +199,12 @@ if (primitiveValue) \
 
 class RuleData {
 public:
-    RuleData(StyleRule*, CSSSelector*, unsigned position, bool hasDocumentSecurityOrigin, bool canUseFastCheckSelector, bool inRegionRule);
+    RuleData(StyleRule*, unsigned selectorIndex, unsigned position, bool hasDocumentSecurityOrigin, bool canUseFastCheckSelector, bool inRegionRule);
 
     unsigned position() const { return m_position; }
     StyleRule* rule() const { return m_rule; }
-    CSSSelector* selector() const { return m_selector; }
+    CSSSelector* selector() const { return m_rule->selectorList().selectorAt(m_selectorIndex); }
+    unsigned selectorIndex() const { return m_selectorIndex; }
 
     bool hasFastCheckableSelector() const { return m_hasFastCheckableSelector; }
     bool hasMultipartSelector() const { return m_hasMultipartSelector; }
@@ -221,11 +223,11 @@ public:
 
 private:
     StyleRule* m_rule;
-    CSSSelector* m_selector;
-    unsigned m_specificity;
+    unsigned m_selectorIndex : 12;
     // This number was picked fairly arbitrarily. We can probably lower it if we need to.
     // Some simple testing showed <100,000 RuleData's on large sites.
-    unsigned m_position : 24;
+    unsigned m_position : 20;
+    unsigned m_specificity : 24;
     unsigned m_hasFastCheckableSelector : 1;
     unsigned m_hasMultipartSelector : 1;
     unsigned m_hasRightmostSelectorMatchingHTMLBasedOnRuleHash : 1;
@@ -239,10 +241,9 @@ private:
     
 struct SameSizeAsRuleData {
     void* a;
-    void* b;
+    unsigned b;
     unsigned c;
-    unsigned d;
-    unsigned e[4];
+    unsigned d[4];
 };
 
 COMPILE_ASSERT(sizeof(RuleData) == sizeof(SameSizeAsRuleData), RuleData_should_stay_small);
@@ -257,7 +258,7 @@ public:
     void addRulesFromSheet(StyleSheetContents*, const MediaQueryEvaluator&, StyleResolver* = 0, const ContainerNode* = 0);
 
     void addStyleRule(StyleRule*, bool hasDocumentSecurityOrigin, bool canUseFastCheckSelector, bool isInRegionRule = false);
-    void addRule(StyleRule*, CSSSelector*, bool hasDocumentSecurityOrigin, bool canUseFastCheckSelector, bool isInRegionRule = false);
+    void addRule(StyleRule*, unsigned selectorIndex, bool hasDocumentSecurityOrigin, bool canUseFastCheckSelector, bool isInRegionRule = false);
     void addPageRule(StyleRulePage*);
     void addToRuleSet(AtomicStringImpl* key, AtomRuleMap&, const RuleData&);
     void addRegionRule(StyleRuleRegion*, bool hasDocumentSecurityOrigin);
@@ -480,7 +481,7 @@ static PassOwnPtr<RuleSet> makeRuleSet(const Vector<StyleResolver::RuleFeature>&
         return nullptr;
     OwnPtr<RuleSet> ruleSet = RuleSet::create();
     for (size_t i = 0; i < size; ++i)
-        ruleSet->addRule(rules[i].rule, rules[i].selector, rules[i].hasDocumentSecurityOrigin, false);
+        ruleSet->addRule(rules[i].rule, rules[i].selectorIndex, rules[i].hasDocumentSecurityOrigin, false);
     ruleSet->shrinkToFit();
     return ruleSet.release();
 }
@@ -737,7 +738,7 @@ void StyleResolver::Features::clear()
 
 void StyleResolver::Features::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo<StyleResolver::Features> info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
     info.addHashSet(idsInRules);
     info.addHashSet(attrsInRules);
     info.addVector(siblingRules);
@@ -863,7 +864,7 @@ void StyleResolver::addMatchedProperties(MatchResult& matchResult, const StylePr
     matchResult.matchedRules.append(rule);
 }
 
-inline void StyleResolver::addElementStyleProperties(MatchResult& result, StylePropertySet* propertySet, bool isCacheable)
+inline void StyleResolver::addElementStyleProperties(MatchResult& result, const StylePropertySet* propertySet, bool isCacheable)
 {
     if (!propertySet)
         return;
@@ -1184,7 +1185,7 @@ void StyleResolver::matchAllRules(MatchResult& result, bool includeSMILPropertie
         // FIXME: Media control shadow trees seem to have problems with caching.
         bool isInlineStyleCacheable = !m_styledElement->inlineStyle()->isMutable() && !m_styledElement->isInShadowTree();
         // FIXME: Constify.
-        addElementStyleProperties(result, const_cast<StylePropertySet*>(m_styledElement->inlineStyle()), isInlineStyleCacheable);
+        addElementStyleProperties(result, m_styledElement->inlineStyle(), isInlineStyleCacheable);
     }
 
 #if ENABLE(SVG)
@@ -1348,7 +1349,7 @@ bool StyleResolver::canShareStyleWithControl(StyledElement* element) const
 }
 
 // This function makes some assumptions that only make sense for attribute styles (we only compare CSSProperty::id() and CSSProperty::value().)
-static inline bool attributeStylesEqual(StylePropertySet* a, StylePropertySet* b)
+static inline bool attributeStylesEqual(const StylePropertySet* a, const StylePropertySet* b)
 {
     if (a == b)
         return true;
@@ -1393,14 +1394,16 @@ bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
         return false;
     if (element->inlineStyle())
         return false;
+    if (element->needsStyleRecalc())
+        return false;
 #if ENABLE(SVG)
     if (element->isSVGElement() && static_cast<SVGElement*>(element)->animatedSMILStyleProperties())
         return false;
 #endif
     if (!!element->attributeStyle() != !!m_styledElement->attributeStyle())
         return false;
-    StylePropertySet* additionalAttributeStyleA = element->additionalAttributeStyle();
-    StylePropertySet* additionalAttributeStyleB = m_styledElement->additionalAttributeStyle();
+    const StylePropertySet* additionalAttributeStyleA = element->additionalAttributeStyle();
+    const StylePropertySet* additionalAttributeStyleB = m_styledElement->additionalAttributeStyle();
     if (!additionalAttributeStyleA != !additionalAttributeStyleB)
         return false;
     if (element->isLink() != m_element->isLink())
@@ -1480,8 +1483,17 @@ bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
     if (elementHasDirectionAuto(element) || elementHasDirectionAuto(m_element))
         return false;
 
-    if (element->hasClass() && m_element->getAttribute(classAttr) != element->getAttribute(classAttr))
-        return false;
+    if (element->hasClass()) {
+#if ENABLE(SVG)
+        // SVG elements require a (slow!) getAttribute comparision because "class" is an animatable attribute for SVG.
+        if (element->isSVGElement()) {
+            if (element->getAttribute(classAttr) != m_element->getAttribute(classAttr))
+                return false;
+        } else
+#endif
+        if (element->fastGetAttribute(classAttr) != m_element->fastGetAttribute(classAttr))
+            return false;
+    }
 
     if (element->attributeStyle() && !attributeStylesEqual(element->attributeStyle(), m_styledElement->attributeStyle()))
         return false;
@@ -2483,25 +2495,27 @@ static inline bool containsUncommonAttributeSelector(const CSSSelector* selector
     return false;
 }
 
-RuleData::RuleData(StyleRule* rule, CSSSelector* selector, unsigned position, bool hasDocumentSecurityOrigin, bool canUseFastCheckSelector, bool inRegionRule)
+RuleData::RuleData(StyleRule* rule, unsigned selectorIndex, unsigned position, bool hasDocumentSecurityOrigin, bool canUseFastCheckSelector, bool inRegionRule)
     : m_rule(rule)
-    , m_selector(selector)
-    , m_specificity(selector->specificity())
+    , m_selectorIndex(selectorIndex)
     , m_position(position)
-    , m_hasFastCheckableSelector(canUseFastCheckSelector && SelectorChecker::isFastCheckableSelector(selector))
-    , m_hasMultipartSelector(!!selector->tagHistory())
-    , m_hasRightmostSelectorMatchingHTMLBasedOnRuleHash(isSelectorMatchingHTMLBasedOnRuleHash(selector))
-    , m_containsUncommonAttributeSelector(WebCore::containsUncommonAttributeSelector(selector))
-    , m_linkMatchType(SelectorChecker::determineLinkMatchType(selector))
+    , m_specificity(selector()->specificity())
+    , m_hasFastCheckableSelector(canUseFastCheckSelector && SelectorChecker::isFastCheckableSelector(selector()))
+    , m_hasMultipartSelector(!!selector()->tagHistory())
+    , m_hasRightmostSelectorMatchingHTMLBasedOnRuleHash(isSelectorMatchingHTMLBasedOnRuleHash(selector()))
+    , m_containsUncommonAttributeSelector(WebCore::containsUncommonAttributeSelector(selector()))
+    , m_linkMatchType(SelectorChecker::determineLinkMatchType(selector()))
     , m_hasDocumentSecurityOrigin(hasDocumentSecurityOrigin)
     , m_isInRegionRule(inRegionRule)
 {
-    SelectorChecker::collectIdentifierHashes(m_selector, m_descendantSelectorIdentifierHashes, maximumIdentifierCount);
+    ASSERT(m_position == position);
+    ASSERT(m_selectorIndex == selectorIndex);
+    SelectorChecker::collectIdentifierHashes(selector(), m_descendantSelectorIdentifierHashes, maximumIdentifierCount);
 }
 
 void RuleData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo<RuleData> info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
 }
 
 RuleSet::RuleSet()
@@ -2510,8 +2524,7 @@ RuleSet::RuleSet()
 {
 }
 
-
-static void reportAtomRuleMap(MemoryClassInfo<RuleSet>* info, const RuleSet::AtomRuleMap& atomicRuleMap)
+static void reportAtomRuleMap(MemoryClassInfo* info, const RuleSet::AtomRuleMap& atomicRuleMap)
 {
     info->addHashMap(atomicRuleMap);
     for (RuleSet::AtomRuleMap::const_iterator it = atomicRuleMap.begin(); it != atomicRuleMap.end(); ++it)
@@ -2520,7 +2533,7 @@ static void reportAtomRuleMap(MemoryClassInfo<RuleSet>* info, const RuleSet::Ato
 
 void RuleSet::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo<RuleSet> info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
     reportAtomRuleMap(&info, m_idRules);
     reportAtomRuleMap(&info, m_classRules);
     reportAtomRuleMap(&info, m_tagRules);
@@ -2534,7 +2547,7 @@ void RuleSet::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 
 void RuleSet::RuleSetSelectorPair::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo<RuleSet::RuleSetSelectorPair> info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
     info.addInstrumentedMember(ruleSet);
 }
 
@@ -2577,9 +2590,9 @@ static void collectFeaturesFromRuleData(StyleResolver::Features& features, const
             foundSiblingSelector = true;
     }
     if (foundSiblingSelector)
-        features.siblingRules.append(StyleResolver::RuleFeature(ruleData.rule(), ruleData.selector(), ruleData.hasDocumentSecurityOrigin()));
+        features.siblingRules.append(StyleResolver::RuleFeature(ruleData.rule(), ruleData.selectorIndex(), ruleData.hasDocumentSecurityOrigin()));
     if (ruleData.containsUncommonAttributeSelector())
-        features.uncommonAttributeRules.append(StyleResolver::RuleFeature(ruleData.rule(), ruleData.selector(), ruleData.hasDocumentSecurityOrigin()));
+        features.uncommonAttributeRules.append(StyleResolver::RuleFeature(ruleData.rule(), ruleData.selectorIndex(), ruleData.hasDocumentSecurityOrigin()));
 }
     
 void RuleSet::addToRuleSet(AtomicStringImpl* key, AtomRuleMap& map, const RuleData& ruleData)
@@ -2592,10 +2605,12 @@ void RuleSet::addToRuleSet(AtomicStringImpl* key, AtomRuleMap& map, const RuleDa
     rules->append(ruleData);
 }
 
-void RuleSet::addRule(StyleRule* rule, CSSSelector* selector, bool hasDocumentSecurityOrigin, bool canUseFastCheckSelector, bool inRegionRule)
+void RuleSet::addRule(StyleRule* rule, unsigned selectorIndex, bool hasDocumentSecurityOrigin, bool canUseFastCheckSelector, bool inRegionRule)
 {
-    RuleData ruleData(rule, selector, m_ruleCount++, hasDocumentSecurityOrigin, canUseFastCheckSelector, inRegionRule);
+    RuleData ruleData(rule, selectorIndex, m_ruleCount++, hasDocumentSecurityOrigin, canUseFastCheckSelector, inRegionRule);
     collectFeaturesFromRuleData(m_features, ruleData);
+
+    CSSSelector* selector = ruleData.selector();
 
     if (selector->m_match == CSSSelector::Id) {
         addToRuleSet(selector->value().impl(), m_idRules, ruleData);
@@ -2737,8 +2752,8 @@ void RuleSet::addRulesFromSheet(StyleSheetContents* sheet, const MediaQueryEvalu
 
 void RuleSet::addStyleRule(StyleRule* rule, bool hasDocumentSecurityOrigin, bool canUseFastCheckSelector, bool isInRegionRule)
 {
-    for (CSSSelector* s = rule->selectorList().first(); s; s = CSSSelectorList::next(s))
-        addRule(rule, s, hasDocumentSecurityOrigin, canUseFastCheckSelector, isInRegionRule);
+    for (size_t selectorIndex = 0; selectorIndex != notFound; selectorIndex = rule->selectorList().indexOfNextSelectorAfter(selectorIndex))
+        addRule(rule, selectorIndex, hasDocumentSecurityOrigin, canUseFastCheckSelector, isInRegionRule);
 }
 
 static inline void shrinkMapVectorsToFit(RuleSet::AtomRuleMap& map)
@@ -3859,8 +3874,14 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         setTextSizeAdjust(primitiveValue->getIdent() == CSSValueAuto);
         return;
     }
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
 #if ENABLE(DASHBOARD_SUPPORT)
-    case CSSPropertyWebkitDashboardRegion: {
+    case CSSPropertyWebkitDashboardRegion:
+#endif
+#if ENABLE(WIDGET_REGION)
+    case CSSPropertyWebkitWidgetRegion:
+#endif
+    {
         HANDLE_INHERIT_AND_INITIAL(dashboardRegions, DashboardRegions)
         if (!primitiveValue)
             return;
@@ -3991,19 +4012,6 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         m_style->setUseTouchOverflowScrolling(primitiveValue->getIdent() == CSSValueTouch);
         return;
     }
-#endif
-#if ENABLE(CSS3_FLEXBOX)
-    case CSSPropertyWebkitFlex:
-        if (isInherit) {
-            m_style->setFlexGrow(m_parentStyle->flexGrow());
-            m_style->setFlexShrink(m_parentStyle->flexShrink());
-            m_style->setFlexBasis(m_parentStyle->flexBasis());
-        } else if (isInitial) {
-            m_style->setFlexGrow(RenderStyle::initialFlexGrow());
-            m_style->setFlexShrink(RenderStyle::initialFlexShrink());
-            m_style->setFlexBasis(RenderStyle::initialFlexBasis());
-        }
-        return;
 #endif
     case CSSPropertyInvalid:
         return;
@@ -4335,6 +4343,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
     case CSSPropertyWebkitAlignContent:
     case CSSPropertyWebkitAlignItems:
     case CSSPropertyWebkitAlignSelf:
+    case CSSPropertyWebkitFlex:
     case CSSPropertyWebkitFlexBasis:
     case CSSPropertyWebkitFlexDirection:
     case CSSPropertyWebkitFlexFlow:
@@ -4394,6 +4403,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
 #endif
     case CSSPropertyWebkitRtlOrdering:
     case CSSPropertyWebkitTextCombine:
+    case CSSPropertyWebkitTextDecorationLine:
     case CSSPropertyWebkitTextEmphasisColor:
     case CSSPropertyWebkitTextEmphasisPosition:
     case CSSPropertyWebkitTextEmphasisStyle:
@@ -4464,14 +4474,14 @@ PassRefPtr<StyleImage> StyleResolver::cachedOrPendingFromValue(CSSPropertyID pro
 {
     RefPtr<StyleImage> image = value->cachedOrPendingImage();
     if (image && image->isPendingImage())
-        m_pendingImageProperties.add(property);
+        m_pendingImageProperties.set(property, value);
     return image.release();
 }
 
 PassRefPtr<StyleImage> StyleResolver::generatedOrPendingFromValue(CSSPropertyID property, CSSImageGeneratorValue* value)
 {
     if (value->isPending()) {
-        m_pendingImageProperties.add(property);
+        m_pendingImageProperties.set(property, value);
         return StylePendingImage::create(value);
     }
     return StyleGeneratedImage::create(value);
@@ -4482,7 +4492,7 @@ PassRefPtr<StyleImage> StyleResolver::setOrPendingFromValue(CSSPropertyID proper
 {
     RefPtr<StyleImage> image = value->cachedOrPendingImageSet(document());
     if (image && image->isPendingImage())
-        m_pendingImageProperties.add(property);
+        m_pendingImageProperties.set(property, value);
     return image.release();
 }
 #endif
@@ -5282,7 +5292,34 @@ PassRefPtr<CustomFilterOperation> StyleResolver::createCustomFilterOperation(Web
 
     ASSERT(shadersList->length());
     RefPtr<StyleShader> vertexShader = styleShader(shadersList->itemWithoutBoundsCheck(0));
-    RefPtr<StyleShader> fragmentShader = (shadersList->length() > 1) ? styleShader(shadersList->itemWithoutBoundsCheck(1)) : 0;
+
+    RefPtr<StyleShader> fragmentShader;
+    CustomFilterProgramMixSettings mixSettings;
+    if (shadersList->length() > 1) {
+        CSSValue* fragmentShaderOrMixFunction = shadersList->itemWithoutBoundsCheck(1);
+        if (fragmentShaderOrMixFunction->isWebKitCSSMixFunctionValue()) {
+            mixSettings.enabled = true;
+            WebKitCSSMixFunctionValue* mixFunction = static_cast<WebKitCSSMixFunctionValue*>(fragmentShaderOrMixFunction);
+            CSSValueListIterator iterator(mixFunction);
+
+            ASSERT(mixFunction->length());
+            fragmentShader = styleShader(iterator.value());
+            iterator.advance();
+
+            ASSERT(mixFunction->length() <= 3);
+            while (iterator.hasMore()) {
+                CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(iterator.value());
+                if (CSSParser::isBlendMode(primitiveValue->getIdent()))
+                    mixSettings.blendMode = *primitiveValue;
+                else if (CSSParser::isCompositeOperator(primitiveValue->getIdent()))
+                    mixSettings.compositeOperator = *primitiveValue;
+                else
+                    ASSERT_NOT_REACHED();
+                iterator.advance();
+            }
+        } else
+            fragmentShader = styleShader(fragmentShaderOrMixFunction);
+    }
     
     unsigned meshRows = 1;
     unsigned meshColumns = 1;
@@ -5351,7 +5388,7 @@ PassRefPtr<CustomFilterOperation> StyleResolver::createCustomFilterOperation(Web
     if (parametersValue && !parseCustomFilterParameterList(parametersValue, parameterList))
         return 0;
     
-    RefPtr<StyleCustomFilterProgram> program = StyleCustomFilterProgram::create(vertexShader.release(), fragmentShader.release());
+    RefPtr<StyleCustomFilterProgram> program = StyleCustomFilterProgram::create(vertexShader.release(), fragmentShader.release(), mixSettings);
     return CustomFilterOperation::create(program.release(), parameterList, meshRows, meshColumns, meshBoxType, meshType);
 }
 #endif
@@ -5539,8 +5576,8 @@ void StyleResolver::loadPendingImages()
     if (m_pendingImageProperties.isEmpty())
         return;
 
-    HashSet<CSSPropertyID>::const_iterator end = m_pendingImageProperties.end();
-    for (HashSet<CSSPropertyID>::const_iterator it = m_pendingImageProperties.begin(); it != end; ++it) {
+    PendingImagePropertyMap::const_iterator::Keys end = m_pendingImageProperties.end().keys();
+    for (PendingImagePropertyMap::const_iterator::Keys it = m_pendingImageProperties.begin().keys(); it != end; ++it) {
         CSSPropertyID currentProperty = *it;
 
         switch (currentProperty) {
@@ -5632,9 +5669,27 @@ void StyleResolver::loadPendingResources()
 #endif
 }
 
+void StyleResolver::MatchedProperties::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    info.addInstrumentedMember(properties);
+}
+
+void StyleResolver::MatchedPropertiesCacheItem::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    info.addInstrumentedVector(matchedProperties);
+}
+
+void MediaQueryResult::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    info.addInstrumentedMember(m_expression);
+}
+
 void StyleResolver::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo<StyleResolver> info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
     info.addMember(m_style);
     info.addInstrumentedMember(m_authorStyle);
     info.addInstrumentedMember(m_userStyle);
@@ -5642,18 +5697,23 @@ void StyleResolver::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addInstrumentedMember(m_uncommonAttributeRuleSet);
     info.addHashMap(m_keyframesRuleMap);
     info.addHashMap(m_matchedPropertiesCache);
+    info.addInstrumentedMapValues(m_matchedPropertiesCache);
     info.addVector(m_matchedRules);
 
-    // FIXME: Instrument StaticCSSRuleList and add m_ruleList here.
-    info.addHashSet(m_pendingImageProperties);
-    info.addVector(m_viewportDependentMediaQueryResults);
+    info.addInstrumentedMember(m_ruleList);
+    info.addHashMap(m_pendingImageProperties);
+    info.addInstrumentedMapValues(m_pendingImageProperties);
+    info.addInstrumentedMember(m_lineHeightValue);
+    info.addInstrumentedVector(m_viewportDependentMediaQueryResults);
     info.addHashMap(m_styleRuleToCSSOMWrapperMap);
-    info.addHashSet(m_styleSheetCSSOMWrapperSet);
+    info.addInstrumentedMapEntries(m_styleRuleToCSSOMWrapperMap);
+    info.addInstrumentedHashSet(m_styleSheetCSSOMWrapperSet);
 #if ENABLE(CSS_FILTERS) && ENABLE(SVG)
     info.addHashMap(m_pendingSVGDocuments);
 #endif
 #if ENABLE(STYLE_SCOPED)
     info.addHashMap(m_scopedAuthorStyles);
+    info.addInstrumentedMapEntries(m_scopedAuthorStyles);
     info.addVector(m_scopeStack);
 #endif
 

@@ -46,6 +46,7 @@
 using namespace WebCore;
 using namespace std;
 
+#define MESSAGE_CHECK(assertion) MESSAGE_CHECK_BASE(assertion, connection())
 #define MESSAGE_CHECK_URL(url) MESSAGE_CHECK_BASE(checkURLReceivedFromWebProcess(url), connection())
 
 namespace WebKit {
@@ -332,7 +333,7 @@ void WebProcessProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC
         || messageID.is<CoreIPC::MessageClassWebVibrationProxy>()
 #endif
         || messageID.is<CoreIPC::MessageClassWebResourceCacheManagerProxy>()) {
-        m_context->didReceiveMessage(connection, messageID, arguments);
+        m_context->didReceiveMessage(this, messageID, arguments);
         return;
     }
 
@@ -359,7 +360,7 @@ void WebProcessProxy::didReceiveSyncMessage(CoreIPC::Connection* connection, Cor
         || messageID.is<CoreIPC::MessageClassWebNetworkInfoManagerProxy>()
 #endif
         || messageID.is<CoreIPC::MessageClassDownloadProxy>() || messageID.is<CoreIPC::MessageClassWebIconDatabase>()) {
-        m_context->didReceiveSyncMessage(connection, messageID, arguments, reply);
+        m_context->didReceiveSyncMessage(this, messageID, arguments, reply);
         return;
     }
 
@@ -525,6 +526,69 @@ void WebProcessProxy::updateTextCheckerState()
         return;
 
     send(Messages::WebProcess::SetTextCheckerState(TextChecker::state()), 0);
+}
+
+void WebProcessProxy::didNavigateWithNavigationData(uint64_t pageID, const WebNavigationDataStore& store, uint64_t frameID) 
+{
+    WebPageProxy* page = webPage(pageID);
+    if (!page)
+        return;
+    
+    WebFrameProxy* frame = webFrame(frameID);
+    MESSAGE_CHECK(frame);
+    MESSAGE_CHECK(frame->page() == page);
+    
+    m_context->historyClient().didNavigateWithNavigationData(m_context.get(), page, store, frame);
+}
+
+void WebProcessProxy::didPerformClientRedirect(uint64_t pageID, const String& sourceURLString, const String& destinationURLString, uint64_t frameID)
+{
+    WebPageProxy* page = webPage(pageID);
+    if (!page)
+        return;
+
+    if (sourceURLString.isEmpty() || destinationURLString.isEmpty())
+        return;
+    
+    WebFrameProxy* frame = webFrame(frameID);
+    MESSAGE_CHECK(frame);
+    MESSAGE_CHECK(frame->page() == page);
+    MESSAGE_CHECK_URL(sourceURLString);
+    MESSAGE_CHECK_URL(destinationURLString);
+
+    m_context->historyClient().didPerformClientRedirect(m_context.get(), page, sourceURLString, destinationURLString, frame);
+}
+
+void WebProcessProxy::didPerformServerRedirect(uint64_t pageID, const String& sourceURLString, const String& destinationURLString, uint64_t frameID)
+{
+    WebPageProxy* page = webPage(pageID);
+    if (!page)
+        return;
+    
+    if (sourceURLString.isEmpty() || destinationURLString.isEmpty())
+        return;
+    
+    WebFrameProxy* frame = webFrame(frameID);
+    MESSAGE_CHECK(frame);
+    MESSAGE_CHECK(frame->page() == page);
+    MESSAGE_CHECK_URL(sourceURLString);
+    MESSAGE_CHECK_URL(destinationURLString);
+
+    m_context->historyClient().didPerformServerRedirect(m_context.get(), page, sourceURLString, destinationURLString, frame);
+}
+
+void WebProcessProxy::didUpdateHistoryTitle(uint64_t pageID, const String& title, const String& url, uint64_t frameID)
+{
+    WebPageProxy* page = webPage(pageID);
+    if (!page)
+        return;
+
+    WebFrameProxy* frame = webFrame(frameID);
+    MESSAGE_CHECK(frame);
+    MESSAGE_CHECK(frame->page() == page);
+    MESSAGE_CHECK_URL(url);
+
+    m_context->historyClient().didUpdateHistoryTitle(m_context.get(), page, title, url, frame);
 }
 
 } // namespace WebKit

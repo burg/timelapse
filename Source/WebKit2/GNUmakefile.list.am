@@ -140,8 +140,6 @@ webkit2_built_sources += \
 	DerivedSources/WebKit2/DrawingAreaProxyMessages.h \
 	DerivedSources/WebKit2/EventDispatcherMessageReceiver.cpp \
 	DerivedSources/WebKit2/EventDispatcherMessages.h \
-	DerivedSources/WebKit2/LayerTreeCoordinatorProxyMessageReceiver.cpp \
-	DerivedSources/WebKit2/LayerTreeCoordinatorProxyMessages.h \
 	DerivedSources/WebKit2/NPObjectMessageReceiverMessageReceiver.cpp \
 	DerivedSources/WebKit2/NPObjectMessageReceiverMessages.h \
 	DerivedSources/WebKit2/PluginControllerProxyMessageReceiver.cpp \
@@ -469,8 +467,6 @@ webkit2_sources += \
 	Source/WebKit2/Shared/WebHitTestResult.h \
 	Source/WebKit2/Shared/WebImage.cpp \
 	Source/WebKit2/Shared/WebImage.h \
-	Source/WebKit2/Shared/WebIntentData.cpp \
-	Source/WebKit2/Shared/WebIntentData.h \
 	Source/WebKit2/Shared/WebIntentServiceInfo.cpp \
 	Source/WebKit2/Shared/WebIntentServiceInfo.h \
 	Source/WebKit2/Shared/WebKeyboardEvent.cpp \
@@ -701,6 +697,8 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/API/gtk/WebKitSettings.cpp \
 	Source/WebKit2/UIProcess/API/gtk/WebKitSettings.h \
 	Source/WebKit2/UIProcess/API/gtk/WebKitSettingsPrivate.h \
+	Source/WebKit2/UIProcess/API/gtk/WebKitTextChecker.cpp \
+	Source/WebKit2/UIProcess/API/gtk/WebKitTextChecker.h \
 	Source/WebKit2/UIProcess/API/gtk/WebKitUIClient.cpp \
 	Source/WebKit2/UIProcess/API/gtk/WebKitUIClient.h \
 	Source/WebKit2/UIProcess/API/gtk/WebKitURIRequest.cpp \
@@ -871,6 +869,8 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/WebIconDatabaseClient.h \
 	Source/WebKit2/UIProcess/WebInspectorProxy.cpp \
 	Source/WebKit2/UIProcess/WebInspectorProxy.h \
+	Source/WebKit2/UIProcess/WebIntentData.cpp \
+	Source/WebKit2/UIProcess/WebIntentData.h \
 	Source/WebKit2/UIProcess/WebKeyValueStorageManagerProxy.cpp \
 	Source/WebKit2/UIProcess/WebKeyValueStorageManagerProxy.h \
 	Source/WebKit2/UIProcess/WebMediaCacheManagerProxy.cpp \

@@ -49,7 +49,6 @@ class GestureEvent;
 class HTMLPlugInElement;
 class IntRect;
 class KeyboardEvent;
-class LayerChromium;
 class MouseEvent;
 class ResourceError;
 class ResourceResponse;
@@ -78,6 +77,7 @@ public:
 
     // PluginViewBase methods
     virtual bool getFormValue(String&);
+    virtual bool supportsKeyboardFocus() const;
 
     // Widget methods
     virtual void setFrameRect(const WebCore::IntRect&);
@@ -150,7 +150,7 @@ public:
     void willDestroyPluginLoadObserver(WebPluginLoadObserver*);
 
 #if USE(ACCELERATED_COMPOSITING)
-    virtual WebCore::LayerChromium* platformLayer() const;
+    virtual WebLayer* platformLayer() const;
 #endif
 
     ScrollbarGroup* scrollbarGroup();

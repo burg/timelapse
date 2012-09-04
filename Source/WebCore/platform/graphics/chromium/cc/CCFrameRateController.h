@@ -52,13 +52,11 @@ public:
     explicit CCFrameRateController(PassRefPtr<CCTimeSource>);
     // Alternate form of CCFrameRateController with unthrottled frame-rate.
     explicit CCFrameRateController(CCThread*);
-    ~CCFrameRateController();
+    virtual ~CCFrameRateController();
 
     void setClient(CCFrameRateControllerClient* client) { m_client = client; }
 
     void setActive(bool);
-
-    void setMaxPendingFrames(int);
 
     // Use the following methods to adjust target frame rate.
     //
@@ -70,6 +68,8 @@ public:
     void didFinishFrame();
     void didAbortAllPendingFrames();
     void setMaxFramesPending(int); // 0 for unlimited.
+
+    void setTimebaseAndInterval(double timebase, double intervalSeconds);
 
 protected:
     friend class CCFrameRateControllerTimeSourceAdapter;

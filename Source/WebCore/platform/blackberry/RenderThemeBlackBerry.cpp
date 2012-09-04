@@ -175,7 +175,7 @@ static float determineFullScreenMultiplier(Element* element)
         // To fix that, lets strips out the Page scale factor from the media controls multiplier.
         float scaleFactor = element->document()->view()->hostWindow()->platformPageClient()->currentZoomFactor();
         static ViewportArguments defaultViewportArguments;
-        float scaleFactorFudge = element->document()->page()->viewportArguments() != defaultViewportArguments ? .5 : .85;
+        float scaleFactorFudge = 1 / element->document()->page()->deviceScaleFactor();
         fullScreenMultiplier /= scaleFactor * scaleFactorFudge;
     }
 #endif
@@ -899,7 +899,7 @@ bool RenderThemeBlackBerry::paintMediaSliderTrack(RenderObject* object, const Pa
     // FIXME: replace loaded with commented out one when buffer bug is fixed (see comment in
     // MediaPlayerPrivateMMrenderer::percentLoaded).
     // loaded = mediaElement->percentLoaded();
-    if (mediaElement->player())
+    if (mediaElement->player() && mediaElement->player()->implementation())
         loaded = static_cast<MediaPlayerPrivate *>(mediaElement->player()->implementation())->percentLoaded();
     float position = mediaElement->duration() > 0 ? (mediaElement->currentTime() / mediaElement->duration()) : 0;
 

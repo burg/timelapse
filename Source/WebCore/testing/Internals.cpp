@@ -30,7 +30,6 @@
 #include "ClientRect.h"
 #include "ClientRectList.h"
 #include "ComposedShadowTreeWalker.h"
-#include "DOMNodeHighlighter.h"
 #include "DOMStringList.h"
 #include "Document.h"
 #include "DocumentMarker.h"
@@ -50,6 +49,7 @@
 #include "InspectorController.h"
 #include "InspectorCounters.h"
 #include "InspectorInstrumentation.h"
+#include "InspectorOverlay.h"
 #include "InstrumentingAgents.h"
 #include "InternalSettings.h"
 #include "IntRect.h"
@@ -431,15 +431,6 @@ void Internals::setShadowPseudoId(Element* element, const String& id, ExceptionC
     }
 
     return element->setShadowPseudoId(id, ec);
-}
-
-void Internals::setAuthorShadowDOMForAnyElementEnabled(bool isEnabled)
-{
-#if ENABLE(SHADOW_DOM)
-    RuntimeEnabledFeatures::setAuthorShadowDOMForAnyElementEnabled(isEnabled);
-#else
-    UNUSED_PARAM(isEnabled);
-#endif
 }
 
 String Internals::visiblePlaceholder(Element* element)

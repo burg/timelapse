@@ -186,9 +186,7 @@ void NetworkJob::handleNotifyStatusReceived(int status, const String& message)
 
     m_response.setHTTPStatusText(message);
 
-    if (!isError(m_extendedStatusCode))
-        storeCredentials();
-    else if (isUnauthorized(m_extendedStatusCode)) {
+    if (isUnauthorized(m_extendedStatusCode)) {
         purgeCredentials();
         BlackBerry::Platform::log(BlackBerry::Platform::LogLevelCritical, "Authentication failed, purge the stored credentials for this site.");
     }
@@ -277,6 +275,7 @@ void NetworkJob::notifyAuthReceived(BlackBerry::Platform::NetworkRequest::AuthTy
                                                                                          challenge.error());
             }
         }
+        storeCredentials();
         return;
     }
 
@@ -349,14 +348,14 @@ void NetworkJob::handleNotifyMultipartHeaderReceived(const String& key, const St
         }
 
         m_multipartResponse->setIsMultipartPayload(true);
-    } else {
-        if (key.lower() == "content-type") {
-            String contentType = value.lower();
-            m_multipartResponse->setMimeType(extractMIMETypeFromMediaType(contentType));
-            m_multipartResponse->setTextEncodingName(extractCharsetFromMediaType(contentType));
-        }
-        m_multipartResponse->setHTTPHeaderField(key, value);
     }
+
+    if (key.lower() == "content-type") {
+        String contentType = value.lower();
+        m_multipartResponse->setMimeType(extractMIMETypeFromMediaType(contentType));
+        m_multipartResponse->setTextEncodingName(extractCharsetFromMediaType(contentType));
+    }
+    m_multipartResponse->setHTTPHeaderField(key, value);
 }
 
 void NetworkJob::handleSetCookieHeader(const String& value)
@@ -759,6 +758,8 @@ bool NetworkJob::sendRequestWithCredentials(ProtectionSpaceServerType type, Prot
                 m_handle->getInternal()->m_user = "";
                 m_handle->getInternal()->m_pass = "";
             } else {
+                if (m_handle->firstRequest().targetType() != ResourceRequest::TargetIsMainFrame && BlackBerry::Platform::Client::isChromeProcess())
+                    return false;
                 Credential inputCredential;
                 if (!m_frame->page()->chrome()->client()->platformPageClient()->authenticationChallenge(newURL, protectionSpace, inputCredential))
                     return false;

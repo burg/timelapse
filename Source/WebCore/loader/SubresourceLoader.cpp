@@ -37,6 +37,7 @@
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
 #include "MemoryCache.h"
+#include "MemoryInstrumentation.h"
 #include "SecurityOrigin.h"
 #include "SecurityPolicy.h"
 #include <wtf/RefCountedLeakCounter.h>
@@ -128,6 +129,15 @@ void SubresourceLoader::cancelIfNotFinishing()
         return;
 
     ResourceLoader::cancel();
+}
+
+void SubresourceLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::Loader);
+    ResourceLoader::reportMemoryUsage(memoryObjectInfo);
+    info.addInstrumentedMember(m_resource);
+    info.addInstrumentedMember(m_document);
+    info.addMember(m_requestCountTracker);
 }
 
 bool SubresourceLoader::init(const ResourceRequest& request)

@@ -229,7 +229,6 @@ namespace WebCore {
     \
     macro(show) \
     \
-    macro(webkitpointerlocklost) \
     macro(webkitpointerlockchange) \
     macro(webkitpointerlockerror) \
     \
@@ -238,6 +237,8 @@ namespace WebCore {
     macro(webkitnetworkinfochange) \
     \
     macro(webkitresourcetimingbufferfull) \
+    \
+    macro(webkitdeviceproximity) \
     \
 
 // end of DOM_EVENT_NAMES_FOR_EACH

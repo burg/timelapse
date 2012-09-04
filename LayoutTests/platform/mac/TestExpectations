@@ -261,9 +261,6 @@ BUGWK84167 : fast/css-generated-content/nested-tables-with-before-after-content-
 BUGWK84167 : fast/inline-block/001.html = TEXT
 BUGWK84167 : tables/mozilla/bugs/bug2479-2.html = TEXT
 
-// Flaky in transition test framework
-BUGWK90234 : css3/calc/transitions.html = PASS TEXT
-
 // Needs rebaseline after bug 86441
 BUGWK86441 : fast/multicol/shadow-breaking.html = IMAGE
 
@@ -305,3 +302,36 @@ BUGWK91552 : fast/text/descent-clip-in-scaled-page.html = IMAGE
 
 // Layout Test css3/filters/custom/custom-filter-animation.html is failing
 BUGWK84813 : css3/filters/custom/custom-filter-animation.html = TEXT
+
+// Needs rebaseline after https://bugs.webkit.org/show_bug.cgi?id=80219
+BUGWK92904 : fast/box-sizing/box-sizing.html = TEXT
+BUGWK92904 : compositing/overflow/clip-descendents.html = TEXT
+
+// Needs rebaseline after https://bugs.webkit.org/show_bug.cig?id=91969
+BUGWK91969 : fast/dom/HTMLProgressElement/progress-bar-value-pseudo-element.html = TEXT
+BUGWK91969 : fast/dom/HTMLProgressElement/progress-writing-mode.html = TEXT
+BUGWK91969 : fast/dom/HTMLProgressElement/indeterminate-progress-001.html = TEXT
+
+// Require rebaseline after bug 93148
+BUGWK93148 : tables/mozilla_expected_failures/bugs/bug106966.html = TEXT
+BUGWK93148 : tables/mozilla_expected_failures/marvin/table_overflow_hidden_tbody.html = TEXT
+BUGWK93148 : tables/mozilla_expected_failures/marvin/table_overflow_hidden_tr.html = TEXT
+BUGWK93148 : fast/css/nested-layers-with-hover.html = TEXT
+
+BUGWK93247 DEBUG : fast/lists/list-marker-remove-crash.html = CRASH
+
+// REGRESSION (r124723-r124741): 5 inspector/debugger tests failing on Apple Lion Debug WK1 (Tests)
+BUGWK93387 :  inspector/debugger/script-formatter-breakpoints.html = TEXT
+BUGWK93387 :  inspector/debugger/pause-in-internal-script.html = TEXT
+BUGWK93387 :  inspector/debugger/watch-expressions-panel-switch.html = TEXT
+BUGWK93387 :  inspector/debugger/debugger-activation-crash2.html = TEXT
+BUGWK93387 :  inspector/debugger/debugger-set-breakpoint-regex.html = TEXT
+
+// REGRESSION (r124416): fast/forms/basic-selects.html failing on Lion Debug Tests
+BUGWK93538 : fast/forms/basic-selects.html = TEXT
+
+// (r124484) inspector/device-orientation-success.html failing on Mac ports
+BUGWK93552 : inspector/device-orientation-success.html = TEXT
+
+// (r125185) http/tests/images/jpg-img-partial-load.html timeout on Lion
+BUGWK93636 : http/tests/images/jpg-img-partial-load.html = TIMEOUT

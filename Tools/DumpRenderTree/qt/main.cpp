@@ -66,11 +66,11 @@ void messageHandler(QtMsgType type, const char *message)
     // do nothing
 }
 
-// We only support -v or --pixel-tests or --stdout or --stderr or -, all the others will be 
+// We only support -v or --stdout or --stderr or -, all the others will be
 // pass as test case name (even -abc.html is a valid test case name)
 bool isOption(const QString& str)
 {
-    return str == QString("-v") || str == QString("--pixel-tests")
+    return str == QString("-v")
            || str == QString("--stdout") || str == QString("--stderr")
            || str == QString("--timeout") || str == QString("--no-timeout")
            || str == QString("-");
@@ -89,8 +89,8 @@ QString takeOptionValue(QStringList& arguments, int index)
 
 void printUsage()
 {
-    fprintf(stderr, "Usage: DumpRenderTree [-v|--pixel-tests] [--stdout output_filename] [-stderr error_filename] [--no-timeout] [--timeout timeout_MS] filename [filename2..n]\n");
-    fprintf(stderr, "Or folder containing test files: DumpRenderTree [-v|--pixel-tests] dirpath\n");
+    fprintf(stderr, "Usage: DumpRenderTree [-v] [--stdout output_filename] [-stderr error_filename] [--no-timeout] [--timeout timeout_MS] filename [filename2..n]\n");
+    fprintf(stderr, "Or folder containing test files: DumpRenderTree [-v] dirpath\n");
     fflush(stderr);
 }
 
@@ -123,27 +123,7 @@ int main(int argc, char* argv[])
     QApplication app(argc, argv);
     app.setQuitOnLastWindowClosed(false);
 
-#if HAVE(QT5)
     QCoreApplication::setAttribute(Qt::AA_Use96Dpi, true);
-#else
-#ifdef Q_WS_X11
-    QX11Info::setAppDpiY(0, 96);
-    QX11Info::setAppDpiX(0, 96);
-#endif
-
-   /*
-    * QApplication will initialize the default application font based
-    * on the application DPI at construction time, which might be
-    * different from the DPI we explicitly set using QX11Info above.
-    * See: https://bugreports.qt.nokia.com/browse/QTBUG-21603
-    *
-    * To ensure that the application font DPI matches the application
-    * DPI, we override the application font using the font we get from
-    * a QWidget, which has already been resolved against the existing
-    * default font, but with the correct paint-device DPI.
-   */
-    QApplication::setFont(QWidget().font());
-#endif
 
     WTFInstallReportBacktraceOnCrashHook();
 
@@ -158,13 +138,7 @@ int main(int argc, char* argv[])
 
     WebCore::DumpRenderTree dumper;
 
-    int index = args.indexOf(QLatin1String("--pixel-tests"));
-    if (index != -1) {
-        dumper.setDumpPixelsForAllTests(true);
-        args.removeAt(index);
-    }
-
-    index = args.indexOf(QLatin1String("--stdout"));
+    int index = args.indexOf(QLatin1String("--stdout"));
     if (index != -1) {
         QString fileName = takeOptionValue(args, index);
         dumper.setRedirectOutputFileName(fileName);

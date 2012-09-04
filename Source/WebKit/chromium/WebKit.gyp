@@ -113,7 +113,6 @@
                 'public/WebCommonWorkerClient.h',
                 'public/WebCompositionUnderline.h',
                 'public/WebCompositor.h',
-                'public/WebCompositorClient.h',
                 'public/WebCompositorInputHandler.h',
                 'public/WebCompositorInputHandlerClient.h',
                 'public/WebConsoleMessage.h',
@@ -275,6 +274,7 @@
                 'public/WebTextInputType.h',
                 'public/WebTextRun.h',
                 'public/WebTimeRange.h',
+                'public/WebTouchCandidatesInfo.h',
                 'public/WebURLLoaderOptions.h',
                 'public/WebUserMediaClient.h',
                 'public/WebUserMediaRequest.h',
@@ -363,8 +363,6 @@
                 'src/BatteryClientImpl.h',
                 'src/BlobRegistryProxy.cpp',
                 'src/BlobRegistryProxy.h',
-                'src/CCThreadImpl.cpp',
-                'src/CCThreadImpl.h',
                 'src/ChromeClientImpl.cpp',
                 'src/ChromeClientImpl.h',
                 'src/ChromiumCurrentTime.cpp',
@@ -491,8 +489,6 @@
                 'src/WebCache.cpp',
                 'src/WebColorName.cpp',
                 'src/WebCommon.cpp',
-                'src/WebCompositorImpl.cpp',
-                'src/WebCompositorImpl.h',
                 'src/WebCompositorInputHandlerImpl.cpp',
                 'src/WebCompositorInputHandlerImpl.h',
                 'src/WebContentLayer.cpp',
@@ -574,7 +570,6 @@
                 'src/WebIDBTransactionCallbacksImpl.cpp',
                 'src/WebIDBTransactionCallbacksImpl.h',
                 'src/WebIOSurfaceLayer.cpp',
-                'src/WebImageCG.cpp',
                 'src/WebImageDecoder.cpp',
                 'src/WebImageLayer.cpp',
                 'src/WebImageSkia.cpp',
@@ -634,7 +629,6 @@
                 'src/WebScrollbarImpl.h',
                 'src/WebScrollbarThemeClientImpl.cpp',
                 'src/WebScrollbarThemeClientImpl.h',
-                'src/WebScrollbarThemeGeometry.cpp',
                 'src/WebScrollbarThemePainter.cpp',
                 'src/WebSearchableFormData.cpp',
                 'src/WebSecurityOrigin.cpp',
@@ -826,18 +820,13 @@
                         ['exclude', '/android/'],
                     ],
                 }],
-                # TODO: we exclude CG.cpp on both sides of the below conditional. Move elsewhere?
                 ['OS=="mac"', {
                     'include_dirs': [
                         'public/mac',
                     ],
-                    'sources/': [
-                        ['exclude', 'CG\\.cpp$'],
-                    ],
                 }, { # else: OS!="mac"
                     'sources/': [
                         ['exclude', '/mac/'],
-                        ['exclude', 'CG\\.cpp$'],
                     ],
                 }],
                 ['OS=="win"', {
@@ -989,6 +978,7 @@
                     '<(PRODUCT_DIR)/resources/inspector/ScriptFormatterWorker.js',
                     '<(PRODUCT_DIR)/resources/inspector/devTools.css',
                     '<(PRODUCT_DIR)/resources/inspector/devtools_extension_api.js',
+                    '<@(webinspector_standalone_js_files)',
                     '<@(webinspector_standalone_css_files)',
                 ],
                 'images': [
@@ -1103,6 +1093,12 @@
                         ],
                         'outputs': ['<(PRODUCT_DIR)/resources/inspector/DevTools.js'],
                         'action': ['python', '<@(_script_name)', '<@(_input_page)', '<@(_search_path)', '<@(_outputs)'],
+                    }],
+                    'copies': [{
+                        'destination': '<(PRODUCT_DIR)/resources/inspector',
+                        'files': [
+                            '<@(webinspector_standalone_js_files)',
+                        ],
                     }],
                 },
                 {

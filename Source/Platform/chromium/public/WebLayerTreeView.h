@@ -26,6 +26,7 @@
 #ifndef WebLayerTreeView_h
 #define WebLayerTreeView_h
 
+#include "SkBitmap.h"
 #include "WebColor.h"
 #include "WebCommon.h"
 #include "WebNonCopyable.h"
@@ -51,7 +52,6 @@ public:
     struct Settings {
         Settings()
             : acceleratePainting(false)
-            , forceSoftwareCompositing(false)
             , showFPSCounter(false)
             , showPlatformLayerTree(false)
             , showPaintRects(false)
@@ -63,7 +63,6 @@ public:
         }
 
         bool acceleratePainting;
-        bool forceSoftwareCompositing;
         bool showFPSCounter;
         bool showPlatformLayerTree;
         bool showPaintRects;
@@ -71,6 +70,7 @@ public:
         double refreshRate;
         WebSize defaultTileSize;
         WebSize maxUntiledLayerSize;
+
 #if WEBKIT_IMPLEMENTATION
         operator WebCore::CCLayerTreeSettings() const;
 #endif
@@ -107,8 +107,13 @@ public:
 
     // View properties ---------------------------------------------------
 
-    WEBKIT_EXPORT void setViewportSize(const WebSize&);
-    WEBKIT_EXPORT WebSize viewportSize() const;
+    WEBKIT_EXPORT void setViewportSize(const WebSize& layoutViewportSize, const WebSize& deviceViewportSize = WebSize());
+    // Gives the viewport size in layer space.
+    WEBKIT_EXPORT WebSize layoutViewportSize() const;
+    // Gives the viewport size in physical device pixels (may be different
+    // from the above if there exists page scale, device scale or fixed layout
+    // mode).
+    WEBKIT_EXPORT WebSize deviceViewportSize() const;
 
     WEBKIT_EXPORT void setDeviceScaleFactor(float);
     WEBKIT_EXPORT float deviceScaleFactor() const;
@@ -174,6 +179,10 @@ public:
     // Fills in a WebRenderingStats struct containing information about the state of the compositor.
     // This call is relatively expensive in threaded mode as it blocks on the compositor thread.
     WEBKIT_EXPORT void renderingStats(WebRenderingStats&) const;
+
+    // Provides a font atlas to use for debug visualizations. The atlas must be a bitmap containing glyph data, a table of
+    // ASCII character values to a subrectangle of the atlas representing the corresponding glyph, and the glyph height.
+    WEBKIT_EXPORT void setFontAtlas(SkBitmap, WebRect asciiToRectTable[128], int fontHeight);
 
     // Simulates a lost context. For testing only.
     WEBKIT_EXPORT void loseCompositorContext(int numTimes);

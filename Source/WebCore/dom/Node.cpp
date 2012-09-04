@@ -67,6 +67,7 @@
 #include "KeyboardEvent.h"
 #include "LabelsNodeList.h"
 #include "Logging.h"
+#include "MemoryInstrumentation.h"
 #include "MouseEvent.h"
 #include "MutationEvent.h"
 #include "NameNodeList.h"
@@ -2131,7 +2132,7 @@ void Node::showNodePathForThis() const
         const Node* node = chain[index - 1];
         if (node->isShadowRoot()) {
             int count = 0;
-            for (ShadowRoot* shadowRoot = oldestShadowRootFor(node); shadowRoot && shadowRoot != node; shadowRoot = shadowRoot->youngerShadowRoot())
+            for (ShadowRoot* shadowRoot = oldestShadowRootFor(toShadowRoot(node)->host()); shadowRoot && shadowRoot != node; shadowRoot = shadowRoot->youngerShadowRoot())
                 ++count;
             fprintf(stderr, "/#shadow-root[%d]", count);
             continue;
@@ -2266,7 +2267,7 @@ void NodeListsNodeData::invalidateCaches(const QualifiedName* attrName)
     for (NodeListNameCacheMap::const_iterator it = m_nameCaches.begin(); it != nameCacheEnd; ++it)
         it->second->invalidateCache(attrName);
 
-    if (!attrName)
+    if (attrName)
         return;
 
     TagNodeListCacheNS::iterator tagCacheEnd = m_tagNodeListCacheNS.end();
@@ -2580,16 +2581,6 @@ bool Node::dispatchEvent(PassRefPtr<Event> event)
     return EventDispatcher::dispatchEvent(this, EventDispatchMediator::create(event));
 }
 
-void Node::dispatchRegionLayoutUpdateEvent()
-{
-    ASSERT(!eventDispatchForbidden());
-
-    if (!document()->hasListenerType(Document::REGIONLAYOUTUPDATE_LISTENER))
-        return;
-
-    dispatchScopedEvent(UIEvent::create(eventNames().webkitRegionLayoutUpdateEvent, true, true, document()->defaultView(), 0));
-}
-
 void Node::dispatchSubtreeModifiedEvent()
 {
     if (isInShadowTree())
@@ -2640,7 +2631,10 @@ bool Node::dispatchMouseEvent(const PlatformMouseEvent& event, const AtomicStrin
 #if ENABLE(GESTURE_EVENTS)
 bool Node::dispatchGestureEvent(const PlatformGestureEvent& event)
 {
-    return EventDispatcher::dispatchEvent(this, GestureEventDispatchMediator::create(GestureEvent::create(document()->defaultView(), event)));
+    RefPtr<GestureEvent> gestureEvent = GestureEvent::create(document()->defaultView(), event);
+    if (!gestureEvent.get())
+        return false;
+    return EventDispatcher::dispatchEvent(this, GestureEventDispatchMediator::create(gestureEvent));
 }
 #endif
 
@@ -2823,12 +2817,14 @@ void Node::removedLastRef()
 
 void Node::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo<Node> info(memoryObjectInfo, this, MemoryInstrumentation::DOM);
-    info.visitBaseClass<TreeShared<Node, ContainerNode> >(this);
-    info.visitBaseClass<ScriptWrappable>(this);
+    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::DOM);
+    TreeShared<Node, ContainerNode>::reportMemoryUsage(memoryObjectInfo);
+    ScriptWrappable::reportMemoryUsage(memoryObjectInfo);
     info.addInstrumentedMember(m_document);
     info.addInstrumentedMember(m_next);
     info.addInstrumentedMember(m_previous);
+    if (m_renderer)
+        info.addInstrumentedMember(m_renderer->style());
 }
 
 } // namespace WebCore

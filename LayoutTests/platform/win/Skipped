@@ -1091,6 +1091,10 @@ http/tests/misc/link-rel-prefetch-and-subresource.html
 fast/dom/HTMLLinkElement/subresource.html
 http/tests/misc/prefetch-purpose.html
 
+# link prerender is disabled.
+fast/dom/HTMLLinkElement/prerender-insert-after-stop.html
+fast/dom/HTMLLinkElement/prerender-remove-after-stop.html
+
 # LayoutTestController::pageProperty is not implemented for WIN yet.
 printing/page-rule-selection.html
 
@@ -1460,6 +1464,7 @@ loader/navigation-while-deferring-loads.html
 http/tests/security/isolatedWorld/cross-origin-xhr.html
 
 # ENABLE(WEBGL) is disabled
+compositing/backface-visibility/backface-visibility-webgl.html
 compositing/visibility/visibility-simple-webgl-layer.html
 compositing/webgl
 fast/canvas/webgl
@@ -1733,6 +1738,7 @@ fast/sub-pixel/file-upload-control-at-fractional-offset.html
 fast/sub-pixel/float-containing-block-with-margin.html
 fast/sub-pixel/float-with-right-margin-zoom.html
 fast/sub-pixel/float-wrap-with-subpixel-top.html
+fast/sub-pixel/inline-block-should-not-wrap.html
 fast/sub-pixel/inline-block-with-margin.html
 fast/sub-pixel/inline-block-with-padding.html
 fast/sub-pixel/layout-boxes-with-zoom.html
@@ -1951,3 +1957,19 @@ http/tests/security/contentSecurityPolicy/1.1
 
 # Skip tests in fast/text/shaping
 fast/text/shaping
+
+# ENABLE(WIDGET_REGION) is disabled
+fast/css/widget-region-parser.html
+
+# CSS image-orientation property not yet supported
+fast/css/image-orientation/
+
+# Test uses "required" form element property which currently does not work on Safari
+fast/forms/validation-message-user-modify.html
+
+# The textInputController.setComposition() implementation is missing
+fast/forms/input-set-composition-scroll.html
+
+# https://bugs.webkit.org/show_bug.cgi?id=93667
+# Test times out
+fast/forms/select/menulist-popup-crash.html

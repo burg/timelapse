@@ -29,7 +29,6 @@
 #include "EventTarget.h"
 #include "KURLHash.h"
 #include "LayoutTypes.h"
-#include "MemoryInstrumentation.h"
 #include "MutationObserver.h"
 #include "RenderStyleConstants.h"
 #include "ScriptWrappable.h"
@@ -66,6 +65,7 @@ class Frame;
 class HTMLInputElement;
 class IntRect;
 class KeyboardEvent;
+class MemoryObjectInfo;
 class NSResolver;
 class NamedNodeMap;
 class NameNodeList;
@@ -222,6 +222,7 @@ public:
     virtual bool isAttributeNode() const { return false; }
     virtual bool isCharacterDataNode() const { return false; }
     virtual bool isFrameOwnerElement() const { return false; }
+    virtual bool isPluginElement() const { return false; }
     bool isDocumentNode() const;
     bool isShadowRoot() const { return getFlag(IsShadowRootFlag); }
     bool inNamedFlow() const { return getFlag(InNamedFlowFlag); }
@@ -605,8 +606,6 @@ public:
     void dispatchScopedEventDispatchMediator(PassRefPtr<EventDispatchMediator>);
 
     virtual void handleLocalEvents(Event*);
-
-    void dispatchRegionLayoutUpdateEvent();
 
     void dispatchSubtreeModifiedEvent();
     bool dispatchDOMActivateEvent(int detail, PassRefPtr<Event> underlyingEvent);

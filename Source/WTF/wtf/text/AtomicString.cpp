@@ -88,7 +88,7 @@ static inline PassRefPtr<StringImpl> addToStringTable(const T& value)
 struct CStringTranslator {
     static unsigned hash(const LChar* c)
     {
-        return StringHasher::computeHash(c);
+        return StringHasher::computeHashAndMaskTop8Bits(c);
     }
 
     static inline bool equal(StringImpl* r, const LChar* s)
@@ -124,7 +124,7 @@ typedef HashTranslatorCharBuffer<UChar> UCharBuffer;
 struct UCharBufferTranslator {
     static unsigned hash(const UCharBuffer& buf)
     {
-        return StringHasher::computeHash(buf.s, buf.length);
+        return StringHasher::computeHashAndMaskTop8Bits(buf.s, buf.length);
     }
 
     static bool equal(StringImpl* const& str, const UCharBuffer& buf)
@@ -149,7 +149,7 @@ struct HashAndCharacters {
 struct HashAndCharactersTranslator {
     static unsigned hash(const HashAndCharacters& buffer)
     {
-        ASSERT(buffer.hash == StringHasher::computeHash(buffer.characters, buffer.length));
+        ASSERT(buffer.hash == StringHasher::computeHashAndMaskTop8Bits(buffer.characters, buffer.length));
         return buffer.hash;
     }
 
@@ -262,7 +262,7 @@ struct SubstringLocation {
 struct SubstringTranslator {
     static unsigned hash(const SubstringLocation& buffer)
     {
-        return StringHasher::computeHash(buffer.baseString->characters() + buffer.start, buffer.length);
+        return StringHasher::computeHashAndMaskTop8Bits(buffer.baseString->characters() + buffer.start, buffer.length);
     }
 
     static bool equal(StringImpl* const& string, const SubstringLocation& buffer)
@@ -297,19 +297,19 @@ PassRefPtr<StringImpl> AtomicString::add(StringImpl* baseString, unsigned start,
     return addToStringTable<SubstringLocation, SubstringTranslator>(buffer);
 }
 
-typedef HashTranslatorCharBuffer<LChar> LCharBuffer;
-struct LCharBufferFromLiteralDataTranslator {
-    static unsigned hash(const LCharBuffer& buf)
+typedef HashTranslatorCharBuffer<char> CharBuffer;
+struct CharBufferFromLiteralDataTranslator {
+    static unsigned hash(const CharBuffer& buf)
     {
-        return StringHasher::computeHash(buf.s, buf.length);
+        return StringHasher::computeHashAndMaskTop8Bits(reinterpret_cast<const LChar*>(buf.s), buf.length);
     }
 
-    static bool equal(StringImpl* const& str, const LCharBuffer& buf)
+    static bool equal(StringImpl* const& str, const CharBuffer& buf)
     {
         return WTF::equal(str, buf.s, buf.length);
     }
 
-    static void translate(StringImpl*& location, const LCharBuffer& buf, unsigned hash)
+    static void translate(StringImpl*& location, const CharBuffer& buf, unsigned hash)
     {
         location = StringImpl::createFromLiteral(buf.s, buf.length).leakRef();
         location->setHash(hash);
@@ -317,13 +317,13 @@ struct LCharBufferFromLiteralDataTranslator {
     }
 };
 
-PassRefPtr<StringImpl> AtomicString::addFromLiteralData(const LChar *characters, unsigned length)
+PassRefPtr<StringImpl> AtomicString::addFromLiteralData(const char* characters, unsigned length)
 {
     ASSERT(characters);
     ASSERT(length);
 
-    LCharBuffer buffer = { characters, length };
-    return addToStringTable<LCharBuffer, LCharBufferFromLiteralDataTranslator>(buffer);
+    CharBuffer buffer = { characters, length };
+    return addToStringTable<CharBuffer, CharBufferFromLiteralDataTranslator>(buffer);
 }
 
 PassRefPtr<StringImpl> AtomicString::addSlowCase(StringImpl* r)
@@ -373,7 +373,7 @@ AtomicString AtomicString::fromUTF8Internal(const char* charactersStart, const c
 {
     HashAndUTF8Characters buffer;
     buffer.characters = charactersStart;
-    buffer.hash = calculateStringHashAndLengthFromUTF8(charactersStart, charactersEnd, buffer.length, buffer.utf16Length);
+    buffer.hash = calculateStringHashAndLengthFromUTF8MaskingTop8Bits(charactersStart, charactersEnd, buffer.length, buffer.utf16Length);
 
     if (!buffer.hash)
         return nullAtom;

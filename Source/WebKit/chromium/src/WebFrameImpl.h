@@ -72,6 +72,8 @@ class WebFrameImpl : public WebFrame, public RefCounted<WebFrameImpl> {
 public:
     // WebFrame methods:
     virtual WebString name() const;
+    virtual WebString uniqueName() const;
+    virtual WebString assignedName() const;
     virtual void setName(const WebString&);
     virtual long long identifier() const;
     virtual WebVector<WebIconURL> iconURLs(int iconTypes) const;
@@ -210,6 +212,10 @@ public:
     virtual void cancelPendingScopingEffort();
     virtual void increaseMatchCount(int count, int identifier);
     virtual void resetMatchCount();
+    virtual int findMatchMarkersVersion() const;
+    virtual WebFloatRect activeFindMatchRect();
+    virtual void findMatchRects(WebVector<WebFloatRect>&);
+    virtual int selectNearestFindMatch(const WebFloatPoint&, WebRect* selectionRect);
 
     virtual void sendOrientationChangeEvent(int orientation);
 

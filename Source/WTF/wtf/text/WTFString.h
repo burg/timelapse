@@ -94,6 +94,8 @@ WTF_EXPORT_STRING_API float charactersToFloat(const UChar*, size_t, bool* ok = 0
 WTF_EXPORT_STRING_API float charactersToFloat(const LChar*, size_t, size_t& parsedLength);
 WTF_EXPORT_STRING_API float charactersToFloat(const UChar*, size_t, size_t& parsedLength);
 
+class ASCIILiteral;
+
 enum FloatConversionFlags {
     ShouldRoundSignificantFigures = 1 << 0,
     ShouldRoundDecimalPlaces = 1 << 1,
@@ -130,6 +132,15 @@ public:
     String(StringImpl* impl) : m_impl(impl) { }
     String(PassRefPtr<StringImpl> impl) : m_impl(impl) { }
     String(RefPtr<StringImpl> impl) : m_impl(impl) { }
+
+    // Construct a string from a constant string literal.
+    WTF_EXPORT_STRING_API String(ASCIILiteral characters);
+
+    // Construct a string from a constant string literal.
+    // This constructor is the "big" version, as it put the length in the function call and generate bigger code.
+    enum ConstructFromLiteralTag { ConstructFromLiteral };
+    template<unsigned charactersCount>
+    String(const char (&characters)[charactersCount], ConstructFromLiteralTag) : m_impl(StringImpl::createFromLiteral<charactersCount>(characters)) { }
 
 #if COMPILER_SUPPORTS(CXX_RVALUE_REFERENCES)
     // We have to declare the copy constructor and copy assignment operator as well, otherwise
@@ -189,6 +200,13 @@ public:
     inline const CharType* getCharacters() const;
 
     bool is8Bit() const { return m_impl->is8Bit(); }
+
+    unsigned sizeInBytes() const
+    {
+        if (!m_impl)
+            return 0;
+        return m_impl->length() * (is8Bit() ? sizeof(LChar) : sizeof(UChar));
+    }
 
     WTF_EXPORT_STRING_API CString ascii() const;
     WTF_EXPORT_STRING_API CString latin1() const;
@@ -581,6 +599,15 @@ template<> struct DefaultHash<String> {
 
 template <> struct VectorTraits<String> : SimpleClassVectorTraits { };
 
+class ASCIILiteral {
+public:
+    explicit ASCIILiteral(const char* characters) : m_characters(characters) { }
+    operator const char*() { return m_characters; }
+
+private:
+    const char* m_characters;
+};
+
 // Shared global empty string.
 WTF_EXPORT_STRING_API const String& emptyString();
 
@@ -611,6 +638,7 @@ using WTF::isAllSpecialCharacters;
 using WTF::isSpaceOrNewline;
 using WTF::reverseFind;
 using WTF::ShouldRoundDecimalPlaces;
+using WTF::ASCIILiteral;
 
 #include <wtf/text/AtomicString.h>
 #endif

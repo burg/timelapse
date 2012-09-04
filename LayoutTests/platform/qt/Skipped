@@ -149,6 +149,10 @@ fast/dom/HTMLLinkElement/subresource.html
 http/tests/misc/link-rel-prefetch-and-subresource.html
 http/tests/misc/prefetch-purpose.html
 
+# ENABLE(LINK_PRERENDER) is disabled.
+fast/dom/HTMLLinkElement/prerender-insert-after-stop.html
+fast/dom/HTMLLinkElement/prerender-remove-after-stop.html
+
 # ENABLE(DASHBOARD_SUPPORT) is disabled
 http/tests/xmlhttprequest/default-content-type-dashboard.html
 http/tests/xmlhttprequest/svg-created-by-xhr-allowed-in-dashboard.html
@@ -211,6 +215,12 @@ fast/dom/shadow/shadowdom-for-image-with-pseudo-id.html
 fast/dom/shadow/shadowdom-for-image-with-width-and-height.html
 fast/dom/shadow/shadowdom-for-image.html
 fast/dom/shadow/shadowdom-for-media.html
+fast/dom/shadow/shadowdom-for-progress-dynamic.html
+fast/dom/shadow/shadowdom-for-progress-multiple.html
+fast/dom/shadow/shadowdom-for-progress-with-style.html
+fast/dom/shadow/shadowdom-for-progress-without-appearance.html
+fast/dom/shadow/shadowdom-for-progress-without-shadow-element.html
+fast/dom/shadow/shadowdom-for-progress.html
 fast/dom/shadow/shadow-and-list-elements.html
 fast/dom/shadow/shadow-boundary-events.html
 fast/dom/shadow/shadow-content-crash.html
@@ -260,6 +270,7 @@ fast/dom/shadow/shadowdom-for-keygen-without-shadow.html
 fast/dom/shadow/input-with-validation.html
 fast/dom/shadow/input-with-validation-without-shadow.html
 fast/dom/shadow/shadowdom-for-form-associated-element-useragent.html
+fast/dom/shadow/suppress-mutation-events-in-shadow-characterdata.html
 
 # Fail until SUBPIXEL_LAYOUT is enabled
 # https://bugs.webkit.org/show_bug.cgi?id=85532
@@ -269,6 +280,7 @@ fast/sub-pixel/file-upload-control-at-fractional-offset.html
 fast/sub-pixel/float-containing-block-with-margin.html
 fast/sub-pixel/float-with-right-margin-zoom.html
 fast/sub-pixel/float-wrap-with-subpixel-top.html
+fast/sub-pixel/inline-block-should-not-wrap.html
 fast/sub-pixel/inline-block-with-margin.html
 fast/sub-pixel/inline-block-with-padding.html
 fast/sub-pixel/layout-boxes-with-zoom.html
@@ -494,6 +506,10 @@ http/tests/security/video-cross-origin-readback.html
 # https://bugs.webkit.org/show_bug.cgi?id=85558
 http/tests/security/contentSecurityPolicy/1.1
 
+# Proximity Events is now supported.
+fast/dom/Proximity
+fast/events/constructors/device-proximity-event-constructor.html
+
 # =========================================================================== #
 #       Drag and Drop Support in DRT.                                         #
 # =========================================================================== #
@@ -669,7 +685,7 @@ http/tests/local/blob/send-data-blob.html
 
 # [Qt] XML Viewer fails due to specifics in the parser implementation
 # https://bugs.webkit.org/show_bug.cgi?id=55302
-http/tests/xmlviewer/extensions-api.html
+xmlviewer/extensions-api.html
 http/tests/xmlviewer/dumpAsText/svg.xml
 http/tests/xmlviewer/dumpAsText/xlink.xml
 http/tests/xmlviewer/dumpAsText/xmlviewer-charset-cp1251.xml
@@ -1967,14 +1983,6 @@ fast/xmlhttprequest/xmlhttprequest-get.xhtml
 # https://bugs.webkit.org/show_bug.cgi?id=84013
 fast/repaint/line-flow-with-floats-in-regions.html
 
-# [Qt]REGRESSION(r123786) It made 3 fast/animation tests fail
-# https://bugs.webkit.org/show_bug.cgi?id=92490
-fast/animation/request-animation-frame-cancel2.html
-fast/animation/request-animation-frame-detach-element.html
-fast/animation/request-animation-frame-during-modal.html
-fast/animation/request-animation-frame-timestamps.html
-fast/dom/Window/post-message-crash.html
-
 # [Qt] fast/block/positioning/offsetLeft-offsetTop-multicolumn.html is failing
 # https://bugs.webkit.org/show_bug.cgi?id=86130
 fast/block/positioning/offsetLeft-offsetTop-multicolumn.html
@@ -2002,6 +2010,10 @@ fast/dom/gc-attribute-node.html
 # [Qt] fast/forms/datalist/input-list.html fails
 # https://bugs.webkit.org/show_bug.cgi?id=89656
 fast/forms/datalist/input-list.html
+
+# [Qt][EFL] new fast/forms/datalist/range-snap-to-datalist.html introduced in r124549 fails
+# https://bugs.webkit.org/show_bug.cgi?id=93074
+fast/forms/datalist/range-snap-to-datalist.html
 
 # [Qt] New fast/forms/number/number-validation-message.html introduced in r121019 fails.
 # https://bugs.webkit.org/show_bug.cgi?id=89760
@@ -2104,7 +2116,6 @@ canvas/philip/tests/2d.text.draw.space.collapse.space.html
 canvas/philip/tests/2d.text.draw.space.collapse.start.html
 canvas/philip/tests/2d.text.font.parse.basic.html
 canvas/philip/tests/2d.text.font.parse.complex.html
-canvas/philip/tests/2d.text.font.parse.invalid.html
 canvas/philip/tests/2d.text.font.parse.size.percentage.default.html
 canvas/philip/tests/2d.text.font.parse.size.percentage.html
 canvas/philip/tests/2d.text.font.parse.system.html
@@ -2395,6 +2406,7 @@ fast/events/selectstart-by-drag.html
 fast/events/touch/gesture/gesture-click.html
 # New tests introduced in https://bugs.webkit.org/show_bug.cgi?id=66272. Needs
 # Qt implementation.
+fast/events/touch/gesture/gesture-dblclick.html
 fast/events/touch/gesture/gesture-scroll.html
 fast/events/touch/gesture/touch-gesture-scroll-sideways.html
 
@@ -2566,6 +2578,7 @@ fast/forms/datalist/update-range-with-datalist.html
 fast/multicol/cell-shrinkback.html
 fast/multicol/overflow-into-columngap.html
 fast/table/td-width-fifty-percent-regression.html
+fast/text/descent-clip-in-scaled-page.html
 fast/sub-pixel/block-with-margin-overflow.html
 svg/custom/anchor-on-use.svg
 svg/animations/animateTransform-rotate-around-point.svg
@@ -2699,6 +2712,22 @@ svg/repaint/container-repaint.svg
 # https://bugs.webkit.org/show_bug.cgi?id=92352
 css3/flexbox/flex-rounding.html
 
-# [Qt] REGRESSION http/tests/security/contentSecurityPolicy/object-src-none-blocked.html fails after r123978
-# https://bugs.webkit.org/show_bug.cgi?id=92649
-http/tests/security/contentSecurityPolicy/object-src-none-blocked.html
+# ENABLE(WIDGET_REGION) is disabled
+fast/css/widget-region-parser.html
+
+# https://bugs.webkit.org/show_bug.cgi?id=92914
+touchadjustment/touch-links-longpress.html
+
+# [Qt] REGRESSION(r124729): It made 6 inspector tests fail
+# https://bugs.webkit.org/show_bug.cgi?id=93228
+inspector/debugger/debugger-activation-crash2.html
+inspector/debugger/debugger-set-breakpoint-regex.html
+inspector/debugger/pause-in-internal-script.html
+inspector/debugger/script-formatter-breakpoints.html
+inspector/debugger/set-breakpoint.html
+inspector/debugger/watch-expressions-panel-switch.html
+
+# New tests introduced in r124555 asserts on 32 bit platforms
+# https://bugs.webkit.org/show_bug.cgi?id=93246
+fast/js/dfg-peephole-compare-final-object-to-final-object-or-other-when-both-proven-final-object.html
+fast/js/dfg-compare-final-object-to-final-object-or-other-when-both-proven-final-object.html

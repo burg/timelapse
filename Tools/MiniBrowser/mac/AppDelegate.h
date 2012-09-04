@@ -23,9 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// FIXME: We should expose process model via an API header.
 enum ProcessModel {
+    kProcessModelSharedSecondaryProcess,
     kProcessModelSharedSecondaryThread,
-    kProcessModelSharedSecondaryProcess
+    kProcessModelMultipleSecondaryProcesses
 };
 typedef unsigned long ProcessModel;
 
@@ -34,9 +36,12 @@ typedef unsigned long ProcessModel;
     WKContextRef _threadContext;
     WKContextRef _processContext;
     WKPageGroupRef _pageGroup;
+    NSMutableSet *_browserWindows;
 }
 
 - (WKContextRef)getCurrentContext;
+
+- (void)browserWindowWillClose:(NSWindow *)window;
 
 - (IBAction)setSharedProcessProcessModel:(id)sender;
 - (IBAction)setSharedThreadProcessModel:(id)sender;

@@ -1139,15 +1139,21 @@ void RenderBlock::collapseAnonymousBoxChild(RenderBlock* parent, RenderObject* c
     RenderBlock* anonBlock = toRenderBlock(parent->children()->removeChildNode(parent, child, child->hasLayer()));
     anonBlock->moveAllChildrenTo(parent, nextSibling, child->hasLayer());
     // Delete the now-empty block's lines and nuke it.
-    if (!parent->documentBeingDestroyed())
-        anonBlock->deleteLineBoxTree();
-    if (!parent->documentBeingDestroyed() && childFlowThread && childFlowThread->isRenderNamedFlowThread())
+    anonBlock->deleteLineBoxTree();
+    if (childFlowThread && childFlowThread->isRenderNamedFlowThread())
         toRenderNamedFlowThread(childFlowThread)->removeFlowChildInfo(anonBlock);
     anonBlock->destroy();
 }
 
 void RenderBlock::removeChild(RenderObject* oldChild)
 {
+    // No need to waste time in merging or removing empty anonymous blocks.
+    // We can just bail out if our document is getting destroyed.
+    if (documentBeingDestroyed()) {
+        RenderBox::removeChild(oldChild);
+        return;
+    }
+
     // If this child is a block, and if our previous and next siblings are
     // both anonymous blocks with inline content, then we can go ahead and
     // fold the inline content back together.
@@ -1169,12 +1175,14 @@ void RenderBlock::removeChild(RenderObject* oldChild)
             // column span flag if it is set.
             ASSERT(!inlineChildrenBlock->continuation());
             RefPtr<RenderStyle> newStyle = RenderStyle::createAnonymousStyleWithDisplay(style(), BLOCK);
-            children()->removeChildNode(this, inlineChildrenBlock, inlineChildrenBlock->hasLayer());
+            // Cache this value as it might get changed in setStyle() call.
+            bool inlineChildrenBlockHasLayer = inlineChildrenBlock->hasLayer();
             inlineChildrenBlock->setStyle(newStyle);
+            children()->removeChildNode(this, inlineChildrenBlock, inlineChildrenBlockHasLayer);
             
             // Now just put the inlineChildrenBlock inside the blockChildrenBlock.
             blockChildrenBlock->children()->insertChildNode(blockChildrenBlock, inlineChildrenBlock, prev == inlineChildrenBlock ? blockChildrenBlock->firstChild() : 0,
-                                                            inlineChildrenBlock->hasLayer() || blockChildrenBlock->hasLayer());
+                                                            inlineChildrenBlockHasLayer || blockChildrenBlock->hasLayer());
             next->setNeedsLayoutAndPrefWidthsRecalc();
             
             // inlineChildrenBlock got reparented to blockChildrenBlock, so it is no longer a child
@@ -1215,14 +1223,14 @@ void RenderBlock::removeChild(RenderObject* oldChild)
         }
     }
 
-    if (!firstChild() && !documentBeingDestroyed()) {
+    if (!firstChild()) {
         // If this was our last child be sure to clear out our line boxes.
         if (childrenInline())
             deleteLineBoxTree();
 
         // If we are an empty anonymous block in the continuation chain,
         // we need to remove ourself and fix the continuation chain.
-        if (!beingDestroyed() && isAnonymousBlockContinuation()) {
+        if (!beingDestroyed() && isAnonymousBlockContinuation() && !oldChild->isListMarker()) {
             RenderObject* containingBlockIgnoringAnonymous = containingBlock();
             while (containingBlockIgnoringAnonymous && containingBlockIgnoringAnonymous->isAnonymousBlock())
                 containingBlockIgnoringAnonymous = containingBlockIgnoringAnonymous->containingBlock();
@@ -1418,7 +1426,7 @@ void RenderBlock::layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeigh
     if (!relayoutChildren && simplifiedLayout())
         return;
 
-    LayoutRepainter repainter(*this, everHadLayout() && checkForRepaintDuringLayout());
+    LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
 
     if (recomputeLogicalWidth())
         relayoutChildren = true;
@@ -1661,8 +1669,12 @@ void RenderBlock::addOverflowFromPositionedObjects()
         positionedObject = *it;
         
         // Fixed positioned elements don't contribute to layout overflow, since they don't scroll with the content.
-        if (positionedObject->style()->position() != FixedPosition)
-            addOverflowFromChild(positionedObject, IntSize(positionedObject->x(), positionedObject->y()));
+        if (positionedObject->style()->position() != FixedPosition) {
+            int x = positionedObject->x();
+            if (style()->shouldPlaceBlockDirectionScrollbarOnLogicalLeft())
+                x -= verticalScrollbarWidth();
+            addOverflowFromChild(positionedObject, IntSize(x, positionedObject->y()));
+        }
     }
 }
 
@@ -1691,18 +1703,11 @@ void RenderBlock::adjustPositionedBlock(RenderBox* child, const MarginInfo& marg
     setStaticInlinePositionForChild(child, logicalTop, startOffsetForContent(logicalTop));
 
     if (!marginInfo.canCollapseWithMarginBefore()) {
-        child->computeBlockDirectionMargins(this);
-        LayoutUnit marginBefore = marginBeforeForChild(child);
+        // Positioned blocks don't collapse margins, so add the margin provided by
+        // the container now. The child's own margin is added later when calculating its logical top.
         LayoutUnit collapsedBeforePos = marginInfo.positiveMargin();
         LayoutUnit collapsedBeforeNeg = marginInfo.negativeMargin();
-        if (marginBefore > 0) {
-            if (marginBefore > collapsedBeforePos)
-                collapsedBeforePos = marginBefore;
-        } else {
-            if (-marginBefore > collapsedBeforeNeg)
-                collapsedBeforeNeg = -marginBefore;
-        }
-        logicalTop += (collapsedBeforePos - collapsedBeforeNeg) - marginBefore;
+        logicalTop += collapsedBeforePos - collapsedBeforeNeg;
     }
     
     RenderLayer* childLayer = child->layer();
@@ -1841,11 +1846,7 @@ void RenderBlock::moveRunInUnderSiblingBlockIfNeeded(RenderObject* runIn)
 
     // Check if this node is allowed to run-in. E.g. <select> expects its renderer to
     // be a RenderListBox or RenderMenuList, and hence cannot be a RenderInline run-in.
-    Node* runInNode = runIn->node();
-    if (runInNode && runInNode->hasTagName(selectTag))
-        return;
-
-    if (runInNode && runInNode->hasTagName(progressTag))
+    if (!runIn->canBeReplacedWithInlineRunIn())
         return;
 
     RenderObject* curr = runIn->nextSibling();
@@ -2196,6 +2197,8 @@ LayoutUnit RenderBlock::computeStartPositionDeltaForChildAvoidingFloats(const Re
 void RenderBlock::determineLogicalLeftPositionForChild(RenderBox* child)
 {
     LayoutUnit startPosition = borderStart() + paddingStart();
+    if (style()->shouldPlaceBlockDirectionScrollbarOnLogicalLeft())
+        startPosition -= verticalScrollbarWidth();
     LayoutUnit totalAvailableLogicalWidth = borderAndPaddingLogicalWidth() + availableLogicalWidth();
 
     // Add in our start margin.
@@ -2961,11 +2964,8 @@ void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
 
     // Adjust our painting position if we're inside a scrolled layer (e.g., an overflow:auto div).
     LayoutPoint scrolledOffset = paintOffset;
-    if (hasOverflowClip()) {
+    if (hasOverflowClip())
         scrolledOffset.move(-scrolledContentOffset());
-        if (style()->shouldPlaceBlockDirectionScrollbarOnLogicalLeft())
-            scrolledOffset.move(verticalScrollbarWidth(), 0);
-    }
 
     // 2. paint contents
     if (paintPhase != PaintPhaseSelfOutline) {
@@ -3212,7 +3212,7 @@ GapRects RenderBlock::selectionGapRectsForRepaint(RenderBoxModelObject* repaintC
 
     // FIXME: this is broken with transforms
     TransformState transformState(TransformState::ApplyTransformDirection, FloatPoint());
-    mapLocalToContainer(repaintContainer, false, false, transformState);
+    mapLocalToContainer(repaintContainer, transformState);
     LayoutPoint offsetFromRepaintContainer = roundedLayoutPoint(transformState.mappedPoint());
 
     if (hasOverflowClip())
@@ -6894,11 +6894,11 @@ LayoutUnit RenderBlock::pageRemainingLogicalHeightForOffset(LayoutUnit offset, P
     
     if (!inRenderFlowThread()) {
         LayoutUnit pageLogicalHeight = renderView->layoutState()->m_pageLogicalHeight;
-        LayoutUnit remainingHeight = pageLogicalHeight - layoutMod(offset, pageLogicalHeight);
+        LayoutUnit remainingHeight = pageLogicalHeight - intMod(offset, pageLogicalHeight);
         if (pageBoundaryRule == IncludePageBoundary) {
             // If includeBoundaryPoint is true the line exactly on the top edge of a
             // column will act as being part of the previous column.
-            remainingHeight = layoutMod(remainingHeight, pageLogicalHeight);
+            remainingHeight = intMod(remainingHeight, pageLogicalHeight);
         }
         return remainingHeight;
     }

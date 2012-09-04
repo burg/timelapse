@@ -38,6 +38,7 @@
 #include "CSSStyleRule.h"
 #include "DOMWindow.h"
 #include "Database.h"
+#include "DeviceOrientationData.h"
 #include "DocumentLoader.h"
 #include "Event.h"
 #include "EventContext.h"
@@ -230,6 +231,18 @@ void InspectorInstrumentation::willPopShadowRootImpl(InstrumentingAgents* instru
 {
     if (InspectorDOMAgent* domAgent = instrumentingAgents->inspectorDOMAgent())
         domAgent->willPopShadowRoot(host, root);
+}
+
+void InspectorInstrumentation::didCreateNamedFlowImpl(InstrumentingAgents* instrumentingAgents, Document* document, const AtomicString& name)
+{
+    if (InspectorCSSAgent* cssAgent = instrumentingAgents->inspectorCSSAgent())
+        cssAgent->didCreateNamedFlow(document, name);
+}
+
+void InspectorInstrumentation::didRemoveNamedFlowImpl(InstrumentingAgents* instrumentingAgents, Document* document, const AtomicString& name)
+{
+    if (InspectorCSSAgent* cssAgent = instrumentingAgents->inspectorCSSAgent())
+        cssAgent->didRemoveNamedFlow(document, name);
 }
 
 void InspectorInstrumentation::mouseDidMoveOverElementImpl(InstrumentingAgents* instrumentingAgents, const HitTestResult& result, unsigned modifierFlags)
@@ -920,28 +933,28 @@ void InspectorInstrumentation::consoleCountImpl(InstrumentingAgents* instrumenti
         consoleAgent->count(arguments, stack);
 }
 
-void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents* instrumentingAgents, const String& title)
+void InspectorInstrumentation::startConsoleTimingImpl(InstrumentingAgents* instrumentingAgents, Frame* frame, const String& title)
 {
     if (InspectorTimelineAgent* timelineAgent = instrumentingAgents->inspectorTimelineAgent())
-        timelineAgent->time(title);
+        timelineAgent->time(frame, title);
     if (InspectorConsoleAgent* consoleAgent = instrumentingAgents->inspectorConsoleAgent())
         consoleAgent->startTiming(title);
 }
 
-void InspectorInstrumentation::stopConsoleTimingImpl(InstrumentingAgents* instrumentingAgents, const String& title, PassRefPtr<ScriptCallStack> stack)
+void InspectorInstrumentation::stopConsoleTimingImpl(InstrumentingAgents* instrumentingAgents, Frame* frame, const String& title, PassRefPtr<ScriptCallStack> stack)
 {
     if (InspectorConsoleAgent* consoleAgent = instrumentingAgents->inspectorConsoleAgent())
         consoleAgent->stopTiming(title, stack);
     if (InspectorTimelineAgent* timelineAgent = instrumentingAgents->inspectorTimelineAgent())
-        timelineAgent->timeEnd(title);
+        timelineAgent->timeEnd(frame, title);
 }
 
-void InspectorInstrumentation::consoleTimeStampImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ScriptArguments> arguments)
+void InspectorInstrumentation::consoleTimeStampImpl(InstrumentingAgents* instrumentingAgents, Frame* frame, PassRefPtr<ScriptArguments> arguments)
 {
     if (InspectorTimelineAgent* timelineAgent = instrumentingAgents->inspectorTimelineAgent()) {
         String message;
         arguments->getFirstArgumentAsString(message);
-        timelineAgent->didTimeStamp(message);
+        timelineAgent->didTimeStamp(frame, message);
      }
 }
 
@@ -1292,6 +1305,13 @@ GeolocationPosition* InspectorInstrumentation::overrideGeolocationPositionImpl(I
     return position;
 }
 #endif
+
+DeviceOrientationData* InspectorInstrumentation::overrideDeviceOrientationImpl(InstrumentingAgents* instrumentingAgents, DeviceOrientationData* deviceOrientation)
+{
+    if (InspectorPageAgent* pageAgent = instrumentingAgents->inspectorPageAgent())
+        deviceOrientation = pageAgent->overrideDeviceOrientation(deviceOrientation);
+    return deviceOrientation;
+}
 
 } // namespace WebCore
 

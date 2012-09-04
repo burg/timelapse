@@ -1614,6 +1614,10 @@ http/tests/misc/link-rel-prefetch-and-subresource.html
 fast/dom/HTMLLinkElement/subresource.html
 http/tests/misc/prefetch-purpose.html
 
+# ENABLE(LINK_PRERENDER) is disabled.
+fast/dom/HTMLLinkElement/prerender-insert-after-stop.html
+fast/dom/HTMLLinkElement/prerender-remove-after-stop.html
+
 # LayoutTestController::pageProperty is not implemented for WIN yet.
 printing/page-rule-selection.html
 
@@ -2122,6 +2126,7 @@ fast/sub-pixel/file-upload-control-at-fractional-offset.html
 fast/sub-pixel/float-containing-block-with-margin.html
 fast/sub-pixel/float-with-right-margin-zoom.html
 fast/sub-pixel/float-wrap-with-subpixel-top.html
+fast/sub-pixel/inline-block-should-not-wrap.html
 fast/sub-pixel/inline-block-with-margin.html
 fast/sub-pixel/inline-block-with-padding.html
 fast/sub-pixel/layout-boxes-with-zoom.html
@@ -2152,3 +2157,6 @@ http/tests/security/contentSecurityPolicy/1.1
 
 # Skip tests in fast/text/shaping
 fast/text/shaping
+
+# ENABLE(WIDGET_REGION) is disabled
+fast/css/widget-region-parser.html

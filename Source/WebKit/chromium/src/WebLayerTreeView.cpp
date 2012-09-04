@@ -29,6 +29,7 @@
 #include "GraphicsContext3DPrivate.h"
 #include "LayerChromium.h"
 #include "WebLayerTreeViewImpl.h"
+#include "cc/CCFontAtlas.h"
 #include "cc/CCGraphicsContext.h"
 #include "cc/CCLayerTreeHost.h"
 #include "cc/CCRenderingStats.h"
@@ -45,7 +46,6 @@ namespace WebKit {
 WebLayerTreeView::Settings::operator CCLayerTreeSettings() const
 {
     CCLayerTreeSettings settings;
-    settings.forceSoftwareCompositing = forceSoftwareCompositing;
     settings.showFPSCounter = showFPSCounter;
     settings.showPlatformLayerTree = showPlatformLayerTree;
     settings.showPaintRects = showPaintRects;
@@ -94,14 +94,22 @@ int WebLayerTreeView::compositorIdentifier()
     return m_private->layerTreeHost()->compositorIdentifier();
 }
 
-void WebLayerTreeView::setViewportSize(const WebSize& viewportSize)
+void WebLayerTreeView::setViewportSize(const WebSize& layoutViewportSize, const WebSize& deviceViewportSize)
 {
-    m_private->layerTreeHost()->setViewportSize(viewportSize);
+    if (!deviceViewportSize.isEmpty())
+        m_private->layerTreeHost()->setViewportSize(layoutViewportSize, deviceViewportSize);
+    else
+        m_private->layerTreeHost()->setViewportSize(layoutViewportSize, layoutViewportSize);
 }
 
-WebSize WebLayerTreeView::viewportSize() const
+WebSize WebLayerTreeView::layoutViewportSize() const
 {
-    return WebSize(m_private->layerTreeHost()->viewportSize());
+    return WebSize(m_private->layerTreeHost()->layoutViewportSize());
+}
+
+WebSize WebLayerTreeView::deviceViewportSize() const
+{
+    return WebSize(m_private->layerTreeHost()->deviceViewportSize());
 }
 
 void WebLayerTreeView::setDeviceScaleFactor(const float deviceScaleFactor)
@@ -187,6 +195,15 @@ void WebLayerTreeView::renderingStats(WebRenderingStats& stats) const
     stats.droppedFrameCount = ccStats.droppedFrameCount;
     stats.totalPaintTimeInSeconds = ccStats.totalPaintTimeInSeconds;
     stats.totalRasterizeTimeInSeconds = ccStats.totalRasterizeTimeInSeconds;
+}
+
+void WebLayerTreeView::setFontAtlas(SkBitmap bitmap, WebRect asciiToWebRectTable[128], int fontHeight)
+{
+    IntRect asciiToRectTable[128];
+    for (int i = 0; i < 128; ++i)
+        asciiToRectTable[i] = asciiToWebRectTable[i];
+    OwnPtr<CCFontAtlas> fontAtlas = CCFontAtlas::create(bitmap, asciiToRectTable, fontHeight);
+    m_private->layerTreeHost()->setFontAtlas(fontAtlas.release());
 }
 
 void WebLayerTreeView::loseCompositorContext(int numTimes)

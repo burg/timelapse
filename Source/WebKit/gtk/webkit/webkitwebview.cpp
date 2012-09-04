@@ -118,10 +118,6 @@
 #include "DeviceOrientationClientGtk.h"
 #endif
 
-#if ENABLE(REGISTER_PROTOCOL_HANDLER)
-#include "RegisterProtocolHandlerClientGtk.h"
-#endif
-
 /**
  * SECTION:webkitwebview
  * @short_description: The central class of the WebKitGTK+ API
@@ -2294,7 +2290,7 @@ static void webkit_web_view_class_init(WebKitWebViewClass* webViewClass)
      *
      * The default bindings for this signal is Ctrl-a.
      */
-    webkit_web_view_signals[SELECT_ALL] = g_signal_new("select-all",
+    webkit_web_view_signals[::SELECT_ALL] = g_signal_new("select-all",
             G_TYPE_FROM_CLASS(webViewClass),
             (GSignalFlags)(G_SIGNAL_RUN_LAST | G_SIGNAL_ACTION),
             G_STRUCT_OFFSET(WebKitWebViewClass, select_all),
@@ -3635,7 +3631,8 @@ static void webkit_web_view_init(WebKitWebView* webView)
 #endif
 
 #if ENABLE(REGISTER_PROTOCOL_HANDLER)
-    WebCore::provideRegisterProtocolHandlerTo(priv->corePage, new WebKit::RegisterProtocolHandlerClient);
+    priv->registerProtocolHandlerClient = WebKit::RegisterProtocolHandlerClient::create();
+    WebCore::provideRegisterProtocolHandlerTo(priv->corePage, priv->registerProtocolHandlerClient.get());
 #endif
 
     if (DumpRenderTreeSupportGtk::dumpRenderTreeModeEnabled()) {
@@ -4422,7 +4419,7 @@ void webkit_web_view_select_all(WebKitWebView* webView)
 {
     g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
 
-    g_signal_emit(webView, webkit_web_view_signals[SELECT_ALL], 0);
+    g_signal_emit(webView, webkit_web_view_signals[::SELECT_ALL], 0);
 }
 
 /**

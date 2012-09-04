@@ -31,16 +31,31 @@
 #include "config.h"
 #include "MemoryInstrumentation.h"
 
+#include "KURL.h"
 #include <wtf/text/StringImpl.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-void MemoryInstrumentation::addString(const String& string, ObjectType objectType)
+void MemoryInstrumentation::addObject(const String& string, ObjectType objectType)
 {
-    if (string.isNull() || visited(string.impl()))
+    addObject(string.impl(), objectType);
+}
+
+void MemoryInstrumentation::addObject(const StringImpl* stringImpl, ObjectType objectType)
+{
+    if (!stringImpl || visited(stringImpl))
         return;
-    countObjectSize(objectType, string.impl()->sizeInBytes());
+    countObjectSize(objectType, stringImpl->sizeInBytes());
+}
+
+void MemoryInstrumentation::addObject(const KURL& url, ObjectType objectType)
+{
+    if (visited(&url))
+        return;
+    addObject(url.string(), objectType);
+    if (url.innerURL())
+        addObject(url.innerURL(), objectType);
 }
 
 } // namespace WebCore

@@ -351,7 +351,7 @@ sub determineNumberOfCPUs
     } elsif (isLinux()) {
         # First try the nproc utility, if it exists. If we get no
         # results fall back to just interpretting /proc directly.
-        chomp($numberOfCPUs = `nproc 2> /dev/null`);
+        chomp($numberOfCPUs = `nproc --all 2> /dev/null`);
         if ($numberOfCPUs eq "") {
             $numberOfCPUs = (grep /processor/, `cat /proc/cpuinfo`);
         }
@@ -2354,10 +2354,10 @@ sub buildQMakeProjects
     if ($passedConfig =~ m/debug/i) {
         push @buildArgs, "CONFIG-=release";
         push @buildArgs, "CONFIG+=debug";
-    } elsif ($passedConfig =~ m/release/i) {
+    } elsif (!$passedConfig or $passedConfig =~ m/release/i) {
         push @buildArgs, "CONFIG+=release";
         push @buildArgs, "CONFIG-=debug";
-    } elsif ($passedConfig) {
+    } else {
         die "Build type $passedConfig is not supported with --qt.\n";
     }
     push @buildArgs, "CONFIG-=debug_and_release" if ($passedConfig && isDarwin());
@@ -2622,7 +2622,9 @@ sub buildChromium($@)
 
     # We might need to update DEPS or re-run GYP if things have changed.
     if (checkForArgumentAndRemoveFromArrayRef("--update-chromium", \@options)) {
-        system("perl", "Tools/Scripts/update-webkit-chromium", "--force") == 0 or die $!;
+        my @updateCommand = ("perl", "Tools/Scripts/update-webkit-chromium", "--force");
+        push @updateCommand, "--chromium-android" if isChromiumAndroid();
+        system(@updateCommand) == 0 or die $!;
     }
 
     my $result = 1;

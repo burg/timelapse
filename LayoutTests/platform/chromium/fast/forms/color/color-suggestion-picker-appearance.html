@@ -34,7 +34,14 @@ if (window.eventSender)
 var pickerWindow = document.getElementById('mock-page-popup').contentWindow;
 pickerWindow.onresize = function() {
     console.log(pickerWindow.pagePopupController);
-    testRunner.notifyDone();
+    pickerWindow.focus();
+    eventSender.keyDown('downArrow');
+    eventSender.keyDown('downArrow');
+    eventSender.keyDown('downArrow');
+    eventSender.keyDown('leftArrow');
+    eventSender.keyDown('upArrow');
+    eventSender.keyDown('rightArrow');
+    setTimeout(function() {testRunner.notifyDone();}, 0);
 }
 </script>
 </body>

@@ -26,6 +26,7 @@
 
 #include "Canvas2DLayerBridge.h"
 
+#include "FakeWebCompositorOutputSurface.h"
 #include "FakeWebGraphicsContext3D.h"
 #include "GraphicsContext3DPrivate.h"
 #include "ImageBuffer.h"
@@ -34,7 +35,7 @@
 #include "WebKit.h"
 #include "cc/CCGraphicsContext.h"
 #include "cc/CCRenderingStats.h"
-#include "cc/CCTextureUpdater.h"
+#include "cc/CCTextureUpdateQueue.h"
 #include "platform/WebKitPlatformSupport.h"
 #include "platform/WebThread.h"
 
@@ -75,7 +76,7 @@ protected:
     void fullLifecycleTest(ThreadMode threadMode, DeferralMode deferralMode)
     {
         RefPtr<GraphicsContext3D> mainContext = GraphicsContext3DPrivate::createGraphicsContextFromWebContext(adoptPtr(new MockCanvasContext));
-        OwnPtr<CCGraphicsContext> ccImplContext = CCGraphicsContext::create3D(adoptPtr(new MockCanvasContext));
+        OwnPtr<CCGraphicsContext> ccImplContext = FakeWebCompositorOutputSurface::create(adoptPtr(new MockCanvasContext));
 
         MockCanvasContext& mainMock = *static_cast<MockCanvasContext*>(GraphicsContext3DPrivate::extractWebGraphicsContext3D(mainContext.get()));
         MockCanvasContext& implMock = *static_cast<MockCanvasContext*>(ccImplContext->context3D());
@@ -141,19 +142,6 @@ TEST_F(Canvas2DLayerBridgeTest, testFullLifecycleThreadedNonDeferred)
 TEST_F(Canvas2DLayerBridgeTest, testFullLifecycleThreadedDeferred)
 {
     fullLifecycleTest(Threaded, Deferred);
-}
-
-TEST(Canvas2DLayerBridgeTest2, testClearClient)
-{
-    GraphicsContext3D::Attributes attrs;
-
-    RefPtr<GraphicsContext3D> mainContext = GraphicsContext3DPrivate::createGraphicsContextFromWebContext(adoptPtr(new MockCanvasContext));
-    OwnPtr<Canvas2DLayerBridge> bridge = Canvas2DLayerBridge::create(mainContext.get(), IntSize(100, 100), Deferred, 1);
-    RefPtr<LayerChromium> layer = bridge->layer();
-    bridge.clear();
-    CCTextureUpdater updater;
-    CCRenderingStats stats;
-    layer->update(updater, 0, stats);
 }
 
 } // namespace

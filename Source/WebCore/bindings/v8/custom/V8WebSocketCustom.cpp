@@ -38,6 +38,7 @@
 #include "Frame.h"
 #include "Settings.h"
 #include "V8ArrayBuffer.h"
+#include "V8ArrayBufferView.h"
 #include "V8Binding.h"
 #include "V8Blob.h"
 #include "V8Proxy.h"
@@ -105,11 +106,12 @@ v8::Handle<v8::Value> V8WebSocket::constructorCallback(const v8::Arguments& args
         }
     }
     if (ec)
-        return throwError(ec, args.GetIsolate());
+        return V8Proxy::setDOMException(ec, args.GetIsolate());
 
-    V8DOMWrapper::setDOMWrapper(args.Holder(), &info, webSocket.get());
-    V8DOMWrapper::setJSWrapperForActiveDOMObject(webSocket.release(), v8::Persistent<v8::Object>::New(args.Holder()));
-    return args.Holder();
+    v8::Handle<v8::Object> wrapper = args.Holder();
+    V8DOMWrapper::setDOMWrapper(wrapper, &info, webSocket.get());
+    V8DOMWrapper::setJSWrapperForActiveDOMObject(webSocket.release(), wrapper);
+    return wrapper;
 }
 
 v8::Handle<v8::Value> V8WebSocket::sendCallback(const v8::Arguments& args)
@@ -127,6 +129,10 @@ v8::Handle<v8::Value> V8WebSocket::sendCallback(const v8::Arguments& args)
         ArrayBuffer* arrayBuffer = V8ArrayBuffer::toNative(v8::Handle<v8::Object>::Cast(message));
         ASSERT(arrayBuffer);
         result = webSocket->send(arrayBuffer, ec);
+    } else if (V8ArrayBufferView::HasInstance(message)) {
+        ArrayBufferView* arrayBufferView = V8ArrayBufferView::toNative(v8::Handle<v8::Object>::Cast(message));
+        ASSERT(arrayBufferView);
+        result = webSocket->send(arrayBufferView, ec);
     } else if (V8Blob::HasInstance(message)) {
         Blob* blob = V8Blob::toNative(v8::Handle<v8::Object>::Cast(message));
         ASSERT(blob);
@@ -139,7 +145,7 @@ v8::Handle<v8::Value> V8WebSocket::sendCallback(const v8::Arguments& args)
         result = webSocket->send(toWebCoreString(stringMessage), ec);
     }
     if (ec)
-        return throwError(ec, args.GetIsolate());
+        return V8Proxy::setDOMException(ec, args.GetIsolate());
 
     return v8Boolean(result, args.GetIsolate());
 }

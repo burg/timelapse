@@ -152,7 +152,7 @@ PlatformGestureEventBuilder::PlatformGestureEventBuilder(Widget* widget, const W
         break;
     case WebInputEvent::GestureTap:
         m_type = PlatformEvent::GestureTap;
-        m_area = IntSize(e.deltaX * 2, e.deltaY * 2);
+        m_area = IntSize(e.boundingBox.width, e.boundingBox.height);
         break;
     case WebInputEvent::GestureTapDown:
         m_type = PlatformEvent::GestureTapDown;
@@ -165,6 +165,7 @@ PlatformGestureEventBuilder::PlatformGestureEventBuilder(Widget* widget, const W
         break;
     case WebInputEvent::GestureLongPress:
         m_type = PlatformEvent::GestureLongPress;
+        m_area = IntSize(e.boundingBox.width, e.boundingBox.height);
         break;
     case WebInputEvent::GesturePinchBegin:
         m_type = PlatformEvent::GesturePinchBegin;
@@ -463,6 +464,7 @@ WebKeyboardEventBuilder::WebKeyboardEventBuilder(const KeyboardEvent& event)
         text[i] = event.keyEvent()->text()[i];
         unmodifiedText[i] = event.keyEvent()->unmodifiedText()[i];
     }
+    memcpy(keyIdentifier, event.keyIdentifier().ascii().data(), event.keyIdentifier().length());
 }
 
 #if ENABLE(TOUCH_EVENTS)

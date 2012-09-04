@@ -36,6 +36,7 @@
 // Tests that require new results.
 //////////////////////////////////////////////////////////////////////////////////////////
 
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // Expected failures
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -46,9 +47,9 @@ WONTFIX : fast/harness/sample-fail-mismatch-reftest.html = IMAGE
 // Modal dialogs will not be supported in WebKit1. These expectations should eventually
 // be moved into WebKit1-specific TestExpectations file (once it's created).
 WONTFIX : fast/animation/request-animation-frame-during-modal.html = TEXT
-WONTFIX : fast/events/show-modal-dialog-onblur-onfocus.html = TEXT
+WONTFIX SKIP : fast/events/show-modal-dialog-onblur-onfocus.html = TEXT
 WONTFIX : fast/events/scroll-event-during-modal-dialog.html = TEXT
-WONTFIX : fast/harness/show-modal-dialog.html = TEXT
+WONTFIX SKIP : fast/harness/show-modal-dialog.html = TEXT
 WONTFIX : http/tests/security/cross-frame-access-call.html = TEXT
 WONTFIX : http/tests/security/cross-frame-access-get.html = TEXT
 WONTFIX SKIP : inspector/console/console-long-eval-crash.html = TEXT
@@ -66,6 +67,9 @@ WONTFIX SKIP : media/unsupported-rtsp.html = TIMEOUT
 // We have no need to support Dashboard compatibility mode. (via Chromium).
 WONTFIX SKIP : fast/canvas/canvas-gradient-addStop-error.html = TEXT
 WONTFIX SKIP : http/tests/xmlhttprequest/default-content-type-dashboard.html = TEXT
+
+// ENABLE(WIDGET_REGION) is disabled
+WONTFIX SKIP : fast/css/widget-region-parser.html = TEXT
 
 // These test -apple- and -khtml- prefixed CSS properties, which we don't support.
 WONTFIX SKIP : inspector/styles/vendor-prefixes.html = TEXT
@@ -286,7 +290,7 @@ BUGWKGTK SKIP : fast/css/image-set-parsing-invalid.html = TEXT
 // For now, Web Audio API is disabled
 BUGWKGTK SKIP : webaudio = TEXT
 
-// Needs layoutTestController.enableAutoResizeMode()
+// Needs testRunner.enableAutoResizeMode()
 BUGWKGTK SKIP : fast/autoresize = TEXT
 
 // The GTK+ build bots don't yet have the muscle to run WebGL tests.
@@ -384,6 +388,11 @@ BUGWK84186 SKIP : fast/text-autosizing = PASS
 
 // Dialog element is not yet enabled.
 BUGWK84635 SKIP : fast/dom/HTMLDialogElement = TEXT
+
+// Proximity Events is not supported.
+BUGWK92942 SKIP : fast/dom/Proximity = PASS
+BUGWK92942 SKIP : fast/events/constructors/device-proximity-event-constructor.html = PASS
+
 //////////////////////////////////////////////////////////////////////////////////////////
 // End of Expected failures
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -393,8 +402,6 @@ BUGWK84635 SKIP : fast/dom/HTMLDialogElement = TEXT
 //////////////////////////////////////////////////////////////////////////////////////////
 
 BUGWK74297 : http/tests/security/cross-origin-xsl-redirect-BLOCKED.html = CRASH PASS
-
-BUGWK63611 DEBUG : editing/pasteboard/interchange-newline-2.html = CRASH PASS
 
 BUGWK85811 DEBUG : fast/events/message-port-close.html = CRASH PASS
 
@@ -406,6 +413,20 @@ BUGWK86176 DEBUG : ietestcenter/css3/valuesandunits/units-000.htm = CRASH
 BUGWK89188 RELEASE : storage/websql/quota-tracking.html = CRASH PASS
 
 BUGWK90589 RELEASE : fast/css/user-drag-none.html = CRASH TIMEOUT
+
+BUGWK93501 : editing/inserting/insert-character-in-first-letter-crash.html = CRASH PASS
+BUGWK93501 : fast/css/first-letter-text-fragment-crash.html = CRASH PASS
+
+BUGWK93502 : fast/history/nested-visited-test.html = CRASH PASS
+
+BUGWK93247 DEBUG : fast/lists/list-marker-remove-crash.html = CRASH
+
+BUGWK93727 DEBUG : fast/events/keyevent-iframe-removed-crash.html = CRASH PASS
+BUGWK93727 DEBUG : fullscreen/full-screen-iframe-zIndex.html = CRASH PASS
+BUGWK93727 DEBUG : fullscreen/full-screen-iframe-allowed.html = CRASH PASS
+BUGWK93727 DEBUG : fullscreen/full-screen-iframe-not-allowed.html = CRASH PASS
+BUGWK93727 DEBUG : fullscreen/exit-full-screen-iframe.html = CRASH PASS
+BUGWK93727 DEBUG : svg/custom/use-instanceRoot-as-event-target.xhtml = CRASH PASS
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // End of Crashing tests
@@ -438,7 +459,6 @@ BUGWK80129 : fast/frames/flattening/iframe-flattening-out-of-view.html = TEXT PA
 BUGWK87363 : fast/frames/flattening/iframe-tiny.html = PASS TEXT
 
 BUGWK72698 : media/audio-garbage-collect.html = PASS TEXT
-BUGWK79760 : media/video-poster-blocked-by-willsendrequest.html = PASS TEXT
 
 BUGWK73772 : fast/table/multiple-captions-display.xhtml = PASS TEXT
 
@@ -491,8 +511,6 @@ BUGWK84859 : fast/workers/storage/use-same-database-in-page-and-workers.html = P
 
 BUGWK83878 : media/track/track-mode.html = PASS TEXT
 BUGWK88867 : media/track/track-cue-rendering-snap-to-lines-not-set.html = PASS TEXT
-
-BUGWK63611 DEBUG : editing/pasteboard/interchange-newline-3.html = TEXT PASS
 
 BUGWK89663 : editing/deleting/delete-3800834-fix.html = PASS TEXT
 
@@ -891,7 +909,6 @@ BUGWKGTK : canvas/philip/tests/2d.text.draw.space.collapse.space.html = TEXT
 BUGWKGTK : canvas/philip/tests/2d.text.draw.space.collapse.start.html = TEXT
 BUGWKGTK : canvas/philip/tests/2d.text.font.parse.basic.html = TEXT
 BUGWKGTK : canvas/philip/tests/2d.text.font.parse.complex.html = TEXT
-BUGWKGTK : canvas/philip/tests/2d.text.font.parse.invalid.html = TEXT
 BUGWKGTK : canvas/philip/tests/2d.text.font.parse.size.percentage.html = TEXT
 BUGWKGTK : canvas/philip/tests/2d.text.font.parse.size.percentage.default.html = TEXT
 BUGWKGTK : canvas/philip/tests/2d.text.font.parse.system.html = TEXT
@@ -985,7 +1002,7 @@ BUGWK50740 : editing/spelling/spellcheck-queue.html = TEXT
 BUGWK50740 : editing/spelling/spellcheck-sequencenum.html = TEXT
 BUGWK50740 : editing/spelling/spellcheck-async-mutation.html = TEXT
 
-// DRT does not obey layoutTestController.addURLToRedirect()
+// DRT does not obey testRunner.addURLToRedirect()
 BUGWKGTK : http/tests/loading/cross-origin-XHR-willLoadRequest.html = TEXT
 
 BUGWK40272 : canvas/philip/tests/2d.imageData.object.round.html = TEXT
@@ -999,10 +1016,10 @@ BUGWK53707 : http/tests/security/xss-DENIED-xsl-external-entity-redirect.xml = T
 BUGWKGTK : editing/spelling/grammar.html = TEXT
 BUGWKGTK : editing/spelling/grammar-paste.html = TEXT
 
-// layoutTestController::setTextDirection() is not implemented.
+// testRunner::setTextDirection() is not implemented.
 BUGWKGTK : fast/html/set-text-direction.html = TEXT
 
-// layoutTestController.overridePreference("WebKitDefaultFontSize"...) does not take into account screen DPI
+// testRunner.overridePreference("WebKitDefaultFontSize"...) does not take into account screen DPI
 BUGWK57160 : fast/harness/override-preferences-2.html = TEXT
 
 BUGWK58309 : fast/canvas/DrawImageSinglePixelStretch.html = TEXT
@@ -1022,7 +1039,7 @@ BUGWK61118 : fullscreen/full-screen-restrictions.html = TEXT
 
 BUGWK61630 : fast/events/dropzone-005.html = TEXT
 
-// Need layoutTestController.setShouldStayOnPageAfterHandlingBeforeUnload
+// Need testRunner.setShouldStayOnPageAfterHandlingBeforeUnload
 BUGWK67014 : fast/loader/form-submission-after-beforeunload-cancel.html = TEXT
 
 BUGWK67713 : accessibility/textbox-role-reports-selection.html = TEXT
@@ -1190,8 +1207,6 @@ BUGWK86137 : ietestcenter/css3/namespaces/prefix-007.xml = IMAGE
 BUGWK86139 : ietestcenter/css3/namespaces/prefix-010.xml = IMAGE
 BUGWK86142 : ietestcenter/css3/namespaces/syntax-021.xml = IMAGE
 
-BUGWK86310 : media/media-continues-playing-after-replace-source.html = TEXT
-
 BUGWK86443 : plugins/npruntime/delete-plugin-within-hasProperty-return-false.html = TEXT
 BUGWK86443 : plugins/npruntime/delete-plugin-within-hasProperty-return-true.html = TEXT
 BUGWK86443 : plugins/npruntime/delete-plugin-within-setProperty.html = TEXT
@@ -1259,9 +1274,36 @@ BUGWK92063 : fast/css/sticky/parsing-position-sticky.html = TEXT
 
 BUGWK92100 : accessibility/canvas-accessibilitynodeobject.html = TEXT
 
-// This test depends on subpixel layout.
+// These tests depend on subpixel layout.
 BUGWK92352 : css3/flexbox/flex-rounding.html = TEXT
 
+BUGWK93073 : mathml/presentation/attributes.xhtml = TEXT
+BUGWK93073 : mathml/presentation/fenced-mi.xhtml = TEXT
+BUGWK93073 : mathml/presentation/fenced.xhtml = TEXT
+BUGWK93073 : mathml/presentation/fractions-vertical-alignment.xhtml = TEXT
+BUGWK93073 : mathml/presentation/fractions.xhtml = TEXT
+BUGWK93073 : mathml/presentation/mo-stretch.html = TEXT
+BUGWK93073 : mathml/presentation/mo.xhtml = TEXT
+BUGWK93073 : mathml/presentation/mroot-pref-width.html = TEXT
+BUGWK93073 : mathml/presentation/over.xhtml = TEXT
+BUGWK93073 : mathml/presentation/roots.xhtml = TEXT
+BUGWK93073 : mathml/presentation/row-alignment.xhtml = TEXT
+BUGWK93073 : mathml/presentation/row.xhtml = TEXT
+BUGWK93073 : mathml/presentation/style.xhtml = TEXT
+BUGWK93073 : mathml/presentation/sub.xhtml = TEXT
+BUGWK93073 : mathml/presentation/subsup.xhtml = TEXT
+BUGWK93073 : mathml/presentation/sup.xhtml = TEXT
+BUGWK93073 : mathml/presentation/tables.xhtml = TEXT
+BUGWK93073 : mathml/presentation/tokenElements.xhtml = TEXT
+BUGWK93073 : mathml/presentation/under.xhtml = TEXT
+BUGWK93073 : mathml/presentation/underover.xhtml = TEXT
+
+BUGWK93727 RELEASE : fast/events/keyevent-iframe-removed-crash.html = TEXT PASS
+BUGWK93727 RELEASE : fullscreen/full-screen-iframe-zIndex.html = TEXT PASS
+BUGWK93727 RELEASE : fullscreen/full-screen-iframe-allowed.html = TEXT PASS
+BUGWK93727 RELEASE : fullscreen/full-screen-iframe-not-allowed.html = TEXT PASS
+BUGWK93727 RELEASE : fullscreen/exit-full-screen-iframe.html = TEXT PASS
+BUGWK93727 RELEASE : svg/custom/use-instanceRoot-as-event-target.xhtml = TEXT PASS
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // End of Tests failing

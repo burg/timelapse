@@ -485,6 +485,17 @@ void RenderLayer::computeRepaintRects(LayoutPoint* offsetFromRoot)
     m_outlineBox = renderer()->outlineBoundsForRepaint(repaintContainer, offsetFromRoot);
 }
 
+
+void RenderLayer::computeRepaintRectsIncludingDescendants()
+{
+    // FIXME: computeRepaintRects() has to walk up the parent chain for every layer to compute the rects.
+    // We should make this more efficient.
+    computeRepaintRects();
+
+    for (RenderLayer* layer = firstChild(); layer; layer = layer->nextSibling())
+        layer->computeRepaintRectsIncludingDescendants();
+}
+
 void RenderLayer::clearRepaintRects()
 {
     ASSERT(!m_hasVisibleContent);
@@ -1446,7 +1457,7 @@ void RenderLayer::convertToLayerCoords(const RenderLayer* ancestorLayer, LayoutP
         // If the fixed layer's container is the root, just add in the offset of the view. We can obtain this by calling
         // localToAbsolute() on the RenderView.
         FloatPoint absPos = renderer()->localToAbsolute(FloatPoint(), true);
-        location += flooredLayoutSize(absPos);
+        location += LayoutSize(absPos.x(), absPos.y());
         return;
     }
 
@@ -1668,7 +1679,7 @@ void RenderLayer::scrollTo(int x, int y)
     // We should have a RenderView if we're trying to scroll.
     ASSERT(view);
     if (view) {
-#if ENABLE(DASHBOARD_SUPPORT)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
         // Update dashboard regions, scrolling may change the clip of a
         // particular region.
         view->frameView()->updateDashboardRegions();
@@ -2319,7 +2330,7 @@ void RenderLayer::setHasHorizontalScrollbar(bool hasScrollbar)
     if (m_vBar)
         m_vBar->styleChanged();
 
-#if ENABLE(DASHBOARD_SUPPORT)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
     // Force an update since we know the scrollbars have changed things.
     if (renderer()->document()->hasDashboardRegions())
         renderer()->document()->setDashboardRegionsDirty(true);
@@ -2342,7 +2353,7 @@ void RenderLayer::setHasVerticalScrollbar(bool hasScrollbar)
     if (m_vBar)
         m_vBar->styleChanged();
 
-#if ENABLE(DASHBOARD_SUPPORT)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
     // Force an update since we know the scrollbars have changed things.
     if (renderer()->document()->hasDashboardRegions())
         renderer()->document()->setDashboardRegionsDirty(true);
@@ -2551,7 +2562,7 @@ void RenderLayer::updateScrollbarsAfterLayout()
 
         updateSelfPaintingLayer();
 
-#if ENABLE(DASHBOARD_SUPPORT)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
         // Force an update since we know the scrollbars have changed things.
         if (renderer()->document()->hasDashboardRegions())
             renderer()->document()->setDashboardRegionsDirty(true);

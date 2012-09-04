@@ -1190,7 +1190,7 @@ void HTMLTreeBuilder::processStartTag(AtomicHTMLToken* token)
             || token->name() == titleTag) {
             parseError(token);
             ASSERT(m_tree.head());
-            m_tree.openElements()->pushHTMLHeadElement(HTMLStackItem::create(m_tree.head(), token));
+            m_tree.openElements()->pushHTMLHeadElement(m_tree.headStackItem());
             processStartTagForInHead(token);
             m_tree.openElements()->removeHTMLHeadElement(m_tree.head());
             return;
@@ -1543,7 +1543,7 @@ void HTMLTreeBuilder::callTheAdoptionAgency(AtomicHTMLToken* token)
         }
         // 4.
         ASSERT(furthestBlock->isAbove(formattingElementRecord));
-        RefPtr<ContainerNode> commonAncestor = formattingElementRecord->next()->node();
+        RefPtr<HTMLStackItem> commonAncestor = formattingElementRecord->next()->stackItem();
         // 5.
         HTMLFormattingElementList::Bookmark bookmark = m_tree.activeFormattingElements()->bookmarkFor(formattingElement);
         // 6.
@@ -1585,17 +1585,12 @@ void HTMLTreeBuilder::callTheAdoptionAgency(AtomicHTMLToken* token)
             lastNode = node;
         }
         // 7
-        const AtomicString& commonAncestorTag = commonAncestor->localName();
         if (ContainerNode* parent = lastNode->element()->parentNode())
             parent->parserRemoveChild(lastNode->element());
-        // FIXME: If this moves to HTMLConstructionSite, this check should use
-        // causesFosterParenting(tagName) instead.
-        if (commonAncestorTag == tableTag
-            || commonAncestorTag == trTag
-            || isTableBodyContextTag(commonAncestorTag))
+        if (commonAncestor->causesFosterParenting())
             m_tree.fosterParent(lastNode->element());
         else {
-            commonAncestor->parserAddChild(lastNode->element());
+            commonAncestor->node()->parserAddChild(lastNode->element());
             ASSERT(lastNode->stackItem()->isElementNode());
             ASSERT(lastNode->element()->parentNode());
             if (lastNode->element()->parentNode()->attached() && !lastNode->element()->attached())

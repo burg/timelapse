@@ -231,11 +231,47 @@ static void testWebContextURIScheme(URISchemeTest* test, gconstpointer)
     g_assert(!test->m_loadEvents.contains(LoadTrackingTest::LoadFailed));
 }
 
+static void testWebContextSpellChecker(Test* test, gconstpointer)
+{
+    WebKitWebContext* webContext = webkit_web_context_get_default();
+
+    // Check what happens if no spell checking language has been set.
+    const gchar* currentLanguage = webkit_web_context_get_spell_checking_languages(webContext);
+    g_assert(!currentLanguage);
+
+    // Set the language to a specific one.
+    webkit_web_context_set_spell_checking_languages(webContext, "en_US");
+    currentLanguage = webkit_web_context_get_spell_checking_languages(webContext);
+    g_assert_cmpstr(currentLanguage, ==, "en_US");
+
+    // Set the language string to list of valid languages.
+    webkit_web_context_set_spell_checking_languages(webContext, "en_GB,en_US");
+    currentLanguage = webkit_web_context_get_spell_checking_languages(webContext);
+    g_assert_cmpstr(currentLanguage, ==, "en_GB,en_US");
+
+    // Try passing a wrong language along with good ones.
+    webkit_web_context_set_spell_checking_languages(webContext, "bd_WR,en_US,en_GB");
+    currentLanguage = webkit_web_context_get_spell_checking_languages(webContext);
+    g_assert_cmpstr(currentLanguage, ==, "en_US,en_GB");
+
+    // Try passing a list with only wrong languages.
+    webkit_web_context_set_spell_checking_languages(webContext, "bd_WR,wr_BD");
+    currentLanguage = webkit_web_context_get_spell_checking_languages(webContext);
+    g_assert(!currentLanguage);
+
+    // Check disabling and re-enabling spell checking.
+    webkit_web_context_set_spell_checking_enabled(webContext, FALSE);
+    g_assert(!webkit_web_context_get_spell_checking_enabled(webContext));
+    webkit_web_context_set_spell_checking_enabled(webContext, TRUE);
+    g_assert(webkit_web_context_get_spell_checking_enabled(webContext));
+}
+
 void beforeAll()
 {
     Test::add("WebKitWebContext", "default-context", testWebContextDefault);
     PluginsTest::add("WebKitWebContext", "get-plugins", testWebContextGetPlugins);
     URISchemeTest::add("WebKitWebContext", "uri-scheme", testWebContextURIScheme);
+    Test::add("WebKitWebContext", "spell-checker", testWebContextSpellChecker);
 }
 
 void afterAll()

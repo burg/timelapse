@@ -30,6 +30,7 @@
 #include "CCScrollbarLayerImpl.h"
 
 #include "cc/CCQuadSink.h"
+#include "cc/CCScrollbarAnimationController.h"
 #include "cc/CCTextureDrawQuad.h"
 
 using WebKit::WebRect;
@@ -44,7 +45,6 @@ PassOwnPtr<CCScrollbarLayerImpl> CCScrollbarLayerImpl::create(int id)
 
 CCScrollbarLayerImpl::CCScrollbarLayerImpl(int id)
     : CCLayerImpl(id)
-    , m_scrollLayer(0)
     , m_scrollbar(this)
     , m_backTrackResourceId(0)
     , m_foreTrackResourceId(0)
@@ -62,10 +62,13 @@ CCScrollbarLayerImpl::CCScrollbarLayerImpl(int id)
 {
 }
 
-void CCScrollbarLayerImpl::setScrollbarData(const WebScrollbar* scrollbar, WebKit::WebScrollbarThemeGeometry geometry)
+void CCScrollbarLayerImpl::setScrollbarGeometry(PassOwnPtr<WebKit::WebScrollbarThemeGeometry> geometry)
 {
     m_geometry = geometry;
+}
 
+void CCScrollbarLayerImpl::setScrollbarData(const WebScrollbar* scrollbar)
+{
     m_scrollbarOverlayStyle = scrollbar->scrollbarOverlayStyle();
     m_orientation = scrollbar->orientation();
     m_controlSize = scrollbar->controlSize();
@@ -80,10 +83,10 @@ void CCScrollbarLayerImpl::setScrollbarData(const WebScrollbar* scrollbar, WebKi
     scrollbar->getTickmarks(m_tickmarks);
 }
 
-static FloatRect toUVRect(const WebRect& r, const WebRect& bounds)
+static FloatRect toUVRect(const WebRect& r, const IntRect& bounds)
 {
-    return FloatRect(static_cast<float>(r.x) / bounds.width, static_cast<float>(r.y) / bounds.height,
-                     static_cast<float>(r.width) / bounds.width, static_cast<float>(r.height) / bounds.height);
+    return FloatRect(static_cast<float>(r.x) / bounds.width(), static_cast<float>(r.y) / bounds.height(),
+                     static_cast<float>(r.width) / bounds.width(), static_cast<float>(r.height) / bounds.height());
 }
 
 void CCScrollbarLayerImpl::appendQuads(CCQuadSink& quadList, const CCSharedQuadState* sharedQuadState, bool&)
@@ -94,10 +97,12 @@ void CCScrollbarLayerImpl::appendQuads(CCQuadSink& quadList, const CCSharedQuadS
     IntRect boundsRect(IntPoint(), contentBounds());
 
     WebRect thumbRect, backTrackRect, foreTrackRect;
-    m_geometry.splitTrack(&m_scrollbar, m_geometry.trackRect(&m_scrollbar), backTrackRect, thumbRect, foreTrackRect);
+    m_geometry->splitTrack(&m_scrollbar, m_geometry->trackRect(&m_scrollbar), backTrackRect, thumbRect, foreTrackRect);
+    if (!m_geometry->hasThumb(&m_scrollbar))
+        thumbRect = WebRect();
 
-    if (m_thumbResourceId && m_geometry.hasThumb(&m_scrollbar) && !thumbRect.isEmpty()) {
-        OwnPtr<CCTextureDrawQuad> quad = CCTextureDrawQuad::create(sharedQuadState, IntRect(thumbRect), m_thumbResourceId, premultipledAlpha, uvRect, flipped);
+    if (m_thumbResourceId && !thumbRect.isEmpty()) {
+        OwnPtr<CCTextureDrawQuad> quad = CCTextureDrawQuad::create(sharedQuadState, IntRect(thumbRect.x, thumbRect.y, thumbRect.width, thumbRect.height), m_thumbResourceId, premultipledAlpha, uvRect, flipped);
         quad->setNeedsBlending();
         quadList.append(quad.release());
     }
@@ -107,12 +112,19 @@ void CCScrollbarLayerImpl::appendQuads(CCQuadSink& quadList, const CCSharedQuadS
 
     // We only paint the track in two parts if we were given a texture for the forward track part.
     if (m_foreTrackResourceId && !foreTrackRect.isEmpty())
-        quadList.append(CCTextureDrawQuad::create(sharedQuadState, IntRect(foreTrackRect), m_foreTrackResourceId, premultipledAlpha, toUVRect(foreTrackRect, boundsRect), flipped));
+        quadList.append(CCTextureDrawQuad::create(sharedQuadState, IntRect(foreTrackRect.x, foreTrackRect.y, foreTrackRect.width, foreTrackRect.height), m_foreTrackResourceId, premultipledAlpha, toUVRect(foreTrackRect, boundsRect), flipped));
 
     // Order matters here: since the back track texture is being drawn to the entire contents rect, we must append it after the thumb and
     // fore track quads. The back track texture contains (and displays) the buttons.
     if (!boundsRect.isEmpty())
         quadList.append(CCTextureDrawQuad::create(sharedQuadState, IntRect(boundsRect), m_backTrackResourceId, premultipledAlpha, uvRect, flipped));
+}
+
+void CCScrollbarLayerImpl::didLoseContext()
+{
+    m_backTrackResourceId = 0;
+    m_foreTrackResourceId = 0;
+    m_thumbResourceId = 0;
 }
 
 bool CCScrollbarLayerImpl::CCScrollbar::isOverlay() const
@@ -122,11 +134,7 @@ bool CCScrollbarLayerImpl::CCScrollbar::isOverlay() const
 
 int CCScrollbarLayerImpl::CCScrollbar::value() const
 {
-    if (!m_owner->m_scrollLayer)
-        return 0;
-    if (orientation() == WebScrollbar::Horizontal)
-        return m_owner->m_scrollLayer->scrollPosition().x() + m_owner->m_scrollLayer->scrollDelta().width();
-    return m_owner->m_scrollLayer->scrollPosition().y() + m_owner->m_scrollLayer->scrollDelta().height();
+    return m_owner->m_currentPos;
 }
 
 WebKit::WebPoint CCScrollbarLayerImpl::CCScrollbar::location() const
@@ -136,7 +144,7 @@ WebKit::WebPoint CCScrollbarLayerImpl::CCScrollbar::location() const
 
 WebKit::WebSize CCScrollbarLayerImpl::CCScrollbar::size() const
 {
-    return m_owner->contentBounds();
+    return WebKit::WebSize(m_owner->contentBounds().width(), m_owner->contentBounds().height());
 }
 
 bool CCScrollbarLayerImpl::CCScrollbar::enabled() const
@@ -146,23 +154,12 @@ bool CCScrollbarLayerImpl::CCScrollbar::enabled() const
 
 int CCScrollbarLayerImpl::CCScrollbar::maximum() const
 {
-    if (!m_owner->m_scrollLayer)
-        return 0;
-    if (orientation() == WebScrollbar::Horizontal)
-        return m_owner->m_scrollLayer->maxScrollPosition().width();
-    return m_owner->m_scrollLayer->maxScrollPosition().height();
+    return m_owner->m_maximum;
 }
 
 int CCScrollbarLayerImpl::CCScrollbar::totalSize() const
 {
-    if (!m_owner->m_scrollLayer || !m_owner->m_scrollLayer->children().size())
-        return 0;
-    // Copy & paste from CCLayerTreeHostImpl...
-    // FIXME: Hardcoding the first child here is weird. Think of
-    // a cleaner way to get the contentBounds on the Impl side.
-    if (orientation() == WebScrollbar::Horizontal)
-        return m_owner->m_scrollLayer->children()[0]->bounds().width();
-    return m_owner->m_scrollLayer->children()[0]->bounds().height();
+    return m_owner->m_totalSize;
 }
 
 bool CCScrollbarLayerImpl::CCScrollbar::isScrollViewScrollbar() const

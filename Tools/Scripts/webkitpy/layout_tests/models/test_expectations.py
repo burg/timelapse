@@ -690,18 +690,16 @@ class TestExpectations(object):
                     'crash': CRASH,
                     'missing': MISSING}
 
-    EXPECTATION_DESCRIPTIONS = {SKIP: ('skipped', 'skipped'),
-                                PASS: ('pass', 'passes'),
-                                TEXT: ('text diff mismatch',
-                                       'text diff mismatch'),
-                                IMAGE: ('image mismatch', 'image mismatch'),
-                                IMAGE_PLUS_TEXT: ('image and text mismatch',
-                                                  'image and text mismatch'),
-                                AUDIO: ('audio mismatch', 'audio mismatch'),
-                                CRASH: ('crash', 'crashes'),
-                                TIMEOUT: ('test timed out', 'tests timed out'),
-                                MISSING: ('no expected result found',
-                                          'no expected results found')}
+    # (aggregated by category, pass/fail/skip, type)
+    EXPECTATION_DESCRIPTIONS = {SKIP: ('skipped', 'skipped', ''),
+                                PASS: ('passes', 'passed', ''),
+                                TEXT: ('text failures', 'failed', ' (text diff)'),
+                                IMAGE: ('image-only failures', 'failed', ' (image diff)'),
+                                IMAGE_PLUS_TEXT: ('both image and text failures', 'failed', ' (both image and text diffs'),
+                                AUDIO: ('audio failures', 'failed', ' (audio diff)'),
+                                CRASH: ('crashes', 'crashed', ''),
+                                TIMEOUT: ('timeouts', 'timed out', ''),
+                                MISSING: ('no expected results found', 'no expected result found', '')}
 
     EXPECTATION_ORDER = (PASS, CRASH, TIMEOUT, MISSING, IMAGE_PLUS_TEXT, TEXT, IMAGE, AUDIO, SKIP)
 
@@ -854,10 +852,13 @@ class TestExpectations(object):
 
         return TestExpectationSerializer.list_to_string(self._expectations, self._parser._test_configuration_converter, modified_expectations)
 
-    def remove_rebaselined_tests(self, except_these_tests):
-        """Returns a copy of the expectations with the tests removed."""
+    def remove_rebaselined_tests(self, except_these_tests, filename):
+        """Returns a copy of the expectations in the file with the tests removed."""
         def without_rebaseline_modifier(expectation):
-            return not (not expectation.is_invalid() and expectation.name in except_these_tests and "rebaseline" in expectation.modifiers)
+            return not (not expectation.is_invalid() and
+                        expectation.name in except_these_tests and
+                        "rebaseline" in expectation.modifiers and
+                        filename == expectation.filename)
 
         return TestExpectationSerializer.list_to_string(filter(without_rebaseline_modifier, self._expectations))
 

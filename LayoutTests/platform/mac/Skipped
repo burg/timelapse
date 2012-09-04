@@ -197,6 +197,10 @@ fast/dom/HTMLLinkElement/subresource.html
 http/tests/misc/link-rel-prefetch-and-subresource.html
 http/tests/misc/prefetch-purpose.html
 
+# Link prerender is disabled.
+fast/dom/HTMLLinkElement/prerender-insert-after-stop.html
+fast/dom/HTMLLinkElement/prerender-remove-after-stop.html
+
 # Filenames aren't filtered out from edit drags yet, see https://bugs.wekit.org/show_bug.cgi?id=38826
 editing/pasteboard/file-drag-to-editable.html
 
@@ -616,6 +620,10 @@ batterystatus/
 #Network Information is not supported yet. http://webkit.org/b/73528
 networkinformation
 
+# Proximity Events is not supported.
+fast/dom/Proximity
+fast/events/constructors/device-proximity-event-constructor.html
+
 # https://bugs.webkit.org/show_bug.cgi?id=43022
 tables/mozilla_expected_failures/bugs/bug85016.html
 
@@ -759,7 +767,6 @@ plugins/multiple-plugins.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=82976
 media/W3C/video/networkState/networkState_during_progress.html
-media/video-poster-blocked-by-willsendrequest.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=82978
 inspector/styles/svg-style.xhtml
@@ -816,6 +823,7 @@ fast/sub-pixel/file-upload-control-at-fractional-offset.html
 fast/sub-pixel/float-containing-block-with-margin.html
 fast/sub-pixel/float-with-right-margin-zoom.html
 fast/sub-pixel/float-wrap-with-subpixel-top.html
+fast/sub-pixel/inline-block-should-not-wrap.html
 fast/sub-pixel/inline-block-with-margin.html
 fast/sub-pixel/inline-block-with-padding.html
 fast/sub-pixel/layout-boxes-with-zoom.html
@@ -896,9 +904,6 @@ svg/filters/color-space-conversion.svg
 # https://bugs.webkit.org/show_bug.cgi?id=89528
 svg/filters/container-with-filters.svg
 svg/filters/feSpecularLight-premultiplied.svg
-
-# https://bugs.webkit.org/show_bug.cgi?id=88736
-http/tests/security/mixedContent/blob-url-in-iframe.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=89680
 fast/canvas/canvas-imageSmoothingEnabled-repaint.html
