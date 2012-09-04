@@ -813,7 +813,7 @@ WebInspector.TimelapseMiniviewSlider = function(miniview, name, adjustable, hand
 
     if (this._adjustable) {
 	this.element.classList.add("adjustable");
-	this.element.addEventListener("mousedown", this._startSliderDragging.bind(this), false);
+	WebInspector.installDragHandle(this.element, this._startSliderDragging.bind(this), this._sliderDragging.bind(this), this._endSliderDragging.bind(this), event, "col-resize");
     }
 
     this._miniview = miniview;
@@ -939,7 +939,7 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 
     _startSliderDragging: function(event)
     {
-	if (!this._enabled || !this._adjustable)
+	if (!this._enabled)
 	    return;
 
 	if (this.element.hasStyleClass("breakpoint-slider"))
@@ -947,13 +947,14 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 
 	this.element.classList.add("slider-dragging");
 
-	WebInspector.elementDragStart(this.element, this._sliderDragging.bind(this), this._endSliderDragging.bind(this), event, "col-resize");
 	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart);
+
+	return true;
     },
 
     _sliderDragging: function(event)
     {
-	if (!this._enabled || !this._adjustable)
+	if (!this._enabled)
 	    return;
 
 	var parent = this.element.parentElement; // should be heatmap container
@@ -967,10 +968,9 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 
     _endSliderDragging: function(event)
     {	
-	if (!this._enabled || !this._adjustable)
+	if (!this._enabled)
 	    return;
 
-	WebInspector.elementDragEnd(event);
 	this.element.classList.remove("slider-dragging");
 	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd);
     }
