@@ -33,45 +33,34 @@
 
 #if ENABLE(TIMELAPSE)
 
-#include "SendResizeEvent.h"
+#include "InitializeWindow.h"
 
 #include "DeterminismController.h"
-#include "Frame.h"
-#include "DOMWindow.h"
-#include <wtf/Assertions.h>
-#include <wtf/text/StringBuilder.h>
+#include "UserInputProxy.h"
 #include <wtf/text/StringConcatenate.h>
 #include <wtf/timelapse/ActionSerializer.h>
 
 namespace WebCore {
 
-SendResizeEvent::SendResizeEvent(const IntSize& size)
-    : DispatchableAction(ReplayableTypes::SendResizeEvent)
-    , m_size(size) {}
-
-void SendResizeEvent::dispatch(DeterminismController* controller)
+void InitializeWindow::dispatch(DeterminismController* controller)
 {
     ASSERT(sealed());
-
-    controller->page()->mainFrame()->domWindow()->resizeTo((float) m_size.width(), (float) m_size.height());
+    
+    controller->page()->userInputProxy()->sendResizeEvent((float) m_width, (float) m_height);
     controller->didDispatch(this);
 }
 
-String SendResizeEvent::toString() const
+String InitializeWindow::toString() const
 {
-    StringBuilder sb;
-    sb.append(makeString("Resize("));
-    sb.append(makeString("size=[", String::number(m_size.width()), ",", String::number(m_size.height()), "];"));
-    sb.append(")");
-    return sb.toString();
+    return makeString("InitializeWindow(size=[", m_width, ",", m_height, "])");
 }
 
-void SendResizeEvent::serialize(ActionSerializer* serializer) const
+void InitializeWindow::serialize(ActionSerializer* serializer) const
 {
-    serializer->putInt("width", m_size.width());
-    serializer->putInt("height", m_size.height());
+    serializer->putInt("width", m_width);
+    serializer->putInt("height", m_height);
 }
-
+ 
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

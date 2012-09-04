@@ -29,49 +29,43 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#ifndef InitializeWindow_h
+#define InitializeWindow_h
 
 #if ENABLE(TIMELAPSE)
 
-#include "SendResizeEvent.h"
-
-#include "DeterminismController.h"
-#include "Frame.h"
-#include "DOMWindow.h"
-#include <wtf/Assertions.h>
-#include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringConcatenate.h>
-#include <wtf/timelapse/ActionSerializer.h>
+#include "DispatchableAction.h"
+#include "ReplayableTypes.h"
 
 namespace WebCore {
 
-SendResizeEvent::SendResizeEvent(const IntSize& size)
-    : DispatchableAction(ReplayableTypes::SendResizeEvent)
-    , m_size(size) {}
+    class DeterminismController;
 
-void SendResizeEvent::dispatch(DeterminismController* controller)
-{
-    ASSERT(sealed());
+class InitializeWindow : public DispatchableAction { 
 
-    controller->page()->mainFrame()->domWindow()->resizeTo((float) m_size.width(), (float) m_size.height());
-    controller->didDispatch(this);
-}
+public:
+    InitializeWindow(Page* page, unsigned dispatchCount, const PositionMark& mark)
+    : DispatchableAction(ReplayableTypes::InitializeWindow, dispatchCount, mark)
+        , m_width(page->mainFrame()->domWindow()->innerWidth())
+        , m_height(page->mainFrame()->domWindow()->innerHeight()) {}
 
-String SendResizeEvent::toString() const
-{
-    StringBuilder sb;
-    sb.append(makeString("Resize("));
-    sb.append(makeString("size=[", String::number(m_size.width()), ",", String::number(m_size.height()), "];"));
-    sb.append(")");
-    return sb.toString();
-}
+    virtual ~InitializeWindow() {};
 
-void SendResizeEvent::serialize(ActionSerializer* serializer) const
-{
-    serializer->putInt("width", m_size.width());
-    serializer->putInt("height", m_size.height());
-}
+    // DispatchableAction API
+    virtual void dispatch(DeterminismController*) OVERRIDE;
 
-} // namespace WebCore
+    // ReplayableAction API
+    virtual String toString() const OVERRIDE;
+    size_t memorySize() const OVERRIDE { return sizeof(InitializeWindow); }
+    void serialize(WTF::ActionSerializer*) const OVERRIDE;
+  
+private:
+    int m_width;
+    int m_height;
+};
+
+} //namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
+
+#endif // InitializeWindow_h
