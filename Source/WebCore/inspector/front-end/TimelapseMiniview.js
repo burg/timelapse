@@ -133,9 +133,9 @@ WebInspector.TimelapseMiniview.prototype = {
     {
 	this.element.className = "timelapse-miniview";
 	this.element.tabIndex = 1;
-	this.element.addEventListener("mousedown", this._onMiniviewClicked.bind(this), false);
 	this.element.addEventListener("dblclick", this._onMiniviewDoubleClicked.bind(this), true);
 	this.element.addEventListener("mousewheel", this._onMiniviewMousewheel.bind(this), true);
+	WebInspector.installDragHandle(this.element, this._startZoomSelectorDragging.bind(this), this._zoomSelectorDragging.bind(this), this._endZoomSelectorDragging.bind(this), "ew-resize");
 	
 	this._canvas = document.createElement("canvas");
 	this._canvas.className = "timelapse-miniview-canvas";
@@ -710,36 +710,21 @@ WebInspector.TimelapseMiniview.prototype = {
 	this._rightZoomGlassPane.style.right = 0;
     },
 
-    _onMiniviewClicked: function(event)
+    _startZoomSelectorDragging: function(event)
     {
-	var node = event.target;
+        var position = (event.pageX - this.element.offsetLeft) / this.element.clientWidth;
+        this._zoomSelector = new WebInspector.TimelapseMiniview.ZoomSelector(this.element, position, event);
 
-        while (node) {
-	    if (node === this.sliders.playback.element)
-		break;
-	    if (node === this.sliders.leftZoom.element)
-		break;
-	    if (node === this.sliders.rightZoom.element)
-		break;
-            else if (node === this.element) {
-                var position = (event.pageX - this.element.offsetLeft) / this.element.clientWidth;
-                this._zoomSelector = new WebInspector.TimelapseMiniview.ZoomSelector(this.element, position, event);
-                WebInspector.elementDragStart(null, this._zoomSelectorDragging.bind(this), this._endZoomSelectorDragging.bind(this), event, "ew-resize");
-                break;
-	    }
-            node = node.parentNode;
-	}
+	return true;
     },
 
     _zoomSelectorDragging: function(event)
     {
         this._zoomSelector._updatePosition((event.pageX - this.element.offsetLeft) / this.element.clientWidth);
-        event.preventDefault();
     },
 
     _endZoomSelectorDragging: function(event)
     {
-        WebInspector.elementDragEnd(event);
         var zoom = this._zoomSelector._close((event.pageX - this.element.offsetLeft) / this.element.clientWidth);
 	var minSize = WebInspector.TimelapseMiniview.MinSelectableSize;
         delete this._zoomSelector;
@@ -813,7 +798,7 @@ WebInspector.TimelapseMiniviewSlider = function(miniview, name, adjustable, hand
 
     if (this._adjustable) {
 	this.element.classList.add("adjustable");
-	this.element.addEventListener("mousedown", this._startSliderDragging.bind(this), false);
+	WebInspector.installDragHandle(this.element, this._startSliderDragging.bind(this), this._sliderDragging.bind(this), this._endSliderDragging.bind(this), "col-resize");
     }
 
     this._miniview = miniview;
@@ -939,21 +924,21 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 
     _startSliderDragging: function(event)
     {
-	if (!this._enabled || !this._adjustable)
-	    return;
+	if (!this._enabled)
+	    return false;
 
 	if (this.element.hasStyleClass("breakpoint-slider"))
 	    this.element.removeStyleClass("breakpoint-slider");
 
 	this.element.classList.add("slider-dragging");
 
-	WebInspector.elementDragStart(this.element, this._sliderDragging.bind(this), this._endSliderDragging.bind(this), event, "col-resize");
 	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart);
+	return true;
     },
 
     _sliderDragging: function(event)
     {
-	if (!this._enabled || !this._adjustable)
+	if (!this._enabled)
 	    return;
 
 	var parent = this.element.parentElement; // should be heatmap container
@@ -967,10 +952,9 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 
     _endSliderDragging: function(event)
     {	
-	if (!this._enabled || !this._adjustable)
+	if (!this._enabled)
 	    return;
 
-	WebInspector.elementDragEnd(event);
 	this.element.classList.remove("slider-dragging");
 	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd);
     }

@@ -737,7 +737,7 @@ WebInspector.TimelapseGridSlider = function(grid, name, adjustable)
 
     if (this._adjustable) {
 	this.element.classList.add("adjustable");
-	this.element.addEventListener("mousedown", this._startSliderDragging.bind(this), false);
+	WebInspector.installDragHandle(this.element, this._startSliderDragging.bind(this), this._sliderDragging.bind(this), this._endSliderDragging.bind(this), "row-resize");
     }
 
     var wrapper = this._wedgeWrapperElement = document.createElement("div");
@@ -880,19 +880,19 @@ WebInspector.TimelapseGridSlider.prototype =  {
 
     _startSliderDragging: function(event)
     {
-	if (!this._enabled || !this._adjustable)
-	    return;
+	if (!this._enabled)
+	    return false;
 
 	this.element.classList.add("slider-dragging");
 	var offsetTop = this._computeAbsOffsetTop(event);
 
-	WebInspector.elementDragStart(this.element, this._sliderDragging.bind(this), this._endSliderDragging.bind(this), event, "col-resize");
 	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.EventTypes.DragStart, offsetTop);
+	return true;
     },
 
     _sliderDragging: function(event)
     {
-	if (!this._enabled || !this._adjustable)
+	if (!this._enabled)
 	    return;
 	
 	var offsetTop = this._computeAbsOffsetTop(event);
@@ -903,10 +903,9 @@ WebInspector.TimelapseGridSlider.prototype =  {
 
     _endSliderDragging: function(event)
     {	
-	if (!this._enabled || !this._adjustable)
+	if (!this._enabled)
 	    return;
 
-	WebInspector.elementDragEnd(event);
 	delete this._visibleRows;
 
 	this.element.classList.remove("slider-dragging");

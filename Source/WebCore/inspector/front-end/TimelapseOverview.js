@@ -630,7 +630,7 @@ WebInspector.TimelapseOverview.prototype = {
 		    break;
 
 		this._lastPanPosition = (event.pageX - this.element.offsetLeft) / this.element.clientWidth;
-                WebInspector.elementDragStart(null, this._overviewPanning.bind(this), this._overviewPanningEnd.bind(this), event, "-webkit-grabbing");
+                WebInspector.installDragHandle(this.element, null, this._overviewPanning.bind(this), this._overviewPanningEnd.bind(this), "-webkit-grabbing");
                 break;
 	    }
             node = node.parentNode;
@@ -665,7 +665,6 @@ WebInspector.TimelapseOverview.prototype = {
 
     _overviewPanningEnd: function(event)
     {
-        WebInspector.elementDragEnd(event);
 	delete this._lastPanPosition;
     },
 
@@ -1283,7 +1282,7 @@ WebInspector.TimelapseOverviewSlider = function(overview, name, adjustable)
 
     if (this._adjustable) {
 	this.element.classList.add("adjustable");
-	this.element.addEventListener("mousedown", this._startSliderDragging.bind(this), false);
+	WebInspector.installDragHandle(this.element, this._startSliderDragging.bind(this), this._sliderDragging.bind(this), this._endSliderDragging.bind(this), "col-resize");
     }
 
     this._verticalBarElement = document.createElement("div");
@@ -1434,21 +1433,21 @@ WebInspector.TimelapseOverviewSlider.prototype = {
 
     _startSliderDragging: function(event)
     {
-	if (!this._enabled || !this._adjustable)
-	    return;
+	if (!this._enabled)
+	    return false;
 
 	if (this.element.hasStyleClass("breakpoint-slider"))
 	    this.element.removeStyleClass("breakpoint-slider");
 
 	this.element.classList.add("slider-dragging");
 
-	WebInspector.elementDragStart(this.element, this._sliderDragging.bind(this), this._endSliderDragging.bind(this), event, "col-resize");
 	this.dispatchEventToListeners(WebInspector.TimelapseOverviewSlider.EventTypes.DragStart);
+	return true;
     },
 
     _sliderDragging: function(event)
     {
-	if (!this._enabled || !this._adjustable)
+	if (!this._enabled)
 	    return;
 
 	var parent = this.element.parentElement; // should be timeline container
@@ -1462,10 +1461,9 @@ WebInspector.TimelapseOverviewSlider.prototype = {
 
     _endSliderDragging: function(event)
     {	
-	if (!this._enabled || !this._adjustable)
+	if (!this._enabled)
 	    return;
 
-	WebInspector.elementDragEnd(event);
 	this.element.classList.remove("slider-dragging");
 	this.dispatchEventToListeners(WebInspector.TimelapseOverviewSlider.EventTypes.DragEnd);
     }
