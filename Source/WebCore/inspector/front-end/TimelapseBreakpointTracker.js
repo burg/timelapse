@@ -73,7 +73,7 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 	if (this._exploredIntervals.intervalPending)
 	    this._exploredIntervals.endInterval(this._model.currentMarkIndex);
 
-	var canHitBreakpoints = WebInspector.panels.scripts.debuggingEnabled && WebInspector.debuggerModel.breakpointsActive();
+	var canHitBreakpoints = WebInspector.debuggerModel.debuggerEnabled() && WebInspector.debuggerModel.breakpointsActive();
 	if (canHitBreakpoints)
 	    this._exploredIntervals.startInterval(this._model.replayStartMarkIndex);
     },
