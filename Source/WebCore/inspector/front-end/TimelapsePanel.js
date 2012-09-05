@@ -28,7 +28,6 @@ WebInspector.TimelapsePanel = function()
     this._viewsContainerElement.addStyleClass("hidden");
 
     this._registerShortcuts();
-    this._createGlobalStatusBarButtons();
     this._createStatusBarButtons();
 
     this.popover = new WebInspector.TimelapsePopover(this);
@@ -58,6 +57,7 @@ WebInspector.TimelapsePanel.prototype = {
     get statusBarItems()
     {
         var items = [this.toggleTimelapseButton.element];
+	items.push(this.lockButton.element);
 	items.push(this.toggleRecordButton.element);
 	items.push(this.togglePlaybackButton.element);
 	items.push(this.setAnchorButton.element);
@@ -151,60 +151,6 @@ WebInspector.TimelapsePanel.prototype = {
     },
 
     /* subroutines of initialization */
-    _createGlobalStatusBarButtons: function()
-    {
-	var panel = this;
-	var eventNames = WebInspector.TimelapseModel.EventTypes;
-
-        // these three widgets are inserted into the right-anchored status
-        // bar area by WebInspector._createGlobalStatusBarItems, if this panel
-        // is loaded at all.
-        this.globalLockButton = new WebInspector.StatusBarButton(WebInspector.UIString("Timelapse Locking Mode"), "timelapse-lock-status-bar-item");
-        this.globalLockButton.addEventListener("click", this._lockButtonClicked, panel);
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.disabled = true;
-            this.visible = true;
-            this.toggled = false;
-            this.title = "Input unlocked.";
-        }, panel.globalLockButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.visible = false;
-        }, panel.globalLockButton);
-        this._model.addEventListener(eventNames.RecordingDidStart, function() {
-            this.disabled = true;
-        }, panel.globalLockButton);
-        this._model.addEventListener(eventNames.RecordingDidStop, function() {
-            this.disabled = false;
-        }, panel.globalLockButton);
-        this._model.addEventListener(eventNames.InputLocked, function() {
-            this.title = "Input locked.";
-            this.toggled = true;
-        }, panel.globalLockButton);
-        this._model.addEventListener(eventNames.InputUnlocked, function() {
-            if (panel._recording) return;
-            this.title = "Input unlocked.";
-            this.toggled = false;
-        }, panel.globalLockButton);
-
-	// this is the status message widget. It's plucked out and
-	// attached by the main inspector script.
-        this.statusMessage = document.createElement("div");
-        this.statusMessage.id = "timelapse-status";
-        this._model.addEventListener(eventNames.Enabled, function() {
-           this.classList.remove("hidden");
-        }, this.statusMessage);
-        this._model.addEventListener(eventNames.Disabled, function() {
-           this.classList.add("hidden");
-        }, this.statusMessage);
-	this._model.addEventListener(eventNames.StatusChanged, function(event) {
-            var message = event.data;
-            this.removeChildren();
-            var messageSpan = document.createElement("span");
-            messageSpan.textContent = WebInspector.UIString(message);
-            this.appendChild(messageSpan);
-        }, this.statusMessage);
-    },
-
     _createStatusBarButtons: function()
     {
 	var panel = this;
@@ -220,6 +166,34 @@ WebInspector.TimelapsePanel.prototype = {
             this.title = WebInspector.UIString("Timelapse disabled. Click to enable.");
             this.toggled = false;
         }, timelapseButton);
+
+	//the lock/unlock button
+	var lockButton = this.lockButton = new WebInspector.StatusBarButton(WebInspector.UIString("Timelapse Locking Mode"), "timelapse-lock-status-bar-item");
+        lockButton.addEventListener("click", this._lockButtonClicked, this);
+        this._model.addEventListener(eventNames.Enabled, function() {
+            this.disabled = true;
+            this.visible = true;
+            this.toggled = false;
+            this.title = "Input unlocked.";
+        }, lockButton);
+        this._model.addEventListener(eventNames.Disabled, function() {
+            this.visible = false;
+        }, lockButton);
+        this._model.addEventListener(eventNames.RecordingDidStart, function() {
+            this.disabled = true;
+        }, lockButton);
+        this._model.addEventListener(eventNames.RecordingDidStop, function() {
+            this.disabled = false;
+        }, lockButton);
+        this._model.addEventListener(eventNames.InputLocked, function() {
+            this.title = "Input locked.";
+            this.toggled = true;
+        }, lockButton);
+        this._model.addEventListener(eventNames.InputUnlocked, function() {
+            if (this._recording) return;
+            this.title = "Input unlocked.";
+            this.toggled = false;
+        }, lockButton);
 
         //the play/pause button
         var playbackButton = this.togglePlaybackButton = new WebInspector.StatusBarButton("", "playback-toggle-status-bar-item");

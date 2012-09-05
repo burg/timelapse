@@ -84,12 +84,29 @@ var WebInspector = {
         this._toggleConsoleButton.addEventListener("click", this._toggleConsoleButtonClicked.bind(this), false);
         mainStatusBar.insertBefore(this._toggleConsoleButton.element, bottomStatusBarContainer);
 
-	// FIXME: move Lock to Timelapse panel, and make StatusMessage independent of any specific panel.
-/*
-	if (WebInspector.panels.timelapse) {
-	    mainStatusBar.appendChild(WebInspector.panels.timelapse.statusMessage);
-	    mainStatusBar.appendChild(WebInspector.panels.timelapse.globalLockButton.element);
-	}*/
+	if (WebInspector.TimelapsePanel) {
+	    // create status message widget
+	    var model = WebInspector.timelapseModel;
+	    var eventNames = WebInspector.TimelapseModel.EventTypes;
+
+            this._timelapseStatusMessage = document.createElement("div");
+            this._timelapseStatusMessage.id = "timelapse-status";
+            model.addEventListener(eventNames.Enabled, function() {
+		this.classList.remove("hidden");
+            }, this._timelapseStatusMessage);
+            model.addEventListener(eventNames.Disabled, function() {
+		this.classList.add("hidden");
+            }, this._timelapseStatusMessage);
+	    model.addEventListener(eventNames.StatusChanged, function(event) {
+		var message = event.data;
+		this.removeChildren();
+		var messageSpan = document.createElement("span");
+		messageSpan.textContent = WebInspector.UIString(message);
+		this.appendChild(messageSpan);
+            }, this._timelapseStatusMessage);
+
+	    mainStatusBar.appendChild(this._timelapseStatusMessage);
+	}
 
         if (!WebInspector.WorkerManager.isWorkerFrontend()) {
             this._nodeSearchButton = new WebInspector.StatusBarButton(WebInspector.UIString("Select an element in the page to inspect it."), "node-search-status-bar-item");
