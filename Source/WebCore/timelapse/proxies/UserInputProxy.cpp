@@ -66,14 +66,14 @@ PassOwnPtr<UserInputProxy> UserInputProxy::create(Page* page)
     return adoptPtr(new UserInputProxy(page));
 }
 
-bool UserInputProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
+bool UserInputProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent, const Frame* frame, bool fromReplay)
 {
 #if ENABLE(TIMELAPSE)
     if (!fromReplay && m_mode == Replaying)
         return true;
 
     if (m_mode == Capturing && m_page->determinismController()) {
-        HandleContextMenu* action = new HandleContextMenu(mouseEvent);
+        HandleContextMenu* action = new HandleContextMenu(mouseEvent, frame);
         m_page->determinismController()->capturePageInput(action);
     }
 #else
@@ -81,8 +81,7 @@ bool UserInputProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent
 #endif // ENABLE(TIMELAPSE)
 
     // do dispatch
-    // FIXME: Should not always dispatch through the main frame. See Issue #20.
-    return m_page->mainFrame()->eventHandler()->sendContextMenuEvent(mouseEvent);
+    return frame->eventHandler()->sendContextMenuEvent(mouseEvent);
 }
 
 bool UserInputProxy::handleMousePressEvent(const PlatformMouseEvent& mouseEvent, bool fromReplay)
