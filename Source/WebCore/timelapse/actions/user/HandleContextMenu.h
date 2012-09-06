@@ -35,6 +35,8 @@
 #if ENABLE(TIMELAPSE)
 
 #include "DispatchableAction.h"
+#include "DispatchEventBase.h"
+#include "Frame.h"
 #include "HandleMouseBase.h"
 #include "ReplayableTypes.h"
 
@@ -43,8 +45,9 @@ namespace WebCore {
 class HandleContextMenu : public HandleMouseBase {
 
 public:
-    HandleContextMenu(const PlatformMouseEvent& event)
-        : HandleMouseBase(event, ReplayableTypes::HandleContextMenu) {}
+    HandleContextMenu(const PlatformMouseEvent& event, const Frame* frame)
+        : HandleMouseBase(event, ReplayableTypes::HandleContextMenu)
+        , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(frame->document())) {}
     virtual ~HandleContextMenu() {};
 
     // DispatchableAction API
@@ -56,6 +59,9 @@ public:
         return HandleMouseBase::memorySize();
     }
     virtual void serialize(WTF::ActionSerializer*) const OVERRIDE;
+
+private:
+    int m_frameIndex;
 };
 
 

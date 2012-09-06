@@ -1317,7 +1317,7 @@ static bool handleContextMenuEvent(const PlatformMouseEvent& platformMouseEvent,
     if (result.innerNonSharedNode())
         frame = result.innerNonSharedNode()->document()->frame();
     
-    bool handled = page->corePage()->userInputProxy()->handleContextMenuEvent(platformMouseEvent);
+    bool handled = page->corePage()->userInputProxy()->handleContextMenuEvent(platformMouseEvent, frame);
     if (handled)
         page->contextMenu()->show();
 

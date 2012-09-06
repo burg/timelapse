@@ -46,7 +46,9 @@ void HandleContextMenu::dispatch(DeterminismController* controller)
 {
     ASSERT(sealed());
 
-    controller->page()->userInputProxy()->handleContextMenuEvent(platformEvent(), true);
+    Document* document = SerializedEventTarget::documentFromFrameIndex(controller->page(), m_frameIndex);
+
+    controller->page()->userInputProxy()->handleContextMenuEvent(platformEvent(), document->frame(), true);
     controller->didDispatch(this);
 }
 
