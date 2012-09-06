@@ -278,21 +278,21 @@ void UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, 
     m_page->focusController()->focusedOrMainFrame()->eventHandler()->logicalScrollRecursively(direction, granularity, static_cast<Node*>(0));
 }        
 
-void UserInputProxy::sendResizeEvent(bool fromReplay)
+void UserInputProxy::sendResizeEvent(const Frame* frame, bool fromReplay)
     {
 #if ENABLE(TIMELAPSE)
         if (!fromReplay && m_mode == Replaying)
             return;
         
         if (m_mode == Capturing && m_page->determinismController()) {
-            SendResizeEvent* action = new SendResizeEvent(m_page);
+            SendResizeEvent* action = new SendResizeEvent(frame);
             m_page->determinismController()->capturePageInput(action);
         }
 #else
         UNUSED_PARAM(fromReplay);
 #endif // ENABLE(TIMELAPSE)
         
-        m_page->mainFrame()->eventHandler()->sendResizeEvent();
+        frame->eventHandler()->sendResizeEvent();
     }
 
 } // namespace WebCore

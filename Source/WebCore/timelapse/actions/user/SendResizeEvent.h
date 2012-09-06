@@ -44,7 +44,7 @@ namespace WebCore {
 class SendResizeEvent : public DispatchableAction {
 
 public:
-    SendResizeEvent(Page* page);
+    SendResizeEvent(const Frame* frame);
     virtual ~SendResizeEvent() {}
 
     int width() const { return m_width; }
@@ -61,6 +61,7 @@ public:
 private:
     int m_width;
     int m_height;
+    int m_frameIndex;
 };
 
 } //namespace WebCore

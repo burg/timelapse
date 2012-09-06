@@ -2481,10 +2481,9 @@ void FrameView::performPostLayoutTasks()
         m_lastViewportSize = currentSize;
         m_lastZoomFactor = currentZoomFactor;
         if (resized) {
-            // TODO: when do frames other than the main frame resize? Should Timelapse record this?
             Page* page = m_frame->page();
-            if (page && page->mainFrame() == m_frame)
-                page->userInputProxy()->sendResizeEvent();
+            if (page)
+                page->userInputProxy()->sendResizeEvent(m_frame.get());
             else
                 m_frame->eventHandler()->sendResizeEvent();
 

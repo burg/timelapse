@@ -36,6 +36,7 @@
 #include "SendResizeEvent.h"
 
 #include "DeterminismController.h"
+#include "DispatchEventBase.h"
 #include "Frame.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
@@ -45,17 +46,20 @@
 
 namespace WebCore {
 
-SendResizeEvent::SendResizeEvent(Page* page)
+SendResizeEvent::SendResizeEvent(const Frame* frame)
     : DispatchableAction(ReplayableTypes::SendResizeEvent)
-    , m_width(page->mainFrame()->document()->domWindow()->outerWidth())
-    , m_height(page->mainFrame()->document()->domWindow()->outerHeight()) {}
+    , m_width(frame->document()->domWindow()->outerWidth())
+    , m_height(frame->document()->domWindow()->outerHeight())
+    , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(frame->document())) {}
 
 void SendResizeEvent::dispatch(DeterminismController* controller)
 {
     ASSERT(sealed());
 
-    controller->page()->mainFrame()->document()->domWindow()->resizeTo((float) m_width, (float) m_height);
-    controller->page()->userInputProxy()->sendResizeEvent(true);
+    Document* document = SerializedEventTarget::documentFromFrameIndex(controller->page(), m_frameIndex);
+
+    document->domWindow()->resizeTo((float) m_width, (float) m_height);
+    controller->page()->userInputProxy()->sendResizeEvent(document->frame(), true);
     controller->didDispatch(this);
 }
 
