@@ -46,13 +46,13 @@ void InitializeWindow::dispatch(DeterminismController* controller)
 {
     ASSERT(sealed());
     
-    controller->page()->userInputProxy()->sendResizeEvent((float) m_width, (float) m_height);
+    controller->page()->mainFrame()->document()->domWindow()->resizeTo((float) m_width, (float) m_height);
     controller->didDispatch(this);
 }
 
 String InitializeWindow::toString() const
 {
-    return makeString("InitializeWindow(size=[", m_width, ",", m_height, "])");
+    return makeString("InitializeWindow(size=[", String::number(m_width), ",", String::number(m_height), "])");
 }
 
 void InitializeWindow::serialize(ActionSerializer* serializer) const

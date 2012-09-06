@@ -37,7 +37,7 @@
 
 #include "DeterminismController.h"
 #include "Frame.h"
-#include "DOMWindow.h"
+#include "UserInputProxy.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
@@ -45,15 +45,17 @@
 
 namespace WebCore {
 
-SendResizeEvent::SendResizeEvent(const IntSize& size)
+SendResizeEvent::SendResizeEvent(Page* page)
     : DispatchableAction(ReplayableTypes::SendResizeEvent)
-    , m_size(size) {}
+    , m_width(page->mainFrame()->document()->domWindow()->outerWidth())
+    , m_height(page->mainFrame()->document()->domWindow()->outerHeight()) {}
 
 void SendResizeEvent::dispatch(DeterminismController* controller)
 {
     ASSERT(sealed());
 
-    controller->page()->mainFrame()->domWindow()->resizeTo((float) m_size.width(), (float) m_size.height());
+    controller->page()->mainFrame()->document()->domWindow()->resizeTo((float) m_width, (float) m_height);
+    controller->page()->userInputProxy()->sendResizeEvent(true);
     controller->didDispatch(this);
 }
 
@@ -61,15 +63,15 @@ String SendResizeEvent::toString() const
 {
     StringBuilder sb;
     sb.append(makeString("Resize("));
-    sb.append(makeString("size=[", String::number(m_size.width()), ",", String::number(m_size.height()), "];"));
+    sb.append(makeString("size=[", String::number(m_width), ",", String::number(m_height), "];"));
     sb.append(")");
     return sb.toString();
 }
 
 void SendResizeEvent::serialize(ActionSerializer* serializer) const
 {
-    serializer->putInt("width", m_size.width());
-    serializer->putInt("height", m_size.height());
+    serializer->putInt("width", m_width);
+    serializer->putInt("height", m_height);
 }
 
 } // namespace WebCore

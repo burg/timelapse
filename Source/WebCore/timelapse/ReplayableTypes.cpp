@@ -53,6 +53,7 @@ const char* HandleMousePress = "HandleMousePress";
 const char* HandleMouseRelease = "HandleMouseRelease";
 const char* HandleWheelEvent = "HandleWheelEvent";
 const char* InitializeFocus = "InitializeFocus";
+const char* InitializeWindow = "InitializeWindow";
 const char* ReceivedResourceResponse = "ReceivedResourceResponse";
 const char* NavigateToPage = "NavigateToPage";
 const char* ScrollPage = "ScrollPage";

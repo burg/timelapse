@@ -35,7 +35,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "DispatchableAction.h"
-#include "IntSize.h"
+#include "Page.h"
 #include "ReplayableTypes.h"
 #include <wtf/timelapse/ReplayableAction.h>
 
@@ -44,10 +44,11 @@ namespace WebCore {
 class SendResizeEvent : public DispatchableAction {
 
 public:
-    SendResizeEvent(const IntSize& size);
+    SendResizeEvent(Page* page);
     virtual ~SendResizeEvent() {}
 
-    const IntSize& size() const { return m_size; }
+    int width() const { return m_width; }
+    int height() const { return m_height; }
 
     // DispatchableAction API
     virtual void dispatch(DeterminismController*) OVERRIDE;
@@ -58,7 +59,8 @@ public:
     void serialize(WTF::ActionSerializer*) const OVERRIDE;
 
 private:
-    IntSize m_size;
+    int m_width;
+    int m_height;
 };
 
 } //namespace WebCore

@@ -35,6 +35,8 @@
 #if ENABLE(TIMELAPSE)
 
 #include "DispatchableAction.h"
+#include "Frame.h"
+#include "Page.h"
 #include "ReplayableTypes.h"
 
 namespace WebCore {
@@ -46,8 +48,8 @@ class InitializeWindow : public DispatchableAction {
 public:
     InitializeWindow(Page* page, unsigned dispatchCount, const PositionMark& mark)
     : DispatchableAction(ReplayableTypes::InitializeWindow, dispatchCount, mark)
-        , m_width(page->mainFrame()->domWindow()->innerWidth())
-        , m_height(page->mainFrame()->domWindow()->innerHeight()) {}
+    , m_width(page->mainFrame()->document()->domWindow()->outerWidth())
+    , m_height(page->mainFrame()->document()->domWindow()->outerHeight()) {}
 
     virtual ~InitializeWindow() {};
 

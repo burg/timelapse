@@ -278,14 +278,14 @@ void UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, 
     m_page->focusController()->focusedOrMainFrame()->eventHandler()->logicalScrollRecursively(direction, granularity, static_cast<Node*>(0));
 }        
 
-void UserInputProxy::sendResizeEvent(const IntSize& size, bool fromReplay)
+void UserInputProxy::sendResizeEvent(bool fromReplay)
     {
 #if ENABLE(TIMELAPSE)
         if (!fromReplay && m_mode == Replaying)
             return;
         
         if (m_mode == Capturing && m_page->determinismController()) {
-            SendResizeEvent* action = new SendResizeEvent(size);
+            SendResizeEvent* action = new SendResizeEvent(m_page);
             m_page->determinismController()->capturePageInput(action);
         }
 #else

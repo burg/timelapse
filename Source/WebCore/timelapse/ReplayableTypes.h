@@ -52,6 +52,7 @@ extern const char* HandleMousePress;
 extern const char* HandleMouseRelease;
 extern const char* HandleWheelEvent;
 extern const char* InitializeFocus;
+extern const char* InitializeWindow;
 extern const char* ReceivedResourceResponse;
 extern const char* NavigateToPage;
 extern const char* ScrollPage;
