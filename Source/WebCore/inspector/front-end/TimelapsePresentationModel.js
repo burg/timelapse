@@ -430,6 +430,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    recordStyles[recordTypes.MouseWheel] = { title: WebInspector.UIString("Mouse Wheel"), category: this.categories.userinput };
 	    recordStyles[recordTypes.KeyPress] = { title: WebInspector.UIString("Key Press"), category: this.categories.userinput };
 	    recordStyles[recordTypes.Scroll] = { title: WebInspector.UIString("Scroll"), category: this.categories.userinput };
+	    recordStyles[recordTypes.Resize] = { title: WebInspector.UIString("Resize"), category: this.categories.userinput };
 
 	    recordStyles[recordTypes.WindowActive] = { title: WebInspector.UIString("Window Became Active"), category: this.categories.userinput };
 	    recordStyles[recordTypes.WindowInactive] = { title: WebInspector.UIString("Window Became Inactive"), category: this.categories.userinput };

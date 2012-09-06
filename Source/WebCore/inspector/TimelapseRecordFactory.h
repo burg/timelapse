@@ -45,6 +45,7 @@ class PlatformKeyboardEvent;
 class PlatformWheelEvent;
 class ResourceResponse;
 class ScrollPage;
+class SendResizeEvent;
 
 class TimelapseRecordFactory {
 public:
@@ -52,6 +53,7 @@ public:
     static PassRefPtr<InspectorObject> createWheelData(const PlatformWheelEvent&);
     static PassRefPtr<InspectorObject> createKeyPressData(const PlatformKeyboardEvent&);
     static PassRefPtr<InspectorObject> createScrollData(ScrollPage* scrollAction);
+    static PassRefPtr<InspectorObject> createResizeData(SendResizeEvent* action);
 
     static PassRefPtr<InspectorObject> createEmptyData();
 
