@@ -44,6 +44,7 @@ WebInspector.TimelapseAgent.RecordType = {
     MouseWheel: "MouseWheel",
     KeyPress: "KeyPress",
     Scroll: "Scroll",
+    Resize: "Resize",
 
     WindowActive: "WindowActive",
     WindowInactive: "WindowInactive",
@@ -105,6 +106,9 @@ WebInspector.TimelapseAgent.RecordPreview = {
 	return "Keys: " + data.text + " and modifiers " + makeModKeys(data);
     },
     Scroll: function (data) { return " "; }, // TODO
+    Resize: function (data) {
+	return "Width: " + data.width + "; Height: " + data.height;
+    },
 
     WindowActive: function (data) { return " "; },
     WindowInactive: function (data) { return " "; },

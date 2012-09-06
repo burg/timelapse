@@ -64,6 +64,7 @@
 #include "PlatformWheelEvent.h"
 #include "ReplayableTypes.h"
 #include "ScrollPage.h"
+#include "SendResizeEvent.h"
 #include "TimelapseAgentStateMachine.h"
 #include "TimelapseRecordFactory.h"
 #include <wtf/OwnPtr.h>
@@ -93,6 +94,7 @@ static const char MouseMove[] = "MouseMove";
 static const char MouseWheel[] = "MouseWheel";
 static const char KeyPress[] = "KeyPress";
 static const char Scroll[] = "Scroll";
+static const char Resize[] = "Resize";
 
 static const char WindowActive[] = "WindowActive";
 static const char WindowInactive[] = "WindowInactive";
@@ -225,6 +227,8 @@ void InspectorTimelapseAgent::recordedPageInput(DispatchableAction* action)
                              newMark);
     } else if (action->type() == ReplayableTypes::ScrollPage) {
         pushRecordToFrontend(TimelapseRecordFactory::createScrollData(static_cast<ScrollPage*>(action)), TimelapseRecordType::Scroll, newMark);
+    } else if (action->type() == ReplayableTypes::SendResizeEvent) {
+        pushRecordToFrontend(TimelapseRecordFactory::createResizeData(static_cast<SendResizeEvent*>(action)), TimelapseRecordType::Resize, newMark);
     }
 }
     
