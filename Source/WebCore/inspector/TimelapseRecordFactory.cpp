@@ -39,6 +39,7 @@
 #include "FrameTree.h"
 #include "InspectorValues.h"
 #include "ScrollPage.h"
+#include "SendResizeEvent.h"
 #include "PlatformKeyboardEvent.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
@@ -95,6 +96,14 @@ PassRefPtr<InspectorObject> TimelapseRecordFactory::createScrollData(ScrollPage*
     else
         data->setString("direction", ScrollPage::scrollDirectionToString(action->scrollDirection()));
     data->setString("granularity", ScrollPage::scrollGranularityToString(action->scrollGranularity()));
+    return data.release();
+}
+
+PassRefPtr<InspectorObject> TimelapseRecordFactory::createResizeData(SendResizeEvent* action)
+{
+    RefPtr<InspectorObject> data = InspectorObject::create();
+    data->setNumber("width", action->width());
+    data->setNumber("height", action->height());
     return data.release();
 }
 
