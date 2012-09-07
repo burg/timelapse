@@ -63,6 +63,8 @@
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
 #include "ReplayableTypes.h"
+#include "ResourceDidFinishLoading.h"
+#include "ResourceDidReceiveData.h"
 #include "ResourceDidReceiveResponse.h"
 #include "ScrollPage.h"
 #include "SendResizeEvent.h"
@@ -102,7 +104,10 @@ static const char WindowInactive[] = "WindowInactive";
 static const char WindowFocused[] = "WindowFocused";
 static const char WindowUnfocused[] = "WindowUnfocused";
 
-static const char ReceiveResource[] = "ReceiveResource";
+static const char RequestResource[] = "RequestResource";
+static const char ReceiveResponse[] = "ReceiveResponse";
+static const char ReceiveData[] = "ReceiveData";
+static const char ResourceLoaded[] = "ResourceLoaded";
 
 static const char TimerFire[] = "TimerFire";
 
@@ -232,7 +237,11 @@ void InspectorTimelapseAgent::recordedPageInput(DispatchableAction* action)
         pushRecordToFrontend(TimelapseRecordFactory::createResizeData(static_cast<SendResizeEvent*>(action)), TimelapseRecordType::Resize, newMark);
     } else if (action->type() == ReplayableTypes::ResourceDidReceiveResponse) {
         ResourceResponse* response = static_cast<ResourceDidReceiveResponse*>(action)->response();
-        pushRecordToFrontend(TimelapseRecordFactory::createReceiveResourceData(*response), TimelapseRecordType::ReceiveResource, newMark);
+        pushRecordToFrontend(TimelapseRecordFactory::createReceiveResponseData(*response), TimelapseRecordType::ReceiveResponse, newMark);
+    } else if (action->type() == ReplayableTypes::ResourceDidReceiveData) {
+        pushRecordToFrontend(TimelapseRecordFactory::createReceiveDataData(static_cast<ResourceDidReceiveData*>(action)), TimelapseRecordType::ReceiveData, newMark);
+    } else if (action->type() == ReplayableTypes::ResourceDidFinishLoading) {
+        pushRecordToFrontend(TimelapseRecordFactory::createResourceLoadedData(static_cast<ResourceDidFinishLoading*>(action)), TimelapseRecordType::ResourceLoaded, newMark);
     }
 }
     
