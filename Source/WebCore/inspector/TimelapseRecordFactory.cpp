@@ -43,6 +43,9 @@
 #include "PlatformKeyboardEvent.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
+#include "ResourceDidFinishLoading.h"
+#include "ResourceDidReceiveData.h"
+#include "ResourceRequest.h"
 #include "ResourceResponse.h"
 
 namespace WebCore {
@@ -112,10 +115,31 @@ PassRefPtr<InspectorObject> TimelapseRecordFactory::createEmptyData()
     return InspectorObject::create();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createReceiveResourceData(const ResourceResponse& response)
+PassRefPtr<InspectorObject> TimelapseRecordFactory::createRequestResourceData(const ResourceRequest& request)
+{
+    RefPtr<InspectorObject> data = InspectorObject::create();
+    data->setString("url", request.url().string());
+    return data.release();
+}
+
+PassRefPtr<InspectorObject> TimelapseRecordFactory::createReceiveResponseData(const ResourceResponse& response)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setString("url", response.url().string());
+    return data.release();
+}
+
+PassRefPtr<InspectorObject> TimelapseRecordFactory::createReceiveDataData(ResourceDidReceiveData* action)
+{
+    RefPtr<InspectorObject> data = InspectorObject::create();
+    data->setNumber("id", action->id());
+    return data.release();
+}
+
+PassRefPtr<InspectorObject> TimelapseRecordFactory::createResourceLoadedData(ResourceDidFinishLoading* action)
+{
+    RefPtr<InspectorObject> data = InspectorObject::create();
+    data->setNumber("id", action->id());
     return data.release();
 }
 

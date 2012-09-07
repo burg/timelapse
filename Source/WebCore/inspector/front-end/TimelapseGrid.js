@@ -1055,7 +1055,7 @@ WebInspector.TimelapseGridNode.prototype = {
     {
     	this._previewCell.removeChildren();
 	var preview = WebInspector.TimelapseAgent.RecordPreview[this._record.type](this._record.data);
-	if (this._record.type == "ReceiveResource" || this._record.type == "StartPageLoad") {
+	if (this._record.type == "RequestResource" || this._record.type == "ReceiveResponse") {
 	    var url = preview;
 	    var isExternal = !WebInspector.resourceForURL(url);
 	    var link = WebInspector.linkifyURLAsNode(url,

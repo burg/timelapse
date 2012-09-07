@@ -437,7 +437,10 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    recordStyles[recordTypes.WindowFocused] = { title: WebInspector.UIString("Window Was Focused"), category: this.categories.userinput };
 	    recordStyles[recordTypes.WindowUnfocused] = { title: WebInspector.UIString("Window Was Unfocused"), category: this.categories.userinput };
 
-	    recordStyles[recordTypes.ReceiveResource] = { title: WebInspector.UIString("Received Resource"), category: this.categories.network };
+	    recordStyles[recordTypes.RequestResource] = { title: WebInspector.UIString("Requested Resource"), category: this.categories.network };
+	    recordStyles[recordTypes.ReceiveResponse] = { title: WebInspector.UIString("Received Response"), category: this.categories.network };
+	    recordStyles[recordTypes.ReceiveData] = { title: WebInspector.UIString("Received Data"), category: this.categories.network };
+	    recordStyles[recordTypes.ResourceLoaded] = { title: WebInspector.UIString("Resource Loaded"), category: this.categories.network };
 
 	    recordStyles[recordTypes.TimerFire] = { title: WebInspector.UIString("Timer Fired"), category: this.categories.timer };
 

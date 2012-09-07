@@ -51,7 +51,10 @@ WebInspector.TimelapseAgent.RecordType = {
     WindowFocused: "WindowFocused",
     WindowUnfocused: "WindowUnfocused",
 
-    ReceiveResource: "ReceiveResource",
+    RequestResource: "RequestResource",
+    ReceiveResponse: "ReceiveResponse",
+    ReceiveData: "ReceiveData",
+    ResourceLoaded: "ResourceLoaded",
     
     TimerFire: "TimerFire",
     
@@ -115,7 +118,10 @@ WebInspector.TimelapseAgent.RecordPreview = {
     WindowFocused: function (data) { return " "; },
     WindowUnfocused: function (data) { return " "; },
 
-    ReceiveResource: function (data) { return data.url; },
+    RequestResource: function (data) { return data.url; },
+    ReceiveResponse: function (data) { return data.url; },
+    ReceiveData: function (data) { return data.id; },
+    ResourceLoaded: function (data) { return data.id; },
     
     TimerFire: function (data) { return "Fired"; },
     
