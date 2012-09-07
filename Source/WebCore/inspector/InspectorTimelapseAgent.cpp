@@ -63,6 +63,10 @@
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
 #include "ReplayableTypes.h"
+#include "ResourceDidFinishLoading.h"
+#include "ResourceDidReceiveData.h"
+#include "ResourceDidReceiveResponse.h"
+#include "ResourceWillSendRequest.h"
 #include "ScrollPage.h"
 #include "SendResizeEvent.h"
 #include "TimelapseAgentStateMachine.h"
@@ -101,7 +105,10 @@ static const char WindowInactive[] = "WindowInactive";
 static const char WindowFocused[] = "WindowFocused";
 static const char WindowUnfocused[] = "WindowUnfocused";
 
-static const char ReceiveResource[] = "ReceiveResource";
+static const char RequestResource[] = "RequestResource";
+static const char ReceiveResponse[] = "ReceiveResponse";
+static const char ReceiveData[] = "ReceiveData";
+static const char ResourceLoaded[] = "ResourceLoaded";
 
 static const char TimerFire[] = "TimerFire";
 
@@ -229,6 +236,16 @@ void InspectorTimelapseAgent::recordedPageInput(DispatchableAction* action)
         pushRecordToFrontend(TimelapseRecordFactory::createScrollData(static_cast<ScrollPage*>(action)), TimelapseRecordType::Scroll, newMark);
     } else if (action->type() == ReplayableTypes::SendResizeEvent) {
         pushRecordToFrontend(TimelapseRecordFactory::createResizeData(static_cast<SendResizeEvent*>(action)), TimelapseRecordType::Resize, newMark);
+    } else if (action->type() == ReplayableTypes::ResourceWillSendRequest) {
+        ResourceRequest* request = static_cast<ResourceWillSendRequest*>(action)->request();
+        pushRecordToFrontend(TimelapseRecordFactory::createRequestResourceData(*request), TimelapseRecordType::RequestResource, newMark);
+    } else if (action->type() == ReplayableTypes::ResourceDidReceiveResponse) {
+        ResourceResponse* response = static_cast<ResourceDidReceiveResponse*>(action)->response();
+        pushRecordToFrontend(TimelapseRecordFactory::createReceiveResponseData(*response), TimelapseRecordType::ReceiveResponse, newMark);
+    } else if (action->type() == ReplayableTypes::ResourceDidReceiveData) {
+        pushRecordToFrontend(TimelapseRecordFactory::createReceiveDataData(static_cast<ResourceDidReceiveData*>(action)), TimelapseRecordType::ReceiveData, newMark);
+    } else if (action->type() == ReplayableTypes::ResourceDidFinishLoading) {
+        pushRecordToFrontend(TimelapseRecordFactory::createResourceLoadedData(static_cast<ResourceDidFinishLoading*>(action)), TimelapseRecordType::ResourceLoaded, newMark);
     }
 }
     
