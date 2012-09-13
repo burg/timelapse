@@ -766,6 +766,7 @@ JSValue JSDOMWindow::screenTop(ExecState* exec) const
     return jsNumber(result);
 }
 
+// Implementation of Replaceable IDL attribute
 void JSDOMWindow::setScreenX(ExecState* exec, JSValue value)
 {
     // Shadowing a built-in object

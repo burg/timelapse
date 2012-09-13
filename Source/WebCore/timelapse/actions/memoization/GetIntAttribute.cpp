@@ -64,12 +64,12 @@ String GetIntAttribute::toString() const {
 
 size_t GetIntAttribute::memorySize() const
 {
-    size_t size = sizeof(GetIntAttribute);
-    return size;
+    return sizeof(GetIntAttribute);
 }
 
 void GetIntAttribute::serialize(ActionSerializer* serializer) const
 {
+    serializer->putString("attribute", m_attribute);
     serializer->putInt("result", m_result);
 }
 
