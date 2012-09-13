@@ -671,4 +671,55 @@ DOMWindow* toDOMWindow(JSValue value)
     return 0;
 }
 
+#if ENABLE(TIMELAPSE)
+// TODO: implement memoization and replay
+JSValue JSDOMWindow::screenX(ExecState* exec) const
+{
+    UNUSED_PARAM(exec);
+    return jsNumber(impl()->screenX());
+}
+
+JSValue JSDOMWindow::screenY(ExecState* exec) const
+{
+    UNUSED_PARAM(exec);
+    return jsNumber(impl()->screenY());
+}
+
+JSValue JSDOMWindow::screenLeft(ExecState* exec) const
+{
+    UNUSED_PARAM(exec);
+    return jsNumber(impl()->screenLeft());
+}
+
+JSValue JSDOMWindow::screenTop(ExecState* exec) const
+{
+    UNUSED_PARAM(exec);
+    return jsNumber(impl()->screenTop());
+}
+
+void JSDOMWindow::setScreenX(ExecState* exec, JSValue value)
+{
+    // Shadowing a built-in object
+    putDirect(exec->globalData(), Identifier(exec, "screenX"), value);
+}
+
+void JSDOMWindow::setScreenY(ExecState* exec, JSValue value)
+{
+    // Shadowing a built-in object
+    putDirect(exec->globalData(), Identifier(exec, "screenY"), value);
+}
+
+void JSDOMWindow::setScreenLeft(ExecState* exec, JSValue value)
+{
+    // Shadowing a built-in object
+    putDirect(exec->globalData(), Identifier(exec, "screenLeft"), value);
+}
+
+void JSDOMWindow::setScreenTop(ExecState* exec, JSValue value)
+{
+    // Shadowing a built-in object
+    putDirect(exec->globalData(), Identifier(exec, "screenTop"), value);
+}
+
+#endif
 } // namespace WebCore
