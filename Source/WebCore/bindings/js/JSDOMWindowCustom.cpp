@@ -75,6 +75,11 @@
 #include "JSWebSocket.h"
 #endif
 
+#if ENABLE(TIMELAPSE)
+#include "GetIntAttribute.h"
+#include <wtf/timelapse/DeterminismLog.h>
+#endif
+
 using namespace JSC;
 
 namespace WebCore {
@@ -672,29 +677,93 @@ DOMWindow* toDOMWindow(JSValue value)
 }
 
 #if ENABLE(TIMELAPSE)
-// TODO: implement memoization and replay
+// Custom window.screen bindings that handle Timelapse memoization.
 JSValue JSDOMWindow::screenX(ExecState* exec) const
 {
-    UNUSED_PARAM(exec);
-    return jsNumber(impl()->screenX());
+    int result;
+    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+
+    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+        if (log->capturing()) {
+            result = impl()->screenX();
+            log->append(new GetIntAttribute(AttributeTypes::ScreenX, result));
+        } else if (log->replaying()) {
+            GetIntAttribute* action = static_cast<GetIntAttribute*>(log->currentAction(ReplayableTypes::GetIntAttribute));
+            ASSERT(action->attributeType() == AttributeTypes::ScreenX);
+            result = action->result();
+        }
+    } else {
+        //if no determinism, obtain the normal way.
+        result = impl()->screenX();
+    }
+
+    return jsNumber(result);
 }
 
 JSValue JSDOMWindow::screenY(ExecState* exec) const
 {
-    UNUSED_PARAM(exec);
-    return jsNumber(impl()->screenY());
+    int result;
+    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+
+    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+        if (log->capturing()) {
+            result = impl()->screenY();
+            log->append(new GetIntAttribute(AttributeTypes::ScreenY, result));
+        } else if (log->replaying()) {
+            GetIntAttribute* action = static_cast<GetIntAttribute*>(log->currentAction(ReplayableTypes::GetIntAttribute));
+            ASSERT(action->attributeType() == AttributeTypes::ScreenY);
+            result = action->result();
+        }
+    } else {
+        //if no determinism, obtain the normal way.
+        result = impl()->screenY();
+    }
+
+    return jsNumber(result);
 }
 
 JSValue JSDOMWindow::screenLeft(ExecState* exec) const
 {
-    UNUSED_PARAM(exec);
-    return jsNumber(impl()->screenLeft());
+    int result;
+    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+
+    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+        if (log->capturing()) {
+            result = impl()->screenLeft();
+            log->append(new GetIntAttribute(AttributeTypes::ScreenLeft, result));
+        } else if (log->replaying()) {
+            GetIntAttribute* action = static_cast<GetIntAttribute*>(log->currentAction(ReplayableTypes::GetIntAttribute));
+            ASSERT(action->attributeType() == AttributeTypes::ScreenLeft);
+            result = action->result();
+        }
+    } else {
+        //if no determinism, obtain the normal way.
+        result = impl()->screenLeft();
+    }
+
+    return jsNumber(result);
 }
 
 JSValue JSDOMWindow::screenTop(ExecState* exec) const
 {
-    UNUSED_PARAM(exec);
-    return jsNumber(impl()->screenTop());
+    int result;
+    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+
+    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+        if (log->capturing()) {
+            result = impl()->screenTop();
+            log->append(new GetIntAttribute(AttributeTypes::ScreenTop, result));
+        } else if (log->replaying()) {
+            GetIntAttribute* action = static_cast<GetIntAttribute*>(log->currentAction(ReplayableTypes::GetIntAttribute));
+            ASSERT(action->attributeType() == AttributeTypes::ScreenTop);
+            result = action->result();
+        }
+    } else {
+        //if no determinism, obtain the normal way.
+        result = impl()->screenTop();
+    }
+
+    return jsNumber(result);
 }
 
 void JSDOMWindow::setScreenX(ExecState* exec, JSValue value)
