@@ -76,7 +76,7 @@
 #endif
 
 #if ENABLE(TIMELAPSE)
-#include "GetIntAttribute.h"
+#include "GetJSAttribute.h"
 #include <wtf/timelapse/DeterminismLog.h>
 #endif
 
@@ -686,10 +686,10 @@ JSValue JSDOMWindow::screenX(ExecState* exec) const
     if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
         if (log->capturing()) {
             result = impl()->screenX();
-            log->append(new GetIntAttribute(AttributeTypes::ScreenX, result));
+            log->append(new GetJSAttribute<int>(ScreenX, result));
         } else if (log->replaying()) {
-            GetIntAttribute* action = static_cast<GetIntAttribute*>(log->currentAction(ReplayableTypes::GetIntAttribute));
-            ASSERT(action->attributeType() == AttributeTypes::ScreenX);
+            GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
+            ASSERT(action->attributeType() == ScreenX);
             result = action->result();
         }
     } else {
@@ -708,10 +708,10 @@ JSValue JSDOMWindow::screenY(ExecState* exec) const
     if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
         if (log->capturing()) {
             result = impl()->screenY();
-            log->append(new GetIntAttribute(AttributeTypes::ScreenY, result));
+            log->append(new GetJSAttribute<int>(ScreenY, result));
         } else if (log->replaying()) {
-            GetIntAttribute* action = static_cast<GetIntAttribute*>(log->currentAction(ReplayableTypes::GetIntAttribute));
-            ASSERT(action->attributeType() == AttributeTypes::ScreenY);
+            GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
+            ASSERT(action->attributeType() == ScreenY);
             result = action->result();
         }
     } else {
@@ -730,10 +730,10 @@ JSValue JSDOMWindow::screenLeft(ExecState* exec) const
     if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
         if (log->capturing()) {
             result = impl()->screenLeft();
-            log->append(new GetIntAttribute(AttributeTypes::ScreenLeft, result));
+            log->append(new GetJSAttribute<int>(ScreenLeft, result));
         } else if (log->replaying()) {
-            GetIntAttribute* action = static_cast<GetIntAttribute*>(log->currentAction(ReplayableTypes::GetIntAttribute));
-            ASSERT(action->attributeType() == AttributeTypes::ScreenLeft);
+            GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
+            ASSERT(action->attributeType() == ScreenLeft);
             result = action->result();
         }
     } else {
@@ -752,10 +752,10 @@ JSValue JSDOMWindow::screenTop(ExecState* exec) const
     if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
         if (log->capturing()) {
             result = impl()->screenTop();
-            log->append(new GetIntAttribute(AttributeTypes::ScreenTop, result));
+            log->append(new GetJSAttribute<int>(ScreenTop, result));
         } else if (log->replaying()) {
-            GetIntAttribute* action = static_cast<GetIntAttribute*>(log->currentAction(ReplayableTypes::GetIntAttribute));
-            ASSERT(action->attributeType() == AttributeTypes::ScreenTop);
+            GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
+            ASSERT(action->attributeType() == ScreenTop);
             result = action->result();
         }
     } else {
