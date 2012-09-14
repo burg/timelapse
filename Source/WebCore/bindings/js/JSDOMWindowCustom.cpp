@@ -75,6 +75,11 @@
 #include "JSWebSocket.h"
 #endif
 
+#if ENABLE(TIMELAPSE)
+#include "GetJSAttribute.h"
+#include <wtf/timelapse/DeterminismLog.h>
+#endif
+
 using namespace JSC;
 
 namespace WebCore {
@@ -671,4 +676,120 @@ DOMWindow* toDOMWindow(JSValue value)
     return 0;
 }
 
+#if ENABLE(TIMELAPSE)
+// Custom window.screen bindings that handle Timelapse memoization.
+JSValue JSDOMWindow::screenX(ExecState* exec) const
+{
+    int result;
+    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+
+    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+        if (log->capturing()) {
+            result = impl()->screenX();
+            log->append(new GetJSAttribute<int>(ScreenX, result));
+        } else if (log->replaying()) {
+            GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
+            ASSERT(action->attributeType() == ScreenX);
+            result = action->result();
+        }
+    } else {
+        //if no determinism, obtain the normal way.
+        result = impl()->screenX();
+    }
+
+    return jsNumber(result);
+}
+
+JSValue JSDOMWindow::screenY(ExecState* exec) const
+{
+    int result;
+    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+
+    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+        if (log->capturing()) {
+            result = impl()->screenY();
+            log->append(new GetJSAttribute<int>(ScreenY, result));
+        } else if (log->replaying()) {
+            GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
+            ASSERT(action->attributeType() == ScreenY);
+            result = action->result();
+        }
+    } else {
+        //if no determinism, obtain the normal way.
+        result = impl()->screenY();
+    }
+
+    return jsNumber(result);
+}
+
+JSValue JSDOMWindow::screenLeft(ExecState* exec) const
+{
+    int result;
+    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+
+    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+        if (log->capturing()) {
+            result = impl()->screenLeft();
+            log->append(new GetJSAttribute<int>(ScreenLeft, result));
+        } else if (log->replaying()) {
+            GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
+            ASSERT(action->attributeType() == ScreenLeft);
+            result = action->result();
+        }
+    } else {
+        //if no determinism, obtain the normal way.
+        result = impl()->screenLeft();
+    }
+
+    return jsNumber(result);
+}
+
+JSValue JSDOMWindow::screenTop(ExecState* exec) const
+{
+    int result;
+    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+
+    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+        if (log->capturing()) {
+            result = impl()->screenTop();
+            log->append(new GetJSAttribute<int>(ScreenTop, result));
+        } else if (log->replaying()) {
+            GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
+            ASSERT(action->attributeType() == ScreenTop);
+            result = action->result();
+        }
+    } else {
+        //if no determinism, obtain the normal way.
+        result = impl()->screenTop();
+    }
+
+    return jsNumber(result);
+}
+
+// Implementation of Replaceable IDL attribute
+void JSDOMWindow::setScreenX(ExecState* exec, JSValue value)
+{
+    // Shadowing a built-in object
+    putDirect(exec->globalData(), Identifier(exec, "screenX"), value);
+}
+
+void JSDOMWindow::setScreenY(ExecState* exec, JSValue value)
+{
+    // Shadowing a built-in object
+    putDirect(exec->globalData(), Identifier(exec, "screenY"), value);
+}
+
+void JSDOMWindow::setScreenLeft(ExecState* exec, JSValue value)
+{
+    // Shadowing a built-in object
+    putDirect(exec->globalData(), Identifier(exec, "screenLeft"), value);
+}
+
+void JSDOMWindow::setScreenTop(ExecState* exec, JSValue value)
+{
+    // Shadowing a built-in object
+    putDirect(exec->globalData(), Identifier(exec, "screenTop"), value);
+}
+
+#endif
 } // namespace WebCore

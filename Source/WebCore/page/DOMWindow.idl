@@ -98,10 +98,18 @@ module window {
         attribute [Replaceable] long outerWidth;
         attribute [Replaceable] long innerHeight;
         attribute [Replaceable] long innerWidth;
+#if defined(ENABLE_TIMELAPSE) && ENABLE_TIMELAPSE
+        // Custom bindings implement Replaceable
+        attribute [Custom] long screenX;
+        attribute [Custom] long screenY;
+        attribute [Custom] long screenLeft;
+        attribute [Custom] long screenTop;
+#else
         attribute [Replaceable] long screenX;
         attribute [Replaceable] long screenY;
         attribute [Replaceable] long screenLeft;
         attribute [Replaceable] long screenTop;
+#endif
         attribute [Replaceable] long scrollX;
         attribute [Replaceable] long scrollY;
         readonly attribute long pageXOffset;
