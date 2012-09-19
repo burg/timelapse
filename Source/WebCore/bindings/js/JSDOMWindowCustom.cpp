@@ -682,8 +682,9 @@ JSValue JSDOMWindow::screenX(ExecState* exec) const
 {
     int result;
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+    RefPtr<DeterminismLog> log = globalObject->determinismLog();
 
-    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+    if (log && log->active()) {
         if (log->capturing()) {
             result = impl()->screenX();
             log->append(new GetJSAttribute<int>(ScreenX, result));
@@ -704,8 +705,9 @@ JSValue JSDOMWindow::screenY(ExecState* exec) const
 {
     int result;
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+    RefPtr<DeterminismLog> log = globalObject->determinismLog();
 
-    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+    if (log && log->active()) {
         if (log->capturing()) {
             result = impl()->screenY();
             log->append(new GetJSAttribute<int>(ScreenY, result));
@@ -726,8 +728,9 @@ JSValue JSDOMWindow::screenLeft(ExecState* exec) const
 {
     int result;
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+    RefPtr<DeterminismLog> log = globalObject->determinismLog();
 
-    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+    if (log && log->active()) {
         if (log->capturing()) {
             result = impl()->screenLeft();
             log->append(new GetJSAttribute<int>(ScreenLeft, result));
@@ -748,8 +751,9 @@ JSValue JSDOMWindow::screenTop(ExecState* exec) const
 {
     int result;
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+    RefPtr<DeterminismLog> log = globalObject->determinismLog();
 
-    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+    if (log && log->active()) {
         if (log->capturing()) {
             result = impl()->screenTop();
             log->append(new GetJSAttribute<int>(ScreenTop, result));

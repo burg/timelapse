@@ -120,8 +120,9 @@ JSValue JSDocument::cookie(ExecState* exec) const
     String cookie;
     ExceptionCode ec = 0;
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+    RefPtr<DeterminismLog> log = globalObject->determinismLog();
 
-    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
+    if (log && log->active()) {
         if (log->capturing()) {
             cookie = impl()->cookie(ec);
             log->append(new GetDocumentCookie(cookie, ec));
