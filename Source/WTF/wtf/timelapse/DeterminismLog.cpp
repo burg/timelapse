@@ -55,6 +55,7 @@ DeterminismLog::DeterminismLog(bool capturing, bool replaying)
 , m_dispatchActions(Vector<ActionEntry>())
 , m_isCapturing(capturing)
 , m_isReplaying(replaying)
+, m_isActive(true)
 , m_memoizedReplayPosition(0)
 , m_dispatchReplayPosition(0)
 , m_captureCount(0) {}
@@ -117,12 +118,14 @@ void DeterminismLog::reset()
     m_memoizedReplayPosition = 0;
     m_dispatchReplayPosition = 0;
     m_isReplaying = true;
+    m_isActive = true;
     m_isCapturing = false;
 }
 
 ReplayableAction* DeterminismLog::currentAction(ReplayableAction::ReplayableType type)
 {   
     ASSERT(m_isReplaying);
+    ASSERT(m_isActive);
     ASSERT(m_memoizedReplayPosition < m_memoizedActions.size());
     
     const ActionEntry& entry = m_memoizedActions.at(m_memoizedReplayPosition);
@@ -152,6 +155,7 @@ ReplayableAction* DeterminismLog::currentAction(ReplayableAction::ReplayableType
 ReplayableAction* DeterminismLog::currentDispatchableAction()
 {
     ASSERT(m_isReplaying);
+    ASSERT(m_isActive);
     ASSERT(m_dispatchReplayPosition < m_dispatchActions.size());
 
     const ActionEntry& entry = m_dispatchActions.at(m_dispatchReplayPosition);
@@ -162,6 +166,18 @@ ReplayableAction* DeterminismLog::currentDispatchableAction()
     m_dispatchReplayPosition++;
 
     return entry.action;
+}
+
+void DeterminismLog::activate()
+{
+    ASSERT(!m_isActive);
+    m_isActive = true;
+}
+
+void DeterminismLog::deactivate()
+{
+    ASSERT(m_isActive);
+    m_isActive = false;
 }
 
 size_t DeterminismLog::memorySize() const
