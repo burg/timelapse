@@ -60,6 +60,7 @@ public:
 
     static PassRefPtr<InspectorObject> createEmptyData();
 
+    static PassRefPtr<InspectorObject> createRequestResourceData(const ResourceRequest&);
     static PassRefPtr<InspectorObject> createReceiveResponseData(const ResourceResponse&);
     static PassRefPtr<InspectorObject> createReceiveDataData(ResourceDidReceiveData*);
     static PassRefPtr<InspectorObject> createResourceLoadedData(ResourceDidFinishLoading*);

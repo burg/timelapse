@@ -115,6 +115,13 @@ PassRefPtr<InspectorObject> TimelapseRecordFactory::createEmptyData()
     return InspectorObject::create();
 }
 
+PassRefPtr<InspectorObject> TimelapseRecordFactory::createRequestResourceData(const ResourceRequest& request)
+{
+    RefPtr<InspectorObject> data = InspectorObject::create();
+    data->setString("url", request.url().string());
+    return data.release();
+}
+
 PassRefPtr<InspectorObject> TimelapseRecordFactory::createReceiveResponseData(const ResourceResponse& response)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
