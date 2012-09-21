@@ -28,7 +28,7 @@
 #include "ResourceResponseBase.h"
 
 #include "HTTPParsers.h"
-#include "MemoryInstrumentation.h"
+#include "PlatformMemoryInstrumentation.h"
 #include "ResourceResponse.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/MathExtras.h>
@@ -570,7 +570,7 @@ void ResourceResponseBase::lazyInit(InitLevel initLevel) const
 
 void ResourceResponseBase::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::Loader);
+    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Loader);
     info.addInstrumentedMember(m_url);
     info.addInstrumentedMember(m_mimeType);
     info.addInstrumentedMember(m_textEncodingName);

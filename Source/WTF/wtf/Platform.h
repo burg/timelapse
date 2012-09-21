@@ -169,6 +169,10 @@
     || defined(_ARM_)
 #define WTF_CPU_ARM 1
 
+#if defined(__ARM_PCS_VFP)
+#define WTF_CPU_ARM_HARDFP 1
+#endif
+
 #if defined(__ARMEB__) || (COMPILER(RVCT) && defined(__BIG_ENDIAN))
 #define WTF_CPU_BIG_ENDIAN 1
 
@@ -518,11 +522,7 @@
 
 #endif  /* OS(WINCE) && !PLATFORM(QT) */
 
-#if PLATFORM(QT)
-#ifndef WTF_USE_ICU_UNICODE
-#define WTF_USE_QT4_UNICODE 1
-#endif
-#elif OS(WINCE)
+#if OS(WINCE) && !PLATFORM(QT)
 #define WTF_USE_WCHAR_UNICODE 1
 #elif PLATFORM(GTK)
 /* The GTK+ Unicode backend is configurable */
@@ -1123,7 +1123,7 @@
 #define WTF_USE_EXPORT_MACROS_FOR_TESTING 1
 #endif
 
-#if (PLATFORM(QT) && !OS(DARWIN)) || PLATFORM(GTK) || PLATFORM(EFL)
+#if (PLATFORM(QT) && !OS(DARWIN) && !OS(WINDOWS)) || PLATFORM(GTK) || PLATFORM(EFL)
 #define WTF_USE_UNIX_DOMAIN_SOCKETS 1
 #endif
 
@@ -1183,6 +1183,10 @@
 
 #if !defined(WTF_USE_ZLIB) && !PLATFORM(QT)
 #define WTF_USE_ZLIB 1
+#endif
+
+#if PLATFORM(GTK)
+#define WTF_DEPRECATED_STRING_OPERATORS
 #endif
 
 #if PLATFORM(QT)

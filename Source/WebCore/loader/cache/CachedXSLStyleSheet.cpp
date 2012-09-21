@@ -29,9 +29,9 @@
 
 #include "CachedResourceClientWalker.h"
 #include "CachedStyleSheetClient.h"
-#include "MemoryInstrumentation.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -89,17 +89,9 @@ void CachedXSLStyleSheet::checkNotify()
         c->setXSLStyleSheet(m_resourceRequest.url(), m_response.url(), m_sheet);
 }
 
-void CachedXSLStyleSheet::error(CachedResource::Status status)
-{
-    setStatus(status);
-    ASSERT(errorOccurred());
-    setLoading(false);
-    checkNotify();
-}
-
 void CachedXSLStyleSheet::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CachedResourceXSLT);
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CachedResourceXSLT);
     CachedResource::reportMemoryUsage(memoryObjectInfo);
     info.addInstrumentedMember(m_sheet);
     info.addMember(m_decoder);

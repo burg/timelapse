@@ -1254,7 +1254,7 @@ void FrameView::layout(bool allowSubtree)
         m_actionScheduler->resume();
     }
 
-    InspectorInstrumentation::didLayout(cookie);
+    InspectorInstrumentation::didLayout(cookie, root);
 
     m_nestedLayoutCount--;
     if (m_nestedLayoutCount)
@@ -1338,7 +1338,7 @@ void FrameView::adjustMediaTypeForPrinting(bool printing)
 
 bool FrameView::useSlowRepaints(bool considerOverlap) const
 {
-    bool mustBeSlow = m_slowRepaintObjectCount > 0 || (platformWidget() && hasFixedObjects());
+    bool mustBeSlow = m_slowRepaintObjectCount > 0 || (platformWidget() && hasViewportConstrainedObjects());
 
     // FIXME: WidgetMac.mm makes the assumption that useSlowRepaints ==
     // m_contentIsOpaque, so don't take the fast path for composited layers
@@ -1423,13 +1423,13 @@ void FrameView::removeSlowRepaintObject()
     }
 }
 
-void FrameView::addFixedObject(RenderObject* object)
+void FrameView::addViewportConstrainedObject(RenderObject* object)
 {
-    if (!m_fixedObjects)
-        m_fixedObjects = adoptPtr(new FixedObjectSet);
+    if (!m_viewportConstrainedObjects)
+        m_viewportConstrainedObjects = adoptPtr(new ViewportConstrainedObjectSet);
 
-    if (!m_fixedObjects->contains(object)) {
-        m_fixedObjects->add(object);
+    if (!m_viewportConstrainedObjects->contains(object)) {
+        m_viewportConstrainedObjects->add(object);
         if (platformWidget())
             updateCanBlitOnScrollRecursively();
 
@@ -1440,12 +1440,10 @@ void FrameView::addFixedObject(RenderObject* object)
     }
 }
 
-void FrameView::removeFixedObject(RenderObject* object)
+void FrameView::removeViewportConstrainedObject(RenderObject* object)
 {
-    ASSERT(hasFixedObjects());
-
-    if (m_fixedObjects->contains(object)) {
-        m_fixedObjects->remove(object);
+    if (m_viewportConstrainedObjects && m_viewportConstrainedObjects->contains(object)) {
+        m_viewportConstrainedObjects->remove(object);
         if (Page* page = m_frame->page()) {
             if (ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator())
                 scrollingCoordinator->frameViewFixedObjectsDidChange(this);
@@ -1514,7 +1512,7 @@ IntPoint FrameView::currentMousePosition() const
 
 bool FrameView::scrollContentsFastPath(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect)
 {
-    if (!m_fixedObjects || m_fixedObjects->isEmpty()) {
+    if (!m_viewportConstrainedObjects || m_viewportConstrainedObjects->isEmpty()) {
         hostWindow()->scroll(scrollDelta, rectToScroll, clipRect);
         return true;
     }
@@ -1523,8 +1521,8 @@ bool FrameView::scrollContentsFastPath(const IntSize& scrollDelta, const IntRect
 
     // Get the rects of the fixed objects visible in the rectToScroll
     Region regionToUpdate;
-    FixedObjectSet::const_iterator end = m_fixedObjects->end();
-    for (FixedObjectSet::const_iterator it = m_fixedObjects->begin(); it != end; ++it) {
+    ViewportConstrainedObjectSet::const_iterator end = m_viewportConstrainedObjects->end();
+    for (ViewportConstrainedObjectSet::const_iterator it = m_viewportConstrainedObjects->begin(); it != end; ++it) {
         RenderObject* renderer = *it;
         if (!renderer->style()->hasViewportConstrainedPosition())
             continue;
@@ -1557,8 +1555,8 @@ bool FrameView::scrollContentsFastPath(const IntSize& scrollDelta, const IntRect
 
     // 2) update the area of fixed objects that has been invalidated
     Vector<IntRect> subRectsToUpdate = regionToUpdate.rects();
-    size_t fixObjectsCount = subRectsToUpdate.size();
-    for (size_t i = 0; i < fixObjectsCount; ++i) {
+    size_t viewportConstrainedObjectsCount = subRectsToUpdate.size();
+    for (size_t i = 0; i < viewportConstrainedObjectsCount; ++i) {
         IntRect updateRect = subRectsToUpdate[i];
         IntRect scrolledRect = updateRect;
         scrolledRect.move(scrollDelta);
@@ -1747,7 +1745,7 @@ void FrameView::scrollElementToRect(Element* element, const IntRect& rect)
 {
     m_frame->document()->updateLayoutIgnorePendingStylesheets();
 
-    LayoutRect bounds = element->getRect();
+    LayoutRect bounds = element->boundingBox();
     int centeringOffsetX = (rect.width() - bounds.width()) / 2;
     int centeringOffsetY = (rect.height() - bounds.height()) / 2;
     setScrollPosition(IntPoint(bounds.x() - centeringOffsetX - rect.x(), bounds.y() - centeringOffsetY - rect.y()));
@@ -1778,9 +1776,8 @@ void FrameView::setFixedVisibleContentRect(const IntRect& visibleContentRect)
     bool visibleContentSizeDidChange = false;
     if (visibleContentRect.size() != this->fixedVisibleContentRect().size()) {
         // When the viewport size changes or the content is scaled, we need to
-        // reposition the fixed positioned elements.
-        if (RenderView* root = rootRenderer(this))
-            root->setFixedPositionedObjectsNeedLayout();
+        // reposition the fixed and sticky positioned elements.
+        setViewportConstrainedObjectsNeedLayout();
         visibleContentSizeDidChange = true;
     }
 
@@ -1798,6 +1795,19 @@ void FrameView::setFixedVisibleContentRect(const IntRect& visibleContentRect)
     }
     frame()->loader()->client()->didChangeScrollOffset();
 }
+
+void FrameView::setViewportConstrainedObjectsNeedLayout()
+{
+    if (!hasViewportConstrainedObjects())
+        return;
+
+    ViewportConstrainedObjectSet::const_iterator end = m_viewportConstrainedObjects->end();
+    for (ViewportConstrainedObjectSet::const_iterator it = m_viewportConstrainedObjects->begin(); it != end; ++it) {
+        RenderObject* renderer = *it;
+        renderer->setNeedsLayout(true);
+    }
+}
+
 
 void FrameView::scrollPositionChangedViaPlatformWidget()
 {
@@ -1823,7 +1833,7 @@ void FrameView::repaintFixedElementsAfterScrolling()
 {
     // For fixed position elements, update widget positions and compositing layers after scrolling,
     // but only if we're not inside of layout.
-    if (!m_nestedLayoutCount && hasFixedObjects()) {
+    if (!m_nestedLayoutCount && hasViewportConstrainedObjects()) {
         if (RenderView* root = rootRenderer(this)) {
             root->updateWidgetPositions();
             root->layer()->updateLayerPositionsAfterScroll();
@@ -1834,7 +1844,7 @@ void FrameView::repaintFixedElementsAfterScrolling()
 void FrameView::updateFixedElementsAfterScrolling()
 {
 #if USE(ACCELERATED_COMPOSITING)
-    if (m_nestedLayoutCount <= 1 && hasFixedObjects()) {
+    if (m_nestedLayoutCount <= 1 && hasViewportConstrainedObjects()) {
         if (RenderView* root = rootRenderer(this)) {
             root->compositor()->updateCompositingLayers(CompositingUpdateOnScroll);
         }
@@ -2333,7 +2343,7 @@ void FrameView::scrollToAnchor()
 
     LayoutRect rect;
     if (anchorNode != m_frame->document())
-        rect = anchorNode->getRect();
+        rect = anchorNode->boundingBox();
 
     // Scroll nested layers and frames to reveal the anchor.
     // Align to the top and to the closest side (this matches other browsers).
@@ -2741,14 +2751,22 @@ void FrameView::setVisibleScrollerThumbRect(const IntRect& scrollerThumb)
     page->chrome()->client()->notifyScrollerThumbIsVisibleInRect(scrollerThumb);
 }
 
-bool FrameView::isOnActivePage() const
+bool FrameView::scrollbarsCanBeActive() const
 {
     if (!m_frame)
         return false;
+
     if (m_frame->view() != this)
         return false;
+
+    if (Page* page = m_frame->page()) {
+        if (page->shouldSuppressScrollbarAnimations())
+            return false;
+    }
+
     if (Document* document = m_frame->document())
         return !document->inPageCache();
+
     return false;
 }
 
@@ -2834,7 +2852,7 @@ void FrameView::setAnimatorsAreActive()
     for (HashSet<ScrollableArea*>::const_iterator it = m_scrollableAreas->begin(), end = m_scrollableAreas->end(); it != end; ++it) {
         ScrollableArea* scrollableArea = *it;
 
-        ASSERT(scrollableArea->isOnActivePage());
+        ASSERT(scrollableArea->scrollbarsCanBeActive());
         scrollableArea->scrollAnimator()->setIsActive();
     }
 }
@@ -2853,7 +2871,7 @@ void FrameView::notifyPageThatContentAreaWillPaint() const
     for (HashSet<ScrollableArea*>::const_iterator it = m_scrollableAreas->begin(), end = m_scrollableAreas->end(); it != end; ++it) {
         ScrollableArea* scrollableArea = *it;
 
-        if (!scrollableArea->isOnActivePage())
+        if (!scrollableArea->scrollbarsCanBeActive())
             continue;
 
         scrollableArea->contentAreaWillPaint();
@@ -3698,6 +3716,8 @@ void FrameView::setScrollingPerformanceLoggingEnabled(bool flag)
 #if USE(ACCELERATED_COMPOSITING)
     if (TiledBacking* tiledBacking = this->tiledBacking())
         tiledBacking->setScrollingPerformanceLoggingEnabled(flag);
+#else
+    UNUSED_PARAM(flag);
 #endif
 }
 

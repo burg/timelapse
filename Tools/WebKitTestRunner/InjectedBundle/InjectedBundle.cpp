@@ -239,16 +239,28 @@ void InjectedBundle::beginTesting(WKDictionaryRef settings)
     WKBundleSwitchNetworkLoaderToNewTestingSession(m_bundle);
     WKBundleSetAuthorAndUserStylesEnabled(m_bundle, m_pageGroup, true);
     WKBundleSetFrameFlatteningEnabled(m_bundle, m_pageGroup, false);
+    WKBundleSetMinimumLogicalFontSize(m_bundle, m_pageGroup, 9);
+    WKBundleSetMinimumTimerInterval(m_bundle, m_pageGroup, 0.010); // 10 milliseconds (DOMTimer::s_minDefaultTimerInterval)
+    WKBundleSetSpatialNavigationEnabled(m_bundle, m_pageGroup, false);
+    WKBundleSetAllowFileAccessFromFileURLs(m_bundle, m_pageGroup, true);
+    WKBundleSetPluginsEnabled(m_bundle, m_pageGroup, true);
+    WKBundleSetPopupBlockingEnabled(m_bundle, m_pageGroup, false);
 
     WKBundleRemoveAllUserContent(m_bundle, m_pageGroup);
 
     m_testRunner->setShouldDumpFrameLoadCallbacks(booleanForKey(settings, "DumpFrameLoadDelegates"));
+    m_testRunner->setUserStyleSheetEnabled(false);
+    m_testRunner->setXSSAuditorEnabled(false);
+    m_testRunner->setCloseRemainingWindowsWhenComplete(false);
+    m_testRunner->setAcceptsEditing(true);
+    m_testRunner->setTabKeyCyclesThroughElements(true);
 
     page()->prepare();
 
     WKBundleClearAllDatabases(m_bundle);
     WKBundleClearApplicationCache(m_bundle);
     WKBundleResetOriginAccessWhitelists(m_bundle);
+    WKBundleSetDatabaseQuota(m_bundle, 5 * 1024 * 1024);
 }
 
 void InjectedBundle::done()

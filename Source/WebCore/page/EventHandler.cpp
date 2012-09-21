@@ -1045,40 +1045,21 @@ DragSourceAction EventHandler::updateDragSourceActionsAllowed() const
     
 HitTestResult EventHandler::hitTestResultAtPoint(const LayoutPoint& point, bool allowShadowContent, bool ignoreClipping, HitTestScrollbars testScrollbars, HitTestRequest::HitTestRequestType hitType, const LayoutSize& padding)
 {
-    enum ShadowContentFilterPolicy shadowContentFilterPolicy = allowShadowContent ? AllowShadowContent : DoNotAllowShadowContent;
-    HitTestResult result(point, padding.height(), padding.width(), padding.height(), padding.width(), shadowContentFilterPolicy);
+    HitTestResult result(point, padding.height(), padding.width(), padding.height(), padding.width());
 
     if (!m_frame->contentRenderer())
         return result;
     if (ignoreClipping)
         hitType |= HitTestRequest::IgnoreClipping;
+    if (allowShadowContent)
+        hitType |= HitTestRequest::AllowShadowContent;
+    if (testScrollbars == ShouldHitTestScrollbars)
+        hitType |= HitTestRequest::TestChildFrameScrollBars;
+    // We always need to handle child frame content.
+    hitType |= HitTestRequest::AllowChildFrameContent;
+
     m_frame->contentRenderer()->hitTest(HitTestRequest(hitType), result);
 
-    while (true) {
-        Node* n = result.innerNode();
-        if (!result.isOverWidget() || !n || !n->renderer() || !n->renderer()->isWidget())
-            break;
-        RenderWidget* renderWidget = toRenderWidget(n->renderer());
-        Widget* widget = renderWidget->widget();
-        if (!widget || !widget->isFrameView())
-            break;
-        Frame* frame = static_cast<HTMLFrameElementBase*>(n)->contentFrame();
-        if (!frame || !frame->contentRenderer())
-            break;
-        FrameView* view = static_cast<FrameView*>(widget);
-        LayoutPoint widgetPoint(result.localPoint().x() + view->scrollX() - renderWidget->borderLeft() - renderWidget->paddingLeft(), 
-            result.localPoint().y() + view->scrollY() - renderWidget->borderTop() - renderWidget->paddingTop());
-        HitTestResult widgetHitTestResult(widgetPoint, padding.height(), padding.width(), padding.height(), padding.width(), shadowContentFilterPolicy);
-        frame->contentRenderer()->hitTest(HitTestRequest(hitType), widgetHitTestResult);
-        result = widgetHitTestResult;
-
-        if (testScrollbars == ShouldHitTestScrollbars) {
-            Scrollbar* eventScrollbar = view->scrollbarAtPoint(roundedIntPoint(point));
-            if (eventScrollbar)
-                result.setScrollbar(eventScrollbar);
-        }
-    }
-    
     // If our HitTestResult is not visible, then we started hit testing too far down the frame chain. 
     // Another hit test at the main frame level should get us the correct visible result.
     Frame* resultFrame = result.innerNonSharedNode() ? result.innerNonSharedNode()->document()->frame() : 0;
@@ -2405,7 +2386,8 @@ bool EventHandler::handleGestureEvent(const PlatformGestureEvent& gestureEvent)
         eventTarget = m_scrollGestureHandlingNode.get();
 
     if (!eventTarget) {
-        HitTestResult result = hitTestResultAtPoint(gestureEvent.position(), false, false, DontHitTestScrollbars, HitTestRequest::ReadOnly | HitTestRequest::Active);
+        IntPoint hitTestPoint = m_frame->view()->windowToContents(gestureEvent.position());
+        HitTestResult result = hitTestResultAtPoint(hitTestPoint, false, false, DontHitTestScrollbars, HitTestRequest::ReadOnly | HitTestRequest::Active);
         eventTarget = result.targetNode();
     }
 
@@ -2648,7 +2630,7 @@ bool EventHandler::sendContextMenuEventForKey()
     HitTestResult result(position);
     result.setInnerNode(targetNode);
     HitTestRequest request(HitTestRequest::Active);
-    doc->renderView()->layer()->updateHoverActiveState(request, result);
+    doc->updateHoverActiveState(request, result);
     doc->updateStyleIfNeeded();
    
     // The contextmenu event is a mouse event even when invoked using the keyboard.

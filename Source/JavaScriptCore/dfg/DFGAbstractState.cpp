@@ -608,14 +608,9 @@ bool AbstractState::execute(unsigned indexInBlock)
         Node& child = m_graph[node.child1()];
         if (isBooleanSpeculation(child.prediction()))
             speculateBooleanUnary(node);
-        else if (child.shouldSpeculateFinalObjectOrOther()) {
-            node.setCanExit(
-                !isFinalObjectOrOtherSpeculation(forNode(node.child1()).m_type));
-            forNode(node.child1()).filter(SpecFinalObject | SpecOther);
-        } else if (child.shouldSpeculateArrayOrOther()) {
-            node.setCanExit(
-                !isArrayOrOtherSpeculation(forNode(node.child1()).m_type));
-            forNode(node.child1()).filter(SpecArray | SpecOther);
+        else if (child.shouldSpeculateNonStringCellOrOther()) {
+            node.setCanExit(true);
+            forNode(node.child1()).filter((SpecCell & ~SpecString) | SpecOther);
         } else if (child.shouldSpeculateInteger())
             speculateInt32Unary(node);
         else if (child.shouldSpeculateNumber())
@@ -857,11 +852,13 @@ bool AbstractState::execute(unsigned indexInBlock)
             forNode(node.child2()).filter(SpecInt32);
             forNode(nodeIndex).makeTop();
             break;
-        case Array::JSArray:
-        case Array::JSArrayOutOfBounds:
-            // FIXME: We should have more conservative handling of the out-of-bounds
-            // case.
+        case IN_BOUNDS_ARRAY_STORAGE_MODES:
             forNode(node.child2()).filter(SpecInt32);
+            forNode(nodeIndex).makeTop();
+            break;
+        case OUT_OF_BOUNDS_ARRAY_STORAGE_MODES:
+            forNode(node.child2()).filter(SpecInt32);
+            clobberWorld(node.codeOrigin, indexInBlock);
             forNode(nodeIndex).makeTop();
             break;
         case Array::Int8Array:
@@ -919,10 +916,10 @@ bool AbstractState::execute(unsigned indexInBlock)
         case Array::Generic:
             clobberWorld(node.codeOrigin, indexInBlock);
             break;
-        case Array::JSArray:
+        case IN_BOUNDS_ARRAY_STORAGE_MODES:
             forNode(child2).filter(SpecInt32);
             break;
-        case Array::JSArrayOutOfBounds:
+        case OUT_OF_BOUNDS_ARRAY_STORAGE_MODES:
             forNode(child2).filter(SpecInt32);
             clobberWorld(node.codeOrigin, indexInBlock);
             break;
@@ -1344,7 +1341,7 @@ bool AbstractState::execute(unsigned indexInBlock)
         forNode(node.child1()).set(node.structureTransitionData().newStructure);
         m_haveStructures = true;
         break;
-    case GetPropertyStorage:
+    case GetButterfly:
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
         node.setCanExit(false);
@@ -1362,8 +1359,7 @@ bool AbstractState::execute(unsigned indexInBlock)
         case Array::String:
             forNode(node.child1()).filter(SpecString);
             break;
-        case Array::JSArray:
-        case Array::JSArrayOutOfBounds:
+        case ALL_ARRAY_STORAGE_MODES:
             // This doesn't filter anything meaningful right now. We may want to add
             // CFA tracking of array mode speculations, but we don't have that, yet.
             forNode(node.child1()).filter(SpecCell);
@@ -1526,11 +1522,14 @@ inline void AbstractState::clobberCapturedVars(const CodeOrigin& codeOrigin)
             m_variables.local(i).makeTop();
         }
     } else {
-        for (size_t i = m_codeBlock->m_numCapturedVars; i--;)
-            m_variables.local(i).makeTop();
+        for (size_t i = m_codeBlock->m_numVars; i--;) {
+            if (m_codeBlock->isCaptured(i))
+                m_variables.local(i).makeTop();
+        }
     }
-    if (m_codeBlock->argumentsAreCaptured()) {
-        for (size_t i = m_variables.numberOfArguments(); i--;)
+
+    for (size_t i = m_variables.numberOfArguments(); i--;) {
+        if (m_codeBlock->isCaptured(argumentToOperand(i)))
             m_variables.argument(i).makeTop();
     }
 }

@@ -104,6 +104,13 @@ void DumpRenderTreeSupportEfl::clearOpener(Evas_Object* ewkFrame)
     frame->loader()->setOpener(0);
 }
 
+String DumpRenderTreeSupportEfl::layerTreeAsText(const Evas_Object* ewkFrame)
+{
+    DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, String());
+
+    return frame->layerTreeAsText();
+}
+
 bool DumpRenderTreeSupportEfl::elementDoesAutoCompleteForElementWithId(const Evas_Object* ewkFrame, const String& elementId)
 {
     DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, false);
@@ -153,27 +160,6 @@ void DumpRenderTreeSupportEfl::layoutFrame(Evas_Object* ewkFrame)
         return;
 
     frame->view()->layout();
-}
-
-int DumpRenderTreeSupportEfl::numberOfPages(const Evas_Object* ewkFrame, float pageWidth, float pageHeight)
-{
-    DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, 0);
-
-    return WebCore::PrintContext::numberOfPages(frame, WebCore::FloatSize(pageWidth, pageHeight));
-}
-
-String DumpRenderTreeSupportEfl::pageSizeAndMarginsInPixels(const Evas_Object* ewkFrame, int pageNumber, int width, int height, int marginTop, int marginRight, int marginBottom, int marginLeft)
-{
-    DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, String());
-
-    return WebCore::PrintContext::pageSizeAndMarginsInPixels(frame, pageNumber, width, height, marginTop, marginRight, marginBottom, marginLeft);
-}
-
-String DumpRenderTreeSupportEfl::pageProperty(const Evas_Object* ewkFrame, const char* propertyName, int pageNumber)
-{
-    DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, String());
-
-    return WebCore::PrintContext::pageProperty(frame, propertyName, pageNumber);
 }
 
 bool DumpRenderTreeSupportEfl::pauseAnimation(Evas_Object* ewkFrame, const char* name, const char* elementId, double time)
@@ -296,6 +282,13 @@ void DumpRenderTreeSupportEfl::setLoadsSiteIconsIgnoringImageLoadingSetting(Evas
     DRT_SUPPRT_PAGE_GET_OR_RETURN(ewkView, page);
 
     page->settings()->setLoadsSiteIconsIgnoringImageLoadingSetting(loadsSiteIconsIgnoringImageLoadingPreferences);
+}
+
+void DumpRenderTreeSupportEfl::setMinimumLogicalFontSize(Evas_Object* ewkView, int size)
+{
+    DRT_SUPPRT_PAGE_GET_OR_RETURN(ewkView, page);
+
+    page->settings()->setMinimumLogicalFontSize(size);
 }
 
 void DumpRenderTreeSupportEfl::addUserScript(const Evas_Object* ewkView, const String& sourceCode, bool runAtStart, bool allFrames)
@@ -571,7 +564,7 @@ void DumpRenderTreeSupportEfl::setSerializeHTTPLoads(bool enabled)
 void DumpRenderTreeSupportEfl::sendWebIntentResponse(Ewk_Intent_Request* request, JSStringRef response)
 {
 #if ENABLE(WEB_INTENTS)
-    String responseString = response->ustring();
+    String responseString = response->string();
     if (responseString.isNull())
         ewk_intent_request_failure_post(request, WebCore::SerializedScriptValue::create(String::fromUTF8("ERROR")));
     else
@@ -592,10 +585,10 @@ WebCore::MessagePortChannelArray* DumpRenderTreeSupportEfl::intentMessagePorts(c
 void DumpRenderTreeSupportEfl::deliverWebIntent(Evas_Object* ewkFrame, JSStringRef action, JSStringRef type, JSStringRef data)
 {
 #if ENABLE(WEB_INTENTS)
-    RefPtr<WebCore::SerializedScriptValue> serializedData = WebCore::SerializedScriptValue::create(String(data->ustring().impl()));
+    RefPtr<WebCore::SerializedScriptValue> serializedData = WebCore::SerializedScriptValue::create(data->string());
     WebCore::ExceptionCode ec = 0;
     WebCore::MessagePortArray ports;
-    RefPtr<WebCore::Intent> coreIntent = WebCore::Intent::create(String(action->ustring().impl()), String(type->ustring().impl()), serializedData.get(), ports, ec);
+    RefPtr<WebCore::Intent> coreIntent = WebCore::Intent::create(action->string(), type->string(), serializedData.get(), ports, ec);
     if (ec)
         return;
     Ewk_Intent* ewkIntent = ewk_intent_new(coreIntent.get());

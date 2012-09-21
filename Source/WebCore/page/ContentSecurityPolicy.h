@@ -49,6 +49,7 @@ typedef int SandboxFlags;
 typedef Vector<OwnPtr<CSPDirectiveList> > CSPDirectiveListVector;
 
 class ContentSecurityPolicy {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static PassOwnPtr<ContentSecurityPolicy> create(ScriptExecutionContext* scriptExecutionContext)
     {
@@ -100,6 +101,7 @@ public:
 
     void reportDuplicateDirective(const String&) const;
     void reportIgnoredPathComponent(const String& directiveName, const String& completeSource, const String& path) const;
+    void reportInvalidDirectiveValueCharacter(const String& directiveName, const String& value) const;
     void reportInvalidNonce(const String&) const;
     void reportInvalidPluginTypes(const String&) const;
     void reportInvalidSourceExpression(const String& directiveName, const String& source) const;

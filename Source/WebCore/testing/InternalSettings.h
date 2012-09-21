@@ -79,6 +79,11 @@ public:
         bool m_originalDialogElementEnabled;
 #endif
         bool m_canStartMedia;
+        bool m_originalMockScrollbarsEnabled;
+#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
+        bool m_langAttributeAwareFormControlUIEnabled;
+#endif
+        bool m_imagesEnabled;
     };
 
     typedef RefCountedSupplement<Page, InternalSettings> SuperType;
@@ -141,7 +146,10 @@ public:
     void setEnableMockPagePopup(bool, ExceptionCode&);
     String configurationForViewport(float devicePixelRatio, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight, ExceptionCode&);
     void setMemoryInfoEnabled(bool, ExceptionCode&);
-    void setThirdPartyStorageBlockingEnabled(bool, ExceptionCode&);
+    void setStorageBlockingPolicy(const String&, ExceptionCode&);
+    void setLangAttributeAwareFormControlUIEnabled(bool);
+    void setImagesEnabled(bool enabled, ExceptionCode&);
+
 private:
     explicit InternalSettings(Page*);
     virtual void hostDestroyed() OVERRIDE { m_page = 0; }

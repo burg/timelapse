@@ -29,10 +29,10 @@
 #include "CachedResourceLoader.h"
 #include "Document.h"
 #include "FontCustomPlatformData.h"
-#include "MemoryInstrumentation.h"
 #include "Node.h"
 #include "SVGFontFaceElement.h"
 #include "StyleSheetContents.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -103,7 +103,7 @@ CachedFont* CSSFontFaceSrcValue::cachedFont(Document* document)
 
 void CSSFontFaceSrcValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     info.addInstrumentedMember(m_resource);
     info.addInstrumentedMember(m_format);
     // FIXME: add m_cachedFont when MemoryCache is instrumented.

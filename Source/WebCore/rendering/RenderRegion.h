@@ -78,8 +78,6 @@ public:
 
     void deleteAllRenderBoxRegionInfo();
 
-    LayoutUnit offsetFromLogicalTopOfFirstPage() const;
-
     bool isFirstRegion() const;
     bool isLastRegion() const;
 
@@ -100,7 +98,17 @@ public:
     // height of a single column or page in the set.
     virtual LayoutUnit pageLogicalWidth() const;
     virtual LayoutUnit pageLogicalHeight() const;
+
+    virtual LayoutUnit minPreferredLogicalWidth() const OVERRIDE;
+    virtual LayoutUnit maxPreferredLogicalWidth() const OVERRIDE;
     
+    LayoutUnit logicalTopOfFlowThreadContentRect(const LayoutRect&) const;
+    LayoutUnit logicalBottomOfFlowThreadContentRect(const LayoutRect&) const;
+    LayoutUnit logicalTopForFlowThreadContent() const { return logicalTopOfFlowThreadContentRect(flowThreadPortionRect()); };
+    LayoutUnit logicalBottomForFlowThreadContent() const { return logicalBottomOfFlowThreadContentRect(flowThreadPortionRect()); };
+
+    void getRanges(Vector<RefPtr<Range> >&) const;
+
     // This method represents the logical height of the entire flow thread portion used by the region or set.
     // For RenderRegions it matches logicalPaginationHeight(), but for sets it is the height of all the pages
     // or columns added together.
@@ -111,7 +119,7 @@ public:
     // page.
     virtual LayoutUnit pageLogicalTopForOffset(LayoutUnit offset) const;
     
-    virtual void expandToEncompassFlowThreadContentsIfNeeded() {};
+    virtual void expandToEncompassFlowThreadContentsIfNeeded() { };
 
     // Whether or not this region is a set.
     virtual bool isRenderRegionSet() const { return false; }
@@ -128,6 +136,12 @@ protected:
 
 private:
     virtual const char* renderName() const { return "RenderRegion"; }
+
+    // FIXME: these functions should be revisited once RenderRegion inherits from RenderBlock
+    // instead of RenderReplaced (see https://bugs.webkit.org/show_bug.cgi?id=74132 )
+    // When width is auto, use normal block/box sizing code except when inline.
+    virtual bool isInlineBlockOrInlineTable() const OVERRIDE { return isInline() && style()->logicalWidth().isAuto(); }
+    virtual bool shouldComputeSizeAsReplaced() const OVERRIDE { return !style()->logicalWidth().isAuto(); }
 
     virtual void insertedIntoTree() OVERRIDE;
     virtual void willBeRemovedFromTree() OVERRIDE;

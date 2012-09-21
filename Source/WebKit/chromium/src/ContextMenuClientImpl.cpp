@@ -53,7 +53,6 @@
 #include "KURL.h"
 #include "MediaError.h"
 #include "Page.h"
-#include "PlatformString.h"
 #include "RenderWidget.h"
 #include "Settings.h"
 #include "TextBreakIterator.h"
@@ -75,6 +74,7 @@
 #include "platform/WebVector.h"
 #include "WebViewClient.h"
 #include "WebViewImpl.h"
+#include <wtf/text/WTFString.h>
 
 using namespace WebCore;
 
@@ -160,7 +160,7 @@ PlatformMenuDescription ContextMenuClientImpl::getCustomMenuFromDefaultItems(
     Frame* selectedFrame = r.innerNonSharedNode()->document()->frame();
 
     WebContextMenuData data;
-    data.mousePosition = selectedFrame->view()->contentsToWindow(r.roundedPoint());
+    data.mousePosition = r.roundedPoint();
 
     // Compute edit flags.
     data.editFlags = WebContextMenuData::CanDoNone;

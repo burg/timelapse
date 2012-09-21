@@ -83,6 +83,7 @@ class DocumentWeakReference;
 class DynamicNodeListCacheBase;
 class EditingText;
 class Element;
+class ElementAttributeData;
 class EntityReference;
 class Event;
 class EventListener;
@@ -107,6 +108,7 @@ class HitTestResult;
 class IntPoint;
 class DOMWrapperWorld;
 class JSNode;
+class Localizer;
 class MediaCanStartListener;
 class MediaQueryList;
 class MediaQueryMatcher;
@@ -205,6 +207,9 @@ enum NodeListInvalidationType {
     InvalidateOnAnyAttrChange,
 };
 const int numNodeListInvalidationTypes = InvalidateOnAnyAttrChange + 1;
+
+struct ImmutableAttributeDataCacheEntry;
+typedef HashMap<unsigned, OwnPtr<ImmutableAttributeDataCacheEntry>, AlreadyHashed> ImmutableAttributeDataCache;
 
 class Document : public ContainerNode, public TreeScope, public ScriptExecutionContext {
 public:
@@ -375,8 +380,9 @@ public:
      * @param ignoreClipping whether or not to ignore the root scroll frame when retrieving the element.
      *        If false, this method returns null for coordinates outside of the viewport.
      */
-    PassRefPtr<NodeList> nodesFromRect(int centerX, int centerY, unsigned topPadding, unsigned rightPadding,
-                                       unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent) const;
+    PassRefPtr<NodeList> nodesFromRect(int centerX, int centerY,
+                                       unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding,
+                                       bool ignoreClipping, bool allowShadowContent, bool allowChildFrameContent = false) const;
     Element* elementFromPoint(int x, int y) const;
     PassRefPtr<Range> caretRangeFromPoint(int x, int y);
 
@@ -741,6 +747,8 @@ public:
     void hoveredNodeDetached(Node*);
     void activeChainNodeDetached(Node*);
 
+    void updateHoverActiveState(const HitTestRequest&, HitTestResult&);
+
     // Updates for :target (CSS3 selector).
     void setCSSTarget(Element*);
     Element* cssTarget() const { return m_cssTarget; }
@@ -1013,6 +1021,7 @@ public:
 
     void registerForPrivateBrowsingStateChangedCallbacks(Element*);
     void unregisterForPrivateBrowsingStateChangedCallbacks(Element*);
+    void storageBlockingStateDidChange();
     void privateBrowsingStateDidChange();
 
     void setShouldCreateRenderers(bool);
@@ -1183,6 +1192,10 @@ public:
     ContextFeatures* contextFeatures() { return m_contextFeatures.get(); }
 
     virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
+
+    PassRefPtr<ElementAttributeData> cachedImmutableAttributeData(const Element*, const Vector<Attribute>&);
+
+    Localizer& getLocalizer(const AtomicString& locale);
 
 protected:
     Document(Frame*, const KURL&, bool isXHTML, bool isHTML);
@@ -1569,9 +1582,14 @@ private:
     RefPtr<DOMSecurityPolicy> m_domSecurityPolicy;
 #endif
 
+    ImmutableAttributeDataCache m_immutableAttributeDataCache;
+
 #ifndef NDEBUG
     bool m_didDispatchViewportPropertiesChanged;
 #endif
+
+    typedef HashMap<AtomicString, OwnPtr<Localizer> > LocaleToLocalizerMap;
+    LocaleToLocalizerMap m_localizerCache;
 };
 
 inline void Document::notifyRemovePendingSheetIfNeeded()

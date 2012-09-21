@@ -41,6 +41,8 @@
 #include "FakeWebCompositorOutputSurface.h"
 #include <gmock/gmock.h>
 #include <public/Platform.h>
+#include <public/WebLayerScrollClient.h>
+#include <public/WebSize.h>
 #include <wtf/MainThread.h>
 #include <wtf/OwnArrayPtr.h>
 
@@ -1277,11 +1279,22 @@ public:
     void notifySyncRequired() { }
 };
 
+class NoScaleContentLayerChromium : public ContentLayerChromium {
+public:
+    static PassRefPtr<NoScaleContentLayerChromium> create(ContentLayerChromiumClient* client) { return adoptRef(new NoScaleContentLayerChromium(client)); }
+
+    virtual bool needsContentsScale() const OVERRIDE { return false; }
+
+private:
+    explicit NoScaleContentLayerChromium(ContentLayerChromiumClient* client)
+        : ContentLayerChromium(client) { }
+};
+
 class CCLayerTreeHostTestDeviceScaleFactorScalesViewportAndLayers : public CCLayerTreeHostTest {
 public:
 
     CCLayerTreeHostTestDeviceScaleFactorScalesViewportAndLayers()
-        : m_rootLayer(ContentLayerChromium::create(&m_client))
+        : m_rootLayer(NoScaleContentLayerChromium::create(&m_client))
         , m_childLayer(ContentLayerChromium::create(&m_client))
     {
     }
@@ -1343,6 +1356,11 @@ public:
         // The root render surface is the size of the viewport.
         EXPECT_RECT_EQ(IntRect(0, 0, 60, 60), root->renderSurface()->contentRect());
 
+        // The content bounds of the child should be scaled.
+        IntSize childBoundsScaled = child->bounds();
+        childBoundsScaled.scale(1.5);
+        EXPECT_EQ(childBoundsScaled, child->contentBounds());
+
         WebTransformationMatrix scaleTransform;
         scaleTransform.scale(impl->deviceScaleFactor());
 
@@ -1353,11 +1371,10 @@ public:
         EXPECT_EQ(rootDrawTransform, root->drawTransform());
         EXPECT_EQ(rootScreenSpaceTransform, root->screenSpaceTransform());
 
-        // The child is at position 2,2, so translate by 2,2 before applying the scale by 2x.
-        WebTransformationMatrix childScreenSpaceTransform = scaleTransform;
-        childScreenSpaceTransform.translate(2, 2);
-        WebTransformationMatrix childDrawTransform = scaleTransform;
-        childDrawTransform.translate(2, 2);
+        // The child is at position 2,2, which is transformed to 3,3 after the scale
+        WebTransformationMatrix childScreenSpaceTransform;
+        childScreenSpaceTransform.translate(3, 3);
+        WebTransformationMatrix childDrawTransform = childScreenSpaceTransform;
 
         EXPECT_EQ(childDrawTransform, child->drawTransform());
         EXPECT_EQ(childScreenSpaceTransform, child->screenSpaceTransform());
@@ -1373,7 +1390,7 @@ public:
 
 private:
     MockContentLayerChromiumClient m_client;
-    RefPtr<ContentLayerChromium> m_rootLayer;
+    RefPtr<NoScaleContentLayerChromium> m_rootLayer;
     RefPtr<ContentLayerChromium> m_childLayer;
 };
 
@@ -2212,7 +2229,7 @@ private:
 
 SINGLE_AND_MULTI_THREAD_TEST_F(CCLayerTreeHostTestLayerAddedWithAnimation)
 
-class CCLayerTreeHostTestScrollChildLayer : public CCLayerTreeHostTest, public LayerChromiumScrollDelegate {
+class CCLayerTreeHostTestScrollChildLayer : public CCLayerTreeHostTest, public WebLayerScrollClient {
 public:
     CCLayerTreeHostTestScrollChildLayer()
         : m_scrollAmount(2, 1)
@@ -2235,7 +2252,7 @@ public:
         m_rootScrollLayer->setMaxScrollPosition(IntSize(100, 100));
         m_layerTreeHost->rootLayer()->addChild(m_rootScrollLayer);
         m_childLayer = ContentLayerChromium::create(&m_mockDelegate);
-        m_childLayer->setLayerScrollDelegate(this);
+        m_childLayer->setLayerScrollClient(this);
         m_childLayer->setBounds(IntSize(50, 50));
         m_childLayer->setIsDrawable(true);
         m_childLayer->setScrollable(true);
@@ -2248,9 +2265,9 @@ public:
         postSetNeedsCommitToMainThread();
     }
 
-    virtual void didScroll(const IntSize& scrollDelta) OVERRIDE
+    virtual void didScroll() OVERRIDE
     {
-        m_reportedScrollAmount = scrollDelta;
+        m_finalScrollPosition = m_childLayer->scrollPosition();
     }
 
     virtual void applyScrollAndScale(const IntSize& scrollDelta, float) OVERRIDE
@@ -2280,12 +2297,12 @@ public:
 
     virtual void afterTest() OVERRIDE
     {
-        EXPECT_EQ(m_scrollAmount, m_reportedScrollAmount);
+        EXPECT_EQ(IntPoint(m_scrollAmount), m_finalScrollPosition);
     }
 
 private:
     const IntSize m_scrollAmount;
-    IntSize m_reportedScrollAmount;
+    IntPoint m_finalScrollPosition;
     MockContentLayerChromiumClient m_mockDelegate;
     RefPtr<LayerChromium> m_childLayer;
     RefPtr<LayerChromium> m_rootScrollLayer;
@@ -2352,8 +2369,8 @@ public:
     virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* hostImpl) OVERRIDE
     {
         CCRenderer* renderer = hostImpl->renderer();
-        unsigned surface1RenderPassId = hostImpl->rootLayer()->children()[0]->id();
-        unsigned surface2RenderPassId = hostImpl->rootLayer()->children()[0]->children()[0]->id();
+        CCRenderPass::Id surface1RenderPassId = hostImpl->rootLayer()->children()[0]->renderSurface()->renderPassId();
+        CCRenderPass::Id surface2RenderPassId = hostImpl->rootLayer()->children()[0]->children()[0]->renderSurface()->renderPassId();
 
         switch (hostImpl->sourceFrameNumber()) {
         case 0:
@@ -2828,6 +2845,173 @@ private:
 };
 
 TEST_F(CCLayerTreeHostTestLostContextWhileUpdatingResources, runMultiThread)
+{
+    runTest(true);
+}
+
+class CCLayerTreeHostTestContinuousCommit : public CCLayerTreeHostTest {
+public:
+    CCLayerTreeHostTestContinuousCommit()
+        : m_numCommitComplete(0)
+        , m_numDrawLayers(0)
+    {
+    }
+
+    virtual void beginTest() OVERRIDE
+    {
+        m_layerTreeHost->setViewportSize(IntSize(10, 10), IntSize(10, 10));
+        m_layerTreeHost->rootLayer()->setBounds(IntSize(10, 10));
+
+        postSetNeedsCommitToMainThread();
+    }
+
+    virtual void didCommit() OVERRIDE
+    {
+        postSetNeedsCommitToMainThread();
+    }
+
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
+    {
+        if (m_numDrawLayers == 1)
+            m_numCommitComplete++;
+    }
+
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
+    {
+        m_numDrawLayers++;
+        if (m_numDrawLayers == 2)
+            endTest();
+    }
+
+    virtual void afterTest() OVERRIDE
+    {
+        // Check that we didn't commit twice between first and second draw.
+        EXPECT_EQ(1, m_numCommitComplete);
+    }
+
+private:
+    int m_numCommitComplete;
+    int m_numDrawLayers;
+};
+
+TEST_F(CCLayerTreeHostTestContinuousCommit, runMultiThread)
+{
+    runTest(true);
+}
+
+class CCLayerTreeHostTestContinuousInvalidate : public CCLayerTreeHostTest {
+public:
+    CCLayerTreeHostTestContinuousInvalidate()
+        : m_numCommitComplete(0)
+        , m_numDrawLayers(0)
+    {
+    }
+
+    virtual void beginTest() OVERRIDE
+    {
+        m_layerTreeHost->setViewportSize(IntSize(10, 10), IntSize(10, 10));
+        m_layerTreeHost->rootLayer()->setBounds(IntSize(10, 10));
+
+        m_contentLayer = ContentLayerChromium::create(&m_mockDelegate);
+        m_contentLayer->setBounds(IntSize(10, 10));
+        m_contentLayer->setPosition(FloatPoint(0, 0));
+        m_contentLayer->setAnchorPoint(FloatPoint(0, 0));
+        m_contentLayer->setIsDrawable(true);
+        m_layerTreeHost->rootLayer()->addChild(m_contentLayer);
+
+        postSetNeedsCommitToMainThread();
+    }
+
+    virtual void didCommit() OVERRIDE
+    {
+        m_contentLayer->setNeedsDisplay();
+    }
+
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
+    {
+        if (m_numDrawLayers == 1)
+            m_numCommitComplete++;
+    }
+
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
+    {
+        m_numDrawLayers++;
+        if (m_numDrawLayers == 2)
+            endTest();
+    }
+
+    virtual void afterTest() OVERRIDE
+    {
+        // Check that we didn't commit twice between first and second draw.
+        EXPECT_EQ(1, m_numCommitComplete);
+
+        // Clear layer references so CCLayerTreeHost dies.
+        m_contentLayer.clear();
+    }
+
+private:
+    MockContentLayerChromiumClient m_mockDelegate;
+    RefPtr<LayerChromium> m_contentLayer;
+    int m_numCommitComplete;
+    int m_numDrawLayers;
+};
+
+TEST_F(CCLayerTreeHostTestContinuousInvalidate, runMultiThread)
+{
+    runTest(true);
+}
+
+class CCLayerTreeHostTestContinuousAnimate : public CCLayerTreeHostTest {
+public:
+    CCLayerTreeHostTestContinuousAnimate()
+        : m_numCommitComplete(0)
+        , m_numDrawLayers(0)
+    {
+    }
+
+    virtual void beginTest() OVERRIDE
+    {
+        m_layerTreeHost->setViewportSize(IntSize(10, 10), IntSize(10, 10));
+        m_layerTreeHost->rootLayer()->setBounds(IntSize(10, 10));
+
+        postSetNeedsCommitToMainThread();
+    }
+
+    virtual void animate(double) OVERRIDE
+    {
+        m_layerTreeHost->setNeedsAnimate();
+    }
+
+    virtual void layout() OVERRIDE
+    {
+        m_layerTreeHost->rootLayer()->setNeedsDisplay();
+    }
+
+    virtual void commitCompleteOnCCThread(CCLayerTreeHostImpl*) OVERRIDE
+    {
+        if (m_numDrawLayers == 1)
+            m_numCommitComplete++;
+    }
+
+    virtual void drawLayersOnCCThread(CCLayerTreeHostImpl* impl) OVERRIDE
+    {
+        m_numDrawLayers++;
+        if (m_numDrawLayers == 2)
+            endTest();
+    }
+
+    virtual void afterTest() OVERRIDE
+    {
+        // Check that we didn't commit twice between first and second draw.
+        EXPECT_EQ(1, m_numCommitComplete);
+    }
+
+private:
+    int m_numCommitComplete;
+    int m_numDrawLayers;
+};
+
+TEST_F(CCLayerTreeHostTestContinuousAnimate, runMultiThread)
 {
     runTest(true);
 }

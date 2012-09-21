@@ -59,6 +59,8 @@ struct PresentationAttributeCacheKey {
 };
 
 struct PresentationAttributeCacheEntry {
+    WTF_MAKE_FAST_ALLOCATED;
+public:
     PresentationAttributeCacheKey key;
     RefPtr<StylePropertySet> value;
 };
@@ -79,7 +81,7 @@ static PresentationAttributeCache& presentationAttributeCache()
 }
 
 class PresentationAttributeCacheCleaner {
-    WTF_MAKE_NONCOPYABLE(PresentationAttributeCacheCleaner);
+    WTF_MAKE_NONCOPYABLE(PresentationAttributeCacheCleaner); WTF_MAKE_FAST_ALLOCATED;
 public:
     PresentationAttributeCacheCleaner()
         : m_cleanTimer(this, &PresentationAttributeCacheCleaner::cleanCache)
@@ -264,7 +266,7 @@ static unsigned computePresentationAttributeCacheHash(const PresentationAttribut
         return 0;
     ASSERT(key.attributesAndValues.size());
     unsigned attributeHash = StringHasher::hashMemory(key.attributesAndValues.data(), key.attributesAndValues.size() * sizeof(key.attributesAndValues[0]));
-    return WTF::intHash((static_cast<uint64_t>(key.tagName->existingHash()) << 32 | attributeHash));
+    return WTF::pairIntHash(key.tagName->existingHash(), attributeHash);
 }
 
 void StyledElement::updateAttributeStyle()

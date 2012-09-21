@@ -197,12 +197,12 @@ public:
     void removeSlowRepaintObject();
     bool hasSlowRepaintObjects() const { return m_slowRepaintObjectCount; }
 
-    // This includes position:fixed and sticky objects.
-    typedef HashSet<RenderObject*> FixedObjectSet;
-    void addFixedObject(RenderObject*);
-    void removeFixedObject(RenderObject*);
-    const FixedObjectSet* fixedObjects() const { return m_fixedObjects.get(); }
-    bool hasFixedObjects() const { return m_fixedObjects && m_fixedObjects->size() > 0; }
+    // Includes fixed- and sticky-position objects.
+    typedef HashSet<RenderObject*> ViewportConstrainedObjectSet;
+    void addViewportConstrainedObject(RenderObject*);
+    void removeViewportConstrainedObject(RenderObject*);
+    const ViewportConstrainedObjectSet* viewportConstrainedObjects() const { return m_viewportConstrainedObjects.get(); }
+    bool hasViewportConstrainedObjects() const { return m_viewportConstrainedObjects && m_viewportConstrainedObjects->size() > 0; }
 
     // Functions for querying the current scrolled position, negating the effects of overhang
     // and adjusting for page scale.
@@ -320,6 +320,8 @@ public:
 
     virtual IntPoint currentMousePosition() const;
 
+    virtual bool scrollbarsCanBeActive() const OVERRIDE;
+
     // FIXME: Remove this method once plugin loading is decoupled from layout.
     void flushAnyPendingPostLayoutTasks();
 
@@ -410,7 +412,6 @@ private:
     virtual void getTickmarks(Vector<IntRect>&) const OVERRIDE;
     virtual void scrollTo(const IntSize&) OVERRIDE;
     virtual void setVisibleScrollerThumbRect(const IntRect&) OVERRIDE;
-    virtual bool isOnActivePage() const OVERRIDE;
     virtual ScrollableArea* enclosingScrollableArea() const OVERRIDE;
     virtual IntRect scrollableAreaBoundingBox() const OVERRIDE;
     virtual bool scrollAnimatorEnabled() const OVERRIDE;
@@ -445,6 +446,8 @@ private:
     FrameView* parentFrameView() const;
 
     bool doLayoutWithFrameFlattening(bool allowSubtree);
+
+    void setViewportConstrainedObjectsNeedLayout();
 
     virtual AXObjectCache* axObjectCache() const;
     void notifyWidgetsInAllFrames(WidgetNotification);
@@ -544,7 +547,7 @@ private:
     IntSize m_maxAutoSize;
 
     OwnPtr<ScrollableAreaSet> m_scrollableAreas;
-    OwnPtr<FixedObjectSet> m_fixedObjects;
+    OwnPtr<ViewportConstrainedObjectSet> m_viewportConstrainedObjects;
 
     static double s_normalDeferredRepaintDelay;
     static double s_initialDeferredRepaintDelayDuringLoading;

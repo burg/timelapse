@@ -93,7 +93,7 @@ class Reviewer(Committer):
 
 
 watchers_who_are_not_contributors = [
-    Account("Chromium Compositor Bugs", ["cc-bugs@google.com"], ""),
+    Account("Chromium Compositor Bugs", ["cc-bugs@chromium.org"], ""),
     Account("Chromium Media Reviews", ["feature-media-reviews@chromium.org"], ""),
     Account("David Levin", ["levin+threading@chromium.org"], ""),
     Account("David Levin", ["levin+watchlist@chromium.org"], ""),
@@ -130,6 +130,7 @@ contributors_who_are_not_committers = [
     Contributor("Felician Marton", ["felician@inf.u-szeged.hu", "marton.felician.zoltan@stud.u-szeged.hu"], "Felician"),
     Contributor("Finnur Thorarinsson", ["finnur@chromium.org", "finnur.webkit@gmail.com"], "finnur"),
     Contributor("Forms Bugs", "forms-bugs@chromium.org"),
+    Contributor("Gabor Ballabas", "gaborb@inf.u-szeged.hu", "bgabor"),
     Contributor("Grace Kloba", "klobag@chromium.org", "klobag"),
     Contributor("Greg Simon", "gregsimon@chromium.org", "gregsimon"),
     Contributor("Gregg Tavares", ["gman@google.com", "gman@chromium.org"], "gman"),
@@ -322,6 +323,7 @@ committers_unable_to_review = [
     Committer("Mahesh Kulkarni", ["mahesh.kulkarni@nokia.com", "maheshk@webkit.org"], "maheshk"),
     Committer("Marcus Voltis Bulach", "bulach@chromium.org"),
     Committer("Mario Sanchez Prada", ["msanchez@igalia.com", "mario@webkit.org"], "msanchez"),
+    Committer("Mark Lam", "mark.lam@apple.com", "mlam"),
     Committer("Mary Wu", ["mary.wu@torchmobile.com.cn", "wwendy2007@gmail.com"], "marywu"),
     Committer("Matt Delaney", "mdelaney@apple.com"),
     Committer("Matt Lilek", ["mlilek@apple.com", "webkit@mattlilek.com", "pewtermoose@webkit.org"], "pewtermoose"),
@@ -358,7 +360,7 @@ committers_unable_to_review = [
     Committer("Rafael Antognolli", "antognolli@profusion.mobi", "antognolli"),
     Committer("Rafael Brandao", "rafael.lobo@openbossa.org", "rafaelbrandao"),
     Committer("Rafael Weinstein", "rafaelw@chromium.org", "rafaelw"),
-    Committer("Raphael Kubo da Costa", ["rakuco@webkit.org", "rakuco@FreeBSD.org"], "rakuco"),
+    Committer("Raphael Kubo da Costa", ["rakuco@webkit.org", "rakuco@FreeBSD.org", "raphael.kubo.da.costa@intel.com"], "rakuco"),
     Committer("Ravi Kasibhatla", "ravi.kasibhatla@motorola.com", "kphanee"),
     Committer("Renata Hodovan", "reni@webkit.org", "reni"),
     Committer("Robert Hogan", ["robert@webkit.org", "robert@roberthogan.net", "lists@roberthogan.net"], "mwenge"),
@@ -398,7 +400,6 @@ committers_unable_to_review = [
     Committer("Yongjun Zhang", ["yongjun.zhang@nokia.com", "yongjun_zhang@apple.com"]),
     Committer("Yoshifumi Inoue", "yosin@chromium.org", "yosin"),
     Committer("Yuqiang Xian", "yuqiang.xian@intel.com"),
-    Committer("Yuta Kitamura", "yutak@chromium.org", "yutak"),
     Committer("Yuzo Fujishima", "yuzo@google.com", "yuzo"),
     Committer("Zalan Bujtas", ["zbujtas@gmail.com", "zalan.bujtas@nokia.com"], "zalan"),
     Committer("Zeno Albisser", ["zeno@webkit.org", "zeno.albisser@nokia.com"], "zalbisser"),
@@ -532,6 +533,7 @@ reviewers_list = [
     Reviewer("Xan Lopez", ["xan.lopez@gmail.com", "xan@gnome.org", "xan@webkit.org", "xlopez@igalia.com"], "xan"),
     Reviewer("Yong Li", ["yoli@rim.com", "yong.li.webkit@gmail.com"], "yoli"),
     Reviewer("Yury Semikhatsky", "yurys@chromium.org", "yurys"),
+    Reviewer("Yuta Kitamura", "yutak@chromium.org", "yutak"),
     Reviewer("Zack Rusin", "zack@kde.org", "zackr"),
     Reviewer("Zoltan Herczeg", ["zherczeg@webkit.org", "zherczeg@inf.u-szeged.hu"], "zherczeg"),
 ]

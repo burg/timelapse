@@ -1402,7 +1402,7 @@ void RenderBlock::computeInitialRegionRangeForBlock()
         LayoutUnit oldHeight =  logicalHeight();
         LayoutUnit oldLogicalTop = logicalTop();
         setLogicalHeight(MAX_LAYOUT_UNIT / 2);
-        computeLogicalHeight();
+        updateLogicalHeight();
         enclosingRenderFlowThread()->setRegionRangeForBox(this, offsetFromLogicalTopOfFirstPage());
         setLogicalHeight(oldHeight);
         setLogicalTop(oldLogicalTop);
@@ -1415,12 +1415,12 @@ void RenderBlock::computeRegionRangeForBlock()
         enclosingRenderFlowThread()->setRegionRangeForBox(this, offsetFromLogicalTopOfFirstPage());
 }
 
-bool RenderBlock::recomputeLogicalWidth()
+bool RenderBlock::updateLogicalWidthAndColumnWidth()
 {
     LayoutUnit oldWidth = logicalWidth();
     LayoutUnit oldColumnWidth = desiredColumnWidth();
 
-    computeLogicalWidth();
+    updateLogicalWidth();
     calcColumnWidth();
 
     return oldWidth != logicalWidth() || oldColumnWidth != desiredColumnWidth();
@@ -1433,7 +1433,7 @@ void RenderBlock::checkForPaginationLogicalHeightChange(LayoutUnit& pageLogicalH
         if (!pageLogicalHeight) {
             // We need to go ahead and set our explicit page height if one exists, so that we can
             // avoid doing two layout passes.
-            computeLogicalHeight();
+            updateLogicalHeight();
             LayoutUnit columnHeight = contentLogicalHeight();
             if (columnHeight > ZERO_LAYOUT_UNIT) {
                 pageLogicalHeight = columnHeight;
@@ -1468,7 +1468,7 @@ void RenderBlock::layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeigh
 
     LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
 
-    if (recomputeLogicalWidth())
+    if (updateLogicalWidthAndColumnWidth())
         relayoutChildren = true;
 
     m_overflow.clear();
@@ -1546,7 +1546,7 @@ void RenderBlock::layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeigh
     // Calculate our new height.
     LayoutUnit oldHeight = logicalHeight();
     LayoutUnit oldClientAfterEdge = clientLogicalBottom();
-    computeLogicalHeight();
+    updateLogicalHeight();
     LayoutUnit newHeight = logicalHeight();
     if (oldHeight != newHeight) {
         if (oldHeight > newHeight && maxFloatLogicalBottom > newHeight && !childrenInline()) {
@@ -2124,7 +2124,7 @@ LayoutUnit RenderBlock::clearFloatsIfNeeded(RenderBox* child, MarginInfo& margin
     LayoutUnit logicalTop = yPos + heightIncrease;
     // After margin collapsing, one of our floats may now intrude into the child. If the child doesn't contain floats of its own it
     // won't get picked up for relayout even though the logical top estimate was wrong - so add the newly intruding float now.
-    if (containsFloats() && child->isRenderBlock() && !toRenderBlock(child)->containsFloats() && lowestFloatLogicalBottom() > logicalTop)
+    if (containsFloats() && child->isRenderBlock() && !toRenderBlock(child)->containsFloats() && !child->avoidsFloats() && lowestFloatLogicalBottom() > logicalTop)
         toRenderBlock(child)->addIntrudingFloats(this, logicalLeftOffsetForContent(), logicalTop);
 
     return logicalTop;
@@ -2232,7 +2232,7 @@ LayoutUnit RenderBlock::computeStartPositionDeltaForChildAvoidingFloats(const Re
 
     LayoutUnit blockOffset = logicalTopForChild(child);
     if (region)
-        blockOffset = max(blockOffset, blockOffset + (region->offsetFromLogicalTopOfFirstPage() - offsetFromLogicalTopOfFirstPage));
+        blockOffset = max(blockOffset, blockOffset + (region->logicalTopForFlowThreadContent() - offsetFromLogicalTopOfFirstPage));
 
     LayoutUnit startOff = startOffsetForLine(blockOffset, false, region, offsetFromLogicalTopOfFirstPage, logicalHeightForChild(child));
 
@@ -2652,9 +2652,9 @@ void RenderBlock::layoutPositionedObjects(bool relayoutChildren)
         bool needsBlockDirectionLocationSetBeforeLayout = r->needsLayout() && view()->layoutState()->needsBlockDirectionLocationSetBeforeLayout(); 
         if (needsBlockDirectionLocationSetBeforeLayout) {
             if (isHorizontalWritingMode() == r->isHorizontalWritingMode())
-                r->computeLogicalHeight();
+                r->updateLogicalHeight();
             else
-                r->computeLogicalWidth();
+                r->updateLogicalWidth();
             oldLogicalTop = logicalTopForChild(r);
         }
         
@@ -3760,7 +3760,7 @@ RenderBlock::FloatingObject* RenderBlock::insertFloatingObject(RenderBox* o)
     if (!needsBlockDirectionLocationSetBeforeLayout || isWritingModeRoot()) // We are unsplittable if we're a block flow root.
         o->layoutIfNeeded();
     else {
-        o->computeLogicalWidth();
+        o->updateLogicalWidth();
         o->computeAndSetBlockDirectionMargins(this);
     }
     setLogicalWidthForFloat(newObj, logicalWidthForChild(o) + marginStartForChild(o) + marginEndForChild(o));
@@ -4511,6 +4511,8 @@ bool RenderBlock::hasOverhangingFloat(RenderBox* renderer)
 
 void RenderBlock::addIntrudingFloats(RenderBlock* prev, LayoutUnit logicalLeftOffset, LayoutUnit logicalTopOffset)
 {
+    ASSERT(!avoidsFloats());
+
     // If the parent or previous sibling doesn't have any floats to add, don't bother.
     if (!prev->m_floatingObjects)
         return;
@@ -4650,7 +4652,7 @@ LayoutUnit RenderBlock::getClearDelta(RenderBox* child, LayoutUnit logicalTop)
             LayoutUnit childOldLogicalTop = child->logicalTop();
 
             child->setLogicalTop(newLogicalTop);
-            child->computeLogicalWidth();
+            child->updateLogicalWidth();
             region = regionAtBlockOffset(logicalTopForChild(child));
             borderBox = child->borderBoxRectInRegion(region, offsetFromLogicalTopOfFirstPage() + logicalTopForChild(child), DoNotCacheRenderBoxRegionInfo);
             LayoutUnit childLogicalWidthAtNewLogicalTopOffset = isHorizontalWritingMode() ? borderBox.width() : borderBox.height();
@@ -4704,7 +4706,7 @@ bool RenderBlock::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
     if ((hitTestAction == HitTestBlockBackground || hitTestAction == HitTestChildBlockBackground) && isPointInOverflowControl(result, locationInContainer.point(), adjustedLocation)) {
         updateHitTestResult(result, locationInContainer.point() - localOffset);
         // FIXME: isPointInOverflowControl() doesn't handle rect-based tests yet.
-        if (!result.addNodeToRectBasedTestResult(node(), locationInContainer))
+        if (!result.addNodeToRectBasedTestResult(node(), request, locationInContainer))
            return true;
     }
 
@@ -4737,7 +4739,7 @@ bool RenderBlock::nodeAtPoint(const HitTestRequest& request, HitTestResult& resu
         LayoutRect boundsRect(adjustedLocation, size());
         if (visibleToHitTesting() && locationInContainer.intersects(boundsRect)) {
             updateHitTestResult(result, flipForWritingMode(locationInContainer.point() - localOffset));
-            if (!result.addNodeToRectBasedTestResult(node(), locationInContainer, boundsRect))
+            if (!result.addNodeToRectBasedTestResult(node(), request, locationInContainer, boundsRect))
                 return true;
         }
     }
@@ -5550,7 +5552,7 @@ void RenderBlock::computePreferredLogicalWidths()
     RenderStyle* styleToUse = style();
     if (!isTableCell() && styleToUse->logicalWidth().isFixed() && styleToUse->logicalWidth().value() >= 0 
        && style()->marqueeBehavior() != MALTERNATE && !(isDeprecatedFlexItem() && !styleToUse->logicalWidth().intValue()))
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = computeContentBoxLogicalWidth(styleToUse->logicalWidth().value());
+        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = adjustContentBoxLogicalWidthForBoxSizing(styleToUse->logicalWidth().value());
     else {
         m_minPreferredLogicalWidth = 0;
         m_maxPreferredLogicalWidth = 0;
@@ -5582,7 +5584,7 @@ void RenderBlock::computePreferredLogicalWidths()
         if (isTableCell()) {
             Length w = toRenderTableCell(this)->styleOrColLogicalWidth();
             if (w.isFixed() && w.value() > 0) {
-                m_maxPreferredLogicalWidth = max(m_minPreferredLogicalWidth, computeContentBoxLogicalWidth(w.value()));
+                m_maxPreferredLogicalWidth = max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(w.value()));
                 scrollbarWidth = 0;
             }
         }
@@ -5591,13 +5593,13 @@ void RenderBlock::computePreferredLogicalWidths()
     }
     
     if (styleToUse->logicalMinWidth().isFixed() && styleToUse->logicalMinWidth().value() > 0) {
-        m_maxPreferredLogicalWidth = max(m_maxPreferredLogicalWidth, computeContentBoxLogicalWidth(styleToUse->logicalMinWidth().value()));
-        m_minPreferredLogicalWidth = max(m_minPreferredLogicalWidth, computeContentBoxLogicalWidth(styleToUse->logicalMinWidth().value()));
+        m_maxPreferredLogicalWidth = max(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse->logicalMinWidth().value()));
+        m_minPreferredLogicalWidth = max(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse->logicalMinWidth().value()));
     }
     
     if (styleToUse->logicalMaxWidth().isFixed()) {
-        m_maxPreferredLogicalWidth = min(m_maxPreferredLogicalWidth, computeContentBoxLogicalWidth(styleToUse->logicalMaxWidth().value()));
-        m_minPreferredLogicalWidth = min(m_minPreferredLogicalWidth, computeContentBoxLogicalWidth(styleToUse->logicalMaxWidth().value()));
+        m_maxPreferredLogicalWidth = min(m_maxPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse->logicalMaxWidth().value()));
+        m_minPreferredLogicalWidth = min(m_minPreferredLogicalWidth, adjustContentBoxLogicalWidthForBoxSizing(styleToUse->logicalMaxWidth().value()));
     }
 
     LayoutUnit borderAndPadding = borderAndPaddingLogicalWidth();
@@ -6055,7 +6057,7 @@ void RenderBlock::computeBlockPreferredLogicalWidths()
             RenderBox* childBox = toRenderBox(child);
             LayoutUnit oldHeight = childBox->logicalHeight();
             childBox->setLogicalHeight(childBox->borderAndPaddingLogicalHeight());
-            childBox->computeLogicalHeight();
+            childBox->updateLogicalHeight();
             childMinPreferredLogicalWidth = childMaxPreferredLogicalWidth = childBox->logicalHeight();
             childBox->setLogicalHeight(oldHeight);
         } else {
@@ -6894,7 +6896,7 @@ bool RenderBlock::hasNextPage(LayoutUnit logicalOffset, PageBoundaryRule pageBou
         return false;
     if (region->isLastRegion())
         return region->isRenderRegionSet() || region->style()->regionOverflow() == BreakRegionOverflow
-            || (pageBoundaryRule == IncludePageBoundary && pageOffset == region->offsetFromLogicalTopOfFirstPage());
+            || (pageBoundaryRule == IncludePageBoundary && pageOffset == region->logicalTopForFlowThreadContent());
     return true;
 }
 
@@ -7185,20 +7187,51 @@ bool RenderBlock::lineWidthForPaginatedLineChanged(RootInlineBox* rootBox, Layou
 
 LayoutUnit RenderBlock::offsetFromLogicalTopOfFirstPage() const
 {
-    // FIXME: This function needs to work without layout state. It's fine to use the layout state as a cache
-    // for speed, but we need a slow implementation that will walk up the containing block chain and figure
-    // out our offset from the top of the page.
     LayoutState* layoutState = view()->layoutState();
-    if (!layoutState || !layoutState->isPaginated())
-        return 0;
+    if (layoutState && !layoutState->isPaginated())
+        return ZERO_LAYOUT_UNIT;
+    if (layoutState) {
+        // FIXME: Sanity check that the renderer in the layout state is ours, since otherwise the computation will be off.
+        // Right now this assert gets hit inside computeLogicalHeight for percentage margins, since they're computed using
+        // widths which can vary in each region. Until we patch that, we can't have this assert.
+        // ASSERT(layoutState->m_renderer == this);
 
-    // FIXME: Sanity check that the renderer in the layout state is ours, since otherwise the computation will be off.
-    // Right now this assert gets hit inside computeLogicalHeight for percentage margins, since they're computed using
-    // widths which can vary in each region. Until we patch that, we can't have this assert.
-    // ASSERT(layoutState->m_renderer == this);
+        LayoutSize offsetDelta = layoutState->m_layoutOffset - layoutState->m_pageOffset;
+        return isHorizontalWritingMode() ? offsetDelta.height() : offsetDelta.width();
+    }
+    // FIXME: Right now, this assert is hit outside layout, from logicalLeftSelectionOffset in selectionGapRectsForRepaint (called from FrameSelection::selectAll).
+    // ASSERT(inRenderFlowThread());
 
-    LayoutSize offsetDelta = layoutState->m_layoutOffset - layoutState->m_pageOffset;
-    return isHorizontalWritingMode() ? offsetDelta.height() : offsetDelta.width();
+    // FIXME: This is a slower path that doesn't use layout state and relies on getting your logical top inside the enclosing flow thread. It doesn't
+    // work with columns or pages currently, but it should once they have been switched over to using flow threads.
+    if (!inRenderFlowThread())
+        return ZERO_LAYOUT_UNIT;
+
+    const RenderBlock* currentBlock = this;
+    LayoutRect blockRect(0, 0, width(), height());
+
+    while (currentBlock && !currentBlock->isRenderFlowThread()) {
+        RenderBlock* containerBlock = currentBlock->containingBlock();
+        ASSERT(containerBlock);
+        if (!containerBlock)
+            return ZERO_LAYOUT_UNIT;
+        LayoutPoint currentBlockLocation = currentBlock->location();
+
+        if (containerBlock->style()->writingMode() != currentBlock->style()->writingMode()) {
+            // We have to put the block rect in container coordinates
+            // and we have to take into account both the container and current block flipping modes
+            if (containerBlock->style()->isFlippedBlocksWritingMode()) {
+                if (containerBlock->isHorizontalWritingMode())
+                    blockRect.setY(currentBlock->height() - blockRect.maxY());
+                else
+                    blockRect.setX(currentBlock->width() - blockRect.maxX());
+            }
+            currentBlock->flipForWritingMode(blockRect);
+        }
+        blockRect.moveBy(currentBlockLocation);
+        currentBlock = containerBlock;
+    };
+    return currentBlock->isHorizontalWritingMode() ? blockRect.y() : blockRect.x();
 }
 
 RenderRegion* RenderBlock::regionAtBlockOffset(LayoutUnit blockOffset) const
@@ -7246,9 +7279,9 @@ RenderRegion* RenderBlock::clampToStartAndEndRegions(RenderRegion* region) const
     RenderRegion* endRegion;
     enclosingRenderFlowThread()->getRegionRangeForBox(this, startRegion, endRegion);
     
-    if (startRegion && region->offsetFromLogicalTopOfFirstPage() < startRegion->offsetFromLogicalTopOfFirstPage())
+    if (startRegion && region->logicalTopForFlowThreadContent() < startRegion->logicalTopForFlowThreadContent())
         return startRegion;
-    if (endRegion && region->offsetFromLogicalTopOfFirstPage() > endRegion->offsetFromLogicalTopOfFirstPage())
+    if (endRegion && region->logicalTopForFlowThreadContent() > endRegion->logicalTopForFlowThreadContent())
         return endRegion;
     
     return region;

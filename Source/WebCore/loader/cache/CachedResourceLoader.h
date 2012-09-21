@@ -52,7 +52,6 @@ class Document;
 class Frame;
 class ImageLoader;
 class KURL;
-class MemoryObjectInfo;
 
 // The CachedResourceLoader manages the loading of scripts/images/stylesheets for a single document.
 class CachedResourceLoader {
@@ -98,6 +97,11 @@ public:
 
     bool autoLoadImages() const { return m_autoLoadImages; }
     void setAutoLoadImages(bool);
+
+    bool imagesEnabled() const { return m_imagesEnabled; }
+    void setImagesEnabled(bool);
+
+    bool shouldDeferImageLoad(const KURL&) const;
     
     CachePolicy cachePolicy() const;
     
@@ -136,6 +140,8 @@ private:
 
     void garbageCollectDocumentResourcesTimerFired(Timer<CachedResourceLoader>*);
     void performPostLoadActions();
+
+    void reloadImagesIfNotDeferred();
     
     HashSet<String> m_validatedURLs;
     mutable DocumentResourceMap m_documentResources;
@@ -153,8 +159,9 @@ private:
 
     Timer<CachedResourceLoader> m_garbageCollectDocumentResourcesTimer;
 
-    // 30 bits left
+    // 29 bits left
     bool m_autoLoadImages : 1;
+    bool m_imagesEnabled : 1;
     bool m_allowStaleResources : 1;
 };
 

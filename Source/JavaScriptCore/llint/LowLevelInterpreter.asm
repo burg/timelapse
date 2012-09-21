@@ -61,6 +61,11 @@ else
     const PayloadOffset = 0
 end
 
+# Constant for reasoning about butterflies.
+const IsArray = 1
+const HasArrayStorage = 8
+const AllArrayTypes = 15
+
 # Type constants.
 const StringType = 5
 const ObjectType = 13
@@ -86,9 +91,9 @@ const HashFlags8BitBuffer = 64
 
 # Property storage constants
 if JSVALUE64
-    const InlineStorageCapacity = 5
-else
     const InlineStorageCapacity = 6
+else
+    const InlineStorageCapacity = 7
 end
 
 # Allocation constants
@@ -177,8 +182,8 @@ macro slowPathForCall(advance, slowPath)
                 cloopCallJSFunction callee
             else
                 call callee
+                dispatchAfterCall()
             end
-            dispatchAfterCall()
         end)
 end
 
@@ -310,7 +315,7 @@ macro functionInitialization(profileArgSkip)
 .stackHeightOK:
 end
 
-macro allocateBasicJSObject(sizeClassIndex, classInfoOffset, structure, result, scratch1, scratch2, slowCase)
+macro allocateBasicJSObject(sizeClassIndex, structure, result, scratch1, scratch2, slowCase)
     if ALWAYS_ALLOCATE_SLOW
         jmp slowCase
     else
@@ -338,10 +343,8 @@ macro allocateBasicJSObject(sizeClassIndex, classInfoOffset, structure, result, 
         storep scratch2, offsetOfMySizeClass + offsetOfFirstFreeCell[scratch1]
     
         # Initialize the object.
-        loadp classInfoOffset[scratch1], scratch2
-        storep scratch2, [result]
         storep structure, JSCell::m_structure[result]
-        storep 0, JSObject::m_outOfLineStorage[result]
+        storep 0, JSObject::m_butterfly[result]
     end
 end
 
@@ -516,7 +519,7 @@ macro withInlineStorage(object, propertyStorage, continuation)
 end
 
 macro withOutOfLineStorage(object, propertyStorage, continuation)
-    loadp JSObject::m_outOfLineStorage[object], propertyStorage
+    loadp JSObject::m_butterfly[object], propertyStorage
     # Indicate that the propertyStorage register now points to the
     # property storage, and that the object register may be reused
     # if the object pointer is not needed anymore.
@@ -846,9 +849,6 @@ macro notSupported()
         break
     end
 end
-
-_llint_op_get_array_length:
-    notSupported()
 
 _llint_op_get_by_id_chain:
     notSupported()

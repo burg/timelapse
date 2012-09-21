@@ -77,7 +77,6 @@
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "MainResourceLoader.h"
-#include "MemoryInstrumentation.h"
 #include "Page.h"
 #include "PageCache.h"
 #include "PageTransitionEvent.h"
@@ -99,6 +98,7 @@
 #include "SerializedScriptValue.h"
 #include "Settings.h"
 #include "TextResourceDecoder.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include "WindowFeatures.h"
 #include "XMLDocumentParser.h"
 #include <wtf/CurrentTime.h>
@@ -123,6 +123,7 @@
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
 #include "Archive.h"
 #endif
+
 
 namespace WebCore {
 
@@ -646,6 +647,7 @@ void FrameLoader::didBeginDocument(bool dispatch)
     m_frame->document()->initContentSecurityPolicy();
 
     Settings* settings = m_frame->document()->settings();
+    m_frame->document()->cachedResourceLoader()->setImagesEnabled(!settings || settings->areImagesEnabled());
     m_frame->document()->cachedResourceLoader()->setAutoLoadImages(settings && settings->loadsImagesAutomatically());
 
     if (m_documentLoader) {
@@ -3277,7 +3279,7 @@ NetworkingContext* FrameLoader::networkingContext() const
 
 void FrameLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::Loader);
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
     info.addInstrumentedMember(m_documentLoader);
     info.addInstrumentedMember(m_provisionalDocumentLoader);
     info.addInstrumentedMember(m_policyDocumentLoader);

@@ -2567,7 +2567,10 @@ def check_style(clean_lines, line_number, file_extension, class_state, file_stat
         and not (match(r'.*\(.*\).*{.*.}', line)
                  and class_state.classinfo_stack
                  and line.count('{') == line.count('}'))
-        and not cleansed_line.startswith('#define ')):
+        and not cleansed_line.startswith('#define ')
+        # It's ok to use use WTF_MAKE_NONCOPYABLE and WTF_MAKE_FAST_ALLOCATED macros in 1 line
+        and not (cleansed_line.find("WTF_MAKE_NONCOPYABLE") != -1
+                 and cleansed_line.find("WTF_MAKE_FAST_ALLOCATED") != -1)):
         error(line_number, 'whitespace/newline', 4,
               'More than one command on the same line')
 
@@ -3027,6 +3030,11 @@ def check_language(filename, clean_lines, line_number, file_extension, include_s
               'Please declare integral type bitfields with either signed or unsigned.')
 
     check_identifier_name_in_declaration(filename, line_number, line, file_state, error)
+
+    # Check for unsigned int (should be just 'unsigned')
+    if search(r'\bunsigned int\b', line):
+        error(line_number, 'runtime/unsigned', 1,
+              'Omit int when using unsigned')
 
     # Check that we're not using static_cast<Text*>.
     if search(r'\bstatic_cast<Text\*>', line):
@@ -3595,6 +3603,7 @@ class CppChecker(object):
         'runtime/sizeof',
         'runtime/string',
         'runtime/threadsafe_fn',
+        'runtime/unsigned',
         'runtime/virtual',
         'whitespace/blank_line',
         'whitespace/braces',

@@ -41,7 +41,11 @@ namespace WebCore {
 
 class MediaConstraints;
 class RTCConfiguration;
+class RTCIceCandidateDescriptor;
 class RTCPeerConnectionHandlerClient;
+class RTCSessionDescriptionDescriptor;
+class RTCSessionDescriptionRequest;
+class RTCVoidRequest;
 
 class RTCPeerConnectionHandler {
 public:
@@ -50,6 +54,14 @@ public:
 
     virtual bool initialize(PassRefPtr<RTCConfiguration>, PassRefPtr<MediaConstraints>) = 0;
 
+    virtual void createOffer(PassRefPtr<RTCSessionDescriptionRequest>, PassRefPtr<MediaConstraints>) = 0;
+    virtual void createAnswer(PassRefPtr<RTCSessionDescriptionRequest>, PassRefPtr<MediaConstraints>) = 0;
+    virtual void setLocalDescription(PassRefPtr<RTCVoidRequest>, PassRefPtr<RTCSessionDescriptionDescriptor>) = 0;
+    virtual void setRemoteDescription(PassRefPtr<RTCVoidRequest>, PassRefPtr<RTCSessionDescriptionDescriptor>) = 0;
+    virtual PassRefPtr<RTCSessionDescriptionDescriptor> localDescription() = 0;
+    virtual PassRefPtr<RTCSessionDescriptionDescriptor> remoteDescription() = 0;
+    virtual bool updateIce(PassRefPtr<RTCConfiguration>, PassRefPtr<MediaConstraints>) = 0;
+    virtual bool addIceCandidate(PassRefPtr<RTCIceCandidateDescriptor>) = 0;
     virtual bool addStream(PassRefPtr<MediaStreamDescriptor>, PassRefPtr<MediaConstraints>) = 0;
     virtual void removeStream(PassRefPtr<MediaStreamDescriptor>) = 0;
     virtual void stop() = 0;

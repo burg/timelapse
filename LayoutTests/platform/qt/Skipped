@@ -287,6 +287,7 @@ fast/dom/shadow/shadowdom-for-meter-without-appearance.html
 fast/dom/shadow/shadowdom-for-meter-without-shadow-element.html
 fast/dom/shadow/shadowdom-for-meter.html
 fast/dom/shadow/style-of-distributed-node.html
+fast/dom/shadow/shadowroot-clonenode.html
 
 # Fail until SUBPIXEL_LAYOUT is enabled
 # https://bugs.webkit.org/show_bug.cgi?id=85532
@@ -299,12 +300,14 @@ fast/sub-pixel/float-wrap-with-subpixel-top.html
 fast/sub-pixel/inline-block-should-not-wrap.html
 fast/sub-pixel/inline-block-with-margin.html
 fast/sub-pixel/inline-block-with-padding.html
+fast/sub-pixel/large-sizes.html
 fast/sub-pixel/layout-boxes-with-zoom.html
 fast/sub-pixel/position-right-aligns-with-container.html
 fast/sub-pixel/selection/selection-gaps-at-fractional-offsets.html
 fast/sub-pixel/size-of-box-with-zoom.html
 fast/sub-pixel/table-rows-no-gaps.html
 fast/sub-pixel/sub-pixel-accumulates-to-layers.html
+fast/sub-pixel/selection/selection-rect-in-sub-pixel-table.html
 
 # CSS Regions support not yet enabled. http://webkit.org/b/57312
 fast/regions
@@ -1535,7 +1538,6 @@ css2.1/t1008-c44-ln-box-02-d-ag.html
 css2.1/t1202-counters-04-b.html
 css2.1/t1601-c547-indent-00-b-a.html
 css2.1/t1602-c43-center-00-d-ag.html
-css2.1/t1604-c541-word-sp-00-b-a.html
 css2.1/t1604-c542-letter-sp-00-b-a.html
 css2.1/t1604-c542-letter-sp-01-b-a.html
 css2.1/t1605-c545-txttrans-00-b-ag.html
@@ -1643,10 +1645,6 @@ fast/repaint/inline-relative-positioned.html
 # Relies on WebKit API [WebView _loadBackForwardListFromOtherView:]
 fast/loader/crash-copying-backforwardlist.html
 
-# Needs platform specific API implemented in DRT, maybe not relevant for non-Mac and non-Windows ports
-fast/loader/api-test-new-window-data-load-base-url.html
-fast/loader/api-test-go-to-current-back-forward-item.html
-
 # Slider tests that need new results
 fast/forms/range/slider-thumb-shared-style.html
 fast/forms/range/slider-thumb-stylability.html
@@ -1722,7 +1720,6 @@ fast/table/giantCellspacing.html
 fast/text/atsui-pointtooffset-calls-cg.html
 fast/text/atsui-rtl-override-selection.html
 fast/text/in-rendered-text-rtl.html
-fast/text/large-text-composed-char-dos.html
 fast/text/international/002.html
 fast/canvas/canvas-gradient-addStop-error.html
 fast/css/zoom-body-scroll.html
@@ -1738,8 +1735,6 @@ fast/forms/text-control-intrinsic-widths.html
 fast/forms/textarea-metrics.html
 fast/history/window-open.html
 fast/dom/Range/range-expand.html
-fast/encoding/frame-default-enc.html
-fast/encoding/invalid-xml.html
 fast/events/attempt-scroll-with-no-scrollbars.html
 fast/events/key-events-in-input-button.html
 fast/forms/radio/input-radio-checked-tab.html
@@ -2057,6 +2052,10 @@ fast/block/positioning/002.html
 # [Qt] fast/block/positioning/056.html fails
 # https://bugs.webkit.org/show_bug.cgi?id=92733
 fast/block/positioning/056.html
+
+# REGRESSION(128400): It broke fast/js/primitive-property-access-edge-cases.html.
+# https://bugs.webkit.org/show_bug.cgi?id=96596
+fast/js/primitive-property-access-edge-cases.html
 
 # ============================================================================= #
 # failing fonts tests
@@ -2744,11 +2743,6 @@ fast/css/widget-region-parser.html
 # https://bugs.webkit.org/show_bug.cgi?id=92914
 touchadjustment/touch-links-longpress.html
 
-# New tests introduced in r124555 asserts on 32 bit platforms
-# https://bugs.webkit.org/show_bug.cgi?id=93246
-fast/js/dfg-peephole-compare-final-object-to-final-object-or-other-when-both-proven-final-object.html
-fast/js/dfg-compare-final-object-to-final-object-or-other-when-both-proven-final-object.html
-
 # [Qt][GTK] REGRESSION(r125251): It made svg/custom/use-instanceRoot-as-event-target.xhtml assert and flakey
 # https://bugs.webkit.org/show_bug.cgi?id=93812
 svg/custom/use-instanceRoot-as-event-target.xhtml
@@ -2761,20 +2755,14 @@ fast/events/autoscroll-in-textarea.html
 fast/forms/time-multiple-fields
 
 # [Qt] New inspector/timeline/timeline-decode-resize.html introduced in r125790 fails
-# https://bugs.webkit.org/show_bug.cgi?id=?????
+# https://bugs.webkit.org/show_bug.cgi?id=94341
 inspector/timeline/timeline-decode-resize.html
-
-# [Qt] New fast/forms/range/range-hit-test-with-padding.html introduced in r126132 fails
-# https://bugs.webkit.org/show_bug.cgi?id=?????
-fast/forms/range/range-hit-test-with-padding.html
 
 # REGRESSION(r126852): It broke inspector tests
 # https://bugs.webkit.org/show_bug.cgi?id=95176
 http/tests/inspector-enabled/console-clear-arguments-on-frame-navigation.html
 http/tests/inspector-enabled/contentSecurityPolicy-blocks-setInterval.html
 http/tests/inspector-enabled/contentSecurityPolicy-blocks-setTimeout.html
-http/tests/inspector/csp-injected-content-warning-contains-stacktrace.html
-http/tests/inspector/csp-inline-warning-contains-stacktrace.html
 
 # [Qt] New svg/custom/clamped-masking-clipping.svg asserts
 # https://bugs.webkit.org/show_bug.cgi?id=95431
@@ -2788,3 +2776,22 @@ http/tests/security/inactive-document-with-empty-security-origin.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=95507
 http/tests/notifications
+
+# Test fails after r127534.
+# https://bugs.webkit.org/show_bug.cgi?id=95827
+fast/innerHTML/innerHTML-iframe.html
+
+# New tests introduced in r127704 fail
+# https://bugs.webkit.org/show_bug.cgi?id=95952
+fast/viewport/viewport-limits-adjusted-for-no-user-scale-control.html
+fast/viewport/viewport-limits-adjusted-for-no-user-scale.html
+
+# REGRESSION (r128006): Three spatial navigation tests are failing
+# https://bugs.webkit.org/show_bug.cgi?id=96226
+fast/spatial-navigation/snav-container-white-space.html
+fast/spatial-navigation/snav-div-overflow-scrol-hidden.html
+fast/spatial-navigation/snav-imagemap-overlapped-areas.html
+
+# New fast/canvas/canvas-lineDash.html introduced in r128116 fails
+# https://bugs.webkit.org/show_bug.cgi?id=96360
+fast/canvas/canvas-lineDash.html

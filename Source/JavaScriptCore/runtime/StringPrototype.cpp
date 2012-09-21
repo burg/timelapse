@@ -22,7 +22,9 @@
 #include "config.h"
 #include "StringPrototype.h"
 
+#include "ButterflyInlineMethods.h"
 #include "CachedCall.h"
+#include "CopiedSpaceInlineMethods.h"
 #include "Error.h"
 #include "Executable.h"
 #include "JSGlobalObjectFunctions.h"
@@ -287,7 +289,7 @@ static ALWAYS_INLINE JSValue jsSpliceSubstrings(ExecState* exec, JSString* sourc
         totalLength += substringRanges[i].length;
 
     if (!totalLength)
-        return jsString(exec, "");
+        return jsEmptyString(exec);
 
     if (source.is8Bit()) {
         LChar* buffer;
@@ -348,7 +350,7 @@ static ALWAYS_INLINE JSValue jsSpliceSubstringsWithSeparators(ExecState* exec, J
     }
 
     if (!totalLength)
-        return jsString(exec, "");
+        return jsEmptyString(exec);
 
     if (source.is8Bit() && allSeperators8Bit) {
         LChar* buffer;

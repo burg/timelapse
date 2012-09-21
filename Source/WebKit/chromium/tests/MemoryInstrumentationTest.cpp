@@ -32,6 +32,7 @@
 
 #include "DataRef.h"
 #include "MemoryInstrumentationImpl.h"
+#include "WebCoreMemoryInstrumentation.h"
 
 #include <gtest/gtest.h>
 
@@ -39,6 +40,7 @@
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomicString.h>
+#include <wtf/text/CString.h>
 #include <wtf/text/StringImpl.h>
 #include <wtf/text/WTFString.h>
 
@@ -58,7 +60,7 @@ public:
 
     virtual void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     {
-        MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::DOM);
+        MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
         info.addMember(m_notInstrumented);
     }
     NotInstrumented* m_notInstrumented;
@@ -122,7 +124,7 @@ public:
 
     virtual void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     {
-        MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::DOM);
+        MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
         info.addMember(m_notInstrumented);
     }
     NotInstrumented* m_notInstrumented;
@@ -155,7 +157,7 @@ public:
 
     virtual void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     {
-        MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+        MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
         Instrumented::reportMemoryUsage(memoryObjectInfo);
         info.addMember(m_notInstrumentedOwnPtr);
     }
@@ -172,27 +174,27 @@ TEST(MemoryInstrumentationTest, ownPtrNotInstrumented)
     EXPECT_EQ(2, visitedObjects.size());
 }
 
-class InstrumentedOther {
+class InstrumentedUndefined {
 public:
-    InstrumentedOther() : m_data(0) { }
+    InstrumentedUndefined() : m_data(0) { }
 
     void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     {
-        MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::Other);
+        MemoryClassInfo info(memoryObjectInfo, this);
     }
     int m_data;
 };
 
 class InstrumentedDOM {
 public:
-    InstrumentedDOM() : m_instrumentedOther(adoptPtr(new InstrumentedOther)) { }
+    InstrumentedDOM() : m_instrumentedUndefined(adoptPtr(new InstrumentedUndefined)) { }
 
     void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     {
-        MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::DOM);
-        info.addInstrumentedMember(m_instrumentedOther);
+        MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
+        info.addInstrumentedMember(m_instrumentedUndefined);
     }
-    OwnPtr<InstrumentedOther> m_instrumentedOther;
+    OwnPtr<InstrumentedUndefined> m_instrumentedUndefined;
 };
 
 TEST(MemoryInstrumentationTest, ownerTypePropagation)
@@ -201,8 +203,8 @@ TEST(MemoryInstrumentationTest, ownerTypePropagation)
     MemoryInstrumentationImpl impl(visitedObjects);
     OwnPtr<InstrumentedDOM> instrumentedDOM(adoptPtr(new InstrumentedDOM));
     impl.addRootObject(instrumentedDOM);
-    EXPECT_EQ(sizeof(InstrumentedDOM) + sizeof(InstrumentedOther), impl.reportedSizeForAllTypes());
-    EXPECT_EQ(sizeof(InstrumentedDOM) + sizeof(InstrumentedOther), impl.totalSize(MemoryInstrumentation::DOM));
+    EXPECT_EQ(sizeof(InstrumentedDOM) + sizeof(InstrumentedUndefined), impl.reportedSizeForAllTypes());
+    EXPECT_EQ(sizeof(InstrumentedDOM) + sizeof(InstrumentedUndefined), impl.totalSize(WebCoreMemoryTypes::DOM));
     EXPECT_EQ(2, visitedObjects.size());
 }
 
@@ -210,7 +212,7 @@ class NonVirtualInstrumented {
 public:
     void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     {
-        MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::DOM);
+        MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
         info.addInstrumentedMember(m_instrumented);
     }
 
@@ -227,31 +229,49 @@ TEST(MemoryInstrumentationTest, visitFirstMemberInNonVirtualClass)
     EXPECT_EQ(2, visitedObjects.size());
 }
 
+template<typename T>
+class InstrumentedOwner {
+public:
+    template<typename V>
+    InstrumentedOwner(const V& value) : m_value(value) { }
+    void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+    {
+        MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
+        info.addInstrumentedMember(m_value);
+    }
+
+    T m_value;
+};
+
 TEST(MemoryInstrumentationTest, visitStrings)
 {
     {
         VisitedObjects visitedObjects;
         MemoryInstrumentationImpl impl(visitedObjects);
-        String string("string");
-        impl.addRootObject(string);
-        EXPECT_EQ(string.impl()->sizeInBytes(), impl.reportedSizeForAllTypes());
+        InstrumentedOwner<String> stringInstrumentedOwner("String");
+        stringInstrumentedOwner.m_value.characters(); // Force 16bit shadow creation.
+        impl.addRootObject(stringInstrumentedOwner);
+        EXPECT_EQ(sizeof(StringImpl) + stringInstrumentedOwner.m_value.length() * 2, impl.reportedSizeForAllTypes());
         EXPECT_EQ(2, visitedObjects.size());
     }
+
     {
         VisitedObjects visitedObjects;
         MemoryInstrumentationImpl impl(visitedObjects);
-        String string("string");
-        impl.addRootObject(&string);
-        EXPECT_EQ(string.impl()->sizeInBytes() + sizeof(String), impl.reportedSizeForAllTypes());
+        InstrumentedOwner<AtomicString> atomicStringInstrumentedOwner("AtomicString");
+        atomicStringInstrumentedOwner.m_value.string().characters(); // Force 16bit shadow creation.
+        impl.addRootObject(atomicStringInstrumentedOwner);
+        EXPECT_EQ(sizeof(StringImpl) + atomicStringInstrumentedOwner.m_value.length() * 2, impl.reportedSizeForAllTypes());
         EXPECT_EQ(2, visitedObjects.size());
     }
+
     {
         VisitedObjects visitedObjects;
         MemoryInstrumentationImpl impl(visitedObjects);
-        AtomicString string("string");
-        impl.addRootObject(&string);
-        EXPECT_EQ(string.impl()->sizeInBytes() + sizeof(AtomicString), impl.reportedSizeForAllTypes());
-        EXPECT_EQ(2, visitedObjects.size());
+        InstrumentedOwner<CString> cStringInstrumentedOwner("CString");
+        impl.addRootObject(cStringInstrumentedOwner);
+        EXPECT_EQ(sizeof(WTF::CStringBuffer) + cStringInstrumentedOwner.m_value.length(), impl.reportedSizeForAllTypes());
+        EXPECT_EQ(1, visitedObjects.size());
     }
 }
 

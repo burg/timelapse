@@ -1232,7 +1232,7 @@ void RenderBlock::layoutRunsAndFloats(LineLayoutState& layoutState, bool hasInli
             // that the block really needed a full layout, we missed our chance to repaint the layer
             // before layout started.  Luckily the layer has cached the repaint rect for its original
             // position and size, and so we can use that to make a repaint happen now.
-            repaintUsingContainer(containerForRepaint(), layer()->repaintRect());
+            repaintUsingContainer(containerForRepaint(), pixelSnappedIntRect(layer()->repaintRect()));
         }
     }
 
@@ -1297,8 +1297,8 @@ void RenderBlock::layoutRunsAndFloatsInRange(LineLayoutState& layoutState, Inlin
 #if ENABLE(CSS_EXCLUSIONS)
     WrapShapeInfo* wrapShapeInfo = this->wrapShapeInfo();
     // Move to the top of the shape inside to begin layout
-    if (wrapShapeInfo && logicalHeight() < wrapShapeInfo->shapeTop())
-        setLogicalHeight(wrapShapeInfo->shapeTop());
+    if (wrapShapeInfo && logicalHeight() < wrapShapeInfo->shapeLogicalTop())
+        setLogicalHeight(wrapShapeInfo->shapeLogicalTop());
 #endif
 
     while (!end.atEnd()) {

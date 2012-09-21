@@ -3861,6 +3861,9 @@ class WebKitStyleTest(CppStyleTestBase):
         #     '#define TEST_ASSERT(expression) do { if (!(expression)) { TestsController::shared().testFailed(__FILE__, __LINE__, #expression); return; } } while (0 )\n',
         #     'Mismatching spaces inside () in if  [whitespace/parens] [5]')
         self.assert_multi_line_lint(
+            'WTF_MAKE_NONCOPYABLE(ClassName); WTF_MAKE_FAST_ALLOCATED;\n',
+            '')
+        self.assert_multi_line_lint(
             'if (condition) {\n'
             '    doSomething();\n'
             '    doSomethingAgain();\n'
@@ -4457,7 +4460,7 @@ class WebKitStyleTest(CppStyleTestBase):
                          'length_' + name_underscore_error_message)
         self.assert_lint('unsigned _length;',
                          '_length' + name_underscore_error_message)
-        self.assert_lint('unsigned int _length;',
+        self.assert_lint('unsigned long _length;',
                          '_length' + name_underscore_error_message)
         self.assert_lint('unsigned long long _length;',
                          '_length' + name_underscore_error_message)
