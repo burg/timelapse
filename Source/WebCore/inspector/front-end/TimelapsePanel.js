@@ -456,6 +456,11 @@ WebInspector.TimelapsePanel.prototype = {
     },
 
     _recordingDidStop: function() {
+	// if nothing was recorded, don't even show the replay view.
+	// the recording view knows to change its message in this situation.
+	if (this._model.allRecords.length == 0)
+	    return;	    
+
 	this._recordingView.detach();
 	this._replayingView.show(this.sidebarElement);
 	
@@ -575,6 +580,9 @@ WebInspector.TimelapseRecordingView.prototype = {
     _onRecordingDidStop: function()
     {
 	this._messagePanel.classList.remove("message-pulse");
+
+	if (this._model.allRecords.length == 0)
+	    this._messagePanel.textContent = "Nothing was recorded. Please try again.";
     },
 
     _onMessagePanelClicked: function(event)

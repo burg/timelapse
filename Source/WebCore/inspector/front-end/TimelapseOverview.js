@@ -791,6 +791,9 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onRecordingDidStop: function()
     {
+	if (this._model.allRecords.length == 0)
+	    return;
+
 	this.sliders.playback.setPosition(1.0, true);
 	this.sliders.playback.enable();
 	this.sliders.playback.show();
