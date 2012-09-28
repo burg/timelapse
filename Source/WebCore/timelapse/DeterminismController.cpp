@@ -674,12 +674,14 @@ void DeterminismController::changeProxyMode(TimelapseProxy::ProxyMode mode)
 
 bool DeterminismController::capturing() const
 {
-    return m_determinismLog && m_determinismLog->isActive() && m_determinismLog->capturing();
+    return m_status == CannotReplay && m_determinismLog &&
+           m_determinismLog->isActive() && m_determinismLog->capturing();
 }
 
 bool DeterminismController::replaying() const
 {
-    return m_determinismLog && m_determinismLog->isActive() && m_determinismLog->replaying();
+    return m_status != CannotReplay && m_status != PlaybackUninitialized &&
+           m_determinismLog && m_determinismLog->isActive() && m_determinismLog->replaying();
 }
         
 }; // namespace WebCore
