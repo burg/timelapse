@@ -448,10 +448,17 @@ WebInspector.TimelapseModel.prototype = {
 
     _recordingDidStop: function()
     {
+	var numRecords = this._records.length;
+
+	if (numRecords == 0) {
+	    this._currentMarkIndex = 0;	    
+	} else {
+	    this._canReplay = true;
+	    this._currentMarkIndex = this._records[numRecords-1].mark.index;
+	}
+
     	this._recording = false;
-	this._canReplay = true;
 	this._changeStatus("Ready");
-	this._currentMarkIndex = this._records[this._records.length-1].mark.index;
 	this._unsuppressBreakpoints();
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.RecordingDidStop);
     },
