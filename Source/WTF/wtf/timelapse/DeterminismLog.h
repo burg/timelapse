@@ -71,13 +71,12 @@ public:
     WTF_EXPORT_PRIVATE ReplayableAction* currentAction(ReplayableAction::ReplayableType);
     WTF_EXPORT_PRIVATE ReplayableAction* currentDispatchableAction();
     
-    //used for temporary deactivation; e.g. when injected scripts are evaluated.
-    WTF_EXPORT_PRIVATE void activate();
-    WTF_EXPORT_PRIVATE void deactivate();
-    
+
     bool capturing() const { return m_isCapturing; }
     bool replaying() const { return m_isReplaying; }
     bool isActive() const { return m_active; }
+    //used for temporary deactivation; e.g. when injected scripts are evaluated.
+    WTF_EXPORT_PRIVATE void setIsActive(bool);
     WTF_EXPORT_PRIVATE size_t memorySize() const;
     WTF_EXPORT_PRIVATE void serialize(ActionSerializer*) const;
 
