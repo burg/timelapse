@@ -48,10 +48,12 @@ RiggedWeakRandom::RiggedWeakRandom()
         
 void RiggedWeakRandom::setSeed()
 {
-    unsigned seed;
-    
     ASSERT(!m_initialized);
-    if (!m_determinismLog)
+
+    unsigned seed;
+
+    // if no determinism, initialize seed normally.
+    if (!m_determinismLog || !m_determinismLog->isActive())
         seed = createSeed();
     else if (m_determinismLog->capturing()) {
         //get a seed, record it.
@@ -71,7 +73,7 @@ void RiggedWeakRandom::setSeed()
     m_low = seed ^ 0x49616E42;
     m_high = seed;
     m_initialized = true;
-    }
+}
     
 void RiggedWeakRandom::configureDeterminism(PassRefPtr<DeterminismLog> prpDeterminismLog)
 {

@@ -76,23 +76,23 @@ const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_inf
 #if ENABLE(TIMELAPSE)   
 static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
 {
-    if (RefPtr<DeterminismLog> log = globalObject->determinismLog()) {
-        double currentTime;
-        
-        if (log->capturing()) {
-            currentTime = jsCurrentTime();
-            log->append(new GetCurrentTime(currentTime));
-        } else {
-            ASSERT(log->replaying());
-            GetCurrentTime* action = static_cast<GetCurrentTime*>(log->currentAction(ReplayableTypes::GetCurrentTime));
-            currentTime = action->currentTime();
-        }
-        return currentTime;
-        
+    RefPtr<DeterminismLog> log = globalObject->determinismLog();
+
+    // if no determinism, get current time normally.
+    if (!log || !log->isActive())
+        return jsCurrentTime();
+
+    double currentTime;
+
+    if (log->capturing()) {
+        currentTime = jsCurrentTime();
+        log->append(new GetCurrentTime(currentTime));
+    } else {
+        ASSERT(log->replaying());
+        GetCurrentTime* action = static_cast<GetCurrentTime*>(log->currentAction(ReplayableTypes::GetCurrentTime));
+        currentTime = action->currentTime();
     }
-    
-    //if no determinism shenenigans are going to happen
-    return jsCurrentTime();
+    return currentTime;
 }
 #endif
     

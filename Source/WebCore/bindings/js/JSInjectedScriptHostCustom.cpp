@@ -298,12 +298,12 @@ JSValue JSInjectedScriptHost::evaluate(ExecState* exec)
 #if ENABLE(TIMELAPSE)
     RefPtr<DeterminismLog> log = globalObject->determinismLog();
     if (log)
-        log->deactivate();
+        log->setIsActive(false);
 #endif
     JSValue result = JSC::call(exec, evalFunction, callType, callData, exec->globalThisValue(), args);
 #if ENABLE(TIMELAPSE)
     if (log)
-        log->activate();
+        log->setIsActive(true);
 #endif
     globalObject->setEvalEnabled(wasEvalEnabled);
 

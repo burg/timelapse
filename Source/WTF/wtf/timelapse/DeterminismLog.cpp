@@ -95,6 +95,7 @@ void DeterminismLog::endCapturing()
 void DeterminismLog::append(ReplayableAction* action)
 {
     ASSERT_ARG(action, action != NULL);
+    ASSERT(m_active);
     ASSERT(m_isCapturing && !m_isReplaying);
 
     ActionEntry newEntry = ActionEntry(action, m_captureCount++);
@@ -168,16 +169,10 @@ ReplayableAction* DeterminismLog::currentDispatchableAction()
     return entry.action;
 }
 
-void DeterminismLog::activate()
+void DeterminismLog::setIsActive(bool state)
 {
-    ASSERT(!m_active);
-    m_active = true;
-}
-
-void DeterminismLog::deactivate()
-{
-    ASSERT(isActive());
-    m_active = false;
+    ASSERT(m_active != state);
+    m_active = state;
 }
 
 size_t DeterminismLog::memorySize() const
