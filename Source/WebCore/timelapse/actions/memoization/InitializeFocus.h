@@ -35,7 +35,9 @@
 #if ENABLE(TIMELAPSE)
 
 #include "DispatchableAction.h"
+#include "DispatchEventBase.h"
 #include "FocusController.h"
+#include "Frame.h"
 #include "Page.h"
 #include "ReplayableTypes.h"
 
@@ -49,7 +51,8 @@ public:
     InitializeFocus(Page* page, unsigned dispatchCount, const PositionMark& mark)
     : DispatchableAction(ReplayableTypes::InitializeFocus, dispatchCount, mark)
     , m_focus(page->focusController()->isFocused())
-    , m_active(page->focusController()->isActive()) {}
+    , m_active(page->focusController()->isActive())
+    , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(page->focusController()->focusedFrame()->document())) {}
 
     virtual ~InitializeFocus() {};
 
@@ -64,6 +67,7 @@ public:
 private:
     bool m_focus;
     bool m_active;
+    int m_frameIndex;
 };
 
 } //namespace WebCore
