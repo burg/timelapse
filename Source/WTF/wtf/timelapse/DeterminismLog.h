@@ -77,7 +77,7 @@ public:
     
     bool capturing() const { return m_isCapturing; }
     bool replaying() const { return m_isReplaying; }
-    bool active() const { return m_isActive; }
+    bool isActive() const { return m_active; }
     WTF_EXPORT_PRIVATE size_t memorySize() const;
     WTF_EXPORT_PRIVATE void serialize(ActionSerializer*) const;
 
@@ -90,7 +90,7 @@ private:
     Vector<ActionEntry> m_dispatchActions;
     bool m_isCapturing;
     bool m_isReplaying;
-    bool m_isActive;
+    bool m_active;
     size_t m_memoizedReplayPosition;
     size_t m_dispatchReplayPosition;
     size_t m_captureCount;
