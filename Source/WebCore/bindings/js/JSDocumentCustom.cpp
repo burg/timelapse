@@ -122,19 +122,19 @@ JSValue JSDocument::cookie(ExecState* exec) const
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
     RefPtr<DeterminismLog> log = globalObject->determinismLog();
 
-    if (log && log->active()) {
-        if (log->capturing()) {
-            cookie = impl()->cookie(ec);
-            log->append(new GetDocumentCookie(cookie, ec));
-        } else if (log->replaying()) {
-            GetDocumentCookie* action = static_cast<GetDocumentCookie*>(log->currentAction(ReplayableTypes::GetDocumentCookie));
-            cookie = action->cookie();
-            ec = action->exceptionCode();
-        }
-    } else {
+    if (!log || !log->isActive()) {
         //if no determinism, obtain the normal way.
         cookie = impl()->cookie(ec);
+    } else if (log->capturing()) {
+        cookie = impl()->cookie(ec);
+        log->append(new GetDocumentCookie(cookie, ec));
+    } else {
+        ASSERT(log->replaying());
+        GetDocumentCookie* action = static_cast<GetDocumentCookie*>(log->currentAction(ReplayableTypes::GetDocumentCookie));
+        cookie = action->cookie();
+        ec = action->exceptionCode();
     }
+
     //convert and send the cookie result to JS-land
     JSC::JSValue result = jsString(exec, cookie);
     setDOMException(exec, ec);
