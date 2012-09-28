@@ -201,8 +201,8 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
     bool eventWasHandled = false;
 #if ENABLE(TIMELAPSE)
     WebCore::DeterminismController* controller = corePage()->determinismController();
-    bool isCapturing = controller && controller->capturing(corePage()->mainFrame()->document());
-    bool isReplaying = controller && controller->replaying(corePage()->mainFrame()->document());
+    bool isCapturing = controller && controller->isCapturingDocument(corePage()->mainFrame()->document());
+    bool isReplaying = controller && controller->isReplayingDocument(corePage()->mainFrame()->document());
     ASSERT(!(isCapturing && isReplaying));
 #endif
 
