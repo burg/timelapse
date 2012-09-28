@@ -125,8 +125,8 @@ void HistoryController::restoreScrollPositionAndViewState()
 #if ENABLE(TIMELAPSE)
     if (m_frame->page() && m_frame->page()->determinismController()) {
         DeterminismController* controller = m_frame->page()->determinismController();
-        if (controller->capturing(m_frame->document()) ||
-            controller->replaying(m_frame->document()))
+        if (controller->isCapturingDocument(m_frame->document()) ||
+            controller->isReplayingDocument(m_frame->document()))
             return;
     }
 #endif

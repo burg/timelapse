@@ -104,9 +104,8 @@ namespace WebCore {
         // There can be several Documents/JSDOMWindows per Page. If the old document is about to unload and
         // the new document has started recording the first resource, then replaying() should be false for
         // the first document and true for the second document.
-        // TODO: revisit this to see if actually true? what about iframes?
-        bool capturing(Document*) const;
-        bool replaying(Document*) const;
+        bool isCapturingDocument(Document*) const;
+        bool isReplayingDocument(Document*) const;
         Page* page() const { return m_page; }
         PassRefPtr<CacheController> cacheController() const;
         PassRefPtr<WTF::DeterminismLog> determinismLog() const;

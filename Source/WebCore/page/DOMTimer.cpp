@@ -84,9 +84,9 @@ DOMTimer::DOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> 
         Document* document = static_cast<Document*>(scriptExecutionContext());
         if (document->page() && document->page()->determinismController()) {
             DeterminismController* controller = document->page()->determinismController();
-            if (controller->capturing(document)) {
+            if (controller->isCapturingDocument(document)) {
                 controller->determinismLog()->append(new TimerCreated(m_timeoutId, document));
-            } else if (controller->replaying(document)) {
+            } else if (controller->isReplayingDocument(document)) {
                 ReplayableAction* loggedAction = controller->determinismLog()->currentAction(ReplayableTypes::TimerCreated);
                 TimerCreated* action = static_cast<TimerCreated*>(loggedAction);
                 m_timeoutId = action->timerId();

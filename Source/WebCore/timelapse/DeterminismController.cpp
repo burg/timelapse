@@ -351,7 +351,8 @@ void DeterminismController::cancelPlayback()
 
 void DeterminismController::willDispatchEvent(const Event& event, DOMWindow* window, Node* node, const PositionMark&)
 {
-    bool shouldIgnore = !window || (!capturing(window->document()) && !replaying(window->document()));
+    bool shouldIgnore = !window || (!isCapturingDocument(window->document()) &&
+                                    !isReplayingDocument(window->document()));
 
     m_domEventDispatchDepth++;
 #if !LOG_DISABLED
@@ -407,7 +408,7 @@ void DeterminismController::frameNavigated(DocumentLoader* loader, const Positio
 
 void DeterminismController::willFireTimer(int timerId, Frame* frame, const PositionMark& mark)
 {
-    if (capturing(frame->document()))
+    if (isCapturingDocument(frame->document()))
         captureAction(new TimerFired(timerId, frame->document(), m_domEventDispatchCount, mark));
 }
 
@@ -422,22 +423,24 @@ PassRefPtr<DeterminismLog> DeterminismController::determinismLog() const
     return m_determinismLog;
 }
     
-bool DeterminismController::capturing(Document* forDocument) const
+bool DeterminismController::isCapturingDocument(Document* document) const
 {
-    if (!capturing() || !forDocument)
+    if (!capturing() || !document)
         return false;
     
-    JSDOMWindow* window = toJSDOMWindow(forDocument->frame(), mainThreadNormalWorld());
-    return window && window->determinismLog() && window->determinismLog()->capturing();
+    JSDOMWindow* window = toJSDOMWindow(document->frame(), mainThreadNormalWorld());
+    return window && window->determinismLog() && 
+           window->determinismLog()->isActive() && window->determinismLog()->capturing();
 }
 
-bool DeterminismController::replaying(Document* forDocument) const
+bool DeterminismController::isReplayingDocument(Document* document) const
 {
-    if (!replaying() || !forDocument)
+    if (!replaying() || !document)
         return false;
     
-    JSDOMWindow* window = toJSDOMWindow(forDocument->frame(), mainThreadNormalWorld());
-    return window && window->determinismLog() && window->determinismLog()->replaying();
+    JSDOMWindow* window = toJSDOMWindow(document->frame(), mainThreadNormalWorld());
+    return window && window->determinismLog() &&
+           window->determinismLog()->isActive() && window->determinismLog()->replaying();
 }
 
 void DeterminismController::capturePageInput(DispatchableAction* action)
