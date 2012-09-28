@@ -46,22 +46,28 @@ void InitializeFocus::dispatch(DeterminismController* controller)
 {
     ASSERT(sealed());
     
+    Document* document = SerializedEventTarget::documentFromFrameIndex(controller->page(), m_frameIndex);
+    PassRefPtr<Frame> framePtr(document->frame());
+    
     // Setting active/focus is idempotent, so set it whether or not it needs to be set.
     controller->page()->userInputProxy()->focusSetActive(m_active, true);
     controller->page()->userInputProxy()->focusSetFocused(m_focus, true);
+    controller->page()->focusController()->setFocusedFrame(framePtr);
     controller->didDispatch(this);
 }
 
 String InitializeFocus::toString() const
 {
     return makeString("InitializeFocus(focus=", (m_focus)?"true":"false",
-                      "; active=", (m_active)?"true":"false", ")");
+                      "; active=", (m_active)?"true":"false",
+                      "; frameIndex=", String::number(m_frameIndex), ")");
 }
 
 void InitializeFocus::serialize(ActionSerializer* serializer) const
 {
     serializer->putBoolean("active", m_active);
     serializer->putBoolean("focused", m_focus);
+    serializer->putInt("frameIndex", m_frameIndex);
 }
  
 } // namespace WebCore
