@@ -6,16 +6,12 @@ title: Frequently Asked Questions
 <div class="span7">
 <h2>Downloading and Installing</h2><br/>
 <h3>Can I demo Timelapse without building from source?</h3>
-<p class="lead">Not yet :-(</p>
+<p class="lead">Yes!</p>
 <p>
-Some work remains before Timelapse can be distributed as an OSX disk
- image. Timelapse requires the use of some out-of-process helper
- scripts and tools. In particular, an HTTP proxy (implemented
- with <a href="http://nodejs.org">node.js</a>) must run alongside the
- browser for recording and replaying. A Timelapse-enabled WebKit
- Nightly.app can be built, but it needs to be packaged with node and
- helper scripts somehow. There hasn't been time to figure that last
- step out yet.
+ But, you need a recent version of OS X and Safari. See
+ the <a href="https://github.com/burg/timelapse">README on the project
+ page</a> for details on downloading and running a Timelapse nightly
+ binary.
 </p>
 <hr />
 
@@ -46,26 +42,29 @@ sidestep nondeterminism in the network scheduler.
 <p>
 All HTTP requests and responses are captured, so the recording's size
 is the sum of all resources requested during the execution, plus the
-size of each nondeterministic input. Most such inputs are fairly small
-(a keyboard event is one integer, while a mouse click is 3 integers,
-and enum, and a bitfield), and they are very compressible. The total
-size of the recording will scale with the number of program inputs,
-such as network requests, user mouse/key input, and timer
-callbacks. We do not yet have empirical data on recording size, such
-as KB/minute for several workloads.
+size of each nondeterministic input. Most such inputs are really small
+and highly compressible. The total size of the recording will scale
+with the number of program inputs, such as network requests, user
+mouse/key input, and timer callbacks.
+</p>
+<p>
+In our preliminary performance evaluation, applications with high
+rates of user input (such as timer-based video games) generate at most
+250KB/minute of input, and this can be compressed to under 50KB for
+storing or transmitting recordings. These numbers do not include
+network traffic/page resources, which can also be compressed.
 </p>
 
 <hr />
 <h3>Will replaying an execution cause network traffic?</h3>
-<p class="lead">On replay, network requests are simulated by a
-  proxy.</p>
+<p class="lead">On replay, network requests are intercepted by an in-browser network simulator.</p>
 <p>
 External servers will not re-receive network requests during replay. A
-network-level record/replay proxy captures all HTTP headers and
+network-level record/replay simulator captures all HTTP headers and
 traffic when recording, and only allows the same requests to occur on
 replay. From the web page's point of view, the external server appears
-to behave the same on recording and replay, though on replay the proxy
-is the real source of the server responses.
+to behave the same on recording and replay, though on replay the
+network traffic actually originates from the recording..
 </p>
 <hr />
 
@@ -87,12 +86,6 @@ is the real source of the server responses.
 <p>
 There are several platform-specific parts of code to implement, in
 order of increasing effort:
-</p>
-<h4>Network proxy configuration</h4>
-<p>
-Timelapse records and replays network traffic using a special HTTP
-proxy. WebKit defaults to using the system proxy settings, so a script
-is needed to configure each platform's system proxy settings.
 </p>
 <h4>Build system</h4>
 <p>

@@ -65,7 +65,7 @@ static void saveLastVersionShown(int lastVersion)
 
 static NSString *getPathForStartPage()
 {
-    return [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"start.html"];
+    return [[[NSBundle mainBundle] resourcePath] stringByAppendingPathComponent:@"start-timelapse.html"];
 }
 
 static int getCurrentVersion()
