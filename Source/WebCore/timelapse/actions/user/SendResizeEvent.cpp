@@ -60,6 +60,12 @@ void SendResizeEvent::dispatch(DeterminismController* controller)
 
     document->domWindow()->resizeTo((float) m_width, (float) m_height);
     controller->page()->userInputProxy()->sendResizeEvent(document->frame(), true);
+    // TODO: flushing this may be unsafe for some reason, if there are other things in the
+    // document event queue that cannot be dispatched correctly without the stack unwinding.
+    // If we encounter random crashes when replaying resize events, then we may need to
+    // find another strategy, such as adding synthetic callback events or routing a callback
+    // somehow.
+    document->eventQueue()->flush();
     controller->didDispatch(this);
 }
 
