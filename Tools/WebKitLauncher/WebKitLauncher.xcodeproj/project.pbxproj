@@ -35,6 +35,7 @@
 		5DB70525097B94CD009875EC /* webkit.icns in Resources */ = {isa = PBXBuildFile; fileRef = 5DB70524097B94CD009875EC /* webkit.icns */; };
 		8D11072D0486CEB800E47090 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; settings = {ATTRIBUTES = (); }; };
 		8D11072F0486CEB800E47090 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
+		C4C569DE161681600071618B /* start-timelapse.html in Resources */ = {isa = PBXBuildFile; fileRef = C4C569DD161681600071618B /* start-timelapse.html */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,6 +82,7 @@
 		5DE79BEB0F1C63CC0067BE08 /* Sparkle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = Sparkle.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8D1107310486CEB800E47090 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8D1107320486CEB800E47090 /* WebKit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WebKit.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C4C569DD161681600071618B /* start-timelapse.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = "start-timelapse.html"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,6 +152,7 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				C4C569DD161681600071618B /* start-timelapse.html */,
 				8D1107310486CEB800E47090 /* Info.plist */,
 				5D18A1FE103FE255006CA7C7 /* nightly.webkit.org.public.pem */,
 				5D4DF981097F89FB0083D5E5 /* start.html */,
@@ -271,6 +274,7 @@
 				5DB70525097B94CD009875EC /* webkit.icns in Resources */,
 				5D650F3A09DB8B410075E9A8 /* WebKitNightlyEnabler.dylib in Resources */,
 				5D18A1FF103FE255006CA7C7 /* nightly.webkit.org.public.pem in Resources */,
+				C4C569DE161681600071618B /* start-timelapse.html in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

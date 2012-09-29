@@ -20,9 +20,22 @@ platforms, and future work.
 
 ## Getting Timelapse
 
-In the near future (pending Issue #6), a Timelapse "nightly" .app will
-be available on the project page. Until then, you must download and
-build from source.
+### Binary Distribution
+
+A binary version of Timelapse is created monthly, based on recent
+Timelapse development and upstream changes to WebKit. You can download
+the latest binary from the <a
+href="https://github.com/burg/timelapse/downloads">project downloads
+page</a>.
+
+## From Source
+
+Simply run the following from a well-connected computer:
+
+    git clone https://github.com/burg/timelapse
+    
+The repository is several gigabytes in size, so it will take a long
+time to clone (sorry!).
 
 ## Prerequisites
 
@@ -32,9 +45,12 @@ actively explored. The stated versions below are what we know will
 work; other versions may work, but are untested.
 
 * OS X 10.7
-* 4 GB of RAM (necessary to link Debug builds without paging)
+
+The following are additionally necessary to build WebKit and Timelapse:
+
+* 4 GB of RAM (necessary to link Debug builds without dynamic paging)
 * XCode 3.1.4+ or 4.3+
-* git 1.7+
+* git 1.7+ 
 
 ## Building, Running, Debugging
 
