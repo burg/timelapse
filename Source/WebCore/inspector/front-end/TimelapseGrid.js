@@ -1054,8 +1054,9 @@ WebInspector.TimelapseGridNode.prototype = {
     _refreshPreviewCell: function()
     {
     	this._previewCell.removeChildren();
-	var preview = WebInspector.TimelapseAgent.RecordPreview[this._record.type](this._record.data);
-	if (this._record.type == "RequestResource" || this._record.type == "ReceiveResponse") {
+	var preview = WebInspector.TimelapsePresentationModel.RecordPreview[this._record.type](this._record.data);
+	var category = WebInspector.timelapsePresentationModel.recordStyles[this._record.type].category;
+	if (category.name == "network") {
 	    var url = preview;
 	    var isExternal = !WebInspector.resourceForURL(url);
 	    var link = WebInspector.linkifyURLAsNode(url,
@@ -1118,8 +1119,8 @@ WebInspector.TimelapseGridNode.TimestampComparator = function(a,b)
 
 WebInspector.TimelapseGridNode.PreviewComparator = function(a,b)
 {
-    var aPreview = WebInspector.TimelapseAgent.RecordPreview[a._record.type](a._record.data);
-    var bPreview = WebInspector.TimelapseAgent.RecordPreview[b._record.type](b._record.data);
+    var aPreview = WebInspector.TimelapsePresentationModel.RecordPreview[a._record.type](a._record.data);
+    var bPreview = WebInspector.TimelapsePresentationModel.RecordPreview[b._record.type](b._record.data);
     if (aPreview > bPreview)
 	return 1;
     if (bPreview > aPreview)

@@ -45,8 +45,8 @@
 #include "PlatformWheelEvent.h"
 #include "ResourceDidFinishLoading.h"
 #include "ResourceDidReceiveData.h"
-#include "ResourceRequest.h"
-#include "ResourceResponse.h"
+#include "ResourceDidReceiveResponse.h"
+#include "ResourceWillSendRequest.h"
 
 namespace WebCore {
 
@@ -115,17 +115,19 @@ PassRefPtr<InspectorObject> TimelapseRecordFactory::createEmptyData()
     return InspectorObject::create();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createRequestResourceData(const ResourceRequest& request)
+PassRefPtr<InspectorObject> TimelapseRecordFactory::createRequestResourceData(ResourceWillSendRequest* action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
-    data->setString("url", request.url().string());
+    data->setNumber("id", action->id());
+    data->setString("url", action->request()->url().string());
     return data.release();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createReceiveResponseData(const ResourceResponse& response)
+PassRefPtr<InspectorObject> TimelapseRecordFactory::createReceiveResponseData(ResourceDidReceiveResponse* action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
-    data->setString("url", response.url().string());
+    data->setNumber("id", action->id());
+    data->setString("url", action->response()->url().string());
     return data.release();
 }
 

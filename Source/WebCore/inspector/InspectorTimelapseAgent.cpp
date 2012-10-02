@@ -237,11 +237,9 @@ void InspectorTimelapseAgent::recordedPageInput(DispatchableAction* action)
     } else if (action->type() == ReplayableTypes::SendResizeEvent) {
         pushRecordToFrontend(TimelapseRecordFactory::createResizeData(static_cast<SendResizeEvent*>(action)), TimelapseRecordType::Resize, newMark);
     } else if (action->type() == ReplayableTypes::ResourceWillSendRequest) {
-        ResourceRequest* request = static_cast<ResourceWillSendRequest*>(action)->request();
-        pushRecordToFrontend(TimelapseRecordFactory::createRequestResourceData(*request), TimelapseRecordType::RequestResource, newMark);
+        pushRecordToFrontend(TimelapseRecordFactory::createRequestResourceData(static_cast<ResourceWillSendRequest*>(action)), TimelapseRecordType::RequestResource, newMark);
     } else if (action->type() == ReplayableTypes::ResourceDidReceiveResponse) {
-        ResourceResponse* response = static_cast<ResourceDidReceiveResponse*>(action)->response();
-        pushRecordToFrontend(TimelapseRecordFactory::createReceiveResponseData(*response), TimelapseRecordType::ReceiveResponse, newMark);
+        pushRecordToFrontend(TimelapseRecordFactory::createReceiveResponseData(static_cast<ResourceDidReceiveResponse*>(action)), TimelapseRecordType::ReceiveResponse, newMark);
     } else if (action->type() == ReplayableTypes::ResourceDidReceiveData) {
         pushRecordToFrontend(TimelapseRecordFactory::createReceiveDataData(static_cast<ResourceDidReceiveData*>(action)), TimelapseRecordType::ReceiveData, newMark);
     } else if (action->type() == ReplayableTypes::ResourceDidFinishLoading) {
