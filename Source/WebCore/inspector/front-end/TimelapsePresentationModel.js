@@ -67,6 +67,70 @@ WebInspector.TimelapsePresentationModel.EventTypes = {
     CircleSelected: "TimelapseCircleSelected"
 };
 
+var makeCoords = function(data) {
+	return "(" + (data.x || 0) + "," + (data.y || 0) + ")";
+    };
+
+var makeModKeys = function(data) {
+	str = "";
+	if (data.shiftKey) str += "<SHIFT> ";
+	if (data.altKey) str += "<ALT> ";
+	if (data.ctrlKey) str += "<CTRL> ";
+	if (data.metaKey) str += "<META> ";
+	return str;
+    };
+
+var makeButton = function(button) {
+	if (button == -1) return ""; // No button
+	if (button == 0) return "Left Button";
+	if (button == 1) return "Middle Button";
+	if (button == 2) return "Right Button";
+	return "";
+    };
+
+WebInspector.TimelapsePresentationModel.RecordPreview = {
+    MousePress: function(data)
+    {
+	return "Coords: " + makeCoords(data) + "; Keys: " + makeModKeys(data) + makeButton(data);
+    },
+    MouseRelease: function (data)
+    {
+	return "Coords: " + makeCoords(data) + "; Keys: " + makeModKeys(data) + makeButton(data);
+    },
+    MouseMove: function (data)
+    {
+	return "Coords: " + makeCoords(data) + "; Keys: " + makeModKeys(data) + makeButton(data);
+    },
+    MouseWheel: function (data)
+    {
+	return "Coords: " + makeCoords(data) + "; Keys: " + makeModKeys(data) + makeButton(data) + "; Scroll: delta of (" + data.deltaX + "," + data.deltaY + "), ticks of (" + data.ticksX + "," + data.ticksY + ")";
+    },
+    KeyPress: function (data)
+    {
+	return "Keys: " + data.text + " and modifiers " + makeModKeys(data);
+    },
+    Scroll: function (data) { return " "; }, // TODO
+    Resize: function (data) {
+	return "Width: " + data.width + "; Height: " + data.height;
+    },
+
+    WindowActive: function (data) { return " "; },
+    WindowInactive: function (data) { return " "; },
+    WindowFocused: function (data) { return " "; },
+    WindowUnfocused: function (data) { return " "; },
+
+    RequestResource: function (data) { return data.url; },
+    ReceiveResponse: function (data) { return data.url; },
+    ReceiveData: function (data) { return WebInspector.timelapsePresentationModel._resourceUrlById[data.id]; },
+    ResourceLoaded: function (data) { return WebInspector.timelapsePresentationModel._resourceUrlById[data.id]; },
+
+    TimerFire: function (data) { return "Fired"; },
+
+    FrameNavigated: function(data) { return data.url; },
+    CaptureBegin: function (data) { return " "; },
+    CaptureEnd: function (data) { return " "; }
+};
+
 WebInspector.TimelapsePresentationModel.prototype = {
 
     get replayingToAnchor()
@@ -116,6 +180,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this._matchedRecordsAreStale = false;
 	this._breakpointRecordsAreStale = true;
 	this._replayingToAnchor = false;
+	this._resourceUrlById = [];
 	this.anchorManager.reset();
 	this.calculator.reset();
     },
@@ -141,6 +206,13 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    console.log("record=");
 	    console.log(record);
 	    return;
+	}
+
+	// ReceiveData and ResourceLoaded records do not include URL data, so store it from request/response records.
+	var recordTypes = WebInspector.TimelapseAgent.RecordType;
+	if (record.type == recordTypes.RequestResource
+	    || record.type == recordTypes.ReceiveResponse) {
+	    this._resourceUrlById[record.data.id] = record.data.url;
 	}
 
 	this._matchedRecords.push(record);

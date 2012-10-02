@@ -45,8 +45,8 @@ class PlatformKeyboardEvent;
 class PlatformWheelEvent;
 class ResourceDidFinishLoading;
 class ResourceDidReceiveData;
-class ResourceRequest;
-class ResourceResponse;
+class ResourceDidReceiveResponse;
+class ResourceWillSendRequest;
 class ScrollPage;
 class SendResizeEvent;
 
@@ -60,8 +60,8 @@ public:
 
     static PassRefPtr<InspectorObject> createEmptyData();
 
-    static PassRefPtr<InspectorObject> createRequestResourceData(const ResourceRequest&);
-    static PassRefPtr<InspectorObject> createReceiveResponseData(const ResourceResponse&);
+    static PassRefPtr<InspectorObject> createRequestResourceData(ResourceWillSendRequest*);
+    static PassRefPtr<InspectorObject> createReceiveResponseData(ResourceDidReceiveResponse*);
     static PassRefPtr<InspectorObject> createReceiveDataData(ResourceDidReceiveData*);
     static PassRefPtr<InspectorObject> createResourceLoadedData(ResourceDidFinishLoading*);
 
