@@ -1167,18 +1167,11 @@ JSCell* DFG_OPERATION operationCreateInlinedArguments(
     return result;
 }
 
-void DFG_OPERATION operationTearOffActivation(ExecState* exec, JSCell* activationCell)
-{
-    JSGlobalData& globalData = exec->globalData();
-    NativeCallFrameTracer tracer(&globalData, exec);
-    jsCast<JSActivation*>(activationCell)->tearOff(exec->globalData());
-}
-
 void DFG_OPERATION operationTearOffArguments(ExecState* exec, JSCell* argumentsCell, JSCell* activationCell)
 {
     ASSERT(exec->codeBlock()->usesArguments());
     if (activationCell) {
-        jsCast<Arguments*>(argumentsCell)->didTearOffActivation(exec->globalData(), jsCast<JSActivation*>(activationCell));
+        jsCast<Arguments*>(argumentsCell)->didTearOffActivation(exec, jsCast<JSActivation*>(activationCell));
         return;
     }
     jsCast<Arguments*>(argumentsCell)->tearOff(exec);
@@ -1193,9 +1186,11 @@ void DFG_OPERATION operationTearOffInlinedArguments(
 
 EncodedJSValue DFG_OPERATION operationGetArgumentsLength(ExecState* exec, int32_t argumentsRegister)
 {
+    JSGlobalData& globalData = exec->globalData();
+    NativeCallFrameTracer tracer(&globalData, exec);
     // Here we can assume that the argumernts were created. Because otherwise the JIT code would
     // have not made this call.
-    Identifier ident(&exec->globalData(), "length");
+    Identifier ident(&globalData, "length");
     JSValue baseValue = exec->uncheckedR(argumentsRegister).jsValue();
     PropertySlot slot(baseValue);
     return JSValue::encode(baseValue.get(exec, ident, slot));
@@ -1203,6 +1198,9 @@ EncodedJSValue DFG_OPERATION operationGetArgumentsLength(ExecState* exec, int32_
 
 EncodedJSValue DFG_OPERATION operationGetArgumentByVal(ExecState* exec, int32_t argumentsRegister, int32_t index)
 {
+    JSGlobalData& globalData = exec->globalData();
+    NativeCallFrameTracer tracer(&globalData, exec);
+
     JSValue argumentsValue = exec->uncheckedR(argumentsRegister).jsValue();
     
     // If there are no arguments, and we're accessing out of bounds, then we have to create the
@@ -1216,6 +1214,9 @@ EncodedJSValue DFG_OPERATION operationGetArgumentByVal(ExecState* exec, int32_t 
 EncodedJSValue DFG_OPERATION operationGetInlinedArgumentByVal(
     ExecState* exec, int32_t argumentsRegister, InlineCallFrame* inlineCallFrame, int32_t index)
 {
+    JSGlobalData& globalData = exec->globalData();
+    NativeCallFrameTracer tracer(&globalData, exec);
+
     JSValue argumentsValue = exec->uncheckedR(argumentsRegister).jsValue();
     
     // If there are no arguments, and we're accessing out of bounds, then we have to create the
@@ -1239,6 +1240,10 @@ JSCell* DFG_OPERATION operationNewFunction(ExecState* exec, JSCell* functionExec
 JSCell* DFG_OPERATION operationNewFunctionExpression(ExecState* exec, JSCell* functionExecutableAsCell)
 {
     ASSERT(functionExecutableAsCell->inherits(&FunctionExecutable::s_info));
+
+    JSGlobalData& globalData = exec->globalData();
+    NativeCallFrameTracer tracer(&globalData, exec);
+
     FunctionExecutable* functionExecutable =
         static_cast<FunctionExecutable*>(functionExecutableAsCell);
     return JSFunction::create(exec, functionExecutable, exec->scope());
@@ -1257,6 +1262,8 @@ size_t DFG_OPERATION operationIsFunction(EncodedJSValue value)
 void DFG_OPERATION operationReallocateStorageAndFinishPut(ExecState* exec, JSObject* base, Structure* structure, PropertyOffset offset, EncodedJSValue value)
 {
     JSGlobalData& globalData = exec->globalData();
+    NativeCallFrameTracer tracer(&globalData, exec);
+
     ASSERT(structure->outOfLineCapacity() > base->structure()->outOfLineCapacity());
     ASSERT(!globalData.heap.storageAllocator().fastPathShouldSucceed(structure->outOfLineCapacity() * sizeof(JSValue)));
     base->setStructureAndReallocateStorageIfNecessary(globalData, structure);
@@ -1265,29 +1272,49 @@ void DFG_OPERATION operationReallocateStorageAndFinishPut(ExecState* exec, JSObj
 
 char* DFG_OPERATION operationAllocatePropertyStorageWithInitialCapacity(ExecState* exec)
 {
+    JSGlobalData& globalData = exec->globalData();
+    NativeCallFrameTracer tracer(&globalData, exec);
+
     return reinterpret_cast<char*>(
-        Butterfly::createUninitialized(exec->globalData(), 0, initialOutOfLineCapacity, false, 0));
+        Butterfly::createUninitialized(globalData, 0, initialOutOfLineCapacity, false, 0));
 }
 
 char* DFG_OPERATION operationAllocatePropertyStorage(ExecState* exec, size_t newSize)
 {
+    JSGlobalData& globalData = exec->globalData();
+    NativeCallFrameTracer tracer(&globalData, exec);
+
     return reinterpret_cast<char*>(
-        Butterfly::createUninitialized(exec->globalData(), 0, newSize, false, 0));
+        Butterfly::createUninitialized(globalData, 0, newSize, false, 0));
 }
 
 char* DFG_OPERATION operationReallocateButterflyToHavePropertyStorageWithInitialCapacity(ExecState* exec, JSObject* object)
 {
+    JSGlobalData& globalData = exec->globalData();
+    NativeCallFrameTracer tracer(&globalData, exec);
+
     ASSERT(!object->structure()->outOfLineCapacity());
-    Butterfly* result = object->growOutOfLineStorage(exec->globalData(), 0, initialOutOfLineCapacity);
+    Butterfly* result = object->growOutOfLineStorage(globalData, 0, initialOutOfLineCapacity);
     object->setButterflyWithoutChangingStructure(result);
     return reinterpret_cast<char*>(result);
 }
 
 char* DFG_OPERATION operationReallocateButterflyToGrowPropertyStorage(ExecState* exec, JSObject* object, size_t newSize)
 {
-    Butterfly* result = object->growOutOfLineStorage(exec->globalData(), object->structure()->outOfLineCapacity(), newSize);
+    JSGlobalData& globalData = exec->globalData();
+    NativeCallFrameTracer tracer(&globalData, exec);
+
+    Butterfly* result = object->growOutOfLineStorage(globalData, object->structure()->outOfLineCapacity(), newSize);
     object->setButterflyWithoutChangingStructure(result);
     return reinterpret_cast<char*>(result);
+}
+
+char* DFG_OPERATION operationEnsureArrayStorage(ExecState* exec, JSObject* object)
+{
+    JSGlobalData& globalData = exec->globalData();
+    NativeCallFrameTracer tracer(&globalData, exec);
+
+    return reinterpret_cast<char*>(object->ensureArrayStorage(globalData));
 }
 
 double DFG_OPERATION operationFModOnInts(int32_t a, int32_t b)

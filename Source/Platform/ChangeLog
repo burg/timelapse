@@ -1,3 +1,236 @@
+2012-09-26  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r129654.
+        http://trac.webkit.org/changeset/129654
+        https://bugs.webkit.org/show_bug.cgi?id=97702
+
+        breaks chromium windows build (Requested by schenney on
+        #webkit).
+
+        * chromium/public/WebRTCPeerConnectionHandler.h:
+        (WebKit):
+        (WebRTCPeerConnectionHandler):
+        * chromium/public/WebRTCStatsRequest.h: Removed.
+
+2012-09-26  Harald Tveit Alvestrand  <harald@alvestrand.no>
+
+        Implement the GetStats interface on PeerConnection
+        https://bugs.webkit.org/show_bug.cgi?id=95193
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/WebRTCPeerConnectionHandler.h:
+        (WebKit):
+        (WebRTCPeerConnectionHandler):
+        (WebKit::WebRTCPeerConnectionHandler::getStats):
+        * chromium/public/WebRTCStatsRequest.h: added.
+        (WebCore):
+        (WebKit):
+        (WebRTCStatsRequest):
+        (WebKit::WebRTCStatsRequest::WebRTCStatsRequest):
+        (WebKit::WebRTCStatsRequest::~WebRTCStatsRequest):
+        (WebKit::WebRTCStatsRequest::operator=):
+
+2012-09-25  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r129517.
+        http://trac.webkit.org/changeset/129517
+        https://bugs.webkit.org/show_bug.cgi?id=97582
+
+        Link errors in chromium (Requested by alecf on #webkit).
+
+        * chromium/public/WebMediaConstraints.h:
+        (WebMediaConstraints):
+
+2012-09-25  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Update getUserMedia to match the latest specification
+        https://bugs.webkit.org/show_bug.cgi?id=97540
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/WebMediaConstraints.h:
+        (WebMediaConstraints):
+
+2012-09-24  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Add setters to WebFilterOperation for IPC pickling
+        https://bugs.webkit.org/show_bug.cgi?id=97147
+
+        Reviewed by James Robinson.
+
+        These methods allow us to restore a WebFilterOperation from a blob
+        of opaque data. The pickling code needs to be able to create an
+        empty object and then fill in the pieces, so these setters allow it
+        to do so.
+
+        Test: WebFilterOperationsTest.saveAndRestore
+
+        * chromium/public/WebFilterOperation.h:
+        (WebKit::WebFilterOperation::amount):
+        (WebKit::WebFilterOperation::dropShadowOffset):
+        (WebKit::WebFilterOperation::matrix):
+        (WebKit::WebFilterOperation::zoomRect):
+        (WebFilterOperation):
+        (WebKit::WebFilterOperation::createEmptyFilter):
+        (WebKit::WebFilterOperation::setType):
+        (WebKit::WebFilterOperation::setAmount):
+        (WebKit::WebFilterOperation::setDropShadowOffset):
+        (WebKit::WebFilterOperation::setDropShadowColor):
+        (WebKit::WebFilterOperation::setMatrix):
+        (WebKit::WebFilterOperation::setZoomRect):
+        * chromium/src/WebFilterOperation.cpp:
+
+2012-09-24  Yury Semikhatsky  <yurys@chromium.org>
+
+        Unreviewed, rolling out r122243.
+        http://trac.webkit.org/changeset/129243
+        https://bugs.webkit.org/show_bug.cgi?id=97441
+
+        WebFilterOperationsTest.saveAndRestore added in the change is failing.
+
+        * chromium/public/WebFilterOperation.h:
+        (WebKit::WebFilterOperation::amount):
+        (WebKit::WebFilterOperation::dropShadowOffset):
+        (WebKit::WebFilterOperation::matrix):
+        (WebKit::WebFilterOperation::zoomRect):
+        (WebFilterOperation):
+
+2012-09-21  Alexandre Elias  <aelias@chromium.org>
+
+        [chromium] Forward-declare WebSize as a struct
+        https://bugs.webkit.org/show_bug.cgi?id=97381
+
+        Reviewed by James Robinson.
+
+        The mismatched "class" forward-declaration for WebSize in this file
+        will cause a Clang error when it's included in Chromium.
+
+        * chromium/public/WebCompositorSoftwareOutputDevice.h:
+        (WebKit):
+
+2012-09-21  Brandon Jones  <bajones@google.com>
+
+        Add support for OES_vertex_array_object in chromium
+        https://bugs.webkit.org/show_bug.cgi?id=96578
+
+        Reviewed by Kenneth Russell.
+
+        Added code to allow calls to the OES_vertex_array_object extension to interface
+        properly with the chromium WebGL implementation. 
+
+        * chromium/public/WebGraphicsContext3D.h:
+        (WebGraphicsContext3D):
+        (WebKit::WebGraphicsContext3D::createVertexArrayOES):
+        (WebKit::WebGraphicsContext3D::deleteVertexArrayOES):
+        (WebKit::WebGraphicsContext3D::isVertexArrayOES):
+        (WebKit::WebGraphicsContext3D::bindVertexArrayOES):
+
+2012-09-21  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Add setters to WebFilterOperation for IPC pickling
+        https://bugs.webkit.org/show_bug.cgi?id=97147
+
+        Reviewed by James Robinson.
+
+        These methods allow us to restore a WebFilterOperation from a blob
+        of opaque data. The pickling code needs to be able to create an
+        empty object and then fill in the pieces, so these setters allow it
+        to do so.
+
+        Test: WebFilterOperationsTest.saveAndRestore
+
+        * chromium/public/WebFilterOperation.h:
+        (WebKit::WebFilterOperation::amount):
+        (WebKit::WebFilterOperation::dropShadowOffset):
+        (WebKit::WebFilterOperation::matrix):
+        (WebKit::WebFilterOperation::zoomRect):
+        (WebFilterOperation):
+        (WebKit::WebFilterOperation::createEmptyFilter):
+        (WebKit::WebFilterOperation::setType):
+        (WebKit::WebFilterOperation::setAmount):
+        (WebKit::WebFilterOperation::setDropShadowOffset):
+        (WebKit::WebFilterOperation::setDropShadowColor):
+        (WebKit::WebFilterOperation::setMatrix):
+        (WebKit::WebFilterOperation::setZoomRect):
+        * chromium/src/WebFilterOperation.cpp:
+
+2012-09-20  Keishi Hattori  <keishi@webkit.org>
+
+        [Chromium ] Add new localized string, OtherDateLabel, to be used in input type=date datalist UI
+        https://bugs.webkit.org/show_bug.cgi?id=97200
+
+        Reviewed by Kent Tamura.
+
+        Adding new localized string to be used in the SuggestionPicker for input type=date.
+
+        * chromium/public/WebLocalizedString.h:
+
+2012-09-18  Sailesh Agrawal  <sail@chromium.org>
+
+        Chromium: Scrollbar with tickmarks doesn't respond to clicks
+        https://bugs.webkit.org/show_bug.cgi?id=96049
+
+        Reviewed by Beth Dakin.
+
+        Added isAlphaLocked and setIsAlphaLocked.
+
+        * chromium/public/WebScrollbar.h:
+        (WebScrollbar):
+
+2012-09-17  Brian Anderson  <brianderson@chromium.org>
+
+        [chromium] Add rendering commit statistics
+        https://bugs.webkit.org/show_bug.cgi?id=96938
+
+        Reviewed by James Robinson.
+
+        Adds total commit time and total commit count to WebRenderingStats.
+        Allows us to caculate average commit time in performance tests.
+
+        * chromium/public/WebRenderingStats.h:
+        (WebRenderingStats):
+        (WebKit::WebRenderingStats::WebRenderingStats):
+        (WebKit::WebRenderingStats::enumerateFields):
+
+2012-09-17  Antoine Labour  <piman@chromium.org>
+
+        [chromium] Add onSendFrameToParentCompositorAck to WebCompositorOutputSurfaceClient
+        https://bugs.webkit.org/show_bug.cgi?id=96850
+
+        Reviewed by James Robinson.
+
+        Hook for the WebCompositorOutputSurface::sendFrameToParent ack.
+        Also changes WebCompositorFrame from a class to a struct.
+
+        * chromium/public/WebCompositorOutputSurface.h:
+        (WebKit):
+        * chromium/public/WebCompositorOutputSurfaceClient.h:
+        (WebKit):
+        (WebCompositorOutputSurfaceClient):
+
+2012-09-17  Alexandre Elias  <aelias@chromium.org>
+
+        [chromium] WebCompositorOutputSurface software API
+        https://bugs.webkit.org/show_bug.cgi?id=96851
+
+        Reviewed by James Robinson.
+
+        This adds a software-based output option to
+        WebCompositorOutputSurface, for use with the new software compositor.
+        If returns a "tear-off" which provides a WebImage object that can be
+        written to or read.
+
+        * Platform.gypi:
+        * chromium/public/WebCompositorOutputSurface.h:
+        (WebKit):
+        (WebCompositorOutputSurface):
+        (WebKit::WebCompositorOutputSurface::surfaceSoftware):
+        * chromium/public/WebCompositorOutputSurfaceSoftware.h: Added.
+        (WebKit):
+        (WebCompositorOutputSurfaceSoftware):
+        (WebKit::WebCompositorOutputSurfaceSoftware::~WebCompositorOutputSurfaceSoftware):
+
 2012-09-14  Dana Jansens  <danakj@chromium.org>
 
         [chromium] Add the ubercomp WebDelegatedRendererLayer

@@ -372,7 +372,7 @@ bool AccessibilityNodeObject::isWebArea() const
 
 bool AccessibilityNodeObject::isImageButton() const
 {
-    return isNativeImage() && roleValue() == ButtonRole;
+    return isNativeImage() && isButton();
 }
 
 bool AccessibilityNodeObject::isAnchor() const
@@ -565,7 +565,7 @@ bool AccessibilityNodeObject::isIndeterminate() const
 
 bool AccessibilityNodeObject::isPressed() const
 {
-    if (roleValue() != ButtonRole)
+    if (!isButton())
         return false;
 
     Node* node = this->node();
@@ -634,8 +634,11 @@ bool AccessibilityNodeObject::isReadOnly() const
     if (node->hasTagName(textareaTag))
         return static_cast<HTMLTextAreaElement*>(node)->readOnly();
 
-    if (node->hasTagName(inputTag))
-        return static_cast<HTMLInputElement*>(node)->readOnly();
+    if (node->hasTagName(inputTag)) {
+        HTMLInputElement* input = static_cast<HTMLInputElement*>(node);
+        if (input->isTextField())
+            return input->readOnly();
+    }
 
     return !node->rendererIsEditable();
 }
@@ -875,6 +878,7 @@ Element* AccessibilityNodeObject::actionElement() const
     switch (roleValue()) {
     case ButtonRole:
     case PopUpButtonRole:
+    case ToggleButtonRole:
     case TabRole:
     case MenuItemRole:
     case ListItemRole:
@@ -1212,6 +1216,7 @@ String AccessibilityNodeObject::title() const
     switch (roleValue()) {
     case PopUpButtonRole:
     case ButtonRole:
+    case ToggleButtonRole:
     case CheckBoxRole:
     case ListBoxOptionRole:
     case MenuButtonRole:

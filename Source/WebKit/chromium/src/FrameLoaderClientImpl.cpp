@@ -142,6 +142,12 @@ void FrameLoaderClientImpl::documentElementAvailable()
         m_webFrame->client()->didCreateDocumentElement(m_webFrame);
 }
 
+void FrameLoaderClientImpl::didExhaustMemoryAvailableForScript()
+{
+    if (m_webFrame->client())
+        m_webFrame->client()->didExhaustMemoryAvailableForScript(m_webFrame);
+}
+
 #if USE(V8)
 void FrameLoaderClientImpl::didCreateScriptContext(v8::Handle<v8::Context> context, int extensionGroup, int worldId)
 {
@@ -861,15 +867,14 @@ void FrameLoaderClientImpl::dispatchDidFinishLoad()
     // provisional load succeeds or fails, not the "real" one.
 }
 
-void FrameLoaderClientImpl::dispatchDidFirstLayout()
+void FrameLoaderClientImpl::dispatchDidLayout(LayoutMilestones milestones)
 {
-    if (m_webFrame->client())
-        m_webFrame->client()->didFirstLayout(m_webFrame);
-}
+    if (!m_webFrame->client())
+        return;
 
-void FrameLoaderClientImpl::dispatchDidFirstVisuallyNonEmptyLayout()
-{
-    if (m_webFrame->client())
+    if (milestones & DidFirstLayout)
+        m_webFrame->client()->didFirstLayout(m_webFrame);
+    if (milestones & DidFirstVisuallyNonEmptyLayout)
         m_webFrame->client()->didFirstVisuallyNonEmptyLayout(m_webFrame);
 }
 

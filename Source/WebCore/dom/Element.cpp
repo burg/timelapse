@@ -843,13 +843,10 @@ void Element::parserSetAttributes(const Vector<Attribute>& attributeVector, Frag
     }
 
     // When the document is in parsing state, we cache immutable ElementAttributeData objects with the
-    // input attribute vector as key. (This cache is held by Document.)
+    // input attribute vector (and the tag name) as key. (This cache is held by Document.)
     if (!document() || !document()->parsing())
         m_attributeData = ElementAttributeData::createImmutable(filteredAttributes);
-    else if (!isHTMLElement()) {
-        // FIXME: Support attribute data sharing for non-HTML elements.
-        m_attributeData = ElementAttributeData::createImmutable(filteredAttributes);
-    } else
+    else
         m_attributeData = document()->cachedImmutableAttributeData(this, filteredAttributes);
 
     // Iterate over the set of attributes we already have on the stack in case
@@ -1002,7 +999,7 @@ void Element::removedFrom(ContainerNode* insertionPoint)
 void Element::attach()
 {
     suspendPostAttachCallbacks();
-    RenderWidget::suspendWidgetHierarchyUpdates();
+    WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
 
     createRendererIfNeeded();
     StyleResolverParentPusher parentPusher(this);
@@ -1031,7 +1028,6 @@ void Element::attach()
         }
     }
 
-    RenderWidget::resumeWidgetHierarchyUpdates();
     resumePostAttachCallbacks();
 }
 
@@ -1045,7 +1041,7 @@ void Element::unregisterNamedFlowContentNode()
 
 void Element::detach()
 {
-    RenderWidget::suspendWidgetHierarchyUpdates();
+    WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
     unregisterNamedFlowContentNode();
     cancelFocusAppearanceUpdate();
     if (hasRareData()) {
@@ -1058,8 +1054,6 @@ void Element::detach()
         shadow->detach();
     }
     ContainerNode::detach();
-
-    RenderWidget::resumeWidgetHierarchyUpdates();
 }
 
 bool Element::pseudoStyleCacheIsInvalid(const RenderStyle* currentStyle, RenderStyle* newStyle)
@@ -1179,7 +1173,7 @@ void Element::recalcStyle(StyleChange change)
 
         // If "rem" units are used anywhere in the document, and if the document element's font size changes, then go ahead and force font updating
         // all the way down the tree. This is simpler than having to maintain a cache of objects (and such font size changes should be rare anyway).
-        if (document()->usesRemUnits() && document()->documentElement() == this && ch != NoChange && currentStyle && newStyle && currentStyle->fontSize() != newStyle->fontSize()) {
+        if (document()->styleSheetCollection()->usesRemUnits() && document()->documentElement() == this && ch != NoChange && currentStyle && newStyle && currentStyle->fontSize() != newStyle->fontSize()) {
             // Cached RenderStyles may depend on the rem units.
             document()->styleResolver()->invalidateMatchedPropertiesCache();
             change = Force;
@@ -2033,6 +2027,8 @@ RenderRegion* Element::renderRegion() const
     return 0;
 }
 
+#if ENABLE(CSS_REGIONS)
+
 const AtomicString& Element::webkitRegionOverset() const
 {
     document()->updateLayoutIgnorePendingStylesheets();
@@ -2061,8 +2057,6 @@ const AtomicString& Element::webkitRegionOverset() const
     ASSERT_NOT_REACHED();
     return undefinedState;
 }
-
-#if ENABLE(CSS_REGIONS)
 
 Vector<RefPtr<Range> > Element::webkitGetRegionFlowRanges() const
 {

@@ -45,6 +45,7 @@
 #include "WorkerThread.h"
 #include <stdio.h>
 #include <wtf/CurrentTime.h>
+#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/TemporaryChange.h>
 #include <wtf/text/CString.h>
 
@@ -721,10 +722,10 @@ void MemoryCache::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addHashMap(m_resources);
     CachedResourceMap::const_iterator e = m_resources.end();
     for (CachedResourceMap::const_iterator i = m_resources.begin(); i != e; ++i) {
-        info.addInstrumentedMember(i->first);
-        info.addInstrumentedMember(i->second);
+        info.addMember(i->first);
+        info.addMember(i->second);
     }
-    info.addVector(m_allResources);
+    info.addMember(m_allResources);
     info.addMember(m_liveDecodedResources);
 }
 

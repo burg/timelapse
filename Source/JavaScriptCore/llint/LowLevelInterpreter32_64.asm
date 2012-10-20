@@ -833,28 +833,21 @@ _llint_op_bitor:
 
 _llint_op_check_has_instance:
     traceExecution()
-    loadi 4[PC], t1
+    loadi 12[PC], t1
     loadConstantOrVariablePayload(t1, CellTag, t0, .opCheckHasInstanceSlow)
     loadp JSCell::m_structure[t0], t0
-    btbz Structure::m_typeInfo + TypeInfo::m_flags[t0], ImplementsHasInstance, .opCheckHasInstanceSlow
-    dispatch(2)
+    btbz Structure::m_typeInfo + TypeInfo::m_flags[t0], ImplementsDefaultHasInstance, .opCheckHasInstanceSlow
+    dispatch(5)
 
 .opCheckHasInstanceSlow:
     callSlowPath(_llint_slow_path_check_has_instance)
-    dispatch(2)
+    dispatch(0)
 
 
 _llint_op_instanceof:
     traceExecution()
-    # Check that baseVal implements the default HasInstance behavior.
-    # FIXME: This should be deprecated.
-    loadi 12[PC], t1
-    loadConstantOrVariablePayloadUnchecked(t1, t0)
-    loadp JSCell::m_structure[t0], t0
-    btbz Structure::m_typeInfo + TypeInfo::m_flags[t0], ImplementsDefaultHasInstance, .opInstanceofSlow
-    
     # Actually do the work.
-    loadi 16[PC], t0
+    loadi 12[PC], t0
     loadi 4[PC], t3
     loadConstantOrVariablePayload(t0, CellTag, t1, .opInstanceofSlow)
     loadp JSCell::m_structure[t1], t2
@@ -874,11 +867,11 @@ _llint_op_instanceof:
 .opInstanceofDone:
     storei BooleanTag, TagOffset[cfr, t3, 8]
     storei t0, PayloadOffset[cfr, t3, 8]
-    dispatch(5)
+    dispatch(4)
 
 .opInstanceofSlow:
     callSlowPath(_llint_slow_path_instanceof)
-    dispatch(5)
+    dispatch(4)
 
 
 _llint_op_is_undefined:
@@ -1176,12 +1169,9 @@ _llint_op_get_array_length:
     loadp 16[PC], t1
     loadConstantOrVariablePayload(t0, CellTag, t3, .opGetArrayLengthSlow)
     loadp JSCell::m_structure[t3], t2
-    if VALUE_PROFILER
-        storep t2, ArrayProfile::m_lastSeenStructure[t1]
-    end
-    loadb Structure::m_indexingType[t2], t1
-    btiz t1, IsArray, .opGetArrayLengthSlow
-    btiz t1, HasArrayStorage, .opGetArrayLengthSlow
+    arrayProfile(t2, t1, t0)
+    btiz t2, IsArray, .opGetArrayLengthSlow
+    btiz t2, HasArrayStorage, .opGetArrayLengthSlow
     loadi 4[PC], t1
     loadp 32[PC], t2
     loadp JSObject::m_butterfly[t3], t0
@@ -1308,17 +1298,15 @@ _llint_op_put_by_id_transition_normal_out_of_line:
 _llint_op_get_by_val:
     traceExecution()
     loadi 8[PC], t2
-    loadi 12[PC], t3
     loadConstantOrVariablePayload(t2, CellTag, t0, .opGetByValSlow)
+    loadp JSCell::m_structure[t0], t2
+    loadp 16[PC], t3
+    arrayProfile(t2, t3, t1)
+    btiz t2, HasArrayStorage, .opGetByValSlow
+    loadi 12[PC], t3
     loadConstantOrVariablePayload(t3, Int32Tag, t1, .opGetByValSlow)
-    loadp JSCell::m_structure[t0], t3
-    loadp 16[PC], t2
-    if VALUE_PROFILER
-        storep t3, ArrayProfile::m_lastSeenStructure[t2]
-    end
-    btpz Structure::m_indexingType[t3], HasArrayStorage, .opGetByValSlow
     loadp JSObject::m_butterfly[t0], t3
-    biaeq t1, -sizeof IndexingHeader + IndexingHeader::m_vectorLength[t0], .opGetByValSlow
+    biaeq t1, -sizeof IndexingHeader + IndexingHeader::m_vectorLength[t3], .opGetByValSlow
     loadi 4[PC], t0
     loadi ArrayStorage::m_vector + TagOffset[t3, t1, 8], t2
     loadi ArrayStorage::m_vector + PayloadOffset[t3, t1, 8], t1
@@ -1392,14 +1380,12 @@ _llint_op_put_by_val:
     traceExecution()
     loadi 4[PC], t0
     loadConstantOrVariablePayload(t0, CellTag, t1, .opPutByValSlow)
+    loadp JSCell::m_structure[t1], t2
+    loadp 16[PC], t3
+    arrayProfile(t2, t3, t0)
+    btiz t2, HasArrayStorage, .opPutByValSlow
     loadi 8[PC], t0
     loadConstantOrVariablePayload(t0, Int32Tag, t2, .opPutByValSlow)
-    loadp JSCell::m_structure[t1], t3
-    loadp 16[PC], t0
-    if VALUE_PROFILER
-        storep t3, ArrayProfile::m_lastSeenStructure[t0]
-    end
-    btpz Structure::m_indexingType[t3], HasArrayStorage, .opPutByValSlow
     loadp JSObject::m_butterfly[t1], t0
     biaeq t2, -sizeof IndexingHeader + IndexingHeader::m_vectorLength[t0], .opPutByValSlow
     bieq ArrayStorage::m_vector + TagOffset[t0, t2, 8], EmptyValueTag, .opPutByValEmpty
@@ -1412,6 +1398,9 @@ _llint_op_put_by_val:
     dispatch(5)
 
 .opPutByValEmpty:
+    if VALUE_PROFILER
+        storeb 1, ArrayProfile::m_mayStoreToHole[t3]
+    end
     addi 1, ArrayStorage::m_numValuesInVector[t0]
     bib t2, -sizeof IndexingHeader + IndexingHeader::m_publicLength[t0], .opPutByValStoreResult
     addi 1, t2, t1

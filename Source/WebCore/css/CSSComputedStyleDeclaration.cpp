@@ -377,6 +377,7 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyMarkerEnd,
     CSSPropertyMarkerMid,
     CSSPropertyMarkerStart,
+    CSSPropertyMaskType,
     CSSPropertyShapeRendering,
     CSSPropertyStroke,
     CSSPropertyStrokeDasharray,
@@ -2417,9 +2418,11 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyCounterReset:
             return counterToCSSValue(style.get(), propertyID);
         case CSSPropertyWebkitClipPath:
-            if (!style->clipPath())
-                return cssValuePool().createIdentifierValue(CSSValueNone);
-            return valueForBasicShape(style->clipPath());
+            if (ClipPathOperation* operation = style->clipPath()) {
+                if (operation->getOperationType() == ClipPathOperation::SHAPE)
+                    return valueForBasicShape(static_cast<ShapeClipPathOperation*>(operation)->basicShape());
+            }
+            return cssValuePool().createIdentifierValue(CSSValueNone);
 #if ENABLE(CSS_REGIONS)
         case CSSPropertyWebkitFlowInto:
             if (style->flowThread().isNull())
@@ -2611,6 +2614,7 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyMarkerEnd:
         case CSSPropertyMarkerMid:
         case CSSPropertyMarkerStart:
+        case CSSPropertyMaskType:
         case CSSPropertyShapeRendering:
         case CSSPropertyStroke:
         case CSSPropertyStrokeDasharray:
@@ -2747,7 +2751,7 @@ PassRefPtr<StylePropertySet> CSSComputedStyleDeclaration::copyPropertiesInSet(co
 void CSSComputedStyleDeclaration::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addInstrumentedMember(m_node);
+    info.addMember(m_node);
 }
 
 CSSRule* CSSComputedStyleDeclaration::parentRule() const

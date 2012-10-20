@@ -59,6 +59,7 @@ LIST(APPEND WebKit_SOURCES
     blackberry/Api/BlackBerryGlobal.cpp
     blackberry/Api/InRegionScroller.cpp
     blackberry/Api/WebAnimation.cpp
+    blackberry/Api/WebCookieJar.cpp
     blackberry/Api/WebKitMIMETypeConverter.cpp
     blackberry/Api/WebKitTextCodec.cpp
     blackberry/Api/WebOverlay.cpp
@@ -94,7 +95,6 @@ LIST(APPEND WebKit_SOURCES
     blackberry/WebCoreSupport/DatePickerClient.cpp
     blackberry/WebCoreSupport/ColorPickerClient.cpp
     blackberry/WebKitSupport/AboutData.cpp
-    blackberry/WebKitSupport/BackingStoreCompositingSurface.cpp
     blackberry/WebKitSupport/BackingStoreTile.cpp
     blackberry/WebKitSupport/BackingStoreClient.cpp
     blackberry/WebKitSupport/DefaultTapHighlight.cpp

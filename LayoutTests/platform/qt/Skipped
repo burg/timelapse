@@ -171,6 +171,9 @@ fast/regions/style-scoped-in-flow-override-region-styling-multiple-regions.html
 fast/regions/style-scoped-in-flow-override-region-styling.html
 fast/regions/style-scoped-in-flow.html
 
+# Accelerated compositing is disabled for elements in a RenderFlowThread webkit.org/b/84900
+compositing/regions/webkit-flow-renderer-layer-compositing.html
+
 # ENABLE(SHADOW_DOM) is disabled.
 editing/shadow
 fast/dom/shadow/access-key.html
@@ -210,6 +213,7 @@ fast/dom/shadow/shadowdom-for-image-alt-update.html
 fast/dom/shadow/shadowdom-for-image-alt.html
 fast/dom/shadow/shadowdom-for-image-content.html
 fast/dom/shadow/shadowdom-for-image-dynamic.html
+fast/dom/shadow/shadowdom-for-image-event.html
 fast/dom/shadow/shadowdom-for-image-event-click.html
 fast/dom/shadow/shadowdom-for-image-in-shadowdom.html
 fast/dom/shadow/shadowdom-for-image-map.html
@@ -239,6 +243,7 @@ fast/dom/shadow/shadow-element-rendering-single.html
 fast/dom/shadow/shadow-element-rendering-multiple.html
 fast/dom/shadow/shadow-nested-pseudo-id.html
 fast/dom/shadow/shadow-on-image.html
+fast/dom/shadow/shadow-removechild-and-blur-event.html
 fast/dom/shadow/shadow-root-activeElement.html
 fast/dom/shadow/shadow-root-append.html
 fast/dom/shadow/shadow-root-applyAuthorStyles.html
@@ -308,12 +313,7 @@ fast/sub-pixel/size-of-box-with-zoom.html
 fast/sub-pixel/table-rows-no-gaps.html
 fast/sub-pixel/sub-pixel-accumulates-to-layers.html
 fast/sub-pixel/selection/selection-rect-in-sub-pixel-table.html
-
-# CSS Regions support not yet enabled. http://webkit.org/b/57312
-fast/regions
-
-# CSS Exclusions support not yet enabled. http://webkit.org/b/57311
-fast/exclusions
+fast/sub-pixel/snap-negative-location.html
 
 # USE(V8)
 
@@ -399,6 +399,7 @@ inspector/styles/media-queries.html
 fast/dom/MicroData
 
 # ENABLE(MUTATION_OBSERVERS) is disabled
+fast/mutation/added-out-of-order.html
 fast/mutation/callback-arguments.html
 fast/mutation/clear-transient-without-delivery.html
 fast/mutation/create-during-delivery.html
@@ -416,6 +417,7 @@ fast/mutation/observe-characterdata.html
 fast/mutation/observe-childList.html
 fast/mutation/observe-exceptions.html
 fast/mutation/observe-subtree.html
+fast/mutation/removed-out-of-order.html
 fast/mutation/shadow-dom.html
 fast/mutation/takeRecords.html
 fast/mutation/transient-gc-crash.html
@@ -423,6 +425,10 @@ fast/mutation/transient-gc-crash.html
 # Disable private names by default in WebCore
 # https://bugs.webkit.org/show_bug.cgi?id=87088
 fast/js/names.html
+
+# Don't have GestureLongPress, GestureTapCancel event types
+touchadjustment/touch-links-longpress.html
+touchadjustment/touch-links-active.html
 
 # =========================================================================== #
 #       Feature not yet supported.                                            #
@@ -704,17 +710,6 @@ http/tests/xmlhttprequest/remember-bad-password.html
 # BlodBuilder is not enabled
 http/tests/local/blob/send-data-blob.html
 
-# [Qt] XML Viewer fails due to specifics in the parser implementation
-# https://bugs.webkit.org/show_bug.cgi?id=55302
-xmlviewer/extensions-api.html
-http/tests/xmlviewer/dumpAsText/svg.xml
-http/tests/xmlviewer/dumpAsText/xlink.xml
-http/tests/xmlviewer/dumpAsText/xmlviewer-charset-cp1251.xml
-http/tests/xmlviewer/dumpAsText/xmlviewer-charset-utf8.xml
-http/tests/xmlviewer/dumpAsText/xmlviewer.xml
-http/tests/xmlviewer/dumpAsText/xsl-stylesheet.xml
-http/tests/xmlviewer/dumpAsText/xul.xml
-
 # new test introduced in r94828, but fails on Qt.
 # https://bugs.webkit.org/show_bug.cgi?id=66588
 http/tests/security/xssAuditor/script-tag-with-16bit-unicode4.html
@@ -778,10 +773,6 @@ http/tests/cookies/js-get-and-set-http-only-cookie.html
 # https://bugs.webkit.org/show_bug.cgi?id=91218
 http/tests/w3c/webperf/approved/navigation-timing/html/test_performance_attributes_exist_in_object.html
 http/tests/w3c/webperf/approved/navigation-timing/html/test_timing_xserver_redirect.html
-
-# [Qt][GTK] REGRESSION(r126194): http/tests/security/contentSecurityPolicy/register-bypassing-scheme.html fails
-# https://bugs.webkit.org/show_bug.cgi?id=94677
-http/tests/security/contentSecurityPolicy/register-bypassing-scheme.html
 
 # =========================================================================== #
 #       Failing xmlhttprequest tests                                          #
@@ -1236,6 +1227,7 @@ fast/autoresize
 # Needs layoutTestController.setBackingScaleFactor()
 fast/canvas/2d.backingStorePixelRatio.html
 fast/canvas/2d.imageDataHD.html
+svg/as-image/svg-as-image-canvas.html
 
 # This requires didClearWindowObjectForFrameInIsolatedWorld foo in FrameLoaderClient
 http/tests/security/isolatedWorld/didClearWindowObject.html
@@ -1331,6 +1323,11 @@ css3/filters/custom/filter-repaint-custom-clipped.html
 css3/filters/custom/filter-repaint-custom-rotated.html
 css3/filters/custom/filter-repaint-custom.html
 
+# ERROR: TestRunner::overridePreference() does not support the 'WebKitDisplayImagesKey' preference
+# http://trac.webkit.org/changeset/129462
+fast/loader/display-image-unset-allows-cached-image-load.html
+fast/loader/display-image-unset-can-block-image-and-can-reload-in-place.html
+fast/loader/images-enabled-unset-can-block-image-and-can-reload-in-place.html
 
 # ReferenceError: Can't find variable: MediaKeyError
 # http://trac.webkit.org/changeset/114067
@@ -2053,10 +2050,6 @@ fast/block/positioning/002.html
 # https://bugs.webkit.org/show_bug.cgi?id=92733
 fast/block/positioning/056.html
 
-# REGRESSION(128400): It broke fast/js/primitive-property-access-edge-cases.html.
-# https://bugs.webkit.org/show_bug.cgi?id=96596
-fast/js/primitive-property-access-edge-cases.html
-
 # ============================================================================= #
 # failing fonts tests
 # ============================================================================= #
@@ -2418,14 +2411,12 @@ fast/events/remove-target-in-mouseup.html
 fast/events/selectstart-by-double-triple-clicks.html
 fast/events/selectstart-by-drag.html
 
-# [Qt] Add eventSender.gestureTap
-# https://bugs.webkit.org/show_bug.cgi?id=66173
-fast/events/touch/gesture/gesture-click.html
 # New tests introduced in https://bugs.webkit.org/show_bug.cgi?id=66272. Needs
 # Qt implementation.
 fast/events/touch/gesture/gesture-dblclick.html
 fast/events/touch/gesture/gesture-scroll.html
 fast/events/touch/gesture/touch-gesture-scroll-sideways.html
+fast/events/touch/gesture/gesture-tap-active-state-iframe.html
 
 # new test introduced in r89118, but fail on Qt
 # https://bugs.webkit.org/show_bug.cgi?id=62847
@@ -2541,21 +2532,7 @@ fast/workers/worker-crash-with-invalid-location.html
 fast/ruby/text-decoration-in-descendants-ruby.html
 
 # Failing since isWordTextBreak is not implemented. https://bugs.webkit.org/show_bug.cgi?id=81136
-editing/selection/move-by-word-visually-crash-test-1.html
-editing/selection/move-by-word-visually-crash-test-2.html
-editing/selection/move-by-word-visually-crash-test-3.html
-editing/selection/move-by-word-visually-crash-test-4.html
-editing/selection/move-by-word-visually-crash-test-5.html
-editing/selection/move-by-word-visually-crash-test-textarea.html
-editing/selection/move-by-word-visually-crash-test-css-generated-content.html
-editing/selection/move-by-word-visually-inline-block-positioned-element.html
 editing/selection/move-by-word-visually-multi-line.html
-editing/selection/move-by-word-visually-multi-space.html
-editing/selection/move-by-word-visually-null-box.html
-editing/selection/move-by-word-visually-single-space-inline-element.html
-editing/selection/move-by-word-visually-single-space-one-element.html
-editing/selection/move-by-word-visually-textarea.html
-editing/selection/move-by-word-visually-wrong-left-right.html
 editing/selection/move-by-word-visually-mac.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=82628
@@ -2599,6 +2576,9 @@ svg/custom/anchor-on-use.svg
 svg/animations/animateTransform-rotate-around-point.svg
 svg/animations/animateMotion-additive-1.svg
 svg/transforms/transformed-text-fill-gradient.html
+fast/regions/floats-basic-in-variable-width-regions.html
+fast/regions/positioned-objects-block-static-spanning-regions-rtl.html
+fast/regions/region-style-rule-position.html
 
 # Failing fast/css/sticky/ tests with minor pixel differences
 # https://bugs.webkit.org/show_bug.cgi?id=92080
@@ -2740,9 +2720,6 @@ css3/flexbox/flex-rounding.html
 # ENABLE(WIDGET_REGION) is disabled
 fast/css/widget-region-parser.html
 
-# https://bugs.webkit.org/show_bug.cgi?id=92914
-touchadjustment/touch-links-longpress.html
-
 # [Qt][GTK] REGRESSION(r125251): It made svg/custom/use-instanceRoot-as-event-target.xhtml assert and flakey
 # https://bugs.webkit.org/show_bug.cgi?id=93812
 svg/custom/use-instanceRoot-as-event-target.xhtml
@@ -2751,7 +2728,7 @@ svg/custom/use-instanceRoot-as-event-target.xhtml
 # https://bugs.webkit.org/show_bug.cgi?id=94076
 fast/events/autoscroll-in-textarea.html
 
-# ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS) is disabled
+# ENABLE(INPUT_MULTIPLE_FIELDS_UI) is disabled
 fast/forms/time-multiple-fields
 
 # [Qt] New inspector/timeline/timeline-decode-resize.html introduced in r125790 fails
@@ -2795,3 +2772,28 @@ fast/spatial-navigation/snav-imagemap-overlapped-areas.html
 # New fast/canvas/canvas-lineDash.html introduced in r128116 fails
 # https://bugs.webkit.org/show_bug.cgi?id=96360
 fast/canvas/canvas-lineDash.html
+
+# [Qt]REGRESSION(r128699): It made 2 fast/js/dfg tests assert
+# https://bugs.webkit.org/show_bug.cgi?id=96907
+fast/js/dfg-inline-arguments-use-from-all-the-places-broken.html
+fast/js/dfg-inline-arguments-use-from-all-the-places.html
+
+# [Qt] REGRESSION(r128749): http/tests/inspector/network/network-xhr-same-url-as-main-resource.html crashes
+# https://bugs.webkit.org/show_bug.cgi?id=96931
+http/tests/inspector/network/network-xhr-replay.html
+
+# [Qt] REGRESSION(r128910): inspector/extensions/extensions-panel.html fails
+# https://bugs.webkit.org/show_bug.cgi?id=97084
+inspector/extensions/extensions-panel.html
+
+# [Qt] fast/regions/overflow-size-change-with-stacking-context.html fails
+# https://bugs.webkit.org/show_bug.cgi?id=97199
+fast/regions/overflow-size-change-with-stacking-context.html
+
+# [Qt] New test introduced in r129346 inspector-protocol/css-getSupportedCSSProperties.html fails
+# https://bugs.webkit.org/show_bug.cgi?id=97451
+inspector-protocol/css-getSupportedCSSProperties.html
+
+# REGRESSION (r129456): http/tests/security/xss-eval.html is failing on JSC platforms
+# https://bugs.webkit.org/show_bug.cgi?id=97529
+http/tests/security/xss-eval.html

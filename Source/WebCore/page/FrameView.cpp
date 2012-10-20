@@ -2185,19 +2185,21 @@ void FrameView::scheduleRelayoutOfSubtree(RenderObject* relayoutRoot)
                 m_layoutRoot->markContainingBlocksForLayout(false, relayoutRoot);
                 m_layoutRoot = relayoutRoot;
                 ASSERT(!m_layoutRoot->container() || !m_layoutRoot->container()->needsLayout());
+                InspectorInstrumentation::didInvalidateLayout(m_frame.get());
             } else {
                 // Just do a full relayout
                 if (m_layoutRoot)
                     m_layoutRoot->markContainingBlocksForLayout(false);
                 m_layoutRoot = 0;
                 relayoutRoot->markContainingBlocksForLayout(false);
+                InspectorInstrumentation::didInvalidateLayout(m_frame.get());
             }
         }
     } else if (m_layoutSchedulingEnabled) {
-        InspectorInstrumentation::didInvalidateLayout(m_frame.get());
         int delay = m_frame->document()->minimumLayoutDelay();
         m_layoutRoot = relayoutRoot;
         ASSERT(!m_layoutRoot->container() || !m_layoutRoot->container()->needsLayout());
+        InspectorInstrumentation::didInvalidateLayout(m_frame.get());
         m_delayedLayout = delay != 0;
         m_layoutTimer.startOneShot(delay * 0.001);
     }
@@ -2434,11 +2436,19 @@ void FrameView::performPostLayoutTasks()
     m_frame->selection()->setCaretRectNeedsUpdate();
     m_frame->selection()->updateAppearance();
 
+    LayoutMilestones milestonesOfInterest = 0;
+    LayoutMilestones milestonesAchieved = 0;
+    Page* page = m_frame->page();
+    if (page)
+        milestonesOfInterest = page->layoutMilestones();
+
     if (m_nestedLayoutCount <= 1) {
         if (m_firstLayoutCallbackPending) {
             m_firstLayoutCallbackPending = false;
             m_frame->loader()->didFirstLayout();
-            if (Page* page = m_frame->page()) {
+            if (milestonesOfInterest & DidFirstLayout)
+                milestonesAchieved |= DidFirstLayout;
+            if (page) {
                 if (page->mainFrame() == m_frame)
                     page->startCountingRelevantRepaintedObjects();
             }
@@ -2451,10 +2461,15 @@ void FrameView::performPostLayoutTasks()
         // If the layout was done with pending sheets, we are not in fact visually non-empty yet.
         if (m_isVisuallyNonEmpty && !m_frame->document()->didLayoutWithPendingStylesheets() && m_firstVisuallyNonEmptyLayoutCallbackPending) {
             m_firstVisuallyNonEmptyLayoutCallbackPending = false;
-            m_frame->loader()->didFirstVisuallyNonEmptyLayout();
+            if (milestonesOfInterest & DidFirstVisuallyNonEmptyLayout)
+                milestonesAchieved |= DidFirstVisuallyNonEmptyLayout;
         }
     }
 
+    m_frame->loader()->didLayout(milestonesAchieved);
+    
+    // FIXME: We should consider adding DidLayout as a LayoutMilestone. That would let us merge this
+    // with didLayout(LayoutMilestones).
     m_frame->loader()->client()->dispatchDidLayout();
 
     RenderView* root = rootRenderer(this);
@@ -2466,7 +2481,7 @@ void FrameView::performPostLayoutTasks()
             break;
     }
 
-    if (Page* page = m_frame->page()) {
+    if (page) {
         if (ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator())
             scrollingCoordinator->frameViewLayoutUpdated(this);
     }

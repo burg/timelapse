@@ -2,6 +2,7 @@ fast/js/add-recovery
 fast/js/apply-varargs
 fast/js/arguments-bad-index
 fast/js/arguments
+fast/js/array-bad-time
 fast/js/array-constructor-host-call
 fast/js/array-defineOwnProperty
 fast/js/array-enumerators-functions
@@ -19,6 +20,7 @@ fast/js/array-proto-func-property-getter-except
 fast/js/array-reduce
 fast/js/array-reduceRight
 fast/js/array-reset-large-index
+fast/js/array-slow-put
 fast/js/array-sort-numericCompare
 fast/js/array-sort-reentrance
 fast/js/array-splice
@@ -44,6 +46,7 @@ fast/js/comparefn-sort-stability
 fast/js/comparison-operators-greater
 fast/js/comparison-operators-less
 fast/js/comparison-operators
+fast/js/concat-while-having-a-bad-time
 fast/js/const-without-initializer
 fast/js/constant-count
 fast/js/constant-encoding
@@ -76,7 +79,13 @@ fast/js/dfg-arguments-mixed-alias
 fast/js/dfg-arguments-osr-exit
 fast/js/dfg-arguments-out-of-bounds
 fast/js/dfg-arguments-unexpected-escape
+fast/js/dfg-arrayify-when-late-prevent-extensions
+fast/js/dfg-arrayify-when-prevent-extensions
 fast/js/dfg-array-length-dead
+fast/js/dfg-array-pop-side-effects
+fast/js/dfg-array-push-bad-time
+fast/js/dfg-array-push-slow-put
+fast/js/dfg-bool-to-int32-reuse
 fast/js/dfg-branch-not-fail
 fast/js/dfg-check-two-structures
 fast/js/dfg-constant-fold-first-local-read-after-block-merge
@@ -97,6 +106,7 @@ fast/js/dfg-get-by-val-clobber
 fast/js/dfg-get-by-val-getter-cse
 fast/js/dfg-getter-throw
 fast/js/dfg-getter
+fast/js/dfg-holy-put-by-val-interferes-with-get-array-length
 fast/js/dfg-inline-arguments-become-double
 fast/js/dfg-inline-arguments-become-int32
 fast/js/dfg-inline-arguments-int32
@@ -229,8 +239,10 @@ fast/js/Object-defineProperties
 fast/js/Object-defineProperty
 fast/js/Object-getOwnPropertyNames
 fast/js/Object-keys
+fast/js/object-bad-time
 fast/js/object-literal-direct-put
 fast/js/object-literal-syntax
+fast/js/object-slow-put
 fast/js/order-of-operations
 fast/js/parse-backslash-before-newline
 fast/js/parse-nan
@@ -311,6 +323,7 @@ fast/js/toString-for-var-decl
 fast/js/toString-number-dot-expr
 fast/js/toString-prefix-postfix-preserve-parens
 fast/js/toString-recursion
+fast/js/try-try-return-finally-finally
 fast/js/typeof-codegen-crash
 fast/js/typeof-constant-string
 fast/js/unexpected-constant-crash

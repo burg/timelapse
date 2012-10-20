@@ -32,6 +32,8 @@ void ArrayProfile::computeUpdatedPrediction(OperationInProgress operation)
 {
     if (m_lastSeenStructure) {
         m_observedArrayModes |= arrayModeFromStructure(m_lastSeenStructure);
+        m_mayInterceptIndexedAccesses |=
+            m_lastSeenStructure->typeInfo().interceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero();
         if (!m_structureIsPolymorphic) {
             if (!m_expectedStructure)
                 m_expectedStructure = m_lastSeenStructure;
@@ -41,6 +43,11 @@ void ArrayProfile::computeUpdatedPrediction(OperationInProgress operation)
             }
         }
         m_lastSeenStructure = 0;
+    }
+    
+    if (hasTwoOrMoreBitsSet(m_observedArrayModes)) {
+        m_structureIsPolymorphic = true;
+        m_expectedStructure = 0;
     }
     
     if (operation == Collection

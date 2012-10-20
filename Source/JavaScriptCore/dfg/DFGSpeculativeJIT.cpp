@@ -324,7 +324,8 @@ void SpeculativeJIT::checkArray(Node& node)
             m_jit.branchTest8(
                 MacroAssembler::Zero,
                 MacroAssembler::Address(temp.gpr(), Structure::indexingTypeOffset()),
-                MacroAssembler::TrustedImm32(HasArrayStorage)));
+                MacroAssembler::TrustedImm32(
+                    isSlowPutAccess(node.arrayMode()) ? (HasArrayStorage | HasSlowPutArrayStorage) : HasArrayStorage)));
         
         noResult(m_compileIndex);
         return;
@@ -345,7 +346,8 @@ void SpeculativeJIT::checkArray(Node& node)
         speculationCheck(
             Uncountable, JSValueRegs(), NoNode,
             m_jit.branchTest32(
-                MacroAssembler::Zero, tempGPR, MacroAssembler::TrustedImm32(HasArrayStorage)));
+                MacroAssembler::Zero, tempGPR, MacroAssembler::TrustedImm32(
+                    isSlowPutAccess(node.arrayMode()) ? (HasArrayStorage | HasSlowPutArrayStorage) : HasArrayStorage)));
         
         noResult(m_compileIndex);
         return;
@@ -380,6 +382,80 @@ void SpeculativeJIT::checkArray(Node& node)
             MacroAssembler::TrustedImmPtr(expectedClassInfo)));
     
     noResult(m_compileIndex);
+}
+
+void SpeculativeJIT::arrayify(Node& node)
+{
+    ASSERT(modeIsSpecific(node.arrayMode()));
+    ASSERT(!modeAlreadyChecked(m_state.forNode(node.child1()), node.arrayMode()));
+    
+    SpeculateCellOperand base(this, node.child1());
+    GPRReg baseReg = base.gpr();
+    
+    switch (node.arrayMode()) {
+    case EFFECTFUL_NON_ARRAY_ARRAY_STORAGE_MODES: {
+        GPRTemporary structure(this);
+        GPRTemporary temp(this);
+        GPRReg structureGPR = structure.gpr();
+        GPRReg tempGPR = temp.gpr();
+        
+        m_jit.loadPtr(
+            MacroAssembler::Address(baseReg, JSCell::structureOffset()), structureGPR);
+        
+        // We can skip all that comes next if we already have array storage.
+        IndexingType desiredIndexingTypeMask =
+            isSlowPutAccess(node.arrayMode()) ? (HasArrayStorage | HasSlowPutArrayStorage) : HasArrayStorage;
+        MacroAssembler::Jump slowCase = m_jit.branchTest8(
+            MacroAssembler::Zero,
+            MacroAssembler::Address(structureGPR, Structure::indexingTypeOffset()),
+            MacroAssembler::TrustedImm32(desiredIndexingTypeMask));
+        
+        m_jit.loadPtr(
+            MacroAssembler::Address(baseReg, JSObject::butterflyOffset()), tempGPR);
+        
+        MacroAssembler::Jump done = m_jit.jump();
+        
+        slowCase.link(&m_jit);
+        
+        // Next check that the object does not intercept indexed accesses. If it does,
+        // then this mode won't work.
+        speculationCheck(
+            Uncountable, JSValueRegs(), NoNode,
+            m_jit.branchTest8(
+                MacroAssembler::NonZero,
+                MacroAssembler::Address(structureGPR, Structure::typeInfoFlagsOffset()),
+                MacroAssembler::TrustedImm32(InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero)));
+        
+        // Now call out to create the array storage.
+        silentSpillAllRegisters(tempGPR);
+        callOperation(operationEnsureArrayStorage, tempGPR, baseReg);
+        silentFillAllRegisters(tempGPR);
+
+        // Alas, we need to reload the structure because silent spilling does not save
+        // temporaries. Nor would it be useful for it to do so. Either way we're talking
+        // about a load.
+        m_jit.loadPtr(
+            MacroAssembler::Address(baseReg, JSCell::structureOffset()), structureGPR);
+        
+        // Finally, check that we have the kind of array storage that we wanted to get.
+        // Note that this is a backwards speculation check, which will result in the 
+        // bytecode operation corresponding to this arrayification being reexecuted.
+        // That's fine, since arrayification is not user-visible.
+        speculationCheck(
+            Uncountable, JSValueRegs(), NoNode,
+            m_jit.branchTest8(
+                MacroAssembler::Zero,
+                MacroAssembler::Address(structureGPR, Structure::indexingTypeOffset()),
+                MacroAssembler::TrustedImm32(desiredIndexingTypeMask)));
+        
+        done.link(&m_jit);
+        storageResult(tempGPR, m_compileIndex);
+        break;
+    }
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
 }
 
 GPRReg SpeculativeJIT::fillStorage(NodeIndex nodeIndex)
@@ -1831,9 +1907,10 @@ void SpeculativeJIT::compileValueToInt32(Node& node)
         SpeculateBooleanOperand op1(this, node.child1());
         GPRTemporary result(this, op1);
         
-        m_jit.and32(JITCompiler::TrustedImm32(1), op1.gpr());
+        m_jit.move(op1.gpr(), result.gpr());
+        m_jit.and32(JITCompiler::TrustedImm32(1), result.gpr());
         
-        integerResult(op1.gpr(), m_compileIndex);
+        integerResult(result.gpr(), m_compileIndex);
         return;
     }
     
@@ -2306,7 +2383,7 @@ void SpeculativeJIT::compileInstanceOf(Node& node)
         // from speculating any more aggressively than we absolutely need to.
         
         JSValueOperand value(this, node.child1());
-        SpeculateCellOperand prototype(this, node.child3());
+        SpeculateCellOperand prototype(this, node.child2());
         GPRTemporary scratch(this);
         
         GPRReg prototypeReg = prototype.gpr();
@@ -2340,8 +2417,7 @@ void SpeculativeJIT::compileInstanceOf(Node& node)
     }
     
     SpeculateCellOperand value(this, node.child1());
-    // Base unused since we speculate default InstanceOf behaviour in CheckHasInstance.
-    SpeculateCellOperand prototype(this, node.child3());
+    SpeculateCellOperand prototype(this, node.child2());
     
     GPRTemporary scratch(this);
     
@@ -3055,28 +3131,24 @@ void SpeculativeJIT::compileGetByValOnArguments(Node& node)
   
     ASSERT(modeAlreadyChecked(m_state.forNode(node.child1()), Array::Arguments));
     
-    m_jit.loadPtr(
-        MacroAssembler::Address(baseReg, Arguments::offsetOfData()),
-        scratchReg);
-
     // Two really lame checks.
     speculationCheck(
         Uncountable, JSValueSource(), NoNode,
         m_jit.branchPtr(
             MacroAssembler::AboveOrEqual, propertyReg,
-            MacroAssembler::Address(scratchReg, OBJECT_OFFSETOF(ArgumentsData, numArguments))));
+            MacroAssembler::Address(baseReg, OBJECT_OFFSETOF(Arguments, m_numArguments))));
     speculationCheck(
         Uncountable, JSValueSource(), NoNode,
         m_jit.branchTestPtr(
             MacroAssembler::NonZero,
             MacroAssembler::Address(
-                scratchReg, OBJECT_OFFSETOF(ArgumentsData, deletedArguments))));
+                baseReg, OBJECT_OFFSETOF(Arguments, m_slowArguments))));
     
     m_jit.move(propertyReg, resultReg);
     m_jit.neg32(resultReg);
     m_jit.signExtend32ToPtr(resultReg, resultReg);
     m_jit.loadPtr(
-        MacroAssembler::Address(scratchReg, OBJECT_OFFSETOF(ArgumentsData, registers)),
+        MacroAssembler::Address(baseReg, OBJECT_OFFSETOF(Arguments, m_registers)),
         scratchReg);
     
 #if USE(JSVALUE32_64)
@@ -3116,18 +3188,14 @@ void SpeculativeJIT::compileGetArgumentsLength(Node& node)
     
     ASSERT(modeAlreadyChecked(m_state.forNode(node.child1()), Array::Arguments));
     
-    m_jit.loadPtr(
-        MacroAssembler::Address(baseReg, Arguments::offsetOfData()),
-        resultReg);
-
     speculationCheck(
         Uncountable, JSValueSource(), NoNode,
         m_jit.branchTest8(
             MacroAssembler::NonZero,
-            MacroAssembler::Address(resultReg, OBJECT_OFFSETOF(ArgumentsData, overrodeLength))));
+            MacroAssembler::Address(baseReg, OBJECT_OFFSETOF(Arguments, m_overrodeLength))));
     
     m_jit.load32(
-        MacroAssembler::Address(resultReg, OBJECT_OFFSETOF(ArgumentsData, numArguments)),
+        MacroAssembler::Address(baseReg, OBJECT_OFFSETOF(Arguments, m_numArguments)),
         resultReg);
     integerResult(resultReg, m_compileIndex);
 }

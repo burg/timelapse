@@ -281,6 +281,7 @@ v8::Local<v8::Value> ScriptController::compileAndRunScript(const ScriptSourceCod
         // Keep Frame (and therefore ScriptController) alive.
         RefPtr<Frame> protect(m_frame);
         result = ScriptRunner::runCompiledScript(script, m_frame->document());
+        ASSERT(!tryCatch.HasCaught() || result.IsEmpty());
     }
 
     InspectorInstrumentation::didEvaluateScript(cookie);
@@ -485,7 +486,7 @@ void ScriptController::enableEval()
     v8Context->AllowCodeGenerationFromStrings(true);
 }
 
-void ScriptController::disableEval()
+void ScriptController::disableEval(const String& /* errorMessage */)
 {
     v8::HandleScope handleScope;
     v8::Handle<v8::Context> v8Context = windowShell()->context();

@@ -40,6 +40,23 @@ namespace JSC {
     class Watchpoint;
     class WatchpointSet;
 
+    struct SlowArgument {
+        enum Status {
+            Normal = 0,
+            Captured = 1,
+            Deleted = 2
+        };
+
+        SlowArgument()
+            : status(Normal)
+            , index(0)
+        {
+        }
+
+        Status status;
+        int index; // If status is 'Deleted', index is bogus.
+    };
+
     static ALWAYS_INLINE int missingSymbolMarker() { return std::numeric_limits<int>::max(); }
 
     // The bit twiddling in this class assumes that every register index is a
@@ -343,22 +360,21 @@ namespace JSC {
         bool usesNonStrictEval() { return m_usesNonStrictEval; }
         void setUsesNonStrictEval(bool usesNonStrictEval) { m_usesNonStrictEval = usesNonStrictEval; }
 
-        enum CaptureMode {
-            SomeOfTheThings,
-            AllOfTheThings
-        };
-
-        CaptureMode captureMode() { return m_captureMode; }
-        void setCaptureMode(CaptureMode captureMode) { m_captureMode = captureMode; }
-
         int captureStart() { return m_captureStart; }
         void setCaptureStart(int captureStart) { m_captureStart = captureStart; }
 
         int captureEnd() { return m_captureEnd; }
         void setCaptureEnd(int captureEnd) { m_captureEnd = captureEnd; }
 
+        int captureCount() { return m_captureEnd - m_captureStart; }
+
+        int parameterCount() { return m_parameterCountIncludingThis - 1; }
         int parameterCountIncludingThis() { return m_parameterCountIncludingThis; }
         void setParameterCountIncludingThis(int parameterCountIncludingThis) { m_parameterCountIncludingThis = parameterCountIncludingThis; }
+
+        // 0 if we don't capture any arguments; parameterCount() in length if we do.
+        const SlowArgument* slowArguments() { return m_slowArguments.get(); }
+        void setSlowArguments(PassOwnArrayPtr<SlowArgument> slowArguments) { m_slowArguments = slowArguments; }
 
         static JS_EXPORTDATA const ClassInfo s_info;
 
@@ -367,7 +383,6 @@ namespace JSC {
             : JSCell(globalData, globalData.sharedSymbolTableStructure.get())
             , m_parameterCountIncludingThis(0)
             , m_usesNonStrictEval(false)
-            , m_captureMode(SomeOfTheThings)
             , m_captureStart(0)
             , m_captureEnd(0)
         {
@@ -376,11 +391,11 @@ namespace JSC {
         int m_parameterCountIncludingThis;
         bool m_usesNonStrictEval;
 
-        CaptureMode m_captureMode;
         int m_captureStart;
         int m_captureEnd;
+
+        OwnArrayPtr<SlowArgument> m_slowArguments;
     };
-    
 } // namespace JSC
 
 #endif // SymbolTable_h

@@ -285,23 +285,6 @@ void compileZoomableSubtargets(const NodeList& intersectedNodes, SubtargetGeomet
     }
 }
 
-
-float distanceSquaredToTargetCenterLine(const IntPoint& touchHotspot, const IntRect& touchArea, const SubtargetGeometry& subtarget)
-{
-    UNUSED_PARAM(touchArea);
-    // For a better center of a line-box we use the center-line instead of the center-point.
-    // We use the center-line of the bounding box of the quad though, since it is much faster
-    // and gives the same result in all untransformed cases, and in transformed cases still
-    // gives a better distance-function than the distance to the center-point.
-    IntRect rect = subtarget.boundingBox();
-    ASSERT(subtarget.node()->document());
-    ASSERT(subtarget.node()->document()->view());
-    // Convert from frame coordinates to window coordinates.
-    rect = subtarget.node()->document()->view()->contentsToWindow(rect);
-
-    return rect.distanceSquaredFromCenterLineToPoint(touchHotspot);
-}
-
 // This returns quotient of the target area and its intersection with the touch area.
 // This will prioritize largest intersection and smallest area, while balancing the two against each other.
 float zoomableIntersectionQuotient(const IntPoint& touchHotspot, const IntRect& touchArea, const SubtargetGeometry& subtarget)
@@ -321,32 +304,30 @@ float zoomableIntersectionQuotient(const IntPoint& touchHotspot, const IntRect& 
     return rect.size().area() / (float)intersection.size().area();
 }
 
-// Uses a hybrid of distance to center and intersect ratio, normalizing each
-// score between 0 and 1 and choosing the better score. The distance to
-// centerline works best for disambiguating clicks on targets such as links,
-// where the width may be significantly larger than the touch width. Using
-// area of overlap in such cases can lead to a bias towards shorter links.
-// Conversely, percentage of overlap can provide strong confidence in tapping
-// on a small target, where the overlap is often quite high, and works well
-// for tightly packed controls.
-float hybridDistanceFunction(const IntPoint& touchHotspot, const IntRect& touchArea, const SubtargetGeometry& subtarget)
+// Uses a hybrid of distance to adjust and intersect ratio, normalizing each score between 0 and 1
+// and combining them. The distance to adjust works best for disambiguating clicks on targets such
+// as links, where the width may be significantly larger than the touch width. Using area of overlap
+// in such cases can lead to a bias towards shorter links. Conversely, percentage of overlap can
+// provide strong confidence in tapping on a small target, where the overlap is often quite high,
+// and works well for tightly packed controls.
+float hybridDistanceFunction(const IntPoint& touchHotspot, const IntRect& touchRect, const SubtargetGeometry& subtarget)
 {
     IntRect rect = subtarget.boundingBox();
 
     // Convert from frame coordinates to window coordinates.
     rect = subtarget.node()->document()->view()->contentsToWindow(rect);
    
-    float touchWidth = touchArea.width();
-    float touchHeight = touchArea.height();
-    float distanceScale =  touchWidth * touchWidth + touchHeight * touchHeight;
-    float distanceToCenterScore = rect.distanceSquaredFromCenterLineToPoint(touchHotspot) / distanceScale;
+    float radiusSquared = 0.25f * (touchRect.size().diagonalLengthSquared());
+    float distanceToAdjustScore = rect.distanceSquaredToPoint(touchHotspot) / radiusSquared;
 
     float targetArea = rect.size().area();
-    rect.intersect(touchArea);
+    rect.intersect(touchRect);
     float intersectArea = rect.size().area();
     float intersectionScore = 1 - intersectArea / targetArea;
 
-    return intersectionScore < distanceToCenterScore ? intersectionScore : distanceToCenterScore;
+    float hybridScore = intersectionScore + distanceToAdjustScore;
+
+    return hybridScore;
 }
 
 FloatPoint contentsToWindow(FrameView *view, FloatPoint pt)
@@ -355,6 +336,20 @@ FloatPoint contentsToWindow(FrameView *view, FloatPoint pt)
     int y = static_cast<int>(pt.y() + 0.5f);
     IntPoint adjusted = view->contentsToWindow(IntPoint(x, y));
     return FloatPoint(adjusted.x(), adjusted.y());
+}
+
+// Adjusts 'point' to the nearest point inside rect, and leaves it unchanged if already inside.
+void adjustPointToRect(FloatPoint& point, const FloatRect& rect)
+{
+    if (point.x() < rect.x())
+        point.setX(rect.x());
+    else if (point.x() > rect.maxX())
+        point.setX(rect.maxX());
+
+    if (point.y() < rect.y())
+        point.setY(rect.y());
+    else if (point.y() > rect.maxY())
+        point.setY(rect.maxY());
 }
 
 bool snapTo(const SubtargetGeometry& geom, const IntPoint& touchPoint, const IntRect& touchArea, IntPoint& adjustedPoint)
@@ -378,7 +373,11 @@ bool snapTo(const SubtargetGeometry& geom, const IntPoint& touchPoint, const Int
         return false;
     }
 
-    // Non-rectilinear element.
+    // The following code tries to adjust the point to place inside a both the touchArea and the non-rectilinear quad.
+    // FIXME: This will return the point inside the touch area that is the closest to the quad center, but does not
+    // guarantee that the point will be inside the quad. Corner-cases exist where the quad will intersect but this
+    // will fail to adjust the point to somewhere in the intersection.
+
     // Convert quad from content to window coordinates.
     FloatPoint p1 = contentsToWindow(view, quad.p1());
     FloatPoint p2 = contentsToWindow(view, quad.p2());
@@ -392,32 +391,12 @@ bool snapTo(const SubtargetGeometry& geom, const IntPoint& touchPoint, const Int
     }
 
     // Pull point towards the center of the element.
-    float cx = 0.25 * (p1.x() + p2.x() + p3.x() + p4.x());
-    float cy = 0.25 * (p1.y() + p2.y() + p3.y() + p4.y());
-    FloatPoint center = FloatPoint(cx, cy);
+    FloatPoint center = quad.center();
 
-    FloatSize pullDirection = center - touchPoint;
-    float distanceToCenter = pullDirection.diagonalLength();
+    adjustPointToRect(center, touchArea);
+    adjustedPoint = roundedIntPoint(center);
 
-    // Use distance from center to corner of touch area to limit adjustment distance.
-    float dx = 0.5f * touchArea.width();
-    float dy = 0.5f * touchArea.height();
-    float touchRadius = sqrt(dx * dx + dy * dy);
-
-    float scaleFactor = touchRadius / distanceToCenter;
-    if (scaleFactor > 1)
-        scaleFactor = 1;
-    pullDirection.scale(scaleFactor);
-
-    int x = static_cast<int>(touchPoint.x() + pullDirection.width());
-    int y = static_cast<int>(touchPoint.y() + pullDirection.height());
-    IntPoint point(x, y);
-
-    if (quad.containsPoint(point)) {
-        adjustedPoint = point;
-        return true;
-    }
-    return false;
+    return quad.containsPoint(adjustedPoint);
 }
 
 // A generic function for finding the target node with the lowest distance metric. A distance metric here is the result
@@ -448,19 +427,6 @@ bool findNodeWithLowestDistanceMetric(Node*& targetNode, IntPoint& targetPoint, 
                     targetPoint = adjustedPoint;
                     targetNode = node;
                     targetArea = it->boundingBox();
-                } else {
-                    // Minimize adjustment distance.
-                    float dx = targetPoint.x() - touchHotspot.x();
-                    float dy = targetPoint.y() - touchHotspot.y();
-                    float bestDistance = dx * dx + dy * dy;
-                    dx = adjustedPoint.x() - touchHotspot.x();
-                    dy = adjustedPoint.y() - touchHotspot.y();
-                    float distance = dx * dx + dy * dy;
-                    if (distance < bestDistance) {
-                        targetPoint = adjustedPoint;
-                        targetNode = node;
-                        targetArea = it->boundingBox();
-                    }
                 }
             }
         }

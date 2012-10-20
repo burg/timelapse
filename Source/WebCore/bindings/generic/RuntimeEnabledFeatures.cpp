@@ -64,6 +64,7 @@ bool RuntimeEnabledFeatures::isScriptedSpeechEnabled = false;
 #if ENABLE(MEDIA_STREAM)
 bool RuntimeEnabledFeatures::isMediaStreamEnabled = false;
 bool RuntimeEnabledFeatures::isPeerConnectionEnabled = true;
+bool RuntimeEnabledFeatures::isDeprecatedPeerConnectionEnabled = true;
 #endif
 
 #if ENABLE(GAMEPAD)
@@ -175,7 +176,7 @@ bool RuntimeEnabledFeatures::isMediaSourceEnabled = false;
 #endif
 
 #if ENABLE(VIDEO_TRACK)
-#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(EFL) || PLATFORM(CHROMIUM)
+#if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(EFL) || PLATFORM(CHROMIUM) || PLATFORM(BLACKBERRY)
     bool RuntimeEnabledFeatures::isVideoTrackEnabled = true;
 #else
     bool RuntimeEnabledFeatures::isVideoTrackEnabled = false;

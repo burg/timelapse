@@ -300,6 +300,8 @@ WebInspector.ScriptsPanel.prototype = {
             this.sidebarPanes.callstack.setStatus(WebInspector.UIString("Paused on exception: '%s'.", details.auxData.description));
         else if (details.reason === WebInspector.DebuggerModel.BreakReason.Assert)
             this.sidebarPanes.callstack.setStatus(WebInspector.UIString("Paused on assertion."));
+        else if (details.reason === WebInspector.DebuggerModel.BreakReason.CSPViolation)
+            this.sidebarPanes.callstack.setStatus(WebInspector.UIString("Paused on a script blocked due to Content Security Policy directive: \"%s\".", details.auxData["directiveText"]));
         else {
             function didGetUILocation(uiLocation)
             {
@@ -1100,8 +1102,9 @@ WebInspector.ScriptsPanel.prototype = {
 
         var uiSourceCode = /** @type {WebInspector.UISourceCode} */ target;
         contextMenu.appendItem(WebInspector.UIString("Local modifications..."), this._showLocalHistory.bind(this, uiSourceCode));
-        if (uiSourceCode.resource() && uiSourceCode.resource().request)
-            contextMenu.appendApplicableItems(uiSourceCode.resource().request);
+        var resource = WebInspector.resourceForURL(uiSourceCode.url);
+        if (resource && resource.request)
+            contextMenu.appendApplicableItems(resource.request);
     },
 
     /** 

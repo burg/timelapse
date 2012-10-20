@@ -88,6 +88,7 @@ public:
     virtual const AtomicString& interfaceName() const;
     virtual ScriptExecutionContext* scriptExecutionContext() const;
 
+    bool isClosePending() const { return m_closePending; }
     void forceClose();
     const IDBDatabaseMetadata metadata() const { return m_metadata; }
     void enqueueEvent(PassRefPtr<Event>);
@@ -123,6 +124,8 @@ private:
     Vector<RefPtr<Event> > m_enqueuedEvents;
 
     RefPtr<IDBDatabaseCallbacks> m_databaseCallbacks;
+
+    bool m_didSpamConsole;
 };
 
 } // namespace WebCore

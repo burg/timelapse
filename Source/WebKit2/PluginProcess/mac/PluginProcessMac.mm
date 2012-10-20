@@ -39,6 +39,10 @@
 #import <objc/runtime.h>
 #import <wtf/HashSet.h>
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+#import "NetscapeSandboxFunctions.h"
+#endif
+
 namespace WebKit {
 
 static pthread_once_t shouldCallRealDebuggerOnce = PTHREAD_ONCE_INIT;
@@ -262,6 +266,39 @@ void PluginProcess::setFullscreenWindowIsShowing(bool fullscreenWindowIsShowing)
     m_connection->send(Messages::PluginProcessProxy::SetFullscreenWindowIsShowing(fullscreenWindowIsShowing), 0);
 }
 
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+static void initializeSandbox(const String& pluginPath, const String& sandboxProfileDirectoryPath)
+{
+    if (sandboxProfileDirectoryPath.isEmpty())
+        return;
+
+    RetainPtr<CFStringRef> cfPluginPath = adoptCF(pluginPath.createCFString());
+    RetainPtr<CFURLRef> pluginURL = adoptCF(CFURLCreateWithFileSystemPath(0, cfPluginPath.get(), kCFURLPOSIXPathStyle, false));
+    if (!pluginURL)
+        return;
+
+    RetainPtr<CFBundleRef> pluginBundle = adoptCF(CFBundleCreate(kCFAllocatorDefault, pluginURL.get()));
+    if (!pluginBundle)
+        return;
+    
+    CFStringRef bundleIdentifier = CFBundleGetIdentifier(pluginBundle.get());
+    if (!bundleIdentifier)
+        return;
+
+    RetainPtr<CFStringRef> cfSandboxProfileDirectoryPath = adoptCF(sandboxProfileDirectoryPath.createCFString());
+    RetainPtr<CFURLRef> sandboxProfileDirectory = adoptCF(CFURLCreateWithFileSystemPath(0, cfSandboxProfileDirectoryPath.get(), kCFURLPOSIXPathStyle, TRUE));
+
+    RetainPtr<CFStringRef> sandboxFileName = CFStringCreateWithFormat(0, 0, CFSTR("%@.sb"), bundleIdentifier);
+    RetainPtr<CFURLRef> sandboxURL = adoptCF(CFURLCreateWithFileSystemPathRelativeToBase(0, sandboxFileName.get(), kCFURLPOSIXPathStyle, FALSE, sandboxProfileDirectory.get()));
+
+    RetainPtr<NSString> profileString = [[NSString alloc] initWithContentsOfURL:(NSURL *)sandboxURL.get() encoding:NSUTF8StringEncoding error:NULL];
+    if (!profileString)
+        return;
+
+    enterSandbox([profileString.get() UTF8String], 0, 0);
+}
+#endif
+
 void PluginProcess::platformInitialize(const PluginProcessCreationParameters& parameters)
 {
     m_compositingRenderServerPort = parameters.acceleratedCompositingPort.port();
@@ -273,6 +310,10 @@ void PluginProcess::platformInitialize(const PluginProcessCreationParameters& pa
                                  (NSString *)parameters.parentProcessName];
     
     WKSetVisibleApplicationName((CFStringRef)applicationName);
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+    initializeSandbox(m_pluginPath, parameters.sandboxProfileDirectoryPath);
+#endif
 }
 
 } // namespace WebKit

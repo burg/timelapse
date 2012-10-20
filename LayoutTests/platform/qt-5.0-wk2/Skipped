@@ -51,7 +51,6 @@ fast/events/continuous-platform-wheelevent-in-scrolling-div.html
 fast/events/fire-mousedown-while-pressing-mouse-button.html
 fast/events/open-window-from-another-frame.html
 fast/events/platform-wheelevent-in-scrolling-div.html
-fast/events/popup-blocking-click-in-iframe.html
 fast/events/popup-when-select-change.html
 fast/events/remove-child-onscroll.html
 fast/events/right-click-focus.html
@@ -63,6 +62,8 @@ fast/forms/focus-change-on-keypress.html
 fast/forms/interactive-validation-attach-assertion.html
 fast/forms/legend-access-key.html
 fast/loader/policy-delegate-action-hit-test-zoomed.html
+# eventSender.gestureTap
+fast/events/touch/gesture/gesture-click.html
 
 svg/custom/use-events-crash.svg
 
@@ -498,3 +499,36 @@ fast/events/popup-blocking-timers.html
 # [Qt][WK2] New fast/forms/number/number-spinbutton-click-in-iframe.html fails
 # https://bugs.webkit.org/show_bug.cgi?id=96634
 fast/forms/number/number-spinbutton-click-in-iframe.html
+
+# [Qt][WK2] New http/tests/security/storage-blocking* tests fails
+# https://bugs.webkit.org/show_bug.cgi?id=96859
+http/tests/security/storage-blocking-loosened-plugin.html
+http/tests/security/storage-blocking-loosened-private-browsing-plugin.html
+http/tests/security/storage-blocking-strengthened-plugin.html
+http/tests/security/storage-blocking-strengthened-private-browsing-plugin.html
+
+# Unskipped by r129252 (wk2/Skipped list), but still fail on Qt WK2
+fast/dom/Geolocation/callback-exception.html
+fast/dom/Geolocation/callback-to-deleted-context.html
+fast/dom/Geolocation/callback-to-remote-context.html
+fast/dom/Geolocation/callback-to-remote-context2.html
+fast/dom/Geolocation/multiple-requests.html
+fast/dom/Geolocation/position-string.html
+fast/dom/Geolocation/reentrant-success.html
+fast/dom/Geolocation/success-clear-watch.html
+fast/dom/Geolocation/success.html
+fast/dom/Geolocation/timeout.html
+fast/dom/Geolocation/timestamp.html
+
+# Unskipped by r129486 (wk2/Skipped list), but still fail on Qt WK2
+fast/dom/Geolocation/delayed-permission-allowed-for-multiple-requests.html
+fast/dom/Geolocation/delayed-permission-allowed.html
+fast/dom/Geolocation/error-clear-watch.html
+fast/dom/Geolocation/error.html
+fast/dom/Geolocation/maximum-age.html
+fast/dom/Geolocation/reentrant-error.html
+fast/dom/Geolocation/watch.html
+
+# [Qt][WK2] fast/events/popup-blocked-from-fake-user-gesture.html times out
+# https://bugs.webkit.org/show_bug.cgi?id=97598
+fast/events/popup-blocked-from-fake-user-gesture.html

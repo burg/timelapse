@@ -64,6 +64,10 @@ struct WebProcessCreationParameters {
     Vector<String> urlSchemesRegistererdAsEmptyDocument;
     Vector<String> urlSchemesRegisteredAsSecure;
     Vector<String> urlSchemesForWhichDomainRelaxationIsForbidden;
+    Vector<String> urlSchemesRegisteredAsLocal;
+    Vector<String> urlSchemesRegisteredAsNoAccess;
+    Vector<String> urlSchemesRegisteredAsDisplayIsolated;
+    Vector<String> urlSchemesRegisteredAsCORSEnabled;
 
     // MIME types for which the UI process will handle showing the data.
     Vector<String> mimeTypesWithCustomRepresentation;
@@ -111,6 +115,7 @@ struct WebProcessCreationParameters {
     String uiProcessBundleResourcePath;
     SandboxExtension::Handle uiProcessBundleResourcePathExtensionHandle;
 
+    bool shouldForceScreenFontSubstitution;
 #elif PLATFORM(WIN)
     String cfURLCachePath;
     uint64_t cfURLCacheDiskCapacity;

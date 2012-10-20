@@ -304,8 +304,6 @@ BytecodeGenerator::BytecodeGenerator(ProgramNode* programNode, JSScope* scope, S
 
     // FIXME: Move code that modifies the global object to Interpreter::execute.
     
-    codeBlock->m_numCapturedVars = codeBlock->m_numVars;
-    
     if (compilationKind == OptimizingCompilation)
         return;
 
@@ -392,6 +390,8 @@ BytecodeGenerator::BytecodeGenerator(FunctionBodyNode* functionBody, JSScope* sc
         m_codeBlock->setActivationRegister(m_activationRegister->index());
     }
 
+    symbolTable->setCaptureStart(m_codeBlock->m_numVars);
+
     if (functionBody->usesArguments() || codeBlock->usesEval() || m_shouldEmitDebugHooks) { // May reify arguments object.
         RegisterID* unmodifiedArgumentsRegister = addVar(); // Anonymous, so it can't be modified by user code.
         RegisterID* argumentsRegister = addVar(propertyNames().arguments, false); // Can be changed by assigning to 'arguments'.
@@ -423,23 +423,35 @@ BytecodeGenerator::BytecodeGenerator(FunctionBodyNode* functionBody, JSScope* sc
         }
     }
 
-    bool capturesAnyArgument = codeBlock->usesArguments() || codeBlock->usesEval() || m_shouldEmitDebugHooks; // May reify arguments object.
-    if (!capturesAnyArgument && functionBody->hasCapturedVariables()) {
+    bool shouldCaptureAllTheThings = m_shouldEmitDebugHooks || codeBlock->usesEval();
+
+    bool capturesAnyArgumentByName = false;
+    Vector<RegisterID*> capturedArguments;
+    if (functionBody->hasCapturedVariables() || shouldCaptureAllTheThings) {
         FunctionParameters& parameters = *functionBody->parameters();
+        capturedArguments.resize(parameters.size());
         for (size_t i = 0; i < parameters.size(); ++i) {
-            if (!functionBody->captures(parameters[i]))
+            capturedArguments[i] = 0;
+            if (!functionBody->captures(parameters[i]) && !shouldCaptureAllTheThings)
                 continue;
-            capturesAnyArgument = true;
-            break;
+            capturesAnyArgumentByName = true;
+            capturedArguments[i] = addVar();
         }
     }
 
-    if (capturesAnyArgument) {
-        symbolTable->setCaptureMode(SharedSymbolTable::AllOfTheThings);
-        symbolTable->setCaptureStart(-CallFrame::offsetFor(symbolTable->parameterCountIncludingThis()));
-    } else {
-        symbolTable->setCaptureMode(SharedSymbolTable::SomeOfTheThings);
-        symbolTable->setCaptureStart(m_codeBlock->m_numVars);
+    if (capturesAnyArgumentByName && !codeBlock->isStrictMode()) {
+        size_t parameterCount = symbolTable->parameterCount();
+        OwnArrayPtr<SlowArgument> slowArguments = adoptArrayPtr(new SlowArgument[parameterCount]);
+        for (size_t i = 0; i < parameterCount; ++i) {
+            if (!capturedArguments[i]) {
+                ASSERT(slowArguments[i].status == SlowArgument::Normal);
+                slowArguments[i].index = CallFrame::argumentOffset(i);
+                continue;
+            }
+            slowArguments[i].status = SlowArgument::Captured;
+            slowArguments[i].index = capturedArguments[i]->index();
+        }
+        symbolTable->setSlowArguments(slowArguments.release());
     }
 
     RegisterID* calleeRegister = resolveCallee(functionBody); // May push to the scope chain and/or add a captured var.
@@ -480,7 +492,7 @@ BytecodeGenerator::BytecodeGenerator(FunctionBodyNode* functionBody, JSScope* sc
         instructions().append(m_activationRegister->index());
     }
 
-    codeBlock->m_numCapturedVars = codeBlock->m_numVars;
+    symbolTable->setCaptureEnd(codeBlock->m_numVars);
 
     m_firstLazyFunction = codeBlock->m_numVars;
     for (size_t i = 0; i < functionStack.size(); ++i) {
@@ -507,10 +519,8 @@ BytecodeGenerator::BytecodeGenerator(FunctionBodyNode* functionBody, JSScope* sc
             addVar(ident, varStack[i].second & DeclarationStacks::IsConstant);
     }
 
-    if (m_shouldEmitDebugHooks || codeBlock->usesEval())
-        codeBlock->m_numCapturedVars = codeBlock->m_numVars;
-
-    symbolTable->setCaptureEnd(codeBlock->m_numCapturedVars);
+    if (shouldCaptureAllTheThings)
+        symbolTable->setCaptureEnd(codeBlock->m_numVars);
 
     FunctionParameters& parameters = *functionBody->parameters();
     m_parameters.grow(parameters.size() + 1); // reserve space for "this"
@@ -520,9 +530,16 @@ BytecodeGenerator::BytecodeGenerator(FunctionBodyNode* functionBody, JSScope* sc
     m_thisRegister.setIndex(nextParameterIndex--);
     m_codeBlock->addParameter();
     
-    for (size_t i = 0; i < parameters.size(); ++i)
-        addParameter(parameters[i], nextParameterIndex--);
-
+    for (size_t i = 0; i < parameters.size(); ++i, --nextParameterIndex) {
+        int index = nextParameterIndex;
+        if (capturedArguments.size() && capturedArguments[i]) {
+            ASSERT((functionBody->hasCapturedVariables() && functionBody->captures(parameters[i])) || shouldCaptureAllTheThings);
+            index = capturedArguments[i]->index();
+            RegisterID original(nextParameterIndex);
+            emitMove(capturedArguments[i], &original);
+        }
+        addParameter(parameters[i], index);
+    }
     preserveLastVar();
 
     // We declare the callee's name last because it should lose to a var, function, and/or parameter declaration.
@@ -592,7 +609,6 @@ BytecodeGenerator::BytecodeGenerator(EvalNode* evalNode, JSScope* scope, SharedS
     for (size_t i = 0; i < numVariables; ++i)
         variables.append(*varStack[i].first);
     codeBlock->adoptVariables(variables);
-    codeBlock->m_numCapturedVars = codeBlock->m_numVars;
     preserveLastVar();
 }
 
@@ -681,7 +697,7 @@ bool BytecodeGenerator::willResolveToArguments(const Identifier& ident)
     SymbolTableEntry entry = symbolTable().get(ident.impl());
     if (entry.isNull())
         return false;
-    
+
     if (m_codeBlock->usesArguments() && m_codeType == FunctionCode)
         return true;
     
@@ -1446,18 +1462,21 @@ ResolveResult BytecodeGenerator::resolveConstDecl(const Identifier& property)
     return ResolveResult::dynamicResolve(scopeDepth());
 }
 
-void BytecodeGenerator::emitCheckHasInstance(RegisterID* base)
-{ 
+void BytecodeGenerator::emitCheckHasInstance(RegisterID* dst, RegisterID* value, RegisterID* base, Label* target)
+{
+    size_t begin = instructions().size();
     emitOpcode(op_check_has_instance);
+    instructions().append(dst->index());
+    instructions().append(value->index());
     instructions().append(base->index());
+    instructions().append(target->bind(begin, instructions().size()));
 }
 
-RegisterID* BytecodeGenerator::emitInstanceOf(RegisterID* dst, RegisterID* value, RegisterID* base, RegisterID* basePrototype)
+RegisterID* BytecodeGenerator::emitInstanceOf(RegisterID* dst, RegisterID* value, RegisterID* basePrototype)
 { 
     emitOpcode(op_instanceof);
     instructions().append(dst->index());
     instructions().append(value->index());
-    instructions().append(base->index());
     instructions().append(basePrototype->index());
     return dst;
 }
@@ -2464,6 +2483,7 @@ PassRefPtr<Label> BytecodeGenerator::emitComplexJumpScopes(Label* target, Contro
                     context.start = afterFinally;
                     m_tryContextStack.append(context);
                 }
+                poppedTryContexts.clear();
             }
             if (flipLabelScopes)
                 m_labelScopes = savedLabelScopes;

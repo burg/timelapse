@@ -37,6 +37,7 @@
 #include "RenderObject.h"
 #include "StyleResolver.h"
 #include "WebCoreMemoryInstrumentation.h"
+#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
@@ -47,8 +48,8 @@ namespace WebCore {
 void CSSGradientColorStop::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addInstrumentedMember(m_position);
-    info.addInstrumentedMember(m_color);
+    info.addMember(m_position);
+    info.addMember(m_color);
 }
 
 PassRefPtr<Image> CSSGradientValue::image(RenderObject* renderer, const IntSize& size)
@@ -465,11 +466,11 @@ void CSSGradientValue::reportBaseClassMemoryUsage(MemoryObjectInfo* memoryObject
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     CSSImageGeneratorValue::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addInstrumentedMember(m_firstX);
-    info.addInstrumentedMember(m_firstY);
-    info.addInstrumentedMember(m_secondX);
-    info.addInstrumentedMember(m_secondY);
-    info.addInstrumentedVector(m_stops);
+    info.addMember(m_firstX);
+    info.addMember(m_firstY);
+    info.addMember(m_secondX);
+    info.addMember(m_secondY);
+    info.addMember(m_stops);
 }
 
 String CSSLinearGradientValue::customCssText() const
@@ -638,7 +639,7 @@ void CSSLinearGradientValue::reportDescendantMemoryUsage(MemoryObjectInfo* memor
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     CSSGradientValue::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addInstrumentedMember(m_angle);
+    info.addMember(m_angle);
 }
 
 String CSSRadialGradientValue::customCssText() const
@@ -963,12 +964,12 @@ void CSSRadialGradientValue::reportDescendantMemoryUsage(MemoryObjectInfo* memor
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     CSSGradientValue::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addInstrumentedMember(m_firstRadius);
-    info.addInstrumentedMember(m_secondRadius);
-    info.addInstrumentedMember(m_shape);
-    info.addInstrumentedMember(m_sizingBehavior);
-    info.addInstrumentedMember(m_endHorizontalSize);
-    info.addInstrumentedMember(m_endVerticalSize);
+    info.addMember(m_firstRadius);
+    info.addMember(m_secondRadius);
+    info.addMember(m_shape);
+    info.addMember(m_sizingBehavior);
+    info.addMember(m_endHorizontalSize);
+    info.addMember(m_endVerticalSize);
 }
 
 } // namespace WebCore

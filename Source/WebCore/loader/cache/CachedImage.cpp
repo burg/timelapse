@@ -29,7 +29,6 @@
 #include "CachedResourceClient.h"
 #include "CachedResourceClientWalker.h"
 #include "CachedResourceLoader.h"
-#include "Frame.h"
 #include "FrameLoaderClient.h"
 #include "FrameLoaderTypes.h"
 #include "FrameView.h"
@@ -79,7 +78,7 @@ CachedImage::~CachedImage()
 
 void CachedImage::load(CachedResourceLoader* cachedResourceLoader, const ResourceLoaderOptions& options)
 {
-    if (!cachedResourceLoader || !cachedResourceLoader->shouldDeferImageLoad(m_resourceRequest.url()))
+    if (!cachedResourceLoader || cachedResourceLoader->autoLoadImages())
         CachedResource::load(cachedResourceLoader, options);
     else
         setLoading(false);
@@ -474,7 +473,7 @@ void CachedImage::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CachedResourceImage);
     CachedResource::reportMemoryUsage(memoryObjectInfo);
-    info.addInstrumentedMember(m_image);
+    info.addMember(m_image);
 #if ENABLE(SVG)
     info.addMember(m_svgImageCache);
 #endif

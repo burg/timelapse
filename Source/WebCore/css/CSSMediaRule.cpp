@@ -29,6 +29,7 @@
 #include "ExceptionCode.h"
 #include "StyleRule.h"
 #include "WebCoreMemoryInstrumentation.h"
+#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -179,9 +180,9 @@ void CSSMediaRule::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInf
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     CSSRule::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addInstrumentedMember(m_mediaCSSOMWrapper);
-    info.addInstrumentedVector(m_childRuleCSSOMWrappers);
-    info.addInstrumentedMember(m_ruleListCSSOMWrapper);
+    info.addMember(m_mediaCSSOMWrapper);
+    info.addMember(m_childRuleCSSOMWrappers);
+    info.addMember(m_ruleListCSSOMWrapper);
 }
 
 } // namespace WebCore

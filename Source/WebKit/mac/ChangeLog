@@ -1,3 +1,153 @@
+2012-09-25  Dan Bernstein  <mitz@apple.com>
+
+        WebKit/mac part of <rdar://problem/11455228> [mac] Stop using screen fonts
+        https://bugs.webkit.org/show_bug.cgi?id=97620
+
+        Reviewed by John Sullivan.
+
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]): Changed the default value of the screenFontSubstitutionEnabled
+        preference to NO.
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]):  Changed to enable screen font substitution also if
+        the value of the NSFontDefaultScreenFontSubstitutionEnabled user defaults key is YES.
+
+2012-09-21  Jeffrey Pfau  <jpfau@apple.com>
+
+        Add WebKit1 SPI for storage blocking preference
+        https://bugs.webkit.org/show_bug.cgi?id=97356
+
+        Reviewed by Brady Eidson.
+
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+        (-[WebPreferences setStorageBlockingPolicy:]):
+        (-[WebPreferences storageBlockingPolicy]):
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]):
+
+2012-09-24  Simon Fraser  <simon.fraser@apple.com>
+
+        <rdar://problem/12351906> Have DumpRenderTree and WebKitTestRunner crash logs show which test crashed
+
+        Reviewed by Mark Rowe.
+
+        Use a new WebKitSytemInterface function to add data to crash logs about which 
+        test was running when the crash happened.
+
+        * WebCoreSupport/WebSystemInterface.mm:
+        (InitWebCoreSystemInterface): Hook up the function pointer for [wk|WK]SetCrashReportApplicationSpecificInformation.
+
+2012-09-25  Beth Dakin  <bdakin@apple.com>
+
+        https://bugs.webkit.org/show_bug.cgi?id=95397
+        Need to merge didFirstVisuallyNonEmptyLayout and 
+        didNewFirstVisuallyNonEmptyLayout
+        -and corresponding-
+        <rdar://problem/10791680>
+
+        Reviewed by Sam Weinig.
+
+        The new API has two parts. First, the client has to opt into which 
+        layout milestones they are interested in hearing about using 
+        [WebView _layoutMilestones]. Then, WebKit will call 
+        the WebFrameLoader delegate's didLayout(WebLayoutMilestones) 
+        callback when the specified layout milestones have fired. 
+        didLayout takes the WebLayoutMilestones bit mask, which will 
+        indicate which milestones have fired since it is possible for two 
+        to fire at the same time.
+
+        Remove dispatchDidFirstLayout, 
+        dispatchDidFirstVisuallyNonEmptyLayout, and 
+        dispatchDidNewFirstVisuallyNonEmptyLayout. They are now replaced 
+        by dispatchDidLayout(LayoutMilestones)
+        * WebCoreSupport/WebFrameLoaderClient.h:
+        (WebFrameLoaderClient):
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (WebFrameLoaderClient::dispatchDidLayout):
+
+        Add new function to the delegate for didLayout.
+        * WebView/WebDelegateImplementationCaching.h:
+        (WebFrameLoadDelegateImplementationCache):
+
+        We need a delegate template that takes an NSUInteger.
+        * WebView/WebDelegateImplementationCaching.mm:
+        (CallDelegate):
+        (CallFrameLoadDelegate):
+
+        Convert between WebCore and WebKit versions of the bit mask.
+        * WebView/WebView.mm:
+        (coreLayoutMilestones):
+        (kitLayoutMilestones):
+
+        Add new delegate, and set the appropriate layout milestones in 
+        WebCore based on old delegates having implementations.
+        (-[WebView _cacheFrameLoadDelegateImplementations]):
+
+        Call into WebCore.
+        (-[WebView _listenForLayoutMilestones:]):
+        (-[WebView _layoutMilestones]):
+        * WebView/WebViewInternal.h:
+        * WebView/WebViewPrivate.h:
+
+2012-09-24  Benjamin Poulain  <bpoulain@apple.com>
+
+        Fix Geolocation error reporting in the test support
+        https://bugs.webkit.org/show_bug.cgi?id=97386
+
+        Reviewed by Sam Weinig.
+
+        * WebView/WebView.mm:
+        (-[WebView _geolocationDidFailWithMessage:]):
+        * WebView/WebViewPrivate.h:
+
+2012-09-24  Ryosuke Niwa  <rniwa@webkit.org>
+
+        suspend/resumeWidgetHierarchyUpdates should be a RAII object
+        https://bugs.webkit.org/show_bug.cgi?id=96706
+
+        Reviewed by Simon Fraser.
+
+        * WebView/WebHTMLView.mm:
+        (-[WebHTMLView _invalidateGStatesForTree]):
+
+2012-09-21  Chris Rogers  <crogers@google.com>
+
+        Add Web Audio support for deprecated/legacy APIs
+        https://bugs.webkit.org/show_bug.cgi?id=97050
+
+        Reviewed by Eric Carlson.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-09-19  Dan Bernstein  <mitz@apple.com>
+
+        WebKit/mac part of adding a setting and API for disabling screen font substitution
+        https://bugs.webkit.org/show_bug.cgi?id=97168
+
+        Reviewed by Tim Horton.
+
+        * WebView/WebPreferenceKeysPrivate.h: Defined WebKitScreenFontSubstitutionEnabledKey.
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]): Added a default value of YES for the new preference key.
+        (-[WebPreferences setScreenFontSubstitutionEnabled:]): Added this setter.
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]): Added a call to Settings::setScreenFontSubstitutionEnabled
+        to push the preference down to Settings.
+
+2012-09-17  Dan Bernstein  <mitz@apple.com>
+
+        <rdar://problem/12316935> [mac WebKit1]: -[WebView _setPaginationBehavesLikeColumns:] is a no-op
+        https://bugs.webkit.org/show_bug.cgi?id=96971
+
+        Reviewed by Sam Weinig.
+
+        * WebView/WebView.mm:
+        (-[WebView _setPaginationBehavesLikeColumns:]): Added a call to setPagination().
+
 2012-09-14  Adam Barth  <abarth@webkit.org>
 
         Remove webkitPostMessage

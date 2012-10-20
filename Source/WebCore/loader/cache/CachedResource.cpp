@@ -32,7 +32,6 @@
 #include "CachedResourceLoader.h"
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
-#include "Frame.h"
 #include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
 #include "KURL.h"
@@ -45,6 +44,7 @@
 #include "WebCoreMemoryInstrumentation.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/MathExtras.h>
+#include <wtf/MemoryInstrumentationHashSet.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
@@ -805,20 +805,20 @@ void CachedResource::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CachedResource);
     info.addMember(m_resourceRequest);
-    info.addHashSet(m_clients);
-    info.addInstrumentedMember(m_accept);
-    info.addInstrumentedMember(m_loader);
-    info.addInstrumentedMember(m_response);
-    info.addInstrumentedMember(m_data);
+    info.addMember(m_clients);
+    info.addMember(m_accept);
+    info.addMember(m_loader);
+    info.addMember(m_response);
+    info.addMember(m_data);
     info.addMember(m_cachedMetadata);
-    info.addInstrumentedMember(m_nextInAllResourcesList);
-    info.addInstrumentedMember(m_prevInAllResourcesList);
-    info.addInstrumentedMember(m_nextInLiveResourcesList);
-    info.addInstrumentedMember(m_prevInLiveResourcesList);
-    info.addInstrumentedMember(m_owningCachedResourceLoader);
-    info.addInstrumentedMember(m_resourceToRevalidate);
-    info.addInstrumentedMember(m_proxyResource);
-    info.addInstrumentedHashSet(m_handlesToRevalidate);
+    info.addMember(m_nextInAllResourcesList);
+    info.addMember(m_prevInAllResourcesList);
+    info.addMember(m_nextInLiveResourcesList);
+    info.addMember(m_prevInLiveResourcesList);
+    info.addMember(m_owningCachedResourceLoader);
+    info.addMember(m_resourceToRevalidate);
+    info.addMember(m_proxyResource);
+    info.addMember(m_handlesToRevalidate);
 
     if (m_purgeableData && !m_purgeableData->wasPurged())
         info.addRawBuffer(m_purgeableData.get(), m_purgeableData->size());

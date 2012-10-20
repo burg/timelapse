@@ -25,6 +25,7 @@
 
 #include "config.h"
 
+#include "WKString.h"
 #include "ewk_view_private.h"
 #include "ewk_view_ui_client_private.h"
 
@@ -43,6 +44,35 @@ static WKPageRef createNewPage(WKPageRef, WKURLRequestRef, WKDictionaryRef, WKEv
      return ewk_view_page_create(toEwkView(clientInfo));
 }
 
+static void runJavaScriptAlert(WKPageRef, WKStringRef alertText, WKFrameRef, const void* clientInfo)
+{
+    ewk_view_run_javascript_alert(toEwkView(clientInfo), WKEinaSharedString(alertText));
+}
+
+static bool runJavaScriptConfirm(WKPageRef, WKStringRef message, WKFrameRef, const void* clientInfo)
+{
+    return ewk_view_run_javascript_confirm(toEwkView(clientInfo), WKEinaSharedString(message));
+}
+
+static WKStringRef runJavaScriptPrompt(WKPageRef, WKStringRef message, WKStringRef defaultValue, WKFrameRef, const void* clientInfo)
+{
+    WKEinaSharedString value = ewk_view_run_javascript_prompt(toEwkView(clientInfo), WKEinaSharedString(message), WKEinaSharedString(defaultValue));
+    return value ? WKStringCreateWithUTF8CString(value) : 0;
+}
+
+#if ENABLE(INPUT_TYPE_COLOR)
+static void showColorPicker(WKPageRef, WKStringRef initialColor, WKColorPickerResultListenerRef listener, const void* clientInfo)
+{
+    WebCore::Color color = WebCore::Color(WebKit::toWTFString(initialColor));
+    ewk_view_color_picker_request(toEwkView(clientInfo), color.red(), color.green(), color.blue(), color.alpha(), listener);
+}
+
+static void hideColorPicker(WKPageRef, const void* clientInfo)
+{
+    ewk_view_color_picker_dismiss(toEwkView(clientInfo));
+}
+#endif
+
 void ewk_view_ui_client_attach(WKPageRef pageRef, Evas_Object* ewkView)
 {
     WKPageUIClient uiClient;
@@ -51,5 +81,14 @@ void ewk_view_ui_client_attach(WKPageRef pageRef, Evas_Object* ewkView)
     uiClient.clientInfo = ewkView;
     uiClient.close = closePage;
     uiClient.createNewPage = createNewPage;
+    uiClient.runJavaScriptAlert = runJavaScriptAlert;
+    uiClient.runJavaScriptConfirm = runJavaScriptConfirm;
+    uiClient.runJavaScriptPrompt = runJavaScriptPrompt;
+
+#if ENABLE(INPUT_TYPE_COLOR)
+    uiClient.showColorPicker = showColorPicker;
+    uiClient.hideColorPicker = hideColorPicker;
+#endif
+
     WKPageSetPageUIClient(pageRef, &uiClient);
 }

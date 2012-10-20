@@ -1,8 +1,3 @@
-# [Qt] load event fires on XMLHttpRequestUpload twice with Qt5
-# https://bugs.webkit.org/show_bug.cgi?id=92669
-http/tests/xmlhttprequest/upload-onprogress-event.html
-http/tests/xmlhttprequest/upload-progress-events.html
-
 # timeout
 fast/events/bogus-dropEffect-effectAllowed.html
 fast/forms/textfield-drag-into-disabled.html
@@ -72,14 +67,6 @@ http/tests/security/frameNavigation/xss-DENIED-plugin-navigation.html
 # [Qt] New fast/text/line-breaks-after-ideographic-comma-or-full-stop-2.html introduced in r120624 fails on ICU platforms
 # https://bugs.webkit.org/show_bug.cgi?id=89436
 fast/text/line-breaks-after-ideographic-comma-or-full-stop-2.html
-
-# [Qt] REGRESSION: 5 tests started to fail with newer Qt5
-# https://bugs.webkit.org/show_bug.cgi?id=90687
-http/tests/cookies/double-quoted-value-with-semi-colon.html
-http/tests/xmlhttprequest/methods.html
-http/tests/xmlhttprequest/workers/methods-async.html
-http/tests/xmlhttprequest/workers/methods.html
-http/tests/xmlhttprequest/workers/shared-worker-methods-async.html
 
 # [Qt] svg/text/foreignObject-text-clipping-bug giving wrong results
 # https://bugs.webkit.org/show_bug.cgi?id=91893

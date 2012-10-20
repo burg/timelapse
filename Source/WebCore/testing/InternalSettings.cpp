@@ -80,6 +80,7 @@ InternalSettings::Backup::Backup(Page* page, Settings* settings)
     , m_originalAuthorShadowDOMForAnyElementEnabled(RuntimeEnabledFeatures::authorShadowDOMForAnyElementEnabled())
 #endif
     , m_originalEditingBehavior(settings->editingBehaviorType())
+    , m_originalUnifiedSpellCheckerEnabled(settings->unifiedTextCheckerEnabled())
     , m_originalFixedPositionCreatesStackingContext(settings->fixedPositionCreatesStackingContext())
     , m_originalSyncXHRInDocumentsEnabled(settings->syncXHRInDocumentsEnabled())
 #if ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
@@ -98,10 +99,7 @@ InternalSettings::Backup::Backup(Page* page, Settings* settings)
 #endif
     , m_canStartMedia(page->canStartMedia())
     , m_originalMockScrollbarsEnabled(settings->mockScrollbarsEnabled())
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
-    // FIXME: This is a workaround for Apple Windows crash.
     , m_langAttributeAwareFormControlUIEnabled(RuntimeEnabledFeatures::langAttributeAwareFormControlUIEnabled())
-#endif
     , m_imagesEnabled(settings->areImagesEnabled())
 {
 }
@@ -117,6 +115,7 @@ void InternalSettings::Backup::restoreTo(Page* page, Settings* settings)
     RuntimeEnabledFeatures::setAuthorShadowDOMForAnyElementEnabled(m_originalAuthorShadowDOMForAnyElementEnabled);
 #endif
     settings->setEditingBehaviorType(m_originalEditingBehavior);
+    settings->setUnifiedTextCheckerEnabled(m_originalUnifiedSpellCheckerEnabled);
     settings->setFixedPositionCreatesStackingContext(m_originalFixedPositionCreatesStackingContext);
     settings->setSyncXHRInDocumentsEnabled(m_originalSyncXHRInDocumentsEnabled);
 #if ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
@@ -136,9 +135,7 @@ void InternalSettings::Backup::restoreTo(Page* page, Settings* settings)
 #endif
     page->setCanStartMedia(m_canStartMedia);
     settings->setMockScrollbarsEnabled(m_originalMockScrollbarsEnabled);
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
     RuntimeEnabledFeatures::setLangAttributeAwareFormControlUIEnabled(m_langAttributeAwareFormControlUIEnabled);
-#endif
     settings->setImagesEnabled(m_imagesEnabled);
 }
 
@@ -173,6 +170,7 @@ void InternalSettings::reset()
     setUserPreferredLanguages(Vector<String>());
     page()->setPagination(Pagination());
     page()->setPageScaleFactor(1, IntPoint(0, 0));
+    setUsesOverlayScrollbars(false);
 #if ENABLE(PAGE_POPUP)
     m_pagePopupDriver.clear();
     if (page()->chrome())
@@ -239,6 +237,11 @@ void InternalSettings::setMockScrollbarsEnabled(bool enabled, ExceptionCode& ec)
 {
     InternalSettingsGuardForSettings();
     settings()->setMockScrollbarsEnabled(enabled);
+}
+
+void InternalSettings::setUsesOverlayScrollbars(bool flag)
+{
+    settings()->setUsesOverlayScrollbars(flag);
 }
 
 void InternalSettings::setPasswordEchoEnabled(bool enabled, ExceptionCode& ec)
@@ -655,11 +658,7 @@ void InternalSettings::setStorageBlockingPolicy(const String& mode, ExceptionCod
 
 void InternalSettings::setLangAttributeAwareFormControlUIEnabled(bool enabled)
 {
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
     RuntimeEnabledFeatures::setLangAttributeAwareFormControlUIEnabled(enabled);
-#else
-    UNUSED_PARAM(enabled);
-#endif
 }
 
 void InternalSettings::setImagesEnabled(bool enabled, ExceptionCode& ec)

@@ -222,19 +222,18 @@ void RenderFlowThread::updateLogicalWidth()
     }
 }
 
-void RenderFlowThread::updateLogicalHeight()
+void RenderFlowThread::computeLogicalHeight(LayoutUnit, LayoutUnit logicalTop, LogicalExtentComputedValues& computedValues) const
 {
-    LayoutUnit logicalHeight = 0;
+    computedValues.m_position = logicalTop;
+    computedValues.m_extent = 0;
 
-    for (RenderRegionList::iterator iter = m_regionList.begin(); iter != m_regionList.end(); ++iter) {
+    for (RenderRegionList::const_iterator iter = m_regionList.begin(); iter != m_regionList.end(); ++iter) {
         RenderRegion* region = *iter;
         if (!region->isValid())
             continue;
         ASSERT(!region->needsLayout());
-        logicalHeight += region->logicalHeightOfAllFlowThreadContent();
+        computedValues.m_extent += region->logicalHeightOfAllFlowThreadContent();
     }
-
-    setLogicalHeight(logicalHeight);
 }
 
 void RenderFlowThread::paintFlowThreadPortionInRegion(PaintInfo& paintInfo, RenderRegion* region, LayoutRect flowThreadPortionRect, LayoutRect flowThreadPortionOverflowRect, const LayoutPoint& paintOffset) const
@@ -753,6 +752,25 @@ bool RenderFlowThread::objectInFlowRegion(const RenderObject* object, const Rend
 
     return false;
 }
+
+#ifndef NDEBUG
+unsigned RenderFlowThread::autoLogicalHeightRegionsCount() const
+{
+    unsigned autoLogicalHeightRegions = 0;
+    for (RenderRegionList::const_iterator iter = m_regionList.begin(); iter != m_regionList.end(); ++iter) {
+        const RenderRegion* region = *iter;
+        if (!region->isValid()) {
+            ASSERT(!region->hasAutoLogicalHeight());
+            continue;
+        }
+
+        if (region->hasAutoLogicalHeight())
+            autoLogicalHeightRegions++;
+    }
+
+    return autoLogicalHeightRegions;
+}
+#endif
 
 CurrentRenderFlowThreadMaintainer::CurrentRenderFlowThreadMaintainer(RenderFlowThread* renderFlowThread)
         : m_renderFlowThread(renderFlowThread)

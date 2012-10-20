@@ -210,7 +210,13 @@ void InspectorOverlay::paint(GraphicsContext& context)
     GraphicsContextStateSaver stateSaver(context);
     FrameView* view = overlayPage()->mainFrame()->view();
     ASSERT(!view->needsLayout());
+
+    context.setCompositeOperation(CompositeCopy);
+    context.beginTransparencyLayer(1);
+
     view->paint(&context, IntRect(0, 0, view->width(), view->height()));
+
+    context.endTransparencyLayer();
 }
 
 void InspectorOverlay::drawOutline(GraphicsContext* context, const LayoutRect& rect, const Color& color)
@@ -271,6 +277,9 @@ void InspectorOverlay::update()
     }
 
     FrameView* view = m_page->mainFrame()->view();
+    if (!view)
+        return;
+
     FrameView* overlayView = overlayPage()->mainFrame()->view();
     IntRect visibleRect = enclosingIntRect(view->visibleContentRect());
     overlayView->resize(visibleRect.width(), visibleRect.height());

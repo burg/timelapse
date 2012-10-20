@@ -149,6 +149,7 @@ public:
     WebPageGroupProxy* webPageGroup(const WebPageGroupData&);
 #if PLATFORM(MAC)
     pid_t presenterApplicationPid() const { return m_presenterApplicationPid; }
+    bool shouldForceScreenFontSubstitution() const { return m_shouldForceScreenFontSubstitution; }
 #endif 
     
 #if PLATFORM(QT)
@@ -199,6 +200,10 @@ private:
     void registerURLSchemeAsEmptyDocument(const String&);
     void registerURLSchemeAsSecure(const String&) const;
     void setDomainRelaxationForbiddenForURLScheme(const String&) const;
+    void registerURLSchemeAsLocal(const String&) const;
+    void registerURLSchemeAsNoAccess(const String&) const;
+    void registerURLSchemeAsDisplayIsolated(const String&) const;
+    void registerURLSchemeAsCORSEnabled(const String&) const;
     void setDefaultRequestTimeoutInterval(double);
     void setAlwaysUsesComplexTextCodePath(bool);
     void setShouldUseFontSmoothing(bool);
@@ -300,6 +305,7 @@ private:
 #if PLATFORM(MAC)
     pid_t m_presenterApplicationPid;
     dispatch_group_t m_clearResourceCachesDispatchGroup;
+    bool m_shouldForceScreenFontSubstitution;
 #endif
 
     bool m_fullKeyboardAccessEnabled;

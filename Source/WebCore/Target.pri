@@ -371,6 +371,7 @@ SOURCES += \
     dom/DocumentMarker.cpp \
     dom/DocumentOrderedMap.cpp \
     dom/DocumentParser.cpp \
+    dom/DocumentStyleSheetCollection.cpp \
     dom/DocumentType.cpp \
     dom/DOMCoreException.cpp \
     dom/DOMError.cpp \
@@ -732,14 +733,15 @@ SOURCES += \
     inspector/IdentifiersFactory.cpp \
     inspector/InjectedScript.cpp \
     inspector/InjectedScriptBase.cpp \
+    inspector/InjectedScriptCanvasModule.cpp \
     inspector/InjectedScriptHost.cpp \
     inspector/InjectedScriptManager.cpp \
     inspector/InjectedScriptModule.cpp \
-    inspector/InjectedScriptWebGLModule.cpp \
     inspector/InspectorAgent.cpp \
     inspector/InspectorApplicationCacheAgent.cpp \
     inspector/InspectorBaseAgent.cpp \
     inspector/InspectorCSSAgent.cpp \
+    inspector/InspectorCanvasAgent.cpp \
     inspector/InspectorClient.cpp \
     inspector/InspectorConsoleAgent.cpp \
     inspector/InspectorController.cpp \
@@ -766,7 +768,6 @@ SOURCES += \
     inspector/InspectorStyleTextEditor.cpp \
     inspector/InspectorTimelineAgent.cpp \
     inspector/InspectorValues.cpp \
-    inspector/InspectorWebGLAgent.cpp \
     inspector/InspectorWorkerAgent.cpp \
     inspector/InstrumentingAgents.cpp \
     inspector/MemoryInstrumentationImpl.cpp \
@@ -865,6 +866,7 @@ SOURCES += \
     page/DragController.cpp \
     page/EventHandler.cpp \
     page/EventSource.cpp \
+    page/FeatureObserver.cpp \
     page/FocusController.cpp \
     page/Frame.cpp \
     page/FrameActionScheduler.cpp \
@@ -1101,6 +1103,7 @@ SOURCES += \
     rendering/ExclusionInterval.cpp \
     rendering/ExclusionRectangle.cpp \
     rendering/ExclusionShape.cpp \
+    rendering/ExclusionShapeInsideInfo.cpp \
     rendering/FilterEffectRenderer.cpp \
     rendering/FixedTableLayout.cpp \
     rendering/FlowThreadController.cpp \
@@ -1192,7 +1195,6 @@ SOURCES += \
     rendering/RenderWordBreak.cpp \
     rendering/RootInlineBox.cpp \
     rendering/ScrollBehavior.cpp \
-    rendering/WrapShapeInfo.cpp \
     rendering/style/BasicShapes.cpp \
     rendering/style/ContentData.cpp \
     rendering/style/CounterDirectives.cpp \
@@ -1527,6 +1529,7 @@ HEADERS += \
     dom/DocumentMarker.h \
     dom/DocumentMarkerController.h \
     dom/DocumentOrderedMap.h \
+    dom/DocumentStyleSheetCollection.h \
     dom/DocumentType.h \
     dom/DOMError.h \
     dom/DOMImplementation.h \
@@ -1856,13 +1859,15 @@ HEADERS += \
     inspector/IdentifiersFactory.h \
     inspector/InjectedScript.h \
     inspector/InjectedScriptBase.h \
+    inspector/InjectedScriptCanvasModule.h \
     inspector/InjectedScriptHost.h \
     inspector/InjectedScriptManager.h \
     inspector/InjectedScriptModule.h \
-    inspector/InjectedScriptWebGLModule.h \
     inspector/InspectorAgent.h \
     inspector/InspectorApplicationCacheAgent.h \
     inspector/InspectorBaseAgent.h \
+    inspector/InspectorCanvasAgent.h \
+    inspector/InspectorCanvasInstrumentation.h \
     inspector/InspectorConsoleAgent.h \
     inspector/InspectorConsoleInstrumentation.h \
     inspector/InspectorController.h \
@@ -1891,8 +1896,6 @@ HEADERS += \
     inspector/InspectorStyleSheet.h \
     inspector/InspectorStyleTextEditor.h \
     inspector/InspectorTimelineAgent.h \
-    inspector/InspectorWebGLAgent.h \
-    inspector/InspectorWebGLInstrumentation.h \
     inspector/InspectorWorkerAgent.h \
     inspector/InstrumentingAgents.h \
     inspector/MemoryInstrumentationImpl.h \
@@ -1991,6 +1994,7 @@ HEADERS += \
     page/GestureTapHighlighter.h\
     page/GroupSettings.h \
     page/History.h \
+    page/LayoutMilestones.h \
     page/Location.h \
     page/MouseEventWithHitTestResults.h \
     page/NavigatorBase.h \
@@ -2289,6 +2293,7 @@ HEADERS += \
     rendering/ExclusionInterval.h \
     rendering/ExclusionRectangle.h \
     rendering/ExclusionShape.h \
+    rendering/ExclusionShapeInsideInfo.h \
     rendering/FilterEffectRenderer.h \
     rendering/FixedTableLayout.h \
     rendering/HitTestingTransformState.h \
@@ -2387,7 +2392,6 @@ HEADERS += \
     rendering/RenderWordBreak.h \
     rendering/RootInlineBox.h \
     rendering/ScrollBehavior.h \
-    rendering/WrapShapeInfo.h \
     rendering/style/BasicShapes.h \
     rendering/style/ContentData.h \
     rendering/style/CounterDirectives.h \

@@ -126,7 +126,6 @@ namespace WebCore {
     macro(DOMActivate) \
     macro(DOMFocusIn) \
     macro(DOMFocusOut) \
-    macro(DOMAttrModified) \
     macro(DOMCharacterDataModified) \
     macro(DOMNodeInserted) \
     macro(DOMNodeInsertedIntoDocument) \
@@ -229,7 +228,7 @@ namespace WebCore {
     macro(unmute) \
     macro(icechange) \
     macro(icecandidate) \
-    macro(negotationneeded) \
+    macro(negotiationneeded) \
     \
     macro(show) \
     \

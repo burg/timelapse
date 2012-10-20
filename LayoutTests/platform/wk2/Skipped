@@ -98,6 +98,7 @@ fast/sub-pixel/size-of-box-with-zoom.html
 fast/sub-pixel/table-rows-no-gaps.html
 fast/sub-pixel/sub-pixel-accumulates-to-layers.html
 fast/sub-pixel/selection/selection-rect-in-sub-pixel-table.html
+fast/sub-pixel/snap-negative-location.html
 
 # [WK2][WTR] svg/animations/animate-text-nested-transforms.html fails
 # https://bugs.webkit.org/show_bug.cgi?id=95191
@@ -199,8 +200,10 @@ fast/canvas/webgl/uniform-location.html
 fast/canvas/webgl/viewport-unchanged-upon-resize.html
 fast/canvas/webgl/webgl-array-invalid-ranges.html
 fast/canvas/webgl/webgl-specific.html
+fast/canvas/webgl/oes-vertex-array-object.html
 fast/harness/override-preferences-2.html
 fast/images/animated-gif-restored-from-bfcache.html
+fast/loader/display-image-unset-allows-cached-image-load.html
 fast/text/zero-font-size.html
 
 # WebKitTestRunner needs to support layoutTestController.dumpDOMAsWebArchive
@@ -251,6 +254,7 @@ editing/selection/5825350-1.html
 editing/selection/5825350-2.html
 editing/selection/move-left-right.html
 editing/style/text-indent.html
+fast/dom/tab-in-right-alignment.html
 fast/events/ime-composition-events-001.html
 fast/forms/cursor-at-editable-content-boundary.html
 fast/text/international/thai-cursor-position.html
@@ -288,41 +292,7 @@ platform/mac/editing/deleting/deletionUI-differing-background.html
 platform/mac/editing/deleting/deletionUI-minimum-size.html
 platform/mac/editing/deleting/deletionUI-successful-deletion.html
 
-# WebKitTestRunner needs layoutTestController.setMockGeolocationPosition
-# and layoutTestController.setMockGeolocationError
-# <https://bugs.webkit.org/show_bug.cgi?id=59201>
-fast/dom/Geolocation/callback-exception.html
-fast/dom/Geolocation/callback-to-deleted-context.html
-fast/dom/Geolocation/callback-to-remote-context.html
-fast/dom/Geolocation/callback-to-remote-context2.html
-fast/dom/Geolocation/clear-watch-invalid-id-crash.html
-fast/dom/Geolocation/delayed-permission-allowed-for-multiple-requests.html
-fast/dom/Geolocation/delayed-permission-allowed.html
-fast/dom/Geolocation/delayed-permission-denied-for-multiple-requests.html
-fast/dom/Geolocation/delayed-permission-denied.html
-fast/dom/Geolocation/disconnected-frame-already.html
-fast/dom/Geolocation/disconnected-frame-permission-denied.html
-fast/dom/Geolocation/disconnected-frame.html
-fast/dom/Geolocation/error-clear-watch.html
-fast/dom/Geolocation/error.html
-fast/dom/Geolocation/maximum-age.html
-fast/dom/Geolocation/multiple-requests.html
-fast/dom/Geolocation/permission-denied-already-clear-watch.html
-fast/dom/Geolocation/permission-denied-already-error.html
-fast/dom/Geolocation/permission-denied-already-success.html
-fast/dom/Geolocation/permission-denied-stops-watches.html
-fast/dom/Geolocation/permission-denied.html
-fast/dom/Geolocation/position-string.html
-fast/dom/Geolocation/reentrant-error.html
-fast/dom/Geolocation/reentrant-permission-denied.html
-fast/dom/Geolocation/reentrant-success.html
-fast/dom/Geolocation/success-clear-watch.html
-fast/dom/Geolocation/success.html
-fast/dom/Geolocation/timeout.html
-fast/dom/Geolocation/timeout-clear-watch.html
-fast/dom/Geolocation/timeout-zero.html
-fast/dom/Geolocation/timestamp.html
-fast/dom/Geolocation/watch.html
+# Fail on WebKit2, the test crash.
 fast/dom/Geolocation/window-close-crash.html
 
 # WebKitTestRunner needs layoutTestController.setDashboardCompatibilityMode
@@ -339,7 +309,10 @@ svg/custom/svg-allowed-in-dashboard-object.html
 # <https://bugs.webkit.org/show_bug.cgi?id=42672>
 fast/css/compare-content-style.html
 fast/frames/frame-display-none-focus.html
+fast/loader/display-image-unset-can-block-image-and-can-reload-in-place.html
+fast/loader/images-enabled-unset-can-block-image-and-can-reload-in-place.html
 fast/loader/reload-policy-delegate.html
+http/tests/navigation/fallback-anchor-reload.html
 
 # WebKitTestRunner needs layoutTestController.queueLoad
 # <https://bugs.webkit.org/show_bug.cgi?id=42674>
@@ -470,25 +443,6 @@ http/tests/globalhistory/history-delegate-basic-refresh-redirect.html
 http/tests/globalhistory/history-delegate-basic-title.html
 http/tests/globalhistory/history-delegate-basic-visited-links.html
 
-# WebKitTestRunner needs to print frame load delegate information
-# <https://bugs.webkit.org/show_bug.cgi?id=42705>
-fast/loader/subframe-removes-itself.html
-http/tests/loading/bad-scheme-subframe.html
-http/tests/loading/bad-server-subframe.html
-http/tests/loading/basic.html
-http/tests/loading/deleted-host-in-resource-load-delegate-callback.html
-http/tests/loading/empty-subframe.html
-http/tests/loading/load-javascript-after-many-xhrs.html
-http/tests/loading/location-hash-reload-cycle.html
-http/tests/loading/nested_bad_objects.php
-http/tests/loading/onload-vs-immediate-refresh.pl
-http/tests/loading/preload-img-test.html
-http/tests/loading/redirect-with-no-location-crash.html
-http/tests/loading/simple-subframe.html
-http/tests/loading/slow-parsing-subframe.html
-http/tests/loading/text-content-type-with-binary-extension.html
-http/tests/loading/state-object-security-exception.html
-
 # These tests crash the WebProcess when run under WebKitTestRunner.
 # <https://bugs.webkit.org/show_bug.cgi?id=44479>
 fast/parser/remove-misnested-iframe-in-beforeload.html
@@ -596,7 +550,6 @@ fast/text-autosizing
 # https://bugs.webkit.org/show_bug.cgi?id=94554
 inspector/geolocation-error.html
 inspector/geolocation-success.html
-inspector/geolocation-watchPosition.html
 
 # WebFrameLoaderClient::dispatchDecidePolicy methods should consider 
 # 'WKBundlePagePolicyActionPassThrough' policy action 
@@ -612,9 +565,6 @@ fast/loader/onload-policy-ignore-for-frame.html
 
 # WebKitTestRunner needs layoutTestController.shouldPaintBrockenImage
 fast/images/support-broken-image-delegate.html
-
-# WebKitTestRunner needs layoutTestController.setWillSendRequestReturnNullOnRedirect
-http/tests/misc/will-send-request-returns-null-on-redirect.html
 
 # WebKitTestrunner needs layoutTestController.dumpSourceAsWebArchive
 webarchive/doctype.html
@@ -844,6 +794,10 @@ webarchive/loading/cache-expired-subresource.html
 webarchive/loading/test-loading-archive.html
 webarchive/loading/test-loading-archive-subresource-null-mimetype.html
 
+# Should pass now on ports other than EFL and GTK.
+# But it needs to be checked first.
+http/tests/loading/bad-scheme-subframe.html
+
 # Some elements are skipped when focus is moved.
 fast/spatial-navigation/snav-container-white-space.html
 fast/spatial-navigation/snav-div-overflow-scrol-hidden.html
@@ -852,12 +806,17 @@ fast/spatial-navigation/snav-fully-aligned-vertically.html
 fast/spatial-navigation/snav-iframe-no-scrollable-content.html
 fast/spatial-navigation/snav-imagemap-overlapped-areas.html
 
-# WK2 is missing API for getting header fields from HTTP responses
-# which have to be serialized.
-http/tests/download
+# InjectedBundlePagePolicyClient::decidePolicyForResponse is not called on WK2 EFL at least.
+# Might be port-specific issue. Should be checked on other ports.
+http/tests/download/default-encoding.html
+http/tests/download/inherited-encoding-form-submission-result.html
+http/tests/download/inherited-encoding.html
 
 # WebFrameLoaderClient::canHandleRequest() has to be implemented.
 http/tests/misc/redirect-to-external-url.html
+
+# WebKitTestRunner needs testRunner.dispatchPendingLoadRequests
+http/tests/loading/deleted-host-in-resource-load-delegate-callback.html
 
 ### END OF (2) Classified failures without bug reports (yet)
 ########################################
@@ -875,30 +834,6 @@ editing/style/non-inheritable-styles.html
 editing/style/smoosh-styles-001.html
 editing/style/smoosh-styles-003.html
 editing/style/style-boundary-005.html
-
-# Unexplained failures that were formerly in the dumpChildFramesAsText list.
-http/tests/security/cross-frame-access-private-browsing.html
-http/tests/security/dataURL/xss-DENIED-from-data-url-sub-frame-to-data-url-sub-frame.html
-http/tests/security/dataURL/xss-DENIED-from-data-url-to-data-url.html
-http/tests/security/dataURL/xss-DENIED-to-data-url-in-foreign-domain-subframe-location-change.html
-http/tests/security/dataURL/xss-DENIED-to-data-url-in-foreign-domain-subframe.html
-http/tests/security/dataURL/xss-DENIED-to-data-url-sub-frame-2-level.html
-http/tests/security/frameNavigation/xss-ALLOWED-targeted-subframe-navigation-change.html
-http/tests/security/host-compare-case-insensitive.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-frame-location-htmldom.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-frame-src-getAttribute-value.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-frame-src-htmldom.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-frame-src-setAttribute.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-frame-src-setAttributeNS.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-frame-src-setAttributeNode.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-frame-src-setAttributeNodeNS.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-iframe-src-getAttribute-value.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-iframe-src-htmldom.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-iframe-src-setAttribute.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-iframe-src-setAttributeNS.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-iframe-src-setAttributeNode.html
-http/tests/security/javascriptURL/javascriptURL-execution-context-iframe-src-setAttributeNodeNS.html
-http/tests/security/javascriptURL/xss-DENIED-to-javascript-url-in-foreign-domain-subframe.html
 
 # Unexplained failures that were formerly in the setCanOpenWindows or setCloseRemainingWindowsWhenComplete lists.
 fast/dom/Window/new-window-opener.html
@@ -930,46 +865,19 @@ http/tests/security/cross-frame-access-location-get.html
 http/tests/security/cross-frame-access-protocol-explicit-domain.html
 http/tests/security/cross-frame-access-protocol.html
 
-# Unexplained failures
-fast/block/basic/truncation-rtl.html
-fast/dom/beforeload/remove-frame-in-beforeload-listener.html
-fast/dom/Document/open-with-pending-load.html
-fast/dom/StyleSheet/detached-style-2.html
-fast/dom/StyleSheet/detached-style-pi-2.xhtml
-fast/dom/StyleSheet/detached-style-pi.xhtml
-fast/dom/StyleSheet/detached-style.html
-fast/dom/Window/window-appendages-cleared.html
-fast/dom/tab-in-right-alignment.html
-fast/events/popup-blocked-from-fake-user-gesture.html
-fast/frames/frame-element-name.html
-fast/frames/iframe-onload-remove-self-no-crash.html
-fast/frames/sandboxed-iframe-plugins.html
-fast/frames/sandboxed-iframe-storage.html
+# Wrong color for visited link
 fast/history/multiple-classes-visited.html
-fast/history/saves-state-after-fragment-nav.html
-fast/html/empty-fragment-id-goto-top.html
-fast/loader/frame-creation-removal.html
-fast/loader/hashchange-event-async.html
-fast/loader/hashchange-event.html
-fast/loader/onhashchange-attribute-listeners.html
-fast/loader/stateobjects/popstate-fires-on-history-traversal.html
-fast/overflow/overflow_hidden.html
+
+# Flaky tests (slow)
 fast/workers/storage/interrupt-database.html
 fast/workers/storage/use-same-database-in-page-and-workers.html
-fast/xmlhttprequest/xmlhttprequest-nonexistent-file.html
-http/tests/appcache/different-https-origin-resource-main.html
 http/tests/cache/subresource-expiration-1.html
 http/tests/cache/subresource-expiration-2.html
-http/tests/history/back-during-onload-triggered-by-back.html
-http/tests/media/reload-after-dialog.html
-http/tests/misc/slow-loading-mask.html
-http/tests/misc/unloadable-script.html
-http/tests/navigation/back-send-referrer.html
-http/tests/navigation/fallback-anchor-reload.html
-http/tests/navigation/history-back-across-form-submission-to-fragment.html
-http/tests/security/cross-frame-access-put.html
-http/tests/security/originHeader/origin-header-for-https.html
-http/tests/storage/callbacks-are-called-in-correct-context.html
+
+# Unexplained failures
+fast/frames/sandboxed-iframe-plugins.html
+fast/frames/sandboxed-iframe-storage.html
+fast/overflow/overflow_hidden.html
 media/controls-after-reload.html
 media/controls-styling.html
 platform/mac/fast/loader/non-html-load-event.html
@@ -1036,8 +944,6 @@ plugins/destroy-on-setwindow.html
 fast/forms/input-align.html
 
 # WebProcess sometimes terminates when running these tests
-fast/dom/Geolocation/notimer-after-unload.html
-fast/dom/Geolocation/remove-remote-context-in-error-callback-crash.html
 fast/forms/form-associated-element-crash.html
 
 # New history tests added in r76205 fail on WebKit2 (perhaps the change

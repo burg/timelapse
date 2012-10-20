@@ -34,13 +34,11 @@
  * @extends {WebInspector.Object}
  * @implements {WebInspector.ContentProvider}
  * @param {string} url
- * @param {WebInspector.Resource} resource
  * @param {WebInspector.ContentProvider} contentProvider
  */
-WebInspector.UISourceCode = function(url, resource, contentProvider)
+WebInspector.UISourceCode = function(url, contentProvider)
 {
     this._url = url;
-    this._resource = resource;
     this._parsedURL = new WebInspector.ParsedURL(url);
     this._contentProvider = contentProvider;
     this.isContentScript = false;
@@ -94,14 +92,6 @@ WebInspector.UISourceCode.prototype = {
     },
 
     /**
-     * @return {WebInspector.Resource}
-     */
-    resource: function()
-    {
-        return this._resource;
-    },
-
-    /**
      * @return {WebInspector.ParsedURL}
      */
     get parsedURL()
@@ -110,7 +100,7 @@ WebInspector.UISourceCode.prototype = {
     },
 
     /**
-     * @return {?string}
+     * @return {string}
      */
     contentURL: function()
     {
@@ -204,26 +194,42 @@ WebInspector.UISourceCode.prototype = {
     revertToOriginal: function()
     {
         /**
+         * @this {WebInspector.UISourceCode}
          * @param {?string} content
          * @param {boolean} contentEncoded
          * @param {string} mimeType
          */
-      function callback(content, contentEncoded, mimeType)
+        function callback(content, contentEncoded, mimeType)
         {
-            this._setContent();
+            if (typeof content === "undefined")
+                return;
+
+            this._setContent(/** @type {string} */ content);
         }
 
         this.requestOriginalContent(callback.bind(this));
     },
 
+    /**
+     * @param {function(WebInspector.UISourceCode)} callback
+     */
     revertAndClearHistory: function(callback)
     {
-        function revert(content)
+        /**
+         * @this {WebInspector.UISourceCode}
+         * @param {?string} content
+         * @param {boolean} contentEncoded
+         * @param {string} mimeType
+         */
+        function revert(content, contentEncoded, mimeType)
         {
-            this._setContent(content);
+            if (typeof content === "undefined")
+                return;
+
+            this._setContent(/** @type {string} */ content);
             this._clearRevisionHistory();
             this.history = [];
-            callback();
+            callback(this);
         }
 
         this.requestOriginalContent(revert.bind(this));
@@ -772,7 +778,7 @@ WebInspector.Revision.prototype = {
     },
 
     /**
-     * @return {?string}
+     * @return {string}
      */
     contentURL: function()
     {

@@ -20,7 +20,6 @@
 #include "BackingStore.h"
 
 #include "BackingStoreClient.h"
-#include "BackingStoreCompositingSurface.h"
 #include "BackingStoreTile.h"
 #include "BackingStore_p.h"
 #include "FatFingers.h"
@@ -28,6 +27,7 @@
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "InspectorController.h"
+#include "InspectorInstrumentation.h"
 #include "Page.h"
 #include "SurfacePool.h"
 #include "WebPage.h"
@@ -61,7 +61,6 @@
 #define DEBUG_WEBCORE_REQUESTS 0
 #define DEBUG_VISUALIZE 0
 #define DEBUG_TILEMATRIX 0
-#define DEBUG_COMPOSITING_DIRTY_REGION 0
 
 using namespace WebCore;
 using namespace std;
@@ -235,6 +234,16 @@ BackingStorePrivate::~BackingStorePrivate()
     pthread_mutex_destroy(&m_mutex);
 }
 
+void BackingStorePrivate::instrumentBeginFrame()
+{
+    WebCore::InspectorInstrumentation::didBeginFrame(WebPagePrivate::core(m_webPage));
+}
+
+void BackingStorePrivate::instrumentCancelFrame()
+{
+    WebCore::InspectorInstrumentation::didCancelFrame(WebPagePrivate::core(m_webPage));
+}
+
 bool BackingStorePrivate::shouldDirectRenderingToWindow() const
 {
     // Direct rendering doesn't work with OpenGL compositing code paths due to
@@ -282,10 +291,6 @@ void BackingStorePrivate::suspendScreenAndBackingStoreUpdates()
     ++m_suspendScreenUpdates;
 
     BlackBerry::Platform::userInterfaceThreadMessageClient()->syncToCurrentMessage();
-
-#if USE(ACCELERATED_COMPOSITING)
-    m_webPage->d->resetCompositingSurface();
-#endif
 }
 
 void BackingStorePrivate::resumeScreenAndBackingStoreUpdates(BackingStore::ResumeUpdateOperation op)
@@ -349,9 +354,16 @@ void BackingStorePrivate::resumeScreenAndBackingStoreUpdates(BackingStore::Resum
     --m_suspendScreenUpdates;
     BlackBerry::Platform::userInterfaceThreadMessageClient()->syncToCurrentMessage();
 
+    if (op == BackingStore::None)
+        return;
+#if USE(ACCELERATED_COMPOSITING)
+    // This will also blit since we set the OSDS flag above.
+    m_webPage->d->commitRootLayerIfNeeded();
+#else
     // Do some blitting if necessary.
     if ((op == BackingStore::Blit || op == BackingStore::RenderAndBlit) && !shouldDirectRenderingToWindow())
         blitVisibleContents();
+#endif
 }
 
 void BackingStorePrivate::repaint(const Platform::IntRect& windowRect,
@@ -514,6 +526,8 @@ void BackingStorePrivate::renderJob()
 {
     if (!shouldPerformRenderJobs())
         return;
+
+    instrumentBeginFrame();
 
 #if DEBUG_BACKINGSTORE
     BlackBerry::Platform::logAlways(BlackBerry::Platform::LogLevelCritical, "BackingStorePrivate::renderJob");
@@ -1469,9 +1483,6 @@ void BackingStorePrivate::blitContents(const Platform::IntRect& dstRect,
         if (compositor->drawsRootLayer())
             paintDefaultBackground(contents, transformation, false /*flush*/);
     }
-
-    if (!isOpenGLCompositing())
-        blendCompositingSurface(dstRect);
 #endif
 
 #if ENABLE_SCROLLBARS
@@ -1638,60 +1649,6 @@ Platform::IntRect BackingStorePrivate::blitTileRect(TileBuffer* tileBuffer,
                  false /*blend*/, 255);
     return dirtyRect;
 }
-
-#if USE(ACCELERATED_COMPOSITING)
-void BackingStorePrivate::blendCompositingSurface(const Platform::IntRect& dstRect)
-{
-    if (!BlackBerry::Platform::userInterfaceThreadMessageClient()->isCurrentThread()) {
-        typedef void (BlackBerry::WebKit::BackingStorePrivate::*FunctionType)(const Platform::IntRect&);
-        BlackBerry::Platform::userInterfaceThreadMessageClient()->dispatchMessage(
-            BlackBerry::Platform::createMethodCallMessage<FunctionType, BackingStorePrivate, Platform::IntRect>(
-                &BackingStorePrivate::blendCompositingSurface, this, dstRect));
-        return;
-    }
-
-    BackingStoreCompositingSurface* compositingSurface =
-        SurfacePool::globalSurfacePool()->compositingSurface();
-
-    if (!compositingSurface || !m_webPage->isVisible())
-        return;
-
-    WebCore::LayerRenderingResults lastCompositingResults = m_webPage->d->lastCompositingResults();
-    for (size_t i = 0; i < lastCompositingResults.holePunchRectSize(); i++) {
-        Platform::IntRect holePunchRect = lastCompositingResults.holePunchRect(i);
-
-        holePunchRect.intersect(dstRect);
-        holePunchRect.intersect(Platform::IntRect(
-            Platform::IntPoint(0, 0), surfaceSize()));
-
-        if (!holePunchRect.isEmpty())
-            clearWindow(holePunchRect, 0, 0, 0, 0);
-    }
-
-    CompositingSurfaceBuffer* frontBuffer = compositingSurface->frontBuffer();
-
-    IntRectList rects = lastCompositingResults.dirtyRegion.rects();
-    for (size_t i = 0; i < rects.size(); ++i) {
-        rects[i].intersect(dstRect);
-#if DEBUG_COMPOSITING_DIRTY_REGION
-        clearBuffer(buffer(), rects[i], 255, 0, 0, 128);
-#endif
-        blitToWindow(rects[i], frontBuffer->nativeBuffer(), rects[i], true /*blend*/, 255);
-    }
-}
-
-void BackingStorePrivate::clearCompositingSurface()
-{
-    BackingStoreCompositingSurface* compositingSurface =
-        SurfacePool::globalSurfacePool()->compositingSurface();
-
-    if (!compositingSurface)
-        return;
-
-    CompositingSurfaceBuffer* frontBuffer = compositingSurface->frontBuffer();
-    BlackBerry::Platform::Graphics::clearBuffer(frontBuffer->nativeBuffer(), Platform::IntRect(Platform::IntPoint(), frontBuffer->surfaceSize()), 0, 0, 0, 0);
-}
-#endif // USE(ACCELERATED_COMPOSITING)
 
 void BackingStorePrivate::blitHorizontalScrollbar(const Platform::IntPoint& scrollPosition)
 {
@@ -2594,15 +2551,6 @@ void BackingStorePrivate::drawAndBlendLayersForDirectRendering(const Platform::I
     // Check if rendering caused a commit and we need to redraw the layers.
     if (WebPageCompositorPrivate* compositor = m_webPage->d->compositor())
         compositor->drawLayers(dstRect, untransformedContentsRect);
-
-#if ENABLE_COMPOSITING_SURFACE
-    // See above comment about sync calling, visibleContentsRect() is safe here.
-    Platform::IntRect visibleDirtyRect = dirtyRect;
-    visibleDirtyRect.intersect(visibleContentsRect());
-    visibleDirtyRect = m_client->mapFromTransformedContentsToTransformedViewport(visibleDirtyRect);
-
-    blendCompositingSurface(visibleDirtyRect);
-#endif
 }
 #endif
 

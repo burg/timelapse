@@ -21,8 +21,10 @@
 #ifndef Page_h
 #define Page_h
 
+#include "FeatureObserver.h"
 #include "FrameLoaderTypes.h"
 #include "FindOptions.h"
+#include "LayoutMilestones.h"
 #include "LayoutTypes.h"
 #include "PageVisibilityState.h"
 #include "Pagination.h"
@@ -209,6 +211,8 @@ namespace WebCore {
         ProgressTracker* progress() const { return m_progress.get(); }
         BackForwardController* backForward() const { return m_backForwardController.get(); }
 
+        FeatureObserver* featureObserver() { return &m_featureObserver; }
+
         enum ViewMode {
             ViewModeInvalid,
             ViewModeWindowed,
@@ -335,8 +339,10 @@ namespace WebCore {
 
         PlatformDisplayID displayID() const { return m_displayID; }
 
+        void addLayoutMilestones(LayoutMilestones);
+        LayoutMilestones layoutMilestones() const { return m_layoutMilestones; }
+
         bool isCountingRelevantRepaintedObjects() const;
-        void setRelevantRepaintedObjectsCounterThreshold(uint64_t);
         void startCountingRelevantRepaintedObjects();
         void resetRelevantPaintedObjectCounter();
         void addRelevantRepaintedObject(RenderObject*, const LayoutRect& objectPaintRect);
@@ -409,6 +415,8 @@ namespace WebCore {
         EditorClient* m_editorClient;
         ValidationMessageClient* m_validationMessageClient;
 
+        FeatureObserver m_featureObserver;
+
         int m_frameCount;
         String m_groupName;
         bool m_openedByDOM;
@@ -459,6 +467,8 @@ namespace WebCore {
         PageVisibilityState m_visibilityState;
 #endif
         PlatformDisplayID m_displayID;
+
+        LayoutMilestones m_layoutMilestones;
 
         HashSet<RenderObject*> m_relevantUnpaintedRenderObjects;
         Region m_relevantPaintedRegion;

@@ -397,6 +397,22 @@ void WebPage::initializeInjectedBundleFormClient(WKBundlePageFormClient* client)
 
 void WebPage::initializeInjectedBundleLoaderClient(WKBundlePageLoaderClient* client)
 {
+    // It would be nice to get rid of this code and transition all clients to using didLayout instead of
+    // didFirstLayoutInFrame and didFirstVisuallyNonEmptyLayoutInFrame. In the meantime, this is required
+    // for backwards compatibility.
+    LayoutMilestones milestones = 0;
+    if (client) {
+        if (client->didFirstLayoutForFrame)
+            milestones |= WebCore::DidFirstLayout;
+        if (client->didFirstVisuallyNonEmptyLayoutForFrame)
+            milestones |= WebCore::DidFirstVisuallyNonEmptyLayout;
+        if (client->didNewFirstVisuallyNonEmptyLayout)
+            milestones |= WebCore::DidHitRelevantRepaintedObjectsAreaThreshold;
+    }
+
+    if (milestones)
+        listenForLayoutMilestones(milestones);
+
     m_loaderClient.initialize(client);
 }
 
@@ -559,13 +575,6 @@ uint64_t WebPage::renderTreeSize() const
     if (!m_page)
         return 0;
     return m_page->renderTreeSize().treeSize;
-}
-
-void WebPage::setPaintedObjectsCounterThreshold(uint64_t threshold)
-{
-    if (!m_page)
-        return;
-    m_page->setRelevantRepaintedObjectsCounterThreshold(threshold);
 }
 
 void WebPage::setTracksRepaints(bool trackRepaints)
@@ -941,7 +950,7 @@ void WebPage::sendViewportAttributesChanged()
     // Recalculate the recommended layout size, when the available size (device pixel) changes.
     Settings* settings = m_page->settings();
 
-    int minimumLayoutFallbackWidth = std::max(settings->layoutFallbackWidth(), m_viewportSize.width());
+    int minimumLayoutFallbackWidth = std::max(settings->layoutFallbackWidth(), int(m_viewportSize.width() / m_page->deviceScaleFactor()));
 
     // If unset  we use the viewport dimensions. This fits with the behavior of desktop browsers.
     int deviceWidth = (settings->deviceWidth() > 0) ? settings->deviceWidth() : m_viewportSize.width();
@@ -1122,6 +1131,13 @@ void WebPage::setFixedLayoutSize(const IntSize& size)
     // Do not force it until the first layout, this would then become our first layout prematurely.
     if (view->didFirstLayout())
         view->forceLayout();
+}
+
+void WebPage::listenForLayoutMilestones(uint32_t milestones)
+{
+    if (!m_page)
+        return;
+    m_page->addLayoutMilestones(static_cast<LayoutMilestones>(milestones));
 }
 
 void WebPage::setSuppressScrollbarAnimations(bool suppressAnimations)
@@ -1955,6 +1971,8 @@ void WebPage::getWebArchiveOfFrame(uint64_t frameID, uint64_t callbackID)
         if ((data = frame->webArchiveData(0, 0)))
             dataReference = CoreIPC::DataReference(CFDataGetBytePtr(data.get()), CFDataGetLength(data.get()));
     }
+#else
+    UNUSED_PARAM(frameID);
 #endif
 
     send(Messages::WebPageProxy::DataCallback(dataReference, callbackID));
@@ -2055,6 +2073,11 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     settings->setMinimumLogicalFontSize(store.getUInt32ValueForKey(WebPreferencesKey::minimumLogicalFontSizeKey()));
     settings->setDefaultFontSize(store.getUInt32ValueForKey(WebPreferencesKey::defaultFontSizeKey()));
     settings->setDefaultFixedFontSize(store.getUInt32ValueForKey(WebPreferencesKey::defaultFixedFontSizeKey()));
+    settings->setScreenFontSubstitutionEnabled(store.getBoolValueForKey(WebPreferencesKey::screenFontSubstitutionEnabledKey())
+#if PLATFORM(MAC)
+        || WebProcess::shared().shouldForceScreenFontSubstitution()
+#endif
+    );
     settings->setLayoutFallbackWidth(store.getUInt32ValueForKey(WebPreferencesKey::layoutFallbackWidthKey()));
     settings->setDeviceWidth(store.getUInt32ValueForKey(WebPreferencesKey::deviceWidthKey()));
     settings->setDeviceHeight(store.getUInt32ValueForKey(WebPreferencesKey::deviceHeightKey()));
@@ -2793,7 +2816,7 @@ void WebPage::SandboxExtensionTracker::willPerformLoadDragDestinationAction(Pass
 
 void WebPage::SandboxExtensionTracker::beginLoad(WebFrame* frame, const SandboxExtension::Handle& handle)
 {
-    ASSERT(frame->isMainFrame());
+    ASSERT_UNUSED(frame, frame->isMainFrame());
 
     setPendingProvisionalSandboxExtension(SandboxExtension::create(handle));
 }

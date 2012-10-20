@@ -546,6 +546,7 @@ WebString WebViewHost::autoCorrectWord(const WebString&)
 void WebViewHost::runModalAlertDialog(WebFrame*, const WebString& message)
 {
     printf("ALERT: %s\n", message.utf8().data());
+    fflush(stdout);
 }
 
 bool WebViewHost::runModalConfirmDialog(WebFrame*, const WebString& message)
@@ -1192,7 +1193,7 @@ void WebViewHost::didReceiveTitle(WebFrame* frame, const WebString& title, WebTe
     }
 
     if (testRunner()->shouldDumpTitleChanges())
-        printf("TITLE CHANGED: %s\n", title8.data());
+        printf("TITLE CHANGED: '%s'\n", title8.data());
 
     setPageTitle(title);
     testRunner()->setTitleTextDirection(direction);

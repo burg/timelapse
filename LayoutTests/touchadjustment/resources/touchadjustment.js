@@ -64,7 +64,6 @@ function shouldBeWithin(adjustedPoint, targetArea) {
     }
 }
 
-
 function testTouchPoint(touchpoint, targetNode, allowTextNodes)
 {
     var adjustedNode = internals.touchNodeAdjustedToBestClickableNode(touchpoint.left, touchpoint.top, touchpoint.width, touchpoint.height, document);
@@ -81,6 +80,12 @@ function testTouchPointContextMenu(touchpoint, targetNode, allowTextNodes)
     shouldBeNode(adjustedNode, targetNode);
 }
 
+function adjustTouchPoint(touchpoint)
+{
+    var adjustedPoint = internals.touchPositionAdjustedToBestClickableNode(touchpoint.left, touchpoint.top, touchpoint.width, touchpoint.height, document);
+    return adjustedPoint;
+}
+
 function adjustTouchPointContextMenu(touchpoint)
 {
     var adjustedPoint = internals.touchPositionAdjustedToBestContextMenuNode(touchpoint.left, touchpoint.top, touchpoint.width, touchpoint.height, document);
@@ -91,12 +96,15 @@ function touchPoint(x, y, radiusX, radiusY)
 {
     if (!radiusY)
         radiusY = radiusX;
-    var touchpoint = new Object();
-    touchpoint.left = x - radiusX;
-    touchpoint.top = y - radiusY;
-    touchpoint.width = radiusX * 2;
-    touchpoint.height = radiusY * 2;
-    return touchpoint;
+
+    return {
+        left: x - radiusX,
+        top: y - radiusY,
+        width: radiusX * 2,
+        height: radiusY * 2,
+        get x() { return this.left + this.width/2; },
+        get y() { return this.top + this.height/2; }
+    };
 }
 
 function offsetTouchPoint(bounds, relativePosition, touchOffset, touchRadiusX, touchRadiusY)
@@ -104,9 +112,10 @@ function offsetTouchPoint(bounds, relativePosition, touchOffset, touchRadiusX, t
     if (!touchRadiusY)
         touchRadiusY = touchRadiusX;
 
-    var touchpoint = {left : bounds.left, top: bounds.top };
+    // Start with the center of the touch at the top-left of the bounds.
+    var touchpoint = touchPoint(bounds.left, bounds.top, touchRadiusX, touchRadiusY);
  
-    // Set center point for touch.
+    // Adjust the touch point as requested.
     switch (relativePosition) {
     case 'center':
         touchpoint.left += bounds.width / 2;
@@ -144,12 +153,6 @@ function offsetTouchPoint(bounds, relativePosition, touchOffset, touchRadiusX, t
         touchpoint.left += bounds.width / 2;
         touchpoint.top += bounds.height + touchOffset;
     }
-    // Adjust from touch center to top-left corner.
-    touchpoint.left -= touchRadiusX;
-    touchpoint.top -= touchRadiusY;
-
-    touchpoint.width = 2 * touchRadiusX;
-    touchpoint.height = 2 * touchRadiusY;
 
     return touchpoint;
 }

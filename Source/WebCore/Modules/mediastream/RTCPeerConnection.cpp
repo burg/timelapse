@@ -83,13 +83,13 @@ PassRefPtr<RTCConfiguration> RTCPeerConnection::parseConfiguration(const Diction
             return 0;
         }
 
-        String uri, credential;
-        ok = iceServer.get("uri", uri);
+        String urlString, credential;
+        ok = iceServer.get("url", urlString);
         if (!ok) {
             ec = TYPE_MISMATCH_ERR;
             return 0;
         }
-        KURL url(KURL(), uri);
+        KURL url(KURL(), urlString);
         if (!url.isValid() || !(url.protocolIs("turn") || url.protocolIs("stun"))) {
             ec = TYPE_MISMATCH_ERR;
             return 0;
@@ -393,7 +393,7 @@ void RTCPeerConnection::close(ExceptionCode& ec)
 
 void RTCPeerConnection::negotiationNeeded()
 {
-    dispatchEvent(Event::create(eventNames().negotationneededEvent, false, false));
+    dispatchEvent(Event::create(eventNames().negotiationneededEvent, false, false));
 }
 
 void RTCPeerConnection::didGenerateIceCandidate(PassRefPtr<RTCIceCandidateDescriptor> iceCandidateDescriptor)

@@ -62,6 +62,7 @@ public:
         bool m_originalAuthorShadowDOMForAnyElementEnabled;
 #endif
         EditingBehaviorType m_originalEditingBehavior;
+        bool m_originalUnifiedSpellCheckerEnabled;
         bool m_originalFixedPositionCreatesStackingContext;
         bool m_originalSyncXHRInDocumentsEnabled;
 #if ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
@@ -80,9 +81,7 @@ public:
 #endif
         bool m_canStartMedia;
         bool m_originalMockScrollbarsEnabled;
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
         bool m_langAttributeAwareFormControlUIEnabled;
-#endif
         bool m_imagesEnabled;
     };
 
@@ -102,6 +101,7 @@ public:
     void setAcceleratedDrawingEnabled(bool enabled, ExceptionCode&);
     void setAcceleratedFiltersEnabled(bool enabled, ExceptionCode&);
     void setMockScrollbarsEnabled(bool enabled, ExceptionCode&);
+    void setUsesOverlayScrollbars(bool);
     void setPasswordEchoEnabled(bool enabled, ExceptionCode&);
     void setPasswordEchoDurationInSeconds(double durationInSeconds, ExceptionCode&);
     void setFixedElementsLayoutRelativeToFrame(bool, ExceptionCode&);

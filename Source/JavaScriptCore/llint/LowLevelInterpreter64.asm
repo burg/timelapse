@@ -691,28 +691,21 @@ _llint_op_bitor:
 
 _llint_op_check_has_instance:
     traceExecution()
-    loadis 8[PB, PC, 8], t1
+    loadis 24[PB, PC, 8], t1
     loadConstantOrVariableCell(t1, t0, .opCheckHasInstanceSlow)
     loadp JSCell::m_structure[t0], t0
-    btbz Structure::m_typeInfo + TypeInfo::m_flags[t0], ImplementsHasInstance, .opCheckHasInstanceSlow
-    dispatch(2)
+    btbz Structure::m_typeInfo + TypeInfo::m_flags[t0], ImplementsDefaultHasInstance, .opCheckHasInstanceSlow
+    dispatch(5)
 
 .opCheckHasInstanceSlow:
     callSlowPath(_llint_slow_path_check_has_instance)
-    dispatch(2)
+    dispatch(0)
 
 
 _llint_op_instanceof:
     traceExecution()
-    # Check that baseVal implements the default HasInstance behavior.
-    # FIXME: This should be deprecated.
-    loadis 24[PB, PC, 8], t1
-    loadConstantOrVariable(t1, t0)
-    loadp JSCell::m_structure[t0], t0
-    btbz Structure::m_typeInfo + TypeInfo::m_flags[t0], ImplementsDefaultHasInstance, .opInstanceofSlow
-    
     # Actually do the work.
-    loadis 32[PB, PC, 8], t0
+    loadis 24[PB, PC, 8], t0
     loadis 8[PB, PC, 8], t3
     loadConstantOrVariableCell(t0, t1, .opInstanceofSlow)
     loadp JSCell::m_structure[t1], t2
@@ -732,11 +725,11 @@ _llint_op_instanceof:
 .opInstanceofDone:
     orp ValueFalse, t0
     storep t0, [cfr, t3, 8]
-    dispatch(5)
+    dispatch(4)
 
 .opInstanceofSlow:
     callSlowPath(_llint_slow_path_instanceof)
-    dispatch(5)
+    dispatch(4)
 
 
 _llint_op_is_undefined:
@@ -1023,12 +1016,9 @@ _llint_op_get_array_length:
     loadp 32[PB, PC, 8], t1
     loadConstantOrVariableCell(t0, t3, .opGetArrayLengthSlow)
     loadp JSCell::m_structure[t3], t2
-    if VALUE_PROFILER
-        storep t2, ArrayProfile::m_lastSeenStructure[t1]
-    end
-    loadb Structure::m_indexingType[t2], t1
-    btiz t1, IsArray, .opGetArrayLengthSlow
-    btiz t1, HasArrayStorage, .opGetArrayLengthSlow
+    arrayProfile(t2, t1, t0)
+    btiz t2, IsArray, .opGetArrayLengthSlow
+    btiz t2, HasArrayStorage, .opGetArrayLengthSlow
     loadis 8[PB, PC, 8], t1
     loadp 64[PB, PC, 8], t2
     loadp JSObject::m_butterfly[t3], t0
@@ -1152,16 +1142,14 @@ _llint_op_put_by_id_transition_normal_out_of_line:
 _llint_op_get_by_val:
     traceExecution()
     loadis 16[PB, PC, 8], t2
-    loadis 24[PB, PC, 8], t3
     loadConstantOrVariableCell(t2, t0, .opGetByValSlow)
+    loadp JSCell::m_structure[t0], t2
+    loadp 32[PB, PC, 8], t3
+    arrayProfile(t2, t3, t1)
+    loadis 24[PB, PC, 8], t3
+    btiz t2, HasArrayStorage, .opGetByValSlow
     loadConstantOrVariableInt32(t3, t1, .opGetByValSlow)
     sxi2p t1, t1
-    loadp JSCell::m_structure[t0], t3
-    loadp 32[PB, PC, 8], t2
-    if VALUE_PROFILER
-        storep t3, ArrayProfile::m_lastSeenStructure[t2]
-    end
-    btbz Structure::m_indexingType[t3], HasArrayStorage, .opGetByValSlow
     loadp JSObject::m_butterfly[t0], t3
     biaeq t1, -sizeof IndexingHeader + IndexingHeader::m_vectorLength[t3], .opGetByValSlow
     loadis 8[PB, PC, 8], t0
@@ -1235,15 +1223,13 @@ _llint_op_put_by_val:
     traceExecution()
     loadis 8[PB, PC, 8], t0
     loadConstantOrVariableCell(t0, t1, .opPutByValSlow)
+    loadp JSCell::m_structure[t1], t2
+    loadp 32[PB, PC, 8], t3
+    arrayProfile(t2, t3, t0)
+    btiz t2, HasArrayStorage, .opPutByValSlow
     loadis 16[PB, PC, 8], t0
     loadConstantOrVariableInt32(t0, t2, .opPutByValSlow)
     sxi2p t2, t2
-    loadp JSCell::m_structure[t1], t3
-    loadp 32[PB, PC, 8], t0
-    if VALUE_PROFILER
-        storep t3, ArrayProfile::m_lastSeenStructure[t0]
-    end
-    btbz Structure::m_indexingType[t3], HasArrayStorage, .opPutByValSlow
     loadp JSObject::m_butterfly[t1], t0
     biaeq t2, -sizeof IndexingHeader + IndexingHeader::m_vectorLength[t0], .opPutByValSlow
     btpz ArrayStorage::m_vector[t0, t2, 8], .opPutByValEmpty
@@ -1255,6 +1241,9 @@ _llint_op_put_by_val:
     dispatch(5)
 
 .opPutByValEmpty:
+    if VALUE_PROFILER
+        storeb 1, ArrayProfile::m_mayStoreToHole[t3]
+    end
     addi 1, ArrayStorage::m_numValuesInVector[t0]
     bib t2, -sizeof IndexingHeader + IndexingHeader::m_publicLength[t0], .opPutByValStoreResult
     addi 1, t2, t1

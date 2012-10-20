@@ -272,7 +272,6 @@ QQuickWebViewPrivate::QQuickWebViewPrivate(QQuickWebView* viewport)
     , m_navigatorQtObjectEnabled(false)
     , m_renderToOffscreenBuffer(false)
     , m_allowAnyHTTPSCertificateForLocalHost(false)
-    , m_customDevicePixelRatio(0)
     , m_loadProgress(0)
 {
     viewport->setClip(true);
@@ -348,10 +347,6 @@ bool QQuickWebViewPrivate::transparentBackground() const
 {
     return webPageProxy->drawsTransparentBackground();
 }
-
-/*!
-    \qmlsignal WebView::loadingChanged(WebLoadRequest request)
-*/
 
 void QQuickWebViewPrivate::provisionalLoadDidStart(const WTF::String& url)
 {
@@ -802,20 +797,6 @@ void QQuickWebViewPrivate::didReceiveMessageFromNavigatorQtObject(const String& 
     emit q_ptr->experimental()->messageReceived(variantMap);
 }
 
-void QQuickWebViewPrivate::didChangeContentsSize(const QSize& newSize)
-{
-    if (newSize.isEmpty() || !m_customDevicePixelRatio || webPageProxy->deviceScaleFactor() == m_customDevicePixelRatio)
-        return;
-
-    // DrawingAreaProxy returns early if the page size is empty
-    // and the device pixel ratio property is propagated from QML
-    // before the QML page item has a valid size yet, thus the
-    // information would not reach the web process.
-    // Set the custom device pixel ratio requested from QML as soon
-    // as the content item has a valid size.
-    webPageProxy->setCustomDeviceScaleFactor(m_customDevicePixelRatio);
-}
-
 QQuickWebViewLegacyPrivate::QQuickWebViewLegacyPrivate(QQuickWebView* viewport)
     : QQuickWebViewPrivate(viewport)
 {
@@ -887,7 +868,7 @@ void QQuickWebViewFlickablePrivate::updateViewportSize()
     Q_Q(QQuickWebView);
 
     if (m_pageViewportController)
-        m_pageViewportController->setViewportSize(QSizeF(q->width(), q->height()));
+        m_pageViewportController->didChangeViewportSize(QSizeF(q->width(), q->height()));
 }
 
 void QQuickWebViewFlickablePrivate::pageDidRequestScroll(const QPoint& pos)
@@ -898,8 +879,8 @@ void QQuickWebViewFlickablePrivate::pageDidRequestScroll(const QPoint& pos)
 
 void QQuickWebViewFlickablePrivate::didChangeContentsSize(const QSize& newSize)
 {
-    pageView->setContentsSize(newSize); // emits contentsSizeChanged()
     QQuickWebViewPrivate::didChangeContentsSize(newSize);
+    pageView->setContentsSize(newSize); // emits contentsSizeChanged()
     m_pageViewportController->didChangeContentsSize(newSize);
 }
 
@@ -1243,10 +1224,6 @@ void QQuickWebViewExperimental::setUserAgent(const QString& userAgent)
 qreal QQuickWebViewExperimental::devicePixelRatio() const
 {
     Q_D(const QQuickWebView);
-
-    if (d->m_customDevicePixelRatio)
-        return d->m_customDevicePixelRatio;
-
     return d->webPageProxy->deviceScaleFactor();
 }
 
@@ -1256,7 +1233,7 @@ void QQuickWebViewExperimental::setDevicePixelRatio(qreal devicePixelRatio)
     if (0 >= devicePixelRatio || devicePixelRatio == this->devicePixelRatio())
         return;
 
-    d->m_customDevicePixelRatio = devicePixelRatio;
+    d->webPageProxy->setCustomDeviceScaleFactor(devicePixelRatio);
     emit devicePixelRatioChanged();
 }
 
@@ -1439,7 +1416,6 @@ QQuickWebPage* QQuickWebViewExperimental::page()
 
 /*!
     \page index.html
-
     \title QtWebKit: QML WebView version 3.0
 
     The WebView API allows QML applications to render regions of dynamic
@@ -1447,12 +1423,12 @@ QQuickWebPage* QQuickWebViewExperimental::page()
     QML components or encompass the full screen as specified within the
     QML application.
 
-    QML WebView version 3.0 is incompatible with previous QML WebView API
-    versions.  It allows an application to load pages into the WebView,
-    either by URL or with an HTML string, and navigate within session
-    history.  By default, links to different pages load within the same
-    WebView, but applications may intercept requests to delegate links to
-    other functions.
+    QML WebView version 3.0 is incompatible with previous QML \l
+    {QtWebKit1::WebView} {WebView} API versions.  It allows an
+    application to load pages into the WebView, either by URL or with
+    an HTML string, and navigate within session history.  By default,
+    links to different pages load within the same WebView, but applications
+    may intercept requests to delegate links to other functions.
 
     This sample QML application loads a web page, responds to session
     history context, and intercepts requests for external links:
@@ -1485,6 +1461,7 @@ QQuickWebPage* QQuickWebViewExperimental::page()
 
 /*!
     \qmltype WebView
+    \instantiates QQuickWebView
     \inqmlmodule QtWebKit 3.0
     \brief A WebView renders web content within a QML application
 */
@@ -1861,10 +1838,15 @@ void QQuickWebView::focusInEvent(QFocusEvent* event)
     d->pageView->eventHandler()->handleFocusInEvent(event);
 }
 
-void QQuickWebView::focusOutEvent(QFocusEvent* event)
+void QQuickWebView::itemChange(ItemChange change, const ItemChangeData &value)
 {
     Q_D(QQuickWebView);
-    d->pageView->eventHandler()->handleFocusOutEvent(event);
+    if (change == ItemActiveFocusHasChanged) {
+        bool focus = value.boolValue;
+        if (!focus)
+            d->pageView->eventHandler()->handleFocusLost();
+    }
+    QQuickFlickable::itemChange(change, value);
 }
 
 void QQuickWebView::touchEvent(QTouchEvent* event)

@@ -27,6 +27,7 @@
 #include "MediaQuery.h"
 #include "MediaQueryExp.h"
 #include "WebCoreMemoryInstrumentation.h"
+#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -215,7 +216,7 @@ String MediaQuerySet::mediaText() const
 void MediaQuerySet::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addInstrumentedVector(m_queries);
+    info.addMember(m_queries);
 }
     
 MediaList::MediaList(MediaQuerySet* mediaQueries, CSSStyleSheet* parentSheet)
@@ -293,7 +294,7 @@ void MediaList::reattach(MediaQuerySet* mediaQueries)
 void MediaList::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addInstrumentedMember(m_mediaQueries);
+    info.addMember(m_mediaQueries);
 }
 
 }

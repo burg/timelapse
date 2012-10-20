@@ -19,8 +19,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/HTMLEntityTable.cpp \
 	DerivedSources/WebCore/HTMLNames.cpp \
 	DerivedSources/WebCore/HTMLNames.h \
+	DerivedSources/WebCore/InjectedScriptCanvasModuleSource.h \
 	DerivedSources/WebCore/InjectedScriptSource.h \
-	DerivedSources/WebCore/InjectedScriptWebGLModuleSource.h \
 	DerivedSources/WebCore/InspectorBackendDispatcher.cpp \
 	DerivedSources/WebCore/InspectorBackendDispatcher.h \
 	DerivedSources/WebCore/InspectorFrontend.cpp \
@@ -2734,6 +2734,8 @@ webcore_sources += \
 	Source/WebCore/dom/DocumentOrderedMap.h \
 	Source/WebCore/dom/DocumentParser.cpp \
 	Source/WebCore/dom/DocumentParser.h \
+    Source/WebCore/dom/DocumentStyleSheetCollection.cpp \
+    Source/WebCore/dom/DocumentStyleSheetCollection.h \
 	Source/WebCore/dom/DocumentTiming.h \
 	Source/WebCore/dom/DocumentType.cpp \
 	Source/WebCore/dom/DocumentType.h \
@@ -3633,20 +3635,23 @@ webcore_sources += \
 	Source/WebCore/inspector/InjectedScript.h \
 	Source/WebCore/inspector/InjectedScriptBase.cpp \
 	Source/WebCore/inspector/InjectedScriptBase.h \
+	Source/WebCore/inspector/InjectedScriptCanvasModule.cpp \
+	Source/WebCore/inspector/InjectedScriptCanvasModule.h \
 	Source/WebCore/inspector/InjectedScriptHost.cpp \
 	Source/WebCore/inspector/InjectedScriptHost.h \
 	Source/WebCore/inspector/InjectedScriptManager.cpp \
 	Source/WebCore/inspector/InjectedScriptManager.h \
 	Source/WebCore/inspector/InjectedScriptModule.cpp \
 	Source/WebCore/inspector/InjectedScriptModule.h \
-	Source/WebCore/inspector/InjectedScriptWebGLModule.cpp \
-	Source/WebCore/inspector/InjectedScriptWebGLModule.h \
 	Source/WebCore/inspector/InspectorAgent.cpp \
 	Source/WebCore/inspector/InspectorAgent.h \
 	Source/WebCore/inspector/InspectorApplicationCacheAgent.cpp \
 	Source/WebCore/inspector/InspectorApplicationCacheAgent.h \
 	Source/WebCore/inspector/InspectorBaseAgent.cpp \
 	Source/WebCore/inspector/InspectorBaseAgent.h \
+	Source/WebCore/inspector/InspectorCanvasAgent.cpp \
+	Source/WebCore/inspector/InspectorCanvasAgent.h \
+	Source/WebCore/inspector/InspectorCanvasInstrumentation.h \
 	Source/WebCore/inspector/InspectorClient.cpp \
 	Source/WebCore/inspector/InspectorClient.h \
 	Source/WebCore/inspector/InspectorController.cpp \
@@ -3710,9 +3715,6 @@ webcore_sources += \
 	Source/WebCore/inspector/InspectorTimelineAgent.h \
 	Source/WebCore/inspector/InspectorValues.cpp \
 	Source/WebCore/inspector/InspectorValues.h \
-	Source/WebCore/inspector/InspectorWebGLAgent.cpp \
-	Source/WebCore/inspector/InspectorWebGLAgent.h \
-	Source/WebCore/inspector/InspectorWebGLInstrumentation.h \
 	Source/WebCore/inspector/InspectorWorkerAgent.cpp \
 	Source/WebCore/inspector/InspectorWorkerAgent.h \
 	Source/WebCore/inspector/InspectorWorkerResource.h \
@@ -3968,6 +3970,8 @@ webcore_sources += \
 	Source/WebCore/page/EventHandler.h \
 	Source/WebCore/page/EventSource.cpp \
 	Source/WebCore/page/EventSource.h \
+	Source/WebCore/page/FeatureObserver.cpp \
+	Source/WebCore/page/FeatureObserver.h \
 	Source/WebCore/page/FocusController.cpp \
 	Source/WebCore/page/FocusController.h \
 	Source/WebCore/page/FocusDirection.h \
@@ -3988,6 +3992,7 @@ webcore_sources += \
 	Source/WebCore/page/GroupSettings.h \
 	Source/WebCore/page/History.cpp \
 	Source/WebCore/page/History.h \
+    Source/WebCore/page/LayoutMilestones.h \
 	Source/WebCore/page/Location.cpp \
 	Source/WebCore/page/Location.h \
 	Source/WebCore/page/MediaCanStartListener.h \
@@ -4888,6 +4893,8 @@ webcore_sources += \
 	Source/WebCore/rendering/ExclusionRectangle.h \
 	Source/WebCore/rendering/ExclusionShape.cpp \
 	Source/WebCore/rendering/ExclusionShape.h \
+	Source/WebCore/rendering/ExclusionShapeInsideInfo.cpp \
+	Source/WebCore/rendering/ExclusionShapeInsideInfo.h \
 	Source/WebCore/rendering/FilterEffectRenderer.cpp \
 	Source/WebCore/rendering/FilterEffectRenderer.h \
 	Source/WebCore/rendering/FixedTableLayout.cpp \
@@ -5091,8 +5098,6 @@ webcore_sources += \
 	Source/WebCore/rendering/ScrollBehavior.cpp \
 	Source/WebCore/rendering/ScrollBehavior.h \
 	Source/WebCore/rendering/VerticalPositionCache.h \
-	Source/WebCore/rendering/WrapShapeInfo.cpp \
-	Source/WebCore/rendering/WrapShapeInfo.h \
 	Source/WebCore/rendering/mathml/RenderMathMLBlock.cpp \
 	Source/WebCore/rendering/mathml/RenderMathMLBlock.h \
 	Source/WebCore/rendering/mathml/RenderMathMLFenced.cpp \
@@ -5117,6 +5122,7 @@ webcore_sources += \
 	Source/WebCore/rendering/style/BasicShapes.h \
 	Source/WebCore/rendering/style/BorderData.h \
 	Source/WebCore/rendering/style/BorderValue.h \
+	Source/WebCore/rendering/style/ClipPathOperation.h \
 	Source/WebCore/rendering/style/CollapsedBorderValue.h \
 	Source/WebCore/rendering/style/ContentData.cpp \
 	Source/WebCore/rendering/style/ContentData.h \
@@ -5977,6 +5983,7 @@ else
 if TARGET_WIN32
 webcore_sources += \
 	Source/WebCore/platform/graphics/win/DIBPixelData.cpp \
+	Source/WebCore/platform/graphics/win/DIBPixelData.h \
 	Source/WebCore/platform/graphics/win/GraphicsContextCairoWin.cpp \
 	Source/WebCore/platform/graphics/win/GraphicsContextWin.cpp \
 	Source/WebCore/platform/graphics/win/LocalWindowsContext.h \
@@ -5987,6 +5994,7 @@ webcore_sources += \
 	Source/WebCore/platform/win/SystemInfo.h \
 	Source/WebCore/platform/win/WebCoreInstanceHandle.cpp \
 	Source/WebCore/platform/win/WebCoreInstanceHandle.h \
+	Source/WebCore/platform/win/WindowsExtras.h \
 	Source/WebCore/plugins/win/PluginDatabaseWin.cpp \
 	Source/WebCore/plugins/win/PluginMessageThrottlerWin.cpp \
 	Source/WebCore/plugins/win/PluginMessageThrottlerWin.h \
@@ -6233,10 +6241,9 @@ endif  # END ENABLE_WEBGL
 if USE_ACCELERATED_COMPOSITING
 if USE_CLUTTER
 webcore_sources += \
-	Source/WebCore/platform/clutter/GRefPtrClutter.cpp \
-	Source/WebCore/platform/clutter/GRefPtrClutter.h \
 	Source/WebCore/platform/graphics/clutter/GraphicsLayerClutter.cpp \
-	Source/WebCore/platform/graphics/clutter/GraphicsLayerClutter.h
+	Source/WebCore/platform/graphics/clutter/GraphicsLayerClutter.h \
+	Source/WebCore/platform/graphics/clutter/TransformationMatrixClutter.cpp
 endif  # END USE_CLUTTER
 
 if USE_TEXTURE_MAPPER_CAIRO

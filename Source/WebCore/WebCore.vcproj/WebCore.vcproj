@@ -590,11 +590,11 @@
 				>
 			</File>
 			<File
-				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\InjectedScriptSource.h"
+				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\InjectedScriptCanvasModuleSource.h"
 				>
 			</File>
 			<File
-				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\InjectedScriptWebGLModuleSource.h"
+				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\InjectedScriptSource.h"
 				>
 			</File>
 			<File
@@ -27051,6 +27051,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\page\FeatureObserver.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\page\FeatureObserver.h"
+				>
+			</File>
+			<File
 				RelativePath="..\page\FocusController.cpp"
 				>
 			</File>
@@ -38439,6 +38447,14 @@
                                 >
                         </File>
 			<File
+				RelativePath="..\rendering\ExclusionShapeInsideInfo.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\rendering\ExclusionShapeInsideInfo.h"
+				>
+			</File>
+			<File
 				RelativePath="..\rendering\FilterEffectRenderer.cpp"
 				>
 				<FileConfiguration
@@ -42208,14 +42224,6 @@
 			</File>
 			<File
 				RelativePath="..\rendering\RenderSlider.h"
-				>
-			</File>
-			<File
-				RelativePath="..\rendering\WrapShapeInfo.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\rendering\WrapShapeInfo.h"
 				>
 			</File>
 			<File
@@ -46687,6 +46695,10 @@
 					RelativePath="..\rendering\style\BasicShapes.h"
 					>
 				</File>
+				<File
+					RelativePath="..\rendering\style\ClipPathOperation.h"
+					>
+				</File>
 			</Filter>
 			<Filter
 				Name="svg"
@@ -50392,6 +50404,14 @@
 			</File>
 			<File
 				RelativePath="..\dom\DocumentParser.h"
+				>
+			</File>
+            <File
+				RelativePath="..\dom\DocumentStyleSheetCollection.cpp"
+				>
+			</File>
+            <File
+				RelativePath="..\dom\DocumentStyleSheetCollection.h"
 				>
 			</File>
 			<File
@@ -74575,6 +74595,30 @@
 				>
 			</File>
 			<File
+				RelativePath="..\inspector\InjectedScriptCanvasModule.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Production|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\inspector\InjectedScriptCanvasModule.h"
+				>
+			</File>
+			<File
 				RelativePath="..\inspector\InjectedScriptHost.cpp"
 				>
 				<FileConfiguration
@@ -74644,30 +74688,6 @@
 			</File>
 			<File
 				RelativePath="..\inspector\InjectedScriptModule.h"
-				>
-			</File>
-			<File
-				RelativePath="..\inspector\InjectedScriptWebGLModule.cpp"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Production|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\inspector\InjectedScriptWebGLModule.h"
 				>
 			</File>
 			<File
@@ -74776,6 +74796,34 @@
 			</File>
 			<File
 				RelativePath="..\inspector\InspectorBaseAgent.h"
+				>
+			</File>
+			<File
+				RelativePath="..\inspector\InspectorCanvasAgent.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Production|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\inspector\InspectorCanvasAgent.h"
+				>
+			</File>
+			<File
+				RelativePath="..\inspector\InspectorCanvasInstrumentation.h"
 				>
 			</File>
 			<File
@@ -75495,34 +75543,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\inspector\InspectorWebGLAgent.cpp"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Production|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\inspector\InspectorWebGLAgent.h"
-				>
-			</File>
-			<File
-				RelativePath="..\inspector\InspectorWebGLInstrumentation.h"
-				>
-			</File>
-			<File
 				RelativePath="..\inspector\InspectorWorkerAgent.cpp"
 				>
 				<FileConfiguration
@@ -75958,6 +75978,14 @@
 					>
 				</File>
 				<File
+					RelativePath="..\inspector\front-end\canvasProfiler.css"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\CanvasProfileView.js"
+					>
+				</File>
+				<File
 					RelativePath="..\inspector\front-end\Checkbox.js"
 					>
 				</File>
@@ -76027,6 +76055,10 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\CSSNamedFlowCollectionsView.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\CSSNamedFlowView.js"
 					>
 				</File>
 				<File
@@ -76855,14 +76887,6 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\WatchExpressionsSidebarPane.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\webGLProfiler.css"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\WebGLProfileView.js"
 					>
 				</File>
 				<File

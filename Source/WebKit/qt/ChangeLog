@@ -1,3 +1,157 @@
+2012-09-26  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Remove Qt Quick 1 support
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        It is being moved to the Qt5 QtQuick1 module.
+
+        A circular dependency exists otherwise in Qt, where QtWebKit would depend on QtQuick1,
+        which in turn depends on QtTools (for designer plugin), which in turn depends on QtWebKit
+        (for assistant help html rendering).
+
+        * declarative/plugin.cpp:
+        (WebKitQmlPlugin::registerTypes):
+        * declarative/public.pri:
+        * declarative/qdeclarativewebview.cpp: Removed.
+        * declarative/qdeclarativewebview_p.h: Removed.
+        * tests/qdeclarativewebview/qdeclarativewebview.pro: Removed.
+        * tests/qdeclarativewebview/resources/basic.html: Removed.
+        * tests/qdeclarativewebview/resources/basic.png: Removed.
+        * tests/qdeclarativewebview/resources/basic.qml: Removed.
+        * tests/qdeclarativewebview/resources/elements.html: Removed.
+        * tests/qdeclarativewebview/resources/elements.qml: Removed.
+        * tests/qdeclarativewebview/resources/forward.html: Removed.
+        * tests/qdeclarativewebview/resources/forward.png: Removed.
+        * tests/qdeclarativewebview/resources/javaScript.html: Removed.
+        * tests/qdeclarativewebview/resources/javaScript.qml: Removed.
+        * tests/qdeclarativewebview/resources/loadError.qml: Removed.
+        * tests/qdeclarativewebview/resources/newwindows.html: Removed.
+        * tests/qdeclarativewebview/resources/newwindows.qml: Removed.
+        * tests/qdeclarativewebview/resources/propertychanges.qml: Removed.
+        * tests/qdeclarativewebview/resources/sample.html: Removed.
+        * tests/qdeclarativewebview/resources/sethtml.qml: Removed.
+        * tests/qdeclarativewebview/resources/webviewbackgroundcolor.qml: Removed.
+        * tests/qdeclarativewebview/resources/webviewtest.qml: Removed.
+        * tests/qdeclarativewebview/resources/webviewtestdefault.qml: Removed.
+        * tests/qdeclarativewebview/tst_qdeclarativewebview.cpp: Removed.
+        * tests/qdeclarativewebview/tst_qdeclarativewebview.qrc: Removed.
+
+2012-09-25  Beth Dakin  <bdakin@apple.com>
+
+        https://bugs.webkit.org/show_bug.cgi?id=95397
+        Need to merge didFirstVisuallyNonEmptyLayout and 
+        didNewFirstVisuallyNonEmptyLayout
+        -and corresponding-
+        <rdar://problem/10791680>
+
+        Reviewed by Sam Weinig.
+
+        Remove dispatchDidFirstLayout, 
+        dispatchDidFirstVisuallyNonEmptyLayout, and 
+        dispatchDidNewFirstVisuallyNonEmptyLayout. Their functionality 
+        is now replaced by dispatchDidLayout(LayoutMilestoneOptions)
+        * WebCoreSupport/FrameLoaderClientQt.cpp:
+        (WebCore::FrameLoaderClientQt::dispatchDidLayout):
+        * WebCoreSupport/FrameLoaderClientQt.h:
+        (FrameLoaderClientQt):
+
+        It is now necessary to opt into getting any of the 
+        "layout milestone" notifications.
+        * Api/qwebpage.cpp:
+        (QWebPagePrivate::QWebPagePrivate):
+
+2012-09-25  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Fix failing assertion when calling QWebSettings::setIconDatabasePath multiple times
+
+        Reviewed by Jocelyn Turcotte.
+
+        This happens in various auto-tests. We can implement this by closing the database before
+        opening it with the new path.
+
+        * Api/qwebsettings.cpp:
+        (QWebSettings::setIconDatabasePath):
+
+2012-09-24  Benjamin Poulain  <bpoulain@apple.com>
+
+        Fix Geolocation error reporting in the test support
+        https://bugs.webkit.org/show_bug.cgi?id=97386
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/DumpRenderTreeSupportQt.cpp:
+        (DumpRenderTreeSupportQt::setMockGeolocationPositionUnavailableError):
+        * WebCoreSupport/DumpRenderTreeSupportQt.h:
+
+2012-09-20  Csaba Osztrogonác  <ossy@webkit.org>
+
+        [Qt] Enable CSS regions by default
+        https://bugs.webkit.org/show_bug.cgi?id=97196
+
+        Reviewed by Dirk Schulze.
+
+        * Api/qwebsettings.cpp:
+        (QWebSettings::QWebSettings):
+
+2012-09-17  Caio Marcelo de Oliveira Filho  <caio.oliveira@openbossa.org>
+
+        [Qt] Use UndoStep::editingAction() to set the text of undo/redo actions
+        https://bugs.webkit.org/show_bug.cgi?id=96921
+
+        Reviewed by Ryosuke Niwa.
+
+        Set the text of QUndoCommands we create for undo/redo actions based on the
+        editing action from UndoStep.
+
+        This change is visible using QtTestBrowser, and looking at the Edit menu after
+        doing HTML editing changes. I've used http://simple-rte.rniwa.com for testing.
+
+        * WebCoreSupport/UndoStepQt.cpp:
+        (undoNameForEditAction): This function returns a localized name of the action.
+        (UndoStepQt::UndoStepQt): Set the text based on UndoStep::editingAction.
+        * tests/qwebpage/tst_qwebpage.cpp:
+        (tst_QWebPage):
+        (tst_QWebPage::undoActionHaveCustomText): Create a new test to verify that the text
+        describing the undo action after inserting a text and indenting the text is different.
+
+2012-09-17  Leo Franchi  <lfranchi@kde.org>
+
+        [Qt] Inspector WebSocket backend protocol update
+        https://bugs.webkit.org/show_bug.cgi?id=77031
+
+        Also adds support for multi-frame messages and non-text messages.
+        Thanks to Jocelyn Turcotte for most of the WebSocket update code!
+
+        Reviewed by Simon Hausmann.
+
+        * WebCoreSupport/InspectorServerQt.cpp:
+        (WebCore):
+        (WebCore::generateWebSocketChallengeResponse):
+        (WebCore::InspectorServerRequestHandlerQt::tcpReadyRead):
+        (WebCore::InspectorServerRequestHandlerQt::webSocketSend):
+        (WebCore::applyMask):
+        (WebCore::InspectorServerRequestHandlerQt::webSocketReadyRead):
+        * WebCoreSupport/InspectorServerQt.h:
+        (InspectorServerRequestHandlerQt):
+
+2012-09-15  Pierre Rossi  <pierre.rossi@gmail.com>
+
+        [Qt] QDoc fixes for Qt 5 documentation
+        https://bugs.webkit.org/show_bug.cgi?id=96796
+
+        Reviewed by Simon Hausmann.
+
+        Produce fewer warnings and a better documentation.
+        Having two QML modules providing a WebView component is a bit too much for poor old qdoc to
+        cope with (or would require a lot of painful disambiguation by hand). Since the plan is to have
+        QDeclarativeWebView living in the qtquick1 module, we can already take it out of the 
+        documentation generation for now.
+
+        * declarative/qdeclarativewebview.cpp: s/qmlclass/qmltype/ out of principle
+        * docs/qtwebkit.qdocconf: Remove the \i alias that caused a warning. Use *.h as headers suffix, not sources.
+        Also remove QDeclarativeWebView from the documentation.
+
 2012-09-13  Lauro Neto  <lauro.neto@openbossa.org>
 
         [Qt][WK2] fast/forms/access-key-for-all-elements.html fails

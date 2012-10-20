@@ -41,6 +41,7 @@ WebProcessCreationParameters::WebProcessCreationParameters()
 #if PLATFORM(MAC)
     , nsURLCacheMemoryCapacity(0)
     , nsURLCacheDiskCapacity(0)
+    , shouldForceScreenFontSubstitution(false)
 #elif PLATFORM(WIN)
     , shouldPaintNativeControls(false)
 #endif
@@ -60,6 +61,10 @@ void WebProcessCreationParameters::encode(CoreIPC::ArgumentEncoder* encoder) con
     encoder->encode(urlSchemesRegistererdAsEmptyDocument);
     encoder->encode(urlSchemesRegisteredAsSecure);
     encoder->encode(urlSchemesForWhichDomainRelaxationIsForbidden);
+    encoder->encode(urlSchemesRegisteredAsLocal);
+    encoder->encode(urlSchemesRegisteredAsNoAccess);
+    encoder->encode(urlSchemesRegisteredAsDisplayIsolated);
+    encoder->encode(urlSchemesRegisteredAsCORSEnabled);
     encoder->encode(mimeTypesWithCustomRepresentation);
     encoder->encodeEnum(cacheModel);
     encoder->encode(shouldTrackVisitedLinks);
@@ -87,6 +92,7 @@ void WebProcessCreationParameters::encode(CoreIPC::ArgumentEncoder* encoder) con
     encoder->encode(acceleratedCompositingPort);
     encoder->encode(uiProcessBundleResourcePath);
     encoder->encode(uiProcessBundleResourcePathExtensionHandle);
+    encoder->encode(shouldForceScreenFontSubstitution);
 #elif PLATFORM(WIN)
     encoder->encode(shouldPaintNativeControls);
     encoder->encode(cfURLCachePath);
@@ -133,6 +139,14 @@ bool WebProcessCreationParameters::decode(CoreIPC::ArgumentDecoder* decoder, Web
     if (!decoder->decode(parameters.urlSchemesRegisteredAsSecure))
         return false;
     if (!decoder->decode(parameters.urlSchemesForWhichDomainRelaxationIsForbidden))
+        return false;
+    if (!decoder->decode(parameters.urlSchemesRegisteredAsLocal))
+        return false;
+    if (!decoder->decode(parameters.urlSchemesRegisteredAsNoAccess))
+        return false;
+    if (!decoder->decode(parameters.urlSchemesRegisteredAsDisplayIsolated))
+        return false;
+    if (!decoder->decode(parameters.urlSchemesRegisteredAsCORSEnabled))
         return false;
     if (!decoder->decode(parameters.mimeTypesWithCustomRepresentation))
         return false;
@@ -183,6 +197,8 @@ bool WebProcessCreationParameters::decode(CoreIPC::ArgumentDecoder* decoder, Web
     if (!decoder->decode(parameters.uiProcessBundleResourcePath))
         return false;
     if (!decoder->decode(parameters.uiProcessBundleResourcePathExtensionHandle))
+        return false;
+    if (!decoder->decode(parameters.shouldForceScreenFontSubstitution))
         return false;
 #elif PLATFORM(WIN)
     if (!decoder->decode(parameters.shouldPaintNativeControls))

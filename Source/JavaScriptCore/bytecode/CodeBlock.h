@@ -432,6 +432,8 @@ namespace JSC {
 
         unsigned instructionCount() { return m_instructions.size(); }
 
+        int argumentIndexAfterCapture(size_t argument);
+
 #if ENABLE(JIT)
         void setJITCode(const JITCode& code, MacroAssemblerCodePtr codeWithArityCheck)
         {
@@ -514,7 +516,7 @@ namespace JSC {
             m_argumentsRegister = argumentsRegister;
             ASSERT(usesArguments());
         }
-        int argumentsRegister()
+        int argumentsRegister() const
         {
             ASSERT(usesArguments());
             return m_argumentsRegister;
@@ -529,7 +531,7 @@ namespace JSC {
         {
             m_activationRegister = activationRegister;
         }
-        int activationRegister()
+        int activationRegister() const
         {
             ASSERT(needsFullScopeChain());
             return m_activationRegister;
@@ -552,11 +554,24 @@ namespace JSC {
             if (inlineCallFrame && !operandIsArgument(operand))
                 return inlineCallFrame->capturedVars.get(operand);
 
-            // Our estimate of argument capture is conservative.
             if (operandIsArgument(operand))
-                return needsActivation() || usesArguments();
+                return usesArguments();
 
-            return operand < m_numCapturedVars;
+            // The activation object isn't in the captured region, but it's "captured"
+            // in the sense that stores to its location can be observed indirectly.
+            if (needsActivation() && operand == activationRegister())
+                return true;
+
+            // Ditto for the arguments object.
+            if (usesArguments() && operand == argumentsRegister())
+                return true;
+
+            // Ditto for the arguments object.
+            if (usesArguments() && operand == unmodifiedArgumentsRegister(argumentsRegister()))
+                return true;
+
+            return operand >= m_symbolTable->captureStart() 
+                && operand < m_symbolTable->captureEnd();
         }
 
         CodeType codeType() const { return m_codeType; }
@@ -1174,7 +1189,6 @@ namespace JSC {
 
         int m_numCalleeRegisters;
         int m_numVars;
-        int m_numCapturedVars;
         bool m_isConstructor;
 
     protected:
@@ -1520,6 +1534,18 @@ namespace JSC {
         return baselineCodeBlock;
     }
     
+    inline int CodeBlock::argumentIndexAfterCapture(size_t argument)
+    {
+        if (argument >= static_cast<size_t>(symbolTable()->parameterCount()))
+            return CallFrame::argumentOffset(argument);
+
+        const SlowArgument* slowArguments = symbolTable()->slowArguments();
+        if (!slowArguments || slowArguments[argument].status == SlowArgument::Normal)
+            return CallFrame::argumentOffset(argument);
+
+        ASSERT(slowArguments[argument].status == SlowArgument::Captured);
+        return slowArguments[argument].index;
+    }
 
     inline Register& ExecState::r(int index)
     {
@@ -1543,6 +1569,17 @@ namespace JSC {
         return isInlineCallFrameSlow();
     }
 #endif
+
+    inline JSValue ExecState::argumentAfterCapture(size_t argument)
+    {
+        if (argument >= argumentCount())
+             return jsUndefined();
+
+        if (!codeBlock())
+            return this[argumentOffset(argument)].jsValue();
+
+        return this[codeBlock()->argumentIndexAfterCapture(argument)].jsValue();
+    }
 
 #if ENABLE(DFG_JIT)
     inline void DFGCodeBlocks::mark(void* candidateCodeBlock)

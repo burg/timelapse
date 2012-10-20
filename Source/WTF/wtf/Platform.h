@@ -604,11 +604,9 @@
 #define WTF_USE_PTHREADS 1
 
 #if PLATFORM(IOS_SIMULATOR)
-    #define ENABLE_CLASSIC_INTERPRETER 1
     #define ENABLE_JIT 0
     #define ENABLE_YARR_JIT 0
 #else
-    #define ENABLE_CLASSIC_INTERPRETER 0
     #define ENABLE_JIT 1
     #define ENABLE_LLINT 1
     #define ENABLE_YARR_JIT 1
@@ -641,7 +639,9 @@
 
 #if PLATFORM(WX)
 #if !CPU(PPC)
+#if !defined(ENABLE_ASSEMBLER)
 #define ENABLE_ASSEMBLER 1
+#endif
 #define ENABLE_JIT 1
 #endif
 #define ENABLE_GLOBAL_FASTMALLOC_NEW 0
@@ -698,7 +698,6 @@
 #define HAVE_LANGINFO_H 1
 #define HAVE_MMAP 1
 #define HAVE_MERGESORT 1
-#define HAVE_SBRK 1
 #define HAVE_STRINGS_H 1
 #define HAVE_SYS_PARAM_H 1
 #define HAVE_SYS_TIME_H 1
@@ -739,7 +738,6 @@
 #define HAVE_MMAP 1
 #define HAVE_MADV_FREE_REUSE 1
 #define HAVE_MADV_FREE 1
-#define HAVE_SBRK 1
 #define HAVE_STRINGS_H 1
 #define HAVE_SYS_PARAM_H 1
 #define HAVE_SYS_TIME_H 1
@@ -749,7 +747,6 @@
 
 #define HAVE_ERRNO_H 1
 #define HAVE_NMAP 1
-#define HAVE_SBRK 1
 #define HAVE_STRINGS_H 1
 #define HAVE_SYS_PARAM_H 1
 #define HAVE_SYS_TIME_H 1
@@ -761,7 +758,6 @@
 #define HAVE_ERRNO_H 1
 #define HAVE_LANGINFO_H 1
 #define HAVE_MMAP 1
-#define HAVE_SBRK 1
 #define HAVE_STRINGS_H 1
 #define HAVE_SYS_PARAM_H 1
 #define HAVE_SYS_TIME_H 1
@@ -920,7 +916,7 @@
 #define ENABLE_LLINT 1
 #endif
 
-#if !defined(ENABLE_DFG_JIT) && ENABLE(JIT)
+#if !defined(ENABLE_DFG_JIT) && ENABLE(JIT) && !COMPILER(MSVC)
 /* Enable the DFG JIT on X86 and X86_64.  Only tested on Mac and GNU/Linux. */
 #if (CPU(X86) || CPU(X86_64)) && (PLATFORM(MAC) || OS(LINUX))
 #define ENABLE_DFG_JIT 1
@@ -933,6 +929,22 @@
 #if CPU(ARM_TRADITIONAL)
 #define ENABLE_DFG_JIT 1
 #endif
+#endif
+
+/* If the jit is not available, enable the LLInt C Loop: */
+#if !ENABLE(JIT)
+#undef ENABLE_LLINT        /* Undef so that we can redefine it. */
+#undef ENABLE_LLINT_C_LOOP /* Undef so that we can redefine it. */
+#undef ENABLE_DFG_JIT      /* Undef so that we can redefine it. */
+#define ENABLE_LLINT 1
+#define ENABLE_LLINT_C_LOOP 1
+#define ENABLE_DFG_JIT 0
+#endif
+
+/* Do a sanity check to make sure that we at least have one execution engine in
+   use: */
+#if !(ENABLE(JIT) || ENABLE(LLINT))
+#error You have to have at least one execution model enabled to build JSC
 #endif
 
 /* Profiling of types and values used by JIT code. DFG_JIT depends on it, but you
@@ -957,29 +969,6 @@
 #define ENABLE_WRITE_BARRIER_PROFILING 0
 #endif
 
-/* Ensure that either the JIT or the interpreter has been enabled. */
-#if !defined(ENABLE_CLASSIC_INTERPRETER) && !ENABLE(JIT) && !ENABLE(LLINT)
-#define ENABLE_CLASSIC_INTERPRETER 1
-#endif
-
-/* If the jit and classic interpreter is not available, enable the LLInt C Loop: */
-#if !ENABLE(JIT) && !ENABLE(CLASSIC_INTERPRETER)
-    #define ENABLE_LLINT 1
-    #define ENABLE_LLINT_C_LOOP 1
-    #define ENABLE_DFG_JIT 0
-#endif
-
-/* Do a sanity check to make sure that we at least have one execution engine in
-   use: */
-#if !(ENABLE(JIT) || ENABLE(CLASSIC_INTERPRETER) || ENABLE(LLINT))
-#error You have to have at least one execution model enabled to build JSC
-#endif
-/* Do a sanity check to make sure that we don't have both the classic interpreter
-   and the llint C loop in use at the same time: */
-#if ENABLE(CLASSIC_INTERPRETER) && ENABLE(LLINT_C_LOOP)
-#error You cannot build both the classic interpreter and the llint C loop together
-#endif
-
 /* Configure the JIT */
 #if CPU(X86) && COMPILER(MSVC)
 #define JSC_HOST_CALL __fastcall
@@ -993,12 +982,9 @@
 #if COMPILER(GCC) || (RVCT_VERSION_AT_LEAST(4, 0, 0, 0) && defined(__GNUC__))
 #define HAVE_COMPUTED_GOTO 1
 #endif
-#if HAVE(COMPUTED_GOTO) && ENABLE(CLASSIC_INTERPRETER)
-#define ENABLE_COMPUTED_GOTO_CLASSIC_INTERPRETER 1
-#endif
 
 /* Determine if we need to enable Computed Goto Opcodes or not: */
-#if (HAVE(COMPUTED_GOTO) && ENABLE(LLINT)) || ENABLE(COMPUTED_GOTO_CLASSIC_INTERPRETER)
+#if HAVE(COMPUTED_GOTO) && ENABLE(LLINT)
 #define ENABLE_COMPUTED_GOTO_OPCODES 1
 #endif
 
@@ -1013,8 +999,15 @@
 #define ENABLE_YARR_JIT_DEBUG 0
 #endif
 
+/* If either the JIT or the RegExp JIT is enabled, then the Assembler must be
+   enabled as well: */
 #if ENABLE(JIT) || ENABLE(YARR_JIT)
+#if defined(ENABLE_ASSEMBLER) && !ENABLE_ASSEMBLER
+#error "Cannot enable the JIT or RegExp JIT without enabling the Assembler"
+#else
+#undef ENABLE_ASSEMBLER
 #define ENABLE_ASSEMBLER 1
+#endif
 #endif
 
 /* Pick which allocator to use; we only need an executable allocator if the assembler is compiled in.
@@ -1183,10 +1176,6 @@
 
 #if !defined(WTF_USE_ZLIB) && !PLATFORM(QT)
 #define WTF_USE_ZLIB 1
-#endif
-
-#if PLATFORM(GTK)
-#define WTF_DEPRECATED_STRING_OPERATORS
 #endif
 
 #if PLATFORM(QT)

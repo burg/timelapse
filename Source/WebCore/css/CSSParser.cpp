@@ -199,6 +199,7 @@ CSSParserContext::CSSParserContext(CSSParserMode mode, const KURL& baseURL)
     , mode(mode)
     , isHTMLDocument(false)
     , isCSSCustomFilterEnabled(false)
+    , isCSSStickyPositionEnabled(false)
     , isCSSRegionsEnabled(false)
     , isCSSGridLayoutEnabled(false)
 #if ENABLE(CSS_VARIABLES)
@@ -215,6 +216,7 @@ CSSParserContext::CSSParserContext(Document* document, const KURL& baseURL, cons
     , mode(document->inQuirksMode() ? CSSQuirksMode : CSSStrictMode)
     , isHTMLDocument(document->isHTMLDocument())
     , isCSSCustomFilterEnabled(document->settings() ? document->settings()->isCSSCustomFilterEnabled() : false)
+    , isCSSStickyPositionEnabled(document->cssStickyPositionEnabled())
     , isCSSRegionsEnabled(document->cssRegionsEnabled())
     , isCSSGridLayoutEnabled(document->cssGridLayoutEnabled())
 #if ENABLE(CSS_VARIABLES)
@@ -232,6 +234,7 @@ bool operator==(const CSSParserContext& a, const CSSParserContext& b)
         && a.mode == b.mode
         && a.isHTMLDocument == b.isHTMLDocument
         && a.isCSSCustomFilterEnabled == b.isCSSCustomFilterEnabled
+        && a.isCSSStickyPositionEnabled == b.isCSSStickyPositionEnabled
         && a.isCSSRegionsEnabled == b.isCSSRegionsEnabled
         && a.isCSSGridLayoutEnabled == b.isCSSGridLayoutEnabled
 #if ENABLE(CSS_VARIABLES)
@@ -670,7 +673,7 @@ static inline bool isValidKeywordPropertyAndValue(CSSPropertyID propertyId, int 
     case CSSPropertyPosition: // static | relative | absolute | fixed | sticky | inherit
         if (valueID == CSSValueStatic || valueID == CSSValueRelative || valueID == CSSValueAbsolute || valueID == CSSValueFixed
 #if ENABLE(CSS_STICKY_POSITION)
-            || valueID == CSSValueWebkitSticky
+            || (parserContext.isCSSStickyPositionEnabled && valueID == CSSValueWebkitSticky)
 #endif
             )
             return true;
@@ -5991,7 +5994,7 @@ bool CSSParser::parseFlex(CSSParserValueList* args, bool important)
     }
 
     if (flexGrow == unsetValue)
-        flexGrow = 0;
+        flexGrow = 1;
     if (flexShrink == unsetValue)
         flexShrink = 1;
     if (!flexBasis)
@@ -10415,12 +10418,12 @@ static CSSPropertyID cssPropertyID(const CharacterType* propertyName, unsigned l
     const Property* hashTableEntry = findProperty(name, length);
     const CSSPropertyID propertyID = hashTableEntry ? static_cast<CSSPropertyID>(hashTableEntry->id) : CSSPropertyInvalid;
 
-    // 600 is comfortably larger than numCSSProperties to allow for growth
-    static const int CSSPropertyHistogramSize = 600;
-    COMPILE_ASSERT(CSSPropertyHistogramSize > numCSSProperties, number_of_css_properties_exceed_CSSPropertyHistogramSize);
-
-    if (hasPrefix(buffer, length, "-webkit-") && propertyID != CSSPropertyInvalid)
-        HistogramSupport::histogramEnumeration("CSS.PrefixUsage", max(1, propertyID - firstCSSProperty), CSSPropertyHistogramSize);
+    static const int cssPropertyHistogramSize = numCSSProperties;
+    if (hasPrefix(buffer, length, "-webkit-") && propertyID != CSSPropertyInvalid) {
+        int histogramValue = propertyID - firstCSSProperty;
+        ASSERT(0 <= histogramValue && histogramValue < cssPropertyHistogramSize);
+        HistogramSupport::histogramEnumeration("CSS.PrefixUsage", histogramValue, cssPropertyHistogramSize);
+    }
 
     return propertyID;
 }

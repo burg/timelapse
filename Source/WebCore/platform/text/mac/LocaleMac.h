@@ -47,6 +47,7 @@ class DateComponents;
 class LocaleMac : public Localizer {
 public:
     static PassOwnPtr<LocaleMac> create(const String&);
+    static PassOwnPtr<LocaleMac> create(NSLocale*);
     static LocaleMac* currentLocale();
     ~LocaleMac();
     double parseDate(const String&);
@@ -59,7 +60,7 @@ public:
     unsigned firstDayOfWeek();
 #endif
 
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
     virtual String timeFormat() OVERRIDE;
     virtual String shortTimeFormat() OVERRIDE;
     virtual const Vector<String>& timeAMPMLabels() OVERRIDE;
@@ -67,7 +68,6 @@ public:
 
 private:
     explicit LocaleMac(NSLocale*);
-    explicit LocaleMac(const String&);
     NSDateFormatter *createShortDateFormatter();
     virtual void initializeLocalizerData() OVERRIDE;
 
@@ -77,7 +77,7 @@ private:
     Vector<String> m_monthLabels;
     Vector<String> m_weekDayShortLabels;
 #endif
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
     NSDateFormatter *createTimeFormatter();
     NSDateFormatter *createShortTimeFormatter();
 

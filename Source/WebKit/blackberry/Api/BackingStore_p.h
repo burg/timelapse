@@ -101,6 +101,9 @@ public:
     enum TileMatrixDirection { Horizontal, Vertical };
     BackingStorePrivate();
 
+    void instrumentBeginFrame();
+    void instrumentCancelFrame();
+
     // Returns whether direct rendering is explicitly turned on or is
     // required because the surface pool is not large enough to meet
     // the minimum number of tiles required to scroll.
@@ -203,9 +206,6 @@ public:
     // Preconditions: You have to call prepareFrame and setViewport on the LayerRenderer before
     //                calling this.
     void compositeContents(WebCore::LayerRenderer*, const WebCore::TransformationMatrix&, const WebCore::FloatRect& contents, bool contentsOpaque);
-
-    void blendCompositingSurface(const Platform::IntRect& dstRect);
-    void clearCompositingSurface();
 
     bool drawLayersOnCommitIfNeeded();
     void drawAndBlendLayersForDirectRendering(const Platform::IntRect& dirtyRect);

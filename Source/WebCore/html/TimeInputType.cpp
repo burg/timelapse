@@ -41,12 +41,14 @@
 #include <wtf/PassOwnPtr.h>
 
 #if ENABLE(INPUT_TYPE_TIME)
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
 #include "DateTimeFieldsState.h"
 #include "ElementShadow.h"
 #include "FormController.h"
 #include "KeyboardEvent.h"
+#include "Localizer.h"
 #include "ShadowRoot.h"
+#include <wtf/text/WTFString.h>
 #endif
 
 namespace WebCore {
@@ -116,7 +118,7 @@ bool TimeInputType::isTimeField() const
     return true;
 }
 
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
 
 TimeInputType::DateTimeEditControlOwnerImpl::DateTimeEditControlOwnerImpl(TimeInputType& timeInputType)
     : m_timeInputType(timeInputType)
@@ -148,10 +150,30 @@ void TimeInputType::DateTimeEditControlOwnerImpl::didFocusOnControl()
 void TimeInputType::DateTimeEditControlOwnerImpl::editControlValueChanged()
 {
     RefPtr<HTMLInputElement> input(m_timeInputType.element());
-    input->setValueInternal(m_timeInputType.serialize(Decimal::fromDouble(m_timeInputType.m_dateTimeEditElement->valueAsDouble())), DispatchNoEvent);
+    input->setValueInternal(m_timeInputType.m_dateTimeEditElement->value(), DispatchNoEvent);
     input->setNeedsStyleRecalc();
     input->dispatchFormControlInputEvent();
     input->dispatchFormControlChangeEvent();
+    input->notifyFormStateChanged();
+}
+
+
+String TimeInputType::DateTimeEditControlOwnerImpl::formatDateTimeFieldsState(const DateTimeFieldsState& dateTimeFieldsState) const
+{
+    if (!dateTimeFieldsState.hasHour() || !dateTimeFieldsState.hasMinute() || !dateTimeFieldsState.hasAMPM())
+        return emptyString();
+    if (dateTimeFieldsState.hasMillisecond() && dateTimeFieldsState.millisecond())
+        return String::format("%02u:%02u:%02u.%03u",
+                dateTimeFieldsState.hour23(),
+                dateTimeFieldsState.minute(),
+                dateTimeFieldsState.hasSecond() ? dateTimeFieldsState.second() : 0,
+                dateTimeFieldsState.millisecond());
+    if (dateTimeFieldsState.hasSecond() && dateTimeFieldsState.second())
+        return String::format("%02u:%02u:%02u",
+                dateTimeFieldsState.hour23(),
+                dateTimeFieldsState.minute(),
+                dateTimeFieldsState.second());
+    return String::format("%02u:%02u", dateTimeFieldsState.hour23(), dateTimeFieldsState.minute());
 }
 
 bool TimeInputType::hasCustomFocusLogic() const
@@ -269,7 +291,7 @@ void TimeInputType::restoreFormControlState(const FormControlState& state)
     setMillisecondToDateComponents(createStepRange(AnyIsDefaultStep).minimum().toDouble(), &date);
     DateTimeFieldsState dateTimeFieldsState = DateTimeFieldsState::restoreFormControlState(state);
     m_dateTimeEditElement->setValueAsDateTimeFieldsState(dateTimeFieldsState, date);
-    element()->setValueInternal(serialize(Decimal::fromDouble(m_dateTimeEditElement->valueAsDouble())), DispatchNoEvent);
+    element()->setValueInternal(m_dateTimeEditElement->value(), DispatchNoEvent);
 }
 
 FormControlState TimeInputType::saveFormControlState() const
@@ -303,14 +325,25 @@ void TimeInputType::updateInnerTextValue()
         return;
 
     Localizer& localizer = element()->document()->getLocalizer(element()->computeInheritedLanguage());
-    const StepRange stepRange(createStepRange(AnyIsDefaultStep));
+    DateTimeEditElement::LayoutParameters layoutParameters(localizer, createStepRange(AnyIsDefaultStep));
+
     DateComponents date;
-    if (parseToDateComponents(element()->value(), &date))
-        m_dateTimeEditElement->setValueAsDate(stepRange, date, localizer);
-    else {
-        setMillisecondToDateComponents(stepRange.minimum().toDouble(), &date);
-        m_dateTimeEditElement->setEmptyValue(stepRange, date, localizer);
+    const bool hasValue = parseToDateComponents(element()->value(), &date);
+    if (!hasValue)
+        setMillisecondToDateComponents(layoutParameters.stepRange.minimum().toDouble(), &date);
+
+    if (date.second() || layoutParameters.shouldHaveSecondField()) {
+        layoutParameters.dateTimeFormat = localizer.timeFormat();
+        layoutParameters.fallbackDateTimeFormat = "HH:mm:ss";
+    } else {
+        layoutParameters.dateTimeFormat = localizer.shortTimeFormat();
+        layoutParameters.fallbackDateTimeFormat = "HH:mm";
     }
+
+    if (hasValue)
+        m_dateTimeEditElement->setValueAsDate(layoutParameters, date);
+    else
+        m_dateTimeEditElement->setEmptyValue(layoutParameters, date);
 }
 #else
 TimeInputType::TimeInputType(HTMLInputElement* element)

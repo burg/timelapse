@@ -366,7 +366,7 @@ public:
 
     virtual void updateLogicalWidth();
     virtual void updateLogicalHeight();
-    void computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues&) const;
+    virtual void computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues&) const;
 
     RenderBoxRegionInfo* renderBoxRegionInfo(RenderRegion*, LayoutUnit offsetFromLogicalTopOfFirstPage, RenderBoxRegionInfoFlags = CacheRenderBoxRegionInfo) const;
     void computeLogicalWidthInRegion(LogicalExtentComputedValues&, RenderRegion* = 0, LayoutUnit offsetFromLogicalTopOfFirstPage = ZERO_LAYOUT_UNIT) const;
@@ -399,6 +399,7 @@ public:
     virtual LayoutUnit computeReplacedLogicalWidth(bool includeMaxWidth = true) const;
     virtual LayoutUnit computeReplacedLogicalHeight() const;
 
+    static bool percentageLogicalHeightIsResolvableFromBlock(const RenderBlock* containingBlock, bool outOfFlowPositioned);
     LayoutUnit computePercentageLogicalHeight(const Length& height) const;
 
     // Block flows subclass availableWidth/Height to handle multi column layout (shrinking the width/height available to children when laying out.)
@@ -541,6 +542,8 @@ public:
         ASSERT_NOT_REACHED();
         return 0;
     }
+
+    bool hasSameDirectionAs(const RenderBox* object) const { return style()->direction() == object->style()->direction(); }
 
 protected:
     virtual void willBeDestroyed();

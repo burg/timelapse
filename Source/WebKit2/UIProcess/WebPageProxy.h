@@ -484,6 +484,8 @@ public:
     bool useFixedLayout() const { return m_useFixedLayout; };
     const WebCore::IntSize& fixedLayoutSize() const { return m_fixedLayoutSize; };
 
+    void listenForLayoutMilestones(WebCore::LayoutMilestones);
+
     bool hasHorizontalScrollbar() const { return m_mainFrameHasHorizontalScrollbar; }
     bool hasVerticalScrollbar() const { return m_mainFrameHasVerticalScrollbar; }
 
@@ -714,7 +716,7 @@ public:
     virtual NativeWebMouseEvent* currentlyProcessedMouseDownEvent();
 
 #if PLATFORM(GTK) && USE(TEXTURE_MAPPER_GL)
-    void widgetMapped(uint64_t nativeWindowId);
+    void setAcceleratedCompositingWindowId(uint64_t nativeWindowId);
 #endif
 
     void setSuppressVisibilityUpdates(bool flag) { m_suppressVisibilityUpdates = flag; }
@@ -764,6 +766,7 @@ private:
     void didFirstLayoutForFrame(uint64_t frameID, CoreIPC::ArgumentDecoder*);
     void didFirstVisuallyNonEmptyLayoutForFrame(uint64_t frameID, CoreIPC::ArgumentDecoder*);
     void didNewFirstVisuallyNonEmptyLayout(CoreIPC::ArgumentDecoder*);
+    void didLayout(uint32_t layoutMilestones, CoreIPC::ArgumentDecoder*);
     void didRemoveFrameFromHierarchy(uint64_t frameID, CoreIPC::ArgumentDecoder*);
     void didDisplayInsecureContentForFrame(uint64_t frameID, CoreIPC::ArgumentDecoder*);
     void didRunInsecureContentForFrame(uint64_t frameID, CoreIPC::ArgumentDecoder*);

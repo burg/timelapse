@@ -284,6 +284,20 @@ void WebPageProxy::initializeLoaderClient(const WKPageLoaderClient* loadClient)
     if (!loadClient)
         return;
 
+    // It would be nice to get rid of this code and transition all clients to using didLayout instead of
+    // didFirstLayoutInFrame and didFirstVisuallyNonEmptyLayoutInFrame. In the meantime, this is required
+    // for backwards compatibility.
+    WebCore::LayoutMilestones milestones = 0;
+    if (loadClient->didFirstLayoutForFrame)
+        milestones |= WebCore::DidFirstLayout;
+    if (loadClient->didFirstVisuallyNonEmptyLayoutForFrame)
+        milestones |= WebCore::DidFirstVisuallyNonEmptyLayout;
+    if (loadClient->didNewFirstVisuallyNonEmptyLayout)
+        milestones |= WebCore::DidHitRelevantRepaintedObjectsAreaThreshold;
+
+    if (milestones)
+        m_process->send(Messages::WebPage::ListenForLayoutMilestones(milestones), m_pageID);
+
     m_process->send(Messages::WebPage::SetWillGoToBackForwardItemCallbackEnabled(loadClient->version > 0), m_pageID);
 }
 
@@ -328,10 +342,13 @@ void WebPageProxy::initializeContextMenuClient(const WKPageContextMenuClient* cl
 void WebPageProxy::reattachToWebProcess()
 {
     ASSERT(!isValid());
+    ASSERT(m_process);
+    ASSERT(!m_process->isValid());
+    ASSERT(!m_process->isLaunching());
 
     m_isValid = true;
 
-    m_process = m_process->context()->relaunchProcessIfNecessary();
+    m_process = m_process->context()->createNewWebProcess();
     m_process->addExistingWebPage(this, m_pageID);
 
     initializeWebPage();
@@ -735,6 +752,9 @@ bool WebPageProxy::canShowMIMEType(const String& mimeType) const
         return true;
 
     if (MIMETypeRegistry::isSupportedImageMIMEType(mimeType))
+        return true;
+
+    if (MIMETypeRegistry::isSupportedMediaMIMEType(mimeType))
         return true;
 
     if (mimeType.startsWith("text/", false))
@@ -1352,7 +1372,7 @@ void WebPageProxy::terminateProcess()
 }
 
 #if !USE(CF) || defined(BUILDING_QT__)
-PassRefPtr<WebData> WebPageProxy::sessionStateData(WebPageProxySessionStateFilterCallback, void* context) const
+PassRefPtr<WebData> WebPageProxy::sessionStateData(WebPageProxySessionStateFilterCallback, void* /*context*/) const
 {
     // FIXME: Return session state data for saving Page state.
     return 0;
@@ -1507,6 +1527,14 @@ void WebPageProxy::setFixedLayoutSize(const IntSize& size)
 
     m_fixedLayoutSize = size;
     m_process->send(Messages::WebPage::SetFixedLayoutSize(size), m_pageID);
+}
+
+void WebPageProxy::listenForLayoutMilestones(WebCore::LayoutMilestones milestones)
+{
+    if (!isValid())
+        return;
+
+    m_process->send(Messages::WebPage::ListenForLayoutMilestones(milestones), m_pageID);
 }
 
 void WebPageProxy::setSuppressScrollbarAnimations(bool suppressAnimations)
@@ -2159,6 +2187,16 @@ void WebPageProxy::didNewFirstVisuallyNonEmptyLayout(CoreIPC::ArgumentDecoder* a
         return;
 
     m_loaderClient.didNewFirstVisuallyNonEmptyLayout(this, userData.get());
+}
+
+void WebPageProxy::didLayout(uint32_t layoutMilestones, CoreIPC::ArgumentDecoder* arguments)
+{
+    RefPtr<APIObject> userData;
+    WebContextUserMessageDecoder messageDecoder(userData, m_process.get());
+    if (!arguments->decode(messageDecoder))
+        return;
+
+    m_loaderClient.didLayout(this, static_cast<LayoutMilestones>(layoutMilestones), userData.get());
 }
 
 void WebPageProxy::didRemoveFrameFromHierarchy(uint64_t frameID, CoreIPC::ArgumentDecoder* arguments)
@@ -3815,6 +3853,8 @@ void WebPageProxy::recommendedScrollbarStyleDidChange(int32_t newStyle)
 {
 #if PLATFORM(MAC)
     m_pageClient->recommendedScrollbarStyleDidChange(newStyle);
+#else
+    UNUSED_PARAM(newStyle);
 #endif
 }
 
@@ -3853,6 +3893,8 @@ void WebPageProxy::didBlockInsecurePluginVersion(const String& mimeType, const S
 
     pluginIdentifier = plugin.bundleIdentifier;
     pluginVersion = plugin.versionString;
+#else
+    UNUSED_PARAM(urlString);
 #endif
 
     m_loaderClient.didBlockInsecurePluginVersion(this, newMimeType, pluginIdentifier, pluginVersion);

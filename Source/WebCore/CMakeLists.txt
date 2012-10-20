@@ -1125,6 +1125,7 @@ SET(WebCore_SOURCES
     dom/DocumentFragment.cpp
     dom/DocumentParser.cpp
     dom/DocumentOrderedMap.cpp
+    dom/DocumentStyleSheetCollection.cpp
     dom/DocumentType.cpp
     dom/DynamicNodeList.cpp
     dom/EditingText.cpp
@@ -1538,15 +1539,16 @@ SET(WebCore_SOURCES
     inspector/IdentifiersFactory.cpp
     inspector/InjectedScript.cpp
     inspector/InjectedScriptBase.cpp
+    inspector/InjectedScriptCanvasModule.cpp
     inspector/InjectedScriptHost.cpp
     inspector/InjectedScriptManager.cpp
     inspector/InjectedScriptModule.cpp
-    inspector/InjectedScriptWebGLModule.cpp
     inspector/InspectorAgent.cpp
     inspector/InspectorApplicationCacheAgent.cpp
     inspector/InspectorBaseAgent.cpp
     inspector/InspectorPageAgent.cpp
     inspector/InspectorCSSAgent.cpp
+    inspector/InspectorCanvasAgent.cpp
     inspector/InspectorClient.cpp
     inspector/InspectorConsoleAgent.cpp
     inspector/InspectorController.cpp
@@ -1575,7 +1577,6 @@ SET(WebCore_SOURCES
     inspector/InspectorTimelapseAgent.cpp
     inspector/InspectorTimelineAgent.cpp
     inspector/InspectorValues.cpp
-    inspector/InspectorWebGLAgent.cpp
     inspector/InspectorWorkerAgent.cpp
     inspector/InstrumentingAgents.cpp
     inspector/MemoryInstrumentationImpl.cpp
@@ -1687,6 +1688,7 @@ SET(WebCore_SOURCES
     page/DragController.cpp
     page/EventHandler.cpp
     page/EventSource.cpp
+    page/FeatureObserver.cpp
     page/FocusController.cpp
     page/Frame.cpp
     page/FrameActionScheduler.cpp
@@ -2024,6 +2026,7 @@ SET(WebCore_SOURCES
     rendering/ExclusionInterval.cpp
     rendering/ExclusionRectangle.cpp
     rendering/ExclusionShape.cpp
+    rendering/ExclusionShapeInsideInfo.cpp
     rendering/FilterEffectRenderer.cpp
     rendering/FixedTableLayout.cpp
     rendering/FlowThreadController.cpp
@@ -2119,7 +2122,6 @@ SET(WebCore_SOURCES
     rendering/RenderWordBreak.cpp
     rendering/RootInlineBox.cpp
     rendering/ScrollBehavior.cpp
-    rendering/WrapShapeInfo.cpp
     rendering/break_lines.cpp
 
     rendering/mathml/RenderMathMLBlock.cpp
@@ -2777,15 +2779,13 @@ ADD_CUSTOM_COMMAND(
 LIST(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/InjectedScriptSource.h)
 
 
-# Generate InjectedScriptWebGLModuleSource.h
-IF (ENABLE_WEBGL)
-    ADD_CUSTOM_COMMAND(
-        OUTPUT ${DERIVED_SOURCES_WEBCORE_DIR}/InjectedScriptWebGLModuleSource.h
-        MAIN_DEPENDENCY inspector/InjectedScriptWebGLModuleSource.js
-        COMMAND ${PERL_EXECUTABLE} ${WEBCORE_DIR}/inspector/xxd.pl InjectedScriptWebGLModuleSource_js ${WEBCORE_DIR}/inspector/InjectedScriptWebGLModuleSource.js ${DERIVED_SOURCES_WEBCORE_DIR}/InjectedScriptWebGLModuleSource.h
-        VERBATIM)
-    LIST(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/InjectedScriptWebGLModuleSource.h)
-ENDIF ()
+# Generate InjectedScriptCanvasModuleSource.h
+ADD_CUSTOM_COMMAND(
+    OUTPUT ${DERIVED_SOURCES_WEBCORE_DIR}/InjectedScriptCanvasModuleSource.h
+    MAIN_DEPENDENCY inspector/InjectedScriptCanvasModuleSource.js
+    COMMAND ${PERL_EXECUTABLE} ${WEBCORE_DIR}/inspector/xxd.pl InjectedScriptCanvasModuleSource_js ${WEBCORE_DIR}/inspector/InjectedScriptCanvasModuleSource.js ${DERIVED_SOURCES_WEBCORE_DIR}/InjectedScriptCanvasModuleSource.h
+    VERBATIM)
+LIST(APPEND WebCore_SOURCES ${DERIVED_SOURCES_WEBCORE_DIR}/InjectedScriptCanvasModuleSource.h)
 
 
 MAKE_HASH_TOOLS(${WEBCORE_DIR}/platform/ColorData)

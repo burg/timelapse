@@ -34,7 +34,6 @@
 #include "IndexingHeaderInlineMethods.h"
 #include "PropertyNameArray.h"
 #include "Reject.h"
-#include "SparseArrayValueMapInlineMethods.h"
 #include <wtf/AVLTree.h>
 #include <wtf/Assertions.h>
 #include <wtf/OwnPtr.h>
@@ -61,10 +60,6 @@ Butterfly* createArrayButterflyInDictionaryIndexingMode(JSGlobalData& globalData
     storage->m_indexBias = 0;
     storage->m_sparseMap.clear();
     storage->m_numValuesInVector = 0;
-#if CHECK_ARRAY_CONSISTENCY
-    storage->m_initializationIndex = 0;
-    storage->m_inCompactInitialization = 0;
-#endif
     return butterfly;
 }
 
@@ -251,7 +246,7 @@ void JSArray::getOwnNonIndexPropertyNames(JSObject* object, ExecState* exec, Pro
 }
 
 // This method makes room in the vector, but leaves the new space uncleared.
-bool JSArray::unshiftCountSlowCase(JSGlobalData& globalData, unsigned count)
+bool JSArray::unshiftCountSlowCase(JSGlobalData& globalData, bool addToFront, unsigned count)
 {
     ArrayStorage* storage = ensureArrayStorage(globalData);
     Butterfly* butterfly = storage->butterfly();
@@ -259,7 +254,7 @@ bool JSArray::unshiftCountSlowCase(JSGlobalData& globalData, unsigned count)
     unsigned propertySize = structure()->outOfLineSize();
 
     // If not, we should have handled this on the fast path.
-    ASSERT(count > storage->m_indexBias);
+    ASSERT(!addToFront || count > storage->m_indexBias);
 
     // Step 1:
     // Gather 4 key metrics:
@@ -283,7 +278,7 @@ bool JSArray::unshiftCountSlowCase(JSGlobalData& globalData, unsigned count)
     unsigned desiredCapacity = min(MAX_STORAGE_VECTOR_LENGTH, max(BASE_VECTOR_LEN, requiredVectorLength) << 1);
 
     // Step 2:
-    // We're either going to choose to allocate a new ArrayStorage, or we're going to reuse the existing on.
+    // We're either going to choose to allocate a new ArrayStorage, or we're going to reuse the existing one.
 
     void* newAllocBase = 0;
     unsigned newStorageCapacity;
@@ -302,11 +297,14 @@ bool JSArray::unshiftCountSlowCase(JSGlobalData& globalData, unsigned count)
     // Work out where we're going to move things to.
 
     // Determine how much of the vector to use as pre-capacity, and how much as post-capacity.
+    // If we're adding to the end, we'll add all the new space to the end.
     // If the vector had no free post-capacity (length >= m_vectorLength), don't give it any.
     // If it did, we calculate the amount that will remain based on an atomic decay - leave the
     // vector with half the post-capacity it had previously.
     unsigned postCapacity = 0;
-    if (length < storage->vectorLength()) {
+    if (!addToFront)
+        postCapacity = max(newStorageCapacity - requiredVectorLength, count);
+    else if (length < storage->vectorLength()) {
         // Atomic decay, + the post-capacity cannot be greater than what is available.
         postCapacity = min((storage->vectorLength() - length) >> 1, newStorageCapacity - requiredVectorLength);
         // If we're moving contents within the same allocation, the post-capacity is being reduced.
@@ -317,8 +315,12 @@ bool JSArray::unshiftCountSlowCase(JSGlobalData& globalData, unsigned count)
     unsigned newIndexBias = newStorageCapacity - newVectorLength;
 
     Butterfly* newButterfly = Butterfly::fromBase(newAllocBase, newIndexBias, propertyCapacity);
-    
-    memmove(newButterfly->arrayStorage()->m_vector + count, storage->m_vector, sizeof(JSValue) * usedVectorLength);
+
+    if (addToFront)
+        memmove(newButterfly->arrayStorage()->m_vector + count, storage->m_vector, sizeof(JSValue) * usedVectorLength);
+    else if (newAllocBase != butterfly->base(structure()))
+        memmove(newButterfly->arrayStorage()->m_vector, storage->m_vector, sizeof(JSValue) * usedVectorLength);
+
     memmove(newButterfly->propertyStorage() - propertySize, butterfly->propertyStorage() - propertySize, sizeof(JSValue) * propertySize + sizeof(IndexingHeader) + ArrayStorage::sizeFor(0));
     
     newButterfly->arrayStorage()->setVectorLength(newVectorLength);
@@ -331,8 +333,6 @@ bool JSArray::unshiftCountSlowCase(JSGlobalData& globalData, unsigned count)
 
 bool JSArray::setLength(ExecState* exec, unsigned newLength, bool throwException)
 {
-    checkIndexingConsistency();
-
     ArrayStorage* storage = ensureArrayStorage(exec->globalData());
     unsigned length = storage->length();
 
@@ -393,19 +393,16 @@ bool JSArray::setLength(ExecState* exec, unsigned newLength, bool throwException
 
     storage->setLength(newLength);
 
-    checkIndexingConsistency();
     return true;
 }
 
 JSValue JSArray::pop(ExecState* exec)
 {
-    checkIndexingConsistency();
-    
     switch (structure()->indexingType()) {
     case ArrayClass:
         return jsUndefined();
         
-    case ArrayWithArrayStorage: {
+    case ARRAY_WITH_ARRAY_STORAGE_INDEXING_TYPES: {
         ArrayStorage* storage = m_butterfly->arrayStorage();
     
         unsigned length = storage->length();
@@ -425,7 +422,6 @@ JSValue JSArray::pop(ExecState* exec)
             
                 ASSERT(isLengthWritable());
                 storage->setLength(index);
-                checkIndexingConsistency();
                 return element;
             }
         }
@@ -442,7 +438,6 @@ JSValue JSArray::pop(ExecState* exec)
         // Call the [[Put]] internal method of O with arguments "length", indx, and true.
         setLength(exec, index, true);
         // Return element.
-        checkIndexingConsistency();
         return element;
     }
         
@@ -457,12 +452,20 @@ JSValue JSArray::pop(ExecState* exec)
 //  - pushing to an array of length 2^32-1 stores the property, but throws a range error.
 void JSArray::push(ExecState* exec, JSValue value)
 {
-    checkIndexingConsistency();
-    
     switch (structure()->indexingType()) {
     case ArrayClass: {
         putByIndexBeyondVectorLengthWithArrayStorage(exec, 0, value, true, createInitialArrayStorage(exec->globalData()));
         break;
+    }
+        
+    case ArrayWithSlowPutArrayStorage: {
+        unsigned oldLength = length();
+        if (attemptToInterceptPutByIndexOnHole(exec, oldLength, value, true)) {
+            if (!exec->hadException() && oldLength < 0xFFFFFFFFu)
+                setLength(exec, oldLength + 1, true);
+            return;
+        }
+        // Fall through.
     }
         
     case ArrayWithArrayStorage: {
@@ -474,12 +477,11 @@ void JSArray::push(ExecState* exec, JSValue value)
             storage->m_vector[length].set(exec->globalData(), this, value);
             storage->setLength(length + 1);
             ++storage->m_numValuesInVector;
-            checkIndexingConsistency();
             return;
         }
 
-        // Pushing to an array of length 2^32-1 stores the property, but throws a range error.
-        if (UNLIKELY(storage->length() == 0xFFFFFFFFu)) {
+        // Pushing to an array of invalid length (2^31-1) stores the property, but throws a range error.
+        if (storage->length() > MAX_ARRAY_INDEX) {
             methodTable()->putByIndex(this, exec, storage->length(), value, true);
             // Per ES5.1 15.4.4.7 step 6 & 15.4.5.1 step 3.d.
             if (!exec->hadException())
@@ -489,7 +491,6 @@ void JSArray::push(ExecState* exec, JSValue value)
 
         // Handled the same as putIndex.
         putByIndexBeyondVectorLengthWithArrayStorage(exec, storage->length(), value, true, storage);
-        checkIndexingConsistency();
         break;
     }
         
@@ -505,6 +506,7 @@ bool JSArray::shiftCount(ExecState* exec, unsigned count)
     ArrayStorage* storage = ensureArrayStorage(exec->globalData());
     
     unsigned oldLength = storage->length();
+    ASSERT(count <= oldLength);
     
     // If the array contains holes or is otherwise in an abnormal state,
     // use the generic algorithm in ArrayPrototype.
@@ -534,7 +536,7 @@ bool JSArray::shiftCount(ExecState* exec, unsigned count)
 }
 
 // Returns true if the unshift can be handled, false to fallback.    
-bool JSArray::unshiftCount(ExecState* exec, unsigned count)
+bool JSArray::unshiftCount(ExecState* exec, unsigned startIndex, unsigned count)
 {
     ArrayStorage* storage = ensureArrayStorage(exec->globalData());
     unsigned length = storage->length();
@@ -544,19 +546,35 @@ bool JSArray::unshiftCount(ExecState* exec, unsigned count)
     if (length != storage->m_numValuesInVector || storage->inSparseMode())
         return false;
 
-    if (storage->m_indexBias >= count) {
+    bool moveFront = !startIndex || startIndex < length / 2;
+
+    unsigned vectorLength = storage->vectorLength();
+
+    if (moveFront && storage->m_indexBias >= count) {
         m_butterfly = storage->butterfly()->unshift(structure(), count);
         storage = m_butterfly->arrayStorage();
         storage->m_indexBias -= count;
-        storage->setVectorLength(storage->vectorLength() + count);
-    } else if (!unshiftCountSlowCase(exec->globalData(), count)) {
+        storage->setVectorLength(vectorLength + count);
+    } else if (!moveFront && vectorLength - length >= count)
+        storage = storage->butterfly()->arrayStorage();
+    else if (unshiftCountSlowCase(exec->globalData(), moveFront, count))
+        storage = arrayStorage();
+    else {
         throwOutOfMemoryError(exec);
         return true;
     }
 
     WriteBarrier<Unknown>* vector = storage->m_vector;
+
+    if (startIndex) {
+        if (moveFront)
+            memmove(vector, vector + count, startIndex * sizeof(JSValue));
+        else
+            memmove(vector + startIndex + count, vector + startIndex, (length - startIndex) * sizeof(JSValue));
+    }
+
     for (unsigned i = 0; i < count; i++)
-        vector[i].clear();
+        vector[i + startIndex].clear();
     return true;
 }
 
@@ -611,7 +629,6 @@ void JSArray::sortNumeric(ExecState* exec, JSValue compareFunction, CallType cal
         // side-effect from swapping the order of equal primitive values.
         qsort(storage->m_vector, size, sizeof(WriteBarrier<Unknown>), compareNumbersForQSort);
         
-        checkIndexingConsistency(SortConsistencyCheck);
         return;
     }
         
@@ -700,7 +717,6 @@ void JSArray::sort(ExecState* exec)
         
         Heap::heap(this)->popTempSortVector(&values);
         
-        checkIndexingConsistency(SortConsistencyCheck);
         return;
     }
         
@@ -796,7 +812,6 @@ void JSArray::sort(ExecState* exec, JSValue compareFunction, CallType callType, 
         
     case ArrayWithArrayStorage: {
         ArrayStorage* storage = m_butterfly->arrayStorage();
-        checkIndexingConsistency();
         
         // FIXME: This ignores exceptions raised in the compare function or in toNumber.
         
@@ -901,7 +916,6 @@ void JSArray::sort(ExecState* exec, JSValue compareFunction, CallType callType, 
         
         storage->m_numValuesInVector = newUsedVectorLength;
         
-        checkIndexingConsistency(SortConsistencyCheck);
         return;
     }
         
@@ -916,7 +930,7 @@ void JSArray::fillArgList(ExecState* exec, MarkedArgumentBuffer& args)
     case ArrayClass:
         return;
     
-    case ArrayWithArrayStorage: {
+    case ARRAY_WITH_ARRAY_STORAGE_INDEXING_TYPES: {
         ArrayStorage* storage = m_butterfly->arrayStorage();
         
         WriteBarrier<Unknown>* vector = storage->m_vector;
@@ -946,7 +960,7 @@ void JSArray::copyToArguments(ExecState* exec, CallFrame* callFrame, uint32_t le
     case ArrayClass:
         return;
         
-    case ArrayWithArrayStorage: {
+    case ARRAY_WITH_ARRAY_STORAGE_INDEXING_TYPES: {
         ArrayStorage* storage = m_butterfly->arrayStorage();
         unsigned i = 0;
         WriteBarrier<Unknown>* vector = storage->m_vector;
@@ -972,8 +986,6 @@ unsigned JSArray::compactForSorting(JSGlobalData& globalData)
 {
     ASSERT(!inSparseIndexingMode());
 
-    checkIndexingConsistency();
-    
     switch (structure()->indexingType()) {
     case ArrayClass:
         return 0;
@@ -1028,8 +1040,6 @@ unsigned JSArray::compactForSorting(JSGlobalData& globalData)
             storage->m_vector[i].clear();
         
         storage->m_numValuesInVector = newUsedVectorLength;
-        
-        checkIndexingConsistency(SortConsistencyCheck);
         
         return numDefined;
     }

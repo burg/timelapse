@@ -158,6 +158,7 @@ namespace JSC {
         RefPtr<DeterminismLog> m_determinismLog;
 #endif
         RefPtr<WatchpointSet> m_masqueradesAsUndefinedWatchpoint;
+        RefPtr<WatchpointSet> m_havingABadTimeWatchpoint;
         OwnPtr<JSGlobalObjectRareData> m_rareData;
 
 #if ENABLE(TIMELAPSE)
@@ -167,6 +168,7 @@ namespace JSC {
 #endif
 
         bool m_evalEnabled;
+        String m_evalDisabledErrorMessage;
         bool m_experimentsEnabled;
 
         static JS_EXPORTDATA const GlobalObjectMethodTable s_globalObjectMethodTable;

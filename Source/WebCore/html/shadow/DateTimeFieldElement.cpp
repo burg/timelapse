@@ -24,7 +24,7 @@
  */
 
 #include "config.h"
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
 #include "DateTimeFieldElement.h"
 
 #include "DateComponents.h"
@@ -184,11 +184,6 @@ void DateTimeFieldElement::updateVisibleValue(EventBehavior eventBehavior)
 
     if (eventBehavior == DispatchEvent && m_fieldOwner)
         m_fieldOwner->fieldValueChanged();
-}
-
-double DateTimeFieldElement::valueAsDouble() const
-{
-    return hasValue() ? valueAsInteger() * unitInMillisecond() : std::numeric_limits<double>::quiet_NaN();
 }
 
 } // namespace WebCore

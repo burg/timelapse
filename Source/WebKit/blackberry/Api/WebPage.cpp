@@ -25,7 +25,6 @@
 #include "BackForwardController.h"
 #include "BackForwardListImpl.h"
 #include "BackingStoreClient.h"
-#include "BackingStoreCompositingSurface.h"
 #include "BackingStore_p.h"
 #if ENABLE(BATTERY_STATUS)
 #include "BatteryClientBlackBerry.h"
@@ -125,6 +124,7 @@
 #include "VibrationClientBlackBerry.h"
 #endif
 #include "VisiblePosition.h"
+#include "WebCookieJar.h"
 #if ENABLE(WEBDOM)
 #include "WebDOMDocument.h"
 #endif
@@ -350,6 +350,7 @@ WebPagePrivate::WebPagePrivate(WebPage* webPage, WebPageClient* client, const In
     , m_mainFrame(0) // Initialized by init.
     , m_currentContextNode(0)
     , m_webSettings(0) // Initialized by init.
+    , m_cookieJar(0)
     , m_visible(false)
     , m_activationState(ActivationActive)
     , m_shouldResetTilesWhenShown(false)
@@ -386,9 +387,12 @@ WebPagePrivate::WebPagePrivate(WebPage* webPage, WebPageClient* client, const In
     , m_cursorEventMode(ProcessedCursorEvents)
     , m_touchEventMode(ProcessedTouchEvents)
 #endif
-#if ENABLE(FULLSCREEN_API) && ENABLE(VIDEO)
+#if ENABLE(FULLSCREEN_API)
+#if ENABLE(VIDEO)
     , m_scaleBeforeFullScreen(-1.0)
     , m_xScrollOffsetBeforeFullScreen(-1)
+#endif
+    , m_isTogglingFullScreenState(false)
 #endif
     , m_currentCursor(Platform::CursorNone)
     , m_dumpRenderTree(0) // Lazy initialization.
@@ -443,6 +447,9 @@ WebPagePrivate::~WebPagePrivate()
 
     delete m_webSettings;
     m_webSettings = 0;
+
+    delete m_cookieJar;
+    m_cookieJar = 0;
 
     delete m_backingStoreClient;
     m_backingStoreClient = 0;
@@ -548,6 +555,8 @@ void WebPagePrivate::init(const WebString& pageGroupName)
     m_webSettings = WebSettings::createFromStandardSettings();
     m_webSettings->setUserAgentString(defaultUserAgent());
     m_page->setDeviceScaleFactor(m_webSettings->devicePixelRatio());
+
+    m_page->addLayoutMilestones(DidFirstVisuallyNonEmptyLayout);
 
 #if USE(ACCELERATED_COMPOSITING)
     m_tapHighlight = DefaultTapHighlight::create(this);
@@ -1127,10 +1136,6 @@ void WebPagePrivate::setLoadState(LoadState state)
             // Update cursor status.
             updateCursor();
 
-#if USE(ACCELERATED_COMPOSITING)
-            // Don't render compositing contents from previous page.
-            resetCompositingSurface();
-#endif
             break;
         }
     case Finished:
@@ -2053,6 +2058,11 @@ bool WebPagePrivate::setViewMode(ViewMode mode)
     m_mainFrame->view()->setUseFixedLayout(useFixedLayout());
     m_mainFrame->view()->setFixedLayoutSize(newSize);
     return true; // Needs re-layout!
+}
+
+int WebPagePrivate::playerID() const
+{
+    return m_client ? m_client->getInstanceId() : 0;
 }
 
 void WebPagePrivate::setCursor(PlatformCursor handle)
@@ -3184,6 +3194,14 @@ WebSettings* WebPage::settings() const
     return d->m_webSettings;
 }
 
+WebCookieJar* WebPage::cookieJar() const
+{
+    if (!d->m_cookieJar)
+        d->m_cookieJar = new WebCookieJar();
+
+    return d->m_cookieJar;
+}
+
 bool WebPage::isVisible() const
 {
     return d->m_visible;
@@ -3533,8 +3551,6 @@ void WebPagePrivate::suspendBackingStore()
 
         return;
     }
-
-    resetCompositingSurface();
 #endif
 }
 
@@ -3624,9 +3640,6 @@ void WebPagePrivate::resizeSurfaceIfNeeded()
             Platform::createMethodCallMessage(&WebPagePrivate::resizeSurfaceIfNeeded, this));
         return;
     }
-
-    if (m_pendingOrientation != -1)
-        SurfacePool::globalSurfacePool()->notifyScreenRotated();
 
     m_client->resizeSurfaceIfNeeded();
 }
@@ -3811,54 +3824,21 @@ void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
     if (atLeft)
         anchor.setX(0);
 
-    double clampedScale;
-
     // Try and zoom here with clamping on.
+    // FIXME: Determine why the above comment says "clamping on", yet we
+    //   don't set enforceScaleClamping to true.
+    // FIXME: Determine why ensureContentVisible() is only called for !success
+    //   in the direct-rendering case, but in all cases otherwise. Chances are
+    //   one of these is incorrect and we can unify two branches into one.
     if (m_backingStore->d->shouldDirectRenderingToWindow()) {
         bool success = zoomAboutPoint(scale, anchor, false /* enforceScaleClamping */, true /* forceRendering */);
         if (!success && ensureFocusElementVisible)
             ensureContentVisible(!newVisibleRectContainsOldVisibleRect);
 
-    } else if (shouldZoomAboutPoint(scale, anchor, false /* enforceScaleClamping */, &clampedScale)) {
-
-        // For some reason, the bitmap zoom wants an anchor in backingstore coordinates!
-        // this is different from zoomAboutPoint, which wants content coordinates.
-        // See RIM Bug #641.
-
-        FloatPoint transformedAnchor = mapToTransformedFloatPoint(anchor);
-        FloatPoint transformedScrollPosition = mapToTransformedFloatPoint(scrollPosition());
-
-        // Prohibit backingstore from updating the window overtop of the bitmap.
-        m_backingStore->d->suspendScreenAndBackingStoreUpdates();
-
-        // Need to invert the previous transform to anchor the viewport.
-        double zoomFraction = clampedScale / transformationMatrix()->m11();
-
-        // Anchor offset from scroll position in float.
-        FloatPoint anchorOffset(transformedAnchor.x() - transformedScrollPosition.x(),
-                transformedAnchor.y() - transformedScrollPosition.y());
-
-        IntPoint srcPoint(
-                static_cast<int>(roundf(transformedAnchor.x() - anchorOffset.x() / zoomFraction)),
-                static_cast<int>(roundf(transformedAnchor.y() - anchorOffset.y() / zoomFraction)));
-
-        const IntRect viewportRect = IntRect(IntPoint::zero(), transformedViewportSize());
-        const IntRect dstRect = viewportRect;
-
-        // This is the rect to pass as the actual source rect in the backingstore
-        // for the transform given by zoom.
-        IntRect srcRect(srcPoint.x(),
-                srcPoint.y(),
-                viewportRect.width() / zoomFraction,
-                viewportRect.height() / zoomFraction);
-        m_backingStore->d->blitContents(dstRect, srcRect);
-
-        zoomAboutPoint(clampedScale, anchor, false /*enforceScaleClamping*/, true /*forceRendering*/);
-
-        m_backingStore->d->resumeScreenAndBackingStoreUpdates(BackingStore::RenderAndBlit);
-
+    } else if (zoomAboutPoint(scale, anchor, false /*enforceScaleClamping*/, true /*forceRendering*/)) {
         if (ensureFocusElementVisible)
             ensureContentVisible(!newVisibleRectContainsOldVisibleRect);
+
     } else {
 
         // Suspend all screen updates to the backingstore.
@@ -3892,6 +3872,13 @@ void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
         // If we need layout then render and blit, otherwise just blit as our viewport has changed.
         m_backingStore->d->resumeScreenAndBackingStoreUpdates(needsLayout ? BackingStore::RenderAndBlit : BackingStore::Blit);
     }
+
+#if ENABLE(FULLSCREEN_API)
+    if (m_isTogglingFullScreenState) {
+        m_backingStore->d->resumeScreenAndBackingStoreUpdates(BackingStore::RenderAndBlit);
+        m_isTogglingFullScreenState = false;
+    }
+#endif
 }
 
 void WebPage::setViewportSize(const Platform::IntSize& viewportSize, bool ensureFocusElementVisible)
@@ -5691,6 +5678,8 @@ void WebPagePrivate::rootLayerCommitTimerFired(Timer<WebPagePrivate>*)
     Platform::log(Platform::LogLevelCritical, "%s", WTF_PRETTY_FUNCTION);
 #endif
 
+    m_backingStore->d->instrumentBeginFrame();
+
     // The commit timer may have fired just before the layout timer, or for some
     // other reason we need layout. It's not allowed to commit when a layout is
     // pending, becaues a commit can cause parts of the web page to be rendered
@@ -5704,14 +5693,11 @@ void WebPagePrivate::rootLayerCommitTimerFired(Timer<WebPagePrivate>*)
     // backing store is never necessary, because the backing store draws
     // nothing.
     if (!compositorDrawsRootLayer()) {
-        bool isSingleTargetWindow = SurfacePool::globalSurfacePool()->compositingSurface()
-            || m_backingStore->d->isOpenGLCompositing();
-
         // If we are doing direct rendering and have a single rendering target,
         // committing is equivalent to a one shot drawing synchronization.
         // We need to re-render the web page, re-render the layers, and
         // then blit them on top of the re-rendered web page.
-        if (isSingleTargetWindow && m_backingStore->d->shouldDirectRenderingToWindow())
+        if (m_backingStore->d->isOpenGLCompositing() && m_backingStore->d->shouldDirectRenderingToWindow())
             setNeedsOneShotDrawingSynchronization();
 
         if (needsOneShotDrawingSynchronization()) {
@@ -5726,19 +5712,6 @@ void WebPagePrivate::rootLayerCommitTimerFired(Timer<WebPagePrivate>*)
     }
 
     commitRootLayerIfNeeded();
-}
-
-void WebPagePrivate::resetCompositingSurface()
-{
-    if (!Platform::userInterfaceThreadMessageClient()->isCurrentThread()) {
-        Platform::userInterfaceThreadMessageClient()->dispatchMessage(
-            Platform::createMethodCallMessage(
-                &WebPagePrivate::resetCompositingSurface, this));
-        return;
-    }
-
-    if (m_compositor)
-        m_compositor->setLastCompositingResults(LayerRenderingResults());
 }
 
 void WebPagePrivate::setRootLayerWebKitThread(Frame* frame, LayerWebKitThread* layer)
@@ -5779,12 +5752,7 @@ void WebPagePrivate::setRootLayerCompositingThread(LayerCompositingThread* layer
         return;
     }
 
-    if (!layer) {
-        // Keep the compositor around, a single web page will frequently enter
-        // and leave compositing mode many times. Instead we destroy it when
-        // navigating to a new page.
-        resetCompositingSurface();
-    } else if (!m_compositor)
+    if (layer && !m_compositor)
         createCompositor();
 
     // Don't ASSERT(m_compositor) here because setIsAcceleratedCompositingActive(true)

@@ -33,6 +33,7 @@
 #include "CSSPrimitiveValueMappings.h"
 #include "CSSToStyleMap.h"
 #include "CSSValueList.h"
+#include "ClipPathOperation.h"
 #include "CursorList.h"
 #include "Document.h"
 #include "Element.h"
@@ -1684,10 +1685,10 @@ public:
     }
 };
 
-template <BasicShape* (RenderStyle::*getterFunction)() const, void (RenderStyle::*setterFunction)(PassRefPtr<BasicShape>), BasicShape* (*initialFunction)()>
+template <ClipPathOperation* (RenderStyle::*getterFunction)() const, void (RenderStyle::*setterFunction)(PassRefPtr<ClipPathOperation>), ClipPathOperation* (*initialFunction)()>
 class ApplyPropertyClipPath {
 public:
-    static void setValue(RenderStyle* style, PassRefPtr<BasicShape> value) { (style->*setterFunction)(value); }
+    static void setValue(RenderStyle* style, PassRefPtr<ClipPathOperation> value) { (style->*setterFunction)(value); }
     static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
     {
         if (value->isPrimitiveValue()) {
@@ -1695,14 +1696,13 @@ public:
             if (primitiveValue->getIdent() == CSSValueNone)
                 setValue(styleResolver->style(), 0);
             else if (primitiveValue->isShape()) {
-                RefPtr<BasicShape> clipPathShape = basicShapeForValue(styleResolver, primitiveValue->getShapeValue());
-                setValue(styleResolver->style(), clipPathShape.release());
+                setValue(styleResolver->style(), ShapeClipPathOperation::create(basicShapeForValue(styleResolver, primitiveValue->getShapeValue())));
             }
         }
     }
     static PropertyHandler createHandler()
     {
-        PropertyHandler handler = ApplyPropertyDefaultBase<BasicShape*, getterFunction, PassRefPtr<BasicShape>, setterFunction, BasicShape*, initialFunction>::createHandler();
+        PropertyHandler handler = ApplyPropertyDefaultBase<ClipPathOperation*, getterFunction, PassRefPtr<ClipPathOperation>, setterFunction, ClipPathOperation*, initialFunction>::createHandler();
         return PropertyHandler(handler.inheritFunction(), handler.initialFunction(), &applyValue);
     }
 };
@@ -1735,18 +1735,18 @@ public:
 #if ENABLE(CSS_IMAGE_RESOLUTION)
 class ApplyPropertyImageResolution {
 public:
-    static void applyInheritValue(CSSPropertyID, StyleResolver* styleResolver)
+    static void applyInheritValue(CSSPropertyID propertyID, StyleResolver* styleResolver)
     {
-        ApplyPropertyDefaultBase<ImageResolutionSource, &RenderStyle::imageResolutionSource, ImageResolutionSource, &RenderStyle::setImageResolutionSource, ImageResolutionSource, &RenderStyle::initialImageResolutionSource>::applyInheritValue(styleResolver);
-        ApplyPropertyDefaultBase<ImageResolutionSnap, &RenderStyle::imageResolutionSnap, ImageResolutionSnap, &RenderStyle::setImageResolutionSnap, ImageResolutionSnap, &RenderStyle::initialImageResolutionSnap>::applyInheritValue(styleResolver);
-        ApplyPropertyDefaultBase<float, &RenderStyle::imageResolution, float, &RenderStyle::setImageResolution, float, &RenderStyle::initialImageResolution>::applyInheritValue(styleResolver);
+        ApplyPropertyDefaultBase<ImageResolutionSource, &RenderStyle::imageResolutionSource, ImageResolutionSource, &RenderStyle::setImageResolutionSource, ImageResolutionSource, &RenderStyle::initialImageResolutionSource>::applyInheritValue(propertyID, styleResolver);
+        ApplyPropertyDefaultBase<ImageResolutionSnap, &RenderStyle::imageResolutionSnap, ImageResolutionSnap, &RenderStyle::setImageResolutionSnap, ImageResolutionSnap, &RenderStyle::initialImageResolutionSnap>::applyInheritValue(propertyID, styleResolver);
+        ApplyPropertyDefaultBase<float, &RenderStyle::imageResolution, float, &RenderStyle::setImageResolution, float, &RenderStyle::initialImageResolution>::applyInheritValue(propertyID, styleResolver);
     }
 
-    static void applyInitialValue(CSSPropertyID, StyleResolver* styleResolver)
+    static void applyInitialValue(CSSPropertyID propertyID, StyleResolver* styleResolver)
     {
-        ApplyPropertyDefaultBase<ImageResolutionSource, &RenderStyle::imageResolutionSource, ImageResolutionSource, &RenderStyle::setImageResolutionSource, ImageResolutionSource, &RenderStyle::initialImageResolutionSource>::applyInitialValue(styleResolver);
-        ApplyPropertyDefaultBase<ImageResolutionSnap, &RenderStyle::imageResolutionSnap, ImageResolutionSnap, &RenderStyle::setImageResolutionSnap, ImageResolutionSnap, &RenderStyle::initialImageResolutionSnap>::applyInitialValue(styleResolver);
-        ApplyPropertyDefaultBase<float, &RenderStyle::imageResolution, float, &RenderStyle::setImageResolution, float, &RenderStyle::initialImageResolution>::applyInitialValue(styleResolver);
+        ApplyPropertyDefaultBase<ImageResolutionSource, &RenderStyle::imageResolutionSource, ImageResolutionSource, &RenderStyle::setImageResolutionSource, ImageResolutionSource, &RenderStyle::initialImageResolutionSource>::applyInitialValue(propertyID, styleResolver);
+        ApplyPropertyDefaultBase<ImageResolutionSnap, &RenderStyle::imageResolutionSnap, ImageResolutionSnap, &RenderStyle::setImageResolutionSnap, ImageResolutionSnap, &RenderStyle::initialImageResolutionSnap>::applyInitialValue(propertyID, styleResolver);
+        ApplyPropertyDefaultBase<float, &RenderStyle::imageResolution, float, &RenderStyle::setImageResolution, float, &RenderStyle::initialImageResolution>::applyInitialValue(propertyID, styleResolver);
     }
 
     static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)

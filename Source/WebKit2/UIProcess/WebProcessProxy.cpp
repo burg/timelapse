@@ -108,21 +108,8 @@ void WebProcessProxy::connect()
 
     ProcessLauncher::LaunchOptions launchOptions;
     launchOptions.processType = ProcessLauncher::WebProcess;
-
-#if PLATFORM(MAC)
-    // We want the web process to match the architecture of the UI process.
-    launchOptions.architecture = ProcessLauncher::LaunchOptions::MatchCurrentArchitecture;
-    launchOptions.executableHeap = false;
-#if HAVE(XPC)
-    launchOptions.useXPC = getenv("WEBKIT_USE_XPC_SERVICE_FOR_WEB_PROCESS");
-#endif
-#endif
-#ifndef NDEBUG
-    const char* webProcessCmdPrefix = getenv("WEB_PROCESS_CMD_PREFIX");
-    if (webProcessCmdPrefix && *webProcessCmdPrefix)
-        launchOptions.processCmdPrefix = String::fromUTF8(webProcessCmdPrefix);
-#endif
-
+    platformConnect(launchOptions);
+    
     m_processLauncher = ProcessLauncher::create(this, launchOptions);
 }
 
@@ -181,7 +168,7 @@ WebPageProxy* WebProcessProxy::webPage(uint64_t pageID) const
     return m_pageMap.get(pageID);
 }
 
-PassRefPtr<WebPageProxy> WebProcessProxy::createWebPage(PageClient* pageClient, WebContext* context, WebPageGroup* pageGroup)
+PassRefPtr<WebPageProxy> WebProcessProxy::createWebPage(PageClient* pageClient, WebContext*, WebPageGroup* pageGroup)
 {
     uint64_t pageID = generatePageID();
     RefPtr<WebPageProxy> webPage = WebPageProxy::create(pageClient, this, pageGroup, pageID);

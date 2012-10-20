@@ -426,8 +426,8 @@ public:
     PassRefPtr<RenderStyle> styleForRenderer();
 
     RenderRegion* renderRegion() const;
-    const AtomicString& webkitRegionOverset() const;
 #if ENABLE(CSS_REGIONS)
+    const AtomicString& webkitRegionOverset() const;
     Vector<RefPtr<Range> > webkitGetRegionFlowRanges() const;
 #endif
 
@@ -442,8 +442,8 @@ public:
     {
         MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
         ContainerNode::reportMemoryUsage(memoryObjectInfo);
-        info.addInstrumentedMember(m_tagName);
-        info.addInstrumentedMember(m_attributeData);
+        info.addMember(m_tagName);
+        info.addMember(m_attributeData);
     }
 
 protected:

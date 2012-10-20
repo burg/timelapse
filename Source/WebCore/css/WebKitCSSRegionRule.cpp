@@ -34,6 +34,7 @@
 #include "CSSParser.h"
 #include "CSSRuleList.h"
 #include "StyleRule.h"
+#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/text/StringBuilder.h>
 
 #if ENABLE(CSS_REGIONS)
@@ -112,9 +113,9 @@ void WebKitCSSRegionRule::reportDescendantMemoryUsage(MemoryObjectInfo* memoryOb
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     CSSRule::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addInstrumentedMember(m_regionRule);
-    info.addInstrumentedVector(m_childRuleCSSOMWrappers);
-    info.addInstrumentedMember(m_ruleListCSSOMWrapper);
+    info.addMember(m_regionRule);
+    info.addMember(m_childRuleCSSOMWrappers);
+    info.addMember(m_ruleListCSSOMWrapper);
 }
 
 } // namespace WebCore

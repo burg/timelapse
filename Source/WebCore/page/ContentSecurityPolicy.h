@@ -100,18 +100,21 @@ public:
     void gatherReportURIs(DOMStringList&) const;
 
     void reportDuplicateDirective(const String&) const;
-    void reportIgnoredPathComponent(const String& directiveName, const String& completeSource, const String& path) const;
     void reportInvalidDirectiveValueCharacter(const String& directiveName, const String& value) const;
+    void reportInvalidPathCharacter(const String& directiveName, const String& value, const char) const;
     void reportInvalidNonce(const String&) const;
     void reportInvalidPluginTypes(const String&) const;
     void reportInvalidSourceExpression(const String& directiveName, const String& source) const;
     void reportUnrecognizedDirective(const String&) const;
     void reportViolation(const String& directiveText, const String& consoleMessage, const KURL& blockedURL, const Vector<KURL>& reportURIs, const String& header, const String& contextURL = String(), const WTF::OrdinalNumber& contextLine = WTF::OrdinalNumber::beforeFirst(), PassRefPtr<ScriptCallStack> = 0) const;
 
+    void reportBlockedScriptExecutionToInspector(const String& directiveText) const;
+
     const KURL& url() const;
     KURL completeURL(const String&) const;
     SecurityOrigin* securityOrigin() const;
     void enforceSandboxFlags(SandboxFlags) const;
+    String evalDisabledErrorMessage() const;
 
 private:
     explicit ContentSecurityPolicy(ScriptExecutionContext*);

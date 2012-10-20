@@ -217,44 +217,6 @@ bool PlatformSupport::ensureFontLoaded(HFONT font)
 }
 #endif
 
-#if OS(DARWIN)
-bool PlatformSupport::loadFont(NSFont* srcFont, CGFontRef* out, uint32_t* fontID)
-{
-    WebSandboxSupport* ss = WebKit::Platform::current()->sandboxSupport();
-    if (ss)
-        return ss->loadFont(srcFont, out, fontID);
-
-    // This function should only be called in response to an error loading a
-    // font due to being blocked by the sandbox.
-    // This by definition shouldn't happen if there is no sandbox support.
-    ASSERT_NOT_REACHED();
-    *out = 0;
-    *fontID = 0;
-    return false;
-}
-#elif OS(UNIX)
-void PlatformSupport::getFontFamilyForCharacters(const UChar* characters, size_t numCharacters, const char* preferredLocale, FontFamily* family)
-{
-#if OS(ANDROID)
-    // FIXME: We do not use fontconfig on Android, so use simple logic for now.
-    // https://bugs.webkit.org/show_bug.cgi?id=67587
-    family->name = "Arial";
-    family->isBold = false;
-    family->isItalic = false;
-#else
-    WebFontFamily webFamily;
-    if (WebKit::Platform::current()->sandboxSupport())
-        WebKit::Platform::current()->sandboxSupport()->getFontFamilyForCharacters(characters, numCharacters, preferredLocale, &webFamily);
-    else
-        WebFontInfo::familyForChars(characters, numCharacters, preferredLocale, &webFamily);
-    family->name = String::fromUTF8(webFamily.name.data(), webFamily.name.length());
-    family->isBold = webFamily.isBold;
-    family->isItalic = webFamily.isItalic;
-#endif
-}
-
-#endif
-
 // Indexed Database -----------------------------------------------------------
 
 PassRefPtr<IDBFactoryBackendInterface> PlatformSupport::idbFactory()
@@ -499,17 +461,6 @@ void PlatformSupport::paintThemePart(
 // Glue layer. Once the Glue layer moves entirely into the WebKit layer, these
 // methods will be deleted.
 
-void PlatformSupport::notifyJSOutOfMemory(Frame* frame)
-{
-    if (!frame)
-        return;
-
-    WebFrameImpl* webFrame = WebFrameImpl::fromFrame(frame);
-    if (!webFrame->client())
-        return;
-    webFrame->client()->didExhaustMemoryAvailableForScript(webFrame);
-}
-
 int PlatformSupport::screenHorizontalDPI(Widget* widget)
 {
     WebWidgetClient* client = toWebWidgetClient(widget);
@@ -564,12 +515,6 @@ IntRect PlatformSupport::screenAvailableRect(Widget* widget)
     if (!client)
         return IntRect();
     return client->screenInfo().availableRect;
-}
-
-bool PlatformSupport::popupsAllowed(NPP npp)
-{
-    // FIXME: Give the embedder a way to control this.
-    return false;
 }
 
 #if ENABLE(WORKERS)

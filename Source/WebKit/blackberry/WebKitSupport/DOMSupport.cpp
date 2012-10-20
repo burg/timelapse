@@ -32,6 +32,7 @@
 #include "RenderText.h"
 #include "RenderTextControl.h"
 #include "TextIterator.h"
+#include "VisiblePosition.h"
 #include "VisibleSelection.h"
 
 #include "htmlediting.h"
@@ -170,11 +171,11 @@ bool isDateTimeInputField(const Element* element)
     const HTMLInputElement* inputElement = static_cast<const HTMLInputElement*>(element);
 
     // The following types have popup's.
-    if (inputElement->isDateControl()
-        || inputElement->isDateTimeControl()
-        || inputElement->isDateTimeLocalControl()
-        || inputElement->isTimeControl()
-        || inputElement->isMonthControl())
+    if (inputElement->isDateField()
+        || inputElement->isDateTimeField()
+        || inputElement->isDateTimeLocalField()
+        || inputElement->isTimeField()
+        || inputElement->isMonthField())
             return true;
 
     return false;
@@ -249,7 +250,7 @@ bool isTextBasedContentEditableElement(Element* element)
     if (!element)
         return false;
 
-    if (element->isReadOnlyFormControl() || !element->isEnabledFormControl())
+    if (element->isReadOnlyNode() || !element->isEnabledFormControl())
         return false;
 
     if (isPopupInputField(element))
@@ -527,6 +528,35 @@ Frame* incrementFrame(Frame* curr, bool forward, bool wrapFlag)
     return forward
         ? curr->tree()->traverseNextWithWrap(wrapFlag)
         : curr->tree()->traversePreviousWithWrap(wrapFlag);
+}
+
+PassRefPtr<Range> trimWhitespaceFromRange(VisiblePosition startPosition, VisiblePosition endPosition)
+{
+    if (isEmptyRangeOrAllSpaces(startPosition, endPosition))
+        return VisibleSelection(endPosition, endPosition).toNormalizedRange();
+
+    while (isWhitespace(startPosition.characterAfter()))
+        startPosition = startPosition.next();
+
+    while (isWhitespace(endPosition.characterBefore()))
+        endPosition = endPosition.previous();
+
+    return VisibleSelection(startPosition, endPosition).toNormalizedRange();
+}
+
+bool isEmptyRangeOrAllSpaces(VisiblePosition startPosition, VisiblePosition endPosition)
+{
+    if (startPosition == endPosition)
+        return true;
+
+    while (isWhitespace(startPosition.characterAfter())) {
+        startPosition = startPosition.next();
+
+        if (startPosition == endPosition)
+            return true;
+    }
+
+    return false;
 }
 
 } // DOMSupport

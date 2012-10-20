@@ -144,7 +144,6 @@ fast/events/mouseup-from-button2.html
 fast/events/node-event-anchor-lock.html
 fast/events/ondragenter.html
 fast/events/open-window-from-another-frame.html
-fast/events/popup-blocking-click-in-iframe.html
 fast/events/popup-when-select-change.html
 fast/events/right-click-focus.html
 fast/events/scroll-after-click-on-tab-index.html
@@ -217,6 +216,7 @@ fast/sub-pixel/size-of-box-with-zoom.html
 fast/sub-pixel/table-rows-no-gaps.html
 fast/sub-pixel/sub-pixel-accumulates-to-layers.html
 fast/sub-pixel/selection/selection-rect-in-sub-pixel-table.html
+fast/sub-pixel/snap-negative-location.html
 
 # fast/events/pagehide-timeout.html, pageshow-pagehide-on-back-cached-with-frames.html, and
 # pageshow-pagehide-on-back-cached.html flakey on Lion Intel Debug WebKit testers.
@@ -318,7 +318,6 @@ fast/frames/flattening/frameset-flattening-advanced.html
 fast/history/form-submit-in-frame-via-onclick.html
 fast/history/form-submit-in-frame.html
 fast/history/saves-state-after-frame-nav.html
-fast/regions/css-regions-disabled.html
 http/tests/inspector/extensions-ignore-cache.html
 http/tests/security/credentials-in-referer.html
 http/tests/workers/terminate-during-sync-operation.html

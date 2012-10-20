@@ -28,6 +28,7 @@
 
 #include "PlatformMemoryInstrumentation.h"
 #include "ResourceRequest.h"
+#include <wtf/MemoryInstrumentationVector.h>
 
 using namespace std;
 
@@ -447,13 +448,13 @@ bool ResourceRequestBase::isConditional() const
 void ResourceRequestBase::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Loader);
-    info.addInstrumentedMember(m_url);
-    info.addInstrumentedMember(m_firstPartyForCookies);
-    info.addInstrumentedMember(m_httpMethod);
+    info.addMember(m_url);
+    info.addMember(m_firstPartyForCookies);
+    info.addMember(m_httpMethod);
     info.addHashMap(m_httpHeaderFields);
     info.addInstrumentedMapEntries(m_httpHeaderFields);
-    info.addInstrumentedVector(m_responseContentDispositionEncodingFallbackArray);
-    info.addInstrumentedMember(m_httpBody);
+    info.addMember(m_responseContentDispositionEncodingFallbackArray);
+    info.addMember(m_httpBody);
 }
 
 double ResourceRequestBase::defaultTimeoutInterval()

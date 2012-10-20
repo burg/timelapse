@@ -2598,7 +2598,7 @@ void RenderObject::layout()
 
 PassRefPtr<RenderStyle> RenderObject::uncachedFirstLineStyle(RenderStyle* style) const
 {
-    if (!document()->usesFirstLineRules())
+    if (!document()->styleSheetCollection()->usesFirstLineRules())
         return 0;
 
     ASSERT(!isText());
@@ -2619,7 +2619,7 @@ PassRefPtr<RenderStyle> RenderObject::uncachedFirstLineStyle(RenderStyle* style)
 
 RenderStyle* RenderObject::firstLineStyleSlowCase() const
 {
-    ASSERT(document()->usesFirstLineRules());
+    ASSERT(document()->styleSheetCollection()->usesFirstLineRules());
 
     RenderStyle* style = m_style.get();
     const RenderObject* renderer = isText() ? parent() : this;

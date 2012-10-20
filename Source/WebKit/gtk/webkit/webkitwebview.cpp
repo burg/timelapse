@@ -80,6 +80,7 @@
 #include "ProgressTracker.h"
 #include "RenderView.h"
 #include "ResourceHandle.h"
+#include "RuntimeEnabledFeatures.h"
 #include "ScriptValue.h"
 #include "Settings.h"
 #include "webkit/WebKitDOMDocumentPrivate.h"
@@ -3432,6 +3433,10 @@ static void webkit_web_view_update_settings(WebKitWebView* webView)
     coreSettings->setWebGLEnabled(settingsPrivate->enableWebgl);
 #endif
 
+#if ENABLE(MEDIA_STREAM)
+    WebCore::RuntimeEnabledFeatures::setMediaStreamEnabled(settingsPrivate->enableMediaStream);
+#endif
+
 #if USE(ACCELERATED_COMPOSITING)
     coreSettings->setAcceleratedCompositingEnabled(settingsPrivate->enableAcceleratedCompositing);
 #endif
@@ -3622,6 +3627,8 @@ static void webkit_web_view_init(WebKitWebView* webView)
     pageClients.inspectorClient = new WebKit::InspectorClient(webView);
 
     priv->corePage = new Page(pageClients);
+
+    priv->corePage->addLayoutMilestones(DidFirstVisuallyNonEmptyLayout);
 
 #if ENABLE(GEOLOCATION)
     if (DumpRenderTreeSupportGtk::dumpRenderTreeModeEnabled()) {

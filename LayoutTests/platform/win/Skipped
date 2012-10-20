@@ -40,6 +40,10 @@ css3/filters/effect-sepia-hw.html
 # Custom filters not yet supported on Windows
 css3/filters/custom
 
+# Needs rebaseline after bug 97217 is fixed
+# https://bugs.webkit.org/show_bug.cgi?id=97325
+css3/masking/clip-path-circle-relative-overflow.html
+
 # CSS image-set support not yet enabled (needs ENABLE_CSS_IMAGE_SET).
 fast/css/image-set-parsing.html
 fast/css/image-set-parsing-invalid.html
@@ -1142,9 +1146,11 @@ fast/forms/number/number-spinbutton-change-and-input-events.html
 fast/forms/number/number-large-padding.html
 fast/forms/number/number-size.html
 fast/forms/number/number-spinbutton-capturing.html
+fast/forms/number/number-spinbutton-click-in-iframe.html
 fast/forms/number/number-spinbutton-gets-disabled-or-readonly.html
 fast/forms/number/number-spinbutton-state.html
 fast/forms/number/number-spinbutton-in-multi-column.html
+
 
 # Datalist is not yet enabled.
 fast/forms/datalist
@@ -1746,6 +1752,7 @@ fast/sub-pixel/size-of-box-with-zoom.html
 fast/sub-pixel/table-rows-no-gaps.html
 fast/sub-pixel/sub-pixel-accumulates-to-layers.html
 fast/sub-pixel/selection/selection-rect-in-sub-pixel-table.html
+fast/sub-pixel/snap-negative-location.html
 
 # No CORS support for media elements is implemented yet.
 http/tests/security/video-cross-origin-readback.html
@@ -1975,7 +1982,7 @@ plugins/nested-plugin-objects.html
 #Require rebaselining after  https://bugs.webkit.org/show_bug.cgi?id=89826
 fast/css/word-space-extra.html
 
-# ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS) is disabled
+# ENABLE(INPUT_MULTIPLE_FIELDS_UI) is disabled
 fast/forms/time-multiple-fields
 
 # Require rebaseline after https://bugs.webkit.org/show_bug.cgi?id=84286
@@ -2196,6 +2203,7 @@ http/tests/security/location-prototype.html
 http/tests/security/script-crossorigin-loads-correctly.html
 http/tests/security/video-poster-cross-origin-crash.html
 http/tests/security/xss-eval.html
+http/tests/security/cookies/xmlhttprequest.html
 
 # Flaky http/tests/cookie tests
 # https://bugs.webkit.org/show_bug.cgi?id=95805
@@ -2219,3 +2227,82 @@ fast/dom/HTMLDialogElement
 
 # Windows does not have global selection.
 editing/pasteboard/paste-global-selection.html
+
+# Skipping a large number of tests that have been failing on Windows for a long period of time
+# https://bugs.webkit.org/show_bug.cgi?id=97026
+editing/selection/select-from-textfield-outwards.html
+editing/spelling/grammar-edit-word.html
+fast/dom/constructed-objects-prototypes.html
+fast/dom/Proximity/check-event-deviceproximity.html
+fast/dom/Proximity/create-event-deviceproximity.html
+fast/events/constructors/device-proximity-event-constructor.html
+fast/forms/state-restore-broken-state.html
+fast/html/progress-user-modify.html
+fast/js/global-constructors.html
+fast/multicol/shrink-to-column-height-for-pagination.html
+inspector/device-orientation-success.html
+inspector/geolocation-error.html
+inspector/geolocation-success.html
+inspector/geolocation-watchPosition.html
+inspector/styles/variables/css-variables.html
+inspector/timeline/timeline-receive-response-event.html
+media/audio-controls-rendering.html
+media/audio-repaint.html
+media/controls-styling-strict.html
+media/media-controls-clone.html
+media/video-controls-fullscreen-volume.html
+plugins/geturlnotify-during-document-teardown.html
+svg/custom/glyph-selection-bidi-mirror.svg
+svg/custom/relative-sized-use-on-symbol.xhtml
+svg/custom/relative-sized-use-without-attributes-on-symbol.xhtml
+svg/text/bidi-text-query.svg
+svg/text/bidi-tspans.svg
+svg/text/non-bmp-positioning-lists.svg
+svg/zoom/page/zoom-img-preserveAspectRatio-support-1.html
+svg/zoom/page/zoom-svg-through-object-with-auto-size.html
+tables/mozilla_expected_failures/collapsing_borders/bug41262-5.html
+tables/mozilla_expected_failures/marvin/table_overflow_hidden_tbody.html
+tables/mozilla_expected_failures/marvin/table_overflow_hidden_tr.html
+http/tests/fullscreen/fullscreenelement-different-origin.html
+http/tests/fullscreen/fullscreenelement-same-origin.html
+http/tests/history/back-with-fragment-change.php
+http/tests/images/jpg-img-partial-load.html
+http/tests/inspector/console-cross-origin-iframe-logging.html
+http/tests/inspector/inspect-element.html
+http/tests/inspector/resource-har-conversion.html
+http/tests/inspector/resource-parameters.html
+http/tests/inspector/websocket/web-socket-frame.html
+http/tests/loading/pdf-commit-load-callbacks.html
+http/tests/loading/post-in-iframe-with-back-navigation.html
+http/tests/media/media-document.html
+http/tests/media/video-useragent.html
+http/tests/misc/submit-post-keygen.html
+http/tests/navigation/https-in-page-cache.html
+http/tests/navigation/post-307-response.html
+http/tests/navigation/post-frames-goback1.html
+http/tests/navigation/post-goback1.html
+http/tests/security/cross-frame-access-call.html
+http/tests/security/cross-frame-access-get.html
+http/tests/security/sandboxed-iframe-modify-self.html
+http/tests/security/contentSecurityPolicy/block-mixed-content-hides-warning.html
+http/tests/security/contentSecurityPolicy/script-src-star-cross-scheme.html
+http/tests/security/xssAuditor/script-tag-with-callbacks.html
+http/tests/security/xssAuditor/xss-filter-bypass-long-string.html
+http/tests/xmlhttprequest/access-control-allow-lists-starting-with-comma.html
+http/tests/xmlhttprequest/range-test.html
+
+#https://bugs.webkit.org/show_bug.cgi?id=97271
+http/tests/security/sandboxed-iframe-origin-add.html
+http/tests/security/sandboxed-iframe-origin-remove.html
+
+#https://bugs.webkit.org/show_bug.cgi?id=96942
+http/tests/inspector/network/network-xhr-replay.html
+
+#AX role needs to be updated on Windows, many test cases involve AX role crash or fail
+accessibility/svg-bounds.html
+
+#https://bugs.webkit.org/show_bug.cgi?id=97485
+http/tests/security/sandboxed-iframe-form-top.html
+
+#https://bugs.webkit.org/show_bug.cgi?id=95530
+http/tests/security/inactive-document-with-empty-security-origin.html

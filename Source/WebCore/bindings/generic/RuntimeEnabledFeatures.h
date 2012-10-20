@@ -31,6 +31,8 @@
 #ifndef RuntimeEnabledFeatures_h
 #define RuntimeEnabledFeatures_h
 
+#include "PlatformExportMacros.h"
+
 namespace WebCore {
 
 // A class that stores static enablers for all experimental features. Note that
@@ -59,16 +61,7 @@ public:
 
     static void setWebkitIndexedDBEnabled(bool isEnabled) { isIndexedDBEnabled = isEnabled; }
     static bool webkitIndexedDBEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBCursorEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBDatabaseEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBDatabaseErrorEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBDatabaseExceptionEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBFactoryEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBIndexEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBKeyRangeEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBObjectStoreEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBRequestEnabled() { return isIndexedDBEnabled; }
-    static bool webkitIDBTransactionEnabled() { return isIndexedDBEnabled; }
+    static bool indexedDBEnabled() { return isIndexedDBEnabled; }
 
 #if ENABLE(CSS_EXCLUSIONS)
     static void setCSSExclusionsEnabled(bool isEnabled) { isCSSExclusionsEnabled = isEnabled; }
@@ -183,7 +176,9 @@ public:
 
     static bool peerConnectionEnabled() { return isMediaStreamEnabled && isPeerConnectionEnabled; }
     static void setPeerConnectionEnabled(bool isEnabled) { isPeerConnectionEnabled = isEnabled; }
-    static bool webkitPeerConnection00Enabled() { return peerConnectionEnabled(); }
+    static bool deprecatedPeerConnectionEnabled() { return isMediaStreamEnabled && isDeprecatedPeerConnectionEnabled; }
+    static void setDeprecatedPeerConnectionEnabled(bool isEnabled) { isDeprecatedPeerConnectionEnabled = isEnabled; }
+    static bool webkitPeerConnection00Enabled() { return deprecatedPeerConnectionEnabled(); }
     static bool webkitRTCPeerConnectionEnabled() { return peerConnectionEnabled(); }
 #endif
 
@@ -281,7 +276,7 @@ private:
     static bool isDeviceOrientationEnabled;
     static bool isSpeechInputEnabled;
     static bool isCSSExclusionsEnabled;
-    static bool isLangAttributeAwareFormControlUIEnabled;
+    WEBCORE_TESTING static bool isLangAttributeAwareFormControlUIEnabled;
 #if ENABLE(SCRIPTED_SPEECH)
     static bool isScriptedSpeechEnabled;
 #endif
@@ -296,6 +291,7 @@ private:
 #if ENABLE(MEDIA_STREAM)
     static bool isMediaStreamEnabled;
     static bool isPeerConnectionEnabled;
+    static bool isDeprecatedPeerConnectionEnabled;
 #endif
 
 #if ENABLE(GAMEPAD)

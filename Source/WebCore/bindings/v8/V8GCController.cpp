@@ -39,7 +39,6 @@
 #include "HTMLNames.h"
 #include "MemoryUsageSupport.h"
 #include "MessagePort.h"
-#include "PlatformSupport.h"
 #include "RetainedDOMInfo.h"
 #include "RetainedObjectInfo.h"
 #include "V8AbstractEventListener.h"
@@ -241,7 +240,7 @@ typedef Vector<GrouperItem> GrouperList;
 // element of the tree to which it belongs.
 static GroupId calculateGroupId(Node* node)
 {
-    if (node->inDocument() || (node->hasTagName(HTMLNames::imgTag) && static_cast<HTMLImageElement*>(node)->hasPendingLoadEvent()))
+    if (node->inDocument() || (node->hasTagName(HTMLNames::imgTag) && static_cast<HTMLImageElement*>(node)->hasPendingActivity()))
         return GroupId(node->document());
 
     Node* root = node;

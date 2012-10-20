@@ -35,10 +35,20 @@ public:
     static PassOwnPtr<Localizer> create(const AtomicString&);
     String convertToLocalizedNumber(const String&);
     String convertFromLocalizedNumber(const String&);
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
     String localizedDecimalSeparator();
+
+    // Returns time format in Unicode TR35 LDML[1] containing hour, minute, and
+    // second with optional period(AM/PM), e.g. "h:mm:ss a"
+    // [1] LDML http://unicode.org/reports/tr35/tr35-6.html#Date_Format_Patterns
     virtual String timeFormat();
+
+    // Returns time format in Unicode TR35 LDML containing hour, and minute
+    // with optional period(AM/PM), e.g. "h:mm a"
+    // Note: Some platforms return same value as timeFormat().
     virtual String shortTimeFormat();
+
+    // Returns localized period field(AM/PM) strings.
     virtual const Vector<String>& timeAMPMLabels();
 #endif
     virtual ~Localizer();
@@ -51,7 +61,7 @@ protected:
         DecimalSymbolsSize
     };
 
-#if ENABLE(INPUT_TYPE_TIME_MULTIPLE_FIELDS)
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
     String m_localizedTimeFormatText;
     String m_localizedShortTimeFormatText;
     Vector<String> m_timeAMPMLabels;

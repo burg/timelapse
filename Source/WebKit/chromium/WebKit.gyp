@@ -54,10 +54,6 @@
         # stored as is. Otherwise, a concatenated file is stored.
         'debug_devtools%': 0,
 
-        # If set to 1, uses the compositor bindings provided by PlatformSupport
-        # instead of the compositor-implementation binding files in WebKit/chromium/src.
-        'use_libcc_for_compositor%': 0,
-
         # List of DevTools source files, ordered by dependencies. It is used both
         # for copying them to resource dir, and for generating 'devtools.html' file.
         'devtools_files': [
@@ -471,6 +467,8 @@
                 'src/TextFieldDecoratorImpl.cpp',
                 'src/UserMediaClientImpl.h',
                 'src/UserMediaClientImpl.cpp',
+                'src/ValidationMessageClientImpl.cpp',
+                'src/ValidationMessageClientImpl.h',
                 'src/WebTextCheckingCompletionImpl.h',
                 'src/WebTextCheckingCompletionImpl.cpp',
                 'src/WebTextCheckingResult.cpp',
@@ -718,8 +716,10 @@
                                 'tests/PopupMenuTest.cpp',
                                 'tests/RenderTableCellTest.cpp',
                                 'tests/RenderTableRowTest.cpp',
+                                'tests/ScrollingCoordinatorChromiumTest.cpp',
                                 'tests/URLTestHelpers.cpp',
                                 'tests/WebFrameTest.cpp',
+                                'tests/WebImageTest.cpp',
                                 'tests/WebPageNewSerializerTest.cpp',
                                 'tests/WebPageSerializerTest.cpp',
                                 'tests/WebViewTest.cpp',
@@ -739,11 +739,6 @@
                                     'xcode_settings': {
                                       'WARNING_CFLAGS!': ['-Wglobal-constructors'],
                                     },
-                                }],
-                                ['use_libcc_for_compositor==0', {
-                                    'sources': [
-                                        '<@(webkit_compositor_unittest_files)',
-                                    ],
                                 }],
                             ],
                             'msvs_settings': {
@@ -832,24 +827,6 @@
                             },
                         }],
                     ],
-                }],
-                ['clang==1', {
-                    'cflags': ['-Wglobal-constructors'],
-                    'xcode_settings': {
-                        'WARNING_CFLAGS': ['-Wglobal-constructors'],
-                    },
-                }],
-                ['use_libcc_for_compositor==1', {
-                    'sources!': [
-                        '../../WebCore/platform/chromium/support/CCThreadImpl.cpp',
-                        '../../WebCore/platform/chromium/support/CCThreadImpl.h',
-                        '../../WebCore/platform/chromium/support/WebCompositorImpl.cpp',
-                        '../../WebCore/platform/chromium/support/WebCompositorImpl.h',
-                    ],
-                }, { # else: use_libcc_for_compositor==0
-                    'sources': [
-                        '<@(webkit_compositor_bindings_files)',
-                    ]
                 }],
             ],
             'target_conditions': [
@@ -1332,6 +1309,14 @@
                     }],
                 },
             ],
+        }],
+        ['clang==1', {
+            'target_defaults': {
+                'cflags': ['-Wglobal-constructors'],
+                'xcode_settings': {
+                    'WARNING_CFLAGS': ['-Wglobal-constructors'],
+                },
+            },
         }],
     ], # conditions
 }

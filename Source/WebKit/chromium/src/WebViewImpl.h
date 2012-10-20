@@ -99,6 +99,7 @@ class PrerendererClientImpl;
 class SpeechInputClientImpl;
 class SpeechRecognitionClientProxy;
 class UserMediaClientImpl;
+class ValidationMessageClientImpl;
 class WebAccessibilityObject;
 class WebCompositorImpl;
 class WebDevToolsAgentClient;
@@ -167,7 +168,7 @@ public:
     virtual void extendSelectionAndDelete(int before, int after);
     virtual bool isSelectionEditable() const;
     virtual WebColor backgroundColor() const;
-    virtual bool selectionBounds(WebRect& start, WebRect& end) const;
+    virtual bool selectionBounds(WebRect& anchor, WebRect& focus) const;
     virtual bool selectionTextDirection(WebTextDirection& start, WebTextDirection& end) const;
     virtual bool caretOrSelectionRange(size_t* location, size_t* length);
     virtual void setTextDirection(WebTextDirection direction);
@@ -862,6 +863,7 @@ private:
 #if ENABLE(GESTURE_EVENTS)
     OwnPtr<LinkHighlight> m_linkHighlight;
 #endif
+    OwnPtr<ValidationMessageClientImpl> m_validationMessage;
 };
 
 } // namespace WebKit

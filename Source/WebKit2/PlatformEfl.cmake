@@ -17,6 +17,7 @@ LIST(APPEND WebKit2_SOURCES
     Shared/efl/NativeWebKeyboardEventEfl.cpp
     Shared/efl/NativeWebWheelEventEfl.cpp
     Shared/efl/NativeWebMouseEventEfl.cpp
+    Shared/efl/NativeWebTouchEventEfl.cpp
     Shared/efl/ProcessExecutablePathEfl.cpp
     Shared/efl/WebEventFactory.cpp
 
@@ -75,6 +76,7 @@ LIST(APPEND WebKit2_SOURCES
     UIProcess/efl/WebPageProxyEfl.cpp
     UIProcess/efl/WebPopupMenuProxyEfl.cpp
     UIProcess/efl/WebPreferencesEfl.cpp
+    UIProcess/efl/WebProcessProxyEfl.cpp
 
     UIProcess/soup/WebCookieManagerProxySoup.cpp
     UIProcess/soup/WebSoupRequestManagerClient.cpp
@@ -222,6 +224,7 @@ SET (EWebKit2_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_navigation_policy_decision.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_popup_menu_item.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_settings.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_touch.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_url_request.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_url_response.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_url_scheme_request.h"
@@ -260,8 +263,10 @@ ENDIF()
 
 SET(WEBKIT2_EFL_TEST_DIR "${WEBKIT2_DIR}/UIProcess/API/efl/tests")
 SET(TEST_RESOURCES_DIR ${WEBKIT2_EFL_TEST_DIR}/resources)
+SET(TEST_INJECTED_BUNDLE_DIR ${WEBKIT2_EFL_TEST_DIR}/InjectedBundle)
 
 ADD_DEFINITIONS(-DTEST_RESOURCES_DIR=\"${TEST_RESOURCES_DIR}\"
+    -DTEST_LIB_DIR=\"${CMAKE_LIBRARY_OUTPUT_DIRECTORY}\"
     -DTEST_THEME_DIR=\"${THEME_BINARY_DIR}\"
     -DGTEST_LINKED_AS_SHARED_LIBRARY=1
     -DLIBEXECDIR=\"${CMAKE_INSTALL_PREFIX}/${EXEC_INSTALL_DIR}\"
@@ -299,6 +304,8 @@ IF (ENABLE_API_TESTS)
         SET_TESTS_PROPERTIES(${testName} PROPERTIES TIMEOUT 60)
         TARGET_LINK_LIBRARIES(${testName} ${EWK2UnitTests_LIBRARIES} ewk2UnitTestUtils)
     ENDFOREACH ()
+
+    ADD_LIBRARY(ewk2UnitTestInjectedBundleSample SHARED ${TEST_INJECTED_BUNDLE_DIR}/injected_bundle_sample.cpp)
 ENDIF ()
 
 IF (ENABLE_INSPECTOR)

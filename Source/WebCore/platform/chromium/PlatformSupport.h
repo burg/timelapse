@@ -49,15 +49,6 @@ typedef struct NPObject NPObject;
 typedef struct _NPP NPP_t;
 typedef NPP_t* NPP;
 
-#if OS(DARWIN)
-typedef struct CGFont* CGFontRef;
-#ifdef __OBJC__
-@class NSFont;
-#else
-class NSFont;
-#endif
-#endif // OS(DARWIN)
-
 #if OS(WINDOWS)
 typedef struct HFONT__* HFONT;
 #endif
@@ -99,27 +90,13 @@ public:
 #if OS(WINDOWS)
     static bool ensureFontLoaded(HFONT);
 #endif
-#if OS(DARWIN)
-    static bool loadFont(NSFont* srcFont, CGFontRef*, uint32_t* fontID);
-#elif OS(UNIX)
-    struct FontFamily {
-        String name;
-        bool isBold;
-        bool isItalic;
-    };
-    static void getFontFamilyForCharacters(const UChar*, size_t numCharacters, const char* preferredLocale, FontFamily*);
-#endif
 
     // IndexedDB ----------------------------------------------------------
     static PassRefPtr<IDBFactoryBackendInterface> idbFactory();
 
-    // JavaScript ---------------------------------------------------------
-    static void notifyJSOutOfMemory(Frame*);
-
     // Plugin -------------------------------------------------------------
     static bool plugins(bool refresh, Vector<PluginInfo>*);
     static NPObject* pluginScriptableObject(Widget*);
-    static bool popupsAllowed(NPP);
 
     // Screen -------------------------------------------------------------
     static int screenHorizontalDPI(Widget*);

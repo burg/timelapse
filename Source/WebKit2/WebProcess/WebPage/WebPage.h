@@ -283,7 +283,6 @@ public:
 
     String renderTreeExternalRepresentation() const;
     uint64_t renderTreeSize() const;
-    void setPaintedObjectsCounterThreshold(uint64_t);
 
     void setTracksRepaints(bool);
     bool isTrackingRepaints() const;
@@ -308,6 +307,8 @@ public:
     void setUseFixedLayout(bool);
     bool useFixedLayout() const { return m_useFixedLayout; }
     void setFixedLayoutSize(const WebCore::IntSize&);
+
+    void listenForLayoutMilestones(uint32_t /* LayoutMilestones */);
 
     void setSuppressScrollbarAnimations(bool);
 
@@ -458,7 +459,7 @@ public:
     void updateAccessibilityTree();
     bool handleMousePressedEvent(const WebCore::PlatformMouseEvent&);
 #if USE(TEXTURE_MAPPER_GL)
-    void widgetMapped(int64_t nativeWindowHandle);
+    void setAcceleratedCompositingWindowId(int64_t nativeWindowHandle);
 #endif
 #endif
 

@@ -35,7 +35,7 @@
 #include <wtf/ListHashSet.h>
 
 #if ENABLE(CSS_EXCLUSIONS)
-#include "WrapShapeInfo.h"
+#include "ExclusionShapeInsideInfo.h"
 #endif
 
 namespace WebCore {
@@ -59,7 +59,7 @@ template <class Run> class BidiRunList;
 template <class Iterator> struct MidpointState;
 typedef BidiResolver<InlineIterator, BidiRun> InlineBidiResolver;
 typedef MidpointState<InlineIterator> LineMidpointState;
-typedef WTF::ListHashSet<RenderBox*> TrackedRendererListHashSet;
+typedef WTF::ListHashSet<RenderBox*, 16> TrackedRendererListHashSet;
 typedef WTF::HashMap<const RenderBlock*, TrackedRendererListHashSet*> TrackedDescendantsMap;
 typedef WTF::HashMap<const RenderBox*, HashSet<RenderBlock*>*> TrackedContainerMap;
 
@@ -402,9 +402,9 @@ public:
 #endif
 
 #if ENABLE(CSS_EXCLUSIONS)
-    WrapShapeInfo* wrapShapeInfo() const
+    ExclusionShapeInsideInfo* exclusionShapeInsideInfo() const
     {
-        return style()->wrapShapeInside() && WrapShapeInfo::isWrapShapeInfoEnabledForRenderBlock(this) ? WrapShapeInfo::wrapShapeInfoForRenderBlock(this) : 0;
+        return style()->wrapShapeInside() && ExclusionShapeInsideInfo::isExclusionShapeInsideInfoEnabledForRenderBlock(this) ? ExclusionShapeInsideInfo::exclusionShapeInsideInfoForRenderBlock(this) : 0;
     }
 #endif
 
@@ -491,14 +491,15 @@ protected:
     }
 #endif
 
-    void computeInitialRegionRangeForBlock();
+    void updateRegionsAndExclusionsLogicalSize();
     void computeRegionRangeForBlock();
 
     virtual void checkForPaginationLogicalHeightChange(LayoutUnit& pageLogicalHeight, bool& pageLogicalHeightChanged, bool& hasSpecifiedPageLogicalHeight);
 
 private:
 #if ENABLE(CSS_EXCLUSIONS)
-    void updateWrapShapeInfoAfterStyleChange(const BasicShape*, const BasicShape* oldWrapShape);
+    void computeExclusionShapeSize();
+    void updateExclusionShapeInsideInfoAfterStyleChange(const BasicShape*, const BasicShape* oldWrapShape);
 #endif
     virtual RenderObjectChildList* virtualChildren() { return children(); }
     virtual const RenderObjectChildList* virtualChildren() const { return children(); }
@@ -715,6 +716,7 @@ private:
         RenderText* m_text;
         OwnPtr<TextLayout> m_layout;
         LazyLineBreakIterator m_lineBreakIterator;
+        const Font* m_font;
     };
 
     class LineBreaker {

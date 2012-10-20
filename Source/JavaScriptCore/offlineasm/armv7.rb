@@ -353,7 +353,7 @@ def armV7LowerMisplacedImmediates(list)
         | node |
         if node.is_a? Instruction
             case node.opcode
-            when "storei", "storep"
+            when "storeb", "storei", "storep"
                 operands = node.operands
                 newOperands = []
                 operands.each {
@@ -683,7 +683,7 @@ def emitArmV7Compact(opcode2, opcode3, operands)
         $asm.puts "#{opcode3} #{armV7FlippedOperands(operands)}"
     else
         raise unless operands.size == 2
-        raise unless operands[1].is_a? RegisterID
+        raise unless operands[1].register?
         if operands[0].is_a? Immediate
             $asm.puts "#{opcode3} #{operands[1].armV7Operand}, #{operands[1].armV7Operand}, #{operands[0].armV7Operand}"
         else
