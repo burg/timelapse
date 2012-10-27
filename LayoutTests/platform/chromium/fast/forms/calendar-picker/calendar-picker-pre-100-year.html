@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="../../../../../fast/js/resources/js-test-pre.js"></script>
+<script src="resources/calendar-picker-common.js"></script>
+</head>
+<body>
+<p id="description"></p>
+<div id="console"></div>
+<input type=date id=date value="0002-02-02">
+<script>
+function finishTest() {
+    popupWindow.removeEventListener('resize', finishTest);
+    var daysContainer = popupWindow.document.getElementsByClassName("days-area")[0];
+    sendKey(daysContainer, 'Right');
+    sendKey(daysContainer, 'Enter');
+    shouldBe('document.getElementById("date").value', '"0002-02-03"');
+    setTimeout(function() { finishJSTest(); }, 0);
+}
+
+description('Check if year before 100 can be set.');
+
+if (window.testRunner)
+    testRunner.waitUntilDone();
+
+window.onload = function() {
+    var dateInput = document.getElementById('date');
+    openPicker(dateInput);
+    popupWindow.addEventListener('resize', finishTest, false);
+};
+var successfullyParsed = true;
+</script>
+<script src="../../../../../fast/js/resources/js-test-post.js"></script>
+</body>
+</html>

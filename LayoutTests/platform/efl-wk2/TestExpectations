@@ -1,5 +1,8 @@
 # We divide the EFL WK2 test expectations into several categories:
-# 1. TESTS EXPECTED TO FAIL
+# 1. PASSING TESTS
+#    Test cases that pass for EFL WK2 but are skipped in a top-level TestExpectations file.
+
+# 2. TESTS EXPECTED TO FAIL
 #    Test cases related to features that we don't expect to be activated for EFL WK2 since
 #    the feature implementation in WebKit2 is missing or not complete yet.
 #    If test cases related to a feature cannot be activated since e.g.
@@ -10,17 +13,21 @@
 #    If in doubt, please discuss on webkit-efl mailing list whether a set of test cases
 #    should be moved here.
 
-# 2. CRASHES
+# 3. CRASHES
 
-# 3. FLAKY TESTS
+# 4. FLAKY TESTS
 
-# 4. FAILING TESTS
+# 5. FAILING TESTS
 #    * Interim failures that are moved here for further investigation as a result of daily
 #      gardening. They should be analysed quickly and either resolved or moved to 1).
 #    * Remaining failures that are moved here until further investigation after
 #      unskipping a directory or block of tests in the Skipped list.
 #    * Tests that we expect to pass once the respective fix for DRT is available or
 #      a relevant compile time feature can be enabled for EFL.
+
+#////////////////////////////////////////////////////////////////////////////////////////
+# PASSING TESTS
+#////////////////////////////////////////////////////////////////////////////////////////
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # TESTS EXPECTED TO FAIL
@@ -30,16 +37,17 @@
 # CRASHES
 #////////////////////////////////////////////////////////////////////////////////////////
 
-Bug(EFL) fast/dom/register-protocol-handler.html [ Crash ]
-Bug(EFL) fast/dom/unregister-protocol-handler.html [ Crash ]
+webkit.org/b/92726 fast/dom/register-protocol-handler.html [ Crash ]
+webkit.org/b/92726 fast/dom/unregister-protocol-handler.html [ Crash ]
+
+# Crashes on plugin test.
+webkit.org/b/98747 plugins/document-open.html [ Crash ]
 
 # WebKitTestRunner needs an implementation for download attribute feature
 # The implementation for DumpRenderTree is on https://bugs.webkit.org/show_bug.cgi?id=96462
 # anchor-download-unset.html and anchor-nodownload.html are currently passed, but need to be checked along with below test cases
 Bug(EFL) fast/dom/HTMLAnchorElement/anchor-download.html [ Crash ]
 Bug(EFL) fast/dom/HTMLAnchorElement/anchor-nodownload-set.html [ Crash ]
-
-webkit.org/b/97565 fast/loader/reload-zero-byte-plugin.html [ Crash ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # FLAKY TESTS
@@ -61,7 +69,6 @@ Bug(EFL) inspector/styles/get-set-stylesheet-text.html [ Failure Pass ]
 Bug(EFL) inspector/styles/lazy-computed-style.html [ Failure Pass ]
 Bug(EFL) inspector/styles/add-new-rule-inline-style-csp.html [ Failure Pass ]
 Bug(EFL) inspector/styles/styles-commit-editing.html [ Failure Pass ]
-Bug(EFL) inspector/styles/styles-history.html [ Failure Pass ]
 Bug(EFL) inspector/styles/edit-inspector-stylesheet.html [ Failure Pass ]
 Bug(EFL) inspector/styles/commit-selector.html [ Failure Pass ]
 Bug(EFL) inspector/styles/force-pseudo-state.html [ Failure Pass ]
@@ -110,7 +117,6 @@ Bug(EFL) inspector/audits/audits-panel-functional.html [ Failure Pass ]
 Bug(EFL) inspector/runtime/runtime-callFunctionOn.html [ Failure Pass ]
 Bug(EFL) inspector/storage-panel-dom-storage-update.html [ Failure Pass ]
 Bug(EFL) media/video-played-reset.html [ Failure Pass ]
-Bug(EFL) fast/encoding/parser-tests-110.html [ Failure Pass ]
 Bug(EFL) fast/loader/fragment-after-redirect-gets-back-entry.html [ Failure Pass ]
 Bug(EFL) fast/loader/child-frame-add-after-back-forward.html [ Failure Pass ]
 Bug(EFL) fast/forms/validation-message-user-modify.html [ Failure Pass ]
@@ -121,8 +127,6 @@ Bug(EFL) fast/layers/no-clipping-overflow-hidden-hardware-acceleration.html [ Im
 Bug(EFL) fast/events/domactivate-sets-underlying-click-event-as-handled.html [ Failure Pass ]
 Bug(EFL) http/tests/inspector/change-iframe-src.html [ Failure Pass ]
 Bug(EFL) http/tests/loading/fire-error-event-empty-404-script.html [ Crash Failure Pass ]
-Bug(EFL) jquery/data.html [ Failure Pass ]
-Bug(EFL) jquery/offset.html [ Failure Pass ]
 Bug(EFL) sputnik/Conformance/07_Lexical_Conventions/7.4_Comments/S7.4_A5.html [ Crash Failure Pass ]
 Bug(EFL) sputnik/Conformance/07_Lexical_Conventions/7.4_Comments/S7.4_A6.html [ Crash Failure Pass ]
 Bug(EFL) sputnik/Conformance/07_Lexical_Conventions/7.8_Literals/7.8.5_Regular_Expression_Literals/S7.8.5_A1.1_T2.html [ Crash Failure Pass ]
@@ -134,6 +138,8 @@ Bug(EFL) svg/dom/viewspec-parser-1.html [ Failure Pass ]
 Bug(EFL) svg/dom/viewspec-parser-4.html [ Failure Pass ]
 Bug(EFL) svg/dom/viewspec-parser-2.html [ Failure Pass ]
 Bug(EFL) svg/dom/viewspec-parser-5.html [ Failure Pass ]
+
+webkit.org/b/98761 svg/text/selection-tripleclick.svg [ Failure Pass ]
 
 # ASSERTION FAILED: m_suspended in WebCore::SuspendableTimer::resume()
 webkit.org/b/35220 inspector/debugger/debugger-no-nested-pause.html [ Crash Failure Pass ]
@@ -156,15 +162,15 @@ webkit.org/b/90207 fast/forms/select/select-state-restore.html [ Failure Pass ]
 # Affects multiple platforms.
 webkit.org/b/90980 fast/forms/textarea/textarea-state-restore.html [ Failure Pass ]
 
+# Flaky, probably because the result is sometimes taken before data about visited link have passed through IPC.
+webkit.org/b/81797 fast/history/visited-link-background-color.html [ Failure  Pass ]
+
+# Also flaky at least on GTK+
+webkit.org/b/72698 media/audio-garbage-collect.html
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # FAILING TESTS
 #////////////////////////////////////////////////////////////////////////////////////////
-
-# WebKitTestRunner needs an implementation for testRunner.queueLoad
-webkit.org/b/42674 fast/dom/navigation-type-back-forward.html [ Failure ]
-webkit.org/b/42674 fast/dom/navigation-type-navigate.html [ Failure ]
-webkit.org/b/42674 fast/dom/navigation-type-reload.html [ Failure ]
-webkit.org/b/42674 http/tests/navigation/response204.html [ Failure ]
 
 # WebKitTestRunner needs an implementation for testRunner.titleTextDirection
 webkit.org/b/93470 fast/dom/title-directionality-removeChild.html [ Failure ]
@@ -191,22 +197,70 @@ webkit.org/b/93980 http/tests/appcache/load-from-appcache-defer-resume-crash.htm
 # WebKitTestRunner needs an implementation for testRunner.setStorageDatabaseIdleInterval
 webkit.org/b/93982 storage/domstorage/storage-close-database-on-idle.html [ Failure ]
 
-# Visited link color is incorrect
-Bug(EFL) fast/block/float/float-in-float-hit-testing.html [ Failure ]
-webkit.org/b/81797 fast/history/visited-link-background-color.html [ Failure ]
+# The following test makes the fast/parser/document-write-ignores-later-network-bytes.html test crash
+webkit.org/b/98345 fast/parser/document-open-in-unload.html [ Skip ]
 
-# Unclassified failures
-Bug(EFL) fast/block/float/float-in-float-hit-testing.html [ Failure ]
-Bug(EFL) fast/dom/Window/mozilla-focus-blur.html [ Failure ]
-Bug(EFL) fast/replaced/no-focus-ring-embed.html [ Failure ]
-Bug(EFL) fast/replaced/no-focus-ring-object.html [ Failure ]
-Bug(EFL) http/tests/inspector/network/network-sidebar-width.html [ Failure ]
+# Fails after r130363.
+webkit.org/b/98573 fast/forms/multiple-form-submission-protection-mouse.html [ Failure ]
 
-# Fails after r128056.
-webkit.org/b/96794 inspector/console/alert-toString-exception.html [ Failure ]
+# Requires TestRunner displayInvalidatedRegion() support.
+webkit.org/b/98523 fast/images/repaint-subrect-grid.html [ Failure ]
 
-# Fails after it was unskipped in r129372.
-webkit.org/b/97545 inspector/styles/variables/css-variables.html [ Failure ]
+# NPP_SetWindow is not called with proper size for the first time.
+webkit.org/b/98746 plugins/netscape-plugin-setwindow-size-2.html [ Failure ]
 
-# Fails after r129479.
-webkit.org/b/97566 http/tests/security/contentSecurityPolicy/object-src-url-allowed.html [ Failure ]
+# Mouse event problem with plugin test.
+webkit.org/b/98745 plugins/clicking-missing-plugin-fires-delegate.html [ Failure ]
+webkit.org/b/98745 plugins/keyboard-events.html [ Failure ]
+webkit.org/b/98745 plugins/mouse-events-fixedpos.html [ Failure ]
+webkit.org/b/98745 plugins/mouse-events.html [ Failure ]
+
+# Test runner needs setSmartInsertDeleteEnabled implementation
+webkit.org/b/99436 editing/selection/doubleclick-beside-cr-span.html [ Failure ]
+webkit.org/b/99436 editing/selection/doubleclick-whitespace-crash.html [ Failure ]
+webkit.org/b/99436 editing/selection/doubleclick-whitespace-img-crash.html [ Failure ]
+webkit.org/b/99436 editing/selection/doubleclick-whitespace.html [ Failure ]
+
+# Text input controller needs selectedRange implementation
+webkit.org/b/99438 editing/selection/mixed-editability-10.html [ Failure ]
+
+# BUG: wrong test results that need investigation
+editing/selection/anchor-focus3.html [ Failure ]
+editing/selection/click-in-margins-inside-editable-div.html [ Failure ]
+
+# NPN_ReloadPlugins is not implemented.
+webkit.org/b/98744 plugins/reloadplugins-and-pages.html [ Failure ]
+
+# Plugin test timeout.
+webkit.org/b/98743 plugins/evaluate-js-after-removing-plugin-element.html [ Failure ]
+
+# Plugin failure related to NPP_URLNotify.
+webkit.org/b/98742 plugins/get-targeted-javascript-url.html [ Failure ]
+
+# Reloading a Netscape plugin that accesses its own DOM element is failing.
+webkit.org/b/82020 plugins/netscape-dom-access-and-reload.html [ Failure ]
+
+# Plugin test failures having wrong object reference count problem.
+webkit.org/b/98741 plugins/npruntime/browser-object-identity.html [ Failure ]
+webkit.org/b/98741 plugins/refcount-leaks.html [ Failure ]
+
+# NPP_SetWindow is not called during plugin destruction on X11.
+webkit.org/b/63261 plugins/npp-set-window-called-during-destruction.html [ Failure ]
+
+# Delete plugin failures.
+webkit.org/b/98740 plugins/npruntime/delete-plugin-within-hasProperty-return-false.html [ Failure ]
+webkit.org/b/98740 plugins/npruntime/delete-plugin-within-hasProperty-return-true.html [ Failure ]
+webkit.org/b/98740 plugins/npruntime/delete-plugin-within-setProperty.html [ Failure ]
+
+# Http plugin test failures.
+webkit.org/b/99561 http/tests/plugins/plugin-document-has-focus.html [ Failure ]
+webkit.org/b/99562 http/tests/plugins/post-url-file.html [ Failure ]
+
+# Comparison of two javascript objects in C++ is failing.
+webkit.org/b/98739 plugins/npruntime/embed-property-equality.html [ Failure ]
+
+# Flaky on EFL port.
+webkit.org/b/96641 media/video-seek-past-end-playing.html [ Failure ]
+
+# EFL WK2 does not support the spellchecker feature
+webkit.org/b/91854 editing/spelling [ Skip ]

@@ -51,14 +51,6 @@ WebInspector.FileManager.prototype = {
     },
 
     /**
-     * @return {boolean}
-     */
-    canAppend: function()
-    {
-        return InspectorFrontendHost.canSave() && ("append" in InspectorFrontendHost);
-    },
-
-    /**
      * @param {string} url
      * @param {string} content
      * @param {boolean} forceSaveAs
@@ -105,12 +97,20 @@ WebInspector.FileManager.prototype = {
     /**
      * @param {string} url
      */
+    close: function(url)
+    {
+        InspectorFrontendHost.close(url);
+    },
+
+    /**
+     * @param {string} url
+     */
     appendedToURL: function(url)
     {
         this.dispatchEventToListeners(WebInspector.FileManager.EventTypes.AppendedToURL, url);
-    }
-}
+    },
 
-WebInspector.FileManager.prototype.__proto__ = WebInspector.Object.prototype;
+    __proto__: WebInspector.Object.prototype
+}
 
 WebInspector.fileManager = new WebInspector.FileManager();

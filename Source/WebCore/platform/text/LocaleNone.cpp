@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "Localizer.h"
+#include <wtf/DateMath.h>
 #include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
@@ -35,6 +36,19 @@ public:
 
 private:
     virtual void initializeLocalizerData() OVERRIDE FINAL;
+    virtual double parseDateTime(const String&, DateComponents::Type) OVERRIDE;
+#if ENABLE(CALENDAR_PICKER)
+    virtual String dateFormatText() OVERRIDE;
+    virtual bool isRTL() OVERRIDE;
+#endif
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+    virtual String dateFormat() OVERRIDE;
+    virtual String monthFormat() OVERRIDE;
+    virtual const Vector<String>& shortMonthLabels() OVERRIDE;
+    virtual const Vector<String>& shortStandAloneMonthLabels() OVERRIDE;
+#endif
+
+    Vector<String> m_shortMonthLabels;
 };
 
 PassOwnPtr<Localizer> Localizer::create(const AtomicString&)
@@ -49,5 +63,49 @@ LocaleNone::~LocaleNone()
 void LocaleNone::initializeLocalizerData()
 {
 }
+
+double LocaleNone::parseDateTime(const String&, DateComponents::Type)
+{
+    return std::numeric_limits<double>::quiet_NaN();
+}
+
+#if ENABLE(CALENDAR_PICKER)
+String LocaleNone::dateFormatText()
+{
+    return ASCIILiteral("Year-Month-Day");
+}
+
+bool LocaleNone::isRTL()
+{
+    return false;
+}
+#endif
+
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+String LocaleNone::dateFormat()
+{
+    return ASCIILiteral("dd/MM/yyyyy");
+}
+
+String LocaleNone::monthFormat()
+{
+    return ASCIILiteral("yyyy-MM");
+}
+
+const Vector<String>& LocaleNone::shortMonthLabels()
+{
+    if (!m_shortMonthLabels.isEmpty())
+        return m_shortMonthLabels;
+    m_shortMonthLabels.reserveCapacity(WTF_ARRAY_LENGTH(WTF::monthName));
+    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(WTF::monthName); ++i)
+        m_shortMonthLabels.append(WTF::monthName[i]);
+    return m_shortMonthLabels;
+}
+
+const Vector<String>& LocaleNone::shortStandAloneMonthLabels()
+{
+    return shortMonthLabels();
+}
+#endif
 
 } // namespace WebCore

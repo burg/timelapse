@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <script src="../../fast/js/resources/js-test-pre.js"></script>
+<script src="resources/helper.js"></script>
 <style>
     body { font-family: monospace }
     .content { -webkit-flow-into: flow }
     .region {  -webkit-flow-from: flow}
-    #region, #region2, region3 {width: 250px; height: 50px}
+    #region, #region2, #region3 { width: 250px; height: 50px; }
 </style>
 </head>
 <body>
@@ -21,7 +22,7 @@
         testRunner.dumpAsText();
 
     // Named flow does not have any regions yet
-    var namedFlow = document.webkitGetFlowByName("flow");
+    var namedFlow = getFlowByName("flow");
 
     // FirstEmptyRegionIndex should be -1 for an empty named flow
     shouldBe("namedFlow.firstEmptyRegionIndex", "-1");

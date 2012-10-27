@@ -82,7 +82,7 @@ struct UUIDHolder : public RefCounted<UUIDHolder> {
 static void setUpTerminationNotificationHandler(pid_t pid)
 {
 #if HAVE(DISPATCH_H)
-    dispatch_source_t processDiedSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_PROC, pid, DISPATCH_PROC_EXIT, dispatch_get_current_queue());
+    dispatch_source_t processDiedSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_PROC, pid, DISPATCH_PROC_EXIT, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0));
     dispatch_source_set_event_handler(processDiedSource, ^{
         int status;
         waitpid(dispatch_source_get_handle(processDiedSource), &status, 0);
@@ -111,14 +111,21 @@ static void addDYLDEnvironmentAdditions(const ProcessLauncher::LaunchOptions& la
     if (isWebKitDevelopmentBuild)
         environmentVariables.appendValue("DYLD_FRAMEWORK_PATH", [frameworksPath fileSystemRepresentation], ':');
 
-    NSString *processPath = [webKit2Bundle pathForAuxiliaryExecutable:(launchOptions.processType == ProcessLauncher::PluginProcess ? @"PluginProcess.app" : @"WebProcess.app")];
-    NSString *processAppExecutablePath = [[NSBundle bundleWithPath:processPath] executablePath];
-
     NSString *processShimPathNSString = nil;
-    if (launchOptions.processType == ProcessLauncher::PluginProcess)
+#if ENABLE(PLUGIN_PROCESS)
+    if (launchOptions.processType == ProcessLauncher::PluginProcess) {
+        NSString *processPath = [webKit2Bundle pathForAuxiliaryExecutable:@"PluginProcess.app"];
+        NSString *processAppExecutablePath = [[NSBundle bundleWithPath:processPath] executablePath];
+
         processShimPathNSString = [[processAppExecutablePath stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"PluginProcessShim.dylib"];
-    else if (launchOptions.processType == ProcessLauncher::WebProcess)
+    } else
+#endif // ENABLE(PLUGIN_PROCESS)
+    if (launchOptions.processType == ProcessLauncher::WebProcess) {
+        NSString *processPath = [webKit2Bundle pathForAuxiliaryExecutable:@"WebProcess.app"];
+        NSString *processAppExecutablePath = [[NSBundle bundleWithPath:processPath] executablePath];
+
         processShimPathNSString = [[processAppExecutablePath stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"WebProcessShim.dylib"];
+    }
 
     // Make sure that the shim library file exists and insert it.
     if (processShimPathNSString) {
@@ -366,7 +373,29 @@ static void createProcess(const ProcessLauncher::LaunchOptions& launchOptions, b
     CString localization = String(cfLocalization.get()).utf8();
 
     NSBundle *webKit2Bundle = [NSBundle bundleWithIdentifier:@"com.apple.WebKit2"];
-    NSString *processPath = [webKit2Bundle pathForAuxiliaryExecutable:(launchOptions.processType == ProcessLauncher::PluginProcess ? @"PluginProcess.app" : @"WebProcess.app")];
+
+    NSString *processPath = nil;
+    switch(launchOptions.processType) {
+    case ProcessLauncher::WebProcess:
+        processPath = [webKit2Bundle pathForAuxiliaryExecutable:@"WebProcess.app"];
+        break;
+#if ENABLE(PLUGIN_PROCESS)
+    case ProcessLauncher::PluginProcess:
+        processPath = [webKit2Bundle pathForAuxiliaryExecutable:@"PluginProcess.app"];
+        break;
+#endif
+#if ENABLE(NETWORK_PROCESS)
+    case ProcessLauncher::NetworkProcess:
+        processPath = [webKit2Bundle pathForAuxiliaryExecutable:@"NetworkProcess.app"];
+        break;
+#endif
+#if ENABLE(SHARED_WORKER_PROCESS)
+    case ProcessLauncher::SharedWorkerProcess:
+        processPath = [webKit2Bundle pathForAuxiliaryExecutable:@"SharedWorkerProcess.app"];
+        break;
+#endif
+    }
+
     NSString *frameworkExecutablePath = [webKit2Bundle executablePath];
     NSString *processAppExecutablePath = [[NSBundle bundleWithPath:processPath] executablePath];
 

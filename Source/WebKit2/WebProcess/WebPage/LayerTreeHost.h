@@ -31,8 +31,8 @@
 #include <wtf/RefCounted.h>
 
 namespace CoreIPC {
-class ArgumentDecoder;
 class Connection;
+class MessageDecoder;
 class MessageID;
 }
 
@@ -41,6 +41,7 @@ class FloatPoint;
 class IntRect;
 class IntSize;
 class GraphicsLayer;
+class GraphicsLayerFactory;
 
 #if PLATFORM(WIN) && USE(AVFOUNDATION)
 struct GraphicsDeviceAdapter;
@@ -86,12 +87,14 @@ public:
     virtual void pauseRendering() { }
     virtual void resumeRendering() { }
 
+    virtual WebCore::GraphicsLayerFactory* graphicsLayerFactory() { return 0; }
+
 #if USE(COORDINATED_GRAPHICS)
-    virtual void setVisibleContentsRect(const WebCore::IntRect&, float scale, const WebCore::FloatPoint&) { }
-    virtual void setVisibleContentsRectForLayer(int layerID, const WebCore::IntRect&) { }
+    virtual void setVisibleContentsRect(const WebCore::IntRect&, float /* scale */, const WebCore::FloatPoint&) { }
+    virtual void setVisibleContentsRectForLayer(int /* layerID */, const WebCore::IntRect&) { }
     virtual void renderNextFrame() { }
     virtual void purgeBackingStores() { }
-    virtual void didReceiveLayerTreeCoordinatorMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::ArgumentDecoder*) = 0;
+    virtual void didReceiveLayerTreeCoordinatorMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&) = 0;
 #endif
 
 #if PLATFORM(WIN)

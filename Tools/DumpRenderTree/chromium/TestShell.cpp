@@ -108,11 +108,13 @@ TestShell::TestShell()
     , m_dumpPixelsForCurrentTest(false)
     , m_allowExternalPages(false)
     , m_acceleratedCompositingForVideoEnabled(false)
+    , m_softwareCompositingEnabled(false)
     , m_threadedCompositingEnabled(false)
     , m_forceCompositingMode(false)
     , m_accelerated2dCanvasEnabled(false)
     , m_deferred2dCanvasEnabled(false)
     , m_acceleratedPaintingEnabled(false)
+    , m_deferredImageDecodingEnabled(false)
     , m_stressOpt(false)
     , m_stressDeopt(false)
     , m_dumpWhenFinished(true)
@@ -134,6 +136,7 @@ TestShell::TestShell()
     WebRuntimeFeatures::enableEncryptedMedia(true);
     WebRuntimeFeatures::enableMediaStream(true);
     WebRuntimeFeatures::enablePeerConnection(true);
+    WebRuntimeFeatures::enableDeprecatedPeerConnection(true);
     WebRuntimeFeatures::enableWebAudio(true);
     WebRuntimeFeatures::enableVideoTrack(true);
     WebRuntimeFeatures::enableGamepad(true);
@@ -228,6 +231,7 @@ void TestShell::resetWebSettings(WebView& webView)
     m_prefs.accelerated2dCanvasEnabled = m_accelerated2dCanvasEnabled;
     m_prefs.deferred2dCanvasEnabled = m_deferred2dCanvasEnabled;
     m_prefs.acceleratedPaintingEnabled = m_acceleratedPaintingEnabled;
+    m_prefs.deferredImageDecodingEnabled = m_deferredImageDecodingEnabled;
     m_prefs.applyTo(&webView);
 }
 
@@ -399,7 +403,7 @@ static string dumpFramesAsText(WebFrame* frame, bool recursive)
     // Add header for all but the main frame. Skip empty frames.
     if (frame->parent() && !frame->document().documentElement().isNull()) {
         result.append("\n--------\nFrame: '");
-        result.append(frame->name().utf8().data());
+        result.append(frame->uniqueName().utf8().data());
         result.append("'\n--------\n");
     }
 
@@ -425,7 +429,7 @@ static string dumpFramesAsPrintedText(WebFrame* frame, bool recursive)
     // Add header for all but the main frame. Skip empty frames.
     if (frame->parent() && !frame->document().documentElement().isNull()) {
         result.append("\n--------\nFrame: '");
-        result.append(frame->name().utf8().data());
+        result.append(frame->uniqueName().utf8().data());
         result.append("'\n--------\n");
     }
 
@@ -445,7 +449,7 @@ static void dumpFrameScrollPosition(WebFrame* frame, bool recursive)
     WebSize offset = frame->scrollOffset();
     if (offset.width > 0 || offset.height > 0) {
         if (frame->parent())
-            printf("frame '%s' ", frame->name().utf8().data());
+            printf("frame '%s' ", frame->uniqueName().utf8().data());
         printf("scrolled to %d,%d\n", offset.width, offset.height);
     }
 

@@ -27,28 +27,56 @@
 #define ewk_download_job_private_h
 
 #include "WKBase.h"
+#include "WKEinaSharedString.h"
+#include "ewk_url_request_private.h"
+#include "ewk_url_response_private.h"
 #include <Evas.h>
-
-typedef struct _Ewk_Download_Job Ewk_Download_Job;
-typedef struct _Ewk_Url_Response Ewk_Url_Response;
-typedef struct _Ewk_Web_Error Ewk_Web_Error;
+#include <wtf/PassRefPtr.h>
 
 namespace WebKit {
 class DownloadProxy;
 }
 
-Ewk_Download_Job* ewk_download_job_new(WebKit::DownloadProxy*, Evas_Object* ewkView);
+/**
+ * \struct  Ewk_Download_Job
+ * @brief   Contains the download data.
+ */
+class Ewk_Download_Job : public RefCounted<Ewk_Download_Job> {
+public:
+    WebKit::DownloadProxy* downloadProxy;
+    Evas_Object* view;
+    Ewk_Download_Job_State state;
+    RefPtr<Ewk_Url_Request> request;
+    RefPtr<Ewk_Url_Response> response;
+    double startTime;
+    double endTime;
+    uint64_t downloaded; /**< length already downloaded */
+    WKEinaSharedString destination;
+    WKEinaSharedString suggestedFilename;
+
+    static PassRefPtr<Ewk_Download_Job> create(WebKit::DownloadProxy* download, Evas_Object* ewkView)
+    {
+        return adoptRef(new Ewk_Download_Job(download, ewkView));
+    }
+
+private:
+    Ewk_Download_Job(WebKit::DownloadProxy* download, Evas_Object* ewkView)
+        : downloadProxy(download)
+        , view(ewkView)
+        , state(EWK_DOWNLOAD_JOB_STATE_NOT_STARTED)
+        , startTime(-1)
+        , endTime(-1)
+        , downloaded(0)
+    { }
+};
+
+typedef struct Ewk_Error Ewk_Error;
+
 uint64_t ewk_download_job_id_get(const Ewk_Download_Job*);
 Evas_Object* ewk_download_job_view_get(const Ewk_Download_Job*);
-
 void ewk_download_job_state_set(Ewk_Download_Job*, Ewk_Download_Job_State);
-void ewk_download_job_cancelled(Ewk_Download_Job*);
-void ewk_download_job_failed(Ewk_Download_Job*);
-void ewk_download_job_finished(Ewk_Download_Job*);
-void ewk_download_job_started(Ewk_Download_Job*);
-
 void ewk_download_job_received_data(Ewk_Download_Job*, uint64_t length);
-void ewk_download_job_response_set(Ewk_Download_Job*, Ewk_Url_Response*);
+void ewk_download_job_response_set(Ewk_Download_Job*, PassRefPtr<Ewk_Url_Response>);
 void ewk_download_job_suggested_filename_set(Ewk_Download_Job*, const char* suggestedFilename);
 
 #endif // ewk_download_job_private_h

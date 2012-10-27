@@ -36,6 +36,7 @@ import optparse
 import time
 
 from webkitpy.common import find_files
+from webkitpy.common.checkout.scm.detection import SCMDetector
 from webkitpy.common.host import Host
 from webkitpy.common.net.file_uploader import FileUploader
 from webkitpy.performance_tests.perftest import PerfTestFactory
@@ -62,7 +63,7 @@ class PerfTestsRunner(object):
         else:
             self._host = Host()
             self._port = self._host.port_factory.get(self._options.platform, self._options)
-        self._host._initialize_scm()
+        self._host.initialize_scm()
         self._webkit_base_dir_len = len(self._port.webkit_base())
         self._base_path = self._port.perf_tests_dir()
         self._results = {}
@@ -205,7 +206,8 @@ class PerfTestsRunner(object):
         if description:
             contents['description'] = description
         for (name, path) in self._port.repository_paths():
-            contents[name + '-revision'] = self._host.scm().svn_revision(path)
+            scm = SCMDetector(self._host.filesystem, self._host.executive).detect_scm_system(path) or self._host.scm()
+            contents[name + '-revision'] = scm.svn_revision(path)
 
         # FIXME: Add --branch or auto-detect the branch we're in
         for key, value in {'timestamp': int(timestamp), 'branch': self._default_branch, 'platform': platform,

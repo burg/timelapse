@@ -34,6 +34,7 @@
 #include <WebKit2/WKGeolocationManager.h>
 #include <WebKit2/WKGeolocationPermissionRequest.h>
 #include <WebKit2/WKGeolocationPosition.h>
+#include <WebKit2/WKIconDatabase.h>
 #include <WebKit2/WKInspector.h>
 #include <WebKit2/WKInspectorClientGtk.h>
 #include <WebKit2/WKRetainPtr.h>
@@ -66,5 +67,6 @@ static void destroy##structName(structName* data) \
 }
 
 unsigned wkEventModifiersToGdkModifiers(WKEventModifiers);
+unsigned wkEventMouseButtonToWebKitMouseButton(WKEventMouseButton);
 
 #endif // WebKitPrivate_h

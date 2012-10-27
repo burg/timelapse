@@ -26,39 +26,45 @@
 #ifndef JSProxy_h
 #define JSProxy_h
 
-#include "JSObject.h"
+#include "JSDestructibleObject.h"
 
 namespace JSC {
 
-class JSProxy : public JSNonFinalObject {
+class JSProxy : public JSDestructibleObject {
 public:
-    typedef JSNonFinalObject Base;
+    typedef JSDestructibleObject Base;
 
-    static JSProxy* create(JSGlobalData& globalData, Structure* structure)
+    static JSProxy* create(JSGlobalData& globalData, Structure* structure, JSObject* target)
     {
         JSProxy* proxy = new (NotNull, allocateCell<JSProxy>(globalData.heap)) JSProxy(globalData, structure);
-        proxy->finishCreation(globalData);
+        proxy->finishCreation(globalData, target);
         return proxy;
     }
 
-    static Structure* createStructure(JSGlobalData& globalData, JSValue prototype) 
+    static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype)
     {
-        return Structure::create(globalData, 0, prototype, TypeInfo(ProxyType, StructureFlags), &s_info);
+        return Structure::create(globalData, globalObject, prototype, TypeInfo(ProxyType, StructureFlags), &s_info);
     }
 
     static JS_EXPORTDATA const ClassInfo s_info;
 
-    JSGlobalObject* target() const { return m_target.get(); }
+    JSObject* target() const { return m_target.get(); }
 
 protected:
     JSProxy(JSGlobalData& globalData, Structure* structure)
-        : JSNonFinalObject(globalData, structure)
+        : JSDestructibleObject(globalData, structure)
     {
     }
 
     void finishCreation(JSGlobalData& globalData)
     {
         Base::finishCreation(globalData);
+    }
+
+    void finishCreation(JSGlobalData& globalData, JSObject* target)
+    {
+        Base::finishCreation(globalData);
+        m_target.set(globalData, this, target);
     }
 
     static const unsigned StructureFlags = OverridesVisitChildren | OverridesGetOwnPropertySlot | OverridesGetPropertyNames | Base::StructureFlags;
@@ -81,7 +87,7 @@ protected:
     JS_EXPORT_PRIVATE static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, PropertyDescriptor&, bool shouldThrow);
 
 private:
-    WriteBarrier<JSGlobalObject> m_target;
+    WriteBarrier<JSObject> m_target;
 };
 
 } // namespace JSC

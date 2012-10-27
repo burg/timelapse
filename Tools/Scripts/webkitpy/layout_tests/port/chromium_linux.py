@@ -46,14 +46,12 @@ class ChromiumLinuxPort(chromium.ChromiumPort):
             'chromium-linux',
             'chromium-win',
             'chromium',
-            'mac',
         ],
         'x86': [
             'chromium-linux-x86',
             'chromium-linux',
             'chromium-win',
             'chromium',
-            'mac',
         ],
     }
 
@@ -155,14 +153,6 @@ class ChromiumLinuxPort(chromium.ChromiumPort):
         else:
             return '/usr/sbin/apache2'
 
-    def _path_to_apache_config_file(self):
-        if self._is_redhat_based():
-            config_name = 'fedora-httpd.conf'
-        else:
-            config_name = 'apache2-debian-httpd.conf'
-
-        return self._filesystem.join(self.layout_tests_dir(), 'http', 'conf', config_name)
-
     def _path_to_lighttpd(self):
         return "/usr/sbin/lighttpd"
 
@@ -178,12 +168,3 @@ class ChromiumLinuxPort(chromium.ChromiumPort):
 
     def _path_to_helper(self):
         return None
-
-    def _path_to_wdiff(self):
-        if self._is_redhat_based():
-            return '/usr/bin/dwdiff'
-        else:
-            return '/usr/bin/wdiff'
-
-    def _is_redhat_based(self):
-        return self._filesystem.exists(self._filesystem.join('/etc', 'redhat-release'))

@@ -38,9 +38,8 @@
 namespace WebKit {
 
 struct WebDraggableRegion {
-    WebString label;
+    bool draggable;
     WebRect bounds;
-    WebRect clip;
 };
 
 } // namespace WebKit

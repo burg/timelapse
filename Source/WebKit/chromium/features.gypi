@@ -38,7 +38,8 @@
       'ENABLE_BLOB_SLICE=1',
       'ENABLE_CHANNEL_MESSAGING=1',
       'ENABLE_CSP_NEXT=1',
-      'ENABLE_CSS3_TEXT_DECORATION=0',
+      'ENABLE_CSS3_CONDITIONAL_RULES=0',
+      'ENABLE_CSS3_TEXT=0',
       'ENABLE_CSS_BOX_DECORATION_BREAK=1',
       'ENABLE_CSS_COMPOSITING=0',
       'ENABLE_CSS_EXCLUSIONS=1',
@@ -58,6 +59,7 @@
       'ENABLE_DIALOG_ELEMENT=1',
       'ENABLE_DIRECTORY_UPLOAD=1',
       'ENABLE_DOWNLOAD_ATTRIBUTE=1',
+      'ENABLE_DRAGGABLE_REGION=1',
       'ENABLE_ENCRYPTED_MEDIA=1',
       'ENABLE_FILE_SYSTEM=1',
       'ENABLE_FILTERS=1',
@@ -79,9 +81,9 @@
       'ENABLE_LEGACY_VIEWPORT_ADAPTION=1',
       'ENABLE_LEGACY_VENDOR_PREFIXES=0',
       'ENABLE_LEGACY_WEB_AUDIO=1',
-      'ENABLE_LEGACY_WEBKIT_BLOB_BUILDER=1',
       'ENABLE_LINK_PREFETCH=1',
       'ENABLE_LINK_PRERENDER=1',
+      'ENABLE_MATHML=1',
       'ENABLE_MEDIA_SOURCE=1',
       'ENABLE_MEDIA_STATISTICS=1',
       'ENABLE_METER_ELEMENT=1',
@@ -116,11 +118,9 @@
       'ENABLE_WEB_INTENTS=1',
       'ENABLE_WEB_SOCKETS=1',
       'ENABLE_WEB_TIMING=1',
-      'ENABLE_WIDGET_REGION=1',
       'ENABLE_WORKERS=1',
       'ENABLE_XHR_RESPONSE_BLOB=1',
       'ENABLE_XSLT=1',
-      'SK_SUPPORT_HINTING_SCALE_FACTOR',
       'WTF_USE_LEVELDB=1',
       'WTF_USE_BUILTIN_UTF8_CODEC=1',
       # WTF_USE_DYNAMIC_ANNOTATIONS=1 may be defined in build/common.gypi
@@ -141,7 +141,6 @@
       'enable_touch_events%': 1,
       'enable_touch_icon_loading%' : 0,
       'enable_mutation_observers%': 1,
-      'use_harfbuzz_ng%': 0,
     },
     'use_accelerated_compositing%': '<(use_accelerated_compositing)',
     'enable_skia_text%': '<(enable_skia_text)',
@@ -153,6 +152,7 @@
           'ENABLE_ACCELERATED_OVERFLOW_SCROLLING=1',
           'ENABLE_CALENDAR_PICKER=0',
           'ENABLE_DATALIST_ELEMENT=0',
+          'ENABLE_FAST_MOBILE_SCROLLING=1',
           'ENABLE_INPUT_SPEECH=0',
           'ENABLE_INPUT_TYPE_COLOR=0',
           'ENABLE_JAVASCRIPT_I18N_API=0',
@@ -203,7 +203,7 @@
           'WTF_USE_WEBAUDIO_FFMPEG=1',
         ],
       }],
-      ['OS=="win" or use_x11==1', {
+      ['OS=="win" or OS=="android" or use_x11==1', {
         'feature_defines': [
           'ENABLE_OPENTYPE_VERTICAL=1',
         ],
@@ -224,9 +224,14 @@
           'WTF_USE_SKIA_ON_MAC_CHROMIUM=1',
         ],
       }],
-      ['use_harfbuzz_ng==1', {
+      ['use_x11==1', {
         'feature_defines': [
           'WTF_USE_HARFBUZZ_NG=1',
+        ],
+      }],
+      ['chromeos==1', {
+        'feature_defines': [
+          'SK_SUPPORT_HINTING_SCALE_FACTOR',
         ],
       }],
     ],

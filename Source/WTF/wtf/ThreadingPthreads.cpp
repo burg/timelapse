@@ -39,6 +39,7 @@
 #include "dtoa/cached-powers.h"
 #include "HashMap.h"
 #include "RandomNumberSeed.h"
+#include "StackStats.h"
 #include "StdLibExtras.h"
 #include "ThreadFunctionInvocation.h"
 #include "ThreadIdentifierDataPthreads.h"
@@ -110,10 +111,25 @@ static Mutex& threadMapMutex()
     return mutex;
 }
 
+#if OS(QNX) && CPU(ARM_THUMB2)
+static void enableIEEE754Denormal()
+{
+    // Clear the ARM_VFP_FPSCR_FZ flag in FPSCR.
+    unsigned fpscr;
+    asm volatile("vmrs %0, fpscr" : "=r"(fpscr));
+    fpscr &= ~0x01000000u;
+    asm volatile("vmsr fpscr, %0" : : "r"(fpscr));
+}
+#endif
+
 void initializeThreading()
 {
     if (atomicallyInitializedStaticMutex)
         return;
+
+#if OS(QNX) && CPU(ARM_THUMB2)
+    enableIEEE754Denormal();
+#endif
 
     WTF::double_conversion::initialize();
     // StringImpl::empty() does not construct its static string in a threadsafe fashion,
@@ -123,6 +139,7 @@ void initializeThreading()
     threadMapMutex();
     initializeRandomNumberGenerator();
     ThreadIdentifierData::initializeOnce();
+    StackStats::initialize();
     wtfThreadData();
     s_dtoaP5Mutex = new Mutex;
     initializeDates();
@@ -151,8 +168,8 @@ static ThreadIdentifier identifierByPthreadHandle(const pthread_t& pthreadHandle
 
     ThreadMap::iterator i = threadMap().begin();
     for (; i != threadMap().end(); ++i) {
-        if (pthread_equal(i->second->pthreadHandle(), pthreadHandle) && !i->second->hasExited())
-            return i->first;
+        if (pthread_equal(i->value->pthreadHandle(), pthreadHandle) && !i->value->hasExited())
+            return i->key;
     }
 
     return 0;
@@ -210,6 +227,10 @@ void initializeCurrentThreadInternal(const char* threadName)
     // All threads that potentially use APIs above the BSD layer must be registered with the Objective-C
     // garbage collector in case API implementations use garbage-collected memory.
     objc_registerThreadWithCollector();
+#endif
+
+#if OS(QNX) && CPU(ARM_THUMB2)
+    enableIEEE754Denormal();
 #endif
 
     ThreadIdentifier id = identifierByPthreadHandle(pthread_self());

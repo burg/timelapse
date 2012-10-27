@@ -37,11 +37,69 @@
 #include "CustomFilterGlobalContext.h"
 #include "CustomFilterProgramInfo.h"
 #include "NotImplemented.h"
+#include <wtf/HashMap.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/StringHash.h>
 
 namespace WebCore {
 
 #define SHADER(Src) (#Src) 
+
+// FIXME: Reuse this type when we validate the types of built-in uniforms.
+// https://bugs.webkit.org/show_bug.cgi?id=98974
+typedef HashMap<String, ShDataType> SymbolNameToTypeMap;
+
+static SymbolNameToTypeMap* builtInAttributeNameToTypeMap()
+{
+    static SymbolNameToTypeMap* nameToTypeMap = 0;
+    if (!nameToTypeMap) {
+        nameToTypeMap = new SymbolNameToTypeMap;        
+        nameToTypeMap->set("a_meshCoord", SH_FLOAT_VEC2);
+        nameToTypeMap->set("a_position", SH_FLOAT_VEC4);
+        nameToTypeMap->set("a_texCoord", SH_FLOAT_VEC2);
+        nameToTypeMap->set("a_triangleCoord", SH_FLOAT_VEC3);
+    }
+    return nameToTypeMap;
+}
+
+static bool validateSymbols(const Vector<ANGLEShaderSymbol>& symbols)
+{
+    for (size_t i = 0; i < symbols.size(); ++i) {
+        const ANGLEShaderSymbol& symbol = symbols[i];
+        switch (symbol.symbolType) {
+        case SHADER_SYMBOL_TYPE_ATTRIBUTE: {
+            SymbolNameToTypeMap* attributeNameToTypeMap = builtInAttributeNameToTypeMap();
+            SymbolNameToTypeMap::iterator builtInAttribute = attributeNameToTypeMap->find(symbol.name);
+            if (builtInAttribute != attributeNameToTypeMap->end() && symbol.dataType != builtInAttribute->value) {
+                // The author defined one of the built-in attributes with the wrong type.
+                return false;
+            }
+
+            // FIXME: Return false when the attribute is not one of the built-in attributes.
+            // https://bugs.webkit.org/show_bug.cgi?id=98973
+            break;
+        }
+        case SHADER_SYMBOL_TYPE_UNIFORM:
+            if (symbol.isSampler()) {
+                // FIXME: For now, we restrict shaders with any sampler defined.
+                // When we implement texture parameters, we will allow shaders whose samplers are bound to valid textures.
+                // We must not allow OpenGL to give unbound samplers a default value of 0 because that references the element texture,
+                // which should be inaccessible to the author's shader code.
+                // https://bugs.webkit.org/show_bug.cgi?id=96230
+                return false;
+            }
+
+            // FIXME: Validate the types of built-in uniforms.
+            // https://bugs.webkit.org/show_bug.cgi?id=98974
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+            break;
+        }
+    }
+
+    return true;
+}
 
 String CustomFilterValidatedProgram::defaultVertexShaderString()
 {
@@ -83,35 +141,26 @@ CustomFilterValidatedProgram::CustomFilterValidatedProgram(CustomFilterGlobalCon
         originalFragmentShader = defaultFragmentShaderString();
 
     // Shaders referenced from the CSS mix function use a different validator than regular WebGL shaders. See CustomFilterGlobalContext.h for more details.
-    ANGLEWebKitBridge* validator = programInfo.mixSettings().enabled ? m_globalContext->mixShaderValidator() : m_globalContext->webglShaderValidator();
+    bool blendsElementTexture = (programInfo.programType() == PROGRAM_TYPE_BLENDS_ELEMENT_TEXTURE);
+    ANGLEWebKitBridge* validator = blendsElementTexture ? m_globalContext->mixShaderValidator() : m_globalContext->webglShaderValidator();
     String vertexShaderLog, fragmentShaderLog;
-    bool vertexShaderValid = validator->validateShaderSource(originalVertexShader.utf8().data(), SHADER_TYPE_VERTEX, m_validatedVertexShader, vertexShaderLog, SH_ATTRIBUTES_UNIFORMS);
-    bool fragmentShaderValid = validator->validateShaderSource(originalFragmentShader.utf8().data(), SHADER_TYPE_FRAGMENT, m_validatedFragmentShader, fragmentShaderLog, SH_ATTRIBUTES_UNIFORMS);
+    Vector<ANGLEShaderSymbol> symbols;
+    bool vertexShaderValid = validator->compileShaderSource(originalVertexShader.utf8().data(), SHADER_TYPE_VERTEX, m_validatedVertexShader, vertexShaderLog, symbols);
+    bool fragmentShaderValid = validator->compileShaderSource(originalFragmentShader.utf8().data(), SHADER_TYPE_FRAGMENT, m_validatedFragmentShader, fragmentShaderLog, symbols);
     if (!vertexShaderValid || !fragmentShaderValid) {
         // FIXME: Report the validation errors.
         // https://bugs.webkit.org/show_bug.cgi?id=74416
         return;
     }
 
-    // Validate the author's samplers.
-    Vector<ANGLEShaderSymbol> uniforms;
-    if (!validator->getUniforms(SH_VERTEX_SHADER, uniforms))
+    if (!validateSymbols(symbols)) {
+        // FIXME: Report validation errors.
+        // https://bugs.webkit.org/show_bug.cgi?id=74416
         return;
-    if (!validator->getUniforms(SH_FRAGMENT_SHADER, uniforms))
-        return;
-    for (Vector<ANGLEShaderSymbol>::iterator it = uniforms.begin(); it != uniforms.end(); ++it) {
-        if (it->isSampler()) {
-            // FIXME: For now, we restrict shaders with any sampler defined.
-            // When we implement texture parameters, we will allow shaders whose samplers are bound to valid textures.
-            // We must not allow OpenGL to give unbound samplers a default value of 0 because that references the DOM element texture,
-            // which should be inaccessible to the author's shader code.
-            // https://bugs.webkit.org/show_bug.cgi?id=96230
-            return;
-        }
     }
 
     // We need to add texture access, blending, and compositing code to shaders that are referenced from the CSS mix function.
-    if (programInfo.mixSettings().enabled) {
+    if (blendsElementTexture) {
         rewriteMixVertexShader();
         rewriteMixFragmentShader();
     }
@@ -129,7 +178,7 @@ PassRefPtr<CustomFilterCompiledProgram> CustomFilterValidatedProgram::compiledPr
 
 void CustomFilterValidatedProgram::rewriteMixVertexShader()
 {
-    ASSERT(m_programInfo.mixSettings().enabled);
+    ASSERT(m_programInfo.programType() == PROGRAM_TYPE_BLENDS_ELEMENT_TEXTURE);
 
     // During validation, ANGLE renamed the author's "main" function to "css_main".
     // We write our own "main" function and call "css_main" from it.
@@ -148,7 +197,7 @@ void CustomFilterValidatedProgram::rewriteMixVertexShader()
 
 void CustomFilterValidatedProgram::rewriteMixFragmentShader()
 {
-    ASSERT(m_programInfo.mixSettings().enabled);
+    ASSERT(m_programInfo.programType() == PROGRAM_TYPE_BLENDS_ELEMENT_TEXTURE);
 
     StringBuilder builder;
     // ANGLE considered these symbols as built-ins during validation under the SH_CSS_SHADERS_SPEC flag.

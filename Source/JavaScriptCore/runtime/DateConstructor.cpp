@@ -96,7 +96,6 @@ static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
 }
 #endif
     
-ASSERT_CLASS_FITS_IN_CELL(DateConstructor);
 ASSERT_HAS_TRIVIAL_DESTRUCTOR(DateConstructor);
 
 DateConstructor::DateConstructor(JSGlobalObject* globalObject, Structure* structure)

@@ -151,6 +151,7 @@ void RenderTableRow::addChild(RenderObject* child, RenderObject* beforeChild)
 
 void RenderTableRow::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
 
     // Table rows do not add translation.
@@ -188,7 +189,7 @@ void RenderTableRow::layout()
     setNeedsLayout(false);
 }
 
-LayoutRect RenderTableRow::clippedOverflowRectForRepaint(RenderBoxModelObject* repaintContainer) const
+LayoutRect RenderTableRow::clippedOverflowRectForRepaint(RenderLayerModelObject* repaintContainer) const
 {
     ASSERT(parent());
 

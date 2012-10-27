@@ -1,3 +1,366 @@
+2012-10-17  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Bump up the number of iterations of html5-full-render to 5
+        https://bugs.webkit.org/show_bug.cgi?id=99657
+
+        Reviewed by Andreas Kling.
+
+        Now that html5-full-render.html runs in less than 15 seconds after r131553,
+        we can afford to get 5 instead of 2 samples.
+
+        * Parser/html5-full-render.html:
+
+2012-10-17  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Rename PerfTestRunner.runPerSecond to PerfTestRunner.measureRunsPerSecond for consistency
+        https://bugs.webkit.org/show_bug.cgi?id=99642
+
+        Reviewed by Dirk Pranke.
+
+        Renamed the method.
+
+        * Bindings/append-child.html:
+        * Bindings/create-element.html:
+        * Bindings/event-target-wrapper.html:
+        * Bindings/first-child.html:
+        * Bindings/get-attribute.html:
+        * Bindings/get-element-by-id.html:
+        * Bindings/get-elements-by-tag-name.html:
+        * Bindings/id-getter.html:
+        * Bindings/id-setter.html:
+        * Bindings/insert-before.html:
+        * Bindings/node-list-access.html:
+        * Bindings/scroll-top.html:
+        * Bindings/set-attribute.html:
+        * Bindings/typed-array-construct-from-array.html:
+        * Bindings/typed-array-construct-from-same-type.html:
+        * Bindings/typed-array-construct-from-typed.html:
+        * Bindings/typed-array-set-from-typed.html:
+        * Bindings/undefined-first-child.html:
+        * Bindings/undefined-get-element-by-id.html:
+        * Bindings/undefined-id-getter.html:
+        * CSS/CSSPropertySetterGetter.html:
+        * CSS/CSSPropertyUpdateValue.html:
+        * CSS/PseudoClassSelectors.html:
+        * DOM/textarea-dom.html:
+        * DOM/textarea-edit.html:
+        * Interactive/resources/window-resize.js:
+        * Layout/flexbox-column-nowrap.html:
+        * Layout/flexbox-column-wrap.html:
+        * Layout/flexbox-row-nowrap.html:
+        * Layout/flexbox-row-wrap.html:
+        * Layout/line-layout.html:
+        * Parser/css-parser-yui.html:
+        * Parser/innerHTML-setter.html:
+        * Parser/query-selector-deep.html:
+        * Parser/query-selector-first.html:
+        * Parser/query-selector-last.html:
+        * Parser/simple-url.html:
+        * Parser/textarea-parsing.html:
+        * Parser/tiny-innerHTML.html:
+        * Parser/url-parser.html:
+        * Parser/xml-parser.html:
+        * SVG/SvgNestedUse.html:
+        * resources/runner.js:
+
+2012-10-17  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Performance test should support asynchronous tests
+        https://bugs.webkit.org/show_bug.cgi?id=95668
+
+        Reviewed by Dirk Pranke.
+
+        Added PerfTestRunner.prepareToMeasureValuesAsync and PerfTestRunner.measureValueAsync,
+        and deployed it in Animation/balls.
+
+        * Animation/balls.html:
+        * resources/runner.js:
+
+2012-10-16  Elliott Sprehn  <esprehn@chromium.org>
+
+        html5-full-render.html test uses substring but meant substr
+        https://bugs.webkit.org/show_bug.cgi?id=99495
+
+        Reviewed by Adam Barth.
+
+        This test intended to chunk up the HTML5 spec into chunks of 500k chars, but used
+        substring(to,from) instead of substr(from,length) so it actually loaded 5x more
+        content than was in the HTML5 spec.
+
+        * Parser/html5-full-render.html:
+
+2012-10-11  James Simonsen  <simonjam@chromium.org>
+
+        unprefix window.performance.webkitNow()
+        https://bugs.webkit.org/show_bug.cgi?id=88278
+
+        Reviewed by Tony Gentilcore.
+
+        * resources/runner.js: Bind to proper object to avoid invalid invocation errors.
+
+2012-10-08  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Skip Layout/subtree-detaching.html temporarily as it's very noisy and
+        takes 112s to run on Chromium Mac. This is tracked by the bug 98708.
+
+        * Skipped:
+
+2012-10-08  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Perf. test results page is broken when runs have different sets of tests
+        https://bugs.webkit.org/show_bug.cgi?id=98691
+
+        Reviewed by Daniel Bates.
+
+        Add "missing" columns for tests that are missing some runs.
+
+        Also fix regressions from the previous patch:
+        - Make reference run switch work again
+        - Load jquery plugins from the remote server when the jquery is loaded from the remote server.
+
+        * resources/results-template.html:
+
+2012-10-08  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Perf test pesults page takes forever to load on a machine with a slow Internet connection
+        https://bugs.webkit.org/show_bug.cgi?id=98561
+
+        Reviewed by Ojan Vafai.
+
+        Try loading jquery both locally and remotely, and use the same method to load the remaining
+        jquery plugins when either one succeeds.
+
+        * resources/results-template.html:
+
+2012-10-04  Hayato Ito  <hayato@chromium.org>
+
+        [Refactoring] Introduce a traversal strategy in SelectorChecker
+        https://bugs.webkit.org/show_bug.cgi?id=97298
+
+        Reviewed by Antti Koivisto.
+
+        Introduces querySelector() performance tests to check SelectorChecker performance.
+
+        * CSS/PseudoClassSelectors.html: Added.
+
+2012-10-03  Philip Rogers  <pdr@google.com>
+
+        Force GC between PageLoad tests.
+        https://bugs.webkit.org/show_bug.cgi?id=98203
+
+        Reviewed by Ryosuke Niwa.
+
+        Previously, our PageLoad PerfTests had multi-modal distributions,
+        typically with a small cluster at 1-2x the median. This turned out
+        to be caused by not garbage collecting between tests!
+
+        This patch adds a new file, force-gc.html, and loads this file between
+        PageLoad tests to force a GC. I manually verified that this cleans up
+        our perf test outliers.
+
+        * resources/force-gc.html: Added.
+
+2012-10-03  Julien Chaffraix  <jchaffraix@webkit.org>
+
+        Add a performance test for subtree detaching
+        https://bugs.webkit.org/show_bug.cgi?id=98281
+
+        Reviewed by Eric Seidel.
+
+        The new test tries to stress detaching on a heavy subtree (2 levels deep but with 1,000 nodes per level).
+        We set display: none on the root and measure the time it takes to update the tree. Note that we will also
+        measure the time taken by recalcStyle and relayout but I don't think we can avoid that.
+
+        * Layout/subtree-detaching.html: Added.
+
+2012-10-02  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Build fix after r130135. Dromaeo tests only report single memory value,
+        and computeStatistics should report variance as 0 in such cases.
+
+        * resources/runner.js:
+
+2012-10-02  Philip Rogers  <pdr@google.com>
+
+        Fix PerfTest standard deviation calculation.
+        https://bugs.webkit.org/show_bug.cgi?id=98115
+
+        Reviewed by Ryosuke Niwa.
+
+        Previously our standard deviation calculation was incorrect. This patch
+        updates perftest.py's algorithm to calculate the sample standard deviation
+        (with Bessel's correction) using Knuth's online algorithm:
+        http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance#Online_algorithm
+        An existing test has been modified to prove our new results.
+
+        This patch also updates runner.js to use Bessel's correction in
+        its sample standard deviation calculation, which is more accurate
+        for small sample sizes.
+
+        Additionally, runner.js has been modified to not calculate
+        the 'sum' statistic, which was not very useful.
+
+        * resources/runner.js:
+        (PerfTestRunner.computeStatistics):
+
+2012-10-01  Ryosuke Niwa  <rniwa@webkit.org>
+
+        PerfTestRunner: Move all functions into the closure and always use double quotation for string literals
+        https://bugs.webkit.org/show_bug.cgi?id=98093
+
+        Reviewed by Ojan Vafai.
+
+        Move all methods of PerfTestRunner into the closure that defines it.
+        Also always use double quotations for string literals for consistency.
+
+        * resources/runner.js:
+
+2012-10-01  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Encapsulate private properties in PerfTestRunner better
+        https://bugs.webkit.org/show_bug.cgi?id=97833
+
+        Reviewed by Ojan Vafai.
+
+        This patch moves "private" methods and properties of PerfTestRunner into a closure so that they're
+        inaccssible from outside. Also catch exceptions from test.run, test.done, and other runner code
+        to ensure we call notifyDone() even if we broke tests. Otherwise DRT will timeout and we end up
+        waiting for 10 minutes per each broken test on bots.
+
+        * resources/runner.js:
+        (PerfTestRunner.gc):
+        (logInDocument): Extracted from PerfTestRunner.log.
+        (PerfTestRunner.log): Moved.
+        (logFatalError): Added.
+        (start): Renamed from PerfTestRunner._start.
+        (scheduleNextRun): Extracted from PerfTestRunner._runLoop. Also catch any exceptions that happen
+        in the runner and ignoreWarmUpAndLog so that we don't end up timing out. We call logFatalError in
+        such cases, which in turn ensures notifyDone() is called.
+        (ignoreWarmUpAndLog): Renamed from PerfTestRunner._ignoreWarmUpAndLog.
+        (finish): Extracted from PerfTestRunner._runLoop.
+        (PerfTestRunner.measureTime): Moved. The initialization of runCount is moved into start().
+        (measureTimeOnce): Renamed from PerfTestRunner._measureTimeOnce.
+        (PerfTestRunner.runPerSecond): Moved. Ditto about runCount.
+        (measureRunsPerSecondOnce): Renamed from PerfTestRunner._measureRunsPerSecondOnce.
+        (callRunAndMeasureTime): Renamed from PerfTestRunner._perSecondRunnerIterator.
+
+2012-10-01  Florin Malita  <fmalita@chromium.org>
+
+        Add a performance test for nested <use> elements
+        https://bugs.webkit.org/show_bug.cgi?id=98047
+
+        Reviewed by Ryosuke Niwa.
+
+        Currently at ~5 runs per second on my workstation, but should go up significantly (100+)
+        after landing a fix for https://bugs.webkit.org/show_bug.cgi?id=97905.
+
+        * SVG/SvgNestedUse.html: Added.
+
+2012-09-28  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Add back test.runCount for runPerSecond as it's used by tests in fast/harness/perftests.
+
+        * resources/runner.js:
+        (PerfTestRunner.runPerSecond):
+
+2012-09-27  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Build fix after r129824.
+
+        * DOM/resources/dom-perf.js:
+        (runBenchmarkSuite):
+
+2012-09-27  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Remove unused features and reduce code duplications in PerfTestRunner
+        https://bugs.webkit.org/show_bug.cgi?id=97852
+
+        Reviewed by Kentaro Hara.
+
+        Made the following refactoring changes:
+        - Remove PerfTestRunner.info since it's never used.
+        - Moved the js heap/malloc related functions up to where they belong.
+        - Moved the initialization of _callsPerIteration, _test, and -description into _start,
+          and stopped initializing _runFunction and _doneFunction since both test times now
+          use _test object.
+        - Made _measureTimeOnce and _measureRunsPerSecondOnce return the measured value
+          instead of calling ignoreWarmUpAndLog and _runLoop to share the code; they're now
+          called in _measureRunsPerSecondOnce.
+
+        * resources/runner.js:
+        (PerfTestRunner.storeHeapResults): Moved.
+        (PerfTestRunner.getUsedMallocHeap): Moved.
+        (PerfTestRunner.getUsedJSHeap): Moved.
+        (PerfTestRunner.getAndPrintMemoryStatistics): Moved.
+        (PerfTestRunner._scheduleNextMeasurementOrNotifyDone): Renamed from _runLoop. Calls
+        ignoreWarmUpAndLog and schedules the next call.
+        (PerfTestRunner._measureTimeOnce): Renamed from _runner.
+        (PerfTestRunner._start): Renamed from initAndStartLoop.
+        (PerfTestRunner.measureTime):
+        (PerfTestRunner.runPerSecond):
+        (PerfTestRunner._measureRunsPerSecondOnce): Renamed from _measureRunsPerSecondOnce.
+        (PerfTestRunner._perSecondRunnerIterator):
+
+2012-09-27  Ryosuke Niwa  <rniwa@webkit.org>
+
+        PerfTestRunner.run should take an object
+        https://bugs.webkit.org/show_bug.cgi?id=97743
+
+        Reviewed by Kentaro Hara.
+
+        Rename PerfTestRunner.run to PerfTestRunner.measureTime and make it take an object instead of
+        5 arguments. Also get rid of PerfTestRunner._loopsPerRun since it's no longer used (it's always 1).
+
+        * CSS/StyleSheetInsert.html:
+        * DOM/resources/dom-perf.js:
+        * Layout/floats_100_100.html:
+        * Layout/floats_100_100_nested.html:
+        * Layout/floats_20_100.html:
+        * Layout/floats_20_100_nested.html:
+        * Layout/floats_2_100.html:
+        * Layout/floats_2_100_nested.html:
+        * Layout/floats_50_100.html:
+        * Layout/floats_50_100_nested.html:
+        * Parser/html-parser.html:
+        * Parser/html5-full-render.html:
+        * SVG/SvgCubics.html:
+        * SVG/SvgHitTesting.html:
+        * resources/runner.js:
+
+2012-09-27  Ryosuke Niwa  <rniwa@webkit.org>
+
+        PerformanceTests/CSS/StyleSheetInsert.html has a time-dependent non-Gaussian distribution
+        https://bugs.webkit.org/show_bug.cgi?id=97741
+
+        Reviewed by Antti Koivisto.
+
+        Reset the content in the iframe in each run so that the runtime from each run follows a normal distribution.
+        We can cleanup this code once my patch to replace the argument list of run by an object is landed.
+
+        * CSS/StyleSheetInsert.html:
+
+2012-09-27  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Unreviewed. Minor appearance tweaks after r129813.
+
+        * resources/results-template.html:
+
+2012-09-27  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Results page should warn about time-dependent distributions
+        https://bugs.webkit.org/show_bug.cgi?id=97818
+
+        Reviewed by Ojan Vafai.
+
+        Add a simple linear regression analysis on results page to detect time-dependent distributions.
+        We add a warning sign (inline SVG) when the regression gave us a slope of at least 0.01 and a R^2 of at least 0.6.
+        Also added time-series graphs per run under the bar graphs so that humans can manually inspect them.
+
+        A nice follow up would be to add some normality test (e.g. Shapiro-Wilk) to detect bi-modal distributions
+        but we probably need to restructure the code to run it asynchronously since normality tests are slow.
+
+        * resources/results-template.html:
+
 2012-09-26  Ryosuke Niwa  <rniwa@webkit.org>
 
         Use runPerSecond in PerformanceTests/Bindings/typed-array* and event-target-wrapper

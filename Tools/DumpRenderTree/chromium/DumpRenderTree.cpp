@@ -55,6 +55,7 @@ static const char optionStartupDialog[] = "--testshell-startup-dialog";
 static const char optionCheckLayoutTestSystemDeps[] = "--check-layout-test-sys-deps";
 
 static const char optionHardwareAcceleratedGL[] = "--enable-hardware-gpu";
+static const char optionEnableSoftwareCompositing[] = "--enable-software-compositing";
 static const char optionEnableThreadedCompositing[] = "--enable-threaded-compositing";
 static const char optionForceCompositingMode[] = "--force-compositing-mode";
 static const char optionEnableAccelerated2DCanvas[] = "--enable-accelerated-2d-canvas";
@@ -63,6 +64,7 @@ static const char optionEnableAcceleratedPainting[] = "--enable-accelerated-pain
 static const char optionEnableAcceleratedCompositingForVideo[] = "--enable-accelerated-video";
 static const char optionUseGraphicsContext3DImplementation[] = "--use-graphics-context-3d-implementation=";
 static const char optionEnablePerTilePainting[] = "--enable-per-tile-painting";
+static const char optionEnableDeferredImageDecoding[] = "--enable-deferred-image-decoding";
 
 static const char optionStressOpt[] = "--stress-opt";
 static const char optionStressDeopt[] = "--stress-deopt";
@@ -125,12 +127,14 @@ int main(int argc, char* argv[])
     bool allowExternalPages = false;
     bool startupDialog = false;
     bool acceleratedCompositingForVideoEnabled = false;
+    bool softwareCompositingEnabled = false;
     bool threadedCompositingEnabled = false;
     bool forceCompositingMode = false;
     bool accelerated2DCanvasEnabled = false;
     bool deferred2DCanvasEnabled = false;
     bool acceleratedPaintingEnabled = false;
     bool perTilePaintingEnabled = false;
+    bool deferredImageDecodingEnabled = false;
     bool stressOpt = false;
     bool stressDeopt = false;
     bool hardwareAcceleratedGL = false;
@@ -159,6 +163,8 @@ int main(int argc, char* argv[])
             hardwareAcceleratedGL = true;
         else if (argument == optionEnableAcceleratedCompositingForVideo)
             acceleratedCompositingForVideoEnabled = true;
+        else if (argument == optionEnableSoftwareCompositing)
+            softwareCompositingEnabled = true;
         else if (argument == optionEnableThreadedCompositing)
             threadedCompositingEnabled = true;
         else if (argument == optionForceCompositingMode)
@@ -179,6 +185,8 @@ int main(int argc, char* argv[])
               fprintf(stderr, "Unknown GraphicContext3D implementation %s\n", implementation.c_str());
         } else if (argument == optionEnablePerTilePainting)
             perTilePaintingEnabled = true;
+        else if (argument == optionEnableDeferredImageDecoding)
+            deferredImageDecodingEnabled = true;
         else if (argument == optionStressOpt)
             stressOpt = true;
         else if (argument == optionStressDeopt)
@@ -211,12 +219,14 @@ int main(int argc, char* argv[])
         TestShell shell;
         shell.setAllowExternalPages(allowExternalPages);
         shell.setAcceleratedCompositingForVideoEnabled(acceleratedCompositingForVideoEnabled);
+        shell.setSoftwareCompositingEnabled(softwareCompositingEnabled);
         shell.setThreadedCompositingEnabled(threadedCompositingEnabled);
         shell.setForceCompositingMode(forceCompositingMode);
         shell.setAccelerated2dCanvasEnabled(accelerated2DCanvasEnabled);
         shell.setDeferred2dCanvasEnabled(deferred2DCanvasEnabled);
         shell.setAcceleratedPaintingEnabled(acceleratedPaintingEnabled);
         shell.setPerTilePaintingEnabled(perTilePaintingEnabled);
+        shell.setDeferredImageDecodingEnabled(deferredImageDecodingEnabled);
         shell.setJavaScriptFlags(javaScriptFlags);
         shell.setStressOpt(stressOpt);
         shell.setStressDeopt(stressDeopt);

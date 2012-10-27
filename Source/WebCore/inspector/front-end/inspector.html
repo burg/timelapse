@@ -29,6 +29,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 <html>
 <head>
     <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta http-equiv="X-WebKit-CSP" content="object-src 'none'; script-src 'self' 'unsafe-eval'">
     <link rel="stylesheet" type="text/css" href="dialog.css">
     <link rel="stylesheet" type="text/css" href="inspector.css">
     <link rel="stylesheet" type="text/css" href="inspectorCommon.css">
@@ -133,7 +134,6 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <script type="text/javascript" src="SourceMapping.js"></script>
     <script type="text/javascript" src="UISourceCode.js"></script>
     <script type="text/javascript" src="Script.js"></script>
-    <script type="text/javascript" src="JavaScriptSource.js"></script>
     <script type="text/javascript" src="Linkifier.js"></script>
     <script type="text/javascript" src="DebuggerScriptMapping.js"></script>
     <script type="text/javascript" src="PresentationConsoleMessageHelper.js"></script>
@@ -168,15 +168,16 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <script type="text/javascript" src="HandlerRegistry.js"></script>
     <script type="text/javascript" src="SnippetStorage.js"></script>
     <script type="text/javascript" src="ScriptSnippetModel.js"></script>
-    <script type="text/javascript" src="ProgressBar.js"></script>
+    <script type="text/javascript" src="Progress.js"></script>
+    <script type="text/javascript" src="ProgressIndicator.js"></script>
     <script type="text/javascript" src="StylesSourceMapping.js"></script>
-    <script type="text/javascript" src="StyleSource.js"></script>
     <script type="text/javascript" src="NetworkUISourceCodeProvider.js"></script>
     <script type="text/javascript" src="ElementsPanelDescriptor.js"></script>
     <script type="text/javascript" src="NetworkPanelDescriptor.js"></script>
     <script type="text/javascript" src="ScriptsPanelDescriptor.js"></script>
+    <script type="text/javascript" src="DockController.js"></script>
 </head>
-<body class="detached" id="-webkit-web-inspector">
+<body class="undocked" id="-webkit-web-inspector">
     <div id="toolbar">
         <div class="toolbar-item close-left"><button id="close-button-left"></button></div>
         <div id="toolbar-controls">

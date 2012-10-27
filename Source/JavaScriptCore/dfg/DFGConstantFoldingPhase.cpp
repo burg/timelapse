@@ -102,7 +102,8 @@ private:
                 break;
             }
                 
-            case CheckArray: {
+            case CheckArray:
+            case Arrayify: {
                 if (!modeAlreadyChecked(m_state.forNode(node.child1()), node.arrayMode()))
                     break;
                 ASSERT(node.refCount() == 1);
@@ -179,7 +180,8 @@ private:
                     block->variablesAtTail.operand(node.local()) = previousLocalAccess;
                 else {
                     ASSERT(m_graph[tailNodeIndex].op() == Flush
-                           || m_graph[tailNodeIndex].op() == SetLocal);
+                        || m_graph[tailNodeIndex].op() == SetLocal
+                        || node.variableAccessData()->isCaptured());
                 }
             }
                 

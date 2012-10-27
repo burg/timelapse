@@ -303,10 +303,6 @@ enum EListStyleType {
     NoneListStyle
 };
 
-enum StyleContentType {
-    CONTENT_NONE, CONTENT_OBJECT, CONTENT_TEXT, CONTENT_COUNTER, CONTENT_QUOTE
-};
-
 enum QuoteType {
     OPEN_QUOTE, CLOSE_QUOTE, NO_OPEN_QUOTE, NO_CLOSE_QUOTE
 };
@@ -340,7 +336,7 @@ enum ETextDecoration {
 inline ETextDecoration operator|(ETextDecoration a, ETextDecoration b) { return ETextDecoration(int(a) | int(b)); }
 inline ETextDecoration& operator|=(ETextDecoration& a, ETextDecoration b) { return a = a | b; }
 
-#if ENABLE(CSS3_TEXT_DECORATION)
+#if ENABLE(CSS3_TEXT)
 enum TextDecorationStyle {
     TextDecorationStyleSolid,
     TextDecorationStyleDouble,
@@ -348,7 +344,7 @@ enum TextDecorationStyle {
     TextDecorationStyleDashed,
     TextDecorationStyleWavy
 };
-#endif // CSS3_TEXT_DECORATION
+#endif // CSS3_TEXT
 
 enum EPageBreak {
     PBAUTO, PBALWAYS, PBAVOID
@@ -472,6 +468,10 @@ enum LineAlign { LineAlignNone, LineAlignEdges };
 enum WrapFlow { WrapFlowAuto, WrapFlowBoth, WrapFlowStart, WrapFlowEnd, WrapFlowMaximum, WrapFlowClear };
 
 enum WrapThrough { WrapThroughWrap, WrapThroughNone };
+
+#if ENABLE(DRAGGABLE_REGION)
+enum DraggableRegionMode { DraggableRegionNone, DraggableRegionDrag, DraggableRegionNoDrag };
+#endif
 
 } // namespace WebCore
 

@@ -56,7 +56,7 @@ static void serializeHTTPHeaderMap(ActionSerializer* serializer, const HTTPHeade
 {
     HTTPHeaderMap::const_iterator end_it = map.end();
     for (HTTPHeaderMap::const_iterator it = map.begin(); it != end_it; ++it)
-        serializer->putString(it->first.string(), it->second);
+        serializer->putString(it->key.string(), it->value);
 }
 
 static void serializeFormDataElement(ActionSerializer* serializer, const FormDataElement& element)

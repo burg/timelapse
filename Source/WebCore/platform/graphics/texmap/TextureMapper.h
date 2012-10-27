@@ -28,6 +28,9 @@
     #define TEXMAP_OPENGL_ES_2
 #endif
 #endif
+#if PLATFORM(GTK) && USE(OPENGL_ES_2)
+#define TEXMAP_OPENGL_ES_2
+#endif
 
 #include "FilterOperations.h"
 #include "GraphicsContext.h"
@@ -70,7 +73,7 @@ public:
     inline Flags flags() const { return m_flags; }
 
     virtual int bpp() const { return 32; }
-    virtual bool canReuseWith(const IntSize& contentsSize, Flags flags = 0) { return false; }
+    virtual bool canReuseWith(const IntSize& /* contentsSize */, Flags = 0) { return false; }
     void reset(const IntSize& size, Flags flags = 0)
     {
         m_flags = flags;
@@ -84,7 +87,7 @@ public:
     inline bool isOpaque() const { return !(m_flags & SupportsAlpha); }
 
 #if ENABLE(CSS_FILTERS)
-    virtual PassRefPtr<BitmapTexture> applyFilters(const BitmapTexture& contentTexture, const FilterOperations&) { return this; }
+    virtual PassRefPtr<BitmapTexture> applyFilters(TextureMapper*, const BitmapTexture& contentTexture, const FilterOperations&) { return this; }
 #endif
 
 protected:
@@ -137,7 +140,7 @@ public:
     TextDrawingModeFlags textDrawingMode() const { return m_textDrawingMode; }
     AccelerationMode accelerationMode() const { return m_accelerationMode; }
 
-    virtual void beginPainting(PaintFlags flags = 0) { }
+    virtual void beginPainting(PaintFlags = 0) { }
     virtual void endPainting() { }
 
     virtual IntSize maxTextureSize() const { return IntSize(INT_MAX, INT_MAX); }

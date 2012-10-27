@@ -286,8 +286,8 @@ namespace WTF {
 
     template<typename T, typename U> inline void hashTableSwap(KeyValuePair<T, U>& a, KeyValuePair<T, U>& b)
     {
-        swap(a.first, b.first);
-        swap(a.second, b.second);
+        swap(a.key, b.key);
+        swap(a.value, b.value);
     }
 
     template<typename T, bool useSwap> struct Mover;
@@ -306,8 +306,6 @@ namespace WTF {
         IteratorType iterator;
         bool isNewEntry;
     };
-
-    class MemoryObjectInfo;
 
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits>
     class HashTable {
@@ -485,8 +483,6 @@ namespace WTF {
 
         static const int m_maxLoad = 2;
         static const int m_minLoad = 6;
-
-        template<typename K, typename V, typename E, typename H, typename T, typename KT> friend void reportMemoryUsage(const HashTable<K, V, E, H, T, KT>* const&, MemoryObjectInfo*);
 
         ValueType* m_table;
         int m_tableSize;
@@ -1250,7 +1246,7 @@ namespace WTF {
             ASSERT(entry == it.m_position);
             ++count;
 
-            ValueCheck<Key>::checkConsistency(it->first);
+            ValueCheck<Key>::checkConsistency(it->key);
         }
 
         ASSERT(count == m_keyCount);

@@ -42,6 +42,9 @@ static PFNGLXBINDTEXIMAGEEXTPROC pGlXBindTexImageEXT = 0;
 static PFNGLXRELEASETEXIMAGEEXTPROC pGlXReleaseTexImageEXT = 0;
 static PFNGLBINDFRAMEBUFFERPROC pGlBindFramebuffer = 0;
 static PFNGLBLITFRAMEBUFFERPROC pGlBlitFramebuffer = 0;
+static PFNGLGENFRAMEBUFFERSPROC pGlGenFramebuffers = 0;
+static PFNGLDELETEFRAMEBUFFERSPROC pGlDeleteFramebuffers = 0;
+static PFNGLFRAMEBUFFERTEXTURE2DPROC pGlFramebufferTexture2D = 0;
 
 class OffScreenRootWindow {
 public:
@@ -99,16 +102,29 @@ static const int glxAttributes[] = {
 };
 
 struct GraphicsSurfacePrivate {
-    GraphicsSurfacePrivate()
+    GraphicsSurfacePrivate(const PlatformGraphicsContext3D shareContext = 0)
         : m_display(0)
         , m_xPixmap(0)
         , m_glxPixmap(0)
         , m_glContext(adoptPtr(new QOpenGLContext))
+        , m_detachedContext(0)
+        , m_detachedSurface(0)
         , m_textureIsYInverted(false)
         , m_hasAlpha(false)
     {
+        QSurface* currentSurface = 0;
+        QOpenGLContext* currentContext = QOpenGLContext::currentContext();
+        if (currentContext)
+            currentSurface = currentContext->surface();
+
         m_display = XOpenDisplay(0);
+        m_glContext->setShareContext(shareContext);
         m_glContext->create();
+
+        // The GLX implementation of QOpenGLContext will reset the current context when create is being called.
+        // Therefore we have to make the previous context current again.
+        if (currentContext)
+            currentContext->makeCurrent(currentSurface);
     }
 
     ~GraphicsSurfacePrivate()
@@ -168,9 +184,18 @@ struct GraphicsSurfacePrivate {
 
     void makeCurrent()
     {
-        QOpenGLContext* glContext = QOpenGLContext::currentContext();
-        if (m_surface && glContext)
-            glContext->makeCurrent(m_surface.get());
+        m_detachedContext = QOpenGLContext::currentContext();
+        if (m_detachedContext)
+            m_detachedSurface = m_detachedContext->surface();
+
+        if (m_surface && m_glContext)
+            m_glContext->makeCurrent(m_surface.get());
+    }
+
+    void doneCurrent()
+    {
+        if (m_detachedContext)
+            m_detachedContext->makeCurrent(m_detachedSurface);
     }
 
     void swapBuffers()
@@ -199,6 +224,36 @@ struct GraphicsSurfacePrivate {
         }
     }
 
+    void copyFromTexture(uint32_t texture, const IntRect& sourceRect)
+    {
+        makeCurrent();
+        int x = sourceRect.x();
+        int y = sourceRect.y();
+        int width = sourceRect.width();
+        int height = sourceRect.height();
+
+        glPushAttrib(GL_ALL_ATTRIB_BITS);
+        GLint previousFBO;
+        glGetIntegerv(GL_FRAMEBUFFER_BINDING, &previousFBO);
+
+        GLuint originFBO;
+        pGlGenFramebuffers(1, &originFBO);
+        pGlBindFramebuffer(GL_READ_FRAMEBUFFER, originFBO);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        pGlFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+        pGlBindFramebuffer(GL_DRAW_FRAMEBUFFER, glContext()->defaultFramebufferObject());
+        pGlBlitFramebuffer(x, y, width, height, x, y, width, height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+        pGlFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, 0, 0);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        pGlBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
+        pGlDeleteFramebuffers(1, &originFBO);
+
+        glPopAttrib();
+        doneCurrent();
+    }
+
 
     Display* display() const { return m_display; }
 
@@ -216,6 +271,8 @@ private:
     GLXPixmap m_glxPixmap;
     OwnPtr<QWindow> m_surface;
     OwnPtr<QOpenGLContext> m_glContext;
+    QOpenGLContext* m_detachedContext;
+    QSurface* m_detachedSurface;
     bool m_textureIsYInverted;
     bool m_hasAlpha;
 };
@@ -232,14 +289,18 @@ static bool resolveGLMethods(GraphicsSurfacePrivate* p)
     pGlBindFramebuffer = reinterpret_cast<PFNGLBINDFRAMEBUFFERPROC>(glContext->getProcAddress("glBindFramebuffer"));
     pGlBlitFramebuffer = reinterpret_cast<PFNGLBLITFRAMEBUFFERPROC>(glContext->getProcAddress("glBlitFramebuffer"));
 
+    pGlGenFramebuffers = reinterpret_cast<PFNGLGENFRAMEBUFFERSPROC>(glContext->getProcAddress("glGenFramebuffers"));
+    pGlDeleteFramebuffers = reinterpret_cast<PFNGLDELETEFRAMEBUFFERSPROC>(glContext->getProcAddress("glDeleteFramebuffers"));
+    pGlFramebufferTexture2D = reinterpret_cast<PFNGLFRAMEBUFFERTEXTURE2DPROC>(glContext->getProcAddress("glFramebufferTexture2D"));
+
     resolved = pGlBlitFramebuffer && pGlBindFramebuffer && pGlXBindTexImageEXT && pGlXReleaseTexImageEXT;
 
     return resolved;
 }
 
-uint64_t GraphicsSurface::platformExport()
+GraphicsSurfaceToken GraphicsSurface::platformExport()
 {
-    return m_platformSurface;
+    return GraphicsSurfaceToken(m_platformSurface);
 }
 
 uint32_t GraphicsSurface::platformGetTextureID()
@@ -262,20 +323,9 @@ void GraphicsSurface::platformCopyToGLTexture(uint32_t target, uint32_t id, cons
     // This is not supported by GLX/Xcomposite.
 }
 
-void GraphicsSurface::platformCopyFromFramebuffer(uint32_t originFbo, const IntRect& sourceRect)
+void GraphicsSurface::platformCopyFromTexture(uint32_t texture, const IntRect& sourceRect)
 {
-    m_private->makeCurrent();
-    int width = m_size.width();
-    int height = m_size.height();
-
-    glPushAttrib(GL_ALL_ATTRIB_BITS);
-    GLint oldFBO;
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFBO);
-    pGlBindFramebuffer(GL_READ_FRAMEBUFFER, originFbo);
-    pGlBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_private->glContext()->defaultFramebufferObject());
-    pGlBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-    pGlBindFramebuffer(GL_FRAMEBUFFER, oldFBO);
-    glPopAttrib();
+    m_private->copyFromTexture(texture, sourceRect);
 }
 
 
@@ -297,7 +347,7 @@ uint32_t GraphicsSurface::platformSwapBuffers()
     return 0;
 }
 
-PassRefPtr<GraphicsSurface> GraphicsSurface::platformCreate(const IntSize& size, Flags flags)
+PassRefPtr<GraphicsSurface> GraphicsSurface::platformCreate(const IntSize& size, Flags flags, const PlatformGraphicsContext3D shareContext)
 {
     // X11 does not support CopyToTexture, so we do not create a GraphicsSurface if this is requested.
     // GraphicsSurfaceGLX uses an XWindow as native surface. This one always has a front and a back buffer.
@@ -307,7 +357,7 @@ PassRefPtr<GraphicsSurface> GraphicsSurface::platformCreate(const IntSize& size,
 
     RefPtr<GraphicsSurface> surface = adoptRef(new GraphicsSurface(size, flags));
 
-    surface->m_private = new GraphicsSurfacePrivate();
+    surface->m_private = new GraphicsSurfacePrivate(shareContext);
     if (!resolveGLMethods(surface->m_private))
         return PassRefPtr<GraphicsSurface>();
 
@@ -316,7 +366,7 @@ PassRefPtr<GraphicsSurface> GraphicsSurface::platformCreate(const IntSize& size,
     return surface;
 }
 
-PassRefPtr<GraphicsSurface> GraphicsSurface::platformImport(const IntSize& size, Flags flags, uint64_t token)
+PassRefPtr<GraphicsSurface> GraphicsSurface::platformImport(const IntSize& size, Flags flags, const GraphicsSurfaceToken& token)
 {
     // X11 does not support CopyToTexture, so we do not create a GraphicsSurface if this is requested.
     // GraphicsSurfaceGLX uses an XWindow as native surface. This one always has a front and a back buffer.
@@ -330,7 +380,7 @@ PassRefPtr<GraphicsSurface> GraphicsSurface::platformImport(const IntSize& size,
     if (!resolveGLMethods(surface->m_private))
         return PassRefPtr<GraphicsSurface>();
 
-    surface->m_platformSurface = token;
+    surface->m_platformSurface = token.frontBufferHandle;
 
     surface->m_private->createPixmap(surface->m_platformSurface);
     surface->m_size = surface->m_private->size();

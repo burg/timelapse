@@ -45,12 +45,13 @@ public:
     }
     inline static v8::Handle<v8::Object> wrap(TestInterface*, v8::Handle<v8::Object> creationContext = v8::Handle<v8::Object>(), v8::Isolate* = 0);
     static void derefObject(void*);
-    static void visitDOMWrapper(DOMDataStore*, void*, v8::Persistent<v8::Object>);
     static WrapperTypeInfo info;
     static ActiveDOMObject* toActiveDOMObject(v8::Handle<v8::Object>);
     static v8::Handle<v8::Value> constructorCallback(const v8::Arguments&);
     static v8::Handle<v8::Value> namedPropertySetter(v8::Local<v8::String>, v8::Local<v8::Value>, const v8::AccessorInfo&);
     static const int internalFieldCount = v8DefaultWrapperInternalFieldCount + 0;
+    static void installPerContextProperties(v8::Handle<v8::Object>, TestInterface*) { }
+    static void installPerContextPrototypeProperties(v8::Handle<v8::Object>) { }
 private:
     static v8::Handle<v8::Object> wrapSlow(PassRefPtr<TestInterface>, v8::Handle<v8::Object> creationContext, v8::Isolate*);
 };

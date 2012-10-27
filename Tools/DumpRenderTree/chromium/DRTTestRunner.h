@@ -42,7 +42,7 @@
 #ifndef DRTTestRunner_h
 #define DRTTestRunner_h
 
-#include "TestRunner/TestRunner.h"
+#include "TestRunner/src/TestRunner.h"
 
 class TestShell;
 
@@ -354,8 +354,6 @@ public:
     void wasMockSpeechRecognitionAborted(const CppArgumentList&, CppVariant*);
 #endif
     void startSpeechInput(const CppArgumentList&, CppVariant*);
-
-    void layerTreeAsText(const CppArgumentList& args, CppVariant* result);
 
     void loseCompositorContext(const CppArgumentList& args, CppVariant* result);
 

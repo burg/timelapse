@@ -41,37 +41,6 @@ using namespace WebCore;
 
 namespace WebKit {
 
-// The timeout, in seconds, when sending sync messages to the plug-in.
-static const double syncMessageTimeout = 45;
-
-static double defaultSyncMessageTimeout(const String& pluginPath)
-{
-    // FIXME: We should key this off something other than the path.
-
-    // We don't want a message timeout for the AppleConnect plug-in.
-    if (pathGetFileName(pluginPath) == "AppleConnect.plugin")
-        return CoreIPC::Connection::NoTimeout;
-
-    // We don't want a message timeout for the Microsoft SharePoint plug-in
-    // since it can spin a nested run loop in response to an NPN_Invoke, making it seem like
-    // the plug-in process is hung. See <rdar://problem/9536303>.
-    // FIXME: Instead of changing the default sync message timeout, CoreIPC could send an
-    // asynchronous message which the other process would have to reply to on the main thread.
-    // This way we could check if the plug-in process is actually hung or not.
-    if (pathGetFileName(pluginPath) == "SharePointBrowserPlugin.plugin")
-        return CoreIPC::Connection::NoTimeout;
-
-    // We don't want a message timeout for the BankID plug-in since it can spin a nested
-    // run loop when it's waiting for a reply to an AppleEvent.
-    if (pathGetFileName(pluginPath) == "PersonalPlugin.bundle")
-        return CoreIPC::Connection::NoTimeout;
-
-    if (WebProcess::shared().disablePluginProcessMessageTimeout())
-        return CoreIPC::Connection::NoTimeout;
-
-    return syncMessageTimeout;
-}
-
 PluginProcessConnection::PluginProcessConnection(PluginProcessConnectionManager* pluginProcessConnectionManager, const String& pluginPath, CoreIPC::Connection::Identifier connectionIdentifier, bool supportsAsynchronousPluginInitialization)
     : m_pluginProcessConnectionManager(pluginProcessConnectionManager)
     , m_pluginPath(pluginPath)
@@ -79,7 +48,6 @@ PluginProcessConnection::PluginProcessConnection(PluginProcessConnectionManager*
 {
     m_connection = CoreIPC::Connection::createClientConnection(connectionIdentifier, this, WebProcess::shared().runLoop());
 
-    m_connection->setDefaultSyncMessageTimeout(defaultSyncMessageTimeout(m_pluginPath));
     m_npRemoteObjectMap = NPRemoteObjectMap::create(m_connection.get());
 
     m_connection->open();
@@ -119,28 +87,28 @@ void PluginProcessConnection::removePluginProxy(PluginProxy* plugin)
     m_pluginProcessConnectionManager->removePluginProcessConnection(this);
 }
 
-void PluginProcessConnection::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::ArgumentDecoder* arguments)
+void PluginProcessConnection::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
 {
-    ASSERT(arguments->destinationID());
+    ASSERT(decoder.destinationID());
 
-    PluginProxy* pluginProxy = m_plugins.get(arguments->destinationID());
+    PluginProxy* pluginProxy = m_plugins.get(decoder.destinationID());
     if (!pluginProxy)
         return;
 
-    pluginProxy->didReceivePluginProxyMessage(connection, messageID, arguments);
+    pluginProxy->didReceivePluginProxyMessage(connection, messageID, decoder);
 }
 
-void PluginProcessConnection::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::ArgumentDecoder* arguments, OwnPtr<CoreIPC::ArgumentEncoder>& reply)
+void PluginProcessConnection::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
 {
     if (messageID.is<CoreIPC::MessageClassNPObjectMessageReceiver>()) {
-        m_npRemoteObjectMap->didReceiveSyncMessage(connection, messageID, arguments, reply);
+        m_npRemoteObjectMap->didReceiveSyncMessage(connection, messageID, decoder, replyEncoder);
         return;
     }
 
-    uint64_t destinationID = arguments->destinationID();
+    uint64_t destinationID = decoder.destinationID();
 
     if (!destinationID) {
-        didReceiveSyncPluginProcessConnectionMessage(connection, messageID, arguments, reply);
+        didReceiveSyncPluginProcessConnectionMessage(connection, messageID, decoder, replyEncoder);
         return;
     }
 
@@ -148,7 +116,7 @@ void PluginProcessConnection::didReceiveSyncMessage(CoreIPC::Connection* connect
     if (!pluginProxy)
         return;
 
-    pluginProxy->didReceiveSyncPluginProxyMessage(connection, messageID, arguments, reply);
+    pluginProxy->didReceiveSyncPluginProxyMessage(connection, messageID, decoder, replyEncoder);
 }
 
 void PluginProcessConnection::didClose(CoreIPC::Connection*)
@@ -163,11 +131,6 @@ void PluginProcessConnection::didClose(CoreIPC::Connection*)
 
 void PluginProcessConnection::didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::MessageID)
 {
-}
-
-void PluginProcessConnection::syncMessageSendTimedOut(CoreIPC::Connection*)
-{
-    WebProcess::shared().connection()->send(Messages::WebProcessProxy::PluginSyncMessageSendTimedOut(m_pluginPath), 0);
 }
 
 void PluginProcessConnection::setException(const String& exceptionString)

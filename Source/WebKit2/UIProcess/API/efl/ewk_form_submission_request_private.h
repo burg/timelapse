@@ -26,8 +26,36 @@
 #ifndef ewk_form_submission_request_private_h
 #define ewk_form_submission_request_private_h
 
-typedef struct _Ewk_Form_Submission_Request Ewk_Form_Submission_Request;
+#include "WKDictionary.h"
+#include "WKFormSubmissionListener.h"
+#include "WKRetainPtr.h"
+#include <wtf/PassRefPtr.h>
+#include <wtf/RefCounted.h>
 
-Ewk_Form_Submission_Request* ewk_form_submission_request_new(WKDictionaryRef values, WKFormSubmissionListenerRef);
+class Ewk_Form_Submission_Request : public RefCounted<Ewk_Form_Submission_Request> {
+public:
+    WKRetainPtr<WKDictionaryRef> wkValues;
+    WKRetainPtr<WKFormSubmissionListenerRef> wkListener;
+    bool handledRequest;
+
+    ~Ewk_Form_Submission_Request()
+    {
+        // Make sure the request is always handled before destroying.
+        if (!handledRequest)
+            WKFormSubmissionListenerContinue(wkListener.get());
+    }
+
+    static PassRefPtr<Ewk_Form_Submission_Request> create(WKDictionaryRef values, WKFormSubmissionListenerRef listener)
+    {
+        return adoptRef(new Ewk_Form_Submission_Request(values, listener));
+    }
+
+private:
+    Ewk_Form_Submission_Request(WKDictionaryRef values, WKFormSubmissionListenerRef listener)
+        : wkValues(values)
+        , wkListener(listener)
+        , handledRequest(false)
+    { }
+};
 
 #endif // ewk_form_submission_request_private_h

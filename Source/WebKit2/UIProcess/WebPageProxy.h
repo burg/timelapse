@@ -304,7 +304,7 @@ public:
     void tryRestoreScrollPosition();
     void didChangeBackForwardList(WebBackForwardListItem* addedItem, Vector<RefPtr<APIObject> >* removedItems);
     void shouldGoToBackForwardListItem(uint64_t itemID, bool& shouldGoToBackForwardListItem);
-    void willGoToBackForwardListItem(uint64_t itemID, CoreIPC::ArgumentDecoder* arguments);
+    void willGoToBackForwardListItem(uint64_t itemID, CoreIPC::MessageDecoder&);
 
     String activeURL() const;
     String provisionalURL() const;
@@ -356,6 +356,7 @@ public:
     bool maintainsInactiveSelection() const { return m_maintainsInactiveSelection; }
     void setMaintainsInactiveSelection(bool);
 #if PLATFORM(QT)
+    void didRenderFrame(const WebCore::IntSize& contentsSize, const WebCore::IntRect& coveredRect);
     void registerApplicationScheme(const String& scheme);
     void resolveApplicationSchemeRequest(QtNetworkRequestData);
     void sendApplicationSchemeReply(const QQuickNetworkReply*);
@@ -418,6 +419,7 @@ public:
 #endif
 #if USE(TILED_BACKING_STORE)
     void setViewportSize(const WebCore::IntSize&);
+    void commitPageTransitionViewport();
 #endif
 
     void handleMouseEvent(const NativeWebMouseEvent&);
@@ -494,6 +496,8 @@ public:
 
     bool isPinnedToLeftSide() const { return m_mainFrameIsPinnedToLeftSide; }
     bool isPinnedToRightSide() const { return m_mainFrameIsPinnedToRightSide; }
+    bool isPinnedToTopSide() const { return m_mainFrameIsPinnedToTopSide; }
+    bool isPinnedToBottomSide() const { return m_mainFrameIsPinnedToBottomSide; }
 
     void setPaginationMode(WebCore::Pagination::Mode);
     WebCore::Pagination::Mode paginationMode() const { return m_paginationMode; }
@@ -587,8 +591,8 @@ public:
 #endif
 #endif
 
-    void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::ArgumentDecoder*);
-    void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::ArgumentDecoder*, OwnPtr<CoreIPC::ArgumentEncoder>&);
+    void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
+    void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
 
     void processDidBecomeUnresponsive();
     void interactionOccurredWhileProcessUnresponsive();
@@ -620,6 +624,8 @@ public:
     WebPageGroup* pageGroup() const { return m_pageGroup.get(); }
 
     bool isValid();
+
+    PassRefPtr<ImmutableArray> relatedPages() const;
 
     const String& urlAtProcessExit() const { return m_urlAtProcessExit; }
     WebFrameProxy::LoadState loadStateAtProcessExit() const { return m_loadStateAtProcessExit; }
@@ -746,49 +752,49 @@ private:
 #endif
 
     // Implemented in generated WebPageProxyMessageReceiver.cpp
-    void didReceiveWebPageProxyMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::ArgumentDecoder*);
-    void didReceiveSyncWebPageProxyMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::ArgumentDecoder*, OwnPtr<CoreIPC::ArgumentEncoder>&);
+    void didReceiveWebPageProxyMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
+    void didReceiveSyncWebPageProxyMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
 
     void didCreateMainFrame(uint64_t frameID);
     void didCreateSubframe(uint64_t frameID, uint64_t parentFrameID);
     void didSaveFrameToPageCache(uint64_t frameID);
     void didRestoreFrameFromPageCache(uint64_t frameID, uint64_t parentFrameID);
 
-    void didStartProvisionalLoadForFrame(uint64_t frameID, const String& url, const String& unreachableURL, CoreIPC::ArgumentDecoder*);
-    void didReceiveServerRedirectForProvisionalLoadForFrame(uint64_t frameID, const String&, CoreIPC::ArgumentDecoder*);
-    void didFailProvisionalLoadForFrame(uint64_t frameID, const WebCore::ResourceError&, CoreIPC::ArgumentDecoder*);
-    void didCommitLoadForFrame(uint64_t frameID, const String& mimeType, bool frameHasCustomRepresentation, const PlatformCertificateInfo&, CoreIPC::ArgumentDecoder*);
-    void didFinishDocumentLoadForFrame(uint64_t frameID, CoreIPC::ArgumentDecoder*);
-    void didFinishLoadForFrame(uint64_t frameID, CoreIPC::ArgumentDecoder*);
-    void didFailLoadForFrame(uint64_t frameID, const WebCore::ResourceError&, CoreIPC::ArgumentDecoder*);
-    void didSameDocumentNavigationForFrame(uint64_t frameID, uint32_t sameDocumentNavigationType, const String&, CoreIPC::ArgumentDecoder*);
-    void didReceiveTitleForFrame(uint64_t frameID, const String&, CoreIPC::ArgumentDecoder*);
-    void didFirstLayoutForFrame(uint64_t frameID, CoreIPC::ArgumentDecoder*);
-    void didFirstVisuallyNonEmptyLayoutForFrame(uint64_t frameID, CoreIPC::ArgumentDecoder*);
-    void didNewFirstVisuallyNonEmptyLayout(CoreIPC::ArgumentDecoder*);
-    void didLayout(uint32_t layoutMilestones, CoreIPC::ArgumentDecoder*);
-    void didRemoveFrameFromHierarchy(uint64_t frameID, CoreIPC::ArgumentDecoder*);
-    void didDisplayInsecureContentForFrame(uint64_t frameID, CoreIPC::ArgumentDecoder*);
-    void didRunInsecureContentForFrame(uint64_t frameID, CoreIPC::ArgumentDecoder*);
-    void didDetectXSSForFrame(uint64_t frameID, CoreIPC::ArgumentDecoder*);
+    void didStartProvisionalLoadForFrame(uint64_t frameID, const String& url, const String& unreachableURL, CoreIPC::MessageDecoder&);
+    void didReceiveServerRedirectForProvisionalLoadForFrame(uint64_t frameID, const String&, CoreIPC::MessageDecoder&);
+    void didFailProvisionalLoadForFrame(uint64_t frameID, const WebCore::ResourceError&, CoreIPC::MessageDecoder&);
+    void didCommitLoadForFrame(uint64_t frameID, const String& mimeType, bool frameHasCustomRepresentation, const PlatformCertificateInfo&, CoreIPC::MessageDecoder&);
+    void didFinishDocumentLoadForFrame(uint64_t frameID, CoreIPC::MessageDecoder&);
+    void didFinishLoadForFrame(uint64_t frameID, CoreIPC::MessageDecoder&);
+    void didFailLoadForFrame(uint64_t frameID, const WebCore::ResourceError&, CoreIPC::MessageDecoder&);
+    void didSameDocumentNavigationForFrame(uint64_t frameID, uint32_t sameDocumentNavigationType, const String&, CoreIPC::MessageDecoder&);
+    void didReceiveTitleForFrame(uint64_t frameID, const String&, CoreIPC::MessageDecoder&);
+    void didFirstLayoutForFrame(uint64_t frameID, CoreIPC::MessageDecoder&);
+    void didFirstVisuallyNonEmptyLayoutForFrame(uint64_t frameID, CoreIPC::MessageDecoder&);
+    void didNewFirstVisuallyNonEmptyLayout(CoreIPC::MessageDecoder&);
+    void didLayout(uint32_t layoutMilestones, CoreIPC::MessageDecoder&);
+    void didRemoveFrameFromHierarchy(uint64_t frameID, CoreIPC::MessageDecoder&);
+    void didDisplayInsecureContentForFrame(uint64_t frameID, CoreIPC::MessageDecoder&);
+    void didRunInsecureContentForFrame(uint64_t frameID, CoreIPC::MessageDecoder&);
+    void didDetectXSSForFrame(uint64_t frameID, CoreIPC::MessageDecoder&);
     void frameDidBecomeFrameSet(uint64_t frameID, bool);
     void didStartProgress();
     void didChangeProgress(double);
     void didFinishProgress();
 
 #if ENABLE(WEB_INTENTS)
-    void didReceiveIntentForFrame(uint64_t frameID, const IntentData&, CoreIPC::ArgumentDecoder*);
+    void didReceiveIntentForFrame(uint64_t frameID, const IntentData&, CoreIPC::MessageDecoder&);
 #endif
 #if ENABLE(WEB_INTENTS_TAG)
-    void registerIntentServiceForFrame(uint64_t frameID, const IntentServiceInfo&, CoreIPC::ArgumentDecoder*);
+    void registerIntentServiceForFrame(uint64_t frameID, const IntentServiceInfo&, CoreIPC::MessageDecoder&);
 #endif
     
-    void decidePolicyForNavigationAction(uint64_t frameID, uint32_t navigationType, uint32_t modifiers, int32_t mouseButton, const WebCore::ResourceRequest&, uint64_t listenerID, CoreIPC::ArgumentDecoder*, bool& receivedPolicyAction, uint64_t& policyAction, uint64_t& downloadID);
-    void decidePolicyForNewWindowAction(uint64_t frameID, uint32_t navigationType, uint32_t modifiers, int32_t mouseButton, const WebCore::ResourceRequest&, const String& frameName, uint64_t listenerID, CoreIPC::ArgumentDecoder*);
-    void decidePolicyForResponse(uint64_t frameID, const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, uint64_t listenerID, CoreIPC::ArgumentDecoder* arguments, bool& receivedPolicyAction, uint64_t& policyAction, uint64_t& downloadID);
-    void unableToImplementPolicy(uint64_t frameID, const WebCore::ResourceError&, CoreIPC::ArgumentDecoder* arguments);
+    void decidePolicyForNavigationAction(uint64_t frameID, uint32_t navigationType, uint32_t modifiers, int32_t mouseButton, const WebCore::ResourceRequest&, uint64_t listenerID, CoreIPC::MessageDecoder&, bool& receivedPolicyAction, uint64_t& policyAction, uint64_t& downloadID);
+    void decidePolicyForNewWindowAction(uint64_t frameID, uint32_t navigationType, uint32_t modifiers, int32_t mouseButton, const WebCore::ResourceRequest&, const String& frameName, uint64_t listenerID, CoreIPC::MessageDecoder&);
+    void decidePolicyForResponse(uint64_t frameID, const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, uint64_t listenerID, CoreIPC::MessageDecoder&, bool& receivedPolicyAction, uint64_t& policyAction, uint64_t& downloadID);
+    void unableToImplementPolicy(uint64_t frameID, const WebCore::ResourceError&, CoreIPC::MessageDecoder&);
 
-    void willSubmitForm(uint64_t frameID, uint64_t sourceFrameID, const StringPairVector& textFieldValues, uint64_t listenerID, CoreIPC::ArgumentDecoder*);
+    void willSubmitForm(uint64_t frameID, uint64_t sourceFrameID, const StringPairVector& textFieldValues, uint64_t listenerID, CoreIPC::MessageDecoder&);
 
     // Resource load client
     void didInitiateLoadForResource(uint64_t frameID, uint64_t resourceIdentifier, const WebCore::ResourceRequest&, bool pageIsProvisionallyLoading);
@@ -807,7 +813,7 @@ private:
     void runJavaScriptPrompt(uint64_t frameID, const String&, const String&, String& result);
     void shouldInterruptJavaScript(bool& result);
     void setStatusText(const String&);
-    void mouseDidMoveOverElement(const WebHitTestResult::Data& hitTestResultData, uint32_t modifiers, CoreIPC::ArgumentDecoder*);
+    void mouseDidMoveOverElement(const WebHitTestResult::Data& hitTestResultData, uint32_t modifiers, CoreIPC::MessageDecoder&);
     void unavailablePluginButtonClicked(uint32_t opaquePluginUnavailabilityReason, const String& mimeType, const String& url, const String& pluginsPageURL);
     void setToolbarsAreVisible(bool toolbarsAreVisible);
     void getToolbarsAreVisible(bool& toolbarsAreVisible);
@@ -832,7 +838,7 @@ private:
     void notifyScrollerThumbIsVisibleInRect(const WebCore::IntRect&);
     void recommendedScrollbarStyleDidChange(int32_t newStyle);
     void didChangeScrollbarsForMainFrame(bool hasHorizontalScrollbar, bool hasVerticalScrollbar);
-    void didChangeScrollOffsetPinningForMainFrame(bool pinnedToLeftSide, bool pinnedToRightSide);
+    void didChangeScrollOffsetPinningForMainFrame(bool pinnedToLeftSide, bool pinnedToRightSide, bool pinnedToTopSide, bool pinnedToBottomSide);
     void didChangePageCount(unsigned);
     void didFailToInitializePlugin(const String& mimeType);
     void didBlockInsecurePluginVersion(const String& mimeType, const String& urlString);
@@ -849,6 +855,7 @@ private:
 #endif
 
 #if PLATFORM(QT)
+    void pageTransitionViewportReady();
     void didFindZoomableArea(const WebCore::IntPoint&, const WebCore::IntRect&);
 #endif
 
@@ -905,8 +912,8 @@ private:
 
 #if ENABLE(CONTEXT_MENUS)
     // Context Menu.
-    void showContextMenu(const WebCore::IntPoint& menuLocation, const WebHitTestResult::Data&, const Vector<WebContextMenuItemData>&, CoreIPC::ArgumentDecoder*);
-    void internalShowContextMenu(const WebCore::IntPoint& menuLocation, const WebHitTestResult::Data&, const Vector<WebContextMenuItemData>&, CoreIPC::ArgumentDecoder*);
+    void showContextMenu(const WebCore::IntPoint& menuLocation, const WebHitTestResult::Data&, const Vector<WebContextMenuItemData>&, CoreIPC::MessageDecoder&);
+    void internalShowContextMenu(const WebCore::IntPoint& menuLocation, const WebHitTestResult::Data&, const Vector<WebContextMenuItemData>&, CoreIPC::MessageDecoder&);
 #endif
 
     // Search popup results
@@ -993,6 +1000,10 @@ private:
     void dictationAlternatives(uint64_t dictationContext, Vector<String>& result);
 #endif
 #endif // PLATFORM(MAC)
+
+#if USE(SOUP)
+    void didReceiveURIRequest(String uriString, uint64_t requestID);
+#endif
 
     void clearLoadDependentCallbacks();
 
@@ -1187,6 +1198,8 @@ private:
 
     bool m_mainFrameIsPinnedToLeftSide;
     bool m_mainFrameIsPinnedToRightSide;
+    bool m_mainFrameIsPinnedToTopSide;
+    bool m_mainFrameIsPinnedToBottomSide;
 
     unsigned m_pageCount;
 

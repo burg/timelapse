@@ -83,12 +83,12 @@ void AcceleratedCompositingContext::initialize()
     if (!m_redirectedWindow)
         return;
 
-    m_rootLayer = GraphicsLayer::create(this);
+    m_rootLayer = GraphicsLayer::create(0, this);
     m_rootLayer->setDrawsContent(false);
     m_rootLayer->setSize(pageSize);
 
     // The non-composited contents are a child of the root layer.
-    m_nonCompositedContentLayer = GraphicsLayer::create(this);
+    m_nonCompositedContentLayer = GraphicsLayer::create(0, this);
     m_nonCompositedContentLayer->setDrawsContent(true);
     m_nonCompositedContentLayer->setContentsOpaque(!m_webView->priv->transparent);
     m_nonCompositedContentLayer->setSize(pageSize);
@@ -322,9 +322,9 @@ void AcceleratedCompositingContext::scheduleLayerFlush()
 
 bool AcceleratedCompositingContext::flushPendingLayerChanges()
 {
-    m_rootLayer->syncCompositingStateForThisLayerOnly();
-    m_nonCompositedContentLayer->syncCompositingStateForThisLayerOnly();
-    return core(m_webView)->mainFrame()->view()->syncCompositingStateIncludingSubframes();
+    m_rootLayer->flushCompositingStateForThisLayerOnly();
+    m_nonCompositedContentLayer->flushCompositingStateForThisLayerOnly();
+    return core(m_webView)->mainFrame()->view()->flushCompositingStateIncludingSubframes();
 }
 
 void AcceleratedCompositingContext::flushAndRenderLayers()
@@ -336,6 +336,9 @@ void AcceleratedCompositingContext::flushAndRenderLayers()
     if (!frame || !frame->contentRenderer() || !frame->view())
         return;
     frame->view()->updateLayoutAndStyleIfNeededRecursive();
+
+    if (!enabled())
+        return;
 
     GLContext* context = m_redirectedWindow->context();
     if (context && !context->makeContextCurrent())
@@ -367,7 +370,7 @@ void AcceleratedCompositingContext::notifyAnimationStarted(const GraphicsLayer*,
 {
 
 }
-void AcceleratedCompositingContext::notifySyncRequired(const GraphicsLayer*)
+void AcceleratedCompositingContext::notifyFlushRequired(const GraphicsLayer*)
 {
 
 }

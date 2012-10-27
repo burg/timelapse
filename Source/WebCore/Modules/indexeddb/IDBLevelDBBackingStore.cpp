@@ -37,6 +37,7 @@
 #include "IDBKeyPath.h"
 #include "IDBKeyRange.h"
 #include "IDBLevelDBCoding.h"
+#include "IDBMetadata.h"
 #include "LevelDBComparator.h"
 #include "LevelDBDatabase.h"
 #include "LevelDBIterator.h"
@@ -146,9 +147,18 @@ public:
     virtual const char* name() const { return "idb_cmp1"; }
 };
 
+const int64_t latestSchemaVersion = 1;
+static bool isSchemaKnown(LevelDBDatabase* db)
+{
+    int64_t schemaVersion = 0;
+    const Vector<char> metaDataKey = SchemaVersionKey::encode();
+    if (!getInt(db, metaDataKey, schemaVersion))
+        return true;
+    return schemaVersion <= latestSchemaVersion;
+}
+
 static bool setUpMetadata(LevelDBDatabase* db, const String& origin)
 {
-    const int64_t latestSchemaVersion = 1;
     const Vector<char> metaDataKey = SchemaVersionKey::encode();
 
     int64_t schemaVersion = 0;
@@ -157,6 +167,7 @@ static bool setUpMetadata(LevelDBDatabase* db, const String& origin)
         if (!putInt(db, metaDataKey, latestSchemaVersion))
             return false;
     } else {
+        ASSERT(schemaVersion <= latestSchemaVersion);
         if (!schemaVersion) {
             schemaVersion = latestSchemaVersion;
             RefPtr<LevelDBTransaction> transaction = LevelDBTransaction::create(db);
@@ -192,6 +203,24 @@ static bool setUpMetadata(LevelDBDatabase* db, const String& origin)
     ASSERT(schemaVersion == latestSchemaVersion);
 
     return true;
+}
+
+template <typename DBOrTransaction>
+static int64_t getMaxObjectStoreId(DBOrTransaction* db, int64_t databaseId)
+{
+    const Vector<char> maxObjectStoreIdKey = DatabaseMetaDataKey::encode(databaseId, DatabaseMetaDataKey::MaxObjectStoreId);
+    return getMaxObjectStoreId(db, maxObjectStoreIdKey);
+}
+
+template <typename DBOrTransaction>
+static int64_t getMaxObjectStoreId(DBOrTransaction* db, const Vector<char>& maxObjectStoreIdKey)
+{
+    int64_t maxObjectStoreId = -1;
+    if (!getInt(db, maxObjectStoreIdKey, maxObjectStoreId))
+        maxObjectStoreId = 0;
+
+    ASSERT(maxObjectStoreId >= 0);
+    return maxObjectStoreId;
 }
 
 IDBLevelDBBackingStore::IDBLevelDBBackingStore(const String& identifier, IDBFactoryBackendImpl* factory, PassOwnPtr<LevelDBDatabase> db)
@@ -230,8 +259,11 @@ PassRefPtr<IDBBackingStore> IDBLevelDBBackingStore::open(SecurityOrigin* securit
         String path = pathByAppendingComponent(pathBase, securityOrigin->databaseIdentifier() + ".indexeddb.leveldb");
 
         db = LevelDBDatabase::open(path, comparator.get());
+        bool knownSchema = isSchemaKnown(db.get());
+        if (!knownSchema)
+            LOG_ERROR("IndexedDB backing store had unknown schema, treating it as failure to open");
 
-        if (!db) {
+        if (!db || !knownSchema) {
             LOG_ERROR("IndexedDB backing store open failed, attempting cleanup");
             bool success = LevelDBDatabase::destroy(path);
             if (!success) {
@@ -282,23 +314,25 @@ void IDBLevelDBBackingStore::getDatabaseNames(Vector<String>& foundNames)
     }
 }
 
-bool IDBLevelDBBackingStore::getIDBDatabaseMetaData(const String& name, String& foundStringVersion, int64_t& foundIntVersion, int64_t& foundId)
+bool IDBLevelDBBackingStore::getIDBDatabaseMetaData(const String& name, IDBDatabaseMetadata* metadata)
 {
     const Vector<char> key = DatabaseNameKey::encode(m_identifier, name);
 
-    bool ok = getInt(m_db.get(), key, foundId);
+    bool ok = getInt(m_db.get(), key, metadata->id);
     if (!ok)
         return false;
 
-    ok = getString(m_db.get(), DatabaseMetaDataKey::encode(foundId, DatabaseMetaDataKey::UserVersion), foundStringVersion);
+    ok = getString(m_db.get(), DatabaseMetaDataKey::encode(metadata->id, DatabaseMetaDataKey::UserVersion), metadata->version);
     if (!ok)
         return false;
 
-    ok = getVarInt(m_db.get(), DatabaseMetaDataKey::encode(foundId, DatabaseMetaDataKey::UserIntVersion), foundIntVersion);
+    ok = getVarInt(m_db.get(), DatabaseMetaDataKey::encode(metadata->id, DatabaseMetaDataKey::UserIntVersion), metadata->intVersion);
     if (!ok)
         return false;
-    if (foundIntVersion == IDBDatabaseMetadata::DefaultIntVersion)
-        foundIntVersion = IDBDatabaseMetadata::NoIntVersion;
+    if (metadata->intVersion == IDBDatabaseMetadata::DefaultIntVersion)
+        metadata->intVersion = IDBDatabaseMetadata::NoIntVersion;
+
+    metadata->maxObjectStoreId = getMaxObjectStoreId(m_db.get(), metadata->id);
 
     return true;
 }
@@ -372,14 +406,12 @@ bool IDBLevelDBBackingStore::deleteDatabase(const String& name)
     IDB_TRACE("IDBLevelDBBackingStore::deleteDatabase");
     OwnPtr<LevelDBWriteOnlyTransaction> transaction = LevelDBWriteOnlyTransaction::create(m_db.get());
 
-    int64_t databaseId;
-    String version;
-    int64_t intVersion;
-    if (!getIDBDatabaseMetaData(name, version, intVersion, databaseId))
+    IDBDatabaseMetadata metadata;
+    if (!getIDBDatabaseMetaData(name, &metadata))
         return true;
 
-    const Vector<char> startKey = DatabaseMetaDataKey::encode(databaseId, DatabaseMetaDataKey::OriginName);
-    const Vector<char> stopKey = DatabaseMetaDataKey::encode(databaseId + 1, DatabaseMetaDataKey::OriginName);
+    const Vector<char> startKey = DatabaseMetaDataKey::encode(metadata.id, DatabaseMetaDataKey::OriginName);
+    const Vector<char> stopKey = DatabaseMetaDataKey::encode(metadata.id + 1, DatabaseMetaDataKey::OriginName);
     OwnPtr<LevelDBIterator> it = m_db->createIterator();
     for (it->seek(startKey); it->isValid() && compareKeys(it->key(), stopKey) < 0; it->next())
         transaction->remove(it->key());
@@ -405,7 +437,7 @@ static bool checkObjectStoreAndMetaDataType(const LevelDBIterator* it, const Vec
     return true;
 }
 
-void IDBLevelDBBackingStore::getObjectStores(int64_t databaseId, Vector<int64_t>& foundIds, Vector<String>& foundNames, Vector<IDBKeyPath>& foundKeyPaths, Vector<bool>& foundAutoIncrementFlags)
+void IDBLevelDBBackingStore::getObjectStores(int64_t databaseId, Vector<int64_t>& foundIds, Vector<String>& foundNames, Vector<IDBKeyPath>& foundKeyPaths, Vector<bool>& foundAutoIncrementFlags, Vector<int64_t>& foundMaxIndexIds)
 {
     IDB_TRACE("IDBLevelDBBackingStore::getObjectStores");
     const Vector<char> startKey = ObjectStoreMetaDataKey::encode(databaseId, 1, 0);
@@ -415,6 +447,7 @@ void IDBLevelDBBackingStore::getObjectStores(int64_t databaseId, Vector<int64_t>
     ASSERT(foundNames.isEmpty());
     ASSERT(foundKeyPaths.isEmpty());
     ASSERT(foundAutoIncrementFlags.isEmpty());
+    ASSERT(foundMaxIndexIds.isEmpty());
 
     OwnPtr<LevelDBIterator> it = m_db->createIterator();
     it->seek(startKey);
@@ -468,6 +501,7 @@ void IDBLevelDBBackingStore::getObjectStores(int64_t databaseId, Vector<int64_t>
             LOG_ERROR("Internal Indexed DB error.");
             return;
         }
+        int64_t maxIndexId = decodeInt(it->value().begin(), it->value().end());
 
         it->next(); // [optional] has key path (is not null)
         if (checkObjectStoreAndMetaDataType(it.get(), stopKey, objectStoreId, ObjectStoreMetaDataKey::HasKeyPath)) {
@@ -498,31 +532,27 @@ void IDBLevelDBBackingStore::getObjectStores(int64_t databaseId, Vector<int64_t>
         foundNames.append(objectStoreName);
         foundKeyPaths.append(keyPath);
         foundAutoIncrementFlags.append(autoIncrement);
+        foundMaxIndexIds.append(maxIndexId);
     }
 }
 
-static int64_t getNewObjectStoreId(LevelDBTransaction* transaction, int64_t databaseId)
+static bool setMaxObjectStoreId(LevelDBTransaction* transaction, int64_t databaseId, int64_t objectStoreId)
 {
-    int64_t maxObjectStoreId = -1;
     const Vector<char> maxObjectStoreIdKey = DatabaseMetaDataKey::encode(databaseId, DatabaseMetaDataKey::MaxObjectStoreId);
-    if (!getInt(transaction, maxObjectStoreIdKey, maxObjectStoreId))
-        maxObjectStoreId = 0;
+    int64_t maxObjectStoreId = getMaxObjectStoreId(transaction, maxObjectStoreIdKey);
 
-    ASSERT(maxObjectStoreId >= 0);
-
-    int64_t objectStoreId = maxObjectStoreId + 1;
-    if (!putInt(transaction, maxObjectStoreIdKey, objectStoreId))
-        return -1;
-
-    return objectStoreId;
+    if (objectStoreId <= maxObjectStoreId) {
+        LOG_ERROR("Possible corruption: new object store id is too small.");
+        return false;
+    }
+    return putInt(transaction, maxObjectStoreIdKey, objectStoreId);
 }
 
-bool IDBLevelDBBackingStore::createObjectStore(IDBBackingStore::Transaction* transaction, int64_t databaseId, const String& name, const IDBKeyPath& keyPath, bool autoIncrement, int64_t& assignedObjectStoreId)
+bool IDBLevelDBBackingStore::createObjectStore(IDBBackingStore::Transaction* transaction, int64_t databaseId, int64_t objectStoreId, const String& name, const IDBKeyPath& keyPath, bool autoIncrement)
 {
     IDB_TRACE("IDBLevelDBBackingStore::createObjectStore");
     LevelDBTransaction* levelDBTransaction = Transaction::levelDBTransactionFrom(transaction);
-    int64_t objectStoreId = getNewObjectStoreId(levelDBTransaction, databaseId);
-    if (objectStoreId < 0)
+    if (!setMaxObjectStoreId(levelDBTransaction, databaseId, objectStoreId))
         return false;
 
     const Vector<char> nameKey = ObjectStoreMetaDataKey::encode(databaseId, objectStoreId, ObjectStoreMetaDataKey::Name);
@@ -588,8 +618,6 @@ bool IDBLevelDBBackingStore::createObjectStore(IDBBackingStore::Transaction* tra
         LOG_ERROR("Internal Indexed DB error.");
         return false;
     }
-
-    assignedObjectStoreId = objectStoreId;
 
     return true;
 }
@@ -918,28 +946,26 @@ void IDBLevelDBBackingStore::getIndexes(int64_t databaseId, int64_t objectStoreI
     }
 }
 
-static int64_t getNewIndexId(LevelDBTransaction* transaction, int64_t databaseId, int64_t objectStoreId)
+static bool setMaxIndexId(LevelDBTransaction* transaction, int64_t databaseId, int64_t objectStoreId, int64_t indexId)
 {
     int64_t maxIndexId = -1;
     const Vector<char> maxIndexIdKey = ObjectStoreMetaDataKey::encode(databaseId, objectStoreId, ObjectStoreMetaDataKey::MaxIndexId);
     if (!getInt(transaction, maxIndexIdKey, maxIndexId))
         maxIndexId = MinimumIndexId;
 
-    ASSERT(maxIndexId >= 0);
+    if (indexId <= maxIndexId) {
+        LOG_ERROR("Possible corruption: new index id is too small.");
+        return false;
+    }
 
-    int64_t indexId = maxIndexId + 1;
-    if (!putInt(transaction, maxIndexIdKey, indexId))
-        return -1;
-
-    return indexId;
+    return putInt(transaction, maxIndexIdKey, indexId);
 }
 
-bool IDBLevelDBBackingStore::createIndex(IDBBackingStore::Transaction* transaction, int64_t databaseId, int64_t objectStoreId, const String& name, const IDBKeyPath& keyPath, bool isUnique, bool isMultiEntry, int64_t& indexId)
+bool IDBLevelDBBackingStore::createIndex(IDBBackingStore::Transaction* transaction, int64_t databaseId, int64_t objectStoreId, int64_t indexId, const String& name, const IDBKeyPath& keyPath, bool isUnique, bool isMultiEntry)
 {
     IDB_TRACE("IDBLevelDBBackingStore::createIndex");
     LevelDBTransaction* levelDBTransaction = Transaction::levelDBTransactionFrom(transaction);
-    indexId = getNewIndexId(levelDBTransaction, databaseId, objectStoreId);
-    if (indexId < 0)
+    if (!setMaxIndexId(levelDBTransaction, databaseId, objectStoreId, indexId))
         return false;
 
     const Vector<char> nameKey = IndexMetaDataKey::encode(databaseId, objectStoreId, indexId, IndexMetaDataKey::Name);

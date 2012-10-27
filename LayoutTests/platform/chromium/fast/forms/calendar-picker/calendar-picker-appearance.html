@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<body>
+<script src="resources/calendar-picker-common.js"></script>
+<input type=date id=date value="10000-12-31">
+<script>
+function finishTest() {
+    console.log(popupWindow.pagePopupController);
+    popupWindow.removeEventListener('resize', finishTest);
+    setTimeout(function() {testRunner.notifyDone();}, 0);
+}
+
+console.log('Check if window.pagePopupController exists for a page-popup window.');
+testRunner.dumpAsText(true);
+testRunner.waitUntilDone();
+
+window.onload = function() {
+    var dateInput = document.getElementById('date');
+    openPicker(dateInput);
+    popupWindow.addEventListener('resize', finishTest, false);
+};
+</script>
+</body>
+

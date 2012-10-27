@@ -130,12 +130,15 @@ public:
     void setAllowExternalPages(bool allowExternalPages) { m_allowExternalPages = allowExternalPages; }
 
     void setAcceleratedCompositingForVideoEnabled(bool enabled) { m_acceleratedCompositingForVideoEnabled = enabled; }
+    bool softwareCompositingEnabled() { return m_softwareCompositingEnabled; }
+    void setSoftwareCompositingEnabled(bool enabled) { m_softwareCompositingEnabled = enabled; }
     void setThreadedCompositingEnabled(bool enabled) { m_threadedCompositingEnabled = enabled; }
     void setForceCompositingMode(bool enabled) { m_forceCompositingMode = enabled; }
     void setAccelerated2dCanvasEnabled(bool enabled) { m_accelerated2dCanvasEnabled = enabled; }
     void setDeferred2dCanvasEnabled(bool enabled) { m_deferred2dCanvasEnabled = enabled; }
     void setAcceleratedPaintingEnabled(bool enabled) { m_acceleratedPaintingEnabled = enabled; }
     void setPerTilePaintingEnabled(bool);
+    void setDeferredImageDecodingEnabled(bool enabled) { m_deferredImageDecodingEnabled = enabled; }
 #if defined(OS_WIN)
     // Access to the finished event. Used by the static WatchDog thread.
     HANDLE finishedEvent() { return m_finishedEvent; }
@@ -226,12 +229,14 @@ private:
     int m_timeout; // timeout value in millisecond
     bool m_allowExternalPages;
     bool m_acceleratedCompositingForVideoEnabled;
+    bool m_softwareCompositingEnabled;
     bool m_threadedCompositingEnabled;
     bool m_forceCompositingMode;
     bool m_accelerated2dCanvasEnabled;
     bool m_deferred2dCanvasEnabled;
     bool m_acceleratedPaintingEnabled;
     bool m_perTilePaintingEnabled;
+    bool m_deferredImageDecodingEnabled;
     WebPreferences m_prefs;
     bool m_stressOpt;
     bool m_stressDeopt;

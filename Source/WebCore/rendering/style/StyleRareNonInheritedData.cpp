@@ -31,6 +31,7 @@
 #include "StyleImage.h"
 #include "StyleResolver.h"
 #include "WebCoreMemoryInstrumentation.h"
+#include <wtf/MemoryInstrumentationHashMap.h>
 #include <wtf/MemoryInstrumentationVector.h>
 
 namespace WebCore {
@@ -43,10 +44,13 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , m_perspectiveOriginX(RenderStyle::initialPerspectiveOriginX())
     , m_perspectiveOriginY(RenderStyle::initialPerspectiveOriginY())
     , lineClamp(RenderStyle::initialLineClamp())
+#if ENABLE(DRAGGABLE_REGION)
+    , m_draggableRegionMode(DraggableRegionNone)
+#endif
     , m_mask(FillLayer(MaskFillLayer))
     , m_pageSize()
-    , m_wrapShapeInside(RenderStyle::initialWrapShapeInside())
-    , m_wrapShapeOutside(RenderStyle::initialWrapShapeOutside())
+    , m_shapeInside(RenderStyle::initialShapeInside())
+    , m_shapeOutside(RenderStyle::initialShapeOutside())
     , m_wrapMargin(RenderStyle::initialWrapMargin())
     , m_wrapPadding(RenderStyle::initialWrapPadding())
     , m_clipPath(RenderStyle::initialClipPath())
@@ -72,9 +76,9 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , m_appearance(RenderStyle::initialAppearance())
     , m_borderFit(RenderStyle::initialBorderFit())
     , m_textCombine(RenderStyle::initialTextCombine())
-#if ENABLE(CSS3_TEXT_DECORATION)
+#if ENABLE(CSS3_TEXT)
     , m_textDecorationStyle(RenderStyle::initialTextDecorationStyle())
-#endif // CSS3_TEXT_DECORATION
+#endif // CSS3_TEXT
     , m_wrapFlow(RenderStyle::initialWrapFlow())
     , m_wrapThrough(RenderStyle::initialWrapThrough())
 #if USE(ACCELERATED_COMPOSITING)
@@ -97,6 +101,9 @@ StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonInherited
     , m_perspectiveOriginX(o.m_perspectiveOriginX)
     , m_perspectiveOriginY(o.m_perspectiveOriginY)
     , lineClamp(o.lineClamp)
+#if ENABLE(DRAGGABLE_REGION)
+    , m_draggableRegionMode(o.m_draggableRegionMode)
+#endif
     , m_deprecatedFlexibleBox(o.m_deprecatedFlexibleBox)
     , m_flexibleBox(o.m_flexibleBox)
     , m_marquee(o.m_marquee)
@@ -116,8 +123,8 @@ StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonInherited
     , m_mask(o.m_mask)
     , m_maskBoxImage(o.m_maskBoxImage)
     , m_pageSize(o.m_pageSize)
-    , m_wrapShapeInside(o.m_wrapShapeInside)
-    , m_wrapShapeOutside(o.m_wrapShapeOutside)
+    , m_shapeInside(o.m_shapeInside)
+    , m_shapeOutside(o.m_shapeOutside)
     , m_wrapMargin(o.m_wrapMargin)
     , m_wrapPadding(o.m_wrapPadding)
     , m_clipPath(o.m_clipPath)
@@ -148,9 +155,9 @@ StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonInherited
     , m_appearance(o.m_appearance)
     , m_borderFit(o.m_borderFit)
     , m_textCombine(o.m_textCombine)
-#if ENABLE(CSS3_TEXT_DECORATION)
+#if ENABLE(CSS3_TEXT)
     , m_textDecorationStyle(o.m_textDecorationStyle)
-#endif // CSS3_TEXT_DECORATION
+#endif // CSS3_TEXT
     , m_wrapFlow(o.m_wrapFlow)
     , m_wrapThrough(o.m_wrapThrough)
 #if USE(ACCELERATED_COMPOSITING)
@@ -158,7 +165,7 @@ StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonInherited
 #endif
     , m_hasAspectRatio(o.m_hasAspectRatio)
 #if ENABLE(CSS_COMPOSITING)
-    , m_effectiveBlendMode(RenderStyle::initialBlendMode())
+    , m_effectiveBlendMode(o.m_effectiveBlendMode)
 #endif
 {
 }
@@ -176,8 +183,11 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_perspectiveOriginX == o.m_perspectiveOriginX
         && m_perspectiveOriginY == o.m_perspectiveOriginY
         && lineClamp == o.lineClamp
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT)
         && m_dashboardRegions == o.m_dashboardRegions
+#endif
+#if ENABLE(DRAGGABLE_REGION)
+        && m_draggableRegionMode == o.m_draggableRegionMode
 #endif
         && m_deprecatedFlexibleBox == o.m_deprecatedFlexibleBox
         && m_flexibleBox == o.m_flexibleBox
@@ -198,8 +208,8 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_mask == o.m_mask
         && m_maskBoxImage == o.m_maskBoxImage
         && m_pageSize == o.m_pageSize
-        && m_wrapShapeInside == o.m_wrapShapeInside
-        && m_wrapShapeOutside == o.m_wrapShapeOutside
+        && m_shapeInside == o.m_shapeInside
+        && m_shapeOutside == o.m_shapeOutside
         && m_wrapMargin == o.m_wrapMargin
         && m_wrapPadding == o.m_wrapPadding
         && m_clipPath == o.m_clipPath
@@ -230,9 +240,9 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_appearance == o.m_appearance
         && m_borderFit == o.m_borderFit
         && m_textCombine == o.m_textCombine
-#if ENABLE(CSS3_TEXT_DECORATION)
+#if ENABLE(CSS3_TEXT)
         && m_textDecorationStyle == o.m_textDecorationStyle
-#endif // CSS3_TEXT_DECORATION
+#endif // CSS3_TEXT
         && m_wrapFlow == o.m_wrapFlow
         && m_wrapThrough == o.m_wrapThrough
 #if USE(ACCELERATED_COMPOSITING)
@@ -246,13 +256,15 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
 
 bool StyleRareNonInheritedData::contentDataEquivalent(const StyleRareNonInheritedData& o) const
 {
-    if (m_content.get() == o.m_content.get())
-        return true;
-        
-    if (m_content && o.m_content && *m_content == *o.m_content)
-        return true;
+    ContentData* a = m_content.get();
+    ContentData* b = o.m_content.get();
 
-    return false;
+    while (a && b && *a == *b) {
+        a = a->next();
+        b = b->next();
+    }
+
+    return !a && !b;
 }
 
 bool StyleRareNonInheritedData::counterDataEquivalent(const StyleRareNonInheritedData& o) const
@@ -325,8 +337,8 @@ void StyleRareNonInheritedData::reportMemoryUsage(MemoryObjectInfo* memoryObject
     info.addMember(m_boxReflect);
     info.addMember(m_animations);
     info.addMember(m_transitions);
-    info.addMember(m_wrapShapeInside);
-    info.addMember(m_wrapShapeOutside);
+    info.addMember(m_shapeInside);
+    info.addMember(m_shapeOutside);
     info.addMember(m_clipPath);
     info.addMember(m_flowThread);
     info.addMember(m_regionThread);

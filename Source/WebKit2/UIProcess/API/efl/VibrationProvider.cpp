@@ -29,21 +29,22 @@
 #if ENABLE(VIBRATION)
 
 #include "WKAPICast.h"
+#include "WKContext.h"
 #include "WKVibration.h"
 #include <Evas.h>
 
 using namespace WebCore;
 
 /**
- * \struct  _Ewk_Vibration_Client
+ * \struct  Ewk_Vibration_Client
  * @brief   Contains the vibration client callbacks.
  */
-struct _Ewk_Vibration_Client {
+struct Ewk_Vibration_Client {
     Ewk_Vibration_Client_Vibrate_Cb vibrate;
     Ewk_Vibration_Client_Vibration_Cancel_Cb cancelVibration;
     void* userData;
 
-    _Ewk_Vibration_Client(Ewk_Vibration_Client_Vibrate_Cb vibrate, Ewk_Vibration_Client_Vibration_Cancel_Cb cancelVibration, void* userData)
+    Ewk_Vibration_Client(Ewk_Vibration_Client_Vibrate_Cb vibrate, Ewk_Vibration_Client_Vibration_Cancel_Cb cancelVibration, void* userData)
         : vibrate(vibrate)
         , cancelVibration(cancelVibration)
         , userData(userData)
@@ -65,15 +66,18 @@ static void cancelVibrationCallback(WKVibrationRef, const void* clientInfo)
     toVibrationProvider(clientInfo)->cancelVibration();
 }
 
-PassRefPtr<VibrationProvider> VibrationProvider::create(WKVibrationRef wkVibrationRef)
+PassRefPtr<VibrationProvider> VibrationProvider::create(WKContextRef wkContext)
 {
-    return adoptRef(new VibrationProvider(wkVibrationRef));
+    return adoptRef(new VibrationProvider(wkContext));
 }
 
-VibrationProvider::VibrationProvider(WKVibrationRef wkVibrationRef)
-    : m_wkVibrationRef(wkVibrationRef)
+VibrationProvider::VibrationProvider(WKContextRef wkContext)
+    : m_wkContext(wkContext)
 {
-    ASSERT(wkVibrationRef);
+    ASSERT(m_wkContext.get());
+
+    WKVibrationRef wkVibration = WKContextGetVibration(m_wkContext.get());
+    ASSERT(wkVibration);
 
     WKVibrationProvider wkVibrationProvider = {
         kWKVibrationProviderCurrentVersion,
@@ -81,11 +85,15 @@ VibrationProvider::VibrationProvider(WKVibrationRef wkVibrationRef)
         vibrateCallback,
         cancelVibrationCallback
     };
-    WKVibrationSetProvider(m_wkVibrationRef.get(), &wkVibrationProvider);
+    WKVibrationSetProvider(wkVibration, &wkVibrationProvider);
 }
 
 VibrationProvider::~VibrationProvider()
 {
+    WKVibrationRef wkVibration = WKContextGetVibration(m_wkContext.get());
+    ASSERT(wkVibration);
+
+    WKVibrationSetProvider(wkVibration, 0);
 }
 
 void VibrationProvider::vibrate(uint64_t vibrationTime)

@@ -29,7 +29,6 @@
 #include "PageVisibilityState.h"
 #include "Pagination.h"
 #include "PlatformScreen.h"
-#include "PluginViewBase.h"
 #include "Region.h"
 #include "Supplementable.h"
 #include "ViewportArguments.h"
@@ -83,6 +82,7 @@ namespace WebCore {
     class Node;
     class PageGroup;
     class PluginData;
+    class PluginViewBase;
     class PointerLockController;
     class ProgressTracker;
     class Range;
@@ -178,9 +178,9 @@ namespace WebCore {
         PageGroup& group() { if (!m_group) initGroup(); return *m_group; }
         PageGroup* groupPtr() { return m_group; } // can return 0
 
-        void incrementFrameCount() { ++m_frameCount; }
-        void decrementFrameCount() { ASSERT(m_frameCount); --m_frameCount; }
-        int frameCount() const { checkFrameCountConsistency(); return m_frameCount; }
+        void incrementSubframeCount() { ++m_subframeCount; }
+        void decrementSubframeCount() { ASSERT(m_subframeCount); --m_subframeCount; }
+        int subframeCount() const { checkSubframeCountConsistency(); return m_subframeCount; }
 
         Chrome* chrome() const { return m_chrome.get(); }
         DragCaretController* dragCaretController() const { return m_dragCaretController.get(); }
@@ -334,6 +334,8 @@ namespace WebCore {
 
 #if ENABLE(PAGE_VISIBILITY_API)
         PageVisibilityState visibilityState() const;
+#endif
+#if ENABLE(PAGE_VISIBILITY_API) || ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
         void setVisibilityState(PageVisibilityState, bool);
 #endif
 
@@ -362,19 +364,29 @@ namespace WebCore {
         void sawPlugin(const String& serviceType);
         void resetSeenPlugins();
 
+        bool hasSeenMediaEngine(const String& engineName) const;
+        bool hasSeenAnyMediaEngine() const;
+        void sawMediaEngine(const String& engineName);
+        void resetSeenMediaEngines();
+
+        void reportMemoryUsage(MemoryObjectInfo*) const;
+
     private:
         void initGroup();
 
 #if ASSERT_DISABLED
-        void checkFrameCountConsistency() const { }
+        void checkSubframeCountConsistency() const { }
 #else
-        void checkFrameCountConsistency() const;
+        void checkSubframeCountConsistency() const;
 #endif
 
         MediaCanStartListener* takeAnyMediaCanStartListener();
 
         void setMinimumTimerInterval(double);
         double minimumTimerInterval() const;
+
+        void setTimerAlignmentInterval(double);
+        double timerAlignmentInterval() const;
 
         void collectPluginViews(Vector<RefPtr<PluginViewBase>, 32>& pluginViewBases);
 
@@ -417,7 +429,7 @@ namespace WebCore {
 
         FeatureObserver m_featureObserver;
 
-        int m_frameCount;
+        int m_subframeCount;
         String m_groupName;
         bool m_openedByDOM;
 
@@ -460,6 +472,8 @@ namespace WebCore {
 
         double m_minimumTimerInterval;
 
+        double m_timerAlignmentInterval;
+
         bool m_isEditable;
         bool m_isOnscreen;
 
@@ -482,6 +496,7 @@ namespace WebCore {
         bool m_scriptedAnimationsSuspended;
 
         HashSet<String> m_seenPlugins;
+        HashSet<String> m_seenMediaEngines;
     };
 
 } // namespace WebCore

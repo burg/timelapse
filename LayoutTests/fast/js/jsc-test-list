@@ -83,6 +83,7 @@ fast/js/dfg-arrayify-when-late-prevent-extensions
 fast/js/dfg-arrayify-when-prevent-extensions
 fast/js/dfg-array-length-dead
 fast/js/dfg-array-pop-side-effects
+fast/js/dfg-array-pop-value-clearing
 fast/js/dfg-array-push-bad-time
 fast/js/dfg-array-push-slow-put
 fast/js/dfg-bool-to-int32-reuse
@@ -91,6 +92,7 @@ fast/js/dfg-check-two-structures
 fast/js/dfg-constant-fold-first-local-read-after-block-merge
 fast/js/dfg-convert-this-dom-window
 fast/js/dfg-cse-cfa-discrepancy
+fast/js/dfg-cse-dead-get-scoped-var
 fast/js/dfg-dead-min-one-arg
 fast/js/dfg-dead-min-two-args
 fast/js/dfg-dead-redundant-get-array-length
@@ -148,9 +150,11 @@ fast/js/dfg-poison-fuzz
 fast/js/dfg-proto-access-inline-osr-exit
 fast/js/dfg-put-by-id-prototype-check
 fast/js/dfg-putbyval-cfa-clobber
+fast/js/dfg-redundant-load-of-captured-variable-proven-constant
 fast/js/dfg-string-stricteq
 fast/js/dfg-tear-off-arguments-not-activation
 fast/js/dfg-uint16array
+fast/js/dfg-uint32-to-number-in-middle-of-copy-propagation
 fast/js/dfg-uint32-to-number-on-captured-variable
 fast/js/dfg-uint32-to-number
 fast/js/dfg-uint32array-overflow-constant
@@ -201,6 +205,7 @@ fast/js/function-toString-semicolon-insertion
 fast/js/getter-setter-gc
 fast/js/get-by-pname
 fast/js/get-by-pname-non-final-object
+fast/js/get-by-pname-that-looks-like-a-patchable-get-by-val
 fast/js/global-resolve-through-eval
 fast/js/gmail-re-re
 fast/js/has-own-property
@@ -296,6 +301,7 @@ fast/js/sort-no-jit-code-crash
 fast/js/sort-non-numbers
 fast/js/sort-randomly
 fast/js/sort-stability
+fast/js/sort-with-side-effecting-comparisons
 fast/js/sparse-array
 fast/js/stack-overflow-arrity-catch
 fast/js/stack-overflow-catch

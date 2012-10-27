@@ -3,6 +3,8 @@
 # See http://trac.webkit.org/wiki/TestExpectations for more information on this file.
 
 # We divide our test_expectations.txt into several categories:
+# 0. TESTS MIGRATED OVER FROM THE SKIPPED FILE
+#
 # 1. TESTS EXPECTED TO FAIL
 #    Test cases related to features that we don't expect to be activated for EFL since e.g.
 #    * the feature implementation in WebCore is not complete yet
@@ -29,8 +31,350 @@
 # Each line should have an associated bug. Please don't file new lines without one.
 
 #////////////////////////////////////////////////////////////////////////////////////////
+# TESTS MIGRATED OVER FROM THE SKIPPED FILE
+#////////////////////////////////////////////////////////////////////////////////////////
+
+# --------------------------------------------------------------------
+# Tests which depend on features which have not been implemented yet
+# --------------------------------------------------------------------
+
+# EFL's LayoutTestController does not implement keepWebHistory
+fast/history/window-open.html
+
+# EFL's LayoutTestController does not implement shadowPseudoId
+media/video-volume-slider.html
+
+# Need to add functionality to DumpRenderTree to handle error pages
+fast/history/back-forward-reset-after-error-handling.html
+
+# BUG: Captions support needed in the media engine (via GTK+)
+media/media-captions.html
+
+# BUG: No authentication challenge handling
+http/tests/cache/subresource-fragment-identifier.html
+
+# The EFL port has no support for detecting slow unload handlers
+fast/dom/Window/slow-unload-handler.html
+fast/dom/Window/slow-unload-handler-only-frame-is-stopped.html
+
+# ----------------------------------------
+# Tests which also fail in other platforms
+# ----------------------------------------
+
+# Tests that fail across all platforms. Even though some platforms don't skip these tests, there are platform-specific results generated that make these tests 'pass' (via GTK+).
+canvas/philip/tests/2d.composite.operation.clear.html
+canvas/philip/tests/2d.composite.operation.darker.html
+canvas/philip/tests/2d.drawImage.broken.html
+canvas/philip/tests/2d.drawImage.image.incomplete.omitted.html
+canvas/philip/tests/2d.fillStyle.parse.rgb-eof.html
+canvas/philip/tests/2d.fillStyle.parse.rgba-eof.html
+canvas/philip/tests/2d.missingargs.html
+canvas/philip/tests/2d.pattern.image.broken.html
+canvas/philip/tests/2d.pattern.image.incomplete.empty.html
+canvas/philip/tests/2d.pattern.image.incomplete.omitted.html
+canvas/philip/tests/2d.text.draw.baseline.bottom.html
+canvas/philip/tests/2d.text.draw.baseline.hanging.html
+canvas/philip/tests/2d.text.draw.baseline.ideographic.html
+canvas/philip/tests/2d.text.draw.baseline.middle.html
+canvas/philip/tests/2d.text.draw.baseline.top.html
+canvas/philip/tests/type.prototype.html
+
+# Other failing Sputnik tests
+sputnik/Unicode/Unicode_510/S7.6_A3.1.html
+sputnik/Unicode/Unicode_510/S7.6_A3.2.html
+sputnik/Unicode/Unicode_510/S7.6_A5.3_T1.html
+sputnik/Unicode/Unicode_510/S7.6_A5.3_T2.html
+
+# Rendering of multipart images is broken: this test times out
+# https://bugs.webkit.org/show_bug.cgi?id=54251
+http/tests/multipart/invalid-image-data-standalone.html
+
+# http/tests/multipart/stop-crash.html fails on GTK and Qt missing multipart/x-mixed-replace support in libsoup
+# https://bugs.webkit.org/show_bug.cgi?id=47060
+http/tests/multipart/stop-crash.html
+http/tests/multipart/load-last-non-html-frame.php
+http/tests/multipart/policy-ignore-crash.php
+
+# Failing on non-Chromium bots
+# https://bugs.webkit.org/show_bug.cgi?id=68278
+http/tests/history/back-with-fragment-change.php
+
+# Failing http tests (via GTK+)
+http/tests/loading/bad-scheme-subframe.html
+http/tests/media/video-play-stall-seek.html
+http/tests/media/video-play-stall.html
+http/tests/security/feed-urls-from-remote.html
+
+# Test times out (via GTK+)
+# https://bugs.webkit.org/show_bug.cgi?id=61122
+http/tests/navigation/post-307-response.html
+
+# ------------------------------
+# Tests which need investigation
+# ------------------------------
+
+# BUG: eyes not being rendered correctly
+http/tests/misc/acid2-pixel.html
+
+# BUG: no green in the rectangle
+http/tests/multipart/invalid-image-data.html
+
+# BUG: composited area is transparent
+compositing/geometry/vertical-scroll-composited.html
+
+# BUG: new windows do not have scrollbars
+fast/dom/Window/new-window-opener.html
+
+# BUG: wrong test result, window should not have been scrolled
+fast/events/attempt-scroll-with-no-scrollbars.html
+
+# BUG: no mouseout event being sent
+fast/events/mouseout-on-window.html
+
+# BUG: wrong test results that need investigation
+compositing/checkerboard.html
+compositing/framesets/composited-frame-alignment.html
+compositing/images/direct-pdf-image.html
+compositing/reflections/backface-hidden-reflection.html
+compositing/tiling/constrained-layer-size.html
+editing/selection/extend-selection-after-double-click.html
+fast/forms/listbox-onchange.html
+fast/forms/onselect-textfield.html
+fast/forms/option-mouseevents.html
+fast/forms/search-abs-pos-cancel-button.html
+fast/forms/search-cancel-button-events.html
+fast/forms/search-transformed.html
+fast/forms/search-zoomed.html
+fast/forms/range/slider-delete-while-dragging-thumb.html
+fast/harness/results.html
+fast/repaint/selection-clear.html
+fast/repaint/table-cell-overflow.html
+fast/repaint/text-emphasis-h.html
+fast/text/midword-break-after-breakable-char.html
+
+# BUG: Needs a grayish canvas background. See DumpRenderTree/chromium/WebViewHost::displayRepaintMask().
+fast/repaint/absolute-position-change-containing-block.html
+fast/repaint/absolute-position-moved.html
+fast/repaint/fixed-to-relative-position-with-absolute-child.html
+fast/repaint/inline-overflow.html
+fast/repaint/inline-relative-positioned.html
+fast/repaint/overflow-flipped-writing-mode-block.html
+fast/repaint/overflow-flipped-writing-mode-table.html
+fast/repaint/text-in-relative-positioned-inline.html
+fast/repaint/trailing-floats-root-line-box-overflow.html
+fast/table/simple_paint.html
+fast/table/border-collapsing/cached-cell-append.html
+fast/table/border-collapsing/cached-cell-remove.html
+fast/table/border-collapsing/cached-change-cell-border-color.html
+fast/table/border-collapsing/cached-change-cell-border-width.html
+fast/table/border-collapsing/cached-change-cell-sl-border-color.html
+fast/table/border-collapsing/cached-change-col-border-color.html
+fast/table/border-collapsing/cached-change-col-border-width.html
+fast/table/border-collapsing/cached-change-colgroup-border-color.html
+fast/table/border-collapsing/cached-change-colgroup-border-width.html
+fast/table/border-collapsing/cached-change-row-border-color.html
+fast/table/border-collapsing/cached-change-row-border-width.html
+fast/table/border-collapsing/cached-change-table-border-color.html
+fast/table/border-collapsing/cached-change-table-border-width.html
+fast/table/border-collapsing/cached-change-tbody-border-color.html
+fast/table/border-collapsing/cached-change-tbody-border-width.html
+
+# BUG: The form widgets are too big for Edje to process, however this makes the page not scrollable at all.
+fast/block/float/overhanging-tall-block.html
+
+# BUG: <select> form elements do not respect some properties when being rendered (probably a problem in the theme).
+fast/forms/basic-selects.html
+
+# BUG: text field renders badly when the height is too small
+fast/forms/textfield-overflow.html
+
+# BUG: rendering problems
+fast/forms/color/input-appearance-color.html
+
+# BUG: international characters not being rendered correctly. they probably need a proper font.
+fast/text/international/arabic-justify.html
+fast/text/international/bidi-linebreak-001.html
+fast/text/international/bidi-linebreak-002.html
+fast/text/international/bidi-linebreak-003.html
+fast/text/international/bold-bengali.html
+fast/text/international/complex-character-based-fallback.html
+fast/text/international/danda-space.html
+fast/text/international/hindi-spacing.html
+fast/text/international/hindi-whitespace.html
+fast/text/international/khmer-selection.html
+fast/text/international/plane2.html
+fast/text/international/thai-baht-space.html
+fast/text/international/thai-line-breaks.html
+
+# BUG: form widgets do not respect RTL settings
+fast/forms/range/input-appearance-range-rtl.html
+fast/text/international/bidi-menulist.html
+fast/text/international/pop-up-button-text-alignment-and-direction.html
+
+# BUG: video sizes not being set properly
+media/video-size-intrinsic-scale.html
+
+# BUG: the theme probably has a different thumb value
+fast/forms/range/slider-zoomed.html
+
+# BUG: wrong textarea sizes
+fast/forms/textarea-metrics.html
+
+# BUG: <select> element is not being scrolled as expected.
+fast/forms/listbox-selection-2.html
+
+# BUG: the whole text is being selected
+fast/forms/input-text-drag-down.html
+
+# BUG: the text field is not scrolled
+fast/forms/input-readonly-autoscroll.html
+
+# Needs investigation: this test passes when run alone
+fast/forms/submit-to-blank-multiple-times.html
+
+# Flaky tests (text diff mismatch)
+http/tests/navigation/document-location-mouseover.html
+
+# ------------------------------------
+# Tests for features under development
+# ------------------------------------
+
+# HiDPI tests require test infrastructure enhancements
+fast/hidpi
+svg/as-image/image-respects-deviceScaleFactor.html
+
+# Skipped until new WebSocket protocol is implemented. http://webkit.org/b/50099
+http/tests/websocket/tests/hybi/
+
+# Hits Cairo assertion
+fast/repaint/moving-shadow-on-container.html
+svg/css/composite-shadow-example.html
+svg/css/composite-shadow-with-opacity.html
+
+# Unclassified failures
+fast/events/platform-wheelevent-paging-x-in-non-scrolling-div.html
+fast/events/platform-wheelevent-paging-x-in-non-scrolling-page.html
+fast/events/platform-wheelevent-paging-x-in-scrolling-div.html
+fast/events/platform-wheelevent-paging-x-in-scrolling-page.html
+fast/events/platform-wheelevent-paging-xy-in-scrolling-div.html
+fast/events/platform-wheelevent-paging-xy-in-scrolling-page.html
+fast/events/platform-wheelevent-paging-y-in-non-scrolling-div.html
+fast/events/platform-wheelevent-paging-y-in-non-scrolling-page.html
+fast/events/platform-wheelevent-paging-y-in-scrolling-div.html
+fast/events/platform-wheelevent-paging-y-in-scrolling-page.html
+fast/forms/number/number-spinbutton-in-multi-column.html
+fast/forms/select/listbox-in-multi-column.html
+fast/inline/continuation-outlines-with-layers.html
+fast/invalid/residual-style.html
+fast/js/constructor-length.html
+
+# The black text is not overlapping with the red one
+fast/text/line-initial-and-final-swashes.html
+
+# Fails, test times out in testLoadErrorGC()
+fast/workers/shared-worker-load-error.html
+
+# Fails, the div does not scroll
+scrollbars/scroll-rtl-or-bt-layer.html
+
+# Failing, the 2 bars are not identical
+svg/hixie/data-types/002.xhtml
+
+# Failing, text size is not the same
+svg/zoom/text/zoom-hixie-mixed-009.xml
+
+# Failing, last gradiant rectangle is blank
+svg/batik/paints/gradientLimit.svg
+
+# EFL DRT doesn't fully support http tests yet. These tests make timeout error.
+fast/overflow/overflow-height-float-not-removed-crash3.html
+http/tests/misc/copy-resolves-urls.html
+http/tests/misc/iframe-invalid-source-crash.html
+http/tests/misc/submit-post-keygen.html
+http/tests/navigation/no-referrer-reset.html
+http/tests/navigation/no-referrer-target-blank.html
+http/tests/navigation/target-frame-from-window.html
+http/tests/security/contentSecurityPolicy/media-src-allowed.html
+http/tests/security/aboutBlank/xss-DENIED-navigate-opener-document-write.html
+http/tests/security/aboutBlank/xss-DENIED-navigate-opener-javascript-url.html
+http/tests/security/aboutBlank/xss-DENIED-set-opener.html
+http/tests/security/cross-origin-xsl-BLOCKED.html
+http/tests/security/cross-origin-xsl-redirect-BLOCKED.html
+http/tests/security/drag-drop-same-unique-origin.html
+http/tests/security/frameNavigation/not-opener.html
+http/tests/security/originHeader/origin-header-for-empty.html
+http/tests/security/redirect-BLOCKED-to-localURL.html
+http/tests/security/xss-DENIED-xsl-document-redirect.xml
+http/tests/security/xss-DENIED-xsl-external-entity-redirect.xml
+http/tests/workers/terminate-during-sync-operation.html
+http/tests/xmlhttprequest/access-control-basic-whitelist-request-headers.html
+http/tests/xmlhttprequest/cross-origin-cookie-storage.html
+http/tests/xmlhttprequest/cross-origin-no-authorization.html
+http/tests/xmlhttprequest/logout.html
+http/tests/xmlhttprequest/redirect-cross-origin-tripmine.html
+xmlviewer/extensions-api.html
+
+# These test -apple- and -khtml- prefixed CSS properties, which we don't support.
+inspector/styles/vendor-prefixes.html
+
+# There are no expected result set yet.
+editing/unsupported-content/list-delete-001.html 
+editing/unsupported-content/list-delete-003.html 
+editing/unsupported-content/list-type-after.html 
+editing/unsupported-content/table-delete-001.html
+editing/unsupported-content/table-delete-002.html
+editing/unsupported-content/table-delete-003.html
+fast/dom/rtl-scroll-to-leftmost-and-resize.html
+fast/text/unicode-variation-selector.html
+
+# Requires ENABLE(FILE_SYSTEM)
+fast/forms/file/input-file-entries.html
+http/tests/security/contentSecurityPolicy/filesystem-urls-match-self.html
+
+# Transparent image being produced
+fast/frames/transparent-scrollbar.html
+
+# Fail until ENABLE_DATA_TRANSFER_ITEMS is enabled
+# (Other tests might also depend on it)
+fast/events/drag-and-drop-subframe-dataTransfer.html
+fast/events/drag-dataTransferItemList-file-handling.html
+
+# Still failing after https://bugs.webkit.org/show_bug.cgi?id=42328
+# most likely related to https://bugs.webkit.org/show_bug.cgi?id=84102
+fast/profiler/stop-profiling-after-setTimeout.html
+fast/profiler/dead-time.html
+
+# following tests started failing on EFL afrer r122952.
+http/tests/inspector/resource-har-conversion.html
+http/tests/inspector/console-cross-origin-iframe-logging.html
+http/tests/inspector/resource-parameters.html
+http/tests/inspector/compiler-source-mapping-debug.html
+http/tests/inspector/console-websocket-error.html
+inspector/styles/svg-style.xhtml
+inspector/debugger/event-listener-breakpoints.html
+inspector/debugger/live-edit.html
+inspector/debugger/live-edit-breakpoints.html
+inspector/debugger/step-through-event-listeners.html
+inspector/debugger/xhr-breakpoints.html
+inspector/debugger/debugger-compile-and-run.html
+inspector/debugger/dom-breakpoints.html
+inspector/timeline/timeline-receive-response-event.html
+
+# ENABLE(DRAGGABLE_REGION) is disabled
+fast/css/draggable-region-parser.html
+
+# http://webkit.org/b/96828
+fast/canvas/webgl/oes-vertex-array-object.html
+
+# Expected to fail until OES_element_index_uint extension is implemented
+webkit.org/b/98257 fast/canvas/webgl/oes-element-index-uint.html [ Failure Pass ]
+
+#////////////////////////////////////////////////////////////////////////////////////////
 # TESTS EXPECTED TO FAIL
 #////////////////////////////////////////////////////////////////////////////////////////
+
+# Missing support for multipart/x-mixed-replace in libsoup.
+webkit.org/b/94515 http/tests/multipart/multipart-html.php [ Failure ]
 
 # These tests require DASHBOARD_SUPPORT but this feature is specific to Mac port.
 Bug(EFL) fast/canvas/canvas-gradient-addStop-error.html
@@ -65,9 +409,6 @@ webkit.org/b/85262 fast/css/image-resolution
 # CSS image-orientation is not yet enabled.
 webkit.org/b/89052 fast/css/image-orientation
 
-# This test assumes we cannot play RTSP, but we can.
-Bug(EFL) media/unsupported-rtsp.html [ Skip ]
-
 # Perf tests are really slow in debug builds and there are few benefits in running them.
 [ Debug ] perf [ WontFix ]
 
@@ -95,20 +436,23 @@ webkit.org/b/43568 sputnik/Conformance/15_Native_Objects/15.8_Math/15.8.2/15.8.2
 webkit.org/b/85969 http/tests/loading/post-in-iframe-with-back-navigation.html [ Failure ]
 
 # Missing drag'n'drop support.
+webkit.org/b/86623 editing/pasteboard/data-transfer-items-drag-drop-string.html [ Failure ]
 webkit.org/b/86623 editing/pasteboard/drag-and-drop-image-contenteditable.html [ Failure ]
 webkit.org/b/86623 editing/pasteboard/drag-and-drop-inputimage-contenteditable.html [ Failure ]
 webkit.org/b/86623 editing/pasteboard/drag-and-drop-objectimage-contenteditable.html [ Failure ]
-webkit.org/b/86623 editing/pasteboard/drag-drop-to-data-url.html [ Failure ]
-webkit.org/b/86623 editing/pasteboard/drag-image-in-about-blank-frame.html [ Failure ]
-webkit.org/b/86623 editing/pasteboard/files-during-page-drags.html [ Failure ]
-webkit.org/b/86623 editing/selection/drag-text-delay.html [ Failure ]
 webkit.org/b/86623 editing/pasteboard/drag-drop-input-textarea.html [ Failure ]
 webkit.org/b/86623 editing/pasteboard/drag-drop-list.html [ Failure ]
 webkit.org/b/86623 editing/pasteboard/drag-drop-url-text.html [ Failure ]
+webkit.org/b/86623 editing/pasteboard/drag-drop-url-with-style.html [ Failure ]
+webkit.org/b/86623 editing/pasteboard/drag-image-in-about-blank-frame.html [ Failure ]
 webkit.org/b/86623 editing/pasteboard/drop-inputtext-acquires-style.html [ Failure ]
 webkit.org/b/86623 editing/pasteboard/drop-link.html [ Failure ]
 webkit.org/b/86623 editing/pasteboard/drop-text-events.html [ Failure ]
+webkit.org/b/86623 editing/pasteboard/files-during-page-drags.html [ Failure ]
 webkit.org/b/86623 editing/pasteboard/get-data-text-plain-drop.html [ Failure ]
+webkit.org/b/86623 editing/selection/4895428-1.html [ Failure ]
+webkit.org/b/86623 editing/selection/4895428-4.html [ Failure ]
+webkit.org/b/86623 editing/selection/drag-text-delay.html [ Failure ]
 webkit.org/b/86623 fast/block/positioning/hittest-on-relative-positioned-children.html
 webkit.org/b/86623 fast/dom/shadow/drop-event-for-input-in-shadow.html [ Failure ]
 webkit.org/b/86623 fast/dom/shadow/drop-event-in-shadow.html [ Failure ]
@@ -158,30 +502,469 @@ webkit.org/b/86623 http/tests/security/drag-drop-different-origin.html
 webkit.org/b/86623 http/tests/security/drag-over-remote-content-iframe.html
 
 # Missing drag'n'drop, needs baselines
+webkit.org/b/86623 editing/pasteboard/4947130.html [ Missing ]
 webkit.org/b/86623 editing/pasteboard/drag-drop-dead-frame.html [ Missing ]
 webkit.org/b/86623 editing/pasteboard/drag-drop-modifies-page.html [ Missing ]
 webkit.org/b/86623 editing/pasteboard/drag-image-to-contenteditable-in-iframe.html [ Missing ]
+webkit.org/b/86623 editing/pasteboard/drag-selected-image-to-contenteditable.html [ Missing ]
 webkit.org/b/86623 editing/pasteboard/drop-text-without-selection.html [ Missing ]
 webkit.org/b/86623 editing/pasteboard/smart-drag-drop.html [ Missing ]
 webkit.org/b/86623 editing/pasteboard/subframe-dragndrop-1.html [ Missing ]
 
-# CSS Sticky (-webkit-sticky) not supported by EFL.
-webkit.org/b/95182 fast/css/sticky/inflow-sticky.html [ ImageOnlyFailure ]
+# Needs baselines
+editing/deleting/4922367.html [ Missing ]
+editing/deleting/5099303.html [ Missing ]
+editing/deleting/5126166.html [ Missing ]
+editing/deleting/5144139-2.html [ Missing ]
+editing/deleting/5206311-1.html [ Missing ]
+editing/deleting/5272440.html [ Missing ]
+editing/deleting/5369009.html [ Missing ]
+editing/deleting/5433862-2.html [ Missing ]
+editing/deleting/5483370.html [ Missing ]
+editing/deleting/collapse-whitespace-3587601-fix.html [ Missing ]
+editing/deleting/delete-3608445-fix.html [ Missing ]
+editing/deleting/delete-3608462-fix.html [ Missing ]
+editing/deleting/delete-3775172-fix.html [ Missing ]
+editing/deleting/delete-3857753-fix.html [ Missing ]
+editing/deleting/delete-3865854-fix.html [ Missing ]
+editing/deleting/delete-3928305-fix.html [ Missing ]
+editing/deleting/delete-4083333-fix.html [ Missing ]
+editing/deleting/delete-after-span-ws-001.html [ Missing ]
+editing/deleting/delete-after-span-ws-002.html [ Missing ]
+editing/deleting/delete-after-span-ws-003.html [ Missing ]
+editing/deleting/delete-and-undo.html [ Missing ]
+editing/deleting/delete-at-paragraph-boundaries-002.html [ Missing ]
+editing/deleting/delete-at-paragraph-boundaries-003.html [ Missing ]
+editing/deleting/delete-at-paragraph-boundaries-004.html [ Missing ]
+editing/deleting/delete-at-paragraph-boundaries-005.html [ Missing ]
+editing/deleting/delete-at-paragraph-boundaries-006.html [ Missing ]
+editing/deleting/delete-at-paragraph-boundaries-007.html [ Missing ]
+editing/deleting/delete-at-paragraph-boundaries-008.html [ Missing ]
+editing/deleting/delete-at-paragraph-boundaries-009.html [ Missing ]
+editing/deleting/delete-at-paragraph-boundaries-010.html [ Missing ]
+editing/deleting/delete-at-paragraph-boundaries-011.html [ Missing ]
+editing/deleting/delete-at-start-or-end.html [ Missing ]
+editing/deleting/delete-block-contents-001.html [ Missing ]
+editing/deleting/delete-block-contents-002.html [ Missing ]
+editing/deleting/delete-block-contents-003.html [ Missing ]
+editing/deleting/delete-block-merge-contents-001.html [ Missing ]
+editing/deleting/delete-block-merge-contents-002.html [ Missing ]
+editing/deleting/delete-block-merge-contents-003.html [ Missing ]
+editing/deleting/delete-block-merge-contents-004.html [ Missing ]
+editing/deleting/delete-block-merge-contents-005.html [ Missing ]
+editing/deleting/delete-block-merge-contents-006.html [ Missing ]
+editing/deleting/delete-block-merge-contents-007.html [ Missing ]
+editing/deleting/delete-block-merge-contents-008.html [ Missing ]
+editing/deleting/delete-block-merge-contents-009.html [ Missing ]
+editing/deleting/delete-block-merge-contents-010.html [ Missing ]
+editing/deleting/delete-block-merge-contents-011.html [ Missing ]
+editing/deleting/delete-block-merge-contents-012.html [ Missing ]
+editing/deleting/delete-block-merge-contents-013.html [ Missing ]
+editing/deleting/delete-block-merge-contents-014.html [ Missing ]
+editing/deleting/delete-block-merge-contents-015.html [ Missing ]
+editing/deleting/delete-block-merge-contents-016.html [ Missing ]
+editing/deleting/delete-block-merge-contents-017.html [ Missing ]
+editing/deleting/delete-block-merge-contents-018.html [ Missing ]
+editing/deleting/delete-block-merge-contents-019.html [ Missing ]
+editing/deleting/delete-block-merge-contents-020.html [ Missing ]
+editing/deleting/delete-block-merge-contents-021.html [ Missing ]
+editing/deleting/delete-block-merge-contents-022.html [ Missing ]
+editing/deleting/delete-block-merge-contents-023.html [ Missing ]
+editing/deleting/delete-block-merge-contents-024.html [ Missing ]
+editing/deleting/delete-br-001.html [ Missing ]
+editing/deleting/delete-br-002.html [ Missing ]
+editing/deleting/delete-br-003.html [ Missing ]
+editing/deleting/delete-br-004.html [ Missing ]
+editing/deleting/delete-br-005.html [ Missing ]
+editing/deleting/delete-br-006.html [ Missing ]
+editing/deleting/delete-br-007.html [ Missing ]
+editing/deleting/delete-br-008.html [ Missing ]
+editing/deleting/delete-br-009.html [ Missing ]
+editing/deleting/delete-br-010.html [ Missing ]
+editing/deleting/delete-br-013.html [ Missing ]
+editing/deleting/delete-character-001.html [ Missing ]
+editing/deleting/delete-contiguous-ws-001.html [ Missing ]
+editing/deleting/delete-first-list-item.html [ Missing ]
+editing/deleting/delete-hr.html [ Missing ]
+editing/deleting/delete-image-001.html [ Missing ]
+editing/deleting/delete-image-002.html [ Missing ]
+editing/deleting/delete-image-003.html [ Missing ]
+editing/deleting/delete-image-004.html [ Missing ]
+editing/deleting/delete-leading-ws-001.html [ Missing ]
+editing/deleting/delete-line-001.html [ Missing ]
+editing/deleting/delete-line-002.html [ Missing ]
+editing/deleting/delete-line-003.html [ Missing ]
+editing/deleting/delete-line-004.html [ Missing ]
+editing/deleting/delete-line-005.html [ Missing ]
+editing/deleting/delete-line-006.html [ Missing ]
+editing/deleting/delete-line-007.html [ Missing ]
+editing/deleting/delete-line-008.html [ Missing ]
+editing/deleting/delete-line-009.html [ Missing ]
+editing/deleting/delete-line-010.html [ Missing ]
+editing/deleting/delete-line-012.html [ Missing ]
+editing/deleting/delete-line-013.html [ Missing ]
+editing/deleting/delete-line-014.html [ Missing ]
+editing/deleting/delete-line-015.html [ Missing ]
+editing/deleting/delete-line-016.html [ Missing ]
+editing/deleting/delete-line-017.html [ Missing ]
+editing/deleting/delete-line-end-ws-001.html [ Missing ]
+editing/deleting/delete-line-end-ws-002.html [ Missing ]
+editing/deleting/delete-listitem-001.html [ Missing ]
+editing/deleting/delete-listitem-002.html [ Missing ]
+editing/deleting/delete-selection-001.html [ Missing ]
+editing/deleting/delete-tab-002.html [ Missing ]
+editing/deleting/delete-tab-003.html [ Missing ]
+editing/deleting/delete-to-select-table.html [ Missing ]
+editing/deleting/delete-trailing-ws-001.html [ Missing ]
+editing/deleting/delete-trailing-ws-002.html [ Missing ]
+editing/deleting/delete-ws-fixup-001.html [ Missing ]
+editing/deleting/delete-ws-fixup-002.html [ Missing ]
+editing/deleting/delete-ws-fixup-003.html [ Missing ]
+editing/deleting/delete-ws-fixup-004.html [ Missing ]
+editing/deleting/forward-delete.html [ Missing ]
+editing/deleting/list-item-1.html [ Missing ]
+editing/deleting/merge-different-styles.html [ Missing ]
+editing/deleting/merge-endOfParagraph.html [ Missing ]
+editing/deleting/merge-no-br.html [ Missing ]
+editing/deleting/merge-unrendered-space.html [ Missing ]
+editing/deleting/merge-whitespace-pre.html [ Missing ]
+editing/deleting/move-nodes-001.html [ Missing ]
+editing/deleting/non-smart-delete.html [ Missing ]
+editing/deleting/pruning-after-merge-2.html [ Missing ]
+editing/deleting/smart-delete-001.html [ Missing ]
+editing/deleting/smart-delete-003.html [ Missing ]
+editing/deleting/smart-delete-004.html [ Missing ]
+editing/deleting/table-cells.html [ Missing ]
+editing/deleting/transpose-empty.html [ Missing ]
+editing/deleting/type-delete-after-quote.html [ Missing ]
+editing/inserting/12882.html [ Missing ]
+editing/inserting/4278698.html [ Missing ]
+editing/inserting/4840662.html [ Missing ]
+editing/inserting/4875189-1.html [ Missing ]
+editing/inserting/4875189-2.html [ Missing ]
+editing/inserting/4959067.html [ Missing ]
+editing/inserting/4960120-1.html [ Missing ]
+editing/inserting/4960120-2.html [ Missing ]
+editing/inserting/5002441.html [ Missing ]
+editing/inserting/5058163-1.html [ Missing ]
+editing/inserting/5058163-2.html [ Missing ]
+editing/inserting/5156401-2.html [ Missing ]
+editing/inserting/5418891.html [ Missing ]
+editing/inserting/5510537.html [ Missing ]
+editing/inserting/5549929-2.html [ Missing ]
+editing/inserting/5549929-3.html [ Missing ]
+editing/inserting/6703873.html [ Missing ]
+editing/inserting/before-after-input-element.html [ Missing ]
+editing/inserting/break-blockquote-after-delete.html [ Missing ]
+editing/inserting/editable-html-element.html [ Missing ]
+editing/inserting/editable-inline-element.html [ Missing ]
+editing/inserting/edited-whitespace-1.html [ Missing ]
+editing/inserting/editing-empty-divs.html [ Missing ]
+editing/inserting/insert-3654864-fix.html [ Missing ]
+editing/inserting/insert-3775316-fix.html [ Missing ]
+editing/inserting/insert-3778059-fix.html [ Missing ]
+editing/inserting/insert-3800346-fix.html [ Missing ]
+editing/inserting/insert-3851164-fix.html [ Missing ]
+editing/inserting/insert-after-delete-001.html [ Missing ]
+editing/inserting/insert-at-end-01.html [ Missing ]
+editing/inserting/insert-at-end-02.html [ Missing ]
+editing/inserting/insert-br-001.html [ Missing ]
+editing/inserting/insert-br-002.html [ Missing ]
+editing/inserting/insert-br-003.html [ Missing ]
+editing/inserting/insert-br-004.html [ Missing ]
+editing/inserting/insert-br-005.html [ Missing ]
+editing/inserting/insert-br-006.html [ Missing ]
+editing/inserting/insert-br-007.html [ Missing ]
+editing/inserting/insert-br-008.html [ Missing ]
+editing/inserting/insert-br-009.html [ Missing ]
+editing/inserting/insert-br-at-tabspan-001.html [ Missing ]
+editing/inserting/insert-br-at-tabspan-002.html [ Missing ]
+editing/inserting/insert-br-at-tabspan-003.html [ Missing ]
+editing/inserting/insert-br-quoted-001.html [ Missing ]
+editing/inserting/insert-br-quoted-002.html [ Missing ]
+editing/inserting/insert-br-quoted-003.html [ Missing ]
+editing/inserting/insert-br-quoted-004.html [ Missing ]
+editing/inserting/insert-br-quoted-005.html [ Missing ]
+editing/inserting/insert-br-quoted-006.html [ Missing ]
+editing/inserting/insert-div-001.html [ Missing ]
+editing/inserting/insert-div-002.html [ Missing ]
+editing/inserting/insert-div-003.html [ Missing ]
+editing/inserting/insert-div-004.html [ Missing ]
+editing/inserting/insert-div-005.html [ Missing ]
+editing/inserting/insert-div-006.html [ Missing ]
+editing/inserting/insert-div-007.html [ Missing ]
+editing/inserting/insert-div-008.html [ Missing ]
+editing/inserting/insert-div-009.html [ Missing ]
+editing/inserting/insert-div-010.html [ Missing ]
+editing/inserting/insert-div-011.html [ Missing ]
+editing/inserting/insert-div-012.html [ Missing ]
+editing/inserting/insert-div-013.html [ Missing ]
+editing/inserting/insert-div-014.html [ Missing ]
+editing/inserting/insert-div-015.html [ Missing ]
+editing/inserting/insert-div-016.html [ Missing ]
+editing/inserting/insert-div-017.html [ Missing ]
+editing/inserting/insert-div-018.html [ Missing ]
+editing/inserting/insert-div-019.html [ Missing ]
+editing/inserting/insert-div-020.html [ Missing ]
+editing/inserting/insert-div-022.html [ Missing ]
+editing/inserting/insert-div-023.html [ Missing ]
+editing/inserting/insert-div-024.html [ Missing ]
+editing/inserting/insert-div-025.html [ Missing ]
+editing/inserting/insert-div-026.html [ Missing ]
+editing/inserting/insert-div-027.html [ Missing ]
+editing/inserting/insert-paragraph-01.html [ Missing ]
+editing/inserting/insert-paragraph-02.html [ Missing ]
+editing/inserting/insert-paragraph-03.html [ Missing ]
+editing/inserting/insert-paragraph-04.html [ Missing ]
+editing/inserting/insert-paragraph-05.html [ Missing ]
+editing/inserting/insert-space-in-empty-doc.html [ Missing ]
+editing/inserting/insert-tab-001.html [ Missing ]
+editing/inserting/insert-tab-002.html [ Missing ]
+editing/inserting/insert-tab-003.html [ Missing ]
+editing/inserting/insert-tab-004.html [ Missing ]
+editing/inserting/insert-text-at-tabspan-001.html [ Missing ]
+editing/inserting/insert-text-at-tabspan-002.html [ Missing ]
+editing/inserting/insert-text-at-tabspan-003.html [ Missing ]
+editing/inserting/insert-text-with-newlines.html [ Missing ]
+editing/inserting/line-break.html [ Missing ]
+editing/inserting/multiple-lines-selected.html [ Missing ]
+editing/inserting/paragraph-separator-01.html [ Missing ]
+editing/inserting/paragraph-separator-02.html [ Missing ]
+editing/inserting/paragraph-separator-03.html [ Missing ]
+editing/inserting/paragraph-separator-in-table-1.html [ Missing ]
+editing/inserting/paragraph-separator-in-table-2.html [ Missing ]
+editing/inserting/redo.html [ Missing ]
+editing/inserting/return-key-with-selection-001.html [ Missing ]
+editing/inserting/return-key-with-selection-002.html [ Missing ]
+editing/inserting/return-key-with-selection-003.html [ Missing ]
+editing/inserting/typing-001.html [ Missing ]
+editing/inserting/typing-002.html [ Missing ]
+editing/inserting/typing-003.html [ Missing ]
+editing/inserting/typing-around-br-001.html [ Missing ]
+editing/inserting/typing-around-image-001.html [ Missing ]
+editing/inserting/typing-at-end-of-line.html [ Missing ]
+editing/selection/13804.html [ Missing ]
+editing/selection/14971.html [ Missing ]
+editing/selection/3690703-2.html [ Missing ]
+editing/selection/3690703.html [ Missing ]
+editing/selection/3690719.html [ Missing ]
+editing/selection/4397952.html [ Missing ]
+editing/selection/4402375.html [ Missing ]
+editing/selection/4776665.html [ Missing ]
+editing/selection/4818145.html [ Missing ]
+editing/selection/4866671.html [ Missing ]
+editing/selection/4889598.html [ Missing ]
+editing/selection/4895428-2.html [ Missing ]
+editing/selection/4895428-3.html [ Missing ]
+editing/selection/4932260-1.html [ Missing ]
+editing/selection/4932260-2.html [ Missing ]
+editing/selection/4932260-3.html [ Missing ]
+editing/selection/4947387.html [ Missing ]
+editing/selection/4960116.html [ Missing ]
+editing/selection/4960137.html [ Missing ]
+editing/selection/4975120.html [ Missing ]
+editing/selection/4983858.html [ Missing ]
+editing/selection/5007143-2.html [ Missing ]
+editing/selection/5007143.html [ Missing ]
+editing/selection/5057506-2.html [ Missing ]
+editing/selection/5057506.html [ Missing ]
+editing/selection/5076323-1.html [ Missing ]
+editing/selection/5076323-2.html [ Missing ]
+editing/selection/5076323-3.html [ Missing ]
+editing/selection/5081257-1.html [ Missing ]
+editing/selection/5081257-2.html [ Missing ]
+editing/selection/5099303.html [ Missing ]
+editing/selection/5131716-1.html [ Missing ]
+editing/selection/5131716-2.html [ Missing ]
+editing/selection/5131716-3.html [ Missing ]
+editing/selection/5131716-4.html [ Missing ]
+editing/selection/5195166-1.html [ Missing ]
+editing/selection/5195166-2.html [ Missing ]
+editing/selection/5232159.html [ Missing ]
+editing/selection/5234383-1.html [ Missing ]
+editing/selection/5234383-2.html [ Missing ]
+editing/selection/5240265.html [ Missing ]
+editing/selection/5333725.html [ Missing ]
+editing/selection/6476.html [ Missing ]
+editing/selection/7152-1.html [ Missing ]
+editing/selection/7152-2.html [ Missing ]
+editing/selection/addRange.html [ Missing ]
+editing/selection/after-line-wrap.html [ Missing ]
+editing/selection/caret-and-focus-ring.html [ Missing ]
+editing/selection/caret-before-select.html [ Missing ]
+editing/selection/caret-ltr-2-left.html [ Missing ]
+editing/selection/caret-ltr-2.html [ Missing ]
+editing/selection/caret-ltr-right.html [ Missing ]
+editing/selection/caret-ltr.html [ Missing ]
+editing/selection/caret-rtl-2-left.html [ Missing ]
+editing/selection/caret-rtl-2.html [ Missing ]
+editing/selection/caret-rtl-right.html [ Missing ]
+editing/selection/caret-rtl.html [ Missing ]
+editing/selection/clear-selection.html [ Missing ]
+editing/selection/click-start-of-line.html [ Missing ]
+editing/selection/contains-boundaries.html [ Missing ]
+editing/selection/contenteditable-click-inside.html [ Missing ]
+editing/selection/designmode-no-caret.html [ Missing ]
+editing/selection/display-table-text.html [ Missing ]
+editing/selection/doubleclick-crash.html [ Missing ]
+editing/selection/drag-in-iframe.html [ Missing ]
+editing/selection/drag-select-1.html [ Missing ]
+editing/selection/drag-to-contenteditable-iframe.html [ Missing ]
+editing/selection/editable-html-element.html [ Missing ]
+editing/selection/editable-links.html [ Missing ]
+editing/selection/editable-non-editable-crash.html [ Missing ]
+editing/selection/end-of-document.html [ Missing ]
+editing/selection/expanding-selections.html [ Missing ]
+editing/selection/expanding-selections2.html [ Missing ]
+editing/selection/extend-by-character-001.html [ Missing ]
+editing/selection/extend-by-character-002.html [ Missing ]
+editing/selection/extend-by-character-003.html [ Missing ]
+editing/selection/extend-by-character-004.html [ Missing ]
+editing/selection/extend-by-character-005.html [ Missing ]
+editing/selection/extend-by-character-006.html [ Missing ]
+editing/selection/extend-by-sentence-001.html [ Missing ]
+editing/selection/extend-by-word-001.html [ Missing ]
+editing/selection/extend-by-word-002.html [ Missing ]
+editing/selection/extend-inside-transforms-backward.html [ Missing ]
+editing/selection/extend-inside-transforms-forward.html [ Missing ]
+editing/selection/focus-body.html [ Missing ]
+editing/selection/focus_editable_html.html [ Missing ]
+editing/selection/image-before-linebreak.html [ Missing ]
+editing/selection/inline-closest-leaf-child.html [ Missing ]
+editing/selection/leave-requested-block.html [ Missing ]
+editing/selection/line-wrap-1.html [ Missing ]
+editing/selection/line-wrap-2.html [ Missing ]
+editing/selection/mixed-editability-1.html [ Missing ]
+editing/selection/mixed-editability-2.html [ Missing ]
+editing/selection/mixed-editability-3.html [ Missing ]
+editing/selection/mixed-editability-4.html [ Missing ]
+editing/selection/mixed-editability-5.html [ Missing ]
+editing/selection/mixed-editability-6.html [ Missing ]
+editing/selection/mixed-editability-7.html [ Missing ]
+editing/selection/mixed-editability-8.html [ Missing ]
+editing/selection/mixed-editability-9.html [ Missing ]
+editing/selection/move-3875618-fix.html [ Missing ]
+editing/selection/move-3875641-fix.html [ Missing ]
+editing/selection/move-backwords-by-word-001.html [ Missing ]
+editing/selection/move-between-blocks-no-001.html [ Missing ]
+editing/selection/move-between-blocks-yes-001.html [ Missing ]
+editing/selection/move-by-character-001.html [ Missing ]
+editing/selection/move-by-character-002.html [ Missing ]
+editing/selection/move-by-character-003.html [ Missing ]
+editing/selection/move-by-character-004.html [ Missing ]
+editing/selection/move-by-character-005.html [ Missing ]
+editing/selection/move-by-character-6.html [ Missing ]
+editing/selection/move-by-line-001.html [ Missing ]
+editing/selection/move-by-line-002.html [ Missing ]
+editing/selection/move-by-sentence-001.html [ Missing ]
+editing/selection/move-by-sentence-linebreak.html [ Missing ]
+editing/selection/move-by-word-001.html [ Missing ]
+editing/selection/move-past-trailing-space.html [ Missing ]
+editing/selection/node-removal-1.html [ Missing ]
+editing/selection/node-removal-2.html [ Missing ]
+editing/selection/paragraph-granularity.html [ Missing ]
+editing/selection/previous-line-position.html [ Missing ]
+editing/selection/range-between-block-and-inline.html [ Missing ]
+editing/selection/replace-selection-1.html [ Missing ]
+editing/selection/replaced-boundaries-1.html [ Missing ]
+editing/selection/replaced-boundaries-2.html [ Missing ]
+editing/selection/replaced-boundaries-3.html [ Missing ]
+editing/selection/select-across-readonly-input-1.html [ Missing ]
+editing/selection/select-across-readonly-input-2.html [ Missing ]
+editing/selection/select-across-readonly-input-3.html [ Missing ]
+editing/selection/select-across-readonly-input-4.html [ Missing ]
+editing/selection/select-across-readonly-input-5.html [ Missing ]
+editing/selection/select-all-001.html [ Missing ]
+editing/selection/select-all-002.html [ Missing ]
+editing/selection/select-all-003.html [ Missing ]
+editing/selection/select-all-004.html [ Missing ]
+editing/selection/select-all-005.html [ Missing ]
+editing/selection/select-all-006.html [ Missing ]
+editing/selection/select-all-iframe.html [ Missing ]
+editing/selection/select-box.html [ Missing ]
+editing/selection/select-element-paragraph-boundary.html [ Missing ]
+editing/selection/select-from-textfield-outwards.html [ Missing ]
+editing/selection/select-missing-image.html [ Missing ]
+editing/selection/select-text-overflow-ellipsis.html [ Missing ]
+editing/selection/selectNode.html [ Missing ]
+editing/selection/selectNodeContents.html [ Missing ]
+editing/selection/selection-3748164-fix.html [ Missing ]
+editing/selection/selection-actions.html [ Missing ]
+editing/selection/selection-background.html [ Missing ]
+editing/selection/selection-button-text.html [ Missing ]
+editing/selection/table-caret-1.html [ Missing ]
+editing/selection/table-caret-2.html [ Missing ]
+editing/selection/transformed-selection-rects.html [ Missing ]
+editing/selection/triple-click-in-pre.html [ Missing ]
+editing/selection/unrendered-001.html [ Missing ]
+editing/selection/unrendered-002.html [ Missing ]
+editing/selection/unrendered-003.html [ Missing ]
+editing/selection/unrendered-004.html [ Missing ]
+editing/selection/unrendered-005.html [ Missing ]
+editing/selection/unrendered-space.html [ Missing ]
+editing/selection/vertical-lr-ltr-extend-line-backward-br.html [ Missing ]
+editing/selection/vertical-lr-ltr-extend-line-forward-br.html [ Missing ]
+editing/selection/vertical-rl-ltr-extend-line-backward-br.html [ Missing ]
+editing/selection/vertical-rl-ltr-extend-line-backward-p.html [ Missing ]
+editing/selection/vertical-rl-ltr-extend-line-backward-wrap.html [ Missing ]
+editing/selection/vertical-rl-ltr-extend-line-forward-br.html [ Missing ]
+editing/selection/vertical-rl-ltr-extend-line-forward-p.html [ Missing ]
+editing/selection/vertical-rl-ltr-extend-line-forward-wrap.html [ Missing ]
+editing/selection/vertical-rl-rtl-extend-line-backward-br.html [ Missing ]
+editing/selection/vertical-rl-rtl-extend-line-backward-p.html [ Missing ]
+editing/selection/vertical-rl-rtl-extend-line-forward-br.html [ Missing ]
+editing/selection/vertical-rl-rtl-extend-line-forward-p.html [ Missing ]
+editing/selection/word-granularity.html [ Missing ]
+editing/selection/wrapped-line-caret-1.html [ Missing ]
+editing/selection/wrapped-line-caret-2.html [ Missing ]
+editing/spelling/inline_spelling_markers.html [ Missing ]
+editing/spelling/spelling.html [ Missing ]
+editing/style/4916887.html [ Missing ]
+editing/style/5017613-1.html [ Missing ]
+editing/style/5017613-2.html [ Missing ]
+editing/style/5046875-1.html [ Missing ]
+editing/style/5046875-2.html [ Missing ]
+editing/style/5065910.html [ Missing ]
+editing/style/5084241.html [ Missing ]
+editing/style/5228141.html [ Missing ]
+editing/style/5279521.html [ Missing ]
+editing/style/apple-style-editable-mix.html [ Missing ]
+editing/style/block-style-001.html [ Missing ]
+editing/style/block-style-002.html [ Missing ]
+editing/style/block-style-003.html [ Missing ]
+editing/style/block-styles-007.html [ Missing ]
+editing/style/create-block-for-style-001.html [ Missing ]
+editing/style/create-block-for-style-002.html [ Missing ]
+editing/style/create-block-for-style-003.html [ Missing ]
+editing/style/create-block-for-style-004.html [ Missing ]
+editing/style/create-block-for-style-005.html [ Missing ]
+editing/style/create-block-for-style-006.html [ Missing ]
+editing/style/create-block-for-style-007.html [ Missing ]
+editing/style/create-block-for-style-008.html [ Missing ]
+editing/style/create-block-for-style-009.html [ Missing ]
+editing/style/create-block-for-style-010.html [ Missing ]
+editing/style/create-block-for-style-011.html [ Missing ]
+editing/style/create-block-for-style-012.html [ Missing ]
+editing/style/create-block-for-style-013.html [ Missing ]
+editing/style/designmode.html [ Missing ]
+editing/style/font-family-with-space.html [ Missing ]
+editing/style/highlight.html [ Missing ]
+editing/style/relative-font-size-change-001.html [ Missing ]
+editing/style/relative-font-size-change-002.html [ Missing ]
+editing/style/relative-font-size-change-003.html [ Missing ]
+editing/style/relative-font-size-change-004.html [ Missing ]
+editing/style/smoosh-styles-001.html [ Missing ]
+editing/style/style-3681552-fix-002.html [ Missing ]
+editing/style/style-3998892-fix.html [ Missing ]
+editing/style/style-boundary-001.html [ Missing ]
+editing/style/style-boundary-004.html [ Missing ]
+editing/style/style-boundary-005.html [ Missing ]
+editing/style/table-selection.html [ Missing ]
+editing/style/unbold-in-bold.html [ Missing ]
+
+# CSS Sticky (-webkit-sticky) supported by EFL, but these tests fail.
 webkit.org/b/95182 fast/css/sticky/inline-sticky-abspos-child.html [ ImageOnlyFailure ]
 webkit.org/b/95182 fast/css/sticky/inline-sticky.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/replaced-sticky.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/sticky-as-positioning-container.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/sticky-both-sides.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/sticky-left-percentage.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/sticky-left.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/sticky-margins.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/sticky-side-margins.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/sticky-stacking-context.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/sticky-top-margins.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/sticky-top.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/sticky-writing-mode-horizontal-bt.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/sticky-writing-mode-vertical-lr.html [ ImageOnlyFailure ]
-webkit.org/b/95182 fast/css/sticky/sticky-writing-mode-vertical-rl.html [ ImageOnlyFailure ]
 
 # Testcase assumes a thumb width of 12px, default there uses 29px.
 webkit.org/b/95071 fast/forms/range/slider-in-multi-column.html [ Failure ]
@@ -255,6 +1038,13 @@ webkit.org/b/82340 fast/regions/style-scoped-in-flow-override-region-styling-mul
 webkit.org/b/82340 fast/regions/style-scoped-in-flow-override-region-styling.html [ ImageOnlyFailure ]
 webkit.org/b/82340 fast/regions/style-scoped-in-flow.html [ ImageOnlyFailure ]
 
+# This port does not enable HIDDEN_PAGE_DOM_TIMER_THROTTLING
+fast/dom/timer-throttling-hidden-page.html [ WontFix ]
+
+# Ignored because we do not have OBJC bindings
+editing/pasteboard/paste-RTFD.html [ WontFix ]
+editing/pasteboard/paste-TIFF.html [ WontFix ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # CRASHES
 #////////////////////////////////////////////////////////////////////////////////////////
@@ -279,6 +1069,7 @@ webkit.org/b/60103 fast/replaced/border-radius-clip.html [ Failure Pass ]
 webkit.org/b/91366 fast/forms/number/number-spinbutton-gets-disabled-or-readonly.html [ Failure Pass ]
 webkit.org/b/92112 fast/overflow/overflow-height-float-not-removed-crash2.html [ Crash Pass ]
 webkit.org/b/93589 svg/dom/SVGScriptElement/script-change-externalResourcesRequired-while-loading.svg [ Failure Pass ]
+webkit.org/b/98656 fast/dynamic/window-scrollbars-test.html [ Failure Pass ]
 
 # Flaky inspector tests
 webkit.org/b/78869 http/tests/inspector/inspect-element.html [ Failure Pass ]
@@ -290,9 +1081,7 @@ webkit.org/b/96886 inspector/debugger/dynamic-script-tag.html [ Failure Pass ]
 Bug(EFL) inspector/profiler/heap-snapshot.html [ Failure Pass ]
 Bug(EFL) inspector/timeline/timeline-enum-stability.html [ Failure Pass ]
 webkit.org/b/95066 inspector/styles/media-queries.html [ Failure Pass ]
-
-# Test is flaky and needs to be fixed
-webkit.org/b/95813 fast/innerHTML/innerHTML-iframe.html [ Failure Pass ]
+webkit.org/b/98777 inspector/styles/styles-history.html [ Failure Pass ]
 
 # Sometimes asserts in MessagePort::contextDestroyed
 webkit.org/b/94458 http/tests/security/XFrameOptions/x-frame-options-deny-meta-tag-in-body.html [ Crash Failure Pass ]
@@ -309,6 +1098,7 @@ webkit.org/b/93213 fast/text/international/text-spliced-font.html [ Failure Pass
 webkit.org/b/93214 http/tests/loading/307-after-303-after-post.html [ Failure Pass Timeout ]
 webkit.org/b/93212 http/tests/incremental/slow-utf8-text.pl [ Pass Timeout ]
 webkit.org/b/68878 media/video-playing-and-pause.html [ Failure Pass ]
+webkit.org/b/98621 media/video-controls-rendering.html [ Failure Pass ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # FAILING TESTS
@@ -318,7 +1108,6 @@ webkit.org/b/68878 media/video-playing-and-pause.html [ Failure Pass ]
 webkit.org/b/74219 fast/regions/positioned-objects-block-static-spanning-regions-rtl.html [ ImageOnlyFailure ]
 
 # CSS Regions issues.
-webkit.org/b/97208 fast/regions/webkit-flow-inlines-inside-regions-bounds-vertical-rl.html [ Missing ]
 webkit.org/b/97209 fast/regions/webkit-flow-floats-inside-regions-bounds.html [ Missing ]
 
 # Needs inner spin button to respect -webkit-inner-spin-button style
@@ -392,11 +1181,8 @@ webkit.org/b/84333 http/tests/local/fileapi/send-sliced-dragged-file.html [ Fail
 webkit.org/b/84333 http/tests/local/formdata [ Failure ]
 webkit.org/b/84333 http/tests/security/clipboard/clipboard-file-access.html [ Failure ]
 
-# Missing execCommand('copy') and execCommand('paste').
+# EFL port needs Pasteboard implementation.
 webkit.org/b/84338 editing/deleting/paste-with-transparent-background-color.html [ Failure ]
-webkit.org/b/84338 editing/execCommand/find-after-replace.html [ Failure Missing ]
-webkit.org/b/84338 editing/execCommand/paste-1.html [ Failure Missing ]
-webkit.org/b/84338 editing/execCommand/paste-2.html [ Failure Missing ]
 webkit.org/b/84338 editing/input/paste-text-ending-with-interchange-newline.html [ Failure ]
 webkit.org/b/84338 editing/input/reveal-contenteditable-on-paste-vertically.html [ Failure ]
 webkit.org/b/84338 editing/inserting/insert-3786362-fix.html [ Failure ]
@@ -416,14 +1202,18 @@ webkit.org/b/84338 editing/pasteboard/clipboard-customData.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/contenteditable-pre-2.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/contenteditable-pre.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/copy-backslash-with-euc.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/copy-element-with-conflicting-background-color-from-rule.html [ ImageOnlyFailure ]
 webkit.org/b/84338 editing/pasteboard/copy-in-password-field.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/copy-null-characters.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/copy-paste-bidi.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/copy-paste-first-line-in-textarea.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/copy-paste-float.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/copy-paste-pre-line-content.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/copy-resolves-urls.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/copy-text-with-backgroundcolor.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/copy-two-pasteboard-types-both-work.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/data-transfer-items.html [ Failure ]
+webkit.org/b/86623 editing/pasteboard/data-transfer-items-image-png.html [ ImageOnlyFailure ]
 webkit.org/b/84338 editing/pasteboard/display-block-on-spans.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/do-not-copy-unnecessary-styles-2.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/do-not-copy-unnecessary-styles.html [ Failure ]
@@ -439,7 +1229,6 @@ webkit.org/b/84338 editing/pasteboard/paste-blockquote-and-paragraph-break.html 
 webkit.org/b/84338 editing/pasteboard/paste-blockquote-before-blockquote.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/paste-code-in-pre.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/paste-double-nested-blockquote-before-blockquote.html [ Failure ]
-webkit.org/b/84338 editing/pasteboard/paste-event-only-once.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/paste-into-table-cell.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/paste-list-001.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/paste-list-002.html [ Failure ]
@@ -451,16 +1240,112 @@ webkit.org/b/84338 editing/pasteboard/paste-noscript.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/paste-placeholder-input.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/paste-plaintext-user-select-none.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/paste-pre-001.html [ Failure ]
-webkit.org/b/84338 editing/pasteboard/paste-removing-iframe.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/paste-sanitize-crash-1.html [ Failure ]
 webkit.org/b/84338 editing/pasteboard/paste-sanitize-crash-2.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-table-001.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-table-002.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-001.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-002.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-003.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-010.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-011.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-012.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-015.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-017.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-018.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-at-tabspan-001.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-at-tabspan-002.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-events.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-with-style-2.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-with-style-3.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-with-style-4.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-with-style-5.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-text-with-style.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-unrendered-select.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-visible-script.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-without-nesting.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/paste-wrapped-blockquote-into-nonblockquote.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/preserve-underline-color.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/select-element-1.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/smart-paste-001.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/smart-paste-002.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/smart-paste-003-trailing-whitespace.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/smart-paste-003.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/smart-paste-004.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/smart-paste-005.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/smart-paste-006.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/smart-paste-in-text-control.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/style-from-rules.html [ Failure ]
+webkit.org/b/84338 editing/pasteboard/testcase-9507.html [ Failure ]
 webkit.org/b/84338 editing/style/apply-through-end-of-document.html [ Failure ]
 webkit.org/b/84338 editing/style/non-inheritable-styles.html [ Failure ]
 webkit.org/b/84338 editing/style/smoosh-styles-003.html [ Failure ]
 webkit.org/b/84338 fast/events/clipboard-dataTransferItemList.html [ Failure ]
 webkit.org/b/84338 fast/forms/input-paste-undo.html [ Failure ]
-webkit.org/b/84338 fast/forms/plaintext-mode-2.html [ Missing ]
 webkit.org/b/84338 fast/forms/textarea-paste-newline.html [ Failure ]
+
+# EFL port needs Pasteboard implementation, needs baselines.
+webkit.org/b/84338 editing/execCommand/find-after-replace.html [ Failure Missing ]
+webkit.org/b/84338 editing/execCommand/paste-1.html [ Failure Missing ]
+webkit.org/b/84338 editing/execCommand/paste-2.html [ Failure Missing ]
+webkit.org/b/84338 editing/pasteboard/3976872.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/4076267-2.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/4076267-3.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/4076267.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/4242293.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/4641033.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/4944770-1.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/4944770-2.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/4989774.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/5006779.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/5028447.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/5071074.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/5075944.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/5247341.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/5478250.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/5601583-1.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/copy-standalone-image.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/cut-text-001.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/input-field-1.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-4035648-fix.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-4038267-fix.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-line-endings-001.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-line-endings-002.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-line-endings-003.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-line-endings-004.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-line-endings-005.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-line-endings-006.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-line-endings-007.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-line-endings-008.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-line-endings-009.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-line-endings-010.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-match-style-001.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-match-style-002.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-table-003.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-table-cells.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-text-004.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-text-005.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-text-006.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-text-007.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-text-008.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-text-009.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-text-013.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-text-014.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-text-016.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-text-019.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-text-at-tabspan-003.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/paste-xml.xhtml [ Missing ]
+webkit.org/b/84338 editing/pasteboard/pasting-tabs.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/smart-paste-007.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/smart-paste-008.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/styled-element-markup.html [ Missing ]
+webkit.org/b/84338 editing/pasteboard/undoable-fragment-removes.html [ Missing ]
+webkit.org/b/84338 fast/forms/plaintext-mode-2.html [ Missing ]
+
+# EFL port is missing Clipboard implementation.
+Bug(EFL) editing/pasteboard/crash-accessing-clipboardData-types.html [ Failure ]
+Bug(EFL) editing/pasteboard/dataTransfer-setData-getData.html [ Failure ]
+Bug(EFL) editing/pasteboard/pasting-empty-html-falls-back-to-text.html [ Failure ]
 
 # MathML: Absolute and Integral operators are not stacked properly
 webkit.org/b/47744 mathml/presentation/mo.xhtml
@@ -469,11 +1354,14 @@ webkit.org/b/47744 mathml/presentation/over.xhtml
 
 # EFL has not fully implemented about some SVG attributes
 Bug(EFL) svg/custom
-Bug(EFL) svg/dom/altGlyph-dom.xhtml
-Bug(EFL) svg/text
-Bug(EFL) svg/W3C-SVG-1.1
-Bug(EFL) svg/W3C-SVG-1.1-SE
+# Bug(EFL) svg/text
 Bug(EFL) svg/zoom/page/zoom-zoom-coords.xhtml
+
+webkit.org/b/98644 svg/W3C-SVG-1.1/pservers-grad-13-b.svg [ Skip ]
+webkit.org/b/98651 svg/text/non-bmp-positioning-lists.svg [ Skip ]
+webkit.org/b/98653 svg/text/lengthAdjust-text-metrics.html [ Failure ]
+
+webkit.org/b/98718 svg/animations/animate-css-xml-attributeType.html [ Failure Pass ]
 
 # EFL's TestRunner does not implement setMediaType
 Bug(EFL) fast/media/print-restores-previous-mediatype.html [ Failure ]
@@ -521,12 +1409,17 @@ webkit.org/b/61540 inspector/extensions/extensions-eval-content-script.html [ Fa
 #__worldID is undefined in isolated world
 Bug(EFL) http/tests/security/isolatedWorld/didClearWindowObject.html
 
-# Needs custom policy delegate enhancement to log DOM node info - EFL port is missing DOM node abstraction
-webkit.org/b/87972 fast/loader/policy-delegate-action-hit-test-zoomed.html [ Failure ]
-webkit.org/b/87972 fast/encoding/mailto-always-utf-8.html [ Failure ]
-
 # EFL has accelerated compositing disabled
 webkit.org/b/79766 compositing/animation/animation-compositing.html [ Failure ]
+webkit.org/b/99043 compositing/backface-visibility/backface-visibility-3d.html [ ImageOnlyFailure ]
+webkit.org/b/99044 compositing/backface-visibility/backface-visibility-hierarchical-transform.html [ ImageOnlyFailure ]
+webkit.org/b/99045 compositing/backface-visibility/backface-visibility-image.html [ ImageOnlyFailure ]
+webkit.org/b/99047 compositing/backface-visibility/backface-visibility-non3d.html [ ImageOnlyFailure ]
+webkit.org/b/99048 compositing/backface-visibility/backface-visibility-simple.html [ ImageOnlyFailure ]
+webkit.org/b/99050 compositing/culling/filter-occlusion-alpha-large.html [ ImageOnlyFailure ]
+webkit.org/b/99051 compositing/culling/filter-occlusion-alpha.html [ ImageOnlyFailure ]
+webkit.org/b/99185 compositing/culling/filter-occlusion-blur-large.html [ ImageOnlyFailure ]
+webkit.org/b/99185 compositing/culling/filter-occlusion-blur.html [ ImageOnlyFailure ]
 webkit.org/b/79766 compositing/geometry/ancestor-overflow-change.html [ Failure ]
 webkit.org/b/79766 compositing/geometry/clip.html [ Failure ]
 webkit.org/b/79766 compositing/geometry/composited-in-columns.html [ Failure ]
@@ -636,6 +1529,9 @@ webkit.org/b/79766 compositing/geometry/bounds-ignores-hidden-dynamic-negzindex.
 webkit.org/b/79766 compositing/geometry/bounds-ignores-hidden-dynamic.html [ Failure ]
 webkit.org/b/79766 compositing/geometry/bounds-ignores-hidden.html [ Failure ]
 
+# LAYER_TREE_INCLUDES_VISIBLE_RECTS option to layerTreeAsText is only applicable to Mac.
+compositing/visible-rect [ Skip ]
+
 # EFL's LayoutTestController does not implement displayInvalidatedRegion
 webkit.org/b/86727 compositing/plugins/invalidate_rect.html [ Failure ]
 
@@ -708,22 +1604,22 @@ webkit.org/b/95302 fast/events/constructors/speech-recognition-event-constructor
 webkit.org/b/73544 fast/notifications [ Skip ]
 webkit.org/b/73544 http/tests/notifications [ Skip ]
 
-# Test is timeouting, passes in all other platforms.
-Bug(EFL) fast/css/device-aspect-ratio.html
-
 # The test is too slow on Debug bot and randomly fails
 webkit.org/b/61932 [ Debug ] jquery/manipulation.html [ Failure Pass Timeout ]
 
 # These test -apple- prefixed CSS properties, which we don't support.
 fast/css/apple-prefix.html [ WontFix ]
 
-webkit.org/b/75747 fast/css/color-correction-on-background-image.html [ Failure ]
-webkit.org/b/75747 fast/css/color-correction-on-backgrounds.html [ Failure ]
-webkit.org/b/75747 fast/css/color-correction-on-box-shadow.html [ Failure ]
-webkit.org/b/75747 fast/css/color-correction-on-text-shadow.html [ Failure ]
-webkit.org/b/75747 fast/css/color-correction-untagged-images.html [ Failure ]
+webkit.org/b/75747 fast/css/color-correction-backgrounds-and-text.html [ Missing Failure ]
+webkit.org/b/75747 fast/css/color-correction-on-background-image.html [ Missing Failure ]
+webkit.org/b/75747 fast/css/color-correction-on-backgrounds.html [ Missing Failure ]
+webkit.org/b/75747 fast/css/color-correction-on-box-shadow.html [ Missing Failure ]
+webkit.org/b/75747 fast/css/color-correction-on-text-shadow.html [ Missing Failure ]
+webkit.org/b/75747 fast/css/color-correction-on-text.html [ Missing Failure ]
+webkit.org/b/75747 fast/css/color-correction-untagged-images.html [ Missing Failure ]
+webkit.org/b/75747 fast/css/color-correction.html [ Missing Failure ]
 
-webkit.org/b/65536 fast/css/text-rendering.html [ Failure ]
+webkit.org/b/65536 fast/css/text-rendering.html [ Missing Failure ]
 
 webkit.org/b/49142 fast/css/style-scoped [ Failure ]
 
@@ -757,10 +1653,6 @@ webkit.org/b/86971 svg/hittest/svg-shapes-non-scale-stroke.html [ Failure ]
 
 # Issue related to battery status and vibration API
 webkit.org/b/85594 fast/dom/navigator-detached-no-crash.html [ Failure ]
-
-# Incorrect rendering results after r115846
-webkit.org/b/85599 http/tests/navigation/postredirect-basic.html [ Failure ]
-webkit.org/b/85599 http/tests/navigation/postredirect-goback1.html [ Failure ]
 
 # Interferes with the rAF tests that are enabled
 webkit.org/b/85689 fast/animation/request-animation-frame-disabled.html [ Skip ]
@@ -819,7 +1711,7 @@ webkit.org/b/68591 http/tests/security/mixedContent/filesystem-url-in-iframe.htm
 webkit.org/b/68591 http/tests/inspector/filesystem
 
 # The EFL port has no support for the Geolocation
-webkit.org/b/82140 fast/dom/Geolocation [ Failure ]
+webkit.org/b/82140 fast/dom/Geolocation [ Skip ]
 webkit.org/b/82140 fast/dom/Window/window-properties-geolocation.html [ Failure ]
 webkit.org/b/82140 inspector/geolocation-error.html [ Failure ]
 webkit.org/b/82140 inspector/geolocation-success.html [ Failure ]
@@ -957,15 +1849,9 @@ webkit.org/b/90007 http/tests/security/mixedContent/insecure-audio-video-in-main
 # Looks like missing multipart/x-mixed-replace support in libsoup. Failing on both GTK and EFL.
 webkit.org/b/68979 http/tests/multipart/multipart-replace-non-html-content.php [ Failure ]
 
-# Test added by Mac port, rendering results totally different on EFL.
-webkit.org/b/91477 fast/multicol/shrink-to-column-height-for-pagination.html [ Missing ]
-
 # These tests are failing after r122528.
 webkit.org/b/91210 http/tests/w3c/webperf/approved/navigation-timing/html/test_performance_attributes_exist_in_object.html [ Failure ]
 webkit.org/b/91210 http/tests/w3c/webperf/approved/navigation-timing/html/test_timing_xserver_redirect.html [ Failure ]
-
-# Failing after r123379 on EFL and GTK.
-webkit.org/b/92063 fast/css/sticky/parsing-position-sticky.html [ Failure ]
 
 # This test depends on subpixel layout.
 webkit.org/b/92352 css3/flexbox/flex-rounding.html [ Failure ]
@@ -995,7 +1881,10 @@ webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-sorting.html [ Skip 
 webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-sorting-instances.html [ Skip ]
 
 # ENABLE(INPUT_MULTIPLE_FIELDS_UI) is disabled
+fast/forms/date-multiple-fields
+webkit.org/b/97299 fast/forms/month-multiple-fields
 webkit.org/b/94186 fast/forms/time-multiple-fields
+webkit.org/b/97877 fast/forms/week-multiple-fields
 
 webkit.org/b/93976 fast/css-generated-content/quotes-lang.html [ ImageOnlyFailure ]
 
@@ -1006,6 +1895,9 @@ webkit.org/b/94009 css2.1/20110323/c541-word-sp-000.htm [ ImageOnlyFailure ]
 
 # Requires CSS_COMPOSITING to be turned on
 webkit.org/b/94024 css3/compositing [ Skip ]
+
+# Fails because Blend Mode is not enabled yet.
+webkit.org/b/91908 transitions/blendmode-transitions.html [ Skip ]
 
 # Alt text should be displayed if src attribute is not set.
 webkit.org/b/94198 fast/dom/HTMLImageElement/image-alt-text.html [ ImageOnlyFailure ]
@@ -1018,8 +1910,6 @@ webkit.org/b/97109 tables/mozilla/bugs/bug99948.html [ Pass ]
 
 # New test introduced in r125790 fails
 webkit.org/b/94341 inspector/timeline/timeline-decode-resize.html [ Failure ]
-
-webkit.org/b/94690 fast/dom/shadow/shadowdom-dynamic-styling.html [ Failure ]
 
 # Fails after r126350
 webkit.org/b/94788 media/track/track-cue-rendering-snap-to-lines-not-set.html [ Failure ]
@@ -1047,26 +1937,18 @@ webkit.org/b/95530 http/tests/security/inactive-document-with-empty-security-ori
 webkit.org/b/95551 fast/forms/datalist/input-appearance-range-with-datalist-rtl.html [ ImageOnlyFailure ]
 
 # EFL port does not support plugins yet
-webkit.org/b/96881 fast/dom/Window/Plug-ins.html [ Failure ]
-webkit.org/b/96881 fast/frames/sandboxed-iframe-about-blank.html [ Failure ]
-webkit.org/b/96881 fast/frames/sandboxed-iframe-navigation-allowed.html [ Failure ]
 webkit.org/b/96881 fast/frames/sandboxed-iframe-plugins.html [ Failure ]
-webkit.org/b/96881 fast/replaced/invalid-object-with-fallback.html [ Failure ]
-webkit.org/b/96881 http/tests/security/contentSecurityPolicy/object-src-none-allowed.html [ Failure ]
-webkit.org/b/96881 http/tests/security/contentSecurityPolicy/object-src-url-blocked.html [ Failure ]
-webkit.org/b/96881 http/tests/plugins [ Skip ]
-webkit.org/b/96881 http/tests/security/cross-origin-plugin-allowed.html [ Failure ]
-webkit.org/b/96881 http/tests/security/cross-origin-plugin-private-browsing-toggled-allowed.html [ Failure ]
 webkit.org/b/96881 http/tests/security/cross-origin-plugin-private-browsing-toggled.html [ Failure ]
 webkit.org/b/96881 http/tests/security/cross-origin-plugin.html [ Failure ]
 webkit.org/b/96881 http/tests/security/frameNavigation/xss-DENIED-plugin-navigation.html [ Failure ]
-webkit.org/b/96881 http/tests/security/storage-blocking-loosened-plugin.html [ Failure ]
-webkit.org/b/96881 http/tests/security/storage-blocking-loosened-private-browsing-plugin.html [ Failure ]
 webkit.org/b/96881 http/tests/security/storage-blocking-strengthened-plugin.html [ Failure ]
 webkit.org/b/96881 http/tests/security/storage-blocking-strengthened-private-browsing-plugin.html [ Failure ]
 webkit.org/b/96881 java [ Skip ]
-webkit.org/b/96881 plugins [ Skip ]
 webkit.org/b/96881 userscripts/user-script-plugin-document.html [ Failure ]
+
+# Ref tests added in r130592 that are failing on both EFL and GTK ports
+webkit.org/b/98613 css3/masking/clip-path-reference-userSpaceOnUse.html [ ImageOnlyFailure ] 
+webkit.org/b/98613 css3/masking/clip-path-reference.html [ ImageOnlyFailure ]
 
 # EFL does not yet support global selection
 webkit.org/b/88238 editing/pasteboard/paste-global-selection.html [ Skip ]
@@ -1074,17 +1956,106 @@ webkit.org/b/88238 editing/pasteboard/paste-global-selection.html [ Skip ]
 # Gradient instead of solid color in the rectangle
 webkit.org/b/54251 fast/canvas/DrawImageSinglePixelStretch.html [ Failure ]
 
-# Fails after r128270.
-webkit.org/b/96517 fast/events/popup-blocking-timers.html [ Failure ]
+webkit.org/b/98564 fast/table/colspanMinWidth-vertical.html [ Missing Failure ]
 
 # Fails after r129175.
 webkit.org/b/97296 fast/text/international/hebrew-selection.html [ ImageOnlyFailure ]
 
-# Frame does not get focus as expected
-webkit.org/b/97077 inspector/extensions/extensions-panel.html [ Failure ]
+# Fails on the bots.
+webkit.org/b/97968 media/unsupported-rtsp.html [ Failure ]
 
-# Marking this as failing again, since r129592 was rolled out.
-webkit.org/b/97529 http/tests/security/xss-eval.html [ Failure ]
+webkit.org/b/98587 fast/writing-mode/vertical-subst-font-vert-no-dflt.html [ ImageOnlyFailure ]
 
-# Needs rebaseline.
-webkit.org/b/97401 mathml/presentation/tables.xhtml [ Failure ]
+# Needs rebaseline eventually
+webkit.org/b/97990 mathml/presentation/attributes.xhtml [ Failure ]
+webkit.org/b/97990 mathml/presentation/fractions.xhtml [ Failure ]
+webkit.org/b/97990 mathml/presentation/fractions-vertical-alignment.xhtml [ Failure ]
+webkit.org/b/97990 mathml/presentation/mo-stretch.html [ Failure ]
+webkit.org/b/97990 mathml/presentation/roots.xhtml [ Failure ]
+webkit.org/b/97990 mathml/presentation/row-alignment.xhtml [ Failure ]
+webkit.org/b/97990 mathml/presentation/subsup.xhtml [ Failure ]
+
+# css3-conditionals support is not yet enabled.
+webkit.org/b/86146 css3/supports.html
+
+# Need rebaselining after 99870
+webkit.org/b/99870 svg/custom/js-late-pattern-creation.svg [ Pass ImageOnlyFailure ]
+webkit.org/b/99870 svg/custom/pattern-skew-transformed.svg [ Pass ImageOnlyFailure ]
+webkit.org/b/99870 svg/custom/pattern-with-transformation.svg [ Pass ImageOnlyFailure ]
+webkit.org/b/99870 svg/transforms/text-with-pattern-inside-transformed-html.xhtml [ Pass ImageOnlyFailure ]
+webkit.org/b/99870 svg/custom/pattern-scaling.svg [ Pass ImageOnlyFailure Missing ]
+
+# Occasionally fails if run after right after
+# fast/selectors/unqualified-hover-quirks.html or itself.
+webkit.org/b/10890 fast/selectors/unqualified-hover-strict.html [ Failure Pass ]
+
+# May need rebaseline
+webkit.org/b/23166 fast/css/background-clip-radius-values.html [ Pass ImageOnlyFailure ]
+webkit.org/b/23166 ietestcenter/css3/bordersbackgrounds/border-radius-clip-002.htm [ Pass ImageOnlyFailure ]
+
+webkit.org/b/98666 fast/dom/HTMLInputElement/input-slider-update.html [ Failure ]
+webkit.org/b/98666 fast/dom/HTMLInputElement/input-slider-update-styled.html [ Failure ]
+webkit.org/b/98666 fast/forms/box-shadow-override.html [ Failure ]
+webkit.org/b/98666 fast/forms/input-appearance-height.html [ Failure ]
+webkit.org/b/98666 fast/forms/range/input-appearance-range.html [ Failure ]
+webkit.org/b/98666 fast/forms/range/range-thumb-height-percentage.html [ Failure ]
+webkit.org/b/98666 fast/forms/range/slider-padding.html [ Failure ]
+webkit.org/b/98666 fast/forms/range/slider-thumb-shared-style.html [ Failure ]
+webkit.org/b/98666 fast/forms/range/slider-thumb-stylability.html [ Failure ]
+webkit.org/b/98666 fast/multicol/client-rects.html [ Failure ]
+webkit.org/b/98666 fast/repaint/slider-thumb-drag-release.html [ Failure ]
+webkit.org/b/98666 fast/repaint/slider-thumb-float.html [ Failure ]
+webkit.org/b/98666 media/track/track-cue-rendering-vertical.html [ Failure ]
+webkit.org/b/98666 fast/layers/video-layer.html [ Failure ]
+webkit.org/b/98666 media/audio-controls-rendering.html [ Failure ]
+webkit.org/b/98666 media/audio-repaint.html [ Failure ]
+webkit.org/b/98666 media/controls-after-reload.html [ Failure ]
+webkit.org/b/98666 media/controls-strict.html [ Failure ]
+webkit.org/b/98666 media/controls-styling.html [ Failure ]
+webkit.org/b/98666 media/controls-styling-strict.html [ Failure ]
+webkit.org/b/98666 media/controls-without-preload.html [ Failure ]
+webkit.org/b/98666 media/media-controls-clone.html [ Failure ]
+webkit.org/b/98666 media/media-document-audio-repaint.html [ Failure ]
+webkit.org/b/98666 media/track/track-cue-rendering-horizontal.html [ Failure ]
+webkit.org/b/98666 media/video-display-toggle.html [ Failure ]
+webkit.org/b/98666 media/video-empty-source.html [ Failure ]
+webkit.org/b/98666 media/video-no-audio.html [ Failure ]
+webkit.org/b/98666 media/video-zoom-controls.html [ Failure ]
+
+# New inspector/profiler/memory-instrumentation-canvas.html fails on JSC platforms
+webkit.org/b/99001 inspector/profiler/memory-instrumentation-canvas.html
+
+# EFL port does not support Emacs commands.
+Bug(EFL) editing/pasteboard/emacs-cntl-y-001.html [ Missing ]
+Bug(EFL) editing/pasteboard/emacs-ctrl-a-k-y.html [ Missing ]
+Bug(EFL) editing/pasteboard/emacs-ctrl-k-y-001.html [ Missing ]
+
+# Cairo 1.12.4 regressions
+webkit.org/b/99189 fast/backgrounds/background-leakage-transforms.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/borderRadiusAllStylesAllCorners.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/borderRadiusDashed02.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/borderRadiusDashed03.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/borderRadiusDashed04.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/borderRadiusDashed05.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/borderRadiusDashed06.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/borderRadiusDotted01.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/borderRadiusDotted02.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/borderRadiusDotted03.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/borderRadiusDotted04.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/borderRadiusDotted06.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/box-shadow/box-shadow-transformed.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/box-shadow/transform-fringing.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/inline-mask-overlay-image-outset-vertical-rl.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/inline-mask-overlay-image-outset.html [ ImageOnlyFailure ]
+webkit.org/b/99189 fast/borders/inline-mask-overlay-image.html [ ImageOnlyFailure ]
+webkit.org/b/99189 ietestcenter/css3/bordersbackgrounds/border-radius-style-001.htm [ ImageOnlyFailure ]
+webkit.org/b/99189 ietestcenter/css3/bordersbackgrounds/border-radius-style-002.htm [ ImageOnlyFailure ]
+
+# User Timing is not enable yet. so skip it.
+webkit.org/b/84893 http/tests/w3c/webperf/submission/Intel/user-timing [ Skip ]
+
+# Regression after r131640.
+webkit.org/b/99691 gamepad/gamepad-out-of-range-crasher.html [ Failure ]
+
+# Resource Timing is not enable yet, skip it.
+webkit.org/b/61138 http/tests/w3c/webperf/submission/Intel/resource-timing [ Skip ]

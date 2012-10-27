@@ -26,10 +26,36 @@
 #ifndef ewk_url_response_private_h
 #define ewk_url_response_private_h
 
+#include "WKAPICast.h"
+#include "WKEinaSharedString.h"
+#include "WKURLResponse.h"
 #include <WebCore/ResourceResponse.h>
+#include <wtf/PassRefPtr.h>
 
-typedef struct _Ewk_Url_Response Ewk_Url_Response;
+/**
+ * \struct  Ewk_Url_Response
+ * @brief   Contains the URL response data.
+ */
+class Ewk_Url_Response : public RefCounted<Ewk_Url_Response> {
+public:
+    WebCore::ResourceResponse coreResponse;
+    WKEinaSharedString url;
+    WKEinaSharedString mimeType;
 
-Ewk_Url_Response* ewk_url_response_new(const WebCore::ResourceResponse& resourceResponse);
+    static PassRefPtr<Ewk_Url_Response> create(WKURLResponseRef wkResponse)
+    {
+        if (!wkResponse)
+            return 0;
+
+        return adoptRef(new Ewk_Url_Response(WebKit::toImpl(wkResponse)->resourceResponse()));
+    }
+
+private:
+    explicit Ewk_Url_Response(const WebCore::ResourceResponse& _coreResponse)
+        : coreResponse(_coreResponse)
+        , url(AdoptWK, WKURLResponseCopyURL(WebKit::toAPI(coreResponse)))
+        , mimeType(AdoptWK, WKURLResponseCopyMIMEType(WebKit::toAPI(coreResponse)))
+    { }
+};
 
 #endif // ewk_url_response_private_h

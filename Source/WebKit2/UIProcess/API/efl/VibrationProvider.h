@@ -33,11 +33,11 @@
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 
-typedef struct _Ewk_Vibration_Client Ewk_Vibration_Client;
+typedef struct Ewk_Vibration_Client Ewk_Vibration_Client;
 
 class VibrationProvider : public RefCounted<VibrationProvider> {
 public:
-    static PassRefPtr<VibrationProvider> create(WKVibrationRef);
+    static PassRefPtr<VibrationProvider> create(WKContextRef);
     virtual ~VibrationProvider();
 
     void vibrate(uint64_t vibrationTime);
@@ -45,9 +45,9 @@ public:
     void setVibrationClientCallbacks(Ewk_Vibration_Client_Vibrate_Cb, Ewk_Vibration_Client_Vibration_Cancel_Cb, void*);
 
 private:
-    explicit VibrationProvider(WKVibrationRef);
+    explicit VibrationProvider(WKContextRef);
 
-    WKRetainPtr<WKVibrationRef> m_wkVibrationRef;
+    WKRetainPtr<WKContextRef> m_wkContext;
     OwnPtr<Ewk_Vibration_Client> m_vibrationClient;
 };
 

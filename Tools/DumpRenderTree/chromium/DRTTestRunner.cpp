@@ -166,7 +166,6 @@ DRTTestRunner::DRTTestRunner(TestShell* shell)
     bindMethod("findString", &DRTTestRunner::findString);
     bindMethod("isCommandEnabled", &DRTTestRunner::isCommandEnabled);
     bindMethod("hasCustomPageSizeStyle", &DRTTestRunner::hasCustomPageSizeStyle);
-    bindMethod("layerTreeAsText", &DRTTestRunner::layerTreeAsText);
     bindMethod("loseCompositorContext", &DRTTestRunner::loseCompositorContext);
     bindMethod("markerTextForListItem", &DRTTestRunner::markerTextForListItem);
     bindMethod("notifyDone", &DRTTestRunner::notifyDone);
@@ -1393,12 +1392,13 @@ void DRTTestRunner::setIsolatedWorldSecurityOrigin(const CppArgumentList& argume
 {
     result->setNull();
 
-    if (arguments.size() != 2 || !arguments[0].isNumber() || !arguments[1].isString())
+    if (arguments.size() != 2 || !arguments[0].isNumber() || !(arguments[1].isString() || arguments[1].isNull()))
         return;
 
-    m_shell->webView()->focusedFrame()->setIsolatedWorldSecurityOrigin(
-        arguments[0].toInt32(),
-        WebSecurityOrigin::createFromString(cppVariantToWebString(arguments[1])));
+    WebSecurityOrigin origin;
+    if (arguments[1].isString())
+        origin = WebSecurityOrigin::createFromString(cppVariantToWebString(arguments[1]));
+    m_shell->webView()->focusedFrame()->setIsolatedWorldSecurityOrigin(arguments[0].toInt32(), origin);
 }
 
 void DRTTestRunner::setAllowUniversalAccessFromFileURLs(const CppArgumentList& arguments, CppVariant* result)
@@ -1902,11 +1902,6 @@ void DRTTestRunner::startSpeechInput(const CppArgumentList& arguments, CppVarian
         return;
 
     input->startSpeechInput();
-}
-
-void DRTTestRunner::layerTreeAsText(const CppArgumentList& args, CppVariant* result)
-{
-    result->set(m_shell->webView()->mainFrame()->layerTreeAsText(m_showDebugLayerTree).utf8());
 }
 
 void DRTTestRunner::loseCompositorContext(const CppArgumentList& args, CppVariant*)

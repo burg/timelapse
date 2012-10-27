@@ -33,6 +33,8 @@
 
 #include "LocalizedStrings.h"
 #include <limits>
+#include <unicode/udatpg.h>
+#include <unicode/uloc.h>
 #include <wtf/DateMath.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/text/StringBuilder.h>
@@ -77,17 +79,6 @@ LocaleICU::~LocaleICU()
 PassOwnPtr<LocaleICU> LocaleICU::create(const char* localeString)
 {
     return adoptPtr(new LocaleICU(localeString));
-}
-
-PassOwnPtr<LocaleICU> LocaleICU::createForCurrentLocale()
-{
-    return adoptPtr(new LocaleICU(0));
-}
-
-LocaleICU* LocaleICU::currentLocale()
-{
-    static LocaleICU* currentLocale = LocaleICU::createForCurrentLocale().leakPtr();
-    return currentLocale;
 }
 
 String LocaleICU::decimalSymbol(UNumberFormatSymbol symbol)
@@ -164,8 +155,10 @@ UDateFormat* LocaleICU::openDateFormat(UDateFormatStyle timeStyle, UDateFormatSt
     return udat_open(timeStyle, dateStyle, m_locale.data(), gmtTimezone, WTF_ARRAY_LENGTH(gmtTimezone), 0, -1, &status);
 }
 
-double LocaleICU::parseLocalizedDate(const String& input)
+double LocaleICU::parseDateTime(const String& input, DateComponents::Type type)
 {
+    if (type != DateComponents::Date)
+        return std::numeric_limits<double>::quiet_NaN();
     if (!initializeShortDateFormat())
         return numeric_limits<double>::quiet_NaN();
     if (input.length() > static_cast<unsigned>(numeric_limits<int32_t>::max()))
@@ -178,23 +171,6 @@ double LocaleICU::parseLocalizedDate(const String& input)
         return numeric_limits<double>::quiet_NaN();
     // UDate, which is an alias of double, is compatible with our expectation.
     return date;
-}
-
-String LocaleICU::formatLocalizedDate(const DateComponents& dateComponents)
-{
-    if (!initializeShortDateFormat())
-        return String();
-    double input = dateComponents.millisecondsSinceEpoch();
-    UErrorCode status = U_ZERO_ERROR;
-    int32_t length = udat_format(m_shortDateFormat, input, 0, 0, 0, &status);
-    if (status != U_BUFFER_OVERFLOW_ERROR)
-        return String();
-    Vector<UChar> buffer(length);
-    status = U_ZERO_ERROR;
-    udat_format(m_shortDateFormat, input, buffer.data(), length, 0, &status);
-    if (U_FAILURE(status))
-        return String();
-    return String::adopt(buffer);
 }
 
 #if ENABLE(CALENDAR_PICKER) || ENABLE(INPUT_MULTIPLE_FIELDS_UI)
@@ -281,7 +257,7 @@ void LocaleICU::initializeLocalizedDateFormatText()
     m_localizedDateFormatText = localizeFormat(getDateFormatPattern(m_shortDateFormat));
 }
 
-String LocaleICU::localizedDateFormatText()
+String LocaleICU::dateFormatText()
 {
     initializeLocalizedDateFormatText();
     return m_localizedDateFormatText;
@@ -373,6 +349,12 @@ unsigned LocaleICU::firstDayOfWeek()
     initializeCalendar();
     return m_firstDayOfWeek;
 }
+
+bool LocaleICU::isRTL()
+{
+    UErrorCode status = U_ZERO_ERROR;
+    return uloc_getCharacterOrientation(m_locale.data(), &status) == ULOC_LAYOUT_RTL;
+}
 #endif
 
 #if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
@@ -407,6 +389,46 @@ void LocaleICU::initializeDateTimeFormat()
     m_didCreateTimeFormat = true;
 }
 
+String LocaleICU::dateFormat()
+{
+    if (!m_dateFormat.isEmpty())
+        return m_dateFormat;
+    if (!initializeShortDateFormat())
+        return ASCIILiteral("dd/MM/yyyy");
+    m_dateFormat = getDateFormatPattern(m_shortDateFormat);
+    return m_dateFormat;
+}
+
+static String getFormatForSkeleton(const char* locale, const String& skeleton)
+{
+    String format = ASCIILiteral("yyyy-MM");
+    UErrorCode status = U_ZERO_ERROR;
+    UDateTimePatternGenerator* patternGenerator = udatpg_open(locale, &status);
+    if (!patternGenerator)
+        return format;
+    status = U_ZERO_ERROR;
+    int32_t length = udatpg_getBestPattern(patternGenerator, skeleton.characters(), skeleton.length(), 0, 0, &status);
+    if (status == U_BUFFER_OVERFLOW_ERROR && length) {
+        Vector<UChar> buffer(length);
+        status = U_ZERO_ERROR;
+        udatpg_getBestPattern(patternGenerator, skeleton.characters(), skeleton.length(), buffer.data(), length, &status);
+        if (U_SUCCESS(status))
+            format = String::adopt(buffer);
+    }
+    udatpg_close(patternGenerator);
+    return format;
+}
+
+String LocaleICU::monthFormat()
+{
+    if (!m_monthFormat.isNull())
+        return m_monthFormat;
+    // Gets a format for "MMM", not "MM" because Windows API always provides
+    // formats for "MMM".
+    m_monthFormat = getFormatForSkeleton(m_locale.data(), ASCIILiteral("yyyyMMM"));
+    return m_monthFormat;
+}
+
 String LocaleICU::timeFormat()
 {
     initializeDateTimeFormat();
@@ -417,6 +439,36 @@ String LocaleICU::shortTimeFormat()
 {
     initializeDateTimeFormat();
     return m_localizedShortTimeFormatText;
+}
+
+const Vector<String>& LocaleICU::shortMonthLabels()
+{
+    if (!m_shortMonthLabels.isEmpty())
+        return m_shortMonthLabels;
+    if (initializeShortDateFormat()) {
+        if (OwnPtr<Vector<String> > labels = createLabelVector(m_shortDateFormat, UDAT_SHORT_MONTHS, UCAL_JANUARY, 12)) {
+            m_shortMonthLabels = *labels;
+            return m_shortMonthLabels;
+        }
+    }
+    m_shortMonthLabels.reserveCapacity(WTF_ARRAY_LENGTH(WTF::monthName));
+    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(WTF::monthName); ++i)
+        m_shortMonthLabels.append(WTF::monthName[i]);
+    return m_shortMonthLabels;
+}
+
+const Vector<String>& LocaleICU::shortStandAloneMonthLabels()
+{
+    if (!m_shortStandAloneMonthLabels.isEmpty())
+        return m_shortStandAloneMonthLabels;
+    if (initializeShortDateFormat()) {
+        if (OwnPtr<Vector<String> > labels = createLabelVector(m_shortDateFormat, UDAT_STANDALONE_SHORT_MONTHS, UCAL_JANUARY, 12)) {
+            m_shortStandAloneMonthLabels = *labels;
+            return m_shortStandAloneMonthLabels;
+        }
+    }
+    m_shortStandAloneMonthLabels = shortMonthLabels();
+    return m_shortStandAloneMonthLabels;
 }
 
 const Vector<String>& LocaleICU::timeAMPMLabels()

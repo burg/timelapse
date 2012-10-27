@@ -49,10 +49,11 @@ public:
     }
     inline static v8::Handle<v8::Object> wrap(TestNamedConstructor*, v8::Handle<v8::Object> creationContext = v8::Handle<v8::Object>(), v8::Isolate* = 0);
     static void derefObject(void*);
-    static void visitDOMWrapper(DOMDataStore*, void*, v8::Persistent<v8::Object>);
     static WrapperTypeInfo info;
     static ActiveDOMObject* toActiveDOMObject(v8::Handle<v8::Object>);
     static const int internalFieldCount = v8DefaultWrapperInternalFieldCount + 0;
+    static void installPerContextProperties(v8::Handle<v8::Object>, TestNamedConstructor*) { }
+    static void installPerContextPrototypeProperties(v8::Handle<v8::Object>) { }
 private:
     static v8::Handle<v8::Object> wrapSlow(PassRefPtr<TestNamedConstructor>, v8::Handle<v8::Object> creationContext, v8::Isolate*);
 };

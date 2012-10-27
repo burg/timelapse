@@ -27,12 +27,15 @@
 #define RenderLayerCompositor_h
 
 #include "ChromeClient.h"
+#include "Frame.h"
+#include "GraphicsLayerUpdater.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
 
 namespace WebCore {
 
 class GraphicsLayer;
+class GraphicsLayerUpdater;
 class RenderEmbeddedObject;
 class RenderPart;
 class ScrollingCoordinator;
@@ -54,7 +57,7 @@ enum CompositingUpdateType {
 // 
 // There is one RenderLayerCompositor per RenderView.
 
-class RenderLayerCompositor : public GraphicsLayerClient {
+class RenderLayerCompositor : public GraphicsLayerClient, public GraphicsLayerUpdaterClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     RenderLayerCompositor(RenderView*);
@@ -195,21 +198,24 @@ public:
 
     void scrollingLayerDidChange(RenderLayer*);
 
-    String layerTreeAsText(bool showDebugInfo = false);
+    String layerTreeAsText(LayerTreeFlags);
 
     // These are named to avoid conflicts with the functions in GraphicsLayerClient
     // These return the actual internal variables.
     bool compositorShowDebugBorders() const { return m_showDebugBorders; }
     bool compositorShowRepaintCounter() const { return m_showRepaintCounter; }
 
-    virtual float deviceScaleFactor() const;
-    virtual float pageScaleFactor() const;
-    virtual void didCommitChangesForLayer(const GraphicsLayer*) const;
+    virtual float deviceScaleFactor() const OVERRIDE;
+    virtual float pageScaleFactor() const OVERRIDE;
+    virtual void didCommitChangesForLayer(const GraphicsLayer*) const OVERRIDE;
+    virtual void notifyFlushBeforeDisplayRefresh(const GraphicsLayer*) OVERRIDE;
     
     bool keepLayersPixelAligned() const;
     bool acceleratedDrawingEnabled() const { return m_acceleratedDrawingEnabled; }
 
     void deviceOrPageScaleFactorChanged();
+
+    void windowScreenDidChange(PlatformDisplayID);
 
     GraphicsLayer* layerForHorizontalScrollbar() const { return m_layerForHorizontalScrollbar.get(); }
     GraphicsLayer* layerForVerticalScrollbar() const { return m_layerForVerticalScrollbar.get(); }
@@ -223,13 +229,16 @@ public:
 private:
     class OverlapMap;
 
-    // GraphicsLayerClient Implementation
-    virtual void notifyAnimationStarted(const GraphicsLayer*, double) { }
-    virtual void notifySyncRequired(const GraphicsLayer*) { scheduleLayerFlush(); }
-    virtual void paintContents(const GraphicsLayer*, GraphicsContext&, GraphicsLayerPaintingPhase, const IntRect&);
+    // GraphicsLayerClient implementation
+    virtual void notifyAnimationStarted(const GraphicsLayer*, double) OVERRIDE { }
+    virtual void notifyFlushRequired(const GraphicsLayer*) OVERRIDE { scheduleLayerFlush(); }
+    virtual void paintContents(const GraphicsLayer*, GraphicsContext&, GraphicsLayerPaintingPhase, const IntRect&) OVERRIDE;
 
-    virtual bool showDebugBorders(const GraphicsLayer*) const;
-    virtual bool showRepaintCounter(const GraphicsLayer*) const;
+    virtual bool showDebugBorders(const GraphicsLayer*) const OVERRIDE;
+    virtual bool showRepaintCounter(const GraphicsLayer*) const OVERRIDE;
+    
+    // GraphicsLayerUpdaterClient implementation
+    virtual void flushLayers(GraphicsLayerUpdater*) OVERRIDE;
     
     // Whether the given RL needs a compositing layer.
     bool needsToBeComposited(const RenderLayer*) const;
@@ -282,7 +291,10 @@ private:
     void notifyIFramesOfCompositingChange();
 
     bool isFlushingLayers() const { return m_flushingLayers; }
+    
+    Page* page() const;
 
+    GraphicsLayerFactory* graphicsLayerFactory() const;
     ScrollingCoordinator* scrollingCoordinator() const;
 
     // Whether a running transition or animation enforces the need for a compositing layer.
@@ -353,6 +365,8 @@ private:
     OwnPtr<GraphicsLayer> m_layerForOverhangAreas;
     OwnPtr<GraphicsLayer> m_contentShadowLayer;
 #endif
+
+    OwnPtr<GraphicsLayerUpdater> m_layerUpdater; // Updates tiled layer visible area periodically while animations are running.
 
 #if !LOG_DISABLED
     int m_rootLayerUpdateCount;

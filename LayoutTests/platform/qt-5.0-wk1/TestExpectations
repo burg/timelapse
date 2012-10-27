@@ -1,0 +1,84 @@
+# Tests failing on WK1 only (working on WK2)
+compositing
+
+# Fullscreen API is not supported on WK1
+fullscreen
+plugins/fullscreen-plugins-dont-reload.html
+
+# New test introduced in r102048 fails on Qt-WK1
+# https://bugs.webkit.org/show_bug.cgi?id=73366
+fast/events/dont-loose-last-event.html
+
+# This has been fixed only on qt-wk2
+# https://bugs.webkit.org/show_bug.cgi?id=45666
+fast/events/click-count.html
+
+# [Qt] http/tests/misc/drag-over-iframe-invalid-source-crash.html and fast/events/drag-selects-image.html fails with timeout
+# https://bugs.webkit.org/show_bug.cgi?id=73901
+fast/events/drag-selects-image.html
+
+# https://bugs.webkit.org/show_bug.cgi?id=35973
+fast/multicol/hit-test-above-or-below.html
+
+# New fast/dom/Window/mozilla-focus-blur.html introduced in r118916 fails
+# https://bugs.webkit.org/show_bug.cgi?id=87956
+fast/dom/Window/mozilla-focus-blur.html
+
+# [Qt] http/tests/incremental/slow-utf8-text.pl times out with Qt5-WK1
+# https://bugs.webkit.org/show_bug.cgi?id=79655
+http/tests/incremental/slow-utf8-text.pl
+
+# https://bugs.webkit.org/show_bug.cgi?id=77380
+fast/url/path.html
+
+# [Qt] Tests still fail after the update to new fonts
+# https://bugs.webkit.org/show_bug.cgi?id=91610
+css3/calc/table-calcs.html
+editing/deleting/delete-block-table.html
+editing/pasteboard/paste-plaintext-user-select-none.html
+fast/canvas/canvas-strokeText-strokes-shadow.html
+fast/css/counters/counter-traverse-table-cell.html
+fast/events/onload-webkit-before-webcore.html
+fast/forms/onselect-textfield.html
+fast/frames/set-parent-src-synchronously.html
+fast/loader/subframe-removes-itself.html
+http/tests/webfont/fallback-font-while-loading.html
+svg/custom/glyph-selection-lang-attribute.svg
+svg/dom/css-transforms.xhtml
+touchadjustment/event-triggered-widgets.html
+
+# [Qt][WK1] New touchadjustment/focusout-on-touch.html fails
+# https://bugs.webkit.org/show_bug.cgi?id=95205
+touchadjustment/focusout-on-touch.html
+
+# [Qt][WK1] xmlviewer/extensions-api.html times out
+# https://bugs.webkit.org/show_bug.cgi?id=97389
+xmlviewer/extensions-api.html
+
+# [Qt][WK1] DumpRenderTree converts "file:///" to a path differently (working on WK2)
+# https://bugs.webkit.org/show_bug.cgi?id=76563
+http/tests/misc/drag-over-iframe-invalid-source-crash.html
+http/tests/misc/iframe-invalid-source-crash.html
+
+# [Qt][WK1] ERROR: TestRunner::overridePreference() does not support the 'WebKitStorageBlockingPolicy' preference
+http/tests/security/cross-origin-local-storage-wk1.html
+
+# [Qt] Unidentified plugin failures
+webkit.org/b/98525 platform/qt/plugins/application-plugin-plugins-disabled.html
+webkit.org/b/98525 plugins/frameset-with-plugin-frame.html
+webkit.org/b/98525 plugins/iframe-plugin-bgcolor.html
+webkit.org/b/98525 plugins/netscape-plugin-setwindow-size-2.html
+webkit.org/b/98525 plugins/netscape-plugin-setwindow-size.html
+webkit.org/b/98525 plugins/no-mime-with-valid-extension.html
+webkit.org/b/98525 plugins/npp-set-window-called-during-destruction.html
+webkit.org/b/98525 plugins/pass-different-npp-struct.html
+webkit.org/b/98525 plugins/plugin-document-back-forward.html
+webkit.org/b/98525 plugins/reentrant-update-widget-positions.html
+webkit.org/b/98525 plugins/update-widgets-crash.html
+webkit.org/b/98525 plugins/window-open.html
+
+# [Qt] Unidentified pixel failures
+webkit.org/b/99306 fast/images/gif-loop-count.html [ ImageOnlyFailure ]
+webkit.org/b/99306 fast/repaint/background-scaling.html [ ImageOnlyFailure ]
+webkit.org/b/99306 transforms/3d/point-mapping/3d-point-mapping-coplanar.html [ ImageOnlyFailure ]
+webkit.org/b/99306 transitions/suspend-transform-transition.html [ ImageOnlyFailure ]

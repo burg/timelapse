@@ -1,0 +1,6 @@
+basic  
+focus  
+disabled  
+readonly  
+RTL  
+With max  

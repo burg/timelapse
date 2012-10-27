@@ -619,6 +619,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Shared\WebConnection.messages.in"
+				>
+			</File>
+			<File
 				RelativePath="..\Shared\WebConnectionClient.cpp"
 				>
 			</File>
@@ -2119,6 +2123,10 @@
 				</File>
 				<File
 					RelativePath="..\WebProcess\WebPage\WebPageGroupProxy.h"
+					>
+				</File>
+				<File
+					RelativePath="..\WebProcess\WebPage\WebPageGroupProxy.messages.in"
 					>
 				</File>
 				<File
@@ -4086,7 +4094,35 @@
 					>
 				</File>
 				<File
+					RelativePath="..\Platform\CoreIPC\MessageDecoder.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\Platform\CoreIPC\MessageDecoder.h"
+					>
+				</File>
+				<File
+					RelativePath="..\Platform\CoreIPC\MessageEncoder.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\Platform\CoreIPC\MessageEncoder.h"
+					>
+				</File>
+				<File
 					RelativePath="..\Platform\CoreIPC\MessageID.h"
+					>
+				</File>
+				<File
+					RelativePath="..\Platform\CoreIPC\MessageReceiver.h"
+					>
+				</File>
+				<File
+					RelativePath="..\Platform\CoreIPC\MessageReceiverMap.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\Platform\CoreIPC\MessageReceiverMap.h"
 					>
 				</File>
 				<File
@@ -4279,6 +4315,14 @@
 				>
 			</File>
 			<File
+				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\WebConnectionMessageReceiver.cpp"
+				>
+			</File>
+			<File
+				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\WebConnectionMessages.h"
+				>
+			</File>
+			<File
 				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\WebContextMessageReceiver.cpp"
 				>
 			</File>
@@ -4428,6 +4472,14 @@
 			</File>
 			<File
 				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\WebNotificationManagerProxyMessages.h"
+				>
+			</File>
+			<File
+				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\WebPageGroupProxyMessageReceiver.cpp"
+				>
+			</File>
+			<File
+				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\WebPageGroupProxyMessages.h"
 				>
 			</File>
 			<File

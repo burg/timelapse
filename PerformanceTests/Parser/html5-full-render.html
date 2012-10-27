@@ -13,7 +13,7 @@ var chunks = [];
 var chunkSize = 500000; // 6.09mb / 500k = approx 13 chunks (thus 13 forced layouts/style resolves).
 var chunkCount = Math.ceil(spec.length / chunkSize);
 for (var chunkIndex = 0; chunkIndex < chunkCount; chunkIndex++) {
-    var chunk = spec.substring(chunkIndex * chunkSize, chunkSize);
+    var chunk = spec.substr(chunkIndex * chunkSize, chunkSize);
     chunks.push(chunk);
 }
 
@@ -44,12 +44,12 @@ function loadChunkedSpecIntoIframe(iframe) {
 // Running from the onload callback just makes the UI nicer as it shows the logs before starting the test.
 window.onload = function() {
     // Depending on the chosen chunk size, iterations can take over 60s to run on a fast machine, so we only run 2.
-    PerfTestRunner.run(function() {
+    PerfTestRunner.measureTime({run: function() {
         var iframe = document.createElement("iframe");
         document.body.appendChild(iframe);
         loadChunkedSpecIntoIframe(iframe);
         document.body.removeChild(iframe);
-    }, 1, 2); // We only loop once for each run, again because this test is so slow.
+    }, runCount: 5});
 }
 
 </script>

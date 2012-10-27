@@ -112,7 +112,7 @@ static void didChangeProgress(WKPageRef page, const void* clientInfo)
 
 static void didChangeBackForwardList(WKPageRef page, WKBackForwardListItemRef addedItem, WKArrayRef removedItems, const void* clientInfo)
 {
-    webkitBackForwardListChanged(webkit_web_view_get_back_forward_list(WEBKIT_WEB_VIEW(clientInfo)), addedItem, removedItems);
+    webkitBackForwardListChanged(webkit_web_view_get_back_forward_list(WEBKIT_WEB_VIEW(clientInfo)), toImpl(addedItem), toImpl(removedItems));
 }
 
 void attachLoaderClientToView(WebKitWebView* webView)
@@ -152,6 +152,7 @@ void attachLoaderClientToView(WebKitWebView* webView)
         0, // pluginDidFail
         0, // didReceiveIntentForFrame
         0, // registerIntentServiceForFrame
+        0, // didLayout
     };
     WKPageRef wkPage = toAPI(webkitWebViewBaseGetPage(WEBKIT_WEB_VIEW_BASE(webView)));
     WKPageSetPageLoaderClient(wkPage, &wkLoaderClient);

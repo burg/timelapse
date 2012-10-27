@@ -756,7 +756,7 @@ void HTMLMediaElement::loadInternal()
     // Some of the code paths below this function dispatch the BeforeLoad event. This ASSERT helps
     // us catch those bugs more quickly without needing all the branches to align to actually
     // trigger the event.
-    ASSERT(!eventDispatchForbidden());
+    ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
 
     // If we can't start a load right away, start it later.
     Page* page = document()->page();
@@ -1516,6 +1516,29 @@ void HTMLMediaElement::mediaPlayerNetworkStateChanged(MediaPlayer*)
     endProcessingMediaPlayerCallback();
 }
 
+static void logMediaLoadRequest(Page* page, const String& mediaEngine, const String& errorMessage, bool succeeded)
+{
+    if (!page || !page->settings()->diagnosticLoggingEnabled())
+        return;
+
+    ChromeClient* client = page->chrome()->client();
+
+    if (!succeeded) {
+        client->logDiagnosticMessage(DiagnosticLoggingKeys::mediaLoadingFailedKey(), errorMessage, DiagnosticLoggingKeys::failKey());
+        return;
+    }
+
+    client->logDiagnosticMessage(DiagnosticLoggingKeys::mediaLoadedKey(), mediaEngine, DiagnosticLoggingKeys::noopKey());
+
+    if (!page->hasSeenAnyMediaEngine())
+        client->logDiagnosticMessage(DiagnosticLoggingKeys::pageContainsAtLeastOneMediaEngineKey(), emptyString(), DiagnosticLoggingKeys::noopKey());
+
+    if (!page->hasSeenMediaEngine(mediaEngine))
+        client->logDiagnosticMessage(DiagnosticLoggingKeys::pageContainsMediaEngineKey(), mediaEngine, DiagnosticLoggingKeys::noopKey());
+
+    page->sawMediaEngine(mediaEngine);
+}
+
 static String stringForNetworkState(MediaPlayer::NetworkState state)
 {
     switch (state) {
@@ -1567,8 +1590,7 @@ void HTMLMediaElement::mediaLoadingFailed(MediaPlayer::NetworkState error)
         mediaControls()->reportedError();
     }
 
-    if (document()->page() && document()->page()->settings()->diagnosticLoggingEnabled())
-        document()->page()->chrome()->client()->logDiagnosticMessage(DiagnosticLoggingKeys::mediaLoadingFailedKey(), stringForNetworkState(error), DiagnosticLoggingKeys::failKey());
+    logMediaLoadRequest(document()->page(), String(), stringForNetworkState(error), false);
 }
 
 void HTMLMediaElement::setNetworkState(MediaPlayer::NetworkState state)
@@ -1698,8 +1720,7 @@ void HTMLMediaElement::setReadyState(MediaPlayer::ReadyState state)
         if (renderer())
             renderer()->updateFromElement();
 
-        if (document()->page() && document()->page()->settings()->diagnosticLoggingEnabled())
-            document()->page()->chrome()->client()->logDiagnosticMessage(DiagnosticLoggingKeys::mediaLoadedKey(), m_player->engineDescription(), DiagnosticLoggingKeys::noopKey());
+        logMediaLoadRequest(document()->page(), m_player->engineDescription(), String(), true);
     }
 
     bool shouldUpdateDisplayState = false;
@@ -1834,8 +1855,14 @@ void HTMLMediaElement::mediaPlayerKeyMessage(MediaPlayer*, const String& keySyst
     m_asyncEventQueue->enqueueEvent(event.release());
 }
 
-void HTMLMediaElement::mediaPlayerKeyNeeded(MediaPlayer*, const String& keySystem, const String& sessionId, const unsigned char* initData, unsigned initDataLength)
+bool HTMLMediaElement::mediaPlayerKeyNeeded(MediaPlayer*, const String& keySystem, const String& sessionId, const unsigned char* initData, unsigned initDataLength)
 {
+    if (!hasEventListeners(eventNames().webkitneedkeyEvent)) {
+        m_error = MediaError::create(MediaError::MEDIA_ERR_ENCRYPTED);
+        scheduleEvent(eventNames().errorEvent);
+        return false;
+    }
+
     MediaKeyEventInit initializer;
     initializer.keySystem = keySystem;
     initializer.sessionId = sessionId;
@@ -1846,6 +1873,7 @@ void HTMLMediaElement::mediaPlayerKeyNeeded(MediaPlayer*, const String& keySyste
     RefPtr<Event> event = MediaKeyEvent::create(eventNames().webkitneedkeyEvent, initializer);
     event->setTarget(this);
     m_asyncEventQueue->enqueueEvent(event.release());
+    return true;
 }
 #endif
 

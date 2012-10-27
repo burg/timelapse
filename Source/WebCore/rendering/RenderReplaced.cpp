@@ -79,6 +79,7 @@ void RenderReplaced::styleDidChange(StyleDifference diff, const RenderStyle* old
 
 void RenderReplaced::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
     
     LayoutRepainter repainter(*this, checkForRepaintDuringLayout());
@@ -145,7 +146,9 @@ void RenderReplaced::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         else {
             // Push a clip if we have a border radius, since we want to round the foreground content that gets painted.
             paintInfo.context->save();
-            paintInfo.context->addRoundedRectClip(style()->getRoundedBorderFor(paintRect, view()));
+            RoundedRect roundedInnerRect = style()->getRoundedInnerBorderFor(paintRect,
+                paddingTop() + borderTop(), paddingBottom() + borderBottom(), paddingLeft() + borderLeft(), paddingRight() + borderRight(), true, true);
+            clipRoundedInnerRect(paintInfo.context, paintRect, roundedInnerRect);
         }
     }
 
@@ -496,7 +499,7 @@ VisiblePosition RenderReplaced::positionForPoint(const LayoutPoint& point)
     return RenderBox::positionForPoint(point);
 }
 
-LayoutRect RenderReplaced::selectionRectForRepaint(RenderBoxModelObject* repaintContainer, bool clipToVisibleContent)
+LayoutRect RenderReplaced::selectionRectForRepaint(RenderLayerModelObject* repaintContainer, bool clipToVisibleContent)
 {
     ASSERT(!needsLayout());
 
@@ -561,7 +564,7 @@ bool RenderReplaced::isSelected() const
     return false;
 }
 
-LayoutRect RenderReplaced::clippedOverflowRectForRepaint(RenderBoxModelObject* repaintContainer) const
+LayoutRect RenderReplaced::clippedOverflowRectForRepaint(RenderLayerModelObject* repaintContainer) const
 {
     if (style()->visibility() != VISIBLE && !enclosingLayer()->hasVisibleContent())
         return LayoutRect();

@@ -645,6 +645,10 @@
 			>
 		</File>
 		<File
+			RelativePath="..\wtf\ByteOrder.h"
+			>
+		</File>
+		<File
 			RelativePath="..\wtf\CheckedArithmetic.h"
 			>
 		</File>
@@ -909,11 +913,23 @@
 			>
 		</File>
 		<File
+		        RelativePath="..\wtf\MemoryInstrumentationHashCountedSet.h"
+			>
+		</File>
+		<File
+		        RelativePath="..\wtf\MemoryInstrumentationHashMap.h"
+			>
+		</File>
+		<File
 		        RelativePath="..\wtf\MemoryInstrumentationHashSet.h"
 			>
 		</File>
 		<File
-		        RelativePath="..\wtf\MemoryInstrumentationHashTable.h"
+		        RelativePath="..\wtf\MemoryInstrumentationSequence.h"
+			>
+		</File>
+		<File
+		        RelativePath="..\wtf\MemoryInstrumentationString.h"
 			>
 		</File>
 		<File

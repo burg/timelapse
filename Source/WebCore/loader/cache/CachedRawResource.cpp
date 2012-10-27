@@ -29,7 +29,7 @@
 #include "CachedResourceClient.h"
 #include "CachedResourceClientWalker.h"
 #include "CachedResourceLoader.h"
-#include "SharedBuffer.h"
+#include "ResourceBuffer.h"
 #include "SubresourceLoader.h"
 #include "WebCoreMemoryInstrumentation.h"
 #include <wtf/PassRefPtr.h>
@@ -42,29 +42,31 @@ CachedRawResource::CachedRawResource(ResourceRequest& resourceRequest)
 {
 }
 
-void CachedRawResource::data(PassRefPtr<SharedBuffer> data, bool allDataReceived)
+void CachedRawResource::data(PassRefPtr<ResourceBuffer> data, bool allDataReceived)
 {
     CachedResourceHandle<CachedRawResource> protect(this);
+    const char* incrementalData = 0;
+    size_t incrementalDataLength = 0;
     if (data) {
         // If we are buffering data, then we are saving the buffer in m_data and need to manually
         // calculate the incremental data. If we are not buffering, then m_data will be null and
         // the buffer contains only the incremental data.
         size_t previousDataLength = (m_options.shouldBufferData == BufferData) ? encodedSize() : 0;
         ASSERT(data->size() >= previousDataLength);
-        const char* incrementalData = data->data() + previousDataLength;
-        size_t incrementalDataLength = data->size() - previousDataLength;
-
-        if (incrementalDataLength) {
-            CachedResourceClientWalker<CachedRawResourceClient> w(m_clients);
-            while (CachedRawResourceClient* c = w.next())
-                c->dataReceived(this, incrementalData, incrementalDataLength);
-        }
+        incrementalData = data->data() + previousDataLength;
+        incrementalDataLength = data->size() - previousDataLength;
     }
     
     if (m_options.shouldBufferData == BufferData) {
         if (data)
             setEncodedSize(data->size());
         m_data = data;
+    }
+    
+    if (incrementalDataLength) {
+        CachedResourceClientWalker<CachedRawResourceClient> w(m_clients);
+        while (CachedRawResourceClient* c = w.next())
+            c->dataReceived(this, incrementalData, incrementalDataLength);
     }
     CachedResource::data(m_data, allDataReceived);
 }
@@ -127,6 +129,24 @@ void CachedRawResource::setDefersLoading(bool defers)
         m_loader->setDefersLoading(defers);
 }
 
+static bool shouldIgnoreHeaderForCacheReuse(AtomicString headerName)
+{
+    // FIXME: This list of headers that don't affect cache policy almost certainly isn't complete.
+    DEFINE_STATIC_LOCAL(HashSet<AtomicString>, m_headers, ());
+    if (m_headers.isEmpty()) {
+        m_headers.add("Accept");
+        m_headers.add("Cache-Control");
+        m_headers.add("If-Modified-Since");
+        m_headers.add("If-None-Match");
+        m_headers.add("Origin");
+        m_headers.add("Pragma");
+        m_headers.add("Purpose");
+        m_headers.add("Referer");
+        m_headers.add("User-Agent");
+    }
+    return m_headers.contains(headerName);
+}
+
 bool CachedRawResource::canReuse(const ResourceRequest& newRequest) const
 {
     if (m_options.shouldBufferData == DoNotBufferData)
@@ -141,20 +161,24 @@ bool CachedRawResource::canReuse(const ResourceRequest& newRequest) const
     if (m_resourceRequest.allowCookies() != newRequest.allowCookies())
         return false;
 
-    // Ensure all headers match the existing headers before continuing.
-    // Note that only headers set by our client will be present in either
-    // ResourceRequest, since SubresourceLoader creates a separate copy
-    // for its purposes.
-    // FIXME: There might be some headers that shouldn't block reuse.
+    // Ensure most headers match the existing headers before continuing.
+    // Note that the list of ignored headers includes some headers explicitly related to caching.
+    // A more detailed check of caching policy will be performed later, this is simply a list of
+    // headers that we might permit to be different and still reuse the existing CachedResource.
     const HTTPHeaderMap& newHeaders = newRequest.httpHeaderFields();
     const HTTPHeaderMap& oldHeaders = m_resourceRequest.httpHeaderFields();
-    if (newHeaders.size() != oldHeaders.size())
-        return false;
 
     HTTPHeaderMap::const_iterator end = newHeaders.end();
     for (HTTPHeaderMap::const_iterator i = newHeaders.begin(); i != end; ++i) {
-        AtomicString headerName = i->first;
-        if (i->second != oldHeaders.get(headerName))
+        AtomicString headerName = i->key;
+        if (!shouldIgnoreHeaderForCacheReuse(headerName) && i->value != oldHeaders.get(headerName))
+            return false;
+    }
+
+    end = oldHeaders.end();
+    for (HTTPHeaderMap::const_iterator i = oldHeaders.begin(); i != end; ++i) {
+        AtomicString headerName = i->key;
+        if (!shouldIgnoreHeaderForCacheReuse(headerName) && i->value != newHeaders.get(headerName))
             return false;
     }
     return true;

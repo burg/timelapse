@@ -54,14 +54,14 @@
 #include "WebDataSource.h"
 #include "WebDevToolsAgentClient.h"
 #include "WebFrameImpl.h"
-#include "platform/WebRect.h"
-#include "platform/WebString.h"
-#include "platform/WebURL.h"
-#include "platform/WebURLError.h"
-#include "platform/WebURLRequest.h"
-#include "platform/WebURLResponse.h"
 #include "WebViewClient.h"
 #include "WebViewImpl.h"
+#include <public/WebRect.h>
+#include <public/WebString.h>
+#include <public/WebURL.h>
+#include <public/WebURLError.h>
+#include <public/WebURLRequest.h>
+#include <public/WebURLResponse.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Noncopyable.h>
@@ -72,8 +72,6 @@ using namespace WebCore;
 using namespace std;
 
 namespace OverlayZOrders {
-static const int viewportGutter = 97;
-
 // Use 99 as a big z-order number so that highlight is above other overlays.
 static const int highlight = 99;
 }
@@ -183,20 +181,18 @@ private:
     OwnPtr<WebDevToolsAgent::MessageDescriptor> m_descriptor;
 };
 
-class DeviceMetricsSupport : public WebPageOverlay {
+class DeviceMetricsSupport {
 public:
     DeviceMetricsSupport(WebViewImpl* webView)
         : m_webView(webView)
         , m_fitWindow(false)
         , m_originalZoomFactor(0)
     {
-        m_webView->addPageOverlay(this, OverlayZOrders::viewportGutter);
     }
 
     ~DeviceMetricsSupport()
     {
         restore();
-        m_webView->removePageOverlay(this);
     }
 
     void setDeviceMetrics(int width, int height, float textZoomFactor, bool fitWindow)
@@ -285,7 +281,7 @@ private:
         view->setHorizontalScrollbarLock(false);
         view->setVerticalScrollbarLock(false);
         view->setScrollbarModes(ScrollbarAuto, ScrollbarAuto, false, false);
-        view->resize(IntSize(m_webView->size()));
+        view->setFrameRect(IntRect(IntPoint(), IntSize(m_webView->size())));
         m_webView->sendResizeEventAndRepaint();
     }
 
@@ -341,19 +337,6 @@ private:
         doc->updateLayout();
     }
 
-    virtual void paintPageOverlay(WebCanvas* canvas)
-    {
-        FrameView* frameView = this->frameView();
-        if (!frameView)
-            return;
-
-        GraphicsContextBuilder builder(canvas);
-        GraphicsContext& gc = builder.context();
-        gc.clipOut(IntRect(IntPoint(), frameView->size()));
-        gc.setFillColor(Color::darkGray, ColorSpaceDeviceRGB);
-        gc.drawRect(IntRect(IntPoint(), m_webView->size()));
-    }
-
     WebCore::FrameView* frameView()
     {
         return m_webView->mainFrameImpl() ? m_webView->mainFrameImpl()->frameView() : 0;
@@ -389,6 +372,7 @@ void WebDevToolsAgentImpl::attach()
 
     ClientMessageLoopAdapter::ensureClientMessageLoopCreated(m_client);
     inspectorController()->connectFrontend(this);
+    inspectorController()->webViewResized(m_webViewImpl->size());
     m_attached = true;
 }
 
@@ -437,10 +421,12 @@ bool WebDevToolsAgentImpl::metricsOverridden()
     return !!m_metricsSupport;
 }
 
-void WebDevToolsAgentImpl::webViewResized()
+void WebDevToolsAgentImpl::webViewResized(const WebSize& size)
 {
     if (m_metricsSupport)
         m_metricsSupport->webViewResized();
+    if (InspectorController* ic = inspectorController())
+        ic->webViewResized(m_metricsSupport ? IntSize(size.width, size.height) : IntSize());
 }
 
 void WebDevToolsAgentImpl::overrideDeviceMetrics(int width, int height, float fontScaleFactor, bool fitWindow)
@@ -448,12 +434,19 @@ void WebDevToolsAgentImpl::overrideDeviceMetrics(int width, int height, float fo
     if (!width && !height) {
         if (m_metricsSupport)
             m_metricsSupport.clear();
+        if (InspectorController* ic = inspectorController())
+            ic->webViewResized(IntSize());
         return;
     }
 
     if (!m_metricsSupport)
         m_metricsSupport = adoptPtr(new DeviceMetricsSupport(m_webViewImpl));
+
     m_metricsSupport->setDeviceMetrics(width, height, fontScaleFactor, fitWindow);
+    if (InspectorController* ic = inspectorController()) {
+        WebSize size = m_webViewImpl->size();
+        ic->webViewResized(IntSize(size.width, size.height));
+    }
 }
 
 void WebDevToolsAgentImpl::autoZoomPageToFitWidth()
@@ -469,12 +462,13 @@ void WebDevToolsAgentImpl::getAllocatedObjects(HashSet<const void*>& set)
         CountingVisitor() : m_totalObjectsCount(0)
         {
         }
+
         virtual bool visitObject(const void* ptr)
         {
             ++m_totalObjectsCount;
             return true;
         }
-        size_t totalObjectsCount()
+        size_t totalObjectsCount() const
         {
             return m_totalObjectsCount;
         }
@@ -495,7 +489,7 @@ void WebDevToolsAgentImpl::getAllocatedObjects(HashSet<const void*>& set)
             , m_pointers(new const void*[maxObjectsCount])
         {
         }
-        ~PointerCollector()
+        virtual ~PointerCollector()
         {
             delete[] m_pointers;
         }
@@ -536,6 +530,25 @@ void WebDevToolsAgentImpl::getAllocatedObjects(HashSet<const void*>& set)
         }
         estimatedMaxObjectsCount *= 2;
     }
+}
+
+void WebDevToolsAgentImpl::dumpUncountedAllocatedObjects(const HashMap<const void*, size_t>& map)
+{
+    class InstrumentedObjectSizeProvider : public WebDevToolsAgentClient::InstrumentedObjectSizeProvider {
+    public:
+        InstrumentedObjectSizeProvider(const HashMap<const void*, size_t>& map) : m_map(map) { }
+        virtual size_t objectSize(const void* ptr) const
+        {
+            HashMap<const void*, size_t>::const_iterator i = m_map.find(ptr);
+            return i == m_map.end() ? 0 : i->value;
+        }
+
+    private:
+        const HashMap<const void*, size_t>& m_map;
+    };
+
+    InstrumentedObjectSizeProvider provider(map);
+    m_client->dumpUncountedAllocatedObjects(&provider);
 }
 
 void WebDevToolsAgentImpl::dispatchOnInspectorBackend(const WebString& message)

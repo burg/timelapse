@@ -80,6 +80,8 @@ void DateTimeFieldElement::defaultKeyboardEventHandler(KeyboardEvent* keyboardEv
     const String& keyIdentifier = keyboardEvent->keyIdentifier();
 
     if (keyIdentifier == "Down") {
+        if (keyboardEvent->getModifierState("Alt"))
+            return;
         keyboardEvent->setDefaultHandled();
         stepDown();
         return;
@@ -144,7 +146,11 @@ void DateTimeFieldElement::initialize(const AtomicString& shadowPseudoId, const 
 
 bool DateTimeFieldElement::isFocusable() const
 {
-    return !isReadOnly();
+    if (isReadOnly())
+        return false;
+    if (m_fieldOwner && m_fieldOwner->isFieldOwnerDisabledOrReadOnly())
+        return false;
+    return HTMLElement::isFocusable();
 }
 
 bool DateTimeFieldElement::isReadOnly() const
@@ -155,6 +161,11 @@ bool DateTimeFieldElement::isReadOnly() const
 bool DateTimeFieldElement::isRTL() const
 {
     return renderer() && renderer()->style()->direction() == RTL;
+}
+
+AtomicString DateTimeFieldElement::localeIdentifier() const
+{
+    return m_fieldOwner ? m_fieldOwner->localeIdentifier() : nullAtom;
 }
 
 void DateTimeFieldElement::setReadOnly()

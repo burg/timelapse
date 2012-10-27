@@ -157,10 +157,14 @@ SuggestionPicker.prototype._fixWindowSize = function() {
         desiredWindowHeight = maxHeight;
     }
 
-    resizeWindow(desiredWindowWidth, desiredWindowHeight);
+    var windowRect = adjustWindowRect(desiredWindowWidth, desiredWindowHeight, desiredWindowWidth, 0);
+    this._containerElement.style.height = (windowRect.height - ListBorder) + "px";
+    setWindowRect(windowRect);
 };
 
 SuggestionPicker.prototype._layout = function() {
+    if (this._config.isRTL)
+        this._element.classList.add("rtl");
     this._containerElement = createElement("ul", "suggestion-list");
     this._containerElement.addEventListener("click", this._handleEntryClick.bind(this), false);
     for (var i = 0; i < this._config.suggestionValues.length; ++i) {

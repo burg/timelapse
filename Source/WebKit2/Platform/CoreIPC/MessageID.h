@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2012 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,7 +29,7 @@
 namespace CoreIPC {
 
 enum MessageClass {
-    MessageClassReserved = 0,
+    MessageClassInvalid = 0,
 
     // Messages sent by Core IPC.
     MessageClassCoreIPC,
@@ -37,7 +37,6 @@ enum MessageClass {
     // Messages sent by the UI process to the web process.
     MessageClassAuthenticationManager,
     MessageClassDrawingArea,
-    MessageClassInjectedBundle,
     MessageClassLayerTreeCoordinator,
     MessageClassWebApplicationCacheManager,
     MessageClassWebBatteryManagerProxy,
@@ -52,6 +51,7 @@ enum MessageClass {
     MessageClassWebNetworkInfoManagerProxy,
     MessageClassWebNotificationManager,
     MessageClassWebPage,
+    MessageClassWebPageGroupProxy,
     MessageClassWebProcess,
     MessageClassWebResourceCacheManager,
     MessageClassEventDispatcher,
@@ -65,6 +65,7 @@ enum MessageClass {
     MessageClassLayerTreeCoordinatorProxy,
     MessageClassWebApplicationCacheManagerProxy,
     MessageClassWebBatteryManager,
+    MessageClassWebConnection,
     MessageClassWebContext,
     MessageClassWebContextLegacy,
     MessageClassWebCookieManagerProxy,
@@ -104,6 +105,23 @@ enum MessageClass {
 
     // NPObject messages sent by both the plug-in process and the web process.
     MessageClassNPObjectMessageReceiver,
+
+    // Messages sent by the UI process to the network process.
+    MessageClassNetworkProcess,
+
+    // Messages sent by the network process to the UI process.
+    MessageClassNetworkProcessProxy,
+
+    // Messages sent by the web process to the network process.
+    MessageClassNetworkConnectionToWebProcess,
+
+#if ENABLE(SHARED_WORKER_PROCESS)
+    // Messages sent by the UI process to the shared worker process.
+    MessageClassSharedWorkerProcess,
+#endif // ENABLE(SHARED_WORKER_PROCESS)
+
+    // Messages sent by the shared worker process to the UI process.
+    MessageClassSharedWorkerProcessProxy,
 };
 
 template<typename> struct MessageKindTraits { };
@@ -179,6 +197,11 @@ public:
 
     bool shouldDispatchMessageWhenWaitingForSyncReply() const { return getFlags() & DispatchMessageWhenWaitingForSyncReply; }
     bool isSync() const { return getFlags() & SyncMessage; }
+
+    MessageClass messageClass() const
+    {
+        return static_cast<MessageClass>(getClass());
+    }
 
 private:
     static inline unsigned stripMostSignificantBit(unsigned value)

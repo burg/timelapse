@@ -237,7 +237,7 @@ void MainResourceLoader::willSendRequest(ResourceRequest& newRequest, const Reso
 
     Frame* top = m_frame->tree()->top();
     if (top != m_frame) {
-        if (!frameLoader()->checkIfDisplayInsecureContent(top->document()->securityOrigin(), newRequest.url())) {
+        if (!frameLoader()->mixedContentChecker()->canDisplayInsecureContent(top->document()->securityOrigin(), newRequest.url())) {
             cancel();
             return;
         }
@@ -369,7 +369,7 @@ void MainResourceLoader::didReceiveResponse(const ResourceResponse& r)
 
     HTTPHeaderMap::const_iterator it = r.httpHeaderFields().find(AtomicString("x-frame-options"));
     if (it != r.httpHeaderFields().end()) {
-        String content = it->second;
+        String content = it->value;
         if (m_frame->loader()->shouldInterruptLoadForXFrameOptions(content, r.url())) {
             InspectorInstrumentation::continueAfterXFrameOptionsDenied(m_frame.get(), documentLoader(), identifier(), r);
             DEFINE_STATIC_LOCAL(String, consoleMessage, (ASCIILiteral("Refused to display document because display forbidden by X-Frame-Options.\n")));
@@ -387,7 +387,7 @@ void MainResourceLoader::didReceiveResponse(const ResourceResponse& r)
 #endif
 
     if (m_loadingMultipartContent) {
-        frameLoader()->activeDocumentLoader()->setupForReplaceByMIMEType(r.mimeType());
+        m_documentLoader->setupForReplace();
         clearResourceData();
     }
     

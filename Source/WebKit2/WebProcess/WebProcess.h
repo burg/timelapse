@@ -95,6 +95,10 @@ struct WebPageGroupData;
 struct WebPreferencesStore;
 struct WebProcessCreationParameters;
 
+#if ENABLE(NETWORK_PROCESS)
+class NetworkProcessConnection;
+#endif
+
 #if USE(SECURITY_FRAMEWORK)
 class SecItemResponseData;
 class SecKeychainItemResponseData;
@@ -150,13 +154,11 @@ public:
 #if PLATFORM(MAC)
     pid_t presenterApplicationPid() const { return m_presenterApplicationPid; }
     bool shouldForceScreenFontSubstitution() const { return m_shouldForceScreenFontSubstitution; }
-#endif 
+#endif
     
 #if PLATFORM(QT)
     QNetworkAccessManager* networkAccessManager() { return m_networkAccessManager; }
 #endif
-
-    bool shouldUseCustomRepresentationForResponse(const WebCore::ResourceResponse&) const;
 
     // Text Checking
     const TextCheckerState& textCheckerState() const { return m_textCheckerState; }
@@ -182,7 +184,6 @@ public:
 
 #if ENABLE(PLUGIN_PROCESS)
     PluginProcessConnectionManager& pluginProcessConnectionManager() { return m_pluginProcessConnectionManager; }
-    bool disablePluginProcessMessageTimeout() const { return m_disablePluginProcessMessageTimeout; }
 #endif
 
     EventDispatcher& eventDispatcher() { return m_eventDispatcher; }
@@ -191,11 +192,15 @@ public:
     WebSoupRequestManager& soupRequestManager() { return m_soupRequestManager; }
 #endif
 
+#if ENABLE(NETWORK_PROCESS)
+    void networkProcessConnectionClosed(NetworkProcessConnection*);
+#endif
+
 private:
     WebProcess();
 
-    void initializeWebProcess(const WebProcessCreationParameters&, CoreIPC::ArgumentDecoder*);
-    void platformInitializeWebProcess(const WebProcessCreationParameters&, CoreIPC::ArgumentDecoder*);
+    void initializeWebProcess(const WebProcessCreationParameters&, CoreIPC::MessageDecoder&);
+    void platformInitializeWebProcess(const WebProcessCreationParameters&, CoreIPC::MessageDecoder&);
     void platformTerminate();
     void registerURLSchemeAsEmptyDocument(const String&);
     void registerURLSchemeAsSecure(const String&) const;
@@ -231,7 +236,10 @@ private:
     void getSitesWithPluginData(const Vector<String>& pluginPaths, uint64_t callbackID);
     void clearPluginSiteData(const Vector<String>& pluginPaths, const Vector<String>& sites, uint64_t flags, uint64_t maxAgeInSeconds, uint64_t callbackID);
 #endif
-    
+
+#if ENABLE(NETWORK_PROCESS)
+    void networkProcessCrashed(CoreIPC::Connection*);
+#endif
 #if ENABLE(PLUGIN_PROCESS)
     void pluginProcessCrashed(CoreIPC::Connection*, const String& pluginPath);
 #endif
@@ -251,6 +259,8 @@ private:
     void garbageCollectJavaScriptObjects();
     void setJavaScriptGarbageCollectorTimerEnabled(bool flag);
 
+    void postInjectedBundleMessage(const CoreIPC::DataReference& messageData);
+
 #if USE(SECURITY_FRAMEWORK)
     void secItemResponse(CoreIPC::Connection*, uint64_t requestID, const SecItemResponseData&);
     void secKeychainItemResponse(CoreIPC::Connection*, uint64_t requestID, const SecKeychainItemResponseData&);
@@ -262,23 +272,24 @@ private:
 
     // CoreIPC::Connection::Client
     friend class WebConnectionToUIProcess;
-    virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::ArgumentDecoder*);
-    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::ArgumentDecoder*, OwnPtr<CoreIPC::ArgumentEncoder>&);
+    virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
+    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
     virtual void didClose(CoreIPC::Connection*);
     virtual void didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::MessageID);
-    virtual void syncMessageSendTimedOut(CoreIPC::Connection*);
 #if PLATFORM(WIN)
     virtual Vector<HWND> windowsToReceiveSentMessagesWhileWaitingForSyncReply();
 #endif
 
     // CoreIPC::Connection::QueueClient
-    virtual void didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::ArgumentDecoder*, bool& didHandleMessage) OVERRIDE;
+    virtual void didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&, bool& didHandleMessage) OVERRIDE;
 
     // Implemented in generated WebProcessMessageReceiver.cpp
-    void didReceiveWebProcessMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::ArgumentDecoder*);
-    void didReceiveWebProcessMessageOnConnectionWorkQueue(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::ArgumentDecoder*, bool& didHandleMessage);
+    void didReceiveWebProcessMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
+    void didReceiveWebProcessMessageOnConnectionWorkQueue(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&, bool& didHandleMessage);
 
+#if ENABLE(NETSCAPE_PLUGIN_API)
     void didGetPlugins(CoreIPC::Connection*, uint64_t requestID, const Vector<WebCore::PluginInfo>&);
+#endif
 
     RefPtr<WebConnectionToUIProcess> m_connection;
 
@@ -320,8 +331,6 @@ private:
     HashMap<uint64_t, RefPtr<WebCore::PlatformMessagePortChannel> > m_messagePortChannels;
 #endif
 
-    HashSet<String, CaseFoldingHash> m_mimeTypesWithCustomRepresentations;
-
     TextCheckerState m_textCheckerState;
     WebGeolocationManager m_geolocationManager;
 #if ENABLE(BATTERY_STATUS)
@@ -337,9 +346,14 @@ private:
     
     String m_localStorageDirectory;
 
+#if ENABLE(NETWORK_PROCESS)
+    void ensureNetworkProcessConnection();
+    RefPtr<NetworkProcessConnection> m_networkProcessConnection;
+    bool m_usesNetworkProcess;
+#endif
+
 #if ENABLE(PLUGIN_PROCESS)
     PluginProcessConnectionManager m_pluginProcessConnectionManager;
-    bool m_disablePluginProcessMessageTimeout;
 #endif
 
 #if USE(SOUP)

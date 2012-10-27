@@ -35,6 +35,7 @@
 #include "Page.h"
 #include "PluginViewBase.h"
 #include "RenderEmbeddedObject.h"
+#include "RenderSnapshottedPlugIn.h"
 #include "RenderWidget.h"
 #include "Settings.h"
 #include "Widget.h"
@@ -55,6 +56,7 @@ HTMLPlugInElement::HTMLPlugInElement(const QualifiedName& tagName, Document* doc
     , m_NPObject(0)
 #endif
     , m_isCapturingMouseEvents(false)
+    , m_displayState(Playing)
 {
 }
 
@@ -68,6 +70,12 @@ HTMLPlugInElement::~HTMLPlugInElement()
         m_NPObject = 0;
     }
 #endif
+}
+
+bool HTMLPlugInElement::canProcessDrag() const
+{
+    const PluginViewBase* plugin = pluginWidget() && pluginWidget()->isPluginViewBase() ? static_cast<const PluginViewBase*>(pluginWidget()) : 0;
+    return plugin ? plugin->canProcessDrag() : false;
 }
 
 void HTMLPlugInElement::detach()
@@ -176,9 +184,15 @@ void HTMLPlugInElement::defaultEventHandler(Event* event)
     // FIXME: Mouse down and scroll events are passed down to plug-in via custom code in EventHandler; these code paths should be united.
 
     RenderObject* r = renderer();
-    if (r && r->isEmbeddedObject() && toRenderEmbeddedObject(r)->showsUnavailablePluginIndicator()) {
-        toRenderEmbeddedObject(r)->handleUnavailablePluginIndicatorEvent(event);
-        return;
+    if (r && r->isEmbeddedObject()) {
+        if (toRenderEmbeddedObject(r)->showsUnavailablePluginIndicator()) {
+            toRenderEmbeddedObject(r)->handleUnavailablePluginIndicatorEvent(event);
+            return;
+        }
+        if (r->isSnapshottedPlugIn() && displayState() < Playing) {
+            toRenderSnapshottedPlugIn(r)->handleEvent(event);
+            return;
+        }
     }
 
     if (!r || !r->isWidget())

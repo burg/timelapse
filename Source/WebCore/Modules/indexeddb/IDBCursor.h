@@ -30,6 +30,7 @@
 
 #include "IDBKey.h"
 #include "IDBTransaction.h"
+#include "ScriptValue.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
@@ -58,7 +59,7 @@ public:
     static const AtomicString& directionPrev();
     static const AtomicString& directionPrevUnique();
 
-    static IDBCursor::Direction stringToDirection(const String& modeString, ExceptionCode&);
+    static IDBCursor::Direction stringToDirection(const String& modeString, ScriptExecutionContext*, ExceptionCode&);
     static const AtomicString& directionToString(unsigned short mode, ExceptionCode&);
 
     static PassRefPtr<IDBCursor> create(PassRefPtr<IDBCursorBackendInterface>, Direction, IDBRequest*, IDBAny* source, IDBTransaction*);
@@ -75,7 +76,7 @@ public:
     IDBAny* source() const;
 
     PassRefPtr<IDBRequest> update(ScriptExecutionContext*, ScriptValue&, ExceptionCode&);
-    void advance(unsigned long, ExceptionCode&);
+    void advance(long, ExceptionCode&);
     void continueFunction(PassRefPtr<IDBKey>, ExceptionCode&);
     PassRefPtr<IDBRequest> deleteFunction(ScriptExecutionContext*, ExceptionCode&);
 

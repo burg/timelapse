@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2012 Intel Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -38,6 +39,7 @@
 #include "PerformanceNavigation.h"
 #include "PerformanceResourceTiming.h"
 #include "PerformanceTiming.h"
+#include "PerformanceUserTiming.h"
 #include "ResourceResponse.h"
 #include <wtf/CurrentTime.h>
 
@@ -47,8 +49,15 @@
 
 namespace WebCore {
 
+#if ENABLE(RESOURCE_TIMING)
+static const size_t defaultResourceTimingBufferSize = 150;
+#endif
+
 Performance::Performance(Frame* frame)
     : DOMWindowProperty(frame)
+#if ENABLE(RESOURCE_TIMING)
+    , m_resourceTimingBufferSize(defaultResourceTimingBufferSize)
+#endif
 {
 }
 
@@ -99,6 +108,7 @@ PassRefPtr<PerformanceEntryList> Performance::webkitGetEntries() const
     entries->appendAll(m_resourceTimingBuffer);
 #endif // ENABLE(RESOURCE_TIMING)
 
+    // FIXME: User Timing entries should be handled here. see https://bugs.webkit.org/show_bug.cgi?id=91072
     return entries;
 }
 
@@ -112,6 +122,7 @@ PassRefPtr<PerformanceEntryList> Performance::webkitGetEntriesByType(const Strin
             entries->append(*resource);
 #endif // ENABLE(RESOURCE_TIMING)
 
+    // FIXME: User Timing entries should be handled here. see https://bugs.webkit.org/show_bug.cgi?id=91072
     return entries;
 }
 
@@ -126,6 +137,7 @@ PassRefPtr<PerformanceEntryList> Performance::webkitGetEntriesByName(const Strin
                 entries->append(*resource);
 #endif // ENABLE(RESOURCE_TIMING)
 
+    // FIXME: User Timing entries should be handled here. see https://bugs.webkit.org/show_bug.cgi?id=91072
     return entries;
 }
 
@@ -138,19 +150,29 @@ void Performance::webkitClearResourceTimings()
     m_resourceTimingBuffer.clear();
 }
 
-void Performance::webkitSetResourceTimingBufferSize(unsigned int)
+void Performance::webkitSetResourceTimingBufferSize(unsigned size)
 {
-    // FIXME: Implement this.
+    m_resourceTimingBufferSize = size;
+    if (isResourceTimingBufferFull())
+        dispatchEvent(Event::create(eventNames().webkitresourcetimingbufferfullEvent, false, false));
 }
 
 void Performance::addResourceTiming(const ResourceRequest& request, const ResourceResponse& response, double finishTime, Document* requestingDocument)
 {
-    if (!response.resourceLoadTiming())
+    if (!response.resourceLoadTiming() || isResourceTimingBufferFull())
         return;
 
     RefPtr<PerformanceEntry> entry = PerformanceResourceTiming::create(request, response, finishTime, requestingDocument);
-    // FIXME: Need to enforce buffer limits.
+
     m_resourceTimingBuffer.append(entry);
+
+    if (isResourceTimingBufferFull())
+        dispatchEvent(Event::create(eventNames().webkitresourcetimingbufferfullEvent, false, false));
+}
+
+bool Performance::isResourceTimingBufferFull()
+{
+    return m_resourceTimingBuffer.size() >= m_resourceTimingBufferSize;
 }
 
 #endif // ENABLE(RESOURCE_TIMING)
@@ -165,9 +187,42 @@ EventTargetData* Performance::ensureEventTargetData()
     return &m_eventTargetData;
 }
 
-double Performance::webkitNow() const
+#if ENABLE(USER_TIMING)
+void Performance::webkitMark(const String& markName, ExceptionCode& ec)
 {
-    return 1000.0 * m_frame->document()->loader()->timing()->convertMonotonicTimeToZeroBasedDocumentTime(monotonicallyIncreasingTime());
+    ec = 0;
+    if (!m_userTiming)
+        m_userTiming = UserTiming::create(this);
+    m_userTiming->mark(markName, ec);
+}
+
+void Performance::webkitClearMarks(const String& markName)
+{
+    if (!m_userTiming)
+        m_userTiming = UserTiming::create(this);
+    m_userTiming->clearMarks(markName);
+}
+
+void Performance::webkitMeasure(const String& measureName, const String& startMark, const String& endMark, ExceptionCode& ec)
+{
+    ec = 0;
+    if (!m_userTiming)
+        m_userTiming = UserTiming::create(this);
+    m_userTiming->measure(measureName, startMark, endMark, ec);
+}
+
+void Performance::webkitClearMeasures(const String& measureName)
+{
+    if (!m_userTiming)
+        m_userTiming = UserTiming::create(this);
+    m_userTiming->clearMeasures(measureName);
+}
+
+#endif // ENABLE(USER_TIMING)
+
+double Performance::now() const
+{
+    return 1000.0 * m_frame->document()->loader()->timing()->monotonicTimeToZeroBasedDocumentTime(monotonicallyIncreasingTime());
 }
 
 } // namespace WebCore

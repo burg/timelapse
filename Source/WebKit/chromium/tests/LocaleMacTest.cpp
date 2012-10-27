@@ -57,6 +57,13 @@ protected:
         return date;
     }
 
+    DateComponents timeComponents(int hour, int minute, int second, int millisecond)
+    {
+        DateComponents date;
+        date.setMillisecondsSinceMidnight(hour * msPerHour + minute * msPerMinute + second * msPerSecond + millisecond);
+        return date;
+    }
+
     double msForDate(int year, int month, int day)
     {
         return dateToDaysFrom1970(year, month, day) * msPerDay;
@@ -65,13 +72,19 @@ protected:
     String formatDate(const String& localeString, int year, int month, int day)
     {
         OwnPtr<LocaleMac> locale = LocaleMac::create(localeString);
-        return locale->formatDate(dateComponents(year, month, day));
+        return locale->formatDateTime(dateComponents(year, month, day));
+    }
+
+    String formatTime(const String& localeString, int hour, int minute, int second, int millisecond, bool useShortFormat)
+    {
+        OwnPtr<LocaleMac> locale = LocaleMac::create(localeString);
+        return locale->formatDateTime(timeComponents(hour, minute, second, millisecond), (useShortFormat ? Localizer::FormatTypeShort : Localizer::FormatTypeMedium));
     }
 
     double parseDate(const String& localeString, const String& dateString)
     {
         OwnPtr<LocaleMac> locale = LocaleMac::create(localeString);
-        return locale->parseDate(dateString);
+        return locale->parseDateTime(dateString, DateComponents::Date);
     }
 
 #if ENABLE(CALENDAR_PICKER)
@@ -98,9 +111,21 @@ protected:
         OwnPtr<LocaleMac> locale = LocaleMac::create(localeString);
         return locale->weekDayShortLabels()[index];
     }
+
+    bool isRTL(const String& localeString)
+    {
+        OwnPtr<LocaleMac> locale = LocaleMac::create(localeString);
+        return locale->isRTL();
+    }
 #endif
 
 #if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+    String monthFormat(const String& localeString)
+    {
+        OwnPtr<LocaleMac> locale = LocaleMac::create(localeString);
+        return locale->monthFormat();
+    }
+
     String timeFormat(const String& localeString)
     {
         OwnPtr<LocaleMac> locale = LocaleMac::create(localeString);
@@ -111,6 +136,18 @@ protected:
     {
         OwnPtr<LocaleMac> locale = LocaleMac::create(localeString);
         return locale->shortTimeFormat();
+    }
+
+    String shortMonthLabel(const String& localeString, unsigned index)
+    {
+        OwnPtr<LocaleMac> locale = LocaleMac::create(localeString);
+        return locale->shortMonthLabels()[index];
+    }
+
+    String shortStandAloneMonthLabel(const String& localeString, unsigned index)
+    {
+        OwnPtr<LocaleMac> locale = LocaleMac::create(localeString);
+        return locale->shortStandAloneMonthLabels()[index];
     }
 
     String timeAMPMLabel(const String& localeString, unsigned index)
@@ -129,9 +166,30 @@ protected:
 
 TEST_F(LocaleMacTest, formatDate)
 {
-    EXPECT_STREQ("4/27/05", formatDate("en_US", 2005, April, 27).utf8().data());
-    EXPECT_STREQ("27/04/05", formatDate("fr_FR", 2005, April, 27).utf8().data());
-    EXPECT_STREQ("05/04/27", formatDate("ja_JP", 2005, April, 27).utf8().data());
+    EXPECT_STREQ("04/27/2005", formatDate("en_US", 2005, April, 27).utf8().data());
+    EXPECT_STREQ("27/04/2005", formatDate("fr_FR", 2005, April, 27).utf8().data());
+    // Do not test ja_JP locale. OS X 10.8 and 10.7 have different formats.
+}
+
+TEST_F(LocaleMacTest, formatTime)
+{
+    EXPECT_STREQ("1:23 PM", formatTime("en_US", 13, 23, 00, 000, true).utf8().data());
+    EXPECT_STREQ("13:23", formatTime("fr_FR", 13, 23, 00, 000, true).utf8().data());
+    EXPECT_STREQ("13:23", formatTime("ja_JP", 13, 23, 00, 000, true).utf8().data());
+    EXPECT_STREQ("\xD9\xA1:\xD9\xA2\xD9\xA3 \xD9\x85", formatTime("ar", 13, 23, 00, 000, true).utf8().data());
+    EXPECT_STREQ("\xDB\xB1\xDB\xB3:\xDB\xB2\xDB\xB3", formatTime("fa", 13, 23, 00, 000, true).utf8().data());
+
+    EXPECT_STREQ("12:00 AM", formatTime("en_US", 00, 00, 00, 000, true).utf8().data());
+    EXPECT_STREQ("00:00", formatTime("fr_FR", 00, 00, 00, 000, true).utf8().data());
+    EXPECT_STREQ("0:00", formatTime("ja_JP", 00, 00, 00, 000, true).utf8().data());
+    EXPECT_STREQ("\xD9\xA1\xD9\xA2:\xD9\xA0\xD9\xA0 \xD8\xB5", formatTime("ar", 00, 00, 00, 000, true).utf8().data());
+    EXPECT_STREQ("\xDB\xB0:\xDB\xB0\xDB\xB0", formatTime("fa", 00, 00, 00, 000, true).utf8().data());
+
+    EXPECT_STREQ("7:07:07.007 AM", formatTime("en_US", 07, 07, 07, 007, false).utf8().data());
+    EXPECT_STREQ("07:07:07,007", formatTime("fr_FR", 07, 07, 07, 007, false).utf8().data());
+    EXPECT_STREQ("7:07:07.007", formatTime("ja_JP", 07, 07, 07, 007, false).utf8().data());
+    EXPECT_STREQ("\xD9\xA7:\xD9\xA0\xD9\xA7:\xD9\xA0\xD9\xA7\xD9\xAB\xD9\xA0\xD9\xA0\xD9\xA7 \xD8\xB5", formatTime("ar", 07, 07, 07, 007, false).utf8().data());
+    EXPECT_STREQ("\xDB\xB7:\xDB\xB0\xDB\xB7:\xDB\xB0\xDB\xB7\xD9\xAB\xDB\xB0\xDB\xB0\xDB\xB7", formatTime("fa", 07, 07, 07, 007, false).utf8().data());
 }
 
 TEST_F(LocaleMacTest, parseDate)
@@ -185,9 +243,27 @@ TEST_F(LocaleMacTest, weekDayShortLabels)
     EXPECT_STREQ("\xE6\xB0\xB4", weekDayShortLabel("ja_JP", Wednesday).utf8().data());
     EXPECT_STREQ("\xE5\x9C\x9F", weekDayShortLabel("ja_JP", Saturday).utf8().data());
 }
+
+TEST_F(LocaleMacTest, isRTL)
+{
+    EXPECT_TRUE(isRTL("ar-eg"));
+    EXPECT_FALSE(isRTL("en-us"));
+    EXPECT_FALSE(isRTL("ja-jp"));
+    EXPECT_FALSE(isRTL("**invalid**"));
+}
 #endif
 
 #if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+TEST_F(LocaleMacTest, monthFormat)
+{
+    EXPECT_STREQ("MMM yyyy", monthFormat("en_US").utf8().data());
+    EXPECT_STREQ("yyyy\xE5\xB9\xB4M\xE6\x9C\x88", monthFormat("ja_JP").utf8().data());
+
+    // fr_FR and ru return different results on OS versions.
+    //  "MMM yyyy" "LLL yyyy" on 10.6 and 10.7
+    //  "MMM y" "LLL y" on 10.8
+}
+
 TEST_F(LocaleMacTest, timeFormat)
 {
     EXPECT_STREQ("h:mm:ss a", timeFormat("en_US").utf8().data());
@@ -200,6 +276,30 @@ TEST_F(LocaleMacTest, shortTimeFormat)
     EXPECT_STREQ("h:mm a", shortTimeFormat("en_US").utf8().data());
     EXPECT_STREQ("HH:mm", shortTimeFormat("fr_FR").utf8().data());
     EXPECT_STREQ("H:mm", shortTimeFormat("ja_JP").utf8().data());
+}
+
+TEST_F(LocaleMacTest, shortMonthLabels)
+{
+    EXPECT_STREQ("Jan", shortMonthLabel("en_US", 0).utf8().data());
+    EXPECT_STREQ("Jan", shortStandAloneMonthLabel("en_US", 0).utf8().data());
+    EXPECT_STREQ("Dec", shortMonthLabel("en_US", 11).utf8().data());
+    EXPECT_STREQ("Dec", shortStandAloneMonthLabel("en_US", 11).utf8().data());
+
+    EXPECT_STREQ("janv.", shortMonthLabel("fr_FR", 0).utf8().data());
+    EXPECT_STREQ("janv.", shortStandAloneMonthLabel("fr_FR", 0).utf8().data());
+    EXPECT_STREQ("d\xC3\xA9" "c.", shortMonthLabel("fr_FR", 11).utf8().data());
+    EXPECT_STREQ("d\xC3\xA9" "c.", shortStandAloneMonthLabel("fr_FR", 11).utf8().data());
+
+    EXPECT_STREQ("1\xE6\x9C\x88", shortMonthLabel("ja_JP", 0).utf8().data());
+    EXPECT_STREQ("1\xE6\x9C\x88", shortStandAloneMonthLabel("ja_JP", 0).utf8().data());
+    EXPECT_STREQ("12\xE6\x9C\x88", shortMonthLabel("ja_JP", 11).utf8().data());
+    EXPECT_STREQ("12\xE6\x9C\x88", shortStandAloneMonthLabel("ja_JP", 11).utf8().data());
+
+    EXPECT_STREQ("\xD0\xBC\xD0\xB0\xD1\x80\xD1\x82\xD0\xB0", shortMonthLabel("ru_RU", 2).utf8().data());
+    EXPECT_STREQ("\xD0\xBC\xD0\xB0\xD1\x8F", shortMonthLabel("ru_RU", 4).utf8().data());
+    // The ru_RU locale returns different stand-alone month labels on OS versions.
+    //  "\xD0\xBC\xD0\xB0\xD1\x80\xD1\x82" "\xD0\xBC\xD0\xB0\xD0\xB9" on 10.6 and 10.7
+    //  "\xD0\x9C\xD0\xB0\xD1\x80\xD1\x82" "\xD0\x9C\xD0\xB0\xD0\xB9" on 10.8
 }
 
 TEST_F(LocaleMacTest, timeAMPMLabels)

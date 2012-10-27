@@ -35,6 +35,7 @@ WebSoupRequestManagerProxy::WebSoupRequestManagerProxy(WebContext* context)
     : m_webContext(context)
     , m_loadFailed(false)
 {
+    m_webContext->deprecatedAddMessageReceiver(CoreIPC::MessageClassWebSoupRequestManagerProxy, this);
 }
 
 WebSoupRequestManagerProxy::~WebSoupRequestManagerProxy()
@@ -50,9 +51,9 @@ void WebSoupRequestManagerProxy::initializeClient(const WKSoupRequestManagerClie
     m_client.initialize(client);
 }
 
-void WebSoupRequestManagerProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::ArgumentDecoder* arguments)
+void WebSoupRequestManagerProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
 {
-    didReceiveWebSoupRequestManagerProxyMessage(connection, messageID, arguments);
+    didReceiveWebSoupRequestManagerProxyMessage(connection, messageID, decoder);
 }
 
 void WebSoupRequestManagerProxy::registerURIScheme(const String& scheme)
@@ -76,9 +77,9 @@ void WebSoupRequestManagerProxy::didReceiveURIRequestData(const WebData* request
     m_webContext->sendToAllProcesses(Messages::WebSoupRequestManager::DidReceiveURIRequestData(requestData->dataReference(), requestID));
 }
 
-void WebSoupRequestManagerProxy::didReceiveURIRequest(const String& uriString, uint64_t requestID)
+void WebSoupRequestManagerProxy::didReceiveURIRequest(const String& uriString, WebPageProxy* initiaingPage, uint64_t requestID)
 {
-    if (!m_client.didReceiveURIRequest(this, WebURL::create(uriString).get(), requestID))
+    if (!m_client.didReceiveURIRequest(this, WebURL::create(uriString).get(), initiaingPage, requestID))
         didHandleURIRequest(WebData::create(0, 0).get(), 0, String(), requestID);
 }
 

@@ -117,8 +117,8 @@ void ScriptController::clearScriptObjects()
 {
     PluginObjectMap::iterator it = m_pluginObjects.begin();
     for (; it != m_pluginObjects.end(); ++it) {
-        _NPN_UnregisterObject(it->second);
-        _NPN_ReleaseObject(it->second);
+        _NPN_UnregisterObject(it->value);
+        _NPN_ReleaseObject(it->value);
     }
     m_pluginObjects.clear();
 
@@ -146,10 +146,9 @@ void ScriptController::resetIsolatedWorlds()
 {
     for (IsolatedWorldMap::iterator iter = m_isolatedWorlds.begin();
          iter != m_isolatedWorlds.end(); ++iter) {
-        iter->second->destroyIsolatedShell();
+        iter->value->destroyIsolatedShell();
     }
     m_isolatedWorlds.clear();
-    m_isolatedWorldSecurityOrigins.clear();
 }
 
 void ScriptController::clearForClose()
@@ -221,7 +220,7 @@ v8::Local<v8::Value> ScriptController::callFunctionWithInstrumentation(ScriptExe
         return handleMaxRecursionDepthExceeded();
 
     InspectorInstrumentationCookie cookie;
-    if (InspectorInstrumentation::hasFrontends() && context) {
+    if (InspectorInstrumentation::timelineAgentEnabled(context)) {
         String resourceName;
         int lineNumber;
         resourceInfo(function, resourceName, lineNumber);
@@ -322,9 +321,9 @@ V8DOMWindowShell* ScriptController::ensureIsolatedWorldContext(int worldId, int 
     if (worldId != DOMWrapperWorld::uninitializedWorldId) {
         IsolatedWorldMap::iterator iter = m_isolatedWorlds.find(worldId);
         if (iter != m_isolatedWorlds.end()) {
-            ASSERT(iter->second->world()->worldId() == worldId);
-            ASSERT(iter->second->world()->extensionGroup() == extensionGroup);
-            return iter->second;
+            ASSERT(iter->value->world()->worldId() == worldId);
+            ASSERT(iter->value->world()->extensionGroup() == extensionGroup);
+            return iter->value;
         }
     }
 
@@ -342,7 +341,7 @@ V8DOMWindowShell* ScriptController::existingWindowShellInternal(DOMWrapperWorld*
         return m_windowShell.get();
 
     IsolatedWorldMap::iterator iter = m_isolatedWorlds.find(world->worldId());
-    return iter == m_isolatedWorlds.end() ? 0 : iter->second;
+    return iter == m_isolatedWorlds.end() ? 0 : iter->value;
 }
 
 V8DOMWindowShell* ScriptController::windowShell(DOMWrapperWorld* world)
@@ -368,12 +367,6 @@ void ScriptController::evaluateInIsolatedWorld(int worldID, const Vector<ScriptS
     {
         v8::HandleScope evaluateHandleScope;
         V8DOMWindowShell* isolatedWorldShell = ensureIsolatedWorldContext(worldID, extensionGroup);
-
-        if (worldID != DOMWrapperWorld::uninitializedWorldId) {
-            IsolatedWorldSecurityOriginMap::iterator securityOriginIter = m_isolatedWorldSecurityOrigins.find(worldID);
-            if (securityOriginIter != m_isolatedWorldSecurityOrigins.end())
-                isolatedWorldShell->setIsolatedWorldSecurityOrigin(securityOriginIter->second);
-        }
 
         isolatedWorldShell->initializeIfNeeded();
         if (isolatedWorldShell->context().IsEmpty())
@@ -404,15 +397,6 @@ void ScriptController::evaluateInIsolatedWorld(int worldID, const Vector<ScriptS
         for (size_t i = 0; i < v8Results->Length(); ++i)
             results->append(ScriptValue(v8Results->Get(i)));
     }
-}
-
-void ScriptController::setIsolatedWorldSecurityOrigin(int worldID, PassRefPtr<SecurityOrigin> securityOrigin)
-{
-    ASSERT(worldID);
-    m_isolatedWorldSecurityOrigins.set(worldID, securityOrigin);
-    IsolatedWorldMap::iterator iter = m_isolatedWorlds.find(worldID);
-    if (iter != m_isolatedWorlds.end())
-        iter->second->setIsolatedWorldSecurityOrigin(securityOrigin);
 }
 
 TextPosition ScriptController::eventHandlerPosition() const
@@ -486,7 +470,7 @@ void ScriptController::enableEval()
     v8Context->AllowCodeGenerationFromStrings(true);
 }
 
-void ScriptController::disableEval(const String& /* errorMessage */)
+void ScriptController::disableEval(const String& errorMessage)
 {
     v8::HandleScope handleScope;
     v8::Handle<v8::Context> v8Context = windowShell()->context();
@@ -494,6 +478,7 @@ void ScriptController::disableEval(const String& /* errorMessage */)
         return;
 
     v8Context->AllowCodeGenerationFromStrings(false);
+    v8Context->SetErrorMessageForCodeGenerationFromStrings(v8String(errorMessage));
 }
 
 PassScriptInstance ScriptController::createScriptInstanceForWidget(Widget* widget)
@@ -545,8 +530,8 @@ void ScriptController::cleanupScriptObjectsForPlugin(Widget* nativeHandle)
     PluginObjectMap::iterator it = m_pluginObjects.find(nativeHandle);
     if (it == m_pluginObjects.end())
         return;
-    _NPN_UnregisterObject(it->second);
-    _NPN_ReleaseObject(it->second);
+    _NPN_UnregisterObject(it->value);
+    _NPN_ReleaseObject(it->value);
     m_pluginObjects.remove(it);
 }
 
@@ -665,14 +650,15 @@ void ScriptController::collectIsolatedContexts(Vector<std::pair<ScriptState*, Se
 {
     v8::HandleScope handleScope;
     for (IsolatedWorldMap::iterator it = m_isolatedWorlds.begin(); it != m_isolatedWorlds.end(); ++it) {
-        V8DOMWindowShell* isolatedWorldShell = it->second;
-        if (!isolatedWorldShell->isolatedWorldSecurityOrigin())
+        V8DOMWindowShell* isolatedWorldShell = it->value;
+        SecurityOrigin* origin = isolatedWorldShell->world()->isolatedWorldSecurityOrigin();
+        if (!origin)
             continue;
         v8::Handle<v8::Context> v8Context = isolatedWorldShell->context();
         if (v8Context.IsEmpty())
             continue;
         ScriptState* scriptState = ScriptState::forContext(v8::Local<v8::Context>::New(v8Context));
-        result.append(std::pair<ScriptState*, SecurityOrigin*>(scriptState, isolatedWorldShell->isolatedWorldSecurityOrigin()));
+        result.append(std::pair<ScriptState*, SecurityOrigin*>(scriptState, origin));
     }
 }
 #endif
