@@ -183,6 +183,12 @@
                         r"|.*\w+\.cmake"
                         r"|Source/cmake/",
         },
+        "Selectors": {
+            "filename": r"Source/WebCore/css/CSSSelector*"
+                        r"|Source/WebCore/css/SelectorChecker.*"
+                        r"|Source/WebCore/css/StyleResolver.*"
+                        r"|Source/WebCore/dom/SelectorQuery.*",
+        },
         "SoupNetwork": {
             "filename": r"Source/WebCore/platform/network/soup/",
         },
@@ -253,8 +259,9 @@
             "filename": r"Source/WebCore/svg"
                         r"|Source/WebCore/rendering/svg",
         },
-        "WebInspectorProtocol": {
-            "filename": r"Source/WebCore/inspector/Inspector.json",
+        "WebInspectorAPI": {
+            "filename": r"Source/WebCore/inspector/*.json"
+                        r"|Source/WebCore/inspector/*.idl",
         },
         "WebSocket": {
             "filename": r"Source/WebCore/Modules/websockets"
@@ -269,6 +276,12 @@
             "filename": r"Source/WebCore/accessibility"
                         r"|LayoutTests/.*accessibility",
         },
+        "Cairo": {
+            "filename": r"Source/WebCore/platform/graphics/cairo",
+        },
+        "Harfbuzz": {
+            "filename": r"Source/WebCore/platform/graphics/harfbuzz",
+        }
     },
     "CC_RULES": {
         # Note: All email addresses listed must be registered with bugzilla.
@@ -278,8 +291,9 @@
         "AppleMacPublicApi": [ "timothy@apple.com" ],
         "Battery": [ "gyuyoung.kim@samsung.com" ],
         "BlackBerry": [ "mifenton@rim.com", "rwlbuis@gmail.com", "tonikitoo@webkit.org" ],
+        "Cairo": [ "dominik.rottsches@intel.com" ],
         "CMake": [ "rakuco@webkit.org", "gyuyoung.kim@samsung.com" ],
-        "CSS": [ "alexis@webkit.org", "macpherson@chromium.org", "cmarcelo@webkit.org", "allan.jensen@digia.com" ],
+        "CSS": [ "alexis@webkit.org", "macpherson@chromium.org", "cmarcelo@webkit.org"],
         "ChromiumGraphics": [ "jamesr@chromium.org", "cc-bugs@chromium.org" ],
         "ChromiumPublicApi": [ "abarth@webkit.org", "dglazkov@chromium.org", "fishd@chromium.org", "jamesr@chromium.org", "tkent+wkapi@chromium.org" ],
         "DOMAttributes": [ "cmarcelo@webkit.org", ],
@@ -292,6 +306,7 @@
         "FrameLoader": [ "abarth@webkit.org", "japhet@chromium.org" ],
         "GStreamerGraphics": [ "alexis@webkit.org", "pnormand@igalia.com", "gns@gnome.org", "mrobinson@webkit.org" ],
         "GtkWebKit2PublicAPI": [ "cgarcia@igalia.com", "gns@gnome.org", "mrobinson@webkit.org" ],
+        "Harfbuzz": [ "dominik.rottsches@intel.com" ],
         "Loader": [ "japhet@chromium.org" ],
         "MathML": [ "dbarton@mathscribe.com" ],
         "Media": [ "feature-media-reviews@chromium.org", "eric.carlson@apple.com" ],
@@ -303,11 +318,12 @@
         "QtWebKit2PlatformSpecific": [ "alexis@webkit.org", "cmarcelo@webkit.org", "abecsi@webkit.org" ],
         "QtWebKit2PublicAPI": [ "alexis@webkit.org", "cmarcelo@webkit.org", "abecsi@webkit.org" ],
         "Rendering": [ "eric@webkit.org" ],
-        "SVG": ["schenney@chromium.org", "pdr@google.com", "fmalita@chromium.org" ],
+        "SVG": ["schenney@chromium.org", "pdr@google.com", "fmalita@chromium.org", "dominik.rottsches@intel.com" ],
         "SVNScripts": [ "dbates@webkit.org" ],
         "ScrollingCoordinator": [ "andersca@apple.com", "jamesr@chromium.org", "tonikitoo@webkit.org" ],
         "SecurityCritical": [ "abarth@webkit.org" ],
         "SkiaGraphics": [ "senorblanco@chromium.org" ],
+        "Selectors": [ "allan.jensen@digia.com" ],
         "SoupNetwork": [ "rakuco@webkit.org", "gns@gnome.org", "mrobinson@webkit.org", "danw@gnome.org" ],
         "StyleChecker": [ "levin@chromium.org", ],
         "TestFailures": [ "abarth@webkit.org", "dglazkov@chromium.org" ],
@@ -319,7 +335,7 @@
         "WatchListScript": [ "levin+watchlist@chromium.org", ],
         "WebGL": [ "dino@apple.com" ],
         "WebIDL": [ "abarth@webkit.org", "ojan@chromium.org" ],
-        "WebInspectorProtocol": [ "timothy@apple.com", "joepeck@webkit.org" ],
+        "WebInspectorAPI": [ "timothy@apple.com", "joepeck@webkit.org" ],
         "WebKitGTKTranslations": [ "gns@gnome.org", "mrobinson@webkit.org" ],
         "WebSocket": [ "yutak@chromium.org" ],
         "XSS": [ "dbates@webkit.org" ],

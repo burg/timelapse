@@ -33,15 +33,14 @@
 
 namespace WebCore {
 class FloatPoint3D;
+class GraphicsLayerAnimation;
+class GraphicsLayerAnimations;
 class TransformationMatrix;
+class TransformOperations;
 struct Length;
 
 #if ENABLE(CSS_FILTERS)
 class FilterOperations;
-#endif
-
-#if ENABLE(CSS_SHADERS)
-class TransformOperations;
 #endif
 
 #if USE(GRAPHICS_SURFACE)
@@ -73,12 +72,20 @@ template<> struct ArgumentCoder<WebCore::FilterOperations> {
 };
 #endif
 
-#if ENABLE(CSS_SHADERS)
 template<> struct ArgumentCoder<WebCore::TransformOperations> {
     static void encode(ArgumentEncoder*, const WebCore::TransformOperations&);
     static bool decode(ArgumentDecoder*, WebCore::TransformOperations&);
 };
-#endif
+
+template<> struct ArgumentCoder<WebCore::GraphicsLayerAnimations> {
+    static void encode(ArgumentEncoder*, const WebCore::GraphicsLayerAnimations&);
+    static bool decode(ArgumentDecoder*, WebCore::GraphicsLayerAnimations&);
+};
+
+template<> struct ArgumentCoder<WebCore::GraphicsLayerAnimation> {
+    static void encode(ArgumentEncoder*, const WebCore::GraphicsLayerAnimation&);
+    static bool decode(ArgumentDecoder*, WebCore::GraphicsLayerAnimation&);
+};
 
 #if USE(GRAPHICS_SURFACE)
 template<> struct ArgumentCoder<WebCore::GraphicsSurfaceToken> {

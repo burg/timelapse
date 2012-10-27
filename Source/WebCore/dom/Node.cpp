@@ -64,6 +64,7 @@
 #include "HTMLElement.h"
 #include "HTMLFrameOwnerElement.h"
 #include "HTMLNames.h"
+#include "HTMLStyleElement.h"
 #include "InspectorCounters.h"
 #include "KeyboardEvent.h"
 #include "LabelsNodeList.h"
@@ -1415,17 +1416,6 @@ RenderObject* Node::createRenderer(RenderArena*, RenderStyle*)
     ASSERT_NOT_REACHED();
     return 0;
 }
-    
-RenderStyle* Node::nonRendererRenderStyle() const
-{ 
-    return 0; 
-}   
-
-void Node::setRenderStyle(PassRefPtr<RenderStyle> s)
-{
-    if (m_renderer)
-        m_renderer->setAnimatableStyle(s); 
-}
 
 RenderStyle* Node::virtualComputedStyle(PseudoId pseudoElementSpecifier)
 {
@@ -1526,11 +1516,6 @@ Element* Node::parentOrHostElement() const
 bool Node::isBlockFlow() const
 {
     return renderer() && renderer()->isBlockFlow();
-}
-
-bool Node::isBlockFlowOrBlockTable() const
-{
-    return renderer() && (renderer()->isBlockFlow() || (renderer()->isTable() && !renderer()->isInline()));
 }
 
 Element *Node::enclosingBlockFlowElement() const
@@ -2839,6 +2824,36 @@ void Node::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addMember(m_previous);
     if (m_renderer)
         info.addMember(m_renderer->style());
+}
+
+void Node::textRects(Vector<IntRect>& rects) const
+{
+    RefPtr<Range> range = Range::create(document());
+    WebCore::ExceptionCode ec = 0;
+    range->selectNodeContents(const_cast<Node*>(this), ec);
+    range->textRects(rects);
+}
+
+void Node::registerScopedHTMLStyleChild()
+{
+    setHasScopedHTMLStyleChild(true);
+}
+
+void Node::unregisterScopedHTMLStyleChild()
+{
+    ASSERT(hasScopedHTMLStyleChild());
+    setHasScopedHTMLStyleChild(numberOfScopedHTMLStyleChildren());
+}
+
+size_t Node::numberOfScopedHTMLStyleChildren() const
+{
+    size_t count = 0;
+    for (Node* child = firstChild(); child; child = child->nextSibling()) {
+        if (child->hasTagName(HTMLNames::styleTag) && static_cast<HTMLStyleElement*>(child)->isRegisteredAsScoped())
+            count++;
+    }
+
+    return count;
 }
 
 } // namespace WebCore

@@ -579,7 +579,7 @@ WebInspector.BreakpointManager.Storage.prototype = {
      */
     _updateBreakpoint: function(breakpoint)
     {
-        if (this._muted)
+        if (this._muted || !breakpoint._breakpointStorageId())
             return;
         var newBreakpoint = !this._breakpoints[breakpoint._breakpointStorageId()];
         this._breakpoints[breakpoint._breakpointStorageId()] = new WebInspector.BreakpointManager.Storage.Item(breakpoint);

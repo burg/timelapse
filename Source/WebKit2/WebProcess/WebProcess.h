@@ -30,6 +30,7 @@
 #include "ChildProcess.h"
 #include "DrawingArea.h"
 #include "EventDispatcher.h"
+#include "MessageReceiverMap.h"
 #include "PluginInfoStore.h"
 #include "ResourceCachesToClear.h"
 #include "SandboxExtension.h"
@@ -69,6 +70,10 @@ QT_END_NAMESPACE
 
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
 #include "WebNotificationManager.h"
+#endif
+
+#if ENABLE(NETWORK_PROCESS)
+#include "WebResourceLoadScheduler.h"
 #endif
 
 #if ENABLE(PLUGIN_PROCESS)
@@ -112,6 +117,11 @@ public:
 
     CoreIPC::Connection* connection() const { return m_connection->connection(); }
     WebCore::RunLoop* runLoop() const { return m_runLoop; }
+
+    void addMessageReceiver(CoreIPC::StringReference messageReceiverName, CoreIPC::MessageReceiver*);
+    void addMessageReceiver(CoreIPC::StringReference messageReceiverName, uint64_t destinationID, CoreIPC::MessageReceiver*);
+
+    void removeMessageReceiver(CoreIPC::StringReference messageReceiverName, uint64_t destinationID);
 
     WebConnectionToUIProcess* webConnectionToUIProcess() const { return m_connection.get(); }
 
@@ -193,7 +203,10 @@ public:
 #endif
 
 #if ENABLE(NETWORK_PROCESS)
+    NetworkProcessConnection* networkConnection();
     void networkProcessConnectionClosed(NetworkProcessConnection*);
+    bool usesNetworkProcess() const { return m_usesNetworkProcess; }
+    WebResourceLoadScheduler& webResourceLoadScheduler() { return m_webResourceLoadScheduler; }
 #endif
 
 private:
@@ -292,6 +305,7 @@ private:
 #endif
 
     RefPtr<WebConnectionToUIProcess> m_connection;
+    CoreIPC::MessageReceiverMap m_messageReceiverMap;
 
     HashMap<uint64_t, RefPtr<WebPage> > m_pageMap;
     HashMap<uint64_t, RefPtr<WebPageGroupProxy> > m_pageGroupMap;
@@ -350,6 +364,7 @@ private:
     void ensureNetworkProcessConnection();
     RefPtr<NetworkProcessConnection> m_networkProcessConnection;
     bool m_usesNetworkProcess;
+    WebResourceLoadScheduler m_webResourceLoadScheduler;
 #endif
 
 #if ENABLE(PLUGIN_PROCESS)

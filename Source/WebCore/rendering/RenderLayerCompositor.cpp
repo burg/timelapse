@@ -187,6 +187,7 @@ RenderLayerCompositor::RenderLayerCompositor(RenderView* renderView)
     , m_compositing(false)
     , m_compositingLayersNeedRebuild(false)
     , m_flushingLayers(false)
+    , m_shouldFlushOnReattach(false)
     , m_forceCompositingMode(false)
     , m_rootLayerAttachment(RootLayerUnattached)
 #if !LOG_DISABLED
@@ -284,8 +285,10 @@ void RenderLayerCompositor::flushPendingLayerChanges(bool isFlushRoot)
     if (!isFlushRoot && rootLayerAttachment() == RootLayerAttachedViaEnclosingFrame)
         return;
     
-    if (rootLayerAttachment() == RootLayerUnattached)
+    if (rootLayerAttachment() == RootLayerUnattached) {
+        m_shouldFlushOnReattach = true;
         return;
+    }
 
     AnimationUpdateBlock animationUpdateBlock(m_renderView->frameView()->frame()->animation());
 
@@ -1098,12 +1101,6 @@ void RenderLayerCompositor::frameViewDidScroll()
     FrameView* frameView = m_renderView->frameView();
     IntPoint scrollPosition = frameView->scrollPosition();
 
-    if (TiledBacking* tiledBacking = frameView->tiledBacking()) {
-        IntRect visibleContentRect = frameView->visibleContentRect(false /* exclude scrollbars */);
-        visibleContentRect.move(toSize(frameView->scrollOrigin()));
-        tiledBacking->setVisibleRect(visibleContentRect);
-    }
-
     if (!m_scrollLayer)
         return;
 
@@ -1115,6 +1112,13 @@ void RenderLayerCompositor::frameViewDidScroll()
     }
 
     m_scrollLayer->setPosition(FloatPoint(-scrollPosition.x(), -scrollPosition.y()));
+}
+
+void RenderLayerCompositor::frameViewDidLayout()
+{
+    RenderLayerBacking* renderViewBacking = m_renderView->layer()->backing();
+    if (renderViewBacking)
+        renderViewBacking->adjustTileCacheCoverage();
 }
 
 void RenderLayerCompositor::scrollingLayerDidChange(RenderLayer* layer)
@@ -1138,7 +1142,9 @@ String RenderLayerCompositor::layerTreeAsText(LayerTreeFlags flags)
         layerTreeBehavior |= LayerTreeAsTextDebug;
     if (flags & LayerTreeFlagsIncludeVisibleRects)
         layerTreeBehavior |= LayerTreeAsTextIncludeVisibleRects;
-    
+    if (flags & LayerTreeFlagsIncludeTileCaches)
+        layerTreeBehavior |= LayerTreeAsTextIncludeTileCaches;
+
     // We skip dumping the scroll and clip layers to keep layerTreeAsText output
     // similar between platforms.
     return m_rootContentLayer->layerTreeAsText(layerTreeBehavior);
@@ -1346,8 +1352,17 @@ GraphicsLayer* RenderLayerCompositor::scrollLayer() const
     return m_scrollLayer.get();
 }
 
+TiledBacking* RenderLayerCompositor::pageTiledBacking() const
+{
+    RenderLayerBacking* renderViewBacking = m_renderView->layer()->backing();
+    return renderViewBacking ? renderViewBacking->tiledBacking() : 0;
+}
+
 void RenderLayerCompositor::didMoveOnscreen()
 {
+    if (TiledBacking* tiledBacking = pageTiledBacking())
+        tiledBacking->setIsInWindow(true);
+
     if (!inCompositingMode() || m_rootLayerAttachment != RootLayerUnattached)
         return;
 
@@ -1357,6 +1372,9 @@ void RenderLayerCompositor::didMoveOnscreen()
 
 void RenderLayerCompositor::willMoveOffscreen()
 {
+    if (TiledBacking* tiledBacking = pageTiledBacking())
+        tiledBacking->setIsInWindow(false);
+
     if (!inCompositingMode() || m_rootLayerAttachment == RootLayerUnattached)
         return;
 
@@ -2333,6 +2351,11 @@ void RenderLayerCompositor::attachRootLayer(RootLayerAttachment attachment)
 
     m_rootLayerAttachment = attachment;
     rootLayerAttachmentChanged();
+    
+    if (m_shouldFlushOnReattach) {
+        flushPendingLayerChanges(true);
+        m_shouldFlushOnReattach = false;
+    }
 }
 
 void RenderLayerCompositor::detachRootLayer()

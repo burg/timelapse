@@ -41,18 +41,11 @@ LIST(APPEND WebKit2_SOURCES
     UIProcess/API/C/soup/WKContextSoup.cpp
     UIProcess/API/C/soup/WKSoupRequestManager.cpp
 
-    UIProcess/API/efl/BatteryProvider.cpp
-    UIProcess/API/efl/PageViewportControllerClientEfl.cpp
-    UIProcess/API/efl/NetworkInfoProvider.cpp
-    UIProcess/API/efl/PageClientImpl.cpp
-    UIProcess/API/efl/VibrationProvider.cpp
-    UIProcess/API/efl/WebKitTextChecker.cpp
+    UIProcess/API/efl/EwkViewImpl.cpp
     UIProcess/API/efl/ewk_back_forward_list.cpp
     UIProcess/API/efl/ewk_back_forward_list_item.cpp
+    UIProcess/API/efl/ewk_color_picker.cpp
     UIProcess/API/efl/ewk_context.cpp
-    UIProcess/API/efl/ewk_context_download_client.cpp
-    UIProcess/API/efl/ewk_context_history_client.cpp
-    UIProcess/API/efl/ewk_context_request_manager_client.cpp
     UIProcess/API/efl/ewk_cookie_manager.cpp
     UIProcess/API/efl/ewk_download_job.cpp
     UIProcess/API/efl/ewk_error.cpp
@@ -63,6 +56,7 @@ LIST(APPEND WebKit2_SOURCES
     UIProcess/API/efl/ewk_main.cpp
     UIProcess/API/efl/ewk_navigation_data.cpp
     UIProcess/API/efl/ewk_navigation_policy_decision.cpp
+    UIProcess/API/efl/ewk_popup_menu.cpp
     UIProcess/API/efl/ewk_popup_menu_item.cpp
     UIProcess/API/efl/ewk_resource.cpp
     UIProcess/API/efl/ewk_settings.cpp
@@ -71,16 +65,25 @@ LIST(APPEND WebKit2_SOURCES
     UIProcess/API/efl/ewk_url_response.cpp
     UIProcess/API/efl/ewk_url_scheme_request.cpp
     UIProcess/API/efl/ewk_view.cpp
-    UIProcess/API/efl/ewk_view_find_client.cpp
-    UIProcess/API/efl/ewk_view_form_client.cpp
-    UIProcess/API/efl/ewk_view_loader_client.cpp
-    UIProcess/API/efl/ewk_view_policy_client.cpp
-    UIProcess/API/efl/ewk_view_resource_load_client.cpp
-    UIProcess/API/efl/ewk_view_ui_client.cpp
 
     UIProcess/cairo/BackingStoreCairo.cpp
 
+    UIProcess/efl/BatteryProvider.cpp
+    UIProcess/efl/ContextHistoryClientEfl.cpp
+    UIProcess/efl/DownloadManagerEfl.cpp
+    UIProcess/efl/FindClientEfl.cpp
+    UIProcess/efl/FormClientEfl.cpp
+    UIProcess/efl/InputMethodContextEfl.cpp
+    UIProcess/efl/NetworkInfoProvider.cpp
+    UIProcess/efl/PageClientImpl.cpp
+    UIProcess/efl/PageLoadClientEfl.cpp
+    UIProcess/efl/PagePolicyClientEfl.cpp
+    UIProcess/efl/PageUIClientEfl.cpp
+    UIProcess/efl/PageViewportControllerClientEfl.cpp
+    UIProcess/efl/RequestManagerClientEfl.cpp
+    UIProcess/efl/ResourceLoadClientEfl.cpp
     UIProcess/efl/TextCheckerEfl.cpp
+    UIProcess/efl/VibrationProvider.cpp
     UIProcess/efl/WebContextEfl.cpp
     UIProcess/efl/WebFullScreenManagerProxyEfl.cpp
     UIProcess/efl/WebInspectorProxyEfl.cpp
@@ -207,7 +210,7 @@ LIST (APPEND WebProcess_SOURCES
 
 LIST (APPEND WebProcess_LIBRARIES
     ${CAIRO_LIBRARIES}
-    ${ECORE_X_LIBRARIES}
+    ${ECORE_IMF_LIBRARIES}
     ${EDJE_LIBRARIES}
     ${EFLDEPS_LIBRARIES}
     ${EVAS_LIBRARIES}
@@ -216,6 +219,12 @@ LIST (APPEND WebProcess_LIBRARIES
     ${OPENGL_LIBRARIES}
     ${SQLITE_LIBRARIES}
 )
+
+IF (ENABLE_ECORE_X)
+    LIST(APPEND WebProcess_LIBRARIES
+        ${ECORE_X_LIBRARIES}
+        ${X11_Xext_LIB})
+ENDIF ()
 
 ADD_CUSTOM_TARGET(forwarding-headerEfl
     COMMAND ${PERL_EXECUTABLE} ${WEBKIT2_DIR}/Scripts/generate-forwarding-headers.pl ${WEBKIT2_DIR} ${DERIVED_SOURCES_WEBKIT2_DIR}/include efl
@@ -232,6 +241,7 @@ SET (EWebKit2_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/EWebKit2.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_back_forward_list.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_back_forward_list_item.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_color_picker.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_context.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_cookie_manager.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_download_job.h"
@@ -243,6 +253,7 @@ SET (EWebKit2_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_main.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_navigation_data.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_navigation_policy_decision.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_popup_menu.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_popup_menu_item.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_resource.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_settings.h"
@@ -331,6 +342,7 @@ TARGET_LINK_LIBRARIES(ewk2UnitTestUtils ${EWK2UnitTests_LIBRARIES})
 # will clash with tests from the WebKit 1 test suite.
 SET(EWK2UnitTests_BINARIES
     test_ewk2_back_forward_list
+    test_ewk2_color_picker
     test_ewk2_context
     test_ewk2_context_history_callbacks
     test_ewk2_cookie_manager
@@ -339,6 +351,7 @@ SET(EWK2UnitTests_BINARIES
     test_ewk2_favicon_database
     test_ewk2_refptr_evas_object
     test_ewk2_intents
+    test_ewk2_popup_menu
     test_ewk2_settings
     test_ewk2_text_checker
     test_ewk2_view

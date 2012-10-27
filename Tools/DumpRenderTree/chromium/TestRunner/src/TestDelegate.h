@@ -32,21 +32,29 @@
 #define TestDelegate_h
 
 #include "platform/WebString.h"
-#include <wtf/Vector.h>
+#include "platform/WebVector.h"
 
 namespace WebKit {
 struct WebContextMenuData;
 class WebGamepads;
 }
 
+namespace WebTestRunner {
+class WebTask;
+}
+
 class TestDelegate {
 public:
     virtual void clearContextMenuData() = 0;
     virtual void clearEditCommand() = 0;
-    virtual void fillSpellingSuggestionList(const WebKit::WebString& word, Vector<WebKit::WebString>* suggestions) = 0;
+    virtual void fillSpellingSuggestionList(const WebKit::WebString& word, WebKit::WebVector<WebKit::WebString>* suggestions) = 0;
     virtual void setEditCommand(const std::string& name, const std::string& value) = 0;
     virtual WebKit::WebContextMenuData* lastContextMenuData() const = 0;
     virtual void setGamepadData(const WebKit::WebGamepads&) = 0;
+    virtual void printMessage(const std::string& message) = 0;
+    virtual void postTask(WebTestRunner::WebTask*) = 0;
+    virtual void postDelayedTask(WebTestRunner::WebTask*, long long ms) = 0;
+    virtual WebKit::WebString registerIsolatedFileSystem(const WebKit::WebVector<WebKit::WebString>& absoluteFilenames) = 0;
 };
 
 #endif // TestDelegate_h

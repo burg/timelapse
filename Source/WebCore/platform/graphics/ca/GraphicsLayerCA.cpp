@@ -910,7 +910,7 @@ void GraphicsLayerCA::flushCompositingStateForThisLayerOnly()
     commitLayerChangesAfterSublayers();
 }
 
-TiledBacking* GraphicsLayerCA::tiledBacking()
+TiledBacking* GraphicsLayerCA::tiledBacking() const
 {
     return m_layer->tiledBacking();
 }
@@ -1184,54 +1184,47 @@ void GraphicsLayerCA::updateLayerNames()
 
 void GraphicsLayerCA::updateSublayerList()
 {
-    PlatformCALayerList newSublayers;
-    const Vector<GraphicsLayer*>& childLayers = children();
+    const PlatformCALayerList* customSublayers = m_layer->customSublayers();
 
-    if (const PlatformCALayerList* customSublayers = m_layer->customSublayers())
-        newSublayers.appendRange(customSublayers->begin(), customSublayers->end());
-    
-    if (m_structuralLayer || m_contentsLayer || childLayers.size() > 0) {
-        if (m_structuralLayer) {
-            // Add the replica layer first.
-            if (m_replicaLayer)
-                newSublayers.append(static_cast<GraphicsLayerCA*>(m_replicaLayer)->primaryLayer());
-            // Add the primary layer. Even if we have negative z-order children, the primary layer always comes behind.
-            newSublayers.append(m_layer);
-        } else if (m_contentsLayer && m_contentsVisible) {
-            // FIXME: add the contents layer in the correct order with negative z-order children.
-            // This does not cause visible rendering issues because currently contents layers are only used
-            // for replaced elements that don't have children.
-            newSublayers.append(m_contentsLayer);
-        }
-        
-        size_t numChildren = childLayers.size();
-        for (size_t i = 0; i < numChildren; ++i) {
-            GraphicsLayerCA* curChild = static_cast<GraphicsLayerCA*>(childLayers[i]);
-            PlatformCALayer* childLayer = curChild->layerForSuperlayer();
-            newSublayers.append(childLayer);
-        }
+    PlatformCALayerList structuralLayerChildren;
+    PlatformCALayerList primaryLayerChildren;
 
-        for (size_t i = 0; i < newSublayers.size(); --i)
-            newSublayers[i]->removeFromSuperlayer();
-    }
-    
-#ifdef VISIBLE_TILE_WASH
-    if (m_visibleTileWashLayer)
-        newSublayers.append(m_visibleTileWashLayer);
-#endif
+    PlatformCALayerList& childListForSublayers = m_structuralLayer ? structuralLayerChildren : primaryLayerChildren;
+
+    if (customSublayers)
+        primaryLayerChildren.append(*customSublayers);
 
     if (m_structuralLayer) {
-        m_structuralLayer->setSublayers(newSublayers);
+        if (m_replicaLayer)
+            structuralLayerChildren.append(static_cast<GraphicsLayerCA*>(m_replicaLayer)->primaryLayer());
+    
+        structuralLayerChildren.append(m_layer);
+    }
 
-        if (m_contentsLayer) {
-            // If we have a transform layer, then the contents layer is parented in the 
-            // primary layer (which is itself a child of the transform layer).
-            m_layer->removeAllSublayers();
-            if (m_contentsVisible)
-                m_layer->appendSublayer(m_contentsLayer.get());
-        }
-    } else
-        m_layer->setSublayers(newSublayers);
+    if (m_contentsLayer && m_contentsVisible) {
+        // FIXME: add the contents layer in the correct order with negative z-order children.
+        // This does not cause visible rendering issues because currently contents layers are only used
+        // for replaced elements that don't have children.
+        primaryLayerChildren.append(m_contentsLayer);
+    }
+    
+    const Vector<GraphicsLayer*>& childLayers = children();
+    size_t numChildren = childLayers.size();
+    for (size_t i = 0; i < numChildren; ++i) {
+        GraphicsLayerCA* curChild = static_cast<GraphicsLayerCA*>(childLayers[i]);
+        PlatformCALayer* childLayer = curChild->layerForSuperlayer();
+        childListForSublayers.append(childLayer);
+    }
+
+#ifdef VISIBLE_TILE_WASH
+    if (m_visibleTileWashLayer)
+        childListForSublayers.append(m_visibleTileWashLayer);
+#endif
+
+    if (m_structuralLayer)
+        m_structuralLayer->setSublayers(structuralLayerChildren);
+    
+    m_layer->setSublayers(primaryLayerChildren);
 }
 
 void GraphicsLayerCA::updateGeometry(float pageScaleFactor, const FloatPoint& positionRelativeToBase)
@@ -1600,10 +1593,13 @@ FloatRect GraphicsLayerCA::adjustTiledLayerVisibleRect(TiledBacking* tiledBackin
 
 void GraphicsLayerCA::updateVisibleRect(const FloatRect& oldVisibleRect)
 {
-    if (m_layer->layerType() != PlatformCALayer::LayerTypeTileCacheLayer)
+    if (!m_layer->usesTileCacheLayer())
         return;
 
-    FloatRect tileArea = adjustTiledLayerVisibleRect(tiledBacking(), oldVisibleRect, m_sizeAtLastVisibleRectUpdate);
+    FloatRect tileArea = m_visibleRect;
+    if (m_layer->layerType() == PlatformCALayer::LayerTypeTileCacheLayer)
+        tileArea = adjustTiledLayerVisibleRect(tiledBacking(), oldVisibleRect, m_sizeAtLastVisibleRectUpdate);
+
     tiledBacking()->setVisibleRect(enclosingIntRect(tileArea));
 
     m_sizeAtLastVisibleRectUpdate = m_size;
@@ -2521,6 +2517,16 @@ void GraphicsLayerCA::dumpAdditionalProperties(TextStream& textStream, int inden
     if (behavior & LayerTreeAsTextIncludeVisibleRects) {
         writeIndent(textStream, indent + 1);
         textStream << "(visible rect " << m_visibleRect.x() << ", " << m_visibleRect.y() << " " << m_visibleRect.width() << " x " << m_visibleRect.height() << ")\n";
+    }
+
+    if (tiledBacking() && (behavior & LayerTreeAsTextIncludeTileCaches)) {
+        IntRect tileCoverageRect = tiledBacking()->tileCoverageRect();
+        writeIndent(textStream, indent + 1);
+        textStream << "(tile cache coverage " << tileCoverageRect.x() << ", " << tileCoverageRect.y() << " " << tileCoverageRect.width() << " x " << tileCoverageRect.height() << ")\n";
+
+        IntSize tileSize = tiledBacking()->tileSize();
+        writeIndent(textStream, indent + 1);
+        textStream << "(tile size " << tileSize.width() << " x " << tileSize.height() << ")\n";
     }
 }
 

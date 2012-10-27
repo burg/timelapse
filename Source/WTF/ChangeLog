@@ -1,3 +1,187 @@
+2012-10-27  Dan Bernstein  <mitz@apple.com>
+
+        REAL_PLATFORM_NAME build setting is no longer needed
+        https://bugs.webkit.org/show_bug.cgi?id=100587
+
+        Reviewed by Mark Rowe.
+
+        Removed the definition of REAL_PLATFORM_NAME and replaced references to it with references
+        to PLATFORM_NAME.
+
+        * Configurations/Base.xcconfig:
+        * Configurations/CompilerVersion.xcconfig:
+        * Configurations/DebugRelease.xcconfig:
+
+2012-10-26  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r132689.
+        http://trac.webkit.org/changeset/132689
+        https://bugs.webkit.org/show_bug.cgi?id=100574
+
+        Broke HashMaps containing RetainPtrs (Requested by andersca on
+        #webkit).
+
+        * wtf/RetainPtr.h:
+
+2012-10-26  Anders Carlsson  <andersca@apple.com>
+
+        Add an operator& to RetainPtr
+        https://bugs.webkit.org/show_bug.cgi?id=100549
+
+        Reviewed by Dan Bernstein.
+
+        This is useful for APIs that return references using out parameters.
+
+        * wtf/RetainPtr.h:
+        (WTF::RetainPtr::operator&):
+
+2012-10-26  Gabor Ballabas  <gaborb@inf.u-szeged.hu>
+
+        [Qt] Enable JSC's disassembler on x86, x86_64 Linux
+        https://bugs.webkit.org/show_bug.cgi?id=100386
+
+        Reviewed by Simon Hausmann.
+
+        It works fine on Linux x86, x86_64 just needs to be enabled in the
+        QtWebKit build system.
+
+        * wtf/Platform.h:
+
+2012-10-25  Michael Saboff  <msaboff@apple.com>
+
+        REGRESSION (r131836): failures in list styles tests on EFL, GTK
+        https://bugs.webkit.org/show_bug.cgi?id=99824
+
+        Reviewed by Oliver Hunt.
+
+        Fixed ASCII check.
+        Added placeholder argument for new argument added to convertUTF8ToUTF16() in http://trac.webkit.org/changeset/131836.
+
+        * wtf/unicode/UTF8.cpp:
+        (WTF::Unicode::convertUTF8ToUTF16):
+        * wtf/unicode/glib/UnicodeGLib.cpp:
+        (WTF::Unicode::convertCase):
+
+2012-10-25  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL][WK2] Remove some C'ism from EwkView
+        https://bugs.webkit.org/show_bug.cgi?id=100370
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Make OwnPtr useable for Ecore_IMF_Context to avoid
+        using raw pointers in EFL port.
+
+        * wtf/OwnPtrCommon.h:
+        (WTF):
+        * wtf/PlatformEfl.cmake:
+        * wtf/efl/OwnPtrEfl.cpp:
+        (WTF::deleteOwnedPtr):
+        (WTF):
+
+2012-09-27  Yury Semikhatsky  <yurys@chromium.org>
+
+        Web Inspector: provide memory instrumentation for ListHashSet
+        https://bugs.webkit.org/show_bug.cgi?id=97786
+
+        Reviewed by Vsevolod Vlasov.
+
+        Added memory instrumentation for ListHashSet.
+
+        * GNUmakefile.list.am:
+        * WTF.gypi:
+        * WTF.pro:
+        * WTF.vcproj/WTF.vcproj:
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/HashSet.h:
+        (WTF):
+        * wtf/ListHashSet.h:
+        (ListHashSet):
+        (ListHashSetNodeAllocator): changed visibility of inPool method to public
+        (WTF::ListHashSetNodeAllocator::pool):
+        (WTF::ListHashSetNodeAllocator::pastPool):
+        (WTF::::sizeInBytes): added a method that returns size of the set in bytes including
+        all its internals but not the content elements.
+        (WTF):
+        * wtf/MemoryInstrumentation.h: removed onsolete method. All clients were updated to
+        use generic addMember instead.
+        (MemoryInstrumentation):
+        (WTF::MemoryClassInfo::addPrivateBuffer):
+        * wtf/MemoryInstrumentationHashSet.h:
+        * wtf/MemoryInstrumentationListHashSet.h: Copied from Source/WTF/wtf/MemoryInstrumentationHashSet.h.
+        (WTF):
+        (WTF::reportMemoryUsage):
+
+2012-10-23  Benjamin Poulain  <benjamin@webkit.org>
+
+        WTFURL: Implement KURL::setPort()
+        https://bugs.webkit.org/show_bug.cgi?id=99898
+
+        Reviewed by Adam Barth.
+
+        Add an efficient implementation for remplacing the port component
+        in an URL. This will be the base for replacing other components
+        efficiently.
+
+        The testing is covered by fast/dom/HTMLAnchorElement/set-href-attribute-port.html
+
+        * wtf/url/api/ParsedURL.cpp:
+        (WTF::generateNewSpecWithPort):
+        (WTF::replacePortWithString):
+        (WTF::ParsedURL::replacePort):
+        * wtf/url/api/ParsedURL.h:
+        (ParsedURL):
+
+2012-10-22  Michael Saboff  <msaboff@apple.com>
+
+        Regression(r131655): Crash in StringImpl::findIgnoringCase
+        https://bugs.webkit.org/show_bug.cgi?id=99753
+
+        Reviewed by Geoffrey Garen.
+
+        Fixed to use the searchLength to take into account the start index.
+
+        Added LayoutTests/fast/js/find-ignoring-case-regress-99753.html
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::findIgnoringCase):
+
+2012-10-22  Simon Hausmann  <simon.hausmann@digia.com>
+
+        Unreviewed: Re-enable LLINT on Qt/Linux after r131932.
+
+        * wtf/Platform.h:
+
+2012-10-22  Yury Semikhatsky  <yurys@chromium.org>
+
+        Web Inspector: do not double count memory of objects with multiple ancestors
+        https://bugs.webkit.org/show_bug.cgi?id=99958
+
+        Reviewed by Alexander Pavlov.
+
+        Make sure memory occupied by objects of classes with multiple inheritance is
+        not double counted.
+
+        * wtf/MemoryInstrumentation.h:
+        (WTF::MemoryObjectInfo::MemoryObjectInfo):
+        (WTF::MemoryObjectInfo::reportedPointer):
+        (WTF::MemoryObjectInfo::reportObjectInfo): 1) Store actual pointer to the instrumented
+        object as it may differ from the original pointer by which it was reported. 2) Make
+        the method non-template and calculate object size on the caller side.
+        (MemoryObjectInfo):
+        (WTF::MemoryInstrumentation::reportObjectMemoryUsage):
+        (WTF::MemoryClassInfo::MemoryClassInfo):
+        (WTF::MemoryInstrumentation::InstrumentedPointer::process): use adjusted pointer
+        returned by reportMemoryUsage to check if the object has already been visited when
+        the pointer differs from the orinal one(it may happen if the object was reported
+        by a pointer to one of its base classes).
+
+2012-10-20  Martin Robinson  <mrobinson@igalia.com>
+
+        Fix 'make dist' for the GTK+ port
+
+        * GNUmakefile.list.am: Add missing files to the source list.
+
 2012-10-19  Mark Lam  <mark.lam@apple.com>
 
         Added WTF::StackStats mechanism.

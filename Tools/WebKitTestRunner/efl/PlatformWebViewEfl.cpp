@@ -40,7 +40,7 @@ static Ecore_Evas* initEcoreEvas()
     return ecoreEvas;
 }
 
-PlatformWebView::PlatformWebView(WKContextRef context, WKPageGroupRef pageGroup)
+PlatformWebView::PlatformWebView(WKContextRef context, WKPageGroupRef pageGroup, WKDictionaryRef /*options*/)
 {
     m_window = initEcoreEvas();
     Evas* evas = ecore_evas_get(m_window);
@@ -69,6 +69,11 @@ WKPageRef PlatformWebView::page()
 
 void PlatformWebView::focus()
 {
+    // Force the view to receive focus even if Evas considers it to be focused; sometimes an iframe might receive
+    // focused via JavaScript and the main frame is considered unfocused, but that is not noticed by Evas.
+    // Perhaps WebCoreSupport::focusedFrameChanged() should emit some sort of notification?
+    if (evas_object_focus_get(m_view))
+        evas_object_focus_set(m_view, false);
     evas_object_focus_set(m_view, true);
 }
 

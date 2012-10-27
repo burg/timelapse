@@ -551,13 +551,15 @@ void LocaleWin::ensureWeekDayShortLabels()
     }
 }
 
-#if ENABLE(CALENDAR_PICKER)
+#if ENABLE(CALENDAR_PICKER) || ENABLE(INPUT_MULTIPLE_FIELDS_UI)
 const Vector<String>& LocaleWin::monthLabels()
 {
     ensureMonthLabels();
     return m_monthLabels;
 }
+#endif
 
+#if ENABLE(CALENDAR_PICKER)
 const Vector<String>& LocaleWin::weekDayShortLabels()
 {
     ensureWeekDayShortLabels();
@@ -577,39 +579,13 @@ bool LocaleWin::isRTL()
 #endif
 
 #if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
-static void appendAsLDMLLiteral(const String& literal, StringBuilder& buffer)
-{
-    if (literal.length() <= 0)
-        return;
-    
-    if (literal.find('\'') == notFound) {
-        buffer.append("'");
-        buffer.append(literal);
-        buffer.append("'");
-        return;
-    }
-
-    for (unsigned i = 0; i < literal.length(); ++i) {
-        if (literal[i] == '\'')
-            buffer.append("''");
-        else {
-            String escaped = literal.substring(i);
-            escaped.replace(ASCIILiteral("'"), ASCIILiteral("''"));
-            buffer.append("'");
-            buffer.append(escaped);
-            buffer.append("'");
-            return;
-        }
-    }
-}
-
 static String convertWindowsDateFormatToLDML(const Vector<DateFormatToken>& tokens)
 {
     StringBuilder buffer;
     for (unsigned i = 0; i < tokens.size(); ++i) {
         switch (tokens[i].type) {
         case DateFormatToken::Literal:
-            appendAsLDMLLiteral(tokens[i].data, buffer);
+            DateTimeFormat::quoteAndAppendLiteral(tokens[i].data, buffer);
             break;
 
         case DateFormatToken::Day2:
@@ -701,7 +677,7 @@ static String convertWindowsTimeFormatToLDML(const String& windowsTimeFormat)
 
 String LocaleWin::dateFormat()
 {
-    if (!m_dateFormat.isEmpty())
+    if (!m_dateFormat.isNull())
         return m_dateFormat;
     ensureShortDateTokens();
     m_dateFormat = convertWindowsDateFormatToLDML(m_shortDateTokens);
@@ -723,22 +699,40 @@ String LocaleWin::monthFormat()
 
 String LocaleWin::timeFormat()
 {
-    if (m_localizedTimeFormatText.isEmpty())
-        m_localizedTimeFormatText = convertWindowsTimeFormatToLDML(getLocaleInfoString(LOCALE_STIMEFORMAT));
-    return m_localizedTimeFormatText;
+    if (m_timeFormatWithSeconds.isNull())
+        m_timeFormatWithSeconds = convertWindowsTimeFormatToLDML(getLocaleInfoString(LOCALE_STIMEFORMAT));
+    return m_timeFormatWithSeconds;
 }
 
-// Note: To make XP/Vista and Windows 7/later same behavior, we don't use
-// LOCALE_SSHORTTIME.
 String LocaleWin::shortTimeFormat()
 {
-    return timeFormat();
+    if (!m_timeFormatWithoutSeconds.isNull())
+        return m_timeFormatWithoutSeconds;
+    String format = getLocaleInfoString(LOCALE_SSHORTTIME);
+    // Vista or older Windows doesn't support LOCALE_SSHORTTIME.
+    if (format.isEmpty()) {
+        format = timeFormat();
+        StringBuilder builder;
+        builder.append(getLocaleInfoString(LOCALE_STIME));
+        builder.append("ss");
+        size_t pos = format.reverseFind(builder.toString());
+        if (pos != notFound)
+            format.remove(pos, builder.length());
+    }
+    m_timeFormatWithoutSeconds = convertWindowsTimeFormatToLDML(format);
+    return m_timeFormatWithoutSeconds;
 }
 
 const Vector<String>& LocaleWin::shortMonthLabels()
 {
     ensureShortMonthLabels();
     return m_shortMonthLabels;
+}
+
+const Vector<String>& LocaleWin::standAloneMonthLabels()
+{
+    // Windows doesn't provide a way to get stand-alone month labels.
+    return monthLabels();
 }
 
 const Vector<String>& LocaleWin::shortStandAloneMonthLabels()

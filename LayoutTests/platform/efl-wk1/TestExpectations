@@ -81,6 +81,8 @@ webkit.org/b/30724 [ Debug ] fast/loader/opaque-base-url.html [ Crash ]
 # FLAKY TESTS
 #////////////////////////////////////////////////////////////////////////////////////////
 
+editing/selection/doubleclick-whitespace-img-crash.html [ Failure Pass ]
+
 # Test passes, but editing delegates does not match expected ones
 webkit.org/b/96641 media/video-seek-past-end-playing.html [ Failure Pass ]
 webkit.org/b/96642 loader/go-back-to-different-window-size.html [ Failure Pass ]
@@ -291,8 +293,10 @@ webkit.org/b/85599 http/tests/navigation/postredirect-goback1.html [ Failure ]
 webkit.org/b/56567 http/tests/cache/history-only-cached-subresource-loads.html [ Failure ]
 
 # EFL WK1 does not support plugins yet.
+webkit.org/b/96881 fast/frames/sandboxed-iframe-plugins.html [ Failure ]
 webkit.org/b/96881 http/tests/plugins [ Skip ]
 webkit.org/b/96881 plugins [ Skip ]
+webkit.org/b/96881 userscripts/user-script-plugin-document.html [ Failure ]
 
 # EFL WK1 does not support the spellchecker feature
 webkit.org/b/86633 editing/spelling [ Skip ]
@@ -303,8 +307,3 @@ webkit.org/b/87972 fast/encoding/mailto-always-utf-8.html [ Failure ]
 
 # Frame does not get focus as expected
 webkit.org/b/97077 inspector/extensions/extensions-panel.html [ Failure ]
-
-# Fails after r131836
-webkit.org/b/99824 fast/lists/w3-css3-list-styles-alphabetic.html [ Failure ]
-webkit.org/b/99824 fast/lists/w3-css3-list-styles-fallback-style.html [ Failure ]
-webkit.org/b/99824 fast/lists/w3-list-styles.html [ Failure ]

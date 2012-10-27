@@ -1,3 +1,355 @@
+2012-10-26  Jacky Jiang  <zhajiang@rim.com>
+
+        [BlackBerry][FullScreen] entering/leaving fullscreen results in temporary glitches on the screen
+        https://bugs.webkit.org/show_bug.cgi?id=100421
+
+        Reviewed by Yong Li.
+
+        PR: 231173
+        When leaving fullscreen, we need to suspend screen and backing store
+        updates before setting scroll position and changing transformation and
+        resume after they are done. In which way, we can get rid of a noticeable
+        glitch during the transition.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::exitFullScreenForElement):
+
+2012-10-26  Sean Wang  <Xuewen.Wang@torchmobile.com.cn>
+
+        [BlackBerry] ASSERT currentThreadIsHoldingLock() failed in MarkedAllocator::allocateSlowCase()
+        https://bugs.webkit.org/show_bug.cgi?id=100504
+
+        Reviewed by Yong Li.
+
+        PR #232038 The similar PR # 200724.
+        Reviewed internally by Petter Wang.
+
+        This issue is same as bug 95492, and this patch is same as its patch.
+        Hold the JSLock for the current thread before we call toRef to avoid
+        the ASSERT failure.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::executeJavaScriptInIsolatedWorld):
+        (BlackBerry::WebKit::WebPage::executeJavaScriptFunction):
+
+2012-10-25  Sean Wang  <Xuewen.Wang@torchmobile.com.cn>
+
+        [BlackBerry] WebView process crashed at AuthenticationChallengeManager::pageVisibilityChanged()
+        https://bugs.webkit.org/show_bug.cgi?id=100330
+
+        Reviewed by Rob Buis.
+
+        Reviewed internally by Charles Wei.
+        PR #231232
+
+        Since AuthenticationChallengeManager keeps a map of WebPages, WebPage setting
+        visible needs AuthenticationChallengeManager to update its records, deleting
+        webpage from AuthenticationChallengeManager's map should be done after setting
+        webpage visibility.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::~WebPagePrivate):
+
+2012-10-24  Sean Wang  <Xuewen.Wang@torchmobile.com.cn>
+
+        [BlackBerry] ASSERT(!needsOneShotDrawingSynchronization()) failed in commitRootLayerIfNeeded()
+        https://bugs.webkit.org/show_bug.cgi?id=100214
+
+        Reviewed by Rob Buis.
+
+        ViewportSize has been changed before committing root layer, it asserts
+        that it needs relayout and render if needed before committing if it
+        Needs One Shot Drawing Synchronization.
+        This patch calls requestLayoutIfNeeded() when resumeScreenAndBackingStoreUpdates().
+
+        Fix a coding style in the BackingStore.cpp as well.
+
+        Reviewed internally by Arvid Nilsson.
+        PR #230253
+
+        * Api/BackingStore.cpp:
+        (BlackBerry::WebKit::BackingStorePrivate::resumeScreenAndBackingStoreUpdates):
+
+2012-10-24  Otto Derek Cheung  <otcheung@rim.com>
+
+        [BlackBerry] Geolocation is segfaulting
+        https://bugs.webkit.org/show_bug.cgi?id=100305
+
+        Reviewed by Rob Buis.
+
+        We weren't wrapping the Geolocation object in a RefPtr when we call setIsAllowed in
+        GeolocationClientBlackBerry::onPermission.
+
+        This patch also removes all references of the Geolocation object in WebPageClientImpl.
+        One RefPtr<Geolocation> is used to store the reference of the WebCore object on our port.
+
+        We don't need a mapping between origin -> context of Geolocation because in our port,
+        one WebPage.cpp contains one GeolocationController only. 
+
+        * Api/WebPageClient.h:
+        * WebCoreSupport/GeolocationClientBlackBerry.cpp:
+        (frameOrigin):
+        (GeolocationClientBlackBerry::requestPermission):
+        (GeolocationClientBlackBerry::cancelPermissionRequest):
+        (GeolocationClientBlackBerry::onPermission):
+        * WebCoreSupport/GeolocationClientBlackBerry.h:
+        (GeolocationClientBlackBerry):
+
+2012-10-24  Jacky Jiang  <zhajiang@rim.com>
+
+        [BlackBerry][Fullscreen] Roll out changes to fullscreen which rely on viewport size change [Part II]
+        https://bugs.webkit.org/show_bug.cgi?id=100259
+
+        Reviewed by Rob Buis.
+
+        PR: 219666
+        Revert "[BlackBerry] [FullScreen] entering/leaving fullscreen results in temporary glitches on the screen"
+        This rolls out r128772.
+        The patches relies on the viewport size change of the client side to
+        resume the screen and backing store updates. However, some client
+        sides don't need or wish to resize the WebKit viewport at all which
+        will result in upexpected screen and backing store suspensions.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::WebPagePrivate):
+        (BlackBerry::WebKit::WebPagePrivate::setViewportSize):
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+        * WebCoreSupport/ChromeClientBlackBerry.cpp:
+        (WebCore::ChromeClientBlackBerry::enterFullScreenForElement):
+        (WebCore::ChromeClientBlackBerry::exitFullScreenForElement):
+
+2012-10-24  Jacky Jiang  <zhajiang@rim.com>
+
+        [BlackBerry][Fullscreen] Roll out changes to fullscreen which rely on viewport size change
+        https://bugs.webkit.org/show_bug.cgi?id=100259
+
+        Reviewed by Rob Buis.
+
+        PR: 219666
+        Roll out r130392 and r129909.
+        The patches rely on the viewport size change of the client side to
+        update the scale and scroll position of the video. However, some client
+        sides don't need or wish to resize the WebKit viewport at all.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::WebPagePrivate):
+        (BlackBerry::WebKit::WebPagePrivate::setViewportSize):
+        (BlackBerry::WebKit::WebPagePrivate::enterFullScreenForElement):
+        (BlackBerry::WebKit::WebPagePrivate::exitFullScreenForElement):
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+
+2012-10-24  Otto Derek Cheung  <otcheung@rim.com>
+
+        [BlackBerry] Rename GeolocationControllerClientBlackBerry to GeolocationClientBlackBerry
+        https://bugs.webkit.org/show_bug.cgi?id=100250
+
+        Reviewed by Rob Buis.
+
+        Rename GeolocationControllerClientBlackBerry to GeolocationClientBlackBerry
+        to prevent confusion.
+        PR 230196
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::init):
+        * Api/WebPage_p.h:
+        (WebCore):
+        * WebCoreSupport/ChromeClientBlackBerry.cpp:
+        * WebCoreSupport/GeolocationClientBlackBerry.cpp: Renamed from Source/WebKit/blackberry/WebCoreSupport/GeolocationControllerClientBlackBerry.cpp.
+        (frameOrigin):
+        (GeolocationClientBlackBerry::GeolocationClientBlackBerry):
+        (GeolocationClientBlackBerry::geolocationDestroyed):
+        (GeolocationClientBlackBerry::startUpdating):
+        (GeolocationClientBlackBerry::stopUpdating):
+        (GeolocationClientBlackBerry::lastPosition):
+        (GeolocationClientBlackBerry::requestPermission):
+        (GeolocationClientBlackBerry::cancelPermissionRequest):
+        (GeolocationClientBlackBerry::onLocationUpdate):
+        (GeolocationClientBlackBerry::onLocationError):
+        (GeolocationClientBlackBerry::onPermission):
+        (GeolocationClientBlackBerry::setEnableHighAccuracy):
+        * WebCoreSupport/GeolocationClientBlackBerry.h: Renamed from Source/WebKit/blackberry/WebCoreSupport/GeolocationControllerClientBlackBerry.h.
+        (WebKit):
+        (WebCore):
+        (GeolocationClientBlackBerry):
+        (WebCore::GeolocationClientBlackBerry::tracker):
+
+2012-10-24  Parth Patel  <parpatel@rim.com>
+
+        [BlackBerry] Extending existing ThreadUnsafe singletons in webkit to
+        Generic ThreadUnsafe Singleton
+        https://bugs.webkit.org/show_bug.cgi?id=100145
+
+        Reviewed by Rob Buis.
+
+        Extending the singletons to generic singleton and changing
+        getInstance() in IconDatabaseClientBlackBerry to instance()
+        to match the generic singleton template.
+
+        Reviewed Internally by Yong Li.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPage::initializeIconDataBase):
+        * WebCoreSupport/IconDatabaseClientBlackBerry.cpp:
+        (WebCore):
+        * WebCoreSupport/IconDatabaseClientBlackBerry.h:
+        (IconDatabaseClientBlackBerry):
+
+2012-10-23  Robin Cao  <robin.cao@torchmobile.com.cn>
+
+        [BlackBerry] Web page renders at the wrong zoom level after viewport changes
+        https://bugs.webkit.org/show_bug.cgi?id=100096
+
+        Reviewed by Rob Buis.
+
+        Notify the client of the zoom level change before resuming screen updates.
+        Otherwise, the user interface thread may blit the content at the wrong
+        zoom level in some cases. This can also prevent potential flickering.
+
+        Reviewed internally by Arvid Nilsson.
+
+        PR #225741
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::zoomAboutPoint):
+        (BlackBerry::WebKit::WebPagePrivate::zoomBlock):
+
+2012-10-23  Mike Lattanzio  <mlattanzio@rim.com>
+
+        [BlackBerry] Cache TouchDown HitTestResult to avoid calling RenderLayer::hitTest unnecessarily
+        https://bugs.webkit.org/show_bug.cgi?id=99649
+
+        Reviewed by George Staikos.
+
+        Random latency before scroll starts on sites like http://pintrest.com
+        Internal PR225398
+
+        The chief problem here is the all the hit testing that we do for
+        touch events and simulated mouse events. If the render tree is dirty
+        hit tests can take a long time in Document::recalcStyle(). Masking
+        the flags that force style recalculations will make them fast, at the
+        expense that they might be happening on stale data.
+
+        Since we are only using these hit tests to look for event handlers -
+        we're not actually modifying anything, it is better to skip the
+        Document::recalcStyle() and save ourselves tons of time.
+
+        * Api/InRegionScroller.cpp:
+        (BlackBerry::WebKit::InRegionScrollerPrivate::calculateInRegionScrollableAreasForPoint):
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::WebPagePrivate):
+        (BlackBerry::WebKit::WebPage::touchEvent):
+        (BlackBerry::WebKit::WebPagePrivate::setScrollOriginPoint):
+        (BlackBerry::WebKit::WebPagePrivate::postponeDocumentStyleRecalc):
+        (WebKit):
+        (BlackBerry::WebKit::WebPagePrivate::resumeDocumentStyleRecalc):
+        (BlackBerry::WebKit::WebPagePrivate::hitTestResult):
+        (BlackBerry::WebKit::WebPagePrivate::clearCachedHitTestResult):
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+        * WebKitSupport/FatFingers.cpp:
+        (BlackBerry::WebKit::FatFingers::findBestPoint):
+        (BlackBerry::WebKit::FatFingers::getRelevantInfoFromCachedHitTest):
+        * WebKitSupport/FatFingers.h:
+        * WebKitSupport/TouchEventHandler.cpp:
+        (BlackBerry::WebKit::TouchEventHandler::handleTouchPoint):
+
+2012-10-23  Rob Buis  <rbuis@rim.com>
+
+        [BlackBerry] Make selection in search input box not overlap cancel button
+        https://bugs.webkit.org/show_bug.cgi?id=100130
+
+        Reviewed by Antonio Gomes.
+
+        This ensures that even when selection is active, the user can still press 'cancel'.
+
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::boundingBoxForInputField):
+
+2012-10-23  Arvid Nilsson  <anilsson@rim.com>
+
+        [BlackBerry] Let WebKit manage the SelectionOverlay
+        https://bugs.webkit.org/show_bug.cgi?id=99585
+
+        Reviewed by Rob Buis.
+
+        The SelectionOverlay was exposed to clients of the BlackBerry::WebKit
+        API. However, all the information and notifications necessary to manage
+        the SelectionOverlay are available within WebKit, so the client does
+        not have to shoulder this responsibility.
+
+        Remove WebSelection and all the related plumbing. Now that nobody is
+        using the class from the user interface thread, remove the message
+        related code in SelectionOverlay.
+
+        Add two calls to SelectionOverlay::hide() that are necessary now that
+        the client is no longer responsible for hiding it.
+
+        RIM PR: 225789
+
+        Reviewed internally by Mike Fenton.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::~WebPagePrivate):
+        * Api/WebPage.h:
+        (WebKit):
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+        * Api/WebSelectionOverlay.h: Removed.
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::SelectionHandler::cancelSelection): Hide the overlay here, because state is reset and selection mode is no longer active
+        (BlackBerry::WebKit::SelectionHandler::selectionPositionChanged): Also hide overlay here, to go with the call to cancelSelectionVisuals
+        * WebKitSupport/SelectionOverlay.cpp:
+        (BlackBerry::WebKit::SelectionOverlay::SelectionOverlay):
+        * WebKitSupport/SelectionOverlay.h:
+        (BlackBerry::WebKit::SelectionOverlay::create):
+        (SelectionOverlay):
+
+2012-10-22  Mike Fenton  <mifenton@rim.com>
+
+        [BlackBerry] Remove specialized handling for isIndex fields.
+        https://bugs.webkit.org/show_bug.cgi?id=100004
+
+        Reviewed by Rob Buis.
+
+        PR 214342.
+
+        Remove special handling for isIndex field as the tag
+        is rewritten.
+
+        Reviewed Internally by Yongxin Dai and Nima Ghanavatian.
+
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::inputStyle):
+        (BlackBerry::WebKit::InputHandler::elementType):
+
+2012-10-22  Jocelyn Turcotte  <jocelyn.turcotte@digia.com>
+
+        [Qt] Fix "ASSERTION FAILED: !document->inPageCache()" when loading a page
+        https://bugs.webkit.org/show_bug.cgi?id=98514
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * WebCoreSupport/FrameLoaderClientBlackBerry.cpp:
+        (WebCore::FrameLoaderClientBlackBerry::transitionToCommittedForNewPage):
+
+2012-10-20  Andrew Lo  <anlo@rim.com>
+
+        [BlackBerry] m_mainFrame should be null checked before use in WebPagePrivate destructor
+        https://bugs.webkit.org/show_bug.cgi?id=99916
+
+        Reviewed by George Staikos.
+        Internally reviewed by Arvid Nilsson.
+
+        Internal PR228029
+        Add null checks for m_mainFrame for things that happen during
+        WebPage destruction.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::setVisible):
+        (BlackBerry::WebKit::WebPagePrivate::setCompositorDrawsRootLayer):
+
 2012-10-19  Mike Fenton  <mifenton@rim.com>
 
         [BlackBerry] Convert input style to int64_t

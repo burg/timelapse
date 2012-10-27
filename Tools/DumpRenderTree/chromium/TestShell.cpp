@@ -68,6 +68,7 @@
 
 
 using namespace WebKit;
+using namespace WebTestRunner;
 using namespace std;
 
 // Content area size for newly created windows.
@@ -154,7 +155,7 @@ TestShell::TestShell()
 void TestShell::initialize()
 {
     m_webPermissions = adoptPtr(new WebPermissions(this));
-    m_testInterfaces = adoptPtr(new TestInterfaces());
+    m_testInterfaces = adoptPtr(new WebTestInterfaces());
     m_testRunner = adoptPtr(new DRTTestRunner(this));
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     m_notificationPresenter = adoptPtr(new NotificationPresenter(this));
@@ -384,6 +385,11 @@ void TestShell::testTimedOut()
 void TestShell::setPerTilePaintingEnabled(bool enabled)
 {
     Platform::current()->compositorSupport()->setPerTilePaintingEnabled(enabled);
+}
+
+void TestShell::setAcceleratedAnimationEnabled(bool enabled)
+{
+    Platform::current()->compositorSupport()->setAcceleratedAnimationEnabled(enabled);
 }
 
 static string dumpDocumentText(WebFrame* frame)

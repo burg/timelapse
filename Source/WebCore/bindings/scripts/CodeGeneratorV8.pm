@@ -556,8 +556,11 @@ inline v8::Handle<v8::Value> toV8Fast(Node* node, const v8::AccessorInfo& info, 
     // whether the holder's inline wrapper is the same wrapper we see in the
     // v8::AccessorInfo.
     v8::Handle<v8::Object> holderWrapper = info.Holder();
-    if (holder->wrapper() && *holder->wrapper() == holderWrapper && node->wrapper())
-        return *node->wrapper();
+    if (holder->wrapper() == holderWrapper) {
+        v8::Handle<v8::Object> wrapper = node->wrapper();
+        if (!wrapper.IsEmpty())
+            return wrapper;
+    }
     return toV8Slow(node, holderWrapper, info.GetIsolate());
 }
 END
@@ -753,6 +756,13 @@ sub IsConstructable
     my $dataNode = shift;
 
     return $dataNode->extendedAttributes->{"CustomConstructor"} || $dataNode->extendedAttributes->{"V8CustomConstructor"} || $dataNode->extendedAttributes->{"Constructor"} || $dataNode->extendedAttributes->{"ConstructorTemplate"};
+}
+
+sub IsReadonly
+{
+    my $attribute = shift;
+    my $attrExt = $attribute->signature->extendedAttributes;
+    return ($attribute->type =~ /readonly/ || $attrExt->{"V8ReadOnly"}) && !$attrExt->{"Replaceable"};
 }
 
 sub GenerateDomainSafeFunctionGetter
@@ -1008,10 +1018,10 @@ END
     # Special case for readonly or Replaceable attributes (with a few exceptions). This attempts to ensure that JS wrappers don't get
     # garbage-collected prematurely when their lifetime is strongly tied to their owner. We accomplish this by inserting a reference to
     # the newly created wrapper into an internal field of the holder object.
-    if (!IsNodeSubType($dataNode) && $attrName ne "self" && (IsWrapperType($returnType) && ($attribute->type =~ /^readonly/ || $attribute->signature->extendedAttributes->{"Replaceable"} || $attrName eq "location")
+    if (!IsNodeSubType($dataNode) && $attrName ne "self" && IsWrapperType($returnType) && (IsReadonly($attribute) || $attribute->signature->extendedAttributes->{"Replaceable"} || $attrName eq "location")
         && $returnType ne "EventTarget" && $returnType ne "SerializedScriptValue" && $returnType ne "DOMWindow" 
         && $returnType ne "MessagePortArray"
-        && $returnType !~ /SVG/ && $returnType !~ /HTML/ && !IsDOMNodeType($returnType))) {
+        && $returnType !~ /SVG/ && $returnType !~ /HTML/ && !IsDOMNodeType($returnType)) {
 
         my $arrayType = $codeGenerator->GetArrayType($returnType);
         if ($arrayType) {
@@ -1705,13 +1715,13 @@ sub GenerateParametersCheck
 
     foreach my $parameter (@{$function->parameters}) {
         TranslateParameter($parameter);
-
-        my $parameterName = $parameter->name;
+        my $nativeType = GetNativeTypeFromSignature($parameter, $paramIndex);
 
         # Optional arguments with [Optional] should generate an early call with fewer arguments.
         # Optional arguments with [Optional=...] should not generate the early call.
+        # Optional Dictionary arguments always considered to have default of empty dictionary.
         my $optional = $parameter->extendedAttributes->{"Optional"};
-        if ($optional && $optional ne "DefaultIsUndefined" && $optional ne "DefaultIsNullString" && !$parameter->extendedAttributes->{"Callback"}) {
+        if ($optional && $optional ne "DefaultIsUndefined" && $optional ne "DefaultIsNullString" && $nativeType ne "Dictionary" && !$parameter->extendedAttributes->{"Callback"}) {
             $parameterCheckString .= "    if (args.Length() <= $paramIndex) {\n";
             my $functionCall = GenerateFunctionCallString($function, $paramIndex, "    " x 2, $implClassName, %replacements);
             $parameterCheckString .= $functionCall;
@@ -1723,6 +1733,7 @@ sub GenerateParametersCheck
             $parameterDefaultPolicy = "DefaultIsNullString";
         }
 
+        my $parameterName = $parameter->name;
         if (GetIndexOf($parameterName, @paramTransferListNames) != -1) {
             $replacements{$parameterName} = "messagePortArray" . ucfirst($parameterName);
             $paramIndex++;
@@ -1730,7 +1741,6 @@ sub GenerateParametersCheck
         }
 
         AddToImplIncludes("ExceptionCode.h");
-        my $nativeType = GetNativeTypeFromSignature($parameter, $paramIndex);
         if ($parameter->extendedAttributes->{"Callback"}) {
             my $className = GetCallbackClassName($parameter->type);
             AddToImplIncludes("$className.h");
@@ -2193,7 +2203,7 @@ sub GenerateSingleBatchedAttribute
         $accessControl = "v8::ALL_CAN_WRITE";
     } elsif ($attrExt->{"DoNotCheckSecurity"}) {
         $accessControl = "v8::ALL_CAN_READ";
-        if (!($attribute->type =~ /^readonly/) && !($attrExt->{"V8ReadOnly"})) {
+        if (!IsReadonly($attribute)) {
             $accessControl .= " | v8::ALL_CAN_WRITE";
         }
     }
@@ -2270,7 +2280,7 @@ sub GenerateSingleBatchedAttribute
     }
 
     # Read only attributes
-    if ($attribute->type =~ /^readonly/ || $attrExt->{"V8ReadOnly"}) {
+    if (IsReadonly($attribute)) {
         $setter = "0";
     }
 
@@ -2649,8 +2659,7 @@ sub GenerateImplementation
             $hasReplaceable = 1;
         } elsif (!$attribute->signature->extendedAttributes->{"CustomSetter"} &&
             !$attribute->signature->extendedAttributes->{"V8CustomSetter"} &&
-            $attribute->type !~ /^readonly/ &&
-            !$attribute->signature->extendedAttributes->{"V8ReadOnly"}) {
+            !IsReadonly($attribute)) {
             GenerateNormalAttrSetter($attribute, $dataNode, $implClassName, $interfaceName);
         }
     }
@@ -3455,19 +3464,9 @@ END
         return wrapper;
 
     installPerContextProperties(wrapper, impl.get());
-END
-
-    push(@implContent, <<END);
     v8::Persistent<v8::Object> wrapperHandle = V8DOMWrapper::setJSWrapperFor${domMapName}(impl, wrapper, isolate);
     if (!hasDependentLifetime)
         wrapperHandle.MarkIndependent();
-END
-    if (IsNodeSubType($dataNode)) {
-        push(@implContent, <<END);
-    wrapperHandle.SetWrapperClassId(v8DOMSubtreeClassId);
-END
-    }
-    push(@implContent, <<END);
     return wrapper;
 }
 END
@@ -3487,9 +3486,7 @@ sub GetDomMapName
     my $dataNode = shift;
     my $type = shift;
 
-    return "ActiveDOMNode" if (IsNodeSubType($dataNode) && $dataNode->extendedAttributes->{"ActiveDOMObject"});
     return "DOMNode" if IsNodeSubType($dataNode);
-    return "ActiveDOMObject" if $dataNode->extendedAttributes->{"ActiveDOMObject"};
     return "DOMObject";
 }
 

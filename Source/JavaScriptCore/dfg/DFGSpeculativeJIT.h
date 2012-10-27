@@ -1925,6 +1925,15 @@ public:
 #if !defined(NDEBUG) && !CPU(ARM)
     void prepareForExternalCall()
     {
+        // We're about to call out to a "native" helper function. The helper
+        // function is expected to set topCallFrame itself with the ExecState
+        // that is passed to it.
+        //
+        // We explicitly trash topCallFrame here so that we'll know if some of
+        // the helper functions are not setting topCallFrame when they should
+        // be doing so. Note: the previous value in topcallFrame was not valid
+        // anyway since it was not being updated by JIT'ed code by design.
+
         for (unsigned i = 0; i < sizeof(void*) / 4; i++)
             m_jit.store32(TrustedImm32(0xbadbeef), reinterpret_cast<char*>(&m_jit.globalData()->topCallFrame) + i * 4);
     }
@@ -2261,14 +2270,6 @@ public:
     void compileAllocatePropertyStorage(Node&);
     void compileReallocatePropertyStorage(Node&);
     
-#if USE(JSVALUE64)
-    MacroAssembler::JumpList compileContiguousGetByVal(Node&, GPRReg baseReg, GPRReg propertyReg, GPRReg storageReg, GPRReg resultReg);
-    MacroAssembler::JumpList compileArrayStorageGetByVal(Node&, GPRReg baseReg, GPRReg propertyReg, GPRReg storageReg, GPRReg resultReg);
-#else
-    MacroAssembler::JumpList compileContiguousGetByVal(Node&, GPRReg baseReg, GPRReg propertyReg, GPRReg storageReg, GPRReg resultTagReg, GPRReg resultPayloadReg);
-    MacroAssembler::JumpList compileArrayStorageGetByVal(Node&, GPRReg baseReg, GPRReg propertyReg, GPRReg storageReg, GPRReg resultTagReg, GPRReg resultPayloadReg);
-#endif
-    
     bool putByValWillNeedExtraRegister(Array::Mode arrayMode)
     {
         switch (arrayMode) {
@@ -2295,13 +2296,6 @@ public:
     {
         return temporaryRegisterForPutByVal(temporary, node.arrayMode());
     }
-#if USE(JSVALUE64)
-    MacroAssembler::JumpList compileContiguousPutByVal(Node&, GPRReg baseReg, GPRReg propertyReg, GPRReg storageReg, GPRReg valueReg, GPRReg tempReg);
-    MacroAssembler::JumpList compileArrayStoragePutByVal(Node&, GPRReg baseReg, GPRReg propertyReg, GPRReg storageReg, GPRReg valueReg, GPRReg tempReg);
-#else
-    MacroAssembler::JumpList compileContiguousPutByVal(Node&, GPRReg baseReg, GPRReg propertyReg, GPRReg storageReg, GPRReg valueTagReg, GPRReg valuePayloadReg);
-    MacroAssembler::JumpList compileArrayStoragePutByVal(Node&, GPRReg baseReg, GPRReg propertyReg, GPRReg storageReg, GPRReg valueTagReg, GPRReg valuePayloadReg);
-#endif
     
     void compileGetCharCodeAt(Node&);
     void compileGetByValOnString(Node&);

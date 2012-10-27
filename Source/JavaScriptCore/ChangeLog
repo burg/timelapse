@@ -1,3 +1,533 @@
+2012-10-27  Dan Bernstein  <mitz@apple.com>
+
+        REAL_PLATFORM_NAME build setting is no longer needed
+        https://bugs.webkit.org/show_bug.cgi?id=100587
+
+        Reviewed by Mark Rowe.
+
+        Removed the definition of REAL_PLATFORM_NAME and replaced references to it with references
+        to PLATFORM_NAME.
+
+        * Configurations/Base.xcconfig:
+        * Configurations/CompilerVersion.xcconfig:
+        * Configurations/DebugRelease.xcconfig:
+        * Configurations/FeatureDefines.xcconfig:
+        * Configurations/JSC.xcconfig:
+        * Configurations/JavaScriptCore.xcconfig:
+        * Configurations/ToolExecutable.xcconfig:
+
+2012-10-25  Filip Pizlo  <fpizlo@apple.com>
+
+        Forward OSR calculation is wrong in the presence of multiple SetLocals, or a mix of SetLocals and Phantoms
+        https://bugs.webkit.org/show_bug.cgi?id=100461
+
+        Reviewed by Oliver Hunt and Gavin Barraclough.
+
+        This does a couple of things. First, it removes the part of the change in r131822 that made the forward
+        OSR exit calculator capable of handling multiple SetLocals. That change was wrong, because it would
+        blindly assume that all SetLocals had the same ValueRecovery, and would ignore the possibility that if
+        there is no value recovery then a ForwardCheckStructure on the first SetLocal would not know how to
+        recover the state associated with the second SetLocal. Then, it introduces the invariant that any bytecode
+        op that decomposes into multiple SetLocals must first emit dead SetLocals as hints and then emit a second
+        set of SetLocals to actually do the setting of the locals. This means that if a ForwardCheckStructure (or
+        any other hoisted forward speculation) is inserted, it will always be inserted on the second set of
+        SetLocals (since hoisting only touches the live ones), at which point OSR will already know about the
+        mov hints implied by the first set of (dead) SetLocals. This gives us the behavior we wanted, namely, that
+        a ForwardCheckStructure applied to a variant set by a resolve_with_base-like operation can correctly do a
+        forward exit while also ensuring that prior to exiting we set the appropriate locals.
+
+        * dfg/DFGByteCodeParser.cpp:
+        (JSC::DFG::ByteCodeParser::parseBlock):
+        * dfg/DFGOSRExit.cpp:
+        (JSC::DFG::OSRExit::OSRExit):
+        * dfg/DFGOSRExit.h:
+        (OSRExit):
+        * dfg/DFGOSRExitCompiler.cpp:
+        * dfg/DFGOSRExitCompiler32_64.cpp:
+        (JSC::DFG::OSRExitCompiler::compileExit):
+        * dfg/DFGOSRExitCompiler64.cpp:
+        (JSC::DFG::OSRExitCompiler::compileExit):
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::convertLastOSRExitToForward):
+
+2012-10-26  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Fix the LLInt build on Windows
+        https://bugs.webkit.org/show_bug.cgi?id=97648
+
+        Reviewed by Tor Arne Vestbø.
+
+        The main change for the port on Windows is changing the way offsets are extracted
+        and the LLIntAssembly.h is generated to accomodate release and debug configurations.
+
+        Firstly the LLIntOffsetsExtractor binary is now built as-is (no DESTDIR set) and
+        placed into debug\LLIntOffsetsExtractor.exe and release\LLIntOffsetsExtractor.exe
+        on Windows debug_and_release builds. On other patforms it remainds in the regular
+        out directory.
+
+        Secondly the LLIntAssembly.h files must be different for different build types,
+        so the LLIntAssembly.h generator in DerivedSources.pri operates no on the extractor
+        binary files as input. Using a simple exists() check we verify the presence of either
+        a regular, a debug\LLIntOffsetsExtractor and a release\LLIntOffsetsExtractor binary
+        and process all of them. The resulting assembly files consequently end up in
+        generated\debug\LLIntAssembly.h and generated\release\LLIntAssembly.h.
+
+        In Target.pri we have to also make sure that those directories are in the include
+        path according to the release or debug configuration.
+
+        Lastly a small tweak - swapping WTF.pri and JSC.pri inclusions - in the
+        LLIntOffsetsExtractor build was needed to make sure that we include
+        JavaScriptCore/config.h instead of WTF/config.h, required to fix the
+        build issues originally pasted in bug #97648.
+
+        * DerivedSources.pri:
+        * JavaScriptCore.pro:
+        * LLIntOffsetsExtractor.pro:
+        * Target.pri:
+
+2012-10-26  Gabor Ballabas  <gaborb@inf.u-szeged.hu>
+
+        [Qt] Enable JSC's disassembler on x86, x86_64 Linux
+        https://bugs.webkit.org/show_bug.cgi?id=100386
+
+        Reviewed by Simon Hausmann.
+
+        It works fine on Linux x86, x86_64 just needs to be enabled in the
+        QtWebKit build system.
+
+        * DerivedSources.pri:
+        * JavaScriptCore.pri:
+        * Target.pri:
+
+2012-10-26  Thiago Marcos P. Santos  <thiago.santos@intel.com>
+
+        Add feature flags for CSS Device Adaptation
+        https://bugs.webkit.org/show_bug.cgi?id=95960
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-10-26  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [WIN] Make LLInt offsets extractor work on Windows
+        https://bugs.webkit.org/show_bug.cgi?id=100369
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Open the input file explicitly in binary mode to prevent ruby/Windows from thinking that
+        it's a text mode file that needs even new line conversions. The binary mode parameter is
+        ignored on other platforms.
+
+        * offlineasm/offsets.rb:
+
+2012-10-25  Michael Saboff  <msaboff@apple.com>
+
+        SymbolTableIndexHashTraits::needsDestruction should be set to true
+        https://bugs.webkit.org/show_bug.cgi?id=100437
+
+        Reviewed by Mark Hahnenberg.
+
+        For correctness, set SymbolTableIndexHashTraits::needsDestruction to true since SymbolTableEntry's do
+        need to have their destructor called due to the possibility of rare data.
+
+        * runtime/SymbolTable.h:
+        (SymbolTableIndexHashTraits):
+
+2012-10-25  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG Arrayify elimination should replace it with GetButterfly rather than Phantom
+        https://bugs.webkit.org/show_bug.cgi?id=100441
+
+        Reviewed by Oliver Hunt and Gavin Barraclough.
+
+        Made array profiler's to-string helper behave correctly.
+        
+        Made Arrayify elimination do the right thing (convert to GetButterfly).
+        
+        Made CFA's interference analysis track clobbered array modes correctly, mostly by
+        simplifying the machinery.
+
+        * bytecode/ArrayProfile.cpp:
+        (JSC::arrayModesToString):
+        * dfg/DFGAbstractState.cpp:
+        (JSC::DFG::AbstractState::execute):
+        * dfg/DFGAbstractValue.h:
+        (JSC::DFG::AbstractValue::clobberArrayModes):
+        (AbstractValue):
+        * dfg/DFGConstantFoldingPhase.cpp:
+        (JSC::DFG::ConstantFoldingPhase::foldConstants):
+
+2012-10-25  Filip Pizlo  <fpizlo@apple.com>
+
+        REGRESSION (r131793-r131826): Crash going to wikifonia.org
+        https://bugs.webkit.org/show_bug.cgi?id=100281
+
+        Reviewed by Oliver Hunt.
+
+        Restore something that got lost in the resolve refactoring: the ability to give up on life if
+        we see a resolve of 'arguments'.
+
+        * runtime/JSScope.cpp:
+        (JSC::JSScope::resolveContainingScopeInternal):
+
+2012-10-25  Dominik Röttsches  <dominik.rottsches@intel.com>
+
+        Conditionalize XHR timeout support
+        https://bugs.webkit.org/show_bug.cgi?id=100356
+
+        Reviewed by Adam Barth.
+
+        Adding XHR_TIMEOUT feature to conditionalize this on ports without network backend support.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-10-25  Michael Saboff  <msaboff@apple.com>
+
+        REGRESSION (r131836): failures in list styles tests on EFL, GTK
+        https://bugs.webkit.org/show_bug.cgi?id=99824
+
+        Reviewed by Oliver Hunt.
+
+        Saved start of string since it is modified by call convertUTF8ToUTF16().
+
+        * API/JSStringRef.cpp:
+        (JSStringCreateWithUTF8CString):
+
+2012-10-24  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG NewArrayBuffer node should keep its data in a structure on the side to free up one of the opInfos
+        https://bugs.webkit.org/show_bug.cgi?id=100328
+
+        Reviewed by Oliver Hunt.
+
+        * dfg/DFGByteCodeParser.cpp:
+        (JSC::DFG::ByteCodeParser::parseBlock):
+        * dfg/DFGGraph.h:
+        (Graph):
+        * dfg/DFGNode.h:
+        (NewArrayBufferData):
+        (DFG):
+        (JSC::DFG::Node::newArrayBufferData):
+        (Node):
+        (JSC::DFG::Node::startConstant):
+        (JSC::DFG::Node::numConstants):
+
+2012-10-25  Mark Lam  <mark.lam@apple.com>
+
+        Update the C++ llint to work with the latest op_resolve... changes.
+        https://bugs.webkit.org/show_bug.cgi?id=100345.
+
+        Reviewed by Oliver Hunt.
+
+        * llint/LowLevelInterpreter.cpp:
+        (JSC::CLoop::execute):
+        - emit opcode name as label when not using COMPUTED_GOTOs. The new op_resolve
+          opcodes have jumps to these labels.
+        - declare all opcode labels as UNUSED_LABEL()s to keep the compiler happy
+          for opcodes that are not referenced by anyone.
+        * offlineasm/asm.rb:
+        - strip llint_ prefix from opcode names used as labels.
+
+2012-10-24  Yuqiang Xian  <yuqiang.xian@intel.com>
+
+        Refactor LLInt64 to distinguish the pointer operations from the 64-bit integer operations
+        https://bugs.webkit.org/show_bug.cgi?id=100321
+
+        Reviewed by Filip Pizlo.
+
+        We have refactored the MacroAssembler and JIT compilers to distinguish
+        the pointer operations from the 64-bit integer operations (see bug #99154).
+        Now we want to do the similar work for LLInt, and the goal is same as
+        the one mentioned in 99154.
+
+        This is the first part of the modification: in the offline assembler,
+        adding the support of the "<foo>q" instructions which will be used for
+        64-bit integer operations.
+
+        * llint/LowLevelInterpreter.cpp:
+        (JSC::CLoop::execute):
+        * offlineasm/cloop.rb:
+        * offlineasm/instructions.rb:
+        * offlineasm/x86.rb:
+
+2012-10-24  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG compileBlahBlahByVal methods for Contiguous and ArrayStorage have only one caller and should be removed
+        https://bugs.webkit.org/show_bug.cgi?id=100311
+
+        Reviewed by Mark Hahnenberg.
+
+        Just trying to simplify things before I make them more complicated again.
+
+        * dfg/DFGSpeculativeJIT.h:
+        (SpeculativeJIT):
+        (JSC::DFG::SpeculativeJIT::temporaryRegisterForPutByVal):
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (DFG):
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (DFG):
+        (JSC::DFG::SpeculativeJIT::compile):
+
+2012-10-23  Andreas Kling  <kling@webkit.org>
+
+        CodeBlock: Give m_putToBaseOperations an inline capacity.
+        <http://webkit.org/b/100190>
+        <rdar://problem/12562466>
+
+        Reviewed by Oliver Hunt.
+
+        Since the CodeBlock constructor always inserts a single PutToBaseOperation, but there's no
+        guarantee that more will follow, give the m_putToBaseOperations vector an inline capacity of 1.
+        There are 4009 of these Vectors on Membuster3, and only 126 of them have more than a single entry.
+
+        This change yields a 1.90MB reduction in memory usage.
+
+        * bytecode/CodeBlock.h:
+        (CodeBlock):
+
+2012-10-23  Christophe Dumez  <christophe.dumez@intel.com>
+
+        Regression(r132143): Assertion hit in JSC::Interpreter::StackPolicy::StackPolicy(JSC::Interpreter&, const WTF::StackBounds&)
+        https://bugs.webkit.org/show_bug.cgi?id=100109
+
+        Reviewed by Oliver Hunt.
+
+        Fix possible integer overflow in StackPolicy constructor by
+        using size_t type instead of int for stack sizes. The value
+        returned by StackBounds::size() is of type size_t but was
+        assigned to an int, which may overflow.
+
+        * interpreter/Interpreter.cpp:
+        (JSC):
+        (JSC::Interpreter::StackPolicy::StackPolicy):
+
+2012-10-23  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Fix make distcheck.
+
+        * GNUmakefile.list.am: Add missing header file.
+
+2012-10-23  Mark Lam  <mark.lam@apple.com>
+
+        Make topCallFrame reliable.
+        https://bugs.webkit.org/show_bug.cgi?id=98928.
+
+        Reviewed by Geoffrey Garen.
+
+        - VM entry points and the GC now uses topCallFrame.
+        - The callerFrame value in CallFrames are now always the previous
+          frame on the stack, except for the first frame which has a
+          callerFrame of 0 (not counting the HostCallFrameFlag).
+          Hence, we can now traverse every frame on the stack all the way
+          back to the first frame.
+        - GlobalExec's will no longer be used as the callerFrame values in
+          call frames.
+        - Added fences and traps for debugging the JSStack in debug builds.
+
+        * bytecode/SamplingTool.h:
+        (SamplingTool):
+        (JSC::SamplingTool::CallRecord::CallRecord):
+        * dfg/DFGOperations.cpp:
+        - Fixed 2 DFG helper functions to flush topCallFrame as expected.
+        * dfg/DFGSpeculativeJIT.h:
+        (JSC::DFG::SpeculativeJIT::prepareForExternalCall):
+        * interpreter/CallFrame.h:
+        (JSC::ExecState::callerFrameNoFlags):
+        (ExecState):
+        (JSC::ExecState::argIndexForRegister):
+        (JSC::ExecState::getArgumentUnsafe):
+        * interpreter/CallFrameClosure.h:
+        (CallFrameClosure):
+        * interpreter/Interpreter.cpp:
+        (JSC):
+        (JSC::eval):
+        (JSC::Interpreter::Interpreter):
+        (JSC::Interpreter::throwException):
+        (JSC::Interpreter::execute):
+        (JSC::Interpreter::executeCall):
+        (JSC::Interpreter::executeConstruct):
+        (JSC::Interpreter::prepareForRepeatCall):
+        (JSC::Interpreter::endRepeatCall):
+        * interpreter/Interpreter.h:
+        (JSC):
+        (Interpreter):
+        * interpreter/JSStack.cpp:
+        (JSC::JSStack::JSStack):
+        (JSC::JSStack::gatherConservativeRoots):
+        (JSC::JSStack::disableErrorStackReserve):
+        * interpreter/JSStack.h:
+        (JSC):
+        (JSStack):
+        (JSC::JSStack::installFence):
+        (JSC::JSStack::validateFence):
+        (JSC::JSStack::installTrapsAfterFrame):
+        * interpreter/JSStackInlines.h: Added.
+        (JSC):
+        (JSC::JSStack::getTopOfFrame):
+        (JSC::JSStack::getTopOfStack):
+        (JSC::JSStack::getStartOfFrame):
+        (JSC::JSStack::pushFrame):
+        (JSC::JSStack::popFrame):
+        (JSC::JSStack::generateFenceValue):
+        (JSC::JSStack::installFence):
+        (JSC::JSStack::validateFence):
+        (JSC::JSStack::installTrapsAfterFrame):
+        * jit/JITStubs.cpp:
+        (JSC::jitCompileFor):
+        (JSC::lazyLinkFor):
+        - Set frame->codeBlock to 0 for both the above because they are called
+          with partially intitialized frames (cb uninitialized), but may
+          trigger a GC.
+        (JSC::DEFINE_STUB_FUNCTION):
+        * runtime/JSGlobalData.cpp:
+        (JSC::JSGlobalData::JSGlobalData):
+
+2012-10-22  Filip Pizlo  <fpizlo@apple.com>
+
+        DFG::Array::Undecided should be called DFG::Array::SelectUsingPredictions
+        https://bugs.webkit.org/show_bug.cgi?id=100052
+
+        Reviewed by Oliver Hunt.
+
+        No functional change, just renaming. It's a clearer name that more accurately
+        reflects the meaning, and it eliminates the namespace confusion that will happen
+        with the Undecided indexing type in https://bugs.webkit.org/show_bug.cgi?id=98606
+
+        * dfg/DFGAbstractState.cpp:
+        (JSC::DFG::AbstractState::execute):
+        * dfg/DFGArrayMode.cpp:
+        (JSC::DFG::fromObserved):
+        (JSC::DFG::refineArrayMode):
+        (JSC::DFG::modeAlreadyChecked):
+        (JSC::DFG::modeToString):
+        * dfg/DFGArrayMode.h:
+        (JSC::DFG::canCSEStorage):
+        (JSC::DFG::modeIsSpecific):
+        (JSC::DFG::modeSupportsLength):
+        (JSC::DFG::benefitsFromStructureCheck):
+        * dfg/DFGFixupPhase.cpp:
+        (JSC::DFG::FixupPhase::fixupNode):
+        (JSC::DFG::FixupPhase::blessArrayOperation):
+        * dfg/DFGSpeculativeJIT.cpp:
+        (JSC::DFG::SpeculativeJIT::arrayify):
+        * dfg/DFGSpeculativeJIT32_64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+        * dfg/DFGSpeculativeJIT64.cpp:
+        (JSC::DFG::SpeculativeJIT::compile):
+
+2012-10-22  Mark Lam  <mark.lam@apple.com>
+
+        Change stack recursion checks to be based on stack availability.
+        https://bugs.webkit.org/show_bug.cgi?id=99872.
+
+        Reviewed by Filip Pizlo and Geoffrey Garen.
+
+        - Remove m_reentryDepth, ThreadStackType which are now obsolete.
+        - Replaced the reentryDepth checks with a StackBounds check.
+        - Added the Interpreter::StackPolicy class to compute a reasonable
+          stack capacity requirement given the native stack that the
+          interpreter is executing on at that time.
+        - Reserved an amount of JSStack space for the use of error handling
+          and enable its use (using Interpreter::ErrorHandlingMode) when
+          we're about to throw or report an exception.
+        - Interpreter::StackPolicy also allows more native stack space
+          to be used when in ErrorHandlingMode. This is needed in the case
+          of native stack overflows.
+        - Fixed the parser so that it throws a StackOverflowError instead of
+          a SyntaxError when it encounters a stack overflow.
+
+        * API/JSContextRef.cpp:
+        (JSContextGroupCreate):
+        (JSGlobalContextCreateInGroup):
+        * JavaScriptCore.order:
+        * JavaScriptCore.vcproj/JavaScriptCore/JavaScriptCore.def:
+        * interpreter/Interpreter.cpp:
+        (JSC::Interpreter::ErrorHandlingMode::ErrorHandlingMode):
+        (JSC):
+        (JSC::Interpreter::ErrorHandlingMode::~ErrorHandlingMode):
+        (JSC::Interpreter::StackPolicy::StackPolicy):
+        (JSC::Interpreter::Interpreter):
+        (JSC::Interpreter::execute):
+        (JSC::Interpreter::executeCall):
+        (JSC::Interpreter::executeConstruct):
+        (JSC::Interpreter::prepareForRepeatCall):
+        * interpreter/Interpreter.h:
+        (JSC):
+        (Interpreter):
+        (ErrorHandlingMode):
+        (StackPolicy):
+        (JSC::Interpreter::StackPolicy::requiredCapacity):
+        * interpreter/JSStack.cpp:
+        (JSC):
+        (JSC::JSStack::JSStack):
+        (JSC::JSStack::growSlowCase):
+        (JSC::JSStack::enableErrorStackReserve):
+        (JSC::JSStack::disableErrorStackReserve):
+        * interpreter/JSStack.h:
+        (JSStack):
+        (JSC::JSStack::reservationEnd):
+        (JSC):
+        * jsc.cpp:
+        (jscmain):
+        * parser/Parser.cpp:
+        (JSC::::Parser):
+        * parser/Parser.h:
+        (Parser):
+        (JSC::::parse):
+        * runtime/ExceptionHelpers.cpp:
+        (JSC::throwStackOverflowError):
+        * runtime/JSGlobalData.cpp:
+        (JSC::JSGlobalData::JSGlobalData):
+        (JSC::JSGlobalData::createContextGroup):
+        (JSC::JSGlobalData::create):
+        (JSC::JSGlobalData::createLeaked):
+        (JSC::JSGlobalData::sharedInstance):
+        * runtime/JSGlobalData.h:
+        (JSC):
+        (JSGlobalData):
+        * runtime/StringRecursionChecker.h:
+        (JSC::StringRecursionChecker::performCheck):
+        * testRegExp.cpp:
+        (realMain):
+
+2012-10-20  Martin Robinson  <mrobinson@igalia.com>
+
+        Fix 'make dist' for the GTK+ port
+
+        * GNUmakefile.list.am: Add missing files to the source list.
+
+2012-10-21  Raphael Kubo da Costa  <raphael.kubo.da.costa@intel.com>
+
+        [CMake][JSC] Depend on risc.rb to decide when to run the LLInt scripts.
+        https://bugs.webkit.org/show_bug.cgi?id=99917
+
+        Reviewed by Geoffrey Garen.
+
+        Depend on the newly-added risc.rb to make sure we always run the
+        LLInt scripts when one of them changes.
+
+        * CMakeLists.txt:
+
+2012-10-20  Filip Pizlo  <fpizlo@apple.com>
+
+        LLInt backends of non-ARM RISC platforms should be able to share code with the existing ARMv7 backend
+        https://bugs.webkit.org/show_bug.cgi?id=99745
+
+        Reviewed by Geoffrey Garen.
+
+        This moves all of the things in armv7.rb that I thought are generally useful out
+        into risc.rb. It also separates some phases (branch ops is separated into one
+        phase that does sensible things, and another that does things that are painfully
+        ARM-specific), and removes ARM assumptions from others by using a callback to
+        drive exactly what lowering must happen. The goal here is to minimize the future
+        maintenance burden of LLInt by ensuring that the various platforms share as much
+        lowering code as possible.
+
+        * offlineasm/armv7.rb:
+        * offlineasm/risc.rb: Added.
+
 2012-10-19  Filip Pizlo  <fpizlo@apple.com>
 
         DFG should have some facility for recognizing redundant CheckArrays and Arrayifies

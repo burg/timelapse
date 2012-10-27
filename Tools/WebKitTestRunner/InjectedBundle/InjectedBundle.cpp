@@ -479,7 +479,16 @@ void InjectedBundle::queueBackNavigation(unsigned howFarBackward)
 
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("QueueBackNavigation"));
     WKRetainPtr<WKUInt64Ref> messageBody(AdoptWK, WKUInt64Create(howFarBackward));
-    WKBundlePostMessage(m_bundle, messageName.get(),  messageBody.get());
+    WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
+}
+
+void InjectedBundle::queueForwardNavigation(unsigned howFarForward)
+{
+    m_useWorkQueue = true;
+
+    WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("QueueForwardNavigation"));
+    WKRetainPtr<WKUInt64Ref> messageBody(AdoptWK, WKUInt64Create(howFarForward));
+    WKBundlePostMessage(m_bundle, messageName.get(), messageBody.get());
 }
 
 void InjectedBundle::queueLoad(WKStringRef url, WKStringRef target)
@@ -505,6 +514,22 @@ void InjectedBundle::queueReload()
 
     WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("QueueReload"));
     WKBundlePostMessage(m_bundle, messageName.get(), 0);
+}
+
+void InjectedBundle::queueLoadingScript(WKStringRef script)
+{
+    m_useWorkQueue = true;
+
+    WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("QueueLoadingScript"));
+    WKBundlePostMessage(m_bundle, messageName.get(), script);
+}
+
+void InjectedBundle::queueNonLoadingScript(WKStringRef script)
+{
+    m_useWorkQueue = true;
+
+    WKRetainPtr<WKStringRef> messageName(AdoptWK, WKStringCreateWithUTF8CString("QueueNonLoadingScript"));
+    WKBundlePostMessage(m_bundle, messageName.get(), script);
 }
 
 } // namespace WTR

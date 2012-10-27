@@ -333,12 +333,13 @@ void NetworkJob::handleNotifyHeaderReceived(const String& key, const String& val
         // For now we check for this explicitly by checking m_frame->page(). But we should find out why the network job hasn't been cancelled when the frame was detached.
         // See RIM PR 134207
         if (m_frame && m_frame->page() && m_frame->loader() && m_frame->loader()->client()
-            && static_cast<FrameLoaderClientBlackBerry*>(m_frame->loader()->client())->cookiesEnabled())
+            && static_cast<FrameLoaderClientBlackBerry*>(m_frame->loader()->client())->cookiesEnabled()) {
             handleSetCookieHeader(value);
-
-        if (m_response.httpHeaderFields().contains("Set-Cookie")) {
-            m_response.setHTTPHeaderField(key, m_response.httpHeaderField(key) + "\r\n" + value);
-            return;
+            // If there are several "Set-Cookie" headers, we should combine the following ones with the first.
+            if (m_response.httpHeaderFields().contains("Set-Cookie")) {
+                m_response.setHTTPHeaderField(key, m_response.httpHeaderField(key) + ", " + value);
+                return;
+            }
         }
     } else if (equalIgnoringCase(key, BlackBerry::Platform::NetworkRequest::HEADER_BLACKBERRY_FTP))
         handleFTPHeader(value);
@@ -537,9 +538,7 @@ bool NetworkJob::shouldReleaseClientResource()
 
 bool NetworkJob::shouldNotifyClientFailed() const
 {
-    if (m_handle->firstRequest().targetType() == ResourceRequest::TargetIsXHR)
-        return m_extendedStatusCode < 0;
-    return isError(m_extendedStatusCode) && !m_dataReceived;
+    return m_extendedStatusCode < 0 || (isError(m_extendedStatusCode) && !m_dataReceived);
 }
 
 bool NetworkJob::retryAsFTPDirectory()
@@ -617,8 +616,12 @@ bool NetworkJob::handleRedirect()
         newRequest.clearHTTPContentType();
     }
 
-    // Do not send existing credentials with the new request.
-    m_handle->getInternal()->m_currentWebChallenge.nullify();
+    if (!m_handle->getInternal()->m_currentWebChallenge.isNull()) {
+        // If this request is challenged, store the credentials now because the credential is correct (otherwise, it won't get here).
+        storeCredentials();
+        // Do not send existing credentials with the new request.
+        m_handle->getInternal()->m_currentWebChallenge.nullify();
+    }
 
     return startNewJobWithRequest(newRequest, true);
 }
@@ -767,8 +770,12 @@ bool NetworkJob::sendRequestWithCredentials(ProtectionSpaceServerType type, Prot
         // Don't overwrite any existing credentials with the empty credential
         if (m_handle->getInternal()->m_currentWebChallenge.isNull())
             m_handle->getInternal()->m_currentWebChallenge = AuthenticationChallenge(protectionSpace, credential, 0, m_response, ResourceError());
-    } else if (!(credential = CredentialStorage::get(protectionSpace)).isEmpty()) {
-        // First search the CredentialStorage.
+    } else if (!(credential = CredentialStorage::get(protectionSpace)).isEmpty()
+#if ENABLE(BLACKBERRY_CREDENTIAL_PERSIST)
+            || !(credential = CredentialStorage::getFromPersistentStorage(protectionSpace)).isEmpty()
+#endif
+            ) {
+        // First search the CredentialStorage and Persistent Credential Storage
         m_handle->getInternal()->m_currentWebChallenge = AuthenticationChallenge(protectionSpace, credential, 0, m_response, ResourceError());
         m_handle->getInternal()->m_currentWebChallenge.setStored(true);
     } else {

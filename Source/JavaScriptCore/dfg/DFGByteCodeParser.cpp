@@ -2150,7 +2150,11 @@ bool ByteCodeParser::parseBlock(unsigned limit)
         case op_new_array_buffer: {
             int startConstant = currentInstruction[2].u.operand;
             int numConstants = currentInstruction[3].u.operand;
-            set(currentInstruction[1].u.operand, addToGraph(NewArrayBuffer, OpInfo(m_inlineStackTop->m_constantBufferRemap[startConstant]), OpInfo(numConstants)));
+            NewArrayBufferData data;
+            data.startConstant = m_inlineStackTop->m_constantBufferRemap[startConstant];
+            data.numConstants = numConstants;
+            m_graph.m_newArrayBufferData.append(data);
+            set(currentInstruction[1].u.operand, addToGraph(NewArrayBuffer, OpInfo(&m_graph.m_newArrayBufferData.last())));
             NEXT_OPCODE(op_new_array_buffer);
         }
             
@@ -3104,6 +3108,14 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             NodeIndex base = 0;
             NodeIndex value = 0;
             if (parseResolveOperations(prediction, identifier, operations, putToBaseOperation, &base, &value)) {
+                // First create OSR hints only.
+                set(baseDst, base);
+                set(valueDst, value);
+                
+                // If we try to hoist structure checks into here, then we're guaranteed that they will occur
+                // *after* we have already set up the values for OSR.
+                
+                // Then do the real SetLocals.
                 set(baseDst, base);
                 set(valueDst, value);
             } else {
@@ -3124,6 +3136,14 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             NodeIndex base = 0;
             NodeIndex value = 0;
             if (parseResolveOperations(prediction, identifier, operations, 0, &base, &value)) {
+                // First create OSR hints only.
+                set(baseDst, base);
+                set(valueDst, value);
+                
+                // If we try to hoist structure checks into here, then we're guaranteed that they will occur
+                // *after* we have already set up the values for OSR.
+                
+                // Then do the real SetLocals.
                 set(baseDst, base);
                 set(valueDst, value);
             } else {

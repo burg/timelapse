@@ -30,6 +30,8 @@ include(yarr/yarr.pri)
 
 INSTALLDEPS += all
 
+debug_and_release: INCLUDEPATH += $$JAVASCRIPTCORE_GENERATED_SOURCES_DIR/$$activeBuildConfig()
+
 SOURCES += \
     API/JSBase.cpp \
     API/JSCallbackConstructor.cpp \
@@ -272,6 +274,18 @@ SOURCES += \
     tools/CodeProfile.cpp \
     tools/CodeProfiling.cpp \
     yarr/YarrJIT.cpp \
+
+linux-*:if(isEqual(QT_ARCH, "i386")|isEqual(QT_ARCH, "x86_64")) {
+    SOURCES += \
+        disassembler/UDis86Disassembler.cpp \
+        disassembler/udis86/udis86.c \
+        disassembler/udis86/udis86_decode.c \
+        disassembler/udis86/udis86_input.c \
+        disassembler/udis86/udis86_itab_holder.c \
+        disassembler/udis86/udis86_syn-att.c \
+        disassembler/udis86/udis86_syn-intel.c \
+        disassembler/udis86/udis86_syn.c \
+}
 
 HEADERS += $$files(*.h, true)
 

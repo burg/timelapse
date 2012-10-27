@@ -902,7 +902,9 @@ body.platform-linux .monospace, body.platform-linux .source-code {
 }
 
 #console-prompt {
+    clear: right;
     position: relative;
+    border-top: 1px solid rgb(240, 240, 240);
     padding: 1px 22px 1px 0px;
     margin-left: 24px;
     min-height: 16px;
@@ -919,11 +921,16 @@ body.platform-linux .monospace, body.platform-linux .source-code {
 }
 
 .console-message, .console-user-command {
+    clear: right;
     position: relative;
-    border-bottom: 1px solid rgb(240, 240, 240);
+    border-top: 1px solid rgb(240, 240, 240);
     padding: 1px 22px 1px 0px;
     margin-left: 24px;
     min-height: 16px;
+}
+
+.console-mesage:first-child {
+    border-top: none;
 }
 
 .console-adjacent-user-command-result {
@@ -938,11 +945,11 @@ body.platform-linux .monospace, body.platform-linux .source-code {
     position: absolute;
     display: block;
     content: "";
-    left: -14px;
+    left: -17px;
     top: 0.8em;
     width: 10px;
     height: 10px;
-    margin-top: -5px;
+    margin-top: -6px;
     -webkit-user-select: none;
 }
 
@@ -1036,6 +1043,7 @@ body.platform-linux .monospace, body.platform-linux .source-code {
 
 .console-warning-level::before {
     background-image: url(Images/warningIcon.png);
+    margin-top: -7px;
 }
 
 .console-user-command .console-message {
@@ -1061,8 +1069,7 @@ body.platform-linux .monospace, body.platform-linux .source-code {
     color: rgb(15%, 15%, 15%);
 }
 
-ol.watch-expressions > li.hovered,
-.console-message:hover { 
+ol.watch-expressions > li.hovered {
     background-color: #F0F0F0;
 }
 

@@ -129,6 +129,7 @@ void SubresourceLoader::willSendRequest(ResourceRequest& newRequest, const Resou
 {
     // Store the previous URL because the call to ResourceLoader::willSendRequest will modify it.
     KURL previousURL = request().url();
+    RefPtr<SubresourceLoader> protect(this);
 
     ASSERT(!newRequest.isNull());
     if (!previousURL.isNull() && previousURL != newRequest.url()) {
@@ -147,6 +148,8 @@ void SubresourceLoader::willSendRequest(ResourceRequest& newRequest, const Resou
         return;
 
     ResourceLoader::willSendRequest(newRequest, redirectResponse);
+    if (newRequest.isNull())
+        cancel();
 }
 
 void SubresourceLoader::didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
@@ -183,7 +186,9 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response)
         return;
     ResourceLoader::didReceiveResponse(response);
 
-    if (response.isMultipart()) {
+    // FIXME: Main resources have a different set of rules for multipart than images do.
+    // Hopefully we can merge those 2 paths.
+    if (response.isMultipart() && m_resource->type() != CachedResource::MainResource) {
         m_loadingMultipartContent = true;
 
         // We don't count multiParts in a CachedResourceLoader's request count
@@ -284,7 +289,11 @@ void SubresourceLoader::didFail(const ResourceError& error)
     RefPtr<SubresourceLoader> protect(this);
     CachedResourceHandle<CachedResource> protectResource(m_resource);
     m_state = Finishing;
-    m_resource->error(CachedResource::LoadError);
+    m_resource->setResourceError(error);
+    if (error.isTimeout())
+        m_resource->error(CachedResource::TimeoutError);
+    else
+        m_resource->error(CachedResource::LoadError);
     if (!m_resource->isPreloaded())
         memoryCache()->remove(m_resource);
     ResourceLoader::didFail(error);

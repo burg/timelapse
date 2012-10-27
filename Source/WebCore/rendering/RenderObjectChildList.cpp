@@ -29,6 +29,7 @@
 
 #include "AXObjectCache.h"
 #include "ContentData.h"
+#include "Element.h"
 #include "RenderBlock.h"
 #include "RenderCounter.h"
 #include "RenderLayer.h"
@@ -65,13 +66,11 @@ RenderObject* RenderObjectChildList::removeChildNode(RenderObject* owner, Render
         toRenderBox(oldChild)->removeFloatingOrPositionedChildFromBlockLists();
 
     // So that we'll get the appropriate dirty bit set (either that a normal flow child got yanked or
-    // that a positioned child got yanked).  We also repaint, so that the area exposed when the child
-    // disappears gets repainted properly.
+    // that a positioned child got yanked).
     if (!owner->documentBeingDestroyed() && notifyRenderer && oldChild->everHadLayout()) {
         oldChild->setNeedsLayoutAndPrefWidthsRecalc();
-        if (oldChild->isBody())
-            owner->view()->repaint();
-        else
+        // We only repaint |oldChild| if we have a RenderLayer as its visual overflow may not be tracked by its parent.
+        if (oldChild->hasLayer())
             oldChild->repaint();
     }
 
@@ -339,6 +338,10 @@ void RenderObjectChildList::updateBeforeAfterContent(RenderObject* owner, Pseudo
     
     if (!styledObject)
         styledObject = owner;
+
+    // Disallow generated content in shadows until the spec says what to do. See: http://webkit.org/b/98836
+    if (isShadowHost(styledObject->node()))
+        return;
 
     RenderStyle* pseudoElementStyle = styledObject->getCachedPseudoStyle(type);
     RenderObject* child;

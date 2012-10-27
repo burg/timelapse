@@ -265,17 +265,13 @@ Page* ChromeClientImpl::createWindow(
     return newView->page();
 }
 
-static inline bool currentEventShouldCauseBackgroundTab(const WebInputEvent* inputEvent)
+static inline void updatePolicyForEvent(const WebInputEvent* inputEvent, WebNavigationPolicy* policy)
 {
-    if (!inputEvent)
-        return false;
-
-    if (inputEvent->type != WebInputEvent::MouseUp)
-        return false;
+    if (!inputEvent || inputEvent->type != WebInputEvent::MouseUp)
+        return;
 
     const WebMouseEvent* mouseEvent = static_cast<const WebMouseEvent*>(inputEvent);
 
-    WebNavigationPolicy policy;
     unsigned short buttonNumber;
     switch (mouseEvent->button) {
     case WebMouseEvent::ButtonLeft:
@@ -288,17 +284,14 @@ static inline bool currentEventShouldCauseBackgroundTab(const WebInputEvent* inp
         buttonNumber = 2;
         break;
     default:
-        return false;
+        return;
     }
     bool ctrl = mouseEvent->modifiers & WebMouseEvent::ControlKey;
     bool shift = mouseEvent->modifiers & WebMouseEvent::ShiftKey;
     bool alt = mouseEvent->modifiers & WebMouseEvent::AltKey;
     bool meta = mouseEvent->modifiers & WebMouseEvent::MetaKey;
 
-    if (!WebViewImpl::navigationPolicyFromMouseEvent(buttonNumber, ctrl, shift, alt, meta, &policy))
-        return false;
-
-    return policy == WebNavigationPolicyNewBackgroundTab;
+    WebViewImpl::navigationPolicyFromMouseEvent(buttonNumber, ctrl, shift, alt, meta, policy);
 }
 
 WebNavigationPolicy ChromeClientImpl::getNavigationPolicy()
@@ -315,8 +308,8 @@ WebNavigationPolicy ChromeClientImpl::getNavigationPolicy()
     WebNavigationPolicy policy = WebNavigationPolicyNewForegroundTab;
     if (asPopup)
         policy = WebNavigationPolicyNewPopup;
-    if (currentEventShouldCauseBackgroundTab(WebViewImpl::currentInputEvent()))
-        policy = WebNavigationPolicyNewBackgroundTab;
+    updatePolicyForEvent(WebViewImpl::currentInputEvent(), &policy);
+
     return policy;
 }
 
@@ -647,10 +640,11 @@ void ChromeClientImpl::dispatchViewportPropertiesDidChange(const ViewportArgumen
         return;
 
     Settings* settings = m_webView->page()->settings();
+    float devicePixelRatio = dpi / ViewportArguments::deprecatedTargetDPI;
     // Call the common viewport computing logic in ViewportArguments.cpp.
     ViewportAttributes computed = computeViewportAttributes(
         args, settings->layoutFallbackWidth(), deviceRect.width, deviceRect.height,
-        dpi / ViewportArguments::deprecatedTargetDPI, IntSize(deviceRect.width, deviceRect.height));
+        devicePixelRatio, IntSize(deviceRect.width, deviceRect.height));
 
     restrictScaleFactorToInitialScaleIfNotUserScalable(computed);
 
@@ -664,10 +658,10 @@ void ChromeClientImpl::dispatchViewportPropertiesDidChange(const ViewportArgumen
     m_webView->setFixedLayoutSize(IntSize(layoutWidth, layoutHeight));
 
     bool needInitializePageScale = !m_webView->isPageScaleFactorSet();
-    m_webView->setDeviceScaleFactor(computed.devicePixelRatio);
+    m_webView->setDeviceScaleFactor(devicePixelRatio);
     m_webView->setPageScaleFactorLimits(computed.minimumScale, computed.maximumScale);
     if (needInitializePageScale)
-        m_webView->setPageScaleFactorPreservingScrollOffset(computed.initialScale * computed.devicePixelRatio);
+        m_webView->setPageScaleFactorPreservingScrollOffset(computed.initialScale * devicePixelRatio);
 #endif
 }
 
@@ -900,6 +894,11 @@ void ChromeClientImpl::postAccessibilityNotification(AccessibilityObject* obj, A
     // Alert assistive technology about the accessibility object notification.
     if (obj)
         m_webView->client()->postAccessibilityNotification(WebAccessibilityObject(obj), toWebAccessibilityNotification(notification));
+}
+
+WebKit::WebScreenInfo ChromeClientImpl::screenInfo()
+{
+    return m_webView->client()->screenInfo();
 }
 
 bool ChromeClientImpl::paintCustomOverhangArea(GraphicsContext* context, const IntRect& horizontalOverhangArea, const IntRect& verticalOverhangArea, const IntRect& dirtyRect)

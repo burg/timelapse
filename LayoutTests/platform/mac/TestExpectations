@@ -423,6 +423,7 @@ fast/regions/style-scoped-in-flow.html
 # ENABLE(SHADOW_DOM) is disabled.
 fast/dom/shadow
 editing/shadow
+inspector/elements/update-shadowdom.html
 
 # JSC does not support setIsolatedWorldSecurityOrigin (http://webkit.org/b/61540)
 http/tests/security/isolatedWorld/cross-origin-xhr.html
@@ -967,11 +968,14 @@ webkit.org/b/87908 editing/undomanager
 # CSS image-resolution is not yet enabled.
 webkit.org/b/85262 fast/css/image-resolution
 
+# Resolution media query is not yet enabled.
+webkit.org/b/85262 fast/media/mq-resolution.html [ Skip ]
+
 # CSS image-orientation is not yet enabled.
 webkit.org/b/89052 fast/css/image-orientation
 
 # CSS3 Text support is not yet enabled (needs ENABLE_CSS3_TEXT).
-webkit.org/b/58491 fast/css3-text-decoration
+webkit.org/b/58491 fast/css3-text/css3-text-decoration
 
 # Our slow tests, in alphabetical order.
 webkit.org/b/57672 http/tests/local/fileapi/send-sliced-dragged-file.html [ Failure Pass ]
@@ -1294,8 +1298,21 @@ webkit.org/b/80394 fast/block/margin-collapse/empty-clear-blocks.html [ Failure 
 webkit.org/b/80394 fast/block/margin-collapse/025.html [ Failure ]
 webkit.org/b/80394 fast/block/margin-collapse/block-inside-inline/025.html [ Failure ]
 
+# Needs rebaselining after bug 99921
+webkit.org/b/99921 mathml/presentation/fenced.xhtml [ Failure ]
+webkit.org/b/99921 mathml/presentation/mo.xhtml [ Failure ]
+webkit.org/b/99921 mathml/presentation/mo-stretch.html [ Failure ]
+webkit.org/b/99921 mathml/presentation/over.xhtml [ Failure ]
+webkit.org/b/99921 mathml/presentation/row.xhtml [ Failure ]
+webkit.org/b/99921 mathml/presentation/row-alignment.xhtml [ Failure ]
+webkit.org/b/99921 mathml/presentation/subsup.xhtml [ Failure ]
+
 # css3-conditionals support is not yet enabled.
 webkit.org/b/86146 css3/supports.html
+
+# Hardware accelerated CSS transitions appear pixelated when scaled up using transform
+webkit.org/b/27684 compositing/text-on-scaled-layer.html [ ImageOnlyFailure ]
+webkit.org/b/27684 compositing/text-on-scaled-surface.html [ ImageOnlyFailure ]
 
 # Asserts in MessagePort::contextDestroyed, but the assert usually gets attributed to later tests.
 webkit.org/b/94458 fast/events/message-port-constructor-for-deleted-document.html
@@ -1330,3 +1347,6 @@ webkit.org/b/98257 fast/canvas/webgl/oes-element-index-uint.html [ Failure Pass 
 
 # Resource Timing is not enable yet, skip it.
 webkit.org/b/61138 http/tests/w3c/webperf/submission/Intel/resource-timing [ Skip ]
+
+# TileCache tests that don't apply to WK1 (they are re-enabled via the WK2 TestExpectations file)
+platform/mac/tiled-drawing/ [ Skip ]

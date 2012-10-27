@@ -325,11 +325,8 @@ private:
             cursor->continueFunction(ec);
             ASSERT(!ec);
 
-            RefPtr<IDBKey> primaryKey = cursor->primaryKey();
-            RefPtr<IDBAny> valueAny = cursor->value();
-
-            ASSERT(valueAny->type() == IDBAny::ScriptValueType);
-            ScriptValue value = valueAny->scriptValue();
+            RefPtr<IDBKey> primaryKey = cursor->idbPrimaryKey();
+            ScriptValue value = cursor->value();
 
             IDBObjectStore::IndexKeys indexKeys;
             generateIndexKeysForValue(m_indexMetadata, value, &indexKeys);

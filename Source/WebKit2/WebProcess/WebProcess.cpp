@@ -194,6 +194,21 @@ void WebProcess::initialize(CoreIPC::Connection::Identifier serverIdentifier, Ru
     startRandomCrashThreadIfRequested();
 }
 
+void WebProcess::addMessageReceiver(CoreIPC::StringReference messageReceiverName, CoreIPC::MessageReceiver* messageReceiver)
+{
+    m_messageReceiverMap.addMessageReceiver(messageReceiverName, messageReceiver);
+}
+
+void WebProcess::addMessageReceiver(CoreIPC::StringReference messageReceiverName, uint64_t destinationID, CoreIPC::MessageReceiver* messageReceiver)
+{
+    m_messageReceiverMap.addMessageReceiver(messageReceiverName, destinationID, messageReceiver);
+}
+
+void WebProcess::removeMessageReceiver(CoreIPC::StringReference messageReceiverName, uint64_t destinationID)
+{
+    m_messageReceiverMap.removeMessageReceiver(messageReceiverName, destinationID);
+}
+
 void WebProcess::initializeWebProcess(const WebProcessCreationParameters& parameters, CoreIPC::MessageDecoder& decoder)
 {
     ASSERT(m_pageMap.isEmpty());
@@ -292,8 +307,7 @@ void WebProcess::ensureNetworkProcessConnection()
 #else
     ASSERT_NOT_REACHED();
 #endif
-
-    RefPtr<NetworkProcessConnection> m_networkProcessConnection = NetworkProcessConnection::create(connectionIdentifier);
+    m_networkProcessConnection = NetworkProcessConnection::create(connectionIdentifier);
 }
 #endif // ENABLE(NETWORK_PROCESS)
 
@@ -645,20 +659,16 @@ void WebProcess::terminate()
 }
 
 void WebProcess::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
-{   
-    uint64_t pageID = decoder.destinationID();
-    if (!pageID)
+{
+    m_messageReceiverMap.dispatchSyncMessage(connection, messageID, decoder, replyEncoder);
         return;
-    
-    WebPage* page = webPage(pageID);
-    if (!page)
-        return;
-    
-    page->didReceiveSyncMessage(connection, messageID, decoder, replyEncoder);
 }
 
 void WebProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
 {
+    if (m_messageReceiverMap.dispatchMessage(connection, messageID, decoder))
+        return;
+
     if (messageID.is<CoreIPC::MessageClassWebProcess>()) {
         didReceiveWebProcessMessage(connection, messageID, decoder);
         return;
@@ -681,25 +691,6 @@ void WebProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Mes
     }
 #endif
 
-#if ENABLE(BATTERY_STATUS)
-    if (messageID.is<CoreIPC::MessageClassWebBatteryManager>()) {
-        m_batteryManager.didReceiveMessage(connection, messageID, decoder);
-        return;
-    }
-#endif
-
-#if ENABLE(NETWORK_INFO)
-    if (messageID.is<CoreIPC::MessageClassWebNetworkInfoManager>()) {
-        m_networkInfoManager.didReceiveMessage(connection, messageID, decoder);
-        return;
-    }
-#endif
-
-    if (messageID.is<CoreIPC::MessageClassWebIconDatabaseProxy>()) {
-        m_iconDatabaseProxy.didReceiveMessage(connection, messageID, decoder);
-        return;
-    }
-
     if (messageID.is<CoreIPC::MessageClassWebKeyValueStorageManager>()) {
         WebKeyValueStorageManager::shared().didReceiveMessage(connection, messageID, decoder);
         return;
@@ -709,25 +700,11 @@ void WebProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Mes
         WebMediaCacheManager::shared().didReceiveMessage(connection, messageID, decoder);
         return;
     }
-
-#if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
-    if (messageID.is<CoreIPC::MessageClassWebNotificationManager>()) {
-        m_notificationManager.didReceiveMessage(connection, messageID, decoder);
-        return;
-    }
-#endif
     
     if (messageID.is<CoreIPC::MessageClassWebResourceCacheManager>()) {
         WebResourceCacheManager::shared().didReceiveMessage(connection, messageID, decoder);
         return;
     }
-
-#if USE(SOUP)
-    if (messageID.is<CoreIPC::MessageClassWebSoupRequestManager>()) {
-        m_soupRequestManager.didReceiveMessage(connection, messageID, decoder);
-        return;
-    }
-#endif
     
     if (messageID.is<CoreIPC::MessageClassWebPageGroupProxy>()) {
         uint64_t pageGroupID = decoder.destinationID();
@@ -740,16 +717,6 @@ void WebProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Mes
         
         pageGroupProxy->didReceiveMessage(connection, messageID, decoder);
     }
-
-    uint64_t pageID = decoder.destinationID();
-    if (!pageID)
-        return;
-    
-    WebPage* page = webPage(pageID);
-    if (!page)
-        return;
-    
-    page->didReceiveMessage(connection, messageID, decoder);
 }
 
 void WebProcess::didClose(CoreIPC::Connection*)
@@ -1056,15 +1023,26 @@ void WebProcess::postInjectedBundleMessage(const CoreIPC::DataReference& message
         return;
 
     RefPtr<APIObject> messageBody;
-    if (!decoder->decode(InjectedBundleUserMessageDecoder(messageBody)))
+    InjectedBundleUserMessageDecoder messageBodyDecoder(messageBody);
+    if (!decoder->decode(messageBodyDecoder))
         return;
 
     injectedBundle->didReceiveMessage(messageName, messageBody.get());
 }
 
 #if ENABLE(NETWORK_PROCESS)
+NetworkProcessConnection* WebProcess::networkConnection()
+{
+    // FIXME (NetworkProcess): How do we handle not having the connection when the WebProcess needs it?
+    // If the NetworkProcess crashed, for example.  Do we respawn it?
+    ASSERT(m_networkProcessConnection);
+    return m_networkProcessConnection.get();
+}
+
 void WebProcess::networkProcessConnectionClosed(NetworkProcessConnection* connection)
 {
+    // FIXME (NetworkProcess): How do we handle not having the connection when the WebProcess needs it?
+    // If the NetworkProcess crashed, for example.  Do we respawn it?
     ASSERT(m_networkProcessConnection);
     ASSERT(m_networkProcessConnection == connection);
 
@@ -1073,6 +1051,8 @@ void WebProcess::networkProcessConnectionClosed(NetworkProcessConnection* connec
 
 void WebProcess::networkProcessCrashed(CoreIPC::Connection*)
 {
+    // FIXME (NetworkProcess): How do we handle not having the connection when the WebProcess needs it?
+    // If the NetworkProcess crashed, for example.  Do we respawn it?
     ASSERT(m_networkProcessConnection);
     
     networkProcessConnectionClosed(m_networkProcessConnection.get());

@@ -326,9 +326,8 @@ void GraphicsContext::drawNativeImage(NativeImagePtr imagePtr, const FloatSize& 
 
     setPlatformCompositeOperation(op);
 
-    // Flip the coords.
-    CGContextTranslateCTM(context, adjustedDestRect.x(), adjustedDestRect.maxY());
-    CGContextScaleCTM(context, 1, -1);
+    // ImageOrientation expects the origin to be at (0, 0)
+    CGContextTranslateCTM(context, adjustedDestRect.x(), adjustedDestRect.y());
     adjustedDestRect.setLocation(FloatPoint());
 
     if (orientation != DefaultImageOrientation) {
@@ -340,6 +339,10 @@ void GraphicsContext::drawNativeImage(NativeImagePtr imagePtr, const FloatSize& 
         }
     }
     
+    // Flip the coords.
+    CGContextTranslateCTM(context, 0, adjustedDestRect.height());
+    CGContextScaleCTM(context, 1, -1);
+
     // Adjust the color space.
     image = Image::imageWithColorSpace(image.get(), styleColorSpace);
 
@@ -425,6 +428,10 @@ void GraphicsContext::drawLine(const IntPoint& point1, const IntPoint& point2)
     switch (strokeStyle()) {
     case NoStroke:
     case SolidStroke:
+#if ENABLE(CSS3_TEXT)
+    case DoubleStroke:
+    case WavyStroke: // FIXME: https://bugs.webkit.org/show_bug.cgi?id=94112 - Needs platform support.
+#endif // CSS3_TEXT
         break;
     case DottedStroke:
         patWidth = (int)width;
@@ -1053,7 +1060,7 @@ void GraphicsContext::clipOut(const IntRect& rect)
     if (paintingDisabled())
         return;
 
-    CGRect rects[2] = { CGContextGetClipBoundingBox(platformContext()), rect };
+    CGRect rects[2] = { CGRectInfinite, rect };
     CGContextBeginPath(platformContext());
     CGContextAddRects(platformContext(), rects, 2);
     CGContextEOClip(platformContext());

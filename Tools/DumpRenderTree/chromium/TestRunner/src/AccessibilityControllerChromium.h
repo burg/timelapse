@@ -40,6 +40,10 @@ class WebFrame;
 class WebView;
 }
 
+class TestDelegate;
+
+namespace WebTestRunner {
+
 class AccessibilityController : public CppBoundClass {
 public:
     AccessibilityController();
@@ -57,6 +61,7 @@ public:
 
     void notificationReceived(const WebKit::WebAccessibilityObject& target, const char* notificationName);
 
+    void setDelegate(TestDelegate* delegate) { m_delegate = delegate; }
     void setWebView(WebKit::WebView* webView) { m_webView = webView; }
 
 private:
@@ -82,7 +87,10 @@ private:
 
     std::vector<CppVariant> m_notificationCallbacks;
 
+    TestDelegate* m_delegate;
     WebKit::WebView* m_webView;
 };
+
+}
 
 #endif // AccessibilityControllerChromium_h

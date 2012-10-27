@@ -75,6 +75,7 @@
 #include "HTMLProgressElement.h"
 #include "HTMLStyleElement.h"
 #include "HTMLTextAreaElement.h"
+#include "InsertionPoint.h"
 #include "InspectorInstrumentation.h"
 #include "KeyframeList.h"
 #include "LinkHash.h"
@@ -116,7 +117,6 @@
 #include "StylePendingImage.h"
 #include "StyleRule.h"
 #include "StyleRuleImport.h"
-#include "StyleScopeResolver.h"
 #include "StyleSheetContents.h"
 #include "StyleSheetList.h"
 #include "Text.h"
@@ -147,6 +147,7 @@
 
 #if ENABLE(SVG)
 #include "CachedSVGDocument.h"
+#include "CachedSVGDocumentReference.h"
 #include "SVGDocument.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
@@ -371,7 +372,7 @@ static PassOwnPtr<RuleSet> makeRuleSet(const Vector<RuleFeature>& rules)
         return nullptr;
     OwnPtr<RuleSet> ruleSet = RuleSet::create();
     for (size_t i = 0; i < size; ++i)
-        ruleSet->addRule(rules[i].rule, rules[i].selectorIndex, rules[i].hasDocumentSecurityOrigin, false);
+        ruleSet->addRule(rules[i].rule, rules[i].selectorIndex, rules[i].hasDocumentSecurityOrigin ? RuleHasDocumentSecurityOrigin : RuleHasNoSpecialState);
     ruleSet->shrinkToFit();
     return ruleSet.release();
 }
@@ -410,12 +411,12 @@ void StyleResolver::appendAuthorStyleSheets(unsigned firstNew, const Vector<RefP
         if (cssSheet->mediaQueries() && !m_medium->eval(cssSheet->mediaQueries(), this))
             continue;
         StyleSheetContents* sheet = cssSheet->contents();
+#if ENABLE(STYLE_SCOPED) || ENABLE(SHADOW_DOM)
         if (const ContainerNode* scope = StyleScopeResolver::scopeFor(cssSheet)) {
-            if (!m_scopeResolver)
-                m_scopeResolver = adoptPtr(new StyleScopeResolver());
-            m_scopeResolver->ensureRuleSetFor(scope)->addRulesFromSheet(sheet, *m_medium, this, scope);
+            ensureScopeResolver()->ensureRuleSetFor(scope)->addRulesFromSheet(sheet, *m_medium, this, scope);
             continue;
         }
+#endif
 
         m_authorStyle->addRulesFromSheet(sheet, *m_medium, this);
         if (!m_styleRuleToCSSOMWrapperMap.isEmpty())
@@ -709,7 +710,12 @@ void StyleResolver::sortAndTransferMatchedRules(MatchResult& result)
 void StyleResolver::matchScopedAuthorRules(MatchResult& result, bool includeEmptyRules)
 {
 #if ENABLE(STYLE_SCOPED) || ENABLE(SHADOW_DOM)
-    if (!m_scopeResolver || !m_scopeResolver->hasScopedStyles())
+    if (!m_scopeResolver)
+        return;
+
+    matchHostRules(result, includeEmptyRules);
+
+    if (!m_scopeResolver->hasScopedStyles())
         return;
 
     // Match scoped author rules by traversing the scoped element stack (rebuild it if it got inconsistent).
@@ -735,6 +741,35 @@ void StyleResolver::matchScopedAuthorRules(MatchResult& result, bool includeEmpt
         collectMatchingRulesForRegion(frame.m_ruleSet, result.ranges.firstAuthorRule, result.ranges.lastAuthorRule, options);
     }
 
+#else
+    UNUSED_PARAM(result);
+    UNUSED_PARAM(includeEmptyRules);
+#endif
+}
+
+inline bool StyleResolver::styleSharingCandidateMatchesHostRules()
+{
+#if ENABLE(SHADOW_DOM)
+    return m_scopeResolver && m_scopeResolver->styleSharingCandidateMatchesHostRules(m_element);
+#else
+    return false;
+#endif
+}
+
+void StyleResolver::matchHostRules(MatchResult& result, bool includeEmptyRules)
+{
+#if ENABLE(SHADOW_DOM)
+    ASSERT(m_scopeResolver);
+
+    Vector<RuleSet*> matchedRules;
+    m_scopeResolver->matchHostRules(m_element, matchedRules);
+    if (matchedRules.isEmpty())
+        return;
+
+    MatchOptions options(includeEmptyRules);
+    options.scope = m_element;
+    for (unsigned i = matchedRules.size(); i > 0; --i)
+        collectMatchingRules(matchedRules.at(i-1), result.ranges.firstAuthorRule, result.ranges.lastAuthorRule, options);
 #else
     UNUSED_PARAM(result);
     UNUSED_PARAM(includeEmptyRules);
@@ -961,8 +996,9 @@ inline bool shouldResetStyleInheritance(NodeRenderingContext& context)
     InsertionPoint* insertionPoint = context.insertionPoint();
     if (!insertionPoint)
         return false;
-    ASSERT(context.node()->parentElement());
-    ElementShadow* shadow = context.node()->parentElement()->shadow();
+
+    ASSERT(parentElementForDistribution(context.node()));
+    ElementShadow* shadow = parentElementForDistribution(context.node())->shadow();
     ASSERT(shadow);
 
     for ( ; insertionPoint; ) {
@@ -1329,6 +1365,9 @@ RenderStyle* StyleResolver::locateSharedStyle()
         return 0;
     // Can't share if attribute rules apply.
     if (styleSharingCandidateMatchesRuleSet(m_uncommonAttributeRuleSet.get()))
+        return 0;
+    // Can't share if @host @-rules apply.
+    if (styleSharingCandidateMatchesHostRules())
         return 0;
     // Tracking child index requires unique style for each node. This may get set by the sibling rule match above.
     if (parentStylePreventsSharing(m_parentStyle))
@@ -2202,33 +2241,6 @@ bool StyleResolver::checkRegionSelector(CSSSelector* regionSelector, Element* re
             return true;
 
     return false;
-}
-    
-bool StyleResolver::determineStylesheetSelectorScopes(StyleSheetContents* stylesheet, HashSet<AtomicStringImpl*>& idScopes, HashSet<AtomicStringImpl*>& classScopes)
-{
-    ASSERT(!stylesheet->isLoading());
-
-    const Vector<RefPtr<StyleRuleImport> >& importRules = stylesheet->importRules();
-    for (unsigned i = 0; i < importRules.size(); ++i) {
-        if (!importRules[i]->styleSheet())
-            continue;
-        if (!determineStylesheetSelectorScopes(importRules[i]->styleSheet(), idScopes, classScopes))
-            return false;
-    }
-
-    const Vector<RefPtr<StyleRuleBase> >& rules = stylesheet->childRules();
-    for (unsigned i = 0; i < rules.size(); i++) {
-        StyleRuleBase* rule = rules[i].get();
-        if (rule->isStyleRule()) {
-            StyleRule* styleRule = static_cast<StyleRule*>(rule);
-            if (!SelectorChecker::determineSelectorScopes(styleRule->selectorList(), idScopes, classScopes))
-                return false;
-            continue;
-        } 
-        // FIXME: Media rules and maybe some others could be allowed.
-        return false;
-    }
-    return true;
 }
 
 // -------------------------------------------------------------------------------------
@@ -4265,6 +4277,13 @@ bool StyleResolver::hasSelectorForAttribute(const AtomicString &attrname) const
     return m_features.attrsInRules.contains(attrname.impl());
 }
 
+bool StyleResolver::hasSelectorForId(const AtomicString& idValue) const
+{
+    if (idValue.isEmpty())
+        return false;
+    return m_features.idsInRules.contains(idValue.impl());
+}
+
 void StyleResolver::addViewportDependentMediaQueryResult(const MediaQueryExp* expr, bool result)
 {
     m_viewportDependentMediaQueryResults.append(adoptPtr(new MediaQueryResult(*expr, result)));
@@ -4611,7 +4630,7 @@ void StyleResolver::loadPendingSVGDocuments()
                 continue;
 
             // Stash the CachedSVGDocument on the reference filter.
-            referenceFilter->setData(cachedDocument);
+            referenceFilter->setData(adoptPtr(new CachedSVGDocumentReference(cachedDocument)));
         }
     }
     m_pendingSVGDocuments.clear();
@@ -4841,14 +4860,14 @@ PassRefPtr<CustomFilterOperation> StyleResolver::createCustomFilterOperation(Web
             if (primitiveValue->isNumber()) {
                 // If only one integer value is specified, it will set both
                 // the rows and the columns.
-                meshRows = meshColumns = primitiveValue->getIntValue();
+                meshColumns = meshRows = primitiveValue->getIntValue();
                 iterator.advance();
                 
-                // Try to match another number for the columns.
+                // Try to match another number for the rows.
                 if (iterator.hasMore() && iterator.isPrimitiveValue()) {
                     CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(iterator.value());
                     if (primitiveValue->isNumber()) {
-                        meshColumns = primitiveValue->getIntValue();
+                        meshRows = primitiveValue->getIntValue();
                         iterator.advance();
                     }
                 }
@@ -4947,7 +4966,7 @@ bool StyleResolver::createFilterOperations(CSSValue* inValue, RenderStyle* style
                 if (!svgDocumentValue->loadRequested())
                     m_pendingSVGDocuments.set(operation.get(), svgDocumentValue);
                 else
-                    operation->setData(svgDocumentValue->cachedSVGDocument());
+                    operation->setData(adoptPtr(new CachedSVGDocumentReference(svgDocumentValue->cachedSVGDocument())));
             }
             operations.operations().append(operation);
 #endif

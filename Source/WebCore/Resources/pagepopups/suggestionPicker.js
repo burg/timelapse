@@ -155,6 +155,7 @@ SuggestionPicker.prototype._fixWindowSize = function() {
         this._containerElement.style.maxHeight = (maxHeight - ListBorder) + "px";
         desiredWindowWidth += getScrollbarWidth();
         desiredWindowHeight = maxHeight;
+        this._containerElement.style.overflowY = "scroll";
     }
 
     var windowRect = adjustWindowRect(desiredWindowWidth, desiredWindowHeight, desiredWindowWidth, 0);
@@ -189,7 +190,8 @@ SuggestionPicker.prototype.selectEntry = function(entry) {
     if (typeof entry.dataset.value !== "undefined") {
         this.submitValue(entry.dataset.value);
     } else if (entry.dataset.action === SuggestionPicker.ActionNames.OpenCalendarPicker) {
-        openCalendarPicker();
+        hideWindow();
+        setTimeout(openCalendarPicker, 0);
     }
 };
 

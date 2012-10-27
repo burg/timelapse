@@ -185,21 +185,27 @@ compositing/regions/webkit-flow-renderer-layer-compositing.html
 # LAYER_TREE_INCLUDES_VISIBLE_RECTS option to layerTreeAsText is only applicable to Mac.
 compositing/visible-rect [ Skip ]
 
-
 # ENABLE(SHADOW_DOM) is disabled.
 editing/shadow
 fast/dom/shadow/access-key.html
 fast/dom/shadow/adopt-node-with-shadow-root.html
+fast/dom/shadow/athost-atrules.html
 fast/dom/shadow/composed-shadow-tree-walker.html
 fast/dom/shadow/content-after-style.html
 fast/dom/shadow/content-element-api.html
 fast/dom/shadow/content-element-distributed-nodes.html
+fast/dom/shadow/content-element-in-media-element.html
+fast/dom/shadow/content-element-in-meter-element.html
 fast/dom/shadow/content-element-move.html
 fast/dom/shadow/content-element-outside-shadow.html
 fast/dom/shadow/content-element-outside-shadow-style.html
-fast/dom/shadow/content-element-in-media-element.html
-fast/dom/shadow/content-element-in-meter-element.html
+fast/dom/shadow/content-reprojection-complex.html
 fast/dom/shadow/content-reprojection-dynamic.html
+fast/dom/shadow/content-reprojection-fallback-crash.html
+fast/dom/shadow/content-reprojection-fallback.html
+fast/dom/shadow/content-reprojection-fallback-reprojection.html
+fast/dom/shadow/content-reprojection-order.html
+fast/dom/shadow/content-reprojection-shadow.html
 fast/dom/shadow/drop-event-for-input-in-shadow.html
 fast/dom/shadow/drop-event-in-shadow.html
 fast/dom/shadow/elements-in-frameless-document.html
@@ -211,107 +217,111 @@ fast/dom/shadow/get-element-by-id-in-shadow-mutation.html
 fast/dom/shadow/get-element-by-id-in-shadow-root.html
 fast/dom/shadow/has-shadow-insertion-point.html
 fast/dom/shadow/iframe-shadow.html
-fast/dom/shadow/invalidate-distribution.html
+fast/dom/shadow/input-with-validation.html
+fast/dom/shadow/input-with-validation-without-shadow.html
 fast/dom/shadow/insertion-point-list-menu-crash.html
 fast/dom/shadow/insertion-point-resetStyleInheritance.html
 fast/dom/shadow/insertion-point-shadow-crash.html
 fast/dom/shadow/insertion-point-video-crash.html
+fast/dom/shadow/invalidate-distribution.html
 fast/dom/shadow/link-in-shadow-tree.html
+fast/dom/shadow/multiple-shadowroot-adopt.html
 fast/dom/shadow/multiple-shadowroot.html
 fast/dom/shadow/multiple-shadowroot-rendering.html
-fast/dom/shadow/multiple-shadowroot-adopt.html
 fast/dom/shadow/parent-tree-scope-in-shadow.html
-fast/dom/shadow/selections-in-shadow.html
+fast/dom/shadow/remove-styles-in-shadow-crash.html
+fast/dom/shadow/select-image-with-shadow.html
 fast/dom/shadow/selection-shouldnt-expose-shadow-dom.html
+fast/dom/shadow/selections-in-shadow.html
+fast/dom/shadow/shadow-and-list-elements.html
+fast/dom/shadow/shadow-boundary-events.html
+fast/dom/shadow/shadow-content-crash.html
+fast/dom/shadow/shadow-contents-fallback-dynamic.html
+fast/dom/shadow/shadow-contents-fallback.html
+fast/dom/shadow/shadow-disable.html
+fast/dom/shadow/shadow-div-reflow.html
 fast/dom/shadow/shadowdom-dynamic-styling.html
+fast/dom/shadow/shadow-dom-event-dispatching.html
+fast/dom/shadow/shadowdom-for-button-complex-shadow.html
 fast/dom/shadow/shadowdom-for-button.html
-fast/dom/shadow/shadowdom-for-image-alt-update.html
+fast/dom/shadow/shadowdom-for-button-only-shadow.html
+fast/dom/shadow/shadowdom-for-button-without-shadow.html
+fast/dom/shadow/shadowdom-for-fieldset-complex-shadow.html
+fast/dom/shadow/shadowdom-for-fieldset-only-shadow.html
+fast/dom/shadow/shadowdom-for-fieldset-without-shadow.html
+fast/dom/shadow/shadowdom-for-form-associated-element-useragent.html
 fast/dom/shadow/shadowdom-for-image-alt.html
+fast/dom/shadow/shadowdom-for-image-alt-update.html
 fast/dom/shadow/shadowdom-for-image-content.html
 fast/dom/shadow/shadowdom-for-image-dynamic.html
-fast/dom/shadow/shadowdom-for-image-event.html
 fast/dom/shadow/shadowdom-for-image-event-click.html
+fast/dom/shadow/shadowdom-for-image-event.html
+fast/dom/shadow/shadowdom-for-image.html
 fast/dom/shadow/shadowdom-for-image-in-shadowdom.html
 fast/dom/shadow/shadowdom-for-image-map.html
 fast/dom/shadow/shadowdom-for-image-style.html
 fast/dom/shadow/shadowdom-for-image-with-multiple-shadow.html
 fast/dom/shadow/shadowdom-for-image-with-pseudo-id.html
 fast/dom/shadow/shadowdom-for-image-with-width-and-height.html
-fast/dom/shadow/shadowdom-for-image.html
+fast/dom/shadow/shadowdom-for-keygen-complex-shadow.html
+fast/dom/shadow/shadowdom-for-keygen-only-shadow.html
+fast/dom/shadow/shadowdom-for-keygen-without-shadow.html
 fast/dom/shadow/shadowdom-for-media.html
+fast/dom/shadow/shadowdom-for-meter-dynamic.html
+fast/dom/shadow/shadowdom-for-meter.html
+fast/dom/shadow/shadowdom-for-meter-multiple.html
+fast/dom/shadow/shadowdom-for-meter-without-appearance.html
+fast/dom/shadow/shadowdom-for-meter-without-shadow-element.html
+fast/dom/shadow/shadowdom-for-meter-with-style.html
+fast/dom/shadow/shadowdom-for-object-complex-shadow.html
+fast/dom/shadow/shadowdom-for-object-only-shadow.html
+fast/dom/shadow/shadowdom-for-object-without-shadow.html
+fast/dom/shadow/shadowdom-for-output-complex-shadow.html
+fast/dom/shadow/shadowdom-for-output-only-shadow.html
+fast/dom/shadow/shadowdom-for-output-without-shadow.html
 fast/dom/shadow/shadowdom-for-progress-dynamic.html
+fast/dom/shadow/shadowdom-for-progress.html
 fast/dom/shadow/shadowdom-for-progress-multiple.html
-fast/dom/shadow/shadowdom-for-progress-with-style.html
 fast/dom/shadow/shadowdom-for-progress-without-appearance.html
 fast/dom/shadow/shadowdom-for-progress-without-shadow-element.html
-fast/dom/shadow/shadowdom-for-progress.html
+fast/dom/shadow/shadowdom-for-progress-with-style.html
+fast/dom/shadow/shadowdom-for-select-complex-shadow.html
+fast/dom/shadow/shadowdom-for-select-only-shadow.html
+fast/dom/shadow/shadowdom-for-select-without-shadow.html
+fast/dom/shadow/shadowdom-for-textarea-complex-shadow.html
+fast/dom/shadow/shadowdom-for-textarea.html
+fast/dom/shadow/shadowdom-for-textarea-only-shadow.html
+fast/dom/shadow/shadowdom-for-textarea-without-shadow.html
+fast/dom/shadow/shadowdom-for-textarea-with-placeholder.html
 fast/dom/shadow/shadowdom-reprojection-1.html
 fast/dom/shadow/shadowdom-reprojection-2.html
-fast/dom/shadow/shadow-and-list-elements.html
-fast/dom/shadow/shadow-boundary-events.html
-fast/dom/shadow/shadow-content-crash.html
-fast/dom/shadow/shadow-contents-fallback-dynamic.html
-fast/dom/shadow/shadow-contents-fallback.html
-fast/dom/shadow/shadow-dom-event-dispatching.html
 fast/dom/shadow/shadow-dynamic-style-change-via-mutation-and-selector.html
-fast/dom/shadow/shadow-disable.html
-fast/dom/shadow/shadow-div-reflow.html
 fast/dom/shadow/shadow-element.html
-fast/dom/shadow/shadow-element-rendering-single.html
 fast/dom/shadow/shadow-element-rendering-multiple.html
+fast/dom/shadow/shadow-element-rendering-single.html
 fast/dom/shadow/shadow-nested-pseudo-id.html
 fast/dom/shadow/shadow-on-image.html
 fast/dom/shadow/shadow-removechild-and-blur-event.html
+fast/dom/shadow/shadow-reprojection-prohibited.html
 fast/dom/shadow/shadow-root-activeElement.html
 fast/dom/shadow/shadow-root-append.html
 fast/dom/shadow/shadow-root-applyAuthorStyles.html
 fast/dom/shadow/shadow-root-attached.html
 fast/dom/shadow/shadow-root-blur.html
+fast/dom/shadow/shadowroot-clonenode.html
 fast/dom/shadow/shadow-root-innerHTML.html
 fast/dom/shadow/shadow-root-js-api.html
 fast/dom/shadow/shadow-root-new.html
+fast/dom/shadow/shadowroot-of-insertionpoint.html
 fast/dom/shadow/shadow-root-resetStyleInheritance.html
 fast/dom/shadow/shadow-ul-li.html
+fast/dom/shadow/style-of-distributed-node.html
 fast/dom/shadow/style-scoped-not-enabled.html
+fast/dom/shadow/suppress-mutation-events-in-shadow-characterdata.html
 fast/dom/shadow/tab-order-iframe-and-shadow.html
 fast/dom/shadow/transition-on-shadow-host-with-distributed-node.html
 fast/dom/shadow/user-modify-inheritance.html
-fast/dom/shadow/shadowdom-for-object-complex-shadow.html
-fast/dom/shadow/shadowdom-for-object-only-shadow.html
-fast/dom/shadow/shadowdom-for-object-without-shadow.html
-fast/dom/shadow/shadowdom-for-textarea-complex-shadow.html
-fast/dom/shadow/shadowdom-for-textarea-only-shadow.html
-fast/dom/shadow/shadowdom-for-textarea-without-shadow.html
-fast/dom/shadow/shadowdom-for-button-complex-shadow.html
-fast/dom/shadow/shadowdom-for-button-only-shadow.html
-fast/dom/shadow/shadowdom-for-button-without-shadow.html
-fast/dom/shadow/shadowdom-for-select-complex-shadow.html
-fast/dom/shadow/shadowdom-for-select-only-shadow.html
-fast/dom/shadow/shadowdom-for-select-without-shadow.html
-fast/dom/shadow/shadowdom-for-output-complex-shadow.html
-fast/dom/shadow/shadowdom-for-output-only-shadow.html
-fast/dom/shadow/shadowdom-for-output-without-shadow.html
-fast/dom/shadow/shadowdom-for-fieldset-complex-shadow.html
-fast/dom/shadow/shadowdom-for-fieldset-only-shadow.html
-fast/dom/shadow/shadowdom-for-fieldset-without-shadow.html
-fast/dom/shadow/shadowdom-for-keygen-complex-shadow.html
-fast/dom/shadow/shadowdom-for-keygen-only-shadow.html
-fast/dom/shadow/shadowdom-for-keygen-without-shadow.html
-fast/dom/shadow/shadowdom-for-textarea-with-placeholder.html
-fast/dom/shadow/shadowdom-for-textarea.html
-fast/dom/shadow/input-with-validation.html
-fast/dom/shadow/input-with-validation-without-shadow.html
-fast/dom/shadow/shadowdom-for-form-associated-element-useragent.html
-fast/dom/shadow/suppress-mutation-events-in-shadow-characterdata.html
-fast/dom/shadow/select-image-with-shadow.html
-fast/dom/shadow/shadowdom-for-meter-dynamic.html
-fast/dom/shadow/shadowdom-for-meter-multiple.html
-fast/dom/shadow/shadowdom-for-meter-with-style.html
-fast/dom/shadow/shadowdom-for-meter-without-appearance.html
-fast/dom/shadow/shadowdom-for-meter-without-shadow-element.html
-fast/dom/shadow/shadowdom-for-meter.html
-fast/dom/shadow/style-of-distributed-node.html
-fast/dom/shadow/shadowroot-clonenode.html
+inspector/elements/update-shadowdom.html
 
 # Fail until SUBPIXEL_LAYOUT is enabled
 # https://bugs.webkit.org/show_bug.cgi?id=85532
@@ -430,8 +440,7 @@ fast/mutation/transient-gc-crash.html
 # https://bugs.webkit.org/show_bug.cgi?id=87088
 fast/js/names.html
 
-# Don't have GestureLongPress, GestureTapCancel event types
-touchadjustment/touch-links-longpress.html
+# Don't have GestureTapCancel event type
 touchadjustment/touch-links-active.html
 
 # ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING) is disabled
@@ -469,7 +478,7 @@ webkit.org/b/85262 fast/css/image-resolution
 webkit.org/b/89052 fast/css/image-orientation
 
 # CSS3 Text support is not yet enabled (needs ENABLE_CSS3_TEXT).
-webkit.org/b/58491 fast/css3-text-decoration
+webkit.org/b/58491 fast/css3-text/css3-text-decoration
 
 # Web Inspector: Implement support for InspectorClient::overrideDeviceMetrics() in platforms other than Chromium
 # https://bugs.webkit.org/show_bug.cgi?id=82886
@@ -477,6 +486,9 @@ webkit.org/b/82886 inspector/styles/override-screen-size.html [ Skip ]
 
 # LayoutTestController::setAutomaticLinkDetectionEnabled isn't implemented
 webkit.org/b/85463 editing/inserting/typing-space-to-trigger-smart-link.html
+
+# gestureTwoFingerTap not implemented by this platform (introduced in r132406)
+touchadjustment/touch-links-two-finger-tap.html
 
 # =========================================================================== #
 #       Feature not yet supported.                                            #
@@ -616,10 +628,6 @@ fast/events/prevent-drag-to-navigate.html
 fast/forms/file/input-file-re-render.html
 http/tests/security/clipboard/clipboard-file-access.html
 
-fast/files/apply-blob-url-to-xhr.html
-fast/files/workers/worker-apply-blob-url-to-xhr.html
-fast/files/workers/worker-read-blob-async.html
-
 editing/pasteboard/drag-image-in-about-blank-frame.html
 editing/pasteboard/files-during-page-drags.html
 editing/pasteboard/drag-drop-list.html
@@ -696,6 +704,8 @@ fast/events/dropzone-005.html
 fast/events/drop-with-file-paths.html
 fast/events/moving-text-should-fire-drop-and-dragend-events.html
 fast/events/moving-text-should-fire-drop-and-dragend-events-2.html
+fast/events/input-element-display-none-in-dragleave-crash.html
+fast/events/only-valid-drop-targets-receive-file-drop.html
 
 # =========================================================================== #
 #       Failing HTTP tests.                                                   #
@@ -794,6 +804,19 @@ http/tests/xmlhttprequest/cache-override.html
 # [Qt] New http/tests/xmlhttprequest/xmlhttprequest-check-get-readystate-for-404-without-body.htm fails
 # https://bugs.webkit.org/show_bug.cgi?id=86606
 http/tests/xmlhttprequest/xmlhttprequest-check-get-readystate-for-404-without-body.html
+
+# ResourceRequest needs to support setTimeoutInterval
+webkit.org/b/98397 http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-aborted.html
+webkit.org/b/98397 http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-abortedonmain.html
+webkit.org/b/98397 http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-overridesexpires.html
+webkit.org/b/98397 http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-simple.html
+webkit.org/b/98397 http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-synconmain.html
+webkit.org/b/98397 http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-twice.html
+webkit.org/b/98397 http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-worker-aborted.html
+webkit.org/b/98397 http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-worker-overridesexpires.html
+webkit.org/b/98397 http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-worker-simple.html
+webkit.org/b/98397 http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-worker-synconworker.html
+webkit.org/b/98397 http/tests/xmlhttprequest/timeout/xmlhttprequest-timeout-worker-twice.html
 
 # =========================================================================== #
 #       Failing editing/inserting tests.                                      #
@@ -1402,6 +1425,10 @@ svg/custom/use-on-symbol-inside-pattern.svg
 svg/batik/text/longTextOnPath.svg
 svg/carto.net/tabgroup.svg
 
+# Fail on 32 bit with minor pixel differences (tests introduced in r132602)
+fast/regions/autoheight-middleregion.html
+fast/regions/autoheight-singleregion-breakbeforealways-minheight.html
+
 # [Qt] svg/css/text-gradient-shadow.svg fails
 # https://bugs.webkit.org/show_bug.cgi?id=92734
 svg/css/text-gradient-shadow.svg
@@ -1745,7 +1772,6 @@ fast/text/whitespace/016.html
 fast/text/whitespace/024.html
 fast/text/wide-zero-width-space.html
 fast/text/word-break-soft-hyphen.html
-fast/text/word-space.html
 
 # ------- failures due to missing support for particular XSLT features
 # xsl:output
@@ -1865,10 +1891,6 @@ fast/writing-mode/vertical-subst-font-vert-no-dflt.html
 # https://bugs.webkit.org/show_bug.cgi?id=98751
 fast/xmlhttprequest/xmlhttprequest-nonexistent-file.html
 
-# [Qt] REGRESSION (r130851): fast/text/word-space-with-kerning.html fails
-# https://bugs.webkit.org/show_bug.cgi?id=98876
-fast/text/word-space-with-kerning.html
-
 # ============================================================================= #
 # failing security tests
 # ============================================================================= #
@@ -1959,7 +1981,6 @@ fast/css/line-height-determined-by-primary-font.html
 fast/dom/HTMLMeterElement/meter-appearances-capacity.html
 fast/dom/HTMLMeterElement/meter-appearances-rating-relevancy.html
 fast/dynamic/text-combine.html
-fast/events/touch/gesture/context-menu-on-long-press.html
 fast/events/touch/gesture/context-menu-on-two-finger-tap.html
 fast/images/pixel-crack-image-background-webkit-transform-scale.html
 fast/repaint/inline-horizontal-bt-overflow.html
@@ -2190,6 +2211,10 @@ fast/notifications/notifications-without-permission.html
 # [Qt] unexpected result in fast/js/large-expressions.html
 # https://bugs.webkit.org/show_bug.cgi?id=76379
 fast/js/large-expressions.html
+
+# New fast/js/dfg-arrayify-elimination.html introduced in r132554 fails on 32 bit platforms
+# https://bugs.webkit.org/show_bug.cgi?id=100474
+fast/js/dfg-arrayify-elimination.html
 
 # This should only be a layer change.
 # http://webkit.org/b/82129
@@ -2460,4 +2485,12 @@ webkit.org/b/99306 animations/missing-values-first-keyframe.html [ ImageOnlyFail
 webkit.org/b/99306 animations/missing-values-last-keyframe.html [ ImageOnlyFailure ]
 webkit.org/b/99306 animations/opacity-transform-animation.html [ ImageOnlyFailure ]
 webkit.org/b/99306 css3/filters/effect-blur-hw.html [ ImageOnlyFailure ] # Blur effect radius is too small on WebKit1, the effect not applied at all on WebKit2.
-webkit.org/b/99306 svg/hixie/use/002.xml [ ImageOnlyFailure ]
+
+# [Qt] Text with zero font size renders as X px sometimes, causing fast/text/zero-font-size-2.html to fail
+webkit.org/b/100115 fast/text/zero-font-size-2.html
+
+# REGRESSION(r132143): It made fast/xmlhttprequest/xmlhttprequest-recursive-sync-event.html flakey
+webkit.org/b/100117 fast/xmlhttprequest/xmlhttprequest-recursive-sync-event.html
+
+# [Qt] New http/tests/inspector/network/image-as-text-loading-data-url.html fails
+webkit.org/b/100196 http/tests/inspector/network/image-as-text-loading-data-url.html

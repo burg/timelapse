@@ -206,6 +206,15 @@ $(GENSOURCES_WEBCORE)/XPathGrammar.cpp: $(WebCore)/xml/XPathGrammar.y
 	$(AM_V_at)perl $(WebCore)/css/makegrammar.pl --outputDir $(GENSOURCES_WEBCORE) --bison "$(BISON)" --symbolsPrefix xpathyy $<
 
 # ----
+# XHR timeout Support
+# ----
+if ENABLE_XHR_TIMEOUT
+feature_defines_overrides += ENABLE_XHR_TIMEOUT=1
+else
+feature_defines_overrides += ENABLE_XHR_TIMEOUT=0
+endif # END ENABLE_XHR_TIMEOUT
+
+# ----
 # XSLT Support
 # ----
 if ENABLE_XSLT
@@ -222,6 +231,15 @@ feature_defines_overrides += ENABLE_FILTERS=1
 else
 feature_defines_overrides += ENABLE_FILTERS=0
 endif # END ENABLE_FILTERS
+
+# ----
+# CSS Device Adaptation
+# ----
+if ENABLE_CSS_DEVICE_ADAPTATION
+feature_defines_overrides += ENABLE_CSS_DEVICE_ADAPTATION=1
+else
+feature_defines_overrides += ENABLE_CSS_DEVICE_ADAPTATION=0
+endif # END ENABLE_CSS_DEVICE_ADAPTATION
 
 # ----
 # Shaders
@@ -349,9 +367,11 @@ endif  # END ENABLE_CSS3_CONDITIONAL_RULES
 # ---
 if !ENABLE_UNSTABLE_FEATURES
 feature_defines_unstable += \
+	ENABLE_CSP_NEXT=0 \
 	ENABLE_CSS3_TEXT=0 \
 	ENABLE_CSS_STICKY_POSITION=0 \
 	ENABLE_LINK_PREFETCH=0 \
+	ENABLE_MICRODATA=0 \
 	ENABLE_MUTATION_OBSERVERS=0 \
 	ENABLE_STYLE_SCOPED=0 \
 	ENABLE_VIDEO_TRACK=0 \
@@ -739,7 +759,8 @@ EXTRA_DIST += \
 	Source/WebCore/bindings/scripts/preprocessor.pm \
 	Source/WebCore/bindings/scripts/preprocess-idls.pl \
 	Source/WebCore/ChangeLog \
-	Source/WebCore/css/CSSGrammar.y \
+	Source/WebCore/css/CSSGrammar.y.in \
+	Source/WebCore/css/CSSGrammar.y.includes \
 	Source/WebCore/css/CSSPropertyNames.in \
 	Source/WebCore/css/CSSValueKeywords.in \
 	Source/WebCore/dom/DOMExceptions.in \

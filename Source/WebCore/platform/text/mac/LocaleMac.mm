@@ -178,7 +178,9 @@ String LocaleMac::dateFormatText()
     m_localizedDateFormatText = localizeDateFormat([shortDateFormatter().get() dateFormat]);
     return  m_localizedDateFormatText;
 }
+#endif
 
+#if ENABLE(CALENDAR_PICKER) || ENABLE(INPUT_MULTIPLE_FIELDS_UI)
 const Vector<String>& LocaleMac::monthLabels()
 {
     if (!m_monthLabels.isEmpty())
@@ -194,7 +196,9 @@ const Vector<String>& LocaleMac::monthLabels()
         m_monthLabels.append(WTF::monthFullName[i]);
     return m_monthLabels;
 }
+#endif
 
+#if ENABLE(CALENDAR_PICKER)
 const Vector<String>& LocaleMac::weekDayShortLabels()
 {
     if (!m_weekDayShortLabels.isEmpty())
@@ -250,26 +254,26 @@ String LocaleMac::monthFormat()
 {
     if (!m_monthFormat.isNull())
         return m_monthFormat;
-    // Gets a format for "MMM", not "MM" because Windows API always provides
-    // formats for "MMM".
-    m_monthFormat = [NSDateFormatter dateFormatFromTemplate:@"yyyyMMM" options:0 locale:m_locale.get()];
+    // Gets a format for "MMMM" because Windows API always provides formats for
+    // "MMMM" in some locales.
+    m_monthFormat = [NSDateFormatter dateFormatFromTemplate:@"yyyyMMMM" options:0 locale:m_locale.get()];
     return m_monthFormat;
 }
 
 String LocaleMac::timeFormat()
 {
-    if (!m_localizedTimeFormatText.isNull())
-        return m_localizedTimeFormatText;
-    m_localizedTimeFormatText = [timeFormatter().get() dateFormat];
-    return m_localizedTimeFormatText;
+    if (!m_timeFormatWithSeconds.isNull())
+        return m_timeFormatWithSeconds;
+    m_timeFormatWithSeconds = [timeFormatter().get() dateFormat];
+    return m_timeFormatWithSeconds;
 }
 
 String LocaleMac::shortTimeFormat()
 {
-    if (!m_localizedShortTimeFormatText.isNull())
-        return m_localizedShortTimeFormatText;
-    m_localizedShortTimeFormatText = [shortTimeFormatter().get() dateFormat];
-    return m_localizedShortTimeFormatText;
+    if (!m_timeFormatWithoutSeconds.isNull())
+        return m_timeFormatWithoutSeconds;
+    m_timeFormatWithoutSeconds = [shortTimeFormatter().get() dateFormat];
+    return m_timeFormatWithoutSeconds;
 }
 
 const Vector<String>& LocaleMac::shortMonthLabels()
@@ -286,6 +290,21 @@ const Vector<String>& LocaleMac::shortMonthLabels()
     for (unsigned i = 0; i < WTF_ARRAY_LENGTH(WTF::monthName); ++i)
         m_shortMonthLabels.append(WTF::monthName[i]);
     return m_shortMonthLabels;
+}
+
+const Vector<String>& LocaleMac::standAloneMonthLabels()
+{
+    if (!m_standAloneMonthLabels.isEmpty())
+        return m_standAloneMonthLabels;
+    NSArray *array = [shortDateFormatter().get() standaloneMonthSymbols];
+    if ([array count] == 12) {
+        m_standAloneMonthLabels.reserveCapacity(12);
+        for (unsigned i = 0; i < 12; ++i)
+            m_standAloneMonthLabels.append([array objectAtIndex:i]);
+        return m_standAloneMonthLabels;
+    }
+    m_standAloneMonthLabels = shortMonthLabels();
+    return m_standAloneMonthLabels;
 }
 
 const Vector<String>& LocaleMac::shortStandAloneMonthLabels()

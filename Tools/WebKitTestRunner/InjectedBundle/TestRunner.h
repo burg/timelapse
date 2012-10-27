@@ -263,8 +263,11 @@ public:
 
     // Work queue.
     void queueBackNavigation(unsigned howFarBackward);
+    void queueForwardNavigation(unsigned howFarForward);
     void queueLoad(JSStringRef url, JSStringRef target);
     void queueReload();
+    void queueLoadingScript(JSStringRef script);
+    void queueNonLoadingScript(JSStringRef script);
 
 private:
     static const double waitToDumpWatchdogTimerInterval;

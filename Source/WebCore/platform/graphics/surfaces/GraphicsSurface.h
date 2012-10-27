@@ -20,6 +20,8 @@
 #ifndef GraphicsSurface_h
 #define GraphicsSurface_h
 
+#if USE(GRAPHICS_SURFACE)
+
 #include "GraphicsContext.h"
 #include "GraphicsContext3D.h"
 #include "GraphicsSurfaceToken.h"
@@ -29,14 +31,17 @@
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
-#if USE(GRAPHICS_SURFACE)
-
 #if OS(DARWIN)
 typedef struct __IOSurface* IOSurfaceRef;
 typedef IOSurfaceRef PlatformGraphicsSurface;
 #endif
+
 #if OS(LINUX)
 typedef uint32_t PlatformGraphicsSurface;
+#endif
+
+#if OS(WINDOWS)
+typedef HANDLE PlatformGraphicsSurface;
 #endif
 
 namespace WebCore {

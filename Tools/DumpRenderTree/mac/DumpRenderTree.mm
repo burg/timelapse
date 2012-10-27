@@ -328,6 +328,7 @@ static NSSet *allowedFontFamilySet()
         @"STFangsong",
         @"STHeiti",
         @"STIXGeneral",
+        @"STIXSizeOneSym",
         @"STKaiti",
         @"STSong",
         @"Symbol",
@@ -613,6 +614,8 @@ static void resetDefaultsToConsistentValues()
     [defaults setObject:[path stringByAppendingPathComponent:@"Databases"] forKey:WebDatabaseDirectoryDefaultsKey];
     [defaults setObject:[path stringByAppendingPathComponent:@"LocalStorage"] forKey:WebStorageDirectoryDefaultsKey];
     [defaults setObject:[path stringByAppendingPathComponent:@"LocalCache"] forKey:WebKitLocalCacheDefaultsKey];
+
+    [defaults setBool:NO forKey:@"WebKitKerningAndLigaturesEnabledByDefault"];
 
     WebPreferences *preferences = [WebPreferences standardPreferences];
 

@@ -22,6 +22,8 @@
 #include "config.h"
 #include "PageViewportController.h"
 
+#if USE(TILED_BACKING_STORE)
+
 #include "PageViewportControllerClient.h"
 #include "WebPageProxy.h"
 #include <WebCore/FloatRect.h>
@@ -68,7 +70,6 @@ PageViewportController::PageViewportController(WebKit::WebPageProxy* proxy, Page
 {
     // Initializing Viewport Raw Attributes to avoid random negative or infinity scale factors
     // if there is a race condition between the first layout and setting the viewport attributes for the first time.
-    m_rawAttributes.devicePixelRatio = 1;
     m_rawAttributes.initialScale = 1;
     m_rawAttributes.minimumScale = 1;
     m_rawAttributes.maximumScale = 1;
@@ -277,7 +278,7 @@ void PageViewportController::updateMinimumScaleToFit()
     if (m_viewportSize.isEmpty())
         return;
 
-    float minimumScale = WebCore::computeMinimumScaleFactorForContentContained(m_rawAttributes, WebCore::roundedIntSize(m_viewportSize), WebCore::roundedIntSize(m_contentsSize));
+    float minimumScale = WebCore::computeMinimumScaleFactorForContentContained(m_rawAttributes, WebCore::roundedIntSize(m_viewportSize), WebCore::roundedIntSize(m_contentsSize), devicePixelRatio());
 
     if (!fuzzyCompare(minimumScale, m_minimumScaleToFit, 0.001)) {
         m_minimumScaleToFit = minimumScale;
@@ -290,3 +291,5 @@ void PageViewportController::updateMinimumScaleToFit()
 }
 
 } // namespace WebKit
+
+#endif

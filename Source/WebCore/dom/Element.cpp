@@ -692,62 +692,44 @@ inline void Element::setAttributeInternal(size_t index, const QualifiedName& nam
         existingAttribute->setValue(newValue);
 
     if (!inSynchronizationOfLazyAttribute)
-        didModifyAttribute(*existingAttribute);
+        didModifyAttribute(name, newValue);
 }
 
-void Element::attributeChanged(const Attribute& attribute)
+static inline AtomicString makeIdForStyleResolution(const AtomicString& value, bool inQuirksMode)
 {
-    parseAttribute(attribute);
+    if (inQuirksMode)
+        return value.lower();
+    return value;
+}
+
+void Element::attributeChanged(const QualifiedName& name, const AtomicString& newValue)
+{
+    parseAttribute(Attribute(name, newValue));
 
     document()->incDOMTreeVersion();
 
-    if (isIdAttributeName(attribute.name())) {
-        if (attribute.value() != attributeData()->idForStyleResolution()) {
-            if (attribute.isNull())
-                attributeData()->setIdForStyleResolution(nullAtom);
-            else if (document()->inQuirksMode())
-                attributeData()->setIdForStyleResolution(attribute.value().lower());
-            else
-                attributeData()->setIdForStyleResolution(attribute.value());
-            setNeedsStyleRecalc();
+    if (isIdAttributeName(name)) {
+        AtomicString oldId = attributeData()->idForStyleResolution();
+        AtomicString newId = makeIdForStyleResolution(newValue, document()->inQuirksMode());
+        if (newId != oldId) {
+            attributeData()->setIdForStyleResolution(newId);
+            StyleResolver* styleResolver = document()->styleResolverIfExists();
+            if (attached() && (!styleResolver || (styleResolver->hasSelectorForId(newId) || styleResolver->hasSelectorForId(oldId))))
+                setNeedsStyleRecalc();
         }
-    } else if (attribute.name() == HTMLNames::nameAttr)
-        setHasName(!attribute.isNull());
+    } else if (name == HTMLNames::nameAttr)
+        setHasName(!newValue.isNull());
 
     if (!needsStyleRecalc() && document()->attached()) {
         StyleResolver* styleResolver = document()->styleResolverIfExists();
-        if (!styleResolver || styleResolver->hasSelectorForAttribute(attribute.name().localName()))
+        if (!styleResolver || styleResolver->hasSelectorForAttribute(name.localName()))
             setNeedsStyleRecalc();
     }
 
-    invalidateNodeListCachesInAncestors(&attribute.name(), this);
+    invalidateNodeListCachesInAncestors(&name, this);
 
-    if (!AXObjectCache::accessibilityEnabled())
-        return;
-
-    const QualifiedName& attrName = attribute.name();
-    if (attrName == aria_activedescendantAttr) {
-        // any change to aria-activedescendant attribute triggers accessibility focus change, but document focus remains intact
-        document()->axObjectCache()->handleActiveDescendantChanged(this);
-    } else if (attrName == roleAttr) {
-        // the role attribute can change at any time, and the AccessibilityObject must pick up these changes
-        document()->axObjectCache()->handleAriaRoleChanged(this);
-    } else if (attrName == aria_valuenowAttr) {
-        // If the valuenow attribute changes, AX clients need to be notified.
-        document()->axObjectCache()->postNotification(this, AXObjectCache::AXValueChanged, true);
-    } else if (attrName == aria_labelAttr || attrName == aria_labeledbyAttr || attrName == altAttr || attrName == titleAttr) {
-        // If the content of an element changes due to an attribute change, notify accessibility.
-        document()->axObjectCache()->contentChanged(this);
-    } else if (attrName == aria_checkedAttr)
-        document()->axObjectCache()->checkedStateChanged(this);
-    else if (attrName == aria_selectedAttr)
-        document()->axObjectCache()->selectedChildrenChanged(this);
-    else if (attrName == aria_expandedAttr)
-        document()->axObjectCache()->handleAriaExpandedChange(this);
-    else if (attrName == aria_hiddenAttr)
-        document()->axObjectCache()->childrenChanged(this);
-    else if (attrName == aria_invalidAttr)
-        document()->axObjectCache()->postNotification(this, AXObjectCache::AXInvalidStatusChanged, true);
+    if (AXObjectCache::accessibilityEnabled())
+        document()->axObjectCache()->handleAttributeChanged(name, this);
 }
 
 void Element::parseAttribute(const Attribute& attribute)
@@ -854,7 +836,7 @@ void Element::parserSetAttributes(const Vector<Attribute>& attributeVector, Frag
     // attributeChanged mutates m_attributeData.
     // FIXME: Find a way so we don't have to do this.
     for (unsigned i = 0; i < filteredAttributes.size(); ++i)
-        attributeChanged(filteredAttributes[i]);
+        attributeChanged(filteredAttributes[i].name(), filteredAttributes[i].value());
 }
 
 bool Element::hasAttributes() const
@@ -1016,13 +998,11 @@ void Element::attach()
     if (ElementShadow* shadow = this->shadow()) {
         parentPusher.push();
         shadow->attach();
-        attachChildrenIfNeeded();
-        attachAsNode();
     } else {
         if (firstChild())
             parentPusher.push();
-        ContainerNode::attach();
     }
+    ContainerNode::attach();
 
     if (hasRareData()) {   
         ElementRareData* data = elementRareData();
@@ -1065,8 +1045,9 @@ void Element::detach()
 bool Element::pseudoStyleCacheIsInvalid(const RenderStyle* currentStyle, RenderStyle* newStyle)
 {
     ASSERT(currentStyle == renderStyle());
+    ASSERT(renderer());
 
-    if (!renderer() || !currentStyle)
+    if (!currentStyle)
         return false;
 
     const PseudoStyleCache* pseudoStyleCache = currentStyle->cachedPseudoStyles();
@@ -1116,7 +1097,7 @@ void Element::recalcStyle(StyleChange change)
             return;
     }
 
-    // Ref currentStyle in case it would otherwise be deleted when setRenderStyle() is called.
+    // Ref currentStyle in case it would otherwise be deleted when setting the new style in the renderer.
     RefPtr<RenderStyle> currentStyle(renderStyle());
     bool hasParentStyle = parentNodeForRenderingAndStyle() ? static_cast<bool>(parentNodeForRenderingAndStyle()->renderStyle()) : false;
     bool hasDirectAdjacentRules = currentStyle && currentStyle->childrenAffectedByDirectAdjacentRules();
@@ -1165,17 +1146,15 @@ void Element::recalcStyle(StyleChange change)
                 newStyle->setChildrenAffectedByDirectAdjacentRules();
         }
 
-        if (ch != NoChange || pseudoStyleCacheIsInvalid(currentStyle.get(), newStyle.get()) || (change == Force && renderer() && renderer()->requiresForcedStyleRecalcPropagation())) {
-            setRenderStyle(newStyle);
-        } else if (needsStyleRecalc() && styleChangeType() != SyntheticStyleChange) {
-            // Although no change occurred, we use the new style so that the cousin style sharing code won't get
-            // fooled into believing this style is the same.
-            if (renderer())
-                renderer()->setStyleInternal(newStyle.get());
-            else
-                setRenderStyle(newStyle);
-        } else if (styleChangeType() == SyntheticStyleChange)
-             setRenderStyle(newStyle);
+        if (RenderObject* renderer = this->renderer()) {
+            if (ch != NoChange || pseudoStyleCacheIsInvalid(currentStyle.get(), newStyle.get()) || (change == Force && renderer->requiresForcedStyleRecalcPropagation()) || styleChangeType() == SyntheticStyleChange)
+                renderer->setAnimatableStyle(newStyle.get());
+            else if (needsStyleRecalc()) {
+                // Although no change occurred, we use the new style so that the cousin style sharing code won't get
+                // fooled into believing this style is the same.
+                renderer->setStyleInternal(newStyle.get());
+            }
+        }
 
         // If "rem" units are used anywhere in the document, and if the document element's font size changes, then go ahead and force font updating
         // all the way down the tree. This is simpler than having to maintain a cache of objects (and such font size changes should be rare anyway).
@@ -1565,7 +1544,7 @@ void Element::addAttributeInternal(const QualifiedName& name, const AtomicString
         willModifyAttribute(name, nullAtom, value);
     m_attributeData->addAttribute(Attribute(name, value));
     if (!inSynchronizationOfLazyAttribute)
-        didAddAttribute(Attribute(name, value));
+        didAddAttribute(name, value);
 }
 
 void Element::removeAttribute(const AtomicString& name)
@@ -2181,23 +2160,23 @@ void Element::willModifyAttribute(const QualifiedName& name, const AtomicString&
 #endif
 }
 
-void Element::didAddAttribute(const Attribute& attribute)
+void Element::didAddAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    attributeChanged(attribute);
-    InspectorInstrumentation::didModifyDOMAttr(document(), this, attribute.localName(), attribute.value());
+    attributeChanged(name, value);
+    InspectorInstrumentation::didModifyDOMAttr(document(), this, name.localName(), value);
     dispatchSubtreeModifiedEvent();
 }
 
-void Element::didModifyAttribute(const Attribute& attribute)
+void Element::didModifyAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    attributeChanged(attribute);
-    InspectorInstrumentation::didModifyDOMAttr(document(), this, attribute.localName(), attribute.value());
+    attributeChanged(name, value);
+    InspectorInstrumentation::didModifyDOMAttr(document(), this, name.localName(), value);
     // Do not dispatch a DOMSubtreeModified event here; see bug 81141.
 }
 
 void Element::didRemoveAttribute(const QualifiedName& name)
 {
-    attributeChanged(Attribute(name, nullAtom));
+    attributeChanged(name, nullAtom);
     InspectorInstrumentation::didRemoveDOMAttr(document(), this, name.localName());
     dispatchSubtreeModifiedEvent();
 }

@@ -1080,6 +1080,7 @@ SET(WebCore_SOURCES
     css/SelectorChecker.cpp
     css/ShadowValue.cpp
     css/StyleBuilder.cpp
+    css/StyleInvalidationAnalysis.cpp
     css/StyleMedia.cpp
     css/StylePropertySet.cpp
     css/StylePropertyShorthand.cpp
@@ -1637,6 +1638,7 @@ SET(WebCore_SOURCES
     loader/HistoryController.cpp
     loader/ImageLoader.cpp
     loader/LinkLoader.cpp
+    loader/LoaderStrategy.cpp
     loader/MainResourceLoader.cpp
     loader/MixedContentChecker.cpp
     loader/NavigationAction.cpp
@@ -1683,6 +1685,7 @@ SET(WebCore_SOURCES
     loader/cache/CachedResource.cpp
     loader/cache/CachedResourceHandle.cpp
     loader/cache/CachedResourceLoader.cpp
+    loader/cache/CachedResourceRequest.cpp
     loader/cache/CachedScript.cpp
     loader/cache/CachedShader.cpp
     loader/cache/CachedSVGDocument.cpp
@@ -2150,6 +2153,7 @@ SET(WebCore_SOURCES
     rendering/RenderWordBreak.cpp
     rendering/RootInlineBox.cpp
     rendering/ScrollBehavior.cpp
+    rendering/TextAutosizer.cpp
     rendering/break_lines.cpp
 
     rendering/mathml/RenderMathMLBlock.cpp

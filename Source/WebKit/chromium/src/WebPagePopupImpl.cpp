@@ -44,6 +44,7 @@
 #include "Settings.h"
 #include "WebInputEventConversion.h"
 #include "WebPagePopup.h"
+#include "WebViewClient.h"
 #include "WebViewImpl.h"
 #include "WebWidgetClient.h"
 
@@ -54,7 +55,7 @@ namespace WebKit {
 
 #if ENABLE(PAGE_POPUP)
 
-class PagePopupChromeClient : public EmptyChromeClient {
+class PagePopupChromeClient : public EmptyChromeClient, public WebCore::PageClientChromium {
     WTF_MAKE_NONCOPYABLE(PagePopupChromeClient);
     WTF_MAKE_FAST_ALLOCATED;
 
@@ -124,6 +125,17 @@ private:
         return FloatSize(0, 0);
     }
 
+    virtual PlatformPageClient platformPageClient() const OVERRIDE
+    {
+        return PlatformPageClient(this);
+    }
+
+    // PageClientChromium methods:
+    virtual WebKit::WebScreenInfo screenInfo() OVERRIDE
+    {
+        return m_popup->m_webView->client()->screenInfo();
+    }
+
     WebPagePopupImpl* m_popup;
 };
 
@@ -142,6 +154,7 @@ bool PagePopupFeaturesClient::isEnabled(Document*, ContextFeatures::FeatureType 
 
 WebPagePopupImpl::WebPagePopupImpl(WebWidgetClient* client)
     : m_widgetClient(client)
+    , m_closing(false)
 {
     ASSERT(client);
 }
@@ -259,7 +272,7 @@ bool WebPagePopupImpl::handleCharEvent(const WebKeyboardEvent&)
 #if ENABLE(GESTURE_EVENTS)
 bool WebPagePopupImpl::handleGestureEvent(const WebGestureEvent& event)
 {
-    if (!m_page || !m_page->mainFrame() || !m_page->mainFrame()->view())
+    if (m_closing || !m_page || !m_page->mainFrame() || !m_page->mainFrame()->view())
         return false;
     Frame& frame = *m_page->mainFrame();
     return frame.eventHandler()->handleGestureEvent(PlatformGestureEventBuilder(frame.view(), event));
@@ -268,12 +281,14 @@ bool WebPagePopupImpl::handleGestureEvent(const WebGestureEvent& event)
 
 bool WebPagePopupImpl::handleInputEvent(const WebInputEvent& event)
 {
+    if (m_closing)
+        return false;
     return PageWidgetDelegate::handleInputEvent(m_page.get(), *this, event);
 }
 
 bool WebPagePopupImpl::handleKeyEvent(const PlatformKeyboardEvent& event)
 {
-    if (!m_page->mainFrame() || !m_page->mainFrame()->view())
+    if (m_closing || !m_page->mainFrame() || !m_page->mainFrame()->view())
         return false;
     return m_page->mainFrame()->eventHandler()->keyEvent(event);
 }
@@ -302,7 +317,9 @@ void WebPagePopupImpl::closePopup()
         m_page->setGroupName(String());
         m_page->mainFrame()->loader()->stopAllLoaders();
         m_page->mainFrame()->loader()->stopLoading(UnloadEventPolicyNone);
+        DOMWindowPagePopup::uninstall(m_page->mainFrame()->document()->domWindow());
     }
+    m_closing = true;
     // m_widgetClient might be 0 because this widget might be already closed.
     if (m_widgetClient) {
         // closeWidgetSoon() will call this->close() later.

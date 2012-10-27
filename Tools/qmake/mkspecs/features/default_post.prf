@@ -23,15 +23,10 @@ root_project_file: finalizeConfigure()
     else: CONFIG -= debug_and_release
 } else:debug_and_release {
     # Only build a single instance of each application
-    contains(TEMPLATE, app) {
+    contains(TEMPLATE, app):!force_build_all {
         CONFIG -= build_all
     }
 }
-
-# Help keep the build tree clean
-MOC_DIR = moc
-RCC_DIR = rcc
-isEmpty(OBJECTS_DIR): OBJECTS_DIR = obj/$$activeBuildConfig()
 
 # General default build tweaks
 DEFINES += \

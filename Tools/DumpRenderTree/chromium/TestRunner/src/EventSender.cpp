@@ -51,6 +51,7 @@
 #include "platform/WebDragData.h"
 #include "platform/WebPoint.h"
 #include "platform/WebString.h"
+#include "platform/WebVector.h"
 #include "webkit/support/webkit_support.h"
 #include <wtf/Deque.h>
 #include <wtf/StringExtras.h>
@@ -64,9 +65,13 @@
 using namespace std;
 using namespace WebKit;
 
+namespace WebTestRunner {
+
 WebPoint EventSender::lastMousePos;
 WebMouseEvent::Button EventSender::pressedButton = WebMouseEvent::ButtonNone;
 WebMouseEvent::Button EventSender::lastButtonType = WebMouseEvent::ButtonNone;
+
+namespace {
 
 struct SavedEvent {
     enum SavedEventType {
@@ -87,27 +92,27 @@ struct SavedEvent {
         , milliseconds(0) { }
 };
 
-static WebDragData currentDragData;
-static WebDragOperation currentDragEffect;
-static WebDragOperationsMask currentDragEffectsAllowed;
-static bool replayingSavedEvents = false;
-static Deque<SavedEvent> mouseEventQueue;
-static int touchModifiers;
-static Vector<WebTouchPoint> touchPoints;
+WebDragData currentDragData;
+WebDragOperation currentDragEffect;
+WebDragOperationsMask currentDragEffectsAllowed;
+bool replayingSavedEvents = false;
+Deque<SavedEvent> mouseEventQueue;
+int touchModifiers;
+Vector<WebTouchPoint> touchPoints;
 
 // Time and place of the last mouse up event.
-static double lastClickTimeSec = 0;
-static WebPoint lastClickPos;
-static int clickCount = 0;
+double lastClickTimeSec = 0;
+WebPoint lastClickPos;
+int clickCount = 0;
 
 // maximum distance (in space and time) for a mouse click
 // to register as a double or triple click
-static const double multipleClickTimeSec = 1;
-static const int multipleClickRadiusPixels = 5;
+const double multipleClickTimeSec = 1;
+const int multipleClickRadiusPixels = 5;
 
 // How much we should scroll per event - the value here is chosen to
 // match the WebKit impl and layout test results.
-static const float scrollbarPixelsPerTick = 40.0f;
+const float scrollbarPixelsPerTick = 40.0f;
 
 inline bool outsideMultiClickRadius(const WebPoint& a, const WebPoint& b)
 {
@@ -118,20 +123,19 @@ inline bool outsideMultiClickRadius(const WebPoint& a, const WebPoint& b)
 // Used to offset the time the event hander things an event happened. This is
 // done so tests can run without a delay, but bypass checks that are time
 // dependent (e.g., dragging has a timeout vs selection).
-static uint32 timeOffsetMs = 0;
+uint32 timeOffsetMs = 0;
 
-static double getCurrentEventTimeSec()
+double getCurrentEventTimeSec()
 {
     return (webkit_support::GetCurrentTimeInMillisecond() + timeOffsetMs) / 1000.0;
 }
 
-static void advanceEventTime(int32_t deltaMs)
+void advanceEventTime(int32_t deltaMs)
 {
     timeOffsetMs += deltaMs;
 }
 
-static void initMouseEvent(WebInputEvent::Type t, WebMouseEvent::Button b,
-                           const WebPoint& pos, WebMouseEvent* e)
+void initMouseEvent(WebInputEvent::Type t, WebMouseEvent::Button b, const WebPoint& pos, WebMouseEvent* e)
 {
     e->type = t;
     e->button = b;
@@ -145,7 +149,7 @@ static void initMouseEvent(WebInputEvent::Type t, WebMouseEvent::Button b,
 }
 
 // Returns true if the specified key is the system key.
-static bool applyKeyModifier(const string& modifierName, WebInputEvent* event)
+bool applyKeyModifier(const string& modifierName, WebInputEvent* event)
 {
     bool isSystemKey = false;
     const char* characters = modifierName.c_str();
@@ -182,7 +186,7 @@ static bool applyKeyModifier(const string& modifierName, WebInputEvent* event)
     return isSystemKey;
 }
 
-static bool applyKeyModifiers(const CppVariant* argument, WebInputEvent* event)
+bool applyKeyModifiers(const CppVariant* argument, WebInputEvent* event)
 {
     bool isSystemKey = false;
     if (argument->isObject()) {
@@ -243,6 +247,8 @@ enum KeyLocationCode {
     DOMKeyLocationRight         = 0x02,
     DOMKeyLocationNumpad        = 0x03
 };
+
+}
 
 EventSender::EventSender()
     : m_delegate(0)
@@ -364,7 +370,7 @@ void EventSender::dumpFilenameBeingDragged(const CppArgumentList&, CppVariant*)
             break;
         }
     }
-    printf("Filename being dragged: %s\n", filename.utf8().data());
+    m_delegate->printMessage(std::string("Filename being dragged: ") + filename.utf8().data() + "\n");
 }
 
 WebMouseEvent::Button EventSender::getButtonTypeFromButtonNumber(int buttonCode)
@@ -812,7 +818,7 @@ static Vector<WebString> makeMenuItemStringsFor(WebContextMenuData* contextMenu,
     if (contextMenu->isEditable) {
         for (const char** item = editableMenuStrings; *item; ++item) 
             strings.append(WebString::fromUTF8(*item));
-        Vector<WebString> suggestions;
+        WebVector<WebString> suggestions;
         delegate->fillSpellingSuggestionList(contextMenu->misspelledWord, &suggestions);
         for (size_t i = 0; i < suggestions.size(); ++i) 
             strings.append(suggestions[i]);
@@ -849,20 +855,20 @@ void EventSender::contextClick(const CppArgumentList& arguments, CppVariant* res
     result->set(WebBindings::makeStringArray(makeMenuItemStringsFor(lastContextMenu, m_delegate)));
 }
 
-class MouseDownTask: public MethodTask<EventSender> {
+class MouseDownTask: public WebMethodTask<EventSender> {
 public:
     MouseDownTask(EventSender* obj, const CppArgumentList& arg)
-        : MethodTask<EventSender>(obj), m_arguments(arg) { }
+        : WebMethodTask<EventSender>(obj), m_arguments(arg) { }
     virtual void runIfValid() { m_object->mouseDown(m_arguments, 0); }
 
 private:
     CppArgumentList m_arguments;
 };
 
-class MouseUpTask: public MethodTask<EventSender> {
+class MouseUpTask: public WebMethodTask<EventSender> {
 public:
     MouseUpTask(EventSender* obj, const CppArgumentList& arg)
-        : MethodTask<EventSender>(obj), m_arguments(arg) { }
+        : WebMethodTask<EventSender>(obj), m_arguments(arg) { }
     virtual void runIfValid() { m_object->mouseUp(m_arguments, 0); }
 
 private:
@@ -872,14 +878,14 @@ private:
 void EventSender::scheduleAsynchronousClick(const CppArgumentList& arguments, CppVariant* result)
 {
     result->setNull();
-    postTask(new MouseDownTask(this, arguments));
-    postTask(new MouseUpTask(this, arguments));
+    m_delegate->postTask(new MouseDownTask(this, arguments));
+    m_delegate->postTask(new MouseUpTask(this, arguments));
 }
 
-class KeyDownTask : public MethodTask<EventSender> {
+class KeyDownTask : public WebMethodTask<EventSender> {
 public:
     KeyDownTask(EventSender* obj, const CppArgumentList& arg)
-        : MethodTask<EventSender>(obj), m_arguments(arg) { }
+        : WebMethodTask<EventSender>(obj), m_arguments(arg) { }
     virtual void runIfValid() { m_object->keyDown(m_arguments, 0); }
 
 private:
@@ -889,22 +895,22 @@ private:
 void EventSender::scheduleAsynchronousKeyDown(const CppArgumentList& arguments, CppVariant* result)
 {
     result->setNull();
-    postTask(new KeyDownTask(this, arguments));
+    m_delegate->postTask(new KeyDownTask(this, arguments));
 }
 
 void EventSender::beginDragWithFiles(const CppArgumentList& arguments, CppVariant* result)
 {
     currentDragData.initialize();
     Vector<string> files = arguments[0].toStringVector();
-    Vector<WebString> absoluteFilenames;
+    WebVector<WebString> absoluteFilenames(files.size());
     for (size_t i = 0; i < files.size(); ++i) {
         WebDragData::Item item;
         item.storageType = WebDragData::Item::StorageTypeFilename;
         item.filenameData = webkit_support::GetAbsoluteWebStringFromUTF8Path(files[i]);
         currentDragData.addItem(item);
-        absoluteFilenames.append(item.filenameData);
+        absoluteFilenames[i] = item.filenameData;
     }
-    currentDragData.setFilesystemId(webkit_support::RegisterIsolatedFileSystem(absoluteFilenames));
+    currentDragData.setFilesystemId(m_delegate->registerIsolatedFileSystem(absoluteFilenames));
     currentDragEffectsAllowed = WebKit::WebDragOperationCopy;
 
     // Provide a drag source.
@@ -1268,4 +1274,6 @@ void EventSender::fireKeyboardEventsToElement(const CppArgumentList&, CppVariant
 void EventSender::clearKillRing(const CppArgumentList&, CppVariant* result)
 {
     result->setNull();
+}
+
 }

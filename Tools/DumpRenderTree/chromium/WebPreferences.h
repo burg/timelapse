@@ -87,6 +87,7 @@ struct WebPreferences {
     bool javaEnabled;
     bool javaScriptCanAccessClipboard;
     bool javaScriptCanOpenWindowsAutomatically;
+    bool supportsMultipleWindows;
     bool javaScriptEnabled;
     bool loadsImagesAutomatically;
     bool localStorageEnabled;
@@ -113,6 +114,7 @@ struct WebPreferences {
     bool mediaPlaybackRequiresUserGesture;
     bool mockScrollbarsEnabled;
     bool cssCustomFilterEnabled;
+    bool shouldRespectImageOrientation;
 
     WebPreferences() { reset(); }
     void reset();

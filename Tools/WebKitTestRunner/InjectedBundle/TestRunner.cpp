@@ -75,6 +75,7 @@ TestRunner::TestRunner()
     , m_dumpStatusCallbacks(false)
     , m_dumpTitleChanges(false)
     , m_dumpPixels(true)
+    , m_dumpSelectionRect(false)
     , m_dumpFullScreenCallbacks(false)
     , m_dumpFrameLoadCallbacks(false)
     , m_dumpProgressFinishedCallback(false)
@@ -838,6 +839,11 @@ void TestRunner::queueBackNavigation(unsigned howFarBackward)
     InjectedBundle::shared().queueBackNavigation(howFarBackward);
 }
 
+void TestRunner::queueForwardNavigation(unsigned howFarForward)
+{
+    InjectedBundle::shared().queueForwardNavigation(howFarForward);
+}
+
 void TestRunner::queueLoad(JSStringRef url, JSStringRef target)
 {
     WKRetainPtr<WKURLRef> baseURLWK(AdoptWK, WKBundleFrameCopyURL(WKBundlePageGetMainFrame(InjectedBundle::shared().page()->page())));
@@ -850,6 +856,18 @@ void TestRunner::queueLoad(JSStringRef url, JSStringRef target)
 void TestRunner::queueReload()
 {
     InjectedBundle::shared().queueReload();
+}
+
+void TestRunner::queueLoadingScript(JSStringRef script)
+{
+    WKRetainPtr<WKStringRef> scriptWK = toWK(script);
+    InjectedBundle::shared().queueLoadingScript(scriptWK.get());
+}
+
+void TestRunner::queueNonLoadingScript(JSStringRef script)
+{
+    WKRetainPtr<WKStringRef> scriptWK = toWK(script);
+    InjectedBundle::shared().queueNonLoadingScript(scriptWK.get());
 }
 
 } // namespace WTR

@@ -102,8 +102,11 @@ public:
     bool shouldProcessWorkQueue() const;
     void processWorkQueue();
     void queueBackNavigation(unsigned howFarBackward);
+    void queueForwardNavigation(unsigned howFarForward);
     void queueLoad(WKStringRef url, WKStringRef target);
     void queueReload();
+    void queueLoadingScript(WKStringRef script);
+    void queueNonLoadingScript(WKStringRef script);
 
 private:
     InjectedBundle();

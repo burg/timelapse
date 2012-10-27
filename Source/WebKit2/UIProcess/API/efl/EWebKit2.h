@@ -30,6 +30,7 @@
 
 #include "ewk_back_forward_list.h"
 #include "ewk_back_forward_list_item.h"
+#include "ewk_color_picker.h"
 #include "ewk_context.h"
 #include "ewk_cookie_manager.h"
 #include "ewk_download_job.h"
@@ -41,6 +42,7 @@
 #include "ewk_main.h"
 #include "ewk_navigation_data.h"
 #include "ewk_navigation_policy_decision.h"
+#include "ewk_popup_menu.h"
 #include "ewk_popup_menu_item.h"
 #include "ewk_resource.h"
 #include "ewk_settings.h"

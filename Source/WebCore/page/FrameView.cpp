@@ -933,11 +933,6 @@ bool FrameView::isSoftwareRenderable() const
 
 void FrameView::didMoveOnscreen()
 {
-#if USE(ACCELERATED_COMPOSITING)
-    if (TiledBacking* tiledBacking = this->tiledBacking())
-        tiledBacking->setIsInWindow(true);
-#endif
-
     if (RenderView* root = rootRenderer(this))
         root->didMoveOnscreen();
     contentAreaDidShow();
@@ -945,11 +940,6 @@ void FrameView::didMoveOnscreen()
 
 void FrameView::willMoveOffscreen()
 {
-#if USE(ACCELERATED_COMPOSITING)
-    if (TiledBacking* tiledBacking = this->tiledBacking())
-        tiledBacking->setIsInWindow(false);
-#endif
-
     if (RenderView* root = rootRenderer(this))
         root->willMoveOffscreen();
     contentAreaDidHide();
@@ -2502,13 +2492,9 @@ void FrameView::performPostLayoutTasks()
     }
 
 #if USE(ACCELERATED_COMPOSITING)
-    if (TiledBacking* tiledBacking = this->tiledBacking()) {
-        if (page) {
-            if (ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator()) {
-                bool shouldLimitTileCoverage = !canHaveScrollbars() || scrollingCoordinator->shouldUpdateScrollLayerPositionOnMainThread();
-                tiledBacking->setTileCoverage(shouldLimitTileCoverage ? TiledBacking::CoverageForVisibleArea : TiledBacking::CoverageForScrolling);
-            }
-        }
+    if (RenderView* root = rootRenderer(this)) {
+        if (root->usesCompositing())
+            root->compositor()->frameViewDidLayout();
     }
 #endif
 
@@ -3179,7 +3165,7 @@ void FrameView::paintContents(GraphicsContext* p, const IntRect& rect)
     if (!frame())
         return;
 
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willPaint(m_frame.get(), p, rect);
+    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willPaint(m_frame.get());
 
     Document* document = m_frame->document();
 
@@ -3248,6 +3234,10 @@ void FrameView::paintContents(GraphicsContext* p, const IntRect& rect)
     RenderObject* eltRenderer = m_nodeToDraw ? m_nodeToDraw->renderer() : 0;
     RenderLayer* rootLayer = root->layer();
 
+#ifndef NDEBUG
+    RenderObject::SetLayoutNeededForbiddenScope forbidSetNeedsLayout(rootLayer->renderer());
+#endif
+
     rootLayer->paint(p, rect, m_paintBehavior, eltRenderer);
 
     if (rootLayer->containsDirtyOverlayScrollbars())
@@ -3270,7 +3260,7 @@ void FrameView::paintContents(GraphicsContext* p, const IntRect& rect)
     if (isTopLevelPainter)
         sCurrentPaintTimeStamp = 0;
 
-    InspectorInstrumentation::didPaint(cookie);
+    InspectorInstrumentation::didPaint(cookie, p, rect);
 }
 
 void FrameView::setPaintBehavior(PaintBehavior behavior)

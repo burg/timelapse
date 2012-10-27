@@ -266,6 +266,8 @@ webkit2_sources += \
 	Source/WebKit2/Platform/CoreIPC/MessageReceiverMap.cpp \
 	Source/WebKit2/Platform/CoreIPC/MessageReceiverMap.h \
 	Source/WebKit2/Platform/CoreIPC/MessageSender.h \
+	Source/WebKit2/Platform/CoreIPC/StringReference.cpp \
+	Source/WebKit2/Platform/CoreIPC/StringReference.h \
 	Source/WebKit2/Platform/CoreIPC/unix/AttachmentUnix.cpp \
 	Source/WebKit2/Platform/CoreIPC/unix/ConnectionUnix.cpp \
 	Source/WebKit2/Platform/gtk/LoggingGtk.cpp \
@@ -963,8 +965,6 @@ webkit2_sources += \
 	Source/WebKit2/WebProcess/Geolocation/GeolocationPermissionRequestManager.h \
 	Source/WebKit2/WebProcess/Geolocation/WebGeolocationManager.cpp \
 	Source/WebKit2/WebProcess/Geolocation/WebGeolocationManager.h \
-	Source/WebKit2/WebProcess/gtk/WebAuthDialog.cpp \
-	Source/WebKit2/WebProcess/gtk/WebAuthDialog.h \
 	Source/WebKit2/WebProcess/gtk/WebProcessMainGtk.cpp \
 	Source/WebKit2/WebProcess/gtk/WebProcessMainGtk.h \
 	Source/WebKit2/WebProcess/IconDatabase/WebIconDatabaseProxy.cpp \
@@ -1104,6 +1104,7 @@ webkit2_sources += \
 	Source/WebKit2/WebProcess/WebCoreSupport/gtk/WebDragClientGtk.cpp \
 	Source/WebKit2/WebProcess/WebCoreSupport/gtk/WebEditorClientGtk.cpp \
 	Source/WebKit2/WebProcess/WebCoreSupport/gtk/WebErrorsGtk.cpp \
+	Source/WebKit2/WebProcess/WebCoreSupport/gtk/WebFrameLoaderClientGtk.cpp \
 	Source/WebKit2/WebProcess/WebCoreSupport/gtk/WebPopupMenuGtk.cpp \
 	Source/WebKit2/WebProcess/WebCoreSupport/soup/WebFrameNetworkingContext.cpp \
 	Source/WebKit2/WebProcess/WebCoreSupport/soup/WebFrameNetworkingContext.h \
@@ -1234,6 +1235,8 @@ webkit2_plugin_process_sources += \
 	Source/WebKit2/Platform/CoreIPC/MessageReceiverMap.cpp \
 	Source/WebKit2/Platform/CoreIPC/MessageReceiverMap.h \
 	Source/WebKit2/Platform/CoreIPC/MessageSender.h \
+	Source/WebKit2/Platform/CoreIPC/StringReference.cpp \
+	Source/WebKit2/Platform/CoreIPC/StringReference.h \
 	Source/WebKit2/Platform/CoreIPC/unix/AttachmentUnix.cpp \
 	Source/WebKit2/Platform/CoreIPC/unix/ConnectionUnix.cpp \
 	Source/WebKit2/Platform/Module.cpp \
