@@ -33,6 +33,13 @@
 #include <wtf/CurrentTime.h>
 #include <wtf/PassOwnPtr.h>
 
+#if ENABLE(TIMELAPSE)
+#include "DeterminismController.h"
+#include "Document.h"
+#include "HTMLDocumentParser.h"
+#include "Page.h"
+#endif
+
 namespace WebCore {
 
 class HTMLDocumentParser;
@@ -69,6 +76,13 @@ public:
     // Inline as this is called after every token in the parser.
     void checkForYieldBeforeToken(PumpSession& session)
     {
+#if ENABLE(TIMELAPSE)
+        // The timing of yields is nondeterministic, so just don't yield during capture/replay
+        Document* document = m_parser->document();
+        if (document->page()->determinismController()->isCapturingDocument(document)
+            || document->page()->determinismController()->isReplayingDocument(document))
+            return;
+#endif
         if (session.processedTokens > m_parserChunkSize || session.didSeeScript) {
             // currentTime() can be expensive.  By delaying, we avoided calling
             // currentTime() when constructing non-yielding PumpSessions.

@@ -92,6 +92,12 @@ void HTMLParserScheduler::checkForYieldBeforeScript(PumpSession& session)
     // If we've never painted before and a layout is pending, yield prior to running
     // scripts to give the page a chance to paint earlier.
     Document* document = m_parser->document();
+#if ENABLE(TIMELAPSE)
+    // The timing of yields is nondeterministic, so just don't yield during capture/replay
+    if (document->page()->determinismController()->isCapturingDocument(document)
+        || document->page()->determinismController()->isReplayingDocument(document))
+        return;
+#endif
     bool needsFirstPaint = document->view() && !document->view()->hasEverPainted();
     if (needsFirstPaint && document->isLayoutTimerActive())
         session.needsYield = true;
