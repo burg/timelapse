@@ -697,6 +697,8 @@
 		2346D68815F16461008E6EF0 /* SendResizeEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = 2346D68615F16461008E6EF0 /* SendResizeEvent.h */; };
 		237B5C8415F7C0EB00294B1E /* InitializeWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 237B5C8215F7C0EB00294B1E /* InitializeWindow.cpp */; };
 		237B5C8515F7C0EB00294B1E /* InitializeWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 237B5C8315F7C0EB00294B1E /* InitializeWindow.h */; };
+		23F380E1164324E400650F4D /* RanPendingScripts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23F380DF164324E400650F4D /* RanPendingScripts.cpp */; };
+		23F380E2164324E400650F4D /* RanPendingScripts.h in Headers */ = {isa = PBXBuildFile; fileRef = 23F380E0164324E400650F4D /* RanPendingScripts.h */; };
 		24AA568D13CC94CE00E902F6 /* DOMSVGAltGlyphItemElementInternal.h in Copy Generated Headers */ = {isa = PBXBuildFile; fileRef = 24D912A313CA977D00D21915 /* DOMSVGAltGlyphItemElementInternal.h */; };
 		24AA568E13CC950900E902F6 /* DOMSVGAltGlyphItemElement.h in Copy Generated Headers */ = {isa = PBXBuildFile; fileRef = 24D912A113CA977D00D21915 /* DOMSVGAltGlyphItemElement.h */; };
 		24AA569013CC952F00E902F6 /* DOMSVGAltGlyphDefElement.h in Copy Generated Headers */ = {isa = PBXBuildFile; fileRef = 24D9129B13CA975A00D21915 /* DOMSVGAltGlyphDefElement.h */; };
@@ -7855,6 +7857,8 @@
 		2346D68615F16461008E6EF0 /* SendResizeEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SendResizeEvent.h; path = timelapse/actions/user/SendResizeEvent.h; sourceTree = "<group>"; };
 		237B5C8215F7C0EB00294B1E /* InitializeWindow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = InitializeWindow.cpp; path = timelapse/actions/memoization/InitializeWindow.cpp; sourceTree = "<group>"; };
 		237B5C8315F7C0EB00294B1E /* InitializeWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InitializeWindow.h; path = timelapse/actions/memoization/InitializeWindow.h; sourceTree = "<group>"; };
+		23F380DF164324E400650F4D /* RanPendingScripts.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RanPendingScripts.cpp; path = timelapse/actions/async/RanPendingScripts.cpp; sourceTree = "<group>"; };
+		23F380E0164324E400650F4D /* RanPendingScripts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RanPendingScripts.h; path = timelapse/actions/async/RanPendingScripts.h; sourceTree = "<group>"; };
 		2442BBF81194C9D300D49469 /* HashChangeEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HashChangeEvent.h; sourceTree = "<group>"; };
 		24D9128F13CA951E00D21915 /* JSSVGAltGlyphDefElement.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSSVGAltGlyphDefElement.cpp; sourceTree = "<group>"; };
 		24D9129013CA951E00D21915 /* JSSVGAltGlyphDefElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSSVGAltGlyphDefElement.h; sourceTree = "<group>"; };
@@ -21168,6 +21172,8 @@
 				C4AEC38015EED2FF007076B6 /* TimerCreated.h */,
 				C4AEC38115EED2FF007076B6 /* TimerFired.cpp */,
 				C4AEC38215EED2FF007076B6 /* TimerFired.h */,
+				23F380DF164324E400650F4D /* RanPendingScripts.cpp */,
+				23F380E0164324E400650F4D /* RanPendingScripts.h */,
 			);
 			name = async;
 			sourceTree = "<group>";
@@ -25911,6 +25917,20 @@
 				2346D68815F16461008E6EF0 /* SendResizeEvent.h in Headers */,
 				237B5C8515F7C0EB00294B1E /* InitializeWindow.h in Headers */,
 				2312CBAE1602C63B00BC60B0 /* GetJSAttribute.h in Headers */,
+				C46005B71633869400AFC0F1 /* ScrollPage.h in Headers */,
+				C4DF0D65163387BB00BB135D /* ResourceHandleCreated.h in Headers */,
+				C4DF0D7D163388D900BB135D /* ResourceCannotShowURL.h in Headers */,
+				C4DF0D7F163388D900BB135D /* ResourceDidFail.h in Headers */,
+				C4DF0D81163388D900BB135D /* ResourceDidFinishLoading.h in Headers */,
+				C4DF0D83163388D900BB135D /* ResourceDidReceiveCachedMetadata.h in Headers */,
+				C4DF0D85163388D900BB135D /* ResourceDidReceiveData.h in Headers */,
+				C4DF0D87163388D900BB135D /* ResourceDidReceiveResponse.h in Headers */,
+				C4DF0D89163388D900BB135D /* ResourceDidSendData.h in Headers */,
+				C4DF0D8B163388D900BB135D /* ResourceHandleDestroyed.h in Headers */,
+				C4DF0D8D163388D900BB135D /* ResourceWasBlocked.h in Headers */,
+				C4DF0D8F163388D900BB135D /* ResourceWillCacheResponse.h in Headers */,
+				C4DF0D91163388D900BB135D /* ResourceWillSendRequest.h in Headers */,
+				23F380E2164324E400650F4D /* RanPendingScripts.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -29047,6 +29067,21 @@
 				0F605AEC15F94848004DF0C0 /* ScrollingConstraints.cpp in Sources */,
 				2346D68715F16461008E6EF0 /* SendResizeEvent.cpp in Sources */,
 				237B5C8415F7C0EB00294B1E /* InitializeWindow.cpp in Sources */,
+				C46005B61633869400AFC0F1 /* ScrollPage.cpp in Sources */,
+				C4DF0D64163387BB00BB135D /* ResourceHandleCreated.cpp in Sources */,
+				C4DF0D7C163388D900BB135D /* ResourceCannotShowURL.cpp in Sources */,
+				C4DF0D7E163388D900BB135D /* ResourceDidFail.cpp in Sources */,
+				C4DF0D80163388D900BB135D /* ResourceDidFinishLoading.cpp in Sources */,
+				C4DF0D82163388D900BB135D /* ResourceDidReceiveCachedMetadata.cpp in Sources */,
+				C4DF0D84163388D900BB135D /* ResourceDidReceiveData.cpp in Sources */,
+				C4DF0D86163388D900BB135D /* ResourceDidReceiveResponse.cpp in Sources */,
+				C4DF0D88163388D900BB135D /* ResourceDidSendData.cpp in Sources */,
+				C4DF0D8A163388D900BB135D /* ResourceHandleDestroyed.cpp in Sources */,
+				C4DF0D8C163388D900BB135D /* ResourceWasBlocked.cpp in Sources */,
+				C4DF0D8E163388D900BB135D /* ResourceWillCacheResponse.cpp in Sources */,
+				C4DF0D90163388D900BB135D /* ResourceWillSendRequest.cpp in Sources */,
+				51ABF64D16392E2800132A7A /* LoaderStrategy.cpp in Sources */,
+				23F380E1164324E400650F4D /* RanPendingScripts.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
