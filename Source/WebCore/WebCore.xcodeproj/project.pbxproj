@@ -694,6 +694,8 @@
 		2346D68815F16461008E6EF0 /* SendResizeEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = 2346D68615F16461008E6EF0 /* SendResizeEvent.h */; };
 		237B5C8415F7C0EB00294B1E /* InitializeWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 237B5C8215F7C0EB00294B1E /* InitializeWindow.cpp */; };
 		237B5C8515F7C0EB00294B1E /* InitializeWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 237B5C8315F7C0EB00294B1E /* InitializeWindow.h */; };
+		23F380441641EF5F00650F4D /* ScriptTimerFired.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23F380421641EF5F00650F4D /* ScriptTimerFired.cpp */; };
+		23F380451641EF5F00650F4D /* ScriptTimerFired.h in Headers */ = {isa = PBXBuildFile; fileRef = 23F380431641EF5F00650F4D /* ScriptTimerFired.h */; };
 		24AA568D13CC94CE00E902F6 /* DOMSVGAltGlyphItemElementInternal.h in Copy Generated Headers */ = {isa = PBXBuildFile; fileRef = 24D912A313CA977D00D21915 /* DOMSVGAltGlyphItemElementInternal.h */; };
 		24AA568E13CC950900E902F6 /* DOMSVGAltGlyphItemElement.h in Copy Generated Headers */ = {isa = PBXBuildFile; fileRef = 24D912A113CA977D00D21915 /* DOMSVGAltGlyphItemElement.h */; };
 		24AA569013CC952F00E902F6 /* DOMSVGAltGlyphDefElement.h in Copy Generated Headers */ = {isa = PBXBuildFile; fileRef = 24D9129B13CA975A00D21915 /* DOMSVGAltGlyphDefElement.h */; };
@@ -7896,6 +7898,8 @@
 		2346D68615F16461008E6EF0 /* SendResizeEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SendResizeEvent.h; path = timelapse/actions/user/SendResizeEvent.h; sourceTree = "<group>"; };
 		237B5C8215F7C0EB00294B1E /* InitializeWindow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = InitializeWindow.cpp; path = timelapse/actions/memoization/InitializeWindow.cpp; sourceTree = "<group>"; };
 		237B5C8315F7C0EB00294B1E /* InitializeWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InitializeWindow.h; path = timelapse/actions/memoization/InitializeWindow.h; sourceTree = "<group>"; };
+		23F380421641EF5F00650F4D /* ScriptTimerFired.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ScriptTimerFired.cpp; path = timelapse/actions/async/ScriptTimerFired.cpp; sourceTree = "<group>"; };
+		23F380431641EF5F00650F4D /* ScriptTimerFired.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ScriptTimerFired.h; path = timelapse/actions/async/ScriptTimerFired.h; sourceTree = "<group>"; };
 		2442BBF81194C9D300D49469 /* HashChangeEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HashChangeEvent.h; sourceTree = "<group>"; };
 		24D9128F13CA951E00D21915 /* JSSVGAltGlyphDefElement.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSSVGAltGlyphDefElement.cpp; sourceTree = "<group>"; };
 		24D9129013CA951E00D21915 /* JSSVGAltGlyphDefElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSSVGAltGlyphDefElement.h; sourceTree = "<group>"; };
@@ -21213,14 +21217,6 @@
 			name = actions;
 			sourceTree = "<group>";
 		};
-		C46005831633869400AFC0F1 /* network */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			name = network;
-			path = timelapse/actions/network;
-			sourceTree = "<group>";
-		};
 		C4634C2615E56640000956EB /* proxies */ = {
 			isa = PBXGroup;
 			children = (
@@ -21251,7 +21247,6 @@
 		C4AEC37815EED2A8007076B6 /* user */ = {
 			isa = PBXGroup;
 			children = (
-				C46005831633869400AFC0F1 /* network */,
 				C4AEC3C215EED383007076B6 /* FocusSetActive.cpp */,
 				C4AEC3C315EED383007076B6 /* FocusSetActive.h */,
 				C4AEC3C415EED383007076B6 /* FocusSetFocused.cpp */,
@@ -21290,6 +21285,8 @@
 				C4AEC38015EED2FF007076B6 /* TimerCreated.h */,
 				C4AEC38115EED2FF007076B6 /* TimerFired.cpp */,
 				C4AEC38215EED2FF007076B6 /* TimerFired.h */,
+				23F380421641EF5F00650F4D /* ScriptTimerFired.cpp */,
+				23F380431641EF5F00650F4D /* ScriptTimerFired.h */,
 			);
 			name = async;
 			sourceTree = "<group>";
@@ -26078,6 +26075,7 @@
 				C4DF0D8D163388D900BB135D /* ResourceWasBlocked.h in Headers */,
 				C4DF0D8F163388D900BB135D /* ResourceWillCacheResponse.h in Headers */,
 				C4DF0D91163388D900BB135D /* ResourceWillSendRequest.h in Headers */,
+				23F380451641EF5F00650F4D /* ScriptTimerFired.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -29235,6 +29233,7 @@
 				C4DF0D8E163388D900BB135D /* ResourceWillCacheResponse.cpp in Sources */,
 				C4DF0D90163388D900BB135D /* ResourceWillSendRequest.cpp in Sources */,
 				51ABF64D16392E2800132A7A /* LoaderStrategy.cpp in Sources */,
+				23F380441641EF5F00650F4D /* ScriptTimerFired.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

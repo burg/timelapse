@@ -59,6 +59,7 @@
 #include "Node.h"
 #include "Page.h"
 #include "ResourceResponse.h"
+#include "ScriptTimerFired.h"
 #include "SecurityOrigin.h"
 #include "SentinelActions.h"
 #include "Timer.h"
@@ -410,6 +411,11 @@ void DeterminismController::willFireTimer(int timerId, Frame* frame, const Posit
 {
     if (isCapturingDocument(frame->document()))
         captureAction(new TimerFired(timerId, frame->document(), m_domEventDispatchCount, mark));
+}
+
+void DeterminismController::willRunScripts(Document* document) {
+    if (isCapturingDocument(document))
+        captureAction(new ScriptTimerFired(document));
 }
 
 //-- accessors

@@ -94,6 +94,7 @@ namespace WebCore {
         void didDispatchEvent();
         void frameNavigated(DocumentLoader*, const PositionMark&);
         void willFireTimer(int, Frame*, const PositionMark&);
+        void willRunScripts(Document*);
         void capturePageInput(DispatchableAction* action);
 
         // Action post-dispatch callback
