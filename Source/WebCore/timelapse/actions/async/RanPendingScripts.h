@@ -29,8 +29,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ScriptTimerFired_h
-#define ScriptTimerFired_h
+#ifndef RanPendingScripts_h
+#define RanPendingScripts_h
 
 #if ENABLE(TIMELAPSE)
 
@@ -43,19 +43,19 @@ namespace WebCore {
 
     class DeterminismController;
     class Document;
-    
-class ScriptTimerFired : public DispatchableAction {
+
+class RanPendingScripts : public DispatchableAction {
 
 public:
-    ScriptTimerFired(Document*);
-    virtual ~ScriptTimerFired() {}
+    RanPendingScripts(Document*);
+    virtual ~RanPendingScripts() {}
 
     // DispatchableAction API
     virtual void dispatch(DeterminismController*);
 
     // ReplayableAction API
     virtual String toString() const;
-    size_t memorySize() const OVERRIDE { return sizeof(ScriptTimerFired); }
+    size_t memorySize() const OVERRIDE { return sizeof(RanPendingScripts); }
     void serialize(WTF::ActionSerializer*) const OVERRIDE;
 
 private:
@@ -66,4 +66,4 @@ private:
 
 #endif // ENABLE(TIMELAPSE)
 
-#endif // ScriptTimerFired_h
+#endif // RanPendingScripts_h

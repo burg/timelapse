@@ -33,7 +33,7 @@
 
 #if ENABLE(TIMELAPSE)
 
-#include "ScriptTimerFired.h"
+#include "RanPendingScripts.h"
 
 #include "DeterminismController.h"
 #include "DispatchEventBase.h"
@@ -46,22 +46,22 @@
 
 namespace WebCore {
 
-ScriptTimerFired::ScriptTimerFired(Document* document)
-: DispatchableAction(ReplayableTypes::ScriptTimerFired)
+RanPendingScripts::RanPendingScripts(Document* document)
+: DispatchableAction(ReplayableTypes::RanPendingScripts)
 , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(document)) {}
 
 
-String ScriptTimerFired::toString() const
+String RanPendingScripts::toString() const
 {
-    return makeString("ScriptTimerFired(", String::number(m_frameIndex), ")");
+    return makeString("RanPendingScripts(", String::number(m_frameIndex), ")");
 }
 
-void ScriptTimerFired::serialize(ActionSerializer* serializer) const
+void RanPendingScripts::serialize(ActionSerializer* serializer) const
 {
     serializer->putInt("frameIndex", m_frameIndex);
 }
 
-void ScriptTimerFired::dispatch(DeterminismController* controller)
+void RanPendingScripts::dispatch(DeterminismController* controller)
 {
     ASSERT(sealed());
     Document* document = SerializedEventTarget::documentFromFrameIndex(controller->page(), m_frameIndex);

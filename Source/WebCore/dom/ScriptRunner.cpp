@@ -88,7 +88,8 @@ void ScriptRunner::resume()
 {
 #if ENABLE(TIMELAPSE)
     // timerFired will be called deterministically during replay, so don't start m_timer.
-    if (!m_document->page()->determinismController()->isReplayingDocument(m_document))
+    if (m_document->page()->determinismController()->isReplayingDocument(m_document))
+        return;
 #endif
     if (hasPendingScripts())
         m_timer.startOneShot(0);
@@ -108,7 +109,8 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
     }
 #if ENABLE(TIMELAPSE)
     // timerFired will be called deterministically during replay, so don't start m_timer.
-    if (!m_document->page()->determinismController()->isReplayingDocument(m_document))
+    if (m_document->page()->determinismController()->isReplayingDocument(m_document))
+        return;
 #endif
     m_timer.startOneShot(0);
 }
@@ -117,8 +119,7 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
 {
     ASSERT_UNUSED(timer, timer == &m_timer);
 #if ENABLE(TIMELAPSE)
-    DeterminismController* controller = m_document->page()->determinismController();
-    controller->willRunScripts(m_document);
+    m_document->page()->determinismController()->willRunPendingScriptsForDocument(m_document);
 #endif
 
     RefPtr<Document> protect(m_document);

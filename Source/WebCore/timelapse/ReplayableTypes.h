@@ -55,7 +55,7 @@ extern const char* InitializeFocus;
 extern const char* InitializeWindow;
 extern const char* ReceivedResourceResponse;
 extern const char* NavigateToPage;
-extern const char* ScriptTimerFired;
+extern const char* RanPendingScripts;
 extern const char* ScrollPage;
 extern const char* SendResizeEvent;
 extern const char* SetCookieSeed;

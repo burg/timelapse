@@ -42,7 +42,7 @@ class PendingScript;
 class ScriptElement;
 
 #if ENABLE(TIMELAPSE)
-class ScriptTimerFired;
+class RanPendingScripts;
 #endif
 
 class ScriptRunner {
@@ -70,7 +70,7 @@ private:
     Timer<ScriptRunner> m_timer;
 
 #if ENABLE(TIMELAPSE)
-    friend class ScriptTimerFired;
+    friend class RanPendingScripts;
 #endif
 };
 
