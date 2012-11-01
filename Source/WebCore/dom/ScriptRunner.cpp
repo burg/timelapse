@@ -32,6 +32,12 @@
 #include "PendingScript.h"
 #include "ScriptElement.h"
 
+#if ENABLE(TIMELAPSE)
+#include "DeterminismController.h"
+#include "Logging.h"
+#include "Page.h"
+#endif
+
 namespace WebCore {
 
 ScriptRunner::ScriptRunner(Document* document)
@@ -80,6 +86,11 @@ void ScriptRunner::suspend()
 
 void ScriptRunner::resume()
 {
+#if ENABLE(TIMELAPSE)
+    // timerFired will be called deterministically during replay, so don't start m_timer.
+    if (m_document->page()->determinismController()->isReplayingDocument(m_document))
+        return;
+#endif
     if (hasPendingScripts())
         m_timer.startOneShot(0);
 }
@@ -96,12 +107,20 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
         ASSERT(!m_scriptsToExecuteInOrder.isEmpty());
         break;
     }
+#if ENABLE(TIMELAPSE)
+    // timerFired will be called deterministically during replay, so don't start m_timer.
+    if (m_document->page()->determinismController()->isReplayingDocument(m_document))
+        return;
+#endif
     m_timer.startOneShot(0);
 }
 
 void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
 {
     ASSERT_UNUSED(timer, timer == &m_timer);
+#if ENABLE(TIMELAPSE)
+    m_document->page()->determinismController()->willRunPendingScriptsForDocument(m_document);
+#endif
 
     RefPtr<Document> protect(m_document);
 

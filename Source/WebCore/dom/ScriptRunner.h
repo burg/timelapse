@@ -41,6 +41,10 @@ class Document;
 class PendingScript;
 class ScriptElement;
 
+#if ENABLE(TIMELAPSE)
+class RanPendingScripts;
+#endif
+
 class ScriptRunner {
     WTF_MAKE_NONCOPYABLE(ScriptRunner); WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -64,6 +68,10 @@ private:
     Vector<PendingScript> m_scriptsToExecuteSoon; // http://www.whatwg.org/specs/web-apps/current-work/#set-of-scripts-that-will-execute-as-soon-as-possible
     HashMap<ScriptElement*, PendingScript> m_pendingAsyncScripts;
     Timer<ScriptRunner> m_timer;
+
+#if ENABLE(TIMELAPSE)
+    friend class RanPendingScripts;
+#endif
 };
 
 }
