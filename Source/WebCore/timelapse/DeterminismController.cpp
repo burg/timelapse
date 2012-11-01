@@ -445,7 +445,8 @@ bool DeterminismController::isReplayingDocument(Document* document) const
 
 void DeterminismController::capturePageInput(DispatchableAction* action)
 {
-    ASSERT(capturing());
+    if (!capturing())
+        return;
 
     // flush document event queue, so event dispatch count reflects anything 
     // dispatched or queued before this action was captured.
