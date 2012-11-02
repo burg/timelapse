@@ -49,7 +49,6 @@
 #include "FontFeatureSettings.h"
 #include "FontFeatureValue.h"
 #include "FontValue.h"
-#include "MemoryInstrumentation.h"
 #include "Pair.h"
 #include "Rect.h"
 #include "RenderBox.h"
@@ -59,6 +58,7 @@
 #include "StyleInheritedData.h"
 #include "StylePropertySet.h"
 #include "StylePropertyShorthand.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include "WebKitCSSTransformValue.h"
 #include "WebKitFontFamilyNames.h"
 #include <wtf/text/StringBuilder.h>
@@ -158,6 +158,7 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyOutlineColor,
     CSSPropertyOutlineStyle,
     CSSPropertyOutlineWidth,
+    CSSPropertyOverflowWrap,
     CSSPropertyOverflowX,
     CSSPropertyOverflowY,
     CSSPropertyPaddingBottom,
@@ -1286,8 +1287,8 @@ static PassRefPtr<CSSValue> counterToCSSValue(const RenderStyle* style, CSSPrope
 
     RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
     for (CounterDirectiveMap::const_iterator it = map->begin(); it != map->end(); ++it) {
-        list->append(cssValuePool().createValue(it->first.get(), CSSPrimitiveValue::CSS_STRING));
-        short number = propertyID == CSSPropertyCounterIncrement ? it->second.m_incrementValue : it->second.m_resetValue;
+        list->append(cssValuePool().createValue(it->first, CSSPrimitiveValue::CSS_STRING));
+        short number = propertyID == CSSPropertyCounterIncrement ? it->second.incrementValue() : it->second.resetValue();
         list->append(cssValuePool().createValue((double)number, CSSPrimitiveValue::CSS_NUMBER));
     }
     return list.release();
@@ -1925,6 +1926,8 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             return zoomAdjustedPixelValue(style->outlineWidth(), style.get());
         case CSSPropertyOverflow:
             return cssValuePool().createValue(max(style->overflowX(), style->overflowY()));
+        case CSSPropertyOverflowWrap:
+            return cssValuePool().createValue(style->overflowWrap());
         case CSSPropertyOverflowX:
             return cssValuePool().createValue(style->overflowX());
         case CSSPropertyOverflowY:
@@ -2071,7 +2074,7 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyWordSpacing:
             return zoomAdjustedPixelValue(style->wordSpacing(), style.get());
         case CSSPropertyWordWrap:
-            return cssValuePool().createValue(style->wordWrap());
+            return cssValuePool().createValue(style->overflowWrap());
         case CSSPropertyWebkitLineBreak:
             return cssValuePool().createValue(style->khtmlLineBreak());
         case CSSPropertyWebkitNbspMode:
@@ -2731,7 +2734,7 @@ PassRefPtr<StylePropertySet> CSSComputedStyleDeclaration::copyPropertiesInSet(co
 
 void CSSComputedStyleDeclaration::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     info.addInstrumentedMember(m_node);
 }
 

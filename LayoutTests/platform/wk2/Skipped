@@ -54,10 +54,6 @@ compositing/iframes/iframe-src-change.html
 # <https://bugs.webkit.org/show_bug.cgi?id=57638>
 inspector/styles/styles-add-blank-property.html
 
-# Flakey on both Snow Leopard and Windows 7
-# https://bugs.webkit.org/show_bug.cgi?id=58337
-fast/dom/StyleSheet/detached-stylesheet-without-wrapper.html
-
 # Flakey on Snow Leopard Intel WebKit2 Release Tests
 # https://bugs.webkit.org/show_bug.cgi?id=58183
 editing/execCommand/convert-style-elements-to-spans.html
@@ -203,7 +199,6 @@ fast/canvas/webgl/webgl-array-invalid-ranges.html
 fast/canvas/webgl/webgl-specific.html
 fast/harness/override-preferences-2.html
 fast/images/animated-gif-restored-from-bfcache.html
-fast/repaint/no-caret-repaint-in-non-content-editable-element.html
 fast/text/zero-font-size.html
 
 # WTR needs an implementation of applicationCacheDiskUsageForOrigin
@@ -654,10 +649,6 @@ fast/text-autosizing
 inspector/geolocation-error.html
 inspector/geolocation-success.html
 inspector/geolocation-watchPosition.html
-
-# WKTR doesn't implement dumpWillCacheResponse()
-# https://bugs.webkit.org/show_bug.cgi?id=94607
-http/tests/misc/willCacheResponse-delegate-callback.html
 
 ### END OF (1) Classified failures with bug reports
 ########################################

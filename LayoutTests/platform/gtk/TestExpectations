@@ -36,15 +36,6 @@
 // Tests that require new results.
 //////////////////////////////////////////////////////////////////////////////////////////
 
-BUGWK77754 : fast/inline/left-right-center-inline-alignment-in-ltr-and-rtl-blocks.html = TEXT
-BUGWK77754 : fast/inline/absolute-positioned-inline-in-centred-block.html = TEXT
-BUGWK77754 : fast/css/absolute-child-with-percent-height-inside-relative-parent.html = TEXT
-
-//Require rebaseline after https://bugs.webkit.org/show_bug.cgi?id=80394
-BUGWK80394 : fast/block/margin-collapse/empty-clear-blocks.html = IMAGE+TEXT
-BUGWK80394 : fast/block/float/024.html = IMAGE+TEXT
-BUGWK80394 : fast/block/margin-collapse/025.html = TEXT
-BUGWK80394 : fast/block/margin-collapse/block-inside-inline/025.html = TEXT
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Expected failures
@@ -189,6 +180,7 @@ BUGWKGTK SKIP : fast/forms/color = TEXT
 
 // ENABLE_INPUT_TYPE_* are not enabled.
 BUGWK29359 : fast/forms/date = TEXT
+BUGWK29359 : fast/forms/date/date-interactive-validation-required.html = PASS
 BUGWK29359 SKIP : fast/forms/date/calendar-picker-appearance-pre-100.html = TEXT
 BUGWK29359 SKIP : fast/forms/date/calendar-picker-appearance.html = TEXT
 BUGWK29359 : fast/forms/date/calendar-picker-type-change-onclick.html = PASS
@@ -199,11 +191,16 @@ BUGWK29359 : fast/css/pseudo-in-range.html = TEXT
 BUGWK29359 : fast/css/pseudo-out-of-range.html = TEXT
 BUGWK29359 : fast/css/pseudo-in-range-invalid-value.html = TEXT
 BUGWK29359 : fast/forms/datetime = TEXT
+BUGWK29359 : fast/forms/datetime/datetime-interactive-validation-required.html = PASS
 BUGWK29359 : fast/forms/datetimelocal = TEXT
+BUGWK29359 : fast/forms/datetimelocal/datetimelocal-interactive-validation-required.html = PASS
 BUGWK29359 : fast/forms/datetimelocal/input-valueasdate-datetimelocal.html = PASS
 BUGWK29359 : fast/forms/month = TEXT
+BUGWK29359 : fast/forms/month/month-interactive-validation-required.html = PASS
 BUGWK29359 : fast/forms/time = TEXT
+BUGWK29359 : fast/forms/time/time-interactive-validation-required.html = PASS
 BUGWK29359 : fast/forms/week = TEXT
+BUGWK29359 : fast/forms/week/week-interactive-validation-required.html = PASS
 
 // ENABLE_GAMEPAD not enabled.
 BUGWKGTK SKIP : gamepad = TEXT
@@ -370,12 +367,15 @@ BUGWK85212 : ietestcenter/css3/flexbox/flexbox-layout-002.htm = IMAGE
 
 // These tests require subpixel layout to be enabled
 BUGWK85532 : fast/sub-pixel = TEXT IMAGE
+BUGWK85532 : fast/sub-pixel/auto-table-layout-should-avoid-text-wrapping.html = PASS
+BUGWK85532 : fast/sub-pixel/block-preferred-widths-with-sub-pixel-floats.html = PASS
 BUGWK85532 : fast/sub-pixel/column-clipping.html = PASS
 BUGWK85532 : fast/sub-pixel/file-upload-control-at-fractional-offset.html = PASS
 BUGWK85532 : fast/sub-pixel/float-containing-block-with-margin.html = PASS
 BUGWK85532 : fast/sub-pixel/float-with-margin-in-container.html = PASS
 BUGWK85532 : fast/sub-pixel/float-with-right-margin-zoom.html = PASS
 BUGWK85532 : fast/sub-pixel/float-wrap-with-subpixel-top.html = PASS
+BUGWK85532 : fast/sub-pixel/inline-block-should-not-wrap.html = PASS
 BUGWK85532 : fast/sub-pixel/inline-block-with-margin.html = PASS
 BUGWK85532 : fast/sub-pixel/size-of-span-with-different-positions.html = PASS
 BUGWK85532 : fast/sub-pixel/table-cells-with-padding-do-not-wrap.html = PASS
@@ -632,7 +632,6 @@ BUGWKGTK : accessibility/aria-scrollbar-role.html = TEXT
 BUGWKGTK : accessibility/aria-text-role.html = TEXT
 BUGWKGTK : accessibility/aria-used-on-image-maps.html = TEXT
 BUGWKGTK : accessibility/button-press-action.html = TEXT
-BUGWKGTK : accessibility/canvas-description-and-role.html = TEXT
 BUGWKGTK : accessibility/canvas-fallback-content.html = TEXT
 BUGWKGTK : accessibility/editable-webarea-context-menu-point.html = TEXT
 BUGWKGTK : accessibility/ellipsis-text.html = TEXT
@@ -1025,6 +1024,9 @@ BUGWK53707 : http/tests/security/xss-DENIED-xsl-external-entity-redirect.xml = T
 BUGWKGTK : editing/spelling/grammar.html = TEXT
 BUGWKGTK SKIP : editing/spelling/grammar-paste.html = TEXT
 
+// TextCheckerEnchant::checkSpellingOfString doesn't return misspelled location and length for multiple words.
+BUGWKGTK : editing/spelling/spelling-backspace-between-lines.html = TEXT
+
 // testRunner::setTextDirection() is not implemented.
 BUGWKGTK : fast/html/set-text-direction.html = TEXT
 
@@ -1300,9 +1302,13 @@ BUGWK95428 : media/video-controls-captions.html = TEXT
 
 BUGWK95429 : svg/custom/clamped-masking-clipping.svg = IMAGE
 
-BUGWK94677 : http/tests/security/contentSecurityPolicy/register-bypassing-scheme = TEXT
+BUGWK94677 : http/tests/security/contentSecurityPolicy/register-bypassing-scheme.html = TEXT
 
 BUGWK95530 : http/tests/security/inactive-document-with-empty-security-origin.html = TEXT
+
+BUGWK88238 : editing/pasteboard/paste-global-selection.html = TEXT
+
+BUG_OJAN : fast/css/percent-top-value-with-relative-position.html = TEXT IMAGE+TEXT
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // End of Tests failing

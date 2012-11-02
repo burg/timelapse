@@ -131,9 +131,6 @@ BUGWKEFL SKIP : http/tests/webarchive = PASS
 BUGWKEFL SKIP : svg/webarchive = PASS
 BUGWKEFL SKIP : svg/custom/image-with-prefix-in-webarchive.svg = PASS
 
-// Feature not mature yet and disabled by default on WebCore
-BUGWK87088 : fast/js/names.html = TEXT
-
 // The EFL port uses different keyboard accelerators than Safari (via Chromium).
 BUGWKEFL SKIP : fast/events/option-tab.html = PASS
 
@@ -192,7 +189,6 @@ BUGWK86072 : media/sources-fallback-codecs.html = TEXT PASS
 BUGWK86073 : ietestcenter/css3/flexbox/flexbox-layout-001.htm = IMAGE PASS
 BUGWK86073 : ietestcenter/css3/flexbox/flexbox-layout-003.htm = IMAGE PASS
 BUGWK86074 : media/svg-as-image-with-media-blocked.html = CRASH PASS
-BUGWK86075 : fast/events/message-port-close.html = CRASH PASS
 BUGWK86078 : http/tests/misc/favicon-loads-with-icon-loading-override.html = TEXT PASS
 BUGWK86079 : http/tests/misc/link-rel-icon-beforeload.html = TEXT PASS
 BUGWK86081 : loader/navigation-while-deferring-loads.html = TEXT PASS
@@ -235,6 +231,7 @@ BUGWKEFL : media/media-controls-clone.html = TEXT PASS
 
 BUGWK93213 : fast/text/international/text-spliced-font.html = TEXT PASS
 BUGWK93214 : http/tests/loading/307-after-303-after-post.html = TIMEOUT PASS
+BUGWK93212 : http/tests/incremental/slow-utf8-text.pl = TIMEOUT PASS
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // FAILING TESTS
@@ -374,11 +371,9 @@ BUGWK84338 : fast/forms/plaintext-mode-2.html = MISSING
 BUGWK84338 : fast/forms/textarea-paste-newline.html = TEXT
 
 // Missing showModalDialog implementation
-BUGWK84589 : fast/animation/request-animation-frame-during-modal.html = TEXT
 BUGWK84589 : fast/events/show-modal-dialog-onblur-onfocus.html = TEXT
 BUGWK84589 : fast/harness/show-modal-dialog.html = TEXT
 BUGWK84589 : fast/events/scroll-event-during-modal-dialog.html = TEXT
-BUGWK84589 : http/tests/security/cross-frame-access-call.html = TEXT
 BUGWK84589 : http/tests/security/cross-frame-access-get.html = TEXT
 
 // Issue with timing for suspend/resumeAnimations()?
@@ -409,8 +404,6 @@ BUGWK87974 : http/tests/download = TEXT IMAGE IMAGE+TEXT
 // Needs custom policy delegate enhancement to log DOM node info - EFL port is missing DOM node abstraction
 BUGWK87972 : fast/loader/policy-delegate-action-hit-test-zoomed.html = TEXT
 BUGWK87972 : fast/encoding/mailto-always-utf-8.html = TEXT
-BUGWK87972 : fast/forms/mailto/formenctype-attribute-button-html.html = TEXT
-BUGWK87972 : fast/forms/mailto/formenctype-attribute-input-html.html = TEXT
 
 // EFL's LayoutTestController does not implement layerTreeAsText
 BUGWK82294 : compositing/animation/animation-compositing.html = TEXT
@@ -468,6 +461,7 @@ BUGWK82294 : compositing/overflow/content-gains-scrollbars.html = TEXT
 BUGWK82294 : compositing/overflow/content-loses-scrollbars.html = TEXT
 BUGWK82294 SKIP : compositing/overflow/nested-scrolling.html = MISSING
 BUGWK82294 : compositing/overflow/overflow-auto-with-touch.html = TEXT
+BUGWK82294 : compositing/overflow/overflow-auto-with-touch-toggle.html = TEXT
 BUGWK82294 SKIP : compositing/overflow/overflow-clip-with-accelerated-scrolling-ancestor.html = MISSING
 BUGWK82294 : compositing/overflow/overflow-overlay-with-touch.html = TEXT
 BUGWK82294 : compositing/overflow/overflow-scrollbar-layers.html = TEXT
@@ -542,7 +536,7 @@ BUGWK77219 SKIP : http/tests/canvas/webgl/origin-clean-conformance.html = TEXT
 BUGWK77219 SKIP : http/tests/security/webgl-remote-read-remote-image-allowed-with-credentials.html = TEXT
 BUGWK77219 SKIP : http/tests/security/webgl-remote-read-remote-image-allowed.html = TEXT
 BUGWK77219 SKIP : http/tests/security/webgl-remote-read-remote-image-blocked-no-crossorigin.html = TEXT
-BUGWK77219 : inspector/profiler/webgl/webgl-profiler-api-changes.html = TEXT
+BUGWK77219 SKIP : inspector/profiler/webgl = TEXT
 
 BUGWK84759 : ietestcenter/css3/multicolumn/column-containing-block-001.htm = IMAGE
 BUGWK84760 : ietestcenter/css3/multicolumn/column-containing-block-002.htm = IMAGE
@@ -661,14 +655,10 @@ BUGWK85599 : http/tests/navigation/postredirect-goback1.html = TEXT
 // Interferes with the rAF tests that are enabled
 BUGWK85689 SKIP : fast/animation/request-animation-frame-disabled.html = TEXT
 
-// Crash shared with the GTK+ port
-BUGWK30724 DEBUG : fast/loader/opaque-base-url.html = CRASH
-
 // EFL's DumpRenderTree should support LayoutTestController's dumpEditingCallbacks()
 BUGWK84835 : editing/execCommand/4128080-2.html = TEXT
 BUGWK84835 : editing/execCommand/copy-without-selection.html = TEXT
 BUGWK84835 : editing/execCommand/findString-diacriticals.html = TEXT
-BUGWK84835 : editing/execCommand/indent-paragraphs.html = TEXT
 
 // DRT doesn't check for isPrinting().
 BUGWK87226 : printing/iframe-print.html = TEXT
@@ -699,9 +689,6 @@ BUGWKEFL SLOW DEBUG : http/tests/incremental/slow-utf8-html.pl = PASS
 // Tests imported in r116658
 BUGWK85308 : ietestcenter/css3/valuesandunits/units-000.htm = IMAGE CRASH
 BUGWK85310 : ietestcenter/css3/valuesandunits/units-010.htm = IMAGE
-
-// New test introduced in r116694 fails
-BUGWK86182 : fast/frames/seamless/seamless-inherited-document-style.html = TEXT
 
 // LEGACY_VIEWPORT_ADAPTION flag is not enabled on EFL port
 BUGWK88191 : fast/viewport/viewport-legacy-handheldfriendly.html = TEXT
@@ -758,10 +745,6 @@ BUGWK86142 : ietestcenter/css3/namespaces/syntax-021.xml = IMAGE
 BUGWK86597 : fullscreen/video-controls-drag.html = TEXT
 BUGWK86187 : media/media-fullscreen-not-in-document.html = TEXT
 BUGWK86187 SKIP : media/media-fullscreen-inline.html = PASS
-
-// ecore_x library is not initialized and calls to it cause crashes
-BUGWK86961 : editing/execCommand/paste-and-match-style-event.html = CRASH
-BUGWK86961 : fast/dom/shadow/cppevent-in-shadow.html = CRASH
 
 // Selection problem in Shadow DOM test (passes on GTK)
 BUGWKEFL : fast/dom/shadow/selections-in-shadow.html = TEXT
@@ -965,8 +948,6 @@ BUGWK91477 : fast/multicol/shrink-to-column-height-for-pagination.html = MISSING
 // These tests are failing after r122528.
 BUGWK91210 : http/tests/w3c/webperf/approved/navigation-timing/html/test_performance_attributes_exist_in_object.html = TEXT
 BUGWK91210 : http/tests/w3c/webperf/approved/navigation-timing/html/test_timing_xserver_redirect.html = TEXT
-BUGWK91210 : http/tests/w3c/webperf/approved/navigation-timing/html5/test_performance_attributes_exist_in_object.html = TEXT
-BUGWK91210 : http/tests/w3c/webperf/approved/navigation-timing/html5/test_timing_xserver_redirect.html = TEXT
 
 // Failing after r123145 on EFL, GTK and QT.
 BUGWK91843 : http/tests/security/cross-frame-access-put.html = TEXT
@@ -1011,7 +992,6 @@ BUGWK93148 : tables/mozilla_expected_failures/marvin/table_overflow_hidden_tr.ht
 BUGWK93148 : fast/css/nested-layers-with-hover.html = TEXT
 
 BUGWK92956 : http/tests/security/contentSecurityPolicy/object-src-url-blocked.html = TEXT
-BUGWK93212 : http/tests/incremental/slow-utf8-text.pl = TIMEOUT
 
 BUGWK93976 : fast/css-generated-content/quotes-lang.html = IMAGE
 
@@ -1033,9 +1013,6 @@ BUGWK94024 SKIP : css3/compositing = TEXT
 
 // Fails also on GTK
 BUGWK94080 : fast/overflow/line-clamp-and-columns.html = IMAGE
-
-// Failing after 125592
-BUGWK94194 : http/tests/security/frameNavigation/inactive-function-in-popup-navigate-child.html = TEXT
 
 // Alt text should be displayed if src attribute is not set.
 BUGWK94198 : fast/dom/HTMLImageElement/image-alt-text.html = IMAGE
@@ -1076,13 +1053,39 @@ BUGWK77754 : fast/css/absolute-child-with-percent-height-inside-relative-parent.
 BUGWK95428 : media/video-controls-captions.html = TEXT
 
 //Require rebaseline after https://bugs.webkit.org/show_bug.cgi?id=80394
-BUGWK80394 : fast/block/margin-collapse/empty-clear-blocks.html = IMAGE+TEXT
-BUGWK80394 : fast/block/float/024.html = IMAGE+TEXT
+BUGWK80394 : fast/block/margin-collapse/empty-clear-blocks.html = TEXT IMAGE+TEXT
+BUGWK80394 : fast/block/float/024.html = TEXT IMAGE+TEXT
 BUGWK80394 : fast/block/margin-collapse/025.html = TEXT
 BUGWK80394 : fast/block/margin-collapse/block-inside-inline/025.html = TEXT
 
 // Started failing on JSC ports after r127202.
 BUGWK95530 : http/tests/security/inactive-document-with-empty-security-origin.html = TEXT
 
+// Following tests need baselines
+BUGWK95646 : css3/masking/clip-path-circle.html = MISSING 
+BUGWK95646 : css3/masking/clip-path-ellipse.html = MISSING 
+BUGWK95646 : css3/masking/clip-path-rectangle.html = MISSING 
+BUGWK95646 : css3/masking/clip-path-polygon.html = MISSING 
+BUGWK95646 : css3/masking/clip-path-polygon-evenodd.html = MISSING 
+BUGWK95646 : css3/masking/clip-path-polygon-nonzero.html = MISSING 
+BUGWK95646 : css3/masking/clip-path-circle-filter.html = MISSING 
+BUGWK95646 : css3/masking/clip-path-circle-overflow.html = MISSING 
+BUGWK95646 : css3/masking/clip-path-circle-relative-overflow.html = MISSING 
+BUGWK95646 : css3/masking/clip-path-circle-overflow-hidden.html = MISSING 
+
 // Fails after r127140.
 BUGWK95551 : fast/forms/datalist/input-appearance-range-with-datalist-rtl.html = IMAGE
+
+// Fail after they were introduced in r127513
+BUGWK95840 : http/tests/security/cross-origin-plugin-allowed.html = TEXT
+BUGWK95840 : http/tests/security/cross-origin-plugin-private-browsing-toggled-allowed.html = TEXT
+BUGWK95840 : http/tests/security/cross-origin-plugin-private-browsing-toggled.html = TEXT
+BUGWK95840 : http/tests/security/cross-origin-plugin.html = TEXT
+
+// Fails after r127534.
+BUGWK95813 : fast/innerHTML/innerHTML-iframe.html = TEXT
+
+// EFL does not yet support global selection
+BUGWK88238 SKIP : editing/pasteboard/paste-global-selection.html = TEXT
+
+BUG_OJAN : fast/css/percent-top-value-with-relative-position.html = TEXT IMAGE+TEXT

@@ -620,6 +620,7 @@ accessibility/radio-button-checkbox-size.html
 accessibility/radio-button-group-members.html
 accessibility/radio-button-title-label.html
 accessibility/secure-textfield-title-ui.html
+accessibility/spinbutton-value.html
 accessibility/table-attributes.html
 accessibility/table-cell-spans.html
 accessibility/table-cells.html
@@ -1472,7 +1473,7 @@ fast/events/constructors/webgl-context-event-constructor.html
 http/tests/security/webgl-remote-read-remote-image-allowed.html
 http/tests/security/webgl-remote-read-remote-image-allowed-with-credentials.html
 http/tests/security/webgl-remote-read-remote-image-blocked-no-crossorigin.html
-inspector/profiler/webgl/webgl-profiler-api-changes.html
+inspector/profiler/webgl
 
 # Tests that require ENABLE(DOWNLOAD_ATTRIBUTE).
 fast/dom/HTMLAnchorElement/anchor-nodownload.html
@@ -2162,3 +2163,67 @@ fast/events/domactivate-sets-underlying-click-event-as-handled.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=95388
 fast/css/nested-layers-with-hover.html
+
+# https://bugs.webkit.org/show_bug.cgi?id=95428
+media/video-controls-captions.html
+
+# https://bugs.webkit.org/show_bug.cgi?id=95795
+editing/style/apply-style-atomic.html
+
+# https://bugs.webkit.org/show_bug.cgi?id=94374
+inspector/timeline/timeline-decode-resize.html
+
+# Flaky inspector tests
+# https://bugs.webkit.org/show_bug.cgi?id=95802
+http/tests/inspector/appcache/appcache-manifest-with-non-existing-file.html
+http/tests/inspector/console-resource-errors.html
+http/tests/inspector/network/network-initiator-from-console.html
+http/tests/inspector/resource-tree/resource-request-content-while-loading.html
+http/tests/inspector/search/resources-search-match-index.html
+inspector/profiler/heap-snapshot.html
+inspector/profiler/memory-instrumentation-cached-images.html
+inspector/styles/media-queries.html
+inspector/styles/region-style-crash.html
+
+# Flaky http/tests/security tests
+# https://bugs.webkit.org/show_bug.cgi?id=95803
+http/tests/security/local-image-from-remote-whitelisted.html
+http/tests/security/object-literals.html
+http/tests/security/script-with-failed-cors-check-fails-to-load.html
+http/tests/security/xss-DENIED-mime-type-execute-as-html.html
+http/tests/security/xss-DENIED-xsl-external-entity.xml
+http/tests/security/contentSecurityPolicy/report-blocked-uri.html
+http/tests/security/cookies/cookie-theft-with-javascript-doc.html
+http/tests/security/frameNavigation/inactive-function-in-popup-navigate-child.html
+http/tests/security/local-video-poster-from-remote.html
+http/tests/security/local-video-source-from-remote.html
+http/tests/security/location-prototype.html
+http/tests/security/script-crossorigin-loads-correctly.html
+http/tests/security/video-poster-cross-origin-crash.html
+http/tests/security/xss-eval.html
+
+# Flaky http/tests/cookie tests
+# https://bugs.webkit.org/show_bug.cgi?id=95805
+http/tests/cookies/multiple-cookies.html
+http/tests/cookies/single-quoted-value.html
+
+# Flaky media/video tests
+# https://bugs.webkit.org/show_bug.cgi?id=95806
+media/video-aspect-ratio.html
+media/video-replaces-poster.html
+media/video-set-rate-from-pause.html
+media/video-src-change.html
+media/video-timeupdate-reverse-play.html
+media/W3C/video/src/src_removal_does_not_trigger_loadstart.html
+
+# Interactive form validation not enabled on Windows
+fast/forms/number/number-interactive-validation-required.html
+
+# Dialog element is not yet enabled.
+fast/dom/HTMLDialogElement
+
+# Windows does not have global selection.
+editing/pasteboard/paste-global-selection.html
+
+# https://bugs.webkit.org/show_bug.cgi?id=96133
+http/tests/security/contentSecurityPolicy/blob-urls-match-self.html

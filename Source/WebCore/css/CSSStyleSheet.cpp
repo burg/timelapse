@@ -32,13 +32,13 @@
 #include "ExceptionCode.h"
 #include "HTMLNames.h"
 #include "MediaList.h"
-#include "MemoryInstrumentation.h"
 #include "Node.h"
 #include "SVGNames.h"
 #include "SecurityOrigin.h"
 #include "StyleRule.h"
 #include "StyleRuleImport.h"
 #include "StyleSheetContents.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -58,7 +58,7 @@ private:
 
     virtual void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const OVERRIDE
     {
-        MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+        MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
         info.addInstrumentedMember(m_styleSheet);
     }
     
@@ -184,7 +184,7 @@ void CSSStyleSheet::reattachCSSOMWrappers()
 
 void CSSStyleSheet::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     info.addInstrumentedMember(m_contents);
     info.addInstrumentedMember(m_title);
     info.addInstrumentedMember(m_mediaQueries);

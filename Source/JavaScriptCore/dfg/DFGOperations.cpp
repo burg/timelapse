@@ -409,6 +409,20 @@ EncodedJSValue DFG_OPERATION operationGetByValCell(ExecState* exec, JSCell* base
     return JSValue::encode(JSValue(base).get(exec, ident));
 }
 
+EncodedJSValue DFG_OPERATION operationGetByValArrayInt(ExecState* exec, JSArray* base, int32_t index)
+{
+    JSGlobalData* globalData = &exec->globalData();
+    NativeCallFrameTracer tracer(globalData, exec);
+    
+    if (index < 0) {
+        // Go the slowest way possible becase negative indices don't use indexed storage.
+        return JSValue::encode(JSValue(base).get(exec, Identifier::from(exec, index)));
+    }
+
+    // Use this since we know that the value is out of bounds.
+    return JSValue::encode(JSValue(base).get(exec, index));
+}
+
 EncodedJSValue DFG_OPERATION operationGetById(ExecState* exec, EncodedJSValue base, Identifier* propertyName)
 {
     JSGlobalData* globalData = &exec->globalData();
@@ -1229,7 +1243,7 @@ JSCell* DFG_OPERATION operationNewFunction(ExecState* exec, JSCell* functionExec
     ASSERT(functionExecutable->inherits(&FunctionExecutable::s_info));
     JSGlobalData& globalData = exec->globalData();
     NativeCallFrameTracer tracer(&globalData, exec);
-    return static_cast<FunctionExecutable*>(functionExecutable)->make(exec, exec->scope());
+    return JSFunction::create(exec, static_cast<FunctionExecutable*>(functionExecutable), exec->scope());
 }
 
 JSCell* DFG_OPERATION operationNewFunctionExpression(ExecState* exec, JSCell* functionExecutableAsCell)
@@ -1237,14 +1251,7 @@ JSCell* DFG_OPERATION operationNewFunctionExpression(ExecState* exec, JSCell* fu
     ASSERT(functionExecutableAsCell->inherits(&FunctionExecutable::s_info));
     FunctionExecutable* functionExecutable =
         static_cast<FunctionExecutable*>(functionExecutableAsCell);
-    JSFunction* function = functionExecutable->make(exec, exec->scope());
-    if (!functionExecutable->name().isNull()) {
-        JSNameScope* functionScopeObject =
-            JSNameScope::create(
-                exec, functionExecutable->name(), function, ReadOnly | DontDelete);
-        function->setScope(exec->globalData(), functionScopeObject);
-    }
-    return function;
+    return JSFunction::create(exec, functionExecutable, exec->scope());
 }
 
 size_t DFG_OPERATION operationIsObject(ExecState* exec, EncodedJSValue value)

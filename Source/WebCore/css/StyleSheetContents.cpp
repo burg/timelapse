@@ -26,12 +26,12 @@
 #include "CSSStyleSheet.h"
 #include "CachedCSSStyleSheet.h"
 #include "Document.h"
-#include "MemoryInstrumentation.h"
 #include "Node.h"
 #include "SecurityOrigin.h"
 #include "StylePropertySet.h"
 #include "StyleRule.h"
 #include "StyleRuleImport.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/Deque.h>
 
 namespace WebCore {
@@ -492,7 +492,7 @@ void StyleSheetContents::removedFromMemoryCache()
 
 void StyleSheetContents::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     info.addInstrumentedMember(m_originalURL);
     info.addInstrumentedMember(m_encodingFromCharsetRule);
     info.addVector(m_importRules);

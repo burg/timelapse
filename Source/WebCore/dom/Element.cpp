@@ -823,7 +823,15 @@ void Element::parserSetAttributes(const Vector<Attribute>& attributeVector, Frag
         }
     }
 
-    m_attributeData = ElementAttributeData::createImmutable(filteredAttributes);
+    // When the document is in parsing state, we cache immutable ElementAttributeData objects with the
+    // input attribute vector as key. (This cache is held by Document.)
+    if (!document() || !document()->parsing())
+        m_attributeData = ElementAttributeData::createImmutable(filteredAttributes);
+    else if (!isHTMLElement()) {
+        // FIXME: Support attribute data sharing for non-HTML elements.
+        m_attributeData = ElementAttributeData::createImmutable(filteredAttributes);
+    } else
+        m_attributeData = document()->cachedImmutableAttributeData(this, filteredAttributes);
 
     // Iterate over the set of attributes we already have on the stack in case
     // attributeChanged mutates m_attributeData.
@@ -1389,31 +1397,28 @@ void Element::finishParsingChildren()
 #ifndef NDEBUG
 void Element::formatForDebugger(char* buffer, unsigned length) const
 {
-    String result;
+    StringBuilder result;
     String s;
-    
-    s = nodeName();
-    if (s.length() > 0) {
-        result += s;
-    }
-          
+
+    result.append(nodeName());
+
     s = getIdAttribute();
     if (s.length() > 0) {
         if (result.length() > 0)
-            result += "; ";
-        result += "id=";
-        result += s;
+            result.appendLiteral("; ");
+        result.appendLiteral("id=");
+        result.append(s);
     }
-          
+
     s = getAttribute(classAttr);
     if (s.length() > 0) {
         if (result.length() > 0)
-            result += "; ";
-        result += "class=";
-        result += s;
+            result.appendLiteral("; ");
+        result.appendLiteral("class=");
+        result.append(s);
     }
-          
-    strncpy(buffer, result.utf8().data(), length - 1);
+
+    strncpy(buffer, result.toString().utf8().data(), length - 1);
 }
 #endif
 

@@ -1,3 +1,178 @@
+2012-09-07  Michael Saboff  <msaboff@apple.com>
+
+        equalIgnoringCase of two StringImpls doesn't handle 8 bit strings
+        https://bugs.webkit.org/show_bug.cgi?id=96028
+
+        Reviewed by Benjamin Poulain.
+
+        Added 8 bit checks and paths to CaseFoldingHash::equal.  Also cleaned up StringHash::equal(), removing
+        obvious and in one case wrong comments.  Moved equalIgnoringCase(UChar*, UChar*) from StringImpl.cpp
+        to StringImpl.h.
+
+        * wtf/text/StringHash.h:
+        (WTF::StringHash::equal):
+        (WTF::CaseFoldingHash::equal):
+        * wtf/text/StringImpl.cpp:
+        * wtf/text/StringImpl.h:
+        (WTF::equalIgnoringCase):
+
+2012-09-07  Patrick Gansterer  <paroga@webkit.org>
+
+        [WIN] Deprecate String += operator
+        https://bugs.webkit.org/show_bug.cgi?id=96083
+
+        Reviewed by Adam Barth.
+
+        * wtf/Platform.h:
+
+2012-09-06  Michael Saboff  <msaboff@apple.com>
+
+        StringBuilder::toAtomicString() can create an 16 bit string with 8 bit contents
+        https://bugs.webkit.org/show_bug.cgi?id=96029
+
+        Reviewed by Benjamin Poulain.
+
+        Added 8 bit path when creating an AtomicString from a partial 8 bit buffer.
+
+        * wtf/text/StringBuilder.h:
+        (WTF::StringBuilder::toAtomicString):
+
+2012-09-06  Michael Saboff  <msaboff@apple.com>
+
+        16 bit JSRopeString up converts an 8 bit fibers to 16 bits during resolution
+        https://bugs.webkit.org/show_bug.cgi?id=95810
+
+        Reviewed by Benjamin Poulain.
+
+        New copy routine that takes an 8 bit source and a 16 bit destination.  Used when copying
+        the contents of an 8 bit fiber to the 16 bit buffer when resolving a 16 bit rope.
+
+        * wtf/text/StringImpl.h:
+        (WTF::StringImpl::copyChars):
+        (StringImpl):
+
+2012-09-06  Michael Saboff  <msaboff@apple.com>
+
+        Unreviewed fix to r127799.
+        https://bugs.webkit.org/show_bug.cgi?id=95807
+
+        Unreviewed fix.
+
+        Removed extraneous "static".  This code is hidden behind STRING_STATS define and 
+        therefore is not enabled by default.
+
+        * wtf/text/StringImpl.cpp:
+
+2012-09-06  Lauro Neto  <lauro.neto@openbossa.org>
+
+        [Qt] Deprecate String += operator
+        https://bugs.webkit.org/show_bug.cgi?id=95895
+
+        Reviewed by Benjamin Poulain.
+
+        Remove Qt from WTF_DEPRECATED_STRING_OPERATORS guard.
+
+        * wtf/Platform.h:
+
+2012-09-06  Michael Saboff  <msaboff@apple.com>
+
+        ENH: Add Logging to StringImpl to track String Types
+        https://bugs.webkit.org/show_bug.cgi?id=95807
+
+        Reviewed by Benjamin Poulain.
+
+        Added StringsStats class that keeps track of the number of strings, number of 8 and 16 bit
+        strings as well as the number of 8 bit strings up converted to 16 bits. The number of characrters
+        for each type is also accumulated. These statistics are output via DataLog every 5000
+        calls to StringImpl destructor. The 5000 can be adjusted via s_printStringStatsFrequency.
+        This StringStats code is disabled by default and enabled by defining STRING_STATS in
+        wtf/text/StringImpl.h.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringStats::removeString):
+        (WTF::StringStats::printStats):
+        (WTF::StringImpl::~StringImpl):
+        (WTF::StringImpl::getData16SlowCase):
+        * wtf/text/StringImpl.h:
+        (WTF::StringStats::add8BitString):
+        (StringStats):
+        (WTF::StringStats::add16BitString):
+        (WTF::StringStats::addUpconvertedString):
+        (WTF::StringImpl::StringImpl):
+        (StringImpl):
+        (WTF::StringImpl::isSubString):
+        (WTF::StringImpl::stringStats):
+
+2012-09-06  Patrick Gansterer  <paroga@webkit.org>
+
+        Fix export macros in IntegerToStringConversion.h
+        https://bugs.webkit.org/show_bug.cgi?id=95900
+
+        Reviewed by Benjamin Poulain.
+
+        The WTF_EXPORT_STRING_API must be used only for symbols which are compiled
+        on windows in "non-WTF" binaries too. Since this isn't valid for the
+        IntegerToStringConversion function replace it with WTF_EXPORT_PRIVATE.
+
+        * wtf/text/IntegerToStringConversion.h:
+
+2012-09-06  Simon Hausmann  <simon.hausmann@nokia.com>
+
+        [Qt] Various small Windows / MSVC build fixes
+        https://bugs.webkit.org/show_bug.cgi?id=95934
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        For the Qt build on Windows, do not enable WTF_USE_UNIX_DOMAIN_SOCKETS for
+        WebKit2 IPC.
+
+        * wtf/Platform.h:
+
+2012-09-06  Adam Barth  <abarth@chromium.org>
+
+        Remove WTF::String::operator+=
+        https://bugs.webkit.org/show_bug.cgi?id=95797
+
+        Reviewed by Sam Weinig.
+
+        This patch encloses WTF::String::operator+= in an ifdef so that we can
+        gradually remove it from the various port-specific files. The ifdef
+        lets us whitelist use of operator+= in individual files during the
+        transition.
+
+        * wtf/Platform.h
+        * wtf/text/WTFString.h:
+
+2012-09-05  Gabor Rapcsanyi  <rgabor@webkit.org>
+
+        DFG JIT doesn't work properly on ARM hardfp
+        https://bugs.webkit.org/show_bug.cgi?id=95684
+
+        Reviewed by Filip Pizlo.
+
+        Add hardfp support to DFG JIT. The patch is created with the
+        help of Zoltan Herczeg.
+
+        * wtf/Platform.h:
+
+2012-09-04  Zoltan Horvath  <zoltan@webkit.org>
+
+        Extend the coverage of the Custom Allocation Framework in WTF and in JavaScriptCore
+        https://bugs.webkit.org/show_bug.cgi?id=95737
+
+        Reviewed by Eric Seidel.
+
+        Add WTF_MAKE_FAST_ALLOCATED macro to the following class declarations because these are instantiated by operator new.
+
+        * wtf/CryptographicallyRandomNumber.cpp: CryptographicallyRandomNumber is instantiated at wtf/CryptographicallyRandomNumber.cpp:162.
+        * wtf/MediaTime.h: MediaTime is instantiated at wtf/MediaTime.cpp:288.
+        * wtf/MetaAllocator.h:
+        (MetaAllocatorTracker): MetaAllocatorTracker is instantiated at JavaScriptCore/tools/CodeProfiling.cpp:120.
+        * wtf/ThreadingPthreads.cpp:
+        (PthreadState): PthreadState is instantiated at wtf/ThreadingPthreads.cpp:165.
+        * wtf/text/AtomicString.cpp:
+        (AtomicStringTable): AtomicStringTable is instantiated at wtf/text/AtomicString.cpp:43.
+
 2012-09-01  Mark Lam  <mark.lam@apple.com>
 
         LLInt C loop backend.

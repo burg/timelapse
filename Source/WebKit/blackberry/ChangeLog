@@ -1,3 +1,378 @@
+2012-09-07  Yongxin Dai  <yodai@rim.com>
+
+        [BlackBerry] Initialize caret rectangle with invalid location
+        https://bugs.webkit.org/show_bug.cgi?id=96011
+
+        Reviewed by Rob Buis.
+
+        In SelectionHandler::selectionPositionChanged() method, startCaret and
+        endCaret are used to notify clients about new caret positions. This patch
+        initializes startCaret and endCaret with location(-1. -1), and keeps them
+        empty before they are assigned to valid values. This would help for other
+        classes to check validity of the caret correctly.
+
+        Internal reviewed by Mike Fenton.
+
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::adjustCaretRects):
+        (BlackBerry::WebKit::SelectionHandler::selectionPositionChanged):
+
+2012-09-07  Lianghui Chen  <liachen@rim.com>
+
+        [BlackBerry] when one of multiple tabs uses authentication, user can get the auth dialog while the other tab has focus.
+        https://bugs.webkit.org/show_bug.cgi?id=95488
+        PR: 186597.
+
+        Internally reviewed by Joe Mason.
+        Reviewed by Yong Li.
+
+        Use new AuthenticationChallengeClient interface to make authentication
+        challenge asynchronous to NetworkJob, MediaPlayerPrivateBlackBerry, and
+        other module that will use HTTP authentication. WebPage itself still use
+        synchronous authentication though. Switching to asynchronous authentication
+        in WebPage will require bigger platform layer change and not very necessary
+        at the moment for this bug.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::authenticationChallenge):
+        * Api/WebPage_p.h:
+        (WebCore):
+        (WebPagePrivate):
+
+2012-09-07  Rob Buis  <rbuis@rim.com>
+
+        [BlackBerry] Remove feature about:cache/disable and about:cache/enable
+        https://bugs.webkit.org/show_bug.cgi?id=95820
+
+        Reviewed by Yong Li.
+
+        Fix warning that was caused by r127680.
+
+        * WebKitSupport/AboutData.cpp:
+        (BlackBerry::WebKit::cachePage):
+
+2012-09-07  Allan Sandfeld Jensen  <allan.jensen@nokia.com>
+
+        Simplify hitTestResultAtPoint and nodesFromRect APIs
+        https://bugs.webkit.org/show_bug.cgi?id=95720
+
+        Reviewed by Antonio Gomes.
+
+        Update calls to new API.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::contextNode):
+        (BlackBerry::WebKit::WebPagePrivate::nodeForZoomUnderPoint):
+        (BlackBerry::WebKit::WebPagePrivate::handleMouseEvent):
+        (BlackBerry::WebKit::WebPage::nodeAtPoint):
+        * WebKitSupport/FatFingers.cpp:
+        (BlackBerry::WebKit::FatFingers::getNodesFromRect):
+        (BlackBerry::WebKit::FatFingers::getRelevantInfoFromPoint):
+        * WebKitSupport/SelectionHandler.cpp:
+        (BlackBerry::WebKit::visiblePositionForPointIgnoringClipping):
+
+2012-09-07  Robin Cao  <robin.cao@torchmobile.com.cn>
+
+        [BlackBerry] Rendering issue after rotation
+        https://bugs.webkit.org/show_bug.cgi?id=96094
+        PR #201930
+
+        Reviewed by George Staikos.
+
+        The cause of the rendering issue is that the BackingStore tiles
+        are not reset after layout. This is a regression of r125680, which
+        overwrites a local variable that are used later in the function.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::setViewportSize):
+
+2012-09-06  Crystal Zhang  <haizhang@rim.com>
+
+        [BlackBerry]  Implement a color picker
+        https://bugs.webkit.org/show_bug.cgi?id=96001
+
+        Reviewed by Rob Buis.
+
+        Add files for color picker, replace old hook to AIR color picker.
+
+        * WebCoreSupport/ColorPickerClient.cpp: Added.
+        (WebCore):
+        (WebCore::ColorPickerClient::ColorPickerClient):
+        (WebCore::ColorPickerClient::~ColorPickerClient):
+        (WebCore::ColorPickerClient::generateHTML):
+        (WebCore::ColorPickerClient::closePopup):
+        (WebCore::ColorPickerClient::contentSize):
+        (WebCore::ColorPickerClient::htmlSource):
+        (WebCore::ColorPickerClient::setValueAndClosePopup):
+        (WebCore::ColorPickerClient::didClosePopup):
+        (WebCore::ColorPickerClient::writeDocument):
+        * WebCoreSupport/ColorPickerClient.h: Added.
+        (WebKit):
+        (WebCore):
+        (ColorPickerClient):
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::openColorPopup):
+
+2012-09-06  Genevieve Mak  <gmak@rim.com>
+
+        Add data-blackberry-webworks-context attribute and set the custom context when
+        getting context.
+        https://bugs.webkit.org/show_bug.cgi?id=95993
+
+        Reviewed by Antonio Gomes.
+
+        PR #193726
+        Reviewed Internally by Mike Fenton.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::webContext):
+            - Check for custom WebWorks context and add it if there.
+        * WebKitSupport/DOMSupport.cpp:
+        (BlackBerry::WebKit::DOMSupport::webWorksContext):
+        (DOMSupport):
+        * WebKitSupport/DOMSupport.h:
+            - Add a method that checks a given element for the data-webworks-context
+              attribute and returns its value if present.
+
+2012-09-06  Antonio Gomes  <agomes@rim.com>
+
+        [BlackBerry] Allow overscroll to composited scroll layers
+        https://bugs.webkit.org/show_bug.cgi?id=95998
+        PR #195305
+
+        Reviewed by Rob Buis.
+        Internally reviewed by Gen Mak.
+
+        No need to reset the overscroll limit factor at creation to 0.
+        It is already 0 by default, and later on the client sets the
+        appropriated value.
+
+        * WebKitSupport/InRegionScrollableArea.cpp:
+        (BlackBerry::WebKit::InRegionScrollableArea::InRegionScrollableArea):
+
+2012-09-05  Sam Weinig  <sam@webkit.org>
+
+        Part 2 of removing PlatformString.h, remove PlatformString.h
+        https://bugs.webkit.org/show_bug.cgi?id=95931
+
+        Reviewed by Adam Barth.
+
+        Remove PlatformString.h
+
+        * Api/DumpRenderTreeClient.h:
+        * WebCoreSupport/ChromeClientBlackBerry.cpp:
+        * WebCoreSupport/InspectorClientBlackBerry.h:
+        * WebCoreSupport/JavaScriptDebuggerBlackBerry.cpp:
+        * WebKitSupport/AboutData.h:
+
+2012-09-05  Jason Liu  <jason.liu@torchmobile.com.cn>
+
+        [BlackBerry] Remove feature about:cache/disable and about:cache/enable
+        https://bugs.webkit.org/show_bug.cgi?id=95820
+
+        Reviewed by Rob Buis.
+
+        Remove this feature since we need to add a button in settings.
+
+        * WebKitSupport/AboutData.cpp:
+        (BlackBerry::WebKit::cachePage):
+
+2012-09-05  Mike Fenton  <mifenton@rim.com>
+
+        [BlackBerry] Remove deprecated dialog connections.
+        https://bugs.webkit.org/show_bug.cgi?id=95868
+
+        Reviewed by Rob Buis.
+
+        PR 187481.
+        Remove deprecated logic for unsupported
+        Dialog types.
+
+        * Api/WebPageClient.h:
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::openDatePopup):
+        (BlackBerry::WebKit::InputHandler::openColorPopup):
+
+2012-09-05  George Staikos  <staikos@webkit.org>
+
+        [BlackBerry] Assignment operators missing self-check
+        https://bugs.webkit.org/show_bug.cgi?id=95774
+
+        Reviewed by Rob Buis.
+
+        Add a test for self-assignment.
+
+        * Api/WebAnimation.cpp:
+        (BlackBerry::WebKit::WebAnimation::operator=):
+        * Api/WebString.cpp:
+        (BlackBerry::WebKit::WebString::operator=):
+
+2012-09-05  Leo Yang  <leoyang@rim.com>
+
+        [BlackBerry] Optimize BackingStorePrivate::isCurrentVisibleJob
+        https://bugs.webkit.org/show_bug.cgi?id=95897
+
+        Reviewed by Antonio Gomes.
+
+        Bail out the loop early if one of the not-rendered rectangle is
+        not current regular render job.
+
+        No behavior change, just code optimization.
+
+        * Api/BackingStore.cpp:
+        (BlackBerry::WebKit::BackingStorePrivate::isCurrentVisibleJob):
+
+2012-09-05  Benjamin C Meyer  <bmeyer@rim.com>
+
+        [BlackBerry] JavaScriptVariant can crash when operator= is called with itself
+        https://bugs.webkit.org/show_bug.cgi?id=95859
+
+        Reviewed by George Staikos.
+
+        * Api/JavaScriptVariant.cpp:
+        (BlackBerry::WebKit::JavaScriptVariant::operator=):
+        When JavaScriptVariant contains a string and operator= is
+        called with itself the memory will be free'd in 'this' and
+        then a copy will be attempted from 'that' resulting in a crash.
+
+2012-09-05  Leo Yang  <leoyang@rim.com>
+
+        [BlackBerry] Rotation and then reload causes less sized webpage (PR 190469)
+        https://bugs.webkit.org/show_bug.cgi?id=95870
+
+        Reviewed by George Staikos.
+        Reviewed internally by Jacky Jiang.
+
+        Use the new zoom to fit scale if the page was zoomed to fit initial scale
+        When a page is reloaded the layout size may be changed. So the contents
+        size on which the initial scale depends may be changed. Use the new initial
+        scale in this case to make sure the page will be zoomed to correct scale.
+
+        * WebCoreSupport/FrameLoaderClientBlackBerry.cpp:
+        (WebCore::FrameLoaderClientBlackBerry::restoreViewState):
+
+2012-09-05  Robin Cao  <robin.cao@torchmobile.com.cn>
+
+        [BlackBerry] Do not release shared backingstore memory prematurely
+        https://bugs.webkit.org/show_bug.cgi?id=95841
+        PR #202517
+
+        Reviewed by George Staikos.
+
+        The BackingStore memory is shared by all web pages. We should check if
+        the current backingStore is active before create/release this shared memory.
+
+        * Api/BackingStore.cpp:
+        (BlackBerry::WebKit::BackingStore::createBackingStoreMemory):
+        (BlackBerry::WebKit::BackingStore::releaseBackingStoreMemory):
+
+2012-09-05  Andy Chen  <andchen@rim.com>
+
+        [BlackBerry] Implement number of matches and current active match index for find-on-page
+        https://bugs.webkit.org/show_bug.cgi?id=95801
+
+        Reviewed by Antonio Gomes.
+
+        - Calculate current match index for find-on-page
+        - Notify client when number of matches and current match index update.
+        PR 162090 162091.
+        Internally reviewed by Mike Fenton and Joe Mason
+
+        * Api/WebPageClient.h:
+        * WebKitSupport/InPageSearchManager.cpp:
+        (BlackBerry::WebKit::InPageSearchManager::DeferredScopeStringMatches::DeferredScopeStringMatches):
+        (BlackBerry::WebKit::InPageSearchManager::DeferredScopeStringMatches::doTimeout):
+        (InPageSearchManager::DeferredScopeStringMatches):
+        (BlackBerry::WebKit::InPageSearchManager::findNextString):
+        (BlackBerry::WebKit::InPageSearchManager::findAndMarkText):
+        (BlackBerry::WebKit::InPageSearchManager::scopeStringMatches):
+        (BlackBerry::WebKit::InPageSearchManager::scopeStringMatchesSoon):
+        (BlackBerry::WebKit::InPageSearchManager::callScopeStringMatches):
+        * WebKitSupport/InPageSearchManager.h:
+        (InPageSearchManager):
+
+2012-09-04  Rob Buis  <rbuis@rim.com>
+
+        [BlackBerry] FatFingers::cachingStrategy uses incorrect enum value
+        https://bugs.webkit.org/show_bug.cgi?id=95783
+
+        Reviewed by Antonio Gomes.
+
+        Use the correct enum values.
+
+        * WebKitSupport/FatFingers.cpp:
+        (BlackBerry::WebKit::FatFingers::cachingStrategy):
+
+2012-09-04  Antonio Gomes  <agomes@rim.com>
+
+        [BlackBerry] Use child/ScrollableContent layer's position instead of parent/ScrollLayer's boundsOrigin
+        https://bugs.webkit.org/show_bug.cgi?id=95778
+        PR #202252
+
+        Reviewed by Rob Buis.
+        Internally reviewed by Arvid Nilsson.
+
+        Upstream has switch away from using the parent scroll layer's bounds origin
+        in order to translate contents of all its child layers. Instead now, it directly
+        sets the scroll position of the child scrollable contents layer.
+
+        Source/WebKit/blackberry:
+        * Api/InRegionScroller.cpp:
+        (BlackBerry::WebKit::InRegionScrollerPrivate::setScrollPositionCompositingThread):
+        * WebKitSupport/InRegionScrollableArea.cpp:
+        (BlackBerry::WebKit::InRegionScrollableArea::InRegionScrollableArea):
+
+        No new tests, since it is a catch-up with upstreaming code.
+
+2012-09-04  George Staikos  <staikos@webkit.org>
+
+        [BlackBerry] Fix memory leak in InputHandler
+        https://bugs.webkit.org/show_bug.cgi?id=95771
+
+        Reviewed by Rob Buis.
+
+        Simply delete the arrays at function exit.
+
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::openSelectPopup):
+
+2012-09-04  George Staikos  <staikos@webkit.org>
+
+        [BlackBerry] pass isMainFrame() through to notifyDocumentOnLoad()
+        https://bugs.webkit.org/show_bug.cgi?id=95766
+
+        Reviewed by Rob Buis.
+
+        Passing the frame status through will allow the client to make better
+        decisions about how to act on the onload.
+
+        * Api/WebPageClient.h:
+        * WebCoreSupport/FrameLoaderClientBlackBerry.cpp:
+        (WebCore::FrameLoaderClientBlackBerry::dispatchDidHandleOnloadEvents):
+
+2012-09-04  Rob Buis  <rbuis@rim.com>
+
+        [BlackBerry] Provide virtual dtor for DumpRenderTreeClient
+        https://bugs.webkit.org/show_bug.cgi?id=95769
+
+        Reviewed by Yong Li.
+
+        Also remove WTF prefixes.
+
+        * Api/DumpRenderTreeClient.h:
+
+2012-09-04  Mary Wu  <mary.wu@torchmobile.com.cn>
+
+        [BlackBerry] Add webplatform and browser to build info
+        https://bugs.webkit.org/show_bug.cgi?id=95715
+
+        Reviewed by George Staikos.
+
+        PR# 202102
+
+        * WebKitSupport/AboutData.cpp:
+        (BlackBerry::WebKit::buildPage):
+
 2012-08-31  Jacky Jiang  <zhajiang@rim.com>
 
         [BlackBerry] ASSERT failure in RenderBlock::checkPositionedObjectsNeedLayout

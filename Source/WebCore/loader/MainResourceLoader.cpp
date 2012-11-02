@@ -552,7 +552,7 @@ void MainResourceLoader::didFail(const ResourceError& error)
 
 void MainResourceLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::Loader);
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
     ResourceLoader::reportMemoryUsage(memoryObjectInfo);
     info.addMember(m_initialRequest);
     info.addInstrumentedMember(m_substituteData);

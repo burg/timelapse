@@ -264,6 +264,12 @@ void WebContext::setProcessModel(ProcessModel processModel)
     if (!m_processes.isEmpty())
         CRASH();
 
+#if !ENABLE(PLUGIN_PROCESS)
+    // Plugin process is required for multiple web process mode.
+    if (processModel != ProcessModelSharedSecondaryProcess)
+        CRASH();
+#endif
+
     m_processModel = processModel;
 }
 
@@ -360,7 +366,7 @@ PassRefPtr<WebProcessProxy> WebContext::createNewWebProcess()
         pair<String, RefPtr<APIObject> >& message = m_pendingMessagesToPostToInjectedBundle[i];
         process->deprecatedSend(InjectedBundleMessage::PostMessage, 0, CoreIPC::In(message.first, WebContextUserMessageEncoder(message.second.get())));
     }
-    // FIXME (Multi-WebProcess): What does this mean in the brave new world?
+    // FIXME (Multi-WebProcess) (94368): What does this mean in the brave new world?
     m_pendingMessagesToPostToInjectedBundle.clear();
 
     return process.release();
@@ -421,7 +427,7 @@ void WebContext::processDidFinishLaunching(WebProcessProxy* process)
 {
     ASSERT(m_processes.contains(process));
 
-    m_visitedLinkProvider.processDidFinishLaunching();
+    m_visitedLinkProvider.processDidFinishLaunching(process);
 
     // Sometimes the memorySampler gets initialized after process initialization has happened but before the process has finished launching
     // so check if it needs to be started here
@@ -441,15 +447,15 @@ void WebContext::disconnectProcess(WebProcessProxy* process)
 {
     ASSERT(m_processes.contains(process));
 
-    // FIXME (Multi-WebProcess): All the invalidation calls below are still necessary in multi-process mode, but they should only affect data structures pertaining to the process being disconnected.
+    m_visitedLinkProvider.processDidClose(process);
+
+    // FIXME (Multi-WebProcess): <rdar://problem/12239765> All the invalidation calls below are still necessary in multi-process mode, but they should only affect data structures pertaining to the process being disconnected.
     // Clearing everything causes assertion failures, so it's less trouble to skip that for now.
     if (m_processModel != ProcessModelSharedSecondaryProcess) {
         RefPtr<WebProcessProxy> protect(process);
         m_processes.remove(m_processes.find(process));
         return;
     }
-
-    m_visitedLinkProvider.processDidClose();
 
     // Invalidate all outstanding downloads.
     for (HashMap<uint64_t, RefPtr<DownloadProxy> >::iterator::Values it = m_downloads.begin().values(), end = m_downloads.end().values(); it != end; ++it) {
@@ -503,6 +509,8 @@ PassRefPtr<WebPageProxy> WebContext::createWebPage(PageClient* pageClient, WebPa
         process = m_processes[0];
     } else {
         // FIXME (Multi-WebProcess): Add logic for sharing a process.
+        // <rdar://problem/12218164> window.open() should create pages in the same process.
+        // <rdar://problem/12239661> Consider limiting the number of web processes in per-tab process model
         if (m_haveInitialEmptyProcess) {
             process = m_processes.last();
             m_haveInitialEmptyProcess = false;
@@ -546,7 +554,7 @@ DownloadProxy* WebContext::download(WebPageProxy* initiatingPage, const Resource
         return download;
 
     } else {
-        // FIXME: (Multi-WebProcess): Implement.
+        // FIXME (Multi-WebProcess): <rdar://problem/12239483> Make downloading work.
         return 0;
     }
 }
@@ -932,7 +940,7 @@ void WebContext::getWebCoreStatistics(PassRefPtr<DictionaryCallback> callback)
         m_processes[0]->send(Messages::WebProcess::GetWebCoreStatistics(callbackID), 0);
 
     } else {
-        // FIXME (Multi-WebProcess): Implement.
+        // FIXME (Multi-WebProcess): <rdar://problem/12239483> Make downloading work.
         callback->invalidate();
     }
 }

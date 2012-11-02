@@ -48,6 +48,7 @@
 #include <Evas.h>
 #include <cstdio>
 #include <wtf/NotFound.h>
+#include <wtf/text/StringBuilder.h>
 
 using namespace WebCore;
 
@@ -308,6 +309,7 @@ void DumpRenderTreeChrome::resetDefaultsToConsistentValues()
     DumpRenderTreeSupportEfl::setDefersLoading(mainView(), false);
     DumpRenderTreeSupportEfl::setLoadsSiteIconsIgnoringImageLoadingSetting(mainView(), false);
     DumpRenderTreeSupportEfl::setSerializeHTTPLoads(false);
+    DumpRenderTreeSupportEfl::setMinimumLogicalFontSize(mainView(), 9);
 
     // Reset capacities for the memory cache for dead objects.
     static const unsigned cacheTotalCapacity =  8192 * 1024;
@@ -365,15 +367,20 @@ static CString urlSuitableForTestResult(const char* uriString)
 
 static CString descriptionSuitableForTestResult(Ewk_Frame_Resource_Request* request)
 {
-    String ret = "<NSURLRequest URL ";
-    ret += pathSuitableForTestResult(request->url).data();
-    ret += ", main document URL ";
-    ret += urlSuitableForTestResult(request->first_party).data();
-    ret += ", http method ";
-    ret += request->http_method ? String(request->http_method) : "(none)";
-    ret += ">";
+    StringBuilder builder;
+    builder.appendLiteral("<NSURLRequest URL ");
+    builder.append(pathSuitableForTestResult(request->url).data());
+    builder.appendLiteral(", main document URL ");
+    builder.append(urlSuitableForTestResult(request->first_party).data());
+    builder.appendLiteral(", http method ");
 
-    return ret.utf8();
+    if (request->http_method)
+        builder.append(String(request->http_method));
+    else
+        builder.appendLiteral("(none)");
+
+    builder.append('>');
+    return builder.toString().utf8();
 }
 
 static CString descriptionSuitableForTestResult(const Ewk_Frame_Resource_Response* response)
@@ -381,13 +388,13 @@ static CString descriptionSuitableForTestResult(const Ewk_Frame_Resource_Respons
     if (!response)
         return CString("(null)");
 
-    String ret = "<NSURLResponse ";
-    ret += pathSuitableForTestResult(response->url).data();
-    ret += ", http status code ";
-    ret += String::number(response->status_code);
-    ret += ">";
-
-    return ret.utf8();
+    StringBuilder builder;
+    builder.appendLiteral("<NSURLResponse ");
+    builder.append(pathSuitableForTestResult(response->url).data());
+    builder.appendLiteral(", http status code ");
+    builder.append(String::number(response->status_code));
+    builder.append('>');
+    return builder.toString().utf8();
 }
 
 static CString descriptionSuitableForTestResult(Ewk_Frame_Load_Error* error)

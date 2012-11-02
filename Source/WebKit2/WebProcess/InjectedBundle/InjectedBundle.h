@@ -108,6 +108,7 @@ public:
     void overrideXSSAuditorEnabledForTestRunner(WebPageGroupProxy* pageGroup, bool enabled);
     void setAllowUniversalAccessFromFileURLs(WebPageGroupProxy*, bool);
     void setAllowFileAccessFromFileURLs(WebPageGroupProxy*, bool);
+    void setMinimumLogicalFontSize(WebPageGroupProxy*, int size);
     void setFrameFlatteningEnabled(WebPageGroupProxy*, bool);
     void setPluginsEnabled(WebPageGroupProxy*, bool);
     void setGeoLocationPermission(WebPageGroupProxy*, bool);
@@ -166,7 +167,7 @@ public:
     void setPageVisibilityState(WebPage*, int state, bool isInitialState);
 
 private:
-    InjectedBundle(const String&);
+    explicit InjectedBundle(const String&);
 
     virtual Type type() const { return APIType; }
 

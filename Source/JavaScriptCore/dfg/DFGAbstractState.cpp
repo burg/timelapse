@@ -608,14 +608,9 @@ bool AbstractState::execute(unsigned indexInBlock)
         Node& child = m_graph[node.child1()];
         if (isBooleanSpeculation(child.prediction()))
             speculateBooleanUnary(node);
-        else if (child.shouldSpeculateFinalObjectOrOther()) {
-            node.setCanExit(
-                !isFinalObjectOrOtherSpeculation(forNode(node.child1()).m_type));
-            forNode(node.child1()).filter(SpecFinalObject | SpecOther);
-        } else if (child.shouldSpeculateArrayOrOther()) {
-            node.setCanExit(
-                !isArrayOrOtherSpeculation(forNode(node.child1()).m_type));
-            forNode(node.child1()).filter(SpecArray | SpecOther);
+        else if (child.shouldSpeculateNonStringCellOrOther()) {
+            node.setCanExit(true);
+            forNode(node.child1()).filter((SpecCell & ~SpecString) | SpecOther);
         } else if (child.shouldSpeculateInteger())
             speculateInt32Unary(node);
         else if (child.shouldSpeculateNumber())
@@ -858,10 +853,12 @@ bool AbstractState::execute(unsigned indexInBlock)
             forNode(nodeIndex).makeTop();
             break;
         case Array::JSArray:
-        case Array::JSArrayOutOfBounds:
-            // FIXME: We should have more conservative handling of the out-of-bounds
-            // case.
             forNode(node.child2()).filter(SpecInt32);
+            forNode(nodeIndex).makeTop();
+            break;
+        case Array::JSArrayOutOfBounds:
+            forNode(node.child2()).filter(SpecInt32);
+            clobberWorld(node.codeOrigin, indexInBlock);
             forNode(nodeIndex).makeTop();
             break;
         case Array::Int8Array:

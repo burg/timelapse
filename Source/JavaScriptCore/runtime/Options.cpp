@@ -138,9 +138,17 @@ void Options::initialize()
     ; // Deconfuse editors that do auto indentation
 #endif
     
-#if ENABLE(LLINT_C_LOOP)
+#if !ENABLE(JIT)
     useJIT() = false;
     useDFGJIT() = false;
+#endif
+#if !ENABLE(YARR_JIT)
+    useRegExpJIT() = false;
+#endif
+
+#if USE(CF) || OS(UNIX)
+    zombiesAreImmortal() = !!getenv("JSImmortalZombieEnabled");
+    useZombieMode() = zombiesAreImmortal() || !!getenv("JSZombieEnabled");
 #endif
 
     // Do range checks where needed and make corrections to the options:

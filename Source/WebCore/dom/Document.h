@@ -34,6 +34,7 @@
 #include "DOMTimeStamp.h"
 #include "DocumentEventQueue.h"
 #include "DocumentTiming.h"
+#include "HitTestRequest.h"
 #include "IconURL.h"
 #include "InspectorCounters.h"
 #include "IntRect.h"
@@ -83,6 +84,7 @@ class DocumentWeakReference;
 class DynamicNodeListCacheBase;
 class EditingText;
 class Element;
+class ElementAttributeData;
 class EntityReference;
 class Event;
 class EventListener;
@@ -205,6 +207,9 @@ enum NodeListInvalidationType {
     InvalidateOnAnyAttrChange,
 };
 const int numNodeListInvalidationTypes = InvalidateOnAnyAttrChange + 1;
+
+struct ImmutableAttributeDataCacheEntry;
+typedef HashMap<unsigned, OwnPtr<ImmutableAttributeDataCacheEntry>, AlreadyHashed> ImmutableAttributeDataCache;
 
 class Document : public ContainerNode, public TreeScope, public ScriptExecutionContext {
 public:
@@ -372,11 +377,10 @@ public:
      * @param rightPadding How much to expand the right of the rectangle
      * @param bottomPadding How much to expand the bottom of the rectangle
      * @param leftPadding How much to expand the left of the rectangle
-     * @param ignoreClipping whether or not to ignore the root scroll frame when retrieving the element.
-     *        If false, this method returns null for coordinates outside of the viewport.
      */
-    PassRefPtr<NodeList> nodesFromRect(int centerX, int centerY, unsigned topPadding, unsigned rightPadding,
-                                       unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent) const;
+    PassRefPtr<NodeList> nodesFromRect(int centerX, int centerY,
+                                       unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding,
+                                       HitTestRequest::HitTestRequestType hitType = HitTestRequest::ReadOnly | HitTestRequest::Active) const;
     Element* elementFromPoint(int x, int y) const;
     PassRefPtr<Range> caretRangeFromPoint(int x, int y);
 
@@ -1184,6 +1188,8 @@ public:
 
     virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
 
+    PassRefPtr<ElementAttributeData> cachedImmutableAttributeData(const Element*, const Vector<Attribute>&);
+
 protected:
     Document(Frame*, const KURL&, bool isXHTML, bool isHTML);
 
@@ -1568,6 +1574,8 @@ private:
 #if ENABLE(CSP_NEXT)
     RefPtr<DOMSecurityPolicy> m_domSecurityPolicy;
 #endif
+
+    ImmutableAttributeDataCache m_immutableAttributeDataCache;
 
 #ifndef NDEBUG
     bool m_didDispatchViewportPropertiesChanged;

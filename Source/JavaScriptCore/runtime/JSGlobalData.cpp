@@ -100,12 +100,19 @@ extern const HashTable stringConstructorTable;
 #if ENABLE(ASSEMBLER) && (ENABLE(CLASSIC_INTERPRETER) || ENABLE(LLINT))
 static bool enableAssembler(ExecutableAllocator& executableAllocator)
 {
-    if (!executableAllocator.isValid() || !Options::useJIT())
+    if (!executableAllocator.isValid() || (!Options::useJIT() && !Options::useRegExpJIT()))
         return false;
 
 #if USE(CF)
-    RetainPtr<CFStringRef> canUseJITKey(AdoptCF, CFStringCreateWithCString(0 , "JavaScriptCoreUseJIT", kCFStringEncodingMacRoman));
-    RetainPtr<CFBooleanRef> canUseJIT(AdoptCF, (CFBooleanRef)CFPreferencesCopyAppValue(canUseJITKey.get(), kCFPreferencesCurrentApplication));
+#if COMPILER(GCC) && !COMPILER(CLANG)
+    // FIXME: remove this once the EWS have been upgraded to LLVM.
+    // Work around a bug of GCC with strict-aliasing.
+    RetainPtr<CFStringRef> canUseJITKeyRetain(AdoptCF, CFStringCreateWithCString(0 , "JavaScriptCoreUseJIT", kCFStringEncodingMacRoman));
+    CFStringRef canUseJITKey = canUseJITKeyRetain.get();
+#else
+    CFStringRef canUseJITKey = CFSTR("JavaScriptCoreUseJIT");
+#endif // COMPILER(GCC) && !COMPILER(CLANG)
+    RetainPtr<CFBooleanRef> canUseJIT(AdoptCF, (CFBooleanRef)CFPreferencesCopyAppValue(canUseJITKey, kCFPreferencesCurrentApplication));
     if (canUseJIT)
         return kCFBooleanTrue == canUseJIT.get();
 #endif
@@ -175,6 +182,8 @@ JSGlobalData::JSGlobalData(GlobalDataType globalDataType, ThreadStackType thread
     , m_newStringsSinceLastHashConst(0)
 #if ENABLE(ASSEMBLER) && (ENABLE(CLASSIC_INTERPRETER) || ENABLE(LLINT))
     , m_canUseAssembler(enableAssembler(executableAllocator))
+    , m_canUseJIT(m_canUseAssembler && Options::useJIT())
+    , m_canUseRegExpJIT(m_canUseAssembler && Options::useRegExpJIT())
 #endif
 #if ENABLE(GC_VALIDATION)
     , m_initializingObjectClass(0)

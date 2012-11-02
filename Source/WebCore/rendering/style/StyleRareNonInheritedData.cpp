@@ -23,7 +23,6 @@
 #include "StyleRareNonInheritedData.h"
 
 #include "ContentData.h"
-#include "MemoryInstrumentation.h"
 #include "RenderCounter.h"
 #include "RenderStyle.h"
 #include "ShadowData.h"
@@ -31,6 +30,7 @@
 #include "StyleTransformData.h"
 #include "StyleImage.h"
 #include "StyleResolver.h"
+#include "WebCoreMemoryInstrumentation.h"
 
 namespace WebCore {
 
@@ -304,7 +304,7 @@ bool StyleRareNonInheritedData::transitionDataEquivalent(const StyleRareNonInher
 
 void StyleRareNonInheritedData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
 #if ENABLE(DASHBOARD_SUPPORT)
     info.addVector(m_dashboardRegions);
 #endif

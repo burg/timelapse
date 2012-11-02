@@ -742,6 +742,8 @@ void Interpreter::addStackTraceIfNecessary(CallFrame* callFrame, JSObject* error
         globalObject = globalData->dynamicGlobalObject;
     else
         globalObject = error->globalObject();
+
+    // FIXME: JSStringJoiner could be more efficient than StringBuilder here.
     StringBuilder builder;
     for (unsigned i = 0; i < stackTrace.size(); i++) {
         builder.append(String(stackTrace[i].toString(globalObject->globalExec()).impl()));
@@ -1345,7 +1347,7 @@ JSValue Interpreter::execute(EvalExecutable* eval, CallFrame* callFrame, JSValue
         for (int i = 0; i < numFunctions; ++i) {
             FunctionExecutable* function = codeBlock->functionDecl(i);
             PutPropertySlot slot;
-            variableObject->methodTable()->put(variableObject, callFrame, function->name(), function->make(callFrame, scope), slot);
+            variableObject->methodTable()->put(variableObject, callFrame, function->name(), JSFunction::create(callFrame, function, scope), slot);
         }
     }
 
@@ -4257,7 +4259,7 @@ skip_id_custom_self:
         int shouldCheck = vPC[3].u.operand;
         ASSERT(codeBlock->codeType() != FunctionCode || !codeBlock->needsFullScopeChain() || callFrame->r(codeBlock->activationRegister()).jsValue());
         if (!shouldCheck || !callFrame->r(dst).jsValue())
-            callFrame->uncheckedR(dst) = JSValue(codeBlock->functionDecl(func)->make(callFrame, callFrame->scope()));
+            callFrame->uncheckedR(dst) = JSValue(JSFunction::create(callFrame, codeBlock->functionDecl(func), callFrame->scope()));
 
         vPC += OPCODE_LENGTH(op_new_func);
         NEXT_INSTRUCTION();
@@ -4275,19 +4277,7 @@ skip_id_custom_self:
         
         ASSERT(codeBlock->codeType() != FunctionCode || !codeBlock->needsFullScopeChain() || callFrame->r(codeBlock->activationRegister()).jsValue());
         FunctionExecutable* function = codeBlock->functionExpr(funcIndex);
-        JSFunction* func = function->make(callFrame, callFrame->scope());
-
-        /* 
-            The Identifier in a FunctionExpression can be referenced from inside
-            the FunctionExpression's FunctionBody to allow the function to call
-            itself recursively. However, unlike in a FunctionDeclaration, the
-            Identifier in a FunctionExpression cannot be referenced from and
-            does not affect the scope enclosing the FunctionExpression.
-         */
-        if (!function->name().isNull()) {
-            JSNameScope* functionScopeObject = JSNameScope::create(callFrame, function->name(), func, ReadOnly | DontDelete);
-            func->setScope(*globalData, functionScopeObject);
-        }
+        JSFunction* func = JSFunction::create(callFrame, function, callFrame->scope());
 
         callFrame->uncheckedR(dst) = JSValue(func);
 

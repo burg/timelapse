@@ -32,6 +32,7 @@
 #include "WKString.h"
 #include "WKURL.h"
 #include "WebContext.h"
+#include "WebPageGroup.h"
 #include "WebPopupItem.h"
 #include "WebPopupMenuProxyEfl.h"
 #include "ewk_back_forward_list_private.h"
@@ -41,6 +42,7 @@
 #include "ewk_popup_menu_item.h"
 #include "ewk_popup_menu_item_private.h"
 #include "ewk_private.h"
+#include "ewk_settings_private.h"
 #include "ewk_view_find_client_private.h"
 #include "ewk_view_form_client_private.h"
 #include "ewk_view_loader_client_private.h"
@@ -53,6 +55,7 @@
 #include <Edje.h>
 #include <WebCore/Cursor.h>
 #include <WebCore/EflScreenUtilities.h>
+#include <WebKit2/WKPageGroup.h>
 #include <wtf/text/CString.h>
 
 #if USE(ACCELERATED_COMPOSITING)
@@ -88,6 +91,8 @@ struct _Ewk_View_Private_Data {
     Evas_Object* cursorObject;
     LoadingResourcesMap loadingResourcesMap;
     Ewk_Back_Forward_List* backForwardList;
+    OwnPtr<Ewk_Settings> settings;
+    bool areMouseEventsEnabled;
 
     WebPopupMenuProxyEfl* popupMenuProxy;
     Eina_List* popupMenuItems;
@@ -105,6 +110,7 @@ struct _Ewk_View_Private_Data {
     _Ewk_View_Private_Data()
         : cursorObject(0)
         , backForwardList(0)
+        , areMouseEventsEnabled(false)
         , popupMenuProxy(0)
         , popupMenuItems(0)
 #ifdef HAVE_ECORE_X
@@ -409,13 +415,12 @@ static void _ewk_view_smart_add(Evas_Object* ewkView)
     evas_object_smart_member_add(smartData->image, ewkView);
     evas_object_show(smartData->image);
 
+    ewk_view_mouse_events_enabled_set(ewkView, true);
+
 #define CONNECT(s, c) evas_object_event_callback_add(ewkView, s, c, smartData)
     CONNECT(EVAS_CALLBACK_FOCUS_IN, _ewk_view_on_focus_in);
     CONNECT(EVAS_CALLBACK_FOCUS_OUT, _ewk_view_on_focus_out);
     CONNECT(EVAS_CALLBACK_MOUSE_WHEEL, _ewk_view_on_mouse_wheel);
-    CONNECT(EVAS_CALLBACK_MOUSE_DOWN, _ewk_view_on_mouse_down);
-    CONNECT(EVAS_CALLBACK_MOUSE_UP, _ewk_view_on_mouse_up);
-    CONNECT(EVAS_CALLBACK_MOUSE_MOVE, _ewk_view_on_mouse_move);
     CONNECT(EVAS_CALLBACK_KEY_DOWN, _ewk_view_on_key_down);
     CONNECT(EVAS_CALLBACK_KEY_UP, _ewk_view_on_key_up);
 #undef CONNECT
@@ -685,7 +690,10 @@ static void _ewk_view_initialize(Evas_Object* ewkView, Ewk_Context* context, WKP
 
     priv->pageClient = PageClientImpl::create(ewkView);
 
-    priv->pageProxy = toImpl(ewk_context_WKContext_get(context))->createWebPage(priv->pageClient.get(), toImpl(pageGroupRef));
+    if (pageGroupRef)
+        priv->pageProxy = toImpl(ewk_context_WKContext_get(context))->createWebPage(priv->pageClient.get(), toImpl(pageGroupRef));
+    else
+        priv->pageProxy = toImpl(ewk_context_WKContext_get(context))->createWebPage(priv->pageClient.get(), WebPageGroup::create().get());
 #if USE(COORDINATED_GRAPHICS)
     priv->pageProxy->pageGroup()->preferences()->setAcceleratedCompositingEnabled(true);
     priv->pageProxy->pageGroup()->preferences()->setForceCompositingMode(true);
@@ -694,6 +702,7 @@ static void _ewk_view_initialize(Evas_Object* ewkView, Ewk_Context* context, WKP
     priv->pageProxy->initializeWebPage();
 
     priv->backForwardList = ewk_back_forward_list_new(toAPI(priv->pageProxy->backForwardList()));
+    priv->settings = adoptPtr(new Ewk_Settings(WKPageGroupGetPreferences(WKPageGetPageGroup(toAPI(priv->pageProxy.get())))));
 
 #if USE(COORDINATED_GRAPHICS)
     priv->viewportHandler = EflViewportHandler::create(ewkView);
@@ -706,8 +715,6 @@ static void _ewk_view_initialize(Evas_Object* ewkView, Ewk_Context* context, WKP
     ewk_view_policy_client_attach(wkPage, ewkView);
     ewk_view_resource_load_client_attach(wkPage, ewkView);
     ewk_view_ui_client_attach(wkPage, ewkView);
-
-    ewk_view_theme_set(ewkView, DEFAULT_THEME_PATH"/default.edj");
 }
 
 static Evas_Object* _ewk_view_add_with_smart(Evas* canvas, Evas_Smart* smart)
@@ -849,6 +856,14 @@ Eina_Bool ewk_view_stop(Evas_Object* ewkView)
     priv->pageProxy->stopLoading();
 
     return true;
+}
+
+Ewk_Settings* ewk_view_settings_get(const Evas_Object* ewkView)
+{
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, 0);
+    EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, 0);
+
+    return priv->settings.get();
 }
 
 /**
@@ -1497,10 +1512,8 @@ void ewk_view_popup_menu_request(Evas_Object* ewkView, WebPopupMenuProxyEfl* pop
 
     Eina_List* popupItems = 0;
     size_t size = items.size();
-    for (size_t i = 0; i < size; ++i) {
-        Ewk_Popup_Menu_Item* item = ewk_popup_menu_item_new(items[i].m_type, items[i].m_text.utf8().data());
-        popupItems = eina_list_append(popupItems, item);
-    }
+    for (size_t i = 0; i < size; ++i)
+        popupItems = eina_list_append(popupItems, ewk_popup_menu_item_new(items[i]));
     priv->popupMenuItems = popupItems;
 
     smartData->api->popup_menu_show(smartData, rect, static_cast<Ewk_Text_Direction>(textDirection), pageScaleFactor, popupItems, selectedIndex);
@@ -1539,4 +1552,35 @@ Eina_Bool ewk_view_popup_menu_select(Evas_Object* ewkView, unsigned int selected
     priv->popupMenuProxy->valueChanged(selectedIndex);
 
     return true;
+}
+
+Eina_Bool ewk_view_mouse_events_enabled_set(Evas_Object* ewkView, Eina_Bool enabled)
+{
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, false);
+    EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, false);
+
+    enabled = !!enabled;
+    if (priv->areMouseEventsEnabled == enabled)
+        return true;
+
+    priv->areMouseEventsEnabled = enabled;
+    if (enabled) {
+        evas_object_event_callback_add(ewkView, EVAS_CALLBACK_MOUSE_DOWN, _ewk_view_on_mouse_down, smartData);
+        evas_object_event_callback_add(ewkView, EVAS_CALLBACK_MOUSE_UP, _ewk_view_on_mouse_up, smartData);
+        evas_object_event_callback_add(ewkView, EVAS_CALLBACK_MOUSE_MOVE, _ewk_view_on_mouse_move, smartData);
+    } else {
+        evas_object_event_callback_del(ewkView, EVAS_CALLBACK_MOUSE_DOWN, _ewk_view_on_mouse_down);
+        evas_object_event_callback_del(ewkView, EVAS_CALLBACK_MOUSE_UP, _ewk_view_on_mouse_up);
+        evas_object_event_callback_del(ewkView, EVAS_CALLBACK_MOUSE_MOVE, _ewk_view_on_mouse_move);
+    }
+
+    return true;
+}
+
+Eina_Bool ewk_view_mouse_events_enabled_get(const Evas_Object* ewkView)
+{
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, false);
+    EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, false);
+
+    return priv->areMouseEventsEnabled;
 }

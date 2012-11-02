@@ -1,3 +1,149 @@
+2012-09-07  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Move user agent helpers to WebCore
+        https://bugs.webkit.org/show_bug.cgi?id=95745
+
+        Reviewed by Carlos Garcia Campos.
+
+        Added an autoconf step for the new user agent shared code header in
+        WebCore. This is necessary so that we can use the user agent version
+        based on the information in the configure.ac file.
+
+        * configure.ac:
+
+2012-09-07  Allan Sandfeld Jensen  <allan.jensen@nokia.com>
+
+        Simplify hitTestResultAtPoint and nodesFromRect APIs
+        https://bugs.webkit.org/show_bug.cgi?id=95720
+
+        Reviewed by Antonio Gomes.
+
+        Update exported symbols.
+
+        * Source/autotools/symbols.filter:
+
+2012-09-07  Zan Dobersek  <zandobersek@gmail.com>
+
+        [GTK] Multiple feature defines in webcore_cppflags can occur
+        https://bugs.webkit.org/show_bug.cgi?id=95942
+
+        Reviewed by Martin Robinson.
+
+        Add the feature_defines_unstable variable that should control values of feature
+        defines for unstable features when unstable features are not enabled (e.g. release builds).
+
+        * GNUmakefile.am:
+
+2012-09-06  Zan Dobersek  <zandobersek@gmail.com>
+
+        [Gtk] Remove configuration options for features that are not supported by the Gtk port
+        https://bugs.webkit.org/show_bug.cgi?id=87664
+
+        Reviewed by Martin Robinson.
+
+        Remove configuration options for features that are completely unsupported by the GTK port.
+        They only bloat the configure.ac file. They should be re-added when the feature becomes
+        supported and introduces an external dependency that the users might want to avoid.
+
+        * configure.ac:
+
+2012-09-06  Simon Hausmann  <simon.hausmann@nokia.com>
+
+        [Qt] Fix build with ANGLE on platforms that provide EGL/GLESv2
+        https://bugs.webkit.org/show_bug.cgi?id=95965
+
+        Reviewed by Tor Arne Vestbø.
+
+        Add ANGLE as separate static library to the build and dependencies.
+
+        * Source/api.pri:
+        * WebKit.pro:
+
+2012-09-05  George Staikos  <staikos@webkit.org>
+
+        [BlackBerry] Match th ebuild flags from the platform library
+        https://bugs.webkit.org/show_bug.cgi?id=95423
+
+        Reviewed by Antonio Gomes.
+
+        Unaligned build flags can cause crashes and other strange behavior.
+        These two were not defined here but were defined on the system.
+
+        * Source/cmake/OptionsBlackBerry.cmake:
+
+2012-09-05  Kaustubh Atrawalkar  <kaustubh@motorola.com>
+
+        [DRT] LTC:: Move printing related APIs from LayoutTestController to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=92735
+
+        Reviewed by Hajime Morita.
+
+        Move numberOfPages, pageProperty & pageSizeAndMarginsInPixels in Internals and remove duplicated code from DumprenderTree & WebkitTestRunner.
+        Added symbols for GTK builds for corresponding APIs.
+
+        * Source/autotools/symbols.filter:
+
+2012-09-04  Julien Chaffraix  <jchaffraix@webkit.org>
+
+        REGRESSION(r120832): RenderLayer::clampScrollOffset doesn't properly clamp
+        https://bugs.webkit.org/show_bug.cgi?id=95776
+
+        Reviewed by Simon Fraser.
+
+        * ManualTests/select-menu-list-wrongly-positioned.html: Added.
+
+2012-09-04  Michał Pakuła vel Rutka  <m.pakula@samsung.com>
+
+        [EFL] Context menu restore.
+        https://bugs.webkit.org/show_bug.cgi?id=74179
+
+        Reviewed by Gyuyoung Kim.
+
+        Adds context menu support for EFL port using non-CROSS_PLATFORM_CONTEXT_MENUS
+        approach, the same as used in WebKit2.
+
+        * Source/cmake/OptionsEfl.cmake: Turn on CONTEXT_MENUS flag for EFL port
+
+2012-09-04  Allan Sandfeld Jensen  <allan.jensen@nokia.com>
+
+        Allow child-frame content in hit-tests.
+        https://bugs.webkit.org/show_bug.cgi?id=95204
+
+        Reviewed by Antonio Gomes.
+
+        Update exported symbols.
+
+        * Source/autotools/symbols.filter:
+
+2012-09-04  Jinwoo Song  <jinwoo7.song@samsung.com>
+
+        [CMAKE] Update cmakeconfig.h.cmake 
+        https://bugs.webkit.org/show_bug.cgi?id=95712
+       
+        Reviewed by Gyuyoung Kim.
+
+        Update feature definitions which are missing compared to WebKitFeatures.cmake
+
+        * Source/cmakeconfig.h.cmake:
+
+2012-09-03  Jinwoo Song  <jinwoo7.song@samsung.com>
+
+        [EFL] Use WebKitVersion.h to get version information
+        https://bugs.webkit.org/show_bug.cgi?id=95669
+
+        Reviewed by Gyuyoung Kim.
+
+        WEBKIT_USER_AGENT_MAJOR_VERSION and WEBKIT_USER_AGENT_MINOR_VERSION
+        are defined as constant in the OptionsEfl.cmake. But we do not need 
+        to define these here but can use the defined constant in WebKitVersion.h.
+
+        WebKitVersion.h is already generated with the version information 
+        from the Source/WebCore/Configurations/Version.xcconfig.
+
+        * Source/cmake/OptionsEfl.cmake: Do not set WEBKIT_USER_AGENT_* variables.
+        * Source/cmakeconfig.h.cmake: Remove WEBKIT_USER_AGENT_* definitions
+        as no more port uses.
+
 2012-08-31  Tony Chang  <tony@chromium.org>
 
         Remove ENABLE_CSS3_FLEXBOX compile time flag

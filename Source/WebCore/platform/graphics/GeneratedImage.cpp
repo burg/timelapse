@@ -32,7 +32,7 @@
 #include "GeneratedImage.h"
 
 #include "FloatSize.h"
-#include "MemoryInstrumentation.h"
+#include "WebCoreMemoryInstrumentation.h"
 
 
 namespace WebCore {
@@ -45,7 +45,7 @@ void GeneratedImage::computeIntrinsicDimensions(Length& intrinsicWidth, Length& 
 
 void GeneratedImage::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CachedResourceImage);
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CachedResourceImage);
     Image::reportMemoryUsage(memoryObjectInfo);
 }
 

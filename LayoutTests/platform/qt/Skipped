@@ -287,6 +287,7 @@ fast/dom/shadow/shadowdom-for-meter-without-appearance.html
 fast/dom/shadow/shadowdom-for-meter-without-shadow-element.html
 fast/dom/shadow/shadowdom-for-meter.html
 fast/dom/shadow/style-of-distributed-node.html
+fast/dom/shadow/shadowroot-clonenode.html
 
 # Fail until SUBPIXEL_LAYOUT is enabled
 # https://bugs.webkit.org/show_bug.cgi?id=85532
@@ -1738,8 +1739,6 @@ fast/forms/text-control-intrinsic-widths.html
 fast/forms/textarea-metrics.html
 fast/history/window-open.html
 fast/dom/Range/range-expand.html
-fast/encoding/frame-default-enc.html
-fast/encoding/invalid-xml.html
 fast/events/attempt-scroll-with-no-scrollbars.html
 fast/events/key-events-in-input-button.html
 fast/forms/radio/input-radio-checked-tab.html
@@ -2788,3 +2787,12 @@ http/tests/security/inactive-document-with-empty-security-origin.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=95507
 http/tests/notifications
+
+# Test fails after r127534.
+# https://bugs.webkit.org/show_bug.cgi?id=95827
+fast/innerHTML/innerHTML-iframe.html
+
+# New tests introduced in r127704 fail
+# https://bugs.webkit.org/show_bug.cgi?id=95952
+fast/viewport/viewport-limits-adjusted-for-no-user-scale-control.html
+fast/viewport/viewport-limits-adjusted-for-no-user-scale.html

@@ -1013,20 +1013,9 @@ public:
         for (Iterator it = parentMap.begin(); it != end; ++it) {
             CounterDirectives& directives = map.add(it->first, CounterDirectives()).iterator->second;
             if (counterBehavior == Reset) {
-                directives.m_reset = it->second.m_reset;
-                directives.m_resetValue = it->second.m_resetValue;
+                directives.inheritReset(it->second);
             } else {
-                // Inheriting a counter-increment means taking the parent's current value for the counter
-                // and adding it to itself.
-                directives.m_increment = it->second.m_increment;
-                directives.m_incrementValue = 0;
-                if (directives.m_increment) {
-                    float incrementValue = directives.m_incrementValue;
-                    directives.m_incrementValue = clampToInteger(incrementValue + it->second.m_incrementValue);
-                } else {
-                    directives.m_increment = true;
-                    directives.m_incrementValue = it->second.m_incrementValue;
-                }
+                directives.inheritIncrement(it->second);
             }
         }
     }
@@ -1043,9 +1032,9 @@ public:
         Iterator end = map.end();
         for (Iterator it = map.begin(); it != end; ++it)
             if (counterBehavior == Reset)
-                it->second.m_reset = false;
+                it->second.clearReset();
             else
-                it->second.m_increment = false;
+                it->second.clearIncrement();
 
         int length = list ? list->length() : 0;
         for (int i = 0; i < length; ++i) {
@@ -1059,20 +1048,12 @@ public:
 
             AtomicString identifier = static_cast<CSSPrimitiveValue*>(pair->first())->getStringValue();
             int value = static_cast<CSSPrimitiveValue*>(pair->second())->getIntValue();
-            CounterDirectives& directives = map.add(identifier.impl(), CounterDirectives()).iterator->second;
+            CounterDirectives& directives = map.add(identifier, CounterDirectives()).iterator->second;
             if (counterBehavior == Reset) {
-                directives.m_reset = true;
-                directives.m_resetValue = value;
+                directives.setResetValue(value);
             } else {
-                if (directives.m_increment) {
-                    float incrementValue = directives.m_incrementValue;
-                    directives.m_incrementValue = clampToInteger(incrementValue + value);
-                } else {
-                    directives.m_increment = true;
-                    directives.m_incrementValue = value;
-                }
+                directives.addIncrementValue(value);
             }
-            
         }
     }
     static PropertyHandler createHandler() { return PropertyHandler(&applyInheritValue, &emptyFunction, &applyValue); }
@@ -1903,6 +1884,7 @@ StyleBuilder::StyleBuilder()
     setPropertyHandler(CSSPropertyOutlineStyle, ApplyPropertyOutlineStyle::createHandler());
     setPropertyHandler(CSSPropertyOutlineWidth, ApplyPropertyComputeLength<unsigned short, &RenderStyle::outlineWidth, &RenderStyle::setOutlineWidth, &RenderStyle::initialOutlineWidth, NormalDisabled, ThicknessEnabled>::createHandler());
     setPropertyHandler(CSSPropertyOverflow, ApplyPropertyExpanding<ExpandValue, CSSPropertyOverflowX, CSSPropertyOverflowY>::createHandler());
+    setPropertyHandler(CSSPropertyOverflowWrap, ApplyPropertyDefault<EOverflowWrap, &RenderStyle::overflowWrap, EOverflowWrap, &RenderStyle::setOverflowWrap, EOverflowWrap, &RenderStyle::initialOverflowWrap>::createHandler());
     setPropertyHandler(CSSPropertyOverflowX, ApplyPropertyDefault<EOverflow, &RenderStyle::overflowX, EOverflow, &RenderStyle::setOverflowX, EOverflow, &RenderStyle::initialOverflowX>::createHandler());
     setPropertyHandler(CSSPropertyOverflowY, ApplyPropertyDefault<EOverflow, &RenderStyle::overflowY, EOverflow, &RenderStyle::setOverflowY, EOverflow, &RenderStyle::initialOverflowY>::createHandler());
     setPropertyHandler(CSSPropertyPadding, ApplyPropertyExpanding<SuppressValue, CSSPropertyPaddingTop, CSSPropertyPaddingRight, CSSPropertyPaddingBottom, CSSPropertyPaddingLeft>::createHandler());
@@ -2084,7 +2066,8 @@ StyleBuilder::StyleBuilder()
     setPropertyHandler(CSSPropertyWidth, ApplyPropertyLength<&RenderStyle::width, &RenderStyle::setWidth, &RenderStyle::initialSize, AutoEnabled, LegacyIntrinsicEnabled, IntrinsicEnabled, NoneDisabled, UndefinedDisabled>::createHandler());
     setPropertyHandler(CSSPropertyWordBreak, ApplyPropertyDefault<EWordBreak, &RenderStyle::wordBreak, EWordBreak, &RenderStyle::setWordBreak, EWordBreak, &RenderStyle::initialWordBreak>::createHandler());
     setPropertyHandler(CSSPropertyWordSpacing, ApplyPropertyComputeLength<int, &RenderStyle::wordSpacing, &RenderStyle::setWordSpacing, &RenderStyle::initialLetterWordSpacing, NormalEnabled, ThicknessDisabled, SVGZoomEnabled>::createHandler());
-    setPropertyHandler(CSSPropertyWordWrap, ApplyPropertyDefault<EWordWrap, &RenderStyle::wordWrap, EWordWrap, &RenderStyle::setWordWrap, EWordWrap, &RenderStyle::initialWordWrap>::createHandler());
+    // UAs must treat 'word-wrap' as an alternate name for the 'overflow-wrap' property. So using the same handlers.
+    setPropertyHandler(CSSPropertyWordWrap, ApplyPropertyDefault<EOverflowWrap, &RenderStyle::overflowWrap, EOverflowWrap, &RenderStyle::setOverflowWrap, EOverflowWrap, &RenderStyle::initialOverflowWrap>::createHandler());
     setPropertyHandler(CSSPropertyZIndex, ApplyPropertyAuto<int, &RenderStyle::zIndex, &RenderStyle::setZIndex, &RenderStyle::hasAutoZIndex, &RenderStyle::setHasAutoZIndex>::createHandler());
     setPropertyHandler(CSSPropertyZoom, ApplyPropertyZoom::createHandler());
 }

@@ -119,13 +119,11 @@
 #include "TextFieldDecoratorImpl.h"
 #include "TextIterator.h"
 #include "Timer.h"
-#include "TouchpadFlingPlatformGestureCurve.h"
 #include "TraceEvent.h"
 #include "UserGestureIndicator.h"
 #include "WebAccessibilityObject.h"
 #include "WebActiveWheelFlingParameters.h"
 #include "WebAutofillClient.h"
-#include "WebCompositorImpl.h"
 #include "WebDevToolsAgentImpl.h"
 #include "WebDevToolsAgentPrivate.h"
 #include "WebFrameImpl.h"
@@ -149,8 +147,8 @@
 #include "WheelEvent.h"
 #include "painting/GraphicsContextBuilder.h"
 #include <public/Platform.h>
-#include <public/WebCompositor.h>
 #include <public/WebCompositorOutputSurface.h>
+#include <public/WebCompositorSupport.h>
 #include <public/WebDragData.h>
 #include <public/WebFloatPoint.h>
 #include <public/WebGraphicsContext3D.h>
@@ -168,6 +166,7 @@
 #include <wtf/Uint8ClampedArray.h>
 
 #if ENABLE(GESTURE_EVENTS)
+#include "PlatformGestureCurveFactory.h"
 #include "PlatformGestureEvent.h"
 #include "TouchDisambiguation.h"
 #endif
@@ -638,17 +637,13 @@ void WebViewImpl::handleMouseUp(Frame& mainFrame, const WebMouseEvent& event)
         FrameView* view = m_page->mainFrame()->view();
         IntPoint clickPoint(m_lastMouseDownPoint.x, m_lastMouseDownPoint.y);
         IntPoint contentPoint = view->windowToContents(clickPoint);
-        HitTestResult hitTestResult = focused->eventHandler()->hitTestResultAtPoint(contentPoint, false, false, ShouldHitTestScrollbars);
+        HitTestResult hitTestResult = focused->eventHandler()->hitTestResultAtPoint(contentPoint, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::TestChildFrameScrollBars);
         // We don't want to send a paste when middle clicking a scroll bar or a
         // link (which will navigate later in the code).  The main scrollbars
         // have to be handled separately.
         if (!hitTestResult.scrollbar() && !hitTestResult.isLiveLink() && focused && !view->scrollbarAtPoint(clickPoint)) {
             Editor* editor = focused->editor();
-            Pasteboard* pasteboard = Pasteboard::generalPasteboard();
-            bool oldSelectionMode = pasteboard->isSelectionMode();
-            pasteboard->setSelectionMode(true);
-            editor->command(AtomicString("Paste")).execute();
-            pasteboard->setSelectionMode(oldSelectionMode);
+            editor->command(AtomicString("PasteGlobalSelection")).execute();
         }
     }
 #endif
@@ -693,7 +688,8 @@ bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
         m_lastWheelGlobalPosition = WebPoint(event.globalX, event.globalY);
         m_flingModifier = event.modifiers;
         // FIXME: Make the curve parametrizable from the browser.
-        m_gestureAnimation = ActivePlatformGestureAnimation::create(TouchpadFlingPlatformGestureCurve::create(FloatPoint(event.deltaX, event.deltaY)), this);
+        OwnPtr<PlatformGestureCurve> flingCurve = PlatformGestureCurveFactory::get()->createCurve(event.data.flingStart.sourceDevice, FloatPoint(event.data.flingStart.velocityX, event.data.flingStart.velocityY));
+        m_gestureAnimation = ActivePlatformGestureAnimation::create(flingCurve.release(), this);
         scheduleAnimation();
         return true;
     }
@@ -718,7 +714,7 @@ bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
             findGoodTouchTargets(event.boundingBox, mainFrameImpl()->frame(), pageScaleFactor(), goodTargets);
             // FIXME: replace touch adjustment code when numberOfGoodTargets == 1?
             // Single candidate case is currently handled by: https://bugs.webkit.org/show_bug.cgi?id=85101
-            if (goodTargets.size() >= 2 && m_client && m_client->handleDisambiguationPopup(event, goodTargets))
+            if (goodTargets.size() >= 2 && m_client && m_client->didTapMultipleTargets(event, goodTargets))
                 return true;
         }
 
@@ -785,7 +781,7 @@ void WebViewImpl::transferActiveWheelFlingAnimation(const WebActiveWheelFlingPar
     m_lastWheelPosition = parameters.point;
     m_lastWheelGlobalPosition = parameters.globalPoint;
     m_flingModifier = parameters.modifiers;
-    OwnPtr<PlatformGestureCurve> curve = TouchpadFlingPlatformGestureCurve::create(parameters.delta, IntPoint(parameters.cumulativeScroll));
+    OwnPtr<PlatformGestureCurve> curve = PlatformGestureCurveFactory::get()->createCurve(parameters.sourceDevice, parameters.delta, IntPoint(parameters.cumulativeScroll));
     m_gestureAnimation = ActivePlatformGestureAnimation::create(curve.release(), this, parameters.startTime);
     scheduleAnimation();
 }
@@ -1005,9 +1001,8 @@ WebRect WebViewImpl::computeBlockBounds(const WebRect& rect, AutoZoomType zoomTy
 
     // Use the rect-based hit test to find the node.
     IntPoint point = mainFrameImpl()->frameView()->windowToContents(IntPoint(rect.x, rect.y));
-    HitTestResult result = mainFrameImpl()->frame()->eventHandler()->hitTestResultAtPoint(point,
-            false, zoomType == FindInPage, DontHitTestScrollbars, HitTestRequest::Active | HitTestRequest::ReadOnly,
-            IntSize(rect.width, rect.height));
+    HitTestRequest::HitTestRequestType hitType = HitTestRequest::ReadOnly | HitTestRequest::Active | ((zoomType == FindInPage) ? HitTestRequest::IgnoreClipping : 0);
+    HitTestResult result = mainFrameImpl()->frame()->eventHandler()->hitTestResultAtPoint(point, hitType, IntSize(rect.width, rect.height));
 
     Node* node = result.innerNonSharedNode();
     if (!node)
@@ -1818,7 +1813,7 @@ void WebViewImpl::themeChanged()
 void WebViewImpl::composite(bool)
 {
 #if USE(ACCELERATED_COMPOSITING)
-    if (WebCompositor::threadingEnabled())
+    if (Platform::current()->compositorSupport()->isThreadingEnabled())
         m_layerTreeView->setNeedsRedraw();
     else {
         ASSERT(isAcceleratedCompositingActive());
@@ -3734,7 +3729,7 @@ WebCore::GraphicsLayer* WebViewImpl::rootGraphicsLayer()
 void WebViewImpl::scheduleAnimation()
 {
     if (isAcceleratedCompositingActive()) {
-        if (WebCompositor::threadingEnabled()) {
+        if (Platform::current()->compositorSupport()->isThreadingEnabled()) {
             ASSERT(m_layerTreeView);
             m_layerTreeView->setNeedsAnimate();
         } else
@@ -3967,7 +3962,7 @@ void WebViewImpl::didRecreateOutputSurface(bool success)
 
 void WebViewImpl::scheduleComposite()
 {
-    ASSERT(!WebCompositor::threadingEnabled());
+    ASSERT(!Platform::current()->compositorSupport()->isThreadingEnabled());
     m_client->scheduleComposite();
 }
 
@@ -3980,14 +3975,14 @@ void WebViewImpl::updateLayerTreeViewport()
     IntRect visibleRect = view->visibleContentRect(true /* include scrollbars */);
     IntPoint scroll(view->scrollX(), view->scrollY());
 
-    // This part of the deviceScale will be used to scale the contents of
-    // the NCCH's GraphicsLayer.
-    float deviceScale = m_deviceScaleInCompositor;
-    m_nonCompositedContentHost->setViewport(visibleRect.size(), view->contentsSize(), scroll, view->scrollOrigin(), deviceScale);
+    m_nonCompositedContentHost->setViewport(visibleRect.size(), view->contentsSize(), scroll, view->scrollOrigin());
 
     IntSize layoutViewportSize = size();
     IntSize deviceViewportSize = size();
-    deviceViewportSize.scale(deviceScale);
+
+    // This part of the deviceScale will be used to scale the contents of
+    // the NCCH's GraphicsLayer.
+    deviceViewportSize.scale(m_deviceScaleInCompositor);
     m_layerTreeView->setViewportSize(layoutViewportSize, deviceViewportSize);
     m_layerTreeView->setPageScaleFactorAndLimits(pageScaleFactor(), m_minimumPageScaleFactor, m_maximumPageScaleFactor);
 }

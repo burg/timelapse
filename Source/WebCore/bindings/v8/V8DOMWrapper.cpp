@@ -197,7 +197,7 @@ v8::Local<v8::Object> V8DOMWrapper::instantiateV8Object(Frame* frame, WrapperTyp
         // Avoid setting the DOM wrapper for failed allocations.
         setDOMWrapper(instance, type, impl);
         if (type == &V8HTMLDocument::info)
-            instance = V8HTMLDocument::WrapInShadowObject(instance, static_cast<Node*>(impl));
+            instance = V8HTMLDocument::wrapInShadowObject(instance, static_cast<Node*>(impl));
     }
     return instance;
 }
@@ -246,10 +246,10 @@ bool V8DOMWrapper::isWrapperOfType(v8::Handle<v8::Value> value, WrapperTypeInfo*
 
 #define TRY_TO_WRAP_WITH_INTERFACE(interfaceName) \
     if (eventNames().interfaceFor##interfaceName == desiredInterface) \
-        return toV8(static_cast<interfaceName*>(target), isolate);
+        return toV8(static_cast<interfaceName*>(target), creationContext, isolate);
 
 // A JS object of type EventTarget is limited to a small number of possible classes.
-v8::Handle<v8::Value> V8DOMWrapper::convertEventTargetToV8Object(EventTarget* target, v8::Isolate* isolate)
+v8::Handle<v8::Value> V8DOMWrapper::convertEventTargetToV8Object(EventTarget* target, v8::Handle<v8::Context> creationContext, v8::Isolate* isolate)
 {
     if (!target)
         return v8NullWithCheck(isolate);

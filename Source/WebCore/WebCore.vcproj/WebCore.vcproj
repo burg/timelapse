@@ -27283,6 +27283,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\page\scrolling\ScrollingConstraints.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\page\scrolling\ScrollingConstraints.h"
+				>
+			</File>
+			<File
 				RelativePath="..\page\scrolling\ScrollingCoordinator.cpp"
 				>
 			</File>
@@ -33694,10 +33702,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\platform\text\PlatformString.h"
-					>
-				</File>
-				<File
 					RelativePath="..\platform\text\QuotedPrintable.cpp"
 					>
 				</File>
@@ -33719,10 +33723,6 @@
 				</File>
 				<File
 					RelativePath="..\platform\text\SegmentedString.h"
-					>
-				</File>
-				<File
-					RelativePath="..\platform\text\String.cpp"
 					>
 				</File>
 				<File
@@ -33828,6 +33828,26 @@
 				<File
 					RelativePath="..\platform\text\TextBreakIterator.h"
 					>
+				</File>
+				<File
+					RelativePath="..\platform\text\TextBreakIterator.cpp"
+					>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Production|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\platform\text\TextBreakIteratorICU.cpp"
@@ -37984,6 +38004,14 @@
 			</File>
 			<File
 				RelativePath="..\css\SVGCSSStyleSelector.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\css\WebKitCSSArrayFunctionValue.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\css\WebKitCSSArrayFunctionValue.h"
 				>
 			</File>
 			<File
@@ -51855,10 +51883,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\dom\MemoryInstrumentation.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\dom\MemoryInstrumentation.h"
 				>
 			</File>
@@ -55276,6 +55300,14 @@
 			</File>
 			<File
 				RelativePath="..\dom\DOMNamedFlowCollection.h"
+				>
+			</File>
+			<File
+				RelativePath="..\dom\WebCoreMemoryInstrumentation.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\dom\WebCoreMemoryInstrumentation.h"
 				>
 			</File>
 			<File
@@ -76234,10 +76266,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\inspector\front-end\JavaScriptContextManager.js"
-					>
-				</File>
-				<File
 					RelativePath="..\inspector\front-end\JavaScriptFormatter.js"
 					>
 				</File>
@@ -76322,6 +76350,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\inspector\front-end\NetworkUISourceCodeProvider.js"
+					>
+				</File>
+				<File
 					RelativePath="..\inspector\front-end\NetworkRequest.js"
 					>
 				</File>
@@ -76398,10 +76430,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\inspector\front-end\RawSourceCode.js"
-					>
-				</File>
-				<File
 					RelativePath="..\inspector\front-end\RemoteObject.js"
 					>
 				</File>
@@ -76463,6 +76491,10 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\ResourceUtils.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\RuntimeModel.js"
 					>
 				</File>
 				<File
@@ -76627,10 +76659,6 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\StylesSourceMapping.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\StylesUISourceCodeProvider.js"
 					>
 				</File>
 				<File

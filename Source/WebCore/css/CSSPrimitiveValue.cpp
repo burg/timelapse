@@ -32,13 +32,13 @@
 #include "Counter.h"
 #include "ExceptionCode.h"
 #include "Font.h"
-#include "MemoryInstrumentation.h"
 #include "Node.h"
 #include "Pair.h"
 #include "RGBColor.h"
 #include "Rect.h"
 #include "RenderStyle.h"
 #include "StyleSheetContents.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/ASCIICType.h>
 #include <wtf/DecimalNumber.h>
 #include <wtf/StdLibExtras.h>
@@ -91,7 +91,9 @@ static inline bool isValidCSSUnitTypeForDoubleConversion(CSSPrimitiveValue::Unit
     case CSSPrimitiveValue:: CSS_ATTR:
     case CSSPrimitiveValue:: CSS_COUNTER:
     case CSSPrimitiveValue:: CSS_COUNTER_NAME:
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
     case CSSPrimitiveValue:: CSS_DASHBOARD_REGION:
+#endif
 #if !ENABLE(CSS_IMAGE_RESOLUTION)
     case CSSPrimitiveValue:: CSS_DPPX:
     case CSSPrimitiveValue:: CSS_DPI:
@@ -365,11 +367,14 @@ CSSPrimitiveValue::~CSSPrimitiveValue()
 
 void CSSPrimitiveValue::cleanup()
 {
-    switch (m_primitiveUnitType) {
+    switch (static_cast<UnitTypes>(m_primitiveUnitType)) {
     case CSS_STRING:
     case CSS_URI:
     case CSS_ATTR:
     case CSS_COUNTER_NAME:
+#if ENABLE(CSS_VARIABLES)
+    case CSS_VARIABLE_NAME:
+#endif
     case CSS_PARSER_HEXCOLOR:
         if (m_value.string)
             m_value.string->deref();
@@ -386,7 +391,7 @@ void CSSPrimitiveValue::cleanup()
     case CSS_PAIR:
         m_value.pair->deref();
         break;
-#if ENABLE(DASHBOARD_SUPPORT)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
     case CSS_DASHBOARD_REGION:
         if (m_value.region)
             m_value.region->deref();
@@ -394,6 +399,10 @@ void CSSPrimitiveValue::cleanup()
 #endif
     case CSS_CALC:
         m_value.calc->deref();
+        break;
+    case CSS_CALC_PERCENTAGE_WITH_NUMBER:
+    case CSS_CALC_PERCENTAGE_WITH_LENGTH:
+        ASSERT_NOT_REACHED();
         break;
     case CSS_SHAPE:
         m_value.shape->deref();
@@ -421,10 +430,14 @@ void CSSPrimitiveValue::cleanup()
     case CSS_VW:
     case CSS_VH:
     case CSS_VMIN:
+    case CSS_DPPX:
+    case CSS_DPI:
+    case CSS_DPCM:
     case CSS_IDENT:
     case CSS_RGBCOLOR:
     case CSS_DIMENSION:
     case CSS_UNKNOWN:
+    case CSS_UNICODE_RANGE:
     case CSS_PARSER_OPERATOR:
     case CSS_PARSER_IDENTIFIER:
         break;
@@ -494,6 +507,10 @@ template<> double CSSPrimitiveValue::computeLength(RenderStyle* style, RenderSty
 
 double CSSPrimitiveValue::computeLengthDouble(RenderStyle* style, RenderStyle* rootStyle, float multiplier, bool computingFontSize)
 {
+    if (m_primitiveUnitType == CSS_CALC)
+        // The multiplier and factor is applied to each value in the calc expression individually
+        return m_value.calc->computeLengthPx(style, rootStyle, multiplier, computingFontSize);
+        
     double factor;
 
     switch (primitiveType()) {
@@ -540,18 +557,11 @@ double CSSPrimitiveValue::computeLengthDouble(RenderStyle* style, RenderStyle* r
             return -1.0;
     }
 
-    double computedValue;
-    if (m_primitiveUnitType == CSS_CALC)
-        // The multiplier is passed in as 1.0 here to ensure it is only applied once
-        computedValue = m_value.calc->computeLengthPx(style, rootStyle, 1.0, computingFontSize);
-    else
-        computedValue = getDoubleValue();
-    
     // We do not apply the zoom factor when we are computing the value of the font-size property. The zooming
     // for font sizes is much more complicated, since we have to worry about enforcing the minimum font size preference
     // as well as enforcing the implicit "smart minimum." In addition the CSS property text-size-adjust is used to
     // prevent text from zooming at all. Therefore we will not apply the zoom here if we are computing font-size.
-    double result = computedValue * factor;
+    double result = getDoubleValue() * factor;
     if (computingFontSize || isFontRelativeLength())
         return result;
 
@@ -1252,7 +1262,7 @@ PassRefPtr<CSSPrimitiveValue> CSSPrimitiveValue::cloneForCSSOM() const
 
 void CSSPrimitiveValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::CSS);
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     switch (m_primitiveUnitType) {
     case CSS_ATTR:
     case CSS_COUNTER_NAME:

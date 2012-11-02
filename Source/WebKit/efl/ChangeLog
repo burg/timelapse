@@ -1,3 +1,207 @@
+2012-09-07  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL] Use same default minimum logical font size in DRT and WTR
+        https://bugs.webkit.org/show_bug.cgi?id=96116
+
+        Reviewed by Martin Robinson.
+
+        Add DRT helper function to set the minimum logical
+        font size setting.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::setMinimumLogicalFontSize):
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+
+2012-09-07  Allan Sandfeld Jensen  <allan.jensen@nokia.com>
+
+        Simplify hitTestResultAtPoint and nodesFromRect APIs
+        https://bugs.webkit.org/show_bug.cgi?id=95720
+
+        Reviewed by Antonio Gomes.
+
+        Update calls to new API.
+
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_hit_test_new):
+
+2012-09-07  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        Unreviewed, rolling out r127839.
+        http://trac.webkit.org/changeset/127839
+        https://bugs.webkit.org/show_bug.cgi?id=90603
+
+        This patch was landed with wrong implementation and policy.
+
+        * WebCoreSupport/NotificationPresenterClientEfl.cpp:
+        (WebCore::NotificationPresenterClientEfl::NotificationPresenterClientEfl):
+        (WebCore::NotificationPresenterClientEfl::requestPermission):
+        (WebCore::NotificationPresenterClientEfl::checkPermission):
+        (WebCore::NotificationPresenterClientEfl::cancelRequestsForPermission):
+        * WebCoreSupport/NotificationPresenterClientEfl.h:
+        (NotificationPresenterClientEfl):
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new):
+        * ewk/ewk_view.h:
+        * ewk/ewk_view_private.h:
+
+2012-09-07  Kihong Kwon  <kihong.kwon@samsung.com>
+
+        [EFL] Support the permission function of the Web Notification.
+        https://bugs.webkit.org/show_bug.cgi?id=90603
+
+        Reviewed by Gyuyoung Kim.
+
+        Implement permission related functions of Web Notifications.
+        checkPermission for Notification.permissionLevel().
+        requestPermission for Notification.requestPermission().
+        In addition, if the application(like a browser) has permitted domains already,
+        it can be cached using ewk_view_notification_permissions_store.
+
+        * WebCoreSupport/NotificationPresenterClientEfl.cpp:
+        (WebCore::NotificationPresenterClientEfl::NotificationPresenterClientEfl):
+        (WebCore::NotificationPresenterClientEfl::requestPermission):
+        (WebCore::NotificationPresenterClientEfl::checkPermission):
+        (WebCore::NotificationPresenterClientEfl::addToPermissionCache):
+        (WebCore):
+        (WebCore::NotificationPresenterClientEfl::setPermission):
+        * WebCoreSupport/NotificationPresenterClientEfl.h:
+        (WebCore):
+        (NotificationPresenterClientEfl):
+        (WebCore::NotificationPresenterClientEfl::requestPermission):
+        (WebCore::NotificationPresenterClientEfl::cancelRequestsForPermission):
+        * ewk/ewk_view.cpp:
+        (_ewk_view_priv_new):
+        (ewk_view_notification_permission_store):
+        (ewk_view_notification_permissions_set):
+        (ewk_view_notification_permission_request):
+        * ewk/ewk_view.h:
+        * ewk/ewk_view_private.h:
+
+2012-09-05  Sam Weinig  <sam@webkit.org>
+
+        Part 2 of removing PlatformString.h, remove PlatformString.h
+        https://bugs.webkit.org/show_bug.cgi?id=95931
+
+        Reviewed by Adam Barth.
+
+        Remove PlatformString.h
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        * WebCoreSupport/InspectorClientEfl.cpp:
+
+2012-09-06  Kangil Han  <kangil.han@samsung.com>
+
+        [EFL] Remove unnecessary logic in ewk_frame_source_get.
+        https://bugs.webkit.org/show_bug.cgi?id=95828
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Removed unnecessary logic that checks if <html> tag exists in document.
+        WebKit automatically fill out <html></html> tags if they are not existed.
+
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_source_get):
+
+2012-09-05  Kangil Han  <kangil.han@samsung.com>
+
+        [EFL] Remove '+=' usage in String
+        https://bugs.webkit.org/show_bug.cgi?id=95808
+
+        Reviewed by Benjamin Poulain.
+
+        Replaced use of String operator '+=' with StringBuilder.append*() in order to adopt efficient String concatenation.
+
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_source_get): Removed unnecessary strlen usage.
+
+2012-09-05  Kaustubh Atrawalkar  <kaustubh@motorola.com>
+
+        [DRT] LTC:: Move printing related APIs from LayoutTestController to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=92735
+
+        Reviewed by Hajime Morita.
+
+        Move numberOfPages, pageProperty & pageSizeAndMarginsInPixels in Internals and remove duplicated code from DumprenderTree & WebkitTestRunner.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+
+2012-09-04  Michał Pakuła vel Rutka  <m.pakula@samsung.com>
+
+        [EFL] Context menu restore. 
+        https://bugs.webkit.org/show_bug.cgi?id=74179
+
+        Reviewed by Gyuyoung Kim.
+
+        Adds context menu support for EFL port using non-CROSS_PLATFORM_CONTEXT_MENUS
+        approach, the same as used in WebKit2.
+
+        * WebCoreSupport/ContextMenuClientEfl.cpp: Added.
+        (WebCore):
+        (WebCore::ContextMenuClientEfl::contextMenuDestroyed):
+        (WebCore::ContextMenuClientEfl::getCustomMenuFromDefaultItems):
+        (WebCore::ContextMenuClientEfl::contextMenuItemSelected):
+        (WebCore::ContextMenuClientEfl::downloadURL):
+        (WebCore::ContextMenuClientEfl::lookUpInDictionary):
+        (WebCore::ContextMenuClientEfl::speak):
+        (WebCore::ContextMenuClientEfl::isSpeaking):
+        (WebCore::ContextMenuClientEfl::stopSpeaking):
+        (WebCore::ContextMenuClientEfl::searchWithGoogle):
+        * WebCoreSupport/ContextMenuClientEfl.h: Added.
+        (WebCore):
+        (ContextMenuClientEfl):
+        * ewk/ewk_contextmenu.cpp: Removed ewk_context_menu_customize implementation.
+        (ewk_context_menu_destroy): Added freeing context menu. 
+        (ewk_context_menu_new): Added filling ewk_contextmenu list.
+        (ewk_context_menu_item_append):
+        * ewk/ewk_contextmenu_private.h: Removed ewk_context_menu_customize and changed ewk_context_menu_new definition.
+        * ewk/ewk_view.cpp:
+        (_Ewk_View_Private_Data):
+        (_ewk_view_priv_new):
+        (_ewk_view_priv_del):
+        (ewk_view_context_menu_forward_event):
+
+2012-09-04  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Drop default theme concept
+        https://bugs.webkit.org/show_bug.cgi?id=94778
+
+        Reviewed by Gyuyoung Kim.
+
+        * ewk/ewk_view.h:
+        Updated doxygen document not to mention default theme.
+
+2012-09-03  Jinwoo Song  <jinwoo7.song@samsung.com>
+
+        [EFL] Fix e_dbus_shutdown() error when exiting the Minibrowser
+        https://bugs.webkit.org/show_bug.cgi?id=95636
+
+        Reviewed by Gyuyoung Kim.
+
+        Invoke stopUpdating() in the destructor of BatteryClinetEfl()
+        to call e_ukit_shutdown() and e_dbus_shutdown() if and when 
+        stopUpdating() has not been called explicitly.
+
+        * WebCoreSupport/BatteryClientEfl.cpp:
+        (BatteryClientEfl::~BatteryClientEfl):
+        * WebCoreSupport/BatteryClientEfl.h:
+        (BatteryClientEfl):
+
+2012-09-03  Jinwoo Song  <jinwoo7.song@samsung.com>
+
+        [EFL] Use WebKitVersion.h to get version information
+        https://bugs.webkit.org/show_bug.cgi?id=95669
+
+        Reviewed by Gyuyoung Kim.
+
+        Use WEBKIT_MAJOR_VERSION and WEBKIT_MINOR_VERSION 
+        in the WebKitVersion.h
+
+        Relocate the StorageTracker.h to keep the sorted order.
+
+        * ewk/ewk_settings.cpp:
+        (ewk_settings_default_user_agent_get):
+
 2012-09-01  Jinwoo Song  <jinwoo7.song@samsung.com>
 
         [EFL] Refactoring the DumpRenderTreeSupportEfl

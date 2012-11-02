@@ -108,7 +108,6 @@
 #include "Logging.h"
 #include "MediaQueryList.h"
 #include "MediaQueryMatcher.h"
-#include "MemoryInstrumentation.h"
 #include "MouseEventWithHitTestResults.h"
 #include "NameNodeList.h"
 #include "NamedFlowCollection.h"
@@ -156,6 +155,7 @@
 #include "TreeWalker.h"
 #include "UndoManager.h"
 #include "UserContentURLPattern.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include "WebKitNamedFlow.h"
 #include "XMLDocumentParser.h"
 #include "XMLHttpRequest.h"
@@ -1384,7 +1384,7 @@ String Document::suggestedMIMEType() const
 // * making it receive a rect as parameter, i.e. nodesFromRect(x, y, w, h);
 // * making it receive the expading size of each direction separately,
 //   i.e. nodesFromRect(x, y, topSize, rightSize, bottomSize, leftSize);
-PassRefPtr<NodeList> Document::nodesFromRect(int centerX, int centerY, unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent) const
+PassRefPtr<NodeList> Document::nodesFromRect(int centerX, int centerY, unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding, HitTestRequest::HitTestRequestType hitType) const
 {
     // FIXME: Share code between this, elementFromPoint and caretRangeFromPoint.
     if (!renderer())
@@ -1399,15 +1399,11 @@ PassRefPtr<NodeList> Document::nodesFromRect(int centerX, int centerY, unsigned 
     float zoomFactor = frame->pageZoomFactor();
     LayoutPoint point = roundedLayoutPoint(FloatPoint(centerX * zoomFactor + view()->scrollX(), centerY * zoomFactor + view()->scrollY()));
 
-    int type = HitTestRequest::ReadOnly | HitTestRequest::Active;
+    HitTestRequest request(hitType);
 
     // When ignoreClipping is false, this method returns null for coordinates outside of the viewport.
-    if (ignoreClipping)
-        type |= HitTestRequest::IgnoreClipping;
-    else if (!frameView->visibleContentRect().intersects(HitTestResult::rectForPoint(point, topPadding, rightPadding, bottomPadding, leftPadding)))
+    if (!request.ignoreClipping() && !frameView->visibleContentRect().intersects(HitTestResult::rectForPoint(point, topPadding, rightPadding, bottomPadding, leftPadding)))
         return 0;
-
-    HitTestRequest request(type);
 
     // Passing a zero padding will trigger a rect hit test, however for the purposes of nodesFromRect,
     // we special handle this case in order to return a valid NodeList.
@@ -1416,8 +1412,7 @@ PassRefPtr<NodeList> Document::nodesFromRect(int centerX, int centerY, unsigned 
         return handleZeroPadding(request, result);
     }
 
-    enum ShadowContentFilterPolicy shadowContentFilterPolicy = allowShadowContent ? AllowShadowContent : DoNotAllowShadowContent;
-    HitTestResult result(point, topPadding, rightPadding, bottomPadding, leftPadding, shadowContentFilterPolicy);
+    HitTestResult result(point, topPadding, rightPadding, bottomPadding, leftPadding);
     renderView()->hitTest(request, result);
 
     return StaticHashSetNodeList::adopt(result.rectBasedTestResult());
@@ -4894,6 +4889,10 @@ void Document::finishedParsing()
 
         InspectorInstrumentation::domContentLoadedEventFired(f.get());
     }
+
+    // The ElementAttributeData sharing cache is only used during parsing since
+    // that's when the majority of immutable attribute data will be created.
+    m_immutableAttributeDataCache.clear();
 }
 
 PassRefPtr<XPathExpression> Document::createExpression(const String& expression,
@@ -5874,7 +5873,7 @@ void Document::webkitExitPointerLock()
 
 Element* Document::webkitPointerLockElement() const
 {
-    if (!page())
+    if (!page() || page()->pointerLockController()->lockPending())
         return 0;
     if (Element* element = page()->pointerLockController()->element()) {
         if (element->document() == this)
@@ -6125,7 +6124,7 @@ void Document::setContextFeatures(PassRefPtr<ContextFeatures> features)
 
 void Document::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::DOM);
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
     info.addInstrumentedMember(m_styleResolver);
     ContainerNode::reportMemoryUsage(memoryObjectInfo);
     info.addVector(m_customFonts);
@@ -6179,5 +6178,74 @@ PassRefPtr<UndoManager> Document::undoManager()
     return m_undoManager;
 }
 #endif
+
+class ImmutableAttributeDataCacheKey {
+public:
+    ImmutableAttributeDataCacheKey()
+        : m_localName(0)
+        , m_attributes(0)
+        , m_attributeCount(0)
+    { }
+
+    ImmutableAttributeDataCacheKey(const AtomicString& localName, const Attribute* attributes, unsigned attributeCount)
+        : m_localName(localName.impl())
+        , m_attributes(attributes)
+        , m_attributeCount(attributeCount)
+    { }
+
+    bool operator!=(const ImmutableAttributeDataCacheKey& other) const
+    {
+        if (m_localName != other.m_localName)
+            return true;
+        if (m_attributeCount != other.m_attributeCount)
+            return true;
+        return memcmp(m_attributes, other.m_attributes, sizeof(Attribute) * m_attributeCount);
+    }
+
+    unsigned hash() const
+    {
+        unsigned attributeHash = StringHasher::hashMemory(m_attributes, m_attributeCount * sizeof(Attribute));
+        return WTF::intHash((static_cast<uint64_t>(m_localName->existingHash()) << 32 | attributeHash));
+    }
+
+private:
+    AtomicStringImpl* m_localName;
+    const Attribute* m_attributes;
+    unsigned m_attributeCount;
+};
+
+struct ImmutableAttributeDataCacheEntry {
+    ImmutableAttributeDataCacheKey key;
+    RefPtr<ElementAttributeData> value;
+};
+
+PassRefPtr<ElementAttributeData> Document::cachedImmutableAttributeData(const Element* element, const Vector<Attribute>& attributes)
+{
+    ASSERT(!attributes.isEmpty());
+
+    ImmutableAttributeDataCacheKey cacheKey(element->localName(), attributes.data(), attributes.size());
+    unsigned cacheHash = cacheKey.hash();
+
+    ImmutableAttributeDataCache::iterator cacheIterator = m_immutableAttributeDataCache.add(cacheHash, nullptr).iterator;
+    if (cacheIterator->second && cacheIterator->second->key != cacheKey)
+        cacheHash = 0;
+
+    RefPtr<ElementAttributeData> attributeData;
+    if (cacheHash && cacheIterator->second)
+        attributeData = cacheIterator->second->value;
+    else
+        attributeData = ElementAttributeData::createImmutable(attributes);
+
+    if (!cacheHash || cacheIterator->second)
+        return attributeData.release();
+
+    OwnPtr<ImmutableAttributeDataCacheEntry> newEntry = adoptPtr(new ImmutableAttributeDataCacheEntry);
+    newEntry->key = ImmutableAttributeDataCacheKey(element->localName(), const_cast<const ElementAttributeData*>(attributeData.get())->attributeItem(0), attributeData->length());
+    newEntry->value = attributeData;
+
+    cacheIterator->second = newEntry.release();
+
+    return attributeData.release();
+}
 
 } // namespace WebCore

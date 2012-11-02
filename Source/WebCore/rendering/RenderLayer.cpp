@@ -1567,9 +1567,9 @@ void RenderLayer::convertToLayerCoords(const RenderLayer* ancestorLayer, LayoutR
     rect.move(-delta.x(), -delta.y());
 }
 
+#if USE(ACCELERATED_COMPOSITING)
 bool RenderLayer::usesCompositedScrolling() const
 {
-#if USE(ACCELERATED_COMPOSITING)
     if (!scrollsOverflow() || !allowsScrolling())
         return false;
 
@@ -1578,10 +1578,8 @@ bool RenderLayer::usesCompositedScrolling() const
 #else
     return false;
 #endif
-#else
-    return false;
-#endif
 }
+#endif
 
 static inline int adjustedScrollDelta(int beginningDelta) {
     // This implemention matches Firefox's.
@@ -1667,8 +1665,8 @@ IntSize RenderLayer::clampScrollOffset(const IntSize& scrollOffset) const
     int maxX = scrollWidth() - box->pixelSnappedClientWidth();
     int maxY = scrollHeight() - box->pixelSnappedClientHeight();
 
-    int x = min(max(scrollOffset.width(), 0), maxX);
-    int y = min(max(scrollOffset.height(), 0), maxY);
+    int x = max(min(scrollOffset.width(), maxX), 0);
+    int y = max(min(scrollOffset.height(), maxY), 0);
     return IntSize(x, y);
 }
 
@@ -2657,6 +2655,12 @@ void RenderLayer::updateScrollInfoAfterLayout()
 
     if (originalScrollOffset != scrollOffset())
         scrollToOffsetWithoutAnimation(toPoint(scrollOffset()));
+
+#if USE(ACCELERATED_COMPOSITING)
+    // Composited scrolling may need to be enabled or disabled if the amount of overflow changed.
+    if (renderer()->view() && compositor()->updateLayerCompositingState(this))
+        compositor()->setCompositingLayersNeedRebuild();
+#endif
 }
 
 void RenderLayer::paintOverflowControls(GraphicsContext* context, const IntPoint& paintOffset, const IntRect& damageRect, bool paintingOverlayControls)
@@ -3125,6 +3129,18 @@ void RenderLayer::paintLayerContents(RenderLayer* rootLayer, GraphicsContext* co
     // Ensure our lists are up-to-date.
     updateLayerListsIfNeeded();
 
+    // Apply clip-path to context.
+    RenderStyle* style = renderer()->style();
+    if (renderer()->hasClipPath() && !context->paintingDisabled() && style) {
+        if (BasicShape* clipShape = style->clipPath()) {
+            // FIXME: Investigate if it is better to store and update a Path object in RenderStyle.
+            // https://bugs.webkit.org/show_bug.cgi?id=95619
+            Path clipPath;
+            clipShape->path(clipPath, calculateLayerBounds(this, rootLayer, 0));
+            transparencyLayerContext->clipPath(clipPath, clipShape->windRule());
+        }
+    }
+
 #if ENABLE(CSS_FILTERS)
     FilterEffectRendererHelper filterPainter(filterRenderer() && paintsWithFilters());
     if (filterPainter.haveFilterEffect() && !context->paintingDisabled()) {
@@ -3461,7 +3477,7 @@ bool RenderLayer::hitTest(const HitTestRequest& request, const HitTestLocation& 
         // We didn't hit any layer. If we are the root layer and the mouse is -- or just was -- down, 
         // return ourselves. We do this so mouse events continue getting delivered after a drag has 
         // exited the WebView, and so hit testing over a scrollbar hits the content document.
-        if ((request.active() || request.release()) && isRootLayer()) {
+        if (!request.isChildFrameHitTest() && (request.active() || request.release()) && isRootLayer()) {
             renderer()->updateHitTestResult(result, toRenderView(renderer())->flipForWritingMode(result.point()));
             insideLayer = this;
         }
@@ -3697,7 +3713,7 @@ RenderLayer* RenderLayer::hitTestLayer(RenderLayer* rootLayer, RenderLayer* cont
     // Next we want to see if the mouse pos is inside the child RenderObjects of the layer.
     if (fgRect.intersects(hitTestLocation) && isSelfPaintingLayer()) {
         // Hit test with a temporary HitTestResult, because we only want to commit to 'result' if we know we're frontmost.
-        HitTestResult tempResult(result.hitTestLocation(), result.shadowContentFilterPolicy());
+        HitTestResult tempResult(result.hitTestLocation());
         if (hitTestContents(request, tempResult, layerBounds, hitTestLocation, HitTestDescendants)
             && isHitCandidate(this, false, zOffsetForContentsPtr, unflattenedTransformState.get())) {
             if (result.isRectBasedTest())
@@ -3726,7 +3742,7 @@ RenderLayer* RenderLayer::hitTestLayer(RenderLayer* rootLayer, RenderLayer* cont
         return candidateLayer;
 
     if (bgRect.intersects(hitTestLocation) && isSelfPaintingLayer()) {
-        HitTestResult tempResult(result.hitTestLocation(), result.shadowContentFilterPolicy());
+        HitTestResult tempResult(result.hitTestLocation());
         if (hitTestContents(request, tempResult, layerBounds, hitTestLocation, HitTestSelf)
             && isHitCandidate(this, false, zOffsetForContentsPtr, unflattenedTransformState.get())) {
             if (result.isRectBasedTest())
@@ -3783,7 +3799,7 @@ RenderLayer* RenderLayer::hitTestList(Vector<RenderLayer*>* list, RenderLayer* r
     for (int i = list->size() - 1; i >= 0; --i) {
         RenderLayer* childLayer = list->at(i);
         RenderLayer* hitLayer = 0;
-        HitTestResult tempResult(result.hitTestLocation(), result.shadowContentFilterPolicy());
+        HitTestResult tempResult(result.hitTestLocation());
         if (childLayer->isPaginated())
             hitLayer = hitTestPaginatedChildLayer(childLayer, rootLayer, request, tempResult, hitTestRect, hitTestLocation, transformState, zOffsetForDescendants);
         else
@@ -4822,6 +4838,7 @@ bool RenderLayer::shouldBeNormalFlowOnly() const
                 || (renderer()->style()->specifiesColumns() && !isRootLayer()))
             && !renderer()->isPositioned()
             && !renderer()->hasTransform()
+            && !renderer()->hasClipPath()
 #if ENABLE(CSS_FILTERS)
             && !renderer()->hasFilter()
 #endif
@@ -4836,6 +4853,7 @@ bool RenderLayer::shouldBeSelfPaintingLayer() const
 {
     return !isNormalFlowOnly()
         || hasOverlayScrollbars()
+        || usesCompositedScrolling()
         || renderer()->hasReflection()
         || renderer()->hasMask()
         || renderer()->isTableRow()

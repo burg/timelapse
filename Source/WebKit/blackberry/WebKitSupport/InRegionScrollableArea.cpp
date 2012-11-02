@@ -75,7 +75,6 @@ InRegionScrollableArea::InRegionScrollableArea(WebPagePrivate* webPage, RenderLa
         m_scrollsHorizontally = view->contentsWidth() > view->visibleWidth();
         m_scrollsVertically = view->contentsHeight() > view->visibleHeight();
 
-        m_overscrollLimitFactor = 0.0; // FIXME eventually support overscroll
         m_camouflagedCompositedScrollableLayer = reinterpret_cast<unsigned>(m_layer->enclosingElement()); // FIXME: Needs composited layer for inner frames.
         m_cachedNonCompositedScrollableNode = m_layer->enclosingElement();
 
@@ -97,16 +96,14 @@ InRegionScrollableArea::InRegionScrollableArea(WebPagePrivate* webPage, RenderLa
         if (m_layer->usesCompositedScrolling()) {
             m_supportsCompositedScrolling = true;
             ASSERT(m_layer->backing()->hasScrollingLayer());
-            m_camouflagedCompositedScrollableLayer = reinterpret_cast<unsigned>(m_layer->backing()->scrollingLayer()->platformLayer());
-            m_cachedCompositedScrollableLayer = m_layer->backing()->scrollingLayer()->platformLayer();
+            m_camouflagedCompositedScrollableLayer = reinterpret_cast<unsigned>(m_layer->backing()->scrollingContentsLayer()->platformLayer());
+            m_cachedCompositedScrollableLayer = m_layer->backing()->scrollingContentsLayer()->platformLayer();
             ASSERT(!m_cachedNonCompositedScrollableNode);
         } else {
             m_camouflagedCompositedScrollableLayer = reinterpret_cast<unsigned>(m_layer->enclosingElement());
             m_cachedNonCompositedScrollableNode = m_layer->enclosingElement();
             ASSERT(!m_cachedCompositedScrollableLayer);
         }
-
-        m_overscrollLimitFactor = 0.0;
     }
 }
 

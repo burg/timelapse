@@ -36,11 +36,19 @@
 
 #include "MediaConstraints.h"
 #include "RTCConfiguration.h"
+#include "RTCIceCandidateDescriptor.h"
 #include "RTCPeerConnectionHandlerClient.h"
+#include "RTCSessionDescriptionDescriptor.h"
+#include "RTCSessionDescriptionRequest.h"
+#include "RTCVoidRequest.h"
 #include <public/Platform.h>
 #include <public/WebMediaConstraints.h>
 #include <public/WebMediaStreamDescriptor.h>
 #include <public/WebRTCConfiguration.h>
+#include <public/WebRTCICECandidateDescriptor.h>
+#include <public/WebRTCSessionDescriptionDescriptor.h>
+#include <public/WebRTCSessionDescriptionRequest.h>
+#include <public/WebRTCVoidRequest.h>
 #include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
@@ -64,6 +72,72 @@ bool RTCPeerConnectionHandlerChromium::initialize(PassRefPtr<RTCConfiguration> c
 {
     m_webHandler = adoptPtr(WebKit::Platform::current()->createRTCPeerConnectionHandler(this));
     return m_webHandler ? m_webHandler->initialize(configuration, constraints) : false;
+}
+
+void RTCPeerConnectionHandlerChromium::createOffer(PassRefPtr<RTCSessionDescriptionRequest> request, PassRefPtr<MediaConstraints> constraints)
+{
+    // FIXME: Should the error callback be triggered here?
+    if (!m_webHandler)
+        return;
+
+    m_webHandler->createOffer(request, constraints);
+}
+
+void RTCPeerConnectionHandlerChromium::createAnswer(PassRefPtr<RTCSessionDescriptionRequest> request, PassRefPtr<MediaConstraints> constraints)
+{
+    // FIXME: Should the error callback be triggered here?
+    if (!m_webHandler)
+        return;
+
+    m_webHandler->createAnswer(request, constraints);
+}
+
+void RTCPeerConnectionHandlerChromium::setLocalDescription(PassRefPtr<RTCVoidRequest> request, PassRefPtr<RTCSessionDescriptionDescriptor> sessionDescription)
+{
+    if (!m_webHandler)
+        return;
+
+    m_webHandler->setLocalDescription(request, sessionDescription);
+}
+
+void RTCPeerConnectionHandlerChromium::setRemoteDescription(PassRefPtr<RTCVoidRequest> request, PassRefPtr<RTCSessionDescriptionDescriptor> sessionDescription)
+{
+    if (!m_webHandler)
+        return;
+
+    m_webHandler->setRemoteDescription(request, sessionDescription);
+}
+
+bool RTCPeerConnectionHandlerChromium::updateIce(PassRefPtr<RTCConfiguration> configuration, PassRefPtr<MediaConstraints> constraints)
+{
+    if (!m_webHandler)
+        return false;
+
+    return m_webHandler->updateICE(configuration, constraints);
+}
+
+bool RTCPeerConnectionHandlerChromium::addIceCandidate(PassRefPtr<RTCIceCandidateDescriptor> iceCandidate)
+{
+    if (!m_webHandler)
+        return false;
+
+    return m_webHandler->addICECandidate(iceCandidate);
+}
+
+PassRefPtr<RTCSessionDescriptionDescriptor> RTCPeerConnectionHandlerChromium::localDescription()
+{
+    if (!m_webHandler)
+        return 0;
+
+    return m_webHandler->localDescription();
+}
+
+PassRefPtr<RTCSessionDescriptionDescriptor> RTCPeerConnectionHandlerChromium::remoteDescription()
+{
+    if (!m_webHandler)
+        return 0;
+
+    return m_webHandler->remoteDescription();
 }
 
 bool RTCPeerConnectionHandlerChromium::addStream(PassRefPtr<MediaStreamDescriptor> mediaStream, PassRefPtr<MediaConstraints> constraints)
@@ -90,9 +164,19 @@ void RTCPeerConnectionHandlerChromium::stop()
     m_webHandler->stop();
 }
 
+void RTCPeerConnectionHandlerChromium::didGenerateICECandidate(const WebKit::WebRTCICECandidateDescriptor& iceCandidate)
+{
+    m_client->didGenerateIceCandidate(iceCandidate);
+}
+
 void RTCPeerConnectionHandlerChromium::didChangeReadyState(WebKit::WebRTCPeerConnectionHandlerClient::ReadyState state)
 {
     m_client->didChangeReadyState(static_cast<RTCPeerConnectionHandlerClient::ReadyState>(state));
+}
+
+void RTCPeerConnectionHandlerChromium::didChangeICEState(WebKit::WebRTCPeerConnectionHandlerClient::ICEState state)
+{
+    m_client->didChangeIceState(static_cast<RTCPeerConnectionHandlerClient::IceState>(state));
 }
 
 void RTCPeerConnectionHandlerChromium::didAddRemoteStream(const WebKit::WebMediaStreamDescriptor& webMediaStreamDescriptor)

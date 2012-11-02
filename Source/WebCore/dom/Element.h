@@ -275,6 +275,7 @@ public:
     ElementShadow* shadow() const;
     ElementShadow* ensureShadow();
     virtual void willAddAuthorShadowRoot() { }
+    virtual bool areAuthorShadowsAllowed() const { return true; }
 
     ShadowRoot* userAgentShadowRoot() const;
 
@@ -436,7 +437,7 @@ public:
 
     virtual void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     {
-        MemoryClassInfo info(memoryObjectInfo, this, MemoryInstrumentation::DOM);
+        MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
         ContainerNode::reportMemoryUsage(memoryObjectInfo);
         info.addInstrumentedMember(m_tagName);
         info.addInstrumentedMember(m_attributeData);
@@ -519,7 +520,7 @@ private:
     ElementRareData* elementRareData() const;
     ElementRareData* ensureElementRareData();
 
-    OwnPtr<ElementAttributeData> m_attributeData;
+    RefPtr<ElementAttributeData> m_attributeData;
 };
     
 inline Element* toElement(Node* node)
