@@ -476,7 +476,7 @@ div.timelapse-timeline-label {
     cursor: pointer;
     border: 1px solid #555;
     border-radius: 3px;
-    background-image: url(Images/statusbarBackground.png);
+    background-image: url(Images/timelapseLabelBackground.png);
     background-repeat: repeat-x;
     background-position-y: -1px;
     box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.09);
