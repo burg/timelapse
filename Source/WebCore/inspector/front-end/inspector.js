@@ -549,6 +549,8 @@ WebInspector._doLoadedDoneWithCapabilities = function()
     this.timelapseBreakpointTracker = new WebInspector.TimelapseBreakpointTracker();
     this.timelapsePresentationModel = new WebInspector.TimelapsePresentationModel();
 
+    this.timelapseControllerView = new WebInspector.TimelapseControllerView();
+
     this.scriptSnippetModel = new WebInspector.ScriptSnippetModel(this.workspace);
     new WebInspector.DebuggerScriptMapping(this.workspace);
     new WebInspector.NetworkUISourceCodeProvider(this.workspace);
