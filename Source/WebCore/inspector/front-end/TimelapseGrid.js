@@ -169,6 +169,9 @@ WebInspector.TimelapseGrid.prototype = {
 	    delete this._refreshTimeout;
 	}
 
+	if (this._model.recording)
+	    return;
+
 	// save position
         var wasScrolledToLastRow = this.isScrolledToLastRow();
 
@@ -182,9 +185,6 @@ WebInspector.TimelapseGrid.prototype = {
 
 	this._pendingRecords = [];
 	
-	if (this._model.recording)
-	    return;
-
 	this.updateWidths();
 	this._invalidateVisibleRows();
 
