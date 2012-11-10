@@ -26,10 +26,6 @@ WebInspector.TimelapsePanel = function()
     this._dataGrid = new WebInspector.TimelapseGrid();
     this._dataGrid.show(this.splitView.sidebarElement);
 
-    this._viewsContainerElement = this.splitView.mainElement;
-    this._viewsContainerElement.id = "timelapse-views";
-    this._viewsContainerElement.addStyleClass("hidden");
-
     this._registerShortcuts();
 
     this.popover = new WebInspector.TimelapsePopover(this);
