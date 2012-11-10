@@ -37,7 +37,7 @@ WebInspector.TimelapseControllerView = function()
 {
     WebInspector.View.call(this);
 
-    this.registerRequiredCSS("timelapsePanel.css");
+    this.registerRequiredCSS("timelapseController.css");
     this.element.id = "timelapse-controller-view";
 
     this._model = WebInspector.timelapseModel;
