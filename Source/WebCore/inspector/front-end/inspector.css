@@ -2967,3 +2967,733 @@ body.platform-mac .progress-bar-container progress {
     -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
     -webkit-mask-position: -192px -48px;
 }
+
+.toggle-record-status-bar-item .glyph {
+    -webkit-mask-position: -288px 0;
+}
+
+/* override .status-bar-item > .glyph rule */
+button.pause-playback-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+/* the play and pause buttons are too big in proportion to other icons. */
+/* unscaled:    -webkit-mask-position: -160px -48px; */
+    -webkit-mask-size: 288px;
+    -webkit-mask-position: -141px -41px;
+}
+
+/* override .status-bar-item > .glyph rule */
+button.play-playback-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+/* the play and pause buttons are too big in proportion to other icons. */
+/* unscaled:    -webkit-mask-position: -128px -48px; */
+    -webkit-mask-size: 288px;
+    -webkit-mask-position: -114px -41px;
+}
+
+button.replay-to-anchor-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+}
+
+button.set-anchor-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: 0 -24px;
+}
+
+.reset-playback-status-bar-item .glyph {
+    -webkit-mask-position: 0 0;
+}
+
+/* override .status-bar-item > .glyph rule */
+button.timelapse-locked-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+/* the play and pause buttons are too big in proportion to other icons. */
+/* unscaled:    -webkit-mask-position: -128px -48px; */
+    -webkit-mask-size: 288px;
+    -webkit-mask-position: -114px -41px;
+}
+
+button.breakpoint-radar-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: -32px -24px;
+}
+
+#timelapse-controller-view {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    width: 100%;
+    height: 210px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 11;
+}
+
+.timelapse-recording-message {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 20px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 12pt;
+    color: #666;
+    cursor: pointer;
+}
+
+.timelapse-recording-message:hover {
+    text-decoration: underline;
+    color: #a04010;
+}
+
+.message-pulse {
+    -webkit-animation-name: message-pulse;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+}
+
+#timelapse-recording-view .timelapse-scrollview {
+    position: absolute;
+    height: 30px;
+    left: 50px;
+    right: 50px;
+    top: 60px;
+}
+
+@-webkit-keyframes message-pulse {
+    0%   { color: #444; }
+    50%  { color: #888; }
+    100% { color: #444; }
+}
+
+@-webkit-keyframes playback-pulse {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+@-webkit-keyframes breakpoint-blink {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.8; }
+    100% { opacity: 1; }
+}
+
+div.timelapse-timeline-labels {
+    top: 25px;
+    left: 5px;
+    bottom: 0;
+    position: absolute;
+}
+
+div.timelapse-timeline-label-wrapper {
+    position: absolute;
+    left: 0;
+    width: 85px;
+    height: 24px;
+    margin: 3px 5px 2px 5px;
+    border-radius: 5px;
+    background-clip: border-box;
+    -webkit-transition: all .4s ease-in;
+}
+
+div.timelapse-timeline-label:hover {
+    opacity: 0.75;
+}
+
+div.timelapse-timeline-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    cursor: pointer;
+    border: 1px solid #555;
+    border-radius: 3px;
+    background-image: url(Images/timelapseLabelBackground.png);
+    background-repeat: repeat-x;
+    background-position-y: -1px;
+    box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.09);
+    opacity: 0.85;
+    -webkit-transition: opacity .2s linear;
+    vertical-align: middle;
+    line-height: 20px;
+    text-align: center;
+    font-weight: bold;
+}
+
+div.timelapse-timeline-label-wrapper.disabled {
+    opacity: 1;
+    background-color: #aaa !important;
+    color: #333 !important;
+}
+
+.timelapse-popover {
+    position: absolute;
+    z-index: 1000;
+    background: #fff;
+    border: 2px solid #999;
+    pointer-events: none;
+    box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.3);
+}
+
+.timelapse-popover .content {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    pointer-events: auto;
+    overflow: auto;
+    -webkit-user-select: text;
+}
+
+.timelapse-popover .content.fixed-height {
+    overflow: hidden;
+}
+
+.timelapse-popover,
+.timelapse-overview-popover-table th:first-child {
+    border-top-left-radius: 12px;
+}
+
+.timelapse-popover,
+.timelapse-overview-popover-table th:last-child {
+    border-top-right-radius: 12px;
+}
+
+.timelapse-popover,
+.timelapse-overview-popover-table tr:last-child td:first-child {
+    border-bottom-left-radius: 12px;
+}
+
+.timelapse-popover,
+.timelapse-overview-popover-table tr:last-child td:last-child {
+    border-bottom-right-radius: 12px;
+}
+
+.timelapse-popover .arrow {
+    position: absolute;
+    width: 19px;
+    height: 19px;
+    margin-left: -1px;
+    margin-top: 0;
+    top: -20px;
+    background-image: url(Images/timelapsePopoverArrows.png);;
+}
+
+ .timelapse-overview-popover-table {
+     border-collapse: collapse;
+}
+
+.timelapse-overview-popover-table th,
+.timelapse-overview-popover-table td {
+    text-align: center;
+}
+
+.timelapse-overview-popover-table tr {
+    height: 29px;
+}
+
+.timelapse-overview-popover-table td {
+    padding-top: 5px;
+    padding-bottom: 3px;
+}
+
+.timelapse-overview-popover-table th:first-child,
+.timelapse-overview-popover-table td:first-child {
+    padding-left: 15px;
+    padding-right: 10px;
+}
+
+.timelapse-overview-popover-table th:last-child {
+    padding: 0 10px;
+}
+
+.timelapse-overview-popover-table td:last-child {
+    padding-right: 15px;
+}
+
+.timelapse-overview-popover-table .text-cell {
+    padding-left: 10px;
+    text-align: left;
+}
+
+.timelapse-overview-popover-table th {
+    font-size: larger;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.timelapse-overview-popover-table th:first-child {
+    border-right: 1px solid #ddd;
+}
+
+
+.timelapse-overview-popover-table .row-with-count {
+    border-top: 1px solid #ddd;
+}
+
+.timelapse-overview-popover-table .row-with-count td:first-child {
+    background-color: #f5f5f5;
+    border-right: 2px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+.timelapse-overview-popover-table td:nth-child(2) {
+    padding-left: 10px;
+}
+
+.timelapse-overview-popover-table tr.header-row {
+    background: -webkit-gradient(linear, left top, left bottom, from(#f2f2f2), to(#d9d9d9));
+    border-bottom: 1px solid #ccc;
+}
+
+.timelapse-overview-popover-table tr:last-child td:first-child {
+    border-bottom: none;
+}
+
+.timelapse-overview-popover-table tr:hover:not(.header-row) {
+    background-color: #f5f5f5;
+}
+
+.timelapse-overview-popover-table tr:hover:not(.header-row) td:first-child,
+.timelapse-overview-popover-table tr:hover:not(.header-row) td:last-child {
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.timelapse-overview-popover-table tr.row-with-count:hover:not(.header-row) td:first-child {
+    background-color: #e0e0e0;
+}
+
+.timelapse-overview-popover-table:not(.timelapse-category-breakpoint) tr.selected {
+    background: rgba(255,0,0,0.1);
+}
+
+.timelapse-overview-popover-table.timelapse-category-breakpoint tr.selected {
+    background: rgba(0,0,255,0.1);
+    font-weight: bold;
+}
+
+.timelapse-overview-popover-table .selected .timelapse-breakpoint-link {
+    font-weight: bold;
+}
+
+.timelapse-overview-popover-table .disabled .timelapse-breakpoint-link {
+    font-style: italic;
+}
+
+.timelapse-overview {
+    position: absolute;
+    height: 170px;
+    left: 105px;
+    right: 14px;
+    top: 5px;
+}
+
+.timelapse-overview-message {
+    position: absolute;
+    top: 21px;
+    bottom: 10px;
+    left: -8px;
+    right: -8px;
+    z-index: 1000;
+    font-weight: bold;
+    font-size: 18pt;
+    color: #666;
+    background-color: rgba(255, 255, 255, 0.7);
+    line-height: 120px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.timelapse-overview-message:not(.hidden) {
+    -webkit-animation-name: message-fade-in;
+    -webkit-animation-duration: 0.2s;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-fill-mode: forwards;
+    -webkit-timing-function: ease-out;
+}
+
+.timelapse-overview-message.hidden {
+    display: block !important;
+    -webkit-animation-name: message-fade-out;
+    -webkit-animation-duration: 0.2s;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-fill-mode: forwards;
+    -webkit-timing-function: ease-out;
+}
+
+@-webkit-keyframes message-fade-in {
+    0% { opacity: 0; z-index: 0; display: none; }
+    10% { opacity: 0.1; z-index: 1000; display: block; }
+    100% { opacity: 1; }
+}
+
+@-webkit-keyframes message-fade-out {
+    0% { opacity: 1.0; z-index: 1000; }
+    90% { opacity: 0.1; }
+    100% { opacity: 0; z-index: 0; display: none; }
+}
+
+.timelapse-overview-message:not(.hidden):hover {
+    text-decoration: underline;
+    color: #a04010;
+}
+
+.timelapse-overview .resources-dividers-label-bar {
+    position: absolute;
+    top: -20px;
+    height: 20px;
+    left: 0;
+    right: 0;
+
+    box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.2);
+    background: -webkit-gradient(linear, left top, left bottom, from(#f5f5f5), to(#e0e0e0));
+    margin-left: -1px;
+    margin-right: -1px;
+    border-left: 1px solid #ddd;
+    border-right: 1px solid #ddd;
+}
+
+div.timelapse-overview-timelines {
+    position: absolute;
+    top: 20px;
+    height: 122px;
+    left: 0;
+    right: 0;
+    border: 1px solid #bbb;
+    border-radius: 2px;
+    cursor: -webkit-grab;
+}
+
+div.timelapse-overview-timeline.disabled {
+    background-color: #e5e5e5;
+    background-image: -webkit-repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(255, 255, 255, .5) 10px, rgba(255, 255, 255, .5) 20px);
+}
+
+/* Next two rules are an  ugly hack to emulate :first-of-class. See 
+ * http://stackoverflow.com/questions/2717480/css-selector-for-first-element-with-class/ */
+.timelapse-overview-timelines > .timelapse-overview-timeline {
+    border-top: none;
+}
+
+.timelapse-overview-timelines > .timelapse-overview-timeline ~ .timelapse-overview-timeline {
+    border-top: 1px dotted #ddd;
+}
+
+div.timelapse-overview-timeline {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    height: 30px; /* should match the above */
+    -webkit-transition: all .3s ease-in;
+}
+
+.timelapse-category-userinput .timelapse-column-category {
+    background-color: rgb(20, 170, 70);
+}
+
+.timelapse-category-network .timelapse-column-category {
+    background-color: rgb(200, 150, 0);
+}
+
+.timelapse-category-timer .timelapse-column-category {
+    background-color: rgb(200, 30, 30);
+}
+
+.timelapse-category-system .timelapse-column-category {
+    background-color: rgb(10, 55, 230);
+}
+
+.timelapse-overview-slider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    opacity: 0.8;
+    z-index: 750;
+}
+
+/* the keyframes are defined in timelapsePanel.css */
+.timelapse-overview-slider.playback-pulse div {
+    -webkit-animation: playback-pulse 1s infinite;
+}
+
+.timelapse-overview-slider .timelapse-slider-band {
+    top: 0;
+    bottom: 0;
+    position: absolute;
+    margin-left: -1px;
+    border-left: 1px solid rgba(0,0,0,0.8);
+    border-right: 1px solid rgba(0,0,0,0.8);
+    width: 4px;
+    z-index: 801;
+    pointer-events: none;
+}
+
+.timelapse-overview-slider .timelapse-slider-wedge-wrapper {
+    display: none; /* by default; adjustable per class */
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    overflow: hidden;
+    bottom: -9px;
+    left: -9px;
+    -webkit-transform: rotate(-90deg);
+    border-left: 1px solid #333;
+}
+
+.timelapse-overview-slider .timelapse-slider-wedge-border {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    bottom: 0px;
+    width: 10px;
+    z-index: 201;
+}
+
+.timelapse-overview-slider.adjustable .timelapse-slider-wedge-wrapper {
+    cursor: n-resize;
+    display: block;
+    z-index: 800;
+}
+
+.timelapse-overview-slider.adjustable .timelapse-slider-band {
+    cursor: col-resize;
+    bottom: -1px;
+    border-bottom: 1px solid transparent;
+}
+
+.timelapse-overview-slider .timelapse-slider-wedge {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    -webkit-transform: rotate(45deg);
+    border: 1px solid #000;
+    left: -14px;
+    z-index: 200;
+}
+
+.timelapse-overview-slider.disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+
+.playback-slider .timelapse-slider-band,
+.playback-slider .timelapse-slider-wedge {
+    background-color: rgba(255, 0, 0, 1);
+}
+
+/* this matches the color defined in timelapsePanel.css */
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-band,
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge {
+    -webkit-animation-name: breakpoint-blink;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+    -webkit-animation-timing-function: cubic-bezier(1.0,0.0,0.0,1.0);
+    background-color: rgba(10, 55, 230, 1);
+}
+
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge-wrapper {
+    display: block;
+   -webkit-transform-origin: 100% 100%;
+    height: 12px;
+    width: 15px;
+    bottom: 0;
+    left: -8px;
+    border-left: none;
+}
+
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge {
+    left: -7px;
+    top: -4px;
+}
+
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge-border {
+    display: block;
+    border: 1px solid rgba(0, 0, 0, 0.9);
+    border-right: none;
+}
+
+.previous-slider .timelapse-slider-band {
+    background-color: rgba(150, 0, 0, 0.3);
+    border: 0;
+}
+
+.tentative-slider .timelapse-slider-band {
+    border-left: 1px dashed #f00;
+    border-right: 1px dashed #f00;
+    background-color: rgba(255,0,0,0.1);
+}
+
+.anchor-slider {
+    pointer-events: none;
+}
+
+.anchor-slider .timelapse-slider-band {
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 0;
+}
+
+.anchor-slider .timelapse-slider-icon {
+    position: absolute;
+    bottom: -20px;
+    left: -7px;
+    width: 16px;
+    height: 16px;
+    background-color: rgba(0, 0, 0, 0.5);
+    -webkit-mask-image: url(Images/timelapseAnchor.png);
+}
+
+.timelapse-overview-slider.slider-dragging {
+    opacity: 0.6;
+    -webkit-transition: none;
+}
+
+div.timelapse-miniview {
+    position: absolute;
+    height: 30px;
+    left: 105px;
+    right: 15px;
+    top: 170px;
+}
+
+.timelapse-miniview-glasspane {
+    background-color: rgba(0,0,0,0.2);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: auto;
+    right: 100%;
+    bottom: 0;
+}
+
+.timelapse-miniview-slider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    opacity: 0.8;
+    z-index: 750;
+}
+
+.timelapse-miniview-slider.adjustable {
+}
+
+/* the keyframes are defined in timelapsePanel.css */
+.timelapse-miniview-slider.playback-pulse div {
+    -webkit-animation: playback-pulse 1s infinite;
+}
+
+/* this definition matches the one in timelapsePanel.css */
+.timelapse-miniview-slider.breakpoint-blink div {
+    -webkit-animation-name: breakpoint-blink;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+    -webkit-animation-timing-function: cubic-bezier(1.0,0.0,0.0,1.0);
+}
+
+.timelapse-miniview-slider .timelapse-slider-band {
+    position: absolute;
+    border-left: 1px solid rgba(0,0,0,0.8);
+    border-right: 1px solid rgba(0,0,0,0.8);
+    z-index: 801;
+    top: -1px;
+    bottom: -1px;
+    width: 5px;
+    border-radius: 3px;
+}
+
+.timelapse-miniview-slider.adjustable .timelapse-slider-band {
+    box-shadow: 0px 0px 2px rgba(255, 255, 255, 0.5);
+    cursor: col-resize;
+}
+
+.timelapse-miniview-slider:not(.adjustable) .timelapse-slider-band {
+    pointer-events: none;
+}
+
+.slider-dragging {
+    -webkit-transition: none;
+}
+
+.timelapse-miniview-slider.disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+
+.timelapse-miniview-slider.tentative-slider .timelapse-slider-band {
+    border: 1px dashed #f00;
+    background-color: rgba(255,0,0,0.1);
+}
+
+.timelapse-miniview-slider.anchor-slider .timelapse-slider-band {
+    background-color: rgba(0,0,0,0,3);
+}
+
+/* this matches the color defined in timelapsePanel.css */
+.timelapse-miniview-slider.breakpoint-slider .timelapse-slider-band {
+    background-color: rgba(10, 55, 230, 1);
+}
+
+.timelapse-miniview-slider.slider-dragging {
+    opacity: 0.6;
+}
+
+.timelapse-miniview-slider.zoom-slider.left {
+    margin-left: -5px;
+}
+
+.timelapse-miniview-slider.zoom-slider.right {
+    margin-left: -3px;
+}
+
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-band {
+    background-color: rgba(0, 0, 0, 0.7);
+    box-shadow: none;
+    border: none !important;
+    width: 1px;
+    top: 0px;
+    bottom: 0px;
+    border-radius: 0;
+    left: 4px;
+}
+
+.timelapse-miniview-slider.zoom-slider.slider-dragging {
+    opacity: 0.9;
+}
+
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-handlebar-bottom,
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-handlebar-top {
+    width: 5px;
+    height: 9px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid #333;
+    position: absolute;
+    left: 2px;
+}
+
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-handlebar-top {
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    top: -9px;
+    cursor: s-resize;
+}
+
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-handlebar-bottom {
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 2px;
+    border-bottom-right-radius: 2px;
+    bottom: -9px;
+    cursor: n-resize;
+}
+
+.timelapse-zoom-selector {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(125, 173, 217, 0.5);
+    z-index: 250;
+}

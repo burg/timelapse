@@ -36,7 +36,6 @@
 WebInspector.TimelapseMiniview = function()
 {
     WebInspector.View.call(this);
-    this.registerRequiredCSS("timelapseMiniview.css");
 
     this._model = WebInspector.timelapseModel;
     this._presentationModel = WebInspector.timelapsePresentationModel;
