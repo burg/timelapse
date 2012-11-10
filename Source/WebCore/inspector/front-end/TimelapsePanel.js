@@ -64,6 +64,10 @@ WebInspector.TimelapsePanel.prototype = {
     wasShown: function()
     {
         WebInspector.Panel.prototype.wasShown.call(this);
+        if (WebInspector.drawer.visible && WebInspector._timelapseWasShown) {
+            WebInspector.drawer.hide(WebInspector.Drawer.AnimationType.Immediately);
+            this._drawerWasVisible = true;
+        }
 	this._controllerView.show(this.splitView.sidebarElement);
 	this._dataGrid.wasShown();
     },
@@ -71,6 +75,10 @@ WebInspector.TimelapsePanel.prototype = {
     willHide: function()
     {
 	this.popover.hide();
+        if (this._drawerWasVisible) {
+            WebInspector.drawer.show(this._controllerView, WebInspector.Drawer.AnimationType.Immediately);
+            delete this._drawerWasVisible;
+        }
 	WebInspector.Panel.prototype.willHide.call(this);
     },
 

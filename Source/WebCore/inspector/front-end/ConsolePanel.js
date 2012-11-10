@@ -48,7 +48,7 @@ WebInspector.ConsolePanel.prototype = {
     wasShown: function()
     {
         WebInspector.Panel.prototype.wasShown.call(this);
-        if (WebInspector.drawer.visible) {
+        if (WebInspector.drawer.visible && WebInspector._consoleWasShown) {
             WebInspector.drawer.hide(WebInspector.Drawer.AnimationType.Immediately);
             this._drawerWasVisible = true;
         }

@@ -189,6 +189,11 @@ var WebInspector = {
         if (this._toggleConsoleButton.disabled)
             return;
 
+	if (this._timelapseWasShown) {
+	    delete this._timelapseWasShown;
+	    this._toggleTimelapseControllerButton.toggled = false;
+	}
+
         this._toggleConsoleButton.toggled = !this._toggleConsoleButton.toggled;
 
         var animationType = window.event && window.event.shiftKey ? WebInspector.Drawer.AnimationType.Slow : WebInspector.Drawer.AnimationType.Normal;
@@ -208,6 +213,11 @@ var WebInspector = {
 	var button = this._toggleTimelapseControllerButton;
 	if (button.disabled)
 	    return;
+
+	if (this._consoleWasShown) {
+	    delete this._consoleWasShown;
+	    this._toggleConsoleButton.toggled = false;
+	}
 
 	button.toggled = !button.toggled;
 
