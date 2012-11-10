@@ -119,6 +119,7 @@ button.breakpoint-radar-status-bar-item > .glyph {
     height: 210px;
     overflow-y: auto;
     overflow-x: hidden;
+    z-index: 11;
 }
 
 .timelapse-inputs-grid.data-grid {

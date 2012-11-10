@@ -64,6 +64,7 @@ WebInspector.TimelapsePanel.prototype = {
     wasShown: function()
     {
         WebInspector.Panel.prototype.wasShown.call(this);
+	this._controllerView.show(this.splitView.sidebarElement);
 	this._dataGrid.wasShown();
     },
 

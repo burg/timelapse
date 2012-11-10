@@ -2960,3 +2960,10 @@ body.platform-mac .progress-bar-container progress {
     border-left: none;
     margin-top: 1px;
 }
+
+/* Timelapse Controller Styles */
+
+.timelapse-controller-status-bar-item .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: -192px -48px;
+}

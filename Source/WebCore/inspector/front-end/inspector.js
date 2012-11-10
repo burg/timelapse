@@ -67,6 +67,7 @@ var WebInspector = {
     _panelSelected: function()
     {
         this._toggleConsoleButton.disabled = WebInspector.inspectorView.currentPanel().name === "console";
+	this._toggleTimelapseControllerButton.disabled = WebInspector.inspectorView.currentPanel().name === "timelapse";
     },
 
     _createGlobalStatusBarItems: function()
@@ -83,6 +84,10 @@ var WebInspector = {
         this._toggleConsoleButton = new WebInspector.StatusBarButton(WebInspector.UIString("Show console."), "console-status-bar-item");
         this._toggleConsoleButton.addEventListener("click", this._toggleConsoleButtonClicked.bind(this), false);
         mainStatusBar.insertBefore(this._toggleConsoleButton.element, bottomStatusBarContainer);
+
+	this._toggleTimelapseControllerButton = new WebInspector.StatusBarButton(WebInspector.UIString("Show Timelapse controller."), "timelapse-controller-status-bar-item");
+	this._toggleTimelapseControllerButton.addEventListener("click", this._toggleTimelapseControllerButtonClicked.bind(this), false);
+        mainStatusBar.insertBefore(this._toggleTimelapseControllerButton.element, bottomStatusBarContainer);
 
 	if (WebInspector.TimelapsePanel) {
 	    // create status message widget
@@ -198,6 +203,26 @@ var WebInspector = {
         }
     },
 
+    _toggleTimelapseControllerButtonClicked: function()
+    {
+	var button = this._toggleTimelapseControllerButton;
+	if (button.disabled)
+	    return;
+
+	button.toggled = !button.toggled;
+
+	var animationType = window.event && window.event.shiftKey ? WebInspector.Drawer.AnimationType.Slow : WebInspector.Drawer.AnimationType.Normal;
+        if (button.toggled) {
+            button.title = WebInspector.UIString("Hide Timelapse controller.");
+            this.drawer.show(this.timelapseControllerView, animationType);
+            this._timelapseWasShown = true;
+        } else {
+            button.title = WebInspector.UIString("Show Timelapse controller.");
+            this.drawer.hide(animationType);
+            delete this._timelapseWasShown;
+        }
+    },
+
     /**
      * @param {Element} statusBarElement
      * @param {WebInspector.View} view
@@ -207,6 +232,10 @@ var WebInspector = {
     {
         this._toggleConsoleButton.title = WebInspector.UIString("Hide console.");
         this._toggleConsoleButton.toggled = false;
+
+        this._toggleTimelapseControllerButton.title = WebInspector.UIString("Hide Timelapse controller.");
+        this._toggleTimelapseControllerButton.toggled = false;
+
         this._closePreviousDrawerView();
 
         var drawerStatusBarHeader = document.createElement("div");
@@ -229,9 +258,11 @@ var WebInspector = {
         if (this._drawerStatusBarHeader) {
             this._closePreviousDrawerView();
 
-            // Once drawer is closed console should be shown if it was shown before current view replaced it in drawer. 
-            if (!this._consoleWasShown)
+            // Once drawer is closed console/timelapse should be shown if it was shown before current view replaced it in drawer.
+            if (!this._consoleWasShown && !this._timelapseWasShown)
                 this.drawer.hide(WebInspector.Drawer.AnimationType.Immediately);
+            else if (!this._consoleWasShown)
+                this._toggleTimelapseControllerButtonClicked();
             else
                 this._toggleConsoleButtonClicked();
         }
