@@ -253,14 +253,14 @@ WebInspector.TimelapseOverview.prototype = {
     willHide: function()
     {
     	this._presentationModel.overviewPopover.hide();
-	document.body.removeEventListener("mousemove", this._presentationModel.startHidePopoverTimer, false);
+	document.body.removeEventListener("mousemove", this._presentationModel.startHidePopoverTimer.bind(this._presentationModel), false);
 	WebInspector.View.prototype.willHide.call(this);
     },
 
     wasShown: function()
     {
 	WebInspector.View.prototype.wasShown.call(this);
-	document.body.addEventListener("mousemove", this._presentationModel.startHidePopoverTimer, false);
+	document.body.addEventListener("mousemove", this._presentationModel.startHidePopoverTimer.bind(this._presentationModel), false);
 
 	this._recomputeTimelines();
 	this.refresh();

@@ -70,7 +70,6 @@ WebInspector.Settings = function()
     this.debuggerEnabled = this.createSetting("debuggerEnabled", false);
     this.domWordWrap = this.createSetting("domWordWrap", true);
     this.profilerEnabled = this.createSetting("profilerEnabled", false);
-    this.timelapseEnabled = this.createSetting("timelapseEnabled", false);
     this.eventListenersFilter = this.createSetting("eventListenersFilter", "all");
     this.lastActivePanel = this.createSetting("lastActivePanel", "elements");
     this.lastViewedScriptFile = this.createSetting("lastViewedScriptFile", "application");

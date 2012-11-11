@@ -52,7 +52,10 @@ WebInspector.TimelapseControllerView = function()
     this._replayingView = new WebInspector.TimelapseReplayingView(this);
 
     this._createStatusBarButtons();
-}
+
+    // Tell backend to enable itself.
+    this._model.enable();
+};
 
 WebInspector.TimelapseControllerView.prototype = {
     get statusBarItems()
@@ -81,11 +84,11 @@ WebInspector.TimelapseControllerView.prototype = {
     /* subroutines of initialization */
     _createStatusBarButtons: function()
     {
-	var panel = this;
+	var controllerView = this;
 	var eventNames = WebInspector.TimelapseModel.EventTypes;
 
         var timelapseButton = this.toggleTimelapseButton = new WebInspector.StatusBarButton("", "enable-toggle-status-bar-item");
-        timelapseButton.addEventListener("click", this._toggleTimelapseButtonClicked, panel);
+        timelapseButton.addEventListener("click", this._toggleTimelapseButtonClicked, controllerView);
         this._model.addEventListener(eventNames.Enabled, function() {
             this.title = WebInspector.UIString("Timelapse enabled. Click to disable.");
             this.toggled = true;
@@ -125,7 +128,7 @@ WebInspector.TimelapseControllerView.prototype = {
 
         //the play/pause button
         var playbackButton = this.togglePlaybackButton = new WebInspector.StatusBarButton("", "playback-toggle-status-bar-item");
-        playbackButton.addEventListener("click", panel._togglePlaybackButtonClicked, this);
+        playbackButton.addEventListener("click", controllerView._togglePlaybackButtonClicked, this);
         playbackButton.disabled = true;
         this.toggled = false;
         playbackButton.element.addStyleClass("play-playback-status-bar-item");
@@ -163,7 +166,7 @@ WebInspector.TimelapseControllerView.prototype = {
 	//the set-anchor button
 	var setAnchorButton = this.setAnchorButton = new WebInspector.StatusBarButton("", "set-anchor-status-bar-item");
 
-	setAnchorButton.addEventListener("click", this._setAnchorButtonClicked, panel);
+	setAnchorButton.addEventListener("click", this._setAnchorButtonClicked, controllerView);
         this._model.addEventListener(eventNames.Enabled, function() {
             this.visible = true;
             this.disabled = true;
@@ -187,7 +190,7 @@ WebInspector.TimelapseControllerView.prototype = {
         //the replay-to-anchor button
         var anchorButton = this.replayToAnchorButton = new WebInspector.StatusBarButton("", "replay-to-anchor-status-bar-item");
 
-        anchorButton.addEventListener("click", this._replayToAnchorButtonClicked, panel);
+        anchorButton.addEventListener("click", this._replayToAnchorButtonClicked, controllerView);
         this._model.addEventListener(eventNames.Enabled, function() {
             this.visible = true;
             this.disabled = true;
@@ -229,7 +232,7 @@ WebInspector.TimelapseControllerView.prototype = {
 
         //the record button
         var recordButton = this.toggleRecordButton = new WebInspector.StatusBarButton("", "toggle-record-status-bar-item");
-        recordButton.addEventListener("click", this._toggleRecordButtonClicked, panel);
+        recordButton.addEventListener("click", this._toggleRecordButtonClicked, controllerView);
         this._model.addEventListener(eventNames.Enabled, function() {
             this.disabled = false;
             this.visible = true;
@@ -258,7 +261,7 @@ WebInspector.TimelapseControllerView.prototype = {
 
 	//the breakpoint radar button
 	var radarButton = this.radarButton = new WebInspector.StatusBarButton("", "breakpoint-radar-status-bar-item");
-	radarButton.addEventListener("click", this._radarButtonClicked, panel);
+	radarButton.addEventListener("click", this._radarButtonClicked, controllerView);
         this._model.addEventListener(eventNames.Enabled, function() {
             this.visible = true;
             this.disabled = true;
