@@ -67,7 +67,6 @@ var WebInspector = {
     _panelSelected: function()
     {
         this._toggleConsoleButton.disabled = WebInspector.inspectorView.currentPanel().name === "console";
-	this._toggleTimelapseControllerButton.disabled = WebInspector.inspectorView.currentPanel().name === "timelapse";
     },
 
     _createGlobalStatusBarItems: function()
