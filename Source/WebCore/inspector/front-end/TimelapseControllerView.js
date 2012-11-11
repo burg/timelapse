@@ -451,6 +451,7 @@ WebInspector.TimelapseRecordingView = function()
 WebInspector.TimelapseRecordingView.prototype = {
     wasShown: function()
     {
+	WebInspector.View.prototype.wasShown.call(this);
 	this.refresh();
     },
 
@@ -545,6 +546,7 @@ WebInspector.TimelapseReplayingView = function()
 WebInspector.TimelapseReplayingView.prototype = {
     wasShown: function()
     {
+	WebInspector.View.prototype.wasShown.call(this);
 	this._overviewWindow.refresh();
 	this._miniview.refresh();
 	this._miniview.onResize();
@@ -561,7 +563,7 @@ WebInspector.TimelapseReplayingView.prototype = {
     {
 	this._overviewWindow.reset();
 	this._miniview.reset();
-    }
+    },
 };
 
 WebInspector.TimelapseReplayingView.prototype.__proto__ = WebInspector.View.prototype;

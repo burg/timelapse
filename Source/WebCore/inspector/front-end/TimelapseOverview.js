@@ -250,8 +250,18 @@ WebInspector.TimelapseOverview.prototype = {
 	    delete this._selectedCircle;
     },
 
+    willHide: function()
+    {
+    	this._presentationModel.overviewPopover.hide();
+	document.body.removeEventListener("mousemove", this._presentationModel.startHidePopoverTimer, false);
+	WebInspector.View.prototype.willHide.call(this);
+    },
+
     wasShown: function()
     {
+	WebInspector.View.prototype.wasShown.call(this);
+	document.body.addEventListener("mousemove", this._presentationModel.startHidePopoverTimer, false);
+
 	this._recomputeTimelines();
 	this.refresh();
     },
@@ -611,7 +621,7 @@ WebInspector.TimelapseOverview.prototype = {
 	};
 
 	// TODO: update the size-position when panning
-	WebInspector.panels.timelapse.popover.show(records, position);
+	this._presentationModel.overviewPopover.show(records, position);
     },
 
     _onTimelineMousedown: function(event)
@@ -655,10 +665,10 @@ WebInspector.TimelapseOverview.prototype = {
 		x: timeline.element.boxInWindow().x + highlightCoords.left,
 		y: timeline.element.boxInWindow().y + highlightCoords.top + highlightCoords.radius + 1
 	    };
-	    WebInspector.panels.timelapse.popover.show(records, popupPosition);
+	    this._presentationModel.overviewPopover.show(records, popupPosition);
 	}
 	else {
-	    WebInspector.panels.timelapse.popover.hide();
+	    this._presentationModel.overviewPopover.hide();
 	}
     },
 
@@ -689,7 +699,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	this.calculator.setZoomInterval(zoomLeft, zoomRight);
 
-	WebInspector.panels.timelapse.popover.hide();
+	this._presentationModel.overviewPopover.hide();
     },
 
     _onPlaybackSliderDragStart: function(event)
@@ -699,8 +709,7 @@ WebInspector.TimelapseOverview.prototype = {
 					      this);
 
 	this._presentationModel.startPreviewing();
-
-	WebInspector.panels.timelapse.popover.hide();
+	this._presentationModel.overviewPopover.hide();
     },
 
     _onPlaybackSliderDragged: function(event)
@@ -905,7 +914,7 @@ WebInspector.TimelapseOverview.prototype = {
 	    this.sliders.playback.animateTo(nextRecordPosition, timeDelta);
 	}
 
-	WebInspector.panels.timelapse.popover.hide();
+	this._presentationModel.overviewPopover.hide();
     },
 
     _onBreakpointPaused: function()
@@ -926,8 +935,7 @@ WebInspector.TimelapseOverview.prototype = {
 	// TODO: only recompute breakpoint timeline?
 	this._recomputeTimelines();
 	this._scheduleRefresh();
-	WebInspector.panels.timelapse.popover.hide();
-	return;
+	this._presentationModel.overviewPopover.hide();
     },
 
     _onMessagePanelClicked: function()
@@ -945,7 +953,7 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.anchor.push(anchorSlider);
 	this._updateSliderPositions();
 
-	WebInspector.panels.timelapse.popover.refresh();
+	this._presentationModel.overviewPopover.refresh();
     },
 
     _onAnchorRemoved: function()
@@ -954,7 +962,7 @@ WebInspector.TimelapseOverview.prototype = {
 	anchorSlider.dispose();
 	this._updateSliderPositions();
 
-	WebInspector.panels.timelapse.popover.refresh();
+	this._presentationModel.overviewPopover.refresh();
     }
 };
 
@@ -1049,7 +1057,7 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
 	    x: this.element.boxInWindow().x + circleCoords.left,
 	    y: this.element.boxInWindow().y + circleCoords.top + circleCoords.radius + 1
 	};
-	WebInspector.panels.timelapse.popover.show(records, popupPosition);
+	this._presentationModel.overviewPopover.show(records, popupPosition);
     },
 
     hitTest: function(event)
@@ -1472,3 +1480,120 @@ WebInspector.TimelapseOverviewSlider.prototype = {
 };
 
 WebInspector.TimelapseOverviewSlider.prototype.__proto__ = WebInspector.Object.prototype;
+
+WebInspector.TimelapsePopover = function(popoverHelper)
+{
+    WebInspector.Popover.call(this);
+
+    this._popoverHelper = popoverHelper;
+
+    var model = WebInspector.timelapseModel;
+    var eventNames = WebInspector.TimelapseModel.EventTypes;
+
+    model.addEventListener(eventNames.Enabled, this.hide, this);
+    model.addEventListener(eventNames.Disabled, this.hide, this);
+    model.addEventListener(eventNames.RecordingDidStart, this.hide, this);
+    model.addEventListener(eventNames.PlaybackStopped, this.hide, this);
+}
+
+WebInspector.TimelapsePopover.prototype = {
+    show: function(records, position)
+    {
+	if (this._disposed)
+	    return;
+
+	if (!records) {
+	    this.hide();
+	    return;
+	}
+
+	this._records = records;
+	this._position = position;
+	this.contentElement = WebInspector.timelapsePresentationModel.generatePopupContent(records);
+
+        // This should not happen, but we hide previous popup to be on the safe side.
+        if (WebInspector.Popover._popoverElement)
+            document.body.removeChild(WebInspector.Popover._popoverElement);
+        WebInspector.Popover._popoverElement = this.element;
+
+        // Temporarily attach in order to measure preferred dimensions.
+        this.contentElement.positionAt(0, 0);
+        document.body.appendChild(this.contentElement);
+        var preferredWidth = this.contentElement.offsetWidth;
+        var preferredHeight = this.contentElement.offsetHeight;
+
+	this._contentDiv.removeChildren();
+	this._contentDiv.appendChild(this.contentElement);
+        this.element.appendChild(this._contentDiv);
+        document.body.appendChild(this.element);
+        this._positionElement(position, preferredWidth, preferredHeight);
+        this._visible = true;
+	this._popoverHelper.killHidePopoverTimer();
+        this.contentElement.addEventListener("mousemove", function(event) {
+	    this._popoverHelper.killHidePopoverTimer();
+	    event.stopPropagation();
+	}.bind(this), true);
+    },
+
+    _positionElement: function(anchorPosition, preferredWidth, preferredHeight)
+    {
+	const borderWidth = 2;
+        const scrollerWidth = 11;
+        const arrowHeight = 6;
+        const arrowOffset = 8;
+	const arrowLeft = 12; // default arrow position
+	const minArrowPosition = 7;
+	const borderRadius = 12;
+
+	var totalWidth = window.innerWidth;
+	var totalHeight = window.innerHeight;
+
+        var newElementPosition = {
+	    x: 0,
+	    y: anchorPosition.y + arrowHeight,
+	    width: preferredWidth,
+	    height: preferredHeight
+	};
+
+        // Positioning below the anchor.
+        if (newElementPosition.y + newElementPosition.height + borderWidth * 2 >= totalHeight) {
+            newElementPosition.height = totalHeight - anchorPosition.y - arrowHeight - borderWidth * 2;
+	    newElementPosition.width += scrollerWidth;
+        }
+
+        if (anchorPosition.x + newElementPosition.width + borderWidth - arrowLeft - arrowOffset < totalWidth) {
+	    // Touching left or no border.
+            newElementPosition.x = Math.max(borderWidth, anchorPosition.x - borderWidth - arrowLeft - arrowOffset);
+	    if (newElementPosition.x == borderWidth)
+		this._popupArrowElement.style.left = Math.max(minArrowPosition, anchorPosition.x - arrowOffset) + "px";
+	    else
+		this._popupArrowElement.style.left = arrowLeft + "px";
+        }
+	else if (newElementPosition.width + borderWidth * 2 < totalWidth) {
+	    // Touching right border.
+            newElementPosition.x = totalWidth - newElementPosition.width - borderWidth * 2;
+            this._popupArrowElement.style.right = Math.max(minArrowPosition, totalWidth - anchorPosition.x - borderWidth - arrowOffset - 1) + "px";
+	    this._popupArrowElement.style.left = "auto";
+        }
+	else {
+	    // Touching both borders.
+            newElementPosition.x = borderWidth;
+            newElementPosition.width = totalWidth - borderWidth * 2;
+	    newElementPosition.height += scrollerWidth;
+            this._popupArrowElement.style.left = Math.max(0, anchorPosition.x - arrowOffset) + "px";
+        }
+
+        this.element.className = "timelapse-popover custom-popup-vertical-scroll custom-popup-horizontal-scroll";
+        this.element.positionAt(Math.round(newElementPosition.x), Math.round(newElementPosition.y));
+        this.element.style.width = newElementPosition.width + borderWidth * 2 + "px";
+        this.element.style.height = newElementPosition.height + borderWidth * 2 + "px";
+    },
+
+    refresh: function()
+    {
+	if (this._visible && this._records && this._position)
+	    this.show(this._records, this._position);
+    }
+};
+
+WebInspector.TimelapsePopover.prototype.__proto__ = WebInspector.Popover.prototype;

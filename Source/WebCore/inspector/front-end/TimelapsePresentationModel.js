@@ -41,6 +41,9 @@ WebInspector.TimelapsePresentationModel = function()
     this.anchorManager = new WebInspector.TimelapseAnchorManager();
     this.breakpointLinkifier = new WebInspector.Linkifier();
     this.calculator = new WebInspector.TimelapseCalculator();
+    // for now, put the popover here, so overview can control it.
+    // it should move into TimelapseReplayingView or its children.
+    this.overviewPopover = new WebInspector.TimelapsePopover(this);
 
     var eventNames = WebInspector.TimelapseModel.EventTypes;
     this._model.addEventListener(eventNames.RecordingDidStart, this._recordingDidStart, this);
@@ -344,6 +347,26 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	var endIndex = this.calculator.computeMarkIndexFromPercentage(this.calculator.zoomRight);
 
 	this._model.scanBreakpointsInRegion(startIndex, endIndex);
+    },
+
+    startHidePopoverTimer: function(event)
+    {
+	if (!WebInspector.Popover._popoverElement || this._hidePopoverTimer)
+	    return;
+
+	function doHide() {
+	    this.overviewPopover.hide();
+	    delete this._hidePopoverTimer;
+	}
+	this._hidePopoverTimer = setTimeout(doHide.bind(this), 1000);
+    },
+
+    killHidePopoverTimer: function(event)
+    {
+        if (this._hidePopoverTimer) {
+            clearTimeout(this._hidePopoverTimer);
+            delete this._hidePopoverTimer;
+        }
     },
 
     generatePopupContent: function(records) {
@@ -875,7 +898,6 @@ WebInspector.TimelapseCalculator.prototype = {
 };
 
 WebInspector.TimelapseCalculator.prototype.__proto__ = WebInspector.Object.prototype;
-
 
 /**
  * @constructor
