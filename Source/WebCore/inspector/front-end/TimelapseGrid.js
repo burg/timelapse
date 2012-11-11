@@ -41,7 +41,7 @@ WebInspector.TimelapseGrid = function() {
 
     columns.gutter.title = " ";
     columns.gutter.sortable = false;
-    columns.gutter.width = "100px";
+    columns.gutter.width = "15px";
     columns.gutter.aligned = "center";
 
     columns.index.title = " ";
