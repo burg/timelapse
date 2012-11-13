@@ -38,20 +38,25 @@ WebInspector.TimelapsePresentationModel = function()
     WebInspector.Object.call(this);
     this._model = WebInspector.timelapseModel;
 
+    // TODO: we should create TimelapseAnchorDataProvider when recording is done.
     this.anchorManager = new WebInspector.TimelapseAnchorManager();
     this.breakpointLinkifier = new WebInspector.Linkifier();
     this.calculator = new WebInspector.TimelapseCalculator();
-    // for now, put the popover here, so overview can control it.
-    // it should move into TimelapseReplayingView or its children.
+    // TODO: eventually this should move to TimelapseOverview or something.
     this.overviewPopover = new WebInspector.TimelapsePopover(this);
+
+    this._providers = [];
 
     var eventNames = WebInspector.TimelapseModel.EventTypes;
     this._model.addEventListener(eventNames.RecordingDidStart, this._recordingDidStart, this);
     this._model.addEventListener(eventNames.RecordingDidStop, this._recordingDidStop, this);
+    // TODO: move to TimelapseInputDataProvider
     this._model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
+    // TODO: move to TimelapseBreakpointDataProvider
     this._model.addEventListener(eventNames.BreakpointPaused, this._breakpointPaused, this);
     this._model.addEventListener(eventNames.BreakpointHit, this._breakpointsChanged, this);
 
+    // TODO: move to TimelapseBreakpointDataProvider
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._breakpointsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._breakpointsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, this._breakpointsChanged, this);
@@ -60,6 +65,9 @@ WebInspector.TimelapsePresentationModel = function()
 };
 
 WebInspector.TimelapsePresentationModel.EventTypes = {
+    ProviderAdded: "TimelapseProviderAdded",
+    ProviderRemoved: "TimelapseProviderRemoved",
+    // TODO: the following events are details of specific data providers.
     FilterChanged: "TimelapseFilterChanged",
     InputSelected: "TimelapseInputSelected",
     PreviewStarted: "TimelapsePreviewStarted",
@@ -70,10 +78,12 @@ WebInspector.TimelapsePresentationModel.EventTypes = {
     CircleSelected: "TimelapseCircleSelected"
 };
 
+// TODO: move to TimelapseInputDataProvider
 var makeCoords = function(data) {
 	return "(" + (data.x || 0) + "," + (data.y || 0) + ")";
     };
 
+// TODO: move to TimelapseInputDataProvider
 var makeModKeys = function(data) {
 	str = "";
 	if (data.shiftKey) str += "<SHIFT> ";
@@ -83,6 +93,7 @@ var makeModKeys = function(data) {
 	return str;
     };
 
+// TODO: move to TimelapseInputDataProvider
 var makeButton = function(button) {
 	if (button == -1) return ""; // No button
 	if (button == 0) return "Left Button";
@@ -91,6 +102,7 @@ var makeButton = function(button) {
 	return "";
     };
 
+// TODO: move to TimelapseInputDataProvider
 WebInspector.TimelapsePresentationModel.RecordPreview = {
     MousePress: function(data)
     {
@@ -135,12 +147,13 @@ WebInspector.TimelapsePresentationModel.RecordPreview = {
 };
 
 WebInspector.TimelapsePresentationModel.prototype = {
-
+    // TODO: what is this used for?
     get replayingToAnchor()
     {
 	return this._replayingToAnchor;
     },
 
+    // TODO: move to TimelapseBreakpointDataProvider
     get breakpointRecords()
     {
 	/* The presentation model maintains breakpoint records for _enabled_ breakpoints. */
@@ -176,6 +189,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	return this._breakpointRecords;
     },
 
+    // TODO: most of this state will be moved to providers or timeline widgets
     reset: function() 
     {
 	/* matchedRecords are records that pass non-time filters  */
@@ -186,21 +200,32 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this._resourceUrlById = [];
 	this.anchorManager.reset();
 	this.calculator.reset();
+
+	this._clearProviders();
     },
 
     // Private API (callbacks)
     _recordingDidStart: function()
     {
 	this.reset();
+	// TODO: create new TimelapseInputDataProviders for this recording
+
+	// TODO: remove
 	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.FilterChanged);
     },
 
     _recordingDidStop: function()
     {
+	// TODO: create TimelapseBreakpointDataProvider, TimelapseAnchorDataProvider.
+
+	// TODO: Remove
 	this._updateMatchingRecords();
+
 	this.calculator.setZoomInterval(0.0, 1.0);
     },
 
+    // TODO: disambiguate record type, add to correct TimelapseInputDataProvider.
+    // alternatively, each provider listens for RecordAdded itself.
     _recordAdded: function(event)
     {
 	var record = event.data;
@@ -211,6 +236,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    return;
 	}
 
+	// TODO: This should be moved to TimelapseInputDataProvider.addRecord()
 	// ReceiveData and ResourceLoaded records do not include URL data, so store it from request/response records.
 	var recordTypes = WebInspector.TimelapseAgent.RecordType;
 	if (record.type == recordTypes.RequestResource
@@ -218,12 +244,16 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    this._resourceUrlById[record.data.id] = record.data.url;
 	}
 
+	// TODO: remove
 	this._matchedRecords.push(record);
+
 	this.calculator.updateBoundaries(record);
     },
 
+    // TODO: should be removed
     _updateMatchingRecords: function()
     {
+	// TODO: should be tracked by DataProvider.isEnabled() and friends
 	var catEnabledByRecordType = {};
         for (eventType in this.recordStyles) {
             var category = this.recordStyles[eventType].category;
@@ -237,17 +267,52 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this._matchedRecordsAreStale = true;
     },
 
+    // TODO: should live on TimelapseBreakpointDataProvider
     _breakpointPaused: function()
     {
 	this._replayingToAnchor = false;
     },
 
+    // TODO: should live on TimelapseBreakpointDataProvider
     _breakpointsChanged: function()
     {
 	this._breakpointRecordsAreStale = true;
     },
 
     // Public API
+    addProvider: function(provider) {
+	if (this._providers.indexOf(provider) != -1)
+	    return;
+
+	this._providers.push(provider);
+    	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.ProviderAdded, provider);
+    },
+
+    removeProvider: function(provider) {
+	var idx = this._providers.indexOf(provider);
+	if (idx == -1)
+	    return;
+
+	this._removeProviderAtIndex(idx);
+    },
+
+    _removeProviderAtIndex: function(idx) {
+	console.assert(idx > 0 && idx < self._providers.length, "Tried to tremove provider at invalid index.");
+	
+	var removed = this._providers.splice(idx, 1);
+    	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.ProviderRemoved, removed);
+    },
+
+    _clearProviders: function() {
+	// TODO: may not actually want to remove certain providers, just clear them?
+	while (this._providers.length > 0) {
+	    self._providers[i].willRemove();
+	    self._removeProviderAtIndex(0);
+	}
+    },
+
+    // TODO: eventually, TimelapsePresentationModel shouldn't actually hold any records,
+    // just a calculator that's been informed by the incoming events.
     get matchedRecords()
     {
 	if (this._matchedRecordsAreStale) {
@@ -258,22 +323,26 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	return this._matchedRecords;
     },
 
+    // TODO: Preview state should live on the specific DataProvider which is being previewed.
     get previewModeActive()
     {
 	return !!this._previewModeActive;
     },
 
+    // TODO: Preview state should live on the specific DataProvider which is being previewed.
     get previewedRecord()
     {
 	return this._previewedRecord;
     },
 
+    // TODO: Preview state should live on the specific DataProvider which is being previewed.
     startPreviewing: function()
     {
 	this._previewModeActive = true;
     	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.PreviewStarted);
     },
 
+    // TODO: Preview state should live on the specific DataProvider which is being previewed.
     stopPreviewing: function()
     {
 	delete this._previewModeActive;
@@ -281,6 +350,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
     	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.PreviewStopped);
     },
 
+    // TODO: Preview state should live on the specific DataProvider which is being previewed.
     previewRecord: function(record)
     {
 	console.assert(!!record, "Cannot preview undefined record");
@@ -289,6 +359,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.PreviewChanged, record);
     },
 
+    // TODO: should be tracked by DataProvider.isEnabled() and friends.
     toggleCategory: function(category)
     {
 	category.disabled = !category.disabled;
@@ -300,6 +371,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.FilterChanged);
     },
 
+    // TODO: Selection state should live on the specific DataProvider which is being selected.
     selectCircle: function(category, circleIndex, records)
     {
 	var eventData = {
@@ -311,6 +383,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.CircleSelected, eventData);
     },
 
+    // TODO: Selection state should live on the specific DataProvider which is being selected.
     circleMouseOver: function(category, circleIndex, records)
     {
 	var eventData = {
@@ -322,6 +395,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.CircleMouseOver, eventData);
     },
 
+    // TODO: Selection state should live on the specific DataProvider which is being selected.
     circleMouseOut: function(category, circleIndex, records)
     {
 	var eventData = {
@@ -333,6 +407,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.CircleMouseOut, eventData);
     },
 
+    // TODO: Selection state should live on the specific DataProvider which is being selected.
     selectInput: function(markIndex)
     {
 	this._selectedInputIndex = markIndex;
@@ -349,6 +424,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this._model.scanBreakpointsInRegion(startIndex, endIndex);
     },
 
+    // TODO: Eventually this should live with the TimelapseOverview
     startHidePopoverTimer: function(event)
     {
 	if (!WebInspector.Popover._popoverElement || this._hidePopoverTimer)
@@ -361,6 +437,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this._hidePopoverTimer = setTimeout(doHide.bind(this), 1000);
     },
 
+    // TODO: Eventually this should live with the TimelapseOverview
     killHidePopoverTimer: function(event)
     {
         if (this._hidePopoverTimer) {
@@ -369,6 +446,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
         }
     },
 
+    // TODO: move to specific Timeline subclass (TimelapseInputTimeline, TimelapseBreakpointsTimeline,...)
     generatePopupContent: function(records) {
 	if (!records || records.length == 0)
 	    return null;
@@ -497,6 +575,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	return table;
     },
 
+    // TODO: move to TimelapseInputDataProvider
     get categories()
     {
 	if (!this._categories) {
@@ -514,6 +593,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
     categoryOrder: ["userinput", "network", "timer", "breakpoint"],
     timelineHeight: 30,
 
+    // TODO: move to TimelapseInputDataProvider
     get recordStyles()
     {
 	if (!this._recordStylesArray) {
@@ -555,6 +635,7 @@ WebInspector.TimelapsePresentationModel.prototype.__proto__ = WebInspector.Objec
 /**
  * @constructor
  */
+// TODO: move to TimelapseAnchorDataProvider
 WebInspector.TimelapseAnchorManager = function()
 {
     WebInspector.Object.call(this);
@@ -573,11 +654,13 @@ WebInspector.TimelapseAnchorManager = function()
     this.reset();
 };
 
+// TODO: move to TimelapseAnchorDataProvider
 WebInspector.TimelapseAnchorManager.EventTypes = {
     AnchorSet: "TimelapseAnchorSet",
     AnchorRemoved: "TimelapseAnchorRemoved"
 };
 
+// TODO: move to TimelapseAnchorDataProvider
 WebInspector.TimelapseAnchorManager.prototype = {
     get anchors()
     {
@@ -720,6 +803,7 @@ WebInspector.TimelapseAnchorManager.prototype.__proto__ = WebInspector.Object.pr
 /**
  * @constructor
  */
+// TODO: move to TimelapseAnchorDataProvider
 WebInspector.TimelapseAnchor = function(markIndex, hitIndex, debuggerWalk)
 {
     this._markIndex = markIndex;
@@ -727,6 +811,7 @@ WebInspector.TimelapseAnchor = function(markIndex, hitIndex, debuggerWalk)
     this._debuggerWalk = debuggerWalk;
 };
 
+// TODO: move to TimelapseAnchorDataProvider
 WebInspector.TimelapseAnchor.prototype = {
     get location()
     {
@@ -902,6 +987,7 @@ WebInspector.TimelapseCalculator.prototype.__proto__ = WebInspector.Object.proto
 /**
  * @constructor
  */
+// TODO: move to TimelapseInputDataProvider
 WebInspector.TimelapseCategory = function(name, title, color)
 {
     this.name = name;

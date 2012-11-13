@@ -39,7 +39,23 @@ WebInspector.TimelapseOverview = function()
 
     this._model = WebInspector.timelapseModel;
     this._presentationModel = WebInspector.timelapsePresentationModel;
+
+    // TODO: the overview should look for new providers and create timelines for
+    // them if it knows how to interpret them.
+
+    // TODO: If we have multiple overviews, each with different timelines,
+    // then TimelapseReplayingView or something else needs to coordinate which 
+    // overviews handle which data providers.
+
+    // TODO: TimelapseOverview should compose a Miniview and several Timelines.
+    // The miniview shall be fed a subset of the data providers behind each timeline.
    
+
+    // TODO: being based on DataProviders, the overview should only be
+    // listening for events necessary to update overview slider positions.
+    //
+    // Data changes go through the DataProviders.
+    // Zoom changes come from the TimelapsePresentationModel.
     var modelEventNames = WebInspector.TimelapseModel.EventTypes;
     this._model.addEventListener(modelEventNames.RecordingDidStart, this._onRecordingDidStart, this);
     this._model.addEventListener(modelEventNames.RecordingDidStop, this._onRecordingDidStop, this);
@@ -51,6 +67,7 @@ WebInspector.TimelapseOverview = function()
     this._model.addEventListener(modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
     this._model.addEventListener(modelEventNames.BreakpointHit, this._onBreakpointRecordsChanged, this);
 
+    // TODO: these should instead listen to specific data provider events.
     var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
     this._presentationModel.addEventListener(presEventNames.FilterChanged, this._onFilterChanged, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
@@ -62,6 +79,7 @@ WebInspector.TimelapseOverview = function()
 
     this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
 
+    // TODO: listen to TimelapseAnchorDataProvider instead.
     var anchorManager = WebInspector.timelapsePresentationModel.anchorManager;
     var anchorEventNames = WebInspector.TimelapseAnchorManager.EventTypes;
     anchorManager.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
@@ -938,6 +956,8 @@ WebInspector.TimelapseOverview.prototype = {
 	this._presentationModel.overviewPopover.hide();
     },
 
+    // TODO: message panel (used for "scanning..." etc) should
+    // probably belong on TimelapseReplayingView."
     _onMessagePanelClicked: function()
     {
 	if (!this._model.replaying)
