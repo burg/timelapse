@@ -147,12 +147,6 @@ WebInspector.TimelapsePresentationModel.RecordPreview = {
 };
 
 WebInspector.TimelapsePresentationModel.prototype = {
-    // TODO: what is this used for?
-    get replayingToAnchor()
-    {
-	return this._replayingToAnchor;
-    },
-
     // TODO: move to TimelapseBreakpointDataProvider
     get breakpointRecords()
     {
@@ -196,7 +190,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this._matchedRecords = [];
 	this._matchedRecordsAreStale = false;
 	this._breakpointRecordsAreStale = true;
-	this._replayingToAnchor = false;
 	this._resourceUrlById = [];
 	this.anchorManager.reset();
 	this.calculator.reset();
@@ -268,12 +261,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
     },
 
     // TODO: should live on TimelapseBreakpointDataProvider
-    _breakpointPaused: function()
-    {
-	this._replayingToAnchor = false;
-    },
-
-    // TODO: should live on TimelapseBreakpointDataProvider
     _breakpointsChanged: function()
     {
 	this._breakpointRecordsAreStale = true;
@@ -297,7 +284,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
     },
 
     _removeProviderAtIndex: function(idx) {
-	console.assert(idx > 0 && idx < self._providers.length, "Tried to tremove provider at invalid index.");
+	console.assert(idx > 0 && idx < this._providers.length, "Tried to tremove provider at invalid index.");
 	
 	var removed = this._providers.splice(idx, 1);
     	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.ProviderRemoved, removed);
@@ -306,8 +293,8 @@ WebInspector.TimelapsePresentationModel.prototype = {
     _clearProviders: function() {
 	// TODO: may not actually want to remove certain providers, just clear them?
 	while (this._providers.length > 0) {
-	    self._providers[i].willRemove();
-	    self._removeProviderAtIndex(0);
+	    this._providers[i].willRemove();
+	    this._removeProviderAtIndex(0);
 	}
     },
 
@@ -838,7 +825,6 @@ WebInspector.TimelapseAnchor.prototype = {
 
     replayToAnchor: function()
     {
-	WebInspector.timelapsePresentationModel._replayingToAnchor = true;
 	WebInspector.timelapseModel.replayDebuggerWalk(this._markIndex, this._hitIndex, this._debuggerWalk);
     }
 };

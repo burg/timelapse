@@ -60,17 +60,17 @@ WebInspector.DataProvider.prototype = {
     },
 
     enable: function() {
-	self._enabled = true;
+	this._enabled = true;
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.Enabled, this);
     },
 
     disable: function() {
-	self._enabled = false;
+	this._enabled = false;
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.Disabled, this);
     },
 
     isEnabled: function() {
-	return self._enabled;
+	return this._enabled;
     },
 
     // This should be used by listeners as an opportunity to remove callbacks
@@ -91,34 +91,34 @@ WebInspector.DataProvider.Events = {
     Disabled: "Disabled",
     WillRemove: "WillRemove",
 
-    DataChanged: "DataChanged",  
+    DataChanged: "DataChanged",
 };
 
 WebInspector.TimelapseInputDataProvider = function(inputName)
 {
     WebInspector.DataProvider.call(this);
 
-    self._inputName = inputName;  
-    self._records = [];
+    this._inputName = inputName;
+    this._records = [];
 };
 
 WebInspector.TimelapseInputDataProvider.prototype = {
     get displayName()
-    {    
-	return self.inputName;
+    {
+	return this._inputName;
     },
 
     get records()
     {
-	return self._records;
+	return this._records;
     },
 
     addRecord: function(record)
     {
-	self._records.push(record);
+	this._records.push(record);
     },
 };
 
-// TODO: TimelapseAnchorDataProvider. 
+// TODO: TimelapseAnchorDataProvider
 
 // TODO: TimelapseBreakpointDataProvider
