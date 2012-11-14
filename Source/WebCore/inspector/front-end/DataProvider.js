@@ -56,7 +56,7 @@ WebInspector.DataProvider.prototype = {
     // Override me!
     get displayName()
     {
-        return this.name();
+        return this.name;
     },
 
     enable: function() {
@@ -122,8 +122,11 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	var record = event.data;
 	var recordStyles = WebInspector.timelapsePresentationModel.recordStyles;
 
-	if (recordStyles[record.type].category.name == this._inputName)
-	    this._records.push(event.data);
+	if (recordStyles[record.type].category.name != this._inputName)
+	    return;
+
+	this._records.push(event.data);
+	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged)
     },
 };
 
