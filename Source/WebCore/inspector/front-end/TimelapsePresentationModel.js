@@ -195,6 +195,8 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.calculator.reset();
 
 	this._clearProviders();
+	for (var i = 0; i < this.categoryOrder.length; i++)
+	    this.addProvider(new WebInspector.TimelapseInputDataProvider(this.categoryOrder[i]));
     },
 
     // Private API (callbacks)
@@ -284,7 +286,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
     },
 
     _removeProviderAtIndex: function(idx) {
-	console.assert(idx > 0 && idx < this._providers.length, "Tried to tremove provider at invalid index.");
+	console.assert(idx >= 0 && idx < this._providers.length, "Tried to remove provider at invalid index.");
 	
 	var removed = this._providers.splice(idx, 1);
     	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.ProviderRemoved, removed);
@@ -293,7 +295,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
     _clearProviders: function() {
 	// TODO: may not actually want to remove certain providers, just clear them?
 	while (this._providers.length > 0) {
-	    this._providers[i].willRemove();
+	    this._providers[0].willRemove();
 	    this._removeProviderAtIndex(0);
 	}
     },

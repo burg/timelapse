@@ -100,6 +100,10 @@ WebInspector.TimelapseInputDataProvider = function(inputName)
 
     this._inputName = inputName;
     this._records = [];
+
+    var model = WebInspector.timelapseModel;
+    var eventNames = WebInspector.TimelapseModel.EventTypes;
+    model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
 };
 
 WebInspector.TimelapseInputDataProvider.prototype = {
@@ -113,11 +117,17 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	return this._records;
     },
 
-    addRecord: function(record)
+    _recordAdded: function(event)
     {
-	this._records.push(record);
+	var record = event.data;
+	var recordStyles = WebInspector.timelapsePresentationModel.recordStyles;
+
+	if (recordStyles[record.type].category.name == this._inputName)
+	    this._records.push(event.data);
     },
 };
+
+WebInspector.TimelapseInputDataProvider.prototype.__proto__ = WebInspector.DataProvider.prototype;
 
 // TODO: TimelapseAnchorDataProvider
 
