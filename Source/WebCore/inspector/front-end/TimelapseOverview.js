@@ -1284,6 +1284,48 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
 	}
     },
 
+    _recomputeTimeline: function()
+    {
+	var category = this._category;
+	var data = this._data;
+	var minIntervalPx = 4.0; /* distance between adjacent record centers */
+	var baseRadius = 3;
+	var maxRecordsPerDot = 10;
+
+	var availWidth = this.element.clientWidth;
+	var minInterval = minIntervalPx / availWidth * this.calculator.zoomInterval * this.calculator.boundarySpan;
+
+	var pendingRecords = [];
+
+	function flushDot() {
+	    if (pendingRecords.length == 0)
+		return;
+
+	    var totalTs = 0.0;
+	    for (var i = 0; i < pendingRecords.length; i++)
+		totalTs += pendingRecords[i].mark.timestamp;
+
+	    var averageTimestamp = totalTs/pendingRecords.length;
+	    var radius = baseRadius + pendingRecords.length;
+
+	    data.centers.push(averageTimestamp);
+	    data.radii.push(radius);
+	    data.records.push(pendingRecords);
+
+	    pendingRecords = [];
+	}
+
+	for (i = 0; i < records.length; i++) {
+	    var record = records[i];
+	    pendingRecords.push(record);
+
+	    if (pendingRecords.length == maxRecordsPerDot
+		|| (i > 0 && record.mark.timestamp - records[i-1].mark.timestamp > minInterval))
+		flushDot();
+	}
+	flushDot();
+    },
+
     _clearTimeline: function()
     {
 	this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
