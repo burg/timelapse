@@ -195,8 +195,10 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.calculator.reset();
 
 	this._clearProviders();
-	for (var i = 0; i < this.categoryOrder.length; i++)
-	    this.addProvider(new WebInspector.TimelapseInputDataProvider(this.categoryOrder[i]));
+	for (var i = 0; i < this.categoryOrder.length; i++) {
+	    var categoryName = this.categoryOrder[i];
+	    this.addProvider(new WebInspector.TimelapseInputDataProvider(this.categories[categoryName]));
+	}
     },
 
     // Private API (callbacks)
@@ -288,12 +290,11 @@ WebInspector.TimelapsePresentationModel.prototype = {
     _removeProviderAtIndex: function(idx) {
 	console.assert(idx >= 0 && idx < this._providers.length, "Tried to remove provider at invalid index.");
 	
-	var removed = this._providers.splice(idx, 1);
+	var removed = this._providers.splice(idx, 1)[0];
     	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.ProviderRemoved, removed);
     },
 
     _clearProviders: function() {
-	// TODO: may not actually want to remove certain providers, just clear them?
 	while (this._providers.length > 0) {
 	    this._providers[0].willRemove();
 	    this._removeProviderAtIndex(0);

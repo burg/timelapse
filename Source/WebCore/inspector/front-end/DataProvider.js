@@ -94,11 +94,11 @@ WebInspector.DataProvider.Events = {
     DataChanged: "DataChanged",
 };
 
-WebInspector.TimelapseInputDataProvider = function(inputName)
+WebInspector.TimelapseInputDataProvider = function(inputCategory)
 {
     WebInspector.DataProvider.call(this);
 
-    this._inputName = inputName;
+    this._category = inputCategory;
     this._records = [];
 
     var model = WebInspector.timelapseModel;
@@ -107,9 +107,14 @@ WebInspector.TimelapseInputDataProvider = function(inputName)
 };
 
 WebInspector.TimelapseInputDataProvider.prototype = {
+    get category()
+    {
+	return this._category;
+    },
+
     get displayName()
     {
-	return this._inputName;
+	return this._category.title;
     },
 
     get records()
@@ -122,7 +127,7 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	var record = event.data;
 	var recordStyles = WebInspector.timelapsePresentationModel.recordStyles;
 
-	if (recordStyles[record.type].category.name != this._inputName)
+	if (recordStyles[record.type].category.name != this._category.name)
 	    return;
 
 	this._records.push(event.data);

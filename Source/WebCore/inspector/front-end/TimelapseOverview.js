@@ -69,6 +69,8 @@ WebInspector.TimelapseOverview = function()
 
     // TODO: these should instead listen to specific data provider events.
     var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
+    this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
+    this._presentationModel.addEventListener(presEventNames.ProviderRemoved, this._onProviderRemoved, this);
     this._presentationModel.addEventListener(presEventNames.FilterChanged, this._onFilterChanged, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
@@ -496,6 +498,31 @@ WebInspector.TimelapseOverview.prototype = {
 	circleDesc.timeline.clearCursor();
 	circleDesc.timeline.removeHighlight(circleDesc.circleIndex);
 	circleDesc.timeline.refresh();
+    },
+
+    _onProviderAdded: function(event)
+    {
+	// TODO: allow multiple providers/timelines per category
+	var provider = event.data;
+	for (var key in this._categoryTimelines) {
+	    if (this._categoryTimelines[key].category == provider.category) {
+		this._categoryTimelines[key].setProvider(event.data);
+		return;
+	    }
+	}
+	// TODO: add timeline if appropriate
+    },
+
+    _onProviderRemoved: function(event)
+    {
+	var provider = event.data;
+	for (var key in this._categoryTimelines) {
+	    if (this._categoryTimelines[key].provider == provider) {
+		this._categoryTimelines[key].removeProvider();
+		// TODO: remove timeline if appropriate
+		return;
+	    }
+	}
     },
 
     _onTimelineMousemove: function(event)
@@ -991,11 +1018,14 @@ WebInspector.TimelapseOverview.prototype.__proto__ = WebInspector.View.prototype
 /**
  * @constructor
  */
-WebInspector.TimelapseCategoryTimeline = function(category, data)
+WebInspector.TimelapseCategoryTimeline = function(category, provider)
 {
     this._presentationModel = WebInspector.timelapsePresentationModel;
     this.calculator = this._presentationModel.calculator;
-    this.category = category;
+    this._category = category;
+
+    if (provider)
+	this.setProvider(provider);
 
     var events = WebInspector.TimelapsePresentationModel.EventTypes;
     this._presentationModel.addEventListener(events.FilterChanged, this._onFilterChanged, this);
@@ -1010,6 +1040,16 @@ WebInspector.TimelapseCategoryTimeline = function(category, data)
 };
 
 WebInspector.TimelapseCategoryTimeline.prototype = {
+    get category()
+    {
+	return this._category;
+    },
+
+    get provider()
+    {
+	return this._provider;
+    },
+
     reset: function()
     {
 	this.resize();
@@ -1027,9 +1067,9 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
 
 	this._dirty = true;
 	var fillAlpha = 0.3;
-	var fillColor = WebInspector.Color.fromRGBA(this.category.color.rgb[0],
-						    this.category.color.rgb[1],
-						    this.category.color.rgb[2],
+	var fillColor = WebInspector.Color.fromRGBA(this._category.color.rgb[0],
+						    this._category.color.rgb[1],
+						    this._category.color.rgb[2],
 						    fillAlpha).toString();
 
 	this._ctx = this._canvas.getContext("2d");
@@ -1045,7 +1085,53 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
 
     refresh: function()
     {
+	if (!this._dirty)
+	    return;
+
 	this._drawTimeline();
+    },
+
+    setProvider: function(provider)
+    {
+	this._provider = provider;
+	var events = WebInspector.DataProvider.Events;
+	this._provider.addEventListener(events.DataChanged, this._onDataChanged, this);
+	this._provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
+	this._provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
+
+	this._onDataChanged();
+
+	if (this._provider.isEnabled())
+	    this._onProviderEnabled();
+	else
+	    this._onProviderDisabled();
+    },
+
+    removeProvider: function()
+    {
+	var events = WebInspector.DataProvider.Events;
+	this._provider.removeEventListener(events.DataChanged, this._onDataChanged, this);
+	this._provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
+	this._provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
+
+	delete this._provider;
+    },
+
+    _onDataChanged: function()
+    {
+	this._recomputeTimeline();
+	this.clearHighlights();
+	this._dirty = true;
+    },
+
+    _onProviderEnabled: function()
+    {
+	this.element.classList.remove("disabled");
+    },
+
+    _onProviderDisabled: function()
+    {
+	this.element.classList.add("disabled");
     },
 
     _circleIndexFromMarkIndex: function(markIndex)
@@ -1163,9 +1249,9 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
     {
 	var strokeAlpha = 0.7;
 	var singleInputStrokeColor = WebInspector.Color.fromRGBA(0, 0, 0, strokeAlpha).toString();
-	var defaultStrokeColor = WebInspector.Color.fromRGBA(Math.max(0, this.category.color.rgb[0] - 50),
-							     Math.max(0, this.category.color.rgb[1] - 50),
-							     Math.max(0, this.category.color.rgb[2] - 50),
+	var defaultStrokeColor = WebInspector.Color.fromRGBA(Math.max(0, this._category.color.rgb[0] - 50),
+							     Math.max(0, this._category.color.rgb[1] - 50),
+							     Math.max(0, this._category.color.rgb[2] - 50),
 							     strokeAlpha).toString();
 
 	for (var i = 0; i < this._highlights.length; i++) {
@@ -1212,7 +1298,7 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
 	this._dirty = false;
 
 	// Shade unexplored intervals
-	if (this.category.name == "breakpoint") {
+	if (this._category.name == "breakpoint") {
 	    var model = WebInspector.timelapseModel;
 	    var intervals = WebInspector.timelapseBreakpointTracker.exploredIntervals;
 	    var ctx = this._ctx;
@@ -1288,6 +1374,7 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
     {
 	var category = this._category;
 	var data = this._data;
+	var records = this._provider.records;
 	var minIntervalPx = 4.0; /* distance between adjacent record centers */
 	var baseRadius = 3;
 	var maxRecordsPerDot = 10;
@@ -1333,7 +1420,7 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
 
     _onFilterChanged: function()
     {
-	if (this.category.disabled)
+	if (this._category.disabled)
 	    this.element.classList.add("disabled");
 	else
 	    this.element.classList.remove("disabled");
