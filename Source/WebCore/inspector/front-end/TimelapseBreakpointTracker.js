@@ -24,6 +24,12 @@ WebInspector.TimelapseBreakpointTracker = function()
     this._reset();
 };
 
+WebInspector.TimelapseBreakpointTracker.Events = {
+    BreakpointHit: "BreakpointHit",
+    BreakpointAdded: "BreakpointAdded",
+    BreakpointRemoved: "BreakpointRemoved",
+};
+
 WebInspector.TimelapseBreakpointTracker.prototype = {
 
     // Public query API
@@ -60,6 +66,8 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 	this._breakpoints = {};
 	this._exploredIntervals.clear();
 	this._recordInProgress = false;
+
+	this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Reset);
     },
 
     // Callbacks from TimelapseModel
@@ -143,6 +151,14 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 
 	breakpoints[idx].hits.push(this._breakpoints[debuggerId]);
 	this._recordInProgress = breakpoints[idx];
+
+	var eventData = {
+	    breakpoint: this._breakpoints[debuggerId],
+	    mark: breakpoints[idx].mark,
+	    type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
+	    hitIndex: breakpoints[idx].hits.length - 1
+	}
+	this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Events.BreakpointHit, eventData);
     },
 
     // Callbacks from BreakpointManager
@@ -167,6 +183,7 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
     _breakpointAddedToStorage: function()
     {
 	this._exploredIntervals.clear();
+	this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Events.BreakpointAdded);
     },
 
     _breakpointRemovedFromStorage: function(event)
@@ -185,6 +202,7 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 		records.splice(i--, 1);
 	}
 
+	this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Events.BreakpointRemoved, this._breakpoints[debuggerId]);
 	delete this._breakpoints[debuggerId];
     }
 };

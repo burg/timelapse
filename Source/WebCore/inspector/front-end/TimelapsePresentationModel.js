@@ -53,7 +53,6 @@ WebInspector.TimelapsePresentationModel = function()
     // TODO: move to TimelapseInputDataProvider
     this._model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
     // TODO: move to TimelapseBreakpointDataProvider
-    this._model.addEventListener(eventNames.BreakpointPaused, this._breakpointPaused, this);
     this._model.addEventListener(eventNames.BreakpointHit, this._breakpointsChanged, this);
 
     // TODO: move to TimelapseBreakpointDataProvider
@@ -195,10 +194,10 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.calculator.reset();
 
 	this._clearProviders();
-	for (var i = 0; i < this.categoryOrder.length; i++) {
-	    var categoryName = this.categoryOrder[i];
-	    this.addProvider(new WebInspector.TimelapseInputDataProvider(this.categories[categoryName]));
-	}
+	this.addProvider(new WebInspector.TimelapseInputDataProvider(this.categories["userinput"]));
+	this.addProvider(new WebInspector.TimelapseInputDataProvider(this.categories["network"]));
+	this.addProvider(new WebInspector.TimelapseInputDataProvider(this.categories["timer"]));
+	this.addProvider(new WebInspector.TimelapseBreakpointDataProvider(this.categories["breakpoint"]));
     },
 
     // Private API (callbacks)
@@ -476,66 +475,60 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    var record = records[i];
 
 	    if (isBreakpointPopup) {
-		// traverse breakpoint hits
-		for (var j = 0; j < record.hits.length; j++) {
-		    header.setAttribute("colspan", 4);
-		    var row = document.createElement("tr");
+		header.setAttribute("colspan", 4);
+		var row = document.createElement("tr");
 
-		    if (j == 0) {
-			var countCell = document.createElement("td");
-			countCell.textContent = record.mark.index;
-			row.appendChild(countCell);
-			row.classList.add("row-with-count");
-		    } else 
-			row.appendChild(document.createElement("td"));
+		var countCell = document.createElement("td");
+		countCell.textContent = record.mark.index;
+		row.appendChild(countCell);
+		row.classList.add("row-with-count");
 
-		    var indexExplored = WebInspector.timelapseBreakpointTracker.exploredIndex(record.mark.index);
-		    var isAnchoredLocation = WebInspector.timelapsePresentationModel.anchorManager.anchorAtLocation(record.mark.index, j);
-		    var isCurrentBreakpoint = record.mark.index == WebInspector.timelapseModel.currentMarkIndex
-			&& j == WebInspector.timelapseModel.currentHitIndex;
+		var indexExplored = WebInspector.timelapseBreakpointTracker.exploredIndex(record.mark.index);
+		var isAnchoredLocation = WebInspector.timelapsePresentationModel.anchorManager.anchorAtLocation(record.mark.index, record.hitIndex);
+		var isCurrentBreakpoint = record.mark.index == WebInspector.timelapseModel.currentMarkIndex
+		    && record.hitIndex == WebInspector.timelapseModel.currentHitIndex;
 
-		    if (isAnchoredLocation) {
-			var anchorButton = createButtonInTD("timelapse-anchor-button toggled", function(markIndex, hitIndex) {
-			    WebInspector.timelapsePresentationModel.anchorManager.removeAnchor(markIndex, hitIndex);
-			}.bind(anchorButton, record.mark.index, j));
-			row.appendChild(anchorButton);
-		    }
-		    else
-			row.appendChild(document.createElement("td"));
+		if (isAnchoredLocation) {
+		    var anchorButton = createButtonInTD("timelapse-anchor-button toggled", function(markIndex, hitIndex) {
+			WebInspector.timelapsePresentationModel.anchorManager.removeAnchor(markIndex, hitIndex);
+		    }.bind(anchorButton, record.mark.index, record.hitIndex));
+		    row.appendChild(anchorButton);
+		}
+		else
+		    row.appendChild(document.createElement("td"));
 
-		    if (indexExplored && !isCurrentBreakpoint) {
-			var jumpButton = createButtonInTD("timelapse-jump-button", function(markIndex, hitIndex) {
-			    WebInspector.timelapseModel.replayToBreakpointHit(markIndex, hitIndex);
-			}.bind(jumpButton, record.mark.index, j));
-			row.appendChild(jumpButton);
-		    }
-		    else
-			row.appendChild(document.createElement("td"));
+		if (indexExplored && !isCurrentBreakpoint) {
+		    var jumpButton = createButtonInTD("timelapse-jump-button", function(markIndex, hitIndex) {
+			WebInspector.timelapseModel.replayToBreakpointHit(markIndex, hitIndex);
+		    }.bind(jumpButton, record.mark.index, record.hitIndex));
+		    row.appendChild(jumpButton);
+		}
+		else
+		    row.appendChild(document.createElement("td"));
 
-		    var breakpoint = record.hits[j];
+		var breakpoint = record.breakpoint;
 
-		    var cell = document.createElement("td");
-		    var sourceLink = breakpoint._linkifyLocation();
-		    sourceLink.addEventListener("contextmenu", breakpoint.contextMenu.bind(breakpoint), true);
-		    cell.appendChild(sourceLink);
+		var cell = document.createElement("td");
+		var sourceLink = breakpoint._linkifyLocation();
+		sourceLink.addEventListener("contextmenu", breakpoint.contextMenu.bind(breakpoint), true);
+		cell.appendChild(sourceLink);
+		cell.addStyleClass("text-cell");
+		row.appendChild(cell);
+
+		if (breakpoint.condition()) {
+		    cell = document.createElement("td");
+		    var conditionText = document.createElement("span");
+		    conditionText.textContent = "(" + breakpoint.condition() + ")";
+		    conditionText.addStyleClass("source-code");
+		    cell.appendChild(conditionText);
 		    cell.addStyleClass("text-cell");
 		    row.appendChild(cell);
-
-		    if (breakpoint.condition()) {
-			cell = document.createElement("td");
-		    	var conditionText = document.createElement("span");
-		    	conditionText.textContent = "(" + breakpoint.condition() + ")";
-			conditionText.addStyleClass("source-code");
-		    	cell.appendChild(conditionText);
-			cell.addStyleClass("text-cell");
-			row.appendChild(cell);
-		    }
-
-		    if (isCurrentBreakpoint)
-			row.addStyleClass("selected");
-
-		    table.appendChild(row);
 		}
+
+		if (isCurrentBreakpoint)
+		    row.addStyleClass("selected");
+
+		table.appendChild(row);
 	    }
 	    else {
 		// display single input

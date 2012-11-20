@@ -1300,7 +1300,7 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
 	// Shade unexplored intervals
 	if (this._category.name == "breakpoint") {
 	    var model = WebInspector.timelapseModel;
-	    var intervals = WebInspector.timelapseBreakpointTracker.exploredIntervals;
+	    var intervals = this._provider.exploredIntervals;
 	    var ctx = this._ctx;
 	    var startPercent = 0, endPercent, widthPercent;
 

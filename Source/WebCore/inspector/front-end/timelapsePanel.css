@@ -1,32 +1,3 @@
-.timelapse-button-icon {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    background-color: rgba(0, 0, 0, 0.5);
-    cursor: pointer;
-}
-
-.timelapse-button-icon:hover {
-    background-color: rgba(200, 100, 0, 0.6);
-}
-
-.toggled .timelapse-button-icon,
-.toggled.timelapse-button-icon {
-    background-color: rgb(66, 129, 235) !important;
-}
-
-.timelapse-anchor-button {
-    -webkit-mask-image: url(Images/timelapseAnchor.png);    
-}
-
-.timelapse-jump-button {
-    -webkit-mask-image: url(Images/timelapseJumpButton.png);
-}
-
-.timelapse-inputs-grid .timelapse-anchor-button {
-    margin-right: 6px;
-}
-
 /* grid styles are nearly verbatim from networkLogView.css */
 
 .timelapse-inputs-grid.data-grid {

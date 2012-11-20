@@ -137,6 +137,44 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 
 WebInspector.TimelapseInputDataProvider.prototype.__proto__ = WebInspector.DataProvider.prototype;
 
-// TODO: TimelapseAnchorDataProvider
+WebInspector.TimelapseBreakpointDataProvider = function(category)
+{
+    WebInspector.DataProvider.call(this);
 
-// TODO: TimelapseBreakpointDataProvider
+    this._category = category;
+    this._records = [];
+    this._intervals = WebInspector.timelapseBreakpointTracker.exploredIntervals;
+
+    var tracker = WebInspector.timelapseBreakpointTracker;
+    var events = WebInspector.TimelapseBreakpointTracker.Events;
+    tracker.addEventListener(events.BreakpointHit, this._onBreakpointHit, this);
+    tracker.addEventListener(events.BreakpointAdded, this._removeEventListeners, this);
+    tracker.addEventListener(events.BreakpointRemoved, this._removeEventListeners, this);
+}
+
+WebInspector.TimelapseBreakpointDataProvider.prototype = {
+    get exploredIntervals()
+    {
+	return this._intervals;
+    },
+
+    _onBreakpointHit: function(event)
+    {
+	this._records.push(event.data);
+	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged);
+    },
+
+    _removeEventListeners: function(event)
+    {
+	var tracker = WebInspector.timelapseBreakpointTracker;
+	var events = WebInspector.TimelapseBreakpointTracker.Events;
+	tracker.removeEventListener(events.BreakpointHit, this._onBreakpointHit, this);
+	tracker.removeEventListener(events.BreakpointAdded, this._onBreakpointAdded, this);
+	tracker.removeEventListener(events.BreakpointRemoved, this._onBreakpointRemoved, this);
+	tracker.removeEventListener(events.IntervalExplored, this._onIntervalExplored, this);
+    },
+};
+
+WebInspector.TimelapseBreakpointDataProvider.prototype.__proto__ = WebInspector.TimelapseInputDataProvider.prototype;
+
+// TODO: TimelapseAnchorDataProvider
