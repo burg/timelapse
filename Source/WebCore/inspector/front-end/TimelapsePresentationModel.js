@@ -52,13 +52,10 @@ WebInspector.TimelapsePresentationModel = function()
     this._model.addEventListener(eventNames.RecordingDidStop, this._recordingDidStop, this);
     // TODO: move to TimelapseInputDataProvider
     this._model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
-    // TODO: move to TimelapseBreakpointDataProvider
-    this._model.addEventListener(eventNames.BreakpointHit, this._breakpointsChanged, this);
 
     // TODO: move to TimelapseBreakpointDataProvider
-    WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._breakpointsChanged, this);
-    WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._breakpointsChanged, this);
-    WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, this._breakpointsChanged, this);
+    WebInspector.timelapseBreakpointTracker.addEventListener(WebInspector.TimelapseBreakpointTracker.Events.BreakpointAdded, this._replaceBreakpointProvider, this);
+    WebInspector.timelapseBreakpointTracker.addEventListener(WebInspector.TimelapseBreakpointTracker.Events.BreakpointRemoved, this._replaceBreakpointProvider, this);
 
     this.reset();
 };
@@ -263,10 +260,13 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this._matchedRecordsAreStale = true;
     },
 
-    // TODO: should live on TimelapseBreakpointDataProvider
-    _breakpointsChanged: function()
+    _replaceBreakpointProvider: function()
     {
 	this._breakpointRecordsAreStale = true;
+
+	// TODO: keep old breakpoint providers
+	this._removeProviderAtIndex(3);
+	this.addProvider(new WebInspector.TimelapseBreakpointDataProvider(this.categories["breakpoint"]));
     },
 
     // Public API

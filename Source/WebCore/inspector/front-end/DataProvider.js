@@ -142,8 +142,8 @@ WebInspector.TimelapseBreakpointDataProvider = function(category)
     WebInspector.DataProvider.call(this);
 
     this._category = category;
-    this._records = [];
     this._intervals = WebInspector.timelapseBreakpointTracker.exploredIntervals;
+    this._initializeRecords();
 
     var tracker = WebInspector.timelapseBreakpointTracker;
     var events = WebInspector.TimelapseBreakpointTracker.Events;
@@ -158,9 +158,39 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 	return this._intervals;
     },
 
+    _initializeRecords: function()
+    {
+	var records = WebInspector.timelapseBreakpointTracker.records;
+	this._records = [];
+
+	// flatten existing records from BreakpointTracker
+	for (var i = 0; i < records.length; i++) {
+	    var hits = records[i].hits;
+	    for (var j = 0; j < hits.length; j++) {
+		this._records.push({
+		    breakpoint: hits[j].breakpoint,
+		    mark: records[i].mark,
+		    type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
+		    hitIndex: j
+		});
+	    }
+	}
+    },
+
     _onBreakpointHit: function(event)
     {
-	this._records.push(event.data);
+	// Breakpoints can be detected in any order, so keep records sorted
+	var record = event.data;
+
+	function breakpointRecordComparator(a, b) {
+	    if (a.mark.index > b.mark.index) return 1;
+	    if (a.mark.index < b.mark.index) return -1;
+	    return a.hitIndex - b.hitIndex;
+	}
+
+	var idx = binarySearch(record, this._records, breakpointRecordComparator);
+	this._records.splice(idx < 0 ? -(idx + 1) : idx, 0, record);
+
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged);
     },
 
@@ -169,9 +199,8 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 	var tracker = WebInspector.timelapseBreakpointTracker;
 	var events = WebInspector.TimelapseBreakpointTracker.Events;
 	tracker.removeEventListener(events.BreakpointHit, this._onBreakpointHit, this);
-	tracker.removeEventListener(events.BreakpointAdded, this._onBreakpointAdded, this);
-	tracker.removeEventListener(events.BreakpointRemoved, this._onBreakpointRemoved, this);
-	tracker.removeEventListener(events.IntervalExplored, this._onIntervalExplored, this);
+	tracker.removeEventListener(events.BreakpointAdded, this._removeEventListeners, this);
+	tracker.removeEventListener(events.BreakpointRemoved, this._removeEventListeners, this);
     },
 };
 
