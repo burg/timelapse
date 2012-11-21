@@ -282,7 +282,6 @@ WebInspector.TimelapseOverview.prototype = {
 	WebInspector.View.prototype.wasShown.call(this);
 	document.body.addEventListener("mousemove", this._presentationModel.startHidePopoverTimer.bind(this._presentationModel), false);
 
-	this._recomputeTimelines();
 	this.refresh();
     },
 
@@ -389,107 +388,6 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.tentative.setPosition(percent, true);
     },
 
-    _resetTimelines: function()
-    {
-	function createEmptyTimeline() {
-	    return { centers: [], radii: [], indexExtents: [], records: [] };
-	}
-
-	this._timelineData = {};
-	var order = this._presentationModel.categoryOrder;
-	for (var i = 0; i < order.length; i++) {
-	    var key = order[i];
-	    var category = this._presentationModel.categories[key];
-	    this._timelineData[category.name] = createEmptyTimeline();
-	}
-    },
-
-    _recomputeTimelines: function()
-    {
-	this._resetTimelines();
-
-	var categories = this._presentationModel.categories;
-	var minIntervalPx = 4.0; /* distance between adjacent record centers */
-	var baseRadius = 3;
-	var maxRecordsPerDot = 10;
-
-	var availWidth = this.element.offsetWidth;
-	var minInterval = minIntervalPx / availWidth * this.calculator.zoomInterval * this.calculator.boundarySpan;
-
-	var dotRecords = {};
-	var previousRecords = {};
-	var previousIdx = -1;
-	var breakpointHits = 0;
-
-	var order = this._presentationModel.categoryOrder;
-	for (var i = 0; i < order.length; i++) {
-	    var key = order[i];
-	    var category = categories[key];
-	    dotRecords[category.name] = [];
-	    previousRecords[category.name] = 0;
-	}
-
-	function flushDot(category) {
-	    var data = this._timelineData[category.name];
-	    var pendingRecords = dotRecords[category.name];
-	    var totalTs = 0.0;
-	    for (var i = 0; i < pendingRecords.length; i++)
-		totalTs += pendingRecords[i].mark.timestamp;
-	    
-	    var averageTimestamp = totalTs/pendingRecords.length;
-	    var radius = baseRadius;
-
-	    if (category.name == "breakpoint" && breakpointHits) {
-		radius += breakpointHits > maxRecordsPerDot ? maxRecordsPerDot : breakpointHits;
-		breakpointHits = 0;
-	    }
-	    else
-		radius += pendingRecords.length;
-
-	    if (pendingRecords.length == 0)
-		return;
-
-	    data.centers.push(averageTimestamp);
-	    data.radii.push(radius);
-	    data.indexExtents.push(previousIdx);
-	    data.records.push(pendingRecords);
-
-	    dotRecords[category.name] = [];
-	}
-
-	function quantizeRecords(records) {
-	    for (i = 0; i < records.length; i++) {
-		var record = records[i];
-		var category = this._presentationModel.recordStyles[record.type].category;
-		var previousRecord = previousRecords[category.name];
-
-		if (dotRecords[category.name].length == maxRecordsPerDot)
-		    flushDot.call(this, category);
-		
-		else if (previousRecord && record.mark.timestamp - previousRecord.mark.timestamp > minInterval)
-                flushDot.call(this, category);
-		
-		previousRecords[category.name] = record;
-		previousIdx = i;
-		dotRecords[category.name].push(record);
-
-		if (records[i].type == "BreakpointHit")
-		    breakpointHits += record.hits.length;
-	    }
-	}
-
-	quantizeRecords.call(this, this._presentationModel.matchedRecords);
-	quantizeRecords.call(this, this._presentationModel.breakpointRecords);    
-
-	/* for each category, flush pending records and finalize timeline data */
-	for (i = 0; i < order.length; i++) {
-	    var key = order[i];
-	    var category = categories[key];
-	    flushDot.call(this, category);
-	    this._categoryTimelines[category.name].data = this._timelineData[category.name];
-	}
-    },
-
     _removeHighlight: function(circleDesc)
     {
 	if (!circleDesc)
@@ -536,7 +434,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	var category = timeline.category;
-	var data = this._timelineData[category.name];
+	var data = this._categoryTimelines[category.name].data;
 	if (data.records.length == 0)
 	    return;
 
@@ -566,7 +464,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	var category = timeline.category;
-	var data = this._timelineData[category.name];
+	var data = this._categoryTimelines[category.name].data;
 	if (data.records.length == 0)
 	    return;
 
@@ -584,7 +482,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	var category = timeline.category;
-	var data = this._timelineData[category.name];
+	var data = this._categoryTimelines[category.name].data;
 	if (data.records.length == 0)
 	    return;
 
@@ -604,7 +502,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	var category = timeline.category;
-	var data = this._timelineData[category.name];
+	var data = this._categoryTimelines[category.name].data;
 	if (data.records.length == 0)
 	    return;
 
@@ -704,7 +602,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	if (this._hoveredCircle) {
 	    var timeline = this._hoveredCircle.timeline;
-	    var records = this._timelineData[timeline.category.name].records[this._hoveredCircle.circleIndex];
+	    var records = timeline.data.records[this._hoveredCircle.circleIndex];
 	    var highlightCoords = timeline.getCircleGeometry(this._hoveredCircle.circleIndex);
 	    var popupPosition = {
 		x: timeline.element.boxInWindow().x + highlightCoords.left,
@@ -800,17 +698,14 @@ WebInspector.TimelapseOverview.prototype = {
     
     _onZoomChanged: function()
     {
-	if (!this._currentZoomInterval || this.calculator.zoomInterval != this._currentZoomInterval) {
+	if (!this._currentZoomInterval || this.calculator.zoomInterval != this._currentZoomInterval)
 	    this._currentZoomInterval = this.calculator.zoomInterval;
-	    this._recomputeTimelines();
-	}
 
 	this._scheduleRefresh();
     },
 
     _onFilterChanged: function()
     {
-	this._recomputeTimelines();
 	this._scheduleRefresh();
     },
 
@@ -977,8 +872,6 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onBreakpointRecordsChanged: function()
     {
-	// TODO: only recompute breakpoint timeline?
-	this._recomputeTimelines();
 	this._scheduleRefresh();
 	this._presentationModel.overviewPopover.hide();
     },
@@ -1045,6 +938,11 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
 	return this._category;
     },
 
+    get data()
+    {
+	return this._data;
+    },
+
     get provider()
     {
 	return this._provider;
@@ -1076,18 +974,10 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
 	this._ctx.fillStyle = fillColor;
     },
 
-    set data(stuff)
-    {
-	this._data = stuff;
-	this.clearHighlights();
-	this._dirty = true;
-    },
-
     refresh: function()
     {
-	if (!this._dirty)
-	    return;
-
+	// TODO: only recompute when needed
+	this._recomputeTimeline();
 	this._drawTimeline();
     },
 
@@ -1372,6 +1262,8 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
 
     _recomputeTimeline: function()
     {
+	this._data = { centers: [], radii: [], indexExtents: [], records: [] };
+
 	var category = this._category;
 	var data = this._data;
 	var records = this._provider.records;
@@ -1404,11 +1296,11 @@ WebInspector.TimelapseCategoryTimeline.prototype = {
 
 	for (i = 0; i < records.length; i++) {
 	    var record = records[i];
-	    pendingRecords.push(record);
-
 	    if (pendingRecords.length == maxRecordsPerDot
 		|| (i > 0 && record.mark.timestamp - records[i-1].mark.timestamp > minInterval))
 		flushDot();
+
+	    pendingRecords.push(record);
 	}
 	flushDot();
     },
