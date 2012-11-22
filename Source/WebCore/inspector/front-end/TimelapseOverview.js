@@ -141,7 +141,7 @@ WebInspector.TimelapseOverview.prototype = {
 	    anchor: []
 	};
 
-	this._timelines = {};
+	this._timelines = [];
 
     	var order = this._presentationModel.categoryOrder;
 	var height = this._presentationModel.timelineHeight;
@@ -151,7 +151,7 @@ WebInspector.TimelapseOverview.prototype = {
 	    var category = this._presentationModel.categories[key];
 	    var timeline = new WebInspector.TimelapseCircleTimeline(category);
 	    timeline.element.style.setProperty("top", i*height + "px");
-	    this._timelines[category.name] = timeline;
+	    this._timelines.push(timeline);
 	    this._timelineContainer.appendChild(timeline.element);
 	}
 
@@ -166,6 +166,19 @@ WebInspector.TimelapseOverview.prototype = {
 	this._timelineContainer.appendChild(this._dividersLabelBarElement);
 
 	this.reset();
+    },
+
+    _timelineForCategory: function(category)
+    {
+	for (var i = 0; i < this._timelines.length; i++) {
+	    if (this._timelines[i].category == category)
+		return this._timelines[i];
+	}
+
+	console.error("Tried to find timeline for unknown category:");
+	console.error(category);
+
+	return false;
     },
 
     /* mostly copied from TimelineGrid.js */
@@ -259,10 +272,9 @@ WebInspector.TimelapseOverview.prototype = {
 	this.updateDividers(true);
 
 	/* clear all timelines */
-	for (var key in this._timelines) {
-	    var timeline = this._timelines[key];
-	    timeline.reset();
-	}
+	this._timelines.forEach(function(timeline) {
+            timeline.reset();
+        });
 
 	if (this._hoveredCircle)
 	    delete this._hoveredCircle;
@@ -290,11 +302,10 @@ WebInspector.TimelapseOverview.prototype = {
 	this.updateDividers(false);
 
         /* resize all timelines */
-	for (var key in this._timelines) {
-	    var timeline = this._timelines[key];
+	this._timelines.forEach(function(timeline) {
 	    timeline.resize();
 	    timeline.refresh();
-	}
+	});
     },
 
     get calculator()
@@ -340,10 +351,9 @@ WebInspector.TimelapseOverview.prototype = {
 		this._timelineContainer.style.cursor = "-webkit-grab";
 	}
 
-	for (var key in this._timelines) {
-	    var timeline = this._timelines[key];
-	    timeline.refresh();
-	}
+	this._timelines.forEach(function(timeline) {
+            timeline.refresh();
+        });
 
 	this._updateSliderPositions();
 	this.updateDividers(false);
@@ -402,9 +412,10 @@ WebInspector.TimelapseOverview.prototype = {
     {
 	// TODO: allow multiple providers/timelines per category
 	var provider = event.data;
-	for (var key in this._timelines) {
-	    if (this._timelines[key].category == provider.category) {
-		this._timelines[key].setProvider(event.data);
+
+	for (var i = 0; i < this._timelines.length; i++) {
+	    if (this._timelines[i].category == provider.category) {
+		this._timelines[i].setProvider(event.data);
 		return;
 	    }
 	}
@@ -414,9 +425,9 @@ WebInspector.TimelapseOverview.prototype = {
     _onProviderRemoved: function(event)
     {
 	var provider = event.data;
-	for (var key in this._timelines) {
-	    if (this._timelines[key].provider == provider) {
-		this._timelines[key].removeProvider();
+	for (var i = 0; i < this._timelines.length; i++) {
+	    if (this._timelines[i].provider == provider) {
+		this._timelines[i].removeProvider();
 		// TODO: remove timeline if appropriate
 		return;
 	    }
@@ -434,7 +445,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	var category = timeline.category;
-	var data = this._timelines[category.name].data;
+	var data = this._timelineForCategory(category).data;
 	if (data.records.length == 0)
 	    return;
 
@@ -463,8 +474,9 @@ WebInspector.TimelapseOverview.prototype = {
 	    return;
 
 	var timeline = node.timeline;
+	// TODO: this seems redundant?
 	var category = timeline.category;
-	var data = this._timelines[category.name].data;
+	var data = this._timelineForCategory(category).data;
 	if (data.records.length == 0)
 	    return;
 
@@ -482,7 +494,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	var category = timeline.category;
-	var data = this._timelines[category.name].data;
+	var data = this._timelineForCategory(category).data;
 	if (data.records.length == 0)
 	    return;
 
@@ -502,7 +514,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	var category = timeline.category;
-	var data = this._timelines[category.name].data;
+	var data = this._timelineForCategory(category).data;
 	if (data.records.length == 0)
 	    return;
 
@@ -521,7 +533,7 @@ WebInspector.TimelapseOverview.prototype = {
 	var category = event.data.category;
 	var circleIndex = event.data.index;
 	var records = event.data.records;
-	var timeline = this._timelines[category.name];
+	var data = this._timelineForCategory(category).data;
 	
 	this._selectedCircle = {
 	    "timeline": timeline,
@@ -545,7 +557,7 @@ WebInspector.TimelapseOverview.prototype = {
 	var category = event.data.category;
 	var circleIndex = event.data.index;
 	var records = event.data.records;
-	var timeline = this._timelines[category.name];
+	var timeline = this._timelineForCategory(category);
 	
 	this._hoveredCircle = {
 	    "timeline": timeline,
@@ -867,7 +879,8 @@ WebInspector.TimelapseOverview.prototype = {
 	this._messagePanel.classList.add("hidden");
 
 	var currentMarkIndex = WebInspector.timelapseModel.currentMarkIndex;
-	this._timelines["breakpoint"].showPopoverForMarkIndex(currentMarkIndex);
+	var category = this._presentationModel.categories["breakpoint"];
+	this._timelineForCategory(category).showPopoverForMarkIndex(currentMarkIndex);
     },
 
     _onBreakpointRecordsChanged: function()
