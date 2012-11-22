@@ -141,7 +141,7 @@ WebInspector.TimelapseOverview.prototype = {
 	    anchor: []
 	};
 
-	this._categoryTimelines = {};
+	this._timelines = {};
 
     	var order = this._presentationModel.categoryOrder;
 	var height = this._presentationModel.timelineHeight;
@@ -149,9 +149,9 @@ WebInspector.TimelapseOverview.prototype = {
 	for (var i = 0; i < order.length; i++) {
 	    var key = order[i];
 	    var category = this._presentationModel.categories[key];
-	    var timeline = new WebInspector.TimelapseCategoryTimeline(category);
+	    var timeline = new WebInspector.TimelapseCircleTimeline(category);
 	    timeline.element.style.setProperty("top", i*height + "px");
-	    this._categoryTimelines[category.name] = timeline;
+	    this._timelines[category.name] = timeline;
 	    this._timelineContainer.appendChild(timeline.element);
 	}
 
@@ -259,8 +259,8 @@ WebInspector.TimelapseOverview.prototype = {
 	this.updateDividers(true);
 
 	/* clear all timelines */
-	for (var key in this._categoryTimelines) {
-	    var timeline = this._categoryTimelines[key];
+	for (var key in this._timelines) {
+	    var timeline = this._timelines[key];
 	    timeline.reset();
 	}
 
@@ -290,8 +290,8 @@ WebInspector.TimelapseOverview.prototype = {
 	this.updateDividers(false);
 
         /* resize all timelines */
-	for (var key in this._categoryTimelines) {
-	    var timeline = this._categoryTimelines[key];
+	for (var key in this._timelines) {
+	    var timeline = this._timelines[key];
 	    timeline.resize();
 	    timeline.refresh();
 	}
@@ -340,8 +340,8 @@ WebInspector.TimelapseOverview.prototype = {
 		this._timelineContainer.style.cursor = "-webkit-grab";
 	}
 
-	for (var key in this._categoryTimelines) {
-	    var timeline = this._categoryTimelines[key];
+	for (var key in this._timelines) {
+	    var timeline = this._timelines[key];
 	    timeline.refresh();
 	}
 
@@ -402,9 +402,9 @@ WebInspector.TimelapseOverview.prototype = {
     {
 	// TODO: allow multiple providers/timelines per category
 	var provider = event.data;
-	for (var key in this._categoryTimelines) {
-	    if (this._categoryTimelines[key].category == provider.category) {
-		this._categoryTimelines[key].setProvider(event.data);
+	for (var key in this._timelines) {
+	    if (this._timelines[key].category == provider.category) {
+		this._timelines[key].setProvider(event.data);
 		return;
 	    }
 	}
@@ -414,9 +414,9 @@ WebInspector.TimelapseOverview.prototype = {
     _onProviderRemoved: function(event)
     {
 	var provider = event.data;
-	for (var key in this._categoryTimelines) {
-	    if (this._categoryTimelines[key].provider == provider) {
-		this._categoryTimelines[key].removeProvider();
+	for (var key in this._timelines) {
+	    if (this._timelines[key].provider == provider) {
+		this._timelines[key].removeProvider();
 		// TODO: remove timeline if appropriate
 		return;
 	    }
@@ -434,7 +434,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	var category = timeline.category;
-	var data = this._categoryTimelines[category.name].data;
+	var data = this._timelines[category.name].data;
 	if (data.records.length == 0)
 	    return;
 
@@ -464,7 +464,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	var category = timeline.category;
-	var data = this._categoryTimelines[category.name].data;
+	var data = this._timelines[category.name].data;
 	if (data.records.length == 0)
 	    return;
 
@@ -482,7 +482,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	var category = timeline.category;
-	var data = this._categoryTimelines[category.name].data;
+	var data = this._timelines[category.name].data;
 	if (data.records.length == 0)
 	    return;
 
@@ -502,7 +502,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	var category = timeline.category;
-	var data = this._categoryTimelines[category.name].data;
+	var data = this._timelines[category.name].data;
 	if (data.records.length == 0)
 	    return;
 
@@ -521,7 +521,7 @@ WebInspector.TimelapseOverview.prototype = {
 	var category = event.data.category;
 	var circleIndex = event.data.index;
 	var records = event.data.records;
-	var timeline = this._categoryTimelines[category.name];
+	var timeline = this._timelines[category.name];
 	
 	this._selectedCircle = {
 	    "timeline": timeline,
@@ -545,7 +545,7 @@ WebInspector.TimelapseOverview.prototype = {
 	var category = event.data.category;
 	var circleIndex = event.data.index;
 	var records = event.data.records;
-	var timeline = this._categoryTimelines[category.name];
+	var timeline = this._timelines[category.name];
 	
 	this._hoveredCircle = {
 	    "timeline": timeline,
@@ -867,7 +867,7 @@ WebInspector.TimelapseOverview.prototype = {
 	this._messagePanel.classList.add("hidden");
 
 	var currentMarkIndex = WebInspector.timelapseModel.currentMarkIndex;
-	this._categoryTimelines["breakpoint"].showPopoverForMarkIndex(currentMarkIndex);
+	this._timelines["breakpoint"].showPopoverForMarkIndex(currentMarkIndex);
     },
 
     _onBreakpointRecordsChanged: function()
@@ -911,7 +911,7 @@ WebInspector.TimelapseOverview.prototype.__proto__ = WebInspector.View.prototype
 /**
  * @constructor
  */
-WebInspector.TimelapseCategoryTimeline = function(category, provider)
+WebInspector.TimelapseCircleTimeline = function(category, provider)
 {
     this._presentationModel = WebInspector.timelapsePresentationModel;
     this.calculator = this._presentationModel.calculator;
@@ -932,7 +932,7 @@ WebInspector.TimelapseCategoryTimeline = function(category, provider)
     this.reset();
 };
 
-WebInspector.TimelapseCategoryTimeline.prototype = {
+WebInspector.TimelapseCircleTimeline.prototype = {
     get category()
     {
 	return this._category;
