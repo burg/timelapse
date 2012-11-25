@@ -191,17 +191,23 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.calculator.reset();
 
 	this._clearProviders();
-	this.addProvider(new WebInspector.TimelapseInputDataProvider(this.categories["userinput"]));
-	this.addProvider(new WebInspector.TimelapseInputDataProvider(this.categories["network"]));
-	this.addProvider(new WebInspector.TimelapseInputDataProvider(this.categories["timer"]));
-	this.addProvider(new WebInspector.TimelapseBreakpointDataProvider(this.categories["breakpoint"]));
     },
 
     // Private API (callbacks)
     _recordingDidStart: function()
     {
 	this.reset();
-	// TODO: create new TimelapseInputDataProviders for this recording
+
+	var providerTypes = WebInspector.DataProvider.Types;
+	this.addProvider(new WebInspector.TimelapseInputDataProvider(
+			     this.categories["userinput"]
+			));
+	this.addProvider(new WebInspector.TimelapseInputDataProvider(
+			     this.categories["network"]
+			));
+	this.addProvider(new WebInspector.TimelapseInputDataProvider(
+			     this.categories["timer"]
+			));
 
 	// TODO: remove
 	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.FilterChanged);
@@ -209,7 +215,10 @@ WebInspector.TimelapsePresentationModel.prototype = {
 
     _recordingDidStop: function()
     {
-	// TODO: create TimelapseBreakpointDataProvider, TimelapseAnchorDataProvider.
+	// TODO: create TimelapseAnchorDataProvider.
+	this.addProvider(new WebInspector.TimelapseBreakpointDataProvider(
+			     this.categories["breakpoint"]
+			));
 
 	// TODO: Remove
 	this._updateMatchingRecords();

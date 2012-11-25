@@ -76,6 +76,12 @@ WebInspector.DataProvider.prototype = {
     // This should be used by listeners as an opportunity to remove callbacks
     willRemove: function() {
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.WillRemove, this);
+	
+	if (this.hasAnyEventListeners()){
+	    console.error("Provider still has listeners after dispatching WillRemove event.");
+	    console.error(this);
+	    console.error(this._listeners);
+	}
     },
 };
 
@@ -96,7 +102,8 @@ WebInspector.DataProvider.Events = {
 
 WebInspector.TimelapseInputDataProvider = function(inputCategory)
 {
-    WebInspector.DataProvider.call(this);
+    WebInspector.DataProvider.call(this, inputCategory.name,
+				   WebInspector.DataProvider.Types.TimelapseInput);
 
     this._category = inputCategory;
     this._records = [];
@@ -107,14 +114,15 @@ WebInspector.TimelapseInputDataProvider = function(inputCategory)
 };
 
 WebInspector.TimelapseInputDataProvider.prototype = {
-    get category()
-    {
-	return this._category;
-    },
-
     get displayName()
     {
 	return this._category.title;
+    },
+
+    // TODO: should be removed eventually, use .type instead.
+    get category()
+    {
+	return this._category;
     },
 
     get records()
@@ -131,7 +139,7 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	    return;
 
 	this._records.push(event.data);
-	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged)
+	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged);
     },
 };
 
@@ -139,7 +147,8 @@ WebInspector.TimelapseInputDataProvider.prototype.__proto__ = WebInspector.DataP
 
 WebInspector.TimelapseBreakpointDataProvider = function(category)
 {
-    WebInspector.DataProvider.call(this);
+    WebInspector.DataProvider.call(this, category.name,
+				   WebInspector.DataProvider.Types.BreakpointHits);
 
     this._category = category;
     this._intervals = WebInspector.timelapseBreakpointTracker.exploredIntervals;
@@ -153,6 +162,12 @@ WebInspector.TimelapseBreakpointDataProvider = function(category)
 }
 
 WebInspector.TimelapseBreakpointDataProvider.prototype = {
+    // TODO: should be removed eventually, use .type instead.
+    get category()
+    {
+	return this._category;
+    },
+
     get exploredIntervals()
     {
 	return this._intervals;

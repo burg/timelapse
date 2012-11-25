@@ -550,16 +550,6 @@ WebInspector.TimelapseReplayingView.prototype = {
     wasShown: function()
     {
 	WebInspector.View.prototype.wasShown.call(this);
-	this._overviewWindow.refresh();
-	this._miniview.refresh();
-	this._miniview.onResize();
-    },
-
-    refresh: function()
-    {
-	this._overviewWindow.refresh();
-	this._miniview.refresh();
-	this._miniview.onResize();
     },
 
     clear: function()
