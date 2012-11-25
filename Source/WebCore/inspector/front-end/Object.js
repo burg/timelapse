@@ -85,6 +85,19 @@ WebInspector.Object.prototype = {
         return true;
     },
 
+    hasAnyEventListeners: function()
+    {
+	if (!this._listeners)
+	    return false;
+
+	for (var key in this._listeners) {
+	    if (this._listeners[key].length > 0)
+		return true;
+	}
+
+	return false;
+    },
+
     /**
      * @param {string} eventType
      * @param {*=} eventData
