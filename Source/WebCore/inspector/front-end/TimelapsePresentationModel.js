@@ -216,10 +216,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
     _recordingDidStop: function()
     {
 	// TODO: create TimelapseAnchorDataProvider.
-	this.addProvider(new WebInspector.TimelapseBreakpointDataProvider(
-			     this.categories["breakpoint"]
-			));
-
 	// TODO: Remove
 	this._updateMatchingRecords();
 
@@ -274,7 +270,10 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this._breakpointRecordsAreStale = true;
 
 	// TODO: keep old breakpoint providers
-	this._removeProviderAtIndex(3);
+	var model = this;
+	var breakpointProviders = this._providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
+	breakpointProviders.forEach(function(provider) { model.removeProvider(provider); });
+
 	this.addProvider(new WebInspector.TimelapseBreakpointDataProvider(this.categories["breakpoint"]));
     },
 
@@ -293,6 +292,19 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    return;
 
 	this._removeProviderAtIndex(idx);
+    },
+
+    _providersWithType: function(ty)
+    {
+	var found = [];
+	for (var i = 0; i < this._providers.length; i++) {
+	    var provider = this._providers[i];
+	    if (provider.type === ty) {
+		found.push(provider);
+	    }
+	}
+	
+	return found;
     },
 
     _removeProviderAtIndex: function(idx) {

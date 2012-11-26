@@ -531,27 +531,9 @@ WebInspector.TimelapseReplayingView = function()
 
     this._overviewWindow = new WebInspector.TimelapseOverview();
     this._overviewWindow.show(this.element);
-
-    var labelContainer = document.createElement("div");
-    labelContainer.className = "timelapse-timeline-labels";
-
-    var order = this._presentationModel.categoryOrder;
-    var height = this._presentationModel.timelineHeight;
-    for (var i = 0; i < order.length; i++) {
-	var key = order[i];
-	var label = new WebInspector.TimelapseTimelineLabel(this._presentationModel.categories[key]);
-	label.element.style.setProperty("top", height*i + "px");
-	labelContainer.appendChild(label.element);
-    }
-    this.element.appendChild(labelContainer);
 };
 
 WebInspector.TimelapseReplayingView.prototype = {
-    wasShown: function()
-    {
-	WebInspector.View.prototype.wasShown.call(this);
-    },
-
     clear: function()
     {
 	this._overviewWindow.reset();
@@ -560,56 +542,3 @@ WebInspector.TimelapseReplayingView.prototype = {
 };
 
 WebInspector.TimelapseReplayingView.prototype.__proto__ = WebInspector.View.prototype;
-
-/**
- * @constructor
- * @extends {WebInspector.Object}
- */
-WebInspector.TimelapseTimelineLabel = function(category)
-{
-    WebInspector.Object.call(this);
-
-    this._presentationModel = WebInspector.timelapsePresentationModel;
-    this.category = category;
-
-    this.element = document.createElement("div");
-    this.element.className = "timelapse-timeline-label-wrapper timelapse-category-" + category.name;
-    this.element.style.setProperty("background-color", category.color.toString());
-
-    var label = document.createElement("div");
-    label.className = "timelapse-timeline-label timelapse-category-" + category.name;
-    label.textContent = category.title;
-    label.title = category.title;
-    label.addEventListener("click", this._onLabelClicked.bind(this), false);
-    this.element.appendChild(label);
-
-    var events = WebInspector.TimelapsePresentationModel.EventTypes;
-    this._presentationModel.addEventListener(events.FilterChanged, this.refresh, this);
-};
-
-WebInspector.TimelapseTimelineLabel.prototype = {
-    _onLabelClicked: function()
-    {
-	this._presentationModel.toggleCategory(this.category);
-    },
-
-    refresh: function()
-    {
-	if (this.category.disabled)
-	    this.disable();
-	else
-	    this.enable();
-    },
-
-    enable: function()
-    {
-	this.element.classList.remove("disabled");
-    },
-
-    disable: function()
-    {
-	this.element.classList.add("disabled");
-    }
-};
-
-WebInspector.TimelapseTimelineLabel.prototype.__proto__ = WebInspector.Object.prototype;

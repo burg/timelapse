@@ -112,6 +112,10 @@ WebInspector.TimelapseOverview.prototype = {
 	this._messagePanel.addEventListener("click", this._onMessagePanelClicked.bind(this), true);
 	this.element.appendChild(this._messagePanel);
 
+	this._labelContainer = document.createElement("div");
+	this._labelContainer.className = "timelapse-timeline-labels";
+	this.element.appendChild(this._labelContainer);
+
 	this._timelineContainer = document.createElement("div");
 	this._timelineContainer.className = "timelapse-overview-timelines";
 	this._timelineContainer.addEventListener("mousedown", this._onTimelineMousedown.bind(this), false);
@@ -142,6 +146,7 @@ WebInspector.TimelapseOverview.prototype = {
 	};
 
 	this._timelines = [];
+	this._labels = [];
 
 	this.element.appendChild(this._timelineContainer);
 
@@ -291,6 +296,13 @@ WebInspector.TimelapseOverview.prototype = {
     /* Extends View.onResize */
     onResize: function()
     {
+	var ordinal = this._timelines.length;
+	var height = this._presentationModel.timelineHeight;
+
+	this._labelContainer.style.setProperty("height", ordinal*height + "px");
+	this._timelineContainer.style.setProperty("height", ordinal*height + "px");
+	this.element.style.setProperty("height", ordinal*height + 20 + "px");
+
 	this.updateDividers(false);
 	WebInspector.View.prototype.onResize.call(this);
     },
@@ -420,12 +432,22 @@ WebInspector.TimelapseOverview.prototype = {
 
 	// else, add new timeline to the overview.
 	var timeline = new WebInspector.TimelapseCircleTimeline(provider);
+	// TODO: should take a provider instead of category
+	var label = new WebInspector.TimelapseTimelineLabel(provider.category);
+	this._labels.push(label);
+
 	var ordinal = this._timelines.length;
 	var height = this._presentationModel.timelineHeight;
+	this._timelines.push(timeline);
+
+	label.element.style.setProperty("top", ordinal*height + "px");
+	// TODO: View-ify the labels.
+	this._labelContainer.appendChild(label.element);
 
 	timeline.element.style.setProperty("top", ordinal*height + "px");
-	this._timelines.push(timeline);
 	timeline.show(this._timelineContainer);
+
+	this.onResize();
     },
 
     _onProviderRemoved: function(event)
@@ -439,12 +461,17 @@ WebInspector.TimelapseOverview.prototype = {
 	if (!existingTimeline)
 	    return;
 
-        var i = this._timelines.lastIndexOf[existingTimeline];
+        var i = this._timelines.lastIndexOf(existingTimeline);
 	console.assert(i != -1, "Didn't find timeline for some reason.");
-	this._timelines.splice(i, 1);
+	var removedTimeline = this._timelines.splice(i, 1)[0];
+        var removedLabel = this._labels.splice(i, 1)[0];
 
 	// detach from DOM
-	existingTimeline.detach();
+	removedTimeline.detach();
+	// TODO: view-ify
+	this._labelContainer.removeChild(removedLabel.element);
+
+	this.onResize();
     },
 
     _onTimelineMousemove: function(event)
@@ -457,7 +484,7 @@ WebInspector.TimelapseOverview.prototype = {
 	    return;
 
 	var timeline = node.timeline;
-	console.assert(timeline, "timeline node didn't have attached timeline object.");
+	console.assert(!!timeline, "timeline node didn't have attached timeline object.");
 	var category = timeline.category;
 	var data = this._timelineForCategory(category).data;
 	if (data.records.length == 0)
@@ -949,7 +976,12 @@ WebInspector.TimelapseCircleTimeline = function(provider)
     if (!provider)
 	console.assert("Tried to instantiate circle timeline without provider :-(");
 	
-    this.setProvider(provider);
+    this._provider = provider;
+    var events = WebInspector.DataProvider.Events;
+    this._provider.addEventListener(events.DataChanged, this._onDataChanged, this);
+    this._provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
+    this._provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
+    this._provider.addEventListener(events.WillRemove, this._onProviderRemoved, this);
 
     var events = WebInspector.TimelapsePresentationModel.EventTypes;
     this._presentationModel.addEventListener(events.FilterChanged, this._onFilterChanged, this);
@@ -1028,29 +1060,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this._drawTimeline();
     },
 
-    // this is called when instantiating a timeline, or changing provider.
-    setProvider: function(provider)
-    {
-	// we are changing provider. detach from old one first.
-	if (this._provider)
-	    this._onProviderRemoved();
-
-	this._provider = provider;
-	var events = WebInspector.DataProvider.Events;
-	this._provider.addEventListener(events.DataChanged, this._onDataChanged, this);
-	this._provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
-	this._provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
-	this._provider.addEventListener(events.WillRemove, this._onProviderRemoved, this);
-
-	this._onDataChanged();
-
-	if (this._provider.isEnabled())
-	    this._onProviderEnabled();
-	else
-	    this._onProviderDisabled();
-    },
-
-    // this is called before installing a new provider, or when destroying the timeline.
+    // this is called when tearing down the timeline after the data provider has signaled removal.
     _onProviderRemoved: function()
     {
 	var events = WebInspector.DataProvider.Events;
@@ -1707,3 +1717,57 @@ WebInspector.TimelapsePopover.prototype = {
 };
 
 WebInspector.TimelapsePopover.prototype.__proto__ = WebInspector.Popover.prototype;
+
+
+/**
+ * @constructor
+ * @extends {WebInspector.Object}
+ */
+WebInspector.TimelapseTimelineLabel = function(category)
+{
+    WebInspector.Object.call(this);
+
+    this._presentationModel = WebInspector.timelapsePresentationModel;
+    this.category = category;
+
+    this.element = document.createElement("div");
+    this.element.className = "timelapse-timeline-label-wrapper timelapse-category-" + category.name;
+    this.element.style.setProperty("background-color", category.color.toString());
+
+    var label = document.createElement("div");
+    label.className = "timelapse-timeline-label timelapse-category-" + category.name;
+    label.textContent = category.title;
+    label.title = category.title;
+    label.addEventListener("click", this._onLabelClicked.bind(this), false);
+    this.element.appendChild(label);
+
+    var events = WebInspector.TimelapsePresentationModel.EventTypes;
+    this._presentationModel.addEventListener(events.FilterChanged, this.refresh, this);
+};
+
+WebInspector.TimelapseTimelineLabel.prototype = {
+    _onLabelClicked: function()
+    {
+	this._presentationModel.toggleCategory(this.category);
+    },
+
+    refresh: function()
+    {
+	if (this.category.disabled)
+	    this.disable();
+	else
+	    this.enable();
+    },
+
+    enable: function()
+    {
+	this.element.classList.remove("disabled");
+    },
+
+    disable: function()
+    {
+	this.element.classList.add("disabled");
+    }
+};
+
+WebInspector.TimelapseTimelineLabel.prototype.__proto__ = WebInspector.Object.prototype;

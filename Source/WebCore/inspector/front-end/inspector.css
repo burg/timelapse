@@ -3108,8 +3108,9 @@ button.breakpoint-radar-status-bar-item > .glyph {
 }
 
 div.timelapse-timeline-labels {
-    top: 25px;
+    top: 20px;
     left: 5px;
+    width: 100px;
     bottom: 0;
     position: absolute;
 }
@@ -3315,22 +3316,22 @@ div.timelapse-timeline-label-wrapper.disabled {
 .timelapse-overview {
     position: absolute;
     height: 170px;
-    left: 105px;
+    left: 0;
     right: 14px;
     top: 5px;
 }
 
 .timelapse-overview-message {
     position: absolute;
-    top: 21px;
-    bottom: 10px;
-    left: -8px;
+    top: 0;
+    bottom: -8px;
+    left: 100px;
     right: -8px;
     z-index: 1000;
     font-weight: bold;
     font-size: 18pt;
     color: #666;
-    background-color: rgba(255, 255, 255, 0.7);
+    background-color: rgba(255, 255, 255, 0.5);
     line-height: 120px;
     text-align: center;
     cursor: pointer;
@@ -3388,8 +3389,8 @@ div.timelapse-timeline-label-wrapper.disabled {
 div.timelapse-overview-timelines {
     position: absolute;
     top: 20px;
-    height: 122px;
-    left: 0;
+    height: 20px;
+    left: 100px;
     right: 0;
     border: 1px solid #bbb;
     border-radius: 2px;
