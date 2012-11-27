@@ -110,7 +110,11 @@ WebInspector.DataProvider.Events = {
     Disabled: "Disabled",
     WillRemove: "WillRemove",
 
+    // used by all data providers to signal something changed.
     DataChanged: "DataChanged",
+    // used by input data provider to signal incremental addition.
+    // this only makes sense for providers that add data monotonically.
+    AddedInput: "AddedInput",
 };
 
 WebInspector.TimelapseInputDataProvider = function(inputCategory)
@@ -163,11 +167,19 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	var record = event.data;
 	var recordStyles = WebInspector.timelapsePresentationModel.recordStyles;
 
+	// TODO: this should not need to call out to presentation model.
 	if (recordStyles[record.type].category.name != this._category.name)
 	    return;
 
 	this._records.push(event.data);
-	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged);
+	
+	var eventData = {
+            "input": record,
+            "provider": this,
+	};
+
+	this.dispatchEventToListeners(WebInspector.DataProvider.Events.AddedInput, eventData);
+	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged, this);
     },
 };
 
@@ -234,7 +246,7 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 	var idx = binarySearch(record, this._records, breakpointRecordComparator);
 	this._records.splice(idx < 0 ? -(idx + 1) : idx, 0, record);
 
-	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged);
+	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged, this);
     },
 
     _removeEventListeners: function(event)
