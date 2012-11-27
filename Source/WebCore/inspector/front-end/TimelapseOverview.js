@@ -1728,16 +1728,14 @@ WebInspector.TimelapseTimelineLabel = function(provider)
     this._provider = provider;
     this._setupListeners();
 
-    var category = provider.category;
-
     this.element = document.createElement("div");
-    this.element.className = "timelapse-timeline-label-wrapper timelapse-category-" + category.name;
-    this.element.style.setProperty("background-color", category.color.toString());
+    this.element.className = "timelapse-timeline-label-wrapper timelapse-category-" + provider.name;
+    this.element.style.setProperty("background-color", provider.color.toString());
 
     var label = document.createElement("div");
-    label.className = "timelapse-timeline-label timelapse-category-" + category.name;
-    label.textContent = category.title;
-    label.title = category.title;
+    label.className = "timelapse-timeline-label timelapse-category-" + provider.name;
+    label.textContent = provider.displayName;
+    label.title = provider.displayName;
     label.addEventListener("click", this._onLabelClicked.bind(this), false);
     this.element.appendChild(label);
 };
