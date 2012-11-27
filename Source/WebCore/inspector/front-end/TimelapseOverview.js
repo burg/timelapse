@@ -1725,8 +1725,8 @@ WebInspector.TimelapseTimelineLabel = function(provider)
 {
     WebInspector.View.call(this);
 
-    this._presentationModel = WebInspector.timelapsePresentationModel;
     this._provider = provider;
+    this._setupListeners();
 
     var category = provider.category;
 
@@ -1740,34 +1740,44 @@ WebInspector.TimelapseTimelineLabel = function(provider)
     label.title = category.title;
     label.addEventListener("click", this._onLabelClicked.bind(this), false);
     this.element.appendChild(label);
-
-    var events = WebInspector.TimelapsePresentationModel.EventTypes;
-    this._presentationModel.addEventListener(events.FilterChanged, this.refresh, this);
 };
 
 WebInspector.TimelapseTimelineLabel.prototype = {
+    _setupListeners: function()
+    {
+	var events = WebInspector.DataProvider.Events;
+	this._provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
+	this._provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
+	this._provider.addEventListener(events.WillRemove, this._onProviderRemoved, this);
+    },
+
+    _teardownListeners: function()
+    {
+	var events = WebInspector.DataProvider.Events;
+	this._provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
+	this._provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
+	this._provider.removeEventListener(events.WillRemove, this._onProviderRemoved, this);
+    },
+
     _onLabelClicked: function()
     {
-	this._presentationModel.toggleCategory(this._provider.category);
+	this._provider.toggleEnablement();
     },
 
-    refresh: function()
-    {
-	if (this._provider.category.disabled)
-	    this.disable();
-	else
-	    this.enable();
-    },
-
-    enable: function()
+    _onProviderEnabled: function()
     {
 	this.element.classList.remove("disabled");
     },
 
-    disable: function()
+    _onProviderDisabled: function()
     {
 	this.element.classList.add("disabled");
-    }
+    },
+
+    _onProviderRemoved: function()
+    {
+	this._teardownListeners();
+    },
 };
 
 WebInspector.TimelapseTimelineLabel.prototype.__proto__ = WebInspector.View.prototype;

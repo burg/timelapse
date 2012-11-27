@@ -56,7 +56,13 @@ WebInspector.DataProvider.prototype = {
     // Override me!
     get displayName()
     {
-        return this.name;
+        return this._name;
+    },
+
+    // dummy color
+    get color()
+    {
+	return WebInspector.Color.fromRGB(0,0,0);
     },
 
     enable: function() {
@@ -67,6 +73,13 @@ WebInspector.DataProvider.prototype = {
     disable: function() {
 	this._enabled = false;
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.Disabled, this);
+    },
+
+    toggleEnablement: function() {
+        if (this._enabled)
+	    this.disable();
+	else
+	    this.enable();
     },
 
     isEnabled: function() {
@@ -125,9 +138,21 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	return this._category;
     },
 
+    get color()
+    {
+	return this._category.color;
+    },
+
     get records()
     {
 	return this._records;
+    },
+
+    // TODO: remove this once everyone listens to Enabled/Disabled events of providers.
+    toggleEnablement: function()
+    {
+	WebInspector.DataProvider.prototype.toggleEnablement.call(this);
+	WebInspector.timelapsePresentationModel.toggleCategory(this._category);
     },
 
     _recordAdded: function(event)
