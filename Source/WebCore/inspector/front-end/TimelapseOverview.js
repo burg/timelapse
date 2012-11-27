@@ -433,7 +433,7 @@ WebInspector.TimelapseOverview.prototype = {
 	// else, add new timeline to the overview.
 	var timeline = new WebInspector.TimelapseCircleTimeline(provider);
 	// TODO: should take a provider instead of category
-	var label = new WebInspector.TimelapseTimelineLabel(provider.category);
+	var label = new WebInspector.TimelapseTimelineLabel(provider);
 	this._labels.push(label);
 
 	var ordinal = this._timelines.length;
@@ -1721,12 +1721,14 @@ WebInspector.TimelapsePopover.prototype.__proto__ = WebInspector.Popover.prototy
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseTimelineLabel = function(category)
+WebInspector.TimelapseTimelineLabel = function(provider)
 {
     WebInspector.View.call(this);
 
     this._presentationModel = WebInspector.timelapsePresentationModel;
-    this.category = category;
+    this._provider = provider;
+
+    var category = provider.category;
 
     this.element = document.createElement("div");
     this.element.className = "timelapse-timeline-label-wrapper timelapse-category-" + category.name;
@@ -1746,12 +1748,12 @@ WebInspector.TimelapseTimelineLabel = function(category)
 WebInspector.TimelapseTimelineLabel.prototype = {
     _onLabelClicked: function()
     {
-	this._presentationModel.toggleCategory(this.category);
+	this._presentationModel.toggleCategory(this._provider.category);
     },
 
     refresh: function()
     {
-	if (this.category.disabled)
+	if (this._provider.category.disabled)
 	    this.disable();
 	else
 	    this.enable();
