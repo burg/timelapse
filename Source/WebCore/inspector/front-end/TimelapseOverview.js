@@ -71,7 +71,6 @@ WebInspector.TimelapseOverview = function()
     var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
     this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
     this._presentationModel.addEventListener(presEventNames.ProviderRemoved, this._onProviderRemoved, this);
-    this._presentationModel.addEventListener(presEventNames.FilterChanged, this._onFilterChanged, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
     this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
@@ -161,10 +160,10 @@ WebInspector.TimelapseOverview.prototype = {
 	this.reset();
     },
 
-    _timelineForCategory: function(category)
+    _timelineForProvider: function(provider)
     {
 	for (var i = 0; i < this._timelines.length; i++) {
-	    if (this._timelines[i].category === category)
+	    if (this._timelines[i].provider === provider)
 		return this._timelines[i];
 	}
 
@@ -411,6 +410,19 @@ WebInspector.TimelapseOverview.prototype = {
                provider.type == types.BreakpointHits;
     },
 
+    _providersWithType: function(ty)
+    {
+	var found = [];
+	for (var i = 0; i < this._providers.length; i++) {
+	    var provider = this._providers[i];
+	    if (provider.type === ty) {
+		found.push(provider);
+	    }
+	}
+	
+	return found;
+    },
+
     _onProviderAdded: function(event)
     {
 	var provider = event.data;
@@ -421,31 +433,22 @@ WebInspector.TimelapseOverview.prototype = {
 	    return;
 	}
 
-	// TODO: allow multiple providers/timelines per category
-	var existingTimeline = this._timelineForCategory(provider.category);
-	// if already a timeline for this category, reset it and set provider
-	if (existingTimeline) {
-	    console.log("Setting different provider on existing timeline.");
-	    existingTimeline.setProvider(provider);
-	    return;
-	}
-
-	// else, add new timeline to the overview.
-	var timeline = new WebInspector.TimelapseCircleTimeline(provider);
-	// TODO: should take a provider instead of category
-	var label = new WebInspector.TimelapseTimelineLabel(provider);
-	this._labels.push(label);
+	console.assert(!this._timelineForProvider(provider), "Timeline for provider already exists!");
 
 	var ordinal = this._timelines.length;
 	var height = this._presentationModel.timelineHeight;
-	this._timelines.push(timeline);
 
+	var label = new WebInspector.TimelapseTimelineLabel(provider);
 	label.element.style.setProperty("top", ordinal*height + "px");
 	label.show(this._labelContainer);
+	this._labels.push(label);
 
+	var timeline = new WebInspector.TimelapseCircleTimeline(provider);
 	timeline.element.style.setProperty("top", ordinal*height + "px");
 	timeline.show(this._timelineContainer);
+	this._timelines.push(timeline);
 
+	// resets colors, redraws, etc.
 	this.onResize();
     },
 
@@ -456,7 +459,7 @@ WebInspector.TimelapseOverview.prototype = {
 	if (!this._canUseProvider(provider))
 	    return;
 
-	var existingTimeline = this._timelineForCategory(provider.category);
+	var existingTimeline = this._timelineForProvider(provider);
 	if (!existingTimeline)
 	    return;
 
@@ -483,18 +486,19 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	console.assert(!!timeline, "timeline node didn't have attached timeline object.");
-	var category = timeline.category;
-	var data = this._timelineForCategory(category).data;
+
+	var provider = timeline.provider;
+	var data = timeline.data;
 	if (data.records.length == 0)
 	    return;
 
 	var hoveredCircleIdx = timeline.hitTest(event);
 
 	if (this._hoveredCircle && hoveredCircleIdx != this._hoveredCircle.circleIndex)
-	    this._presentationModel.circleMouseOut(category, this._hoveredCircle.circleIndex, data.records[this._hoveredCircle.circleIndex]);
+	    this._presentationModel.circleMouseOut(provider, this._hoveredCircle.circleIndex, data.records[this._hoveredCircle.circleIndex]);
 
 	if (hoveredCircleIdx != -1 && (!this._hoveredCircle || this._hoveredCircle.circleIndex != hoveredCircleIdx))
-	    this._presentationModel.circleMouseOver(category, hoveredCircleIdx, data.records[hoveredCircleIdx]);
+	    this._presentationModel.circleMouseOver(provider, hoveredCircleIdx, data.records[hoveredCircleIdx]);
 
 	if (hoveredCircleIdx != -1)
 	    event.stopPropagation();
@@ -513,13 +517,11 @@ WebInspector.TimelapseOverview.prototype = {
 	    return;
 
 	var timeline = node.timeline;
-	// TODO: this seems redundant?
-	var category = timeline.category;
-	var data = this._timelineForCategory(category).data;
+	var data = timeline.data;
 	if (data.records.length == 0)
 	    return;
 
-	this._presentationModel.circleMouseOut(category, this._hoveredCircle.circleIndex, data.records[this._hoveredCircle.circleIndex]);
+	this._presentationModel.circleMouseOut(provider, this._hoveredCircle.circleIndex, data.records[this._hoveredCircle.circleIndex]);
     },
 
     _onTimelineClicked: function(event)
@@ -532,14 +534,13 @@ WebInspector.TimelapseOverview.prototype = {
 	    return;
 
 	var timeline = node.timeline;
-	var category = timeline.category;
-	var data = this._timelineForCategory(category).data;
+	var data = this.timeline.data;
 	if (data.records.length == 0)
 	    return;
 
 	var clickedCircleIdx = timeline.hitTest(event);
 	if (clickedCircleIdx != -1)
-	    this._presentationModel.selectCircle(category, clickedCircleIdx, data.records[clickedCircleIdx]);
+	    this._presentationModel.selectCircle(provider, clickedCircleIdx, data.records[clickedCircleIdx]);
     },
 
     _onTimelineDoubleClicked: function(event)
@@ -552,8 +553,7 @@ WebInspector.TimelapseOverview.prototype = {
 	    return;
 
 	var timeline = node.timeline;
-	var category = timeline.category;
-	var data = this._timelineForCategory(category).data;
+	var data = timeline.data;
 	if (data.records.length == 0)
 	    return;
 
@@ -569,10 +569,10 @@ WebInspector.TimelapseOverview.prototype = {
 	    delete this._selectedCircle;
 	}
 
-	var category = event.data.category;
+	var provider = event.data.provider;
 	var circleIndex = event.data.index;
 	var records = event.data.records;
-	var timeline = this._timelineForCategory(category);
+	var timeline = this._timelineForProvider(provider);
 	
 	this._selectedCircle = {
 	    "timeline": timeline,
@@ -593,10 +593,10 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onCircleMouseOver: function(event)
     {
-	var category = event.data.category;
+	var provider = event.data.provider;
 	var circleIndex = event.data.index;
 	var records = event.data.records;
-	var timeline = this._timelineForCategory(category);
+	var timeline = this._timelineForProvider(provider);
 	
 	this._hoveredCircle = {
 	    "timeline": timeline,
@@ -752,11 +752,6 @@ WebInspector.TimelapseOverview.prototype = {
 	if (!this._currentZoomInterval || this.calculator.zoomInterval != this._currentZoomInterval)
 	    this._currentZoomInterval = this.calculator.zoomInterval;
 
-	this._scheduleRefresh();
-    },
-
-    _onFilterChanged: function()
-    {
 	this._scheduleRefresh();
     },
 
@@ -918,8 +913,15 @@ WebInspector.TimelapseOverview.prototype = {
 	this._messagePanel.classList.add("hidden");
 
 	var currentMarkIndex = WebInspector.timelapseModel.currentMarkIndex;
-	var category = this._presentationModel.categories["breakpoint"];
-	this._timelineForCategory(category).showPopoverForMarkIndex(currentMarkIndex);
+        var breakpointProviders = this._providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
+	if (breakpointProviders.length == 0)
+	    return;
+
+	var timeline = this._timelineForProvider(breakpointProviders[0]);
+	if (!timeline)
+	    return;
+
+	timeline.showPopoverForMarkIndex(currentMarkIndex);
     },
 
     _onBreakpointRecordsChanged: function()
@@ -967,27 +969,21 @@ WebInspector.TimelapseOverview.prototype.__proto__ = WebInspector.View.prototype
 WebInspector.TimelapseCircleTimeline = function(provider)
 {
     WebInspector.View.call(this);
+    // only used to get calculator, and set the popover contents.
     this._presentationModel = WebInspector.timelapsePresentationModel;
     this.calculator = this._presentationModel.calculator;
-    this._category = provider.category;
 
-    if (!provider)
-	console.assert("Tried to instantiate circle timeline without provider :-(");
+    console.assert(!!provider, "Tried to instantiate circle timeline without provider :-(");
 	
     this._provider = provider;
-    var events = WebInspector.DataProvider.Events;
-    this._provider.addEventListener(events.DataChanged, this._onDataChanged, this);
-    this._provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
-    this._provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
-    this._provider.addEventListener(events.WillRemove, this._onProviderRemoved, this);
+    this._setupListeners();
 
     var events = WebInspector.TimelapsePresentationModel.EventTypes;
-    this._presentationModel.addEventListener(events.FilterChanged, this._onFilterChanged, this);
     this.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged,
 				     this._onZoomChanged, this);
 
     this.element = document.createElement("div");
-    this.element.className = "timelapse-overview-timeline timelapse-category-" + this._category.name;
+    this.element.className = "timelapse-overview-timeline timelapse-category-" + this.provider.name;
     this.element.timeline = this;
     this._canvas = document.createElement("canvas");
     this.element.appendChild(this._canvas);
@@ -996,9 +992,22 @@ WebInspector.TimelapseCircleTimeline = function(provider)
 };
 
 WebInspector.TimelapseCircleTimeline.prototype = {
-    get category()
+    _setupListeners: function()
     {
-	return this._category;
+	var events = WebInspector.DataProvider.Events;
+	this.provider.addEventListener(events.DataChanged, this._onDataChanged, this);
+	this.provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
+	this.provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
+	this.provider.addEventListener(events.WillRemove, this._onProviderRemoved, this);
+    },
+
+    _teardownListeners: function()
+    {
+	var events = WebInspector.DataProvider.Events;
+	this.provider.removeEventListener(events.DataChanged, this._onDataChanged, this);
+	this.provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
+	this.provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
+	this.provider.removeEventListener(events.WillRemove, this._onProviderRemoved, this);
     },
 
     get data()
@@ -1043,9 +1052,9 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
 	this._dirty = true;
 	var fillAlpha = 0.3;
-	var fillColor = WebInspector.Color.fromRGBA(this._category.color.rgb[0],
-						    this._category.color.rgb[1],
-						    this._category.color.rgb[2],
+	var fillColor = WebInspector.Color.fromRGBA(this.provider.color.rgb[0],
+						    this.provider.color.rgb[1],
+						    this.provider.color.rgb[2],
 						    fillAlpha).toString();
 
 	this._ctx = this._canvas.getContext("2d");
@@ -1058,14 +1067,9 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this._drawTimeline();
     },
 
-    // this is called when tearing down the timeline after the data provider has signaled removal.
     _onProviderRemoved: function()
     {
-	var events = WebInspector.DataProvider.Events;
-	this._provider.removeEventListener(events.DataChanged, this._onDataChanged, this);
-	this._provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
-	this._provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
-	this._provider.removeEventListener(events.WillRemove, this._onProviderRemoved, this);
+	this._removeListeners();
 	delete this._provider;
     },
 
@@ -1203,9 +1207,9 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     {
 	var strokeAlpha = 0.7;
 	var singleInputStrokeColor = WebInspector.Color.fromRGBA(0, 0, 0, strokeAlpha).toString();
-	var defaultStrokeColor = WebInspector.Color.fromRGBA(Math.max(0, this._category.color.rgb[0] - 50),
-							     Math.max(0, this._category.color.rgb[1] - 50),
-							     Math.max(0, this._category.color.rgb[2] - 50),
+	var defaultStrokeColor = WebInspector.Color.fromRGBA(Math.max(0, this.provider.color.rgb[0] - 50),
+							     Math.max(0, this.provider.color.rgb[1] - 50),
+							     Math.max(0, this.provider.color.rgb[2] - 50),
 							     strokeAlpha).toString();
 
 	for (var i = 0; i < this._highlights.length; i++) {
@@ -1252,9 +1256,9 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this._dirty = false;
 
 	// Shade unexplored intervals
-	if (this._category.name == "breakpoint") {
+	if (this.provider.name == "breakpoint") {
 	    var model = WebInspector.timelapseModel;
-	    var intervals = this._provider.exploredIntervals;
+	    var intervals = this.provider.exploredIntervals;
 	    var ctx = this._ctx;
 	    var startPercent = 0, endPercent, widthPercent;
 
@@ -1332,9 +1336,8 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
 	this._data = { centers: [], radii: [], indexExtents: [], records: [] };
 
-	var category = this._category;
-	var data = this._data;
-	var records = this._provider.records;
+	var data = this.data;
+	var records = this.provider.records;
 	var minIntervalPx = 4.0; /* distance between adjacent record centers */
 	var baseRadius = 3;
 	var maxRecordsPerDot = 10;
@@ -1376,15 +1379,6 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     _clearTimeline: function()
     {
 	this._ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
-    },
-
-    // TODO: change over to using data provider enabled/disabled
-    _onFilterChanged: function()
-    {
-	if (this._category.disabled)
-	    this.element.classList.add("disabled");
-	else
-	    this.element.classList.remove("disabled");
     },
 
     _onZoomChanged: function()

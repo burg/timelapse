@@ -382,10 +382,10 @@ WebInspector.TimelapsePresentationModel.prototype = {
     },
 
     // TODO: Selection state should live on the specific DataProvider which is being selected.
-    selectCircle: function(category, circleIndex, records)
+    selectCircle: function(provider, circleIndex, records)
     {
 	var eventData = {
-	    "category": category,
+	    "provider": provider,
 	    "index": circleIndex,
 	    "records": records
 	};
@@ -394,10 +394,10 @@ WebInspector.TimelapsePresentationModel.prototype = {
     },
 
     // TODO: Selection state should live on the specific DataProvider which is being selected.
-    circleMouseOver: function(category, circleIndex, records)
+    circleMouseOver: function(provider, circleIndex, records)
     {
 	var eventData = {
-	    "category": category,
+	    "provider": provider,
 	    "index": circleIndex,
 	    "records": records
 	};
@@ -406,10 +406,10 @@ WebInspector.TimelapsePresentationModel.prototype = {
     },
 
     // TODO: Selection state should live on the specific DataProvider which is being selected.
-    circleMouseOut: function(category, circleIndex, records)
+    circleMouseOut: function(provider, circleIndex, records)
     {
 	var eventData = {
-	    "category": category,
+	    "provider": provider,
 	    "index": circleIndex,
 	    "records": records
 	};
