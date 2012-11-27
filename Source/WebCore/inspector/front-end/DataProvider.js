@@ -165,10 +165,9 @@ WebInspector.TimelapseInputDataProvider.prototype = {
     _recordAdded: function(event)
     {
 	var record = event.data;
-	var recordStyles = WebInspector.timelapsePresentationModel.recordStyles;
+	var styles = WebInspector.TimelapseInputDataProvider.InputStyles;
 
-	// TODO: this should not need to call out to presentation model.
-	if (recordStyles[record.type].category.name != this._category.name)
+	if (styles[record.type].group != this.name)
 	    return;
 
 	this._records.push(record);
@@ -185,7 +184,7 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 
 WebInspector.TimelapseInputDataProvider.prototype.__proto__ = WebInspector.DataProvider.prototype;
 
-WebInspector.TimelapseInputDataProvider.RecordStyles = (function() 
+WebInspector.TimelapseInputDataProvider.InputStyles = (function() 
 {
     var types = WebInspector.TimelapseAgent.RecordType;
     var styles = {};
@@ -215,6 +214,74 @@ WebInspector.TimelapseInputDataProvider.RecordStyles = (function()
     styles[types.BreakpointHit] = { title: WebInspector.UIString("Hit Breakpoint"), group: "breakpoint" };
 
     return styles;
+})();
+
+// NB. the closure keeps the helper functions from polluting global scope.
+WebInspector.TimelapseInputDataProvider.InputPreview = (function(){
+    var makeCoords = function(data) {
+        return "(" + (data.x || 0) + "," + (data.y || 0) + ")";
+    };
+
+    var makeModKeys = function(data) {
+	str = "";
+	if (data.shiftKey) str += "<SHIFT> ";
+	if (data.altKey) str += "<ALT> ";
+	if (data.ctrlKey) str += "<CTRL> ";
+	if (data.metaKey) str += "<META> ";
+	return str;
+    };
+
+    var makeButton = function(button) {
+	if (button == -1) return ""; // No button
+	if (button == 0) return "Left Button";
+	if (button == 1) return "Middle Button";
+	if (button == 2) return "Right Button";
+	return "";
+    };
+
+    return {
+	MousePress: function(data)
+	{
+	    return "Coords: " + makeCoords(data) + "; Keys: " + makeModKeys(data) + makeButton(data);
+	},
+	MouseRelease: function (data)
+	{
+	    return "Coords: " + makeCoords(data) + "; Keys: " + makeModKeys(data) + makeButton(data);
+	},
+	MouseMove: function (data)
+	{
+	    return "Coords: " + makeCoords(data) + "; Keys: " + makeModKeys(data) + makeButton(data);
+	},
+	MouseWheel: function (data)
+	{
+	    return "Coords: " + makeCoords(data) + "; Keys: " + makeModKeys(data) + makeButton(data) + "; Scroll: delta of (" + data.deltaX + "," + data.deltaY + "), ticks of (" + data.ticksX + "," + data.ticksY + ")";
+	},
+	KeyPress: function (data)
+	{
+	    return "Keys: " + data.text + " and modifiers " + makeModKeys(data);
+	},
+	Scroll: function (data) { return " "; }, // TODO
+	Resize: function (data) {
+	    return "Width: " + data.width + "; Height: " + data.height;
+	},
+
+	WindowActive: function (data) { return " "; },
+	WindowInactive: function (data) { return " "; },
+	WindowFocused: function (data) { return " "; },
+	WindowUnfocused: function (data) { return " "; },
+
+	RequestResource: function (data) { return data.url; },
+	ReceiveResponse: function (data) { return data.url; },
+	// TODO: it's really awkward to reference the global here, IMO.
+	ReceiveData: function (data) { return WebInspector.timelapsePresentationModel._resourceUrlById[data.id]; },
+	ResourceLoaded: function (data) { return WebInspector.timelapsePresentationModel._resourceUrlById[data.id]; },
+
+	TimerFire: function (data) { return "Fired"; },
+
+	FrameNavigated: function(data) { return data.url; },
+	CaptureBegin: function (data) { return " "; },
+	CaptureEnd: function (data) { return " "; }
+    };
 })();
 
 WebInspector.TimelapseBreakpointDataProvider = function(category)

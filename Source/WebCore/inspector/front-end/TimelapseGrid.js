@@ -326,7 +326,7 @@ WebInspector.TimelapseGrid.prototype = {
 	// if the selected row matches the disabled provider, then deselect it.
 	if (this.selected) {
 	    var selectedNode = this.selectedNode;
-	    var style = WebInspector.TimelapseInputDataProvider.RecordStyles[selectedNode.record.type];
+	    var style = WebInspector.TimelapseInputDataProvider.InputStyles[selectedNode.record.type];
 	    if (style.group == provider.name)
 		selectedNode.deselect();
 	}
@@ -979,7 +979,7 @@ WebInspector.TimelapseGridNode.prototype = {
 
     createCells: function()
     {
-	var group = WebInspector.TimelapseInputDataProvider.RecordStyles[this._record.type].group;
+	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].group;
 
         // Out of sight, out of mind: create nodes offscreen to save on render tree update times when running updateOffscreenRows()
         this._element.addStyleClass("offscreen");
@@ -995,7 +995,7 @@ WebInspector.TimelapseGridNode.prototype = {
 
     isFilteredOut: function()
     {
-        return !this._parentView.providers[WebInspector.TimelapseInputDataProvider.RecordStyles[this._record.type].group].isEnabled() || this.element.classList.contains("hidden");
+        return !this._parentView.providers[WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].group].isEnabled() || this.element.classList.contains("hidden");
     },
 
     highlight: function(classSuffix)
@@ -1047,7 +1047,7 @@ WebInspector.TimelapseGridNode.prototype = {
 	this._refreshPreviewCell();
 	
 	this._element.addStyleClass("timelapse-table-item");
-	var group = WebInspector.TimelapseInputDataProvider.RecordStyles[this._record.type].group;
+	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].group;
 	if (!this._element.hasStyleClass("timelapse-category-" + group)) {
             this._element.removeMatchingStyleClasses("timelapse-category-\\w+");
             this._element.addStyleClass("timelapse-category-" + group);
@@ -1079,7 +1079,7 @@ WebInspector.TimelapseGridNode.prototype = {
     {
 	this._groupCell.removeChildren();
 	this._groupCell.appendChild(document.createTextNode(" "));
-	var group = WebInspector.TimelapseInputDataProvider.RecordStyles[this._record.type].group;
+	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].group;
 	var provider = this._parentView.providers[group];
 	this._groupCell.title = "Category: " + provider.displayName;
     },
@@ -1099,8 +1099,8 @@ WebInspector.TimelapseGridNode.prototype = {
     _refreshPreviewCell: function()
     {
     	this._previewCell.removeChildren();
-	var preview = WebInspector.TimelapsePresentationModel.RecordPreview[this._record.type](this._record.data);
-	var group = WebInspector.TimelapseInputDataProvider.RecordStyles[this._record.type].group;
+	var preview = WebInspector.TimelapseInputDataProvider.InputPreview[this._record.type](this._record.data);
+	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].group;
 	if (group == "network") {
 	    var url = preview;
 	    var isExternal = !WebInspector.resourceForURL(url);
@@ -1120,8 +1120,8 @@ WebInspector.TimelapseGridNode.prototype.__proto__ = WebInspector.DataGridNode.p
 
 WebInspector.TimelapseGridNode.GroupComparator = function(a,b)
 {
-    var aGroup = WebInspector.TimelapseInputDataProvider.RecordStyles[a._record.type].group;
-    var bGroup = WebInspector.TimelapseInputDataProvider.RecordStyles[b._record.type].group;
+    var aGroup = WebInspector.TimelapseInputDataProvider.InputStyles[a._record.type].group;
+    var bGroup = WebInspector.TimelapseInputDataProvider.InputStyles[b._record.type].group;
     if (aGroup > bGroup)
 	return 1;
     if (bGroup > aGroup)
@@ -1164,8 +1164,8 @@ WebInspector.TimelapseGridNode.TimestampComparator = function(a,b)
 
 WebInspector.TimelapseGridNode.PreviewComparator = function(a,b)
 {
-    var aPreview = WebInspector.TimelapsePresentationModel.RecordPreview[a._record.type](a._record.data);
-    var bPreview = WebInspector.TimelapsePresentationModel.RecordPreview[b._record.type](b._record.data);
+    var aPreview = WebInspector.TimelapseInputDataProvider.InputPreview[a._record.type](a._record.data);
+    var bPreview = WebInspector.TimelapseInputDataProvider.InputPreview[b._record.type](b._record.data);
     if (aPreview > bPreview)
 	return 1;
     if (bPreview > aPreview)
