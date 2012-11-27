@@ -123,7 +123,7 @@ WebInspector.TimelapseGrid = function() {
     anchorManager.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
     anchorManager.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
 
-    this._providers = [];
+    this._providers = {};
     this._refreshDelay = WebInspector.TimelapseGrid.DefaultRefreshDelay;
     this._pendingRecords = [];
     this._recordGridNodes = {};
@@ -252,10 +252,10 @@ WebInspector.TimelapseGrid.prototype = {
 	if (!this._canUseProvider(provider))
 	    return;
 
-	console.assert(this._providers.lastIndexOf(provider) == -1, 
+	console.assert(!this._providers.hasOwnProperty(provider.name),
 		       "Provider already added to timeline grid.");
 
-	this._providers.push(provider);
+	this._providers[provider.name] = provider;
 	this._setupListenersForProvider(provider);
 
 	// set up provider's record filter if it's active.
@@ -271,10 +271,11 @@ WebInspector.TimelapseGrid.prototype = {
 	if (!this._canUseProvider(provider))
 	    return;
 
-	var i = this._providers.indexOf(provider);
-	console.assert(i != -1, "Can't remove provider not in timeline grid.");
-	var removedProvider = this._providers.splice(i, 1)[0];
-	this._teardownListenersForProvider(removedProvider);
+	console.assert(this._providers.hasOwnProperty(provider.name),
+		       "Can't remove provider not in timeline grid.");
+
+	delete this._providers[provider.name];
+	this._teardownListenersForProvider(provider);
     },
 
     _setupListenersForProvider: function(provider)
