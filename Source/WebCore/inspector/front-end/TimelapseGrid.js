@@ -130,10 +130,10 @@ WebInspector.TimelapseGrid = function() {
     anchorManager.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
     anchorManager.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
 
-    // can't reset this unconditionally, since we teardown listeners cleanly.
     this._providers = [];
-
-    this.reset();
+    this._refreshDelay = WebInspector.TimelapseGrid.DefaultRefreshDelay;
+    this._pendingRecords = [];
+    this._recordGridNodes = {};
 };
 
 WebInspector.TimelapseGrid.DefaultRefreshDelay = 150;
@@ -149,20 +149,6 @@ WebInspector.TimelapseGrid.prototype = {
     {
 	this._updateOffscreenRows();
 	this._scheduleRefresh();
-    },
-
-    reset: function()
-    {
-	this._refreshDelay = WebInspector.TimelapseGrid.DefaultRefreshDelay;
-	this._pendingRecords = [];
-	this._recordGridNodes = {};
-	this._invalidateVisibleRows();
-	this.rootNode().removeChildren();
-
-	for (var key in this.sliders) {
-	    var slider = this.sliders[key];
-	    slider.clear();
-	}
     },
 
     refresh: function()
@@ -477,7 +463,11 @@ WebInspector.TimelapseGrid.prototype = {
 
     _onRecordingDidStart: function()
     {
-	this.reset();
+	for (var key in this.sliders) {
+	    var slider = this.sliders[key];
+	    slider.clear();
+	}
+
 	this.sliders.playback.disable();
     },
 

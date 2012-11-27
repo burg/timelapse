@@ -40,7 +40,6 @@ WebInspector.TimelapsePanel.prototype = {
         WebInspector.Panel.prototype.reset.call(this);
         this.searchCanceled();
         this.removeAllListeners();
-	this._dataGrid.reset();
     },
 
     _registerShortcuts: function()
