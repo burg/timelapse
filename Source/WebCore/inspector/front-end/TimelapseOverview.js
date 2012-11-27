@@ -260,11 +260,6 @@ WebInspector.TimelapseOverview.prototype = {
 	/* update dividers */
 	this.updateDividers(true);
 
-	/* clear all timelines */
-	this._timelines.forEach(function(timeline) {
-            timeline.reset();
-        });
-
 	if (this._hoveredCircle)
 	    delete this._hoveredCircle;
 	if (this._selectedCircle)
@@ -289,7 +284,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	document.body.addEventListener("mousemove", this._presentationModel.startHidePopoverTimer.bind(this._presentationModel), false);
 
-	this.refresh();
+	this._scheduleRefresh();
     },
 
     /* Extends View.onResize */
@@ -448,8 +443,7 @@ WebInspector.TimelapseOverview.prototype = {
 	timeline.show(this._timelineContainer);
 	this._timelines.push(timeline);
 
-	// resets colors, redraws, etc.
-	this.onResize();
+	this._scheduleRefresh();
     },
 
     _onProviderRemoved: function(event)
@@ -472,7 +466,7 @@ WebInspector.TimelapseOverview.prototype = {
 	removedTimeline.detach();
 	removedLabel.detach();
 
-	this.onResize();
+	this._scheduleRefresh();
     },
 
     _onTimelineMousemove: function(event)
@@ -517,6 +511,7 @@ WebInspector.TimelapseOverview.prototype = {
 	    return;
 
 	var timeline = node.timeline;
+	var provider = timeline.provider;
 	var data = timeline.data;
 	if (data.records.length == 0)
 	    return;
@@ -534,7 +529,8 @@ WebInspector.TimelapseOverview.prototype = {
 	    return;
 
 	var timeline = node.timeline;
-	var data = this.timeline.data;
+	var provider = timeline.provider;
+	var data = timeline.data;
 	if (data.records.length == 0)
 	    return;
 
@@ -978,17 +974,16 @@ WebInspector.TimelapseCircleTimeline = function(provider)
     this._provider = provider;
     this._setupListeners();
 
-    var events = WebInspector.TimelapsePresentationModel.EventTypes;
-    this.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged,
-				     this._onZoomChanged, this);
-
     this.element = document.createElement("div");
     this.element.className = "timelapse-overview-timeline timelapse-category-" + this.provider.name;
     this.element.timeline = this;
     this._canvas = document.createElement("canvas");
     this.element.appendChild(this._canvas);
 
-    this.reset();
+    this._recomputeParameters();
+    this._clearTimeline();
+    this._dirty = false;
+    this._highlights = [];
 };
 
 WebInspector.TimelapseCircleTimeline.prototype = {
@@ -999,6 +994,9 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this.provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
 	this.provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
 	this.provider.addEventListener(events.WillRemove, this._onProviderRemoved, this);
+
+	this.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged,
+					 this._onZoomChanged, this);
     },
 
     _teardownListeners: function()
@@ -1008,6 +1006,9 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this.provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
 	this.provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
 	this.provider.removeEventListener(events.WillRemove, this._onProviderRemoved, this);
+
+	this.calculator.removeEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged,
+					    this._onZoomChanged, this);
     },
 
     get data()
@@ -1031,19 +1032,11 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	WebInspector.View.prototype.onResize.call(this);
 
         /* resize timeline */
-	this.resize();
+	this._recomputeParameters();
 	this.refresh();
     },
 
-    reset: function()
-    {
-	this.resize();
-	this._clearTimeline();
-	this._dirty = false;
-	this._highlights = [];
-    },
-
-    resize: function()
+    _recomputeParameters: function()
     {
 	this._canvas.width = this.element.clientWidth;
     	this._canvas.style.width = this.element.clientWidth + 'px';
@@ -1069,8 +1062,12 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
     _onProviderRemoved: function()
     {
-	this._removeListeners();
-	delete this._provider;
+	this._teardownListeners();
+	// TODO: we can't quite delete the provider right now, because
+	// we are somewhere calling this.refresh() after the provider
+	// has been deleted but before the Timeline view has been detached.
+
+	//delete this._provider;
     },
 
     _onDataChanged: function()
@@ -1085,11 +1082,15 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     _onProviderEnabled: function()
     {
 	this.element.classList.remove("disabled");
+	this._recomputeParameters();
+	this.refresh();
     },
 
     _onProviderDisabled: function()
     {
 	this.element.classList.add("disabled");
+	this._recomputeParameters();
+	this.refresh();
     },
 
     _circleIndexFromMarkIndex: function(markIndex)
@@ -1769,6 +1770,7 @@ WebInspector.TimelapseTimelineLabel.prototype = {
     _onProviderRemoved: function()
     {
 	this._teardownListeners();
+	delete this._provider;
     },
 };
 

@@ -140,7 +140,10 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 
     get color()
     {
-	return this._category.color;
+	if (this.isEnabled())
+	    return this._category.color;
+	else // faded color
+	    return WebInspector.Color.fromRGB(150, 150, 150);
     },
 
     get records()
