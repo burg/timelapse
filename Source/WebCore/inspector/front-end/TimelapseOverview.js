@@ -443,6 +443,8 @@ WebInspector.TimelapseOverview.prototype = {
 	timeline.show(this._timelineContainer);
 	this._timelines.push(timeline);
 
+	// force dimensions of containers to be recalculated
+	this.onResize();
 	this._scheduleRefresh();
     },
 
@@ -466,6 +468,8 @@ WebInspector.TimelapseOverview.prototype = {
 	removedTimeline.detach();
 	removedLabel.detach();
 
+	// force dimensions of containers to be recalculated
+	this.onResize();
 	this._scheduleRefresh();
     },
 
