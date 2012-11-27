@@ -314,7 +314,7 @@ WebInspector.TimelapseGrid.prototype = {
 	this.element.classList.add("filter-" + provider.name);
 
 	this._updateOffscreenRows();
-	this.refresh();
+	this._scheduleRefresh();
     },
 
     _onProviderDisabled: function(event)
@@ -332,7 +332,7 @@ WebInspector.TimelapseGrid.prototype = {
 	}
 
 	this._updateOffscreenRows();
-	this.refresh();
+	this._scheduleRefresh();
     },
 
     _clearHighlight: function(classSuffix)
@@ -458,13 +458,8 @@ WebInspector.TimelapseGrid.prototype = {
 	this.sliders.playback.disable();
     },
 
-
     _onRecordingDidStop: function()
     {
-	this._sortItems();
-	this._updateOffscreenRows();
-	this.refresh();
-
 	var node = this._recordGridNodes[this._model.currentMarkIndex];
 	this.sliders.playback.placeAfter(node);
 	this.sliders.playback.enable();
@@ -1083,7 +1078,6 @@ WebInspector.TimelapseGridNode.prototype = {
     _refreshGroupCell: function()
     {
 	this._groupCell.removeChildren();
-	// FIXME: is this necessary?
 	this._groupCell.appendChild(document.createTextNode(" "));
 	var group = WebInspector.TimelapseInputDataProvider.RecordStyles[this._record.type].group;
 	var provider = this._parentView.providers[group];
