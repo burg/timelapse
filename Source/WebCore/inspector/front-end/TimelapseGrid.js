@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Brian J. Burg <burg@cs.washington.edu>
+ * Copyright (C) 2011, 2012 Brian J. Burg <burg@cs.washington.edu>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -115,6 +115,8 @@ WebInspector.TimelapseGrid = function() {
     this._model.addEventListener(modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
 
     var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
+    this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
+    this._presentationModel.addEventListener(presEventNames.ProviderRemoved, this._onProviderRemoved, this);
     this._presentationModel.addEventListener(presEventNames.FilterChanged, this._onFilterChanged, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
@@ -127,6 +129,9 @@ WebInspector.TimelapseGrid = function() {
     var anchorEventNames = WebInspector.TimelapseAnchorManager.EventTypes;
     anchorManager.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
     anchorManager.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
+
+    // can't reset this unconditionally, since we teardown listeners cleanly.
+    this._providers = [];
 
     this.reset();
 };
@@ -257,6 +262,74 @@ WebInspector.TimelapseGrid.prototype = {
     },
 
     // Private API (helpers)
+    _canUseProvider: function(provider)
+    {
+	return provider.type == WebInspector.DataProvider.Types.TimelapseInput;
+    },
+
+    _onProviderAdded: function(event)
+    {
+	var provider = event.data;
+	if (!this._canUseProvider(provider))
+	    return;
+
+	console.assert(this._providers.lastIndexOf(provider) == -1, 
+		       "Provider already added to timeline grid.");
+
+	this._providers.push(provider);
+	this._setupListenersForProvider(provider);
+    },
+
+    _onProviderRemoved: function(event)
+    {
+	var provider = event.data;
+	if (!this._canUseProvider(provider))
+	    return;
+
+	var i = this._providers.indexOf(provider);
+	console.assert(i != -1, "Can't remove provider not in timeline grid.");
+	var removedProvider = this._providers.splice(i, 1)[0];
+	this._teardownListenersForProvider(removedProvider);
+    },
+
+    _setupListenersForProvider: function(provider)
+    {
+	var events = WebInspector.DataProvider.Events;
+	provider.addEventListener(events.AddedInput, this._onAddedInput, this);
+	provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
+	provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
+    },
+
+    _teardownListenersForProvider: function(provider)
+    {
+	var events = WebInspector.DataProvider.Events;
+	provider.removeEventListener(events.AddedInput, this._onAddedInput, this);
+	provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
+	provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
+    },
+
+    _onAddedInput: function(event)
+    {
+	var input = event.data.input;
+	var provider = event.data.provider;
+
+	// TODO: add record to timeline
+    },
+
+    _onProviderEnabled: function(event)
+    {
+	var provider = event.data;
+
+	// TODO: equivalent of toggle category
+    },
+
+    _onProviderDisabled: function(event)
+    {
+	var provider = event.data;
+
+	// TODO: equivalent of toggle category
+    },
+
     _clearHighlight: function(classSuffix)
     {
 	var className = "highlight-" + classSuffix;
