@@ -33,7 +33,7 @@ WebInspector.TimelapseGrid = function() {
     var columns = {
 	gutter: {},
 	index: {},
-	category: {},
+	group: {},
 	type: {},
 	timestamp: {},
 	preview: {}
@@ -50,9 +50,9 @@ WebInspector.TimelapseGrid = function() {
     columns.index.aligned = "right";
     columns.index.sort = "ascending";
 
-    columns.category.title = " ";
-    columns.category.sortable = true;
-    columns.category.width = "1%";
+    columns.group.title = " ";
+    columns.group.sortable = true;
+    columns.group.width = "1%";
 
     columns.type.title = "What Happened?";
     columns.type.sortable = true;
@@ -76,7 +76,7 @@ WebInspector.TimelapseGrid = function() {
     this._presentationModel = WebInspector.timelapsePresentationModel;
     this._sortingFunctions = {
 	index: WebInspector.TimelapseGridNode.IndexComparator,
-	category: WebInspector.TimelapseGridNode.CatComparator,
+	group: WebInspector.TimelapseGridNode.GroupComparator,
 	type: WebInspector.TimelapseGridNode.TypeComparator,
 	timestamp: WebInspector.TimelapseGridNode.TimestampComparator,
 	preview: WebInspector.TimelapseGridNode.PreviewComparator
@@ -136,6 +136,11 @@ WebInspector.TimelapseGrid.prototype = {
     get sliders()
     {
 	return this._sliders;
+    },
+
+    get providers()
+    {
+	return this._providers;
     },
 
     wasShown: function()
@@ -979,14 +984,14 @@ WebInspector.TimelapseGridNode.prototype = {
 
     createCells: function()
     {
-	var category = WebInspector.timelapsePresentationModel.recordStyles[this._record.type].category;
+	var group = WebInspector.TimelapseInputDataProvider.RecordStyles[this._record.type].group;
 
         // Out of sight, out of mind: create nodes offscreen to save on render tree update times when running updateOffscreenRows()
         this._element.addStyleClass("offscreen");
-	this._element.addStyleClass("timelapse-category-" + category.name);
+	this._element.addStyleClass("timelapse-category-" + group);
 	this._gutterCell = this._createDivInTD("gutter");
         this._indexCell = this._createDivInTD("index");
-	this._categoryCell = this._createDivInTD("category");
+	this._groupCell = this._createDivInTD("category");
         this._typeCell = this._createDivInTD("type");
         this._timestampCell = this._createDivInTD("timestamp");
         this._previewCell = this._createDivInTD("preview");
@@ -995,7 +1000,7 @@ WebInspector.TimelapseGridNode.prototype = {
 
     isFilteredOut: function()
     {
-        return !!WebInspector.timelapsePresentationModel.recordStyles[this._record.type].category.disabled || this.element.classList.contains("hidden");
+        return !this._parentView.providers[WebInspector.TimelapseInputDataProvider.RecordStyles[this._record.type].group].isEnabled() || this.element.classList.contains("hidden");
     },
 
     highlight: function(classSuffix)
@@ -1041,16 +1046,16 @@ WebInspector.TimelapseGridNode.prototype = {
     {
 	this._refreshGutterCell();
 	this._refreshIndexCell();
-	this._refreshCategoryCell();
+	this._refreshGroupCell();
 	this._refreshTypeCell();
 	this._refreshTimestampCell();
 	this._refreshPreviewCell();
 	
 	this._element.addStyleClass("timelapse-table-item");
-	var categoryName = WebInspector.timelapsePresentationModel.recordStyles[this._record.type].category.name;
-	if (!this._element.hasStyleClass("timelapse-category-" + categoryName)) {
+	var group = WebInspector.TimelapseInputDataProvider.RecordStyles[this._record.type].group;
+	if (!this._element.hasStyleClass("timelapse-category-" + group)) {
             this._element.removeMatchingStyleClasses("timelapse-category-\\w+");
-            this._element.addStyleClass("timelapse-category-" + categoryName);
+            this._element.addStyleClass("timelapse-category-" + group);
         }
     },
 
@@ -1075,13 +1080,14 @@ WebInspector.TimelapseGridNode.prototype = {
 	this._indexCell.title = "Input Action #" + this._record.mark.index;
     },
 
-    _refreshCategoryCell: function()
+    _refreshGroupCell: function()
     {
-	this._categoryCell.removeChildren();
+	this._groupCell.removeChildren();
 	// FIXME: is this necessary?
-	this._categoryCell.appendChild(document.createTextNode(" "));
-	var category = WebInspector.timelapsePresentationModel.recordStyles[this._record.type].category;
-	this._categoryCell.title = "Category: " + category.title;
+	this._groupCell.appendChild(document.createTextNode(" "));
+	var group = WebInspector.TimelapseInputDataProvider.RecordStyles[this._record.type].group;
+	var provider = this._parentView.providers[group];
+	this._groupCell.title = "Category: " + provider.displayName;
     },
 
     _refreshTypeCell: function()
@@ -1100,8 +1106,8 @@ WebInspector.TimelapseGridNode.prototype = {
     {
     	this._previewCell.removeChildren();
 	var preview = WebInspector.TimelapsePresentationModel.RecordPreview[this._record.type](this._record.data);
-	var category = WebInspector.timelapsePresentationModel.recordStyles[this._record.type].category;
-	if (category.name == "network") {
+	var group = WebInspector.TimelapseInputDataProvider.RecordStyles[this._record.type].group;
+	if (group == "network") {
 	    var url = preview;
 	    var isExternal = !WebInspector.resourceForURL(url);
 	    var link = WebInspector.linkifyURLAsNode(url,
@@ -1118,13 +1124,13 @@ WebInspector.TimelapseGridNode.prototype = {
 WebInspector.TimelapseGridNode.prototype.__proto__ = WebInspector.DataGridNode.prototype;
 
 
-WebInspector.TimelapseGridNode.CatComparator = function(a,b)
+WebInspector.TimelapseGridNode.GroupComparator = function(a,b)
 {
-    var aCat = WebInspector.timelapsePresentationModel.recordStyles[a._record.type].category.name;
-    var bCat = WebInspector.timelapsePresentationModel.recordStyles[b._record.type].category.name;
-    if (aCat > bCat)
+    var aGroup = WebInspector.TimelapseInputDataProvider.RecordStyles[a._record.type].group;
+    var bGroup = WebInspector.TimelapseInputDataProvider.RecordStyles[b._record.type].group;
+    if (aGroup > bGroup)
 	return 1;
-    if (bCat > aCat)
+    if (bGroup > aGroup)
 	return -1;
     return 0;
 };
