@@ -84,12 +84,6 @@ WebInspector.TimelapseGrid = function() {
     this.resizeMethod = WebInspector.DataGrid.ResizeMethod.Last;
 
     this.element.classList.add("timelapse-inputs-grid");
-    var order = this._presentationModel.categoryOrder;
-    for (var i = 0; i < order.length; i++) {
-	var key = order[i];
-	var category = this._presentationModel.categories[key];
-	this.element.classList.add("filter-" + category.name);
-    }
 
     // TODO: does this comment even make sense? It's copied from DataGrid
     // Event listeners need to be added _after_ we attach to the document, so that owner document is properly update.
@@ -117,7 +111,6 @@ WebInspector.TimelapseGrid = function() {
     var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
     this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
     this._presentationModel.addEventListener(presEventNames.ProviderRemoved, this._onProviderRemoved, this);
-    this._presentationModel.addEventListener(presEventNames.FilterChanged, this._onFilterChanged, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
     this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
@@ -264,6 +257,12 @@ WebInspector.TimelapseGrid.prototype = {
 
 	this._providers.push(provider);
 	this._setupListenersForProvider(provider);
+
+	// set up provider's record filter if it's active.
+	if (provider.isEnabled())
+	    this.element.classList.add("filter-" + provider.name);
+
+	// TODO: if the provider already has data, we should add it to pendingRecords here.
     },
 
     _onProviderRemoved: function(event)
@@ -306,14 +305,28 @@ WebInspector.TimelapseGrid.prototype = {
     {
 	var provider = event.data;
 
-	// TODO: equivalent of toggle category
+	this.element.classList.add("filter-" + provider.name);
+
+	this._updateOffscreenRows();
+	this.refresh();
     },
 
     _onProviderDisabled: function(event)
     {
 	var provider = event.data;
 
-	// TODO: equivalent of toggle category
+	this.element.classList.remove("filter-" + provider.name);
+
+	// if the selected row matches the disabled provider, then deselect it.
+	if (this.selected) {
+	    var selectedNode = this.selectedNode;
+	    var style = WebInspector.TimelapseInputDataProvider.RecordStyles[selectedNode.record.type];
+	    if (style.group == provider.name)
+		selectedNode.deselect();
+	}
+
+	this._updateOffscreenRows();
+	this.refresh();
     },
 
     _clearHighlight: function(classSuffix)
@@ -409,11 +422,7 @@ WebInspector.TimelapseGrid.prototype = {
 		break;
 	    if (!this._recordGridNodes[record.mark.index])
 		continue;
-	    
-	    if (record.matches)
-		this._recordGridNodes[record.mark.index].element.classList.remove("hidden");
-	    else
-		this._recordGridNodes[record.mark.index].element.classList.add("hidden");
+	    this._recordGridNodes[record.mark.index].element.classList.remove("hidden");
 	}
 
 	/* update records after zoom interval */
@@ -432,34 +441,6 @@ WebInspector.TimelapseGrid.prototype = {
 	this._updateOffscreenRows();
 	this._scheduleRefresh();
     },
-
-    _onFilterChanged: function(eventData)
-    {
-	this._sortItems();
-	this._updateZoomInterval();
-
-	/* update category filter classes */
-	var order = this._presentationModel.categoryOrder;
-	for (var i = 0; i < order.length; i++) {
-	    var key = order[i];
-	    var category = this._presentationModel.categories[key];
-	    if (category.disabled)
-		this.element.classList.remove("filter-" + category.name);
-	    else
-		this.element.classList.add("filter-" + category.name);
-
-	    /* if the selected row is in the toggled category, then deselect it. */
-	    if (this.selected) {
-		var selectedNode = this.selectedNode;
-		if (this._presentationModel.recordStyles[selectedNode.record.type].category.disabled)
-		    selectedNode.deselect();
-	    }
-	}
-
-	this._updateOffscreenRows();
-	this._scheduleRefresh();
-    },
-
 
     _onRecordingDidStart: function()
     {

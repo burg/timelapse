@@ -171,8 +171,8 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	if (recordStyles[record.type].category.name != this._category.name)
 	    return;
 
-	this._records.push(event.data);
-	
+	this._records.push(record);
+
 	var eventData = {
             "input": record,
             "provider": this,
@@ -184,6 +184,38 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 };
 
 WebInspector.TimelapseInputDataProvider.prototype.__proto__ = WebInspector.DataProvider.prototype;
+
+WebInspector.TimelapseInputDataProvider.RecordStyles = (function() 
+{
+    var types = WebInspector.TimelapseAgent.RecordType;
+    var styles = {};
+    styles[types.MousePress] = { title: WebInspector.UIString("Mouse Press"), group: "userinput" };
+    styles[types.MouseRelease] = { title: WebInspector.UIString("Mouse Release"), group: "userinput" };
+    styles[types.MouseMove] = { title: WebInspector.UIString("Mouse Move"), group: "userinput" };
+    styles[types.MouseWheel] = { title: WebInspector.UIString("Mouse Wheel"), group: "userinput" };
+    styles[types.KeyPress] = { title: WebInspector.UIString("Key Press"), group: "userinput" };
+    styles[types.Scroll] = { title: WebInspector.UIString("Scroll"), group: "userinput" };
+    styles[types.Resize] = { title: WebInspector.UIString("Resize"), group: "userinput" };
+
+    styles[types.WindowActive] = { title: WebInspector.UIString("Window Became Active"), group: "userinput" };
+    styles[types.WindowInactive] = { title: WebInspector.UIString("Window Became Inactive"), group: "userinput" };
+    styles[types.WindowFocused] = { title: WebInspector.UIString("Window Was Focused"), group: "userinput" };
+    styles[types.WindowUnfocused] = { title: WebInspector.UIString("Window Was Unfocused"), group: "userinput" };
+
+    styles[types.RequestResource] = { title: WebInspector.UIString("Requested Resource"), group: "network" };
+    styles[types.ReceiveResponse] = { title: WebInspector.UIString("Received Response"), group: "network" };
+    styles[types.ReceiveData] = { title: WebInspector.UIString("Received Data"), group: "network" };
+    styles[types.ResourceLoaded] = { title: WebInspector.UIString("Resource Loaded"), group: "network" };
+
+    styles[types.TimerFire] = { title: WebInspector.UIString("Timer Fired"), group: "timer" };
+
+    styles[types.FrameNavigated] = { title: WebInspector.UIString("Started Page Load"), group: "system" };
+    styles[types.CaptureBegin] = { title: WebInspector.UIString("Recording Began"), group: "system" };
+    styles[types.CaptureEnd] = { title: WebInspector.UIString("Recording Ended"), group: "system" };
+    styles[types.BreakpointHit] = { title: WebInspector.UIString("Hit Breakpoint"), group: "breakpoint" };
+
+    return styles;
+})();
 
 WebInspector.TimelapseBreakpointDataProvider = function(category)
 {
