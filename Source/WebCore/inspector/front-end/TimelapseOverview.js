@@ -441,8 +441,7 @@ WebInspector.TimelapseOverview.prototype = {
 	this._timelines.push(timeline);
 
 	label.element.style.setProperty("top", ordinal*height + "px");
-	// TODO: View-ify the labels.
-	this._labelContainer.appendChild(label.element);
+	label.show(this._labelContainer);
 
 	timeline.element.style.setProperty("top", ordinal*height + "px");
 	timeline.show(this._timelineContainer);
@@ -468,8 +467,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	// detach from DOM
 	removedTimeline.detach();
-	// TODO: view-ify
-	this._labelContainer.removeChild(removedLabel.element);
+	removedLabel.detach();
 
 	this.onResize();
     },
@@ -1721,11 +1719,11 @@ WebInspector.TimelapsePopover.prototype.__proto__ = WebInspector.Popover.prototy
 
 /**
  * @constructor
- * @extends {WebInspector.Object}
+ * @extends {WebInspector.View}
  */
 WebInspector.TimelapseTimelineLabel = function(category)
 {
-    WebInspector.Object.call(this);
+    WebInspector.View.call(this);
 
     this._presentationModel = WebInspector.timelapsePresentationModel;
     this.category = category;
@@ -1770,4 +1768,4 @@ WebInspector.TimelapseTimelineLabel.prototype = {
     }
 };
 
-WebInspector.TimelapseTimelineLabel.prototype.__proto__ = WebInspector.Object.prototype;
+WebInspector.TimelapseTimelineLabel.prototype.__proto__ = WebInspector.View.prototype;
