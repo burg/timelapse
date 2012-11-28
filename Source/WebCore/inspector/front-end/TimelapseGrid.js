@@ -125,6 +125,7 @@ WebInspector.TimelapseGrid = function() {
     this._providers = {};
     this._refreshDelay = WebInspector.TimelapseGrid.DefaultRefreshDelay;
     this._pendingRecords = [];
+    this._maxMarkIndex = 0;
     this._recordGridNodes = {};
 };
 
@@ -166,6 +167,9 @@ WebInspector.TimelapseGrid.prototype = {
 	var newNode;
 	// create new rows for pending records, update table.
 	for (var i = 0; i < this._pendingRecords.length; i++) {
+	    if (this._pendingRecords[i].mark.index > this._maxMarkIndex)
+		this._maxMarkIndex = this._pendingRecords[i].mark.index;
+	    
 	    newNode = this._createRecordGridNode(this._pendingRecords[i]);
 	    this.rootNode().appendChild(newNode);
 	    newNode.refreshRecord();
@@ -215,8 +219,7 @@ WebInspector.TimelapseGrid.prototype = {
     nextVisibleIndex: function(markIndex)
     {
 	var nextIndex = markIndex + 1;
-	var lastRecord = this._model.allRecords[this._model.allRecords.length-1];
-	var lastIndex = lastRecord.mark.index;
+	var lastIndex = this._maxMarkIndex;
 
 	while (nextIndex <= lastIndex) {
 	    var node = this._recordGridNodes[nextIndex];
@@ -618,14 +621,14 @@ WebInspector.TimelapseGrid.prototype = {
 		currentPosition.before != newPosition.before) {		
 
 		if (isAboveRowMidpoint)
-		    this._presentationModel.previewRecord(node._record);
+		    this._presentationModel.previewRecord(node.record);
 		else {
-		    var nextMarkIndex = this.nextVisibleIndex(node._record.mark.index);
+		    var nextMarkIndex = this.nextVisibleIndex(node.record.mark.index);
 		    if (!nextMarkIndex)
 			return;
 
 		    var nextRecordIndex = this._model.recordIndexFromMarkIndex(nextMarkIndex);
-		    this._presentationModel.previewRecord(this._model.allRecords[nextRecordIndex]);
+		    this._presentationModel.previewRecord(this._recordGridNodes[nextMarkIndex].record);
 		}
 	    }
 
