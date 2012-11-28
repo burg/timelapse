@@ -102,7 +102,6 @@ WebInspector.TimelapseGrid = function() {
     var modelEventNames = WebInspector.TimelapseModel.EventTypes;
     this._model.addEventListener(modelEventNames.RecordingDidStart, this._onRecordingDidStart, this);
     this._model.addEventListener(modelEventNames.RecordingDidStop, this._onRecordingDidStop, this);
-    this._model.addEventListener(modelEventNames.RecordAdded, this._onRecordAdded, this);
     this._model.addEventListener(modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
     this._model.addEventListener(modelEventNames.PlaybackStopped, this._onPlaybackStopped, this);
     this._model.addEventListener(modelEventNames.InputPaused, this._onInputPaused, this);
@@ -302,9 +301,9 @@ WebInspector.TimelapseGrid.prototype = {
     _onAddedInput: function(event)
     {
 	var input = event.data.input;
-	var provider = event.data.provider;
 
-	// TODO: add record to timeline
+	this._pendingRecords.push(input);
+        this._scheduleRefresh();
     },
 
     _onProviderEnabled: function(event)
@@ -507,14 +506,6 @@ WebInspector.TimelapseGrid.prototype = {
 
 	if (!WebInspector.debuggerModel.isPaused())
 	    this.sliders.playback.show();
-    },
-
-    _onRecordAdded: function(event)
-    {
-	var record = event.data;
-
-	this._pendingRecords.push(record);
-        this._scheduleRefresh();
     },
 
     _onBreakpointPaused: function(eventData)
@@ -1087,7 +1078,7 @@ WebInspector.TimelapseGridNode.prototype = {
     _refreshTypeCell: function()
     {
     	this._typeCell.removeChildren();
-	this._typeCell.setTextAndTitle(WebInspector.timelapsePresentationModel.recordStyles[this._record.type].title);
+	this._typeCell.setTextAndTitle(WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].title);
     },
 
     _refreshTimestampCell: function()
