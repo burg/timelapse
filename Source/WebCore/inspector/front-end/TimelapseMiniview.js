@@ -49,12 +49,13 @@ WebInspector.TimelapseMiniview = function()
     this._model.addEventListener(eventNames.InputHit, this._onInputHit, this);
     this._model.addEventListener(eventNames.BreakpointPaused, this._onBreakpointPaused, this);
     this._model.addEventListener(eventNames.BreakpointHit, this._onBreakpointRecordsChanged, this);
-    this._model.addEventListener(eventNames.RecordAdded, this._scheduleRefresh, this);
 
-    this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.FilterChanged, this._onFilterChanged, this);
-    this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.PreviewStarted, this._onPreviewStarted, this);
-    this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.PreviewStopped, this._onPreviewStopped, this);
-    this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.PreviewChanged, this._onPreviewChanged, this);
+    var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
+    this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
+    this._presentationModel.addEventListener(presEventNames.ProviderRemoved, this._onProviderRemoved, this);
+    this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
+    this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
+    this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
 
     this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
 
@@ -67,6 +68,7 @@ WebInspector.TimelapseMiniview = function()
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
 
+    this._providers = {};
     this._initializeView();	
 };
 
@@ -78,6 +80,7 @@ WebInspector.TimelapseMiniview.WindowZoomSpeedFactor = 0.001;
 
 WebInspector.TimelapseMiniview.prototype = {
     // Public API
+    // TODO: remove reset.
     reset: function()
     {
 	this._updateZoomLeft();
@@ -104,6 +107,11 @@ WebInspector.TimelapseMiniview.prototype = {
 	this._drawGraph();
     },
 
+    get providers()
+    {
+	return this._providers;
+    },
+
     get calculator()
     {
 	return this._presentationModel.calculator;
@@ -119,6 +127,27 @@ WebInspector.TimelapseMiniview.prototype = {
     // Private API helpers
 
     _graphBorderWidth: 1,
+
+    _canUseProvider: function(provider)
+    {
+	return provider.type == WebInspector.DataProvider.Types.TimelapseInput;
+    },
+
+    _setupListenersForProvider: function(provider)
+    {
+	var events = WebInspector.DataProvider.Events;
+	provider.addEventListener(events.AddedInput, this._onAddedInput, this);
+	provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
+	provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
+    },
+
+    _teardownListenersForProvider: function(provider)
+    {
+	var events = WebInspector.DataProvider.Events;
+	provider.removeEventListener(events.AddedInput, this._onAddedInput, this);
+	provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
+	provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
+    },
 
     _autosizeCanvas: function()
     {
@@ -412,6 +441,50 @@ WebInspector.TimelapseMiniview.prototype = {
     },
 
     // Private API (callbacks)
+    _onProviderAdded: function(event)
+    {
+	var provider = event.data;
+	if (!this._canUseProvider(provider))
+	    return;
+
+	console.assert(!this._providers.hasOwnProperty(provider.name),
+		       "Provider already added to timeline grid.");
+
+	this._providers[provider.name] = provider;
+	this._setupListenersForProvider(provider);
+    },
+
+    _onProviderRemoved: function(event)
+    {
+	var provider = event.data;
+	if (!this._canUseProvider(provider))
+	    return;
+
+	console.assert(this._providers.hasOwnProperty(provider.name),
+		       "Can't remove provider not in timeline grid.");
+
+	delete this._providers[provider.name];
+	this._teardownListenersForProvider(provider);
+    },
+
+    _onAddedInput: function(event)
+    {
+	var input = event.data.input;
+	this._scheduleRefresh();
+    },
+
+    _onProviderEnabled: function(event)
+    {
+	this._potentialMarkBounds = false;
+	this._scheduleRefresh();
+    },
+
+    _onProviderDisabled: function(event)
+    {
+	this._potentialMarkBounds = false;
+	this._scheduleRefresh();
+    },
+
     _onRecordingDidStart: function()
     {
 	this.reset();
@@ -561,14 +634,6 @@ WebInspector.TimelapseMiniview.prototype = {
 	this._potentialMarkBounds = false;
 	this._updateZoomLeft();
 	this._updateZoomRight();
-    },
-
-    _onFilterChanged: function()
-    {
-	this._potentialMarkBounds = false;
-	this._updateZoomLeft();
-	this._updateZoomRight();
-	this._drawGraph();
     },
 
     _onPreviewStarted: function()
