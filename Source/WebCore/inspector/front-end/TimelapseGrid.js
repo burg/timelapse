@@ -404,38 +404,17 @@ WebInspector.TimelapseGrid.prototype = {
 
     _updateZoomInterval: function()
     {
-    	var records = this._model.allRecords;
 	var calculator = this._presentationModel.calculator;
 	var startTs = calculator.computeMiniviewTimestamp(calculator.zoomLeft);
 	var endTs = calculator.computeMiniviewTimestamp(calculator.zoomRight);
-	var i = 0;
 
-	/* update records before zoom interval */
-	for (i = 0; i < records.length; i++) {
-	    var record = records[i];
-	    if (record.mark.timestamp >= startTs)
-		break;
-	    if (!this._recordGridNodes[record.mark.index])
-		continue;
-	    this._recordGridNodes[record.mark.index].element.classList.add("hidden");
-	}
-
-	/* update records within zoom interval */
-	for (; i < records.length; i++) {
-	    var record = records[i];
-	    if (record.mark.timestamp >= endTs)
-		break;
-	    if (!this._recordGridNodes[record.mark.index])
-		continue;
-	    this._recordGridNodes[record.mark.index].element.classList.remove("hidden");
-	}
-
-	/* update records after zoom interval */
-	for (; i < records.length; i++) {
-	    var record = records[i];
-	    if (!this._recordGridNodes[record.mark.index])
-		continue;
-	    this._recordGridNodes[record.mark.index].element.classList.add("hidden");
+	for (var markIndex in this._recordGridNodes) {
+	    var node = this._recordGridNodes[markIndex];
+	    var ts = node.record.mark.timestamp;
+	    if (ts < startTs || ts > endTs)
+		node.element.classList.add("hidden");
+	    else
+		node.element.classList.remove("hidden");
 	}
     },
 
