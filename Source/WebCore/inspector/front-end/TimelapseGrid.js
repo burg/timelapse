@@ -109,7 +109,6 @@ WebInspector.TimelapseGrid = function() {
 
     var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
     this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
-    this._presentationModel.addEventListener(presEventNames.ProviderRemoved, this._onProviderRemoved, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
     this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
@@ -272,7 +271,7 @@ WebInspector.TimelapseGrid.prototype = {
 	// TODO: if the provider already has data, we should add it to pendingRecords here.
     },
 
-    _onProviderRemoved: function(event)
+    _onProviderWillRemove: function(event)
     {
 	var provider = event.data;
 	if (!this._canUseProvider(provider))
@@ -289,6 +288,7 @@ WebInspector.TimelapseGrid.prototype = {
     {
 	var events = WebInspector.DataProvider.Events;
 	provider.addEventListener(events.AddedInput, this._onAddedInput, this);
+	provider.addEventListener(events.WillRemove, this._onProviderWillRemove, this);
 	provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
 	provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
     },
@@ -297,6 +297,7 @@ WebInspector.TimelapseGrid.prototype = {
     {
 	var events = WebInspector.DataProvider.Events;
 	provider.removeEventListener(events.AddedInput, this._onAddedInput, this);
+	provider.removeEventListener(events.WillRemove, this._onProviderWillRemove, this);
 	provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
 	provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
     },
