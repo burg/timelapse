@@ -37,6 +37,10 @@ WebInspector.TimelapseMiniview = function()
 {
     WebInspector.View.call(this);
 
+    // Each timeline aggregates the data for a specific provider name.
+    // There can be several data providers with the same name, but only one timeline per name.
+    // So, timelines are stored in an object by name, while providers are in a list.
+
     this._model = WebInspector.timelapseModel;
     this._presentationModel = WebInspector.timelapsePresentationModel;
    
@@ -52,7 +56,6 @@ WebInspector.TimelapseMiniview = function()
 
     var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
     this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
-    this._presentationModel.addEventListener(presEventNames.ProviderRemoved, this._onProviderRemoved, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
     this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
@@ -68,8 +71,72 @@ WebInspector.TimelapseMiniview = function()
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
 
-    this._providers = {};
-    this._initializeView();	
+    this.element.className = "timelapse-miniview";
+    this.element.tabIndex = 1;
+    this.element.addEventListener("dblclick", this._onMiniviewDoubleClicked.bind(this), true);
+    this.element.addEventListener("mousewheel", this._onMiniviewMousewheel.bind(this), true);
+    WebInspector.installDragHandle(this.element, this._startZoomSelectorDragging.bind(this), this._zoomSelectorDragging.bind(this), this._endZoomSelectorDragging.bind(this), "ew-resize");
+    
+    this._canvas = document.createElement("canvas");
+    this._canvas.className = "timelapse-miniview-canvas";
+    this.element.appendChild(this._canvas);
+
+    var playbackSlider = new WebInspector.TimelapseMiniviewSlider(this, "playback", true);
+    playbackSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart,
+				    this._onPlaybackSliderDragStart, this);
+    playbackSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd,
+				    this._onPlaybackSliderDragEnd, this);
+    this.element.appendChild(playbackSlider.element);
+
+    var previousSlider = new WebInspector.TimelapseMiniviewSlider(this, "previous", false);
+    this.element.appendChild(previousSlider.element);
+
+    var tentativeSlider = new WebInspector.TimelapseMiniviewSlider(this, "tentative", false);
+    this.element.appendChild(tentativeSlider.element);
+
+    this._leftZoomGlassPane = document.createElement("div");
+    this._leftZoomGlassPane.className = "timelapse-miniview-glasspane";
+    this.element.appendChild(this._leftZoomGlassPane);
+
+    this._rightZoomGlassPane = document.createElement("div");
+    this._rightZoomGlassPane.className = "timelapse-miniview-glasspane";
+    this.element.appendChild(this._rightZoomGlassPane);
+
+    var leftZoomSlider = new WebInspector.TimelapseMiniviewSlider(this, "zoom", true, true);
+    leftZoomSlider.element.classList.add("left");
+    leftZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart,
+				    this._onZoomSliderDragStart.bind(this, "leftZoom"));
+    leftZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd,
+				    this._onZoomSliderDragEnd.bind(this, "leftZoom"));
+    this.element.appendChild(leftZoomSlider.element);
+
+    var rightZoomSlider = new WebInspector.TimelapseMiniviewSlider(this, "zoom", true, true);
+    rightZoomSlider.element.classList.add("right");
+    rightZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart,
+				     this._onZoomSliderDragStart.bind(this, "rightZoom"));
+    rightZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd,
+				     this._onZoomSliderDragEnd.bind(this, "rightZoom"));
+    this.element.appendChild(rightZoomSlider.element);
+
+    this.sliders = {
+	playback: playbackSlider,
+	previous: previousSlider,
+	tentative: tentativeSlider,
+	anchor: [],
+	leftZoom: leftZoomSlider,
+	rightZoom: rightZoomSlider
+    };
+
+    this._providers = [];
+    this._timelines = {};
+    this._timelines.all = { providers: [], maxIndex: -1, data: [] };
+
+    this._updateZoomLeft();
+    this._updateZoomRight();
+    this.sliders.playback.clear();
+    this._previousMaxValue = 0;
+    this._autosizeCanvas();
+    this._clearGraph();
 };
 
 WebInspector.TimelapseMiniview.EdgeSnapDistance = 0.02; /* percent */
@@ -80,18 +147,6 @@ WebInspector.TimelapseMiniview.WindowZoomSpeedFactor = 0.001;
 
 WebInspector.TimelapseMiniview.prototype = {
     // Public API
-    // TODO: remove reset.
-    reset: function()
-    {
-	this._updateZoomLeft();
-	this._updateZoomRight();
-	this.sliders.playback.clear();
-	this._resetTimelines();
-	this._previousMaxValue = 0;
-	this._autosizeCanvas();
-	this._clearGraph();
-    },
-
     wasShown: function()
     {
 	this._refreshIfNeeded();
@@ -105,11 +160,6 @@ WebInspector.TimelapseMiniview.prototype = {
 	this._updateZoomRight();
 	this._autosizeCanvas();
 	this._drawGraph();
-    },
-
-    get providers()
-    {
-	return this._providers;
     },
 
     get calculator()
@@ -130,13 +180,29 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _canUseProvider: function(provider)
     {
-	return provider.type == WebInspector.DataProvider.Types.TimelapseInput;
+	var types = WebInspector.DataProvider.Types;
+	return provider.type == types.TimelapseInput ||
+               provider.type == types.BreakpointHits;
+    },
+
+    _providersWithType: function(ty)
+    {
+	var found = [];
+	for (var i = 0; i < this._providers.length; i++) {
+	    var provider = this._providers[i];
+	    if (provider.type === ty) {
+		found.push(provider);
+	    }
+	}
+	
+	return found;
     },
 
     _setupListenersForProvider: function(provider)
     {
 	var events = WebInspector.DataProvider.Events;
 	provider.addEventListener(events.AddedInput, this._onAddedInput, this);
+	provider.addEventListener(events.WillRemove, this._onProviderWillRemove, this);
 	provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
 	provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
     },
@@ -145,6 +211,7 @@ WebInspector.TimelapseMiniview.prototype = {
     {
 	var events = WebInspector.DataProvider.Events;
 	provider.removeEventListener(events.AddedInput, this._onAddedInput, this);
+	provider.removeEventListener(events.WillRemove, this._onProviderWillRemove, this);
 	provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
 	provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
     },
@@ -155,67 +222,6 @@ WebInspector.TimelapseMiniview.prototype = {
     	this._canvas.style.width = this.element.clientWidth + 'px';
 	this._canvas.height = this.element.clientHeight;
 	this._canvas.style.height = this.element.clientHeight + 'px';
-    },
-
-    _initializeView: function()
-    {
-	this.element.className = "timelapse-miniview";
-	this.element.tabIndex = 1;
-	this.element.addEventListener("dblclick", this._onMiniviewDoubleClicked.bind(this), true);
-	this.element.addEventListener("mousewheel", this._onMiniviewMousewheel.bind(this), true);
-	WebInspector.installDragHandle(this.element, this._startZoomSelectorDragging.bind(this), this._zoomSelectorDragging.bind(this), this._endZoomSelectorDragging.bind(this), "ew-resize");
-	
-	this._canvas = document.createElement("canvas");
-	this._canvas.className = "timelapse-miniview-canvas";
-	this.element.appendChild(this._canvas);
-
-	var playbackSlider = new WebInspector.TimelapseMiniviewSlider(this, "playback", true);
-	playbackSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart,
-					     this._onPlaybackSliderDragStart, this);
-	playbackSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd,
-					     this._onPlaybackSliderDragEnd, this);
-	this.element.appendChild(playbackSlider.element);
-
-	var previousSlider = new WebInspector.TimelapseMiniviewSlider(this, "previous", false);
-	this.element.appendChild(previousSlider.element);
-
-	var tentativeSlider = new WebInspector.TimelapseMiniviewSlider(this, "tentative", false);
-	this.element.appendChild(tentativeSlider.element);
-
-	this._leftZoomGlassPane = document.createElement("div");
-	this._leftZoomGlassPane.className = "timelapse-miniview-glasspane";
-	this.element.appendChild(this._leftZoomGlassPane);
-
-	this._rightZoomGlassPane = document.createElement("div");
-	this._rightZoomGlassPane.className = "timelapse-miniview-glasspane";
-	this.element.appendChild(this._rightZoomGlassPane);
-
-	var leftZoomSlider = new WebInspector.TimelapseMiniviewSlider(this, "zoom", true, true);
-	leftZoomSlider.element.classList.add("left");
-	leftZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart,
-					     this._onZoomSliderDragStart.bind(this, "leftZoom"));
-	leftZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd,
-					     this._onZoomSliderDragEnd.bind(this, "leftZoom"));
-	this.element.appendChild(leftZoomSlider.element);
-
-	var rightZoomSlider = new WebInspector.TimelapseMiniviewSlider(this, "zoom", true, true);
-	rightZoomSlider.element.classList.add("right");
-	rightZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart,
-					     this._onZoomSliderDragStart.bind(this, "rightZoom"));
-	rightZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd,
-					     this._onZoomSliderDragEnd.bind(this, "rightZoom"));
-	this.element.appendChild(rightZoomSlider.element);
-
-	this.sliders = {
-	    playback: playbackSlider,
-	    previous: previousSlider,
-	    tentative: tentativeSlider,
-	    anchor: [],
-	    leftZoom: leftZoomSlider,
-	    rightZoom: rightZoomSlider
-	};
-
-	this.reset();
     },
 
     _binsPerTimeline: 100,
@@ -230,35 +236,31 @@ WebInspector.TimelapseMiniview.prototype = {
 	this._scheduleRefresh();
     },
 
+
+    // clear the data of the timelines, but not the entries themselves.
+    // those are managed by the constructor and provider added/removed handlers.
     _resetTimelines: function()
     {
-	function createEmptyTimeline() {
-	    return { maxIndex: -1, data: [] };
+	for (var key in this._timelines) {
+	    // doesn't touch the providers list, since this is managed by handlers.
+	    this._timelines[key].maxIndex = -1;
+	    this._timelines[key].data = [];
 	}
-
-	this._timelines = {};
-	var order = this._presentationModel.categoryOrder;
-	for (var i = 0; i < order.length; i++) {
-	    var key = order[i];
-	    var category = this._presentationModel.categories[key];
-	    this._timelines[category.name] = createEmptyTimeline();
-	}
-	this._timelines["all"] = createEmptyTimeline();
     },
 
     _recomputeTimelines: function()
     {
-	// Create sparse arrays with 101 cells each to fill with counts for a given category.
+	// Create sparse arrays with 101 cells each to fill with counts for a given group.
 	function markPercentagesForRecord(record)
 	{
-	    var category = this._presentationModel.recordStyles[record.type].category;
+	    var group = WebInspector.TimelapseInputDataProvider.InputStyles[record.type].group;
 	    var percent = Math.floor(100.0 * this.calculator.computeMiniviewPercentage(record.mark.timestamp));
 	    var percentile = Number.constrain(percent, 0, 99);
 
-	    if (!this._timelines[category.name].data[percentile])
-		this._timelines[category.name].data[percentile] = 1;
+	    if (!this._timelines[group].data[percentile])
+		this._timelines[group].data[percentile] = 1;
 	    else
-		this._timelines[category.name].data[percentile] += 1;
+		this._timelines[group].data[percentile] += 1;
 
 	    if (!this._timelines.all.data[percentile])
 		this._timelines.all.data[percentile] = 1;
@@ -266,17 +268,17 @@ WebInspector.TimelapseMiniview.prototype = {
 		this._timelines.all.data[percentile] += 1;
 	}
 
-	// Create sparse arrays with 101 cells each to fill with counts for a given category.
+	// Create sparse arrays with 101 cells each to fill with counts for a given group.
 	function markPercentagesForBreakpointRecord(record)
 	{
-	    var category = this._presentationModel.recordStyles[record.type].category;
+	    var group = WebInspector.TimelapseInputDataProvider.InputStyles[record.type].group;
 	    var percent = Math.floor(100.0 * this.calculator.computeMiniviewPercentage(record.mark.timestamp));
 	    var percentile = Number.constrain(percent, 0, 99);
 
-	    if (!this._timelines[category.name].data[percentile])
-		this._timelines[category.name].data[percentile] = record.hits.length;
+	    if (!this._timelines[group.name].data[percentile])
+		this._timelines[group.name].data[percentile] = record.hits.length;
 	    else
-		this._timelines[category.name].data[percentile] += record.hits.length;
+		this._timelines[group.name].data[percentile] += record.hits.length;
 
 	    if (!this._timelines.all.data[percentile])
 		this._timelines.all.data[percentile] = 1;
@@ -285,8 +287,14 @@ WebInspector.TimelapseMiniview.prototype = {
 	}
 
 	this._resetTimelines();
-	this._model.allRecords.map(markPercentagesForRecord.bind(this));
-	this._presentationModel.breakpointRecords.map(markPercentagesForBreakpointRecord.bind(this));
+
+	for (var i = 0; i < this._providers.length; i++) {
+	    var provider = this._providers[i];
+	    if (provider.type == WebInspector.DataProvider.Types.BreakpointHits)
+		provider.records.map(markPercentagesForBreakpointRecord.bind(this));
+	    else
+		provider.records.map(markPercentagesForRecord.bind(this));
+	}
 	
 	for (var key in this._timelines) {
 	    var timeline = this._timelines[key];
@@ -392,7 +400,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	    ctx.closePath();
 	    ctx.fill();
 
-	    if (name === "all")
+	    if (name == "all")
 		this._previousMaxValue = highMark;
 	}
 	
@@ -400,41 +408,61 @@ WebInspector.TimelapseMiniview.prototype = {
 	ctx.fillStyle = "rgba(0,0,0,0.3)";
 	drawLineGraph.call(this, currentData, "all");
 
-	/* first, substract values for all disabled categories */
-	var order = this._presentationModel.categoryOrder;
-	for (var i = 0; i < order.length; i++) {
-	    var key = order[i];
-	    var category = this._presentationModel.categories[key];
-	    if (!category.disabled)
+	// first, subtract values for timelines containing
+	// constituent providers that are disabled.
+
+	// TODO: this widget should be able to handle enabling just
+	// some providers of the same type. Will need to refactor timelines.
+	for (var key in this._timelines) {
+	    if (key == "all")
 		continue;
 
-	    var catData = this._timelines[category.name].data;
-	    for (var j = 0; j < catData.length; j++)
-		if (catData[j])
-		    currentData[j] -= catData[j];
+	    var timeline = this._timelines[key];
+	    //console.log("subtracting semi-disabled timeline:");
+	    //console.log(timeline);
+	    var anyProviderDisabled = false;
+	    for (var i = 0; i < timeline.providers.length; i++) {
+		if (!timeline.providers[i].isEnabled())
+		    anyProviderDisabled = true;
+	    }
+	    if (!anyProviderDisabled)
+		continue;
+
+	    for (var j = 0; j < timeline.data.length; j++)
+		if (timeline.data[j])
+		    currentData[j] -= timeline.data[j];
 	}
 
+	// then, go back and paint those that remain (and substract them)
+	for (var key in this._timelines) {
+	    if (key == "all")
+		continue;
 
-	/* then, go back and paint those that remain (and substract them) */
-	for (i = 0; i < order.length; i++) {
-	    var key = order[i];
-	    var category = this._presentationModel.categories[key];
-	    var rgb = category.color.rgb;
+	    var timeline = this._timelines[key];
+	    //console.log("painting timeline:");
+	    //console.log(timeline);
+	    var anyProviderDisabled = false;
+	    for (var i = 0; i < timeline.providers.length; i++) {
+		if (!timeline.providers[i].isEnabled())
+		    anyProviderDisabled = true;
+	    }
+
+	    var firstProvider = timeline.providers[0];
+	    var rgb = firstProvider.color.rgb;
 	    var rgba = WebInspector.Color.fromRGBA(rgb[0],
 						   rgb[1],
 						   rgb[2],
 						   0.8);
 	    ctx.fillStyle = rgba.toString();
-	    drawLineGraph.call(this, currentData, category.name);
+	    drawLineGraph.call(this, currentData, firstProvider.name);
 
-	    /* overpainting disabled categories ensures same alpha blending look */
-	    if (category.disabled)
+	    // overpainting disabled timelines ensures same alpha blending look
+	    if (anyProviderDisabled)
 		continue;
 	    
-	    var catData = this._timelines[category.name].data;
-	    for (var j = 0; j < catData.length; j++)
-		if (catData[j])
-		    currentData[j] -= catData[j];
+	    for (var j = 0; j < timeline.data.length; j++)
+		if (timeline.data[j])
+		    currentData[j] -= timeline.data[j];
 	}
 
 	ctx.restore();
@@ -447,24 +475,40 @@ WebInspector.TimelapseMiniview.prototype = {
 	if (!this._canUseProvider(provider))
 	    return;
 
-	console.assert(!this._providers.hasOwnProperty(provider.name),
-		       "Provider already added to timeline grid.");
+	console.assert(this._providers.indexOf(provider) == -1,
+		       "Specific provider already added to miniview provider list.");
 
-	this._providers[provider.name] = provider;
+	this._providers.push(provider);
 	this._setupListenersForProvider(provider);
+
+	// add timeline for this named provider, if it doesn't exist.
+	if (!this._timelines.hasOwnProperty(provider.name))
+	    this._timelines[provider.name] = { providers: [], maxIndex: -1, data: [] };
+
+	console.assert(this._timelines[provider.name].providers.indexOf(provider) == -1,
+		       "Tried to double-add a provider to a miniview timeline.");
+	this._timelines[provider.name].providers.push(provider);
     },
 
-    _onProviderRemoved: function(event)
+    _onProviderWillRemove: function(event)
     {
 	var provider = event.data;
 	if (!this._canUseProvider(provider))
 	    return;
 
-	console.assert(this._providers.hasOwnProperty(provider.name),
-		       "Can't remove provider not in timeline grid.");
+	var i = this._providers.indexOf(provider);
+	console.assert(i != -1, "Can't remove provider not in timeline grid.");
 
-	delete this._providers[provider.name];
+	var removedProvider = this._providers.splice(i, 1)[0];
 	this._teardownListenersForProvider(provider);
+
+	// splice out the provider from related timeline, and remove
+	// the timeline entirely if no more providers are attached to it.
+	var timeline = this._timelines[removedProvider.name];
+	timeline.providers.splice(timeline.providers.indexOf(removedProvider), 1);
+	if (timeline.providers.length == 0) {
+	    delete this._timelines[removedProvider.name];
+	}
     },
 
     _onAddedInput: function(event)
@@ -487,7 +531,6 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onRecordingDidStart: function()
     {
-	this.reset();
 	this.sliders.playback.disable();
 	this.sliders.playback.setPosition(1.0, true);
     },
@@ -499,6 +542,8 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onPlaybackDidStart: function()
     {
+	// TODO: hmm, this is not ideal. We really just need the 
+	// timestamp of start/finish/now to position the sliders.
 	var allRecords = this._model.allRecords;
 	var startRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
 	var finishRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
@@ -536,6 +581,8 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onInputPaused: function()
     {
+	// TODO: hmm, this is not ideal. We really just need the 
+	// timestamp of paused mark to position the sliders.
 	var allRecords = this._model.allRecords;
 	var recordIndex = this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex);
 	

@@ -40,19 +40,12 @@ WebInspector.TimelapseOverview = function()
     this._model = WebInspector.timelapseModel;
     this._presentationModel = WebInspector.timelapsePresentationModel;
 
-    // TODO: the overview should look for new providers and create timelines for
-    // them if it knows how to interpret them.
-
     // TODO: If we have multiple overviews, each with different timelines,
     // then TimelapseReplayingView or something else needs to coordinate which 
     // overviews handle which data providers.
 
     // TODO: TimelapseOverview should compose a Miniview and several Timelines.
     // The miniview shall be fed a subset of the data providers behind each timeline.
-   
-
-    // TODO: being based on DataProviders, the overview should only be
-    // listening for events necessary to update overview slider positions.
     //
     // Data changes go through the DataProviders.
     // Zoom changes come from the TimelapsePresentationModel.

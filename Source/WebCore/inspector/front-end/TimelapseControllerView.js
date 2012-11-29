@@ -537,7 +537,6 @@ WebInspector.TimelapseReplayingView.prototype = {
     clear: function()
     {
 	this._overviewWindow.reset();
-	this._miniview.reset();
     },
 };
 
