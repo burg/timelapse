@@ -113,9 +113,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
     // TODO: most of this state will be moved to providers or timeline widgets
     reset: function() 
     {
-	/* matchedRecords are records that pass non-time filters  */
-	this._matchedRecords = [];
-	this._matchedRecordsAreStale = false;
 	this._breakpointRecordsAreStale = true;
 	this._resourceUrlById = [];
 	this.anchorManager.reset();
@@ -144,8 +141,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
     _recordingDidStop: function()
     {
 	// TODO: create TimelapseAnchorDataProvider.
-	// TODO: Remove
-	this._updateMatchingRecords();
 
 	this.calculator.setZoomInterval(0.0, 1.0);
     },
@@ -170,27 +165,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    this._resourceUrlById[record.data.id] = record.data.url;
 	}
 
-	// TODO: remove
-	this._matchedRecords.push(record);
-
 	this.calculator.updateBoundaries(record);
-    },
-
-    // TODO: should be removed
-    _updateMatchingRecords: function()
-    {
-	// TODO: should be tracked by DataProvider.isEnabled() and friends
-	var catEnabledByRecordType = {};
-        for (eventType in this.recordStyles) {
-            var category = this.recordStyles[eventType].category;
-            catEnabledByRecordType[eventType] = !category.disabled;
-	}
-
-	var records = this._model.allRecords;
-	for (var i = 0; i < records.length; i++)
-            records[i].matches = catEnabledByRecordType[records[i].type];
-
-	this._matchedRecordsAreStale = true;
     },
 
     _replaceBreakpointProvider: function()
@@ -247,18 +222,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    this._providers[0].willRemove();
 	    this._removeProviderAtIndex(0);
 	}
-    },
-
-    // TODO: eventually, TimelapsePresentationModel shouldn't actually hold any records,
-    // just a calculator that's been informed by the incoming events.
-    get matchedRecords()
-    {
-	if (this._matchedRecordsAreStale) {
-	    this._matchedRecordsAreStale = false;
-	    this._matchedRecords = this._model.allRecords.filter(function(record) { return record.matches; });
-	}
-
-	return this._matchedRecords;
     },
 
     // TODO: Preview state should live on the specific DataProvider which is being previewed.
