@@ -3324,7 +3324,7 @@ div.timelapse-timeline-label-wrapper.disabled {
 .timelapse-overview-message {
     position: absolute;
     top: 0;
-    bottom: -8px;
+    bottom: -10px;
     left: 100px;
     right: -8px;
     z-index: 1000;

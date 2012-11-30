@@ -285,10 +285,11 @@ WebInspector.TimelapseOverview.prototype = {
     {
 	var ordinal = this._timelines.length;
 	var height = this._presentationModel.timelineHeight;
+	var fudge = 2;
 
-	this._labelContainer.style.setProperty("height", ordinal*height + "px");
-	this._timelineContainer.style.setProperty("height", ordinal*height + "px");
-	this.element.style.setProperty("height", ordinal*height + 20 + "px");
+	this._labelContainer.style.setProperty("height", ordinal*height+fudge + "px");
+	this._timelineContainer.style.setProperty("height", ordinal*height+fudge + "px");
+	this.element.style.setProperty("height", ordinal*height + 20 + fudge + "px");
 
 	this.updateDividers(false);
 	WebInspector.View.prototype.onResize.call(this);
