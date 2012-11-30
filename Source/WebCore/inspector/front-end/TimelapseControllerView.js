@@ -452,21 +452,8 @@ WebInspector.TimelapseRecordingView = function()
 };
 
 WebInspector.TimelapseRecordingView.prototype = {
-    wasShown: function()
-    {
-	WebInspector.View.prototype.wasShown.call(this);
-	this.refresh();
-    },
-
-    refresh: function()
-    {
-	this._scrollview.refresh();
-	this._scrollview.onResize();
-    },
-
     clear: function()
     {
-	this._scrollview.reset();
 	this._messagePanel.textContent = "Click to Record.";
     },
 
@@ -536,7 +523,6 @@ WebInspector.TimelapseReplayingView = function()
 WebInspector.TimelapseReplayingView.prototype = {
     clear: function()
     {
-	this._overviewWindow.reset();
     },
 };
 

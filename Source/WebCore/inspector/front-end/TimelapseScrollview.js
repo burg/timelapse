@@ -44,24 +44,27 @@ WebInspector.TimelapseScrollview = function()
     var eventNames = WebInspector.TimelapseModel.EventTypes;
     this._model.addEventListener(eventNames.RecordingDidStart, this._onRecordingDidStart, this);
 
-    this._initializeView();	
+    var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
+    this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
+    this.element.className = "timelapse-scrollview";
+
+    this._canvas = document.createElement("canvas");
+    this.element.appendChild(this._canvas);
+
+    this._providers = [];
+    this._timelines = {};
+    this._timelines.all = { providers: [], maxIndex: -1, data: [] };
+    this._previousMaxValue = 0;
+    //delete this._previousAnimationTime;
+    this._autosizeCanvas();
+    this._clearGraph();
 };
 
 WebInspector.TimelapseScrollview.MaxRecordLifetime = 10.0; /* seconds */
 WebInspector.TimelapseScrollview.MaxBinsPerTimeline = 600;
 
-
 WebInspector.TimelapseScrollview.prototype = {
     // Public API
-    reset: function()
-    {
-	this._resetTimelines();
-	this._previousMaxValue = 0;
-	delete this._previousAnimationTime;
-	this._autosizeCanvas();
-	this._clearGraph();
-    },
-
     refresh: function()
     {
 	this._drawGraph();
@@ -69,12 +72,15 @@ WebInspector.TimelapseScrollview.prototype = {
 
     wasShown: function()
     {
+	WebInspector.View.prototype.wasShown.call(this);
+
 	/* in case we stopped animating, but the window resized... */
 	this._drawGraph();
     },
 
     onResize: function()
     {
+	WebInspector.View.prototype.onResize.call(this);
 	this._autosizeCanvas();
 	this._drawGraph();
     },
@@ -95,6 +101,37 @@ WebInspector.TimelapseScrollview.prototype = {
 
     // Private API helpers
 
+    _canUseProvider: function(provider)
+    {
+	var types = WebInspector.DataProvider.Types;
+	return provider.type == types.TimelapseInput;
+    },
+
+    _providersWithType: function(ty)
+    {
+	var found = [];
+	for (var i = 0; i < this._providers.length; i++) {
+	    var provider = this._providers[i];
+	    if (provider.type === ty) {
+		found.push(provider);
+	    }
+	}
+	
+	return found;
+    },
+
+    _setupListenersForProvider: function(provider)
+    {
+	var events = WebInspector.DataProvider.Events;
+	provider.addEventListener(events.WillRemove, this._onProviderWillRemove, this);
+    },
+
+    _teardownListenersForProvider: function(provider)
+    {
+	var events = WebInspector.DataProvider.Events;
+	provider.removeEventListener(events.WillRemove, this._onProviderWillRemove, this);
+    },
+
     _graphBorderWidth: 1,
 
     _autosizeCanvas: function()
@@ -105,32 +142,18 @@ WebInspector.TimelapseScrollview.prototype = {
 	this._canvas.style.height = this.element.clientHeight + 'px';
     },
 
-    _initializeView: function()
-    {
-	this.element.className = "timelapse-scrollview";
-
-	this._canvas = document.createElement("canvas");
-	this.element.appendChild(this._canvas);
-
-	this.reset();
-    },
-
     _binsPerTimeline: 200,
 
+
+    // clear the data of the timelines, but not the entries themselves.
+    // those are managed by the constructor and provider added/removed handlers.
     _resetTimelines: function()
     {
-	function createEmptyTimeline() {
-	    return { maxIndex: -1, data: [] };
+	for (var key in this._timelines) {
+	    // doesn't touch the providers list, since this is managed by handlers.
+	    this._timelines[key].maxIndex = -1;
+	    this._timelines[key].data = [];
 	}
-
-	this._timelines = {};
-	var order = this._presentationModel.categoryOrder;
-	for (var i = 0; i < order.length; i++) {
-	    var key = order[i];
-	    var category = this._presentationModel.categories[key];
-	    this._timelines[category.name] = createEmptyTimeline();
-	}
-	this._timelines["all"] = createEmptyTimeline();
     },
 
     _recomputeTimelines: function()
@@ -138,7 +161,7 @@ WebInspector.TimelapseScrollview.prototype = {
 	if (!this.calculator.minimumBoundary)
 	    return;
 
-	this._binsPerTimeline = Math.min(this.element.offsetWidth, WebInspector.TimelapseScrollview.MaxBinsPerTimeline);
+	this._binsPerTimeline = Math.min(this.element.offsetWidth/2, WebInspector.TimelapseScrollview.MaxBinsPerTimeline);
 
 	var interval = WebInspector.TimelapseScrollview.MaxRecordLifetime;
 	var now = Date.now();
@@ -152,27 +175,34 @@ WebInspector.TimelapseScrollview.prototype = {
 	var timestampGranularity = interval / this._binsPerTimeline;
 	this._resetTimelines();
 
-	// Create sparse arrays with 101 cells each to fill with counts for a given category.
-	for (var i = records.length-1; i >= 0; i--) {
-	    var record = records[i];
+	// Create sparse arrays with 101 cells each to fill with counts for a given group.
+	function markPercentagesForRecord(record)
+	{
 	    if (record.mark.timestamp < this._minTimestamp)
-		break;
+		return false;
 
-	    var category = this._presentationModel.recordStyles[record.type].category;
+	    var group = WebInspector.TimelapseInputDataProvider.InputStyles[record.type].group;
 	    var snappedTimestamp = record.mark.timestamp - (record.mark.timestamp % timestampGranularity);
 	    var percent = Math.round(this._binsPerTimeline * (snappedTimestamp - this._minTimestamp) / interval);
 	    var percentile = Number.constrain(percent, 0, this._binsPerTimeline-1);
 
-	    if (!this._timelines[category.name].data[percentile])
-		this._timelines[category.name].data[percentile] = 1;
+	    if (!this._timelines[group].data[percentile])
+		this._timelines[group].data[percentile] = 1;
 	    else
-		this._timelines[category.name].data[percentile] += 1;
+		this._timelines[group].data[percentile] += 1;
 
 	    if (!this._timelines.all.data[percentile])
 		this._timelines.all.data[percentile] = 1;
 	    else
 		this._timelines.all.data[percentile] += 1;
+
+	    return true;
 	}
+
+	var view = this;
+	this._providers.forEach(function(provider) {
+            provider.records.every(markPercentagesForRecord, view);
+	});
 
 	for (var key in this._timelines) {
 	    var timeline = this._timelines[key];
@@ -279,40 +309,55 @@ WebInspector.TimelapseScrollview.prototype = {
 	ctx.fillStyle = "rgba(0,0,0,0.3)";
 	drawLineGraph.call(this, currentData, "all");
 
-	/* first, substract values for all disabled categories */
-	var order = this._presentationModel.categoryOrder;
-	for (var i = 0; i < order.length; i++) {
-	    var key = order[i];
-	    var category = this._presentationModel.categories[key];
-	    if (!category.disabled)
+	// first, subtract values for timelines containing
+	// constituent providers that are disabled.
+
+	for (var key in this._timelines) {
+	    if (key == "all")
 		continue;
 
-	    var catData = this._timelines[category.name].data;
-	    for (var j = 0; j < catData.length; j++)
-		if (catData[j])
-		    currentData[j] -= catData[j];
+	    var timeline = this._timelines[key];
+	    var anyProviderDisabled = false;
+	    for (var i = 0; i < timeline.providers.length; i++) {
+		if (!timeline.providers[i].isEnabled())
+		    anyProviderDisabled = true;
+	    }
+	    if (!anyProviderDisabled)
+		continue;
+
+	    for (var j = 0; j < timeline.data.length; j++)
+		if (timeline.data[j])
+		    currentData[j] -= timeline.data[j];
 	}
 
-
-	/* then, go back and paint those that remain (and substract them) */
-	for (i = 0; i < order.length; i++) {
-	    var key = order[i];
-	    var category = this._presentationModel.categories[key];
-	    if (category.disabled)
+	/* then, go back and paint those that remain (and subtract them) */
+	for (var key in this._timelines) {
+	    if (key == "all")
 		continue;
 
-	    var rgb = category.color.rgb;
+	    var timeline = this._timelines[key];
+	    var anyProviderDisabled = false;
+	    for (var i = 0; i < timeline.providers.length; i++) {
+		if (!timeline.providers[i].isEnabled())
+		    anyProviderDisabled = true;
+	    }
+
+	    var firstProvider = timeline.providers[0];
+	    var rgb = firstProvider.color.rgb;
 	    var rgba = WebInspector.Color.fromRGBA(rgb[0],
 						   rgb[1],
 						   rgb[2],
 						   0.6);
 	    ctx.fillStyle = rgba.toString();
-	    drawLineGraph.call(this, currentData, category.name);
+	    drawLineGraph.call(this, currentData, firstProvider.name);
 
-	    var catData = this._timelines[category.name].data;
-	    for (var j = 0; j < catData.length; j++)
-		if (catData[j])
-		    currentData[j] -= catData[j];
+	    // overpainting disabled timelines ensures same alpha blending look
+	    if (anyProviderDisabled)
+		continue;
+	    
+	    for (var j = 0; j < timeline.data.length; j++)
+		if (timeline.data[j])
+		    currentData[j] -= timeline.data[j];
 	}
 
 	ctx.restore();
@@ -322,9 +367,50 @@ WebInspector.TimelapseScrollview.prototype = {
     _onRecordingDidStart: function()
     {
 	this._recordingStartTime = Date.now();
-	this.reset();
 	window.webkitRequestAnimationFrame(this.animateFrame.bind(this));
-    }
+    },
+
+    _onProviderAdded: function(event)
+    {
+	var provider = event.data;
+	if (!this._canUseProvider(provider))
+	    return;
+
+	console.assert(this._providers.indexOf(provider) == -1,
+		       "Specific provider already added to scrollview provider list.");
+
+	this._providers.push(provider);
+	this._setupListenersForProvider(provider);
+
+	// add timeline for this named provider, if it doesn't exist.
+	if (!this._timelines.hasOwnProperty(provider.name))
+	    this._timelines[provider.name] = { providers: [], maxIndex: -1, data: [] };
+
+	console.assert(this._timelines[provider.name].providers.indexOf(provider) == -1,
+		       "Tried to double-add a provider to a miniview.");
+	this._timelines[provider.name].providers.push(provider);
+    },
+
+    _onProviderWillRemove: function(event)
+    {
+	var provider = event.data;
+	if (!this._canUseProvider(provider))
+	    return;
+
+	var i = this._providers.indexOf(provider);
+	console.assert(i != -1, "Can't remove provider not in scrollview list.");
+
+	var removedProvider = this._providers.splice(i, 1)[0];
+	this._teardownListenersForProvider(provider);
+
+	// splice out the provider from related timeline, and remove
+	// the timeline entirely if no more providers are attached to it.
+	var timeline = this._timelines[removedProvider.name];
+	timeline.providers.splice(timeline.providers.indexOf(removedProvider), 1);
+	if (timeline.providers.length == 0) {
+	    delete this._timelines[removedProvider.name];
+	}
+    },
 };
 
 WebInspector.TimelapseScrollview.prototype.__proto__ = WebInspector.View.prototype;

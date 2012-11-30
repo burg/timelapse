@@ -418,8 +418,6 @@ WebInspector.TimelapseMiniview.prototype = {
 		continue;
 
 	    var timeline = this._timelines[key];
-	    //console.log("subtracting semi-disabled timeline:");
-	    //console.log(timeline);
 	    var anyProviderDisabled = false;
 	    for (var i = 0; i < timeline.providers.length; i++) {
 		if (!timeline.providers[i].isEnabled())
@@ -433,14 +431,12 @@ WebInspector.TimelapseMiniview.prototype = {
 		    currentData[j] -= timeline.data[j];
 	}
 
-	// then, go back and paint those that remain (and substract them)
+	// then, go back and paint those that remain (and subtract them)
 	for (var key in this._timelines) {
 	    if (key == "all")
 		continue;
 
 	    var timeline = this._timelines[key];
-	    //console.log("painting timeline:");
-	    //console.log(timeline);
 	    var anyProviderDisabled = false;
 	    for (var i = 0; i < timeline.providers.length; i++) {
 		if (!timeline.providers[i].isEnabled())
