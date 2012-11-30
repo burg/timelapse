@@ -301,18 +301,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.PreviewChanged, record);
     },
 
-    // TODO: should be tracked by DataProvider.isEnabled() and friends.
-    toggleCategory: function(category)
-    {
-	category.disabled = !category.disabled;
-
-	if (category.name == "breakpoint")
-	    WebInspector.debuggerModel.setBreakpointsActive(!category.disabled);
-
-    	this._updateMatchingRecords();
-	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.FilterChanged);
-    },
-
     // TODO: Selection state should live on the specific DataProvider which is being selected.
     selectCircle: function(provider, circleIndex, records)
     {

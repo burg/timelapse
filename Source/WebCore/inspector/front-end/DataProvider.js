@@ -155,13 +155,6 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	return this._records;
     },
 
-    // TODO: remove this once everyone listens to Enabled/Disabled events of providers.
-    toggleEnablement: function()
-    {
-	WebInspector.DataProvider.prototype.toggleEnablement.call(this);
-	WebInspector.timelapsePresentationModel.toggleCategory(this._category);
-    },
-
     _recordAdded: function(event)
     {
 	var record = event.data;
@@ -305,6 +298,18 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
     get category()
     {
 	return this._category;
+    },
+
+    enable: function()
+    {
+	WebInspector.debuggerModel.setBreakpointsActive(true);
+	WebInspector.DataProvider.prototype.enable.call(this);
+    },
+
+    disable: function()
+    {
+	WebInspector.debuggerModel.setBreakpointsActive(false);
+	WebInspector.DataProvider.prototype.disable.call(this);
     },
 
     get exploredIntervals()
