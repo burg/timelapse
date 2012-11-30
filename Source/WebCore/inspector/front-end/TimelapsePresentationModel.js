@@ -64,7 +64,6 @@ WebInspector.TimelapsePresentationModel.EventTypes = {
     ProviderAdded: "TimelapseProviderAdded",
     ProviderRemoved: "TimelapseProviderRemoved",
     // TODO: the following events are details of specific data providers.
-    FilterChanged: "TimelapseFilterChanged",
     InputSelected: "TimelapseInputSelected",
     PreviewStarted: "TimelapsePreviewStarted",
     PreviewStopped: "TimelapsePreviewStopped",
@@ -140,9 +139,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.addProvider(new WebInspector.TimelapseInputDataProvider(
 			     this.categories["timer"]
 			));
-
-	// TODO: remove
-	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.FilterChanged);
     },
 
     _recordingDidStop: function()
