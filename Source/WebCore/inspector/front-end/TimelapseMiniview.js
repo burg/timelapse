@@ -271,14 +271,14 @@ WebInspector.TimelapseMiniview.prototype = {
 	// Create sparse arrays with 101 cells each to fill with counts for a given group.
 	function markPercentagesForBreakpointRecord(record)
 	{
-	    var group = WebInspector.TimelapseInputDataProvider.InputStyles[record.type].group;
+	    var group = "breakpoint";
 	    var percent = Math.floor(100.0 * this.calculator.computeMiniviewPercentage(record.mark.timestamp));
 	    var percentile = Number.constrain(percent, 0, 99);
 
-	    if (!this._timelines[group.name].data[percentile])
-		this._timelines[group.name].data[percentile] = record.hits.length;
+	    if (!this._timelines[group].data[percentile])
+		this._timelines[group].data[percentile] = record.hits.length;
 	    else
-		this._timelines[group.name].data[percentile] += record.hits.length;
+		this._timelines[group].data[percentile] += record.hits.length;
 
 	    if (!this._timelines.all.data[percentile])
 		this._timelines.all.data[percentile] = 1;
