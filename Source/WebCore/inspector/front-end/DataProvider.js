@@ -131,6 +131,7 @@ WebInspector.TimelapseInputDataProvider = function(name, displayName, color)
     this._displayName = displayName;
     this._color = color;
     this._records = [];
+    this._resourceUrlById = {};
 
     var model = WebInspector.timelapseModel;
     var eventNames = WebInspector.TimelapseModel.EventTypes;
@@ -169,6 +170,12 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	if (styles[record.type].group != this.name)
 	    return;
 
+	var recordTypes = WebInspector.TimelapseAgent.RecordType;
+	if (record.type == recordTypes.RequestResource
+	    || record.type == recordTypes.ReceiveResponse) {
+	    this._resourceUrlById[record.data.id] = record.data.url;
+	}
+
 	this._records.push(record);
 
 	var eventData = {
@@ -179,6 +186,11 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.AddedInput, eventData);
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged, this);
     },
+
+    resourceUrlForId: function(id)
+    {
+	return this._resourceUrlById[id];
+    }    
 };
 
 WebInspector.TimelapseInputDataProvider.prototype.__proto__ = WebInspector.DataProvider.prototype;
@@ -271,9 +283,8 @@ WebInspector.TimelapseInputDataProvider.InputPreview = (function(){
 
 	RequestResource: function (data) { return data.url; },
 	ReceiveResponse: function (data) { return data.url; },
-	// TODO: it's really awkward to reference the global here, IMO.
-	ReceiveData: function (data) { return WebInspector.timelapsePresentationModel._resourceUrlById[data.id]; },
-	ResourceLoaded: function (data) { return WebInspector.timelapsePresentationModel._resourceUrlById[data.id]; },
+	ReceiveData: function (data, provider) { return provider.resourceUrlForId(data.id); },
+	ResourceLoaded: function (data, provider) { return provider.resourceUrlForId(data.id); },
 
 	TimerFire: function (data) { return "Fired"; },
 

@@ -50,7 +50,6 @@ WebInspector.TimelapsePresentationModel = function()
     var eventNames = WebInspector.TimelapseModel.EventTypes;
     this._model.addEventListener(eventNames.RecordingDidStart, this._recordingDidStart, this);
     this._model.addEventListener(eventNames.RecordingDidStop, this._recordingDidStop, this);
-    // TODO: move to TimelapseInputDataProvider
     this._model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
 
     // TODO: move to TimelapseBreakpointDataProvider
@@ -116,14 +115,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
     _recordAdded: function(event)
     {
 	var record = event.data;
-	// TODO: This should be moved to TimelapseInputDataProvider.addRecord()
-	// ReceiveData and ResourceLoaded records do not include URL data, so store it from request/response records.
-	var recordTypes = WebInspector.TimelapseAgent.RecordType;
-	if (record.type == recordTypes.RequestResource
-	    || record.type == recordTypes.ReceiveResponse) {
-	    this._resourceUrlById[record.data.id] = record.data.url;
-	}
-
 	this.calculator.updateBoundaries(record);
     },
 

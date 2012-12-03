@@ -1073,8 +1073,9 @@ WebInspector.TimelapseGridNode.prototype = {
     _refreshPreviewCell: function()
     {
     	this._previewCell.removeChildren();
-	var preview = WebInspector.TimelapseInputDataProvider.InputPreview[this._record.type](this._record.data);
 	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].group;
+	var provider = this._parentView._providers[group];
+	var preview = WebInspector.TimelapseInputDataProvider.InputPreview[this._record.type](this._record.data, provider);
 	if (group == "network") {
 	    var url = preview;
 	    var isExternal = !WebInspector.resourceForURL(url);
