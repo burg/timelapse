@@ -123,12 +123,13 @@ WebInspector.DataProvider.Events = {
     AddedInput: "AddedInput",
 };
 
-WebInspector.TimelapseInputDataProvider = function(inputCategory)
+WebInspector.TimelapseInputDataProvider = function(name, displayName, color)
 {
-    WebInspector.DataProvider.call(this, inputCategory.name,
+    WebInspector.DataProvider.call(this, name,
 				   WebInspector.DataProvider.Types.TimelapseInput);
 
-    this._category = inputCategory;
+    this._displayName = displayName;
+    this._color = color;
     this._records = [];
 
     var model = WebInspector.timelapseModel;
@@ -139,7 +140,7 @@ WebInspector.TimelapseInputDataProvider = function(inputCategory)
 WebInspector.TimelapseInputDataProvider.prototype = {
     get displayName()
     {
-	return this._category.title;
+	return this._displayName;
     },
 
     get counterNoun()
@@ -147,16 +148,10 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	return "Inputs";
     },
 
-    // TODO: should be removed eventually, use .type instead.
-    get category()
-    {
-	return this._category;
-    },
-
     get color()
     {
 	if (this.isEnabled())
-	    return this._category.color;
+	    return this._color;
 	else // faded color
 	    return WebInspector.Color.fromRGB(150, 150, 150);
     },
@@ -288,12 +283,13 @@ WebInspector.TimelapseInputDataProvider.InputPreview = (function(){
     };
 })();
 
-WebInspector.TimelapseBreakpointDataProvider = function(category)
+WebInspector.TimelapseBreakpointDataProvider = function(displayName, color)
 {
-    WebInspector.DataProvider.call(this, category.name,
+    WebInspector.DataProvider.call(this, "breakpoint",
 				   WebInspector.DataProvider.Types.BreakpointHits);
 
-    this._category = category;
+    this._displayName = displayName;
+    this._color = color;
     this._intervals = WebInspector.timelapseBreakpointTracker.exploredIntervals;
     this._initializeRecords();
 
@@ -305,12 +301,6 @@ WebInspector.TimelapseBreakpointDataProvider = function(category)
 }
 
 WebInspector.TimelapseBreakpointDataProvider.prototype = {
-    // TODO: should be removed eventually, use .type instead.
-    get category()
-    {
-	return this._category;
-    },
-
     get counterNoun()
     {
 	return "Hits";

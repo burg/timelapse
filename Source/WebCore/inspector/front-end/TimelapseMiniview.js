@@ -290,6 +290,8 @@ WebInspector.TimelapseMiniview.prototype = {
 
 	for (var i = 0; i < this._providers.length; i++) {
 	    var provider = this._providers[i];
+	    if (provider.records.length)
+
 	    if (provider.type == WebInspector.DataProvider.Types.BreakpointHits)
 		provider.records.map(markPercentagesForBreakpointRecord.bind(this));
 	    else

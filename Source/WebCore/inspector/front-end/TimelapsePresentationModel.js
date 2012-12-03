@@ -91,25 +91,28 @@ WebInspector.TimelapsePresentationModel.prototype = {
 
 	var providerTypes = WebInspector.DataProvider.Types;
 	this.addProvider(new WebInspector.TimelapseInputDataProvider(
-			     this.categories["userinput"]
+			     "userinput",
+			     WebInspector.UIString("User"),
+			     WebInspector.Color.fromRGB(20,170,70)
 			));
 	this.addProvider(new WebInspector.TimelapseInputDataProvider(
-			     this.categories["network"]
+			     "network",
+			     WebInspector.UIString("Network"),
+			     WebInspector.Color.fromRGB(200,150,0)
 			));
 	this.addProvider(new WebInspector.TimelapseInputDataProvider(
-			     this.categories["timer"]
+			     "timer",
+			     WebInspector.UIString("Timer"),
+			     WebInspector.Color.fromRGB(200,30,30)
 			));
     },
 
     _recordingDidStop: function()
     {
 	// TODO: create TimelapseAnchorDataProvider.
-
 	this.calculator.setZoomInterval(0.0, 1.0);
     },
 
-    // TODO: disambiguate record type, add to correct TimelapseInputDataProvider.
-    // alternatively, each provider listens for RecordAdded itself.
     _recordAdded: function(event)
     {
 	var record = event.data;
@@ -131,7 +134,10 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	var breakpointProviders = this._providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
 	breakpointProviders.forEach(function(provider) { model.removeProvider(provider); });
 
-	this.addProvider(new WebInspector.TimelapseBreakpointDataProvider(this.categories["breakpoint"]));
+	this.addProvider(new WebInspector.TimelapseBreakpointDataProvider(
+			     WebInspector.UIString("Breakpoint"),
+			     WebInspector.Color.fromRGB(10,55,230)
+			 ));
     },
 
     // Public API
@@ -420,21 +426,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    }
 	}
 	return table;
-    },
-
-    // TODO: move to TimelapseInputDataProvider
-    get categories()
-    {
-	if (!this._categories) {
-	    this._categories = {
-		userinput: new WebInspector.TimelapseCategory("userinput", WebInspector.UIString("User"), WebInspector.Color.fromRGB(20,170,70)),
-		network: new WebInspector.TimelapseCategory("network", WebInspector.UIString("Network"), WebInspector.Color.fromRGB(200,150,0)),
-		timer: new WebInspector.TimelapseCategory("timer", WebInspector.UIString("Timer"), WebInspector.Color.fromRGB(200,30,30)),
-		system: new WebInspector.TimelapseCategory("system", WebInspector.UIString("System"), WebInspector.Color.fromRGB(10,55,230)),
-		breakpoint: new WebInspector.TimelapseCategory("breakpoint", WebInspector.UIString("Breakpoint"), WebInspector.Color.fromRGB(10,55,230))
-	    };
-	}
-	return this._categories;
     },
 };
 
@@ -790,18 +781,5 @@ WebInspector.TimelapseCalculator.prototype = {
 };
 
 WebInspector.TimelapseCalculator.prototype.__proto__ = WebInspector.Object.prototype;
-
-/**
- * @constructor
- */
-// TODO: move to TimelapseInputDataProvider
-WebInspector.TimelapseCategory = function(name, title, color)
-{
-    this.name = name;
-    this.title = title;
-    this.color = color;
-    this.disabled = false;
-};
-
 
 WebInspector.timelapsePresentationModel;
