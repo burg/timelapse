@@ -91,6 +91,7 @@ WebInspector.TimelapseOverview.MinAnimationDelta = 0.5;
 WebInspector.TimelapseOverview.WindowScrollSpeedFactor = 0.001;
 WebInspector.TimelapseOverview.WindowZoomSpeedFactor = 0.001;
 WebInspector.TimelapseOverview.DefaultRefreshDelay = 30;
+WebInspector.TimelapseOverview.TimelineHeight = 30;
 
 WebInspector.TimelapseOverview.prototype = {
 
@@ -294,7 +295,7 @@ WebInspector.TimelapseOverview.prototype = {
     onResize: function()
     {
 	var ordinal = this._timelines.length;
-	var height = this._presentationModel.timelineHeight;
+	var height = WebInspector.TimelapseOverview.TimelineHeight;
 	var fudge = 2;
 
 	this._labelContainer.style.setProperty("height", ordinal*height+fudge + "px");
@@ -422,7 +423,7 @@ WebInspector.TimelapseOverview.prototype = {
 	console.assert(!this._timelineForProvider(provider), "Timeline for provider already exists!");
 
 	var ordinal = this._timelines.length;
-	var height = this._presentationModel.timelineHeight;
+	var height = WebInspector.TimelapseOverview.TimelineHeight;
 
 	var label = new WebInspector.TimelapseTimelineLabel(provider);
 	label.element.style.setProperty("top", ordinal*height + "px");

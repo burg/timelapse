@@ -74,46 +74,9 @@ WebInspector.TimelapsePresentationModel.EventTypes = {
 };
 
 WebInspector.TimelapsePresentationModel.prototype = {
-    // TODO: move to TimelapseBreakpointDataProvider
-    get breakpointRecords()
-    {
-	/* The presentation model maintains breakpoint records for _enabled_ breakpoints. */
-
-	if (this.categories["breakpoint"].disabled)
-	    return [];
-
-	if (!this._breakpointRecordsAreStale)
-	    return this._breakpointRecords;
-
-	this._breakpointRecordsAreStale = false;
-
-	var records = WebInspector.timelapseBreakpointTracker.records;
-	this._breakpointRecords = [];
-
-	for (var i = 0; i < records.length; i++) {
-	    var record = {};
-	    record.type = records[i].type;
-	    record.mark = records[i].mark;
-	    record.hits = [];
-
-	    for (var j = 0; j < records[i].hits.length; j++) {
-		var breakpoint = records[i].hits[j];
-		if (breakpoint.enabled()) {
-		    record.hits.push(breakpoint);
-		}
-	    }
-
-	    if (record.hits.length > 0)
-		this._breakpointRecords.push(record);
-	}
-
-	return this._breakpointRecords;
-    },
-
     // TODO: most of this state will be moved to providers or timeline widgets
     reset: function() 
     {
-	this._breakpointRecordsAreStale = true;
 	this._resourceUrlById = [];
 	this.anchorManager.reset();
 	this.calculator.reset();
@@ -170,8 +133,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
 
     _replaceBreakpointProvider: function()
     {
-	this._breakpointRecordsAreStale = true;
-
 	// TODO: keep old breakpoint providers
 	var model = this;
 	var breakpointProviders = this._providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
@@ -472,9 +433,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	}
 	return this._categories;
     },
-
-    categoryOrder: ["userinput", "network", "timer", "breakpoint"],
-    timelineHeight: 30,
 
     // TODO: move to TimelapseInputDataProvider
     get recordStyles()
