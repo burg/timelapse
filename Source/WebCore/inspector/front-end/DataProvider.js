@@ -59,6 +59,12 @@ WebInspector.DataProvider.prototype = {
         return this._name;
     },
 
+    // Override me!
+    get counterNoun()
+    {
+	return "Records";
+    },
+
     // dummy color
     get color()
     {
@@ -134,6 +140,11 @@ WebInspector.TimelapseInputDataProvider.prototype = {
     get displayName()
     {
 	return this._category.title;
+    },
+
+    get counterNoun()
+    {
+	return "Inputs";
     },
 
     // TODO: should be removed eventually, use .type instead.
@@ -298,6 +309,11 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
     get category()
     {
 	return this._category;
+    },
+
+    get counterNoun()
+    {
+	return "Hits";
     },
 
     enable: function()

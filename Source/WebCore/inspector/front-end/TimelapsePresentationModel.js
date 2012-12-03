@@ -113,13 +113,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
     _recordAdded: function(event)
     {
 	var record = event.data;
-        if (!this.recordStyles[record.type]) {
-	    console.log("Tried to record unknown record type: " + record.type);
-	    console.log("record=");
-	    console.log(record);
-	    return;
-	}
-
 	// TODO: This should be moved to TimelapseInputDataProvider.addRecord()
 	// ReceiveData and ResourceLoaded records do not include URL data, so store it from request/response records.
 	var recordTypes = WebInspector.TimelapseAgent.RecordType;
@@ -156,6 +149,19 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    return;
 
 	this._removeProviderAtIndex(idx);
+    },
+
+    _providersWithName: function(name)
+    {
+	var found = [];
+	for (var i = 0; i < this._providers.length; i++) {
+	    var provider = this._providers[i];
+	    if (provider.name === name) {
+		found.push(provider);
+	    }
+	}
+	
+	return found;
     },
 
     _providersWithType: function(ty)
@@ -301,9 +307,11 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	if (!records || records.length == 0)
 	    return null;
 
+	var group = WebInspector.TimelapseInputDataProvider.InputStyles[records[0].type].group;
+	var provider = this._providersWithName(group)[0];
+
 	var table = document.createElement("table");
-	table.className = "timelapse-overview-popover-table timelapse-category-" 
-	                  + this.recordStyles[records[0].type].category.name;
+	table.className = "timelapse-overview-popover-table timelapse-category-" + group;
 
 	function createButtonInTD(styleClass, callback) {
 	    var cell = document.createElement("td");
@@ -323,12 +331,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	header.textContent = "#";
 	firstRow.appendChild(header);
 	header = document.createElement("th");
-
-	if (isBreakpointPopup)
-	    header.textContent = "Breakpoint Hits";
-	else
-	    header.textContent = this.recordStyles[records[0].type].category.title + " Inputs";
-
+	header.textContent = provider.displayName + " " + provider.counterNoun;
 	firstRow.appendChild(header);
 	table.appendChild(firstRow);
 
@@ -401,8 +404,8 @@ WebInspector.TimelapsePresentationModel.prototype = {
 		row.appendChild(countCell);
 
 		var cell = document.createElement("td");
-		var type = WebInspector.timelapsePresentationModel.recordStyles[record.type].title;
-		cell.setTextAndTitle(type);
+		var name = WebInspector.TimelapseInputDataProvider.InputStyles[record.type].title;
+		cell.setTextAndTitle(name);
 		cell.addStyleClass("text-cell");
 		row.appendChild(cell);
 
@@ -433,42 +436,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	}
 	return this._categories;
     },
-
-    // TODO: move to TimelapseInputDataProvider
-    get recordStyles()
-    {
-	if (!this._recordStylesArray) {
-	    var recordTypes = WebInspector.TimelapseAgent.RecordType;
-	    var recordStyles = {};
-	    recordStyles[recordTypes.MousePress] = { title: WebInspector.UIString("Mouse Press"), category: this.categories.userinput };
-	    recordStyles[recordTypes.MouseRelease] = { title: WebInspector.UIString("Mouse Release"), category: this.categories.userinput };
-	    recordStyles[recordTypes.MouseMove] = { title: WebInspector.UIString("Mouse Move"), category: this.categories.userinput };
-	    recordStyles[recordTypes.MouseWheel] = { title: WebInspector.UIString("Mouse Wheel"), category: this.categories.userinput };
-	    recordStyles[recordTypes.KeyPress] = { title: WebInspector.UIString("Key Press"), category: this.categories.userinput };
-	    recordStyles[recordTypes.Scroll] = { title: WebInspector.UIString("Scroll"), category: this.categories.userinput };
-	    recordStyles[recordTypes.Resize] = { title: WebInspector.UIString("Resize"), category: this.categories.userinput };
-
-	    recordStyles[recordTypes.WindowActive] = { title: WebInspector.UIString("Window Became Active"), category: this.categories.userinput };
-	    recordStyles[recordTypes.WindowInactive] = { title: WebInspector.UIString("Window Became Inactive"), category: this.categories.userinput };
-	    recordStyles[recordTypes.WindowFocused] = { title: WebInspector.UIString("Window Was Focused"), category: this.categories.userinput };
-	    recordStyles[recordTypes.WindowUnfocused] = { title: WebInspector.UIString("Window Was Unfocused"), category: this.categories.userinput };
-
-	    recordStyles[recordTypes.RequestResource] = { title: WebInspector.UIString("Requested Resource"), category: this.categories.network };
-	    recordStyles[recordTypes.ReceiveResponse] = { title: WebInspector.UIString("Received Response"), category: this.categories.network };
-	    recordStyles[recordTypes.ReceiveData] = { title: WebInspector.UIString("Received Data"), category: this.categories.network };
-	    recordStyles[recordTypes.ResourceLoaded] = { title: WebInspector.UIString("Resource Loaded"), category: this.categories.network };
-
-	    recordStyles[recordTypes.TimerFire] = { title: WebInspector.UIString("Timer Fired"), category: this.categories.timer };
-
-	    recordStyles[recordTypes.FrameNavigated] = { title: WebInspector.UIString("Started Page Load"), category: this.categories.system };
-	    recordStyles[recordTypes.CaptureBegin] = { title: WebInspector.UIString("Recording Began"), category: this.categories.system };
-	    recordStyles[recordTypes.CaptureEnd] = { title: WebInspector.UIString("Recording Ended"), category: this.categories.system };
-	    recordStyles[recordTypes.BreakpointHit] = { title: WebInspector.UIString("Hit Breakpoint"), category: this.categories.breakpoint };
-
-	    this._recordStylesArray = recordStyles;
-	}
-	return this._recordStylesArray;
-    }
 };
 
 WebInspector.TimelapsePresentationModel.prototype.__proto__ = WebInspector.Object.prototype;
