@@ -163,6 +163,16 @@ WebInspector.TimelapseOverview.prototype = {
 	return false;
     },
 
+    _timelineForProviderType: function(ty)
+    {
+	for (var i = 0; i < this._timelines.length; i++) {
+	    if (this._timelines[i].provider.type === ty)
+		return this._timelines[i];
+	}
+
+	return false;
+    },
+
     /* mostly copied from TimelineGrid.js */
     updateDividers: function(force)
     {
@@ -397,19 +407,6 @@ WebInspector.TimelapseOverview.prototype = {
 	var types = WebInspector.DataProvider.Types;
 	return provider.type == types.TimelapseInput ||
                provider.type == types.BreakpointHits;
-    },
-
-    _providersWithType: function(ty)
-    {
-	var found = [];
-	for (var i = 0; i < this._providers.length; i++) {
-	    var provider = this._providers[i];
-	    if (provider.type === ty) {
-		found.push(provider);
-	    }
-	}
-	
-	return found;
     },
 
     _onProviderAdded: function(event)
@@ -907,11 +904,7 @@ WebInspector.TimelapseOverview.prototype = {
 	this._messagePanel.classList.add("hidden");
 
 	var currentMarkIndex = WebInspector.timelapseModel.currentMarkIndex;
-        var breakpointProviders = this._providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
-	if (breakpointProviders.length == 0)
-	    return;
-
-	var timeline = this._timelineForProvider(breakpointProviders[0]);
+        var timeline = this._timelineForProviderType(WebInspector.DataProvider.Types.BreakpointHits);
 	if (!timeline)
 	    return;
 

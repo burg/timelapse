@@ -276,9 +276,9 @@ WebInspector.TimelapseMiniview.prototype = {
 	    var percentile = Number.constrain(percent, 0, 99);
 
 	    if (!this._timelines[group].data[percentile])
-		this._timelines[group].data[percentile] = record.hits.length;
+		this._timelines[group].data[percentile] = 1;
 	    else
-		this._timelines[group].data[percentile] += record.hits.length;
+		this._timelines[group].data[percentile] += 1;
 
 	    if (!this._timelines.all.data[percentile])
 		this._timelines.all.data[percentile] = 1;
