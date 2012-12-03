@@ -171,7 +171,6 @@ WebInspector.TimelapseScrollview.prototype = {
 	    this._minTimestamp = this._minTimestamp + (now - this._previousAnimationTime) * 0.001;
 
 	this._previousAnimationTime = now;
-	var records = this._model.allRecords;
 	var timestampGranularity = interval / this._binsPerTimeline;
 	this._resetTimelines();
 
