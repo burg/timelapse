@@ -480,16 +480,16 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var provider = timeline.provider;
 	var data = timeline.data;
-	if (data.records.length == 0)
+	if (data.recordIndices.length == 0)
 	    return;
 
 	var hoveredCircleIdx = timeline.hitTest(event);
 
 	if (this._hoveredCircle && hoveredCircleIdx != this._hoveredCircle.circleIndex)
-	    this._presentationModel.circleMouseOut(provider, this._hoveredCircle.circleIndex, data.records[this._hoveredCircle.circleIndex]);
+	    this._presentationModel.circleMouseOut(provider, this._hoveredCircle.circleIndex, data.recordIndices[this._hoveredCircle.circleIndex]);
 
 	if (hoveredCircleIdx != -1 && (!this._hoveredCircle || this._hoveredCircle.circleIndex != hoveredCircleIdx))
-	    this._presentationModel.circleMouseOver(provider, hoveredCircleIdx, data.records[hoveredCircleIdx]);
+	    this._presentationModel.circleMouseOver(provider, hoveredCircleIdx, data.recordIndices[hoveredCircleIdx]);
 
 	if (hoveredCircleIdx != -1)
 	    event.stopPropagation();
@@ -510,10 +510,10 @@ WebInspector.TimelapseOverview.prototype = {
 	var timeline = node.timeline;
 	var provider = timeline.provider;
 	var data = timeline.data;
-	if (data.records.length == 0)
+	if (data.recordIndices.length == 0)
 	    return;
 
-	this._presentationModel.circleMouseOut(provider, this._hoveredCircle.circleIndex, data.records[this._hoveredCircle.circleIndex]);
+	this._presentationModel.circleMouseOut(provider, this._hoveredCircle.circleIndex, data.recordIndices[this._hoveredCircle.circleIndex]);
     },
 
     _onTimelineClicked: function(event)
@@ -528,12 +528,12 @@ WebInspector.TimelapseOverview.prototype = {
 	var timeline = node.timeline;
 	var provider = timeline.provider;
 	var data = timeline.data;
-	if (data.records.length == 0)
+	if (data.recordIndices.length == 0)
 	    return;
 
 	var clickedCircleIdx = timeline.hitTest(event);
 	if (clickedCircleIdx != -1)
-	    this._presentationModel.selectCircle(provider, clickedCircleIdx, data.records[clickedCircleIdx]);
+	    this._presentationModel.selectCircle(provider, clickedCircleIdx, data.recordIndices[clickedCircleIdx]);
     },
 
     _onTimelineDoubleClicked: function(event)
@@ -547,12 +547,15 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var timeline = node.timeline;
 	var data = timeline.data;
-	if (data.records.length == 0)
+	if (data.recordIndices.length == 0)
 	    return;
 
 	var clickedCircleIdx = timeline.hitTest(event);
-	if (clickedCircleIdx != -1)
-	    this._model.replayUpToMarkIndex(data.records[clickedCircleIdx][0].mark.index);
+	if (clickedCircleIdx == -1)
+	    return;
+
+	var recordIdx = data.recordIndices[clickedCircleIdx][0];
+	this._model.replayUpToMarkIndex(this._provider.records[recordIdx].mark.index);
     },
 
     _onCircleSelected: function(event)
@@ -564,7 +567,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	var provider = event.data.provider;
 	var circleIndex = event.data.index;
-	var records = event.data.records;
+	var recordIndices = event.data.recordIndices;
 	var timeline = this._timelineForProvider(provider);
 	
 	this._selectedCircle = {
@@ -588,7 +591,7 @@ WebInspector.TimelapseOverview.prototype = {
     {
 	var provider = event.data.provider;
 	var circleIndex = event.data.index;
-	var records = event.data.records;
+	var records = event.data.recordIndices;
 	var timeline = this._timelineForProvider(provider);
 	
 	this._hoveredCircle = {
@@ -608,7 +611,7 @@ WebInspector.TimelapseOverview.prototype = {
 	};
 
 	// TODO: update the size-position when panning
-	this._presentationModel.overviewPopover.show(records, position);
+	this._presentationModel.overviewPopover.show(provider, records, position);
     },
 
     _onTimelineMousedown: function(event)
@@ -646,13 +649,13 @@ WebInspector.TimelapseOverview.prototype = {
 
 	if (this._hoveredCircle) {
 	    var timeline = this._hoveredCircle.timeline;
-	    var records = timeline.data.records[this._hoveredCircle.circleIndex];
+	    var records = timeline.data.recordIndices[this._hoveredCircle.circleIndex];
 	    var highlightCoords = timeline.getCircleGeometry(this._hoveredCircle.circleIndex);
 	    var popupPosition = {
 		x: timeline.element.boxInWindow().x + highlightCoords.left,
 		y: timeline.element.boxInWindow().y + highlightCoords.top + highlightCoords.radius + 1
 	    };
-	    this._presentationModel.overviewPopover.show(records, popupPosition);
+	    this._presentationModel.overviewPopover.show(provider, records, popupPosition);
 	}
 	else {
 	    this._presentationModel.overviewPopover.hide();
@@ -1083,17 +1086,18 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     {
 	this.element.classList.add("disabled");
 	this._recomputeParameters();
+	this.clearHighlights();
 	this.refresh();
     },
 
     _circleIndexFromMarkIndex: function(markIndex)
     {
-	var recordGroups = this._data.records;
+	var recordIndicies = this._data.recordIndices;
 
-	for (var i = 0; i < recordGroups.length; i++) {
-	    var records = recordGroups[i];
-	    for (var j = 0; j < records.length; j++) {
-		if (records[j].mark.index != markIndex)
+	for (var i = 0; i < recordIndices.length; i++) {
+	    var indexList = recordIndices[i];
+	    for (var j = 0; j < indexList.length; j++) {
+		if (indexList[j].mark.index != markIndex)
 		    continue;
 		else
 		    return i;
@@ -1109,13 +1113,13 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	if (circleIndex == -1)
 	    return;
 
-	var records = this._data.records[circleIndex];
+	var recordIndices = this._data.recordIndices[circleIndex];
 	var circleCoords = this.getCircleGeometry(circleIndex);
 	var popupPosition = {
 	    x: this.element.boxInWindow().x + circleCoords.left,
 	    y: this.element.boxInWindow().y + circleCoords.top + circleCoords.radius + 1
 	};
-	this._presentationModel.overviewPopover.show(records, popupPosition);
+	this._presentationModel.overviewPopover.show(this._provider, recordIndices, popupPosition);
     },
 
     hitTest: function(event)
@@ -1208,7 +1212,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
 	for (var i = 0; i < this._highlights.length; i++) {
 	    var circleIdx = this._highlights[i];
-	    var selectedSingleInput = (this._data.records[circleIdx].length == 1);
+	    var selectedSingleInput = (this._data.recordIndices[circleIdx].length == 1);
 	    var newStroke = (selectedSingleInput) ? singleInputStrokeColor : defaultStrokeColor;
 	    if (this._ctx.strokeStyle != newStroke)
 		this._ctx.strokeStyle = newStroke;
@@ -1328,7 +1332,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	// access clientWidth and do auto-scaling based on available width.
 	console.assert(this.isShowing(), "Timeline must be visible before it is recomputed.");
 
-	this._data = { centers: [], radii: [], indexExtents: [], records: [] };
+	this._data = { centers: [], radii: [], indexExtents: [], recordIndices: [] };
 
 	var data = this.data;
 	var records = this.provider.records;
@@ -1339,33 +1343,35 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	var availWidth = this.element.clientWidth;
 	var minInterval = minIntervalPx / availWidth * this.calculator.zoomInterval * this.calculator.boundarySpan;
 
-	var pendingRecords = [];
+	var pendingRecordIndices = [];
 
 	function flushDot() {
-	    if (pendingRecords.length == 0)
+	    if (pendingRecordIndices.length == 0)
 		return;
 
 	    var totalTs = 0.0;
-	    for (var i = 0; i < pendingRecords.length; i++)
-		totalTs += pendingRecords[i].mark.timestamp;
+	    for (var i = 0; i < pendingRecordIndices.length; i++)
+		totalTs += records[pendingRecordIndices[i]].mark.timestamp;
 
-	    var averageTimestamp = totalTs/pendingRecords.length;
-	    var radius = baseRadius + pendingRecords.length;
+	    var averageTimestamp = totalTs/pendingRecordIndices.length;
+	    var radius = baseRadius + pendingRecordIndices.length;
 
 	    data.centers.push(averageTimestamp);
 	    data.radii.push(radius);
-	    data.records.push(pendingRecords);
+	    data.recordIndices.push(pendingRecordIndices);
 
-	    pendingRecords = [];
+	    pendingRecordIndices = [];
 	}
 
 	for (i = 0; i < records.length; i++) {
-	    var record = records[i];
-	    if (pendingRecords.length == maxRecordsPerDot
-		|| (i > 0 && record.mark.timestamp - records[i-1].mark.timestamp > minInterval))
+	    if (pendingRecordIndices.length == maxRecordsPerDot
+		|| (i > 0 && records[i].mark.timestamp - records[i-1].mark.timestamp > minInterval))
 		flushDot();
 
-	    pendingRecords.push(record);
+	    // we assume the array of records is monotonic, so we can 
+	    // use index as a stable reference to a specific record
+	    // within a provider. This speeds up changes in highlighted/selected records.
+	    pendingRecordIndices.push(i);
 	}
 	flushDot();
     },
@@ -1603,19 +1609,20 @@ WebInspector.TimelapsePopover = function(popoverHelper)
 }
 
 WebInspector.TimelapsePopover.prototype = {
-    show: function(records, position)
+    show: function(provider, recordIndices, position)
     {
 	if (this._disposed)
 	    return;
 
-	if (!records) {
+	if (!recordIndices) {
 	    this.hide();
 	    return;
 	}
 
-	this._records = records;
+	this._provider = provider;
+	this._recordIndices = recordIndices;
 	this._position = position;
-	this.contentElement = WebInspector.timelapsePresentationModel.generatePopupContent(records);
+	this.contentElement = WebInspector.timelapsePresentationModel.generatePopupContent(provider, recordIndices);
 
         // This should not happen, but we hide previous popup to be on the safe side.
         if (WebInspector.Popover._popoverElement)
@@ -1697,8 +1704,8 @@ WebInspector.TimelapsePopover.prototype = {
 
     refresh: function()
     {
-	if (this._visible && this._records && this._position)
-	    this.show(this._records, this._position);
+	if (this._visible && this._recordIndices && this._position)
+	    this.show(this._provider, this._recordIndices, this._position);
     }
 };
 

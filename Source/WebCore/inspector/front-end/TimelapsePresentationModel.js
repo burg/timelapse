@@ -224,36 +224,36 @@ WebInspector.TimelapsePresentationModel.prototype = {
     },
 
     // TODO: Selection state should live on the specific DataProvider which is being selected.
-    selectCircle: function(provider, circleIndex, records)
+    selectCircle: function(provider, circleIndex, recordIndices)
     {
 	var eventData = {
 	    "provider": provider,
 	    "index": circleIndex,
-	    "records": records
+	    "recordIndices": recordIndices
 	};
 
 	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.CircleSelected, eventData);
     },
 
     // TODO: Selection state should live on the specific DataProvider which is being selected.
-    circleMouseOver: function(provider, circleIndex, records)
+    circleMouseOver: function(provider, circleIndex, recordIndices)
     {
 	var eventData = {
 	    "provider": provider,
 	    "index": circleIndex,
-	    "records": records
+	    "recordIndices": recordIndices
 	};
 
 	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.CircleMouseOver, eventData);
     },
 
     // TODO: Selection state should live on the specific DataProvider which is being selected.
-    circleMouseOut: function(provider, circleIndex, records)
+    circleMouseOut: function(provider, circleIndex, recordIndices)
     {
 	var eventData = {
 	    "provider": provider,
 	    "index": circleIndex,
-	    "records": records
+	    "recordIndices": recordIndices
 	};
 
 	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.CircleMouseOut, eventData);
@@ -299,13 +299,12 @@ WebInspector.TimelapsePresentationModel.prototype = {
     },
 
     // TODO: move to specific Timeline subclass (TimelapseInputTimeline, TimelapseBreakpointsTimeline,...)
-    generatePopupContent: function(records) {
-	if (!records || records.length == 0)
+    generatePopupContent: function(provider, recordIndices) {
+	if (!provider || !recordIndices || recordIndices.length == 0)
 	    return null;
 
-	var group = WebInspector.TimelapseInputDataProvider.InputStyles[records[0].type].group;
-	var provider = this._providersWithName(group)[0];
-
+	var firstRecordType = provider.records[recordIndices[0]].type;
+	var group = WebInspector.TimelapseInputDataProvider.InputStyles[firstRecordType].group;
 	var table = document.createElement("table");
 	table.className = "timelapse-overview-popover-table timelapse-category-" + group;
 
@@ -319,7 +318,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    return cell;
 	}
 
-	var isBreakpointPopup = (records[0].type == WebInspector.TimelapseAgent.RecordType.BreakpointHit);
+	var isBreakpointPopup = (firstRecordType == WebInspector.TimelapseAgent.RecordType.BreakpointHit);
 
 	var firstRow = document.createElement("tr");
 	firstRow.className = "header-row";
@@ -331,8 +330,8 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	firstRow.appendChild(header);
 	table.appendChild(firstRow);
 
-	for (var i = 0; i < records.length; i++) {
-	    var record = records[i];
+	for (var i = 0; i < recordIndices.length; i++) {
+	    var record = provider.records[recordIndices[i]];
 
 	    if (isBreakpointPopup) {
 		header.setAttribute("colspan", 4);

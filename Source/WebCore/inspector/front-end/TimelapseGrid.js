@@ -507,10 +507,14 @@ WebInspector.TimelapseGrid.prototype = {
 
     _onCircleSelected: function(event)
     {
-	var records = event.data.records;
+	var provider = event.data.provider;
+	var recordIndices = event.data.recordIndices;
+	var firstRecord = provider.records[recordIndices[0]];
+	var lastRecord = provider.records[recordIndices[recordIndices.length-1]];
+
 	// attempt to reveal first and last rows, so it matches the popup
-	this._recordGridNodes[records[0].mark.index].reveal();
-	this._recordGridNodes[records[records.length-1].mark.index].reveal();
+	this._recordGridNodes[firstRecord.mark.index].reveal();
+	this._recordGridNodes[lastRecord.mark.index].reveal();
     },
 
     _onPreviewStarted: function()
