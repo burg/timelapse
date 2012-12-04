@@ -1432,7 +1432,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	    ctx.fillStyle = fogColor;
 
 	    for (var i = 0; i < intervals.length; i++) {
-		var timestamp = model.timestampFromMarkIndex(intervals[i].start);
+		var timestamp = model.timestampFromMarkIndex(intervals[i].start.markIndex);
 		endPercent = this.calculator.computeOverviewPercentage(timestamp);
 		widthPercent = endPercent - startPercent;
 
@@ -1454,7 +1454,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 		    fade(x + width - fadeWidth, fadeWidth);
 		}
 
-		timestamp = model.timestampFromMarkIndex(intervals[i].end);
+		timestamp = model.timestampFromMarkIndex(intervals[i].end.markIndex);
 		startPercent = this.calculator.computeOverviewPercentage(timestamp);
 	    }
 

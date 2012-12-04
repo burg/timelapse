@@ -49,10 +49,11 @@ WebInspector.TimelapsePresentationModel = function()
     this._model.addEventListener(eventNames.RecordingDidStart, this._recordingDidStart, this);
     this._model.addEventListener(eventNames.RecordingDidStop, this._recordingDidStop, this);
     this._model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
+    this._model.addEventListener(eventNames.BreakpointHit, this._breakpointHit, this);
 
     // TODO: move to TimelapseBreakpointDataProvider
-    WebInspector.timelapseBreakpointTracker.addEventListener(WebInspector.TimelapseBreakpointTracker.Events.BreakpointAdded, this._replaceBreakpointProvider, this);
-    WebInspector.timelapseBreakpointTracker.addEventListener(WebInspector.TimelapseBreakpointTracker.Events.BreakpointRemoved, this._replaceBreakpointProvider, this);
+    WebInspector.timelapseBreakpointTracker.addEventListener(WebInspector.TimelapseBreakpointTracker.Events.BreakpointAdded, this._removeBreakpointProviders, this);
+    WebInspector.timelapseBreakpointTracker.addEventListener(WebInspector.TimelapseBreakpointTracker.Events.BreakpointRemoved, this._removeBreakpointProviders, this);
 
     this.reset();
 };
@@ -117,19 +118,25 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.calculator.updateBoundaries(record);
     },
 
-    _replaceBreakpointProvider: function()
+    _breakpointHit: function()
     {
-	// TODO: keep old breakpoint providers
-	var model = this;
+	// TODO: manage multiple breakpoint providers
 	var breakpointProviders = this.providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
-	breakpointProviders.forEach(function(provider) { 
-            model.removeProvider(provider);
-        });
+	if (breakpointProviders.length > 0)
+	    return;
 
 	this.addProvider(new WebInspector.TimelapseBreakpointDataProvider(
 			     WebInspector.UIString("Breakpoint"),
 			     WebInspector.Color.fromRGB(10,55,230)
 			 ));
+    },
+
+    _removeBreakpointProviders: function()
+    {
+	// TODO: keep old breakpoint providers
+	var model = this;
+	var breakpointProviders = this.providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
+	breakpointProviders.forEach(function(provider) { model.removeProvider(provider); });
     },
 
     // Public API

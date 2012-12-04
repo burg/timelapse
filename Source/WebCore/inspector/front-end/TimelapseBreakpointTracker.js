@@ -9,13 +9,10 @@ WebInspector.TimelapseBreakpointTracker = function()
 
     var eventNames = WebInspector.TimelapseModel.EventTypes;
     this._model.addEventListener(eventNames.RecordingWillStart, this._reset, this);
-    this._model.addEventListener(eventNames.PlaybackWillStart, this._playbackWillStart, this);
     this._model.addEventListener(eventNames.PlaybackDidStart, this._playbackDidStart, this);
-    this._model.addEventListener(eventNames.PlaybackStopped, this._playbackStopped, this);
-    this._model.addEventListener(eventNames.InputPaused, this._playbackStopped, this);
-    this._model.addEventListener(eventNames.InputHit, this._inputHit, this);
-    this._model.addEventListener(eventNames.BreakpointPaused, this._breakpointPaused, this);
+    this._model.addEventListener(eventNames.PlaybackStopped, this._endPendingInterval, this);
     this._model.addEventListener(eventNames.BreakpointHit, this._breakpointHit, this);
+    this._model.addEventListener(eventNames.BreakpointPaused, this._endPendingInterval, this);
 
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._breakpointUpdated, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAddedToStorage, this._breakpointAddedToStorage, this);
@@ -43,11 +40,6 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 	return this._currentBreakpoint;
     },
 
-    get recordInProgress()
-    {
-	return !!this._recordInProgress;
-    },
-
     get exploredIntervals()
     {
 	return this._exploredIntervals.intervals;
@@ -65,53 +57,33 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 	// breakpoints are stored using the debuggerID (sourceURL + ":" + lineNumber) as the key
 	this._breakpoints = {};
 	this._exploredIntervals.clear();
-	this._recordInProgress = false;
 
 	this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Reset);
     },
 
-    // Callbacks from TimelapseModel
-    _playbackWillStart: function()
+    _endPendingInterval: function()
     {
-	this._recordInProgress = false;
+	if (this._exploredIntervals.intervalPending)
+	    this._exploredIntervals.endInterval(this._model.currentMarkIndex, this._model.currentHitIndex+1);
     },
 
+    // Callbacks from TimelapseModel
     _playbackDidStart: function()
     {
-	if (this._exploredIntervals.intervalPending)
-	    this._exploredIntervals.endInterval(this._model.currentMarkIndex);
+	this._endPendingInterval();
 
+	var markIndex = this._model.replayStartMarkIndex;
+	var hitIndex = markIndex == this._model.currentMarkIndex ? this._model.currentHitIndex : -1;
 	var canHitBreakpoints = WebInspector.debuggerModel.debuggerEnabled() && WebInspector.debuggerModel.breakpointsActive();
-	if (canHitBreakpoints)
+	if (canHitBreakpoints && this._model.scanningBreakpoints)
 	    this._exploredIntervals.startInterval(this._model.replayStartMarkIndex);
-    },
-
-    _playbackStopped: function()
-    {
-	if (this._exploredIntervals.intervalPending)
-	    this._exploredIntervals.endInterval(this._model.currentMarkIndex);
-
-	this._recordInProgress = false;
-    },
-
-    _breakpointPaused: function()
-    {
-	if (this._exploredIntervals.intervalPending)
-	    this._exploredIntervals.endInterval(this._model.currentMarkIndex);
-    },
-
-    _inputHit: function()
-    {
-	if (!this._recordInProgress)
-	    return;
-
-	this._recordInProgress.complete = true;
-	this._recordInProgress = false;
     },
 
     _breakpointHit: function(event)
     {
-	if (this._exploredIntervals.hasIntervalContaining(this._model.currentMarkIndex))
+	var markIndex = this._model.currentMarkIndex;
+	var hitIndex = this._model.currentHitIndex;
+	if (this._exploredIntervals.hasIntervalContaining(markIndex, hitIndex))
 	    return;
 
 	var rawLocation = event.data.callFrames[0].location;
@@ -125,7 +97,6 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 	this._currentBreakpoint = this._breakpoints[debuggerId];
 
 	var breakpoints = this._records;
-	var markIndex = this._model.currentMarkIndex;
 
 	function markIndexAndRecordComparator(index, record) {
 	    return index - record.mark.index;
@@ -135,28 +106,21 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 
 	if (idx < 0) {
 	    idx = -(idx + 1);
-	    breakpoints.splice(idx, 0, {});
-	}
-
-	if (this._model.currentHitIndex == 0) {
-	    breakpoints[idx] = {};
-	    var records = this._model.allRecords;
 	    var recordIndex = this._model.recordIndexFromMarkIndex(markIndex);
-	    // setting the type allows a uniform decision procedure for the record's category and styles.
-	    breakpoints[idx].type = WebInspector.TimelapseAgent.RecordType.BreakpointHit;
-	    breakpoints[idx].mark = records[recordIndex].mark;
-	    breakpoints[idx].hits = [];
-	    breakpoints[idx].complete = false;
+	    breakpoints.splice(idx, 0, {
+		type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
+		mark: this._model.allRecords[recordIndex].mark,
+		hits: []
+	    });
 	}
 
-	breakpoints[idx].hits.push(this._breakpoints[debuggerId]);
-	this._recordInProgress = breakpoints[idx];
+	breakpoints[idx].hits[hitIndex] = this._breakpoints[debuggerId];
 
 	var eventData = {
 	    breakpoint: this._breakpoints[debuggerId],
 	    mark: breakpoints[idx].mark,
 	    type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
-	    hitIndex: breakpoints[idx].hits.length - 1
+	    hitIndex: hitIndex
 	}
 	this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Events.BreakpointHit, eventData);
     },
@@ -193,9 +157,9 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 
 	for (var i = 0; i < records.length; i++) {
 	    var hits = records[i].hits;
- 
+
 	    for (var j = 0; j < hits.length; j++)
-		if (hits[j].debuggerId == debuggerId)
+		if (typeof hits[j] === "object" && hits[j].debuggerId == debuggerId)
 		    hits.splice(j--, 1);
 
 	    if (hits.length == 0)
@@ -303,32 +267,34 @@ WebInspector.TimelapseIntervalManager.prototype = {
 	return !(typeof this._pendingIntervalStart === "undefined");
     },
 
-    hasIntervalContaining: function(markIndex)
+    hasIntervalContaining: function(markIndex, hitIndex)
     {
+	var location = { markIndex: markIndex, hitIndex: hitIndex || 0 };
 	var intervals = this.intervals;
 	for (var i = 0; i < intervals.length; i++)
-	    if (intervals[i].start <= markIndex && markIndex < intervals[i].end)
+	    if (this._compare(intervals[i].start, location) <= 0
+		&& this._compare(location, intervals[i].end) < 0)
 		return true;
 
 	return false;
     },
 
-    startInterval: function(start)
+    startInterval: function(markIndex, hitIndex)
     {
-	console.assert(!this.intervalPending, "In startInterval("+start+"): startInterval already called");
-	this._pendingIntervalStart = start;
+	console.assert(!this.intervalPending, "In startInterval("+markIndex+", "+hitIndex+"): startInterval already called");
+	this._pendingIntervalStart = { markIndex: markIndex, hitIndex: hitIndex };
     },
 
-    endInterval: function(end)
+    endInterval: function(markIndex, hitIndex)
     {
-	console.assert(typeof this._pendingIntervalStart === "number", "In endInterval("+end+"): corresponding startInterval never called");
-	this.add(this._pendingIntervalStart, end);
+	console.assert(typeof this._pendingIntervalStart === "object", "In endInterval("+markIndex+", "+hitIndex+"): corresponding startInterval never called");
+	this.add(this._pendingIntervalStart, { markIndex: markIndex, hitIndex: hitIndex });
 	delete this._pendingIntervalStart;
     },
 
     add: function(start, end)
     {
-	console.assert(start <= end, "Intervals must have positive delta from start to end (was: "+start+"--"+end+")");
+	console.assert(start <= end, "Intervals must have positive delta from start to end (was: "+start.markIndex+","+start.hitIndex+"--"+end.markIndex+","+end.hitIndex+")");
 
 	function makeInterval(s, e) {
 	    return {
@@ -340,7 +306,7 @@ WebInspector.TimelapseIntervalManager.prototype = {
 	// invariant: this.intervals is disjoint and sorted by start time
 	var intervals = this.intervals;
 
-	if (start-end == 0)
+	if (this._compare(start, end) == 0)
 	    return;
 
 	/* case: first interval */
@@ -350,32 +316,33 @@ WebInspector.TimelapseIntervalManager.prototype = {
 	}
 
 	/* case: interval is before all others */
-	if (intervals[0].start > end) {
+	if (this._compare(intervals[0].start, end) > 0) {
 	    intervals.unshift(makeInterval(start, end));
 	    return;
 	}
 	
 	/* case: interval is after all others */
-	if (intervals[intervals.length-1].end < start) {
+	if (this._compare(intervals[intervals.length-1].end, start) < 0) {
 	    intervals.push(makeInterval(start, end));
 	    return;
 	}
 
 	var i, beginIdx = 0, endIdx = 0;
 	/* seek to where new interval fits */
-	for (i = 0; i < intervals.length && intervals[i].start <= start; i++)
+	for (i = 0; i < intervals.length && this._compare(intervals[i].start, start) <= 0; i++)
 	    beginIdx = i;
 
 	/* case: new interval is enclosed by intervals[beginIdx], so don't adjust intervals  */
-	if (start >= intervals[beginIdx].start && intervals[beginIdx].end >= end)
+	if (this._compare(start, intervals[beginIdx].start) >= 0
+	    && this._compare(intervals[beginIdx].end, end) >= 0)
 	    return;
 
 	var curStart, curEnd;
 
 	/* case: new interval overlaps with intervals[beginIdx] */
-	if (intervals[beginIdx].end >= start) {
-	    curStart = Math.min(start, intervals[beginIdx].start);
-	    curEnd = Math.max(end, intervals[beginIdx].end);	    
+	if (this._compare(intervals[beginIdx].end, start) >= 0) {
+	    curStart = this._compare(start, intervals[beginIdx].start) < 0 ? start : intervals[beginIdx].start;
+	    curEnd = this._compare(end, intervals[beginIdx].end) > 0 ? end : intervals[beginIdx].end;
 	}
 	/* case: new interval comes after intervals[beginIdx] but may overlap with following intervals */
 	else {
@@ -387,8 +354,8 @@ WebInspector.TimelapseIntervalManager.prototype = {
 	/* try to chunk forwards */
 	endIdx = beginIdx;
 	while (endIdx < intervals.length) {
-	    if (intervals[endIdx].start <= curEnd) {
-		curEnd = Math.max(curEnd, intervals[endIdx].end);
+	    if (this._compare(intervals[endIdx].start, curEnd) <= 0) {
+		curEnd = this._compare(curEnd, intervals[endIdx].end) > 0 ? curEnd : intervals[endIdx].end;
 		endIdx++;
 	    }
 	    else
@@ -405,6 +372,14 @@ WebInspector.TimelapseIntervalManager.prototype = {
 	    delete this._pendingIntervalStart;
 
 	this.intervals = [];
+    },
+
+    // Breakpoint hit location comparator
+    _compare: function(a, b)
+    {
+	if (a.markIndex > b.markIndex) return 1;
+	if (a.markIndex < b.markIndex) return -1;
+	return a.hitIndex - b.hitIndex;
     }
 };
 

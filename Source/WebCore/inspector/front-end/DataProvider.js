@@ -383,8 +383,10 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 	for (var i = 0; i < records.length; i++) {
 	    var hits = records[i].hits;
 	    for (var j = 0; j < hits.length; j++) {
+		if (typeof hits[j] === "undefined")
+		    continue;
 		this._records.push({
-		    breakpoint: hits[j].breakpoint,
+		    breakpoint: hits[j],
 		    mark: records[i].mark,
 		    type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
 		    hitIndex: j
@@ -405,7 +407,9 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 	}
 
 	var idx = binarySearch(record, this._records, breakpointRecordComparator);
-	this._records.splice(idx < 0 ? -(idx + 1) : idx, 0, record);
+	if (idx >= 0)
+	    return;
+	this._records.splice(-(idx + 1), 0, record);
 
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged, this);
     },

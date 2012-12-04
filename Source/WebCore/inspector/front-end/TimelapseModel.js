@@ -51,7 +51,7 @@ WebInspector.TimelapseModel = function()
 
     this._breakpointsWereEnabled = WebInspector.debuggerModel.breakpointsActive();
     this._suppressingBreakpoints = false;
-    this._pauseCallbacks = [];
+    this._replayActionQueue = [];
     this._debuggerWalk = [];
 
     WebInspector.debuggerModel.addEventListener(WebInspector.DebuggerModel.Events.DebuggerPaused, this._debuggerPaused, this);
@@ -112,8 +112,8 @@ WebInspector.TimelapseModel.prototype = {
 
     startRecording: function()
     {
-	this._pauseCallbacks = [];
-	this._scanningBreakpoints = false;
+	this._cancelReplayToBreakpointHit();
+	this._cancelBreakpointScan();
 
 	this._changeStatus("Starting capture...");
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.RecordingWillStart);
@@ -127,9 +127,8 @@ WebInspector.TimelapseModel.prototype = {
 	}
 
 	if (this._replaying) {
-	    this._pauseCallbacks.push(TimelapseAgent.startRecording);
-	    this.stopPlayback(true);
-	    return;
+	    this._enqueueAction(TimelapseAgent.startRecording);
+	    return this.stopPlayback(true);
 	}
 
 	TimelapseAgent.startRecording();
@@ -210,30 +209,31 @@ WebInspector.TimelapseModel.prototype = {
 
     replayToBreakpointHit: function(markIndex, hitIndex, allowBreakpoints, fastReplay)
     {
-	this._targetHitIndex = hitIndex;
-	this._replayingToBreakpoint = true;
+	this._targetBreakpoint = { markIndex: markIndex, hitIndex: hitIndex };
+	WebInspector.debuggerModel.addEventListener(WebInspector.DebuggerModel.Events.DebuggerPaused, this._resumeUntilTargetBreakpoint, this);
 
 	if (this._replaying && this._currentMarkIndex == markIndex) {
 	    // Workaround: currently there is no way to force replay up to the current mark index.
 	    if (hitIndex < this._breakpointHitIndex) {
 		var recordIndex = this.recordIndexFromMarkIndex(markIndex);
 		var prevIndex = this._records[recordIndex - 1].mark.index;
-		this._pauseCallbacks.push(this.replayUpToMarkIndex.bind(this, markIndex, allowBreakpoints, fastReplay))
+		this._enqueueAction(this.replayUpToMarkIndex.bind(this, markIndex, allowBreakpoints, fastReplay))
+		this._enqueueAction(this.replayToCompletion.bind(this));
 		this.replayUpToMarkIndex(prevIndex, allowBreakpoints, fastReplay);
 	    }
 	    else if (hitIndex > this._breakpointHitIndex) {
 		if (WebInspector.debuggerModel.isPaused())
 		    DebuggerAgent.resume();
 		else
-		    this.replayToCompletion(true);
+		    this.replayToCompletion();
 	    }
-	    else if (hitIndex == this._breakpointHitIndex) {
-		delete this._targetHitIndex;
-		this._replayingToBreakpoint = false;
-	    }
+	    else if (hitIndex == this._breakpointHitIndex)
+		this._cancelReplayToBreakpointHit();
 	}
-	else
+	else {
+	    this._enqueueAction(this.replayToCompletion.bind(this));
 	    this.replayUpToMarkIndex(markIndex, allowBreakpoints, fastReplay);
+	}
     },
 
     replayDebuggerWalk: function(markIndex, hitIndex, debuggerWalk)
@@ -244,7 +244,7 @@ WebInspector.TimelapseModel.prototype = {
 	    // Workaround: currently there is no way to force replay up to the current mark index.
 	    var recordIndex = this.recordIndexFromMarkIndex(markIndex);
 	    var prevIndex = this._records[recordIndex - 1].mark.index;
-	    this._pauseCallbacks.push(this.replayToBreakpointHit.bind(this, markIndex, hitIndex, false, true));
+	    this._enqueueAction(this.replayToBreakpointHit.bind(this, markIndex, hitIndex, false, true));
 	    this.replayUpToMarkIndex(prevIndex, false, true);
 	}
 	else
@@ -258,47 +258,44 @@ WebInspector.TimelapseModel.prototype = {
 
 	/* Case: playback is paused inside the region to be scanned. */
 	if (startIndex <= currentIndex && endIndex > currentIndex) {
-	    this._pauseCallbacks.push(this.replayUpToMarkIndex.bind(this, endIndex, true, true));
+	    this._enqueueAction(this.replayUpToMarkIndex.bind(this, endIndex, true, true));
 
 	    if (startIndex > this._records[0].mark.index)
-		this._pauseCallbacks.push(this.replayUpToMarkIndex.bind(this, startIndex, false, true));
+		this._enqueueAction(this.replayUpToMarkIndex.bind(this, startIndex, false, true));
 
 	    if (this._breakpointPaused)
-		this._pauseCallbacks.push(this.replayToBreakpointHit.bind(this, currentIndex, this._breakpointHitIndex, true, true));
+		this._enqueueAction(this.replayToBreakpointHit.bind(this, currentIndex, this._breakpointHitIndex, true, true));
 	    else
-		this._pauseCallbacks.push(this.replayUpToMarkIndex.bind(this, currentIndex, true, true));
+		this._enqueueAction(this.replayUpToMarkIndex.bind(this, currentIndex, true, true));
 	}
 	/* Case: playback is paused outside of the region to be scanned, or stopped. */
 	else {
 	    if (startIndex > this._records[0].mark.index)
-		this._pauseCallbacks.push(this.replayUpToMarkIndex.bind(this, startIndex, false, true));
+		this._enqueueAction(this.replayUpToMarkIndex.bind(this, startIndex, false, true));
 
 	    // Workaround: currently there is no way to force replay up to the current mark index.
 	    if (currentIndex == endIndex) {
 		var endRecordIndex = this.recordIndexFromMarkIndex(endIndex);
 		var prevIndex = this._records[endRecordIndex - 1].mark.index;
-		this._pauseCallbacks.push(this.replayUpToMarkIndex.bind(this, prevIndex, true, true));
+		this._enqueueAction(this.replayUpToMarkIndex.bind(this, prevIndex, true, true));
 	    }
 
-	    this._pauseCallbacks.push(this.replayUpToMarkIndex.bind(this, endIndex, true, true));
+	    this._enqueueAction(this.replayUpToMarkIndex.bind(this, endIndex, true, true));
 
 	    if (this._breakpointPaused)
-		this._pauseCallbacks.push(this.replayToBreakpointHit.bind(this, currentIndex, this._breakpointHitIndex, false, true));
+		this._enqueueAction(this.replayToBreakpointHit.bind(this, currentIndex, this._breakpointHitIndex, false, true));
 	    else
-		this._pauseCallbacks.push(this.replayUpToMarkIndex.bind(this, currentIndex, false, true));
+		this._enqueueAction(this.replayUpToMarkIndex.bind(this, currentIndex, false, true));
 	}
 
 	this._scanningBreakpoints = true;
-	this._pauseCallbacks.shift()();
+	this._replayActionQueue.shift()();
     },
 
     pausePlayback: function()
     {
-	if (this._scanningBreakpoints) {
-	    this._pauseCallbacks = [];
-	    this._scanningBreakpoints = false;
-	}
-
+	this._cancelReplayToBreakpointHit();
+	this._cancelBreakpointScan();
 	this._suppressBreakpoints();
 
 	if (WebInspector.debuggerModel.isPaused()) {
@@ -313,11 +310,8 @@ WebInspector.TimelapseModel.prototype = {
 
     stopPlayback: function(shouldUnlock)
     {
-	if (this._scanningBreakpoints) {
-	    this._pauseCallbacks = [];
-	    this._scanningBreakpoints = false;
-	}
-
+	this._cancelReplayToBreakpointHit();
+	this._cancelBreakpointScan();
 	this._suppressBreakpoints();
 
 	if (WebInspector.debuggerModel.isPaused()) {
@@ -422,6 +416,32 @@ WebInspector.TimelapseModel.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.StatusChanged, this._status);
     },
 
+    _enqueueAction: function(action)
+    {
+	this._replayActionQueue.push(action);
+    },
+
+    _resumeUntilTargetBreakpoint: function() {
+	if (this._currentMarkIndex == this._targetBreakpoint.markIndex
+	    && this._breakpointHitIndex == this._targetBreakpoint.hitIndex)
+	    this._cancelReplayToBreakpointHit();
+	else
+	    DebuggerAgent.resume();
+    },
+
+    _cancelReplayToBreakpointHit: function() {
+	WebInspector.debuggerModel.removeEventListener(WebInspector.DebuggerModel.Events.DebuggerPaused, this._resumeUntilTargetBreakpoint, this);
+	delete this._targetBreakpoint;
+    },
+
+    _cancelBreakpointScan: function() {
+	if (!this._scanningBreakpoints)
+	    return;
+
+	this._replayActionQueue = [];
+	this._scanningBreakpoints = false;
+    },
+
     // Callbacks from the backend message dispatcher (TimelapseDispatcher below)
     _timelapseEnabled: function()
     {
@@ -483,17 +503,10 @@ WebInspector.TimelapseModel.prototype = {
 	this._fastReplaying = false;
 	this._unsuppressBreakpoints();
 
-	if (this._pauseCallbacks.length) {
-	    this._pauseCallbacks.shift()();
-	    return;
-	}
+	if (this._replayActionQueue.length)
+	    return this._replayActionQueue.shift()();
 
 	this._scanningBreakpoints = false;
-
-	if (this._replayingToBreakpoint) {
-	    TimelapseAgent.replayToCompletion(true);
-	    return;
-	}
 
 	this._changeStatus("Paused");
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.InputPaused);
@@ -503,14 +516,11 @@ WebInspector.TimelapseModel.prototype = {
     {
 	this._replaying = false;
 	this._fastReplaying = false;
-	this._replayingToBreakpoint = false;
-	delete this._targetHitIndex;
+	this._cancelReplayToBreakpointHit();
 	this._unsuppressBreakpoints();
 
-	if (this._pauseCallbacks.length) {
-	    this._pauseCallbacks.shift()();
-	    return;
-	}
+	if (this._replayActionQueue.length)
+	    return this._replayActionQueue.shift()();
 
 	this._scanningBreakpoints = false;
 
@@ -559,21 +569,15 @@ WebInspector.TimelapseModel.prototype = {
 
 	if (breakpoint) {
 	    this._breakpointHitIndex++;
-	    this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.BreakpointHit, event.data);
-
-	    if (this._targetHitIndex == this._breakpointHitIndex) {
-		this._replayingToBreakpoint = false;
-		delete this._targetHitIndex;
-	    }
+	    if (this._scanningBreakpoints)
+		this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.BreakpointHit, event.data);
 	}
 
-	if (!this._replayingToBreakpoint && this._debuggerWalk.length) {
-	    this._debuggerWalk.shift()();
-	    return;
-	}
+	if (!this._targetBreakpoint && this._debuggerWalk.length)
+	    return this._debuggerWalk.shift()();
 
 	if (breakpoint) {
-	    if (this._replayingToBreakpoint || this._scanningBreakpoints)
+	    if (this._scanningBreakpoints)
 		DebuggerAgent.resume();
 	    else {
 		this._statusBeforeBreakpointPause = this._status;
