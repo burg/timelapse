@@ -513,11 +513,22 @@ WebInspector.TimelapseReplayingView = function()
     this._model = WebInspector.timelapseModel;
     this._presentationModel = WebInspector.timelapsePresentationModel;
 
+    this._splitView = new WebInspector.SplitView(WebInspector.SplitView.SidebarPosition.Right,
+						"timelapseControllerSplitView", 200);
+
+    // TODO: remove this code to hide sidebar when we start putting stuff into it.
+    this._splitView.resizable = false;
+    this._splitView.hideSidebarElement();
+
+    this._splitView.show(this.element);
+
     this._miniview = new WebInspector.TimelapseMiniview();
-    this._miniview.show(this.element);
+    this._miniview.show(this._splitView.mainElement);
 
     this._overviewWindow = new WebInspector.TimelapseOverview();
-    this._overviewWindow.show(this.element);
+    this._overviewWindow.show(this._splitView.mainElement);
+
+    // TODO: create container view for extra info in right sidebar element.
 };
 
 WebInspector.TimelapseReplayingView.prototype = {
