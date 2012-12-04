@@ -53,7 +53,7 @@ module threads {
 
 #if defined(ENABLE_NOTIFICATIONS) && ENABLE_NOTIFICATIONS
         static readonly attribute [CallWith=ScriptExecutionContext] DOMString permission;
-        [Custom] static void requestPermission(in NotificationPermissionCallback callback);
+        [Custom, CallWith=ScriptExecutionContext] static void requestPermission(in NotificationPermissionCallback callback);
 #endif
 
         attribute EventListener onshow;
