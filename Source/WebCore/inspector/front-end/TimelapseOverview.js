@@ -63,7 +63,6 @@ WebInspector.TimelapseOverview = function()
     // TODO: these should instead listen to specific data provider events.
     var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
     this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
-    this._presentationModel.addEventListener(presEventNames.ProviderRemoved, this._onProviderRemoved, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
     this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
@@ -422,6 +421,8 @@ WebInspector.TimelapseOverview.prototype = {
 
 	console.assert(!this._timelineForProvider(provider), "Timeline for provider already exists!");
 
+	provider.addEventListener(WebInspector.DataProvider.Events.WillRemove, this._removeProvider, this);
+
 	var ordinal = this._timelines.length;
 	var height = WebInspector.TimelapseOverview.TimelineHeight;
 
@@ -440,12 +441,12 @@ WebInspector.TimelapseOverview.prototype = {
 	this._scheduleRefresh();
     },
 
-    _onProviderRemoved: function(event)
+    _removeProvider: function(event)
     {
 	var provider = event.data;
+	console.assert(this._canUseProvider(provider), "should only remove providers that we know we can handle.");
 
-	if (!this._canUseProvider(provider))
-	    return;
+	provider.removeEventListener(WebInspector.DataProvider.Events.WillRemove, this._removeProvider, this);
 
 	var existingTimeline = this._timelineForProvider(provider);
 	if (!existingTimeline)

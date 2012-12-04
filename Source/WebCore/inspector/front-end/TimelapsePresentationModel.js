@@ -61,7 +61,6 @@ WebInspector.TimelapsePresentationModel = function()
 
 WebInspector.TimelapsePresentationModel.EventTypes = {
     ProviderAdded: "TimelapseProviderAdded",
-    ProviderRemoved: "TimelapseProviderRemoved",
     // TODO: the following events are details of specific data providers.
     InputSelected: "TimelapseInputSelected",
     PreviewStarted: "TimelapsePreviewStarted",
@@ -123,7 +122,9 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	// TODO: keep old breakpoint providers
 	var model = this;
 	var breakpointProviders = this._providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
-	breakpointProviders.forEach(function(provider) { model.removeProvider(provider); });
+	breakpointProviders.forEach(function(provider) { 
+            model.removeProvider(provider);
+        });
 
 	this.addProvider(new WebInspector.TimelapseBreakpointDataProvider(
 			     WebInspector.UIString("Breakpoint"),
@@ -176,14 +177,12 @@ WebInspector.TimelapsePresentationModel.prototype = {
 
     _removeProviderAtIndex: function(idx) {
 	console.assert(idx >= 0 && idx < this._providers.length, "Tried to remove provider at invalid index.");
-	
-	var removed = this._providers.splice(idx, 1)[0];
-    	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.ProviderRemoved, removed);
+	this._providers[idx].willRemove();
+	this._providers.splice(idx, 1);
     },
 
     _clearProviders: function() {
 	while (this._providers.length > 0) {
-	    this._providers[0].willRemove();
 	    this._removeProviderAtIndex(0);
 	}
     },
