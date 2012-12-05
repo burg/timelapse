@@ -118,6 +118,7 @@ WebInspector.DataProvider.Events = {
 
     // used by all data providers to signal something changed.
     DataChanged: "DataChanged",
+    SelectionChanged: "SelectionChanged",
     // used by input data provider to signal incremental addition.
     // this only makes sense for providers that add data monotonically.
     AddedInput: "AddedInput",
@@ -132,6 +133,7 @@ WebInspector.TimelapseInputDataProvider = function(name, displayName, color)
     this._color = color;
     this._records = [];
     this._resourceUrlById = {};
+    this._selectedIndices = [];
 
     var model = WebInspector.timelapseModel;
     var eventNames = WebInspector.TimelapseModel.EventTypes;
@@ -160,6 +162,43 @@ WebInspector.TimelapseInputDataProvider.prototype = {
     get records()
     {
 	return this._records;
+    },
+
+    get selectedRecords()
+    {
+	var records = [];
+
+	for (var i = 0; i < this._selectedIndices.length; i++)
+	    records.push(this._records[selectedIndices[i]]);
+
+	return records;
+    },
+    
+    get selectedIndices()
+    {
+	return this._selectedIndices();
+    },
+
+    set selectedIndices(indices)
+    {
+        if (!indices || indices.length == 0)
+	    return;
+	
+	for (var i = 0; i < indices.length; i++) {
+	    var withinBounds = indices[i] >= 0 && indices[i] < this._records.length;
+	    console.assert(withinBounds, "Tried to select record index out of bounds");	    
+	    if (!withinBounds)
+		return;
+	}
+
+	this._selectedIndices = indices.slice();
+	this.dispatchEventToListeners(WebInspector.DataProvider.Events.SelectionChanged, this);
+    },
+
+    clearSelections: function()
+    {
+	// more literate API than above; otherwise, the same thing.
+	this.selectIndices = [];
     },
 
     _recordAdded: function(event)
