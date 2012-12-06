@@ -417,6 +417,13 @@ WebInspector.TimelapseOverview.prototype = {
 	var timeline = new WebInspector.TimelapseCircleTimeline(provider);
 	timeline.element.style.setProperty("top", ordinal*height + "px");
 	timeline.show(this._timelineContainer);
+
+	// set up circle event listeners
+	var timelineEvents = WebInspector.TimelapseCircleTimeline.Events;
+	timeline.addEventListener(timelineEvents.CircleMouseOver, this._onCircleMouseOver, this);
+	timeline.addEventListener(timelineEvents.CircleMouseOut, this._onCircleMouseOut, this);
+	timeline.addEventListener(timelineEvents.CircleSelected, this._onCircleSelected, this);
+
 	this._timelines.push(timeline);
 
 	// force dimensions of containers to be recalculated
@@ -444,9 +451,62 @@ WebInspector.TimelapseOverview.prototype = {
 	removedTimeline.detach();
 	removedLabel.detach();
 
+	// tear down circle event listeners
+	var timelineEvents = WebInspector.TimelapseCircleTimeline.Events;
+	removedTimeline.removeEventListener(timelineEvents.CircleMouseOver, this._onCircleMouseOver, this);
+	removedTimeline.removeEventListener(timelineEvents.CircleMouseOut, this._onCircleMouseOut, this);
+	removedTimeline.removeEventListener(timelineEvents.CircleSelected, this._onCircleSelected, this);
+
 	// force dimensions of containers to be recalculated
 	this.onResize();
 	this._scheduleRefresh();
+    },
+
+    _onCircleMouseOver: function(event)
+    {
+	var timeline = event.data.timeline;
+
+	this._timelines.forEach(function(tl) {
+	    if (timeline === tl)
+		return;
+
+	    tl.clearHighlights();
+	});
+
+	var circleIdx = event.data.circleIndex;
+	var recordIndices = timeline.data.recordIndices[circleIdx];
+
+	// TODO: set the records for the provider as selected
+	// TODO: push provider onto OverviewPreviewProvider
+    },
+
+    _onCircleMouseOut: function(event)
+    {
+	var timeline = event.data.timeline;
+	var circleIdx = event.data.circleIndex;
+	var recordIndices = timeline.data.recordIndices[circleIdx];
+
+	// TODO: set the records for the provider as de-selected
+	// TODO: pop provider from OverviewPreviewProvider
+    },
+
+    _onCircleSelected: function(event)
+    {
+	var timeline = event.data.timeline;
+
+	this._timelines.forEach(function(tl) {
+	    if (timeline === tl)
+		return;
+
+	    tl.clearSelection();
+            tl.refresh();
+	});
+
+	var circleIdx = event.data.circleIndex;
+	var recordIndices = timeline.data.recordIndices[circleIdx];
+
+	// TODO: set the records for the provider as selected
+	// TODO: push provider onto OverviewPreviewProvider
     },
 
     _onOverviewMousedown: function(event)
@@ -485,8 +545,8 @@ WebInspector.TimelapseOverview.prototype = {
 	// TODO: this is broken now, but it's going to get nuked soon anyway with the rest of popup stuff. - BJB
 	if (this.hasOwnProperty("_hoveredCircle")) {
 	    var timeline = this._hoveredCircle.timeline;
-	    var records = timeline.data.recordIndices[this._hoveredCircle.circleIndex];
-	    var highlightCoords = timeline.getCircleGeometry(this._hoveredCircle.circleIndex);
+	    var records = timeline.data.recordIndices[this._hoveredCircleIndex];
+	    var highlightCoords = timeline.getCircleGeometry(this._hoveredCircleIndex);
 	    var popupPosition = {
 		x: timeline.element.boxInWindow().x + highlightCoords.left,
 		y: timeline.element.boxInWindow().y + highlightCoords.top + highlightCoords.radius + 1
@@ -829,12 +889,6 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this.provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
 	this.provider.addEventListener(events.WillRemove, this._onProviderRemoved, this);
 
-	// TODO: REMOVE
-	var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
-	this._presentationModel.addEventListener(presEventNames.CircleMouseOver, this._onCircleMouseOver, this);
-	this._presentationModel.addEventListener(presEventNames.CircleMouseOut, this._onCircleMouseOut, this);
-	this._presentationModel.addEventListener(presEventNames.CircleSelected, this._onCircleSelected, this);
-
 	this.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged,
 					 this._onZoomChanged, this);
 
@@ -860,12 +914,6 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
 	this.calculator.removeEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged,
 					    this._onZoomChanged, this);
-
-	// TODO: REMOVE
-	var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
-	this._presentationModel.removeEventListener(presEventNames.CircleMouseOver, this._onCircleMouseOver, this);
-	this._presentationModel.removeEventListener(presEventNames.CircleMouseOut, this._onCircleMouseOut, this);
-	this._presentationModel.removeEventListener(presEventNames.CircleSelected, this._onCircleSelected, this);
 
 	// remove all DOM listeners bound to this.
 	for (var key in this._boundListeners)
@@ -958,49 +1006,48 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     },
 
 
-    _onCircleSelected: function(event)
+    _selectCircle: function(circleIndex)
     {
-	if (event.data.provider !== this.provider)
-	    return;
-
 	if (this.hasOwnProperty("_selectedCircleIndex")) {
 	    this.clearCursor();
 	    this.removeHighlight(this._selectedCircleIndex);
 	    delete this._selectedCircleIndex;
 	}
 
-	var circleIndex = event.data.index;
 	this._selectedCircleIndex = circleIndex;
 	this.addHighlight(circleIndex);
-	this.refresh();
+
+	var eventData = {
+	  "timeline": this,
+	  "circleIndex": circleIndex,
+	};
+
+	this.dispatchEventToListeners(WebInspector.TimelapseCircleTimeline.Events.CircleSelected, eventData);
     },
 
-    // TODO: combine these with the mouse event listeners below, without indirecting.
-
-    _onCircleMouseOut: function(event)
+    _circleMouseOut: function(circleIndex)
     {
-	if (event.data.provider !== this.provider)
-	    return;
-
 	if (!this.hasOwnProperty("_hoveredCircleIndex"))
 	    return;
 
 	this.clearCursor();
 	this.removeHighlight(this._hoveredCircleIndex);
 	delete this._hoveredCircleIndex;
+
+	var eventData = {
+	  "timeline": this,
+	  "circleIndex": circleIndex,
+	};
+
+	this.dispatchEventToListeners(WebInspector.TimelapseCircleTimeline.Events.CircleMouseOut, eventData);
     },
 
-    _onCircleMouseOver: function(event)
+    _circleMouseOver: function(circleIndex)
     {
-	if (event.data.provider !== this.provider)
-	    return;
-
-	var circleIndex = event.data.index;
 	this._hoveredCircleIndex = circleIndex;
 	
 	this.setCursor("pointer");
 	this.addHighlight(circleIndex);
-	this.refresh();
 
 	var highlightCoords = this.getCircleGeometry(circleIndex);
 
@@ -1009,7 +1056,15 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	    y: this.element.boxInWindow().y + highlightCoords.top + highlightCoords.radius + 1
 	};
 
-	this._presentationModel.overviewPopover.show(this.provider, event.data.recordIndices, position);
+	var eventData = {
+	  "timeline": this,
+	  "circleIndex": circleIndex,
+	};
+
+	this.dispatchEventToListeners(WebInspector.TimelapseCircleTimeline.Events.CircleMouseOver, eventData);
+
+	// TODO: remove
+	this._presentationModel.overviewPopover.show(this.provider, this.data.recordIndices[circleIndex], position);
     },
 
     _onTimelineClicked: function(event)
@@ -1028,8 +1083,10 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
 	// TODO: fire the event directly from here
 	var clickedCircleIdx = this.hitTest(event);
-	if (clickedCircleIdx != -1)
-	    this._presentationModel.selectCircle(this.provider, clickedCircleIdx, this.data.recordIndices[clickedCircleIdx]);
+	if (clickedCircleIdx != -1) {
+	    this._selectCircle(clickedCircleIdx);
+	    this.refresh();
+	}
 
 	event.stopPropagation();
     },
@@ -1058,11 +1115,12 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	    return;
 
 	if (hadPreviousHover)
-	    this._presentationModel.circleMouseOut(this.provider, this._hoveredCircleIndex, this.data.recordIndices[this._hoveredCircleIndex]);
+	    this._circleMouseOut(hoveredCircleIdx);
 
 	if (hoveredCircleIdx != -1)
-	    this._presentationModel.circleMouseOver(this.provider, hoveredCircleIdx, this.data.recordIndices[hoveredCircleIdx]);
+	    this._circleMouseOver(hoveredCircleIdx);
 
+	this.refresh();
     },
 
     _onTimelineMouseout: function(event)
@@ -1082,7 +1140,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	if (this.data.recordIndices.length == 0)
 	    return;
 
-	this._presentationModel.circleMouseOut(this.provider, this._hoveredCircleIndex, this.data.recordIndices[this._hoveredCircleIndex]);
+	this._circleMouseOut();
     },
 
     _onTimelineDoubleClicked: function(event)
@@ -1215,6 +1273,15 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     clearHighlights: function()
     {
 	this._highlights = [];
+	this._dirty = true;
+    },
+
+    clearSelection: function()
+    {
+	if (!this._selectedCircleIndex)
+	    return;
+
+	delete this._selectedCircleIndex;
 	this._dirty = true;
     },
 
@@ -1407,8 +1474,15 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
 WebInspector.TimelapseCircleTimeline.prototype.__proto__ = WebInspector.View.prototype;
 
+
+WebInspector.TimelapseCircleTimeline.Events = {
+    CircleMouseOver: "CircleMouseOver",
+    CircleMouseOut: "CircleMouseOut",
+    CircleSelected: "CircleSelected",
+}
+
 /**
- * @constructor
+ * @Constructor
  * @extends {WebInspector.Object}
  */
 WebInspector.TimelapseOverviewSlider = function(overview, name, adjustable)

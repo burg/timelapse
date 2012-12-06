@@ -66,9 +66,6 @@ WebInspector.TimelapsePresentationModel.EventTypes = {
     PreviewStarted: "TimelapsePreviewStarted",
     PreviewStopped: "TimelapsePreviewStopped",
     PreviewChanged: "TimelapsePreviewChanged",
-    CircleMouseOver: "TimelapseCircleMouseOver",
-    CircleMouseOut: "TimelapseCircleMouseOut",
-    CircleSelected: "TimelapseCircleSelected"
 };
 
 WebInspector.TimelapsePresentationModel.prototype = {
@@ -221,42 +218,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
 
 	this._previewedRecord = record;
 	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.PreviewChanged, record);
-    },
-
-    // TODO: Selection state should live on the specific DataProvider which is being selected.
-    selectCircle: function(provider, circleIndex, recordIndices)
-    {
-	var eventData = {
-	    "provider": provider,
-	    "index": circleIndex,
-	    "recordIndices": recordIndices
-	};
-
-	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.CircleSelected, eventData);
-    },
-
-    // TODO: Selection state should live on the specific DataProvider which is being selected.
-    circleMouseOver: function(provider, circleIndex, recordIndices)
-    {
-	var eventData = {
-	    "provider": provider,
-	    "index": circleIndex,
-	    "recordIndices": recordIndices
-	};
-
-	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.CircleMouseOver, eventData);
-    },
-
-    // TODO: Selection state should live on the specific DataProvider which is being selected.
-    circleMouseOut: function(provider, circleIndex, recordIndices)
-    {
-	var eventData = {
-	    "provider": provider,
-	    "index": circleIndex,
-	    "recordIndices": recordIndices
-	};
-
-	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.EventTypes.CircleMouseOut, eventData);
     },
 
     // TODO: Selection state should live on the specific DataProvider which is being selected.
