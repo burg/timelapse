@@ -132,6 +132,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	this._timelines = [];
 	this._labels = [];
+	this._circleContexts = [];
 
 	this.element.appendChild(this._timelineContainer);
 
@@ -473,10 +474,21 @@ WebInspector.TimelapseOverview.prototype = {
 	    tl.clearHighlights();
 	});
 
-	var circleIdx = event.data.circleIndex;
-	var recordIndices = timeline.data.recordIndices[circleIdx];
+	if (this._circleContexts.length > 0) {
+	    var prevContext = this._circleContexts[0];
+	    prevContext.timeline.provider.clearSelections();
+	}
 
-	// TODO: set the records for the provider as selected
+	var circleIdx = event.data.circleIndex;
+	var indices = timeline.data.recordIndices[circleIdx];
+	timeline.provider.selectedIndices = indices;
+
+	var context = {
+	    "index": circleIdx,
+	    "timeline": timeline,
+	};
+	this._circleContexts.unshift(context);
+
 	// TODO: push provider onto OverviewPreviewProvider
     },
 
@@ -484,9 +496,17 @@ WebInspector.TimelapseOverview.prototype = {
     {
 	var timeline = event.data.timeline;
 	var circleIdx = event.data.circleIndex;
-	var recordIndices = timeline.data.recordIndices[circleIdx];
 
-	// TODO: set the records for the provider as de-selected
+	console.assert(this._circleContexts.length > 0, "We lost track of what circle was being hovered. :-(");
+	var prevContext = this._circleContexts.shift();
+	prevContext.timeline.provider.clearSelections();
+
+	if (this._circleContexts.length > 0) {
+	    var context = this._circleContexts[0];
+	    var indices = context.timeline.data[context.index];
+	    context.timeline.provider.selectedIndices = indices;
+	}
+
 	// TODO: pop provider from OverviewPreviewProvider
     },
 
@@ -502,10 +522,21 @@ WebInspector.TimelapseOverview.prototype = {
             tl.refresh();
 	});
 
-	var circleIdx = event.data.circleIndex;
-	var recordIndices = timeline.data.recordIndices[circleIdx];
+	if (this._circleContexts.length > 0) {
+	    var prevContext = this._circleContexts[0];
+	    prevContext.timeline.provider.clearSelections();
+	}
 
-	// TODO: set the records for the provider as selected
+	var circleIdx = event.data.circleIndex;
+	var indices = timeline.data.recordIndices[circleIdx];
+	this._circleContexts[0].timeline.provider.selectedIndices = indices;
+
+	var context = {
+	    "index": circleIdx,
+	    "timeline": timeline,
+	};
+	this._circleContexts.unshift(context);
+
 	// TODO: push provider onto OverviewPreviewProvider
     },
 
