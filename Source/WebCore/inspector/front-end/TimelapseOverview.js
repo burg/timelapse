@@ -69,6 +69,9 @@ WebInspector.TimelapseOverview = function()
 
     this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
 
+    this._previewProvider = new WebInspector.OverviewPreviewProvider();
+    this._presentationModel.addProvider(this._previewProvider);
+
     // TODO: listen to TimelapseAnchorDataProvider instead.
     var anchorManager = WebInspector.timelapsePresentationModel.anchorManager;
     var anchorEventNames = WebInspector.TimelapseAnchorManager.EventTypes;

@@ -72,7 +72,6 @@ WebInspector.TimelapsePresentationModel.prototype = {
     // TODO: most of this state will be moved to providers or timeline widgets
     reset: function() 
     {
-	this._resourceUrlById = [];
 	this.anchorManager.reset();
 	this.calculator.reset();
 
@@ -159,7 +158,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	return found;
     },
 
-    _providersWithType: function(ty)
+    providersWithType: function(ty)
     {
 	var found = [];
 	for (var i = 0; i < this._providers.length; i++) {
