@@ -170,14 +170,14 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	var records = [];
 
 	for (var i = 0; i < this._selectedIndices.length; i++)
-	    records.push(this._records[selectedIndices[i]]);
+	    records.push(this._records[this._selectedIndices[i]]);
 
 	return records;
     },
     
     get selectedIndices()
     {
-	return this._selectedIndices();
+	return this._selectedIndices.slice();
     },
 
     set selectedIndices(indices)

@@ -75,7 +75,13 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.anchorManager.reset();
 	this.calculator.reset();
 
-	this._clearProviders();
+	var inputProviders = this.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+	for (var i = 0; i < inputProviders.length; i++)
+	    this.removeProvider(inputProviders[i]);
+
+	var breakpointProviders = this.providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
+	for (var i = 0; i < breakpointProviders.length; i++)
+	    this.removeProvider(breakpointProviders[i]);
     },
 
     // Private API (callbacks)
@@ -117,7 +123,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
     {
 	// TODO: keep old breakpoint providers
 	var model = this;
-	var breakpointProviders = this._providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
+	var breakpointProviders = this.providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
 	breakpointProviders.forEach(function(provider) { 
             model.removeProvider(provider);
         });

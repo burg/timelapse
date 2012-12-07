@@ -491,8 +491,8 @@ WebInspector.TimelapseOverview.prototype = {
 	    "timeline": timeline,
 	};
 	this._circleContexts.unshift(context);
-
-	// TODO: push provider onto OverviewPreviewProvider
+	var view = new WebInspector.OverviewPreviewViews.InputView(timeline.provider);
+	this._previewProvider.pushView(view);
     },
 
     _onCircleMouseOut: function(event)
@@ -510,7 +510,7 @@ WebInspector.TimelapseOverview.prototype = {
 	    context.timeline.provider.selectedIndices = indices;
 	}
 
-	// TODO: pop provider from OverviewPreviewProvider
+	this._previewProvider.popView();
     },
 
     _onCircleSelected: function(event)
@@ -540,7 +540,8 @@ WebInspector.TimelapseOverview.prototype = {
 	};
 	this._circleContexts.unshift(context);
 
-	// TODO: push provider onto OverviewPreviewProvider
+	var view = new WebInspector.OverviewPreviewViews.InputView(timeline.provider);
+	this._previewProvider.pushView(view);
     },
 
     _onOverviewMousedown: function(event)
