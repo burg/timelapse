@@ -72,14 +72,54 @@ WebInspector.OverviewPreviewViews = {};
  * @extends {WebInspector.View}
  */
 
-WebInspector.OverviewPreviewViews.DefaultView = function()
+WebInspector.OverviewPreviewViews.BaseView = function(name)
 {
     WebInspector.View.call(this);
-    this.element.classList.add("timelapse-opreview-default");
-    this.element.textContent = "Nothing to preview.\nSelect something from a timeline at left.";
+
+    this.element.classList.add("timelapse-overview-preview");
+    this.element.classList.add("timelapse-preview-" + name);
+    this._header = document.createElement("header");
+    this.element.appendChild(this._header);
+    this._content = document.createElement("div"); // dummy
+    this.element.appendChild(this._content);
 };
 
-WebInspector.OverviewPreviewViews.DefaultView.prototype.__proto__ = WebInspector.View.prototype;
+WebInspector.OverviewPreviewViews.BaseView.prototype = {
+    set header(text)
+    {
+	this._header.textContent = text;
+    },
+
+    set body(elem)
+    {
+	this.element.replaceChild(elem, this._content);
+	this._content = elem;
+    }
+};
+
+WebInspector.OverviewPreviewViews.BaseView.prototype.__proto__ = WebInspector.View.prototype;
+
+/**
+ * @constructor
+ * @extends {WebInspector.View}
+ */
+
+WebInspector.OverviewPreviewViews.DefaultView = function()
+{
+    WebInspector.OverviewPreviewViews.BaseView.call(this, "default");
+    this.header = "Preview Window";
+    var body = document.createElement("div");
+    var text = ["Nothing to preview.",
+	        "Select something from a timeline at left."];
+    for (var i = 0; i < text.length; i++) {
+	var para = document.createElement("p");
+	para.textContent = text[i];
+	body.appendChild(para);
+    }
+    this.body = body;
+};
+
+WebInspector.OverviewPreviewViews.DefaultView.prototype.__proto__ = WebInspector.OverviewPreviewViews.BaseView.prototype;
 
 /**
  * @constructor

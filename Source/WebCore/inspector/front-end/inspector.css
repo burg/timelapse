@@ -3157,6 +3157,27 @@ div.timelapse-timeline-label-wrapper.disabled {
     color: #333 !important;
 }
 
+div.timelapse-overview-preview header {
+    height: 24px; 
+    font-size: 12px;
+    padding: 2px 5px;
+    font-weight: bold;
+    line-height: 22px;
+    text-align: center;
+    text-align: center;
+    color: rgb(110,110,110);
+    text-shadow: white 0 1px 0;
+    background-image: -webkit-gradient(linear, left top, left bottom, from(rgb(243, 243, 243)), color-stop(0.05, rgb(243, 243, 243)), color-stop(0.05, rgb(230, 230, 230)), to(rgb(209, 209, 209)));
+    border-bottom: 1px solid #aaa;
+}
+
+div.timelapse-preview-default > div {
+    text-align: center;
+    font-size: 12px;
+    margin: 25% 25px;
+    color: #555;
+}
+
 .timelapse-popover {
     position: absolute;
     z-index: 1000;
