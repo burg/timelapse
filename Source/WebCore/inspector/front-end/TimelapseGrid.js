@@ -64,7 +64,7 @@ WebInspector.TimelapseGrid = function() {
     columns.timestamp.width = "10%";
     
     columns.preview.title = "Input Preview";
-    columns.preview.sortable = true;
+    columns.preview.sortable = false;
     columns.preview.width = "auto";
 
     /* call to super with the constructed columns. */
@@ -79,7 +79,6 @@ WebInspector.TimelapseGrid = function() {
 	group: WebInspector.TimelapseGridNode.GroupComparator,
 	type: WebInspector.TimelapseGridNode.TypeComparator,
 	timestamp: WebInspector.TimelapseGridNode.TimestampComparator,
-	preview: WebInspector.TimelapseGridNode.PreviewComparator
     };
     this.resizeMethod = WebInspector.DataGrid.ResizeMethod.Last;
 
@@ -1137,17 +1136,6 @@ WebInspector.TimelapseGridNode.TimestampComparator = function(a,b)
     if (aTimestamp > bTimestamp)
 	return 1;
     if (bTimestamp > aTimestamp)
-	return -1;
-    return 0;
-};
-
-WebInspector.TimelapseGridNode.PreviewComparator = function(a,b)
-{
-    var aPreview = WebInspector.TimelapseInputDataProvider.InputPreview[a._record.type](a._record.data);
-    var bPreview = WebInspector.TimelapseInputDataProvider.InputPreview[b._record.type](b._record.data);
-    if (aPreview > bPreview)
-	return 1;
-    if (bPreview > aPreview)
 	return -1;
     return 0;
 };
