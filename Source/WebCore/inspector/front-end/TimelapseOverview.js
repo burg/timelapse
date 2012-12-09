@@ -477,20 +477,24 @@ WebInspector.TimelapseOverview.prototype = {
 	    tl.clearHighlights();
 	});
 
+	// clear selections for the old circle
 	if (this._circleContexts.length > 0) {
-	    var prevContext = this._circleContexts[0];
+	    var i = Math.max(0, this._circleContexts.length-1);
+	    var prevContext = this._circleContexts[i];
 	    prevContext.timeline.provider.clearSelections();
 	}
 
+	// set selections for the new circle
 	var circleIdx = event.data.circleIndex;
 	var indices = timeline.data.recordIndices[circleIdx];
 	timeline.provider.selectedIndices = indices;
 
+	// adjust stacks
 	var context = {
 	    "index": circleIdx,
-	    "timeline": timeline,
+	    "timeline": timeline
 	};
-	this._circleContexts.unshift(context);
+	this._circleContexts.push(context);
 	var view = new WebInspector.OverviewPreviewViews.InputView(timeline.provider);
 	this._previewProvider.pushView(view);
     },
@@ -498,18 +502,21 @@ WebInspector.TimelapseOverview.prototype = {
     _onCircleMouseOut: function(event)
     {
 	var timeline = event.data.timeline;
-	var circleIdx = event.data.circleIndex;
-
 	console.assert(this._circleContexts.length > 0, "We lost track of what circle was being hovered. :-(");
-	var prevContext = this._circleContexts.shift();
+
+	// clear selections for the popped circle
+	var prevContext = this._circleContexts.pop();
 	prevContext.timeline.provider.clearSelections();
 
+	// set selections for the old circle now on top.
 	if (this._circleContexts.length > 0) {
-	    var context = this._circleContexts[0];
-	    var indices = context.timeline.data[context.index];
+	    var i = Math.max(0, this._circleContexts.length-1);
+	    var context = this._circleContexts[i];
+	    var indices = context.timeline.data.recordIndices[context.index];
 	    context.timeline.provider.selectedIndices = indices;
 	}
 
+	// NB. This has to be last, since it ultimately triggers view refresh to reflect new highlights..
 	this._previewProvider.popView();
     },
 
@@ -525,22 +532,28 @@ WebInspector.TimelapseOverview.prototype = {
             tl.refresh();
 	});
 
-	if (this._circleContexts.length > 0) {
-	    var prevContext = this._circleContexts[0];
+	// discard any active circle contexts (should be <= 2)
+	while (this._circleContexts.length > 0) {
+	    var prevContext = this._circleContexts.pop();
 	    prevContext.timeline.provider.clearSelections();
+	    this._previewProvider.popView();
 	}
 
+	// set selections for new circle on top.
 	var circleIdx = event.data.circleIndex;
 	var indices = timeline.data.recordIndices[circleIdx];
-	this._circleContexts[0].timeline.provider.selectedIndices = indices;
+	timeline.provider.selectedIndices = indices;
 
+	// adjust stacks
 	var context = {
 	    "index": circleIdx,
 	    "timeline": timeline,
 	};
-	this._circleContexts.unshift(context);
-
 	var view = new WebInspector.OverviewPreviewViews.InputView(timeline.provider);
+	// double-push, since we completely cleared the stack and must hover to select.
+	this._circleContexts.push(context);
+	this._circleContexts.push(context);
+	this._previewProvider.pushView(view);
 	this._previewProvider.pushView(view);
     },
 
@@ -892,7 +905,7 @@ WebInspector.TimelapseOverview.prototype.__proto__ = WebInspector.View.prototype
 WebInspector.TimelapseCircleTimeline = function(provider)
 {
     WebInspector.View.call(this);
-    // only used to get calculator, and set the popover contents.
+    // only used to get calculator
     this._presentationModel = WebInspector.timelapsePresentationModel;
     this.calculator = this._presentationModel.calculator;
 
@@ -907,7 +920,7 @@ WebInspector.TimelapseCircleTimeline = function(provider)
     this.element.appendChild(this._canvas);
 
     // must happen after this.element created.
-    this._setupListeners();
+    this._setupAllListeners();
 
     this._recomputeParameters();
     this._clearTimeline();
@@ -916,7 +929,7 @@ WebInspector.TimelapseCircleTimeline = function(provider)
 };
 
 WebInspector.TimelapseCircleTimeline.prototype = {
-    _setupListeners: function()
+    _setupAllListeners: function()
     {
 	var events = WebInspector.DataProvider.Events;
 	this.provider.addEventListener(events.DataChanged, this._onDataChanged, this);
@@ -926,6 +939,14 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
 	this.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged,
 					 this._onZoomChanged, this);
+
+	this._setupDomListeners();
+    },
+
+    _setupDomListeners: function()
+    {
+	if (this._boundListeners)
+	    return;
 
 	this._boundListeners = {
 	    "click": this._onTimelineClicked.bind(this),  
@@ -939,7 +960,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	    this.element.addEventListener(key, this._boundListeners[key], false);
     },
 
-    _teardownListeners: function()
+    _teardownAllListeners: function()
     {
 	var events = WebInspector.DataProvider.Events;
 	this.provider.removeEventListener(events.DataChanged, this._onDataChanged, this);
@@ -950,6 +971,11 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this.calculator.removeEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged,
 					    this._onZoomChanged, this);
 
+	this._teardownDomListeners();
+    },
+
+    _teardownDomListeners: function()
+{
 	// remove all DOM listeners bound to this.
 	for (var key in this._boundListeners)
 	    this.element.removeEventListener(key, this._boundListeners[key]);
@@ -1008,7 +1034,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
     _onProviderRemoved: function()
     {
-	this._teardownListeners();
+	this._teardownAllListeners();
 	// TODO: we can't quite delete the provider right now, because
 	// we are somewhere calling this.refresh() after the provider
 	// has been deleted but before the Timeline view has been detached.
@@ -1029,6 +1055,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     {
 	this.element.classList.remove("disabled");
 	this._recomputeParameters();
+	this._setupDomListeners();
 	this.refresh();
     },
 
@@ -1036,8 +1063,18 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     {
 	this.element.classList.add("disabled");
 	this._recomputeParameters();
+	this._teardownDomListeners();
 	this.clearHighlights();
 	this.refresh();
+
+	// clear all circle contexts, and pop that many preview views.
+	if (this._)
+	    return;
+
+	while (this._circleContexts.length > 0) {
+	    this._circleContexts.pop();
+	    this._previewProvider.popView();
+	}
     },
 
 
@@ -1116,7 +1153,6 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	if (this.data.recordIndices.length == 0)
 	    return;
 
-	// TODO: fire the event directly from here
 	var clickedCircleIdx = this.hitTest(event);
 	if (clickedCircleIdx != -1) {
 	    this._selectCircle(clickedCircleIdx);
@@ -1197,7 +1233,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	    return;
 
 	var recordIdx = this.data.recordIndices[clickedCircleIdx][0];
-	this._model.replayUpToMarkIndex(this.provider.records[recordIdx].mark.index);
+	WebInspector.timelapseModel.replayUpToMarkIndex(this.provider.records[recordIdx].mark.index);
     },
 
     _circleIndexFromMarkIndex: function(markIndex)
@@ -1514,6 +1550,7 @@ WebInspector.TimelapseCircleTimeline.Events = {
     CircleMouseOver: "CircleMouseOver",
     CircleMouseOut: "CircleMouseOut",
     CircleSelected: "CircleSelected",
+// TODO: circle unselected, when clicking on whitespace or disabling timeline's provider
 }
 
 /**

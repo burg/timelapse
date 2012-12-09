@@ -42,12 +42,12 @@ WebInspector.OverviewPreviewProvider = function()
 
 WebInspector.OverviewPreviewProvider.prototype = {
     pushView: function(view) {
-	this._views.unshift(view);
+	this._views.push(view);
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged, this);
     },
 
     popView: function() {
-	this._views.shift();
+	var view = this._views.pop();
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged, this);
     },
 
@@ -94,6 +94,11 @@ WebInspector.OverviewPreviewViews.BaseView.prototype = {
     {
 	this.element.replaceChild(elem, this._content);
 	this._content = elem;
+    },
+
+    // Override me
+    refresh: function()
+    {
     }
 };
 
@@ -106,17 +111,24 @@ WebInspector.OverviewPreviewViews.BaseView.prototype.__proto__ = WebInspector.Vi
 WebInspector.OverviewPreviewViews.DefaultView = function()
 {
     WebInspector.OverviewPreviewViews.BaseView.call(this, "default");
-    this.header = "Preview Window";
-    var body = document.createElement("div");
-    body.classList.add("preview-message");
-    var text = ["Nothing to preview.",
-	        "Select something from a timeline at left."];
-    for (var i = 0; i < text.length; i++) {
-	var para = document.createElement("p");
-	para.textContent = text[i];
-	body.appendChild(para);
+    this.refresh();
+};
+
+WebInspector.OverviewPreviewViews.DefaultView.prototype = {
+    refresh: function()
+    {
+	this.header = "Preview Window";
+	var body = document.createElement("div");
+	body.classList.add("preview-message");
+	var text = ["Nothing to preview.",
+	            "Select something from a timeline at left."];
+	for (var i = 0; i < text.length; i++) {
+	    var para = document.createElement("p");
+	    para.textContent = text[i];
+	    body.appendChild(para);
+	}
+	this.body = body;
     }
-    this.body = body;
 };
 
 WebInspector.OverviewPreviewViews.DefaultView.prototype.__proto__ = WebInspector.OverviewPreviewViews.BaseView.prototype;
@@ -131,57 +143,66 @@ WebInspector.OverviewPreviewViews.InputView = function(provider)
 		  "Instantiated InputView preview with bad provider type.");
 
     WebInspector.OverviewPreviewViews.BaseView.call(this, "input");
-    this.header = provider.displayName + " " + provider.counterNoun;
-    var records = provider.selectedRecords;
+    this._provider = provider;
+    this.refresh();
+};
 
-    if (records.length == 0) {
-	console.error("Trying to preview input provider with no selected records.");
-	var body = document.createElement("div");
-	body.classList.add("preview-message");
-	body.textContent = "No records.";
-	this.body = body;
-	return;
+WebInspector.OverviewPreviewViews.InputView.prototype = {
+
+    refresh: function() {
+	this.header = this._provider.displayName + " " + this._provider.counterNoun;
+	var records = this._provider.selectedRecords;
+
+	if (records.length == 0) {
+	    console.error("Trying to preview input provider with no selected records.");
+	    var body = document.createElement("div");
+	    body.classList.add("preview-message");
+	    body.textContent = "No records.";
+	    this.body = body;
+	    return;
+	}
+
+	function createButtonInTD(styleClass, callback) {
+	    var cell = document.createElement("td");
+	    cell.setAttribute("width", "20px");
+	    var button = document.createElement("div");
+	    button.className = "timelapse-button-icon " + styleClass;
+	    cell.appendChild(button);
+	    button.addEventListener("click", callback);
+	    return cell;
+	}
+
+	var table = document.createElement("table");
+
+	for (var i = 0; i < records.length; i++) {
+	    var record = records[i];
+	    var row = document.createElement("tr");
+	    row.className = "row-with-count";
+	    var countCell = document.createElement("td");
+	    countCell.textContent = record.mark.index;
+	    row.appendChild(countCell);
+
+	    var cell = document.createElement("td");
+	    var name = WebInspector.TimelapseInputDataProvider.InputStyles[record.type].title;
+	    cell.setTextAndTitle(name);
+	    cell.addStyleClass("text-cell");
+	    row.appendChild(cell);
+
+	    if (record.mark.index == WebInspector.timelapseModel.currentMarkIndex)
+		row.addStyleClass("selected");
+
+	    var view = this;
+
+	    row.addEventListener("dblclick", function(markIndex) {
+				     this.replayUpToMarkIndex(markIndex);
+				 }.bind(WebInspector.timelapseModel, record.mark.index));
+
+	    table.appendChild(row);
+	}
+
+	this.body = table;
     }
 
-    function createButtonInTD(styleClass, callback) {
-	var cell = document.createElement("td");
-	cell.setAttribute("width", "20px");
-	var button = document.createElement("div");
-	button.className = "timelapse-button-icon " + styleClass;
-	cell.appendChild(button);
-	button.addEventListener("click", callback);
-	return cell;
-    }
-
-    var table = document.createElement("table");
-
-    for (var i = 0; i < records.length; i++) {
-	var record = records[i];
-	var row = document.createElement("tr");
-	row.className = "row-with-count";
-	var countCell = document.createElement("td");
-	countCell.textContent = record.mark.index;
-	row.appendChild(countCell);
-
-	var cell = document.createElement("td");
-	var name = WebInspector.TimelapseInputDataProvider.InputStyles[record.type].title;
-	cell.setTextAndTitle(name);
-	cell.addStyleClass("text-cell");
-	row.appendChild(cell);
-
-	if (record.mark.index == WebInspector.timelapseModel.currentMarkIndex)
-	    row.addStyleClass("selected");
-
-	var view = this;
-
-	row.addEventListener("dblclick", function(markIndex) {
-				 this.replayUpToMarkIndex(markIndex);
-			     }.bind(WebInspector.timelapseModel, record.mark.index));
-
-	table.appendChild(row);
-    }
-
-    this.body = table;
 };
 
 WebInspector.OverviewPreviewViews.InputView.prototype.__proto__ = WebInspector.OverviewPreviewViews.BaseView.prototype;
@@ -196,9 +217,17 @@ WebInspector.TimelapseOverviewPreview = function()
 
     this.element.classList.add("timelapse-preview-container");
     this._presentationModel = WebInspector.timelapsePresentationModel;
+    this._model = WebInspector.timelapseModel;
 
     var presEvents = WebInspector.TimelapsePresentationModel.EventTypes;
     this._presentationModel.addEventListener(presEvents.ProviderAdded, this._onProviderAdded, this);
+
+    // if something changed about state of playback, then refresh (the visible view)
+    var events = WebInspector.TimelapseModel.EventTypes;
+    this._model.addEventListener(events.PlaybackDidStart, this.refresh, this);
+    this._model.addEventListener(events.PlaybackStopped, this.refresh, this);
+    this._model.addEventListener(events.BreakpointPaused, this.refresh, this);
+    this._model.addEventListener(events.InputPaused, this.refresh, this);
 
     // scan for existing useful provider
     var providers = this._presentationModel.providersWithType(WebInspector.DataProvider.Types.OverviewPreview);
@@ -214,13 +243,15 @@ WebInspector.TimelapseOverviewPreview.prototype = {
 	if (!this._provider)
 	    return;
 
-	var view = this._provider.views[0];
+	var i = Math.max(0, this._provider.views.length-1);
+	var view = this._provider.views[i];
 
 	if (this._shownView && this._shownView !== view)
 	    this._shownView.detach();
 
 	this._shownView = view;
 	this._shownView.show(this.element);
+	this._shownView.refresh();
     },
 
     _canUseProvider: function(provider)
