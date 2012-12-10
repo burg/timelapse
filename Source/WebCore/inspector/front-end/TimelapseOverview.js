@@ -267,24 +267,12 @@ WebInspector.TimelapseOverview.prototype = {
 	    delete this._selectedCircleIndex;
     },
 
-    /* Extends View.willHide */
-    willHide: function()
-    {
-	WebInspector.View.prototype.willHide.call(this);
-
-    	this._presentationModel.overviewPopover.hide();
-	document.body.removeEventListener("mousemove", this._presentationModel.startHidePopoverTimer.bind(this._presentationModel), false);
-    },
-
     /* Extends View.wasShown */
     wasShown: function()
     {
 	// calling the shadowed method first will allow child timelines
 	//  to become visible before we try to refresh them.
 	WebInspector.View.prototype.wasShown.call(this);
-
-	document.body.addEventListener("mousemove", this._presentationModel.startHidePopoverTimer.bind(this._presentationModel), false);
-
 	this._scheduleRefresh();
     },
 
@@ -628,21 +616,6 @@ WebInspector.TimelapseOverview.prototype = {
 	this._lastPanPosition = position;
 	this.calculator.setZoomInterval(Number.constrain(zoomLeft - globalDelta, 0, 1.0 - zoomInterval),
 					Number.constrain(zoomRight - globalDelta, zoomInterval, 1.0));
-
-	// TODO: this is broken now, but it's going to get nuked soon anyway with the rest of popup stuff. - BJB
-	if (this.hasOwnProperty("_hoveredCircle")) {
-	    var timeline = this._hoveredCircle.timeline;
-	    var records = timeline.data.recordIndices[this._hoveredCircleIndex];
-	    var highlightCoords = timeline.getCircleGeometry(this._hoveredCircleIndex);
-	    var popupPosition = {
-		x: timeline.element.boxInWindow().x + highlightCoords.left,
-		y: timeline.element.boxInWindow().y + highlightCoords.top + highlightCoords.radius + 1
-	    };
-	    this._presentationModel.overviewPopover.show(timeline.provider, records, popupPosition);
-	}
-	else {
-	    this._presentationModel.overviewPopover.hide();
-	}
     },
 
     _overviewPanningEnd: function(event)
@@ -671,8 +644,6 @@ WebInspector.TimelapseOverview.prototype = {
         }
 
 	this.calculator.setZoomInterval(zoomLeft, zoomRight);
-
-	this._presentationModel.overviewPopover.hide();
     },
 
     _onPlaybackSliderDragStart: function(event)
@@ -682,7 +653,6 @@ WebInspector.TimelapseOverview.prototype = {
 					      this);
 
 	this._presentationModel.startPreviewing();
-	this._presentationModel.overviewPopover.hide();
     },
 
     _onPlaybackSliderDragged: function(event)
@@ -878,8 +848,6 @@ WebInspector.TimelapseOverview.prototype = {
 	    var nextRecordPosition = this.calculator.computeOverviewPercentage(nextRecord.mark.timestamp);
 	    this.sliders.playback.animateTo(nextRecordPosition, timeDelta);
 	}
-
-	this._presentationModel.overviewPopover.hide();
     },
 
     _onBreakpointPaused: function()
@@ -896,13 +864,15 @@ WebInspector.TimelapseOverview.prototype = {
 	if (!timeline)
 	    return;
 
-	timeline.showPopoverForMarkIndex(currentMarkIndex);
+	// TODO: this breaks timeline abstractions; maybe refactor to have 
+	//timeline be notified by provider?
+	var circleIdx = timeline._circleIndexFromMarkIndex(currentMarkIndex);
+	timeline._selectCircle(circleIdx);
     },
 
     _onBreakpointRecordsChanged: function()
     {
 	this._scheduleRefresh();
-	this._presentationModel.overviewPopover.hide();
     },
 
     // TODO: message panel (used for "scanning..." etc) should
@@ -922,7 +892,7 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.anchor.push(anchorSlider);
 	this._updateSliderPositions();
 
-	this._presentationModel.overviewPopover.refresh();
+	// TODO: previews may need to be refreshed when anchors modified.
     },
 
     _onAnchorRemoved: function()
@@ -931,7 +901,7 @@ WebInspector.TimelapseOverview.prototype = {
 	anchorSlider.dispose();
 	this._updateSliderPositions();
 
-	this._presentationModel.overviewPopover.refresh();
+	// TODO: previews may need to be refreshed when anchors modified.
     },
 
     _makePreviewForProvider: function(provider)
@@ -1177,22 +1147,12 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this.setCursor("pointer");
 	this.addHighlight(circleIndex);
 
-	var highlightCoords = this.getCircleGeometry(circleIndex);
-
-	var position = {
-	    x: this.element.boxInWindow().x + highlightCoords.left,
-	    y: this.element.boxInWindow().y + highlightCoords.top + highlightCoords.radius + 1
-	};
-
 	var eventData = {
 	  "timeline": this,
 	  "circleIndex": circleIndex,
 	};
 
 	this.dispatchEventToListeners(WebInspector.TimelapseCircleTimeline.Events.CircleMouseOver, eventData);
-
-	// TODO: remove
-	this._presentationModel.overviewPopover.show(this.provider, this.data.recordIndices[circleIndex], position);
     },
 
     _onTimelineClicked: function(event)
@@ -1305,22 +1265,6 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	    }
 	}
 	return -1;
-    },
-
-    showPopoverForMarkIndex: function(markIndex)
-    {
-	var circleIndex = this._circleIndexFromMarkIndex(markIndex);
-
-	if (circleIndex == -1)
-	    return;
-
-	var recordIndices = this._data.recordIndices[circleIndex];
-	var circleCoords = this.getCircleGeometry(circleIndex);
-	var popupPosition = {
-	    x: this.element.boxInWindow().x + circleCoords.left,
-	    y: this.element.boxInWindow().y + circleCoords.top + circleCoords.radius + 1
-	};
-	this._presentationModel.overviewPopover.show(this._provider, recordIndices, popupPosition);
     },
 
     hitTest: function(event)
@@ -1809,125 +1753,6 @@ WebInspector.TimelapseOverviewSlider.prototype = {
 };
 
 WebInspector.TimelapseOverviewSlider.prototype.__proto__ = WebInspector.Object.prototype;
-
-WebInspector.TimelapsePopover = function(popoverHelper)
-{
-    WebInspector.Popover.call(this);
-
-    this._popoverHelper = popoverHelper;
-
-    var model = WebInspector.timelapseModel;
-    var eventNames = WebInspector.TimelapseModel.EventTypes;
-
-    model.addEventListener(eventNames.Enabled, this.hide, this);
-    model.addEventListener(eventNames.Disabled, this.hide, this);
-    model.addEventListener(eventNames.RecordingDidStart, this.hide, this);
-    model.addEventListener(eventNames.PlaybackStopped, this.hide, this);
-}
-
-WebInspector.TimelapsePopover.prototype = {
-    show: function(provider, recordIndices, position)
-    {
-	if (this._disposed)
-	    return;
-
-	if (!recordIndices) {
-	    this.hide();
-	    return;
-	}
-
-	this._provider = provider;
-	this._recordIndices = recordIndices;
-	this._position = position;
-	this.contentElement = WebInspector.timelapsePresentationModel.generatePopupContent(provider, recordIndices);
-
-        // This should not happen, but we hide previous popup to be on the safe side.
-        if (WebInspector.Popover._popoverElement)
-            document.body.removeChild(WebInspector.Popover._popoverElement);
-        WebInspector.Popover._popoverElement = this.element;
-
-        // Temporarily attach in order to measure preferred dimensions.
-        this.contentElement.positionAt(0, 0);
-        document.body.appendChild(this.contentElement);
-        var preferredWidth = this.contentElement.offsetWidth;
-        var preferredHeight = this.contentElement.offsetHeight;
-
-	this._contentDiv.removeChildren();
-	this._contentDiv.appendChild(this.contentElement);
-        this.element.appendChild(this._contentDiv);
-        document.body.appendChild(this.element);
-        this._positionElement(position, preferredWidth, preferredHeight);
-        this._visible = true;
-	this._popoverHelper.killHidePopoverTimer();
-        this.contentElement.addEventListener("mousemove", function(event) {
-	    this._popoverHelper.killHidePopoverTimer();
-	    event.stopPropagation();
-	}.bind(this), true);
-    },
-
-    _positionElement: function(anchorPosition, preferredWidth, preferredHeight)
-    {
-	const borderWidth = 2;
-        const scrollerWidth = 11;
-        const arrowHeight = 6;
-        const arrowOffset = 8;
-	const arrowLeft = 12; // default arrow position
-	const minArrowPosition = 7;
-	const borderRadius = 12;
-
-	var totalWidth = window.innerWidth;
-	var totalHeight = window.innerHeight;
-
-        var newElementPosition = {
-	    x: 0,
-	    y: anchorPosition.y + arrowHeight,
-	    width: preferredWidth,
-	    height: preferredHeight
-	};
-
-        // Positioning below the anchor.
-        if (newElementPosition.y + newElementPosition.height + borderWidth * 2 >= totalHeight) {
-            newElementPosition.height = totalHeight - anchorPosition.y - arrowHeight - borderWidth * 2;
-	    newElementPosition.width += scrollerWidth;
-        }
-
-        if (anchorPosition.x + newElementPosition.width + borderWidth - arrowLeft - arrowOffset < totalWidth) {
-	    // Touching left or no border.
-            newElementPosition.x = Math.max(borderWidth, anchorPosition.x - borderWidth - arrowLeft - arrowOffset);
-	    if (newElementPosition.x == borderWidth)
-		this._popupArrowElement.style.left = Math.max(minArrowPosition, anchorPosition.x - arrowOffset) + "px";
-	    else
-		this._popupArrowElement.style.left = arrowLeft + "px";
-        }
-	else if (newElementPosition.width + borderWidth * 2 < totalWidth) {
-	    // Touching right border.
-            newElementPosition.x = totalWidth - newElementPosition.width - borderWidth * 2;
-            this._popupArrowElement.style.right = Math.max(minArrowPosition, totalWidth - anchorPosition.x - borderWidth - arrowOffset - 1) + "px";
-	    this._popupArrowElement.style.left = "auto";
-        }
-	else {
-	    // Touching both borders.
-            newElementPosition.x = borderWidth;
-            newElementPosition.width = totalWidth - borderWidth * 2;
-	    newElementPosition.height += scrollerWidth;
-            this._popupArrowElement.style.left = Math.max(0, anchorPosition.x - arrowOffset) + "px";
-        }
-
-        this.element.className = "timelapse-popover custom-popup-vertical-scroll custom-popup-horizontal-scroll";
-        this.element.positionAt(Math.round(newElementPosition.x), Math.round(newElementPosition.y));
-        this.element.style.width = newElementPosition.width + borderWidth * 2 + "px";
-        this.element.style.height = newElementPosition.height + borderWidth * 2 + "px";
-    },
-
-    refresh: function()
-    {
-	if (this._visible && this._recordIndices && this._position)
-	    this.show(this._provider, this._recordIndices, this._position);
-    }
-};
-
-WebInspector.TimelapsePopover.prototype.__proto__ = WebInspector.Popover.prototype;
-
 
 /**
  * @constructor
