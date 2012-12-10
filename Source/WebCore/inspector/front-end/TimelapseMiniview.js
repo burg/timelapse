@@ -131,11 +131,8 @@ WebInspector.TimelapseMiniview = function()
     this._timelines = {};
     this._timelines.all = { providers: [], maxIndex: -1, data: [] };
 
-    this._updateZoomLeft();
-    this._updateZoomRight();
     this.sliders.playback.clear();
     this._previousMaxValue = 0;
-    this._autosizeCanvas();
     this._clearGraph();
 };
 
@@ -149,13 +146,18 @@ WebInspector.TimelapseMiniview.prototype = {
     // Public API
     wasShown: function()
     {
+	WebInspector.View.prototype.wasShown.call(this);
+
 	this._refreshIfNeeded();
 	this._updateZoomLeft();
 	this._updateZoomRight();
+	this._autosizeCanvas();
     },
 
     onResize: function()
     {
+	WebInspector.View.prototype.onResize.call(this);
+
 	this._updateZoomLeft();
 	this._updateZoomRight();
 	this._autosizeCanvas();
@@ -486,6 +488,9 @@ WebInspector.TimelapseMiniview.prototype = {
 	console.assert(this._timelines[provider.name].providers.indexOf(provider) == -1,
 		       "Tried to double-add a provider to a miniview timeline.");
 	this._timelines[provider.name].providers.push(provider);
+
+	// force dimensions to be recalculated
+	this.onResize();
     },
 
     _onProviderWillRemove: function(event)
