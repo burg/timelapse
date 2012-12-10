@@ -111,6 +111,7 @@ WebInspector.TimelapseOverview.prototype = {
 	this._timelineContainer = document.createElement("div");
 	this._timelineContainer.className = "timelapse-overview-timelines";
 	this._timelineContainer.addEventListener("mousedown", this._onOverviewMousedown.bind(this), false);
+	this._timelineContainer.addEventListener("click", this._onOverviewClick.bind(this), false);
 	this._timelineContainer.addEventListener("mousewheel", this._onOverviewMousewheel.bind(this), false);
 
 	var playbackSlider = new WebInspector.TimelapseOverviewSlider(this, "playback", true);
@@ -590,6 +591,30 @@ WebInspector.TimelapseOverview.prototype = {
 
 		this._lastPanPosition = (event.pageX - this.element.offsetLeft) / this.element.clientWidth;
                 WebInspector.installDragHandle(this.element, null, this._overviewPanning.bind(this), this._overviewPanningEnd.bind(this), "-webkit-grabbing");
+                break;
+	    }
+            node = node.parentNode;
+	}
+    },
+
+    _onOverviewClick: function(event)
+    {
+	console.log("overview clicked");
+
+	if (event.button != 0)
+	    return;
+
+	var node = event.target;
+
+        while (node) {
+	    if (node === this.sliders.playback.element)
+		break;
+            else if (node === this.element) {
+		this._timelines.forEach(function(timeline) {
+					    timeline.clearHighlights();
+					    timeline.clearSelection();
+					    timeline.refresh();
+					});
                 break;
 	    }
             node = node.parentNode;
@@ -1087,7 +1112,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
     _selectCircle: function(circleIndex)
     {
-	if (this.hasOwnProperty("_selectedCircleIndex")) {
+	if (this._selectedCircleIndex) {
 	    this.clearCursor();
 	    this.removeHighlight(this._selectedCircleIndex);
 	    delete this._selectedCircleIndex;
@@ -1095,6 +1120,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
 	this._selectedCircleIndex = circleIndex;
 	this.addHighlight(circleIndex);
+	this.refresh();
 
 	var eventData = {
 	  "timeline": this,
@@ -1123,7 +1149,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
     _circleMouseOut: function(circleIndex)
     {
-	if (!this.hasOwnProperty("_hoveredCircleIndex"))
+	if (!this._hoveredCircleIndex)
 	    return;
 
 	this.clearCursor();
@@ -1178,16 +1204,14 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	if (this.data.recordIndices.length == 0)
 	    return;
 
+	// * clicking on a circle selects it.
+	// * otherwise, the overview will pick up the event when it bubbles up,
+	// and clear any selections in other timelines.
 	var clickedCircleIdx = this.hitTest(event);
 	if (clickedCircleIdx != -1) {
 	    this._selectCircle(clickedCircleIdx);
-	    this.refresh();
-	} else if (this._selectedCircleIndex) {
-	    // clicking and missing will deselect the circle.
-	    this._deselectCircle();
+	    event.stopPropagation();
 	}
-
-	event.stopPropagation();
     },
 
     _onTimelineMousemove: function(event)
@@ -1378,8 +1402,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	if (!this._selectedCircleIndex)
 	    return;
 
-	delete this._selectedCircleIndex;
-	this._dirty = true;
+	this._deselectCircle();
     },
 
     _drawHighlights: function()

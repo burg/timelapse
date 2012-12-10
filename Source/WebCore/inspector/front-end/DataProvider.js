@@ -199,7 +199,7 @@ WebInspector.TimelapseInputDataProvider.prototype = {
     clearSelections: function()
     {
 	// more literate API than above; otherwise, the same thing.
-	this.selectIndices = [];
+	this.selectedIndices = [];
     },
 
     _recordAdded: function(event)
