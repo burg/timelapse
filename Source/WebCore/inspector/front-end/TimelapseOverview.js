@@ -564,7 +564,7 @@ WebInspector.TimelapseOverview.prototype = {
 	// NB. this assumes that the circle of one timeline won't be selected while
 	// hovering a circle of a different timeline.
 	console.assert(this._circleContexts.length > 0, "circle deselected but no circle context detected.");
-	console.assert(this._circleContexts[0].timeline === event.timeline, "circle deselected but no matching context detected.");
+	console.assert(this._circleContexts[0].timeline === event.data.timeline, "circle deselected but no matching context detected.");
 
 	// discard any active circle contexts (should be <= 2)
 	while (this._circleContexts.length > 0) {
@@ -1111,6 +1111,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this.clearCursor();
 	this.removeHighlight(this._selectedCircleIndex);
 	delete this._selectedCircleIndex;
+	this.refresh();
 
 	var eventData = {
 	  "timeline": this,
@@ -1128,6 +1129,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this.clearCursor();
 	this.removeHighlight(this._hoveredCircleIndex);
 	delete this._hoveredCircleIndex;
+	this.refresh();
 
 	var eventData = {
 	  "timeline": this,
@@ -1180,6 +1182,9 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	if (clickedCircleIdx != -1) {
 	    this._selectCircle(clickedCircleIdx);
 	    this.refresh();
+	} else if (this._selectedCircleIndex) {
+	    // clicking and missing will deselect the circle.
+	    this._deselectCircle();
 	}
 
 	event.stopPropagation();
@@ -1202,8 +1207,6 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	var hoveredCircleIdx = this.hitTest(event);
 	var hadPreviousHover = this.hasOwnProperty("_hoveredCircleIndex");
 	var hoverChanged = (hadPreviousHover && this._hoveredCircleIndex != hoveredCircleIdx) || (!hadPreviousHover && hoveredCircleIdx != -1);
-
-	event.stopPropagation();
 
 	if (!hoverChanged)
 	    return;
@@ -1234,7 +1237,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	if (this.data.recordIndices.length == 0)
 	    return;
 
-	this._circleMouseOut();
+	this._circleMouseOut(this._hoveredCircleIndex);
     },
 
     _onTimelineDoubleClicked: function(event)
