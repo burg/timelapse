@@ -427,6 +427,7 @@ WebInspector.TimelapseOverview.prototype = {
 	timeline.addEventListener(timelineEvents.CircleMouseOver, this._onCircleMouseOver, this);
 	timeline.addEventListener(timelineEvents.CircleMouseOut, this._onCircleMouseOut, this);
 	timeline.addEventListener(timelineEvents.CircleSelected, this._onCircleSelected, this);
+	timeline.addEventListener(timelineEvents.CircleDeselected, this._onCircleDeselected, this);
 
 	this._timelines.push(timeline);
 
@@ -460,6 +461,7 @@ WebInspector.TimelapseOverview.prototype = {
 	removedTimeline.removeEventListener(timelineEvents.CircleMouseOver, this._onCircleMouseOver, this);
 	removedTimeline.removeEventListener(timelineEvents.CircleMouseOut, this._onCircleMouseOut, this);
 	removedTimeline.removeEventListener(timelineEvents.CircleSelected, this._onCircleSelected, this);
+	removedTimeline.removeEventListener(timelineEvents.CircleDeselected, this._onCircleDeselected, this);
 
 	// force dimensions of containers to be recalculated
 	this.onResize();
@@ -555,6 +557,21 @@ WebInspector.TimelapseOverview.prototype = {
 	this._circleContexts.push(context);
 	this._previewProvider.pushView(view);
 	this._previewProvider.pushView(view);
+    },
+
+    _onCircleDeselected: function(event)
+    {
+	// NB. this assumes that the circle of one timeline won't be selected while
+	// hovering a circle of a different timeline.
+	console.assert(this._circleContexts.length > 0, "circle deselected but no circle context detected.");
+	console.assert(this._circleContexts[0].timeline === event.timeline, "circle deselected but no matching context detected.");
+
+	// discard any active circle contexts (should be <= 2)
+	while (this._circleContexts.length > 0) {
+	    var prevContext = this._circleContexts.pop();
+	    prevContext.timeline.provider.clearSelections();
+	    this._previewProvider.popView();
+	}
     },
 
     _onOverviewMousedown: function(event)
@@ -1064,19 +1081,9 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this.element.classList.add("disabled");
 	this._recomputeParameters();
 	this._teardownDomListeners();
-	this.clearHighlights();
+	this._deselectCircle();
 	this.refresh();
-
-	// clear all circle contexts, and pop that many preview views.
-	if (this._)
-	    return;
-
-	while (this._circleContexts.length > 0) {
-	    this._circleContexts.pop();
-	    this._previewProvider.popView();
-	}
     },
-
 
     _selectCircle: function(circleIndex)
     {
@@ -1095,6 +1102,22 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	};
 
 	this.dispatchEventToListeners(WebInspector.TimelapseCircleTimeline.Events.CircleSelected, eventData);
+    },
+
+    _deselectCircle: function(circleIndex)
+    {
+	console.assert(this._selectedCircleIndex, "can't deselect on timeline with no selected circle.");
+
+	this.clearCursor();
+	this.removeHighlight(this._selectedCircleIndex);
+	delete this._selectedCircleIndex;
+
+	var eventData = {
+	  "timeline": this,
+	  "circleIndex": circleIndex,
+	};
+
+	this.dispatchEventToListeners(WebInspector.TimelapseCircleTimeline.Events.CircleDeselected, eventData);
     },
 
     _circleMouseOut: function(circleIndex)
@@ -1550,7 +1573,7 @@ WebInspector.TimelapseCircleTimeline.Events = {
     CircleMouseOver: "CircleMouseOver",
     CircleMouseOut: "CircleMouseOut",
     CircleSelected: "CircleSelected",
-// TODO: circle unselected, when clicking on whitespace or disabling timeline's provider
+    CircleDeselected: "CircleDeselected",
 }
 
 /**
