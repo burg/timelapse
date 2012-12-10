@@ -598,8 +598,6 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onOverviewClick: function(event)
     {
-	console.log("overview clicked");
-
 	if (event.button != 0)
 	    return;
 
@@ -1295,12 +1293,12 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
     _circleIndexFromMarkIndex: function(markIndex)
     {
-	var recordIndicies = this._data.recordIndices;
+	var recordIndices = this._data.recordIndices;
 
 	for (var i = 0; i < recordIndices.length; i++) {
 	    var indexList = recordIndices[i];
 	    for (var j = 0; j < indexList.length; j++) {
-		if (indexList[j].mark.index != markIndex)
+		if (indexList[j] != markIndex)
 		    continue;
 		else
 		    return i;

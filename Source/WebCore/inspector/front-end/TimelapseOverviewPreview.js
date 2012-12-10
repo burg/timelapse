@@ -303,12 +303,6 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	    
 	    table.appendChild(row);
 
-	    var cell = document.createElement("td");
-	    var name = WebInspector.TimelapseInputDataProvider.InputStyles[record.type].title;
-	    cell.setTextAndTitle(name);
-	    cell.addStyleClass("text-cell");
-	    row.appendChild(cell);
-
 	    if (record.mark.index == WebInspector.timelapseModel.currentMarkIndex)
 		row.addStyleClass("selected");
 
