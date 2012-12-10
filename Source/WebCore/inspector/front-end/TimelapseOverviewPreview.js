@@ -209,6 +209,126 @@ WebInspector.OverviewPreviewViews.InputView.prototype.__proto__ = WebInspector.O
 
 /**
  * @constructor
+ * @extends {WebInspector.OverviewPreviewViews.BaseView}
+ */
+WebInspector.OverviewPreviewViews.BreakpointHitView = function(provider)
+{
+    console.assert(provider.type === WebInspector.DataProvider.Types.BreakpointHits,
+		  "Instantiated BreakpointHitView preview with bad provider type.");
+
+    WebInspector.OverviewPreviewViews.BaseView.call(this, "breakpoint");
+    this._provider = provider;
+    this.refresh();
+};
+
+WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
+
+    refresh: function() {
+	this.header = this._provider.displayName + " " + this._provider.counterNoun;
+	var records = this._provider.selectedRecords;
+
+	if (records.length == 0) {
+	    console.error("Trying to preview breakpoint  provider with no selected records.");
+	    var body = document.createElement("div");
+	    body.classList.add("preview-message");
+	    body.textContent = "No records.";
+	    this.body = body;
+	    return;
+	}
+
+	function createButtonInTD(styleClass, callback) {
+	    var cell = document.createElement("td");
+	    cell.setAttribute("width", "20px");
+	    var button = document.createElement("div");
+	    button.className = "timelapse-button-icon " + styleClass;
+	    cell.appendChild(button);
+	    button.addEventListener("click", callback);
+	    return cell;
+	}
+
+	var table = document.createElement("table");
+
+	for (var i = 0; i < records.length; i++) {
+	    var record = records[i];
+	    var row = document.createElement("tr");
+	    row.className = "row-with-count";
+	    var countCell = document.createElement("td");
+	    countCell.textContent = record.mark.index;
+	    row.appendChild(countCell);
+
+	    var indexExplored = WebInspector.timelapseBreakpointTracker.exploredIndex(record.mark.index);
+	    var isAnchoredLocation = WebInspector.timelapsePresentationModel.anchorManager.anchorAtLocation(record.mark.index, record.hitIndex);
+	    var isCurrentBreakpoint = record.mark.index == WebInspector.timelapseModel.currentMarkIndex
+		&& record.hitIndex == WebInspector.timelapseModel.currentHitIndex;
+
+	    if (isAnchoredLocation) {
+		var anchorButton = createButtonInTD("timelapse-anchor-button toggled", function(markIndex, hitIndex) {
+			WebInspector.timelapsePresentationModel.anchorManager.removeAnchor(markIndex, hitIndex);
+		    }.bind(anchorButton, record.mark.index, record.hitIndex));
+		    row.appendChild(anchorButton);
+		}
+	    else
+		row.appendChild(document.createElement("td"));
+
+	    if (indexExplored && !isCurrentBreakpoint) {
+		var jumpButton = createButtonInTD("timelapse-jump-button", function(markIndex, hitIndex) {
+			WebInspector.timelapseModel.replayToBreakpointHit(markIndex, hitIndex);
+		    }.bind(jumpButton, record.mark.index, record.hitIndex));
+		row.appendChild(jumpButton);
+		}
+	    else
+		row.appendChild(document.createElement("td"));
+
+	    var breakpoint = record.breakpoint;
+
+	    var cell = document.createElement("td");
+	    var sourceLink = breakpoint._linkifyLocation();
+	    sourceLink.addEventListener("contextmenu", breakpoint.contextMenu.bind(breakpoint), true);
+	    cell.appendChild(sourceLink);
+	    cell.addStyleClass("text-cell");
+	    row.appendChild(cell);
+
+	    if (breakpoint.condition()) {
+		cell = document.createElement("td");
+		var conditionText = document.createElement("span");
+		conditionText.textContent = "(" + breakpoint.condition() + ")";
+		conditionText.addStyleClass("source-code");
+		cell.appendChild(conditionText);
+		cell.addStyleClass("text-cell");
+		row.appendChild(cell);
+	    }
+
+	    if (isCurrentBreakpoint)
+		row.addStyleClass("selected");
+	    
+	    table.appendChild(row);
+
+	    var cell = document.createElement("td");
+	    var name = WebInspector.TimelapseInputDataProvider.InputStyles[record.type].title;
+	    cell.setTextAndTitle(name);
+	    cell.addStyleClass("text-cell");
+	    row.appendChild(cell);
+
+	    if (record.mark.index == WebInspector.timelapseModel.currentMarkIndex)
+		row.addStyleClass("selected");
+
+	    // TODO: could be shorter
+	    row.addEventListener("dblclick", function(markIndex) {
+				     this.replayUpToMarkIndex(markIndex);
+				 }.bind(WebInspector.timelapseModel, record.mark.index));
+
+	    table.appendChild(row);
+	}
+
+	this.body = table;
+    }
+};
+
+WebInspector.OverviewPreviewViews.BreakpointHitView.prototype.__proto__ = WebInspector.OverviewPreviewViews.BaseView.prototype;
+
+
+/**
+ * @constructor
  * @extends {WebInspector.View}
  */
 WebInspector.TimelapseOverviewPreview = function()

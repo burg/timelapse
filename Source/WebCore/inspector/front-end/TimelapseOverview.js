@@ -498,8 +498,7 @@ WebInspector.TimelapseOverview.prototype = {
 	    "timeline": timeline
 	};
 	this._circleContexts.push(context);
-	var view = new WebInspector.OverviewPreviewViews.InputView(timeline.provider);
-	this._previewProvider.pushView(view);
+	this._previewProvider.pushView(this._makePreviewForProvider(timeline.provider));
     },
 
     _onCircleMouseOut: function(event)
@@ -552,7 +551,7 @@ WebInspector.TimelapseOverview.prototype = {
 	    "index": circleIdx,
 	    "timeline": timeline,
 	};
-	var view = new WebInspector.OverviewPreviewViews.InputView(timeline.provider);
+	var view = this._makePreviewForProvider(timeline.provider);
 	// double-push, since we completely cleared the stack and must hover to select.
 	this._circleContexts.push(context);
 	this._circleContexts.push(context);
@@ -935,6 +934,14 @@ WebInspector.TimelapseOverview.prototype = {
 	this._updateSliderPositions();
 
 	this._presentationModel.overviewPopover.refresh();
+    },
+
+    _makePreviewForProvider: function(provider)
+    {
+	if (provider.type === WebInspector.DataProvider.Types.BreakpointHits)
+	    return new WebInspector.OverviewPreviewViews.BreakpointHitView(provider);
+	else
+	    return new WebInspector.OverviewPreviewViews.InputView(provider);
     }
 };
 
