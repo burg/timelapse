@@ -212,8 +212,11 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
         if (isReplaying) {
             RefPtr<DeterminismLog> detLog = controller->determinismLog();
             InterpretedKeyCommands* memoizedCommands = static_cast<InterpretedKeyCommands*>(detLog->currentAction(ReplayableTypes::InterpretedKeyCommands));
-            commands = memoizedCommands->commands();
-            return eventWasHandled;    
+            if (memoizedCommands) {
+                commands = memoizedCommands->commands();
+                return eventWasHandled;
+            }
+            // error handling case: fall through and ask UIProcess what to do.
         }
         // otherwise, ask the UIProcess to figure out the commands for these keystrokes.
 #endif

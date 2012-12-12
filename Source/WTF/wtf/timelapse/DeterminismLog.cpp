@@ -38,6 +38,7 @@
 #include "ReplayableAction.h"
 #include "Vector.h"
 #include "WTFString.h"
+#include "StringBuilder.h"
 
 namespace WTF {
 
@@ -56,6 +57,7 @@ DeterminismLog::DeterminismLog(bool capturing, bool replaying)
 , m_isCapturing(capturing)
 , m_isReplaying(replaying)
 , m_active(true)
+, m_errorType(NoError)
 , m_memoizedReplayPosition(0)
 , m_dispatchReplayPosition(0)
 , m_captureCount(0) {}
@@ -110,6 +112,37 @@ void DeterminismLog::append(ReplayableAction* action)
         m_memoizedActions.append(newEntry);
 }
 
+String DeterminismLog::errorMessage() const
+{
+    ASSERT(hasError());
+    StringBuilder sb;
+    
+    switch (m_errorType) {
+    case ErrorExhaustedMemoizedInput:
+        sb.append("Ran out of memoized data because too much was requested.");
+        break;
+
+    case ErrorUnexpectedActionType: {
+        sb.append("Expected next memoized input to be a ");
+        sb.append(m_errorData.expectedActionType);
+        sb.append(", but found a ");
+      
+        const ActionEntry& entry = m_memoizedActions.at(m_memoizedReplayPosition);
+        ReplayableAction* thisAction = entry.action;
+
+        sb.append(thisAction->type());
+        sb.append("(detail: ");
+        sb.append(thisAction->toString());
+        sb.append(")");
+        break;
+    }
+    default:
+        break;
+    }
+    
+    return sb.toString();
+}
+
 void DeterminismLog::reset()
 {
     ASSERT(!m_isCapturing);
@@ -120,6 +153,8 @@ void DeterminismLog::reset()
     m_dispatchReplayPosition = 0;
     m_isReplaying = true;
     m_active = true;
+    m_errorType = NoError;
+    // TODO: deallocate anything stuck inside m_errorData
     m_isCapturing = false;
 }
 
@@ -127,7 +162,12 @@ ReplayableAction* DeterminismLog::currentAction(ReplayableAction::ReplayableType
 {   
     ASSERT(m_isReplaying);
     ASSERT(isActive());
-    ASSERT(m_memoizedReplayPosition < m_memoizedActions.size());
+    
+    if (m_memoizedReplayPosition >= m_memoizedActions.size()) {
+        LOG_ERROR("No more memoized inputs remain, but one was requested.");
+        m_errorType = ErrorExhaustedMemoizedInput;
+        return 0;
+    }
     
     const ActionEntry& entry = m_memoizedActions.at(m_memoizedReplayPosition);
 
@@ -143,6 +183,10 @@ ReplayableAction* DeterminismLog::currentAction(ReplayableAction::ReplayableType
         LOG_ERROR("%-25s#%-5ld Expected replay action of type %s, but got type %s (%s)\n",
                   "[DeterminismLog]",
                   entry.count, type, thisAction->type(), thisAction->toString().ascii().data());
+        
+        m_errorType = ErrorUnexpectedActionType;
+        m_errorData.expectedActionType = type;
+        return 0;
     } else {
         LOG(TimelapseCapturing, "%-25s#%-5ld YIELD: %s\n", "[DeterminismLog]",
             entry.count, thisAction->toString().utf8().data());
@@ -157,7 +201,14 @@ ReplayableAction* DeterminismLog::currentDispatchableAction()
 {
     ASSERT(m_isReplaying);
     ASSERT(isActive());
-    ASSERT(m_dispatchReplayPosition < m_dispatchActions.size());
+    // callers should check for errors before requesting dispatchable actions.
+    // if an error exists, the caller should call reset() or clearError()
+    ASSERT(!hasError());
+    if (m_dispatchReplayPosition >= m_dispatchActions.size()) {
+        LOG_ERROR("No more dispatchable actions remain, but one was requested.");
+        m_errorType = ErrorExhaustedDispatchableActions;
+        return 0;
+    }
 
     const ActionEntry& entry = m_dispatchActions.at(m_dispatchReplayPosition);
 

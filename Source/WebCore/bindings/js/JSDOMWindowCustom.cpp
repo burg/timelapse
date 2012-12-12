@@ -693,8 +693,12 @@ JSValue JSDOMWindow::screenX(ExecState* exec) const
     } else {
         ASSERT(log->replaying());
         GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
-        ASSERT(action->attributeType() == ScreenX);
-        result = action->result();
+        if (action) {
+            ASSERT(action->attributeType() == ScreenX);
+            result = action->result();
+        } else { // error handling case
+            result = impl()->screenX();
+        }
     }
 
     return jsNumber(result);
@@ -715,8 +719,12 @@ JSValue JSDOMWindow::screenY(ExecState* exec) const
     } else {
         ASSERT(log->replaying());
         GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
-        ASSERT(action->attributeType() == ScreenY);
-        result = action->result();
+        if (action) {
+            ASSERT(action->attributeType() == ScreenY);
+            result = action->result();
+        } else { // error handling case
+            result = impl()->screenY();
+        }
     }
     
     return jsNumber(result);
@@ -737,8 +745,12 @@ JSValue JSDOMWindow::screenLeft(ExecState* exec) const
     } else {
         ASSERT(log->replaying());
         GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
-        ASSERT(action->attributeType() == ScreenLeft);
-        result = action->result();
+        if (action) {
+            ASSERT(action->attributeType() == ScreenLeft);
+            result = action->result();
+        } else { // error handling case
+            result = impl()->screenLeft();
+        }
     }
 
     return jsNumber(result);
@@ -760,8 +772,12 @@ JSValue JSDOMWindow::screenTop(ExecState* exec) const
     } else {
         ASSERT(log->replaying());
         GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
-        ASSERT(action->attributeType() == ScreenTop);
-        result = action->result();
+        if (action) {
+            ASSERT(action->attributeType() == ScreenTop);
+            result = action->result();
+        } else { // error handling case
+            result = impl()->screenTop();
+        }
     }
 
     return jsNumber(result);

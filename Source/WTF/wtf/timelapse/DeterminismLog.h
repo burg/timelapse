@@ -53,6 +53,13 @@ struct ActionEntry {
     size_t count; //total event ordering
 };
 
+typedef enum {
+    NoError,
+    ErrorExhaustedMemoizedInput,
+    ErrorExhaustedDispatchableActions,
+    ErrorUnexpectedActionType,
+} ReplayErrorType;
+
 class ActionSerializer;
     
 class DeterminismLog : public RefCounted<DeterminismLog> {
@@ -70,11 +77,18 @@ public:
     WTF_EXPORT_PRIVATE void reset();
     WTF_EXPORT_PRIVATE ReplayableAction* currentAction(ReplayableAction::ReplayableType);
     WTF_EXPORT_PRIVATE ReplayableAction* currentDispatchableAction();
-    
 
+    //error handling
+    bool hasError() const { return m_errorType != NoError; }
+    WTF_EXPORT_PRIVATE String errorMessage() const;
+    // TODO: if the previous error allocated any POD, must clean up here.
+    void clearError() { m_errorType = NoError; }
+
+    // status
     bool capturing() const { return m_isCapturing; }
     bool replaying() const { return m_isReplaying; }
     bool isActive() const { return m_active; }
+    
     //used for temporary deactivation; e.g. when injected scripts are evaluated.
     WTF_EXPORT_PRIVATE void setIsActive(bool);
     WTF_EXPORT_PRIVATE size_t memorySize() const;
@@ -90,6 +104,11 @@ private:
     bool m_isCapturing;
     bool m_isReplaying;
     bool m_active;
+    ReplayErrorType m_errorType;
+    union {
+        ReplayableAction::ReplayableType expectedActionType;
+    } m_errorData;
+    
     size_t m_memoizedReplayPosition;
     size_t m_dispatchReplayPosition;
     size_t m_captureCount;

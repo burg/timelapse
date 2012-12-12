@@ -64,7 +64,10 @@ void RiggedWeakRandom::setSeed()
 
         //recover seed
         SetRandomSeed* action = static_cast<SetRandomSeed*>(m_determinismLog->currentAction(ReplayableTypes::SetRandomSeed));       
-        seed = action->randomSeed();
+        if (!action) // error handling case
+            seed = createSeed();
+        else
+            seed = action->randomSeed();
 
         LOG(TimelapseJSCActions, "%-30s Initialized random seed from captured value.", "[RiggedWeakRandom]");
     }

@@ -36,6 +36,7 @@
 #include "CapturingResourceHandleClient.h"
 #include "DeterminismController.h"
 #include "EmptyClients.h"
+#include "InspectorInstrumentation.h"
 #include "NetworkingContext.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
@@ -88,10 +89,25 @@ PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext*
 
     if (mode() == TimelapseProxy::Replaying) {
         RefPtr<DeterminismLog> detLog = controller()->determinismLog();
+        int handleId;
+
         ResourceHandleCreated* memoizedHandle = static_cast<ResourceHandleCreated*>(detLog->currentAction(ReplayableTypes::ResourceHandleCreated));
-        int handleId = memoizedHandle->id();
+        if (memoizedHandle)
+            handleId = memoizedHandle->id();
+        else // error handling case
+            handleId = m_nextId++;
         
-        ASSERT(ResourceRequestBase::compare(*memoizedHandle->request(), request));
+        // error handling when requests don't match
+        if (!ResourceRequestBase::compare(*memoizedHandle->request(), request)) {
+            LOG_ERROR("%-30s Network request details differ from request observed when recording.", "[NetworkProxy]");
+            LOG_ERROR("Memoized request URL: %s", memoizedHandle->request()->url().string().utf8().data());
+            LOG_ERROR("Replayed request URL: %s", request.url().string().utf8().data());
+            String errorString = String::format("Network request details differ from request observed while recording:\nMemoized: %s\nReplayed: %s",
+                                                memoizedHandle->request()->url().string().utf8().data(),
+                                                request.url().string().utf8().data());
+            controller()->cancelPlayback();
+            InspectorInstrumentation::playbackFailed(m_page, errorString);
+        }
 
         ResourceHandleClient* emptyClient = new EmptyResourceHandleClient();
         // TODO: maybe make a dummy ResourceHandle class that doesn't actually fetch resources.

@@ -131,7 +131,11 @@ JSValue JSDocument::cookie(ExecState* exec) const
     } else {
         ASSERT(log->replaying());
         GetDocumentCookie* action = static_cast<GetDocumentCookie*>(log->currentAction(ReplayableTypes::GetDocumentCookie));
-        cookie = action->cookie();
+        if (!action) // error handling case
+            cookie = impl()->cookie(ec);
+        else
+            cookie = action->cookie();
+        
         ec = action->exceptionCode();
     }
 

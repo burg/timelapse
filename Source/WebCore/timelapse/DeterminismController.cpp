@@ -516,6 +516,17 @@ void DeterminismController::maybeDispatchAction()
     if (m_runningAction)
         return;
 
+    // if there was an error between now the previous dispatch, report it now.
+    if (m_determinismLog->hasError()) {
+        // grab error string before resetting replay state.
+        String errorMessage = m_determinismLog->errorMessage();
+        LOG(Timelapse, "%-30s Stopping action dispatch because DeterminismLog reported an error.", "[DeterminismController]");
+        LOG(Timelapse, "%-30s %s", "[DeterminismController]", errorMessage.utf8().data());
+        finishReplay();
+        InspectorInstrumentation::playbackFailed(m_page, errorMessage);
+        return;
+    }
+
     // if there is no waiting action, then get one.
     if (!m_waitingAction)
         m_waitingAction = popDispatchAction(m_determinismLog);
@@ -543,6 +554,7 @@ void DeterminismController::maybeDispatchAction()
         String errorMessage = String::format("Next action should be injected after %d@ retired DOM events, but %d@ DOM events have retired.",
                                              m_waitingAction->dispatchCount(), 
                                              m_domEventDispatchCount);
+        finishReplay();
         InspectorInstrumentation::playbackFailed(m_page, errorMessage);
         return;
     }
