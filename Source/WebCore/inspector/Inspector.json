@@ -2512,6 +2512,13 @@
                 "name": "playbackFinished",
                 "description": "Fired when replaying has stopped."
             },
+	    {
+	        "name": "playbackFailed",
+	        "description": "Fired when playback encounters an internal (divergence) error.",
+		"parameters": [
+		    { "name": "error", "type": "string", "description": "A description of the error." }
+		]
+	    },
             {
                 "name": "inputLocked",
                 "description": "Fired when user input has become locked (will be ignored)."

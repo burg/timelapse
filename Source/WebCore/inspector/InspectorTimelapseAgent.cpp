@@ -319,6 +319,16 @@ void InspectorTimelapseAgent::playbackCancelled()
         m_frontend->inputUnlocked();
 }
 
+void InspectorTimelapseAgent::playbackFailed(const String& errorMessage)
+{
+    // immediately cancel playback, so that nothing bad happens.
+    m_inspectedPage->determinismController()->cancelPlayback();
+    // NB. if instead you would like to debug the failure,
+    // this is a decent breakpoint location.
+    if (m_frontend)
+        m_frontend->playbackFailed(errorMessage);
+}
+
 PositionMark InspectorTimelapseAgent::createMark()
 {
     return  PositionMark(m_nextMarkIndex++);

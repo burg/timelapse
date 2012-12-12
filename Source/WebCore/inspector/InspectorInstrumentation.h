@@ -247,6 +247,7 @@ public:
     static void playbackHitMark(Page*, unsigned);
     static void playbackFinished(Page*);
     static void playbackCancelled(Page*);
+    static void playbackFailed(Page*, const String& errorMessage);
 #endif
     
 #if ENABLE(WEB_SOCKETS)
@@ -442,6 +443,7 @@ private:
     static void playbackHitMarkImpl(InstrumentingAgents*, unsigned);
     static void playbackFinishedImpl(InstrumentingAgents*);
     static void playbackCancelledImpl(InstrumentingAgents*);
+    static void playbackFailedImpl(InstrumentingAgents*, const String& errorMessage);
 #endif
     
     static void networkStateChangedImpl(InstrumentingAgents*);
@@ -1469,8 +1471,15 @@ inline void InspectorInstrumentation::playbackCancelled(Page* page)
         playbackCancelledImpl(instrumentingAgents);
 #endif
 }
-#endif
 
+inline void InspectorInstrumentation::playbackFailed(Page* page, const String& errorMessage)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        playbackFailedImpl(instrumentingAgents, errorMessage);
+#endif
+}
+#endif
 
 inline void InspectorInstrumentation::networkStateChanged(Page* page)
 {

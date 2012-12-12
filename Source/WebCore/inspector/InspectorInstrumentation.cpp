@@ -1157,6 +1157,12 @@ void InspectorInstrumentation::playbackCancelledImpl(InstrumentingAgents* instru
     if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
         timelapseAgent->playbackCancelled();
 }
+
+void InspectorInstrumentation::playbackFailedImpl(InstrumentingAgents* instrumentingAgents, const String& errorMessage)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->playbackFailed(errorMessage);
+}
 #endif
 
 void InspectorInstrumentation::networkStateChangedImpl(InstrumentingAgents* instrumentingAgents)

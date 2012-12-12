@@ -518,6 +518,11 @@ WebInspector.TimelapseModel.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackStopped);
     },
 
+    _playbackFailed: function(errorMessage)
+    {
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackFailed, errorMessage);
+    },
+
     _lockedInput: function()
     {
     	this._inputLocked = true;
@@ -679,6 +684,11 @@ WebInspector.TimelapseDispatcher.prototype = {
     playbackFinished: function()
     {
 	this._model._playbackStopped();
+    },
+
+    playbackFailed: function(errorMessage)
+    {
+	this._model._playbackFailed(errorMessage);
     },
 
     inputLocked: function()

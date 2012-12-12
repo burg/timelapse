@@ -387,6 +387,8 @@ void DeterminismController::willDispatchEvent(const Event& event, DOMWindow* win
             // It would be a lot better for alpha users if we didn't crash. This is mainly
             // a great place to put a breakpoint.
             LOG_ERROR("%-30s REPLAY DIVERGENCE: more DOM events were dispatched (%d) than expected (%d) before the next input\n", "[DeterminismController]", m_runningAction->DOMEventQuota(), m_runningAction->DOMEventQuota()-1);
+            String errorMessage = String::format("more DOM events were dispatched (%d) than expected (%d) before the next input.", m_runningAction->DOMEventQuota(), m_runningAction->DOMEventQuota()-1);
+            InspectorInstrumentation::playbackFailed(m_page, errorMessage);
         }
     }
 }
@@ -535,9 +537,14 @@ void DeterminismController::maybeDispatchAction()
     //if this event is overdue, then the replay has diverged (probably caused by user interaction)
     if (m_waitingAction->dispatchCount() < m_domEventDispatchCount) {
         LOG_ERROR("%-30s REPLAY DIVERGENCE!", "[DeterminismController]");
-        LOG(Timelapse, "%-30s Next action should be injected after %d@ retired DOM events, but %d@ DOM events have retired.\n",
+        LOG_ERROR("%-30s Next action should be injected after %d@ retired DOM events, but %d@ DOM events have retired.\n",
             "[DeterminismController]", m_waitingAction->dispatchCount(), m_domEventDispatchCount);
         
+        String errorMessage = String::format("Next action should be injected after %d@ retired DOM events, but %d@ DOM events have retired.",
+                                             m_waitingAction->dispatchCount(), 
+                                             m_domEventDispatchCount);
+        InspectorInstrumentation::playbackFailed(m_page, errorMessage);
+        return;
     }
     
     //if this event is next in line or overdue, promote it to "running", then fire immediately.
