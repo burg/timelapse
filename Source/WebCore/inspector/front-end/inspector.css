@@ -3167,12 +3167,15 @@ div.timelapse-preview-container, .timelapse-overview-preview {
 }
 
 div.timelapse-overview-preview header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     height: 24px; 
     font-size: 12px;
     padding: 2px 5px;
     font-weight: bold;
     line-height: 22px;
-    text-align: center;
     text-align: center;
     color: rgb(110,110,110);
     text-shadow: white 0 1px 0;
@@ -3190,6 +3193,31 @@ div.timelapse-overview-preview div.preview-message {
     margin: 25% 25px;
     color: #555;
 }
+
+.timelapse-overview-preview div.table-wrapper {
+     overflow-y: scroll;
+     position: absolute;
+     top: 24px;
+     left: 0;
+     right: 0;
+     bottom: 0;
+}
+
+.timelapse-overview-preview div.table-wrapper::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 5px;
+}
+
+.timelapse-overview-preview div.table-wrapper::-webkit-scrollbar-track {
+    background-color: rgba(57,57,57,0.1);
+    border-radius: 4px;
+}
+
+.timelapse-overview-preview div.table-wrapper::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 156, 156, .6);
+    border-radius: 4px;
+}
+
 
 .timelapse-overview-preview table {
      border-collapse: collapse;

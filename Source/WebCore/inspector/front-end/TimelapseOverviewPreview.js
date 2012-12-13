@@ -172,6 +172,8 @@ WebInspector.OverviewPreviewViews.InputView.prototype = {
 	    return cell;
 	}
 
+	var wrapper = document.createElement("div");
+	wrapper.classList.add("table-wrapper");
 	var table = document.createElement("table");
 
 	for (var i = 0; i < records.length; i++) {
@@ -200,7 +202,8 @@ WebInspector.OverviewPreviewViews.InputView.prototype = {
 	    table.appendChild(row);
 	}
 
-	this.body = table;
+	wrapper.appendChild(table);
+	this.body = wrapper;
     }
 
 };
@@ -246,6 +249,8 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	    return cell;
 	}
 
+	var wrapper = document.createElement("div");
+	wrapper.classList.add("table-wrapper");
 	var table = document.createElement("table");
 
 	for (var i = 0; i < records.length; i++) {
@@ -314,7 +319,8 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	    table.appendChild(row);
 	}
 
-	this.body = table;
+	wrapper.appendChild(table);
+	this.body = wrapper;
     }
 };
 
