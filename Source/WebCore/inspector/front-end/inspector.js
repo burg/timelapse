@@ -227,13 +227,6 @@ var WebInspector = {
             this._timelapseWasShown = true;
         } else {
             button.title = WebInspector.UIString("Show Timelapse controller.");
-	    // TODO: i'm a workaround for the fact that View.willHide fires after animation finishes,
-	    // so any popover will linger around until animation is done. Unfortunately, this will
-	    // not persist the popup when the drawer is called back up.
-
-	    // alternatively, the popover could be animated too, but
-	    // it is going to be deleted soon anyway.
-	    this.timelapsePresentationModel.overviewPopover.hide();
             this.drawer.hide(animationType);
             delete this._timelapseWasShown;
         }
