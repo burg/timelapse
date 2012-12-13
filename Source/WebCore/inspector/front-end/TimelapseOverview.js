@@ -99,10 +99,7 @@ WebInspector.TimelapseOverview.prototype = {
 	this.element.className = "timelapse-overview";
 	this.element.tabIndex = 0;
 	
-	this._messagePanel = document.createElement("div");
-	this._messagePanel.className = "timelapse-overview-message message-pulse hidden";
-	this._messagePanel.addEventListener("click", this._onMessagePanelClicked.bind(this), true);
-	this.element.appendChild(this._messagePanel);
+	this._messagePanel = new WebInspector.TimelapseOverviewMessagePanel(this);
 
 	this._labelContainer = document.createElement("div");
 	this._labelContainer.className = "timelapse-timeline-labels";
@@ -389,11 +386,8 @@ WebInspector.TimelapseOverview.prototype = {
     {
 	var provider = event.data;
 
-	if (!this._canUseProvider(provider)) {
-	    console.warn("Overview ignoring unusable data provider:");
-	    console.warn(provider);
+	if (!this._canUseProvider(provider))
 	    return;
-	}
 
 	console.assert(!this._timelineForProvider(provider), "Timeline for provider already exists!");
 
@@ -744,20 +738,34 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPlaybackWillStart: function()
     {
-	this._messagePanel.classList.remove("hidden");
+	var clickEvent = WebInspector.TimelapseOverviewMessagePanel.Events.MessageClicked;
+	var clickCallback = function(event) {
+	    var panel = event.data;
+	    console.assert(panel === this._messagePanel, "unexpected arguments in message panel click callback");
+
+	    if (this._model.replaying)
+		this._model.pausePlayback();
+
+	    panel.removeEventListener(clickEvent, clickCallback, this);
+	    panel.detach();
+	}.bind(this);
+	this._messagePanel.addEventListener(clickEvent, clickCallback, this);
 
 	if (this._model.scanningBreakpoints)
-	    this._messagePanel.textContent = "Scanning breakpoints...";
+	    this._messagePanel.message = "Scanning breakpoints...";
 	else if (this._model.fastReplaying)
-	    this._messagePanel.textContent = "Seeking...";
+	    this._messagePanel.message = "Seeking...";
 	else
-	    this._messagePanel.textContent = "Replaying... click to cancel.";
+	    this._messagePanel.message = "Replaying... click to cancel.";
+
+	this._messagePanel.show(this.element);
     },
 
     _onPlaybackDidStart: function()
     {
+	// FIXME: is this even necessary? we just showed it above..
 	if (!this._model.scanningBreakpoints)
-	    this._messagePanel.classList.remove("hidden");
+	    this._messagePanel.show(this.element);
 
 	var allRecords = this._model.allRecords;
 	var startRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
@@ -787,8 +795,7 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.playback.element.removeStyleClass("playback-pulse");
 	this.sliders.playback.enable();
 
-	this._messagePanel.classList.add("hidden");
-
+	this._messagePanel.detach();
 	this._scheduleRefresh();
     },
 
@@ -814,7 +821,7 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.playback.enable();
 
 	if (!this._model.scanningBreakpoints)
-	    this._messagePanel.classList.add("hidden");
+	    this._messagePanel.detach();
 
 	this._scheduleRefresh();
     },
@@ -857,7 +864,7 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.playback.resetPosition();
 	this.sliders.playback.enable();
 
-	this._messagePanel.classList.add("hidden");
+	this._messagePanel.detach();
 
 	var currentMarkIndex = WebInspector.timelapseModel.currentMarkIndex;
         var timeline = this._timelineForProviderType(WebInspector.DataProvider.Types.BreakpointHits);
@@ -873,16 +880,6 @@ WebInspector.TimelapseOverview.prototype = {
     _onBreakpointRecordsChanged: function()
     {
 	this._scheduleRefresh();
-    },
-
-    // TODO: message panel (used for "scanning..." etc) should
-    // probably belong on TimelapseReplayingView."
-    _onMessagePanelClicked: function()
-    {
-	if (!this._model.replaying)
-	    return;
-
-	this._model.pausePlayback();
     },
 
     _onAnchorSet: function(event)
@@ -1551,6 +1548,46 @@ WebInspector.TimelapseCircleTimeline.Events = {
     CircleSelected: "CircleSelected",
     CircleDeselected: "CircleDeselected",
 }
+
+WebInspector.TimelapseOverviewMessagePanel = function(overview)
+{
+    WebInspector.View.call(this);
+
+    this.element = document.createElement("div");
+    this.element.className = "timelapse-overview-message message-pulse";
+    this.element.addEventListener("click", this._onMessageClicked.bind(this), false);
+}
+
+WebInspector.TimelapseOverviewMessagePanel.prototype = {
+    _onMessageClicked: function(event)
+    {
+	this.dispatchEventToListeners(WebInspector.TimelapseOverviewMessagePanel.Events, this);
+    },
+
+    get message()
+    {
+	return this._message;
+    },
+
+    set message(val)
+    {
+	this._message = val;
+	this.element.textContent = this._message;
+    },
+
+    // overrides WebInspector.View.detach
+    detach: function()
+    {
+	this.message = "ERROR: DIDNT SET MESSAGE BEFORE SHOWING";
+	WebInspector.View.prototype.detach.call(this);
+    }
+};
+
+WebInspector.TimelapseOverviewMessagePanel.prototype.__proto__ = WebInspector.View.prototype;
+
+WebInspector.TimelapseOverviewMessagePanel.Events = {
+    MessageClicked: "MessageClicked"
+};
 
 /**
  * @Constructor
