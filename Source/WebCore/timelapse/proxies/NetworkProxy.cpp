@@ -98,15 +98,17 @@ PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext*
             handleId = m_nextId++;
         
         // error handling when requests don't match
-        if (!ResourceRequestBase::compare(*memoizedHandle->request(), request)) {
+        if (!memoizedHandle || !ResourceRequestBase::compare(*memoizedHandle->request(), request)) {
             LOG_ERROR("%-30s Network request details differ from request observed when recording.", "[NetworkProxy]");
-            LOG_ERROR("Memoized request URL: %s", memoizedHandle->request()->url().string().utf8().data());
             LOG_ERROR("Replayed request URL: %s", request.url().string().utf8().data());
-            String errorString = String::format("Network request details differ from request observed while recording:\nMemoized: %s\nReplayed: %s",
-                                                memoizedHandle->request()->url().string().utf8().data(),
-                                                request.url().string().utf8().data());
+
+            if (memoizedHandle)
+                LOG_ERROR("Memoized request URL: %s", memoizedHandle->request()->url().string().utf8().data());
+            else
+                LOG_ERROR("Memoized request: NULL");
+
             controller()->cancelPlayback();
-            InspectorInstrumentation::playbackFailed(m_page, errorString);
+            InspectorInstrumentation::playbackFailed(m_page, "Network request details missing or differ from request observed when recording.");
         }
 
         ResourceHandleClient* emptyClient = new EmptyResourceHandleClient();
