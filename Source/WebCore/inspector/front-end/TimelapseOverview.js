@@ -1081,7 +1081,8 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this.element.classList.add("disabled");
 	this._recomputeParameters();
 	this._teardownDomListeners();
-	this._deselectCircle();
+	if (this._selectedCircleIndex)
+	    this._deselectCircle();
 	this.refresh();
     },
 
