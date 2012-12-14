@@ -666,11 +666,36 @@ WebInspector.TimelapseOverview.prototype = {
 	}
 
 	var position = this.sliders.playback.position;
-    	var timestamp = this.calculator.computeOverviewTimestamp(position);
-	var records = this._presentationModel.matchedRecords;
-	var idx = records.nearestBinaryIndexOf(timestamp, timestampAndRecordComparator, timeDistanceFunction);
+    	var wantedTs = this.calculator.computeOverviewTimestamp(position);
+	var minTs = this.calculator.minimumBoundary;
+	var maxTs = this.calculator.maximumBoundary;
 
-	this._presentationModel.previewRecord(records[idx]);
+	// for each active input provider, find the nearest mark within the calculator zoom interval
+	var closestPerProvider = [];
+	var inputProviders = this._presentationModel.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+	for (var i = 0; i < inputProviders.length; i++) {
+	    var provider = inputProviders[i];
+	    if (!provider.isEnabled())
+		continue;
+
+	    var minIdx = provider.records.nearestBinaryIndexOf(minTs, timestampAndRecordComparator, timeDistanceFunction);
+	    var maxIdx = provider.records.nearestBinaryIndexOf(maxTs, timestampAndRecordComparator, timeDistanceFunction);
+	    var idx = provider.records.nearestBinaryIndexWithin(wantedTs, minIdx, maxIdx, timestampAndRecordComparator, timeDistanceFunction);
+	    closestPerProvider.push(provider.records[idx]);
+	}
+
+	// if nothing matched at all, then there are no active providers. Just stop.
+	if (closestPerProvider.length === 0)
+	    return;
+
+	// now find the best out of the nearest candidates
+	var bestMatch = closestPerProvider[0];
+	for (var i = 1; i < closestPerProvider.length; i++) {
+	    if (Math.abs(wantedTs - closestPerProvider[i]) < Math.abs(wantedTs - bestMatch))
+		bestMatch = closestPerProvider[i];
+	}
+
+	this._presentationModel.previewRecord(bestMatch);
     },
 
     _onPlaybackSliderDragEnd: function(event)
