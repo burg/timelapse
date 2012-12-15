@@ -102,9 +102,11 @@ void DeterminismLog::append(ReplayableAction* action)
 
     ActionEntry newEntry = ActionEntry(action, m_captureCount++);
 
-    LOG(TimelapseCapturing, "%-25s#%-5ld CAPTURE: %s \n",
+    LOG(TimelapseCapturing, "%-25s#%-5ld %s-CAPTURE: %s \n",
         "[DeterminismLog]",
-        newEntry.count, action->toString().utf8().data());
+        newEntry.count,
+        action->dispatchable() ? "DISP" : "MEMO",
+        action->toString().utf8().data());
 
     if (action->dispatchable())
         m_dispatchActions.append(newEntry);
@@ -188,7 +190,7 @@ ReplayableAction* DeterminismLog::currentAction(ReplayableAction::ReplayableType
         m_errorData.expectedActionType = type;
         return 0;
     } else {
-        LOG(TimelapseCapturing, "%-25s#%-5ld YIELD: %s\n", "[DeterminismLog]",
+        LOG(TimelapseCapturing, "%-25s#%-5ld MEMO-YIELD: %s\n", "[DeterminismLog]",
             entry.count, thisAction->toString().utf8().data());
     }
 
@@ -212,7 +214,7 @@ ReplayableAction* DeterminismLog::currentDispatchableAction()
 
     const ActionEntry& entry = m_dispatchActions.at(m_dispatchReplayPosition);
 
-    LOG(TimelapseCapturing, "%-25s#%-5ldYIELD: %s\n", "[DeterminismLog]",
+    LOG(TimelapseCapturing, "%-25s#%-5ldDISP-YIELD: %s\n", "[DeterminismLog]",
         entry.count, entry.action->toString().utf8().data());
 
     m_dispatchReplayPosition++;
