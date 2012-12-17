@@ -253,15 +253,19 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	wrapper.classList.add("table-wrapper");
 	var table = document.createElement("table");
 
+	var lastMarkIndex;
 	for (var i = 0; i < records.length; i++) {
 	    var record = records[i];
 	    var row = document.createElement("tr");
-	    row.className = "row-with-count";
 	    var countCell = document.createElement("td");
-	    countCell.textContent = record.mark.index;
+	    if (record.mark.index != lastMarkIndex) {
+		row.className = "row-with-count";
+		countCell.textContent = record.mark.index;
+		lastMarkIndex = record.mark.index;
+	    }
 	    row.appendChild(countCell);
 
-	    var indexExplored = WebInspector.timelapseBreakpointTracker.exploredIndex(record.mark.index);
+	    var indexExplored = WebInspector.timelapseBreakpointTracker.exploredIndex(record.mark.index, record.hitIndex);
 	    var isAnchoredLocation = WebInspector.timelapsePresentationModel.anchorManager.anchorAtLocation(record.mark.index, record.hitIndex);
 	    var isCurrentBreakpoint = record.mark.index == WebInspector.timelapseModel.currentMarkIndex
 		&& record.hitIndex == WebInspector.timelapseModel.currentHitIndex;
@@ -308,7 +312,8 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	    
 	    table.appendChild(row);
 
-	    if (record.mark.index == WebInspector.timelapseModel.currentMarkIndex)
+	    if (record.mark.index == WebInspector.timelapseModel.currentMarkIndex
+	       && record.hitIndex == WebInspector.timelapseModel.currentHitIndex)
 		row.addStyleClass("selected");
 
 	    // TODO: could be shorter
