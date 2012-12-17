@@ -648,6 +648,8 @@ void DeterminismController::resetPlayback()
     m_runningAction = 0;
     m_domEventDispatchCount = 0;
     m_currentMark = 0;
+    m_previousMarkTime = 0.0;
+    m_previousActionDispatchStartTime = 0.0;
     m_determinismLog->reset();
 }
 
