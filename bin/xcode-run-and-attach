@@ -50,6 +50,8 @@ do
     WEBPROCESS_PID=$(ps -u $USER -xcwwo pid,pgid,comm | grep $PGID | grep WebProcess | awk '{ print $1 }')
 done
 
+sleep 1
+
 echo " "
 echo "Attaching to WebProcess($WEBPROCESS_PID) in Xcode."
 osascript $REAL_HOME/open-xcode-and-attach-to-process.scpt $WEBPROCESS_PID
