@@ -3279,7 +3279,29 @@ div.timelapse-overview-preview div.preview-message {
 .timelapse-overview-preview table tr:hover td:first-child,
 .timelapse-overview-preview table tr:hover td:last-child {
     text-decoration: underline;
-    cursor: pointer;
+    cursor: default;
+}
+
+.timelapse-overview-preview table .condition-row {
+    height: auto;
+    vertical-align: top;
+}
+
+.timelapse-overview-preview table .condition-row:hover {
+    background-image: none;
+}
+
+.timelapse-overview-preview table .condition-row:hover td:first-child,
+.timelapse-overview-preview table .condition-row:hover td:last-child {
+    text-decoration: none;
+}
+
+.timelapse-overview-preview table .condition-row td {
+    padding-top: 0;
+}
+
+.timelapse-overview-preview table .condition-row td:first-child {
+    text-align: right;
 }
 
 .timelapse-overview-preview table:not(.timelapse-category-breakpoint) tr.selected {
