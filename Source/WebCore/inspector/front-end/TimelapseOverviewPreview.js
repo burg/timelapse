@@ -297,21 +297,9 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	    cell.addStyleClass("text-cell");
 	    row.appendChild(cell);
 
-	    if (breakpoint.condition()) {
-		cell = document.createElement("td");
-		var conditionText = document.createElement("span");
-		conditionText.textContent = "(" + breakpoint.condition() + ")";
-		conditionText.addStyleClass("source-code");
-		cell.appendChild(conditionText);
-		cell.addStyleClass("text-cell");
-		row.appendChild(cell);
-	    }
-
 	    if (isCurrentBreakpoint)
 		row.addStyleClass("selected");
 	    
-	    table.appendChild(row);
-
 	    if (record.mark.index == WebInspector.timelapseModel.currentMarkIndex
 	       && record.hitIndex == WebInspector.timelapseModel.currentHitIndex)
 		row.addStyleClass("selected");
@@ -322,6 +310,25 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 				 }.bind(WebInspector.timelapseModel, record.mark.index));
 
 	    table.appendChild(row);
+
+	    if (breakpoint.condition()) {
+		var conditionRow = document.createElement("tr");
+		conditionRow.className = "condition-row"
+
+		var labelCell = document.createElement("td");
+		labelCell.colSpan = 3;
+		conditionRow.appendChild(labelCell);
+
+		var conditionCell = document.createElement("td");
+		var conditionText = document.createElement("span");
+		conditionText.textContent = breakpoint.condition();
+		conditionText.addStyleClass("source-code");
+		conditionCell.appendChild(conditionText);
+		conditionCell.addStyleClass("text-cell");
+		conditionRow.appendChild(conditionCell);
+
+		table.appendChild(conditionRow);
+	    }
 	}
 
 	wrapper.appendChild(table);
