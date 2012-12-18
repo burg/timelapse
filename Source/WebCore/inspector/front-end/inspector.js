@@ -823,6 +823,7 @@ WebInspector._registerShortcuts = function()
     section.addRelatedKeys(keys, WebInspector.UIString("Go back/forward in panel history"));
 
     section.addKey(shortcut.shortcutToString(shortcut.Keys.Esc), WebInspector.UIString("Toggle console"));
+    section.addKey(shortcut.shortcutToString(shortcut.Keys.F6), WebInspector.UIString("Toggle Timelapse controller"));
     section.addKey(shortcut.shortcutToString("f", shortcut.Modifiers.CtrlOrMeta), WebInspector.UIString("Search"));
 
     var advancedSearchShortcut = WebInspector.AdvancedSearchController.createShortcut();
