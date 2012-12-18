@@ -47,7 +47,7 @@
 #include "ResourceDidReceiveResponse.h"
 #include "ResourceDidSendData.h"
 #include "ResourceHandle.h"
-#include "ResourceHandleDestroyed.h"
+#include "ResourceLoaderDestroyed.h"
 #include "ResourceRequest.h"
 #include "ResourceWasBlocked.h"
 #include "ResourceWillCacheResponse.h"
@@ -62,7 +62,9 @@ CapturingResourceHandleClient::CapturingResourceHandleClient(NetworkProxy* proxy
 
 CapturingResourceHandleClient::~CapturingResourceHandleClient()
 {
-    m_proxy->controller()->capturePageInput(new ResourceHandleDestroyed(m_id));
+    // FIXME: this will probably do the wrong thing if the ResourceLoader switches
+    // between two different handles without completely loading one.
+    m_proxy->controller()->capturePageInput(new ResourceLoaderDestroyed(m_id));
 }
 
 // ResourceHandleClient API

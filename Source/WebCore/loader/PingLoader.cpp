@@ -37,7 +37,6 @@
 #include "Frame.h"
 #include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
-#include "NetworkProxy.h"
 #include "Page.h"
 #include "ProgressTracker.h"
 #include "ResourceHandle.h"
@@ -135,7 +134,7 @@ PingLoader::PingLoader(Frame* frame, ResourceRequest& request)
     // with the provisional DocumentLoader if there is a provisional
     // DocumentLoader.
     m_shouldUseCredentialStorage = frame->loader()->client()->shouldUseCredentialStorage(frame->loader()->activeDocumentLoader(), identifier);
-    m_handle = frame->page()->networkProxy()->createResourceHandle(frame->loader()->networkingContext(), request, this, false, false);
+    m_handle = ResourceHandle::create(frame->loader()->networkingContext(), request, this, false, false);
 
     InspectorInstrumentation::continueAfterPingLoader(frame, identifier, frame->loader()->activeDocumentLoader(), request, ResourceResponse());
 

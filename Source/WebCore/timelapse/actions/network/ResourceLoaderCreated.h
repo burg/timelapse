@@ -29,48 +29,41 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#ifndef ResourceLoaderCreated_h
+#define ResourceLoaderCreated_h
 
 #if ENABLE(TIMELAPSE)
 
-#include "ResourceHandleDestroyed.h"
-
-#include "DeterminismController.h"
-#include "NetworkProxy.h"
+#include "ResourceRequest.h"
 #include <wtf/timelapse/ActionSerializer.h>
+#include <wtf/timelapse/ReplayableAction.h>
 
 namespace WebCore {
 
 namespace ReplayableTypes {
-const char *ResourceHandleDestroyed = "ResourceHandleDestroyed";
+    extern const char *ResourceLoaderCreated;
 }
 
-ResourceHandleDestroyed::ResourceHandleDestroyed(int id)
-: DispatchableAction(ReplayableTypes::ResourceHandleDestroyed)
-, m_id(id) {}
+class ResourceLoaderCreated : public ReplayableAction {
+public:
+    ResourceLoaderCreated(int id, const ResourceRequest&);
+    virtual ~ResourceLoaderCreated();
+    
+    int id() const { return m_id; }
+    ResourceRequest* request() const { return m_request.get(); }
 
-//DispatchableAction API
-void ResourceHandleDestroyed::dispatch(DeterminismController* controller)
-{
-    controller->page()->networkProxy()->removeHandleById(m_id);
-    controller->didDispatch(this);
-}
+    // ReplayableAction API
+    virtual String toString() const OVERRIDE;
+    virtual size_t memorySize() const OVERRIDE;
+    virtual void serialize(ActionSerializer*) const OVERRIDE;
 
-String ResourceHandleDestroyed::toString() const
-{
-    return makeString("ResourceHandleDestroyed(id=", String::number(m_id), ")");
-}
-
-size_t ResourceHandleDestroyed::memorySize() const
-{
-    return sizeof(ResourceHandleDestroyed);
-}
-
-void ResourceHandleDestroyed::serialize(ActionSerializer* serializer) const
-{
-    serializer->putInt("handleId", m_id);
-}
-
+private:
+    int m_id;
+    OwnPtr<ResourceRequest> m_request;
+};
+    
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
+
+#endif // ResourceLoaderCreated_h

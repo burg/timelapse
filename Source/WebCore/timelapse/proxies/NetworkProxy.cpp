@@ -40,7 +40,7 @@
 #include "NetworkingContext.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
-#include "ResourceHandleCreated.h"
+#include "ResourceLoaderCreated.h"
 #include "ResourceRequest.h"
 #include <wtf/timelapse/DeterminismLog.h>
 
@@ -76,46 +76,62 @@ DeterminismController* NetworkProxy::controller() const
 {
     return m_page->determinismController();
 }
-#endif // ENABLE(TIMELAPSE)
 
-PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff)
+int NetworkProxy::nextLoaderId(const ResourceRequest& request)
 {
-#if ENABLE(TIMELAPSE)
     if (mode() == TimelapseProxy::Capturing) {
-        CapturingResourceHandleClient* captureShim = new CapturingResourceHandleClient(this, client, m_nextId++);
-        controller()->determinismLog()->append(new ResourceHandleCreated(captureShim->id(), request, defersLoading, shouldContentSniff));
-        return ResourceHandle::create(context, request, captureShim, defersLoading, shouldContentSniff);
+        int freshId = m_nextId++;
+        controller()->determinismLog()->append(new ResourceLoaderCreated(freshId, request));
+
+        return freshId;
     }
 
     if (mode() == TimelapseProxy::Replaying) {
         RefPtr<DeterminismLog> detLog = controller()->determinismLog();
-        int handleId;
 
-        ResourceHandleCreated* memoizedHandle = static_cast<ResourceHandleCreated*>(detLog->currentAction(ReplayableTypes::ResourceHandleCreated));
-        if (memoizedHandle)
-            handleId = memoizedHandle->id();
+        int loaderId;
+        ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(detLog->currentAction(ReplayableTypes::ResourceLoaderCreated));
+        if (memoizedData)
+            loaderId = memoizedData->id();
         else // error handling case
-            handleId = m_nextId++;
+            loaderId = -1;
         
         // error handling when requests don't match
-        if (!memoizedHandle || !ResourceRequestBase::compare(*memoizedHandle->request(), request)) {
+        if (!memoizedData || !ResourceRequestBase::compare(*memoizedData->request(), request)) {
             LOG_ERROR("%-30s Network request details differ from request observed when recording.", "[NetworkProxy]");
             LOG_ERROR("Replayed request URL: %s", request.url().string().utf8().data());
 
-            if (memoizedHandle)
-                LOG_ERROR("Memoized request URL: %s", memoizedHandle->request()->url().string().utf8().data());
+            if (memoizedData)
+                LOG_ERROR("Memoized request URL: %s", memoizedData->request()->url().string().utf8().data());
             else
                 LOG_ERROR("Memoized request: NULL");
 
             controller()->cancelPlayback();
             InspectorInstrumentation::playbackFailed(m_page, "Network request details missing or differ from request observed when recording.");
         }
+        
+        return loaderId;
+    }
+    
+    return -1;
+}
+#endif // ENABLE(TIMELAPSE)
 
+PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, int loaderId, bool defersLoading, bool shouldContentSniff)
+{
+#if ENABLE(TIMELAPSE)
+    if (mode() == TimelapseProxy::Capturing) {
+        ASSERT(loaderId > 0);
+        CapturingResourceHandleClient* captureShim = new CapturingResourceHandleClient(this, client, loaderId);
+        return ResourceHandle::create(context, request, captureShim, defersLoading, shouldContentSniff);
+    }
+
+    if (mode() == TimelapseProxy::Replaying) {
         ResourceHandleClient* emptyClient = new EmptyResourceHandleClient();
         // TODO: maybe make a dummy ResourceHandle class that doesn't actually fetch resources.
         RefPtr<ResourceHandle> newHandle = ResourceHandle::create(context, request, emptyClient, defersLoading, shouldContentSniff);
 
-        m_replayHandleMap.set(handleId, std::make_pair(newHandle, client));
+        m_replayHandleMap.set(loaderId, std::make_pair(newHandle, client));
         return newHandle;
     }
 

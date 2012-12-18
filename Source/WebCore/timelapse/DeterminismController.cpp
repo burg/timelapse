@@ -220,8 +220,9 @@ void DeterminismController::beginCapturing(const PositionMark& mark)
                                                       mainFrame->loader()->referrer(),
                                                       m_domEventDispatchCount, m_currentMark);
     captureAction(reloadAction);
+
     //The call to scheduleLocationChange should be the same on capture and replay.
-    
+    setExpectsPageLoad(true);
     // TODO: right now, the last two args make this page load count in the BFCache
     // and the history. Is this a bad idea? They are not counted during replays.
     mainFrame->navigationScheduler()->scheduleLocationChange(reloadAction->securityOrigin().get(),
@@ -405,7 +406,8 @@ void DeterminismController::frameNavigated(DocumentLoader* loader, const Positio
 {
     if (!capturing() && !replaying())
         return;
-
+    
+    setExpectsPageLoad(false);
     loader->frame()->script()->globalObject(mainThreadNormalWorld())->configureDeterminism(m_determinismLog);
 }
 

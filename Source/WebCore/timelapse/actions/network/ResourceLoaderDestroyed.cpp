@@ -29,43 +29,48 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ResourceHandleDestroyed_h
-#define ResourceHandleDestroyed_h
+#include "config.h"
 
 #if ENABLE(TIMELAPSE)
 
-#include "DispatchableAction.h"
+#include "ResourceLoaderDestroyed.h"
+
+#include "DeterminismController.h"
+#include "NetworkProxy.h"
 #include <wtf/timelapse/ActionSerializer.h>
 
 namespace WebCore {
-    
-    namespace ReplayableTypes {
-        extern const char *ResourceHandleDestroyed;
-    }
-    
-    class DeterminismController;
-    
-    class ResourceHandleDestroyed : public DispatchableAction {
-    public:
-        ResourceHandleDestroyed(int id);
-        virtual ~ResourceHandleDestroyed() {};
-        
-        int id() const { return m_id; }
-        
-        // DispatchableAction API
-        virtual void dispatch(DeterminismController*) OVERRIDE;
-        
-        // ReplayableAction API
-        virtual String toString() const OVERRIDE;
-        virtual size_t memorySize() const OVERRIDE;
-        virtual void serialize(ActionSerializer*) const OVERRIDE;
-        
-    private:
-        int m_id;
-    };
-    
+
+namespace ReplayableTypes {
+const char *ResourceLoaderDestroyed = "ResourceLoaderDestroyed";
+}
+
+ResourceLoaderDestroyed::ResourceLoaderDestroyed(int id)
+: DispatchableAction(ReplayableTypes::ResourceLoaderDestroyed)
+, m_id(id) {}
+
+//DispatchableAction API
+void ResourceLoaderDestroyed::dispatch(DeterminismController* controller)
+{
+    controller->page()->networkProxy()->removeHandleById(m_id);
+    controller->didDispatch(this);
+}
+
+String ResourceLoaderDestroyed::toString() const
+{
+    return makeString("ResourceLoaderDestroyed(id=", String::number(m_id), ")");
+}
+
+size_t ResourceLoaderDestroyed::memorySize() const
+{
+    return sizeof(ResourceLoaderDestroyed);
+}
+
+void ResourceLoaderDestroyed::serialize(ActionSerializer* serializer) const
+{
+    serializer->putInt("loaderId", m_id);
+}
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
-
-#endif // ResourceHandleDestroyed_h

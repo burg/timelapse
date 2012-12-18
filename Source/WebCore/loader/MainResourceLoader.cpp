@@ -62,6 +62,10 @@
 #include "WebCoreSystemInterface.h"
 #endif
 
+#if ENABLE(TIMELAPSE)
+#include "DeterminismController.h"
+#endif
+
 // FIXME: More that is in common with SubresourceLoader should move up into ResourceLoader.
 
 namespace WebCore {
@@ -637,7 +641,7 @@ bool MainResourceLoader::loadNow(ResourceRequest& r)
     else if (shouldLoadEmpty || frameLoader()->client()->representationExistsForURLScheme(url.protocol()))
         handleEmptyLoad(url, !shouldLoadEmpty);
     else
-        m_handle = m_frame->page()->networkProxy()->createResourceHandle(m_frame->loader()->networkingContext(), r, this, false, true);
+        m_handle = m_frame->page()->networkProxy()->createResourceHandle(m_frame->loader()->networkingContext(), r, this, m_loaderId, false, true);
 
     return false;
 }
@@ -649,6 +653,14 @@ void MainResourceLoader::load(const ResourceRequest& r, const SubstituteData& su
     // It appears that it is possible for this load to be cancelled and derefenced by the DocumentLoader
     // in willSendRequest() if loadNow() is called.
     RefPtr<MainResourceLoader> protect(this);
+
+#if ENABLE(TIMELAPSE)
+    if (m_frame->page()->determinismController() &&
+        m_frame->page()->determinismController()->expectsPageLoad()) {
+        
+        m_loaderId = m_frame->page()->networkProxy()->nextLoaderId(r);
+    }
+#endif // ENABLE(TIMELAPSE)
 
     m_substituteData = substituteData;
 

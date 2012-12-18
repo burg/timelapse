@@ -5778,6 +5778,14 @@
 		C33EE5C414FB49610002095A /* BaseClickableWithKeyInputType.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C33EE5C214FB49610002095A /* BaseClickableWithKeyInputType.cpp */; };
 		C33EE5C514FB49610002095A /* BaseClickableWithKeyInputType.h in Headers */ = {isa = PBXBuildFile; fileRef = C33EE5C314FB49610002095A /* BaseClickableWithKeyInputType.h */; };
 		C37CDEBD149EF2030042090D /* ColorChooserClient.h in Headers */ = {isa = PBXBuildFile; fileRef = C37CDEBC149EF2030042090D /* ColorChooserClient.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		C3CF17A415B0063F00276D39 /* IdTargetObserver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C3CF17A015B0063F00276D39 /* IdTargetObserver.cpp */; };
+		C3CF17A515B0063F00276D39 /* IdTargetObserver.h in Headers */ = {isa = PBXBuildFile; fileRef = C3CF17A115B0063F00276D39 /* IdTargetObserver.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		C3CF17A615B0063F00276D39 /* IdTargetObserverRegistry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C3CF17A215B0063F00276D39 /* IdTargetObserverRegistry.cpp */; };
+		C3CF17A715B0063F00276D39 /* IdTargetObserverRegistry.h in Headers */ = {isa = PBXBuildFile; fileRef = C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		C43DBEDD168129AA00147325 /* ResourceLoaderCreated.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C43DBED9168129AA00147325 /* ResourceLoaderCreated.cpp */; };
+		C43DBEDE168129AA00147325 /* ResourceLoaderCreated.h in Headers */ = {isa = PBXBuildFile; fileRef = C43DBEDA168129AA00147325 /* ResourceLoaderCreated.h */; };
+		C43DBEDF168129AA00147325 /* ResourceLoaderDestroyed.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C43DBEDB168129AA00147325 /* ResourceLoaderDestroyed.cpp */; };
+		C43DBEE0168129AA00147325 /* ResourceLoaderDestroyed.h in Headers */ = {isa = PBXBuildFile; fileRef = C43DBEDC168129AA00147325 /* ResourceLoaderDestroyed.h */; };
 		C4634C2F15E57510000956EB /* AsyncEventProxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4634C2815E57510000956EB /* AsyncEventProxy.cpp */; };
 		C4634C3015E57510000956EB /* AsyncEventProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = C4634C2915E57510000956EB /* AsyncEventProxy.h */; };
 		C4634C3115E57510000956EB /* NetworkProxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4634C2A15E57510000956EB /* NetworkProxy.cpp */; };
@@ -5820,10 +5828,6 @@
 		C4AEC3B515EED36C007076B6 /* ResourceDidReceiveResponse.h in Headers */ = {isa = PBXBuildFile; fileRef = C4AEC39D15EED36C007076B6 /* ResourceDidReceiveResponse.h */; };
 		C4AEC3B615EED36C007076B6 /* ResourceDidSendData.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4AEC39E15EED36C007076B6 /* ResourceDidSendData.cpp */; };
 		C4AEC3B715EED36C007076B6 /* ResourceDidSendData.h in Headers */ = {isa = PBXBuildFile; fileRef = C4AEC39F15EED36C007076B6 /* ResourceDidSendData.h */; };
-		C4AEC3B815EED36C007076B6 /* ResourceHandleCreated.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4AEC3A015EED36C007076B6 /* ResourceHandleCreated.cpp */; };
-		C4AEC3B915EED36C007076B6 /* ResourceHandleCreated.h in Headers */ = {isa = PBXBuildFile; fileRef = C4AEC3A115EED36C007076B6 /* ResourceHandleCreated.h */; };
-		C4AEC3BA15EED36C007076B6 /* ResourceHandleDestroyed.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4AEC3A215EED36C007076B6 /* ResourceHandleDestroyed.cpp */; };
-		C4AEC3BB15EED36C007076B6 /* ResourceHandleDestroyed.h in Headers */ = {isa = PBXBuildFile; fileRef = C4AEC3A315EED36C007076B6 /* ResourceHandleDestroyed.h */; };
 		C4AEC3BC15EED36C007076B6 /* ResourceWasBlocked.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4AEC3A415EED36C007076B6 /* ResourceWasBlocked.cpp */; };
 		C4AEC3BD15EED36C007076B6 /* ResourceWasBlocked.h in Headers */ = {isa = PBXBuildFile; fileRef = C4AEC3A515EED36C007076B6 /* ResourceWasBlocked.h */; };
 		C4AEC3BE15EED36C007076B6 /* ResourceWillCacheResponse.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4AEC3A615EED36C007076B6 /* ResourceWillCacheResponse.cpp */; };
@@ -5862,10 +5866,6 @@
 		C4FF658E14743E32002910B5 /* DeterminismController.h in Headers */ = {isa = PBXBuildFile; fileRef = C4FF658C14743E32002910B5 /* DeterminismController.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C4FF6592147705DC002910B5 /* TimelapseAgentStateMachine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4FF6590147705DB002910B5 /* TimelapseAgentStateMachine.cpp */; };
 		C4FF6593147705DC002910B5 /* TimelapseAgentStateMachine.h in Headers */ = {isa = PBXBuildFile; fileRef = C4FF6591147705DC002910B5 /* TimelapseAgentStateMachine.h */; };
-		C3CF17A415B0063F00276D39 /* IdTargetObserver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C3CF17A015B0063F00276D39 /* IdTargetObserver.cpp */; };
-		C3CF17A515B0063F00276D39 /* IdTargetObserver.h in Headers */ = {isa = PBXBuildFile; fileRef = C3CF17A115B0063F00276D39 /* IdTargetObserver.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		C3CF17A615B0063F00276D39 /* IdTargetObserverRegistry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C3CF17A215B0063F00276D39 /* IdTargetObserverRegistry.cpp */; };
-		C3CF17A715B0063F00276D39 /* IdTargetObserverRegistry.h in Headers */ = {isa = PBXBuildFile; fileRef = C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C50B561612119D23008B46E0 /* GroupSettings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C50B561412119D23008B46E0 /* GroupSettings.cpp */; };
 		C50B561712119D23008B46E0 /* GroupSettings.h in Headers */ = {isa = PBXBuildFile; fileRef = C50B561512119D23008B46E0 /* GroupSettings.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C50D0E820FF4272900AC2644 /* StorageNamespace.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C50D0E800FF4272900AC2644 /* StorageNamespace.cpp */; };
@@ -13186,6 +13186,14 @@
 		C33EE5C214FB49610002095A /* BaseClickableWithKeyInputType.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = BaseClickableWithKeyInputType.cpp; sourceTree = "<group>"; };
 		C33EE5C314FB49610002095A /* BaseClickableWithKeyInputType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BaseClickableWithKeyInputType.h; sourceTree = "<group>"; };
 		C37CDEBC149EF2030042090D /* ColorChooserClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ColorChooserClient.h; sourceTree = "<group>"; };
+		C3CF17A015B0063F00276D39 /* IdTargetObserver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IdTargetObserver.cpp; sourceTree = "<group>"; };
+		C3CF17A115B0063F00276D39 /* IdTargetObserver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IdTargetObserver.h; sourceTree = "<group>"; };
+		C3CF17A215B0063F00276D39 /* IdTargetObserverRegistry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IdTargetObserverRegistry.cpp; sourceTree = "<group>"; };
+		C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IdTargetObserverRegistry.h; sourceTree = "<group>"; };
+		C43DBED9168129AA00147325 /* ResourceLoaderCreated.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ResourceLoaderCreated.cpp; path = timelapse/actions/network/ResourceLoaderCreated.cpp; sourceTree = "<group>"; };
+		C43DBEDA168129AA00147325 /* ResourceLoaderCreated.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ResourceLoaderCreated.h; path = timelapse/actions/network/ResourceLoaderCreated.h; sourceTree = "<group>"; };
+		C43DBEDB168129AA00147325 /* ResourceLoaderDestroyed.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ResourceLoaderDestroyed.cpp; path = timelapse/actions/network/ResourceLoaderDestroyed.cpp; sourceTree = "<group>"; };
+		C43DBEDC168129AA00147325 /* ResourceLoaderDestroyed.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ResourceLoaderDestroyed.h; path = timelapse/actions/network/ResourceLoaderDestroyed.h; sourceTree = "<group>"; };
 		C4634C2815E57510000956EB /* AsyncEventProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = AsyncEventProxy.cpp; path = timelapse/proxies/AsyncEventProxy.cpp; sourceTree = "<group>"; };
 		C4634C2915E57510000956EB /* AsyncEventProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AsyncEventProxy.h; path = timelapse/proxies/AsyncEventProxy.h; sourceTree = "<group>"; };
 		C4634C2A15E57510000956EB /* NetworkProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NetworkProxy.cpp; path = timelapse/proxies/NetworkProxy.cpp; sourceTree = "<group>"; };
@@ -13228,10 +13236,6 @@
 		C4AEC39D15EED36C007076B6 /* ResourceDidReceiveResponse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ResourceDidReceiveResponse.h; path = timelapse/actions/network/ResourceDidReceiveResponse.h; sourceTree = "<group>"; };
 		C4AEC39E15EED36C007076B6 /* ResourceDidSendData.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ResourceDidSendData.cpp; path = timelapse/actions/network/ResourceDidSendData.cpp; sourceTree = "<group>"; };
 		C4AEC39F15EED36C007076B6 /* ResourceDidSendData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ResourceDidSendData.h; path = timelapse/actions/network/ResourceDidSendData.h; sourceTree = "<group>"; };
-		C4AEC3A015EED36C007076B6 /* ResourceHandleCreated.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ResourceHandleCreated.cpp; path = timelapse/actions/network/ResourceHandleCreated.cpp; sourceTree = "<group>"; };
-		C4AEC3A115EED36C007076B6 /* ResourceHandleCreated.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ResourceHandleCreated.h; path = timelapse/actions/network/ResourceHandleCreated.h; sourceTree = "<group>"; };
-		C4AEC3A215EED36C007076B6 /* ResourceHandleDestroyed.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ResourceHandleDestroyed.cpp; path = timelapse/actions/network/ResourceHandleDestroyed.cpp; sourceTree = "<group>"; };
-		C4AEC3A315EED36C007076B6 /* ResourceHandleDestroyed.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ResourceHandleDestroyed.h; path = timelapse/actions/network/ResourceHandleDestroyed.h; sourceTree = "<group>"; };
 		C4AEC3A415EED36C007076B6 /* ResourceWasBlocked.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ResourceWasBlocked.cpp; path = timelapse/actions/network/ResourceWasBlocked.cpp; sourceTree = "<group>"; };
 		C4AEC3A515EED36C007076B6 /* ResourceWasBlocked.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ResourceWasBlocked.h; path = timelapse/actions/network/ResourceWasBlocked.h; sourceTree = "<group>"; };
 		C4AEC3A615EED36C007076B6 /* ResourceWillCacheResponse.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ResourceWillCacheResponse.cpp; path = timelapse/actions/network/ResourceWillCacheResponse.cpp; sourceTree = "<group>"; };
@@ -13270,10 +13274,6 @@
 		C4FF658C14743E32002910B5 /* DeterminismController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DeterminismController.h; path = timelapse/DeterminismController.h; sourceTree = "<group>"; };
 		C4FF6590147705DB002910B5 /* TimelapseAgentStateMachine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TimelapseAgentStateMachine.cpp; path = timelapse/TimelapseAgentStateMachine.cpp; sourceTree = "<group>"; };
 		C4FF6591147705DC002910B5 /* TimelapseAgentStateMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TimelapseAgentStateMachine.h; path = timelapse/TimelapseAgentStateMachine.h; sourceTree = "<group>"; };
-		C3CF17A015B0063F00276D39 /* IdTargetObserver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IdTargetObserver.cpp; sourceTree = "<group>"; };
-		C3CF17A115B0063F00276D39 /* IdTargetObserver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IdTargetObserver.h; sourceTree = "<group>"; };
-		C3CF17A215B0063F00276D39 /* IdTargetObserverRegistry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IdTargetObserverRegistry.cpp; sourceTree = "<group>"; };
-		C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IdTargetObserverRegistry.h; sourceTree = "<group>"; };
 		C50B561412119D23008B46E0 /* GroupSettings.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GroupSettings.cpp; sourceTree = "<group>"; };
 		C50B561512119D23008B46E0 /* GroupSettings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GroupSettings.h; sourceTree = "<group>"; };
 		C50D0E800FF4272900AC2644 /* StorageNamespace.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = StorageNamespace.cpp; sourceTree = "<group>"; };
@@ -21195,10 +21195,10 @@
 				C4AEC39D15EED36C007076B6 /* ResourceDidReceiveResponse.h */,
 				C4AEC39E15EED36C007076B6 /* ResourceDidSendData.cpp */,
 				C4AEC39F15EED36C007076B6 /* ResourceDidSendData.h */,
-				C4AEC3A015EED36C007076B6 /* ResourceHandleCreated.cpp */,
-				C4AEC3A115EED36C007076B6 /* ResourceHandleCreated.h */,
-				C4AEC3A215EED36C007076B6 /* ResourceHandleDestroyed.cpp */,
-				C4AEC3A315EED36C007076B6 /* ResourceHandleDestroyed.h */,
+				C43DBED9168129AA00147325 /* ResourceLoaderCreated.cpp */,
+				C43DBEDA168129AA00147325 /* ResourceLoaderCreated.h */,
+				C43DBEDB168129AA00147325 /* ResourceLoaderDestroyed.cpp */,
+				C43DBEDC168129AA00147325 /* ResourceLoaderDestroyed.h */,
 				C4AEC3A415EED36C007076B6 /* ResourceWasBlocked.cpp */,
 				C4AEC3A515EED36C007076B6 /* ResourceWasBlocked.h */,
 				C4AEC3A615EED36C007076B6 /* ResourceWillCacheResponse.cpp */,
@@ -25886,8 +25886,6 @@
 				C4AEC3B315EED36C007076B6 /* ResourceDidReceiveData.h in Headers */,
 				C4AEC3B515EED36C007076B6 /* ResourceDidReceiveResponse.h in Headers */,
 				C4AEC3B715EED36C007076B6 /* ResourceDidSendData.h in Headers */,
-				C4AEC3B915EED36C007076B6 /* ResourceHandleCreated.h in Headers */,
-				C4AEC3BB15EED36C007076B6 /* ResourceHandleDestroyed.h in Headers */,
 				C4AEC3BD15EED36C007076B6 /* ResourceWasBlocked.h in Headers */,
 				C4AEC3BF15EED36C007076B6 /* ResourceWillCacheResponse.h in Headers */,
 				C4AEC3C115EED36C007076B6 /* ResourceWillSendRequest.h in Headers */,
@@ -25917,20 +25915,9 @@
 				2346D68815F16461008E6EF0 /* SendResizeEvent.h in Headers */,
 				237B5C8515F7C0EB00294B1E /* InitializeWindow.h in Headers */,
 				2312CBAE1602C63B00BC60B0 /* GetJSAttribute.h in Headers */,
-				C46005B71633869400AFC0F1 /* ScrollPage.h in Headers */,
-				C4DF0D65163387BB00BB135D /* ResourceHandleCreated.h in Headers */,
-				C4DF0D7D163388D900BB135D /* ResourceCannotShowURL.h in Headers */,
-				C4DF0D7F163388D900BB135D /* ResourceDidFail.h in Headers */,
-				C4DF0D81163388D900BB135D /* ResourceDidFinishLoading.h in Headers */,
-				C4DF0D83163388D900BB135D /* ResourceDidReceiveCachedMetadata.h in Headers */,
-				C4DF0D85163388D900BB135D /* ResourceDidReceiveData.h in Headers */,
-				C4DF0D87163388D900BB135D /* ResourceDidReceiveResponse.h in Headers */,
-				C4DF0D89163388D900BB135D /* ResourceDidSendData.h in Headers */,
-				C4DF0D8B163388D900BB135D /* ResourceHandleDestroyed.h in Headers */,
-				C4DF0D8D163388D900BB135D /* ResourceWasBlocked.h in Headers */,
-				C4DF0D8F163388D900BB135D /* ResourceWillCacheResponse.h in Headers */,
-				C4DF0D91163388D900BB135D /* ResourceWillSendRequest.h in Headers */,
 				23F380E2164324E400650F4D /* RanPendingScripts.h in Headers */,
+				C43DBEDE168129AA00147325 /* ResourceLoaderCreated.h in Headers */,
+				C43DBEE0168129AA00147325 /* ResourceLoaderDestroyed.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -29036,8 +29023,6 @@
 				C4AEC3B215EED36C007076B6 /* ResourceDidReceiveData.cpp in Sources */,
 				C4AEC3B415EED36C007076B6 /* ResourceDidReceiveResponse.cpp in Sources */,
 				C4AEC3B615EED36C007076B6 /* ResourceDidSendData.cpp in Sources */,
-				C4AEC3B815EED36C007076B6 /* ResourceHandleCreated.cpp in Sources */,
-				C4AEC3BA15EED36C007076B6 /* ResourceHandleDestroyed.cpp in Sources */,
 				C4AEC3BC15EED36C007076B6 /* ResourceWasBlocked.cpp in Sources */,
 				C4AEC3BE15EED36C007076B6 /* ResourceWillCacheResponse.cpp in Sources */,
 				C4AEC3C015EED36C007076B6 /* ResourceWillSendRequest.cpp in Sources */,
@@ -29067,21 +29052,9 @@
 				0F605AEC15F94848004DF0C0 /* ScrollingConstraints.cpp in Sources */,
 				2346D68715F16461008E6EF0 /* SendResizeEvent.cpp in Sources */,
 				237B5C8415F7C0EB00294B1E /* InitializeWindow.cpp in Sources */,
-				C46005B61633869400AFC0F1 /* ScrollPage.cpp in Sources */,
-				C4DF0D64163387BB00BB135D /* ResourceHandleCreated.cpp in Sources */,
-				C4DF0D7C163388D900BB135D /* ResourceCannotShowURL.cpp in Sources */,
-				C4DF0D7E163388D900BB135D /* ResourceDidFail.cpp in Sources */,
-				C4DF0D80163388D900BB135D /* ResourceDidFinishLoading.cpp in Sources */,
-				C4DF0D82163388D900BB135D /* ResourceDidReceiveCachedMetadata.cpp in Sources */,
-				C4DF0D84163388D900BB135D /* ResourceDidReceiveData.cpp in Sources */,
-				C4DF0D86163388D900BB135D /* ResourceDidReceiveResponse.cpp in Sources */,
-				C4DF0D88163388D900BB135D /* ResourceDidSendData.cpp in Sources */,
-				C4DF0D8A163388D900BB135D /* ResourceHandleDestroyed.cpp in Sources */,
-				C4DF0D8C163388D900BB135D /* ResourceWasBlocked.cpp in Sources */,
-				C4DF0D8E163388D900BB135D /* ResourceWillCacheResponse.cpp in Sources */,
-				C4DF0D90163388D900BB135D /* ResourceWillSendRequest.cpp in Sources */,
-				51ABF64D16392E2800132A7A /* LoaderStrategy.cpp in Sources */,
 				23F380E1164324E400650F4D /* RanPendingScripts.cpp in Sources */,
+				C43DBEDD168129AA00147325 /* ResourceLoaderCreated.cpp in Sources */,
+				C43DBEDF168129AA00147325 /* ResourceLoaderDestroyed.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

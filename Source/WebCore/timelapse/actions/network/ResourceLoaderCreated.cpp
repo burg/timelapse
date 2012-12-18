@@ -29,45 +29,58 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ResourceHandleCreated_h
-#define ResourceHandleCreated_h
+#include "config.h"
 
 #if ENABLE(TIMELAPSE)
 
+#include "ResourceLoaderCreated.h"
+
+#include "DeterminismController.h"
 #include "ResourceRequest.h"
+#include "SerializationMethods.h"
 #include <wtf/timelapse/ActionSerializer.h>
-#include <wtf/timelapse/ReplayableAction.h>
 
 namespace WebCore {
 
 namespace ReplayableTypes {
-    extern const char *ResourceHandleCreated;
+const char *ResourceLoaderCreated = "ResourceLoaderCreated";
 }
 
-class ResourceHandleCreated : public ReplayableAction {
-public:
-    ResourceHandleCreated(int id, const ResourceRequest&, bool, bool);
-    virtual ~ResourceHandleCreated();
-    
-    int id() const { return m_id; }
-    ResourceRequest* request() const { return m_request.get(); }
-    bool defersLoading() const { return m_defersLoading; }
-    bool shouldContentSniff() const { return m_shouldContentSniff; }
+ResourceLoaderCreated::ResourceLoaderCreated(int id, const ResourceRequest& request)
+    : ReplayableAction(ReplayableTypes::ResourceLoaderCreated)
+    , m_id(id)
+    , m_request(ResourceRequest::adopt(request.copyData())) {}
 
-    // ReplayableAction API
-    virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE;
-    virtual void serialize(ActionSerializer*) const OVERRIDE;
+ResourceLoaderCreated::~ResourceLoaderCreated()
+{
+    m_request = 0;
+}
 
-private:
-    int m_id;
-    OwnPtr<ResourceRequest> m_request;
-    bool m_defersLoading;
-    bool m_shouldContentSniff;
-};
-    
+//ReplayableAction API
+String ResourceLoaderCreated::toString() const
+{
+    return makeString("ResourceLoaderCreated(handleId=",
+                      String::number(m_id),
+                      "; url=",
+                      m_request->url().string(),
+                      ")");
+}
+
+size_t ResourceLoaderCreated::memorySize() const
+{
+    // see ResourceResponse::memoryUsage();
+    return sizeof(ResourceLoaderCreated) + 1280 + 256;
+}
+
+void ResourceLoaderCreated::serialize(ActionSerializer* serializer) const
+{
+    serializer->putInt("loaderId", m_id);
+    serializer->pushObject();
+    serializeResourceRequest(serializer, m_request.get());
+    serializer->popObjectAsProperty("request");
+}
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
 
-#endif // ResourceHandleCreated_h

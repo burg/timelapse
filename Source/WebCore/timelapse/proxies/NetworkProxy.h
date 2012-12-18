@@ -57,9 +57,10 @@ public:
     HandleContext handleContextById(int);
     void removeHandleById(int);
     DeterminismController* controller() const;
+    int nextLoaderId(const ResourceRequest&);
 #endif // ENABLE(TIMELAPSE)
 
-    PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, bool, bool);
+    PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, int loaderId, bool, bool);
 
 private:
     NetworkProxy(Page*);

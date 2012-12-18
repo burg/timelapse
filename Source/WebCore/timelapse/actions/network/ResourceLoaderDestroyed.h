@@ -29,62 +29,43 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
+#ifndef ResourceLoaderDestroyed_h
+#define ResourceLoaderDestroyed_h
 
 #if ENABLE(TIMELAPSE)
 
-#include "ResourceHandleCreated.h"
-
-#include "DeterminismController.h"
-#include "ResourceRequest.h"
-#include "SerializationMethods.h"
+#include "DispatchableAction.h"
 #include <wtf/timelapse/ActionSerializer.h>
 
 namespace WebCore {
-
-namespace ReplayableTypes {
-const char *ResourceHandleCreated = "ResourceHandleCreated";
-}
-
-ResourceHandleCreated::ResourceHandleCreated(int id, const ResourceRequest& request, bool defersLoading, bool shouldContentSniff)
-    : ReplayableAction(ReplayableTypes::ResourceHandleCreated)
-    , m_id(id)
-    , m_request(ResourceRequest::adopt(request.copyData()))
-    , m_defersLoading(defersLoading)
-    , m_shouldContentSniff(shouldContentSniff) {}
-
-ResourceHandleCreated::~ResourceHandleCreated()
-{
-    m_request = 0;
-}
-
-//ReplayableAction API
-String ResourceHandleCreated::toString() const
-{
-    return makeString("ResourceHandleCreated(handleId=",
-                      String::number(m_id),
-                      "; url=",
-                      m_request->url().string(),
-                      ")");
-}
-
-size_t ResourceHandleCreated::memorySize() const
-{
-    // see ResourceResponse::memoryUsage();
-    return sizeof(ResourceHandleCreated) + 1280 + 256;
-}
-
-void ResourceHandleCreated::serialize(ActionSerializer* serializer) const
-{
-    serializer->putInt("handleId", m_id);
-    serializer->pushObject();
-    serializeResourceRequest(serializer, m_request.get());
-    serializer->popObjectAsProperty("request");
-    serializer->putBoolean("defersLoading", m_defersLoading);
-    serializer->putBoolean("shouldContentSniff", m_shouldContentSniff);
-}
-
+    
+    namespace ReplayableTypes {
+        extern const char *ResourceLoaderDestroyed;
+    }
+    
+    class DeterminismController;
+    
+    class ResourceLoaderDestroyed : public DispatchableAction {
+    public:
+        ResourceLoaderDestroyed(int id);
+        virtual ~ResourceLoaderDestroyed() {};
+        
+        int id() const { return m_id; }
+        
+        // DispatchableAction API
+        virtual void dispatch(DeterminismController*) OVERRIDE;
+        
+        // ReplayableAction API
+        virtual String toString() const OVERRIDE;
+        virtual size_t memorySize() const OVERRIDE;
+        virtual void serialize(ActionSerializer*) const OVERRIDE;
+        
+    private:
+        int m_id;
+    };
+    
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
 
+#endif // ResourceLoaderDestroyed_h
