@@ -270,7 +270,7 @@ var WebInspector = {
             // Once drawer is closed console/timelapse should be shown if it was shown before current view replaced it in drawer.
             if (!this._consoleWasShown && !this._timelapseWasShown)
                 this.drawer.hide(WebInspector.Drawer.AnimationType.Immediately);
-            else if (!this._consoleWasShown)
+            else if (this._timelapseWasShown)
                 this._toggleTimelapseControllerButtonClicked();
             else
                 this._toggleConsoleButtonClicked();
@@ -945,12 +945,22 @@ WebInspector.postDocumentKeyDown = function(event)
     if (event.handled)
         return;
 
+    var consoleAndTimelapseHidden = !this._toggleConsoleButton.toggled && !this._toggleTimelapseControllerButton.toggled;
+
     if (event.keyCode === WebInspector.KeyboardShortcut.Keys.Esc.code) {
         // If drawer is open with some view other than console then close it.
-        if (!this._toggleConsoleButton.toggled && WebInspector.drawer.visible)
+        if (consoleAndTimelapseHidden && WebInspector.drawer.visible)
             this.closeViewInDrawer();
         else
             this._toggleConsoleButtonClicked();
+    }
+
+    if (event.keyIdentifier === "F6") {
+        // If drawer is open with some view other than timelapse then close it.
+        if (consoleAndTimelapseHidden && WebInspector.drawer.visible)
+            this.closeViewInDrawer();
+        else
+            this._toggleTimelapseControllerButtonClicked();
     }
 }
 
