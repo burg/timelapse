@@ -561,6 +561,9 @@ WebInspector.TimelapseOverview.prototype = {
 	if (event.button != 0)
 	    return;
 
+	// The drag handle prevents the controller from being focused, so do it explicitly
+	WebInspector.timelapseControllerView.focus();
+
 	var node = event.target;
 
         while (node) {
