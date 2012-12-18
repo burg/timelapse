@@ -86,6 +86,11 @@ WebInspector.TimelapseControllerView.prototype = {
 	this._recordingView.show(this.element);
     },
 
+    afterShow: function()
+    {
+	this.focus();
+    },
+
     focus: function()
     {
 	WebInspector.View.prototype.focus.call(this);
