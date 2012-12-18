@@ -829,6 +829,9 @@ WebInspector.TimelapseMiniview.prototype = {
         var position = (event.pageX - this.element.offsetLeft) / this.element.clientWidth;
         this._zoomSelector = new WebInspector.TimelapseMiniview.ZoomSelector(this.element, position, event);
 
+	// The drag handle prevents the controller from being focused, so do it explicitly
+	WebInspector.timelapseControllerView.focus();
+
 	return true;
     },
 
