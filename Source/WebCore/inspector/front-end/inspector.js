@@ -945,6 +945,9 @@ WebInspector.postDocumentKeyDown = function(event)
     if (event.handled)
         return;
 
+    if (WebInspector.drawer.animating)
+	return;
+
     var consoleAndTimelapseHidden = !this._toggleConsoleButton.toggled && !this._toggleTimelapseControllerButton.toggled;
 
     if (event.keyCode === WebInspector.KeyboardShortcut.Keys.Esc.code) {

@@ -60,6 +60,11 @@ WebInspector.Drawer.prototype = {
         return !!this._view;
     },
 
+    get animating()
+    {
+	return !!this._currentAnimation;
+    },
+
     _constrainHeight: function(height)
     {
         return Number.constrain(height, Preferences.minConsoleHeight, window.innerHeight - this._mainElement.totalOffsetTop() - Preferences.minConsoleHeight);
