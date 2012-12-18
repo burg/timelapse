@@ -55,6 +55,8 @@ WebInspector.TimelapseControllerView = function()
     this._createStatusBarButtons();
     this._registerShortcuts();
     this.element.addEventListener("keydown", this._keyDown.bind(this), false);
+    this.element.addEventListener("focus", this._onFocus.bind(this), true);
+    this.element.addEventListener("blur", this._onBlur.bind(this), true);
 
     // Tell backend to enable itself.
     this._model.enable();
@@ -336,6 +338,17 @@ WebInspector.TimelapseControllerView.prototype = {
             event.preventDefault();
             return;
         }
+    },
+
+    _onFocus: function()
+    {
+	WebInspector.View.prototype.focus.call(this);
+	this.element.style.opacity = 1.0;
+    },
+
+    _onBlur: function()
+    {
+	this.element.style.opacity = 0.7;
     },
 
     _lockButtonClicked: function()
