@@ -64,16 +64,6 @@ WebInspector.TimelapsePanel.prototype = {
 	var handlers, shortcuts, descriptor;
 	var platformSpecificModifier = WebInspector.KeyboardShortcut.Modifiers.CtrlOrMeta;
 
-	// Play/pause.
-	shortcuts = [];
-	handlers = [];
-	var spacebar = WebInspector.KeyboardShortcut.Keys.Space;
-        shortcuts.push(WebInspector.KeyboardShortcut.makeDescriptor(spacebar));
-	// TODO: put this shortcut into TimelapseControllerView.js
-	handlers.push(WebInspector.timelapseControllerView._togglePlaybackButtonClicked.bind(this));
-	descriptor = WebInspector.UIString("Play/pause");
-	registerAndDocument.call(panel, shortcuts, handlers, descriptor);
-
 	// Next/previous input.
 	shortcuts = [];
 	handlers = [];
@@ -91,14 +81,6 @@ WebInspector.TimelapsePanel.prototype = {
 	});
 	descriptor = WebInspector.UIString("Replay to next/previous input");
 	registerAndDocument.call(panel, shortcuts, handlers, descriptor, true);
-
-	// Continue debugging.
-	shortcuts = [];
-	handlers = [];
-        shortcuts.push(WebInspector.KeyboardShortcut.makeDescriptor("c"));
-	handlers.push(function() { DebuggerAgent.resume(); });
-	descriptor = WebInspector.UIString("Continue debugging");
-	registerAndDocument.call(panel, shortcuts, handlers, descriptor);
     },
 
     _timelapseEnabled: function()

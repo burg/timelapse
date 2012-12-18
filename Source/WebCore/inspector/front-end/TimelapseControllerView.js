@@ -38,6 +38,7 @@ WebInspector.TimelapseControllerView = function()
     WebInspector.View.call(this);
 
     this.element.id = "timelapse-controller-view";
+    this.element.tabIndex = 0;
 
     this._model = WebInspector.timelapseModel;
     this._presentationModel = WebInspector.timelapsePresentationModel;
@@ -52,6 +53,8 @@ WebInspector.TimelapseControllerView = function()
     this._replayingView = new WebInspector.TimelapseReplayingView(this);
 
     this._createStatusBarButtons();
+    this._registerShortcuts();
+    this.element.addEventListener("keydown", this._keyDown.bind(this), false);
 
     // Tell backend to enable itself.
     this._model.enable();
@@ -289,7 +292,52 @@ WebInspector.TimelapseControllerView.prototype = {
         }, radarButton);
     },
 
+    _registerShortcuts: function()
+    {
+	this._shortcuts = {};
+
+	function registerAndDocument(shortcuts, handlers, descriptor, related)
+	{
+            var shortcutNames = [];
+            for (var i = 0; i < shortcuts.length; ++i) {
+		this._shortcuts[shortcuts[i].key] = handlers[i];
+		shortcutNames.push(shortcuts[i].name);
+            }
+
+            var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Timelapse"));
+	    if (related)
+		section.addRelatedKeys(shortcutNames, descriptor);
+	    else
+		section.addAlternateKeys(shortcutNames, descriptor);
+	}
+
+	var view = this;
+	var backend = this._model;
+	var handlers, shortcuts, descriptor;
+	var platformSpecificModifier = WebInspector.KeyboardShortcut.Modifiers.CtrlOrMeta;
+
+	// Play/pause.
+	shortcuts = [];
+	handlers = [];
+	var spacebar = WebInspector.KeyboardShortcut.Keys.Space;
+        shortcuts.push(WebInspector.KeyboardShortcut.makeDescriptor(spacebar));
+	handlers.push(this._togglePlaybackButtonClicked.bind(this));
+	descriptor = WebInspector.UIString("Play/pause");
+	registerAndDocument.call(view, shortcuts, handlers, descriptor);
+    },
+
     /* event handlers */
+    _keyDown: function(event)
+    {
+        var shortcut = WebInspector.KeyboardShortcut.makeKeyFromEvent(event);
+        var handler = this._shortcuts[shortcut];
+        if (handler) {
+            handler();
+            event.preventDefault();
+            return;
+        }
+    },
+
     _lockButtonClicked: function()
     {
 	if (!this._enabled)
