@@ -200,7 +200,9 @@ WebInspector.TimelapseScrollview.prototype = {
 
 	var view = this;
 	this._providers.forEach(function(provider) {
-            provider.records.every(markPercentagesForRecord, view);
+	    for (var i = provider.records.length-1; i >= 0; i--)
+		if (!markPercentagesForRecord.call(view, provider.records[i]))
+		    return;
 	});
 
 	for (var key in this._timelines) {
