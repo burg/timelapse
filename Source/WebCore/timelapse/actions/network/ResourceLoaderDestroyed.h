@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2012 Brian Burg.
+ *  Copyright (C) 2012 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,6 +56,7 @@ namespace WebCore {
         virtual void dispatch(DeterminismController*) OVERRIDE;
         
         // ReplayableAction API
+        virtual DeterminismQueueType queue() const OVERRIDE { return WTF::LoaderMemoizedDataQueue; }
         virtual String toString() const OVERRIDE;
         virtual size_t memorySize() const OVERRIDE;
         virtual void serialize(ActionSerializer*) const OVERRIDE;

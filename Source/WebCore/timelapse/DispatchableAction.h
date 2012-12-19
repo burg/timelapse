@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2011, 2012 Brian Burg.
+ *  Copyright (C) 2011, 2012 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -94,7 +94,8 @@ public:
     virtual void serialize(ActionSerializer*) const =0;
     
     virtual void dispatch(DeterminismController*) =0;
-    virtual bool dispatchable() const OVERRIDE { return true; }
+    
+    virtual DeterminismQueueType queue() const { return WTF::DispatchableActionQueue; }
     
     virtual void serializeDispatchInfo(ActionSerializer*) const OVERRIDE;
     

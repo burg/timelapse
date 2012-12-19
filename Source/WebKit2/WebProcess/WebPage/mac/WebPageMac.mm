@@ -211,7 +211,7 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
         // if replaying, simply populate the commands from memoized state, and return.
         if (isReplaying) {
             RefPtr<DeterminismLog> detLog = controller->determinismLog();
-            InterpretedKeyCommands* memoizedCommands = static_cast<InterpretedKeyCommands*>(detLog->currentAction(ReplayableTypes::InterpretedKeyCommands));
+            InterpretedKeyCommands* memoizedCommands = static_cast<InterpretedKeyCommands*>(detLog->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::InterpretedKeyCommands));
             if (memoizedCommands) {
                 commands = memoizedCommands->commands();
                 return eventWasHandled;

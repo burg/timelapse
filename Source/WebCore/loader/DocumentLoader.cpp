@@ -808,9 +808,7 @@ void DocumentLoader::setDefersLoading(bool defers)
 {
     if (m_mainResourceLoader)
         m_mainResourceLoader->setDefersLoading(defers);
-    LOG(Timelapse, "setAllDefersLoading subresource loaders start");
     setAllDefersLoading(m_subresourceLoaders, defers);
-    LOG(Timelapse, "setAllDefersLoading subresource loaders stop");
     setAllDefersLoading(m_plugInStreamLoaders, defers);
     if (!defers)
         deliverSubstituteResourcesAfterDelay();

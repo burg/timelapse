@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2011, 2012 Brian Burg.
+ *  Copyright (C) 2011, 2012 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -73,8 +73,8 @@ namespace WebCore {
 
 static DispatchableAction* popDispatchAction(PassRefPtr<DeterminismLog> log)
 {
-        ReplayableAction* poppedAction = log->currentDispatchableAction();
-        ASSERT(poppedAction && poppedAction->dispatchable());
+        ReplayableAction* poppedAction = log->popAction(WTF::DispatchableActionQueue);
+        ASSERT(poppedAction);
         return static_cast<DispatchableAction*>(poppedAction);
 }
 
@@ -542,7 +542,7 @@ void DeterminismController::maybeDispatchAction()
         return;
     }
 
-    if (m_waitingAction->hasType(ReplayableTypes::EndSentinel)) {
+    if (m_waitingAction->type() == ReplayableTypes::EndSentinel) {
         finishReplay();
         return;
     }

@@ -130,7 +130,7 @@ JSValue JSDocument::cookie(ExecState* exec) const
         log->append(new GetDocumentCookie(cookie, ec));
     } else {
         ASSERT(log->replaying());
-        GetDocumentCookie* action = static_cast<GetDocumentCookie*>(log->currentAction(ReplayableTypes::GetDocumentCookie));
+        GetDocumentCookie* action = static_cast<GetDocumentCookie*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::GetDocumentCookie));
         if (!action) // error handling case
             cookie = impl()->cookie(ec);
         else

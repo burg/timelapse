@@ -87,7 +87,7 @@ DOMTimer::DOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> 
             if (controller->isCapturingDocument(document)) {
                 controller->determinismLog()->append(new TimerCreated(m_timeoutId, document));
             } else if (controller->isReplayingDocument(document)) {
-                ReplayableAction* loggedAction = controller->determinismLog()->currentAction(ReplayableTypes::TimerCreated);
+                ReplayableAction* loggedAction = controller->determinismLog()->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::TimerCreated);
                 TimerCreated* action = static_cast<TimerCreated*>(loggedAction);
                 // error handling case: if fetch failed, then don't overwrite with memoized id
                 if (action)

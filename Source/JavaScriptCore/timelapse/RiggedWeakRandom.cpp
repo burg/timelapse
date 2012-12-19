@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2011, 2012 Brian Burg.
+ *  Copyright (C) 2011, 2012 University of Washington. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,7 +63,7 @@ void RiggedWeakRandom::setSeed()
         ASSERT(m_determinismLog->replaying());
 
         //recover seed
-        SetRandomSeed* action = static_cast<SetRandomSeed*>(m_determinismLog->currentAction(ReplayableTypes::SetRandomSeed));       
+        SetRandomSeed* action = static_cast<SetRandomSeed*>(m_determinismLog->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::SetRandomSeed));
         if (!action) // error handling case
             seed = createSeed();
         else

@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2012 Brian Burg.
+ *  Copyright (C) 2012 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,6 +52,7 @@ public:
     virtual ~InterpretedKeyCommands();
     
     // ReplayableAction API
+    virtual DeterminismQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
     void serialize(WTF::ActionSerializer*) const OVERRIDE;

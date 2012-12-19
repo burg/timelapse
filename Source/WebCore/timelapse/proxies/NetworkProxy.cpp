@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2012 Brian Burg.
+ *  Copyright (C) 2012 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -90,7 +90,7 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
         RefPtr<DeterminismLog> detLog = controller()->determinismLog();
 
         int loaderId;
-        ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(detLog->currentAction(ReplayableTypes::ResourceLoaderCreated));
+        ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(detLog->popExpectedAction(WTF::LoaderMemoizedDataQueue, ReplayableTypes::ResourceLoaderCreated));
         if (memoizedData)
             loaderId = memoizedData->id();
         else // error handling case

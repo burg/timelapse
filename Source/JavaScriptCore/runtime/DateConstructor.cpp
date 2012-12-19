@@ -89,7 +89,7 @@ static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
         log->append(new GetCurrentTime(currentTime));
     } else {
         ASSERT(log->replaying());
-        GetCurrentTime* action = static_cast<GetCurrentTime*>(log->currentAction(ReplayableTypes::GetCurrentTime));
+        GetCurrentTime* action = static_cast<GetCurrentTime*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::GetCurrentTime));
         if (!action) // error handling case
             currentTime = jsCurrentTime();
         else

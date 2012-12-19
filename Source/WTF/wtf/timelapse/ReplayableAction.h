@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2011, 2012, Brian Burg.
+ *  Copyright (C) 2011, 2012, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -39,6 +39,13 @@ namespace WTF {
 
 class ActionSerializer;
 
+typedef enum {
+    ScriptMemoizedDataQueue    = 0x0,
+    LoaderMemoizedDataQueue    = 0x1,
+    DispatchableActionQueue    = 0x2,
+    DeterminismQueueTypeLength = 0x3,
+} DeterminismQueueType;
+
 class ReplayableAction {
     WTF_MAKE_NONCOPYABLE(ReplayableAction);
 
@@ -49,8 +56,8 @@ public:
     virtual ~ReplayableAction() {};
 
     ReplayableType type() const { return m_type; }
-    bool hasType(ReplayableType type) const { return m_type == type; }
-    virtual bool dispatchable() const { return false; }
+
+    virtual DeterminismQueueType queue() const =0;
     virtual String toString() const =0;
     virtual size_t memorySize() const =0;
     virtual void serialize(ActionSerializer*) const =0;
@@ -63,5 +70,6 @@ private:
 } // namespace WTF
 
 using WTF::ReplayableAction;
+using WTF::DeterminismQueueType;
 
 #endif // ReplayableAction_h

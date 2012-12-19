@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2011, 2012, Brian Burg.
+ *  Copyright (C) 2011, 2012, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -55,8 +55,7 @@ struct ActionEntry {
 
 typedef enum {
     NoError,
-    ErrorExhaustedMemoizedInput,
-    ErrorExhaustedDispatchableActions,
+    ErrorExhaustedQueue,
     ErrorUnexpectedActionType,
 } ReplayErrorType;
 
@@ -75,8 +74,8 @@ public:
     
     //action replaying
     WTF_EXPORT_PRIVATE void reset();
-    WTF_EXPORT_PRIVATE ReplayableAction* currentAction(ReplayableAction::ReplayableType);
-    WTF_EXPORT_PRIVATE ReplayableAction* currentDispatchableAction();
+    WTF_EXPORT_PRIVATE ReplayableAction* popExpectedAction(DeterminismQueueType, ReplayableAction::ReplayableType);
+    WTF_EXPORT_PRIVATE ReplayableAction* popAction(DeterminismQueueType);
 
     //error handling
     bool hasError() const { return m_errorType != NoError; }
@@ -95,22 +94,21 @@ public:
     WTF_EXPORT_PRIVATE void serialize(ActionSerializer*) const;
 
 private:
+    typedef Vector<ActionEntry> DeterminismQueue;
+
     DeterminismLog(bool capturing, bool replaying);
 
-    //These are "pull" actions that feed deterministic data to computation.
-    Vector<ActionEntry> m_memoizedActions;
-    //These are dispatchable "push" actions that decide what to compute.
-    Vector<ActionEntry> m_dispatchActions;
     bool m_isCapturing;
     bool m_isReplaying;
     bool m_active;
     ReplayErrorType m_errorType;
     union {
         ReplayableAction::ReplayableType expectedActionType;
+        DeterminismQueueType queueType;
     } m_errorData;
     
-    size_t m_memoizedReplayPosition;
-    size_t m_dispatchReplayPosition;
+    Vector<DeterminismQueue> m_queues;
+    Vector<size_t> m_positions;
     size_t m_captureCount;
 };
 

@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2011, 2012 Brian Burg.
+ *  Copyright (C) 2011, 2012 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -49,27 +49,47 @@ namespace WTF {
 #endif
 
 WTFLogChannel LogTimelapseCapturing =  { 0x00000001, "", WTFLogChannelOn  };
+
+static const char* queueTypeToMiniString(DeterminismQueueType queue) {
+    switch (queue) {
+        case DispatchableActionQueue:    return "DSPTCH";
+        case LoaderMemoizedDataQueue:    return "LDMEMO";
+        case ScriptMemoizedDataQueue:    return "JSMEMO";
+        case DeterminismQueueTypeLength: return "ERROR!";
+    }
+}
 #endif
 
+static const char* queueTypeToString(DeterminismQueueType queue) {
+    switch (queue) {
+        case DispatchableActionQueue:    return "DispatchableActionQueue";
+        case LoaderMemoizedDataQueue:    return "LoaderMemoizedDataQueue";
+        case ScriptMemoizedDataQueue:    return "ScriptMemoizedDataQueue";
+        case DeterminismQueueTypeLength: return "QueueTypeLength (error)";
+    }
+}
+
 DeterminismLog::DeterminismLog(bool capturing, bool replaying)
-: m_memoizedActions(Vector<ActionEntry>()) //TODO: default capacity?
-, m_dispatchActions(Vector<ActionEntry>())
-, m_isCapturing(capturing)
+: m_isCapturing(capturing)
 , m_isReplaying(replaying)
 , m_active(true)
 , m_errorType(NoError)
-, m_memoizedReplayPosition(0)
-, m_dispatchReplayPosition(0)
-, m_captureCount(0) {}
+, m_captureCount(0) {
+
+    for (size_t i = 0; i < DeterminismQueueTypeLength; i++) {
+        m_positions.append(0);
+        m_queues.append(DeterminismQueue());
+    }
+}
 
 DeterminismLog::~DeterminismLog()
 {
-    //assume ownership of all actions in the vector, so must
+    //the log assumes ownership of all actions in queues, so must
     //delete them in the destructor.
-    for (Vector<ActionEntry>::iterator it = m_memoizedActions.begin(); it != m_memoizedActions.end(); it++)
-        delete it->action;
-    for (Vector<ActionEntry>::iterator it = m_dispatchActions.begin(); it != m_dispatchActions.end(); it++)
-        delete it->action;
+    for (size_t i = 0; i < m_queues.size(); i++) {
+        for (DeterminismQueue::iterator it = m_queues[i].begin(); it != m_queues[i].end(); it++)
+            delete it->action;
+    }
 }
 
 //make object creation redirect through here. This will make it easier
@@ -88,9 +108,9 @@ void DeterminismLog::endCapturing()
     ASSERT(m_isCapturing);
     m_isCapturing = false;
 
-    m_memoizedActions.shrinkToFit();
-    m_dispatchActions.shrinkToFit();
-
+    for (size_t i = 0; i < m_queues.size(); i++)
+        m_queues[i].shrinkToFit();
+    
     LOG(TimelapseCapturing, "%-30s CAPTURE STOP\n", "[DeterminismLog]");
 }
 
@@ -99,19 +119,17 @@ void DeterminismLog::append(ReplayableAction* action)
     ASSERT_ARG(action, action != NULL);
     ASSERT(m_active);
     ASSERT(m_isCapturing && !m_isReplaying);
+    ASSERT(action->queue() < DeterminismQueueTypeLength);
 
     ActionEntry newEntry = ActionEntry(action, m_captureCount++);
 
     LOG(TimelapseCapturing, "%-25s#%-5ld %s-CAPTURE: %s \n",
         "[DeterminismLog]",
         newEntry.count,
-        action->dispatchable() ? "DISP" : "MEMO",
+        queueTypeToMiniString(action->queue()),
         action->toString().utf8().data());
 
-    if (action->dispatchable())
-        m_dispatchActions.append(newEntry);
-    else
-        m_memoizedActions.append(newEntry);
+    m_queues[action->queue()].append(newEntry);
 }
 
 String DeterminismLog::errorMessage() const
@@ -120,16 +138,22 @@ String DeterminismLog::errorMessage() const
     StringBuilder sb;
     
     switch (m_errorType) {
-    case ErrorExhaustedMemoizedInput:
-        sb.append("Ran out of memoized data because too much was requested.");
+    case ErrorExhaustedQueue:
+        ASSERT(m_errorData.queueType < DeterminismQueueTypeLength);
+        sb.append("Ran out of actions on queue: ");
+        sb.append(queueTypeToString(m_errorData.queueType));
+        sb.append(" because too many were requested.");
         break;
 
     case ErrorUnexpectedActionType: {
-        sb.append("Expected next memoized input to be a ");
+        DeterminismQueueType queue = m_errorData.queueType;
+        ASSERT(queue < DeterminismQueueTypeLength);
+        sb.append("Expected next input to be a ");
         sb.append(m_errorData.expectedActionType);
         sb.append(", but found a ");
       
-        const ActionEntry& entry = m_memoizedActions.at(m_memoizedReplayPosition);
+
+        const ActionEntry& entry = m_queues[queue].at(m_positions[queue]);
         ReplayableAction* thisAction = entry.action;
 
         sb.append(thisAction->type());
@@ -151,8 +175,9 @@ void DeterminismLog::reset()
 
     LOG(TimelapseCapturing, "%-30s RESET\n", "[DeterminismLog]");
 
-    m_memoizedReplayPosition = 0;
-    m_dispatchReplayPosition = 0;
+    for (size_t i = 0; i < m_positions.size(); i++)
+        m_positions[i] = 0;
+
     m_isReplaying = true;
     m_active = true;
     m_errorType = NoError;
@@ -160,65 +185,50 @@ void DeterminismLog::reset()
     m_isCapturing = false;
 }
 
-ReplayableAction* DeterminismLog::currentAction(ReplayableAction::ReplayableType type)
+ReplayableAction* DeterminismLog::popExpectedAction(DeterminismQueueType queue,
+                                                    ReplayableAction::ReplayableType type)
 {   
-    ASSERT(m_isReplaying);
-    ASSERT(isActive());
-    
-    if (m_memoizedReplayPosition >= m_memoizedActions.size()) {
-        LOG_ERROR("No more memoized inputs remain, but one was requested.");
-        m_errorType = ErrorExhaustedMemoizedInput;
-        return 0;
-    }
-    
-    const ActionEntry& entry = m_memoizedActions.at(m_memoizedReplayPosition);
+    ReplayableAction* action = popAction(queue);
 
-    //NOTE: in general, it is not the case that 
-    //m_dispatchReplayPosition + m_memoizedReplayPosition == entry.count;
-    //the determinism log client may want to fetch a dispatch action before
-    //it is actually needed (i.e., ahead of some memoized data) and vice-versa.
-
-    ReplayableAction* thisAction = entry.action;
-
-    if (!thisAction->hasType(type)) {
-        LOG_ERROR("%-30s ERROR %p != %p\n", "[DeterminismLog]", type, thisAction->type());
-        LOG_ERROR("%-25s#%-5ld Expected replay action of type %s, but got type %s (%s)\n",
+    if (action->type() != type) {
+        LOG_ERROR("%-30s ERROR %p != %p\n", "[DeterminismLog]", type, action->type());
+        LOG_ERROR("%-25s Expected replay action of type %s, but got type %s (%s)\n",
                   "[DeterminismLog]",
-                  entry.count, type, thisAction->type(), thisAction->toString().ascii().data());
+                  type, action->type(), action->toString().ascii().data());
         
         m_errorType = ErrorUnexpectedActionType;
         m_errorData.expectedActionType = type;
         return 0;
-    } else {
-        LOG(TimelapseCapturing, "%-25s#%-5ld MEMO-YIELD: %s\n", "[DeterminismLog]",
-            entry.count, thisAction->toString().utf8().data());
     }
 
-    m_memoizedReplayPosition++;
-
-    return thisAction;
+    return action;
 }
 
-ReplayableAction* DeterminismLog::currentDispatchableAction()
+ReplayableAction* DeterminismLog::popAction(DeterminismQueueType queue)
 {
     ASSERT(m_isReplaying);
     ASSERT(isActive());
-    // callers should check for errors before requesting dispatchable actions.
+    // callers should check for errors before requesting actions.
     // if an error exists, the caller should call reset() or clearError()
     ASSERT(!hasError());
-    if (m_dispatchReplayPosition >= m_dispatchActions.size()) {
-        LOG_ERROR("No more dispatchable actions remain, but one was requested.");
-        m_errorType = ErrorExhaustedDispatchableActions;
+    ASSERT(queue < DeterminismQueueTypeLength);
+    
+    if (m_positions[queue] >= m_queues[queue].size()) {
+        LOG_ERROR("%-30s ERROR No more inputs remain for determinism queue %s, but one was requested.",
+                  "[DeterminismLog]",
+                  queueTypeToString(queue));
+        m_errorType = ErrorExhaustedQueue;
+        m_errorData.queueType = queue;
         return 0;
     }
+    
+    const ActionEntry& entry = m_queues[queue].at(m_positions[queue]);
 
-    const ActionEntry& entry = m_dispatchActions.at(m_dispatchReplayPosition);
+    LOG(TimelapseCapturing, "%-25s#%-5ld %s-YIELD: %s\n", "[DeterminismLog]",
+            entry.count, queueTypeToMiniString(queue),
+            entry.action->toString().utf8().data());
 
-    LOG(TimelapseCapturing, "%-25s#%-5ldDISP-YIELD: %s\n", "[DeterminismLog]",
-        entry.count, entry.action->toString().utf8().data());
-
-    m_dispatchReplayPosition++;
-
+    m_positions[queue] += 1;
     return entry.action;
 }
 
@@ -231,11 +241,11 @@ void DeterminismLog::setIsActive(bool state)
 size_t DeterminismLog::memorySize() const
 {
     size_t count = 0;
-    for (size_t i = 0; i < m_memoizedActions.size(); i++)
-        count += m_memoizedActions[i].action->memorySize();
+    for (size_t i = 0; i < DeterminismQueueTypeLength; i++) {
+        for (size_t j = 0; j < m_queues[i].size(); j++)
+            count += m_queues[i].at(j).action->memorySize();
+    }
 
-    for (size_t i = 0; i < m_dispatchActions.size(); i++)
-        count += m_dispatchActions[i].action->memorySize();
     return count;
 }
     
@@ -248,20 +258,15 @@ void DeterminismLog::serialize(ActionSerializer* serializer) const
                   memorySize: ...,
                   ...
       },
-      actions: [ { ... }, { ... }, ... ]
+      queues: [ { 'name': 'foo', actions: [ { ... }, { ... }, ... ] } ]
     }*/
     
-    serializer->pushObject();
+    serializer->pushObject(); // the entire recording object
     // TODO: add other recording metadata?
     serializer->putInt("memorySize", memorySize());
     serializer->popObjectAsProperty("metadata");
     
-    serializer->pushArray();
-    // memoizedActions offset
-    size_t i = 0;
-    // dispatchActions offset
-    size_t j = 0;
-    
+    serializer->pushArray(); // array of queues
     
     /* each action has the form:
     {
@@ -276,36 +281,36 @@ void DeterminismLog::serialize(ActionSerializer* serializer) const
       }
     }*/
     
-    for (size_t count = 0; count < m_captureCount; count++) {
-        serializer->pushObject();
+    for (size_t queue = 0; queue < m_queues.size(); queue++) {
+        serializer->pushObject(); // a single queue object
+    
+        serializer->putString("name", queueTypeToString((DeterminismQueueType)queue));
+        serializer->pushArray(); // array of action objects
         
-        ReplayableAction* action;
-        if (i == m_memoizedActions.size())
-            action = m_dispatchActions[j++].action;
-        else if (j == m_dispatchActions.size())
-            action = m_memoizedActions[i++].action;
-        else if (m_memoizedActions[i].count < m_dispatchActions[j].count)
-            action = m_memoizedActions[i++].action;
-        else
-            action = m_dispatchActions[j++].action;
-        
-        LOG(TimelapseCapturing, "%-25s Writing %5zu: %s\n", "[DeterminismLog]",
-                                count, action->type());
+        for (size_t i = 0; i < m_queues[queue].size(); i++) {
+            const ActionEntry& entry = m_queues[queue].at(i);
+            LOG(TimelapseCapturing, "%-25s Writing %5zu: %s\n", "[DeterminismLog]",
+                                    entry.count, entry.action->type());
+            serializer->pushObject(); // a single action object
 
-        serializer->pushObject();
-        serializer->putString("type", action->type());
-        serializer->putInt("number", count);
-        if (action->dispatchable())
-            action->serializeDispatchInfo(serializer);
-        serializer->popObjectAsProperty("metadata");
+            serializer->pushObject(); // action object's metadata
+            serializer->putString("type", entry.action->type());
+            serializer->putInt("number", entry.count);
+            if (entry.action->queue() == DispatchableActionQueue)
+                entry.action->serializeDispatchInfo(serializer);
+            serializer->popObjectAsProperty("metadata");
         
-        serializer->pushObject();
-        action->serialize(serializer);
-        serializer->popObjectAsProperty("action");
+            serializer->pushObject(); // action object's main data
+            entry.action->serialize(serializer);
+            serializer->popObjectAsProperty("action");
         
+            serializer->popObjectAsElement(); // a single action object
+        }
+        
+        serializer->popArrayAsProperty("actions");
         serializer->popObjectAsElement();
     }
-    serializer->popArrayAsProperty("actions");
+    serializer->popArrayAsProperty("queues");
 }
     
 }; // namespace WTF

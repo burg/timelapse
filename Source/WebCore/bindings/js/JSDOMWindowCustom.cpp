@@ -692,7 +692,7 @@ JSValue JSDOMWindow::screenX(ExecState* exec) const
         log->append(new GetJSAttribute<int>(ScreenX, result));
     } else {
         ASSERT(log->replaying());
-        GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
+        GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::GetJSAttribute));
         if (action) {
             ASSERT(action->attributeType() == ScreenX);
             result = action->result();
@@ -718,7 +718,7 @@ JSValue JSDOMWindow::screenY(ExecState* exec) const
         log->append(new GetJSAttribute<int>(ScreenY, result));
     } else {
         ASSERT(log->replaying());
-        GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
+        GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::GetJSAttribute));
         if (action) {
             ASSERT(action->attributeType() == ScreenY);
             result = action->result();
@@ -744,7 +744,7 @@ JSValue JSDOMWindow::screenLeft(ExecState* exec) const
         log->append(new GetJSAttribute<int>(ScreenLeft, result));
     } else {
         ASSERT(log->replaying());
-        GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
+        GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::GetJSAttribute));
         if (action) {
             ASSERT(action->attributeType() == ScreenLeft);
             result = action->result();
@@ -771,7 +771,7 @@ JSValue JSDOMWindow::screenTop(ExecState* exec) const
         log->append(new GetJSAttribute<int>(ScreenTop, result));
     } else {
         ASSERT(log->replaying());
-        GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->currentAction(ReplayableTypes::GetJSAttribute));
+        GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::GetJSAttribute));
         if (action) {
             ASSERT(action->attributeType() == ScreenTop);
             result = action->result();
