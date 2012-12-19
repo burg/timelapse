@@ -791,10 +791,6 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPlaybackDidStart: function()
     {
-	// FIXME: is this even necessary? we just showed it above..
-	if (!this._model.scanningBreakpoints)
-	    this._messagePanel.show(this.element);
-
 	var allRecords = this._model.allRecords;
 	var startRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
 	var finishRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
