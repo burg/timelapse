@@ -613,6 +613,7 @@ WebInspector.TimelapseModel.prototype = {
 	    this._changeStatus(oldStatus);
 	}
 
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackWillStart);
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackDidStart);
     },
 
