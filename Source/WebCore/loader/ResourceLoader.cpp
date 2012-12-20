@@ -70,11 +70,6 @@ ResourceLoader::ResourceLoader(Frame* frame, ResourceLoaderOptions options)
     , m_defersLoading(frame->page()->defersLoading())
     , m_options(options)
 {
-    //XXX remove
-    if (m_frame->page()->determinismController() &&
-    (m_frame->page()->determinismController()->isCapturingDocument(m_frame->document()) ||
-     m_frame->page()->determinismController()->isReplayingDocument(m_frame->document())))
-        LOG(Timelapse, "ResourceLoader[%p]: Allocated", (void*)this);
 }
 
 ResourceLoader::~ResourceLoader()
