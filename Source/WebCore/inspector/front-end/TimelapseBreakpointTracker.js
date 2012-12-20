@@ -9,7 +9,7 @@ WebInspector.TimelapseBreakpointTracker = function()
 
     var eventNames = WebInspector.TimelapseModel.EventTypes;
     this._model.addEventListener(eventNames.RecordingWillStart, this._reset, this);
-    this._model.addEventListener(eventNames.PlaybackDidStart, this._playbackDidStart, this);
+    this._model.addEventListener(eventNames.PlaybackWillStart, this._playbackWillStart, this);
     this._model.addEventListener(eventNames.PlaybackStopped, this._endPendingInterval, this);
     this._model.addEventListener(eventNames.BreakpointHit, this._breakpointHit, this);
     this._model.addEventListener(eventNames.BreakpointPaused, this._endPendingInterval, this);
@@ -68,15 +68,15 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
     },
 
     // Callbacks from TimelapseModel
-    _playbackDidStart: function()
+    _playbackWillStart: function()
     {
 	this._endPendingInterval();
 
 	var markIndex = this._model.replayStartMarkIndex;
-	var hitIndex = markIndex == this._model.currentMarkIndex ? this._model.currentHitIndex : -1;
+	var hitIndex = (markIndex == this._model.currentMarkIndex) ? this._model.currentHitIndex : -1;
 	var canHitBreakpoints = WebInspector.debuggerModel.debuggerEnabled() && WebInspector.debuggerModel.breakpointsActive();
 	if (canHitBreakpoints && this._model.scanningBreakpoints)
-	    this._exploredIntervals.startInterval(this._model.replayStartMarkIndex);
+	    this._exploredIntervals.startInterval(markIndex, hitIndex+1);
     },
 
     _breakpointHit: function(event)
