@@ -618,6 +618,18 @@ bool MainResourceLoader::loadNow(ResourceRequest& r)
     ASSERT(!m_handle);
     ASSERT(shouldLoadEmptyBeforeRedirect || !defersLoading());
 
+#if ENABLE(TIMELAPSE)
+    Document* rootDoc = m_frame->tree()->top()->document();
+    DeterminismController* controller = m_frame->page()->determinismController();
+
+    if (rootDoc && controller && (controller->isCapturingDocument(rootDoc) ||
+                                  controller->isReplayingDocument(rootDoc) ||
+                                  controller->expectsPageLoad())) {
+        
+        m_loaderId = m_frame->page()->networkProxy()->nextLoaderId(r);
+    }
+#endif // ENABLE(TIMELAPSE)
+
     // Send this synthetic delegate callback since clients expect it, and
     // we no longer send the callback from within NSURLConnection for
     // initial requests.
@@ -653,14 +665,6 @@ void MainResourceLoader::load(const ResourceRequest& r, const SubstituteData& su
     // It appears that it is possible for this load to be cancelled and derefenced by the DocumentLoader
     // in willSendRequest() if loadNow() is called.
     RefPtr<MainResourceLoader> protect(this);
-
-#if ENABLE(TIMELAPSE)
-    if (m_frame->page()->determinismController() &&
-        m_frame->page()->determinismController()->expectsPageLoad()) {
-        
-        m_loaderId = m_frame->page()->networkProxy()->nextLoaderId(r);
-    }
-#endif // ENABLE(TIMELAPSE)
 
     m_substituteData = substituteData;
 
