@@ -493,7 +493,7 @@ void DeterminismController::didDispatch(DispatchableAction* action)
 {
     ASSERT(replaying());
     if (!m_runningAction) {
-        LOG(Timelapse, "%-30s Breaking the didDispatch chain, since it appears that replay stopped while processing this event (i.e., inside a debugger's inner event loop\n", "DeterminismController");
+        LOG(Timelapse, "%-30s Clearing pending didDispatch flag, since it appears replay stopped while processing this event (i.e., inside a debugger's inner event loop, or because of a fatal replay error)\n", "DeterminismController");
         return;
     }
     ASSERT(m_dispatching);
@@ -612,8 +612,15 @@ void DeterminismController::asyncDispatchAction()
         // the nonzero interval condition as in the FullSpeed replay mode).
         if (waitInterval < 0.0)
             waitInterval = (1.0 * 0.001);
-            
+               
         LOG(Timelapse, "%-30s WAIT: %.3f ms", "[DeterminismController]", waitInterval*1000.0);
+        
+        if (waitInterval > 1000.0) {
+            LOG_ERROR("%-30s ERROR: tried to wait for over 1000 seconds; this is probably a bug.",
+                      "[DeterminismController]");
+            waitInterval = 1.0 * 0.001;
+        }
+        
         m_timer.startOneShot(waitInterval);
         break;
     }
