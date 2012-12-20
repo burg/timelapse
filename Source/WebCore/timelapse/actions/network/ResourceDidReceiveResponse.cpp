@@ -36,6 +36,7 @@
 #include "ResourceDidReceiveResponse.h"
 
 #include "DeterminismController.h"
+#include "InspectorInstrumentation.h"
 #include "NetworkProxy.h"
 #include "Page.h"
 #include "ResourceHandle.h"
@@ -61,6 +62,14 @@ void ResourceDidReceiveResponse::dispatch(DeterminismController* controller)
     HandleContext context = controller->page()->networkProxy()->handleContextById(m_id);
     RefPtr<ResourceHandle> handle = context.first;
     ResourceHandleClient* client = context.second;
+    
+    if (!client) {
+        LOG_ERROR("ERROR: Couldn't find handle context for id: %d", m_id);
+        controller->cancelPlayback();
+        InspectorInstrumentation::playbackFailed(controller->page(),
+                                                 String::format("Couldn't find handle context for id: %d", m_id));
+        return;
+    }
     
     client->didReceiveResponse(handle.get(), *m_response);
     controller->didDispatch(this);
