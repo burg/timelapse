@@ -1354,8 +1354,9 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
 	for (var i = 0; i < recordIndices.length; i++) {
 	    var indexList = recordIndices[i];
+	    var records = this._provider.records;
 	    for (var j = 0; j < indexList.length; j++) {
-		if (indexList[j] != markIndex)
+		if (records[indexList[j]].mark.index != markIndex)
 		    continue;
 		else
 		    return i;
