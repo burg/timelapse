@@ -40,13 +40,6 @@ WebInspector.TimelapseOverview = function()
     this._model = WebInspector.timelapseModel;
     this._presentationModel = WebInspector.timelapsePresentationModel;
 
-    // TODO: If we have multiple overviews, each with different timelines,
-    // then TimelapseReplayingView or something else needs to coordinate which 
-    // overviews handle which data providers.
-
-    // TODO: TimelapseOverview should compose a Miniview and several Timelines.
-    // The miniview shall be fed a subset of the data providers behind each timeline.
-    //
     // Data changes go through the DataProviders.
     // Zoom changes come from the TimelapsePresentationModel.
     var modelEventNames = WebInspector.TimelapseModel.EventTypes;
@@ -55,6 +48,7 @@ WebInspector.TimelapseOverview = function()
     this._model.addEventListener(modelEventNames.PlaybackWillStart, this._onPlaybackWillStart, this);
     this._model.addEventListener(modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
     this._model.addEventListener(modelEventNames.PlaybackStopped, this._onPlaybackStopped, this);
+    this._model.addEventListener(modelEventNames.PlaybackFailed, this._onPlaybackFailed, this);
     this._model.addEventListener(modelEventNames.InputPaused, this._onInputPaused, this);
     this._model.addEventListener(modelEventNames.InputHit, this._onInputHit, this);
     this._model.addEventListener(modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
@@ -761,6 +755,28 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.playback.setPosition(1.0, true);
 	this.sliders.playback.enable();
 	this.sliders.playback.show();
+    },
+
+    _onPlaybackFailed: function(event)
+    {
+	var errorMessage = event.data;
+
+	var clickEvent = WebInspector.TimelapseOverviewMessagePanel.Events.MessageClicked;
+	var clickCallback = function(event) {
+	    var panel = event.data;
+	    console.assert(panel === this._messagePanel, "unexpected arguments in message panel click callback");
+
+	    this._previewProvider.popView();
+
+	    panel.removeEventListener(clickEvent, clickCallback, this);
+	    panel.detach();
+	}.bind(this);
+
+	this._previewProvider.pushView(new WebInspector.OverviewPreviewViews.ErrorView(errorMessage));
+
+	this._messagePanel.addEventListener(clickEvent, clickCallback, this);
+	this._messagePanel.message = "Oops! Playback failed. Please try again.";
+	this._messagePanel.show(this.element);
     },
 
     _onPlaybackWillStart: function()
@@ -1584,7 +1600,7 @@ WebInspector.TimelapseOverviewMessagePanel = function(overview)
 WebInspector.TimelapseOverviewMessagePanel.prototype = {
     _onMessageClicked: function(event)
     {
-	this.dispatchEventToListeners(WebInspector.TimelapseOverviewMessagePanel.Events, this);
+	this.dispatchEventToListeners(WebInspector.TimelapseOverviewMessagePanel.Events.MessageClicked, this);
     },
 
     get message()

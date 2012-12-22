@@ -137,6 +137,32 @@ WebInspector.OverviewPreviewViews.DefaultView.prototype.__proto__ = WebInspector
  * @constructor
  * @extends {WebInspector.OverviewPreviewViews.BaseView}
  */
+WebInspector.OverviewPreviewViews.ErrorView = function(message)
+{
+    WebInspector.OverviewPreviewViews.BaseView.call(this, "error");
+    this._errorMessage = message;
+    this.refresh();
+};
+
+WebInspector.OverviewPreviewViews.ErrorView.prototype = {
+    refresh: function()
+    {
+	this.header = "Replay Error Details";
+	var body = document.createElement("div");
+	body.classList.add("preview-message");
+	var para = document.createElement("p");
+	para.textContent = this._errorMessage;
+	body.appendChild(para);
+	this.body = body;
+    }
+};
+
+WebInspector.OverviewPreviewViews.ErrorView.prototype.__proto__ = WebInspector.OverviewPreviewViews.BaseView.prototype;
+
+/**
+ * @constructor
+ * @extends {WebInspector.OverviewPreviewViews.BaseView}
+ */
 WebInspector.OverviewPreviewViews.InputView = function(provider)
 {
     console.assert(provider.type === WebInspector.DataProvider.Types.TimelapseInput,

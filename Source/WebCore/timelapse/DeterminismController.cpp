@@ -553,7 +553,7 @@ void DeterminismController::maybeDispatchAction()
         LOG_ERROR("%-30s Next action should be injected after %d@ retired DOM events, but %d@ DOM events have retired.\n",
             "[DeterminismController]", m_waitingAction->dispatchCount(), m_domEventDispatchCount);
         
-        String errorMessage = String::format("Next action should be injected after %d@ retired DOM events, but %d@ DOM events have retired.",
+        String errorMessage = String::format("Next action should be injected after %d retired DOM events, but %d DOM events have retired.",
                                              m_waitingAction->dispatchCount(), 
                                              m_domEventDispatchCount);
         finishReplay();

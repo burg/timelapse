@@ -3337,6 +3337,14 @@ div.timelapse-overview-preview div.preview-message {
     font-style: italic;
 }
 
+.timelapse-overview-preview.timelapse-preview-error header {
+    color: rgb(150,0,0);
+}
+
+.timelapse-overview-preview.timelapse-preview-error .preview-message {
+    color: #500;
+}
+
 .timelapse-overview {
     position: absolute;
     left: 0;
@@ -3349,7 +3357,7 @@ div.timelapse-overview-preview div.preview-message {
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 97px;
+    left: 95px;
     right: 0;
     z-index: 1000;
     font-weight: bold;
