@@ -82,31 +82,21 @@ WebInspector.TimelapseOverview = function()
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
 
-    this._initializeView();
-};
-
-WebInspector.TimelapseOverview.ResizerOffset = 3.5;
-WebInspector.TimelapseOverview.MinAnimationDelta = 0.5;
-WebInspector.TimelapseOverview.WindowScrollSpeedFactor = 0.001;
-WebInspector.TimelapseOverview.WindowZoomSpeedFactor = 0.001;
-WebInspector.TimelapseOverview.DefaultRefreshDelay = 30;
-WebInspector.TimelapseOverview.TimelineHeight = 30;
-
-WebInspector.TimelapseOverview.prototype = {
-
-    _initializeView: function()
-    {
 	this.element.className = "timelapse-overview";
 	this.element.tabIndex = 0;
 	
 	this._messagePanel = new WebInspector.TimelapseOverviewMessagePanel(this);
 
 	this._labelContainer = document.createElement("div");
-	this._labelContainer.className = "timelapse-timeline-labels";
+	this._labelContainer.classList.add("timelapse-timeline-labels");
+        this._labelContainer.classList.add("timelapse-overview-column-label");
+        this._labelContainer.classList.add("timelapse-overview-row-main");
 	this.element.appendChild(this._labelContainer);
 
 	this._timelineContainer = document.createElement("div");
-	this._timelineContainer.className = "timelapse-overview-timelines";
+	this._timelineContainer.classList.add("timelapse-overview-timelines");
+        this._timelineContainer.classList.add("timelapse-overview-column-main");
+        this._timelineContainer.classList.add("timelapse-overview-row-main");
 	this._timelineContainer.addEventListener("mousedown", this._onOverviewMousedown.bind(this), false);
 	this._timelineContainer.addEventListener("click", this._onOverviewClick.bind(this), false);
 	this._timelineContainer.addEventListener("mousewheel", this._onOverviewMousewheel.bind(this), false);
@@ -145,8 +135,27 @@ WebInspector.TimelapseOverview.prototype = {
 	this._dividersLabelBarElement.className = "resources-dividers-label-bar";
 	this._timelineContainer.appendChild(this._dividersLabelBarElement);
 
-	this.reset();
-    },
+	this.sliders.playback.clear();
+	this.sliders.playback.hide();
+	this._refreshDelay = WebInspector.TimelapseOverview.DefaultRefreshDelay;
+
+	/* update dividers */
+	this.updateDividers(true);
+
+	if (this._hoveredCircleIndex)
+	    delete this._hoveredCircleIndex;
+	if (this._selectedCircleIndex)
+	    delete this._selectedCircleIndex;
+};
+
+WebInspector.TimelapseOverview.ResizerOffset = 3.5;
+WebInspector.TimelapseOverview.MinAnimationDelta = 0.5;
+WebInspector.TimelapseOverview.WindowScrollSpeedFactor = 0.001;
+WebInspector.TimelapseOverview.WindowZoomSpeedFactor = 0.001;
+WebInspector.TimelapseOverview.DefaultRefreshDelay = 30;
+WebInspector.TimelapseOverview.TimelineHeight = 30;
+
+WebInspector.TimelapseOverview.prototype = {
 
     _timelineForProvider: function(provider)
     {
@@ -249,43 +258,34 @@ WebInspector.TimelapseOverview.prototype = {
         this._eventDividersElement.removeChildren();
     },
 
-    reset: function()
-    {
-	this.sliders.playback.clear();
-	this.sliders.playback.hide();
-	this._refreshDelay = WebInspector.TimelapseOverview.DefaultRefreshDelay;
-
-	/* update dividers */
-	this.updateDividers(true);
-
-	if (this._hoveredCircleIndex)
-	    delete this._hoveredCircleIndex;
-	if (this._selectedCircleIndex)
-	    delete this._selectedCircleIndex;
-    },
-
     /* Extends View.wasShown */
     wasShown: function()
     {
 	// calling the shadowed method first will allow child timelines
 	//  to become visible before we try to refresh them.
 	WebInspector.View.prototype.wasShown.call(this);
-	this._scheduleRefresh();
+	this.doResize();
     },
 
     /* Extends View.onResize */
     onResize: function()
     {
+	WebInspector.View.prototype.onResize.call(this);
+
+	this._refreshIfNeeded();
+
 	var ordinal = this._timelines.length;
 	var height = WebInspector.TimelapseOverview.TimelineHeight;
 	var fudge = 2;
 
 	this._labelContainer.style.setProperty("height", ordinal*height+fudge + "px");
 	this._timelineContainer.style.setProperty("height", ordinal*height+fudge + "px");
-	this.element.style.setProperty("height", ordinal*height + 20 + fudge + "px");
 
 	this.updateDividers(false);
-	WebInspector.View.prototype.onResize.call(this);
+
+	// this is a hack to work around some incremental layout bug on initial load,
+	// wherein the overview will not be the correct width until it
+	// is resized, while the miniview behaves fine. See Issue #102.
     },
 
     get calculator()
@@ -749,7 +749,6 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onRecordingDidStart: function()
     {
-        this.reset();
 	this.sliders.playback.disable();
 	this.sliders.playback.hide();
     },

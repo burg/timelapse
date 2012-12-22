@@ -3082,6 +3082,11 @@ button.breakpoint-radar-status-bar-item > .glyph {
     -webkit-animation-iteration-count: infinite;
 }
 
+#timelapse-replaying-view .split-view-contents {
+    overflow-x: none;
+    overflow-y: scroll;
+}
+
 #timelapse-recording-view .timelapse-scrollview {
     position: absolute;
     height: 30px;
@@ -3108,12 +3113,24 @@ button.breakpoint-radar-status-bar-item > .glyph {
     100% { opacity: 1; }
 }
 
-div.timelapse-timeline-labels {
-    top: 20px;
+.timelapse-overview-column-label {
     left: 5px;
     width: 100px;
-    bottom: 0;
     position: absolute;
+}
+
+.timelapse-overview-column-main {
+    left: 100px;
+    right: 15px;
+}
+
+.timelapse-overview-row-main {
+    top: 60px; 
+    bottom: 0;
+}
+
+.timelapse-overview-row-label {
+    top: 15px;
 }
 
 div.timelapse-timeline-label-wrapper {
@@ -3323,10 +3340,10 @@ div.timelapse-overview-preview div.preview-message {
 
 .timelapse-overview {
     position: absolute;
-    height: 170px;
     left: 0;
-    right: 14px;
-    top: 5px;
+    right: 0;
+    top: 0;
+    bottom: 0;
 }
 
 .timelapse-overview-message {
@@ -3381,25 +3398,20 @@ div.timelapse-overview-preview div.preview-message {
 
 .timelapse-overview .resources-dividers-label-bar {
     position: absolute;
-    top: -20px;
+    bottom: -23px;
     height: 20px;
     left: 0;
+    top: auto !important;
     right: 0;
-
-    box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.2);
     background: -webkit-gradient(linear, left top, left bottom, from(#f5f5f5), to(#e0e0e0));
     margin-left: -1px;
     margin-right: -1px;
-    border-left: 1px solid #ddd;
-    border-right: 1px solid #ddd;
+    border: 1px solid #ddd;
 }
 
 div.timelapse-overview-timelines {
     position: absolute;
-    top: 20px;
     height: 20px;
-    left: 100px;
-    right: 0;
     border: 1px solid #bbb;
     border-radius: 2px;
     cursor: -webkit-grab;
@@ -3591,9 +3603,6 @@ div.timelapse-overview-timeline {
 div.timelapse-miniview {
     position: absolute;
     height: 30px;
-    left: 105px;
-    right: 15px;
-    top: 170px;
 }
 
 .timelapse-miniview-glasspane {

@@ -71,7 +71,9 @@ WebInspector.TimelapseMiniview = function()
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
 
-    this.element.className = "timelapse-miniview";
+    this.element.classList.add("timelapse-miniview");
+    this.element.classList.add("timelapse-overview-column-main");
+    this.element.classList.add("timelapse-overview-row-label");
     this.element.tabIndex = 1;
     this.element.addEventListener("dblclick", this._onMiniviewDoubleClicked.bind(this), true);
     this.element.addEventListener("mousewheel", this._onMiniviewMousewheel.bind(this), true);

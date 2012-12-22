@@ -584,11 +584,11 @@ WebInspector.TimelapseReplayingView = function()
 
     this._splitView.show(this.element);
 
-    this._miniview = new WebInspector.TimelapseMiniview();
-    this._miniview.show(this._splitView.mainElement);
-
     this._overviewWindow = new WebInspector.TimelapseOverview();
     this._overviewWindow.show(this._splitView.mainElement);
+
+    this._miniview = new WebInspector.TimelapseMiniview();
+    this._miniview.show(this._splitView.mainElement);
 
     this._overviewPreview = new WebInspector.TimelapseOverviewPreview();
     this._overviewPreview.show(this._splitView.sidebarElement);
