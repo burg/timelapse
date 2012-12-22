@@ -3084,7 +3084,6 @@ button.breakpoint-radar-status-bar-item > .glyph {
 
 #timelapse-replaying-view .split-view-contents {
     overflow-x: none;
-    overflow-y: scroll;
 }
 
 #timelapse-recording-view .timelapse-scrollview {
@@ -3349,15 +3348,15 @@ div.timelapse-overview-preview div.preview-message {
 .timelapse-overview-message {
     position: absolute;
     top: 0;
-    bottom: -10px;
-    left: 100px;
-    right: -8px;
+    bottom: 0;
+    left: 97px;
+    right: 0;
     z-index: 1000;
     font-weight: bold;
     font-size: 18pt;
     color: #666;
     background-color: rgba(255, 255, 255, 0.5);
-    line-height: 120px;
+    line-height: 214px;
     text-align: center;
     cursor: pointer;
 }
