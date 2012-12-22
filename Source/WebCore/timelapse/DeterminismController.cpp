@@ -599,10 +599,10 @@ void DeterminismController::asyncDispatchAction()
         // time (until next dispatch) will equal the observed delay between the
         // previous and current event.
 
+        // sometimes, the previous mark time isn't set for some reason.
+        if (m_previousMarkTime == 0.0)
+            m_previousMarkTime = m_runningAction->mark().time();
 
-        // FIXME: if starting normal playback from midway through the recording, the first event
-        // will wait an interval equal to time between the beginning of recording and midway point.
-        // this could be potentially a very long time.
         double targetInterval = m_runningAction->mark().time() - m_previousMarkTime;
         double elapsed = monotonicallyIncreasingTime() - m_previousActionDispatchStartTime;
         double waitInterval = targetInterval - elapsed;
@@ -612,7 +612,7 @@ void DeterminismController::asyncDispatchAction()
         // the nonzero interval condition as in the FullSpeed replay mode).
         if (waitInterval < 0.0)
             waitInterval = (1.0 * 0.001);
-               
+
         LOG(Timelapse, "%-30s WAIT: %.3f ms", "[DeterminismController]", waitInterval*1000.0);
         
         if (waitInterval > 1000.0) {
@@ -639,7 +639,10 @@ void DeterminismController::syncDispatchAction()
         m_previousMarkTime = m_runningAction->mark().time();
     }
     m_domEventRemainingQuota = m_runningAction->DOMEventQuota();
-    LOG(Timelapse, "%-30s DISPATCH: %s\n", "[DeterminismController]", m_runningAction->toString().utf8().data());
+    LOG(Timelapse, "%-30s ----------------------------------------------",
+                   "[DeterminismController");
+    LOG(Timelapse, "%-30s DISPATCH: %s\n", "[DeterminismController]",
+                   m_runningAction->toString().utf8().data());
     m_dispatching = true;
     m_runningAction->dispatch(this);
 }
