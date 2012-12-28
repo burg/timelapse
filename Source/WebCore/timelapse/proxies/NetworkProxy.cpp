@@ -134,9 +134,10 @@ PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext*
         m_replayHandleMap.set(loaderId, std::make_pair(newHandle, client));
         return newHandle;
     }
-
+#else
+    UNUSED_PARAM(loaderId);
 #endif // ENABLE(TIMELAPSE)
-
+    
     return ResourceHandle::create(context, request, client, defersLoading, shouldContentSniff);
 }
 
