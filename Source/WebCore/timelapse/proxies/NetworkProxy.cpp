@@ -106,8 +106,12 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
             else
                 LOG_ERROR("Memoized request: NULL");
 
+            // TODO: don't cancel here.
             controller()->cancelPlayback();
-            InspectorInstrumentation::playbackFailed(m_page, "Network request details missing or differ from request observed when recording.");
+            // FIXME(BJB): in general, I don't think a soft error is appropriate here. But,
+            // let's see how often it has bad consequences.
+            InspectorInstrumentation::playbackError(m_page, false,
+                                                    "Network request details missing or differ from request observed when recording.");
         }
         
         return loaderId;

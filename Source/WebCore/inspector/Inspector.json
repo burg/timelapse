@@ -2513,9 +2513,10 @@
                 "description": "Fired when replaying has stopped."
             },
 	    {
-	        "name": "playbackFailed",
+	        "name": "playbackError",
 	        "description": "Fired when playback encounters an internal (divergence) error.",
 		"parameters": [
+                    { "name": "isFatal", "type": "boolean", "description": "Whether the error causes immediate abortion of replay state." },
 		    { "name": "error", "type": "string", "description": "A description of the error." }
 		]
 	    },

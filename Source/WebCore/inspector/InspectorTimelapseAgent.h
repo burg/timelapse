@@ -97,7 +97,7 @@ public:
     void playbackHitMark(PositionMarkIndex);
     void playbackFinished();
     void playbackCancelled();
-    void playbackFailed(const String&);
+    void playbackError(bool isFatal, const String&);
 
     // Figures out current state and stops everything. 
     void stop();

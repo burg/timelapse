@@ -384,12 +384,10 @@ void DeterminismController::willDispatchEvent(const Event& event, DOMWindow* win
             m_timer.stop();
             syncDispatchAction();
         } else {
-            // this *should* be an assert, but if it fails it's not a disaster either.
-            // It would be a lot better for alpha users if we didn't crash. This is mainly
-            // a great place to put a breakpoint.
+            // This usually indicates nondeterministic APIs, or reordering of dispatchable inputs and DOM events.
             LOG_ERROR("%-30s REPLAY DIVERGENCE: more DOM events were dispatched (%d) than expected (%d) before the next input\n", "[DeterminismController]", m_runningAction->DOMEventQuota(), m_runningAction->DOMEventQuota()-1);
             String errorMessage = String::format("more DOM events were dispatched (%d) than expected (%d) before the next input.", m_runningAction->DOMEventQuota(), m_runningAction->DOMEventQuota()-1);
-            InspectorInstrumentation::playbackFailed(m_page, errorMessage);
+            InspectorInstrumentation::playbackError(m_page, false, errorMessage);
         }
     }
 }
@@ -524,8 +522,10 @@ void DeterminismController::maybeDispatchAction()
         String errorMessage = m_determinismLog->errorMessage();
         LOG(Timelapse, "%-30s Stopping action dispatch because DeterminismLog reported an error.", "[DeterminismController]");
         LOG(Timelapse, "%-30s %s", "[DeterminismController]", errorMessage.utf8().data());
+        // TODO: don't finish replay here.
         finishReplay();
-        InspectorInstrumentation::playbackFailed(m_page, errorMessage);
+        // we cannot recover here, because not all memoized data has "dummy" values.
+        InspectorInstrumentation::playbackError(m_page, true, errorMessage);
         return;
     }
 
@@ -556,8 +556,9 @@ void DeterminismController::maybeDispatchAction()
         String errorMessage = String::format("Next action should be injected after %d retired DOM events, but %d DOM events have retired.",
                                              m_waitingAction->dispatchCount(), 
                                              m_domEventDispatchCount);
+        // TODO: don't finish replay here. It's a policy decision.
         finishReplay();
-        InspectorInstrumentation::playbackFailed(m_page, errorMessage);
+        InspectorInstrumentation::playbackError(m_page, false, errorMessage);
         return;
     }
     

@@ -1158,10 +1158,10 @@ void InspectorInstrumentation::playbackCancelledImpl(InstrumentingAgents* instru
         timelapseAgent->playbackCancelled();
 }
 
-void InspectorInstrumentation::playbackFailedImpl(InstrumentingAgents* instrumentingAgents, const String& errorMessage)
+void InspectorInstrumentation::playbackErrorImpl(InstrumentingAgents* instrumentingAgents, bool isFatal, const String& errorMessage)
 {
     if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->playbackFailed(errorMessage);
+        timelapseAgent->playbackError(isFatal, errorMessage);
 }
 #endif
 

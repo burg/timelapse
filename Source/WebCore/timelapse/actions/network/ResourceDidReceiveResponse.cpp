@@ -65,9 +65,11 @@ void ResourceDidReceiveResponse::dispatch(DeterminismController* controller)
     
     if (!client) {
         LOG_ERROR("ERROR: Couldn't find handle context for id: %d", m_id);
+        // TODO: don't cancel playback here.
         controller->cancelPlayback();
-        InspectorInstrumentation::playbackFailed(controller->page(),
-                                                 String::format("Couldn't find handle context for id: %d", m_id));
+        // FIXME: this shouldn't be fatal error, because we can just not deliver the callback.
+        InspectorInstrumentation::playbackError(controller->page(), true,
+                                                String::format("Couldn't find handle context for id: %d", m_id));
         return;
     }
     

@@ -48,7 +48,7 @@ WebInspector.TimelapseOverview = function()
     this._model.addEventListener(modelEventNames.PlaybackWillStart, this._onPlaybackWillStart, this);
     this._model.addEventListener(modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
     this._model.addEventListener(modelEventNames.PlaybackStopped, this._onPlaybackStopped, this);
-    this._model.addEventListener(modelEventNames.PlaybackFailed, this._onPlaybackFailed, this);
+    this._model.addEventListener(modelEventNames.PlaybackError, this._onPlaybackError, this);
     this._model.addEventListener(modelEventNames.InputPaused, this._onInputPaused, this);
     this._model.addEventListener(modelEventNames.InputHit, this._onInputHit, this);
     this._model.addEventListener(modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
@@ -757,9 +757,10 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.playback.show();
     },
 
-    _onPlaybackFailed: function(event)
+    _onPlaybackError: function(event)
     {
-	var errorMessage = event.data;
+	var errorMessage = event.data.errorMessage;
+    //var isFatal = event.data.isFatal;
 
 	var clickEvent = WebInspector.TimelapseOverviewMessagePanel.Events.MessageClicked;
 	var clickCallback = function(event) {

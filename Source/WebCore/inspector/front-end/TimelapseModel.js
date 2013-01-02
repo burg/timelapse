@@ -528,33 +528,38 @@ WebInspector.TimelapseModel.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackStopped);
     },
 
-    _playbackFailed: function(errorMessage)
+    _playbackError: function(isFatal, errorMessage)
     {
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackFailed, errorMessage);
+        var data = {
+            "errorMessage": errorMessage,
+            "isFatal": isFatal,
+        };
+    
+        this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackError, data);
     },
 
     _lockedInput: function()
     {
     	this._inputLocked = true;
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.InputLocked);
+        this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.InputLocked);
     },
 
     _unlockedInput: function()
     {
     	this._inputLocked = false;
 
-	if (!this.recording)
-	    this._changeStatus("Ready");
+        if (!this.recording)
+            this._changeStatus("Ready");
 
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.InputUnlocked);
+        this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.InputUnlocked);
     },
 
     _playbackHitInput: function(markIndex)
     {
-	if (this.recordIndexFromMarkIndex(markIndex) > -1)
-    	    this._currentMarkIndex = markIndex;
-	this._breakpointHitIndex = -1;
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.InputHit, markIndex);
+        if (this.recordIndexFromMarkIndex(markIndex) > -1)
+            this._currentMarkIndex = markIndex;
+        this._breakpointHitIndex = -1;
+        this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.InputHit, markIndex);
     },
 
     _debuggerPaused: function(event)
@@ -691,9 +696,9 @@ WebInspector.TimelapseDispatcher.prototype = {
 	this._model._playbackStopped();
     },
 
-    playbackFailed: function(errorMessage)
+    playbackError: function(isFatal, errorMessage)
     {
-	this._model._playbackFailed(errorMessage);
+	this._model._playbackError(isFatal, errorMessage);
     },
 
     inputLocked: function()
