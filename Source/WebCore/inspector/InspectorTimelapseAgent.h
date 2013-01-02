@@ -113,6 +113,7 @@ public:
     void replayToCompletion(ErrorString*, bool);
     void pausePlayback(ErrorString*);
     void stopPlayback(ErrorString*, bool);
+    void setPauseOnError(ErrorString*, bool);
 
 private:
     InspectorTimelapseAgent(InstrumentingAgents*, InspectorState*, Page*);

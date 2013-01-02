@@ -75,6 +75,11 @@ namespace WebCore {
         Realtime,
     };
   
+    enum ErrorMode {
+        PauseOnError,
+        ContinueOnError,
+    };
+  
     class DeterminismController {
         WTF_MAKE_NONCOPYABLE(DeterminismController);
     public:
@@ -96,6 +101,8 @@ namespace WebCore {
         void willFireTimer(int, Frame*, const PositionMark&);
         void willRunPendingScriptsForDocument(Document*);
         void capturePageInput(DispatchableAction* action);
+        // callback from InspectorInstrumentation, which allows a policy decision (pause or continue).
+        void playbackError(bool isFatal, const String& errorMessage);
 
         // Action post-dispatch callback
         void didDispatch(DispatchableAction*);
@@ -107,6 +114,9 @@ namespace WebCore {
         // the first document and true for the second document.
         bool isCapturingDocument(Document*) const;
         bool isReplayingDocument(Document*) const;
+        
+        ErrorMode errorStrategy() const { return m_errorStrategy; }
+        void setErrorStrategy(ErrorMode mode) { m_errorStrategy = mode; }
 
         bool expectsPageLoad() const { return m_expectsPageLoad; }
         void setExpectsPageLoad(bool value) { m_expectsPageLoad = value; }
@@ -140,6 +150,7 @@ namespace WebCore {
         //used to keep track of whether we have just dispatched a frame navigation
         //to the root frame, but the new root document hasn't been created yet.
         bool m_expectsPageLoad;
+
         //used to implement "async" action dispatch
         Timer<DeterminismController> m_timer;
         RefPtr<WTF::DeterminismLog> m_determinismLog;
@@ -171,6 +182,7 @@ namespace WebCore {
 
         ReplayStatus m_status;
         ReplayMode m_replayMode;
+        ErrorMode m_errorStrategy;
         PositionMark m_currentMark;
         // in ReplayUpToMark mode, the mark which is being replayed up to (but not through)
         PositionMarkIndex m_stopBeforeMarkIndex;

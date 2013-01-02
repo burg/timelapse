@@ -450,6 +450,11 @@ void InspectorTimelapseAgent::stopPlayback(ErrorString*, bool shouldUnlock)
     m_inspectedPage->determinismController()->cancelPlayback();
 }
 
+void InspectorTimelapseAgent::setPauseOnError(ErrorString*, bool shouldPause)
+{
+    m_inspectedPage->determinismController()->setErrorStrategy(shouldPause ? PauseOnError : ContinueOnError);
+}
+
 }; // namespace WebCore
 
 #endif // ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)

@@ -2465,6 +2465,13 @@
                 "parameters": [
                     { "name": "unlock", "type": "boolean" }
                 ]
+            },
+            {
+                "name": "setPauseOnError",
+                "description": "Changes the actions taken by the replay backend when a playback error is encountered.",
+                "parameters": [
+                    { "name": "shouldPause", "type": "boolean" }
+                ]
             }
         ],
 
