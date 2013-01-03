@@ -89,14 +89,14 @@ DOMTimer::DOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> 
             } else if (controller->isReplayingDocument(document)) {
                 ReplayableAction* loggedAction = controller->determinismLog()->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::TimerCreated);
                 TimerCreated* action = static_cast<TimerCreated*>(loggedAction);
-                // error handling case: if fetch failed, then don't overwrite with memoized id
-                if (action)
+                // implicit error handling case: if fetch failed, then don't overwrite with memoized id
+                if (action) {
+                    // check that this timer was created in the same Document as originally observed.
+                    ASSERT(action->document(document->page()) == document);
                     m_timeoutId = action->timerId();
+                }
                 
                 m_shouldScheduleNormally = false;
-
-                // check that this timer was created in the same Document as originally observed.
-                ASSERT(action->document(document->page()) == document);
             }
         }
     }
