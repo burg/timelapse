@@ -115,11 +115,13 @@ WebInspector.DataProvider.Types = {
 WebInspector.DataProvider.Events = {
     Enabled: "Enabled",
     Disabled: "Disabled",
+    Invalidated: "Invalidated",
     WillRemove: "WillRemove",
 
     // used by all data providers to signal something changed.
     DataChanged: "DataChanged",
     SelectionChanged: "SelectionChanged",
+
     // used by input data provider to signal incremental addition.
     // this only makes sense for providers that add data monotonically.
     AddedInput: "AddedInput",
@@ -347,8 +349,8 @@ WebInspector.TimelapseBreakpointDataProvider = function(displayName, color)
     var tracker = WebInspector.timelapseBreakpointTracker;
     var events = WebInspector.TimelapseBreakpointTracker.Events;
     tracker.addEventListener(events.BreakpointHit, this._onBreakpointHit, this);
-    tracker.addEventListener(events.BreakpointAdded, this._removeEventListeners, this);
-    tracker.addEventListener(events.BreakpointRemoved, this._removeEventListeners, this);
+    tracker.addEventListener(events.BreakpointAdded, this._onBreakpointsInvalidated, this);
+    tracker.addEventListener(events.BreakpointRemoved, this._onBreakpointsInvalidated, this);
 }
 
 WebInspector.TimelapseBreakpointDataProvider.prototype = {
@@ -412,6 +414,13 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 	this._records.splice(-(idx + 1), 0, record);
 
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged, this);
+    },
+
+    _onBreakpointsInvalidated: function(event)
+    {
+	// neutralize ourselves, and notify clients that we became worthless.
+	this._removeEventListeners(event);
+	this.dispatchEventToListeners(WebInspector.DataProvider.Events.Invalidated, this);
     },
 
     _removeEventListeners: function(event)

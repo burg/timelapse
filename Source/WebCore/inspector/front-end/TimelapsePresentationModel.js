@@ -51,10 +51,6 @@ WebInspector.TimelapsePresentationModel = function()
     this._model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
     this._model.addEventListener(eventNames.BreakpointHit, this._breakpointHit, this);
 
-    // TODO: move to TimelapseBreakpointDataProvider
-    WebInspector.timelapseBreakpointTracker.addEventListener(WebInspector.TimelapseBreakpointTracker.Events.BreakpointAdded, this._removeBreakpointProviders, this);
-    WebInspector.timelapseBreakpointTracker.addEventListener(WebInspector.TimelapseBreakpointTracker.Events.BreakpointRemoved, this._removeBreakpointProviders, this);
-
     this.reset();
 };
 
@@ -125,18 +121,15 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	if (breakpointProviders.length > 0)
 	    return;
 
-	this.addProvider(new WebInspector.TimelapseBreakpointDataProvider(
-			     WebInspector.UIString("Breakpoint"),
-			     WebInspector.Color.fromRGB(10,55,230)
-			 ));
-    },
+	var breakpointProvider = new WebInspector.TimelapseBreakpointDataProvider(
+	    WebInspector.UIString("Breakpoint"),
+	    WebInspector.Color.fromRGB(10,55,230)
+	);
 
-    _removeBreakpointProviders: function()
-    {
-	// TODO: keep old breakpoint providers
-	var model = this;
-	var breakpointProviders = this.providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
-	breakpointProviders.forEach(function(provider) { model.removeProvider(provider); });
+	breakpointProvider.addEventListener(WebInspector.DataProvider.Events.Invalidated,
+					    this.removeProvider.bind(this, breakpointProvider));
+
+	this.addProvider(breakpointProvider);
     },
 
     // Public API
