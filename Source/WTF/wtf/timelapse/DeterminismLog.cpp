@@ -187,7 +187,13 @@ void DeterminismLog::reset()
 
 ReplayableAction* DeterminismLog::popExpectedAction(DeterminismQueueType queue,
                                                     ReplayableAction::ReplayableType type)
-{   
+{
+    if (hasError()) {
+        LOG_ERROR("%-30s prior memoized value retrieval failed, so not consulting log and instead propagating error condition.",
+                  "DeterminismLog::popExpectedAction");
+        return 0;
+    }
+   
     ReplayableAction* action = popAction(queue);
 
     if (action->type() != type) {

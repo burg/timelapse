@@ -101,8 +101,10 @@ namespace WebCore {
         void willFireTimer(int, Frame*, const PositionMark&);
         void willRunPendingScriptsForDocument(Document*);
         void capturePageInput(DispatchableAction* action);
-        // callback from InspectorInstrumentation, which allows a policy decision (pause or continue).
-        void playbackError(bool isFatal, const String& errorMessage);
+        // callsites of this method are locations where replay errors are detected.
+        // a true return value indicates playback has aborted or paused;
+        // a false return value indicates that playback will continue unimpeded.
+        bool playbackError(bool isFatal, const String& errorMessage);
 
         // Action post-dispatch callback
         void didDispatch(DispatchableAction*);

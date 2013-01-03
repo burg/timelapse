@@ -321,9 +321,6 @@ void InspectorTimelapseAgent::playbackCancelled()
 
 void InspectorTimelapseAgent::playbackError(bool isFatal, const String& errorMessage)
 {
-    // TODO: won't need to do this once the call originates from DeterminismController
-    // immediately cancel playback, so that nothing bad happens.
-    m_inspectedPage->determinismController()->cancelPlayback();
     // NB. if instead you would like to debug the failure,
     // this is a decent breakpoint location.
     if (m_frontend)

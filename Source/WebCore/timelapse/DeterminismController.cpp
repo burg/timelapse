@@ -386,9 +386,8 @@ void DeterminismController::willDispatchEvent(const Event& event, DOMWindow* win
             syncDispatchAction();
         } else {
             // This usually indicates nondeterministic APIs, or reordering of dispatchable inputs and DOM events.
-            LOG_ERROR("%-30s REPLAY DIVERGENCE: more DOM events were dispatched (%d) than expected (%d) before the next input\n", "[DeterminismController]", m_runningAction->DOMEventQuota(), m_runningAction->DOMEventQuota()-1);
             String errorMessage = String::format("more DOM events were dispatched (%d) than expected (%d) before the next input.", m_runningAction->DOMEventQuota(), m_runningAction->DOMEventQuota()-1);
-            InspectorInstrumentation::playbackError(m_page, false, errorMessage);
+            playbackError(false, errorMessage);
         }
     }
 }
@@ -464,6 +463,33 @@ void DeterminismController::capturePageInput(DispatchableAction* action)
     InspectorInstrumentation::recordedPageInput(m_page, action);
 }
 
+bool DeterminismController::playbackError(bool isFatal, const String& errorMessage)
+{
+    ASSERT(replaying());
+
+    LOG(Timelapse, "%-30s %sPlayback error: %s", "[DeterminismController]",
+        isFatal ? "FATAL " : "",
+        errorMessage.utf8().data());
+    
+    if (isFatal) {
+        LOG(Timelapse, "%-30s Terminating playback due to fatal error.", "[DeterminismController]");
+        cancelPlayback();
+        InspectorInstrumentation::playbackError(m_page, true, errorMessage);
+        return true;
+    }
+    
+    if (m_errorStrategy == ContinueOnError) {
+        LOG(Timelapse, "%-30s Reporting and continuing past non-fatal error.", "[DeterminismController]");
+        InspectorInstrumentation::playbackError(m_page, isFatal, errorMessage);
+    } else {
+        LOG(Timelapse, "%-30s Reporting and pausing because of non-fatal error.", "[DeterminismController]");
+        pauseReplay(m_currentMark.index());
+        InspectorInstrumentation::playbackError(m_page, isFatal, errorMessage);
+    }
+    
+    return m_errorStrategy == PauseOnError;
+}
+
 // Private methods
 
 void DeterminismController::captureAction(DispatchableAction* action)
@@ -519,14 +545,9 @@ void DeterminismController::maybeDispatchAction()
 
     // if there was an error between now the previous dispatch, report it now.
     if (m_determinismLog->hasError()) {
-        // grab error string before resetting replay state.
-        String errorMessage = m_determinismLog->errorMessage();
-        LOG(Timelapse, "%-30s Stopping action dispatch because DeterminismLog reported an error.", "[DeterminismController]");
-        LOG(Timelapse, "%-30s %s", "[DeterminismController]", errorMessage.utf8().data());
-        // TODO: don't finish replay here.
-        finishReplay();
-        // we cannot recover here, because not all memoized data has "dummy" values.
-        InspectorInstrumentation::playbackError(m_page, true, errorMessage);
+        // TODO: some of these should be recoverable, but for now they are all fatal.
+        // we must clear the error
+        playbackError(true, m_determinismLog->errorMessage());
         return;
     }
 
@@ -550,17 +571,12 @@ void DeterminismController::maybeDispatchAction()
     
     //if this event is overdue, then the replay has diverged (probably caused by user interaction)
     if (m_waitingAction->dispatchCount() < m_domEventDispatchCount) {
-        LOG_ERROR("%-30s REPLAY DIVERGENCE!", "[DeterminismController]");
-        LOG_ERROR("%-30s Next action should be injected after %d@ retired DOM events, but %d@ DOM events have retired.\n",
-            "[DeterminismController]", m_waitingAction->dispatchCount(), m_domEventDispatchCount);
-        
         String errorMessage = String::format("Next action should be injected after %d retired DOM events, but %d DOM events have retired.",
                                              m_waitingAction->dispatchCount(), 
                                              m_domEventDispatchCount);
-        // TODO: don't finish replay here. It's a policy decision.
-        finishReplay();
-        InspectorInstrumentation::playbackError(m_page, false, errorMessage);
-        return;
+
+        if (playbackError(false, errorMessage))
+            return;
     }
     
     //if this event is next in line or overdue, promote it to "running", then fire immediately.
@@ -572,7 +588,8 @@ void DeterminismController::maybeDispatchAction()
 
     //otherwise, it will be considered for dispatch after every future event.
     else
-        LOG(Timelapse, "%-30s Waiting to dispatch next action (current: %d@; target: %d@).\n", "[DeterminismController]", m_domEventDispatchCount, m_waitingAction->dispatchCount());
+        LOG(Timelapse, "%-30s Waiting to dispatch next action (current: %d@; target: %d@).\n",
+            "[DeterminismController]", m_domEventDispatchCount, m_waitingAction->dispatchCount());
 }
 
 void DeterminismController::timerFired(Timer<DeterminismController>*)
