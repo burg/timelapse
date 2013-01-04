@@ -762,45 +762,36 @@ WebInspector.TimelapseOverview.prototype = {
 	var errorMessage = event.data.errorMessage;
     //var isFatal = event.data.isFatal;
 
-	var clickEvent = WebInspector.TimelapseOverviewMessagePanel.Events.MessageClicked;
 	var clickCallback = function(event) {
-	    var panel = event.data;
-	    console.assert(panel === this._messagePanel, "unexpected arguments in message panel click callback");
-
 	    this._previewProvider.popView();
-
-	    panel.removeEventListener(clickEvent, clickCallback, this);
-	    panel.detach();
+	    this._messagePanel.element.removeEventListener("click", clickCallback, false);
+	    this._messagePanel.detach();
 	}.bind(this);
 
 	this._previewProvider.pushView(new WebInspector.OverviewPreviewViews.ErrorView(errorMessage));
 
-	this._messagePanel.addEventListener(clickEvent, clickCallback, this);
-	this._messagePanel.message = "Oops! Playback failed. Please try again.";
+	this._messagePanel.element.addEventListener("click", clickCallback, false);
+	this._messagePanel.content = document.createTextNode("Oops! Playback failed. Please try again.");
 	this._messagePanel.show(this.element);
     },
 
     _onPlaybackWillStart: function()
     {
-	var clickEvent = WebInspector.TimelapseOverviewMessagePanel.Events.MessageClicked;
 	var clickCallback = function(event) {
-	    var panel = event.data;
-	    console.assert(panel === this._messagePanel, "unexpected arguments in message panel click callback");
-
 	    if (this._model.replaying)
 		this._model.pausePlayback();
 
-	    panel.removeEventListener(clickEvent, clickCallback, this);
-	    panel.detach();
+	    this._messagePanel.element.removeEventListener("click", clickCallback, false);
+	    this._messagePanel.detach();
 	}.bind(this);
-	this._messagePanel.addEventListener(clickEvent, clickCallback, this);
+	this._messagePanel.addEventListener("click", clickCallback, false);
 
 	if (this._model.scanningBreakpoints)
-	    this._messagePanel.message = "Scanning breakpoints...";
+	    this._messagePanel.content = document.createTextNode("Scanning breakpoints...");
 	else if (this._model.fastReplaying)
-	    this._messagePanel.message = "Seeking...";
+	    this._messagePanel.message = document.createTextNode("Seeking...");
 	else
-	    this._messagePanel.message = "Replaying... click to cancel.";
+	    this._messagePanel.message = document.createTextNode("Replaying... click to cancel.");
 
 	this._messagePanel.show(this.element);
     },
@@ -1595,39 +1586,25 @@ WebInspector.TimelapseOverviewMessagePanel = function(overview)
 
     this.element = document.createElement("div");
     this.element.className = "timelapse-overview-message message-pulse";
-    this.element.addEventListener("click", this._onMessageClicked.bind(this), false);
 }
 
 WebInspector.TimelapseOverviewMessagePanel.prototype = {
-    _onMessageClicked: function(event)
+    get content()
     {
-	this.dispatchEventToListeners(WebInspector.TimelapseOverviewMessagePanel.Events.MessageClicked, this);
+	return this._content;
     },
 
-    get message()
+    set content(val)
     {
-	return this._message;
-    },
+	while (this.element.childNodes.length > 0)
+	    this.element.removeChild(this.element.childNodes[0]);
 
-    set message(val)
-    {
-	this._message = val;
-	this.element.textContent = this._message;
+	this.element.appendChild(val);
+	this._content = val;
     },
-
-    // overrides WebInspector.View.detach
-    detach: function()
-    {
-	this.message = "ERROR: DIDNT SET MESSAGE BEFORE SHOWING";
-	WebInspector.View.prototype.detach.call(this);
-    }
 };
 
 WebInspector.TimelapseOverviewMessagePanel.prototype.__proto__ = WebInspector.View.prototype;
-
-WebInspector.TimelapseOverviewMessagePanel.Events = {
-    MessageClicked: "MessageClicked"
-};
 
 /**
  * @Constructor
