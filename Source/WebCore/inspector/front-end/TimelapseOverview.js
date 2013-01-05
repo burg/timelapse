@@ -760,18 +760,67 @@ WebInspector.TimelapseOverview.prototype = {
     _onPlaybackError: function(event)
     {
 	var errorMessage = event.data.errorMessage;
-    //var isFatal = event.data.isFatal;
+	var isFatal = event.data.isFatal;
+	
+	if (isFatal) {
+	    var clickDismissalCallback = function(event) {
+		this._previewProvider.popView();
+		this._messagePanel.element.removeEventListener("click", clickDismissalCallback, false);
+		this._messagePanel.detach();
+	    }.bind(this);
 
-	var clickCallback = function(event) {
-	    this._previewProvider.popView();
-	    this._messagePanel.element.removeEventListener("click", clickCallback, false);
-	    this._messagePanel.detach();
-	}.bind(this);
+	    this._messagePanel.content = document.createTextNode("Playback was terminated by a fatal error. Please try again.");
+	    this._messagePanel.element.addEventListener("click", clickDismissalCallback, false);
+	} else {
+	    var model = this._model;
+	    var message = this._messagePanel;
+	    var optionLabels = [
+		"Keep going",
+		"Ignore warnings",
+		"Abort"
+	    ];
+	    var optionCallbacks = [
+                // case: moral equivalent of pressing play button
+		function(event) {
+		    model.replayUpToMarkIndex(model.replayFinishMarkIndex, 
+					      model.fastReplaying, 
+					      !model.fastReplaying || model.scanningBreakpoints);
+		    message.detach();
+		},
+
+		// case: disable pauses, then press play
+		function(event) {
+		    TimelapseAgent.setPauseOnError(false);
+		    model.replayUpToMarkIndex(model.replayFinishMarkIndex, 
+					      model.fastReplaying, 
+					      !model.fastReplaying || model.scanningBreakpoints);
+		    message.detach();
+		},
+
+		// case: unlock
+		function() {
+		    model.stopPlayback(true);
+		    message.detach();s
+		}
+	    ];
+	    
+	    var ul = document.createElement("ul");
+
+	    for (var i = 0; i < optionLabels.length; i++) {
+		var li = document.createElement("li");
+		var span = document.createElement("span");
+		span.textContent = optionLabels[i];
+		span.addEventListener("click", optionCallbacks[i], false);
+		li.appendChild(span);
+		ul.appendChild(li);
+	    }
+	    var p = document.createElement("p");
+	    p.appendChild(document.createTextNode("Something went wrong during playback."));
+	    p.appendChild(ul);
+	    this._messagePanel.content = p;
+	}
 
 	this._previewProvider.pushView(new WebInspector.OverviewPreviewViews.ErrorView(errorMessage));
-
-	this._messagePanel.element.addEventListener("click", clickCallback, false);
-	this._messagePanel.content = document.createTextNode("Oops! Playback failed. Please try again.");
 	this._messagePanel.show(this.element);
     },
 

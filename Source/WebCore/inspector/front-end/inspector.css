@@ -3364,9 +3364,23 @@ div.timelapse-overview-preview div.preview-message {
     font-size: 18pt;
     color: #666;
     background-color: rgba(255, 255, 255, 0.5);
-    line-height: 214px;
+    padding: 40px 15px 0;
     text-align: center;
     cursor: pointer;
+}
+
+.timelapse-overview-message li {
+    list-style-type: none;
+    display: inline;
+    text-decoration: underline;
+    font-size: 14px;
+    margin: 0px 10px 0px 10px;
+    color: #444;
+}
+
+.timelapse-overview-message li:hover {
+    text-decoration: underline;
+    color: #a04010;
 }
 
 .timelapse-overview-message:not(.hidden) {
@@ -3396,11 +3410,6 @@ div.timelapse-overview-preview div.preview-message {
     0% { opacity: 1.0; z-index: 1000; }
     90% { opacity: 0.1; }
     100% { opacity: 0; z-index: 0; display: none; }
-}
-
-.timelapse-overview-message:not(.hidden):hover {
-    text-decoration: underline;
-    color: #a04010;
 }
 
 .timelapse-overview .resources-dividers-label-bar {
