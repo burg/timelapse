@@ -59,6 +59,12 @@ typedef enum {
     ErrorUnexpectedActionType,
 } ReplayErrorType;
 
+struct ReplayErrorData {
+    ReplayErrorType error;
+    ReplayableAction::ReplayableType expectedAction;
+    DeterminismQueueType queue;
+};
+
 class ActionSerializer;
     
 class DeterminismLog : public RefCounted<DeterminismLog> {
@@ -78,10 +84,10 @@ public:
     WTF_EXPORT_PRIVATE ReplayableAction* popAction(DeterminismQueueType);
 
     //error handling
-    bool hasError() const { return m_errorType != NoError; }
+    bool hasError() const { return m_errorData.error != NoError; }
     WTF_EXPORT_PRIVATE String errorMessage() const;
     // TODO: if the previous error allocated any POD, must clean up here.
-    void clearError() { m_errorType = NoError; }
+    void clearError() { m_errorData.error = NoError; }
 
     // status
     bool capturing() const { return m_isCapturing; }
@@ -101,11 +107,7 @@ private:
     bool m_isCapturing;
     bool m_isReplaying;
     bool m_active;
-    ReplayErrorType m_errorType;
-    union {
-        ReplayableAction::ReplayableType expectedActionType;
-        DeterminismQueueType queueType;
-    } m_errorData;
+    ReplayErrorData m_errorData;
     
     Vector<DeterminismQueue> m_queues;
     Vector<size_t> m_positions;

@@ -73,8 +73,9 @@ DeterminismLog::DeterminismLog(bool capturing, bool replaying)
 : m_isCapturing(capturing)
 , m_isReplaying(replaying)
 , m_active(true)
-, m_errorType(NoError)
 , m_captureCount(0) {
+
+    m_errorData.error = NoError;
 
     for (size_t i = 0; i < DeterminismQueueTypeLength; i++) {
         m_positions.append(0);
@@ -137,19 +138,19 @@ String DeterminismLog::errorMessage() const
     ASSERT(hasError());
     StringBuilder sb;
     
-    switch (m_errorType) {
+    switch (m_errorData.error) {
     case ErrorExhaustedQueue:
-        ASSERT(m_errorData.queueType < DeterminismQueueTypeLength);
+        ASSERT(m_errorData.queue < DeterminismQueueTypeLength);
         sb.append("Ran out of actions on queue: ");
-        sb.append(queueTypeToString(m_errorData.queueType));
+        sb.append(queueTypeToString(m_errorData.queue));
         sb.append(" because too many were requested.");
         break;
 
     case ErrorUnexpectedActionType: {
-        DeterminismQueueType queue = m_errorData.queueType;
+        DeterminismQueueType queue = m_errorData.queue;
         ASSERT(queue < DeterminismQueueTypeLength);
         sb.append("Expected next input to be a ");
-        sb.append(m_errorData.expectedActionType);
+        sb.append(m_errorData.expectedAction);
         sb.append(", but found a ");
       
 
@@ -180,7 +181,7 @@ void DeterminismLog::reset()
 
     m_isReplaying = true;
     m_active = true;
-    m_errorType = NoError;
+    m_errorData.error = NoError;
     // TODO: deallocate anything stuck inside m_errorData
     m_isCapturing = false;
 }
@@ -202,8 +203,8 @@ ReplayableAction* DeterminismLog::popExpectedAction(DeterminismQueueType queue,
                   "[DeterminismLog]",
                   type, action->type(), action->toString().ascii().data());
         
-        m_errorType = ErrorUnexpectedActionType;
-        m_errorData.expectedActionType = type;
+        m_errorData.error = ErrorUnexpectedActionType;
+        m_errorData.expectedAction = type;
         return 0;
     }
 
@@ -223,8 +224,8 @@ ReplayableAction* DeterminismLog::popAction(DeterminismQueueType queue)
         LOG_ERROR("%-30s ERROR No more inputs remain for determinism queue %s, but one was requested.",
                   "[DeterminismLog]",
                   queueTypeToString(queue));
-        m_errorType = ErrorExhaustedQueue;
-        m_errorData.queueType = queue;
+        m_errorData.error = ErrorExhaustedQueue;
+        m_errorData.queue = queue;
         return 0;
     }
     
