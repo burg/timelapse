@@ -52,7 +52,6 @@ WebInspector.TimelapseOverview = function()
     this._model.addEventListener(modelEventNames.InputPaused, this._onInputPaused, this);
     this._model.addEventListener(modelEventNames.InputHit, this._onInputHit, this);
     this._model.addEventListener(modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
-    this._model.addEventListener(modelEventNames.BreakpointHit, this._onBreakpointRecordsChanged, this);
 
     // TODO: these should instead listen to specific data provider events.
     var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
@@ -1530,7 +1529,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	    ctx.fillStyle = fogColor;
 
 	    for (var i = 0; i < intervals.length; i++) {
-		var timestamp = model.timestampFromMarkIndex(intervals[i].start.markIndex);
+		var timestamp = model.timestampFromMarkIndex(intervals[i].start);
 		endPercent = this.calculator.computeOverviewPercentage(timestamp);
 		widthPercent = endPercent - startPercent;
 
@@ -1552,7 +1551,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 		    fade(x + width - fadeWidth, fadeWidth);
 		}
 
-		timestamp = model.timestampFromMarkIndex(intervals[i].end.markIndex);
+		timestamp = model.timestampFromMarkIndex(intervals[i].end);
 		startPercent = this.calculator.computeOverviewPercentage(timestamp);
 	    }
 

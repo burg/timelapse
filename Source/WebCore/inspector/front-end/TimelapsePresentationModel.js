@@ -47,7 +47,7 @@ WebInspector.TimelapsePresentationModel = function()
     this._model.addEventListener(eventNames.RecordingDidStart, this._recordingDidStart, this);
     this._model.addEventListener(eventNames.RecordingDidStop, this._recordingDidStop, this);
     this._model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
-    this._model.addEventListener(eventNames.BreakpointHit, this._breakpointHit, this);
+    this._model.addEventListener(eventNames.BreakpointScanStarted, this._breakpointScanStarted, this);
 
     this.reset();
 };
@@ -122,7 +122,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	this.calculator.updateBoundaries(record);
     },
 
-    _breakpointHit: function()
+    _breakpointScanStarted: function()
     {
 	// TODO: manage multiple breakpoint providers
 	var breakpointProviders = this.providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
