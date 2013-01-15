@@ -267,34 +267,32 @@ WebInspector.TimelapseIntervalManager.prototype = {
 	return !(typeof this._pendingIntervalStart === "undefined");
     },
 
-    hasIntervalContaining: function(markIndex, hitIndex)
+    hasIntervalContaining: function(markIndex)
     {
-	var location = { markIndex: markIndex, hitIndex: hitIndex || 0 };
 	var intervals = this.intervals;
 	for (var i = 0; i < intervals.length; i++)
-	    if (this._compare(intervals[i].start, location) <= 0
-		&& this._compare(location, intervals[i].end) < 0)
+	    if (intervals[i].start <= markIndex && markIndex < intervals[i].end)
 		return true;
 
 	return false;
     },
 
-    startInterval: function(markIndex, hitIndex)
+    startInterval: function(start)
     {
-	console.assert(!this.intervalPending, "In startInterval("+markIndex+", "+hitIndex+"): startInterval already called");
-	this._pendingIntervalStart = { markIndex: markIndex, hitIndex: hitIndex };
+	console.assert(!this.intervalPending, "In startInterval("+start+"): startInterval already called");
+	this._pendingIntervalStart = start;
     },
 
-    endInterval: function(markIndex, hitIndex)
+    endInterval: function(end)
     {
-	console.assert(typeof this._pendingIntervalStart === "object", "In endInterval("+markIndex+", "+hitIndex+"): corresponding startInterval never called");
-	this.add(this._pendingIntervalStart, { markIndex: markIndex, hitIndex: hitIndex });
+	console.assert(typeof this._pendingIntervalStart === "number", "In endInterval("+end+"): corresponding startInterval never called");
+	this.add(this._pendingIntervalStart, end);
 	delete this._pendingIntervalStart;
     },
 
     add: function(start, end)
     {
-	console.assert(start <= end, "Intervals must have positive delta from start to end (was: "+start.markIndex+","+start.hitIndex+"--"+end.markIndex+","+end.hitIndex+")");
+	console.assert(start <= end, "Intervals must have positive delta from start to end (was: "+start+"--"+end+")");
 
 	function makeInterval(s, e) {
 	    return {
@@ -306,7 +304,7 @@ WebInspector.TimelapseIntervalManager.prototype = {
 	// invariant: this.intervals is disjoint and sorted by start time
 	var intervals = this.intervals;
 
-	if (this._compare(start, end) == 0)
+	if (start-end == 0)
 	    return;
 
 	/* case: first interval */
@@ -316,33 +314,32 @@ WebInspector.TimelapseIntervalManager.prototype = {
 	}
 
 	/* case: interval is before all others */
-	if (this._compare(intervals[0].start, end) > 0) {
+	if (intervals[0].start > end) {
 	    intervals.unshift(makeInterval(start, end));
 	    return;
 	}
 	
 	/* case: interval is after all others */
-	if (this._compare(intervals[intervals.length-1].end, start) < 0) {
+	if (intervals[intervals.length-1].end < start) {
 	    intervals.push(makeInterval(start, end));
 	    return;
 	}
 
 	var i, beginIdx = 0, endIdx = 0;
 	/* seek to where new interval fits */
-	for (i = 0; i < intervals.length && this._compare(intervals[i].start, start) <= 0; i++)
+	for (i = 0; i < intervals.length && intervals[i].start <= start; i++)
 	    beginIdx = i;
 
 	/* case: new interval is enclosed by intervals[beginIdx], so don't adjust intervals  */
-	if (this._compare(start, intervals[beginIdx].start) >= 0
-	    && this._compare(intervals[beginIdx].end, end) >= 0)
+	if (start >= intervals[beginIdx].start && intervals[beginIdx].end >= end)
 	    return;
 
 	var curStart, curEnd;
 
 	/* case: new interval overlaps with intervals[beginIdx] */
-	if (this._compare(intervals[beginIdx].end, start) >= 0) {
-	    curStart = this._compare(start, intervals[beginIdx].start) < 0 ? start : intervals[beginIdx].start;
-	    curEnd = this._compare(end, intervals[beginIdx].end) > 0 ? end : intervals[beginIdx].end;
+	if (intervals[beginIdx].end >= start) {
+	    curStart = Math.min(start, intervals[beginIdx].start);
+	    curEnd = Math.max(end, intervals[beginIdx].end);
 	}
 	/* case: new interval comes after intervals[beginIdx] but may overlap with following intervals */
 	else {
@@ -354,8 +351,8 @@ WebInspector.TimelapseIntervalManager.prototype = {
 	/* try to chunk forwards */
 	endIdx = beginIdx;
 	while (endIdx < intervals.length) {
-	    if (this._compare(intervals[endIdx].start, curEnd) <= 0) {
-		curEnd = this._compare(curEnd, intervals[endIdx].end) > 0 ? curEnd : intervals[endIdx].end;
+	    if (intervals[endIdx].start <= curEnd) {
+		curEnd = Math.max(curEnd, intervals[endIdx].end);
 		endIdx++;
 	    }
 	    else
@@ -372,14 +369,6 @@ WebInspector.TimelapseIntervalManager.prototype = {
 	    delete this._pendingIntervalStart;
 
 	this.intervals = [];
-    },
-
-    // Breakpoint hit location comparator
-    _compare: function(a, b)
-    {
-	if (a.markIndex > b.markIndex) return 1;
-	if (a.markIndex < b.markIndex) return -1;
-	return a.hitIndex - b.hitIndex;
     }
 };
 
