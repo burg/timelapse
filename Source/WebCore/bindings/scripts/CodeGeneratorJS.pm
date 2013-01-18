@@ -1791,6 +1791,16 @@ sub GenerateImplementation
                     push(@implContent, "        return jsUndefined();\n");
                 }
 
+                if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"}) {
+                    $implIncludes{"Logging.h"} = 1;
+                    $implIncludes{"<wtf/timelapse/DeterminismLog.h>"} = 1;
+                    push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
+                    push(@implContent, "    RefPtr<DeterminismLog> log = globalObject->determinismLog();\n");
+                    push(@implContent, "    if (log && log->isActive() && log->replaying()) {\n");
+                    push(@implContent, "        LOG(Timelapse, \"%-30s Binding for %s is not implemented for replay.\", \"[Timelapse]\", \"$name\");\n");
+                    push(@implContent, "    }\n");
+                }
+
                 if ($attribute->signature->extendedAttributes->{"Custom"} || $attribute->signature->extendedAttributes->{"JSCustom"} || $attribute->signature->extendedAttributes->{"CustomGetter"} || $attribute->signature->extendedAttributes->{"JSCustomGetter"}) {
                     push(@implContent, "    return castedThis->$implGetterFunctionName(exec);\n");
                 } elsif ($attribute->signature->extendedAttributes->{"CheckSecurityForNode"}) {
@@ -1984,6 +1994,16 @@ sub GenerateImplementation
                                     push(@implContent, "    if (!shouldAllowAccessToFrame(exec, jsCast<$className*>(thisObject)->impl()->frame()))\n");
                                 }
                                 push(@implContent, "        return;\n");
+                            }
+
+                            if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"}) {
+                                $implIncludes{"Logging.h"} = 1;
+                                $implIncludes{"<wtf/timelapse/DeterminismLog.h>"} = 1;
+                                push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
+                                push(@implContent, "    RefPtr<DeterminismLog> log = globalObject->determinismLog();\n");
+                                push(@implContent, "    if (log && log->isActive() && log->replaying()) {\n");
+                                push(@implContent, "        LOG(Timelapse, \"%-30s Binding for %s is not implemented for replay.\", \"[Timelapse]\", \"$name\");\n");
+                                push(@implContent, "    }\n");
                             }
 
                             if ($attribute->signature->extendedAttributes->{"Custom"} || $attribute->signature->extendedAttributes->{"JSCustom"} || $attribute->signature->extendedAttributes->{"CustomSetter"} || $attribute->signature->extendedAttributes->{"JSCustomSetter"}) {

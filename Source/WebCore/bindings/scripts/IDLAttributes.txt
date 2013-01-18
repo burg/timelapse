@@ -98,6 +98,7 @@ PassThisToCallback=*
 Reflect=*
 Replaceable
 ReplaceableConstructor
+ReplayNotImplemented
 ReturnNewObject
 StrictTypeChecking
 Supplemental=*

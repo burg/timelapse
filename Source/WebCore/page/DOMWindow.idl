@@ -94,10 +94,10 @@ module window {
 
         attribute [Replaceable] boolean offscreenBuffering;
 
-        attribute [Replaceable] long outerHeight;
-        attribute [Replaceable] long outerWidth;
-        attribute [Replaceable] long innerHeight;
-        attribute [Replaceable] long innerWidth;
+        attribute [Replaceable, ReplayNotImplemented] long outerHeight;
+        attribute [Replaceable, ReplayNotImplemented] long outerWidth;
+        attribute [Replaceable, ReplayNotImplemented] long innerHeight;
+        attribute [Replaceable, ReplayNotImplemented] long innerWidth;
 #if defined(ENABLE_TIMELAPSE) && ENABLE_TIMELAPSE
         // Custom bindings implement Replaceable
         attribute [Custom] long screenX;
