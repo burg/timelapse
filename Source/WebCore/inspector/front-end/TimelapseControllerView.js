@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg, Jake Bailey.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2012, 2013 Brian Burg, Jake Bailey.
+ *  Copyright (C) 2012, 2013 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -52,9 +52,7 @@ WebInspector.TimelapseControllerView = function()
     this._recordingView = new WebInspector.TimelapseRecordingView(this);
     this._replayingView = new WebInspector.TimelapseReplayingView(this);
 
-    this._createStatusBarButtons();
-    this._registerShortcuts();
-    this.element.addEventListener("keydown", this._keyDown.bind(this), false);
+    this._createSharedStatusBarButtons();
     this.element.addEventListener("focus", this.focus.bind(this), true);
     this.element.addEventListener("blur", this.blur.bind(this), true);
 
@@ -65,25 +63,11 @@ WebInspector.TimelapseControllerView = function()
 WebInspector.TimelapseControllerView.prototype = {
     get statusBarItems()
     {
-        var items = [this.toggleTimelapseButton.element];
-	items.push(this.toggleRecordButton.element);
-	items.push(this.lockButton.element);
-	items.push(this.togglePlaybackButton.element);
-	items.push(this.setSavepointButton.element);
-	items.push(this.replayToSavepointButton.element);
-	items.push(this.radarButton.element);
-        return items;
-    },
-
-    reset: function()
-    {
-	this._recordingView.clear();
-	this._replayingView.clear();
-
-	if (this._replayingView.isShowing)
-	    this._replayingView.detach();
-
-	this._recordingView.show(this.element);
+        return [
+	    this.toggleTimelapseButton.element,
+	    this.toggleRecordButton.element,
+	    this._contextStatusBarItems
+	];
     },
 
     afterShow: function()
@@ -102,11 +86,40 @@ WebInspector.TimelapseControllerView.prototype = {
 	this.element.style.opacity = 0.7;
     },
 
-    /* subroutines of initialization */
-    _createStatusBarButtons: function()
+    _changeView: function(oldView, newView)
+    {
+	if (oldView) {
+	    oldView.clear();
+	    if (oldView.isShowing)
+		oldView.detach();
+	}
+
+	newView.clear();
+	
+	this._contextStatusBarItems.removeChildren();
+	var buttons = newView.statusBarItems;
+	for (var i = 0; i < buttons.length; i++)
+	    this._contextStatusBarItems.appendChild(buttons[i].element);
+
+	newView.show(this.element);
+    },
+
+    _showRecordingView: function() {
+	 this._changeView(this._replayingView, this._recordingView);
+    },
+
+    _showReplayingView: function()
+    {
+	this._changeView(this._recordingView, this._replayingView);
+    },
+
+    _createSharedStatusBarButtons: function()
     {
 	var controllerView = this;
 	var eventNames = WebInspector.TimelapseModel.EventTypes;
+
+	this._contextStatusBarItems = document.createElement("div");
+	this._contextStatusBarItems.className = "status-bar-items-group";
 
         var timelapseButton = this.toggleTimelapseButton = new WebInspector.StatusBarButton("", "enable-toggle-status-bar-item");
         timelapseButton.addEventListener("click", this._toggleTimelapseButtonClicked, controllerView);
@@ -147,231 +160,6 @@ WebInspector.TimelapseControllerView.prototype = {
             this.toggled = false;
             this.title = "Not recording. Click to re-record.";
         }, recordButton);
-
-	//the lock/unlock button
-	var lockButton = this.lockButton = new WebInspector.StatusBarButton(WebInspector.UIString("Timelapse Locking Mode"), "timelapse-lock-status-bar-item");
-        lockButton.addEventListener("click", this._lockButtonClicked, this);
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.disabled = true;
-            this.visible = true;
-            this.toggled = false;
-            this.title = "Input unlocked.";
-        }, lockButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.visible = false;
-        }, lockButton);
-        this._model.addEventListener(eventNames.RecordingDidStart, function() {
-            this.disabled = true;
-        }, lockButton);
-        this._model.addEventListener(eventNames.RecordingDidStop, function() {
-            this.disabled = false;
-        }, lockButton);
-        this._model.addEventListener(eventNames.InputLocked, function() {
-            this.title = "Input locked.";
-            this.toggled = true;
-        }, lockButton);
-        this._model.addEventListener(eventNames.InputUnlocked, function() {
-            if (this._recording) return;
-            this.title = "Input unlocked.";
-            this.toggled = false;
-        }, lockButton);
-
-        //the play/pause button
-        var playbackButton = this.togglePlaybackButton = new WebInspector.StatusBarButton("", "playback-toggle-status-bar-item");
-        playbackButton.addEventListener("click", controllerView._togglePlaybackButtonClicked, this);
-        playbackButton.disabled = true;
-        this.toggled = false;
-        playbackButton.element.addStyleClass("play-playback-status-bar-item");
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.visible = true;
-            this.disabled = true;
-            this.toggled = false;
-        }, playbackButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.visible = false;
-        }, playbackButton);
-        this._model.addEventListener(eventNames.RecordingDidStart, function() {
-            this.disabled = true;
-        }, playbackButton);
-        this._model.addEventListener(eventNames.RecordingDidStop, function() {
-            this.disabled = false;
-        }, playbackButton);
-        this._model.addEventListener(eventNames.PlaybackDidStart, function() {
-            this.element.removeStyleClass("play-playback-status-bar-item");
-            this.element.addStyleClass("pause-playback-status-bar-item");
-        }, playbackButton);
-        this._model.addEventListener(eventNames.InputPaused, function() {
-            this.element.removeStyleClass("pause-playback-status-bar-item");
-            this.element.addStyleClass("play-playback-status-bar-item");
-        }, playbackButton);
-        this._model.addEventListener(eventNames.BreakpointPaused, function() {
-            this.element.removeStyleClass("pause-playback-status-bar-item");
-            this.element.addStyleClass("play-playback-status-bar-item");
-        }, playbackButton);
-        this._model.addEventListener(eventNames.PlaybackStopped, function() {
-            this.element.removeStyleClass("pause-playback-status-bar-item");
-            this.element.addStyleClass("play-playback-status-bar-item");
-        }, playbackButton);
-
-	//the set-savepoint button
-	var setSavepointButton = this.setSavepointButton = new WebInspector.StatusBarButton("", "set-savepoint-status-bar-item");
-
-	// TODO(Issue #122): attach this to TimelapseReplayingView,
-	// since it requires ReplaySavepointProvider to be available.
-	setSavepointButton.addEventListener("click", this._setSavepointButtonClicked, controllerView);
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.visible = true;
-            this.disabled = true;
-        }, setSavepointButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.visible = false;
-        }, setSavepointButton);
-        this._model.addEventListener(eventNames.RecordingDidStart, function() {
-            this.disabled = true;
-        }, setSavepointButton);
-        this._model.addEventListener(eventNames.PlaybackDidStart, function() {
-	    this.disabled = true;
-	}, setSavepointButton);
-        this._model.addEventListener(eventNames.PlaybackStopped, function() {
-	    this.disabled = true;
-	}, setSavepointButton);
-	this._model.addEventListener(eventNames.BreakpointPaused, function() {
-	    this.disabled = false;
-	}, setSavepointButton);
-
-        //the replay-to-savepoint button
-        var savepointButton = this.replayToSavepointButton = new WebInspector.StatusBarButton("", "replay-to-savepoint-status-bar-item");
-
-	// TODO(Issue #122): attach this to TimelapseReplayingView,
-	// since it requires ReplaySavepointProvider to be available.
-        savepointButton.addEventListener("click", this._replayToSavepointButtonClicked, controllerView);
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.visible = true;
-            this.disabled = true;
-        }, savepointButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.visible = false;
-        }, savepointButton);
-        this._model.addEventListener(eventNames.RecordingDidStart, function() {
-            this.disabled = true;
-        }, savepointButton);
-        this._model.addEventListener(eventNames.PlaybackDidStart, function() {
-	    this.disabled = true;
-	}, savepointButton);
-	/* TODO(Issue #122): can't attach listeners to savepoint provider here, since
-	   the provider has not yet been created. */
-	/*
-        this._model.addEventListener(eventNames.InputPaused, function() {
-	    this.disabled = !WebInspector.timelapsePresentationModel.savepointManager.hasSavepoint();
-	}, savepointButton);
-        this._model.addEventListener(eventNames.PlaybackStopped, function() {
-	    this.toggled = false;
-	    this.disabled = !WebInspector.timelapsePresentationModel.savepointManager.hasSavepoint();
-	}, savepointButton);
-	this._model.addEventListener(eventNames.BreakpointPaused, function() {
-	    this.toggled = false;
-	    this.disabled = !WebInspector.timelapsePresentationModel.savepointManager.hasSavepoint();
-	}, savepointButton);
-	this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.DebuggerPaused, function() {
-	    this.toggled = false;
-	}, savepointButton);
-
-	var provider = this._presentationModel.savepointProvider;
-	var events = WebInspector.ReplaySavepointProvider.EventTypes;
-        provider.addEventListener(events.SavepointSet, function() {
-            this.disabled = false;
-        }, savepointButton);
-	provider.addEventListener(events.SavepointRemoved, function() {
-            this.disabled = !provider.hasSavepoint();
-	}, savepointButton);
-	 */
-
-	//the breakpoint radar button
-	var radarButton = this.radarButton = new WebInspector.StatusBarButton("", "breakpoint-radar-status-bar-item");
-	radarButton.addEventListener("click", this._radarButtonClicked, controllerView);
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.visible = true;
-            this.disabled = true;
-        }, radarButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.visible = false;
-        }, radarButton);
-        this._model.addEventListener(eventNames.RecordingDidStart, function() {
-            this.disabled = true;
-        }, radarButton);
-        this._model.addEventListener(eventNames.RecordingDidStop, function() {
-            this.disabled = false;
-        }, radarButton);
-        this._model.addEventListener(eventNames.PlaybackDidStart, function() {
-	    this.toggled = WebInspector.timelapseModel.scanningBreakpoints;
-        }, radarButton);
-	this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.DebuggerPaused, function() {
-	    this.toggled = WebInspector.timelapseModel.scanningBreakpoints;
-	}, radarButton);
-	this._model.addEventListener(eventNames.InputPaused, function() {
-	    this.toggled = WebInspector.timelapseModel.scanningBreakpoints;
-	}, radarButton);
-        this._model.addEventListener(eventNames.PlaybackStopped, function() {
-	    this.toggled = false;
-        }, radarButton);
-    },
-
-    _registerShortcuts: function()
-    {
-	this._shortcuts = {};
-
-	function registerAndDocument(shortcuts, handlers, descriptor, related)
-	{
-            var shortcutNames = [];
-            for (var i = 0; i < shortcuts.length; ++i) {
-		this._shortcuts[shortcuts[i].key] = handlers[i];
-		shortcutNames.push(shortcuts[i].name);
-            }
-
-            var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Timelapse"));
-	    if (related)
-		section.addRelatedKeys(shortcutNames, descriptor);
-	    else
-		section.addAlternateKeys(shortcutNames, descriptor);
-	}
-
-	var view = this;
-	var backend = this._model;
-	var handlers, shortcuts, descriptor;
-	var platformSpecificModifier = WebInspector.KeyboardShortcut.Modifiers.CtrlOrMeta;
-
-	// Play/pause.
-	shortcuts = [];
-	handlers = [];
-	var spacebar = WebInspector.KeyboardShortcut.Keys.Space;
-        shortcuts.push(WebInspector.KeyboardShortcut.makeDescriptor(spacebar));
-	handlers.push(this._togglePlaybackButtonClicked.bind(this));
-	descriptor = WebInspector.UIString("Play/pause");
-	registerAndDocument.call(view, shortcuts, handlers, descriptor);
-    },
-
-    /* event handlers */
-    _keyDown: function(event)
-    {
-        var shortcut = WebInspector.KeyboardShortcut.makeKeyFromEvent(event);
-        var handler = this._shortcuts[shortcut];
-        if (handler) {
-            handler();
-            event.preventDefault();
-            return;
-        }
-    },
-
-    _lockButtonClicked: function()
-    {
-	if (!this._enabled)
-	    return;
-
-	// if in playback mode and locked, then unlock. This should
-	// just stop the current playback, which will cause unlock
-	// anyway.
-	if (this._model.inputLocked)
-	    this._model.stopPlayback(true);
     },
 
     _toggleTimelapseButtonClicked: function(optionalAlways)
@@ -401,42 +189,16 @@ WebInspector.TimelapseControllerView.prototype = {
 	    this._model.startRecording();
     },
 
-    _togglePlaybackButtonClicked: function()
-    {
-	if (!this._model.canReplay)
-	    return;
-
-	if (!this._model.replaying)
-	    this._model.replayToCompletion(true, false);
-
-	else if (this._model.replaying && this._model.inputPaused)
-	    this._model.replayToCompletion(true, false);
-
-	else if (this._model.replaying && this._model.breakpointPaused)
-	    DebuggerAgent.resume();
-
-	else if (this._model.replaying && !this._model.inputPaused)
-	    this._model.pausePlayback();
-    },
-
-    _radarButtonClicked: function()
-    {
-	if (!this._model.scanningBreakpoints)
-	    this._presentationModel.scanBreakpointsInZoomRegion();
-	else
-	    this._model.pausePlayback();
-    },
-
     _timelapseEnabled: function()
     {
         this._enabled = true;
-        this.reset();
+	this._showRecordingView();
     },
 
     _timelapseDisabled: function()
     {
         this._enabled = false;
-        this.reset();
+	this._showRecordingView();
 
         // restore any disablements we did to the timeline.
         if (WebInspector.panels.timeline) {
@@ -447,7 +209,7 @@ WebInspector.TimelapseControllerView.prototype = {
 
     _recordingDidStart: function()
     {
-        this.reset();
+	this._showRecordingView();
 
         var timelinePanel = WebInspector.panels.timeline;
         // automatically turn on Timeline recording, and prevent its clearing or stopping.
@@ -466,8 +228,7 @@ WebInspector.TimelapseControllerView.prototype = {
         if (this._model.allRecords.length == 0)
             return;
 
-        this._recordingView.detach();
-        this._replayingView.show(this.element);
+	this._showReplayingView();
 
         var timelinePanel = WebInspector.panels.timeline;
         // automatically turn off Timeline recording.
@@ -477,17 +238,6 @@ WebInspector.TimelapseControllerView.prototype = {
             timelinePanel.toggleTimelineButton.disabled = true;
         }
     },
-
-    _setSavepointButtonClicked: function()
-    {
-        if (this._model.breakpointPaused)
-            this._presentationModel.savepointProvider.setSavepoint();
-    },
-
-    _replayToSavepointButtonClicked: function()
-    {
-        this._presentationModel.savepointProvider.replayToSavepoint();
-    }
 }
 
 WebInspector.TimelapseControllerView.prototype.__proto__ = WebInspector.View.prototype;
@@ -523,6 +273,11 @@ WebInspector.TimelapseRecordingView = function()
 };
 
 WebInspector.TimelapseRecordingView.prototype = {
+    get statusBarItems()
+    {
+	return [];
+    },
+
     clear: function()
     {
 	this._messagePanel.textContent = "Click to Record.";
@@ -597,12 +352,266 @@ WebInspector.TimelapseReplayingView = function()
 
     this._overviewPreview = new WebInspector.TimelapseOverviewPreview();
     this._overviewPreview.show(this._splitView.sidebarElement);
+
+    this._registerShortcuts();
+    this.element.addEventListener("keydown", this._keyDown.bind(this), false);
 };
 
 WebInspector.TimelapseReplayingView.prototype = {
+    get statusBarItems()
+    {
+	if (!this._statusBarButtons)
+	    this._createReplayStatusBarButtons();
+
+	return this._statusBarButtons;
+    },
+
     clear: function()
     {
     },
+
+    _createReplayStatusBarButtons: function()
+    {
+	var eventNames = WebInspector.TimelapseModel.EventTypes;
+	var replayView = this;
+
+	this._statusBarButtons = [];
+
+	//the lock/unlock button
+	var lockButton = this.lockButton = new WebInspector.StatusBarButton(WebInspector.UIString("Timelapse Locking Mode"), "timelapse-lock-status-bar-item");
+        lockButton.addEventListener("click", this._lockButtonClicked, this);
+        this._model.addEventListener(eventNames.Enabled, function() {
+            this.disabled = true;
+            this.visible = true;
+            this.toggled = false;
+            this.title = "Input unlocked.";
+        }, lockButton);
+        this._model.addEventListener(eventNames.Disabled, function() {
+            this.visible = false;
+        }, lockButton);
+        this._model.addEventListener(eventNames.InputLocked, function() {
+            this.title = "Input locked.";
+            this.toggled = true;
+        }, lockButton);
+        this._model.addEventListener(eventNames.InputUnlocked, function() {
+            if (this._recording) return;
+            this.title = "Input unlocked.";
+            this.toggled = false;
+        }, lockButton);
+	this._statusBarButtons.push(lockButton);
+
+        //the play/pause button
+        var playbackButton = this.togglePlaybackButton = new WebInspector.StatusBarButton("", "playback-toggle-status-bar-item");
+        playbackButton.addEventListener("click", replayView._togglePlaybackButtonClicked, this);
+        playbackButton.disabled = false;
+        this.toggled = false;
+        playbackButton.element.addStyleClass("play-playback-status-bar-item");
+        this._model.addEventListener(eventNames.Enabled, function() {
+            this.visible = true;
+            this.disabled = true;
+            this.toggled = false;
+        }, playbackButton);
+        this._model.addEventListener(eventNames.Disabled, function() {
+            this.visible = false;
+        }, playbackButton);
+        this._model.addEventListener(eventNames.PlaybackDidStart, function() {
+            this.element.removeStyleClass("play-playback-status-bar-item");
+            this.element.addStyleClass("pause-playback-status-bar-item");
+        }, playbackButton);
+        this._model.addEventListener(eventNames.InputPaused, function() {
+            this.element.removeStyleClass("pause-playback-status-bar-item");
+            this.element.addStyleClass("play-playback-status-bar-item");
+        }, playbackButton);
+        this._model.addEventListener(eventNames.BreakpointPaused, function() {
+            this.element.removeStyleClass("pause-playback-status-bar-item");
+            this.element.addStyleClass("play-playback-status-bar-item");
+        }, playbackButton);
+        this._model.addEventListener(eventNames.PlaybackStopped, function() {
+            this.element.removeStyleClass("pause-playback-status-bar-item");
+            this.element.addStyleClass("play-playback-status-bar-item");
+        }, playbackButton);
+	this._statusBarButtons.push(playbackButton);
+
+	//the set-savepoint button
+	var setSavepointButton = this.setSavepointButton = new WebInspector.StatusBarButton("", "set-savepoint-status-bar-item");
+
+	setSavepointButton.addEventListener("click", this._setSavepointButtonClicked, replayView);
+        this._model.addEventListener(eventNames.Enabled, function() {
+            this.visible = true;
+            this.disabled = true;
+        }, setSavepointButton);
+        this._model.addEventListener(eventNames.Disabled, function() {
+            this.visible = false;
+        }, setSavepointButton);
+        this._model.addEventListener(eventNames.PlaybackDidStart, function() {
+	    this.disabled = true;
+	}, setSavepointButton);
+        this._model.addEventListener(eventNames.PlaybackStopped, function() {
+	    this.disabled = true;
+	}, setSavepointButton);
+	this._model.addEventListener(eventNames.BreakpointPaused, function() {
+	    this.disabled = false;
+	}, setSavepointButton);
+	this._statusBarButtons.push(setSavepointButton);
+
+        //the replay-to-savepoint button
+        var savepointButton = this.replayToSavepointButton = new WebInspector.StatusBarButton("", "replay-to-savepoint-status-bar-item");
+	savepointButton.disabled = true;
+	savepointButton.toggled = false;
+
+        savepointButton.addEventListener("click", this._replayToSavepointButtonClicked, replayView);
+        this._model.addEventListener(eventNames.Enabled, function() {
+            this.visible = true;
+            this.disabled = true;
+        }, savepointButton);
+        this._model.addEventListener(eventNames.Disabled, function() {
+            this.visible = false;
+        }, savepointButton);
+
+        this._model.addEventListener(eventNames.PlaybackDidStart, function() {
+	    this.disabled = true;
+	}, savepointButton);
+        this._model.addEventListener(eventNames.InputPaused, function() {
+	    this.disabled = !WebInspector.timelapsePresentationModel.savepointProvider.hasSavepoint();
+	}, savepointButton);
+        this._model.addEventListener(eventNames.PlaybackStopped, function() {
+	    this.toggled = false;
+	    this.disabled = !WebInspector.timelapsePresentationModel.savepointProvider.hasSavepoint();
+	}, savepointButton);
+	this._model.addEventListener(eventNames.BreakpointPaused, function() {
+	    this.toggled = false;
+	    this.disabled = !WebInspector.timelapsePresentationModel.savepointProvider.hasSavepoint();
+	}, savepointButton);
+	this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.DebuggerPaused, function() {
+	    this.toggled = false;
+	}, savepointButton);
+	this._statusBarButtons.push(savepointButton);
+
+	var provider = this._presentationModel.savepointProvider;
+	var events = WebInspector.ReplaySavepointProvider.EventTypes;
+        provider.addEventListener(events.SavepointSet, function() {
+            this.disabled = false;
+        }, savepointButton);
+	provider.addEventListener(events.SavepointRemoved, function() {
+            this.disabled = !provider.hasSavepoint();
+	}, savepointButton);
+
+	//the breakpoint radar button
+	var radarButton = this.radarButton = new WebInspector.StatusBarButton("", "breakpoint-radar-status-bar-item");
+	radarButton.addEventListener("click", this._radarButtonClicked, replayView);
+        this._model.addEventListener(eventNames.Enabled, function() {
+            this.visible = true;
+            this.disabled = true;
+        }, radarButton);
+        this._model.addEventListener(eventNames.Disabled, function() {
+            this.visible = false;
+        }, radarButton);
+        this._model.addEventListener(eventNames.PlaybackDidStart, function() {
+	    this.toggled = WebInspector.timelapseModel.scanningBreakpoints;
+        }, radarButton);
+	this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.DebuggerPaused, function() {
+	    this.toggled = WebInspector.timelapseModel.scanningBreakpoints;
+	}, radarButton);
+	this._model.addEventListener(eventNames.InputPaused, function() {
+	    this.toggled = WebInspector.timelapseModel.scanningBreakpoints;
+	}, radarButton);
+        this._model.addEventListener(eventNames.PlaybackStopped, function() {
+	    this.toggled = false;
+        }, radarButton);
+	this._statusBarButtons.push(radarButton);
+    },
+
+    _lockButtonClicked: function()
+    {
+	// if in playback mode and locked, then unlock. This should
+	// just stop the current playback, which will cause unlock
+	// anyway.
+	if (this._model.inputLocked)
+	    this._model.stopPlayback(true);
+    },
+
+    _registerShortcuts: function()
+    {
+	this._shortcuts = {};
+
+	function registerAndDocument(shortcuts, handlers, descriptor, related)
+	{
+            var shortcutNames = [];
+            for (var i = 0; i < shortcuts.length; ++i) {
+		this._shortcuts[shortcuts[i].key] = handlers[i];
+		shortcutNames.push(shortcuts[i].name);
+            }
+
+            var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Replay"));
+	    if (related)
+		section.addRelatedKeys(shortcutNames, descriptor);
+	    else
+		section.addAlternateKeys(shortcutNames, descriptor);
+	}
+
+	var view = this;
+	var backend = this._model;
+	var handlers, shortcuts, descriptor;
+	var platformSpecificModifier = WebInspector.KeyboardShortcut.Modifiers.CtrlOrMeta;
+
+	// Play/pause.
+	shortcuts = [];
+	handlers = [];
+	var spacebar = WebInspector.KeyboardShortcut.Keys.Space;
+        shortcuts.push(WebInspector.KeyboardShortcut.makeDescriptor(spacebar));
+	handlers.push(this._togglePlaybackButtonClicked.bind(this));
+	descriptor = WebInspector.UIString("Play/pause");
+	registerAndDocument.call(view, shortcuts, handlers, descriptor);
+    },
+
+    /* event handlers */
+    _keyDown: function(event)
+    {
+        var shortcut = WebInspector.KeyboardShortcut.makeKeyFromEvent(event);
+        var handler = this._shortcuts[shortcut];
+        if (handler) {
+            handler();
+            event.preventDefault();
+            return;
+        }
+    },
+
+    _togglePlaybackButtonClicked: function()
+    {
+	if (!this._model.canReplay)
+	    return;
+
+	if (!this._model.replaying)
+	    this._model.replayToCompletion(true, false);
+
+	else if (this._model.replaying && this._model.inputPaused)
+	    this._model.replayToCompletion(true, false);
+
+	else if (this._model.replaying && this._model.breakpointPaused)
+	    DebuggerAgent.resume();
+
+	else if (this._model.replaying && !this._model.inputPaused)
+	    this._model.pausePlayback();
+    },
+
+    _radarButtonClicked: function()
+    {
+	if (!this._model.scanningBreakpoints)
+	    this._presentationModel.scanBreakpointsInZoomRegion();
+	else
+	    this._model.pausePlayback();
+    },
+
+    _setSavepointButtonClicked: function()
+    {
+        if (this._model.breakpointPaused)
+            this._presentationModel.savepointProvider.setSavepoint();
+    },
+
+    _replayToSavepointButtonClicked: function()
+    {
+        this._presentationModel.savepointProvider.replayToSavepoint();
+    }
 };
 
 WebInspector.TimelapseReplayingView.prototype.__proto__ = WebInspector.View.prototype;

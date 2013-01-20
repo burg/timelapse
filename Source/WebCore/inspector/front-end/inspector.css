@@ -2298,14 +2298,18 @@ body.inactive li.selected .bubble.search-matches {
     top: 4px;
 }
 
-.status-bar-items {
+.status-bar-items, .status-bar-items-group {
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 200px;
     overflow: hidden;
+    display: inline-block;
     border-left: 1px solid rgb(184, 184, 184);
     margin-left: -1px;
+}
+
+.status-bar-items {
+    left: 200px;
 }
 
 .node-search-status-bar-item .glyph {
