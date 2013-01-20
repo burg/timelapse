@@ -434,6 +434,8 @@ WebInspector.TimelapseReplayingView.prototype = {
 
 	//the set-savepoint button
 	var setSavepointButton = this.setSavepointButton = new WebInspector.StatusBarButton("", "set-savepoint-status-bar-item");
+	setSavepointButton.disabled = true;
+	setSavepointButton.toggled = false;
 
 	setSavepointButton.addEventListener("click", this._setSavepointButtonClicked, replayView);
         this._model.addEventListener(eventNames.Enabled, function() {

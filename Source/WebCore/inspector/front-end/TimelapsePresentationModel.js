@@ -387,6 +387,8 @@ WebInspector.ReplaySavepointProvider.prototype = {
 
     _breakpointHit: function()
     {
+	// TODO(Issue #124): this code is never getting called, so later attempts
+	// to read debuggerWalkRecord will fail.
 	this._debuggerWalkRecord = [];
     },
 
