@@ -69,8 +69,8 @@ WebInspector.TimelapseControllerView.prototype = {
 	items.push(this.lockButton.element);
 	items.push(this.toggleRecordButton.element);
 	items.push(this.togglePlaybackButton.element);
-	items.push(this.setAnchorButton.element);
-	items.push(this.replayToAnchorButton.element);
+	items.push(this.setSavepointButton.element);
+	items.push(this.replayToSavepointButton.element);
 	items.push(this.radarButton.element);
         return items;
     },
@@ -184,72 +184,78 @@ WebInspector.TimelapseControllerView.prototype = {
             this.element.addStyleClass("play-playback-status-bar-item");
         }, playbackButton);
 
-	//the set-anchor button
-	var setAnchorButton = this.setAnchorButton = new WebInspector.StatusBarButton("", "set-anchor-status-bar-item");
+	//the set-savepoint button
+	var setSavepointButton = this.setSavepointButton = new WebInspector.StatusBarButton("", "set-savepoint-status-bar-item");
 
-	setAnchorButton.addEventListener("click", this._setAnchorButtonClicked, controllerView);
+	// TODO(Issue #122): attach this to TimelapseReplayingView,
+	// since it requires ReplaySavepointProvider to be available.
+	setSavepointButton.addEventListener("click", this._setSavepointButtonClicked, controllerView);
         this._model.addEventListener(eventNames.Enabled, function() {
             this.visible = true;
             this.disabled = true;
-        }, setAnchorButton);
+        }, setSavepointButton);
         this._model.addEventListener(eventNames.Disabled, function() {
             this.visible = false;
-        }, setAnchorButton);
+        }, setSavepointButton);
         this._model.addEventListener(eventNames.RecordingDidStart, function() {
             this.disabled = true;
-        }, setAnchorButton);
+        }, setSavepointButton);
         this._model.addEventListener(eventNames.PlaybackDidStart, function() {
 	    this.disabled = true;
-	}, setAnchorButton);
+	}, setSavepointButton);
         this._model.addEventListener(eventNames.PlaybackStopped, function() {
 	    this.disabled = true;
-	}, setAnchorButton);
+	}, setSavepointButton);
 	this._model.addEventListener(eventNames.BreakpointPaused, function() {
 	    this.disabled = false;
-	}, setAnchorButton);
+	}, setSavepointButton);
 
-        //the replay-to-anchor button
-        var anchorButton = this.replayToAnchorButton = new WebInspector.StatusBarButton("", "replay-to-anchor-status-bar-item");
+        //the replay-to-savepoint button
+        var savepointButton = this.replayToSavepointButton = new WebInspector.StatusBarButton("", "replay-to-savepoint-status-bar-item");
 
-        anchorButton.addEventListener("click", this._replayToAnchorButtonClicked, controllerView);
+	// TODO(Issue #122): attach this to TimelapseReplayingView,
+	// since it requires ReplaySavepointProvider to be available.
+        savepointButton.addEventListener("click", this._replayToSavepointButtonClicked, controllerView);
         this._model.addEventListener(eventNames.Enabled, function() {
             this.visible = true;
             this.disabled = true;
-        }, anchorButton);
+        }, savepointButton);
         this._model.addEventListener(eventNames.Disabled, function() {
             this.visible = false;
-        }, anchorButton);
+        }, savepointButton);
         this._model.addEventListener(eventNames.RecordingDidStart, function() {
             this.disabled = true;
-        }, anchorButton);
+        }, savepointButton);
         this._model.addEventListener(eventNames.PlaybackDidStart, function() {
-	    this.toggled = WebInspector.timelapsePresentationModel.replayingToAnchor;
 	    this.disabled = true;
-	}, anchorButton);
+	}, savepointButton);
+	/* TODO(Issue #122): can't attach listeners to savepoint provider here, since
+	   the provider has not yet been created. */
+	/*
         this._model.addEventListener(eventNames.InputPaused, function() {
-	    this.toggled = WebInspector.timelapsePresentationModel.replayingToAnchor;
-	    this.disabled = !WebInspector.timelapsePresentationModel.anchorManager.hasAnchor();
-	}, anchorButton);
+	    this.disabled = !WebInspector.timelapsePresentationModel.savepointManager.hasSavepoint();
+	}, savepointButton);
         this._model.addEventListener(eventNames.PlaybackStopped, function() {
 	    this.toggled = false;
-	    this.disabled = !WebInspector.timelapsePresentationModel.anchorManager.hasAnchor();
-	}, anchorButton);
+	    this.disabled = !WebInspector.timelapsePresentationModel.savepointManager.hasSavepoint();
+	}, savepointButton);
 	this._model.addEventListener(eventNames.BreakpointPaused, function() {
 	    this.toggled = false;
-	    this.disabled = !WebInspector.timelapsePresentationModel.anchorManager.hasAnchor();
-	}, anchorButton);
+	    this.disabled = !WebInspector.timelapsePresentationModel.savepointManager.hasSavepoint();
+	}, savepointButton);
 	this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.DebuggerPaused, function() {
 	    this.toggled = false;
-	}, anchorButton);
+	}, savepointButton);
 
-	var anchor = this._presentationModel.anchorManager;
-	var anchorEvents = WebInspector.TimelapseAnchorManager.EventTypes;
-        anchor.addEventListener(anchorEvents.AnchorSet, function() {
+	var provider = this._presentationModel.savepointProvider;
+	var events = WebInspector.ReplaySavepointProvider.EventTypes;
+        provider.addEventListener(events.SavepointSet, function() {
             this.disabled = false;
-        }, anchorButton);
-	anchor.addEventListener(anchorEvents.AnchorRemoved, function() {
-            this.disabled = !WebInspector.timelapsePresentationModel.anchorManager.hasAnchor();
-	}, anchorButton);
+        }, savepointButton);
+	provider.addEventListener(events.SavepointRemoved, function() {
+            this.disabled = !provider.hasSavepoint();
+	}, savepointButton);
+	 */
 
         //the record button
         var recordButton = this.toggleRecordButton = new WebInspector.StatusBarButton("", "toggle-record-status-bar-item");
@@ -441,9 +447,9 @@ WebInspector.TimelapseControllerView.prototype = {
 
     _recordingDidStart: function()
     {
-	this.reset();
+        this.reset();
 
-	var timelinePanel = WebInspector.panels.timeline;
+        var timelinePanel = WebInspector.panels.timeline;
         // automatically turn on Timeline recording, and prevent its clearing or stopping.
         if (timelinePanel) {
             timelinePanel.toggleTimelineButton.disabled = false;
@@ -455,16 +461,15 @@ WebInspector.TimelapseControllerView.prototype = {
 
     _recordingDidStop: function()
     {
-	// if nothing was recorded, don't even show the replay view.
-	// the recording view knows to change its message in this situation.
-	if (this._model.allRecords.length == 0)
-	    return;
+        // if nothing was recorded, don't even show the replay view.
+        // the recording view knows to change its message in this situation.
+        if (this._model.allRecords.length == 0)
+            return;
 
-	this._recordingView.detach();
-	this._replayingView.show(this.element);
+        this._recordingView.detach();
+        this._replayingView.show(this.element);
 
-
-	var timelinePanel = WebInspector.panels.timeline;
+        var timelinePanel = WebInspector.panels.timeline;
         // automatically turn off Timeline recording.
         if (timelinePanel) {
             timelinePanel.toggleTimelineButton.disabled = false;
@@ -473,15 +478,15 @@ WebInspector.TimelapseControllerView.prototype = {
         }
     },
 
-    _setAnchorButtonClicked: function()
+    _setSavepointButtonClicked: function()
     {
-	if (this._model.breakpointPaused)
-	    this._presentationModel.anchorManager.setAnchor();
+        if (this._model.breakpointPaused)
+            this._presentationModel.savepointProvider.setSavepoint();
     },
 
-    _replayToAnchorButtonClicked: function()
+    _replayToSavepointButtonClicked: function()
     {
-	this._presentationModel.anchorManager.replayToAnchor();
+        this._presentationModel.savepointProvider.replayToSavepoint();
     }
 }
 

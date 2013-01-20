@@ -62,11 +62,6 @@ WebInspector.TimelapseMiniview = function()
 
     this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
 
-    var anchorManager = WebInspector.timelapsePresentationModel.anchorManager;
-    var anchorEventNames = WebInspector.TimelapseAnchorManager.EventTypes;
-    anchorManager.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
-    anchorManager.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
-
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
@@ -124,7 +119,7 @@ WebInspector.TimelapseMiniview = function()
 	playback: playbackSlider,
 	previous: previousSlider,
 	tentative: tentativeSlider,
-	anchor: [],
+	savepoint: [],
 	leftZoom: leftZoomSlider,
 	rightZoom: rightZoomSlider
     };
@@ -186,7 +181,8 @@ WebInspector.TimelapseMiniview.prototype = {
     {
 	var types = WebInspector.DataProvider.Types;
 	return provider.type == types.TimelapseInput ||
-               provider.type == types.BreakpointHits;
+               provider.type == types.BreakpointHits ||
+               provider.type == types.ReplaySavepoint;
     },
 
     _providersWithType: function(ty)
@@ -205,19 +201,37 @@ WebInspector.TimelapseMiniview.prototype = {
     _setupListenersForProvider: function(provider)
     {
 	var events = WebInspector.DataProvider.Events;
-	provider.addEventListener(events.AddedInput, this._onAddedInput, this);
+	var types = WebInspector.DataProvider.Types;
+
 	provider.addEventListener(events.WillRemove, this._onProviderWillRemove, this);
-	provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
-	provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
+
+	if (provider.type == types.ReplaySavepoint) {
+	    var savepointEvents = WebInspector.ReplaySavepointProvider.EventTypes;
+	    provider.addEventListener(savepointEvents.SavepointSet, this._onSavepointSet, this);
+	    provider.addEventListener(savepointEvents.SavepointRemoved, this._onSavepointRemoved, this);
+	} else {
+	    provider.addEventListener(events.AddedInput, this._onAddedInput, this);
+	    provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
+	    provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
+	}
     },
 
     _teardownListenersForProvider: function(provider)
     {
 	var events = WebInspector.DataProvider.Events;
-	provider.removeEventListener(events.AddedInput, this._onAddedInput, this);
+	var types = WebInspector.DataProvider.Types;
+
 	provider.removeEventListener(events.WillRemove, this._onProviderWillRemove, this);
-	provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
-	provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
+
+	if (provider.type == types.ReplaySavepoint) {
+	    var savepointEvents = WebInspector.ReplaySavepointProvider.EventTypes;
+	    provider.removeEventListener(savepointEvents.SavepointSet, this._onSavepointSet, this);
+	    provider.removeEventListener(savepointEvents.SavepointRemoved, this._onSavepointRemoved, this);
+	} else {
+	    provider.removeEventListener(events.AddedInput, this._onAddedInput, this);
+	    provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
+	    provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
+	}
     },
 
     _autosizeCanvas: function()
@@ -477,11 +491,15 @@ WebInspector.TimelapseMiniview.prototype = {
 	if (!this._canUseProvider(provider))
 	    return;
 
+	this._setupListenersForProvider(provider);
+
+	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint)
+	    return;
+
+	// add provider to internal list
 	console.assert(this._providers.indexOf(provider) == -1,
 		       "Specific provider already added to miniview provider list.");
-
 	this._providers.push(provider);
-	this._setupListenersForProvider(provider);
 
 	// add timeline for this named provider, if it doesn't exist.
 	if (!this._timelines.hasOwnProperty(provider.name))
@@ -498,14 +516,15 @@ WebInspector.TimelapseMiniview.prototype = {
     _onProviderWillRemove: function(event)
     {
 	var provider = event.data;
-	if (!this._canUseProvider(provider))
+	this._teardownListenersForProvider(provider);
+
+	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint)
 	    return;
 
 	var i = this._providers.indexOf(provider);
 	console.assert(i != -1, "Can't remove provider not in timeline grid.");
 
 	var removedProvider = this._providers.splice(i, 1)[0];
-	this._teardownListenersForProvider(provider);
 
 	// splice out the provider from related timeline, and remove
 	// the timeline entirely if no more providers are attached to it.
@@ -637,48 +656,48 @@ WebInspector.TimelapseMiniview.prototype = {
     },
 
     _onBreakpointPaused: function(eventData)
-    {
-	this.sliders.playback.element.addStyleClass("breakpoint-slider");
-	this.sliders.playback.element.removeStyleClass("playback-pulse");
-	this.sliders.playback.enable();
+        {
+        this.sliders.playback.element.addStyleClass("breakpoint-slider");
+        this.sliders.playback.element.removeStyleClass("playback-pulse");
+        this.sliders.playback.enable();
     },
 
     _onBreakpointRecordsChanged: function(eventData)
     {
-	this._scheduleRefresh();
+        this._scheduleRefresh();
     },
 
-    _updateAnchorSliders: function()
+    _updateSavepointSliders: function()
     {
-	var anchorManager = this._presentationModel.anchorManager;
-	var anchors = anchorManager.anchors;
-	for (var i = 0; i < anchors.length; i++) {
-	    var anchor = anchorManager.anchors[i];
-	    var markIndex = anchor.markIndex;
-	    var timestamp = this._model.timestampFromMarkIndex(markIndex);
-	    var percent = 0.0;
-	    if (markIndex > 0)
-		percent = this.calculator.computeMiniviewPercentage(timestamp);
+        var provider = this._presentationModel.savepointProvider;
+        var savepoints = provider.savepoints;
+        for (var i = 0; i < savepoints.length; i++) {
+            var savepoint = savepoints[i];
+            var markIndex = savepoint.markIndex;
+            var timestamp = this._model.timestampFromMarkIndex(markIndex);
+            var percent = 0.0;
+            if (markIndex > 0)
+            percent = this.calculator.computeMiniviewPercentage(timestamp);
 
-	    this.sliders.anchor[i].setPosition(percent, true);
-	}
+            this.sliders.savepoint[i].setPosition(percent, true);
+        }
     },
 
-    _onAnchorSet: function(event)
+    _onSavepointSet: function(event)
     {
-	var anchorSlider = new WebInspector.TimelapseMiniviewSlider(this, "anchor", false);
-	this.element.appendChild(anchorSlider.element);
-	this.sliders.anchor.push(anchorSlider);
+        var savepointSlider = new WebInspector.TimelapseMiniviewSlider(this, "savepoint", false);
+        this.element.appendChild(savepointSlider.element);
+        this.sliders.savepoint.push(savepointSlider);
 
-	this._updateAnchorSliders();
+        this._updateSavepointSliders();
     },
 
-    _onAnchorRemoved: function()
+    _onSavepointRemoved: function()
     {
-	var anchorSlider = this.sliders.anchor.pop();
-	anchorSlider.dispose();
+        var savepointSlider = this.sliders.savepoint.pop();
+        savepointSlider.dispose();
 
-	this._updateAnchorSliders();
+        this._updateSavepointSliders();
     },
 
     _onZoomChanged: function()

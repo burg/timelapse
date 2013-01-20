@@ -109,6 +109,7 @@ WebInspector.DataProvider.prototype.__proto__ = WebInspector.Object.prototype;
 WebInspector.DataProvider.Types = {
     TimelapseInput: "TimelapseInput",
     BreakpointHits: "BreakpointHits",
+    ReplaySavepoint: "ReplaySavepoint",
     OverviewPreview: "OverviewPreview",
 };
 

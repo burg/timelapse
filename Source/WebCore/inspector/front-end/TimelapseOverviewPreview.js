@@ -257,7 +257,7 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	var records = this._provider.selectedRecords;
 
 	if (records.length == 0) {
-	    console.error("Trying to preview breakpoint  provider with no selected records.");
+	    console.error("Trying to preview breakpoint provider with no selected records.");
 	    var body = document.createElement("div");
 	    body.classList.add("preview-message");
 	    body.textContent = "No records.";
@@ -279,6 +279,8 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	wrapper.classList.add("table-wrapper");
 	var table = document.createElement("table");
 
+	var savepointProvider = this._presentationModel.savepointProvider;
+
 	var lastMarkIndex;
 	for (var i = 0; i < records.length; i++) {
 	    var record = records[i];
@@ -292,15 +294,15 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	    row.appendChild(countCell);
 
 	    var indexExplored = WebInspector.timelapseBreakpointTracker.exploredIndex(record.mark.index, record.hitIndex);
-	    var isAnchoredLocation = WebInspector.timelapsePresentationModel.anchorManager.anchorAtLocation(record.mark.index, record.hitIndex);
+	    var isSavedLocation = savepointProvider.savepointAtLocation(record.mark.index, record.hitIndex);
 	    var isCurrentBreakpoint = record.mark.index == WebInspector.timelapseModel.currentMarkIndex
 		&& record.hitIndex == WebInspector.timelapseModel.currentHitIndex;
 
-	    if (isAnchoredLocation) {
-		var anchorButton = createButtonInTD("timelapse-anchor-button toggled", function(markIndex, hitIndex) {
-			WebInspector.timelapsePresentationModel.anchorManager.removeAnchor(markIndex, hitIndex);
-		    }.bind(anchorButton, record.mark.index, record.hitIndex));
-		    row.appendChild(anchorButton);
+	    if (isSavedLocation) {
+		var savepointButton = createButtonInTD("timelapse-savepoint-button toggled", function(markIndex, hitIndex) {
+			savepointProvider.removeSavepoint(markIndex, hitIndex);
+		    }.bind(savepointButton, record.mark.index, record.hitIndex));
+		    row.appendChild(savepointButton);
 		}
 	    else
 		row.appendChild(document.createElement("td"));

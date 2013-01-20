@@ -66,12 +66,6 @@ WebInspector.TimelapseOverview = function()
     this._previewProvider = new WebInspector.OverviewPreviewProvider();
     this._presentationModel.addProvider(this._previewProvider);
 
-    // TODO: listen to TimelapseAnchorDataProvider instead.
-    var anchorManager = WebInspector.timelapsePresentationModel.anchorManager;
-    var anchorEventNames = WebInspector.TimelapseAnchorManager.EventTypes;
-    anchorManager.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
-    anchorManager.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
-
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
@@ -106,13 +100,12 @@ WebInspector.TimelapseOverview = function()
 	this._timelineContainer.appendChild(previousSlider.element);
 	var tentativeSlider = new WebInspector.TimelapseOverviewSlider(this, "tentative", false);
 	this._timelineContainer.appendChild(tentativeSlider.element);
-	// TODO: click, contextmenu events for anchor?
 
 	this.sliders = {
 	    playback: playbackSlider,
 	    previous: previousSlider,
 	    tentative: tentativeSlider,
-	    anchor: []
+	    savepoint: []
 	};
 
 	this._timelines = [];
@@ -342,16 +335,17 @@ WebInspector.TimelapseOverview.prototype = {
 
 	this.sliders.playback.setPosition(percent, true);
 
-	/* anchor slider */
-	var anchorManager = this._presentationModel.anchorManager;
-	var anchors = anchorManager.anchors;
-	for (var i = 0; i < anchors.length; i++) {
-	    var anchor = anchorManager.anchors[i];
-	    markIdx = anchor.markIndex;
+	/* savepoint slider */
+	var provider = this._presentationModel.savepointProvider;
+	var savepoints = provider.savepoints;
+
+	for (var i = 0; i < savepoints.length; i++) {
+	    var savepoint = provider.savepoints[i];
+	    markIdx = savepoint.markIndex;
 	    recordIdx = this._model.recordIndexFromMarkIndex(markIdx);
 	    percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
-	    this.sliders.anchor[i].setPosition(percent, true);
-	    this.sliders.anchor[i].show();
+	    this.sliders.savepoint[i].setPosition(percent, true);
+	    this.sliders.savepoint[i].show();
 	}
 
 	/* always update the position, but don't necessarily make them visible. */
@@ -373,7 +367,22 @@ WebInspector.TimelapseOverview.prototype = {
     {
 	var types = WebInspector.DataProvider.Types;
 	return provider.type == types.TimelapseInput ||
-               provider.type == types.BreakpointHits;
+               provider.type == types.BreakpointHits ||
+               provider.type == types.ReplaySavepoint;
+    },
+
+    _setupSavepointListeners: function(provider)
+    {
+	var events = WebInspector.ReplaySavepointProvider.EventTypes;
+	provider.addEventListener(events.SavepointSet, this._onSavepointSet, this);
+	provider.addEventListener(events.SavepointRemoved, this._onSavepointRemoved, this);
+    },
+
+    _teardownSavepointListeners: function(provider)
+    {
+	var events = WebInspector.ReplaySavepointProvider.EventTypes;
+	provider.removeEventListener(events.SavepointSet, this._onSavepointSet, this);
+	provider.removeEventListener(events.SavepointRemoved, this._onSavepointRemoved, this);
     },
 
     _onProviderAdded: function(event)
@@ -382,6 +391,11 @@ WebInspector.TimelapseOverview.prototype = {
 
 	if (!this._canUseProvider(provider))
 	    return;
+
+	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint) {
+	    this._setupSavepointListeners(provider);
+	    return;
+	}
 
 	console.assert(!this._timelineForProvider(provider), "Timeline for provider already exists!");
 
@@ -419,6 +433,11 @@ WebInspector.TimelapseOverview.prototype = {
 	console.assert(this._canUseProvider(provider), "should only remove providers that we know we can handle.");
 
 	provider.removeEventListener(WebInspector.DataProvider.Events.WillRemove, this._removeProvider, this);
+
+	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint) {
+	    this._teardownSavepointListeners(provider);
+	    return;
+	}
 
 	var existingTimeline = this._timelineForProvider(provider);
 	if (!existingTimeline)
@@ -962,23 +981,23 @@ WebInspector.TimelapseOverview.prototype = {
 	this._scheduleRefresh();
     },
 
-    _onAnchorSet: function(event)
+    _onSavepointSet: function(event)
     {
-	var anchorSlider = new WebInspector.TimelapseOverviewSlider(this, "anchor", false);
-	this._timelineContainer.appendChild(anchorSlider.element);
-	this.sliders.anchor.push(anchorSlider);
+	var savepointSlider = new WebInspector.TimelapseOverviewSlider(this, "savepoint", false);
+	this._timelineContainer.appendChild(savepointSlider.element);
+	this.sliders.savepoint.push(savepointSlider);
 	this._updateSliderPositions();
 
-	// TODO: previews may need to be refreshed when anchors modified.
+	// TODO: previews may need to be refreshed when savepoints modified.
     },
 
-    _onAnchorRemoved: function()
+    _onSavepointRemoved: function()
     {
-	var anchorSlider = this.sliders.anchor.pop();
-	anchorSlider.dispose();
+	var savepointSlider = this.sliders.savepoint.pop();
+	savepointSlider.dispose();
 	this._updateSliderPositions();
 
-	// TODO: previews may need to be refreshed when anchors modified.
+	// TODO: previews may need to be refreshed when savepoints modified.
     },
 
     _makePreviewForProvider: function(provider)
@@ -1686,7 +1705,7 @@ WebInspector.TimelapseOverviewSlider = function(overview, name, adjustable)
     wrapper.appendChild(wedge);
     this.element.appendChild(wrapper);
 
-    if (name == "anchor") {
+    if (name == "savepoint") {
 	var icon = document.createElement("div");
 	icon.className = "timelapse-slider-icon";
 	this.element.appendChild(icon);

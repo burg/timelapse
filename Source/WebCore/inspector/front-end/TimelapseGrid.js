@@ -115,11 +115,6 @@ WebInspector.TimelapseGrid = function() {
 
     this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
 
-    var anchorManager = WebInspector.timelapsePresentationModel.anchorManager;
-    var anchorEventNames = WebInspector.TimelapseAnchorManager.EventTypes;
-    anchorManager.addEventListener(anchorEventNames.AnchorSet, this._onAnchorSet, this);
-    anchorManager.addEventListener(anchorEventNames.AnchorRemoved, this._onAnchorRemoved, this);
-
     this._providers = {};
     this._refreshDelay = WebInspector.TimelapseGrid.DefaultRefreshDelay;
     this._pendingRecords = [];
@@ -248,7 +243,9 @@ WebInspector.TimelapseGrid.prototype = {
     // Private API (helpers)
     _canUseProvider: function(provider)
     {
-	return provider.type == WebInspector.DataProvider.Types.TimelapseInput;
+	var types = WebInspector.DataProvider.Types;
+	return provider.type == types.TimelapseInput ||
+               provider.type == types.ReplaySavepoint;
     },
 
     _onProviderAdded: function(event)
@@ -286,19 +283,39 @@ WebInspector.TimelapseGrid.prototype = {
     _setupListenersForProvider: function(provider)
     {
 	var events = WebInspector.DataProvider.Events;
-	provider.addEventListener(events.AddedInput, this._onAddedInput, this);
+	var types = WebInspector.DataProvider.Types;
 	provider.addEventListener(events.WillRemove, this._onProviderWillRemove, this);
-	provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
-	provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
+
+	if (provider.type == types.TimelapseInput) {
+	    provider.addEventListener(events.AddedInput, this._onAddedInput, this);
+	    provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
+	    provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
+	}
+
+        if (provider.type == types.ReplaySavepoint) {
+	    var savepointEvents = WebInspector.ReplaySavepointProvider.EventTypes;
+	    provider.addEventListener(savepointEvents.SavepointSet, this._onSavepointChanged, this);
+	    provider.addEventListener(savepointEvents.SavepointRemoved, this._onSavepointChanged, this);
+	}
     },
 
     _teardownListenersForProvider: function(provider)
     {
 	var events = WebInspector.DataProvider.Events;
-	provider.removeEventListener(events.AddedInput, this._onAddedInput, this);
+	var types = WebInspector.DataProvider.Types;
 	provider.removeEventListener(events.WillRemove, this._onProviderWillRemove, this);
-	provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
-	provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
+
+	if (provider.type == types.TimelapseInput) {
+	    provider.removeEventListener(events.AddedInput, this._onAddedInput, this);
+	    provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
+	    provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
+	}
+
+        if (provider.type == types.ReplaySavepoint) {
+	    var savepointEvents = WebInspector.ReplaySavepointProvider.EventTypes;
+	    provider.removeEventListener(savepointEvents.SavepointSet, this._onSavepointChanged, this);
+	    provider.removeEventListener(savepointEvents.SavepointRemoved, this._onSavepointChanged, this);
+	}
     },
 
     _onAddedInput: function(event)
@@ -726,15 +743,10 @@ WebInspector.TimelapseGrid.prototype = {
         }
     },
 
-    _onAnchorSet: function(event)
+    _onSavepointChanged: function(event)
     {
 	this.refreshRecordGridNode(event.data.markIndex);
     },
-
-    _onAnchorRemoved: function(event)
-    {
-	this.refreshRecordGridNode(event.data.markIndex);
-    }
 };
 
 WebInspector.TimelapseGrid.prototype.__proto__ = WebInspector.DataGrid.prototype;
@@ -1035,14 +1047,15 @@ WebInspector.TimelapseGridNode.prototype = {
     {
 	this._gutterCell.removeChildren();
 
-	var anchor = WebInspector.timelapsePresentationModel.anchorManager.anchorAtMarkIndex(this._record.mark.index);
-	if (!anchor)
+	var savepointProvider = WebInspector.timelapsePresentationModel.savepointProvider;
+	var savepoint = savepointProvider.savepointAtMarkIndex(this._record.mark.index);
+	if (!savepoint)
 	    return;
 
-	var anchorButton = document.createElement("div");
-	anchorButton.className = "timelapse-button-icon timelapse-anchor-button toggled";
+	var savepointButton = document.createElement("div");
+	savepointButton.className = "timelapse-button-icon timelapse-savepoint-button toggled";
 
-	this._gutterCell.appendChild(anchorButton);
+	this._gutterCell.appendChild(savepointButton);
     },
 
     _refreshIndexCell: function()

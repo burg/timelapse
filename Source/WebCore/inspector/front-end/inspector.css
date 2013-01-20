@@ -2990,11 +2990,11 @@ button.play-playback-status-bar-item > .glyph {
     -webkit-mask-position: -114px -41px;
 }
 
-button.replay-to-anchor-status-bar-item > .glyph {
+button.replay-to-savepoint-status-bar-item > .glyph {
     -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
 }
 
-button.set-anchor-status-bar-item > .glyph {
+button.set-savepoint-status-bar-item > .glyph {
     -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
     -webkit-mask-position: 0 -24px;
 }
@@ -3034,7 +3034,7 @@ button.breakpoint-radar-status-bar-item > .glyph {
     background-color: rgb(66, 129, 235) !important;
 }
 
-.timelapse-anchor-button {
+.timelapse-savepoint-button {
     -webkit-mask-image: url(Images/timelapseAnchor.png);    
 }
 
@@ -3042,7 +3042,7 @@ button.breakpoint-radar-status-bar-item > .glyph {
     -webkit-mask-image: url(Images/timelapseJumpButton.png);
 }
 
-.timelapse-inputs-grid .timelapse-anchor-button {
+.timelapse-inputs-grid .timelapse-savepoint-button {
     margin-right: 6px;
 }
 
@@ -3592,16 +3592,16 @@ div.timelapse-overview-timeline {
     background-color: rgba(255,0,0,0.1);
 }
 
-.anchor-slider {
+.savepoint-slider {
     pointer-events: none;
 }
 
-.anchor-slider .timelapse-slider-band {
+.savepoint-slider .timelapse-slider-band {
     background-color: rgba(0, 0, 0, 0.3);
     border: 0;
 }
 
-.anchor-slider .timelapse-slider-icon {
+.savepoint-slider .timelapse-slider-icon {
     position: absolute;
     bottom: -20px;
     left: -7px;
@@ -3689,7 +3689,7 @@ div.timelapse-miniview {
     background-color: rgba(255,0,0,0.1);
 }
 
-.timelapse-miniview-slider.anchor-slider .timelapse-slider-band {
+.timelapse-miniview-slider.savepoint-slider .timelapse-slider-band {
     background-color: rgba(0,0,0,0,3);
 }
 
