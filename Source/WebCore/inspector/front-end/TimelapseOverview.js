@@ -1002,7 +1002,7 @@ WebInspector.TimelapseOverview.prototype = {
     _makePreviewForProvider: function(provider)
     {
 	if (provider.type === WebInspector.DataProvider.Types.BreakpointHits)
-	    return new WebInspector.OverviewPreviewViews.BreakpointHitView(provider);
+	    return new WebInspector.OverviewPreviewViews.BreakpointHitView(this._presentationModel, provider);
 	else
 	    return new WebInspector.OverviewPreviewViews.InputView(provider);
     }

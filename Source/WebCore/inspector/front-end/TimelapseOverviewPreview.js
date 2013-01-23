@@ -240,12 +240,13 @@ WebInspector.OverviewPreviewViews.InputView.prototype.__proto__ = WebInspector.O
  * @constructor
  * @extends {WebInspector.OverviewPreviewViews.BaseView}
  */
-WebInspector.OverviewPreviewViews.BreakpointHitView = function(provider)
+WebInspector.OverviewPreviewViews.BreakpointHitView = function(recording, provider)
 {
     console.assert(provider.type === WebInspector.DataProvider.Types.BreakpointHits,
 		  "Instantiated BreakpointHitView preview with bad provider type.");
 
     WebInspector.OverviewPreviewViews.BaseView.call(this, "breakpoint");
+    this._recording = recording;
     this._provider = provider;
     this.refresh();
 };
@@ -279,7 +280,7 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	wrapper.classList.add("table-wrapper");
 	var table = document.createElement("table");
 
-	var savepointProvider = this._presentationModel.savepointProvider;
+	var savepointProvider = this._recording.savepointProvider;
 
 	var lastMarkIndex;
 	for (var i = 0; i < records.length; i++) {
