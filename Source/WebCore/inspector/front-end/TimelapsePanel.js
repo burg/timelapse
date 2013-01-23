@@ -7,23 +7,21 @@ WebInspector.TimelapsePanel = function()
     WebInspector.Panel.call(this, "timelapse");
     this.registerRequiredCSS("timelapsePanel.css");
 
-    this._presentationModel = WebInspector.timelapsePresentationModel;
-    this._model = WebInspector.timelapseModel;
-    this._enabled = Preferences.timelapseAlwaysEnabled;
-
-    var eventNames = WebInspector.TimelapseModel.EventTypes;
-    this._model.addEventListener(eventNames.Enabled, this._timelapseEnabled, this);
-    this._model.addEventListener(eventNames.Disabled, this._timelapseDisabled, this);
-    this._model.addEventListener(eventNames.RecordingDidStart, this._recordingDidStart, this);
-    this._model.addEventListener(eventNames.RecordingDidStop, this._recordingDidStop, this);
-
     this.createSplitView();
     this.splitView.hideMainElement();
+
+    this._model = WebInspector.timelapseModel;
 
     this._dataGrid = new WebInspector.TimelapseGrid();
     this._dataGrid.show(this.splitView.sidebarElement);
 
     this._registerShortcuts();
+    
+    var eventNames = WebInspector.TimelapseModel.EventTypes;
+    this._model.addEventListener(eventNames.Enabled, this._reset, this);
+    this._model.addEventListener(eventNames.Disabled, this._reset, this);
+    this._model.addEventListener(eventNames.RecordingDidStart, this._reset, this);
+    this._model.addEventListener(eventNames.RecordingDidStop, this._dataGrid.refresh, this);
 
     this._reset();
 };
@@ -81,26 +79,6 @@ WebInspector.TimelapsePanel.prototype = {
 	});
 	descriptor = WebInspector.UIString("Replay to next/previous input");
 	registerAndDocument.call(panel, shortcuts, handlers, descriptor, true);
-    },
-
-    _timelapseEnabled: function()
-    {
-        this._reset();
-    },
-
-    _timelapseDisabled: function()
-    {
-        this._reset();
-    },
-
-    _recordingDidStart: function()
-    {
-	this._reset();
-    },
-
-    _recordingDidStop: function()
-    {
-	this._dataGrid.refresh();
     },
 };
 

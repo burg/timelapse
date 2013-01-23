@@ -64,7 +64,6 @@ WebInspector.TimelapseControllerView.prototype = {
     get statusBarItems()
     {
         return [
-	    this.toggleTimelapseButton.element,
 	    this.toggleRecordButton.element,
 	    this._contextStatusBarItems
 	];
@@ -115,35 +114,19 @@ WebInspector.TimelapseControllerView.prototype = {
 
     _createSharedStatusBarButtons: function()
     {
+	// only create buttons once.
+	if (this._contextStatusBarItems)
+	    return;
+
 	var controllerView = this;
 	var eventNames = WebInspector.TimelapseModel.EventTypes;
 
 	this._contextStatusBarItems = document.createElement("div");
 	this._contextStatusBarItems.className = "status-bar-items-group";
 
-        var timelapseButton = this.toggleTimelapseButton = new WebInspector.StatusBarButton("", "enable-toggle-status-bar-item");
-        timelapseButton.addEventListener("click", this._toggleTimelapseButtonClicked, controllerView);
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.title = WebInspector.UIString("Timelapse enabled. Click to disable.");
-            this.toggled = true;
-        }, timelapseButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.title = WebInspector.UIString("Timelapse disabled. Click to enable.");
-            this.toggled = false;
-        }, timelapseButton);
-
         //the record button
         var recordButton = this.toggleRecordButton = new WebInspector.StatusBarButton("", "toggle-record-status-bar-item");
         recordButton.addEventListener("click", this._toggleRecordButtonClicked, controllerView);
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.disabled = false;
-            this.visible = true;
-            this.toggled = WebInspector.timelapseModel.recording;
-            this.title = "Click to record.";
-        }, recordButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.visible = false;
-        }, recordButton);
         this._model.addEventListener(eventNames.RecordingWillStart, function() {
             this.disabled = true;
         }, recordButton);
@@ -162,25 +145,6 @@ WebInspector.TimelapseControllerView.prototype = {
         }, recordButton);
     },
 
-    _toggleTimelapseButtonClicked: function(optionalAlways)
-    {
-	//enable timelapse
-        if (!this._enabled) {
-            WebInspector.settings.timelapseEnabled.set(!!optionalAlways);
-            this._model.enable();
-	}
-
-	//disable timelapse. First, stop recording or playback.
-	if (this._model.recording)
-	    this._model.stopRecording();
-
-	if (this._model.replaying && !this._model.inputPaused)
-	    this._model.stopPlayback();
-
-        WebInspector.settings.timelapseEnabled.set(false);
-        this._model.disable();
-    },
-
     _toggleRecordButtonClicked: function()
     {
 	if (this._model.recording)
@@ -193,6 +157,7 @@ WebInspector.TimelapseControllerView.prototype = {
     {
         this._enabled = true;
 	this._showRecordingView();
+	this._createSharedStatusBarButtons();
     },
 
     _timelapseDisabled: function()
@@ -380,15 +345,6 @@ WebInspector.TimelapseReplayingView.prototype = {
 	//the lock/unlock button
 	var lockButton = this.lockButton = new WebInspector.StatusBarButton(WebInspector.UIString("Timelapse Locking Mode"), "timelapse-lock-status-bar-item");
         lockButton.addEventListener("click", this._lockButtonClicked, this);
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.disabled = true;
-            this.visible = true;
-            this.toggled = false;
-            this.title = "Input unlocked.";
-        }, lockButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.visible = false;
-        }, lockButton);
         this._model.addEventListener(eventNames.InputLocked, function() {
             this.title = "Input locked.";
             this.toggled = true;
@@ -406,14 +362,6 @@ WebInspector.TimelapseReplayingView.prototype = {
         playbackButton.disabled = false;
         this.toggled = false;
         playbackButton.element.addStyleClass("play-playback-status-bar-item");
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.visible = true;
-            this.disabled = true;
-            this.toggled = false;
-        }, playbackButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.visible = false;
-        }, playbackButton);
         this._model.addEventListener(eventNames.PlaybackDidStart, function() {
             this.element.removeStyleClass("play-playback-status-bar-item");
             this.element.addStyleClass("pause-playback-status-bar-item");
@@ -438,13 +386,6 @@ WebInspector.TimelapseReplayingView.prototype = {
 	setSavepointButton.toggled = false;
 
 	setSavepointButton.addEventListener("click", this._setSavepointButtonClicked, replayView);
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.visible = true;
-            this.disabled = true;
-        }, setSavepointButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.visible = false;
-        }, setSavepointButton);
         this._model.addEventListener(eventNames.PlaybackDidStart, function() {
 	    this.disabled = true;
 	}, setSavepointButton);
@@ -462,14 +403,6 @@ WebInspector.TimelapseReplayingView.prototype = {
 	savepointButton.toggled = false;
 
         savepointButton.addEventListener("click", this._replayToSavepointButtonClicked, replayView);
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.visible = true;
-            this.disabled = true;
-        }, savepointButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.visible = false;
-        }, savepointButton);
-
         this._model.addEventListener(eventNames.PlaybackDidStart, function() {
 	    this.disabled = true;
 	}, savepointButton);
@@ -501,13 +434,6 @@ WebInspector.TimelapseReplayingView.prototype = {
 	//the breakpoint radar button
 	var radarButton = this.radarButton = new WebInspector.StatusBarButton("", "breakpoint-radar-status-bar-item");
 	radarButton.addEventListener("click", this._radarButtonClicked, replayView);
-        this._model.addEventListener(eventNames.Enabled, function() {
-            this.visible = true;
-            this.disabled = true;
-        }, radarButton);
-        this._model.addEventListener(eventNames.Disabled, function() {
-            this.visible = false;
-        }, radarButton);
         this._model.addEventListener(eventNames.PlaybackDidStart, function() {
 	    this.toggled = WebInspector.timelapseModel.scanningBreakpoints;
         }, radarButton);
