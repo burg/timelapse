@@ -37,10 +37,7 @@ WebInspector.TimelapsePresentationModel = function()
 {
     WebInspector.Object.call(this);
     this._model = WebInspector.timelapseModel;
-
-    this.breakpointLinkifier = new WebInspector.Linkifier();
     this.calculator = new WebInspector.TimelapseCalculator();
-
     this._providers = [];
 
     var eventNames = WebInspector.TimelapseModel.EventTypes;

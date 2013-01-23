@@ -239,9 +239,9 @@ WebInspector.TimelapseBreakpoint.prototype = {
 	this.breakpoint.remove();
     },
 
-    _linkifyLocation: function()
+    _linkifyLocation: function(linkifier)
     {
-        return WebInspector.timelapsePresentationModel.breakpointLinkifier.linkifyLocation(this._sourceURL, this._lineNumber, 0, "timelapse-breakpoint-link source-code");
+        return linkifier.linkifyLocation(this._sourceURL, this._lineNumber, 0, "timelapse-breakpoint-link source-code");
     }
 };
 

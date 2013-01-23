@@ -248,6 +248,7 @@ WebInspector.OverviewPreviewViews.BreakpointHitView = function(recording, provid
     WebInspector.OverviewPreviewViews.BaseView.call(this, "breakpoint");
     this._recording = recording;
     this._provider = provider;
+    this._linkifier = new WebInspector.Linkifier();
     this.refresh();
 };
 
@@ -320,7 +321,7 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	    var breakpoint = record.breakpoint;
 
 	    var cell = document.createElement("td");
-	    var sourceLink = breakpoint._linkifyLocation();
+	    var sourceLink = breakpoint._linkifyLocation(this._linkifier);
 	    sourceLink.addEventListener("contextmenu", breakpoint.contextMenu.bind(breakpoint), true);
 	    cell.appendChild(sourceLink);
 	    cell.addStyleClass("text-cell");
