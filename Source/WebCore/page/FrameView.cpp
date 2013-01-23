@@ -1819,7 +1819,7 @@ void FrameView::scrollPositionChangedViaPlatformWidget()
 void FrameView::scrollPositionChanged()
 {
     frame()->eventHandler()->sendScrollEvent();
-    frame()->page()->asyncEventProxy()->dispatchFakeMouseMoveEventSoon(frame());
+    frame()->eventHandler()->dispatchFakeMouseMoveEventSoon();
 
 #if USE(ACCELERATED_COMPOSITING)
     if (RenderView* root = rootRenderer(this)) {

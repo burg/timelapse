@@ -48,8 +48,8 @@ namespace ReplayableTypes {
 const char *DispatchFakeMouseMove = "DispatchFakeMouseMove";
 }
 
-DispatchFakeMouseMove::DispatchFakeMouseMove(Frame* frame)
-    : DispatchableAction(ReplayableTypes::DispatchFakeMouseMove)
+DispatchFakeMouseMove::DispatchFakeMouseMove(Frame* frame, const PlatformMouseEvent& event)
+    : HandleMouseBase(event, ReplayableTypes::DispatchFakeMouseMove)
     , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(frame->document())) { }
 
 //DispatchableAction API
@@ -60,7 +60,7 @@ void DispatchFakeMouseMove::dispatch(DeterminismController* controller)
     Frame* frame = document->frame();
     ASSERT(frame);
 
-    controller->page()->asyncEventProxy()->dispatchFakeMouseMoveEventSoon(frame, true);
+    controller->page()->asyncEventProxy()->dispatchFakeMouseMove(frame, platformEvent(), true);
     controller->didDispatch(this);
 }
 
@@ -71,6 +71,7 @@ String DispatchFakeMouseMove::toString() const
 
 void DispatchFakeMouseMove::serialize(ActionSerializer* serializer) const
 {
+    HandleMouseBase::serializeMouseInfo(serializer);
     serializer->putInt("frameIndex", m_frameIndex);
 }
 

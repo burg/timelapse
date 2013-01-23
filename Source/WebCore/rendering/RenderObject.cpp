@@ -1939,7 +1939,7 @@ void RenderObject::styleDidChange(StyleDifference diff, const RenderStyle* oldSt
 
     if (oldStyle && !areCursorsEqual(oldStyle, style())) {
         if (Frame* frame = this->frame())
-            frame->page()->asyncEventProxy()->dispatchFakeMouseMoveEventSoon(frame);
+            frame->eventHandler()->dispatchFakeMouseMoveEventSoon();
     }
 }
 

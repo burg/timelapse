@@ -61,6 +61,7 @@
 #include "MouseEvent.h"
 #include "MouseEventWithHitTestResults.h"
 #include "Page.h"
+#include "AsyncEventProxy.h"
 #include "PlatformEvent.h"
 #include "PlatformKeyboardEvent.h"
 #include "PlatformWheelEvent.h"
@@ -2726,7 +2727,7 @@ void EventHandler::fakeMouseMoveEventTimerFired(Timer<EventHandler>* timer)
     bool metaKey;
     PlatformKeyboardEvent::getCurrentModifierState(shiftKey, ctrlKey, altKey, metaKey);
     PlatformMouseEvent fakeMouseMoveEvent(m_currentMousePosition, m_currentMouseGlobalPosition, NoButton, PlatformEvent::MouseMoved, 0, shiftKey, ctrlKey, altKey, metaKey, currentTime());
-    mouseMoved(fakeMouseMoveEvent);
+    m_frame->page()->asyncEventProxy()->dispatchFakeMouseMove(m_frame, fakeMouseMoveEvent);
 }
 
 void EventHandler::setResizingFrameSet(HTMLFrameSetElement* frameSet)

@@ -94,7 +94,7 @@ PassOwnPtr<AsyncEventProxy> AsyncEventProxy::create(Page* page)
     return adoptPtr(new AsyncEventProxy(page));
 }
 
-void AsyncEventProxy::dispatchFakeMouseMoveEventSoon(Frame* frame, bool fromReplay)
+void AsyncEventProxy::dispatchFakeMouseMove(Frame* frame, const PlatformMouseEvent& fakeMouseMove, bool fromReplay)
 {
     ASSERT(frame);
 #if ENABLE(TIMELAPSE)
@@ -102,12 +102,12 @@ void AsyncEventProxy::dispatchFakeMouseMoveEventSoon(Frame* frame, bool fromRepl
         return;
     
     if (mode() == TimelapseProxy::Capturing)
-        m_page->determinismController()->capturePageInput(new DispatchFakeMouseMove(frame));
+        m_page->determinismController()->capturePageInput(new DispatchFakeMouseMove(frame, fakeMouseMove));
 #else
     UNUSED_PARAM(fromReplay);
 #endif // ENABLE(TIMELAPSE)
 
-    return frame->eventHandler()->dispatchFakeMouseMoveEventSoon();
+    frame->eventHandler()->mouseMoved(fakeMouseMove);
 }
 
 bool AsyncEventProxy::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget> prpEventTarget, bool fromReplay)

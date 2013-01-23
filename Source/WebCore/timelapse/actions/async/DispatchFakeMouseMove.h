@@ -35,33 +35,35 @@
 #if ENABLE(TIMELAPSE)
 
 #include "DispatchableAction.h"
+#include "HandleMouseBase.h"
 #include <wtf/timelapse/ActionSerializer.h>
 
 namespace WebCore {
     
-    namespace ReplayableTypes {
-        extern const char *DispatchFakeMouseMove;
+namespace ReplayableTypes {
+    extern const char *DispatchFakeMouseMove;
+}
+
+class Frame;
+
+class DispatchFakeMouseMove : public HandleMouseBase {
+public:
+    DispatchFakeMouseMove(Frame*, const PlatformMouseEvent&);
+    virtual ~DispatchFakeMouseMove() {}
+    
+    // DispatchableAction API
+    virtual void dispatch(DeterminismController*) OVERRIDE;
+    
+    // ReplayableAction API
+    virtual String toString() const OVERRIDE;
+    virtual size_t memorySize() const OVERRIDE
+    {
+        return HandleMouseBase::memorySize() + sizeof(m_frameIndex);
     }
-    
-    class DeterminismController;
-    class Frame;
-    
-    class DispatchFakeMouseMove : public DispatchableAction {
-    public:
-        DispatchFakeMouseMove(Frame*);
-        virtual ~DispatchFakeMouseMove() {}
-        
-        // DispatchableAction API
-        virtual void dispatch(DeterminismController*) OVERRIDE;
-        
-        // ReplayableAction API
-        virtual String toString() const OVERRIDE;
-        virtual size_t memorySize() const { return sizeof(DispatchFakeMouseMove); }
-        virtual void serialize(ActionSerializer*) const OVERRIDE;
-        
-    private:
-        int m_frameIndex;
-    };
+    virtual void serialize(ActionSerializer*) const OVERRIDE;
+private:
+    int m_frameIndex;
+};
     
 } // namespace WebCore
 

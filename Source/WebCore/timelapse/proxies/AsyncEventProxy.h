@@ -33,6 +33,7 @@
 #define AsyncEventProxy_h
 
 #include "DispatchAsyncEvent.h"
+#include "PlatformMouseEvent.h"
 #include "TimelapseProxy.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
@@ -54,7 +55,7 @@ public:
     static PassOwnPtr<AsyncEventProxy> create(Page*);
     virtual ~AsyncEventProxy() {}
 
-    void dispatchFakeMouseMoveEventSoon(Frame*, bool fromReplay = false);
+    void dispatchFakeMouseMove(Frame*, const PlatformMouseEvent&, bool fromReplay = false);
     bool dispatchAsyncEvent(PassRefPtr<Event>, PassRefPtr<EventTarget>, bool fromReplay = false);
     static bool dispatchEvent(PassRefPtr<Event>, PassRefPtr<EventTarget>);
 
