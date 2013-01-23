@@ -16,13 +16,6 @@ WebInspector.TimelapsePanel = function()
     this._dataGrid.show(this.splitView.sidebarElement);
 
     this._registerShortcuts();
-    
-    var eventNames = WebInspector.TimelapseModel.EventTypes;
-    this._model.addEventListener(eventNames.Enabled, this._reset, this);
-    this._model.addEventListener(eventNames.Disabled, this._reset, this);
-    this._model.addEventListener(eventNames.RecordingDidStart, this._reset, this);
-    this._model.addEventListener(eventNames.RecordingDidStop, this._dataGrid.refresh, this);
-
     this._reset();
 };
 

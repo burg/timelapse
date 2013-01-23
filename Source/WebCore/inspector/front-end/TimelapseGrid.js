@@ -448,6 +448,8 @@ WebInspector.TimelapseGrid.prototype = {
 
     _onRecordingDidStart: function()
     {
+	// TODO: make widget lifetime tied to specific recording, rather
+	// than record/replay events
 	for (var key in this.sliders) {
 	    var slider = this.sliders[key];
 	    slider.clear();
@@ -458,6 +460,7 @@ WebInspector.TimelapseGrid.prototype = {
 
     _onRecordingDidStop: function()
     {
+	this._refreshIfNeeded();
 	var node = this._recordGridNodes[this._model.currentMarkIndex];
 	this.sliders.playback.placeAfter(node);
 	this.sliders.playback.enable();

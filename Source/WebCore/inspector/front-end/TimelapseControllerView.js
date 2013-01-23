@@ -423,9 +423,9 @@ WebInspector.TimelapseReplayingView.prototype = {
 	var willRemoveCallback = function() {
 	    provider.removeEventListener(events.SavepointSet, enableButtonCallback, savepointButton);
 	    provider.removeEventListener(events.SavepointRemoved, syncSavepointStatus, savepointButton);
-	    provider.removeEventListener(WebInspector.DataProvider.WillRemove, willRemoveCallback, savepointButton);
+	    provider.removeEventListener(WebInspector.DataProvider.Events.WillRemove, willRemoveCallback, savepointButton);
 	};
-	provider.addEventListener(WebInspector.DataProvider.WillRemove, willRemoveCallback, savepointButton);
+	provider.addEventListener(WebInspector.DataProvider.Events.WillRemove, willRemoveCallback, savepointButton);
 
 	//the breakpoint radar button
 	var radarButton = this.radarButton = new WebInspector.StatusBarButton("", "breakpoint-radar-status-bar-item");

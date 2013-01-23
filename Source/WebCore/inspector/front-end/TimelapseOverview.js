@@ -336,16 +336,18 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.playback.setPosition(percent, true);
 
 	/* savepoint slider */
-	var provider = this._presentationModel.savepointProvider;
-	var savepoints = provider.savepoints;
+	if (this._presentationModel.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint).length > 0) {
+	    var provider = this._presentationModel.savepointProvider;
+	    var savepoints = provider.savepoints;
 
-	for (var i = 0; i < savepoints.length; i++) {
-	    var savepoint = provider.savepoints[i];
-	    markIdx = savepoint.markIndex;
-	    recordIdx = this._model.recordIndexFromMarkIndex(markIdx);
-	    percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
-	    this.sliders.savepoint[i].setPosition(percent, true);
-	    this.sliders.savepoint[i].show();
+	    for (var i = 0; i < savepoints.length; i++) {
+		var savepoint = provider.savepoints[i];
+		markIdx = savepoint.markIndex;
+		recordIdx = this._model.recordIndexFromMarkIndex(markIdx);
+		percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
+		this.sliders.savepoint[i].setPosition(percent, true);
+		this.sliders.savepoint[i].show();
+	    }
 	}
 
 	/* always update the position, but don't necessarily make them visible. */
@@ -392,14 +394,14 @@ WebInspector.TimelapseOverview.prototype = {
 	if (!this._canUseProvider(provider))
 	    return;
 
+	provider.addEventListener(WebInspector.DataProvider.Events.WillRemove, this._removeProvider, this);
+
 	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint) {
 	    this._setupSavepointListeners(provider);
 	    return;
 	}
 
 	console.assert(!this._timelineForProvider(provider), "Timeline for provider already exists!");
-
-	provider.addEventListener(WebInspector.DataProvider.Events.WillRemove, this._removeProvider, this);
 
 	var ordinal = this._timelines.length;
 	var height = WebInspector.TimelapseOverview.TimelineHeight;
@@ -430,8 +432,6 @@ WebInspector.TimelapseOverview.prototype = {
     _removeProvider: function(event)
     {
 	var provider = event.data;
-	console.assert(this._canUseProvider(provider), "should only remove providers that we know we can handle.");
-
 	provider.removeEventListener(WebInspector.DataProvider.Events.WillRemove, this._removeProvider, this);
 
 	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint) {
