@@ -361,24 +361,22 @@ WebInspector.TimelapseReplayingView.prototype = {
         playbackButton.addEventListener("click", replayView._togglePlaybackButtonClicked, this);
         playbackButton.disabled = false;
         this.toggled = false;
-        playbackButton.element.addStyleClass("play-playback-status-bar-item");
-        this._model.addEventListener(eventNames.PlaybackDidStart, function() {
-            this.element.removeStyleClass("play-playback-status-bar-item");
-            this.element.addStyleClass("pause-playback-status-bar-item");
-        }, playbackButton);
-        this._model.addEventListener(eventNames.InputPaused, function() {
+
+	var togglePlayGlyph = function() {
             this.element.removeStyleClass("pause-playback-status-bar-item");
             this.element.addStyleClass("play-playback-status-bar-item");
-        }, playbackButton);
-        this._model.addEventListener(eventNames.BreakpointPaused, function() {
+	};
+	var togglePauseGlyph = function() {
             this.element.removeStyleClass("pause-playback-status-bar-item");
             this.element.addStyleClass("play-playback-status-bar-item");
-        }, playbackButton);
-        this._model.addEventListener(eventNames.PlaybackStopped, function() {
-            this.element.removeStyleClass("pause-playback-status-bar-item");
-            this.element.addStyleClass("play-playback-status-bar-item");
-        }, playbackButton);
+	};
+
+        this._model.addEventListener(eventNames.PlaybackDidStart, togglePauseGlyph, playbackButton);
+        this._model.addEventListener(eventNames.InputPaused,      togglePlayGlyph,  playbackButton);
+        this._model.addEventListener(eventNames.BreakpointPaused, togglePlayGlyph,  playbackButton);
+        this._model.addEventListener(eventNames.PlaybackStopped,  togglePlayGlyph,  playbackButton);
 	this._statusBarButtons.push(playbackButton);
+        togglePlayGlyph.call(playbackButton);
 
 	//the set-savepoint button
 	var setSavepointButton = this.setSavepointButton = new WebInspector.StatusBarButton("", "set-savepoint-status-bar-item");
@@ -386,15 +384,12 @@ WebInspector.TimelapseReplayingView.prototype = {
 	setSavepointButton.toggled = false;
 
 	setSavepointButton.addEventListener("click", this._setSavepointButtonClicked, replayView);
-        this._model.addEventListener(eventNames.PlaybackDidStart, function() {
-	    this.disabled = true;
-	}, setSavepointButton);
-        this._model.addEventListener(eventNames.PlaybackStopped, function() {
-	    this.disabled = true;
-	}, setSavepointButton);
-	this._model.addEventListener(eventNames.BreakpointPaused, function() {
-	    this.disabled = false;
-	}, setSavepointButton);
+	var disableButtonCallback = function() { this.disabled = true; };
+	var enableButtonCallback = function() { this.disabled = false; };
+
+        this._model.addEventListener(eventNames.PlaybackDidStart, disableButtonCallback, setSavepointButton);
+        this._model.addEventListener(eventNames.PlaybackStopped,  disableButtonCallback, setSavepointButton);
+	this._model.addEventListener(eventNames.BreakpointPaused,  enableButtonCallback, setSavepointButton);
 	this._statusBarButtons.push(setSavepointButton);
 
         //the replay-to-savepoint button
@@ -403,12 +398,13 @@ WebInspector.TimelapseReplayingView.prototype = {
 	savepointButton.toggled = false;
 
         savepointButton.addEventListener("click", this._replayToSavepointButtonClicked, replayView);
-        this._model.addEventListener(eventNames.PlaybackDidStart, function() {
-	    this.disabled = true;
-	}, savepointButton);
-        this._model.addEventListener(eventNames.InputPaused, function() {
-	    this.disabled = !WebInspector.timelapsePresentationModel.savepointProvider.hasSavepoint();
-	}, savepointButton);
+	var provider = this._presentationModel.savepointProvider;
+	var syncSavepointStatus = function() {
+	    this.disabled = !provider.hasSavepoint();
+	};
+
+        this._model.addEventListener(eventNames.PlaybackDidStart, disableButtonCallback, savepointButton);
+        this._model.addEventListener(eventNames.InputPaused, syncSavepointStatus, savepointButton);
         this._model.addEventListener(eventNames.PlaybackStopped, function() {
 	    this.toggled = false;
 	    this.disabled = !WebInspector.timelapsePresentationModel.savepointProvider.hasSavepoint();
@@ -417,19 +413,19 @@ WebInspector.TimelapseReplayingView.prototype = {
 	    this.toggled = false;
 	    this.disabled = !WebInspector.timelapsePresentationModel.savepointProvider.hasSavepoint();
 	}, savepointButton);
-	this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.DebuggerPaused, function() {
-	    this.toggled = false;
-	}, savepointButton);
+	this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.DebuggerPaused,
+						 enableButtonCallback, savepointButton);
 	this._statusBarButtons.push(savepointButton);
 
-	var provider = this._presentationModel.savepointProvider;
 	var events = WebInspector.ReplaySavepointProvider.EventTypes;
-        provider.addEventListener(events.SavepointSet, function() {
-            this.disabled = false;
-        }, savepointButton);
-	provider.addEventListener(events.SavepointRemoved, function() {
-            this.disabled = !provider.hasSavepoint();
-	}, savepointButton);
+        provider.addEventListener(events.SavepointSet, enableButtonCallback, savepointButton);
+	provider.addEventListener(events.SavepointRemoved, syncSavepointStatus, savepointButton);
+	var willRemoveCallback = function() {
+	    provider.removeEventListener(events.SavepointSet, enableButtonCallback, savepointButton);
+	    provider.removeEventListener(events.SavepointRemoved, syncSavepointStatus, savepointButton);
+	    provider.removeEventListener(WebInspector.DataProvider.WillRemove, willRemoveCallback, savepointButton);
+	};
+	provider.addEventListener(WebInspector.DataProvider.WillRemove, willRemoveCallback, savepointButton);
 
 	//the breakpoint radar button
 	var radarButton = this.radarButton = new WebInspector.StatusBarButton("", "breakpoint-radar-status-bar-item");
