@@ -3086,7 +3086,7 @@ button.breakpoint-radar-status-bar-item > .glyph {
     -webkit-animation-iteration-count: infinite;
 }
 
-#timelapse-replaying-view .split-view-contents {
+#timelapse-replay-view .split-view-contents {
     overflow-x: none;
 }
 
