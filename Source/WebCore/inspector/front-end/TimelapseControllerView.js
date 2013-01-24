@@ -88,11 +88,14 @@ WebInspector.TimelapseControllerView.prototype = {
     _changeView: function(oldView, newView)
     {
         if (oldView) {
+            // TODO: remove clear(), use dispose() instead
             oldView.clear();
             if (oldView.isShowing)
-            oldView.detach();
+                oldView.detach();
+            oldView.dispose();
         }
 
+        // TODO: remove clear()
         newView.clear();
         
         this._contextStatusBarItems.removeChildren();
