@@ -33,15 +33,15 @@
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseOverview = function()
+WebInspector.TimelapseOverview = function(model, recording)
 {
     WebInspector.View.call(this);
 
-    this._model = WebInspector.timelapseModel;
-    this._presentationModel = WebInspector.timelapsePresentationModel;
+    this._model = model;
+    this._recording = recording;
 
     // Data changes go through the DataProviders.
-    // Zoom changes come from the TimelapsePresentationModel.
+    // Zoom changes come from the calculator.
     var modelEventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(modelEventNames.CaptureDidStart, this._onCaptureDidStart, this);
     this._model.addEventListener(modelEventNames.CaptureDidStop, this._onCaptureDidStop, this);
@@ -54,16 +54,16 @@ WebInspector.TimelapseOverview = function()
     this._model.addEventListener(modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
 
     // TODO: these should instead listen to specific data provider events.
-    var presEventNames = WebInspector.TimelapsePresentationModel.Events;
-    this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
-    this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
-    this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
-    this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
+    var recordingEventNames = WebInspector.TimelapseRecording.Events;
+    this._recording.addEventListener(recordingEventNames.ProviderAdded, this._onProviderAdded, this);
+    this._recording.addEventListener(recordingEventNames.PreviewStarted, this._onPreviewStarted, this);
+    this._recording.addEventListener(recordingEventNames.PreviewStopped, this._onPreviewStopped, this);
+    this._recording.addEventListener(recordingEventNames.PreviewChanged, this._onPreviewChanged, this);
 
-    this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
+    this._recording.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
 
     this._previewProvider = new WebInspector.OverviewPreviewProvider();
-    this._presentationModel.addProvider(this._previewProvider);
+    this._recording.addProvider(this._previewProvider);
 
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
@@ -76,14 +76,14 @@ WebInspector.TimelapseOverview = function()
 
 	this._labelContainer = document.createElement("div");
 	this._labelContainer.classList.add("timelapse-timeline-labels");
-        this._labelContainer.classList.add("timelapse-overview-column-label");
-        this._labelContainer.classList.add("timelapse-overview-row-main");
+    this._labelContainer.classList.add("timelapse-overview-column-label");
+    this._labelContainer.classList.add("timelapse-overview-row-main");
 	this.element.appendChild(this._labelContainer);
 
 	this._timelineContainer = document.createElement("div");
 	this._timelineContainer.classList.add("timelapse-overview-timelines");
-        this._timelineContainer.classList.add("timelapse-overview-column-main");
-        this._timelineContainer.classList.add("timelapse-overview-row-main");
+    this._timelineContainer.classList.add("timelapse-overview-column-main");
+    this._timelineContainer.classList.add("timelapse-overview-row-main");
 	this._timelineContainer.addEventListener("mousedown", this._onOverviewMousedown.bind(this), false);
 	this._timelineContainer.addEventListener("click", this._onOverviewClick.bind(this), false);
 	this._timelineContainer.addEventListener("mousewheel", this._onOverviewMousewheel.bind(this), false);
@@ -276,7 +276,7 @@ WebInspector.TimelapseOverview.prototype = {
 
     get calculator()
     {
-	return this._presentationModel.calculator;
+	return this._recording.calculator;
     },
 
     _scheduleRefresh: function()
@@ -335,8 +335,8 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.playback.setPosition(percent, true);
 
 	/* savepoint slider */
-	if (this._presentationModel.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint).length > 0) {
-	    var provider = this._presentationModel.savepointProvider;
+	if (this._recording.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint).length > 0) {
+	    var provider = this._recording.savepointProvider;
 	    var savepoints = provider.savepoints;
 
 	    for (var i = 0; i < savepoints.length; i++) {
@@ -410,7 +410,7 @@ WebInspector.TimelapseOverview.prototype = {
 	label.show(this._labelContainer);
 	this._labels.push(label);
 
-	var timeline = new WebInspector.TimelapseCircleTimeline(provider);
+	var timeline = new WebInspector.TimelapseCircleTimeline(this._recording, provider);
 	timeline.element.style.setProperty("top", ordinal*height + "px");
 	timeline.show(this._timelineContainer);
 
@@ -661,7 +661,7 @@ WebInspector.TimelapseOverview.prototype = {
 					      this._onPlaybackSliderDragged,
 					      this);
 
-	this._presentationModel.startPreviewing();
+	this._recording.startPreviewing();
     },
 
     _onPlaybackSliderDragged: function(event)
@@ -687,7 +687,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	// for each active input provider, find the nearest mark within the calculator zoom interval
 	var closestPerProvider = [];
-	var inputProviders = this._presentationModel.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+	var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
 	for (var i = 0; i < inputProviders.length; i++) {
 	    var provider = inputProviders[i];
 	    if (!provider.isEnabled())
@@ -710,7 +710,7 @@ WebInspector.TimelapseOverview.prototype = {
 		bestMatch = closestPerProvider[i];
 	}
 
-	this._presentationModel.previewRecord(bestMatch);
+	this._recording.previewRecord(bestMatch);
     },
 
     _onPlaybackSliderDragEnd: function(event)
@@ -719,8 +719,8 @@ WebInspector.TimelapseOverview.prototype = {
 						 this._onPlaybackSliderDragged,
 						 this);
 
-	var targetRecord = this._presentationModel.previewedRecord;
-	this._presentationModel.stopPreviewing();
+	var targetRecord = this._recording.previewedRecord;
+	this._recording.stopPreviewing();
 	this._model.replayUpToMarkIndex(targetRecord.mark.index);
     },
 
@@ -1002,7 +1002,7 @@ WebInspector.TimelapseOverview.prototype = {
     _makePreviewForProvider: function(provider)
     {
 	if (provider.type === WebInspector.DataProvider.Types.BreakpointHits)
-	    return new WebInspector.OverviewPreviewViews.BreakpointHitView(this._presentationModel, provider);
+	    return new WebInspector.OverviewPreviewViews.BreakpointHitView(this._recording, provider);
 	else
 	    return new WebInspector.OverviewPreviewViews.InputView(provider);
     }
@@ -1014,17 +1014,15 @@ WebInspector.TimelapseOverview.prototype.__proto__ = WebInspector.View.prototype
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseCircleTimeline = function(provider)
+WebInspector.TimelapseCircleTimeline = function(recording, provider)
 {
     WebInspector.View.call(this);
     // only used to get calculator
-    this._presentationModel = WebInspector.timelapsePresentationModel;
-    this.calculator = this._presentationModel.calculator;
+    this.calculator = recording.calculator;
+    this._provider = provider;
 
     console.assert(!!provider, "Tried to instantiate circle timeline without provider :-(");
 	
-    this._provider = provider;
-
     this.element = document.createElement("div");
     this.element.className = "timelapse-overview-timeline timelapse-category-" + this.provider.name;
     this.element.timeline = this;

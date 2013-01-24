@@ -53,6 +53,7 @@ WebInspector.TimelapseModel = function()
     this._suppressingBreakpoints = false;
     this._replayActionQueue = [];
     this._debuggerWalk = [];
+    this._activeRecording = new WebInspector.TimelapseRecording(this);
 
     WebInspector.debuggerModel.addEventListener(WebInspector.DebuggerModel.Events.DebuggerPaused, this._debuggerPaused, this);
     WebInspector.debuggerModel.addEventListener(WebInspector.DebuggerModel.Events.DebuggerResumed, this._debuggerResumed, this);
@@ -325,6 +326,11 @@ WebInspector.TimelapseModel.prototype = {
     },
 
     // Public query API
+    get activeRecording()
+    {
+    return this._activeRecording;
+    },
+    
     get isCapturing()
     {
 	return this._capturing;
@@ -385,6 +391,7 @@ WebInspector.TimelapseModel.prototype = {
 	return this._replayFinishIndex;
     },
 
+    // TODO: move this to TimelapseRecording
     get allRecords()
     {
 	return this._records;

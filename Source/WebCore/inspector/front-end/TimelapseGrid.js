@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.TimelapseGrid = function() {
+WebInspector.TimelapseGrid = function(model, recording) {
     /* column definitions */
     var columns = {
 	gutter: {},
@@ -72,8 +72,8 @@ WebInspector.TimelapseGrid = function() {
 
     this._highlightedNodes = {};
     this._sliders = {};
-    this._model = WebInspector.timelapseModel;
-    this._presentationModel = WebInspector.timelapsePresentationModel;
+    this._model = model;
+    this._recording = recording;
     this._sortingFunctions = {
 	index: WebInspector.TimelapseGridNode.IndexComparator,
 	group: WebInspector.TimelapseGridNode.GroupComparator,
@@ -106,14 +106,14 @@ WebInspector.TimelapseGrid = function() {
     this._model.addEventListener(modelEventNames.InputPaused, this._onInputPaused, this);
     this._model.addEventListener(modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
 
-    var presEventNames = WebInspector.TimelapsePresentationModel.Events;
-    this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
-    this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
-    this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
-    this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
-    this._presentationModel.addEventListener(presEventNames.CircleSelected, this._onCircleSelected, this);
+    var recordingEventNames = WebInspector.TimelapseRecording.Events;
+    this._recording.addEventListener(recordingEventNames.ProviderAdded, this._onProviderAdded, this);
+    this._recording.addEventListener(recordingEventNames.PreviewStarted, this._onPreviewStarted, this);
+    this._recording.addEventListener(recordingEventNames.PreviewStopped, this._onPreviewStopped, this);
+    this._recording.addEventListener(recordingEventNames.PreviewChanged, this._onPreviewChanged, this);
+    this._recording.addEventListener(recordingEventNames.CircleSelected, this._onCircleSelected, this);
 
-    this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
+    this._recording.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
 
     this._providers = {};
     this._refreshDelay = WebInspector.TimelapseGrid.DefaultRefreshDelay;
@@ -134,6 +134,11 @@ WebInspector.TimelapseGrid.prototype = {
     get providers()
     {
 	return this._providers;
+    },
+
+    get recording()
+    {
+        return this._recording;
     },
 
     wasShown: function()
@@ -424,7 +429,7 @@ WebInspector.TimelapseGrid.prototype = {
 
     _updateZoomInterval: function()
     {
-	var calculator = this._presentationModel.calculator;
+	var calculator = this._recording.calculator;
 	var startTs = calculator.computeMiniviewTimestamp(calculator.zoomLeft);
 	var endTs = calculator.computeMiniviewTimestamp(calculator.zoomRight);
 
@@ -594,7 +599,7 @@ WebInspector.TimelapseGrid.prototype = {
 	// HACK: this will clear any .after-node style.
 	this.sliders.playback.placeBefore(position.node);
 
-	this._presentationModel.startPreviewing();
+	this._recording.startPreviewing();
     },
 
     _onGridDragEnd: function()
@@ -605,8 +610,8 @@ WebInspector.TimelapseGrid.prototype = {
 	delete this._dragStartOffset;
 
 	this._cancelAutoScroll();
-	var targetRecord = this._presentationModel.previewedRecord;
-	this._presentationModel.stopPreviewing();
+	var targetRecord = this._recording.previewedRecord;
+	this._recording.stopPreviewing();
 
 	var position = this.sliders.playback.position;
 	if (position.before)
@@ -645,14 +650,14 @@ WebInspector.TimelapseGrid.prototype = {
 		currentPosition.before != newPosition.before) {		
 
 		if (isAboveRowMidpoint)
-		    this._presentationModel.previewRecord(node.record);
+		    this._recording.previewRecord(node.record);
 		else {
 		    var nextMarkIndex = this.nextVisibleIndex(node.record.mark.index);
 		    if (!nextMarkIndex)
 			return;
 
 		    var nextRecordIndex = this._model.recordIndexFromMarkIndex(nextMarkIndex);
-		    this._presentationModel.previewRecord(this._recordGridNodes[nextMarkIndex].record);
+		    this._recording.previewRecord(this._recordGridNodes[nextMarkIndex].record);
 		}
 	    }
 
@@ -1006,7 +1011,7 @@ WebInspector.TimelapseGridNode.prototype = {
 	    return;
 	
 	// let the model know that the row is selected, but paint the change immediately.
-	WebInspector.timelapsePresentationModel.selectInput(this._record.mark.index);
+	this._parentView.recording.selectInput(this._record.mark.index);
         WebInspector.DataGridNode.prototype.select.apply(this, arguments);
     },
 
@@ -1050,7 +1055,7 @@ WebInspector.TimelapseGridNode.prototype = {
     {
 	this._gutterCell.removeChildren();
 
-	var savepointProvider = WebInspector.timelapsePresentationModel.savepointProvider;
+	var savepointProvider = this._parentView.recording.savepointProvider;
 	var savepoint = savepointProvider.savepointAtMarkIndex(this._record.mark.index);
 	if (!savepoint)
 	    return;
@@ -1086,7 +1091,7 @@ WebInspector.TimelapseGridNode.prototype = {
     _refreshTimestampCell: function()
     {
     	this._timestampCell.removeChildren();
-	this._timestampCell.setTextAndTitle(WebInspector.timelapsePresentationModel.calculator.formatElapsedValue(this._record.mark.timestamp));
+	this._timestampCell.setTextAndTitle(this._parentView.recording.calculator.formatElapsedValue(this._record.mark.timestamp));
     },
 
     _refreshPreviewCell: function()

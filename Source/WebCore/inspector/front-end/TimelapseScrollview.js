@@ -33,19 +33,19 @@
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseScrollview = function()
+WebInspector.TimelapseScrollview = function(model, recording)
 {
     WebInspector.View.call(this);
     this.registerRequiredCSS("timelapseMiniview.css");
 
-    this._model = WebInspector.timelapseModel;
-    this._presentationModel = WebInspector.timelapsePresentationModel;
+    this._model = model;
+    this._recording = recording;
    
     var eventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(eventNames.CaptureDidStart, this._onCaptureDidStart, this);
 
-    var presEventNames = WebInspector.TimelapsePresentationModel.Events;
-    this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
+    var recordingEventNames = WebInspector.TimelapseRecording.Events;
+    this._recording.addEventListener(recordingEventNames.ProviderAdded, this._onProviderAdded, this);
     this.element.className = "timelapse-scrollview";
 
     this._canvas = document.createElement("canvas");
@@ -87,7 +87,7 @@ WebInspector.TimelapseScrollview.prototype = {
 
     get calculator()
     {
-	return this._presentationModel.calculator;
+	return this._recording.calculator;
     },
 
     animateFrame: function()

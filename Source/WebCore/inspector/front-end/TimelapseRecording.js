@@ -33,10 +33,10 @@
  * @constructor
  * @extends {WebInspector.Object}
  */
-WebInspector.TimelapsePresentationModel = function()
+WebInspector.TimelapseRecording = function(model)
 {
     WebInspector.Object.call(this);
-    this._model = WebInspector.timelapseModel;
+    this._model = model;
     this.calculator = new WebInspector.TimelapseCalculator();
     this._providers = [];
 
@@ -49,7 +49,7 @@ WebInspector.TimelapsePresentationModel = function()
     this.reset();
 };
 
-WebInspector.TimelapsePresentationModel.Events = {
+WebInspector.TimelapseRecording.Events = {
     ProviderAdded: "TimelapseProviderAdded",
     // TODO: the following events are details of specific data providers.
     InputSelected: "TimelapseInputSelected",
@@ -58,7 +58,7 @@ WebInspector.TimelapsePresentationModel.Events = {
     PreviewChanged: "TimelapsePreviewChanged",
 };
 
-WebInspector.TimelapsePresentationModel.prototype = {
+WebInspector.TimelapseRecording.prototype = {
     get savepointProvider() {
 	var providers = this.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);
 	console.assert(providers.length == 1, "Expected one savepoint provider, but found "+providers.length);
@@ -143,7 +143,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	    return;
 
 	this._providers.push(provider);
-    	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.Events.ProviderAdded, provider);
+    	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.ProviderAdded, provider);
     },
 
     removeProvider: function(provider) {
@@ -208,7 +208,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
     startPreviewing: function()
     {
 	this._previewModeActive = true;
-    	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.Events.PreviewStarted);
+    	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.PreviewStarted);
     },
 
     // TODO: Preview state should live on the specific DataProvider which is being previewed.
@@ -216,7 +216,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
     {
 	delete this._previewModeActive;
 	delete this._previewedRecord;
-    	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.Events.PreviewStopped);
+    	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.PreviewStopped);
     },
 
     // TODO: Preview state should live on the specific DataProvider which is being previewed.
@@ -225,14 +225,14 @@ WebInspector.TimelapsePresentationModel.prototype = {
 	console.assert(!!record, "Cannot preview undefined record");
 
 	this._previewedRecord = record;
-	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.Events.PreviewChanged, record);
+	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.PreviewChanged, record);
     },
 
     // TODO: Selection state should live on the specific DataProvider which is being selected.
     selectInput: function(markIndex)
     {
 	this._selectedInputIndex = markIndex;
-	this.dispatchEventToListeners(WebInspector.TimelapsePresentationModel.Events.InputSelected, markIndex);
+	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.InputSelected, markIndex);
     },
 
     scanBreakpointsInZoomRegion: function()
@@ -246,7 +246,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
     },
 };
 
-WebInspector.TimelapsePresentationModel.prototype.__proto__ = WebInspector.Object.prototype;
+WebInspector.TimelapseRecording.prototype.__proto__ = WebInspector.Object.prototype;
 
 /**
  * @constructor
@@ -600,4 +600,4 @@ WebInspector.TimelapseCalculator.prototype = {
 
 WebInspector.TimelapseCalculator.prototype.__proto__ = WebInspector.Object.prototype;
 
-WebInspector.timelapsePresentationModel;
+WebInspector.TimelapseRecording;

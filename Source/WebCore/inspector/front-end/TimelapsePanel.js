@@ -12,7 +12,7 @@ WebInspector.TimelapsePanel = function()
 
     this._model = WebInspector.timelapseModel;
 
-    this._dataGrid = new WebInspector.TimelapseGrid();
+    this._dataGrid = new WebInspector.TimelapseGrid(this._model, this._model.activeRecording);
     this._dataGrid.show(this.splitView.sidebarElement);
 
     this._registerShortcuts();
@@ -37,13 +37,13 @@ WebInspector.TimelapsePanel.prototype = {
     {
 	function registerAndDocument(shortcuts, handlers, descriptor, related)
 	{
-            var shortcutNames = [];
-            for (var i = 0; i < shortcuts.length; ++i) {
-	    	this.registerShortcut(shortcuts[i].key, handlers[i]);
-	    	shortcutNames.push(shortcuts[i].name);
-            }
+        var shortcutNames = [];
+        for (var i = 0; i < shortcuts.length; ++i) {
+        this.registerShortcut(shortcuts[i].key, handlers[i]);
+        shortcutNames.push(shortcuts[i].name);
+        }
 
-            var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Timelapse Panel"));
+        var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Timelapse Panel"));
 	    if (related)
 		section.addRelatedKeys(shortcutNames, descriptor);
 	    else

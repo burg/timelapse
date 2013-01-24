@@ -33,7 +33,7 @@
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseMiniview = function()
+WebInspector.TimelapseMiniview = function(model, recording)
 {
     WebInspector.View.call(this);
 
@@ -41,8 +41,8 @@ WebInspector.TimelapseMiniview = function()
     // There can be several data providers with the same name, but only one timeline per name.
     // So, timelines are stored in an object by name, while providers are in a list.
 
-    this._model = WebInspector.timelapseModel;
-    this._presentationModel = WebInspector.timelapsePresentationModel;
+    this._model = model;
+    this._recording = recording;
    
     var eventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(eventNames.CaptureDidStart, this._onCaptureDidStart, this);
@@ -54,13 +54,13 @@ WebInspector.TimelapseMiniview = function()
     this._model.addEventListener(eventNames.BreakpointPaused, this._onBreakpointPaused, this);
     this._model.addEventListener(eventNames.BreakpointHit, this._onBreakpointRecordsChanged, this);
 
-    var presEventNames = WebInspector.TimelapsePresentationModel.Events;
-    this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
-    this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
-    this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
-    this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
+    var recordingEventNames = WebInspector.TimelapseRecording.Events;
+    this._recording.addEventListener(recordingEventNames.ProviderAdded, this._onProviderAdded, this);
+    this._recording.addEventListener(recordingEventNames.PreviewStarted, this._onPreviewStarted, this);
+    this._recording.addEventListener(recordingEventNames.PreviewStopped, this._onPreviewStopped, this);
+    this._recording.addEventListener(recordingEventNames.PreviewChanged, this._onPreviewChanged, this);
 
-    this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
+    this._recording.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
 
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
@@ -163,7 +163,7 @@ WebInspector.TimelapseMiniview.prototype = {
 
     get calculator()
     {
-	return this._presentationModel.calculator;
+	return this._recording.calculator;
     },
 
     refresh: function()
@@ -669,7 +669,7 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _updateSavepointSliders: function()
     {
-        var provider = this._presentationModel.savepointProvider;
+        var provider = this._recording.savepointProvider;
         var savepoints = provider.savepoints;
         for (var i = 0; i < savepoints.length; i++) {
             var savepoint = savepoints[i];
@@ -724,7 +724,7 @@ WebInspector.TimelapseMiniview.prototype = {
     _onPreviewChanged: function(event)
     {
 	var record = event.data;
-	var percent = this._presentationModel.calculator.computeMiniviewPercentage(record.mark.timestamp);
+	var percent = this._recording.calculator.computeMiniviewPercentage(record.mark.timestamp);
 	this.sliders.tentative.setPosition(percent, true);
     },
 
@@ -734,12 +734,12 @@ WebInspector.TimelapseMiniview.prototype = {
 					      this._onPlaybackSliderDragged,
 					      this);
 
-	this._presentationModel.startPreviewing();
+	this._recording.startPreviewing();
     },
 
     _onPlaybackSliderDragged: function(event)
     {
-	var calculator = this._presentationModel.calculator;
+	var calculator = this._recording.calculator;
 	var position = this.sliders.playback.position;
     	var timestamp = calculator.computeMiniviewTimestamp(position);
 
@@ -773,7 +773,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	// this record to the next one
 	this._potentialMarkBounds = {min: minBounds, max: maxBounds};
 
-	this._presentationModel.previewRecord(records[idx]);
+	this._recording.previewRecord(records[idx]);
     },
 
     _onPlaybackSliderDragEnd: function(event)
@@ -782,8 +782,8 @@ WebInspector.TimelapseMiniview.prototype = {
 						 this._onPlaybackSliderDragged,
 						 this);
 
-	var targetRecord = this._presentationModel.previewedRecord;
-	this._presentationModel.stopPreviewing();
+	var targetRecord = this._recording.previewedRecord;
+	this._recording.stopPreviewing();
 	this._model.replayUpToMarkIndex(targetRecord.mark.index);
     },
 
@@ -806,7 +806,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	    else if (start >= this.sliders.rightZoom.position - minSelectableSize)
 	        start = this.sliders.rightZoom.position - minSelectableSize;
 
-	    this._presentationModel.calculator.zoomLeft = start;	    
+	    this._recording.calculator.zoomLeft = start;	    
 	} else {
 	    var end = this.sliders.rightZoom.position;
 	    // Glue to edge
@@ -816,7 +816,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	    else if (end < this.sliders.leftZoom.position + minSelectableSize)
                 end = this.sliders.leftZoom.position + minSelectableSize;
 
-	    this._presentationModel.calculator.zoomRight = end;
+	    this._recording.calculator.zoomRight = end;
 	}
     },
 
@@ -830,7 +830,7 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _updateZoomLeft: function()
     {
-	this.sliders.leftZoom.setPosition(this._presentationModel.calculator.zoomLeft, true);
+	this.sliders.leftZoom.setPosition(this._recording.calculator.zoomLeft, true);
 	this._leftZoomGlassPane.style.left = 0;
 	var width = this.sliders.leftZoom.element.offsetLeft;
 	if (width > 0)
@@ -840,7 +840,7 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _updateZoomRight: function()
     {
-	this.sliders.rightZoom.setPosition(this._presentationModel.calculator.zoomRight, true);
+	this.sliders.rightZoom.setPosition(this._recording.calculator.zoomRight, true);
 	this._rightZoomGlassPane.style.left = (this.sliders.rightZoom.element.offsetLeft + this.rulerAdjustment) + "px";
 	this._rightZoomGlassPane.style.right = 0;
     },
@@ -872,19 +872,19 @@ WebInspector.TimelapseMiniview.prototype = {
             else
                 zoom.start = zoom.end -  minSize;
 
-	this._presentationModel.calculator.setZoomInterval(zoom.start, zoom.end);
+	this._recording.calculator.setZoomInterval(zoom.start, zoom.end);
     },
 
     _onMiniviewDoubleClicked: function()
     {
-	this._presentationModel.calculator.setZoomInterval(0.0, 1.0);
+	this._recording.calculator.setZoomInterval(0.0, 1.0);
     },
 
     _onMiniviewMousewheel: function(event)
     {
-	var zoomLeft = this._presentationModel.calculator.zoomLeft;
-	var zoomRight = this._presentationModel.calculator.zoomRight;
-	var zoomInterval = this._presentationModel.calculator.zoomInterval;
+	var zoomLeft = this._recording.calculator.zoomLeft;
+	var zoomRight = this._recording.calculator.zoomRight;
+	var zoomInterval = this._recording.calculator.zoomInterval;
 
         if (typeof event.wheelDeltaX === "number" && 
 	    event.wheelDeltaX && zoomInterval != 1.0) {
@@ -902,7 +902,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	    zoomRight = Number.constrain(zoomRight - zoomDelta, zoomLeft, 1.0);
         }
 
-	this._presentationModel.calculator.setZoomInterval(zoomLeft, zoomRight);
+	this._recording.calculator.setZoomInterval(zoomLeft, zoomRight);
     }
 
 };

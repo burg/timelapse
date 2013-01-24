@@ -373,16 +373,16 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype.__proto__ = WebIns
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseOverviewPreview = function()
+WebInspector.TimelapseOverviewPreview = function(model, recording)
 {
     WebInspector.View.call(this);
 
     this.element.classList.add("timelapse-preview-container");
-    this._presentationModel = WebInspector.timelapsePresentationModel;
-    this._model = WebInspector.timelapseModel;
+    this._model = model;
+    this._recording = recording;
 
-    var presEvents = WebInspector.TimelapsePresentationModel.Events;
-    this._presentationModel.addEventListener(presEvents.ProviderAdded, this._onProviderAdded, this);
+    var recordingEvents = WebInspector.TimelapseRecording.Events;
+    this._recording.addEventListener(recordingEvents.ProviderAdded, this._onProviderAdded, this);
 
     // if something changed about state of playback, then refresh (the visible view)
     var events = WebInspector.TimelapseModel.Events;
@@ -392,7 +392,7 @@ WebInspector.TimelapseOverviewPreview = function()
     this._model.addEventListener(events.InputPaused, this.refresh, this);
 
     // scan for existing useful provider
-    var providers = this._presentationModel.providersWithType(WebInspector.DataProvider.Types.OverviewPreview);
+    var providers = this._recording.providersWithType(WebInspector.DataProvider.Types.OverviewPreview);
     for (var i = 0; i < providers.length; i++)
 	this._setProvider(providers[i]);
 
