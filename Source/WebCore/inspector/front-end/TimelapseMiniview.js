@@ -44,7 +44,7 @@ WebInspector.TimelapseMiniview = function()
     this._model = WebInspector.timelapseModel;
     this._presentationModel = WebInspector.timelapsePresentationModel;
    
-    var eventNames = WebInspector.TimelapseModel.EventTypes;
+    var eventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(eventNames.RecordingDidStart, this._onRecordingDidStart, this);
     this._model.addEventListener(eventNames.RecordingDidStop, this._onRecordingDidStop, this);
     this._model.addEventListener(eventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
@@ -54,13 +54,13 @@ WebInspector.TimelapseMiniview = function()
     this._model.addEventListener(eventNames.BreakpointPaused, this._onBreakpointPaused, this);
     this._model.addEventListener(eventNames.BreakpointHit, this._onBreakpointRecordsChanged, this);
 
-    var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
+    var presEventNames = WebInspector.TimelapsePresentationModel.Events;
     this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
     this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
 
-    this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
+    this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
 
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._onBreakpointRecordsChanged, this);
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
@@ -79,9 +79,9 @@ WebInspector.TimelapseMiniview = function()
     this.element.appendChild(this._canvas);
 
     var playbackSlider = new WebInspector.TimelapseMiniviewSlider(this, "playback", true);
-    playbackSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart,
+    playbackSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.DragStart,
 				    this._onPlaybackSliderDragStart, this);
-    playbackSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd,
+    playbackSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.DragEnd,
 				    this._onPlaybackSliderDragEnd, this);
     this.element.appendChild(playbackSlider.element);
 
@@ -101,17 +101,17 @@ WebInspector.TimelapseMiniview = function()
 
     var leftZoomSlider = new WebInspector.TimelapseMiniviewSlider(this, "zoom", true, true);
     leftZoomSlider.element.classList.add("left");
-    leftZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart,
+    leftZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.DragStart,
 				    this._onZoomSliderDragStart.bind(this, "leftZoom"));
-    leftZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd,
+    leftZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.DragEnd,
 				    this._onZoomSliderDragEnd.bind(this, "leftZoom"));
     this.element.appendChild(leftZoomSlider.element);
 
     var rightZoomSlider = new WebInspector.TimelapseMiniviewSlider(this, "zoom", true, true);
     rightZoomSlider.element.classList.add("right");
-    rightZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart,
+    rightZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.DragStart,
 				     this._onZoomSliderDragStart.bind(this, "rightZoom"));
-    rightZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd,
+    rightZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.DragEnd,
 				     this._onZoomSliderDragEnd.bind(this, "rightZoom"));
     this.element.appendChild(rightZoomSlider.element);
 
@@ -206,7 +206,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	provider.addEventListener(events.WillRemove, this._onProviderWillRemove, this);
 
 	if (provider.type == types.ReplaySavepoint) {
-	    var savepointEvents = WebInspector.ReplaySavepointProvider.EventTypes;
+	    var savepointEvents = WebInspector.ReplaySavepointProvider.Events;
 	    provider.addEventListener(savepointEvents.SavepointSet, this._onSavepointSet, this);
 	    provider.addEventListener(savepointEvents.SavepointRemoved, this._onSavepointRemoved, this);
 	} else {
@@ -224,7 +224,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	provider.removeEventListener(events.WillRemove, this._onProviderWillRemove, this);
 
 	if (provider.type == types.ReplaySavepoint) {
-	    var savepointEvents = WebInspector.ReplaySavepointProvider.EventTypes;
+	    var savepointEvents = WebInspector.ReplaySavepointProvider.Events;
 	    provider.removeEventListener(savepointEvents.SavepointSet, this._onSavepointSet, this);
 	    provider.removeEventListener(savepointEvents.SavepointRemoved, this._onSavepointRemoved, this);
 	} else {
@@ -730,7 +730,7 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onPlaybackSliderDragStart: function(event)
     {
-	this.sliders.playback.addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.Moved,
+	this.sliders.playback.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.Moved,
 					      this._onPlaybackSliderDragged,
 					      this);
 
@@ -778,7 +778,7 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onPlaybackSliderDragEnd: function(event)
     {
-	this.sliders.playback.removeEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.Moved,
+	this.sliders.playback.removeEventListener(WebInspector.TimelapseMiniviewSlider.Events.Moved,
 						 this._onPlaybackSliderDragged,
 						 this);
 
@@ -789,7 +789,7 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onZoomSliderDragStart: function(zoomSide, event)
     {
-	this.sliders[zoomSide].addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.Moved,
+	this.sliders[zoomSide].addEventListener(WebInspector.TimelapseMiniviewSlider.Events.Moved,
 						this._onZoomSliderDragged.bind(this, zoomSide), this);
     },
 
@@ -822,7 +822,7 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onZoomSliderDragEnd: function(zoomSide, event)
     {
-	this.sliders[zoomSide].addEventListener(WebInspector.TimelapseMiniviewSlider.EventTypes.Moved,
+	this.sliders[zoomSide].addEventListener(WebInspector.TimelapseMiniviewSlider.Events.Moved,
 						  this._onZoomSliderDragged.bind(this, zoomSide), this);
     },
 
@@ -944,7 +944,7 @@ WebInspector.TimelapseMiniviewSlider = function(miniview, name, adjustable, hand
     this.enable();
 };
 
-WebInspector.TimelapseMiniviewSlider.EventTypes = {
+WebInspector.TimelapseMiniviewSlider.Events = {
     Moved: "TimelapseSliderMoved",
     DragStart: "TimelapseSliderDragStart",
     DragEnd: "TimelapseSliderDragEnd"
@@ -971,7 +971,7 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 	this.refresh();
 	
 	if (!suppressEvents) {
-	    this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.EventTypes.Moved);
+	    this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.Events.Moved);
 	}
     },
 
@@ -1070,7 +1070,7 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 
 	this.element.classList.add("slider-dragging");
 
-	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.EventTypes.DragStart);
+	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.Events.DragStart);
 	return true;
     },
 
@@ -1094,7 +1094,7 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 	    return;
 
 	this.element.classList.remove("slider-dragging");
-	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.EventTypes.DragEnd);
+	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.Events.DragEnd);
     }
 };
 

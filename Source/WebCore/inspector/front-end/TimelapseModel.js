@@ -58,7 +58,7 @@ WebInspector.TimelapseModel = function()
     WebInspector.debuggerModel.addEventListener(WebInspector.DebuggerModel.Events.DebuggerResumed, this._debuggerResumed, this);
 };
 
-WebInspector.TimelapseModel.EventTypes = {
+WebInspector.TimelapseModel.Events = {
     Enabled: "TimelapseEnabled",
     Disabled: "TimelapseDisabled",
     StatusChanged: "TimelapseStatusChanged",
@@ -119,7 +119,7 @@ WebInspector.TimelapseModel.prototype = {
 	this._stopBreakpointScan();
 
 	this._changeStatus("Starting capture...");
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.RecordingWillStart);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingWillStart);
 
 	this._suppressBreakpoints();
 
@@ -142,7 +142,7 @@ WebInspector.TimelapseModel.prototype = {
 	var wasAllowed = TimelapseAgent.stopRecording();
 	if (wasAllowed) {
 	    this._changeStatus("Stopping capture...");
-	    this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.RecordingWillStop);
+	    this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingWillStop);
 	}
 
 	return wasAllowed;
@@ -176,7 +176,7 @@ WebInspector.TimelapseModel.prototype = {
 	if (this._replaying && this._currentMarkIndex && this._currentMarkIndex <= markIndex)
 	    this._replayStartIndex = this._currentMarkIndex;
 	this._replayFinishIndex = markIndex;
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackWillStart);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.PlaybackWillStart);
 	return TimelapseAgent.replayUpToMarkIndex(markIndex+1, this.fastReplaying);
     },
 
@@ -206,7 +206,7 @@ WebInspector.TimelapseModel.prototype = {
 	var lastMarkIndex = this._records[this._records.length-1].mark.index;
 	this._replayStartIndex = (!this._replaying && this._currentMarkIndex == lastMarkIndex) ? this._records[0].mark.index : this._currentMarkIndex;
 	this._replayFinishIndex = lastMarkIndex;
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackWillStart);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.PlaybackWillStart);
 	return TimelapseAgent.replayToCompletion(this.fastReplaying);
     },
 
@@ -288,7 +288,7 @@ WebInspector.TimelapseModel.prototype = {
 	}
 
 	this._scanningBreakpoints = true;
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.BreakpointScanStarted);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.BreakpointScanStarted);
 	this._replayActionQueue.shift()();
     },
 
@@ -413,7 +413,7 @@ WebInspector.TimelapseModel.prototype = {
     _changeStatus: function(newStatus)
     {
 	this._status = newStatus || "(no status)";
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.StatusChanged, this._status);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.StatusChanged, this._status);
     },
 
     _enqueueAction: function(action)
@@ -427,7 +427,7 @@ WebInspector.TimelapseModel.prototype = {
 
 	this._replayActionQueue = [];
 	this._scanningBreakpoints = false;
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.BreakpointScanStopped);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.BreakpointScanStopped);
     },
 
     // Callbacks from the backend message dispatcher (TimelapseDispatcher below)
@@ -435,14 +435,14 @@ WebInspector.TimelapseModel.prototype = {
     {
     	this._canReplay = false;
 	this._changeStatus("Ready");
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.Enabled);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.Enabled);
     },
 
     _timelapseDisabled: function()
     {
 	this._canReplay = false;
 	this._changeStatus("Disabled");
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.Disabled);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.Disabled);
     },
     
     _recordingDidStart: function()
@@ -451,7 +451,7 @@ WebInspector.TimelapseModel.prototype = {
 	this._changeStatus("Recording...");
 	this._records = [];
 	this._suppressBreakpoints();
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.RecordingDidStart);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingDidStart);
     },
 
     _recordingDidStop: function()
@@ -468,13 +468,13 @@ WebInspector.TimelapseModel.prototype = {
     	this._recording = false;
 	this._changeStatus("Ready");
 	this._unsuppressBreakpoints();
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.RecordingDidStop);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingDidStop);
     },
 
     _recordedAction: function(record)
     {
 	this._records.push(record);
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.RecordAdded, record);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordAdded, record);
     },
 
     _playbackStarted: function()
@@ -482,7 +482,7 @@ WebInspector.TimelapseModel.prototype = {
 	this._replaying = true;
 	this._inputPaused = false;
 	this._changeStatus("Replaying...");
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackDidStart);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.PlaybackDidStart);
     },
 
     _playbackPausedAtInput: function()
@@ -496,7 +496,7 @@ WebInspector.TimelapseModel.prototype = {
 
 	this._stopBreakpointScan();
 	this._changeStatus("Paused");
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.InputPaused);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.InputPaused);
     },
 
     _playbackStopped: function()
@@ -511,7 +511,7 @@ WebInspector.TimelapseModel.prototype = {
 
 	this._stopBreakpointScan();
 	this._changeStatus("Ready");
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackStopped);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.PlaybackStopped);
     },
 
     _playbackError: function(isFatal, errorMessage)
@@ -521,13 +521,13 @@ WebInspector.TimelapseModel.prototype = {
             "isFatal": isFatal,
         };
     
-        this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackError, data);
+        this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.PlaybackError, data);
     },
 
     _lockedInput: function()
     {
     	this._inputLocked = true;
-        this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.InputLocked);
+        this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.InputLocked);
     },
 
     _unlockedInput: function()
@@ -537,7 +537,7 @@ WebInspector.TimelapseModel.prototype = {
         if (!this.recording)
             this._changeStatus("Ready");
 
-        this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.InputUnlocked);
+        this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.InputUnlocked);
     },
 
     _playbackHitInput: function(markIndex)
@@ -545,7 +545,7 @@ WebInspector.TimelapseModel.prototype = {
         if (this.recordIndexFromMarkIndex(markIndex) > -1)
             this._currentMarkIndex = markIndex;
         this._breakpointHitIndex = -1;
-        this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.InputHit, markIndex);
+        this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.InputHit, markIndex);
     },
 
     _debuggerPaused: function(event)
@@ -561,7 +561,7 @@ WebInspector.TimelapseModel.prototype = {
 	// Record breakpoint hit
 	if (breakpoint) {
 	    this._breakpointHitIndex++;
-	    this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.BreakpointHit, event.data);
+	    this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.BreakpointHit, event.data);
 	}
 
 	var scanningBreakpoints = this._scanningBreakpoints;
@@ -588,7 +588,7 @@ WebInspector.TimelapseModel.prototype = {
 	// FIXME: We reach this point when the pause/step over/step in commands are used in
 	// the debugger, so "breakpointPaused" isn't a great way to describe the current state.
 	this._breakpointPaused = true;
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.BreakpointPaused);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.BreakpointPaused);
     },
 
     _debuggerResumed: function()
@@ -610,8 +610,8 @@ WebInspector.TimelapseModel.prototype = {
 	    this._changeStatus(oldStatus);
 	}
 
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackWillStart);
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.EventTypes.PlaybackDidStart);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.PlaybackWillStart);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.PlaybackDidStart);
     },
 
     /* suppressing breakpoints will temporarily ignore the state of

@@ -140,7 +140,7 @@ WebInspector.TimelapseInputDataProvider = function(name, displayName, color)
     this._selectedIndices = [];
 
     var model = WebInspector.timelapseModel;
-    var eventNames = WebInspector.TimelapseModel.EventTypes;
+    var eventNames = WebInspector.TimelapseModel.Events;
     model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
 };
 

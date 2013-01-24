@@ -381,11 +381,11 @@ WebInspector.TimelapseOverviewPreview = function()
     this._presentationModel = WebInspector.timelapsePresentationModel;
     this._model = WebInspector.timelapseModel;
 
-    var presEvents = WebInspector.TimelapsePresentationModel.EventTypes;
+    var presEvents = WebInspector.TimelapsePresentationModel.Events;
     this._presentationModel.addEventListener(presEvents.ProviderAdded, this._onProviderAdded, this);
 
     // if something changed about state of playback, then refresh (the visible view)
-    var events = WebInspector.TimelapseModel.EventTypes;
+    var events = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(events.PlaybackDidStart, this.refresh, this);
     this._model.addEventListener(events.PlaybackStopped, this.refresh, this);
     this._model.addEventListener(events.BreakpointPaused, this.refresh, this);

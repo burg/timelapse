@@ -41,10 +41,10 @@ WebInspector.TimelapseScrollview = function()
     this._model = WebInspector.timelapseModel;
     this._presentationModel = WebInspector.timelapsePresentationModel;
    
-    var eventNames = WebInspector.TimelapseModel.EventTypes;
+    var eventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(eventNames.RecordingDidStart, this._onRecordingDidStart, this);
 
-    var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
+    var presEventNames = WebInspector.TimelapsePresentationModel.Events;
     this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
     this.element.className = "timelapse-scrollview";
 

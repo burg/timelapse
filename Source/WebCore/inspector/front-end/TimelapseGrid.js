@@ -89,7 +89,7 @@ WebInspector.TimelapseGrid = function() {
     this.addEventListener("sorting changed", this._onSortingChanged, this);
     this.scrollContainer.addEventListener("scroll", this._updateOffscreenRows.bind(this));
 
-    var sliderEventNames = WebInspector.TimelapseGridSlider.EventTypes;
+    var sliderEventNames = WebInspector.TimelapseGridSlider.Events;
     var playbackSlider = new WebInspector.TimelapseGridSlider(this, "playback", true);
     playbackSlider.addEventListener(sliderEventNames.DragStart, this._onGridDragStart, this);
     playbackSlider.addEventListener(sliderEventNames.DragEnd, this._onGridDragEnd, this);
@@ -98,7 +98,7 @@ WebInspector.TimelapseGrid = function() {
     this._addSlider(new WebInspector.TimelapseGridSlider(this, "previous", false));
     this._addSlider(new WebInspector.TimelapseGridSlider(this, "tentative", false));
 
-    var modelEventNames = WebInspector.TimelapseModel.EventTypes;
+    var modelEventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(modelEventNames.RecordingDidStart, this._onRecordingDidStart, this);
     this._model.addEventListener(modelEventNames.RecordingDidStop, this._onRecordingDidStop, this);
     this._model.addEventListener(modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
@@ -106,14 +106,14 @@ WebInspector.TimelapseGrid = function() {
     this._model.addEventListener(modelEventNames.InputPaused, this._onInputPaused, this);
     this._model.addEventListener(modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
 
-    var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
+    var presEventNames = WebInspector.TimelapsePresentationModel.Events;
     this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
     this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
     this._presentationModel.addEventListener(presEventNames.CircleSelected, this._onCircleSelected, this);
 
-    this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
+    this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
 
     this._providers = {};
     this._refreshDelay = WebInspector.TimelapseGrid.DefaultRefreshDelay;
@@ -293,7 +293,7 @@ WebInspector.TimelapseGrid.prototype = {
 	}
 
         if (provider.type == types.ReplaySavepoint) {
-	    var savepointEvents = WebInspector.ReplaySavepointProvider.EventTypes;
+	    var savepointEvents = WebInspector.ReplaySavepointProvider.Events;
 	    provider.addEventListener(savepointEvents.SavepointSet, this._onSavepointChanged, this);
 	    provider.addEventListener(savepointEvents.SavepointRemoved, this._onSavepointChanged, this);
 	}
@@ -312,7 +312,7 @@ WebInspector.TimelapseGrid.prototype = {
 	}
 
         if (provider.type == types.ReplaySavepoint) {
-	    var savepointEvents = WebInspector.ReplaySavepointProvider.EventTypes;
+	    var savepointEvents = WebInspector.ReplaySavepointProvider.Events;
 	    provider.removeEventListener(savepointEvents.SavepointSet, this._onSavepointChanged, this);
 	    provider.removeEventListener(savepointEvents.SavepointRemoved, this._onSavepointChanged, this);
 	}
@@ -584,7 +584,7 @@ WebInspector.TimelapseGrid.prototype = {
     _onGridDragStart: function(event)
     {
 	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
-	this.sliders.playback.addEventListener(WebInspector.TimelapseGridSlider.EventTypes.Dragging,
+	this.sliders.playback.addEventListener(WebInspector.TimelapseGridSlider.Events.Dragging,
 							 this._onGridDragging, this);
 
 	this._dragStartOffset = event.data;
@@ -599,7 +599,7 @@ WebInspector.TimelapseGrid.prototype = {
 
     _onGridDragEnd: function()
     {
-	this.sliders.playback.removeEventListener(WebInspector.TimelapseGridSlider.EventTypes.Dragging,
+	this.sliders.playback.removeEventListener(WebInspector.TimelapseGridSlider.Events.Dragging,
 							 this._onGridDragging);
 
 	delete this._dragStartOffset;
@@ -794,7 +794,7 @@ WebInspector.TimelapseGridSlider = function(grid, name, adjustable)
     this.enable();
 };
 
-WebInspector.TimelapseGridSlider.EventTypes = {
+WebInspector.TimelapseGridSlider.Events = {
     Dragging: "TimelapseSliderDragging",
     DragStart: "TimelapseSliderDragStart",
     DragEnd: "TimelapseSliderDragEnd"
@@ -923,7 +923,7 @@ WebInspector.TimelapseGridSlider.prototype =  {
 	this.element.classList.add("slider-dragging");
 	var offsetTop = this._computeAbsOffsetTop(event);
 
-	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.EventTypes.DragStart, offsetTop);
+	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.Events.DragStart, offsetTop);
 	return true;
     },
 
@@ -934,7 +934,7 @@ WebInspector.TimelapseGridSlider.prototype =  {
 	
 	var offsetTop = this._computeAbsOffsetTop(event);
 	this.element.style.top = offsetTop + "px";
-	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.EventTypes.Dragging, offsetTop);
+	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.Events.Dragging, offsetTop);
 	event.preventDefault();
     },
 
@@ -946,7 +946,7 @@ WebInspector.TimelapseGridSlider.prototype =  {
 	delete this._visibleRows;
 
 	this.element.classList.remove("slider-dragging");
-	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.EventTypes.DragEnd);
+	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.Events.DragEnd);
     }
 };
 

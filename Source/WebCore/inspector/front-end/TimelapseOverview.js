@@ -42,7 +42,7 @@ WebInspector.TimelapseOverview = function()
 
     // Data changes go through the DataProviders.
     // Zoom changes come from the TimelapsePresentationModel.
-    var modelEventNames = WebInspector.TimelapseModel.EventTypes;
+    var modelEventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(modelEventNames.RecordingDidStart, this._onRecordingDidStart, this);
     this._model.addEventListener(modelEventNames.RecordingDidStop, this._onRecordingDidStop, this);
     this._model.addEventListener(modelEventNames.PlaybackWillStart, this._onPlaybackWillStart, this);
@@ -54,13 +54,13 @@ WebInspector.TimelapseOverview = function()
     this._model.addEventListener(modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
 
     // TODO: these should instead listen to specific data provider events.
-    var presEventNames = WebInspector.TimelapsePresentationModel.EventTypes;
+    var presEventNames = WebInspector.TimelapsePresentationModel.Events;
     this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStarted, this._onPreviewStarted, this);
     this._presentationModel.addEventListener(presEventNames.PreviewStopped, this._onPreviewStopped, this);
     this._presentationModel.addEventListener(presEventNames.PreviewChanged, this._onPreviewChanged, this);
 
-    this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged, this._onZoomChanged, this);
+    this._presentationModel.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
 
     this._previewProvider = new WebInspector.OverviewPreviewProvider();
     this._presentationModel.addProvider(this._previewProvider);
@@ -89,9 +89,9 @@ WebInspector.TimelapseOverview = function()
 	this._timelineContainer.addEventListener("mousewheel", this._onOverviewMousewheel.bind(this), false);
 
 	var playbackSlider = new WebInspector.TimelapseOverviewSlider(this, "playback", true);
-	playbackSlider.addEventListener(WebInspector.TimelapseOverviewSlider.EventTypes.DragStart,
+	playbackSlider.addEventListener(WebInspector.TimelapseOverviewSlider.Events.DragStart,
 					     this._onPlaybackSliderDragStart, this);
-	playbackSlider.addEventListener(WebInspector.TimelapseOverviewSlider.EventTypes.DragEnd,
+	playbackSlider.addEventListener(WebInspector.TimelapseOverviewSlider.Events.DragEnd,
 					     this._onPlaybackSliderDragEnd, this);
 	playbackSlider.element.addEventListener("contextmenu", this._onPlaybackSliderContextMenu, this);
 	this._timelineContainer.appendChild(playbackSlider.element);
@@ -374,14 +374,14 @@ WebInspector.TimelapseOverview.prototype = {
 
     _setupSavepointListeners: function(provider)
     {
-	var events = WebInspector.ReplaySavepointProvider.EventTypes;
+	var events = WebInspector.ReplaySavepointProvider.Events;
 	provider.addEventListener(events.SavepointSet, this._onSavepointSet, this);
 	provider.addEventListener(events.SavepointRemoved, this._onSavepointRemoved, this);
     },
 
     _teardownSavepointListeners: function(provider)
     {
-	var events = WebInspector.ReplaySavepointProvider.EventTypes;
+	var events = WebInspector.ReplaySavepointProvider.Events;
 	provider.removeEventListener(events.SavepointSet, this._onSavepointSet, this);
 	provider.removeEventListener(events.SavepointRemoved, this._onSavepointRemoved, this);
     },
@@ -657,7 +657,7 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPlaybackSliderDragStart: function(event)
     {
-	this.sliders.playback.addEventListener(WebInspector.TimelapseOverviewSlider.EventTypes.Moved,
+	this.sliders.playback.addEventListener(WebInspector.TimelapseOverviewSlider.Events.Moved,
 					      this._onPlaybackSliderDragged,
 					      this);
 
@@ -715,7 +715,7 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPlaybackSliderDragEnd: function(event)
     {
-	this.sliders.playback.removeEventListener(WebInspector.TimelapseOverviewSlider.EventTypes.Moved,
+	this.sliders.playback.removeEventListener(WebInspector.TimelapseOverviewSlider.Events.Moved,
 						 this._onPlaybackSliderDragged,
 						 this);
 
@@ -1049,7 +1049,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this.provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
 	this.provider.addEventListener(events.WillRemove, this._onProviderRemoved, this);
 
-	this.calculator.addEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged,
+	this.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged,
 					 this._onZoomChanged, this);
 
 	this._setupDomListeners();
@@ -1080,7 +1080,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this.provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
 	this.provider.removeEventListener(events.WillRemove, this._onProviderRemoved, this);
 
-	this.calculator.removeEventListener(WebInspector.TimelapseCalculator.EventTypes.ZoomChanged,
+	this.calculator.removeEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged,
 					    this._onZoomChanged, this);
 
 	this._teardownDomListeners();
@@ -1716,7 +1716,7 @@ WebInspector.TimelapseOverviewSlider = function(overview, name, adjustable)
     this.enable();
 };
 
-WebInspector.TimelapseOverviewSlider.EventTypes = {
+WebInspector.TimelapseOverviewSlider.Events = {
     Moved: "TimelapseSliderMoved",
     DragStart: "TimelapseSliderDragStart",
     DragEnd: "TimelapseSliderDragEnd"
@@ -1742,7 +1742,7 @@ WebInspector.TimelapseOverviewSlider.prototype = {
 	this.refresh();
 	
 	if (!suppressEvents) {
-	    this.dispatchEventToListeners(WebInspector.TimelapseOverviewSlider.EventTypes.Moved);
+	    this.dispatchEventToListeners(WebInspector.TimelapseOverviewSlider.Events.Moved);
 	}
     },
 
@@ -1847,7 +1847,7 @@ WebInspector.TimelapseOverviewSlider.prototype = {
 
 	this.element.classList.add("slider-dragging");
 
-	this.dispatchEventToListeners(WebInspector.TimelapseOverviewSlider.EventTypes.DragStart);
+	this.dispatchEventToListeners(WebInspector.TimelapseOverviewSlider.Events.DragStart);
 	return true;
     },
 
@@ -1871,7 +1871,7 @@ WebInspector.TimelapseOverviewSlider.prototype = {
 	    return;
 
 	this.element.classList.remove("slider-dragging");
-	this.dispatchEventToListeners(WebInspector.TimelapseOverviewSlider.EventTypes.DragEnd);
+	this.dispatchEventToListeners(WebInspector.TimelapseOverviewSlider.Events.DragEnd);
     }
 };
 

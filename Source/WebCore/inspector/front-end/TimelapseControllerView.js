@@ -43,7 +43,7 @@ WebInspector.TimelapseControllerView = function()
     this._model = WebInspector.timelapseModel;
     this._presentationModel = WebInspector.timelapsePresentationModel;
 
-    var eventNames = WebInspector.TimelapseModel.EventTypes;
+    var eventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(eventNames.Enabled, this._timelapseEnabled, this);
     this._model.addEventListener(eventNames.Disabled, this._timelapseDisabled, this);
     this._model.addEventListener(eventNames.RecordingDidStart, this._recordingDidStart, this);
@@ -119,7 +119,7 @@ WebInspector.TimelapseControllerView.prototype = {
 	    return;
 
 	var controllerView = this;
-	var eventNames = WebInspector.TimelapseModel.EventTypes;
+	var eventNames = WebInspector.TimelapseModel.Events;
 
 	this._contextStatusBarItems = document.createElement("div");
 	this._contextStatusBarItems.className = "status-bar-items-group";
@@ -225,7 +225,7 @@ WebInspector.TimelapseRecordingView = function()
     this._messagePanel.addEventListener("click", this._onMessagePanelClicked.bind(this), true);
     this.element.appendChild(this._messagePanel);
 
-    var eventNames = WebInspector.TimelapseModel.EventTypes;
+    var eventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(eventNames.RecordingWillStart, this._onRecordingWillStart, this);
     this._model.addEventListener(eventNames.RecordingDidStart, this._onRecordingDidStart, this);
     this._model.addEventListener(eventNames.RecordingWillStop, this._onRecordingWillStop, this);
@@ -337,7 +337,7 @@ WebInspector.TimelapseReplayingView.prototype = {
 
     _createReplayStatusBarButtons: function()
     {
-	var eventNames = WebInspector.TimelapseModel.EventTypes;
+	var eventNames = WebInspector.TimelapseModel.Events;
 	var replayView = this;
 
 	this._statusBarButtons = [];
@@ -413,11 +413,11 @@ WebInspector.TimelapseReplayingView.prototype = {
 	    this.toggled = false;
 	    this.disabled = !WebInspector.timelapsePresentationModel.savepointProvider.hasSavepoint();
 	}, savepointButton);
-	this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.DebuggerPaused,
+	this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.Events.DebuggerPaused,
 						 enableButtonCallback, savepointButton);
 	this._statusBarButtons.push(savepointButton);
 
-	var events = WebInspector.ReplaySavepointProvider.EventTypes;
+	var events = WebInspector.ReplaySavepointProvider.Events;
         provider.addEventListener(events.SavepointSet, enableButtonCallback, savepointButton);
 	provider.addEventListener(events.SavepointRemoved, syncSavepointStatus, savepointButton);
 	var willRemoveCallback = function() {
@@ -433,7 +433,7 @@ WebInspector.TimelapseReplayingView.prototype = {
         this._model.addEventListener(eventNames.PlaybackDidStart, function() {
 	    this.toggled = WebInspector.timelapseModel.scanningBreakpoints;
         }, radarButton);
-	this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.EventTypes.DebuggerPaused, function() {
+	this._presentationModel.addEventListener(WebInspector.TimelapsePresentationModel.Events.DebuggerPaused, function() {
 	    this.toggled = WebInspector.timelapseModel.scanningBreakpoints;
 	}, radarButton);
 	this._model.addEventListener(eventNames.InputPaused, function() {

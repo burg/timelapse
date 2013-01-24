@@ -91,7 +91,7 @@ var WebInspector = {
 	if (WebInspector.TimelapsePanel) {
 	    // create status message widget
 	    var model = WebInspector.timelapseModel;
-	    var eventNames = WebInspector.TimelapseModel.EventTypes;
+	    var eventNames = WebInspector.TimelapseModel.Events;
 
             this._timelapseStatusMessage = document.createElement("div");
             this._timelapseStatusMessage.id = "timelapse-status";
