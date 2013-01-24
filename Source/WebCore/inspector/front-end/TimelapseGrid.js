@@ -99,8 +99,8 @@ WebInspector.TimelapseGrid = function() {
     this._addSlider(new WebInspector.TimelapseGridSlider(this, "tentative", false));
 
     var modelEventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(modelEventNames.RecordingDidStart, this._onRecordingDidStart, this);
-    this._model.addEventListener(modelEventNames.RecordingDidStop, this._onRecordingDidStop, this);
+    this._model.addEventListener(modelEventNames.CaptureDidStart, this._onCaptureDidStart, this);
+    this._model.addEventListener(modelEventNames.CaptureDidStop, this._onCaptureDidStop, this);
     this._model.addEventListener(modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
     this._model.addEventListener(modelEventNames.PlaybackStopped, this._onPlaybackStopped, this);
     this._model.addEventListener(modelEventNames.InputPaused, this._onInputPaused, this);
@@ -151,7 +151,7 @@ WebInspector.TimelapseGrid.prototype = {
 	    delete this._refreshTimeout;
 	}
 
-	if (this._model.recording)
+	if (this._model.isCapturing)
 	    return;
 
 	// save position
@@ -446,7 +446,7 @@ WebInspector.TimelapseGrid.prototype = {
 	this._scheduleRefresh();
     },
 
-    _onRecordingDidStart: function()
+    _onCaptureDidStart: function()
     {
 	// TODO: make widget lifetime tied to specific recording, rather
 	// than record/replay events
@@ -458,7 +458,7 @@ WebInspector.TimelapseGrid.prototype = {
 	this.sliders.playback.disable();
     },
 
-    _onRecordingDidStop: function()
+    _onCaptureDidStop: function()
     {
 	this._refreshIfNeeded();
 	var node = this._recordGridNodes[this._model.currentMarkIndex];

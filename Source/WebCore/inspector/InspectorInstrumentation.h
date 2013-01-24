@@ -239,9 +239,9 @@ public:
 #endif
 
 #if ENABLE(TIMELAPSE)
-    static void recordedPageInput(Page*, DispatchableAction*);
-    static void recordingStarted(Page*);
-    static void recordingFinished(Page*);
+    static void capturedPageInput(Page*, DispatchableAction*);
+    static void captureStarted(Page*);
+    static void captureFinished(Page*);
     static void playbackStarted(Page*);
     static void playbackPaused(Page*, unsigned);
     static void playbackHitMark(Page*, unsigned);
@@ -435,9 +435,9 @@ private:
 #endif
 
 #if ENABLE(TIMELAPSE)
-    static void recordedPageInputImpl(InstrumentingAgents*, DispatchableAction*);
-    static void recordingStartedImpl(InstrumentingAgents*);
-    static void recordingFinishedImpl(InstrumentingAgents*);
+    static void capturedPageInputImpl(InstrumentingAgents*, DispatchableAction*);
+    static void captureStartedImpl(InstrumentingAgents*);
+    static void captureFinishedImpl(InstrumentingAgents*);
     static void playbackStartedImpl(InstrumentingAgents*);
     static void playbackPausedImpl(InstrumentingAgents*, unsigned);
     static void playbackHitMarkImpl(InstrumentingAgents*, unsigned);
@@ -1408,27 +1408,27 @@ inline void InspectorInstrumentation::didSendWebSocketFrame(Document* document, 
 #endif
     
 #if ENABLE(TIMELAPSE)
-inline void InspectorInstrumentation::recordedPageInput(Page* page, DispatchableAction* action)
+inline void InspectorInstrumentation::capturedPageInput(Page* page, DispatchableAction* action)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        recordedPageInputImpl(instrumentingAgents, action);
+        capturedPageInputImpl(instrumentingAgents, action);
 #endif
 }
     
-inline void InspectorInstrumentation::recordingStarted(Page* page)
+inline void InspectorInstrumentation::captureStarted(Page* page)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        recordingStartedImpl(instrumentingAgents);
+        captureStartedImpl(instrumentingAgents);
 #endif
 }
 
-inline void InspectorInstrumentation::recordingFinished(Page* page)
+inline void InspectorInstrumentation::captureFinished(Page* page)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        recordingFinishedImpl(instrumentingAgents);
+        captureFinishedImpl(instrumentingAgents);
 #endif
 }
 

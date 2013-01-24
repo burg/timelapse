@@ -42,7 +42,7 @@ WebInspector.TimelapseScrollview = function()
     this._presentationModel = WebInspector.timelapsePresentationModel;
    
     var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.RecordingDidStart, this._onRecordingDidStart, this);
+    this._model.addEventListener(eventNames.CaptureDidStart, this._onCaptureDidStart, this);
 
     var presEventNames = WebInspector.TimelapsePresentationModel.Events;
     this._presentationModel.addEventListener(presEventNames.ProviderAdded, this._onProviderAdded, this);
@@ -95,7 +95,7 @@ WebInspector.TimelapseScrollview.prototype = {
 	this._recomputeTimelines();
 	this._drawGraph();
 
-	if (this._model.recording)
+	if (this._model.isCapturing)
 	    window.webkitRequestAnimationFrame(this.animateFrame.bind(this));
     },
 
@@ -365,9 +365,9 @@ WebInspector.TimelapseScrollview.prototype = {
     },
 
     // Private API (callbacks)
-    _onRecordingDidStart: function()
+    _onCaptureDidStart: function()
     {
-	this._recordingStartTime = Date.now();
+	this._captureStartTime = Date.now();
 	window.webkitRequestAnimationFrame(this.animateFrame.bind(this));
     },
 

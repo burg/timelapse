@@ -43,8 +43,8 @@ WebInspector.TimelapseOverview = function()
     // Data changes go through the DataProviders.
     // Zoom changes come from the TimelapsePresentationModel.
     var modelEventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(modelEventNames.RecordingDidStart, this._onRecordingDidStart, this);
-    this._model.addEventListener(modelEventNames.RecordingDidStop, this._onRecordingDidStop, this);
+    this._model.addEventListener(modelEventNames.CaptureDidStart, this._onCaptureDidStart, this);
+    this._model.addEventListener(modelEventNames.CaptureDidStop, this._onCaptureDidStop, this);
     this._model.addEventListener(modelEventNames.PlaybackWillStart, this._onPlaybackWillStart, this);
     this._model.addEventListener(modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
     this._model.addEventListener(modelEventNames.PlaybackStopped, this._onPlaybackStopped, this);
@@ -759,13 +759,13 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.tentative.setPosition(percent, true);
     },
 
-    _onRecordingDidStart: function()
+    _onCaptureDidStart: function()
     {
 	this.sliders.playback.disable();
 	this.sliders.playback.hide();
     },
 
-    _onRecordingDidStop: function()
+    _onCaptureDidStop: function()
     {
 	if (this._model.allRecords.length == 0)
 	    return;
@@ -845,7 +845,7 @@ WebInspector.TimelapseOverview.prototype = {
     _onPlaybackWillStart: function()
     {
 	var clickCallback = function(event) {
-	    if (this._model.replaying)
+	    if (this._model.isReplaying)
 		this._model.pausePlayback();
 
 	    this._messagePanel.element.removeEventListener("click", clickCallback, false);

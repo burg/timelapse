@@ -86,12 +86,12 @@ public:
     void frameNavigated(DocumentLoader*);
     void willFireTimer(int, Frame*);
 
-    bool recording() const { return m_state.recording(); }
+    bool capturing() const { return m_state.capturing(); }
     bool replaying() const { return m_state.replaying(); }
 
-    void recordedPageInput(DispatchableAction*);
-    void recordingStarted();
-    void recordingFinished();
+    void capturedPageInput(DispatchableAction*);
+    void captureStarted();
+    void captureFinished();
     void playbackStarted();
     void playbackPaused(PositionMarkIndex);
     void playbackHitMark(PositionMarkIndex);
@@ -107,8 +107,8 @@ public:
     void enable(ErrorString*);
     void disable(ErrorString*);
     void isEnabled(ErrorString*, bool*);
-    void startRecording(ErrorString*);
-    void stopRecording(ErrorString*, bool*);
+    void startCapture(ErrorString*);
+    void stopCapture(ErrorString*, bool*);
     void replayUpToMarkIndex(ErrorString*, int, bool);
     void replayToCompletion(ErrorString*, bool);
     void pausePlayback(ErrorString*);

@@ -46,10 +46,10 @@ WebInspector.TimelapseControllerView = function()
     var eventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(eventNames.Enabled, this._timelapseEnabled, this);
     this._model.addEventListener(eventNames.Disabled, this._timelapseDisabled, this);
-    this._model.addEventListener(eventNames.RecordingDidStart, this._recordingDidStart, this);
-    this._model.addEventListener(eventNames.RecordingDidStop, this._recordingDidStop, this);
+    this._model.addEventListener(eventNames.CaptureDidStart, this._captureDidStart, this);
+    this._model.addEventListener(eventNames.CaptureDidStop, this._captureDidStop, this);
 
-    this._recordingView = new WebInspector.TimelapseRecordingView(this);
+    this._captureView = new WebInspector.TimelapseCaptureView(this);
     this._replayingView = new WebInspector.TimelapseReplayingView(this);
 
     this._createSharedStatusBarButtons();
@@ -103,13 +103,13 @@ WebInspector.TimelapseControllerView.prototype = {
 	newView.show(this.element);
     },
 
-    _showRecordingView: function() {
-	 this._changeView(this._replayingView, this._recordingView);
+    _showCaptureView: function() {
+	 this._changeView(this._replayingView, this._captureView);
     },
 
     _showReplayingView: function()
     {
-	this._changeView(this._recordingView, this._replayingView);
+	this._changeView(this._captureView, this._replayingView);
     },
 
     _createSharedStatusBarButtons: function()
@@ -127,18 +127,18 @@ WebInspector.TimelapseControllerView.prototype = {
         //the record button
         var recordButton = this.toggleRecordButton = new WebInspector.StatusBarButton("", "toggle-record-status-bar-item");
         recordButton.addEventListener("click", this._toggleRecordButtonClicked, controllerView);
-        this._model.addEventListener(eventNames.RecordingWillStart, function() {
+        this._model.addEventListener(eventNames.CaptureWillStart, function() {
             this.disabled = true;
         }, recordButton);
-        this._model.addEventListener(eventNames.RecordingDidStart, function() {
+        this._model.addEventListener(eventNames.CaptureDidStart, function() {
             this.disabled = false;
             this.toggled = true;
-            this.title = "Recording. Click to stop.";
+            this.title = "Capture. Click to stop.";
         }, recordButton);
-        this._model.addEventListener(eventNames.RecordingWillStop, function() {
+        this._model.addEventListener(eventNames.CaptureWillStop, function() {
             this.disabled = true;
         }, recordButton);
-        this._model.addEventListener(eventNames.RecordingDidStop, function() {
+        this._model.addEventListener(eventNames.CaptureDidStop, function() {
             this.disabled = false;
             this.toggled = false;
             this.title = "Not recording. Click to re-record.";
@@ -147,23 +147,23 @@ WebInspector.TimelapseControllerView.prototype = {
 
     _toggleRecordButtonClicked: function()
     {
-	if (this._model.recording)
-	    this._model.stopRecording();
+	if (this._model.isCapturing)
+	    this._model.stopCapture();
 	else
-	    this._model.startRecording();
+	    this._model.startCapture();
     },
 
     _timelapseEnabled: function()
     {
         this._enabled = true;
-	this._showRecordingView();
+	this._showCaptureView();
 	this._createSharedStatusBarButtons();
     },
 
     _timelapseDisabled: function()
     {
         this._enabled = false;
-	this._showRecordingView();
+	this._showCaptureView();
 
         // restore any disablements we did to the timeline.
         if (WebInspector.panels.timeline) {
@@ -172,12 +172,12 @@ WebInspector.TimelapseControllerView.prototype = {
         }
     },
 
-    _recordingDidStart: function()
+    _captureDidStart: function()
     {
-	this._showRecordingView();
+	this._showCaptureView();
 
         var timelinePanel = WebInspector.panels.timeline;
-        // automatically turn on Timeline recording, and prevent its clearing or stopping.
+        // automatically turn on Timeline capture, and prevent its clearing or stopping.
         if (timelinePanel) {
             timelinePanel.toggleTimelineButton.disabled = false;
             timelinePanel.toggleTimelineButton.element.click();
@@ -186,17 +186,17 @@ WebInspector.TimelapseControllerView.prototype = {
         }
     },
 
-    _recordingDidStop: function()
+    _captureDidStop: function()
     {
         // if nothing was recorded, don't even show the replay view.
-        // the recording view knows to change its message in this situation.
+        // the capture view knows to change its message in this situation.
         if (this._model.allRecords.length == 0)
             return;
 
 	this._showReplayingView();
 
         var timelinePanel = WebInspector.panels.timeline;
-        // automatically turn off Timeline recording.
+        // automatically turn off Timeline capture.
         if (timelinePanel) {
             timelinePanel.toggleTimelineButton.disabled = false;
             timelinePanel.toggleTimelineButton.element.click();
@@ -211,25 +211,25 @@ WebInspector.TimelapseControllerView.prototype.__proto__ = WebInspector.View.pro
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseRecordingView = function()
+WebInspector.TimelapseCaptureView = function()
 {
     WebInspector.View.call(this);
 
     this._model = WebInspector.timelapseModel;
     this._presentationModel = WebInspector.timelapsePresentationModel;
 
-    this.element.id = "timelapse-recording-view";
+    this.element.id = "timelapse-capture-view";
 
     this._messagePanel = document.createElement("div");
-    this._messagePanel.className = "timelapse-recording-message";
+    this._messagePanel.className = "timelapse-capture-message";
     this._messagePanel.addEventListener("click", this._onMessagePanelClicked.bind(this), true);
     this.element.appendChild(this._messagePanel);
 
     var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.RecordingWillStart, this._onRecordingWillStart, this);
-    this._model.addEventListener(eventNames.RecordingDidStart, this._onRecordingDidStart, this);
-    this._model.addEventListener(eventNames.RecordingWillStop, this._onRecordingWillStop, this);
-    this._model.addEventListener(eventNames.RecordingDidStop, this._onRecordingDidStop, this);
+    this._model.addEventListener(eventNames.CaptureWillStart, this._onCaptureWillStart, this);
+    this._model.addEventListener(eventNames.CaptureDidStart, this._onCaptureDidStart, this);
+    this._model.addEventListener(eventNames.CaptureWillStop, this._onCaptureWillStop, this);
+    this._model.addEventListener(eventNames.CaptureDidStop, this._onCaptureDidStop, this);
 
     WebInspector.resourceTreeModel.addEventListener(WebInspector.ResourceTreeModel.EventTypes.MainFrameNavigated, this._onMainFrameNavigated, this);
 
@@ -237,7 +237,7 @@ WebInspector.TimelapseRecordingView = function()
     this._scrollview.show(this.element);
 };
 
-WebInspector.TimelapseRecordingView.prototype = {
+WebInspector.TimelapseCaptureView.prototype = {
     get statusBarItems()
     {
 	return [];
@@ -248,47 +248,47 @@ WebInspector.TimelapseRecordingView.prototype = {
 	this._messagePanel.textContent = "Click to Record.";
     },
 
-    _onRecordingWillStart: function()
+    _onCaptureWillStart: function()
     {
 	this._messagePanel.textContent = "Initializing...";
 	this._messagePanel.classList.add("message-pulse");
     },
 
-    _onRecordingDidStart: function()
+    _onCaptureDidStart: function()
     {
 	this._messagePanel.textContent = "Reloading page...";
     },
 
     _onMainFrameNavigated: function()
     {
-	if (this._model.recording)
-	    this._messagePanel.textContent = "Recording... Click again to stop.";
+	if (this._model.isCapturing)
+	    this._messagePanel.textContent = "Capturing... Click again to stop.";
     },
 
-    _onRecordingWillStop: function()
+    _onCaptureWillStop: function()
     {
 	this._messagePanel.textContent = "Working...";
     },
 
-    _onRecordingDidStop: function()
+    _onCaptureDidStop: function()
     {
 	this._messagePanel.classList.remove("message-pulse");
 
 	if (this._model.allRecords.length == 0)
-	    this._messagePanel.textContent = "Nothing was recorded. Please try again.";
+	    this._messagePanel.textContent = "Nothing was captured. Please try again.";
     },
 
     _onMessagePanelClicked: function(event)
     {
-	if (this._model.recording)
-	    this._model.stopRecording();
+	if (this._model.isCapturing)
+	    this._model.stopCapture();
 
-	if (!this._model.recording && !this._model.replaying)
-	    this._model.startRecording();
+	if (!this._model.isCapturing && !this._model.isReplaying)
+	    this._model.startCapture();
     }
 };
 
-WebInspector.TimelapseRecordingView.prototype.__proto__ = WebInspector.View.prototype;
+WebInspector.TimelapseCaptureView.prototype.__proto__ = WebInspector.View.prototype;
 
 
 /**
@@ -350,7 +350,7 @@ WebInspector.TimelapseReplayingView.prototype = {
             this.toggled = true;
         }, lockButton);
         this._model.addEventListener(eventNames.InputUnlocked, function() {
-            if (this._recording) return;
+            if (this._capture) return;
             this.title = "Input unlocked.";
             this.toggled = false;
         }, lockButton);
@@ -505,16 +505,16 @@ WebInspector.TimelapseReplayingView.prototype = {
 	if (!this._model.canReplay)
 	    return;
 
-	if (!this._model.replaying)
+	if (!this._model.isReplaying)
 	    this._model.replayToCompletion(true, false);
 
-	else if (this._model.replaying && this._model.inputPaused)
+	else if (this._model.isReplaying && this._model.inputPaused)
 	    this._model.replayToCompletion(true, false);
 
-	else if (this._model.replaying && this._model.breakpointPaused)
+	else if (this._model.isReplaying && this._model.breakpointPaused)
 	    DebuggerAgent.resume();
 
-	else if (this._model.replaying && !this._model.inputPaused)
+	else if (this._model.isReplaying && !this._model.inputPaused)
 	    this._model.pausePlayback();
     },
 

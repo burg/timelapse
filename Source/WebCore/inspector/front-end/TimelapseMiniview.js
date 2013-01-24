@@ -45,8 +45,8 @@ WebInspector.TimelapseMiniview = function()
     this._presentationModel = WebInspector.timelapsePresentationModel;
    
     var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.RecordingDidStart, this._onRecordingDidStart, this);
-    this._model.addEventListener(eventNames.RecordingDidStop, this._onRecordingDidStop, this);
+    this._model.addEventListener(eventNames.CaptureDidStart, this._onCaptureDidStart, this);
+    this._model.addEventListener(eventNames.CaptureDidStop, this._onCaptureDidStop, this);
     this._model.addEventListener(eventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
     this._model.addEventListener(eventNames.PlaybackStopped, this._onPlaybackStopped, this);
     this._model.addEventListener(eventNames.InputPaused, this._onInputPaused, this);
@@ -553,13 +553,13 @@ WebInspector.TimelapseMiniview.prototype = {
 	this._scheduleRefresh();
     },
 
-    _onRecordingDidStart: function()
+    _onCaptureDidStart: function()
     {
 	this.sliders.playback.disable();
 	this.sliders.playback.setPosition(1.0, true);
     },
 
-    _onRecordingDidStop: function()
+    _onCaptureDidStop: function()
     {
 	this.sliders.playback.enable();
     },

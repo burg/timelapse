@@ -3063,7 +3063,7 @@ button.breakpoint-radar-status-bar-item > .glyph {
     z-index: 11;
 }
 
-.timelapse-recording-message {
+.timelapse-capture-message {
     position: absolute;
     left: 0px;
     right: 0px;
@@ -3075,7 +3075,7 @@ button.breakpoint-radar-status-bar-item > .glyph {
     cursor: pointer;
 }
 
-.timelapse-recording-message:hover {
+.timelapse-capture-message:hover {
     text-decoration: underline;
     color: #a04010;
 }
@@ -3090,7 +3090,7 @@ button.breakpoint-radar-status-bar-item > .glyph {
     overflow-x: none;
 }
 
-#timelapse-recording-view .timelapse-scrollview {
+#timelapse-capture-view .timelapse-scrollview {
     position: absolute;
     height: 30px;
     left: 50px;

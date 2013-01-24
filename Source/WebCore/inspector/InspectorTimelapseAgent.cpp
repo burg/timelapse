@@ -148,25 +148,25 @@ void InspectorTimelapseAgent::setFrontend(InspectorFrontend* frontend)
 
 void InspectorTimelapseAgent::clearFrontend()
 {
-    //TODO: stop instrumenting, stop recording, etc. see InspectorTimelineAgent::clearFrontend
+    //TODO: stop instrumenting, stop capturing, etc. see InspectorTimelineAgent::clearFrontend
     m_frontend = 0;
 }
 
 void InspectorTimelapseAgent::willDispatchEvent(const Event& event, DOMWindow* window, Node* node, const Vector<EventContext>&)
 {
-    if (recording() || replaying())
+    if (capturing() || replaying())
         m_inspectedPage->determinismController()->willDispatchEvent(event, window, node, reuseMark());
 }
 
 void InspectorTimelapseAgent::didDispatchEvent()
 {
-    if (recording() || replaying())
+    if (capturing() || replaying())
         m_inspectedPage->determinismController()->didDispatchEvent();
 }
 
 void InspectorTimelapseAgent::willDispatchEventOnWindow(const Event& event, DOMWindow* window)
 {
-    if (recording() || replaying())
+    if (capturing() || replaying())
         m_inspectedPage->determinismController()->willDispatchEvent(event, window, 0, reuseMark());
 }
 
@@ -177,7 +177,7 @@ void InspectorTimelapseAgent::didDispatchEventOnWindow()
 
 void InspectorTimelapseAgent::frameNavigated(DocumentLoader* loader)
 {
-    if (!recording() && !replaying())
+    if (!capturing() && !replaying())
         return;
 
     PositionMark mark = createMark();
@@ -186,21 +186,21 @@ void InspectorTimelapseAgent::frameNavigated(DocumentLoader* loader)
 
 void InspectorTimelapseAgent::willFireTimer(int timerId, Frame* frame)
 {
-    if (!recording() && !replaying())
+    if (!capturing() && !replaying())
         return;
 
     PositionMark mark = createMark();
     m_inspectedPage->determinismController()->willFireTimer(timerId, frame, mark);
 
-    if (recording())
+    if (capturing())
         pushRecordToFrontend(TimelapseRecordFactory::createEmptyData(), TimelapseRecordType::TimerFire, mark);
 }
 
-void InspectorTimelapseAgent::recordedPageInput(DispatchableAction* action)
+void InspectorTimelapseAgent::capturedPageInput(DispatchableAction* action)
 {
-    // this instrumentation should only fire when we are actually recording.
+    // this instrumentation should only fire when we are actually capturing.
     // if it's some transient state, the caller should know not to call.
-    ASSERT(recording());
+    ASSERT(capturing());
 
     PositionMark newMark = createMark();
     action->setMark(newMark);
@@ -247,28 +247,27 @@ void InspectorTimelapseAgent::recordedPageInput(DispatchableAction* action)
     }
 }
     
-void InspectorTimelapseAgent::recordingStarted()
+void InspectorTimelapseAgent::captureStarted()
 {
     LOG(Timelapse, "-----CAPTURE START-----");
     
-    m_state.advanceTo(TimelapseAgentStateMachine::Recording);
+    m_state.advanceTo(TimelapseAgentStateMachine::Capturing);
     m_inputLocked = false;
     if (m_frontend) {
-        m_frontend->recordingWasStarted();
+        m_frontend->captureWasStarted();
         m_frontend->inputUnlocked();
     }
 
 }
 
-void InspectorTimelapseAgent::recordingFinished()
+void InspectorTimelapseAgent::captureFinished()
 {
     LOG(Timelapse, "-----CAPTURE STOP-----");
     
-    m_state.advanceTo(TimelapseAgentStateMachine::EnabledCanReplayOrRecord);
+    m_state.advanceTo(TimelapseAgentStateMachine::EnabledCanReplayOrCapture);
     
     if (m_frontend)
-        //TODO : rename?
-        m_frontend->recordingWasStopped();
+        m_frontend->captureWasStopped();
 }
 
 void InspectorTimelapseAgent::playbackStarted()
@@ -306,7 +305,7 @@ void InspectorTimelapseAgent::playbackFinished()
 {
     LOG(Timelapse, "-----REPLAY STOP-----");
     
-    m_state.advanceTo(TimelapseAgentStateMachine::EnabledCanReplayOrRecord);
+    m_state.advanceTo(TimelapseAgentStateMachine::EnabledCanReplayOrCapture);
     if (m_frontend)
         m_frontend->playbackFinished();
 }
@@ -339,7 +338,7 @@ PositionMark InspectorTimelapseAgent::reuseMark() const
 
 void InspectorTimelapseAgent::pushRecordToFrontend(PassRefPtr<InspectorObject> data, const String& type, const PositionMark& mark)
 {
-    ASSERT(recording());
+    ASSERT(capturing());
 
     if (!m_frontend)
         return;
@@ -352,7 +351,7 @@ void InspectorTimelapseAgent::pushRecordToFrontend(PassRefPtr<InspectorObject> d
         .setType(type)
         .setMark(checkedMark.release())
         .setData(data);
-    m_frontend->recordedAction(checkedRecord.release());
+    m_frontend->capturedAction(checkedRecord.release());
 }
 
 void InspectorTimelapseAgent::stop()
@@ -360,8 +359,8 @@ void InspectorTimelapseAgent::stop()
   ErrorString dummy;
   bool dummy2;
 
-  if (recording())
-      stopRecording(&dummy, &dummy2);
+  if (capturing())
+      stopCapture(&dummy, &dummy2);
   else if (replaying())
       stopPlayback(&dummy, true);
 }
@@ -376,7 +375,7 @@ void InspectorTimelapseAgent::enable(ErrorString*)
     if (m_state.enabled())
         return;
     
-    m_state.advanceTo(TimelapseAgentStateMachine::EnabledCanRecord);
+    m_state.advanceTo(TimelapseAgentStateMachine::EnabledCanCapture);
     m_inspectorState->setBoolean(TimelapsePersistentAgentState::timelapseEnabled, true);
     m_instrumentingAgents->setInspectorTimelapseAgent(this);
     
@@ -397,16 +396,16 @@ void InspectorTimelapseAgent::disable(ErrorString*)
         m_frontend->timelapseWasDisabled();
 }
 
-void InspectorTimelapseAgent::startRecording(ErrorString*)
+void InspectorTimelapseAgent::startCapture(ErrorString*)
 {   
-    m_state.advanceTo(TimelapseAgentStateMachine::WaitingForRecord);
+    m_state.advanceTo(TimelapseAgentStateMachine::WaitingForCapture);
     m_nextMarkIndex = 0;
 
     PositionMark mark = createMark();
     m_inspectedPage->determinismController()->beginCapturing(mark);
 }
 
-void InspectorTimelapseAgent::stopRecording(ErrorString*, bool* wasAllowed)
+void InspectorTimelapseAgent::stopCapture(ErrorString*, bool* wasAllowed)
 {
     PositionMark mark = createMark();
     *wasAllowed = m_inspectedPage->determinismController()->endCapturing(mark);

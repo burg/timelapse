@@ -45,21 +45,21 @@ public:
 
     enum State {
         Disabled,
-        EnabledCanRecord,
-        EnabledCanReplayOrRecord,
-        WaitingForRecord,
+        EnabledCanCapture,
+        EnabledCanReplayOrCapture,
+        WaitingForCapture,
         WaitingForReplay,
-        Recording,
+        Capturing,
         Replaying,
         ReplayPaused
     };
 
     bool disabled() const;
     bool enabled() const;
-    bool canRecord() const;
+    bool canCapture() const;
     bool canReplay() const;
     bool replayPaused() const;
-    bool recording() const;
+    bool capturing() const;
     bool replaying() const;
 
     bool inState(State state) const { return m_state == state; }

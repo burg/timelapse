@@ -8,7 +8,7 @@ WebInspector.TimelapseBreakpointTracker = function()
     this._exploredIntervals = new WebInspector.TimelapseIntervalManager();
 
     var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.RecordingWillStart, this._reset, this);
+    this._model.addEventListener(eventNames.CaptureWillStart, this._reset, this);
     this._model.addEventListener(eventNames.PlaybackWillStart, this._playbackWillStart, this);
     this._model.addEventListener(eventNames.InputPaused, this._endPendingInterval, this);
     this._model.addEventListener(eventNames.PlaybackStopped, this._endPendingInterval, this);

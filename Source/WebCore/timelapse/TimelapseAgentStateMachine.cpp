@@ -42,11 +42,11 @@ namespace WebCore {
 
 namespace TimelapseAgentStateNames {
 static const char* Disabled = "Disabled";
-static const char* EnabledCanRecord = "EnabledCanRecord";
-static const char* EnabledCanReplayOrRecord =  "EnabledCanReplayOrRecord";
-static const char* WaitingForRecord = "WaitingForRecord";
+static const char* EnabledCanCapture = "EnabledCanCapture";
+static const char* EnabledCanReplayOrCapture =  "EnabledCanReplayOrCapture";
+static const char* WaitingForCapture = "WaitingForCapture";
 static const char* WaitingForReplay = "WaitingForReplay";
-static const char* Recording = "Recording";
+static const char* Capturing = "Capturing";
 static const char* Replaying = "Replaying";
 static const char* ReplayPaused = "ReplayPaused";
 }
@@ -57,20 +57,20 @@ const char* TimelapseAgentStateMachine::stateNameFor(TimelapseAgentStateMachine:
     case TimelapseAgentStateMachine::Disabled:
         return TimelapseAgentStateNames::Disabled;
 
-    case TimelapseAgentStateMachine::EnabledCanRecord:
-        return TimelapseAgentStateNames::EnabledCanRecord;
+    case TimelapseAgentStateMachine::EnabledCanCapture:
+        return TimelapseAgentStateNames::EnabledCanCapture;
 
-    case TimelapseAgentStateMachine::EnabledCanReplayOrRecord:
-        return TimelapseAgentStateNames::EnabledCanReplayOrRecord;
+    case TimelapseAgentStateMachine::EnabledCanReplayOrCapture:
+        return TimelapseAgentStateNames::EnabledCanReplayOrCapture;
 
-    case TimelapseAgentStateMachine::WaitingForRecord:
-        return TimelapseAgentStateNames::WaitingForRecord;
+    case TimelapseAgentStateMachine::WaitingForCapture:
+        return TimelapseAgentStateNames::WaitingForCapture;
 
     case TimelapseAgentStateMachine::WaitingForReplay:
         return TimelapseAgentStateNames::WaitingForReplay;
 
-    case TimelapseAgentStateMachine::Recording:
-        return TimelapseAgentStateNames::Recording;
+    case TimelapseAgentStateMachine::Capturing:
+        return TimelapseAgentStateNames::Capturing;
 
     case TimelapseAgentStateMachine::Replaying:
         return TimelapseAgentStateNames::Replaying;
@@ -95,14 +95,14 @@ bool TimelapseAgentStateMachine::enabled() const
     return !inState(Disabled);
 }
 
-bool TimelapseAgentStateMachine::canRecord() const
+bool TimelapseAgentStateMachine::canCapture() const
 {
-    return inState(EnabledCanRecord) || inState(EnabledCanReplayOrRecord);
+    return inState(EnabledCanCapture) || inState(EnabledCanReplayOrCapture);
 }
 
 bool TimelapseAgentStateMachine::canReplay() const
 {
-    return inState(EnabledCanReplayOrRecord);
+    return inState(EnabledCanReplayOrCapture);
 }
 
 bool TimelapseAgentStateMachine::replayPaused() const
@@ -110,9 +110,9 @@ bool TimelapseAgentStateMachine::replayPaused() const
     return inState(ReplayPaused);
 }
 
-bool TimelapseAgentStateMachine::recording() const
+bool TimelapseAgentStateMachine::capturing() const
 {
-    return inState(Recording);
+    return inState(Capturing);
 }
 
 bool TimelapseAgentStateMachine::replaying() const
@@ -124,37 +124,37 @@ void TimelapseAgentStateMachine::advanceTo(State newState)
 {
     switch (newState) {
     case Disabled:
-        if (inState(EnabledCanRecord) || inState(EnabledCanReplayOrRecord))
+        if (inState(EnabledCanCapture) || inState(EnabledCanReplayOrCapture))
             goto commit_transition;
 
         break;
 
-    case EnabledCanRecord:
+    case EnabledCanCapture:
         if (inState(Disabled))
             goto commit_transition;
 
         break;
 
-    case EnabledCanReplayOrRecord:
-        if (inState(Recording) || inState(Replaying) || inState(ReplayPaused) || inState(EnabledCanReplayOrRecord))
+    case EnabledCanReplayOrCapture:
+        if (inState(Capturing) || inState(Replaying) || inState(ReplayPaused) || inState(EnabledCanReplayOrCapture))
             goto commit_transition;
 
         break;
 
-    case WaitingForRecord:
-        if (inState(EnabledCanRecord) || inState(EnabledCanReplayOrRecord))
+    case WaitingForCapture:
+        if (inState(EnabledCanCapture) || inState(EnabledCanReplayOrCapture))
             goto commit_transition;
         
         break;
     
     case WaitingForReplay:
-        if (inState(EnabledCanReplayOrRecord) || inState(ReplayPaused))
+        if (inState(EnabledCanReplayOrCapture) || inState(ReplayPaused))
             goto commit_transition;
         
         break;
         
-    case Recording:
-        if (inState(WaitingForRecord))
+    case Capturing:
+        if (inState(WaitingForCapture))
             goto commit_transition;
 
         break;

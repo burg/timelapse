@@ -41,8 +41,8 @@ WebInspector.TimelapsePresentationModel = function()
     this._providers = [];
 
     var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.RecordingDidStart, this._recordingDidStart, this);
-    this._model.addEventListener(eventNames.RecordingDidStop, this._recordingDidStop, this);
+    this._model.addEventListener(eventNames.CaptureDidStart, this._captureDidStart, this);
+    this._model.addEventListener(eventNames.CaptureDidStop, this._captureDidStop, this);
     this._model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
     this._model.addEventListener(eventNames.BreakpointScanStarted, this._breakpointScanStarted, this);
 
@@ -84,7 +84,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
     },
 
     // Private API (callbacks)
-    _recordingDidStart: function()
+    _captureDidStart: function()
     {
 	this.reset();
 
@@ -106,7 +106,7 @@ WebInspector.TimelapsePresentationModel.prototype = {
 			));
     },
 
-    _recordingDidStop: function()
+    _captureDidStop: function()
     {
 	this.addProvider(new WebInspector.ReplaySavepointProvider());
 
@@ -391,7 +391,7 @@ WebInspector.ReplaySavepointProvider.prototype = {
 
     _debuggerStepOver: function()
     {
-	if (!this._model.replaying)
+	if (!this._model.isReplaying)
 	    return;
 
 	var stepOver = WebInspector.debuggerModel.stepOver.bind(WebInspector.debuggerModel);
@@ -400,7 +400,7 @@ WebInspector.ReplaySavepointProvider.prototype = {
 
     _debuggerStepInto: function()
     {
-	if (!this._model.replaying)
+	if (!this._model.isReplaying)
 	    return;
 
 	var stepInto = WebInspector.debuggerModel.stepInto.bind(WebInspector.debuggerModel);
@@ -409,7 +409,7 @@ WebInspector.ReplaySavepointProvider.prototype = {
 
     _debuggerStepOut: function()
     {
-	if (!this._model.replaying)
+	if (!this._model.isReplaying)
 	    return;
 
 	var stepOut = WebInspector.debuggerModel.stepOut.bind(WebInspector.debuggerModel);

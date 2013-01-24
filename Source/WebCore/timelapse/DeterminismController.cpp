@@ -204,7 +204,7 @@ void DeterminismController::beginCapturing(const PositionMark& mark)
     m_determinismLog = DeterminismLog::createLogForCapture();
     changeProxyMode(TimelapseProxy::Capturing);
 
-    InspectorInstrumentation::recordingStarted(m_page);
+    InspectorInstrumentation::captureStarted(m_page);
     
     // create begin sentinel
     captureAction(new BeginSentinel(m_domEventDispatchCount, mark));
@@ -260,7 +260,7 @@ bool DeterminismController::endCapturing(const PositionMark& mark)
     
     //now replay is possible, but requires a reset.
     m_status = PlaybackUninitialized;
-    InspectorInstrumentation::recordingFinished(m_page);
+    InspectorInstrumentation::captureFinished(m_page);
     return true;
 }
 
@@ -460,7 +460,7 @@ void DeterminismController::capturePageInput(DispatchableAction* action)
     // dispatched or queued before this action was captured.
     m_page->mainFrame()->document()->eventQueue()->flush();
     captureAction(action);
-    InspectorInstrumentation::recordedPageInput(m_page, action);
+    InspectorInstrumentation::capturedPageInput(m_page, action);
 }
 
 bool DeterminismController::playbackError(bool isFatal, const String& errorMessage)

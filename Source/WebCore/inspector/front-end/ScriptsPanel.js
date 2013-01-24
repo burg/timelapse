@@ -411,7 +411,7 @@ WebInspector.ScriptsPanel.prototype = {
         var sourceFrame = this._showFile(uiSourceCode);
         if (typeof lineNumber === "number")
             sourceFrame.highlightLine(lineNumber);
-	if (!WebInspector.timelapseModel.replaying)
+	if (!WebInspector.timelapseModel.isReplaying)
             sourceFrame.focus();
     },
 
@@ -521,7 +521,7 @@ WebInspector.ScriptsPanel.prototype = {
         this._editorContainer.addUISourceCode(uiLocation.uiSourceCode);
         var sourceFrame = this._showFile(uiLocation.uiSourceCode);
         sourceFrame.revealLine(uiLocation.lineNumber);
-	if (!WebInspector.timelapseModel.replaying)
+	if (!WebInspector.timelapseModel.isReplaying)
             sourceFrame.focus();
     },
 
@@ -556,7 +556,7 @@ WebInspector.ScriptsPanel.prototype = {
         var uiSourceCode = /** @type {WebInspector.UISourceCode} */ event.data;
         var sourceFrame = this._showFile(uiSourceCode);
         this._navigatorController.hideNavigatorOverlay();
-	if (!WebInspector.timelapseModel.replaying)
+	if (!WebInspector.timelapseModel.isReplaying)
             sourceFrame.focus();
         WebInspector.searchController.resetSearch();
     },
@@ -566,7 +566,7 @@ WebInspector.ScriptsPanel.prototype = {
         var uiSourceCode = /** @type {WebInspector.UISourceCode} */ event.data.uiSourceCode;
         var sourceFrame = this._showFile(uiSourceCode);
         this._navigatorController.hideNavigatorOverlay();
-        if (sourceFrame && event.data.focusSource && !WebInspector.timelapseModel.replaying)
+        if (sourceFrame && event.data.focusSource && !WebInspector.timelapseModel.isReplaying)
             sourceFrame.focus();
     },
 

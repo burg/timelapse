@@ -40,7 +40,7 @@ WebInspector.TimelapseModel = function()
     this._records = [];
 
     //enablement defaults to preference
-    this._recording = false;
+    this._capturing = false;
     this._replaying = false;
     this._inputPaused = false;
     this._breakpointPaused = false;
@@ -64,10 +64,10 @@ WebInspector.TimelapseModel.Events = {
     StatusChanged: "TimelapseStatusChanged",
 
     // These events are associated with capture.
-    RecordingWillStart: "TimelapseRecordingWillStart",
-    RecordingDidStart: "TimelapseRecordingDidStart",
-    RecordingWillStop: "TimelapseRecordingWillStop",
-    RecordingDidStop: "TimelapseRecordingDidStop",
+    CaptureWillStart: "TimelapseCaptureWillStart",
+    CaptureDidStart: "TimelapseCaptureDidStart",
+    CaptureWillStop: "TimelapseCaptureWillStop",
+    CaptureDidStop: "TimelapseCaptureDidStop",
     RecordAdded: "TimelapseRecordAdded",
 
     // These events are associated with playback.
@@ -88,7 +88,7 @@ WebInspector.TimelapseModel.Events = {
 };
 
 WebInspector.TimelapseModel.prototype = {
-    /* TimelapseModel represents the state of execution and recording
+    /* TimelapseModel represents the state of execution and capture
      * or replay. Clients call methods of TimelapseModel to issue
      * commands that affect record or replay, or to query its state.
      * 
@@ -113,36 +113,36 @@ WebInspector.TimelapseModel.prototype = {
 	return TimelapseAgent.enable(cb);
     },
 
-    startRecording: function()
+    startCapture: function()
     {
 	delete this._targetBreakpointIndex;
 	this._stopBreakpointScan();
 
 	this._changeStatus("Starting capture...");
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingWillStart);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.CaptureWillStart);
 
 	this._suppressBreakpoints();
 
 	if (WebInspector.debuggerModel.isPaused()) {
-	    this._resumeCallback = this.startRecording.bind(this);
+	    this._resumeCallback = this.startCapture.bind(this);
 	    DebuggerAgent.resume();
 	    return;
 	}
 
 	if (this._replaying) {
-	    this._enqueueAction(TimelapseAgent.startRecording);
+	    this._enqueueAction(TimelapseAgent.startCapture);
 	    return this.stopPlayback(true);
 	}
 
-	TimelapseAgent.startRecording();
+	TimelapseAgent.startCapture();
     },
 
-    stopRecording: function()
+    stopCapture: function()
     {
-	var wasAllowed = TimelapseAgent.stopRecording();
+	var wasAllowed = TimelapseAgent.stopCapture();
 	if (wasAllowed) {
 	    this._changeStatus("Stopping capture...");
-	    this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingWillStop);
+	    this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.CaptureWillStop);
 	}
 
 	return wasAllowed;
@@ -325,12 +325,12 @@ WebInspector.TimelapseModel.prototype = {
     },
 
     // Public query API
-    get recording()
+    get isCapturing()
     {
-	return this._recording;
+	return this._capturing;
     },
 
-    get replaying()
+    get isReplaying()
     {
 	return this._replaying;
     },
@@ -445,16 +445,16 @@ WebInspector.TimelapseModel.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.Disabled);
     },
     
-    _recordingDidStart: function()
+    _captureDidStart: function()
     {
-    	this._recording = true;
-	this._changeStatus("Recording...");
+    	this._capturing = true;
+	this._changeStatus("Capturing...");
 	this._records = [];
 	this._suppressBreakpoints();
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingDidStart);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.CaptureDidStart);
     },
 
-    _recordingDidStop: function()
+    _captureDidStop: function()
     {
 	var numRecords = this._records.length;
 
@@ -465,13 +465,13 @@ WebInspector.TimelapseModel.prototype = {
 	    this._currentMarkIndex = this._records[numRecords-1].mark.index;
 	}
 
-    	this._recording = false;
+    	this._capturing = false;
 	this._changeStatus("Ready");
 	this._unsuppressBreakpoints();
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingDidStop);
+	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.CaptureDidStop);
     },
 
-    _recordedAction: function(record)
+    _capturedAction: function(record)
     {
 	this._records.push(record);
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordAdded, record);
@@ -534,7 +534,7 @@ WebInspector.TimelapseModel.prototype = {
     {
     	this._inputLocked = false;
 
-        if (!this.recording)
+        if (!this.capture)
             this._changeStatus("Ready");
 
         this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.InputUnlocked);
@@ -658,19 +658,19 @@ WebInspector.TimelapseDispatcher.prototype = {
 	this._model._timelapseDisabled();
     },
 
-    recordingWasStarted: function()
+    captureWasStarted: function()
     {
-	this._model._recordingDidStart();
+	this._model._captureDidStart();
     },
 
-    recordingWasStopped: function()
+    captureWasStopped: function()
     {
-	this._model._recordingDidStop();
+	this._model._captureDidStop();
     },
 
-    recordedAction: function(record)
+    capturedAction: function(record)
     {
-	this._model._recordedAction(record);
+	this._model._capturedAction(record);
     },
 
     playbackWasStarted: function()

@@ -263,8 +263,8 @@ WebInspector.TimelapseInputDataProvider.InputStyles = (function()
     styles[types.TimerFire] = { title: WebInspector.UIString("Timer Fired"), group: "timer" };
 
     styles[types.FrameNavigated] = { title: WebInspector.UIString("Started Page Load"), group: "system" };
-    styles[types.CaptureBegin] = { title: WebInspector.UIString("Recording Began"), group: "system" };
-    styles[types.CaptureEnd] = { title: WebInspector.UIString("Recording Ended"), group: "system" };
+    styles[types.CaptureBegin] = { title: WebInspector.UIString("Capturing Began"), group: "system" };
+    styles[types.CaptureEnd] = { title: WebInspector.UIString("Capturing Ended"), group: "system" };
     styles[types.BreakpointHit] = { title: WebInspector.UIString("Hit Breakpoint"), group: "breakpoint" };
 
     return styles;

@@ -2388,7 +2388,7 @@
     {
         "domain": "Timelapse",
 	"hidden": true,
-        "description": "Timelapse is the frontend for execution trace recording controls, trace queries, and controlling deterministic record/replay. When Timelapse is turned on, it records nondeterminism and execution traces. In replay, it reruns the page to a specific place and provides information about past instants of the program.", 
+        "description": "Timelapse is the frontend for deterministic record/replay. In capture mode, Timelapse captures nondeterminism into a log (aka recording). In replaying mode, Timelapse replicates/replays the recorded execution in various possible modes.",
         "types": [
 	    {
 	        "id": "MarkIndex",
@@ -2430,12 +2430,12 @@
                 ]
             },
             {
-                "name": "startRecording",
-		"description": "Starts recording of a program execution."
+                "name": "startCapture",
+		"description": "Starts capture of a program execution."
             },
             {
-                "name": "stopRecording",
-		"description": "Stops recording of a program execution.",
+                "name": "stopCapture",
+		"description": "Stops capture of a program execution.",
                 "returns": [
                     { "name": "wasAllowed", "type": "boolean" }
                 ]
@@ -2483,16 +2483,16 @@
                 "name": "timelapseWasDisabled"
             },
             {
-                "name": "recordingWasStarted",
-                "description": "Fired when recording has started."
+                "name": "captureWasStarted",
+                "description": "Fired when capture has started."
             },
             {
-                "name": "recordingWasStopped",
-                "description": "Fired when recording has stopped."
+                "name": "captureWasStopped",
+                "description": "Fired when capture has stopped."
             },
 	    {
-	        "name": "recordedAction",
-	        "description": "A new action was recorded.",
+	        "name": "capturedAction",
+	        "description": "A new action was captured.",
 		"parameters": [
 		    { "name": "record", "$ref": "TimelapseRecord", "description": "The record describing the captured action." }
 		]
