@@ -77,14 +77,24 @@ public:
     , m_dispatchCount(dispatchCount)
     , m_domEventQuota(-1)
     , m_mark(mark)
-    , m_sealed(false) {}
+    , m_sealed(false)
+    , m_dispatchCounted(true) {}
 
     DispatchableAction(ReplayableType type)
     : ReplayableAction(type)
     , m_dispatchCount(-1)
     , m_domEventQuota(-1)
     , m_mark(PositionMark())
-    , m_sealed(false) {}
+    , m_sealed(false)
+    , m_dispatchCounted(true) {}
+
+    DispatchableAction(ReplayableType type, bool dispatchCounted)
+    : ReplayableAction(type)
+    , m_dispatchCount(0)
+    , m_domEventQuota(0)
+    , m_mark(PositionMark())
+    , m_sealed(true)
+    , m_dispatchCounted(dispatchCounted) {}
 
     virtual ~DispatchableAction() {};
 
@@ -103,13 +113,17 @@ public:
     // only be set when the event is "unsealed".
 
     void setDispatchCount(unsigned count) { ASSERT(!m_sealed); m_dispatchCount = count; }
-    int dispatchCount() const { return m_dispatchCount; }
+    virtual int dispatchCount() const { return m_dispatchCount; }
 
     void setMark(const PositionMark& mark) { ASSERT(!m_sealed); m_mark = mark; }
     PositionMark mark() const { return m_mark; }
     
     void setDOMEventQuota(unsigned quota) { ASSERT(!m_sealed); m_domEventQuota = quota; }
     int DOMEventQuota() const { return m_domEventQuota; }
+
+    // only actions added through DeterminismController::captureAction can be dispatch-
+    // counted. DeterminismController will ignore the dispatch count of other actions.
+    bool dispatchCounted() const { return m_dispatchCounted; }
 
     void seal()
     {
@@ -131,6 +145,7 @@ private:
     //instead of some implementation-specific detail like event dispatched count.
     PositionMark m_mark;
     bool m_sealed;
+    bool m_dispatchCounted;
 };
 
 } //namespace WebCore
