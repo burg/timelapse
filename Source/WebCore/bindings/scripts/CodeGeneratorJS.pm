@@ -1794,11 +1794,13 @@ sub GenerateImplementation
                 if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"}) {
                     $implIncludes{"PlaybackError.h"} = 1;
                     $implIncludes{"<wtf/timelapse/DeterminismLog.h>"} = 1;
+                    push(@implContent, "#if ENABLE(TIMELAPSE)\n");
                     push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
                     push(@implContent, "    RefPtr<DeterminismLog> log = globalObject->determinismLog();\n");
                     push(@implContent, "    if (log && log->isActive() && log->capturing()) {\n");
                     push(@implContent, "        log->append(new PlaybackError(\"Replay is not implemented for ${className}.$name\"));\n");
                     push(@implContent, "    }\n");
+                    push(@implContent, "#endif\n");
                 }
 
                 if ($attribute->signature->extendedAttributes->{"Custom"} || $attribute->signature->extendedAttributes->{"JSCustom"} || $attribute->signature->extendedAttributes->{"CustomGetter"} || $attribute->signature->extendedAttributes->{"JSCustomGetter"}) {
