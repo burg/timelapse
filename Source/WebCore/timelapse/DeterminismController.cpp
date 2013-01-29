@@ -479,8 +479,7 @@ bool DeterminismController::playbackError(bool isFatal, const String& errorMessa
     }
     
     if (m_errorStrategy == ContinueOnError) {
-        LOG(Timelapse, "%-30s Reporting and continuing past non-fatal error.", "[DeterminismController]");
-        InspectorInstrumentation::playbackError(m_page, isFatal, errorMessage);
+        LOG(Timelapse, "%-30s Continuing past non-fatal error.", "[DeterminismController]");
     } else {
         LOG(Timelapse, "%-30s Reporting and pausing because of non-fatal error.", "[DeterminismController]");
         pauseReplay(m_currentMark.index());
