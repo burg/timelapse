@@ -193,8 +193,7 @@ WebInspector.TimelapseControllerView.prototype = {
     {
         // if nothing was recorded, don't even show the replay view.
         // the capture view knows to change its message in this situation.
-        // TODO: remove allRecords
-        if (this._model.allRecords.length == 0)
+        if (this._model.activeRecording.allRecords.length == 0)
             return;
 
         this._showReplayView();
@@ -277,7 +276,7 @@ WebInspector.TimelapseCaptureView.prototype = {
     {
     this._messagePanel.classList.remove("message-pulse");
 
-    if (this._model.allRecords.length == 0)
+    if (this._model.activeRecording.allRecords.length == 0)
         this._messagePanel.textContent = "Nothing was captured. Please try again.";
     },
 

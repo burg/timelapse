@@ -62,7 +62,7 @@ WebInspector.TimelapseOverview = function(model, recording)
 
     this._recording.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
 
-    this._previewProvider = new WebInspector.OverviewPreviewProvider();
+    this._previewProvider = new WebInspector.OverviewPreviewProvider(this._recording);
     this._recording.addProvider(this._previewProvider);
 
     WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._onBreakpointRecordsChanged, this);
@@ -325,7 +325,7 @@ WebInspector.TimelapseOverview.prototype = {
     _updateSliderPositions: function()
     {
 	/* reposition the sliders within the overview. */
-	var allRecords = this._model.allRecords;
+	var allRecords = this._recording.allRecords;
 
 	/* playback cursor */
 	var markIdx = this._model.currentMarkIndex;
@@ -767,7 +767,7 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onCaptureDidStop: function()
     {
-	if (this._model.allRecords.length == 0)
+	if (this._recording.allRecords.length == 0)
 	    return;
 
 	this.sliders.playback.setPosition(1.0, true);
@@ -865,7 +865,7 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPlaybackDidStart: function()
     {
-	var allRecords = this._model.allRecords;
+	var allRecords = this._recording.allRecords;
 	var startRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
 	var finishRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
 	var currentRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex)];
@@ -899,7 +899,7 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onInputPaused: function()
     {
-	var allRecords = this._model.allRecords;
+	var allRecords = this._recording.allRecords;
 	var recordIndex = this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex);
 	
 	if (recordIndex != -1) {
@@ -933,7 +933,7 @@ WebInspector.TimelapseOverview.prototype = {
 	if (recordIndex == -1)
 	    return;
 
-	var allRecords = this._model.allRecords;
+	var allRecords = this._recording.allRecords;
 	var percent = 0.0;
 	if (markIndex > 0)
 	    percent = this.calculator.computeOverviewPercentage(allRecords[recordIndex].mark.timestamp);

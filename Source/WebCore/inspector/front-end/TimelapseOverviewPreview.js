@@ -33,9 +33,10 @@
  * @constructor
  * @extends {WebInspector.DataProvider}
  */
-WebInspector.OverviewPreviewProvider = function()
+WebInspector.OverviewPreviewProvider = function(recording)
 {
-    WebInspector.DataProvider.call(this, "preview", WebInspector.DataProvider.Types.OverviewPreview);
+    WebInspector.DataProvider.call(this, recording, "preview",
+                                   WebInspector.DataProvider.Types.OverviewPreview);
     this._views = [];
     this._views.push(new WebInspector.OverviewPreviewViews.DefaultView());
 };

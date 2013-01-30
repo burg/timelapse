@@ -37,22 +37,24 @@ WebInspector.TimelapseRecording = function(model)
 {
     WebInspector.Object.call(this);
     this._model = model;
-    this.calculator = new WebInspector.TimelapseCalculator();
+    this.calculator = new WebInspector.TimelapseCalculator(this);
     this._providers = [];
+    this._isCapturing = false;
+    //this._records = [];
 
     var eventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(eventNames.CaptureDidStart, this._captureDidStart, this);
     this._model.addEventListener(eventNames.CaptureDidStop, this._captureDidStop, this);
-    this._model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
     this._model.addEventListener(eventNames.BreakpointScanStarted, this._breakpointScanStarted, this);
 
     this.reset();
 };
 
 WebInspector.TimelapseRecording.Events = {
-    ProviderAdded: "TimelapseProviderAdded",
+    ProviderAdded:  "TimelapseProviderAdded",
+    RecordAdded:    "TimelapseRecordAdded",
     // TODO: the following events are details of specific data providers.
-    InputSelected: "TimelapseInputSelected",
+    InputSelected:  "TimelapseInputSelected",
     PreviewStarted: "TimelapsePreviewStarted",
     PreviewStopped: "TimelapsePreviewStopped",
     PreviewChanged: "TimelapsePreviewChanged",
@@ -65,9 +67,10 @@ WebInspector.TimelapseRecording.prototype = {
 	return (providers.length) ? providers.pop() : false;
     },
 
-    // TODO: most of this state will be moved to providers or timeline widgets
+    // TODO: remove; recording should not be reused across captures
     reset: function() 
     {
+    this._records = [];
 	this.calculator.reset();
 
 	var inputProviders = this.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
@@ -87,19 +90,23 @@ WebInspector.TimelapseRecording.prototype = {
     _captureDidStart: function()
     {
 	this.reset();
+    this._isCapturing = true;
 
 	var providerTypes = WebInspector.DataProvider.Types;
 	this.addProvider(new WebInspector.TimelapseInputDataProvider(
+                 this,
 			     "userinput",
 			     WebInspector.UIString("User"),
 			     WebInspector.Color.fromRGB(20,170,70)
 			));
 	this.addProvider(new WebInspector.TimelapseInputDataProvider(
+                 this,
 			     "network",
 			     WebInspector.UIString("Network"),
 			     WebInspector.Color.fromRGB(200,150,0)
 			));
 	this.addProvider(new WebInspector.TimelapseInputDataProvider(
+                 this,
 			     "timer",
 			     WebInspector.UIString("Timer"),
 			     WebInspector.Color.fromRGB(200,30,30)
@@ -108,15 +115,10 @@ WebInspector.TimelapseRecording.prototype = {
 
     _captureDidStop: function()
     {
-	this.addProvider(new WebInspector.ReplaySavepointProvider());
+    this._isCapturing = false;
+	this.addProvider(new WebInspector.ReplaySavepointProvider(this));
 
 	this.calculator.setZoomInterval(0.0, 1.0);
-    },
-
-    _recordAdded: function(event)
-    {
-	var record = event.data;
-	this.calculator.updateBoundaries(record);
     },
 
     _breakpointScanStarted: function()
@@ -127,6 +129,7 @@ WebInspector.TimelapseRecording.prototype = {
 	    return;
 
 	var breakpointProvider = new WebInspector.TimelapseBreakpointDataProvider(
+        this,
 	    WebInspector.UIString("Breakpoint"),
 	    WebInspector.Color.fromRGB(10,55,230)
 	);
@@ -192,6 +195,16 @@ WebInspector.TimelapseRecording.prototype = {
 	}
     },
 
+    get isCapturing()
+    {
+        return this._isCapturing;
+    },
+
+    get allRecords()
+    {
+    return this._records;
+    },
+
     // TODO: Preview state should live on the specific DataProvider which is being previewed.
     get previewModeActive()
     {
@@ -244,6 +257,15 @@ WebInspector.TimelapseRecording.prototype = {
 
 	this._model.scanBreakpointsInRegion(startIndex, endIndex);
     },
+    
+    // Called by WebInspector.TimelapseDispatcher
+    _capturedAction: function(record)
+    {
+    console.assert(this.isCapturing);
+	this._records.push(record);
+  	this.calculator.updateBoundaries(record);
+	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.RecordAdded, record);
+    },
 };
 
 WebInspector.TimelapseRecording.prototype.__proto__ = WebInspector.Object.prototype;
@@ -251,9 +273,9 @@ WebInspector.TimelapseRecording.prototype.__proto__ = WebInspector.Object.protot
 /**
  * @constructor
  */
-WebInspector.ReplaySavepointProvider = function()
+WebInspector.ReplaySavepointProvider = function(recording)
 {
-    WebInspector.DataProvider.call(this, "savepoints",
+    WebInspector.DataProvider.call(this, recording, "savepoints",
 				   WebInspector.DataProvider.Types.ReplaySavepoint);
 
     this._model = WebInspector.timelapseModel;
@@ -462,8 +484,9 @@ WebInspector.ReplaySavepoint.prototype = {
 /**
  * @constructor
  */
-WebInspector.TimelapseCalculator = function()
+WebInspector.TimelapseCalculator = function(recording)
 {
+    this._recording = recording;
     WebInspector.Object.call(this);
 };
 
@@ -580,7 +603,7 @@ WebInspector.TimelapseCalculator.prototype = {
 	    return Math.abs(ts - record.mark.timestamp);
 	}
 
-	var records = WebInspector.timelapseModel.allRecords;
+	var records = this._recording.allRecords;
 	var idx = records.nearestBinaryIndexOf(timestamp, timestampAndRecordComparator, timeDistanceFunction);
 	return records[idx].mark.index;
     },

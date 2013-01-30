@@ -33,16 +33,22 @@
  * @constructor
  * @extends {WebInspector.Object}
  */
-WebInspector.DataProvider = function(name, type)
+WebInspector.DataProvider = function(recording, name, type)
 {
     this._name = name;
     this._type = type;
     this._enabled = true;
+    this._recording = recording;
 
     WebInspector.Object.call(this);
 };
 
 WebInspector.DataProvider.prototype = {
+    get recording()
+    {
+        return this._recording;
+    },
+
     get name()
     {
         return this._name;
@@ -128,9 +134,9 @@ WebInspector.DataProvider.Events = {
     AddedInput: "AddedInput",
 };
 
-WebInspector.TimelapseInputDataProvider = function(name, displayName, color)
+WebInspector.TimelapseInputDataProvider = function(recording, name, displayName, color)
 {
-    WebInspector.DataProvider.call(this, name,
+    WebInspector.DataProvider.call(this, recording, name,
 				   WebInspector.DataProvider.Types.TimelapseInput);
 
     this._displayName = displayName;
@@ -139,9 +145,8 @@ WebInspector.TimelapseInputDataProvider = function(name, displayName, color)
     this._resourceUrlById = {};
     this._selectedIndices = [];
 
-    var model = WebInspector.timelapseModel;
-    var eventNames = WebInspector.TimelapseModel.Events;
-    model.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
+    var eventNames = WebInspector.TimelapseRecording.Events;
+    recording.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
 };
 
 WebInspector.TimelapseInputDataProvider.prototype = {
@@ -337,9 +342,9 @@ WebInspector.TimelapseInputDataProvider.InputPreview = (function(){
     };
 })();
 
-WebInspector.TimelapseBreakpointDataProvider = function(displayName, color)
+WebInspector.TimelapseBreakpointDataProvider = function(recording, displayName, color)
 {
-    WebInspector.DataProvider.call(this, "breakpoint",
+    WebInspector.DataProvider.call(this, recording, "breakpoint",
 				   WebInspector.DataProvider.Types.BreakpointHits);
 
     this._displayName = displayName;

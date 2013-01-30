@@ -37,7 +37,6 @@ WebInspector.TimelapseModel = function()
 {
     WebInspector.Object.call(this);
     this._dispatcher = new WebInspector.TimelapseDispatcher(this);
-    this._records = [];
 
     //enablement defaults to preference
     this._capturing = false;
@@ -69,7 +68,6 @@ WebInspector.TimelapseModel.Events = {
     CaptureDidStart: "TimelapseCaptureDidStart",
     CaptureWillStop: "TimelapseCaptureWillStop",
     CaptureDidStop: "TimelapseCaptureDidStop",
-    RecordAdded: "TimelapseRecordAdded",
 
     // These events are associated with playback.
     PlaybackWillStart: "TimelapsePlaybackWillStart",
@@ -169,11 +167,13 @@ WebInspector.TimelapseModel.prototype = {
 	    return;
 	}
 
-	// Workaround: attempting to replay to the first record replays through entire recording (see Issue #17)
-	// if (markIndex == this._records[0].mark.index)
-	//     markIndex = this._records[1].mark.index;
+    var allRecords = this.activeRecording.allRecords;
 
-	this._replayStartIndex = this._records[0].mark.index;
+	// Workaround: attempting to replay to the first record replays through entire recording (see Issue #17)
+	// if (markIndex = allRecords[0].mark.index)
+	//     markIndex = allRecords[1].mark.index;
+
+	this._replayStartIndex = this.activeRecording.allRecords[0].mark.index;
 	if (this._replaying && this._currentMarkIndex && this._currentMarkIndex <= markIndex)
 	    this._replayStartIndex = this._currentMarkIndex;
 	this._replayFinishIndex = markIndex;
@@ -201,11 +201,13 @@ WebInspector.TimelapseModel.prototype = {
 	    return;
 	}
 
+    var allRecords = this.activeRecording.allRecords;
+
 	// TODO: revisit this?
 	// replayToCompletion() from the last mark causes last mark to play, 
 	// unless a recording was just made and there is no replay state.
-	var lastMarkIndex = this._records[this._records.length-1].mark.index;
-	this._replayStartIndex = (!this._replaying && this._currentMarkIndex == lastMarkIndex) ? this._records[0].mark.index : this._currentMarkIndex;
+	var lastMarkIndex = allRecords[allRecords.length-1].mark.index;
+	this._replayStartIndex = (!this._replaying && this._currentMarkIndex == lastMarkIndex) ? allRecords[0].mark.index : this._currentMarkIndex;
 	this._replayFinishIndex = lastMarkIndex;
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.PlaybackWillStart);
 	return TimelapseAgent.replayToCompletion(this.fastReplaying);
@@ -217,7 +219,7 @@ WebInspector.TimelapseModel.prototype = {
 	    // Workaround: currently there is no way to force replay up to the current mark index.
 	    if (hitIndex < this._breakpointHitIndex) {
 		var recordIndex = this.recordIndexFromMarkIndex(markIndex);
-		var prevIndex = this._records[recordIndex - 1].mark.index;
+		var prevIndex = this.activeRecording.allRecords[recordIndex - 1].mark.index;
 		this._enqueueAction(this.replayUpToMarkIndex.bind(this, markIndex, allowBreakpoints, fastReplay))
 		this._enqueueAction(this.replayToBreakpointHit.bind(this, markIndex, hitIndex, allowBreakpoints, fastReplay));
 		this.replayUpToMarkIndex(prevIndex, allowBreakpoints, fastReplay);
@@ -243,7 +245,7 @@ WebInspector.TimelapseModel.prototype = {
 	if (this._replaying && this._currentMarkIndex == markIndex) {
 	    // Workaround: currently there is no way to force replay up to the current mark index.
 	    var recordIndex = this.recordIndexFromMarkIndex(markIndex);
-	    var prevIndex = this._records[recordIndex - 1].mark.index;
+	    var prevIndex = this.activeRecording.allRecords[recordIndex - 1].mark.index;
 	    this._enqueueAction(this.replayToBreakpointHit.bind(this, markIndex, hitIndex, false, true));
 	    this.replayUpToMarkIndex(prevIndex, false, true);
 	}
@@ -255,12 +257,13 @@ WebInspector.TimelapseModel.prototype = {
     scanBreakpointsInRegion: function(startIndex, endIndex)
     {
 	var currentIndex = this._currentMarkIndex;
+    var allrecords = this.activeRecording.allRecords;
 
 	/* Case: playback is paused inside the region to be scanned. */
 	if (startIndex <= currentIndex && endIndex > currentIndex) {
 	    this._enqueueAction(this.replayUpToMarkIndex.bind(this, endIndex, true, true));
 
-	    if (startIndex > this._records[0].mark.index)
+	    if (startIndex > allRecords[0].mark.index)
 		this._enqueueAction(this.replayUpToMarkIndex.bind(this, startIndex, false, true));
 
 	    if (this._breakpointPaused)
@@ -270,13 +273,13 @@ WebInspector.TimelapseModel.prototype = {
 	}
 	/* Case: playback is paused outside of the region to be scanned, or stopped. */
 	else {
-	    if (startIndex > this._records[0].mark.index)
+	    if (startIndex > allRecords[0].mark.index)
 		this._enqueueAction(this.replayUpToMarkIndex.bind(this, startIndex, false, true));
 
 	    // Workaround: currently there is no way to force replay up to the current mark index.
 	    if (currentIndex == endIndex) {
 		var endRecordIndex = this.recordIndexFromMarkIndex(endIndex);
-		var prevIndex = this._records[endRecordIndex - 1].mark.index;
+		var prevIndex = allRecords[endRecordIndex - 1].mark.index;
 		this._enqueueAction(this.replayUpToMarkIndex.bind(this, prevIndex, true, true));
 	    }
 
@@ -391,12 +394,7 @@ WebInspector.TimelapseModel.prototype = {
 	return this._replayFinishIndex;
     },
 
-    // TODO: move this to TimelapseRecording
-    get allRecords()
-    {
-	return this._records;
-    },
-
+    // TODO: move these to WebInspector.TimelapseRecording
     recordIndexFromMarkIndex: function(markIndex)
     {
 	function markIndexAndRecordComparator(idx, record) {
@@ -406,13 +404,13 @@ WebInspector.TimelapseModel.prototype = {
 	    return 0;
 	}
 
-	return this._records.binaryIndexOf(markIndex, markIndexAndRecordComparator);
+	return this.activeRecording.allRecords.binaryIndexOf(markIndex, markIndexAndRecordComparator);
     },
 
     timestampFromMarkIndex: function(markIndex)
     {
 	var recordIndex = this.recordIndexFromMarkIndex(markIndex);
-	var record = this._records[recordIndex];
+	var record = this.activeRecording.allRecords[recordIndex];
 	return record.mark.timestamp;
     },
 
@@ -456,32 +454,25 @@ WebInspector.TimelapseModel.prototype = {
     {
     	this._capturing = true;
 	this._changeStatus("Capturing...");
-	this._records = [];
 	this._suppressBreakpoints();
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.CaptureDidStart);
     },
 
     _captureDidStop: function()
     {
-	var numRecords = this._records.length;
+	var numRecords = this.activeRecording.allRecords.length;
 
 	if (numRecords == 0) {
 	    this._currentMarkIndex = 0;	    
 	} else {
 	    this._canReplay = true;
-	    this._currentMarkIndex = this._records[numRecords-1].mark.index;
+	    this._currentMarkIndex = this.activeRecording.allRecords[numRecords-1].mark.index;
 	}
 
     	this._capturing = false;
 	this._changeStatus("Ready");
 	this._unsuppressBreakpoints();
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.CaptureDidStop);
-    },
-
-    _capturedAction: function(record)
-    {
-	this._records.push(record);
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordAdded, record);
     },
 
     _playbackStarted: function()
@@ -677,7 +668,7 @@ WebInspector.TimelapseDispatcher.prototype = {
 
     capturedAction: function(record)
     {
-	this._model._capturedAction(record);
+	this._model.activeRecording._capturedAction(record);
     },
 
     playbackWasStarted: function()

@@ -566,9 +566,8 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onPlaybackDidStart: function()
     {
-	// TODO: hmm, this is not ideal. We really just need the 
 	// timestamp of start/finish/now to position the sliders.
-	var allRecords = this._model.allRecords;
+	var allRecords = this._recording.allRecords;
 	var startRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
 	var finishRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
 	var currentRecordIndex = this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex);
@@ -605,9 +604,7 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onInputPaused: function()
     {
-	// TODO: hmm, this is not ideal. We really just need the 
-	// timestamp of paused mark to position the sliders.
-	var allRecords = this._model.allRecords;
+	var allRecords = this._recording.allRecords;
 	var recordIndex = this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex);
 	
 	if (recordIndex != -1) {
@@ -633,7 +630,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	if (recordIndex == -1)
 	    return;
 
-	var allRecords = this._model.allRecords;
+	var allRecords = this._recording.allRecords;
 	var percent = 0.0;
 	if (markIndex > 0)
             percent = this.calculator.computeMiniviewPercentage(allRecords[recordIndex].mark.timestamp);
@@ -757,7 +754,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	    return Math.abs(ts - record.mark.timestamp);
 	}
 
-	var records = this._model.allRecords;
+	var records = this._recording.allRecords;
 	var idx = records.nearestBinaryIndexOf(timestamp, timestampAndRecordComparator, timeDistanceFunction);
 	var recordPosition = Math.floor(calculator.computeMiniviewPercentage(records[idx].mark.timestamp));
 	var prevRecordPosition = (idx == 0) ? 0.0
