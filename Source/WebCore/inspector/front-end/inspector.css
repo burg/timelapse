@@ -3090,7 +3090,7 @@ button.breakpoint-radar-status-bar-item > .glyph {
     overflow-x: none;
 }
 
-#timelapse-capture-view .timelapse-scrollview {
+.timelapse-scrollview {
     position: absolute;
     height: 30px;
     left: 50px;

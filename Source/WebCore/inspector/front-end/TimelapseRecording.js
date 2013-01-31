@@ -81,6 +81,10 @@ WebInspector.TimelapseRecording.prototype = {
 	var savepointProviders = this.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);
 	for (var i = 0; i < savepointProviders.length; i++)
 	    this.removeProvider(savepointProviders[i]);
+
+	var overviewPreviewProviders = this.providersWithType(WebInspector.DataProvider.Types.OverviewPreview);
+	for (var i = 0; i < overviewPreviewProviders.length; i++)
+	    this.removeProvider(overviewPreviewProviders[i]);
     },
 
     // Private API (callbacks)
@@ -279,8 +283,8 @@ WebInspector.TimelapseLiveRecording = function(model)
     this._isCapturing = false;
 
     var eventNames = WebInspector.TimelapseModel.Events;
-    model.addEventListener(eventNames.CaptureDidStart, this._captureDidStart, this);
-    model.addEventListener(eventNames.CaptureDidStop,  this._captureDidStop,  this);
+    model.addEventListener(eventNames.CaptureWillStart, this._captureWillStart, this);
+    model.addEventListener(eventNames.CaptureWillStop,  this._captureWillStop,  this);
 };
 
 WebInspector.TimelapseLiveRecording.prototype = {
@@ -290,7 +294,7 @@ WebInspector.TimelapseLiveRecording.prototype = {
         return this._isCapturing;
     },
     
-    _captureDidStart: function()
+    _captureWillStart: function()
     {
         // TODO: remove
         this.reset();
@@ -299,7 +303,7 @@ WebInspector.TimelapseLiveRecording.prototype = {
         this._initializeInputs();
     },
 
-    _captureDidStop: function()
+    _captureWillStop: function()
     {
         this._isCapturing = false;
         this._initializeSavepoints();

@@ -63,6 +63,11 @@ WebInspector.TimelapseModel.Events = {
     Disabled: "TimelapseDisabled",
     StatusChanged: "TimelapseStatusChanged",
 
+    // fires when a new recording is created.
+    RecordingAdded: "TimelapseRecordingAdded",
+    // fired when activeRecording changes.
+    RecordingLoaded: "TimelapseRecordingLoaded",
+
     // These events are associated with capture.
     CaptureWillStart: "TimelapseCaptureWillStart",
     CaptureDidStart: "TimelapseCaptureDidStart",
@@ -138,13 +143,13 @@ WebInspector.TimelapseModel.prototype = {
 
     stopCapture: function()
     {
-	var wasAllowed = TimelapseAgent.stopCapture();
-	if (wasAllowed) {
-	    this._changeStatus("Stopping capture...");
-	    this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.CaptureWillStop);
-	}
-
-	return wasAllowed;
+        var callback = function(wasAllowed) {
+            if (wasAllowed) {
+                this._changeStatus("Stopping capture...");
+            }
+        }
+        this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.CaptureWillStop);
+        TimelapseAgent.stopCapture(callback.bind(this));
     },
 
     replayUpToMarkIndex: function(markIndex, allowBreakpoints, fastReplay)
@@ -257,7 +262,7 @@ WebInspector.TimelapseModel.prototype = {
     scanBreakpointsInRegion: function(startIndex, endIndex)
     {
 	var currentIndex = this._currentMarkIndex;
-    var allrecords = this.activeRecording.allRecords;
+    var allRecords = this.activeRecording.allRecords;
 
 	/* Case: playback is paused inside the region to be scanned. */
 	if (startIndex <= currentIndex && endIndex > currentIndex) {

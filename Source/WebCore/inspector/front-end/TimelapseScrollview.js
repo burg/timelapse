@@ -41,11 +41,6 @@ WebInspector.TimelapseScrollview = function(model, recording)
     this._model = model;
     this._recording = recording;
    
-    var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.CaptureDidStart, this._onCaptureDidStart, this);
-
-    var recordingEventNames = WebInspector.TimelapseRecording.Events;
-    this._recording.addEventListener(recordingEventNames.ProviderAdded, this._onProviderAdded, this);
     this.element.className = "timelapse-scrollview";
 
     this._canvas = document.createElement("canvas");
@@ -54,10 +49,16 @@ WebInspector.TimelapseScrollview = function(model, recording)
     this._providers = [];
     this._timelines = {};
     this._timelines.all = { providers: [], maxIndex: -1, data: [] };
+  	this._captureStartTime = Date.now();
     this._previousMaxValue = 0;
-    //delete this._previousAnimationTime;
     this._autosizeCanvas();
     this._clearGraph();
+    
+    var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+    for (var i = 0; i < inputProviders.length; i++)
+        this._addProvider(inputProviders[i]);
+    
+	window.webkitRequestAnimationFrame(this.animateFrame.bind(this));
 };
 
 WebInspector.TimelapseScrollview.MaxRecordLifetime = 10.0; /* seconds */
@@ -365,18 +366,8 @@ WebInspector.TimelapseScrollview.prototype = {
     },
 
     // Private API (callbacks)
-    _onCaptureDidStart: function()
+    _addProvider: function(provider)
     {
-	this._captureStartTime = Date.now();
-	window.webkitRequestAnimationFrame(this.animateFrame.bind(this));
-    },
-
-    _onProviderAdded: function(event)
-    {
-	var provider = event.data;
-	if (!this._canUseProvider(provider))
-	    return;
-
 	console.assert(this._providers.indexOf(provider) == -1,
 		       "Specific provider already added to scrollview provider list.");
 

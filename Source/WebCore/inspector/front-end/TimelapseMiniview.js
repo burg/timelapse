@@ -45,8 +45,6 @@ WebInspector.TimelapseMiniview = function(model, recording)
     this._recording = recording;
    
     var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.CaptureDidStart, this._onCaptureDidStart, this);
-    this._model.addEventListener(eventNames.CaptureDidStop, this._onCaptureDidStop, this);
     this._model.addEventListener(eventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
     this._model.addEventListener(eventNames.PlaybackStopped, this._onPlaybackStopped, this);
     this._model.addEventListener(eventNames.InputPaused, this._onInputPaused, this);
@@ -131,6 +129,10 @@ WebInspector.TimelapseMiniview = function(model, recording)
     this.sliders.playback.clear();
     this._previousMaxValue = 0;
     this._clearGraph();
+    
+    var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+    for (var i = 0; i < inputProviders.length; i++)
+        this._addProvider(inputProviders[i]);
 };
 
 WebInspector.TimelapseMiniview.EdgeSnapDistance = 0.02; /* percent */
@@ -491,6 +493,11 @@ WebInspector.TimelapseMiniview.prototype = {
 	if (!this._canUseProvider(provider))
 	    return;
 
+    this._addProvider(provider);
+    },
+    
+    _addProvider: function(provider)
+    {
 	this._setupListenersForProvider(provider);
 
 	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint)
@@ -551,17 +558,6 @@ WebInspector.TimelapseMiniview.prototype = {
     {
 	this._potentialMarkBounds = false;
 	this._scheduleRefresh();
-    },
-
-    _onCaptureDidStart: function()
-    {
-	this.sliders.playback.disable();
-	this.sliders.playback.setPosition(1.0, true);
-    },
-
-    _onCaptureDidStop: function()
-    {
-	this.sliders.playback.enable();
     },
 
     _onPlaybackDidStart: function()

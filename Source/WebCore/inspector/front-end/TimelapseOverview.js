@@ -43,8 +43,6 @@ WebInspector.TimelapseOverview = function(model, recording)
     // Data changes go through the DataProviders.
     // Zoom changes come from the calculator.
     var modelEventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(modelEventNames.CaptureDidStart, this._onCaptureDidStart, this);
-    this._model.addEventListener(modelEventNames.CaptureDidStop, this._onCaptureDidStop, this);
     this._model.addEventListener(modelEventNames.PlaybackWillStart, this._onPlaybackWillStart, this);
     this._model.addEventListener(modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
     this._model.addEventListener(modelEventNames.PlaybackStopped, this._onPlaybackStopped, this);
@@ -121,8 +119,10 @@ WebInspector.TimelapseOverview = function(model, recording)
 	this._dividersLabelBarElement.className = "resources-dividers-label-bar";
 	this._timelineContainer.appendChild(this._dividersLabelBarElement);
 
-	this.sliders.playback.clear();
-	this.sliders.playback.hide();
+    this.sliders.playback.setPosition(1.0, true);
+    this.sliders.playback.enable();
+    this.sliders.playback.show();
+
 	this._refreshDelay = WebInspector.TimelapseOverview.DefaultRefreshDelay;
 
 	/* update dividers */
@@ -132,6 +132,10 @@ WebInspector.TimelapseOverview = function(model, recording)
 	    delete this._hoveredCircleIndex;
 	if (this._selectedCircleIndex)
 	    delete this._selectedCircleIndex;
+    
+    var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+    for (var i = 0; i < inputProviders.length; i++)
+        this._addProvider(inputProviders[i]);
 };
 
 WebInspector.TimelapseOverview.ResizerOffset = 3.5;
@@ -393,6 +397,11 @@ WebInspector.TimelapseOverview.prototype = {
 	if (!this._canUseProvider(provider))
 	    return;
 
+    this._addProvider(provider);
+    },
+    
+    _addProvider: function(provider)
+    {
 	provider.addEventListener(WebInspector.DataProvider.Events.WillRemove, this._removeProvider, this);
 
 	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint) {
@@ -757,22 +766,6 @@ WebInspector.TimelapseOverview.prototype = {
 	var record = event.data;
 	var percent = this.calculator.computeOverviewPercentage(record.mark.timestamp);
 	this.sliders.tentative.setPosition(percent, true);
-    },
-
-    _onCaptureDidStart: function()
-    {
-	this.sliders.playback.disable();
-	this.sliders.playback.hide();
-    },
-
-    _onCaptureDidStop: function()
-    {
-	if (this._recording.allRecords.length == 0)
-	    return;
-
-	this.sliders.playback.setPosition(1.0, true);
-	this.sliders.playback.enable();
-	this.sliders.playback.show();
     },
 
     _onPlaybackError: function(event)

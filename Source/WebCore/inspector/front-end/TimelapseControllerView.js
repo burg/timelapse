@@ -48,13 +48,11 @@ WebInspector.TimelapseControllerView = function(model)
     this._model.addEventListener(events.CaptureDidStart, this._captureDidStart, this);
     this._model.addEventListener(events.CaptureDidStop, this._captureDidStop, this);
 
-    // TODO: associate each view with specific recording, and create new one per recording.
-    this._captureView = new WebInspector.TimelapseCaptureView(this, model, model.activeRecording);
-    this._replayView = new WebInspector.TimelapseReplayView(this, model, model.activeRecording);
-
     this._createSharedStatusBarButtons();
     this.element.addEventListener("focus", this.focus.bind(this), true);
     this.element.addEventListener("blur", this.blur.bind(this), true);
+
+    this.currentView = new WebInspector.TimelapseDefaultView(model);
 
     // Tell backend to enable itself.
     this._model.enable();
@@ -67,6 +65,29 @@ WebInspector.TimelapseControllerView.prototype = {
             this.toggleRecordButton.element,
             this._contextStatusBarItems
         ];
+    },
+
+    get currentView()
+    {
+        return this._currentView;
+    },
+    
+    set currentView(view)
+    {
+        if (this._currentView) {
+            this._currentView.detach();
+            this._currentView.dispose();
+        }
+        
+        this._currentView = view;
+        
+        this._contextStatusBarItems.removeChildren();
+        var buttons = view.statusBarItems;
+        
+        for (var i = 0; i < buttons.length; i++)
+            this._contextStatusBarItems.appendChild(buttons[i].element);
+
+        this._currentView.show(this.element);
     },
 
     afterShow: function()
@@ -83,36 +104,6 @@ WebInspector.TimelapseControllerView.prototype = {
     blur: function()
     {
         this.element.style.opacity = 0.7;
-    },
-
-    _changeView: function(oldView, newView)
-    {
-        if (oldView) {
-            // TODO: remove clear(), use dispose() instead
-            oldView.clear();
-            if (oldView.isShowing)
-                oldView.detach();
-            oldView.dispose();
-        }
-
-        // TODO: remove clear()
-        newView.clear();
-        
-        this._contextStatusBarItems.removeChildren();
-        var buttons = newView.statusBarItems;
-        for (var i = 0; i < buttons.length; i++)
-            this._contextStatusBarItems.appendChild(buttons[i].element);
-
-        newView.show(this.element);
-    },
-
-    _showCaptureView: function() {
-        this._changeView(this._replayView, this._captureView);
-    },
-
-    _showReplayView: function()
-    {
-        this._changeView(this._captureView, this._replayView);
     },
 
     _createSharedStatusBarButtons: function()
@@ -159,14 +150,14 @@ WebInspector.TimelapseControllerView.prototype = {
     _timelapseEnabled: function()
     {
         this._enabled = true;
-        this._showCaptureView();
+        this.currentView = new WebInspector.TimelapseDefaultView(this._model);
         this._createSharedStatusBarButtons();
     },
 
     _timelapseDisabled: function()
     {
         this._enabled = false;
-        this._showCaptureView();
+        this.currentView = new WebInspector.TimelapseDefaultView(this._model);
 
         // restore any disablements we did to the timeline.
         if (WebInspector.panels.timeline) {
@@ -177,7 +168,7 @@ WebInspector.TimelapseControllerView.prototype = {
 
     _captureDidStart: function()
     {
-        this._showCaptureView();
+        this.currentView = new WebInspector.TimelapseCaptureView(this._model, this._model.activeRecording);
 
         var timelinePanel = WebInspector.panels.timeline;
         // automatically turn on Timeline capture, and prevent its clearing or stopping.
@@ -191,12 +182,14 @@ WebInspector.TimelapseControllerView.prototype = {
 
     _captureDidStop: function()
     {
+        // XXX: parameterize the default view's message
+    
         // if nothing was recorded, don't even show the replay view.
         // the capture view knows to change its message in this situation.
         if (this._model.activeRecording.allRecords.length == 0)
             return;
 
-        this._showReplayView();
+        this.currentView = new WebInspector.TimelapseReplayView(this._model, this._model.activeRecording);
 
         var timelinePanel = WebInspector.panels.timeline;
         // automatically turn off Timeline capture.
@@ -214,22 +207,77 @@ WebInspector.TimelapseControllerView.prototype.__proto__ = WebInspector.View.pro
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseCaptureView = function(parentView, model, recording)
+WebInspector.TimelapseDefaultView = function(model)
 {
     WebInspector.View.call(this);
 
     this._model = model;
 
-    this.element.id = "timelapse-capture-view";
+    this.element.id = "timelapse-default-view";
 
     this._messagePanel = document.createElement("div");
     this._messagePanel.className = "timelapse-capture-message";
-    this._messagePanel.addEventListener("click", this._onMessagePanelClicked.bind(this), true);
-    this.element.appendChild(this._messagePanel);
-
+    this._messagePanel.textContent = "Nothing loaded. Click to start recording.";
+    this._clickListener = this._onMessagePanelClicked.bind(this);
+    this._messagePanel.addEventListener("click", this._clickListener, true);
+    
     var eventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(eventNames.CaptureWillStart, this._onCaptureWillStart, this);
-    this._model.addEventListener(eventNames.CaptureDidStart, this._onCaptureDidStart, this);
+    this.element.appendChild(this._messagePanel);
+};
+
+WebInspector.TimelapseDefaultView.prototype = {
+    willDispose: function()
+    {
+        this._messagePanel.removeEventListener("click", this._clickListener, true);
+
+        var eventNames = WebInspector.TimelapseModel.Events;
+        this._model.removeEventListener(eventNames.CaptureWillStart, this._onCaptureWillStart, this);
+    },
+
+    get statusBarItems()
+    {
+        return [];
+    },
+
+    _onMessagePanelClicked: function(event)
+    {
+        this._model.startCapture();
+    },
+    
+    _onCaptureWillStart: function()
+    {
+        this._messagePanel.textContent = "Initializing...";
+        this._messagePanel.classList.add("message-pulse");
+    },
+};
+
+WebInspector.TimelapseDefaultView.prototype.__proto__ = WebInspector.View.prototype;
+
+
+/**
+ * @constructor
+ * @extends {WebInspector.View}
+ */
+WebInspector.TimelapseCaptureView = function(model, recording)
+{
+    WebInspector.View.call(this);
+
+    this._model = model;
+    this._recording = recording;
+
+    this.element.id = "timelapse-capture-view";
+
+    this._messagePanel = document.createElement("div");
+    this._messagePanel.classList.add("timelapse-capture-message");
+    this._messagePanel.classList.add("message-pulse");
+    this._clickListener = this._onMessagePanelClicked.bind(this);
+    this._messagePanel.addEventListener("click", this._clickListener, true);
+    this.element.appendChild(this._messagePanel);
+
+    this._messagePanel.textContent = "Reloading page...";
+
+    var eventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(eventNames.CaptureWillStop, this._onCaptureWillStop, this);
     this._model.addEventListener(eventNames.CaptureDidStop, this._onCaptureDidStop, this);
 
@@ -240,25 +288,18 @@ WebInspector.TimelapseCaptureView = function(parentView, model, recording)
 };
 
 WebInspector.TimelapseCaptureView.prototype = {
+    willDispose: function()
+    {
+        this._messagePanel.removeEventListener("click", this._clickListener, true);
+
+        var eventNames = WebInspector.TimelapseModel.Events;
+        this._model.removeEventListener(eventNames.CaptureWillStop, this._onCaptureWillStop, this);
+        this._model.removeEventListener(eventNames.CaptureDidStop, this._onCaptureDidStop, this);
+    },
+
     get statusBarItems()
     {
     return [];
-    },
-
-    clear: function()
-    {
-    this._messagePanel.textContent = "Click to Record.";
-    },
-
-    _onCaptureWillStart: function()
-    {
-    this._messagePanel.textContent = "Initializing...";
-    this._messagePanel.classList.add("message-pulse");
-    },
-
-    _onCaptureDidStart: function()
-    {
-    this._messagePanel.textContent = "Reloading page...";
     },
 
     _onMainFrameNavigated: function()
@@ -276,7 +317,8 @@ WebInspector.TimelapseCaptureView.prototype = {
     {
     this._messagePanel.classList.remove("message-pulse");
 
-    if (this._model.activeRecording.allRecords.length == 0)
+    // TODO: move to ReplayingView
+    if (this._recording.allRecords.length == 0)
         this._messagePanel.textContent = "Nothing was captured. Please try again.";
     },
 
@@ -284,9 +326,6 @@ WebInspector.TimelapseCaptureView.prototype = {
     {
     if (this._model.isCapturing)
         this._model.stopCapture();
-
-    if (!this._model.isCapturing && !this._model.isReplaying)
-        this._model.startCapture();
     }
 };
 
@@ -297,7 +336,7 @@ WebInspector.TimelapseCaptureView.prototype.__proto__ = WebInspector.View.protot
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseReplayView = function(parentView, model, recording)
+WebInspector.TimelapseReplayView = function(model, recording)
 {
     WebInspector.View.call(this);
 
@@ -321,20 +360,24 @@ WebInspector.TimelapseReplayView = function(parentView, model, recording)
     this._overviewPreview.show(this._splitView.sidebarElement);
 
     this._registerShortcuts();
-    this.element.addEventListener("keydown", this._keyDown.bind(this), false);
+    this._keydownListener = this._keyDown.bind(this)
+    this.element.addEventListener("keydown", this._keydownListener, false);
 };
 
 WebInspector.TimelapseReplayView.prototype = {
+    willDispose: function()
+    {
+        this.element.removeEventListener("keydown", this._keydownListener, false);
+        
+        // TODO: currently leaking status bar buttons via its listeners?
+    },
+
     get statusBarItems()
     {
     if (!this._statusBarButtons)
         this._createReplayStatusBarButtons();
 
     return this._statusBarButtons;
-    },
-
-    clear: function()
-    {
     },
 
     _createReplayStatusBarButtons: function()
