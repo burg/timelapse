@@ -43,7 +43,7 @@ WebInspector.TimelapseMiniview = function(model, recording)
 
     this._model = model;
     this._recording = recording;
-   
+
     var eventNames = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(eventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
     this._model.addEventListener(eventNames.PlaybackStopped, this._onPlaybackStopped, this);
@@ -126,13 +126,18 @@ WebInspector.TimelapseMiniview = function(model, recording)
     this._timelines = {};
     this._timelines.all = { providers: [], maxIndex: -1, data: [] };
 
-    this.sliders.playback.clear();
     this._previousMaxValue = 0;
     this._clearGraph();
     
+    // add input providers that have already been created
     var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
+    
+    // initialize slider position
+    this.sliders.playback.enable();
+    this.sliders.playback.setPosition(1.0, true);
+  	this.sliders.playback.show();
 };
 
 WebInspector.TimelapseMiniview.EdgeSnapDistance = 0.02; /* percent */

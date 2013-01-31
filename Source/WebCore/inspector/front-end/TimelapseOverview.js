@@ -119,10 +119,6 @@ WebInspector.TimelapseOverview = function(model, recording)
 	this._dividersLabelBarElement.className = "resources-dividers-label-bar";
 	this._timelineContainer.appendChild(this._dividersLabelBarElement);
 
-    this.sliders.playback.setPosition(1.0, true);
-    this.sliders.playback.enable();
-    this.sliders.playback.show();
-
 	this._refreshDelay = WebInspector.TimelapseOverview.DefaultRefreshDelay;
 
 	/* update dividers */
@@ -132,10 +128,16 @@ WebInspector.TimelapseOverview = function(model, recording)
 	    delete this._hoveredCircleIndex;
 	if (this._selectedCircleIndex)
 	    delete this._selectedCircleIndex;
-    
+
+    // add input providers that have already been created
     var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
+    
+    // initialize slider position
+    this.sliders.playback.enable();
+    this.sliders.playback.setPosition(1.0, true);
+  	this.sliders.playback.show();
 };
 
 WebInspector.TimelapseOverview.ResizerOffset = 3.5;
