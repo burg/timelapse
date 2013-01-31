@@ -52,7 +52,7 @@ WebInspector.TimelapseModel = function()
     this._suppressingBreakpoints = false;
     this._replayActionQueue = [];
     this._debuggerWalk = [];
-    this._activeRecording = new WebInspector.TimelapseRecording(this);
+    this._activeRecording = new WebInspector.TimelapseLiveRecording(this);
 
     WebInspector.debuggerModel.addEventListener(WebInspector.DebuggerModel.Events.DebuggerPaused, this._debuggerPaused, this);
     WebInspector.debuggerModel.addEventListener(WebInspector.DebuggerModel.Events.DebuggerResumed, this._debuggerResumed, this);
