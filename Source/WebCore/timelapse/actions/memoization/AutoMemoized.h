@@ -29,8 +29,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GetJSAttribute_h
-#define GetJSAttribute_h
+#ifndef AutoMemoized_h
+#define AutoMemoized_h
 
 #if ENABLE(TIMELAPSE)
 
@@ -40,7 +40,7 @@
 namespace JSC {
 
 namespace ReplayableTypes {
-const char* GetJSAttribute = "GetJSAttribute";
+const char* AutoMemoized = "AutoMemoized";
 }
 
 enum AttributeType {
@@ -50,14 +50,14 @@ enum AttributeType {
     ScreenTop
 };
 
-template<typename T> class GetJSAttribute : public ReplayableAction {
+template<typename T> class AutoMemoized : public ReplayableAction {
 
 public:
-    GetJSAttribute(AttributeType attribute, T result)
-        : ReplayableAction(ReplayableTypes::GetJSAttribute)
+    AutoMemoized(AttributeType attribute, T result)
+        : ReplayableAction(ReplayableTypes::AutoMemoized)
         , m_attribute(attribute)
         , m_result(result) {}
-    virtual ~GetJSAttribute() {}
+    virtual ~AutoMemoized() {}
     
     AttributeType attributeType() const { return m_attribute; }
     T result() const { return m_result; }
@@ -75,7 +75,7 @@ private:
     T m_result;
 };
 
-template<typename T> String GetJSAttribute<T>::resultString() const
+template<typename T> String AutoMemoized<T>::resultString() const
 {
     switch (m_attribute) {
         case ScreenX:
@@ -86,7 +86,7 @@ template<typename T> String GetJSAttribute<T>::resultString() const
     }
 }
 
-template<typename T> String GetJSAttribute<T>::attributeName() const
+template<typename T> String AutoMemoized<T>::attributeName() const
 {
     switch(m_attribute) {
         case ScreenX: return String("window.screenX");
@@ -96,17 +96,17 @@ template<typename T> String GetJSAttribute<T>::attributeName() const
     }
 }
 
-template<typename T> String GetJSAttribute<T>::toString() const
+template<typename T> String AutoMemoized<T>::toString() const
 {
-    return makeString("GetJSAttribute(attribute=", attributeName(), ";result=", resultString(), ")");
+    return makeString("AutoMemoized(attribute=", attributeName(), ";result=", resultString(), ")");
 }
 
-template<typename T> size_t GetJSAttribute<T>::memorySize() const
+template<typename T> size_t AutoMemoized<T>::memorySize() const
 {
-    return sizeof(GetJSAttribute);
+    return sizeof(AutoMemoized);
 }
 
-template<typename T> void GetJSAttribute<T>::serialize(ActionSerializer* serializer) const
+template<typename T> void AutoMemoized<T>::serialize(ActionSerializer* serializer) const
 {
     serializer->putString("attribute", attributeName());
 
@@ -123,4 +123,4 @@ template<typename T> void GetJSAttribute<T>::serialize(ActionSerializer* seriali
 
 #endif // ENABLE(TIMELAPSE)
 
-#endif // GetJSAttribute_h
+#endif // AutoMemoized_h

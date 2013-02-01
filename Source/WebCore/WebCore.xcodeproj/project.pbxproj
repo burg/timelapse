@@ -690,7 +690,7 @@
 		2292B27C1356669400CF11EF /* ImageBufferDataCG.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2292B27B1356669400CF11EF /* ImageBufferDataCG.cpp */; };
 		22BD9F7F1353625C009BD102 /* ImageBufferData.h in Headers */ = {isa = PBXBuildFile; fileRef = 22BD9F7D1353625C009BD102 /* ImageBufferData.h */; };
 		22BD9F81135364FE009BD102 /* ImageBufferDataCG.h in Headers */ = {isa = PBXBuildFile; fileRef = 22BD9F80135364FE009BD102 /* ImageBufferDataCG.h */; };
-		2312CBAE1602C63B00BC60B0 /* GetJSAttribute.h in Headers */ = {isa = PBXBuildFile; fileRef = 2312CBAD1602C63B00BC60B0 /* GetJSAttribute.h */; };
+		23139D0C16BC714500A6D975 /* AutoMemoized.h in Headers */ = {isa = PBXBuildFile; fileRef = 23139D0B16BC714500A6D975 /* AutoMemoized.h */; };
 		2346D66615F02F46008E6EF0 /* HandleContextMenu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2346D66415F02F46008E6EF0 /* HandleContextMenu.cpp */; };
 		2346D66715F02F46008E6EF0 /* HandleContextMenu.h in Headers */ = {isa = PBXBuildFile; fileRef = 2346D66515F02F46008E6EF0 /* HandleContextMenu.h */; };
 		2346D68715F16461008E6EF0 /* SendResizeEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2346D68515F16461008E6EF0 /* SendResizeEvent.cpp */; };
@@ -7852,7 +7852,7 @@
 		2292B27B1356669400CF11EF /* ImageBufferDataCG.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ImageBufferDataCG.cpp; sourceTree = "<group>"; };
 		22BD9F7D1353625C009BD102 /* ImageBufferData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageBufferData.h; sourceTree = "<group>"; };
 		22BD9F80135364FE009BD102 /* ImageBufferDataCG.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImageBufferDataCG.h; sourceTree = "<group>"; };
-		2312CBAD1602C63B00BC60B0 /* GetJSAttribute.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GetJSAttribute.h; path = timelapse/actions/memoization/GetJSAttribute.h; sourceTree = "<group>"; };
+		23139D0B16BC714500A6D975 /* AutoMemoized.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AutoMemoized.h; path = timelapse/actions/memoization/AutoMemoized.h; sourceTree = "<group>"; };
 		2346D66415F02F46008E6EF0 /* HandleContextMenu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = HandleContextMenu.cpp; path = timelapse/actions/user/HandleContextMenu.cpp; sourceTree = "<group>"; };
 		2346D66515F02F46008E6EF0 /* HandleContextMenu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = HandleContextMenu.h; path = timelapse/actions/user/HandleContextMenu.h; sourceTree = "<group>"; };
 		2346D68515F16461008E6EF0 /* SendResizeEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SendResizeEvent.cpp; path = timelapse/actions/user/SendResizeEvent.cpp; sourceTree = "<group>"; };
@@ -21216,6 +21216,7 @@
 		C4AEC37B15EED2DE007076B6 /* memoization */ = {
 			isa = PBXGroup;
 			children = (
+				23139D0B16BC714500A6D975 /* AutoMemoized.h */,
 				237B5C8215F7C0EB00294B1E /* InitializeWindow.cpp */,
 				237B5C8315F7C0EB00294B1E /* InitializeWindow.h */,
 				C4AEC38E15EED355007076B6 /* InitializeFocus.cpp */,
@@ -25919,11 +25920,11 @@
 				4F377FF515FA356A00E5D60D /* WebCoreMemoryInstrumentation.h in Headers */,
 				2346D68815F16461008E6EF0 /* SendResizeEvent.h in Headers */,
 				237B5C8515F7C0EB00294B1E /* InitializeWindow.h in Headers */,
-				2312CBAE1602C63B00BC60B0 /* GetJSAttribute.h in Headers */,
 				23F380E2164324E400650F4D /* RanPendingScripts.h in Headers */,
 				C43DBEDE168129AA00147325 /* ResourceLoaderCreated.h in Headers */,
 				C43DBEE0168129AA00147325 /* ResourceLoaderDestroyed.h in Headers */,
 				23B3DB1E16B336DA0096FDC7 /* PlaybackError.h in Headers */,
+				23139D0C16BC714500A6D975 /* AutoMemoized.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

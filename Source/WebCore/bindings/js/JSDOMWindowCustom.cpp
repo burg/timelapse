@@ -76,7 +76,7 @@
 #endif
 
 #if ENABLE(TIMELAPSE)
-#include "GetJSAttribute.h"
+#include "AutoMemoized.h"
 #include <wtf/timelapse/DeterminismLog.h>
 #endif
 
@@ -689,10 +689,10 @@ JSValue JSDOMWindow::screenX(ExecState* exec) const
         result = impl()->screenX();
     } else if (log->capturing()) {
         result = impl()->screenX();
-        log->append(new GetJSAttribute<int>(ScreenX, result));
+        log->append(new AutoMemoized<int>(ScreenX, result));
     } else {
         ASSERT(log->replaying());
-        GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::GetJSAttribute));
+        AutoMemoized<int>* action = static_cast<AutoMemoized<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));
         if (action) {
             ASSERT(action->attributeType() == ScreenX);
             result = action->result();
@@ -715,10 +715,10 @@ JSValue JSDOMWindow::screenY(ExecState* exec) const
         result = impl()->screenY();
     } else if (log->capturing()) {
         result = impl()->screenY();
-        log->append(new GetJSAttribute<int>(ScreenY, result));
+        log->append(new AutoMemoized<int>(ScreenY, result));
     } else {
         ASSERT(log->replaying());
-        GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::GetJSAttribute));
+        AutoMemoized<int>* action = static_cast<AutoMemoized<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));
         if (action) {
             ASSERT(action->attributeType() == ScreenY);
             result = action->result();
@@ -741,10 +741,10 @@ JSValue JSDOMWindow::screenLeft(ExecState* exec) const
         result = impl()->screenLeft();
     } else if (log->capturing()) {
         result = impl()->screenLeft();
-        log->append(new GetJSAttribute<int>(ScreenLeft, result));
+        log->append(new AutoMemoized<int>(ScreenLeft, result));
     } else {
         ASSERT(log->replaying());
-        GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::GetJSAttribute));
+        AutoMemoized<int>* action = static_cast<AutoMemoized<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));
         if (action) {
             ASSERT(action->attributeType() == ScreenLeft);
             result = action->result();
@@ -768,10 +768,10 @@ JSValue JSDOMWindow::screenTop(ExecState* exec) const
     }
     else if (log->capturing()) {
         result = impl()->screenTop();
-        log->append(new GetJSAttribute<int>(ScreenTop, result));
+        log->append(new AutoMemoized<int>(ScreenTop, result));
     } else {
         ASSERT(log->replaying());
-        GetJSAttribute<int>* action = static_cast<GetJSAttribute<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::GetJSAttribute));
+        AutoMemoized<int>* action = static_cast<AutoMemoized<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));
         if (action) {
             ASSERT(action->attributeType() == ScreenTop);
             result = action->result();
