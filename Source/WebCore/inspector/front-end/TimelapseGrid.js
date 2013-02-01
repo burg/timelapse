@@ -581,6 +581,8 @@ WebInspector.TimelapseGrid.prototype = {
 	this.sliders.playback.placeBefore(position.node);
 
 	this._recording.startPreviewing();
+    // fake a movement so that we immediately preview the record underneath drag start.
+    this._recording.previewRecord(position.node.record);
     },
 
     _onGridDragEnd: function()
