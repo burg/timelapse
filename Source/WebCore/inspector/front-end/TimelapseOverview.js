@@ -795,6 +795,7 @@ WebInspector.TimelapseOverview.prototype = {
 	} else {
 	    var model = this._model;
 	    var message = this._messagePanel;
+	    var preview = this._previewProvider;
 	    var optionLabels = [
 		"Keep going",
 		"Ignore warnings",
@@ -806,6 +807,7 @@ WebInspector.TimelapseOverview.prototype = {
 		    model.replayUpToMarkIndex(model.replayFinishMarkIndex, 
 					      model.fastReplaying, 
 					      !model.fastReplaying || model.scanningBreakpoints);
+		    preview.popView();
 		    message.detach();
 		},
 
@@ -815,13 +817,15 @@ WebInspector.TimelapseOverview.prototype = {
 		    model.replayUpToMarkIndex(model.replayFinishMarkIndex, 
 					      model.fastReplaying, 
 					      !model.fastReplaying || model.scanningBreakpoints);
+		    preview.popView();
 		    message.detach();
 		},
 
 		// case: unlock
 		function() {
 		    model.stopPlayback(true);
-		    message.detach();s
+		    preview.popView();
+		    message.detach();
 		}
 	    ];
 	    
@@ -859,9 +863,9 @@ WebInspector.TimelapseOverview.prototype = {
 	if (this._model.scanningBreakpoints)
 	    this._messagePanel.content = document.createTextNode("Scanning breakpoints...");
 	else if (this._model.fastReplaying)
-	    this._messagePanel.message = document.createTextNode("Seeking...");
+	    this._messagePanel.content = document.createTextNode("Seeking...");
 	else
-	    this._messagePanel.message = document.createTextNode("Replaying... click to cancel.");
+	    this._messagePanel.content = document.createTextNode("Replaying... click to cancel.");
 
 	this._messagePanel.show(this.element);
     },

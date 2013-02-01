@@ -697,6 +697,8 @@
 		2346D68815F16461008E6EF0 /* SendResizeEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = 2346D68615F16461008E6EF0 /* SendResizeEvent.h */; };
 		237B5C8415F7C0EB00294B1E /* InitializeWindow.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 237B5C8215F7C0EB00294B1E /* InitializeWindow.cpp */; };
 		237B5C8515F7C0EB00294B1E /* InitializeWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 237B5C8315F7C0EB00294B1E /* InitializeWindow.h */; };
+		23B3DB1D16B336DA0096FDC7 /* PlaybackError.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23B3DB1B16B336DA0096FDC7 /* PlaybackError.cpp */; };
+		23B3DB1E16B336DA0096FDC7 /* PlaybackError.h in Headers */ = {isa = PBXBuildFile; fileRef = 23B3DB1C16B336DA0096FDC7 /* PlaybackError.h */; };
 		23F380E1164324E400650F4D /* RanPendingScripts.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23F380DF164324E400650F4D /* RanPendingScripts.cpp */; };
 		23F380E2164324E400650F4D /* RanPendingScripts.h in Headers */ = {isa = PBXBuildFile; fileRef = 23F380E0164324E400650F4D /* RanPendingScripts.h */; };
 		24AA568D13CC94CE00E902F6 /* DOMSVGAltGlyphItemElementInternal.h in Copy Generated Headers */ = {isa = PBXBuildFile; fileRef = 24D912A313CA977D00D21915 /* DOMSVGAltGlyphItemElementInternal.h */; };
@@ -7857,6 +7859,8 @@
 		2346D68615F16461008E6EF0 /* SendResizeEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SendResizeEvent.h; path = timelapse/actions/user/SendResizeEvent.h; sourceTree = "<group>"; };
 		237B5C8215F7C0EB00294B1E /* InitializeWindow.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = InitializeWindow.cpp; path = timelapse/actions/memoization/InitializeWindow.cpp; sourceTree = "<group>"; };
 		237B5C8315F7C0EB00294B1E /* InitializeWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InitializeWindow.h; path = timelapse/actions/memoization/InitializeWindow.h; sourceTree = "<group>"; };
+		23B3DB1B16B336DA0096FDC7 /* PlaybackError.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PlaybackError.cpp; path = timelapse/actions/memoization/PlaybackError.cpp; sourceTree = "<group>"; };
+		23B3DB1C16B336DA0096FDC7 /* PlaybackError.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PlaybackError.h; path = timelapse/actions/memoization/PlaybackError.h; sourceTree = "<group>"; };
 		23F380DF164324E400650F4D /* RanPendingScripts.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RanPendingScripts.cpp; path = timelapse/actions/async/RanPendingScripts.cpp; sourceTree = "<group>"; };
 		23F380E0164324E400650F4D /* RanPendingScripts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RanPendingScripts.h; path = timelapse/actions/async/RanPendingScripts.h; sourceTree = "<group>"; };
 		2442BBF81194C9D300D49469 /* HashChangeEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HashChangeEvent.h; sourceTree = "<group>"; };
@@ -21218,7 +21222,8 @@
 				C4AEC38F15EED355007076B6 /* InitializeFocus.h */,
 				C4AEC38A15EED337007076B6 /* GetDocumentCookie.cpp */,
 				C4AEC38B15EED337007076B6 /* GetDocumentCookie.h */,
-				2312CBAD1602C63B00BC60B0 /* GetJSAttribute.h */,
+				23B3DB1B16B336DA0096FDC7 /* PlaybackError.cpp */,
+				23B3DB1C16B336DA0096FDC7 /* PlaybackError.h */,
 			);
 			name = memoization;
 			sourceTree = "<group>";
@@ -25918,6 +25923,7 @@
 				23F380E2164324E400650F4D /* RanPendingScripts.h in Headers */,
 				C43DBEDE168129AA00147325 /* ResourceLoaderCreated.h in Headers */,
 				C43DBEE0168129AA00147325 /* ResourceLoaderDestroyed.h in Headers */,
+				23B3DB1E16B336DA0096FDC7 /* PlaybackError.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -29055,6 +29061,7 @@
 				23F380E1164324E400650F4D /* RanPendingScripts.cpp in Sources */,
 				C43DBEDD168129AA00147325 /* ResourceLoaderCreated.cpp in Sources */,
 				C43DBEDF168129AA00147325 /* ResourceLoaderDestroyed.cpp in Sources */,
+				23B3DB1D16B336DA0096FDC7 /* PlaybackError.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

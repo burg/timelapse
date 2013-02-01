@@ -479,8 +479,7 @@ bool DeterminismController::playbackError(bool isFatal, const String& errorMessa
     }
     
     if (m_errorStrategy == ContinueOnError) {
-        LOG(Timelapse, "%-30s Reporting and continuing past non-fatal error.", "[DeterminismController]");
-        InspectorInstrumentation::playbackError(m_page, isFatal, errorMessage);
+        LOG(Timelapse, "%-30s Continuing past non-fatal error.", "[DeterminismController]");
     } else {
         LOG(Timelapse, "%-30s Reporting and pausing because of non-fatal error.", "[DeterminismController]");
         pauseReplay(m_currentMark.index());
@@ -530,6 +529,10 @@ void DeterminismController::didDispatch(DispatchableAction* action)
     InspectorInstrumentation::playbackHitMark(m_page, m_runningAction->mark().index());
     m_runningAction = 0;
     m_dispatching = false;
+
+    if (m_status == PlaybackPaused)
+        return;
+
     // if the expected input never came, just forget we were expecting it.
     // it may have been consumed by another instrumenting agent.
     maybeDispatchAction();
@@ -570,7 +573,7 @@ void DeterminismController::maybeDispatchAction()
     }
     
     //if this event is overdue, then the replay has diverged (probably caused by user interaction)
-    if (m_waitingAction->dispatchCount() < m_domEventDispatchCount) {
+    if (m_waitingAction->dispatchCounted() && m_waitingAction->dispatchCount() < m_domEventDispatchCount) {
         String errorMessage = String::format("Next action should be injected after %d retired DOM events, but %d DOM events have retired.",
                                              m_waitingAction->dispatchCount(), 
                                              m_domEventDispatchCount);
@@ -580,7 +583,7 @@ void DeterminismController::maybeDispatchAction()
     }
     
     //if this event is next in line or overdue, promote it to "running", then fire immediately.
-    if (m_waitingAction->dispatchCount() <= m_domEventDispatchCount) {
+    if (!m_waitingAction->dispatchCounted() || m_waitingAction->dispatchCount() <= m_domEventDispatchCount) {
         m_runningAction = m_waitingAction;
         m_waitingAction = 0;
         asyncDispatchAction();

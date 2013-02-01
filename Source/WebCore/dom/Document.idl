@@ -154,7 +154,7 @@ module core {
         // Moved down from HTMLDocument
 
                  attribute [TreatNullAs=NullString] DOMString title;
-        readonly attribute DOMString referrer;
+        readonly attribute [ReplayNotImplemented] DOMString referrer;
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
                  attribute [TreatNullAs=NullString] DOMString domain
                      setter raises (DOMException);

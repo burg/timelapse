@@ -56,6 +56,7 @@ const char* InitializeFocus = "InitializeFocus";
 const char* InitializeWindow = "InitializeWindow";
 const char* ReceivedResourceResponse = "ReceivedResourceResponse";
 const char* NavigateToPage = "NavigateToPage";
+const char* PlaybackError = "PlaybackError";
 const char* RanPendingScripts = "RanPendingScripts";
 const char* ScrollPage = "ScrollPage";
 const char* SendResizeEvent = "SendResizeEvent";
