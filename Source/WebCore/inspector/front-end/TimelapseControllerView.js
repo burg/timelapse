@@ -48,9 +48,10 @@ WebInspector.TimelapseControllerView = function(model)
     this._model.addEventListener(events.CaptureDidStart, this._captureDidStart, this);
     this._model.addEventListener(events.CaptureDidStop, this._captureDidStop, this);
 
-    this._createSharedStatusBarButtons();
     this.element.addEventListener("focus", this.focus.bind(this), true);
     this.element.addEventListener("blur", this.blur.bind(this), true);
+
+    this._createSharedStatusBarButtons();
 
     this.currentView = new WebInspector.TimelapseDefaultView(model);
 
@@ -227,12 +228,22 @@ WebInspector.TimelapseDefaultView = function(model)
 };
 
 WebInspector.TimelapseDefaultView.prototype = {
-    willDispose: function()
-    {
-        this._messagePanel.removeEventListener("click", this._clickListener, true);
+    _modifyListeners: function(op) {
+        console.assert(op === "addEventListener" || op === "removeEventListener",
+                       "Tried to do something unsupported to listeners: " + op);
+        
+        if (!this._clickListener)
+            this._clickListener = this._onMessagePanelClicked.bind(this);
+        
+        this._messagePanel[op]("click", this._clickListener, true);
 
         var eventNames = WebInspector.TimelapseModel.Events;
-        this._model.removeEventListener(eventNames.CaptureWillStart, this._onCaptureWillStart, this);
+        this._model[op](eventNames.CaptureWillStart, this._onCaptureWillStart, this);
+    },
+    
+    willDispose: function()
+    {
+        this._modifyListeners("removeEventListener");
     },
 
     get statusBarItems()
@@ -271,30 +282,35 @@ WebInspector.TimelapseCaptureView = function(model, recording)
     this._messagePanel = document.createElement("div");
     this._messagePanel.classList.add("timelapse-capture-message");
     this._messagePanel.classList.add("message-pulse");
-    this._clickListener = this._onMessagePanelClicked.bind(this);
-    this._messagePanel.addEventListener("click", this._clickListener, true);
+    this._messagePanel.textContent = "Reloading page...";
     this.element.appendChild(this._messagePanel);
 
-    this._messagePanel.textContent = "Reloading page...";
-
-    var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.CaptureWillStop, this._onCaptureWillStop, this);
-    this._model.addEventListener(eventNames.CaptureDidStop, this._onCaptureDidStop, this);
-
-    WebInspector.resourceTreeModel.addEventListener(WebInspector.ResourceTreeModel.EventTypes.MainFrameNavigated, this._onMainFrameNavigated, this);
+    this._modifyListeners("addEventListener");
 
     this._scrollview = new WebInspector.TimelapseScrollview(model, recording);
     this._scrollview.show(this.element);
 };
 
 WebInspector.TimelapseCaptureView.prototype = {
-    willDispose: function()
-    {
-        this._messagePanel.removeEventListener("click", this._clickListener, true);
+    _modifyListeners: function(op) {
+        console.assert(op === "addEventListener" || op === "removeEventListener",
+                       "Tried to do something unsupported to listeners: " + op);
+        
+        if (!this._clickListener)
+            this._clickListener = this._onMessagePanelClicked.bind(this);
+        
+        this._messagePanel[op]("click", this._clickListener, true);
 
         var eventNames = WebInspector.TimelapseModel.Events;
-        this._model.removeEventListener(eventNames.CaptureWillStop, this._onCaptureWillStop, this);
-        this._model.removeEventListener(eventNames.CaptureDidStop, this._onCaptureDidStop, this);
+        this._model[op](eventNames.CaptureWillStop, this._onCaptureWillStop, this);
+        this._model[op](eventNames.CaptureDidStop,  this._onCaptureDidStop, this);
+        
+         WebInspector.resourceTreeModel[op](WebInspector.ResourceTreeModel.EventTypes.MainFrameNavigated, this._onMainFrameNavigated, this);
+    },
+
+    willDispose: function()
+    {
+        this._modifyListeners("removeEventListener");
     },
 
     get statusBarItems()
@@ -347,7 +363,6 @@ WebInspector.TimelapseReplayView = function(model, recording)
 
     this._splitView = new WebInspector.SplitView(WebInspector.SplitView.SidebarPosition.Right,
                         "timelapseControllerSplitView", 200);
-
     this._splitView.show(this.element);
 
     this._overviewWindow = new WebInspector.TimelapseOverview(model, recording);
@@ -360,15 +375,23 @@ WebInspector.TimelapseReplayView = function(model, recording)
     this._overviewPreview.show(this._splitView.sidebarElement);
 
     this._registerShortcuts();
-    this._keydownListener = this._keyDown.bind(this)
-    this.element.addEventListener("keydown", this._keydownListener, false);
+    this._modifyListeners("addEventListener");
 };
 
 WebInspector.TimelapseReplayView.prototype = {
+    _modifyListeners: function(op) {
+        console.assert(op === "addEventListener" || op === "removeEventListener",
+                       "Tried to do something unsupported to listeners: " + op);
+
+        if (!this._keydownListener)
+            this._keydownListener = this._keyDown.bind(this)
+        
+        this.element[op]("keydown", this._keydownListener, false);
+    },
+    
     willDispose: function()
     {
-        this.element.removeEventListener("keydown", this._keydownListener, false);
-        
+        this._modifyListeners("removeEventListener");
         // TODO: currently leaking status bar buttons via its listeners?
     },
 

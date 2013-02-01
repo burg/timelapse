@@ -148,6 +148,11 @@ WebInspector.TimelapseOverview.DefaultRefreshDelay = 30;
 WebInspector.TimelapseOverview.TimelineHeight = 30;
 
 WebInspector.TimelapseOverview.prototype = {
+    _modifyListeners: function(op) {
+        console.assert(op === "addEventListener" || op === "removeEventListener",
+                       "Tried to do something unsupported to listeners: " + op);
+
+    },
 
     _timelineForProvider: function(provider)
     {

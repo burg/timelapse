@@ -44,25 +44,7 @@ WebInspector.TimelapseMiniview = function(model, recording)
     this._model = model;
     this._recording = recording;
 
-    var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
-    this._model.addEventListener(eventNames.PlaybackStopped, this._onPlaybackStopped, this);
-    this._model.addEventListener(eventNames.InputPaused, this._onInputPaused, this);
-    this._model.addEventListener(eventNames.InputHit, this._onInputHit, this);
-    this._model.addEventListener(eventNames.BreakpointPaused, this._onBreakpointPaused, this);
-    this._model.addEventListener(eventNames.BreakpointHit, this._onBreakpointRecordsChanged, this);
-
-    var recordingEventNames = WebInspector.TimelapseRecording.Events;
-    this._recording.addEventListener(recordingEventNames.ProviderAdded, this._onProviderAdded, this);
-    this._recording.addEventListener(recordingEventNames.PreviewStarted, this._onPreviewStarted, this);
-    this._recording.addEventListener(recordingEventNames.PreviewStopped, this._onPreviewStopped, this);
-    this._recording.addEventListener(recordingEventNames.PreviewChanged, this._onPreviewChanged, this);
-
-    this._recording.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
-
-    WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._onBreakpointRecordsChanged, this);
-    WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
-    WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
+    this._modifyListeners("addEventListener");
 
     this.element.classList.add("timelapse-miniview");
     this.element.classList.add("timelapse-overview-column-main");
@@ -147,7 +129,38 @@ WebInspector.TimelapseMiniview.WindowScrollSpeedFactor = 0.001;
 WebInspector.TimelapseMiniview.WindowZoomSpeedFactor = 0.001;
 
 WebInspector.TimelapseMiniview.prototype = {
+    _modifyListeners: function(op) {
+        console.assert(op === "addEventListener" || op === "removeEventListener",
+                       "Tried to do something unsupported to listeners: " + op);
+        
+        var eventNames = WebInspector.TimelapseModel.Events;
+        this._model[op](eventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
+        this._model[op](eventNames.PlaybackStopped,  this._onPlaybackStopped, this);
+        this._model[op](eventNames.InputPaused,      this._onInputPaused, this);
+        this._model[op](eventNames.InputHit,         this._onInputHit, this);
+        this._model[op](eventNames.BreakpointPaused, this._onBreakpointPaused, this);
+        this._model[op](eventNames.BreakpointHit,    this._onBreakpointRecordsChanged, this);
+
+        var recordingEventNames = WebInspector.TimelapseRecording.Events;
+        this._recording[op](recordingEventNames.ProviderAdded,  this._onProviderAdded, this);
+        this._recording[op](recordingEventNames.PreviewStarted, this._onPreviewStarted, this);
+        this._recording[op](recordingEventNames.PreviewStopped, this._onPreviewStopped, this);
+        this._recording[op](recordingEventNames.PreviewChanged, this._onPreviewChanged, this);
+
+        this._recording.calculator[op](WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
+
+        var bpEventNames = WebInspector.BreakpointManager.Events;
+        WebInspector.breakpointManager[op](bpEventNames.BreakpointAdded,   this._onBreakpointRecordsChanged, this);
+        WebInspector.breakpointManager[op](bpEventNames.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
+        WebInspector.breakpointManager[op](bpEventNames.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
+    },
+
     // Public API
+    willDispose: function()
+    {
+        this._modifyListeners("removeEventListener");
+    },
+    
     wasShown: function()
     {
 	WebInspector.View.prototype.wasShown.call(this);
@@ -205,21 +218,25 @@ WebInspector.TimelapseMiniview.prototype = {
 	return found;
     },
 
-    _setupListenersForProvider: function(provider)
+    _modifyListenersForProvider: function(provider, op)
     {
+    
+    console.assert(op === "addEventListener" || op === "removeEventListener",
+                   "Tried to do something unsupported to listeners: " + op);
+        
 	var events = WebInspector.DataProvider.Events;
 	var types = WebInspector.DataProvider.Types;
 
-	provider.addEventListener(events.WillRemove, this._onProviderWillRemove, this);
+	provider[op](events.WillRemove, this._onProviderWillRemove, this);
 
 	if (provider.type == types.ReplaySavepoint) {
 	    var savepointEvents = WebInspector.ReplaySavepointProvider.Events;
-	    provider.addEventListener(savepointEvents.SavepointSet, this._onSavepointSet, this);
-	    provider.addEventListener(savepointEvents.SavepointRemoved, this._onSavepointRemoved, this);
+	    provider[op](savepointEvents.SavepointSet, this._onSavepointSet, this);
+	    provider[op](savepointEvents.SavepointRemoved, this._onSavepointRemoved, this);
 	} else {
-	    provider.addEventListener(events.AddedInput, this._onAddedInput, this);
-	    provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
-	    provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
+	    provider[op](events.AddedInput, this._onAddedInput, this);
+	    provider[op](events.Enabled, this._onProviderEnabled, this);
+	    provider[op](events.Disabled, this._onProviderDisabled, this);
 	}
     },
 
@@ -503,7 +520,7 @@ WebInspector.TimelapseMiniview.prototype = {
     
     _addProvider: function(provider)
     {
-	this._setupListenersForProvider(provider);
+	this._modifyListenersForProvider(provider, "addEventListener");
 
 	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint)
 	    return;
@@ -528,7 +545,7 @@ WebInspector.TimelapseMiniview.prototype = {
     _onProviderWillRemove: function(event)
     {
 	var provider = event.data;
-	this._teardownListenersForProvider(provider);
+	this._modifyListenersForProvider(provider, "removeEventListener");
 
 	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint)
 	    return;
