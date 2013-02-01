@@ -11,12 +11,10 @@ WebInspector.TimelapsePanel = function()
     this.splitView.hideMainElement();
 
     this._model = WebInspector.timelapseModel;
-
-    this._dataGrid = new WebInspector.TimelapseGrid(this._model, this._model.activeRecording);
-    this._dataGrid.show(this.splitView.sidebarElement);
+    this._model.addEventListener(WebInspector.TimelapseModel.Events.CaptureDidStart, this._captureDidStart, this);
+    this._model.addEventListener(WebInspector.TimelapseModel.Events.CaptureDidStop, this._captureDidStop, this);
 
     this._registerShortcuts();
-    this._reset();
 };
 
 WebInspector.TimelapsePanel.prototype = {
@@ -25,12 +23,24 @@ WebInspector.TimelapsePanel.prototype = {
         return WebInspector.UIString("Timelapse");
     },
 
-    //called to clear the interface without reloading inspector.html/building DOM
-    _reset: function()
+    _captureDidStart: function()
     {
         WebInspector.Panel.prototype.reset.call(this);
         this.searchCanceled();
-        this.removeAllListeners();
+        
+        if (this._dataGrid) {
+            this._dataGrid.detach();
+            this._dataGrid.dispose();
+            delete this._dataGrid;
+        }
+    },
+
+    _captureDidStop: function()
+    {
+        this.searchCanceled();
+      
+        this._dataGrid = new WebInspector.TimelapseGrid(this._model, this._model.activeRecording);
+        this._dataGrid.show(this.splitView.sidebarElement);
     },
 
     _registerShortcuts: function()

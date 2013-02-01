@@ -72,8 +72,10 @@ WebInspector.TimelapseGrid = function(model, recording) {
 
     this._highlightedNodes = {};
     this._sliders = {};
+
     this._model = model;
     this._recording = recording;
+    
     this._sortingFunctions = {
 	index: WebInspector.TimelapseGridNode.IndexComparator,
 	group: WebInspector.TimelapseGridNode.GroupComparator,
@@ -98,33 +100,65 @@ WebInspector.TimelapseGrid = function(model, recording) {
     this._addSlider(new WebInspector.TimelapseGridSlider(this, "previous", false));
     this._addSlider(new WebInspector.TimelapseGridSlider(this, "tentative", false));
 
-    var modelEventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(modelEventNames.CaptureDidStart, this._onCaptureDidStart, this);
-    this._model.addEventListener(modelEventNames.CaptureDidStop, this._onCaptureDidStop, this);
-    this._model.addEventListener(modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
-    this._model.addEventListener(modelEventNames.PlaybackStopped, this._onPlaybackStopped, this);
-    this._model.addEventListener(modelEventNames.InputPaused, this._onInputPaused, this);
-    this._model.addEventListener(modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
-
-    var recordingEventNames = WebInspector.TimelapseRecording.Events;
-    this._recording.addEventListener(recordingEventNames.ProviderAdded, this._onProviderAdded, this);
-    this._recording.addEventListener(recordingEventNames.PreviewStarted, this._onPreviewStarted, this);
-    this._recording.addEventListener(recordingEventNames.PreviewStopped, this._onPreviewStopped, this);
-    this._recording.addEventListener(recordingEventNames.PreviewChanged, this._onPreviewChanged, this);
-    this._recording.addEventListener(recordingEventNames.CircleSelected, this._onCircleSelected, this);
-
-    this._recording.calculator.addEventListener(WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
-
     this._providers = {};
     this._refreshDelay = WebInspector.TimelapseGrid.DefaultRefreshDelay;
-    this._pendingRecords = [];
     this._maxMarkIndex = 0;
     this._recordGridNodes = {};
+    
+    this._adjustListeners("addEventListener");
+    
+    // add input providers that have already been created
+    var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+    for (var i = 0; i < inputProviders.length; i++)
+        this._addProvider(inputProviders[i]);
+    
+	// create new rows for all records, update table.
+    var newNode;
+    var allRecords = this._recording.allRecords;
+	for (var i = 0; i < allRecords.length; i++) {
+	    if (allRecords[i].mark.index > this._maxMarkIndex)
+		this._maxMarkIndex = allRecords[i].mark.index;
+	    
+	    newNode = this._createRecordGridNode(allRecords[i]);
+	    this.rootNode().appendChild(newNode);
+	    newNode.refreshRecord();
+	}
+    
+    // initialize slider position
+    // XXX test me
+    this._refreshIfNeeded();
+	var node = this._recordGridNodes[this._model.currentMarkIndex];
+	this.sliders.playback.placeAfter(node);
+	this.sliders.playback.enable();
+	this.sliders.playback.show();
+	node.reveal();
 };
 
 WebInspector.TimelapseGrid.DefaultRefreshDelay = 150;
 
 WebInspector.TimelapseGrid.prototype = {
+
+    _adjustListeners: function(op)
+    {
+        console.assert(op === "addEventListener" || op === "removeEventListener",
+                       "Tried to do something unsupported to listeners: " + op);
+    
+        var modelEventNames = WebInspector.TimelapseModel.Events;
+        this._model[op](modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
+        this._model[op](modelEventNames.PlaybackStopped,  this._onPlaybackStopped, this);
+        this._model[op](modelEventNames.InputPaused,      this._onInputPaused, this);
+        this._model[op](modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
+
+        var recordingEventNames = WebInspector.TimelapseRecording.Events;
+        this._recording[op](recordingEventNames.ProviderAdded,  this._onProviderAdded, this);
+        this._recording[op](recordingEventNames.PreviewStarted, this._onPreviewStarted, this);
+        this._recording[op](recordingEventNames.PreviewStopped, this._onPreviewStopped, this);
+        this._recording[op](recordingEventNames.PreviewChanged, this._onPreviewChanged, this);
+        this._recording[op](recordingEventNames.CircleSelected, this._onCircleSelected, this);
+
+        this._recording.calculator[op](WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
+    },
+
     // Public API
     get sliders()
     {
@@ -139,6 +173,11 @@ WebInspector.TimelapseGrid.prototype = {
     get recording()
     {
         return this._recording;
+    },
+
+    willDispose: function()
+    {
+        this._adjustListeners("removeEventListener");
     },
 
     wasShown: function()
@@ -156,25 +195,9 @@ WebInspector.TimelapseGrid.prototype = {
 	    delete this._refreshTimeout;
 	}
 
-	if (this._model.isCapturing)
-	    return;
-
 	// save position
-        var wasScrolledToLastRow = this.isScrolledToLastRow();
+    var wasScrolledToLastRow = this.isScrolledToLastRow();
 
-	var newNode;
-	// create new rows for pending records, update table.
-	for (var i = 0; i < this._pendingRecords.length; i++) {
-	    if (this._pendingRecords[i].mark.index > this._maxMarkIndex)
-		this._maxMarkIndex = this._pendingRecords[i].mark.index;
-	    
-	    newNode = this._createRecordGridNode(this._pendingRecords[i]);
-	    this.rootNode().appendChild(newNode);
-	    newNode.refreshRecord();
-	}
-
-	this._pendingRecords = [];
-	
 	this.updateWidths();
 	this._invalidateVisibleRows();
 
@@ -256,6 +279,13 @@ WebInspector.TimelapseGrid.prototype = {
     _onProviderAdded: function(event)
     {
 	var provider = event.data;
+    
+    this._addProvider(provider);
+    },
+    
+    _addProvider: function(provider)
+    {
+
 	if (!this._canUseProvider(provider))
 	    return;
 
@@ -263,13 +293,11 @@ WebInspector.TimelapseGrid.prototype = {
 		       "Provider already added to timeline grid.");
 
 	this._providers[provider.name] = provider;
-	this._setupListenersForProvider(provider);
+	this._adjustListenersForProvider(provider, "addEventListener");
 
 	// set up provider's record filter if it's active.
 	if (provider.isEnabled())
 	    this.element.classList.add("filter-" + provider.name);
-
-	// TODO: if the provider already has data, we should add it to pendingRecords here.
     },
 
     _onProviderWillRemove: function(event)
@@ -282,53 +310,28 @@ WebInspector.TimelapseGrid.prototype = {
 		       "Can't remove provider not in timeline grid.");
 
 	delete this._providers[provider.name];
-	this._teardownListenersForProvider(provider);
+	this._adjustListenersForProvider(provider, "removeEventListener");
     },
 
-    _setupListenersForProvider: function(provider)
+    _adjustListenersForProvider: function(provider, op)
     {
-	var events = WebInspector.DataProvider.Events;
-	var types = WebInspector.DataProvider.Types;
-	provider.addEventListener(events.WillRemove, this._onProviderWillRemove, this);
+        console.assert(op === "addEventListener" || op === "removeEventListener",
+                       "Tried to do something unsupported to listeners: " + op);
+    
+        var events = WebInspector.DataProvider.Events;
+        var types = WebInspector.DataProvider.Types;
+        provider[op](events.WillRemove, this._onProviderWillRemove, this);
 
-	if (provider.type == types.TimelapseInput) {
-	    provider.addEventListener(events.AddedInput, this._onAddedInput, this);
-	    provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
-	    provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
-	}
+        if (provider.type == types.TimelapseInput) {
+            provider[op](events.Enabled,  this._onProviderEnabled, this);
+            provider[op](events.Disabled, this._onProviderDisabled, this);
+        }
 
         if (provider.type == types.ReplaySavepoint) {
-	    var savepointEvents = WebInspector.ReplaySavepointProvider.Events;
-	    provider.addEventListener(savepointEvents.SavepointSet, this._onSavepointChanged, this);
-	    provider.addEventListener(savepointEvents.SavepointRemoved, this._onSavepointChanged, this);
-	}
-    },
-
-    _teardownListenersForProvider: function(provider)
-    {
-	var events = WebInspector.DataProvider.Events;
-	var types = WebInspector.DataProvider.Types;
-	provider.removeEventListener(events.WillRemove, this._onProviderWillRemove, this);
-
-	if (provider.type == types.TimelapseInput) {
-	    provider.removeEventListener(events.AddedInput, this._onAddedInput, this);
-	    provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
-	    provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
-	}
-
-        if (provider.type == types.ReplaySavepoint) {
-	    var savepointEvents = WebInspector.ReplaySavepointProvider.Events;
-	    provider.removeEventListener(savepointEvents.SavepointSet, this._onSavepointChanged, this);
-	    provider.removeEventListener(savepointEvents.SavepointRemoved, this._onSavepointChanged, this);
-	}
-    },
-
-    _onAddedInput: function(event)
-    {
-	var input = event.data.input;
-
-	this._pendingRecords.push(input);
-        this._scheduleRefresh();
+            var savepointEvents = WebInspector.ReplaySavepointProvider.Events;
+            provider[op](savepointEvents.SavepointSet,     this._onSavepointChanged, this);
+            provider[op](savepointEvents.SavepointRemoved, this._onSavepointChanged, this);
+        }
     },
 
     _onProviderEnabled: function(event)
@@ -449,28 +452,6 @@ WebInspector.TimelapseGrid.prototype = {
 	this._updateZoomInterval();
 	this._updateOffscreenRows();
 	this._scheduleRefresh();
-    },
-
-    _onCaptureDidStart: function()
-    {
-	// TODO: make widget lifetime tied to specific recording, rather
-	// than record/replay events
-	for (var key in this.sliders) {
-	    var slider = this.sliders[key];
-	    slider.clear();
-	}
-
-	this.sliders.playback.disable();
-    },
-
-    _onCaptureDidStop: function()
-    {
-	this._refreshIfNeeded();
-	var node = this._recordGridNodes[this._model.currentMarkIndex];
-	this.sliders.playback.placeAfter(node);
-	this.sliders.playback.enable();
-	this.sliders.playback.show();
-	node.reveal();
     },
 
     _onPlaybackDidStart: function()
