@@ -73,12 +73,18 @@ WebInspector.TimelapseScrollview.prototype = {
 
     wasShown: function()
     {
-	WebInspector.View.prototype.wasShown.call(this);
-
-	/* in case we stopped animating, but the window resized... */
-	this._drawGraph();
+        WebInspector.View.prototype.wasShown.call(this);
+        /* in case we stopped animating, but the window resized... */
+        this._drawGraph();
     },
 
+    willDispose: function()
+    {
+        for (var i = 0; i < this._providers.length; i++) {
+            this._modifyListenersForProvider(this._providers[i], "removeEventListener");
+        }
+    },
+    
     onResize: function()
     {
 	WebInspector.View.prototype.onResize.call(this);
@@ -121,16 +127,13 @@ WebInspector.TimelapseScrollview.prototype = {
 	return found;
     },
 
-    _setupListenersForProvider: function(provider)
+    _modifyListenersForProvider: function(provider, op)
     {
-	var events = WebInspector.DataProvider.Events;
-	provider.addEventListener(events.WillRemove, this._onProviderWillRemove, this);
-    },
-
-    _teardownListenersForProvider: function(provider)
-    {
-	var events = WebInspector.DataProvider.Events;
-	provider.removeEventListener(events.WillRemove, this._onProviderWillRemove, this);
+        console.assert(op === "addEventListener" || op === "removeEventListener",
+                       "Tried to do something unsupported to listeners: " + op);
+        
+        var events = WebInspector.DataProvider.Events;
+        provider[op](events.WillRemove, this._onProviderWillRemove, this);
     },
 
     _graphBorderWidth: 1,
@@ -372,7 +375,7 @@ WebInspector.TimelapseScrollview.prototype = {
 		       "Specific provider already added to scrollview provider list.");
 
 	this._providers.push(provider);
-	this._setupListenersForProvider(provider);
+	this._modifyListenersForProvider(provider, "addEventListener");
 
 	// add timeline for this named provider, if it doesn't exist.
 	if (!this._timelines.hasOwnProperty(provider.name))
@@ -393,7 +396,7 @@ WebInspector.TimelapseScrollview.prototype = {
 	console.assert(i != -1, "Can't remove provider not in scrollview list.");
 
 	var removedProvider = this._providers.splice(i, 1)[0];
-	this._teardownListenersForProvider(provider);
+	this._modifyListenersForProvider(provider, "removeEventListener");
 
 	// splice out the provider from related timeline, and remove
 	// the timeline entirely if no more providers are attached to it.

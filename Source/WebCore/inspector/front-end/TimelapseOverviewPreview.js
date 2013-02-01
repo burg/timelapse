@@ -382,15 +382,7 @@ WebInspector.TimelapseOverviewPreview = function(model, recording)
     this._model = model;
     this._recording = recording;
 
-    var recordingEvents = WebInspector.TimelapseRecording.Events;
-    this._recording.addEventListener(recordingEvents.ProviderAdded, this._onProviderAdded, this);
-
-    // if something changed about state of playback, then refresh (the visible view)
-    var events = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(events.PlaybackDidStart, this.refresh, this);
-    this._model.addEventListener(events.PlaybackStopped, this.refresh, this);
-    this._model.addEventListener(events.BreakpointPaused, this.refresh, this);
-    this._model.addEventListener(events.InputPaused, this.refresh, this);
+    this._modifyListeners("addEventListener");
 
     // scan for existing useful provider
     var providers = this._recording.providersWithType(WebInspector.DataProvider.Types.OverviewPreview);
@@ -401,6 +393,28 @@ WebInspector.TimelapseOverviewPreview = function(model, recording)
 };
 
 WebInspector.TimelapseOverviewPreview.prototype = {
+
+    _modifyListeners: function(op)
+    {
+        console.assert(op === "addEventListener" || op === "removeEventListener",
+                       "Tried to do something unsupported to listeners: " + op);
+
+        var recordingEvents = WebInspector.TimelapseRecording.Events;
+        this._recording[op](recordingEvents.ProviderAdded, this._onProviderAdded, this);
+
+        // if something changed about state of playback, then refresh (the visible view)
+        var events = WebInspector.TimelapseModel.Events;
+        this._model[op](events.PlaybackDidStart, this.refresh, this);
+        this._model[op](events.PlaybackStopped,  this.refresh, this);
+        this._model[op](events.BreakpointPaused, this.refresh, this);
+        this._model[op](events.InputPaused,      this.refresh, this);
+    },
+
+    willDispose: function()
+    {
+        this._modifyListeners("removeEventListener");
+    },
+
     refresh: function()
     {
 	if (!this._provider)
