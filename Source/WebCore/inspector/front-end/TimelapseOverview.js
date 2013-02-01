@@ -347,7 +347,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	/* playback cursor */
 	var markIdx = this._model.currentMarkIndex;
-	var recordIdx = this._model.recordIndexFromMarkIndex(markIdx);
+	var recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
 	var percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
 
 	this.sliders.playback.setPosition(percent, true);
@@ -360,7 +360,7 @@ WebInspector.TimelapseOverview.prototype = {
 	    for (var i = 0; i < savepoints.length; i++) {
 		var savepoint = provider.savepoints[i];
 		markIdx = savepoint.markIndex;
-		recordIdx = this._model.recordIndexFromMarkIndex(markIdx);
+		recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
 		percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
 		this.sliders.savepoint[i].setPosition(percent, true);
 		this.sliders.savepoint[i].show();
@@ -371,13 +371,13 @@ WebInspector.TimelapseOverview.prototype = {
 
 	/* previous/replay start slider */
 	markIdx = this._model.replayStartMarkIndex;
-	recordIdx = this._model.recordIndexFromMarkIndex(markIdx);
+	recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
 	percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
 	this.sliders.previous.setPosition(percent, true);
 
 	/* tentative/replay finish slider */
 	markIdx = this._model.replayFinishMarkIndex;
-	recordIdx = this._model.recordIndexFromMarkIndex(markIdx);
+	recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
 	percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
 	this.sliders.tentative.setPosition(percent, true);
     },
@@ -869,9 +869,9 @@ WebInspector.TimelapseOverview.prototype = {
     _onPlaybackDidStart: function()
     {
 	var allRecords = this._recording.allRecords;
-	var startRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
-	var finishRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
-	var currentRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex)];
+	var startRecord = allRecords[this._recording.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
+	var finishRecord = allRecords[this._recording.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
+	var currentRecord = allRecords[this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex)];
 
 	this.sliders.playback.element.addStyleClass("playback-slider");
 	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
@@ -903,7 +903,7 @@ WebInspector.TimelapseOverview.prototype = {
     _onInputPaused: function()
     {
 	var allRecords = this._recording.allRecords;
-	var recordIndex = this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex);
+	var recordIndex = this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex);
 	
 	if (recordIndex != -1) {
 	    var percent = this.calculator.computeOverviewPercentage(allRecords[recordIndex].mark.timestamp);
@@ -930,7 +930,7 @@ WebInspector.TimelapseOverview.prototype = {
     _onInputHit: function(eventData)
     {
 	var markIndex = eventData.data;
-	var recordIndex = this._model.recordIndexFromMarkIndex(markIndex);
+	var recordIndex = this._recording.recordIndexFromMarkIndex(markIndex);
 
 	// don't animate if this mark has no corresponding record (aka, not a user-visible mark)
 	if (recordIndex == -1)
@@ -1020,8 +1020,9 @@ WebInspector.TimelapseOverview.prototype.__proto__ = WebInspector.View.prototype
 WebInspector.TimelapseCircleTimeline = function(recording, provider)
 {
     WebInspector.View.call(this);
-    // only used to get calculator
+
     this.calculator = recording.calculator;
+    this._recording = recording;
     this._provider = provider;
 
     console.assert(!!provider, "Tried to instantiate circle timeline without provider :-(");
@@ -1511,7 +1512,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	    ctx.fillStyle = fogColor;
 
 	    for (var i = 0; i < intervals.length; i++) {
-		var timestamp = model.timestampFromMarkIndex(intervals[i].start);
+		var timestamp = this._recording.timestampFromMarkIndex(intervals[i].start);
 		endPercent = this.calculator.computeOverviewPercentage(timestamp);
 		widthPercent = endPercent - startPercent;
 
@@ -1533,7 +1534,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 		    fade(x + width - fadeWidth, fadeWidth);
 		}
 
-		timestamp = model.timestampFromMarkIndex(intervals[i].end);
+		timestamp = this._recording.timestampFromMarkIndex(intervals[i].end);
 		startPercent = this.calculator.computeOverviewPercentage(timestamp);
 	    }
 

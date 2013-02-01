@@ -586,9 +586,9 @@ WebInspector.TimelapseMiniview.prototype = {
     {
 	// timestamp of start/finish/now to position the sliders.
 	var allRecords = this._recording.allRecords;
-	var startRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
-	var finishRecord = allRecords[this._model.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
-	var currentRecordIndex = this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex);
+	var startRecord = allRecords[this._recording.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
+	var finishRecord = allRecords[this._recording.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
+	var currentRecordIndex = this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex);
 
 	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
 	this.sliders.playback.show();
@@ -623,7 +623,7 @@ WebInspector.TimelapseMiniview.prototype = {
     _onInputPaused: function()
     {
 	var allRecords = this._recording.allRecords;
-	var recordIndex = this._model.recordIndexFromMarkIndex(this._model.currentMarkIndex);
+	var recordIndex = this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex);
 	
 	if (recordIndex != -1) {
 	    var percent = this.calculator.computeMiniviewPercentage(allRecords[recordIndex].mark.timestamp);
@@ -642,7 +642,7 @@ WebInspector.TimelapseMiniview.prototype = {
     _onInputHit: function(event)
     {
 	var markIndex = event.data;
-	var recordIndex = this._model.recordIndexFromMarkIndex(markIndex);
+	var recordIndex = this._recording.recordIndexFromMarkIndex(markIndex);
 
 	// don't animate if this mark has no corresponding record (aka, not a user-visible mark)
 	if (recordIndex == -1)
@@ -689,7 +689,7 @@ WebInspector.TimelapseMiniview.prototype = {
         for (var i = 0; i < savepoints.length; i++) {
             var savepoint = savepoints[i];
             var markIndex = savepoint.markIndex;
-            var timestamp = this._model.timestampFromMarkIndex(markIndex);
+            var timestamp = this._recording.timestampFromMarkIndex(markIndex);
             var percent = 0.0;
             if (markIndex > 0)
             percent = this.calculator.computeMiniviewPercentage(timestamp);

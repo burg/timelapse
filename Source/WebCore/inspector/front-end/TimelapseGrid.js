@@ -656,7 +656,7 @@ WebInspector.TimelapseGrid.prototype = {
 		    if (!nextMarkIndex)
 			return;
 
-		    var nextRecordIndex = this._model.recordIndexFromMarkIndex(nextMarkIndex);
+		    var nextRecordIndex = this._recording.recordIndexFromMarkIndex(nextMarkIndex);
 		    this._recording.previewRecord(this._recordGridNodes[nextMarkIndex].record);
 		}
 	    }

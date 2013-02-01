@@ -197,6 +197,25 @@ WebInspector.TimelapseRecording.prototype = {
     return this._records;
     },
 
+    recordIndexFromMarkIndex: function(markIndex)
+    {
+        function markIndexAndRecordComparator(idx, record) {
+            var record_idx = record.mark.index;
+            if (record_idx > idx) return -1;
+            if (record_idx < idx) return 1;
+            return 0;
+        }
+
+        return this.allRecords.binaryIndexOf(markIndex, markIndexAndRecordComparator);
+    },
+
+    timestampFromMarkIndex: function(markIndex)
+    {
+        var recordIndex = this.recordIndexFromMarkIndex(markIndex);
+        var record = this.allRecords[recordIndex];
+        return record.mark.timestamp;
+    },
+
     // TODO: Preview state should live on the specific DataProvider which is being previewed.
     get previewModeActive()
     {

@@ -223,7 +223,7 @@ WebInspector.TimelapseModel.prototype = {
 	if (this._replaying && this._currentMarkIndex == markIndex) {
 	    // Workaround: currently there is no way to force replay up to the current mark index.
 	    if (hitIndex < this._breakpointHitIndex) {
-		var recordIndex = this.recordIndexFromMarkIndex(markIndex);
+		var recordIndex = this.activeRecording.recordIndexFromMarkIndex(markIndex);
 		var prevIndex = this.activeRecording.allRecords[recordIndex - 1].mark.index;
 		this._enqueueAction(this.replayUpToMarkIndex.bind(this, markIndex, allowBreakpoints, fastReplay))
 		this._enqueueAction(this.replayToBreakpointHit.bind(this, markIndex, hitIndex, allowBreakpoints, fastReplay));
@@ -249,7 +249,7 @@ WebInspector.TimelapseModel.prototype = {
 
 	if (this._replaying && this._currentMarkIndex == markIndex) {
 	    // Workaround: currently there is no way to force replay up to the current mark index.
-	    var recordIndex = this.recordIndexFromMarkIndex(markIndex);
+	    var recordIndex = this.activeRecording.recordIndexFromMarkIndex(markIndex);
 	    var prevIndex = this.activeRecording.allRecords[recordIndex - 1].mark.index;
 	    this._enqueueAction(this.replayToBreakpointHit.bind(this, markIndex, hitIndex, false, true));
 	    this.replayUpToMarkIndex(prevIndex, false, true);
@@ -283,7 +283,7 @@ WebInspector.TimelapseModel.prototype = {
 
 	    // Workaround: currently there is no way to force replay up to the current mark index.
 	    if (currentIndex == endIndex) {
-		var endRecordIndex = this.recordIndexFromMarkIndex(endIndex);
+		var endRecordIndex = this.activeRecording.recordIndexFromMarkIndex(endIndex);
 		var prevIndex = allRecords[endRecordIndex - 1].mark.index;
 		this._enqueueAction(this.replayUpToMarkIndex.bind(this, prevIndex, true, true));
 	    }
@@ -397,26 +397,6 @@ WebInspector.TimelapseModel.prototype = {
     get replayFinishMarkIndex()
     {
 	return this._replayFinishIndex;
-    },
-
-    // TODO: move these to WebInspector.TimelapseRecording
-    recordIndexFromMarkIndex: function(markIndex)
-    {
-	function markIndexAndRecordComparator(idx, record) {
-	    var record_idx = record.mark.index;
-	    if (record_idx > idx) return -1;
-	    if (record_idx < idx) return 1;
-	    return 0;
-	}
-
-	return this.activeRecording.allRecords.binaryIndexOf(markIndex, markIndexAndRecordComparator);
-    },
-
-    timestampFromMarkIndex: function(markIndex)
-    {
-	var recordIndex = this.recordIndexFromMarkIndex(markIndex);
-	var record = this.activeRecording.allRecords[recordIndex];
-	return record.mark.timestamp;
     },
 
     // Internal helpers
@@ -545,7 +525,7 @@ WebInspector.TimelapseModel.prototype = {
 
     _playbackHitInput: function(markIndex)
     {
-        if (this.recordIndexFromMarkIndex(markIndex) > -1)
+        if (this.activeRecording.recordIndexFromMarkIndex(markIndex) > -1)
             this._currentMarkIndex = markIndex;
         this._breakpointHitIndex = -1;
         this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.InputHit, markIndex);
