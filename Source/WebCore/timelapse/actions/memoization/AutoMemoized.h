@@ -43,26 +43,18 @@ namespace ReplayableTypes {
 const char* AutoMemoized = "AutoMemoized";
 }
 
-enum AttributeType {
-    ScreenX,
-    ScreenY,
-    ScreenLeft,
-    ScreenTop
-};
-
 template<typename T> class AutoMemoized : public ReplayableAction {
 
 public:
-    AutoMemoized(AttributeType attribute, T result)
+    AutoMemoized(String attribute, T result)
         : ReplayableAction(ReplayableTypes::AutoMemoized)
         , m_attribute(attribute)
         , m_result(result) {}
     virtual ~AutoMemoized() {}
     
-    AttributeType attributeType() const { return m_attribute; }
+    String attributeName() const { return m_attribute; }
     T result() const { return m_result; }
     String resultString() const;
-    String attributeName() const;
 
     // ReplayableAction API
     virtual DeterminismQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
@@ -71,30 +63,9 @@ public:
     virtual void serialize(ActionSerializer*) const OVERRIDE;
     
 private:
-    AttributeType m_attribute;
+    String m_attribute;
     T m_result;
 };
-
-template<typename T> String AutoMemoized<T>::resultString() const
-{
-    switch (m_attribute) {
-        case ScreenX:
-        case ScreenY:
-        case ScreenLeft:
-        case ScreenTop:
-            return String::number(m_result);
-    }
-}
-
-template<typename T> String AutoMemoized<T>::attributeName() const
-{
-    switch(m_attribute) {
-        case ScreenX: return String("window.screenX");
-        case ScreenY: return String("window.screenY");
-        case ScreenLeft: return String("window.screenLeft");
-        case ScreenTop: return String("window.screenTop");
-    }
-}
 
 template<typename T> String AutoMemoized<T>::toString() const
 {
@@ -103,20 +74,35 @@ template<typename T> String AutoMemoized<T>::toString() const
 
 template<typename T> size_t AutoMemoized<T>::memorySize() const
 {
-    return sizeof(AutoMemoized);
+    size_t size = sizeof(AutoMemoized);
+    size += m_attribute.impl()->cost();
+    return size;
 }
 
 template<typename T> void AutoMemoized<T>::serialize(ActionSerializer* serializer) const
 {
     serializer->putString("attribute", attributeName());
+    serializer->putInt("result", m_result);
+}
 
-    switch (m_attribute) {
-        case ScreenX:
-        case ScreenY:
-        case ScreenLeft:
-        case ScreenTop:
-            serializer->putInt("result", m_result);
-    }
+template<typename T> String AutoMemoized<T>::resultString() const
+{
+    return m_attribute + ": AutoMemoized not implemented";
+}
+
+template<> String AutoMemoized<int>::resultString() const
+{
+    return String::number(m_result);
+}
+
+template<> String AutoMemoized<long>::resultString() const
+{
+    return String::number(m_result);
+}
+
+template<> String AutoMemoized<double>::resultString() const
+{
+    return String::numberToStringECMAScript(m_result);
 }
 
 } //namespace JSC

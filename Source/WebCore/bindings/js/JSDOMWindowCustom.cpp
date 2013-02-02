@@ -689,12 +689,12 @@ JSValue JSDOMWindow::screenX(ExecState* exec) const
         result = impl()->screenX();
     } else if (log->capturing()) {
         result = impl()->screenX();
-        log->append(new AutoMemoized<int>(ScreenX, result));
+        log->append(new AutoMemoized<int>("JSDOMWindow.screenX", result));
     } else {
         ASSERT(log->replaying());
         AutoMemoized<int>* action = static_cast<AutoMemoized<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));
         if (action) {
-            ASSERT(action->attributeType() == ScreenX);
+            ASSERT(action->attributeName() == "JSDOMWindow.screenX");
             result = action->result();
         } else { // error handling case
             result = impl()->screenX();
@@ -715,12 +715,12 @@ JSValue JSDOMWindow::screenY(ExecState* exec) const
         result = impl()->screenY();
     } else if (log->capturing()) {
         result = impl()->screenY();
-        log->append(new AutoMemoized<int>(ScreenY, result));
+        log->append(new AutoMemoized<int>("JSDOMWindow.screenY", result));
     } else {
         ASSERT(log->replaying());
         AutoMemoized<int>* action = static_cast<AutoMemoized<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));
         if (action) {
-            ASSERT(action->attributeType() == ScreenY);
+            ASSERT(action->attributeName() == "JSDOMWindow.screenY");
             result = action->result();
         } else { // error handling case
             result = impl()->screenY();
@@ -741,12 +741,12 @@ JSValue JSDOMWindow::screenLeft(ExecState* exec) const
         result = impl()->screenLeft();
     } else if (log->capturing()) {
         result = impl()->screenLeft();
-        log->append(new AutoMemoized<int>(ScreenLeft, result));
+        log->append(new AutoMemoized<int>("JSDOMWindow.screenLeft", result));
     } else {
         ASSERT(log->replaying());
         AutoMemoized<int>* action = static_cast<AutoMemoized<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));
         if (action) {
-            ASSERT(action->attributeType() == ScreenLeft);
+            ASSERT(action->attributeName() == "JSDOMWindow.screenLeft");
             result = action->result();
         } else { // error handling case
             result = impl()->screenLeft();
@@ -768,12 +768,12 @@ JSValue JSDOMWindow::screenTop(ExecState* exec) const
     }
     else if (log->capturing()) {
         result = impl()->screenTop();
-        log->append(new AutoMemoized<int>(ScreenTop, result));
+        log->append(new AutoMemoized<int>("JSDOMWindow.screenTop", result));
     } else {
         ASSERT(log->replaying());
         AutoMemoized<int>* action = static_cast<AutoMemoized<int>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));
         if (action) {
-            ASSERT(action->attributeType() == ScreenTop);
+            ASSERT(action->attributeName() == "JSDOMWindow.screenTop");
             result = action->result();
         } else { // error handling case
             result = impl()->screenTop();
