@@ -86,6 +86,7 @@ JSWindowEventListener
 MasqueradesAsUndefined
 NamedConstructor=*
 NamedGetter
+Nondeterministic
 NotEnumerable
 NumericIndexedGetter
 ObjCCustomImplementation

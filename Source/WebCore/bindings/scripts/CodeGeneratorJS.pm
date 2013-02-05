@@ -1791,14 +1791,43 @@ sub GenerateImplementation
                     push(@implContent, "        return jsUndefined();\n");
                 }
 
-                if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"}) {
-                    $implIncludes{"PlaybackError.h"} = 1;
+                if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"} || $attribute->signature->extendedAttributes->{"Nondeterministic"}) {
                     $implIncludes{"<wtf/timelapse/DeterminismLog.h>"} = 1;
                     push(@implContent, "#if ENABLE(TIMELAPSE)\n");
                     push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
                     push(@implContent, "    RefPtr<DeterminismLog> log = globalObject->determinismLog();\n");
+                    push(@implContent, "#endif\n");
+                }
+
+                if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"}) {
+                    $implIncludes{"PlaybackError.h"} = 1;
+                    push(@implContent, "#if ENABLE(TIMELAPSE)\n");
                     push(@implContent, "    if (log && log->isActive() && log->capturing()) {\n");
-                    push(@implContent, "        log->append(new PlaybackError(\"Replay is not implemented for ${className}.$name\"));\n");
+                    push(@implContent, "        log->append(new PlaybackError(\"Replay is not implemented for $interfaceName.$name\"));\n");
+                    push(@implContent, "    }\n");
+                    push(@implContent, "#endif\n");
+                }
+
+                if ($attribute->signature->extendedAttributes->{"Nondeterministic"}) {
+                    $implIncludes{"AutoMemoized.h"} = 1;
+                    push(@implContent, "#if ENABLE(TIMELAPSE)\n");
+                    push(@implContent, "    $type memoizedResult;\n");
+                    push(@implContent, "    if (log && log->isActive()) {\n");
+                    push(@implContent, "        if (log->capturing()) {\n");
+                    push(@implContent, "            memoizedResult = castedThis->impl()->$implGetterFunctionName();\n");
+                    push(@implContent, "            log->append(new AutoMemoized<$type>(\"$interfaceName.$name\", memoizedResult));\n");
+                    # Assume getters all return numbers
+                    push(@implContent, "            return jsNumber(memoizedResult);\n");
+                    push(@implContent, "        } else {\n");
+                    push(@implContent, "            ASSERT(log->replaying());\n");
+                    push(@implContent, "            AutoMemoized<$type>* action = static_cast<AutoMemoized<$type>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+                    push(@implContent, "            if (action) {\n");
+                    push(@implContent, "                ASSERT(action->attributeName() == \"$interfaceName.$name\");\n");
+                    push(@implContent, "                memoizedResult = action->result();\n");
+                    push(@implContent, "                return jsNumber(memoizedResult);\n");
+                    push(@implContent, "            }\n");
+                    # if !action, there was an error, so obtain result normally
+                    push(@implContent, "        }\n");
                     push(@implContent, "    }\n");
                     push(@implContent, "#endif\n");
                 }

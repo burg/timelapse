@@ -37,7 +37,7 @@
 #include <wtf/text/StringConcatenate.h>
 #include <wtf/timelapse/ActionSerializer.h>
 
-namespace JSC {
+namespace WebCore {
 
 namespace ReplayableTypes {
 const char* AutoMemoized = "AutoMemoized";
@@ -82,7 +82,24 @@ template<typename T> size_t AutoMemoized<T>::memorySize() const
 template<typename T> void AutoMemoized<T>::serialize(ActionSerializer* serializer) const
 {
     serializer->putString("attribute", attributeName());
+}
+
+template<> void AutoMemoized<int>::serialize(ActionSerializer* serializer) const
+{
+    serializer->putString("attribute", attributeName());
     serializer->putInt("result", m_result);
+}
+
+template<> void AutoMemoized<long>::serialize(ActionSerializer* serializer) const
+{
+    serializer->putString("attribute", attributeName());
+    serializer->putInt64("result", m_result);
+}
+
+template<> void AutoMemoized<double>::serialize(ActionSerializer* serializer) const
+{
+    serializer->putString("attribute", attributeName());
+    serializer->putDouble("result", m_result);
 }
 
 template<typename T> String AutoMemoized<T>::resultString() const

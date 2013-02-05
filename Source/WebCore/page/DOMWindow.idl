@@ -94,24 +94,16 @@ module window {
 
         attribute [Replaceable] boolean offscreenBuffering;
 
-        attribute [Replaceable, ReplayNotImplemented] long outerHeight;
-        attribute [Replaceable, ReplayNotImplemented] long outerWidth;
-        attribute [Replaceable, ReplayNotImplemented] long innerHeight;
-        attribute [Replaceable, ReplayNotImplemented] long innerWidth;
-#if defined(ENABLE_TIMELAPSE) && ENABLE_TIMELAPSE
-        // Custom bindings implement Replaceable
-        attribute [Custom] long screenX;
-        attribute [Custom] long screenY;
-        attribute [Custom] long screenLeft;
-        attribute [Custom] long screenTop;
-#else
-        attribute [Replaceable] long screenX;
-        attribute [Replaceable] long screenY;
-        attribute [Replaceable] long screenLeft;
-        attribute [Replaceable] long screenTop;
-#endif
-        attribute [Replaceable] long scrollX;
-        attribute [Replaceable] long scrollY;
+        attribute [Replaceable, Nondeterministic] long outerHeight;
+        attribute [Replaceable, Nondeterministic] long outerWidth;
+        attribute [Replaceable, Nondeterministic] long innerHeight;
+        attribute [Replaceable, Nondeterministic] long innerWidth;
+        attribute [Replaceable, Nondeterministic] long screenX;
+        attribute [Replaceable, Nondeterministic] long screenY;
+        attribute [Replaceable, Nondeterministic] long screenLeft;
+        attribute [Replaceable, Nondeterministic] long screenTop;
+        attribute [Replaceable, Nondeterministic] long scrollX;
+        attribute [Replaceable, Nondeterministic] long scrollY;
         readonly attribute long pageXOffset;
         readonly attribute long pageYOffset;
 
@@ -164,7 +156,7 @@ module window {
                                        in [TreatNullAs=NullString, TreatUndefinedAs=NullString,Optional=DefaultIsUndefined] DOMString pseudoElement);
 #endif
 
-        attribute [Replaceable] double devicePixelRatio;
+        attribute [Replaceable, Nondeterministic] double devicePixelRatio;
         
         WebKitPoint webkitConvertPointFromPageToNode(in [Optional=DefaultIsUndefined] Node node, 
                                                      in [Optional=DefaultIsUndefined] WebKitPoint p);
