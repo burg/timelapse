@@ -1806,15 +1806,16 @@ sub GenerateImplementation
 
                     if ($attribute->signature->extendedAttributes->{"Nondeterministic"}) {
                         $implIncludes{"AutoMemoized.h"} = 1;
-                        my $nativeType = GetNativeTypeForMemoization($type);
+                        my $nativeType = GetNativeType($type);
+                        my $memoizedType = GetNativeTypeForMemoization($type);
                         push(@implContent, "    if (log && log->isActive()) {\n");
                         push(@implContent, "        if (log->capturing()) {\n");
                         push(@implContent, "            $nativeType memoizedResult = castedThis->impl()->$implGetterFunctionName();\n");
-                        push(@implContent, "            log->append(new AutoMemoized<$nativeType>(\"$interfaceName.$name\", memoizedResult));\n");
+                        push(@implContent, "            log->append(new AutoMemoized<$memoizedType>(\"$interfaceName.$name\", memoizedResult));\n");
                         push(@implContent, "            return " . NativeToJSValue($attribute->signature, 0, $implClassName, "memoizedResult", "castedThis") . ";\n");
                         push(@implContent, "        } else {\n");
                         push(@implContent, "            ASSERT(log->replaying());\n");
-                        push(@implContent, "            AutoMemoized<$nativeType>* action = static_cast<AutoMemoized<$nativeType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+                        push(@implContent, "            AutoMemoized<$memoizedType>* action = static_cast<AutoMemoized<$memoizedType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
                         push(@implContent, "            if (action) {\n");
                         push(@implContent, "                ASSERT(action->attributeName() == \"$interfaceName.$name\");\n");
                         push(@implContent, "                return " . NativeToJSValue($attribute->signature, 0, $implClassName, "action->result()", "castedThis") . ";\n");
