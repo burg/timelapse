@@ -38,6 +38,7 @@
 namespace WebCore {
 
 namespace ReplayableTypes {
+const char* AutoMemoized = "AutoMemoized";
 const char* BeginSentinel = "BeginSentinel";
 const char* FocusSetActive = "FocusSetActive";
 const char* FocusSetFocused = "FocusSetFocused";

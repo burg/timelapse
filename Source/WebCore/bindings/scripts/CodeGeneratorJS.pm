@@ -1796,39 +1796,33 @@ sub GenerateImplementation
                     push(@implContent, "#if ENABLE(TIMELAPSE)\n");
                     push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
                     push(@implContent, "    RefPtr<DeterminismLog> log = globalObject->determinismLog();\n");
-                    push(@implContent, "#endif\n");
-                }
 
-                if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"}) {
-                    $implIncludes{"PlaybackError.h"} = 1;
-                    push(@implContent, "#if ENABLE(TIMELAPSE)\n");
-                    push(@implContent, "    if (log && log->isActive() && log->capturing()) {\n");
-                    push(@implContent, "        log->append(new PlaybackError(\"Replay is not implemented for $interfaceName.$name\"));\n");
-                    push(@implContent, "    }\n");
-                    push(@implContent, "#endif\n");
-                }
+                    if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"}) {
+                        $implIncludes{"PlaybackError.h"} = 1;
+                        push(@implContent, "    if (log && log->isActive() && log->capturing()) {\n");
+                        push(@implContent, "        log->append(new PlaybackError(\"Replay is not implemented for $interfaceName.$name\"));\n");
+                        push(@implContent, "    }\n");
+                    }
 
-                if ($attribute->signature->extendedAttributes->{"Nondeterministic"}) {
-                    $implIncludes{"AutoMemoized.h"} = 1;
-                    push(@implContent, "#if ENABLE(TIMELAPSE)\n");
-                    push(@implContent, "    $type memoizedResult;\n");
-                    push(@implContent, "    if (log && log->isActive()) {\n");
-                    push(@implContent, "        if (log->capturing()) {\n");
-                    push(@implContent, "            memoizedResult = castedThis->impl()->$implGetterFunctionName();\n");
-                    push(@implContent, "            log->append(new AutoMemoized<$type>(\"$interfaceName.$name\", memoizedResult));\n");
-                    # Assume getters all return numbers
-                    push(@implContent, "            return jsNumber(memoizedResult);\n");
-                    push(@implContent, "        } else {\n");
-                    push(@implContent, "            ASSERT(log->replaying());\n");
-                    push(@implContent, "            AutoMemoized<$type>* action = static_cast<AutoMemoized<$type>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
-                    push(@implContent, "            if (action) {\n");
-                    push(@implContent, "                ASSERT(action->attributeName() == \"$interfaceName.$name\");\n");
-                    push(@implContent, "                memoizedResult = action->result();\n");
-                    push(@implContent, "                return jsNumber(memoizedResult);\n");
-                    push(@implContent, "            }\n");
-                    # if !action, there was an error, so obtain result normally
-                    push(@implContent, "        }\n");
-                    push(@implContent, "    }\n");
+                    if ($attribute->signature->extendedAttributes->{"Nondeterministic"}) {
+                        $implIncludes{"AutoMemoized.h"} = 1;
+                        my $nativeType = GetNativeTypeForMemoization($type);
+                        push(@implContent, "    if (log && log->isActive()) {\n");
+                        push(@implContent, "        if (log->capturing()) {\n");
+                        push(@implContent, "            $nativeType memoizedResult = castedThis->impl()->$implGetterFunctionName();\n");
+                        push(@implContent, "            log->append(new AutoMemoized<$nativeType>(\"$interfaceName.$name\", memoizedResult));\n");
+                        push(@implContent, "            return " . NativeToJSValue($attribute->signature, 0, $implClassName, "memoizedResult", "castedThis") . ";\n");
+                        push(@implContent, "        } else {\n");
+                        push(@implContent, "            ASSERT(log->replaying());\n");
+                        push(@implContent, "            AutoMemoized<$nativeType>* action = static_cast<AutoMemoized<$nativeType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+                        push(@implContent, "            if (action) {\n");
+                        push(@implContent, "                ASSERT(action->attributeName() == \"$interfaceName.$name\");\n");
+                        push(@implContent, "                return " . NativeToJSValue($attribute->signature, 0, $implClassName, "action->result()", "castedThis") . ";\n");
+                        push(@implContent, "            }\n");
+                        # if !action, there was an error, so obtain result normally
+                        push(@implContent, "        }\n");
+                        push(@implContent, "    }\n");
+                    }
                     push(@implContent, "#endif\n");
                 }
 
@@ -3014,6 +3008,14 @@ sub GetNativeTypeForCallbacks
     my $type = shift;
     return "SerializedScriptValue*" if $type eq "SerializedScriptValue";
     return "PassRefPtr<DOMStringList>" if $type eq "DOMStringList" or $type eq "DOMString[]";
+
+    return GetNativeType($type);
+}
+
+sub GetNativeTypeForMemoization
+{
+    my $type = shift;
+    return "String" if $type eq "DOMString";
 
     return GetNativeType($type);
 }

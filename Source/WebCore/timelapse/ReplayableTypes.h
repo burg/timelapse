@@ -37,6 +37,7 @@
 namespace WebCore {
 
 namespace ReplayableTypes {
+extern const char* AutoMemoized;
 extern const char* BeginSentinel;
 extern const char* FocusSetActive;
 extern const char* FocusSetFocused;

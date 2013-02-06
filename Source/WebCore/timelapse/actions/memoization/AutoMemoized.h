@@ -34,20 +34,19 @@
 
 #if ENABLE(TIMELAPSE)
 
+#include "ReplayableTypes.h"
+#include <runtime/JSObject.h>
 #include <wtf/text/StringConcatenate.h>
 #include <wtf/timelapse/ActionSerializer.h>
 
-namespace WebCore {
+namespace JSC {
 
-namespace ReplayableTypes {
-const char* AutoMemoized = "AutoMemoized";
-}
 
 template<typename T> class AutoMemoized : public ReplayableAction {
 
 public:
-    AutoMemoized(String attribute, T result)
-        : ReplayableAction(ReplayableTypes::AutoMemoized)
+    AutoMemoized(const String& attribute, T result)
+        : ReplayableAction(WebCore::ReplayableTypes::AutoMemoized)
         , m_attribute(attribute)
         , m_result(result) {}
     virtual ~AutoMemoized() {}
@@ -67,59 +66,70 @@ private:
     T m_result;
 };
 
-template<typename T> String AutoMemoized<T>::toString() const
+template<typename T> inline String AutoMemoized<T>::toString() const
 {
     return makeString("AutoMemoized(attribute=", attributeName(), ";result=", resultString(), ")");
 }
 
-template<typename T> size_t AutoMemoized<T>::memorySize() const
+template<typename T> inline size_t AutoMemoized<T>::memorySize() const
 {
     size_t size = sizeof(AutoMemoized);
     size += m_attribute.impl()->cost();
     return size;
 }
 
-template<typename T> void AutoMemoized<T>::serialize(ActionSerializer* serializer) const
+template<typename T> inline void AutoMemoized<T>::serialize(ActionSerializer* serializer) const
 {
     serializer->putString("attribute", attributeName());
 }
 
-template<> void AutoMemoized<int>::serialize(ActionSerializer* serializer) const
+template<> inline void AutoMemoized<int>::serialize(ActionSerializer* serializer) const
 {
     serializer->putString("attribute", attributeName());
     serializer->putInt("result", m_result);
 }
 
-template<> void AutoMemoized<long>::serialize(ActionSerializer* serializer) const
+template<> inline void AutoMemoized<long>::serialize(ActionSerializer* serializer) const
 {
     serializer->putString("attribute", attributeName());
     serializer->putInt64("result", m_result);
 }
 
-template<> void AutoMemoized<double>::serialize(ActionSerializer* serializer) const
+template<> inline void AutoMemoized<double>::serialize(ActionSerializer* serializer) const
 {
     serializer->putString("attribute", attributeName());
     serializer->putDouble("result", m_result);
 }
 
-template<typename T> String AutoMemoized<T>::resultString() const
+template<> inline void AutoMemoized<String>::serialize(ActionSerializer* serializer) const
+{
+    serializer->putString("attribute", attributeName());
+    serializer->putString("result", m_result);
+}
+
+template<typename T> inline String AutoMemoized<T>::resultString() const
 {
     return m_attribute + ": AutoMemoized not implemented";
 }
 
-template<> String AutoMemoized<int>::resultString() const
+template<> inline String AutoMemoized<int>::resultString() const
 {
     return String::number(m_result);
 }
 
-template<> String AutoMemoized<long>::resultString() const
+template<> inline String AutoMemoized<long>::resultString() const
 {
     return String::number(m_result);
 }
 
-template<> String AutoMemoized<double>::resultString() const
+template<> inline String AutoMemoized<double>::resultString() const
 {
     return String::numberToStringECMAScript(m_result);
+}
+
+template<> inline String AutoMemoized<String>::resultString() const
+{
+    return String::String(m_result);
 }
 
 } //namespace JSC
