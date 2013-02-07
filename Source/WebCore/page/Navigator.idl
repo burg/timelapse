@@ -36,11 +36,11 @@ module window {
         readonly attribute [Nondeterministic] DOMString vendor;
         readonly attribute [Nondeterministic] DOMString vendorSub;
         readonly attribute [Nondeterministic] boolean cookieEnabled;
-        boolean javaEnabled();
+        [ReplayNotImplemented] boolean javaEnabled();
 
         readonly attribute [Nondeterministic] boolean onLine;
 
-        void getStorageUpdates(); // FIXME: Remove this method or rename to yieldForStorageUpdates.
+        [ReplayNotImplemented] void getStorageUpdates(); // FIXME: Remove this method or rename to yieldForStorageUpdates.
     };
 
 }

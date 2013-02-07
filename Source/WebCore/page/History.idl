@@ -39,13 +39,13 @@ module window {
         readonly attribute [Nondeterministic] unsigned long length;
         readonly attribute [CachedAttribute, Custom, ReplayNotImplemented] SerializedScriptValue state;
 
-        [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void back();
-        [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void forward();
-        [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void go(in [Optional=DefaultIsUndefined] long distance);
+        [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void back();
+        [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void forward();
+        [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void go(in [Optional=DefaultIsUndefined] long distance);
 
-        [Custom] void pushState(in any data, in DOMString title, in [Optional] DOMString url)
+        [Custom, ReplayNotImplemented] void pushState(in any data, in DOMString title, in [Optional] DOMString url)
             raises(DOMException);
-        [Custom] void replaceState(in any data, in DOMString title, in [Optional] DOMString url)
+        [Custom, ReplayNotImplemented] void replaceState(in any data, in DOMString title, in [Optional] DOMString url)
             raises(DOMException);
     };
 

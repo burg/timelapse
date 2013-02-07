@@ -51,7 +51,7 @@ public:
         , m_result(result) {}
     virtual ~AutoMemoized() {}
     
-    String attributeName() const { return m_attribute; }
+    const String& attributeName() const { return m_attribute; }
     T result() const { return m_result; }
     String resultString() const;
 

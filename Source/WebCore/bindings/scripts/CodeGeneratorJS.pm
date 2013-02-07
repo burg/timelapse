@@ -2217,6 +2217,18 @@ sub GenerateImplementation
 
             $implIncludes{"<runtime/Error.h>"} = 1;
 
+            if ($function->signature->extendedAttributes->{"ReplayNotImplemented"}) {
+                $implIncludes{"PlaybackError.h"} = 1;
+                $implIncludes{"<wtf/timelapse/DeterminismLog.h>"} = 1;
+                push(@implContent, "#if ENABLE(TIMELAPSE)\n");
+                push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
+                push(@implContent, "    RefPtr<DeterminismLog> log = globalObject->determinismLog();\n");
+                push(@implContent, "    if (log && log->isActive() && log->capturing()) {\n");
+                push(@implContent, "        log->append(new PlaybackError(\"Replay is not implemented for $interfaceName." . $function->signature->name . "\"));\n");
+                push(@implContent, "    }\n");
+                push(@implContent, "#endif\n");
+            }
+
             if ($function->isStatic) {
                 if ($isCustom) {
                     GenerateArgumentsCountCheck(\@implContent, $function, $dataNode);

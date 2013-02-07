@@ -68,7 +68,7 @@ module window {
         [DoNotCheckSecurity] void blur();
         [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void close();
 
-        void print();
+        [ReplayNotImplemented] void print();
         void stop();
 
         [Custom] DOMWindow open(in DOMString url,
@@ -79,12 +79,12 @@ module window {
                                            in [Optional] DOMObject dialogArgs,
                                            in [Optional] DOMString featureArgs);
 
-        void alert(in [Optional=DefaultIsUndefined] DOMString message);
-        boolean confirm(in [Optional=DefaultIsUndefined] DOMString message);
+        [ReplayNotImplemented] void alert(in [Optional=DefaultIsUndefined] DOMString message);
+        [ReplayNotImplemented] boolean confirm(in [Optional=DefaultIsUndefined] DOMString message);
         [TreatReturnedNullStringAs=Null] DOMString prompt(in [Optional=DefaultIsUndefined] DOMString message,
                                                     in [TreatNullAs=NullString, TreatUndefinedAs=NullString,Optional=DefaultIsUndefined] DOMString defaultValue);
 
-        boolean find(in [Optional=DefaultIsUndefined] DOMString string,
+        [ReplayNotImplemented] boolean find(in [Optional=DefaultIsUndefined] DOMString string,
                      in [Optional=DefaultIsUndefined] boolean caseSensitive,
                      in [Optional=DefaultIsUndefined] boolean backwards,
                      in [Optional=DefaultIsUndefined] boolean wrap,
