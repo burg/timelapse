@@ -36,8 +36,8 @@ module window {
         CustomEnumerateProperty,
         OmitConstructor
     ] History {
-        readonly attribute unsigned long length;
-        readonly attribute [CachedAttribute, Custom] SerializedScriptValue state;
+        readonly attribute [Nondeterministic] unsigned long length;
+        readonly attribute [CachedAttribute, Custom, ReplayNotImplemented] SerializedScriptValue state;
 
         [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void back();
         [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void forward();
