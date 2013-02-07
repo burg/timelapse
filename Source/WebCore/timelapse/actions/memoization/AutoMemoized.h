@@ -89,6 +89,12 @@ template<> inline void AutoMemoized<int>::serialize(ActionSerializer* serializer
     serializer->putInt("result", m_result);
 }
 
+template<> inline void AutoMemoized<unsigned>::serialize(ActionSerializer* serializer) const
+{
+    serializer->putString("attribute", attributeName());
+    serializer->putUInt64("result", (uint64_t) m_result);
+}
+
 template<> inline void AutoMemoized<double>::serialize(ActionSerializer* serializer) const
 {
     serializer->putString("attribute", attributeName());
@@ -113,6 +119,11 @@ template<typename T> inline String AutoMemoized<T>::resultString() const
 }
 
 template<> inline String AutoMemoized<int>::resultString() const
+{
+    return String::number(m_result);
+}
+
+template<> inline String AutoMemoized<unsigned>::resultString() const
 {
     return String::number(m_result);
 }

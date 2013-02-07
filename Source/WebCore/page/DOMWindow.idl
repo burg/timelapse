@@ -44,7 +44,7 @@ module window {
         InterfaceName=Window
     ] DOMWindow {
         // DOM Level 0
-        attribute [Replaceable, ReplayNotImplemented] Screen screen;
+        attribute [Replaceable] Screen screen;
         attribute [Replaceable, DoNotCheckSecurityOnGetter, ReplayNotImplemented] History history;
         attribute [Replaceable] BarInfo locationbar;
         attribute [Replaceable] BarInfo menubar;
