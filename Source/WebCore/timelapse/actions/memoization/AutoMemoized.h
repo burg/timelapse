@@ -95,6 +95,12 @@ template<> inline void AutoMemoized<double>::serialize(ActionSerializer* seriali
     serializer->putDouble("result", m_result);
 }
 
+template<> inline void AutoMemoized<bool>::serialize(ActionSerializer* serializer) const
+{
+    serializer->putString("attribute", attributeName());
+    serializer->putBoolean("result", m_result);
+}
+
 template<> inline void AutoMemoized<String>::serialize(ActionSerializer* serializer) const
 {
     serializer->putString("attribute", attributeName());
@@ -114,6 +120,11 @@ template<> inline String AutoMemoized<int>::resultString() const
 template<> inline String AutoMemoized<double>::resultString() const
 {
     return String::numberToStringECMAScript(m_result);
+}
+
+template<> inline String AutoMemoized<bool>::resultString() const
+{
+    return m_result ? "true" : "false";
 }
 
 template<> inline String AutoMemoized<String>::resultString() const

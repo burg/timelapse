@@ -23,22 +23,22 @@ module window {
         JSGenerateIsReachable=ImplFrame,
         OmitConstructor
     ] Navigator {
-        readonly attribute DOMString appCodeName;
-        readonly attribute DOMString appName;
-        readonly attribute DOMString appVersion;
-        readonly attribute DOMString language;
-        readonly attribute DOMString userAgent;
-        readonly attribute DOMString platform;
-        readonly attribute DOMPluginArray plugins;
-        readonly attribute DOMMimeTypeArray mimeTypes;
-        readonly attribute DOMString product;
-        readonly attribute DOMString productSub;
-        readonly attribute DOMString vendor;
-        readonly attribute DOMString vendorSub;
-        readonly attribute boolean cookieEnabled;
+        readonly attribute [Nondeterministic] DOMString appCodeName;
+        readonly attribute [Nondeterministic] DOMString appName;
+        readonly attribute [Nondeterministic] DOMString appVersion;
+        readonly attribute [Nondeterministic] DOMString language;
+        readonly attribute [Nondeterministic] DOMString userAgent;
+        readonly attribute [Nondeterministic] DOMString platform;
+        readonly attribute [ReplayNotImplemented] DOMPluginArray plugins;
+        readonly attribute [ReplayNotImplemented] DOMMimeTypeArray mimeTypes;
+        readonly attribute [Nondeterministic] DOMString product;
+        readonly attribute [Nondeterministic] DOMString productSub;
+        readonly attribute [Nondeterministic] DOMString vendor;
+        readonly attribute [Nondeterministic] DOMString vendorSub;
+        readonly attribute [Nondeterministic] boolean cookieEnabled;
         boolean javaEnabled();
 
-        readonly attribute boolean onLine;
+        readonly attribute [Nondeterministic] boolean onLine;
 
         void getStorageUpdates(); // FIXME: Remove this method or rename to yieldForStorageUpdates.
     };
