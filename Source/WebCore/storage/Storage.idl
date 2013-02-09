@@ -32,13 +32,13 @@ module storage {
         CustomEnumerateProperty,
         CustomNamedSetter,
     ] Storage {
-        readonly attribute [NotEnumerable] unsigned long length;
-        [NotEnumerable, TreatReturnedNullStringAs=Null] DOMString key(in unsigned long index);
-        [NotEnumerable, TreatReturnedNullStringAs=Null] DOMString getItem(in DOMString key);
-        [NotEnumerable] void setItem(in DOMString key, in DOMString data) 
+        readonly attribute [NotEnumerable, Nondeterministic] unsigned long length;
+        [NotEnumerable, TreatReturnedNullStringAs=Null, Nondeterministic] DOMString key(in unsigned long index);
+        [NotEnumerable, TreatReturnedNullStringAs=Null, Nondeterministic] DOMString getItem(in DOMString key);
+        [NotEnumerable, Nondeterministic] void setItem(in DOMString key, in DOMString data)
             raises(DOMException);
-        [NotEnumerable] void removeItem(in DOMString key);
-        [NotEnumerable] void clear();
+        [NotEnumerable, Nondeterministic] void removeItem(in DOMString key);
+        [NotEnumerable, Nondeterministic] void clear();
     };
 
 }

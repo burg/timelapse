@@ -2936,9 +2936,21 @@ sub GenerateImplementationFunctionCall()
     my $svgPropertyType = shift;
     my $implClassName = shift;
 
+    my $nondeterministic = $function->signature->extendedAttributes->{"Nondeterministic"};
+
     if ($function->signature->type eq "void") {
+        if ($nondeterministic) {
+            $implIncludes{"<wtf/timelapse/DeterminismLog.h>"} = 1;
+            push(@implContent, "#if ENABLE(TIMELAPSE)\n");
+            push(@implContent, $indent . "RefPtr<DeterminismLog> log = exec->lexicalGlobalObject()->determinismLog();\n");
+            push(@implContent, $indent . "if (!log || !log->isActive() || log->capturing()) {\n");
+            push(@implContent, $indent . "    $functionString;\n");
+            push(@implContent, $indent . "}\n");
+            push(@implContent, "#else\n");
+        }
         push(@implContent, $indent . "$functionString;\n");
         push(@implContent, $indent . "setDOMException(exec, ec);\n") if @{$function->raisesExceptions};
+        push(@implContent, "#endif\n") if $nondeterministic;
 
         if ($svgPropertyType and !$function->isStatic) {
             if (@{$function->raisesExceptions}) {
@@ -2952,8 +2964,36 @@ sub GenerateImplementationFunctionCall()
         push(@implContent, $indent . "return JSValue::encode(jsUndefined());\n");
     } else {
         my $thisObject = $function->isStatic ? 0 : "castedThis";
+        if ($nondeterministic) {
+            $implIncludes{"AutoMemoized.h"} = 1;
+            $implIncludes{"<wtf/timelapse/DeterminismLog.h>"} = 1;
+            my $nativeType = GetNativeTypeFromSignature($function->signature);
+            my $memoizedType = GetNativeTypeForMemoization($codeGenerator->StripModule($function->signature->type));
+            my $bindingName = $implClassName . "." . $function->signature->name;
+            push(@implContent, "#if ENABLE(TIMELAPSE)\n");
+            push(@implContent, $indent . "RefPtr<DeterminismLog> log = exec->lexicalGlobalObject()->determinismLog();\n");
+            push(@implContent, $indent . "JSC::JSValue result;\n");
+            push(@implContent, $indent . "if (!log || !log->isActive()) {\n");
+            push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $implClassName, $functionString, $thisObject) . ";\n");
+            push(@implContent, $indent . "} else if (log->capturing()) {\n");
+            push(@implContent, $indent . "    $nativeType memoizedResult = $functionString;\n");
+            push(@implContent, $indent . "    log->append(new AutoMemoized<$memoizedType>(\"$bindingName\", memoizedResult));\n");
+            push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $implClassName, "memoizedResult", $thisObject) . ";\n");
+            push(@implContent, $indent . "} else {\n");
+            push(@implContent, $indent . "    ASSERT(log->replaying());\n");
+            push(@implContent, $indent . "    AutoMemoized<$memoizedType>* action = static_cast<AutoMemoized<$memoizedType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+            push(@implContent, $indent . "    if (action) {\n");
+            push(@implContent, $indent . "        ASSERT(action->attributeName() == \"$bindingName\");\n");
+            push(@implContent, $indent . "        result = " . NativeToJSValue($function->signature, 1, $implClassName, "action->result()", $thisObject) . ";\n");
+            push(@implContent, $indent . "    } else {  // error handling case\n");
+            push(@implContent, $indent . "        result = " . NativeToJSValue($function->signature, 1, $implClassName, $functionString, $thisObject) . ";\n");
+            push(@implContent, $indent . "    }\n");
+            push(@implContent, $indent . "}\n");
+            push(@implContent, "#else");
+        }
         push(@implContent, "\n" . $indent . "JSC::JSValue result = " . NativeToJSValue($function->signature, 1, $implClassName, $functionString, $thisObject) . ";\n");
         push(@implContent, $indent . "setDOMException(exec, ec);\n") if @{$function->raisesExceptions};
+        push(@implContent, "#endif\n") if $nondeterministic;
 
         if ($codeGenerator->ExtendedAttributeContains($function->signature->extendedAttributes->{"CallWith"}, "ScriptState")) {
             push(@implContent, $indent . "if (exec->hadException())\n");

@@ -68,7 +68,7 @@ module window {
         [DoNotCheckSecurity] void blur();
         [DoNotCheckSecurity, CallWith=ScriptExecutionContext] void close();
 
-        [ReplayNotImplemented] void print();
+        [Nondeterministic] void print();
         void stop();
 
         [Custom] DOMWindow open(in DOMString url,
@@ -79,12 +79,12 @@ module window {
                                            in [Optional] DOMObject dialogArgs,
                                            in [Optional] DOMString featureArgs);
 
-        [ReplayNotImplemented] void alert(in [Optional=DefaultIsUndefined] DOMString message);
-        [ReplayNotImplemented] boolean confirm(in [Optional=DefaultIsUndefined] DOMString message);
+        [Nondeterministic] void alert(in [Optional=DefaultIsUndefined] DOMString message);
+        [Nondeterministic] boolean confirm(in [Optional=DefaultIsUndefined] DOMString message);
         [TreatReturnedNullStringAs=Null] DOMString prompt(in [Optional=DefaultIsUndefined] DOMString message,
                                                     in [TreatNullAs=NullString, TreatUndefinedAs=NullString,Optional=DefaultIsUndefined] DOMString defaultValue);
 
-        [ReplayNotImplemented] boolean find(in [Optional=DefaultIsUndefined] DOMString string,
+        [Nondeterministic] boolean find(in [Optional=DefaultIsUndefined] DOMString string,
                      in [Optional=DefaultIsUndefined] boolean caseSensitive,
                      in [Optional=DefaultIsUndefined] boolean backwards,
                      in [Optional=DefaultIsUndefined] boolean wrap,
@@ -167,7 +167,7 @@ module window {
 
         readonly attribute [V8EnabledAtRuntime] Storage sessionStorage
             getter raises(DOMException);
-        readonly attribute [V8EnabledAtRuntime, ReplayNotImplemented] Storage localStorage
+        readonly attribute [V8EnabledAtRuntime] Storage localStorage
             getter raises(DOMException);
 
 #if defined(ENABLE_ORIENTATION_EVENTS) && ENABLE_ORIENTATION_EVENTS
