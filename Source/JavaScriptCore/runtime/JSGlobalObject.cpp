@@ -77,6 +77,10 @@
 #include "StringConstructor.h"
 #include "StringPrototype.h"
 
+#if ENABLE(TIMELAPSE)
+#include "Logging.h"
+#endif // ENABLE(TIMELAPSE)
+
 #include "JSGlobalObject.lut.h"
 
 namespace JSC {
@@ -111,7 +115,11 @@ static const int preferredScriptCheckTimeInterval = 1000;
 JSGlobalObject::JSGlobalObject(JSGlobalData& globalData, Structure* structure, const GlobalObjectMethodTable* globalObjectMethodTable)
     : Base(globalData, structure, 0)
     , m_masqueradesAsUndefinedWatchpoint(adoptRef(new WatchpointSet(InitializedWatching)))
+#if ENABLE(TIMELAPSE)
+    , m_weakRandom(RiggedWeakRandom())
+#else
     , m_weakRandom(Options::forceWeakRandomSeed() ? Options::forcedWeakRandomSeed() : static_cast<unsigned>(randomNumber() * (std::numeric_limits<unsigned>::max() + 1.0)))
+#endif
     , m_evalEnabled(true)
     , m_globalObjectMethodTable(globalObjectMethodTable ? globalObjectMethodTable : &s_globalObjectMethodTable)
 {
@@ -413,6 +421,19 @@ ExecState* JSGlobalObject::globalExec()
 {
     return CallFrame::create(m_globalCallFrame + RegisterFile::CallFrameHeaderSize);
 }
+
+#if ENABLE(TIMELAPSE)
+void JSGlobalObject::configureDeterminism(PassRefPtr<DeterminismLog> prpDeterminismLog)
+{
+    m_determinismLog = prpDeterminismLog;
+    
+    LOG(TimelapseJSCActions, "%-30s Configuring global object with determinism log: %p\n",
+        "[DeterminismLog]", (void*)m_determinismLog.get());
+
+    //set up determinism elsewhere in JSC
+    m_weakRandom.configureDeterminism(m_determinismLog);
+}
+#endif
 
 void JSGlobalObject::addStaticGlobals(GlobalPropertyInfo* globals, int count)
 {

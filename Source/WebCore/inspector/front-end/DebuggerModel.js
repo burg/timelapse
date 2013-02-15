@@ -80,6 +80,9 @@ WebInspector.DebuggerModel.Events = {
     DebuggerWasDisabled: "DebuggerWasDisabled",
     DebuggerPaused: "DebuggerPaused",
     DebuggerResumed: "DebuggerResumed",
+    DebuggerStepOver: "DebuggerStepOver",
+    DebuggerStepInto: "DebuggerStepInto",
+    DebuggerStepOut: "DebuggerStepOut",
     ParsedScriptSource: "ParsedScriptSource",
     FailedToParseScriptSource: "FailedToParseScriptSource",
     BreakpointResolved: "BreakpointResolved",
@@ -160,6 +163,33 @@ WebInspector.DebuggerModel.prototype = {
     continueToLocation: function(rawLocation)
     {
         DebuggerAgent.continueToLocation(rawLocation);
+    },
+
+    stepOver: function()
+    {
+	if (!this.isPaused())
+	    return;
+
+	this.dispatchEventToListeners(WebInspector.DebuggerModel.Events.DebuggerStepOver);
+	DebuggerAgent.stepOver();
+    },
+
+    stepInto: function()
+    {
+	if (!this.isPaused())
+	    return;
+
+	this.dispatchEventToListeners(WebInspector.DebuggerModel.Events.DebuggerStepInto);
+	DebuggerAgent.stepInto();
+    },
+
+    stepOut: function()
+    {
+	if (!this.isPaused())
+	    return;
+
+	this.dispatchEventToListeners(WebInspector.DebuggerModel.Events.DebuggerStepOut);
+	DebuggerAgent.stepOut();
     },
 
     /**

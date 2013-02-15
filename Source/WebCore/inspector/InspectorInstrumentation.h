@@ -92,6 +92,10 @@ class WebSocketHandshakeRequest;
 class WebSocketHandshakeResponse;
 #endif
 
+#if ENABLE(TIMELAPSE)
+class DispatchableAction;
+#endif
+
 #define FAST_RETURN_IF_NO_FRONTENDS(value) if (!hasFrontends()) return value;
 
 typedef pair<InstrumentingAgents*, int> InspectorInstrumentationCookie;
@@ -234,6 +238,18 @@ public:
     static void willEvaluateWorkerScript(WorkerContext*, int workerThreadStartMode);
 #endif
 
+#if ENABLE(TIMELAPSE)
+    static void capturedPageInput(Page*, DispatchableAction*);
+    static void captureStarted(Page*);
+    static void captureFinished(Page*);
+    static void playbackStarted(Page*);
+    static void playbackPaused(Page*, unsigned);
+    static void playbackHitMark(Page*, unsigned);
+    static void playbackFinished(Page*);
+    static void playbackCancelled(Page*);
+    static void playbackError(Page*, bool isFatal, const String& errorMessage);
+#endif
+    
 #if ENABLE(WEB_SOCKETS)
     static void didCreateWebSocket(ScriptExecutionContext*, unsigned long identifier, const KURL& requestURL, const KURL& documentURL);
     static void willSendWebSocketHandshakeRequest(ScriptExecutionContext*, unsigned long identifier, const WebSocketHandshakeRequest&);
@@ -346,6 +362,7 @@ private:
     static bool shouldApplyScreenHeightOverrideImpl(InstrumentingAgents*);
     static void willSendRequestImpl(InstrumentingAgents*, unsigned long identifier, DocumentLoader*, ResourceRequest&, const ResourceResponse& redirectResponse);
     static void continueAfterPingLoaderImpl(InstrumentingAgents*, unsigned long identifier, DocumentLoader*, ResourceRequest&, const ResourceResponse&);
+    static void willRevalidateCachedResourceImpl(InstrumentingAgents*, unsigned long identifier, DocumentLoader*, const ResourceResponse&);
     static void markResourceAsCachedImpl(InstrumentingAgents*, unsigned long identifier);
     static void didLoadResourceFromMemoryCacheImpl(InstrumentingAgents*, DocumentLoader*, CachedResource*);
     static InspectorInstrumentationCookie willReceiveResourceDataImpl(InstrumentingAgents*, unsigned long identifier, Frame*, int length);
@@ -417,6 +434,18 @@ private:
     static void didReceiveWebSocketFrameErrorImpl(InstrumentingAgents*, unsigned long identifier, const String&);
 #endif
 
+#if ENABLE(TIMELAPSE)
+    static void capturedPageInputImpl(InstrumentingAgents*, DispatchableAction*);
+    static void captureStartedImpl(InstrumentingAgents*);
+    static void captureFinishedImpl(InstrumentingAgents*);
+    static void playbackStartedImpl(InstrumentingAgents*);
+    static void playbackPausedImpl(InstrumentingAgents*, unsigned);
+    static void playbackHitMarkImpl(InstrumentingAgents*, unsigned);
+    static void playbackFinishedImpl(InstrumentingAgents*);
+    static void playbackCancelledImpl(InstrumentingAgents*);
+    static void playbackErrorImpl(InstrumentingAgents*, bool isFatal, const String& errorMessage);
+#endif
+    
     static void networkStateChangedImpl(InstrumentingAgents*);
     static void updateApplicationCacheStatusImpl(InstrumentingAgents*, Frame*);
 
@@ -1374,6 +1403,80 @@ inline void InspectorInstrumentation::didSendWebSocketFrame(Document* document, 
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForDocument(document))
         didSendWebSocketFrameImpl(instrumentingAgents, identifier, frame);
+#endif
+}
+#endif
+    
+#if ENABLE(TIMELAPSE)
+inline void InspectorInstrumentation::capturedPageInput(Page* page, DispatchableAction* action)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        capturedPageInputImpl(instrumentingAgents, action);
+#endif
+}
+    
+inline void InspectorInstrumentation::captureStarted(Page* page)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        captureStartedImpl(instrumentingAgents);
+#endif
+}
+
+inline void InspectorInstrumentation::captureFinished(Page* page)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        captureFinishedImpl(instrumentingAgents);
+#endif
+}
+
+inline void InspectorInstrumentation::playbackStarted(Page* page)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        playbackStartedImpl(instrumentingAgents);
+#endif
+}
+
+inline void InspectorInstrumentation::playbackPaused(Page* page, unsigned mark)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        playbackPausedImpl(instrumentingAgents, mark);
+#endif
+}
+
+inline void InspectorInstrumentation::playbackHitMark(Page* page, unsigned mark)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        playbackHitMarkImpl(instrumentingAgents, mark);
+#endif
+}
+
+inline void InspectorInstrumentation::playbackFinished(Page* page)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        playbackFinishedImpl(instrumentingAgents);
+#endif
+}
+
+inline void InspectorInstrumentation::playbackCancelled(Page* page)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        playbackCancelledImpl(instrumentingAgents);
+#endif
+}
+
+inline void InspectorInstrumentation::playbackError(Page* page, bool isFatal, const String& errorMessage)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        playbackErrorImpl(instrumentingAgents, isFatal, errorMessage);
 #endif
 }
 #endif

@@ -345,12 +345,12 @@ bool HTMLLinkElement::styleSheetIsLoading() const
 
 void HTMLLinkElement::linkLoaded()
 {
-    dispatchEvent(Event::create(eventNames().loadEvent, false, false));
+    dispatchAsyncEvent(Event::create(eventNames().loadEvent, false, false));
 }
 
 void HTMLLinkElement::linkLoadingErrored()
 {
-    dispatchEvent(Event::create(eventNames().errorEvent, false, false));
+    dispatchAsyncEvent(Event::create(eventNames().errorEvent, false, false));
 }
 
 bool HTMLLinkElement::sheetLoaded()

@@ -1,0 +1,180 @@
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.5;
+  width: 64.3em;
+  margin: 3em auto;
+  padding: 0 1em;
+}
+
+hr {
+   height: 1px;
+   border: 0;
+   background-color: #ddd;
+   margin: 1em auto 2em;
+}
+
+body.droid {
+  font-family: Droid Sans, Arial, sans-serif;
+}
+
+h1 {
+  letter-spacing: -3px;
+  font-size: 3.23em;
+  font-weight: bold;
+  text-align: center;
+  margin: 0;
+}
+
+h2 {
+  font-size: 1.23em;
+  font-weight: bold;
+  margin: .5em 0;
+  letter-spacing: -1px;
+}
+
+h3 {
+  font-size: 1em;
+  font-weight: bold;
+  margin: .4em 0;
+}
+
+pre {
+  background-color: #eee;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+  border-radius: 6px;
+  padding: 1em;
+}
+
+pre.code {
+  margin: 0 1em;
+}
+
+.grey {
+  font-size: 2.2em;
+  padding: .5em 1em;
+  line-height: 1.2em;
+  margin-top: .5em;
+  position: relative;
+}
+
+img.logo {
+  position: absolute;
+  right: -25px;
+  bottom: 4px;
+}
+
+a:link, a:visited, .quasilink {
+  color: #0070e0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+a:hover, .quasilink:hover {
+  color: #004080;
+}
+
+h1 a:link, h1 a:visited, h1 a:hover {
+  color: black;
+}
+
+ul {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+a.download {
+  color: white;
+  background-color: #0070E0;
+  width: 100%;
+  display: block;
+  text-align: center;
+  font-size: 1.23em;
+  font-weight: bold;
+  text-decoration: none;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: 6px;
+  border-radius: 6px;
+  padding: .5em 0;
+  margin-bottom: 1em;
+}
+
+a.download:hover {
+  background-color: #004080;
+}
+
+.rel {
+  margin-bottom: 0;
+}
+
+.rel-note {
+  color: #777;
+  font-size: .9em;
+  margin-top: .1em;
+}
+
+.logo-dingbat {
+  color: #004080;
+  position: relative;
+  font-weight: bold;
+}
+
+.tagline {
+    color: #004080;
+    position: relative;
+    font-weight: normal;
+    letter-spacing: normal;
+    font-size: 16pt;
+}
+
+.blk {
+  float: left;
+}
+
+.left {
+  width: 20.68em;
+}
+
+.left1 {
+  width: 15.24em;
+  padding-right: 6.45em;
+}
+
+.left2 {
+  width: 15.24em;
+}
+
+.right {
+  padding-left: 6.53em;
+  padding-bottom: 1em;
+  width: 37em;
+}
+
+.leftbig {
+  width: 42.44em;
+  padding-right: 6.53em;
+}
+
+.rightsmall {
+  width: 15.24em;
+}
+
+.clear:after {
+  visibility: hidden;
+  display: block;
+  font-size: 0;
+  content: " ";
+  clear: both;
+  height: 0;
+}
+.clear { display: inline-block; }
+/* start commented backslash hack \*/
+* html .clear { height: 1%; }
+.clear { display: block; }
+/* close commented backslash hack */
+
+.footer {
+    clear: both;
+    text-align: center;
+    margin: 0;
+}

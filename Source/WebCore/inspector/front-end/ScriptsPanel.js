@@ -276,7 +276,9 @@ WebInspector.ScriptsPanel.prototype = {
 
         this._updateDebuggerButtons();
 
-        WebInspector.inspectorView.setCurrentPanel(this);
+	if (WebInspector.inspectorView.currentPanel().name != "timelapse" || !WebInspector.timelapseModel.inputLocked)
+            WebInspector.inspectorView.setCurrentPanel(this);
+
         this.sidebarPanes.callstack.update(details.callFrames);
 
         if (details.reason === WebInspector.DebuggerModel.BreakReason.DOM) {
@@ -409,7 +411,8 @@ WebInspector.ScriptsPanel.prototype = {
         var sourceFrame = this._showFile(uiSourceCode);
         if (typeof lineNumber === "number")
             sourceFrame.highlightLine(lineNumber);
-        sourceFrame.focus();
+	if (!WebInspector.timelapseModel.isReplaying)
+            sourceFrame.focus();
     },
 
     /**
@@ -518,7 +521,8 @@ WebInspector.ScriptsPanel.prototype = {
         this._editorContainer.addUISourceCode(uiLocation.uiSourceCode);
         var sourceFrame = this._showFile(uiLocation.uiSourceCode);
         sourceFrame.revealLine(uiLocation.lineNumber);
-        sourceFrame.focus();
+	if (!WebInspector.timelapseModel.isReplaying)
+            sourceFrame.focus();
     },
 
     _callFrameSelected: function(event)
@@ -552,7 +556,8 @@ WebInspector.ScriptsPanel.prototype = {
         var uiSourceCode = /** @type {WebInspector.UISourceCode} */ event.data;
         var sourceFrame = this._showFile(uiSourceCode);
         this._navigatorController.hideNavigatorOverlay();
-        sourceFrame.focus();
+	if (!WebInspector.timelapseModel.isReplaying)
+            sourceFrame.focus();
         WebInspector.searchController.resetSearch();
     },
 
@@ -561,7 +566,7 @@ WebInspector.ScriptsPanel.prototype = {
         var uiSourceCode = /** @type {WebInspector.UISourceCode} */ event.data.uiSourceCode;
         var sourceFrame = this._showFile(uiSourceCode);
         this._navigatorController.hideNavigatorOverlay();
-        if (sourceFrame && event.data.focusSource)
+        if (sourceFrame && event.data.focusSource && !WebInspector.timelapseModel.isReplaying)
             sourceFrame.focus();
     },
 
@@ -690,7 +695,7 @@ WebInspector.ScriptsPanel.prototype = {
 
         this._clearInterface();
 
-        DebuggerAgent.stepOver();
+	WebInspector.debuggerModel.stepOver();
     },
 
     _stepIntoClicked: function()
@@ -703,7 +708,7 @@ WebInspector.ScriptsPanel.prototype = {
 
         this._clearInterface();
 
-        DebuggerAgent.stepInto();
+	WebInspector.debuggerModel.stepInto();
     },
 
     _stepOutClicked: function()
@@ -716,7 +721,7 @@ WebInspector.ScriptsPanel.prototype = {
 
         this._clearInterface();
 
-        DebuggerAgent.stepOut();
+	WebInspector.debuggerModel.stepOut();
     },
 
     _toggleBreakpointsClicked: function(event)

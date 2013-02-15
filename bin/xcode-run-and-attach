@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# get cwd
+
+# resolve links - $0 may be a link to this script
+PRG="$0"
+
+# need this for relative symlinks
+while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+    PRG="$link"
+    else
+    PRG="`dirname "$PRG"`/$link"
+    fi
+done
+
+saveddir=`pwd`
+REAL_HOME=`dirname "$PRG"`
+
+# make it fully qualified
+REAL_HOME=`cd "$REAL_HOME" && pwd`
+
+# as far as I can tell, each bash script creates its own process group,
+# whose id is equal to its PID. So, look for "WebProcess" with PGID=pid
+
+PGID=$$
+TMPFILE=$(mktemp -t timelapse-log)
+
+XCODE_RUNNING=$(ps -cu $USER | grep Xcode)
+
+if [ ! -n "$XCODE_RUNNING" ]
+then
+    echo "Launching Xcode... (waiting 15 seconds)"
+    open $REAL_HOME/../Source/WebCore/WebCore.xcodeproj
+    open $REAL_HOME/../Source/JavaScriptCore/JavaScriptCore.xcodeproj
+    sleep 15
+fi
+
+echo "Launching Timelapse-enabled Safari."
+echo "Logging to $TMPFILE"
+$REAL_HOME/debug-timelapse > $TMPFILE 2>&1 &
+
+printf "Waiting for WebProcess"
+while [ ! -n "$WEBPROCESS_PID" ]
+do
+    printf "."
+    sleep 0.3
+    WEBPROCESS_PID=$(ps -u $USER -xcwwo pid,pgid,comm | grep $PGID | grep WebProcess | awk '{ print $1 }')
+done
+
+sleep 1
+
+echo " "
+echo "Attaching to WebProcess($WEBPROCESS_PID) in Xcode."
+osascript $REAL_HOME/open-xcode-and-attach-to-process.scpt $WEBPROCESS_PID
+
+echo "Tailing the log file at $TMPFILE."
+echo "(Use Control-C to exit)"
+tail -f $TMPFILE

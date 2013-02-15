@@ -1,0 +1,301 @@
+/* grid styles are nearly verbatim from networkLogView.css */
+
+.timelapse-inputs-grid.data-grid {
+    border: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    font-size: 11px;
+}
+
+.timelapse-inputs-grid.data-grid .data-container {
+    padding-right: 15px;
+}
+
+.timelapse-inputs-grid.data-grid table.data {
+    -webkit-background-size: 1px 52px;
+    background-image: -webkit-gradient(linear, left top, left bottom, from(rgba(0, 0, 0, 0)), color-stop(0.5, rgba(0, 0, 0, 0)), color-stop(0.5, rgba(0, 0, 0, 0.05)), to(rgba(0, 0, 0, 0.05)));
+    font-size: 11px;
+}
+
+.timelapse-inputs-grid.data-grid.small table.data {
+    -webkit-background-size: 1px 42px;
+}
+
+
+.timelapse-inputs-grid.data-grid td {
+    line-height: 20px;
+    height: 26px;
+    border-right: 1px solid rgb(210, 210, 210);
+    vertical-align: middle;
+}
+
+.timelapse-inputs-grid.data-grid.small td {
+    height: 17px;
+}
+
+.timelapse-inputs-grid.data-grid th {
+    border-bottom: 1px solid rgb(64%, 64%, 64%);
+    height: 30px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.timelapse-inputs-grid.data-grid.small th {
+    height: 22px;
+}
+
+.timelapse-inputs-grid.data-grid th, .timelapse-inputs-grid.data-grid th.sort-descending, .timelapse-inputs-grid.data-grid th.sort-ascending {
+    background: -webkit-gradient(linear, left top, left bottom, from(rgb(236, 236, 236)), to(rgb(217, 217, 217)));
+}
+
+.timelapse-inputs-grid.data-grid .data-container {
+    top: 31px;
+}
+
+.timelapse-inputs-grid.data-grid.small .data-container {
+    top: 23px;
+}
+
+
+.timelapse-inputs-grid.data-grid select {
+    -webkit-appearance: none;
+    background-color: transparent;
+    border: none;
+    width: 100%;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.timelapse-inputs-grid.data-grid.small tr.offscreen {
+    height: 21px;
+}
+
+.timelapse-inputs-grid.data-grid tr.offscreen {
+    height: 26px;
+}
+
+.timelapse-inputs-grid.data-grid tr.offscreen td {
+    display: none;
+}
+
+.timelapse-inputs-grid.data-grid tr.filler {
+    background-color: white;
+}
+
+.timelapse-inputs-grid.data-grid tr:not(.filler) td.timelapse-column-type {
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.timelapse-inputs-grid.data-grid td.timelapse-column-type:hover {
+    text-decoration: underline;
+}
+
+.timelapse-inputs-grid.data-grid td.timelapse-column-gutter {
+    background-color: #fff; /* to match the panel's background color */
+    text-align: right;
+}
+
+.timelapse-inputs-grid.data-grid td.timelapse-column-category {
+    opacity: 0.5;
+}
+
+.timelapse-inputs-grid.data-grid td.timelapse-column-index,
+.timelapse-inputs-grid.data-grid td.timelapse-column-type,
+.timelapse-inputs-grid.data-grid td.timelapse-column-timestamp,
+.timelapse-inputs-grid.data-grid td.timelapse-column-preview {
+    background-color: rgba(0, 0, 0, 0.07);
+}
+
+.timelapse-inputs-grid.data-grid td.timelapse-column-timestamp {
+    text-align: right;
+}
+
+.timelapse-inputs-grid.data-grid td.timelapse-column-type,
+.timelapse-inputs-grid.data-grid td.timelapse-column-index  {
+    text-align: center;
+}
+
+.timelapse-inputs-grid.data-grid th.sortable:active {
+    background-image: none !important;
+}
+
+.timelapse-inputs-grid.data-grid .index-column,
+.timelapse-inputs-grid.data-grid .type-column,
+.timelapse-inputs-grid.data-grid .timestamp-column {
+    text-align: center;
+}
+
+.timelapse-inputs-grid.data-grid table.header .gutter-column,
+.timelapse-inputs-grid.data-grid table.header th.corner {
+    visibility: hidden;
+}
+
+.timelapse-inputs-grid.data-grid table.data tr.revealed.timelapse-table-item {
+    display: none;
+}
+
+.timelapse-inputs-grid.data-grid.filter-userinput table.data tr.revealed.timelapse-category-userinput,
+.timelapse-inputs-grid.data-grid.filter-network table.data tr.revealed.timelapse-category-network,
+.timelapse-inputs-grid.data-grid.filter-timer table.data tr.revealed.timelapse-category-timer,
+.timelapse-inputs-grid.data-grid.filter-system table.data tr.revealed.timelapse-category-system {
+    display: table-row;
+}
+
+.timelapse-inputs-grid.data-grid table.data tr {
+    border-top: 1px solid none;
+    border-bottom: 1px solid none;
+}
+
+.timelapse-inputs-grid.data-grid table.data tr.revealed.highlight-select {
+    background-color: rgba(56, 121, 217, 0.2);
+    border-top: 1px dotted rgba(56, 121, 217, 0.4);
+    border-bottom: 1px dotted rgba(56, 121, 217, 0.4);
+    height: 24px;
+}
+
+.timelapse-grid-slider {
+    position: absolute;
+    left: 0;
+    right: 0;
+    opacity: 0.8;
+    z-index: 750;
+}
+
+.timelapse-grid-slider .timelapse-slider-band {
+    right: 14px;
+    position: absolute;
+    border-top: 1px solid rgba(0,0,0,0.8);
+    border-bottom: 1px solid rgba(0,0,0,0.8);
+    margin-left: 1px;
+    height: 4px;
+}
+
+.timelapse-grid-slider .timelapse-slider-wedge-wrapper {
+    display: none;
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    overflow: hidden;
+    top: -8px;
+    border-left: 1px solid #333;
+    margin-left: 12px;
+}
+
+.timelapse-grid-slider.adjustable .timelapse-slider-wedge-wrapper {
+    display: block;
+    z-index: 800;
+    cursor: row-resize;
+}
+
+.timelapse-grid-slider.adjustable .timelapse-slider-band {
+    cursor: row-resize;
+}
+
+
+.timelapse-grid-slider.breakpoint-slider .timelapse-slider-wedge-border {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    bottom: 0px;
+    width: 20px;
+    z-index: 201;
+}
+
+.timelapse-grid-slider .timelapse-slider-wedge {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    -webkit-transform: rotate(45deg);
+    border: 1px solid #000;
+    left: -14px;
+    z-index: 200;
+}
+
+.timelapse-grid-slider.disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+
+.timelapse-grid-slider.after-node {
+    /* should be the height of a single table row */
+    margin-top: 22px;
+}
+
+.timelapse-grid-slider.playback-slider .timelapse-slider-band {
+    z-index: 801;
+}
+
+.timelapse-grid-slider.playback-slider .timelapse-slider-band, 
+.timelapse-grid-slider.playback-slider .timelapse-slider-wedge {
+    background-color: rgba(255, 0, 0, 1);
+}
+
+.timelapse-grid-slider.playback-pulse div {
+    -webkit-animation-name: playback-pulse;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+}
+
+.timelapse-grid-slider.breakpoint-slider .timelapse-slider-band,
+.timelapse-grid-slider.breakpoint-slider .timelapse-slider-wedge {
+    background-color: rgba(10, 55, 230, 1);
+    -webkit-animation-name: breakpoint-blink;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+    -webkit-animation-timing-function: cubic-bezier(1.0,0.0,0.0,1.0);
+}
+
+.timelapse-grid-slider.breakpoint-slider .timelapse-slider-wedge-wrapper {
+    display: block;
+    height: 12px;
+    width: 36px;
+    top: -4px;
+    margin-left: 11px;
+    border-left: none;
+}
+
+.timelapse-grid-slider.breakpoint-slider .timelapse-slider-wedge {
+    left: -20px;
+    top: -14px;
+    border: 1px solid #000;
+    width: 40px;
+    height: 40px;
+}
+
+.timelapse-grid-slider.breakpoint-slider .timelapse-slider-wedge-border {
+    display: block;
+    border: 1px solid rgba(0, 0, 120, 1);
+    border-right: none;
+}
+
+.timelapse-grid-slider.tentative-slider .timelapse-slider-band,
+.timelapse-grid-slider.previous-slider .timelapse-slider-band {
+    border-left-width: 0px;
+    border-right-width: 0px;
+    height: 0px;
+    pointer-events: none;
+}
+
+.timelapse-grid-slider.tentative-slider.before-node .timelapse-slider-band {
+    border-top: 1px solid rgba(0, 0, 0, 0.5);
+    border-bottom: 4px dashed rgba(255, 0, 0, 1);
+}
+
+.timelapse-grid-slider.tentative-slider.after-node .timelapse-slider-band {
+    border-top: 4px dashed rgba(255, 0, 0, 1);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.timelapse-grid-slider.previous-slider.before-node .timelapse-slider-band {
+    border-top: 1px solid rgba(0, 0, 0, 0.5);
+    border-bottom: 4px solid rgba(255, 0, 0, 0.5);
+}
+
+.timelapse-grid-slider.previous-slider.after-node .timelapse-slider-band {
+    border-top: 4px solid rgba(255, 0, 0, 0.3);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+}

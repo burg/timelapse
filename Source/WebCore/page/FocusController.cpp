@@ -47,6 +47,7 @@
 #include "HTMLImageElement.h"
 #include "HTMLNames.h"
 #include "HitTestResult.h"
+#include "InspectorInstrumentation.h"
 #include "KeyboardEvent.h"
 #include "Page.h"
 #include "Range.h"
@@ -660,7 +661,7 @@ void FocusController::setActive(bool active)
 {
     if (m_isActive == active)
         return;
-
+    
     m_isActive = active;
 
     if (FrameView* view = m_page->mainFrame()->view()) {

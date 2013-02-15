@@ -44,6 +44,7 @@
 #include "HTMLFormElement.h"
 #include "HistoryItem.h"
 #include "InspectorInstrumentation.h"
+#include "NetworkProxy.h"
 #include "Page.h"
 #include "ResourceError.h"
 #include "ResourceHandle.h"
@@ -59,6 +60,10 @@
 
 #if PLATFORM(MAC) && !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 #include "WebCoreSystemInterface.h"
+#endif
+
+#if ENABLE(TIMELAPSE)
+#include "DeterminismController.h"
 #endif
 
 // FIXME: More that is in common with SubresourceLoader should move up into ResourceLoader.
@@ -613,6 +618,18 @@ bool MainResourceLoader::loadNow(ResourceRequest& r)
     ASSERT(!m_handle);
     ASSERT(shouldLoadEmptyBeforeRedirect || !defersLoading());
 
+#if ENABLE(TIMELAPSE)
+    Document* rootDoc = m_frame->tree()->top()->document();
+    DeterminismController* controller = m_frame->page()->determinismController();
+
+    if (rootDoc && controller && (controller->isCapturingDocument(rootDoc) ||
+                                  controller->isReplayingDocument(rootDoc) ||
+                                  controller->expectsPageLoad())) {
+        
+        m_loaderId = m_frame->page()->networkProxy()->nextLoaderId(r);
+    }
+#endif // ENABLE(TIMELAPSE)
+
     // Send this synthetic delegate callback since clients expect it, and
     // we no longer send the callback from within NSURLConnection for
     // initial requests.
@@ -636,7 +653,7 @@ bool MainResourceLoader::loadNow(ResourceRequest& r)
     else if (shouldLoadEmpty || frameLoader()->client()->representationExistsForURLScheme(url.protocol()))
         handleEmptyLoad(url, !shouldLoadEmpty);
     else
-        m_handle = ResourceHandle::create(m_frame->loader()->networkingContext(), r, this, false, true);
+        m_handle = m_frame->page()->networkProxy()->createResourceHandle(m_frame->loader()->networkingContext(), r, this, m_loaderId, false, true);
 
     return false;
 }

@@ -33,7 +33,13 @@
 #if PLATFORM(MAC)
 
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+// for now,Timelapse requires disabling the sandbox,
+// so that the caching proxy can be spawned from WebProcess.
+// in the future, if the proxy functionality is baked into WebCore,
+// then it should suffice to whitelist Timelapse storage directories.
+#if !ENABLE(TIMELAPSE)
 #define ENABLE_WEB_PROCESS_SANDBOX 1
+#endif
 #endif
 
 #if ENABLE(NETSCAPE_PLUGIN_API)

@@ -115,6 +115,7 @@ namespace WebCore {
         virtual bool removeEventListener(const AtomicString& eventType, EventListener*, bool useCapture);
         virtual void removeAllEventListeners();
         virtual bool dispatchEvent(PassRefPtr<Event>);
+        virtual bool dispatchAsyncEvent(PassRefPtr<Event>);
         bool dispatchEvent(PassRefPtr<Event>, ExceptionCode&); // DOM API
         virtual void uncaughtExceptionInEventHandler();
 

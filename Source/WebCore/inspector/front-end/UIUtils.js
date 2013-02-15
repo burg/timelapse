@@ -117,6 +117,26 @@ WebInspector._elementDragEnd = function(event)
         elementDragEnd(event);
 }
 
+WebInspector.TimingFunctions = {
+    /* t: current t (time),
+     * b: min value,
+     * c: value delta,
+     * d: time delta
+     * return: f(t)
+     */
+    EaseInOut: function(t, b, c, d)
+    {
+	if ((t/=d/2) < 1) return c/2*t*t*t + b;
+	return c/2*((t-=2)*t*t + 2) + b;
+    },
+
+    Linear: function(t, b, c, d)
+    {
+	return c*(t/d) + b;
+    }
+
+};
+
 /**
  * @constructor
  */
@@ -144,19 +164,14 @@ WebInspector.animateStyle = function(animations, duration, callback)
 
     const intervalDuration = (1000 / 30); // 30 frames per second.
     const animationsLength = animations.length;
-    const propertyUnit = {opacity: ""};
+    const propertyUnit = {opacity: "", left: "%"};
     const defaultUnit = "px";
-
-    function cubicInOut(t, b, c, d)
-    {
-        if ((t/=d/2) < 1) return c/2*t*t*t + b;
-        return c/2*((t-=2)*t*t + 2) + b;
-    }
+    const defaultTimingFunction = WebInspector.TimingFunctions.EaseInOut;
 
     // Pre-process animations.
     for (var i = 0; i < animationsLength; ++i) {
         var animation = animations[i];
-        var element = null, start = null, end = null, key = null;
+        var element = null, start = null, end = null, key = null, timingFunction = null;
         for (key in animation) {
             if (key === "element")
                 element = animation[key];
@@ -164,6 +179,8 @@ WebInspector.animateStyle = function(animations, duration, callback)
                 start = animation[key];
             else if (key === "end")
                 end = animation[key];
+	    else if (key === "timingFunction")
+	        timingFunction = animation[key];
         }
 
         if (!element || !end)
@@ -178,10 +195,14 @@ WebInspector.animateStyle = function(animations, duration, callback)
         } else
             for (key in start)
                 element.style.setProperty(key, start[key] + (key in propertyUnit ? propertyUnit[key] : defaultUnit));
+
+	if (!timingFunction)
+	    animation.timingFunction = defaultTimingFunction;
     }
 
     function animateLoop()
     {
+
         if (hasCompleted)
             return;
         
@@ -195,6 +216,7 @@ WebInspector.animateStyle = function(animations, duration, callback)
             var element = animation.element;
             var start = animation.start;
             var end = animation.end;
+	    var timingFn = animation.timingFunction;
             if (!element || !end)
                 continue;
 
@@ -203,7 +225,7 @@ WebInspector.animateStyle = function(animations, duration, callback)
                 var endValue = end[key];
                 if (next < duration) {
                     var startValue = start[key];
-                    var newValue = cubicInOut(complete, startValue, endValue - startValue, duration);
+                    var newValue = timingFn(complete, startValue, endValue - startValue, duration);
                     style.setProperty(key, newValue + (key in propertyUnit ? propertyUnit[key] : defaultUnit));
                 } else
                     style.setProperty(key, endValue + (key in propertyUnit ? propertyUnit[key] : defaultUnit));

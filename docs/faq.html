@@ -1,0 +1,179 @@
+---
+layout: info
+title: Frequently Asked Questions
+---
+
+<div class="span7">
+<h2>Downloading and Installing</h2><br/>
+<h3>Can I demo Timelapse without building from source?</h3>
+<p class="lead">Yes!</p>
+<p>
+ But, you need a recent version of OS X and Safari. See
+ the <a href="https://github.com/burg/timelapse">README on the project
+ page</a> for details on downloading and running a Timelapse nightly
+ binary.
+</p>
+<hr />
+
+<h2>Conceptual</h2><br/>
+<h3>Does Timelapse slow down the user experience?</h3>
+<p class="lead">In theory, no. In practice, usually not.</p>
+<p>Because Timelapse records inputs to a program instead of the actual
+  instructions executed, relatively little time is spent capturing and
+  saving data during recording. Overhead should scale with the amount
+  of user input, not CPU time. For applications with high rates of
+  user input (such as video games), Timelapse doesn't introduce a
+  noticeable framerate drop.
+</p>
+<p>
+Due to prototype implementation shortcuts, network-bound applications
+do experience some slowdown. For example: the resource cache is
+disabled, so everything must be re-downloaded from the
+network. Another example is that HTTP pipelining has been disabled to
+sidestep nondeterminism in the network scheduler.
+</p>
+<p>On program <strong>replay</strong>, Timelapse can replay the
+  execution much faster than the speed at which it was recorded. This
+  is due to zero network traffic on replay, immediate timer callbacks,
+  and that the results of some platform functions can be memoized
+  instead of re-executed. <hr />
+
+<h3>How big are the Timelapse recordings?</h3>
+<p>
+All HTTP requests and responses are captured, so the recording's size
+is the sum of all resources requested during the execution, plus the
+size of each nondeterministic input. Most such inputs are really small
+and highly compressible. The total size of the recording will scale
+with the number of program inputs, such as network requests, user
+mouse/key input, and timer callbacks.
+</p>
+<p>
+In our preliminary performance evaluation, applications with high
+rates of user input (such as timer-based video games) generate at most
+250KB/minute of input, and this can be compressed to under 50KB for
+storing or transmitting recordings. These numbers do not include
+network traffic/page resources, which can also be compressed.
+</p>
+
+<hr />
+<h3>Will replaying an execution cause network traffic?</h3>
+<p class="lead">On replay, network requests are intercepted by an in-browser network simulator.</p>
+<p>
+External servers will not re-receive network requests during replay. A
+network-level record/replay simulator captures all HTTP headers and
+traffic when recording, and only allows the same requests to occur on
+replay. From the web page's point of view, the external server appears
+to behave the same on recording and replay, though on replay the
+network traffic actually originates from the recording..
+</p>
+<hr />
+
+<h2>Implementation</h2><br/>
+<h3>Does Timelapse work on Linux or Windows?</h3>
+<p class="lead">Right now, no.</p>
+<p>Timelapse is first and foremost a research prototype, and
+  multi-platform support has not been a priority. For the initial
+  prototype, We have stuck with the Mac platform and Safari embedding
+  application for reasons of expediency. Other platforms will
+  definitely not work out of the box. That said, the implementation
+  approach for Timelapse is platform-independent and does not overly
+  rely on platform-specific APIs. See the next question for details.
+</p>
+
+<hr />
+<h3>How much work is necessary to port Timelapse to other WebKit platforms?</h3>
+<p class="lead">Enough to give pause, but it's finite.</p>
+<p>
+There are several platform-specific parts of code to implement, in
+order of increasing effort:
+</p>
+<h4>Build system</h4>
+<p>
+Each platform has its own build system and/or build settings. In
+general, Timelapse has only maintained build settings for the Mac
+port. Timelapse's files and build configurations need to be added to
+each port's build system. This is mainly a trial-and-error task to see
+what files are missing.
+</p>
+<h4>Embedder-specific nondeterminism</h4>
+<p>
+Each embedding application/library uses a different subset of the
+WebKit/WebKit2 embedding APIs. In some cases, embedders may use API
+calls that have not yet been piped through Timelapse's page input
+proxy. Fixing this could be as simple as calling a different method,
+or as hard as adding/controlling an entirely new source of
+nondeterminism.
+
+<h4>Platform-specific nondeterminism</h4>
+<p>
+Each platform introduces its own sources of nondeterminism, which must
+be controlled for record/replay to work correctly. For example, the
+Timelapse code specific to the Mac port exists to clear the system
+resource cache, network cache, and memoize accesses to the
+system-shared cookie jar.
+</p>
+
+<hr />
+<h3>What language is Timelapse implemented with?</h3>
+<p>The infrastructure for recording and replaying is a part of
+  the WebKit engine, which is mostly written in C++. The developer
+  tool UI is written using HTML, CSS, and JavaScript. Accompanying
+  scripts and tools are predominantly written in Bash and JavaScript.</p>
+<hr />
+
+<h3>How do you write tests for Timelapse functionality?</h3>
+<p>
+In principle, it's simple to write a regression test that starts up a
+test page, records some interaction with it, and compares replay
+output to record output. WebKit's test harness provides access to test
+both the Web Inspector UI, and the C++ backend to which it
+communicates.
+</p>
+<p>
+For now, few such tests are written for Timelapse. At this point, bugs
+are still easy to witness on small test pages, so an automatic test
+suite is not (yet) necessary. The UI changes frequently, so writing UI
+tests at this stage is premature. Were Timelapse to be included with
+WebKit, tests would definitely be necessary to build confidence in the
+implementation and prevent regressions.
+</p>
+<hr />
+
+<h3>How much work is necessary to port Timelapse to Google
+  Chrome?</h3>
+<p>This is less clear than the above question about platforms. Chrome
+  uses a different JavaScript engine, so certain parts of the
+  Timelapse replay engine would need to be reimplemented or
+  refactored. In particular, capture/replay of
+  the <code>Date.now</code> and <code>Math.random</code> may require
+  V8 support. There may also be some issues arising from the fact that
+  Safari and Chrome use slightly different versions of Web Inspector.
+</p>
+<hr />
+
+<h3>Can Timelapse be (easily) ported to Firefox/Gecko?</h3>
+<p class="lead">It seems very unlikely.</p>
+<p>Timelapse's architecture is suited to large and monolithic
+  applications. The current record/replay design is unsuitable for
+  Firefox, because Firefox has a fundamentally extensible,
+  component-based architecture. This environment is more akin to
+  record/replay work in the distributed systems community. So,
+  record/replay may be possible, but it would be novel research and
+  not a straightforward reimplementation.</p>
+<hr />
+
+<h2>Contributing and Reusing</h2><br/>
+<h3>How can I contribute patches to the project?</h3>
+<p>If you would like to contribute features or patches to the
+  project, the easiest way is
+  to <a href="https://bitbucket.org/burg/timelapse/fork">create a
+  fork</a> on Bitbucket and send a
+  <a href="https://bitbucket.org/burg/timelapse/pull">pull
+  request</a>. Drive-by bug fixes and incremental features are very
+  welcome, but larger contributions should occur with some level of
+  coordination.</p>
+<hr />
+
+</div>
+ 
+

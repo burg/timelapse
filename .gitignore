@@ -117,3 +117,6 @@ tags
 .project
 .cproject
 .settings
+
+# Ignore Timelapse project-related files:
+/docs/_site/

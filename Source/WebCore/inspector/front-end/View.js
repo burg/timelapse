@@ -71,6 +71,12 @@ WebInspector.View.prototype = {
                 method.call(this._children[i]);
     },
 
+    _callOnAllChildren: function(method)
+    {
+        for (var i = 0; i < this._children.length; ++i)
+            method.call(this._children[i]);
+    },
+
     _processWillShow: function()
     {
         this._loadCSSIfNeeded();
@@ -111,6 +117,20 @@ WebInspector.View.prototype = {
 
         this.onResize();
         this._callOnVisibleChildren(this._processOnResize);
+    },
+
+    _processWillDispose: function()
+    {
+        WebInspector.View._assert(!this.isShowing(), "Can't dispose attached view!");
+        
+        this.willDispose();
+        this._callOnAllChildren(this._processWillDispose);
+    },
+    
+    willDispose: function()
+    {
+        // should remove all handlers with a reference to `this`,
+        // so that this object can be garbage collected
     },
 
     wasShown: function()
@@ -203,6 +223,11 @@ WebInspector.View.prototype = {
             this._parentView = null;
         } else
             WebInspector.View._assert(this._isRoot, "Removing non-root view from DOM");
+    },
+
+    dispose: function()
+    {
+        this._processWillDispose();
     },
 
     detachChildViews: function()

@@ -25,6 +25,7 @@
 #include "DateConversion.h"
 #include "DateInstance.h"
 #include "DatePrototype.h"
+#include "GetCurrentTime.h"
 #include "JSDateMath.h"
 #include "JSFunction.h"
 #include "JSGlobalObject.h"
@@ -34,6 +35,7 @@
 #include <math.h>
 #include <time.h>
 #include <wtf/MathExtras.h>
+#include <wtf/timelapse/DeterminismLog.h>
 
 #if OS(WINCE) && !PLATFORM(QT)
 extern "C" time_t time(time_t* timer); // Provided by libce.
@@ -71,6 +73,32 @@ const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_inf
 @end
 */
 
+#if ENABLE(TIMELAPSE)   
+static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
+{
+    RefPtr<DeterminismLog> log = globalObject->determinismLog();
+
+    // if no determinism, get current time normally.
+    if (!log || !log->isActive())
+        return jsCurrentTime();
+
+    double currentTime;
+
+    if (log->capturing()) {
+        currentTime = jsCurrentTime();
+        log->append(new GetCurrentTime(currentTime));
+    } else {
+        ASSERT(log->replaying());
+        GetCurrentTime* action = static_cast<GetCurrentTime*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::GetCurrentTime));
+        if (!action) // error handling case
+            currentTime = jsCurrentTime();
+        else
+            currentTime = action->currentTime();
+    }
+    return currentTime;
+}
+#endif
+    
 ASSERT_CLASS_FITS_IN_CELL(DateConstructor);
 ASSERT_HAS_TRIVIAL_DESTRUCTOR(DateConstructor);
 
@@ -104,7 +132,11 @@ JSObject* constructDate(ExecState* exec, JSGlobalObject* globalObject, const Arg
     double value;
 
     if (numArgs == 0) // new Date() ECMA 15.9.3.3
+#if ENABLE(TIMELAPSE)
+        value = jsRiggedCurrentTime(globalObject);
+#else
         value = jsCurrentTime();
+#endif
     else if (numArgs == 1) {
         if (args.at(0).inherits(&DateInstance::s_info))
             value = asDateInstance(args.at(0))->internalNumber();
@@ -182,9 +214,14 @@ static EncodedJSValue JSC_HOST_CALL dateParse(ExecState* exec)
     return JSValue::encode(jsNumber(parseDate(exec, exec->argument(0).toString(exec)->value(exec))));
 }
 
-static EncodedJSValue JSC_HOST_CALL dateNow(ExecState*)
+static EncodedJSValue JSC_HOST_CALL dateNow(ExecState* exec)
 {
+#if ENABLE(TIMELAPSE)
+    return JSValue::encode(jsNumber(jsRiggedCurrentTime(exec->lexicalGlobalObject())));
+#else
+    UNUSED_PARAM(exec);
     return JSValue::encode(jsNumber(jsCurrentTime()));
+#endif
 }
 
 static EncodedJSValue JSC_HOST_CALL dateUTC(ExecState* exec) 

@@ -51,6 +51,7 @@ namespace JSC {
 namespace WebCore {
 
     class AlternativeTextClient;
+    class AsyncEventProxy;
     class BackForwardController;
     class BackForwardList;
     class Chrome;
@@ -58,6 +59,9 @@ namespace WebCore {
 #if ENABLE(CONTEXT_MENUS)
     class ContextMenuClient;
     class ContextMenuController;
+#endif
+#if ENABLE(TIMELAPSE)
+    class DeterminismController;
 #endif
     class Document;
     class DragCaretController;
@@ -72,6 +76,7 @@ namespace WebCore {
     class InspectorClient;
     class InspectorController;
     class MediaCanStartListener;
+    class NetworkProxy;
     class Node;
     class PageGroup;
     class PluginData;
@@ -85,6 +90,7 @@ namespace WebCore {
     class ScrollingCoordinator;
     class Settings;
     class StorageNamespace;
+    class UserInputProxy;
 
     typedef uint64_t LinkHash;
 
@@ -179,6 +185,12 @@ namespace WebCore {
         FocusController* focusController() const { return m_focusController.get(); }
 #if ENABLE(CONTEXT_MENUS)
         ContextMenuController* contextMenuController() const { return m_contextMenuController.get(); }
+#endif
+        NetworkProxy* networkProxy() const { return m_networkProxy.get(); }
+        AsyncEventProxy* asyncEventProxy() const { return m_asyncEventProxy.get(); }
+        UserInputProxy* userInputProxy() const { return m_userInputProxy.get(); }
+#if ENABLE(TIMELAPSE)
+        DeterminismController* determinismController() const { return m_determinismController.get(); }
 #endif
 #if ENABLE(INSPECTOR)
         InspectorController* inspectorController() const { return m_inspectorController.get(); }
@@ -359,6 +371,12 @@ namespace WebCore {
         OwnPtr<FocusController> m_focusController;
 #if ENABLE(CONTEXT_MENUS)
         OwnPtr<ContextMenuController> m_contextMenuController;
+#endif
+        OwnPtr<NetworkProxy> m_networkProxy;
+        OwnPtr<AsyncEventProxy> m_asyncEventProxy;
+        OwnPtr<UserInputProxy> m_userInputProxy;
+#if ENABLE(TIMELAPSE)
+        OwnPtr<DeterminismController> m_determinismController;
 #endif
 #if ENABLE(INSPECTOR)
         OwnPtr<InspectorController> m_inspectorController;

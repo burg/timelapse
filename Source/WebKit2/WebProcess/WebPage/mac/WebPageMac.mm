@@ -43,6 +43,7 @@
 #import "WebProcess.h"
 #import <PDFKit/PDFKit.h>
 #import <WebCore/AXObjectCache.h>
+#import <WebCore/Document.h>
 #import <WebCore/FocusController.h>
 #import <WebCore/Frame.h>
 #import <WebCore/FrameView.h>
@@ -60,6 +61,13 @@
 #import <WebCore/WindowsKeyboardCodes.h>
 #import <WebCore/visible_units.h>
 #import <WebKitSystemInterface.h>
+
+#if ENABLE(TIMELAPSE)
+#import "InterpretedKeyCommands.h"
+#import <WebCore/DeterminismController.h>
+#import <wtf/timelapse/DeterminismLog.h>
+#import <wtf/timelapse/ReplayableAction.h>
+#endif
 
 using namespace WebCore;
 using namespace std;
@@ -191,16 +199,44 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
         return false;
 
     bool eventWasHandled = false;
-    
+#if ENABLE(TIMELAPSE)
+    WebCore::DeterminismController* controller = corePage()->determinismController();
+    bool isCapturing = controller && controller->isCapturingDocument(corePage()->mainFrame()->document());
+    bool isReplaying = controller && controller->isReplayingDocument(corePage()->mainFrame()->document());
+    ASSERT(!(isCapturing && isReplaying));
+#endif
+
     if (saveCommands) {
+#if ENABLE(TIMELAPSE)
+        // if replaying, simply populate the commands from memoized state, and return.
+        if (isReplaying) {
+            RefPtr<DeterminismLog> detLog = controller->determinismLog();
+            InterpretedKeyCommands* memoizedCommands = static_cast<InterpretedKeyCommands*>(detLog->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::InterpretedKeyCommands));
+            if (memoizedCommands) {
+                commands = memoizedCommands->commands();
+                return eventWasHandled;
+            }
+            // error handling case: fall through and ask UIProcess what to do.
+        }
+        // otherwise, ask the UIProcess to figure out the commands for these keystrokes.
+#endif
         KeyboardEvent* oldEvent = m_keyboardEventBeingInterpreted;
         m_keyboardEventBeingInterpreted = event;
         bool sendResult = WebProcess::shared().connection()->sendSync(Messages::WebPageProxy::InterpretQueuedKeyEvent(editorState()), 
             Messages::WebPageProxy::InterpretQueuedKeyEvent::Reply(eventWasHandled, commands), m_pageID);
         m_keyboardEventBeingInterpreted = oldEvent;
+        
+        
+#if ENABLE(TIMELAPSE)
+        // if capturing, save away the key commands as memoized state.
+        if (isCapturing) {
+            RefPtr<DeterminismLog> detLog = controller->determinismLog();
+            detLog->append(new InterpretedKeyCommands(commands));
+        }
+#endif
+        
         if (!sendResult)
             return false;
-
         // An input method may make several actions per keypress. For example, pressing Return with Korean IM both confirms it and sends a newline.
         // IM-like actions are handled immediately (so the return value from UI process is true), but there are saved commands that
         // should be handled like normal text input after DOM event dispatch.
@@ -236,6 +272,9 @@ void WebPage::sendComplexTextInputToPlugin(uint64_t pluginComplexTextInputIdenti
 
 void WebPage::setComposition(const String& text, Vector<CompositionUnderline> underlines, uint64_t selectionStart, uint64_t selectionEnd, uint64_t replacementRangeStart, uint64_t replacementRangeEnd, EditorState& newState)
 {
+    //TIMELAPSE-TODO: need to interpose on calls to FrameSelection::setSelection
+    // and Editor::setComposition in order to determinise IME inputs.
+    // right now, the composition{start,update,end} events and derivatives are not fired.
     Frame* frame = m_page->focusController()->focusedOrMainFrame();
 
     if (frame->selection()->isContentEditable()) {

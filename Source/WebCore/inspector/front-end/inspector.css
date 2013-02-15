@@ -395,6 +395,10 @@ body.detached.platform-mac-snowleopard #toolbar-dropdown {
     background-position-x: -32px;
 }
 
+.toolbar-item.timelapse .toolbar-icon {
+    background-image: url(Images/timelapseIcon.png);
+}
+
 body.compact .toolbar-item.resources .toolbar-icon {
     background-position-x: -24px;
 }
@@ -534,10 +538,42 @@ body.drawer-visible #main-panels {
     display: -webkit-flex;
 }
 
-.status-bar > div {
+.status-bar > div { /* applies to .anchored-status-bar-items */
     display: inline-block;
     vertical-align: top;
     overflow: visible;
+}
+
+#anchored-status-bar-items-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    line-height: 24px;
+}
+ 
+#timelapse-status {
+    display: inline-block;
+    border-image-source: url(Images/statusbarButtons.png);
+    border-image-slice: 0 0 0 5;
+    border-width: 0px 1px;
+    padding: 0px 4px 0px 6px;
+    line-height: 2em;
+}
+
+/* this must be more specific that the general status bar style to change
+    the sprite map. But, position must not be overspecific so it can be changed. */
+button.timelapse-lock-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: -288px -48px;
+}
+
+button.timelapse-lock-status-bar-item.toggled-on > .glyph {
+    -webkit-mask-position: -256px -48px;
+}
+
+button.timelapse-record-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: -192px -48px;
 }
 
 .status-bar-item {
@@ -1884,11 +1920,11 @@ body.inactive .panel-enabler-view button:not(.status-bar-item), .panel-enabler-v
 }
 
 button.enable-toggle-status-bar-item .glyph {
-    -webkit-mask-position: -192px 0;
+    -webkit-mask-position: -195px 0;
 }
 
 button.enable-toggle-status-bar-item.toggled-on .glyph {
-    -webkit-mask-position: -96px -24px;
+    -webkit-mask-position: -95px -24px;
 }
 
 #console-messages.console-filter-top {
@@ -2262,14 +2298,18 @@ body.inactive li.selected .bubble.search-matches {
     top: 4px;
 }
 
-.status-bar-items {
+.status-bar-items, .status-bar-items-group {
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 200px;
     overflow: hidden;
+    display: inline-block;
     border-left: 1px solid rgb(184, 184, 184);
     margin-left: -1px;
+}
+
+.status-bar-items {
+    left: 200px;
 }
 
 .node-search-status-bar-item .glyph {
@@ -2923,4 +2963,804 @@ body.platform-mac .progress-bar-container progress {
 .progress-bar-container button.status-bar-item {
     border-left: none;
     margin-top: 1px;
+}
+
+/* Timelapse Controller Styles */
+
+.timelapse-controller-status-bar-item .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: -192px -48px;
+}
+
+.toggle-record-status-bar-item .glyph {
+    -webkit-mask-position: -288px 0;
+}
+
+/* override .status-bar-item > .glyph rule */
+button.pause-playback-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+/* the play and pause buttons are too big in proportion to other icons. */
+/* unscaled:    -webkit-mask-position: -160px -48px; */
+    -webkit-mask-size: 288px;
+    -webkit-mask-position: -141px -41px;
+}
+
+/* override .status-bar-item > .glyph rule */
+button.play-playback-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+/* the play and pause buttons are too big in proportion to other icons. */
+/* unscaled:    -webkit-mask-position: -128px -48px; */
+    -webkit-mask-size: 288px;
+    -webkit-mask-position: -114px -41px;
+}
+
+button.replay-to-savepoint-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+}
+
+button.set-savepoint-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: 0 -24px;
+}
+
+.reset-playback-status-bar-item .glyph {
+    -webkit-mask-position: 0 0;
+}
+
+/* override .status-bar-item > .glyph rule */
+button.timelapse-locked-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+/* the play and pause buttons are too big in proportion to other icons. */
+/* unscaled:    -webkit-mask-position: -128px -48px; */
+    -webkit-mask-size: 288px;
+    -webkit-mask-position: -114px -41px;
+}
+
+button.breakpoint-radar-status-bar-item > .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: -32px -24px;
+}
+
+.timelapse-button-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    background-color: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+}
+
+.timelapse-button-icon:hover {
+    background-color: rgba(200, 100, 0, 0.6);
+}
+
+.toggled .timelapse-button-icon,
+.toggled.timelapse-button-icon {
+    background-color: rgb(66, 129, 235) !important;
+}
+
+.timelapse-savepoint-button {
+    -webkit-mask-image: url(Images/timelapseAnchor.png);    
+}
+
+.timelapse-jump-button {
+    -webkit-mask-image: url(Images/timelapseJumpButton.png);
+}
+
+.timelapse-inputs-grid .timelapse-savepoint-button {
+    margin-right: 6px;
+}
+
+#timelapse-controller-view {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    width: 100%;
+    min-height: 210px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 11;
+}
+
+.timelapse-capture-message {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 20px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 12pt;
+    color: #666;
+    cursor: pointer;
+}
+
+.timelapse-capture-message:hover {
+    text-decoration: underline;
+    color: #a04010;
+}
+
+.message-pulse {
+    -webkit-animation-name: message-pulse;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+}
+
+#timelapse-replay-view .split-view-contents {
+    overflow-x: none;
+}
+
+.timelapse-scrollview {
+    position: absolute;
+    height: 30px;
+    left: 50px;
+    right: 50px;
+    top: 60px;
+}
+
+@-webkit-keyframes message-pulse {
+    0%   { color: #444; }
+    50%  { color: #888; }
+    100% { color: #444; }
+}
+
+@-webkit-keyframes playback-pulse {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+@-webkit-keyframes breakpoint-blink {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.8; }
+    100% { opacity: 1; }
+}
+
+.timelapse-overview-column-label {
+    left: 5px;
+    width: 100px;
+    position: absolute;
+}
+
+.timelapse-overview-column-main {
+    left: 100px;
+    right: 15px;
+}
+
+.timelapse-overview-row-main {
+    top: 60px; 
+    bottom: 0;
+}
+
+.timelapse-overview-row-label {
+    top: 15px;
+}
+
+div.timelapse-timeline-label-wrapper {
+    position: absolute;
+    left: 0;
+    width: 85px;
+    height: 24px;
+    margin: 3px 5px 2px 5px;
+    border-radius: 5px;
+    background-clip: border-box;
+    -webkit-transition: all .4s ease-in;
+}
+
+div.timelapse-timeline-label:hover {
+    opacity: 0.75;
+}
+
+div.timelapse-timeline-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    cursor: pointer;
+    border: 1px solid #555;
+    border-radius: 3px;
+    background-image: url(Images/timelapseLabelBackground.png);
+    background-repeat: repeat-x;
+    background-position-y: -1px;
+    box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.09);
+    opacity: 0.85;
+    -webkit-transition: opacity .2s linear;
+    vertical-align: middle;
+    line-height: 20px;
+    text-align: center;
+    font-weight: bold;
+}
+
+div.timelapse-timeline-label-wrapper.disabled {
+    opacity: 1;
+    background-color: #aaa !important;
+    color: #333 !important;
+}
+
+div.timelapse-preview-container, .timelapse-overview-preview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+}
+
+div.timelapse-overview-preview header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 24px; 
+    font-size: 12px;
+    padding: 2px 5px;
+    font-weight: bold;
+    line-height: 22px;
+    text-align: center;
+    color: rgb(110,110,110);
+    text-shadow: white 0 1px 0;
+    background-image: -webkit-gradient(linear, left top, left bottom, from(rgb(243, 243, 243)), color-stop(0.05, rgb(243, 243, 243)), color-stop(0.05, rgb(230, 230, 230)), to(rgb(209, 209, 209)));
+    border-bottom: 1px solid #aaa;
+}
+
+.timelapse-preview-input {
+    background-image: -webkit-linear-gradient(rgb(253,253,253), rgb(240,240,240) 75%, rgb(230,230,230));
+}
+
+div.timelapse-overview-preview div.preview-message {
+    text-align: center;
+    font-size: 12px;
+    margin: 25% 25px;
+    color: #555;
+}
+
+.timelapse-overview-preview div.table-wrapper {
+     overflow-y: scroll;
+     position: absolute;
+     top: 24px;
+     left: 0;
+     right: 0;
+     bottom: 0;
+}
+
+.timelapse-overview-preview div.table-wrapper::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 5px;
+}
+
+.timelapse-overview-preview div.table-wrapper::-webkit-scrollbar-track {
+    background-color: rgba(57,57,57,0.1);
+    border-radius: 4px;
+}
+
+.timelapse-overview-preview div.table-wrapper::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 156, 156, .6);
+    border-radius: 4px;
+}
+
+
+.timelapse-overview-preview table {
+     border-collapse: collapse;
+     width: 100%;
+     background-color: #f5f5f5;
+     border-bottom: 1px solid #ccc;
+     box-shadow: rgba(230,230,231,1) 0px 2px 4px;
+}
+
+.timelapse-overview-preview table th,
+.timelapse-overview-preview table td {
+    text-align: center;
+}
+
+.timelapse-overview-preview table tr {
+    height: 29px;
+}
+
+.timelapse-overview-preview table td {
+    padding-top: 5px;
+    padding-bottom: 3px;
+}
+
+.timelapse-overview-preview table th:first-child,
+.timelapse-overview-preview table td:first-child {
+    padding-left: 15px;
+    padding-right: 10px;
+}
+
+.timelapse-overview-preview table th:last-child {
+    padding: 0 10px;
+}
+
+.timelapse-overview-preview table td:last-child {
+    padding-right: 15px;
+}
+
+.timelapse-overview-preview table .text-cell {
+    padding-left: 10px;
+    text-align: left;
+}
+
+.timelapse-overview-preview table .row-with-count {
+    border-top: 1px solid #ddd;
+}
+
+.timelapse-overview-preview table td:nth-child(2) {
+    padding-left: 10px;
+}
+
+.timelapse-overview-preview table tr:hover {
+    background-color: #f5f5f5;
+}
+
+.timelapse-overview-preview table tr:hover {
+    background-image: -webkit-linear-gradient(rgba(253,253,253,0.8), rgba(230,230,230,0.8) 75%, rgba(230,230,230,0.8));
+}
+
+.timelapse-overview-preview table tr:hover td:first-child,
+.timelapse-overview-preview table tr:hover td:last-child {
+    text-decoration: underline;
+    cursor: default;
+}
+
+.timelapse-overview-preview table .condition-row {
+    height: auto;
+    vertical-align: top;
+}
+
+.timelapse-overview-preview table .condition-row:hover {
+    background-image: none;
+}
+
+.timelapse-overview-preview table .condition-row:hover td:first-child,
+.timelapse-overview-preview table .condition-row:hover td:last-child {
+    text-decoration: none;
+}
+
+.timelapse-overview-preview table .condition-row td {
+    padding-top: 0;
+}
+
+.timelapse-overview-preview table .condition-row td:first-child {
+    text-align: right;
+}
+
+.timelapse-overview-preview table:not(.timelapse-category-breakpoint) tr.selected {
+    background: rgba(255,0,0,0.1);
+}
+
+.timelapse-overview-preview table.timelapse-category-breakpoint tr.selected {
+    background: rgba(0,0,255,0.1);
+    font-weight: bold;
+}
+
+.timelapse-overview-preview table .selected .timelapse-breakpoint-link {
+    font-weight: bold;
+}
+
+.timelapse-overview-preview table .disabled .timelapse-breakpoint-link {
+    font-style: italic;
+}
+
+.timelapse-overview-preview.timelapse-preview-error header {
+    color: rgb(150,0,0);
+}
+
+.timelapse-overview-preview.timelapse-preview-error .preview-message {
+    color: #500;
+}
+
+.timelapse-overview {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.timelapse-overview-message {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 95px;
+    right: 0;
+    z-index: 1000;
+    font-weight: bold;
+    font-size: 18pt;
+    color: #666;
+    background-color: rgba(255, 255, 255, 0.5);
+    padding: 40px 15px 0;
+    text-align: center;
+    cursor: pointer;
+}
+
+.timelapse-overview-message li {
+    list-style-type: none;
+    display: inline;
+    text-decoration: underline;
+    font-size: 14px;
+    margin: 0px 10px 0px 10px;
+    color: #444;
+}
+
+.timelapse-overview-message li:hover {
+    text-decoration: underline;
+    color: #a04010;
+}
+
+.timelapse-overview-message:not(.hidden) {
+    -webkit-animation-name: message-fade-in;
+    -webkit-animation-duration: 0.2s;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-fill-mode: forwards;
+    -webkit-timing-function: ease-out;
+}
+
+.timelapse-overview-message.hidden {
+    display: block !important;
+    -webkit-animation-name: message-fade-out;
+    -webkit-animation-duration: 0.2s;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-fill-mode: forwards;
+    -webkit-timing-function: ease-out;
+}
+
+@-webkit-keyframes message-fade-in {
+    0% { opacity: 0; z-index: 0; display: none; }
+    10% { opacity: 0.1; z-index: 1000; display: block; }
+    100% { opacity: 1; }
+}
+
+@-webkit-keyframes message-fade-out {
+    0% { opacity: 1.0; z-index: 1000; }
+    90% { opacity: 0.1; }
+    100% { opacity: 0; z-index: 0; display: none; }
+}
+
+.timelapse-overview .resources-dividers-label-bar {
+    position: absolute;
+    bottom: -23px;
+    height: 20px;
+    left: 0;
+    top: auto !important;
+    right: 0;
+    background: -webkit-gradient(linear, left top, left bottom, from(#f5f5f5), to(#e0e0e0));
+    margin-left: -1px;
+    margin-right: -1px;
+    border: 1px solid #ddd;
+}
+
+div.timelapse-overview-timelines {
+    position: absolute;
+    height: 20px;
+    border: 1px solid #bbb;
+    border-radius: 2px;
+    cursor: -webkit-grab;
+}
+
+div.timelapse-overview-timeline.disabled {
+    background-color: #e5e5e5;
+    background-image: -webkit-repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(255, 255, 255, .5) 10px, rgba(255, 255, 255, .5) 20px);
+}
+
+/* Next two rules are an  ugly hack to emulate :first-of-class. See 
+ * http://stackoverflow.com/questions/2717480/css-selector-for-first-element-with-class/ */
+.timelapse-overview-timelines > .timelapse-overview-timeline {
+    border-top: none;
+}
+
+.timelapse-overview-timelines > .timelapse-overview-timeline ~ .timelapse-overview-timeline {
+    border-top: 1px dotted #ddd;
+}
+
+div.timelapse-overview-timeline {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    height: 30px; /* should match the above */
+    -webkit-transition: all .3s ease-in;
+}
+
+.timelapse-category-userinput .timelapse-column-category {
+    background-color: rgb(20, 170, 70);
+}
+
+.timelapse-category-network .timelapse-column-category {
+    background-color: rgb(200, 150, 0);
+}
+
+.timelapse-category-timer .timelapse-column-category {
+    background-color: rgb(200, 30, 30);
+}
+
+.timelapse-category-system .timelapse-column-category {
+    background-color: rgb(10, 55, 230);
+}
+
+.timelapse-overview-slider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    opacity: 0.8;
+    z-index: 750;
+}
+
+/* the keyframes are defined in timelapsePanel.css */
+.timelapse-overview-slider.playback-pulse div {
+    -webkit-animation: playback-pulse 1s infinite;
+}
+
+.timelapse-overview-slider .timelapse-slider-band {
+    top: 0;
+    bottom: 0;
+    position: absolute;
+    margin-left: -1px;
+    border-left: 1px solid rgba(0,0,0,0.8);
+    border-right: 1px solid rgba(0,0,0,0.8);
+    width: 4px;
+    z-index: 801;
+    pointer-events: none;
+}
+
+.timelapse-overview-slider .timelapse-slider-wedge-wrapper {
+    display: none; /* by default; adjustable per class */
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    overflow: hidden;
+    bottom: -9px;
+    left: -9px;
+    -webkit-transform: rotate(-90deg);
+    border-left: 1px solid #333;
+}
+
+.timelapse-overview-slider .timelapse-slider-wedge-border {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    bottom: 0px;
+    width: 10px;
+    z-index: 201;
+}
+
+.timelapse-overview-slider.adjustable .timelapse-slider-wedge-wrapper {
+    cursor: n-resize;
+    display: block;
+    z-index: 800;
+}
+
+.timelapse-overview-slider.adjustable .timelapse-slider-band {
+    cursor: col-resize;
+    bottom: -1px;
+    border-bottom: 1px solid transparent;
+}
+
+.timelapse-overview-slider .timelapse-slider-wedge {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    -webkit-transform: rotate(45deg);
+    border: 1px solid #000;
+    left: -14px;
+    z-index: 200;
+}
+
+.timelapse-overview-slider.disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+
+.playback-slider .timelapse-slider-band,
+.playback-slider .timelapse-slider-wedge {
+    background-color: rgba(255, 0, 0, 1);
+}
+
+/* this matches the color defined in timelapsePanel.css */
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-band,
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge {
+    -webkit-animation-name: breakpoint-blink;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+    -webkit-animation-timing-function: cubic-bezier(1.0,0.0,0.0,1.0);
+    background-color: rgba(10, 55, 230, 1);
+}
+
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge-wrapper {
+    display: block;
+   -webkit-transform-origin: 100% 100%;
+    height: 12px;
+    width: 15px;
+    bottom: 0;
+    left: -8px;
+    border-left: none;
+}
+
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge {
+    left: -7px;
+    top: -4px;
+}
+
+.timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge-border {
+    display: block;
+    border: 1px solid rgba(0, 0, 0, 0.9);
+    border-right: none;
+}
+
+.previous-slider .timelapse-slider-band {
+    background-color: rgba(150, 0, 0, 0.3);
+    border: 0;
+}
+
+.tentative-slider .timelapse-slider-band {
+    border-left: 1px dashed #f00;
+    border-right: 1px dashed #f00;
+    background-color: rgba(255,0,0,0.1);
+}
+
+.savepoint-slider {
+    pointer-events: none;
+}
+
+.savepoint-slider .timelapse-slider-band {
+    background-color: rgba(0, 0, 0, 0.3);
+    border: 0;
+}
+
+.savepoint-slider .timelapse-slider-icon {
+    position: absolute;
+    bottom: -20px;
+    left: -7px;
+    width: 16px;
+    height: 16px;
+    background-color: rgba(0, 0, 0, 0.5);
+    -webkit-mask-image: url(Images/timelapseAnchor.png);
+}
+
+.timelapse-overview-slider.slider-dragging {
+    opacity: 0.6;
+    -webkit-transition: none;
+}
+
+div.timelapse-miniview {
+    position: absolute;
+    height: 30px;
+}
+
+.timelapse-miniview-glasspane {
+    background-color: rgba(0,0,0,0.2);
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: auto;
+    right: 100%;
+    bottom: 0;
+}
+
+.timelapse-miniview-slider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    opacity: 0.8;
+    z-index: 750;
+}
+
+.timelapse-miniview-slider.adjustable {
+}
+
+/* the keyframes are defined in timelapsePanel.css */
+.timelapse-miniview-slider.playback-pulse div {
+    -webkit-animation: playback-pulse 1s infinite;
+}
+
+/* this definition matches the one in timelapsePanel.css */
+.timelapse-miniview-slider.breakpoint-blink div {
+    -webkit-animation-name: breakpoint-blink;
+    -webkit-animation-duration: 1s;
+    -webkit-animation-iteration-count: infinite;
+    -webkit-animation-timing-function: cubic-bezier(1.0,0.0,0.0,1.0);
+}
+
+.timelapse-miniview-slider .timelapse-slider-band {
+    position: absolute;
+    border-left: 1px solid rgba(0,0,0,0.8);
+    border-right: 1px solid rgba(0,0,0,0.8);
+    z-index: 801;
+    top: -1px;
+    bottom: -1px;
+    width: 5px;
+    border-radius: 3px;
+}
+
+.timelapse-miniview-slider.adjustable .timelapse-slider-band {
+    box-shadow: 0px 0px 2px rgba(255, 255, 255, 0.5);
+    cursor: col-resize;
+}
+
+.timelapse-miniview-slider:not(.adjustable) .timelapse-slider-band {
+    pointer-events: none;
+}
+
+.slider-dragging {
+    -webkit-transition: none;
+}
+
+.timelapse-miniview-slider.disabled {
+    cursor: default;
+    opacity: 0.4;
+}
+
+.timelapse-miniview-slider.tentative-slider .timelapse-slider-band {
+    border: 1px dashed #f00;
+    background-color: rgba(255,0,0,0.1);
+}
+
+.timelapse-miniview-slider.savepoint-slider .timelapse-slider-band {
+    background-color: rgba(0,0,0,0,3);
+}
+
+/* this matches the color defined in timelapsePanel.css */
+.timelapse-miniview-slider.breakpoint-slider .timelapse-slider-band {
+    background-color: rgba(10, 55, 230, 1);
+}
+
+.timelapse-miniview-slider.slider-dragging {
+    opacity: 0.6;
+}
+
+.timelapse-miniview-slider.zoom-slider.left {
+    margin-left: -5px;
+}
+
+.timelapse-miniview-slider.zoom-slider.right {
+    margin-left: -3px;
+}
+
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-band {
+    background-color: rgba(0, 0, 0, 0.7);
+    box-shadow: none;
+    border: none !important;
+    width: 1px;
+    top: 0px;
+    bottom: 0px;
+    border-radius: 0;
+    left: 4px;
+}
+
+.timelapse-miniview-slider.zoom-slider.slider-dragging {
+    opacity: 0.9;
+}
+
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-handlebar-bottom,
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-handlebar-top {
+    width: 5px;
+    height: 9px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid #333;
+    position: absolute;
+    left: 2px;
+}
+
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-handlebar-top {
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    top: -9px;
+    cursor: s-resize;
+}
+
+.timelapse-miniview-slider.zoom-slider .timelapse-slider-handlebar-bottom {
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 2px;
+    border-bottom-right-radius: 2px;
+    bottom: -9px;
+    cursor: n-resize;
+}
+
+.timelapse-zoom-selector {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background-color: rgba(125, 173, 217, 0.5);
+    z-index: 250;
 }

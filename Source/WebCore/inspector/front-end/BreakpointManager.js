@@ -53,7 +53,9 @@ WebInspector.BreakpointManager = function(breakpointStorage, debuggerModel, work
 
 WebInspector.BreakpointManager.Events = {
     BreakpointAdded: "breakpoint-added",
-    BreakpointRemoved: "breakpoint-removed"
+    BreakpointRemoved: "breakpoint-removed",
+    BreakpointAddedToStorage: "breakpoint-added-to-storage",
+    BreakpointRemovedFromStorage: "breakpoint-removed-from-storage"
 }
 
 WebInspector.BreakpointManager.prototype = {
@@ -211,10 +213,12 @@ WebInspector.BreakpointManager.prototype = {
      */
     _removeBreakpoint: function(breakpoint, removeFromStorage)
     {
-        console.assert(!breakpoint._debuggerId)
+        console.assert(!breakpoint._debuggerId);
         this._breakpoints.remove(breakpoint);
-        if (removeFromStorage)
-            this._storage._removeBreakpoint(breakpoint);
+        if (removeFromStorage) {
+	    this._storage._removeBreakpoint(breakpoint);
+	    this.dispatchEventToListeners(WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, {breakpoint: breakpoint, uiLocation: breakpoint.primaryUILocation()});
+	}
     },
 
     /**
@@ -508,8 +512,11 @@ WebInspector.BreakpointManager.Storage.prototype = {
     {
         if (this._muted)
             return;
+        var newBreakpoint = !this._breakpoints[breakpoint._breakpointStorageId()];
         this._breakpoints[breakpoint._breakpointStorageId()] = new WebInspector.BreakpointManager.Storage.Item(breakpoint);
         this._save();
+        if (newBreakpoint)
+            this._breakpointManager.dispatchEventToListeners(WebInspector.BreakpointManager.Events.BreakpointAddedToStorage);
     },
 
     /**

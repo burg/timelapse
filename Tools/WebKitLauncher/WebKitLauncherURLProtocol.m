@@ -115,7 +115,7 @@
 -(void)resourceNotFound
 {
     id client = [self client];
-    NSDictionary *infoDictionary = [NSDictionary dictionaryWithObject:NSErrorFailingURLStringKey forKey:[[self request] URL]];
+    NSDictionary *infoDictionary = [NSDictionary dictionaryWithObject:NSURLErrorFailingURLStringErrorKey forKey:[[self request] URL]];
     NSError *error = [NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorFileDoesNotExist userInfo:infoDictionary];
     [client URLProtocol:self didFailWithError:error];
 }

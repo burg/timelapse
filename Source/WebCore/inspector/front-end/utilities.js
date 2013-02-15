@@ -393,6 +393,61 @@ Object.defineProperty(Array.prototype, "binaryIndexOf",
     }
 });
 
+function binarySearchNearest(key, array, comparator, distancefn)
+{
+    return binarySearchNearestWithin(key, array, 0, array.length-1, comparator, distancefn);
+}
+
+function binarySearchNearestWithin(key, array, first, last, comparator, distancefn)
+{
+    first = Math.max(0, first);
+    last = Math.min(last, array.length-1);
+    while (first <= last) {
+	var mid = (first + last) >> 1;
+	var c = comparator(key, array[mid]);
+	if (c > 0)
+	    first = mid + 1;
+	else if (c < 0)
+	last = mid - 1;
+	else
+	    return mid;
+    }
+    
+    var dLeft = distancefn(key, array[first]);
+    var dRight = distancefn(key, array[last]);
+    return (dRight <= dLeft) ? last : first;
+}
+
+Object.defineProperty(Array.prototype, "nearestBinaryIndexOf",
+{
+    /**
+     * @this {Array.<*>}
+     * @param {function(*, *):number} comparator
+     * @param {function(*, *):number} distancefn
+     */
+    value: function(value, comparator, distancefn)
+    {
+        var result = binarySearchNearest(value, this, comparator, distancefn);
+        return result >= 0 ? result : -1;
+    }
+});
+
+Object.defineProperty(Array.prototype, "nearestBinaryIndexWithin",
+{
+    /**
+     * @this {Array.<*>}
+     * @param {number} begin
+     * @param {number} end
+     * @param {function(*, *):number} comparator
+     * @param {function(*, *):number} distancefn
+     */
+    value: function(value, begin, end, comparator, distancefn)
+    {
+        var result = binarySearchNearestWithin(value, this, begin, end, comparator, distancefn);
+        return result >= 0 ? result : -1;
+    }
+});
+
 Object.defineProperty(Array.prototype, "select",
 {
     /**

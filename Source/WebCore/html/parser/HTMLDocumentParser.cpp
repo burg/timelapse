@@ -41,6 +41,10 @@
 #include "NestingLevelIncrementer.h"
 #include "Settings.h"
 
+#if ENABLE(TIMELAPSE)
+#include "DeterminismController.h"
+#endif
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -358,6 +362,13 @@ void HTMLDocumentParser::append(const SegmentedString& source)
         return;
     }
 
+#if ENABLE(TIMELAPSE)
+    // The timing of yields is nondeterministic, so just don't yield during capture/replay
+    if (document()->page()->determinismController()->isCapturingDocument(document())
+        || document()->page()->determinismController()->isReplayingDocument(document())) {
+        pumpTokenizerIfPossible(ForceSynchronous);
+    } else
+#endif
     pumpTokenizerIfPossible(AllowYield);
 
     endIfDelayed();
@@ -473,6 +484,14 @@ void HTMLDocumentParser::resumeParsingAfterScriptExecution()
     ASSERT(!isWaitingForScripts());
 
     m_insertionPreloadScanner.clear();
+
+#if ENABLE(TIMELAPSE)
+    // The timing of yields is nondeterministic, so just don't yield during capture/replay
+    if (document()->page()->determinismController()->isCapturingDocument(document())
+        || document()->page()->determinismController()->isReplayingDocument(document())) {
+        pumpTokenizerIfPossible(ForceSynchronous);
+    } else
+#endif
     pumpTokenizerIfPossible(AllowYield);
     endIfDelayed();
 }

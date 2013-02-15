@@ -168,6 +168,9 @@ namespace WebCore {
         RefPtr<DocumentLoader> m_documentLoader;
         ResourceResponse m_response;
         
+        //used by Timelapse to track loader orderings.
+        int m_loaderId;
+
     private:
         virtual void willCancel(const ResourceError&) = 0;
         virtual void didCancel(const ResourceError&) = 0;

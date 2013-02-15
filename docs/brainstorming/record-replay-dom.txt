@@ -1,0 +1,133 @@
+Goals: 
+
+ * reconstruct the visual output at any point in the execution.
+
+Implications:
+
+ * Need all original non-script resources (HTML, CSS, images)
+ * Need the basic DOM tree structure
+ * Need initial properties of DOM nodes
+ * Need to memoize/reify all DOM mutations from JS
+
+For example, most DOM elements have a 'bgColor' field, that when set,
+will change the background color. This field is part of the DOM node's
+state and would have to be recorded.
+
+When loading the saved resources from file, we must prevent the
+execution of the original scripts. This is because we would not be
+able to control their mutation of the DOM, and acheive a known state.
+
+Capturing just the calls to the DOM may not be sufficient-- if some
+DOM node is created, assigned to variable, then later inserted into
+the tree, then capturing and simulating that binding becomes difficult.
+
+
+Sources of nondeterminism (per Mugshot):
+
+* DOM Events -- mouse (click, over, out); key (up,down); load; focus/blur/select/change; scroll/resize
+* Callback Events -- setTimeout, setInterval
+* text selection
+* AJAX Events -- onreadystatechange
+* Nondeterministic functions -- new Date(), Math.random()
+* Opaque plugins -- flash, java applet
+
+Approach:
+
+To make replay deterministic, must:
+
+1) have access to same resources
+2) load resources in same order (images, etc) ?
+3) run the same events over
+4) fake the results of nondeterministic functions, or make them deterministic
+5) mitigate or disallow opaque plugins
+
+To accomplish this, at record time:
+
+1) dump all resources as they are loaded, or their locations on disk. Create mapping from requested URL -> location on disk.
+
+Notes:
+
+WebKit does not implement a web page serializer. 
+
+Safari implements "save webpage" as either just save the HTML file, or
+save a .webarchive. The latter uses ObjC's serialization facilities to
+serialize the Pages and the DOM to disk. Loading up a .webarchive
+returns the page to the state that it was once at, but as far as I can
+tell it does not serialize any of the JS heap. This is implemented in
+WebKit/WebView/WebArchive.mm in Safari.
+
+Chrome implements "save webpage" as a serialized, link-replaced html
+file plus a folder of resources. The code for this is named
+WebPageSerializer.h and WebPageSerializerClient.h in WebKit/chromium/
+and the actual implementations are in the Chrome tree.
+
+For serializing JS state, there is nothing turnkey and built into WebKit.
+
+SerializedScriptValue.h just serializes a single JSValue. Don't know
+if it would work for the global object.
+
+The closest is inspector's "heap snapshot", which is only implemented
+in Chrome. The stub for it in WebKit is at ScriptHeapSnapshot.h in
+WebCore/bindings/js/. Don't know how hard it would be to port to
+WebKit. Probably would suck quite a bit. As a hack, can just start
+recording the first page from the beginning and address other
+determinacy issues.
+
+--
+
+For now we implement without serializing the loaded resources to
+disk. To make the traces portable this will require fixing later.
+
+As far as I can tell, every resource is loaded through an LRU resource
+cache in CachedResourceLoader. Every Document has a
+m_cachedResourceLoader. When recording, we should set the cache to
+always save all resources for the Document being recorded. When
+replaying, we want to use a custom ResourceLoader that can replay the
+relenquishing of resources in the order that was recorded. We could
+implement a subclass of this CachedResourceLoader that uses the same
+cached objects, but will not mark them as finished until a
+"releaseResource" message is received (corresponding to replaying the
+load event from the Replay log).
+
+2) record the load time of these resources
+
+For each resource load, there are several discrete actions recorded by the timeline:
+
+Send Request
+Receive Response
+(several) Receive Data
+Finish Loading
+
+We need the exact image load order since the last action queues a DOM
+load event on the image element, which can trigger scripts. So, we
+should be able to record a log of something like:
+
+JS trace event
+
+prior to JS trace event <tid>, resource <id> finished loading.
+
+3) record each event and its arguments
+
+Need to dispatch a certain event on a particular DOM node. Mugshot
+captures the child-path (m'th child of n'th child of o -> o.n.m) or an
+explicit node id to identify the DOM node to dispatch on, and saves
+the event type and arguments (cursor position, character typed, etc).
+
+
+4) record and number the results of nondeterministic calls
+
+
+
+5) disable handling of flash/java-sourced events?
+
+ignore for now.
+
+To do the deterministic replay:
+
+1) Interpose on resource requests, instead serving up the dumped resource based on the recorded mapping.
+2) instead of normally loading resources, only make them "loaded" upon reaching a "resource load" log event.
+3) create and dispatch all of the recorded events (either by JS or not..)
+4) Instead of computing a nondeterministic return value, return the recorded values in order
+5) ?
+
+Each of these above 10 items is a TODO. They will be further split into work items.

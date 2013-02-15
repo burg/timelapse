@@ -2752,7 +2752,7 @@ bool FrameLoader::fireBeforeUnloadEvent(Chrome* chrome)
 
     RefPtr<BeforeUnloadEvent> beforeUnloadEvent = BeforeUnloadEvent::create();
     m_pageDismissalEventBeingDispatched = BeforeUnloadDismissal;
-    domWindow->dispatchEvent(beforeUnloadEvent.get(), domWindow->document());
+    domWindow->dispatchAsyncEvent(beforeUnloadEvent.get(), domWindow->document());
     m_pageDismissalEventBeingDispatched = NoDismissal;
 
     if (!beforeUnloadEvent->defaultPrevented())

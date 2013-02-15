@@ -42,6 +42,7 @@
 #include "InspectorClient.h"
 #include "Page.h"
 #include "ResourceError.h"
+#include "ResourceHandleClient.h"
 
 #if USE(V8)
 #include <v8.h>
@@ -587,6 +588,13 @@ public:
     virtual void stopUpdating() { }
     virtual DeviceOrientationData* lastOrientation() const { return 0; }
     virtual void deviceOrientationControllerDestroyed() { }
+};
+
+/* default empty implementations are provided by the client interface, but no constructor. */
+class EmptyResourceHandleClient : public ResourceHandleClient {
+public:
+    EmptyResourceHandleClient() { }
+    virtual ~EmptyResourceHandleClient() { }
 };
 
 void fillWithEmptyClients(Page::PageClients&);

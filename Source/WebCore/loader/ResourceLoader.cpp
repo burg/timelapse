@@ -37,6 +37,7 @@
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
+#include "NetworkProxy.h"
 #include "Page.h"
 #include "ProgressTracker.h"
 #include "ResourceError.h"
@@ -45,6 +46,11 @@
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
+
+#if ENABLE(TIMELAPSE)
+#include "Logging.h" // XXX remove me
+#include "DeterminismController.h"
+#endif // ENABLE(TIMELAPSE)
 
 namespace WebCore {
 
@@ -110,6 +116,15 @@ bool ResourceLoader::init(const ResourceRequest& r)
     ASSERT(m_request.isNull());
     ASSERT(m_deferredRequest.isNull());
     ASSERT(!m_documentLoader->isSubstituteLoadPending(this));
+        
+#if ENABLE(TIMELAPSE)
+    Document* rootDoc = m_frame->tree()->top()->document();
+    DeterminismController* controller = m_frame->page()->determinismController();
+    if (rootDoc && controller && (controller->isCapturingDocument(rootDoc) ||
+                                  controller->isReplayingDocument(rootDoc))) {
+        m_loaderId = m_frame->page()->networkProxy()->nextLoaderId(r);
+    }
+#endif // ENABLE(TIMELAPSE)
     
     ResourceRequest clientRequest(r);
     
@@ -160,7 +175,7 @@ void ResourceLoader::start()
     }
 
     if (!m_reachedTerminalState)
-        m_handle = ResourceHandle::create(m_frame->loader()->networkingContext(), m_request, this, m_defersLoading, m_options.sniffContent == SniffContent);
+        m_handle = m_frame->page()->networkProxy()->createResourceHandle(m_frame->loader()->networkingContext(), m_request, this, m_loaderId, m_defersLoading, m_options.sniffContent == SniffContent);
 }
 
 void ResourceLoader::setDefersLoading(bool defers)
@@ -171,6 +186,7 @@ void ResourceLoader::setDefersLoading(bool defers)
     if (!defers && !m_deferredRequest.isNull()) {
         m_request = m_deferredRequest;
         m_deferredRequest = ResourceRequest();
+
         start();
     }
 }

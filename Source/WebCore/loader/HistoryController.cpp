@@ -54,6 +54,10 @@
 #include "VisitedLinkStrategy.h"
 #endif
 
+#if ENABLE(TIMELAPSE)
+#include "DeterminismController.h"
+#endif
+
 namespace WebCore {
 
 static inline void addVisitedLink(Page* page, const KURL& url)
@@ -117,6 +121,15 @@ void HistoryController::restoreScrollPositionAndViewState()
     // so there *is* no scroll or view state to restore!
     if (!m_currentItem)
         return;
+    
+#if ENABLE(TIMELAPSE)
+    if (m_frame->page() && m_frame->page()->determinismController()) {
+        DeterminismController* controller = m_frame->page()->determinismController();
+        if (controller->isCapturingDocument(m_frame->document()) ||
+            controller->isReplayingDocument(m_frame->document()))
+            return;
+    }
+#endif
     
     // FIXME: It would be great to work out a way to put this code in WebCore instead of calling
     // through to the client. It's currently used only for the PDF view on Mac.

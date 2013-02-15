@@ -1,0 +1,7 @@
+permalink: /articles/:title/
+paginate: 10
+name: Timelapse
+pygments: true
+baseurl: /~burg/projects/timelapse
+exclude:
+- Rakefile

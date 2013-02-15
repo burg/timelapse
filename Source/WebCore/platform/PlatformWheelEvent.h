@@ -164,6 +164,23 @@ namespace WebCore {
         bool hasPreciseScrollingDeltas() const { return m_hasPreciseScrollingDeltas; }
 #endif
 #if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN))
+#if ENABLE(TIMELAPSE)
+        // add this constructor so Timelapse can recreate Mac wheel events without using NSEvent.
+        PlatformWheelEvent(IntPoint position, IntPoint globalPosition, float deltaX, float deltaY, float wheelTicksX, float wheelTicksY, PlatformWheelEventGranularity granularity, bool shiftKey, bool ctrlKey, bool altKey, bool metaKey, bool directionInverted, bool hasPreciseScrollingDeltas, PlatformWheelEventPhase phase, PlatformWheelEventPhase momentumPhase, double timestamp)
+        : PlatformEvent(PlatformEvent::Wheel, shiftKey, ctrlKey, altKey, metaKey, timestamp)
+        , m_position(position)
+        , m_globalPosition(globalPosition)
+        , m_deltaX(deltaX)
+        , m_deltaY(deltaY)
+        , m_wheelTicksX(wheelTicksX)
+        , m_wheelTicksY(wheelTicksY)
+        , m_granularity(granularity)
+        , m_directionInvertedFromDevice(directionInverted)
+        , m_hasPreciseScrollingDeltas(hasPreciseScrollingDeltas)
+        , m_phase(phase)
+        , m_momentumPhase(momentumPhase)
+        { }
+#endif
         PlatformWheelEventPhase phase() const { return m_phase; }
         PlatformWheelEventPhase momentumPhase() const { return m_momentumPhase; }
         unsigned scrollCount() const { return m_scrollCount; }

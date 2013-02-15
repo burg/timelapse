@@ -707,6 +707,14 @@
 		C2E526BE1590EF000054E48D /* HeapTimer.h in Headers */ = {isa = PBXBuildFile; fileRef = C2E526BC1590EF000054E48D /* HeapTimer.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C2EAA3FA149A835E00FCE112 /* CopiedSpace.h in Headers */ = {isa = PBXBuildFile; fileRef = C2EAA3F8149A830800FCE112 /* CopiedSpace.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C2EAD2FC14F0249800A4B159 /* CopiedAllocator.h in Headers */ = {isa = PBXBuildFile; fileRef = C2EAD2FB14F0249800A4B159 /* CopiedAllocator.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		C4CE975615CEFB65009C5D85 /* GetCurrentTime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4CE975015CEFB65009C5D85 /* GetCurrentTime.cpp */; };
+		C4CE975715CEFB65009C5D85 /* GetCurrentTime.h in Headers */ = {isa = PBXBuildFile; fileRef = C4CE975115CEFB65009C5D85 /* GetCurrentTime.h */; };
+		C4CE975815CEFB65009C5D85 /* RiggedWeakRandom.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4CE975215CEFB65009C5D85 /* RiggedWeakRandom.cpp */; };
+		C4CE975915CEFB65009C5D85 /* RiggedWeakRandom.h in Headers */ = {isa = PBXBuildFile; fileRef = C4CE975315CEFB65009C5D85 /* RiggedWeakRandom.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		C4CE975A15CEFB65009C5D85 /* SetRandomSeed.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4CE975415CEFB65009C5D85 /* SetRandomSeed.cpp */; };
+		C4CE975B15CEFB65009C5D85 /* SetRandomSeed.h in Headers */ = {isa = PBXBuildFile; fileRef = C4CE975515CEFB65009C5D85 /* SetRandomSeed.h */; };
+		C4CE976815CF024D009C5D85 /* Logging.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4CE976615CF024D009C5D85 /* Logging.cpp */; };
+		C4CE976915CF024D009C5D85 /* Logging.h in Headers */ = {isa = PBXBuildFile; fileRef = C4CE976715CF024D009C5D85 /* Logging.h */; };
 		DDF7ABD411F60ED200108E36 /* GCActivityCallback.h in Headers */ = {isa = PBXBuildFile; fileRef = DDF7ABD211F60ED200108E36 /* GCActivityCallback.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		E124A8F70E555775003091F1 /* OpaqueJSString.h in Headers */ = {isa = PBXBuildFile; fileRef = E124A8F50E555775003091F1 /* OpaqueJSString.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		E124A8F80E555775003091F1 /* OpaqueJSString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E124A8F60E555775003091F1 /* OpaqueJSString.cpp */; };
@@ -1468,6 +1476,14 @@
 		C2E526BC1590EF000054E48D /* HeapTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HeapTimer.h; sourceTree = "<group>"; };
 		C2EAA3F8149A830800FCE112 /* CopiedSpace.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CopiedSpace.h; sourceTree = "<group>"; };
 		C2EAD2FB14F0249800A4B159 /* CopiedAllocator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CopiedAllocator.h; sourceTree = "<group>"; };
+		C4CE975015CEFB65009C5D85 /* GetCurrentTime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GetCurrentTime.cpp; path = timelapse/GetCurrentTime.cpp; sourceTree = "<group>"; };
+		C4CE975115CEFB65009C5D85 /* GetCurrentTime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GetCurrentTime.h; path = timelapse/GetCurrentTime.h; sourceTree = "<group>"; };
+		C4CE975215CEFB65009C5D85 /* RiggedWeakRandom.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RiggedWeakRandom.cpp; path = timelapse/RiggedWeakRandom.cpp; sourceTree = "<group>"; };
+		C4CE975315CEFB65009C5D85 /* RiggedWeakRandom.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RiggedWeakRandom.h; path = timelapse/RiggedWeakRandom.h; sourceTree = "<group>"; };
+		C4CE975415CEFB65009C5D85 /* SetRandomSeed.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SetRandomSeed.cpp; path = timelapse/SetRandomSeed.cpp; sourceTree = "<group>"; };
+		C4CE975515CEFB65009C5D85 /* SetRandomSeed.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SetRandomSeed.h; path = timelapse/SetRandomSeed.h; sourceTree = "<group>"; };
+		C4CE976615CF024D009C5D85 /* Logging.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Logging.cpp; path = timelapse/Logging.cpp; sourceTree = "<group>"; };
+		C4CE976715CF024D009C5D85 /* Logging.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Logging.h; path = timelapse/Logging.h; sourceTree = "<group>"; };
 		D21202280AD4310C00ED79B6 /* DateConversion.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; path = DateConversion.cpp; sourceTree = "<group>"; };
 		D21202290AD4310C00ED79B6 /* DateConversion.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = DateConversion.h; sourceTree = "<group>"; };
 		DDF7ABD211F60ED200108E36 /* GCActivityCallback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GCActivityCallback.h; sourceTree = "<group>"; };
@@ -1620,6 +1636,7 @@
 				95AB831A0DA42C6900BC83F3 /* profiler */,
 				7EF6E0BB0EB7A1EC0079AFAF /* runtime */,
 				141211000A48772600480255 /* tests */,
+				C4CE974F15CEFB45009C5D85 /* timelapse */,
 				8603CEF014C753EF00AE59E3 /* tools */,
 				86EAC48C0F93E8B9008EC948 /* yarr */,
 				1C90513E0BA9E8830081E9D0 /* Configurations */,
@@ -2497,6 +2514,21 @@
 			path = bytecode;
 			sourceTree = "<group>";
 		};
+		C4CE974F15CEFB45009C5D85 /* timelapse */ = {
+			isa = PBXGroup;
+			children = (
+				C4CE975015CEFB65009C5D85 /* GetCurrentTime.cpp */,
+				C4CE975115CEFB65009C5D85 /* GetCurrentTime.h */,
+				C4CE976615CF024D009C5D85 /* Logging.cpp */,
+				C4CE976715CF024D009C5D85 /* Logging.h */,
+				C4CE975215CEFB65009C5D85 /* RiggedWeakRandom.cpp */,
+				C4CE975315CEFB65009C5D85 /* RiggedWeakRandom.h */,
+				C4CE975415CEFB65009C5D85 /* SetRandomSeed.cpp */,
+				C4CE975515CEFB65009C5D85 /* SetRandomSeed.h */,
+			);
+			name = timelapse;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
@@ -2525,6 +2557,7 @@
 				86ADD1450FDDEA980006EEC2 /* ARMv7Assembler.h in Headers */,
 				C2EAD2FC14F0249800A4B159 /* CopiedAllocator.h in Headers */,
 				C2B916C214DA014E00CBAC86 /* MarkedAllocator.h in Headers */,
+				C4CE975915CEFB65009C5D85 /* RiggedWeakRandom.h in Headers */,
 				FE20CE9E15F04A9500DF3430 /* LLIntCLoop.h in Headers */,
 				C21122E215DD9AB300790E3A /* GCThreadSharedData.h in Headers */,
 				C2E526BE1590EF000054E48D /* HeapTimer.h in Headers */,
@@ -2884,6 +2917,9 @@
 				0FF4274B158EBE91004CB9FF /* udis86.h in Headers */,
 				0FF427651591A1CE004CB9FF /* DFGDisassembler.h in Headers */,
 				0FF42772159275D8004CB9FF /* ResolveGlobalStatus.h in Headers */,
+				C4CE975715CEFB65009C5D85 /* GetCurrentTime.h in Headers */,
+				C4CE975B15CEFB65009C5D85 /* SetRandomSeed.h in Headers */,
+				C4CE976915CF024D009C5D85 /* Logging.h in Headers */,
 				0FF7168C15A3B235008F5DAA /* PropertyOffset.h in Headers */,
 				0F766D2C15A8CC3A008F363E /* JITStubRoutineSet.h in Headers */,
 				0F766D3015A8DCE2008F363E /* GCAwareJITStubRoutine.h in Headers */,
@@ -3489,6 +3525,10 @@
 				C2D58C3415912FEE0021A844 /* GCActivityCallback.cpp in Sources */,
 				0FF427641591A1CC004CB9FF /* DFGDisassembler.cpp in Sources */,
 				0FF42771159275D5004CB9FF /* ResolveGlobalStatus.cpp in Sources */,
+				C4CE975615CEFB65009C5D85 /* GetCurrentTime.cpp in Sources */,
+				C4CE975815CEFB65009C5D85 /* RiggedWeakRandom.cpp in Sources */,
+				C4CE975A15CEFB65009C5D85 /* SetRandomSeed.cpp in Sources */,
+				C4CE976815CF024D009C5D85 /* Logging.cpp in Sources */,
 				0F766D2815A8CC1E008F363E /* JITStubRoutine.cpp in Sources */,
 				0F766D2B15A8CC38008F363E /* JITStubRoutineSet.cpp in Sources */,
 				0F766D2F15A8DCE0008F363E /* GCAwareJITStubRoutine.cpp in Sources */,
@@ -3646,6 +3686,14 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1C9051430BA9E8A70081E9D0 /* JavaScriptCore.xcconfig */;
 			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(DEBUG_DEFINES)",
+					"HAVE_DTRACE=$(HAVE_DTRACE)",
+					"WEBKIT_VERSION_MIN_REQUIRED=WEBKIT_VERSION_LATEST",
+					HAVE_HEADER_DETECTION_H,
+					"$(GCC_PREPROCESSOR_DEFINITIONS)",
+					"$(FEATURE_DEFINES)",
+				);
 				INSTALL_PATH = "$(BUILT_PRODUCTS_DIR)";
 			};
 			name = Debug;
@@ -3654,6 +3702,14 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1C9051430BA9E8A70081E9D0 /* JavaScriptCore.xcconfig */;
 			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(DEBUG_DEFINES)",
+					"HAVE_DTRACE=$(HAVE_DTRACE)",
+					"WEBKIT_VERSION_MIN_REQUIRED=WEBKIT_VERSION_LATEST",
+					HAVE_HEADER_DETECTION_H,
+					"$(GCC_PREPROCESSOR_DEFINITIONS)",
+					"$(FEATURE_DEFINES)",
+				);
 				INSTALL_PATH = "$(BUILT_PRODUCTS_DIR)";
 			};
 			name = Release;
@@ -3663,6 +3719,14 @@
 			baseConfigurationReference = 1C9051430BA9E8A70081E9D0 /* JavaScriptCore.xcconfig */;
 			buildSettings = {
 				BUILD_VARIANTS = normal;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(DEBUG_DEFINES)",
+					"HAVE_DTRACE=$(HAVE_DTRACE)",
+					"WEBKIT_VERSION_MIN_REQUIRED=WEBKIT_VERSION_LATEST",
+					HAVE_HEADER_DETECTION_H,
+					"$(GCC_PREPROCESSOR_DEFINITIONS)",
+					"$(FEATURE_DEFINES)",
+				);
 			};
 			name = Production;
 		};
@@ -3715,6 +3779,7 @@
 				DEAD_CODE_STRIPPING = "$(DEAD_CODE_STRIPPING_debug)";
 				DEBUG_DEFINES = "$(DEBUG_DEFINES_debug)";
 				GCC_OPTIMIZATION_LEVEL = "$(GCC_OPTIMIZATION_LEVEL_debug)";
+				LLVM_COMPILER_SUITABLE_FOR_DEBUG_BUILDS_ = YES;
 				STRIP_INSTALLED_PRODUCT = "$(STRIP_INSTALLED_PRODUCT_debug)";
 			};
 			name = Debug;
@@ -3723,6 +3788,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1C9051440BA9E8A70081E9D0 /* DebugRelease.xcconfig */;
 			buildSettings = {
+				LLVM_COMPILER_SUITABLE_FOR_DEBUG_BUILDS_ = YES;
 				STRIP_INSTALLED_PRODUCT = NO;
 			};
 			name = Release;
@@ -3731,6 +3797,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1C9051450BA9E8A70081E9D0 /* Base.xcconfig */;
 			buildSettings = {
+				LLVM_COMPILER_SUITABLE_FOR_DEBUG_BUILDS_ = YES;
 			};
 			name = Production;
 		};
@@ -3836,6 +3903,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1C9051440BA9E8A70081E9D0 /* DebugRelease.xcconfig */;
 			buildSettings = {
+				LLVM_COMPILER_SUITABLE_FOR_DEBUG_BUILDS_ = YES;
 				STRIP_INSTALLED_PRODUCT = NO;
 			};
 			name = Profiling;
@@ -3851,6 +3919,14 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 1C9051430BA9E8A70081E9D0 /* JavaScriptCore.xcconfig */;
 			buildSettings = {
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(DEBUG_DEFINES)",
+					"HAVE_DTRACE=$(HAVE_DTRACE)",
+					"WEBKIT_VERSION_MIN_REQUIRED=WEBKIT_VERSION_LATEST",
+					HAVE_HEADER_DETECTION_H,
+					"$(GCC_PREPROCESSOR_DEFINITIONS)",
+					"$(FEATURE_DEFINES)",
+				);
 				INSTALL_PATH = "$(BUILT_PRODUCTS_DIR)";
 			};
 			name = Profiling;

@@ -1,0 +1,20 @@
+# to run this, you need the ruby gem package manager.
+# once you have that, must install gems:
+#
+#   jekyll, net-ssh.
+#
+# For example,
+#
+#   sudo gem update --system && sudo gem install jekyll net-ssh
+
+require 'rubygems'
+require 'net/ssh'
+
+desc 'publish to UW CSE ~/www from this repository by rsync'
+task :publish do
+  # first, grab .exclude from remote side. 
+  # Then, uses it as a filter merge file for rsync
+  # (so as not to clobber anything listed in the file).
+
+  puts `jekyll && rsync -av --delete _site/ burg@buffalo.cs.washington.edu:~/public_html/projects/timelapse/`
+end

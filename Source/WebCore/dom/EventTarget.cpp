@@ -32,6 +32,7 @@
 #include "config.h"
 #include "EventTarget.h"
 
+#include "AsyncEventProxy.h"
 #include "Event.h"
 #include "EventException.h"
 #include "InspectorInstrumentation.h"
@@ -177,6 +178,22 @@ bool EventTarget::dispatchEvent(PassRefPtr<Event> event)
     bool defaultPrevented = fireEventListeners(event.get());
     event->setEventPhase(0);
     return defaultPrevented;
+}
+
+bool EventTarget::dispatchAsyncEvent(PassRefPtr<Event> event)
+{
+#if ENABLE(TIMELAPSE)
+    AsyncEventProxy* eventProxy = 0;
+    if (DOMWindow* window = toDOMWindow())
+        eventProxy = window->frame()->page()->asyncEventProxy();
+    else if (Node* node = toNode())
+        eventProxy = node->document()->page()->asyncEventProxy();
+    
+    ASSERT(eventProxy);
+    return eventProxy->dispatchAsyncEvent(event, this);
+#else
+    return dispatchEvent(event);
+#endif
 }
 
 void EventTarget::uncaughtExceptionInEventHandler()

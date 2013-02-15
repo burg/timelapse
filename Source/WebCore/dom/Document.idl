@@ -154,7 +154,7 @@ module core {
         // Moved down from HTMLDocument
 
                  attribute [TreatNullAs=NullString] DOMString title;
-        readonly attribute DOMString referrer;
+        readonly attribute [ReplayNotImplemented] DOMString referrer;
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
                  attribute [TreatNullAs=NullString] DOMString domain
                      setter raises (DOMException);
@@ -163,9 +163,13 @@ module core {
 #endif
         readonly attribute DOMString URL;
 
+#if defined(ENABLE_TIMELAPSE) && ENABLE_TIMELAPSE
+                 attribute [CustomGetter] DOMString cookie // CustomGetter implements TreatNullAs=NullString
+#else
                  attribute [TreatNullAs=NullString] DOMString cookie
-                     setter raises (DOMException),
-                     getter raises (DOMException);
+#endif
+                     getter raises (DOMException),
+                     setter raises (DOMException);
 
         // FIXME: the DOM spec does NOT have this attribute
         // raising an exception.

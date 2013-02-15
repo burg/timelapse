@@ -1,0 +1,12 @@
+These manuals are written in simple HTML. To automatically generate
+table of contents, use the `html-update-toc` script available from
+Michael Ernst's software site:
+
+http://www.cs.washington.edu/homes/mernst/software/#html-update
+
+
+Code snippets tend to be highlighted with syntaxhighlighter. If you
+want to add new languages or see how to configure highlighters, see
+the project website:
+
+http://alexgorbatchev.com/SyntaxHighlighter/

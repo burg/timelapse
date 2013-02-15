@@ -1234,7 +1234,7 @@ void Document::setReadyState(ReadyState readyState)
     }
 
     m_readyState = readyState;
-    dispatchEvent(Event::create(eventNames().readystatechangeEvent, false, false));
+    dispatchAsyncEvent(Event::create(eventNames().readystatechangeEvent, false, false));
     
     if (settings() && settings()->suppressesIncrementalRendering())
         setVisualUpdatesAllowed(readyState);
@@ -4095,6 +4095,15 @@ void Document::dispatchWindowEvent(PassRefPtr<Event> event,  PassRefPtr<EventTar
     domWindow->dispatchEvent(event, target);
 }
 
+void Document::dispatchAsyncWindowEvent(PassRefPtr<Event> event,  PassRefPtr<EventTarget> target)
+{
+    ASSERT(!eventDispatchForbidden());
+    DOMWindow* domWindow = this->domWindow();
+    if (!domWindow)
+        return;
+    domWindow->dispatchAsyncEvent(event, target);
+}
+
 void Document::dispatchWindowLoadEvent()
 {
     ASSERT(!eventDispatchForbidden());
@@ -4862,7 +4871,7 @@ void Document::finishedParsing()
     setParsing(false);
     if (!m_documentTiming.domContentLoadedEventStart)
         m_documentTiming.domContentLoadedEventStart = monotonicallyIncreasingTime();
-    dispatchEvent(Event::create(eventNames().DOMContentLoadedEvent, true, false));
+    dispatchAsyncEvent(Event::create(eventNames().DOMContentLoadedEvent, true, false));
     if (!m_documentTiming.domContentLoadedEventEnd)
         m_documentTiming.domContentLoadedEventEnd = monotonicallyIncreasingTime();
 
@@ -5345,7 +5354,7 @@ void Document::displayBufferModifiedByEncoding(UChar* buffer, unsigned len) cons
 void Document::enqueuePageshowEvent(PageshowEventPersistence persisted)
 {
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=36334 Pageshow event needs to fire asynchronously.
-    dispatchWindowEvent(PageTransitionEvent::create(eventNames().pageshowEvent, persisted), this);
+    dispatchAsyncWindowEvent(PageTransitionEvent::create(eventNames().pageshowEvent, persisted), this);
 }
 
 void Document::enqueueHashchangeEvent(const String& oldURL, const String& newURL)
@@ -5356,7 +5365,7 @@ void Document::enqueueHashchangeEvent(const String& oldURL, const String& newURL
 void Document::enqueuePopstateEvent(PassRefPtr<SerializedScriptValue> stateObject)
 {
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=36202 Popstate event needs to fire asynchronously
-    dispatchWindowEvent(PopStateEvent::create(stateObject, domWindow() ? domWindow()->history() : 0));
+    dispatchAsyncWindowEvent(PopStateEvent::create(stateObject, domWindow() ? domWindow()->history() : 0));
 }
 
 void Document::addMediaCanStartListener(MediaCanStartListener* listener)

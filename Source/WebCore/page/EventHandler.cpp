@@ -61,6 +61,7 @@
 #include "MouseEvent.h"
 #include "MouseEventWithHitTestResults.h"
 #include "Page.h"
+#include "AsyncEventProxy.h"
 #include "PlatformEvent.h"
 #include "PlatformKeyboardEvent.h"
 #include "PlatformWheelEvent.h"
@@ -107,6 +108,10 @@
 #include "PlatformTouchEvent.h"
 #include "TouchEvent.h"
 #include "TouchList.h"
+#endif
+
+#if ENABLE(TIMELAPSE)
+#include "DeterminismController.h"
 #endif
 
 namespace WebCore {
@@ -1798,7 +1803,7 @@ bool EventHandler::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEvent)
 #endif
 
     UserGestureIndicator gestureIndicator(DefinitelyProcessingUserGesture);
-
+    
 #if ENABLE(PAN_SCROLLING)
     if (mouseEvent.button() == MiddleButton)
         m_panScrollButtonPressed = false;
@@ -2264,6 +2269,7 @@ bool EventHandler::handleWheelEvent(const PlatformWheelEvent& e)
     FrameView* view = m_frame->view();
     if (!view)
         return false;
+    
     setFrameWasScrolledByUser();
     LayoutPoint vPoint = view->windowToContents(e.position());
 
@@ -2721,7 +2727,7 @@ void EventHandler::fakeMouseMoveEventTimerFired(Timer<EventHandler>* timer)
     bool metaKey;
     PlatformKeyboardEvent::getCurrentModifierState(shiftKey, ctrlKey, altKey, metaKey);
     PlatformMouseEvent fakeMouseMoveEvent(m_currentMousePosition, m_currentMouseGlobalPosition, NoButton, PlatformEvent::MouseMoved, 0, shiftKey, ctrlKey, altKey, metaKey, currentTime());
-    mouseMoved(fakeMouseMoveEvent);
+    m_frame->page()->asyncEventProxy()->dispatchFakeMouseMove(m_frame, fakeMouseMoveEvent);
 }
 
 void EventHandler::setResizingFrameSet(HTMLFrameSetElement* frameSet)
@@ -2874,6 +2880,7 @@ bool EventHandler::keyEvent(const PlatformKeyboardEvent& initialKeyEvent)
     // in order to match IE:
     // 1. preventing default handling of keydown and keypress events has no effect on IM input;
     // 2. if an input method handles the event, its keyCode is set to 229 in keydown event.
+
     m_frame->editor()->handleInputMethodKeydown(keydown.get());
     
     bool handledByInputMethod = keydown->defaultHandled();

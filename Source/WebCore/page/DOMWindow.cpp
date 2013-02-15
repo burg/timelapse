@@ -28,6 +28,7 @@
 #include "DOMWindow.h"
 
 #include "AbstractDatabase.h"
+#include "AsyncEventProxy.h"
 #include "BackForwardController.h"
 #include "BarInfo.h"
 #include "BeforeUnloadEvent.h"
@@ -1626,17 +1627,17 @@ void DOMWindow::dispatchLoadEvent()
         RefPtr<DocumentLoader> documentLoader = m_frame->loader()->documentLoader();
         DocumentLoadTiming* timing = documentLoader->timing();
         timing->markLoadEventStart();
-        dispatchEvent(loadEvent, document());
+        dispatchAsyncEvent(loadEvent, document());
         timing->markLoadEventEnd();
     } else
-        dispatchEvent(loadEvent, document());
+        dispatchAsyncEvent(loadEvent, document());
 
     // For load events, send a separate load event to the enclosing frame only.
     // This is a DOM extension and is independent of bubbling/capturing rules of
     // the DOM.
     Element* ownerElement = m_frame ? m_frame->ownerElement() : 0;
     if (ownerElement)
-        ownerElement->dispatchEvent(Event::create(eventNames().loadEvent, false, false));
+        ownerElement->dispatchAsyncEvent(Event::create(eventNames().loadEvent, false, false));
 
     InspectorInstrumentation::loadEventFired(frame());
 }
@@ -1657,6 +1658,19 @@ bool DOMWindow::dispatchEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget
     InspectorInstrumentation::didDispatchEventOnWindow(cookie);
 
     return result;
+}
+
+bool DOMWindow::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget> prpTarget)
+{
+#if ENABLE(TIMELAPSE)
+    UNUSED_PARAM(prpTarget);
+    // dispatch on the DOMWindow, even though prpTarget likely refers to document().
+    // when this is actually dispatched, the DOMWindow's document is substituted
+    // back as the second argument.
+    return frame()->page()->asyncEventProxy()->dispatchAsyncEvent(prpEvent, this);
+#else
+    return dispatchEvent(prpEvent, prpTarget);
+#endif
 }
 
 void DOMWindow::removeAllEventListeners()

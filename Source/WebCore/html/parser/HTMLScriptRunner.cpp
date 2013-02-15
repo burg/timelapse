@@ -81,6 +81,11 @@ static KURL documentURLForScriptExecution(Document* document)
     return document->frame()->document()->url();
 }
 
+inline PassRefPtr<Event> createScriptErrorEvent()
+{
+    return Event::create(eventNames().errorEvent, false, false);
+}
+
 inline PassRefPtr<Event> createScriptLoadEvent()
 {
     return Event::create(eventNames().loadEvent, false, false);
@@ -133,11 +138,11 @@ void HTMLScriptRunner::executePendingScriptAndDispatchEvent(PendingScript& pendi
         NestingLevelIncrementer nestingLevelIncrementer(m_scriptNestingLevel);
         IgnoreDestructiveWriteCountIncrementer ignoreDestructiveWriteCountIncrementer(m_document);
         if (errorOccurred)
-            scriptElement->dispatchErrorEvent();
+            element->dispatchAsyncEvent(createScriptErrorEvent());
         else {
             ASSERT(isExecutingScript());
             scriptElement->executeScript(sourceCode);
-            element->dispatchEvent(createScriptLoadEvent());
+            element->dispatchAsyncEvent(createScriptLoadEvent());
         }
     }
     ASSERT(!m_scriptNestingLevel);

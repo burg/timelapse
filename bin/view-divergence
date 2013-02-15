@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# resolve links - $0 may be a link to this script
+PRG="$0"
+
+# need this for relative symlinks
+while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+    PRG="$link"
+    else
+    PRG="`dirname "$PRG"`/$link"
+    fi
+done
+
+saveddir=`pwd`
+REAL_HOME=`dirname "$PRG"`
+
+# make it fully qualified
+REAL_HOME=`cd "$REAL_HOME" && pwd`
+
+export TIMELAPSE_HOME=$REAL_HOME/../
+
+TMP_CAPTURE=$(mktemp -t timelapse-capture)
+TMP_REPLAY=$(mktemp -t timelapse-replay)
+MODE="none"
+
+for arg in "$@"
+do
+    case "$arg" in
+	--no-proxy) NO_PROXY=1 ;;
+    esac
+done
+
+
+{ while read line 
+do
+    if [[ "$line" =~ 'CAPTURE START' ]]; then
+	MODE="capture"
+	continue
+    elif [[ "$line" =~ 'CAPTURE STOP' ]]; then
+	MODE="none"
+	continue
+    elif [[ "$line" =~ 'REPLAY START' ]]; then
+	MODE="replay"
+	continue
+    elif [[ "$line" =~ (ASSERTION|REPLAY STOP) ]]; then
+	MODE="none"
+	break;
+    fi
+
+    if [[ "$line" =~ WS: ]]; then
+	continue
+    fi
+
+    if [[ -n $NO_PROXY && "$line" =~ (NodeProxy|ProxyController) ]]; then
+	continue
+    fi
+
+    if [ "$MODE" = "capture" ]; then
+	echo $line >> $TMP_CAPTURE
+    elif [ "$MODE" = "replay" ]; then
+	echo $line >> $TMP_REPLAY
+    fi
+done
+
+cat $TMP_CAPTURE | $REAL_HOME/e-sink.pl capture
+cat $TMP_REPLAY  | $REAL_HOME/e-sink.pl replay
+emacsclient -t --eval "(with-current-buffer \"*| capture*\" (split-window-horizontally) (switch-to-buffer \"*| capture*\") (switch-to-buffer-other-window \"*| replay*\") (scroll-all-mode))"
+
+ }
+

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# resolve links - $0 may be a link to this script
+PRG="$0"
+
+# need this for relative symlinks
+while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+    PRG="$link"
+    else
+    PRG="`dirname "$PRG"`/$link"
+    fi
+done
+
+saveddir=`pwd`
+REAL_HOME=`dirname "$PRG"`
+
+# make it fully qualified
+REAL_HOME=`cd "$REAL_HOME" && pwd`
+
+WEBKIT_LION_PRODUCT_PATH=$REAL_HOME/../WebKitBuild
+
+$REAL_HOME/../Tools/BuildSlaveSupport/build-launcher-app --no-sign --build-dir-10-7 $WEBKIT_LION_PRODUCT_PATH

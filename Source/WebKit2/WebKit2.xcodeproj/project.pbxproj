@@ -868,6 +868,8 @@
 		C0E3AA7B1209E83500A49D01 /* Module.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0E3AA451209E2BA00A49D01 /* Module.cpp */; };
 		C0E3AA7C1209E83C00A49D01 /* Module.h in Headers */ = {isa = PBXBuildFile; fileRef = C0E3AA441209E2BA00A49D01 /* Module.h */; };
 		C0FA52431345694A0028E8C2 /* LayerTreeHostCAMac.h in Headers */ = {isa = PBXBuildFile; fileRef = C0FA52421345694A0028E8C2 /* LayerTreeHostCAMac.h */; };
+		C45A6E2A15CF6D970043C6F1 /* InterpretedKeyCommands.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C45A6E2815CF6D970043C6F1 /* InterpretedKeyCommands.cpp */; };
+		C45A6E2B15CF6D970043C6F1 /* InterpretedKeyCommands.h in Headers */ = {isa = PBXBuildFile; fileRef = C45A6E2915CF6D970043C6F1 /* InterpretedKeyCommands.h */; };
 		C517388112DF8F4F00EE3F47 /* DragControllerAction.h in Headers */ = {isa = PBXBuildFile; fileRef = C517388012DF8F4F00EE3F47 /* DragControllerAction.h */; };
 		C5237F6012441CA300780472 /* WebEditorClientMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = C5237F5F12441CA300780472 /* WebEditorClientMac.mm */; };
 		C574A37712E6099D002DFE98 /* WebDragClientMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = C554FFA212E4E8EA002F22C0 /* WebDragClientMac.mm */; };
@@ -1956,6 +1958,8 @@
 		C0E3AA451209E2BA00A49D01 /* Module.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Module.cpp; sourceTree = "<group>"; };
 		C0E3AA481209E45000A49D01 /* ModuleMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ModuleMac.mm; sourceTree = "<group>"; };
 		C0FA52421345694A0028E8C2 /* LayerTreeHostCAMac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LayerTreeHostCAMac.h; sourceTree = "<group>"; };
+		C45A6E2815CF6D970043C6F1 /* InterpretedKeyCommands.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = InterpretedKeyCommands.cpp; path = UIProcess/timelapse/InterpretedKeyCommands.cpp; sourceTree = SOURCE_ROOT; };
+		C45A6E2915CF6D970043C6F1 /* InterpretedKeyCommands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InterpretedKeyCommands.h; path = UIProcess/timelapse/InterpretedKeyCommands.h; sourceTree = SOURCE_ROOT; };
 		C517388012DF8F4F00EE3F47 /* DragControllerAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DragControllerAction.h; sourceTree = "<group>"; };
 		C5237F5F12441CA300780472 /* WebEditorClientMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebEditorClientMac.mm; sourceTree = "<group>"; };
 		C554FFA212E4E8EA002F22C0 /* WebDragClientMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebDragClientMac.mm; sourceTree = "<group>"; };
@@ -2799,6 +2803,7 @@
 				31099974146C8AA80029DEB9 /* Notifications (User) */,
 				1A6FB7AA11E64B4900DB1371 /* Plugins */,
 				3336762B130C9978006C9DE2 /* ResourceCache */,
+				C45A6E2615CF6D300043C6F1 /* timelapse */,
 				BC032D5D10F437220058C15A /* WebCoreSupport */,
 				BC032D5E10F4372B0058C15A /* WebPage */,
 				BCE9C0CF1485965D00E33D61 /* WebConnectionToUIProcess.cpp */,
@@ -3737,6 +3742,15 @@
 			tabWidth = 8;
 			usesTabs = 0;
 		};
+		C45A6E2615CF6D300043C6F1 /* timelapse */ = {
+			isa = PBXGroup;
+			children = (
+				C45A6E2815CF6D970043C6F1 /* InterpretedKeyCommands.cpp */,
+				C45A6E2915CF6D970043C6F1 /* InterpretedKeyCommands.h */,
+			);
+			name = timelapse;
+			sourceTree = "<group>";
+		};
 		CD73BA3D131A2A2100EEDED2 /* FullScreen */ = {
 			isa = PBXGroup;
 			children = (
@@ -4238,6 +4252,7 @@
 				51EFC1CF1524E62500C9A938 /* WKBundleDOMWindowExtension.h in Headers */,
 				3F87B9BE158940190090FF62 /* WebColorChooser.h in Headers */,
 				3F87B9C0158940D80090FF62 /* WebColorChooserProxy.h in Headers */,
+				C45A6E2B15CF6D970043C6F1 /* InterpretedKeyCommands.h in Headers */,
 				BC59548915C7868500FD1E3E /* WebKit2.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5028,6 +5043,7 @@
 				51FA2D7715212E2600C1BA0B /* WKBundleDOMWindowExtension.cpp in Sources */,
 				1A2A4B0E1586A2240090C9E9 /* ColorSpaceData.mm in Sources */,
 				3F87B9BD158940120090FF62 /* WebColorChooser.cpp in Sources */,
+				C45A6E2A15CF6D970043C6F1 /* InterpretedKeyCommands.cpp in Sources */,
 				CD67D30E15C08F9A00843ADF /* InjectedBundlePageDiagnosticLoggingClient.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

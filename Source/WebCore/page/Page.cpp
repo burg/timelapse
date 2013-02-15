@@ -21,6 +21,7 @@
 #include "Page.h"
 
 #include "AlternativeTextClient.h"
+#include "AsyncEventProxy.h"
 #include "BackForwardController.h"
 #include "BackForwardList.h"
 #include "Chrome.h"
@@ -50,6 +51,7 @@
 #include "Logging.h"
 #include "MediaCanStartListener.h"
 #include "Navigator.h"
+#include "NetworkProxy.h"
 #include "NetworkStateNotifier.h"
 #include "PageCache.h"
 #include "PageGroup.h"
@@ -71,6 +73,7 @@
 #include "StorageNamespace.h"
 #include "StyleResolver.h"
 #include "TextResourceDecoder.h"
+#include "UserInputProxy.h"
 #include "VoidCallback.h"
 #include "Widget.h"
 #include <wtf/HashMap.h>
@@ -78,6 +81,10 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/StringHash.h>
+
+#if ENABLE(TIMELAPSE)
+#include "DeterminismController.h"
+#endif
 
 namespace WebCore {
 
@@ -121,6 +128,12 @@ Page::Page(PageClients& pageClients)
     , m_focusController(FocusController::create(this))
 #if ENABLE(CONTEXT_MENUS)
     , m_contextMenuController(ContextMenuController::create(this, pageClients.contextMenuClient))
+#endif
+    , m_networkProxy(NetworkProxy::create(this))
+    , m_asyncEventProxy(AsyncEventProxy::create(this))
+    , m_userInputProxy(UserInputProxy::create(this))
+#if ENABLE(TIMELAPSE)
+    , m_determinismController(adoptPtr(new DeterminismController(this)))
 #endif
 #if ENABLE(INSPECTOR)
     , m_inspectorController(InspectorController::create(this, pageClients.inspectorClient))

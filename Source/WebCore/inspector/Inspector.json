@@ -2386,6 +2386,159 @@
         ]
     },
     {
+        "domain": "Timelapse",
+	"hidden": true,
+        "description": "Timelapse is the frontend for deterministic record/replay. In capture mode, Timelapse captures nondeterminism into a log (aka recording). In replaying mode, Timelapse replicates/replays the recorded execution in various possible modes.",
+        "types": [
+	    {
+	        "id": "MarkIndex",
+		"type": "integer",
+		"description": "The mark index type."
+	    },
+	    {
+	        "id": "Mark",
+		"type": "object",
+		"properties": [
+		   { "name": "index", "$ref": "MarkIndex", "description": "The index of this mark." },
+                   { "name": "timestamp", "type": "number", "description": "The timestamp of this mark." }
+                ],
+		"description": "The index and timestamp of an input action."
+	    },
+            {
+                "id": "TimelapseRecord",
+                "type": "object",
+                "properties": [
+                    { "name": "type", "type": "string", "description": "Record type." },
+		    { "name": "mark", "$ref": "Mark", "description": "The time and index of the record's underlying action." },
+                    { "name": "data", "type": "object", "description": "Record data." }
+                ],
+                "description": "Timelapse record contains information about the recorded input action."
+            }
+        ],
+
+	"commands": [
+            {
+                "name": "enable"
+            },
+            {
+                "name": "disable"
+            },
+            {
+                "name": "isEnabled",
+                "returns": [
+                    { "name": "state", "type": "boolean" }
+                ]
+            },
+            {
+                "name": "startCapture",
+		"description": "Starts capture of a program execution."
+            },
+            {
+                "name": "stopCapture",
+		"description": "Stops capture of a program execution.",
+                "returns": [
+                    { "name": "wasAllowed", "type": "boolean" }
+                ]
+            },
+            {
+                "name": "replayUpToMarkIndex",
+		"description": "Replays the program up to a specific point, called a mark.  command will bring the replay execution up to the point before the first input with the specified mark is used.",
+                "parameters": [
+                    { "name": "markIndex", "$ref": "MarkIndex" },
+                    { "name": "fastReplay", "type": "boolean" }
+                ]
+            },
+	    {
+	        "name": "replayToCompletion",
+	        "description": "Replays the program completely.",
+		"parameters": [
+                    { "name": "fastReplay", "type": "boolean" }
+		]
+	    },
+	    {
+	        "name": "pausePlayback",
+		"description": "Pauses the current replay action. Can be resumed by using a replay command."
+            },
+	    {
+	        "name": "stopPlayback",
+		"description": "Stops the current playback. Further replaying will start from the beginning. Optionally, unlock user input.",
+                "parameters": [
+                    { "name": "unlock", "type": "boolean" }
+                ]
+            },
+            {
+                "name": "setPauseOnError",
+                "description": "Changes the actions taken by the replay backend when a playback error is encountered.",
+                "parameters": [
+                    { "name": "shouldPause", "type": "boolean" }
+                ]
+            }
+        ],
+
+        "events": [
+            {
+                "name": "timelapseWasEnabled"
+            },
+            {
+                "name": "timelapseWasDisabled"
+            },
+            {
+                "name": "captureWasStarted",
+                "description": "Fired when capture has started."
+            },
+            {
+                "name": "captureWasStopped",
+                "description": "Fired when capture has stopped."
+            },
+	    {
+	        "name": "capturedAction",
+	        "description": "A new action was captured.",
+		"parameters": [
+		    { "name": "record", "$ref": "TimelapseRecord", "description": "The record describing the captured action." }
+		]
+	    },	     
+	    {
+		"name": "playbackHitMark",
+		"description": "A mark was reached during the replay.",
+		"parameters": [
+		    { "name": "mark", "$ref": "MarkIndex", "description": "The mark that was hit." }
+		]
+	    },	    
+            {
+                "name": "playbackWasStarted",
+                "description": "Fired when replaying has started."
+            },
+            {
+                "name": "playbackWasPaused",
+                "description": "Fired when replaying has paused, but not finished.",
+		"parameters": [
+		    { "name": "mark", "$ref": "MarkIndex", "description": "The mark of the input at which we paused, but has not yet been executed." }
+		]
+            },
+            {
+                "name": "playbackFinished",
+                "description": "Fired when replaying has stopped."
+            },
+	    {
+	        "name": "playbackError",
+	        "description": "Fired when playback encounters an internal (divergence) error.",
+		"parameters": [
+                    { "name": "isFatal", "type": "boolean", "description": "Whether the error causes immediate abortion of replay state." },
+		    { "name": "error", "type": "string", "description": "A description of the error." }
+		]
+	    },
+            {
+                "name": "inputLocked",
+                "description": "Fired when user input has become locked (will be ignored)."
+            },
+            {
+                "name": "inputUnlocked",
+                "description": "Fired when user input has been unlocked (will no longer be ignored)."
+            }
+       ]
+    },
+
+    {
         "domain": "Timeline",
         "description": "Timeline provides its clients with instrumentation records that are generated during the page runtime. Timeline instrumentation can be started and stopped using corresponding commands. While timeline is started, it is generating timeline event records.",
         "types": [

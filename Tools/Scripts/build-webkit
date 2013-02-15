@@ -274,11 +274,12 @@ if (isGtk()) {
 # build options, etc.
 @projects = ("Source/WebKit") if $onlyWebKitProject;
 
-if (isInspectorFrontend()) {
-    exit exitStatus(copyInspectorFrontendFiles());
-}
-
 my $result = 0;
+
+if (isInspectorFrontend()) {
+    copyInspectorFrontendFiles();
+    streamlineInspectorFrontendFiles();
+}
 
 if (isWx()) {
     $makeArgs .= " --port=wx";

@@ -51,6 +51,9 @@ WheelEvent::WheelEvent(const FloatPoint& wheelTicks, const FloatPoint& rawDelta,
                  ctrlKey, altKey, shiftKey, metaKey, 0, 0, 0, false)
     , m_wheelDelta(IntPoint(static_cast<int>(wheelTicks.x() * tickMultiplier), static_cast<int>(wheelTicks.y() * tickMultiplier)))
     , m_rawDelta(roundedIntPoint(rawDelta))
+#if ENABLE(TIMELAPSE)
+    , m_unscaledPageLocation(pageLocation) //necessary since MouseRelatedEvent modifies this value
+#endif
     , m_granularity(granularity)
     , m_directionInvertedFromDevice(directionInvertedFromDevice)
 {

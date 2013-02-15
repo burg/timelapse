@@ -22,6 +22,7 @@
 #include "config.h"
 #include "HTMLImageLoader.h"
 
+#include "AsyncEventProxy.h"
 #include "CachedImage.h"
 #include "Element.h"
 #include "Event.h"
@@ -29,6 +30,7 @@
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "HTMLParserIdioms.h"
+#include "Page.h"
 #include "Settings.h"
 
 #if USE(JSC)
@@ -56,7 +58,9 @@ void HTMLImageLoader::dispatchLoadEvent()
     bool errorOccurred = image()->errorOccurred();
     if (!errorOccurred && image()->response().httpStatusCode() >= 400)
         errorOccurred = client()->sourceElement()->hasTagName(HTMLNames::objectTag); // An <object> considers a 404 to be an error and should fire onerror.
-    client()->eventTarget()->dispatchEvent(Event::create(errorOccurred ? eventNames().errorEvent : eventNames().loadEvent, false, false));
+    
+    RefPtr<Event> event = Event::create(errorOccurred ? eventNames().errorEvent : eventNames().loadEvent, false, false);
+    client()->eventTarget()->dispatchAsyncEvent(event);
 }
 
 String HTMLImageLoader::sourceURI(const AtomicString& attr) const

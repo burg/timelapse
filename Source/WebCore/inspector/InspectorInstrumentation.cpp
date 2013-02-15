@@ -57,6 +57,7 @@
 #include "InspectorProfilerAgent.h"
 #include "InspectorResourceAgent.h"
 #include "InspectorRuntimeAgent.h"
+#include "InspectorTimelapseAgent.h"
 #include "InspectorTimelineAgent.h"
 #include "InspectorWorkerAgent.h"
 #include "InstrumentingAgents.h"
@@ -344,6 +345,10 @@ InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventImpl(I
         timelineAgent->willDispatchEvent(event, document->frame());
         timelineAgentId = timelineAgent->id();
     }
+#if ENABLE(TIMELAPSE)
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->willDispatchEvent(event, window, node, ancestors);
+#endif // ENABLE(TIMELAPSE)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
 
@@ -362,6 +367,10 @@ void InspectorInstrumentation::didDispatchEventImpl(const InspectorInstrumentati
 {
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didDispatchEvent();
+#if ENABLE(TIMELAPSE)
+    if (InspectorTimelapseAgent* timelapseAgent = cookie.first->inspectorTimelapseAgent())
+        timelapseAgent->didDispatchEvent();
+#endif // ENABLE(TIMELAPSE)
 }
 
 InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventOnWindowImpl(InstrumentingAgents* instrumentingAgents, const Event& event, DOMWindow* window)
@@ -372,6 +381,10 @@ InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventOnWind
         timelineAgent->willDispatchEvent(event, window ? window->frame() : 0);
         timelineAgentId = timelineAgent->id();
     }
+#if ENABLE(TIMELAPSE)
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->willDispatchEventOnWindow(event, window);
+#endif // ENABLE(TIMELAPSE)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
 
@@ -379,6 +392,10 @@ void InspectorInstrumentation::didDispatchEventOnWindowImpl(const InspectorInstr
 {
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didDispatchEvent();
+#if ENABLE(TIMELAPSE)
+    if (InspectorTimelapseAgent* timelapseAgent = cookie.first->inspectorTimelapseAgent())
+        timelapseAgent->didDispatchEventOnWindow();
+#endif // ENABLE(TIMELAPSE)
 }
 
 InspectorInstrumentationCookie InspectorInstrumentation::willEvaluateScriptImpl(InstrumentingAgents* instrumentingAgents, const String& url, int lineNumber, Frame* frame)
@@ -412,6 +429,10 @@ InspectorInstrumentationCookie InspectorInstrumentation::willFireTimerImpl(Instr
         timelineAgent->willFireTimer(timerId, frameForScriptExecutionContext(context));
         timelineAgentId = timelineAgent->id();
     }
+#if ENABLE(TIMELAPSE)
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->willFireTimer(timerId, frameForScriptExecutionContext(context));
+#endif // ENABLE(TIMELAPSE)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
 
@@ -866,6 +887,11 @@ void InspectorInstrumentation::didCommitLoadImpl(InstrumentingAgents* instrument
     }
     if (InspectorPageAgent* pageAgent = instrumentingAgents->inspectorPageAgent())
         pageAgent->frameNavigated(loader);
+#if ENABLE(TIMELAPSE)
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->frameNavigated(loader);
+#endif
+
 }
 
 void InspectorInstrumentation::loaderDetachedFromFrameImpl(InstrumentingAgents* instrumentingAgents, DocumentLoader* loader)
@@ -1080,6 +1106,62 @@ void InspectorInstrumentation::didSendWebSocketFrameImpl(InstrumentingAgents* in
 {
     if (InspectorResourceAgent* resourceAgent = instrumentingAgents->inspectorResourceAgent())
         resourceAgent->didSendWebSocketFrame(identifier, frame);
+}
+#endif
+
+#if ENABLE(TIMELAPSE)
+void InspectorInstrumentation::capturedPageInputImpl(InstrumentingAgents* instrumentingAgents, DispatchableAction* action)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->capturedPageInput(action);
+}
+    
+void InspectorInstrumentation::captureStartedImpl(InstrumentingAgents* instrumentingAgents)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->captureStarted();
+}
+
+void InspectorInstrumentation::captureFinishedImpl(InstrumentingAgents* instrumentingAgents)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->captureFinished();
+}
+
+void InspectorInstrumentation::playbackStartedImpl(InstrumentingAgents* instrumentingAgents)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->playbackStarted();
+}
+
+void InspectorInstrumentation::playbackPausedImpl(InstrumentingAgents* instrumentingAgents, PositionMarkIndex mark)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->playbackPaused(mark);
+}
+
+void InspectorInstrumentation::playbackHitMarkImpl(InstrumentingAgents* instrumentingAgents, PositionMarkIndex mark)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->playbackHitMark(mark);
+}
+
+void InspectorInstrumentation::playbackFinishedImpl(InstrumentingAgents* instrumentingAgents)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->playbackFinished();
+}
+
+void InspectorInstrumentation::playbackCancelledImpl(InstrumentingAgents* instrumentingAgents)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->playbackCancelled();
+}
+
+void InspectorInstrumentation::playbackErrorImpl(InstrumentingAgents* instrumentingAgents, bool isFatal, const String& errorMessage)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->playbackError(isFatal, errorMessage);
 }
 #endif
 

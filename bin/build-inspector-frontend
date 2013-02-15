@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# resolve links - $0 may be a link to this script
+PRG="$0"
+
+# need this for relative symlinks
+while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+    PRG="$link"
+    else
+    PRG="`dirname "$PRG"`/$link"
+    fi
+done
+
+saveddir=`pwd`
+REAL_HOME=`dirname "$PRG"`
+
+# make it fully qualified
+REAL_HOME=`cd "$REAL_HOME" && pwd`
+
+
+$REAL_HOME/../Tools/Scripts/build-webkit --debug --timelapse --inspector-frontend
+
+# bug: must touch inspector.js to have changes rebuilt
+touch $REAL_HOME/../Source/WebCore/inspector/front-end/inspector.js
+$REAL_HOME/../Tools/Scripts/build-webkit --timelapse --inspector-frontend

@@ -126,6 +126,7 @@ private:
     InspectorAgent* m_inspectorAgent;
     InspectorDOMAgent* m_domAgent;
     InspectorResourceAgent* m_resourceAgent;
+    //TODO: inspector timelapse agent
     InspectorPageAgent* m_pageAgent;
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     InspectorDebuggerAgent* m_debuggerAgent;

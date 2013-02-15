@@ -1,0 +1,38 @@
+#!/bin/bash
+
+BUILD_ARGS="--debug --timelapse"
+HAPPY_NOISE="/System/Library/Sounds/Glass.aiff"
+SAD_NOISE="/System/Library/Sounds/Basso.aiff"
+
+# resolve links - $0 may be a link to this script
+PRG="$0"
+
+# need this for relative symlinks
+while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+    PRG="$link"
+    else
+    PRG="`dirname "$PRG"`/$link"
+    fi
+done
+
+saveddir=`pwd`
+REAL_HOME=`dirname "$PRG"`
+
+# make it fully qualified
+REAL_HOME=`cd "$REAL_HOME" && pwd`
+
+# the grep will remove setenv spew from stdout.
+$REAL_HOME/../Tools/Scripts/build-webkit $BUILD_ARGS | grep -v setenv
+
+COMPILE_EXIT_STATUS=${PIPESTATUS[0]}
+
+if [ $COMPILE_EXIT_STATUS -eq 0 ]; then
+    afplay $HAPPY_NOISE
+else
+    afplay $SAD_NOISE
+fi
+
+exit $COMPILE_EXIT_STATUS

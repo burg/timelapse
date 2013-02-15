@@ -554,12 +554,25 @@ WebInspector.DataGrid.prototype = {
         this.dispatchEventToListeners("width changed");
     },
 
-    columnWidthsMap: function()
+    get columnPixelWidthsMap()
+    {
+
+        var tableWidth = this._dataTable.offsetWidth;
+
+        var result = {};
+        for (var i = 0; i < this._columnsArray.length; ++i) {
+            var width = this._headerTableColumnGroup.children[i].style.width;
+            result[this._columnsArray[i].identifier] = parseFloat(width) / 100.0 * tableWidth;
+        }
+        return result;
+    },
+
+    get columnWidthsMap()
     {
         var result = {};
         for (var i = 0; i < this._columnsArray.length; ++i) {
             var width = this._headerTableColumnGroup.children[i].style.width;
-            result[this._columnsArray[i].columnIdentifier] = parseFloat(width);
+            result[this._columnsArray[i].identifier] = parseFloat(width);
         }
         return result;
     },

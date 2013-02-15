@@ -69,6 +69,10 @@
 #include <runtime/JSLock.h>
 #include <runtime/RegExpObject.h>
 
+#if ENABLE(TIMELAPSE)
+#include <wtf/timelapse/DeterminismLog.h>
+#endif
+
 using namespace JSC;
 
 namespace WebCore {
@@ -291,7 +295,16 @@ JSValue JSInjectedScriptHost::evaluate(ExecState* exec)
 
     bool wasEvalEnabled = globalObject->evalEnabled();
     globalObject->setEvalEnabled(true);
+#if ENABLE(TIMELAPSE)
+    RefPtr<DeterminismLog> log = globalObject->determinismLog();
+    if (log)
+        log->setIsActive(false);
+#endif
     JSValue result = JSC::call(exec, evalFunction, callType, callData, exec->globalThisValue(), args);
+#if ENABLE(TIMELAPSE)
+    if (log)
+        log->setIsActive(true);
+#endif
     globalObject->setEvalEnabled(wasEvalEnabled);
 
     return result;

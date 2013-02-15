@@ -1,0 +1,17 @@
+---
+layout: default
+title: Blog
+permalink: blog/
+---
+
+{% for post in site.posts limit:10 %}
+
+<div class="span8">
+<h2>{{ post.title }}</h2>
+<small>Posted on {{ post.date | date:'%B %d, %Y' }}</small>
+<hr/>
+{{ post.content }}
+<hr/>
+</div>
+
+{% endfor %}

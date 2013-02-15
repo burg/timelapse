@@ -33,7 +33,7 @@
 WebInspector.Drawer = function()
 {
     this.element = document.getElementById("drawer");
-    this._savedHeight = 200; // Default.
+    this._savedHeight = 234; // Default.
     this._mainElement = document.getElementById("main");
     this._toolbarElement = document.getElementById("toolbar");
 
@@ -58,6 +58,11 @@ WebInspector.Drawer.prototype = {
     get visible()
     {
         return !!this._view;
+    },
+
+    get animating()
+    {
+	return !!this._currentAnimation;
     },
 
     _constrainHeight: function(height)

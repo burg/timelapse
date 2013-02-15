@@ -44,16 +44,16 @@ module window {
         InterfaceName=Window
     ] DOMWindow {
         // DOM Level 0
-        attribute [Replaceable] Screen screen;
-        attribute [Replaceable, DoNotCheckSecurityOnGetter] History history;
+        attribute [Replaceable, ReplayNotImplemented] Screen screen;
+        attribute [Replaceable, DoNotCheckSecurityOnGetter, ReplayNotImplemented] History history;
         attribute [Replaceable] BarInfo locationbar;
         attribute [Replaceable] BarInfo menubar;
         attribute [Replaceable] BarInfo personalbar;
         attribute [Replaceable] BarInfo scrollbars;
         attribute [Replaceable] BarInfo statusbar;
         attribute [Replaceable] BarInfo toolbar;
-        attribute [Replaceable] Navigator navigator;
-        attribute [Replaceable] Navigator clientInformation;
+        attribute [Replaceable, ReplayNotImplemented] Navigator navigator;
+        attribute [Replaceable, ReplayNotImplemented] Navigator clientInformation;
         readonly attribute Crypto crypto;
 #if !defined(LANGUAGE_CPP) || !LANGUAGE_CPP
         attribute [DoNotCheckSecurity, CustomSetter, V8Unforgeable] Location location;
@@ -94,14 +94,22 @@ module window {
 
         attribute [Replaceable] boolean offscreenBuffering;
 
-        attribute [Replaceable] long outerHeight;
-        attribute [Replaceable] long outerWidth;
-        attribute [Replaceable] long innerHeight;
-        attribute [Replaceable] long innerWidth;
+        attribute [Replaceable, ReplayNotImplemented] long outerHeight;
+        attribute [Replaceable, ReplayNotImplemented] long outerWidth;
+        attribute [Replaceable, ReplayNotImplemented] long innerHeight;
+        attribute [Replaceable, ReplayNotImplemented] long innerWidth;
+#if defined(ENABLE_TIMELAPSE) && ENABLE_TIMELAPSE
+        // Custom bindings implement Replaceable
+        attribute [Custom] long screenX;
+        attribute [Custom] long screenY;
+        attribute [Custom] long screenLeft;
+        attribute [Custom] long screenTop;
+#else
         attribute [Replaceable] long screenX;
         attribute [Replaceable] long screenY;
         attribute [Replaceable] long screenLeft;
         attribute [Replaceable] long screenTop;
+#endif
         attribute [Replaceable] long scrollX;
         attribute [Replaceable] long scrollY;
         readonly attribute long pageXOffset;
@@ -163,11 +171,11 @@ module window {
         WebKitPoint webkitConvertPointFromNodeToPage(in [Optional=DefaultIsUndefined] Node node, 
                                                      in [Optional=DefaultIsUndefined] WebKitPoint p);
 
-        readonly attribute [V8EnabledAtRuntime] DOMApplicationCache applicationCache;
+        readonly attribute [V8EnabledAtRuntime, ReplayNotImplemented] DOMApplicationCache applicationCache;
 
         readonly attribute [V8EnabledAtRuntime] Storage sessionStorage
             getter raises(DOMException);
-        readonly attribute [V8EnabledAtRuntime] Storage localStorage
+        readonly attribute [V8EnabledAtRuntime, ReplayNotImplemented] Storage localStorage
             getter raises(DOMException);
 
 #if defined(ENABLE_ORIENTATION_EVENTS) && ENABLE_ORIENTATION_EVENTS
@@ -197,7 +205,7 @@ module window {
 #endif
 
 #if defined(ENABLE_WEB_TIMING) && ENABLE_WEB_TIMING
-        attribute [Replaceable] Performance performance;
+        attribute [Replaceable, ReplayNotImplemented] Performance performance;
 #endif
 
         // Timers

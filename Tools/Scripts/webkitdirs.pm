@@ -1748,6 +1748,8 @@ sub copyInspectorFrontendFiles
         die;
     }
 
+    print "Copying Inspector sources...\n";
+
     if (isAppleMacWebKit()) {
         my $sourceLocalizedStrings = sourceDir() . "/Source/WebCore/English.lproj/localizedStrings.js";
         my $destinationLocalizedStrings = $productDir . "/WebCore.framework/Resources/English.lproj/localizedStrings.js";
@@ -1755,6 +1757,47 @@ sub copyInspectorFrontendFiles
     }
 
     return system "rsync", "-aut", "--exclude=/.DS_Store", "--exclude=*.re2js", "--exclude=.svn/", !isQt() ? "--exclude=/WebKit.qrc" : "", $sourceInspectorPath, $inspectorResourcesDirPath;
+}
+
+sub streamlineInspectorFrontendFiles
+{
+    exit unless configuration() eq "Release";
+    exit unless isAppleMacWebKit();
+
+    my $productDir = productDir();
+    my $sourceInspectorPath = sourceDir() . "/Source/WebCore/inspector/front-end/";
+    my $inspectorResourcesDirPath = $ENV{"WEBKITINSPECTORRESOURCESDIR"};
+
+    if (!defined($inspectorResourcesDirPath)) {
+        $inspectorResourcesDirPath = "";
+    }
+
+    $inspectorResourcesDirPath = $productDir . "/WebCore.framework/Resources/inspector";
+
+    if (! -d $inspectorResourcesDirPath) {
+        print "*************************************************************\n";
+        print "Cannot find '$inspectorResourcesDirPath'.\n" if (defined($inspectorResourcesDirPath));
+        print "Make sure that you have built WebKit first.\n" if (! -d $productDir || defined($inspectorResourcesDirPath));
+        print "Optionally, set the environment variable 'WebKitInspectorResourcesDir'\n";
+        print "to point to the directory that contains the WebKit Inspector front-end\n";
+        print "files for the built WebCore framework.\n";
+        print "*************************************************************\n";
+        die;
+    }
+    
+    my $streamlineScript = $sourceInspectorPath  . "../combine-javascript-resources.pl";
+    my $inlineScript = $sourceInspectorPath . "../inline-javascript-imports.py";
+    my $outputDir = $productDir . "/DerivedResources";
+    my $inspectorInputHTML = $sourceInspectorPath . "/inspector.html";
+
+    print "Streamlining Inspector sources...\n";
+
+    system $streamlineScript, "--input-html", $inspectorInputHTML, "--generated-scripts-dir", $inspectorResourcesDirPath, "--output-dir", $outputDir, "--output-script-name", "inspector.js";
+    system $inlineScript, $sourceInspectorPath . "/ScriptFormatterWorker.js", $sourceInspectorPath, $outputDir . "/scriptFormatterWorker.js";
+    system "cp",  "$outputDir/inspector.html", "$inspectorResourcesDirPath/inspector.html";
+    system "cp",  "$outputDir/inspector.js", "$inspectorResourcesDirPath/inspector.js";
+    system "cp",  "$outputDir/scriptFormatterWorker.js", "$inspectorResourcesDirPath/scriptFormatterWorker.js";
+    exit;
 }
 
 sub buildXCodeProject($$@)

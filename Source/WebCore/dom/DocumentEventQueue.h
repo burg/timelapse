@@ -57,6 +57,7 @@ public:
     virtual bool cancelEvent(Event*) OVERRIDE;
     virtual void close() OVERRIDE;
 
+    void flush();
     void enqueueOrDispatchScrollEvent(PassRefPtr<Node>, ScrollEventTargetType);
 
     void reportMemoryUsage(MemoryObjectInfo*) const;

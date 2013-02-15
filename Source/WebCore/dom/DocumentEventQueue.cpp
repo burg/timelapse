@@ -132,6 +132,18 @@ void DocumentEventQueue::close()
     m_queuedEvents.clear();
 }
 
+void DocumentEventQueue::flush()
+{
+    // if there is something sitting in a timer, fire pre-emptively
+    if (m_queuedEvents.isEmpty())
+        return;
+        
+    if (m_pendingEventTimer->isActive())
+        m_pendingEventTimer->stop();
+
+    pendingEventTimerFired();
+}
+
 void DocumentEventQueue::pendingEventTimerFired()
 {
     ASSERT(!m_pendingEventTimer->isActive());

@@ -39,7 +39,7 @@ var Preferences = {
     showMissingLocalizedStrings: false,
     useLowerCaseMenuTitlesOnWindows: false,
     sharedWorkersDebugNote: undefined,
-    localizeUI: true,
+    localizeUI: false,
     exposeDisableCache: false,
     applicationTitle: "Web Inspector - %s",
     showDockToRight: false,
