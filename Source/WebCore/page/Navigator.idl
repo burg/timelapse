@@ -29,8 +29,8 @@ module window {
         readonly attribute [Nondeterministic] DOMString language;
         readonly attribute [Nondeterministic] DOMString userAgent;
         readonly attribute [Nondeterministic] DOMString platform;
-        readonly attribute [ReplayNotImplemented] DOMPluginArray plugins;
-        readonly attribute [ReplayNotImplemented] DOMMimeTypeArray mimeTypes;
+        readonly attribute DOMPluginArray plugins;
+        readonly attribute DOMMimeTypeArray mimeTypes;
         readonly attribute [Nondeterministic] DOMString product;
         readonly attribute [Nondeterministic] DOMString productSub;
         readonly attribute [Nondeterministic] DOMString vendor;
