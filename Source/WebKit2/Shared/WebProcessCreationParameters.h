@@ -80,10 +80,6 @@ struct WebProcessCreationParameters {
 
     bool iconDatabaseEnabled;
 
-#if ENABLE(PLUGIN_PROCESS)
-    bool disablePluginProcessMessageTimeout;
-#endif
-
     double terminationTimeout;
 
     Vector<String> languages;
@@ -115,6 +111,7 @@ struct WebProcessCreationParameters {
     String uiProcessBundleResourcePath;
     SandboxExtension::Handle uiProcessBundleResourcePathExtensionHandle;
 
+    bool shouldForceScreenFontSubstitution;
 #elif PLATFORM(WIN)
     String cfURLCachePath;
     uint64_t cfURLCacheDiskCapacity;

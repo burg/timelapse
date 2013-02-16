@@ -144,6 +144,7 @@ SET(WebCore_IDL_FILES
     Modules/battery/BatteryManager.idl
     Modules/battery/NavigatorBattery.idl
 
+    Modules/filesystem/DataTransferItemFileSystem.idl
     Modules/filesystem/DirectoryEntry.idl
     Modules/filesystem/DirectoryEntrySync.idl
     Modules/filesystem/DirectoryReader.idl
@@ -165,6 +166,7 @@ SET(WebCore_IDL_FILES
     Modules/filesystem/FileWriterCallback.idl
     Modules/filesystem/FileWriter.idl
     Modules/filesystem/FileWriterSync.idl
+    Modules/filesystem/HTMLInputElementFileSystem.idl
     Modules/filesystem/Metadata.idl
     Modules/filesystem/MetadataCallback.idl
     Modules/filesystem/WorkerContextFileSystem.idl
@@ -228,6 +230,10 @@ SET(WebCore_IDL_FILES
     Modules/mediastream/RTCPeerConnection.idl
     Modules/mediastream/RTCSessionDescription.idl
     Modules/mediastream/RTCSessionDescriptionCallback.idl
+    Modules/mediastream/RTCStatsCallback.idl
+    Modules/mediastream/RTCStatsElement.idl
+    Modules/mediastream/RTCStatsReport.idl
+    Modules/mediastream/RTCStatsResponse.idl
     Modules/mediastream/SessionDescription.idl
 
     Modules/navigatorcontentutils/NavigatorContentUtils.idl
@@ -408,7 +414,6 @@ SET(WebCore_IDL_FILES
     fileapi/FileList.idl
     fileapi/FileReader.idl
     fileapi/FileReaderSync.idl
-    fileapi/WebKitBlobBuilder.idl
 
     html/DOMFormData.idl
     html/DOMSettableTokenList.idl
@@ -791,6 +796,7 @@ SET(WebCore_SOURCES
     Modules/filesystem/FileWriter.cpp
     Modules/filesystem/FileWriterBase.cpp
     Modules/filesystem/FileWriterSync.cpp
+    Modules/filesystem/HTMLInputElementFileSystem.cpp
     Modules/filesystem/LocalFileSystem.cpp
     Modules/filesystem/WorkerContextFileSystem.cpp
     
@@ -861,6 +867,10 @@ SET(WebCore_SOURCES
     Modules/mediastream/RTCPeerConnection.cpp
     Modules/mediastream/RTCSessionDescription.cpp
     Modules/mediastream/RTCSessionDescriptionRequestImpl.cpp
+    Modules/mediastream/RTCStatsElement.cpp
+    Modules/mediastream/RTCStatsReport.cpp
+    Modules/mediastream/RTCStatsRequestImpl.cpp
+    Modules/mediastream/RTCStatsResponse.cpp
     Modules/mediastream/RTCVoidRequestImpl.cpp
     Modules/mediastream/SessionDescription.cpp
     Modules/mediastream/UserMediaController.cpp
@@ -1125,6 +1135,7 @@ SET(WebCore_SOURCES
     dom/DocumentFragment.cpp
     dom/DocumentParser.cpp
     dom/DocumentOrderedMap.cpp
+    dom/DocumentStyleSheetCollection.cpp
     dom/DocumentType.cpp
     dom/DynamicNodeList.cpp
     dom/EditingText.cpp
@@ -1308,6 +1319,7 @@ SET(WebCore_SOURCES
     html/BaseCheckableInputType.cpp
     html/BaseClickableWithKeyInputType.cpp
     html/BaseDateAndTimeInputType.cpp
+    html/BaseMultipleFieldsDateAndTimeInputType.cpp
     html/BaseTextInputType.cpp
     html/ButtonInputType.cpp
     html/CheckboxInputType.cpp
@@ -1507,6 +1519,11 @@ SET(WebCore_SOURCES
 
     html/shadow/ContentDistributor.cpp
     html/shadow/ContentSelectorQuery.cpp
+    html/shadow/DateTimeEditElement.cpp
+    html/shadow/DateTimeFieldElement.cpp
+    html/shadow/DateTimeFieldElements.cpp
+    html/shadow/DateTimeNumericFieldElement.cpp
+    html/shadow/DateTimeSymbolicFieldElement.cpp
     html/shadow/DetailsMarkerControl.cpp
     html/shadow/HTMLContentElement.cpp
     html/shadow/HTMLShadowElement.cpp
@@ -1907,10 +1924,6 @@ SET(WebCore_SOURCES
     platform/graphics/filters/SourceGraphic.cpp
     platform/graphics/filters/SpotLightSource.cpp
 
-    platform/graphics/filters/arm/NEONHelpers.h
-    platform/graphics/filters/arm/FEBlendNEON.h
-    platform/graphics/filters/arm/FECompositeArithmeticNEON.h
-    platform/graphics/filters/arm/FEGaussianBlurNEON.h
     platform/graphics/filters/arm/FELightingNEON.cpp
 
     platform/graphics/texmap/TextureMapper.cpp
@@ -1989,8 +2002,6 @@ SET(WebCore_SOURCES
     platform/text/LineEnding.cpp
     platform/text/LocaleNone.cpp
     platform/text/LocaleToScriptMappingDefault.cpp
-    platform/text/LocalizedDateNone.cpp
-    platform/text/LocalizedNumberNone.cpp
     platform/text/Localizer.cpp
     platform/text/QuotedPrintable.cpp
     platform/text/RegularExpression.cpp
@@ -2023,6 +2034,7 @@ SET(WebCore_SOURCES
     rendering/ExclusionInterval.cpp
     rendering/ExclusionRectangle.cpp
     rendering/ExclusionShape.cpp
+    rendering/ExclusionShapeInsideInfo.cpp
     rendering/FilterEffectRenderer.cpp
     rendering/FixedTableLayout.cpp
     rendering/FlowThreadController.cpp
@@ -2068,6 +2080,7 @@ SET(WebCore_SOURCES
     rendering/RenderLayerBacking.cpp
     rendering/RenderLayerCompositor.cpp
     rendering/RenderLayerFilterInfo.cpp
+    rendering/RenderLayerModelObject.cpp
     rendering/RenderLineBoxList.cpp
     rendering/RenderListBox.cpp
     rendering/RenderListItem.cpp
@@ -2118,7 +2131,6 @@ SET(WebCore_SOURCES
     rendering/RenderWordBreak.cpp
     rendering/RootInlineBox.cpp
     rendering/ScrollBehavior.cpp
-    rendering/WrapShapeInfo.cpp
     rendering/break_lines.cpp
 
     rendering/mathml/RenderMathMLBlock.cpp
@@ -2596,19 +2608,13 @@ IF (WTF_USE_3D_GRAPHICS)
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/CodeGenGLSL.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/Compiler.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/Diagnostics.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/Diagnostics.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/DirectiveHandler.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/DirectiveHandler.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/debug.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/depgraph/DependencyGraph.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/depgraph/DependencyGraph.h
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/depgraph/DependencyGraphBuilder.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/depgraph/DependencyGraphBuilder.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/depgraph/DependencyGraphOutput.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/depgraph/DependencyGraphOutput.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/depgraph/DependencyGraphTraverse.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/DetectDiscontinuity.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/DetectDiscontinuity.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/DetectRecursion.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/ForLoopUnroll.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/InfoSink.cpp
@@ -2627,52 +2633,35 @@ IF (WTF_USE_3D_GRAPHICS)
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/parseConst.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/ParseHelper.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/PoolAlloc.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/Pragma.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/atom.c
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/cpp.c
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/cppstruct.c
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/memory.c
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/DiagnosticsBase.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Diagnostics.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/DirectiveHandlerBase.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/DirectiveHandler.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/DirectiveParser.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/DirectiveParser.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/ExpressionParser.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/ExpressionParser.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Input.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Input.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Lexer.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Lexer.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Macro.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Macro.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/MacroExpander.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/MacroExpander.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Preprocessor.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Preprocessor.h
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/SourceLocation.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Token.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Token.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Tokenizer.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Tokenizer.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/scanner.c
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/symbols.c
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/tokens.c
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/QualifierAlive.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/RemoveTree.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/RenameFunction.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/SearchSymbol.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/ShaderLang.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/SymbolTable.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/timing/RestrictFragmentShaderTiming.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/timing/RestrictFragmentShaderTiming.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/timing/RestrictVertexShaderTiming.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/timing/RestrictVertexShaderTiming.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/TranslatorESSL.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/TranslatorGLSL.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/TranslatorHLSL.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/UnfoldShortCircuit.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/UnfoldShortCircuit.h
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/util.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/ValidateLimitations.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/VariableInfo.cpp

@@ -41,6 +41,7 @@ WebProcessCreationParameters::WebProcessCreationParameters()
 #if PLATFORM(MAC)
     , nsURLCacheMemoryCapacity(0)
     , nsURLCacheDiskCapacity(0)
+    , shouldForceScreenFontSubstitution(false)
 #elif PLATFORM(WIN)
     , shouldPaintNativeControls(false)
 #endif
@@ -70,9 +71,6 @@ void WebProcessCreationParameters::encode(CoreIPC::ArgumentEncoder* encoder) con
     encoder->encode(shouldAlwaysUseComplexTextCodePath);
     encoder->encode(shouldUseFontSmoothing);
     encoder->encode(iconDatabaseEnabled);
-#if ENABLE(PLUGIN_PROCESS)
-    encoder->encode(disablePluginProcessMessageTimeout);
-#endif
     encoder->encode(terminationTimeout);
     encoder->encode(languages);
     encoder->encode(textCheckerState);
@@ -91,6 +89,7 @@ void WebProcessCreationParameters::encode(CoreIPC::ArgumentEncoder* encoder) con
     encoder->encode(acceleratedCompositingPort);
     encoder->encode(uiProcessBundleResourcePath);
     encoder->encode(uiProcessBundleResourcePathExtensionHandle);
+    encoder->encode(shouldForceScreenFontSubstitution);
 #elif PLATFORM(WIN)
     encoder->encode(shouldPaintNativeControls);
     encoder->encode(cfURLCachePath);
@@ -158,10 +157,6 @@ bool WebProcessCreationParameters::decode(CoreIPC::ArgumentDecoder* decoder, Web
         return false;
     if (!decoder->decode(parameters.iconDatabaseEnabled))
         return false;
-#if ENABLE(PLUGIN_PROCESS)
-    if (!decoder->decode(parameters.disablePluginProcessMessageTimeout))
-        return false;
-#endif
     if (!decoder->decode(parameters.terminationTimeout))
         return false;
     if (!decoder->decode(parameters.languages))
@@ -195,6 +190,8 @@ bool WebProcessCreationParameters::decode(CoreIPC::ArgumentDecoder* decoder, Web
     if (!decoder->decode(parameters.uiProcessBundleResourcePath))
         return false;
     if (!decoder->decode(parameters.uiProcessBundleResourcePathExtensionHandle))
+        return false;
+    if (!decoder->decode(parameters.shouldForceScreenFontSubstitution))
         return false;
 #elif PLATFORM(WIN)
     if (!decoder->decode(parameters.shouldPaintNativeControls))

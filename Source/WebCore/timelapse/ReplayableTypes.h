@@ -60,7 +60,6 @@ extern const char* PlaybackError;
 extern const char* RanPendingScripts;
 extern const char* ScrollPage;
 extern const char* SendResizeEvent;
-extern const char* SetCookieSeed;
 extern const char* TimerCreated;
 extern const char* TimerFired;
 } // namespace ReplayableTypes

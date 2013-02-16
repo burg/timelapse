@@ -118,7 +118,7 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
 #if ENABLE(TIMELAPSE)
     m_agents.append(InspectorTimelapseAgent::create(m_instrumentingAgents.get(), m_state.get(), page));
 #endif    
-    m_agents.append(InspectorMemoryAgent::create(m_instrumentingAgents.get(), m_state.get(), m_page, domStorageAgent));
+    m_agents.append(InspectorMemoryAgent::create(m_instrumentingAgents.get(), inspectorClient, m_state.get(), m_page, domStorageAgent));
     m_agents.append(InspectorTimelineAgent::create(m_instrumentingAgents.get(), pageAgent, m_state.get(), InspectorTimelineAgent::PageInspector,
        inspectorClient));
     m_agents.append(InspectorApplicationCacheAgent::create(m_instrumentingAgents.get(), m_state.get(), pageAgent));
@@ -227,8 +227,6 @@ void InspectorController::connectFrontend(InspectorFrontendChannel* frontendChan
     for (Agents::iterator it = m_agents.begin(); it != m_agents.end(); ++it)
         (*it)->setFrontend(frontend);
 
-    if (!InspectorInstrumentation::hasFrontends())
-        ScriptController::setCaptureCallStackForUncaughtExceptions(true);
     InspectorInstrumentation::frontendCreated();
 
     ASSERT(m_inspectorClient);
@@ -256,8 +254,6 @@ void InspectorController::disconnectFrontend()
     m_inspectorFrontend.clear();
 
     InspectorInstrumentation::frontendDeleted();
-    if (!InspectorInstrumentation::hasFrontends())
-        ScriptController::setCaptureCallStackForUncaughtExceptions(false);
 }
 
 void InspectorController::show()
@@ -295,6 +291,11 @@ void InspectorController::reconnectFrontend(InspectorFrontendChannel* frontendCh
 void InspectorController::setProcessId(long processId)
 {
     IdentifiersFactory::setProcessId(processId);
+}
+
+void InspectorController::webViewResized(const IntSize& size)
+{
+    m_overlay->resize(size);
 }
 
 void InspectorController::evaluateForTestInFrontend(long callId, const String& script)

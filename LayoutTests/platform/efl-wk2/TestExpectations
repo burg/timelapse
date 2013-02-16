@@ -1,5 +1,8 @@
 # We divide the EFL WK2 test expectations into several categories:
-# 1. TESTS EXPECTED TO FAIL
+# 1. PASSING TESTS
+#    Test cases that pass for EFL WK2 but are skipped in a top-level TestExpectations file.
+
+# 2. TESTS EXPECTED TO FAIL
 #    Test cases related to features that we don't expect to be activated for EFL WK2 since
 #    the feature implementation in WebKit2 is missing or not complete yet.
 #    If test cases related to a feature cannot be activated since e.g.
@@ -10,17 +13,21 @@
 #    If in doubt, please discuss on webkit-efl mailing list whether a set of test cases
 #    should be moved here.
 
-# 2. CRASHES
+# 3. CRASHES
 
-# 3. FLAKY TESTS
+# 4. FLAKY TESTS
 
-# 4. FAILING TESTS
+# 5. FAILING TESTS
 #    * Interim failures that are moved here for further investigation as a result of daily
 #      gardening. They should be analysed quickly and either resolved or moved to 1).
 #    * Remaining failures that are moved here until further investigation after
 #      unskipping a directory or block of tests in the Skipped list.
 #    * Tests that we expect to pass once the respective fix for DRT is available or
 #      a relevant compile time feature can be enabled for EFL.
+
+#////////////////////////////////////////////////////////////////////////////////////////
+# PASSING TESTS
+#////////////////////////////////////////////////////////////////////////////////////////
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # TESTS EXPECTED TO FAIL
@@ -30,8 +37,8 @@
 # CRASHES
 #////////////////////////////////////////////////////////////////////////////////////////
 
-Bug(EFL) fast/dom/register-protocol-handler.html [ Crash ]
-Bug(EFL) fast/dom/unregister-protocol-handler.html [ Crash ]
+webkit.org/b/92726 fast/dom/register-protocol-handler.html [ Crash ]
+webkit.org/b/92726 fast/dom/unregister-protocol-handler.html [ Crash ]
 
 # WebKitTestRunner needs an implementation for download attribute feature
 # The implementation for DumpRenderTree is on https://bugs.webkit.org/show_bug.cgi?id=96462
@@ -42,6 +49,12 @@ Bug(EFL) fast/dom/HTMLAnchorElement/anchor-nodownload-set.html [ Crash ]
 #////////////////////////////////////////////////////////////////////////////////////////
 # FLAKY TESTS
 #////////////////////////////////////////////////////////////////////////////////////////
+
+webkit.org/b/97560 http/tests/inspector/extensions-useragent.html [ Failure Pass ]
+webkit.org/b/97560 inspector/extensions/extensions-api.html [ Failure Pass ]
+webkit.org/b/97560 inspector/extensions/extensions-audits-content-script.html [ Failure Pass ]
+webkit.org/b/97560 inspector/extensions/extensions-audits.html [ Failure Pass ]
+webkit.org/b/97560 inspector/extensions/extensions-eval-content-script.html [ Failure Pass ]
 
 Bug(EFL) http/tests/security/contentSecurityPolicy/connect-src-websocket-blocked.html [ Crash Pass ]
 Bug(EFL) inspector/styles/styles-add-new-rule.html [ Failure Pass ]
@@ -113,8 +126,6 @@ Bug(EFL) fast/layers/no-clipping-overflow-hidden-hardware-acceleration.html [ Im
 Bug(EFL) fast/events/domactivate-sets-underlying-click-event-as-handled.html [ Failure Pass ]
 Bug(EFL) http/tests/inspector/change-iframe-src.html [ Failure Pass ]
 Bug(EFL) http/tests/loading/fire-error-event-empty-404-script.html [ Crash Failure Pass ]
-Bug(EFL) jquery/data.html [ Failure Pass ]
-Bug(EFL) jquery/offset.html [ Failure Pass ]
 Bug(EFL) sputnik/Conformance/07_Lexical_Conventions/7.4_Comments/S7.4_A5.html [ Crash Failure Pass ]
 Bug(EFL) sputnik/Conformance/07_Lexical_Conventions/7.4_Comments/S7.4_A6.html [ Crash Failure Pass ]
 Bug(EFL) sputnik/Conformance/07_Lexical_Conventions/7.8_Literals/7.8.5_Regular_Expression_Literals/S7.8.5_A1.1_T2.html [ Crash Failure Pass ]
@@ -139,6 +150,18 @@ webkit.org/b/35220 inspector/debugger/disable-script.html [ Crash Failure Pass ]
 webkit.org/b/35220 inspector/debugger/function-details.html [ Crash Failure Pass ]
 webkit.org/b/35220 inspector/debugger/script-extract-outline.html [ Crash Failure Pass ]
 
+# Test is flaky and needs to be fixed
+webkit.org/b/56985 http/tests/loading/bad-server-subframe.html [ Crash Pass ]
+
+# Sometimes times out of the build bot
+webkit.org/b/90207 fast/forms/select/select-state-restore.html [ Failure Pass ]
+
+# Affects multiple platforms.
+webkit.org/b/90980 fast/forms/textarea/textarea-state-restore.html [ Failure Pass ]
+
+# Flaky, probably because the result is sometimes taken before data about visited link have passed through IPC.
+webkit.org/b/81797 fast/history/visited-link-background-color.html [ Failure  Pass ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # FAILING TESTS
 #////////////////////////////////////////////////////////////////////////////////////////
@@ -153,24 +176,8 @@ webkit.org/b/42674 http/tests/navigation/response204.html [ Failure ]
 webkit.org/b/93470 fast/dom/title-directionality-removeChild.html [ Failure ]
 webkit.org/b/93470 fast/dom/title-directionality.html [ Failure ]
 
-# WebKitTestRunner needs an implementation for eventSender.scheduleAsynchronousClick
-Bug(EFL) fast/events/popup-blocking-click-in-iframe.html [ Failure ]
-
-# WebKitTestRunner eventSender needs touch events support
-webkit.org/b/96465 fast/events/touch/basic-multi-touch-events-limited.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/basic-multi-touch-events.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/basic-single-touch-events.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/multi-touch-grouped-targets.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/send-oncancel-event.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/tap-highlight-color.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/touch-active-state.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/touch-coords-in-zoom-and-scroll.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/touch-inside-iframe.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/touch-inside-iframe-scrolled.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/touch-slider.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/touch-stale-node-crash.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/touch-target-limited.html [ Failure ]
-webkit.org/b/96465 fast/events/touch/touch-target.html [ Failure ]
+# WebKitTestRunner setTouchPointRadius() is not supported
+Bug(EFL) fast/events/touch/basic-single-touch-events.html [ Failure ]
 
 # WebKitTestRunner needs an implementation for testRunner.setViewModeMediaFeature
 Bug(EFL) fast/media/media-query-list-02.html [ Failure ]
@@ -191,15 +198,12 @@ webkit.org/b/93980 http/tests/appcache/load-from-appcache-defer-resume-crash.htm
 webkit.org/b/93982 storage/domstorage/storage-close-database-on-idle.html [ Failure ]
 
 # Unclassified failures
-Bug(EFL) editing/input/emacs-ctrl-o.html [ Failure ]
-Bug(EFL) fast/block/float/float-in-float-hit-testing.html [ Failure ]
 Bug(EFL) fast/dom/Window/mozilla-focus-blur.html [ Failure ]
-Bug(EFL) fast/frames/flattening/iframe-tiny.html [ Failure ]
-Bug(EFL) fast/replaced/no-focus-ring-embed.html [ Failure ]
-Bug(EFL) fast/replaced/no-focus-ring-object.html [ Failure ]
 Bug(EFL) http/tests/inspector/network/network-sidebar-width.html [ Failure ]
-Bug(EFL) inspector/extensions/extensions-panel.html [ Failure ]
 
 # Fails after r128056.
 webkit.org/b/96794 inspector/console/alert-toString-exception.html [ Failure ]
+
+# Fails after it was unskipped in r129372.
+webkit.org/b/97545 inspector/styles/variables/css-variables.html [ Failure ]
 

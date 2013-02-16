@@ -108,6 +108,9 @@ namespace WebCore {
         void setDefaultFixedFontSize(int);
         int defaultFixedFontSize() const { return m_defaultFixedFontSize; }
 
+        void setScreenFontSubstitutionEnabled(bool);
+        bool screenFontSubstitutionEnabled() const { return m_screenFontSubstitutionEnabled; }
+
 #if ENABLE(TEXT_AUTOSIZING)
         void setTextAutosizingEnabled(bool);
         bool textAutosizingEnabled() const { return m_textAutosizingEnabled; }
@@ -630,6 +633,9 @@ namespace WebCore {
         void setDiagnosticLoggingEnabled(bool enabled) { m_diagnosticLoggingEnabled = enabled; }
         bool diagnosticLoggingEnabled() const { return m_diagnosticLoggingEnabled; }
 
+        void setApplyPageScaleFactorInCompositor(bool enabled) { m_applyPageScaleFactorInCompositor = enabled; }
+        bool applyPageScaleFactorInCompositor() const { return m_applyPageScaleFactorInCompositor; }
+
     private:
         explicit Settings(Page*);
 
@@ -655,6 +661,7 @@ namespace WebCore {
         int m_minimumLogicalFontSize;
         int m_defaultFontSize;
         int m_defaultFixedFontSize;
+        bool m_screenFontSubstitutionEnabled;
         int m_validationMessageTimerMagnification;
         int m_minimumAccelerated2dCanvasSize;
         int m_layoutFallbackWidth;
@@ -814,9 +821,11 @@ namespace WebCore {
 
         bool m_scrollingPerformanceLoggingEnabled : 1;
 
-        Timer<Settings> m_loadsImagesAutomaticallyTimer;
-        void loadsImagesAutomaticallyTimerFired(Timer<Settings>*);
-        
+        bool m_applyPageScaleFactorInCompositor : 1;
+
+        Timer<Settings> m_setImageLoadingSettingsTimer;
+        void imageLoadingSettingsTimerFired(Timer<Settings>*);
+
         double m_incrementalRenderingSuppressionTimeoutInSeconds;
 
 #if USE(AVFOUNDATION)

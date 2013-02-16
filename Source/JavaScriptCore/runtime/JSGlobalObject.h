@@ -24,10 +24,10 @@
 
 #include "JSArray.h"
 #include "JSGlobalData.h"
-#include "JSGlobalThis.h"
 #include "JSSegmentedVariableObject.h"
 #include "JSWeakObjectMapRefInternal.h"
 #include "NumberPrototype.h"
+#include "SpecialPointer.h"
 #include "StringPrototype.h"
 #include "StructureChain.h"
 #include "Watchpoint.h"
@@ -84,7 +84,6 @@ namespace JSC {
 
     class JSGlobalObject : public JSSegmentedVariableObject {
     private:
-        typedef JSSegmentedVariableObject Base;
         typedef HashSet<RefPtr<OpaqueJSWeakObjectMap> > WeakMapSet;
 
         struct JSGlobalObjectRareData {
@@ -153,6 +152,8 @@ namespace JSC {
         WriteBarrier<Structure> m_regExpStructure;
         WriteBarrier<Structure> m_stringObjectStructure;
         WriteBarrier<Structure> m_internalFunctionStructure;
+        
+        void* m_specialPointers[Special::TableSize]; // Special pointers used by the LLInt and JIT.
 
         Debugger* m_debugger;
 #if ENABLE(TIMELAPSE)
@@ -181,14 +182,16 @@ namespace JSC {
             if (m_rareData)
                 return;
             m_rareData = adoptPtr(new JSGlobalObjectRareData);
-            Heap::heap(this)->addFinalizer(this, clearRareData);
         }
         
     public:
+        typedef JSSegmentedVariableObject Base;
+
         static JSGlobalObject* create(JSGlobalData& globalData, Structure* structure)
         {
             JSGlobalObject* globalObject = new (NotNull, allocateCell<JSGlobalObject>(globalData.heap)) JSGlobalObject(globalData, structure);
             globalObject->finishCreation(globalData);
+            globalData.heap.addFinalizer(globalObject, destroy);
             return globalObject;
         }
 
@@ -205,7 +208,7 @@ namespace JSC {
             init(this);
         }
 
-        void finishCreation(JSGlobalData& globalData, JSGlobalThis* thisValue)
+        void finishCreation(JSGlobalData& globalData, JSObject* thisValue)
         {
             Base::finishCreation(globalData);
             structure()->setGlobalObject(globalData, this);
@@ -216,6 +219,8 @@ namespace JSC {
     public:
         JS_EXPORT_PRIVATE ~JSGlobalObject();
         JS_EXPORT_PRIVATE static void destroy(JSCell*);
+        // We don't need a destructor because we use a finalizer instead.
+        static const bool needsDestruction = false;
 
         JS_EXPORT_PRIVATE static void visitChildren(JSCell*, SlotVisitor&);
 
@@ -294,6 +299,12 @@ namespace JSC {
         Structure* regExpMatchesArrayStructure() const { return m_regExpMatchesArrayStructure.get(); }
         Structure* regExpStructure() const { return m_regExpStructure.get(); }
         Structure* stringObjectStructure() const { return m_stringObjectStructure.get(); }
+
+        void* actualPointerFor(Special::Pointer pointer)
+        {
+            ASSERT(pointer < Special::TableSize);
+            return m_specialPointers[pointer];
+        }
 
         WatchpointSet* masqueradesAsUndefinedWatchpoint() { return m_masqueradesAsUndefinedWatchpoint.get(); }
         WatchpointSet* havingABadTimeWatchpoint() { return m_havingABadTimeWatchpoint.get(); }
@@ -383,13 +394,16 @@ namespace JSC {
         };
         JS_EXPORT_PRIVATE void addStaticGlobals(GlobalPropertyInfo*, int count);
 
+        JS_EXPORT_PRIVATE static JSC::JSObject* toThisObject(JSC::JSCell*, JSC::ExecState*);
+
+        JS_EXPORT_PRIVATE void setGlobalThis(JSGlobalData&, JSObject* globalThis);
+
     private:
         friend class LLIntOffsetsExtractor;
         
         // FIXME: Fold reset into init.
         JS_EXPORT_PRIVATE void init(JSObject* thisValue);
         void reset(JSValue prototype);
-        void setGlobalThis(JSGlobalData&, JSObject* globalThis);
 
         void createThrowTypeError(ExecState*);
 

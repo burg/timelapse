@@ -97,10 +97,9 @@ WTF_EXPORT_STRING_API float charactersToFloat(const UChar*, size_t, size_t& pars
 
 class ASCIILiteral;
 
-enum FloatConversionFlags {
-    ShouldRoundSignificantFigures = 1 << 0,
-    ShouldRoundDecimalPlaces = 1 << 1,
-    ShouldTruncateTrailingZeros = 1 << 2
+enum TrailingZerosTruncatingPolicy {
+    KeepTrailingZeros,
+    TruncateTrailingZeros
 };
 
 template<bool isSpecialCharacter(UChar), typename CharacterType>
@@ -233,10 +232,11 @@ public:
     WTF_EXPORT_STRING_API static String number(long long);
     WTF_EXPORT_STRING_API static String number(unsigned long long);
 
-    WTF_EXPORT_STRING_API static String number(double, unsigned = ShouldRoundSignificantFigures | ShouldTruncateTrailingZeros, unsigned precision = 6);
+    WTF_EXPORT_STRING_API static String number(double, unsigned precision = 6, TrailingZerosTruncatingPolicy = TruncateTrailingZeros);
 
     // Number to String conversion following the ECMAScript definition.
     WTF_EXPORT_STRING_API static String numberToStringECMAScript(double);
+    WTF_EXPORT_STRING_API static String numberToStringFixedWidth(double, unsigned decimalPlaces);
 
     // Find a single character or string, also with match function & latin1 forms.
     size_t find(UChar c, unsigned start = 0) const
@@ -302,6 +302,7 @@ public:
     WTF_EXPORT_STRING_API void append(LChar);
     void append(char c) { append(static_cast<LChar>(c)); };
     WTF_EXPORT_STRING_API void append(UChar);
+    WTF_EXPORT_STRING_API void append(const LChar*, unsigned length);
     WTF_EXPORT_STRING_API void append(const UChar*, unsigned length);
     WTF_EXPORT_STRING_API void insert(const String&, unsigned pos);
     void insert(const UChar*, unsigned length, unsigned pos);
@@ -414,6 +415,7 @@ public:
 #endif
 
     WTF_EXPORT_STRING_API static String make8BitFrom16BitSource(const UChar*, size_t);
+    WTF_EXPORT_STRING_API static String make16BitFrom8BitSource(const LChar*, size_t);
 
     // String::fromUTF8 will return a null string if
     // the input data contains invalid UTF-8 sequences.
@@ -456,8 +458,6 @@ public:
         return (*m_impl)[index];
     }
 
-    WTF_EXPORT_STRING_API void reportMemoryUsage(MemoryObjectInfo*) const;
-
 private:
     RefPtr<StringImpl> m_impl;
 };
@@ -465,10 +465,6 @@ private:
 #if PLATFORM(QT)
 QDataStream& operator<<(QDataStream& stream, const String& str);
 QDataStream& operator>>(QDataStream& stream, String& str);
-#endif
-
-#ifdef WTF_DEPRECATED_STRING_OPERATORS
-inline String& operator+=(String& a, const String& b) { a.append(b); return a; }
 #endif
 
 inline bool operator==(const String& a, const String& b) { return equal(a.impl(), b.impl()); }
@@ -660,6 +656,7 @@ WTF_EXPORT_STRING_API const String& emptyString();
 }
 
 using WTF::CString;
+using WTF::KeepTrailingZeros;
 using WTF::String;
 using WTF::emptyString;
 using WTF::append;
@@ -683,7 +680,6 @@ using WTF::find;
 using WTF::isAllSpecialCharacters;
 using WTF::isSpaceOrNewline;
 using WTF::reverseFind;
-using WTF::ShouldRoundDecimalPlaces;
 using WTF::ASCIILiteral;
 
 #include <wtf/text/AtomicString.h>

@@ -50,6 +50,7 @@ class MainTest(unittest.TestCase):
             'Ignoring warm-up run (1115)',
             '',
             'Time:',
+            'values 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 ms',
             'avg 1100 ms',
             'median 1101 ms',
             'stdev 11 ms',
@@ -60,7 +61,8 @@ class MainTest(unittest.TestCase):
         try:
             test = PerfTest(None, 'some-test', '/path/some-dir/some-test')
             self.assertEqual(test.parse_output(output),
-                {'some-test': {'avg': 1100.0, 'median': 1101.0, 'min': 1080.0, 'max': 1120.0, 'stdev': 11.0, 'unit': 'ms'}})
+                {'some-test': {'avg': 1100.0, 'median': 1101.0, 'min': 1080.0, 'max': 1120.0, 'stdev': 11.0, 'unit': 'ms',
+                    'values': [i for i in range(1, 20)]}})
         finally:
             pass
             actual_stdout, actual_stderr, actual_logs = output_capture.restore_output()
@@ -76,6 +78,7 @@ class MainTest(unittest.TestCase):
             'some-unrecognizable-line',
             '',
             'Time:'
+            'values 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 ms',
             'avg 1100 ms',
             'median 1101 ms',
             'stdev 11 ms',
@@ -109,17 +112,18 @@ class TestPageLoadingPerfTest(unittest.TestCase):
 
     def test_run(self):
         test = PageLoadingPerfTest(None, 'some-test', '/path/some-dir/some-test')
-        driver = TestPageLoadingPerfTest.MockDriver([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20])
+        driver = TestPageLoadingPerfTest.MockDriver(range(1, 21))
         output_capture = OutputCapture()
         output_capture.capture_output()
         try:
             self.assertEqual(test.run(driver, None),
-                {'some-test': {'max': 20000, 'avg': 11000.0, 'median': 11000, 'stdev': math.sqrt(570 * 1000 * 1000), 'min': 2000, 'unit': 'ms'}})
+                {'some-test': {'max': 20000, 'avg': 11000.0, 'median': 11000, 'stdev': 5627.314338711378, 'min': 2000, 'unit': 'ms',
+                    'values': [i * 1000 for i in range(2, 21)]}})
         finally:
             actual_stdout, actual_stderr, actual_logs = output_capture.restore_output()
         self.assertEqual(actual_stdout, '')
         self.assertEqual(actual_stderr, '')
-        self.assertEqual(actual_logs, 'RESULT some-test= 11000.0 ms\nmedian= 11000 ms, stdev= 23874.6727726 ms, min= 2000 ms, max= 20000 ms\n')
+        self.assertEqual(actual_logs, 'RESULT some-test= 11000.0 ms\nmedian= 11000 ms, stdev= 5627.31433871 ms, min= 2000 ms, max= 20000 ms\n')
 
     def test_run_with_bad_output(self):
         output_capture = OutputCapture()

@@ -26,6 +26,10 @@
 # TESTS EXPECTED TO FAIL
 #////////////////////////////////////////////////////////////////////////////////////////
 
+# CSS Sticky (-webkit-sticky) not supported by EFL.
+# This test passes on WK2, though.
+webkit.org/b/95182 fast/css/sticky/sticky-overflowing.html [ ImageOnlyFailure ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # CRASHES
 #////////////////////////////////////////////////////////////////////////////////////////
@@ -38,21 +42,45 @@ webkit.org/b/30724 [ Debug ] fast/loader/opaque-base-url.html [ Crash ]
 #////////////////////////////////////////////////////////////////////////////////////////
 
 # Test passes, but editing delegates does not match expected ones
-Bug(EFL) editing/undo/undo-indent.html [ Failure Pass ]
-Bug(EFL) editing/undo/undo-misspellings.html [ Failure Pass ]
-
 webkit.org/b/96641 media/video-seek-past-end-playing.html [ Failure Pass ]
 webkit.org/b/96642 loader/go-back-to-different-window-size.html [ Failure Pass ]
+
+webkit.org/b/96977 [ Release ] perf/nested-combined-selectors.html [ Failure Pass ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # FAILING TESTS
 #////////////////////////////////////////////////////////////////////////////////////////
 
+# Frame flattening does not work properly for EFL port
+Bug(EFL) fast/frames/flattening/frameset-flattening-advanced.html [ Failure ]
+Bug(EFL) fast/frames/flattening/frameset-flattening-grid.html [ Failure ]
+Bug(EFL) fast/frames/flattening/frameset-flattening-simple.html [ Failure ]
+Bug(EFL) fast/frames/flattening/frameset-flattening-subframesets.html [ Failure ]
+Bug(EFL) fast/frames/flattening/iframe-flattening-fixed-height.html [ Failure ]
+Bug(EFL) fast/frames/flattening/iframe-flattening-fixed-width.html [ Failure ]
+Bug(EFL) fast/frames/flattening/iframe-flattening-offscreen.html [ Failure ]
+Bug(EFL) fast/frames/flattening/iframe-flattening-out-of-view.html [ Failure ]
+Bug(EFL) fast/frames/flattening/iframe-flattening-out-of-view-and-scroll.html [ ImageOnlyFailure ]
+Bug(EFL) fast/frames/flattening/iframe-flattening-out-of-view-scroll-and-relayout.html [ ImageOnlyFailure ]
+Bug(EFL) fast/frames/flattening/iframe-flattening-simple.html [ Failure ]
+
+# EFL's DRT explicitly disables X11 use
+webkit.org/b/98231 fast/dom/Window/Plug-ins.html [ Failure ]
+webkit.org/b/98231 fast/frames/sandboxed-iframe-about-blank.html [ Failure ]
+webkit.org/b/98231 fast/frames/sandboxed-iframe-navigation-allowed.html [ Failure ]
+webkit.org/b/98231 fast/replaced/invalid-object-with-fallback.html [ Failure ]
+webkit.org/b/98231 http/tests/security/contentSecurityPolicy/object-src-none-allowed.html [ Failure ]
+webkit.org/b/98231 http/tests/security/contentSecurityPolicy/object-src-url-blocked.html [ Failure ]
+webkit.org/b/98231 http/tests/security/cross-origin-plugin-allowed.html [ Failure ]
+webkit.org/b/98231 http/tests/security/cross-origin-plugin-private-browsing-toggled-allowed.html [ Failure ]
+webkit.org/b/98231 http/tests/security/storage-blocking-loosened-plugin.html [ Failure ]
+webkit.org/b/98231 http/tests/security/storage-blocking-loosened-private-browsing-plugin.html [ Failure ]
+
 # EFL's DumpRenderTree should support LayoutTestController's dumpEditingCallbacks()
 webkit.org/b/84835 editing/execCommand/indent-paragraphs.html [ Failure ]
 
-# Frame does not get focus as expected
-webkit.org/b/97077 inspector/extensions/extensions-panel.html [ Failure ]
+# Incomplete policy delegate dumping (missing "originated from")
+Bug(EFL) http/tests/misc/policy-delegate-called-twice.html [ Failure ]
 
 # Custom font loading delaying text drawing on Canvas
 webkit.org/b/87355 canvas/philip/tests/2d.text.draw.fontface.notinpage.html [ Failure ]
@@ -90,11 +118,15 @@ webkit.org/b/87088 fast/js/names.html [ Failure ]
 # Failing after 125592
 webkit.org/b/94194 http/tests/security/frameNavigation/inactive-function-in-popup-navigate-child.html [ Failure ]
 
+# EFL's LayoutTestController does not implement setTabKeyCyclesThroughElements.
+webkit.org/b/82864 fast/events/keypress-insert-tab.html [ Failure ]
+
+# scrolling with fixed position does not work correctly when using ewk_view_tiled. 
+webkit.org/b/84933 compositing/geometry/fixed-position.html [ ImageOnlyFailure Pass ]
+
 # Fail after r128393.
 webkit.org/b/96620 http/tests/loading/pdf-commit-load-callbacks.html [ Failure ]
 webkit.org/b/96620 http/tests/loading/text-content-type-with-binary-extension.html [ Failure ]
 
-# EFL's LayoutTestController does not implement setTabKeyCyclesThroughElements.
-webkit.org/b/82864 fast/events/keypress-insert-tab.html [ Failure ]
-
-
+# Needs custom policy delegate enhancement to log downloads - EFL port is missing api for getting header fields from HTTP responses.
+webkit.org/b/87974 http/tests/download [ Failure ]

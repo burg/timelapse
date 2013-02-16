@@ -40,9 +40,6 @@ _log = logging.getLogger(__name__)
 
 
 # Test expectation and modifier constants.
-# TEXT, IMAGE_PLUS_TEXT, and AUDIO are no longer used in new test runs but
-# we keep them around for now so we can parse old results.json entries and to
-# avoid changing the numbering for the constants.
 #
 # FIXME: range() starts with 0 which makes if expectation checks harder
 # as PASS is 0.
@@ -78,6 +75,8 @@ class TestExpectationParser(object):
     WONTFIX_MODIFIER = 'wontfix'
 
     TIMEOUT_EXPECTATION = 'timeout'
+
+    MISSING_BUG_WARNING = 'Test lacks BUG modifier.'
 
     def __init__(self, port, full_test_list, allow_rebaseline_modifier):
         self._port = port
@@ -156,8 +155,8 @@ class TestExpectationParser(object):
             else:
                 parsed_specifiers.add(modifier)
 
-        if not expectation_line.parsed_bug_modifiers and not has_wontfix and not has_bugid:
-            expectation_line.warnings.append('Test lacks BUG modifier.')
+        if not expectation_line.parsed_bug_modifiers and not has_wontfix and not has_bugid and self._port.warn_if_bug_missing_in_test_expectations():
+            expectation_line.warnings.append(self.MISSING_BUG_WARNING)
 
         if self._allow_rebaseline_modifier and self.REBASELINE_MODIFIER in modifiers:
             expectation_line.warnings.append('REBASELINE should only be used for running rebaseline.py. Cannot be checked in.')
@@ -209,56 +208,6 @@ class TestExpectationParser(object):
         if expectation_line.path in self._full_test_list:
             expectation_line.matching_tests.append(expectation_line.path)
 
-    # FIXME: Seems like these should be classmethods on TestExpectationLine instead of TestExpectationParser.
-    @classmethod
-    def _tokenize_line(cls, filename, expectation_string, line_number):
-        expectation_line = cls._tokenize_line_using_new_format(filename, expectation_string, line_number)
-        if expectation_line.is_invalid():
-            old_expectation_line = cls._tokenize_line_using_old_format(filename, expectation_string, line_number)
-            if not old_expectation_line.is_invalid():
-                return old_expectation_line
-        return expectation_line
-
-    @classmethod
-    def _tokenize_line_using_old_format(cls, filename, expectation_string, line_number):
-        """Tokenizes a line from TestExpectations and returns an unparsed TestExpectationLine instance.
-
-        The format of a test expectation line is:
-
-        [[<modifiers>] : <name> = <expectations>][ //<comment>]
-
-        Any errant whitespace is not preserved.
-
-        """
-        expectation_line = TestExpectationLine()
-        expectation_line.original_string = expectation_string
-        expectation_line.line_number = line_number
-        expectation_line.filename = filename
-        comment_index = expectation_string.find("//")
-        if comment_index == -1:
-            comment_index = len(expectation_string)
-        else:
-            expectation_line.comment = expectation_string[comment_index + 2:]
-
-        remaining_string = re.sub(r"\s+", " ", expectation_string[:comment_index].strip())
-        if len(remaining_string) == 0:
-            return expectation_line
-
-        parts = remaining_string.split(':')
-        if len(parts) != 2:
-            expectation_line.warnings.append("Missing a ':'" if len(parts) < 2 else "Extraneous ':'")
-        else:
-            test_and_expectation = parts[1].split('=')
-            if len(test_and_expectation) != 2:
-                expectation_line.warnings.append("Missing expectations" if len(test_and_expectation) < 2 else "Extraneous '='")
-
-        if not expectation_line.is_invalid():
-            expectation_line.modifiers = cls._split_space_separated(parts[0])
-            expectation_line.name = test_and_expectation[0].strip()
-            expectation_line.expectations = cls._split_space_separated(test_and_expectation[1])
-
-        return expectation_line
-
     # FIXME: Update the original modifiers and remove this once the old syntax is gone.
     _configuration_tokens_list = [
         'Mac', 'SnowLeopard', 'Lion', 'MountainLion',
@@ -286,10 +235,12 @@ class TestExpectationParser(object):
         'WontFix': 'WONTFIX',
     }
 
-    _inverted_expectation_tokens = dict((value, name) for name, value in _expectation_tokens.iteritems())
+    _inverted_expectation_tokens = dict([(value, name) for name, value in _expectation_tokens.iteritems()] +
+                                        [('TEXT', 'Failure'), ('IMAGE+TEXT', 'Failure'), ('AUDIO', 'Failure')])
 
+    # FIXME: Seems like these should be classmethods on TestExpectationLine instead of TestExpectationParser.
     @classmethod
-    def _tokenize_line_using_new_format(cls, filename, expectation_string, line_number):
+    def _tokenize_line(cls, filename, expectation_string, line_number):
         """Tokenizes a line from TestExpectations and returns an unparsed TestExpectationLine instance using the old format.
 
         The new format for a test expectation line is:
@@ -394,7 +345,13 @@ class TestExpectationParser(object):
             elif state not in ('name_found', 'done'):
                 warnings.append('Missing a "]"')
 
-        if not expectations:
+        if 'WONTFIX' in modifiers and 'SKIP' not in modifiers:
+            modifiers.append('SKIP')
+
+        if 'SKIP' in modifiers and expectations:
+            # FIXME: This is really a semantic warning and shouldn't be here. Remove when we drop the old syntax.
+            warnings.append('A test marked Skip or WontFix must not have other expectations.')
+        elif not expectations:
             if 'SKIP' not in modifiers and 'REBASELINE' not in modifiers and 'SLOW' not in modifiers:
                 modifiers.append('SKIP')
             expectations = ['PASS']
@@ -433,7 +390,7 @@ class TestExpectationLine(object):
         self.warnings = []
 
     def is_invalid(self):
-        return len(self.warnings) > 0
+        return self.warnings and self.warnings != [TestExpectationParser.MISSING_BUG_WARNING]
 
     def is_flaky(self):
         return len(self.parsed_expectations) > 1
@@ -791,8 +748,11 @@ class TestExpectations(object):
 
     # FIXME: Update to new syntax once the old format is no longer supported.
     EXPECTATIONS = {'pass': PASS,
+                    'audio': AUDIO,
                     'fail': FAIL,
                     'image': IMAGE,
+                    'image+text': IMAGE_PLUS_TEXT,
+                    'text': TEXT,
                     'timeout': TIMEOUT,
                     'crash': CRASH,
                     'missing': MISSING}
@@ -802,6 +762,9 @@ class TestExpectations(object):
                                 PASS: ('passes', 'passed', ''),
                                 FAIL: ('failures', 'failed', ''),
                                 IMAGE: ('image-only failures', 'failed', ' (image diff)'),
+                                TEXT: ('text-only failures', 'failed', ' (text diff)'),
+                                IMAGE_PLUS_TEXT: ('image and text failures', 'failed', ' (image and text diff)'),
+                                AUDIO: ('audio failures', 'failed', ' (audio diff)'),
                                 CRASH: ('crashes', 'crashed', ''),
                                 TIMEOUT: ('timeouts', 'timed out', ''),
                                 MISSING: ('no expected results found', 'no expected result found', '')}
@@ -838,6 +801,8 @@ class TestExpectations(object):
             test_needs_rebaselining: whether test was marked as REBASELINE
             test_is_skipped: whether test was marked as SKIP"""
         if result in expected_results:
+            return True
+        if result in (TEXT, IMAGE_PLUS_TEXT, AUDIO) and (FAIL in expected_results):
             return True
         if result == MISSING and test_needs_rebaselining:
             return True
@@ -1005,7 +970,7 @@ class TestExpectations(object):
                          expectation.name in except_these_tests and
                          'rebaseline' in expectation.parsed_modifiers))
 
-        return self.list_to_string(filter(without_rebaseline_modifier, self._expectations))
+        return self.list_to_string(filter(without_rebaseline_modifier, self._expectations), reconstitute_only_these=[])
 
     def _add_expectations(self, expectation_list):
         for expectation_line in expectation_list:

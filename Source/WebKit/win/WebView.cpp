@@ -2691,6 +2691,9 @@ HRESULT STDMETHODCALLTYPE WebView::initWithFrame(
     m_page = new Page(pageClients);
     provideGeolocationTo(m_page, new WebGeolocationClient(this));
 
+    unsigned layoutMilestones = DidFirstLayout | DidFirstVisuallyNonEmptyLayout;
+    m_page->addLayoutMilestones(static_cast<LayoutMilestones>(layoutMilestones));
+
     BString localStoragePath;
     if (SUCCEEDED(m_preferences->localStorageDatabasePath(&localStoragePath)))
         m_page->settings()->setLocalStorageDatabasePath(toString(localStoragePath));
@@ -6485,7 +6488,7 @@ void WebView::setAcceleratedCompositing(bool accelerated)
             // FIXME: We could perhaps get better performance by never allowing this layer to
             // become tiled (or choosing a higher-than-normal tiling threshold).
             // <http://webkit.org/b/52603>
-            m_backingLayer = GraphicsLayer::create(this);
+            m_backingLayer = GraphicsLayer::create(0, this);
             m_backingLayer->setDrawsContent(true);
             m_backingLayer->setContentsOpaque(true);
             RECT clientRect;

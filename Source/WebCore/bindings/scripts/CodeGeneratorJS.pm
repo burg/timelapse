@@ -391,7 +391,7 @@ sub GenerateGetOwnPropertySlotBody
 
     my @getOwnPropertySlotImpl = ();
 
-    if ($interfaceName eq "NamedNodeMap" or $interfaceName eq "HTMLCollection" or $interfaceName eq "HTMLAllCollection") {
+    if ($interfaceName eq "NamedNodeMap" or $interfaceName eq "HTMLCollection" or $interfaceName eq "HTMLAllCollection" or $interfaceName eq "HTMLPropertiesCollection") {
         push(@getOwnPropertySlotImpl, "    ${namespaceMaybe}JSValue proto = thisObject->prototype();\n");
         push(@getOwnPropertySlotImpl, "    if (proto.isObject() && jsCast<${namespaceMaybe}JSObject*>(asObject(proto))->hasProperty(exec, propertyName))\n");
         push(@getOwnPropertySlotImpl, "        return false;\n\n");
@@ -483,7 +483,7 @@ sub GenerateGetOwnPropertyDescriptorBody
         push(@implContent, "        return false;\n");
     }
     
-    if ($interfaceName eq "NamedNodeMap" or $interfaceName eq "HTMLCollection" or $interfaceName eq "HTMLAllCollection") {
+    if ($interfaceName eq "NamedNodeMap" or $interfaceName eq "HTMLCollection" or $interfaceName eq "HTMLAllCollection" or $interfaceName eq "HTMLPropertiesCollection") {
         push(@getOwnPropertyDescriptorImpl, "    ${namespaceMaybe}JSValue proto = thisObject->prototype();\n");
         push(@getOwnPropertyDescriptorImpl, "    if (proto.isObject() && jsCast<${namespaceMaybe}JSObject*>(asObject(proto))->hasProperty(exec, propertyName))\n");
         push(@getOwnPropertyDescriptorImpl, "        return false;\n\n");
@@ -742,6 +742,7 @@ sub GenerateHeader
         push(@headerContent, "    {\n");
         push(@headerContent, "        $className* ptr = new (NotNull, JSC::allocateCell<$className>(globalData.heap)) ${className}(globalData, structure, impl, windowShell);\n");
         push(@headerContent, "        ptr->finishCreation(globalData, windowShell);\n");
+        push(@headerContent, "        globalData.heap.addFinalizer(ptr, destroy);\n");
         push(@headerContent, "        return ptr;\n");
         push(@headerContent, "    }\n\n");
     } elsif ($dataNode->extendedAttributes->{"IsWorkerContext"}) {
@@ -749,6 +750,7 @@ sub GenerateHeader
         push(@headerContent, "    {\n");
         push(@headerContent, "        $className* ptr = new (NotNull, JSC::allocateCell<$className>(globalData.heap)) ${className}(globalData, structure, impl);\n");
         push(@headerContent, "        ptr->finishCreation(globalData);\n");
+        push(@headerContent, "        globalData.heap.addFinalizer(ptr, destroy);\n");
         push(@headerContent, "        return ptr;\n");
         push(@headerContent, "    }\n\n");
     } elsif ($dataNode->extendedAttributes->{"MasqueradesAsUndefined"}) {
@@ -768,6 +770,10 @@ sub GenerateHeader
         push(@headerContent, "        ptr->finishCreation(globalObject->globalData());\n");
         push(@headerContent, "        return ptr;\n");
         push(@headerContent, "    }\n\n");
+    }
+
+    if ($interfaceName eq "DOMWindow" || $dataNode->extendedAttributes->{"IsWorkerContext"}) {
+        push(@headerContent, "    static const bool needsDestruction = false;\n\n");
     }
 
     # Prototype
@@ -1308,6 +1314,7 @@ sub GenerateFunctionParametersCheck
     my @orExpression = ();
     my $numParameters = 0;
     my @neededArguments = ();
+    my $hasVariadic = 0;
     my $numMandatoryParams = @{$function->parameters};
 
     foreach my $parameter (@{$function->parameters}) {
@@ -1317,11 +1324,17 @@ sub GenerateFunctionParametersCheck
             push(@neededArguments, @usedArguments);
             $numMandatoryParams--;
         }
+        if ($parameter->isVariadic) {
+            $hasVariadic = 1;
+            last;
+        }
         $numParameters++;
     }
-    my ($expression, @usedArguments) = GenerateParametersCheckExpression($numParameters, $function);
-    push(@orExpression, $expression);
-    push(@neededArguments, @usedArguments);
+    if (!$hasVariadic) {
+        my ($expression, @usedArguments) = GenerateParametersCheckExpression($numParameters, $function);
+        push(@orExpression, $expression);
+        push(@neededArguments, @usedArguments);
+    }
     return ($numMandatoryParams, join(" || ", @orExpression), @neededArguments);
 }
 
@@ -1868,20 +1881,38 @@ sub GenerateImplementation
                     }
 
                     if ($attribute->signature->extendedAttributes->{"Nondeterministic"}) {
+                        my @arguments = ();
+                        if (@{$attribute->getterExceptions}) {
+                            push(@arguments, "ec");
+                            push(@implContent, "    ExceptionCode ec = 0;\n");
+                        }
+                        
                         $implIncludes{"AutoMemoized.h"} = 1;
                         my $nativeType = GetNativeType($type);
                         my $memoizedType = GetNativeTypeForMemoization($type);
                         push(@implContent, "    if (log && log->isActive()) {\n");
                         push(@implContent, "        if (log->capturing()) {\n");
-                        push(@implContent, "            $nativeType memoizedResult = castedThis->impl()->$implGetterFunctionName();\n");
-                        push(@implContent, "            log->append(new AutoMemoized<$memoizedType>(\"$interfaceName.$name\", memoizedResult));\n");
-                        push(@implContent, "            return " . NativeToJSValue($attribute->signature, 0, $implClassName, "memoizedResult", "castedThis") . ";\n");
+                        push(@implContent, "            $nativeType memoizedResult = castedThis->impl()->$implGetterFunctionName(" . join(", ", @arguments) . ");\n");
+                        if (@{$attribute->getterExceptions}) {
+                            push(@implContent, "            log->append(new AutoMemoizedWithExceptionCode<$memoizedType>(\"$interfaceName.$name\", memoizedResult, ec));\n");
+                        } else {
+                            push(@implContent, "            log->append(new AutoMemoized<$memoizedType>(\"$interfaceName.$name\", memoizedResult));\n");
+                        }
+                        push(@implContent, "            JSC::JSValue result = " . NativeToJSValue($attribute->signature, 0, $implClassName, "memoizedResult", "castedThis") . ";\n");
+                        push(@implContent, "            setDOMException(exec, ec);\n") if @{$attribute->getterExceptions};
+                        push(@implContent, "            return result;\n");
                         push(@implContent, "        } else {\n");
                         push(@implContent, "            ASSERT(log->replaying());\n");
-                        push(@implContent, "            AutoMemoized<$memoizedType>* action = static_cast<AutoMemoized<$memoizedType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+                        if (@{$attribute->getterExceptions}) {
+                            push(@implContent, "            AutoMemoizedWithExceptionCode<$memoizedType>* action = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+                        } else {
+                            push(@implContent, "            AutoMemoized<$memoizedType>* action = static_cast<AutoMemoized<$memoizedType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+                        }
                         push(@implContent, "            if (action) {\n");
                         push(@implContent, "                ASSERT(action->attributeName() == \"$interfaceName.$name\");\n");
-                        push(@implContent, "                return " . NativeToJSValue($attribute->signature, 0, $implClassName, "action->result()", "castedThis") . ";\n");
+                        push(@implContent, "                JSC::JSValue result = " . NativeToJSValue($attribute->signature, 0, $implClassName, "action->result()", "castedThis") . ";\n");
+                        push(@implContent, "                setDOMException(exec, action->exceptionCode());\n") if @{$attribute->getterExceptions};
+                        push(@implContent, "                return result;\n");
                         push(@implContent, "            }\n");
                         # if !action, there was an error, so obtain result normally
                         push(@implContent, "        }\n");
@@ -1975,7 +2006,7 @@ sub GenerateImplementation
 
                 } else {
                     my @arguments = ("ec");
-                    push(@implContent, "    ExceptionCode ec = 0;\n");
+                    push(@implContent, "    ExceptionCode ec = 0;\n") if !$attribute->signature->extendedAttributes->{"Nondeterministic"};
 
                     unshift(@arguments, GenerateCallWith($attribute->signature->extendedAttributes->{"CallWith"}, \@implContent, "jsUndefined()"));
 
@@ -2636,7 +2667,7 @@ sub GenerateCallWith
         push(@callWithArgs, "scriptArguments");
     }
     if ($codeGenerator->ExtendedAttributeContains($callWith, "CallStack")) {
-        push(@$outputArray, "    RefPtr<ScriptCallStack> callStack(createScriptCallStackForInspector(exec));\n");
+        push(@$outputArray, "    RefPtr<ScriptCallStack> callStack(createScriptCallStackForConsole(exec));\n");
         $implIncludes{"ScriptCallStack.h"} = 1;
         $implIncludes{"ScriptCallStackFactory.h"} = 1;
         push(@callWithArgs, "callStack");
@@ -2652,7 +2683,7 @@ sub GenerateArgumentsCountCheck
 
     my $numMandatoryParams = @{$function->parameters};
     foreach my $param (reverse(@{$function->parameters})) {
-        if ($param->extendedAttributes->{"Optional"}) {
+        if ($param->extendedAttributes->{"Optional"} or $param->isVariadic) {
             $numMandatoryParams--;
         } else {
             last;
@@ -2755,13 +2786,38 @@ sub GenerateParametersCheck
                 push(@$outputArray, "    RefPtr<$argType> $name = ${callbackClassName}::create(asObject(exec->argument($argsIndex)), castedThis->globalObject());\n");
             }
         } elsif ($parameter->extendedAttributes->{"Clamp"}) {
-                my $nativeValue = "${name}NativeValue";
-                push(@$outputArray, "    $argType $name = 0;\n");
-                push(@$outputArray, "    double $nativeValue = exec->argument($argsIndex).toNumber(exec);\n");
+            my $nativeValue = "${name}NativeValue";
+            push(@$outputArray, "    $argType $name = 0;\n");
+            push(@$outputArray, "    double $nativeValue = exec->argument($argsIndex).toNumber(exec);\n");
+            push(@$outputArray, "    if (exec->hadException())\n");
+            push(@$outputArray, "        return JSValue::encode(jsUndefined());\n\n");
+            push(@$outputArray, "    if (!isnan($nativeValue))\n");
+            push(@$outputArray, "        $name = clampTo<$argType>($nativeValue);\n\n");
+        } elsif ($parameter->isVariadic) {
+            my $nativeElementType;
+            if ($argType eq "DOMString") {
+                $nativeElementType = "String";
+            } else {
+                $nativeElementType = GetNativeType($argType);
+                if ($nativeElementType =~ />$/) {
+                    $nativeElementType .= " ";
+                }
+            }
+
+            if (!IsNativeType($argType)) {
+                push(@$outputArray, "    Vector<$nativeElementType> $name;\n");
+                push(@$outputArray, "    for (unsigned i = $argsIndex; i < exec->argumentCount(); ++i) {\n");
+                push(@$outputArray, "        if (!exec->argument(i).inherits(&JS${argType}::s_info))\n");
+                push(@$outputArray, "            return throwVMTypeError(exec);\n");
+                push(@$outputArray, "        $name.append(to$argType(exec->argument(i)));\n");
+                push(@$outputArray, "    }\n")
+            } else {
+                push(@$outputArray, "    Vector<$nativeElementType> $name = toNativeArguments<$nativeElementType>(exec, $argsIndex);\n");
+                # Check if the type conversion succeeded.
                 push(@$outputArray, "    if (exec->hadException())\n");
-                push(@$outputArray, "        return JSValue::encode(jsUndefined());\n\n");
-                push(@$outputArray, "    if (!isnan($nativeValue))\n");
-                push(@$outputArray, "        $name = clampTo<$argType>($nativeValue);\n\n");
+                push(@$outputArray, "        return JSValue::encode(jsUndefined());\n");
+            }
+
         } else {
             # If the "StrictTypeChecking" extended attribute is present, and the argument's type is an
             # interface type, then if the incoming value does not implement that interface, a TypeError

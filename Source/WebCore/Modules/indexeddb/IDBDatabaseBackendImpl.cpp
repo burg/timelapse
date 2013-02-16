@@ -119,9 +119,9 @@ private:
     RefPtr<IDBDatabaseCallbacks> m_databaseCallbacks;
 };
 
-PassRefPtr<IDBDatabaseBackendImpl> IDBDatabaseBackendImpl::create(const String& name, IDBBackingStore* database, IDBTransactionCoordinator* coordinator, IDBFactoryBackendImpl* factory, const String& uniqueIdentifier)
+PassRefPtr<IDBDatabaseBackendImpl> IDBDatabaseBackendImpl::create(const String& name, IDBBackingStore* database, IDBFactoryBackendImpl* factory, const String& uniqueIdentifier)
 {
-    RefPtr<IDBDatabaseBackendImpl> backend = adoptRef(new IDBDatabaseBackendImpl(name, database, coordinator, factory, uniqueIdentifier));
+    RefPtr<IDBDatabaseBackendImpl> backend = adoptRef(new IDBDatabaseBackendImpl(name, database, factory, uniqueIdentifier));
     if (!backend->openInternal())
         return 0;
     return backend.release();
@@ -131,7 +131,7 @@ namespace {
 const char* NoStringVersion = "";
 }
 
-IDBDatabaseBackendImpl::IDBDatabaseBackendImpl(const String& name, IDBBackingStore* backingStore, IDBTransactionCoordinator* coordinator, IDBFactoryBackendImpl* factory, const String& uniqueIdentifier)
+IDBDatabaseBackendImpl::IDBDatabaseBackendImpl(const String& name, IDBBackingStore* backingStore, IDBFactoryBackendImpl* factory, const String& uniqueIdentifier)
     : m_backingStore(backingStore)
     , m_id(InvalidId)
     , m_name(name)
@@ -139,7 +139,8 @@ IDBDatabaseBackendImpl::IDBDatabaseBackendImpl(const String& name, IDBBackingSto
     , m_intVersion(IDBDatabaseMetadata::NoIntVersion)
     , m_identifier(uniqueIdentifier)
     , m_factory(factory)
-    , m_transactionCoordinator(coordinator)
+    , m_transactionCoordinator(IDBTransactionCoordinator::create())
+    , m_closingConnection(false)
 {
     ASSERT(!m_name.isNull());
 }
@@ -573,9 +574,17 @@ void IDBDatabaseBackendImpl::close(PassRefPtr<IDBDatabaseCallbacks> prpCallbacks
     if (connectionCount() > 1)
         return;
 
+    // processPendingCalls allows the inspector to process a pending open call
+    // and call close, reentering IDBDatabaseBackendImpl::close. Then the
+    // backend would be removed both by the inspector closing its connection, and
+    // by the connection that first called close.
+    // To avoid that situation, don't proceed in case of reentrancy.
+    if (m_closingConnection)
+        return;
+    m_closingConnection = true;
     processPendingCalls();
 
-    // FIXME: Add a test for the m_pendingOpenCalls·and m_pendingOpenWithVersionCalls cases below.
+    // FIXME: Add a test for the m_pendingOpenCalls and m_pendingOpenWithVersionCalls cases below.
     if (!connectionCount() && !m_pendingOpenCalls.size() && !m_pendingOpenWithVersionCalls.size() && !m_pendingDeleteCalls.size()) {
         TransactionSet transactions(m_transactions);
         for (TransactionSet::const_iterator it = transactions.begin(); it != transactions.end(); ++it)
@@ -588,6 +597,7 @@ void IDBDatabaseBackendImpl::close(PassRefPtr<IDBDatabaseCallbacks> prpCallbacks
         if (m_factory)
             m_factory->removeIDBDatabaseBackend(m_identifier);
     }
+    m_closingConnection = false;
 }
 
 void IDBDatabaseBackendImpl::loadObjectStores()

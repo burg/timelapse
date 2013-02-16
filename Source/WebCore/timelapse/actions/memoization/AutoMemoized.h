@@ -41,8 +41,8 @@
 
 namespace JSC {
 
-
-template<typename T> class AutoMemoized : public ReplayableAction {
+template<typename T>
+class AutoMemoized : public ReplayableAction {
 
 public:
     AutoMemoized(const String& attribute, T result)
@@ -64,6 +64,23 @@ public:
 private:
     String m_attribute;
     T m_result;
+};
+
+typedef int ExceptionCode;
+
+template<typename T>
+class AutoMemoizedWithExceptionCode : public AutoMemoized<T> {
+
+public:
+    AutoMemoizedWithExceptionCode(const String& attribute, T result, ExceptionCode ec)
+        : AutoMemoized<T>(attribute, result)
+        , m_exceptionCode(ec) {}
+    virtual ~AutoMemoizedWithExceptionCode() {}
+
+    ExceptionCode exceptionCode() const { return m_exceptionCode; }
+
+private:
+    ExceptionCode m_exceptionCode;
 };
 
 template<typename T> inline String AutoMemoized<T>::toString() const

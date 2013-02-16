@@ -30,7 +30,6 @@
 #include "InspectorInstrumentation.h"
 #include "ScheduledAction.h"
 #include "ScriptExecutionContext.h"
-#include "UserGestureIndicator.h"
 #include <wtf/HashSet.h>
 #include <wtf/StdLibExtras.h>
 
@@ -76,8 +75,8 @@ DOMTimer::DOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> 
     , m_nestingLevel(timerNestingLevel + 1)
     , m_action(action)
     , m_originalInterval(interval)
-    , m_shouldForwardUserGesture(shouldForwardUserGesture(interval, m_nestingLevel))
 {
+
 #if ENABLE(TIMELAPSE)
     m_shouldScheduleNormally = true;
     if (scriptExecutionContext()->isDocument()) {
@@ -101,7 +100,9 @@ DOMTimer::DOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> 
         }
     }
 #endif
-    
+
+    if (shouldForwardUserGesture(interval, m_nestingLevel))
+        m_userGestureToken = UserGestureIndicator::currentToken();
     scriptExecutionContext()->addTimeout(m_timeoutId, this);
 
     double intervalMilliseconds = intervalClampedToMinimum(interval, context->minimumTimerInterval());
@@ -153,10 +154,8 @@ void DOMTimer::fired()
     ScriptExecutionContext* context = scriptExecutionContext();
     timerNestingLevel = m_nestingLevel;
     ASSERT(!context->activeDOMObjectsAreSuspended());
-    UserGestureIndicator gestureIndicator(m_shouldForwardUserGesture ? DefinitelyProcessingUserGesture : PossiblyProcessingUserGesture);
-    
     // Only the first execution of a multi-shot timer should get an affirmative user gesture indicator.
-    m_shouldForwardUserGesture = false;
+    UserGestureIndicator gestureIndicator(m_userGestureToken.release());
 
     InspectorInstrumentationCookie cookie = InspectorInstrumentation::willFireTimer(context, m_timeoutId);
 

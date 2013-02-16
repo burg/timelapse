@@ -27,7 +27,6 @@ webcore_cppflags += \
 	-I$(srcdir)/Source/WebCore/bindings/js \
 	-I$(srcdir)/Source/WebCore/bridge \
 	-I$(srcdir)/Source/WebCore/bridge/c \
-	-I$(srcdir)/Source/WebCore/bridge/jni/jsc \
 	-I$(srcdir)/Source/WebCore/bridge/jsc \
 	-I$(srcdir)/Source/WebCore/css \
 	-I$(srcdir)/Source/WebCore/dom \
@@ -348,8 +347,11 @@ endif  # END ENABLE_SPELLCHECK
 # ---
 if !ENABLE_UNSTABLE_FEATURES
 feature_defines_unstable += \
-	ENABLE_MUTATION_OBSERVERS=0 \
+	ENABLE_CSS3_TEXT_DECORATION=0 \
+	ENABLE_CSS_STICKY_POSITION=0 \
 	ENABLE_LINK_PREFETCH=0 \
+	ENABLE_MUTATION_OBSERVERS=0 \
+	ENABLE_STYLE_SCOPED=0 \
 	ENABLE_VIDEO_TRACK=0 \
 	ENABLE_WEB_TIMING=0
 endif
@@ -694,6 +696,7 @@ libWebCoreGtk_la_CPPFLAGS = \
 	$(SQLITE3_CFLAGS) \
 	$(UNICODE_CFLAGS) \
 	$(XCOMPOSITE_CFLAGS) \
+	$(XDAMAGE_CFLAGS) \
 	$(XRENDER_CFLAGS) \
 	$(XT_CFLAGS)
 

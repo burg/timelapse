@@ -307,7 +307,9 @@ private:
     bool m_alwaysUsesComplexTextCodePath;
     bool m_shouldUseFontSmoothing;
 
-    Vector<pair<String, RefPtr<APIObject> > > m_pendingMessagesToPostToInjectedBundle;
+    // Messages that were posted before any pages were created.
+    // The client should use initialization messages instead, so that a restarted process would get the same state.
+    Vector<pair<String, RefPtr<APIObject> > > m_messagesToInjectedBundlePostedToEmptyContext;
 
     CacheModel m_cacheModel;
 
@@ -372,7 +374,9 @@ template<typename U> inline void WebContext::sendToAllProcesses(const U& message
 
 template<typename U> void WebContext::sendToAllProcessesRelaunchingThemIfNecessary(const U& message)
 {
-    relaunchProcessIfNecessary();
+// FIXME (Multi-WebProcess): WebContext doesn't track processes that have exited, so it cannot relaunch these. Perhaps this functionality won't be needed in this mode.
+    if (m_processModel == ProcessModelSharedSecondaryProcess)
+        relaunchProcessIfNecessary();
     sendToAllProcesses(message);
 }
 

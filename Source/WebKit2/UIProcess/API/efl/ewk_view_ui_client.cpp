@@ -60,6 +60,42 @@ static WKStringRef runJavaScriptPrompt(WKPageRef, WKStringRef message, WKStringR
     return value ? WKStringCreateWithUTF8CString(value) : 0;
 }
 
+#if ENABLE(INPUT_TYPE_COLOR)
+static void showColorPicker(WKPageRef, WKStringRef initialColor, WKColorPickerResultListenerRef listener, const void* clientInfo)
+{
+    WebCore::Color color = WebCore::Color(WebKit::toWTFString(initialColor));
+    ewk_view_color_picker_request(toEwkView(clientInfo), color.red(), color.green(), color.blue(), color.alpha(), listener);
+}
+
+static void hideColorPicker(WKPageRef, const void* clientInfo)
+{
+    ewk_view_color_picker_dismiss(toEwkView(clientInfo));
+}
+#endif
+
+#if ENABLE(SQL_DATABASE)
+static unsigned long long exceededDatabaseQuota(WKPageRef, WKFrameRef, WKSecurityOriginRef, WKStringRef databaseName, WKStringRef displayName, unsigned long long currentQuota, unsigned long long currentOriginUsage, unsigned long long currentDatabaseUsage, unsigned long long expectedUsage, const void* clientInfo)
+{
+    return ewk_view_database_quota_exceeded(toEwkView(clientInfo), WKEinaSharedString(databaseName), WKEinaSharedString(displayName), currentQuota, currentOriginUsage, currentDatabaseUsage, expectedUsage);
+}
+#endif
+
+static void focus(WKPageRef, const void* clientInfo)
+{
+    evas_object_focus_set(toEwkView(clientInfo), true);
+}
+
+static void unfocus(WKPageRef, const void* clientInfo)
+{
+    evas_object_focus_set(toEwkView(clientInfo), false);
+}
+
+static void takeFocus(WKPageRef, WKFocusDirection, const void* clientInfo)
+{
+    // FIXME: this is only a partial implementation.
+    evas_object_focus_set(toEwkView(clientInfo), false);
+}
+
 void ewk_view_ui_client_attach(WKPageRef pageRef, Evas_Object* ewkView)
 {
     WKPageUIClient uiClient;
@@ -71,5 +107,17 @@ void ewk_view_ui_client_attach(WKPageRef pageRef, Evas_Object* ewkView)
     uiClient.runJavaScriptAlert = runJavaScriptAlert;
     uiClient.runJavaScriptConfirm = runJavaScriptConfirm;
     uiClient.runJavaScriptPrompt = runJavaScriptPrompt;
+    uiClient.takeFocus = takeFocus;
+    uiClient.focus = focus;
+    uiClient.unfocus = unfocus;
+#if ENABLE(SQL_DATABASE)
+    uiClient.exceededDatabaseQuota = exceededDatabaseQuota;
+#endif
+
+#if ENABLE(INPUT_TYPE_COLOR)
+    uiClient.showColorPicker = showColorPicker;
+    uiClient.hideColorPicker = hideColorPicker;
+#endif
+
     WKPageSetPageUIClient(pageRef, &uiClient);
 }

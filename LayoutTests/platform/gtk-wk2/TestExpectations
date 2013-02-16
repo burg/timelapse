@@ -37,8 +37,8 @@
 # Tests that require new results.
 #////////////////////////////////////////////////////////////////////////////////////////
 
-Bug(GTK) fast/regions/autoheight-regions-mark.html [ Failure Skip ]
-Bug(GTK) http/tests/security/resources/drag-drop-allowed.html [ Failure Skip ]
+Bug(GTK) fast/regions/autoheight-regions-mark.html [ Skip ]
+Bug(GTK) http/tests/security/resources/drag-drop-allowed.html [ Skip ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # End of Tests that require new results.
@@ -171,10 +171,6 @@ Bug(GTK) editing/undo/undo-after-setting-value.html [ Failure ]
 Bug(GTK) editing/undo/undo-indent.html [ Failure ]
 Bug(GTK) editing/undo/undo-misspellings.html [ Failure ]
 Bug(GTK) fast/forms/plaintext-mode-1.html [ Failure ]
-
-# Implement layoutTestController.setPopupBlockingEnabled and
-# eventSender.scheduleAsynchronousClick support
-Bug(GTK) fast/events/popup-blocking-click-in-iframe.html [ Failure ]
 
 # accessibility tests failing due to missing WKTR features
 Bug(GTK) accessibility/aria-describedby-on-input.html [ Failure ]
@@ -429,6 +425,11 @@ webkit.org/b/39160 security/block-test-no-port.html [ Failure ]
 # https://bugs.webkit.org/show_bug.cgi?id=64135
 webkit.org/b/64135 fast/dom/frame-loading-via-document-write.html [ Failure ]
 
+webkit.org/b/97655 fast/css/style-scoped [ Failure ]
+webkit.org/b/97655 fast/regions/style-scoped-in-flow-override-container-style.html [ ImageOnlyFailure ]
+webkit.org/b/97655 fast/regions/style-scoped-in-flow-override-region-styling.html [ ImageOnlyFailure ]
+webkit.org/b/97655 fast/regions/style-scoped-in-flow.html [ ImageOnlyFailure ]
+
 # Unexplained failures
 Bug(GTK) accessibility/accessibility-node-memory-management.html [ Failure ]
 Bug(GTK) accessibility/accessibility-node-reparent.html [ Failure ]
@@ -480,8 +481,6 @@ Bug(GTK) fast/forms/select-type-ahead-non-latin.html [ Failure ]
 Bug(GTK) fast/loader/submit-form-while-parsing-2.html [ Failure ]
 Bug(GTK) fast/media/mq-transform-02.html [ Failure ]
 Bug(GTK) fast/media/mq-transform-03.html [ Failure ]
-Bug(GTK) fast/regions/css-regions-disabled.html [ Failure ]
-Bug(GTK) fast/regions/css-regions-disabled.html [ Failure ]
 Bug(GTK) fast/repaint/fixed-move-after-keyboard-scroll.html [ Failure ]
 Bug(GTK) fast/ruby/nested-ruby.html [ Failure ]
 Bug(GTK) fast/ruby/ruby-beforeafter.html [ Failure ]

@@ -61,7 +61,6 @@ const char* PlaybackError = "PlaybackError";
 const char* RanPendingScripts = "RanPendingScripts";
 const char* ScrollPage = "ScrollPage";
 const char* SendResizeEvent = "SendResizeEvent";
-const char* SetCookieSeed = "SetCookieSeed";
 const char* TimerCreated = "TimerCreated";
 const char* TimerFired = "TimerFired";
 } // namespace ReplayableTypes

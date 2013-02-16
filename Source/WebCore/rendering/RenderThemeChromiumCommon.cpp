@@ -39,6 +39,10 @@ bool RenderThemeChromiumCommon::supportsDataListUI(const AtomicString& type)
 #if ENABLE(INPUT_TYPE_COLOR)
         || type == InputTypeNames::color()
 #endif
+#if ENABLE(CALENDAR_PICKER)
+        || type == InputTypeNames::date()
+#endif
+        || type == InputTypeNames::time()
         || type == InputTypeNames::range();
 }
 
