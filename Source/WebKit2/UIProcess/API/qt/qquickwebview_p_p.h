@@ -21,11 +21,12 @@
 #ifndef qquickwebview_p_p_h
 #define qquickwebview_p_p_h
 
+#include "DefaultUndoController.h"
 #include "PageViewportController.h"
 #include "PageViewportControllerClient.h"
 #include "QtPageClient.h"
 #include "QtWebPageUIClient.h"
-#include "QtWebUndoController.h"
+
 #include "qquickwebview_p.h"
 #include "qquickwebpage_p.h"
 #include <QtCore/QElapsedTimer>
@@ -79,6 +80,7 @@ public:
     virtual void loadProgressDidChange(int loadProgress);
     virtual void backForwardListDidChange();
     virtual void loadDidSucceed();
+    virtual void loadDidStop();
     virtual void loadDidFail(const WebKit::QtWebError& error);
     virtual void handleMouseEvent(QMouseEvent*);
 
@@ -87,7 +89,7 @@ public:
     int loadProgress() const { return m_loadProgress; }
     void setNeedsDisplay();
 
-    WebKit::PageViewportControllerClientQt* pageViewportControllerClient() const { return m_pageViewportControllerClient.data(); }
+    WebKit::PageViewportController* viewportController() const { return m_pageViewportController.data(); }
     virtual void updateViewportSize() { }
     void updateTouchViewportSize();
 
@@ -159,7 +161,7 @@ protected:
     RefPtr<WebKit::WebPageProxy> webPageProxy;
 
     WebKit::QtPageClient pageClient;
-    WebKit::QtWebUndoController undoController;
+    WebKit::DefaultUndoController undoController;
     OwnPtr<QWebNavigationHistory> navigationHistory;
     OwnPtr<QWebPreferences> preferences;
 

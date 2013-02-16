@@ -550,19 +550,8 @@ JSObject* PluginView::scriptObject(JSGlobalObject* globalObject)
     if (m_isWaitingForSynchronousInitialization)
         return 0;
 
-    // The plug-in can be null here if it failed to initialize previously.
-    if (!m_plugin)
-        return 0;
-
-    // If the plug-in exists but is not initialized then we're still initializing asynchronously.
-    // We need to wait here until initialization has either succeeded or failed.
-    if (m_plugin->isBeingAsynchronouslyInitialized()) {
-        m_isWaitingForSynchronousInitialization = true;
-        m_plugin->waitForAsynchronousInitialization();
-        m_isWaitingForSynchronousInitialization = false;
-    }
-
-    // The plug-in can be null here if it still failed to initialize.
+    // We might not have started initialization of the plug-in yet, the plug-in might be in the middle
+    // of being initializing asynchronously, or initialization might have previously failed.
     if (!m_isInitialized || !m_plugin)
         return 0;
 
@@ -581,13 +570,21 @@ JSObject* PluginView::scriptObject(JSGlobalObject* globalObject)
 #endif
 }
 
-void PluginView::privateBrowsingStateChanged(bool privateBrowsingEnabled)
+void PluginView::storageBlockingStateChanged()
 {
     // The plug-in can be null here if it failed to initialize.
     if (!m_isInitialized || !m_plugin)
         return;
 
-    if (!privateBrowsingEnabled && !frame()->document()->securityOrigin()->canAccessPluginStorage(frame()->tree()->top()->document()->securityOrigin()))
+    bool storageBlockingPolicy = !frame()->document()->securityOrigin()->canAccessPluginStorage(frame()->tree()->top()->document()->securityOrigin());
+
+    m_plugin->storageBlockingStateChanged(storageBlockingPolicy);
+}
+
+void PluginView::privateBrowsingStateChanged(bool privateBrowsingEnabled)
+{
+    // The plug-in can be null here if it failed to initialize.
+    if (!m_isInitialized || !m_plugin)
         return;
 
     m_plugin->privateBrowsingStateChanged(privateBrowsingEnabled);

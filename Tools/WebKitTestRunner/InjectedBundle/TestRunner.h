@@ -82,6 +82,8 @@ public:
     void dumpResourceLoadCallbacks() { m_dumpResourceLoadCallbacks = true; }
     void dumpResourceResponseMIMETypes() { m_dumpResourceResponseMIMETypes = true; }
     void dumpWillCacheResponse() { m_dumpWillCacheResponse = true; }
+    void dumpApplicationCacheDelegateCallbacks() { m_dumpApplicationCacheDelegateCallbacks = true; }
+    void dumpDatabaseCallbacks() { m_dumpDatabaseCallbacks = true; }
 
     void setShouldDumpFrameLoadCallbacks(bool value) { m_dumpFrameLoadCallbacks = value; }
     void setShouldDumpProgressFinishedCallback(bool value) { m_dumpProgressFinishedCallback = value; }
@@ -106,6 +108,9 @@ public:
     void removeOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains);
     void setUserStyleSheetEnabled(bool);
     void setUserStyleSheetLocation(JSStringRef);
+    void setMinimumTimerInterval(double seconds); // Interval specified in seconds.
+    void setSpatialNavigationEnabled(bool);
+    void setTabKeyCyclesThroughElements(bool);
 
     // Special DOM functions.
     JSValueRef computedStyleIncludingVisitedInfo(JSValueRef element);
@@ -143,7 +148,13 @@ public:
 
     // Application Cache
     void clearAllApplicationCaches();
+    void clearApplicationCacheForOrigin(JSStringRef origin);
     void setAppCacheMaximumSize(uint64_t);
+    long long applicationCacheDiskUsageForOrigin(JSStringRef origin);
+    void setApplicationCacheOriginQuota(unsigned long long);
+    void disallowIncreaseForApplicationCacheQuota();
+    bool shouldDisallowIncreaseForApplicationCacheQuota() { return m_disallowIncreaseForApplicationCacheQuota; }
+    JSValueRef originsWithApplicationCache();
 
     // Printing
     bool isPageBoxVisible(int pageIndex);
@@ -166,6 +177,8 @@ public:
     bool shouldDumpResourceLoadCallbacks() const { return m_dumpResourceLoadCallbacks; }
     bool shouldDumpResourceResponseMIMETypes() const { return m_dumpResourceResponseMIMETypes; }
     bool shouldDumpWillCacheResponse() const { return m_dumpWillCacheResponse; }
+    bool shouldDumpApplicationCacheDelegateCallbacks() const { return m_dumpApplicationCacheDelegateCallbacks; }
+    bool shouldDumpDatabaseCallbacks() const { return m_dumpDatabaseCallbacks; }
 
     bool isPolicyDelegateEnabled() const { return m_policyDelegateEnabled; }
     bool isPolicyDelegatePermissive() const { return m_policyDelegatePermissive; }
@@ -195,9 +208,14 @@ public:
     void setShouldStayOnPageAfterHandlingBeforeUnload(bool);
 
     void setDefersLoading(bool);
+
+    void setStopProvisionalFrameLoads() { m_shouldStopProvisionalFrameLoads = true; }
+    bool shouldStopProvisionalFrameLoads() const { return m_shouldStopProvisionalFrameLoads; }
     
     bool globalFlag() const { return m_globalFlag; }
     void setGlobalFlag(bool value) { m_globalFlag = value; }
+
+    unsigned workerThreadCount();
     
     void addChromeInputField(JSValueRef);
     void removeChromeInputField(JSValueRef);
@@ -235,6 +253,8 @@ public:
     void setPageVisibility(JSStringRef state);
     void resetPageVisibility();
 
+    bool callShouldCloseOnWebView();
+
 private:
     static const double waitToDumpWatchdogTimerInterval;
 
@@ -260,11 +280,15 @@ private:
     bool m_dumpResourceLoadCallbacks;
     bool m_dumpResourceResponseMIMETypes;
     bool m_dumpWillCacheResponse;
+    bool m_dumpApplicationCacheDelegateCallbacks;
+    bool m_dumpDatabaseCallbacks;
+    bool m_disallowIncreaseForApplicationCacheQuota;
     bool m_waitToDump; // True if waitUntilDone() has been called, but notifyDone() has not yet been called.
     bool m_testRepaint;
     bool m_testRepaintSweepHorizontally;
 
     bool m_willSendRequestReturnsNull;
+    bool m_shouldStopProvisionalFrameLoads;
 
     bool m_policyDelegateEnabled;
     bool m_policyDelegatePermissive;

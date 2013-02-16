@@ -372,10 +372,7 @@ void WebPluginContainerImpl::setBackingTextureId(unsigned textureId)
     ASSERT(!m_ioSurfaceLayer);
 
     if (!m_textureLayer) {
-        if (WebCompositorSupport* compositorSupport = Platform::current()->compositorSupport())
-            m_textureLayer = adoptPtr(compositorSupport->createExternalTextureLayer());
-        else
-            m_textureLayer = adoptPtr(WebExternalTextureLayer::create());
+        m_textureLayer = adoptPtr(Platform::current()->compositorSupport()->createExternalTextureLayer());
         GraphicsLayerChromium::registerContentsLayer(m_textureLayer->layer());
     }
     m_textureLayer->setTextureId(textureId);
@@ -401,10 +398,7 @@ void WebPluginContainerImpl::setBackingIOSurfaceId(int width,
     ASSERT(!m_textureLayer);
 
     if (!m_ioSurfaceLayer) {
-        if (WebCompositorSupport* compositorSupport = Platform::current()->compositorSupport())
-            m_ioSurfaceLayer = adoptPtr(compositorSupport->createIOSurfaceLayer());
-        else
-            m_ioSurfaceLayer = adoptPtr(WebIOSurfaceLayer::create());
+        m_ioSurfaceLayer = adoptPtr(Platform::current()->compositorSupport()->createIOSurfaceLayer());
         GraphicsLayerChromium::registerContentsLayer(m_ioSurfaceLayer->layer());
     }
     m_ioSurfaceLayer->setIOSurfaceProperties(ioSurfaceId, WebSize(width, height));
@@ -513,7 +507,7 @@ bool WebPluginContainerImpl::isRectTopmost(const WebRect& rect)
     LayoutPoint center = documentRect.center();
     // Make the rect we're checking (the point surrounded by padding rects) contained inside the requested rect. (Note that -1/2 is 0.)
     LayoutSize padding((documentRect.width() - 1) / 2, (documentRect.height() - 1) / 2);
-    HitTestResult result = frame->eventHandler()->hitTestResultAtPoint(center, HitTestRequest::ReadOnly | HitTestRequest::Active, padding);
+    HitTestResult result = frame->eventHandler()->hitTestResultAtPoint(center, false, false, DontHitTestScrollbars, HitTestRequest::ReadOnly | HitTestRequest::Active, padding);
     const HitTestResult::NodeSet& nodes = result.rectBasedTestResult();
     if (nodes.size() != 1)
         return false;

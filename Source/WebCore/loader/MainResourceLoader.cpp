@@ -559,7 +559,7 @@ void MainResourceLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) c
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
     ResourceLoader::reportMemoryUsage(memoryObjectInfo);
     info.addMember(m_initialRequest);
-    info.addInstrumentedMember(m_substituteData);
+    info.addMember(m_substituteData);
     info.addMember(m_dataLoadTimer);
 }
 

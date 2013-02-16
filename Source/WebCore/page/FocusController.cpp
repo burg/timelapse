@@ -709,7 +709,7 @@ void FocusController::setContainingWindowIsVisible(bool containingWindowIsVisibl
 
         for (HashSet<ScrollableArea*>::const_iterator it = scrollableAreas->begin(), end = scrollableAreas->end(); it != end; ++it) {
             ScrollableArea* scrollableArea = *it;
-            ASSERT(scrollableArea->isOnActivePage());
+            ASSERT(scrollableArea->scrollbarsCanBeActive() || m_page->shouldSuppressScrollbarAnimations());
 
             contentAreaDidShowOrHide(scrollableArea, containingWindowIsVisible);
         }
@@ -746,7 +746,7 @@ static void updateFocusCandidateIfNeeded(FocusDirection direction, const FocusCa
         // If 2 nodes are intersecting, do hit test to find which node in on top.
         LayoutUnit x = intersectionRect.x() + intersectionRect.width() / 2;
         LayoutUnit y = intersectionRect.y() + intersectionRect.height() / 2;
-        HitTestResult result = candidate.visibleNode->document()->page()->mainFrame()->eventHandler()->hitTestResultAtPoint(IntPoint(x, y), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping);
+        HitTestResult result = candidate.visibleNode->document()->page()->mainFrame()->eventHandler()->hitTestResultAtPoint(IntPoint(x, y), false, true);
         if (candidate.visibleNode->contains(result.innerNode())) {
             closest = candidate;
             return;

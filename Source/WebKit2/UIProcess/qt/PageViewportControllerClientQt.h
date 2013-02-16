@@ -31,11 +31,11 @@
 #include <QVariantAnimation>
 
 QT_BEGIN_NAMESPACE
-class QQuickWebPage;
-class QQuickWebView;
 class QRectF;
 QT_END_NAMESPACE
 
+class QQuickWebPage;
+class QQuickWebView;
 class QWebKitTest;
 
 namespace WebKit {
@@ -47,7 +47,7 @@ public:
     PageViewportControllerClientQt(QQuickWebView*, QQuickWebPage*);
     ~PageViewportControllerClientQt();
 
-    virtual void setContentsPosition(const FloatPoint& localPoint);
+    virtual void setContentsPosition(const WebCore::FloatPoint& localPoint);
     virtual void setContentsScale(float localScale, bool treatAsInitialValue);
 
     virtual void didResumeContent();
@@ -119,13 +119,6 @@ private:
     PageViewportController* m_controller;
     QQuickWebView* const m_viewportItem;
     QQuickWebPage* const m_pageItem;
-
-    bool allowsUserScaling() const;
-    qreal devicePixelRatio() const;
-    qreal minimumContentsScale() const;
-    qreal maximumContentsScale() const;
-    qreal currentContentsScale() const;
-    QSizeF contentsLayoutSize() const;
 
     float viewportScaleForRect(const QRectF&) const;
     QRectF visibleContentsRect() const;

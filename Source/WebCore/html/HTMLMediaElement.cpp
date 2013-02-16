@@ -3258,8 +3258,16 @@ void HTMLMediaElement::mediaPlayerDurationChanged(MediaPlayer* player)
     LOG(Media, "HTMLMediaElement::mediaPlayerDurationChanged");
 
     beginProcessingMediaPlayerCallback();
+
     scheduleEvent(eventNames().durationchangeEvent);
     mediaPlayerCharacteristicChanged(player);
+
+    float now = currentTime();
+    float dur = duration();
+    ExceptionCode ignoredException;
+    if (now > dur)
+        seek(dur, ignoredException);
+
     endProcessingMediaPlayerCallback();
 }
 
@@ -4467,6 +4475,11 @@ void HTMLMediaElement::mediaPlayerPlay()
 bool HTMLMediaElement::mediaPlayerIsPaused() const
 {
     return paused();
+}
+
+bool HTMLMediaElement::mediaPlayerIsLooping() const
+{
+    return loop();
 }
 
 HostWindow* HTMLMediaElement::mediaPlayerHostWindow()

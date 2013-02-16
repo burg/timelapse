@@ -319,15 +319,15 @@ PassRefPtr<WebProcessProxy> WebContext::createNewWebProcess()
 
     parameters.applicationCacheDirectory = applicationCacheDirectory();
     if (!parameters.applicationCacheDirectory.isEmpty())
-        SandboxExtension::createHandle(parameters.applicationCacheDirectory, SandboxExtension::ReadWrite, parameters.applicationCacheDirectoryExtensionHandle);
+        SandboxExtension::createHandleForReadWriteDirectory(parameters.applicationCacheDirectory, parameters.applicationCacheDirectoryExtensionHandle);
 
     parameters.databaseDirectory = databaseDirectory();
     if (!parameters.databaseDirectory.isEmpty())
-        SandboxExtension::createHandle(parameters.databaseDirectory, SandboxExtension::ReadWrite, parameters.databaseDirectoryExtensionHandle);
+        SandboxExtension::createHandleForReadWriteDirectory(parameters.databaseDirectory, parameters.databaseDirectoryExtensionHandle);
 
     parameters.localStorageDirectory = localStorageDirectory();
     if (!parameters.localStorageDirectory.isEmpty())
-        SandboxExtension::createHandle(parameters.localStorageDirectory, SandboxExtension::ReadWrite, parameters.localStorageDirectoryExtensionHandle);
+        SandboxExtension::createHandleForReadWriteDirectory(parameters.localStorageDirectory, parameters.localStorageDirectoryExtensionHandle);
 
     parameters.shouldTrackVisitedLinks = m_historyClient.shouldTrackVisitedLinks();
     parameters.cacheModel = m_cacheModel;
@@ -336,6 +336,10 @@ PassRefPtr<WebProcessProxy> WebContext::createNewWebProcess()
     copyToVector(m_schemesToRegisterAsEmptyDocument, parameters.urlSchemesRegistererdAsEmptyDocument);
     copyToVector(m_schemesToRegisterAsSecure, parameters.urlSchemesRegisteredAsSecure);
     copyToVector(m_schemesToSetDomainRelaxationForbiddenFor, parameters.urlSchemesForWhichDomainRelaxationIsForbidden);
+    copyToVector(m_schemesToRegisterAsLocal, parameters.urlSchemesRegisteredAsLocal);
+    copyToVector(m_schemesToRegisterAsNoAccess, parameters.urlSchemesRegisteredAsNoAccess);
+    copyToVector(m_schemesToRegisterAsDisplayIsolated, parameters.urlSchemesRegisteredAsDisplayIsolated);
+    copyToVector(m_schemesToRegisterAsCORSEnabled, parameters.urlSchemesRegisteredAsCORSEnabled);
 
     parameters.shouldAlwaysUseComplexTextCodePath = m_alwaysUsesComplexTextCodePath;
     parameters.shouldUseFontSmoothing = m_shouldUseFontSmoothing;
@@ -501,20 +505,21 @@ void WebContext::disconnectProcess(WebProcessProxy* process)
     m_processes.remove(m_processes.find(process));
 }
 
-PassRefPtr<WebPageProxy> WebContext::createWebPage(PageClient* pageClient, WebPageGroup* pageGroup)
+PassRefPtr<WebPageProxy> WebContext::createWebPage(PageClient* pageClient, WebPageGroup* pageGroup, WebPageProxy* relatedPage)
 {
     RefPtr<WebProcessProxy> process;
     if (m_processModel == ProcessModelSharedSecondaryProcess) {
         ensureSharedWebProcess();
         process = m_processes[0];
     } else {
-        // FIXME (Multi-WebProcess): Add logic for sharing a process.
-        // <rdar://problem/12218164> window.open() should create pages in the same process.
-        // <rdar://problem/12239661> Consider limiting the number of web processes in per-tab process model
         if (m_haveInitialEmptyProcess) {
             process = m_processes.last();
             m_haveInitialEmptyProcess = false;
+        } else if (relatedPage) {
+            // Sharing processes, e.g. when creating the page via window.open().
+            process = relatedPage->process();
         } else {
+            // FIXME (Multi-WebProcess): <rdar://problem/12239661> Consider limiting the number of web processes in per-tab process model.
             process = createNewWebProcess();
             m_processes.append(process);
         }
@@ -637,6 +642,30 @@ void WebContext::setDomainRelaxationForbiddenForURLScheme(const String& urlSchem
 {
     m_schemesToSetDomainRelaxationForbiddenFor.add(urlScheme);
     sendToAllProcesses(Messages::WebProcess::SetDomainRelaxationForbiddenForURLScheme(urlScheme));
+}
+
+void WebContext::registerURLSchemeAsLocal(const String& urlScheme)
+{
+    m_schemesToRegisterAsLocal.add(urlScheme);
+    sendToAllProcesses(Messages::WebProcess::RegisterURLSchemeAsLocal(urlScheme));
+}
+
+void WebContext::registerURLSchemeAsNoAccess(const String& urlScheme)
+{
+    m_schemesToRegisterAsNoAccess.add(urlScheme);
+    sendToAllProcesses(Messages::WebProcess::RegisterURLSchemeAsNoAccess(urlScheme));
+}
+
+void WebContext::registerURLSchemeAsDisplayIsolated(const String& urlScheme)
+{
+    m_schemesToRegisterAsDisplayIsolated.add(urlScheme);
+    sendToAllProcesses(Messages::WebProcess::RegisterURLSchemeAsDisplayIsolated(urlScheme));
+}
+
+void WebContext::registerURLSchemeAsCORSEnabled(const String& urlScheme)
+{
+    m_schemesToRegisterAsCORSEnabled.add(urlScheme);
+    sendToAllProcesses(Messages::WebProcess::RegisterURLSchemeAsCORSEnabled(urlScheme));
 }
 
 void WebContext::setCacheModel(CacheModel cacheModel)

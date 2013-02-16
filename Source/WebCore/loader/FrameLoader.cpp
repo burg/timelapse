@@ -124,6 +124,7 @@
 #include "Archive.h"
 #endif
 
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -3278,10 +3279,10 @@ NetworkingContext* FrameLoader::networkingContext() const
 void FrameLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
-    info.addInstrumentedMember(m_documentLoader);
-    info.addInstrumentedMember(m_provisionalDocumentLoader);
-    info.addInstrumentedMember(m_policyDocumentLoader);
-    info.addInstrumentedMember(m_outgoingReferrer);
+    info.addMember(m_documentLoader);
+    info.addMember(m_provisionalDocumentLoader);
+    info.addMember(m_policyDocumentLoader);
+    info.addMember(m_outgoingReferrer);
     info.addInstrumentedHashSet(m_openedFrames);
 }
 

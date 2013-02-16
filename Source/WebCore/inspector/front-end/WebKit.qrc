@@ -14,6 +14,7 @@
     <file>BreakpointManager.js</file>
     <file>BreakpointsSidebarPane.js</file>
     <file>CallStackSidebarPane.js</file>
+    <file>CanvasProfileView.js</file>
     <file>Checkbox.js</file>
     <file>CodeMirrorTextEditor.js</file>
     <file>Color.js</file>
@@ -31,6 +32,8 @@
     <file>CPUProfileView.js</file>
     <file>CSSCompletions.js</file>
     <file>CSSKeywordCompletions.js</file>
+    <file>CSSNamedFlowCollectionsView.js</file>
+    <file>CSSNamedFlowView.js</file>
     <file>CSSSelectorProfileView.js</file>
     <file>CSSStyleModel.js</file>
     <file>cm/codemirror.css</file>
@@ -211,13 +214,14 @@
     <file>utilities.js</file>
     <file>View.js</file>
     <file>WatchExpressionsSidebarPane.js</file>
-    <file>WebGLProfileView.js</file>
     <file>WorkerManager.js</file>
     <file>WorkersSidebarPane.js</file>
     <file>Workspace.js</file>
     <file>UglifyJS/parse-js.js</file>
     <file>auditsPanel.css</file>
     <file>breadcrumbList.css</file>
+    <file>canvasProfiler.css</file>
+    <file>cssNamedFlows.css</file>
     <file>dataGrid.css</file>
     <file>cmdevtools.css</file>
     <file>dialog.css</file>
@@ -247,7 +251,6 @@
     <file>timelinePanel.css</file>
     <file>timelapsePanel.css</file>
     <file>timelapseOverview.css</file>
-    <file>webGLProfiler.css</file>
     <file>Images/applicationCache.png</file>
     <file>Images/back.png</file>
     <file>Images/breakpointBorder.png</file>
@@ -293,6 +296,7 @@
     <file>Images/indexedDBIndex.png</file>
     <file>Images/localStorage.png</file>
     <file>Images/navigatorShowHideButton.png</file>
+    <file>Images/namedFlowOverflow.png</file>
     <file>Images/paneAddButtons.png</file>
     <file>Images/paneBottomGrow.png</file>
     <file>Images/paneBottomGrowActive.png</file>
@@ -309,6 +313,9 @@
     <file>Images/profilesSilhouette.png</file>
     <file>Images/programCounterBorder.png</file>
     <file>Images/radioDot.png</file>
+    <file>Images/regionEmpty.png</file>
+    <file>Images/regionFit.png</file>
+    <file>Images/regionOverset.png</file>
     <file>Images/resourceCSSIcon.png</file>
     <file>Images/resourceDocumentIcon.png</file>
     <file>Images/resourceDocumentIconSmall.png</file>

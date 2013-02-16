@@ -40,6 +40,7 @@ GtkIMContext* webkitWebViewBaseGetIMContext(WebKitWebViewBase*);
 WebPageProxy* webkitWebViewBaseGetPage(WebKitWebViewBase*);
 void webkitWebViewBaseCreateWebPage(WebKitWebViewBase*, WKContextRef, WKPageGroupRef);
 void webkitWebViewBaseSetTooltipText(WebKitWebViewBase*, const char*);
+void webkitWebViewBaseSetTooltipArea(WebKitWebViewBase*, const WebCore::IntRect&);
 void webkitWebViewBaseForwardNextKeyEvent(WebKitWebViewBase*);
 void webkitWebViewBaseStartDrag(WebKitWebViewBase*, const WebCore::DragData&, PassRefPtr<ShareableBitmap> dragImage);
 void webkitWebViewBaseChildMoveResize(WebKitWebViewBase*, GtkWidget*, const WebCore::IntRect&);
@@ -50,5 +51,9 @@ void webkitWebViewBaseSetInspectorViewHeight(WebKitWebViewBase*, unsigned height
 void webkitWebViewBaseSetActiveContextMenuProxy(WebKitWebViewBase*, WebContextMenuProxyGtk*);
 WebContextMenuProxyGtk* webkitWebViewBaseGetActiveContextMenuProxy(WebKitWebViewBase*);
 GdkEvent* webkitWebViewBaseTakeContextMenuEvent(WebKitWebViewBase*);
+
+#if USE(TEXTURE_MAPPER_GL)
+void webkitWebViewBaseQueueDrawOfAcceleratedCompositingResults(WebKitWebViewBase*);
+#endif
 
 #endif // WebKitWebViewBasePrivate_h

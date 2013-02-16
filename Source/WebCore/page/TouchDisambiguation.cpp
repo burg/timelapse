@@ -58,7 +58,7 @@ static IntRect boundingBoxForEventNodes(Node* eventNode)
             node = node->traverseNextSibling(eventNode);
             continue;
         }
-        result.unite(pixelSnappedIntRect(node->getRect()));
+        result.unite(node->pixelSnappedBoundingBox());
         node = node->traverseNextNode(eventNode);
     }
     return eventNode->document()->view()->contentsToWindow(result);
@@ -96,7 +96,7 @@ void findGoodTouchTargets(const IntRect& touchBox, Frame* mainFrame, float pageS
     IntPoint touchPoint = touchBox.center();
     IntPoint contentsPoint = mainFrame->view()->windowToContents(touchPoint);
 
-    HitTestResult result = mainFrame->eventHandler()->hitTestResultAtPoint(contentsPoint, HitTestRequest::ReadOnly | HitTestRequest::Active, IntSize(padding, padding));
+    HitTestResult result = mainFrame->eventHandler()->hitTestResultAtPoint(contentsPoint, false, false, DontHitTestScrollbars, HitTestRequest::Active | HitTestRequest::ReadOnly, IntSize(padding, padding));
     const ListHashSet<RefPtr<Node> >& hitResults = result.rectBasedTestResult();
 
     HashMap<Node*, TouchTargetData> touchTargets;

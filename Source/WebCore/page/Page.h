@@ -21,12 +21,14 @@
 #ifndef Page_h
 #define Page_h
 
+#include "FeatureObserver.h"
 #include "FrameLoaderTypes.h"
 #include "FindOptions.h"
 #include "LayoutTypes.h"
 #include "PageVisibilityState.h"
 #include "Pagination.h"
 #include "PlatformScreen.h"
+#include "PluginViewBase.h"
 #include "Region.h"
 #include "Supplementable.h"
 #include "ViewportArguments.h"
@@ -91,6 +93,7 @@ namespace WebCore {
     class Settings;
     class StorageNamespace;
     class UserInputProxy;
+    class ValidationMessageClient;
 
     typedef uint64_t LinkHash;
 
@@ -130,6 +133,7 @@ namespace WebCore {
             DragClient* dragClient;
             InspectorClient* inspectorClient;
             RefPtr<BackForwardList> backForwardClient;
+            ValidationMessageClient* validationMessageClient;
         };
 
         explicit Page(PageClients&);
@@ -198,12 +202,15 @@ namespace WebCore {
 #if ENABLE(POINTER_LOCK)
         PointerLockController* pointerLockController() const { return m_pointerLockController.get(); }
 #endif
+        ValidationMessageClient* validationMessageClient() const { return m_validationMessageClient; }
 
         ScrollingCoordinator* scrollingCoordinator();
 
         Settings* settings() const { return m_settings.get(); }
         ProgressTracker* progress() const { return m_progress.get(); }
         BackForwardController* backForward() const { return m_backForwardController.get(); }
+
+        FeatureObserver* featureObserver() { return &m_featureObserver; }
 
         enum ViewMode {
             ViewModeInvalid,
@@ -259,6 +266,9 @@ namespace WebCore {
         float deviceScaleFactor() const { return m_deviceScaleFactor; }
         void setDeviceScaleFactor(float);
 
+        bool shouldSuppressScrollbarAnimations() const { return m_suppressScrollbarAnimations; }
+        void setShouldSuppressScrollbarAnimations(bool suppressAnimations);
+
         // Page and FrameView both store a Pagination value. Page::pagination() is set only by API,
         // and FrameView::pagination() is set only by CSS. Page::pagination() will affect all
         // FrameViews in the page cache, but FrameView::pagination() only affects the current
@@ -283,6 +293,7 @@ namespace WebCore {
         const String& userStyleSheet() const;
 
         void dnsPrefetchingStateChanged();
+        void storageBlockingStateChanged();
         void privateBrowsingStateChanged();
 
         static void setDebuggerForAllPages(JSC::Debugger*);
@@ -362,6 +373,8 @@ namespace WebCore {
         void setMinimumTimerInterval(double);
         double minimumTimerInterval() const;
 
+        void collectPluginViews(Vector<RefPtr<PluginViewBase>, 32>& pluginViewBases);
+
         OwnPtr<Chrome> m_chrome;
         OwnPtr<DragCaretController> m_dragCaretController;
 
@@ -397,6 +410,9 @@ namespace WebCore {
         RefPtr<RenderTheme> m_theme;
 
         EditorClient* m_editorClient;
+        ValidationMessageClient* m_validationMessageClient;
+
+        FeatureObserver m_featureObserver;
 
         int m_frameCount;
         String m_groupName;
@@ -413,6 +429,8 @@ namespace WebCore {
 
         float m_pageScaleFactor;
         float m_deviceScaleFactor;
+
+        bool m_suppressScrollbarAnimations;
 
         Pagination m_pagination;
 

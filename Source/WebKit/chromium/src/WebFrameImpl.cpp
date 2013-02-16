@@ -571,16 +571,18 @@ int WebFrame::instanceCount()
 
 WebFrame* WebFrame::frameForEnteredContext()
 {
-    Frame* frame =
-        ScriptController::retrieveFrameForEnteredContext();
-    return WebFrameImpl::fromFrame(frame);
+    v8::Handle<v8::Context> context = v8::Context::GetEntered();
+    if (context.IsEmpty())
+        return 0;
+    return frameForContext(context);
 }
 
 WebFrame* WebFrame::frameForCurrentContext()
 {
-    Frame* frame =
-        ScriptController::retrieveFrameForCurrentContext();
-    return WebFrameImpl::fromFrame(frame);
+    v8::Handle<v8::Context> context = v8::Context::GetCurrent();
+    if (context.IsEmpty())
+        return 0;
+    return frameForContext(context);
 }
 
 #if WEBKIT_USING_V8
@@ -1027,7 +1029,7 @@ void WebFrameImpl::loadHistoryItem(const WebHistoryItem& item)
 
     m_frame->loader()->prepareForHistoryNavigation();
     RefPtr<HistoryItem> currentItem = m_frame->loader()->history()->currentItem();
-    m_inSameDocumentHistoryLoad = currentItem->shouldDoSameDocumentNavigationTo(historyItem.get());
+    m_inSameDocumentHistoryLoad = currentItem && currentItem->shouldDoSameDocumentNavigationTo(historyItem.get());
     m_frame->page()->goToItem(historyItem.get(),
                               FrameLoadTypeIndexedBackForward);
     m_inSameDocumentHistoryLoad = false;
@@ -1263,7 +1265,7 @@ size_t WebFrameImpl::characterIndexForPoint(const WebPoint& webPoint) const
         return notFound;
 
     IntPoint point = frame()->view()->windowToContents(webPoint);
-    HitTestResult result = frame()->eventHandler()->hitTestResultAtPoint(point);
+    HitTestResult result = frame()->eventHandler()->hitTestResultAtPoint(point, false);
     RefPtr<Range> range = frame()->rangeForPoint(result.roundedPoint());
     if (!range)
         return notFound;
@@ -1464,69 +1466,13 @@ bool WebFrameImpl::selectWordAroundCaret()
     return true;
 }
 
-void WebFrameImpl::selectRange(const WebPoint& start, const WebPoint& end)
+void WebFrameImpl::selectRange(const WebPoint& base, const WebPoint& extent)
 {
-    if (start == end && moveCaret(start))
-        return;
-
-    if (moveSelectionStart(start, true) && moveSelectionEnd(end, true))
-        return;
-
-    // Failed to move endpoints, probably because there's no current selection.
-    // Just set the selection explicitly (but this won't handle editable boundaries correctly).
-    VisibleSelection newSelection(visiblePositionForWindowPoint(start), visiblePositionForWindowPoint(end));    
+    VisiblePosition basePos = visiblePositionForWindowPoint(base);
+    VisiblePosition extentPos = visiblePositionForWindowPoint(extent);
+    VisibleSelection newSelection = VisibleSelection(basePos, extentPos);
     if (frame()->selection()->shouldChangeSelection(newSelection))
         frame()->selection()->setSelection(newSelection, CharacterGranularity);
-}
-
-bool WebFrameImpl::moveSelectionStart(const WebPoint& point, bool allowCollapsedSelection)
-{
-    const VisibleSelection& selection = frame()->selection()->selection();
-    if (selection.isNone())
-        return false;
-
-    VisiblePosition start = visiblePositionForWindowPoint(point);
-    if (!allowCollapsedSelection) {
-        VisiblePosition maxStart = selection.visibleEnd().previous();
-        if (comparePositions(start, maxStart) > 0)
-            start = maxStart;
-    }
-
-    // start is moving, so base=end, extent=start
-    VisibleSelection newSelection = VisibleSelection(selection.visibleEnd(), start);
-    frame()->selection()->setNonDirectionalSelectionIfNeeded(newSelection, CharacterGranularity);
-    return true;
-}
-
-bool WebFrameImpl::moveSelectionEnd(const WebPoint& point, bool allowCollapsedSelection)
-{
-    const VisibleSelection& selection = frame()->selection()->selection();
-    if (selection.isNone())
-        return false;
-
-    VisiblePosition end = visiblePositionForWindowPoint(point);
-    if (!allowCollapsedSelection) {
-        VisiblePosition minEnd = selection.visibleStart().next();
-        if (comparePositions(end, minEnd) < 0)
-            end = minEnd;
-    }
-
-    // end is moving, so base=start, extent=end
-    VisibleSelection newSelection = VisibleSelection(selection.visibleStart(), end);
-    frame()->selection()->setNonDirectionalSelectionIfNeeded(newSelection, CharacterGranularity);
-    return true;
-}
-
-bool WebFrameImpl::moveCaret(const WebPoint& point)
-{
-    FrameSelection* frameSelection = frame()->selection();
-    if (frameSelection->isNone() || !frameSelection->isContentEditable())
-        return false;
-
-    VisiblePosition pos = visiblePositionForWindowPoint(point);
-    frameSelection->setExtent(pos, UserTriggered);
-    frameSelection->setBase(frameSelection->extent(), UserTriggered);
-    return true;
 }
 
 void WebFrameImpl::selectRange(const WebRange& webRange)
@@ -1777,17 +1723,15 @@ void WebFrameImpl::scopeStringMatches(int identifier,
                                       const WebFindOptions& options,
                                       bool reset)
 {
-    if (!shouldScopeMatches(searchText))
-        return;
-
     WebFrameImpl* mainFrameImpl = viewImpl()->mainFrameImpl();
 
     if (reset) {
         // This is a brand new search, so we need to reset everything.
         // Scoping is just about to begin.
         m_scopingComplete = false;
+
         // Clear highlighting for this frame.
-        if (frame()->editor()->markedTextMatchesAreHighlighted())
+        if (frame() && frame()->editor()->markedTextMatchesAreHighlighted())
             frame()->page()->unmarkAllTextMatches();
 
         // Clear the tickmarks and results cache.
@@ -1807,6 +1751,14 @@ void WebFrameImpl::scopeStringMatches(int identifier,
             searchText,
             options,
             false); // false=we just reset, so don't do it again.
+        return;
+    }
+
+    if (!shouldScopeMatches(searchText)) {
+        // Note that we want to defer the final update when resetting even if shouldScopeMatches returns false.
+        // This is done in order to prevent sending a final message based only on the results of the first frame
+        // since m_framesScopingCount would be 0 as other frames have yet to reset.
+        finishCurrentScopingEffort(identifier);
         return;
     }
 
@@ -1936,10 +1888,18 @@ void WebFrameImpl::scopeStringMatches(int identifier,
         return; // Done for now, resume work later.
     }
 
+    finishCurrentScopingEffort(identifier);
+}
+
+void WebFrameImpl::finishCurrentScopingEffort(int identifier)
+{
+    WebFrameImpl* mainFrameImpl = viewImpl()->mainFrameImpl();
+
     // This frame has no further scoping left, so it is done. Other frames might,
     // of course, continue to scope matches.
     m_scopingComplete = true;
     mainFrameImpl->m_framesScopingCount--;
+    m_lastFindRequestCompletedWithNoMatches = !m_lastMatchCount;
 
     // If this is the last frame to finish scoping we need to trigger the final
     // update to be sent.
@@ -1956,6 +1916,9 @@ void WebFrameImpl::cancelPendingScopingEffort()
     m_deferredScopingWork.clear();
 
     m_activeMatchIndexInCurrentFrame = -1;
+
+    if (!m_scopingComplete)
+        m_lastFindRequestCompletedWithNoMatches = false;
 }
 
 void WebFrameImpl::increaseMatchCount(int count, int identifier)
@@ -2328,6 +2291,7 @@ WebFrameImpl::WebFrameImpl(WebFrameClient* client)
     , m_totalMatchCount(-1)
     , m_framesScopingCount(-1)
     , m_scopingComplete(false)
+    , m_lastFindRequestCompletedWithNoMatches(false)
     , m_nextInvalidateAfter(0)
     , m_findMatchMarkersVersion(0)
     , m_findMatchRectsAreValid(false)
@@ -2569,13 +2533,13 @@ void WebFrameImpl::invalidateArea(AreaToInvalidate area)
             contentArea.move(-frameRect.x(), -frameRect.y());
             view->invalidateRect(contentArea);
         }
+    }
 
-        if ((area & InvalidateScrollbar) == InvalidateScrollbar) {
-            // Invalidate the vertical scroll bar region for the view.
-            Scrollbar* scrollbar = view->verticalScrollbar();
-            if (scrollbar)
-                scrollbar->invalidate();
-        }
+    if ((area & InvalidateScrollbar) == InvalidateScrollbar) {
+        // Invalidate the vertical scroll bar region for the view.
+        Scrollbar* scrollbar = view->verticalScrollbar();
+        if (scrollbar)
+            scrollbar->invalidate();
     }
 }
 
@@ -2610,9 +2574,9 @@ int WebFrameImpl::ordinalOfFirstMatchForFrame(WebFrameImpl* frame) const
 
 bool WebFrameImpl::shouldScopeMatches(const String& searchText)
 {
-    // Don't scope if we can't find a frame or a view or if the frame is not visible.
+    // Don't scope if we can't find a frame or a view.
     // The user may have closed the tab/application, so abort.
-    if (!frame() || !frame()->view() || !hasVisibleContent())
+    if (!frame() || !frame()->view())
         return false;
 
     ASSERT(frame()->document() && frame()->view());
@@ -2620,7 +2584,7 @@ bool WebFrameImpl::shouldScopeMatches(const String& searchText)
     // If the frame completed the scoping operation and found 0 matches the last
     // time it was searched, then we don't have to search it again if the user is
     // just adding to the search string or sending the same search string again.
-    if (m_scopingComplete && !m_lastSearchString.isEmpty() && !m_lastMatchCount) {
+    if (m_lastFindRequestCompletedWithNoMatches && !m_lastSearchString.isEmpty()) {
         // Check to see if the search string prefixes match.
         String previousSearchPrefix =
             searchText.substring(0, m_lastSearchString.length());

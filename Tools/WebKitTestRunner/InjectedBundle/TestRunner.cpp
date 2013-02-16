@@ -46,6 +46,8 @@
 #include <WebKit2/WebKit2_C.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/HashMap.h>
+#include <wtf/OwnArrayPtr.h>
+#include <wtf/PassOwnArrayPtr.h>
 #include <wtf/text/StringBuilder.h>
 
 #if ENABLE(WEB_INTENTS)
@@ -55,9 +57,7 @@
 
 namespace WTR {
 
-// This is lower than DumpRenderTree's timeout, to make it easier to work through the failures
-// Eventually it should be changed to match.
-const double TestRunner::waitToDumpWatchdogTimerInterval = 6;
+const double TestRunner::waitToDumpWatchdogTimerInterval = 30;
 
 PassRefPtr<TestRunner> TestRunner::create()
 {
@@ -80,10 +80,14 @@ TestRunner::TestRunner()
     , m_dumpResourceLoadCallbacks(false)
     , m_dumpResourceResponseMIMETypes(false)
     , m_dumpWillCacheResponse(false)
+    , m_dumpApplicationCacheDelegateCallbacks(false)
+    , m_dumpDatabaseCallbacks(false)
+    , m_disallowIncreaseForApplicationCacheQuota(false)
     , m_waitToDump(false)
     , m_testRepaint(false)
     , m_testRepaintSweepHorizontally(false)
     , m_willSendRequestReturnsNull(false)
+    , m_shouldStopProvisionalFrameLoads(false)
     , m_policyDelegateEnabled(false)
     , m_policyDelegatePermissive(false)
     , m_globalFlag(false)
@@ -302,9 +306,54 @@ void TestRunner::clearAllApplicationCaches()
     WKBundleClearApplicationCache(InjectedBundle::shared().bundle());
 }
 
+void TestRunner::clearApplicationCacheForOrigin(JSStringRef origin)
+{
+    WKBundleClearApplicationCacheForOrigin(InjectedBundle::shared().bundle(), toWK(origin).get());
+}
+
 void TestRunner::setAppCacheMaximumSize(uint64_t size)
 {
     WKBundleSetAppCacheMaximumSize(InjectedBundle::shared().bundle(), size);
+}
+
+long long TestRunner::applicationCacheDiskUsageForOrigin(JSStringRef origin)
+{
+    return WKBundleGetAppCacheUsageForOrigin(InjectedBundle::shared().bundle(), toWK(origin).get());
+}
+
+void TestRunner::setApplicationCacheOriginQuota(unsigned long long bytes)
+{
+    WKRetainPtr<WKStringRef> origin(AdoptWK, WKStringCreateWithUTF8CString("http://127.0.0.1:8000"));
+    WKBundleSetApplicationCacheOriginQuota(InjectedBundle::shared().bundle(), origin.get(), bytes);
+}
+
+void TestRunner::disallowIncreaseForApplicationCacheQuota()
+{
+    m_disallowIncreaseForApplicationCacheQuota = true;
+}
+
+static inline JSValueRef stringArrayToJS(JSContextRef context, WKArrayRef strings)
+{
+    const size_t count = WKArrayGetSize(strings);
+
+    OwnArrayPtr<JSValueRef> jsStringsArray = adoptArrayPtr(new JSValueRef[count]);
+    for (size_t i = 0; i < count; ++i) {
+        WKStringRef stringRef = static_cast<WKStringRef>(WKArrayGetItemAtIndex(strings, i));
+        JSRetainPtr<JSStringRef> stringJS = toJS(stringRef);
+        jsStringsArray[i] = JSValueMakeString(context, stringJS.get());
+    }
+
+    return JSObjectMakeArray(context, count, jsStringsArray.get(), 0);
+}
+
+JSValueRef TestRunner::originsWithApplicationCache()
+{
+    WKRetainPtr<WKArrayRef> origins(AdoptWK, WKBundleCopyOriginsWithApplicationCache(InjectedBundle::shared().bundle()));
+
+    WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(InjectedBundle::shared().page()->page());
+    JSContextRef context = WKBundleFrameGetJavaScriptContext(mainFrame);
+
+    return stringArrayToJS(context, origins.get());
 }
 
 bool TestRunner::isCommandEnabled(JSStringRef name)
@@ -551,6 +600,11 @@ static void callTestRunnerCallback(unsigned index)
     JSValueUnprotect(context, callback);
 }
 
+unsigned TestRunner::workerThreadCount()
+{
+    return WKBundleGetWorkerThreadCount(InjectedBundle::shared().bundle());
+}
+
 void TestRunner::addChromeInputField(JSValueRef callback)
 {
     cacheTestRunnerCallback(AddChromeInputFieldCallbackID, callback);
@@ -637,9 +691,14 @@ void TestRunner::deliverWebIntent(JSStringRef action, JSStringRef type, JSString
     WKRetainPtr<WKSerializedScriptValueRef> dataWK(AdoptWK, WKSerializedScriptValueCreate(context, JSValueMakeString(context, data), 0));
 
     WKRetainPtr<WKMutableDictionaryRef> intentInitDict(AdoptWK, WKMutableDictionaryCreate());
-    WKDictionaryAddItem(intentInitDict.get(), WKStringCreateWithUTF8CString("action"), actionWK.get());
-    WKDictionaryAddItem(intentInitDict.get(), WKStringCreateWithUTF8CString("type"), typeWK.get());
-    WKDictionaryAddItem(intentInitDict.get(), WKStringCreateWithUTF8CString("data"), dataWK.get());
+    WKRetainPtr<WKStringRef> actionKey(AdoptWK, WKStringCreateWithUTF8CString("action"));
+    WKDictionaryAddItem(intentInitDict.get(), actionKey.get(), actionWK.get());
+
+    WKRetainPtr<WKStringRef> typeKey(AdoptWK, WKStringCreateWithUTF8CString("type"));
+    WKDictionaryAddItem(intentInitDict.get(), typeKey.get(), typeWK.get());
+
+    WKRetainPtr<WKStringRef> dataKey(AdoptWK, WKStringCreateWithUTF8CString("data"));
+    WKDictionaryAddItem(intentInitDict.get(), dataKey.get(), dataWK.get());
 
     WKRetainPtr<WKBundleIntentRef> wkIntent(AdoptWK, WKBundleIntentCreate(intentInitDict.get()));
     WKBundlePageDeliverIntentToFrame(InjectedBundle::shared().page()->page(), mainFrame, wkIntent.get());
@@ -673,6 +732,21 @@ void TestRunner::setUserStyleSheetLocation(JSStringRef location)
         setUserStyleSheetEnabled(true);
 }
 
+void TestRunner::setMinimumTimerInterval(double seconds)
+{
+    WKBundleSetMinimumTimerInterval(InjectedBundle::shared().bundle(), InjectedBundle::shared().pageGroup(), seconds);
+}
+
+void TestRunner::setSpatialNavigationEnabled(bool enabled)
+{
+    WKBundleSetSpatialNavigationEnabled(InjectedBundle::shared().bundle(), InjectedBundle::shared().pageGroup(), enabled);
+}
+
+void TestRunner::setTabKeyCyclesThroughElements(bool enabled)
+{
+    WKBundleSetTabKeyCyclesThroughElements(InjectedBundle::shared().bundle(), InjectedBundle::shared().page()->page(), enabled);
+}
+
 void TestRunner::grantWebNotificationPermission(JSStringRef origin)
 {
     WKRetainPtr<WKStringRef> originWK = toWK(origin);
@@ -696,6 +770,12 @@ void TestRunner::simulateWebNotificationClick(JSValueRef notification)
     JSContextRef context = WKBundleFrameGetJavaScriptContext(mainFrame);
     uint64_t notificationID = WKBundleGetWebNotificationID(InjectedBundle::shared().bundle(), context, notification);
     InjectedBundle::shared().postSimulateWebNotificationClick(notificationID);
+}
+
+bool TestRunner::callShouldCloseOnWebView()
+{
+    WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(InjectedBundle::shared().page()->page());
+    return WKBundleFrameCallShouldCloseOnWebView(mainFrame);
 }
 
 } // namespace WTR

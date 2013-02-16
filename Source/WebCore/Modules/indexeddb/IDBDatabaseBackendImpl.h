@@ -55,9 +55,8 @@ public:
     static const int64_t InvalidId = 0;
     int64_t id() const { return m_id; }
 
-    void registerFrontendCallbacks(PassRefPtr<IDBDatabaseCallbacks>);
-    void openConnection(PassRefPtr<IDBCallbacks>);
-    void openConnectionWithVersion(PassRefPtr<IDBCallbacks>, int64_t version);
+    void openConnection(PassRefPtr<IDBCallbacks>, PassRefPtr<IDBDatabaseCallbacks>);
+    void openConnectionWithVersion(PassRefPtr<IDBCallbacks>, PassRefPtr<IDBDatabaseCallbacks>, int64_t version);
     void deleteDatabase(PassRefPtr<IDBCallbacks>);
 
     // IDBDatabaseBackendInterface
@@ -79,21 +78,20 @@ private:
     IDBDatabaseBackendImpl(const String& name, IDBBackingStore* database, IDBTransactionCoordinator*, IDBFactoryBackendImpl*, const String& uniqueIdentifier);
 
     bool openInternal();
-    void runIntVersionChangeTransaction(int64_t requestedVersion, PassRefPtr<IDBCallbacks>);
+    void runIntVersionChangeTransaction(int64_t requestedVersion, PassRefPtr<IDBCallbacks>, PassRefPtr<IDBDatabaseCallbacks>);
     void loadObjectStores();
-    int32_t connectionCount();
+    size_t connectionCount();
     void processPendingCalls();
 
     static void createObjectStoreInternal(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackendImpl>, PassRefPtr<IDBObjectStoreBackendImpl>, PassRefPtr<IDBTransactionBackendImpl>);
     static void deleteObjectStoreInternal(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackendImpl>, PassRefPtr<IDBObjectStoreBackendImpl>, PassRefPtr<IDBTransactionBackendImpl>);
     static void setVersionInternal(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackendImpl>, const String& version, PassRefPtr<IDBCallbacks>, PassRefPtr<IDBTransactionBackendImpl>);
-    static void setIntVersionInternal(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackendImpl>, int64_t version, PassRefPtr<IDBCallbacks>, PassRefPtr<IDBTransactionBackendInterface>);
+    static void setIntVersionInternal(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackendImpl>, int64_t version, PassRefPtr<IDBCallbacks>, PassRefPtr<IDBTransactionBackendImpl>);
 
     // These are used as setVersion transaction abort tasks.
     static void removeObjectStoreFromMap(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackendImpl>, PassRefPtr<IDBObjectStoreBackendImpl>);
     static void addObjectStoreToMap(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackendImpl>, PassRefPtr<IDBObjectStoreBackendImpl>);
-    static void resetVersion(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackendImpl>, const String& version);
-    static void resetIntVersion(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackendImpl>, int64_t intVersion);
+    static void resetVersion(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackendImpl>, const String& version, int64_t intVersion);
 
     RefPtr<IDBBackingStore> m_backingStore;
     int64_t m_id;
@@ -115,21 +113,17 @@ private:
     TransactionSet m_transactions;
 
     class PendingSetVersionCall;
-    Deque<RefPtr<PendingSetVersionCall> > m_pendingSetVersionCalls;
+    Deque<OwnPtr<PendingSetVersionCall> > m_pendingSetVersionCalls;
 
     class PendingOpenCall;
-    Deque<RefPtr<PendingOpenCall> > m_pendingOpenCalls;
+    Deque<OwnPtr<PendingOpenCall> > m_pendingOpenCalls;
 
     class PendingOpenWithVersionCall;
-    Deque<RefPtr<PendingOpenWithVersionCall> > m_pendingOpenWithVersionCalls;
-    Deque<RefPtr<PendingOpenWithVersionCall> > m_pendingSecondHalfOpenWithVersionCalls;
+    Deque<OwnPtr<PendingOpenWithVersionCall> > m_pendingOpenWithVersionCalls;
+    OwnPtr<PendingOpenWithVersionCall> m_pendingSecondHalfOpenWithVersion;
 
     class PendingDeleteCall;
-    Deque<RefPtr<PendingDeleteCall> > m_pendingDeleteCalls;
-
-    // FIXME: Eliminate the limbo state between openConnection() and registerFrontendCallbacks()
-    // that this counter tracks.
-    int32_t m_pendingConnectionCount;
+    Deque<OwnPtr<PendingDeleteCall> > m_pendingDeleteCalls;
 
     typedef ListHashSet<RefPtr<IDBDatabaseCallbacks> > DatabaseCallbacksSet;
     DatabaseCallbacksSet m_databaseCallbacksSet;

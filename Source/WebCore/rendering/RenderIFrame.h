@@ -40,9 +40,6 @@ public:
     bool isSeamless() const;
 
 private:
-    virtual void computeLogicalHeight() OVERRIDE;
-    virtual void computeLogicalWidth() OVERRIDE;
-
     virtual LayoutUnit minPreferredLogicalWidth() const OVERRIDE;
     virtual LayoutUnit maxPreferredLogicalWidth() const OVERRIDE;
 

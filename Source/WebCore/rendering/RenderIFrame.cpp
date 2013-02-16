@@ -43,46 +43,6 @@ RenderIFrame::RenderIFrame(Element* element)
 {
 }
 
-void RenderIFrame::computeLogicalHeight()
-{
-    RenderPart::computeLogicalHeight();
-    if (!flattenFrame())
-         return;
-
-    HTMLIFrameElement* frame = static_cast<HTMLIFrameElement*>(node());
-    bool isScrollable = frame->scrollingMode() != ScrollbarAlwaysOff;
-
-    if (isScrollable || !style()->height().isFixed()) {
-        FrameView* view = static_cast<FrameView*>(widget());
-        if (!view)
-            return;
-        int border = borderTop() + borderBottom();
-        setHeight(max<LayoutUnit>(height(), view->contentsHeight() + border));
-    }
-}
-
-void RenderIFrame::computeLogicalWidth()
-{
-    // When we're seamless, we behave like a block. Thankfully RenderBox has all the right logic for this.
-    if (isSeamless())
-        return RenderBox::computeLogicalWidth();
-
-    RenderPart::computeLogicalWidth();
-    if (!flattenFrame())
-        return;
-
-    HTMLIFrameElement* frame = static_cast<HTMLIFrameElement*>(node());
-    bool isScrollable = frame->scrollingMode() != ScrollbarAlwaysOff;
-
-    if (isScrollable || !style()->width().isFixed()) {
-        FrameView* view = static_cast<FrameView*>(widget());
-        if (!view)
-            return;
-        LayoutUnit border = borderLeft() + borderRight();
-        setWidth(max<LayoutUnit>(width(), view->contentsWidth() + border));
-    }
-}
-
 bool RenderIFrame::shouldComputeSizeAsReplaced() const
 {
     // When we're seamless, we use normal block/box sizing code except when inline.
@@ -162,7 +122,7 @@ bool RenderIFrame::flattenFrame() const
 
 void RenderIFrame::layoutSeamlessly()
 {
-    computeLogicalWidth();
+    updateLogicalWidth();
     // FIXME: Containers set their height to 0 before laying out their kids (as we're doing here)
     // however, this causes FrameView::layout() to add vertical scrollbars, incorrectly inflating
     // the resulting contentHeight(). We'll need to make FrameView::layout() smarter.
@@ -175,7 +135,7 @@ void RenderIFrame::layoutSeamlessly()
     FrameView* childFrameView = static_cast<FrameView*>(widget());
     if (childFrameView) // Widget should never be null during layout(), but just in case.
         setLogicalHeight(childFrameView->contentsHeight() + borderTop() + borderBottom());
-    computeLogicalHeight();
+    updateLogicalHeight();
 
     updateWidgetPosition(); // Notify the Widget of our final height.
 
@@ -189,19 +149,16 @@ void RenderIFrame::layout()
 {
     ASSERT(needsLayout());
 
-    if (flattenFrame()) {
-        RenderPart::computeLogicalWidth();
-        RenderPart::computeLogicalHeight();
-        layoutWithFlattening(style()->width().isFixed(), style()->height().isFixed());
-        // FIXME: Is early return really OK here? What about transform/overflow code below?
-        return;
-    } else if (isSeamless()) {
+    if (isSeamless()) {
         layoutSeamlessly();
         // Do not return so as to share the layer and overflow updates below.
     } else {
-        computeLogicalWidth();
+        updateLogicalWidth();
         // No kids to layout as a replaced element.
-        computeLogicalHeight();
+        updateLogicalHeight();
+
+        if (flattenFrame())
+            layoutWithFlattening(style()->width().isFixed(), style()->height().isFixed());
     }
 
     m_overflow.clear();

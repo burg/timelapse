@@ -47,7 +47,6 @@ DOMAIN_DEFINE_NAME_MAP = {
     "Profiler": "JAVASCRIPT_DEBUGGER",
     "Timelapse": "TIMELAPSE",
     "Worker": "WORKERS",
-    "WebGL": "WEBGL",
 }
 
 
@@ -59,7 +58,7 @@ TYPE_NAME_FIX_MAP = {
 
 
 TYPES_WITH_RUNTIME_CAST_SET = frozenset(["Runtime.RemoteObject", "Runtime.PropertyDescriptor",
-                                         "Debugger.FunctionDetails", "Debugger.CallFrame", "WebGL.TraceLog",
+                                         "Debugger.FunctionDetails", "Debugger.CallFrame", "Canvas.TraceLog",
                                          # This should be a temporary hack. TimelineEvent should be created via generated C++ API.
                                          "Timeline.TimelineEvent"])
 

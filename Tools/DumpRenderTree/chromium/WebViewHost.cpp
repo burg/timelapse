@@ -251,12 +251,13 @@ static string textAffinityDescription(WebTextAffinity affinity)
 
 // WebViewClient -------------------------------------------------------------
 
-WebView* WebViewHost::createView(WebFrame*, const WebURLRequest& request, const WebWindowFeatures&, const WebString&, WebNavigationPolicy)
+WebView* WebViewHost::createView(WebFrame* creator, const WebURLRequest& request, const WebWindowFeatures&, const WebString&, WebNavigationPolicy)
 {
     if (!testRunner()->canOpenWindows())
         return 0;
     if (testRunner()->shouldDumpCreateView())
         fprintf(stdout, "createView(%s)\n", URLDescription(request.url()).c_str());
+    creator->consumeUserGesture();
     return m_shell->createNewWindow(WebURL())->webView();
 }
 
@@ -1191,7 +1192,7 @@ void WebViewHost::didReceiveTitle(WebFrame* frame, const WebString& title, WebTe
     }
 
     if (testRunner()->shouldDumpTitleChanges())
-        printf("TITLE CHANGED: %s\n", title8.data());
+        printf("TITLE CHANGED: '%s'\n", title8.data());
 
     setPageTitle(title);
     testRunner()->setTitleTextDirection(direction);

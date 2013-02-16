@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004, 2005, 2006, 2007, 2008, 2012 Apple Inc. All rights reserved.
  *  Copyright (C) 2006 Bjoern Graf (bjoern.graf@gmail.com)
  *
  *  This library is free software; you can redistribute it and/or
@@ -22,8 +22,10 @@
 
 #include "config.h"
 
+#include "ButterflyInlineMethods.h"
 #include "BytecodeGenerator.h"
 #include "Completion.h"
+#include "CopiedSpaceInlineMethods.h"
 #include "ExceptionHelpers.h"
 #include "InitializeThreading.h"
 #include "Interpreter.h"
@@ -232,13 +234,13 @@ protected:
     void addFunction(JSGlobalData& globalData, const char* name, NativeFunction function, unsigned arguments)
     {
         Identifier identifier(globalExec(), name);
-        putDirect(globalData, identifier, JSFunction::create(globalExec(), this, arguments, identifier.ustring(), function));
+        putDirect(globalData, identifier, JSFunction::create(globalExec(), this, arguments, identifier.string(), function));
     }
     
     void addConstructableFunction(JSGlobalData& globalData, const char* name, NativeFunction function, unsigned arguments)
     {
         Identifier identifier(globalExec(), name);
-        putDirect(globalData, identifier, JSFunction::create(globalExec(), this, arguments, identifier.ustring(), function, NoIntrinsic, function));
+        putDirect(globalData, identifier, JSFunction::create(globalExec(), this, arguments, identifier.string(), function, NoIntrinsic, function));
     }
 };
 COMPILE_ASSERT(!IsInteger<GlobalObject>::value, WTF_IsInteger_GlobalObject_false);

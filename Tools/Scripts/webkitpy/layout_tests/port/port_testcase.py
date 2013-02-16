@@ -513,9 +513,9 @@ class PortTestCase(unittest.TestCase):
         # Check that we read the expectations file
         host = MockSystemHost()
         host.filesystem.write_text_file('/mock-checkout/LayoutTests/platform/testwebkitport/TestExpectations',
-            'BUG_TESTEXPECTATIONS SKIP : fast/html/article-element.html = TEXT\n')
+            'BUG_TESTEXPECTATIONS SKIP : fast/html/article-element.html = FAIL\n')
         port = TestWebKitPort(host=host)
-        self.assertEqual(''.join(port.expectations_dict().values()), 'BUG_TESTEXPECTATIONS SKIP : fast/html/article-element.html = TEXT\n')
+        self.assertEqual(''.join(port.expectations_dict().values()), 'BUG_TESTEXPECTATIONS SKIP : fast/html/article-element.html = FAIL\n')
 
     def test_build_driver(self):
         output = OutputCapture()
@@ -609,3 +609,7 @@ class PortTestCase(unittest.TestCase):
         port._build_driver = build_driver_called
         port.check_build(False)
         self.assertFalse(self.build_called, None)
+
+    def test_additional_platform_directory(self):
+        port = self.make_port(options=MockOptions(additional_platform_directory=['/tmp/foo']))
+        self.assertEquals(port.baseline_search_path()[0], '/tmp/foo')

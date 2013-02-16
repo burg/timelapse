@@ -23,6 +23,7 @@
 #include "InspectorClient.h"
 #include "InspectorFrontendChannel.h"
 #include "InspectorOverlay.h"
+#include "InspectorOverlayBlackBerry.h"
 #include <wtf/HashMap.h>
 #include <wtf/text/WTFString.h>
 

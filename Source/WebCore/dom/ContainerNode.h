@@ -75,7 +75,7 @@ public:
 
     virtual void attach() OVERRIDE;
     virtual void detach() OVERRIDE;
-    virtual LayoutRect getRect() const OVERRIDE;
+    virtual LayoutRect boundingBox() const OVERRIDE;
     virtual void setFocus(bool = true) OVERRIDE;
     virtual void setActive(bool active = true, bool pause = false) OVERRIDE;
     virtual void setHovered(bool = true) OVERRIDE;
@@ -105,8 +105,8 @@ public:
     {
         MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
         Node::reportMemoryUsage(memoryObjectInfo);
-        info.addInstrumentedMember(m_firstChild);
-        info.addInstrumentedMember(m_lastChild);
+        info.addMember(m_firstChild);
+        info.addMember(m_lastChild);
     }
 
 protected:

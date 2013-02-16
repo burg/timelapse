@@ -1254,6 +1254,7 @@ const String& AccessibilityObject::actionVerb() const
 
     switch (roleValue()) {
     case ButtonRole:
+    case ToggleButtonRole:
         return buttonAction;
     case TextFieldRole:
     case TextAreaRole:
@@ -1496,7 +1497,12 @@ bool AccessibilityObject::isInsideARIALiveRegion() const
 
 bool AccessibilityObject::supportsARIAAttributes() const
 {
-    return supportsARIALiveRegion() || supportsARIADragging() || supportsARIADropping() || supportsARIAFlowTo() || supportsARIAOwns();
+    return supportsARIALiveRegion()
+        || supportsARIADragging()
+        || supportsARIADropping()
+        || supportsARIAFlowTo()
+        || supportsARIAOwns()
+        || hasAttribute(aria_labelAttr);
 }
     
 bool AccessibilityObject::supportsARIALiveRegion() const
@@ -1782,6 +1788,13 @@ AccessibilityRole AccessibilityObject::buttonRoleType() const
     // type.
 
     return ButtonRole;
+}
+
+bool AccessibilityObject::isButton() const
+{
+    AccessibilityRole role = roleValue();
+
+    return role == ButtonRole || role == PopUpButtonRole || role == ToggleButtonRole;
 }
 
 } // namespace WebCore

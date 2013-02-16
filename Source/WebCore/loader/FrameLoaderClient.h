@@ -278,6 +278,8 @@ namespace WebCore {
         virtual void documentElementAvailable() = 0;
         virtual void didPerformFirstNavigation() const = 0; // "Navigation" here means a transition from one page to another that ends up in the back/forward list.
 
+        virtual void didExhaustMemoryAvailableForScript() { };
+
 #if USE(V8)
         virtual void didCreateScriptContext(v8::Handle<v8::Context>, int extensionGroup, int worldId) = 0;
         virtual void willReleaseScriptContext(v8::Handle<v8::Context>, int worldId) = 0;
@@ -334,7 +336,7 @@ namespace WebCore {
         virtual void dispatchIntent(PassRefPtr<IntentRequest>) = 0;
 #endif
 #if ENABLE(WEB_INTENTS_TAG)
-        virtual void registerIntentService(const String& action, const String& type, const KURL& href, const String& title, const String& disposition) { }
+        virtual void registerIntentService(const String&, const String&, const KURL&, const String&, const String&) { }
 #endif
 
         virtual void dispatchWillOpenSocketStream(SocketStreamHandle*) { }

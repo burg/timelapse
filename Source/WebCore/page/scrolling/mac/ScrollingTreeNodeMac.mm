@@ -29,6 +29,7 @@
 #if ENABLE(THREADED_SCROLLING)
 
 #include "PlatformWheelEvent.h"
+#include "ScrollingCoordinator.h"
 #include "ScrollingTree.h"
 #include "ScrollingTreeState.h"
 #include "Settings.h"
@@ -42,7 +43,7 @@
 
 namespace WebCore {
 
-static void logThreadedScrollingMode(unsigned reasonsForUpdatingScrollLayerPositionOnMainThread);
+static void logThreadedScrollingMode(unsigned mainThreadScrollingReasons);
 
 PassOwnPtr<ScrollingTreeNode> ScrollingTreeNode::create(ScrollingTree* scrollingTree)
 {
@@ -74,10 +75,10 @@ void ScrollingTreeNodeMac::update(ScrollingTreeState* state)
     if (state->changedProperties() & (ScrollingTreeState::ScrollLayer | ScrollingTreeState::ContentsSize | ScrollingTreeState::ViewportRect))
         updateMainFramePinState(scrollPosition());
 
-    if ((state->changedProperties() & ScrollingTreeState::ShouldUpdateScrollLayerPositionOnMainThreadReason)) {
-        unsigned reasonsForUpdatingScrollLayerPositionOnMainThread = this->shouldUpdateScrollLayerPositionOnMainThreadReason();
+    if ((state->changedProperties() & ScrollingTreeState::ShouldUpdateScrollLayerPositionOnMainThread)) {
+        unsigned mainThreadScrollingReasons = this->shouldUpdateScrollLayerPositionOnMainThread();
 
-        if (reasonsForUpdatingScrollLayerPositionOnMainThread) {
+        if (mainThreadScrollingReasons) {
             // We're transitioning to the slow "update scroll layer position on the main thread" mode.
             // Initialize the probable main thread scroll position with the current scroll layer position.
             if (state->changedProperties() & ScrollingTreeState::RequestedScrollPosition)
@@ -89,7 +90,7 @@ void ScrollingTreeNodeMac::update(ScrollingTreeState* state)
         }
 
         if (scrollingTree()->scrollingPerformanceLoggingEnabled())
-            logThreadedScrollingMode(reasonsForUpdatingScrollLayerPositionOnMainThread);
+            logThreadedScrollingMode(mainThreadScrollingReasons);
     }
 }
 
@@ -236,7 +237,7 @@ void ScrollingTreeNodeMac::stopSnapRubberbandTimer()
 
 IntPoint ScrollingTreeNodeMac::scrollPosition() const
 {
-    if (shouldUpdateScrollLayerPositionOnMainThreadReason())
+    if (shouldUpdateScrollLayerPositionOnMainThread())
         return m_probableMainThreadScrollPosition;
 
     CGPoint scrollLayerPosition = m_scrollLayer.get().position;
@@ -259,7 +260,7 @@ void ScrollingTreeNodeMac::setScrollPositionWithoutContentEdgeConstraints(const 
 {
     updateMainFramePinState(scrollPosition);
 
-    if (shouldUpdateScrollLayerPositionOnMainThreadReason()) {
+    if (shouldUpdateScrollLayerPositionOnMainThread()) {
         m_probableMainThreadScrollPosition = scrollPosition;
         scrollingTree()->updateMainFrameScrollPositionAndScrollLayerPosition(scrollPosition);
         return;
@@ -271,7 +272,7 @@ void ScrollingTreeNodeMac::setScrollPositionWithoutContentEdgeConstraints(const 
 
 void ScrollingTreeNodeMac::setScrollLayerPosition(const IntPoint& position)
 {
-    ASSERT(!shouldUpdateScrollLayerPositionOnMainThreadReason());
+    ASSERT(!shouldUpdateScrollLayerPositionOnMainThread());
     m_scrollLayer.get().position = CGPointMake(-position.x() + scrollOrigin().x(), -position.y() + scrollOrigin().y());
 }
 
@@ -341,20 +342,20 @@ void ScrollingTreeNodeMac::logExposedUnfilledArea()
         WTFLogAlways("SCROLLING: Exposed tileless area. Time: %f Unfilled Pixels: %u\n", WTF::monotonicallyIncreasingTime(), unfilledArea);
 }
 
-static void logThreadedScrollingMode(unsigned reasonsForUpdatingScrollLayerPositionOnMainThread)
+static void logThreadedScrollingMode(unsigned mainThreadScrollingReasons)
 {
-    if (reasonsForUpdatingScrollLayerPositionOnMainThread) {
+    if (mainThreadScrollingReasons) {
         StringBuilder reasonsDescription;
 
-        if (reasonsForUpdatingScrollLayerPositionOnMainThread & ScrollingTreeState::ForcedOnMainThread)
+        if (mainThreadScrollingReasons & ScrollingCoordinator::ForcedOnMainThread)
             reasonsDescription.append("forced,");
-        if (reasonsForUpdatingScrollLayerPositionOnMainThread & ScrollingTreeState::HasSlowRepaintObjects)
+        if (mainThreadScrollingReasons & ScrollingCoordinator::HasSlowRepaintObjects)
             reasonsDescription.append("slow-repaint objects,");
-        if (reasonsForUpdatingScrollLayerPositionOnMainThread & ScrollingTreeState::HasNonCompositedViewportConstrainedObjects)
+        if (mainThreadScrollingReasons & ScrollingCoordinator::HasViewportConstrainedObjectsWithoutSupportingFixedLayers)
             reasonsDescription.append("viewport-constrained objects,");
-        if (reasonsForUpdatingScrollLayerPositionOnMainThread & ScrollingTreeState::HasNonLayerViewportConstrainedObjects)
+        if (mainThreadScrollingReasons & ScrollingCoordinator::HasNonLayerFixedObjects)
             reasonsDescription.append("non-layer viewport-constrained objects,");
-        if (reasonsForUpdatingScrollLayerPositionOnMainThread & ScrollingTreeState::IsImageDocument)
+        if (mainThreadScrollingReasons & ScrollingCoordinator::IsImageDocument)
             reasonsDescription.append("image document,");
 
         // Strip the trailing comma.

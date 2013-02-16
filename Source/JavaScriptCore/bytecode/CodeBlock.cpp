@@ -45,6 +45,7 @@
 #include "LowLevelInterpreter.h"
 #include "MethodCallLinkStatus.h"
 #include "RepatchBuffer.h"
+#include "SlotVisitorInlineMethods.h"
 #include <stdio.h>
 #include <wtf/StringExtras.h>
 #include <wtf/UnusedParam.h>
@@ -90,7 +91,7 @@ static CString constantName(ExecState* exec, int k, JSValue value)
 
 static CString idName(int id0, const Identifier& ident)
 {
-    return makeString(ident.ustring(), "(@id", String::number(id0), ")").utf8();
+    return makeString(ident.string(), "(@id", String::number(id0), ")").utf8();
 }
 
 void CodeBlock::dumpBytecodeCommentAndNewLine(int location)
@@ -290,10 +291,14 @@ void CodeBlock::printGetByIdCacheStatus(ExecState* exec, int location)
     UNUSED_PARAM(ident); // tell the compiler to shut up in certain platform configurations.
     
 #if ENABLE(LLINT)
-    Structure* structure = instruction[4].u.structure.get();
-    dataLog(" llint(");
-    dumpStructure("struct", exec, structure, ident);
-    dataLog(")");
+    if (exec->interpreter()->getOpcodeID(instruction[0].u.opcode) == op_get_array_length)
+        dataLog(" llint(array_length)");
+    else {
+        Structure* structure = instruction[4].u.structure.get();
+        dataLog(" llint(");
+        dumpStructure("struct", exec, structure, ident);
+        dataLog(")");
+    }
 #endif
 
 #if ENABLE(JIT)
@@ -548,7 +553,7 @@ void CodeBlock::dump(ExecState* exec)
         dataLog("\nIdentifiers:\n");
         size_t i = 0;
         do {
-            dataLog("  id%u = %s\n", static_cast<unsigned>(i), m_identifiers[i].ustring().utf8().data());
+            dataLog("  id%u = %s\n", static_cast<unsigned>(i), m_identifiers[i].string().utf8().data());
             ++i;
         } while (i != m_identifiers.size());
     }
@@ -1000,6 +1005,22 @@ void CodeBlock::dump(ExecState* exec, const Vector<Instruction>::const_iterator&
             it++;
             break;
         }
+        case op_init_global_const: {
+            WriteBarrier<Unknown>* registerPointer = (++it)->u.registerPointer;
+            int r0 = (++it)->u.operand;
+            dataLog("[%4d] init_global_const\t g%d(%p), %s", location, m_globalObject->findRegisterIndex(registerPointer), registerPointer, registerName(exec, r0).data());
+            dumpBytecodeCommentAndNewLine(location);
+            break;
+        }
+        case op_init_global_const_check: {
+            WriteBarrier<Unknown>* registerPointer = (++it)->u.registerPointer;
+            int r0 = (++it)->u.operand;
+            dataLog("[%4d] init_global_const_check\t g%d(%p), %s", location, m_globalObject->findRegisterIndex(registerPointer), registerPointer, registerName(exec, r0).data());
+            dumpBytecodeCommentAndNewLine(location);
+            it++;
+            it++;
+            break;
+        }
         case op_resolve_base: {
             int r0 = (++it)->u.operand;
             int id0 = (++it)->u.operand;
@@ -1406,14 +1427,14 @@ void CodeBlock::dump(ExecState* exec, const Vector<Instruction>::const_iterator&
         }
         case op_tear_off_activation: {
             int r0 = (++it)->u.operand;
-            int r1 = (++it)->u.operand;
-            dataLog("[%4d] tear_off_activation\t %s, %s", location, registerName(exec, r0).data(), registerName(exec, r1).data());
+            dataLog("[%4d] tear_off_activation\t %s", location, registerName(exec, r0).data());
             dumpBytecodeCommentAndNewLine(location);
             break;
         }
         case op_tear_off_arguments: {
             int r0 = (++it)->u.operand;
-            dataLog("[%4d] tear_off_arguments %s", location, registerName(exec, r0).data());
+            int r1 = (++it)->u.operand;
+            dataLog("[%4d] tear_off_arguments %s, %s", location, registerName(exec, r0).data(), registerName(exec, r1).data());
             dumpBytecodeCommentAndNewLine(location);
             break;
         }
@@ -2079,6 +2100,8 @@ void CodeBlock::finalizeUnconditionally()
                 curInstruction[6].u.structure.clear();
                 curInstruction[7].u.structureChain.clear();
                 curInstruction[0].u.opcode = interpreter->getOpcode(op_put_by_id);
+                break;
+            case op_get_array_length:
                 break;
             default:
                 ASSERT_NOT_REACHED();

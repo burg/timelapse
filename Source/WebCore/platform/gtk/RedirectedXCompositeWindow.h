@@ -27,6 +27,8 @@
 #ifndef  RedirectedXCompositeWindow_h
 #define  RedirectedXCompositeWindow_h
 
+#if USE(GLX)
+
 #include "GLContextGLX.h"
 #include "IntSize.h"
 #include "RefPtrCairo.h"
@@ -47,6 +49,7 @@ public:
     void resize(const IntSize& newSize);
     GLContext* context();
     cairo_surface_t* cairoSurfaceForWidget(GtkWidget*);
+    Window windowId() { return m_window; }
 
 private:
     RedirectedXCompositeWindow(const IntSize&);
@@ -67,5 +70,7 @@ private:
 };
 
 } // namespace WebCore
+
+#endif // USE(GLX)
 
 #endif // RedirectedXCompositeWindow_h

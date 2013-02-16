@@ -60,6 +60,7 @@ template<typename CharacterType> struct HashAndCharactersTranslator;
 struct HashAndUTF8CharactersTranslator;
 struct LCharBufferTranslator;
 struct CharBufferFromLiteralDataTranslator;
+class MemoryObjectInfo;
 struct SubstringTranslator;
 struct UCharBufferTranslator;
 
@@ -714,6 +715,9 @@ public:
 #ifdef STRING_STATS
     ALWAYS_INLINE static StringStats& stringStats() { return m_stringStats; }
 #endif
+
+    WTF_EXPORT_STRING_API void reportMemoryUsage(MemoryObjectInfo*) const;
+
 private:
     // This number must be at least 2 to avoid sharing empty, null as well as 1 character strings from SmallStrings.
     static const unsigned s_copyCharsInlineCutOff = 20;

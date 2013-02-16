@@ -473,7 +473,8 @@ public:
     {
         switch (node.arrayMode()) {
         case Array::Generic:
-        case Array::JSArrayOutOfBounds:
+        case OUT_OF_BOUNDS_ARRAY_STORAGE_MODES:
+        case ALL_EFFECTFUL_ARRAY_STORAGE_MODES:
             return false;
         case Array::String:
             return node.op() == GetByVal;

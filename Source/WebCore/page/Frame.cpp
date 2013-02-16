@@ -675,8 +675,8 @@ void Frame::dispatchVisibilityStateChangeEvent()
 void Frame::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    info.addInstrumentedMember(m_doc.get());
-    info.addInstrumentedMember(m_loader);
+    info.addMember(m_doc.get());
+    info.addMember(m_loader);
 }
 
 void Frame::willDetachPage()
@@ -724,7 +724,7 @@ String Frame::displayStringModifiedByEncoding(const String& str) const
 
 VisiblePosition Frame::visiblePositionForPoint(const IntPoint& framePoint)
 {
-    HitTestResult result = eventHandler()->hitTestResultAtPoint(framePoint, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowShadowContent);
+    HitTestResult result = eventHandler()->hitTestResultAtPoint(framePoint, true);
     Node* node = result.innerNonSharedNode();
     if (!node)
         return VisiblePosition();
@@ -746,7 +746,7 @@ Document* Frame::documentAtPoint(const IntPoint& point)
     HitTestResult result = HitTestResult(pt);
 
     if (contentRenderer())
-        result = eventHandler()->hitTestResultAtPoint(pt);
+        result = eventHandler()->hitTestResultAtPoint(pt, false);
     return result.innerNode() ? result.innerNode()->document() : 0;
 }
 
@@ -886,6 +886,7 @@ String Frame::layerTreeAsText(bool showDebugInfo) const
 
     return contentRenderer()->compositor()->layerTreeAsText(showDebugInfo);
 #else
+    UNUSED_PARAM(showDebugInfo);
     return String();
 #endif
 }

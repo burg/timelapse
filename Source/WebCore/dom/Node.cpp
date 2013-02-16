@@ -796,7 +796,7 @@ RenderBoxModelObject* Node::renderBoxModelObject() const
     return m_renderer && m_renderer->isBoxModelObject() ? toRenderBoxModelObject(m_renderer) : 0;
 }
 
-LayoutRect Node::getRect() const
+LayoutRect Node::boundingBox() const
 {
     if (renderer())
         return renderer()->absoluteBoundingBoxRect();
@@ -2535,40 +2535,6 @@ void Node::notifyMutationObserversNodeWillDetach()
 }
 #endif // ENABLE(MUTATION_OBSERVERS)
 
-#if ENABLE(STYLE_SCOPED)
-bool Node::hasScopedHTMLStyleChild() const
-{
-    return hasRareData() && rareData()->hasScopedHTMLStyleChild();
-}
-
-size_t Node::numberOfScopedHTMLStyleChildren() const
-{
-    return hasRareData() ? rareData()->numberOfScopedHTMLStyleChildren() : 0;
-}
-
-void Node::registerScopedHTMLStyleChild()
-{
-    ensureRareData()->registerScopedHTMLStyleChild();
-}
-
-void Node::unregisterScopedHTMLStyleChild()
-{
-    ASSERT(hasRareData());
-    if (hasRareData())
-        rareData()->unregisterScopedHTMLStyleChild();
-}
-#else
-bool Node::hasScopedHTMLStyleChild() const
-{
-    return 0;
-}
-
-size_t Node::numberOfScopedHTMLStyleChildren() const
-{
-    return 0;
-}
-#endif
-
 void Node::handleLocalEvents(Event* event)
 {
     if (!hasRareData() || !rareData()->eventTargetData())
@@ -2845,11 +2811,11 @@ void Node::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
     TreeShared<Node, ContainerNode>::reportMemoryUsage(memoryObjectInfo);
     ScriptWrappable::reportMemoryUsage(memoryObjectInfo);
-    info.addInstrumentedMember(m_document);
-    info.addInstrumentedMember(m_next);
-    info.addInstrumentedMember(m_previous);
+    info.addMember(m_document);
+    info.addMember(m_next);
+    info.addMember(m_previous);
     if (m_renderer)
-        info.addInstrumentedMember(m_renderer->style());
+        info.addMember(m_renderer->style());
 }
 
 } // namespace WebCore

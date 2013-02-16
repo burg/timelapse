@@ -26,6 +26,7 @@
 #define Attribute_h
 
 #include "QualifiedName.h"
+#include "WebCoreMemoryInstrumentation.h"
 
 namespace WebCore {
 
@@ -70,8 +71,8 @@ public:
     void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     {
         MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-        info.addInstrumentedMember(m_name);
-        info.addInstrumentedMember(m_value);
+        info.addMember(m_name);
+        info.addMember(m_value);
     }
 
 private:

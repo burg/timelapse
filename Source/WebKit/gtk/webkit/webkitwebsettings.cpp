@@ -114,11 +114,13 @@ enum {
     PROP_ENABLE_FULLSCREEN,
     PROP_ENABLE_DNS_PREFETCHING,
     PROP_ENABLE_WEBGL,
+    PROP_ENABLE_MEDIA_STREAM,
     PROP_ENABLE_WEB_AUDIO,
     PROP_ENABLE_ACCELERATED_COMPOSITING,
     PROP_ENABLE_SMOOTH_SCROLLING,
     PROP_MEDIA_PLAYBACK_REQUIRES_USER_GESTURE,
-    PROP_MEDIA_PLAYBACK_ALLOWS_INLINE
+    PROP_MEDIA_PLAYBACK_ALLOWS_INLINE,
+    PROP_ENABLE_CSS_SHADERS
 };
 
 static void webkit_web_settings_finalize(GObject* object);
@@ -888,6 +890,25 @@ static void webkit_web_settings_class_init(WebKitWebSettingsClass* klass)
                                                          _("Whether WebKit prefetches domain names"),
                                                          TRUE,
                                                          flags));
+    /**
+    * WebKitWebSettings:enable-media-stream:
+    *
+    * Enable or disable support for Media Stream on pages. Media Stream is
+    * an experimental proposal for allowing web pages to access local video and
+    * audio input devices.  The standard is currently a work-in-progress as part
+    * of the Web Applications 1.0 specification from WHATWG.
+    *
+    * See also http://www.w3.org/TR/mediacapture-streams/
+    *
+    * Since: 1.10.0
+    */
+    g_object_class_install_property(gobject_class,
+                                    PROP_ENABLE_MEDIA_STREAM,
+                                    g_param_spec_boolean("enable-media-stream",
+                                                         _("Enable Media Stream"),
+                                                         _("Whether Media Stream should be enabled"),
+                                                         FALSE,
+                                                         flags));
 
     /**
     * WebKitWebSettings:enable-smooth-scrolling
@@ -939,6 +960,25 @@ static void webkit_web_settings_class_init(WebKitWebSettingsClass* klass)
                                                          _("Media playback allows inline"),
                                                          _("Whether media playback allows inline"),
                                                          TRUE,
+                                                         flags));
+
+    /**
+    * WebKitWebSettings:enable-css-shaders
+    *
+    * Enable or disable support for css shaders (css custom filters).
+    * Accelerated compositing needs to be enabled at compile time, but needs
+    * not be enabled at runtime.
+    *
+    * See also https://dvcs.w3.org/hg/FXTF/raw-file/tip/custom/index.html
+    *
+    * Since: 2.0
+    */
+    g_object_class_install_property(gobject_class,
+                                    PROP_ENABLE_CSS_SHADERS,
+                                    g_param_spec_boolean("enable-css-shaders",
+                                                         _("Enable CSS shaders"),
+                                                         _("Whether to enable css shaders"),
+                                                         FALSE,
                                                          flags));
 
 }
@@ -1110,6 +1150,9 @@ static void webkit_web_settings_set_property(GObject* object, guint prop_id, con
     case PROP_ENABLE_WEBGL:
         priv->enableWebgl = g_value_get_boolean(value);
         break;
+    case PROP_ENABLE_MEDIA_STREAM:
+        priv->enableMediaStream = g_value_get_boolean(value);
+        break;
     case PROP_ENABLE_WEB_AUDIO:
         priv->enableWebAudio = g_value_get_boolean(value);
         break;
@@ -1118,6 +1161,9 @@ static void webkit_web_settings_set_property(GObject* object, guint prop_id, con
         break;
     case PROP_ENABLE_SMOOTH_SCROLLING:
         priv->enableSmoothScrolling = g_value_get_boolean(value);
+        break;
+    case PROP_ENABLE_CSS_SHADERS:
+        priv->enableCSSShaders = g_value_get_boolean(value);
         break;
     case PROP_MEDIA_PLAYBACK_REQUIRES_USER_GESTURE:
         priv->mediaPlaybackRequiresUserGesture = g_value_get_boolean(value);
@@ -1284,6 +1330,9 @@ static void webkit_web_settings_get_property(GObject* object, guint prop_id, GVa
     case PROP_ENABLE_WEBGL:
         g_value_set_boolean(value, priv->enableWebgl);
         break;
+    case PROP_ENABLE_MEDIA_STREAM:
+        g_value_set_boolean(value, priv->enableMediaStream);
+        break;
     case PROP_ENABLE_WEB_AUDIO:
         g_value_set_boolean(value, priv->enableWebAudio);
         break;
@@ -1292,6 +1341,9 @@ static void webkit_web_settings_get_property(GObject* object, guint prop_id, GVa
         break;
     case PROP_ENABLE_SMOOTH_SCROLLING:
         g_value_set_boolean(value, priv->enableSmoothScrolling);
+        break;
+    case PROP_ENABLE_CSS_SHADERS:
+        g_value_set_boolean(value, priv->enableCSSShaders);
         break;
     case PROP_MEDIA_PLAYBACK_REQUIRES_USER_GESTURE:
         g_value_set_boolean(value, priv->mediaPlaybackRequiresUserGesture);

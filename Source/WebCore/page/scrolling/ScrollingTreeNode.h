@@ -30,7 +30,7 @@
 
 #include "IntRect.h"
 #include "ScrollTypes.h"
-#include "ScrollingTreeState.h"
+#include "ScrollingCoordinator.h"
 #include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
@@ -48,7 +48,7 @@ public:
     virtual void handleWheelEvent(const PlatformWheelEvent&) = 0;
     virtual void setScrollPosition(const IntPoint&) = 0;
 
-    ReasonForUpdatingScrollLayerPositionOnMainThreadFlags shouldUpdateScrollLayerPositionOnMainThreadReason() const { return m_shouldUpdateScrollLayerPositionOnMainThreadReason; }
+    MainThreadScrollingReasons shouldUpdateScrollLayerPositionOnMainThread() const { return m_shouldUpdateScrollLayerPositionOnMainThread; }
 
 protected:
     explicit ScrollingTreeNode(ScrollingTree*);
@@ -75,7 +75,7 @@ private:
     IntSize m_contentsSize;
     IntPoint m_scrollOrigin;
 
-    ReasonForUpdatingScrollLayerPositionOnMainThreadFlags m_shouldUpdateScrollLayerPositionOnMainThreadReason;
+    MainThreadScrollingReasons m_shouldUpdateScrollLayerPositionOnMainThread;
 
     ScrollElasticity m_horizontalScrollElasticity;
     ScrollElasticity m_verticalScrollElasticity;

@@ -140,6 +140,8 @@ messages -> WebPage {
     SetUseFixedLayout(bool fixed)
     SetFixedLayoutSize(WebCore::IntSize size)
 
+    SetSuppressScrollbarAnimations(bool suppressAnimations)
+
     SetPaginationMode(uint32_t mode);
     SetPaginationBehavesLikeColumns(bool behavesLikeColumns);
     SetPageLength(double pageLength);
@@ -297,6 +299,6 @@ messages -> WebPage {
 #endif
 
 #if PLATFORM(GTK) && USE(TEXTURE_MAPPER_GL)
-    WidgetMapped(int64_t id)
+    SetAcceleratedCompositingWindowId(int64_t id)
 #endif
 }

@@ -1,13 +1,5 @@
-LIST(APPEND WebKit2_LINK_FLAGS
-    ${CAIRO_LDFLAGS}
-    ${ECORE_X_LDFLAGS}
-    ${EDJE_LDFLAGS}
-    ${EFLDEPS_LDFLAGS}
-    ${EFREET_LDFLAGS}
-    ${EVAS_LDFLAGS}
-)
-
 LIST(APPEND WebKit2_SOURCES
+    Platform/efl/LoggingEfl.cpp
     Platform/efl/ModuleEfl.cpp
     Platform/efl/WorkQueueEfl.cpp
     Platform/unix/SharedMemoryUnix.cpp
@@ -25,6 +17,7 @@ LIST(APPEND WebKit2_SOURCES
     Shared/efl/NativeWebKeyboardEventEfl.cpp
     Shared/efl/NativeWebWheelEventEfl.cpp
     Shared/efl/NativeWebMouseEventEfl.cpp
+    Shared/efl/NativeWebTouchEventEfl.cpp
     Shared/efl/ProcessExecutablePathEfl.cpp
     Shared/efl/WebEventFactory.cpp
 
@@ -32,6 +25,8 @@ LIST(APPEND WebKit2_SOURCES
 
     Shared/soup/PlatformCertificateInfo.cpp
     Shared/soup/WebCoreArgumentCodersSoup.cpp
+
+    UIProcess/DefaultUndoController.cpp
 
     UIProcess/API/C/efl/WKView.cpp
     
@@ -142,11 +137,13 @@ LIST(APPEND WebKit2_INCLUDE_DIRECTORIES
     "${WEBKIT2_DIR}/WebProcess/WebCoreSupport/soup"
     "${WTF_DIR}/wtf/gobject"
     ${CAIRO_INCLUDE_DIRS}
-    ${ECORE_X_INCLUDE_DIRS}
+    ${ECORE_INCLUDE_DIRS}
+    ${ECORE_EVAS_INCLUDE_DIRS}
     ${EDJE_INCLUDE_DIRS}
-    ${EFLDEPS_INCLUDE_DIRS}
     ${EFREET_INCLUDE_DIRS}
+    ${EINA_INCLUDE_DIRS}
     ${EVAS_INCLUDE_DIRS}
+    ${HARFBUZZ_INCLUDE_DIRS}
     ${LIBSOUP_INCLUDE_DIRS}
     ${LIBXML2_INCLUDE_DIR}
     ${LIBXSLT_INCLUDE_DIRS}
@@ -156,12 +153,22 @@ LIST(APPEND WebKit2_INCLUDE_DIRECTORIES
     ${WTF_DIR}
 )
 
+IF (WTF_USE_3D_GRAPHICS)
+    LIST(APPEND WebKit2_INCLUDE_DIRECTORIES
+        "${THIRDPARTY_DIR}/ANGLE/include/GLSLANG"
+    )
+ENDIF ()
+
 LIST(APPEND WebKit2_LIBRARIES
     ${CAIRO_LIBRARIES}
-    ${ECORE_X_LIBRARIES}
-    ${EFLDEPS_LIBRARIES}
+    ${ECORE_LIBRARIES}
+    ${ECORE_EVAS_LIBRARIES}
+    ${EDJE_LIBRARIES}
     ${EFREET_LIBRARIES}
+    ${EINA_LIBRARIES}
+    ${EVAS_LIBRARIES}
     ${Freetype_LIBRARIES}
+    ${HARFBUZZ_LIBRARIES}
     ${LIBXML2_LIBRARIES}
     ${OPENGL_LIBRARIES}
     ${SQLITE_LIBRARIES}
@@ -280,6 +287,7 @@ SET(EWK2UnitTests_BINARIES
     test_ewk2_cookie_manager
     test_ewk2_download_job
     test_ewk2_eina_shared_string
+    test_ewk2_refptr_evas_object
     test_ewk2_intents
     test_ewk2_settings
     test_ewk2_view

@@ -202,7 +202,7 @@ JSObject* EvalExecutable::compileInternal(ExecState* exec, JSScope* scope, JITCo
         m_evalCodeBlock = newCodeBlock.release();
     } else {
         if (!lexicalGlobalObject->evalEnabled())
-            return throwError(exec, createEvalError(exec, ASCIILiteral("Eval is disabled")));
+            return throwError(exec, createEvalError(exec, lexicalGlobalObject->evalDisabledErrorMessage()));
         RefPtr<EvalNode> evalNode = parse<EvalNode>(globalData, lexicalGlobalObject, m_source, 0, Identifier(), isStrictMode() ? JSParseStrict : JSParseNormal, EvalNode::isFunctionNode ? JSParseFunctionCode : JSParseProgramCode, lexicalGlobalObject->debugger(), exec, &exception);
         if (!evalNode) {
             ASSERT(exception);
@@ -672,7 +672,7 @@ FunctionExecutable* FunctionExecutable::fromGlobalCode(const Identifier& name, E
     ASSERT(body->ident().isNull());
 
     FunctionExecutable* functionExecutable = FunctionExecutable::create(exec->globalData(), body);
-    functionExecutable->m_nameValue.set(exec->globalData(), functionExecutable, jsString(&exec->globalData(), name.ustring()));
+    functionExecutable->m_nameValue.set(exec->globalData(), functionExecutable, jsString(&exec->globalData(), name.string()));
     return functionExecutable;
 }
 
@@ -683,7 +683,7 @@ String FunctionExecutable::paramString() const
     for (size_t pos = 0; pos < parameters.size(); ++pos) {
         if (!builder.isEmpty())
             builder.appendLiteral(", ");
-        builder.append(parameters[pos].ustring());
+        builder.append(parameters[pos].string());
     }
     return builder.toString();
 }

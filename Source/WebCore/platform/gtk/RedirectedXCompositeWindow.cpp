@@ -27,6 +27,7 @@
 #include "config.h"
 #include "RedirectedXCompositeWindow.h"
 
+#if USE(GLX)
 #include "GLContextGLX.h"
 #include <GL/glx.h>
 #include <X11/extensions/Xcomposite.h>
@@ -43,7 +44,8 @@ PassOwnPtr<RedirectedXCompositeWindow> RedirectedXCompositeWindow::create(const 
 }
 
 RedirectedXCompositeWindow::RedirectedXCompositeWindow(const IntSize& size)
-    : m_window(0)
+    : m_usableSize(size)
+    , m_window(0)
     , m_parentWindow(0)
     , m_pixmap(0)
     , m_surface(0)
@@ -90,7 +92,6 @@ RedirectedXCompositeWindow::RedirectedXCompositeWindow(const IntSize& size)
     XCompositeRedirectWindow(display, m_window, CompositeRedirectManual);
 
     resize(size);
-    resizeLater(); // Force update of the usable area.
 }
 
 RedirectedXCompositeWindow::~RedirectedXCompositeWindow()
@@ -136,6 +137,8 @@ void RedirectedXCompositeWindow::resize(const IntSize& size)
 
     Display* display = GLContextGLX::sharedDisplay();
     XResizeWindow(display, m_window, size.width(), size.height());
+
+    XFlush(display);
     glXWaitX();
 
     // This swap is based on code in Chromium. It tries to work-around a bug in the Intel drivers
@@ -214,3 +217,5 @@ cairo_surface_t* RedirectedXCompositeWindow::cairoSurfaceForWidget(GtkWidget* wi
 }
 
 } // namespace WebCore
+
+#endif // USE(GLX)

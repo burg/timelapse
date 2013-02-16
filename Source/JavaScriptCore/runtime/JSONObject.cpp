@@ -193,7 +193,7 @@ JSValue PropertyNameForFunctionCall::value(ExecState* exec) const
 {
     if (!m_value) {
         if (m_identifier)
-            m_value = jsString(exec, m_identifier->ustring());
+            m_value = jsString(exec, m_identifier->string());
         else
             m_value = jsNumber(m_number);
     }
@@ -521,8 +521,8 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
     if (m_isArray) {
         // Get the value.
         JSValue value;
-        if (m_isJSArray && asArray(m_object.get())->canGetIndex(index))
-            value = asArray(m_object.get())->getIndex(index);
+        if (m_isJSArray && asArray(m_object.get())->canGetIndexQuickly(index))
+            value = asArray(m_object.get())->getIndexQuickly(index);
         else {
             PropertySlot slot(m_object.get());
             if (!m_object->methodTable()->getOwnPropertySlotByIndex(m_object.get(), exec, index, slot))
@@ -557,7 +557,7 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
         stringifier.startNewLine(builder);
 
         // Append the property name.
-        appendQuotedString(builder, propertyName.ustring());
+        appendQuotedString(builder, propertyName.string());
         builder.append(':');
         if (stringifier.willIndent())
             builder.append(' ');
@@ -687,8 +687,8 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     indexStack.removeLast();
                     break;
                 }
-                if (isJSArray(array) && array->canGetIndex(index))
-                    inValue = array->getIndex(index);
+                if (isJSArray(array) && array->canGetIndexQuickly(index))
+                    inValue = array->getIndexQuickly(index);
                 else {
                     PropertySlot slot;
                     if (array->methodTable()->getOwnPropertySlotByIndex(array, m_exec, index, slot))
@@ -769,7 +769,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 JSObject* object = objectStack.peek();
                 Identifier prop = propertyStack.last()[indexStack.last()];
                 PutPropertySlot slot;
-                JSValue filteredValue = callReviver(object, jsString(m_exec, prop.ustring()), outValue);
+                JSValue filteredValue = callReviver(object, jsString(m_exec, prop.string()), outValue);
                 if (filteredValue.isUndefined())
                     object->methodTable()->deleteProperty(object, m_exec, prop);
                 else

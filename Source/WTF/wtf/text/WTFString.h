@@ -26,7 +26,6 @@
 // on systems without case-sensitive file systems.
 
 #include <wtf/text/ASCIIFastPath.h>
-#include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/StringImpl.h>
 
 #ifdef __OBJC__
@@ -59,6 +58,7 @@ namespace WebKit {
 namespace WTF {
 
 class CString;
+class MemoryObjectInfo;
 struct StringHash;
 
 // Declarations of string operations
@@ -226,13 +226,12 @@ public:
         return (*m_impl)[index];
     }
 
-    static String number(unsigned short number) { return numberToStringImpl(number); }
-    static String number(int number) { return numberToStringImpl(number); }
-    static String number(unsigned number) { return numberToStringImpl(number); }
-    static String number(long number) { return numberToStringImpl(number); }
-    static String number(unsigned long number) { return numberToStringImpl(number); }
-    static String number(long long number) { return numberToStringImpl(number); }
-    static String number(unsigned long long number) { return numberToStringImpl(number); }
+    WTF_EXPORT_STRING_API static String number(int);
+    WTF_EXPORT_STRING_API static String number(unsigned int);
+    WTF_EXPORT_STRING_API static String number(long);
+    WTF_EXPORT_STRING_API static String number(unsigned long);
+    WTF_EXPORT_STRING_API static String number(long long);
+    WTF_EXPORT_STRING_API static String number(unsigned long long);
 
     WTF_EXPORT_STRING_API static String number(double, unsigned = ShouldRoundSignificantFigures | ShouldTruncateTrailingZeros, unsigned precision = 6);
 
@@ -456,6 +455,8 @@ public:
             return 0;
         return (*m_impl)[index];
     }
+
+    WTF_EXPORT_STRING_API void reportMemoryUsage(MemoryObjectInfo*) const;
 
 private:
     RefPtr<StringImpl> m_impl;

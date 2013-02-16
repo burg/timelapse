@@ -299,10 +299,10 @@ public:
 
     virtual LayoutSize offsetFromContainer(RenderObject*, const LayoutPoint&, bool* offsetDependsOnPoint = 0) const;
     
-    LayoutUnit computeBorderBoxLogicalWidth(LayoutUnit width) const;
-    LayoutUnit computeBorderBoxLogicalHeight(LayoutUnit height) const;
-    LayoutUnit computeContentBoxLogicalWidth(LayoutUnit width) const;
-    LayoutUnit computeContentBoxLogicalHeight(LayoutUnit height) const;
+    LayoutUnit adjustBorderBoxLogicalWidthForBoxSizing(LayoutUnit width) const;
+    LayoutUnit adjustBorderBoxLogicalHeightForBoxSizing(LayoutUnit height) const;
+    LayoutUnit adjustContentBoxLogicalWidthForBoxSizing(LayoutUnit width) const;
+    LayoutUnit adjustContentBoxLogicalHeightForBoxSizing(LayoutUnit height) const;
 
     virtual void borderFitAdjust(LayoutRect&) const { } // Shrink the box in which the border paints if border-fit is set.
 
@@ -364,9 +364,9 @@ public:
     LayoutUnit containingBlockAvailableLineWidthInRegion(RenderRegion*, LayoutUnit offsetFromLogicalTopOfFirstPage) const;
     LayoutUnit perpendicularContainingBlockLogicalHeight() const;
 
-    virtual void computeLogicalWidth();
-    virtual void computeLogicalHeight();
-    void computeLogicalHeight(LogicalExtentComputedValues&) const;
+    virtual void updateLogicalWidth();
+    virtual void updateLogicalHeight();
+    void computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues&) const;
 
     RenderBoxRegionInfo* renderBoxRegionInfo(RenderRegion*, LayoutUnit offsetFromLogicalTopOfFirstPage, RenderBoxRegionInfoFlags = CacheRenderBoxRegionInfo) const;
     void computeLogicalWidthInRegion(LogicalExtentComputedValues&, RenderRegion* = 0, LayoutUnit offsetFromLogicalTopOfFirstPage = ZERO_LAYOUT_UNIT) const;
@@ -389,8 +389,8 @@ public:
 
     LayoutUnit computeLogicalWidthInRegionUsing(SizeType, LayoutUnit availableLogicalWidth, const RenderBlock* containingBlock, RenderRegion*, LayoutUnit offsetFromLogicalTopOfFirstPage) const;
     LayoutUnit computeLogicalHeightUsing(SizeType, const Length& height) const;
-    LayoutUnit computeLogicalClientHeight(SizeType, const Length& height);
-    LayoutUnit computeContentLogicalHeightUsing(SizeType, const Length& height) const;
+    LayoutUnit computeContentLogicalHeight(SizeType, const Length& height);
+    LayoutUnit computeContentAndScrollbarLogicalHeightUsing(SizeType, const Length& height) const;
     LayoutUnit computeReplacedLogicalWidthUsing(SizeType, Length width) const;
     LayoutUnit computeReplacedLogicalWidthRespectingMinMaxWidth(LayoutUnit logicalWidth, bool includeMaxWidth = true) const;
     LayoutUnit computeReplacedLogicalHeightUsing(SizeType, Length height) const;
@@ -399,6 +399,7 @@ public:
     virtual LayoutUnit computeReplacedLogicalWidth(bool includeMaxWidth = true) const;
     virtual LayoutUnit computeReplacedLogicalHeight() const;
 
+    static bool percentageLogicalHeightIsResolvableFromBlock(const RenderBlock* containingBlock, bool outOfFlowPositioned);
     LayoutUnit computePercentageLogicalHeight(const Length& height) const;
 
     // Block flows subclass availableWidth/Height to handle multi column layout (shrinking the width/height available to children when laying out.)
@@ -449,11 +450,11 @@ public:
     bool tryLayoutDoingPositionedMovementOnly()
     {
         LayoutUnit oldWidth = width();
-        computeLogicalWidth();
+        updateLogicalWidth();
         // If we shrink to fit our width may have changed, so we still need full layout.
         if (oldWidth != width())
             return false;
-        computeLogicalHeight();
+        updateLogicalHeight();
         return true;
     }
 
@@ -509,6 +510,7 @@ public:
 
     IntSize scrolledContentOffset() const;
     LayoutSize cachedSizeForOverflowClip() const;
+    void applyCachedClipAndScrollOffsetForRepaint(LayoutRect& paintRect) const;
 
     virtual bool hasRelativeDimensions() const;
     virtual bool hasRelativeLogicalHeight() const;
@@ -582,6 +584,8 @@ private:
 
     // Returns true if we did a full repaint
     bool repaintLayerRectsForImage(WrappedImagePtr image, const FillLayer* layers, bool drawingBackground);
+
+    bool skipContainingBlockForPercentHeightCalculation(const RenderBox* containingBlock) const;
    
     LayoutUnit containingBlockLogicalWidthForPositioned(const RenderBoxModelObject* containingBlock, RenderRegion* = 0,
         LayoutUnit offsetFromLogicalTopOfFirstPage = 0, bool checkForPerpendicularWritingMode = true) const;
@@ -592,8 +596,8 @@ private:
                                             LayoutUnit containerLogicalWidth, LayoutUnit bordersPlusPadding,
                                             Length logicalLeft, Length logicalRight, Length marginLogicalLeft, Length marginLogicalRight,
                                             LogicalExtentComputedValues&) const;
-    void computePositionedLogicalHeightUsing(SizeType, Length logicalHeight, const RenderBoxModelObject* containerBlock,
-                                             LayoutUnit containerLogicalHeight, LayoutUnit bordersPlusPadding,
+    void computePositionedLogicalHeightUsing(SizeType, Length logicalHeightLength, const RenderBoxModelObject* containerBlock,
+                                             LayoutUnit containerLogicalHeight, LayoutUnit bordersPlusPadding, LayoutUnit logicalHeight,
                                              Length logicalTop, Length logicalBottom, Length marginLogicalTop, Length marginLogicalBottom,
                                              LogicalExtentComputedValues&) const;
 

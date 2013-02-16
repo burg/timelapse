@@ -36,7 +36,7 @@
 
 #include "RTCSessionDescriptionDescriptor.h"
 #include "RTCSessionDescriptionRequest.h"
-#include <public/WebRTCSessionDescriptionDescriptor.h>
+#include <public/WebRTCSessionDescription.h>
 #include <wtf/PassOwnPtr.h>
 
 using namespace WebCore;
@@ -58,7 +58,7 @@ void WebRTCSessionDescriptionRequest::reset()
     m_private.reset();
 }
 
-void WebRTCSessionDescriptionRequest::requestSucceeded(const WebRTCSessionDescriptionDescriptor& sessionDescription) const
+void WebRTCSessionDescriptionRequest::requestSucceeded(const WebRTCSessionDescription& sessionDescription) const
 {
     ASSERT(m_private.get());
     m_private->requestSucceeded(sessionDescription);

@@ -470,7 +470,7 @@ WebInspector.Events = {
 
 WebInspector.loaded = function()
 {
-    InspectorBackend.loadFromJSONIfNeeded();
+    InspectorBackend.loadFromJSONIfNeeded("../Inspector.json");
 
     if (WebInspector.WorkerManager.isDedicatedWorkerFrontend()) {
         // Do not create socket for the worker front-end.

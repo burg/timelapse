@@ -44,6 +44,7 @@
 #include "InspectorBackendDispatcher.h"
 #include "InspectorBaseAgent.h"
 #include "InspectorCSSAgent.h"
+#include "InspectorCanvasAgent.h"
 #include "InspectorClient.h"
 #include "InspectorDOMAgent.h"
 #include "InspectorDOMDebuggerAgent.h"
@@ -63,7 +64,6 @@
 #include "InspectorState.h"
 #include "InspectorTimelineAgent.h"
 #include "InspectorTimelapseAgent.h"
-#include "InspectorWebGLAgent.h"
 #include "InspectorWorkerAgent.h"
 #include "InstrumentingAgents.h"
 #include "PageConsoleAgent.h"
@@ -151,9 +151,7 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     m_agents.append(InspectorWorkerAgent::create(m_instrumentingAgents.get(), m_state.get()));
 #endif
 
-#if ENABLE(WEBGL)
-    m_agents.append(InspectorWebGLAgent::create(m_instrumentingAgents.get(), m_state.get(), page, m_injectedScriptManager.get()));
-#endif
+    m_agents.append(InspectorCanvasAgent::create(m_instrumentingAgents.get(), m_state.get(), page, m_injectedScriptManager.get()));
 
     ASSERT_ARG(inspectorClient, inspectorClient);
     m_injectedScriptManager->injectedScriptHost()->init(m_inspectorAgent

@@ -559,25 +559,23 @@ void JIT::emit_op_construct(Instruction* currentInstruction)
 
 void JIT::emit_op_tear_off_activation(Instruction* currentInstruction)
 {
-    unsigned activation = currentInstruction[1].u.operand;
-    unsigned arguments = currentInstruction[2].u.operand;
-    Jump activationCreated = branchTestPtr(NonZero, addressFor(activation));
-    Jump argumentsNotCreated = branchTestPtr(Zero, addressFor(arguments));
-    activationCreated.link(this);
+    int activation = currentInstruction[1].u.operand;
+    Jump activationNotCreated = branchTestPtr(Zero, addressFor(activation));
     JITStubCall stubCall(this, cti_op_tear_off_activation);
     stubCall.addArgument(activation, regT2);
-    stubCall.addArgument(unmodifiedArgumentsRegister(arguments), regT2);
     stubCall.call();
-    argumentsNotCreated.link(this);
+    activationNotCreated.link(this);
 }
 
 void JIT::emit_op_tear_off_arguments(Instruction* currentInstruction)
 {
-    unsigned dst = currentInstruction[1].u.operand;
+    int arguments = currentInstruction[1].u.operand;
+    int activation = currentInstruction[2].u.operand;
 
-    Jump argsNotCreated = branchTestPtr(Zero, Address(callFrameRegister, sizeof(Register) * (unmodifiedArgumentsRegister(dst))));
+    Jump argsNotCreated = branchTestPtr(Zero, Address(callFrameRegister, sizeof(Register) * (unmodifiedArgumentsRegister(arguments))));
     JITStubCall stubCall(this, cti_op_tear_off_arguments);
-    stubCall.addArgument(unmodifiedArgumentsRegister(dst), regT2);
+    stubCall.addArgument(unmodifiedArgumentsRegister(arguments), regT2);
+    stubCall.addArgument(activation, regT2);
     stubCall.call();
     argsNotCreated.link(this);
 }
@@ -1668,7 +1666,7 @@ void JIT::emit_op_new_func_exp(Instruction* currentInstruction)
 void JIT::emit_op_new_array(Instruction* currentInstruction)
 {
     int length = currentInstruction[3].u.operand;
-    if (CopiedSpace::isOversize(JSArray::storageSize(length))) {
+    if (CopiedSpace::isOversize(Butterfly::totalSize(0, 0, true, ArrayStorage::sizeFor(length)))) {
         JITStubCall stubCall(this, cti_op_new_array);
         stubCall.addArgument(TrustedImm32(currentInstruction[2].u.operand));
         stubCall.addArgument(TrustedImm32(currentInstruction[3].u.operand));
@@ -1678,7 +1676,7 @@ void JIT::emit_op_new_array(Instruction* currentInstruction)
     int dst = currentInstruction[1].u.operand;
     int values = currentInstruction[2].u.operand;
 
-    emitAllocateJSArray(values, length, regT0, regT1, regT2);
+    emitAllocateJSArray(values, length, regT0, regT1, regT2, regT3);
     emitStoreCell(dst, regT0); 
 }
 
@@ -1687,7 +1685,7 @@ void JIT::emitSlow_op_new_array(Instruction* currentInstruction, Vector<SlowCase
     // If the allocation would be oversize, we will already make the proper stub call above in 
     // emit_op_new_array.
     int length = currentInstruction[3].u.operand;
-    if (CopiedSpace::isOversize(JSArray::storageSize(length)))
+    if (CopiedSpace::isOversize(Butterfly::totalSize(0, 0, true, ArrayStorage::sizeFor(length))))
         return;
     linkSlowCase(iter); // Not enough space in CopiedSpace for storage.
     linkSlowCase(iter); // Not enough space in MarkedSpace for cell.

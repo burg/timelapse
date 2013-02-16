@@ -88,6 +88,7 @@ bool Settings::gAVFoundationEnabled(false);
 #endif
 
 bool Settings::gMockScrollbarsEnabled = false;
+bool Settings::gUsesOverlayScrollbars = false;
 
 #if PLATFORM(WIN) || (OS(WINDOWS) && PLATFORM(WX))
 bool Settings::gShouldUseHighResolutionTimers = true;
@@ -138,6 +139,7 @@ Settings::Settings(Page* page)
     , m_sessionStorageQuota(StorageMap::noQuota)
     , m_editingBehaviorType(editingBehaviorTypeForPlatform())
     , m_maximumHTMLParserDOMTreeDepth(defaultMaximumHTMLParserDOMTreeDepth)
+    , m_storageBlockingPolicy(SecurityOrigin::AllowAllStorage)
 #if ENABLE(TEXT_AUTOSIZING)
     , m_textAutosizingFontScaleFactor(1)
 #if HACK_FORCE_TEXT_AUTOSIZING_ON_DESKTOP
@@ -199,6 +201,9 @@ Settings::Settings(Page* page)
     , m_acceleratedDrawingEnabled(false)
     , m_acceleratedFiltersEnabled(false)
     , m_isCSSCustomFilterEnabled(false)
+#if ENABLE(CSS_STICKY_POSITION)
+    , m_cssStickyPositionEnabled(true)
+#endif
 #if ENABLE(CSS_REGIONS)
     , m_cssRegionsEnabled(false)
 #endif
@@ -284,7 +289,6 @@ Settings::Settings(Page* page)
     , m_cookieEnabled(true)
     , m_windowFocusRestricted(true)
     , m_diagnosticLoggingEnabled(false)
-    , m_thirdPartyStorageBlockingEnabled(false)
     , m_scrollingPerformanceLoggingEnabled(false)
     , m_loadsImagesAutomaticallyTimer(this, &Settings::loadsImagesAutomaticallyTimerFired)
     , m_incrementalRenderingSuppressionTimeoutInSeconds(defaultIncrementalRenderingSuppressionTimeoutInSeconds)
@@ -931,6 +935,15 @@ void Settings::setLoadDeferringEnabled(bool enabled)
     m_loadDeferringEnabled = enabled;
 }
 
+void Settings::setStorageBlockingPolicy(SecurityOrigin::StorageBlockingPolicy enabled)
+{
+    if (m_storageBlockingPolicy == enabled)
+        return;
+
+    m_storageBlockingPolicy = enabled;
+    m_page->storageBlockingStateChanged();
+}
+
 void Settings::setTiledBackingStoreEnabled(bool enabled)
 {
     m_tiledBackingStoreEnabled = enabled;
@@ -956,6 +969,16 @@ void Settings::setMockScrollbarsEnabled(bool flag)
 bool Settings::mockScrollbarsEnabled()
 {
     return gMockScrollbarsEnabled;
+}
+
+void Settings::setUsesOverlayScrollbars(bool flag)
+{
+    gUsesOverlayScrollbars = flag;
+}
+
+bool Settings::usesOverlayScrollbars()
+{
+    return gUsesOverlayScrollbars;
 }
 
 #if USE(JSC)

@@ -80,6 +80,7 @@
 #include "ProgressTracker.h"
 #include "RenderView.h"
 #include "ResourceHandle.h"
+#include "RuntimeEnabledFeatures.h"
 #include "ScriptValue.h"
 #include "Settings.h"
 #include "webkit/WebKitDOMDocumentPrivate.h"
@@ -427,7 +428,7 @@ static IntPoint getLocationForKeyboardGeneratedContextMenu(Frame* frame)
     if (!selection->selection().isNonOrphanedCaretOrRange()
          || (selection->selection().isCaret() && !selection->selection().isContentEditable())) {
         if (Node* focusedNode = getFocusedNode(frame))
-            return focusedNode->getPixelSnappedRect().location();
+            return focusedNode->pixelSnappedBoundingBox().location();
 
         // There was no selection and no focused node, so just put the context
         // menu into the corner of the view, offset slightly.
@@ -1608,7 +1609,7 @@ static gboolean webkit_web_view_query_tooltip(GtkWidget *widget, gint x, gint y,
                 String title = static_cast<Element*>(titleNode)->title();
                 if (!title.isEmpty()) {
                     if (FrameView* view = coreFrame->view()) {
-                        GdkRectangle area = view->contentsToWindow(node->getPixelSnappedRect());
+                        GdkRectangle area = view->contentsToWindow(node->pixelSnappedBoundingBox());
                         gtk_tooltip_set_tip_area(tooltip, &area);
                     }
                     gtk_tooltip_set_text(tooltip, title.utf8().data());
@@ -3432,6 +3433,10 @@ static void webkit_web_view_update_settings(WebKitWebView* webView)
     coreSettings->setWebGLEnabled(settingsPrivate->enableWebgl);
 #endif
 
+#if ENABLE(MEDIA_STREAM)
+    WebCore::RuntimeEnabledFeatures::setMediaStreamEnabled(settingsPrivate->enableMediaStream);
+#endif
+
 #if USE(ACCELERATED_COMPOSITING)
     coreSettings->setAcceleratedCompositingEnabled(settingsPrivate->enableAcceleratedCompositing);
 #endif
@@ -3442,6 +3447,10 @@ static void webkit_web_view_update_settings(WebKitWebView* webView)
 
 #if ENABLE(SMOOTH_SCROLLING)
     coreSettings->setEnableScrollAnimator(settingsPrivate->enableSmoothScrolling);
+#endif
+
+#if ENABLE(CSS_SHADERS)
+    coreSettings->setCSSCustomFilterEnabled(settingsPrivate->enableCSSShaders);
 #endif
 
     // Use mock scrollbars if in DumpRenderTree mode (i.e. testing layout tests).
@@ -3583,6 +3592,11 @@ static void webkit_web_view_settings_notify(WebKitWebSettings* webSettings, GPar
 #if ENABLE(SMOOTH_SCROLLING)
     else if (name == g_intern_string("enable-smooth-scrolling"))
         settings->setEnableScrollAnimator(g_value_get_boolean(&value));
+#endif
+
+#if ENABLE(CSS_SHADERS)
+    else if (name == g_intern_string("enable-css-shaders"))
+        settings->setCSSCustomFilterEnabled(g_value_get_boolean(&value));
 #endif
 
     else if (!g_object_class_find_property(G_OBJECT_GET_CLASS(webSettings), name))

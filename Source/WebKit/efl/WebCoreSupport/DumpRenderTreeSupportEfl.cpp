@@ -104,6 +104,13 @@ void DumpRenderTreeSupportEfl::clearOpener(Evas_Object* ewkFrame)
     frame->loader()->setOpener(0);
 }
 
+String DumpRenderTreeSupportEfl::layerTreeAsText(const Evas_Object* ewkFrame)
+{
+    DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, String());
+
+    return frame->layerTreeAsText();
+}
+
 bool DumpRenderTreeSupportEfl::elementDoesAutoCompleteForElementWithId(const Evas_Object* ewkFrame, const String& elementId)
 {
     DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, false);
@@ -335,6 +342,13 @@ void DumpRenderTreeSupportEfl::setCSSGridLayoutEnabled(const Evas_Object* ewkVie
     page->settings()->setCSSGridLayoutEnabled(enabled);
 }
 
+void DumpRenderTreeSupportEfl::setCSSRegionsEnabled(const Evas_Object* ewkView, bool enabled)
+{
+    DRT_SUPPRT_PAGE_GET_OR_RETURN(ewkView, page);
+
+    page->settings()->setCSSRegionsEnabled(enabled);
+}
+
 bool DumpRenderTreeSupportEfl::isCommandEnabled(const Evas_Object* ewkView, const char* name)
 {
     DRT_SUPPRT_PAGE_GET_OR_RETURN(ewkView, page, false);
@@ -557,7 +571,7 @@ void DumpRenderTreeSupportEfl::setSerializeHTTPLoads(bool enabled)
 void DumpRenderTreeSupportEfl::sendWebIntentResponse(Ewk_Intent_Request* request, JSStringRef response)
 {
 #if ENABLE(WEB_INTENTS)
-    String responseString = response->ustring();
+    String responseString = response->string();
     if (responseString.isNull())
         ewk_intent_request_failure_post(request, WebCore::SerializedScriptValue::create(String::fromUTF8("ERROR")));
     else
@@ -578,10 +592,10 @@ WebCore::MessagePortChannelArray* DumpRenderTreeSupportEfl::intentMessagePorts(c
 void DumpRenderTreeSupportEfl::deliverWebIntent(Evas_Object* ewkFrame, JSStringRef action, JSStringRef type, JSStringRef data)
 {
 #if ENABLE(WEB_INTENTS)
-    RefPtr<WebCore::SerializedScriptValue> serializedData = WebCore::SerializedScriptValue::create(String(data->ustring().impl()));
+    RefPtr<WebCore::SerializedScriptValue> serializedData = WebCore::SerializedScriptValue::create(data->string());
     WebCore::ExceptionCode ec = 0;
     WebCore::MessagePortArray ports;
-    RefPtr<WebCore::Intent> coreIntent = WebCore::Intent::create(String(action->ustring().impl()), String(type->ustring().impl()), serializedData.get(), ports, ec);
+    RefPtr<WebCore::Intent> coreIntent = WebCore::Intent::create(action->string(), type->string(), serializedData.get(), ports, ec);
     if (ec)
         return;
     Ewk_Intent* ewkIntent = ewk_intent_new(coreIntent.get());

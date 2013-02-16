@@ -125,7 +125,7 @@ RegisterID* RegExpNode::emitBytecode(BytecodeGenerator& generator, RegisterID* d
 {
     if (dst == generator.ignoredResult())
         return 0;
-    return generator.emitNewRegExp(generator.finalDestination(dst), RegExp::create(*generator.globalData(), m_pattern.ustring(), regExpFlags(m_flags.ustring())));
+    return generator.emitNewRegExp(generator.finalDestination(dst), RegExp::create(*generator.globalData(), m_pattern.string(), regExpFlags(m_flags.string())));
 }
 
 // ------------------------------ ThisNode -------------------------------------
@@ -1387,9 +1387,11 @@ RegisterID* ConstDeclNode::emitCodeSingle(BytecodeGenerator& generator)
 
     RefPtr<RegisterID> value = m_init ? generator.emitNode(m_init) : generator.emitLoad(0, jsUndefined());
 
-    if (resolveResult.isStatic())
+    if (resolveResult.isStatic()) {
+        if (generator.codeType() == GlobalCode)
+            return generator.emitInitGlobalConst(resolveResult, m_ident, value.get());
         return generator.emitPutStaticVar(resolveResult, m_ident, value.get());
-    
+    }
     if (generator.codeType() != EvalCode)
         return value.get();
 
@@ -1831,7 +1833,7 @@ static void processClauseList(ClauseListNode* list, Vector<ExpressionNode*, 8>& 
                 typeForTable = SwitchNeither;
                 break;
             }
-            const String& value = static_cast<StringNode*>(clauseExpression)->value().ustring();
+            const String& value = static_cast<StringNode*>(clauseExpression)->value().string();
             if (singleCharacterSwitch &= value.length() == 1) {
                 int32_t intVal = value[0];
                 if (intVal < min_num)

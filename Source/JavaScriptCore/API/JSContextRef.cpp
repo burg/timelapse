@@ -185,9 +185,7 @@ JSStringRef JSContextCreateBacktrace(JSContextRef ctx, unsigned maxStackSize)
         intptr_t sourceID;
         String urlString;
         JSValue function;
-        
-        String levelStr = String::number(count);
-        
+
         exec->interpreter()->retrieveLastCaller(callFrame, signedLineNumber, sourceID, urlString, function);
 
         if (function)
@@ -200,15 +198,15 @@ JSStringRef JSContextCreateBacktrace(JSContextRef ctx, unsigned maxStackSize)
         }
         unsigned lineNumber = signedLineNumber >= 0 ? signedLineNumber : 0;
         if (!builder.isEmpty())
-            builder.append("\n");
-        builder.append("#");
-        builder.append(levelStr);
-        builder.append(" ");
+            builder.append('\n');
+        builder.append('#');
+        builder.appendNumber(count);
+        builder.append(' ');
         builder.append(functionName);
-        builder.append("() at ");
+        builder.appendLiteral("() at ");
         builder.append(urlString);
-        builder.append(":");
-        builder.append(String::number(lineNumber));
+        builder.append(':');
+        builder.appendNumber(lineNumber);
         if (!function || ++count == maxStackSize)
             break;
         callFrame = callFrame->callerFrame();

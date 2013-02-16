@@ -232,7 +232,17 @@ IDBTransaction::OpenCursorNotifier::OpenCursorNotifier(PassRefPtr<IDBTransaction
 
 IDBTransaction::OpenCursorNotifier::~OpenCursorNotifier()
 {
-    m_transaction->unregisterOpenCursor(m_cursor);
+    if (m_cursor)
+        m_transaction->unregisterOpenCursor(m_cursor);
+}
+
+void IDBTransaction::OpenCursorNotifier::cursorFinished()
+{
+    if (m_cursor) {
+        m_transaction->unregisterOpenCursor(m_cursor);
+        m_cursor = 0;
+        m_transaction.clear();
+    }
 }
 
 void IDBTransaction::registerOpenCursor(IDBCursor* cursor)
@@ -294,12 +304,10 @@ void IDBTransaction::onAbort()
     }
     m_objectStoreCleanupMap.clear();
     closeOpenCursors();
-    m_database->transactionFinished(this);
 
-    if (m_contextStopped || !scriptExecutionContext())
-        return;
-
+    // Enqueue events before notifying database, as database may close which enqueues more events and order matters.
     enqueueEvent(Event::create(eventNames().abortEvent, true, false));
+    m_database->transactionFinished(this);
 }
 
 void IDBTransaction::onComplete()
@@ -309,12 +317,10 @@ void IDBTransaction::onComplete()
     m_state = Finishing;
     m_objectStoreCleanupMap.clear();
     closeOpenCursors();
-    m_database->transactionFinished(this);
 
-    if (m_contextStopped || !scriptExecutionContext())
-        return;
-
+    // Enqueue events before notifying database, as database may close which enqueues more events and order matters.
     enqueueEvent(Event::create(eventNames().completeEvent, false, false));
+    m_database->transactionFinished(this);
 }
 
 bool IDBTransaction::hasPendingActivity() const

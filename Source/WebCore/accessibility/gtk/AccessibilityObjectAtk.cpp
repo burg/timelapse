@@ -41,7 +41,7 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
         return DefaultBehavior;
 
     AccessibilityRole role = roleValue();
-    if (role == SplitterRole)
+    if (role == HorizontalRuleRole)
         return IncludeObject;
 
     // We expose the slider as a whole but not its value indicator.
@@ -89,7 +89,7 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
             return DefaultBehavior;
 
         child = child->firstChild();
-        if (child->isLink() || !child->firstAnonymousBlockChild())
+        if (child && (child->isLink() || !child->firstAnonymousBlockChild()))
             return IncludeObject;
     }
 

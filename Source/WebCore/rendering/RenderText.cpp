@@ -727,7 +727,6 @@ ALWAYS_INLINE float RenderText::widthFromCache(const Font& f, int start, int len
         float monospaceCharacterWidth = f.spaceWidth();
         float w = 0;
         bool isSpace;
-        bool previousCharWasSpace = true; // FIXME: Preserves historical behavior, but seems wrong for start > 0.
         ASSERT(m_text);
         StringImpl& text = *m_text.impl();
         for (int i = start; i < start + len; i++) {
@@ -737,17 +736,21 @@ ALWAYS_INLINE float RenderText::widthFromCache(const Font& f, int start, int len
                     w += monospaceCharacterWidth;
                     isSpace = true;
                 } else if (c == '\t') {
-                    w += style()->collapseWhiteSpace() ? monospaceCharacterWidth : f.tabWidth(style()->tabSize(), xPos + w);
-                    isSpace = true;
+                    if (style()->collapseWhiteSpace()) {
+                        w += monospaceCharacterWidth;
+                        isSpace = true;
+                    } else {
+                        w += f.tabWidth(style()->tabSize(), xPos + w);
+                        isSpace = false;
+                    }
                 } else
                     isSpace = false;
             } else {
                 w += monospaceCharacterWidth;
                 isSpace = false;
             }
-            if (isSpace && !previousCharWasSpace)
+            if (isSpace && i > start)
                 w += f.wordSpacing();
-            previousCharWasSpace = isSpace;
         }
         return w;
     }
@@ -963,7 +966,7 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Si
 
     // Non-zero only when kerning is enabled, in which case we measure words with their trailing
     // space, then subtract its width.
-    float wordTrailingSpaceWidth = f.typesettingFeatures() & Kerning ? f.width(RenderBlock::constructTextRun(this, f, &space, 1, styleToUse)) : 0;
+    float wordTrailingSpaceWidth = f.typesettingFeatures() & Kerning ? f.width(RenderBlock::constructTextRun(this, f, &space, 1, styleToUse)) + wordSpacing : 0;
 
     // If automatic hyphenation is allowed, we keep track of the width of the widest word (or word
     // fragment) encountered so far, and only try hyphenating words that are wider.

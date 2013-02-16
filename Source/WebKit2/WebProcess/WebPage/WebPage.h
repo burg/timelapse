@@ -309,6 +309,8 @@ public:
     bool useFixedLayout() const { return m_useFixedLayout; }
     void setFixedLayoutSize(const WebCore::IntSize&);
 
+    void setSuppressScrollbarAnimations(bool);
+
     void setPaginationMode(uint32_t /* WebCore::Pagination::Mode */);
     void setPaginationBehavesLikeColumns(bool);
     void setPageLength(double);
@@ -456,7 +458,8 @@ public:
     void updateAccessibilityTree();
     bool handleMousePressedEvent(const WebCore::PlatformMouseEvent&);
 #if USE(TEXTURE_MAPPER_GL)
-    void widgetMapped(int64_t nativeWindowHandle);
+    void setAcceleratedCompositingWindowId(int64_t nativeWindowHandle);
+    void invalidateWidget();
 #endif
 #endif
 
@@ -581,6 +584,8 @@ public:
     void setAsynchronousPluginInitializationEnabledForAllPlugins(bool enabled) { m_asynchronousPluginInitializationEnabledForAllPlugins = enabled; }
     bool artificialPluginInitializationDelayEnabled() const { return m_artificialPluginInitializationDelayEnabled; }
     void setArtificialPluginInitializationDelayEnabled(bool enabled) { m_artificialPluginInitializationDelayEnabled = enabled; }
+    void setTabToLinksEnabled(bool enabled) { m_tabToLinks = enabled; }
+    bool tabToLinksEnabled() const { return m_tabToLinks; }
 
     bool scrollingPerformanceLoggingEnabled() const { return m_scrollingPerformanceLoggingEnabled; }
     void setScrollingPerformanceLoggingEnabled(bool);

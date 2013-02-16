@@ -64,6 +64,7 @@ public:
     static String responseMimeType(const Evas_Object* ewkFrame);
     static WebCore::IntRect selectionRectangle(const Evas_Object* ewkFrame);
     static String suitableDRTFrameName(const Evas_Object* ewkFrame);
+    static String layerTreeAsText(const Evas_Object* ewkFrame);
     static void setValueForUser(JSContextRef, JSValueRef nodeObject, const String& value);
     static void setAutofilled(JSContextRef, JSValueRef nodeObject, bool autofilled);
     static void setDefersLoading(Evas_Object* ewkView, bool defers);
@@ -78,6 +79,7 @@ public:
     static bool findString(const Evas_Object* ewkView, const String& text, WebCore::FindOptions);
     static bool isCommandEnabled(const Evas_Object* ewkView, const char* name);
     static void setCSSGridLayoutEnabled(const Evas_Object* ewkView, bool enabled);
+    static void setCSSRegionsEnabled(const Evas_Object* ewkView, bool enabled);
     static void setSmartInsertDeleteEnabled(Evas_Object* ewkView, bool enabled);
     static void setSelectTrailingWhitespaceEnabled(Evas_Object* ewkView, bool enabled);
 

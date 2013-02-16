@@ -197,7 +197,6 @@ void WebPage::resetSettings()
     m_drt->testRunner()->setCaretBrowsingEnabled(false);
     m_drt->testRunner()->setAuthorAndUserStylesEnabled(true);
     m_drt->testRunner()->setFrameFlatteningEnabled(false);
-    m_drt->testRunner()->setMockScrollbarsEnabled(false);
     m_drt->testRunner()->setSmartInsertDeleteEnabled(true);
     m_drt->testRunner()->setSelectTrailingWhitespaceEnabled(false);
     m_drt->testRunner()->setDefersLoading(false);
@@ -1003,7 +1002,7 @@ void DumpRenderTree::dump()
 void DumpRenderTree::titleChanged(const QString &s)
 {
     if (m_controller->shouldDumpTitleChanges())
-        printf("TITLE CHANGED: %s\n", s.toUtf8().data());
+        printf("TITLE CHANGED: '%s'\n", s.toUtf8().data());
 }
 
 void DumpRenderTree::connectFrame(QWebFrame *frame)

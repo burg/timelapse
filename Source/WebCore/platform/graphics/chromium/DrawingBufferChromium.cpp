@@ -37,6 +37,7 @@
 #include "GraphicsContext3D.h"
 #include "GraphicsContext3DPrivate.h"
 #include "GraphicsLayerChromium.h"
+#include "TraceEvent.h"
 #include <algorithm>
 #include <public/Platform.h>
 #include <public/WebCompositorSupport.h>
@@ -90,6 +91,9 @@ DrawingBuffer::DrawingBuffer(GraphicsContext3D* context,
     , m_multisampleColorBuffer(0)
     , m_contentsChanged(true)
 {
+    // Used by browser tests to detect the use of a DrawingBuffer.
+    TRACE_EVENT_INSTANT0("test_gpu", "DrawingBufferCreation");
+
     // We need a separate front and back textures if ...
     m_separateFrontTexture = m_preserveDrawingBuffer == Preserve // ... we have to preserve contents after compositing, which is done with a copy or ...
                              || WebKit::Platform::current()->compositorSupport()->isThreadingEnabled(); // ... if we're in threaded mode and need to double buffer.
@@ -166,11 +170,8 @@ class DrawingBufferPrivate : public WebKit::WebExternalTextureLayerClient {
 public:
     explicit DrawingBufferPrivate(DrawingBuffer* drawingBuffer)
         : m_drawingBuffer(drawingBuffer)
+        , m_layer(adoptPtr(WebKit::Platform::current()->compositorSupport()->createExternalTextureLayer(this)))
     {
-        if (WebKit::WebCompositorSupport* compositorSupport = WebKit::Platform::current()->compositorSupport())
-            m_layer = adoptPtr(compositorSupport->createExternalTextureLayer(this));
-        else
-            m_layer = adoptPtr(WebKit::WebExternalTextureLayer::create(this));
 
         GraphicsContext3D::Attributes attributes = m_drawingBuffer->graphicsContext3D()->getContextAttributes();
         m_layer->setOpaque(!attributes.alpha);

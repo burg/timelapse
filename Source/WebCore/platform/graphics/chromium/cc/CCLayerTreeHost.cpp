@@ -70,8 +70,7 @@ PassOwnPtr<CCLayerTreeHost> CCLayerTreeHost::create(CCLayerTreeHostClient* clien
 }
 
 CCLayerTreeHost::CCLayerTreeHost(CCLayerTreeHostClient* client, const CCLayerTreeSettings& settings)
-    : m_compositorIdentifier(-1)
-    , m_animating(false)
+    : m_animating(false)
     , m_needsAnimateLayers(false)
     , m_client(client)
     , m_commitNumber(0)
@@ -105,11 +104,7 @@ bool CCLayerTreeHost::initialize()
         m_proxy = CCSingleThreadProxy::create(this);
     m_proxy->start();
 
-    if (!m_proxy->initializeContext())
-        return false;
-
-    m_compositorIdentifier = m_proxy->compositorIdentifier();
-    return true;
+    return m_proxy->initializeContext();
 }
 
 CCLayerTreeHost::~CCLayerTreeHost()
@@ -292,6 +287,11 @@ PassOwnPtr<CCGraphicsContext> CCLayerTreeHost::createContext()
     return m_client->createOutputSurface();
 }
 
+PassOwnPtr<CCInputHandler> CCLayerTreeHost::createInputHandler()
+{
+    return m_client->createInputHandler();
+}
+
 PassOwnPtr<CCLayerTreeHostImpl> CCLayerTreeHost::createLayerTreeHostImpl(CCLayerTreeHostImplClient* client)
 {
     return CCLayerTreeHostImpl::create(m_settings, client);
@@ -414,11 +414,33 @@ void CCLayerTreeHost::setVisible(bool visible)
     m_proxy->setVisible(visible);
 }
 
-void CCLayerTreeHost::evictAllContentTextures()
+void CCLayerTreeHost::reduceContentsTexturesMemoryOnImplThread(size_t limitBytes, CCResourceProvider* resourceProvider)
+{
+    ASSERT(CCProxy::isImplThread());
+    ASSERT(m_contentsTextureManager.get());
+    m_contentsTextureManager->reduceMemoryOnImplThread(limitBytes, resourceProvider);
+}
+
+void CCLayerTreeHost::getEvictedContentTexturesBackings(CCPrioritizedTextureManager::BackingVector& evictedBackings)
+{
+    ASSERT(CCProxy::isImplThread());
+    evictedBackings.clear();
+    if (m_rendererInitialized)
+        m_contentsTextureManager->getEvictedBackings(evictedBackings);
+}
+
+void CCLayerTreeHost::unlinkEvictedContentTexturesBackings(const CCPrioritizedTextureManager::BackingVector& evictedBackings)
 {
     ASSERT(CCProxy::isMainThread());
     ASSERT(m_contentsTextureManager.get());
-    m_contentsTextureManager->allBackingTexturesWereDeleted();
+    m_contentsTextureManager->unlinkEvictedBackings(evictedBackings);
+}
+
+bool CCLayerTreeHost::deleteEvictedContentTexturesBackings()
+{
+    ASSERT(CCProxy::isImplThread() && CCProxy::isMainThreadBlocked());
+    ASSERT(m_contentsTextureManager.get());
+    return m_contentsTextureManager->deleteEvictedBackings();
 }
 
 void CCLayerTreeHost::startPageScaleAnimation(const IntSize& targetPosition, bool useAnchor, float scale, double durationSec)

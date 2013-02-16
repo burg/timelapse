@@ -323,6 +323,14 @@ void QQuickWebViewPrivate::initialize(WKContextRef contextRef, WKPageGroupRef pa
     webPageProxy->initializeWebPage();
 }
 
+void QQuickWebViewPrivate::loadDidStop()
+{
+    Q_Q(QQuickWebView);
+    ASSERT(!q->loading());
+    QWebLoadRequest loadRequest(q->url(), QQuickWebView::LoadStoppedStatus);
+    emit q->loadingChanged(&loadRequest);
+}
+
 void QQuickWebViewPrivate::onComponentComplete()
 {
     Q_Q(QQuickWebView);
@@ -340,10 +348,6 @@ bool QQuickWebViewPrivate::transparentBackground() const
 {
     return webPageProxy->drawsTransparentBackground();
 }
-
-/*!
-    \qmlsignal WebView::loadingChanged(WebLoadRequest request)
-*/
 
 void QQuickWebViewPrivate::provisionalLoadDidStart(const WTF::String& url)
 {
@@ -1431,7 +1435,6 @@ QQuickWebPage* QQuickWebViewExperimental::page()
 
 /*!
     \page index.html
-
     \title QtWebKit: QML WebView version 3.0
 
     The WebView API allows QML applications to render regions of dynamic
@@ -1439,12 +1442,12 @@ QQuickWebPage* QQuickWebViewExperimental::page()
     QML components or encompass the full screen as specified within the
     QML application.
 
-    QML WebView version 3.0 is incompatible with previous QML WebView API
-    versions.  It allows an application to load pages into the WebView,
-    either by URL or with an HTML string, and navigate within session
-    history.  By default, links to different pages load within the same
-    WebView, but applications may intercept requests to delegate links to
-    other functions.
+    QML WebView version 3.0 is incompatible with previous QML \l
+    {QtWebKit1::WebView} {WebView} API versions.  It allows an
+    application to load pages into the WebView, either by URL or with
+    an HTML string, and navigate within session history.  By default,
+    links to different pages load within the same WebView, but applications
+    may intercept requests to delegate links to other functions.
 
     This sample QML application loads a web page, responds to session
     history context, and intercepts requests for external links:
@@ -1477,6 +1480,7 @@ QQuickWebPage* QQuickWebViewExperimental::page()
 
 /*!
     \qmltype WebView
+    \instantiates QQuickWebView
     \inqmlmodule QtWebKit 3.0
     \brief A WebView renders web content within a QML application
 */

@@ -142,6 +142,12 @@ void FrameLoaderClientImpl::documentElementAvailable()
         m_webFrame->client()->didCreateDocumentElement(m_webFrame);
 }
 
+void FrameLoaderClientImpl::didExhaustMemoryAvailableForScript()
+{
+    if (m_webFrame->client())
+        m_webFrame->client()->didExhaustMemoryAvailableForScript(m_webFrame);
+}
+
 #if USE(V8)
 void FrameLoaderClientImpl::didCreateScriptContext(v8::Handle<v8::Context> context, int extensionGroup, int worldId)
 {
@@ -997,7 +1003,8 @@ void FrameLoaderClientImpl::dispatchDecidePolicyForNavigationAction(
                 if (event->isMouseEvent()) {
                     const MouseEvent* mouseEvent =
                         static_cast<const MouseEvent*>(event);
-                    node = m_webFrame->frame()->eventHandler()->hitTestResultAtPoint(mouseEvent->absoluteLocation()).innerNonSharedNode();
+                    node = m_webFrame->frame()->eventHandler()->hitTestResultAtPoint(
+                        mouseEvent->absoluteLocation(), false).innerNonSharedNode();
                     break;
                 }
             }

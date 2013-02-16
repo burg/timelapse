@@ -78,9 +78,11 @@ struct _WebKitWebSettingsPrivate {
     gboolean enableFullscreen;
     gboolean enableDNSPrefetching;
     gboolean enableWebgl;
+    gboolean enableMediaStream;
     gboolean enableWebAudio;
     gboolean enableAcceleratedCompositing;
     gboolean enableSmoothScrolling;
+    gboolean enableCSSShaders;
     gboolean mediaPlaybackRequiresUserGesture;
     gboolean mediaPlaybackAllowsInline;
 };

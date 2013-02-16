@@ -34,7 +34,6 @@
 #include "DOMTimeStamp.h"
 #include "DocumentEventQueue.h"
 #include "DocumentTiming.h"
-#include "HitTestRequest.h"
 #include "IconURL.h"
 #include "InspectorCounters.h"
 #include "IntRect.h"
@@ -109,6 +108,7 @@ class HitTestResult;
 class IntPoint;
 class DOMWrapperWorld;
 class JSNode;
+class Localizer;
 class MediaCanStartListener;
 class MediaQueryList;
 class MediaQueryMatcher;
@@ -355,6 +355,7 @@ public:
     virtual PassRefPtr<Element> createElementNS(const String& namespaceURI, const String& qualifiedName, ExceptionCode&);
     PassRefPtr<Element> createElement(const QualifiedName&, bool createdByParser);
 
+    bool cssStickyPositionEnabled() const;
     bool cssRegionsEnabled() const;
 #if ENABLE(CSS_REGIONS)
     PassRefPtr<WebKitNamedFlow> webkitGetFlowByName(const String&);
@@ -377,10 +378,11 @@ public:
      * @param rightPadding How much to expand the right of the rectangle
      * @param bottomPadding How much to expand the bottom of the rectangle
      * @param leftPadding How much to expand the left of the rectangle
+     * @param ignoreClipping whether or not to ignore the root scroll frame when retrieving the element.
+     *        If false, this method returns null for coordinates outside of the viewport.
      */
-    PassRefPtr<NodeList> nodesFromRect(int centerX, int centerY,
-                                       unsigned topPadding, unsigned rightPadding, unsigned bottomPadding, unsigned leftPadding,
-                                       HitTestRequest::HitTestRequestType hitType = HitTestRequest::ReadOnly | HitTestRequest::Active) const;
+    PassRefPtr<NodeList> nodesFromRect(int centerX, int centerY, unsigned topPadding, unsigned rightPadding,
+                                       unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent) const;
     Element* elementFromPoint(int x, int y) const;
     PassRefPtr<Range> caretRangeFromPoint(int x, int y);
 
@@ -642,7 +644,7 @@ public:
 
     virtual String userAgent(const KURL&) const;
 
-    virtual void disableEval();
+    virtual void disableEval(const String& errorMessage);
 
     bool canNavigate(Frame* targetFrame);
     Frame* findUnsafeParentScrollPropagationBoundary();
@@ -744,6 +746,8 @@ public:
     void removeFocusedNodeOfSubtree(Node*, bool amongChildrenOnly = false);
     void hoveredNodeDetached(Node*);
     void activeChainNodeDetached(Node*);
+
+    void updateHoverActiveState(const HitTestRequest&, HitTestResult&);
 
     // Updates for :target (CSS3 selector).
     void setCSSTarget(Element*);
@@ -1017,6 +1021,7 @@ public:
 
     void registerForPrivateBrowsingStateChangedCallbacks(Element*);
     void unregisterForPrivateBrowsingStateChangedCallbacks(Element*);
+    void storageBlockingStateDidChange();
     void privateBrowsingStateDidChange();
 
     void setShouldCreateRenderers(bool);
@@ -1189,6 +1194,8 @@ public:
     virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
 
     PassRefPtr<ElementAttributeData> cachedImmutableAttributeData(const Element*, const Vector<Attribute>&);
+
+    Localizer& getLocalizer(const AtomicString& locale);
 
 protected:
     Document(Frame*, const KURL&, bool isXHTML, bool isHTML);
@@ -1580,6 +1587,9 @@ private:
 #ifndef NDEBUG
     bool m_didDispatchViewportPropertiesChanged;
 #endif
+
+    typedef HashMap<AtomicString, OwnPtr<Localizer> > LocaleToLocalizerMap;
+    LocaleToLocalizerMap m_localizerCache;
 };
 
 inline void Document::notifyRemovePendingSheetIfNeeded()

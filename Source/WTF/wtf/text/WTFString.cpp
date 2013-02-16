@@ -26,7 +26,9 @@
 #include <stdarg.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/DataLog.h>
+#include <wtf/HexNumber.h>
 #include <wtf/MathExtras.h>
+#include <wtf/MemoryInstrumentation.h>
 #include <wtf/text/CString.h>
 #include <wtf/StringExtras.h>
 #include <wtf/Vector.h>
@@ -417,7 +419,37 @@ String String::format(const char *format, ...)
     return StringImpl::create(reinterpret_cast<const LChar*>(buffer.data()), len);
 #endif
 }
-    
+
+String String::number(int number)
+{
+    return numberToStringSigned<String>(number);
+}
+
+String String::number(unsigned int number)
+{
+    return numberToStringUnsigned<String>(number);
+}
+
+String String::number(long number)
+{
+    return numberToStringSigned<String>(number);
+}
+
+String String::number(unsigned long number)
+{
+    return numberToStringUnsigned<String>(number);
+}
+
+String String::number(long long number)
+{
+    return numberToStringSigned<String>(number);
+}
+
+String String::number(unsigned long long number)
+{
+    return numberToStringUnsigned<String>(number);
+}
+
 String String::number(double number, unsigned flags, unsigned precision)
 {
     NumberToStringBuffer buffer;
@@ -790,6 +822,12 @@ String String::fromUTF8WithLatin1Fallback(const LChar* string, size_t size)
     return utf8;
 }
 
+void String::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this);
+    info.addMember(m_impl);
+}
+
 // String Operations
 
 static bool isCharacterAllowedInBase(UChar c, int base)
@@ -1098,16 +1136,19 @@ Vector<char> asciiDebug(StringImpl* impl)
         return asciiDebug(String("[null]").impl());
 
     Vector<char> buffer;
-    unsigned length = impl->length();
-    const UChar* characters = impl->characters();
-
-    buffer.resize(length + 1);
-    for (unsigned i = 0; i < length; ++i) {
-        UChar ch = characters[i];
-        buffer[i] = ch && (ch < 0x20 || ch > 0x7f) ? '?' : ch;
+    for (unsigned i = 0; i < impl->length(); ++i) {
+        UChar ch = (*impl)[i];
+        if (isASCIIPrintable(ch)) {
+            if (ch == '\\')
+                buffer.append(ch);
+            buffer.append(ch);
+        } else {
+            buffer.append('\\');
+            buffer.append('u');
+            appendUnsignedAsHexFixedSize(ch, buffer, 4);
+        }
     }
-    buffer[length] = '\0';
-
+    buffer.append('\0');
     return buffer;
 }
 

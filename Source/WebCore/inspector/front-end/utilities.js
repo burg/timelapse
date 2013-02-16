@@ -686,7 +686,7 @@ function createSearchRegex(query, caseSensitive, isRegex)
 /**
  * @param {string} query
  * @param {string=} flags
- * @return {RegExp}
+ * @return {!RegExp}
  */
 function createPlainTextSearchRegex(query, flags)
 {
@@ -739,6 +739,7 @@ function numberToStringWithSpacesPadding(value, symbolsCount)
 var Map = function()
 {
     this._map = {};
+    this._size = 0;
 }
 
 Map._lastObjectIdentifier = 0;
@@ -754,6 +755,8 @@ Map.prototype = {
             objectIdentifier = ++Map._lastObjectIdentifier;
             key.__identifier = objectIdentifier;
         }
+        if (!this._map[objectIdentifier])
+            ++this._size;
         this._map[objectIdentifier] = [key, value];
     },
     
@@ -764,6 +767,7 @@ Map.prototype = {
     {
         var result = this._map[key.__identifier];
         delete this._map[key.__identifier];
+        --this._size;
         return result ? result[1] : undefined;
     },
 
@@ -785,9 +789,10 @@ Map.prototype = {
      */
     _list: function(index)
     {
-        var result = [];
+        var result = new Array(this._size);
+        var i = 0;
         for (var objectIdentifier in this._map)
-            result.push(this._map[objectIdentifier][index]);
+            result[i++] = this._map[objectIdentifier][index];
         return result;
     },
 
@@ -799,10 +804,16 @@ Map.prototype = {
         var entry = this._map[key.__identifier];
         return entry ? entry[1] : undefined;
     },
-    
+
+    size: function()
+    {
+        return this._size;
+    },
+
     clear: function()
     {
         this._map = {};
+        this._size = 0;
     }
 }
 /**

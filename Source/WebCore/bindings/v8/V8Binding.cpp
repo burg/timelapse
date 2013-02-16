@@ -35,7 +35,8 @@
 #include "DOMStringList.h"
 #include "Element.h"
 #include "Frame.h"
-#include "PlatformSupport.h"
+#include "FrameLoader.h"
+#include "FrameLoaderClient.h"
 #include "QualifiedName.h"
 #include "Settings.h"
 #include "V8DOMStringList.h"
@@ -254,6 +255,11 @@ PassRefPtr<XPathNSResolver> toXPathNSResolver(v8::Handle<v8::Value> value)
     return resolver;
 }
 
+v8::Handle<v8::Object> toInnerGlobalObject(v8::Handle<v8::Context> context)
+{
+    return v8::Handle<v8::Object>::Cast(context->Global()->GetPrototype());
+}
+
 DOMWindow* toDOMWindow(v8::Handle<v8::Context> context)
 {
     v8::Handle<v8::Object> global = context->Global();
@@ -305,9 +311,9 @@ v8::Local<v8::Context> toV8Context(ScriptExecutionContext* context, const WorldC
 
 V8PerContextData* perContextDataForCurrentWorld(Frame* frame)
 {
-    V8IsolatedContext* isolatedContext;
-    if (UNLIKELY(!!(isolatedContext = V8IsolatedContext::getEntered())))
-        return isolatedContext->perContextData();
+    V8DOMWindowShell* isolatedShell;
+    if (UNLIKELY(!!(isolatedShell = V8DOMWindowShell::getEntered())))
+        return isolatedShell->perContextData();
     return frame->script()->windowShell()->perContextData();
 }
 
@@ -327,7 +333,7 @@ bool handleOutOfMemory()
     frame->script()->windowShell()->destroyGlobal();
 
 #if PLATFORM(CHROMIUM)
-    PlatformSupport::notifyJSOutOfMemory(frame);
+    frame->loader()->client()->didExhaustMemoryAvailableForScript();
 #endif
 
     if (Settings* settings = frame->settings())

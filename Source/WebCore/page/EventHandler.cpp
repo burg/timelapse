@@ -269,6 +269,20 @@ static inline bool scrollNode(float delta, ScrollGranularity granularity, Scroll
     return enclosingBox->scroll(delta < 0 ? negativeDirection : positiveDirection, granularity, absDelta, stopNode);
 }
 
+#if ENABLE(GESTURE_EVENTS)
+static inline bool shouldGesturesTriggerActive()
+{
+    // If the platform we're on supports GestureTapDown and GestureTapCancel then we'll
+    // rely on them to set the active state. Unfortunately there's no generic way to
+    // know in advance what event types are supported.
+#if PLATFORM(CHROMIUM) && !OS(ANDROID)
+    return true;
+#else
+    return false;
+#endif
+}
+#endif
+
 #if !PLATFORM(MAC)
 
 inline bool EventHandler::eventLoopHandleMouseUp(const MouseEventWithHitTestResults&)
@@ -1012,7 +1026,7 @@ void EventHandler::updateAutoscrollRenderer()
     if (!m_autoscrollRenderer)
         return;
 
-    HitTestResult hitTest = hitTestResultAtPoint(m_panScrollStartPos, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowShadowContent);
+    HitTestResult hitTest = hitTestResultAtPoint(m_panScrollStartPos, true);
 
     if (Node* nodeAtPoint = hitTest.innerNode())
         m_autoscrollRenderer = nodeAtPoint->renderer();
@@ -1044,18 +1058,43 @@ DragSourceAction EventHandler::updateDragSourceActionsAllowed() const
 }
 #endif // ENABLE(DRAG_SUPPORT)
     
-HitTestResult EventHandler::hitTestResultAtPoint(const LayoutPoint& point, HitTestRequest::HitTestRequestType hitType, const LayoutSize& padding)
+HitTestResult EventHandler::hitTestResultAtPoint(const LayoutPoint& point, bool allowShadowContent, bool ignoreClipping, HitTestScrollbars testScrollbars, HitTestRequest::HitTestRequestType hitType, const LayoutSize& padding)
 {
     HitTestResult result(point, padding.height(), padding.width(), padding.height(), padding.width());
 
     if (!m_frame->contentRenderer())
         return result;
-    // We always need to handle child frame content.
-    hitType |= HitTestRequest::AllowChildFrameContent;
+    if (ignoreClipping)
+        hitType |= HitTestRequest::IgnoreClipping;
+    if (allowShadowContent)
+        hitType |= HitTestRequest::AllowShadowContent;
+    m_frame->contentRenderer()->hitTest(HitTestRequest(hitType), result);
 
-    HitTestRequest request(hitType);
-    m_frame->contentRenderer()->hitTest(request, result);
+    while (true) {
+        Node* n = result.innerNode();
+        if (!result.isOverWidget() || !n || !n->renderer() || !n->renderer()->isWidget())
+            break;
+        RenderWidget* renderWidget = toRenderWidget(n->renderer());
+        Widget* widget = renderWidget->widget();
+        if (!widget || !widget->isFrameView())
+            break;
+        Frame* frame = static_cast<HTMLFrameElementBase*>(n)->contentFrame();
+        if (!frame || !frame->contentRenderer())
+            break;
+        FrameView* view = static_cast<FrameView*>(widget);
+        LayoutPoint widgetPoint(result.localPoint().x() + view->scrollX() - renderWidget->borderLeft() - renderWidget->paddingLeft(), 
+            result.localPoint().y() + view->scrollY() - renderWidget->borderTop() - renderWidget->paddingTop());
+        HitTestResult widgetHitTestResult(widgetPoint, padding.height(), padding.width(), padding.height(), padding.width());
+        frame->contentRenderer()->hitTest(HitTestRequest(hitType), widgetHitTestResult);
+        result = widgetHitTestResult;
 
+        if (testScrollbars == ShouldHitTestScrollbars) {
+            Scrollbar* eventScrollbar = view->scrollbarAtPoint(roundedIntPoint(point));
+            if (eventScrollbar)
+                result.setScrollbar(eventScrollbar);
+        }
+    }
+    
     // If our HitTestResult is not visible, then we started hit testing too far down the frame chain. 
     // Another hit test at the main frame level should get us the correct visible result.
     Frame* resultFrame = result.innerNonSharedNode() ? result.innerNonSharedNode()->document()->frame() : 0;
@@ -1066,12 +1105,12 @@ HitTestResult EventHandler::hitTestResultAtPoint(const LayoutPoint& point, HitTe
             FrameView* mainView = mainFrame->view();
             if (resultView && mainView) {
                 IntPoint mainFramePoint = mainView->rootViewToContents(resultView->contentsToRootView(roundedIntPoint(result.point())));
-                result = mainFrame->eventHandler()->hitTestResultAtPoint(mainFramePoint, hitType, padding);
+                result = mainFrame->eventHandler()->hitTestResultAtPoint(mainFramePoint, allowShadowContent, ignoreClipping, testScrollbars, hitType, padding);
             }
         }
     }
 
-    if (!request.allowsShadowContent())
+    if (!allowShadowContent)
         result.setToNonShadowAncestor();
 
     return result;
@@ -1481,7 +1520,7 @@ bool EventHandler::handleMousePressEvent(const PlatformMouseEvent& mouseEvent)
     m_mouseDownWasInSubframe = false;
 
     HitTestRequest request(HitTestRequest::Active);
-    // Save the document point we generate in case the window coordinate is invalidated by what happens
+    // Save the document point we generate in case the window coordinate is invalidated by what happens 
     // when we dispatch the event.
     LayoutPoint documentPoint = documentPointForWindowPoint(m_frame, mouseEvent.position());
     MouseEventWithHitTestResults mev = m_frame->document()->prepareMouseEvent(request, documentPoint, mouseEvent);
@@ -2381,8 +2420,25 @@ bool EventHandler::handleGestureEvent(const PlatformGestureEvent& gestureEvent)
     if (gestureEvent.type() == PlatformEvent::GestureScrollEnd || gestureEvent.type() == PlatformEvent::GestureScrollUpdate)
         eventTarget = m_scrollGestureHandlingNode.get();
 
-    if (!eventTarget) {
-        HitTestResult result = hitTestResultAtPoint(gestureEvent.position());
+    IntPoint adjustedPoint = gestureEvent.position();
+    HitTestRequest::HitTestRequestType hitType = HitTestRequest::TouchEvent;
+    if (gestureEvent.type() == PlatformEvent::GestureTapDown) {
+#if ENABLE(TOUCH_ADJUSTMENT)
+        if (!gestureEvent.area().isEmpty())
+            adjustGesturePosition(gestureEvent, adjustedPoint);
+#endif
+        hitType |= HitTestRequest::Active;
+    } else if (gestureEvent.type() == PlatformEvent::GestureTap || gestureEvent.type() == PlatformEvent::GestureTapDownCancel)
+        hitType |= HitTestRequest::Release;
+    else
+        hitType |= HitTestRequest::Active | HitTestRequest::ReadOnly;
+
+    if (!shouldGesturesTriggerActive())
+        hitType |= HitTestRequest::ReadOnly;
+
+    if (!eventTarget || !(hitType & HitTestRequest::ReadOnly)) {
+        IntPoint hitTestPoint = m_frame->view()->windowToContents(adjustedPoint);
+        HitTestResult result = hitTestResultAtPoint(hitTestPoint, false, false, DontHitTestScrollbars, hitType);
         eventTarget = result.targetNode();
     }
 
@@ -2420,6 +2476,7 @@ bool EventHandler::handleGestureEvent(const PlatformGestureEvent& gestureEvent)
     case PlatformEvent::GesturePinchBegin:
     case PlatformEvent::GesturePinchEnd:
     case PlatformEvent::GesturePinchUpdate:
+    case PlatformEvent::GestureTapDownCancel:
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -2484,8 +2541,9 @@ bool EventHandler::handleGestureScrollCore(const PlatformGestureEvent& gestureEv
 #if ENABLE(TOUCH_ADJUSTMENT)
 bool EventHandler::bestClickableNodeForTouchPoint(const IntPoint& touchCenter, const IntSize& touchRadius, IntPoint& targetPoint, Node*& targetNode)
 {
+    HitTestRequest::HitTestRequestType hitType = HitTestRequest::ReadOnly | HitTestRequest::Active;
     IntPoint hitTestPoint = m_frame->view()->windowToContents(touchCenter);
-    HitTestResult result = hitTestResultAtPoint(hitTestPoint, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowShadowContent, touchRadius);
+    HitTestResult result = hitTestResultAtPoint(hitTestPoint, /*allowShadowContent*/ true, /*ignoreClipping*/ false, DontHitTestScrollbars, hitType, touchRadius);
 
     IntRect touchRect(touchCenter - touchRadius, touchRadius + touchRadius);
     RefPtr<StaticHashSetNodeList> nodeList = StaticHashSetNodeList::adopt(result.rectBasedTestResult());
@@ -2502,8 +2560,9 @@ bool EventHandler::bestClickableNodeForTouchPoint(const IntPoint& touchCenter, c
 
 bool EventHandler::bestContextMenuNodeForTouchPoint(const IntPoint& touchCenter, const IntSize& touchRadius, IntPoint& targetPoint, Node*& targetNode)
 {
+    HitTestRequest::HitTestRequestType hitType = HitTestRequest::ReadOnly | HitTestRequest::Active;
     IntPoint hitTestPoint = m_frame->view()->windowToContents(touchCenter);
-    HitTestResult result = hitTestResultAtPoint(hitTestPoint, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowShadowContent, touchRadius);
+    HitTestResult result = hitTestResultAtPoint(hitTestPoint, /*allowShadowContent*/ true, /*ignoreClipping*/ false, DontHitTestScrollbars, hitType, touchRadius);
 
     IntRect touchRect(touchCenter - touchRadius, touchRadius + touchRadius);
     RefPtr<StaticHashSetNodeList> nodeList = StaticHashSetNodeList::adopt(result.rectBasedTestResult());
@@ -2512,8 +2571,9 @@ bool EventHandler::bestContextMenuNodeForTouchPoint(const IntPoint& touchCenter,
 
 bool EventHandler::bestZoomableAreaForTouchPoint(const IntPoint& touchCenter, const IntSize& touchRadius, IntRect& targetArea, Node*& targetNode)
 {
+    HitTestRequest::HitTestRequestType hitType = HitTestRequest::ReadOnly | HitTestRequest::Active;
     IntPoint hitTestPoint = m_frame->view()->windowToContents(touchCenter);
-    HitTestResult result = hitTestResultAtPoint(hitTestPoint, HitTestRequest::ReadOnly | HitTestRequest::Active, touchRadius);
+    HitTestResult result = hitTestResultAtPoint(hitTestPoint, /*allowShadowContent*/ false, /*ignoreClipping*/ false, DontHitTestScrollbars, hitType, touchRadius);
 
     IntRect touchRect(touchCenter - touchRadius, touchRadius + touchRadius);
     RefPtr<StaticHashSetNodeList> nodeList = StaticHashSetNodeList::adopt(result.rectBasedTestResult());
@@ -2525,6 +2585,7 @@ bool EventHandler::adjustGesturePosition(const PlatformGestureEvent& gestureEven
     Node* targetNode = 0;
     switch (gestureEvent.type()) {
     case PlatformEvent::GestureTap:
+    case PlatformEvent::GestureTapDown:
         bestClickableNodeForTouchPoint(gestureEvent.position(), IntSize(gestureEvent.area().width() / 2, gestureEvent.area().height() / 2), adjustedPoint, targetNode);
         break;
     case PlatformEvent::GestureLongPress:
@@ -2622,7 +2683,7 @@ bool EventHandler::sendContextMenuEventForKey()
     HitTestResult result(position);
     result.setInnerNode(targetNode);
     HitTestRequest request(HitTestRequest::Active);
-    doc->renderView()->layer()->updateHoverActiveState(request, result);
+    doc->updateHoverActiveState(request, result);
     doc->updateStyleIfNeeded();
    
     // The contextmenu event is a mouse event even when invoked using the keyboard.
@@ -3552,11 +3613,16 @@ bool EventHandler::handleTouchEvent(const PlatformTouchEvent& event)
             break;
         }
 
+#if ENABLE(GESTURE_EVENTS)
+        if (shouldGesturesTriggerActive())
+            hitType |= HitTestRequest::ReadOnly;
+#endif
+
         // Increment the platform touch id by 1 to avoid storing a key of 0 in the hashmap.
         unsigned touchPointTargetKey = point.id() + 1;
         RefPtr<EventTarget> touchTarget;
         if (pointState == PlatformTouchPoint::TouchPressed) {
-            HitTestResult result = hitTestResultAtPoint(pagePoint, hitType);
+            HitTestResult result = hitTestResultAtPoint(pagePoint, /*allowShadowContent*/ false, false, DontHitTestScrollbars, hitType);
             Node* node = result.innerNode();
             ASSERT(node);
 
@@ -3574,7 +3640,7 @@ bool EventHandler::handleTouchEvent(const PlatformTouchEvent& event)
             touchTarget = node;
         } else if (pointState == PlatformTouchPoint::TouchReleased || pointState == PlatformTouchPoint::TouchCancelled) {
             // We only perform a hittest on release or cancel to unset :active or :hover state.
-            hitTestResultAtPoint(pagePoint, hitType);
+            hitTestResultAtPoint(pagePoint, /*allowShadowContent*/ false, false, DontHitTestScrollbars, hitType);
             // The target should be the original target for this touch, so get it from the hashmap. As it's a release or cancel
             // we also remove it from the map.
             touchTarget = m_originatingTouchPointTargets.take(touchPointTargetKey);

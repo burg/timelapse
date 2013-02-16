@@ -77,15 +77,10 @@ namespace WebCore {
         // Returns a local handle of the context.
         v8::Local<v8::Context> context() { return v8::Local<v8::Context>::New(m_context); }
 
-        V8PerContextData* perContextData() { return m_perContextData.get(); }
-
     private:
         void initIsolate();
         bool initializeIfNeeded();
         void dispose();
-
-        // Run an already compiled script.
-        v8::Local<v8::Value> runScript(v8::Handle<v8::Script>);
 
         static bool forgetV8EventObject(Event*);
 

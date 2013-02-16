@@ -461,6 +461,30 @@
       ]
     },
     {
+      'target_name': 'injected_canvas_script_source',
+      'type': 'none',
+      'actions': [
+        {
+          'action_name': 'generateInjectedScriptCanvasModuleSource',
+          'inputs': [
+            '../inspector/InjectedScriptCanvasModuleSource.js',
+          ],
+          'outputs': [
+            '<(SHARED_INTERMEDIATE_DIR)/webkit/InjectedScriptCanvasModuleSource.h',
+          ],
+          'msvs_cygwin_shell': 0,
+          'action': [
+            '<(perl_exe)',
+            '../inspector/xxd.pl',
+            'InjectedScriptCanvasModuleSource_js',
+            '<@(_inputs)',
+            '<@(_outputs)'
+          ],
+          'message': 'Generating InjectedScriptCanvasModuleSource.h from InjectedScriptCanvasModuleSource.js',
+        },
+      ]
+    },
+    {
       'target_name': 'injected_script_source',
       'type': 'none',
       'actions': [
@@ -481,30 +505,6 @@
             '<@(_outputs)'
           ],
           'message': 'Generating InjectedScriptSource.h from InjectedScriptSource.js',
-        },
-      ]
-    },
-    {
-      'target_name': 'injected_webgl_script_source',
-      'type': 'none',
-      'actions': [
-        {
-          'action_name': 'generateInjectedScriptWebGLModuleSource',
-          'inputs': [
-            '../inspector/InjectedScriptWebGLModuleSource.js',
-          ],
-          'outputs': [
-            '<(SHARED_INTERMEDIATE_DIR)/webkit/InjectedScriptWebGLModuleSource.h',
-          ],
-          'msvs_cygwin_shell': 0,
-          'action': [
-            '<(perl_exe)',
-            '../inspector/xxd.pl',
-            'InjectedScriptWebGLModuleSource_js',
-            '<@(_inputs)',
-            '<@(_outputs)'
-          ],
-          'message': 'Generating InjectedScriptWebGLModuleSource.h from InjectedScriptWebGLModuleSource.js',
         },
       ]
     },
@@ -1200,8 +1200,8 @@
         'webcore_bindings_sources',
         'inspector_overlay_page',
         'inspector_protocol_sources',
+        'injected_canvas_script_source',
         'injected_script_source',
-        'injected_webgl_script_source',
         'debugger_script_source',
         '../../JavaScriptCore/JavaScriptCore.gyp/JavaScriptCore.gyp:yarr',
         '../../WTF/WTF.gyp/WTF.gyp:wtf',
@@ -1327,15 +1327,14 @@
       'type': 'none',
       'dependencies': [
         'debugger_script_source',
+        'injected_canvas_script_source',
         'injected_script_source',
-        'injected_webgl_script_source',
         'inspector_overlay_page',
         'inspector_protocol_sources',
         'webcore_bindings_sources',
         '../../ThirdParty/glu/glu.gyp:libtess',
         '../../JavaScriptCore/JavaScriptCore.gyp/JavaScriptCore.gyp:yarr',
         '../../WTF/WTF.gyp/WTF.gyp:wtf',
-        '../../Platform/Platform.gyp/Platform.gyp:webkit_platform',
         '<(chromium_src_dir)/build/temp_gyp/googleurl.gyp:googleurl',
         '<(chromium_src_dir)/skia/skia.gyp:skia',
         '<(chromium_src_dir)/third_party/iccjpeg/iccjpeg.gyp:iccjpeg',
@@ -1355,7 +1354,6 @@
       'export_dependent_settings': [
         '../../JavaScriptCore/JavaScriptCore.gyp/JavaScriptCore.gyp:yarr',
         '../../WTF/WTF.gyp/WTF.gyp:wtf',
-        '../../Platform/Platform.gyp/Platform.gyp:webkit_platform',
         '<(chromium_src_dir)/build/temp_gyp/googleurl.gyp:googleurl',
         '<(chromium_src_dir)/skia/skia.gyp:skia',
         '<(chromium_src_dir)/third_party/iccjpeg/iccjpeg.gyp:iccjpeg',
@@ -1380,6 +1378,7 @@
           'WEBCORE_NAVIGATOR_VENDOR="Google Inc."',
         ],
         'include_dirs': [
+          '../../Platform/chromium',
           '<(INTERMEDIATE_DIR)',
           '<@(webcore_include_dirs)',
           '<(chromium_src_dir)/gpu',
@@ -1475,6 +1474,7 @@
               # com.google.Chrome[] objc[]: Class ScrollbarPrefsObserver is implemented in both .../Google Chrome.app/Contents/Versions/.../Google Chrome Helper.app/Contents/MacOS/../../../Google Chrome Framework.framework/Google Chrome Framework and /System/Library/Frameworks/WebKit.framework/Versions/A/Frameworks/WebCore.framework/Versions/A/WebCore. One of the two will be used. Which one is undefined.
               'WebCascadeList=ChromiumWebCoreObjCWebCascadeList',
               'WebCoreFlippedView=ChromiumWebCoreObjCWebCoreFlippedView',
+              'WebCoreTextFieldCell=ChromiumWebCoreObjCWebCoreTextFieldCell',
               'WebScrollbarPrefsObserver=ChromiumWebCoreObjCWebScrollbarPrefsObserver',
               'WebCoreRenderThemeNotificationObserver=ChromiumWebCoreObjCWebCoreRenderThemeNotificationObserver',
               'WebFontCache=ChromiumWebCoreObjCWebFontCache',
@@ -1493,7 +1493,7 @@
                 'postbuild_name': 'Check Objective-C Rename',
                 'variables': {
                   'class_whitelist_regex':
-                      'ChromiumWebCoreObjC|TCMVisibleView|RTCMFlippedView|WebCoreTextFieldCell',
+                      'ChromiumWebCoreObjC|TCMVisibleView|RTCMFlippedView',
                   'category_whitelist_regex':
                       'TCMInterposing|ScrollAnimatorChromiumMacExt',
                 },
@@ -2146,7 +2146,6 @@
         'webcore_rendering',
         # Exported.
         'webcore_bindings',
-        '../../Platform/Platform.gyp/Platform.gyp:webkit_platform',
         '../../WTF/WTF.gyp/WTF.gyp:wtf',
         '<(chromium_src_dir)/build/temp_gyp/googleurl.gyp:googleurl',
         '<(chromium_src_dir)/skia/skia.gyp:skia',
@@ -2156,7 +2155,6 @@
       ],
       'export_dependent_settings': [
         'webcore_bindings',
-        '../../Platform/Platform.gyp/Platform.gyp:webkit_platform',
         '../../WTF/WTF.gyp/WTF.gyp:wtf',
         '<(chromium_src_dir)/build/temp_gyp/googleurl.gyp:googleurl',
         '<(chromium_src_dir)/skia/skia.gyp:skia',

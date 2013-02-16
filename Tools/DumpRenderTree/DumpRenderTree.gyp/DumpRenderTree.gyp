@@ -121,11 +121,11 @@
                 '<(source_dir)/WebKit/chromium/WebKit.gyp:inspector_resources',
                 '<(source_dir)/WebKit/chromium/WebKit.gyp:webkit',
                 '<(source_dir)/WTF/WTF.gyp/WTF.gyp:wtf',
+                '<(chromium_src_dir)/base/base.gyp:test_support_base',
                 '<(chromium_src_dir)/build/temp_gyp/googleurl.gyp:googleurl',
                 '<(chromium_src_dir)/third_party/icu/icu.gyp:icuuc',
                 '<(chromium_src_dir)/third_party/mesa/mesa.gyp:osmesa',
                 '<(chromium_src_dir)/v8/tools/gyp/v8.gyp:v8',
-                '<(chromium_src_dir)/base/base.gyp:test_support_base',
                 '<(chromium_src_dir)/webkit/support/webkit_support.gyp:blob',
                 '<(chromium_src_dir)/webkit/support/webkit_support.gyp:webkit_support',
             ],
@@ -195,7 +195,7 @@
                                     '<(SHARED_INTERMEDIATE_DIR)/ui/gfx/gfx_resources.pak',
                                     '<(SHARED_INTERMEDIATE_DIR)/webkit/webkit_chromium_resources.pak',
                                     '<(SHARED_INTERMEDIATE_DIR)/webkit/webkit_strings_en-US.pak',
-                                    '<(SHARED_INTERMEDIATE_DIR)/webkit/webkit_resources.pak',
+                                    '<(SHARED_INTERMEDIATE_DIR)/webkit/webkit_resources_100_percent.pak',
                             ]},
                             'inputs': [
                                 '<(repack_path)',
@@ -282,13 +282,23 @@
                     'type': 'shared_library',
                     'dependencies': [
                         '<(chromium_src_dir)/base/base.gyp:test_support_base',
-                        '<(chromium_src_dir)/tools/android/forwarder/forwarder.gyp:forwarder',
                         '<(chromium_src_dir)/testing/android/native_test.gyp:native_test_native_code',
+                        '<(chromium_src_dir)/tools/android/forwarder/forwarder.gyp:forwarder',
+                        '<(chromium_src_dir)/tools/android/md5sum/md5sum.gyp:md5sum',
+                        '<(source_dir)/WebKit/chromium/WebKitUnitTests.gyp:io_stream_forwarder_android',
                     ],
                     'dependencies!': [
                         'ImageDiff',
                         'copy_TestNetscapePlugIn',
                         '<(chromium_src_dir)/third_party/mesa/mesa.gyp:osmesa',
+                    ],
+                    # FIXME: Remove when the io_stream_forwarder_android target is deprecated.
+                    'conditions': [
+                        ['inside_chromium_build==1', {
+                            'include_dirs': [
+                                '<(source_dir)/WebKit/chromium/',
+                            ],
+                        }],
                     ],
                     'copies': [{
                         'destination': '<(PRODUCT_DIR)',
@@ -451,9 +461,9 @@
                 'target_name': 'DumpRenderTree_apk',
                 'type': 'none',
                 'dependencies': [
-                    '<(chromium_src_dir)/base/base.gyp:base_java',
-                    '<(chromium_src_dir)/net/net.gyp:net_java',
+                    '<(chromium_src_dir)/base/base.gyp:base',
                     '<(chromium_src_dir)/media/media.gyp:media_java',
+                    '<(chromium_src_dir)/net/net.gyp:net',
                     'DumpRenderTree',
                 ],
                 'variables': {

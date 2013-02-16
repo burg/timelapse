@@ -31,7 +31,7 @@
 
 #include "V8IDBAny.h"
 
-#include "SerializedScriptValue.h"
+#include "ScriptValue.h"
 #include "V8Binding.h"
 #include "V8DOMStringList.h"
 #include "V8IDBCursor.h"
@@ -45,7 +45,7 @@
 
 namespace WebCore {
 
-v8::Handle<v8::Value> toV8(IDBAny* impl, v8::Handle<v8::Context> creationContext, v8::Isolate* isolate)
+v8::Handle<v8::Value> toV8(IDBAny* impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
 {
     if (!impl)
         return v8NullWithCheck(isolate);
@@ -73,10 +73,12 @@ v8::Handle<v8::Value> toV8(IDBAny* impl, v8::Handle<v8::Context> creationContext
         return toV8(impl->idbObjectStore(), creationContext, isolate);
     case IDBAny::IDBTransactionType:
         return toV8(impl->idbTransaction(), creationContext, isolate);
-    case IDBAny::SerializedScriptValueType:
-        return impl->serializedScriptValue()->deserialize(0, isolate);
+    case IDBAny::ScriptValueType:
+        return impl->scriptValue().v8Value();
     case IDBAny::StringType:
         return v8String(impl->string(), isolate);
+    case IDBAny::IntegerType:
+        return v8::Number::New(impl->integer());
     }
 
     ASSERT_NOT_REACHED();

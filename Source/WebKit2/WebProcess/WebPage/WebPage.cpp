@@ -308,16 +308,15 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
 
     m_page->setCanStartMedia(false);
 
-    updatePreferences(parameters.store);
-
     m_pageGroup = WebProcess::shared().webPageGroup(parameters.pageGroupData);
     m_page->setGroupName(m_pageGroup->identifier());
     m_page->setDeviceScaleFactor(parameters.deviceScaleFactor);
 
-    platformInitialize();
-
     m_drawingArea = DrawingArea::create(this, parameters);
     m_drawingArea->setPaintingEnabled(false);
+
+    updatePreferences(parameters.store);
+    platformInitialize();
 
     m_mainFrame = WebFrame::createMainFrame(this);
 
@@ -516,7 +515,7 @@ EditorState WebPage::editorState() const
     }
 
     if (selectionRoot)
-        result.editorRect = frame->view()->contentsToWindow(selectionRoot->getPixelSnappedRect());
+        result.editorRect = frame->view()->contentsToWindow(selectionRoot->pixelSnappedBoundingBox());
 
     RefPtr<Range> range;
     if (result.hasComposition && (range = frame->editor()->compositionRange())) {
@@ -1125,6 +1124,11 @@ void WebPage::setFixedLayoutSize(const IntSize& size)
         view->forceLayout();
 }
 
+void WebPage::setSuppressScrollbarAnimations(bool suppressAnimations)
+{
+    m_page->setShouldSuppressScrollbarAnimations(suppressAnimations);
+}
+
 void WebPage::setPaginationMode(uint32_t mode)
 {
     Pagination pagination = m_page->pagination();
@@ -1311,7 +1315,7 @@ static bool isContextClick(const PlatformMouseEvent& event)
 static bool handleContextMenuEvent(const PlatformMouseEvent& platformMouseEvent, WebPage* page)
 {
     IntPoint point = page->corePage()->mainFrame()->view()->windowToContents(platformMouseEvent.position());
-    HitTestResult result = page->corePage()->mainFrame()->eventHandler()->hitTestResultAtPoint(point);
+    HitTestResult result = page->corePage()->mainFrame()->eventHandler()->hitTestResultAtPoint(point, false);
 
     Frame* frame = page->corePage()->mainFrame();
     if (result.innerNonSharedNode())
@@ -1351,12 +1355,14 @@ static bool handleMouseEvent(const WebMouseEvent& mouseEvent, WebPage* page, boo
 
             return handled;
         }
-        case PlatformEvent::MouseReleased:
+        case PlatformEvent::MouseReleased: {
+            bool handled = page->corePage()->userInputProxy()->handleMouseReleaseEvent(platformMouseEvent);
 #if PLATFORM(QT)
-            if (page->handleMouseReleaseEvent(platformMouseEvent))
-                return true;
+            if (!handled)
+                handled = page->handleMouseReleaseEvent(platformMouseEvent);
 #endif
-            return page->corePage()->userInputProxy()->handleMouseReleaseEvent(platformMouseEvent);
+            return handled;
+        }
         case PlatformEvent::MouseMoved:
             if (onlyUpdateScrollbars)
                 return page->corePage()->userInputProxy()->handleMouseMoveOnScrollbarEvent(platformMouseEvent);
@@ -1559,7 +1565,7 @@ void WebPage::highlightPotentialActivation(const IntPoint& point, const IntSize&
             return;
 
 #else
-        HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowShadowContent);
+        HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), /*allowShadowContent*/ false, /*ignoreClipping*/ true);
         adjustedNode = result.innerNode();
 #endif
         // Find the node to highlight. This is not the same as the node responding the tap gesture, because many
@@ -2072,15 +2078,7 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
 #if ENABLE(SMOOTH_SCROLLING)
     settings->setEnableScrollAnimator(store.getBoolValueForKey(WebPreferencesKey::scrollAnimatorEnabledKey()));
 #endif
-
-    // <rdar://problem/10697417>: It is necessary to force compositing when accelerate drawing
-    // is enabled on Mac so that scrollbars are always in their own layers.
-#if PLATFORM(MAC)
-    if (settings->acceleratedDrawingEnabled())
-        settings->setForceCompositingMode(LayerTreeHost::supportsAcceleratedCompositing());
-    else
-#endif
-        settings->setForceCompositingMode(store.getBoolValueForKey(WebPreferencesKey::forceCompositingModeKey()) && LayerTreeHost::supportsAcceleratedCompositing());
+    settings->setInteractiveFormValidationEnabled(store.getBoolValueForKey(WebPreferencesKey::interactiveFormValidationEnabledKey()));
 
 #if ENABLE(SQL_DATABASE)
     AbstractDatabase::setIsAvailable(store.getBoolValueForKey(WebPreferencesKey::databasesEnabledKey()));
@@ -2117,7 +2115,7 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
 #endif
 
     settings->setShouldRespectImageOrientation(store.getBoolValueForKey(WebPreferencesKey::shouldRespectImageOrientationKey()));
-    settings->setThirdPartyStorageBlockingEnabled(store.getBoolValueForKey(WebPreferencesKey::thirdPartyStorageBlockingEnabledKey()));
+    settings->setStorageBlockingPolicy(static_cast<SecurityOrigin::StorageBlockingPolicy>(store.getUInt32ValueForKey(WebPreferencesKey::storageBlockingPolicyKey())));
 
     settings->setDiagnosticLoggingEnabled(store.getBoolValueForKey(WebPreferencesKey::diagnosticLoggingEnabledKey()));
 
@@ -2126,7 +2124,7 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     platformPreferencesDidChange(store);
 
     if (m_drawingArea)
-        m_drawingArea->updatePreferences();
+        m_drawingArea->updatePreferences(store);
 }
 
 #if ENABLE(INSPECTOR)
@@ -2728,7 +2726,7 @@ void WebPage::findZoomableAreaForPoint(const WebCore::IntPoint& point, const Web
 {
     UNUSED_PARAM(area);
     Frame* mainframe = m_mainFrame->coreFrame();
-    HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping);
+    HitTestResult result = mainframe->eventHandler()->hitTestResultAtPoint(mainframe->view()->windowToContents(point), /*allowShadowContent*/ false, /*ignoreClipping*/ true);
 
     Node* node = result.innerNode();
 
@@ -3245,7 +3243,7 @@ static bool pageContainsAnyHorizontalScrollbars(Frame* mainFrame)
 
         for (HashSet<ScrollableArea*>::const_iterator it = scrollableAreas->begin(), end = scrollableAreas->end(); it != end; ++it) {
             ScrollableArea* scrollableArea = *it;
-            if (!scrollableArea->isOnActivePage())
+            if (!scrollableArea->scrollbarsCanBeActive())
                 continue;
 
             if (hasEnabledHorizontalScrollbar(scrollableArea))

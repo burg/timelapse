@@ -42,7 +42,6 @@ namespace BlackBerry {
 namespace WebKit {
 
 static bool canScrollInnerFrame(Frame*);
-static bool canScrollRenderBox(RenderBox*);
 static RenderLayer* parentLayer(RenderLayer*);
 static bool isNonRenderViewFixedPositionedContainer(RenderLayer*);
 
@@ -360,9 +359,22 @@ static bool canScrollInnerFrame(Frame* frame)
 //     with overflow-y: hidden and overflow-x: auto set.
 // The version below fixes it.
 // FIXME: Fix RenderBox::canBeScrolledAndHasScrollableArea method instead.
-static bool canScrollRenderBox(RenderBox* box)
+bool InRegionScrollerPrivate::canScrollRenderBox(RenderBox* box)
 {
-    if (!box || !box->hasOverflowClip())
+    if (!box)
+        return false;
+
+    // We use this to make non-overflown contents layers to actually
+    // be overscrollable.
+    if (box->layer() && box->layer()->usesCompositedScrolling()) {
+        if (box->style()->overflowScrolling() == OSBlackberryTouch)
+            return true;
+    }
+
+    if (!box->hasOverflowClip())
+        return false;
+
+    if (box->scrollHeight() == box->clientHeight() && box->scrollWidth() == box->clientWidth())
         return false;
 
     if (box->scrollsOverflowX() && (box->scrollWidth() != box->clientWidth())

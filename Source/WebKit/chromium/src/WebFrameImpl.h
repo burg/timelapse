@@ -184,11 +184,8 @@ public:
     virtual WebString selectionAsText() const;
     virtual WebString selectionAsMarkup() const;
     virtual bool selectWordAroundCaret();
-    virtual void selectRange(const WebPoint& start, const WebPoint& end);
+    virtual void selectRange(const WebPoint& base, const WebPoint& extent);
     virtual void selectRange(const WebRange&);
-    virtual bool moveSelectionStart(const WebPoint&, bool allowCollapsedSelection);
-    virtual bool moveSelectionEnd(const WebPoint&, bool allowCollapsedSelection);
-    virtual bool moveCaret(const WebPoint&);
     virtual int printBegin(const WebPrintParams&,
                            const WebNode& constrainToNode,
                            bool* useBrowserOverlays);
@@ -385,6 +382,9 @@ private:
     // was searched.
     bool shouldScopeMatches(const WTF::String& searchText);
 
+    // Finishes the current scoping effort and triggers any updates if appropriate.
+    void finishCurrentScopingEffort(int identifier);
+
     // Queue up a deferred call to scopeStringMatches.
     void scopeStringMatchesSoon(
         int identifier, const WebString& searchText, const WebFindOptions&,
@@ -455,6 +455,10 @@ private:
     // Keeps track of whether the scoping effort was completed (the user may
     // interrupt it before it completes by submitting a new search).
     bool m_scopingComplete;
+
+    // Keeps track of whether the last find request completed its scoping effort
+    // without finding any matches in this frame.
+    bool m_lastFindRequestCompletedWithNoMatches;
 
     // Keeps track of when the scoping effort should next invalidate the scrollbar
     // and the frame area.

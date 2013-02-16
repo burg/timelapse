@@ -210,7 +210,7 @@ static Vector<MediaPlayerFactory*>& installedMediaEngines()
         enginesQueried = true;
 
 #if USE(AVFOUNDATION)
-        if (1 /* @@Settings::isAVFoundationEnabled() @@ */) {
+        if (Settings::isAVFoundationEnabled()) {
 #if PLATFORM(MAC)
             MediaPlayerPrivateAVFoundationObjC::registerMediaEngine(addMediaEngine);
 #elif PLATFORM(WIN)
@@ -785,6 +785,8 @@ MediaPlayer::SupportsType MediaPlayer::supportsType(const ContentType& contentTy
             && (contentType.type().startsWith("video/webm", false) || contentType.type().startsWith("video/x-flv", false)))
             return IsNotSupported;
     }
+#else
+    UNUSED_PARAM(client);
 #endif
 
 #if ENABLE(ENCRYPTED_MEDIA)

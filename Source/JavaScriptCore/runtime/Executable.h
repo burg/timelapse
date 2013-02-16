@@ -31,6 +31,7 @@
 #include "HandlerInfo.h"
 #include "JSFunction.h"
 #include "Interpreter.h"
+#include "JSGlobalObject.h"
 #include "LLIntCLoop.h"
 #include "Nodes.h"
 #include "SamplingTool.h"
@@ -712,7 +713,7 @@ namespace JSC {
         void finishCreation(JSGlobalData& globalData)
         {
             Base::finishCreation(globalData);
-            m_nameValue.set(globalData, this, jsString(&globalData, name().ustring()));
+            m_nameValue.set(globalData, this, jsString(&globalData, name().string()));
         }
 
     private:
@@ -753,6 +754,13 @@ namespace JSC {
         WriteBarrier<JSString> m_nameValue;
         WriteBarrier<SharedSymbolTable> m_symbolTable;
     };
+
+    inline JSFunction::JSFunction(JSGlobalData& globalData, FunctionExecutable* executable, JSScope* scope)
+        : Base(globalData, scope->globalObject()->functionStructure())
+        , m_executable(globalData, this, executable)
+        , m_scope(globalData, this, scope)
+    {
+    }
 
     inline FunctionExecutable* JSFunction::jsExecutable() const
     {

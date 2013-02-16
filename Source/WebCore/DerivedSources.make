@@ -675,13 +675,17 @@ else
 	TEXT_PREPROCESSOR_FLAGS=-E -P -x c -std=c89
 endif
 
-ifeq ($(shell $(CC) -x c++ -E -P -dM $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ENABLE_DASHBOARD_SUPPORT | cut -d' ' -f3), 1)
+ifneq ($(SDKROOT),)
+	SDK_FLAGS=-isysroot $(SDKROOT)
+endif
+
+ifeq ($(shell $(CC) -x c++ -E -P -dM $(SDK_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ENABLE_DASHBOARD_SUPPORT | cut -d' ' -f3), 1)
     ENABLE_DASHBOARD_SUPPORT = 1
 else
     ENABLE_DASHBOARD_SUPPORT = 0
 endif
 
-ifeq ($(shell $(CC) -x c++ -E -P -dM $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ENABLE_ORIENTATION_EVENTS | cut -d' ' -f3), 1)
+ifeq ($(shell $(CC) -x c++ -E -P -dM $(SDK_FLAGS) $(FRAMEWORK_FLAGS) $(HEADER_FLAGS) -include "wtf/Platform.h" /dev/null | grep ENABLE_ORIENTATION_EVENTS | cut -d' ' -f3), 1)
     ENABLE_ORIENTATION_EVENTS = 1
 else
     ENABLE_ORIENTATION_EVENTS = 0
@@ -1040,10 +1044,10 @@ all : InjectedScriptSource.h
 InjectedScriptSource.h : InjectedScriptSource.js
 	perl $(WebCore)/inspector/xxd.pl InjectedScriptSource_js $(WebCore)/inspector/InjectedScriptSource.js InjectedScriptSource.h
 
-all : InjectedScriptWebGLModuleSource.h
+all : InjectedScriptCanvasModuleSource.h
 
-InjectedScriptWebGLModuleSource.h : InjectedScriptWebGLModuleSource.js
-	perl $(WebCore)/inspector/xxd.pl InjectedScriptWebGLModuleSource_js $(WebCore)/inspector/InjectedScriptWebGLModuleSource.js InjectedScriptWebGLModuleSource.h
+InjectedScriptCanvasModuleSource.h : InjectedScriptCanvasModuleSource.js
+	perl $(WebCore)/inspector/xxd.pl InjectedScriptCanvasModuleSource_js $(WebCore)/inspector/InjectedScriptCanvasModuleSource.js InjectedScriptCanvasModuleSource.h
 
 -include $(JS_DOM_HEADERS:.h=.dep)
 

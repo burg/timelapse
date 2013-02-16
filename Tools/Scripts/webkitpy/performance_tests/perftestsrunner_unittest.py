@@ -31,6 +31,7 @@
 
 import StringIO
 import json
+import re
 import unittest
 
 from webkitpy.common.host_mock import MockHost
@@ -47,6 +48,9 @@ from webkitpy.performance_tests.perftestsrunner import PerfTestsRunner
 class MainTest(unittest.TestCase):
     def assertWritten(self, stream, contents):
         self.assertEquals(stream.buflist, contents)
+
+    def normalizeFinishedTime(self, log):
+        return re.sub(r'Finished: [0-9\.]+ s', 'Finished: 0.1 s', log)
 
     class TestDriver:
         def run_test(self, driver_input, stop_when_done):
@@ -234,7 +238,8 @@ max 548000 bytes
         finally:
             stdout, stderr, log = output.restore_output()
         self.assertEqual(stderr, "Ready to run test?\n")
-        self.assertEqual(log, "Running inspector/pass.html (1 of 1)\nRESULT group_name: test_name= 42 ms\n\n")
+        self.assertEqual(self.normalizeFinishedTime(log),
+            "Running inspector/pass.html (1 of 1)\nRESULT group_name: test_name= 42 ms\nFinished: 0.1 s\n\n")
 
     def test_run_test_set_for_parser_tests(self):
         runner, port = self.create_runner()
@@ -246,13 +251,15 @@ max 548000 bytes
         finally:
             stdout, stderr, log = output.restore_output()
         self.assertEqual(unexpected_result_count, 0)
-        self.assertEqual(log, '\n'.join(['Running Bindings/event-target-wrapper.html (1 of 2)',
+        self.assertEqual(self.normalizeFinishedTime(log), '\n'.join(['Running Bindings/event-target-wrapper.html (1 of 2)',
         'RESULT Bindings: event-target-wrapper= 1489.05 ms',
         'median= 1487.0 ms, stdev= 14.46 ms, min= 1471.0 ms, max= 1510.0 ms',
+        'Finished: 0.1 s',
         '',
         'Running Parser/some-parser.html (2 of 2)',
         'RESULT Parser: some-parser= 1100.0 ms',
         'median= 1101.0 ms, stdev= 11.0 ms, min= 1080.0 ms, max= 1120.0 ms',
+        'Finished: 0.1 s',
         '', '']))
 
     def test_run_memory_test(self):
@@ -267,7 +274,7 @@ max 548000 bytes
         finally:
             stdout, stderr, log = output.restore_output()
         self.assertEqual(unexpected_result_count, 0)
-        self.assertEqual(log, '\n'.join([
+        self.assertEqual(self.normalizeFinishedTime(log), '\n'.join([
             'Running 1 tests',
             'Running Parser/memory-test.html (1 of 1)',
             'RESULT Parser: memory-test= 1100.0 ms',
@@ -276,13 +283,14 @@ max 548000 bytes
             'median= 829000.0 bytes, stdev= 15000.0 bytes, min= 811000.0 bytes, max= 848000.0 bytes',
             'RESULT Parser: memory-test: Malloc= 532000.0 bytes',
             'median= 529000.0 bytes, stdev= 13000.0 bytes, min= 511000.0 bytes, max= 548000.0 bytes',
+            'Finished: 0.1 s',
             '', '']))
         results = runner.load_output_json()[0]['results']
         self.assertEqual(results['Parser/memory-test'], {'min': 1080.0, 'max': 1120.0, 'median': 1101.0, 'stdev': 11.0, 'avg': 1100.0, 'unit': 'ms'})
         self.assertEqual(results['Parser/memory-test:JSHeap'], {'min': 811000.0, 'max': 848000.0, 'median': 829000.0, 'stdev': 15000.0, 'avg': 832000.0, 'unit': 'bytes'})
         self.assertEqual(results['Parser/memory-test:Malloc'], {'min': 511000.0, 'max': 548000.0, 'median': 529000.0, 'stdev': 13000.0, 'avg': 532000.0, 'unit': 'bytes'})
 
-    def _test_run_with_json_output(self, runner, filesystem, upload_suceeds=True, expected_exit_code=0):
+    def _test_run_with_json_output(self, runner, filesystem, upload_suceeds=False, expected_exit_code=0):
         filesystem.write_text_file(runner._base_path + '/inspector/pass.html', 'some content')
         filesystem.write_text_file(runner._base_path + '/Bindings/event-target-wrapper.html', 'some content')
 
@@ -291,7 +299,7 @@ max 548000 bytes
         def mock_upload_json(hostname, json_path):
             self.assertEqual(hostname, 'some.host')
             self.assertEqual(json_path, '/mock-checkout/output.json')
-            uploaded[0] = True
+            uploaded[0] = upload_suceeds
             return upload_suceeds
 
         runner._upload_json = mock_upload_json
@@ -304,18 +312,22 @@ max 548000 bytes
             stdout, stderr, logs = output_capture.restore_output()
 
         if not expected_exit_code:
-            self.assertEqual(logs, '\n'.join([
-                'Running 2 tests',
+            self.assertEqual(self.normalizeFinishedTime(logs),
+                '\n'.join(['Running 2 tests',
                 'Running Bindings/event-target-wrapper.html (1 of 2)',
                 'RESULT Bindings: event-target-wrapper= 1489.05 ms',
                 'median= 1487.0 ms, stdev= 14.46 ms, min= 1471.0 ms, max= 1510.0 ms',
+                'Finished: 0.1 s',
                 '',
                 'Running inspector/pass.html (2 of 2)',
                 'RESULT group_name: test_name= 42 ms',
+                'Finished: 0.1 s',
                 '',
                 '']))
 
-        return uploaded[0]
+        self.assertEqual(uploaded[0], upload_suceeds)
+
+        return logs
 
     _event_target_wrapper_and_inspector_results = {
         "Bindings/event-target-wrapper": {"max": 1510, "avg": 1489.05, "median": 1487, "min": 1471, "stdev": 14.46, "unit": "ms"},
@@ -324,7 +336,7 @@ max 548000 bytes
     def test_run_with_json_output(self):
         runner, port = self.create_runner(args=['--output-json-path=/mock-checkout/output.json',
             '--test-results-server=some.host'])
-        self._test_run_with_json_output(runner, port.host.filesystem)
+        self._test_run_with_json_output(runner, port.host.filesystem, upload_suceeds=True)
         self.assertEqual(runner.load_output_json(), {
             "timestamp": 123456789, "results": self._event_target_wrapper_and_inspector_results,
             "webkit-revision": "5678", "branch": "webkit-trunk"})
@@ -332,7 +344,7 @@ max 548000 bytes
     def test_run_with_description(self):
         runner, port = self.create_runner(args=['--output-json-path=/mock-checkout/output.json',
             '--test-results-server=some.host', '--description', 'some description'])
-        self._test_run_with_json_output(runner, port.host.filesystem)
+        self._test_run_with_json_output(runner, port.host.filesystem, upload_suceeds=True)
         self.assertEqual(runner.load_output_json(), {
             "timestamp": 123456789, "description": "some description",
             "results": self._event_target_wrapper_and_inspector_results,
@@ -350,7 +362,7 @@ max 548000 bytes
     def test_run_respects_no_results(self):
         runner, port = self.create_runner(args=['--output-json-path=/mock-checkout/output.json',
             '--test-results-server=some.host', '--no-results'])
-        self.assertFalse(self._test_run_with_json_output(runner, port.host.filesystem))
+        self._test_run_with_json_output(runner, port.host.filesystem, upload_suceeds=False)
         self.assertFalse(port.host.filesystem.isfile('/mock-checkout/output.json'))
 
     def test_run_generates_json_by_default(self):
@@ -419,29 +431,30 @@ max 548000 bytes
         port.host.filesystem.write_text_file('/mock-checkout/output.json', '{"another bad json": "1"}')
         self._test_run_with_json_output(runner, port.host.filesystem, expected_exit_code=PerfTestsRunner.EXIT_CODE_BAD_MERGE)
 
-    def test_run_with_json_source(self):
+    def test_run_with_slave_config_json(self):
         runner, port = self.create_runner(args=['--output-json-path=/mock-checkout/output.json',
-            '--source-json-path=/mock-checkout/source.json', '--test-results-server=some.host'])
-        port.host.filesystem.write_text_file('/mock-checkout/source.json', '{"key": "value"}')
-        self._test_run_with_json_output(runner, port.host.filesystem)
+            '--source-json-path=/mock-checkout/slave-config.json', '--test-results-server=some.host'])
+        port.host.filesystem.write_text_file('/mock-checkout/slave-config.json', '{"key": "value"}')
+        self._test_run_with_json_output(runner, port.host.filesystem, upload_suceeds=True)
         self.assertEqual(runner.load_output_json(), {
             "timestamp": 123456789, "results": self._event_target_wrapper_and_inspector_results,
             "webkit-revision": "5678", "branch": "webkit-trunk", "key": "value"})
 
-    def test_run_with_bad_json_source(self):
+    def test_run_with_bad_slave_config_json(self):
         runner, port = self.create_runner(args=['--output-json-path=/mock-checkout/output.json',
-            '--source-json-path=/mock-checkout/source.json', '--test-results-server=some.host'])
+            '--source-json-path=/mock-checkout/slave-config.json', '--test-results-server=some.host'])
+        logs = self._test_run_with_json_output(runner, port.host.filesystem, expected_exit_code=PerfTestsRunner.EXIT_CODE_BAD_SOURCE_JSON)
+        self.assertTrue('Missing slave configuration JSON file: /mock-checkout/slave-config.json' in logs)
+        port.host.filesystem.write_text_file('/mock-checkout/slave-config.json', 'bad json')
         self._test_run_with_json_output(runner, port.host.filesystem, expected_exit_code=PerfTestsRunner.EXIT_CODE_BAD_SOURCE_JSON)
-        port.host.filesystem.write_text_file('/mock-checkout/source.json', 'bad json')
-        self._test_run_with_json_output(runner, port.host.filesystem, expected_exit_code=PerfTestsRunner.EXIT_CODE_BAD_SOURCE_JSON)
-        port.host.filesystem.write_text_file('/mock-checkout/source.json', '["another bad json"]')
+        port.host.filesystem.write_text_file('/mock-checkout/slave-config.json', '["another bad json"]')
         self._test_run_with_json_output(runner, port.host.filesystem, expected_exit_code=PerfTestsRunner.EXIT_CODE_BAD_SOURCE_JSON)
 
     def test_run_with_multiple_repositories(self):
         runner, port = self.create_runner(args=['--output-json-path=/mock-checkout/output.json',
             '--test-results-server=some.host'])
         port.repository_paths = lambda: [('webkit', '/mock-checkout'), ('some', '/mock-checkout/some')]
-        self._test_run_with_json_output(runner, port.host.filesystem)
+        self._test_run_with_json_output(runner, port.host.filesystem, upload_suceeds=True)
         self.assertEqual(runner.load_output_json(), {
             "timestamp": 123456789, "results": self._event_target_wrapper_and_inspector_results,
             "webkit-revision": "5678", "some-revision": "5678", "branch": "webkit-trunk"})

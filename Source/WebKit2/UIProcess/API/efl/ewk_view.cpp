@@ -35,6 +35,7 @@
 #include "WebPageGroup.h"
 #include "WebPopupItem.h"
 #include "WebPopupMenuProxyEfl.h"
+#include "WebPreferences.h"
 #include "ewk_back_forward_list_private.h"
 #include "ewk_context.h"
 #include "ewk_context_private.h"
@@ -57,6 +58,10 @@
 #include <WebCore/EflScreenUtilities.h>
 #include <WebKit2/WKPageGroup.h>
 #include <wtf/text/CString.h>
+
+#if ENABLE(FULLSCREEN_API)
+#include "WebFullScreenManagerProxy.h"
+#endif
 
 #if USE(ACCELERATED_COMPOSITING)
 #include <Evas_GL.h>
@@ -493,7 +498,10 @@ bool ewk_view_accelerated_compositing_mode_enter(const Evas_Object* ewkView)
     EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, false);
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, false);
 
-    EINA_SAFETY_ON_NULL_RETURN_VAL(!priv->evasGl, false);
+    if (priv->evasGl) {
+        EINA_LOG_DOM_WARN(_ewk_log_dom, "Accelerated compositing mode already entered.");
+        return false;
+    }
 
     Evas* evas = evas_object_evas_get(ewkView);
     priv->evasGl = evas_gl_new(evas);
@@ -715,6 +723,10 @@ static void _ewk_view_initialize(Evas_Object* ewkView, Ewk_Context* context, WKP
     ewk_view_policy_client_attach(wkPage, ewkView);
     ewk_view_resource_load_client_attach(wkPage, ewkView);
     ewk_view_ui_client_attach(wkPage, ewkView);
+#if ENABLE(FULLSCREEN_API)
+    priv->pageProxy->fullScreenManager()->setWebView(ewkView);
+    ewk_settings_fullscreen_enabled_set(priv->settings.get(), true);
+#endif
 }
 
 static Evas_Object* _ewk_view_add_with_smart(Evas* canvas, Evas_Smart* smart)
@@ -880,8 +892,7 @@ void ewk_view_resource_load_initiated(Evas_Object* ewkView, uint64_t resourceIde
     Ewk_Web_Resource_Request resourceRequest = {resource, request, 0};
 
     // Keep the resource internally to reuse it later.
-    ewk_web_resource_ref(resource);
-    priv->loadingResourcesMap.add(resourceIdentifier, resource);
+    priv->loadingResourcesMap.add(resourceIdentifier, ewk_web_resource_ref(resource));
 
     evas_object_smart_callback_call(ewkView, "resource,request,new", &resourceRequest);
 }
@@ -1150,6 +1161,37 @@ void ewk_view_display(Evas_Object* ewkView, const IntRect& rect)
 
     evas_object_image_data_update_add(smartData->image, rect.x(), rect.y(), rect.width(), rect.height());
 }
+
+#if ENABLE(FULLSCREEN_API)
+/**
+ * @internal
+ * Calls fullscreen_enter callback or falls back to default behavior and enables fullscreen mode.
+ */
+void ewk_view_full_screen_enter(Evas_Object* ewkView)
+{
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData);
+
+    if (!smartData->api->fullscreen_enter || !smartData->api->fullscreen_enter(smartData)) {
+        Ecore_Evas* ecoreEvas = ecore_evas_ecore_evas_get(smartData->base.evas);
+        ecore_evas_fullscreen_set(ecoreEvas, true);
+    }
+}
+
+/**
+ * @internal
+ * Calls fullscreen_exit callback or falls back to default behavior and disables fullscreen mode.
+ */
+void ewk_view_full_screen_exit(Evas_Object* ewkView)
+{
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData);
+
+    if (!smartData->api->fullscreen_exit || !smartData->api->fullscreen_exit(smartData)) {
+        Ecore_Evas* ecoreEvas = ecore_evas_ecore_evas_get(smartData->base.evas);
+        ecore_evas_fullscreen_set(ecoreEvas, false);
+    }
+}
+#endif
+
 
 /**
  * @internal
@@ -1583,4 +1625,72 @@ Eina_Bool ewk_view_mouse_events_enabled_get(const Evas_Object* ewkView)
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv, false);
 
     return priv->areMouseEventsEnabled;
+}
+
+/**
+ * @internal
+ * Web process has crashed.
+ *
+ * Emits signal: "webprocess,crashed" with pointer to crash handling boolean.
+ */
+void ewk_view_webprocess_crashed(Evas_Object* ewkView)
+{
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData);
+    EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv);
+
+    bool handled = false;
+    evas_object_smart_callback_call(ewkView, "webprocess,crashed", &handled);
+
+    if (!handled) {
+        CString url = priv->pageProxy->urlAtProcessExit().utf8();
+        WRN("WARNING: The web process experienced a crash on '%s'.\n", url.data());
+
+        // Display an error page
+        ewk_view_html_string_load(ewkView, "The web process has crashed.", 0, url.data());
+    }
+}
+
+/**
+ * @internal
+ * Calls a smart member function for javascript alert().
+ */
+void ewk_view_run_javascript_alert(Evas_Object* ewkView, const WKEinaSharedString& message)
+{
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData);
+    EINA_SAFETY_ON_NULL_RETURN(smartData->api);
+
+    if (!smartData->api->run_javascript_alert)
+        return;
+
+    smartData->api->run_javascript_alert(smartData, message);
+}
+
+/**
+ * @internal
+ * Calls a smart member function for javascript confirm() and returns a value from the function. Returns false by default.
+ */
+bool ewk_view_run_javascript_confirm(Evas_Object* ewkView, const WKEinaSharedString& message)
+{
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, false);
+    EINA_SAFETY_ON_NULL_RETURN_VAL(smartData->api, false);
+
+    if (!smartData->api->run_javascript_confirm)
+        return false;
+
+    return smartData->api->run_javascript_confirm(smartData, message);
+}
+
+/**
+ * @internal
+ * Calls a smart member function for javascript prompt() and returns a value from the function. Returns null string by default.
+ */
+WKEinaSharedString ewk_view_run_javascript_prompt(Evas_Object* ewkView, const WKEinaSharedString& message, const WKEinaSharedString& defaultValue)
+{
+    EWK_VIEW_SD_GET_OR_RETURN(ewkView, smartData, WKEinaSharedString());
+    EINA_SAFETY_ON_NULL_RETURN_VAL(smartData->api, WKEinaSharedString());
+
+    if (!smartData->api->run_javascript_prompt)
+        return WKEinaSharedString();
+
+    return WKEinaSharedString::adopt(smartData->api->run_javascript_prompt(smartData, message, defaultValue));
 }

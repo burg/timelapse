@@ -400,9 +400,9 @@ void RenderLayer::updateLayerPositions(LayoutPoint* offsetFromRoot, UpdateLayerP
         if (flags & CheckForRepaint) {
             if (view && !view->printing()) {
                 if (m_repaintStatus & NeedsFullRepaint) {
-                    renderer()->repaintUsingContainer(repaintContainer, oldRepaintRect);
+                    renderer()->repaintUsingContainer(repaintContainer, pixelSnappedIntRect(oldRepaintRect));
                     if (m_repaintRect != oldRepaintRect)
-                        renderer()->repaintUsingContainer(repaintContainer, m_repaintRect);
+                        renderer()->repaintUsingContainer(repaintContainer, pixelSnappedIntRect(m_repaintRect));
                 } else if (shouldRepaintAfterLayout())
                     renderer()->repaintAfterLayoutIfNeeded(repaintContainer, oldRepaintRect, oldOutlineBox, &m_repaintRect, &m_outlineBox);
             }
@@ -1573,7 +1573,7 @@ bool RenderLayer::usesCompositedScrolling() const
     if (!scrollsOverflow() || !allowsScrolling())
         return false;
 
-#if ENABLE(OVERFLOW_SCROLLING)
+#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
     return renderer()->style()->useTouchOverflowScrolling();
 #else
     return false;
@@ -1733,7 +1733,7 @@ void RenderLayer::scrollTo(int x, int y)
 
     // Just schedule a full repaint of our object.
     if (view && !usesCompositedScrolling())
-        renderer()->repaintUsingContainer(repaintContainer, m_repaintRect);
+        renderer()->repaintUsingContainer(repaintContainer, pixelSnappedIntRect(m_repaintRect));
 
     // Schedule the scroll DOM event.
     if (renderer()->node())
@@ -2210,9 +2210,12 @@ bool RenderLayer::shouldSuspendScrollAnimations() const
     return view->frameView()->shouldSuspendScrollAnimations();
 }
 
-bool RenderLayer::isOnActivePage() const
+bool RenderLayer::scrollbarsCanBeActive() const
 {
-    return !m_renderer->document()->inPageCache();
+    RenderView* view = renderer()->view();
+    if (!view)
+        return false;
+    return view->frameView()->scrollbarsCanBeActive();
 }
 
 IntPoint RenderLayer::currentMousePosition() const
@@ -2430,7 +2433,7 @@ bool RenderLayer::hasOverflowControls() const
     return m_hBar || m_vBar || m_scrollCorner || renderer()->style()->resize() != RESIZE_NONE;
 }
 
-void RenderLayer::positionOverflowControls(const IntSize& offsetFromLayer)
+void RenderLayer::positionOverflowControls(const IntSize& offsetFromRoot)
 {
     if (!m_hBar && !m_vBar && (!renderer()->hasOverflowClip() || renderer()->style()->resize() == RESIZE_NONE))
         return;
@@ -2441,7 +2444,7 @@ void RenderLayer::positionOverflowControls(const IntSize& offsetFromLayer)
 
     const IntRect borderBox = box->pixelSnappedBorderBoxRect();
     const IntRect& scrollCorner = scrollCornerRect();
-    IntRect absBounds(borderBox.location() + offsetFromLayer, borderBox.size());
+    IntRect absBounds(borderBox.location() + offsetFromRoot, borderBox.size());
     if (m_vBar)
         m_vBar->setFrameRect(IntRect(verticalScrollbarStart(absBounds.x(), absBounds.maxX()),
                                      absBounds.y() + box->borderTop(),
@@ -2454,34 +2457,15 @@ void RenderLayer::positionOverflowControls(const IntSize& offsetFromLayer)
                                      absBounds.width() - (box->borderLeft() + box->borderRight()) - scrollCorner.width(),
                                      m_hBar->height()));
 
-#if USE(ACCELERATED_COMPOSITING)
-    if (GraphicsLayer* layer = layerForHorizontalScrollbar()) {
-        if (m_hBar) {
-            layer->setPosition(m_hBar->frameRect().location() - offsetFromLayer);
-            layer->setSize(m_hBar->frameRect().size());
-        }
-        layer->setDrawsContent(m_hBar);
-    }
-    if (GraphicsLayer* layer = layerForVerticalScrollbar()) {
-        if (m_vBar) {
-            layer->setPosition(m_vBar->frameRect().location() - offsetFromLayer);
-            layer->setSize(m_vBar->frameRect().size());
-        }
-        layer->setDrawsContent(m_vBar);
-    }
-
-    if (GraphicsLayer* layer = layerForScrollCorner()) {
-        const LayoutRect& scrollCornerAndResizer = scrollCornerAndResizerRect();
-        layer->setPosition(scrollCornerAndResizer.location());
-        layer->setSize(scrollCornerAndResizer.size());
-        layer->setDrawsContent(!scrollCornerAndResizer.isEmpty());
-    }
-#endif
-
     if (m_scrollCorner)
         m_scrollCorner->setFrameRect(scrollCorner);
     if (m_resizer)
         m_resizer->setFrameRect(resizerCornerRect(this, borderBox));
+
+#if USE(ACCELERATED_COMPOSITING)    
+    if (isComposited())
+        backing()->positionOverflowControlsLayers(offsetFromRoot);
+#endif
 }
 
 int RenderLayer::scrollWidth() const
@@ -3132,12 +3116,10 @@ void RenderLayer::paintLayerContents(RenderLayer* rootLayer, GraphicsContext* co
     // Apply clip-path to context.
     RenderStyle* style = renderer()->style();
     if (renderer()->hasClipPath() && !context->paintingDisabled() && style) {
-        if (BasicShape* clipShape = style->clipPath()) {
-            // FIXME: Investigate if it is better to store and update a Path object in RenderStyle.
-            // https://bugs.webkit.org/show_bug.cgi?id=95619
-            Path clipPath;
-            clipShape->path(clipPath, calculateLayerBounds(this, rootLayer, 0));
-            transparencyLayerContext->clipPath(clipPath, clipShape->windRule());
+        ASSERT(style->clipPath());
+        if (style->clipPath()->getOperationType() == ClipPathOperation::SHAPE) {
+            ShapeClipPathOperation* clipPath = static_cast<ShapeClipPathOperation*>(style->clipPath());
+            transparencyLayerContext->clipPath(clipPath->path(calculateLayerBounds(this, rootLayer, 0)), clipPath->windRule());
         }
     }
 
@@ -3477,7 +3459,7 @@ bool RenderLayer::hitTest(const HitTestRequest& request, const HitTestLocation& 
         // We didn't hit any layer. If we are the root layer and the mouse is -- or just was -- down, 
         // return ourselves. We do this so mouse events continue getting delivered after a drag has 
         // exited the WebView, and so hit testing over a scrollbar hits the content document.
-        if (!request.isChildFrameHitTest() && (request.active() || request.release()) && isRootLayer()) {
+        if ((request.active() || request.release()) && isRootLayer()) {
             renderer()->updateHitTestResult(result, toRenderView(renderer())->flipForWritingMode(result.point()));
             insideLayer = this;
         }
@@ -3488,9 +3470,6 @@ bool RenderLayer::hitTest(const HitTestRequest& request, const HitTestLocation& 
     if (node && !result.URLElement())
         result.setURLElement(static_cast<Element*>(node->enclosingLinkEventParentOrSelf()));
 
-    // Next set up the correct :hover/:active state along the new chain.
-    updateHoverActiveState(request, result);
-    
     // Now return whether we were inside this layer (this will always be true for the root
     // layer).
     return insideLayer;
@@ -4522,118 +4501,6 @@ void RenderLayer::setParent(RenderLayer* parent)
 #endif
 }
 
-static RenderObject* commonAncestor(RenderObject* obj1, RenderObject* obj2)
-{
-    if (!obj1 || !obj2)
-        return 0;
-
-    for (RenderObject* currObj1 = obj1; currObj1; currObj1 = currObj1->hoverAncestor())
-        for (RenderObject* currObj2 = obj2; currObj2; currObj2 = currObj2->hoverAncestor())
-            if (currObj1 == currObj2)
-                return currObj1;
-
-    return 0;
-}
-
-void RenderLayer::updateHoverActiveState(const HitTestRequest& request, HitTestResult& result)
-{
-    // We don't update :hover/:active state when the result is marked as readOnly.
-    if (request.readOnly())
-        return;
-
-    Document* doc = renderer()->document();
-
-    Node* activeNode = doc->activeNode();
-    if (activeNode && !request.active()) {
-        // We are clearing the :active chain because the mouse has been released.
-        for (RenderObject* curr = activeNode->renderer(); curr; curr = curr->parent()) {
-            if (curr->node() && !curr->isText()) {
-                curr->node()->setActive(false);
-                curr->node()->clearInActiveChain();
-            }
-        }
-        doc->setActiveNode(0);
-    } else {
-        Node* newActiveNode = result.innerNode();
-        if (!activeNode && newActiveNode && request.active() && !request.touchMove()) {
-            // We are setting the :active chain and freezing it. If future moves happen, they
-            // will need to reference this chain.
-            for (RenderObject* curr = newActiveNode->renderer(); curr; curr = curr->parent()) {
-                if (curr->node() && !curr->isText())
-                    curr->node()->setInActiveChain();
-            }
-            doc->setActiveNode(newActiveNode);
-        }
-    }
-    // If the mouse has just been pressed, set :active on the chain. Those (and only those)
-    // nodes should remain :active until the mouse is released.
-    bool allowActiveChanges = !activeNode && doc->activeNode();
-
-    // If the mouse is down and if this is a mouse move event, we want to restrict changes in 
-    // :hover/:active to only apply to elements that are in the :active chain that we froze
-    // at the time the mouse went down.
-    bool mustBeInActiveChain = request.active() && request.move();
-
-    RefPtr<Node> oldHoverNode = doc->hoverNode();
-    // Clear the :hover chain when the touch gesture is over.
-    if (request.touchRelease()) {
-        if (oldHoverNode) {
-            for (RenderObject* curr = oldHoverNode->renderer(); curr; curr = curr->parent()) {
-                if (curr->node() && !curr->isText())
-                    curr->node()->setHovered(false);
-            }
-            doc->setHoverNode(0);
-        }
-        // A touch release can not set new hover or active target.
-        return;
-    }
-
-    // Check to see if the hovered node has changed.
-    // If it hasn't, we do not need to do anything.
-    Node* newHoverNode = result.innerNode();
-    if (newHoverNode && !newHoverNode->renderer())
-        newHoverNode = result.innerNonSharedNode();
-
-    // Update our current hover node.
-    doc->setHoverNode(newHoverNode);
-
-    // We have two different objects.  Fetch their renderers.
-    RenderObject* oldHoverObj = oldHoverNode ? oldHoverNode->renderer() : 0;
-    RenderObject* newHoverObj = newHoverNode ? newHoverNode->renderer() : 0;
-    
-    // Locate the common ancestor render object for the two renderers.
-    RenderObject* ancestor = commonAncestor(oldHoverObj, newHoverObj);
-
-    Vector<RefPtr<Node>, 32> nodesToRemoveFromChain;
-    Vector<RefPtr<Node>, 32> nodesToAddToChain;
-
-    if (oldHoverObj != newHoverObj) {
-        // The old hover path only needs to be cleared up to (and not including) the common ancestor;
-        for (RenderObject* curr = oldHoverObj; curr && curr != ancestor; curr = curr->hoverAncestor()) {
-            if (curr->node() && !curr->isText() && (!mustBeInActiveChain || curr->node()->inActiveChain()))
-                nodesToRemoveFromChain.append(curr->node());
-        }
-    }
-
-    // Now set the hover state for our new object up to the root.
-    for (RenderObject* curr = newHoverObj; curr; curr = curr->hoverAncestor()) {
-        if (curr->node() && !curr->isText() && (!mustBeInActiveChain || curr->node()->inActiveChain()))
-            nodesToAddToChain.append(curr->node());
-    }
-
-    size_t removeCount = nodesToRemoveFromChain.size();
-    for (size_t i = 0; i < removeCount; ++i) {
-        nodesToRemoveFromChain[i]->setHovered(false);
-    }
-
-    size_t addCount = nodesToAddToChain.size();
-    for (size_t i = 0; i < addCount; ++i) {
-        if (allowActiveChanges)
-            nodesToAddToChain[i]->setActive(true);
-        nodesToAddToChain[i]->setHovered(true);
-    }
-}
-
 // Helper for the sorting of layers by z-index.
 static inline bool compareZIndex(RenderLayer* first, RenderLayer* second)
 {
@@ -4817,7 +4684,7 @@ void RenderLayer::setBackingNeedsRepaintInRect(const LayoutRect& r)
 // Since we're only painting non-composited layers, we know that they all share the same repaintContainer.
 void RenderLayer::repaintIncludingNonCompositingDescendants(RenderBoxModelObject* repaintContainer)
 {
-    renderer()->repaintUsingContainer(repaintContainer, renderer()->clippedOverflowRectForRepaint(repaintContainer));
+    renderer()->repaintUsingContainer(repaintContainer, pixelSnappedIntRect(renderer()->clippedOverflowRectForRepaint(repaintContainer)));
 
     for (RenderLayer* curr = firstChild(); curr; curr = curr->nextSibling()) {
         if (!curr->isComposited())

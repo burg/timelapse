@@ -137,8 +137,9 @@ namespace JSC { namespace DFG {
     macro(PhantomPutStructure, NodeMustGenerate | NodeDoesNotExit) \
     macro(AllocatePropertyStorage, NodeMustGenerate | NodeDoesNotExit | NodeResultStorage) \
     macro(ReallocatePropertyStorage, NodeMustGenerate | NodeDoesNotExit | NodeResultStorage) \
-    macro(GetPropertyStorage, NodeResultStorage) \
+    macro(GetButterfly, NodeResultStorage) \
     macro(CheckArray, NodeMustGenerate) \
+    macro(Arrayify, NodeResultStorage | NodeMustGenerate | NodeClobbersWorld) \
     macro(GetIndexedPropertyStorage, NodeResultStorage) \
     macro(GetByOffset, NodeResultJS) \
     macro(PutByOffset, NodeMustGenerate) \

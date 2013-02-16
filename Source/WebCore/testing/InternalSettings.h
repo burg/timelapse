@@ -62,6 +62,7 @@ public:
         bool m_originalAuthorShadowDOMForAnyElementEnabled;
 #endif
         EditingBehaviorType m_originalEditingBehavior;
+        bool m_originalUnifiedSpellCheckerEnabled;
         bool m_originalFixedPositionCreatesStackingContext;
         bool m_originalSyncXHRInDocumentsEnabled;
 #if ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
@@ -79,6 +80,8 @@ public:
         bool m_originalDialogElementEnabled;
 #endif
         bool m_canStartMedia;
+        bool m_originalMockScrollbarsEnabled;
+        bool m_langAttributeAwareFormControlUIEnabled;
     };
 
     typedef RefCountedSupplement<Page, InternalSettings> SuperType;
@@ -97,6 +100,7 @@ public:
     void setAcceleratedDrawingEnabled(bool enabled, ExceptionCode&);
     void setAcceleratedFiltersEnabled(bool enabled, ExceptionCode&);
     void setMockScrollbarsEnabled(bool enabled, ExceptionCode&);
+    void setUsesOverlayScrollbars(bool);
     void setPasswordEchoEnabled(bool enabled, ExceptionCode&);
     void setPasswordEchoDurationInSeconds(double durationInSeconds, ExceptionCode&);
     void setFixedElementsLayoutRelativeToFrame(bool, ExceptionCode&);
@@ -141,7 +145,8 @@ public:
     void setEnableMockPagePopup(bool, ExceptionCode&);
     String configurationForViewport(float devicePixelRatio, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight, ExceptionCode&);
     void setMemoryInfoEnabled(bool, ExceptionCode&);
-    void setThirdPartyStorageBlockingEnabled(bool, ExceptionCode&);
+    void setStorageBlockingPolicy(const String&, ExceptionCode&);
+    void setLangAttributeAwareFormControlUIEnabled(bool);
 private:
     explicit InternalSettings(Page*);
     virtual void hostDestroyed() OVERRIDE { m_page = 0; }

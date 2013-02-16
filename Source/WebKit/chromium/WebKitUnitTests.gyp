@@ -126,6 +126,7 @@
                     'type': 'shared_library',
                     'dependencies': [
                         '<(chromium_src_dir)/testing/android/native_test.gyp:native_test_native_code',
+                        'io_stream_forwarder_android',
                     ],
                 }],
             ],
@@ -145,13 +146,15 @@
                 'target_name': 'webkit_unit_tests_apk',
                 'type': 'none',
                 'dependencies': [
-                    '<(chromium_src_dir)/base/base.gyp:base_java',
+                    '<(chromium_src_dir)/base/base.gyp:base',
+                    '<(chromium_src_dir)/net/net.gyp:net',
                     'webkit_unit_tests',
                 ],
                 'variables': {
                     'input_shlib_path': '<(SHARED_LIB_DIR)/<(SHARED_LIB_PREFIX)webkit_unit_tests<(SHARED_LIB_SUFFIX)',
                     'input_jars_paths': [
                         '<(PRODUCT_DIR)/lib.java/chromium_base.jar',
+                        '<(PRODUCT_DIR)/lib.java/chromium_net.jar',
                     ],
                     'conditions': [
                         ['inside_chromium_build==1', {
@@ -171,7 +174,7 @@
                         '<(chromium_src_dir)/testing/android/AndroidManifest.xml',
                         '<(chromium_src_dir)/testing/android/generate_native_test.py',
                         '<(input_shlib_path)',
-                        '<@(input_jars_paths)',
+                        '>@(input_jars_paths)',
                     ],
                     'outputs': [
                         '<(PRODUCT_DIR)/webkit_unit_tests_apk/webkit_unit_tests-debug.apk',
@@ -181,7 +184,7 @@
                         '--native_library',
                         '<(input_shlib_path)',
                         '--jars',
-                        '"<@(input_jars_paths)"',
+                        '">@(input_jars_paths)"',
                         '--output',
                         '<(PRODUCT_DIR)/webkit_unit_tests_apk',
                         '--strip-binary=<(android_strip)',
@@ -206,6 +209,20 @@
                         '<(android_app_abi)',
                     ],
                 }],
+            },
+            # FIXME: When the Android test runner framework in Chromium has stabilized enough,
+            # we should switch to using that and will no longer need the stream forwarding.
+            # https://bugs.webkit.org/show_bug.cgi?id=96764
+            {
+                'target_name': 'io_stream_forwarder_android',
+                'type': 'static_library',
+                'sources': [
+                    'tests/ForwardIOStreamsAndroid.cpp',
+                    'tests/ForwardIOStreamsAndroid.h',
+                ],
+                'dependencies': [
+                    '../../WebCore/WebCore.gyp/WebCore.gyp:webcore',
+                ],
             }],
         }],
     ],

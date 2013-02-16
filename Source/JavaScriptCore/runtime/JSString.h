@@ -153,7 +153,7 @@ namespace JSC {
 
         static Structure* createStructure(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue proto)
         {
-            return Structure::create(globalData, globalObject, proto, TypeInfo(StringType, OverridesGetOwnPropertySlot), &s_info);
+            return Structure::create(globalData, globalObject, proto, TypeInfo(StringType, OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero), &s_info);
         }
 
         static size_t offsetOfLength() { return OBJECT_OFFSETOF(JSString, m_length); }
@@ -531,13 +531,13 @@ namespace JSC {
         if (value.isDouble())
             return globalData.numericStrings.add(value.asDouble());
         if (value.isTrue())
-            return globalData.propertyNames->trueKeyword.ustring();
+            return globalData.propertyNames->trueKeyword.string();
         if (value.isFalse())
-            return globalData.propertyNames->falseKeyword.ustring();
+            return globalData.propertyNames->falseKeyword.string();
         if (value.isNull())
-            return globalData.propertyNames->nullKeyword.ustring();
+            return globalData.propertyNames->nullKeyword.string();
         if (value.isUndefined())
-            return globalData.propertyNames->undefinedKeyword.ustring();
+            return globalData.propertyNames->undefinedKeyword.string();
         return value.toString(exec)->value(exec);
     }
 

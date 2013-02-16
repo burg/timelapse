@@ -414,7 +414,7 @@ void WebPage::characterIndexForPoint(IntPoint point, uint64_t& index)
     if (!frame)
         return;
 
-    HitTestResult result = frame->eventHandler()->hitTestResultAtPoint(point);
+    HitTestResult result = frame->eventHandler()->hitTestResultAtPoint(point, false);
     frame = result.innerNonSharedNode() ? result.innerNonSharedNode()->document()->frame() : m_page->focusController()->focusedOrMainFrame();
     
     RefPtr<Range> range = frame->rangeForPoint(result.roundedPoint());
@@ -503,7 +503,7 @@ void WebPage::performDictionaryLookupAtLocation(const FloatPoint& floatPoint)
 
     // Find the frame the point is over.
     IntPoint point = roundedIntPoint(floatPoint);
-    HitTestResult result = frame->eventHandler()->hitTestResultAtPoint(frame->view()->windowToContents(point));
+    HitTestResult result = frame->eventHandler()->hitTestResultAtPoint(frame->view()->windowToContents(point), false);
     frame = result.innerNonSharedNode() ? result.innerNonSharedNode()->document()->frame() : m_page->focusController()->focusedOrMainFrame();
 
     IntPoint translatedPoint = frame->view()->windowToContents(point);
@@ -766,7 +766,7 @@ void WebPage::shouldDelayWindowOrderingEvent(const WebKit::WebMouseEvent& event,
         return;
 
 #if ENABLE(DRAG_SUPPORT)
-    HitTestResult hitResult = frame->eventHandler()->hitTestResultAtPoint(frame->view()->windowToContents(event.position()), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowShadowContent);
+    HitTestResult hitResult = frame->eventHandler()->hitTestResultAtPoint(frame->view()->windowToContents(event.position()), true);
     if (hitResult.isSelected())
         result = frame->eventHandler()->eventMayStartDrag(platform(event));
 #endif
@@ -779,7 +779,7 @@ void WebPage::acceptsFirstMouse(int eventNumber, const WebKit::WebMouseEvent& ev
     if (!frame)
         return;
     
-    HitTestResult hitResult = frame->eventHandler()->hitTestResultAtPoint(frame->view()->windowToContents(event.position()), HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowShadowContent);
+    HitTestResult hitResult = frame->eventHandler()->hitTestResultAtPoint(frame->view()->windowToContents(event.position()), true);
     frame->eventHandler()->setActivationEventNumber(eventNumber);
 #if ENABLE(DRAG_SUPPORT)
     if (hitResult.isSelected())

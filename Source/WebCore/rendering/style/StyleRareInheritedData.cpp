@@ -88,7 +88,7 @@ StyleRareInheritedData::StyleRareInheritedData()
     , m_imageRendering(RenderStyle::initialImageRendering())
     , m_lineSnap(RenderStyle::initialLineSnap())
     , m_lineAlign(RenderStyle::initialLineAlign())
-#if ENABLE(OVERFLOW_SCROLLING)
+#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
     , useTouchOverflowScrolling(RenderStyle::initialUseTouchOverflowScrolling())
 #endif
 #if ENABLE(CSS_IMAGE_RESOLUTION)
@@ -150,7 +150,7 @@ StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedData& o)
     , m_imageRendering(o.m_imageRendering)
     , m_lineSnap(o.m_lineSnap)
     , m_lineAlign(o.m_lineAlign)
-#if ENABLE(OVERFLOW_SCROLLING)
+#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
     , useTouchOverflowScrolling(o.useTouchOverflowScrolling)
 #endif
 #if ENABLE(CSS_IMAGE_RESOLUTION)
@@ -215,7 +215,7 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
         && overflowWrap == o.overflowWrap
         && nbspMode == o.nbspMode
         && khtmlLineBreak == o.khtmlLineBreak
-#if ENABLE(OVERFLOW_SCROLLING)
+#if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
         && useTouchOverflowScrolling == o.useTouchOverflowScrolling
 #endif
         && textSizeAdjust == o.textSizeAdjust
@@ -266,13 +266,13 @@ void StyleRareInheritedData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInf
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     info.addMember(textShadow);
-    info.addInstrumentedMember(highlight);
+    info.addMember(highlight);
     info.addMember(cursorData);
-    info.addInstrumentedMember(hyphenationString);
-    info.addInstrumentedMember(locale);
-    info.addInstrumentedMember(textEmphasisCustomMark);
+    info.addMember(hyphenationString);
+    info.addMember(locale);
+    info.addMember(textEmphasisCustomMark);
     info.addMember(quotes);
-    info.addInstrumentedMember(m_lineGrid);
+    info.addMember(m_lineGrid);
 #if ENABLE(CSS_VARIABLES)
     info.addMember(m_variables);
 #endif
