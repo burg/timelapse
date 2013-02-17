@@ -492,19 +492,27 @@ void WebPage::initializeInjectedBundleDiagnosticLoggingClient(WKBundlePageDiagno
 PassRefPtr<Plugin> WebPage::createPlugin(WebFrame* frame, HTMLPlugInElement* pluginElement, const Plugin::Parameters& parameters)
 {
     String pluginPath;
-    bool blocked;
-
+    uint32_t pluginLoadPolicy;
     if (!WebProcess::shared().connection()->sendSync(
             Messages::WebProcessProxy::GetPluginPath(parameters.mimeType, parameters.url.string()),
-            Messages::WebProcessProxy::GetPluginPath::Reply(pluginPath, blocked), 0)) {
+            Messages::WebProcessProxy::GetPluginPath::Reply(pluginPath, pluginLoadPolicy), 0)) {
         return 0;
     }
 
-    if (blocked) {
+    switch (static_cast<PluginModuleLoadPolicy>(pluginLoadPolicy)) {
+    case PluginModuleLoadNormally:
+        break;
+
+    case PluginModuleBlocked:
         if (pluginElement->renderer()->isEmbeddedObject())
             toRenderEmbeddedObject(pluginElement->renderer())->setPluginUnavailabilityReason(RenderEmbeddedObject::InsecurePluginVersion);
 
         send(Messages::WebPageProxy::DidBlockInsecurePluginVersion(parameters.mimeType, parameters.url.string()));
+        return 0;
+
+    case PluginModuleInactive:
+        if (pluginElement->renderer()->isEmbeddedObject())
+            toRenderEmbeddedObject(pluginElement->renderer())->setPluginUnavailabilityReason(RenderEmbeddedObject::PluginInactive);
         return 0;
     }
 
@@ -667,6 +675,20 @@ PassRefPtr<ImmutableArray> WebPage::trackedRepaintRects()
     return ImmutableArray::adopt(vector);
 }
 
+static PluginView* focusedPluginViewForFrame(Frame* frame)
+{
+    if (!frame->document()->isPluginDocument())
+        return 0;
+
+    PluginDocument* pluginDocument = static_cast<PluginDocument*>(frame->document());
+
+    if (pluginDocument->focusedNode() != pluginDocument->pluginNode())
+        return 0;
+
+    PluginView* pluginView = static_cast<PluginView*>(pluginDocument->pluginWidget());
+    return pluginView;
+}
+
 static PluginView* pluginViewForFrame(Frame* frame)
 {
     if (!frame->document()->isPluginDocument())
@@ -683,7 +705,7 @@ void WebPage::executeEditingCommand(const String& commandName, const String& arg
     if (!frame)
         return;
 
-    if (PluginView* pluginView = pluginViewForFrame(frame)) {
+    if (PluginView* pluginView = focusedPluginViewForFrame(frame)) {
         pluginView->handleEditingCommand(commandName, argument);
         return;
     }
@@ -697,7 +719,7 @@ bool WebPage::isEditingCommandEnabled(const String& commandName)
     if (!frame)
         return false;
 
-    if (PluginView* pluginView = pluginViewForFrame(frame))
+    if (PluginView* pluginView = focusedPluginViewForFrame(frame))
         return pluginView->isEditingCommandEnabled(commandName);
     
     Editor::Command command = frame->editor()->command(commandName);
@@ -963,32 +985,6 @@ void WebPage::setFixedVisibleContentRect(const IntRect& rect)
     m_page->mainFrame()->view()->setFixedVisibleContentRect(rect);
 }
 
-void WebPage::setResizesToContentsUsingLayoutSize(const IntSize& targetLayoutSize)
-{
-    ASSERT(m_useFixedLayout);
-    ASSERT(!targetLayoutSize.isEmpty());
-
-    FrameView* view = m_page->mainFrame()->view();
-
-    view->setDelegatesScrolling(true);
-    view->setUseFixedLayout(true);
-    view->setPaintsEntireContents(true);
-
-    if (view->fixedLayoutSize() == targetLayoutSize)
-        return;
-
-    m_page->settings()->setAcceleratedCompositingForFixedPositionEnabled(true);
-    m_page->settings()->setFixedElementsLayoutRelativeToFrame(true);
-    m_page->settings()->setFixedPositionCreatesStackingContext(true);
-#if ENABLE(SMOOTH_SCROLLING)
-    // Ensure we don't do animated scrolling in the WebProcess when scrolling is delegated.
-    m_page->settings()->setEnableScrollAnimator(false);
-#endif
-
-    // Always reset even when empty. This also takes care of the relayout.
-    setFixedLayoutSize(targetLayoutSize);
-}
-
 void WebPage::resizeToContentsIfNeeded()
 {
     ASSERT(m_useFixedLayout);
@@ -1027,7 +1023,8 @@ void WebPage::sendViewportAttributesChanged()
 
     ViewportAttributes attr = computeViewportAttributes(m_page->viewportArguments(), minimumLayoutFallbackWidth, deviceWidth, deviceHeight, m_page->deviceScaleFactor(), m_viewportSize);
 
-    setResizesToContentsUsingLayoutSize(IntSize(static_cast<int>(attr.layoutSize.width()), static_cast<int>(attr.layoutSize.height())));
+    // This also takes care of the relayout.
+    setFixedLayoutSize(IntSize(static_cast<int>(attr.layoutSize.width()), static_cast<int>(attr.layoutSize.height())));
     send(Messages::WebPageProxy::DidChangeViewportProperties(attr));
 }
 
@@ -1189,12 +1186,31 @@ float WebPage::deviceScaleFactor() const
 
 void WebPage::setUseFixedLayout(bool fixed)
 {
+    // Do not overwrite current settings if initially setting it to false.
+    if (m_useFixedLayout == fixed)
+        return;
     m_useFixedLayout = fixed;
+
+    m_page->settings()->setFixedElementsLayoutRelativeToFrame(fixed);
+#if USE(COORDINATED_GRAPHICS)
+    m_page->settings()->setAcceleratedCompositingForFixedPositionEnabled(fixed);
+    m_page->settings()->setFixedPositionCreatesStackingContext(fixed);
+#endif
+
+#if USE(TILED_BACKING_STORE) && ENABLE(SMOOTH_SCROLLING)
+    // Delegated scrolling will be enabled when the FrameView is created if fixed layout is enabled.
+    // Ensure we don't do animated scrolling in the WebProcess in that case.
+    m_page->settings()->setEnableScrollAnimator(!fixed);
+#endif
 
     FrameView* view = mainFrameView();
     if (!view)
         return;
 
+#if USE(TILED_BACKING_STORE)
+    view->setDelegatesScrolling(fixed);
+    view->setPaintsEntireContents(fixed);
+#endif
     view->setUseFixedLayout(fixed);
     if (!fixed)
         setFixedLayoutSize(IntSize());
@@ -1203,7 +1219,7 @@ void WebPage::setUseFixedLayout(bool fixed)
 void WebPage::setFixedLayoutSize(const IntSize& size)
 {
     FrameView* view = mainFrameView();
-    if (!view)
+    if (!view || view->fixedLayoutSize() == size)
         return;
 
     view->setFixedLayoutSize(size);
@@ -1609,7 +1625,7 @@ void WebPage::validateCommand(const String& commandName, uint64_t callbackID)
     int32_t state = 0;
     Frame* frame = m_page->focusController()->focusedOrMainFrame();
     if (frame) {
-        if (PluginView* pluginView = pluginViewForFrame(frame))
+        if (PluginView* pluginView = focusedPluginViewForFrame(frame))
             isEnabled = pluginView->isEditingCommandEnabled(commandName);
         else {
             Editor::Command command = frame->editor()->command(commandName);
@@ -3485,12 +3501,12 @@ static bool canPluginHandleResponse(const ResourceResponse& response)
 {
 #if ENABLE(NETSCAPE_PLUGIN_API)
     String pluginPath;
-    bool blocked;
+    uint32_t pluginLoadPolicy;
     
-    if (!WebProcess::shared().connection()->sendSync(Messages::WebProcessProxy::GetPluginPath(response.mimeType(), response.url().string()), Messages::WebProcessProxy::GetPluginPath::Reply(pluginPath, blocked), 0))
+    if (!WebProcess::shared().connection()->sendSync(Messages::WebProcessProxy::GetPluginPath(response.mimeType(), response.url().string()), Messages::WebProcessProxy::GetPluginPath::Reply(pluginPath, pluginLoadPolicy), 0))
         return false;
-    
-    return !blocked && !pluginPath.isEmpty();
+
+    return pluginLoadPolicy != PluginModuleBlocked && !pluginPath.isEmpty();
 #else
     return false;
 #endif

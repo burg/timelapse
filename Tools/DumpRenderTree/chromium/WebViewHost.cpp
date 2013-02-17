@@ -696,6 +696,12 @@ void WebViewHost::postAccessibilityNotification(const WebAccessibilityObject& ob
     case WebAccessibilityNotificationInvalidStatusChanged:
         notificationName = "InvalidStatusChanged";
         break;
+    case WebAccessibilityNotificationTextChanged:
+        notificationName = "TextChanged";
+        break;
+    case WebAccessibilityNotificationAriaAttributeChanged:
+        notificationName = "AriaAttributeChanged";
+        break;
     default:
         notificationName = "UnknownNotification";
         break;
@@ -1498,6 +1504,16 @@ void WebViewHost::postDelayedTask(WebTask* task, long long ms)
 WebString WebViewHost::registerIsolatedFileSystem(const WebVector<WebString>& absoluteFilenames)
 {
     return webkit_support::RegisterIsolatedFileSystem(absoluteFilenames);
+}
+
+long long WebViewHost::getCurrentTimeInMillisecond()
+{
+    return webkit_support::GetCurrentTimeInMillisecond();
+}
+
+WebKit::WebString WebViewHost::getAbsoluteWebStringFromUTF8Path(const std::string& path)
+{
+    return webkit_support::GetAbsoluteWebStringFromUTF8Path(path);
 }
 
 // Public functions -----------------------------------------------------------

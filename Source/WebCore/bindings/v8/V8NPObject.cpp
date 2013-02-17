@@ -35,7 +35,6 @@
 #include "HTMLPlugInElement.h"
 #include "NPV8Object.h"
 #include "V8Binding.h"
-#include "V8DOMMap.h"
 #include "V8HTMLAppletElement.h"
 #include "V8HTMLEmbedElement.h"
 #include "V8HTMLObjectElement.h"
@@ -196,6 +195,7 @@ private:
         MapType::iterator it = m_map.find(key);
         ASSERT(it != m_map.end());
         it->value.Dispose();
+        it->value.Clear();
         m_map.remove(it);
     }
 
@@ -378,9 +378,9 @@ v8::Handle<v8::Array> npObjectIndexedPropertyEnumerator(const v8::AccessorInfo& 
 
 static void weakNPObjectCallback(v8::Persistent<v8::Value>, void*);
 
-static DOMWrapperHashMap<NPObject>& staticNPObjectMap()
+static DOMWrapperMap<NPObject>& staticNPObjectMap()
 {
-    DEFINE_STATIC_LOCAL(DOMWrapperHashMap<NPObject>, npObjectMap, (&weakNPObjectCallback));
+    DEFINE_STATIC_LOCAL(DOMWrapperMap<NPObject>, npObjectMap, (&weakNPObjectCallback));
     return npObjectMap;
 }
 
@@ -397,6 +397,7 @@ static void weakNPObjectCallback(v8::Persistent<v8::Value> value, void*)
     // call forgetV8ObjectForNPObject, which uses the table as well.
     staticNPObjectMap().remove(npObject, wrapper);
     wrapper.Dispose();
+    wrapper.Clear();
 
     if (_NPN_IsAlive(npObject))
         _NPN_ReleaseObject(npObject);
@@ -456,9 +457,10 @@ void forgetV8ObjectForNPObject(NPObject* object)
     v8::Persistent<v8::Object> wrapper = staticNPObjectMap().get(object);
     if (!wrapper.IsEmpty()) {
         v8::HandleScope scope;
-        V8DOMWrapper::setDOMWrapper(wrapper, npObjectTypeInfo(), 0);
+        V8DOMWrapper::clearDOMWrapper(wrapper, npObjectTypeInfo());
         staticNPObjectMap().remove(object, wrapper);
         wrapper.Dispose();
+        wrapper.Clear();
         _NPN_ReleaseObject(object);
     }
 }

@@ -33,7 +33,6 @@
 #include "ApplyStyleCommand.h"
 #include "BackForwardController.h"
 #include "CSSComputedStyleDeclaration.h"
-#include "CSSProperty.h"
 #include "CSSPropertyNames.h"
 #include "CachedCSSStyleSheet.h"
 #include "Chrome.h"
@@ -608,14 +607,7 @@ void Frame::injectUserScriptsForWorld(DOMWrapperWorld* world, const UserScriptVe
 
 RenderView* Frame::contentRenderer() const
 {
-    Document* doc = document();
-    if (!doc)
-        return 0;
-    RenderObject* object = doc->renderer();
-    if (!object)
-        return 0;
-    ASSERT(object->isRenderView());
-    return toRenderView(object);
+    return document() ? document()->renderView() : 0;
 }
 
 RenderPart* Frame::ownerRenderer() const
@@ -892,6 +884,13 @@ String Frame::layerTreeAsText(LayerTreeFlags flags) const
     UNUSED_PARAM(flags);
     return String();
 #endif
+}
+
+String Frame::trackedRepaintRectsAsText() const
+{
+    if (!m_view)
+        return String();
+    return m_view->trackedRepaintRectsAsText();
 }
 
 void Frame::setPageZoomFactor(float factor)

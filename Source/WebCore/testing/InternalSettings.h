@@ -53,7 +53,9 @@ public:
 
         double m_originalPasswordEchoDurationInSeconds;
         bool m_originalPasswordEchoEnabled;
+        bool m_originalFixedElementsLayoutRelativeToFrame;
         bool m_originalCSSExclusionsEnabled;
+        bool m_originalCSSVariablesEnabled;
 #if ENABLE(SHADOW_DOM)
         bool m_originalShadowDOMEnabled;
         bool m_originalAuthorShadowDOMForAnyElementEnabled;
@@ -65,9 +67,6 @@ public:
         bool m_originalUnifiedSpellCheckerEnabled;
         bool m_originalFixedPositionCreatesStackingContext;
         bool m_originalSyncXHRInDocumentsEnabled;
-#if ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
-        bool m_originalJavaScriptProfilingEnabled;
-#endif
         bool m_originalWindowFocusRestricted;
         bool m_originalDeviceSupportsTouch;
         bool m_originalDeviceSupportsMouse;
@@ -82,9 +81,18 @@ public:
         bool m_originalDialogElementEnabled;
 #endif
         bool m_canStartMedia;
+        bool m_originalForceCompositingMode;
+        bool m_originalCompositingForFixedPositionEnabled;
+        bool m_originalCompositingForScrollableFramesEnabled;
+        bool m_originalAcceleratedDrawingEnabled;
         bool m_originalMockScrollbarsEnabled;
         bool m_langAttributeAwareFormControlUIEnabled;
         bool m_imagesEnabled;
+#if ENABLE(VIDEO_TRACK)
+        bool m_shouldDisplaySubtitles;
+        bool m_shouldDisplayCaptions;
+        bool m_shouldDisplayTextDescriptions;
+#endif
     };
 
     typedef RefCountedSupplement<Page, InternalSettings> SuperType;
@@ -96,7 +104,6 @@ public:
 #endif
     void reset();
 
-    void setInspectorResourcesDataSizeLimits(int maximumResourcesContentSize, int maximumSingleResourceContentSize, ExceptionCode&);
     void setForceCompositingMode(bool enabled, ExceptionCode&);
     void setEnableCompositingForFixedPosition(bool enabled, ExceptionCode&);
     void setEnableCompositingForScrollableFrames(bool enabled, ExceptionCode&);
@@ -140,7 +147,6 @@ public:
     void setSyncXHRInDocumentsEnabled(bool, ExceptionCode&);
     void setWindowFocusRestricted(bool, ExceptionCode&);
     void setDialogElementEnabled(bool, ExceptionCode&);
-    void setJavaScriptProfilingEnabled(bool enabled, ExceptionCode&);
     Vector<String> userPreferredLanguages() const;
     void setUserPreferredLanguages(const Vector<String>&);
     void setPagination(const String& mode, int gap, ExceptionCode& ec) { setPagination(mode, gap, 0, ec); }

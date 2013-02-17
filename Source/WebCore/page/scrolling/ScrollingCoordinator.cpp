@@ -240,8 +240,10 @@ void ScrollingCoordinator::updateMainFrameScrollPosition(const IntPoint& scrollP
     if (GraphicsLayer* scrollLayer = scrollLayerForFrameView(frameView)) {
         if (programmaticScroll)
             scrollLayer->setPosition(-frameView->scrollPosition());
-        else
+        else {
             scrollLayer->syncPosition(-frameView->scrollPosition());
+            syncChildPositions(frameView->visibleContentRect());
+        }
     }
 #endif
 }
@@ -262,7 +264,7 @@ void ScrollingCoordinator::handleWheelEventPhase(PlatformWheelEventPhase phase)
 }
 #endif
 
-bool ScrollingCoordinator::hasNonLayerFixedObjects(FrameView* frameView) const
+bool ScrollingCoordinator::hasVisibleSlowRepaintFixedObjects(FrameView* frameView) const
 {
     const FrameView::ViewportConstrainedObjectSet* viewportConstrainedObjects = frameView->viewportConstrainedObjects();
     if (!viewportConstrainedObjects)
@@ -295,7 +297,7 @@ MainThreadScrollingReasons ScrollingCoordinator::mainThreadScrollingReasons() co
         mainThreadScrollingReasons |= HasSlowRepaintObjects;
     if (!supportsFixedPositionLayers() && frameView->hasViewportConstrainedObjects())
         mainThreadScrollingReasons |= HasViewportConstrainedObjectsWithoutSupportingFixedLayers;
-    if (supportsFixedPositionLayers() && hasNonLayerFixedObjects(frameView))
+    if (supportsFixedPositionLayers() && hasVisibleSlowRepaintFixedObjects(frameView))
         mainThreadScrollingReasons |= HasNonLayerFixedObjects;
     if (m_page->mainFrame()->document()->isImageDocument())
         mainThreadScrollingReasons |= IsImageDocument;
@@ -321,6 +323,11 @@ ScrollingNodeID ScrollingCoordinator::uniqueScrollLayerID()
 {
     static ScrollingNodeID uniqueScrollLayerID = 1;
     return uniqueScrollLayerID++;
+}
+
+String ScrollingCoordinator::scrollingStateTreeAsText() const
+{
+    return String();
 }
 
 } // namespace WebCore

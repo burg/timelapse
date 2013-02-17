@@ -1450,7 +1450,7 @@ bool RenderObject::repaintAfterLayoutIfNeeded(RenderLayerModelObject* repaintCon
         LayoutUnit shadowRight;
         style()->getBoxShadowHorizontalExtent(shadowLeft, shadowRight);
         int borderRight = isBox() ? toRenderBox(this)->borderRight() : 0;
-        LayoutUnit boxWidth = isBox() ? toRenderBox(this)->width() : ZERO_LAYOUT_UNIT;
+        LayoutUnit boxWidth = isBox() ? toRenderBox(this)->width() : LayoutUnit();
         LayoutUnit minInsetRightShadowExtent = min<LayoutUnit>(-insetShadowExtent.right(), min<LayoutUnit>(newBounds.width(), oldBounds.width()));
         LayoutUnit borderWidth = max<LayoutUnit>(borderRight, max<LayoutUnit>(valueForLength(style()->borderTopRightRadius().width(), boxWidth, v), valueForLength(style()->borderBottomRightRadius().width(), boxWidth, v)));
         LayoutUnit decorationsWidth = max<LayoutUnit>(-outlineStyle->outlineOffset(), borderWidth + minInsetRightShadowExtent) + max<LayoutUnit>(outlineWidth, shadowRight);
@@ -1470,7 +1470,7 @@ bool RenderObject::repaintAfterLayoutIfNeeded(RenderLayerModelObject* repaintCon
         LayoutUnit shadowBottom;
         style()->getBoxShadowVerticalExtent(shadowTop, shadowBottom);
         int borderBottom = isBox() ? toRenderBox(this)->borderBottom() : 0;
-        LayoutUnit boxHeight = isBox() ? toRenderBox(this)->height() : ZERO_LAYOUT_UNIT;
+        LayoutUnit boxHeight = isBox() ? toRenderBox(this)->height() : LayoutUnit();
         LayoutUnit minInsetBottomShadowExtent = min<LayoutUnit>(-insetShadowExtent.bottom(), min<LayoutUnit>(newBounds.height(), oldBounds.height()));
         LayoutUnit borderHeight = max<LayoutUnit>(borderBottom, max<LayoutUnit>(valueForLength(style()->borderBottomLeftRadius().height(), boxHeight, v), valueForLength(style()->borderBottomRightRadius().height(), boxHeight, v)));
         LayoutUnit decorationsHeight = max<LayoutUnit>(-outlineStyle->outlineOffset(), borderHeight + minInsetBottomShadowExtent) + max<LayoutUnit>(outlineWidth, shadowBottom);
@@ -1829,7 +1829,7 @@ void RenderObject::styleWillChange(StyleDifference diff, const RenderStyle* newS
                 document()->setAnnotatedRegionsDirty(true);
 #endif
             if (visibilityChanged && AXObjectCache::accessibilityEnabled())
-                document()->axObjectCache()->childrenChanged(this);
+                document()->axObjectCache()->childrenChanged(parent());
 
             // Keep layer hierarchy visibility bits up to date if visibility changes.
             if (m_style->visibility() != newStyle->visibility()) {
@@ -2227,7 +2227,7 @@ RespectImageOrientationEnum RenderObject::shouldRespectImageOrientation() const
     // Respect the image's orientation if it's being used as a full-page image or it's
     // an <img> and the setting to respect it everywhere is set.
     return
-#if USE(CG) || PLATFORM(CHROMIUM)
+#if USE(CG) || PLATFORM(CHROMIUM) || USE(CAIRO)
         // This can only be enabled for ports which honor the orientation flag in their drawing code.
         document()->isImageDocument() ||
 #endif
@@ -2841,7 +2841,7 @@ int RenderObject::maximalOutlineSize(PaintPhase p) const
 {
     if (p != PaintPhaseOutline && p != PaintPhaseSelfOutline && p != PaintPhaseChildOutlines)
         return 0;
-    return toRenderView(document()->renderer())->maximalOutlineSize();
+    return view()->maximalOutlineSize();
 }
 
 int RenderObject::caretMinOffset() const

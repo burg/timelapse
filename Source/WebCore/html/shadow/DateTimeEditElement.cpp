@@ -35,8 +35,8 @@
 #include "EventHandler.h"
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
-#include "Localizer.h"
 #include "MouseEvent.h"
+#include "PlatformLocale.h"
 #include "Text.h"
 #include <wtf/DateMath.h>
 #include <wtf/text/StringBuilder.h>
@@ -130,10 +130,10 @@ void DateTimeEditBuilder::visitField(DateTimeFormat::FieldType fieldType, int co
         switch (count) {
         case countForNarrowMonth: // Fallthrough.
         case countForAbbreviatedMonth:
-            m_editElement.addField(DateTimeSymbolicMonthFieldElement::create(document, m_editElement, m_parameters.localizer.shortMonthLabels()));
+            m_editElement.addField(DateTimeSymbolicMonthFieldElement::create(document, m_editElement, m_parameters.locale.shortMonthLabels()));
             break;
         case countForFullMonth:
-            m_editElement.addField(DateTimeSymbolicMonthFieldElement::create(document, m_editElement, m_parameters.localizer.monthLabels()));
+            m_editElement.addField(DateTimeSymbolicMonthFieldElement::create(document, m_editElement, m_parameters.locale.monthLabels()));
             break;
         default:
             m_editElement.addField(DateTimeMonthFieldElement::create(document, m_editElement, m_parameters.placeholderForMonth));
@@ -145,10 +145,10 @@ void DateTimeEditBuilder::visitField(DateTimeFormat::FieldType fieldType, int co
         switch (count) {
         case countForNarrowMonth: // Fallthrough.
         case countForAbbreviatedMonth:
-            m_editElement.addField(DateTimeSymbolicMonthFieldElement::create(document, m_editElement, m_parameters.localizer.shortStandAloneMonthLabels()));
+            m_editElement.addField(DateTimeSymbolicMonthFieldElement::create(document, m_editElement, m_parameters.locale.shortStandAloneMonthLabels()));
             break;
         case countForFullMonth:
-            m_editElement.addField(DateTimeSymbolicMonthFieldElement::create(document, m_editElement, m_parameters.localizer.standAloneMonthLabels()));
+            m_editElement.addField(DateTimeSymbolicMonthFieldElement::create(document, m_editElement, m_parameters.locale.standAloneMonthLabels()));
             break;
         default:
             m_editElement.addField(DateTimeMonthFieldElement::create(document, m_editElement, m_parameters.placeholderForMonth));
@@ -157,7 +157,7 @@ void DateTimeEditBuilder::visitField(DateTimeFormat::FieldType fieldType, int co
         return;
 
     case DateTimeFormat::FieldTypePeriod:
-        m_editElement.addField(DateTimeAMPMFieldElement::create(document, m_editElement, m_parameters.localizer.timeAMPMLabels()));
+        m_editElement.addField(DateTimeAMPMFieldElement::create(document, m_editElement, m_parameters.locale.timeAMPMLabels()));
         return;
 
     case DateTimeFormat::FieldTypeSecond: {
@@ -167,7 +167,7 @@ void DateTimeEditBuilder::visitField(DateTimeFormat::FieldType fieldType, int co
             field->setReadOnly();
 
         if (needMillisecondField()) {
-            visitLiteral(m_parameters.localizer.localizedDecimalSeparator());
+            visitLiteral(m_parameters.locale.localizedDecimalSeparator());
             visitField(DateTimeFormat::FieldTypeFractionalSecond, 3);
         }
         return;
@@ -235,7 +235,7 @@ void DateTimeEditBuilder::visitLiteral(const String& text)
     DEFINE_STATIC_LOCAL(AtomicString, textPseudoId, ("-webkit-datetime-edit-text", AtomicString::ConstructFromLiteral));
     ASSERT(text.length());
     RefPtr<HTMLDivElement> element = HTMLDivElement::create(m_editElement.document());
-    element->setShadowPseudoId(textPseudoId);
+    element->setPseudo(textPseudoId);
     element->appendChild(Text::create(m_editElement.document(), text));
     m_editElement.appendChild(element);
 }
@@ -250,8 +250,8 @@ DateTimeEditElement::DateTimeEditElement(Document* document, EditControlOwner& e
     : HTMLDivElement(divTag, document)
     , m_editControlOwner(&editControlOwner)
 {
-    DEFINE_STATIC_LOCAL(AtomicString, dateTimeEditPseudoId, ("-webkit-datetime-edit"));
-    setShadowPseudoId(dateTimeEditPseudoId);
+    DEFINE_STATIC_LOCAL(AtomicString, dateTimeEditPseudoId, ("-webkit-datetime-edit", AtomicString::ConstructFromLiteral));
+    setPseudo(dateTimeEditPseudoId);
 }
 
 DateTimeEditElement::~DateTimeEditElement()

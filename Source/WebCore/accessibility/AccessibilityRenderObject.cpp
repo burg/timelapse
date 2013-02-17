@@ -32,8 +32,11 @@
 #include "AXObjectCache.h"
 #include "AccessibilityImageMapLink.h"
 #include "AccessibilityListBox.h"
+#include "AccessibilitySVGRoot.h"
 #include "AccessibilitySpinButton.h"
 #include "AccessibilityTable.h"
+#include "CachedImage.h"
+#include "Chrome.h"
 #include "EventNames.h"
 #include "FloatRect.h"
 #include "Frame.h"
@@ -54,6 +57,7 @@
 #include "HTMLTextAreaElement.h"
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
+#include "Image.h"
 #include "LocalizedStrings.h"
 #include "MathMLNames.h"
 #include "NodeList.h"
@@ -77,6 +81,10 @@
 #include "RenderView.h"
 #include "RenderWidget.h"
 #include "RenderedPosition.h"
+#include "SVGDocument.h"
+#include "SVGImage.h"
+#include "SVGImageChromeClient.h"
+#include "SVGSVGElement.h"
 #include "Text.h"
 #include "TextControlInnerElements.h"
 #include "htmlediting.h"
@@ -120,6 +128,8 @@ PassRefPtr<AccessibilityRenderObject> AccessibilityRenderObject::create(RenderOb
 void AccessibilityRenderObject::detach()
 {
     AccessibilityNodeObject::detach();
+    
+    detachRemoteSVGRoot();
     
 #ifndef NDEBUG
     if (m_renderer)
@@ -711,6 +721,18 @@ HTMLLabelElement* AccessibilityRenderObject::labelElementContainer() const
     return 0;
 }
 
+// The boundingBox for elements within the remote SVG element needs to be offset by its position
+// within the parent page, otherwise they are in relative coordinates only.
+void AccessibilityRenderObject::offsetBoundingBoxForRemoteSVGElement(LayoutRect& rect) const
+{
+    for (AccessibilityObject* parent = parentObject(); parent; parent = parent->parentObject()) {
+        if (parent->isAccessibilitySVGRoot()) {
+            rect.moveBy(parent->parentObject()->boundingBoxRect().location());
+            break;
+        }
+    }
+}
+    
 LayoutRect AccessibilityRenderObject::boundingBoxRect() const
 {
     RenderObject* obj = m_renderer;
@@ -733,6 +755,12 @@ LayoutRect AccessibilityRenderObject::boundingBoxRect() const
     
     LayoutRect result = boundingBoxForQuads(obj, quads);
 
+#if ENABLE(SVG)
+    Document* document = this->document();
+    if (document && document->isSVGDocument())
+        offsetBoundingBoxForRemoteSVGElement(result);
+#endif
+    
     // The size of the web area should be the content size, not the clipped size.
     if (isWebArea() && obj->frame()->view())
         result.setSize(obj->frame()->view()->contentsSize());
@@ -1094,8 +1122,8 @@ bool AccessibilityRenderObject::accessibilityIsIgnored() const
     // NOTE: BRs always have text boxes now, so the text box check here can be removed
     if (m_renderer->isText()) {
         // static text beneath MenuItems and MenuButtons are just reported along with the menu item, so it's ignored on an individual level
-        if (parentObjectUnignored()->ariaRoleAttribute() == MenuItemRole
-            || parentObjectUnignored()->ariaRoleAttribute() == MenuButtonRole)
+        AccessibilityObject* parent = parentObjectUnignored();
+        if (parent && (parent->ariaRoleAttribute() == MenuItemRole || parent->ariaRoleAttribute() == MenuButtonRole))
             return true;
         RenderText* renderText = toRenderText(m_renderer);
         if (m_renderer->isBR() || !renderText->firstTextBox())
@@ -1488,13 +1516,21 @@ void AccessibilityRenderObject::setFocused(bool on)
     if (!canSetFocusAttribute())
         return;
     
+    Document* document = this->document();
     if (!on)
-        m_renderer->document()->setFocusedNode(0);
+        document->setFocusedNode(0);
     else {
-        if (m_renderer->node()->isElementNode())
-            static_cast<Element*>(m_renderer->node())->focus();
-        else
-            m_renderer->document()->setFocusedNode(m_renderer->node());
+        Node* node = this->node();
+        if (node && node->isElementNode()) {
+            // If this node is already the currently focused node, then calling focus() won't do anything.
+            // That is a problem when focus is removed from the webpage to chrome, and then returns.
+            // In these cases, we need to do what keyboard and mouse focus do, which is reset focus first.
+            if (document->focusedNode() == node)
+                document->setFocusedNode(0);
+            
+            toElement(node)->focus();
+        } else
+            document->setFocusedNode(node);
     }
 }
 
@@ -1863,20 +1899,16 @@ VisiblePosition AccessibilityRenderObject::visiblePositionForPoint(const IntPoin
 {
     if (!m_renderer)
         return VisiblePosition();
-    
+
     // convert absolute point to view coordinates
-    Document* topDoc = topDocument();
-    if (!topDoc || !topDoc->renderer() || !topDoc->renderer()->view())
-        return VisiblePosition();
-    
-    FrameView* frameView = topDoc->renderer()->view()->frameView();
-    if (!frameView)
-        return VisiblePosition();
-    
     RenderView* renderView = topRenderer();
     if (!renderView)
         return VisiblePosition();
-    
+
+    FrameView* frameView = renderView->frameView();
+    if (!frameView)
+        return VisiblePosition();
+
     Node* innerNode = 0;
     
     // locate the node containing the point
@@ -2059,6 +2091,24 @@ AccessibilityObject* AccessibilityRenderObject::accessibilityImageMapHitTest(HTM
     
     return 0;
 }
+
+AccessibilityObject* AccessibilityRenderObject::remoteSVGElementHitTest(const IntPoint& point) const
+{
+    AccessibilityObject* remote = remoteSVGRootElement();
+    if (!remote)
+        return 0;
+    
+    IntSize offsetPoint = point - roundedIntPoint(boundingBoxRect().location());
+    return remote->accessibilityHitTest(toPoint(offsetPoint));
+}
+
+AccessibilityObject* AccessibilityRenderObject::elementAccessibilityHitTest(const IntPoint& point) const
+{
+    if (isSVGImage())
+        return remoteSVGElementHitTest(point);
+    
+    return AccessibilityObject::elementAccessibilityHitTest(point);
+}
     
 AccessibilityObject* AccessibilityRenderObject::accessibilityHitTest(const IntPoint& point) const
 {
@@ -2212,6 +2262,10 @@ AccessibilityObject* AccessibilityRenderObject::correspondingControlForLabelElem
     HTMLElement* correspondingControl = labelElement->control();
     if (!correspondingControl)
         return 0;
+
+    // Make sure the corresponding control isn't a descendant of this label that's in the middle of being destroyed.
+    if (correspondingControl->renderer() && !correspondingControl->renderer()->parent())
+        return 0;
     
     return axObjectCache()->getOrCreate(correspondingControl);     
 }
@@ -2301,6 +2355,8 @@ AccessibilityRole AccessibilityRenderObject::determineAccessibilityRole()
     if (cssBox && cssBox->isImage()) {
         if (node && node->hasTagName(inputTag))
             return ariaHasPopup() ? PopUpButtonRole : ButtonRole;
+        if (isSVGImage())
+            return SVGRootRole;
         return ImageRole;
     }
     
@@ -2338,6 +2394,8 @@ AccessibilityRole AccessibilityRenderObject::determineAccessibilityRole()
 #if ENABLE(SVG)
     if (m_renderer->isSVGImage())
         return ImageRole;
+    if (m_renderer->isSVGRoot())
+        return SVGRootRole;
 #endif
 
 #if ENABLE(MATHML)
@@ -2528,7 +2586,7 @@ bool AccessibilityRenderObject::canSetTextRangeAttributes() const
     return isTextControl();
 }
 
-void AccessibilityRenderObject::contentChanged()
+void AccessibilityRenderObject::textChanged()
 {
     // If this element supports ARIA live regions, or is part of a region with an ARIA editable role,
     // then notify the AT of changes.
@@ -2599,6 +2657,81 @@ void AccessibilityRenderObject::addTextFieldChildren()
     axSpinButton->setSpinButtonElement(static_cast<SpinButtonElement*>(spinButtonElement));
     axSpinButton->setParent(this);
     m_children.append(axSpinButton);
+}
+    
+bool AccessibilityRenderObject::isSVGImage() const
+{
+    return remoteSVGRootElement();
+}
+    
+void AccessibilityRenderObject::detachRemoteSVGRoot()
+{
+    if (AccessibilitySVGRoot* root = remoteSVGRootElement())
+        root->setParent(0);
+}
+
+AccessibilitySVGRoot* AccessibilityRenderObject::remoteSVGRootElement() const
+{
+#if ENABLE(SVG)
+    if (!m_renderer || !m_renderer->isRenderImage())
+        return 0;
+    
+    CachedImage* cachedImage = toRenderImage(m_renderer)->cachedImage();
+    if (!cachedImage)
+        return 0;
+    
+    Image* image = cachedImage->image();
+    if (!image || !image->isSVGImage())
+        return 0;
+    
+    SVGImage* svgImage = static_cast<SVGImage*>(image);
+    FrameView* frameView = svgImage->frameView();
+    if (!frameView)
+        return 0;
+    Frame* frame = frameView->frame();
+    if (!frame)
+        return 0;
+    
+    Document* doc = frame->document();
+    if (!doc || !doc->isSVGDocument())
+        return 0;
+    
+    SVGSVGElement* rootElement = static_cast<SVGDocument*>(doc)->rootElement();
+    if (!rootElement)
+        return 0;
+    RenderObject* rendererRoot = rootElement->renderer();
+    if (!rendererRoot)
+        return 0;
+    
+    AccessibilityObject* rootSVGObject = frame->document()->axObjectCache()->getOrCreate(rendererRoot);
+
+    // In order to connect the AX hierarchy from the SVG root element from the loaded resource
+    // the parent must be set, because there's no other way to get back to who created the image.
+    ASSERT(rootSVGObject && rootSVGObject->isAccessibilitySVGRoot());
+    if (!rootSVGObject->isAccessibilitySVGRoot())
+        return 0;
+    
+    return toAccessibilitySVGRoot(rootSVGObject);
+#else
+    return 0;
+#endif
+}
+    
+void AccessibilityRenderObject::addRemoteSVGChildren()
+{
+    AccessibilitySVGRoot* root = remoteSVGRootElement();
+    if (!root)
+        return;
+    
+    root->setParent(this);
+    
+    if (root->accessibilityIsIgnored()) {
+        AccessibilityChildrenVector children = root->children();
+        unsigned length = children.size();
+        for (unsigned i = 0; i < length; ++i)
+            m_children.append(children[i]);
+    } else
+        m_children.append(root);
 }
 
 void AccessibilityRenderObject::addCanvasChildren()
@@ -2716,7 +2849,8 @@ void AccessibilityRenderObject::addChildren()
     addImageMapChildren();
     addTextFieldChildren();
     addCanvasChildren();
-
+    addRemoteSVGChildren();
+    
 #if PLATFORM(MAC)
     updateAttachmentViewParents();
 #endif

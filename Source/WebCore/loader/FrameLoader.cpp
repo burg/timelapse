@@ -660,13 +660,21 @@ void FrameLoader::didBeginDocument(bool dispatch)
         if (!dnsPrefetchControl.isEmpty())
             m_frame->document()->parseDNSPrefetchControlHeader(dnsPrefetchControl);
 
-        String contentSecurityPolicy = m_documentLoader->response().httpHeaderField("X-WebKit-CSP");
-        if (!contentSecurityPolicy.isEmpty())
-            m_frame->document()->contentSecurityPolicy()->didReceiveHeader(contentSecurityPolicy, ContentSecurityPolicy::EnforcePolicy);
+        String policyValue = m_documentLoader->response().httpHeaderField("Content-Security-Policy");
+        if (!policyValue.isEmpty())
+            m_frame->document()->contentSecurityPolicy()->didReceiveHeader(policyValue, ContentSecurityPolicy::EnforceStableDirectives);
 
-        String reportOnlyContentSecurityPolicy = m_documentLoader->response().httpHeaderField("X-WebKit-CSP-Report-Only");
-        if (!reportOnlyContentSecurityPolicy.isEmpty())
-            m_frame->document()->contentSecurityPolicy()->didReceiveHeader(reportOnlyContentSecurityPolicy, ContentSecurityPolicy::ReportOnly);
+        policyValue = m_documentLoader->response().httpHeaderField("Content-Security-Policy-Report-Only");
+        if (!policyValue.isEmpty())
+            m_frame->document()->contentSecurityPolicy()->didReceiveHeader(policyValue, ContentSecurityPolicy::ReportStableDirectives);
+
+        policyValue = m_documentLoader->response().httpHeaderField("X-WebKit-CSP");
+        if (!policyValue.isEmpty())
+            m_frame->document()->contentSecurityPolicy()->didReceiveHeader(policyValue, ContentSecurityPolicy::EnforceAllDirectives);
+
+        policyValue = m_documentLoader->response().httpHeaderField("X-WebKit-CSP-Report-Only");
+        if (!policyValue.isEmpty())
+            m_frame->document()->contentSecurityPolicy()->didReceiveHeader(policyValue, ContentSecurityPolicy::ReportAllDirectives);
 
         String headerContentLanguage = m_documentLoader->response().httpHeaderField("Content-Language");
         if (!headerContentLanguage.isEmpty()) {
@@ -734,7 +742,7 @@ void FrameLoader::checkCompleted()
     m_shouldCallCheckCompleted = false;
 
     if (m_frame->view())
-        m_frame->view()->checkFlushDeferredRepaintsAfterLoadComplete();
+        m_frame->view()->handleLoadCompleted();
 
     // Have we completed before?
     if (m_isComplete)
@@ -771,7 +779,7 @@ void FrameLoader::checkCompleted()
         checkLoadComplete();
 
     if (m_frame->view())
-        m_frame->view()->checkFlushDeferredRepaintsAfterLoadComplete();
+        m_frame->view()->handleLoadCompleted();
 }
 
 void FrameLoader::checkTimerFired(Timer<FrameLoader>*)
@@ -1392,7 +1400,7 @@ void FrameLoader::reportLocalLoadFailed(Frame* frame, const String& url)
     if (!frame)
         return;
 
-    frame->document()->domWindow()->console()->addMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to load local resource: " + url);
+    frame->document()->addConsoleMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to load local resource: " + url);
 }
 
 const ResourceRequest& FrameLoader::initialRequest() const

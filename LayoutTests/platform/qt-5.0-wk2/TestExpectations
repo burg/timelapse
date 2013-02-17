@@ -90,6 +90,7 @@ fast/files/workers/worker-read-blob-sync.html
 fast/files/workers/worker-read-file-async.html
 fast/files/workers/worker-read-file-sync.html
 fast/forms/file/get-file-upload.html
+fast/forms/file/input-file-value.html
 fast/forms/file/input-file-write-files.html
 fast/forms/file/file-input-change-event.html
 fast/forms/file/recover-file-input-in-unposted-form.html
@@ -334,7 +335,6 @@ compositing/geometry/limit-layer-bounds-transformed.html
 compositing/layer-creation/overflow-scroll-overlap.html
 compositing/layer-creation/scroll-partial-update.html
 compositing/layer-creation/spanOverlapsCanvas.html
-compositing/tiling/crash-reparent-tiled-layer.html
 
 # The following tests doesnt match both expected image and text.
 compositing/geometry/ancestor-overflow-change.html
@@ -361,11 +361,11 @@ compositing/overflow/overflow-visible-with-touch.html
 compositing/overflow/scrolling-content-clip-to-viewport.html
 compositing/overflow/textarea-scroll-touch.html
 
-# New compositing/tiling/backface-preserve-3d-tiled.html introduced in r132394 fails
-webkit.org/b/100348 compositing/tiling/backface-preserve-3d-tiled.html
-
 # [Qt][WK2] New compositing/tiling/tile-cache-zoomed.html introduced in r132542 fails
 webkit.org/b/100490 compositing/tiling/tile-cache-zoomed.html
+
+# [Qt][WK2]New compositing/repaint/invalidations-on-composited-layers.html fails
+webkit.org/b/101165 compositing/repaint/invalidations-on-composited-layers.html
 
 # [Qt] [WK2] Some fullscreen layout tests are timing out on the bot
 # https://bugs.webkit.org/show_bug.cgi?id=92543
@@ -768,3 +768,15 @@ webkit.org/b/99306 fast/repaint/fixed-child-of-fixed-move-after-scroll.html [ Im
 webkit.org/b/99306 fast/replaced/border-radius-clip.html [ ImageOnlyFailure ]
 webkit.org/b/99306 transitions/opacity-transition-zindex.html [ ImageOnlyFailure ]
 webkit.org/b/99306 transitions/suspend-transform-transition.html [ ImageOnlyFailure ]
+
+# missing "PASS: mousewheel event is fired."
+fast/dom/shadow/wheel-event-in-shadow-dom.html
+fast/dom/shadow/wheel-event-on-input-in-shadow-dom.html
+
+# [Qt][WK2] REGRESSION(r132907): It made animations/negative-delay.html fail
+webkit.org/b/100769 animations/negative-delay.html
+webkit.org/b/100769 transitions/negative-delay.html
+
+# [Qt] Text on scaled layer is blurry
+webkit.org/b/101491 compositing/text-on-scaled-layer.html [ ImageOnlyFailure ]
+webkit.org/b/101491 compositing/text-on-scaled-surface.html [ ImageOnlyFailure ]

@@ -146,8 +146,7 @@
             }],
             ['os_posix==1 and OS!="mac"', {
                 'webkit_unittest_files': [
-                    'tests/LocalizedDateICUTest.cpp',
-                    'tests/LocalizedNumberICUTest.cpp',
+                    'tests/LocaleICUTest.cpp',
                 ],
             }],
             ['toolkit_uses_gtk == 1', {

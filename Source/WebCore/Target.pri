@@ -72,7 +72,6 @@ SOURCES += \
      bindings/js/BindingState.cpp \
      bindings/js/CallbackFunction.cpp \
      bindings/js/DOMObjectHashTableMap.cpp \
-     bindings/js/DOMTransaction.cpp \
      bindings/js/DOMWrapperWorld.cpp \
      bindings/js/Dictionary.cpp \
      bindings/js/GCController.cpp \
@@ -181,7 +180,6 @@ SOURCES += \
      bindings/js/JSTouchCustom.cpp \
      bindings/js/JSTouchListCustom.cpp \
      bindings/js/JSTreeWalkerCustom.cpp \
-     bindings/js/JSUndoManagerCustom.cpp \
      bindings/js/JSWebKitAnimationCustom.cpp \
      bindings/js/JSWebKitAnimationListCustom.cpp \
      bindings/js/JSWebKitCSSKeyframeRuleCustom.cpp \
@@ -339,6 +337,7 @@ SOURCES += \
     css/WebKitCSSSVGDocumentValue.cpp \
     css/WebKitCSSShaderValue.cpp \
     css/WebKitCSSTransformValue.cpp \
+    css/WebKitCSSViewportRule.cpp \
     dom/ActiveDOMObject.cpp \
     dom/Attr.cpp \
     dom/BeforeTextInsertedEvent.cpp \
@@ -387,8 +386,9 @@ SOURCES += \
     dom/DynamicNodeList.cpp \
     dom/EditingText.cpp \
     dom/Element.cpp \
-    dom/ElementShadow.cpp \
     dom/ElementAttributeData.cpp \
+    dom/ElementRareData.cpp \
+    dom/ElementShadow.cpp \
     dom/EntityReference.cpp \
     dom/ErrorEvent.cpp \
     dom/Event.cpp \
@@ -427,6 +427,7 @@ SOURCES += \
     dom/NodeFilterCondition.cpp \
     dom/NodeFilter.cpp \
     dom/NodeIterator.cpp \
+    dom/NodeRareData.cpp \
     dom/NodeRenderingContext.cpp \
     dom/Notation.cpp \
     dom/StaticHashSetNodeList.cpp \
@@ -557,6 +558,7 @@ SOURCES += \
     history/PageCache.cpp \
     html/BaseButtonInputType.cpp \
     html/BaseCheckableInputType.cpp \
+    html/BaseChooserOnlyDateAndTimeInputType.cpp \
     html/BaseClickableWithKeyInputType.cpp \
     html/BaseDateAndTimeInputType.cpp \
     html/BaseMultipleFieldsDateAndTimeInputType.cpp \
@@ -802,6 +804,7 @@ SOURCES += \
     loader/appcache/ManifestParser.cpp \
     loader/archive/ArchiveResource.cpp \
     loader/archive/ArchiveResourceCollection.cpp \
+    loader/CachedMetadata.cpp \
     loader/cache/MemoryCache.cpp \
     loader/cache/CachedCSSStyleSheet.cpp \
     loader/cache/CachedFont.cpp \
@@ -933,7 +936,7 @@ SOURCES += \
     platform/text/Hyphenation.cpp \
     platform/text/LocaleNone.cpp \
     platform/text/LocaleToScriptMappingDefault.cpp \
-    platform/text/Localizer.cpp \
+    platform/text/PlatformLocale.cpp \
     platform/text/QuotedPrintable.cpp \
     platform/CalculationValue.cpp \
     platform/Clock.cpp \
@@ -966,8 +969,8 @@ SOURCES += \
     platform/graphics/Font.cpp \
     platform/graphics/FontCache.cpp \
     platform/graphics/FontFastPath.cpp \
-    platform/graphics/FractionalLayoutBoxExtent.cpp \
-    platform/graphics/FractionalLayoutRect.cpp \
+    platform/graphics/LayoutBoxExtent.cpp \
+    platform/graphics/LayoutRect.cpp \
     platform/graphics/GeneratedImage.cpp \
     platform/graphics/GeneratorGeneratedImage.cpp \
     platform/graphics/GlyphPageTreeNode.cpp \
@@ -1323,7 +1326,6 @@ HEADERS += \
     bindings/js/JSDOMBinding.h \
     bindings/js/JSDOMGlobalObject.h \
     bindings/js/JSDOMStringMapCustom.h \
-    bindings/js/DOMTransaction.h \
     bindings/js/JSDOMWindowBase.h \
     bindings/js/JSDOMWindowCustom.h \
     bindings/js/JSDOMWindowShell.h \
@@ -1512,6 +1514,7 @@ HEADERS += \
     css/WebKitCSSSVGDocumentValue.h \
     css/WebKitCSSShaderValue.h \
     css/WebKitCSSTransformValue.h \
+    css/WebKitCSSViewportRule.h \
     dom/ActiveDOMObject.h \
     dom/Attr.h \
     dom/Attribute.h \
@@ -1594,6 +1597,7 @@ HEADERS += \
     dom/NodeFilter.h \
     dom/Node.h \
     dom/NodeIterator.h \
+    dom/NodeRareData.h \
     dom/NodeRenderingContext.h \
     dom/Notation.h \
     dom/StaticHashSetNodeList.h \
@@ -2077,9 +2081,12 @@ HEADERS += \
     platform/graphics/filters/CustomFilterNumberParameter.h \
     platform/graphics/filters/CustomFilterCompiledProgram.h \
     platform/graphics/filters/CustomFilterOperation.h \
+    platform/graphics/filters/ValidatedCustomFilterOperation.h \
     platform/graphics/filters/CustomFilterParameter.h \
+    platform/graphics/filters/CustomFilterParameterList.h \
     platform/graphics/filters/CustomFilterProgram.h \
     platform/graphics/filters/CustomFilterProgramInfo.h \
+    platform/graphics/filters/CustomFilterRenderer.h \
     platform/graphics/filters/CustomFilterTransformParameter.h \
     platform/graphics/filters/CustomFilterValidatedProgram.h \
     platform/graphics/filters/FEBlend.h \
@@ -2328,7 +2335,6 @@ HEADERS += \
     rendering/InlineFlowBox.h \
     rendering/InlineTextBox.h \
     rendering/LayoutState.h \
-    rendering/LayoutTypes.h \
     rendering/LayoutRepainter.h \
     rendering/mathml/RenderMathMLBlock.h \
     rendering/mathml/RenderMathMLFenced.h \
@@ -2775,9 +2781,9 @@ SOURCES += \
     platform/graphics/qt/FloatPointQt.cpp \
     platform/graphics/qt/FloatRectQt.cpp \
     platform/graphics/qt/FloatSizeQt.cpp \
-    platform/graphics/qt/FractionalLayoutPointQt.cpp \
-    platform/graphics/qt/FractionalLayoutRectQt.cpp \
-    platform/graphics/qt/FractionalLayoutSizeQt.cpp \
+    platform/graphics/qt/LayoutPointQt.cpp \
+    platform/graphics/qt/LayoutRectQt.cpp \
+    platform/graphics/qt/LayoutSizeQt.cpp \
     platform/graphics/qt/GradientQt.cpp \
     platform/graphics/qt/GraphicsContextQt.cpp \
     platform/graphics/qt/IconQt.cpp \
@@ -2872,8 +2878,9 @@ win32-*|wince* {
 
 mac {
     SOURCES += \
-        platform/text/cf/StringCF.cpp \
         platform/cf/SharedBufferCF.cpp \
+        platform/text/cf/AtomicStringCF.cpp \
+        platform/text/cf/StringCF.cpp \
         platform/text/cf/StringImplCF.cpp
 }
 
@@ -3492,11 +3499,14 @@ enable?(FILTERS) {
     SOURCES += \
         platform/graphics/filters/CustomFilterGlobalContext.cpp \
         platform/graphics/filters/CustomFilterOperation.cpp \
+        platform/graphics/filters/CustomFilterParameterList.cpp \
+        platform/graphics/filters/ValidatedCustomFilterOperation.cpp \
         platform/graphics/filters/CustomFilterProgram.cpp \
         platform/graphics/filters/CustomFilterProgramInfo.cpp \
         platform/graphics/filters/CustomFilterCompiledProgram.cpp \
         platform/graphics/filters/CustomFilterMesh.cpp \
         platform/graphics/filters/CustomFilterMeshGenerator.cpp \
+        platform/graphics/filters/CustomFilterRenderer.cpp \
         platform/graphics/filters/CustomFilterValidatedProgram.cpp \
         platform/graphics/filters/DistantLightSource.cpp \
         platform/graphics/filters/FEBlend.cpp \
@@ -4008,13 +4018,6 @@ enable?(MHTML) {
         page/PageSerializer.cpp
 }
 
-enable?(UNDO_MANAGER) {
-    SOURCES += \
-        editing/UndoManager.cpp
-    HEADERS += \
-        editing/UndoManager.h
-}
-
 use?(LIBPNG) {
     SOURCES += platform/image-decoders/ico/ICOImageDecoder.cpp \
                platform/image-decoders/png/PNGImageDecoder.cpp
@@ -4070,6 +4073,11 @@ use?(GRAPHICS_SURFACE) {
     have?(XCOMPOSITE) {
         SOURCES += platform/graphics/surfaces/qt/GraphicsSurfaceGLX.cpp
     }
+}
+
+if(build?(drt)|build?(wtr)) {
+    HEADERS += platform/qt/QtTestSupport.h
+    SOURCES += platform/qt/QtTestSupport.cpp
 }
 
 ALL_IN_ONE_SOURCES += \

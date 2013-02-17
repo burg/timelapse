@@ -47,7 +47,6 @@ namespace WebCore {
 
 class CSSBorderImageSliceValue;
 class CSSPrimitiveValue;
-class CSSProperty;
 class CSSSelectorList;
 class CSSValue;
 class CSSValueList;
@@ -367,6 +366,12 @@ public:
 
     int token() { return m_token; }
 
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+    void markViewportRuleBodyStart() { m_inViewport = true; }
+    void markViewportRuleBodyEnd() { m_inViewport = false; }
+    StyleRuleBase* createViewportRule();
+#endif
+
     PassRefPtr<CSSPrimitiveValue> createPrimitiveNumericValue(CSSParserValue*);
     PassRefPtr<CSSPrimitiveValue> createPrimitiveStringValue(CSSParserValue*);
 #if ENABLE(CSS_VARIABLES)
@@ -455,8 +460,12 @@ private:
 
     void recheckAtKeyword(const UChar* str, int len);
 
-    void setupParser(const char* prefix, const String&, const char* suffix);
-
+    template<unsigned prefixLength, unsigned suffixLength>
+    inline void setupParser(const char (&prefix)[prefixLength], const String& string, const char (&suffix)[suffixLength])
+    {
+        setupParser(prefix, prefixLength - 1, string, suffix, suffixLength - 1);
+    }
+    void setupParser(const char* prefix, unsigned prefixLength, const String&, const char* suffix, unsigned suffixLength);
     bool inShorthand() const { return m_inParseShorthand; }
 
     bool validWidth(CSSParserValue*);
@@ -513,6 +522,14 @@ private:
 
     bool m_allowImportRules;
     bool m_allowNamespaceDeclarations;
+
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+    bool parseViewportProperty(CSSPropertyID propId, bool important);
+    bool parseViewportShorthand(CSSPropertyID propId, CSSPropertyID first, CSSPropertyID second, bool important);
+
+    bool inViewport() const { return m_inViewport; }
+    bool m_inViewport;
+#endif
 
     int (CSSParser::*m_lexFunc)(void*);
 

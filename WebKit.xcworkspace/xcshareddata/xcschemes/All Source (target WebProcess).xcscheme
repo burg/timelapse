@@ -88,7 +88,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "9398100A0824BF01008DF038"
-               BuildableName = "WebKit.framework"
+               BuildableName = ".framework"
                BlueprintName = "WebKit"
                ReferencedContainer = "container:Source/WebKit/WebKit.xcodeproj">
             </BuildableReference>
@@ -120,7 +120,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "1A50DB1D110A3BDC000D3FE5"
-            BuildableName = "WebProcess.app"
+            BuildableName = ".app"
             BlueprintName = "WebProcess"
             ReferencedContainer = "container:Source/WebKit2/WebKit2.xcodeproj">
          </BuildableReference>
@@ -139,7 +139,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "1A50DB1D110A3BDC000D3FE5"
-            BuildableName = "WebProcess.app"
+            BuildableName = ".app"
             BlueprintName = "WebProcess"
             ReferencedContainer = "container:Source/WebKit2/WebKit2.xcodeproj">
          </BuildableReference>

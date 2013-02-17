@@ -24,8 +24,8 @@
 #include "WKAPICast.h"
 #include "WKRetainPtr.h"
 #include "ewk_context.h"
+#include "ewk_object_private.h"
 
-class Ewk_Url_Scheme_Request;
 class Ewk_Cookie_Manager;
 class Ewk_Favicon_Database;
 
@@ -43,19 +43,26 @@ class VibrationProvider;
 #endif
 }
 
-class Ewk_Context : public RefCounted<Ewk_Context> {
+class EwkContext : public Ewk_Object {
 public:
-    static PassRefPtr<Ewk_Context> create(WKContextRef context);
-    static PassRefPtr<Ewk_Context> create();
-    static PassRefPtr<Ewk_Context> create(const String& injectedBundlePath);
+    EWK_OBJECT_DECLARE(EwkContext)
 
-    static PassRefPtr<Ewk_Context> defaultContext();
+    static PassRefPtr<EwkContext> create(WKContextRef context);
+    static PassRefPtr<EwkContext> create();
+    static PassRefPtr<EwkContext> create(const String& injectedBundlePath);
 
-    ~Ewk_Context();
+    static PassRefPtr<EwkContext> defaultContext();
+
+    ~EwkContext();
 
     Ewk_Cookie_Manager* cookieManager();
 
+    Ewk_Database_Manager* databaseManager();
+
+    bool setFaviconDatabaseDirectoryPath(const String& databaseDirectory);
     Ewk_Favicon_Database* faviconDatabase();
+
+    Ewk_Storage_Manager* storageManager() const;
 
     WebKit::RequestManagerClientEfl* requestManager();
 
@@ -71,19 +78,21 @@ public:
 
     WKContextRef wkContext();
 
-    void urlSchemeRequestReceived(Ewk_Url_Scheme_Request*);
-
     WebKit::DownloadManagerEfl* downloadManager() const;
 
     WebKit::ContextHistoryClientEfl* historyClient();
 
 private:
-    explicit Ewk_Context(WKContextRef);
+    explicit EwkContext(WKContextRef);
+
+    void ensureFaviconDatabase();
 
     WKRetainPtr<WKContextRef> m_context;
 
     OwnPtr<Ewk_Cookie_Manager> m_cookieManager;
+    OwnPtr<Ewk_Database_Manager> m_databaseManager;
     OwnPtr<Ewk_Favicon_Database> m_faviconDatabase;
+    OwnPtr<Ewk_Storage_Manager> m_storageManager;
 #if ENABLE(BATTERY_STATUS)
     RefPtr<WebKit::BatteryProvider> m_batteryProvider;
 #endif

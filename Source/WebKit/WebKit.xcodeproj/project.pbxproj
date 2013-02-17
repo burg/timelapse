@@ -234,7 +234,6 @@
 		9398109C0824BF01008DF038 /* WebFrameInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = 930D02BD06275F710076701E /* WebFrameInternal.h */; };
 		9398109D0824BF01008DF038 /* WebDOMOperationsPrivate.h in Headers */ = {isa = PBXBuildFile; fileRef = 84AE905F062DE6A80075BBF9 /* WebDOMOperationsPrivate.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		9398109E0824BF01008DF038 /* WebEditingDelegate.h in Headers */ = {isa = PBXBuildFile; fileRef = BE4FBECB0653DF47005EDE15 /* WebEditingDelegate.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		939810A00824BF01008DF038 /* WebJavaPlugIn.h in Headers */ = {isa = PBXBuildFile; fileRef = 51863EFC065419EB00E9E8DD /* WebJavaPlugIn.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		939810A10824BF01008DF038 /* WebHTMLViewInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = 93185DB506679F42005D5E7E /* WebHTMLViewInternal.h */; };
 		939810A20824BF01008DF038 /* WebNSObjectExtras.h in Headers */ = {isa = PBXBuildFile; fileRef = 93D1FE13067EB10B009CE68A /* WebNSObjectExtras.h */; };
 		939810A40824BF01008DF038 /* WebPDFView.h in Headers */ = {isa = PBXBuildFile; fileRef = 51E94C3406C0321200A9B09E /* WebPDFView.h */; };
@@ -510,7 +509,6 @@
 		516F296F03A6C45A00CA2D3A /* WebHistoryItemInternal.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 4; lastKnownFileType = sourcecode.c.h; path = WebHistoryItemInternal.h; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
 		5185F62510712B80007AA393 /* WebNavigationData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebNavigationData.h; sourceTree = "<group>"; };
 		5185F62710712B97007AA393 /* WebNavigationData.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebNavigationData.mm; sourceTree = "<group>"; };
-		51863EFC065419EB00E9E8DD /* WebJavaPlugIn.h */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.c.h; path = WebJavaPlugIn.h; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
 		51A8B52E04282B5900CA2D3A /* WebFrameView.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 4; lastKnownFileType = sourcecode.c.h; path = WebFrameView.h; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
 		51A8B52F04282B5900CA2D3A /* WebFrameView.mm */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebFrameView.mm; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
 		51A8B53204282BD200CA2D3A /* WebFrameViewInternal.h */ = {isa = PBXFileReference; fileEncoding = 30; indentWidth = 4; lastKnownFileType = sourcecode.c.h; path = WebFrameViewInternal.h; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
@@ -617,7 +615,7 @@
 		9391F273121B38BD00EBF7E8 /* WebFrameNetworkingContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebFrameNetworkingContext.h; sourceTree = "<group>"; };
 		9391F274121B38BD00EBF7E8 /* WebFrameNetworkingContext.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebFrameNetworkingContext.mm; sourceTree = "<group>"; };
 		939811320824BF01008DF038 /* Info.plist */ = {isa = PBXFileReference; indentWidth = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = mac/Info.plist; sourceTree = SOURCE_ROOT; tabWidth = 8; usesTabs = 1; };
-		939811330824BF01008DF038 /* WebKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = WebKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		939811330824BF01008DF038 /* .framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = .framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		93AEB17D032C1735008635CE /* WebKitLogging.h */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.c.h; path = WebKitLogging.h; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
 		93AEB17E032C1735008635CE /* WebKitLogging.m */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.c.objc; path = WebKitLogging.m; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
 		93C6F14507920B93002449CD /* WebFrameViewPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.c.h; path = WebFrameViewPrivate.h; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
@@ -778,7 +776,7 @@
 		034768DFFF38A50411DB9C8B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				939811330824BF01008DF038 /* WebKit.framework */,
+				939811330824BF01008DF038 /* .framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -1121,7 +1119,6 @@
 		848DFF430365F71500CA2ACA /* WebKit Plug-ins */ = {
 			isa = PBXGroup;
 			children = (
-				51863EFC065419EB00E9E8DD /* WebJavaPlugIn.h */,
 				848DFF840365FE6A00CA2ACA /* WebPlugin.h */,
 				848DFF850365FE6A00CA2ACA /* WebPluginContainer.h */,
 				65E1150307EFFEBF009B8BF7 /* WebPluginContainerCheck.h */,
@@ -1517,7 +1514,6 @@
 				06693DDC0BFBA85200216072 /* WebInspectorClient.h in Headers */,
 				B804176F1217A83100466BAE /* WebInspectorFrontend.h in Headers */,
 				7A8FF0D11075024A00A80A08 /* WebInspectorPrivate.h in Headers */,
-				939810A00824BF01008DF038 /* WebJavaPlugIn.h in Headers */,
 				939810420824BF01008DF038 /* WebJavaScriptTextInputPanel.h in Headers */,
 				37D1DCA81065928C0068F7EF /* WebJSPDFDoc.h in Headers */,
 				939810850824BF01008DF038 /* WebKeyGenerator.h in Headers */,
@@ -1648,8 +1644,6 @@
 				939810BB0824BF01008DF038 /* Sources */,
 				1C395DE20C6BE8E0000D1E52 /* Generate 64-bit Export File */,
 				939811270824BF01008DF038 /* Frameworks */,
-				939D054F09DA02D500984996 /* Check For Global Initializers */,
-				9337D6540EBFE54D00DA3CB5 /* Check For Exit Time Destructors */,
 				5D0D54210E98631D0029E223 /* Check For Weak VTables and Externals */,
 				3713F018142905B70036387F /* Check For Inappropriate Objective-C Class Names */,
 				5D88EE6C11407DE800BC3ABC /* Check For Framework Include Consistency */,
@@ -1662,7 +1656,7 @@
 			name = WebKit;
 			productInstallPath = /System/Library/Frameworks;
 			productName = WebKit;
-			productReference = 939811330824BF01008DF038 /* WebKit.framework */;
+			productReference = 939811330824BF01008DF038 /* .framework */;
 			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */
@@ -1819,21 +1813,6 @@
 			shellPath = /bin/sh;
 			shellScript = "if [[ \"${MACOSX_DEPLOYMENT_TARGET}\" > \"10.5\" && \"${CONFIGURATION}\" != \"Production\" && \"${ACTION}\" == \"build\" ]]; then\n    if [[ ! -e \"${CONFIGURATION_BUILD_DIR}/WebKit.framework/WebKitPluginHost.app\" ]]; then\n       ln -s /System/Library/Frameworks/WebKit.framework/WebKitPluginHost.app \"${CONFIGURATION_BUILD_DIR}/WebKit.framework/WebKitPluginHost.app\"\n    fi\nfi\n";
 		};
-		9337D6540EBFE54D00DA3CB5 /* Check For Exit Time Destructors */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
-			);
-			name = "Check For Exit Time Destructors";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if [ \"${TARGET_GCC_VERSION}\" = \"LLVM_COMPILER\" ]; then\n    exit 0;\nfi\n\nif [ \"${ACTION}\" = \"installhdrs\" ]; then\n    exit 0;\nfi\n\nif [ -f ../../Tools/Scripts/check-for-exit-time-destructors ]; then\n    ../../Tools/Scripts/check-for-exit-time-destructors || exit $?\nfi";
-		};
 		939811300824BF01008DF038 /* Make Frameworks Symbolic Link */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
@@ -1849,21 +1828,6 @@
 			runOnlyForDeploymentPostprocessing = 1;
 			shellPath = /bin/sh;
 			shellScript = "ln -sf Versions/Current/Frameworks \"$TARGET_BUILD_DIR/WebKit.framework/Frameworks\"\n";
-		};
-		939D054F09DA02D500984996 /* Check For Global Initializers */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
-			);
-			name = "Check For Global Initializers";
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if [ \"${TARGET_GCC_VERSION}\" = \"LLVM_COMPILER\" ]; then\n    exit 0;\nfi\n\nif [ \"${ACTION}\" = \"installhdrs\" ]; then\n    exit 0;\nfi\n\nif [ -f ../../Tools/Scripts/check-for-global-initializers ]; then\n    ../../Tools/Scripts/check-for-global-initializers || exit $?\nfi";
 		};
 /* End PBXShellScriptBuildPhase section */
 

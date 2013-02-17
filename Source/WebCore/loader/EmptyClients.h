@@ -174,8 +174,8 @@ public:
     virtual PassOwnPtr<ColorChooser> createColorChooser(ColorChooserClient*, const Color&) OVERRIDE;
 #endif
 
-#if ENABLE(CALENDAR_PICKER)
-    virtual PassOwnPtr<DateTimeChooser> openDateTimeChooser(DateTimeChooserClient*, const DateTimeChooserParameters&) OVERRIDE;
+#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+    virtual PassRefPtr<DateTimeChooser> openDateTimeChooser(DateTimeChooserClient*, const DateTimeChooserParameters&) OVERRIDE;
 #endif
 
     virtual void runOpenPanel(Frame*, PassRefPtr<FileChooser>) OVERRIDE;
@@ -207,6 +207,8 @@ public:
     virtual void numWheelEventHandlersChanged(unsigned) OVERRIDE { }
     
     virtual bool shouldRubberBandInDirection(WebCore::ScrollDirection) const { return false; }
+    
+    virtual bool isEmptyChromeClient() const { return true; }
 };
 
 class EmptyFrameLoaderClient : public FrameLoaderClient {
@@ -382,6 +384,10 @@ public:
 
 #if ENABLE(WEB_INTENTS)
     virtual void dispatchIntent(PassRefPtr<IntentRequest>) OVERRIDE;
+#endif
+
+#if ENABLE(REQUEST_AUTOCOMPLETE)
+    virtual void didRequestAutocomplete(PassRefPtr<FormState>) OVERRIDE;
 #endif
 };
 

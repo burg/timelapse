@@ -45,7 +45,6 @@ LIST(APPEND WebCore_SOURCES
   platform/efl/ScrollViewEfl.cpp
   platform/efl/ScrollbarEfl.cpp
   platform/efl/ScrollbarThemeEfl.cpp
-  platform/efl/SharedBufferEfl.cpp
   platform/efl/SharedTimerEfl.cpp
   platform/efl/SoundEfl.cpp
   platform/efl/SystemTimeEfl.cpp
@@ -69,6 +68,7 @@ LIST(APPEND WebCore_SOURCES
   platform/linux/GamepadDeviceLinux.cpp
   platform/mediastream/gstreamer/MediaStreamCenterGStreamer.cpp
   platform/network/efl/NetworkStateNotifierEfl.cpp
+  platform/network/soup/AuthenticationChallengeSoup.cpp
   platform/network/soup/CookieJarSoup.cpp
   platform/network/soup/CookieStorageSoup.cpp
   platform/network/soup/CredentialStorageSoup.cpp
@@ -84,6 +84,7 @@ LIST(APPEND WebCore_SOURCES
   platform/network/soup/SoupURIUtils.cpp
   platform/PlatformStrategies.cpp
   platform/posix/FileSystemPOSIX.cpp
+  platform/posix/SharedBufferPOSIX.cpp
   platform/text/efl/TextBreakIteratorInternalICUEfl.cpp
   platform/text/enchant/TextCheckerEnchant.cpp
 )
@@ -201,10 +202,10 @@ LIST(APPEND WebCore_LIBRARIES
   ${FONTCONFIG_LIBRARIES}
   ${FREETYPE_LIBRARIES}
   ${ICU_LIBRARIES}
-  ${JPEG_LIBRARY}
+  ${JPEG_LIBRARIES}
   ${LIBXML2_LIBRARIES}
   ${LIBXSLT_LIBRARIES}
-  ${PNG_LIBRARY}
+  ${PNG_LIBRARIES}
   ${SQLITE_LIBRARIES}
   ${GLIB_LIBRARIES}
   ${GLIB_GIO_LIBRARIES}

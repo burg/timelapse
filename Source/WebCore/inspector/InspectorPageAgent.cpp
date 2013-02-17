@@ -355,9 +355,6 @@ void InspectorPageAgent::restore()
     if (m_state->getBoolean(PageAgentState::pageAgentEnabled)) {
         ErrorString error;
         enable(&error);
-
-        if (m_inspectorAgent->didCommitLoadFired())
-            frameNavigated(m_page->mainFrame()->loader()->documentLoader());
 #if ENABLE(TOUCH_EVENTS)
         updateTouchEventEmulationInPage(m_state->getBoolean(PageAgentState::touchEventEmulationEnabled));
 #endif
@@ -950,10 +947,10 @@ PassRefPtr<TypeBuilder::Page::FrameResourceTree> InspectorPageAgent::buildObject
             .setUrl(cachedResource->url())
             .setType(cachedResourceTypeJson(*cachedResource))
             .setMimeType(cachedResource->response().mimeType());
-        if (cachedResource->status() == CachedResource::LoadError)
-            resourceObject->setFailed(true);
-        if (cachedResource->status() == CachedResource::Canceled)
+        if (cachedResource->wasCanceled())
             resourceObject->setCanceled(true);
+        else if (cachedResource->status() == CachedResource::LoadError)
+            resourceObject->setFailed(true);
         subresources->addItem(resourceObject);
     }
 

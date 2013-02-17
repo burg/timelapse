@@ -237,7 +237,7 @@ WebInspector.ScriptsPanel.prototype = {
      */
     _uiSourceCodeAdded: function(event)
     {
-        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ event.data;
+        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ (event.data);
         this._addUISourceCode(uiSourceCode);
     },
 
@@ -247,7 +247,7 @@ WebInspector.ScriptsPanel.prototype = {
     _addUISourceCode: function(uiSourceCode)
     {
         if (this._toggleFormatSourceButton.toggled)
-            uiSourceCode.setFormatted(true, this._uiSourceCodeFormatted.bind(this, uiSourceCode));
+            uiSourceCode.setFormatted(true);
 
         this._navigator.addUISourceCode(uiSourceCode);
         this._editorContainer.addUISourceCode(uiSourceCode);
@@ -255,7 +255,7 @@ WebInspector.ScriptsPanel.prototype = {
 
     _uiSourceCodeRemoved: function(event)
     {
-        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ event.data;
+        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ (event.data);
         this._editorContainer.removeUISourceCode(uiSourceCode);
         this._navigator.removeUISourceCode(uiSourceCode);
         this._removeSourceFrame(uiSourceCode);
@@ -520,7 +520,7 @@ WebInspector.ScriptsPanel.prototype = {
                 return;
             this._editorContainer.addUISourceCode(uiSourceCode);
             if (uiSourceCode.formatted() !== this._toggleFormatSourceButton.toggled)
-                uiSourceCode.setFormatted(this._toggleFormatSourceButton.toggled, this._uiSourceCodeFormatted.bind(this, uiSourceCode));
+                uiSourceCode.setFormatted(this._toggleFormatSourceButton.toggled);
         }
         var sourceFrame = this._showFile(uiSourceCode);
         sourceFrame.revealLine(uiLocation.lineNumber);
@@ -544,7 +544,7 @@ WebInspector.ScriptsPanel.prototype = {
     _editorClosed: function(event)
     {
         this._navigatorController.hideNavigatorOverlay();
-        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ event.data;
+        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ (event.data);
 
         if (this._currentUISourceCode === uiSourceCode)
             delete this._currentUISourceCode;
@@ -556,7 +556,7 @@ WebInspector.ScriptsPanel.prototype = {
 
     _editorSelected: function(event)
     {
-        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ event.data;
+        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ (event.data);
         var sourceFrame = this._showFile(uiSourceCode);
         this._navigatorController.hideNavigatorOverlay();
 	if (!WebInspector.timelapseModel.isReplaying)
@@ -566,7 +566,7 @@ WebInspector.ScriptsPanel.prototype = {
 
     _scriptSelected: function(event)
     {
-        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ event.data.uiSourceCode;
+        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ (event.data.uiSourceCode);
         var sourceFrame = this._showFile(uiSourceCode);
         this._navigatorController.hideNavigatorOverlay();
         if (sourceFrame && event.data.focusSource && !WebInspector.timelapseModel.isReplaying)
@@ -923,7 +923,7 @@ WebInspector.ScriptsPanel.prototype = {
      */
     canSearchAndReplace: function()
     {
-        var view = /** @type {WebInspector.SourceFrame} */ this.visibleView;
+        var view = /** @type {WebInspector.SourceFrame} */ (this.visibleView);
         return !!view && view.canEditSource();
     },
 
@@ -932,7 +932,7 @@ WebInspector.ScriptsPanel.prototype = {
      */
     replaceSelectionWith: function(text)
     {
-        var view = /** @type {WebInspector.SourceFrame} */ this.visibleView;
+        var view = /** @type {WebInspector.SourceFrame} */ (this.visibleView);
         view.replaceSearchMatchWith(text);
     },
 
@@ -942,13 +942,8 @@ WebInspector.ScriptsPanel.prototype = {
      */
     replaceAllWith: function(query, text)
     {
-        var view = /** @type {WebInspector.SourceFrame} */ this.visibleView;
+        var view = /** @type {WebInspector.SourceFrame} */ (this.visibleView);
         view.replaceAllWith(query, text);
-    },
-
-    _uiSourceCodeFormatted: function(uiSourceCode)
-    {
-        WebInspector.breakpointManager.restoreBreakpoints(uiSourceCode);
     },
 
     _toggleFormatSource: function()
@@ -956,7 +951,7 @@ WebInspector.ScriptsPanel.prototype = {
         this._toggleFormatSourceButton.toggled = !this._toggleFormatSourceButton.toggled;
         var uiSourceCodes = this._workspace.uiSourceCodes();
         for (var i = 0; i < uiSourceCodes.length; ++i)
-            uiSourceCodes[i].setFormatted(this._toggleFormatSourceButton.toggled, this._uiSourceCodeFormatted.bind(this, uiSourceCodes[i]));
+            uiSourceCodes[i].setFormatted(this._toggleFormatSourceButton.toggled);
     },
 
     addToWatch: function(expression)
@@ -971,7 +966,7 @@ WebInspector.ScriptsPanel.prototype = {
             return;
 
         if (sourceFrame instanceof WebInspector.JavaScriptSourceFrame) {
-            var javaScriptSourceFrame = /** @type {WebInspector.JavaScriptSourceFrame} */ sourceFrame;
+            var javaScriptSourceFrame = /** @type {WebInspector.JavaScriptSourceFrame} */ (sourceFrame);
             javaScriptSourceFrame.toggleBreakpointOnCurrentLine();
         }            
     },
@@ -1037,8 +1032,8 @@ WebInspector.ScriptsPanel.prototype = {
 
     _fileRenamed: function(event)
     {
-        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ event.data.uiSourceCode;
-        var name = /** @type {string} */ event.data.name;
+        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ (event.data.uiSourceCode);
+        var name = /** @type {string} */ (event.data.name);
         if (!uiSourceCode.isSnippet)
             return;
         WebInspector.scriptSnippetModel.renameScriptSnippet(uiSourceCode, name);
@@ -1079,7 +1074,7 @@ WebInspector.ScriptsPanel.prototype = {
      */
     _itemRenamingRequested: function(event)
     {
-        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ event.data;
+        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ (event.data);
         
         var shouldHideNavigator = !this._navigatorController.isNavigatorPinned();
         if (this._navigatorController.isNavigatorHidden())
@@ -1110,7 +1105,7 @@ WebInspector.ScriptsPanel.prototype = {
      * @param {WebInspector.ContextMenu} contextMenu
      * @param {Object} target
      */
-    appendApplicableItems: function(contextMenu, target)
+    appendApplicableItems: function(event, contextMenu, target)
     {
         this._appendUISourceCodeItems(contextMenu, target);
         this._appendFunctionItems(contextMenu, target);
@@ -1125,7 +1120,7 @@ WebInspector.ScriptsPanel.prototype = {
         if (!(target instanceof WebInspector.UISourceCode))
             return;
 
-        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ target;
+        var uiSourceCode = /** @type {WebInspector.UISourceCode} */ (target);
         contextMenu.appendItem(WebInspector.UIString("Local modifications..."), this._showLocalHistory.bind(this, uiSourceCode));
         var resource = WebInspector.resourceForURL(uiSourceCode.url);
         if (resource && resource.request)
@@ -1140,7 +1135,7 @@ WebInspector.ScriptsPanel.prototype = {
     {
         if (!(target instanceof WebInspector.RemoteObject))
             return;
-        var remoteObject = /** @type {WebInspector.RemoteObject} */ target;
+        var remoteObject = /** @type {WebInspector.RemoteObject} */ (target);
         if (remoteObject.type !== "function")
             return;
 

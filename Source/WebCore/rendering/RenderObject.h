@@ -30,8 +30,7 @@
 #include "DocumentStyleSheetCollection.h"
 #include "Element.h"
 #include "FloatQuad.h"
-#include "FractionalLayoutUnit.h"
-#include "LayoutTypes.h"
+#include "LayoutRect.h"
 #include "PaintPhase.h"
 #include "RenderObjectChildList.h"
 #include "RenderStyle.h"
@@ -178,6 +177,11 @@ public:
     RenderObject* previousSibling() const { return m_previous; }
     RenderObject* nextSibling() const { return m_next; }
 
+    // FIXME: These should be renamed slowFirstChild, slowLastChild, etc.
+    // to discourage their use. The virtualChildren() call inside these
+    // can be slow for hot code paths.
+    // Currently, some subclasses like RenderBlock, override these NON-virtual
+    // functions to make these fast when we already have a more specific pointer type.
     RenderObject* firstChild() const
     {
         if (const RenderObjectChildList* children = virtualChildren())
@@ -610,8 +614,7 @@ public:
     
     virtual void updateDragState(bool dragOn);
 
-    // Inlined into RenderView.h for performance and to avoid a cyclic dependency.
-    RenderView* view() const;
+    RenderView* view() const { return document()->renderView(); };
 
     // Returns true if this renderer is rooted, and optionally returns the hosting view (the root of the hierarchy).
     bool isRooted(RenderView** = 0) const;

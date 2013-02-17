@@ -81,7 +81,6 @@
 #include "InspectorController.h"
 #include "InspectorInstrumentation.h"
 #include "InspectorOverlay.h"
-#include "JavaScriptDebuggerBlackBerry.h"
 #include "JavaScriptVariant_p.h"
 #include "LayerWebKitThread.h"
 #if ENABLE(NETWORK_INFO)
@@ -781,36 +780,25 @@ bool WebPagePrivate::executeJavaScript(const BlackBerry::Platform::String& scrip
         return false;
     }
 
-    JSC::ExecState* exec = m_mainFrame->script()->globalObject(mainThreadNormalWorld())->globalExec();
-    JSGlobalContextRef context = toGlobalRef(exec);
-
-    JSC::JSLockHolder lock(exec);
-    JSType type = JSValueGetType(context, toRef(exec, value));
-
-    switch (type) {
-    case kJSTypeNull:
-        returnType = JSNull;
-        break;
-    case kJSTypeBoolean:
-        returnType = JSBoolean;
-        break;
-    case kJSTypeNumber:
-        returnType = JSNumber;
-        break;
-    case kJSTypeString:
-        returnType = JSString;
-        break;
-    case kJSTypeObject:
-        returnType = JSObject;
-        break;
-    case kJSTypeUndefined:
-    default:
+    if (value.isUndefined())
         returnType = JSUndefined;
-        break;
-    }
+    else if (value.isNull())
+        returnType = JSNull;
+    else if (value.isBoolean())
+        returnType = JSBoolean;
+    else if (value.isNumber())
+        returnType = JSNumber;
+    else if (value.isString())
+        returnType = JSString;
+    else if (value.isObject())
+        returnType = JSObject;
+    else
+        returnType = JSUndefined;
 
-    if (returnType == JSBoolean || returnType == JSNumber || returnType == JSString || returnType == JSObject)
+    if (returnType == JSBoolean || returnType == JSNumber || returnType == JSString || returnType == JSObject) {
+        JSC::ExecState* exec = m_mainFrame->script()->globalObject(mainThreadNormalWorld())->globalExec();
         returnValue = result.toString(exec);
+    }
 
     return true;
 }
@@ -833,35 +821,25 @@ bool WebPagePrivate::executeJavaScriptInIsolatedWorld(const ScriptSourceCode& so
         return false;
     }
 
-    JSC::ExecState* exec = m_mainFrame->script()->globalObject(m_isolatedWorld.get())->globalExec();
-    JSGlobalContextRef context = toGlobalRef(exec);
-
-    JSType type = JSValueGetType(context, toRef(exec, value));
-
-    switch (type) {
-    case kJSTypeNull:
-        returnType = JSNull;
-        break;
-    case kJSTypeBoolean:
-        returnType = JSBoolean;
-        break;
-    case kJSTypeNumber:
-        returnType = JSNumber;
-        break;
-    case kJSTypeString:
-        returnType = JSString;
-        break;
-    case kJSTypeObject:
-        returnType = JSObject;
-        break;
-    case kJSTypeUndefined:
-    default:
+    if (value.isUndefined())
         returnType = JSUndefined;
-        break;
-    }
+    else if (value.isNull())
+        returnType = JSNull;
+    else if (value.isBoolean())
+        returnType = JSBoolean;
+    else if (value.isNumber())
+        returnType = JSNumber;
+    else if (value.isString())
+        returnType = JSString;
+    else if (value.isObject())
+        returnType = JSObject;
+    else
+        returnType = JSUndefined;
 
-    if (returnType == JSBoolean || returnType == JSNumber || returnType == JSString || returnType == JSObject)
+    if (returnType == JSBoolean || returnType == JSNumber || returnType == JSString || returnType == JSObject) {
+        JSC::ExecState* exec = m_mainFrame->script()->globalObject(mainThreadNormalWorld())->globalExec();
         returnValue = result.toString(exec);
+    }
 
     return true;
 }
@@ -910,6 +888,7 @@ void WebPage::executeJavaScriptFunction(const std::vector<BlackBerry::Platform::
     JSC::ExecState* exec = root->globalObject()->globalExec();
     JSGlobalContextRef ctx = toGlobalRef(exec);
 
+    JSC::JSLockHolder lock(exec);
     WTF::Vector<JSValueRef> argListRef(args.size());
     for (unsigned i = 0; i < args.size(); ++i)
         argListRef[i] = BlackBerryJavaScriptVariantToJSValueRef(ctx, args[i]);
@@ -1276,8 +1255,6 @@ bool WebPagePrivate::zoomAboutPoint(double unclampedScale, const FloatPoint& anc
     // We need to invalidate all tiles both visible and non-visible if we're loading.
     m_backingStore->d->updateTiles(isLoading /* updateVisible */, false /* immediate */);
 
-    m_client->resetBitmapZoomScale(m_transformationMatrix->m11());
-
     bool shouldRender = !isLoading || m_userPerformedManualZoom || forceRendering;
     bool shouldClearVisibleZoom = isLoading && shouldRender;
 
@@ -1288,6 +1265,9 @@ bool WebPagePrivate::zoomAboutPoint(double unclampedScale, const FloatPoint& anc
     }
 
     m_client->zoomChanged(m_webPage->isMinZoomed(), m_webPage->isMaxZoomed(), !shouldZoomOnEscape(), currentScale());
+
+    if (m_pendingOrientation != -1)
+        m_client->updateInteractionViews();
 
     // Clear window to make sure there are no artifacts.
     if (shouldRender) {
@@ -2360,12 +2340,6 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
     if (node->isElementNode()) {
         Element* element = static_cast<Element*>(node->shadowAncestorNode());
 
-        String webWorksContext(DOMSupport::webWorksContext(element));
-        if (!webWorksContext.stripWhiteSpace().isEmpty()) {
-            context.setFlag(Platform::WebContext::IsWebWorksContext);
-            context.setWebWorksContext(webWorksContext);
-        }
-
         if (DOMSupport::isTextBasedContentEditableElement(element)) {
             if (!canStartSelection) {
                 // Input fields host node is by spec non-editable unless the field itself has content editable enabled.
@@ -2391,6 +2365,20 @@ Platform::WebContext WebPagePrivate::webContext(TargetDetectionStrategy strategy
 
     if (node->isFocusable())
         context.setFlag(Platform::WebContext::IsFocusable);
+
+    // Walk up the node tree looking for our custom webworks context attribute.
+    while (node) {
+        if (node->isElementNode()) {
+            Element* element = static_cast<Element*>(node->shadowAncestorNode());
+            String webWorksContext(DOMSupport::webWorksContext(element));
+            if (!webWorksContext.stripWhiteSpace().isEmpty()) {
+                context.setFlag(Platform::WebContext::IsWebWorksContext);
+                context.setWebWorksContext(webWorksContext);
+                break;
+            }
+        }
+        node = node->parentNode();
+    }
 
     return context;
 }
@@ -3908,15 +3896,13 @@ bool WebPage::mouseEvent(const Platform::MouseEvent& mouseEvent, bool* wheelDelt
         buttonType = MiddleButton;
 
     // Create our event.
-    PlatformMouseEvent platformMouseEvent(d->mapFromTransformed(mouseEvent.position()),
-                                          d->mapFromTransformed(mouseEvent.screenPosition()),
+    PlatformMouseEvent platformMouseEvent(d->mapFromTransformed(mouseEvent.position()), mouseEvent.screenPosition(),
                                           toWebCoreMouseEventType(mouseEvent.type()), clickCount, buttonType, PointingDevice);
     d->m_lastMouseEvent = platformMouseEvent;
     bool success = d->handleMouseEvent(platformMouseEvent);
 
     if (mouseEvent.wheelTicks()) {
-        PlatformWheelEvent wheelEvent(d->mapFromTransformed(mouseEvent.position()),
-                                      d->mapFromTransformed(mouseEvent.screenPosition()),
+        PlatformWheelEvent wheelEvent(d->mapFromTransformed(mouseEvent.position()), mouseEvent.screenPosition(),
                                       0, -mouseEvent.wheelDelta(),
                                       0, -mouseEvent.wheelTicks(),
                                       ScrollByPixelWheelEvent,
@@ -4043,10 +4029,10 @@ bool WebPage::touchEvent(const Platform::TouchEvent& event)
     Platform::TouchEvent tEvent = event;
     for (unsigned i = 0; i < event.m_points.size(); i++) {
         tEvent.m_points[i].m_pos = d->mapFromTransformed(tEvent.m_points[i].m_pos);
-        tEvent.m_points[i].m_screenPos = d->mapFromTransformed(tEvent.m_points[i].m_screenPos);
+        tEvent.m_points[i].m_screenPos = tEvent.m_points[i].m_screenPos;
     }
 
-    if (event.hasGesture(Platform::Gesture::SingleTap))
+    if (event.isSingleTap())
         d->m_pluginMayOpenNewTab = true;
     else if (tEvent.m_type == Platform::TouchEvent::TouchStart || tEvent.m_type == Platform::TouchEvent::TouchCancel)
         d->m_pluginMayOpenNewTab = false;
@@ -4056,7 +4042,7 @@ bool WebPage::touchEvent(const Platform::TouchEvent& event)
 
     bool handled = false;
 
-    if (d->m_needTouchEvents && !event.hasGesture(Platform::Gesture::Injected))
+    if (d->m_needTouchEvents && !event.m_type != Platform::TouchEvent::TouchInjected)
         handled = d->m_mainFrame->eventHandler()->handleTouchEvent(PlatformTouchEvent(&tEvent));
 
     // Unpress mouse if touch end is consumed by a JavaScript touch handler, otherwise the mouse state will remain pressed
@@ -4076,7 +4062,7 @@ bool WebPage::touchEvent(const Platform::TouchEvent& event)
         return true;
     }
 
-    if (event.hasGesture(Platform::Gesture::TouchHold))
+    if (event.isTouchHold())
         d->m_touchEventHandler->touchHoldEvent();
 #endif
 
@@ -4107,9 +4093,9 @@ bool WebPagePrivate::dispatchTouchEventToFullScreenPlugin(PluginView* plugin, co
 {
     NPTouchEvent npTouchEvent;
 
-    if (event.hasGesture(Platform::Gesture::DoubleTap))
+    if (event.isDoubleTap())
         npTouchEvent.type = TOUCH_EVENT_DOUBLETAP;
-    else if (event.hasGesture(Platform::Gesture::TouchHold))
+    else if (event.isTouchHold())
         npTouchEvent.type = TOUCH_EVENT_TOUCHHOLD;
     else {
         switch (event.m_type) {
@@ -4174,7 +4160,7 @@ bool WebPage::touchPointAsMouseEvent(const Platform::TouchPoint& point, bool use
 
     Platform::TouchPoint tPoint = point;
     tPoint.m_pos = d->mapFromTransformed(tPoint.m_pos);
-    tPoint.m_screenPos = d->mapFromTransformed(tPoint.m_screenPos);
+    tPoint.m_screenPos = tPoint.m_screenPos;
 
     return d->m_touchEventHandler->handleTouchPoint(tPoint, useFatFingers);
 }
@@ -4886,108 +4872,6 @@ void WebPage::runLayoutTests()
 #endif
 }
 
-bool WebPage::enableScriptDebugger()
-{
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    if (d->m_scriptDebugger)
-        return true;
-
-    d->m_scriptDebugger = adoptPtr(new JavaScriptDebuggerBlackBerry(this->d));
-
-    return !!d->m_scriptDebugger;
-#endif
-}
-
-bool WebPage::disableScriptDebugger()
-{
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    if (!d->m_scriptDebugger)
-        return true;
-
-    d->m_scriptDebugger.clear();
-    return true;
-#endif
-}
-
-void WebPage::addBreakpoint(const unsigned short* url, unsigned urlLength, int lineNumber, const unsigned short* condition, unsigned conditionLength)
-{
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    if (d->m_scriptDebugger)
-        d->m_scriptDebugger->addBreakpoint(url, urlLength, lineNumber, condition, conditionLength);
-#endif
-}
-
-void WebPage::updateBreakpoint(const unsigned short* url, unsigned urlLength, int lineNumber, const unsigned short* condition, unsigned conditionLength)
-{
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    if (d->m_scriptDebugger)
-        d->m_scriptDebugger->updateBreakpoint(url, urlLength, lineNumber, condition, conditionLength);
-#endif
-}
-
-void WebPage::removeBreakpoint(const unsigned short* url, unsigned urlLength, int lineNumber)
-{
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    if (d->m_scriptDebugger)
-        d->m_scriptDebugger->removeBreakpoint(url, urlLength, lineNumber);
-#endif
-}
-
-bool WebPage::pauseOnExceptions()
-{
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    return d->m_scriptDebugger ? d->m_scriptDebugger->pauseOnExceptions() : false;
-#endif
-}
-
-void WebPage::setPauseOnExceptions(bool pause)
-{
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    if (d->m_scriptDebugger)
-        d->m_scriptDebugger->setPauseOnExceptions(pause);
-#endif
-}
-
-void WebPage::pauseInDebugger()
-{
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    if (d->m_scriptDebugger)
-        d->m_scriptDebugger->pauseInDebugger();
-#endif
-}
-
-void WebPage::resumeDebugger()
-{
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    if (d->m_scriptDebugger)
-        d->m_scriptDebugger->resumeDebugger();
-#endif
-}
-
-void WebPage::stepOverStatementInDebugger()
-{
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    if (d->m_scriptDebugger)
-        d->m_scriptDebugger->stepOverStatementInDebugger();
-#endif
-}
-
-void WebPage::stepIntoStatementInDebugger()
-{
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    if (d->m_scriptDebugger)
-        d->m_scriptDebugger->stepIntoStatementInDebugger();
-#endif
-}
-
-void WebPage::stepOutOfFunctionInDebugger()
-{
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    if (d->m_scriptDebugger)
-        d->m_scriptDebugger->stepOutOfFunctionInDebugger();
-#endif
-}
-
 unsigned WebPage::timeoutForJavaScriptExecution() const
 {
     return Settings::timeoutForJavaScriptExecution(d->m_page->groupName());
@@ -5622,6 +5506,7 @@ bool WebPagePrivate::commitRootLayerIfNeeded()
         return false;
     }
 
+    willComposite();
     m_needsCommit = false;
     // We get here either due to the commit timer, which would have called
     // render if a one shot sync was needed. Or we get called from render
@@ -5654,6 +5539,7 @@ bool WebPagePrivate::commitRootLayerIfNeeded()
             contentsSizeForCompositing,
             drawsRootLayer));
 
+    didComposite();
     return true;
 }
 
@@ -5846,16 +5732,6 @@ void WebPagePrivate::notifyFlushRequired(const GraphicsLayer*)
 {
     scheduleRootLayerCommit();
 }
-
-bool WebPagePrivate::showDebugBorders(const GraphicsLayer*) const
-{
-    return m_page->settings()->showDebugBorders();
-}
-
-bool WebPagePrivate::showRepaintCounter(const GraphicsLayer*) const
-{
-    return m_page->settings()->showRepaintCounter();
-}
 #endif // USE(ACCELERATED_COMPOSITING)
 
 void WebPagePrivate::enterFullscreenForNode(Node* node)
@@ -5969,6 +5845,8 @@ void WebPagePrivate::exitFullScreenForElement(Element* element)
         // The Browser chrome has its own fullscreen video widget.
         exitFullscreenForNode(element);
     } else {
+        m_backingStore->d->suspendScreenAndBackingStoreUpdates();
+
         // When leaving fullscreen mode, we need to restore the 'x' scroll position
         // before fullscreen.
         // FIXME: We may need to respect 'y' position as well, because the web page always scrolls to
@@ -5986,6 +5864,9 @@ void WebPagePrivate::exitFullScreenForElement(Element* element)
             m_transformationMatrix->setM22(m_scaleBeforeFullScreen);
             m_scaleBeforeFullScreen = -1.0;
         }
+
+        notifyTransformChanged();
+        m_backingStore->d->resumeScreenAndBackingStoreUpdates(BackingStore::RenderAndBlit);
 
         // This is where we would restore the browser's chrome
         // if hidden above.
@@ -6025,9 +5906,7 @@ void WebPagePrivate::didChangeSettings(WebSettings* webSettings)
     coreSettings->setSpatialNavigationEnabled(m_webSettings->isSpatialNavigationEnabled());
     coreSettings->setAsynchronousSpellCheckingEnabled(m_webSettings->isAsynchronousSpellCheckingEnabled());
 
-    BlackBerry::Platform::String stylesheetURL = webSettings->userStyleSheetString();
-    if (stylesheetURL.empty())
-        stylesheetURL = webSettings->userStyleSheetLocation();
+    BlackBerry::Platform::String stylesheetURL = webSettings->userStyleSheetLocation();
     if (!stylesheetURL.empty())
         coreSettings->setUserStyleSheetLocation(KURL(KURL(), stylesheetURL));
 
@@ -6328,7 +6207,7 @@ IntSize WebPagePrivate::screenSize() const
     return Platform::Graphics::Screen::primaryScreen()->size();
 }
 
-bool WebPagePrivate::postponeDocumentStyleRecalc()
+void WebPagePrivate::postponeDocumentStyleRecalc()
 {
     if (Document* document = m_mainFrame->document()) {
         m_documentChildNeedsStyleRecalc = document->childNeedsStyleRecalc();
@@ -6357,7 +6236,7 @@ const HitTestResult& WebPagePrivate::hitTestResult(const IntPoint& contentPos)
 {
     if (m_cachedHitTestContentPos != contentPos) {
         m_cachedHitTestContentPos = contentPos;
-        m_cachedHitTestResult = m_mainFrame->eventHandler()->hitTestResultAtPoint(m_cachedHitTestContentPos, HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::AllowShadowContent);
+        m_cachedHitTestResult = m_mainFrame->eventHandler()->hitTestResultAtPoint(m_cachedHitTestContentPos, true /*allowShadowContent*/);
     }
 
     return m_cachedHitTestResult;
@@ -6366,6 +6245,20 @@ const HitTestResult& WebPagePrivate::hitTestResult(const IntPoint& contentPos)
 void WebPagePrivate::clearCachedHitTestResult()
 {
     m_cachedHitTestContentPos = WebCore::IntPoint(-1, -1);
+}
+
+void WebPagePrivate::willComposite()
+{
+    if (!m_page->settings()->developerExtrasEnabled())
+        return;
+    InspectorInstrumentation::willComposite(m_page);
+}
+
+void WebPagePrivate::didComposite()
+{
+    if (!m_page->settings()->developerExtrasEnabled())
+        return;
+    InspectorInstrumentation::didComposite(m_page);
 }
 
 }

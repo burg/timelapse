@@ -274,7 +274,8 @@ void WebProcess::initializeWebProcess(const WebProcessCreationParameters& parame
     if (parameters.shouldUseFontSmoothing)
         setShouldUseFontSmoothing(true);
 
-#if USE(CFURLSTORAGESESSIONS)
+#if PLATFORM(MAC) || USE(CFNETWORK)
+    // FIXME (NetworkProcess): Send this identifier to network process.
     WebCore::ResourceHandle::setPrivateBrowsingStorageSessionIdentifierBase(parameters.uiProcessBundleIdentifier);
 #endif
 
@@ -307,8 +308,7 @@ void WebProcess::ensureNetworkProcessConnection()
 #else
     ASSERT_NOT_REACHED();
 #endif
-
-    RefPtr<NetworkProcessConnection> m_networkProcessConnection = NetworkProcessConnection::create(connectionIdentifier);
+    m_networkProcessConnection = NetworkProcessConnection::create(connectionIdentifier);
 }
 #endif // ENABLE(NETWORK_PROCESS)
 
@@ -743,7 +743,7 @@ void WebProcess::didClose(CoreIPC::Connection*)
     m_runLoop->stop();
 }
 
-void WebProcess::didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::MessageID)
+void WebProcess::didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference, CoreIPC::StringReference)
 {
     // We received an invalid message, but since this is from the UI process (which we trust),
     // we'll let it slide.
@@ -1032,8 +1032,18 @@ void WebProcess::postInjectedBundleMessage(const CoreIPC::DataReference& message
 }
 
 #if ENABLE(NETWORK_PROCESS)
+NetworkProcessConnection* WebProcess::networkConnection()
+{
+    // FIXME (NetworkProcess): How do we handle not having the connection when the WebProcess needs it?
+    // If the NetworkProcess crashed, for example.  Do we respawn it?
+    ASSERT(m_networkProcessConnection);
+    return m_networkProcessConnection.get();
+}
+
 void WebProcess::networkProcessConnectionClosed(NetworkProcessConnection* connection)
 {
+    // FIXME (NetworkProcess): How do we handle not having the connection when the WebProcess needs it?
+    // If the NetworkProcess crashed, for example.  Do we respawn it?
     ASSERT(m_networkProcessConnection);
     ASSERT(m_networkProcessConnection == connection);
 
@@ -1042,6 +1052,8 @@ void WebProcess::networkProcessConnectionClosed(NetworkProcessConnection* connec
 
 void WebProcess::networkProcessCrashed(CoreIPC::Connection*)
 {
+    // FIXME (NetworkProcess): How do we handle not having the connection when the WebProcess needs it?
+    // If the NetworkProcess crashed, for example.  Do we respawn it?
     ASSERT(m_networkProcessConnection);
     
     networkProcessConnectionClosed(m_networkProcessConnection.get());

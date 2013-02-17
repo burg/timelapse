@@ -25,7 +25,6 @@
 #define SVGRenderSupport_h
 
 #if ENABLE(SVG)
-#include "LayoutTypes.h"
 #include "PaintInfo.h"
 
 namespace WebCore {
@@ -33,6 +32,7 @@ namespace WebCore {
 class FloatPoint;
 class FloatRect;
 class ImageBuffer;
+class LayoutRect;
 class RenderBoxModelObject;
 class RenderGeometryMap;
 class RenderLayerModelObject;
@@ -67,6 +67,7 @@ public:
     static void computeFloatRectForRepaint(const RenderObject*, RenderLayerModelObject* repaintContainer, FloatRect&, bool fixed);
     static void mapLocalToContainer(const RenderObject*, RenderLayerModelObject* repaintContainer, TransformState&, bool snapOffsetForTransforms = true, bool* wasFixed = 0);
     static const RenderObject* pushMappingToContainer(const RenderObject*, const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&);
+    static bool checkForSVGRepaintDuringLayout(RenderObject*);
 
     // Shared between SVG renderers and resources.
     static void applyStrokeStyleToContext(GraphicsContext*, const RenderStyle*, const RenderObject*);

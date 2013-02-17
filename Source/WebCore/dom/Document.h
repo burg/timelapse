@@ -37,7 +37,6 @@
 #include "IconURL.h"
 #include "InspectorCounters.h"
 #include "IntRect.h"
-#include "LayoutTypes.h"
 #include "MutationObserver.h"
 #include "PageVisibilityState.h"
 #include "PlatformScreen.h"
@@ -106,9 +105,11 @@ class HTMLNameCollection;
 class HitTestRequest;
 class HitTestResult;
 class IntPoint;
+class LayoutPoint;
+class LayoutRect;
 class DOMWrapperWorld;
 class JSNode;
-class Localizer;
+class Locale;
 class MediaCanStartListener;
 class MediaQueryList;
 class MediaQueryMatcher;
@@ -116,7 +117,6 @@ class MouseEventWithHitTestResults;
 class NamedFlowCollection;
 class NodeFilter;
 class NodeIterator;
-class NodeRareData;
 class Page;
 class PlatformMouseEvent;
 class ProcessingInstruction;
@@ -140,7 +140,6 @@ class StyleSheetList;
 class Text;
 class TextResourceDecoder;
 class TreeWalker;
-class UndoManager;
 class WebKitNamedFlow;
 class XMLHttpRequest;
 class XPathEvaluator;
@@ -467,9 +466,6 @@ public:
 
     bool isSrcdocDocument() const { return m_isSrcdocDocument; }
 
-    NodeRareData* documentRareData() const { return m_documentRareData; };
-    void setDocumentRareData(NodeRareData*);
-
     StyleResolver* styleResolverIfExists() const { return m_styleResolver.get(); }
 
     bool isViewSource() const { return m_isViewSource; }
@@ -533,7 +529,7 @@ public:
 
     void recalcStyle(StyleChange = NoChange);
     bool childNeedsAndNotInStyleRecalc();
-    virtual void updateStyleIfNeeded();
+    void updateStyleIfNeeded();
     void updateLayout();
     void updateLayoutIgnorePendingStylesheets();
     PassRefPtr<RenderStyle> styleForElementIgnoringPendingStylesheets(Element*);
@@ -561,7 +557,17 @@ public:
 
     RenderArena* renderArena() { return m_renderArena.get(); }
 
+    // Implemented in RenderView.h to avoid a cyclic header dependency this just
+    // returns renderer so callers can avoid verbose casts.
     RenderView* renderView() const;
+
+    // Shadow the implementations on Node to provide faster access for documents.
+    RenderObject* renderer() const { return m_renderer; }
+    void setRenderer(RenderObject* renderer)
+    {
+        m_renderer = renderer;
+        Node::setRenderer(renderer);
+    }
 
     void clearAXObjectCache();
     AXObjectCache* axObjectCache() const;
@@ -987,7 +993,14 @@ public:
 
     String displayStringModifiedByEncoding(const String&) const;
     PassRefPtr<StringImpl> displayStringModifiedByEncoding(PassRefPtr<StringImpl>) const;
-    void displayBufferModifiedByEncoding(UChar* buffer, unsigned len) const;
+    void displayBufferModifiedByEncoding(LChar* buffer, unsigned len) const
+    {
+        displayBufferModifiedByEncodingInternal(buffer, len);
+    }
+    void displayBufferModifiedByEncoding(UChar* buffer, unsigned len) const
+    {
+        displayBufferModifiedByEncodingInternal(buffer, len);
+    }
 
     // Quirk for the benefit of Apple's Dictionary application.
     void setFrameElementsShouldIgnoreScrolling(bool ignore) { m_frameElementsShouldIgnoreScrolling = ignore; }
@@ -1120,11 +1133,7 @@ public:
 #if ENABLE(MICRODATA)
     PassRefPtr<NodeList> getItems(const String& typeNames);
 #endif
-    
-#if ENABLE(UNDO_MANAGER)
-    PassRefPtr<UndoManager> undoManager();
-#endif
-    
+
     bool isInDocumentWrite() { return m_writeRecursionDepth > 0; }
 
     void suspendScheduledTasks(ActiveDOMObject::ReasonForSuspension);
@@ -1157,8 +1166,8 @@ public:
 
     bool inStyleRecalc() { return m_inStyleRecalc; }
 
-    // Return a Localizer for the default locale if the argument is null or empty.
-    Localizer& getCachedLocalizer(const AtomicString& locale = nullAtom);
+    // Return a Locale for the default locale if the argument is null or empty.
+    Locale& getCachedLocale(const AtomicString& locale = nullAtom);
 
 protected:
     Document(Frame*, const KURL&, bool isXHTML, bool isHTML);
@@ -1194,7 +1203,7 @@ private:
     virtual const KURL& virtualURL() const; // Same as url(), but needed for ScriptExecutionContext to implement it without a performance loss for direct calls.
     virtual KURL virtualCompleteURL(const String&) const; // Same as completeURL() for the same reason as above.
 
-    virtual void addMessage(MessageSource, MessageType, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, PassRefPtr<ScriptCallStack>);
+    virtual void addMessage(MessageSource, MessageType, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, PassRefPtr<ScriptCallStack>, unsigned long requestIdentifier = 0);
 
     virtual double minimumTimerInterval() const;
 
@@ -1217,6 +1226,9 @@ private:
     void pendingTasksTimerFired(Timer<Document>*);
 
     static void didReceiveTask(void*);
+    
+    template <typename CharacterType>
+    void displayBufferModifiedByEncodingInternal(CharacterType*, unsigned) const;
 
 #if ENABLE(PAGE_VISIBILITY_API)
     PageVisibilityState visibilityState() const;
@@ -1435,8 +1447,7 @@ private:
     bool m_sawElementsInKnownNamespaces;
     bool m_isSrcdocDocument;
 
-    NodeRareData* m_documentRareData;
-
+    RenderObject* m_renderer;
     RefPtr<DocumentEventQueue> m_eventQueue;
 
     RefPtr<DocumentWeakReference> m_weakReference;
@@ -1477,10 +1488,6 @@ private:
 #if ENABLE(TOUCH_EVENTS)
     unsigned m_touchEventHandlerCount;
 #endif
-    
-#if ENABLE(UNDO_MANAGER)
-    RefPtr<UndoManager> m_undoManager;
-#endif
 
 #if ENABLE(REQUEST_ANIMATION_FRAME)
     RefPtr<ScriptedAnimationController> m_scriptedAnimationController;
@@ -1514,8 +1521,8 @@ private:
     bool m_didDispatchViewportPropertiesChanged;
 #endif
 
-    typedef HashMap<AtomicString, OwnPtr<Localizer> > LocaleToLocalizerMap;
-    LocaleToLocalizerMap m_localizerCache;
+    typedef HashMap<AtomicString, OwnPtr<Locale> > LocaleIdentifierToLocaleMap;
+    LocaleIdentifierToLocaleMap m_localeCache;
 };
 
 inline void Document::notifyRemovePendingSheetIfNeeded()
@@ -1536,7 +1543,6 @@ inline Node::Node(Document* document, ConstructionType type)
     , m_document(document)
     , m_previous(0)
     , m_next(0)
-    , m_renderer(0)
 {
     if (document)
         document->guardRef();

@@ -26,6 +26,8 @@
  *
  * The following signals (see evas_object_smart_callback_add()) are emitted:
  *
+ * - "authentication,request", Ewk_Auth_Request*: reports that user authentication was requested. Call
+ *   ewk_auth_request_ref() on the request object to process the authentication asynchronously.
  * - "back,forward,list,changed", void: reports that the view's back / forward list had changed.
  * - "close,window", void: window is closed.
  * - "create,window", Evas_Object**: a new window is created.
@@ -34,6 +36,9 @@
  * - "download,finished", Ewk_Download_Job*: reports that a download completed successfully.
  * - "download,request", Ewk_Download_Job*: reports that a new download has been requested. The client should set the
  *   destination path by calling ewk_download_job_destination_set() or the download will fail.
+ * - "file,chooser,request", Ewk_File_Chooser_Request*: reports that a request has been made for the user to choose
+ *   a file (or several) on the file system. Call ewk_file_chooser_request_ref() on the request object to process it
+ *   asynchronously.
  * - "form,submission,request", Ewk_Form_Submission_Request*: Reports that a form request is about to be submitted.
  *   The Ewk_Form_Submission_Request passed contains information about the text fields of the form. This
  *   is typically used to store login information that can be used later to pre-fill the form.
@@ -122,6 +127,8 @@ struct Ewk_View_Smart_Class {
     Eina_Bool (*mouse_move)(Ewk_View_Smart_Data *sd, const Evas_Event_Mouse_Move *ev);
     Eina_Bool (*key_down)(Ewk_View_Smart_Data *sd, const Evas_Event_Key_Down *ev);
     Eina_Bool (*key_up)(Ewk_View_Smart_Data *sd, const Evas_Event_Key_Up *ev);
+    Eina_Bool (*window_geometry_set)(Ewk_View_Smart_Data *sd, Evas_Coord x, Evas_Coord y, Evas_Coord width, Evas_Coord height);
+    Eina_Bool (*window_geometry_get)(Ewk_View_Smart_Data *sd, Evas_Coord *x, Evas_Coord *y, Evas_Coord *width, Evas_Coord *height);
 
     // javascript popup:
     //   - All strings should be guaranteed to be stringshared.
@@ -143,7 +150,7 @@ struct Ewk_View_Smart_Class {
  * The version you have to put into the version field
  * in the @a Ewk_View_Smart_Class structure.
  */
-#define EWK_VIEW_SMART_CLASS_VERSION 6UL
+#define EWK_VIEW_SMART_CLASS_VERSION 7UL
 
 /**
  * Initializer for whole Ewk_View_Smart_Class structure.
@@ -155,7 +162,7 @@ struct Ewk_View_Smart_Class {
  * @see EWK_VIEW_SMART_CLASS_INIT_VERSION
  * @see EWK_VIEW_SMART_CLASS_INIT_NAME_VERSION
  */
-#define EWK_VIEW_SMART_CLASS_INIT(smart_class_init) {smart_class_init, EWK_VIEW_SMART_CLASS_VERSION, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+#define EWK_VIEW_SMART_CLASS_INIT(smart_class_init) {smart_class_init, EWK_VIEW_SMART_CLASS_VERSION, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 /**
  * Initializer to zero a whole Ewk_View_Smart_Class structure.

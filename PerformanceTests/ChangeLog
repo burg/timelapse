@@ -1,3 +1,128 @@
+2012-11-06  Adam Barth  <abarth@webkit.org>
+
+        DOMImplementation should use ScriptWrappable
+        https://bugs.webkit.org/show_bug.cgi?id=101279
+
+        Reviewed by Eric Seidel.
+
+        This simple PerformanceTest measure how quickly we can access
+        document.implementation. The goal of this performance test is just to
+        validate that using ScriptWrappable actually makes the bindings faster.
+
+        * Bindings/document-implementation.html: Added.
+
+2012-11-05  Geoffrey Garen  <ggaren@apple.com>
+
+        WebKit should have performance tests for book chapter reflow
+        https://bugs.webkit.org/show_bug.cgi?id=101271
+
+        Reviewed by Dan Bernstein.
+
+        I grabbed a book chapter from the Project Gutenberg front page:
+
+        * Layout/chapter-reflow-once.html: Added.
+        * Layout/chapter-reflow-thrice.html: Added.
+        * Layout/chapter-reflow-twice.html: Added.
+        * Layout/chapter-reflow.html: Added.
+
+        I also created a torture-test random text generator:
+
+        * Layout/chapter-reflow-once-random.html: Added.
+
+2012-10-29  Zoltan Horvath  <zoltan@webkit.org>
+
+        Turn PageLoad tests into simple performancetests, commit #7 (last) 
+        https://bugs.webkit.org/show_bug.cgi?id=99899
+
+        Reviewed by Ryosuke Niwa.
+
+        We cannot provide an elegant way to measure the memory consumption of the PageLoad tests, but we can turn them into simple
+        performance tests and measure their memory footprint and performance that way. This change moves and renames the related files
+        to their new location and adds html/js wrappers for them.
+
+        This is the #7 (last) commit of the whole patch.
+
+        * PageLoad: Removed.
+        * PageLoad/svg: Removed.
+        * PageLoad/svg/LICENSES: Removed.
+        * PageLoad/svg/files: Removed.
+        * PageLoad/svg/files/33041-Samurai.svg: Removed.
+        * PageLoad/svg/files/42450-under the see.svg: Removed.
+        * PageLoad/svg/files/world-iso.svg: Removed.
+        * PageLoad/svg/svg.pltsuite: Removed.
+        * SVG/Samurai.html: Added.
+        * SVG/UnderTheSee.html: Added.
+        * SVG/WorldIso.html: Added.
+        * SVG/resources/LICENSES: Copied from PerformanceTests/PageLoad/svg/LICENSES.
+        * SVG/resources/Samurai.svg: Copied from PerformanceTests/PageLoad/svg/files/33041-Samurai.svg.
+        * SVG/resources/UnderTheSee.svg: Copied from PerformanceTests/PageLoad/svg/files/42450-under%20the%20see.svg.
+        * SVG/resources/WorldIso.svg: Copied from PerformanceTests/PageLoad/svg/files/world-iso.svg.
+        * SVG/resources/svg.pltsuite: Copied from PerformanceTests/PageLoad/svg/svg.pltsuite.
+        * Skipped: Rename the files on the skipped list also.
+
+2012-10-26  Eric Seidel  <eric@webkit.org>
+
+        Add a microbenchmark for Hindi (complex-text) line-layout
+        https://bugs.webkit.org/show_bug.cgi?id=100024
+
+        Reviewed by Ryosuke Niwa.
+
+        I wrote this to make sure that we don't regress line-breaking performance
+        for the complex-text codepath. This test has shown me that TOT is
+        already 5% slower than Safari 6.0.1 here. :(
+
+        * Layout/hindi-line-layout.html: Added.
+
+2012-10-26  Zoltan Horvath  <zoltan@webkit.org>
+
+        Turn PageLoad tests into simple performancetests, commit #6 
+        https://bugs.webkit.org/show_bug.cgi?id=99899
+
+        Reviewed by Ryosuke Niwa.
+
+        We cannot provide an elegant way to measure the memory consumption of the PageLoad tests, but we can turn them into simple
+        performance tests and measure their memory footprint and performance that way. This change moves and renames the related files
+        to their new location and adds html/js wrappers for them.
+
+        This is the #6 commit of the whole patch.
+
+        * PageLoad/svg/files/gearflowers.svg: Removed.
+        * PageLoad/svg/files/hereGear4.svg: Removed.
+        * PageLoad/svg/files/worldcup.svg: Removed.
+        * SVG/GearFlowers.html: Added.
+        * SVG/HereGear.html: Added.
+        * SVG/Worldcup.html: Added.
+        * SVG/resources/GearFlowers.svg: Copied from PerformanceTests/PageLoad/svg/files/gearflowers.svg.
+        * SVG/resources/HereGear.svg: Copied from PerformanceTests/PageLoad/svg/files/hereGear4.svg.
+        * SVG/resources/Worldcup.svg: Copied from PerformanceTests/PageLoad/svg/files/worldcup.svg.
+        * Skipped: Rename the files on the skipped list also.
+
+2012-10-26  Zoltan Horvath  <zoltan@webkit.org>
+
+        Turn PageLoad tests into simple performancetests, commit #5 
+        https://bugs.webkit.org/show_bug.cgi?id=99899
+
+        Reviewed by Ryosuke Niwa.
+
+        We cannot provide an elegant way to measure the memory consumption of the PageLoad tests, but we can turn them into simple
+        performance tests and measure their memory footprint and performance that way. This change moves and renames the related files
+        to their new location and adds html/js wrappers for them.
+
+        This is the #5 commit of the whole patch.
+
+        * PageLoad/svg/files/Harvey_Rayner.svg: Removed.
+        * PageLoad/svg/files/Sierpinski_carpet_6.svg: Removed.
+        * PageLoad/svg/files/mtsthelens.svg: Removed.
+        * PageLoad/svg/files/mtsthelens0.jpg: Removed.
+        * SVG/HarveyRayner.html: Added.
+        * SVG/MtSaintHelens.html: Added.
+        * SVG/SierpinskiCarpet.html: Added.
+        * SVG/resources/HarveyRayner.svg: Copied from PerformanceTests/PageLoad/svg/files/Harvey_Rayner.svg.
+        * SVG/resources/MtSaintHelens.svg: Copied from PerformanceTests/PageLoad/svg/files/mtsthelens.svg.
+        * SVG/resources/SierpinskiCarpet.svg: Copied from PerformanceTests/PageLoad/svg/files/Sierpinski_carpet_6.svg.
+        * SVG/resources/mtsthelens0.jpg: Copied from PerformanceTests/PageLoad/svg/files/mtsthelens0.jpg.
+        * Skipped: Rename the files on the skipped list also.
+
 2012-10-25  Zoltan Horvath  <zoltan@webkit.org>
 
         Turn PageLoad tests into simple performancetests, commit #4 

@@ -207,7 +207,6 @@ class Port(object):
         baseline_search_paths = self.baseline_search_path()
         return baseline_search_paths[0]
 
-
     def baseline_search_path(self):
         return self.get_option('additional_platform_directory', []) + self._compare_baseline() + self.default_baseline_search_path()
 
@@ -900,6 +899,11 @@ class Port(object):
         method."""
         pass
 
+    def requires_http_server(self):
+        """Does the port require an HTTP server for running tests? This could
+        be the case when the tests aren't run on the host platform."""
+        return False
+
     def start_http_server(self, additional_dirs=None, number_of_servers=None):
         """Start a web server. Raise an error if it can't start or is already running.
 
@@ -923,6 +927,13 @@ class Port(object):
         server = websocket_server.PyWebSocket(self, self.results_directory())
         server.start()
         self._websocket_server = server
+
+    def http_server_supports_ipv6(self):
+        # Cygwin is the only platform to still use Apache 1.3, which only supports IPV4.
+        # Once it moves to Apache 2, we can drop this method altogether.
+        if self.host.platform.is_cygwin():
+            return False
+        return True
 
     def acquire_http_lock(self):
         self._http_lock = http_lock.HttpLock(None, filesystem=self._filesystem, executive=self._executive)

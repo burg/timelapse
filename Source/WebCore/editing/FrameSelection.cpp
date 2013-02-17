@@ -75,7 +75,7 @@ using namespace HTMLNames;
 
 static inline LayoutUnit NoXPosForVerticalArrowNavigation()
 {
-    return MIN_LAYOUT_UNIT;
+    return LayoutUnit::min();
 }
 
 CaretBase::CaretBase(CaretVisibility visibility)
@@ -337,7 +337,7 @@ static void clearRenderViewSelection(const Position& position)
 {
     RefPtr<Document> document = position.anchorNode()->document();
     document->updateStyleIfNeeded();
-    if (RenderView* view = toRenderView(document->renderer()))
+    if (RenderView* view = document->renderView())
         view->clearSelection();
 }
 
@@ -556,6 +556,14 @@ VisiblePosition FrameSelection::endForPlatform() const
     return positionForPlatform(false);
 }
 
+#if ENABLE(USERSELECT_ALL)
+static void adjustPositionForUserSelectAll(VisiblePosition& pos, bool isForward)
+{
+    if (Node* rootUserSelectAll = Position::rootUserSelectAllForNode(pos.deepEquivalent().anchorNode()))
+        pos = isForward ? positionAfterNode(rootUserSelectAll).downstream(CanCrossEditingBoundary) : positionBeforeNode(rootUserSelectAll).upstream(CanCrossEditingBoundary);
+}
+#endif
+
 VisiblePosition FrameSelection::modifyExtendingRight(TextGranularity granularity)
 {
     VisiblePosition pos(m_selection.extent(), m_selection.affinity());
@@ -594,6 +602,9 @@ VisiblePosition FrameSelection::modifyExtendingRight(TextGranularity granularity
         pos = modifyExtendingForward(granularity);
         break;
     }
+#if ENABLE(USERSELECT_ALL)
+    adjustPositionForUserSelectAll(pos, directionOfEnclosingBlock() == LTR);
+#endif
     return pos;
 }
 
@@ -633,7 +644,9 @@ VisiblePosition FrameSelection::modifyExtendingForward(TextGranularity granulari
             pos = endOfDocument(pos);
         break;
     }
-    
+#if ENABLE(USERSELECT_ALL)
+     adjustPositionForUserSelectAll(pos, directionOfEnclosingBlock() == LTR);
+#endif
     return pos;
 }
 
@@ -760,6 +773,9 @@ VisiblePosition FrameSelection::modifyExtendingLeft(TextGranularity granularity)
         pos = modifyExtendingBackward(granularity);
         break;
     }
+#if ENABLE(USERSELECT_ALL)
+    adjustPositionForUserSelectAll(pos, !(directionOfEnclosingBlock() == LTR));
+#endif
     return pos;
 }
        
@@ -804,6 +820,9 @@ VisiblePosition FrameSelection::modifyExtendingBackward(TextGranularity granular
             pos = startOfDocument(pos);
         break;
     }
+#if ENABLE(USERSELECT_ALL)
+    adjustPositionForUserSelectAll(pos, !(directionOfEnclosingBlock() == LTR));
+#endif
     return pos;
 }
 
@@ -956,6 +975,7 @@ bool FrameSelection::modify(EAlteration alter, SelectionDirection direction, Tex
         moveTo(position, userTriggered);
         break;
     case AlterationExtend:
+
         if (!m_selection.isCaret()
             && (granularity == WordGranularity || granularity == ParagraphGranularity || granularity == LineGranularity)
             && m_frame && !m_frame->editor()->behavior().shouldExtendSelectionByWordOrLineAcrossCaret()) {
@@ -1322,7 +1342,7 @@ bool FrameSelection::recomputeCaretRect()
     m_absoluteCaretRepaintBounds = caretRepaintRect(m_selection.start().deprecatedNode());
 
 #if ENABLE(TEXT_CARET)
-    if (RenderView* view = toRenderView(m_frame->document()->renderer())) {
+    if (RenderView* view = m_frame->document()->renderView()) {
         // FIXME: make caret repainting container-aware.
         view->repaintRectangleInViewAndCompositedLayers(oldAbsoluteCaretRepaintBounds, false);
         if (shouldRepaintCaret(view, isContentEditable()))
@@ -1363,9 +1383,11 @@ void CaretBase::invalidateCaretRect(Node* node, bool caretRectChanged)
     // away after clicking.
     m_caretRectNeedsUpdate = true;
 
-    if (!caretRectChanged) {
-        RenderView* view = toRenderView(node->document()->renderer());
-        if (view && shouldRepaintCaret(view, node->isContentEditable()))
+    if (caretRectChanged)
+        return;
+
+    if (RenderView* view = node->document()->renderView()) {
+        if (shouldRepaintCaret(view, node->isContentEditable(Node::UserSelectAllIsAlwaysNonEditable)))
             view->repaintRectangleInViewAndCompositedLayers(caretRepaintRect(node), false);
     }
 }
@@ -1632,7 +1654,7 @@ void FrameSelection::focusedOrActiveStateChanged()
     // Because RenderObject::selectionBackgroundColor() and
     // RenderObject::selectionForegroundColor() check if the frame is active,
     // we have to update places those colors were painted.
-    if (RenderView* view = toRenderView(m_frame->document()->renderer()))
+    if (RenderView* view = m_frame->document()->renderView())
         view->repaintRectangleInViewAndCompositedLayers(enclosingIntRect(bounds()));
 
     // Caret appears in the active frame.

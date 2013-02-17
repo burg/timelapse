@@ -510,7 +510,7 @@ void ResourceLoader::didReceiveAuthenticationChallenge(const AuthenticationChall
     }
     // Only these platforms provide a way to continue without credentials.
     // If we can't continue with credentials, we need to cancel the load altogether.
-#if PLATFORM(MAC) || USE(CFNETWORK) || USE(CURL) || PLATFORM(GTK)
+#if PLATFORM(MAC) || USE(CFNETWORK) || USE(CURL) || PLATFORM(GTK) || PLATFORM(EFL)
     handle()->receivedRequestToContinueWithoutCredential(challenge);
     ASSERT(!handle()->hasAuthenticationChallenge());
 #else
@@ -573,5 +573,15 @@ void ResourceLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addMember(m_deferredRequest);
     info.addMember(m_options);
 }
+
+#if PLATFORM(MAC)
+void ResourceLoader::setIdentifier(unsigned long identifier)
+{
+    // FIXME (NetworkProcess): This is temporary to allow WebKit to directly set the identifier on a ResourceLoader.
+    // More permanently we'll want the identifier to be piped through ResourceLoader::init/start so
+    // it always has it, especially in willSendRequest.
+    m_identifier = identifier;
+}
+#endif
 
 }

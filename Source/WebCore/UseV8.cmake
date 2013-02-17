@@ -48,7 +48,6 @@ LIST(APPEND WebCore_SOURCES
     bindings/v8/V8Binding.cpp
     bindings/v8/V8Collection.cpp
     bindings/v8/V8DOMConfiguration.cpp,
-    bindings/v8/V8DOMMap.cpp
     bindings/v8/V8DOMWindowShell.cpp
     bindings/v8/V8DOMWrapper.cpp
     bindings/v8/V8EventListener.cpp
@@ -204,15 +203,6 @@ IF (ENABLE_SVG)
         bindings/v8/custom/V8SVGElementCustom.cpp
         bindings/v8/custom/V8SVGLengthCustom.cpp
         bindings/v8/custom/V8SVGPathSegCustom.cpp
-    )
-ENDIF ()
-
-IF (ENABLE_UNDO_MANAGER)
-    LIST(APPEND WebCore_SOURCES
-        bindings/v8/DOMTransaction.cpp
-
-        bindings/v8/custom/V8DOMTransactionCustom.cpp
-        bindings/v8/custom/V8UndoManagerCustom.cpp
     )
 ENDIF ()
 

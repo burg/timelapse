@@ -56,6 +56,14 @@
 #include <wtf/text/CString.h>
 #include <wtf/Vector.h>
 
+namespace WTF {
+
+template<> struct SequenceMemoryInstrumentationTraits<WebCore::CachedResourceClient*> {
+    template <typename I> static void reportMemoryUsage(I, I, MemoryClassInfo&) { }
+};
+
+}
+
 using namespace WTF;
 
 namespace WebCore {
@@ -430,8 +438,9 @@ void CachedResource::stopLoading()
     // canceled loads, which silently set our request to 0. Be sure to notify our
     // client in that case, so we don't seem to continue loading forever.
     if (isLoading()) {
+        ASSERT(!m_error.isNull());
         setLoading(false);
-        setStatus(Canceled);
+        setStatus(LoadError);
         checkNotify();
     }
 }

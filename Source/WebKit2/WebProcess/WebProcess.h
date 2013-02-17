@@ -203,7 +203,9 @@ public:
 #endif
 
 #if ENABLE(NETWORK_PROCESS)
+    NetworkProcessConnection* networkConnection();
     void networkProcessConnectionClosed(NetworkProcessConnection*);
+    bool usesNetworkProcess() const { return m_usesNetworkProcess; }
     WebResourceLoadScheduler& webResourceLoadScheduler() { return m_webResourceLoadScheduler; }
 #endif
 
@@ -286,7 +288,7 @@ private:
     virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
     virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
     virtual void didClose(CoreIPC::Connection*);
-    virtual void didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::MessageID);
+    virtual void didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference messageReceiverName, CoreIPC::StringReference messageName) OVERRIDE;
 #if PLATFORM(WIN)
     virtual Vector<HWND> windowsToReceiveSentMessagesWhileWaitingForSyncReply();
 #endif

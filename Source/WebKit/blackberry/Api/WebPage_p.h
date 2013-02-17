@@ -55,7 +55,6 @@ class Element;
 class Frame;
 class GeolocationClientBlackBerry;
 class GraphicsLayerBlackBerry;
-class JavaScriptDebuggerBlackBerry;
 class LayerWebKitThread;
 class Node;
 class Page;
@@ -402,8 +401,6 @@ public:
     virtual void notifyAnimationStarted(const WebCore::GraphicsLayer*, double time) { }
     virtual void notifyFlushRequired(const WebCore::GraphicsLayer*);
     virtual void paintContents(const WebCore::GraphicsLayer*, WebCore::GraphicsContext&, WebCore::GraphicsLayerPaintingPhase, const WebCore::IntRect& inClip) { }
-    virtual bool showDebugBorders(const WebCore::GraphicsLayer*) const;
-    virtual bool showRepaintCounter(const WebCore::GraphicsLayer*) const;
 
     // WebKit thread, plumbed through from ChromeClientBlackBerry.
     void setRootLayerWebKitThread(WebCore::Frame*, WebCore::LayerWebKitThread*);
@@ -461,13 +458,16 @@ public:
     void applySizeOverride(int overrideWidth, int overrideHeight);
     void setTextZoomFactor(float);
 
-    bool postponeDocumentStyleRecalc();
+    void postponeDocumentStyleRecalc();
     void resumeDocumentStyleRecalc();
 
     const WebCore::HitTestResult& hitTestResult(const WebCore::IntPoint& contentPos);
     void clearCachedHitTestResult();
 
     WebCore::IntSize screenSize() const;
+
+    void willComposite();
+    void didComposite();
 
     WebPage* m_webPage;
     WebPageClient* m_client;
@@ -479,10 +479,6 @@ public:
     WebCookieJar* m_cookieJar;
     OwnPtr<WebTapHighlight> m_tapHighlight;
     OwnPtr<SelectionOverlay> m_selectionOverlay;
-
-#if ENABLE(JAVASCRIPT_DEBUGGER)
-    OwnPtr<WebCore::JavaScriptDebuggerBlackBerry> m_scriptDebugger;
-#endif
 
     bool m_visible;
     ActivationStateType m_activationState;

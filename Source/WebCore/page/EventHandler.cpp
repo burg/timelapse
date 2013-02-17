@@ -423,14 +423,21 @@ bool EventHandler::updateSelectionForMouseDownDispatchingSelectStart(Node* targe
     if (!dispatchSelectStart(targetNode))
         return false;
 
-    if (newSelection.isRange())
+    VisibleSelection selection(newSelection);
+#if ENABLE(USERSELECT_ALL)
+    if (Node* rootUserSelectAll = Position::rootUserSelectAllForNode(targetNode)) {
+        selection.setBase(positionBeforeNode(rootUserSelectAll).upstream(CanCrossEditingBoundary));
+        selection.setExtent(positionAfterNode(rootUserSelectAll).downstream(CanCrossEditingBoundary));
+    }
+#endif
+    if (selection.isRange())
         m_selectionInitiationState = ExtendedSelection;
     else {
         granularity = CharacterGranularity;
         m_selectionInitiationState = PlacedCaret;
     }
 
-    m_frame->selection()->setNonDirectionalSelectionIfNeeded(newSelection, granularity);
+    m_frame->selection()->setNonDirectionalSelectionIfNeeded(selection, granularity);
 
     return true;
 }
@@ -849,7 +856,28 @@ void EventHandler::updateSelectionForMouseDrag(const HitTestResult& hitTestResul
         newSelection = VisibleSelection(targetPosition);
     }
 
+#if ENABLE(USERSELECT_ALL)
+    Node* rootUserSelectAllForMousePressNode = Position::rootUserSelectAllForNode(m_mousePressNode.get());
+    if (rootUserSelectAllForMousePressNode && rootUserSelectAllForMousePressNode == Position::rootUserSelectAllForNode(target)) {
+        newSelection.setBase(positionBeforeNode(rootUserSelectAllForMousePressNode).upstream(CanCrossEditingBoundary));
+        newSelection.setExtent(positionAfterNode(rootUserSelectAllForMousePressNode).downstream(CanCrossEditingBoundary));
+    } else {
+        // Reset base for user select all when base is inside user-select-all area and extent < base.
+        if (rootUserSelectAllForMousePressNode && comparePositions(target->renderer()->positionForPoint(hitTestResult.localPoint()), m_mousePressNode->renderer()->positionForPoint(m_dragStartPos)) < 0)
+            newSelection.setBase(positionAfterNode(rootUserSelectAllForMousePressNode).downstream(CanCrossEditingBoundary));
+        
+        Node* rootUserSelectAllForTarget = Position::rootUserSelectAllForNode(target);
+        if (rootUserSelectAllForTarget && m_mousePressNode->renderer() && comparePositions(target->renderer()->positionForPoint(hitTestResult.localPoint()), m_mousePressNode->renderer()->positionForPoint(m_dragStartPos)) < 0)
+            newSelection.setExtent(positionBeforeNode(rootUserSelectAllForTarget).upstream(CanCrossEditingBoundary));
+        else if (rootUserSelectAllForTarget && m_mousePressNode->renderer())
+            newSelection.setExtent(positionAfterNode(rootUserSelectAllForTarget).downstream(CanCrossEditingBoundary));
+        else
+            newSelection.setExtent(targetPosition);
+    }
+#else
     newSelection.setExtent(targetPosition);
+#endif
+
     if (m_frame->selection()->granularity() != CharacterGranularity)
         newSelection.expandUsingGranularity(m_frame->selection()->granularity());
 
@@ -1320,6 +1348,41 @@ static bool nodeIsNotBeingEdited(Node* node, Frame* frame)
     return frame->selection()->rootEditableElement() != node->rootEditableElement();
 }
 
+bool EventHandler::useHandCursor(Node* node, bool isOverLink, bool shiftKey)
+{
+    if (!node)
+        return false;
+
+    bool editable = node->rendererIsEditable();
+    bool editableLinkEnabled = false;
+
+    // If the link is editable, then we need to check the settings to see whether or not the link should be followed
+    if (editable) {
+        ASSERT(m_frame->settings());
+        switch (m_frame->settings()->editableLinkBehavior()) {
+        default:
+        case EditableLinkDefaultBehavior:
+        case EditableLinkAlwaysLive:
+            editableLinkEnabled = true;
+            break;
+
+        case EditableLinkNeverLive:
+            editableLinkEnabled = false;
+            break;
+
+        case EditableLinkLiveWhenNotFocused:
+            editableLinkEnabled = nodeIsNotBeingEdited(node, m_frame) || shiftKey;
+            break;
+
+        case EditableLinkOnlyLiveWithShiftKey:
+            editableLinkEnabled = shiftKey;
+            break;
+        }
+    }
+
+    return ((isOverLink || isSubmitImage(node)) && (!editable || editableLinkEnabled));
+}
+
 OptionalCursor EventHandler::selectCursor(const MouseEventWithHitTestResults& event, Scrollbar* scrollbar)
 {
     if (m_resizeLayer && m_resizeLayer->inResizeMode())
@@ -1380,34 +1443,10 @@ OptionalCursor EventHandler::selectCursor(const MouseEventWithHitTestResults& ev
     switch (style ? style->cursor() : CURSOR_AUTO) {
     case CURSOR_AUTO: {
         bool editable = (node && node->rendererIsEditable());
-        bool editableLinkEnabled = false;
 
-        // If the link is editable, then we need to check the settings to see whether or not the link should be followed
-        if (editable) {
-            ASSERT(m_frame->settings());
-            switch (m_frame->settings()->editableLinkBehavior()) {
-            default:
-            case EditableLinkDefaultBehavior:
-            case EditableLinkAlwaysLive:
-                editableLinkEnabled = true;
-                break;
-
-            case EditableLinkNeverLive:
-                editableLinkEnabled = false;
-                break;
-
-            case EditableLinkLiveWhenNotFocused:
-                editableLinkEnabled = nodeIsNotBeingEdited(node, m_frame) || event.event().shiftKey();
-                break;
-            
-            case EditableLinkOnlyLiveWithShiftKey:
-                editableLinkEnabled = event.event().shiftKey();
-                break;
-            }
-        }
-
-        if ((event.isOverLink() || isSubmitImage(node)) && (!editable || editableLinkEnabled))
+        if (useHandCursor(node, event.isOverLink(), event.event().shiftKey()))
             return handCursor();
+
         bool inResizer = false;
         if (renderer) {
             if (RenderLayer* layer = renderer->enclosingLayer()) {

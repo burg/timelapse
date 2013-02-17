@@ -86,7 +86,6 @@ void (*wkQTClearMediaDownloadCacheForSite)(NSString *site);
 void (*wkQTClearMediaDownloadCache)();
 
 void (*wkSetCGFontRenderingMode)(CGContextRef, NSFont*);
-void (*wkSetCookieStoragePrivateBrowsingEnabled)(BOOL);
 void (*wkSetDragImage)(NSImage*, NSPoint offset);
 void (*wkSetBaseCTM)(CGContextRef, CGAffineTransform);
 void (*wkSetPatternPhaseInUserSpace)(CGContextRef, CGPoint point);
@@ -175,8 +174,10 @@ NSURLRequest* (*wkCopyRequestWithStorageSession)(CFURLStorageSessionRef, NSURLRe
 CFHTTPCookieStorageRef (*wkCopyHTTPCookieStorage)(CFURLStorageSessionRef);
 unsigned (*wkGetHTTPCookieAcceptPolicy)(CFHTTPCookieStorageRef);
 void (*wkSetHTTPCookieAcceptPolicy)(CFHTTPCookieStorageRef, unsigned);
+NSArray *(*wkHTTPCookies)(CFHTTPCookieStorageRef);
 NSArray *(*wkHTTPCookiesForURL)(CFHTTPCookieStorageRef, NSURL *);
 void (*wkSetHTTPCookiesForURL)(CFHTTPCookieStorageRef, NSArray *, NSURL *, NSURL *);
+void (*wkDeleteAllHTTPCookies)(CFHTTPCookieStorageRef);
 void (*wkDeleteHTTPCookie)(CFHTTPCookieStorageRef, NSHTTPCookie *);
 
 CFStringRef (*wkGetCFURLResponseMIMEType)(CFURLResponseRef);

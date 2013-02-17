@@ -55,40 +55,55 @@ class OffScreenRootWindow {
 public:
     OffScreenRootWindow()
     {
-        ++refCount;
+        ++m_refCount;
     }
 
-    Window* get(Display* dpy)
+    Window getXWindow()
     {
-        if (!window) {
-            window = XCreateSimpleWindow(dpy, XDefaultRootWindow(dpy), -1, -1, 1, 1, 0, BlackPixel(dpy, 0), WhitePixel(dpy, 0));
+        if (!m_window) {
+            Display* dpy = display();
+            m_window = XCreateSimpleWindow(dpy, XDefaultRootWindow(dpy), -1, -1, 1, 1, 0, BlackPixel(dpy, 0), WhitePixel(dpy, 0));
             XSetWindowAttributes attributes;
             attributes.override_redirect = true;
-            XChangeWindowAttributes(dpy, window, X11OverrideRedirect, &attributes);
-            display = dpy;
+            XChangeWindowAttributes(dpy, m_window, X11OverrideRedirect, &attributes);
             // Map window to the screen
-            XMapWindow(dpy, window);
+            XMapWindow(dpy, m_window);
         }
 
-        return &window;
+        return m_window;
+    }
+
+    Display* display()
+    {
+        if (!m_display)
+            m_display = XOpenDisplay(0);
+        return m_display;
     }
 
     ~OffScreenRootWindow()
     {
-        if (!--refCount) {
-            XUnmapWindow(display, window);
-            XDestroyWindow(display, window);
+        if (--m_refCount || !m_display)
+            return;
+
+        if (m_window) {
+            XUnmapWindow(m_display, m_window);
+            XDestroyWindow(m_display, m_window);
+            m_window = 0;
         }
+
+        XCloseDisplay(m_display);
+        m_display = 0;
     }
 
 private:
-    static int refCount;
-    static Window window;
-    Display* display;
+    static int m_refCount;
+    static Window m_window;
+    static Display* m_display;
 };
 
-int OffScreenRootWindow::refCount = 0;
-Window OffScreenRootWindow::window = 0;
+int OffScreenRootWindow::m_refCount = 0;
+Window OffScreenRootWindow::m_window = 0;
+Display* OffScreenRootWindow::m_display = 0;
 
 static const int glxSpec[] = {
     // The specification is a set key value pairs stored in a simple array.
@@ -119,7 +134,7 @@ struct GraphicsSurfacePrivate {
         , m_hasAlpha(false)
     {
         GLXContext shareContextObject = 0;
-        m_display = XOpenDisplay(0);
+        m_display = m_offScreenWindow.display();
 
 #if PLATFORM(QT)
         if (shareContext) {
@@ -141,6 +156,8 @@ struct GraphicsSurfacePrivate {
             previousContext->makeCurrent(previousSurface);
 #endif
         }
+#else
+        UNUSED_PARAM(shareContext);
 #endif
 
         int attributes[] = {
@@ -170,9 +187,11 @@ struct GraphicsSurfacePrivate {
             XFreePixmap(m_display, m_xPixmap);
         m_xPixmap = 0;
 
-        if (m_display)
-            XCloseDisplay(m_display);
-        m_display = 0;
+        if (m_fbConfigs)
+            XFree(m_fbConfigs);
+
+        if (m_glContext)
+            glXDestroyContext(m_display, m_glContext);
     }
 
     uint32_t createSurface(const IntSize& size)
@@ -181,16 +200,17 @@ struct GraphicsSurfacePrivate {
         if (!visualInfo)
             return 0;
 
-        Colormap cmap = XCreateColormap(m_display, *m_offScreenWindow.get(m_display), visualInfo->visual, AllocNone);
+        Colormap cmap = XCreateColormap(m_display, m_offScreenWindow.getXWindow(), visualInfo->visual, AllocNone);
         XSetWindowAttributes a;
         a.background_pixel = WhitePixel(m_display, 0);
         a.border_pixel = BlackPixel(m_display, 0);
         a.colormap = cmap;
-        m_surface = XCreateWindow(m_display, *m_offScreenWindow.get(m_display), 0, 0, size.width(), size.height(),
+        m_surface = XCreateWindow(m_display, m_offScreenWindow.getXWindow(), 0, 0, size.width(), size.height(),
             0, visualInfo->depth, InputOutput, visualInfo->visual,
             CWBackPixel | CWBorderPixel | CWColormap, &a);
         XSetWindowBackgroundPixmap(m_display, m_surface, 0);
         XCompositeRedirectWindow(m_display, m_surface, CompositeRedirectManual);
+        XFree(visualInfo);
 
         // Make sure the XRender Extension is available.
         int eventBasep, errorBasep;
@@ -308,7 +328,7 @@ private:
     bool m_hasAlpha;
 };
 
-static bool resolveGLMethods(GraphicsSurfacePrivate* p)
+static bool resolveGLMethods(GraphicsSurfacePrivate*)
 {
     static bool resolved = false;
     if (resolved)
@@ -346,7 +366,7 @@ uint32_t GraphicsSurface::platformGetTextureID()
     return m_texture;
 }
 
-void GraphicsSurface::platformCopyToGLTexture(uint32_t target, uint32_t id, const IntRect& targetRect, const IntPoint& offset)
+void GraphicsSurface::platformCopyToGLTexture(uint32_t /*target*/, uint32_t /*id*/, const IntRect& /*targetRect*/, const IntPoint& /*offset*/)
 {
     // This is not supported by GLX/Xcomposite.
 }
@@ -359,9 +379,10 @@ void GraphicsSurface::platformCopyFromTexture(uint32_t texture, const IntRect& s
 
 void GraphicsSurface::platformPaintToTextureMapper(TextureMapper* textureMapper, const FloatRect& targetRect, const TransformationMatrix& transform, float opacity, BitmapTexture* mask)
 {
+    TextureMapperGL* texMapGL = static_cast<TextureMapperGL*>(textureMapper);
     TransformationMatrix adjustedTransform = transform;
     adjustedTransform.multiply(TransformationMatrix::rectToRect(FloatRect(FloatPoint::zero(), m_size), targetRect));
-    static_cast<TextureMapperGL*>(textureMapper)->drawTexture(platformGetTextureID(), 0, m_size, targetRect, adjustedTransform, opacity, mask);
+    texMapGL->drawTexture(platformGetTextureID(), TextureMapperGL::ShouldFlipTexture, m_size, targetRect, adjustedTransform, opacity, mask);
 }
 
 uint32_t GraphicsSurface::platformFrontBuffer() const
@@ -416,7 +437,7 @@ PassRefPtr<GraphicsSurface> GraphicsSurface::platformImport(const IntSize& size,
     return surface;
 }
 
-char* GraphicsSurface::platformLock(const IntRect& rect, int* outputStride, LockOptions lockOptions)
+char* GraphicsSurface::platformLock(const IntRect&, int* /*outputStride*/, LockOptions)
 {
     // GraphicsSurface is currently only being used for WebGL, which does not require this locking mechanism.
     return 0;

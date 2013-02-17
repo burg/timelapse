@@ -50,6 +50,8 @@ WebInspector.Script = function(scriptId, sourceURL, startLine, startColumn, endL
     this._locations = [];
 }
 
+WebInspector.Script.snippetSourceURLPrefix = "snippets:///";
+
 WebInspector.Script.prototype = {
     /**
      * @return {string}
@@ -170,6 +172,14 @@ WebInspector.Script.prototype = {
     },
 
     /**
+     * @return {boolean}
+     */
+    isSnippet: function()
+    {
+        return this.sourceURL && this.sourceURL.startsWith(WebInspector.Script.snippetSourceURLPrefix);
+    },
+
+    /**
      * @param {number} lineNumber
      * @param {number=} columnNumber
      * @return {WebInspector.UILocation}
@@ -224,7 +234,7 @@ WebInspector.Script.Location.prototype = {
      */
     uiLocation: function()
     {
-        var debuggerModelLocation = /** @type {WebInspector.DebuggerModel.Location} */ this.rawLocation();
+        var debuggerModelLocation = /** @type {WebInspector.DebuggerModel.Location} */ (this.rawLocation());
         return this._script.rawLocationToUILocation(debuggerModelLocation.lineNumber, debuggerModelLocation.columnNumber);
     },
 

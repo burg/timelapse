@@ -34,7 +34,7 @@
 
 #include "IntRect.h"
 #include "KURL.h"
-#include "LayoutTypesInlineMethods.h"
+#include "LayoutRect.h"
 #include "Timer.h"
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
@@ -193,7 +193,10 @@ public:
     virtual String mediaPlayerReferrer() const { return String(); }
     virtual String mediaPlayerUserAgent() const { return String(); }
     virtual CORSMode mediaPlayerCORSMode() const { return Unspecified; }
+    virtual void mediaPlayerEnterFullscreen() { }
     virtual void mediaPlayerExitFullscreen() { }
+    virtual bool mediaPlayerIsFullscreen() const { return false; }
+    virtual bool mediaPlayerIsFullscreenPermitted() const { return false; }
     virtual bool mediaPlayerIsVideo() const { return false; }
     virtual LayoutRect mediaPlayerContentBoxRect() const { return LayoutRect(); }
     virtual void mediaPlayerSetSize(const IntSize&) { }

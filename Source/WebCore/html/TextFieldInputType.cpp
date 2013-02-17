@@ -245,7 +245,7 @@ void TextFieldInputType::createShadowSubtree()
 
     ShadowRoot* shadowRoot = element()->userAgentShadowRoot();
     m_container = HTMLDivElement::create(document);
-    m_container->setShadowPseudoId("-webkit-textfield-decoration-container");
+    m_container->setPseudo(AtomicString("-webkit-textfield-decoration-container", AtomicString::ConstructFromLiteral));
     shadowRoot->appendChild(m_container, ec);
 
     m_innerBlock = TextControlInnerElement::create(document);
@@ -402,7 +402,7 @@ void TextFieldInputType::updatePlaceholderText()
     if (!supportsPlaceholder())
         return;
     ExceptionCode ec = 0;
-    String placeholderText = usesFixedPlaceholder() ? fixedPlaceholder() : element()->strippedPlaceholder();
+    String placeholderText = element()->strippedPlaceholder();
     if (placeholderText.isEmpty()) {
         if (m_placeholder) {
             m_placeholder->parentNode()->removeChild(m_placeholder.get(), ec);
@@ -413,7 +413,7 @@ void TextFieldInputType::updatePlaceholderText()
     }
     if (!m_placeholder) {
         m_placeholder = HTMLDivElement::create(element()->document());
-        m_placeholder->setShadowPseudoId("-webkit-input-placeholder");
+        m_placeholder->setPseudo(AtomicString("-webkit-input-placeholder", AtomicString::ConstructFromLiteral));
         element()->userAgentShadowRoot()->insertBefore(m_placeholder, m_container ? m_container->nextSibling() : innerTextElement()->nextSibling(), ec);
         ASSERT(!ec);
     }

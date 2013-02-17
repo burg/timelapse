@@ -47,15 +47,6 @@ static HashMap<WebLayerID, CoordinatedGraphicsLayer*>& layerByIDMap()
     return globalMap;
 }
 
-CoordinatedGraphicsLayer* CoordinatedGraphicsLayer::layerByID(WebKit::WebLayerID id)
-{
-    HashMap<WebLayerID, CoordinatedGraphicsLayer*>& table = layerByIDMap();
-    HashMap<WebLayerID, CoordinatedGraphicsLayer*>::iterator it = table.find(id);
-    if (it == table.end())
-        return 0;
-    return it->value;
-}
-
 static WebLayerID toWebLayerID(GraphicsLayer* layer)
 {
     return layer ? toCoordinatedGraphicsLayer(layer)->id() : 0;
@@ -136,11 +127,6 @@ CoordinatedGraphicsLayer::~CoordinatedGraphicsLayer()
         m_CoordinatedGraphicsLayerClient->detachLayer(this);
     }
     willBeDestroyed();
-}
-
-void CoordinatedGraphicsLayer::willBeDestroyed()
-{
-    GraphicsLayer::willBeDestroyed();
 }
 
 bool CoordinatedGraphicsLayer::setChildren(const Vector<GraphicsLayer*>& children)
@@ -490,7 +476,6 @@ void CoordinatedGraphicsLayer::syncLayerState()
     m_layerInfo.mask = toWebLayerID(maskLayer());
     m_layerInfo.masksToBounds = masksToBounds();
     m_layerInfo.opacity = opacity();
-    m_layerInfo.parent = toWebLayerID(parent());
     m_layerInfo.pos = position();
     m_layerInfo.preserves3D = preserves3D();
     m_layerInfo.replica = toWebLayerID(replicaLayer());
@@ -651,9 +636,9 @@ Color CoordinatedGraphicsLayer::tiledBackingStoreBackgroundColor() const
     return contentsOpaque() ? Color::white : Color::transparent;
 }
 
-PassOwnPtr<WebCore::GraphicsContext> CoordinatedGraphicsLayer::beginContentUpdate(const WebCore::IntSize& size, ShareableSurface::Handle& handle, WebCore::IntPoint& offset)
+PassOwnPtr<WebCore::GraphicsContext> CoordinatedGraphicsLayer::beginContentUpdate(const WebCore::IntSize& size, int& atlas, WebCore::IntPoint& offset)
 {
-    return m_CoordinatedGraphicsLayerClient->beginContentUpdate(size, contentsOpaque() ? 0 : ShareableBitmap::SupportsAlpha, handle, offset);
+    return m_CoordinatedGraphicsLayerClient->beginContentUpdate(size, contentsOpaque() ? 0 : ShareableBitmap::SupportsAlpha, atlas, offset);
 }
 
 void CoordinatedGraphicsLayer::createTile(int tileID, const SurfaceUpdateInfo& updateInfo, const IntRect& targetRect)
@@ -795,7 +780,7 @@ bool CoordinatedGraphicsLayer::selfOrAncestorHaveNonAffineTransforms()
     return false;
 }
 
-bool CoordinatedGraphicsLayer::addAnimation(const KeyframeValueList& valueList, const IntSize& boxSize, const Animation* anim, const String& keyframesName, double timeOffset)
+bool CoordinatedGraphicsLayer::addAnimation(const KeyframeValueList& valueList, const IntSize& boxSize, const Animation* anim, const String& keyframesName, double delayAsNegativeTimeOffset)
 {
     ASSERT(!keyframesName.isEmpty());
 
@@ -808,15 +793,16 @@ bool CoordinatedGraphicsLayer::addAnimation(const KeyframeValueList& valueList, 
     if (valueList.property() == AnimatedPropertyWebkitTransform)
         listsMatch = validateTransformOperations(valueList, ignoredHasBigRotation) >= 0;
 
-    m_animations.add(GraphicsLayerAnimation(keyframesName, valueList, boxSize, anim, WTF::currentTime() - timeOffset, listsMatch));
+    m_lastAnimationStartTime = WTF::currentTime() - delayAsNegativeTimeOffset;
+    m_animations.add(GraphicsLayerAnimation(keyframesName, valueList, boxSize, anim, m_lastAnimationStartTime, listsMatch));
     m_animationStartedTimer.startOneShot(0);
     didChangeAnimations();
     return true;
 }
 
-void CoordinatedGraphicsLayer::pauseAnimation(const String& animationName, double timeOffset)
+void CoordinatedGraphicsLayer::pauseAnimation(const String& animationName, double time)
 {
-    m_animations.pause(animationName, timeOffset);
+    m_animations.pause(animationName, time);
     didChangeAnimations();
 }
 
@@ -828,7 +814,7 @@ void CoordinatedGraphicsLayer::removeAnimation(const String& animationName)
 
 void CoordinatedGraphicsLayer::animationStartedTimerFired(Timer<CoordinatedGraphicsLayer>*)
 {
-    client()->notifyAnimationStarted(this, /* DOM time */ WTF::currentTime());
+    client()->notifyAnimationStarted(this, m_lastAnimationStartTime);
 }
 }
 #endif

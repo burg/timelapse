@@ -37,7 +37,6 @@
 #include "DOMImplementation.h"
 #include "HTMLImageElement.h"
 #include "HTMLNames.h"
-#include "IntrusiveDOMWrapperMap.h"
 #include "MemoryUsageSupport.h"
 #include "MessagePort.h"
 #include "RetainedDOMInfo.h"
@@ -49,6 +48,7 @@
 #include "V8CSSStyleDeclaration.h"
 #include "V8DOMImplementation.h"
 #include "V8MessagePort.h"
+#include "V8Node.h"
 #include "V8RecursionScope.h"
 #include "V8StyleSheet.h"
 #include "V8StyleSheetList.h"
@@ -67,37 +67,72 @@
 
 namespace WebCore {
 
-class ObjectVisitor : public DOMWrapperVisitor<void> {
+class ImplicitConnection {
 public:
-    explicit ObjectVisitor(Vector<v8::Persistent<v8::Value> >* liveObjects)
-        : m_liveObjects(liveObjects)
+    ImplicitConnection(void* root, v8::Persistent<v8::Value> wrapper)
+        : m_root(root)
+        , m_wrapper(wrapper)
     {
     }
 
-    void visitDOMWrapper(DOMDataStore* store, void* object, v8::Persistent<v8::Object> wrapper)
+    void* root() const { return m_root; }
+    v8::Persistent<v8::Value> wrapper() const { return m_wrapper; }
+
+private:
+    void* m_root;
+    v8::Persistent<v8::Value> m_wrapper;
+};
+
+bool operator<(const ImplicitConnection& left, const ImplicitConnection& right)
+{
+    return left.root() < right.root();
+}
+
+class WrapperGrouper {
+public:
+    WrapperGrouper()
     {
-        WrapperTypeInfo* type = V8DOMWrapper::domWrapperType(wrapper);
+        m_liveObjects.append(V8PerIsolateData::current()->ensureLiveRoot());
+    }
 
-        if (V8MessagePort::info.equals(type)) {
-            // Mark each port as in-use if it's entangled. For simplicity's sake,
-            // we assume all ports are remotely entangled, since the Chromium port
-            // implementation can't tell the difference.
-            MessagePort* port = static_cast<MessagePort*>(object);
-            if (port->isEntangled() || port->hasPendingActivity())
-                m_liveObjects->append(wrapper);
-        } else {
-            ActiveDOMObject* activeDOMObject = type->toActiveDOMObject(wrapper);
-            if (activeDOMObject && activeDOMObject->hasPendingActivity())
-                m_liveObjects->append(wrapper);
+    void addToGroup(void* root, v8::Persistent<v8::Value> wrapper)
+    {
+        m_connections.append(ImplicitConnection(root, wrapper));
+    }
+
+    void keepAlive(v8::Persistent<v8::Value> wrapper)
+    {
+        m_liveObjects.append(wrapper);
+    }
+
+    void apply()
+    {
+        if (m_liveObjects.size() > 1)
+            v8::V8::AddObjectGroup(m_liveObjects.data(), m_liveObjects.size());
+
+        std::sort(m_connections.begin(), m_connections.end());
+        Vector<v8::Persistent<v8::Value> > group;
+        size_t i = 0;
+        while (i < m_connections.size()) {
+            void* root = m_connections[i].root();
+
+            do {
+                group.append(m_connections[i++].wrapper());
+            } while (i < m_connections.size() && root == m_connections[i].root());
+
+            if (group.size() > 1)
+                v8::V8::AddObjectGroup(group.data(), group.size(), 0);
+
+            group.shrink(0);
         }
-
-        type->visitDOMWrapper(store, object, wrapper);
     }
 
 private:
-    Vector<v8::Persistent<v8::Value> >* m_liveObjects;
+    Vector<v8::Persistent<v8::Value> > m_liveObjects;
+    Vector<ImplicitConnection> m_connections;
 };
 
+// FIXME: This should use opaque GC roots.
 static void addImplicitReferencesForNodeWithEventListeners(Node* node, v8::Persistent<v8::Object> wrapper)
 {
     ASSERT(node->hasEventListeners());
@@ -120,15 +155,16 @@ static void addImplicitReferencesForNodeWithEventListeners(Node* node, v8::Persi
     v8::V8::AddImplicitReferences(wrapper, listeners.data(), listeners.size());
 }
 
-static Node* rootForGC(Node* node)
+void* V8GCController::opaqueRootForGC(Node* node)
 {
     if (node->inDocument() || (node->hasTagName(HTMLNames::imgTag) && static_cast<HTMLImageElement*>(node)->hasPendingActivity()))
         return node->document();
 
     if (node->isAttributeNode()) {
-        node = static_cast<Attr*>(node)->ownerElement();
-        if (!node)
-            return 0;
+        Node* ownerElement = static_cast<Attr*>(node)->ownerElement();
+        if (!ownerElement)
+            return node;
+        node = ownerElement;
     }
 
     while (Node* parent = node->parentOrHostNode())
@@ -137,73 +173,61 @@ static Node* rootForGC(Node* node)
     return node;
 }
 
-class ImplicitConnection {
+class WrapperVisitor : public v8::PersistentHandleVisitor {
 public:
-    ImplicitConnection(Node* root, v8::Persistent<v8::Value> wrapper)
-        : m_root(root)
-        , m_wrapper(wrapper)
+    virtual void VisitPersistentHandle(v8::Persistent<v8::Value> value, uint16_t classId) OVERRIDE
     {
-    }
+        ASSERT(value->IsObject());
+        v8::Persistent<v8::Object> wrapper = v8::Persistent<v8::Object>::Cast(value);
 
-    Node* root() const { return m_root; }
-    v8::Persistent<v8::Value> wrapper() const { return m_wrapper; }
-
-public:
-    Node* m_root;
-    v8::Persistent<v8::Value> m_wrapper;
-};
-
-bool operator<(const ImplicitConnection& left, const ImplicitConnection& right)
-{
-    return left.root() < right.root();
-}
-
-class NodeVisitor : public NodeWrapperVisitor {
-public:
-    explicit NodeVisitor(Vector<v8::Persistent<v8::Value> >* liveObjects)
-        : m_liveObjects(liveObjects)
-    {
-    }
-
-    void visitNodeWrapper(Node* node, v8::Persistent<v8::Object> wrapper)
-    {
-        if (node->hasEventListeners())
-            addImplicitReferencesForNodeWithEventListeners(node, wrapper);
-
-        WrapperTypeInfo* type = V8DOMWrapper::domWrapperType(wrapper);  
-
-        ActiveDOMObject* activeDOMObject = type->toActiveDOMObject(wrapper);
-        if (activeDOMObject && activeDOMObject->hasPendingActivity())
-            m_liveObjects->append(wrapper);
-
-        Node* root = rootForGC(node);
-        if (!root)
+        if (classId != v8DOMNodeClassId && classId != v8DOMObjectClassId)
             return;
-        m_connections.append(ImplicitConnection(root, wrapper));
-    }
 
-    void applyGrouping()
-    {
-        std::sort(m_connections.begin(), m_connections.end());
-        Vector<v8::Persistent<v8::Value> > group;
-        size_t i = 0;
-        while (i < m_connections.size()) {
-            Node* root = m_connections[i].root();
+        ASSERT(V8DOMWrapper::maybeDOMWrapper(value));
 
-            do {
-                group.append(m_connections[i++].wrapper());
-            } while (i < m_connections.size() && root == m_connections[i].root());
+        if (value.IsIndependent())
+            return;
 
-            if (group.size() > 1)
-                v8::V8::AddObjectGroup(group.data(), group.size(), new RetainedDOMInfo(root));
+        WrapperTypeInfo* type = V8DOMWrapper::domWrapperType(wrapper);
+        void* object = toNative(wrapper);
 
-            group.shrink(0);
+        if (V8MessagePort::info.equals(type)) {
+            // Mark each port as in-use if it's entangled. For simplicity's sake,
+            // we assume all ports are remotely entangled, since the Chromium port
+            // implementation can't tell the difference.
+            MessagePort* port = static_cast<MessagePort*>(object);
+            if (port->isEntangled() || port->hasPendingActivity())
+                m_grouper.keepAlive(wrapper);
+        } else {
+            ActiveDOMObject* activeDOMObject = type->toActiveDOMObject(wrapper);
+            if (activeDOMObject && activeDOMObject->hasPendingActivity())
+                m_grouper.keepAlive(wrapper);
+        }
+
+        if (classId == v8DOMNodeClassId) {
+            ASSERT(V8Node::HasInstance(wrapper));
+            ASSERT(!wrapper.IsIndependent());
+
+            Node* node = static_cast<Node*>(object);
+
+            if (node->hasEventListeners())
+                addImplicitReferencesForNodeWithEventListeners(node, wrapper);
+
+            m_grouper.addToGroup(V8GCController::opaqueRootForGC(node), wrapper);
+        } else if (classId == v8DOMObjectClassId) {
+            m_grouper.addToGroup(type->opaqueRootForGC(object, wrapper), wrapper);
+        } else {
+            ASSERT_NOT_REACHED();
         }
     }
 
+    void notifyFinished()
+    {
+        m_grouper.apply();
+    }
+
 private:
-    Vector<v8::Persistent<v8::Value> >* m_liveObjects;
-    Vector<ImplicitConnection> m_connections;
+    WrapperGrouper m_grouper;
 };
 
 void V8GCController::gcPrologue(v8::GCType type, v8::GCCallbackFlags flags)
@@ -224,17 +248,9 @@ void V8GCController::majorGCPrologue()
 
     v8::HandleScope scope;
 
-    Vector<v8::Persistent<v8::Value> > liveObjects;
-    liveObjects.append(V8PerIsolateData::current()->ensureLiveRoot());
-
-    NodeVisitor nodeVisitor(&liveObjects);
-    visitAllDOMNodes(&nodeVisitor);
-    nodeVisitor.applyGrouping();
-
-    ObjectVisitor objectVisitor(&liveObjects);
-    visitDOMObjects(&objectVisitor);
-
-    v8::V8::AddObjectGroup(liveObjects.data(), liveObjects.size());
+    WrapperVisitor visitor;
+    v8::V8::VisitHandlesWithClassIds(&visitor);
+    visitor.notifyFinished();
 
     V8PerIsolateData* data = V8PerIsolateData::current();
     data->stringCache()->clearOnGC();
@@ -289,9 +305,20 @@ void V8GCController::checkMemoryUsage()
         MutexLocker locker(workingSetEstimateMBMutex());
         workingSetEstimateMBCopy = workingSetEstimateMB;
     }
-
-    if ((memoryUsageMB > lowMemoryUsageMB && memoryUsageMB > 2 * workingSetEstimateMBCopy) || (memoryUsageMB > highMemoryUsageMB && memoryUsageMB > workingSetEstimateMBCopy + highUsageDeltaMB))
+    if (memoryUsageMB > lowMemoryUsageMB && memoryUsageMB > 2 * workingSetEstimateMBCopy) {
+        // Memory usage is large and doubled since the last GC.
+        // Check if we need to send low memory notification.
+        v8::HeapStatistics heapStatistics;
+        v8::V8::GetHeapStatistics(&heapStatistics);
+        int heapSizeMB = heapStatistics.total_heap_size() >> 20;
+        // Do not send low memory notification if V8 heap size is more than 7/8
+        // of total memory usage. Let V8 to schedule GC itself in this case.
+        if (heapSizeMB < memoryUsageMB / 8 * 7)
+            v8::V8::LowMemoryNotification();
+    } else if (memoryUsageMB > highMemoryUsageMB && memoryUsageMB > workingSetEstimateMBCopy + highUsageDeltaMB) {
+        // We are approaching OOM and memory usage increased by highUsageDeltaMB since the last GC.
         v8::V8::LowMemoryNotification();
+    }
 #endif
 }
 

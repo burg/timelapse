@@ -95,7 +95,6 @@ TextTrackCueBox::TextTrackCueBox(Document* document, TextTrackCue* cue)
     : HTMLElement(divTag, document)
     , m_cue(cue)
 {
-    setShadowPseudoId(shadowPseudoId());
 }
 
 TextTrackCue* TextTrackCueBox::getCue() const
@@ -210,6 +209,7 @@ TextTrackCue::TextTrackCue(ScriptExecutionContext* context, double start, double
     , m_writingDirection(Horizontal)
     , m_cueAlignment(Middle)
     , m_documentFragment(0)
+    , m_track(0)
     , m_scriptExecutionContext(context)
     , m_isActive(false)
     , m_pauseOnExit(false)
@@ -252,10 +252,10 @@ void TextTrackCue::cueDidChange()
 
 TextTrack* TextTrackCue::track() const
 {
-    return m_track.get();
+    return m_track;
 }
 
-void TextTrackCue::setTrack(PassRefPtr<TextTrack>track)
+void TextTrackCue::setTrack(TextTrack* track)
 {
     m_track = track;
 }
@@ -677,10 +677,10 @@ void TextTrackCue::updateDisplayTree(float movieTime)
 
     // Clear the contents of the two sets.
     m_futureDocumentNodes->removeChildren();
-    m_futureDocumentNodes->setShadowPseudoId(futureNodesShadowPseudoId());
+    m_futureDocumentNodes->setPseudo(futureNodesShadowPseudoId());
 
     m_pastDocumentNodes->removeChildren();
-    m_pastDocumentNodes->setShadowPseudoId(pastNodesShadowPseudoId());
+    m_pastDocumentNodes->setPseudo(pastNodesShadowPseudoId());
 
     // Update the two sets containing past and future WebVTT objects.
     RefPtr<DocumentFragment> referenceTree = getCueAsHTML();
