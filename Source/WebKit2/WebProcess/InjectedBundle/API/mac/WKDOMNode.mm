@@ -30,6 +30,7 @@
 #import "WKDOMNode.h"
 
 #import "WKDOMInternals.h"
+#import <WebCore/Document.h>
 
 @implementation WKDOMNode
 
@@ -65,6 +66,13 @@
     _impl->appendChild(WebKit::toWebCoreNode(node), ec);
 }
 
+- (void)removeChild:(WKDOMNode *)node
+{
+    // FIXME: Do something about the exception.
+    WebCore::ExceptionCode ec;
+    _impl->removeChild(WebKit::toWebCoreNode(node), ec);
+}
+
 - (WKDOMDocument *)document
 {
     return WebKit::toWKDOMDocument(_impl->document());
@@ -93,6 +101,16 @@
 - (WKDOMNode *)nextSibling
 {
     return WebKit::toWKDOMNode(_impl->nextSibling());
+}
+
+- (NSArray *)textRects
+{
+    _impl->document()->updateLayoutIgnorePendingStylesheets();
+    if (!_impl->renderer())
+        return nil;
+    Vector<WebCore::IntRect> rects;
+    _impl->textRects(rects);
+    return WebKit::toNSArray(rects);
 }
 
 @end

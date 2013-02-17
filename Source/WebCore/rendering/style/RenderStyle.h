@@ -617,9 +617,11 @@ public:
     ETextTransform textTransform() const { return static_cast<ETextTransform>(inherited_flags._text_transform); }
     ETextDecoration textDecorationsInEffect() const { return static_cast<ETextDecoration>(inherited_flags._text_decorations); }
     ETextDecoration textDecoration() const { return static_cast<ETextDecoration>(visual->textDecoration); }
-#if ENABLE(CSS3_TEXT_DECORATION)
+#if ENABLE(CSS3_TEXT)
     TextDecorationStyle textDecorationStyle() const { return static_cast<TextDecorationStyle>(rareNonInheritedData->m_textDecorationStyle); }
-#endif // CSS3_TEXT_DECORATION
+#else
+    TextDecorationStyle textDecorationStyle() const { return TextDecorationStyleSolid; }
+#endif // CSS3_TEXT
     int wordSpacing() const;
     int letterSpacing() const;
 
@@ -1039,7 +1041,7 @@ public:
     }
 #endif
 
-#if ENABLE(WIDGET_REGION)
+#if ENABLE(DRAGGABLE_REGION)
     DraggableRegionMode getDraggableRegionMode() const { return rareNonInheritedData->m_draggableRegionMode; }
     void setDraggableRegionMode(DraggableRegionMode v) { SET_VAR(rareNonInheritedData, m_draggableRegionMode, v); }
 #endif
@@ -1148,9 +1150,9 @@ public:
     void addToTextDecorationsInEffect(ETextDecoration v) { inherited_flags._text_decorations |= v; }
     void setTextDecorationsInEffect(ETextDecoration v) { inherited_flags._text_decorations = v; }
     void setTextDecoration(ETextDecoration v) { SET_VAR(visual, textDecoration, v); }
-#if ENABLE(CSS3_TEXT_DECORATION)
+#if ENABLE(CSS3_TEXT)
     void setTextDecorationStyle(TextDecorationStyle v) { SET_VAR(rareNonInheritedData, m_textDecorationStyle, v); }
-#endif // CSS3_TEXT_DECORATION
+#endif // CSS3_TEXT
     void setDirection(TextDirection v) { inherited_flags._direction = v; }
     void setLineHeight(Length specifiedLineHeight);
     bool setZoom(float);
@@ -1607,9 +1609,9 @@ public:
     static Length initialLineHeight() { return Length(-100.0, Percent); }
     static ETextAlign initialTextAlign() { return TASTART; }
     static ETextDecoration initialTextDecoration() { return TDNONE; }
-#if ENABLE(CSS3_TEXT_DECORATION)
+#if ENABLE(CSS3_TEXT)
     static TextDecorationStyle initialTextDecorationStyle() { return TextDecorationStyleSolid; }
-#endif // CSS3_TEXT_DECORATION
+#endif // CSS3_TEXT
     static float initialZoom() { return 1.0f; }
     static int initialOutlineOffset() { return 0; }
     static float initialOpacity() { return 1.0f; }
@@ -1632,7 +1634,7 @@ public:
     static EAlignItems initialAlignItems() { return AlignStretch; }
     static EAlignItems initialAlignSelf() { return AlignAuto; }
     static EFlexDirection initialFlexDirection() { return FlowRow; }
-    static EFlexWrap initialFlexWrap() { return FlexWrapNone; }
+    static EFlexWrap initialFlexWrap() { return FlexNoWrap; }
     static EJustifyContent initialJustifyContent() { return JustifyFlexStart; }
     static int initialMarqueeLoopCount() { return -1; }
     static int initialMarqueeSpeed() { return 85; }

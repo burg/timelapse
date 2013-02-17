@@ -235,18 +235,22 @@ void RenderFlexibleBox::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
-LayoutUnit RenderFlexibleBox::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
+static int synthesizedBaselineFromContentBox(const RenderBox* box, LineDirectionMode direction)
 {
-    LayoutUnit baseline = firstLineBoxBaseline();
-    if (baseline != -1) {
-        LayoutUnit marginAscent = direction == HorizontalLine ? marginTop() : marginRight();
-        return baseline + marginAscent;
-    }
-
-    return RenderBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
+    return direction == HorizontalLine ? box->borderTop() + box->paddingTop() + box->contentHeight() : box->borderRight() + box->paddingRight() + box->contentWidth();
 }
 
-LayoutUnit RenderFlexibleBox::firstLineBoxBaseline() const
+int RenderFlexibleBox::baselinePosition(FontBaseline, bool, LineDirectionMode direction, LinePositionMode) const
+{
+    int baseline = firstLineBoxBaseline();
+    if (baseline == -1)
+        baseline = synthesizedBaselineFromContentBox(this, direction);
+
+    int marginAscent = direction == HorizontalLine ? marginTop() : marginRight();
+    return baseline + marginAscent;
+}
+
+int RenderFlexibleBox::firstLineBoxBaseline() const
 {
     ASSERT(m_orderIterator);
 
@@ -273,11 +277,25 @@ LayoutUnit RenderFlexibleBox::firstLineBoxBaseline() const
     if (isColumnFlow() && !hasOrthogonalFlow(baselineChild))
         return mainAxisExtentForChild(baselineChild) + baselineChild->logicalTop();
 
-    LayoutUnit baseline = baselineChild->firstLineBoxBaseline();
-    if (baseline == -1)
-        return -1;
+    int baseline = baselineChild->firstLineBoxBaseline();
+    if (baseline == -1) {
+        // FIXME: We should pass |direction| into firstLineBoxBaseline and stop bailing out if we're a writing mode root.
+        // This would also fix some cases where the flexbox is orthogonal to its container.
+        LineDirectionMode direction = isHorizontalWritingMode() ? HorizontalLine : VerticalLine;
+        return synthesizedBaselineFromContentBox(baselineChild, direction) + baselineChild->logicalTop();
+    }
 
     return baseline + baselineChild->logicalTop();
+}
+
+int RenderFlexibleBox::inlineBlockBaseline(LineDirectionMode direction) const
+{
+    int baseline = firstLineBoxBaseline();
+    if (baseline != -1)
+        return baseline;
+
+    int marginAscent = direction == HorizontalLine ? marginTop() : marginRight();
+    return synthesizedBaselineFromContentBox(this, direction) + marginAscent;
 }
 
 void RenderFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
@@ -407,7 +425,7 @@ bool RenderFlexibleBox::isLeftToRightFlow() const
 
 bool RenderFlexibleBox::isMultiline() const
 {
-    return style()->flexWrap() != FlexWrapNone;
+    return style()->flexWrap() != FlexNoWrap;
 }
 
 Length RenderFlexibleBox::flexBasisForChild(RenderBox* child) const
@@ -643,10 +661,21 @@ LayoutPoint RenderFlexibleBox::flowAwareLocationForChild(RenderBox* child) const
 
 void RenderFlexibleBox::setFlowAwareLocationForChild(RenderBox* child, const LayoutPoint& location)
 {
+    LayoutRect oldFrameRect = child->frameRect();
+
     if (isHorizontalFlow())
         child->setLocation(location);
     else
         child->setLocation(location.transposedPoint());
+
+    // If the child moved, we have to repaint it as well as any floating/positioned
+    // descendants. An exception is if we need a layout. In this case, we know we're going to
+    // repaint ourselves (and the child) anyway.
+    // FIXME: In some cases, we might overpaint as we move a child multiple times. We could reduce
+    // overpainting by keeping track of the original position of a child and running this check on
+    // the final position.
+    if (!selfNeedsLayout() && child->checkForRepaintDuringLayout())
+        child->repaintDuringLayoutIfMoved(oldFrameRect);
 }
 
 LayoutUnit RenderFlexibleBox::mainAxisBorderAndPaddingExtentForChild(RenderBox* child) const
@@ -664,6 +693,7 @@ LayoutUnit RenderFlexibleBox::preferredMainAxisContentExtentForChild(RenderBox* 
     Length flexBasis = flexBasisForChild(child);
     if (flexBasis.isAuto()) {
         LayoutUnit mainAxisExtent = hasOrthogonalFlow(child) ? child->logicalHeight() : child->maxPreferredLogicalWidth();
+        ASSERT(mainAxisExtent - mainAxisBorderAndPaddingExtentForChild(child) >= 0);
         return mainAxisExtent - mainAxisBorderAndPaddingExtentForChild(child);
     }
     return std::max(LayoutUnit(0), computeMainAxisExtentForChild(child, MainOrPreferredSize, flexBasis));
@@ -1123,10 +1153,7 @@ void RenderFlexibleBox::layoutColumnReverse(const OrderedFlexItemList& children,
         }
         mainAxisOffset -= mainAxisExtentForChild(child) + flowAwareMarginEndForChild(child);
 
-        LayoutRect oldRect = child->frameRect();
         setFlowAwareLocationForChild(child, LayoutPoint(mainAxisOffset, crossAxisOffset + flowAwareMarginBeforeForChild(child)));
-        if (!selfNeedsLayout() && child->checkForRepaintDuringLayout())
-            child->repaintDuringLayoutIfMoved(oldRect);
 
         mainAxisOffset -= flowAwareMarginStartForChild(child);
 
@@ -1197,14 +1224,7 @@ void RenderFlexibleBox::adjustAlignmentForChild(RenderBox* child, LayoutUnit del
         return;
     }
 
-    LayoutRect oldRect = child->frameRect();
     setFlowAwareLocationForChild(child, flowAwareLocationForChild(child) + LayoutSize(0, delta));
-
-    // If the child moved, we have to repaint it as well as any floating/positioned
-    // descendants. An exception is if we need a layout. In this case, we know we're going to
-    // repaint ourselves (and the child) anyway.
-    if (!selfNeedsLayout() && child->checkForRepaintDuringLayout())
-        child->repaintDuringLayoutIfMoved(oldRect);
 }
 
 void RenderFlexibleBox::alignChildren(OrderIterator& iterator, const WTF::Vector<LineContext>& lineContexts)
@@ -1303,7 +1323,7 @@ void RenderFlexibleBox::applyStretchAlignmentToChild(RenderBox* child, LayoutUni
             childWidth = child->constrainLogicalWidthInRegionByMinMax(childWidth, childWidth, this);
 
             if (childWidth != child->logicalWidth()) {
-                child->setOverrideLogicalContentWidth(childWidth);
+                child->setOverrideLogicalContentWidth(childWidth - child->borderAndPaddingLogicalWidth());
                 child->setChildNeedsLayout(true, MarkOnlyThis);
                 child->layoutIfNeeded();
             }

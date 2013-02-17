@@ -57,12 +57,12 @@ TEST(IDBDatabaseBackendTest, BackingStoreRetention)
     EXPECT_GT(backingStore->refCount(), 1);
 
     const bool autoIncrement = false;
-    RefPtr<IDBObjectStoreBackendImpl> store = IDBObjectStoreBackendImpl::create(db.get(), 1, "store", IDBKeyPath("keyPath"), autoIncrement, 0);
+    RefPtr<IDBObjectStoreBackendImpl> store = IDBObjectStoreBackendImpl::create(db.get(), IDBObjectStoreMetadata("store", 1, IDBKeyPath("keyPath"), autoIncrement, 0));
     EXPECT_GT(backingStore->refCount(), 1);
 
     const bool unique = false;
     const bool multiEntry = false;
-    RefPtr<IDBIndexBackendImpl> index = IDBIndexBackendImpl::create(db.get(), store.get(), -1, "index", IDBKeyPath("keyPath"), unique, multiEntry);
+    RefPtr<IDBIndexBackendImpl> index = IDBIndexBackendImpl::create(db.get(), store.get(), IDBIndexMetadata("index", -1, IDBKeyPath("keyPath"), unique, multiEntry));
     EXPECT_GT(backingStore->refCount(), 1);
 
     db.clear();
@@ -91,6 +91,8 @@ public:
     virtual void onSuccess(PassRefPtr<IDBTransactionBackendInterface>) OVERRIDE { }
     virtual void onSuccess(PassRefPtr<SerializedScriptValue>) OVERRIDE { }
     virtual void onSuccess(PassRefPtr<SerializedScriptValue>, PassRefPtr<IDBKey>, const IDBKeyPath&) OVERRIDE { };
+    virtual void onSuccess(int64_t) OVERRIDE { }
+    virtual void onSuccess() OVERRIDE { }
     virtual void onSuccess(PassRefPtr<IDBKey>, PassRefPtr<IDBKey>, PassRefPtr<SerializedScriptValue>) OVERRIDE { };
     virtual void onSuccessWithPrefetch(const Vector<RefPtr<IDBKey> >&, const Vector<RefPtr<IDBKey> >&, const Vector<RefPtr<SerializedScriptValue> >&) OVERRIDE { }
     virtual void onBlocked() OVERRIDE { }

@@ -37,7 +37,7 @@ namespace WebCore {
 
 static size_t immutableElementAttributeDataSize(unsigned count)
 {
-    return sizeof(ImmutableElementAttributeData) + sizeof(Attribute) * count;
+    return sizeof(ElementAttributeData) + sizeof(Attribute) * count;
 }
 
 PassRefPtr<ElementAttributeData> ElementAttributeData::createImmutable(const Vector<Attribute>& attributes)
@@ -338,7 +338,7 @@ void ElementAttributeData::cloneDataFrom(const ElementAttributeData& sourceData,
             static_cast<StyledElement&>(targetElement).styleAttributeChanged(attribute.value(), StyledElement::DoNotReparseStyleAttribute);
             continue;
         }
-        targetElement.attributeChanged(attribute);
+        targetElement.attributeChanged(attribute.name(), attribute.value());
     }
 
     if (targetElement.isStyledElement() && sourceData.m_inlineStyleDecl) {

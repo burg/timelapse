@@ -38,6 +38,7 @@
 #define ewk_context_h
 
 #include "ewk_cookie_manager.h"
+#include "ewk_favicon_database.h"
 #include "ewk_navigation_data.h"
 #include "ewk_url_scheme_request.h"
 #include <Evas.h>
@@ -46,8 +47,25 @@
 extern "C" {
 #endif
 
-/** Creates a type name for @a _Ewk_Context. */
-typedef struct _Ewk_Context Ewk_Context;
+/** Creates a type name for @a Ewk_Context. */
+typedef struct Ewk_Context Ewk_Context;
+
+/**
+ * \enum    Ewk_Cache_Model
+ *
+ * @brief   Contains option for cache model
+ */
+enum Ewk_Cache_Model {
+    /// Use the smallest cache capacity.
+    EWK_CACHE_MODEL_DOCUMENT_VIEWER,
+    /// Use bigger cache capacity than EWK_CACHE_MODEL_DOCUMENT_VIEWER.
+    EWK_CACHE_MODEL_DOCUMENT_BROWSER,
+    /// Use the biggest cache capacity.
+    EWK_CACHE_MODEL_PRIMARY_WEBBROWSER
+};
+
+/// Creates a type name for the Ewk_Cache_Model.
+typedef enum Ewk_Cache_Model Ewk_Cache_Model;
 
 /**
  * @typedef Ewk_Url_Scheme_Request_Cb Ewk_Url_Scheme_Request_Cb
@@ -165,6 +183,15 @@ EAPI Ewk_Context *ewk_context_new_with_injected_bundle_path(const char *path);
 EAPI Ewk_Cookie_Manager *ewk_context_cookie_manager_get(const Ewk_Context *context);
 
 /**
+ * Gets the favicon database instance for this @a context.
+ *
+ * @param context context object to query.
+ *
+ * @return Ewk_Favicon_Database object instance or @c NULL in case of failure.
+ */
+EAPI Ewk_Favicon_Database *ewk_context_favicon_database_get(const Ewk_Context *context);
+
+/**
  * Register @a scheme in @a context.
  *
  * When an URL request with @a scheme is made in the #Ewk_Context, the callback
@@ -257,6 +284,27 @@ EAPI void ewk_context_history_callbacks_set(Ewk_Context *context,
  * @see Ewk_Context_History_Client
  */
 EAPI void ewk_context_visited_link_add(Ewk_Context *context, const char *visited_url);
+
+/**
+ * Set @a cache_model as the cache model for @a context.
+ *
+ * By default, it is EWK_CACHE_MODEL_DOCUMENT_VIEWER.
+ *
+ * @param context context object to update.
+ * @param cache_model a #Ewk_Cache_Model.
+ *
+ * @return @c EINA_TRUE on success or @c EINA_FALSE on failure
+ */
+EAPI Eina_Bool ewk_context_cache_model_set(Ewk_Context *context, Ewk_Cache_Model cache_model);
+
+/**
+ * Gets the cache model for @a context.
+ *
+ * @param context context object to query.
+ *
+ * @return the cache model for the @a context.
+ */
+EAPI Ewk_Cache_Model ewk_context_cache_model_get(const Ewk_Context *context);
 
 #ifdef __cplusplus
 }

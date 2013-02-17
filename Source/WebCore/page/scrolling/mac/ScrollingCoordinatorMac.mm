@@ -147,7 +147,6 @@ void ScrollingCoordinatorMac::frameViewRootLayerDidChange(FrameView* frameView)
     // If the root layer does not have a ScrollingStateNode, then we should create one.
     ensureRootStateNodeForFrameView(frameView);
     ASSERT(m_scrollingStateTree->rootStateNode());
-    m_scrollingStateTree->rootLayerDidChange();
 
     ScrollingCoordinator::frameViewRootLayerDidChange(frameView);
 
@@ -184,12 +183,13 @@ bool ScrollingCoordinatorMac::requestScrollPositionUpdate(FrameView* frameView, 
     if (!coordinatesScrollingForFrameView(frameView))
         return false;
 
-    if (frameView->frame()->document()->inPageCache()) {
-        // If this frame view's document is being put into the page cache, we don't want to update our
-        // main frame scroll position. Just let the FrameView think that we did.
+    if (frameView->inProgrammaticScroll() || frameView->frame()->document()->inPageCache())
         updateMainFrameScrollPosition(scrollPosition, frameView->inProgrammaticScroll());
+
+    // If this frame view's document is being put into the page cache, we don't want to update our
+    // main frame scroll position. Just let the FrameView think that we did.
+    if (frameView->frame()->document()->inPageCache())
         return true;
-    }
 
     ScrollingStateScrollingNode* stateNode = stateNodeForID(frameView->scrollLayerID());
     if (!stateNode)
@@ -234,22 +234,26 @@ void ScrollingCoordinatorMac::updateMainFrameScrollPositionAndScrollLayerPositio
         scrollLayer->setPosition(-frameView->scrollPosition());
 }
 
-ScrollingNodeID ScrollingCoordinatorMac::attachToStateTree(ScrollingNodeID scrollLayerID)
+ScrollingNodeID ScrollingCoordinatorMac::attachToStateTree(ScrollingNodeID newNodeID, ScrollingNodeID parentID)
 {
-    ASSERT(scrollLayerID);
+    ASSERT(newNodeID);
 
-    ScrollingStateScrollingNode* existingNode = stateNodeForID(scrollLayerID);
+    ScrollingStateScrollingNode* existingNode = stateNodeForID(newNodeID);
     if (existingNode && existingNode == m_scrollingStateTree->rootStateNode())
-        return scrollLayerID;
+        return newNodeID;
 
-    clearStateTree();
+    // If there is no parent, this is the root node. Right now, we only support the root node.
+    // FIXME: In the future, we should append child nodes in the appropriate spot in the state
+    // tree.
+    if (!parentID) {
+        // If we're resetting the root node, we should clear the HashMap and destroy the current children.
+        clearStateTree();
 
-    // FIXME: In the future, this function will have to take a parent ID so that it can
-    // append the node in the appropriate spot in the state tree. For now we always assume
-    // this is the root node.
-    m_scrollingStateTree->setRootStateNode(ScrollingStateScrollingNode::create(m_scrollingStateTree.get(), scrollLayerID));
-    m_stateNodeMap.set(scrollLayerID, m_scrollingStateTree->rootStateNode());
-    return scrollLayerID;
+        m_scrollingStateTree->rootStateNode()->setScrollingNodeID(newNodeID);
+        m_stateNodeMap.set(newNodeID, m_scrollingStateTree->rootStateNode());
+    }
+
+    return newNodeID;
 }
 
 void ScrollingCoordinatorMac::detachFromStateTree(ScrollingNodeID scrollLayerID)
@@ -257,12 +261,16 @@ void ScrollingCoordinatorMac::detachFromStateTree(ScrollingNodeID scrollLayerID)
     if (!scrollLayerID)
         return;
 
+    // The node may not be found if clearStateTree() was recently called.
     ScrollingStateNode* node = m_stateNodeMap.take(scrollLayerID);
+    if (!node)
+        return;
+
     m_scrollingStateTree->removeNode(node);
 
     // ScrollingStateTree::removeNode() will destroy children, so we have to make sure we remove those children
     // from the HashMap.
-   const Vector<ScrollingNodeID>& removedNodes = m_scrollingStateTree->removedNodes();
+    const Vector<ScrollingNodeID>& removedNodes = m_scrollingStateTree->removedNodes();
     size_t size = removedNodes.size();
     for (size_t i = 0; i < size; ++i)
         m_stateNodeMap.remove(removedNodes[i]);
@@ -271,8 +279,7 @@ void ScrollingCoordinatorMac::detachFromStateTree(ScrollingNodeID scrollLayerID)
 void ScrollingCoordinatorMac::clearStateTree()
 {
     m_stateNodeMap.clear();
-    if (ScrollingStateScrollingNode* node = m_scrollingStateTree->rootStateNode())
-        m_scrollingStateTree->removeNode(node);
+    m_scrollingStateTree->removeNode(m_scrollingStateTree->rootStateNode());
 }
 
 ScrollingStateScrollingNode* ScrollingCoordinatorMac::stateNodeForID(ScrollingNodeID scrollLayerID)
@@ -290,7 +297,7 @@ ScrollingStateScrollingNode* ScrollingCoordinatorMac::stateNodeForID(ScrollingNo
 
 void ScrollingCoordinatorMac::ensureRootStateNodeForFrameView(FrameView* frameView)
 {
-    attachToStateTree(frameView->scrollLayerID());
+    attachToStateTree(frameView->scrollLayerID(), 0);
 }
 
 void ScrollingCoordinatorMac::setScrollLayerForNode(GraphicsLayer* scrollLayer, ScrollingStateNode* node)

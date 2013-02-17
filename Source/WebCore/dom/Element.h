@@ -245,7 +245,7 @@ public:
     NamedNodeMap* attributes() const;
 
     // This method is called whenever an attribute is added, changed or removed.
-    virtual void attributeChanged(const Attribute&);
+    virtual void attributeChanged(const QualifiedName&, const AtomicString&);
     virtual void parseAttribute(const Attribute&);
 
     // Only called by the parser immediately after element construction.
@@ -315,6 +315,7 @@ public:
     void updateId(const AtomicString& oldId, const AtomicString& newId);
     void updateId(TreeScope*, const AtomicString& oldId, const AtomicString& newId);
     void updateName(const AtomicString& oldName, const AtomicString& newName);
+    void updateLabel(TreeScope*, const AtomicString& oldForAttributeValue, const AtomicString& newForAttributeValue);
 
     void removeCachedHTMLCollection(HTMLCollection*, CollectionType);
 
@@ -473,9 +474,9 @@ private:
 
     enum SynchronizationOfLazyAttribute { NotInSynchronizationOfLazyAttribute = 0, InSynchronizationOfLazyAttribute };
 
-    void didAddAttribute(const Attribute&);
+    void didAddAttribute(const QualifiedName&, const AtomicString&);
     void willModifyAttribute(const QualifiedName&, const AtomicString& oldValue, const AtomicString& newValue);
-    void didModifyAttribute(const Attribute&);
+    void didModifyAttribute(const QualifiedName&, const AtomicString&);
     void didRemoveAttribute(const QualifiedName&);
 
     void updateInvalidAttributes() const;

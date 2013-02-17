@@ -36,11 +36,13 @@
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/ListHashSet.h>
 #include <wtf/MemoryInstrumentation.h>
 #include <wtf/MemoryInstrumentationArrayBufferView.h>
 #include <wtf/MemoryInstrumentationHashCountedSet.h>
 #include <wtf/MemoryInstrumentationHashMap.h>
 #include <wtf/MemoryInstrumentationHashSet.h>
+#include <wtf/MemoryInstrumentationListHashSet.h>
 #include <wtf/MemoryInstrumentationString.h>
 #include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/RefCounted.h>
@@ -95,7 +97,7 @@ public:
 private:
     class Client : public WTF::MemoryInstrumentationClient {
     public:
-        virtual void countObjectSize(MemoryObjectType objectType, size_t size)
+        virtual void countObjectSize(const void*, MemoryObjectType objectType, size_t size)
         {
             TypeToSizeMap::AddResult result = m_totalSizes.add(objectType, size);
             if (!result.isNewEntry)
@@ -472,7 +474,7 @@ TEST(MemoryInstrumentationTest, detectReportMemoryUsageMethod)
     {
         InstrumentationTestHelper helper;
 
-        OwnPtr<InstrumentedTemplate<String> > value = adoptPtr(new InstrumentedTemplate<String>(""));
+        OwnPtr<InstrumentedTemplate<String> > value(adoptPtr(new InstrumentedTemplate<String>("")));
         InstrumentedOwner<InstrumentedTemplate<String>* > root(value.get());
         helper.addRootObject(root);
         EXPECT_EQ(sizeof(InstrumentedTemplate<String>) + sizeof(StringImpl), helper.reportedSizeForAllTypes());
@@ -482,7 +484,7 @@ TEST(MemoryInstrumentationTest, detectReportMemoryUsageMethod)
     {
         InstrumentationTestHelper helper;
 
-        OwnPtr<InstrumentedTemplate<NotInstrumented> > value = adoptPtr(new InstrumentedTemplate<NotInstrumented>(""));
+        OwnPtr<InstrumentedTemplate<NotInstrumented> > value(adoptPtr(new InstrumentedTemplate<NotInstrumented>("")));
         InstrumentedOwner<InstrumentedTemplate<NotInstrumented>* > root(value.get());
         helper.addRootObject(root);
         EXPECT_EQ(sizeof(InstrumentedTemplate<NotInstrumented>), helper.reportedSizeForAllTypes());
@@ -634,7 +636,7 @@ TEST(MemoryInstrumentationTest, hashMapWithInstrumentedPointerKeysAndPointerValu
     InstrumentationTestHelper helper;
 
     typedef HashMap<Instrumented*, Instrumented*> InstrumentedToInstrumentedMap;
-    OwnPtr<InstrumentedToInstrumentedMap> value = adoptPtr(new InstrumentedToInstrumentedMap());
+    OwnPtr<InstrumentedToInstrumentedMap> value(adoptPtr(new InstrumentedToInstrumentedMap()));
     Vector<OwnPtr<Instrumented> > valuesVector;
     size_t count = 10;
     for (size_t i = 0; i < count; ++i) {
@@ -646,6 +648,43 @@ TEST(MemoryInstrumentationTest, hashMapWithInstrumentedPointerKeysAndPointerValu
     helper.addRootObject(root);
     EXPECT_EQ(sizeof(InstrumentedToInstrumentedMap) + sizeof(InstrumentedToInstrumentedMap::ValueType) * value->capacity() + 2 * (sizeof(Instrumented) + sizeof(NotInstrumented)) * value->size(), helper.reportedSizeForAllTypes());
     EXPECT_EQ(2u * 2u * count + 1, helper.visitedObjects());
+}
+
+TEST(MemoryInstrumentationTest, listHashSetWithInstrumentedType)
+{
+    InstrumentationTestHelper helper;
+
+    typedef ListHashSet<String, 8> TestSet;
+    OwnPtr<TestSet> value = adoptPtr(new TestSet());
+    size_t count = 10;
+    for (size_t i = 0; i < count; ++i)
+        value->add(String::number(i));
+    InstrumentedOwner<TestSet* > root(value.get());
+    helper.addRootObject(root);
+    EXPECT_EQ(sizeof(TestSet) + sizeof(String) * value->capacity() + (sizeof(StringImpl) + 1 * sizeof(LChar)) * count +
+        sizeof(WTF::ListHashSetNodeAllocator<String, 8>) + sizeof(WTF::ListHashSetNode<String, 8>) * (count - 8),
+        helper.reportedSizeForAllTypes());
+    EXPECT_EQ(1 + count, helper.visitedObjects());
+}
+
+TEST(MemoryInstrumentationTest, listHashSetWithInstrumentedTypeAfterValuesRemoval)
+{
+    InstrumentationTestHelper helper;
+
+    typedef ListHashSet<String, 8> TestSet;
+    OwnPtr<TestSet> value = adoptPtr(new TestSet());
+    size_t count = 20;
+    for (size_t i = 0; i < count; ++i)
+        value->add(String::number(i));
+    // Remove 10 values, 8 of which were allocated in the internal buffer.
+    for (size_t i = 0; i < 10; ++i)
+        value->remove(String::number(i));
+    InstrumentedOwner<TestSet* > root(value.get());
+    helper.addRootObject(root);
+    EXPECT_EQ(sizeof(TestSet) + sizeof(String) * value->capacity() + (sizeof(StringImpl) + 2 * sizeof(LChar)) * (count - 10) +
+        sizeof(WTF::ListHashSetNodeAllocator<String, 8>) + sizeof(WTF::ListHashSetNode<String, 8>) * (count - 10),
+        helper.reportedSizeForAllTypes());
+    EXPECT_EQ(1 + (count - 10), helper.visitedObjects());
 }
 
 class InstrumentedConvertibleToInt {
@@ -673,7 +712,7 @@ TEST(MemoryInstrumentationTest, hashMapWithValuesConvertibleToInt)
     InstrumentationTestHelper helper;
 
     typedef HashMap<InstrumentedConvertibleToInt*, InstrumentedConvertibleToInt> TestMap;
-    OwnPtr<TestMap> value = adoptPtr(new TestMap());
+    OwnPtr<TestMap> value(adoptPtr(new TestMap()));
     Vector<OwnPtr<InstrumentedConvertibleToInt> > keysVector;
     Vector<OwnPtr<NotInstrumented> > valuesVector;
     size_t count = 10;
@@ -694,7 +733,7 @@ TEST(MemoryInstrumentationTest, hashMapWithEnumKeysAndInstrumentedValues)
     InstrumentationTestHelper helper;
 
     typedef HashMap<TestEnum, String> EnumToStringMap;
-    OwnPtr<EnumToStringMap> value = adoptPtr(new EnumToStringMap());
+    OwnPtr<EnumToStringMap> value(adoptPtr(new EnumToStringMap()));
     size_t count = MY_ENUM_MAX;
     for (size_t i = ONE; i <= count; ++i)
         value->set(static_cast<TestEnum>(i), String::number(i));
@@ -709,7 +748,7 @@ TEST(MemoryInstrumentationTest, hashCountedSetWithInstrumentedValues)
     InstrumentationTestHelper helper;
 
     typedef HashCountedSet<Instrumented*> TestSet;
-    OwnPtr<TestSet> set = adoptPtr(new TestSet());
+    OwnPtr<TestSet> set(adoptPtr(new TestSet()));
     Vector<OwnPtr<Instrumented> > keysVector;
     size_t count = 10;
     for (size_t i = 0; i < count; ++i) {
@@ -731,6 +770,38 @@ TEST(MemoryInstrumentationTest, arrayBuffer)
     ValueType value(ArrayBuffer::create(1000, sizeof(int)));
     helper.addRootObject(value);
     EXPECT_EQ(sizeof(int) * 1000 + sizeof(ArrayBuffer), helper.reportedSizeForAllTypes());
+    EXPECT_EQ(2u, helper.visitedObjects());
+}
+
+class AncestorWithVirtualMethod {
+public:
+    virtual char* data() { return m_data; }
+
+private:
+    char m_data[10];
+};
+
+class ClassWithTwoAncestors : public AncestorWithVirtualMethod, public Instrumented {
+public:
+    virtual void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+    {
+        MemoryClassInfo info(memoryObjectInfo, this, TestType);
+    }
+};
+
+
+TEST(MemoryInstrumentationTest, instrumentedWithMultipleAncestors)
+{
+    InstrumentationTestHelper helper;
+    OwnPtr<ClassWithTwoAncestors> instance = adoptPtr(new ClassWithTwoAncestors());
+    ClassWithTwoAncestors* descendantPointer = instance.get();
+    InstrumentedOwner<ClassWithTwoAncestors*> descendantPointerOwner(descendantPointer);
+    Instrumented* ancestorPointer = descendantPointer;
+    InstrumentedOwner<Instrumented*> ancestorPointerOwner(ancestorPointer);
+    EXPECT_NE(static_cast<void*>(ancestorPointer), static_cast<void*>(descendantPointer));
+    helper.addRootObject(descendantPointerOwner);
+    helper.addRootObject(ancestorPointerOwner);
+    EXPECT_EQ(sizeof(ClassWithTwoAncestors), helper.reportedSizeForAllTypes());
     EXPECT_EQ(2u, helper.visitedObjects());
 }
 

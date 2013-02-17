@@ -48,6 +48,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/OwnArrayPtr.h>
 #include <wtf/PassOwnArrayPtr.h>
+#include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
 #if ENABLE(WEB_INTENTS)
@@ -74,6 +75,7 @@ TestRunner::TestRunner()
     , m_dumpStatusCallbacks(false)
     , m_dumpTitleChanges(false)
     , m_dumpPixels(true)
+    , m_dumpSelectionRect(false)
     , m_dumpFullScreenCallbacks(false)
     , m_dumpFrameLoadCallbacks(false)
     , m_dumpProgressFinishedCallback(false)
@@ -830,6 +832,42 @@ bool TestRunner::callShouldCloseOnWebView()
 {
     WKBundleFrameRef mainFrame = WKBundlePageGetMainFrame(InjectedBundle::shared().page()->page());
     return WKBundleFrameCallShouldCloseOnWebView(mainFrame);
+}
+
+void TestRunner::queueBackNavigation(unsigned howFarBackward)
+{
+    InjectedBundle::shared().queueBackNavigation(howFarBackward);
+}
+
+void TestRunner::queueForwardNavigation(unsigned howFarForward)
+{
+    InjectedBundle::shared().queueForwardNavigation(howFarForward);
+}
+
+void TestRunner::queueLoad(JSStringRef url, JSStringRef target)
+{
+    WKRetainPtr<WKURLRef> baseURLWK(AdoptWK, WKBundleFrameCopyURL(WKBundlePageGetMainFrame(InjectedBundle::shared().page()->page())));
+    WKRetainPtr<WKURLRef> urlWK(AdoptWK, WKURLCreateWithBaseURL(baseURLWK.get(), toWTFString(toWK(url)).utf8().data()));
+    WKRetainPtr<WKStringRef> urlStringWK(AdoptWK, WKURLCopyString(urlWK.get()));
+
+    InjectedBundle::shared().queueLoad(urlStringWK.get(), toWK(target).get());
+}
+
+void TestRunner::queueReload()
+{
+    InjectedBundle::shared().queueReload();
+}
+
+void TestRunner::queueLoadingScript(JSStringRef script)
+{
+    WKRetainPtr<WKStringRef> scriptWK = toWK(script);
+    InjectedBundle::shared().queueLoadingScript(scriptWK.get());
+}
+
+void TestRunner::queueNonLoadingScript(JSStringRef script)
+{
+    WKRetainPtr<WKStringRef> scriptWK = toWK(script);
+    InjectedBundle::shared().queueNonLoadingScript(scriptWK.get());
 }
 
 } // namespace WTR

@@ -28,7 +28,7 @@
 
 #if ENABLE(THREADED_SCROLLING)
 
-#include "GraphicsLayer.h"
+#include "PlatformLayer.h"
 #include "ScrollingCoordinator.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
@@ -40,6 +40,7 @@
 
 namespace WebCore {
 
+class GraphicsLayer;
 class ScrollingStateTree;
 
 class ScrollingStateNode {
@@ -70,12 +71,14 @@ public:
     void setScrollingStateTree(ScrollingStateTree* tree) { m_scrollingStateTree = tree; }
 
     ScrollingNodeID scrollingNodeID() const { return m_nodeID; }
+    void setScrollingNodeID(ScrollingNodeID nodeID) { m_nodeID = nodeID; }
 
     ScrollingStateNode* parent() const { return m_parent; }
     void setParent(ScrollingStateNode* parent) { m_parent = parent; }
 
-    void appendChild(PassOwnPtr<ScrollingStateNode>);
+    Vector<OwnPtr<ScrollingStateNode> >* children() const { return m_children.get(); }
 
+    void appendChild(PassOwnPtr<ScrollingStateNode>);
     void removeChild(ScrollingStateNode*);
 
 protected:

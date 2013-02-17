@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "Localizer.h"
+#include <wtf/DateMath.h>
 #include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
@@ -36,13 +37,24 @@ public:
 private:
     virtual void initializeLocalizerData() OVERRIDE FINAL;
     virtual double parseDateTime(const String&, DateComponents::Type) OVERRIDE;
-    virtual String formatDateTime(const DateComponents&, FormatType = FormatTypeUnspecified) OVERRIDE;
 #if ENABLE(CALENDAR_PICKER)
     virtual String dateFormatText() OVERRIDE;
     virtual bool isRTL() OVERRIDE;
 #endif
+#if ENABLE(CALENDAR_PICKER) || ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+    virtual const Vector<String>& monthLabels() OVERRIDE;
+#endif
 #if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
     virtual String dateFormat() OVERRIDE;
+    virtual String monthFormat() OVERRIDE;
+    virtual const Vector<String>& shortMonthLabels() OVERRIDE;
+    virtual const Vector<String>& standAloneMonthLabels() OVERRIDE;
+    virtual const Vector<String>& shortStandAloneMonthLabels() OVERRIDE;
+
+    Vector<String> m_shortMonthLabels;
+#endif
+#if ENABLE(CALENDAR_PICKER) || ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+    Vector<String> m_monthLabels;
 #endif
 };
 
@@ -64,11 +76,6 @@ double LocaleNone::parseDateTime(const String&, DateComponents::Type)
     return std::numeric_limits<double>::quiet_NaN();
 }
 
-String LocaleNone::formatDateTime(const DateComponents&, FormatType)
-{
-    return String();
-}
-
 #if ENABLE(CALENDAR_PICKER)
 String LocaleNone::dateFormatText()
 {
@@ -81,10 +88,47 @@ bool LocaleNone::isRTL()
 }
 #endif
 
+#if ENABLE(CALENDAR_PICKER) || ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+const Vector<String>& LocaleNone::monthLabels()
+{
+    if (!m_monthLabels.isEmpty())
+        return m_monthLabels;
+    m_monthLabels.reserveCapacity(WTF_ARRAY_LENGTH(WTF::monthFullName));
+    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(WTF::monthFullName); ++i)
+        m_monthLabels.append(WTF::monthFullName[i]);
+    return m_monthLabels;
+}
+#endif
+
 #if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
 String LocaleNone::dateFormat()
 {
     return ASCIILiteral("dd/MM/yyyyy");
+}
+
+String LocaleNone::monthFormat()
+{
+    return ASCIILiteral("yyyy-MM");
+}
+
+const Vector<String>& LocaleNone::shortMonthLabels()
+{
+    if (!m_shortMonthLabels.isEmpty())
+        return m_shortMonthLabels;
+    m_shortMonthLabels.reserveCapacity(WTF_ARRAY_LENGTH(WTF::monthName));
+    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(WTF::monthName); ++i)
+        m_shortMonthLabels.append(WTF::monthName[i]);
+    return m_shortMonthLabels;
+}
+
+const Vector<String>& LocaleNone::shortStandAloneMonthLabels()
+{
+    return shortMonthLabels();
+}
+
+const Vector<String>& LocaleNone::standAloneMonthLabels()
+{
+    return monthLabels();
 }
 #endif
 

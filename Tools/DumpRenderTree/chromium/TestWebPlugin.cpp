@@ -125,6 +125,7 @@ TestWebPlugin::TestWebPlugin(WebKit::WebFrame* frame,
     , m_context(0)
     , m_acceptsTouchEvent(false)
     , m_printEventDetails(false)
+    , m_canProcessDrag(false)
 {
     static const WebString kAttributePrimitive = WebString::fromUTF8("primitive");
     static const WebString kAttributeBackgroundColor = WebString::fromUTF8("background-color");
@@ -132,6 +133,7 @@ TestWebPlugin::TestWebPlugin(WebKit::WebFrame* frame,
     static const WebString kAttributeOpacity = WebString::fromUTF8("opacity");
     static const WebString kAttributeAcceptsTouch = WebString::fromUTF8("accepts-touch");
     static const WebString kAttributePrintEventDetails = WebString::fromUTF8("print-event-details");
+    static const WebString kAttributeCanProcessDrag = WebString::fromUTF8("can-process-drag");
 
     ASSERT(params.attributeNames.size() == params.attributeValues.size());
     size_t size = params.attributeNames.size();
@@ -151,6 +153,8 @@ TestWebPlugin::TestWebPlugin(WebKit::WebFrame* frame,
             m_acceptsTouchEvent = parseBoolean(attributeValue);
         else if (attributeName == kAttributePrintEventDetails)
             m_printEventDetails = parseBoolean(attributeValue);
+        else if (attributeName == kAttributeCanProcessDrag)
+            m_canProcessDrag = parseBoolean(attributeValue);
     }
 }
 
@@ -202,6 +206,8 @@ void TestWebPlugin::updateGeometry(const WebRect& frameRect,
     if (clipRect == m_rect)
         return;
     m_rect = clipRect;
+    if (m_rect.isEmpty())
+        return;
 
     m_context->reshape(m_rect.width, m_rect.height);
     m_context->viewport(0, 0, m_rect.width, m_rect.height);

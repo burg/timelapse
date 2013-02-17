@@ -1860,7 +1860,7 @@ function maybeAddPngChecksum(expectationDiv, pngUrl)
 {
     // pngUrl gets served from the browser cache since we just loaded it in an
     // <img> tag.
-    request(pngUrl,
+    loader.request(pngUrl,
         function(xhr) {
             // Convert the first 2k of the response to a byte string.
             var bytes = xhr.responseText.substring(0, 2048);
@@ -1954,7 +1954,7 @@ function addExpectationItem(expectationsContainers, parentContainer, platform, p
         if (!isImage)
             childContainer.appendChild(dummyNode);
     } else {
-        request(url,
+        loader.request(url,
             function(xhr) {
                 var item = document.createElement('pre');
                 item.innerText = xhr.responseText;
@@ -2522,12 +2522,12 @@ function hideLegend()
 }
 
 var g_fallbacksMap = {};
-g_fallbacksMap['WIN-XP'] = ['chromium-win-xp', 'chromium-win', 'chromium', 'mac'];
-g_fallbacksMap['WIN-7'] = ['chromium-win', 'chromium', 'mac'];
-g_fallbacksMap['MAC-SNOWLEOPARD'] = ['chromium-mac-snowleopard', 'chromium-mac', 'chromium', 'mac'];
-g_fallbacksMap['MAC-LION'] = ['chromium-mac', 'chromium', 'mac'];
-g_fallbacksMap['LINUX-32'] = ['chromium-linux-x86', 'chromium-linux', 'chromium-win', 'chromium', 'mac'];
-g_fallbacksMap['LINUX-64'] = ['chromium-linux', 'chromium-win', 'chromium', 'mac'];
+g_fallbacksMap['WIN-XP'] = ['chromium-win-xp', 'chromium-win', 'chromium'];
+g_fallbacksMap['WIN-7'] = ['chromium-win', 'chromium'];
+g_fallbacksMap['MAC-SNOWLEOPARD'] = ['chromium-mac-snowleopard', 'chromium-mac', 'chromium'];
+g_fallbacksMap['MAC-LION'] = ['chromium-mac', 'chromium'];
+g_fallbacksMap['LINUX-32'] = ['chromium-linux-x86', 'chromium-linux', 'chromium-win', 'chromium'];
+g_fallbacksMap['LINUX-64'] = ['chromium-linux', 'chromium-win', 'chromium'];
 
 function htmlForFallbackHelp(fallbacks)
 {

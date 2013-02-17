@@ -27,8 +27,8 @@
 #define GraphicsContext3D_h
 
 #include "IntRect.h"
-#include "GraphicsLayer.h"
 #include "GraphicsTypes3D.h"
+#include "PlatformLayer.h"
 #include <wtf/HashMap.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/Noncopyable.h>
@@ -72,6 +72,7 @@ typedef QOpenGLContext* PlatformGraphicsContext3D;
 typedef QSurface* PlatformGraphicsSurface3D;
 #else
 typedef void* PlatformGraphicsContext3D;
+typedef void* PlatformGraphicsSurface3D;
 #endif
 
 #if (PLATFORM(CHROMIUM) || PLATFORM(BLACKBERRY)) && USE(SKIA)
@@ -947,7 +948,7 @@ public:
 
     bool reshapeFBOs(const IntSize&);
     void resolveMultisamplingIfNecessary(const IntRect& = IntRect());
-#if PLATFORM(QT) && USE(GRAPHICS_SURFACE)
+#if (PLATFORM(QT) || PLATFORM(EFL)) && USE(GRAPHICS_SURFACE)
     void createGraphicsSurfaces(const IntSize&);
 #endif
 

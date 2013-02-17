@@ -37,18 +37,21 @@
 #include <wtf/HashSet.h>
 #include <wtf/MemoryInstrumentation.h>
 #include <wtf/Vector.h>
+#include <wtf/text/StringHash.h>
 
 using WTF::MemoryObjectType;
 
 namespace WebCore {
 
 typedef HashSet<const void*> VisitedObjects;
+typedef HashMap<String, size_t> TypeNameToSizeMap;
 
 class MemoryInstrumentationClientImpl : public WTF::MemoryInstrumentationClient {
 public:
-    explicit MemoryInstrumentationClientImpl(VisitedObjects* allocatedObjects)
-        : m_allocatedObjects(allocatedObjects)
-        , m_totalCountedObjects(0)
+    typedef HashMap<const void*, size_t> ObjectToSizeMap;
+
+    MemoryInstrumentationClientImpl()
+        : m_totalCountedObjects(0)
         , m_totalObjectsNotInAllocatedSet(0)
     { }
 
@@ -66,26 +69,27 @@ public:
         return size;
     }
 
-    size_t selfSize() const
-    {
-        return m_visitedObjects.capacity() * sizeof(VisitedObjects::ValueType) +
-            m_totalSizes.capacity() * sizeof(TypeToSizeMap::ValueType);
-    }
+    TypeNameToSizeMap sizesMap() const;
+    VisitedObjects& allocatedObjects() { return m_allocatedObjects; }
+    const ObjectToSizeMap& countedObjects() { return m_countedObjects; }
 
-    bool checkInstrumentedObjects() const { return m_allocatedObjects; }
+    bool checkInstrumentedObjects() const { return !m_allocatedObjects.isEmpty(); }
     size_t visitedObjects() const { return m_visitedObjects.size(); }
     size_t totalCountedObjects() const { return m_totalCountedObjects; }
     size_t totalObjectsNotInAllocatedSet() const { return m_totalObjectsNotInAllocatedSet; }
 
-    virtual void countObjectSize(MemoryObjectType, size_t) OVERRIDE;
+    virtual void countObjectSize(const void*, MemoryObjectType, size_t) OVERRIDE;
     virtual bool visited(const void*) OVERRIDE;
     virtual void checkCountedObject(const void*) OVERRIDE;
+
+    void reportMemoryUsage(MemoryObjectInfo*) const;
 
 private:
     typedef HashMap<MemoryObjectType, size_t> TypeToSizeMap;
     TypeToSizeMap m_totalSizes;
     VisitedObjects m_visitedObjects;
-    const VisitedObjects* m_allocatedObjects;
+    VisitedObjects m_allocatedObjects;
+    ObjectToSizeMap m_countedObjects;
     size_t m_totalCountedObjects;
     size_t m_totalObjectsNotInAllocatedSet;
 };
@@ -98,6 +102,8 @@ public:
     }
 
     size_t selfSize() const;
+
+    void reportMemoryUsage(MemoryObjectInfo*) const;
 
 private:
     virtual void deferInstrumentedPointer(PassOwnPtr<InstrumentedPointerBase>) OVERRIDE;

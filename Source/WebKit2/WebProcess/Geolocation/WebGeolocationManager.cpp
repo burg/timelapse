@@ -26,6 +26,7 @@
 #include "config.h"
 #include "WebGeolocationManager.h"
 
+#include "WebGeolocationManagerMessages.h"
 #include "WebGeolocationManagerProxyMessages.h"
 #include "WebPage.h"
 #include "WebProcess.h"
@@ -41,26 +42,21 @@ namespace WebKit {
 
 WebGeolocationManager::WebGeolocationManager(WebProcess* process)
     : m_process(process)
-    , m_didAddMessageReceiver(false)
 {
+    m_process->addMessageReceiver(Messages::WebGeolocationManager::messageReceiverName(), this);
 }
 
 WebGeolocationManager::~WebGeolocationManager()
 {
 }
 
-void WebGeolocationManager::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::ArgumentDecoder* arguments)
+void WebGeolocationManager::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
 {
-    didReceiveWebGeolocationManagerMessage(connection, messageID, arguments);
+    didReceiveWebGeolocationManagerMessage(connection, messageID, decoder);
 }
 
 void WebGeolocationManager::registerWebPage(WebPage* page)
 {
-    if (!m_didAddMessageReceiver) {
-        m_process->connection()->addMessageReceiver(CoreIPC::MessageClassWebGeolocationManager, this);
-        m_didAddMessageReceiver = true;
-    }
-
     bool wasEmpty = m_pageSet.isEmpty();
 
     m_pageSet.add(page);

@@ -172,6 +172,7 @@ void RenderListBox::selectionChanged()
 
 void RenderListBox::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     RenderBlock::layout();
 
     if (m_vBar) {
@@ -268,7 +269,7 @@ void RenderListBox::computeLogicalHeight(LayoutUnit, LayoutUnit logicalTop, Logi
     RenderBox::computeLogicalHeight(height, logicalTop, computedValues);
 }
 
-LayoutUnit RenderListBox::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode lineDirection, LinePositionMode linePositionMode) const
+int RenderListBox::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode lineDirection, LinePositionMode linePositionMode) const
 {
     return RenderBox::baselinePosition(baselineType, firstLine, lineDirection, linePositionMode) - baselineAdjustment;
 }
@@ -877,7 +878,7 @@ void RenderListBox::setHasVerticalScrollbar(bool hasScrollbar)
         m_vBar->styleChanged();
 
     // Force an update since we know the scrollbars have changed things.
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
     if (document()->hasAnnotatedRegions())
         document()->setAnnotatedRegionsDirty(true);
 #endif

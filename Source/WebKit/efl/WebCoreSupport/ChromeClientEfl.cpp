@@ -591,24 +591,24 @@ PassRefPtr<SearchPopupMenu> ChromeClientEfl::createSearchPopupMenu(PopupMenuClie
 }
 
 #if USE(ACCELERATED_COMPOSITING)
-void ChromeClientEfl::attachRootGraphicsLayer(Frame* frame, GraphicsLayer* rootLayer)
+void ChromeClientEfl::attachRootGraphicsLayer(Frame*, GraphicsLayer* rootLayer)
 {
-    notImplemented();
+    ewk_view_root_graphics_layer_set(m_view, rootLayer);
 }
 
 void ChromeClientEfl::setNeedsOneShotDrawingSynchronization()
 {
-    notImplemented();
+    ewk_view_mark_for_sync(m_view);
 }
 
 void ChromeClientEfl::scheduleCompositingLayerFlush()
 {
-    notImplemented();
+    ewk_view_mark_for_sync(m_view);
 }
 
 ChromeClient::CompositingTriggerFlags ChromeClientEfl::allowedCompositingTriggers() const
 {
-    return 0;
+    return AllTriggers;
 }
 #endif
 
@@ -649,7 +649,7 @@ void ChromeClientEfl::exitFullScreenForElement(WebCore::Element*)
 #endif
 
 #if USE(TILED_BACKING_STORE)
-void ChromeClientEfl::delegatedScrollRequested(const IntPoint& point)
+void ChromeClientEfl::delegatedScrollRequested(const IntPoint&)
 {
     notImplemented();
 }

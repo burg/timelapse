@@ -31,6 +31,7 @@
 #include "DataReference.h"
 #include "DecoderAdapter.h"
 #include "DrawingArea.h"
+#include "DrawingAreaMessages.h"
 #include "InjectedBundle.h"
 #include "InjectedBundleBackForwardList.h"
 #include "InjectedBundleUserMessageCoders.h"
@@ -60,15 +61,18 @@
 #include "WebEventConversion.h"
 #include "WebFrame.h"
 #include "WebFullScreenManager.h"
+#include "WebFullScreenManagerMessages.h"
 #include "WebGeolocationClient.h"
 #include "WebGeometry.h"
 #include "WebImage.h"
 #include "WebInspector.h"
 #include "WebInspectorClient.h"
+#include "WebInspectorMessages.h"
 #include "WebNotificationClient.h"
 #include "WebOpenPanelResultListener.h"
 #include "WebPageCreationParameters.h"
 #include "WebPageGroupProxy.h"
+#include "WebPageMessages.h"
 #include "WebPageProxyMessages.h"
 #include "WebPopupMenu.h"
 #include "WebPreferencesStore.h"
@@ -175,6 +179,10 @@
 
 #ifndef NDEBUG
 #include <wtf/RefCountedLeakCounter.h>
+#endif
+
+#if USE(COORDINATED_GRAPHICS)
+#include "LayerTreeCoordinatorMessages.h"
 #endif
 
 using namespace JSC;
@@ -356,6 +364,20 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
     
     setMediaVolume(parameters.mediaVolume);
 
+    WebProcess::shared().addMessageReceiver(Messages::WebPage::messageReceiverName(), m_pageID, this);
+
+    // FIXME: This should be done in the object constructors, and the objects themselves should be message receivers.
+    WebProcess::shared().addMessageReceiver(Messages::DrawingArea::messageReceiverName(), m_pageID, this);
+#if USE(COORDINATED_GRAPHICS)
+    WebProcess::shared().addMessageReceiver(Messages::LayerTreeCoordinator::messageReceiverName(), m_pageID, this);
+#endif
+#if ENABLE(INSPECTOR)
+    WebProcess::shared().addMessageReceiver(Messages::WebInspector::messageReceiverName(), m_pageID, this);
+#endif
+#if ENABLE(FULLSCREEN_API)
+    WebProcess::shared().addMessageReceiver(Messages::WebFullScreenManager::messageReceiverName(), m_pageID, this);
+#endif
+
 #ifndef NDEBUG
     webPageCounter.increment();
 #endif
@@ -372,6 +394,20 @@ WebPage::~WebPage()
 
     for (HashSet<PluginView*>::const_iterator it = m_pluginViews.begin(), end = m_pluginViews.end(); it != end; ++it)
         (*it)->webPageDestroyed();
+
+    WebProcess::shared().removeMessageReceiver(Messages::WebPage::messageReceiverName(), m_pageID);
+
+    // FIXME: This should be done in the object destructors, and the objects themselves should be message receivers.
+    WebProcess::shared().removeMessageReceiver(Messages::DrawingArea::messageReceiverName(), m_pageID);
+#if USE(COORDINATED_GRAPHICS)
+    WebProcess::shared().removeMessageReceiver(Messages::LayerTreeCoordinator::messageReceiverName(), m_pageID);
+#endif
+#if ENABLE(INSPECTOR)
+    WebProcess::shared().removeMessageReceiver(Messages::WebInspector::messageReceiverName(), m_pageID);
+#endif
+#if ENABLE(FULLSCREEN_API)
+    WebProcess::shared().removeMessageReceiver(Messages::WebFullScreenManager::messageReceiverName(), m_pageID);
+#endif
 
 #ifndef NDEBUG
     webPageCounter.decrement();
@@ -452,6 +488,7 @@ void WebPage::initializeInjectedBundleDiagnosticLoggingClient(WKBundlePageDiagno
     m_logDiagnosticMessageClient.initialize(client);
 }
 
+#if ENABLE(NETSCAPE_PLUGIN_API)
 PassRefPtr<Plugin> WebPage::createPlugin(WebFrame* frame, HTMLPlugInElement* pluginElement, const Plugin::Parameters& parameters)
 {
     String pluginPath;
@@ -489,13 +526,12 @@ PassRefPtr<Plugin> WebPage::createPlugin(WebFrame* frame, HTMLPlugInElement* plu
 
 #if ENABLE(PLUGIN_PROCESS)
     return PluginProxy::create(pluginPath);
-#elif ENABLE(NETSCAPE_PLUGIN_API)
+#else
     NetscapePlugin::setSetExceptionFunction(NPRuntimeObjectMap::setGlobalException);
     return NetscapePlugin::create(NetscapePluginModule::getOrCreate(pluginPath));
-#else
-    return 0;
 #endif
 }
+#endif // ENABLE(NETSCAPE_PLUGIN_API)
 
 EditorState WebPage::editorState() const
 {
@@ -1216,20 +1252,15 @@ void WebPage::setGapBetweenPages(double gap)
     m_page->setPagination(pagination);
 }
 
-void WebPage::postInjectedBundleMessage(const CoreIPC::DataReference& messageData)
+void WebPage::postInjectedBundleMessage(const String& messageName, CoreIPC::MessageDecoder& decoder)
 {
     InjectedBundle* injectedBundle = WebProcess::shared().injectedBundle();
     if (!injectedBundle)
         return;
 
-    CoreIPC::ArgumentDecoder messageDecoder(messageData.data(), messageData.size());
-
-    String messageName;
-    if (!messageDecoder.decode(messageName))
-        return;
-
     RefPtr<APIObject> messageBody;
-    if (!messageDecoder.decode(InjectedBundleUserMessageDecoder(messageBody)))
+    InjectedBundleUserMessageDecoder messageBodyDecoder(messageBody);
+    if (!decoder.decode(messageBodyDecoder))
         return;
 
     injectedBundle->didReceiveMessageToPage(this, messageName, messageBody.get());
@@ -1319,6 +1350,12 @@ PassRefPtr<WebImage> WebPage::scaledSnapshotWithOptions(const IntRect& rect, dou
         coordinateSpace = FrameView::ViewCoordinates;
 
     frameView->paintContentsForSnapshot(graphicsContext.get(), rect, shouldPaintSelection, coordinateSpace);
+
+    if (options & SnapshotOptionsPaintSelectionRectangle) {
+        FloatRect selectionRectangle = m_mainFrame->coreFrame()->selection()->bounds();
+        graphicsContext->setStrokeColor(Color(0xFF, 0, 0), ColorSpaceDeviceRGB);
+        graphicsContext->strokeRect(selectionRectangle, 1);
+    }
 
     return snapshot.release();
 }
@@ -1853,7 +1890,7 @@ void WebPage::didStartPageTransition()
 
 void WebPage::didCompletePageTransition()
 {
-#if PLATFORM(QT)
+#if USE(TILED_BACKING_STORE)
     if (m_mainFrame->coreFrame()->view()->delegatesScrolling())
         // Wait until the UI process sent us the visible rect it wants rendered.
         send(Messages::WebPageProxy::PageTransitionViewportReady());
@@ -2763,18 +2800,18 @@ bool WebPage::windowAndWebPageAreFocused() const
     return m_page->focusController()->isFocused() && m_page->focusController()->isActive();
 }
 
-void WebPage::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::ArgumentDecoder* arguments)
+void WebPage::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
 {
     if (messageID.is<CoreIPC::MessageClassDrawingArea>()) {
         if (m_drawingArea)
-            m_drawingArea->didReceiveDrawingAreaMessage(connection, messageID, arguments);
+            m_drawingArea->didReceiveDrawingAreaMessage(connection, messageID, decoder);
         return;
     }
 
 #if USE(TILED_BACKING_STORE) && USE(ACCELERATED_COMPOSITING)
     if (messageID.is<CoreIPC::MessageClassLayerTreeCoordinator>()) {
         if (m_drawingArea)
-            m_drawingArea->didReceiveLayerTreeCoordinatorMessage(connection, messageID, arguments);
+            m_drawingArea->didReceiveLayerTreeCoordinatorMessage(connection, messageID, decoder);
         return;
     }
 #endif
@@ -2782,24 +2819,24 @@ void WebPage::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Messag
 #if ENABLE(INSPECTOR)
     if (messageID.is<CoreIPC::MessageClassWebInspector>()) {
         if (WebInspector* inspector = this->inspector())
-            inspector->didReceiveWebInspectorMessage(connection, messageID, arguments);
+            inspector->didReceiveWebInspectorMessage(connection, messageID, decoder);
         return;
     }
 #endif
 
 #if ENABLE(FULLSCREEN_API)
     if (messageID.is<CoreIPC::MessageClassWebFullScreenManager>()) {
-        fullScreenManager()->didReceiveMessage(connection, messageID, arguments);
+        fullScreenManager()->didReceiveMessage(connection, messageID, decoder);
         return;
     }
 #endif
 
-    didReceiveWebPageMessage(connection, messageID, arguments);
+    didReceiveWebPageMessage(connection, messageID, decoder);
 }
 
-void WebPage::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::ArgumentDecoder* arguments, OwnPtr<CoreIPC::ArgumentEncoder>& reply)
+void WebPage::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
 {   
-    didReceiveSyncWebPageMessage(connection, messageID, arguments, reply);
+    didReceiveSyncWebPageMessage(connection, messageID, decoder, replyEncoder);
 }
     
 InjectedBundleBackForwardList* WebPage::backForwardList()
@@ -3446,6 +3483,7 @@ void WebPage::setScrollingPerformanceLoggingEnabled(bool enabled)
 
 static bool canPluginHandleResponse(const ResourceResponse& response)
 {
+#if ENABLE(NETSCAPE_PLUGIN_API)
     String pluginPath;
     bool blocked;
     
@@ -3453,6 +3491,9 @@ static bool canPluginHandleResponse(const ResourceResponse& response)
         return false;
     
     return !blocked && !pluginPath.isEmpty();
+#else
+    return false;
+#endif
 }
 
 bool WebPage::shouldUseCustomRepresentationForResponse(const ResourceResponse& response) const

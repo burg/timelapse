@@ -20,6 +20,7 @@
 #include "config.h"
 #include "ShareableSurface.h"
 
+#include "CoordinatedGraphicsArgumentCoders.h"
 #include "GraphicsContext.h"
 #include "WebCoreArgumentCoders.h"
 #include <WebCore/GraphicsSurfaceToken.h>
@@ -36,16 +37,16 @@ ShareableSurface::Handle::Handle()
 {
 }
 
-void ShareableSurface::Handle::encode(CoreIPC::ArgumentEncoder* encoder) const
+void ShareableSurface::Handle::encode(CoreIPC::ArgumentEncoder& encoder) const
 {
-    encoder->encode(m_size);
-    encoder->encode(m_flags);
+    encoder.encode(m_size);
+    encoder.encode(m_flags);
 #if USE(GRAPHICS_SURFACE)
-    encoder->encode(m_graphicsSurfaceToken);
+    encoder.encode(m_graphicsSurfaceToken);
     if (m_graphicsSurfaceToken.isValid())
         return;
 #endif
-    encoder->encode(m_bitmapHandle);
+    encoder.encode(m_bitmapHandle);
 }
 
 bool ShareableSurface::Handle::decode(CoreIPC::ArgumentDecoder* decoder, Handle& handle)
@@ -195,13 +196,13 @@ void ShareableSurface::copyToTexture(PassRefPtr<WebCore::BitmapTexture> passText
         }
 
         RefPtr<Image> image = m_graphicsSurface->createReadOnlyImage(IntRect(sourceOffset, target.size()));
-        texture->updateContents(image.get(), target, IntPoint::zero());
+        texture->updateContents(image.get(), target, IntPoint::zero(), BitmapTexture::UpdateCanModifyOriginalImageData);
     }
 #endif
 
     ASSERT(m_bitmap);
     RefPtr<Image> image = m_bitmap->createImage();
-    texture->updateContents(image.get(), target, sourceOffset);
+    texture->updateContents(image.get(), target, sourceOffset, BitmapTexture::UpdateCanModifyOriginalImageData);
     return;
 }
 #endif // USE(TEXTURE_MAPPER)

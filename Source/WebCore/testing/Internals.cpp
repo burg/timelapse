@@ -297,16 +297,6 @@ Node* Internals::parentTreeScope(Node* node, ExceptionCode& ec)
     return parentTreeScope ? parentTreeScope->rootNode() : 0;
 }
 
-PassRefPtr<NodeList> Internals::distributedNodes(Element* insertionPoint, ExceptionCode& ec)
-{
-    if (!insertionPoint || !isInsertionPoint(insertionPoint)) {
-        ec = INVALID_ACCESS_ERR;
-        return 0;
-    }
-
-    return toInsertionPoint(insertionPoint)->distributedNodes();
-}
-
 bool Internals::hasShadowInsertionPoint(const Node* root, ExceptionCode& ec) const
 {
     if (root && root->isShadowRoot())
@@ -1247,6 +1237,8 @@ String Internals::layerTreeAsText(Document* document, unsigned flags, ExceptionC
     LayerTreeFlags layerTreeFlags = 0;
     if (flags & LAYER_TREE_INCLUDES_VISIBLE_RECTS)
         layerTreeFlags |= LayerTreeFlagsIncludeVisibleRects;
+    if (flags & LAYER_TREE_INCLUDES_TILE_CACHES)
+        layerTreeFlags |= LayerTreeFlagsIncludeTileCaches;
 
     return document->frame()->layerTreeAsText(layerTreeFlags);
 }

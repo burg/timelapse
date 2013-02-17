@@ -91,6 +91,18 @@ using namespace HTMLNames;
 
 #ifndef NDEBUG
 static void* baseOfRenderObjectBeingDeleted;
+
+RenderObject::SetLayoutNeededForbiddenScope::SetLayoutNeededForbiddenScope(RenderObject* renderObject)
+    : m_renderObject(renderObject)
+    , m_preexistingForbidden(m_renderObject->isSetNeedsLayoutForbidden())
+{
+    m_renderObject->setNeedsLayoutIsForbidden(true);
+}
+
+RenderObject::SetLayoutNeededForbiddenScope::~SetLayoutNeededForbiddenScope()
+{
+    m_renderObject->setNeedsLayoutIsForbidden(m_preexistingForbidden);
+}
 #endif
 
 struct SameSizeAsRenderObject {
@@ -135,13 +147,13 @@ RenderObject* RenderObject::createObject(Node* node, RenderStyle* style)
         // RenderImageResourceStyleImage requires a style being present on the image but we don't want to
         // trigger a style change now as the node is not fully attached. Moving this code to style change
         // doesn't make sense as it should be run once at renderer creation.
-        image->m_style = style;
+        image->setStyleInternal(style);
         if (const StyleImage* styleImage = static_cast<const ImageContentData*>(contentData)->image()) {
             image->setImageResource(RenderImageResourceStyleImage::create(const_cast<StyleImage*>(styleImage)));
             image->setIsGeneratedContent();
         } else
             image->setImageResource(RenderImageResource::create());
-        image->m_style = 0;
+        image->setStyleInternal(0);
         return image;
     }
 
@@ -1756,7 +1768,7 @@ void RenderObject::setStyle(PassRefPtr<RenderStyle> style)
     styleWillChange(diff, style.get());
     
     RefPtr<RenderStyle> oldStyle = m_style.release();
-    m_style = style;
+    setStyleInternal(style);
 
     updateFillImages(oldStyle ? oldStyle->backgroundLayers() : 0, m_style ? m_style->backgroundLayers() : 0);
     updateFillImages(oldStyle ? oldStyle->maskLayers() : 0, m_style ? m_style->maskLayers() : 0);
@@ -1803,11 +1815,6 @@ void RenderObject::setStyle(PassRefPtr<RenderStyle> style)
     }
 }
 
-void RenderObject::setStyleInternal(PassRefPtr<RenderStyle> style)
-{
-    m_style = style;
-}
-
 void RenderObject::styleWillChange(StyleDifference diff, const RenderStyle* newStyle)
 {
     if (m_style) {
@@ -1817,7 +1824,7 @@ void RenderObject::styleWillChange(StyleDifference diff, const RenderStyle* newS
             bool visibilityChanged = m_style->visibility() != newStyle->visibility() 
                 || m_style->zIndex() != newStyle->zIndex() 
                 || m_style->hasAutoZIndex() != newStyle->hasAutoZIndex();
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
             if (visibilityChanged)
                 document()->setAnnotatedRegionsDirty(true);
 #endif
@@ -2219,7 +2226,12 @@ RespectImageOrientationEnum RenderObject::shouldRespectImageOrientation() const
 {
     // Respect the image's orientation if it's being used as a full-page image or it's
     // an <img> and the setting to respect it everywhere is set.
-    return document()->isImageDocument() || (document()->settings() && document()->settings()->shouldRespectImageOrientation() && node() && (node()->hasTagName(HTMLNames::imgTag) || node()->hasTagName(HTMLNames::webkitInnerImageTag))) ? RespectImageOrientation : DoNotRespectImageOrientation;
+    return
+#if USE(CG) || PLATFORM(CHROMIUM)
+        // This can only be enabled for ports which honor the orientation flag in their drawing code.
+        document()->isImageDocument() ||
+#endif
+        (document()->settings() && document()->settings()->shouldRespectImageOrientation() && node() && (node()->hasTagName(HTMLNames::imgTag) || node()->hasTagName(HTMLNames::webkitInnerImageTag))) ? RespectImageOrientation : DoNotRespectImageOrientation;
 }
 
 bool RenderObject::hasOutlineAnnotation() const
@@ -2336,6 +2348,11 @@ void RenderObject::willBeDestroyed()
 
     remove();
 
+    // Continuation and first-letter can generate several renderers associated with a single node.
+    // We only want to clear the node's renderer if we are the associated renderer.
+    if (node() && node()->renderer() == this)
+        node()->setRenderer(0);
+
 #ifndef NDEBUG
     if (!documentBeingDestroyed() && view() && view()->hasRenderNamedFlowThreads()) {
         // After remove, the object and the associated information should not be in any flow thread.
@@ -2433,29 +2450,36 @@ void RenderObject::willBeRemovedFromTree()
 
 void RenderObject::destroyAndCleanupAnonymousWrappers()
 {
-    RenderObject* parent = this->parent();
-
-    // If the tree is destroyed or our parent is not anonymous, there is no need for a clean-up phase.
-    if (documentBeingDestroyed() || !parent || !parent->isAnonymous()) {
+    // If the tree is destroyed, there is no need for a clean-up phase.
+    if (documentBeingDestroyed()) {
         destroy();
         return;
     }
 
-    bool parentIsLeftOverAnonymousWrapper = false;
+    RenderObject* destroyRoot = this;
+    for (RenderObject* destroyRootParent = destroyRoot->parent(); destroyRootParent && destroyRootParent->isAnonymous(); destroyRoot = destroyRootParent, destroyRootParent = destroyRootParent->parent()) {
+        // Currently we only remove anonymous cells' wrapper but we should remove all unneeded
+        // wrappers. See http://webkit.org/b/52123 as an example where this is needed.
+        if (!destroyRootParent->isTableCell())
+            break;
 
-    // Currently we only remove anonymous cells' wrapper but we should remove all unneeded
-    // wrappers. See http://webkit.org/b/52123 as an example where this is needed.
-    if (parent->isTableCell())
-        parentIsLeftOverAnonymousWrapper = parent->firstChild() == this && parent->lastChild() == this;
+        if (destroyRootParent->firstChild() != this || destroyRootParent->lastChild() != this)
+            break;
+    }
 
-    destroy();
+    // We repaint, so that the area exposed when this object disappears gets repainted properly.
+    // FIXME: A RenderObject with RenderLayer should probably repaint through it as getting the
+    // repaint rects is O(1) through a RenderLayer (assuming it's up-to-date).
+    if (destroyRoot->everHadLayout()) {
+        if (destroyRoot->isBody())
+            destroyRoot->view()->repaint();
+        else
+            destroyRoot->repaint();
+    }
+
+    destroyRoot->destroy();
 
     // WARNING: |this| is deleted here.
-
-    if (parentIsLeftOverAnonymousWrapper) {
-        ASSERT(!parent->firstChild());
-        parent->destroyAndCleanupAnonymousWrappers();
-    }
 }
 
 void RenderObject::destroy()
@@ -2577,6 +2601,7 @@ void RenderObject::scheduleRelayout()
 
 void RenderObject::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
     RenderObject* child = firstChild();
     while (child) {
@@ -2735,7 +2760,7 @@ void RenderObject::getTextDecorationColors(int decorations, Color& underline, Co
     }
 }
 
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
 void RenderObject::addAnnotatedRegions(Vector<AnnotatedRegionValue>& regions)
 {
     // Convert the style regions to absolute coordinates.
@@ -2774,7 +2799,7 @@ void RenderObject::addAnnotatedRegions(Vector<AnnotatedRegionValue>& regions)
 
         regions.append(region);
     }
-#else // ENABLE(WIDGET_REGION)
+#else // ENABLE(DRAGGABLE_REGION)
     if (style()->getDraggableRegionMode() == DraggableRegionNone)
         return;
     AnnotatedRegionValue region;

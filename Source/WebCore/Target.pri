@@ -318,6 +318,7 @@ SOURCES += \
     css/SelectorChecker.cpp \
     css/ShadowValue.cpp \
     css/StyleBuilder.cpp \
+    css/StyleInvalidationAnalysis.cpp \
     css/StyleMedia.cpp \
     css/StylePropertySet.cpp \
     css/StylePropertyShorthand.cpp \
@@ -816,6 +817,7 @@ SOURCES += \
     loader/CrossOriginAccessControl.cpp \
     loader/CrossOriginPreflightResultCache.cpp \
     loader/cache/CachedResourceLoader.cpp \
+    loader/cache/CachedResourceRequest.cpp \
     loader/DocumentLoadTiming.cpp \
     loader/DocumentLoader.cpp \
     loader/DocumentThreadableLoader.cpp \
@@ -832,7 +834,9 @@ SOURCES += \
     loader/icon/IconLoader.cpp \
     loader/ImageLoader.cpp \
     loader/LinkLoader.cpp \
+    loader/LoaderStrategy.cpp \
     loader/MainResourceLoader.cpp \
+    loader/MixedContentChecker.cpp \
     loader/NavigationAction.cpp \
     loader/NetscapePlugInStreamLoader.cpp \
     loader/PingLoader.cpp \
@@ -971,6 +975,7 @@ SOURCES += \
     platform/graphics/GraphicsContext.cpp \
     platform/graphics/GraphicsLayer.cpp \
     platform/graphics/GraphicsLayerAnimation.cpp \
+    platform/graphics/GraphicsLayerUpdater.cpp \
     platform/graphics/GraphicsLayerTransform.cpp \
     platform/graphics/GraphicsTypes.cpp \
     platform/graphics/Image.cpp \
@@ -1488,6 +1493,7 @@ HEADERS += \
     css/SiblingTraversalStrategies.h \
     css/StyleMedia.h \
     css/StyleBuilder.h \
+    css/StyleInvalidationAnalysis.h \
     css/StylePropertySet.h \
     css/StylePropertyShorthand.h \
     css/StyleResolver.h \
@@ -1957,7 +1963,9 @@ HEADERS += \
     loader/ImageLoader.h \
     loader/LinkLoader.h \
     loader/LinkLoaderClient.h \
+    loader/LoaderStrategy.h \
     loader/MainResourceLoader.h \
+    loader/MixedContentChecker.h \
     loader/NavigationAction.h \
     loader/NetscapePlugInStreamLoader.h \
     loader/PlaceholderDocument.h \
@@ -2211,6 +2219,7 @@ HEADERS += \
     platform/network/Credential.h \
     platform/network/CredentialStorage.h \
     platform/network/ContentTypeParser.h \
+    platform/network/DNSResolveQueue.h \
     platform/network/FormDataBuilder.h \
     platform/network/FormData.h \
     platform/network/HTTPHeaderMap.h \
@@ -2232,7 +2241,6 @@ HEADERS += \
     platform/network/ResourceLoadTiming.h \
     platform/network/ResourceRequestBase.h \
     platform/network/ResourceResponseBase.h \
-    platform/network/qt/DnsPrefetchHelper.h \
     platform/network/qt/NetworkStateNotifierPrivate.h \
     platform/PlatformExportMacros.h \
     platform/PlatformMemoryInstrumentation.h \
@@ -2787,11 +2795,12 @@ SOURCES += \
     platform/graphics/texmap/TextureMapperBackingStore.cpp \
     platform/graphics/texmap/TextureMapperImageBuffer.cpp \
     platform/graphics/texmap/TextureMapperLayer.cpp \
+    platform/network/DNSResolveQueue.cpp \
     platform/network/MIMESniffing.cpp \
     platform/network/qt/CredentialStorageQt.cpp \
     platform/network/qt/ResourceHandleQt.cpp \
     platform/network/qt/ResourceRequestQt.cpp \
-    platform/network/qt/DnsPrefetchHelper.cpp \
+    platform/network/qt/DNSQt.cpp \
     platform/network/qt/NetworkStateNotifierQt.cpp \
     platform/network/qt/ProxyServerQt.cpp \
     platform/network/qt/QtMIMETypeSniffer.cpp \
@@ -2864,6 +2873,7 @@ win32-*|wince* {
 mac {
     SOURCES += \
         platform/text/cf/StringCF.cpp \
+        platform/cf/SharedBufferCF.cpp \
         platform/text/cf/StringImplCF.cpp
 }
 
@@ -3207,7 +3217,6 @@ enable?(VIDEO) {
             platform/mac/DisplaySleepDisabler.cpp \
             platform/graphics/cg/IntRectCG.cpp \
             platform/graphics/cg/FloatSizeCG.cpp \
-            platform/cf/SharedBufferCF.cpp \
             platform/cf/KURLCFNet.cpp
 
          OBJECTIVE_SOURCES += \
@@ -3266,17 +3275,17 @@ enable?(WEB_AUDIO) {
         Modules/webaudio/AudioBufferCallback.h \
         Modules/webaudio/AudioBuffer.h \
         Modules/webaudio/AudioBufferSourceNode.h \
-        Modules/webaudio/AudioChannelMerger.h \
-        Modules/webaudio/AudioChannelSplitter.h \
+        Modules/webaudio/ChannelMergerNode.h \
+        Modules/webaudio/ChannelSplitterNode.h \
         Modules/webaudio/AudioContext.h \
         Modules/webaudio/AudioDestinationNode.h \
         Modules/webaudio/AudioGain.h \
-        Modules/webaudio/AudioGainNode.h \
+        Modules/webaudio/GainNode.h \
         Modules/webaudio/AudioListener.h \
         Modules/webaudio/AudioNode.h \
         Modules/webaudio/AudioNodeInput.h \
         Modules/webaudio/AudioNodeOutput.h \
-        Modules/webaudio/AudioPannerNode.h \
+        Modules/webaudio/PannerNode.h \
         Modules/webaudio/AudioParam.h \
         Modules/webaudio/AudioParamTimeline.h \
         Modules/webaudio/AudioProcessingEvent.h \
@@ -3292,14 +3301,14 @@ enable?(WEB_AUDIO) {
         Modules/webaudio/DelayNode.h \
         Modules/webaudio/DelayProcessor.h \
         Modules/webaudio/DynamicsCompressorNode.h \
-        Modules/webaudio/JavaScriptAudioNode.h \
+        Modules/webaudio/ScriptProcessorNode.h \
         Modules/webaudio/MediaElementAudioSourceNode.h \
         Modules/webaudio/MediaStreamAudioSourceNode.h \
         Modules/webaudio/OfflineAudioCompletionEvent.h \
         Modules/webaudio/OfflineAudioDestinationNode.h \
-        Modules/webaudio/Oscillator.h \
+        Modules/webaudio/OscillatorNode.h \
         Modules/webaudio/RealtimeAnalyser.h \
-        Modules/webaudio/RealtimeAnalyserNode.h \
+        Modules/webaudio/AnalyserNode.h \
         Modules/webaudio/WaveShaperDSPKernel.h \
         Modules/webaudio/WaveShaperNode.h \
         Modules/webaudio/WaveShaperProcessor.h \
@@ -3350,22 +3359,22 @@ enable?(WEB_AUDIO) {
         bindings/js/JSAudioBufferSourceNodeCustom.cpp \
         bindings/js/JSAudioContextCustom.cpp \
         bindings/js/JSDOMWindowWebAudioCustom.cpp \
-        bindings/js/JSJavaScriptAudioNodeCustom.cpp \
+        bindings/js/JSScriptProcessorNodeCustom.cpp \
         Modules/webaudio/AsyncAudioDecoder.cpp \
         Modules/webaudio/AudioBasicInspectorNode.cpp \
         Modules/webaudio/AudioBasicProcessorNode.cpp \
         Modules/webaudio/AudioBuffer.cpp \
         Modules/webaudio/AudioBufferSourceNode.cpp \
-        Modules/webaudio/AudioChannelMerger.cpp \
-        Modules/webaudio/AudioChannelSplitter.cpp \
+        Modules/webaudio/ChannelMergerNode.cpp \
+        Modules/webaudio/ChannelSplitterNode.cpp \
         Modules/webaudio/AudioContext.cpp \
         Modules/webaudio/AudioDestinationNode.cpp \
-        Modules/webaudio/AudioGainNode.cpp \
+        Modules/webaudio/GainNode.cpp \
         Modules/webaudio/AudioListener.cpp \
         Modules/webaudio/AudioNode.cpp \
         Modules/webaudio/AudioNodeInput.cpp \
         Modules/webaudio/AudioNodeOutput.cpp \
-        Modules/webaudio/AudioPannerNode.cpp \
+        Modules/webaudio/PannerNode.cpp \
         Modules/webaudio/AudioParam.cpp \
         Modules/webaudio/AudioParamTimeline.cpp \
         Modules/webaudio/AudioProcessingEvent.cpp \
@@ -3380,14 +3389,14 @@ enable?(WEB_AUDIO) {
         Modules/webaudio/DelayNode.cpp \
         Modules/webaudio/DelayProcessor.cpp \
         Modules/webaudio/DynamicsCompressorNode.cpp \
-        Modules/webaudio/JavaScriptAudioNode.cpp \
+        Modules/webaudio/ScriptProcessorNode.cpp \
         Modules/webaudio/MediaElementAudioSourceNode.cpp \
         Modules/webaudio/MediaStreamAudioSourceNode.cpp \
         Modules/webaudio/OfflineAudioCompletionEvent.cpp \
         Modules/webaudio/OfflineAudioDestinationNode.cpp \
-        Modules/webaudio/Oscillator.cpp \
+        Modules/webaudio/OscillatorNode.cpp \
         Modules/webaudio/RealtimeAnalyser.cpp \
-        Modules/webaudio/RealtimeAnalyserNode.cpp \
+        Modules/webaudio/AnalyserNode.cpp \
         Modules/webaudio/WaveShaperDSPKernel.cpp \
         Modules/webaudio/WaveShaperNode.cpp \
         Modules/webaudio/WaveShaperProcessor.cpp \
@@ -3891,6 +3900,7 @@ enable?(WEBGL) {
         html/canvas/OESStandardDerivatives.h \
         html/canvas/OESTextureFloat.h \
         html/canvas/OESVertexArrayObject.h \
+        html/canvas/OESElementIndexUint.h \
         html/canvas/WebGLTexture.h \
         html/canvas/WebGLUniformLocation.h \
         html/canvas/WebGLVertexArrayObjectOES.h \
@@ -3924,6 +3934,7 @@ enable?(WEBGL) {
         html/canvas/OESStandardDerivatives.cpp \
         html/canvas/OESTextureFloat.cpp \
         html/canvas/OESVertexArrayObject.cpp \
+        html/canvas/OESElementIndexUint.cpp \
         html/canvas/WebGLTexture.cpp \
         html/canvas/WebGLUniformLocation.cpp \
         html/canvas/WebGLVertexArrayObjectOES.cpp
@@ -4053,6 +4064,9 @@ use?(GRAPHICS_SURFACE) {
         SOURCES += platform/graphics/surfaces/mac/GraphicsSurfaceMac.cpp
         INCLUDEPATH += /System/Library/Frameworks/CoreFoundation.framework/Headers
     }
+    win32 {
+        SOURCES += platform/graphics/surfaces/win/GraphicsSurfaceWin.cpp
+    }
     have?(XCOMPOSITE) {
         SOURCES += platform/graphics/surfaces/qt/GraphicsSurfaceGLX.cpp
     }
@@ -4063,7 +4077,10 @@ ALL_IN_ONE_SOURCES += \
     inspector/InspectorAllInOne.cpp \
     loader/appcache/ApplicationCacheAllInOne.cpp \
     platform/text/TextAllInOne.cpp \
-    rendering/style/StyleAllInOne.cpp
+    rendering/style/StyleAllInOne.cpp \
+    html/HTMLElementsAllInOne.cpp \
+    editing/EditingAllInOne.cpp \
+    rendering/RenderingAllInOne.cpp
 
 enable?(XSLT):use?(LIBXML2) {
     ALL_IN_ONE_SOURCES += \
@@ -4073,9 +4090,6 @@ enable?(XSLT):use?(LIBXML2) {
 # These do not compile at the moment:
 #    css/MediaAllInOne.cpp
 #    css/CSSAllInOne.cpp
-#    editing/EditingAllInOne.cpp
-#    html/HTMLElementsAllInOne.cpp
-#    rendering/RenderingAllInOne.cpp
 
 # Make sure the derived sources are built
 include(DerivedSources.pri)

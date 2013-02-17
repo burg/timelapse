@@ -1,3 +1,244 @@
+2012-10-26  Hyowon Kim  <hw1008.kim@samsung.com>
+
+        [Texmap][EFL] Implementation of AC related functions in ChromeClientEfl and ewkView.
+        https://bugs.webkit.org/show_bug.cgi?id=82315
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        This patch implements accelerated-compositing-related functions
+        to enter accelerated-compositing mode and sync layers 
+        in ChromeClientEfl and ewkView.
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        (WebCore::ChromeClientEfl::attachRootGraphicsLayer):
+        (WebCore::ChromeClientEfl::setNeedsOneShotDrawingSynchronization):
+        (WebCore::ChromeClientEfl::scheduleCompositingLayerFlush):
+        (WebCore::ChromeClientEfl::allowedCompositingTriggers):
+        * ewk/ewk_view.cpp:
+        (_Ewk_View_Private_Data):
+        (_ewk_view_priv_new):
+        (_ewk_view_priv_del):
+        (_ewk_view_accelerated_compositing_cb):
+        Sync and render layers.
+        (_ewk_view_accelerated_compositing_context_create_if_needed):
+        Create a new AcceleratedCompositingContext.
+        (ewk_view_accelerated_compositing_object_create):
+        Create a new evas_image_object act as render target surface.
+        (ewk_view_accelerated_compositing_context_get):
+        Return the GraphicsContext3D for accelerated compositing. 
+        (ewk_view_root_graphics_layer_set):
+        Set the root layer to AcceleratedCompositingContext.
+        (ewk_view_mark_for_sync):
+        Mark the evas_image_object for accelerated compositing as dirty to make it update.
+        * ewk/ewk_view_private.h:
+        (WebCore):
+
+2012-10-24  Brady Eidson  <beidson@apple.com>
+
+        Add a strategy for loader customization.
+        https://bugs.webkit.org/show_bug.cgi?id=100278
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebCoreSupport/PlatformStrategiesEfl.cpp:
+        (PlatformStrategiesEfl::createLoaderStrategy):
+        * WebCoreSupport/PlatformStrategiesEfl.h:
+        (PlatformStrategiesEfl):
+
+2012-10-23  Alexey Proskuryakov  <ap@apple.com>
+
+        Add a strategy for shared workers
+        https://bugs.webkit.org/show_bug.cgi?id=100165
+
+        Reviewed by Brady Eidson.
+
+        * WebCoreSupport/PlatformStrategiesEfl.cpp:
+        (PlatformStrategiesEfl::createPasteboardStrategy):
+        (PlatformStrategiesEfl::createSharedWorkerStrategy):
+        (PlatformStrategiesEfl::createVisitedLinkStrategy):
+        * WebCoreSupport/PlatformStrategiesEfl.h:
+
+2012-10-23  Hyowon Kim  <hw1008.kim@samsung.com>
+
+        [Texmap][EFL] Add AcceleratedCompositingContextEfl to the build system.
+        https://bugs.webkit.org/show_bug.cgi?id=88630
+
+        Reviewed by Gyuyoung Kim.
+
+        * WebCoreSupport/AcceleratedCompositingContextEfl.cpp: Modify the #include file.
+
+2012-10-23  Andras Becsi  <andras.becsi@digia.com>
+
+        Remove devicePixelRatio from ViewportAttributes
+        https://bugs.webkit.org/show_bug.cgi?id=99845
+
+        Reviewed by Adam Barth.
+
+        * ewk/ewk_view.cpp:
+        (_ewk_view_viewport_attributes_compute):
+        Pass the device pixel ratio as a function argument.
+
+2012-10-22  Ryuan Choi  <ryuan.choi@gmail.com>
+
+        [EFL] pc files should use DATA_INSTALL_DIR for datadir
+        https://bugs.webkit.org/show_bug.cgi?id=99961
+
+        Reviewed by Gyuyoung Kim.
+
+        * ewebkit.pc.in: Used DATA_INSTALL_DIR instead of hardcoded `shared/XXX`
+
+2012-10-22  Jocelyn Turcotte  <jocelyn.turcotte@digia.com>
+
+        [Qt] Fix "ASSERTION FAILED: !document->inPageCache()" when loading a page
+        https://bugs.webkit.org/show_bug.cgi?id=98514
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_view_create_for_view):
+
+2012-10-21  Seokju Kwon  <seokju.kwon@samsung.com>
+
+        [EFL] Fix failure to access the inspector resources
+        https://bugs.webkit.org/show_bug.cgi?id=99816
+
+        Reviewed by Gyuyoung Kim.
+
+        access() returns -1, if path has a file protocol like "file://".
+        And I have removed it from the first argument of access().
+        If not, inspectorBaseURL() or inspectorFilesPath() always returns WEB_INSPECTOR_DIR.
+        Then all layout test related to inspector can fail after installing webkit package.
+
+        * WebCoreSupport/InspectorClientEfl.cpp:
+        (WebCore::InspectorClientEfl::inspectorFilesPath):
+
+2012-10-20  Raphael Kubo da Costa  <raphael.kubo.da.costa@intel.com>
+
+        [EFL][DRT] Implement tracking and painting repaint rectangles.
+        https://bugs.webkit.org/show_bug.cgi?id=99838
+
+        Reviewed by Gyuyoung Kim.
+
+        Add the required DumpRenderTreeSupport plumbing functions to
+        interact with FrameView and track/obtain repaint rectangles for
+        DumpRenderTree.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::setSelectTrailingWhitespaceEnabled):
+        (DumpRenderTreeSupportEfl::setTracksRepaints):
+        (DumpRenderTreeSupportEfl::resetTrackedRepaints):
+        (DumpRenderTreeSupportEfl::isTrackingRepaints):
+        (DumpRenderTreeSupportEfl::trackedRepaintRects):
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+
+2012-10-18  Kangil Han  <kangil.han@samsung.com>
+
+        [EFL] Add unit test for ewk_frame_source_get.
+        https://bugs.webkit.org/show_bug.cgi?id=95984
+
+        Reviewed by Gyuyoung Kim.
+
+        Add three unit test cases to verify ewk_frame_source_get function.
+        Additionally, insert code to check if uri exists in order to return error since view itself has blank html.
+
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_source_get):
+        * tests/test_ewk_frame.cpp: Added.
+        (initBuffer):
+        (TEST_F):
+
+2012-10-17  Byungwoo Lee  <bw80.lee@samsung.com>
+
+        Fix build warnings : -Wunused-parameter, -Wunused-variable
+        https://bugs.webkit.org/show_bug.cgi?id=99539
+
+        Reviewed by Kentaro Hara.
+
+        Fix build warnings about unused parameter or unused variable when
+        WTF_USE_TILED_BACKING_STORE option is enabled.
+
+        * WebCoreSupport/ChromeClientEfl.cpp:
+        (WebCore::ChromeClientEfl::attachRootGraphicsLayer):
+        (WebCore::ChromeClientEfl::delegatedScrollRequested):
+
+2012-10-17  Byungwoo Lee  <bw80.lee@samsung.com>
+
+        [EFL] Add background color to the checkbox theme.
+        https://bugs.webkit.org/show_bug.cgi?id=98788
+
+        Reviewed by Gyuyoung Kim.
+
+        Background color is added to the checkbox theme for identifying
+        checkbox status easily.
+
+        Checkbox theme uses images which has transparent background, and the
+        theme itself doesn't have the background color.
+
+        When the background of checkbox is black, checked/unchecked status
+        cannot be distinguished because check mark color is black.
+
+        And it is hard to identify whether the checkbox is disabled or not,
+        because there is no background color in the checkbox theme.
+
+        Instead of adding background color to the edc script, background
+        images are added because the shape of the check box can be various.
+
+        * DefaultTheme/widget/check/check.edc:
+        * DefaultTheme/widget/check/img_check_bg_enabled.png: Added.
+        * DefaultTheme/widget/check/img_check_bg_disabled.png: Added.
+
+2012-10-17  Byungwoo Lee  <bw80.lee@samsung.com>
+
+        [EFL] Add background color to the radio button theme.
+        https://bugs.webkit.org/show_bug.cgi?id=98852
+
+        Reviewed by Gyuyoung Kim.
+
+        Background color is added to the radio button theme for identifying
+        radio button status easily.
+
+        Radio button theme uses images which has transparent background.
+
+        When the background of radio button is black, checked/unchecked status
+        cannot be distinguished because check mark color is black.
+
+        And it is hard to identify whether the radio button is disabled or not,
+        because there is no background color in the radio button theme.
+
+        * DefaultTheme/widget/radio/img_radio_bg_disabled.png: Added.
+        * DefaultTheme/widget/radio/img_radio_bg_enabled.png: Added.
+        * DefaultTheme/widget/radio/radio.edc:
+
+2012-10-15  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL][WK2] Implement Favicons API
+        https://bugs.webkit.org/show_bug.cgi?id=99087
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Remove ewk_util now that its code has been moved
+        to CairoUtilitiesEfl in WebCore.
+
+        * ewk/ewk_history.cpp:
+        (ewk_history_item_icon_object_add):
+        * ewk/ewk_settings.cpp:
+        (ewk_settings_icon_database_icon_object_get):
+
+2012-10-15  Dongwoo Joshua Im  <dw.im@samsung.com>
+
+        [EFL] Set the basepath of the File System API.
+        https://bugs.webkit.org/show_bug.cgi?id=98344
+
+        Reviewed by Gyuyoung Kim.
+
+        Set the basepath of the File System API using the internal setter function.
+
+        * ewk/ewk_main.cpp:
+        (_ewk_init_body): Call the setter function with the default path.
+        * ewk/ewk_settings.cpp:
+        (ewk_settings_file_system_path_set): Set the given path as the base path of the file system.
+        * ewk/ewk_settings_private.h: Add ewk_settings_file_system_path_set.
+
 2012-10-14  Sam Weinig  <sam@webkit.org>
 
         Make UserScript and UserStyleSheet value objects that are copyable

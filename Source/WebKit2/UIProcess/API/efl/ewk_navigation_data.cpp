@@ -26,47 +26,36 @@
 #include "config.h"
 #include "ewk_navigation_data.h"
 
-#include "WKAPICast.h"
-#include "WKEinaSharedString.h"
-#include "WKRetainPtr.h"
 #include "ewk_navigation_data_private.h"
-#include "ewk_private.h"
-#include "ewk_url_request_private.h"
 
 using namespace WebKit;
 
-/**
- * \struct  _Ewk_Navigation_Data
- * @brief   Contains the navigation data details.
- */
-struct _Ewk_Navigation_Data {
-    unsigned __ref; /**< the reference count of the object */
-    WKEinaSharedString title;
-    WKEinaSharedString url;
-    Ewk_Url_Request* request;
+Ewk_Navigation_Data::Ewk_Navigation_Data(WKNavigationDataRef dataRef)
+    : m_request(Ewk_Url_Request::create(adoptWK(WKNavigationDataCopyOriginalRequest(dataRef)).get()))
+    , m_title(AdoptWK, WKNavigationDataCopyTitle(dataRef))
+    , m_url(AdoptWK, WKNavigationDataCopyURL(dataRef))
+{ }
 
-    _Ewk_Navigation_Data(WKNavigationDataRef dataRef)
-        : __ref(1)
-        , title(AdoptWK, WKNavigationDataCopyTitle(dataRef))
-        , url(AdoptWK, WKNavigationDataCopyURL(dataRef))
-        , request(0)
-    {
-        WKRetainPtr<WKURLRequestRef> requestWK(AdoptWK, WKNavigationDataCopyOriginalRequest(dataRef));
-        request = ewk_url_request_new(requestWK.get());
-    }
+Ewk_Url_Request* Ewk_Navigation_Data::originalRequest() const
+{
+    return m_request.get();
+}
 
-    ~_Ewk_Navigation_Data()
-    {
-        ASSERT(!__ref);
-        ewk_url_request_unref(request);
-    }
-};
+const char* Ewk_Navigation_Data::title() const
+{
+    return m_title;
+}
+
+const char* Ewk_Navigation_Data::url() const
+{
+    return m_url;
+}
 
 Ewk_Navigation_Data* ewk_navigation_data_ref(Ewk_Navigation_Data* data)
 {
     EINA_SAFETY_ON_NULL_RETURN_VAL(data, 0);
 
-    ++data->__ref;
+    data->ref();
 
     return data;
 }
@@ -75,37 +64,26 @@ void ewk_navigation_data_unref(Ewk_Navigation_Data* data)
 {
     EINA_SAFETY_ON_NULL_RETURN(data);
 
-    if (--data->__ref)
-        return;
-
-    delete data;
+    data->deref();
 }
 
 const char* ewk_navigation_data_title_get(const Ewk_Navigation_Data* data)
 {
     EINA_SAFETY_ON_NULL_RETURN_VAL(data, 0);
 
-    return data->title;
+    return data->title();
 }
 
 Ewk_Url_Request* ewk_navigation_data_original_request_get(const Ewk_Navigation_Data* data)
 {
     EINA_SAFETY_ON_NULL_RETURN_VAL(data, 0);
 
-    return data->request;
+    return data->originalRequest();
 }
 
 const char* ewk_navigation_data_url_get(const Ewk_Navigation_Data* data)
 {
     EINA_SAFETY_ON_NULL_RETURN_VAL(data, 0);
 
-    return data->url;
-}
-
-Ewk_Navigation_Data* ewk_navigation_data_new(WKNavigationDataRef dataRef)
-{
-    ASSERT(dataRef);
-    EINA_SAFETY_ON_NULL_RETURN_VAL(dataRef, 0);
-
-    return new Ewk_Navigation_Data(dataRef);
+    return data->url();
 }

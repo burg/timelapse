@@ -45,7 +45,6 @@
 #include "FrameTree.h"
 #include "FrameView.h"
 #include "HTMLElement.h"
-#include "HistogramSupport.h"
 #include "HistoryItem.h"
 #include "InspectorController.h"
 #include "InspectorInstrumentation.h"
@@ -75,6 +74,7 @@
 #include "TextResourceDecoder.h"
 #include "UserInputProxy.h"
 #include "VoidCallback.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include "Widget.h"
 #include <wtf/HashMap.h>
 #include <wtf/RefCountedLeakCounter.h>
@@ -160,7 +160,6 @@ Page::Page(PageClients& pageClients)
     , m_pageScaleFactor(1)
     , m_deviceScaleFactor(1)
     , m_suppressScrollbarAnimations(false)
-    , m_javaScriptURLsAreAllowed(true)
     , m_didLoadUserStyleSheet(false)
     , m_userStyleSheetModificationTime(0)
     , m_group(0)
@@ -1015,16 +1014,6 @@ void Page::setMemoryCacheClientCallsEnabled(bool enabled)
         frame->loader()->tellClientAboutPastMemoryCacheLoads();
 }
 
-void Page::setJavaScriptURLsAreAllowed(bool areAllowed)
-{
-    m_javaScriptURLsAreAllowed = areAllowed;
-}
-
-bool Page::javaScriptURLsAreAllowed() const
-{
-    return m_javaScriptURLsAreAllowed;
-}
-
 void Page::setMinimumTimerInterval(double minimumTimerInterval)
 {
     double oldTimerInterval = m_minimumTimerInterval;
@@ -1133,14 +1122,8 @@ void Page::setVisibilityState(PageVisibilityState visibilityState, bool isInitia
         return;
     m_visibilityState = visibilityState;
 
-    if (!isInitialState && m_mainFrame) {
-        if (visibilityState == PageVisibilityStateHidden) {
-            ArenaSize size = renderTreeSize();
-            HistogramSupport::histogramCustomCounts("WebCore.Page.renderTreeSizeBytes", size.treeSize, 1000, 500000000, 50);
-            HistogramSupport::histogramCustomCounts("WebCore.Page.renderTreeAllocatedBytes", size.allocated, 1000, 500000000, 50);
-        }
+    if (!isInitialState && m_mainFrame)
         m_mainFrame->dispatchVisibilityStateChangeEvent();
-    }
 #endif
 
 #if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
@@ -1277,6 +1260,69 @@ void Page::sawPlugin(const String& serviceType)
 void Page::resetSeenPlugins()
 {
     m_seenPlugins.clear();
+}
+
+bool Page::hasSeenAnyMediaEngine() const
+{
+    return !m_seenMediaEngines.isEmpty();
+}
+
+bool Page::hasSeenMediaEngine(const String& engineDescription) const
+{
+    return m_seenMediaEngines.contains(engineDescription);
+}
+
+void Page::sawMediaEngine(const String& engineDescription)
+{
+    m_seenMediaEngines.add(engineDescription);
+}
+
+void Page::resetSeenMediaEngines()
+{
+    m_seenMediaEngines.clear();
+}
+
+void Page::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Page);
+    info.addMember(m_chrome);
+    info.addMember(m_dragCaretController);
+
+#if ENABLE(DRAG_SUPPORT)
+    info.addMember(m_dragController);
+#endif
+    info.addMember(m_focusController);
+#if ENABLE(CONTEXT_MENUS)
+    info.addMember(m_contextMenuController);
+#endif
+#if ENABLE(INSPECTOR)
+    info.addMember(m_inspectorController);
+#endif
+#if ENABLE(POINTER_LOCK)
+    info.addMember(m_pointerLockController);
+#endif
+    info.addMember(m_scrollingCoordinator);
+    info.addMember(m_settings);
+    info.addMember(m_progress);
+    info.addMember(m_backForwardController);
+    info.addMember(m_mainFrame);
+    info.addMember(m_pluginData);
+    info.addMember(m_theme);
+    info.addMember(m_editorClient);
+    info.addMember(m_featureObserver);
+    info.addMember(m_groupName);
+    info.addMember(m_pagination);
+    info.addMember(m_userStyleSheetPath);
+    info.addMember(m_userStyleSheet);
+    info.addMember(m_singlePageGroup);
+    info.addMember(m_group);
+    info.addWeakPointer(m_debugger);
+    info.addMember(m_sessionStorage);
+    info.addMember(m_relevantUnpaintedRenderObjects);
+    info.addMember(m_relevantPaintedRegion);
+    info.addMember(m_relevantUnpaintedRegion);
+    info.addMember(m_alternativeTextClient);
+    info.addMember(m_seenPlugins);
 }
 
 Page::PageClients::PageClients()

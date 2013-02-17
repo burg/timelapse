@@ -43,7 +43,7 @@ class TextLayout {
 public:
     static bool isNeeded(RenderText* text, const Font& font)
     {
-        TextRun run = RenderBlock::constructTextRun(text, font, text->characters(), text->textLength(), text->style());
+        TextRun run = RenderBlock::constructTextRun(text, font, text, text->style());
         return font.codePath(run) == Font::Complex;
     }
 
@@ -68,7 +68,7 @@ public:
 private:
     static TextRun constructTextRun(RenderText* text, const Font& font, float xPos)
     {
-        TextRun run = RenderBlock::constructTextRun(text, font, text->characters(), text->textLength(), text->style());
+        TextRun run = RenderBlock::constructTextRun(text, font, text, text->style());
         run.setCharactersLength(text->textLength());
         ASSERT(run.charactersLength() >= run.length());
 
@@ -329,12 +329,8 @@ void ComplexTextController::collectComplexTextRuns()
     nextIsMissingGlyph = false;
 #if !PLATFORM(WX)
     nextFontData = m_font.fontDataForCombiningCharacterSequence(sequenceStart, curr - sequenceStart, nextIsSmallCaps ? SmallCapsVariant : NormalVariant);
-    if (!nextFontData) {
-        if (markCount)
-            nextFontData = systemFallbackFontData();
-        else
-            nextIsMissingGlyph = true;
-    }
+    if (!nextFontData)
+        nextIsMissingGlyph = true;
 #endif
 
     while (curr < end) {
@@ -361,12 +357,8 @@ void ComplexTextController::collectComplexTextRuns()
 #if !PLATFORM(WX)
         else {
             nextFontData = m_font.fontDataForCombiningCharacterSequence(cp + index, curr - cp - index, nextIsSmallCaps ? SmallCapsVariant : NormalVariant);
-            if (!nextFontData) {
-                if (markCount)
-                    nextFontData = systemFallbackFontData();
-                else
-                    nextIsMissingGlyph = true;
-            }
+            if (!nextFontData)
+                nextIsMissingGlyph = true;
         }
 #endif
 

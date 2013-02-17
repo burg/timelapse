@@ -317,12 +317,12 @@ void TestController::initialize(int argc, const char* argv[])
     m_context.adopt(WKContextCreateWithInjectedBundlePath(injectedBundlePath()));
     m_geolocationProvider = adoptPtr(new GeolocationProviderMock(m_context.get()));
 
-    const char* path = libraryPathForTesting();
-    if (path) {
-        Vector<char> databaseDirectory(strlen(path) + strlen("/Databases") + 1);
-        sprintf(databaseDirectory.data(), "%s%s", path, "/Databases");
-        WKRetainPtr<WKStringRef> databaseDirectoryWK(AdoptWK, WKStringCreateWithUTF8CString(databaseDirectory.data()));
-        WKContextSetDatabaseDirectory(m_context.get(), databaseDirectoryWK.get());
+    if (const char* dumpRenderTreeTemp = libraryPathForTesting()) {
+        WKRetainPtr<WKStringRef> dumpRenderTreeTempWK(AdoptWK, WKStringCreateWithUTF8CString(dumpRenderTreeTemp));
+        WKContextSetDatabaseDirectory(m_context.get(), dumpRenderTreeTempWK.get());
+        WKContextSetLocalStorageDirectory(m_context.get(), dumpRenderTreeTempWK.get());
+        WKContextSetDiskCacheDirectory(m_context.get(), dumpRenderTreeTempWK.get());
+        WKContextSetCookieStorageDirectory(m_context.get(), dumpRenderTreeTempWK.get());
     }
 
     platformInitializeContext();
@@ -343,8 +343,12 @@ void TestController::initialize(int argc, const char* argv[])
     if (testPluginDirectory())
         WKContextSetAdditionalPluginsDirectory(m_context.get(), testPluginDirectory());
 
-    m_mainWebView = adoptPtr(new PlatformWebView(m_context.get(), m_pageGroup.get()));
+    createWebViewWithOptions(0);
+}
 
+void TestController::createWebViewWithOptions(WKDictionaryRef options)
+{
+    m_mainWebView = adoptPtr(new PlatformWebView(m_context.get(), m_pageGroup.get(), options));
     WKPageUIClient pageUIClient = {
         kWKPageUIClientCurrentVersion,
         m_mainWebView.get(),
@@ -446,6 +450,21 @@ void TestController::initialize(int argc, const char* argv[])
     WKPageSetPagePolicyClient(m_mainWebView->page(), &pagePolicyClient);
 }
 
+void TestController::ensureViewSupportsOptions(WKDictionaryRef options)
+{
+    if (m_mainWebView && !m_mainWebView->viewSupportsOptions(options)) {
+        WKPageSetPageUIClient(m_mainWebView->page(), 0);
+        WKPageSetPageLoaderClient(m_mainWebView->page(), 0);
+        WKPageSetPagePolicyClient(m_mainWebView->page(), 0);
+        WKPageClose(m_mainWebView->page());
+        
+        m_mainWebView = nullptr;
+
+        createWebViewWithOptions(options);
+        resetStateToConsistentValues();
+    }
+}
+
 bool TestController::resetStateToConsistentValues()
 {
     m_state = Resetting;
@@ -529,6 +548,8 @@ bool TestController::resetStateToConsistentValues()
 
     // Reset Custom Policy Delegate.
     setCustomPolicyDelegate(false, false);
+
+    m_workQueueManager.clearWorkQueue();
 
     // Reset main page back to about:blank
     m_doneResetting = false;

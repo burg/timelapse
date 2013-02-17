@@ -28,6 +28,7 @@
 #include "WebKitContextMenuClient.h"
 #include "WebKitContextMenuItemPrivate.h"
 #include "WebKitContextMenuPrivate.h"
+#include "WebKitDownloadPrivate.h"
 #include "WebKitEnumTypes.h"
 #include "WebKitError.h"
 #include "WebKitFaviconDatabasePrivate.h"
@@ -63,6 +64,7 @@
 #include <wtf/gobject/GRefPtr.h>
 #include <wtf/text/CString.h>
 
+using namespace WebKit;
 using namespace WebCore;
 
 enum {
@@ -301,7 +303,7 @@ static void iconReadyCallback(WebKitFaviconDatabase* database, const char* uri, 
 static void webkitWebViewSetSettings(WebKitWebView* webView, WebKitSettings* settings)
 {
     webView->priv->settings = settings;
-    webkitSettingsAttachSettingsToPage(webView->priv->settings.get(), toAPI(getPage(webView)));
+    webkitSettingsAttachSettingsToPage(webView->priv->settings.get(), getPage(webView));
     g_signal_connect(settings, "notify::allow-modal-dialogs", G_CALLBACK(allowModalDialogsChanged), webView);
     g_signal_connect(settings, "notify::zoom-text-only", G_CALLBACK(zoomTextOnlyChanged), webView);
     g_signal_connect(settings, "notify::user-agent", G_CALLBACK(userAgentChanged), webView);
@@ -389,6 +391,12 @@ static gboolean webkitWebViewRunFileChooser(WebKitWebView* webView, WebKitFileCh
     return TRUE;
 }
 
+static void webkitWebViewHandleDownloadRequest(WebKitWebViewBase* webViewBase, DownloadProxy* downloadProxy)
+{
+    GRefPtr<WebKitDownload> download = webkitWebContextGetOrCreateDownload(downloadProxy);
+    webkitDownloadSetWebView(download.get(), WEBKIT_WEB_VIEW(webViewBase));
+}
+
 static void webkitWebViewConstructed(GObject* object)
 {
     if (G_OBJECT_CLASS(webkit_web_view_parent_class)->constructed)
@@ -399,16 +407,17 @@ static void webkitWebViewConstructed(GObject* object)
     WebKitWebViewBase* webViewBase = WEBKIT_WEB_VIEW_BASE(webView);
 
     webkitWebViewBaseCreateWebPage(webViewBase, webkitWebContextGetContext(priv->context), 0);
+    webkitWebViewBaseSetDownloadRequestHandler(webViewBase, webkitWebViewHandleDownloadRequest);
 
     attachLoaderClientToView(webView);
     attachUIClientToView(webView);
-    attachPolicyClientToPage(webView);
+    attachPolicyClientToView(webView);
     attachResourceLoadClientToView(webView);
     attachFullScreenClientToView(webView);
     attachContextMenuClientToView(webView);
     attachFormClientToView(webView);
 
-    priv->backForwardList = adoptGRef(webkitBackForwardListCreate(toAPI(getPage(webView)->backForwardList())));
+    priv->backForwardList = adoptGRef(webkitBackForwardListCreate(getPage(webView)->backForwardList()));
 
     GRefPtr<WebKitSettings> settings = adoptGRef(webkit_settings_new());
     webkitWebViewSetSettings(webView, settings.get());
@@ -1231,7 +1240,7 @@ static void setCertificateToMainResource(WebKitWebView* webView)
     ASSERT(priv->mainResource.get());
 
     webkitURIResponseSetCertificateInfo(webkit_web_resource_get_response(priv->mainResource.get()),
-                                        WKFrameGetCertificateInfo(webkitWebResourceGetFrame(priv->mainResource.get())));
+                                        webkitWebResourceGetFrame(priv->mainResource.get())->certificateInfo());
 }
 
 static void webkitWebViewEmitLoadChanged(WebKitWebView* webView, WebKitLoadEvent loadEvent)
@@ -1355,7 +1364,7 @@ WebPageProxy* webkitWebViewCreateNewPage(WebKitWebView* webView, ImmutableDictio
     if (!newWebView)
         return 0;
 
-    webkitWindowPropertiesUpdateFromWKWindowFeatures(newWebView->priv->windowProperties.get(), toAPI(windowFeatures));
+    webkitWindowPropertiesUpdateFromWebWindowFeatures(newWebView->priv->windowProperties.get(), windowFeatures);
 
     RefPtr<WebPageProxy> newPage = getPage(newWebView);
     return newPage.release().leakRef();
@@ -1423,11 +1432,11 @@ void webkitWebViewMouseTargetChanged(WebKitWebView* webView, WebHitTestResult* h
     WebKitWebViewPrivate* priv = webView->priv;
     if (priv->mouseTargetHitTestResult
         && priv->mouseTargetModifiers == modifiers
-        && webkitHitTestResultCompare(priv->mouseTargetHitTestResult.get(), toAPI(hitTestResult)))
+        && webkitHitTestResultCompare(priv->mouseTargetHitTestResult.get(), hitTestResult))
         return;
 
     priv->mouseTargetModifiers = modifiers;
-    priv->mouseTargetHitTestResult = adoptGRef(webkitHitTestResultCreate(toAPI(hitTestResult)));
+    priv->mouseTargetHitTestResult = adoptGRef(webkitHitTestResultCreate(hitTestResult));
     g_signal_emit(webView, signals[MOUSE_TARGET_CHANGED], 0, priv->mouseTargetHitTestResult.get(), modifiers);
 }
 
@@ -1467,7 +1476,7 @@ void webkitWebViewResourceLoadStarted(WebKitWebView* webView, WebFrameProxy* fra
 {
     WebKitWebViewPrivate* priv = webView->priv;
     bool isMainResource = frame->isMainFrame() && !priv->mainResource;
-    WebKitWebResource* resource = webkitWebResourceCreate(toAPI(frame), request, isMainResource);
+    WebKitWebResource* resource = webkitWebResourceCreate(frame, request, isMainResource);
     if (isMainResource) {
         priv->mainResource = resource;
         waitForMainResourceResponseIfWaitingForResource(webView);
@@ -1577,11 +1586,11 @@ void webkitWebViewPopulateContextMenu(WebKitWebView* webView, ImmutableArray* pr
     WebContextMenuProxyGtk* contextMenuProxy = webkitWebViewBaseGetActiveContextMenuProxy(webViewBase);
     ASSERT(contextMenuProxy);
 
-    GRefPtr<WebKitContextMenu> contextMenu = adoptGRef(webkitContextMenuCreate(toAPI(proposedMenu)));
+    GRefPtr<WebKitContextMenu> contextMenu = adoptGRef(webkitContextMenuCreate(proposedMenu));
     if (webHitTestResult->isContentEditable())
         webkitWebViewCreateAndAppendInputMethodsMenuItem(webView, contextMenu.get());
 
-    GRefPtr<WebKitHitTestResult> hitTestResult = adoptGRef(webkitHitTestResultCreate(toAPI(webHitTestResult)));
+    GRefPtr<WebKitHitTestResult> hitTestResult = adoptGRef(webkitHitTestResultCreate(webHitTestResult));
     GOwnPtr<GdkEvent> contextMenuEvent(webkitWebViewBaseTakeContextMenuEvent(webViewBase));
 
     gboolean returnValue;
@@ -2057,7 +2066,7 @@ void webkit_web_view_go_to_back_forward_list_item(WebKitWebView* webView, WebKit
     g_return_if_fail(WEBKIT_IS_WEB_VIEW(webView));
     g_return_if_fail(WEBKIT_IS_BACK_FORWARD_LIST_ITEM(listItem));
 
-    getPage(webView)->goToBackForwardItem(toImpl(webkitBackForwardListItemGetWKItem(listItem)));
+    getPage(webView)->goToBackForwardItem(webkitBackForwardListItemGetItem(listItem));
 }
 
 /**
@@ -2569,7 +2578,7 @@ WebKitWebInspector* webkit_web_view_get_inspector(WebKitWebView* webView)
     g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), 0);
 
     if (!webView->priv->inspector)
-        webView->priv->inspector = adoptGRef(webkitWebInspectorCreate(toAPI(getPage(webView)->inspector())));
+        webView->priv->inspector = adoptGRef(webkitWebInspectorCreate(getPage(webView)->inspector()));
 
     return webView->priv->inspector.get();
 }
@@ -2756,4 +2765,25 @@ gboolean webkit_web_view_save_to_file_finish(WebKitWebView* webView, GAsyncResul
         return FALSE;
 
     return TRUE;
+}
+
+/**
+ * webkit_web_view_download_uri:
+ * @web_view: a #WebKitWebView
+ * @uri: the URI to download
+ *
+ * Requests downloading of the specified URI string for @web_view.
+ *
+ * Returns: (transfer full): a new #WebKitDownload representing the
+ *    the download operation.
+ */
+WebKitDownload* webkit_web_view_download_uri(WebKitWebView* webView, const char* uri)
+{
+    g_return_val_if_fail(WEBKIT_IS_WEB_VIEW(webView), 0);
+    g_return_val_if_fail(uri, 0);
+
+    WebKitDownload* download = webkitWebContextStartDownload(webView->priv->context, uri, getPage(webView));
+    webkitDownloadSetWebView(download, webView);
+
+    return download;
 }

@@ -186,6 +186,7 @@ RenderLayerCompositor::RenderLayerCompositor(RenderView* renderView)
     , m_compositing(false)
     , m_compositingLayersNeedRebuild(false)
     , m_flushingLayers(false)
+    , m_shouldFlushOnReattach(false)
     , m_forceCompositingMode(false)
     , m_rootLayerAttachment(RootLayerUnattached)
 #if !LOG_DISABLED
@@ -230,9 +231,7 @@ void RenderLayerCompositor::cacheAcceleratedCompositingFlags()
         // We allow the chrome to override the settings, in case the page is rendered
         // on a chrome that doesn't allow accelerated compositing.
         if (hasAcceleratedCompositing) {
-            Frame* frame = m_renderView->frameView()->frame();
-            Page* page = frame ? frame->page() : 0;
-            if (page) {
+            if (Page* page = this->page()) {
                 ChromeClient* chromeClient = page->chrome()->client();
                 m_compositingTriggers = chromeClient->allowedCompositingTriggers();
                 hasAcceleratedCompositing = m_compositingTriggers;
@@ -272,12 +271,8 @@ void RenderLayerCompositor::setCompositingLayersNeedRebuild(bool needRebuild)
 
 void RenderLayerCompositor::scheduleLayerFlush()
 {
-    Frame* frame = m_renderView->frameView()->frame();
-    Page* page = frame ? frame->page() : 0;
-    if (!page)
-        return;
-
-    page->chrome()->client()->scheduleCompositingLayerFlush();
+    if (Page* page = this->page())
+        page->chrome()->client()->scheduleCompositingLayerFlush();
 }
 
 void RenderLayerCompositor::flushPendingLayerChanges(bool isFlushRoot)
@@ -289,15 +284,22 @@ void RenderLayerCompositor::flushPendingLayerChanges(bool isFlushRoot)
     if (!isFlushRoot && rootLayerAttachment() == RootLayerAttachedViaEnclosingFrame)
         return;
     
+    if (rootLayerAttachment() == RootLayerUnattached) {
+        m_shouldFlushOnReattach = true;
+        return;
+    }
+
+    AnimationUpdateBlock animationUpdateBlock(m_renderView->frameView()->frame()->animation());
+
     ASSERT(!m_flushingLayers);
     m_flushingLayers = true;
 
     if (GraphicsLayer* rootLayer = rootGraphicsLayer()) {
         FrameView* frameView = m_renderView ? m_renderView->frameView() : 0;
         if (frameView) {
-            // FIXME: Passing frameRect() is correct only when RenderLayerCompositor uses a ScrollLayer (as in WebKit2)
-            // otherwise, the passed clip rect needs to take scrolling into account
-            rootLayer->flushCompositingState(frameView->frameRect());
+            // Having a m_clipLayer indicates that we're doing scrolling via GraphicsLayers.
+            IntRect visibleRect = m_clipLayer ? IntRect(IntPoint(), frameView->contentsSize()) : frameView->visibleContentRect();
+            rootLayer->flushCompositingState(visibleRect);
         }
     }
     
@@ -307,6 +309,24 @@ void RenderLayerCompositor::flushPendingLayerChanges(bool isFlushRoot)
 
 void RenderLayerCompositor::didFlushChangesForLayer(RenderLayer*)
 {
+}
+
+void RenderLayerCompositor::notifyFlushBeforeDisplayRefresh(const GraphicsLayer*)
+{
+    if (!m_layerUpdater) {
+        PlatformDisplayID displayID = 0;
+        if (Page* page = this->page())
+            displayID = page->displayID();
+
+        m_layerUpdater = adoptPtr(new GraphicsLayerUpdater(this, displayID));
+    }
+    
+    m_layerUpdater->scheduleUpdate();
+}
+
+void RenderLayerCompositor::flushLayers(GraphicsLayerUpdater*)
+{
+    flushPendingLayerChanges(true); // FIXME: deal with iframes
 }
 
 RenderLayerCompositor* RenderLayerCompositor::enclosingCompositorFlushingLayers() const
@@ -496,7 +516,7 @@ bool RenderLayerCompositor::updateBacking(RenderLayer* layer, CompositingChangeR
 
             // At this time, the ScrollingCooridnator only supports the top-level frame.
             if (layer->isRootLayer() && !m_renderView->document()->ownerElement()) {
-                layer->backing()->attachToScrollingCoordinator();
+                layer->backing()->attachToScrollingCoordinator(0);
                 if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
                     scrollingCoordinator->frameViewRootLayerDidChange(m_renderView->frameView());
             }
@@ -1080,12 +1100,6 @@ void RenderLayerCompositor::frameViewDidScroll()
     FrameView* frameView = m_renderView->frameView();
     IntPoint scrollPosition = frameView->scrollPosition();
 
-    if (TiledBacking* tiledBacking = frameView->tiledBacking()) {
-        IntRect visibleContentRect = frameView->visibleContentRect(false /* exclude scrollbars */);
-        visibleContentRect.move(toSize(frameView->scrollOrigin()));
-        tiledBacking->visibleRectChanged(visibleContentRect);
-    }
-
     if (!m_scrollLayer)
         return;
 
@@ -1097,6 +1111,13 @@ void RenderLayerCompositor::frameViewDidScroll()
     }
 
     m_scrollLayer->setPosition(FloatPoint(-scrollPosition.x(), -scrollPosition.y()));
+}
+
+void RenderLayerCompositor::frameViewDidLayout()
+{
+    RenderLayerBacking* renderViewBacking = m_renderView->layer()->backing();
+    if (renderViewBacking)
+        renderViewBacking->adjustTileCacheCoverage();
 }
 
 void RenderLayerCompositor::scrollingLayerDidChange(RenderLayer* layer)
@@ -1120,7 +1141,9 @@ String RenderLayerCompositor::layerTreeAsText(LayerTreeFlags flags)
         layerTreeBehavior |= LayerTreeAsTextDebug;
     if (flags & LayerTreeFlagsIncludeVisibleRects)
         layerTreeBehavior |= LayerTreeAsTextIncludeVisibleRects;
-    
+    if (flags & LayerTreeFlagsIncludeTileCaches)
+        layerTreeBehavior |= LayerTreeAsTextIncludeTileCaches;
+
     // We skip dumping the scroll and clip layers to keep layerTreeAsText output
     // similar between platforms.
     return m_rootContentLayer->layerTreeAsText(layerTreeBehavior);
@@ -1328,8 +1351,17 @@ GraphicsLayer* RenderLayerCompositor::scrollLayer() const
     return m_scrollLayer.get();
 }
 
+TiledBacking* RenderLayerCompositor::pageTiledBacking() const
+{
+    RenderLayerBacking* renderViewBacking = m_renderView->layer()->backing();
+    return renderViewBacking ? renderViewBacking->tiledBacking() : 0;
+}
+
 void RenderLayerCompositor::didMoveOnscreen()
 {
+    if (TiledBacking* tiledBacking = pageTiledBacking())
+        tiledBacking->setIsInWindow(true);
+
     if (!inCompositingMode() || m_rootLayerAttachment != RootLayerUnattached)
         return;
 
@@ -1339,6 +1371,9 @@ void RenderLayerCompositor::didMoveOnscreen()
 
 void RenderLayerCompositor::willMoveOffscreen()
 {
+    if (TiledBacking* tiledBacking = pageTiledBacking())
+        tiledBacking->setIsInWindow(false);
+
     if (!inCompositingMode() || m_rootLayerAttachment == RootLayerUnattached)
         return;
 
@@ -1397,6 +1432,8 @@ bool RenderLayerCompositor::allowsIndependentlyCompositedFrames(const FrameView*
 #if PLATFORM(MAC)
     // frames are only independently composited in Mac pre-WebKit2.
     return view->platformWidget();
+#else
+    UNUSED_PARAM(view);
 #endif
     return false;
 }
@@ -1421,8 +1458,7 @@ bool RenderLayerCompositor::shouldPropagateCompositingToEnclosingFrame() const
 
     // On Mac, only propagate compositing if the frame is overlapped in the parent
     // document, or the parent is already compositing, or the main frame is scaled.
-    Frame* frame = m_renderView->frameView()->frame();
-    Page* page = frame ? frame->page() : 0;
+    Page* page = this->page();
     if (page && page->pageScaleFactor() != 1)
         return true;
     
@@ -1979,24 +2015,14 @@ bool RenderLayerCompositor::showRepaintCounter(const GraphicsLayer* layer) const
 
 float RenderLayerCompositor::deviceScaleFactor() const
 {
-    Frame* frame = m_renderView->frameView()->frame();
-    if (!frame)
-        return 1;
-    Page* page = frame->page();
-    if (!page)
-        return 1;
-    return page->deviceScaleFactor();
+    Page* page = this->page();
+    return page ? page->deviceScaleFactor() : 1;
 }
 
 float RenderLayerCompositor::pageScaleFactor() const
 {
-    Frame* frame = m_renderView->frameView()->frame();
-    if (!frame)
-        return 1;
-    Page* page = frame->page();
-    if (!page)
-        return 1;
-    return page->pageScaleFactor();
+    Page* page = this->page();
+    return page ? page->pageScaleFactor() : 1;
 }
 
 void RenderLayerCompositor::didCommitChangesForLayer(const GraphicsLayer*) const
@@ -2292,6 +2318,8 @@ void RenderLayerCompositor::destroyRootLayer()
     }
     ASSERT(!m_scrollLayer);
     m_rootContentLayer = nullptr;
+
+    m_layerUpdater = nullptr;
 }
 
 void RenderLayerCompositor::attachRootLayer(RootLayerAttachment attachment)
@@ -2322,6 +2350,11 @@ void RenderLayerCompositor::attachRootLayer(RootLayerAttachment attachment)
 
     m_rootLayerAttachment = attachment;
     rootLayerAttachmentChanged();
+    
+    if (m_shouldFlushOnReattach) {
+        flushPendingLayerChanges(true);
+        m_shouldFlushOnReattach = false;
+    }
 }
 
 void RenderLayerCompositor::detachRootLayer()
@@ -2451,23 +2484,33 @@ void RenderLayerCompositor::deviceOrPageScaleFactorChanged()
         rootLayer->noteDeviceOrPageScaleFactorChangedIncludingDescendants();
 }
 
+void RenderLayerCompositor::windowScreenDidChange(PlatformDisplayID displayID)
+{
+    if (m_layerUpdater)
+        m_layerUpdater->screenDidChange(displayID);
+}
+
 ScrollingCoordinator* RenderLayerCompositor::scrollingCoordinator() const
 {
-    if (Frame* frame = m_renderView->frameView()->frame()) {
-        if (Page* page = frame->page())
-            return page->scrollingCoordinator();
-    }
+    if (Page* page = this->page())
+        return page->scrollingCoordinator();
 
     return 0;
 }
 
 GraphicsLayerFactory* RenderLayerCompositor::graphicsLayerFactory() const
 {
-    if (Frame* frame = m_renderView->frameView()->frame()) {
-        if (Page* page = frame->page())
-            return page->chrome()->client()->graphicsLayerFactory();
-    }
+    if (Page* page = this->page())
+        return page->chrome()->client()->graphicsLayerFactory();
 
+    return 0;
+}
+
+Page* RenderLayerCompositor::page() const
+{
+    if (Frame* frame = m_renderView->frameView()->frame())
+        return frame->page();
+    
     return 0;
 }
 

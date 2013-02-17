@@ -48,6 +48,7 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3D::Attributes attrs, HostWi
     , m_currentHeight(0)
     , m_compiler(isGLES2Compliant() ? SH_ESSL_OUTPUT : SH_GLSL_OUTPUT)
     , m_attrs(attrs)
+    , m_renderStyle(renderStyle)
     , m_texture(0)
     , m_compositorTexture(0)
     , m_fbo(0)
@@ -80,6 +81,14 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3D::Attributes attrs, HostWi
     if (!success) {
         m_private = nullptr;
         return;
+    }
+
+    if (renderStyle == RenderToCurrentGLContext) {
+        // Evas doesn't allow including gl headers and Evas_GL headers at the same time,
+        // so we need to query the current gl context/surface here instead of in GraphicsContext3DPrivate.
+        void* currentContext = (void*)glXGetCurrentContext();
+        void* currentSurface = (void*)glXGetCurrentDrawable();
+        m_private->setCurrentGLContext(currentContext, currentSurface);
     }
 
     if (renderStyle == RenderOffscreen) {
@@ -217,12 +226,11 @@ void GraphicsContext3D::paintToCanvas(const unsigned char* imagePixels, int imag
 #if USE(GRAPHICS_SURFACE)
 void GraphicsContext3D::createGraphicsSurfaces(const IntSize& size)
 {
-    notImplemented();
+    m_private->createGraphicsSurfaces(size);
 }
 #endif
 
-bool GraphicsContext3D::getImageData(Image* image, GC3Denum format, GC3Denum type, bool premultiplyAlpha,
-                                     bool ignoreGammaAndColorProfile, Vector<uint8_t>& outputVector)
+bool GraphicsContext3D::getImageData(Image*, GC3Denum /* format */, GC3Denum /* type */, bool /* premultiplyAlpha */, bool /* ignoreGammaAndColorProfile */, Vector<uint8_t>& /* outputVector */)
 {
     notImplemented();
     return false;

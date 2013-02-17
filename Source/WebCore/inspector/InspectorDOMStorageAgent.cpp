@@ -45,7 +45,9 @@
 #include "Storage.h"
 #include "StorageArea.h"
 #include "VoidCallback.h"
+#include "WebCoreMemoryInstrumentation.h"
 
+#include <wtf/MemoryInstrumentationHashMap.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -118,11 +120,17 @@ void InspectorDOMStorageAgent::getDOMStorageEntries(ErrorString*, const String& 
     Frame* frame = storageResource->frame();
     if (!frame)
         return;
-        
+
+    // FIXME: Exceptions are not reported here.
+    ExceptionCode ec = 0;
     StorageArea* storageArea = storageResource->storageArea();
-    for (unsigned i = 0; i < storageArea->length(frame); ++i) {
-        String name(storageArea->key(i, frame));
-        String value(storageArea->getItem(name, frame));
+    for (unsigned i = 0; i < storageArea->length(ec, frame); ++i) {
+        String name(storageArea->key(i, ec, frame));
+        if (ec)
+            return;
+        String value(storageArea->getItem(name, ec, frame));
+        if (ec)
+            return;
         RefPtr<TypeBuilder::Array<String> > entry = TypeBuilder::Array<String>::create();
         entry->addItem(name);
         entry->addItem(value);
@@ -145,8 +153,9 @@ void InspectorDOMStorageAgent::removeDOMStorageItem(ErrorString*, const String& 
 {
     InspectorDOMStorageResource* storageResource = getDOMStorageResourceForId(storageId);
     if (storageResource) {
-        storageResource->storageArea()->removeItem(key, storageResource->frame());
-        *success = true;
+        ExceptionCode exception = 0;
+        storageResource->storageArea()->removeItem(key, exception, storageResource->frame());
+        *success = !exception;
     } else
         *success = false;
 }
@@ -214,14 +223,13 @@ void InspectorDOMStorageAgent::clearResources()
     m_resources.clear();
 }
 
-size_t InspectorDOMStorageAgent::memoryBytesUsedByStorageCache() const
+void InspectorDOMStorageAgent::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
-    size_t size = 0;
-    for (DOMStorageResourcesMap::const_iterator it = m_resources.begin(); it != m_resources.end(); ++it)
-        size += it->value->storageArea()->memoryBytesUsedByCache();
-    return size;
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::InspectorDOMStorageAgent);
+    InspectorBaseAgent<InspectorDOMStorageAgent>::reportMemoryUsage(memoryObjectInfo);
+    info.addMember(m_resources);
+    info.addWeakPointer(m_frontend);
 }
-
 
 } // namespace WebCore
 

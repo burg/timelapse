@@ -3093,11 +3093,20 @@ sub GenerateImplementationFunctionCall()
             push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $implClassName, $functionString, $thisObject) . ";\n");
             push(@implContent, $indent . "} else if (log->capturing()) {\n");
             push(@implContent, $indent . "    $nativeType memoizedResult = $functionString;\n");
-            push(@implContent, $indent . "    log->append(new AutoMemoized<$memoizedType>(\"$bindingName\", memoizedResult));\n");
+            if (@{$function->raisesExceptions}) {
+                push(@implContent, $indent . "    log->append(new AutoMemoizedWithExceptionCode<$memoizedType>(\"$bindingName\", memoizedResult, ec));\n");
+            } else {
+                push(@implContent, $indent . "    log->append(new AutoMemoized<$memoizedType>(\"$bindingName\", memoizedResult));\n");
+            }
             push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $implClassName, "memoizedResult", $thisObject) . ";\n");
             push(@implContent, $indent . "} else {\n");
             push(@implContent, $indent . "    ASSERT(log->replaying());\n");
-            push(@implContent, $indent . "    AutoMemoized<$memoizedType>* action = static_cast<AutoMemoized<$memoizedType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+            if (@{$function->raisesExceptions}) {
+                push(@implContent, $indent . "    AutoMemoizedWithExceptionCode<$memoizedType>* action = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+		push(@implContent, $indent . "    ec = action->exceptionCode();\n")
+	    } else {
+                push(@implContent, $indent . "    AutoMemoized<$memoizedType>* action = static_cast<AutoMemoized<$memoizedType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+	    }
             push(@implContent, $indent . "    if (action) {\n");
             push(@implContent, $indent . "        ASSERT(action->attributeName() == \"$bindingName\");\n");
             push(@implContent, $indent . "        result = " . NativeToJSValue($function->signature, 1, $implClassName, "action->result()", $thisObject) . ";\n");

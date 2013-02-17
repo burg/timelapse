@@ -597,7 +597,7 @@ void RenderLayer::updateTransform()
         dirty3DTransformedDescendantStatus();
 }
 
-TransformationMatrix RenderLayer::currentTransform() const
+TransformationMatrix RenderLayer::currentTransform(RenderStyle::ApplyTransformOrigin applyOrigin) const
 {
     if (!m_transform)
         return TransformationMatrix();
@@ -606,10 +606,21 @@ TransformationMatrix RenderLayer::currentTransform() const
     if (renderer()->style()->isRunningAcceleratedAnimation()) {
         TransformationMatrix currTransform;
         RefPtr<RenderStyle> style = renderer()->animation()->getAnimatedStyleForRenderer(renderer());
-        style->applyTransform(currTransform, renderBox()->pixelSnappedBorderBoxRect().size(), RenderStyle::IncludeTransformOrigin);
+        style->applyTransform(currTransform, renderBox()->pixelSnappedBorderBoxRect().size(), applyOrigin);
         makeMatrixRenderable(currTransform, canRender3DTransforms());
         return currTransform;
     }
+
+    // m_transform includes transform-origin, so we need to recompute the transform here.
+    if (applyOrigin == RenderStyle::ExcludeTransformOrigin) {
+        RenderBox* box = renderBox();
+        TransformationMatrix currTransform;
+        box->style()->applyTransform(currTransform, box->pixelSnappedBorderBoxRect().size(), RenderStyle::ExcludeTransformOrigin);
+        makeMatrixRenderable(currTransform, canRender3DTransforms());
+        return currTransform;
+    }
+#else
+    UNUSED_PARAM(applyOrigin);
 #endif
 
     return *m_transform;
@@ -1708,6 +1719,9 @@ void RenderLayer::scrollTo(int x, int y)
         return;
     m_scrollOffset = newScrollOffset;
 
+    Frame* frame = renderer()->frame();
+    InspectorInstrumentation::willScrollLayer(frame);
+
     // Update the positions of our child layers (if needed as only fixed layers should be impacted by a scroll).
     // We don't update compositing layers, because we need to do a deep update from the compositing ancestor.
     updateLayerPositionsAfterScroll();
@@ -1718,7 +1732,7 @@ void RenderLayer::scrollTo(int x, int y)
     ASSERT(view);
     if (view) {
         // Update regions, scrolling may change the clip of a particular region.
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
         view->frameView()->updateAnnotatedRegions();
 #endif
 
@@ -1734,7 +1748,6 @@ void RenderLayer::scrollTo(int x, int y)
     }
 
     RenderLayerModelObject* repaintContainer = renderer()->containerForRepaint();
-    Frame* frame = renderer()->frame();
     if (frame) {
         // The caret rect needs to be invalidated after scrolling
         frame->selection()->setCaretRectNeedsUpdate();
@@ -1752,6 +1765,8 @@ void RenderLayer::scrollTo(int x, int y)
     // Schedule the scroll DOM event.
     if (renderer()->node())
         renderer()->node()->document()->eventQueue()->enqueueOrDispatchScrollEvent(renderer()->node(), DocumentEventQueue::ScrollEventElementTarget);
+
+    InspectorInstrumentation::didScrollLayer(frame);
 }
 
 static inline bool frameElementAndViewPermitScroll(HTMLFrameElement* frameElement, FrameView* frameView) 
@@ -2392,7 +2407,7 @@ void RenderLayer::setHasHorizontalScrollbar(bool hasScrollbar)
         m_vBar->styleChanged();
 
     // Force an update since we know the scrollbars have changed things.
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
     if (renderer()->document()->hasAnnotatedRegions())
         renderer()->document()->setAnnotatedRegionsDirty(true);
 #endif
@@ -2415,7 +2430,7 @@ void RenderLayer::setHasVerticalScrollbar(bool hasScrollbar)
         m_vBar->styleChanged();
 
     // Force an update since we know the scrollbars have changed things.
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
     if (renderer()->document()->hasAnnotatedRegions())
         renderer()->document()->setAnnotatedRegionsDirty(true);
 #endif
@@ -2605,7 +2620,7 @@ void RenderLayer::updateScrollbarsAfterLayout()
         updateSelfPaintingLayer();
 
         // Force an update since we know the scrollbars have changed things.
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
         if (renderer()->document()->hasAnnotatedRegions())
             renderer()->document()->setAnnotatedRegionsDirty(true);
 #endif
@@ -3495,6 +3510,8 @@ bool RenderLayer::hitTest(const HitTestRequest& request, HitTestResult& result)
 
 bool RenderLayer::hitTest(const HitTestRequest& request, const HitTestLocation& hitTestLocation, HitTestResult& result)
 {
+    ASSERT(isSelfPaintingLayer() || hasSelfPaintingLayerDescendant());
+
     renderer()->document()->updateLayout();
     
     LayoutRect hitTestArea = renderer()->isRenderFlowThread() ? toRenderFlowThread(renderer())->borderBoxRect() : renderer()->view()->documentRect();
@@ -3615,6 +3632,9 @@ RenderLayer* RenderLayer::hitTestLayer(RenderLayer* rootLayer, RenderLayer* cont
                                        const LayoutRect& hitTestRect, const HitTestLocation& hitTestLocation, bool appliedTransform,
                                        const HitTestingTransformState* transformState, double* zOffset)
 {
+    if (!isSelfPaintingLayer() && !hasSelfPaintingLayerDescendant())
+        return 0;
+
     // The natural thing would be to keep HitTestingTransformState on the stack, but it's big, so we heap-allocate.
 
     bool useTemporaryClipRects = renderer()->view()->frameView()->containsScrollableAreaWithOverlayScrollbars();
@@ -3786,6 +3806,8 @@ RenderLayer* RenderLayer::hitTestLayer(RenderLayer* rootLayer, RenderLayer* cont
 
 bool RenderLayer::hitTestContents(const HitTestRequest& request, HitTestResult& result, const LayoutRect& layerBounds, const HitTestLocation& hitTestLocation, HitTestFilter hitTestFilter) const
 {
+    ASSERT(isSelfPaintingLayer() || hasSelfPaintingLayerDescendant());
+
     if (!renderer()->hitTest(request, result, hitTestLocation,
                             toLayoutPoint(layerBounds.location() - renderBoxLocation()),
                             hitTestFilter)) {
@@ -3820,7 +3842,10 @@ RenderLayer* RenderLayer::hitTestList(Vector<RenderLayer*>* list, RenderLayer* r
 {
     if (!list)
         return 0;
-    
+
+    if (!hasSelfPaintingLayerDescendant())
+        return 0;
+
     RenderLayer* resultLayer = 0;
     for (int i = list->size() - 1; i >= 0; --i) {
         RenderLayer* childLayer = list->at(i);

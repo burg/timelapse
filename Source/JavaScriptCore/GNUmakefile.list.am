@@ -106,7 +106,6 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/bytecode/ExpressionRangeInfo.h \
 	Source/JavaScriptCore/bytecode/GetByIdStatus.cpp \
 	Source/JavaScriptCore/bytecode/GetByIdStatus.h \
-	Source/JavaScriptCore/bytecode/GlobalResolveInfo.h \
 	Source/JavaScriptCore/bytecode/HandlerInfo.h \
 	Source/JavaScriptCore/bytecode/Instruction.h \
 	Source/JavaScriptCore/bytecode/JumpTable.cpp \
@@ -133,6 +132,7 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/bytecode/PutKind.h \
 	Source/JavaScriptCore/bytecode/ResolveGlobalStatus.cpp \
 	Source/JavaScriptCore/bytecode/ResolveGlobalStatus.h \
+	Source/JavaScriptCore/bytecode/ResolveOperation.h \
 	Source/JavaScriptCore/bytecode/SamplingTool.cpp \
 	Source/JavaScriptCore/bytecode/SamplingTool.h \
 	Source/JavaScriptCore/bytecode/SpecialPointer.cpp \
@@ -170,6 +170,7 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/dfg/DFGCCallHelpers.h \
 	Source/JavaScriptCore/dfg/DFGCFGSimplificationPhase.cpp \
 	Source/JavaScriptCore/dfg/DFGCFGSimplificationPhase.h \
+	Source/JavaScriptCore/dfg/DFGCallArrayAllocatorSlowPathGenerator.h \
 	Source/JavaScriptCore/dfg/DFGCapabilities.cpp \
 	Source/JavaScriptCore/dfg/DFGCapabilities.h \
 	Source/JavaScriptCore/dfg/DFGCFAPhase.cpp \
@@ -376,6 +377,7 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/interpreter/Interpreter.h \
 	Source/JavaScriptCore/interpreter/JSStack.cpp \
 	Source/JavaScriptCore/interpreter/JSStack.h \
+	Source/JavaScriptCore/interpreter/JSStackInlines.h \
 	Source/JavaScriptCore/interpreter/Register.h \
 	Source/JavaScriptCore/interpreter/VMInspector.cpp \
 	Source/JavaScriptCore/interpreter/VMInspector.h \
@@ -731,6 +733,7 @@ offlineasm_nosources += \
 	Source/JavaScriptCore/offlineasm/opt.rb \
 	Source/JavaScriptCore/offlineasm/parser.rb \
 	Source/JavaScriptCore/offlineasm/registers.rb \
+	Source/JavaScriptCore/offlineasm/risc.rb \
 	Source/JavaScriptCore/offlineasm/self_hash.rb \
 	Source/JavaScriptCore/offlineasm/settings.rb \
 	Source/JavaScriptCore/offlineasm/transform.rb \

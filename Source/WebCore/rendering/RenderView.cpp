@@ -65,6 +65,7 @@ RenderView::RenderView(Node* node, FrameView* view)
     , m_layoutStateDisableCount(0)
     , m_renderQuoteHead(0)
     , m_renderCounterCount(0)
+    , m_layoutPhase(RenderViewNormalLayout)
 {
     // Clear our anonymous bit, set because RenderObject assumes
     // any renderer with document as the node is anonymous.
@@ -100,10 +101,9 @@ bool RenderView::hitTest(const HitTestRequest& request, const HitTestLocation& l
     return inside;
 }
 
-void RenderView::updateLogicalHeight()
+void RenderView::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit, LogicalExtentComputedValues& computedValues) const
 {
-    if (!shouldUsePrintingLayout() && m_frameView)
-        setLogicalHeight(viewLogicalHeight());
+    computedValues.m_extent = (!shouldUsePrintingLayout() && m_frameView) ? LayoutUnit(viewLogicalHeight()) : logicalHeight;
 }
 
 void RenderView::updateLogicalWidth()
@@ -132,8 +132,31 @@ bool RenderView::isChildAllowed(RenderObject* child, RenderStyle*) const
     return child->isBox();
 }
 
+void RenderView::layoutContent(const LayoutState& state)
+{
+    UNUSED_PARAM(state);
+    ASSERT(needsLayout());
+
+    RenderBlock::layout();
+    if (hasRenderNamedFlowThreads())
+        flowThreadController()->layoutRenderNamedFlowThreads();
+#ifndef NDEBUG
+    checkLayoutState(state);
+#endif
+}
+
+#ifndef NDEBUG
+void RenderView::checkLayoutState(const LayoutState& state)
+{
+    ASSERT(layoutDeltaMatches(LayoutSize()));
+    ASSERT(!m_layoutStateDisableCount);
+    ASSERT(m_layoutState == &state);
+}
+#endif
+
 void RenderView::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     if (!document()->paginated())
         setPageLogicalHeight(0);
 
@@ -154,6 +177,9 @@ void RenderView::layout()
     }
 
     ASSERT(!m_layoutState);
+    if (!needsLayout())
+        return;
+
     LayoutState state;
     // FIXME: May be better to push a clip and avoid issuing offscreen repaints.
     state.m_clipped = false;
@@ -163,15 +189,23 @@ void RenderView::layout()
     m_pageLogicalHeightChanged = false;
     m_layoutState = &state;
 
-    if (needsLayout()) {
-        RenderBlock::layout();
-        if (hasRenderNamedFlowThreads())
-            flowThreadController()->layoutRenderNamedFlowThreads();
+    m_layoutPhase = RenderViewNormalLayout;
+    bool needsTwoPassLayoutForAutoLogicalHeightRegions = hasRenderNamedFlowThreads() && flowThreadController()->hasAutoLogicalHeightRegions();
+
+    if (needsTwoPassLayoutForAutoLogicalHeightRegions)
+        flowThreadController()->resetRegionsOverrideLogicalContentHeight();
+
+    layoutContent(state);
+
+    if (needsTwoPassLayoutForAutoLogicalHeightRegions) {
+        m_layoutPhase = ConstrainedFlowThreadsLayoutInAutoLogicalHeightRegions;
+        flowThreadController()->markAutoLogicalHeightRegionsForLayout();
+        layoutContent(state);
     }
 
-    ASSERT(layoutDelta() == LayoutSize());
-    ASSERT(m_layoutStateDisableCount == 0);
-    ASSERT(m_layoutState == &state);
+#ifndef NDEBUG
+    checkLayoutState(state);
+#endif
     m_layoutState = 0;
     setNeedsLayout(false);
 }

@@ -314,6 +314,7 @@ void RenderBox::updateFromStyle()
 
 void RenderBox::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
 
     RenderObject* child = firstChild();
@@ -698,12 +699,22 @@ void RenderBox::setOverrideLogicalContentWidth(LayoutUnit width)
     gOverrideWidthMap->set(this, width);
 }
 
-void RenderBox::clearOverrideSize()
+void RenderBox::clearOverrideLogicalContentHeight()
 {
     if (gOverrideHeightMap)
         gOverrideHeightMap->remove(this);
+}
+
+void RenderBox::clearOverrideLogicalContentWidth()
+{
     if (gOverrideWidthMap)
         gOverrideWidthMap->remove(this);
+}
+
+void RenderBox::clearOverrideSize()
+{
+    clearOverrideLogicalContentHeight();
+    clearOverrideLogicalContentWidth();
 }
 
 LayoutUnit RenderBox::overrideLogicalContentWidth() const
@@ -1762,6 +1773,24 @@ LayoutUnit RenderBox::computeLogicalWidthInRegionUsing(SizeType widthType, Layou
     return logicalWidthResult;
 }
 
+static bool flexItemHasStretchAlignment(const RenderObject* flexitem)
+{
+    RenderObject* parent = flexitem->parent();
+    return flexitem->style()->alignSelf() == AlignStretch || (flexitem->style()->alignSelf() == AlignAuto && parent->style()->alignItems() == AlignStretch);
+}
+
+static bool isStretchingColumnFlexItem(const RenderObject* flexitem)
+{
+    RenderObject* parent = flexitem->parent();
+    if (parent->isDeprecatedFlexibleBox() && parent->style()->boxOrient() == VERTICAL && parent->style()->boxAlign() == BSTRETCH)
+        return true;
+
+    // We don't stretch multiline flexboxes because they need to apply line spacing (align-content) first.
+    if (parent->isFlexibleBox() && parent->style()->flexWrap() == FlexNoWrap && parent->style()->isColumnFlexDirection() && flexItemHasStretchAlignment(flexitem))
+        return true;
+    return false;
+}
+
 bool RenderBox::sizesLogicalWidthToFitContent(SizeType widthType) const
 {
     // Marquees in WinIE are like a mixture of blocks and inline-blocks.  They size as though they're blocks,
@@ -1790,11 +1819,10 @@ bool RenderBox::sizesLogicalWidthToFitContent(SizeType widthType) const
     // In the case of columns that have a stretch alignment, we go ahead and layout at the
     // stretched size to avoid an extra layout when applying alignment.
     if (parent()->isFlexibleBox()) {
-        // For multiline columns, we need to apply the flex-line-pack first, so we can't stretch now.
-        if (!parent()->style()->isColumnFlexDirection() || parent()->style()->flexWrap() != FlexWrapNone)
+        // For multiline columns, we need to apply align-content first, so we can't stretch now.
+        if (!parent()->style()->isColumnFlexDirection() || parent()->style()->flexWrap() != FlexNoWrap)
             return true;
-        EAlignItems itemAlign = style()->alignSelf();
-        if (itemAlign != AlignStretch && (itemAlign != AlignAuto || parent()->style()->alignItems() != AlignStretch))
+        if (!flexItemHasStretchAlignment(this))
             return true;
     }
 
@@ -1802,16 +1830,14 @@ bool RenderBox::sizesLogicalWidthToFitContent(SizeType widthType) const
     // that don't stretch their kids lay out their children at their intrinsic widths.
     // FIXME: Think about block-flow here.
     // https://bugs.webkit.org/show_bug.cgi?id=46473
-    if (parent()->isDeprecatedFlexibleBox()
-            && (parent()->style()->boxOrient() == HORIZONTAL || parent()->style()->boxAlign() != BSTRETCH))
+    if (parent()->isDeprecatedFlexibleBox() && (parent()->style()->boxOrient() == HORIZONTAL || parent()->style()->boxAlign() != BSTRETCH))
         return true;
 
-    // Button, input, select, textarea, and legend treat
-    // width value of 'auto' as 'intrinsic' unless it's in a
-    // stretching vertical flexbox.
+    // Button, input, select, textarea, and legend treat width value of 'auto' as 'intrinsic' unless it's in a
+    // stretching column flexbox.
     // FIXME: Think about block-flow here.
     // https://bugs.webkit.org/show_bug.cgi?id=46473
-    if (logicalWidth.type() == Auto && !(parent()->isDeprecatedFlexibleBox() && parent()->style()->boxOrient() == VERTICAL && parent()->style()->boxAlign() == BSTRETCH) && node() && (node()->hasTagName(inputTag) || node()->hasTagName(selectTag) || node()->hasTagName(buttonTag) || node()->hasTagName(textareaTag) || node()->hasTagName(legendTag)))
+    if (logicalWidth.type() == Auto && !isStretchingColumnFlexItem(this) && node() && (node()->hasTagName(inputTag) || node()->hasTagName(selectTag) || node()->hasTagName(buttonTag) || node()->hasTagName(textareaTag) || node()->hasTagName(legendTag)))
         return true;
 
     if (isHorizontalWritingMode() != containingBlock()->isHorizontalWritingMode())
@@ -2187,10 +2213,9 @@ LayoutUnit RenderBox::computePercentageLogicalHeight(const Length& height) const
     } else if (cb->isRenderView() || isOutOfFlowPositionedWithSpecifiedHeight) {
         // Don't allow this to affect the block' height() member variable, since this
         // can get called while the block is still laying out its kids.
-        LayoutUnit oldHeight = cb->logicalHeight();
-        cb->updateLogicalHeight();
-        availableHeight = cb->contentLogicalHeight();
-        cb->setLogicalHeight(oldHeight);
+        LogicalExtentComputedValues computedValues;
+        cb->computeLogicalHeight(cb->logicalHeight(), 0, computedValues);
+        availableHeight = computedValues.m_extent - cb->borderAndPaddingLogicalHeight() - cb->scrollbarLogicalHeight();
     }
 
     if (availableHeight == -1)
@@ -2286,10 +2311,10 @@ LayoutUnit RenderBox::computeReplacedLogicalHeightUsing(SizeType sizeType, Lengt
             if (cb->isOutOfFlowPositioned() && cb->style()->height().isAuto() && !(cb->style()->top().isAuto() || cb->style()->bottom().isAuto())) {
                 ASSERT(cb->isRenderBlock());
                 RenderBlock* block = toRenderBlock(cb);
-                LayoutUnit oldHeight = block->height();
-                block->updateLogicalHeight();
-                LayoutUnit newHeight = block->adjustContentBoxLogicalHeightForBoxSizing(block->contentHeight());
-                block->setHeight(oldHeight);
+                LogicalExtentComputedValues computedValues;
+                block->computeLogicalHeight(block->logicalHeight(), 0, computedValues);
+                LayoutUnit newContentHeight = computedValues.m_extent - block->borderAndPaddingLogicalHeight() - block->scrollbarLogicalHeight();
+                LayoutUnit newHeight = block->adjustContentBoxLogicalHeightForBoxSizing(newContentHeight);
                 return adjustContentBoxLogicalHeightForBoxSizing(valueForLength(logicalHeight, newHeight));
             }
             
@@ -2361,11 +2386,10 @@ LayoutUnit RenderBox::availableLogicalHeightUsing(const Length& h) const
     // https://bugs.webkit.org/show_bug.cgi?id=46500
     if (isRenderBlock() && isOutOfFlowPositioned() && style()->height().isAuto() && !(style()->top().isAuto() || style()->bottom().isAuto())) {
         RenderBlock* block = const_cast<RenderBlock*>(toRenderBlock(this));
-        LayoutUnit oldHeight = block->logicalHeight();
-        block->updateLogicalHeight();
-        LayoutUnit newHeight = block->adjustContentBoxLogicalHeightForBoxSizing(block->contentLogicalHeight());
-        block->setLogicalHeight(oldHeight);
-        return adjustContentBoxLogicalHeightForBoxSizing(newHeight);
+        LogicalExtentComputedValues computedValues;
+        block->computeLogicalHeight(block->logicalHeight(), 0, computedValues);
+        LayoutUnit newContentHeight = computedValues.m_extent - block->borderAndPaddingLogicalHeight() - block->scrollbarLogicalHeight();
+        return adjustContentBoxLogicalHeightForBoxSizing(newContentHeight);
     }
 
     // FIXME: This is wrong if the containingBlock has a perpendicular writing mode.
@@ -3807,10 +3831,10 @@ LayoutUnit RenderBox::lineHeight(bool /*firstLine*/, LineDirectionMode direction
     return 0;
 }
 
-LayoutUnit RenderBox::baselinePosition(FontBaseline baselineType, bool /*firstLine*/, LineDirectionMode direction, LinePositionMode /*linePositionMode*/) const
+int RenderBox::baselinePosition(FontBaseline baselineType, bool /*firstLine*/, LineDirectionMode direction, LinePositionMode /*linePositionMode*/) const
 {
     if (isReplaced()) {
-        LayoutUnit result = direction == HorizontalLine ? m_marginBox.top() + height() + m_marginBox.bottom() : m_marginBox.right() + width() + m_marginBox.left();
+        int result = direction == HorizontalLine ? m_marginBox.top() + height() + m_marginBox.bottom() : m_marginBox.right() + width() + m_marginBox.left();
         if (baselineType == AlphabeticBaseline)
             return result;
         return result - result / 2;

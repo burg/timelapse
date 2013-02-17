@@ -840,7 +840,7 @@ bool AbstractState::execute(unsigned indexInBlock)
     case GetByVal: {
         node.setCanExit(true);
         switch (node.arrayMode()) {
-        case Array::Undecided:
+        case Array::SelectUsingPredictions:
         case Array::Unprofiled:
             ASSERT_NOT_REACHED();
             break;
@@ -868,7 +868,6 @@ bool AbstractState::execute(unsigned indexInBlock)
         case OUT_OF_BOUNDS_ARRAY_STORAGE_MODES:
         case SLOW_PUT_ARRAY_STORAGE_MODES:
         case ALL_EFFECTFUL_MODES:
-        case POLYMORPHIC_MODES:
             forNode(node.child1()).filter(SpecCell);
             forNode(node.child2()).filter(SpecInt32);
             clobberWorld(node.codeOrigin, indexInBlock);
@@ -943,7 +942,6 @@ bool AbstractState::execute(unsigned indexInBlock)
         case OUT_OF_BOUNDS_ARRAY_STORAGE_MODES:
         case SLOW_PUT_ARRAY_STORAGE_MODES:
         case ALL_EFFECTFUL_MODES:
-        case POLYMORPHIC_MODES:
             forNode(child1).filter(SpecCell);
             forNode(child2).filter(SpecInt32);
             clobberWorld(node.codeOrigin, indexInBlock);
@@ -1384,7 +1382,6 @@ bool AbstractState::execute(unsigned indexInBlock)
             break;
         case ALL_CONTIGUOUS_MODES:
         case ALL_ARRAY_STORAGE_MODES:
-        case POLYMORPHIC_MODES: // These only get a CheckArray for GetArrayLength
             // This doesn't filter anything meaningful right now. We may want to add
             // CFA tracking of array mode speculations, but we don't have that, yet.
             forNode(node.child1()).filter(SpecCell);
@@ -1423,19 +1420,29 @@ bool AbstractState::execute(unsigned indexInBlock)
             ASSERT_NOT_REACHED();
             break;
         }
+        forNode(node.child1()).filterArrayModes(arrayModesFor(node.arrayMode()));
+        m_haveStructures = true;
         break;
     }
     case Arrayify: {
+        if (modeAlreadyChecked(forNode(node.child1()), node.arrayMode())) {
+            m_foundConstants = true;
+            node.setCanExit(false);
+            break;
+        }
         switch (node.arrayMode()) {
         case ALL_EFFECTFUL_MODES:
             node.setCanExit(true);
             forNode(node.child1()).filter(SpecCell);
-            forNode(node.child2()).filter(SpecInt32);
+            if (node.child2())
+                forNode(node.child2()).filter(SpecInt32);
             forNode(nodeIndex).clear();
             clobberStructures(indexInBlock);
+            forNode(node.child1()).filterArrayModes(arrayModesFor(node.arrayMode()));
+            m_haveStructures = true;
             break;
         default:
-            ASSERT_NOT_REACHED();
+            CRASH();
             break;
         }
         break;
@@ -1526,7 +1533,12 @@ bool AbstractState::execute(unsigned indexInBlock)
         clobberWorld(node.codeOrigin, indexInBlock);
         forNode(nodeIndex).makeTop();
         break;
-            
+
+    case GarbageValue:
+        clobberWorld(node.codeOrigin, indexInBlock);
+        forNode(nodeIndex).makeTop();
+        break;
+
     case ForceOSRExit:
         node.setCanExit(true);
         m_isValid = false;

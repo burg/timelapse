@@ -264,6 +264,7 @@ http/tests/inspector/resource-tree/resource-tree-reload.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=40300
 inspector/debugger/live-edit.html
+inspector/debugger/live-edit-breakpoints.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=89652
 inspector/debugger/debugger-compile-and-run.html
@@ -397,6 +398,7 @@ http/tests/navigation/response204.html
 fast/events/page-visibility-iframe-delete-test.html
 fast/events/page-visibility-iframe-move-test.html
 fast/events/page-visibility-iframe-propagation-test.html
+fast/events/page-visibility-null-view.html
 fast/events/page-visibility-transition-test.html
 
 # console long eval test is timeout 60616
@@ -421,6 +423,7 @@ fast/regions/style-scoped-in-flow.html
 # ENABLE(SHADOW_DOM) is disabled.
 fast/dom/shadow
 editing/shadow
+inspector/elements/update-shadowdom.html
 
 # JSC does not support setIsolatedWorldSecurityOrigin (http://webkit.org/b/61540)
 http/tests/security/isolatedWorld/cross-origin-xhr.html
@@ -444,7 +447,7 @@ webaudio/
 # Microdata DOM API is not yet enabled.
 fast/dom/MicroData
 
-# ENABLE(WIDGET_REGION) is disabled
+# ENABLE(DRAGGABLE_REGION) is disabled
 fast/css/draggable-region-parser.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=97132
@@ -965,11 +968,14 @@ webkit.org/b/87908 editing/undomanager
 # CSS image-resolution is not yet enabled.
 webkit.org/b/85262 fast/css/image-resolution
 
+# Resolution media query is not yet enabled.
+webkit.org/b/85262 fast/media/mq-resolution.html [ Skip ]
+
 # CSS image-orientation is not yet enabled.
 webkit.org/b/89052 fast/css/image-orientation
 
-# CSS3 Text Decoration support is not yet enabled (needs ENABLE_CSS3_TEXT_DECORATION).
-webkit.org/b/58491 fast/css3-text-decoration
+# CSS3 Text support is not yet enabled (needs ENABLE_CSS3_TEXT).
+webkit.org/b/58491 fast/css3-text/css3-text-decoration
 
 # Our slow tests, in alphabetical order.
 webkit.org/b/57672 http/tests/local/fileapi/send-sliced-dragged-file.html [ Failure Pass ]
@@ -997,6 +1003,13 @@ webkit.org/b/58192 http/tests/inspector/console-websocket-error.html [ Failure P
 webkit.org/b/58192 fast/canvas/webgl/gl-teximage.html [ Failure Pass ]
 webkit.org/b/58192 fast/frames/flattening/iframe-flattening-offscreen.html [ Failure Pass ]
 webkit.org/b/58192 svg/dom/SVGScriptElement/script-set-href.svg [ Failure Pass ]
+
+# Need rebaselining after 99870
+webkit.org/b/99870 svg/custom/js-late-pattern-creation.svg [ Pass ImageOnlyFailure ]
+webkit.org/b/99870 svg/custom/pattern-skew-transformed.svg [ Pass ImageOnlyFailure ]
+webkit.org/b/99870 svg/custom/pattern-with-transformation.svg [ Pass ImageOnlyFailure ]
+webkit.org/b/99870 svg/transforms/text-with-pattern-inside-transformed-html.xhtml [ Pass ImageOnlyFailure ]
+webkit.org/b/99870 svg/custom/pattern-scaling.svg [ Pass ImageOnlyFailure Missing ]
 
 # Flakey cookies tests
 webkit.org/b/73694 http/tests/cookies/simple-cookies-expired.html [ Failure Pass ]
@@ -1285,6 +1298,22 @@ webkit.org/b/80394 fast/block/margin-collapse/empty-clear-blocks.html [ Failure 
 webkit.org/b/80394 fast/block/margin-collapse/025.html [ Failure ]
 webkit.org/b/80394 fast/block/margin-collapse/block-inside-inline/025.html [ Failure ]
 
+# Needs rebaselining after bug 99921
+webkit.org/b/99921 mathml/presentation/fenced.xhtml [ Failure ]
+webkit.org/b/99921 mathml/presentation/mo.xhtml [ Failure ]
+webkit.org/b/99921 mathml/presentation/mo-stretch.html [ Failure ]
+webkit.org/b/99921 mathml/presentation/over.xhtml [ Failure ]
+webkit.org/b/99921 mathml/presentation/row.xhtml [ Failure ]
+webkit.org/b/99921 mathml/presentation/row-alignment.xhtml [ Failure ]
+webkit.org/b/99921 mathml/presentation/subsup.xhtml [ Failure ]
+
+# css3-conditionals support is not yet enabled.
+webkit.org/b/86146 css3/supports.html
+
+# Hardware accelerated CSS transitions appear pixelated when scaled up using transform
+webkit.org/b/27684 compositing/text-on-scaled-layer.html [ ImageOnlyFailure ]
+webkit.org/b/27684 compositing/text-on-scaled-surface.html [ ImageOnlyFailure ]
+
 # Asserts in MessagePort::contextDestroyed, but the assert usually gets attributed to later tests.
 webkit.org/b/94458 fast/events/message-port-constructor-for-deleted-document.html
 
@@ -1309,3 +1338,15 @@ webkit.org/b/99096 fast/canvas/webgl/arraybuffer-transfer-of-control.html [ Fail
 
 # Timing out on Mountain Lion WK1 release sometimes
 webkit.org/b/99221 fast/js/random-array-gc-stress.html [ Pass Timeout ]
+
+# User Timing is not enable yet. so skip it.
+webkit.org/b/84893 http/tests/w3c/webperf/submission/Intel/user-timing [ Skip ]
+
+# Expected to fail until WebGL extension implementation lands
+webkit.org/b/98257 fast/canvas/webgl/oes-element-index-uint.html [ Failure Pass ]
+
+# Resource Timing is not enable yet, skip it.
+webkit.org/b/61138 http/tests/w3c/webperf/submission/Intel/resource-timing [ Skip ]
+
+# TileCache tests that don't apply to WK1 (they are re-enabled via the WK2 TestExpectations file)
+platform/mac/tiled-drawing/ [ Skip ]

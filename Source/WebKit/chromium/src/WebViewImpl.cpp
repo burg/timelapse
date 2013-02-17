@@ -445,6 +445,7 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
 #endif
     , m_flingModifier(0)
     , m_validationMessage(ValidationMessageClientImpl::create(*client))
+    , m_suppressInvalidations(false)
 {
     // WebKit/win/WebView.cpp does the same thing, except they call the
     // KJS specific wrapper around this method. We need to have threading
@@ -679,6 +680,7 @@ bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
             m_linkHighlight->startHighlightAnimationIfNeeded();
         break;
     case WebInputEvent::GestureTap:
+    case WebInputEvent::GestureLongPress:
         // If a link highlight is active, kill it.
         m_linkHighlight.clear();
         break;
@@ -742,18 +744,7 @@ bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
 
         break;
     }
-    case WebInputEvent::GestureTwoFingerTap: {
-        if (!mainFrameImpl() || !mainFrameImpl()->frameView())
-            break;
-
-        m_page->contextMenuController()->clearContextMenu();
-        m_contextMenuAllowed = true;
-        PlatformGestureEventBuilder platformEvent(mainFrameImpl()->frameView(), event);
-        eventSwallowed = mainFrameImpl()->frame()->eventHandler()->sendContextMenuEventForGesture(platformEvent);
-        m_contextMenuAllowed = false;
-
-        break;
-    }
+    case WebInputEvent::GestureTwoFingerTap:
     case WebInputEvent::GestureLongPress: {
         if (!mainFrameImpl() || !mainFrameImpl()->frameView())
             break;
@@ -774,10 +765,12 @@ bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
         break;
     }
     case WebInputEvent::GestureDoubleTap:
-        m_client->cancelScheduledContentIntents();
-        animateZoomAroundPoint(WebPoint(event.x, event.y), DoubleTap);
-        eventSwallowed = true;
-        break;
+        if (m_webSettings->doubleTapToZoomEnabled()) {
+            m_client->cancelScheduledContentIntents();
+            animateZoomAroundPoint(WebPoint(event.x, event.y), DoubleTap);
+            eventSwallowed = true;
+            break;
+        }
     case WebInputEvent::GestureScrollBegin:
     case WebInputEvent::GesturePinchBegin:
         m_client->cancelScheduledContentIntents();
@@ -1776,6 +1769,14 @@ void WebViewImpl::doPixelReadbackToCanvas(WebCanvas* canvas, const IntRect& rect
     target.setConfig(SkBitmap::kARGB_8888_Config, rect.width(), rect.height(), rect.width() * 4);
     target.allocPixels();
     m_layerTreeView->compositeAndReadback(target.getPixels(), rect);
+#if (!SK_R32_SHIFT && SK_B32_SHIFT == 16)
+    // The compositor readback always gives back pixels in BGRA order, but for
+    // example Android's Skia uses RGBA ordering so the red and blue channels
+    // need to be swapped.
+    uint8_t* pixels = reinterpret_cast<uint8_t*>(target.getPixels());
+    for (size_t i = 0; i < target.getSize(); i += 4)
+        std::swap(pixels[i], pixels[i + 2]);
+#endif
     canvas->writePixels(target, rect.x(), rect.y());
 }
 #endif
@@ -3763,6 +3764,11 @@ bool WebViewImpl::tabsToLinks() const
     return m_tabsToLinks;
 }
 
+void WebViewImpl::suppressInvalidations(bool enable)
+{
+    m_suppressInvalidations = enable;
+}
+
 #if USE(ACCELERATED_COMPOSITING)
 bool WebViewImpl::allowsAcceleratedCompositing()
 {
@@ -3771,6 +3777,8 @@ bool WebViewImpl::allowsAcceleratedCompositing()
 
 void WebViewImpl::setRootGraphicsLayer(GraphicsLayer* layer)
 {
+    TemporaryChange<bool> change(m_suppressInvalidations, true);
+
     m_rootGraphicsLayer = layer;
     m_rootLayer = layer ? layer->platformLayer() : 0;
 
@@ -3794,7 +3802,7 @@ void WebViewImpl::setRootGraphicsLayer(GraphicsLayer* layer)
     }
 
     IntRect damagedRect(0, 0, m_size.width, m_size.height);
-    if (!m_isAcceleratedCompositingActive)
+    if (!m_isAcceleratedCompositingActive && !m_suppressInvalidations)
         m_client->didInvalidateRect(damagedRect);
 }
 
@@ -4093,6 +4101,11 @@ void WebViewImpl::didRecreateOutputSurface(bool success)
 
 void WebViewImpl::scheduleComposite()
 {
+    if  (m_suppressInvalidations) {
+        TRACE_EVENT_INSTANT0("webkit", "WebViewImpl invalidations suppressed");
+        return;
+    }
+
     ASSERT(!Platform::current()->compositorSupport()->isThreadingEnabled());
     m_client->scheduleComposite();
 }

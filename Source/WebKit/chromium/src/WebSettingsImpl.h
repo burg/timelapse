@@ -78,9 +78,11 @@ public:
     virtual void setDefaultTextEncodingName(const WebString&);
     virtual void setDefaultTileSize(WebSize);
     virtual void setDeferred2dCanvasEnabled(bool);
+    virtual void setDeferredImageDecodingEnabled(bool);
     virtual void setDeveloperExtrasEnabled(bool);
     virtual void setDeviceSupportsMouse(bool);
     virtual void setDeviceSupportsTouch(bool);
+    virtual void setDoubleTapToZoomEnabled(bool);
     virtual void setDownloadableBinaryFontsEnabled(bool);
     virtual void setEditableLinkBehaviorNeverLive();
     virtual void setEditingBehavior(EditingBehavior);
@@ -134,12 +136,14 @@ public:
     virtual void setShouldDisplaySubtitles(bool);
     virtual void setShouldDisplayTextDescriptions(bool);
     virtual void setShouldPrintBackgrounds(bool);
+    virtual void setShouldRespectImageOrientation(bool);
     virtual void setShowDebugBorders(bool);
     virtual void setShowFPSCounter(bool);
     virtual void setShowPaintRects(bool);
     virtual void setShowPlatformLayerTree(bool);
     virtual void setShrinksStandaloneImagesToFit(bool);
     virtual void setStandardFontFamily(const WebString&, UScriptCode = USCRIPT_COMMON);
+    virtual void setSupportsMultipleWindows(bool);
     virtual void setSyncXHRInDocumentsEnabled(bool);
     virtual void setTextAreasAreResizable(bool);
     virtual void setTextAutosizingEnabled(bool);
@@ -165,6 +169,7 @@ public:
     bool applyPageScaleFactorInCompositor() const;
     bool autoZoomFocusedNodeToLegibleScale() const { return m_autoZoomFocusedNodeToLegibleScale; }
     bool gestureTapHighlightEnabled() { return m_gestureTapHighlightEnabled; }
+    bool doubleTapToZoomEnabled() { return m_doubleTapToZoomEnabled; }
     WebSize defaultTileSize() const { return m_defaultTileSize; }
     WebSize maxUntiledLayerSize() const { return m_maxUntiledLayerSize; }
 
@@ -178,6 +183,8 @@ private:
     bool m_applyDefaultDeviceScaleFactorInCompositor;
     bool m_gestureTapHighlightEnabled;
     bool m_autoZoomFocusedNodeToLegibleScale;
+    bool m_deferredImageDecodingEnabled;
+    bool m_doubleTapToZoomEnabled;
     WebSize m_defaultTileSize;
     WebSize m_maxUntiledLayerSize;
 };

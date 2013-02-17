@@ -15,7 +15,6 @@ fast/events/click-count.html
 
 # [Qt] http/tests/misc/drag-over-iframe-invalid-source-crash.html and fast/events/drag-selects-image.html fails with timeout
 # https://bugs.webkit.org/show_bug.cgi?id=73901
-http/tests/misc/drag-over-iframe-invalid-source-crash.html
 fast/events/drag-selects-image.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=35973
@@ -77,3 +76,14 @@ webkit.org/b/98525 plugins/plugin-document-back-forward.html
 webkit.org/b/98525 plugins/reentrant-update-widget-positions.html
 webkit.org/b/98525 plugins/update-widgets-crash.html
 webkit.org/b/98525 plugins/window-open.html
+
+# [Qt] Unidentified pixel failures
+webkit.org/b/99306 fast/images/gif-loop-count.html [ ImageOnlyFailure ]
+webkit.org/b/99306 fast/repaint/background-scaling.html [ ImageOnlyFailure ]
+webkit.org/b/99306 transforms/3d/point-mapping/3d-point-mapping-coplanar.html [ ImageOnlyFailure ]
+webkit.org/b/99306 transitions/suspend-transform-transition.html [ ImageOnlyFailure ]
+
+# TestRunner::overridePreference() does not support the 'WebKitSupportsMultipleWindows' preference
+fast/dom/HTMLAnchorElement/anchor-no-multiple-windows.html
+fast/dom/Window/window-open-no-multiple-windows.html
+fast/forms/post-popup-no-multiple-windows.html

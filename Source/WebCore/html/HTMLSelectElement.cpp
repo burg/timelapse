@@ -106,7 +106,7 @@ void HTMLSelectElement::optionSelectedByUser(int optionIndex, bool fireOnChangeN
     // User interaction such as mousedown events can cause list box select elements to send change events.
     // This produces that same behavior for changes triggered by other code running on behalf of the user.
     if (!usesMenuList()) {
-        updateSelectedState(optionIndex, allowMultipleSelection, false);
+        updateSelectedState(optionToListIndex(optionIndex), allowMultipleSelection, false);
         setNeedsValidityCheck();
         if (fireOnChangeNow)
             listBoxOnChange();
@@ -1314,6 +1314,10 @@ void HTMLSelectElement::listBoxDefaultEventHandler(Event* event)
         if (listIndex >= 0) {
             if (!disabled()) {
                 if (m_multiple) {
+                    // Only extend selection if there is something selected.
+                    if (m_activeSelectionAnchorIndex < 0)
+                        return;
+
                     setActiveSelectionEndIndex(listIndex);
                     updateListBoxSelection(false);
                 } else {

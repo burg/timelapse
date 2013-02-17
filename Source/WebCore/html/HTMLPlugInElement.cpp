@@ -72,6 +72,24 @@ HTMLPlugInElement::~HTMLPlugInElement()
 #endif
 }
 
+bool HTMLPlugInElement::canProcessDrag() const
+{
+    const PluginViewBase* plugin = pluginWidget() && pluginWidget()->isPluginViewBase() ? static_cast<const PluginViewBase*>(pluginWidget()) : 0;
+    return plugin ? plugin->canProcessDrag() : false;
+}
+
+bool HTMLPlugInElement::willRespondToMouseClickEvents()
+{
+    if (disabled())
+        return false;
+    RenderObject* r = renderer();
+    if (!r)
+        return false;
+    if (!r->isEmbeddedObject() && !r->isWidget())
+        return false;
+    return true;
+}
+
 void HTMLPlugInElement::detach()
 {
     m_instance.clear();

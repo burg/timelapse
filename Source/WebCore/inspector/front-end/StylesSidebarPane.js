@@ -94,6 +94,7 @@ WebInspector.StylesSidebarPane = function(computedStylePane, setPseudoClassCallb
     this.bodyElement.appendChild(this._sectionsContainer);
 
     this._spectrum = new WebInspector.Spectrum();
+    this._linkifier = new WebInspector.Linkifier(new WebInspector.Linkifier.DefaultCSSFormatter());
 
     WebInspector.cssModel.addEventListener(WebInspector.CSSStyleModel.Events.StyleSheetChanged, this._styleSheetOrMediaQueryResultChanged, this);
     WebInspector.cssModel.addEventListener(WebInspector.CSSStyleModel.Events.MediaQueryResultChanged, this._styleSheetOrMediaQueryResultChanged, this);
@@ -353,6 +354,7 @@ WebInspector.StylesSidebarPane.prototype = {
     {
         this._sectionsContainer.removeChildren();
         this._computedStylePane.bodyElement.removeChildren();
+        this._linkifier.reset();
 
         var styleRules = this._rebuildStyleRules(node, styles);
         var usedProperties = {};
@@ -400,7 +402,7 @@ WebInspector.StylesSidebarPane.prototype = {
                 continue;
             if (section.computedStyle)
                 section.styleRule.style = nodeComputedStyle;
-            var styleRule = { section: section, style: section.styleRule.style, computedStyle: section.computedStyle, rule: section.rule, editable: !!(section.styleRule.style && section.styleRule.style.id), isAttribute: section.styleRule.isAttribute };
+            var styleRule = { section: section, style: section.styleRule.style, computedStyle: section.computedStyle, rule: section.rule, editable: !!(section.styleRule.style && section.styleRule.style.id), isAttribute: section.styleRule.isAttribute, isInherited: section.styleRule.isInherited };
             styleRules.push(styleRule);
         }
         return styleRules;
@@ -511,7 +513,11 @@ WebInspector.StylesSidebarPane.prototype = {
                 var property = allProperties[j];
                 if (!property.isLive || !property.parsedOk)
                     continue;
+
                 var canonicalName = WebInspector.StylesSidebarPane.canonicalPropertyName(property.name);
+                // Do not pick non-inherited properties from inherited styles.
+                if (styleRule.isInherited && !WebInspector.CSSKeywordCompletions.InheritedProperties[canonicalName])
+                    continue;
 
                 if (foundImportantProperties.hasOwnProperty(canonicalName))
                     continue;
@@ -1187,13 +1193,8 @@ WebInspector.StylePropertiesSection.prototype = {
             return link;
         }
 
-        if (this.styleRule.sourceURL) {
-            var uiLocation = this.rule.uiLocation();
-            if (uiLocation)
-                return linkifyUncopyable(uiLocation.url(), uiLocation.lineNumber);
-            else
-                return linkifyUncopyable(this.styleRule.sourceURL, this.rule.sourceLine);
-        }
+        if (this.styleRule.sourceURL)
+            return this._parentPane._linkifier.linkifyCSSRuleLocation(this.rule) || linkifyUncopyable(this.styleRule.sourceURL, this.rule.sourceLine);
 
         if (!this.rule)
             return document.createTextNode("");
@@ -1228,6 +1229,9 @@ WebInspector.StylePropertiesSection.prototype = {
     _handleEmptySpaceClick: function(event)
     {
         if (!this.editable)
+            return;
+
+        if (!window.getSelection().isCollapsed)
             return;
 
         if (this._checkWillCancelEditing())
@@ -2044,6 +2048,9 @@ WebInspector.StylePropertyTreeElement.prototype = {
 
     _mouseClick: function(event)
     {
+        if (!window.getSelection().isCollapsed)
+            return;
+
         event.consume(true);
 
         if (event.target === this.listItemElement) {

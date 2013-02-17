@@ -895,7 +895,8 @@
 /* If possible, try to enable a disassembler. This is optional. We proceed in two
    steps: first we try to find some disassembler that we can use, and then we
    decide if the high-level disassembler API can be enabled. */
-#if !defined(WTF_USE_UDIS86) && ENABLE(JIT) && PLATFORM(MAC) && (CPU(X86) || CPU(X86_64))
+#if !defined(WTF_USE_UDIS86) && ENABLE(JIT) && (PLATFORM(MAC) || (PLATFORM(QT) && OS(LINUX))) \
+    && (CPU(X86) || CPU(X86_64))
 #define WTF_USE_UDIS86 1
 #endif
 
@@ -1027,6 +1028,11 @@
 
 #if !defined(ENABLE_PAN_SCROLLING) && OS(WINDOWS)
 #define ENABLE_PAN_SCROLLING 1
+#endif
+
+/*Add other platforms as they update their platfrom specific code to handle TextRun's with 8 bit data. */
+#if PLATFORM(MAC)
+#define ENABLE_8BIT_TEXTRUN 1
 #endif
 
 /* Use the QXmlStreamReader implementation for XMLDocumentParser */

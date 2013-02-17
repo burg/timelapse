@@ -1,3 +1,125 @@
+2012-10-26  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r132601.
+        http://trac.webkit.org/changeset/132601
+        https://bugs.webkit.org/show_bug.cgi?id=100494
+
+        It broke the Qt build (Requested by Ossy on #webkit).
+
+        * PlatformEfl.cmake:
+
+2012-10-26  Xiaobo Wang  <xbwang@torchmobile.com.cn>
+
+        [BlackBerry] Support pixel tests for BlackBerry DRT
+        https://bugs.webkit.org/show_bug.cgi?id=100210
+
+        Reviewed by Rob Buis.
+
+        Adds a step to build ImageDiff from Qt for DRT. Most of the works are
+        accomplished by Christopher Wells.
+
+        * PlatformBlackBerry.cmake:
+
+2012-10-24  Alexey Proskuryakov  <ap@apple.com>
+
+        Add a strategy for shared workers
+        https://bugs.webkit.org/show_bug.cgi?id=100165
+
+        EFL build fix by Christophe Dumez.
+
+        Reviewed by Brady Eidson.
+
+        * CMakeLists.txt: Add WebCore/workers to include paths.
+
+2012-10-24  Otto Derek Cheung  <otcheung@rim.com>
+
+        [BlackBerry] Rename GeolocationControllerClientBlackBerry to GeolocationClientBlackBerry
+        https://bugs.webkit.org/show_bug.cgi?id=100250
+
+        Reviewed by Rob Buis.
+
+        Rename GeolocationControllerClientBlackBerry to GeolocationClientBlackBerry
+        to prevent confusion.
+
+        PR 230196
+
+        * PlatformBlackBerry.cmake:
+
+2012-10-23  Hyowon Kim  <hw1008.kim@samsung.com>
+
+        [Texmap][EFL] Add AcceleratedCompositingContextEfl to the build system.
+        https://bugs.webkit.org/show_bug.cgi?id=88630
+
+        Reviewed by Gyuyoung Kim.
+
+        * PlatformEfl.cmake: Add the AcceleratedCompositingContextEfl.cpp file
+        and INCLUDE paths for TEXTURE_MAPPER_GL.
+
+2012-10-18  Kangil Han  <kangil.han@samsung.com>
+
+        [EFL] Add unit test for ewk_frame_source_get.
+        https://bugs.webkit.org/show_bug.cgi?id=95984
+
+        Reviewed by Gyuyoung Kim.
+
+        Add test_ewk_frame.cpp for unit test.
+
+        * PlatformEfl.cmake:
+
+2012-10-15  David Kilzer  <ddkilzer@apple.com>
+
+        Move framework and library linking into WebKit.xcconfig
+        <http://webkit.org/b/99284>
+
+        Reviewed by Mark Rowe.
+
+        * WebKit.xcodeproj/project.pbxproj: Remove frameworks and
+        libraries from Xcode project file.
+
+2012-10-15  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL][WK2] Implement Favicons API
+        https://bugs.webkit.org/show_bug.cgi?id=99087
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Remove ewk_util.cpp from PlatformEfl.cmake now that its
+        code has been moved to WebCore to be reused in WK2.
+
+        * PlatformEfl.cmake:
+
+2012-10-15  Dongwoo Joshua Im  <dw.im@samsung.com>
+
+        [EFL] Set the basepath of the File System API.
+        https://bugs.webkit.org/show_bug.cgi?id=98344
+
+        Reviewed by Gyuyoung Kim.
+
+        Set the basepath of the File System API using the internal setter function.
+
+        * PlatformEfl.cmake: Add new include path.
+
+2012-10-15  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Share resources installed for inspector
+        https://bugs.webkit.org/show_bug.cgi?id=98991
+
+        Reviewed by Gyuyoung Kim.
+
+        * PlatformEfl.cmake:
+        Extracted build scripts which install resources to WebKit/PlatformEfl.cmake.
+
+2012-10-15  George Staikos  <staikos@webkit.org>
+
+        [BlackBerry] Adapt to Platform API changes in string handling
+        https://bugs.webkit.org/show_bug.cgi?id=99248
+
+        Reviewed by Yong Li.
+
+        Convert usage of WebString, char* and std::string to BlackBerry::Platform::String.
+
+        * PlatformBlackBerry.cmake:
+
 2012-10-13  Jakob Petsovits  <jpetsovits@rim.com>
 
         [BlackBerry] Fetch blit rects from a viewport accessor

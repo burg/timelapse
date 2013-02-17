@@ -35,11 +35,17 @@
 
 namespace WebCore {
 
+static String failingURI(SoupURI* soupURI)
+{
+    ASSERT(soupURI);
+    GOwnPtr<char> uri(soup_uri_to_string(soupURI, FALSE));
+    return uri.get();
+}
+
 static String failingURI(SoupRequest* request)
 {
     ASSERT(request);
-    GOwnPtr<char> uri(soup_uri_to_string(soup_request_get_uri(request), FALSE));
-    return uri.get();
+    return failingURI(soup_request_get_uri(request));
 }
 
 ResourceError ResourceError::httpError(SoupMessage* message, GError* error, SoupRequest* request)
@@ -50,13 +56,20 @@ ResourceError ResourceError::httpError(SoupMessage* message, GError* error, Soup
         failingURI(request), String::fromUTF8(message->reason_phrase));
 }
 
+ResourceError ResourceError::authenticationError(SoupMessage* message)
+{
+    ASSERT(message);
+    return ResourceError(g_quark_to_string(SOUP_HTTP_ERROR), message->status_code,
+        failingURI(soup_message_get_uri(message)), String::fromUTF8(message->reason_phrase));
+}
+
 ResourceError ResourceError::genericIOError(GError* error, SoupRequest* request)
 {
     return ResourceError(g_quark_to_string(G_IO_ERROR), error->code,
         failingURI(request), String::fromUTF8(error->message));
 }
 
-ResourceError ResourceError::tlsError(SoupRequest* request, unsigned tlsErrors, GTlsCertificate* certificate)
+ResourceError ResourceError::tlsError(SoupRequest* request, unsigned /* tlsErrors */, GTlsCertificate*)
 {
     return ResourceError(g_quark_to_string(SOUP_HTTP_ERROR), SOUP_STATUS_SSL_FAILED,
         failingURI(request), unacceptableTLSCertificate());

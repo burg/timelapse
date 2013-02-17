@@ -27607,11 +27607,27 @@
 				>
 			</File>
 			<File
+				RelativePath="..\loader\LoaderStrategy.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\loader\LoaderStrategy.h"
+				>
+			</File>
+			<File
 				RelativePath="..\loader\MainResourceLoader.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\loader\MainResourceLoader.h"
+				>
+			</File>
+			<File
+				RelativePath="..\loader\MixedContentChecker.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\loader\MixedContentChecker.h"
 				>
 			</File>
 			<File
@@ -28183,6 +28199,14 @@
 				</File>
 				<File
 					RelativePath="..\loader\cache\CachedResourceLoader.h"
+					>
+				</File>
+				<File
+					RelativePath="..\loader\cache\CachedResourceRequest.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\loader\cache\CachedResourceRequest.h"
 					>
 				</File>
 				<File
@@ -29603,6 +29627,14 @@
 				</File>
 				<File
 					RelativePath="..\platform\graphics\GraphicsLayerClient.h"
+					>
+				</File>
+				<File
+					RelativePath="..\platform\graphics\GraphicsLayerUpdater.h"
+					>
+				</File>
+				<File
+					RelativePath="..\platform\graphics\GraphicsLayerUpdater.cpp"
 					>
 				</File>
 				<File
@@ -35875,7 +35907,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\css\CSSGrammar.y"
+				RelativePath="..\css\CSSGrammar.y.in"
+				>
+			</File>
+			<File
+				RelativePath="..\css\CSSGrammar.y.includes"
 				>
 			</File>
 			<File
@@ -37764,6 +37800,14 @@
 			</File>
 			<File
 				RelativePath="..\css\StyleBuilder.h"
+				>
+			</File>
+            <File
+				RelativePath="..\css\StyleInvalidationAnalysis.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\css\StyleInvalidationAnalysis.h"
 				>
 			</File>
 			<File
@@ -55675,6 +55719,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\workers\SharedWorkerStrategy.h"
+				>
+			</File>
+			<File
 				RelativePath="..\workers\SharedWorkerThread.cpp"
 				>
 			</File>
@@ -64920,58 +64968,6 @@
 				<File
 					RelativePath="..\bindings\js\IDBBindingUtilities.h"
 					>
-				</File>
-				<File
-					RelativePath="..\bindings\js\IDBCustomBindings.cpp"
-					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_Cairo_CFLite|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_Cairo_CFLite|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_All|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Production|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\bindings\js\JavaScriptCallFrame.cpp"
@@ -76186,6 +76182,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\inspector\front-end\cm\cmdevtools.css"
+					>
+				</File>
+				<File
 					RelativePath="..\inspector\front-end\cm\codemirror.css"
 					>
 				</File>
@@ -76207,10 +76207,6 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\cm\xml.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\cmdevtools.css"
 					>
 				</File>
 				<File
@@ -76490,10 +76486,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\inspector\front-end\JavaScriptSource.js"
-					>
-				</File>
-				<File
 					RelativePath="..\inspector\front-end\JavaScriptSourceFrame.js"
 					>
 				</File>
@@ -76566,11 +76558,15 @@
 					>
 				</File>
 				<File
+					RelativePath="..\inspector\front-end\NetworkRequest.js"
+					>
+				</File>
+				<File
 					RelativePath="..\inspector\front-end\NetworkUISourceCodeProvider.js"
 					>
 				</File>
 				<File
-					RelativePath="..\inspector\front-end\NetworkRequest.js"
+					RelativePath="..\inspector\front-end\NetworkWorkspaceProvider.js"
 					>
 				</File>
 				<File
@@ -76879,10 +76875,6 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\StylesSourceMapping.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\StyleSource.js"
 					>
 				</File>
 				<File

@@ -32,6 +32,7 @@
 #include "WebSettingsImpl.h"
 
 #include "FontRenderingMode.h"
+#include "ImageDecodingStore.h"
 #include "Settings.h"
 #include <public/WebString.h>
 #include <public/WebURL.h>
@@ -55,6 +56,8 @@ WebSettingsImpl::WebSettingsImpl(Settings* settings)
     , m_applyDefaultDeviceScaleFactorInCompositor(false)
     , m_gestureTapHighlightEnabled(true)
     , m_autoZoomFocusedNodeToLegibleScale(false)
+    , m_deferredImageDecodingEnabled(false)
+    , m_doubleTapToZoomEnabled(false)
     , m_defaultTileSize(WebSize(256, 256))
     , m_maxUntiledLayerSize(WebSize(512, 512))
 {
@@ -189,6 +192,11 @@ void WebSettingsImpl::setJavaScriptCanOpenWindowsAutomatically(bool canOpenWindo
     m_settings->setJavaScriptCanOpenWindowsAutomatically(canOpenWindows);
 }
 
+void WebSettingsImpl::setSupportsMultipleWindows(bool supportsMultipleWindows)
+{
+    m_settings->setSupportsMultipleWindows(supportsMultipleWindows);
+}
+
 void WebSettingsImpl::setLoadsImagesAutomatically(bool loadsImagesAutomatically)
 {
     m_settings->setLoadsImagesAutomatically(loadsImagesAutomatically);
@@ -262,6 +270,11 @@ void WebSettingsImpl::setUsesPageCache(bool usesPageCache)
 void WebSettingsImpl::setPageCacheSupportsPlugins(bool pageCacheSupportsPlugins)
 {
     m_settings->setPageCacheSupportsPlugins(pageCacheSupportsPlugins);
+}
+
+void WebSettingsImpl::setDoubleTapToZoomEnabled(bool doubleTapToZoomEnabled)
+{
+    m_doubleTapToZoomEnabled = doubleTapToZoomEnabled;
 }
 
 void WebSettingsImpl::setDownloadableBinaryFontsEnabled(bool enabled)
@@ -480,6 +493,15 @@ void WebSettingsImpl::setDeferred2dCanvasEnabled(bool enabled)
     m_settings->setDeferred2dCanvasEnabled(enabled);
 }
 
+void WebSettingsImpl::setDeferredImageDecodingEnabled(bool enabled)
+{
+    if (!m_deferredImageDecodingEnabled && enabled)
+        ImageDecodingStore::initializeOnMainThread();
+    if (m_deferredImageDecodingEnabled && !enabled)
+        ImageDecodingStore::shutdown();
+    m_deferredImageDecodingEnabled = enabled;
+}
+
 void WebSettingsImpl::setAcceleratedCompositingForFixedPositionEnabled(bool enabled)
 {
     m_settings->setAcceleratedCompositingForFixedPositionEnabled(enabled);
@@ -617,6 +639,11 @@ void WebSettingsImpl::setShouldDisplayTextDescriptions(bool enabled)
 #else
     UNUSED_PARAM(enabled);
 #endif
+}
+
+void WebSettingsImpl::setShouldRespectImageOrientation(bool enabled)
+{
+    m_settings->setShouldRespectImageOrientation(enabled);
 }
 
 void WebSettingsImpl::setAcceleratedPaintingEnabled(bool enabled)

@@ -29,8 +29,10 @@
 #include "MediaQueryExp.h"
 #include "RenderStyle.h"
 #include "RuleFeature.h"
+#include "RuntimeEnabledFeatures.h"
 #include "SelectorChecker.h"
 #include "StyleInheritedData.h"
+#include "StyleScopeResolver.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
@@ -80,6 +82,7 @@ class StyleKeyframe;
 class StylePendingImage;
 class StylePropertySet;
 class StyleRule;
+class StyleRuleHost;
 class StyleRuleKeyframes;
 class StyleRulePage;
 class StyleRuleRegion;
@@ -137,6 +140,9 @@ public:
     void popParentElement(Element*);
     void pushParentShadowRoot(const ShadowRoot*);
     void popParentShadowRoot(const ShadowRoot*);
+#if ENABLE(SHADOW_DOM)
+    void addHostRule(StyleRuleHost* rule, bool hasDocumentSecurityOrigin, const ContainerNode* scope) { ensureScopeResolver()->addHostRule(rule, hasDocumentSecurityOrigin, scope); }
+#endif
 
     PassRefPtr<RenderStyle> styleForElement(Element*, RenderStyle* parentStyle = 0, StyleSharingBehavior = AllowStyleSharing,
         RuleMatchingBehavior = MatchAllRules, RenderRegion* regionForStyling = 0);
@@ -163,17 +169,33 @@ public:
     bool hasParentNode() const { return m_parentNode; }
 
     void resetAuthorStyle();
-    void appendAuthorStylesheets(unsigned firstNew, const Vector<RefPtr<StyleSheet> >&);
-    
-    // Find the ids or classes the selectors on a stylesheet are scoped to. The selectors only apply to elements in subtrees where the root element matches the scope.
-    static bool determineStylesheetSelectorScopes(StyleSheetContents*, HashSet<AtomicStringImpl*>& idScopes, HashSet<AtomicStringImpl*>& classScopes);
+    void appendAuthorStyleSheets(unsigned firstNew, const Vector<RefPtr<CSSStyleSheet> >&);
 
 private:
+#if ENABLE(STYLE_SCOPED) || ENABLE(SHADOW_DOM)
+    StyleScopeResolver* ensureScopeResolver()
+    {
+#if ENABLE(STYLE_SCOPED)
+#if ENABLE(SHADOW_DOM)
+        ASSERT(RuntimeEnabledFeatures::shadowDOMEnabled() || RuntimeEnabledFeatures::styleScopedEnabled());
+#else
+        ASSERT(RuntimeEnabledFeatures::styleScopedEnabled());
+#endif
+#else
+        ASSERT(RuntimeEnabledFeatures::shadowDOMEnabled());
+#endif
+        if (!m_scopeResolver)
+            m_scopeResolver = adoptPtr(new StyleScopeResolver());
+        return m_scopeResolver.get();
+    }
+#endif
+
     void initForStyleResolve(Element*, RenderStyle* parentStyle = 0, PseudoId = NOPSEUDO);
     void initElement(Element*);
     void collectFeatures();
     RenderStyle* locateSharedStyle();
     bool styleSharingCandidateMatchesRuleSet(RuleSet*);
+    bool styleSharingCandidateMatchesHostRules();
     Node* locateCousinList(Element* parent, unsigned& visitedNodeCount) const;
     StyledElement* findSiblingForStyleSharing(Node*, unsigned& count) const;
     bool canShareStyleWithElement(StyledElement*) const;
@@ -221,6 +243,7 @@ public:
     static bool colorFromPrimitiveValueIsDerivedFromElement(CSSPrimitiveValue*);
     Color colorFromPrimitiveValue(CSSPrimitiveValue*, bool forVisitedLink = false) const;
 
+    bool hasSelectorForId(const AtomicString&) const;
     bool hasSelectorForAttribute(const AtomicString&) const;
 
     CSSFontSelector* fontSelector() const { return m_fontSelector.get(); }
@@ -326,6 +349,7 @@ private:
     void matchAuthorRules(MatchResult&, bool includeEmptyRules);
     void matchUserRules(MatchResult&, bool includeEmptyRules);
     void matchScopedAuthorRules(MatchResult&, bool includeEmptyRules);
+    void matchHostRules(MatchResult&, bool includeEmptyRules);
     void collectMatchingRules(RuleSet*, int& firstRuleIndex, int& lastRuleIndex, const MatchOptions&);
     void collectMatchingRulesForRegion(RuleSet*, int& firstRuleIndex, int& lastRuleIndex, const MatchOptions&);
     void collectMatchingRulesForList(const Vector<RuleData>*, int& firstRuleIndex, int& lastRuleIndex, const MatchOptions&);
@@ -429,12 +453,14 @@ private:
 
     // Every N additions to the matched declaration cache trigger a sweep where entries holding
     // the last reference to a style declaration are garbage collected.
-    void sweepMatchedPropertiesCache();
+    void sweepMatchedPropertiesCache(Timer<StyleResolver>*);
 
     unsigned m_matchedPropertiesCacheAdditionsSinceLastSweep;
 
     typedef HashMap<unsigned, MatchedPropertiesCacheItem> MatchedPropertiesCache;
     MatchedPropertiesCache m_matchedPropertiesCache;
+
+    Timer<StyleResolver> m_matchedPropertiesCacheSweepTimer;
 
     // A buffer used to hold the set of matched rules for an element, and a temporary buffer used for
     // merge sorting.

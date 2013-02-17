@@ -26,10 +26,37 @@
 #ifndef ewk_navigation_data_private_h
 #define ewk_navigation_data_private_h
 
+#include "WKAPICast.h"
+#include "WKEinaSharedString.h"
 #include "WKNavigationData.h"
+#include "WKRetainPtr.h"
+#include "ewk_private.h"
+#include "ewk_url_request_private.h"
+#include <wtf/PassRefPtr.h>
+#include <wtf/RefCounted.h>
 
-typedef struct _Ewk_Navigation_Data Ewk_Navigation_Data;
+/**
+ * \struct  Ewk_Navigation_Data
+ * @brief   Contains the navigation data details.
+ */
+class Ewk_Navigation_Data : public RefCounted<Ewk_Navigation_Data> {
+public:
+    static PassRefPtr<Ewk_Navigation_Data> create(WKNavigationDataRef dataRef)
+    {
+        return adoptRef(new Ewk_Navigation_Data(dataRef));
+    }
 
-Ewk_Navigation_Data* ewk_navigation_data_new(WKNavigationDataRef dataRef);
+    Ewk_Url_Request* originalRequest() const;
+
+    const char* title() const;
+    const char* url() const;
+
+private:
+    explicit Ewk_Navigation_Data(WKNavigationDataRef dataRef);
+
+    RefPtr<Ewk_Url_Request> m_request;
+    WKEinaSharedString m_title;
+    WKEinaSharedString m_url;
+};
 
 #endif // ewk_navigation_data_private_h

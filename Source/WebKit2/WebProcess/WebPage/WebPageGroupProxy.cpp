@@ -47,9 +47,9 @@ WebPageGroupProxy::~WebPageGroupProxy()
 {
 }
     
-void WebPageGroupProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::ArgumentDecoder* arguments)
+void WebPageGroupProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
 {
-    didReceiveWebPageGroupProxyMessage(connection, messageID, arguments);
+    didReceiveWebPageGroupProxyMessage(connection, messageID, decoder);
 }
     
 WebPageGroupProxy::WebPageGroupProxy(const WebPageGroupData& data)
@@ -79,7 +79,7 @@ void WebPageGroupProxy::removeAllUserStyleSheets()
 
 void WebPageGroupProxy::removeAllUserScripts()
 {
-    m_pageGroup->removeUserStyleSheetsFromWorld(WebCore::mainThreadNormalWorld());
+    m_pageGroup->removeUserScriptsFromWorld(WebCore::mainThreadNormalWorld());
 }
 
 void WebPageGroupProxy::removeAllUserContent()

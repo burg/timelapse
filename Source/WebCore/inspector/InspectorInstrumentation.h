@@ -145,8 +145,10 @@ public:
     static void didScroll(Page*);
     static InspectorInstrumentationCookie willDispatchXHRLoadEvent(ScriptExecutionContext*, XMLHttpRequest*);
     static void didDispatchXHRLoadEvent(const InspectorInstrumentationCookie&);
-    static InspectorInstrumentationCookie willPaint(Frame*, GraphicsContext*, const LayoutRect&);
-    static void didPaint(const InspectorInstrumentationCookie&);
+    static void willScrollLayer(Frame*);
+    static void didScrollLayer(Frame*);
+    static InspectorInstrumentationCookie willPaint(Frame*);
+    static void didPaint(const InspectorInstrumentationCookie&, GraphicsContext*, const LayoutRect&);
     static void willComposite(Page*);
     static void didComposite(Page*);
     static InspectorInstrumentationCookie willRecalculateStyle(Document*);
@@ -347,8 +349,10 @@ private:
     static void didScrollImpl(InstrumentingAgents*);
     static InspectorInstrumentationCookie willDispatchXHRLoadEventImpl(InstrumentingAgents*, XMLHttpRequest*, ScriptExecutionContext*);
     static void didDispatchXHRLoadEventImpl(const InspectorInstrumentationCookie&);
-    static InspectorInstrumentationCookie willPaintImpl(InstrumentingAgents*, GraphicsContext*, const LayoutRect&, Frame*);
-    static void didPaintImpl(const InspectorInstrumentationCookie&);
+    static void willScrollLayerImpl(InstrumentingAgents*, Frame*);
+    static void didScrollLayerImpl(InstrumentingAgents*);
+    static InspectorInstrumentationCookie willPaintImpl(InstrumentingAgents*, Frame*);
+    static void didPaintImpl(const InspectorInstrumentationCookie&, GraphicsContext*, const LayoutRect&);
     static void willCompositeImpl(InstrumentingAgents*);
     static void didCompositeImpl(InstrumentingAgents*);
     static InspectorInstrumentationCookie willRecalculateStyleImpl(InstrumentingAgents*, Frame*);
@@ -928,22 +932,40 @@ inline void InspectorInstrumentation::didDispatchXHRLoadEvent(const InspectorIns
 #endif
 }
 
-inline InspectorInstrumentationCookie InspectorInstrumentation::willPaint(Frame* frame, GraphicsContext* context, const LayoutRect& rect)
+inline InspectorInstrumentationCookie InspectorInstrumentation::willPaint(Frame* frame)
 {
 #if ENABLE(INSPECTOR)
     FAST_RETURN_IF_NO_FRONTENDS(InspectorInstrumentationCookie());
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForFrame(frame))
-        return willPaintImpl(instrumentingAgents, context, rect, frame);
+        return willPaintImpl(instrumentingAgents, frame);
 #endif
     return InspectorInstrumentationCookie();
 }
 
-inline void InspectorInstrumentation::didPaint(const InspectorInstrumentationCookie& cookie)
+inline void InspectorInstrumentation::didPaint(const InspectorInstrumentationCookie& cookie, GraphicsContext* context, const LayoutRect& rect)
 {
 #if ENABLE(INSPECTOR)
     FAST_RETURN_IF_NO_FRONTENDS(void());
     if (cookie.first)
-        didPaintImpl(cookie);
+        didPaintImpl(cookie, context, rect);
+#endif
+}
+
+inline void InspectorInstrumentation::willScrollLayer(Frame* frame)
+{
+#if ENABLE(INSPECTOR)
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForFrame(frame))
+        willScrollLayerImpl(instrumentingAgents, frame);
+#endif
+}
+
+inline void InspectorInstrumentation::didScrollLayer(Frame* frame)
+{
+#if ENABLE(INSPECTOR)
+    FAST_RETURN_IF_NO_FRONTENDS(void());
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForFrame(frame))
+        didScrollLayerImpl(instrumentingAgents);
 #endif
 }
 

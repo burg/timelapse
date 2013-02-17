@@ -723,7 +723,7 @@ sub builtDylibPathForName
     }
     if (isQt()) {
         my $isSearchingForWebCore = $libraryName =~ "WebCore";
-        $libraryName = "QtWebKit";
+        $libraryName = "QtWebKitWidgets";
         my $result;
         if (isDarwin() and -d "$configurationProductDir/lib/$libraryName.framework") {
             $result = "$configurationProductDir/lib/$libraryName.framework/$libraryName";
@@ -2331,6 +2331,7 @@ sub buildQMakeProjects
                 $previousSvnRevision = $1;
             }
         }
+        close(QMAKECACHE);
     }
 
     my $result = 0;
@@ -2361,14 +2362,34 @@ sub buildQMakeProjects
        die "\nFailed to set up build environment using $qmakebin!\n";
     }
 
-    if ($configChanged) {
-        print "Calling '$command wipeclean' in " . $dir . "\n\n";
-        $result = system "$command wipeclean";
-    }
+    my $needsCleanBuild = 0;
+    my $needsIncrementalBuild = 0;
 
     if ($svnRevision ne $previousSvnRevision) {
         print "Last built revision was " . $previousSvnRevision .
             ", now at revision $svnRevision. Full incremental build needed.\n";
+        $needsIncrementalBuild = 1;
+
+        my @fileList = listOfChangedFilesBetweenRevisions(sourceDir(), $previousSvnRevision, $svnRevision);
+
+        foreach (@fileList) {
+            if (m/\.pr[oif]$/ or
+                m/\.qmake.conf$/ or
+                m/^Tools\/qmake\//
+               ) {
+                print "Change to $_ detected, clean build needed.\n";
+                $needsCleanBuild = 1;
+                last;
+            }
+        }
+    }
+
+    if ($configChanged or $needsCleanBuild) {
+        print "Calling '$command wipeclean' in " . $dir . "\n\n";
+        $result = system "$command wipeclean";
+    }
+
+    if ($needsIncrementalBuild) {
         $command .= " incremental";
     }
 

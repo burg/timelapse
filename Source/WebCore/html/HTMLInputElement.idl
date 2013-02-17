@@ -56,7 +56,7 @@ interface HTMLInputElement : HTMLElement {
     [Reflect] attribute DOMString step;
     [TreatNullAs=NullString] attribute DOMString type; // readonly dropped as part of DOM level 2
     [TreatNullAs=NullString] attribute DOMString defaultValue;
-    [TreatNullAs=NullString] attribute DOMString value;
+    [TreatNullAs=NullString] attribute DOMString value setter raises(DOMException);
 #if !defined(LANGUAGE_CPP) || !LANGUAGE_CPP
     attribute Date valueAsDate setter raises(DOMException);
 #endif
@@ -78,6 +78,13 @@ interface HTMLInputElement : HTMLElement {
     [Custom] attribute long selectionStart;
     [Custom] attribute long selectionEnd;
     [Custom] attribute DOMString selectionDirection;
+
+    void setRangeText(in DOMString replacement) raises(DOMException);
+    void setRangeText(in DOMString replacement,
+                        in unsigned long start,
+                        in unsigned long end,
+                        in [Optional=DefaultIsNullString] DOMString selectionMode) raises(DOMException);
+
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
     [Custom] void setSelectionRange(in long start, in long end);
 #else

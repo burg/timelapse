@@ -43,6 +43,7 @@
  *   when done to continue with the form submission. If the last reference is removed on a
  *   #Ewk_Form_Submission_Request and the form has not been submitted yet,
  *   ewk_form_submission_request_submit() will be called automatically.
+ * - "icon,changed", void: reports that the view's favicon has changed.
  * - "intent,request,new", Ewk_Intent*: reports new Web intent request.
  * - "intent,service,register", Ewk_Intent_Service*: reports new Web intent service registration.
  * - "load,error", const Ewk_Error*: reports main frame load failed.
@@ -64,6 +65,8 @@
  * - "resource,request,sent", const Ewk_Resource_Request*: a resource request was sent.
  * - "text,found", unsigned int*: the requested text was found and it gives the number of matches.
  * - "title,changed", const char*: title of the main frame was changed.
+ * - "tooltip,text,set", const char*: tooltip was set.
+ * - "tooltip,text,unset", void: tooltip was unset.
  * - "url,changed", const char*: url of the main frame was changed.
  * - "webprocess,crashed", Eina_Bool*: expects a @c EINA_TRUE if web process crash is handled; @c EINA_FALSE, otherwise.
  */
@@ -72,10 +75,12 @@
 #define ewk_view_h
 
 #include "ewk_back_forward_list.h"
+#include "ewk_color_picker.h"
 #include "ewk_context.h"
 #include "ewk_download_job.h"
 #include "ewk_error.h"
 #include "ewk_intent.h"
+#include "ewk_popup_menu.h"
 #include "ewk_resource.h"
 #include "ewk_settings.h"
 #include "ewk_touch.h"
@@ -93,15 +98,15 @@ typedef enum {
     EWK_TEXT_DIRECTION_LEFT_TO_RIGHT
 } Ewk_Text_Direction;
 
-typedef struct _Ewk_View_Smart_Data Ewk_View_Smart_Data;
-typedef struct _Ewk_View_Smart_Class Ewk_View_Smart_Class;
+typedef struct Ewk_View_Smart_Data Ewk_View_Smart_Data;
+typedef struct Ewk_View_Smart_Class Ewk_View_Smart_Class;
 
 /// Ewk view's class, to be overridden by sub-classes.
-struct _Ewk_View_Smart_Class {
+struct Ewk_View_Smart_Class {
     Evas_Smart_Class sc; /**< all but 'data' is free to be changed. */
     unsigned long version;
 
-    Eina_Bool (*popup_menu_show)(Ewk_View_Smart_Data *sd, Eina_Rectangle rect, Ewk_Text_Direction text_direction, double page_scale_factor, Eina_List *items, int selected_index);
+    Eina_Bool (*popup_menu_show)(Ewk_View_Smart_Data *sd, Eina_Rectangle rect, Ewk_Text_Direction text_direction, double page_scale_factor, Ewk_Popup_Menu *menu);
     Eina_Bool (*popup_menu_hide)(Ewk_View_Smart_Data *sd);
 
     // event handling:
@@ -126,7 +131,7 @@ struct _Ewk_View_Smart_Class {
 
     // color picker:
     //   - Shows and hides color picker.
-    Eina_Bool (*input_picker_color_request)(Ewk_View_Smart_Data *sd, int r, int g, int b, int a);
+    Eina_Bool (*input_picker_color_request)(Ewk_View_Smart_Data *sd, Ewk_Color_Picker *color_picker);
     Eina_Bool (*input_picker_color_dismiss)(Ewk_View_Smart_Data *sd);
 
     // storage:
@@ -179,19 +184,19 @@ struct _Ewk_View_Smart_Class {
  */
 #define EWK_VIEW_SMART_CLASS_INIT_NAME_VERSION(name) EWK_VIEW_SMART_CLASS_INIT(EVAS_SMART_CLASS_INIT_NAME_VERSION(name))
 
-typedef struct _Ewk_View_Private_Data Ewk_View_Private_Data;
+typedef struct EwkViewImpl EwkViewImpl;
 /**
  * @brief Contains an internal View data.
  *
  * It is to be considered private by users, but may be extended or
  * changed by sub-classes (that's why it's in public header file).
  */
-struct _Ewk_View_Smart_Data {
+struct Ewk_View_Smart_Data {
     Evas_Object_Smart_Clipped_Data base;
     const Ewk_View_Smart_Class* api; /**< reference to casted class instance */
     Evas_Object* self; /**< reference to owner object */
     Evas_Object* image; /**< reference to evas_object_image for drawing web contents */
-    Ewk_View_Private_Data* priv; /**< should never be accessed, c++ stuff */
+    EwkViewImpl* priv; /**< should never be accessed, c++ stuff */
     struct {
         Evas_Coord x, y, w, h; /**< last used viewport */
     } view;
@@ -202,49 +207,49 @@ struct _Ewk_View_Smart_Data {
     } changed;
 };
 
-/// Creates a type name for _Ewk_Resource_Request.
-typedef struct _Ewk_Resource_Request Ewk_Resource_Request;
+/// Creates a type name for Ewk_Resource_Request.
+typedef struct Ewk_Resource_Request Ewk_Resource_Request;
 
 /**
  * @brief Structure containing details about a resource request.
  */
-struct _Ewk_Resource_Request {
+struct Ewk_Resource_Request {
     Ewk_Resource *resource; /**< resource being requested */
     Ewk_Url_Request *request; /**< URL request for the resource */
     Ewk_Url_Response *redirect_response; /**< Possible redirect response for the resource or @c NULL */
 };
 
-/// Creates a type name for _Ewk_Resource_Load_Response.
-typedef struct _Ewk_Resource_Load_Response Ewk_Resource_Load_Response;
+/// Creates a type name for Ewk_Resource_Load_Response.
+typedef struct Ewk_Resource_Load_Response Ewk_Resource_Load_Response;
 
 /**
  * @brief Structure containing details about a response to a resource request.
  */
-struct _Ewk_Resource_Load_Response {
+struct Ewk_Resource_Load_Response {
     Ewk_Resource *resource; /**< resource requested */
     Ewk_Url_Response *response; /**< resource load response */
 };
 
-/// Creates a type name for _Ewk_Resource_Load_Error.
-typedef struct _Ewk_Resource_Load_Error Ewk_Resource_Load_Error;
+/// Creates a type name for Ewk_Resource_Load_Error.
+typedef struct Ewk_Resource_Load_Error Ewk_Resource_Load_Error;
 
 /**
  * @brief Structure containing details about a resource load error.
  *
  * Details given about a resource load failure.
  */
-struct _Ewk_Resource_Load_Error {
+struct Ewk_Resource_Load_Error {
     Ewk_Resource *resource; /**< resource that failed loading */
     Ewk_Error *error; /**< load error */
 };
 
-/// Creates a type name for _Ewk_Download_Job_Error.
-typedef struct _Ewk_Download_Job_Error Ewk_Download_Job_Error;
+/// Creates a type name for Ewk_Download_Job_Error.
+typedef struct Ewk_Download_Job_Error Ewk_Download_Job_Error;
 
 /**
  * @brief Structure containing details about a download failure.
  */
-struct _Ewk_Download_Job_Error {
+struct Ewk_Download_Job_Error {
     Ewk_Download_Job *download_job; /**< download that failed */
     Ewk_Error *error; /**< download error */
 };
@@ -254,7 +259,7 @@ struct _Ewk_Download_Job_Error {
  * @brief   Provides option to find text
  * @info    Keep this in sync with WKFindOptions.h
  */
-enum _Ewk_Find_Options {
+enum Ewk_Find_Options {
     EWK_FIND_OPTIONS_NONE, /**< no search flags, this means a case sensitive, no wrap, forward only search. */
     EWK_FIND_OPTIONS_CASE_INSENSITIVE = 1 << 0, /**< case insensitive search. */
     EWK_FIND_OPTIONS_AT_WORD_STARTS = 1 << 1, /**< search text only at the beginning of the words. */
@@ -265,7 +270,19 @@ enum _Ewk_Find_Options {
     EWK_FIND_OPTIONS_SHOW_FIND_INDICATOR = 1 << 6, /**< show indicator */
     EWK_FIND_OPTIONS_SHOW_HIGHLIGHT = 1 << 7 /**< show highlight */
 };
-typedef enum _Ewk_Find_Options Ewk_Find_Options;
+typedef enum Ewk_Find_Options Ewk_Find_Options;
+
+/**
+ * Enum values used to set pagination mode.
+ */
+typedef enum {
+    EWK_PAGINATION_MODE_INVALID = -1, /**< invalid pagination mode that will be returned when error occured. */
+    EWK_PAGINATION_MODE_UNPAGINATED, /**< default mode for pagination. not paginated  */
+    EWK_PAGINATION_MODE_LEFT_TO_RIGHT, /**< go to the next page with scrolling left to right horizontally. */
+    EWK_PAGINATION_MODE_RIGHT_TO_LEFT, /**< go to the next page with scrolling right to left horizontally. */
+    EWK_PAGINATION_MODE_TOP_TO_BOTTOM, /**< go to the next page with scrolling top to bottom vertically. */
+    EWK_PAGINATION_MODE_BOTTOM_TO_TOP /**< go to the next page with scrolling bottom to top vertically. */
+} Ewk_Pagination_Mode;
 
 /**
  * Sets the smart class APIs, enabling view to be inherited.
@@ -355,6 +372,18 @@ EAPI Eina_Bool ewk_view_url_set(Evas_Object *o, const char *url);
  * @return current URL on success or @c NULL on failure
  */
 EAPI const char *ewk_view_url_get(const Evas_Object *o);
+
+/**
+ * Returns the current icon URL of view object.
+ *
+ * It returns an internal string and should not
+ * be modified. The string is guaranteed to be stringshared.
+ *
+ * @param o view object to get current icon URL
+ *
+ * @return current icon URL on success or @c NULL if unavailable or on failure
+ */
+EAPI const char *ewk_view_icon_url_get(const Evas_Object *o);
 
 /**
  * Asks the main frame to reload the current document.
@@ -511,7 +540,7 @@ EAPI Eina_Bool ewk_view_html_string_load(Evas_Object *o, const char *html, const
  *
  * @return @c EINA_TRUE on success or @c EINA_FALSE otherwise
  */
-Eina_Bool ewk_view_scale_set(Evas_Object *o, double scaleFactor, int x, int y);
+EAPI Eina_Bool ewk_view_scale_set(Evas_Object *o, double scaleFactor, int x, int y);
 
 /**
  * Queries the current scale factor of the page.
@@ -662,27 +691,6 @@ EAPI Eina_Bool ewk_view_text_find_highlight_clear(Evas_Object *o);
 EAPI Eina_Bool ewk_view_text_matches_count(Evas_Object *o, const char *text, Ewk_Find_Options options, unsigned max_match_count);
 
 /**
- * Selects index of current popup menu.
- *
- * @param o view object contains popup menu.
- * @param index index of item to select
- *
- * @return @c EINA_TRUE on success, @c EINA_FALSE on failure (probably
- *         popup menu is not selected or index is out of range)
- */
-EAPI Eina_Bool ewk_view_popup_menu_select(Evas_Object *o, unsigned int index);
-
-/**
- * Closes current popup menu.
- *
- * @param o view object contains popup menu.
- *
- * @return @c EINA_TRUE on success, @c EINA_FALSE on failure (probably
- *         popup menu is not selected)
- */
-EAPI Eina_Bool ewk_view_popup_menu_close(Evas_Object *o);
-
-/**
  * Sets whether the ewk_view supports the mouse events or not.
  *
  * The ewk_view will support the mouse events if EINA_TRUE or not support the
@@ -703,23 +711,6 @@ EAPI Eina_Bool ewk_view_mouse_events_enabled_set(Evas_Object *o, Eina_Bool enabl
  * @return @c EINA_TRUE if the mouse events are enabled or @c EINA_FALSE otherwise
  */
 EAPI Eina_Bool ewk_view_mouse_events_enabled_get(const Evas_Object *o);
-
-/*
- * Sets the user chosen color. To be used when implementing a color picker.
- *
- * The function should only be called when a color has been requested by the document.
- * If called when this is not the case or when the input picker has been dismissed, this
- * function will fail and return EINA_FALSE.
- *
- * @param o view object contains color picker
- * @param r red channel value to be set
- * @param g green channel value to be set
- * @param b blue channel value to be set
- * @param a alpha channel value to be set
- *
- * @return @c EINA_TRUE on success @c EINA_FALSE otherwise
- */
-EAPI Eina_Bool ewk_view_color_picker_color_set(Evas_Object *o, int r, int g, int b, int a);
 
 /**
  * Feeds the touch event to the view.
@@ -777,6 +768,28 @@ EAPI Eina_Bool ewk_view_inspector_show(Evas_Object *o);
  * @return @c EINA_TRUE on success or @c EINA_FALSE on failure
  */
 EAPI Eina_Bool ewk_view_inspector_close(Evas_Object *o);
+
+/**
+ * Set pagination mode to the current web page.
+ *
+ * @param o view object to set the pagenation mode
+ * @param mode The Ewk_Pagination_Mode to set
+ *
+ * @return @c EINA_TRUE on success or @c EINA_FALSE on failure
+ */
+EAPI Eina_Bool ewk_view_pagination_mode_set(Evas_Object *o, Ewk_Pagination_Mode mode);
+
+/**
+ * Get pagination mode of the current web page. 
+ * 
+ * The default value is EWK_PAGINATION_MODE_UNPAGINATED.
+ * When error occured, EWK_PAGINATION_MODE_INVALID is returned. 
+ *
+ * @param o view object to get the pagination mode
+ *
+ * @return The pagination mode of the current web page
+ */
+EAPI Ewk_Pagination_Mode ewk_view_pagination_mode_get(const Evas_Object *o);
 
 #ifdef __cplusplus
 }

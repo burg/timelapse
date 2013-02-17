@@ -1,3 +1,198 @@
+2012-10-26  Thiago Marcos P. Santos  <thiago.santos@intel.com>
+
+        Add feature flags for CSS Device Adaptation
+        https://bugs.webkit.org/show_bug.cgi?id=95960
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-10-25  Dominik Röttsches  <dominik.rottsches@intel.com>
+
+        Conditionalize XHR timeout support
+        https://bugs.webkit.org/show_bug.cgi?id=100356
+
+        Reviewed by Adam Barth.
+
+        Adding XHR_TIMEOUT feature to conditionalize this on ports without network backend support.
+        Defaults to ON on Mac since the Mac NSUrlConnection based backend has setTimeoutInterval support.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-10-24  Timothy Hatcher  <timothy@apple.com>
+
+        Fix a crash seen during the Inspector tests on the WebKit1 bots.
+
+        Reviewed by Filip Pizlo.
+
+        * WebCoreSupport/WebInspectorClient.mm:
+        (WebInspectorFrontendClient::bringToFront): Use the window from the WebView since m_windowController's window
+        is not the same when the Inspector is docked.
+
+2012-10-24  Brady Eidson  <beidson@apple.com>
+
+        Add a strategy for loader customization.
+        https://bugs.webkit.org/show_bug.cgi?id=100278
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        (WebPlatformStrategies):
+        * WebCoreSupport/WebPlatformStrategies.mm:
+        (WebPlatformStrategies::createLoaderStrategy):
+
+2012-10-24  Timothy Hatcher  <timothy@apple.com>
+
+        Make the Inspector WKView/WebView become the first responder when bringToFront is called.
+
+        https://bugs.webkit.org/show_bug.cgi?id=100209
+
+        Reviewed by Joseph Pecoraro.
+
+        * WebCoreSupport/WebInspectorClient.mm:
+        (WebInspectorFrontendClient::bringToFront): Make the Inspector WebView become the first responder.
+
+2012-10-23  Alexey Proskuryakov  <ap@apple.com>
+
+        Add a strategy for shared workers
+        https://bugs.webkit.org/show_bug.cgi?id=100165
+
+        Reviewed by Brady Eidson.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        * WebCoreSupport/WebPlatformStrategies.mm:
+        (WebPlatformStrategies::createPasteboardStrategy):
+        (WebPlatformStrategies::createSharedWorkerStrategy):
+        (WebPlatformStrategies::createVisitedLinkStrategy):
+
+2012-10-24  Eric Carlson  <eric.carlson@apple.com>
+
+        Allow ports to override text track rendering style
+        https://bugs.webkit.org/show_bug.cgi?id=97800
+        <rdar://problem/12044964>
+
+        Reviewed by Maciej Stachowiak.
+
+        * WebCoreSupport/WebSystemInterface.mm:
+        (InitWebCoreSystemInterface): Initialize new WKSI function pointers.
+
+2012-10-23  Dan Bernstein  <mitz@apple.com>
+
+        WebKit/mac part of <rdar://problem/2966974> [mac] Kerning and ligatures are not enabled by default
+        https://bugs.webkit.org/show_bug.cgi?id=100188
+
+        Reviewed by Sam Weinig.
+
+        * WebView/WebView.mm:
+        (+[WebView initialize]): Added a local variable to hold the standard user defaults. Added
+        code to register a value of YES for the WebKitKerningAndLigaturesEnabledByDefault user
+        default. Changed to refer to that default key by name.
+
+2012-10-23  Kenneth Rohde Christiansen  <kenneth@webkit.org>
+
+        Add support for resolution media query
+        https://bugs.webkit.org/show_bug.cgi?id=99077
+
+        Reviewed by Antti Koivisto.
+
+        Add support for the RESOLUTION_MEDIA_QUERY feature flag.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-10-21  Andreas Kling  <kling@webkit.org>
+
+        Remove Page::javaScriptURLsAreAllowed setting.
+        <http://webkit.org/b/99944>
+
+        Reviewed by Anders Carlsson.
+
+        * WebKit.order:
+        * WebView/WebView.mm:
+        * WebView/WebViewPrivate.h:
+
+2012-10-19  Dongwoo Joshua Im  <dw.im@samsung.com>
+
+        Rename ENABLE_CSS3_TEXT_DECORATION to ENABLE_CSS3_TEXT
+        https://bugs.webkit.org/show_bug.cgi?id=99804
+
+        Reviewed by Julien Chaffraix.
+
+        CSS3 text related properties will be implemented under this flag,
+        including text decoration, text-align-last, and text-justify.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-10-18  Pablo Flouret  <pablof@motorola.com>
+
+        Implement css3-conditional's @supports rule
+        https://bugs.webkit.org/show_bug.cgi?id=86146
+
+        Reviewed by Antti Koivisto.
+
+        * Configurations/FeatureDefines.xcconfig:
+            Add an ENABLE_CSS3_CONDITIONAL_RULES flag.
+
+2012-10-17  Joseph Pecoraro  <pecoraro@apple.com>
+
+        [Mac] Uninitialized Members in WebDataSourcePrivate
+        https://bugs.webkit.org/show_bug.cgi?id=99617
+
+        Reviewed by David Kilzer.
+
+        Initialize BOOL member variables.
+
+        * WebView/WebDataSource.mm:
+        (WebDataSourcePrivate::WebDataSourcePrivate):
+
+2012-10-17  Mark Rowe  <mrowe@apple.com>
+
+        Fix the build with a newer version of clang.
+
+        Reviewed by Dan Bernstein.
+
+        Some of the methods in WebCoreStatistics appear to have been added by someone not familiar with Objective-C.
+        While it's technically valid to have empty components in a selector, it's rarely done and is not consistent
+        with our style guidelines. In this particular case it's also done in such a manner that it's ambiguous and
+        therefore generates a warning in newer versions of the compiler.
+
+        Fixes <rdar://problem/12503709>.
+
+        * Misc/WebCoreStatistics.h: Remove unused methods and rename the two poorly-named methods that remain.
+        * Misc/WebCoreStatistics.mm: Ditto.
+        (-[WebFrame numberOfPagesWithPageWidth:pageHeight:]):
+        (-[WebFrame printToCGContext:pageWidth:pageHeight:]):
+
+2012-10-16  Jian Li  <jianli@chromium.org>
+
+        Rename feature define ENABLE_WIDGET_REGION to ENABLE_DRAGGBALE_REGION
+        https://bugs.webkit.org/show_bug.cgi?id=98975
+
+        Reviewed by Adam Barth.
+
+        Renaming is needed to better match with the draggable region code.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-10-15  Dan Bernstein  <mitz@apple.com>
+
+        WebKit/mac part of <rdar://problem/12470680> Font’s fast code path doesn’t support kerning and ligatures
+        https://bugs.webkit.org/show_bug.cgi?id=99113
+
+        Reviewed by Tim Horton.
+
+        * WebCoreSupport/WebSystemInterface.mm:
+        (InitWebCoreSystemInterface): Added wkCTFontTransformGlyphs.
+
+2012-10-15  David Kilzer  <ddkilzer@apple.com>
+
+        Move framework and library linking into WebKit.xcconfig
+        <http://webkit.org/b/99284>
+
+        Reviewed by Mark Rowe.
+
+        * Configurations/WebKit.xcconfig: Move frameworks and libraries
+        link flags to OTHER_LDFLAGS so that they work for iOS and OS X.
+
 2012-10-14  Jon Lee  <jonlee@apple.com>
 
         Allow notification origin permission request when no js callback is provided

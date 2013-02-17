@@ -29,16 +29,18 @@
 #include "CachedImageClient.h"
 #include "DocumentStyleSheetCollection.h"
 #include "Element.h"
-#include "FractionalLayoutUnit.h"
 #include "FloatQuad.h"
+#include "FractionalLayoutUnit.h"
 #include "LayoutTypes.h"
 #include "PaintPhase.h"
 #include "RenderObjectChildList.h"
 #include "RenderStyle.h"
 #include "ScrollBehavior.h"
+#include "StyleInheritedData.h"
 #include "TextAffinity.h"
 #include "TransformationMatrix.h"
 #include <wtf/HashSet.h>
+#include <wtf/StackStats.h>
 #include <wtf/UnusedParam.h>
 
 namespace WebCore {
@@ -120,13 +122,13 @@ typedef unsigned MapCoordinatesFlags;
 
 const int caretWidth = 1;
 
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
 struct AnnotatedRegionValue {
     bool operator==(const AnnotatedRegionValue& o) const
     {
 #if ENABLE(DASHBOARD_SUPPORT)
         return type == o.type && bounds == o.bounds && clip == o.clip && label == o.label;
-#else // ENABLE(WIDGET_REGION)
+#else // ENABLE(DRAGGABLE_REGION)
         return draggable == o.draggable && bounds == o.bounds;
 #endif
     }
@@ -140,7 +142,7 @@ struct AnnotatedRegionValue {
     String label;
     LayoutRect clip;
     int type;
-#else // ENABLE(WIDGET_REGION)
+#else // ENABLE(DRAGGABLE_REGION)
     bool draggable;
 #endif
 };
@@ -247,6 +249,16 @@ public:
     bool hasAXObject() const { return m_hasAXObject; }
     bool isSetNeedsLayoutForbidden() const { return m_setNeedsLayoutForbidden; }
     void setNeedsLayoutIsForbidden(bool flag) { m_setNeedsLayoutForbidden = flag; }
+
+    // Helper class forbidding calls to setNeedsLayout() during its lifetime.
+    class SetLayoutNeededForbiddenScope {
+    public:
+        explicit SetLayoutNeededForbiddenScope(RenderObject*);
+        ~SetLayoutNeededForbiddenScope();
+    private:
+        RenderObject* m_renderObject;
+        bool m_preexistingForbidden;
+    };
 #endif
 
     // Obtains the nearest enclosing block (including this block) that contributes a first-line style to our inline
@@ -674,7 +686,7 @@ public:
     // repaint and do not need a relayout
     virtual void updateFromElement() { }
 
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
     virtual void addAnnotatedRegions(Vector<AnnotatedRegionValue>&);
     void collectAnnotatedRegions(Vector<AnnotatedRegionValue>&);
 #endif
@@ -701,7 +713,7 @@ public:
 
     // Updates only the local style ptr of the object.  Does not update the state of the object,
     // and so only should be called when the style is known not to have changed (or from setStyle).
-    void setStyleInternal(PassRefPtr<RenderStyle>);
+    void setStyleInternal(PassRefPtr<RenderStyle> style) { m_style = style; }
 
     // returns the containing block level element for this element.
     RenderBlock* containingBlock() const;

@@ -118,8 +118,8 @@ public:
     void getRegionRangeForBox(const RenderBox*, RenderRegion*& startRegion, RenderRegion*& endRegion) const;
 
     void clearRenderObjectCustomStyle(const RenderObject*,
-                                      const RenderRegion* oldStartRegion = 0, const RenderRegion* oldEndRegion = 0,
-                                      const RenderRegion* newStartRegion = 0, const RenderRegion* newEndRegion = 0);
+        const RenderRegion* oldStartRegion = 0, const RenderRegion* oldEndRegion = 0,
+        const RenderRegion* newStartRegion = 0, const RenderRegion* newEndRegion = 0);
     
     void computeOverflowStateForRegions(LayoutUnit oldClientAfterEdge);
 
@@ -127,6 +127,11 @@ public:
 
     // Check if the object is in region and the region is part of this flow thread.
     bool objectInFlowRegion(const RenderObject*, const RenderRegion*) const;
+
+    void resetRegionsOverrideLogicalContentHeight();
+    void markAutoLogicalHeightRegionsForLayout();
+
+    bool addForcedRegionBreak(LayoutUnit, RenderObject* breakChild, bool isBefore, LayoutUnit* offsetBreakAdjustment = 0);
 
     bool pageLogicalHeightChanged() const { return m_pageLogicalHeightChanged; }
 
@@ -137,6 +142,7 @@ public:
 protected:
     virtual const char* renderName() const = 0;
 
+    void updateRegionsFlowThreadPortionRect();
     bool shouldRepaint(const LayoutRect&) const;
     bool regionInRange(const RenderRegion* targetRegion, const RenderRegion* startRegion, const RenderRegion* endRegion) const;
     
@@ -145,6 +151,8 @@ protected:
     
     // Override if the flow thread implementation supports dispatching events when the flow layout is updated (e.g. for named flows)
     virtual void dispatchRegionLayoutUpdateEvent() { m_dispatchRegionLayoutUpdateEvent = false; }
+
+    void clearOverrideLogicalContentHeightInRegions(RenderRegion* startRegion = 0);
 
     RenderRegionList m_regionList;
 
@@ -177,6 +185,10 @@ protected:
     // A maps from RenderBox
     typedef HashMap<const RenderBox*, RenderRegionRange> RenderRegionRangeMap;
     RenderRegionRangeMap m_regionRangeMap;
+
+    typedef HashMap<RenderObject*, RenderRegion*> RenderObjectToRegionMap;
+    RenderObjectToRegionMap m_breakBeforeToRegionMap;
+    RenderObjectToRegionMap m_breakAfterToRegionMap;
 
     bool m_regionsInvalidated : 1;
     bool m_regionsHaveUniformLogicalWidth : 1;

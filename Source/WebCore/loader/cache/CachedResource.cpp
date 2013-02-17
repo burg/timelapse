@@ -32,14 +32,19 @@
 #include "CachedResourceLoader.h"
 #include "CrossOriginAccessControl.h"
 #include "Document.h"
+#include "DocumentLoader.h"
 #include "FrameLoaderClient.h"
 #include "InspectorInstrumentation.h"
 #include "KURL.h"
+#include "LoaderStrategy.h"
 #include "Logging.h"
+#include "PlatformStrategies.h"
 #include "PurgeableBuffer.h"
 #include "ResourceBuffer.h"
 #include "ResourceHandle.h"
 #include "ResourceLoadScheduler.h"
+#include "SecurityOrigin.h"
+#include "SecurityPolicy.h"
 #include "SubresourceLoader.h"
 #include "WebCoreMemoryInstrumentation.h"
 #include <wtf/CurrentTime.h>
@@ -58,35 +63,37 @@ namespace WebCore {
 static ResourceLoadPriority defaultPriorityForResourceType(CachedResource::Type type)
 {
     switch (type) {
-        case CachedResource::CSSStyleSheet:
-            return ResourceLoadPriorityHigh;
-        case CachedResource::Script:
-        case CachedResource::FontResource:
-        case CachedResource::RawResource:
-            return ResourceLoadPriorityMedium;
-        case CachedResource::ImageResource:
-            return ResourceLoadPriorityLow;
+    case CachedResource::MainResource:
+        return ResourceLoadPriorityVeryHigh;
+    case CachedResource::CSSStyleSheet:
+        return ResourceLoadPriorityHigh;
+    case CachedResource::Script:
+    case CachedResource::FontResource:
+    case CachedResource::RawResource:
+        return ResourceLoadPriorityMedium;
+    case CachedResource::ImageResource:
+        return ResourceLoadPriorityLow;
 #if ENABLE(XSLT)
-        case CachedResource::XSLStyleSheet:
-            return ResourceLoadPriorityHigh;
+    case CachedResource::XSLStyleSheet:
+        return ResourceLoadPriorityHigh;
 #endif
 #if ENABLE(SVG)
-        case CachedResource::SVGDocumentResource:
-            return ResourceLoadPriorityLow;
+    case CachedResource::SVGDocumentResource:
+        return ResourceLoadPriorityLow;
 #endif
 #if ENABLE(LINK_PREFETCH)
-        case CachedResource::LinkPrefetch:
-            return ResourceLoadPriorityVeryLow;
-        case CachedResource::LinkSubresource:
-            return ResourceLoadPriorityVeryLow;
+    case CachedResource::LinkPrefetch:
+        return ResourceLoadPriorityVeryLow;
+    case CachedResource::LinkSubresource:
+        return ResourceLoadPriorityVeryLow;
 #endif
 #if ENABLE(VIDEO_TRACK)
-        case CachedResource::TextTrackResource:
-            return ResourceLoadPriorityLow;
+    case CachedResource::TextTrackResource:
+        return ResourceLoadPriorityLow;
 #endif
 #if ENABLE(CSS_SHADERS)
-        case CachedResource::ShaderResource:
-            return ResourceLoadPriorityMedium;
+    case CachedResource::ShaderResource:
+        return ResourceLoadPriorityMedium;
 #endif
     }
     ASSERT_NOT_REACHED();
@@ -97,6 +104,8 @@ static ResourceLoadPriority defaultPriorityForResourceType(CachedResource::Type 
 static ResourceRequest::TargetType cachedResourceTypeToTargetType(CachedResource::Type type)
 {
     switch (type) {
+    case CachedResource::MainResource:
+        return ResourceRequest::TargetIsMainFrame;
     case CachedResource::CSSStyleSheet:
 #if ENABLE(XSLT)
     case CachedResource::XSLStyleSheet:
@@ -190,8 +199,55 @@ CachedResource::~CachedResource()
         m_owningCachedResourceLoader->removeCachedResource(this);
 }
 
+void CachedResource::failBeforeStarting()
+{
+    // FIXME: What if resources in other frames were waiting for this revalidation?
+    LOG(ResourceLoading, "Cannot start loading '%s'", url().string().latin1().data());
+    if (m_resourceToRevalidate) 
+        memoryCache()->revalidationFailed(this); 
+    error(CachedResource::LoadError);
+}
+
+void CachedResource::addAdditionalRequestHeaders(CachedResourceLoader* cachedResourceLoader)
+{
+    // Note: We skip the Content-Security-Policy check here because we check
+    // the Content-Security-Policy at the CachedResourceLoader layer so we can
+    // handle different resource types differently.
+
+    FrameLoader* frameLoader = cachedResourceLoader->frame()->loader();
+    String outgoingReferrer;
+    String outgoingOrigin;
+    if (m_resourceRequest.httpReferrer().isNull()) {
+        outgoingReferrer = frameLoader->outgoingReferrer();
+        outgoingOrigin = frameLoader->outgoingOrigin();
+    } else {
+        outgoingReferrer = m_resourceRequest.httpReferrer();
+        outgoingOrigin = SecurityOrigin::createFromString(outgoingReferrer)->toString();
+    }
+
+    outgoingReferrer = SecurityPolicy::generateReferrerHeader(cachedResourceLoader->document()->referrerPolicy(), m_resourceRequest.url(), outgoingReferrer);
+    if (outgoingReferrer.isEmpty())
+        m_resourceRequest.clearHTTPReferrer();
+    else if (!m_resourceRequest.httpReferrer())
+        m_resourceRequest.setHTTPReferrer(outgoingReferrer);
+    FrameLoader::addHTTPOriginIfNeeded(m_resourceRequest, outgoingOrigin);
+
+    frameLoader->addExtraFieldsToSubresourceRequest(m_resourceRequest);
+}
+
 void CachedResource::load(CachedResourceLoader* cachedResourceLoader, const ResourceLoaderOptions& options)
 {
+    if (!cachedResourceLoader->frame()) {
+        failBeforeStarting();
+        return;
+    }
+
+    FrameLoader* frameLoader = cachedResourceLoader->frame()->loader();
+    if (options.securityCheck == DoSecurityCheck && (frameLoader->state() == FrameStateProvisional || !frameLoader->activeDocumentLoader() || frameLoader->activeDocumentLoader()->isStopping())) {
+        failBeforeStarting();
+        return;
+    }
+
     m_options = options;
     m_loading = true;
 
@@ -225,14 +281,18 @@ void CachedResource::load(CachedResourceLoader* cachedResourceLoader, const Reso
         m_resourceRequest.setHTTPHeaderField("Purpose", "prefetch");
 #endif
     m_resourceRequest.setPriority(loadPriority());
-    
-    m_loader = resourceLoadScheduler()->scheduleSubresourceLoad(cachedResourceLoader->document()->frame(), this, m_resourceRequest, m_resourceRequest.priority(), options);
+
+    if (type() != MainResource)
+        addAdditionalRequestHeaders(cachedResourceLoader);
+
+#if USE(PLATFORM_STRATEGIES)
+    m_loader = platformStrategies()->loaderStrategy()->resourceLoadScheduler()->scheduleSubresourceLoad(cachedResourceLoader->frame(), this, m_resourceRequest, m_resourceRequest.priority(), options);
+#else
+    m_loader = resourceLoadScheduler()->scheduleSubresourceLoad(cachedResourceLoader->frame(), this, m_resourceRequest, m_resourceRequest.priority(), options);
+#endif
+
     if (!m_loader) {
-        // FIXME: What if resources in other frames were waiting for this revalidation?
-        LOG(ResourceLoading, "Cannot start loading '%s'", url().string().latin1().data());
-        if (m_resourceToRevalidate) 
-            memoryCache()->revalidationFailed(this); 
-        error(CachedResource::LoadError);
+        failBeforeStarting();
         return;
     }
 
@@ -293,9 +353,9 @@ double CachedResource::currentAge() const
     // RFC2616 13.2.3
     // No compensation for latency as that is not terribly important in practice
     double dateValue = m_response.date();
-    double apparentAge = isfinite(dateValue) ? max(0., m_responseTimestamp - dateValue) : 0;
+    double apparentAge = isfinite(dateValue) ? std::max(0., m_responseTimestamp - dateValue) : 0;
     double ageValue = m_response.age();
-    double correctedReceivedAge = isfinite(ageValue) ? max(apparentAge, ageValue) : apparentAge;
+    double correctedReceivedAge = isfinite(ageValue) ? std::max(apparentAge, ageValue) : apparentAge;
     double residentTime = currentTime() - m_responseTimestamp;
     return correctedReceivedAge + residentTime;
 }

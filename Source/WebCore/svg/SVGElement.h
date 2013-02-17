@@ -126,7 +126,7 @@ protected:
     virtual void parseAttribute(const Attribute&) OVERRIDE;
 
     virtual void finishParsingChildren();
-    virtual void attributeChanged(const Attribute&) OVERRIDE;
+    virtual void attributeChanged(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const OVERRIDE;
     
     virtual void removedFrom(ContainerNode*) OVERRIDE;
@@ -159,8 +159,10 @@ private:
 struct SVGAttributeHashTranslator {
     static unsigned hash(const QualifiedName& key)
     {
-        if (key.hasPrefix())
-            return DefaultHash<QualifiedName>::Hash::hash(QualifiedName(nullAtom, key.localName(), key.namespaceURI()));
+        if (key.hasPrefix()) {
+            QualifiedNameComponents components = { nullAtom.impl(), key.localName().impl(), key.namespaceURI().impl() };
+            return hashComponents(components);
+        }
         return DefaultHash<QualifiedName>::Hash::hash(key);
     }
     static bool equal(const QualifiedName& a, const QualifiedName& b) { return a.matches(b); }

@@ -212,12 +212,14 @@ void V8${implClassName}::visitDOMWrapper(DOMDataStore* store, void* object, v8::
 {
     ${implClassName}* impl = static_cast<${implClassName}*>(object);
 END
-    if (GetGenerateIsReachable($dataNode) eq  "ImplElementRoot" ||
+    if (GetGenerateIsReachable($dataNode) eq  "ImplDocument" ||
+        GetGenerateIsReachable($dataNode) eq  "ImplElementRoot" ||
         GetGenerateIsReachable($dataNode) eq  "ImplOwnerRoot" ||
         GetGenerateIsReachable($dataNode) eq  "ImplOwnerNodeRoot" ||
         GetGenerateIsReachable($dataNode) eq  "ImplBaseRoot") {
 
         my $methodName;
+        $methodName = "document" if (GetGenerateIsReachable($dataNode) eq "ImplDocument");
         $methodName = "element" if (GetGenerateIsReachable($dataNode) eq "ImplElementRoot");
         $methodName = "owner" if (GetGenerateIsReachable($dataNode) eq "ImplOwnerRoot");
         $methodName = "ownerNode" if (GetGenerateIsReachable($dataNode) eq "ImplOwnerNodeRoot");
@@ -382,9 +384,13 @@ END
     }
     inline static v8::Handle<v8::Object> wrap(${nativeType}*, v8::Handle<v8::Object> creationContext = v8::Handle<v8::Object>(), v8::Isolate* = 0);
     static void derefObject(void*);
-    static void visitDOMWrapper(DOMDataStore*, void*, v8::Persistent<v8::Object>);
     static WrapperTypeInfo info;
 END
+
+    if (NeedsToVisitDOMWrapper($dataNode)) {
+        push(@headerContent, "    static void visitDOMWrapper(DOMDataStore*, void*, v8::Persistent<v8::Object>);\n");
+    }
+
     if ($dataNode->extendedAttributes->{"ActiveDOMObject"}) {
         push(@headerContent, "    static ActiveDOMObject* toActiveDOMObject(v8::Handle<v8::Object>);\n");
     }
@@ -477,11 +483,11 @@ END
 
     if (@enabledPerContextFunctions) {
         push(@headerContent, <<END);
-    static void installPerContextPrototypeProperties(v8::Handle<v8::Object>, ScriptExecutionContext*);
+    static void installPerContextPrototypeProperties(v8::Handle<v8::Object>);
 END
     } else {
         push(@headerContent, <<END);
-    static void installPerContextPrototypeProperties(v8::Handle<v8::Object>, ScriptExecutionContext*) { }
+    static void installPerContextPrototypeProperties(v8::Handle<v8::Object>) { }
 END
     }
 
@@ -550,8 +556,11 @@ inline v8::Handle<v8::Value> toV8Fast(Node* node, const v8::AccessorInfo& info, 
     // whether the holder's inline wrapper is the same wrapper we see in the
     // v8::AccessorInfo.
     v8::Handle<v8::Object> holderWrapper = info.Holder();
-    if (holder->wrapper() && *holder->wrapper() == holderWrapper && node->wrapper())
-        return *node->wrapper();
+    if (holder->wrapper() == holderWrapper) {
+        v8::Handle<v8::Object> wrapper = node->wrapper();
+        if (!wrapper.IsEmpty())
+            return wrapper;
+    }
     return toV8Slow(node, holderWrapper, info.GetIsolate());
 }
 END
@@ -828,20 +837,7 @@ static v8::Handle<v8::Value> ${implClassName}ConstructorGetter(v8::Local<v8::Str
     V8PerContextData* perContextData = V8PerContextData::from(info.Holder()->CreationContext());
     if (!perContextData)
         return v8Undefined();
-END
-
-    if ($implClassName eq "DOMWindow") {
-        push(@implContentDecls, "    return perContextData->constructorForType(WrapperTypeInfo::unwrap(data), V8DOMWindow::toNative(info.Holder())->document());\n");
-END
-    } elsif ($implClassName eq "WorkerContext") {
-        push(@implContentDecls, "    return perContextData->constructorForType(WrapperTypeInfo::unwrap(data), V8WorkerContext::toNative(info.Holder()));\n")
-    }
-    # FIXME: This code is correct for real IDL files, but fails with TestObj.idl,
-    # which contains methods with [V8EnabledPerContext].
-    # else {
-    #    die "Unknown Context ${implClassName}"
-    # }
-    push(@implContentDecls, <<END);
+    return perContextData->constructorForType(WrapperTypeInfo::unwrap(data));
 }
 END
 }
@@ -3089,15 +3085,16 @@ END
 
     if (@enabledPerContextFunctions) {
         push(@implContent, <<END);
-void ${className}::installPerContextPrototypeProperties(v8::Handle<v8::Object> proto, ScriptExecutionContext* context)
+void ${className}::installPerContextPrototypeProperties(v8::Handle<v8::Object> proto)
 {
     UNUSED_PARAM(proto);
-    UNUSED_PARAM(context);
 END
         # Setup the enable-by-settings functions if we have them
         push(@implContent,  <<END);
     v8::Local<v8::Signature> defaultSignature = v8::Signature::New(GetTemplate());
     UNUSED_PARAM(defaultSignature); // In some cases, it will not be used.
+
+    ScriptExecutionContext* context = toScriptExecutionContext(proto->CreationContext());
 END
 
         foreach my $runtimeFunc (@enabledPerContextFunctions) {
@@ -3430,13 +3427,14 @@ END
     }
 
     push(@implContent, <<END);
-    Document* document = 0;
-    UNUSED_PARAM(document);
+    // Please don't add any more uses of this variable.
+    Document* deprecatedDocument = 0;
+    UNUSED_PARAM(deprecatedDocument);
 END
 
-    if (IsNodeSubType($dataNode) || $interfaceName eq "NotificationCenter") {
+    if (IsNodeSubType($dataNode)) {
         push(@implContent, <<END);
-    document = impl->document(); 
+    deprecatedDocument = impl->document(); 
 END
     }
 
@@ -3451,7 +3449,7 @@ END
         context->Enter();
     }
 
-    wrapper = V8DOMWrapper::instantiateV8Object(document, &info, impl.get());
+    wrapper = V8DOMWrapper::instantiateV8Object(deprecatedDocument, &info, impl.get());
 
     if (!context.IsEmpty())
         context->Exit();
@@ -3460,19 +3458,9 @@ END
         return wrapper;
 
     installPerContextProperties(wrapper, impl.get());
-END
-
-    push(@implContent, <<END);
     v8::Persistent<v8::Object> wrapperHandle = V8DOMWrapper::setJSWrapperFor${domMapName}(impl, wrapper, isolate);
     if (!hasDependentLifetime)
         wrapperHandle.MarkIndependent();
-END
-    if (IsNodeSubType($dataNode)) {
-        push(@implContent, <<END);
-    wrapperHandle.SetWrapperClassId(v8DOMSubtreeClassId);
-END
-    }
-    push(@implContent, <<END);
     return wrapper;
 }
 END
@@ -3492,9 +3480,7 @@ sub GetDomMapName
     my $dataNode = shift;
     my $type = shift;
 
-    return "ActiveDOMNode" if (IsNodeSubType($dataNode) && $dataNode->extendedAttributes->{"ActiveDOMObject"});
     return "DOMNode" if IsNodeSubType($dataNode);
-    return "ActiveDOMObject" if $dataNode->extendedAttributes->{"ActiveDOMObject"};
     return "DOMObject";
 }
 

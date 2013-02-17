@@ -136,7 +136,7 @@ void TextureMapperLayer::updateBackingStore(TextureMapper* textureMapper, Graphi
 
     RefPtr<Image> image = imageBuffer->copyImage(DontCopyBackingStore);
     TextureMapperTiledBackingStore* backingStore = static_cast<TextureMapperTiledBackingStore*>(m_backingStore.get());
-    backingStore->updateContents(textureMapper, image.get(), m_size, dirtyRect);
+    backingStore->updateContents(textureMapper, image.get(), m_size, dirtyRect, BitmapTexture::UpdateCanModifyOriginalImageData);
 
     backingStore->setShowDebugBorders(layer->showDebugBorders());
     backingStore->setDebugBorder(m_debugBorderColor, m_debugBorderWidth);
@@ -183,7 +183,7 @@ int TextureMapperLayer::compareGraphicsLayersZValue(const void* a, const void* b
     return int(((*layerA)->m_centerZ - (*layerB)->m_centerZ) * 1000);
 }
 
-void TextureMapperLayer::sortByZOrder(Vector<TextureMapperLayer* >& array, int first, int last)
+void TextureMapperLayer::sortByZOrder(Vector<TextureMapperLayer* >& array, int /* first */, int /* last */)
 {
     qsort(array.data(), array.size(), sizeof(TextureMapperLayer*), compareGraphicsLayersZValue);
 }
@@ -407,7 +407,7 @@ void TextureMapperLayer::flushCompositingState(GraphicsLayerTextureMapper* graph
     flushCompositingState(graphicsLayer, rootLayer()->m_textureMapper, options);
 }
 
-void TextureMapperLayer::flushCompositingStateSelf(GraphicsLayerTextureMapper* graphicsLayer, TextureMapper* textureMapper)
+void TextureMapperLayer::flushCompositingStateSelf(GraphicsLayerTextureMapper* graphicsLayer, TextureMapper*)
 {
     int changeMask = graphicsLayer->changeMask();
 
@@ -508,6 +508,13 @@ bool TextureMapperLayer::descendantsOrSelfHaveRunningAnimations() const
     }
 
     return false;
+}
+
+void TextureMapperLayer::applyAnimationsRecursively()
+{
+    syncAnimations();
+    for (size_t i = 0; i < m_children.size(); ++i)
+        m_children[i]->applyAnimationsRecursively();
 }
 
 void TextureMapperLayer::syncAnimations()

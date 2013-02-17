@@ -53,23 +53,23 @@ void WebConnection::postMessage(const String& messageName, APIObject* messageBod
     if (!m_connection)
         return;
 
-    OwnPtr<CoreIPC::ArgumentEncoder> messageData = CoreIPC::ArgumentEncoder::create(0);
+    OwnPtr<CoreIPC::ArgumentEncoder> messageData = CoreIPC::ArgumentEncoder::create();
     messageData->encode(messageName);
-    encodeMessageBody(messageData.get(), messageBody);
+    encodeMessageBody(*messageData, messageBody);
 
     m_connection->send(Messages::WebConnection::HandleMessage(CoreIPC::DataReference(messageData->buffer(), messageData->bufferSize())), 0);
 }
 
 void WebConnection::handleMessage(const CoreIPC::DataReference& messageData)
 {
-    CoreIPC::ArgumentDecoder messageDecoder(messageData.data(), messageData.size());
+    OwnPtr<CoreIPC::ArgumentDecoder> decoder = CoreIPC::ArgumentDecoder::create(messageData.data(), messageData.size());
 
     String messageName;
-    if (!messageDecoder.decode(messageName))
+    if (!decoder->decode(messageName))
         return;
 
     RefPtr<APIObject> messageBody;
-    if (!decodeMessageBody(&messageDecoder, messageBody))
+    if (!decodeMessageBody(*decoder, messageBody))
         return;
 
     m_client.didReceiveMessage(this, messageName, messageBody.get());

@@ -48,6 +48,7 @@
 #include "HTMLElement.h"
 #include "HTMLFormCollection.h"
 #include "HTMLFrameOwnerElement.h"
+#include "HTMLLabelElement.h"
 #include "HTMLNames.h"
 #include "HTMLOptionsCollection.h"
 #include "HTMLParserIdioms.h"
@@ -691,61 +692,66 @@ inline void Element::setAttributeInternal(size_t index, const QualifiedName& nam
         existingAttribute->setValue(newValue);
 
     if (!inSynchronizationOfLazyAttribute)
-        didModifyAttribute(*existingAttribute);
+        didModifyAttribute(name, newValue);
 }
 
-void Element::attributeChanged(const Attribute& attribute)
+static inline AtomicString makeIdForStyleResolution(const AtomicString& value, bool inQuirksMode)
 {
-    parseAttribute(attribute);
+    if (inQuirksMode)
+        return value.lower();
+    return value;
+}
+
+void Element::attributeChanged(const QualifiedName& name, const AtomicString& newValue)
+{
+    parseAttribute(Attribute(name, newValue));
 
     document()->incDOMTreeVersion();
 
-    if (isIdAttributeName(attribute.name())) {
-        if (attribute.value() != attributeData()->idForStyleResolution()) {
-            if (attribute.isNull())
-                attributeData()->setIdForStyleResolution(nullAtom);
-            else if (document()->inQuirksMode())
-                attributeData()->setIdForStyleResolution(attribute.value().lower());
-            else
-                attributeData()->setIdForStyleResolution(attribute.value());
-            setNeedsStyleRecalc();
+    if (isIdAttributeName(name)) {
+        AtomicString oldId = attributeData()->idForStyleResolution();
+        AtomicString newId = makeIdForStyleResolution(newValue, document()->inQuirksMode());
+        if (newId != oldId) {
+            attributeData()->setIdForStyleResolution(newId);
+            StyleResolver* styleResolver = document()->styleResolverIfExists();
+            if (attached() && (!styleResolver || (styleResolver->hasSelectorForId(newId) || styleResolver->hasSelectorForId(oldId))))
+                setNeedsStyleRecalc();
         }
-    } else if (attribute.name() == HTMLNames::nameAttr)
-        setHasName(!attribute.isNull());
+    } else if (name == HTMLNames::nameAttr)
+        setHasName(!newValue.isNull());
 
     if (!needsStyleRecalc() && document()->attached()) {
         StyleResolver* styleResolver = document()->styleResolverIfExists();
-        if (!styleResolver || styleResolver->hasSelectorForAttribute(attribute.name().localName()))
+        if (!styleResolver || styleResolver->hasSelectorForAttribute(name.localName()))
             setNeedsStyleRecalc();
     }
 
-    invalidateNodeListCachesInAncestors(&attribute.name(), this);
+    invalidateNodeListCachesInAncestors(&name, this);
 
     if (!AXObjectCache::accessibilityEnabled())
         return;
 
-    const QualifiedName& attrName = attribute.name();
-    if (attrName == aria_activedescendantAttr) {
+    if (name == aria_activedescendantAttr) {
         // any change to aria-activedescendant attribute triggers accessibility focus change, but document focus remains intact
         document()->axObjectCache()->handleActiveDescendantChanged(this);
-    } else if (attrName == roleAttr) {
+    } else if (name == roleAttr) {
         // the role attribute can change at any time, and the AccessibilityObject must pick up these changes
         document()->axObjectCache()->handleAriaRoleChanged(this);
-    } else if (attrName == aria_valuenowAttr) {
+    } else if (name == aria_valuenowAttr) {
         // If the valuenow attribute changes, AX clients need to be notified.
         document()->axObjectCache()->postNotification(this, AXObjectCache::AXValueChanged, true);
-    } else if (attrName == aria_labelAttr || attrName == aria_labeledbyAttr || attrName == altAttr || attrName == titleAttr) {
+    } else if (name == aria_labelAttr || name == aria_labeledbyAttr || name == altAttr || name == titleAttr) {
         // If the content of an element changes due to an attribute change, notify accessibility.
         document()->axObjectCache()->contentChanged(this);
-    } else if (attrName == aria_checkedAttr)
+    } else if (name == aria_checkedAttr)
         document()->axObjectCache()->checkedStateChanged(this);
-    else if (attrName == aria_selectedAttr)
+    else if (name == aria_selectedAttr)
         document()->axObjectCache()->selectedChildrenChanged(this);
-    else if (attrName == aria_expandedAttr)
+    else if (name == aria_expandedAttr)
         document()->axObjectCache()->handleAriaExpandedChange(this);
-    else if (attrName == aria_hiddenAttr)
+    else if (name == aria_hiddenAttr)
         document()->axObjectCache()->childrenChanged(this);
-    else if (attrName == aria_invalidAttr)
+    else if (name == aria_invalidAttr)
         document()->axObjectCache()->postNotification(this, AXObjectCache::AXInvalidStatusChanged, true);
 }
 
@@ -853,7 +859,7 @@ void Element::parserSetAttributes(const Vector<Attribute>& attributeVector, Frag
     // attributeChanged mutates m_attributeData.
     // FIXME: Find a way so we don't have to do this.
     for (unsigned i = 0; i < filteredAttributes.size(); ++i)
-        attributeChanged(filteredAttributes[i]);
+        attributeChanged(filteredAttributes[i].name(), filteredAttributes[i].value());
 }
 
 bool Element::hasAttributes() const
@@ -959,16 +965,14 @@ Node::InsertionNotificationRequest Element::insertedInto(ContainerNode* insertio
     if (!nameValue.isNull())
         updateName(nullAtom, nameValue);
 
+    if (hasTagName(labelTag)) {
+        TreeScope* scope = treeScope();
+        if (scope->shouldCacheLabelsByForAttribute())
+            updateLabel(scope, nullAtom, fastGetAttribute(forAttr));
+    }
+
     return InsertionDone;
 }
-
-static inline TreeScope* treeScopeOfParent(Node* node, ContainerNode* insertionPoint)
-{
-    if (Node* parent = node->parentNode())
-        parent->treeScope();
-    return insertionPoint->treeScope();
-}
-
 
 void Element::removedFrom(ContainerNode* insertionPoint)
 {
@@ -986,11 +990,17 @@ void Element::removedFrom(ContainerNode* insertionPoint)
     if (insertionPoint->inDocument()) {
         const AtomicString& idValue = getIdAttribute();
         if (!idValue.isNull() && inDocument())
-            updateId(treeScopeOfParent(this, insertionPoint), idValue, nullAtom);
+            updateId(insertionPoint->treeScope(), idValue, nullAtom);
 
         const AtomicString& nameValue = getNameAttribute();
         if (!nameValue.isNull())
             updateName(nameValue, nullAtom);
+
+        if (hasTagName(labelTag)) {
+            TreeScope* treeScope = insertionPoint->treeScope();
+            if (treeScope->shouldCacheLabelsByForAttribute())
+                updateLabel(treeScope, fastGetAttribute(forAttr), nullAtom);
+        }
     }
 
     ContainerNode::removedFrom(insertionPoint);
@@ -1011,13 +1021,11 @@ void Element::attach()
     if (ElementShadow* shadow = this->shadow()) {
         parentPusher.push();
         shadow->attach();
-        attachChildrenIfNeeded();
-        attachAsNode();
     } else {
         if (firstChild())
             parentPusher.push();
-        ContainerNode::attach();
     }
+    ContainerNode::attach();
 
     if (hasRareData()) {   
         ElementRareData* data = elementRareData();
@@ -1560,7 +1568,7 @@ void Element::addAttributeInternal(const QualifiedName& name, const AtomicString
         willModifyAttribute(name, nullAtom, value);
     m_attributeData->addAttribute(Attribute(name, value));
     if (!inSynchronizationOfLazyAttribute)
-        didAddAttribute(Attribute(name, value));
+        didAddAttribute(name, value);
 }
 
 void Element::removeAttribute(const AtomicString& name)
@@ -2133,12 +2141,33 @@ bool Element::hasNamedNodeMap() const
 }
 #endif
 
+void Element::updateLabel(TreeScope* scope, const AtomicString& oldForAttributeValue, const AtomicString& newForAttributeValue)
+{
+    ASSERT(hasTagName(labelTag));
+
+    if (!inDocument())
+        return;
+
+    if (oldForAttributeValue == newForAttributeValue)
+        return;
+
+    if (!oldForAttributeValue.isEmpty())
+        scope->removeLabel(oldForAttributeValue, static_cast<HTMLLabelElement*>(this));
+    if (!newForAttributeValue.isEmpty())
+        scope->addLabel(newForAttributeValue, static_cast<HTMLLabelElement*>(this));
+}
+
 void Element::willModifyAttribute(const QualifiedName& name, const AtomicString& oldValue, const AtomicString& newValue)
 {
     if (isIdAttributeName(name))
         updateId(oldValue, newValue);
     else if (name == HTMLNames::nameAttr)
         updateName(oldValue, newValue);
+    else if (name == HTMLNames::forAttr && hasTagName(labelTag)) {
+        TreeScope* scope = treeScope();
+        if (scope->shouldCacheLabelsByForAttribute())
+            updateLabel(scope, oldValue, newValue);
+    }
 
 #if ENABLE(MUTATION_OBSERVERS)
     if (OwnPtr<MutationObserverInterestGroup> recipients = MutationObserverInterestGroup::createForAttributesMutation(this, name))
@@ -2155,23 +2184,23 @@ void Element::willModifyAttribute(const QualifiedName& name, const AtomicString&
 #endif
 }
 
-void Element::didAddAttribute(const Attribute& attribute)
+void Element::didAddAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    attributeChanged(attribute);
-    InspectorInstrumentation::didModifyDOMAttr(document(), this, attribute.localName(), attribute.value());
+    attributeChanged(name, value);
+    InspectorInstrumentation::didModifyDOMAttr(document(), this, name.localName(), value);
     dispatchSubtreeModifiedEvent();
 }
 
-void Element::didModifyAttribute(const Attribute& attribute)
+void Element::didModifyAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    attributeChanged(attribute);
-    InspectorInstrumentation::didModifyDOMAttr(document(), this, attribute.localName(), attribute.value());
+    attributeChanged(name, value);
+    InspectorInstrumentation::didModifyDOMAttr(document(), this, name.localName(), value);
     // Do not dispatch a DOMSubtreeModified event here; see bug 81141.
 }
 
 void Element::didRemoveAttribute(const QualifiedName& name)
 {
-    attributeChanged(Attribute(name, nullAtom));
+    attributeChanged(name, nullAtom);
     InspectorInstrumentation::didRemoveDOMAttr(document(), this, name.localName());
     dispatchSubtreeModifiedEvent();
 }

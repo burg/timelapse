@@ -222,7 +222,7 @@ void GraphicsContext3D::reshape(int width, int height)
     if (width == m_currentWidth && height == m_currentHeight)
         return;
 
-#if PLATFORM(QT) && USE(GRAPHICS_SURFACE)
+#if (PLATFORM(QT) || PLATFORM(EFL)) && USE(GRAPHICS_SURFACE)
     ::glFlush(); // Make sure all GL calls have been committed before resizing.
     createGraphicsSurfaces(IntSize(width, height));
 #endif
@@ -477,9 +477,9 @@ void GraphicsContext3D::compileShader(Platform3DObject shader)
     
     // ASSERT that ANGLE generated GLSL will be accepted by OpenGL.
     ASSERT(GLCompileSuccess == GL_TRUE);
-#if PLATFORM(BLACKBERRY)
+#if PLATFORM(BLACKBERRY) && !defined(NDEBUG)
     if (GLCompileSuccess != GL_TRUE)
-        BlackBerry::Platform::log(BlackBerry::Platform::LogLevelWarn, "The shader validated, but didn't compile.\n");
+        BBLOG(BlackBerry::Platform::LogLevelWarn, "The shader validated, but didn't compile.\n");
 #endif
 }
 
@@ -1406,6 +1406,8 @@ void GraphicsContext3D::deleteShader(Platform3DObject shader)
 void GraphicsContext3D::deleteTexture(Platform3DObject texture)
 {
     makeContextCurrent();
+    if (m_boundTexture0 == texture)
+        m_boundTexture0 = 0;
     glDeleteTextures(1, &texture);
 }
 

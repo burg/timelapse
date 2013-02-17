@@ -35,6 +35,7 @@
 
 #include "CommonSlowPaths.h"
 #include "Arguments.h"
+#include "ArrayConstructor.h"
 #include "CallFrame.h"
 #include "CodeBlock.h"
 #include "CodeProfiling.h"
@@ -2141,6 +2142,23 @@ DEFINE_STUB_FUNCTION(JSObject*, op_new_func)
 
 inline void* jitCompileFor(CallFrame* callFrame, CodeSpecializationKind kind)
 {
+    // This function is called by cti_op_call_jitCompile() and
+    // cti_op_construct_jitCompile() JIT glue trampolines to compile the
+    // callee function that we want to call. Both cti glue trampolines are
+    // called by JIT'ed code which has pushed a frame and initialized most of
+    // the frame content except for the codeBlock.
+    //
+    // Normally, the prologue of the callee is supposed to set the frame's cb
+    // pointer to the cb of the callee. But in this case, the callee code does
+    // not exist yet until it is compiled below. The compilation process will
+    // allocate memory which may trigger a GC. The GC, in turn, will scan the
+    // JSStack, and will expect the frame's cb to either be valid or 0. If
+    // we don't initialize it, the GC will be accessing invalid memory and may
+    // crash.
+    //
+    // Hence, we should nullify it here before proceeding with the compilation.
+    callFrame->setCodeBlock(0);
+
     JSFunction* function = jsCast<JSFunction*>(callFrame->callee());
     ASSERT(!function->isHostFunction());
     FunctionExecutable* executable = function->jsExecutable();
@@ -2221,6 +2239,23 @@ inline void* lazyLinkFor(CallFrame* callFrame, CodeSpecializationKind kind)
     CodeBlock* codeBlock = 0;
     CallLinkInfo* callLinkInfo = &callFrame->callerFrame()->codeBlock()->getCallLinkInfo(callFrame->returnPC());
 
+    // This function is called by cti_vm_lazyLinkCall() and
+    // cti_lazyLinkConstruct JIT glue trampolines to link the callee function
+    // that we want to call. Both cti glue trampolines are called by JIT'ed
+    // code which has pushed a frame and initialized most of the frame content
+    // except for the codeBlock.
+    //
+    // Normally, the prologue of the callee is supposed to set the frame's cb
+    // field to the cb of the callee. But in this case, the callee may not
+    // exist yet, and if not, it will be generated in the compilation below.
+    // The compilation will allocate memory which may trigger a GC. The GC, in
+    // turn, will scan the JSStack, and will expect the frame's cb to be valid
+    // or 0. If we don't initialize it, the GC will be accessing invalid
+    // memory and may crash.
+    //
+    // Hence, we should nullify it here before proceeding with the compilation.
+    callFrame->setCodeBlock(0);
+
     if (executable->isHostFunction())
         codePtr = executable->generatedJITCodeFor(kind).addressForCall();
     else {
@@ -2297,7 +2332,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_call_NotJSFunction)
 
     EncodedJSValue returnValue;
     {
-        SamplingTool::HostCallRecord callRecord(CTI_SAMPLER);
+        SamplingTool::CallRecord callRecord(CTI_SAMPLER, true);
         returnValue = callData.native.function(callFrame);
     }
 
@@ -2360,6 +2395,13 @@ DEFINE_STUB_FUNCTION(JSObject*, op_new_array)
     return constructArray(stackFrame.callFrame, reinterpret_cast<JSValue*>(&stackFrame.callFrame->registers()[stackFrame.args[0].int32()]), stackFrame.args[1].int32());
 }
 
+DEFINE_STUB_FUNCTION(JSObject*, op_new_array_with_size)
+{
+    STUB_INIT_STACK_FRAME(stackFrame);
+    
+    return constructArrayWithSizeQuirk(stackFrame.callFrame, stackFrame.callFrame->lexicalGlobalObject(), stackFrame.args[0].jsValue());
+}
+
 DEFINE_STUB_FUNCTION(JSObject*, op_new_array_buffer)
 {
     STUB_INIT_STACK_FRAME(stackFrame);
@@ -2367,7 +2409,7 @@ DEFINE_STUB_FUNCTION(JSObject*, op_new_array_buffer)
     return constructArray(stackFrame.callFrame, stackFrame.callFrame->codeBlock()->constantBuffer(stackFrame.args[0].int32()), stackFrame.args[1].int32());
 }
 
-DEFINE_STUB_FUNCTION(void, op_put_global_var_check)
+DEFINE_STUB_FUNCTION(void, op_init_global_const_check)
 {
     STUB_INIT_STACK_FRAME(stackFrame);
     
@@ -2382,9 +2424,20 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_resolve)
 
     CallFrame* callFrame = stackFrame.callFrame;
 
-    JSValue result = JSScope::resolve(callFrame, stackFrame.args[0].identifier());
+    JSValue result = JSScope::resolve(callFrame, stackFrame.args[0].identifier(), stackFrame.args[1].resolveOperations());
     CHECK_FOR_EXCEPTION_AT_END();
     return JSValue::encode(result);
+}
+
+DEFINE_STUB_FUNCTION(void, op_put_to_base)
+{
+    STUB_INIT_STACK_FRAME(stackFrame);
+
+    CallFrame* callFrame = stackFrame.callFrame;
+    JSValue base = callFrame->r(stackFrame.args[0].int32()).jsValue();
+    JSValue value = callFrame->r(stackFrame.args[2].int32()).jsValue();
+    JSScope::resolvePut(callFrame, base, stackFrame.args[1].identifier(), value, stackFrame.args[3].putToBaseOperation());
+    CHECK_FOR_EXCEPTION_AT_END();
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_construct_NotJSConstruct)
@@ -2405,7 +2458,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_construct_NotJSConstruct)
 
     EncodedJSValue returnValue;
     {
-        SamplingTool::HostCallRecord callRecord(CTI_SAMPLER);
+        SamplingTool::CallRecord callRecord(CTI_SAMPLER, true);
         returnValue = constructData.native.function(callFrame);
     }
 
@@ -2711,14 +2764,14 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_resolve_base)
 {
     STUB_INIT_STACK_FRAME(stackFrame);
 
-    return JSValue::encode(JSScope::resolveBase(stackFrame.callFrame, stackFrame.args[0].identifier(), false));
+    return JSValue::encode(JSScope::resolveBase(stackFrame.callFrame, stackFrame.args[0].identifier(), false, stackFrame.args[1].resolveOperations(), stackFrame.args[2].putToBaseOperation()));
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_resolve_base_strict_put)
 {
     STUB_INIT_STACK_FRAME(stackFrame);
 
-    if (JSValue result = JSScope::resolveBase(stackFrame.callFrame, stackFrame.args[0].identifier(), true))
+    if (JSValue result = JSScope::resolveBase(stackFrame.callFrame, stackFrame.args[0].identifier(), true, stackFrame.args[1].resolveOperations(), stackFrame.args[2].putToBaseOperation()))
         return JSValue::encode(result);
     VM_THROW_EXCEPTION();
 }
@@ -2736,36 +2789,6 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_ensure_property_exists)
     }
 
     return JSValue::encode(base);
-}
-    
-DEFINE_STUB_FUNCTION(EncodedJSValue, op_resolve_skip)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    JSValue result = JSScope::resolveSkip(stackFrame.callFrame, stackFrame.args[0].identifier(), stackFrame.args[1].int32());
-    CHECK_FOR_EXCEPTION_AT_END();
-    return JSValue::encode(result);
-}
-
-DEFINE_STUB_FUNCTION(EncodedJSValue, op_resolve_global)
-{
-    STUB_INIT_STACK_FRAME(stackFrame);
-
-    CallFrame* callFrame = stackFrame.callFrame;
-    Identifier& ident = stackFrame.args[0].identifier();
-    CodeBlock* codeBlock = callFrame->codeBlock();
-    unsigned globalResolveInfoIndex = stackFrame.args[1].int32();
-    GlobalResolveInfo& globalResolveInfo = codeBlock->globalResolveInfo(globalResolveInfoIndex);
-
-    JSValue result = JSScope::resolveGlobal(
-        callFrame,
-        ident,
-        callFrame->lexicalGlobalObject(),
-        &globalResolveInfo.structure,
-        &globalResolveInfo.offset
-    );
-    CHECK_FOR_EXCEPTION();
-    return JSValue::encode(result);
 }
 
 DEFINE_STUB_FUNCTION(EncodedJSValue, op_div)
@@ -3047,7 +3070,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_resolve_with_base)
     STUB_INIT_STACK_FRAME(stackFrame);
 
     CallFrame* callFrame = stackFrame.callFrame;
-    JSValue result = JSScope::resolveWithBase(callFrame, stackFrame.args[0].identifier(), &callFrame->registers()[stackFrame.args[1].int32()]);
+    JSValue result = JSScope::resolveWithBase(callFrame, stackFrame.args[0].identifier(), &callFrame->registers()[stackFrame.args[1].int32()], stackFrame.args[2].resolveOperations(), stackFrame.args[3].putToBaseOperation());
     CHECK_FOR_EXCEPTION_AT_END();
     return JSValue::encode(result);
 }
@@ -3057,7 +3080,7 @@ DEFINE_STUB_FUNCTION(EncodedJSValue, op_resolve_with_this)
     STUB_INIT_STACK_FRAME(stackFrame);
 
     CallFrame* callFrame = stackFrame.callFrame;
-    JSValue result = JSScope::resolveWithThis(callFrame, stackFrame.args[0].identifier(), &callFrame->registers()[stackFrame.args[1].int32()]);
+    JSValue result = JSScope::resolveWithThis(callFrame, stackFrame.args[0].identifier(), &callFrame->registers()[stackFrame.args[1].int32()], stackFrame.args[2].resolveOperations());
     CHECK_FOR_EXCEPTION_AT_END();
     return JSValue::encode(result);
 }

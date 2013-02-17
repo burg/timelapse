@@ -72,6 +72,8 @@
 #include "Page.h"
 #include "ScriptObject.h"
 #include "Settings.h"
+#include "WebCoreMemoryInstrumentation.h"
+#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/UnusedParam.h>
 
 namespace WebCore {
@@ -118,7 +120,7 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
 #if ENABLE(TIMELAPSE)
     m_agents.append(InspectorTimelapseAgent::create(m_instrumentingAgents.get(), m_state.get(), page));
 #endif    
-    m_agents.append(InspectorMemoryAgent::create(m_instrumentingAgents.get(), inspectorClient, m_state.get(), m_page, domStorageAgent));
+    m_agents.append(InspectorMemoryAgent::create(m_instrumentingAgents.get(), inspectorClient, m_state.get(), m_page));
     m_agents.append(InspectorTimelineAgent::create(m_instrumentingAgents.get(), pageAgent, m_state.get(), InspectorTimelineAgent::PageInspector,
        inspectorClient));
     m_agents.append(InspectorApplicationCacheAgent::create(m_instrumentingAgents.get(), m_state.get(), pageAgent));
@@ -382,6 +384,32 @@ void InspectorController::resume()
 void InspectorController::setResourcesDataSizeLimitsFromInternals(int maximumResourcesContentSize, int maximumSingleResourceContentSize)
 {
     m_resourceAgent->setResourcesDataSizeLimitsFromInternals(maximumResourcesContentSize, maximumSingleResourceContentSize);
+}
+
+void InspectorController::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::InspectorController);
+    info.addMember(m_inspectorAgent);
+    info.addMember(m_instrumentingAgents);
+    info.addMember(m_injectedScriptManager);
+    info.addMember(m_state);
+    info.addMember(m_overlay);
+
+    info.addMember(m_inspectorAgent);
+    info.addMember(m_domAgent);
+    info.addMember(m_resourceAgent);
+    info.addMember(m_pageAgent);
+#if ENABLE(JAVASCRIPT_DEBUGGER)
+    info.addMember(m_debuggerAgent);
+    info.addMember(m_profilerAgent);
+#endif
+
+    info.addMember(m_inspectorBackendDispatcher);
+    info.addMember(m_inspectorFrontendClient);
+    info.addMember(m_inspectorFrontend);
+    info.addMember(m_page);
+    info.addMember(m_inspectorClient);
+    info.addMember(m_agents);
 }
 
 } // namespace WebCore

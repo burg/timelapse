@@ -52,6 +52,9 @@ void InitWebCoreSystemInterface(void)
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
     INIT(CGContextDrawsWithCorrectShadowOffsets);
 #endif
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    INIT(CTFontTransformGlyphs);
+#endif
     INIT(CopyCFLocalizationPreferredName);
     INIT(CopyCONNECTProxyResponse);
     INIT(CopyNSURLResponseStatusLine);
@@ -207,6 +210,19 @@ void InitWebCoreSystemInterface(void)
     INIT(NSElasticDeltaForReboundDelta);
     INIT(NSReboundDeltaForElasticDelta);
 #endif
+
+    INIT(CaptionAppearanceHasUserPreferences);
+    INIT(CaptionAppearanceShowCaptionsWhenAvailable);
+    INIT(CaptionAppearanceCopyForegroundColor);
+    INIT(CaptionAppearanceCopyBackgroundColor);
+    INIT(CaptionAppearanceCopyWindowColor);
+    INIT(CaptionAppearanceGetForegroundOpacity);
+    INIT(CaptionAppearanceGetBackgroundOpacity);
+    INIT(CaptionAppearanceGetWindowOpacity);
+    INIT(CaptionAppearanceCopyFontForStyle);
+    INIT(CaptionAppearanceGetRelativeCharacterSize);
+    INIT(CaptionAppearanceGetTextEdgeStyle);
+    INIT(CaptionAppearanceGetSettingsChangedNotification);
 
 #endif
     didInit = true;

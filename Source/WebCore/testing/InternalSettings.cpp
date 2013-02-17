@@ -97,6 +97,8 @@ InternalSettings::Backup::Backup(Page* page, Settings* settings)
     , m_originalTextAutosizingWindowSizeOverride(settings->textAutosizingWindowSizeOverride())
     , m_originalTextAutosizingFontScaleFactor(settings->textAutosizingFontScaleFactor())
 #endif
+    , m_originalResolutionOverride(settings->resolutionOverride())
+    , m_originalMediaTypeOverride(settings->mediaTypeOverride())
 #if ENABLE(DIALOG_ELEMENT)
     , m_originalDialogElementEnabled(RuntimeEnabledFeatures::dialogElementEnabled())
 #endif
@@ -136,6 +138,8 @@ void InternalSettings::Backup::restoreTo(Page* page, Settings* settings)
     settings->setTextAutosizingWindowSizeOverride(m_originalTextAutosizingWindowSizeOverride);
     settings->setTextAutosizingFontScaleFactor(m_originalTextAutosizingFontScaleFactor);
 #endif
+    settings->setResolutionOverride(m_originalResolutionOverride);
+    settings->setMediaTypeOverride(m_originalMediaTypeOverride);
 #if ENABLE(DIALOG_ELEMENT)
     RuntimeEnabledFeatures::setDialogElementEnabled(m_originalDialogElementEnabled);
 #endif
@@ -413,6 +417,19 @@ void InternalSettings::setTextAutosizingWindowSizeOverride(int width, int height
 #endif
 }
 
+void InternalSettings::setResolutionOverride(int dotsPerCSSInchHorizontally, int dotsPerCSSInchVertically, ExceptionCode& ec)
+{
+    InternalSettingsGuardForSettings();
+    // An empty size resets the override.
+    settings()->setResolutionOverride(IntSize(dotsPerCSSInchHorizontally, dotsPerCSSInchVertically));
+}
+
+void InternalSettings::setMediaTypeOverride(const String& mediaType, ExceptionCode& ec)
+{
+    InternalSettingsGuardForSettings();
+    settings()->setMediaTypeOverride(mediaType);
+}
+
 void InternalSettings::setTextAutosizingFontScaleFactor(float fontScaleFactor, ExceptionCode& ec)
 {
 #if ENABLE(TEXT_AUTOSIZING)
@@ -645,7 +662,7 @@ String InternalSettings::configurationForViewport(float devicePixelRatio, int de
 
     ViewportArguments arguments = page()->viewportArguments();
     ViewportAttributes attributes = computeViewportAttributes(arguments, defaultLayoutWidthForNonMobilePages, deviceWidth, deviceHeight, devicePixelRatio, IntSize(availableWidth, availableHeight));
-    restrictMinimumScaleFactorToViewportSize(attributes, IntSize(availableWidth, availableHeight));
+    restrictMinimumScaleFactorToViewportSize(attributes, IntSize(availableWidth, availableHeight), devicePixelRatio);
     restrictScaleFactorToInitialScaleIfNotUserScalable(attributes);
 
     return "viewport size " + String::number(attributes.layoutSize.width()) + "x" + String::number(attributes.layoutSize.height()) + " scale " + String::number(attributes.initialScale) + " with limits [" + String::number(attributes.minimumScale) + ", " + String::number(attributes.maximumScale) + "] and userScalable " + (attributes.userScalable ? "true" : "false");

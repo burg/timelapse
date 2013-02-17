@@ -66,6 +66,10 @@ public:
 
     bool canContainRangeEndPoint() const { return false; }
 
+    bool canProcessDrag() const;
+
+    virtual bool willRespondToMouseClickEvents() OVERRIDE;
+
 protected:
     HTMLPlugInElement(const QualifiedName& tagName, Document*);
 

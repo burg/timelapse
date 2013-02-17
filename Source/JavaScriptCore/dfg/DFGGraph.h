@@ -57,10 +57,23 @@ struct StorageAccessData {
 
 struct ResolveGlobalData {
     unsigned identifierNumber;
-    unsigned resolveInfoIndex;
+    unsigned resolveOperationsIndex;
+    unsigned putToBaseOperationIndex;
+    unsigned resolvePropertyIndex;
 };
 
-// 
+struct ResolveOperationData {
+    unsigned identifierNumber;
+    unsigned resolveOperationsIndex;
+    unsigned putToBaseOperationIndex;
+};
+
+struct PutToBaseOperationData {
+    unsigned putToBaseOperationIndex;
+};
+
+
+//
 // === Graph ===
 //
 // The dataflow graph is an ordered vector of nodes.
@@ -484,7 +497,6 @@ public:
         case OUT_OF_BOUNDS_ARRAY_STORAGE_MODES:
         case SLOW_PUT_ARRAY_STORAGE_MODES:
         case ALL_EFFECTFUL_MODES:
-        case POLYMORPHIC_MODES:
             return false;
         case Array::String:
             return node.op() == GetByVal;
@@ -670,11 +682,14 @@ public:
     Vector<Edge, 16> m_varArgChildren;
     Vector<StorageAccessData> m_storageAccessData;
     Vector<ResolveGlobalData> m_resolveGlobalData;
+    Vector<ResolveOperationData> m_resolveOperationsData;
+    Vector<PutToBaseOperationData> m_putToBaseOperationData;
     Vector<NodeIndex, 8> m_arguments;
     SegmentedVector<VariableAccessData, 16> m_variableAccessData;
     SegmentedVector<ArgumentPosition, 8> m_argumentPositions;
     SegmentedVector<StructureSet, 16> m_structureSet;
     SegmentedVector<StructureTransitionData, 8> m_structureTransitionData;
+    SegmentedVector<NewArrayBufferData, 4> m_newArrayBufferData;
     bool m_hasArguments;
     HashSet<ExecutableBase*> m_executablesWhoseArgumentsEscaped;
     BitVector m_preservedVars;

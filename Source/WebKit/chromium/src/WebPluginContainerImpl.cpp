@@ -118,7 +118,7 @@ void WebPluginContainerImpl::paint(GraphicsContext* gc, const IntRect& damageRec
         return;
 
     FloatRect scaledDamageRect = damageRect;
-    float frameScaleFactor = m_element->document()->page()->mainFrame()->frameScaleFactor();
+    float frameScaleFactor = m_element->document()->frame()->frameScaleFactor();
     scaledDamageRect.scale(frameScaleFactor);
     scaledDamageRect.move(-frameRect().x() * (frameScaleFactor - 1), -frameRect().y() * (frameScaleFactor - 1));
 
@@ -139,7 +139,7 @@ void WebPluginContainerImpl::paint(GraphicsContext* gc, const IntRect& damageRec
     WebCanvas* canvas = gc->platformContext()->canvas();
 
     IntRect windowRect =
-        IntRect(view->contentsToWindow(enclosingIntRect(scaledDamageRect)));
+        IntRect(view->contentsToWindow(enclosingIntRect(scaledDamageRect).location()), enclosingIntRect(scaledDamageRect).size());
     m_webPlugin->paint(canvas, windowRect);
 
     gc->restore();
@@ -577,6 +577,11 @@ bool WebPluginContainerImpl::supportsKeyboardFocus() const
     return m_webPlugin->supportsKeyboardFocus();
 }
 
+bool WebPluginContainerImpl::canProcessDrag() const
+{
+    return m_webPlugin->canProcessDrag();
+}
+
 void WebPluginContainerImpl::willDestroyPluginLoadObserver(WebPluginLoadObserver* observer)
 {
     size_t pos = m_pluginLoadObservers.find(observer);
@@ -661,7 +666,8 @@ void WebPluginContainerImpl::handleMouseEvent(MouseEvent* event)
     ASSERT(parent()->isFrameView());
 
     if (event->isDragEvent()) {
-        handleDragEvent(event);
+        if (m_webPlugin->canProcessDrag())
+            handleDragEvent(event);
         return;
     }
 

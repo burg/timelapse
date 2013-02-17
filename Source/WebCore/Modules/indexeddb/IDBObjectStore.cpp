@@ -41,6 +41,7 @@
 #include "IDBKeyRange.h"
 #include "IDBTracing.h"
 #include "IDBTransaction.h"
+#include "ScriptExecutionContext.h"
 #include "SerializedScriptValue.h"
 #include <wtf/UnusedParam.h>
 
@@ -324,11 +325,8 @@ private:
             cursor->continueFunction(ec);
             ASSERT(!ec);
 
-            RefPtr<IDBKey> primaryKey = cursor->primaryKey();
-            RefPtr<IDBAny> valueAny = cursor->value();
-
-            ASSERT(valueAny->type() == IDBAny::ScriptValueType);
-            ScriptValue value = valueAny->scriptValue();
+            RefPtr<IDBKey> primaryKey = cursor->idbPrimaryKey();
+            ScriptValue value = cursor->value();
 
             IDBObjectStore::IndexKeys indexKeys;
             generateIndexKeysForValue(m_indexMetadata, value, &indexKeys);
@@ -421,6 +419,7 @@ PassRefPtr<IDBIndex> IDBObjectStore::createIndex(ScriptExecutionContext* context
     ASSERT(!ec);
     if (ec)
         return 0;
+    indexRequest->preventPropagation();
 
     // This is kept alive by being the success handler of the request, which is in turn kept alive by the owning transaction.
     RefPtr<IndexPopulator> indexPopulator = IndexPopulator::create(m_backend, m_transaction->backend(), indexRequest, metadata);

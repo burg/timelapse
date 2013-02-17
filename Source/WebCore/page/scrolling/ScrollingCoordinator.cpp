@@ -235,6 +235,15 @@ void ScrollingCoordinator::updateMainFrameScrollPosition(const IntPoint& scrollP
     frameView->setConstrainsScrollingToContentEdge(true);
 
     frameView->setInProgrammaticScroll(oldProgrammaticScroll);
+
+#if USE(ACCELERATED_COMPOSITING)
+    if (GraphicsLayer* scrollLayer = scrollLayerForFrameView(frameView)) {
+        if (programmaticScroll)
+            scrollLayer->setPosition(-frameView->scrollPosition());
+        else
+            scrollLayer->syncPosition(-frameView->scrollPosition());
+    }
+#endif
 }
 
 #if PLATFORM(MAC) || (PLATFORM(CHROMIUM) && OS(DARWIN))
@@ -253,7 +262,7 @@ void ScrollingCoordinator::handleWheelEventPhase(PlatformWheelEventPhase phase)
 }
 #endif
 
-bool ScrollingCoordinator::hasNonLayerFixedObjects(FrameView* frameView)
+bool ScrollingCoordinator::hasNonLayerFixedObjects(FrameView* frameView) const
 {
     const FrameView::ViewportConstrainedObjectSet* viewportConstrainedObjects = frameView->viewportConstrainedObjects();
     if (!viewportConstrainedObjects)
@@ -274,7 +283,7 @@ bool ScrollingCoordinator::hasNonLayerFixedObjects(FrameView* frameView)
 #endif
 }
 
-void ScrollingCoordinator::updateShouldUpdateScrollLayerPositionOnMainThread()
+MainThreadScrollingReasons ScrollingCoordinator::mainThreadScrollingReasons() const
 {
     FrameView* frameView = m_page->mainFrame()->view();
 
@@ -291,7 +300,12 @@ void ScrollingCoordinator::updateShouldUpdateScrollLayerPositionOnMainThread()
     if (m_page->mainFrame()->document()->isImageDocument())
         mainThreadScrollingReasons |= IsImageDocument;
 
-    setShouldUpdateScrollLayerPositionOnMainThread(mainThreadScrollingReasons);
+    return mainThreadScrollingReasons;
+}
+
+void ScrollingCoordinator::updateShouldUpdateScrollLayerPositionOnMainThread()
+{
+    setShouldUpdateScrollLayerPositionOnMainThread(mainThreadScrollingReasons());
 }
 
 void ScrollingCoordinator::setForceMainThreadScrollLayerPositionUpdates(bool forceMainThreadScrollLayerPositionUpdates)

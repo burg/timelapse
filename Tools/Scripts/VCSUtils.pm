@@ -89,6 +89,8 @@ BEGIN {
         &svnRevisionForDirectory
         &svnStatus
         &toWindowsLineEndings
+        &gitCommitForSVNRevision
+        &listOfChangedFilesBetweenRevisions
     );
     %EXPORT_TAGS = ( );
     @EXPORT_OK   = ();
@@ -2104,5 +2106,56 @@ sub runCommand(@)
     # FIXME: Consider further hardening of this function, including sanitizing the environment.
     exec { $args[0] } @args or die "Failed to exec(): $!";
 }
+
+sub gitCommitForSVNRevision
+{
+    my ($svnRevision) = @_;
+    my $command = "git svn find-rev r" . $svnRevision;
+    $command = "LC_ALL=C $command" if !isWindows();
+    my $gitHash = `$command`;
+    if (!defined($gitHash)) {
+        $gitHash = "unknown";
+        warn "Unable to determine GIT commit from SVN revision";
+    } else {
+        chop($gitHash);
+    }
+    return $gitHash;
+}
+
+sub listOfChangedFilesBetweenRevisions
+{
+    my ($sourceDir, $firstRevision, $lastRevision) = @_;
+    my $command;
+
+    if ($firstRevision eq "unknown" or $lastRevision eq "unknown") {
+        return ();
+    }
+
+    # Some VCS functions don't work from within the build dir, so always
+    # go to the source dir first.
+    my $cwd = Cwd::getcwd();
+    chdir $sourceDir;
+
+    if (isGit()) {
+        my $firstCommit = gitCommitForSVNRevision($firstRevision);
+        my $lastCommit = gitCommitForSVNRevision($lastRevision);
+        $command = "git diff --name-status $firstCommit..$lastCommit";
+    } elsif (isSVN()) {
+        $command = "svn diff --summarize -r $firstRevision:$lastRevision";
+    }
+
+    my @result = ();
+
+    if ($command) {
+        my $diffOutput = `$command`;
+        $diffOutput =~ s/^[A-Z]\s+//gm;
+        @result = split(/[\r\n]+/, $diffOutput);
+    }
+
+    chdir $cwd;
+
+    return @result;
+}
+
 
 1;

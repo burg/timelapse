@@ -300,8 +300,7 @@ on_download_request(void *user_data, Evas_Object *webview, void *event_info)
     else {
         // Generate a unique file name since no name was suggested.
         char unique_path[] = "/tmp/downloaded-file.XXXXXX";
-        mktemp(unique_path);
-        eina_strbuf_append(destination_path, unique_path);
+        eina_strbuf_append(destination_path, mktemp(unique_path));
     }
 
     ewk_download_job_destination_set(download, eina_strbuf_string_get(destination_path));
@@ -320,6 +319,45 @@ static void
 on_download_failed(void *user_data, Evas_Object *webview, void *event_info)
 {
     info("Download failed!\n");
+}
+
+static void
+on_favicon_received(const char *page_url, Evas_Object *icon, void *event_info)
+{
+    Browser_Window *app_data = (Browser_Window *)event_info;
+    if (strcmp(page_url, ewk_view_url_get(app_data->webview)))
+        return;
+
+    /* Remove previous icon from URL bar */
+    Evas_Object *old_icon = elm_object_part_content_unset(app_data->url_bar, "icon");
+    if (old_icon) {
+        evas_object_unref(old_icon);
+        evas_object_del(old_icon);
+    }
+
+    /* Show new icon in URL bar */
+    if (icon) {
+        /* Workaround for icon display bug:
+         * http://trac.enlightenment.org/e/ticket/1616 */
+        evas_object_size_hint_min_set(icon, 48, 24);
+        evas_object_image_filled_set(icon, EINA_FALSE);
+        evas_object_image_fill_set(icon, 24, 0, 24, 24);
+        elm_object_part_content_set(app_data->url_bar, "icon", icon);
+        evas_object_ref(icon);
+    }
+}
+
+static void
+on_view_icon_changed(void *user_data, Evas_Object *webview, void *event_info)
+{
+    Browser_Window *app_data = (Browser_Window *)user_data;
+    /* Retrieve the view's favicon */
+    Ewk_Context *context = ewk_view_context_get(webview);
+    Ewk_Favicon_Database *icon_database = ewk_context_favicon_database_get(context);
+
+    const char *page_url = ewk_view_url_get(webview);
+    Evas *evas = evas_object_evas_get(webview);
+    ewk_favicon_database_async_icon_get(icon_database, page_url, evas, on_favicon_received, app_data);
 }
 
 static int
@@ -427,6 +465,7 @@ on_javascript_alert(Ewk_View_Smart_Data *smartData, const char *message)
     elm_object_text_set(button, "OK");
     elm_object_part_content_set(alert_popup, "button1", button);
     evas_object_smart_callback_add(button, "clicked", quit_event_loop, NULL);
+    elm_object_focus_set(button, EINA_TRUE);
     evas_object_show(alert_popup);
 
     /* Make modal */
@@ -456,6 +495,7 @@ on_javascript_confirm(Ewk_View_Smart_Data *smartData, const char *message)
     elm_object_text_set(ok_button, "OK");
     elm_object_part_content_set(confirm_popup, "button2", ok_button);
     evas_object_smart_callback_add(ok_button, "clicked", on_ok_clicked, &ok);
+    elm_object_focus_set(ok_button, EINA_TRUE);
     evas_object_show(confirm_popup);
 
     /* Make modal */
@@ -496,9 +536,11 @@ on_javascript_prompt(Ewk_View_Smart_Data *smartData, const char *message, const 
     elm_entry_single_line_set(entry, EINA_TRUE);
     elm_entry_text_style_user_push(entry, "DEFAULT='font_size=18'");
     elm_entry_entry_set(entry, default_value ? default_value : "");
+    elm_entry_select_all(entry);
     evas_object_size_hint_weight_set(entry, EVAS_HINT_EXPAND, 0.0);
     evas_object_size_hint_align_set(entry, EVAS_HINT_FILL, 0.5);
     elm_box_pack_end(box, entry);
+    elm_object_focus_set(entry, EINA_TRUE);
     evas_object_show(entry);
 
     elm_object_content_set(prompt_popup, box);
@@ -522,6 +564,24 @@ on_javascript_prompt(Ewk_View_Smart_Data *smartData, const char *message, const 
     evas_object_del(prompt_popup);
 
     return prompt_text;
+}
+
+static void
+on_tooltip_text_set(void *user_data, Evas_Object *obj, void *event_info)
+{
+    Browser_Window *window = (Browser_Window *)user_data;
+    const char* message = (const char*)event_info;
+
+    elm_object_tooltip_text_set(window->webview, message);
+    elm_object_tooltip_show(window->webview);
+}
+
+static void
+on_tooltip_text_unset(void *user_data, Evas_Object *obj, void *event_info)
+{
+    Browser_Window *window = (Browser_Window *)user_data;
+
+    elm_object_tooltip_unset(window->webview);
 }
 
 static void
@@ -610,6 +670,7 @@ static Browser_Window *window_create(const char *url)
     /* Create URL bar */
     app_data->url_bar = elm_entry_add(app_data->window);
     elm_entry_scrollable_set(app_data->url_bar, EINA_TRUE);
+    elm_entry_scrollbar_policy_set(app_data->url_bar, ELM_SCROLLER_POLICY_OFF, ELM_SCROLLER_POLICY_OFF);
     elm_entry_single_line_set(app_data->url_bar, EINA_TRUE);
     elm_entry_cnp_mode_set(app_data->url_bar, ELM_CNP_MODE_PLAINTEXT);
     elm_entry_text_style_user_push(app_data->url_bar, "DEFAULT='font_size=18'");
@@ -657,11 +718,14 @@ static Browser_Window *window_create(const char *url)
     evas_object_smart_callback_add(app_data->webview, "download,failed", on_download_failed, app_data);
     evas_object_smart_callback_add(app_data->webview, "download,finished", on_download_finished, app_data);
     evas_object_smart_callback_add(app_data->webview, "download,request", on_download_request, app_data);
+    evas_object_smart_callback_add(app_data->webview, "icon,changed", on_view_icon_changed, app_data);
     evas_object_smart_callback_add(app_data->webview, "load,error", on_error, app_data);
     evas_object_smart_callback_add(app_data->webview, "load,progress", on_progress, app_data);
     evas_object_smart_callback_add(app_data->webview, "title,changed", on_title_changed, app_data);
     evas_object_smart_callback_add(app_data->webview, "url,changed", on_url_changed, app_data);
     evas_object_smart_callback_add(app_data->webview, "back,forward,list,changed", on_back_forward_list_changed, app_data);
+    evas_object_smart_callback_add(app_data->webview, "tooltip,text,set", on_tooltip_text_set, app_data);
+    evas_object_smart_callback_add(app_data->webview, "tooltip,text,unset", on_tooltip_text_unset, app_data);
 
     evas_object_event_callback_add(app_data->webview, EVAS_CALLBACK_KEY_DOWN, on_key_down, app_data);
     evas_object_event_callback_add(app_data->webview, EVAS_CALLBACK_MOUSE_DOWN, on_mouse_down, app_data);
@@ -712,6 +776,9 @@ elm_main(int argc, char *argv[])
 
     if (quitOption)
         return quit(EINA_TRUE, NULL);
+
+    if (evas_engine_name)
+        elm_config_preferred_engine_set(evas_engine_name);
 
     if (args < argc) {
         char *url = url_from_user_input(argv[args]);

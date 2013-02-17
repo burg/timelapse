@@ -35,12 +35,12 @@
 #include "PageCache.h"
 #include "PageGroup.h"
 #include "TextureCacheCompositingThread.h"
-#include "WebString.h"
 #include "bindings/js/GCController.h"
 #include "runtime/JSLock.h"
 #include <BlackBerryPlatformExecutableMessage.h>
 #include <BlackBerryPlatformMessageClient.h>
 #include <BlackBerryPlatformSettings.h>
+#include <BlackBerryPlatformString.h>
 #include <wtf/MainThread.h>
 
 using namespace WebCore;
@@ -135,18 +135,27 @@ void clearMemoryCaches()
     fontCache()->invalidate();
 }
 
-void clearAppCache(const WebString& pageGroupName)
+void clearAppCache(const BlackBerry::Platform::String& pageGroupName)
 {
     cacheStorage().empty();
 }
 
-void clearDatabase(const WebString& pageGroupName)
+void clearDatabase(const BlackBerry::Platform::String& pageGroupName)
 {
 }
 
 void updateOnlineStatus(bool online)
 {
     networkStateNotifier().networkStateChange(online);
+}
+
+bool isRunningDrt()
+{
+#if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
+    return getenv("drtRun");
+#else
+    return false;
+#endif
 }
 
 }

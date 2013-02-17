@@ -2529,6 +2529,8 @@ bool EventHandler::handleGestureEvent(const PlatformGestureEvent& gestureEvent)
         return handleGestureTapDown();
     case PlatformEvent::GestureLongPress:
         return handleGestureLongPress(gestureEvent);
+    case PlatformEvent::GestureTwoFingerTap:
+        return handleGestureTwoFingerTap(gestureEvent);
     case PlatformEvent::GestureDoubleTap:
     case PlatformEvent::GesturePinchBegin:
     case PlatformEvent::GesturePinchEnd:
@@ -2578,6 +2580,11 @@ bool EventHandler::handleGestureTap(const PlatformGestureEvent& gestureEvent)
 
 bool EventHandler::handleGestureLongPress(const PlatformGestureEvent& gestureEvent)
 {
+    return handleGestureForTextSelectionOrContextMenu(gestureEvent);
+}
+
+bool EventHandler::handleGestureForTextSelectionOrContextMenu(const PlatformGestureEvent& gestureEvent)
+{
 #if OS(ANDROID)
     IntPoint hitTestPoint = m_frame->view()->windowToContents(gestureEvent.position());
     HitTestResult result = hitTestResultAtPoint(hitTestPoint, true);
@@ -2593,6 +2600,11 @@ bool EventHandler::handleGestureLongPress(const PlatformGestureEvent& gestureEve
 #else
     return false;
 #endif
+}
+
+bool EventHandler::handleGestureTwoFingerTap(const PlatformGestureEvent& gestureEvent)
+{
+    return handleGestureForTextSelectionOrContextMenu(gestureEvent);
 }
 
 bool EventHandler::handleGestureScrollUpdate(const PlatformGestureEvent& gestureEvent)
@@ -2665,6 +2677,7 @@ bool EventHandler::adjustGesturePosition(const PlatformGestureEvent& gestureEven
         bestClickableNodeForTouchPoint(gestureEvent.position(), IntSize(gestureEvent.area().width() / 2, gestureEvent.area().height() / 2), adjustedPoint, targetNode);
         break;
     case PlatformEvent::GestureLongPress:
+    case PlatformEvent::GestureTwoFingerTap:
         bestContextMenuNodeForTouchPoint(gestureEvent.position(), IntSize(gestureEvent.area().width() / 2, gestureEvent.area().height() / 2), adjustedPoint, targetNode);
         break;
     default:
@@ -2791,7 +2804,12 @@ bool EventHandler::sendContextMenuEventForGesture(const PlatformGestureEvent& ev
         adjustGesturePosition(event, adjustedPoint);
 #endif
     PlatformMouseEvent mouseEvent(adjustedPoint, event.globalPosition(), RightButton, eventType, 1, false, false, false, false, WTF::currentTime());
+    // To simulate right-click behavior, we send a right mouse down and then
+    // context menu event.
+    handleMousePressEvent(mouseEvent);
     return sendContextMenuEvent(mouseEvent);
+    // We do not need to send a corresponding mouse release because in case of
+    // right-click, the context menu takes capture and consumes all events.
 }
 #endif // ENABLE(GESTURE_EVENTS)
 #endif // ENABLE(CONTEXT_MENUS)

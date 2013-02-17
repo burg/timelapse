@@ -29,6 +29,7 @@
 #include "DataReference.h"
 #include "Logging.h"
 #include "WebContext.h"
+#include "WebIconDatabaseMessages.h"
 #include "WebIconDatabaseProxyMessages.h"
 #include <WebCore/FileSystem.h>
 #include <WebCore/IconDatabase.h>
@@ -54,7 +55,7 @@ WebIconDatabase::WebIconDatabase(WebContext* context)
     , m_urlImportCompleted(false)
     , m_databaseCleanupDisabled(false)
 {
-    m_webContext->addMessageReceiver(CoreIPC::MessageClassWebIconDatabase, this);
+    m_webContext->addMessageReceiver(Messages::WebIconDatabase::messageReceiverName(), this);
 }
 
 void WebIconDatabase::invalidate()
@@ -284,14 +285,14 @@ void WebIconDatabase::didFinishURLImport()
     m_urlImportCompleted = true;
 }
 
-void WebIconDatabase::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::ArgumentDecoder* decoder)
+void WebIconDatabase::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
 {
     didReceiveWebIconDatabaseMessage(connection, messageID, decoder);
 }
 
-void WebIconDatabase::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::ArgumentDecoder* decoder, OwnPtr<CoreIPC::ArgumentEncoder>& reply)
+void WebIconDatabase::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
 {
-    didReceiveSyncWebIconDatabaseMessage(connection, messageID, decoder, reply);
+    didReceiveSyncWebIconDatabaseMessage(connection, messageID, decoder, replyEncoder);
 }
 
 void WebIconDatabase::notifyIconDataReadyForPageURL(const String& pageURL)

@@ -61,6 +61,7 @@ class CachedResource {
     
 public:
     enum Type {
+        MainResource,
         ImageResource,
         CSSStyleSheet,
         Script,
@@ -90,6 +91,7 @@ public:
         Cached,       // regular case
         Canceled,
         LoadError,
+        TimeoutError,
         DecodeError
     };
 
@@ -102,6 +104,9 @@ public:
     virtual String encoding() const { return String(); }
     virtual void data(PassRefPtr<ResourceBuffer> data, bool allDataReceived);
     virtual void error(CachedResource::Status);
+
+    void setResourceError(const ResourceError& error) { m_error = error; }
+    const ResourceError& resourceError() const { return m_error; }
 
     virtual bool shouldIgnoreHTTPStatusCodeErrors() const { return false; }
 
@@ -151,7 +156,7 @@ public:
     virtual bool isImage() const { return false; }
     bool ignoreForRequestCount() const
     {
-        return false
+        return type() == MainResource
 #if ENABLE(LINK_PREFETCH)
             || type() == LinkPrefetch
             || type() == LinkSubresource
@@ -207,10 +212,11 @@ public:
     void setAccept(const String& accept) { m_accept = accept; }
 
     bool wasCanceled() const { return m_status == Canceled; }
-    bool errorOccurred() const { return (m_status == LoadError || m_status == DecodeError); }
-    bool loadFailedOrCanceled() { return m_status == Canceled || m_status == LoadError; }
+    bool errorOccurred() const { return (m_status == LoadError || m_status == DecodeError || m_status == TimeoutError); }
+    bool loadFailedOrCanceled() { return m_status == Canceled || m_status == LoadError || m_status == TimeoutError; }
+    bool timedOut() const { return m_status == TimeoutError; }
 
-    bool sendResourceLoadCallbacks() const { return m_options.sendLoadCallbacks == SendCallbacks; }
+    bool shouldSendResourceLoadCallbacks() const { return m_options.sendLoadCallbacks == SendCallbacks; }
     
     virtual void destroyDecodedData() { }
 
@@ -301,7 +307,12 @@ private:
     double currentAge() const;
     double freshnessLifetime() const;
 
+    void addAdditionalRequestHeaders(CachedResourceLoader*);
+    void failBeforeStarting();
+
     RefPtr<CachedMetadata> m_cachedMetadata;
+
+    ResourceError m_error;
 
     double m_lastDecodedAccessTime; // Used as a "thrash guard" in the cache
     double m_loadFinishTime;

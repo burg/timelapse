@@ -58,6 +58,7 @@ RenderTable::RenderTable(Node* node)
     , m_collapsedBordersValid(false)
     , m_hasColElements(false)
     , m_needsSectionRecalc(false)
+    , m_columnLogicalWidthChanged(false)
     , m_hSpacing(0)
     , m_vSpacing(0)
     , m_borderStart(0)
@@ -340,6 +341,7 @@ void RenderTable::distributeExtraLogicalHeight(int extraLogicalHeight)
 
 void RenderTable::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
 
     if (simplifiedLayout())
@@ -369,8 +371,6 @@ void RenderTable::layout()
 //     if ( oldWidth != width() || columns.size() + 1 != columnPos.size() )
     m_tableLayout->layout();
 
-    setCellLogicalWidths();
-
     LayoutUnit totalSectionLogicalHeight = 0;
     LayoutUnit oldTableLogicalTop = 0;
     for (unsigned i = 0; i < m_captions.size(); i++)
@@ -380,8 +380,10 @@ void RenderTable::layout()
 
     for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
         if (child->isTableSection()) {
-            child->layoutIfNeeded();
             RenderTableSection* section = toRenderTableSection(child);
+            if (m_columnLogicalWidthChanged)
+                section->setChildNeedsLayout(true, MarkOnlyThis);
+            section->layoutIfNeeded();
             totalSectionLogicalHeight += section->calcRowLogicalHeight();
             if (collapsing)
                 section->recalcOuterBorder();
@@ -496,6 +498,7 @@ void RenderTable::layout()
             repaintRectangle(LayoutRect(movedSectionLogicalTop, visualOverflowRect().y(), visualOverflowRect().maxX() - movedSectionLogicalTop, visualOverflowRect().height()));
     }
 
+    m_columnLogicalWidthChanged = false;
     setNeedsLayout(false);
 }
 
@@ -550,12 +553,6 @@ void RenderTable::addOverflowFromChildren()
         addOverflowFromChild(section);
 }
 
-void RenderTable::setCellLogicalWidths()
-{
-    for (RenderTableSection* section = topSection(); section; section = sectionBelow(section))
-        section->setCellLogicalWidths();
-}
-
 void RenderTable::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
     LayoutPoint adjustedPaintOffset = paintOffset + location();
@@ -600,11 +597,9 @@ void RenderTable::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     info.phase = paintPhase;
     info.updatePaintingRootForChildren(this);
 
-    IntPoint alignedOffset = roundedIntPoint(paintOffset);
-
     for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
         if (child->isBox() && !toRenderBox(child)->hasSelfPaintingLayer() && (child->isTableSection() || child->isTableCaption())) {
-            LayoutPoint childPoint = flipForWritingModeForChild(toRenderBox(child), alignedOffset);
+            LayoutPoint childPoint = flipForWritingModeForChild(toRenderBox(child), paintOffset);
             child->paint(info, childPoint);
         }
     }
@@ -1225,7 +1220,7 @@ void RenderTable::updateFirstLetter()
 {
 }
 
-LayoutUnit RenderTable::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
+int RenderTable::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
 {
     LayoutUnit baseline = firstLineBoxBaseline();
     if (baseline != -1)
@@ -1234,13 +1229,13 @@ LayoutUnit RenderTable::baselinePosition(FontBaseline baselineType, bool firstLi
     return RenderBox::baselinePosition(baselineType, firstLine, direction, linePositionMode);
 }
 
-LayoutUnit RenderTable::lastLineBoxBaseline() const
+int RenderTable::inlineBlockBaseline(LineDirectionMode) const
 {
-    // Tables don't contribute their baseline towards the computation of an inline-block's baseline.
+    // Tables are skipped when computing an inline-block's baseline.
     return -1;
 }
 
-LayoutUnit RenderTable::firstLineBoxBaseline() const
+int RenderTable::firstLineBoxBaseline() const
 {
     // The baseline of a 'table' is the same as the 'inline-table' baseline per CSS 3 Flexbox (CSS 2.1
     // doesn't define the baseline of a 'table' only an 'inline-table').
@@ -1255,7 +1250,7 @@ LayoutUnit RenderTable::firstLineBoxBaseline() const
     if (!topNonEmptySection)
         return -1;
 
-    LayoutUnit baseline = topNonEmptySection->firstLineBoxBaseline();
+    int baseline = topNonEmptySection->firstLineBoxBaseline();
     if (baseline > 0)
         return topNonEmptySection->logicalTop() + baseline;
 

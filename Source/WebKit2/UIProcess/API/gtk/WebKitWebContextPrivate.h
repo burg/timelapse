@@ -33,13 +33,12 @@
 #include "WebKitWebContext.h"
 #include "WebSoupRequestManagerProxy.h"
 
-using namespace WebKit;
-
-WebContext* webkitWebContextGetContext(WebKitWebContext*);
-WebKitDownload* webkitWebContextGetOrCreateDownload(DownloadProxy*);
-void webkitWebContextRemoveDownload(DownloadProxy*);
+WebKit::WebContext* webkitWebContextGetContext(WebKitWebContext*);
+WebKitDownload* webkitWebContextGetOrCreateDownload(WebKit::DownloadProxy*);
+WebKitDownload* webkitWebContextStartDownload(WebKitWebContext*, const char* uri, WebKit::WebPageProxy*);
+void webkitWebContextRemoveDownload(WebKit::DownloadProxy*);
 void webkitWebContextDownloadStarted(WebKitWebContext*, WebKitDownload*);
-WebSoupRequestManagerProxy* webkitWebContextGetRequestManager(WebKitWebContext*);
+WebKit::WebSoupRequestManagerProxy* webkitWebContextGetRequestManager(WebKitWebContext*);
 void webkitWebContextReceivedURIRequest(WebKitWebContext*, WebKitURISchemeRequest*);
 void webkitWebContextDidFailToLoadURIRequest(WebKitWebContext*, uint64_t requestID);
 void webkitWebContextDidFinishURIRequest(WebKitWebContext*, uint64_t requestID);

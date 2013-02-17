@@ -60,7 +60,7 @@ public:
 
     virtual void layout() OVERRIDE;
     virtual void updateLogicalWidth() OVERRIDE;
-    virtual void updateLogicalHeight() OVERRIDE;
+    virtual void computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues&) const OVERRIDE;
     // FIXME: This override is not needed and should be removed
     // it only exists to make computePreferredLogicalWidths public.
     virtual void computePreferredLogicalWidths() OVERRIDE;
@@ -124,9 +124,27 @@ public:
     }
     void addLayoutDelta(const LayoutSize& delta) 
     {
-        if (m_layoutState)
+        if (m_layoutState) {
             m_layoutState->m_layoutDelta += delta;
+#if !ASSERT_DISABLED && ENABLE(SATURATED_LAYOUT_ARITHMETIC)
+            m_layoutState->m_layoutDeltaXSaturated |= m_layoutState->m_layoutDelta.width() == FractionalLayoutUnit::max() || m_layoutState->m_layoutDelta.width() == FractionalLayoutUnit::min();
+            m_layoutState->m_layoutDeltaYSaturated |= m_layoutState->m_layoutDelta.height() == FractionalLayoutUnit::max() || m_layoutState->m_layoutDelta.height() == FractionalLayoutUnit::min();
+#endif
+        }
     }
+    
+#if !ASSERT_DISABLED
+    bool layoutDeltaMatches(const LayoutSize& delta)
+    {
+        if (!m_layoutState)
+            return false;
+#if ENABLE(SATURATED_LAYOUT_ARITHMETIC)
+        return (delta.width() == m_layoutState->m_layoutDelta.width() || m_layoutState->m_layoutDeltaXSaturated) && (delta.height() == m_layoutState->m_layoutDelta.height() || m_layoutState->m_layoutDeltaYSaturated);
+#else
+        return delta == m_layoutState->m_layoutDelta;
+#endif
+    }
+#endif
 
     bool doingFullRepaint() const { return m_frameView->needsFullRepaint(); }
 
@@ -187,6 +205,10 @@ public:
 
     bool hasRenderNamedFlowThreads() const;
     FlowThreadController* flowThreadController();
+
+    enum RenderViewLayoutPhase { RenderViewNormalLayout, ConstrainedFlowThreadsLayoutInAutoLogicalHeightRegions };
+    bool normalLayoutPhase() const { return m_layoutPhase == RenderViewNormalLayout; }
+    bool constrainedFlowThreadsLayoutPhase() const { return m_layoutPhase == ConstrainedFlowThreadsLayoutInAutoLogicalHeightRegions; }
 
     void styleDidChange(StyleDifference, const RenderStyle* oldStyle);
 
@@ -249,6 +271,11 @@ private:
     void disableLayoutState() { m_layoutStateDisableCount++; }
     void enableLayoutState() { ASSERT(m_layoutStateDisableCount > 0); m_layoutStateDisableCount--; }
 
+    void layoutContent(const LayoutState&);
+#ifndef NDEBUG
+    void checkLayoutState(const LayoutState&);
+#endif
+
     size_t getRetainedWidgets(Vector<RenderWidget*>&);
     void releaseWidgets(Vector<RenderWidget*>&);
     
@@ -307,6 +334,7 @@ private:
 
     RenderQuote* m_renderQuoteHead;
     unsigned m_renderCounterCount;
+    RenderViewLayoutPhase m_layoutPhase;
 };
 
 inline RenderView* toRenderView(RenderObject* object)

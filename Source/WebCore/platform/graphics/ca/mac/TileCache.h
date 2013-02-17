@@ -51,7 +51,7 @@ class TileCache : public TiledBacking {
     WTF_MAKE_NONCOPYABLE(TileCache);
 
 public:
-    static PassOwnPtr<TileCache> create(WebTileCacheLayer*, const IntSize& tileSize);
+    static PassOwnPtr<TileCache> create(WebTileCacheLayer*);
     ~TileCache();
 
     void tileCacheLayerBoundsChanged();
@@ -73,22 +73,24 @@ public:
     void setTileDebugBorderWidth(float);
     void setTileDebugBorderColor(CGColorRef);
 
-    IntRect visibleRect() const { return m_visibleRect; }
+    virtual IntRect visibleRect() const OVERRIDE { return m_visibleRect; }
 
     unsigned blankPixelCount() const;
     static unsigned blankPixelCountForTiles(const WebTileLayerList&, IntRect, IntPoint);
 
 private:
-    TileCache(WebTileCacheLayer*, const IntSize& tileSize);
+    TileCache(WebTileCacheLayer*);
 
     // TiledBacking member functions.
-    virtual void visibleRectChanged(const IntRect&) OVERRIDE;
+    virtual void setVisibleRect(const IntRect&) OVERRIDE;
     virtual void setIsInWindow(bool) OVERRIDE;
     virtual void setTileCoverage(TileCoverage) OVERRIDE;
     virtual TileCoverage tileCoverage() const OVERRIDE { return m_tileCoverage; }
     virtual void forceRepaint() OVERRIDE;
+    virtual IntSize tileSize() const OVERRIDE { return m_tileSize; }
     virtual void setScrollingPerformanceLoggingEnabled(bool flag) OVERRIDE { m_scrollingPerformanceLoggingEnabled = flag; }
     virtual bool scrollingPerformanceLoggingEnabled() const OVERRIDE { return m_scrollingPerformanceLoggingEnabled; }
+    virtual IntRect tileCoverageRect() const;
     
     IntRect bounds() const;
 
@@ -96,7 +98,8 @@ private:
     IntRect rectForTileIndex(const TileIndex&) const;
     void getTileIndexRangeForRect(const IntRect&, TileIndex& topLeft, TileIndex& bottomRight);
 
-    IntRect tileCoverageRect() const;
+    IntRect computeTileCoverageRect() const;
+    IntSize tileSizeForCoverageRect(const IntRect&) const;
 
     void scheduleTileRevalidation(double interval);
     void tileRevalidationTimerFired(Timer<TileCache>*);
@@ -110,7 +113,7 @@ private:
 
     WebTileCacheLayer* m_tileCacheLayer;
     RetainPtr<CALayer> m_tileContainerLayer;
-    const IntSize m_tileSize;
+    IntSize m_tileSize;
     IntRect m_visibleRect;
 
     typedef HashMap<TileIndex, RetainPtr<WebTileLayer> > TileMap;

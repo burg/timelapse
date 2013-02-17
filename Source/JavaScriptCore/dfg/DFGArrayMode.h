@@ -47,7 +47,7 @@ enum Action {
 };
 
 enum Mode {
-    Undecided, // Implies that we need predictions to decide. We will never get to the backend in this mode.
+    SelectUsingPredictions, // Implies that we need predictions to decide. We will never get to the backend in this mode.
     Unprofiled, // Implies that array profiling didn't see anything. But that could be because the operands didn't comply with basic type assumptions (base is cell, property is int). This either becomes Generic or ForceExit depending on value profiling.
     ForceExit, // Implies that we have no idea how to execute this operation, so we should just give up.
     Generic,
@@ -77,16 +77,11 @@ enum Mode {
     PossiblyArrayWithArrayStorageOutOfBounds,
     
     // Modes of conventional indexed storage where the check is side-effecting.
-    BlankToContiguous,
-    BlankToArrayStorage,
-    BlankToSlowPutArrayStorage,
-    BlankToContiguousOrArrayStorage,
-    
-    // Modes that indicate polymorphic array storage. These don't benefit from
-    // any checking or storage CSE.
-    ContiguousOrArrayStorage,
-    ArrayWithContiguousOrArrayStorage,
-    PossiblyArrayWithContiguousOrArrayStorage,
+    ToContiguous,
+    ToArrayStorage,
+    ArrayToArrayStorage,
+    PossiblyArrayToArrayStorage,
+    ToSlowPutArrayStorage,
     
     Arguments,
     Int8Array,
@@ -167,30 +162,25 @@ enum Mode {
     case Array::PossiblyArrayWithArrayStorageOutOfBounds
 
 // Next: helpers for side-effecting checks.
+#define NON_ARRAY_EFFECTFUL_MODES                          \
+    Array::ToContiguous:                                   \
+    case Array::ToArrayStorage:                            \
+    case Array::ToSlowPutArrayStorage:                     \
+    case Array::PossiblyArrayToArrayStorage
+#define ARRAY_EFFECTFUL_MODES                              \
+    Array::ArrayToArrayStorage
 #define ALL_EFFECTFUL_CONTIGUOUS_MODES                     \
-    Array::BlankToContiguous
-#define EFFECTFUL_NON_ARRAY_ARRAY_STORAGE_MODES            \
-    Array::BlankToArrayStorage:                            \
-    case Array::BlankToSlowPutArrayStorage
+    Array::ToContiguous
 #define ALL_EFFECTFUL_ARRAY_STORAGE_MODES                  \
-    EFFECTFUL_NON_ARRAY_ARRAY_STORAGE_MODES
+    Array::ToArrayStorage:                                 \
+    case Array::ToSlowPutArrayStorage:                     \
+    case Array::ArrayToArrayStorage:                       \
+    case Array::PossiblyArrayToArrayStorage
 #define SLOW_PUT_EFFECTFUL_ARRAY_STORAGE_MODES             \
-    Array::BlankToSlowPutArrayStorage
-#define POLYMORPHIC_EFFECTFUL_MODES                        \
-    Array::BlankToContiguousOrArrayStorage
+    Array::ToSlowPutArrayStorage
 #define ALL_EFFECTFUL_MODES                                \
     ALL_EFFECTFUL_CONTIGUOUS_MODES:                        \
-    case ALL_EFFECTFUL_ARRAY_STORAGE_MODES:                \
-    case POLYMORPHIC_EFFECTFUL_MODES
-
-// Finally: helpers for polymorphic array accesses.
-#define POLYMORPHIC_MODES                                  \
-    Array::ContiguousOrArrayStorage:                       \
-    case Array::ArrayWithContiguousOrArrayStorage:         \
-    case Array::PossiblyArrayWithContiguousOrArrayStorage
-#define ALL_POLYMORPHIC_MODES                              \
-    POLYMORPHIC_EFFECTFUL_MODES:                           \
-    case POLYMORPHIC_MODES
+    case ALL_EFFECTFUL_ARRAY_STORAGE_MODES
 
 Array::Mode fromObserved(ArrayProfile*, Array::Action, bool makeSafe);
 
@@ -206,7 +196,6 @@ inline bool modeUsesButterfly(Array::Mode arrayMode)
     case ALL_CONTIGUOUS_MODES:
     case ALL_ARRAY_STORAGE_MODES:
     case ALL_EFFECTFUL_MODES:
-    case POLYMORPHIC_MODES:
         return true;
     default:
         return false;
@@ -218,7 +207,7 @@ inline bool modeIsJSArray(Array::Mode arrayMode)
     switch (arrayMode) {
     case ARRAY_WITH_CONTIGUOUS_MODES:
     case ARRAY_WITH_ARRAY_STORAGE_MODES:
-    case Array::ArrayWithContiguousOrArrayStorage:
+    case ARRAY_EFFECTFUL_MODES:
         return true;
     default:
         return false;
@@ -255,7 +244,6 @@ inline bool mayStoreToTail(Array::Mode arrayMode)
     case CONTIGUOUS_TO_TAIL_MODES:
     case OUT_OF_BOUNDS_CONTIGUOUS_MODES:
     case ALL_EFFECTFUL_CONTIGUOUS_MODES:
-    case ALL_POLYMORPHIC_MODES:
         return true;
     default:
         return false;
@@ -269,44 +257,20 @@ inline bool mayStoreToHole(Array::Mode arrayMode)
     case OUT_OF_BOUNDS_ARRAY_STORAGE_MODES:
     case SLOW_PUT_ARRAY_STORAGE_MODES:
     case ALL_EFFECTFUL_ARRAY_STORAGE_MODES:
-    case ALL_POLYMORPHIC_MODES:
         return true;
     default:
         return false;
     }
-}
-
-inline bool modeIsPolymorphic(Array::Mode mode)
-{
-    switch (mode) {
-    case ALL_POLYMORPHIC_MODES:
-        return true;
-    default:
-        return false;
-    }
-}
-
-inline bool polymorphicIncludesContiguous(Array::Mode arrayMode)
-{
-    ASSERT_UNUSED(arrayMode, modeIsPolymorphic(arrayMode));
-    return true;
-}
-
-inline bool polymorphicIncludesArrayStorage(Array::Mode arrayMode)
-{
-    ASSERT_UNUSED(arrayMode, modeIsPolymorphic(arrayMode));
-    return true;
 }
 
 inline bool canCSEStorage(Array::Mode arrayMode)
 {
     switch (arrayMode) {
-    case Array::Undecided:
+    case Array::SelectUsingPredictions:
     case Array::Unprofiled:
     case Array::ForceExit:
     case Array::Generic:
     case Array::Arguments:
-    case ALL_POLYMORPHIC_MODES:
         return false;
     default:
         return true;
@@ -335,7 +299,7 @@ inline Array::Mode modeForPut(Array::Mode arrayMode)
 inline bool modeIsSpecific(Array::Mode mode)
 {
     switch (mode) {
-    case Array::Undecided:
+    case Array::SelectUsingPredictions:
     case Array::Unprofiled:
     case Array::ForceExit:
     case Array::Generic:
@@ -348,15 +312,13 @@ inline bool modeIsSpecific(Array::Mode mode)
 inline bool modeSupportsLength(Array::Mode mode)
 {
     switch (mode) {
-    case Array::Undecided:
+    case Array::SelectUsingPredictions:
     case Array::Unprofiled:
     case Array::ForceExit:
     case Array::Generic:
     case NON_ARRAY_CONTIGUOUS_MODES:
     case NON_ARRAY_ARRAY_STORAGE_MODES:
-    case ALL_EFFECTFUL_MODES:
-    case Array::ContiguousOrArrayStorage:
-    case Array::PossiblyArrayWithContiguousOrArrayStorage:
+    case NON_ARRAY_EFFECTFUL_MODES:
         return false;
     default:
         return true;
@@ -367,8 +329,7 @@ inline bool benefitsFromStructureCheck(Array::Mode mode)
 {
     switch (mode) {
     case ALL_EFFECTFUL_MODES:
-    case POLYMORPHIC_MODES:
-    case Array::Undecided:
+    case Array::SelectUsingPredictions:
     case Array::Unprofiled:
     case Array::ForceExit:
     case Array::Generic:
@@ -385,6 +346,51 @@ inline bool isEffectful(Array::Mode mode)
         return true;
     default:
         return false;
+    }
+}
+
+// This returns the set of array modes that will pass filtering of a CheckArray or
+// Arrayify with the given mode.
+inline ArrayModes arrayModesFor(Array::Mode arrayMode)
+{
+    switch (arrayMode) {
+    case Array::Generic:
+        return ALL_ARRAY_MODES;
+    case Array::Contiguous:
+    case Array::ContiguousToTail:
+    case Array::ContiguousOutOfBounds:
+    case Array::ToContiguous:
+        return asArrayModes(NonArrayWithContiguous);
+    case Array::PossiblyArrayWithContiguous:
+    case Array::PossiblyArrayWithContiguousToTail:
+    case Array::PossiblyArrayWithContiguousOutOfBounds:
+        return asArrayModes(NonArrayWithContiguous) | asArrayModes(ArrayWithContiguous);
+    case ARRAY_WITH_CONTIGUOUS_MODES:
+        return asArrayModes(ArrayWithContiguous);
+    case Array::ArrayStorage:
+    case Array::ArrayStorageToHole:
+    case Array::ArrayStorageOutOfBounds:
+    case Array::ToArrayStorage:
+        return asArrayModes(NonArrayWithArrayStorage);
+    case Array::ToSlowPutArrayStorage:
+    case Array::SlowPutArrayStorage:
+        return asArrayModes(NonArrayWithArrayStorage) | asArrayModes(NonArrayWithSlowPutArrayStorage);
+    case Array::PossiblyArrayWithArrayStorage:
+    case Array::PossiblyArrayWithArrayStorageToHole:
+    case Array::PossiblyArrayWithArrayStorageOutOfBounds:
+    case Array::PossiblyArrayToArrayStorage:
+        return asArrayModes(NonArrayWithArrayStorage) | asArrayModes(ArrayWithArrayStorage);
+    case Array::PossiblyArrayWithSlowPutArrayStorage:
+        return asArrayModes(NonArrayWithArrayStorage) | asArrayModes(ArrayWithArrayStorage) | asArrayModes(NonArrayWithSlowPutArrayStorage) | asArrayModes(ArrayWithSlowPutArrayStorage);
+    case Array::ArrayWithArrayStorage:
+    case Array::ArrayWithArrayStorageToHole:
+    case Array::ArrayWithArrayStorageOutOfBounds:
+    case Array::ArrayToArrayStorage:
+        return asArrayModes(ArrayWithArrayStorage);
+    case Array::ArrayWithSlowPutArrayStorage:
+        return asArrayModes(ArrayWithArrayStorage) | asArrayModes(ArrayWithSlowPutArrayStorage);
+    default:
+        return asArrayModes(NonArray);
     }
 }
 

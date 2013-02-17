@@ -72,7 +72,7 @@ public:
     size_t size();
     size_t capacity();
 
-    static const size_t blockSize = 64 * KB;
+    static const size_t blockSize = 32 * KB;
 
 private:
     CopiedBlock(Region*);
@@ -119,12 +119,16 @@ inline CopiedBlock::CopiedBlock(Region* region)
 
 inline void CopiedBlock::reportLiveBytes(unsigned bytes)
 {
+#if ENABLE(PARALLEL_GC)
     unsigned oldValue = 0;
     unsigned newValue = 0;
     do {
         oldValue = m_liveBytes;
         newValue = oldValue + bytes;
     } while (!WTF::weakCompareAndSwap(&m_liveBytes, oldValue, newValue));
+#else
+    m_liveBytes += bytes;
+#endif
 }
 
 inline void CopiedBlock::didSurviveGC()
@@ -136,6 +140,7 @@ inline void CopiedBlock::didSurviveGC()
 inline bool CopiedBlock::didEvacuateBytes(unsigned bytes)
 {
     ASSERT(m_liveBytes >= bytes);
+#if ENABLE(PARALLEL_GC)
     unsigned oldValue = 0;
     unsigned newValue = 0;
     do {
@@ -144,6 +149,10 @@ inline bool CopiedBlock::didEvacuateBytes(unsigned bytes)
     } while (!WTF::weakCompareAndSwap(&m_liveBytes, oldValue, newValue));
     ASSERT(m_liveBytes < oldValue);
     return !newValue;
+#else
+    m_liveBytes -= bytes;
+    return !m_liveBytes;
+#endif
 }
 
 inline bool CopiedBlock::canBeRecycled()

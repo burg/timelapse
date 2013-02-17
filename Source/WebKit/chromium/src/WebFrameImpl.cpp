@@ -148,6 +148,7 @@
 #include "SubstituteData.h"
 #include "TextAffinity.h"
 #include "TextIterator.h"
+#include "TraceEvent.h"
 #include "UserGestureIndicator.h"
 #include "V8DOMFileSystem.h"
 #include "V8DirectoryEntry.h"
@@ -866,7 +867,7 @@ void WebFrameImpl::collectGarbage()
 bool WebFrameImpl::checkIfRunInsecureContent(const WebURL& url) const
 {
     ASSERT(frame());
-    return frame()->loader()->checkIfRunInsecureContent(frame()->document()->securityOrigin(), url);
+    return frame()->loader()->mixedContentChecker()->canRunInsecureContent(frame()->document()->securityOrigin(), url);
 }
 
 v8::Handle<v8::Value> WebFrameImpl::executeScriptAndReturnValue(const WebScriptSource& source)
@@ -2267,14 +2268,22 @@ void WebFrameImpl::didChangeContentsSize(const IntSize& size)
 
 void WebFrameImpl::createFrameView()
 {
+    TRACE_EVENT0("webkit", "WebFrameImpl::createFrameView");
+
     ASSERT(frame()); // If frame() doesn't exist, we probably didn't init properly.
 
     WebViewImpl* webView = viewImpl();
     bool isMainFrame = webView->mainFrameImpl()->frame() == frame();
-    frame()->createView(webView->size(), Color::white, webView->isTransparent(),  webView->fixedLayoutSize(), isMainFrame ? webView->isFixedLayoutModeEnabled() : 0);
+    if (isMainFrame)
+        webView->suppressInvalidations(true);
+ 
+    frame()->createView(webView->size(), Color::white, webView->isTransparent(), webView->fixedLayoutSize(), IntRect(), isMainFrame ? webView->isFixedLayoutModeEnabled() : 0);
     if (webView->shouldAutoResize() && isMainFrame)
         frame()->view()->enableAutoSizeMode(true, webView->minAutoSize(), webView->maxAutoSize());
 
+    if (isMainFrame)
+        webView->suppressInvalidations(false);
+ 
     if (isMainFrame && webView->devToolsAgentPrivate())
         webView->devToolsAgentPrivate()->mainFrameViewCreated(this);
 }

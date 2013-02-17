@@ -161,13 +161,11 @@ RenderBlock::MarginInfo::MarginInfo(RenderBlock* block, LayoutUnit beforeBorderP
     , m_marginAfterQuirk(false)
     , m_determinedMarginBeforeQuirk(false)
 {
-    // Whether or not we can collapse our own margins with our children.  We don't do this
-    // if we had any border/padding (obviously), if we're the root or HTML elements, or if
-    // we're positioned, floating, a table cell.
     RenderStyle* blockStyle = block->style();
+    ASSERT(block->isRenderView() || block->parent());
     m_canCollapseWithChildren = !block->isRenderView() && !block->isRoot() && !block->isOutOfFlowPositioned()
         && !block->isFloating() && !block->isTableCell() && !block->hasOverflowClip() && !block->isInlineBlockOrInlineTable()
-        && !block->isWritingModeRoot() && blockStyle->hasAutoColumnCount() && blockStyle->hasAutoColumnWidth()
+        && !block->isWritingModeRoot() && !block->parent()->isFlexibleBox() && blockStyle->hasAutoColumnCount() && blockStyle->hasAutoColumnWidth()
         && !blockStyle->columnSpan();
 
     m_canCollapseMarginBeforeWithChildren = m_canCollapseWithChildren && !beforeBorderPadding && blockStyle->marginBeforeCollapse() != MSEPARATE;
@@ -1373,6 +1371,7 @@ void RenderBlock::updateScrollInfoAfterLayout()
 
 void RenderBlock::layout()
 {
+    StackStats::LayoutCheckPoint layoutCheckPoint;
     OverflowEventDispatcher dispatcher(this);
 
     // Update our first letter info now.
@@ -2566,7 +2565,7 @@ void RenderBlock::layoutBlockChild(RenderBox* child, MarginInfo& marginInfo, Lay
             setLogicalHeight(newHeight);
     }
 
-    ASSERT(oldLayoutDelta == view()->layoutDelta());
+    ASSERT(view()->layoutDeltaMatches(oldLayoutDelta));
 }
 
 void RenderBlock::simplifiedNormalFlowLayout()
@@ -5914,6 +5913,11 @@ void RenderBlock::computeInlinePreferredLogicalWidths()
                     inlineMin = 0;
                 }
 
+                if (autoWrap && canBreakReplacedElement && isPrevChildInlineFlow) {
+                    updatePreferredWidth(m_minPreferredLogicalWidth, inlineMin);
+                    inlineMin = 0;
+                }
+
                 // We are no longer stripping whitespace at the start of
                 // a line.
                 if (!child->isFloating()) {
@@ -6088,11 +6092,9 @@ void RenderBlock::computeBlockPreferredLogicalWidths()
         LayoutUnit childMinPreferredLogicalWidth, childMaxPreferredLogicalWidth;
         if (child->isBox() && child->isHorizontalWritingMode() != isHorizontalWritingMode()) {
             RenderBox* childBox = toRenderBox(child);
-            LayoutUnit oldHeight = childBox->logicalHeight();
-            childBox->setLogicalHeight(childBox->borderAndPaddingLogicalHeight());
-            childBox->updateLogicalHeight();
-            childMinPreferredLogicalWidth = childMaxPreferredLogicalWidth = childBox->logicalHeight();
-            childBox->setLogicalHeight(oldHeight);
+            LogicalExtentComputedValues computedValues;
+            childBox->computeLogicalHeight(childBox->borderAndPaddingLogicalHeight(), 0, computedValues);
+            childMinPreferredLogicalWidth = childMaxPreferredLogicalWidth = computedValues.m_extent;
         } else {
             childMinPreferredLogicalWidth = child->minPreferredLogicalWidth();
             childMaxPreferredLogicalWidth = child->maxPreferredLogicalWidth();
@@ -6178,7 +6180,7 @@ LayoutUnit RenderBlock::lineHeight(bool firstLine, LineDirectionMode direction, 
     return m_lineHeight;
 }
 
-LayoutUnit RenderBlock::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
+int RenderBlock::baselinePosition(FontBaseline baselineType, bool firstLine, LineDirectionMode direction, LinePositionMode linePositionMode) const
 {
     // Inline blocks are replaced elements. Otherwise, just pass off to
     // the base class.  If we're being queried as though we're the root line
@@ -6201,7 +6203,7 @@ LayoutUnit RenderBlock::baselinePosition(FontBaseline baselineType, bool firstLi
         bool ignoreBaseline = (layer() && (layer()->marquee() || (direction == HorizontalLine ? (layer()->verticalScrollbar() || layer()->scrollYOffset() != 0)
             : (layer()->horizontalScrollbar() || layer()->scrollXOffset() != 0)))) || (isWritingModeRoot() && !isRubyRun());
         
-        LayoutUnit baselinePos = ignoreBaseline ? static_cast<LayoutUnit>(-1) : lastLineBoxBaseline();
+        int baselinePos = ignoreBaseline ? -1 : inlineBlockBaseline(direction);
         
         LayoutUnit bottomOfContent = direction == HorizontalLine ? borderTop() + paddingTop() + contentHeight() : borderRight() + paddingRight() + contentWidth();
         if (baselinePos != -1 && baselinePos <= bottomOfContent)
@@ -6214,7 +6216,7 @@ LayoutUnit RenderBlock::baselinePosition(FontBaseline baselineType, bool firstLi
     return fontMetrics.ascent(baselineType) + (lineHeight(firstLine, direction, linePositionMode) - fontMetrics.height()) / 2;
 }
 
-LayoutUnit RenderBlock::firstLineBoxBaseline() const
+int RenderBlock::firstLineBoxBaseline() const
 {
     if (!isBlockFlow() || (isWritingModeRoot() && !isRubyRun()))
         return -1;
@@ -6228,7 +6230,7 @@ LayoutUnit RenderBlock::firstLineBoxBaseline() const
     else {
         for (RenderBox* curr = firstChildBox(); curr; curr = curr->nextSiblingBox()) {
             if (!curr->isFloatingOrOutOfFlowPositioned()) {
-                LayoutUnit result = curr->firstLineBoxBaseline();
+                int result = curr->firstLineBoxBaseline();
                 if (result != -1)
                     return curr->logicalTop() + result; // Translate to our coordinate space.
             }
@@ -6238,12 +6240,15 @@ LayoutUnit RenderBlock::firstLineBoxBaseline() const
     return -1;
 }
 
-LayoutUnit RenderBlock::lastLineBoxBaseline() const
+int RenderBlock::inlineBlockBaseline(LineDirectionMode direction) const
+{
+    return lastLineBoxBaseline(direction);
+}
+
+int RenderBlock::lastLineBoxBaseline(LineDirectionMode lineDirection) const
 {
     if (!isBlockFlow() || (isWritingModeRoot() && !isRubyRun()))
         return -1;
-
-    LineDirectionMode lineDirection = isHorizontalWritingMode() ? HorizontalLine : VerticalLine;
 
     if (childrenInline()) {
         if (!firstLineBox() && hasLineIfEmpty()) {
@@ -6260,7 +6265,7 @@ LayoutUnit RenderBlock::lastLineBoxBaseline() const
         for (RenderBox* curr = lastChildBox(); curr; curr = curr->previousSiblingBox()) {
             if (!curr->isFloatingOrOutOfFlowPositioned()) {
                 haveNormalFlowChild = true;
-                LayoutUnit result = curr->lastLineBoxBaseline();
+                int result = curr->inlineBlockBaseline(lineDirection);
                 if (result != -1)
                     return curr->logicalTop() + result; // Translate to our coordinate space.
             }
@@ -6976,6 +6981,11 @@ LayoutUnit RenderBlock::applyBeforeBreak(RenderBox* child, LayoutUnit logicalOff
     if (checkBeforeAlways && inNormalFlow(child) && hasNextPage(logicalOffset, IncludePageBoundary)) {
         if (checkColumnBreaks)
             view()->layoutState()->addForcedColumnBreak(child, logicalOffset);
+        if (checkRegionBreaks) {
+            LayoutUnit offsetBreakAdjustment = ZERO_LAYOUT_UNIT;
+            if (enclosingRenderFlowThread()->addForcedRegionBreak(offsetFromLogicalTopOfFirstPage() + logicalOffset, child, true, &offsetBreakAdjustment))
+                return logicalOffset + offsetBreakAdjustment;
+        }
         return nextPageLogicalTop(logicalOffset, IncludePageBoundary);
     }
     return logicalOffset;
@@ -6993,6 +7003,12 @@ LayoutUnit RenderBlock::applyAfterBreak(RenderBox* child, LayoutUnit logicalOffs
         marginInfo.setMarginAfterQuirk(true); // Cause margins to be discarded for any following content.
         if (checkColumnBreaks)
             view()->layoutState()->addForcedColumnBreak(child, logicalOffset);
+        if (checkRegionBreaks) {
+            LayoutUnit marginOffset = marginInfo.canCollapseWithMarginBefore() ? ZERO_LAYOUT_UNIT : marginInfo.margin();
+            LayoutUnit offsetBreakAdjustment = ZERO_LAYOUT_UNIT;
+            if (enclosingRenderFlowThread()->addForcedRegionBreak(offsetFromLogicalTopOfFirstPage() + logicalOffset + marginOffset, child, false, &offsetBreakAdjustment))
+                return logicalOffset + offsetBreakAdjustment;
+        }
         return nextPageLogicalTop(logicalOffset, IncludePageBoundary);
     }
     return logicalOffset;
@@ -7531,7 +7547,23 @@ void RenderBlock::FloatingObjects::computePlacedFloatsTree()
     }
 }
 
-TextRun RenderBlock::constructTextRun(RenderObject* context, const Font& font, const UChar* characters, int length, RenderStyle* style, TextRun::ExpansionBehavior expansion, TextRunFlags flags)
+template <typename CharacterType>
+static inline TextRun constructTextRunInternal(RenderObject* context, const Font& font, const CharacterType* characters, int length, RenderStyle* style, TextRun::ExpansionBehavior expansion)
+{
+    ASSERT(style);
+
+    TextDirection textDirection = LTR;
+    bool directionalOverride = style->rtlOrdering() == VisualOrder;
+
+    TextRun run(characters, length, 0, 0, expansion, textDirection, directionalOverride);
+    if (textRunNeedsRenderingContext(font))
+        run.setRenderingContext(SVGTextRunRenderingContext::create(context));
+
+    return run;
+}
+
+template <typename CharacterType>
+static inline TextRun constructTextRunInternal(RenderObject* context, const Font& font, const CharacterType* characters, int length, RenderStyle* style, TextRun::ExpansionBehavior expansion, TextRunFlags flags)
 {
     ASSERT(style);
 
@@ -7543,7 +7575,6 @@ TextRun RenderBlock::constructTextRun(RenderObject* context, const Font& font, c
         if (flags & RespectDirectionOverride)
             directionalOverride |= isOverride(style->unicodeBidi());
     }
-
     TextRun run(characters, length, 0, 0, expansion, textDirection, directionalOverride);
     if (textRunNeedsRenderingContext(font))
         run.setRenderingContext(SVGTextRunRenderingContext::create(context));
@@ -7551,9 +7582,52 @@ TextRun RenderBlock::constructTextRun(RenderObject* context, const Font& font, c
     return run;
 }
 
+#if ENABLE(8BIT_TEXTRUN)
+TextRun RenderBlock::constructTextRun(RenderObject* context, const Font& font, const LChar* characters, int length, RenderStyle* style, TextRun::ExpansionBehavior expansion)
+{
+    return constructTextRunInternal(context, font, characters, length, style, expansion);
+}
+#endif
+
+TextRun RenderBlock::constructTextRun(RenderObject* context, const Font& font, const UChar* characters, int length, RenderStyle* style, TextRun::ExpansionBehavior expansion)
+{
+    return constructTextRunInternal(context, font, characters, length, style, expansion);
+}
+
+TextRun RenderBlock::constructTextRun(RenderObject* context, const Font& font, const RenderText* text, RenderStyle* style, TextRun::ExpansionBehavior expansion)
+{
+#if ENABLE(8BIT_TEXTRUN)
+    if (text->is8Bit())
+        return constructTextRunInternal(context, font, text->characters8(), text->textLength(), style, expansion);
+    return constructTextRunInternal(context, font, text->characters16(), text->textLength(), style, expansion);
+#else
+    return constructTextRunInternal(context, font, text->characters(), text->textLength(), style, expansion);
+#endif
+}
+
+TextRun RenderBlock::constructTextRun(RenderObject* context, const Font& font, const RenderText* text, unsigned offset, unsigned length, RenderStyle* style, TextRun::ExpansionBehavior expansion)
+{
+    ASSERT(offset + length <= text->textLength());
+#if ENABLE(8BIT_TEXTRUN)
+    if (text->is8Bit())
+        return constructTextRunInternal(context, font, text->characters8() + offset, length, style, expansion);
+    return constructTextRunInternal(context, font, text->characters16() + offset, length, style, expansion);
+#else
+    return constructTextRunInternal(context, font, text->characters() + offset, length, style, expansion);
+#endif
+}
+
 TextRun RenderBlock::constructTextRun(RenderObject* context, const Font& font, const String& string, RenderStyle* style, TextRun::ExpansionBehavior expansion, TextRunFlags flags)
 {
-    return constructTextRun(context, font, string.characters(), string.length(), style, expansion, flags);
+    unsigned length = string.length();
+
+#if ENABLE(8BIT_TEXTRUN)
+    if (length && string.is8Bit())
+        return constructTextRunInternal(context, font, string.characters8(), length, style, expansion, flags);
+    return constructTextRunInternal(context, font, string.characters(), length, style, expansion, flags);
+#else
+    return constructTextRunInternal(context, font, string.characters(), length, style, expansion, flags);
+#endif
 }
 
 RenderBlock* RenderBlock::createAnonymousWithParentRendererAndDisplay(const RenderObject* parent, EDisplay display)

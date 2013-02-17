@@ -30,8 +30,9 @@
 
 #include "ImmutableArray.h"
 #include "ImmutableDictionary.h"
-#include "WebDatabaseManagerMessages.h"
 #include "WebContext.h"
+#include "WebDatabaseManagerMessages.h"
+#include "WebDatabaseManagerProxyMessages.h"
 #include "WebSecurityOrigin.h"
 
 using namespace WebCore;
@@ -94,7 +95,7 @@ PassRefPtr<WebDatabaseManagerProxy> WebDatabaseManagerProxy::create(WebContext* 
 WebDatabaseManagerProxy::WebDatabaseManagerProxy(WebContext* webContext)
     : m_webContext(webContext)
 {
-    m_webContext->addMessageReceiver(CoreIPC::MessageClassWebDatabaseManagerProxy, this);
+    m_webContext->addMessageReceiver(Messages::WebDatabaseManagerProxy::messageReceiverName(), this);
 }
 
 WebDatabaseManagerProxy::~WebDatabaseManagerProxy()
@@ -232,9 +233,9 @@ void WebDatabaseManagerProxy::didModifyDatabase(const String& originIdentifier, 
     m_client.didModifyDatabase(this, origin.get(), databaseIdentifier);
 }
 
-void WebDatabaseManagerProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::ArgumentDecoder* arguments)
+void WebDatabaseManagerProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
 {
-    didReceiveWebDatabaseManagerProxyMessage(connection, messageID, arguments);
+    didReceiveWebDatabaseManagerProxyMessage(connection, messageID, decoder);
 }
 
 } // namespace WebKit

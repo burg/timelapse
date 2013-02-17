@@ -159,6 +159,9 @@ void Font::drawText(GraphicsContext* context, const TextRun& run, const FloatPoi
     to = (to == -1 ? run.length() : to);
 
     CodePath codePathToUse = codePath(run);
+    // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
+    if (codePathToUse != Complex && typesettingFeatures() && (from || to != run.length()))
+        codePathToUse = Complex;
 
     if (codePathToUse != Complex)
         return drawSimpleText(context, run, point, from, to);
@@ -174,7 +177,12 @@ void Font::drawEmphasisMarks(GraphicsContext* context, const TextRun& run, const
     if (to < 0)
         to = run.length();
 
-    if (codePath(run) != Complex)
+    CodePath codePathToUse = codePath(run);
+    // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
+    if (codePathToUse != Complex && typesettingFeatures() && (from || to != run.length()))
+        codePathToUse = Complex;
+
+    if (codePathToUse != Complex)
         drawEmphasisMarksForSimpleText(context, run, mark, point, from, to);
     else
         drawEmphasisMarksForComplexText(context, run, mark, point, from, to);
@@ -187,7 +195,7 @@ float Font::width(const TextRun& run, HashSet<const SimpleFontData*>* fallbackFo
         // If the complex text implementation cannot return fallback fonts, avoid
         // returning them for simple text as well.
         static bool returnFallbackFonts = canReturnFallbackFontsForComplexText();
-        return floatWidthForSimpleText(run, 0, returnFallbackFonts ? fallbackFonts : 0, codePathToUse == SimpleWithGlyphOverflow || (glyphOverflow && glyphOverflow->computeBounds) ? glyphOverflow : 0);
+        return floatWidthForSimpleText(run, returnFallbackFonts ? fallbackFonts : 0, codePathToUse == SimpleWithGlyphOverflow || (glyphOverflow && glyphOverflow->computeBounds) ? glyphOverflow : 0);
     }
 
     return floatWidthForComplexText(run, fallbackFonts, glyphOverflow);
@@ -204,7 +212,7 @@ float Font::width(const TextRun& run, int& charsConsumed, String& glyphName) con
     glyphName = "";
 
     if (codePath(run) != Complex)
-        return floatWidthForSimpleText(run, 0);
+        return floatWidthForSimpleText(run);
 
     return floatWidthForComplexText(run);
 }
@@ -232,7 +240,12 @@ FloatRect Font::selectionRectForText(const TextRun& run, const FloatPoint& point
 {
     to = (to == -1 ? run.length() : to);
 
-    if (codePath(run) != Complex)
+    CodePath codePathToUse = codePath(run);
+    // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
+    if (codePathToUse != Complex && typesettingFeatures() && (from || to != run.length()))
+        codePathToUse = Complex;
+
+    if (codePathToUse != Complex)
         return selectionRectForSimpleText(run, point, h, from, to);
 
     return selectionRectForComplexText(run, point, h, from, to);
@@ -240,7 +253,8 @@ FloatRect Font::selectionRectForText(const TextRun& run, const FloatPoint& point
 
 int Font::offsetForPosition(const TextRun& run, float x, bool includePartialGlyphs) const
 {
-    if (codePath(run) != Complex)
+    // FIXME: Use the fast code path once it handles partial runs with kerning and ligatures. See http://webkit.org/b/100050
+    if (codePath(run) != Complex && !typesettingFeatures())
         return offsetForPositionForSimpleText(run, x, includePartialGlyphs);
 
     return offsetForPositionForComplexText(run, x, includePartialGlyphs);
@@ -314,7 +328,7 @@ Font::CodePath Font::codePath(const TextRun& run) const
     if (m_fontDescription.featureSettings() && m_fontDescription.featureSettings()->size() > 0)
         return Complex;
     
-    if (run.length() > 1 && typesettingFeatures())
+    if (run.length() > 1 && !WidthIterator::supportsTypesettingFeatures(*this))
         return Complex;
 
     if (!run.characterScanForCodePath())

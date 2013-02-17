@@ -40,6 +40,7 @@
 #include "IDBPendingTransactionMonitor.h"
 #include "IDBTracing.h"
 #include "ScriptCallStack.h"
+#include "ScriptExecutionContext.h"
 
 namespace WebCore {
 
@@ -281,14 +282,14 @@ void IDBTransaction::unregisterRequest(IDBRequest* request)
     m_requestList.remove(request);
 }
 
-void IDBTransaction::onAbort()
+void IDBTransaction::onAbort(PassRefPtr<IDBDatabaseError> error)
 {
     IDB_TRACE("IDBTransaction::onAbort");
     ASSERT(m_state != Finished);
 
     if (m_state != Finishing) {
-        // FIXME: Propagate true cause from back end (e.g. QuotaError, UnknownError, etc.)
-        setError(DOMError::create(IDBDatabaseException::getErrorName(IDBDatabaseException::UNKNOWN_ERR)));
+        ASSERT(error.get());
+        setError(DOMError::create(error->name()));
 
         // Abort was not triggered by front-end, so outstanding requests must
         // be aborted now.

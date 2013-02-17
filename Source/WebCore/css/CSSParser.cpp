@@ -284,38 +284,57 @@ CSSParser::~CSSParser()
 {
     clearProperties();
 
-    fastDeleteAllValues(m_floatingSelectors);
+    deleteAllValues(m_floatingSelectors);
     deleteAllValues(m_floatingSelectorVectors);
     deleteAllValues(m_floatingValueLists);
     deleteAllValues(m_floatingFunctions);
 }
 
 template <typename CharacterType>
-ALWAYS_INLINE static void makeLower(CharacterType* characters, unsigned length)
+ALWAYS_INLINE static void makeLower(const CharacterType* input, CharacterType* output, unsigned length)
 {
     // FIXME: If we need Unicode lowercasing here, then we probably want the real kind
     // that can potentially change the length of the string rather than the character
     // by character kind. If we don't need Unicode lowercasing, it would be good to
     // simplify this function.
 
-    if (charactersAreAllASCII(characters, length)) {
+    if (charactersAreAllASCII(input, length)) {
         // Fast case for all-ASCII.
         for (unsigned i = 0; i < length; i++)
-            characters[i] = toASCIILower(characters[i]);
+            output[i] = toASCIILower(input[i]);
     } else {
         for (unsigned i = 0; i < length; i++)
-            characters[i] = Unicode::toLower(characters[i]);
+            output[i] = Unicode::toLower(input[i]);
     }
 }
 
 void CSSParserString::lower()
 {
     if (is8Bit()) {
-        makeLower(characters8(), length());
+        makeLower(characters8(), characters8(), length());
         return;
     }
 
-    makeLower(characters16(), length());
+    makeLower(characters16(), characters16(), length());
+}
+
+AtomicString CSSParserString::lowerSubstring(unsigned position, unsigned length) const
+{
+    ASSERT(m_length >= position + length);
+
+    RefPtr<StringImpl> result;
+
+    if (is8Bit()) {
+        LChar* buffer;
+        result = StringImpl::createUninitialized(length, buffer);
+        makeLower(characters8() + position, buffer, length);
+    } else {
+        UChar* buffer = 0;
+        result = StringImpl::createUninitialized(length, buffer);
+        makeLower(characters16() + position, buffer, length);
+    }
+
+    return AtomicString(result);
 }
 
 void CSSParser::setupParser(const char* prefix, const String& string, const char* suffix)
@@ -787,7 +806,7 @@ static inline bool isValidKeywordPropertyAndValue(CSSPropertyID propertyId, int 
             return true;
         break;
     case CSSPropertyWebkitFlexWrap:
-        if (valueID == CSSValueNone || valueID == CSSValueWrap || valueID == CSSValueWrapReverse)
+        if (valueID == CSSValueNowrap || valueID == CSSValueWrap || valueID == CSSValueWrapReverse)
              return true;
         break;
     case CSSPropertyWebkitJustifyContent:
@@ -1553,7 +1572,7 @@ bool CSSParser::validUnit(CSSParserValue* value, Units unitflags, CSSParserMode 
     case CSSPrimitiveValue::CSS_TURN:
         b = (unitflags & FAngle);
         break;
-#if ENABLE(CSS_IMAGE_RESOLUTION)
+#if ENABLE(CSS_IMAGE_RESOLUTION) || ENABLE(RESOLUTION_MEDIA_QUERY)
     case CSSPrimitiveValue::CSS_DPPX:
     case CSSPrimitiveValue::CSS_DPI:
     case CSSPrimitiveValue::CSS_DPCM:
@@ -1575,15 +1594,15 @@ inline PassRefPtr<CSSPrimitiveValue> CSSParser::createPrimitiveNumericValue(CSSP
 {
 #if ENABLE(CSS_VARIABLES)
     if (value->unit == CSSPrimitiveValue::CSS_VARIABLE_NAME)
-        return CSSPrimitiveValue::create(value->string, CSSPrimitiveValue::CSS_VARIABLE_NAME);
+        return createPrimitiveVariableNameValue(value);
 #endif
 
     if (m_parsedCalculation) {
         ASSERT(isCalculation(value));
         return CSSPrimitiveValue::create(m_parsedCalculation.release());
     }
-               
-#if ENABLE(CSS_IMAGE_RESOLUTION)
+
+#if ENABLE(CSS_IMAGE_RESOLUTION) || ENABLE(RESOLUTION_MEDIA_QUERY)
     ASSERT((value->unit >= CSSPrimitiveValue::CSS_NUMBER && value->unit <= CSSPrimitiveValue::CSS_KHZ)
            || (value->unit >= CSSPrimitiveValue::CSS_TURN && value->unit <= CSSPrimitiveValue::CSS_REMS)
            || (value->unit >= CSSPrimitiveValue::CSS_VW && value->unit <= CSSPrimitiveValue::CSS_VMIN)
@@ -1601,6 +1620,15 @@ inline PassRefPtr<CSSPrimitiveValue> CSSParser::createPrimitiveStringValue(CSSPa
     ASSERT(value->unit == CSSPrimitiveValue::CSS_STRING || value->unit == CSSPrimitiveValue::CSS_IDENT);
     return cssValuePool().createValue(value->string, CSSPrimitiveValue::CSS_STRING);
 }
+
+#if ENABLE(CSS_VARIABLES)
+inline PassRefPtr<CSSPrimitiveValue> CSSParser::createPrimitiveVariableNameValue(CSSParserValue* value)
+{
+    ASSERT(value->unit == CSSPrimitiveValue::CSS_VARIABLE_NAME);
+    AtomicString variableName = String(value->string).lower();
+    return CSSPrimitiveValue::create(variableName, CSSPrimitiveValue::CSS_VARIABLE_NAME);
+}
+#endif
 
 static inline bool isComma(CSSParserValue* value)
 { 
@@ -1636,13 +1664,13 @@ inline PassRefPtr<CSSPrimitiveValue> CSSParser::parseValidPrimitive(int identifi
         return createPrimitiveNumericValue(value);
     if (value->unit >= CSSPrimitiveValue::CSS_VW && value->unit <= CSSPrimitiveValue::CSS_VMIN)
         return createPrimitiveNumericValue(value);
-#if ENABLE(CSS_IMAGE_RESOLUTION)
+#if ENABLE(CSS_IMAGE_RESOLUTION) || ENABLE(RESOLUTION_MEDIA_QUERY)
     if (value->unit >= CSSPrimitiveValue::CSS_DPPX && value->unit <= CSSPrimitiveValue::CSS_DPCM)
         return createPrimitiveNumericValue(value);
 #endif
 #if ENABLE(CSS_VARIABLES)
     if (value->unit == CSSPrimitiveValue::CSS_VARIABLE_NAME)
-        return CSSPrimitiveValue::create(value->string, CSSPrimitiveValue::CSS_VARIABLE_NAME);
+        return createPrimitiveVariableNameValue(value);
 #endif
     if (value->unit >= CSSParserValue::Q_EMS)
         return CSSPrimitiveValue::createAllowingMarginQuirk(value->fValue, CSSPrimitiveValue::CSS_EMS);
@@ -1685,7 +1713,7 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
 
 #if ENABLE(CSS_VARIABLES)
     if (!id && value->unit == CSSPrimitiveValue::CSS_VARIABLE_NAME && num == 1) {
-        addProperty(propId, CSSPrimitiveValue::create(value->string, CSSPrimitiveValue::CSS_VARIABLE_NAME), important);
+        addProperty(propId, createPrimitiveVariableNameValue(value), important);
         m_valueList->next();
         return true;
     }
@@ -2093,7 +2121,7 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
         // none | [ underline || overline || line-through || blink ] | inherit
         return parseTextDecoration(propId, important);
 
-#if ENABLE(CSS3_TEXT_DECORATION)
+#if ENABLE(CSS3_TEXT)
     case CSSPropertyWebkitTextDecorationLine:
         // none | [ underline || overline || line-through ] | inherit
         return parseTextDecoration(propId, important);
@@ -2103,7 +2131,7 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
         if (id == CSSValueSolid || id == CSSValueDouble || id == CSSValueDotted || id == CSSValueDashed || id == CSSValueWavy)
             validPrimitive = true;
         break;
-#endif // CSS3_TEXT_DECORATION
+#endif // CSS3_TEXT
 
     case CSSPropertyZoom:          // normal | reset | document | <number> | <percentage> | inherit
         if (id == CSSValueNormal || id == CSSValueReset || id == CSSValueDocument)
@@ -2525,7 +2553,7 @@ bool CSSParser::parseValue(CSSPropertyID propId, bool important)
 #endif
     // End Apple-specific properties
 
-#if ENABLE(WIDGET_REGION)
+#if ENABLE(DRAGGABLE_REGION)
     case CSSPropertyWebkitAppRegion:
         if (id >= CSSValueDrag && id <= CSSValueNoDrag)
             validPrimitive = true;
@@ -3028,8 +3056,10 @@ void CSSParser::storeVariableDeclaration(const CSSParserString& name, PassOwnPtr
     if (!value)
         return;
     
-    ASSERT(name.length() > 12);
-    AtomicString variableName = name.is8Bit() ? AtomicString(name.characters8() + 12, name.length() - 12) : AtomicString(name.characters16() + 12, name.length() - 12);
+    static const unsigned prefixLength = sizeof("-webkit-var-") - 1;
+    
+    ASSERT(name.length() > prefixLength);
+    AtomicString variableName = name.lowerSubstring(prefixLength, name.length() - prefixLength);
 
     StringBuilder builder;
     for (unsigned i = 0, size = value->size(); i < size; i++) {
@@ -3040,7 +3070,7 @@ void CSSParser::storeVariableDeclaration(const CSSParserString& name, PassOwnPtr
             return;
         builder.append(cssValue->cssText());
     }
-    addProperty(CSSPropertyVariable, CSSVariableValue::create(variableName, builder.toString()), important, false);
+    addProperty(CSSPropertyVariable, CSSVariableValue::create(variableName, builder.toString().lower()), important, false);
 }
 #endif
 
@@ -8003,7 +8033,7 @@ bool CSSParser::parsePerspectiveOrigin(CSSPropertyID propId, CSSPropertyID& prop
 
 void CSSParser::addTextDecorationProperty(CSSPropertyID propId, PassRefPtr<CSSValue> value, bool important)
 {
-#if ENABLE(CSS3_TEXT_DECORATION)
+#if ENABLE(CSS3_TEXT)
     // The text-decoration-line property takes priority over text-decoration, unless the latter has important priority set.
     if (propId == CSSPropertyTextDecoration && !important && m_currentShorthand == CSSPropertyInvalid) {
         for (unsigned i = 0; i < m_parsedProperties->size(); ++i) {
@@ -8011,7 +8041,7 @@ void CSSParser::addTextDecorationProperty(CSSPropertyID propId, PassRefPtr<CSSVa
                 return;
         }
     }
-#endif // CSS3_TEXT_DECORATION
+#endif // CSS3_TEXT
     addProperty(propId, value, important);
 }
 
@@ -8029,11 +8059,11 @@ bool CSSParser::parseTextDecoration(CSSPropertyID propId, bool important)
     while (isValid && value) {
         switch (value->id) {
         case CSSValueBlink:
-#if ENABLE(CSS3_TEXT_DECORATION)
+#if ENABLE(CSS3_TEXT)
             // Blink value is not accepted by -webkit-text-decoration-line.
             isValid = propId != CSSPropertyWebkitTextDecorationLine;
             break;
-#endif // CSS3_TEXT_DECORATION
+#endif // CSS3_TEXT
         case CSSValueUnderline:
         case CSSValueOverline:
         case CSSValueLineThrough:
@@ -8980,7 +9010,7 @@ inline void CSSParser::detectNumberToken(CharacterType* type, int length)
     case 'd':
         if (length == 3 && isASCIIAlphaCaselessEqual(type[1], 'e') && isASCIIAlphaCaselessEqual(type[2], 'g'))
             m_token = DEGS;
-#if ENABLE(CSS_IMAGE_RESOLUTION)
+#if ENABLE(CSS_IMAGE_RESOLUTION) || ENABLE(RESOLUTION_MEDIA_QUERY)
         else if (length > 2 && isASCIIAlphaCaselessEqual(type[1], 'p')) {
             if (length == 4) {
                 // There is a discussion about the name of this unit on www-style.
@@ -9110,7 +9140,7 @@ inline void CSSParser::detectAtToken(int length, bool hasEscape)
     CharacterType* name = tokenStart<CharacterType>();
     ASSERT(name[0] == '@' && length >= 2);
 
-    // charset, font-face, import, media, namespace, page,
+    // charset, font-face, import, media, namespace, page, supports,
     // -webkit-keyframes, and -webkit-mediaquery are not affected by hasEscape.
     switch (toASCIILowerUnchecked(name[1])) {
     case 'b':
@@ -9154,6 +9184,13 @@ inline void CSSParser::detectAtToken(int length, bool hasEscape)
         if (length == 10 && isEqualToCSSIdentifier(name + 2, "ont-face"))
             m_token = FONT_FACE_SYM;
         return;
+
+#if ENABLE(SHADOW_DOM)
+    case 'h':
+        if (length == 5 && isEqualToCSSIdentifier(name + 2, "ost"))
+            m_token = HOST_SYM;
+        return;
+#endif
 
     case 'i':
         if (length == 7 && isEqualToCSSIdentifier(name + 2, "mport")) {
@@ -9210,6 +9247,15 @@ inline void CSSParser::detectAtToken(int length, bool hasEscape)
                 m_token = RIGHTBOTTOM_SYM;
         }
         return;
+
+#if ENABLE(CSS3_CONDITIONAL_RULES)
+    case 's':
+        if (length == 9 && isEqualToCSSIdentifier(name + 2, "upports")) {
+            m_parsingMode = SupportsMode;
+            m_token = SUPPORTS_SYM;
+        }
+        return;
+#endif
 
     case 't':
         if (hasEscape)
@@ -9293,6 +9339,25 @@ inline void CSSParser::detectAtToken(int length, bool hasEscape)
     }
 }
 
+#if ENABLE(CSS3_CONDITIONAL_RULES)
+template <typename CharacterType>
+inline void CSSParser::detectSupportsToken(int length)
+{
+    ASSERT(m_parsingMode == SupportsMode);
+    CharacterType* name = tokenStart<CharacterType>();
+
+    if (length == 2) {
+        if (isASCIIAlphaCaselessEqual(name[0], 'o') && isASCIIAlphaCaselessEqual(name[1], 'r'))
+            m_token = SUPPORTS_OR;
+    } else if (length == 3) {
+        if (isASCIIAlphaCaselessEqual(name[0], 'a') && isASCIIAlphaCaselessEqual(name[1], 'n') && isASCIIAlphaCaselessEqual(name[2], 'd'))
+            m_token = SUPPORTS_AND;
+        else if (isASCIIAlphaCaselessEqual(name[0], 'n') && isASCIIAlphaCaselessEqual(name[1], 'o') && isASCIIAlphaCaselessEqual(name[2], 't'))
+            m_token = SUPPORTS_NOT;
+    }
+}
+#endif
+
 template <typename SrcCharacterType>
 int CSSParser::realLex(void* yylvalWithoutType)
 {
@@ -9331,6 +9396,14 @@ restartAfterComment:
         m_token = IDENT;
 
         if (UNLIKELY(*currentCharacter<SrcCharacterType>() == '(')) {
+#if ENABLE(CSS3_CONDITIONAL_RULES)
+            if (m_parsingMode == SupportsMode && !hasEscape) {
+                detectSupportsToken<SrcCharacterType>(result - tokenStart<SrcCharacterType>());
+                if (m_token != IDENT)
+                    break;
+            }
+#endif
+
             m_token = FUNCTION;
             if (!hasEscape)
                 detectFunctionTypeToken<SrcCharacterType>(result - tokenStart<SrcCharacterType>());
@@ -9349,6 +9422,10 @@ restartAfterComment:
         } else if (UNLIKELY(m_parsingMode != NormalMode) && !hasEscape) {
             if (m_parsingMode == MediaQueryMode)
                 detectMediaQueryToken<SrcCharacterType>(result - tokenStart<SrcCharacterType>());
+#if ENABLE(CSS3_CONDITIONAL_RULES)
+            else if (m_parsingMode == SupportsMode)
+                detectSupportsToken<SrcCharacterType>(result - tokenStart<SrcCharacterType>());
+#endif
             else if (m_parsingMode == NthChildMode && isASCIIAlphaCaselessEqual(tokenStart<SrcCharacterType>()[0], 'n')) {
                 if (result - tokenStart<SrcCharacterType>() == 1) {
                     // String "n" is IDENT but "n+1" is NTH.
@@ -9946,6 +10023,24 @@ StyleRuleBase* CSSParser::createFontFaceRule()
     processAndAddNewRuleToSourceTreeIfNeeded();
     return result;
 }
+
+#if ENABLE(SHADOW_DOM)
+StyleRuleBase* CSSParser::createHostRule(RuleList* rules)
+{
+    m_allowImportRules = m_allowNamespaceDeclarations = false;
+    RefPtr<StyleRuleHost> rule;
+    if (rules)
+        rule = StyleRuleHost::create(*rules);
+    else {
+        RuleList emptyRules;
+        rule = StyleRuleHost::create(emptyRules);
+    }
+    StyleRuleHost* result = rule.get();
+    m_parsedRules.append(rule.release());
+    processAndAddNewRuleToSourceTreeIfNeeded();
+    return result;
+}
+#endif
 
 void CSSParser::addNamespace(const AtomicString& prefix, const AtomicString& uri)
 {

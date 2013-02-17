@@ -1,3 +1,488 @@
+2012-10-26  Gabor Ballabas  <gaborb@inf.u-szeged.hu>
+
+        [Qt] Enable JSC's disassembler on x86, x86_64 Linux
+        https://bugs.webkit.org/show_bug.cgi?id=100386
+
+        Reviewed by Simon Hausmann.
+
+        It works fine on Linux x86, x86_64 just needs to be enabled in the
+        QtWebKit build system.
+
+        * wtf/Platform.h:
+
+2012-10-25  Michael Saboff  <msaboff@apple.com>
+
+        REGRESSION (r131836): failures in list styles tests on EFL, GTK
+        https://bugs.webkit.org/show_bug.cgi?id=99824
+
+        Reviewed by Oliver Hunt.
+
+        Fixed ASCII check.
+        Added placeholder argument for new argument added to convertUTF8ToUTF16() in http://trac.webkit.org/changeset/131836.
+
+        * wtf/unicode/UTF8.cpp:
+        (WTF::Unicode::convertUTF8ToUTF16):
+        * wtf/unicode/glib/UnicodeGLib.cpp:
+        (WTF::Unicode::convertCase):
+
+2012-10-25  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL][WK2] Remove some C'ism from EwkView
+        https://bugs.webkit.org/show_bug.cgi?id=100370
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Make OwnPtr useable for Ecore_IMF_Context to avoid
+        using raw pointers in EFL port.
+
+        * wtf/OwnPtrCommon.h:
+        (WTF):
+        * wtf/PlatformEfl.cmake:
+        * wtf/efl/OwnPtrEfl.cpp:
+        (WTF::deleteOwnedPtr):
+        (WTF):
+
+2012-09-27  Yury Semikhatsky  <yurys@chromium.org>
+
+        Web Inspector: provide memory instrumentation for ListHashSet
+        https://bugs.webkit.org/show_bug.cgi?id=97786
+
+        Reviewed by Vsevolod Vlasov.
+
+        Added memory instrumentation for ListHashSet.
+
+        * GNUmakefile.list.am:
+        * WTF.gypi:
+        * WTF.pro:
+        * WTF.vcproj/WTF.vcproj:
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/HashSet.h:
+        (WTF):
+        * wtf/ListHashSet.h:
+        (ListHashSet):
+        (ListHashSetNodeAllocator): changed visibility of inPool method to public
+        (WTF::ListHashSetNodeAllocator::pool):
+        (WTF::ListHashSetNodeAllocator::pastPool):
+        (WTF::::sizeInBytes): added a method that returns size of the set in bytes including
+        all its internals but not the content elements.
+        (WTF):
+        * wtf/MemoryInstrumentation.h: removed onsolete method. All clients were updated to
+        use generic addMember instead.
+        (MemoryInstrumentation):
+        (WTF::MemoryClassInfo::addPrivateBuffer):
+        * wtf/MemoryInstrumentationHashSet.h:
+        * wtf/MemoryInstrumentationListHashSet.h: Copied from Source/WTF/wtf/MemoryInstrumentationHashSet.h.
+        (WTF):
+        (WTF::reportMemoryUsage):
+
+2012-10-23  Benjamin Poulain  <benjamin@webkit.org>
+
+        WTFURL: Implement KURL::setPort()
+        https://bugs.webkit.org/show_bug.cgi?id=99898
+
+        Reviewed by Adam Barth.
+
+        Add an efficient implementation for remplacing the port component
+        in an URL. This will be the base for replacing other components
+        efficiently.
+
+        The testing is covered by fast/dom/HTMLAnchorElement/set-href-attribute-port.html
+
+        * wtf/url/api/ParsedURL.cpp:
+        (WTF::generateNewSpecWithPort):
+        (WTF::replacePortWithString):
+        (WTF::ParsedURL::replacePort):
+        * wtf/url/api/ParsedURL.h:
+        (ParsedURL):
+
+2012-10-22  Michael Saboff  <msaboff@apple.com>
+
+        Regression(r131655): Crash in StringImpl::findIgnoringCase
+        https://bugs.webkit.org/show_bug.cgi?id=99753
+
+        Reviewed by Geoffrey Garen.
+
+        Fixed to use the searchLength to take into account the start index.
+
+        Added LayoutTests/fast/js/find-ignoring-case-regress-99753.html
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::findIgnoringCase):
+
+2012-10-22  Simon Hausmann  <simon.hausmann@digia.com>
+
+        Unreviewed: Re-enable LLINT on Qt/Linux after r131932.
+
+        * wtf/Platform.h:
+
+2012-10-22  Yury Semikhatsky  <yurys@chromium.org>
+
+        Web Inspector: do not double count memory of objects with multiple ancestors
+        https://bugs.webkit.org/show_bug.cgi?id=99958
+
+        Reviewed by Alexander Pavlov.
+
+        Make sure memory occupied by objects of classes with multiple inheritance is
+        not double counted.
+
+        * wtf/MemoryInstrumentation.h:
+        (WTF::MemoryObjectInfo::MemoryObjectInfo):
+        (WTF::MemoryObjectInfo::reportedPointer):
+        (WTF::MemoryObjectInfo::reportObjectInfo): 1) Store actual pointer to the instrumented
+        object as it may differ from the original pointer by which it was reported. 2) Make
+        the method non-template and calculate object size on the caller side.
+        (MemoryObjectInfo):
+        (WTF::MemoryInstrumentation::reportObjectMemoryUsage):
+        (WTF::MemoryClassInfo::MemoryClassInfo):
+        (WTF::MemoryInstrumentation::InstrumentedPointer::process): use adjusted pointer
+        returned by reportMemoryUsage to check if the object has already been visited when
+        the pointer differs from the orinal one(it may happen if the object was reported
+        by a pointer to one of its base classes).
+
+2012-10-20  Martin Robinson  <mrobinson@igalia.com>
+
+        Fix 'make dist' for the GTK+ port
+
+        * GNUmakefile.list.am: Add missing files to the source list.
+
+2012-10-19  Mark Lam  <mark.lam@apple.com>
+
+        Added WTF::StackStats mechanism.
+        https://bugs.webkit.org/show_bug.cgi?id=99805.
+
+        Reviewed by Geoffrey Garen.
+
+        Disabled by default. Should have no performance and memory cost when
+        disabled. To enable, #define ENABLE_STACK_STATS 1 in StackStats.h.
+        The output is currently hardcoded to be dumped in /tmp/stack-stats.log,
+        and is in the form of stack sample events. By default, it only logs
+        a sample event when a new high watermark value is encountered.
+
+        Also renamed StackBounds::recursiveCheck() to isSafeToRecurse().
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/StackBounds.h:
+        (StackBounds):
+        (WTF::StackBounds::size):
+        (WTF::StackBounds::isSafeToRecurse):
+        * wtf/StackStats.cpp: Added.
+        (WTF):
+        (WTF::StackStats::initialize):
+        (WTF::StackStats::PerThreadStats::PerThreadStats):
+        (WTF::StackStats::CheckPoint::CheckPoint):
+        (WTF::StackStats::CheckPoint::~CheckPoint):
+        (WTF::StackStats::probe):
+        (WTF::StackStats::LayoutCheckPoint::LayoutCheckPoint):
+        (WTF::StackStats::LayoutCheckPoint::~LayoutCheckPoint):
+        * wtf/StackStats.h: Added.
+        (WTF):
+        (StackStats):
+        (CheckPoint):
+        (WTF::StackStats::CheckPoint::CheckPoint):
+        (PerThreadStats):
+        (WTF::StackStats::PerThreadStats::PerThreadStats):
+        (LayoutCheckPoint):
+        (WTF::StackStats::LayoutCheckPoint::LayoutCheckPoint):
+        (WTF::StackStats::initialize):
+        (WTF::StackStats::probe):
+        * wtf/ThreadingPthreads.cpp:
+        (WTF::initializeThreading):
+        * wtf/WTFThreadData.cpp:
+        (WTF::WTFThreadData::WTFThreadData):
+        * wtf/WTFThreadData.h:
+        (WTFThreadData):
+        (WTF::WTFThreadData::stackStats):
+
+2012-10-19  Anders Carlsson  <andersca@apple.com>
+
+        Deque can use std::reverse_iterator for its reverse iterators
+        https://bugs.webkit.org/show_bug.cgi?id=99789
+
+        Reviewed by Andreas Kling.
+
+        Remove DequeReverseIterator and DequeConstReverseIterator and just use std::reverse_iterator directly.
+        Also, remove the DequeIteratorBase<T, inlineCapacity> to Base typedef - We can already use DequeIteratorBase since it's
+        equivalent to the full class template type.
+
+        * wtf/Deque.h:
+        (WTF::Deque::rbegin):
+        (WTF::Deque::rend):
+        (DequeIteratorBase):
+        (WTF::DequeIteratorBase::assign):
+        (DequeIterator):
+        (DequeConstIterator):
+        (WTF::::checkValidity):
+        (WTF::::DequeIteratorBase):
+        (WTF::=):
+        (WTF::::isEqual):
+
+2012-10-19  Csaba Osztrogonác  <ossy@webkit.org>
+
+        Unreviewed buildfix, use C-style comment instead of C++
+
+        * wtf/Platform.h:
+
+2012-10-19  Csaba Osztrogonác  <ossy@webkit.org>
+
+        REGRESSION(r131822): It made 500+ tests crash on 32 bit platforms
+        https://bugs.webkit.org/show_bug.cgi?id=99814
+
+        Reviewed by Simon Hausmann.
+
+        * wtf/Platform.h: Disable LLINT on (PLATFORM(QT) && CPU(X86)) temporarily until proper fix.
+
+2012-10-17  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Web Inspector: NMI provide data for mixing with tcmalloc heap dumps.
+        https://bugs.webkit.org/show_bug.cgi?id=99457
+
+        Reviewed by Yury Semikhatsky.
+
+        countObjectSize now accepts ptr as the first argument and saves it into HashMap if the binary was ran with HEAPPROFILE env variable.
+        getProcessMemoryDistribution does snapshot and calls the downstream code with the map of counted objects.
+
+        * wtf/MemoryInstrumentation.h:
+        (MemoryInstrumentationClient):
+        (WTF::MemoryInstrumentation::countObjectSize):
+        (WTF::MemoryInstrumentation::addRawBuffer):
+        (WTF::MemoryClassInfo::addPrivateBuffer):
+        (WTF::MemoryInstrumentation::addObjectImpl):
+        (WTF::MemoryInstrumentation::addListHashSet):
+        (WTF::::process):
+
+2012-10-18  Michael Saboff  <msaboff@apple.com>
+
+        convertUTF8ToUTF16() Should Check for ASCII Input
+        ihttps://bugs.webkit.org/show_bug.cgi?id=99739
+
+        Reviewed by Geoffrey Garen.
+
+        Added code to accumulate the "or" of all characters seen during the UTF8 to UTF16 conversion.  This is
+        used to check to see if all characters are ASCII and is returned via a bool*.
+
+        * wtf/unicode/UTF8.cpp:
+        (WTF::Unicode::convertUTF8ToUTF16):
+        * wtf/unicode/UTF8.h:
+
+2012-10-18  Michael Saboff  <msaboff@apple.com>
+
+        Mac WTF build checks dependencies before copying header files
+        https://bugs.webkit.org/show_bug.cgi?id=99770
+
+        Reviewed by Mark Rowe.
+
+        Fixed up build rules per Mark Rowe. Made new target an Aggregate and removed "WTF copy".
+
+        * Configurations/CopyWTFHeaders.xcconfig: Added.
+        * Configurations/WTF.xcconfig:
+        * WTF.xcodeproj/project.pbxproj:
+
+2012-10-18  Michael Saboff  <msaboff@apple.com>
+
+        Mac WTF build checks dependencies before copying header files
+        https://bugs.webkit.org/show_bug.cgi?id=99770
+
+        Reviewed by Geoffrey Garen.
+
+        Added a new build target "Copy WTF HEaders" to copy the header files and made that new target a dependency
+        for the main WTF build target.  Moved the "Copy WTF Headers" phase from WTF target to the new target.
+
+        * WTF.xcodeproj/project.pbxproj:
+
+2012-10-17  Anders Carlsson  <andersca@apple.com>
+
+        Clean up Vector.h
+        https://bugs.webkit.org/show_bug.cgi?id=99622
+
+        Reviewed by Benjamin Poulain.
+
+        Remove unused member functions from Vector and get rid of the std::max and std::min using declarations
+        (as per the WebKit coding style guidelines).
+
+        * WTF.xcodeproj/project.pbxproj:
+        Turns out StreamBuffer.h was never added to the Xcode project; add it. Also go ahead and sort the project file.
+
+        * wtf/Deque.h:
+        (WTF::::expandCapacity):
+        * wtf/StreamBuffer.h:
+        (WTF::StreamBuffer::append):
+        Add std:: prefixes to max and min.
+
+        * wtf/Vector.h:
+        Remove VectorBase::bufferSlot(), VectorReverseProxy and add std:: prefixes where needed.
+
+2012-10-17  Michael Saboff  <msaboff@apple.com>
+
+        Creating a String from an NSString should check for all 8 bit strings
+        https://bugs.webkit.org/show_bug.cgi?id=99392
+
+        Reviewed by Geoffrey Garen.
+
+        Exported the LChar* version of create().
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::create):
+
+2012-10-17  Michael Saboff  <msaboff@apple.com>
+
+        StringImpl::findIgnoringCase() and reverseFindIgnoringCase() don't optimally handle a mix of 8 and 16 bit strings
+        https://bugs.webkit.org/show_bug.cgi?id=99224
+
+        Reviewed by Geoffrey Garen.
+
+        Added helper templated functions and all four combinations similar to find() and reverseFind().
+
+        (WTF::findIgnoringCaseInner):
+        (WTF::StringImpl::findIgnoringCase):
+        (WTF::reverseFindIgnoringCaseInner):
+        (WTF::StringImpl::reverseFindIgnoringCase):
+
+2012-10-17  Michael Saboff  <msaboff@apple.com>
+
+        AtomicString::HashAndUTF8CharactersTranslator::equal() doesn't optimally handle 8 bit strings
+        https://bugs.webkit.org/show_bug.cgi?id=99223
+
+        Reviewed by Geoffrey Garen.
+
+        Added an 8 bit path.
+
+        * wtf/text/AtomicString.cpp:
+        (WTF::HashAndUTF8CharactersTranslator::equal):
+
+2012-10-17  Anders Carlsson  <andersca@apple.com>
+
+        Always use fastRealloc when growing or shrinking the Vector buffer
+        https://bugs.webkit.org/show_bug.cgi?id=99616
+
+        Reviewed by Andreas Kling.
+
+        Remove the pointless #if PLATFORM(BLACKBERRY) and always try to use fastRealloc to grow or shrink the
+        vector buffer when possible; realloc should always be at least as fast as free+malloc.
+
+        * wtf/Vector.h:
+        (WTF::VectorBufferBase::shouldReallocateBuffer):
+
+2012-10-16  Michael Saboff  <msaboff@apple.com>
+
+        Change WTF_USE_8BIT_TEXTRUN to ENABLE_8BIT_TEXTRUN
+        https://bugs.webkit.org/show_bug.cgi?id=99484
+
+        Reviewed by Eric Seidel.
+
+        Changed macro name to align with it's purpose.
+
+        * wtf/Platform.h:
+
+2012-10-16  Michael Saboff  <msaboff@apple.com>
+
+        StringImpl::reverseFind() with a single match character isn't optimal for mixed 8/16 bit cases
+        https://bugs.webkit.org/show_bug.cgi?id=99363
+
+        Reviewed by Benjamin Poulain.
+
+        Factored out the 8/16 bitness check of the match character from the subject character bitness
+        check.  Did this for both find() and reverseFind().  Added all UChar/LChar combinations to the
+        inline reverseFind().
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::find):
+        (WTF::StringImpl::reverseFind):
+        * wtf/text/StringImpl.h:
+        (WTF::reverseFind):
+
+2012-10-16  Dima Gorbik  <dgorbik@apple.com>
+
+        Remove Platform.h include from the header files.
+        https://bugs.webkit.org/show_bug.cgi?id=98665
+
+        Reviewed by Eric Seidel.
+
+        We don't want other clients that include WebKit headers to know about Platform.h.
+
+        * wtf/Assertions.h:
+        * wtf/MainThread.h:
+
+2012-10-16  Adrienne Walker  <enne@google.com>
+
+        Remove unused WTF_NEW_HASHMAP_ITERATORS_INTERFACE #define
+        https://bugs.webkit.org/show_bug.cgi?id=99367
+
+        Reviewed by James Robinson.
+
+        Does what it says on the tin.
+
+        * wtf/HashTraits.h:
+
+2012-10-15  Andreas Kling  <kling@webkit.org>
+
+        Remove WTF::fastDeleteAllValues().
+        <http://webkit.org/b/99345>
+
+        Reviewed by Eric Seidel.
+
+        It was only used to fastDelete() a class that was already overriding operator delete
+        by way of WTF_MAKE_FAST_ALLOCATED anyway.
+
+        * wtf/HashSet.h:
+        (WTF):
+        (HashSet):
+
+2012-10-15  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Parallel GC should not be disabled for all platforms
+
+        * wtf/Platform.h: D'oh!
+
+2012-10-15  George Staikos  <staikos@webkit.org>
+
+        [BlackBerry] Adapt to Platform API changes in string handling
+        https://bugs.webkit.org/show_bug.cgi?id=99248
+
+        Reviewed by Yong Li.
+
+        Convert usage of WebString, char* and std::string to BlackBerry::Platform::String.
+
+        * wtf/Assertions.cpp: Use proper log function.
+        * wtf/text/AtomicString.h: Add BlackBerry support
+        (AtomicString):
+        (WTF::AtomicString::AtomicString): Add BlackBerry Support
+        (WTF::AtomicString::operator BlackBerry::Platform::String):
+        * wtf/text/StringImpl.h: Conversion support.
+        * wtf/text/WTFString.h: Conversion support.
+        (Platform):
+        (String):
+
+2012-10-15  Michael Saboff  <msaboff@apple.com>
+
+        Update RenderText to use String instead of UChar* for text
+        https://bugs.webkit.org/show_bug.cgi?id=96979
+
+        Reviewed by Dan Bernstein.
+
+        Added WTF_USE_8BIT_TEXTRUN to encase code that creates 8 bit TextRun's.  Enabled WTF_USE_8BIT_TEXTRUN
+        for PLATFORM(MAC).  Other platform can update this setting in Platform.h when their platform specific use of
+        TextRun handle 8 bit data.  Added a new Vector::appendVector to allow appending the contents of a vector
+        containing one type to the end of vector containing another.  This is used to append a Vector<LChar> to
+        the end of a Vector<UChar>.
+
+        * wtf/Platform.h:
+        * wtf/Vector.h:
+        (Vector):
+        (WTF::Vector::appendVector):
+
+2012-10-15  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Web Inspector: convert manual size calculation of different WebKit things into MemoryInstrumentation.
+        https://bugs.webkit.org/show_bug.cgi?id=99309
+
+        Reviewed by Yury Semikhatsky.
+
+        JSHeap, DOMStorage and HeapProfiler data were counted manually.
+        Now we count the sizes more generic way.
+
+        * wtf/MemoryInstrumentation.h: calculateContainerSize were removed.
+        * wtf/MemoryInstrumentationSequence.h: empty instrumentations were added for 'const char*' and 'const void*' sequences.
+
 2012-10-12  Anders Carlsson  <andersca@apple.com>
 
         Move QDataStream functions into HistoryItemQt.cpp

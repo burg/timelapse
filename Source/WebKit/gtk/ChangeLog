@@ -1,3 +1,84 @@
+2012-10-24  Brady Eidson  <beidson@apple.com>
+
+        Add a strategy for loader customization.
+        https://bugs.webkit.org/show_bug.cgi?id=100278
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebCoreSupport/PlatformStrategiesGtk.cpp:
+        (PlatformStrategiesGtk::createLoaderStrategy):
+        * WebCoreSupport/PlatformStrategiesGtk.h:
+        (PlatformStrategiesGtk):
+
+2012-10-23  Alexey Proskuryakov  <ap@apple.com>
+
+        Add a strategy for shared workers
+        https://bugs.webkit.org/show_bug.cgi?id=100165
+
+        Reviewed by Brady Eidson.
+
+        * WebCoreSupport/PlatformStrategiesGtk.cpp:
+        (PlatformStrategiesGtk::createPasteboardStrategy):
+        (PlatformStrategiesGtk::createSharedWorkerStrategy):
+        (PlatformStrategiesGtk::createVisitedLinkStrategy):
+        * WebCoreSupport/PlatformStrategiesGtk.h:
+
+2012-10-24  Priit Laes  <plaes@plaes.org>
+
+        [GTK] Typos in user-visible strings: "coordintate"
+        https://bugs.webkit.org/show_bug.cgi?id=100252
+
+        Reviewed by Martin Robinson.
+
+        s/coordintate/coordinate
+
+        * webkit/webkithittestresult.cpp:
+        (webkit_hit_test_result_class_init):
+
+2012-10-23  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK][Soup] Implement the default authentication dialog via WebCoreSupport
+        https://bugs.webkit.org/show_bug.cgi?id=99351
+
+        Reviewed by Carlos Garcia Campos.
+
+        Instead of using a custom SoupSessionFeature to show the authentication dialog,
+        show it using the corresponding WebCore message.
+
+        * WebCoreSupport/FrameLoaderClientGtk.cpp:
+        (WebKit::FrameLoaderClient::dispatchDidReceiveAuthenticationChallenge):
+        Show the dialog when we need to authenticate. Also, so not show the dialog
+        if we are in DRT mode.
+        * webkit/webkitglobals.cpp:
+        (webkitInit): No longer install our SoupFeature.
+
+2012-10-23  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Update NEWS and configure.ac for 1.11.1 release
+
+        * NEWS: Added release notes for 1.11.1.
+
+2012-10-23  Andras Becsi  <andras.becsi@digia.com>
+
+        Remove devicePixelRatio from ViewportAttributes
+        https://bugs.webkit.org/show_bug.cgi?id=99845
+
+        Reviewed by Adam Barth.
+
+        * webkit/webkitviewportattributes.cpp:
+        (webkitViewportAttributesRecompute):
+        Pass the device pixel ratio as a function argument.
+
+2012-10-22  Jocelyn Turcotte  <jocelyn.turcotte@digia.com>
+
+        [Qt] Fix "ASSERTION FAILED: !document->inPageCache()" when loading a page
+        https://bugs.webkit.org/show_bug.cgi?id=98514
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * WebCoreSupport/FrameLoaderClientGtk.cpp:
+        (WebKit::FrameLoaderClient::transitionToCommittedForNewPage):
+
 2012-10-10  Brady Eidson  <beidson@apple.com>
 
         Switch ResourceLoader::resourceData() from SharedBuffer to ResourceBuffer

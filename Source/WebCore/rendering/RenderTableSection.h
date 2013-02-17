@@ -70,11 +70,10 @@ public:
 
     virtual void addChild(RenderObject* child, RenderObject* beforeChild = 0);
 
-    virtual LayoutUnit firstLineBoxBaseline() const;
+    virtual int firstLineBoxBaseline() const OVERRIDE;
 
     void addCell(RenderTableCell*, RenderTableRow* row);
 
-    void setCellLogicalWidths();
     int calcRowLogicalHeight();
     void layoutRows();
 

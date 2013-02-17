@@ -1,3 +1,58 @@
+2012-10-24  Brady Eidson  <beidson@apple.com>
+
+        Add a strategy for loader customization.
+        https://bugs.webkit.org/show_bug.cgi?id=100278
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebCoreSupport/WebPlatformStrategies.cpp:
+        (WebPlatformStrategies::createLoaderStrategy):
+        * WebCoreSupport/WebPlatformStrategies.h:
+        (WebPlatformStrategies):
+
+2012-10-23  Alexey Proskuryakov  <ap@apple.com>
+
+        Add a strategy for shared workers
+        https://bugs.webkit.org/show_bug.cgi?id=100165
+
+        Reviewed by Brady Eidson.
+
+        * WebCoreSupport/WebPlatformStrategies.cpp:
+        (WebPlatformStrategies::createPasteboardStrategy):
+        (WebPlatformStrategies::createSharedWorkerStrategy):
+        (WebPlatformStrategies::createVisitedLinkStrategy):
+        * WebCoreSupport/WebPlatformStrategies.h:
+        (WebPlatformStrategies):
+
+2012-10-22  Jocelyn Turcotte  <jocelyn.turcotte@digia.com>
+
+        [Qt] Fix "ASSERTION FAILED: !document->inPageCache()" when loading a page
+        https://bugs.webkit.org/show_bug.cgi?id=98514
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * WebCoreSupport/WebFrameLoaderClient.cpp:
+        (WebFrameLoaderClient::transitionToCommittedForNewPage):
+
+2012-10-21  Andreas Kling  <kling@webkit.org>
+
+        Remove Page::javaScriptURLsAreAllowed setting.
+        <http://webkit.org/b/99944>
+
+        Reviewed by Anders Carlsson.
+
+        Have WebView::setJavaScriptURLsAreAllowed() do nothing and return E_NOTIMPL
+        to prevent COM ABI breakage.
+
+        * WebView.cpp:
+        (WebView::setJavaScriptURLsAreAllowed):
+
+2012-10-18  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Build fix after r131701 and r131777.
+
+        * WebKit.vcproj/WebKit.sln:
+
 2012-10-14  Sam Weinig  <sam@webkit.org>
 
         Fix the windows build.

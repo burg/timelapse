@@ -25,6 +25,7 @@
 #include "GraphicsContext.h"
 #include "HostWindow.h"
 #include "NotImplemented.h"
+#include "PlatformContextCairo.h"
 #include <Ecore_Evas.h>
 #include <Evas_GL.h>
 #include <wtf/OwnArrayPtr.h>
@@ -87,6 +88,13 @@ GraphicsContext3DPrivate::GraphicsContext3DPrivate(GraphicsContext3D* context, H
         return;
 
     makeContextCurrent();
+
+#if USE(GRAPHICS_SURFACE)
+    IntSize surfaceSize(m_context->m_currentWidth, m_context->m_currentHeight);
+    m_surfaceFlags = GraphicsSurface::SupportsTextureTarget | GraphicsSurface::SupportsSharing;
+    if (!surfaceSize.isEmpty())
+        m_graphicsSurface = GraphicsSurface::create(surfaceSize, m_surfaceFlags);
+#endif
 }
 
 GraphicsContext3DPrivate::~GraphicsContext3DPrivate()
@@ -101,15 +109,16 @@ GraphicsContext3DPrivate::~GraphicsContext3DPrivate()
         evas_gl_context_destroy(m_evasGL, m_evasGLContext);
 
     evas_gl_free(m_evasGL);
-}
 
+#if USE(GRAPHICS_SURFACE)
+    m_graphicsSurface.clear();
+#endif
+}
 
 bool GraphicsContext3DPrivate::createSurface(PageClientEfl* pageClient, bool renderDirectlyToHostWindow)
 {
     // If RenderStyle is RenderOffscreen, we will be rendering to a FBO,
     // so Evas_GL_Surface has a 1x1 dummy surface.
-    int x = 0;
-    int y = 0;
     int width = 1;
     int height = 1;
 
@@ -124,7 +133,8 @@ bool GraphicsContext3DPrivate::createSurface(PageClientEfl* pageClient, bool ren
         EVAS_GL_RGBA_8888,
         EVAS_GL_DEPTH_BIT_8,
         EVAS_GL_STENCIL_NONE, // FIXME: set EVAS_GL_STENCIL_BIT_8 after fixing Evas_GL bug.
-        EVAS_GL_OPTIONS_NONE
+        EVAS_GL_OPTIONS_NONE,
+        EVAS_GL_MULTISAMPLE_NONE
     };
 
     // Create a new Evas_GL_Surface object
@@ -165,11 +175,37 @@ bool GraphicsContext3DPrivate::makeContextCurrent()
 }
 
 #if USE(TEXTURE_MAPPER_GL)
-void GraphicsContext3DPrivate::paintToTextureMapper(TextureMapper*, const FloatRect& target, const TransformationMatrix&, float opacity, BitmapTexture* mask)
+void GraphicsContext3DPrivate::paintToTextureMapper(TextureMapper*, const FloatRect& /* target */, const TransformationMatrix&, float /* opacity */, BitmapTexture* /* mask */)
 {
     notImplemented();
 }
 #endif
+
+#if USE(GRAPHICS_SURFACE)
+void GraphicsContext3DPrivate::createGraphicsSurfaces(const IntSize& size)
+{
+    if (size.isEmpty())
+        m_graphicsSurface.clear();
+    else
+        m_graphicsSurface = GraphicsSurface::create(size, m_surfaceFlags);
+}
+
+uint32_t GraphicsContext3DPrivate::copyToGraphicsSurface()
+{
+    if (!m_graphicsSurface)
+        return 0;
+
+    makeContextCurrent();
+    m_graphicsSurface->copyFromTexture(m_context->m_texture, IntRect(0, 0, m_context->m_currentWidth, m_context->m_currentHeight));
+    return m_graphicsSurface->swapBuffers();
+}
+
+GraphicsSurfaceToken GraphicsContext3DPrivate::graphicsSurfaceToken() const
+{
+    return m_graphicsSurface->exportToken();
+}
+#endif
+
 } // namespace WebCore
 
 #endif // USE(3D_GRAPHICS) || USE(ACCELERATED_COMPOSITING)

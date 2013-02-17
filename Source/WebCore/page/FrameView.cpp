@@ -933,11 +933,6 @@ bool FrameView::isSoftwareRenderable() const
 
 void FrameView::didMoveOnscreen()
 {
-#if USE(ACCELERATED_COMPOSITING)
-    if (TiledBacking* tiledBacking = this->tiledBacking())
-        tiledBacking->setIsInWindow(true);
-#endif
-
     if (RenderView* root = rootRenderer(this))
         root->didMoveOnscreen();
     contentAreaDidShow();
@@ -945,11 +940,6 @@ void FrameView::didMoveOnscreen()
 
 void FrameView::willMoveOffscreen()
 {
-#if USE(ACCELERATED_COMPOSITING)
-    if (TiledBacking* tiledBacking = this->tiledBacking())
-        tiledBacking->setIsInWindow(false);
-#endif
-
     if (RenderView* root = rootRenderer(this))
         root->willMoveOffscreen();
     contentAreaDidHide();
@@ -1229,7 +1219,7 @@ void FrameView::layout(bool allowSubtree)
     if (AXObjectCache::accessibilityEnabled())
         root->document()->axObjectCache()->postNotification(root, AXObjectCache::AXLayoutComplete, true);
 #endif
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
     updateAnnotatedRegions();
 #endif
 
@@ -2502,8 +2492,10 @@ void FrameView::performPostLayoutTasks()
     }
 
 #if USE(ACCELERATED_COMPOSITING)
-    if (TiledBacking* tiledBacking = this->tiledBacking())
-        tiledBacking->setTileCoverage(canHaveScrollbars() ? TiledBacking::CoverageForScrolling : TiledBacking::CoverageForVisibleArea);
+    if (RenderView* root = rootRenderer(this)) {
+        if (root->usesCompositing())
+            root->compositor()->frameViewDidLayout();
+    }
 #endif
 
     scrollToAnchor();
@@ -2918,7 +2910,7 @@ bool FrameView::scrollAnimatorEnabled() const
     return false;
 }
 
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
 void FrameView::updateAnnotatedRegions()
 {
     Document* document = m_frame->document();
@@ -3173,7 +3165,7 @@ void FrameView::paintContents(GraphicsContext* p, const IntRect& rect)
     if (!frame())
         return;
 
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willPaint(m_frame.get(), p, rect);
+    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willPaint(m_frame.get());
 
     Document* document = m_frame->document();
 
@@ -3242,6 +3234,10 @@ void FrameView::paintContents(GraphicsContext* p, const IntRect& rect)
     RenderObject* eltRenderer = m_nodeToDraw ? m_nodeToDraw->renderer() : 0;
     RenderLayer* rootLayer = root->layer();
 
+#ifndef NDEBUG
+    RenderObject::SetLayoutNeededForbiddenScope forbidSetNeedsLayout(rootLayer->renderer());
+#endif
+
     rootLayer->paint(p, rect, m_paintBehavior, eltRenderer);
 
     if (rootLayer->containsDirtyOverlayScrollbars())
@@ -3256,7 +3252,7 @@ void FrameView::paintContents(GraphicsContext* p, const IntRect& rect)
     m_lastPaintTime = currentTime();
 
     // Regions may have changed as a result of the visibility/z-index of element changing.
-#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(WIDGET_REGION)
+#if ENABLE(DASHBOARD_SUPPORT) || ENABLE(DRAGGABLE_REGION)
     if (document->annotatedRegionsDirty())
         updateAnnotatedRegions();
 #endif
@@ -3264,7 +3260,7 @@ void FrameView::paintContents(GraphicsContext* p, const IntRect& rect)
     if (isTopLevelPainter)
         sCurrentPaintTimeStamp = 0;
 
-    InspectorInstrumentation::didPaint(cookie);
+    InspectorInstrumentation::didPaint(cookie, p, rect);
 }
 
 void FrameView::setPaintBehavior(PaintBehavior behavior)
