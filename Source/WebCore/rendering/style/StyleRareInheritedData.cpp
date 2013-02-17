@@ -27,11 +27,14 @@
 #include "RenderStyle.h"
 #include "RenderStyleConstants.h"
 #include "ShadowData.h"
+#include "StyleImage.h"
 #include "WebCoreMemoryInstrumentation.h"
+#include <wtf/MemoryObjectInfo.h>
 
 namespace WebCore {
 
 struct SameSizeAsStyleRareInheritedData : public RefCounted<SameSizeAsStyleRareInheritedData> {
+    void* styleImage;
     Color firstColor;
     float firstFloat;
     Color colors[5];
@@ -61,7 +64,8 @@ struct SameSizeAsStyleRareInheritedData : public RefCounted<SameSizeAsStyleRareI
 COMPILE_ASSERT(sizeof(StyleRareInheritedData) == sizeof(SameSizeAsStyleRareInheritedData), StyleRareInheritedData_should_bit_pack);
 
 StyleRareInheritedData::StyleRareInheritedData()
-    : textStrokeWidth(RenderStyle::initialTextStrokeWidth())
+    : listStyleImage(RenderStyle::initialListStyleImage())
+    , textStrokeWidth(RenderStyle::initialTextStrokeWidth())
     , indent(RenderStyle::initialTextIndent())
     , m_effectiveZoom(RenderStyle::initialZoom())
     , widows(RenderStyle::initialWidows())
@@ -98,6 +102,7 @@ StyleRareInheritedData::StyleRareInheritedData()
 #if ENABLE(CSS3_TEXT)
     , m_textAlignLast(RenderStyle::initialTextAlignLast())
 #endif // CSS3_TEXT
+    , m_rubyPosition(RenderStyle::initialRubyPosition())
     , hyphenationLimitBefore(-1)
     , hyphenationLimitAfter(-1)
     , hyphenationLimitLines(-1)
@@ -117,6 +122,7 @@ StyleRareInheritedData::StyleRareInheritedData()
 
 StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedData& o)
     : RefCounted<StyleRareInheritedData>()
+    , listStyleImage(o.listStyleImage)
     , textStrokeColor(o.textStrokeColor)
     , textStrokeWidth(o.textStrokeWidth)
     , textFillColor(o.textFillColor)
@@ -163,6 +169,7 @@ StyleRareInheritedData::StyleRareInheritedData(const StyleRareInheritedData& o)
 #if ENABLE(CSS3_TEXT)
     , m_textAlignLast(o.m_textAlignLast)
 #endif // CSS3_TEXT
+    , m_rubyPosition(o.m_rubyPosition)
     , hyphenationString(o.hyphenationString)
     , hyphenationLimitBefore(o.hyphenationLimitBefore)
     , hyphenationLimitAfter(o.hyphenationLimitAfter)
@@ -255,11 +262,13 @@ bool StyleRareInheritedData::operator==(const StyleRareInheritedData& o) const
 #if ENABLE(CSS3_TEXT)
         && m_textAlignLast == o.m_textAlignLast
 #endif // CSS3_TEXT
+        && m_rubyPosition == o.m_rubyPosition
         && m_lineSnap == o.m_lineSnap
 #if ENABLE(CSS_VARIABLES)
         && m_variables == o.m_variables
 #endif
-        && m_lineAlign == o.m_lineAlign;
+        && m_lineAlign == o.m_lineAlign
+        && StyleImage::imagesEquivalent(listStyleImage.get(), o.listStyleImage.get());
 }
 
 bool StyleRareInheritedData::shadowDataEquivalent(const StyleRareInheritedData& o) const

@@ -45,6 +45,7 @@
 #include <wtf/MemoryInstrumentationListHashSet.h>
 #include <wtf/MemoryInstrumentationString.h>
 #include <wtf/MemoryInstrumentationVector.h>
+#include <wtf/MemoryObjectInfo.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomicString.h>
@@ -90,7 +91,7 @@ public:
             result.iterator->value += size;
     }
     virtual bool visited(const void* object) { return !m_visitedObjects.add(object).isNewEntry; }
-    virtual void checkCountedObject(const void*) { }
+    virtual bool checkCountedObject(const void*) { return true; }
 
     size_t visitedObjects() const { return m_visitedObjects.size(); }
     size_t totalSize(const MemoryObjectType objectType) const
@@ -816,10 +817,11 @@ TEST(MemoryInstrumentationTest, instrumentedWithMultipleAncestors)
 class CheckCountedObjectsClient : public MemoryInstrumentationTestClient {
 public:
     CheckCountedObjectsClient(const void* expectedPointer) : m_expectedPointer(expectedPointer), m_expectedPointerFound(false) { }
-    virtual void checkCountedObject(const void* pointer)
+    virtual bool checkCountedObject(const void* pointer)
     {
         EXPECT_EQ(pointer, m_expectedPointer);
         m_expectedPointerFound = true;
+        return true;
     }
     bool expectedPointerFound() { return m_expectedPointerFound; }
 

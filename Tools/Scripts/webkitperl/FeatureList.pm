@@ -49,6 +49,7 @@ my (
     $blobSupport,
     $channelMessagingSupport,
     $cspNextSupport,
+    $css3BackgroundSupport,
     $css3ConditionalRulesSupport,
     $css3TextSupport,
     $cssBoxDecorationBreakSupport,
@@ -111,6 +112,7 @@ my (
     $orientationEventsSupport,
     $pageVisibilityAPISupport,
     $progressTagSupport,
+    $proximityEventsSupport,
     $quotaSupport,
     $resolutionMediaQuerySupport,
     $registerProtocolHandlerSupport,
@@ -128,6 +130,7 @@ my (
     $tiledBackingStoreSupport,
     $timelapseSupport,
     $touchEventsSupport,
+    $touchSliderSupport,
     $touchIconLoadingSupport,
     $vibrationSupport,
     $videoSupport,
@@ -175,14 +178,14 @@ my @features = (
     { option => "css-filters", desc => "Toggle CSS Filters support",
       define => "ENABLE_CSS_FILTERS", default => isAppleWebKit() || isBlackBerry(), value => \$cssFiltersSupport },
 
+    { option => "css3-background", desc => "Toggle CSS3 Background support",
+      define => "ENABLE_CSS3_BACKGROUND", default => 0, value => \$css3BackgroundSupport },
+
     { option => "css3-conditional-rules", desc => "Toggle CSS3 Conditional Rules support (i.e. \@supports)",
       define => "ENABLE_CSS3_CONDITIONAL_RULES", default => 0, value => \$css3ConditionalRulesSupport },
 
     { option => "css3-text", desc => "Toggle CSS3 Text support",
       define => "ENABLE_CSS3_TEXT", default => isEfl(), value => \$css3TextSupport },
-
-    { option => "css-hierarchies", desc => "Toggle CSS Hierarchy support",
-      define => "ENABLE_CSS_HIERARCHIES", default => 0, value => \$cssHierarchiesSupport },
 
     { option => "css-box-decoration-break", desc => "Toggle CSS box-decoration-break support",
       define => "ENABLE_CSS_BOX_DECORATION_BREAK", default => 1, value => \$cssBoxDecorationBreakSupport },
@@ -352,6 +355,9 @@ my @features = (
     { option => "progress-tag", desc => "Toggle Progress Tag support",
       define => "ENABLE_PROGRESS_ELEMENT", default => 1, value => \$progressTagSupport },
 
+    { option => "proximity-events", desc => "Toggle Proximity Events support",
+      define => "ENABLE_PROXIMITY_EVENTS", default => 0, value => \$proximityEventsSupport },
+
     { option => "quota", desc => "Toggle Quota support",
       define => "ENABLE_QUOTA", default => 0, value => \$quotaSupport },
 
@@ -399,6 +405,9 @@ my @features = (
 
     { option => "touch-events", desc => "Toggle Touch Events support",
       define => "ENABLE_TOUCH_EVENTS", default => (isQt() || isBlackBerry() || isEfl()), value => \$touchEventsSupport },
+
+    { option => "touch-slider", desc => "Toggle Touch Slider support",
+      define => "ENABLE_TOUCH_SLIDER", default => isBlackBerry(), value => \$touchSliderSupport },
 
     { option => "touch-icon-loading", desc => "Toggle Touch Icon Loading Support",
       define => "ENABLE_TOUCH_ICON_LOADING", default => 0, value => \$touchIconLoadingSupport },

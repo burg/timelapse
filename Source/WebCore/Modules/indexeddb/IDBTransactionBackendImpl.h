@@ -44,7 +44,7 @@ class IDBDatabaseBackendImpl;
 
 class IDBTransactionBackendImpl : public IDBTransactionBackendInterface {
 public:
-    static PassRefPtr<IDBTransactionBackendImpl> create(const Vector<int64_t>&, unsigned short mode, IDBDatabaseBackendImpl*);
+    static PassRefPtr<IDBTransactionBackendImpl> create(int64_t transactionId, const Vector<int64_t>&, unsigned short mode, IDBDatabaseBackendImpl*);
     static IDBTransactionBackendImpl* from(IDBTransactionBackendInterface* interface)
     {
         return static_cast<IDBTransactionBackendImpl*>(interface);
@@ -53,29 +53,29 @@ public:
 
     // IDBTransactionBackendInterface
     virtual PassRefPtr<IDBObjectStoreBackendInterface> objectStore(int64_t, ExceptionCode&);
-    virtual void didCompleteTaskEvents();
     virtual void abort();
     virtual void setCallbacks(IDBTransactionCallbacks* callbacks) { m_callbacks = callbacks; }
 
     void abort(PassRefPtr<IDBDatabaseError>);
     void run();
     unsigned short mode() const { return m_mode; }
+    bool isFinished() const { return m_state == Finished; }
     bool scheduleTask(PassOwnPtr<ScriptExecutionContext::Task> task, PassOwnPtr<ScriptExecutionContext::Task> abortTask = nullptr) { return scheduleTask(NormalTask, task, abortTask); }
     bool scheduleTask(TaskType, PassOwnPtr<ScriptExecutionContext::Task>, PassOwnPtr<ScriptExecutionContext::Task> abortTask = nullptr);
     void registerOpenCursor(IDBCursorBackendImpl*);
     void unregisterOpenCursor(IDBCursorBackendImpl*);
-    void addPendingEvents(int);
     void addPreemptiveEvent() { m_pendingPreemptiveEvents++; }
     void didCompletePreemptiveEvent() { m_pendingPreemptiveEvents--; ASSERT(m_pendingPreemptiveEvents >= 0); }
     IDBBackingStore::Transaction* backingStoreTransaction() { return &m_transaction; }
+    int64_t id() const { return m_id; }
 
 private:
-    IDBTransactionBackendImpl(const Vector<int64_t>& objectStoreIds, unsigned short mode, IDBDatabaseBackendImpl*);
+    IDBTransactionBackendImpl(int64_t id, const Vector<int64_t>& objectStoreIds, unsigned short mode, IDBDatabaseBackendImpl*);
 
     enum State {
         Unused, // Created, but no tasks yet.
-        StartPending, // Enqueued tasks, but SQLite transaction not yet started.
-        Running, // SQLite transaction started but not yet finished.
+        StartPending, // Enqueued tasks, but backing store transaction not yet started.
+        Running, // Backing store transaction started but not yet finished.
         Finished, // Either aborted or committed.
     };
 
@@ -83,15 +83,17 @@ private:
     void commit();
 
     bool isTaskQueueEmpty() const;
+    bool hasPendingTasks() const;
 
     void taskTimerFired(Timer<IDBTransactionBackendImpl>*);
-    void taskEventTimerFired(Timer<IDBTransactionBackendImpl>*);
     void closeOpenCursors();
 
+    const int64_t m_id;
     const Vector<int64_t> m_objectStoreIds;
     const unsigned short m_mode;
 
     State m_state;
+    bool m_commitPending;
     RefPtr<IDBTransactionCallbacks> m_callbacks;
     RefPtr<IDBDatabaseBackendImpl> m_database;
 
@@ -104,9 +106,7 @@ private:
 
     // FIXME: delete the timer once we have threads instead.
     Timer<IDBTransactionBackendImpl> m_taskTimer;
-    Timer<IDBTransactionBackendImpl> m_taskEventTimer;
     int m_pendingPreemptiveEvents;
-    int m_pendingEvents;
 
     HashSet<IDBCursorBackendImpl*> m_openCursors;
 };

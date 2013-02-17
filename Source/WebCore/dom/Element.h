@@ -246,7 +246,7 @@ public:
 
     // This method is called whenever an attribute is added, changed or removed.
     virtual void attributeChanged(const QualifiedName&, const AtomicString&);
-    virtual void parseAttribute(const Attribute&);
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) { }
 
     // Only called by the parser immediately after element construction.
     void parserSetAttributes(const Vector<Attribute>&, FragmentScriptingPermission);
@@ -270,10 +270,13 @@ public:
     virtual void attach();
     virtual void detach();
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
+    virtual bool rendererIsNeeded(const NodeRenderingContext&);
     void recalcStyle(StyleChange = NoChange);
 
     ElementShadow* shadow() const;
     ElementShadow* ensureShadow();
+    PassRefPtr<ShadowRoot> createShadowRoot(ExceptionCode&);
+
     virtual void willAddAuthorShadowRoot() { }
     virtual bool areAuthorShadowsAllowed() const { return true; }
 
@@ -283,8 +286,29 @@ public:
 
     RenderStyle* computedStyle(PseudoId = NOPSEUDO);
 
+    // Methods for indicating the style is affected by dynamic updates (e.g., children changing, our position changing in our sibling list, etc.)
+    bool styleAffectedByEmpty() const { return hasRareData() && rareDataStyleAffectedByEmpty(); }
+    bool childrenAffectedByHover() const { return hasRareData() && rareDataChildrenAffectedByHover(); }
+    bool childrenAffectedByActive() const { return hasRareData() && rareDataChildrenAffectedByActive(); }
+    bool childrenAffectedByDrag() const { return hasRareData() && rareDataChildrenAffectedByDrag(); }
+    bool childrenAffectedByPositionalRules() const { return hasRareData() && (rareDataChildrenAffectedByForwardPositionalRules() || rareDataChildrenAffectedByBackwardPositionalRules()); }
+    bool childrenAffectedByFirstChildRules() const { return hasRareData() && rareDataChildrenAffectedByFirstChildRules(); }
+    bool childrenAffectedByLastChildRules() const { return hasRareData() && rareDataChildrenAffectedByLastChildRules(); }
+    bool childrenAffectedByDirectAdjacentRules() const { return hasRareData() && rareDataChildrenAffectedByDirectAdjacentRules(); }
+    bool childrenAffectedByForwardPositionalRules() const { return hasRareData() && rareDataChildrenAffectedByForwardPositionalRules(); }
+    bool childrenAffectedByBackwardPositionalRules() const { return hasRareData() && rareDataChildrenAffectedByBackwardPositionalRules(); }
+    unsigned childIndex() const { return hasRareData() ? rareDataChildIndex() : 0; }
+
     void setStyleAffectedByEmpty();
-    bool styleAffectedByEmpty() const;
+    void setChildrenAffectedByHover(bool);
+    void setChildrenAffectedByActive(bool);
+    void setChildrenAffectedByDrag(bool);
+    void setChildrenAffectedByFirstChildRules();
+    void setChildrenAffectedByLastChildRules();
+    void setChildrenAffectedByDirectAdjacentRules();
+    void setChildrenAffectedByForwardPositionalRules();
+    void setChildrenAffectedByBackwardPositionalRules();
+    void setChildIndex(unsigned);
 
     void setIsInCanvasSubtree(bool);
     bool isInCanvasSubtree() const;
@@ -380,7 +404,6 @@ public:
     virtual bool isDefaultButtonForForm() const { return false; }
     virtual bool willValidate() const { return false; }
     virtual bool isValidFormControlElement() { return false; }
-    virtual bool hasUnacceptableValue() const { return false; }
     virtual bool isInRange() const { return false; }
     virtual bool isOutOfRange() const { return false; }
     virtual bool isFrameElementBase() const { return false; }
@@ -413,6 +436,11 @@ public:
     void webkitRequestFullscreen();
 #endif
 
+#if ENABLE(DIALOG_ELEMENT)
+    virtual bool isInTopLayer() const;
+    virtual void setIsInTopLayer(bool);
+#endif
+
 #if ENABLE(POINTER_LOCK)
     void webkitRequestPointerLock();
 #endif
@@ -420,7 +448,7 @@ public:
     virtual bool isSpellCheckingEnabled() const;
 
     PassRefPtr<WebKitAnimationList> webkitGetAnimations() const;
-    
+
     PassRefPtr<RenderStyle> styleForRenderer();
 
     RenderRegion* renderRegion() const;
@@ -513,6 +541,16 @@ private:
 
     QualifiedName m_tagName;
     virtual OwnPtr<NodeRareData> createRareData();
+    bool rareDataStyleAffectedByEmpty() const;
+    bool rareDataChildrenAffectedByHover() const;
+    bool rareDataChildrenAffectedByActive() const;
+    bool rareDataChildrenAffectedByDrag() const;
+    bool rareDataChildrenAffectedByFirstChildRules() const;
+    bool rareDataChildrenAffectedByLastChildRules() const;
+    bool rareDataChildrenAffectedByDirectAdjacentRules() const;
+    bool rareDataChildrenAffectedByForwardPositionalRules() const;
+    bool rareDataChildrenAffectedByBackwardPositionalRules() const;
+    unsigned rareDataChildIndex() const;
 
     SpellcheckAttributeState spellcheckAttributeState() const;
 
@@ -523,12 +561,15 @@ private:
 
     void createMutableAttributeData();
 
-private:
+    bool shouldInvalidateDistributionWhenAttributeChanged(ElementShadow*, const QualifiedName&, const AtomicString&);
+
     ElementRareData* elementRareData() const;
     ElementRareData* ensureElementRareData();
 
     void detachAllAttrNodesFromElement();
     void detachAttrNodeFromElementWithValue(Attr*, const AtomicString& value);
+
+    void createRendererIfNeeded();
 
     RefPtr<ElementAttributeData> m_attributeData;
 };
@@ -732,11 +773,14 @@ inline Attribute* Element::getAttributeItem(const QualifiedName& name)
 
 inline void Element::updateInvalidAttributes() const
 {
-    if (!isStyleAttributeValid())
+    if (!attributeData())
+        return;
+
+    if (attributeData()->m_styleAttributeIsDirty)
         updateStyleAttribute();
 
 #if ENABLE(SVG)
-    if (!areSVGAttributesValid())
+    if (attributeData()->m_animatedSVGAttributesAreDirty)
         updateAnimatedSVGAttribute(anyQName());
 #endif
 }

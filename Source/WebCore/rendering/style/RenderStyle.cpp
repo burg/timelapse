@@ -41,6 +41,7 @@
 #endif
 #include "WebCoreMemoryInstrumentation.h"
 #include <wtf/MemoryInstrumentationVector.h>
+#include <wtf/MemoryObjectInfo.h>
 #include <wtf/StdLibExtras.h>
 #include <algorithm>
 
@@ -60,8 +61,6 @@ struct SameSizeAsBorderValue {
 COMPILE_ASSERT(sizeof(BorderValue) == sizeof(SameSizeAsBorderValue), BorderValue_should_not_grow);
 
 struct SameSizeAsRenderStyle : public RefCounted<SameSizeAsRenderStyle> {
-    unsigned m_bitfields;
-
     void* dataRefs[7];
     void* ownPtrs[1];
 #if ENABLE(SVG)
@@ -206,6 +205,7 @@ void RenderStyle::copyNonInheritedFrom(const RenderStyle* other)
     noninherited_flags._page_break_before = other->noninherited_flags._page_break_before;
     noninherited_flags._page_break_after = other->noninherited_flags._page_break_after;
     noninherited_flags._page_break_inside = other->noninherited_flags._page_break_inside;
+    noninherited_flags.explicitInheritance = other->noninherited_flags.explicitInheritance;
 #if ENABLE(SVG)
     if (m_svgStyle != other->m_svgStyle)
         m_svgStyle.access()->copyNonInheritedFrom(other->m_svgStyle.get());
@@ -478,6 +478,7 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
             || rareInheritedData->hyphenationLimitAfter != other->rareInheritedData->hyphenationLimitAfter
             || rareInheritedData->hyphenationString != other->rareInheritedData->hyphenationString
             || rareInheritedData->locale != other->rareInheritedData->locale
+            || rareInheritedData->m_rubyPosition != other->rareInheritedData->m_rubyPosition
             || rareInheritedData->textEmphasisMark != other->rareInheritedData->textEmphasisMark
             || rareInheritedData->textEmphasisPosition != other->rareInheritedData->textEmphasisPosition
             || rareInheritedData->textEmphasisCustomMark != other->rareInheritedData->textEmphasisCustomMark
@@ -490,7 +491,8 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
             || rareInheritedData->m_imageResolution != other->rareInheritedData->m_imageResolution
 #endif
             || rareInheritedData->m_lineSnap != other->rareInheritedData->m_lineSnap
-            || rareInheritedData->m_lineAlign != other->rareInheritedData->m_lineAlign)
+            || rareInheritedData->m_lineAlign != other->rareInheritedData->m_lineAlign
+            || rareInheritedData->listStyleImage != other->rareInheritedData->listStyleImage)
             return StyleDifferenceLayout;
 
         if (!rareInheritedData->shadowDataEquivalent(*other->rareInheritedData.get()))
@@ -506,7 +508,6 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
 #endif
 
     if (inherited->line_height != other->inherited->line_height
-        || inherited->list_style_image != other->inherited->list_style_image
         || inherited->font != other->inherited->font
         || inherited->horizontal_border_spacing != other->inherited->horizontal_border_spacing
         || inherited->vertical_border_spacing != other->inherited->vertical_border_spacing
@@ -965,11 +966,11 @@ static float calcConstraintScaleFor(const IntRect& rect, const RoundedRect::Radi
     return factor;
 }
 
-StyleImage* RenderStyle::listStyleImage() const { return inherited->list_style_image.get(); }
+StyleImage* RenderStyle::listStyleImage() const { return rareInheritedData->listStyleImage.get(); }
 void RenderStyle::setListStyleImage(PassRefPtr<StyleImage> v)
 {
-    if (inherited->list_style_image != v)
-        inherited.access()->list_style_image = v;
+    if (rareInheritedData->listStyleImage != v)
+        rareInheritedData.access()->listStyleImage = v;
 }
 
 Color RenderStyle::color() const { return inherited->color; }

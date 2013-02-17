@@ -46,7 +46,6 @@
 #include "DOMSettableTokenList.h"
 #include "Document.h"
 #include "DocumentType.h"
-#include "DynamicNodeList.h"
 #include "Element.h"
 #include "ElementRareData.h"
 #include "ElementShadow.h"
@@ -68,6 +67,7 @@
 #include "InspectorCounters.h"
 #include "KeyboardEvent.h"
 #include "LabelsNodeList.h"
+#include "LiveNodeList.h"
 #include "Logging.h"
 #include "MouseEvent.h"
 #include "MutationEvent.h"
@@ -111,6 +111,10 @@
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
+
+#ifndef NDEBUG
+#include "RenderLayer.h"
+#endif
 
 #if ENABLE(GESTURE_EVENTS)
 #include "GestureEvent.h"
@@ -340,12 +344,6 @@ Node::StyleChange Node::diff(const RenderStyle* s1, const RenderStyle* s2, Docum
         ch = Inherit;
     else if (s1->hasExplicitlyInheritedProperties() || s2->hasExplicitlyInheritedProperties())
         ch = Inherit;
-
-    // For nth-child and other positional rules, treat styles as different if they have
-    // changed positionally in the DOM. This way subsequent sibling resolutions won't be confused
-    // by the wrong child index and evaluate to incorrect results.
-    if (ch == NoChange && s1->childIndex() != s2->childIndex())
-        ch = NoInherit;
 
     // If the pseudoStyles have changed, we want any StyleChange that is not NoChange
     // because setStyle will do the right thing with anything else.
@@ -950,6 +948,12 @@ bool Node::isMouseFocusable() const
     return isFocusable();
 }
 
+bool Node::documentFragmentIsShadowRoot() const
+{
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
 Node* Node::focusDelegate()
 {
     return this;
@@ -967,7 +971,7 @@ unsigned Node::nodeIndex() const
 template<unsigned type>
 bool shouldInvalidateNodeListCachesForAttr(const unsigned nodeListCounts[], const QualifiedName& attrName)
 {
-    if (nodeListCounts[type] && DynamicNodeListCacheBase::shouldInvalidateTypeOnAttributeChange(static_cast<NodeListInvalidationType>(type), attrName))
+    if (nodeListCounts[type] && LiveNodeListBase::shouldInvalidateTypeOnAttributeChange(static_cast<NodeListInvalidationType>(type), attrName))
         return true;
     return shouldInvalidateNodeListCachesForAttr<type + 1>(nodeListCounts, attrName);
 }
@@ -993,8 +997,8 @@ bool Document::shouldInvalidateNodeListCaches(const QualifiedName* attrName) con
 
 void Document::invalidateNodeListCaches(const QualifiedName* attrName)
 {
-    HashSet<DynamicNodeListCacheBase*>::iterator end = m_listsInvalidatedAtDocument.end();
-    for (HashSet<DynamicNodeListCacheBase*>::iterator it = m_listsInvalidatedAtDocument.begin(); it != end; ++it)
+    HashSet<LiveNodeListBase*>::iterator end = m_listsInvalidatedAtDocument.end();
+    for (HashSet<LiveNodeListBase*>::iterator it = m_listsInvalidatedAtDocument.begin(); it != end; ++it)
         (*it)->invalidateCache(attrName);
 }
 
@@ -1018,8 +1022,6 @@ void Node::invalidateNodeListCachesInAncestors(const QualifiedName* attrName, El
         NodeRareData* data = node->rareData();
         if (data->nodeLists())
             data->nodeLists()->invalidateCaches(attrName);
-        if (node->isElementNode())
-            static_cast<ElementRareData*>(data)->clearHTMLCollectionCaches(attrName);
     }
 }
 
@@ -1150,89 +1152,13 @@ void Node::checkSetPrefix(const AtomicString& prefix, ExceptionCode& ec)
     // Attribute-specific checks are in Attr::setPrefix().
 }
 
-static bool isChildTypeAllowed(Node* newParent, Node* child)
-{
-    if (child->nodeType() != Node::DOCUMENT_FRAGMENT_NODE) {
-        if (!newParent->childTypeAllowed(child->nodeType()))
-            return false;
-        return true;
-    }
-    
-    for (Node *n = child->firstChild(); n; n = n->nextSibling()) {
-        if (!newParent->childTypeAllowed(n->nodeType()))
-            return false;
-    }
-    return true;
-}
-
-bool Node::canReplaceChild(Node* newChild, Node*)
-{
-    return isChildTypeAllowed(this, newChild);
-}
-
-static void checkAcceptChild(Node* newParent, Node* newChild, ExceptionCode& ec)
-{
-    // Not mentioned in spec: throw NOT_FOUND_ERR if newChild is null
-    if (!newChild) {
-        ec = NOT_FOUND_ERR;
-        return;
-    }
-    
-    if (newParent->isReadOnlyNode()) {
-        ec = NO_MODIFICATION_ALLOWED_ERR;
-        return;
-    }
-
-    if (newChild->inDocument() && newChild->nodeType() == Node::DOCUMENT_TYPE_NODE) {
-        ec = HIERARCHY_REQUEST_ERR;
-        return;
-    }
-
-    // HIERARCHY_REQUEST_ERR: Raised if this node is of a type that does not allow children of the type of the
-    // newChild node, or if the node to append is one of this node's ancestors.
-
-    if (newChild == newParent || newParent->isDescendantOf(newChild)) {
-        ec = HIERARCHY_REQUEST_ERR;
-        return;
-    }
-}
-
-void Node::checkReplaceChild(Node* newChild, Node* oldChild, ExceptionCode& ec)
-{
-    if (!oldChild) {
-        ec = NOT_FOUND_ERR;
-        return;
-    }
-
-    checkAcceptChild(this, newChild, ec);
-    if (ec)
-        return;
-
-    if (!canReplaceChild(newChild, oldChild)) {
-        ec = HIERARCHY_REQUEST_ERR;
-        return;
-    }
-}
-
-void Node::checkAddChild(Node *newChild, ExceptionCode& ec)
-{
-    checkAcceptChild(this, newChild, ec);
-    if (ec)
-        return;
-    
-    if (!isChildTypeAllowed(this, newChild)) {
-        ec = HIERARCHY_REQUEST_ERR;
-        return;
-    }
-}
-
 bool Node::isDescendantOf(const Node *other) const
 {
     // Return true if other is an ancestor of this, otherwise false
     if (!other || !other->hasChildNodes() || inDocument() != other->inDocument())
         return false;
-    if (other == other->document())
-        return document() == other && this != document() && inDocument();
+    if (other->isDocumentNode())
+        return document() == other && !isDocumentNode() && inDocument();
     for (const ContainerNode* n = parentNode(); n; n = n->parentNode()) {
         if (n == other)
             return true;
@@ -1265,7 +1191,7 @@ void Node::attach()
 
     // FIXME: This is O(N^2) for the innerHTML case, where all children are replaced at once (and not attached).
     // If this node got a renderer it may be the previousRenderer() of sibling text nodes and thus affect the
-    // result of Text::rendererIsNeeded() for those nodes.
+    // result of Text::textRendererIsNeeded() for those nodes.
     if (renderer()) {
         for (Node* next = nextSibling(); next; next = next->nextSibling()) {
             if (next->renderer())
@@ -1273,7 +1199,7 @@ void Node::attach()
             if (!next->attached())
                 break;  // Assume this means none of the following siblings are attached.
             if (next->isTextNode())
-                next->createRendererIfNeeded();
+                toText(next)->createTextRendererIfNeeded();
         }
     }
 
@@ -1306,9 +1232,13 @@ void Node::detach()
 #ifndef NDEBUG
         for (Node* node = this; node; node = node->traverseNextNode(this)) {
             RenderObject* renderer = node->renderer();
-            // RenderFlowThread removes some elements from the regular tree
+            // RenderFlowThread and the top layer remove elements from the regular tree
             // hierarchy. They will be cleaned up when we call detach on them.
+#if ENABLE(DIALOG_ELEMENT)
+            ASSERT(!renderer || renderer->inRenderFlowThread() || (renderer->enclosingLayer()->isInTopLayerSubtree()));
+#else
             ASSERT(!renderer || renderer->inRenderFlowThread());
+#endif
         }
 #endif
     }
@@ -1387,22 +1317,6 @@ Node *Node::nextLeafNode() const
 ContainerNode* Node::parentNodeForRenderingAndStyle()
 {
     return NodeRenderingContext(this).parentNodeForRenderingAndStyle();
-}
-
-void Node::createRendererIfNeeded()
-{
-    NodeRendererFactory(this).createRendererIfNeeded();
-}
-
-bool Node::rendererIsNeeded(const NodeRenderingContext& context)
-{
-    return (document()->documentElement() == this) || (context.style()->display() != NONE);
-}
-
-RenderObject* Node::createRenderer(RenderArena*, RenderStyle*)
-{
-    ASSERT_NOT_REACHED();
-    return 0;
 }
 
 RenderStyle* Node::virtualComputedStyle(PseudoId pseudoElementSpecifier)
@@ -1561,8 +1475,8 @@ PassRefPtr<NodeList> Node::getElementsByTagName(const AtomicString& localName)
         return 0;
 
     if (document()->isHTMLDocument())
-        return ensureRareData()->ensureNodeLists()->addCacheWithAtomicName<HTMLTagNodeList>(this, DynamicNodeList::TagNodeListType, localName);
-    return ensureRareData()->ensureNodeLists()->addCacheWithAtomicName<TagNodeList>(this, DynamicNodeList::TagNodeListType, localName);
+        return ensureRareData()->ensureNodeLists()->addCacheWithAtomicName<HTMLTagNodeList>(this, TagNodeListType, localName);
+    return ensureRareData()->ensureNodeLists()->addCacheWithAtomicName<TagNodeList>(this, TagNodeListType, localName);
 }
 
 PassRefPtr<NodeList> Node::getElementsByTagNameNS(const AtomicString& namespaceURI, const AtomicString& localName)
@@ -1578,18 +1492,18 @@ PassRefPtr<NodeList> Node::getElementsByTagNameNS(const AtomicString& namespaceU
 
 PassRefPtr<NodeList> Node::getElementsByName(const String& elementName)
 {
-    return ensureRareData()->ensureNodeLists()->addCacheWithAtomicName<NameNodeList>(this, DynamicNodeList::NameNodeListType, elementName);
+    return ensureRareData()->ensureNodeLists()->addCacheWithAtomicName<NameNodeList>(this, NameNodeListType, elementName);
 }
 
 PassRefPtr<NodeList> Node::getElementsByClassName(const String& classNames)
 {
-    return ensureRareData()->ensureNodeLists()->addCacheWithName<ClassNodeList>(this, DynamicNodeList::ClassNodeListType, classNames);
+    return ensureRareData()->ensureNodeLists()->addCacheWithName<ClassNodeList>(this, ClassNodeListType, classNames);
 }
 
 PassRefPtr<RadioNodeList> Node::radioNodeList(const AtomicString& name)
 {
     ASSERT(hasTagName(formTag) || hasTagName(fieldsetTag));
-    return ensureRareData()->ensureNodeLists()->addCacheWithAtomicName<RadioNodeList>(this, DynamicNodeList::RadioNodeListType, name);
+    return ensureRareData()->ensureNodeLists()->addCacheWithAtomicName<RadioNodeList>(this, RadioNodeListType, name);
 }
 
 PassRefPtr<Element> Node::querySelector(const AtomicString& selectors, ExceptionCode& ec)
@@ -2005,7 +1919,7 @@ unsigned short Node::compareDocumentPosition(Node* otherNode)
     // If the nodes have different owning documents, they must be disconnected.  Note that we avoid
     // comparing Attr nodes here, since they return false from inDocument() all the time (which seems like a bug).
     if (start1->inDocument() != start2->inDocument() ||
-        start1->document() != start2->document())
+        start1->treeScope() != start2->treeScope())
         return DOCUMENT_POSITION_DISCONNECTED | DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC;
 
     // We need to find a common ancestor container, and then compare the indices of the two immediate children.
@@ -2614,9 +2528,9 @@ bool Node::dispatchGestureEvent(const PlatformGestureEvent& event)
 }
 #endif
 
-void Node::dispatchSimulatedClick(PassRefPtr<Event> event, bool sendMouseEvents, bool showPressedLook)
+void Node::dispatchSimulatedClick(Event* underlyingEvent, SimulatedClickMouseEventOptions eventOptions, SimulatedClickVisualOptions visualOptions)
 {
-    EventDispatcher::dispatchSimulatedClick(this, event, sendMouseEvents, showPressedLook);
+    EventDispatcher::dispatchSimulatedClick(this, underlyingEvent, eventOptions, visualOptions);
 }
 
 bool Node::dispatchBeforeLoadEvent(const String& sourceURL)
@@ -2781,7 +2695,7 @@ void Node::setItemType(const String& value)
 
 PassRefPtr<PropertyNodeList> Node::propertyNodeList(const String& name)
 {
-    return ensureRareData()->ensureNodeLists()->addCacheWithName<PropertyNodeList>(this, DynamicNodeList::PropertyNodeListType, name);
+    return ensureRareData()->ensureNodeLists()->addCacheWithName<PropertyNodeList>(this, PropertyNodeListType, name);
 }
 #endif
 
@@ -2822,22 +2736,6 @@ void Node::textRects(Vector<IntRect>& rects) const
     WebCore::ExceptionCode ec = 0;
     range->selectNodeContents(const_cast<Node*>(this), ec);
     range->textRects(rects);
-}
-
-unsigned Node::connectedSubframeCount() const
-{
-    return hasRareData() ? rareData()->connectedSubframeCount() : 0;
-}
-
-void Node::incrementConnectedSubframeCount()
-{
-    ASSERT(isContainerNode());
-    ensureRareData()->incrementConnectedSubframeCount();
-}
-
-void Node::decrementConnectedSubframeCount()
-{
-    rareData()->decrementConnectedSubframeCount();
 }
 
 void Node::registerScopedHTMLStyleChild()

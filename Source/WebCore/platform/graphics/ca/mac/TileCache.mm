@@ -29,6 +29,7 @@
 #import "IntRect.h"
 #import "PlatformCALayer.h"
 #import "Region.h"
+#import "LayerPool.h"
 #import "WebLayer.h"
 #import "WebTileCacheLayer.h"
 #import "WebTileLayer.h"
@@ -295,7 +296,7 @@ IntRect TileCache::rectForTileIndex(const TileIndex& tileIndex) const
     return rect;
 }
 
-void TileCache::getTileIndexRangeForRect(const IntRect& rect, TileIndex& topLeft, TileIndex& bottomRight)
+void TileCache::getTileIndexRangeForRect(const IntRect& rect, TileIndex& topLeft, TileIndex& bottomRight) const
 {
     IntRect clampedRect = bounds();
     clampedRect.scale(m_scale);
@@ -419,7 +420,7 @@ void TileCache::revalidateTiles()
     // the tiles that are outside the coverage rect. When we know that we're going to be scrolling up,
     // we might want to remove the ones below the coverage rect but keep the ones above.
     for (size_t i = 0; i < tilesToRemove.size(); ++i)
-        m_tiles.remove(tilesToRemove[i]);
+        LayerPool::sharedPool()->addLayer(m_tiles.take(tilesToRemove[i]));
 
     TileIndex topLeft;
     TileIndex bottomRight;
@@ -462,6 +463,16 @@ void TileCache::revalidateTiles()
     platformLayer->owner()->platformCALayerDidCreateTiles(dirtyRects);
 }
 
+IntRect TileCache::tileGridExtent() const
+{
+    TileIndex topLeft;
+    TileIndex bottomRight;
+    getTileIndexRangeForRect(m_tileCoverageRect, topLeft, bottomRight);
+
+    // Return index of top, left tile and the number of tiles across and down.
+    return IntRect(topLeft.x(), topLeft.y(), bottomRight.x() - topLeft.x() + 1, bottomRight.y() - topLeft.y() + 1);
+}
+
 // Return the rect in layer coords, not tile coords.
 IntRect TileCache::tileCoverageRect() const
 {
@@ -477,7 +488,13 @@ WebTileLayer* TileCache::tileLayerAtIndex(const TileIndex& index) const
 
 RetainPtr<WebTileLayer> TileCache::createTileLayer(const IntRect& tileRect)
 {
-    RetainPtr<WebTileLayer> layer = adoptNS([[WebTileLayer alloc] init]);
+    RetainPtr<WebTileLayer> layer = LayerPool::sharedPool()->takeLayerWithSize(tileRect.size());
+    if (layer) {
+        // If we were able to restore a layer from the LayerPool, we should call setNeedsDisplay to
+        // ensure we avoid stale content.
+        [layer setNeedsDisplay];
+    } else
+        layer = adoptNS([[WebTileLayer alloc] init]);
     [layer.get() setAnchorPoint:CGPointZero];
     [layer.get() setFrame:tileRect];
     [layer.get() setTileCache:this];

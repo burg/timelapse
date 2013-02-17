@@ -29,42 +29,125 @@
 
 #include "ImageDecoder.h"
 #include "ImageDecodingStore.h"
+#include "ScaledImageFragment.h"
 #include "SharedBuffer.h"
 
-namespace {
-
-// An unique ID for an image file.
-int s_nextImageId = 0;
-
-} // namespace
+#include "skia/ext/image_operations.h"
 
 namespace WebCore {
 
-ImageFrameGenerator::ImageFrameGenerator(PassOwnPtr<ImageDecoder> decoder, PassRefPtr<SharedBuffer> data, bool allDataReceived)
-    : m_decoder(decoder)
-{
-    m_fullSize = SkISize::Make(m_decoder->size().width(), m_decoder->size().height());
-    m_imageId = s_nextImageId++;
+namespace {
 
+skia::ImageOperations::ResizeMethod resizeMethod()
+{
+    return skia::ImageOperations::RESIZE_LANCZOS3;
+}
+
+} // namespace
+
+ImageFrameGenerator::ImageFrameGenerator(const SkISize& fullSize, PassRefPtr<SharedBuffer> data, bool allDataReceived)
+    : m_fullSize(fullSize)
+    , m_allDataReceived(false)
+{
     setData(data, allDataReceived);
 }
 
 ImageFrameGenerator::~ImageFrameGenerator()
 {
-    if (ImageDecodingStore::instanceOnMainThread())
-        ImageDecodingStore::instanceOnMainThread()->frameGeneratorBeingDestroyed(this);
-}
-
-ImageDecoder* ImageFrameGenerator::decoder()
-{
-    return m_decoder.get();
+    // TODO: Call ImageDecodingStore to remove all cache entries indexed
+    // by this object.
 }
 
 void ImageFrameGenerator::setData(PassRefPtr<SharedBuffer> data, bool allDataReceived)
 {
-    m_data = data;
-    if (m_decoder)
-        m_decoder->setData(m_data.get(), allDataReceived);
+    // FIXME: Doing a full copy is expensive, instead copy only new data.
+    RefPtr<SharedBuffer> dataCopy = data->copy();
+
+    MutexLocker lock(m_dataMutex);
+    m_data = dataCopy;
+    m_allDataReceived = allDataReceived;
+}
+
+const ScaledImageFragment* ImageFrameGenerator::decodeAndScale(const SkISize& scaledSize)
+{
+    // Prevents concurrent decode or scale operations on the same image data.
+    // Multiple LazyDecodingPixelRefs can call this method at the same time.
+    MutexLocker lock(m_decodeMutex);
+    const ScaledImageFragment* cachedImage = 0;
+
+    cachedImage = tryToLockCache(scaledSize);
+    if (cachedImage)
+        return cachedImage;
+
+    cachedImage = tryToScale(0, scaledSize);
+    if (cachedImage)
+        return cachedImage;
+
+    cachedImage = tryToDecodeAndScale(scaledSize);
+    if (cachedImage)
+        return cachedImage;
+    return 0;
+}
+
+const ScaledImageFragment* ImageFrameGenerator::tryToLockCache(const SkISize& scaledSize)
+{
+    return ImageDecodingStore::instance()->lockCompleteCache(this, scaledSize);
+}
+
+const ScaledImageFragment* ImageFrameGenerator::tryToScale(const ScaledImageFragment* fullSizeImage, const SkISize& scaledSize)
+{
+    // If the requested scaled size is the same as the full size then exit
+    // early. This saves a cache lookup.
+    if (scaledSize == m_fullSize)
+        return 0;
+
+    if (!fullSizeImage)
+        fullSizeImage = ImageDecodingStore::instance()->lockCompleteCache(this, m_fullSize);
+
+    if (!fullSizeImage)
+        return 0;
+
+    SkBitmap scaledBitmap = skia::ImageOperations::Resize(
+        fullSizeImage->bitmap(), resizeMethod(), scaledSize.width(), scaledSize.height());
+    OwnPtr<ScaledImageFragment> scaledImage = ScaledImageFragment::create(scaledSize, scaledBitmap, fullSizeImage->isComplete());
+
+    ImageDecodingStore::instance()->unlockCache(this, fullSizeImage);
+    return ImageDecodingStore::instance()->insertAndLockCache(this, scaledImage.release());
+}
+
+const ScaledImageFragment* ImageFrameGenerator::tryToDecodeAndScale(const SkISize& scaledSize)
+{
+    RefPtr<SharedBuffer> data;
+    bool allDataReceived = false;
+    {
+        MutexLocker lock(m_dataMutex);
+
+        // FIXME: We should do a shallow copy instead. Now we're restricted by the API of SharedBuffer.
+        data = m_data->copy();
+        allDataReceived = m_allDataReceived;
+    }
+
+    OwnPtr<ImageDecoder> decoder(adoptPtr(ImageDecoder::create(*data.get(), ImageSource::AlphaPremultiplied, ImageSource::GammaAndColorProfileApplied)));
+    if (!decoder && m_imageDecoderFactory)
+        decoder = m_imageDecoderFactory->create();
+    if (!decoder)
+        return 0;
+
+    decoder->setData(data.get(), allDataReceived);
+    ImageFrame* frame = decoder->frameBufferAtIndex(0);
+    if (!frame || frame->status() == ImageFrame::FrameEmpty)
+        return 0;
+
+    bool isComplete = frame->status() == ImageFrame::FrameComplete;
+    SkBitmap fullSizeBitmap = frame->getSkBitmap();
+    ASSERT(fullSizeBitmap.width() == m_fullSize.width() && fullSizeBitmap.height() == m_fullSize.height());
+
+    const ScaledImageFragment* fullSizeImage = ImageDecodingStore::instance()->insertAndLockCache(
+        this, ScaledImageFragment::create(m_fullSize, fullSizeBitmap, isComplete));
+
+    if (m_fullSize == scaledSize)
+        return fullSizeImage;
+    return tryToScale(fullSizeImage, scaledSize);
 }
 
 } // namespace WebCore

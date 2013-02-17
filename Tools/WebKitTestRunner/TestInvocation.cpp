@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010, 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012 Intel Corporation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -104,7 +105,7 @@ TestInvocation::TestInvocation(const std::string& pathOrURL)
     , m_gotFinalMessage(false)
     , m_gotRepaint(false)
     , m_error(false)
-    , m_webProcessIsUnrensponsive(false)
+    , m_webProcessIsUnresponsive(false)
 {
 }
 
@@ -165,9 +166,31 @@ static void updateTiledDrawingForCurrentTest(const char* pathOrURL)
 #endif
 }
 
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+static bool shouldUseFixedLayout(const char* pathOrURL)
+{
+    return strstr(pathOrURL, "device-adapt/") || strstr(pathOrURL, "device-adapt\\");
+}
+#endif
+
+static void updateLayoutType(const char* pathOrURL)
+{
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+    WKRetainPtr<WKMutableDictionaryRef> viewOptions = adoptWK(WKMutableDictionaryCreate());
+    WKRetainPtr<WKStringRef> useFixedLayoutKey = adoptWK(WKStringCreateWithUTF8CString("UseFixedLayout"));
+    WKRetainPtr<WKBooleanRef> useFixedLayoutValue = adoptWK(WKBooleanCreate(shouldUseFixedLayout(pathOrURL)));
+    WKDictionaryAddItem(viewOptions.get(), useFixedLayoutKey.get(), useFixedLayoutValue.get());
+
+    TestController::shared().ensureViewSupportsOptions(viewOptions.get());
+#else
+    UNUSED_PARAM(pathOrURL);
+#endif
+}
+
 void TestInvocation::invoke()
 {
     sizeWebViewForCurrentTest(m_pathOrURL.c_str());
+    updateLayoutType(m_pathOrURL.c_str());
     updateTiledDrawingForCurrentTest(m_pathOrURL.c_str());
 
     WKRetainPtr<WKStringRef> messageName = adoptWK(WKStringCreateWithUTF8CString("BeginTest"));
@@ -190,7 +213,7 @@ void TestInvocation::invoke()
     TestController::shared().runUntil(m_gotInitialResponse, TestController::ShortTimeout);
     if (!m_gotInitialResponse) {
         m_errorMessage = "Timed out waiting for initial response from web process\n";
-        m_webProcessIsUnrensponsive = true;
+        m_webProcessIsUnresponsive = true;
         goto end;
     }
     if (m_error)
@@ -206,7 +229,7 @@ void TestInvocation::invoke()
     TestController::shared().runUntil(m_gotFinalMessage, TestController::shared().useWaitToDumpWatchdogTimer() ? TestController::LongTimeout : TestController::NoTimeout);
     if (!m_gotFinalMessage) {
         m_errorMessage = "Timed out waiting for final message from web process\n";
-        m_webProcessIsUnrensponsive = true;
+        m_webProcessIsUnresponsive = true;
         goto end;
     }
     if (m_error)
@@ -220,7 +243,7 @@ end:
         WKInspectorClose(WKPageGetInspector(TestController::shared().mainWebView()->page()));
 #endif // ENABLE(INSPECTOR)
 
-    if (m_webProcessIsUnrensponsive)
+    if (m_webProcessIsUnresponsive)
         dumpWebProcessUnresponsiveness();
     else if (!TestController::shared().resetStateToConsistentValues()) {
         m_errorMessage = "Timed out loading about:blank before the next test";

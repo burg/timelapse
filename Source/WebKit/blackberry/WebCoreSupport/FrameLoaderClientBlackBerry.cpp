@@ -34,6 +34,7 @@
 #include "CredentialTransformData.h"
 #include "DumpRenderTreeClient.h"
 #include "ExternalExtension.h"
+#include "FrameLoadRequest.h"
 #include "FrameNetworkingContextBlackBerry.h"
 #include "FrameView.h"
 #include "HTMLFormElement.h"
@@ -74,7 +75,6 @@
 
 #include <BlackBerryPlatformExecutableMessage.h>
 #include <BlackBerryPlatformLog.h>
-#include <BlackBerryPlatformMediaDocument.h>
 #include <BlackBerryPlatformMessageClient.h>
 #include <BlackBerryPlatformScreen.h>
 #include <JavaScriptCore/APICast.h>
@@ -404,8 +404,7 @@ PassRefPtr<DocumentLoader> FrameLoaderClientBlackBerry::createDocumentLoader(con
             // The first 6 letters is "about:"
             String aboutWhat = request.url().string().substring(6);
             source = aboutData(aboutWhat);
-        } else if (request.url().protocolIs("rtsp"))
-            source = BlackBerry::Platform::mediaDocument(request.url().string());
+        }
 
         if (!source.isEmpty()) {
             // Always ignore existing substitute data if any.
@@ -752,7 +751,7 @@ void FrameLoaderClientBlackBerry::dispatchDidFailProvisionalLoad(const ResourceE
     }
 
     m_loadingErrorPage = true;
-    m_frame->loader()->load(originalRequest, errorData, false);
+    m_frame->loader()->load(FrameLoadRequest(m_frame, originalRequest, errorData));
 }
 
 void FrameLoaderClientBlackBerry::dispatchWillSubmitForm(FramePolicyFunction function, PassRefPtr<FormState>)
@@ -768,7 +767,7 @@ void FrameLoaderClientBlackBerry::dispatchWillSendSubmitEvent(PassRefPtr<FormSta
             m_webPagePrivate->m_autofillManager->saveTextFields(prpFormState->form());
 #if ENABLE(BLACKBERRY_CREDENTIAL_PERSIST)
         if (m_webPagePrivate->m_webSettings->isCredentialAutofillEnabled())
-            credentialManager().saveCredentialIfConfirmed(m_webPagePrivate, CredentialTransformData(prpFormState->form()));
+            credentialManager().saveCredentialIfConfirmed(m_webPagePrivate, CredentialTransformData(prpFormState->form(), true));
 #endif
     }
 }

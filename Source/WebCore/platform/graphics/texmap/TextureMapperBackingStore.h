@@ -50,23 +50,18 @@ protected:
 class TextureMapperSurfaceBackingStore : public TextureMapperBackingStore {
 public:
     static PassRefPtr<TextureMapperSurfaceBackingStore> create() { return adoptRef(new TextureMapperSurfaceBackingStore); }
-    void setGraphicsSurface(const GraphicsSurfaceToken&, const IntSize& surfaceSize, uint32_t frontBuffer);
-    PassRefPtr<WebCore::GraphicsSurface> graphicsSurface() const { return m_graphicsSurface; }
+    void setGraphicsSurface(PassRefPtr<GraphicsSurface>);
+    void swapBuffersIfNeeded(uint32_t frontBuffer);
     virtual PassRefPtr<BitmapTexture> texture() const;
     virtual void paintToTextureMapper(TextureMapper*, const FloatRect&, const TransformationMatrix&, float, BitmapTexture*);
     virtual ~TextureMapperSurfaceBackingStore() { }
-
-protected:
-    void setSurface(PassRefPtr<GraphicsSurface>);
 
 private:
     TextureMapperSurfaceBackingStore()
         : TextureMapperBackingStore()
         { }
 
-    GraphicsSurfaceToken m_graphicsSurfaceToken;
-    RefPtr<WebCore::GraphicsSurface> m_graphicsSurface;
-    IntSize m_graphicsSurfaceSize;
+    RefPtr<GraphicsSurface> m_graphicsSurface;
 };
 #endif
 
@@ -81,7 +76,7 @@ public:
     virtual void paint(TextureMapper*, const TransformationMatrix&, float, BitmapTexture*, const unsigned exposedEdges);
     virtual ~TextureMapperTile() { }
 
-    TextureMapperTile(const FloatRect& rect)
+    explicit TextureMapperTile(const FloatRect& rect)
         : m_rect(rect)
     {
     }
@@ -93,23 +88,22 @@ private:
 
 class TextureMapperTiledBackingStore : public TextureMapperBackingStore {
 public:
-    void updateContentsFromLayer(TextureMapper*, GraphicsLayer*, const IntRect&);
-    virtual ~TextureMapperTiledBackingStore() { }
-    virtual void paintToTextureMapper(TextureMapper*, const FloatRect&, const TransformationMatrix&, float, BitmapTexture*);
-    virtual PassRefPtr<BitmapTexture> texture() const;
-    void updateContents(TextureMapper*, Image*, const FloatSize&, const IntRect&, BitmapTexture::UpdateContentsFlag);
-    void updateContents(TextureMapper* textureMapper, Image* image, BitmapTexture::UpdateContentsFlag updateContentsFlag) { updateContents(textureMapper, image, image->size(), image->rect(), updateContentsFlag); }
-    inline FloatRect rect() const { return FloatRect(FloatPoint::zero(), m_size); }
     static PassRefPtr<TextureMapperTiledBackingStore> create() { return adoptRef(new TextureMapperTiledBackingStore); }
-    void setContentsToImage(Image* image) { m_image = image; }
-    void updateContentsFromImageIfNeeded(TextureMapper*);
+    virtual ~TextureMapperTiledBackingStore() { }
 
+    virtual PassRefPtr<BitmapTexture> texture() const OVERRIDE;
+    virtual void paintToTextureMapper(TextureMapper*, const FloatRect&, const TransformationMatrix&, float, BitmapTexture*) OVERRIDE;
+    void updateContents(TextureMapper*, Image*, const FloatSize&, const IntRect&, BitmapTexture::UpdateContentsFlag);
+
+    void setContentsToImage(Image* image) { m_image = image; }
     void setShowDebugBorders(bool drawsDebugBorders) { m_drawsDebugBorders = drawsDebugBorders; }
     void setDebugBorder(const Color&, float width);
 
 private:
     TextureMapperTiledBackingStore();
     void createOrDestroyTilesIfNeeded(const FloatSize& backingStoreSize, const IntSize& tileSize, bool hasAlpha);
+    void updateContentsFromImageIfNeeded(TextureMapper*);
+    inline FloatRect rect() const { return FloatRect(FloatPoint::zero(), m_size); }
 
     Vector<TextureMapperTile> m_tiles;
     FloatSize m_size;

@@ -525,6 +525,7 @@ public:
 #endif
 
     void setMediaVolume(float);
+    void setMayStartMediaWhenInWindow(bool);
 
     bool mainFrameHasCustomRepresentation() const;
 
@@ -780,6 +781,8 @@ private:
     void changeSelectedIndex(int32_t index);
     void setCanStartMediaTimerFired();
 
+    bool canHandleUserEvents() const;
+
     static bool platformCanHandleRequest(const WebCore::ResourceRequest&);
 
     OwnPtr<WebCore::Page> m_page;
@@ -851,6 +854,7 @@ private:
 #endif
     
     WebCore::RunLoop::Timer<WebPage> m_setCanStartMediaTimer;
+    bool m_mayStartMediaWhenInWindow;
 
     HashMap<uint64_t, RefPtr<WebUndoStep> > m_undoStepMap;
 
@@ -945,6 +949,7 @@ private:
     WebInspectorClient* m_inspectorClient;
 
     HashSet<String, CaseFoldingHash> m_mimeTypesWithCustomRepresentations;
+    WebCore::Color m_backgroundColor;
 };
 
 } // namespace WebKit

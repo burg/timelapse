@@ -34,27 +34,25 @@ class GtkAuthenticationDialog {
     WTF_MAKE_FAST_ALLOCATED;
 
 public:
+    GtkAuthenticationDialog(const AuthenticationChallenge&);
     GtkAuthenticationDialog(GtkWindow*, const AuthenticationChallenge&);
-    ~GtkAuthenticationDialog();
-
+    virtual ~GtkAuthenticationDialog() { }
     void show();
-
-private:
     void destroy();
-    void authenticate();
-    void savePassword();
-    static void savePasswordCallback(SoupMessage*, GtkAuthenticationDialog*);
-    static void authenticationDialogResponseCallback(GtkWidget*, gint responseID, GtkAuthenticationDialog*);
 
-    AuthenticationChallenge m_challenge;
+protected:
+    void createContentsInContainer(GtkWidget* container);
+    virtual void authenticate(const Credential&);
     GtkWidget* m_dialog;
     GtkWidget* m_loginEntry;
     GtkWidget* m_passwordEntry;
     GtkWidget* m_rememberCheckButton;
-    bool m_isSavingPassword;
-    unsigned long m_savePasswordHandler;
-    CString m_username;
-    CString m_password;
+    GtkWidget* m_okayButton;
+    GtkWidget* m_cancelButton;
+
+private:
+    static void buttonClickedCallback(GtkWidget*, GtkAuthenticationDialog*);
+    AuthenticationChallenge m_challenge;
 };
 
 } // namespace WebCore

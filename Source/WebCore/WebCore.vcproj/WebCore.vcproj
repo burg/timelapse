@@ -6990,6 +6990,62 @@
 				>
 			</File>
 			<File
+				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSHTMLFormControlsCollection.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_All|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Production|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSHTMLFormControlsCollection.h"
+				>
+			</File>
+			<File
 				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSHTMLFormElement.cpp"
 				>
 				<FileConfiguration
@@ -23122,6 +23178,62 @@
 				>
 			</File>
 			<File
+				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSWebKitCSSMixFunctionValue.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_All|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Production|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSWebKitCSSMixFunctionValue.h"
+				>
+			</File>
+			<File
 				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSWebKitCSSRegionRule.cpp"
 				>
 				<FileConfiguration
@@ -26850,6 +26962,18 @@
 				>
 			</File>
 			<File
+				RelativePath="..\page\DeviceClient.h"
+				>
+			</File>
+			<File
+				RelativePath="..\page\DeviceController.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\page\DeviceController.h"
+				>
+			</File>
+			<File
 				RelativePath="..\page\DiagnosticLoggingKeys.cpp"
 				>
 			</File>
@@ -27167,6 +27291,10 @@
 			</File>
 			<File
 				RelativePath="..\page\PerformanceTiming.h"
+				>
+			</File>
+			<File
+				RelativePath="..\page\PoppupOpeningObserver.h"
 				>
 			</File>
 			<File
@@ -27515,6 +27643,10 @@
 			</File>
 			<File
 				RelativePath="..\loader\FrameLoaderTypes.h"
+				>
+			</File>
+			<File
+				RelativePath="..\loader\FrameLoadRequest.cpp"
 				>
 			</File>
 			<File
@@ -28169,6 +28301,14 @@
 					>
 				</File>
 				<File
+					RelativePath="..\loader\cache\CachedResourceRequestInitiators.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\loader\cache\CachedResourceRequestInitiators.h"
+					>
+				</File>
+				<File
 					RelativePath="..\loader\cache\CachedScript.cpp"
 					>
 				</File>
@@ -28194,6 +28334,10 @@
 				</File>
 				<File
 					RelativePath="..\loader\cache\CachedSVGDocument.h"
+					>
+				</File>
+				<File
+					RelativePath="..\loader\cache\CachedSVGDocumentReference.h"
 					>
 				</File>
 				<File
@@ -38038,6 +38182,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\css\ViewportStyleResolver.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\css\ViewportStyleResolver.h"
+				>
+			</File>
+			<File
 				RelativePath="..\css\WebKitCSSArrayFunctionValue.cpp"
 				>
 			</File>
@@ -45355,6 +45507,10 @@
 					>
 				</File>
 				<File
+				    RelativePath="..\rendering\style\ExclusionShapeValue.h"
+				    >
+				</File>
+				<File
 					RelativePath="..\rendering\style\FillLayer.cpp"
 					>
 					<FileConfiguration
@@ -45408,6 +45564,10 @@
 				</File>
 				<File
 					RelativePath="..\rendering\style\FillLayer.h"
+					>
+				</File>
+				<File
+					RelativePath="..\rendering\style\GridPosition.h"
 					>
 				</File>
 				<File
@@ -46688,6 +46848,10 @@
 				</File>
 				<File
 					RelativePath="..\rendering\style\StyleVisualData.h"
+					>
+				</File>
+				<File
+					RelativePath="..\rendering\style\GridTrackSize.h"
 					>
 				</File>
 				<File
@@ -50977,63 +51141,7 @@
 				RelativePath="..\dom\DynamicNodeList.h"
 				>
 			</File>
-			<File
-				RelativePath="..\dom\EditingText.cpp"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug_Cairo_CFLite|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release_Cairo_CFLite|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug_All|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Production|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\dom\EditingText.h"
-				>
-			</File>
-			<File
+            <File
 				RelativePath="..\dom\Element.cpp"
 				>
 				<FileConfiguration
@@ -54303,6 +54411,10 @@
 			</File>
 			<File
 				RelativePath="..\dom\SelectorQuery.h"
+				>
+			</File>
+			<File
+				RelativePath="..\dom\SimulatedClickOptions.h"
 				>
 			</File>
 			<File
@@ -60482,11 +60594,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\html\HTMLFormCollection.cpp"
+				RelativePath="..\html\HTMLFormControlsCollection.cpp"
 				>
 			</File>
 			<File
-				RelativePath="..\html\HTMLFormCollection.h"
+				RelativePath="..\html\HTMLFormControlsCollection.h"
 				>
 			</File>
 			<File
@@ -68029,6 +68141,58 @@
 					>
 				</File>
 				<File
+					RelativePath="..\bindings\js\JSHTMLFormControlsCollectionCustom.cpp"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug_Cairo_CFLite|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release_Cairo_CFLite|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug_All|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Production|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
 					RelativePath="..\bindings\js\JSHTMLFormElementCustom.cpp"
 					>
 					<FileConfiguration
@@ -72269,10 +72433,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\bindings\scripts\IDLStructure.pm"
-					>
-				</File>
-				<File
 					RelativePath="..\bindings\scripts\preprocess-idls.pl"
 					>
 				</File>
@@ -76374,6 +76534,10 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\ObjectPropertiesSection.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\OverridesView.js"
 					>
 				</File>
 				<File

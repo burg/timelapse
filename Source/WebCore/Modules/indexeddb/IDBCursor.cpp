@@ -124,7 +124,7 @@ IDBAny* IDBCursor::source() const
     return m_source.get();
 }
 
-PassRefPtr<IDBRequest> IDBCursor::update(ScriptExecutionContext* context, ScriptValue& value, ExceptionCode& ec)
+PassRefPtr<IDBRequest> IDBCursor::update(ScriptState* state, ScriptValue& value, ExceptionCode& ec)
 {
     IDB_TRACE("IDBCursor::update");
 
@@ -145,14 +145,14 @@ PassRefPtr<IDBRequest> IDBCursor::update(ScriptExecutionContext* context, Script
     const IDBKeyPath& keyPath = objectStore->metadata().keyPath;
     const bool usesInLineKeys = !keyPath.isNull();
     if (usesInLineKeys) {
-        RefPtr<IDBKey> keyPathKey = createIDBKeyFromScriptValueAndKeyPath(value, keyPath);
+        RefPtr<IDBKey> keyPathKey = createIDBKeyFromScriptValueAndKeyPath(m_request->requestState(), value, keyPath);
         if (!keyPathKey || !keyPathKey->isEqual(m_currentPrimaryKey.get())) {
             ec = IDBDatabaseException::DATA_ERR;
             return 0;
         }
     }
 
-    return objectStore->put(IDBObjectStoreBackendInterface::CursorUpdate, IDBAny::create(this), context, value, m_currentPrimaryKey, ec);
+    return objectStore->put(IDBObjectStoreBackendInterface::CursorUpdate, IDBAny::create(this), state, value, m_currentPrimaryKey, ec);
 }
 
 void IDBCursor::advance(long long count, ExceptionCode& ec)
@@ -270,10 +270,10 @@ void IDBCursor::setValueReady(DOMRequestState* state, PassRefPtr<IDBKey> key, Pa
         const IDBObjectStoreMetadata metadata = objectStore->metadata();
         if (metadata.autoIncrement && !metadata.keyPath.isNull()) {
 #ifndef NDEBUG
-            RefPtr<IDBKey> expectedKey = createIDBKeyFromScriptValueAndKeyPath(value, metadata.keyPath);
+            RefPtr<IDBKey> expectedKey = createIDBKeyFromScriptValueAndKeyPath(m_request->requestState(), value, metadata.keyPath);
             ASSERT(!expectedKey || expectedKey->isEqual(m_currentPrimaryKey.get()));
 #endif
-            bool injected = injectIDBKeyIntoScriptValue(m_currentPrimaryKey, value, metadata.keyPath);
+            bool injected = injectIDBKeyIntoScriptValue(m_request->requestState(), m_currentPrimaryKey, value, metadata.keyPath);
             // FIXME: There is no way to report errors here. Move this into onSuccessWithContinuation so that we can abort the transaction there. See: https://bugs.webkit.org/show_bug.cgi?id=92278
             ASSERT_UNUSED(injected, injected);
         }
@@ -301,14 +301,6 @@ IDBCursor::Direction IDBCursor::stringToDirection(const String& directionString,
         return IDBCursor::PREV;
     if (directionString == IDBCursor::directionPrevUnique())
         return IDBCursor::PREV_NO_DUPLICATE;
-
-    // FIXME: Remove legacy constants. http://webkit.org/b/85315
-    // FIXME: This is not thread-safe.
-    DEFINE_STATIC_LOCAL(String, consoleMessage, (ASCIILiteral("Numeric direction values are deprecated in openCursor and openKeyCursor. Use \"next\", \"nextunique\", \"prev\", or \"prevunique\".")));
-    if (directionString == "0" || directionString == "1" || directionString == "2" || directionString == "3") {
-        context->addConsoleMessage(JSMessageSource, LogMessageType, WarningMessageLevel, consoleMessage);
-        return static_cast<IDBCursor::Direction>(IDBCursor::NEXT + (directionString[0] - '0'));
-    }
 
     ec = TypeError;
     return IDBCursor::NEXT;

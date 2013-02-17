@@ -38,6 +38,7 @@ LazyDecodingPixelRef::LazyDecodingPixelRef(PassRefPtr<ImageFrameGenerator> frame
     , m_frameGenerator(frameGenerator)
     , m_scaledSize(scaledSize)
     , m_scaledSubset(scaledSubset)
+    , m_lockedCachedImage(0)
 {
 }
 
@@ -57,14 +58,31 @@ bool LazyDecodingPixelRef::isClipped() const
 
 void* LazyDecodingPixelRef::onLockPixels(SkColorTable**)
 {
-    ASSERT(isMainThread());
-    return ImageDecodingStore::instanceOnMainThread()->lockPixels(m_frameGenerator, m_scaledSize, m_scaledSubset);
+    m_mutex.lock();
+    ASSERT(!m_lockedCachedImage);
+
+    m_lockedCachedImage = ImageDecodingStore::instance()->lockCompleteCache(m_frameGenerator.get(), m_scaledSize);
+
+    // Use ImageFrameGenerator to generate the image. It will lock the cache
+    // entry for us.
+    if (!m_lockedCachedImage)
+        m_lockedCachedImage = m_frameGenerator->decodeAndScale(m_scaledSize);
+
+    if (!m_lockedCachedImage)
+        return 0;
+
+    ASSERT(!m_lockedCachedImage->bitmap().isNull());
+    ASSERT(m_lockedCachedImage->scaledSize() == m_scaledSize);
+    return m_lockedCachedImage->bitmap().getAddr(m_scaledSubset.x(), m_scaledSubset.y());
 }
 
 void LazyDecodingPixelRef::onUnlockPixels()
 {
-    ASSERT(isMainThread());
-    ImageDecodingStore::instanceOnMainThread()->unlockPixels();
+    if (m_lockedCachedImage) {
+        ImageDecodingStore::instance()->unlockCache(m_frameGenerator.get(), m_lockedCachedImage);
+        m_lockedCachedImage = 0;
+    }
+    m_mutex.unlock();
 }
 
 bool LazyDecodingPixelRef::onLockPixelsAreWritable() const

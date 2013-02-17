@@ -28,6 +28,8 @@
 
 #include "BackForwardController.h"
 #include "CachedResourceLoader.h"
+#include "Chrome.h"
+#include "ChromeClient.h"
 #include "ClientRect.h"
 #include "ClientRectList.h"
 #include "ComposedShadowTreeWalker.h"
@@ -62,6 +64,7 @@
 #include "IntRect.h"
 #include "Language.h"
 #include "MallocStatistics.h"
+#include "MockPagePopupDriver.h"
 #include "NodeRenderingContext.h"
 #include "Page.h"
 #include "PrintContext.h"
@@ -111,6 +114,10 @@
 #endif
 
 namespace WebCore {
+
+#if ENABLE(PAGE_POPUP)
+static MockPagePopupDriver* s_pagePopupDriver = 0;
+#endif
 
 using namespace HTMLNames;
 
@@ -212,6 +219,18 @@ Internals::~Internals()
 void Internals::resetToConsistentState(Page* page)
 {
     ASSERT(page);
+
+    page->setPageScaleFactor(1, IntPoint(0, 0));
+    page->setPagination(Pagination());
+    TextRun::setAllowsRoundingHacks(false);
+    WebCore::overrideUserPreferredLanguages(Vector<String>());
+    WebCore::Settings::setUsesOverlayScrollbars(false);
+#if ENABLE(PAGE_POPUP)
+    delete s_pagePopupDriver;
+    s_pagePopupDriver = 0;
+    if (page->chrome())
+        page->chrome()->client()->resetPagePopupDriver();
+#endif
 #if ENABLE(INSPECTOR) && ENABLE(JAVASCRIPT_DEBUGGER)
     if (page->inspectorController())
         page->inspectorController()->setProfilerEnabled(false);
@@ -283,7 +302,7 @@ Element* Internals::getElementByIdInShadowRoot(Node* shadowRoot, const String& i
 
 bool Internals::isValidContentSelect(Element* insertionPoint, ExceptionCode& ec)
 {
-    if (!insertionPoint || !isInsertionPoint(insertionPoint)) {
+    if (!insertionPoint || !insertionPoint->isInsertionPoint()) {
         ec = INVALID_ACCESS_ERR;
         return false;
     }
@@ -661,13 +680,30 @@ void Internals::setFormControlStateOfPreviousHistoryItem(PassRefPtr<DOMStringLis
         ec = INVALID_ACCESS_ERR;
 }
 
+void Internals::setEnableMockPagePopup(bool enabled, ExceptionCode& ec)
+{
+#if ENABLE(PAGE_POPUP)
+    Document* document = contextDocument();
+    if (!document || !document->page() || !document->page()->chrome())
+        return;
+    Page* page = document->page();
+    if (!enabled) {
+        page->chrome()->client()->resetPagePopupDriver();
+        return;
+    }
+    if (!s_pagePopupDriver)
+        s_pagePopupDriver = MockPagePopupDriver::create(page->mainFrame()).leakPtr();
+    page->chrome()->client()->setPagePopupDriver(s_pagePopupDriver);
+#else
+    UNUSED_PARAM(enabled);
+    UNUSED_PARAM(ec);
+#endif
+}
+
 #if ENABLE(PAGE_POPUP)
 PassRefPtr<PagePopupController> Internals::pagePopupController()
 {
-    InternalSettings* settings = this->settings();
-    if (!settings)
-        return 0;
-    return settings->pagePopupController();
+    return s_pagePopupDriver ? s_pagePopupDriver->pagePopupController() : 0;
 }
 #endif
 
@@ -824,14 +860,51 @@ void Internals::setScrollViewPosition(Document* document, long x, long y, Except
     frameView->setConstrainsScrollingToContentEdge(constrainsScrollingToContentEdgeOldValue);
 }
 
-void Internals::setPagination(Document*, const String& mode, int gap, int pageLength, ExceptionCode& ec)
+void Internals::setPagination(Document* document, const String& mode, int gap, int pageLength, ExceptionCode& ec)
 {
-    settings()->setPagination(mode, gap, pageLength, ec);
+    if (!document || !document->page()) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+    Page* page = document->page();
+
+    Pagination pagination;
+    if (mode == "Unpaginated")
+        pagination.mode = Pagination::Unpaginated;
+    else if (mode == "LeftToRightPaginated")
+        pagination.mode = Pagination::LeftToRightPaginated;
+    else if (mode == "RightToLeftPaginated")
+        pagination.mode = Pagination::RightToLeftPaginated;
+    else if (mode == "TopToBottomPaginated")
+        pagination.mode = Pagination::TopToBottomPaginated;
+    else if (mode == "BottomToTopPaginated")
+        pagination.mode = Pagination::BottomToTopPaginated;
+    else {
+        ec = SYNTAX_ERR;
+        return;
+    }
+
+    pagination.gap = gap;
+    pagination.pageLength = pageLength;
+    page->setPagination(pagination);
 }
 
-String Internals::configurationForViewport(Document*, float devicePixelRatio, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight, ExceptionCode& ec)
+String Internals::configurationForViewport(Document* document, float devicePixelRatio, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight, ExceptionCode& ec)
 {
-    return settings()->configurationForViewport(devicePixelRatio, deviceWidth, deviceHeight, availableWidth, availableHeight, ec);
+    if (!document || !document->page()) {
+        ec = INVALID_ACCESS_ERR;
+        return String();
+    }
+    Page* page = document->page();
+
+    const int defaultLayoutWidthForNonMobilePages = 980;
+
+    ViewportArguments arguments = page->viewportArguments();
+    ViewportAttributes attributes = computeViewportAttributes(arguments, defaultLayoutWidthForNonMobilePages, deviceWidth, deviceHeight, devicePixelRatio, IntSize(availableWidth, availableHeight));
+    restrictMinimumScaleFactorToViewportSize(attributes, IntSize(availableWidth, availableHeight), devicePixelRatio);
+    restrictScaleFactorToInitialScaleIfNotUserScalable(attributes);
+
+    return "viewport size " + String::number(attributes.layoutSize.width()) + "x" + String::number(attributes.layoutSize.height()) + " scale " + String::number(attributes.initialScale) + " with limits [" + String::number(attributes.minimumScale) + ", " + String::number(attributes.maximumScale) + "] and userScalable " + (attributes.userScalable ? "true" : "false");
 }
 
 bool Internals::wasLastChangeUserEdit(Element* textField, ExceptionCode& ec)
@@ -1098,12 +1171,12 @@ int Internals::lastSpellCheckProcessedSequence(Document* document, ExceptionCode
 
 Vector<String> Internals::userPreferredLanguages() const
 {
-    return settings()->userPreferredLanguages();
+    return WebCore::userPreferredLanguages();
 }
 
 void Internals::setUserPreferredLanguages(const Vector<String>& languages)
 {
-    settings()->setUserPreferredLanguages(languages);
+    WebCore::overrideUserPreferredLanguages(languages);
 }
 
 unsigned Internals::wheelEventHandlerCount(Document* document, ExceptionCode& ec)
@@ -1407,7 +1480,7 @@ void Internals::garbageCollectDocumentResources(Document* document, ExceptionCod
 
 void Internals::allowRoundingHacks() const
 {
-    settings()->allowRoundingHacks();
+    TextRun::setAllowsRoundingHacks(true);
 }
 
 String Internals::counterValue(Element* element)
@@ -1464,6 +1537,17 @@ String Internals::pageSizeAndMarginsInPixels(int pageNumber, int width, int heig
     }
 
     return PrintContext::pageSizeAndMarginsInPixels(frame(), pageNumber, width, height, marginTop, marginRight, marginBottom, marginLeft);
+}
+
+void Internals::setPageScaleFactor(float scaleFactor, int x, int y, ExceptionCode& ec)
+{
+    Document* document = contextDocument();
+    if (!document || !document->page()) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+    Page* page = document->page();
+    page->setPageScaleFactor(scaleFactor, IntPoint(x, y));
 }
 
 #if ENABLE(FULLSCREEN_API)
@@ -1638,6 +1722,11 @@ PassRefPtr<SerializedScriptValue> Internals::deserializeBuffer(PassRefPtr<ArrayB
 {
     String value(static_cast<const UChar*>(buffer->data()), buffer->byteLength() / sizeof(UChar));
     return SerializedScriptValue::createFromWire(value);
+}
+
+void Internals::setUsesOverlayScrollbars(bool enabled)
+{
+    WebCore::Settings::setUsesOverlayScrollbars(enabled);
 }
 
 }

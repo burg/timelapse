@@ -45,6 +45,9 @@ SET(JavaScriptCore_SOURCES
     bytecode/CallLinkInfo.cpp
     bytecode/CallLinkStatus.cpp
     bytecode/CodeBlock.cpp
+    bytecode/CodeBlockHash.cpp
+    bytecode/CodeOrigin.cpp
+    bytecode/CodeType.cpp
     bytecode/DFGExitProfile.cpp
     bytecode/ExecutionCounter.cpp
     bytecode/GetByIdStatus.cpp
@@ -100,10 +103,13 @@ SET(JavaScriptCore_SOURCES
     dfg/DFGStructureCheckHoistingPhase.cpp
     dfg/DFGThunks.cpp
     dfg/DFGValueSource.cpp
+    dfg/DFGVariableAccessDataDump.cpp
     dfg/DFGVariableEvent.cpp
     dfg/DFGVariableEventStream.cpp
     dfg/DFGValidate.cpp
     dfg/DFGVirtualRegisterAllocationPhase.cpp
+    
+    disassembler/Disassembler.cpp
 
     heap/BlockAllocator.cpp
     heap/CopiedSpace.cpp
@@ -139,6 +145,7 @@ SET(JavaScriptCore_SOURCES
     interpreter/JSStack.cpp
     interpreter/VMInspector.cpp
 
+    jit/ClosureCallStubRoutine.cpp
     jit/ExecutableAllocator.cpp
     jit/HostCallReturnValue.cpp
     jit/GCAwareJITStubRoutine.cpp
@@ -146,7 +153,9 @@ SET(JavaScriptCore_SOURCES
     jit/JITArithmetic.cpp
     jit/JITCall32_64.cpp
     jit/JITCall.cpp
+    jit/JITCode.cpp
     jit/JIT.cpp
+    jit/JITDisassembler.cpp
     jit/JITExceptions.cpp
     jit/JITOpcodes32_64.cpp
     jit/JITOpcodes.cpp
@@ -177,6 +186,7 @@ SET(JavaScriptCore_SOURCES
     runtime/BooleanPrototype.cpp
     runtime/CallData.cpp
     runtime/CodeCache.cpp
+    runtime/CodeSpecializationKind.cpp
     runtime/CommonIdentifiers.cpp
     runtime/Completion.cpp
     runtime/ConstructData.cpp
@@ -393,6 +403,43 @@ FOREACH (_file ${JavaScriptCore_LUT_FILES})
     LIST(APPEND JavaScriptCore_HEADERS ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/${_name}.lut.h)
 ENDFOREACH ()
 
+SET (JavaScriptCore_FORWARDING_HEADERS_DIRECTORIES
+    assembler
+    bytecode
+    collector/handles
+    debugger
+    heap
+    interpreter
+    jit
+    llint
+    parser
+    profiler
+    runtime
+    yarr
+)
+
+SET (JavaScriptCore_FORWARDING_HEADERS_FILES
+    API/APICast.h
+    API/APIShims.h
+    API/JavaScript.h
+    API/JSBase.h
+    API/JSContextRef.h
+    API/JSContextRefPrivate.h
+    API/JSObjectRef.h
+    API/JSObjectRefPrivate.h
+    API/JSStringRef.h
+    API/JSStringRefCF.h
+    API/JSStringRefBSTR.h
+    API/JSValueRef.h
+    API/JavaScriptCore.h
+    API/JSRetainPtr.h
+    API/JSWeakObjectMapRefInternal.h
+    API/JSWeakObjectMapRefPrivate.h
+    API/JSRetainPtr.h
+    API/OpaqueJSString.h
+    API/WebKitAvailability.h
+)
+
 
 # GENERATOR 1-B: particular LUT creator (for 1 file only)
 GENERATE_HASH_LUT(${JAVASCRIPTCORE_DIR}/parser/Keywords.table ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/Lexer.lut.h MAIN_DEPENDENCY)
@@ -430,6 +477,8 @@ ENDIF ()
 
 
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
+
+WEBKIT_CREATE_FORWARDING_HEADERS(JavaScriptCore DIRECTORIES ${JavaScriptCore_FORWARDING_HEADERS_DIRECTORIES} FILES ${JavaScriptCore_FORWARDING_HEADERS_FILES})
 
 
 ADD_SUBDIRECTORY(shell)

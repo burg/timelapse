@@ -30,6 +30,8 @@
 
 namespace WebCore {
 
+class CustomFilterProgram;
+class CustomFilterCompiledProgram;
 class TextureMapperGLData;
 class GraphicsContext;
 class TextureMapperShaderProgram;
@@ -74,6 +76,7 @@ public:
 #endif
 #if ENABLE(CSS_SHADERS)
     bool drawUsingCustomFilter(BitmapTexture& targetTexture, const BitmapTexture& sourceTexture, const FilterOperation&);
+    virtual void removeCachedCustomFilterProgram(CustomFilterProgram*);
 #endif
 
     void setEnableEdgeDistanceAntialiasing(bool enabled) { m_enableEdgeDistanceAntialiasing = enabled; }
@@ -128,6 +131,11 @@ private:
     ClipStack m_clipStack;
     bool m_enableEdgeDistanceAntialiasing;
 
+#if ENABLE(CSS_SHADERS)
+    typedef HashMap<CustomFilterProgram*, RefPtr<CustomFilterCompiledProgram> > CustomFilterProgramMap;
+    CustomFilterProgramMap m_customFilterPrograms;
+#endif
+
     friend class BitmapTextureGL;
 };
 
@@ -153,6 +161,8 @@ public:
 #endif
 
 private:
+    void updateContentsNoSwizzle(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine, unsigned bytesPerPixel = 4, Platform3DObject glFormat = GraphicsContext3D::RGBA);
+
     Platform3DObject m_id;
     IntSize m_textureSize;
     IntRect m_dirtyRect;
@@ -163,7 +173,7 @@ private:
     TextureMapperGL::ClipStack m_clipStack;
     RefPtr<GraphicsContext3D> m_context3D;
 
-    BitmapTextureGL(TextureMapperGL*);
+    explicit BitmapTextureGL(TextureMapperGL*);
     BitmapTextureGL();
 
     void clearIfNeeded();

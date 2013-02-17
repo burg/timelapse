@@ -21,12 +21,12 @@
 #ifndef CoordinatedGraphicsLayer_h
 #define CoordinatedGraphicsLayer_h
 
+#include "CoordinatedImageBacking.h"
 #include "CoordinatedTile.h"
 #include "FloatPoint3D.h"
 #include "GraphicsLayer.h"
 #include "GraphicsLayerAnimation.h"
 #include "GraphicsLayerTransform.h"
-#include "GraphicsSurface.h"
 #include "Image.h"
 #include "IntSize.h"
 #include "ShareableBitmap.h"
@@ -36,6 +36,9 @@
 #include "UpdateInfo.h"
 #include "WebLayerTreeInfo.h"
 #include "WebProcess.h"
+#if USE(GRAPHICS_SURFACE)
+#include <WebCore/GraphicsSurfaceToken.h>
+#endif
 #include <WebCore/RunLoop.h>
 #include <wtf/text/StringHash.h>
 
@@ -56,15 +59,16 @@ public:
 
     virtual WebCore::IntRect visibleContentsRect() const = 0;
     virtual bool layerTreeTileUpdatesAllowed() const = 0;
-    virtual int64_t adoptImageBackingStore(WebCore::Image*) = 0;
-    virtual void releaseImageBackingStore(int64_t) = 0;
+    virtual PassRefPtr<CoordinatedImageBacking> createImageBackingIfNeeded(WebCore::Image*) = 0;
     virtual void syncLayerState(WebLayerID, const WebLayerInfo&) = 0;
     virtual void syncLayerChildren(WebLayerID, const Vector<WebLayerID>&) = 0;
 #if ENABLE(CSS_FILTERS)
     virtual void syncLayerFilters(WebLayerID, const WebCore::FilterOperations&) = 0;
 #endif
 #if USE(GRAPHICS_SURFACE)
-    virtual void syncCanvas(WebLayerID, const WebCore::IntSize& canvasSize, const WebCore::GraphicsSurfaceToken&, uint32_t frontBuffer) = 0;
+    virtual void createCanvas(WebLayerID, WebCore::PlatformLayer*) = 0;
+    virtual void syncCanvas(WebLayerID, WebCore::PlatformLayer*) = 0;
+    virtual void destroyCanvas(WebLayerID) = 0;
 #endif
 
     virtual void setLayerAnimations(WebLayerID, const WebCore::GraphicsLayerAnimations&) = 0;
@@ -79,6 +83,7 @@ namespace WebCore {
 
 class CoordinatedGraphicsLayer : public GraphicsLayer
     , public TiledBackingStoreClient
+    , public WebKit::CoordinatedImageBacking::Host
     , public WebKit::CoordinatedTileClient {
 public:
     explicit CoordinatedGraphicsLayer(GraphicsLayerClient*);
@@ -160,7 +165,6 @@ public:
 
 private:
     bool fixedToViewport() const { return m_fixedToViewport; }
-    void setMaskTarget(GraphicsLayer* layer) { m_maskTarget = layer; }
 
     void didChangeLayerState();
     void didChangeAnimations();
@@ -185,8 +189,14 @@ private:
     void createBackingStore();
     void releaseImageBackingIfNeeded();
 
+    // CoordinatedImageBacking::Host
+    virtual bool imageBackingVisible() OVERRIDE;
+
+    void destroyCanvasIfNeeded();
+    void createCanvasIfNeeded();
+
+    bool selfOrAncestorHasActiveTransformAnimation() const;
     bool selfOrAncestorHaveNonAffineTransforms();
-    bool shouldUseTiledBackingStore();
     void adjustContentsScale();
 
     void setShouldUpdateVisibleRect();
@@ -196,7 +206,6 @@ private:
 
     WebKit::WebLayerID m_id;
     WebKit::WebLayerInfo m_layerInfo;
-    GraphicsLayer* m_maskTarget;
     GraphicsLayerTransform m_layerTransform;
     TransformationMatrix m_cachedInverseTransform;
     bool m_inUpdateMode : 1;
@@ -208,6 +217,8 @@ private:
     bool m_shouldSyncAnimations: 1;
     bool m_fixedToViewport : 1;
     bool m_canvasNeedsDisplay : 1;
+    bool m_canvasNeedsCreate : 1;
+    bool m_canvasNeedsDestroy : 1;
 
     WebKit::CoordinatedGraphicsLayerClient* m_coordinator;
     OwnPtr<TiledBackingStore> m_mainBackingStore;
@@ -216,8 +227,12 @@ private:
 
     RefPtr<Image> m_compositedImage;
     NativeImagePtr m_compositedNativeImagePtr;
+    RefPtr<WebKit::CoordinatedImageBacking> m_coordinatedImageBacking;
 
     PlatformLayer* m_canvasPlatformLayer;
+#if USE(GRAPHICS_SURFACE)
+    GraphicsSurfaceToken m_canvasToken;
+#endif
     Timer<CoordinatedGraphicsLayer> m_animationStartedTimer;
     GraphicsLayerAnimations m_animations;
     double m_lastAnimationStartTime;

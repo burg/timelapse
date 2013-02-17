@@ -39,6 +39,7 @@
 #include "TestNavigationController.h"
 #include "TestShell.h"
 #include "TestWebPlugin.h"
+#include "WebCachedURLRequest.h"
 #include "WebConsoleMessage.h"
 #include "WebContextMenuData.h"
 #include "WebDOMMessageEvent.h"
@@ -144,16 +145,6 @@ static string descriptionSuitableForTestResult(const string& url)
         return "ERROR:" + url;
 
     return url.substr(pos + 1);
-}
-
-// Adds a file called "DRTFakeFile" to dragData (CF_HDROP). Use to fake
-// dragging a file.
-static void addDRTFakeFileToDataObject(WebDragData* dragData)
-{
-    WebDragData::Item item;
-    item.storageType = WebDragData::Item::StorageTypeFilename;
-    item.filenameData = WebString::fromUTF8("DRTFakeFile");
-    dragData->addItem(item);
 }
 
 // Get a debugging string from a WebNavigationType.
@@ -343,7 +334,7 @@ bool WebViewHost::shouldBeginEditing(const WebRange& range)
         printRangeDescription(range);
         fputs("\n", stdout);
     }
-    return testRunner()->acceptsEditing();
+    return true;
 }
 
 bool WebViewHost::shouldEndEditing(const WebRange& range)
@@ -353,7 +344,7 @@ bool WebViewHost::shouldEndEditing(const WebRange& range)
         printRangeDescription(range);
         fputs("\n", stdout);
     }
-    return testRunner()->acceptsEditing();
+    return true;
 }
 
 bool WebViewHost::shouldInsertNode(const WebNode& node, const WebRange& range, WebEditingAction action)
@@ -365,7 +356,7 @@ bool WebViewHost::shouldInsertNode(const WebNode& node, const WebRange& range, W
         printRangeDescription(range);
         printf(" givenAction:%s\n", editingActionDescription(action).c_str());
     }
-    return testRunner()->acceptsEditing();
+    return true;
 }
 
 bool WebViewHost::shouldInsertText(const WebString& text, const WebRange& range, WebEditingAction action)
@@ -375,7 +366,7 @@ bool WebViewHost::shouldInsertText(const WebString& text, const WebRange& range,
         printRangeDescription(range);
         printf(" givenAction:%s\n", editingActionDescription(action).c_str());
     }
-    return testRunner()->acceptsEditing();
+    return true;
 }
 
 bool WebViewHost::shouldChangeSelectedRange(
@@ -390,7 +381,7 @@ bool WebViewHost::shouldChangeSelectedRange(
                textAffinityDescription(affinity).c_str(),
                (stillSelecting ? "TRUE" : "FALSE"));
     }
-    return testRunner()->acceptsEditing();
+    return true;
 }
 
 bool WebViewHost::shouldDeleteRange(const WebRange& range)
@@ -400,7 +391,7 @@ bool WebViewHost::shouldDeleteRange(const WebRange& range)
         printRangeDescription(range);
         fputs("\n", stdout);
     }
-    return testRunner()->acceptsEditing();
+    return true;
 }
 
 bool WebViewHost::shouldApplyStyle(const WebString& style, const WebRange& range)
@@ -410,7 +401,7 @@ bool WebViewHost::shouldApplyStyle(const WebString& style, const WebRange& range
         printRangeDescription(range);
         fputs("\n", stdout);
     }
-    return testRunner()->acceptsEditing();
+    return true;
 }
 
 bool WebViewHost::isSmartInsertDeleteEnabled()
@@ -585,19 +576,6 @@ void WebViewHost::setStatusText(const WebString& text)
         return;
     // When running tests, write to stdout.
     printf("UI DELEGATE STATUS CALLBACK: setStatusText:%s\n", text.utf8().data());
-}
-
-void WebViewHost::startDragging(WebFrame*, const WebDragData& data, WebDragOperationsMask mask, const WebImage&, const WebPoint&)
-{
-    WebDragData mutableDragData = data;
-    if (testRunner()->shouldAddFileToPasteboard()) {
-        // Add a file called DRTFakeFile to the drag&drop clipboard.
-        addDRTFakeFileToDataObject(&mutableDragData);
-    }
-
-    // When running a test, we need to fake a drag drop operation otherwise
-    // Windows waits for real mouse events to know when the drag is over.
-    m_shell->eventSender()->doDragDrop(mutableDragData, mask);
 }
 
 void WebViewHost::didUpdateLayout()
@@ -1162,6 +1140,23 @@ static bool hostIsUsedBySomeTestsToGenerateError(const string& host)
     return host == "255.255.255.255";
 }
 
+void WebViewHost::willRequestResource(WebKit::WebFrame* frame, const WebKit::WebCachedURLRequest& request)
+{
+    if (m_shell->shouldDumpResourceRequestCallbacks()) {
+        printFrameDescription(frame);
+        WebElement element = request.initiatorElement();
+        if (!element.isNull()) {
+            printf(" - element with ");
+            if (element.hasAttribute("id"))
+                printf("id '%s'", element.getAttribute("id").utf8().data());
+            else
+                printf("no id");
+        } else
+            printf(" - %s", request.initiatorName().utf8().data());
+        printf(" requested '%s'\n", URLDescription(request.urlRequest().url()).c_str());
+    }
+}
+
 void WebViewHost::willSendRequest(WebFrame* frame, unsigned identifier, WebURLRequest& request, const WebURLResponse& redirectResponse)
 {
     // Need to use GURL for host() and SchemeIs()
@@ -1628,7 +1623,8 @@ void WebViewHost::updateForCommittedLoad(WebFrame* frame, bool isNewNavigation)
 {
     // Code duplicated from RenderView::DidCommitLoadForFrame.
     TestShellExtraData* extraData = static_cast<TestShellExtraData*>(frame->dataSource()->extraData());
-    bool nonBlankPageAfterReset = m_pageId == -1 && strcmp(frame->dataSource()->request().url().spec().data(), "about:blank");
+    const WebURL& url = frame->dataSource()->request().url();
+    bool nonBlankPageAfterReset = m_pageId == -1 && !url.isEmpty() && strcmp(url.spec().data(), "about:blank");
 
     if (isNewNavigation || nonBlankPageAfterReset) {
         // New navigation.
@@ -1743,18 +1739,12 @@ void WebViewHost::setAddressBarURL(const WebURL&)
 
 void WebViewHost::enterFullScreenNow()
 {
-    if (testRunner()->hasCustomFullScreenBehavior())
-        return;
-
     webView()->willEnterFullScreen();
     webView()->didEnterFullScreen();
 }
 
 void WebViewHost::exitFullScreenNow()
 {
-    if (testRunner()->hasCustomFullScreenBehavior())
-        return;
-
     webView()->willExitFullScreen();
     webView()->didExitFullScreen();
 }

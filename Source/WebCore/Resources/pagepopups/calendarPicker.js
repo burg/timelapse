@@ -671,6 +671,7 @@ function CalendarPicker(element, config) {
     }
     this._element.classList.add("calendar-picker");
     this._element.classList.add("preparing");
+    this.isPreparing = true;
     this._handleWindowResizeBound = this._handleWindowResize.bind(this);
     window.addEventListener("resize", this._handleWindowResizeBound, false);
     // We assume this._config.min/max are valid dates or months.
@@ -709,6 +710,7 @@ CalendarPicker.NavigationBehaviour = {
 
 CalendarPicker.prototype._handleWindowResize = function() {
     this._element.classList.remove("preparing");
+    this.isPreparing = false;
 };
 
 CalendarPicker.prototype.cleanup = function() {
@@ -740,20 +742,24 @@ CalendarPicker.prototype.fixWindowSize = function() {
     var daysAreaElement = this._element.getElementsByClassName(ClassNames.DaysArea)[0];
     var headers = daysAreaElement.getElementsByClassName(ClassNames.DayLabel);
     var maxCellWidth = 0;
-    for (var i = 0; i < headers.length; ++i) {
+    for (var i = 1; i < headers.length; ++i) {
         if (maxCellWidth < headers[i].offsetWidth)
             maxCellWidth = headers[i].offsetWidth;
     }
+    var weekColumnWidth = headers[0].offsetWidth;
+    if (maxCellWidth > weekColumnWidth)
+        weekColumnWidth = maxCellWidth;
+    headers[0].style.width = weekColumnWidth + "px";
     var DaysAreaContainerBorder = 1;
     var yearMonthEnd;
     var daysAreaEnd;
     if (global.params.isCalendarRTL) {
         var startOffset = this._element.offsetLeft + this._element.offsetWidth;
         yearMonthEnd = startOffset - yearMonthRightElement.offsetLeft;
-        daysAreaEnd = startOffset - (daysAreaElement.offsetLeft + daysAreaElement.offsetWidth) + maxCellWidth * 7 + DaysAreaContainerBorder;
+        daysAreaEnd = startOffset - (daysAreaElement.offsetLeft + daysAreaElement.offsetWidth) + weekColumnWidth + maxCellWidth * 7 + DaysAreaContainerBorder;
     } else {
         yearMonthEnd = yearMonthRightElement.offsetLeft + yearMonthRightElement.offsetWidth;
-        daysAreaEnd = daysAreaElement.offsetLeft + maxCellWidth * 7 + DaysAreaContainerBorder;
+        daysAreaEnd = daysAreaElement.offsetLeft + weekColumnWidth + maxCellWidth * 7 + DaysAreaContainerBorder;
     }
     var maxEnd = Math.max(yearMonthEnd, daysAreaEnd);
     var MainPadding = 6; // FIXME: Fix name.
@@ -1219,7 +1225,8 @@ DaysTable.prototype.attachTo = function(element) {
  * @return {!boolean}
  */
 CalendarPicker.prototype._stepMismatch = function(value) {
-    return (value - this.stepBase) % this.step != 0;
+    var nextAllowedValue = Math.ceil((value - this.stepBase) / this.step) * this.step + this.stepBase;
+    return nextAllowedValue >= value + this.selectionConstructor.DefaultStep
 }
 
 /**
@@ -1310,6 +1317,8 @@ DaysTable.prototype.navigateToMonth = function(month, navigationBehaviour) {
  * @param {!Month} month
  */
 DaysTable.prototype._startMoveInAnimation = function(month) {
+    if (this.picker.isPreparing)
+        return;
     var daysStyle = this._daysContainer.style;
     daysStyle.position = "relative";
     daysStyle.webkitTransition = "left 0.1s ease";
@@ -1348,7 +1357,7 @@ DaysTable.prototype._markRangeAsSelected = function(day) {
 DaysTable.prototype.selectRange = function(day) {
     this._deselect();
     if (this.startDate() > day.startDate() || this.endDate() < day.endDate())
-        this.picker.showMonth(Month.createFromDate(day.startDate()));
+        this.picker.showMonth(Month.createFromDate(day.startDate()), CalendarPicker.NavigationBehaviour.Animate);
     this._markRangeAsSelected(day);
 };
 

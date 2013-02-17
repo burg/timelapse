@@ -69,10 +69,11 @@ public:
     virtual void setAcceleratedPaintingEnabled(bool) = 0;
     virtual void setAllowDisplayOfInsecureContent(bool) = 0;
     virtual void setAllowFileAccessFromFileURLs(bool) = 0;
+    virtual void setAllowCustomScrollbarInMainFrame(bool) = 0;
     virtual void setAllowRunningOfInsecureContent(bool) = 0;
     virtual void setAllowScriptsToCloseWindows(bool) = 0;
     virtual void setAllowUniversalAccessFromFileURLs(bool) = 0;
-    virtual void setApplyDefaultDeviceScaleFactorInCompositor(bool) = 0;
+    virtual void setApplyDeviceScaleFactorInCompositor(bool) = 0;
     virtual void setApplyPageScaleFactorInCompositor(bool) = 0;
     virtual void setAsynchronousSpellCheckingEnabled(bool) = 0;
     virtual void setAutoZoomFocusedNodeToLegibleScale(bool) = 0;
@@ -96,6 +97,7 @@ public:
     virtual void setEditableLinkBehaviorNeverLive() = 0;
     virtual void setEditingBehavior(EditingBehavior) = 0;
     virtual void setEnableScrollAnimator(bool) = 0;
+    virtual void setEnableTouchAdjustment(bool) = 0;
     virtual void setExperimentalCSSCustomFilterEnabled(bool) = 0;
     virtual void setExperimentalCSSGridLayoutEnabled(bool) = 0;
     virtual void setCSSStickyPositionEnabled(bool) = 0;
@@ -156,6 +158,7 @@ public:
     virtual void setTextAutosizingEnabled(bool) = 0;
     virtual void setTextAutosizingFontScaleFactor(float) = 0;
     virtual void setTextDirectionSubmenuInclusionBehaviorNeverIncluded() = 0;
+    virtual void setTouchDragDropEnabled(bool) = 0;
     virtual void setUnifiedTextCheckerEnabled(bool) = 0;
     virtual void setUserStyleSheetLocation(const WebURL&) = 0;
     virtual void setUsesEncodingDetector(bool) = 0;
@@ -168,8 +171,8 @@ public:
     virtual void setWebSecurityEnabled(bool) = 0;
     virtual void setXSSAuditorEnabled(bool) = 0;
 
-    // DEPRECATED
-    virtual void setDefaultDeviceScaleFactor(int) { }
+    // DEPRECATED (renamed. remove this after all call sites changed to the new name)
+    void setApplyDefaultDeviceScaleFactorInCompositor(bool enabled) { setApplyDeviceScaleFactorInCompositor(enabled); }
 
 protected:
     ~WebSettings() { }

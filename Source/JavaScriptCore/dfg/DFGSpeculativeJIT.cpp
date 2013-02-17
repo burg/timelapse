@@ -147,6 +147,13 @@ void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource
     speculationCheck(kind, jsValueSource, nodeUse.index(), jumpToFail, recovery);
 }
 
+void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, NodeIndex nodeIndex, MacroAssembler::Jump jumpToFail, const SpeculationRecovery& recovery, SpeculationDirection direction)
+{
+    speculationCheck(kind, jsValueSource, nodeIndex, jumpToFail, recovery);
+    if (direction == ForwardSpeculation)
+        convertLastOSRExitToForward();
+}
+
 JumpReplacementWatchpoint* SpeculativeJIT::speculationWatchpoint(ExitKind kind, JSValueSource jsValueSource, NodeIndex nodeIndex)
 {
     if (!m_compileOkay)
@@ -170,10 +177,13 @@ JumpReplacementWatchpoint* SpeculativeJIT::speculationWatchpoint(ExitKind kind)
 void SpeculativeJIT::convertLastOSRExitToForward(const ValueRecovery& valueRecovery)
 {
     if (!valueRecovery) {
-        // Check that the preceding node was a SetLocal with the same code origin.
-        Node* setLocal = &at(m_jit.graph().m_blocks[m_block]->at(m_indexInBlock - 1));
-        ASSERT_UNUSED(setLocal, setLocal->op() == SetLocal);
-        ASSERT_UNUSED(setLocal, setLocal->codeOrigin == at(m_compileIndex).codeOrigin);
+        // Check that either the current node is a SetLocal, or the preceding node was a
+        // SetLocal with the same code origin.
+        if (at(m_compileIndex).op() != SetLocal) {
+            Node* setLocal = &at(m_jit.graph().m_blocks[m_block]->at(m_indexInBlock - 1));
+            ASSERT_UNUSED(setLocal, setLocal->op() == SetLocal);
+            ASSERT_UNUSED(setLocal, setLocal->codeOrigin == at(m_compileIndex).codeOrigin);
+        }
         
         // Find the next node.
         unsigned indexInBlock = m_indexInBlock + 1;
@@ -239,10 +249,10 @@ JumpReplacementWatchpoint* SpeculativeJIT::forwardSpeculationWatchpoint(ExitKind
     return result;
 }
 
-JumpReplacementWatchpoint* SpeculativeJIT::speculationWatchpointWithConditionalDirection(ExitKind kind, bool isForward)
+JumpReplacementWatchpoint* SpeculativeJIT::speculationWatchpoint(ExitKind kind, SpeculationDirection direction)
 {
     JumpReplacementWatchpoint* result = speculationWatchpoint(kind);
-    if (isForward)
+    if (direction == ForwardSpeculation)
         convertLastOSRExitToForward();
     return result;
 }
@@ -262,9 +272,9 @@ void SpeculativeJIT::forwardSpeculationCheck(ExitKind kind, JSValueSource jsValu
         forwardSpeculationCheck(kind, jsValueSource, nodeIndex, jumpVector[i], valueRecovery);
 }
 
-void SpeculativeJIT::speculationCheckWithConditionalDirection(ExitKind kind, JSValueSource jsValueSource, NodeIndex nodeIndex, MacroAssembler::Jump jumpToFail, bool isForward)
+void SpeculativeJIT::speculationCheck(ExitKind kind, JSValueSource jsValueSource, NodeIndex nodeIndex, MacroAssembler::Jump jumpToFail, SpeculationDirection direction)
 {
-    if (isForward)
+    if (direction == ForwardSpeculation)
         forwardSpeculationCheck(kind, jsValueSource, nodeIndex, jumpToFail);
     else
         speculationCheck(kind, jsValueSource, nodeIndex, jumpToFail);
@@ -274,7 +284,7 @@ void SpeculativeJIT::terminateSpeculativeExecution(ExitKind kind, JSValueRegs js
 {
     ASSERT(at(m_compileIndex).canExit() || m_isCheckingArgumentTypes);
 #if DFG_ENABLE(DEBUG_VERBOSE)
-    dataLog("SpeculativeJIT was terminated.\n");
+    dataLogF("SpeculativeJIT was terminated.\n");
 #endif
     if (!m_compileOkay)
         return;
@@ -288,15 +298,15 @@ void SpeculativeJIT::terminateSpeculativeExecution(ExitKind kind, JSValueRegs js
     terminateSpeculativeExecution(kind, jsValueRegs, nodeUse.index());
 }
 
-void SpeculativeJIT::terminateSpeculativeExecutionWithConditionalDirection(ExitKind kind, JSValueRegs jsValueRegs, NodeIndex nodeIndex, bool isForward)
+void SpeculativeJIT::terminateSpeculativeExecution(ExitKind kind, JSValueRegs jsValueRegs, NodeIndex nodeIndex, SpeculationDirection direction)
 {
     ASSERT(at(m_compileIndex).canExit() || m_isCheckingArgumentTypes);
 #if DFG_ENABLE(DEBUG_VERBOSE)
-    dataLog("SpeculativeJIT was terminated.\n");
+    dataLogF("SpeculativeJIT was terminated.\n");
 #endif
     if (!m_compileOkay)
         return;
-    speculationCheckWithConditionalDirection(kind, jsValueRegs, nodeIndex, m_jit.jump(), isForward);
+    speculationCheck(kind, jsValueRegs, nodeIndex, m_jit.jump(), direction);
     m_compileOkay = false;
 }
 
@@ -308,7 +318,7 @@ void SpeculativeJIT::addSlowPathGenerator(PassOwnPtr<SlowPathGenerator> slowPath
 void SpeculativeJIT::runSlowPathGenerators()
 {
 #if DFG_ENABLE(DEBUG_VERBOSE)
-    dataLog("Running %lu slow path generators.\n", m_slowPathGenerators.size());
+    dataLogF("Running %lu slow path generators.\n", m_slowPathGenerators.size());
 #endif
     for (unsigned i = 0; i < m_slowPathGenerators.size(); ++i)
         m_slowPathGenerators[i]->generate(this);
@@ -662,7 +672,7 @@ GPRReg SpeculativeJIT::fillStorage(NodeIndex nodeIndex)
         }
         
         // Must be a cell; fill it as a cell and then return the pointer.
-        return fillSpeculateCell(nodeIndex);
+        return fillSpeculateCell(nodeIndex, BackwardSpeculation);
     }
         
     case DataFormatStorage: {
@@ -672,7 +682,7 @@ GPRReg SpeculativeJIT::fillStorage(NodeIndex nodeIndex)
     }
         
     default:
-        return fillSpeculateCell(nodeIndex);
+        return fillSpeculateCell(nodeIndex, BackwardSpeculation);
     }
 }
 
@@ -1005,33 +1015,33 @@ static const char* dataFormatString(DataFormat format)
 void SpeculativeJIT::dump(const char* label)
 {
     if (label)
-        dataLog("<%s>\n", label);
+        dataLogF("<%s>\n", label);
 
-    dataLog("  gprs:\n");
+    dataLogF("  gprs:\n");
     m_gprs.dump();
-    dataLog("  fprs:\n");
+    dataLogF("  fprs:\n");
     m_fprs.dump();
-    dataLog("  VirtualRegisters:\n");
+    dataLogF("  VirtualRegisters:\n");
     for (unsigned i = 0; i < m_generationInfo.size(); ++i) {
         GenerationInfo& info = m_generationInfo[i];
         if (info.alive())
-            dataLog("    % 3d:%s%s", i, dataFormatString(info.registerFormat()), dataFormatString(info.spillFormat()));
+            dataLogF("    % 3d:%s%s", i, dataFormatString(info.registerFormat()), dataFormatString(info.spillFormat()));
         else
-            dataLog("    % 3d:[__][__]", i);
+            dataLogF("    % 3d:[__][__]", i);
         if (info.registerFormat() == DataFormatDouble)
-            dataLog(":fpr%d\n", info.fpr());
+            dataLogF(":fpr%d\n", info.fpr());
         else if (info.registerFormat() != DataFormatNone
 #if USE(JSVALUE32_64)
             && !(info.registerFormat() & DataFormatJS)
 #endif
             ) {
             ASSERT(info.gpr() != InvalidGPRReg);
-            dataLog(":%s\n", GPRInfo::debugName(info.gpr()));
+            dataLogF(":%s\n", GPRInfo::debugName(info.gpr()));
         } else
-            dataLog("\n");
+            dataLogF("\n");
     }
     if (label)
-        dataLog("</%s>\n", label);
+        dataLogF("</%s>\n", label);
 }
 #endif
 
@@ -1043,13 +1053,13 @@ void SpeculativeJIT::checkConsistency()
 
     for (gpr_iterator iter = m_gprs.begin(); iter != m_gprs.end(); ++iter) {
         if (iter.isLocked()) {
-            dataLog("DFG_CONSISTENCY_CHECK failed: gpr %s is locked.\n", iter.debugName());
+            dataLogF("DFG_CONSISTENCY_CHECK failed: gpr %s is locked.\n", iter.debugName());
             failed = true;
         }
     }
     for (fpr_iterator iter = m_fprs.begin(); iter != m_fprs.end(); ++iter) {
         if (iter.isLocked()) {
-            dataLog("DFG_CONSISTENCY_CHECK failed: fpr %s is locked.\n", iter.debugName());
+            dataLogF("DFG_CONSISTENCY_CHECK failed: fpr %s is locked.\n", iter.debugName());
             failed = true;
         }
     }
@@ -1077,7 +1087,7 @@ void SpeculativeJIT::checkConsistency()
             GPRReg gpr = info.gpr();
             ASSERT(gpr != InvalidGPRReg);
             if (m_gprs.name(gpr) != virtualRegister) {
-                dataLog("DFG_CONSISTENCY_CHECK failed: name mismatch for virtual register %d (gpr %s).\n", virtualRegister, GPRInfo::debugName(gpr));
+                dataLogF("DFG_CONSISTENCY_CHECK failed: name mismatch for virtual register %d (gpr %s).\n", virtualRegister, GPRInfo::debugName(gpr));
                 failed = true;
             }
             break;
@@ -1086,7 +1096,7 @@ void SpeculativeJIT::checkConsistency()
             FPRReg fpr = info.fpr();
             ASSERT(fpr != InvalidFPRReg);
             if (m_fprs.name(fpr) != virtualRegister) {
-                dataLog("DFG_CONSISTENCY_CHECK failed: name mismatch for virtual register %d (fpr %s).\n", virtualRegister, FPRInfo::debugName(fpr));
+                dataLogF("DFG_CONSISTENCY_CHECK failed: name mismatch for virtual register %d (fpr %s).\n", virtualRegister, FPRInfo::debugName(fpr));
                 failed = true;
             }
             break;
@@ -1102,18 +1112,18 @@ void SpeculativeJIT::checkConsistency()
         GenerationInfo& info = m_generationInfo[virtualRegister];
 #if USE(JSVALUE64)
         if (iter.regID() != info.gpr()) {
-            dataLog("DFG_CONSISTENCY_CHECK failed: name mismatch for gpr %s (virtual register %d).\n", iter.debugName(), virtualRegister);
+            dataLogF("DFG_CONSISTENCY_CHECK failed: name mismatch for gpr %s (virtual register %d).\n", iter.debugName(), virtualRegister);
             failed = true;
         }
 #else
         if (!(info.registerFormat() & DataFormatJS)) {
             if (iter.regID() != info.gpr()) {
-                dataLog("DFG_CONSISTENCY_CHECK failed: name mismatch for gpr %s (virtual register %d).\n", iter.debugName(), virtualRegister);
+                dataLogF("DFG_CONSISTENCY_CHECK failed: name mismatch for gpr %s (virtual register %d).\n", iter.debugName(), virtualRegister);
                 failed = true;
             }
         } else {
             if (iter.regID() != info.tagGPR() && iter.regID() != info.payloadGPR()) {
-                dataLog("DFG_CONSISTENCY_CHECK failed: name mismatch for gpr %s (virtual register %d).\n", iter.debugName(), virtualRegister);
+                dataLogF("DFG_CONSISTENCY_CHECK failed: name mismatch for gpr %s (virtual register %d).\n", iter.debugName(), virtualRegister);
                 failed = true;
             }
         }
@@ -1127,7 +1137,7 @@ void SpeculativeJIT::checkConsistency()
 
         GenerationInfo& info = m_generationInfo[virtualRegister];
         if (iter.regID() != info.fpr()) {
-            dataLog("DFG_CONSISTENCY_CHECK failed: name mismatch for fpr %s (virtual register %d).\n", iter.debugName(), virtualRegister);
+            dataLogF("DFG_CONSISTENCY_CHECK failed: name mismatch for fpr %s (virtual register %d).\n", iter.debugName(), virtualRegister);
             failed = true;
         }
     }
@@ -1545,7 +1555,7 @@ void SpeculativeJIT::compile(BasicBlock& block)
 #endif
     
 #if DFG_ENABLE(DEBUG_VERBOSE)
-    dataLog("Setting up state for block #%u: ", m_block);
+    dataLogF("Setting up state for block #%u: ", m_block);
 #endif
     
     m_stream->appendAndLog(VariableEvent::reset());
@@ -1593,7 +1603,7 @@ void SpeculativeJIT::compile(BasicBlock& block)
     }
 
 #if DFG_ENABLE(DEBUG_VERBOSE)
-    dataLog("\n");
+    dataLogF("\n");
 #endif
 
     for (m_indexInBlock = 0; m_indexInBlock < block.size(); ++m_indexInBlock) {
@@ -1603,7 +1613,7 @@ void SpeculativeJIT::compile(BasicBlock& block)
         m_codeOriginForOSR = node.codeOrigin;
         if (!node.shouldGenerate()) {
 #if DFG_ENABLE(DEBUG_VERBOSE)
-            dataLog("SpeculativeJIT skipping Node @%d (bc#%u) at JIT offset 0x%x     ", (int)m_compileIndex, node.codeOrigin.bytecodeIndex, m_jit.debugOffset());
+            dataLogF("SpeculativeJIT skipping Node @%d (bc#%u) at JIT offset 0x%x     ", (int)m_compileIndex, node.codeOrigin.bytecodeIndex, m_jit.debugOffset());
 #endif
             switch (node.op()) {
             case JSConstant:
@@ -1650,7 +1660,7 @@ void SpeculativeJIT::compile(BasicBlock& block)
                     // The exception is the this argument, which we don't really need to be
                     // able to recover.
 #if DFG_ENABLE(DEBUG_VERBOSE)
-                    dataLog("\nRecovery for argument %d: ", i);
+                    dataLogF("\nRecovery for argument %d: ", i);
                     recovery.dump(WTF::dataFile());
 #endif
                     inlineCallFrame->arguments[i] = recovery;
@@ -1666,7 +1676,7 @@ void SpeculativeJIT::compile(BasicBlock& block)
         } else {
             
 #if DFG_ENABLE(DEBUG_VERBOSE)
-            dataLog("SpeculativeJIT generating Node @%d (bc#%u) at JIT offset 0x%x   ", (int)m_compileIndex, node.codeOrigin.bytecodeIndex, m_jit.debugOffset());
+            dataLogF("SpeculativeJIT generating Node @%d (bc#%u) at JIT offset 0x%x   ", (int)m_compileIndex, node.codeOrigin.bytecodeIndex, m_jit.debugOffset());
 #endif
 #if DFG_ENABLE(JIT_BREAK_ON_EVERY_NODE)
             m_jit.breakpoint();
@@ -1691,25 +1701,25 @@ void SpeculativeJIT::compile(BasicBlock& block)
 #if DFG_ENABLE(DEBUG_VERBOSE)
             if (node.hasResult()) {
                 GenerationInfo& info = m_generationInfo[node.virtualRegister()];
-                dataLog("-> %s, vr#%d", dataFormatToString(info.registerFormat()), (int)node.virtualRegister());
+                dataLogF("-> %s, vr#%d", dataFormatToString(info.registerFormat()), (int)node.virtualRegister());
                 if (info.registerFormat() != DataFormatNone) {
                     if (info.registerFormat() == DataFormatDouble)
-                        dataLog(", %s", FPRInfo::debugName(info.fpr()));
+                        dataLogF(", %s", FPRInfo::debugName(info.fpr()));
 #if USE(JSVALUE32_64)
                     else if (info.registerFormat() & DataFormatJS)
-                        dataLog(", %s %s", GPRInfo::debugName(info.tagGPR()), GPRInfo::debugName(info.payloadGPR()));
+                        dataLogF(", %s %s", GPRInfo::debugName(info.tagGPR()), GPRInfo::debugName(info.payloadGPR()));
 #endif
                     else
-                        dataLog(", %s", GPRInfo::debugName(info.gpr()));
+                        dataLogF(", %s", GPRInfo::debugName(info.gpr()));
                 }
-                dataLog("    ");
+                dataLogF("    ");
             } else
-                dataLog("    ");
+                dataLogF("    ");
 #endif
         }
         
 #if DFG_ENABLE(DEBUG_VERBOSE)
-        dataLog("\n");
+        dataLogF("\n");
 #endif
         
         // Make sure that the abstract state is rematerialized for the next node.
@@ -2006,7 +2016,7 @@ void SpeculativeJIT::compileGetByValOnString(Node& node)
 GeneratedOperandType SpeculativeJIT::checkGeneratedTypeForToInt32(NodeIndex nodeIndex)
 {
 #if DFG_ENABLE(DEBUG_VERBOSE)
-    dataLog("checkGeneratedTypeForToInt32@%d   ", nodeIndex);
+    dataLogF("checkGeneratedTypeForToInt32@%d   ", nodeIndex);
 #endif
     Node& node = at(nodeIndex);
     VirtualRegister virtualRegister = node.virtualRegister();

@@ -51,6 +51,7 @@ SET(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/graphics/cpu/arm"
     "${WEBCORE_DIR}/platform/graphics/cpu/arm/filters"
     "${WEBCORE_DIR}/platform/graphics/filters"
+    "${WEBCORE_DIR}/platform/graphics/filters/texmap"
     "${WEBCORE_DIR}/platform/graphics/harfbuzz"
     "${WEBCORE_DIR}/platform/graphics/harfbuzz/ng"
     "${WEBCORE_DIR}/platform/graphics/opentype"
@@ -331,8 +332,10 @@ SET(WebCore_IDL_FILES
     css/WebKitCSSKeyframeRule.idl
     css/WebKitCSSKeyframesRule.idl
     css/WebKitCSSMatrix.idl
+    css/WebKitCSSMixFunctionValue.idl
     css/WebKitCSSRegionRule.idl
     css/WebKitCSSTransformValue.idl
+    css/WebKitCSSViewportRule.idl
 
     dom/Attr.idl
     dom/BeforeLoadEvent.idl
@@ -438,6 +441,7 @@ SET(WebCore_IDL_FILES
     html/HTMLEmbedElement.idl
     html/HTMLFieldSetElement.idl
     html/HTMLFontElement.idl
+    html/HTMLFormControlsCollection.idl
     html/HTMLFormElement.idl
     html/HTMLFrameElement.idl
     html/HTMLFrameSetElement.idl
@@ -1086,6 +1090,7 @@ SET(WebCore_SOURCES
     css/SVGCSSComputedStyleDeclaration.cpp
     css/SVGCSSParser.cpp
     css/SVGCSSStyleSelector.cpp
+    css/ViewportStyleResolver.cpp
     css/WebKitCSSFilterValue.cpp
     css/WebKitCSSKeyframeRule.cpp
     css/WebKitCSSKeyframesRule.cpp
@@ -1142,8 +1147,6 @@ SET(WebCore_SOURCES
     dom/DocumentOrderedMap.cpp
     dom/DocumentStyleSheetCollection.cpp
     dom/DocumentType.cpp
-    dom/DynamicNodeList.cpp
-    dom/EditingText.cpp
     dom/Element.cpp
     dom/ElementAttributeData.cpp
     dom/ElementRareData.cpp
@@ -1165,6 +1168,7 @@ SET(WebCore_SOURCES
     dom/IconURL.cpp
     dom/IdTargetObserver.cpp
     dom/IdTargetObserverRegistry.cpp
+    dom/LiveNodeList.cpp
     dom/KeyboardEvent.cpp
     dom/MessageChannel.cpp
     dom/MessageEvent.cpp
@@ -1367,7 +1371,7 @@ SET(WebCore_SOURCES
     html/HTMLEmbedElement.cpp
     html/HTMLFieldSetElement.cpp
     html/HTMLFontElement.cpp
-    html/HTMLFormCollection.cpp
+    html/HTMLFormControlsCollection.cpp
     html/HTMLFormControlElement.cpp
     html/HTMLFormControlElementWithState.cpp
     html/HTMLFormElement.cpp
@@ -1546,6 +1550,7 @@ SET(WebCore_SOURCES
     html/shadow/SpinButtonElement.cpp
     html/shadow/TextControlInnerElements.cpp
 
+    html/track/InbandTextTrack.cpp
     html/track/LoadableTextTrack.cpp
     html/track/TextTrack.cpp
     html/track/TextTrackCue.cpp
@@ -1628,6 +1633,7 @@ SET(WebCore_SOURCES
     loader/FTPDirectoryParser.cpp
     loader/FormState.cpp
     loader/FormSubmission.cpp
+    loader/FrameLoadRequest.cpp
     loader/FrameLoader.cpp
     loader/FrameLoaderStateMachine.cpp
     loader/HistoryController.cpp
@@ -1681,6 +1687,7 @@ SET(WebCore_SOURCES
     loader/cache/CachedResourceHandle.cpp
     loader/cache/CachedResourceLoader.cpp
     loader/cache/CachedResourceRequest.cpp
+    loader/cache/CachedResourceRequestInitiators.cpp
     loader/cache/CachedScript.cpp
     loader/cache/CachedShader.cpp
     loader/cache/CachedSVGDocument.cpp
@@ -1706,6 +1713,7 @@ SET(WebCore_SOURCES
     page/ContentSecurityPolicy.cpp
     page/ContextMenuController.cpp
     page/Crypto.cpp
+    page/DeviceController.cpp
     page/DiagnosticLoggingKeys.cpp
     page/DOMSecurityPolicy.cpp
     page/DOMSelection.cpp
@@ -1906,6 +1914,7 @@ SET(WebCore_SOURCES
 
     platform/graphics/cpu/arm/filters/FELightingNEON.cpp
 
+    platform/graphics/filters/texmap/CustomFilterValidatedProgramTextureMapper.cpp
     platform/graphics/filters/CustomFilterCompiledProgram.cpp
     platform/graphics/filters/CustomFilterGlobalContext.cpp
     platform/graphics/filters/CustomFilterMesh.cpp
@@ -1960,6 +1969,18 @@ SET(WebCore_SOURCES
     platform/graphics/transforms/TransformState.cpp
     platform/graphics/transforms/TranslateTransformOperation.cpp
 
+    platform/graphics/ImageSource.cpp
+
+    platform/image-decoders/ImageDecoder.cpp
+    platform/image-decoders/bmp/BMPImageDecoder.cpp
+    platform/image-decoders/bmp/BMPImageReader.cpp
+    platform/image-decoders/gif/GIFImageDecoder.cpp
+    platform/image-decoders/gif/GIFImageReader.cpp
+    platform/image-decoders/ico/ICOImageDecoder.cpp
+    platform/image-decoders/jpeg/JPEGImageDecoder.cpp
+    platform/image-decoders/png/PNGImageDecoder.cpp
+    platform/image-decoders/webp/WEBPImageDecoder.cpp
+
     platform/leveldb/LevelDBDatabase.cpp
     platform/leveldb/LevelDBTransaction.cpp
     platform/leveldb/LevelDBWriteBatch.cpp
@@ -1982,7 +2003,6 @@ SET(WebCore_SOURCES
     platform/network/BlobResourceHandle.cpp
     platform/network/Credential.cpp
     platform/network/CredentialStorage.cpp
-    platform/network/ContentTypeParser.cpp
     platform/network/DataURL.cpp
     platform/network/DNSResolveQueue.cpp
     platform/network/FormDataBuilder.cpp
@@ -1993,6 +2013,7 @@ SET(WebCore_SOURCES
     platform/network/HTTPValidation.cpp
     platform/network/MIMEHeader.cpp
     platform/network/NetworkStateNotifier.cpp
+    platform/network/ParsedContentType.cpp
     platform/network/ProtectionSpace.cpp
     platform/network/ProxyServer.cpp
     platform/network/ResourceErrorBase.cpp
@@ -2530,9 +2551,7 @@ ENDIF()
 
 IF (ENABLE_SMOOTH_SCROLLING)
     LIST(APPEND WebCore_SOURCES
-        platform/ActivePlatformGestureAnimation.cpp
         platform/ScrollAnimatorNone.cpp
-        platform/TouchFlingPlatformGestureCurve.cpp
     )
 ENDIF ()
 
@@ -2725,7 +2744,6 @@ SET(SCRIPTS_RESOLVE_SUPPLEMENTAL
 )
 SET(SCRIPTS_BINDINGS
     ${WEBCORE_DIR}/bindings/scripts/IDLParser.pm
-    ${WEBCORE_DIR}/bindings/scripts/IDLStructure.pm
     ${WEBCORE_DIR}/bindings/scripts/InFilesParser.pm
     ${WEBCORE_DIR}/bindings/scripts/preprocessor.pm
 )

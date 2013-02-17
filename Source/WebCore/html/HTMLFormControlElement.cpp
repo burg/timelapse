@@ -120,38 +120,38 @@ void HTMLFormControlElement::ancestorDisabledStateWasChanged()
     disabledAttributeChanged();
 }
 
-void HTMLFormControlElement::parseAttribute(const Attribute& attribute)
+void HTMLFormControlElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (attribute.name() == formAttr)
+    if (name == formAttr)
         formAttributeChanged();
-    else if (attribute.name() == disabledAttr) {
+    else if (name == disabledAttr) {
         bool oldDisabled = m_disabled;
-        m_disabled = !attribute.isNull();
+        m_disabled = !value.isNull();
         if (oldDisabled != m_disabled)
             disabledAttributeChanged();
-    } else if (attribute.name() == readonlyAttr) {
+    } else if (name == readonlyAttr) {
         bool oldReadOnly = m_readOnly;
-        m_readOnly = !attribute.isNull();
+        m_readOnly = !value.isNull();
         if (oldReadOnly != m_readOnly) {
             setNeedsWillValidateCheck();
             setNeedsStyleRecalc();
             if (renderer() && renderer()->style()->hasAppearance())
                 renderer()->theme()->stateChanged(renderer(), ReadOnlyState);
         }
-    } else if (attribute.name() == requiredAttr) {
+    } else if (name == requiredAttr) {
         bool oldRequired = m_required;
-        m_required = !attribute.isNull();
+        m_required = !value.isNull();
         if (oldRequired != m_required)
             requiredAttributeChanged();
     } else
-        HTMLElement::parseAttribute(attribute);
+        HTMLElement::parseAttribute(name, value);
 }
 
 void HTMLFormControlElement::disabledAttributeChanged()
 {
     setNeedsWillValidateCheck();
     setNeedsStyleRecalc();
-    invalidateParentDistributionIfNecessary(this, SelectRuleFeatureSet::RuleFeatureDisabled);
+    invalidateParentDistributionIfNecessary(this, SelectRuleFeatureSet::RuleFeatureDisabled | SelectRuleFeatureSet::RuleFeatureEnabled);
     if (renderer() && renderer()->style()->hasAppearance())
         renderer()->theme()->stateChanged(renderer(), EnabledState);
 }
@@ -172,8 +172,11 @@ static bool shouldAutofocus(HTMLFormControlElement* element)
         return false;
     if (element->document()->ignoreAutofocus())
         return false;
-    if (element->document()->isSandboxed(SandboxAutomaticFeatures))
+    if (element->document()->isSandboxed(SandboxAutomaticFeatures)) {
+        // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
+        element->document()->addConsoleMessage(HTMLMessageSource, LogMessageType, ErrorMessageLevel, "Blocked autofocusing on a form control because the form's frame is sandboxed and the 'allow-scripts' permission is not set.");
         return false;
+    }
     if (element->hasAutofocused())
         return false;
 
@@ -457,16 +460,6 @@ void HTMLFormControlElement::setCustomValidity(const String& error)
 {
     FormAssociatedElement::setCustomValidity(error);
     setNeedsValidityCheck();
-}
-
-bool HTMLFormControlElement::shouldMatchReadOnlySelector() const
-{
-    return readOnly();
-}
-
-bool HTMLFormControlElement::shouldMatchReadWriteSelector() const
-{
-    return !readOnly();
 }
 
 bool HTMLFormControlElement::validationMessageShadowTreeContains(Node* node) const

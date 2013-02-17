@@ -26,16 +26,19 @@
 #ifndef LazyDecodingPixelRef_h
 #define LazyDecodingPixelRef_h
 
+#include "SkTypes.h"
 #include "SkFlattenableBuffers.h"
 #include "SkPixelRef.h"
 #include "SkRect.h"
 #include "SkSize.h"
 
 #include <wtf/RefPtr.h>
+#include <wtf/ThreadingPrimitives.h>
 
 namespace WebCore {
 
 class ImageFrameGenerator;
+class ScaledImageFragment;
 
 class LazyDecodingPixelRef : public SkPixelRef {
 public:
@@ -58,6 +61,9 @@ private:
     RefPtr<ImageFrameGenerator> m_frameGenerator;
     SkISize m_scaledSize;
     SkIRect m_scaledSubset;
+
+    const ScaledImageFragment* m_lockedCachedImage;
+    Mutex m_mutex;
 };
 
 } // namespace WebCore

@@ -64,6 +64,7 @@
 #include "htmlediting.h"
 #include "visible_units.h"
 
+#include <BlackBerryPlatformIMF.h>
 #include <BlackBerryPlatformKeyboardEvent.h>
 #include <BlackBerryPlatformLog.h>
 #include <BlackBerryPlatformMisc.h>
@@ -77,7 +78,6 @@
 #define ENABLE_SPELLING_LOG 0
 
 static const unsigned MaxLearnTextDataSize = 500;
-static const unsigned MaxSpellCheckingStringLength = 250;
 
 using namespace BlackBerry::Platform;
 using namespace WebCore;
@@ -616,7 +616,7 @@ void InputHandler::requestCheckingOfString(PassRefPtr<WebCore::TextCheckingReque
         return;
     }
 
-    m_processingTransactionId = m_webPage->m_client->checkSpellingOfStringAsync(checkingString, paragraphLength);
+    m_processingTransactionId = m_webPage->m_client->checkSpellingOfStringAsync(checkingString, static_cast<unsigned>(paragraphLength));
     free(checkingString);
 
     // If the call to the input service did not go through, then cancel the request so we don't block endlessly.
@@ -741,6 +741,9 @@ void InputHandler::requestSpellingCheckingOptions(imf_sp_text_t& spellCheckingOp
 {
     // If the caret is no longer active, no message should be sent.
     if (m_webPage->focusedOrMainFrame()->selection()->selectionType() != VisibleSelection::CaretSelection)
+        return;
+
+    if (!m_currentFocusElement || !m_currentFocusElement->document() || !m_currentFocusElement->document()->frame())
         return;
 
     // imf_sp_text_t should be generated in pixel viewport coordinates.
@@ -1120,8 +1123,6 @@ void InputHandler::ensureFocusTextElementVisible(CaretScrollType scrollType)
 
     int fontHeight = selectionFocusRect.height();
 
-    m_webPage->suspendBackingStore();
-
     // If the text is too small, zoom in to make it a minimum size.
     // The minimum size being defined as 3 mm is a good value based on my observations.
     static const int s_minimumTextHeightInPixels = Graphics::Screen::primaryScreen()->heightInMMToPixels(3);
@@ -1133,7 +1134,7 @@ void InputHandler::ensureFocusTextElementVisible(CaretScrollType scrollType)
         zoomScaleRequired = m_webPage->currentScale(); // Don't scale.
 
     // The scroll location we should go to given the zoom required, could be adjusted later.
-    WebCore::FloatPoint offset(selectionFocusRect.location().y() - m_webPage->scrollPosition().x(), selectionFocusRect.location().y() - m_webPage->scrollPosition().y());
+    WebCore::FloatPoint offset(selectionFocusRect.location().x() - m_webPage->scrollPosition().x(), selectionFocusRect.location().y() - m_webPage->scrollPosition().y());
     double inverseScale = zoomScaleRequired / m_webPage->currentScale();
     WebCore::IntPoint destinationScrollLocation = WebCore::IntPoint(max(0, static_cast<int>(roundf(selectionFocusRect.location().x() - offset.x() / inverseScale))),
                                                                     max(0, static_cast<int>(roundf(selectionFocusRect.location().y() - offset.y() / inverseScale))));
@@ -1221,7 +1222,6 @@ void InputHandler::ensureFocusTextElementVisible(CaretScrollType scrollType)
         m_webPage->m_userPerformedManualScroll = true;
         m_webPage->client()->animateBlockZoom(zoomScaleRequired, m_webPage->m_finalBlockPoint);
     }
-    m_webPage->resumeBackingStore();
 }
 
 void InputHandler::ensureFocusPluginElementVisible()
@@ -2205,7 +2205,7 @@ bool InputHandler::setText(spannable_string_t* spannableString)
     // Remove it and apply it as a keypress later.
     // Upstream Webkit bug created https://bugs.webkit.org/show_bug.cgi?id=70823
     bool requiresSpaceKeyPress = false;
-    if (textLength > 0 && textToInsert[textLength - 1] == 32 /* space */) {
+    if (textLength > 0 && textToInsert[textLength - 1] == KEYCODE_SPACE) {
         requiresSpaceKeyPress = true;
         textLength--;
         textToInsert.remove(textLength, 1);
@@ -2227,7 +2227,7 @@ bool InputHandler::setText(spannable_string_t* spannableString)
     }
 
     if (requiresSpaceKeyPress)
-        handleKeyboardInput(Platform::KeyboardEvent(32 /* space */, Platform::KeyboardEvent::KeyDown, 0), true /* changeIsPartOfComposition */);
+        handleKeyboardInput(Platform::KeyboardEvent(KEYCODE_SPACE, Platform::KeyboardEvent::KeyDown, 0), true /* changeIsPartOfComposition */);
 
     InputLog(LogLevelInfo, "InputHandler::setText Request being processed. Text after processing '%s'", elementText().latin1().data());
 

@@ -1,3 +1,202 @@
+2012-11-28  Tommy Widenflycht  <tommyw@google.com>
+
+        Add basic implementation for MediaStreamAudioDestinationNode
+        https://bugs.webkit.org/show_bug.cgi?id=101815
+
+        Reviewed by Chris Rogers.
+
+        Adds the consumer interface and related functionality to WebMediaStreamSource.
+
+        * chromium/public/WebAudioDestinationConsumer.h: Added.
+        (WebKit):
+        (WebAudioDestinationConsumer):
+        (WebKit::WebAudioDestinationConsumer::~WebAudioDestinationConsumer):
+        * chromium/public/WebMediaStreamSource.h:
+        (WebKit):
+        (WebMediaStreamSource):
+
+2012-11-27  Eberhard Graether  <egraether@google.com>
+
+        [chromium] Add WebLayerTreeViewClient API to request font atlas
+        https://bugs.webkit.org/show_bug.cgi?id=102958
+
+        Reviewed by James Robinson.
+
+        This change makes the font atlas creation accessible to the WebLayerTreeView.
+
+        * chromium/public/WebLayerTreeViewClient.h:
+        (WebKit):
+        (WebLayerTreeViewClient):
+        (WebKit::WebLayerTreeViewClient::createFontAtlas):
+
+2012-11-27  Eberhard Graether  <egraether@google.com>
+
+        Plumbing showPaintRects out of InspectorPageAgent to use a different drawing implementation if available.
+        https://bugs.webkit.org/show_bug.cgi?id=102452
+
+        Reviewed by Pavel Feldman.
+
+        This change makes the showPaintRects setting in the Web Inspector's settings notify InspectorClient
+        when changed. And the default paint rects drawing is not used if an alternative is available.
+        This allows Chromium to draw the paint rects in the compositor's HUDLayer.
+
+        * chromium/public/WebLayerTreeView.h:
+        (WebLayerTreeView):
+        (WebKit::WebLayerTreeView::setShowPaintRects):
+
+2012-11-27  Keishi Hattori  <keishi@webkit.org>
+
+        Add WebLocalizedString for validation type badinput
+        https://bugs.webkit.org/show_bug.cgi?id=103381
+
+        Reviewed by Kent Tamura.
+
+        Adding WebLocalizedString enums for validation type badinput text.
+
+        * chromium/public/WebLocalizedString.h:
+
+2012-11-26  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Remove deprecated and unused WebGraphicsContext3D compositor binding calls
+        https://bugs.webkit.org/show_bug.cgi?id=103322
+
+        Reviewed by Adam Barth.
+
+        These have been uncalled for a while.
+
+        * chromium/public/WebLayerTreeViewClient.h:
+        (WebLayerTreeViewClient):
+
+2012-11-23  Sami Kyostila  <skyostil@chromium.org>
+
+        [chromium] Remove WebScreenInfo.{horizontal,vertical}DPI
+        https://bugs.webkit.org/show_bug.cgi?id=101772
+
+        Reviewed by Adam Barth.
+
+        Now that nothing is using WebScreenInfo.{horizontal,vertical}DPI we can simply
+        remove them.
+
+        * chromium/public/WebScreenInfo.h:
+        (WebKit::WebScreenInfo::WebScreenInfo):
+
+2012-11-22  David Reveman  <reveman@chromium.org>
+
+        [Chromium] Add GL_CHROMIUM_pixel_transfer_buffer_object extension support.
+        https://bugs.webkit.org/show_bug.cgi?id=102528
+
+        Reviewed by James Robinson.
+
+        Add mapBufferCHROMIUM and unmapBufferCHROMIUM prototypes to WebGraphicsContext3D.h.
+
+        * chromium/public/WebGraphicsContext3D.h:
+        (WebGraphicsContext3D):
+        (WebKit::WebGraphicsContext3D::mapBufferCHROMIUM):
+        (WebKit::WebGraphicsContext3D::unmapBufferCHROMIUM):
+
+2012-11-21  Harald Alvestrand  <hta@google.com>
+
+        WebMediaStreamComponent: Add assignment and copy operators
+        https://bugs.webkit.org/show_bug.cgi?id=102915
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/WebMediaStreamComponent.h:
+        (WebKit::WebMediaStreamComponent::WebMediaStreamComponent):
+        (WebKit::WebMediaStreamComponent::operator=):
+        (WebMediaStreamComponent):
+
+2012-11-19  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Remove the WebCompositorSupport virtual methods from the base class
+        https://bugs.webkit.org/show_bug.cgi?id=102153
+
+        Reviewed by James Robinson.
+
+        These methods have now been removed from WebCompositorSupportImpl in
+        chromium and should be removed from the base class. Everything is
+        going through WebLayerTreeSettings now.
+
+        * chromium/public/WebCompositorSupport.h:
+
+2012-11-19  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r135180.
+        http://trac.webkit.org/changeset/135180
+        https://bugs.webkit.org/show_bug.cgi?id=102700
+
+        breaks ui/compositor build (Requested by danakj on #webkit).
+
+        * chromium/public/WebCompositorSupport.h:
+        (WebCompositorSupport):
+        (WebKit::WebCompositorSupport::setPerTilePaintingEnabled):
+        (WebKit::WebCompositorSupport::setPartialSwapEnabled):
+        (WebKit::WebCompositorSupport::setAcceleratedAnimationEnabled):
+        (WebKit::WebCompositorSupport::setPageScalePinchZoomEnabled):
+
+2012-11-19  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Remove the WebCompositorSupport virtual methods from the base class
+        https://bugs.webkit.org/show_bug.cgi?id=102153
+
+        Reviewed by James Robinson.
+
+        These methods have now been removed from WebCompositorSupportImpl in
+        chromium and should be removed from the base class. Everything is
+        going through WebLayerTreeSettings now.
+
+        * chromium/public/WebCompositorSupport.h:
+
+2012-11-16  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Add conversion between WebTransformation and gfx::Transform
+        https://bugs.webkit.org/show_bug.cgi?id=102575
+
+        Reviewed by James Robinson.
+
+        * chromium/public/WebTransformationMatrix.h:
+        (WebTransformationMatrix):
+        (WebKit::WebTransformationMatrix::WebTransformationMatrix):
+        (WebKit::WebTransformationMatrix::operator=):
+        (WebKit::WebTransformationMatrix::operator gfx::Transform):
+
+2012-11-16  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Update RTCPeerConnection states to match the latest editors draft
+        https://bugs.webkit.org/show_bug.cgi?id=102382
+
+        Reviewed by Adam Barth.
+
+        Adding a callback for the new RTCPeerConnection::iceGatheringState.
+
+        * chromium/public/WebRTCPeerConnectionHandlerClient.h:
+        (WebKit::WebRTCPeerConnectionHandlerClient::didChangeICEGatheringState):
+
+2012-11-16  Tommy Widenflycht  <tommyw@google.com>
+
+        [chromium] MediaStream API: Add missing WebRTCPeerConnectionHandlerClient::didAddRemoteDataChannel
+        https://bugs.webkit.org/show_bug.cgi?id=102386
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/WebRTCPeerConnectionHandlerClient.h:
+        (WebRTCPeerConnectionHandlerClient):
+
+2012-11-16  Scott Violet  <sky@chromium.org>
+
+        [chromium] Copy linux theme related files to default
+        https://bugs.webkit.org/show_bug.cgi?id=102403
+
+        Reviewed by Tony Chang
+
+        Transitional patch that copies linux WebThemeEngine to default directory.
+
+        No new tests, refactoring only.
+
+        * Platform.gypi:
+        * chromium/public/default: Added.
+        * chromium/public/default/WebThemeEngine.h: Copied from Source/Platform/chromium/public/linux/WebThemeEngine.h.
+
 2012-11-15  Scott Violet  <sky@chromium.org>
 
         [chromium] Create default directory so that cq can apply patch

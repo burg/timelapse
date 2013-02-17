@@ -149,26 +149,32 @@ template<> inline CSSPrimitiveValue::operator LineClampValue() const
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ColumnSpan columnSpan)
     : CSSValue(PrimitiveClass)
 {
+    m_primitiveUnitType = CSS_IDENT;
     switch (columnSpan) {
     case ColumnSpanAll:
-        m_primitiveUnitType = CSS_IDENT;
         m_value.ident = CSSValueAll;
         break;
-    case ColumnSpanOne:
-        m_primitiveUnitType = CSS_NUMBER;
-        m_value.num = 1;
+    case ColumnSpanNone:
+        m_value.ident = CSSValueNone;
         break;
     }
 }
 
 template<> inline CSSPrimitiveValue::operator ColumnSpan() const
 {
-    if (m_primitiveUnitType == CSS_IDENT && m_value.ident == CSSValueAll)
-        return ColumnSpanAll;
+    // Map 1 to none for compatibility reasons.
     if (m_primitiveUnitType == CSS_NUMBER && m_value.num == 1)
-        return ColumnSpanOne;
+        return ColumnSpanNone;
+
+    switch (m_value.ident) {
+    case CSSValueAll:
+        return ColumnSpanAll;
+    case CSSValueNone:
+        return ColumnSpanNone;
+    }
+
     ASSERT_NOT_REACHED();
-    return ColumnSpanOne;
+    return ColumnSpanNone;
 }
 
 
@@ -2803,6 +2809,33 @@ template<> inline CSSPrimitiveValue::operator TextCombine() const
 
     ASSERT_NOT_REACHED();
     return TextCombineNone;
+}
+
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(RubyPosition position)
+    : CSSValue(PrimitiveClass)
+{
+    m_primitiveUnitType = CSS_IDENT;
+    switch (position) {
+    case RubyPositionBefore:
+        m_value.ident = CSSValueBefore;
+        break;
+    case RubyPositionAfter:
+        m_value.ident = CSSValueAfter;
+        break;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator RubyPosition() const
+{
+    switch (m_value.ident) {
+    case CSSValueBefore:
+        return RubyPositionBefore;
+    case CSSValueAfter:
+        return RubyPositionAfter;
+    }
+
+    ASSERT_NOT_REACHED();
+    return RubyPositionBefore;
 }
 
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(TextEmphasisPosition position)

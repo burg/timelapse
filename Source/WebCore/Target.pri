@@ -132,6 +132,7 @@ SOURCES += \
      bindings/js/JSHTMLDocumentCustom.cpp \
      bindings/js/JSHTMLElementCustom.cpp \
      bindings/js/JSHTMLEmbedElementCustom.cpp \
+     bindings/js/JSHTMLFormControlsCollectionCustom.cpp \
      bindings/js/JSHTMLFormElementCustom.cpp \
      bindings/js/JSHTMLFrameElementCustom.cpp \
      bindings/js/JSHTMLFrameSetElementCustom.cpp \
@@ -326,6 +327,7 @@ SOURCES += \
     css/StyleSheet.cpp \
     css/StyleSheetContents.cpp \
     css/StyleSheetList.cpp \
+    css/ViewportStyleResolver.cpp \
     css/WebKitCSSArrayFunctionValue.cpp \
     css/WebKitCSSFilterValue.cpp \
     css/WebKitCSSKeyframeRule.cpp \
@@ -382,8 +384,6 @@ SOURCES += \
     dom/DOMStringList.cpp \
     dom/DOMStringMap.cpp \
     dom/DatasetDOMStringMap.cpp \
-    dom/DynamicNodeList.cpp \
-    dom/EditingText.cpp \
     dom/Element.cpp \
     dom/ElementAttributeData.cpp \
     dom/ElementRareData.cpp \
@@ -405,6 +405,7 @@ SOURCES += \
     dom/IconURL.cpp \
     dom/IdTargetObserver.cpp \
     dom/IdTargetObserverRegistry.cpp \
+    dom/LiveNodeList.cpp \
     dom/KeyboardEvent.cpp \
     dom/MessageChannel.cpp \
     dom/MessageEvent.cpp \
@@ -601,7 +602,7 @@ SOURCES += \
     html/HTMLEmbedElement.cpp \
     html/HTMLFieldSetElement.cpp \
     html/HTMLFontElement.cpp \
-    html/HTMLFormCollection.cpp \
+    html/HTMLFormControlsCollection.cpp \
     html/HTMLFormControlElement.cpp \
     html/HTMLFormControlElementWithState.cpp \
     html/HTMLFormElement.cpp \
@@ -822,6 +823,7 @@ SOURCES += \
     loader/CrossOriginPreflightResultCache.cpp \
     loader/cache/CachedResourceLoader.cpp \
     loader/cache/CachedResourceRequest.cpp \
+    loader/cache/CachedResourceRequestInitiators.cpp \
     loader/DocumentLoadTiming.cpp \
     loader/DocumentLoader.cpp \
     loader/DocumentThreadableLoader.cpp \
@@ -829,6 +831,7 @@ SOURCES += \
     loader/EmptyClients.cpp \
     loader/FormState.cpp \
     loader/FormSubmission.cpp \
+    loader/FrameLoadRequest.cpp \
     loader/FrameLoader.cpp \
     loader/FrameLoaderStateMachine.cpp \
     loader/HistoryController.cpp \
@@ -875,6 +878,7 @@ SOURCES += \
     page/ContentSecurityPolicy.cpp \
     page/ContextMenuController.cpp \
     page/Crypto.cpp \
+    page/DeviceController.cpp \
     page/DiagnosticLoggingKeys.cpp \
     page/DOMSelection.cpp \
     page/DOMTimer.cpp \
@@ -1045,7 +1049,6 @@ SOURCES += \
     platform/network/BlobResourceHandle.cpp \
     platform/network/Credential.cpp \
     platform/network/CredentialStorage.cpp \
-    platform/network/ContentTypeParser.cpp \
     platform/network/FormData.cpp \
     platform/network/FormDataBuilder.cpp \
     platform/network/HTTPHeaderMap.cpp \
@@ -1054,6 +1057,7 @@ SOURCES += \
     platform/network/HTTPValidation.cpp \
     platform/network/MIMEHeader.cpp \
     platform/network/NetworkStateNotifier.cpp \
+    platform/network/ParsedContentType.cpp \
     platform/network/ProtectionSpace.cpp \
     platform/network/ProxyServer.cpp \
     platform/network/ResourceErrorBase.cpp \
@@ -1505,6 +1509,7 @@ HEADERS += \
     css/StyleSheet.h \
     css/StyleSheetContents.h \
     css/StyleSheetList.h \
+    css/ViewportStyleResolver.h \
     css/WebKitCSSArrayFunctionValue.h \
     css/WebKitCSSFilterValue.h \
     css/WebKitCSSKeyframeRule.h \
@@ -1558,8 +1563,6 @@ HEADERS += \
     dom/DOMStringMap.h \
     dom/DOMTimeStamp.h \
     dom/DatasetDOMStringMap.h \
-    dom/DynamicNodeList.h \
-    dom/EditingText.h \
     dom/Element.h \
     dom/ElementShadow.h \
     dom/ElementAttributeData.h \
@@ -1578,6 +1581,7 @@ HEADERS += \
     dom/GestureEvent.h \
     dom/IdTargetObserver.h \
     dom/IdTargetObserverRegistry.h \
+    dom/LiveNodeList.h \
     dom/KeyboardEvent.h \
     dom/MessageChannel.h \
     dom/MessageEvent.h \
@@ -1618,6 +1622,7 @@ HEADERS += \
     dom/ScriptExecutionContext.h \
     dom/SelectorQuery.h \
     dom/ShadowRoot.h \
+    dom/SimulatedClickOptions.h \
     dom/SpaceSplitString.h \
     dom/StaticNodeList.h \
     dom/StyledElement.h \
@@ -1759,7 +1764,7 @@ HEADERS += \
     html/HTMLEmbedElement.h \
     html/HTMLFieldSetElement.h \
     html/HTMLFontElement.h \
-    html/HTMLFormCollection.h \
+    html/HTMLFormControlsCollection.h \
     html/HTMLFormControlElement.h \
     html/HTMLFormControlElementWithState.h \
     html/HTMLFormElement.h \
@@ -1863,6 +1868,8 @@ HEADERS += \
     html/shadow/HTMLShadowElement.h \
     html/shadow/MediaControlElements.h \
     html/shadow/DetailsMarkerControl.h \
+    html/track/InbandTextTrack.h \
+    html/track/InbandTextTrackPrivate.h \
     html/track/LoadableTextTrack.h \
     html/track/TextTrack.h \
     html/track/TextTrackCue.h \
@@ -1954,6 +1961,8 @@ HEADERS += \
     loader/CrossOriginAccessControl.h \
     loader/CrossOriginPreflightResultCache.h \
     loader/cache/CachedResourceLoader.h \
+    loader/cache/CachedResourceRequest.h \
+    loader/cache/CachedResourceRequestInitiators.h \
     loader/DocumentLoader.h \
     loader/DocumentThreadableLoader.h \
     loader/FormState.h \
@@ -2003,6 +2012,8 @@ HEADERS += \
     page/ContextMenuController.h \
     page/ContextMenuProvider.h \
     page/Coordinates.h \
+    page/DeviceClient.h \
+    page/DeviceController.h \
     page/DiagnosticLoggingKeys.h \
     page/DOMSelection.h \
     page/DOMTimer.h \
@@ -2029,6 +2040,7 @@ HEADERS += \
     page/PageGroupLoadDeferrer.h \
     page/Page.h \
     page/PageVisibilityState.h \
+    page/PopupOpeningObserver.h \
     page/PrintContext.h \
     page/Screen.h \
     page/SecurityOrigin.h \
@@ -2080,6 +2092,7 @@ HEADERS += \
     platform/graphics/cpu/arm/filters/FEGaussianBlurNEON.h \
     platform/graphics/cpu/arm/filters/FELightingNEON.h \
     platform/graphics/CrossfadeGeneratedImage.h \
+    platform/graphics/filters/texmap/TextureMapperPlatformCompiledProgram.h \
     platform/graphics/filters/CustomFilterArrayParameter.h \
     platform/graphics/filters/CustomFilterConstants.h \
     platform/graphics/filters/CustomFilterGlobalContext.h \
@@ -2228,7 +2241,6 @@ HEADERS += \
     platform/network/CookieStorage.h \
     platform/network/Credential.h \
     platform/network/CredentialStorage.h \
-    platform/network/ContentTypeParser.h \
     platform/network/DNSResolveQueue.h \
     platform/network/FormDataBuilder.h \
     platform/network/FormData.h \
@@ -2240,6 +2252,7 @@ HEADERS += \
     platform/network/MIMESniffing.h \
     platform/network/NetworkingContext.h \
     platform/network/NetworkStateNotifier.h \
+    platform/network/ParsedContentType.h \
     platform/network/PlatformCookieJar.h \
     platform/network/ProtectionSpace.h \
     platform/network/ProxyServer.h \
@@ -2435,6 +2448,7 @@ HEADERS += \
     rendering/style/CounterDirectives.h \
     rendering/style/CursorData.h \
     rendering/style/CursorList.h \
+    rendering/style/ExclusionShapeValue.h \
     rendering/style/FillLayer.h \
     rendering/style/KeyframeList.h \
     rendering/style/NinePieceImage.h \
@@ -2462,6 +2476,7 @@ HEADERS += \
     rendering/style/StyleTransformData.h \
     rendering/style/StyleVariableData.h \
     rendering/style/StyleVisualData.h \
+    rendering/style/GridTrackSize.h \
     rendering/style/SVGRenderStyleDefs.h \
     rendering/style/SVGRenderStyle.h \
     rendering/svg/RenderSVGBlock.h \
@@ -3502,6 +3517,7 @@ enable?(XSLT) {
 enable?(FILTERS) {
     SOURCES += \
         platform/graphics/cpu/arm/filters/FELightingNEON.cpp \
+        platform/graphics/filters/texmap/CustomFilterValidatedProgramTextureMapper.cpp \
         platform/graphics/filters/CustomFilterGlobalContext.cpp \
         platform/graphics/filters/CustomFilterOperation.cpp \
         platform/graphics/filters/CustomFilterParameterList.cpp \
@@ -4065,6 +4081,17 @@ contains(CONFIG, opengl-shims) {
     HEADERS += platform/graphics/OpenGLShims.h
     SOURCES += platform/graphics/OpenGLShims.cpp
     DEFINES += QT_OPENGL_SHIMS=1
+}
+
+contains(DEFINES, ENABLE_OPENCL=1) {
+    HEADERS += \
+        platform/graphics/gpu/opencl/OpenCLHandle.h \
+        platform/graphics/gpu/opencl/FilterContextOpenCL.h
+    SOURCES += \
+        platform/graphics/gpu/opencl/FilterContextOpenCL.cpp \
+        platform/graphics/gpu/opencl/OpenCLFESourceAlpha.cpp \
+        platform/graphics/gpu/opencl/OpenCLFESourceGraphic.cpp \
+        platform/graphics/gpu/opencl/OpenCLFETurbulence.cpp
 }
 
 use?(GRAPHICS_SURFACE) {

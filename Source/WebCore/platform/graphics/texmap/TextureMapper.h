@@ -48,6 +48,7 @@
 namespace WebCore {
 
 class BitmapTexturePool;
+class CustomFilterProgram;
 class TextureMapper;
 
 // A 2D texture that can be the target of software or GL rendering.
@@ -154,8 +155,12 @@ public:
 
     virtual PassRefPtr<BitmapTexture> acquireTextureFromPool(const IntSize&);
 
+#if ENABLE(CSS_SHADERS)
+    virtual void removeCachedCustomFilterProgram(CustomFilterProgram*) { }
+#endif
+
 protected:
-    TextureMapper(AccelerationMode);
+    explicit TextureMapper(AccelerationMode);
 
 private:
 #if USE(TEXTURE_MAPPER_GL)

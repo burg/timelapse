@@ -49,6 +49,7 @@ void CoordinatedBackingStoreTile::swapBuffers(WebCore::TextureMapper* textureMap
         shouldReset = true;
     }
 
+    ASSERT(textureMapper->maxTextureSize().width() >= m_tileRect.size().width() && textureMapper->maxTextureSize().height() >= m_tileRect.size().height());
     if (shouldReset)
         texture->reset(m_tileRect.size(), m_surface->flags() & ShareableBitmap::SupportsAlpha ? BitmapTexture::SupportsAlpha : 0);
 
@@ -76,17 +77,19 @@ void CoordinatedBackingStore::removeTile(int id)
     m_tilesToRemove.add(id);
 }
 
+void CoordinatedBackingStore::removeAllTiles()
+{
+    HashMap<int, CoordinatedBackingStoreTile>::iterator end = m_tiles.end();
+    for (HashMap<int, CoordinatedBackingStoreTile>::iterator it = m_tiles.begin(); it != end; ++it)
+        m_tilesToRemove.add(it->key);
+}
+
 void CoordinatedBackingStore::updateTile(int id, const IntRect& sourceRect, const IntRect& tileRect, PassRefPtr<ShareableSurface> backBuffer, const IntPoint& offset)
 {
     HashMap<int, CoordinatedBackingStoreTile>::iterator it = m_tiles.find(id);
     ASSERT(it != m_tiles.end());
     it->value.incrementRepaintCount();
     it->value.setBackBuffer(tileRect, sourceRect, backBuffer, offset);
-}
-
-bool CoordinatedBackingStore::isEmpty() const
-{
-    return m_tiles.size() == m_tilesToRemove.size();
 }
 
 PassRefPtr<BitmapTexture> CoordinatedBackingStore::texture() const
@@ -132,6 +135,10 @@ void CoordinatedBackingStore::paintTilesToTextureMapper(Vector<TextureMapperTile
 
 void CoordinatedBackingStore::paintToTextureMapper(TextureMapper* textureMapper, const FloatRect& targetRect, const TransformationMatrix& transform, float opacity, BitmapTexture* mask)
 {
+    if (m_tiles.isEmpty())
+        return;
+    ASSERT(!m_size.isZero());
+
     Vector<TextureMapperTile*> tilesToPaint;
     Vector<TextureMapperTile*> previousTilesToPaint;
 
@@ -157,7 +164,6 @@ void CoordinatedBackingStore::paintToTextureMapper(TextureMapper* textureMapper,
         previousTilesToPaint.append(&tile);
     }
 
-    ASSERT(!m_size.isZero());
     FloatRect rectOnContents(FloatPoint::zero(), m_size);
     TransformationMatrix adjustedTransform = transform;
     // targetRect is on the contents coordinate system, so we must compare two rects on the contents coordinate system.

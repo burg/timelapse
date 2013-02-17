@@ -54,6 +54,8 @@ namespace WebCore {
         void adjustMinimumTimerInterval(double oldMinimumTimerInterval);
         virtual void fired();
 
+        virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
+
     private:
         DOMTimer(ScriptExecutionContext*, PassOwnPtr<ScheduledAction>, int interval, bool singleShot);
 

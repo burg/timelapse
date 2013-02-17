@@ -61,10 +61,11 @@ public:
     virtual void setAcceleratedPaintingEnabled(bool);
     virtual void setAllowDisplayOfInsecureContent(bool);
     virtual void setAllowFileAccessFromFileURLs(bool);
+    virtual void setAllowCustomScrollbarInMainFrame(bool);
     virtual void setAllowRunningOfInsecureContent(bool);
     virtual void setAllowScriptsToCloseWindows(bool);
     virtual void setAllowUniversalAccessFromFileURLs(bool);
-    virtual void setApplyDefaultDeviceScaleFactorInCompositor(bool);
+    virtual void setApplyDeviceScaleFactorInCompositor(bool);
     virtual void setApplyPageScaleFactorInCompositor(bool);
     virtual void setAsynchronousSpellCheckingEnabled(bool);
     virtual void setAuthorAndUserStylesEnabled(bool);
@@ -88,6 +89,7 @@ public:
     virtual void setEditableLinkBehaviorNeverLive();
     virtual void setEditingBehavior(EditingBehavior);
     virtual void setEnableScrollAnimator(bool);
+    virtual void setEnableTouchAdjustment(bool);
     virtual void setExperimentalCSSCustomFilterEnabled(bool);
     virtual void setExperimentalCSSGridLayoutEnabled(bool);
     virtual void setCSSStickyPositionEnabled(bool);
@@ -151,6 +153,7 @@ public:
     virtual void setTextAutosizingEnabled(bool);
     virtual void setTextAutosizingFontScaleFactor(float);
     virtual void setTextDirectionSubmenuInclusionBehaviorNeverIncluded();
+    virtual void setTouchDragDropEnabled(bool);
     virtual void setUnifiedTextCheckerEnabled(bool);
     virtual void setUserStyleSheetLocation(const WebURL&);
     virtual void setUsesEncodingDetector(bool);
@@ -167,7 +170,7 @@ public:
     bool showPlatformLayerTree() const { return m_showPlatformLayerTree; }
     bool showPaintRects() const { return m_showPaintRects; }
     bool renderVSyncEnabled() const { return m_renderVSyncEnabled; }
-    bool applyDefaultDeviceScaleFactorInCompositor() const { return m_applyDefaultDeviceScaleFactorInCompositor; }
+    bool applyDeviceScaleFactorInCompositor() const { return m_applyDeviceScaleFactorInCompositor; }
     bool applyPageScaleFactorInCompositor() const;
     bool autoZoomFocusedNodeToLegibleScale() const { return m_autoZoomFocusedNodeToLegibleScale; }
     bool gestureTapHighlightEnabled() const { return m_gestureTapHighlightEnabled; }
@@ -184,7 +187,7 @@ private:
     bool m_showPaintRects;
     bool m_renderVSyncEnabled;
     bool m_viewportEnabled;
-    bool m_applyDefaultDeviceScaleFactorInCompositor;
+    bool m_applyDeviceScaleFactorInCompositor;
     bool m_gestureTapHighlightEnabled;
     bool m_autoZoomFocusedNodeToLegibleScale;
     bool m_deferredImageDecodingEnabled;

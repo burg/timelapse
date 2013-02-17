@@ -1,3 +1,141 @@
+2012-11-29  Alexey Proskuryakov  <ap@apple.com>
+
+        [WK2] Forward cookie jar calls to NetworkProcess
+        https://bugs.webkit.org/show_bug.cgi?id=103457
+
+        Reviewed by Darin Adler.
+
+        * WebCoreSupport/WebPlatformStrategies.cpp:
+        (WebPlatformStrategies::cookiesForDOM):
+        (WebPlatformStrategies::setCookiesFromDOM):
+        (WebPlatformStrategies::cookiesEnabled):
+        (WebPlatformStrategies::cookieRequestHeaderFieldValue):
+        (WebPlatformStrategies::getRawCookies):
+        (WebPlatformStrategies::deleteCookie):
+        (WebPlatformStrategies::getHostnamesWithCookies):
+        (WebPlatformStrategies::deleteCookiesForHostname):
+        (WebPlatformStrategies::deleteAllCookies):
+
+2012-11-27  James Simonsen  <simonjam@chromium.org>
+
+        Consolidate FrameLoader::load() into one function taking a FrameLoadRequest
+        https://bugs.webkit.org/show_bug.cgi?id=102151
+
+        Reviewed by Adam Barth.
+
+        * WebFrame.cpp:
+        (WebFrame::loadRequest):
+        (WebFrame::loadData):
+
+2012-11-27  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r135786.
+        http://trac.webkit.org/changeset/135786
+        https://bugs.webkit.org/show_bug.cgi?id=103379
+
+        It made 3 plugin tests timeout on several platforms (Requested
+        by Ossy on #webkit).
+
+        * WebFrame.cpp:
+        (WebFrame::loadRequest):
+        (WebFrame::loadData):
+
+2012-11-26  James Simonsen  <simonjam@chromium.org>
+
+        Consolidate FrameLoader::load() into one function taking a FrameLoadRequest
+        https://bugs.webkit.org/show_bug.cgi?id=102151
+
+        Reviewed by Adam Barth.
+
+        * WebFrame.cpp:
+        (WebFrame::loadRequest):
+        (WebFrame::loadData):
+
+2012-11-21  Allan Sandfeld Jensen  <allan.jensen@digia.com>
+
+        Disambiguate innerNodeFramePoint and mainFramePoint
+        https://bugs.webkit.org/show_bug.cgi?id=98139
+
+        Reviewed by Julien Chaffraix.
+
+        * WebView.cpp:
+        (WebView::handleContextMenuEvent):
+
+2012-11-20  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r135295.
+        http://trac.webkit.org/changeset/135295
+        https://bugs.webkit.org/show_bug.cgi?id=102834
+
+        This patch causes assertion to some layout tests on chromium
+        (Requested by jianli on #webkit).
+
+        * WebFrame.cpp:
+        (WebFrame::loadRequest):
+        (WebFrame::loadData):
+
+2012-11-20  James Simonsen  <simonjam@chromium.org>
+
+        Consolidate FrameLoader::load() into one function taking a FrameLoadRequest
+        https://bugs.webkit.org/show_bug.cgi?id=102151
+
+        Reviewed by Adam Barth.
+
+        * WebFrame.cpp:
+        (WebFrame::loadRequest):
+        (WebFrame::loadData):
+
+2012-11-17  Brady Eidson  <beidson@apple.com>
+
+        Add an integer identifier field to AuthenticationChallengeBase.
+        https://bugs.webkit.org/show_bug.cgi?id=102593
+
+        Reviewed by Darin Adler.
+
+        * WebURLAuthenticationChallenge.cpp:
+        (WebURLAuthenticationChallenge::initWithProtectionSpace): Adopt the new constructor with a dummy identifier.
+
+2012-11-16  Brent Fulgham  <bfulgham@webkit.org>
+
+        [WinCairo] Unreviewed build fix after r134960.
+
+        Avoid including Mac-specific headers.
+
+        * WebCoreSupport/WebFrameNetworkingContext.cpp: Stub out
+        CFNetwork-based implementations.
+        * WebCoreSupport/WebFrameNetworkingContext.h: Exclude
+        CFNetwork data types.
+        * WebCoreSupport/WebPlatformStrategies.cpp: Stub out
+        CFNetwork-based implementations.
+        * WebCoreSupport/WebPlatformStrategies.h: Exclude
+        CFNetwork data types.
+
+2012-11-15  Alexey Proskuryakov  <ap@apple.com>
+
+        Private Browsing is a per-page setting that sets a global value
+        https://bugs.webkit.org/show_bug.cgi?id=67870
+
+        Reviewed by Sam Weinig.
+
+        * WebCookieManagerCFNet.cpp: (WebCookieManager::cookieStorage): We can't get
+        current session without any context, but the code was not correct anyway, the client
+        is clearly interested in a getter to match override setter.
+
+        * WebCoreSupport/WebFrameNetworkingContext.cpp: Moved code for tracking global
+        sessions from WebCore to WebKit. The behavior is unchanged, but lower levels are
+        now cleaner.
+
+        * WebCoreSupport/WebFrameNetworkingContext.h: Ditto.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        * WebCoreSupport/WebPlatformStrategies.cpp:
+        (WebPlatformStrategies::defaultCookieStorage): Added. Use WebFrameNetworkingContext
+        for tracking the default session.
+
+        * WebView.cpp: (updateSharedSettingsFromPreferencesIfNeeded):
+        Use WebFrameNetworkingContext::setCookieAcceptPolicyForAllContexts. Updating only
+        the current session is not sufficient, and did not match Mac.
+
 2012-11-14  George Tsoumalis  <tsumalis96@gmail.com>
 
         Implementation for mehods in WebMutableURLRequest.cpp

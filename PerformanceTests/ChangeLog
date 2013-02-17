@@ -1,3 +1,33 @@
+2012-11-29  Shinya Kawanaka  <shinyak@chromium.org>
+
+        [Shadow] Performance tests of distribution for changing select attribute
+        https://bugs.webkit.org/show_bug.cgi?id=103611
+
+        Reviewed by Hajime Morita.
+
+        We would like to measure ShadowDOM performance and compare it to the similar functional HTML without using ShadowDOM.
+        In this patch, we add a case when select attribute of HTMLContentElement is changed.
+
+        * ShadowDOM/ChangingSelect.html: Added.
+        * ShadowDOM/ChangingSelectWithoutShadow.html: Added.
+        * Skipped:
+
+2012-11-19  Shinya Kawanaka  <shinyak@chromium.org>
+
+        Changing id, className, or attribute should invalidate distribution
+        https://bugs.webkit.org/show_bug.cgi?id=100738
+
+        Reviewed by Dimitri Glazkov.
+
+        Added test code to modify id/class/attribute.
+
+        * DOM/ModifyAttribute.html: Added.
+        * DOM/resources/dom-perf/modify-attribute.js: Added.
+        (ModifyAttribute.CreateElementToSetUp):
+        (ModifyAttribute.ModifyId):
+        (ModifyAttribute.ModifyClass):
+        (ModifyAttribute.ModifyTitle):
+
 2012-11-14  Ryosuke Niwa  <rniwa@webkit.org>
 
         runCount in runner.js should be renamed to iterationCount

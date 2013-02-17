@@ -48,7 +48,7 @@ namespace WebCore {
 
 struct SameSizeAsInlineFlowBox : public InlineBox {
     void* pointers[5];
-    uint32_t bitfields : 24;
+    uint32_t bitfields : 23;
 };
 
 COMPILE_ASSERT(sizeof(InlineFlowBox) == sizeof(SameSizeAsInlineFlowBox), InlineFlowBox_should_stay_small);
@@ -670,7 +670,7 @@ void InlineFlowBox::placeBoxesInBlockDirection(LayoutUnit top, LayoutUnit maxHei
                 // Treat the leading on the first and last lines of ruby runs as not being part of the overall lineTop/lineBottom.
                 // Really this is a workaround hack for the fact that ruby should have been done as line layout and not done using
                 // inline-block.
-                if (!renderer()->style()->isFlippedLinesWritingMode())
+                if (renderer()->style()->isFlippedLinesWritingMode() == (curr->renderer()->style()->rubyPosition() == RubyPositionAfter))
                     hasAnnotationsBefore = true;
                 else
                     hasAnnotationsAfter = true;
@@ -981,11 +981,40 @@ bool InlineFlowBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
         return false;
 
     // Check children first.
+    // We need to account for culled inline parents of the hit-tested nodes, so that they may also get included in area-based hit-tests.
+    RenderObject* culledParent = 0;
     for (InlineBox* curr = lastChild(); curr; curr = curr->prevOnLine()) {
-        if ((curr->renderer()->isText() || !curr->boxModelObject()->hasSelfPaintingLayer()) && curr->nodeAtPoint(request, result, locationInContainer, accumulatedOffset, lineTop, lineBottom)) {
-            renderer()->updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
-            return true;
+        if (curr->renderer()->isText() || !curr->boxModelObject()->hasSelfPaintingLayer()) {
+            RenderObject* newParent = 0;
+            // Culled parents are only relevant for area-based hit-tests, so ignore it in point-based ones.
+            if (locationInContainer.isRectBasedTest()) {
+                newParent = curr->renderer()->parent();
+                if (newParent == renderer())
+                    newParent = 0;
+            }
+            // Check the culled parent after all its children have been checked, to do this we wait until
+            // we are about to test an element with a different parent.
+            if (newParent != culledParent) {
+                if (!newParent || !newParent->isDescendantOf(culledParent)) {
+                    while (culledParent && culledParent != renderer() && culledParent != newParent) {
+                        if (culledParent->isRenderInline() && toRenderInline(culledParent)->hitTestCulledInline(request, result, locationInContainer, accumulatedOffset))
+                            return true;
+                        culledParent = culledParent->parent();
+                    }
+                }
+                culledParent = newParent;
+            }
+            if (curr->nodeAtPoint(request, result, locationInContainer, accumulatedOffset, lineTop, lineBottom)) {
+                renderer()->updateHitTestResult(result, locationInContainer.point() - toLayoutSize(accumulatedOffset));
+                return true;
+            }
         }
+    }
+    // Check any culled ancestor of the final children tested.
+    while (culledParent && culledParent != renderer()) {
+        if (culledParent->isRenderInline() && toRenderInline(culledParent)->hitTestCulledInline(request, result, locationInContainer, accumulatedOffset))
+            return true;
+        culledParent = culledParent->parent();
     }
 
     // Now check ourselves. Pixel snap hit testing.
@@ -1432,7 +1461,7 @@ LayoutUnit InlineFlowBox::computeOverAnnotationAdjustment(LayoutUnit allowedPosi
         if (curr->isInlineFlowBox())
             result = max(result, toInlineFlowBox(curr)->computeOverAnnotationAdjustment(allowedPosition));
         
-        if (curr->renderer()->isReplaced() && curr->renderer()->isRubyRun()) {
+        if (curr->renderer()->isReplaced() && curr->renderer()->isRubyRun() && curr->renderer()->style()->rubyPosition() == RubyPositionBefore) {
             RenderRubyRun* rubyRun = toRenderRubyRun(curr->renderer());
             RenderRubyText* rubyText = rubyRun->rubyText();
             if (!rubyText)
@@ -1479,6 +1508,27 @@ LayoutUnit InlineFlowBox::computeUnderAnnotationAdjustment(LayoutUnit allowedPos
 
         if (curr->isInlineFlowBox())
             result = max(result, toInlineFlowBox(curr)->computeUnderAnnotationAdjustment(allowedPosition));
+
+        if (curr->renderer()->isReplaced() && curr->renderer()->isRubyRun() && curr->renderer()->style()->rubyPosition() == RubyPositionAfter) {
+            RenderRubyRun* rubyRun = toRenderRubyRun(curr->renderer());
+            RenderRubyText* rubyText = rubyRun->rubyText();
+            if (!rubyText)
+                continue;
+
+            if (rubyRun->style()->isFlippedLinesWritingMode()) {
+                LayoutUnit topOfFirstRubyTextLine = rubyText->logicalTop() + (rubyText->firstRootBox() ? rubyText->firstRootBox()->lineTop() : LayoutUnit());
+                if (topOfFirstRubyTextLine >= 0)
+                    continue;
+                topOfFirstRubyTextLine += curr->logicalTop();
+                result = max(result, allowedPosition - topOfFirstRubyTextLine);
+            } else {
+                LayoutUnit bottomOfLastRubyTextLine = rubyText->logicalTop() + (rubyText->lastRootBox() ? rubyText->lastRootBox()->lineBottom() : rubyText->logicalHeight());
+                if (bottomOfLastRubyTextLine <= curr->logicalHeight())
+                    continue;
+                bottomOfLastRubyTextLine += curr->logicalTop();
+                result = max(result, bottomOfLastRubyTextLine - allowedPosition);
+            }
+        }
 
         if (curr->isInlineTextBox()) {
             RenderStyle* style = curr->renderer()->style(isFirstLineStyle());

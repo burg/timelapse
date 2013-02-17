@@ -38,6 +38,7 @@
 #include "V8AbstractEventListener.h"
 #include "V8Binding.h"
 #include "V8MessagePort.h"
+#include "V8MutationObserver.h"
 #include "V8Node.h"
 #include "V8RecursionScope.h"
 #include "WrapperTypeInfo.h"
@@ -176,6 +177,14 @@ public:
             MessagePort* port = static_cast<MessagePort*>(object);
             if (port->isEntangled() || port->hasPendingActivity())
                 m_grouper.keepAlive(wrapper);
+#if ENABLE(MUTATION_OBSERVERS)
+        } else if (V8MutationObserver::info.equals(type)) {
+            // FIXME: Allow opaqueRootForGC to operate on multiple roots and move this logic into V8MutationObserverCustom.
+            MutationObserver* observer = static_cast<MutationObserver*>(object);
+            HashSet<Node*> observedNodes = observer->getObservedNodes();
+            for (HashSet<Node*>::iterator it = observedNodes.begin(); it != observedNodes.end(); ++it)
+                m_grouper.addToGroup(V8GCController::opaqueRootForGC(*it), wrapper);
+#endif // ENABLE(MUTATION_OBSERVERS)
         } else {
             ActiveDOMObject* activeDOMObject = type->toActiveDOMObject(wrapper);
             if (activeDOMObject && activeDOMObject->hasPendingActivity())
@@ -227,7 +236,7 @@ static void gcTree(Node* startNode)
     do {
         ASSERT(node);
         if (!node->wrapper().IsEmpty()) {
-            if (!node->inEden()) {
+            if (!node->isV8CollectableDuringMinorGC()) {
                 // The fact that we encounter a node that is not in the Eden space
                 // implies that its wrapper might be in the old space of V8.
                 // This indicates that the minor GC cannot anyway judge reachability
@@ -235,7 +244,7 @@ static void gcTree(Node* startNode)
                 return;
             }
             // A once traversed node is removed from the Eden space.
-            node->setEden(false);
+            node->setV8CollectableDuringMinorGC(false);
             newSpaceWrappers.append(node->wrapper());
         }
         if (node->firstChild()) {
@@ -276,7 +285,7 @@ void V8GCController::didCreateWrapperForNode(Node* node)
     if (m_edenNodes->size() <= wrappersHandledByEachMinorGC) {
         // A node of a newly created wrapper is put into the Eden space.
         m_edenNodes->append(node);
-        node->setEden(true);
+        node->setV8CollectableDuringMinorGC(true);
     }
 }
 
@@ -298,7 +307,7 @@ void V8GCController::minorGCPrologue()
     if (isMainThreadOrGCThread() && m_edenNodes) {
         for (size_t i = 0; i < m_edenNodes->size(); i++) {
             ASSERT(!m_edenNodes->at(i)->wrapper().IsEmpty());
-            if (m_edenNodes->at(i)->inEden()) // This branch is just for performance.
+            if (m_edenNodes->at(i)->isV8CollectableDuringMinorGC()) // This branch is just for performance.
                 gcTree(m_edenNodes->at(i));
         }
     }

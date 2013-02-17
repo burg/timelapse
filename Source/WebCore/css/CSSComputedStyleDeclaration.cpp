@@ -64,6 +64,10 @@
 #include "WebKitFontFamilyNames.h"
 #include <wtf/text/StringBuilder.h>
 
+#if ENABLE(CSS_EXCLUSIONS)
+#include "ExclusionShapeValue.h"
+#endif
+
 #if ENABLE(CSS_SHADERS)
 #include "CustomFilterArrayParameter.h"
 #include "CustomFilterNumberParameter.h"
@@ -292,7 +296,6 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyWebkitMarqueeIncrement,
     CSSPropertyWebkitMarqueeRepetition,
     CSSPropertyWebkitMarqueeStyle,
-    CSSPropertyWebkitMaskAttachment,
     CSSPropertyWebkitMaskBoxImage,
     CSSPropertyWebkitMaskBoxImageOutset,
     CSSPropertyWebkitMaskBoxImageRepeat,
@@ -980,37 +983,33 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::valueForFilter(const RenderObj
 }
 #endif
 
-static PassRefPtr<CSSValue> valueForGridTrackBreadth(const Length& trackLength, const RenderStyle* style)
+static PassRefPtr<CSSValue> valueForGridTrackBreadth(const GridTrackSize& trackSize, const RenderStyle* style)
 {
-    if (trackLength.isPercent())
-        return cssValuePool().createValue(trackLength);
-    if (trackLength.isAuto())
+    if (trackSize.length().isPercent())
+        return cssValuePool().createValue(trackSize.length());
+    if (trackSize.length().isAuto())
         return cssValuePool().createIdentifierValue(CSSValueAuto);
-    return zoomAdjustedPixelValue(trackLength.value(), style);
+    return zoomAdjustedPixelValue(trackSize.length().value(), style);
 }
 
-static PassRefPtr<CSSValue> valueForGridTrackList(const Vector<Length>& trackLengths, const RenderStyle* style)
+static PassRefPtr<CSSValue> valueForGridTrackList(const Vector<GridTrackSize>& trackSizes, const RenderStyle* style)
 {
-    // We should have at least an element!
-    ASSERT(trackLengths.size());
-
     // Handle the 'none' case here.
-    if (trackLengths.size() == 1 && trackLengths[0].isUndefined())
+    if (!trackSizes.size())
         return cssValuePool().createIdentifierValue(CSSValueNone);
 
     RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
-    for (size_t i = 0; i < trackLengths.size(); ++i)
-        list->append(valueForGridTrackBreadth(trackLengths[i], style));
+    for (size_t i = 0; i < trackSizes.size(); ++i)
+        list->append(valueForGridTrackBreadth(trackSizes[i], style));
     return list.release();
 }
 
-static PassRefPtr<CSSValue> valueForGridPosition(const Length& position)
+static PassRefPtr<CSSValue> valueForGridPosition(const GridPosition& position)
 {
     if (position.isAuto())
         return cssValuePool().createIdentifierValue(CSSValueAuto);
 
-    ASSERT(position.isFixed());
-    return cssValuePool().createValue(position.value(), CSSPrimitiveValue::CSS_NUMBER);
+    return cssValuePool().createValue(position.integerPosition(), CSSPrimitiveValue::CSS_NUMBER);
 }
 
 static PassRefPtr<CSSValue> getDelayValue(const AnimationList* animList)
@@ -1537,9 +1536,8 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
 
             return list.release();
         }
-        case CSSPropertyBackgroundAttachment:
-        case CSSPropertyWebkitMaskAttachment: {
-            const FillLayer* layers = propertyID == CSSPropertyWebkitMaskAttachment ? style->maskLayers() : style->backgroundLayers();
+        case CSSPropertyBackgroundAttachment: {
+            const FillLayer* layers = style->backgroundLayers();
             if (!layers->next())
                 return cssValuePool().createValue(layers->attachment());
 
@@ -1712,9 +1710,7 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyWebkitColumnRuleWidth:
             return zoomAdjustedPixelValue(style->columnRuleWidth(), style.get());
         case CSSPropertyWebkitColumnSpan:
-            if (style->columnSpan())
-                return cssValuePool().createIdentifierValue(CSSValueAll);
-            return cssValuePool().createValue(1, CSSPrimitiveValue::CSS_NUMBER);
+            return cssValuePool().createIdentifierValue(style->columnSpan() ? CSSValueAll : CSSValueNone);
         case CSSPropertyWebkitColumnBreakAfter:
             return cssValuePool().createValue(style->columnBreakAfter());
         case CSSPropertyWebkitColumnBreakBefore:
@@ -2026,6 +2022,8 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             return cssValuePool().createValue(style->position());
         case CSSPropertyRight:
             return getPositionOffsetValue(style.get(), CSSPropertyRight, m_node->document()->renderView());
+        case CSSPropertyWebkitRubyPosition:
+            return cssValuePool().createValue(style->rubyPosition());
         case CSSPropertyTableLayout:
             return cssValuePool().createValue(style->tableLayout());
         case CSSPropertyTextAlign:
@@ -2505,11 +2503,15 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyWebkitShapeInside:
             if (!style->shapeInside())
                 return cssValuePool().createIdentifierValue(CSSValueAuto);
-            return valueForBasicShape(style->shapeInside());
+            else if (style->shapeInside()->type() == ExclusionShapeValue::OUTSIDE)
+                return cssValuePool().createIdentifierValue(CSSValueOutsideShape);
+            ASSERT(style->shapeInside()->type() == ExclusionShapeValue::SHAPE);
+            return valueForBasicShape(style->shapeInside()->shape());
         case CSSPropertyWebkitShapeOutside:
             if (!style->shapeOutside())
                 return cssValuePool().createIdentifierValue(CSSValueAuto);
-            return valueForBasicShape(style->shapeOutside());
+            ASSERT(style->shapeOutside()->type() == ExclusionShapeValue::SHAPE);
+            return valueForBasicShape(style->shapeOutside()->shape());
         case CSSPropertyWebkitWrapThrough:
             return cssValuePool().createValue(style->wrapThrough());
 #endif

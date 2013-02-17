@@ -49,10 +49,6 @@ typedef struct NPObject NPObject;
 typedef struct _NPP NPP_t;
 typedef NPP_t* NPP;
 
-#if OS(WINDOWS)
-typedef struct HFONT__* HFONT;
-#endif
-
 namespace WebCore {
 
 class Color;
@@ -69,7 +65,6 @@ class KURL;
 class SerializedScriptValue;
 class Widget;
 
-struct Cookie;
 struct FontRenderStyle;
 
 // PlatformSupport an interface to the embedding layer that lets the embedder
@@ -78,28 +73,14 @@ struct FontRenderStyle;
 
 class PlatformSupport {
 public:
-    // Cookies ------------------------------------------------------------
-    static void setCookies(const Document*, const KURL&, const String& value);
-    static String cookies(const Document*, const KURL&);
-    static String cookieRequestHeaderFieldValue(const Document*, const KURL&);
-    static bool rawCookies(const Document*, const KURL&, Vector<Cookie>&);
-    static void deleteCookie(const Document*, const KURL&, const String& cookieName);
-    static bool cookiesEnabled(const Document*);
-
-    // Font ---------------------------------------------------------------
-#if OS(WINDOWS)
-    static bool ensureFontLoaded(HFONT);
-#endif
-
     // IndexedDB ----------------------------------------------------------
     static PassRefPtr<IDBFactoryBackendInterface> idbFactory();
 
     // Plugin -------------------------------------------------------------
     static bool plugins(bool refresh, Vector<PluginInfo>*);
-    static NPObject* pluginScriptableObject(Widget*);
 
     // Theming ------------------------------------------------------------
-#if OS(WINDOWS)
+#if OS(WINDOWS) && !ENABLE(DEFAULT_RENDER_THEME)
     static void paintButton(
         GraphicsContext*, int part, int state, int classicState, const IntRect&);
     static void paintMenuList(

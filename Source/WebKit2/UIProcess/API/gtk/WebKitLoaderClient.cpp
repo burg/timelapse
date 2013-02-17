@@ -21,6 +21,7 @@
 #include "config.h"
 #include "WebKitLoaderClient.h"
 
+#include "WebKit2GtkAuthenticationDialog.h"
 #include "WebKitBackForwardListPrivate.h"
 #include "WebKitURIResponsePrivate.h"
 #include "WebKitWebViewBasePrivate.h"
@@ -115,6 +116,11 @@ static void didChangeBackForwardList(WKPageRef page, WKBackForwardListItemRef ad
     webkitBackForwardListChanged(webkit_web_view_get_back_forward_list(WEBKIT_WEB_VIEW(clientInfo)), toImpl(addedItem), toImpl(removedItems));
 }
 
+static void didReceiveAuthenticationChallengeInFrame(WKPageRef page, WKFrameRef frame, WKAuthenticationChallengeRef authenticationChallenge, const void *clientInfo)
+{
+    webkitWebViewHandleAuthenticationChallenge(WEBKIT_WEB_VIEW(clientInfo), toImpl(authenticationChallenge));
+}
+
 void attachLoaderClientToView(WebKitWebView* webView)
 {
     WKPageLoaderClient wkLoaderClient = {
@@ -135,7 +141,7 @@ void attachLoaderClientToView(WebKitWebView* webView)
         0, // didDisplayInsecureContentForFrame
         0, // didRunInsecureContentForFrame
         0, // canAuthenticateAgainstProtectionSpaceInFrame
-        0, // didReceiveAuthenticationChallengeInFrame
+        didReceiveAuthenticationChallengeInFrame,
         didChangeProgress, // didStartProgress
         didChangeProgress,
         didChangeProgress, // didFinishProgress

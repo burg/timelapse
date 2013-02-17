@@ -1167,7 +1167,6 @@
             '../bindings/scripts/CodeGenerator.pm',
             '../bindings/scripts/CodeGeneratorV8.pm',
             '../bindings/scripts/IDLParser.pm',
-            '../bindings/scripts/IDLStructure.pm',
             '../bindings/scripts/preprocessor.pm',
             '<(SHARED_INTERMEDIATE_DIR)/supplemental_dependency.tmp',
             '<(additional_idl_files_list)',
@@ -1611,8 +1610,8 @@
       ],
       'sources/': [
         # FIXME: Figure out how to store these patterns in a variable.
-        ['exclude', '(cairo|ca|cf|cg|curl|efl|freetype|gstreamer|gtk|linux|mac|opengl|openvg|opentype|pango|posix|qt|soup|svg|symbian|texmap|iphone|win|wince|wx)/'],
-        ['exclude', '(?<!Chromium)(Cairo|CF|CG|Curl|Gtk|JSC|Linux|Mac|OpenType|POSIX|Posix|Qt|Safari|Soup|Symbian|Win|WinCE|Wx)\\.(cpp|mm?)$'],
+        ['exclude', '(cairo|ca|cf|cg|curl|efl|freetype|gstreamer|gtk|linux|mac|opengl|openvg|opentype|pango|posix|qt|soup|svg|texmap|iphone|win|wince|wx)/'],
+        ['exclude', '(?<!Chromium)(Cairo|CF|CG|Curl|Gtk|JSC|Linux|Mac|OpenType|POSIX|Posix|Qt|Safari|Soup|Win|WinCE|Wx)\\.(cpp|mm?)$'],
 
         ['exclude', 'AllInOne\\.cpp$'],
       ],
@@ -1673,8 +1672,8 @@
         ['include', 'platform/'],
 
         # FIXME: Figure out how to store these patterns in a variable.
-        ['exclude', '(cairo|ca|cf|cg|curl|efl|freetype|gstreamer|gtk|harfbuzz|linux|mac|opengl|openvg|opentype|pango|posix|qt|soup|svg|symbian|texmap|iphone|win|wince|wx)/'],
-        ['exclude', '(?<!Chromium)(Cairo|CF|CG|Curl|Gtk|JSC|Linux|Mac|OpenType|POSIX|Posix|Qt|Safari|Soup|Symbian|Win|WinCE|Wx)\\.(cpp|mm?)$'],
+        ['exclude', '(cairo|ca|cf|cg|curl|efl|freetype|gstreamer|gtk|harfbuzz|linux|mac|opengl|openvg|opentype|pango|posix|qt|soup|svg|texmap|iphone|win|wince|wx)/'],
+        ['exclude', '(?<!Chromium)(Cairo|CF|CG|Curl|Gtk|JSC|Linux|Mac|OpenType|POSIX|Posix|Qt|Safari|Soup|Win|WinCE|Wx)\\.(cpp|mm?)$'],
 
         ['exclude', 'platform/LinkHash\\.cpp$'],
         ['exclude', 'platform/MIMETypeRegistry\\.cpp$'],
@@ -1698,6 +1697,26 @@
                     ],
                 }],
             ],
+        }],
+        ['use_default_render_theme==1', {
+          'sources/': [
+            ['exclude', 'platform/chromium/PlatformThemeChromiumLinux.h'],
+            ['exclude', 'platform/chromium/PlatformThemeChromiumLinux.cpp'],
+            ['exclude', 'platform/chromium/PlatformThemeChromiumWin.h'],
+            ['exclude', 'platform/chromium/PlatformThemeChromiumWin.cpp'],
+            ['exclude', 'platform/chromium/ScrollbarThemeChromiumLinux.cpp'],
+            ['exclude', 'platform/chromium/ScrollbarThemeChromiumLinux.h'],
+            ['exclude', 'platform/chromium/ScrollbarThemeChromiumWin.cpp'],
+            ['exclude', 'platform/chromium/ScrollbarThemeChromiumWin.h'],
+          ],
+        }],
+        ['use_default_render_theme==0', {
+          'sources/': [
+            ['exclude', 'platform/chromium/PlatformThemeChromiumDefault.cpp'],
+            ['exclude', 'platform/chromium/PlatformThemeChromiumDefault.h'],
+            ['exclude', 'platform/chromium/ScrollbarThemeChromiumDefault.cpp'],
+            ['exclude', 'platform/chromium/ScrollbarThemeChromiumDefault.h'],
+          ],
         }],
         ['use_x11 == 1', {
           'sources/': [
@@ -1980,13 +1999,24 @@
         ['include', 'rendering/'],
 
         # FIXME: Figure out how to store these patterns in a variable.
-        ['exclude', '(cairo|ca|cf|cg|curl|efl|freetype|gstreamer|gtk|linux|mac|opengl|openvg|opentype|pango|posix|qt|soup|svg|symbian|texmap|iphone|win|wince|wx)/'],
-        ['exclude', '(?<!Chromium)(Cairo|CF|CG|Curl|Gtk|JSC|Linux|Mac|OpenType|POSIX|Posix|Qt|Safari|Soup|Symbian|Win|WinCE|Wx)\\.(cpp|mm?)$'],
+        ['exclude', '(cairo|ca|cf|cg|curl|efl|freetype|gstreamer|gtk|linux|mac|opengl|openvg|opentype|pango|posix|qt|soup|svg|texmap|iphone|win|wince|wx)/'],
+        ['exclude', '(?<!Chromium)(Cairo|CF|CG|Curl|Gtk|JSC|Linux|Mac|OpenType|POSIX|Posix|Qt|Safari|Soup|Win|WinCE|Wx)\\.(cpp|mm?)$'],
         # Previous rule excludes things like ChromiumFooWin, include those.
         ['include', 'rendering/.*Chromium.*\\.(cpp|mm?)$'],
         ['exclude', 'AllInOne\\.cpp$'],
       ],
       'conditions': [
+        ['use_default_render_theme==0', {
+          'sources/': [
+            ['exclude', 'rendering/RenderThemeChromiumDefault.*'],
+          ],
+        }],
+        ['use_default_render_theme==1', {
+          'sources/': [
+            ['exclude', 'RenderThemeChromiumLinux.*'],
+            ['exclude', 'RenderThemeChromiumWin.*'],
+          ],
+        }],
         ['OS=="win"', {
           'sources/': [
             ['exclude', 'Posix\\.cpp$'],
@@ -2070,8 +2100,8 @@
         ['exclude', 'bridge/jni/jsc/'],
 
         # FIXME: Figure out how to store these patterns in a variable.
-        ['exclude', '(cairo|ca|cf|cg|curl|efl|freetype|gstreamer|gtk|linux|mac|opengl|openvg|opentype|pango|posix|qt|soup|svg|symbian|texmap|iphone|win|wince|wx)/'],
-        ['exclude', '(?<!Chromium)(Cairo|CF|CG|Curl|Gtk|JSC|Linux|Mac|OpenType|POSIX|Posix|Qt|Safari|Soup|Symbian|Win|WinCE|Wx)\\.(cpp|mm?)$'],
+        ['exclude', '(atk|cairo|ca|cf|cg|curl|efl|freetype|gstreamer|gtk|linux|mac|opengl|openvg|opentype|pango|posix|qt|soup|svg|texmap|iphone|win|wince|wx)/'],
+        ['exclude', '(?<!Chromium)(Cairo|CF|CG|Curl|Gtk|JSC|Linux|Mac|OpenType|POSIX|Posix|Qt|Safari|Soup|Win|WinCE|Wx)\\.(cpp|mm?)$'],
 
         ['exclude', 'AllInOne\\.cpp$'],
 
@@ -2085,7 +2115,6 @@
         ['exclude', 'inspector/InspectorFrontendClientLocal\\.cpp$'],
         ['exclude', 'inspector/JavaScript[^/]*\\.cpp$'],
         ['exclude', 'loader/UserStyleSheetLoader\\.cpp$'],
-        ['exclude', 'loader/CookieJar\\.cpp$'],
         ['exclude', 'loader/appcache/'],
         ['exclude', 'loader/archive/cf/LegacyWebArchiveMac\\.mm$'],
         ['exclude', 'loader/archive/cf/LegacyWebArchive\\.cpp$'],

@@ -26,15 +26,12 @@
 #include "config.h"
 #include "InternalSettings.h"
 
-#include "Chrome.h"
-#include "ChromeClient.h"
 #include "Document.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "Language.h"
 #include "LocaleToScriptMapping.h"
-#include "MockPagePopupDriver.h"
 #include "Page.h"
 #include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
@@ -175,25 +172,9 @@ InternalSettings::InternalSettings(Page* page)
 {
 }
 
-#if ENABLE(PAGE_POPUP)
-PagePopupController* InternalSettings::pagePopupController()
-{
-    return m_pagePopupDriver ? m_pagePopupDriver->pagePopupController() : 0;
-}
-#endif
-
 void InternalSettings::reset()
 {
-    TextRun::setAllowsRoundingHacks(false);
-    setUserPreferredLanguages(Vector<String>());
-    page()->setPagination(Pagination());
     page()->setPageScaleFactor(1, IntPoint(0, 0));
-    setUsesOverlayScrollbars(false);
-#if ENABLE(PAGE_POPUP)
-    m_pagePopupDriver.clear();
-    if (page()->chrome())
-        page()->chrome()->client()->resetPagePopupDriver();
-#endif
 
     m_backup.restoreTo(page(), settings());
     m_backup = Backup(page(), settings());
@@ -242,11 +223,6 @@ void InternalSettings::setMockScrollbarsEnabled(bool enabled, ExceptionCode& ec)
     settings()->setMockScrollbarsEnabled(enabled);
 }
 
-void InternalSettings::setUsesOverlayScrollbars(bool flag)
-{
-    settings()->setUsesOverlayScrollbars(flag);
-}
-
 void InternalSettings::setPasswordEchoEnabled(bool enabled, ExceptionCode& ec)
 {
     InternalSettingsGuardForSettings();
@@ -275,12 +251,6 @@ bool InternalSettings::unifiedTextCheckingEnabled(ExceptionCode& ec)
 {
     InternalSettingsGuardForSettingsReturn(false);
     return settings()->unifiedTextCheckerEnabled();
-}
-
-void InternalSettings::setPageScaleFactor(float scaleFactor, int x, int y, ExceptionCode& ec)
-{
-    InternalSettingsGuardForPage();
-    page()->setPageScaleFactor(scaleFactor, IntPoint(x, y));
 }
 
 void InternalSettings::setShadowDOMEnabled(bool enabled, ExceptionCode& ec)
@@ -527,21 +497,6 @@ void InternalSettings::setDialogElementEnabled(bool enabled, ExceptionCode& ec)
 #endif
 }
 
-void InternalSettings::allowRoundingHacks() const
-{
-    TextRun::setAllowsRoundingHacks(true);
-}
-
-Vector<String> InternalSettings::userPreferredLanguages() const
-{
-    return WebCore::userPreferredLanguages();
-}
-
-void InternalSettings::setUserPreferredLanguages(const Vector<String>& languages)
-{
-    WebCore::overrideUserPreferredLanguages(languages);
-}
-
 void InternalSettings::setShouldDisplayTrackKind(const String& kind, bool enabled, ExceptionCode& ec)
 {
     InternalSettingsGuardForSettings();
@@ -579,70 +534,6 @@ bool InternalSettings::shouldDisplayTrackKind(const String& kind, ExceptionCode&
     UNUSED_PARAM(kind);
     return false;
 #endif
-}
-
-void InternalSettings::setPagination(const String& mode, int gap, int pageLength, ExceptionCode& ec)
-{
-    if (!page()) {
-        ec = INVALID_ACCESS_ERR;
-        return;
-    }
-
-    Pagination pagination;
-    if (mode == "Unpaginated")
-        pagination.mode = Pagination::Unpaginated;
-    else if (mode == "LeftToRightPaginated")
-        pagination.mode = Pagination::LeftToRightPaginated;
-    else if (mode == "RightToLeftPaginated")
-        pagination.mode = Pagination::RightToLeftPaginated;
-    else if (mode == "TopToBottomPaginated")
-        pagination.mode = Pagination::TopToBottomPaginated;
-    else if (mode == "BottomToTopPaginated")
-        pagination.mode = Pagination::BottomToTopPaginated;
-    else {
-        ec = SYNTAX_ERR;
-        return;
-    }
-
-    pagination.gap = gap;
-    pagination.pageLength = pageLength;
-    page()->setPagination(pagination);
-}
-
-void InternalSettings::setEnableMockPagePopup(bool enabled, ExceptionCode& ec)
-{
-#if ENABLE(PAGE_POPUP)
-    InternalSettingsGuardForPage();
-    if (!page()->chrome())
-        return;
-    if (!enabled) {
-        page()->chrome()->client()->resetPagePopupDriver();
-        return;
-    }
-    if (!m_pagePopupDriver)
-        m_pagePopupDriver = MockPagePopupDriver::create(page()->mainFrame());
-    page()->chrome()->client()->setPagePopupDriver(m_pagePopupDriver.get());
-#else
-    UNUSED_PARAM(enabled);
-    UNUSED_PARAM(ec);
-#endif
-}
-
-String InternalSettings::configurationForViewport(float devicePixelRatio, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight, ExceptionCode& ec)
-{
-    if (!page()) {
-        ec = INVALID_ACCESS_ERR;
-        return String();
-    }
-
-    const int defaultLayoutWidthForNonMobilePages = 980;
-
-    ViewportArguments arguments = page()->viewportArguments();
-    ViewportAttributes attributes = computeViewportAttributes(arguments, defaultLayoutWidthForNonMobilePages, deviceWidth, deviceHeight, devicePixelRatio, IntSize(availableWidth, availableHeight));
-    restrictMinimumScaleFactorToViewportSize(attributes, IntSize(availableWidth, availableHeight), devicePixelRatio);
-    restrictScaleFactorToInitialScaleIfNotUserScalable(attributes);
-
-    return "viewport size " + String::number(attributes.layoutSize.width()) + "x" + String::number(attributes.layoutSize.height()) + " scale " + String::number(attributes.initialScale) + " with limits [" + String::number(attributes.minimumScale) + ", " + String::number(attributes.maximumScale) + "] and userScalable " + (attributes.userScalable ? "true" : "false");
 }
 
 void InternalSettings::setMemoryInfoEnabled(bool enabled, ExceptionCode& ec)

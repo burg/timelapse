@@ -61,6 +61,7 @@
 #import "WebEditorClient.h"
 #import "WebFormDelegatePrivate.h"
 #import "WebFrameInternal.h"
+#import "WebFrameNetworkingContext.h"
 #import "WebFrameViewInternal.h"
 #import "WebFullScreenController.h"
 #import "WebGeolocationClient.h"
@@ -180,7 +181,7 @@
 #import <WebKitSystemInterface.h>
 #import <mach-o/dyld.h>
 #import <objc/objc-auto.h>
-#import <objc/objc-runtime.h>
+#import <objc/runtime.h>
 #import <runtime/ArrayPrototype.h>
 #import <runtime/DateInstance.h>
 #import <runtime/InitializeThreading.h>
@@ -1470,7 +1471,16 @@ static bool needsSelfRetainWhileLoadingQuirk()
 #endif
     settings->setLocalStorageEnabled([preferences localStorageEnabled]);
     settings->setExperimentalNotificationsEnabled([preferences experimentalNotificationsEnabled]);
-    settings->setPrivateBrowsingEnabled([preferences privateBrowsingEnabled]);
+
+    bool privateBrowsingEnabled = [preferences privateBrowsingEnabled];
+#if PLATFORM(MAC) || USE(CFNETWORK)
+    if (privateBrowsingEnabled)
+        WebFrameNetworkingContext::ensurePrivateBrowsingSession();
+    else
+        WebFrameNetworkingContext::destroyPrivateBrowsingSession();
+#endif
+    settings->setPrivateBrowsingEnabled(privateBrowsingEnabled);
+
     settings->setSansSerifFontFamily([preferences sansSerifFontFamily]);
     settings->setSerifFontFamily([preferences serifFontFamily]);
     settings->setStandardFontFamily([preferences standardFontFamily]);
@@ -1676,9 +1686,7 @@ static inline IMP getMethod(id o, SEL s)
     // for backwards compatibility.
     Page* page = core(self);
     if (page) {
-        unsigned milestones = 0;
-        if (cache->didFirstLayoutInFrameFunc)
-            milestones |= DidFirstLayout;
+        unsigned milestones = DidFirstLayout;
         if (cache->didFirstVisuallyNonEmptyLayoutInFrameFunc)
             milestones |= DidFirstVisuallyNonEmptyLayout;
         page->addLayoutMilestones(static_cast<LayoutMilestones>(milestones));
@@ -1997,14 +2005,18 @@ static inline IMP getMethod(id o, SEL s)
 
 - (NSCachedURLResponse *)_cachedResponseForURL:(NSURL *)URL
 {
-    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:URL];
+    RetainPtr<NSMutableURLRequest *> request = adoptNS([[NSMutableURLRequest alloc] initWithURL:URL]);
     [request _web_setHTTPUserAgent:[self userAgentForURL:URL]];
     NSCachedURLResponse *cachedResponse;
-    if (CFURLStorageSessionRef storageSession = ResourceHandle::currentStorageSession())
-        cachedResponse = WKCachedResponseForRequest(storageSession, request);
+
+    if (!_private->page)
+        return nil;
+
+    if (CFURLStorageSessionRef storageSession = _private->page->mainFrame()->loader()->networkingContext()->storageSession())
+        cachedResponse = WKCachedResponseForRequest(storageSession, request.get());
     else
-        cachedResponse = [[NSURLCache sharedURLCache] cachedResponseForRequest:request];
-    [request release];
+        cachedResponse = [[NSURLCache sharedURLCache] cachedResponseForRequest:request.get()];
+
     return cachedResponse;
 }
 

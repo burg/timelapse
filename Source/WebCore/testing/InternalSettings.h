@@ -39,9 +39,7 @@ typedef int ExceptionCode;
 
 class Frame;
 class Document;
-class MockPagePopupDriver;
 class Page;
-class PagePopupController;
 class Settings;
 
 class InternalSettings : public RefCountedSupplement<Page, InternalSettings> {
@@ -86,6 +84,7 @@ public:
         bool m_originalCompositingForScrollableFramesEnabled;
         bool m_originalAcceleratedDrawingEnabled;
         bool m_originalMockScrollbarsEnabled;
+        bool m_originalUsesOverlayScrollbars;
         bool m_langAttributeAwareFormControlUIEnabled;
         bool m_imagesEnabled;
 #if ENABLE(VIDEO_TRACK)
@@ -99,9 +98,6 @@ public:
     static InternalSettings* from(Page*);
 
     virtual ~InternalSettings();
-#if ENABLE(PAGE_POPUP)
-    PagePopupController* pagePopupController();
-#endif
     void reset();
 
     void setForceCompositingMode(bool enabled, ExceptionCode&);
@@ -110,13 +106,12 @@ public:
     void setAcceleratedDrawingEnabled(bool enabled, ExceptionCode&);
     void setAcceleratedFiltersEnabled(bool enabled, ExceptionCode&);
     void setMockScrollbarsEnabled(bool enabled, ExceptionCode&);
-    void setUsesOverlayScrollbars(bool);
+    void setUsesOverlayScrollbars(bool enabled, ExceptionCode&);
     void setPasswordEchoEnabled(bool enabled, ExceptionCode&);
     void setPasswordEchoDurationInSeconds(double durationInSeconds, ExceptionCode&);
     void setFixedElementsLayoutRelativeToFrame(bool, ExceptionCode&);
     void setUnifiedTextCheckingEnabled(bool, ExceptionCode&);
     bool unifiedTextCheckingEnabled(ExceptionCode&);
-    void setPageScaleFactor(float scaleFactor, int x, int y, ExceptionCode&);
     void setTouchEventEmulationEnabled(bool enabled, ExceptionCode&);
     void setDeviceSupportsTouch(bool enabled, ExceptionCode&);
     void setDeviceSupportsMouse(bool enabled, ExceptionCode&);
@@ -147,15 +142,8 @@ public:
     void setSyncXHRInDocumentsEnabled(bool, ExceptionCode&);
     void setWindowFocusRestricted(bool, ExceptionCode&);
     void setDialogElementEnabled(bool, ExceptionCode&);
-    Vector<String> userPreferredLanguages() const;
-    void setUserPreferredLanguages(const Vector<String>&);
-    void setPagination(const String& mode, int gap, ExceptionCode& ec) { setPagination(mode, gap, 0, ec); }
-    void setPagination(const String& mode, int gap, int pageLength, ExceptionCode&);
-    void allowRoundingHacks() const;
     void setShouldDisplayTrackKind(const String& kind, bool enabled, ExceptionCode&);
     bool shouldDisplayTrackKind(const String& kind, ExceptionCode&);
-    void setEnableMockPagePopup(bool, ExceptionCode&);
-    String configurationForViewport(float devicePixelRatio, int deviceWidth, int deviceHeight, int availableWidth, int availableHeight, ExceptionCode&);
     void setMemoryInfoEnabled(bool, ExceptionCode&);
     void setStorageBlockingPolicy(const String&, ExceptionCode&);
     void setLangAttributeAwareFormControlUIEnabled(bool);
@@ -170,9 +158,6 @@ private:
 
     Page* m_page;
     Backup m_backup;
-#if ENABLE(PAGE_POPUP)
-    OwnPtr<MockPagePopupDriver> m_pagePopupDriver;
-#endif
 };
 
 } // namespace WebCore

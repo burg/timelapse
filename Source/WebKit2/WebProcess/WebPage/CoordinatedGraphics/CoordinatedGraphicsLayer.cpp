@@ -1,5 +1,6 @@
 /*
  Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
+ Copyright (C) 2012 Company 100, Inc.
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -106,7 +107,6 @@ void CoordinatedGraphicsLayer::didChangeGeometry()
 
 CoordinatedGraphicsLayer::CoordinatedGraphicsLayer(GraphicsLayerClient* client)
     : GraphicsLayer(client)
-    , m_maskTarget(0)
     , m_inUpdateMode(false)
     , m_shouldUpdateVisibleRect(true)
     , m_shouldSyncLayerState(true)
@@ -116,6 +116,8 @@ CoordinatedGraphicsLayer::CoordinatedGraphicsLayer(GraphicsLayerClient* client)
     , m_shouldSyncAnimations(true)
     , m_fixedToViewport(false)
     , m_canvasNeedsDisplay(false)
+    , m_canvasNeedsCreate(false)
+    , m_canvasNeedsDestroy(false)
     , m_coordinator(0)
     , m_contentsScale(1)
     , m_compositedNativeImagePtr(0)
@@ -143,10 +145,6 @@ bool CoordinatedGraphicsLayer::setChildren(const Vector<GraphicsLayer*>& childre
     bool ok = GraphicsLayer::setChildren(children);
     if (!ok)
         return false;
-    for (unsigned i = 0; i < children.size(); ++i) {
-        CoordinatedGraphicsLayer* child = toCoordinatedGraphicsLayer(children[i]);
-        child->didChangeLayerState();
-    }
     didChangeChildren();
     return true;
 }
@@ -154,28 +152,24 @@ bool CoordinatedGraphicsLayer::setChildren(const Vector<GraphicsLayer*>& childre
 void CoordinatedGraphicsLayer::addChild(GraphicsLayer* layer)
 {
     GraphicsLayer::addChild(layer);
-    toCoordinatedGraphicsLayer(layer)->didChangeLayerState();
     didChangeChildren();
 }
 
 void CoordinatedGraphicsLayer::addChildAtIndex(GraphicsLayer* layer, int index)
 {
     GraphicsLayer::addChildAtIndex(layer, index);
-    toCoordinatedGraphicsLayer(layer)->didChangeLayerState();
     didChangeChildren();
 }
 
 void CoordinatedGraphicsLayer::addChildAbove(GraphicsLayer* layer, GraphicsLayer* sibling)
 {
     GraphicsLayer::addChildAbove(layer, sibling);
-    toCoordinatedGraphicsLayer(layer)->didChangeLayerState();
     didChangeChildren();
 }
 
 void CoordinatedGraphicsLayer::addChildBelow(GraphicsLayer* layer, GraphicsLayer* sibling)
 {
     GraphicsLayer::addChildBelow(layer, sibling);
-    toCoordinatedGraphicsLayer(layer)->didChangeLayerState();
     didChangeChildren();
 }
 
@@ -185,8 +179,6 @@ bool CoordinatedGraphicsLayer::replaceChild(GraphicsLayer* oldChild, GraphicsLay
     if (!ok)
         return false;
     didChangeChildren();
-    toCoordinatedGraphicsLayer(oldChild)->didChangeLayerState();
-    toCoordinatedGraphicsLayer(newChild)->didChangeLayerState();
     return true;
 }
 
@@ -195,8 +187,6 @@ void CoordinatedGraphicsLayer::removeFromParent()
     if (CoordinatedGraphicsLayer* parentLayer = toCoordinatedGraphicsLayer(parent()))
         parentLayer->didChangeChildren();
     GraphicsLayer::removeFromParent();
-
-    didChangeLayerState();
 }
 
 void CoordinatedGraphicsLayer::setPosition(const FloatPoint& p)
@@ -278,6 +268,8 @@ void CoordinatedGraphicsLayer::setContentsVisible(bool b)
     if (contentsAreVisible() == b)
         return;
     GraphicsLayer::setContentsVisible(b);
+    if (maskLayer())
+        maskLayer()->setContentsVisible(b);
 
     didChangeLayerState();
 }
@@ -321,17 +313,40 @@ void CoordinatedGraphicsLayer::setContentsRect(const IntRect& r)
 
 void CoordinatedGraphicsLayer::setContentsNeedsDisplay()
 {
-    m_canvasNeedsDisplay = true;
+    if (m_canvasPlatformLayer)
+        m_canvasNeedsDisplay = true;
     if (client())
         client()->notifyFlushRequired(this);
 }
 
 void CoordinatedGraphicsLayer::setContentsToCanvas(PlatformLayer* platformLayer)
 {
+#if USE(GRAPHICS_SURFACE)
+    if (m_canvasPlatformLayer) {
+        ASSERT(m_canvasToken.isValid());
+        if (!platformLayer)
+            m_canvasNeedsDestroy = true;
+        else if (m_canvasToken != platformLayer->graphicsSurfaceToken()) {
+            // m_canvasToken can be different to platformLayer->graphicsSurfaceToken(), even if m_canvasPlatformLayer equals platformLayer.
+            m_canvasNeedsDestroy = true;
+            m_canvasNeedsCreate = true;
+        }
+    } else {
+        if (platformLayer)
+            m_canvasNeedsCreate = true;
+    }
+
     m_canvasPlatformLayer = platformLayer;
-    m_canvasNeedsDisplay = true;
+    // m_canvasToken is updated only here. In detail, when GraphicsContext3D is changed or reshaped, m_canvasToken is changed and setContentsToCanvas() is always called.
+    m_canvasToken = m_canvasPlatformLayer ? m_canvasPlatformLayer->graphicsSurfaceToken() : GraphicsSurfaceToken();
+    ASSERT(!(!m_canvasToken.isValid() && m_canvasPlatformLayer));
+    if (m_canvasPlatformLayer)
+        m_canvasNeedsDisplay = true;
     if (client())
         client()->notifyFlushRequired(this);
+#else
+    UNUSED_PARAM(platformLayer);
+#endif
 }
 
 #if ENABLE(CSS_FILTERS)
@@ -347,13 +362,10 @@ bool CoordinatedGraphicsLayer::setFilters(const FilterOperations& newFilters)
 
 void CoordinatedGraphicsLayer::setContentsToImage(Image* image)
 {
-    if (image) {
+    NativeImagePtr newNativeImagePtr = image ? image->nativeImageForCurrentFrame() : 0;
+    if (newNativeImagePtr) {
         // This code makes the assumption that pointer equality on a NativeImagePtr is a valid way to tell if the image is changed.
         // This assumption is true in Qt, GTK and EFL.
-        NativeImagePtr newNativeImagePtr = image->nativeImageForCurrentFrame();
-        if (!newNativeImagePtr)
-            return;
-
         if (newNativeImagePtr == m_compositedNativeImagePtr)
             return;
 
@@ -379,8 +391,8 @@ void CoordinatedGraphicsLayer::setMaskLayer(GraphicsLayer* layer)
         return;
 
     layer->setSize(size());
+    layer->setContentsVisible(contentsAreVisible());
     CoordinatedGraphicsLayer* CoordinatedGraphicsLayer = toCoordinatedGraphicsLayer(layer);
-    CoordinatedGraphicsLayer->setMaskTarget(this);
     CoordinatedGraphicsLayer->didChangeLayerState();
     didChangeLayerState();
 
@@ -473,16 +485,25 @@ void CoordinatedGraphicsLayer::syncImageBacking()
         return;
     m_shouldSyncImageBacking = false;
 
-    releaseImageBackingIfNeeded();
-
     if (m_compositedNativeImagePtr) {
         ASSERT(!m_mainBackingStore);
         ASSERT(m_compositedImage);
 
-        m_layerInfo.imageBackingStoreID = m_coordinator->adoptImageBackingStore(m_compositedImage.get());
-    }
+        bool imageInstanceReplaced = m_coordinatedImageBacking && (m_coordinatedImageBacking->id() != CoordinatedImageBacking::getCoordinatedImageBackingID(m_compositedImage.get()));
+        if (imageInstanceReplaced)
+            releaseImageBackingIfNeeded();
 
-    // This method changes m_layerInfo.imageBackingStoreID.
+        if (!m_coordinatedImageBacking) {
+            m_coordinatedImageBacking = m_coordinator->createImageBackingIfNeeded(m_compositedImage.get());
+            m_coordinatedImageBacking->addHost(this);
+            m_layerInfo.imageID = m_coordinatedImageBacking->id();
+        }
+
+        m_coordinatedImageBacking->markDirty();
+    } else
+        releaseImageBackingIfNeeded();
+
+    // syncImageBacking() changed m_layerInfo.imageID.
     didChangeLayerState();
 }
 
@@ -523,19 +544,40 @@ void CoordinatedGraphicsLayer::syncAnimations()
 
 void CoordinatedGraphicsLayer::syncCanvas()
 {
+    destroyCanvasIfNeeded();
+    createCanvasIfNeeded();
+
     if (!m_canvasNeedsDisplay)
         return;
 
-    if (!m_canvasPlatformLayer)
+    ASSERT(m_canvasPlatformLayer);
+#if USE(GRAPHICS_SURFACE)
+    m_coordinator->syncCanvas(m_id, m_canvasPlatformLayer);
+#endif
+    m_canvasNeedsDisplay = false;
+}
+
+void CoordinatedGraphicsLayer::destroyCanvasIfNeeded()
+{
+    if (!m_canvasNeedsDestroy)
         return;
 
 #if USE(GRAPHICS_SURFACE)
-    uint32_t frontBuffer = m_canvasPlatformLayer->copyToGraphicsSurface();
-    GraphicsSurfaceToken token = m_canvasPlatformLayer->graphicsSurfaceToken();
-
-    m_coordinator->syncCanvas(m_id, IntSize(size().width(), size().height()), token, frontBuffer);
+    m_coordinator->destroyCanvas(m_id);
 #endif
-    m_canvasNeedsDisplay = false;
+    m_canvasNeedsDestroy = false;
+}
+
+void CoordinatedGraphicsLayer::createCanvasIfNeeded()
+{
+    if (!m_canvasNeedsCreate)
+        return;
+
+    ASSERT(m_canvasPlatformLayer);
+#if USE(GRAPHICS_SURFACE)
+    m_coordinator->createCanvas(m_id, m_canvasPlatformLayer);
+#endif
+    m_canvasNeedsCreate = false;
 }
 
 void CoordinatedGraphicsLayer::flushCompositingStateForThisLayerOnly()
@@ -552,14 +594,21 @@ void CoordinatedGraphicsLayer::flushCompositingStateForThisLayerOnly()
     syncCanvas();
 }
 
+bool CoordinatedGraphicsLayer::imageBackingVisible()
+{
+    ASSERT(m_coordinatedImageBacking);
+    return tiledBackingStoreVisibleRect().intersects(contentsRect());
+}
+
 void CoordinatedGraphicsLayer::releaseImageBackingIfNeeded()
 {
-    if (!m_layerInfo.imageBackingStoreID)
+    if (!m_coordinatedImageBacking)
         return;
 
     ASSERT(m_coordinator);
-    m_coordinator->releaseImageBackingStore(m_layerInfo.imageBackingStoreID);
-    m_layerInfo.imageBackingStoreID = 0;
+    m_coordinatedImageBacking->removeHost(this);
+    m_coordinatedImageBacking.clear();
+    m_layerInfo.imageID = InvalidCoordinatedImageBackingID;
 }
 
 void CoordinatedGraphicsLayer::tiledBackingStorePaintBegin()
@@ -586,7 +635,7 @@ void CoordinatedGraphicsLayer::setContentsScale(float scale)
 
 float CoordinatedGraphicsLayer::effectiveContentsScale()
 {
-    return shouldUseTiledBackingStore() ? m_contentsScale : 1;
+    return selfOrAncestorHaveNonAffineTransforms() ? 1 : m_contentsScale;
 }
 
 void CoordinatedGraphicsLayer::adjustContentsScale()
@@ -605,8 +654,6 @@ void CoordinatedGraphicsLayer::adjustContentsScale()
 
     // No reason to save the previous backing store for non-visible areas.
     m_previousBackingStore->removeAllNonVisibleTiles();
-
-    createBackingStore();
 }
 
 void CoordinatedGraphicsLayer::createBackingStore()
@@ -639,16 +686,21 @@ IntRect CoordinatedGraphicsLayer::tiledBackingStoreContentsRect()
     return IntRect(0, 0, size().width(), size().height());
 }
 
-bool CoordinatedGraphicsLayer::shouldUseTiledBackingStore()
+static void clampToContentsRectIfRectIsInfinite(FloatRect& rect, const IntRect& contentsRect)
 {
-    return !selfOrAncestorHaveNonAffineTransforms();
+    if (rect.width() >= LayoutUnit::nearlyMax() || rect.width() <= LayoutUnit::nearlyMin()) {
+        rect.setX(contentsRect.x());
+        rect.setWidth(contentsRect.width());
+    }
+
+    if (rect.height() >= LayoutUnit::nearlyMax() || rect.height() <= LayoutUnit::nearlyMin()) {
+        rect.setY(contentsRect.y());
+        rect.setHeight(contentsRect.height());
+    }
 }
 
 IntRect CoordinatedGraphicsLayer::tiledBackingStoreVisibleRect()
 {
-    if (!shouldUseTiledBackingStore())
-        return tiledBackingStoreContentsRect();
-
     // Non-invertible layers are not visible.
     if (!m_layerTransform.combined().isInvertible())
         return IntRect();
@@ -657,7 +709,9 @@ IntRect CoordinatedGraphicsLayer::tiledBackingStoreVisibleRect()
     // The resulting quad might be squewed and the visible rect is the bounding box of this quad,
     // so it might spread further than the real visible area (and then even more amplified by the cover rect multiplier).
     ASSERT(m_cachedInverseTransform == m_layerTransform.combined().inverse());
-    return enclosingIntRect(m_cachedInverseTransform.clampedBoundsOfProjectedQuad(FloatQuad(FloatRect(m_coordinator->visibleContentsRect()))));
+    FloatRect rect = m_cachedInverseTransform.clampedBoundsOfProjectedQuad(FloatQuad(FloatRect(m_coordinator->visibleContentsRect())));
+    clampToContentsRectIfRectIsInfinite(rect, tiledBackingStoreContentsRect());
+    return enclosingIntRect(rect);
 }
 
 Color CoordinatedGraphicsLayer::tiledBackingStoreBackgroundColor() const
@@ -665,7 +719,7 @@ Color CoordinatedGraphicsLayer::tiledBackingStoreBackgroundColor() const
     return contentsOpaque() ? Color::white : Color::transparent;
 }
 
-PassOwnPtr<WebCore::GraphicsContext> CoordinatedGraphicsLayer::beginContentUpdate(const WebCore::IntSize& size, int& atlas, WebCore::IntPoint& offset)
+PassOwnPtr<GraphicsContext> CoordinatedGraphicsLayer::beginContentUpdate(const IntSize& size, int& atlas, IntPoint& offset)
 {
     if (!m_coordinator)
         return PassOwnPtr<WebCore::GraphicsContext>();
@@ -693,7 +747,7 @@ void CoordinatedGraphicsLayer::removeTile(int tileID)
 
 void CoordinatedGraphicsLayer::updateContentBuffers()
 {
-    if (!drawsContent()) {
+    if (!drawsContent() || !contentsAreVisible() || m_size.isEmpty()) {
         m_mainBackingStore.clear();
         m_previousBackingStore.clear();
         return;
@@ -722,7 +776,6 @@ void CoordinatedGraphicsLayer::purgeBackingStores()
     releaseImageBackingIfNeeded();
 
     didChangeLayerState();
-    didChangeChildren();
 }
 
 void CoordinatedGraphicsLayer::setCoordinator(WebKit::CoordinatedGraphicsLayerClient* coordinator)
@@ -749,17 +802,21 @@ bool CoordinatedGraphicsLayer::hasPendingVisibleChanges()
     if (!m_shouldSyncLayerState && !m_shouldSyncChildren && !m_shouldSyncFilters && !m_shouldSyncImageBacking && !m_shouldSyncAnimations && !m_canvasNeedsDisplay)
         return false;
 
-    return selfOrAncestorHaveNonAffineTransforms() || !tiledBackingStoreVisibleRect().isEmpty();
-
+    return tiledBackingStoreVisibleRect().intersects(tiledBackingStoreContentsRect());
 }
 
 void CoordinatedGraphicsLayer::computeTransformedVisibleRect()
 {
-    if (!m_shouldUpdateVisibleRect)
+    // When we have a transform animation, we need to update visible rect every frame to adjust the visible rect of a backing store.
+    bool hasActiveTransformAnimation = selfOrAncestorHasActiveTransformAnimation();
+    if (!m_shouldUpdateVisibleRect && !hasActiveTransformAnimation)
         return;
 
     m_shouldUpdateVisibleRect = false;
-    m_layerTransform.setLocalTransform(transform());
+    TransformationMatrix currentTransform = transform();
+    if (hasActiveTransformAnimation)
+        client()->getCurrentTransform(this, currentTransform);
+    m_layerTransform.setLocalTransform(currentTransform);
     m_layerTransform.setPosition(position());
     m_layerTransform.setAnchorPoint(anchorPoint());
     m_layerTransform.setSize(size());
@@ -783,6 +840,17 @@ void CoordinatedGraphicsLayer::initFactory()
     GraphicsLayer::setGraphicsLayerFactory(createCoordinatedGraphicsLayer);
 }
 
+bool CoordinatedGraphicsLayer::selfOrAncestorHasActiveTransformAnimation() const
+{
+    if (m_animations.hasActiveAnimationsOfType(AnimatedPropertyWebkitTransform))
+        return true;
+
+    if (!parent())
+        return false;
+
+    return toCoordinatedGraphicsLayer(parent())->selfOrAncestorHasActiveTransformAnimation();
+}
+
 bool CoordinatedGraphicsLayer::selfOrAncestorHaveNonAffineTransforms()
 {
     if (m_animations.hasActiveAnimationsOfType(AnimatedPropertyWebkitTransform))
@@ -791,7 +859,10 @@ bool CoordinatedGraphicsLayer::selfOrAncestorHaveNonAffineTransforms()
     if (!m_layerTransform.combined().isAffine())
         return true;
 
-    return false;
+    if (!parent())
+        return false;
+
+    return toCoordinatedGraphicsLayer(parent())->selfOrAncestorHaveNonAffineTransforms();
 }
 
 bool CoordinatedGraphicsLayer::addAnimation(const KeyframeValueList& valueList, const IntSize& boxSize, const Animation* anim, const String& keyframesName, double delayAsNegativeTimeOffset)

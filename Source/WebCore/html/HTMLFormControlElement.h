@@ -81,8 +81,6 @@ public:
 
     virtual const AtomicString& formControlType() const OVERRIDE = 0;
     virtual bool isEnabledFormControl() const { return !disabled(); }
-    virtual bool shouldMatchReadOnlySelector() const OVERRIDE;
-    virtual bool shouldMatchReadWriteSelector() const OVERRIDE;
 
     virtual bool canTriggerImplicitSubmission() const { return false; }
 
@@ -117,7 +115,7 @@ public:
 protected:
     HTMLFormControlElement(const QualifiedName& tagName, Document*, HTMLFormElement*);
 
-    virtual void parseAttribute(const Attribute&) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
     virtual void requiredAttributeChanged();
     virtual void disabledAttributeChanged();
     virtual void attach();

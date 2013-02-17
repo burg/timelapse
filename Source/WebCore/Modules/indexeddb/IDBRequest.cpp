@@ -78,9 +78,10 @@ IDBRequest::IDBRequest(ScriptExecutionContext* context, PassRefPtr<IDBAny> sourc
     , m_preventPropagation(false)
     , m_requestState(context)
 {
-    if (m_transaction) {
+    // Requests associated with IDBFactory (open/deleteDatabase/getDatabaseNames) are not
+    // associated with transactions.
+    if (m_transaction)
         m_transaction->registerRequest(this);
-    }
 }
 
 IDBRequest::~IDBRequest()
@@ -286,7 +287,7 @@ void IDBRequest::onSuccess(PassRefPtr<IDBCursorBackendInterface> backend, PassRe
         return;
 
     DOMRequestState::Scope scope(m_requestState);
-    ScriptValue value = deserializeIDBValue(&m_requestState, serializedValue);
+    ScriptValue value = deserializeIDBValue(requestState(), serializedValue);
     ASSERT(m_cursorType != IDBCursorBackendInterface::InvalidCursorType);
     RefPtr<IDBCursor> cursor;
     if (m_cursorType == IDBCursorBackendInterface::IndexKeyCursor)
@@ -311,31 +312,6 @@ void IDBRequest::onSuccess(PassRefPtr<IDBKey> idbKey)
     enqueueEvent(createSuccessEvent());
 }
 
-void IDBRequest::onSuccess(PassRefPtr<IDBTransactionBackendInterface> prpBackend)
-{
-    IDB_TRACE("IDBRequest::onSuccess(IDBTransaction)");
-    RefPtr<IDBTransactionBackendInterface> backend = prpBackend;
-
-    if (m_contextStopped || !scriptExecutionContext()) {
-        // Should only be null in tests.
-        if (backend.get())
-            backend->abort();
-        return;
-    }
-    if (!shouldEnqueueEvent())
-        return;
-
-    RefPtr<IDBTransaction> frontend = IDBTransaction::create(scriptExecutionContext(), backend, Vector<String>(), IDBTransaction::VERSION_CHANGE, m_source->idbDatabase().get());
-    backend->setCallbacks(frontend.get());
-    m_transaction = frontend;
-
-    ASSERT(m_source->type() == IDBAny::IDBDatabaseType);
-    ASSERT(m_transaction->isVersionChange());
-
-    m_result = IDBAny::create(frontend.release());
-    enqueueEvent(createSuccessEvent());
-}
-
 void IDBRequest::onSuccess(PassRefPtr<SerializedScriptValue> serializedScriptValue)
 {
     IDB_TRACE("IDBRequest::onSuccess(SerializedScriptValue)");
@@ -343,7 +319,7 @@ void IDBRequest::onSuccess(PassRefPtr<SerializedScriptValue> serializedScriptVal
         return;
 
     DOMRequestState::Scope scope(m_requestState);
-    ScriptValue value = deserializeIDBValue(&m_requestState, serializedScriptValue);
+    ScriptValue value = deserializeIDBValue(requestState(), serializedScriptValue);
     onSuccessInternal(value);
 }
 
@@ -370,14 +346,14 @@ void IDBRequest::onSuccess(PassRefPtr<SerializedScriptValue> prpSerializedScript
     ASSERT(keyPath == effectiveObjectStore(m_source)->keyPath());
 #endif
     DOMRequestState::Scope scope(m_requestState);
-    ScriptValue value = deserializeIDBValue(&m_requestState, prpSerializedScriptValue);
+    ScriptValue value = deserializeIDBValue(requestState(), prpSerializedScriptValue);
 
     RefPtr<IDBKey> primaryKey = prpPrimaryKey;
 #ifndef NDEBUG
-    RefPtr<IDBKey> expectedKey = createIDBKeyFromScriptValueAndKeyPath(value, keyPath);
+    RefPtr<IDBKey> expectedKey = createIDBKeyFromScriptValueAndKeyPath(requestState(), value, keyPath);
     ASSERT(!expectedKey || expectedKey->isEqual(primaryKey.get()));
 #endif
-    bool injected = injectIDBKeyIntoScriptValue(primaryKey, value, keyPath);
+    bool injected = injectIDBKeyIntoScriptValue(requestState(), primaryKey, value, keyPath);
     ASSERT_UNUSED(injected, injected);
     onSuccessInternal(value);
 }
@@ -409,7 +385,7 @@ void IDBRequest::onSuccess(PassRefPtr<IDBKey> key, PassRefPtr<IDBKey> primaryKey
         return;
 
     DOMRequestState::Scope scope(m_requestState);
-    ScriptValue value = deserializeIDBValue(&m_requestState, serializedValue);
+    ScriptValue value = deserializeIDBValue(requestState(), serializedValue);
     ASSERT(m_pendingCursor);
     setResultCursor(m_pendingCursor.release(), key, primaryKey, value);
     enqueueEvent(createSuccessEvent());
@@ -482,7 +458,7 @@ bool IDBRequest::dispatchEvent(PassRefPtr<Event> event)
     if (event->type() == eventNames().successEvent) {
         cursorToNotify = getResultCursor();
         if (cursorToNotify) {
-            cursorToNotify->setValueReady(&m_requestState, m_cursorKey.release(), m_cursorPrimaryKey.release(), m_cursorValue);
+            cursorToNotify->setValueReady(requestState(), m_cursorKey.release(), m_cursorPrimaryKey.release(), m_cursorValue);
             m_cursorValue.clear();
         }
     }
@@ -500,28 +476,29 @@ bool IDBRequest::dispatchEvent(PassRefPtr<Event> event)
         m_transaction->setActive(true);
 
     bool dontPreventDefault = IDBEventDispatcher::dispatch(event.get(), targets);
-    if (setTransactionActive)
-        m_transaction->setActive(false);
-
-    if (cursorToNotify)
-        cursorToNotify->postSuccessHandlerCallback();
-
-    if (m_readyState == DONE && (!cursorToNotify || m_cursorFinished) && event->type() != eventNames().upgradeneededEvent)
-        m_hasPendingActivity = false;
 
     if (m_transaction) {
+        if (m_readyState == DONE)
+            m_transaction->unregisterRequest(this);
+
+        // Possibly abort the transaction. This must occur after unregistering (so this request
+        // doesn't receive a second error) and before deactivating (which might trigger commit).
         if (event->type() == eventNames().errorEvent && dontPreventDefault && !m_requestAborted) {
             m_transaction->setError(m_error);
             ExceptionCode unused;
             m_transaction->abort(unused);
         }
 
-        if (event->type() != eventNames().blockedEvent)
-            m_transaction->backend()->didCompleteTaskEvents();
-
-        if (m_readyState == DONE)
-            m_transaction->unregisterRequest(this);
+        // If this was the last request in the transaction's list, it may commit here.
+        if (setTransactionActive)
+            m_transaction->setActive(false);
     }
+
+    if (cursorToNotify)
+        cursorToNotify->postSuccessHandlerCallback();
+
+    if (m_readyState == DONE && (!cursorToNotify || m_cursorFinished) && event->type() != eventNames().upgradeneededEvent)
+        m_hasPendingActivity = false;
 
     return dontPreventDefault;
 }

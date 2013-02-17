@@ -118,6 +118,7 @@ public:
 #endif
     PassRefPtr<DOMStringList> formControlStateOfPreviousHistoryItem(ExceptionCode&);
     void setFormControlStateOfPreviousHistoryItem(PassRefPtr<DOMStringList>, ExceptionCode&);
+    void setEnableMockPagePopup(bool, ExceptionCode&);
 #if ENABLE(PAGE_POPUP)
     PassRefPtr<PagePopupController> pagePopupController();
 #endif
@@ -231,6 +232,8 @@ public:
     String pageProperty(String, int, ExceptionCode& = ASSERT_NO_EXCEPTION) const;
     String pageSizeAndMarginsInPixels(int, int, int, int, int, int, int, ExceptionCode& = ASSERT_NO_EXCEPTION) const;
 
+    void setPageScaleFactor(float scaleFactor, int x, int y, ExceptionCode&);
+
 #if ENABLE(FULLSCREEN_API)
     void webkitWillEnterFullScreenForElement(Document*, Element*);
     void webkitDidEnterFullScreenForElement(Document*, Element*);
@@ -250,6 +253,8 @@ public:
 
     PassRefPtr<ArrayBuffer> serializeObject(PassRefPtr<SerializedScriptValue>) const;
     PassRefPtr<SerializedScriptValue> deserializeBuffer(PassRefPtr<ArrayBuffer>) const;
+
+    void setUsesOverlayScrollbars(bool enabled);
 
     String getCurrentCursorInfo(Document*, ExceptionCode&);
 

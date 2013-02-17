@@ -163,6 +163,7 @@
 #include "JSHTMLEmbedElement.cpp"
 #include "JSHTMLFieldSetElement.cpp"
 #include "JSHTMLFontElement.cpp"
+#include "JSHTMLFormControlsCollection.cpp"
 #include "JSHTMLFormElement.cpp"
 #include "JSHTMLFrameElement.cpp"
 #include "JSHTMLFrameSetElement.cpp"
@@ -486,6 +487,9 @@
 #include "JSWebKitCSSKeyframesRule.cpp"
 #include "JSWebKitCSSTransformValue.cpp"
 #include "JSWebKitCSSMatrix.cpp"
+#if ENABLE(CSS_SHADERS)
+#include "JSWebKitCSSMixFunctionValue.cpp"
+#endif
 #include "JSWebKitCSSRegionRule.cpp"
 #include "JSWebKitNamedFlow.cpp"
 #include "JSWebKitPoint.cpp"

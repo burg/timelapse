@@ -79,6 +79,7 @@ public:
     virtual bool getFormValue(String&);
     virtual bool supportsKeyboardFocus() const;
     virtual bool canProcessDrag() const;
+    virtual bool wantsWheelEvents();
 
     // Widget methods
     virtual void setFrameRect(const WebCore::IntRect&);
@@ -112,7 +113,9 @@ public:
     virtual void zoomLevelChanged(double zoomLevel);    
     virtual void setOpaque(bool);
     virtual bool isRectTopmost(const WebRect&);
-    virtual void setIsAcceptingTouchEvents(bool);
+    virtual void requestTouchEventType(TouchEventRequestType);
+    virtual void setWantsWheelEvents(bool);
+    virtual WebPoint windowToLocalPoint(const WebPoint&);
 
     // This cannot be null.
     WebPlugin* plugin() { return m_webPlugin; }
@@ -146,7 +149,7 @@ public:
     void didFinishLoading();
     void didFailLoading(const WebCore::ResourceError&);
 
-    NPObject* scriptableObject();
+    virtual NPObject* scriptableObject() OVERRIDE;
 
     void willDestroyPluginLoadObserver(WebPluginLoadObserver*);
 
@@ -171,6 +174,8 @@ private:
     void handleKeyboardEvent(WebCore::KeyboardEvent*);
     void handleTouchEvent(WebCore::TouchEvent*);
     void handleGestureEvent(WebCore::GestureEvent*);
+
+    void synthesizeMouseEventIfPossible(WebCore::TouchEvent*);
 
     void calculateGeometry(const WebCore::IntRect& frameRect,
                            WebCore::IntRect& windowRect,
@@ -198,7 +203,8 @@ private:
     // scrollbars.
     OwnPtr<ScrollbarGroup> m_scrollbarGroup;
 
-    bool m_isAcceptingTouchEvents;
+    TouchEventRequestType m_touchEventRequestType;
+    bool m_wantsWheelEvents;
 };
 
 } // namespace WebKit

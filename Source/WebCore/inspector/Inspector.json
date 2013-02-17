@@ -1858,10 +1858,11 @@
             {
                 "name": "highlightNode",
                 "parameters": [
-                    { "name": "nodeId", "$ref": "NodeId", "description": "Identifier of the node to highlight." },
+                    { "name": "nodeId", "$ref": "NodeId", "optional": true, "description": "Identifier of the node to highlight." },
+                    { "name": "objectId", "$ref": "Runtime.RemoteObjectId", "optional": true, "description": "JavaScript object id of the node to be highlighted." },
                     { "name": "highlightConfig", "$ref": "HighlightConfig", "description": "A descriptor for the highlight appearance." }
                 ],
-                "description": "Highlights DOM node with given id."
+                "description": "Highlights DOM node with given id or with the given JavaScript object wrapper. Either nodeId or objectId must be specified."
             },
             {
                 "name": "hideHighlight",
@@ -3333,7 +3334,9 @@
                 "type": "object",
                 "properties": [
                     { "name": "id", "$ref": "TraceLogId" },
-                    { "name": "calls", "type": "array", "items": { "$ref": "Call" } }
+                    { "name": "calls", "type": "array", "items": { "$ref": "Call" } },
+                    { "name": "startOffset", "type": "integer", "optional": true },
+                    { "name": "alive", "type": "boolean", "optional": true }
                 ]
             }
         ],
@@ -3359,9 +3362,22 @@
                 ]
             },
             {
-                "name": "getTraceLog",
+                "name": "startCapturing",
+                "returns": [
+                    { "name": "traceLogId", "$ref": "TraceLogId" }
+                ]
+            },
+            {
+                "name": "stopCapturing",
                 "parameters": [
                     { "name": "traceLogId", "$ref": "TraceLogId" }
+                ]
+            },
+            {
+                "name": "getTraceLog",
+                "parameters": [
+                    { "name": "traceLogId", "$ref": "TraceLogId" },
+                    { "name": "startOffset", "type": "integer", "optional": true }
                 ],
                 "returns": [
                     { "name": "traceLog", "$ref": "TraceLog" }

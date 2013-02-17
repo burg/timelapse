@@ -36,6 +36,62 @@
 
 namespace WebCore {
 
+void ContentDistribution::swap(ContentDistribution& other)
+{
+    m_nodes.swap(other.m_nodes);
+    m_indices.swap(other.m_indices);
+}
+
+void ContentDistribution::append(PassRefPtr<Node> node)
+{
+    size_t size = m_nodes.size();
+    m_indices.set(node.get(), size);
+    m_nodes.append(node);
+}
+
+size_t ContentDistribution::find(const Node* node) const
+{
+    HashMap<const Node*, size_t>::const_iterator it = m_indices.find(node);
+    if (it == m_indices.end())
+        return notFound;
+
+    return it.get()->value;
+}
+
+ShadowRootContentDistributionData::ShadowRootContentDistributionData()
+    : m_insertionPointAssignedTo(0)
+    , m_numberOfShadowElementChildren(0)
+    , m_numberOfContentElementChildren(0)
+    , m_numberOfElementShadowChildren(0)
+    , m_insertionPointListIsValid(false)
+{
+}
+
+void ShadowRootContentDistributionData::invalidateInsertionPointList()
+{
+    m_insertionPointListIsValid = false;
+    m_insertionPointList.clear();
+}
+
+const Vector<InsertionPoint*>& ShadowRootContentDistributionData::ensureInsertionPointList(ShadowRoot* shadowRoot)
+{
+    if (m_insertionPointListIsValid)
+        return m_insertionPointList;
+
+    m_insertionPointListIsValid = true;
+    ASSERT(m_insertionPointList.isEmpty());
+
+    if (!shadowRoot->hasInsertionPoint())
+        return m_insertionPointList;
+
+    for (Node* node = shadowRoot; node; node = node->traverseNextNode(shadowRoot)) {
+        if (node->isInsertionPoint())
+            m_insertionPointList.append(toInsertionPoint(node));
+    }
+
+    return m_insertionPointList;
+}
+
 ContentDistributor::ContentDistributor()
     : m_validity(Undetermined)
 {
@@ -85,17 +141,18 @@ void ContentDistributor::distribute(Element* host)
     for (ShadowRoot* root = host->youngestShadowRoot(); root; root = root->olderShadowRoot()) {
         HTMLShadowElement* firstActiveShadowInsertionPoint = 0;
 
-        for (Node* node = root; node; node = node->traverseNextNode(root)) {
-            if (!isActiveInsertionPoint(node))
+        const Vector<InsertionPoint*>& insertionPoints = root->insertionPointList();
+        for (size_t i = 0; i < insertionPoints.size(); ++i) {
+            InsertionPoint* point = insertionPoints[i];
+            if (!point->isActive())
                 continue;
-            InsertionPoint* point = toInsertionPoint(node);
 
-            if (isHTMLShadowElement(node)) {
+            if (isHTMLShadowElement(point)) {
                 if (!firstActiveShadowInsertionPoint)
-                    firstActiveShadowInsertionPoint = toHTMLShadowElement(node);
+                    firstActiveShadowInsertionPoint = toHTMLShadowElement(point);
             } else {
                 distributeSelectionsTo(point, pool, distributed);
-                if (ElementShadow* shadow = node->parentNode()->isElementNode() ? toElement(node->parentNode())->shadow() : 0)
+                if (ElementShadow* shadow = point->parentNode()->isElementNode() ? toElement(point->parentNode())->shadow() : 0)
                     shadow->invalidateDistribution();
             }
         }
@@ -126,13 +183,10 @@ bool ContentDistributor::invalidate(Element* host)
 
     for (ShadowRoot* root = host->youngestShadowRoot(); root; root = root->olderShadowRoot()) {
         root->setAssignedTo(0);
-
-        for (Node* node = root; node; node = node->traverseNextNode(root)) {
-            if (!isInsertionPoint(node))
-                continue;
+        const Vector<InsertionPoint*>& insertionPoints = root->insertionPointList();
+        for (size_t i = 0; i < insertionPoints.size(); ++i) {
             needsReattach = needsReattach || true;
-            InsertionPoint* point = toInsertionPoint(node);
-            point->clearDistribution();
+            insertionPoints[i]->clearDistribution();
         }
     }
 
@@ -156,10 +210,10 @@ void ContentDistributor::distributeSelectionsTo(InsertionPoint* insertionPoint, 
         if (distributed[i])
             continue;
 
-        if (!query.matches(pool, i))
+        if (!query.matches(pool.nodes(), i))
             continue;
 
-        Node* child = pool[i].get();
+        Node* child = pool.at(i).get();
         distribution.append(child);
         m_nodeToInsertionPoint.add(child, insertionPoint);
         distributed[i] = true;

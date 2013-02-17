@@ -55,6 +55,7 @@
 #include "TextCheckerClient.h"
 #include "TextCheckingHelper.h"
 #include "TextIterator.h"
+#include "UserGestureIndicator.h"
 #include "htmlediting.h"
 #include "visible_units.h"
 #include <wtf/StdLibExtras.h>
@@ -73,7 +74,7 @@ AccessibilityObject::AccessibilityObject()
     , m_haveChildren(false)
     , m_role(UnknownRole)
     , m_cachedIsIgnoredValue(DefaultBehavior)
-#if PLATFORM(GTK)
+#if PLATFORM(GTK) || PLATFORM(EFL)
     , m_wrapper(0)
 #elif PLATFORM(CHROMIUM)
     , m_detached(false)
@@ -540,6 +541,8 @@ bool AccessibilityObject::press() const
         return false;
     if (Frame* f = actionElem->document()->frame())
         f->loader()->resetMultipleFormSubmissionProtection();
+    
+    UserGestureIndicator gestureIndicator(DefinitelyProcessingUserGesture);
     actionElem->accessKeyAction(true);
     return true;
 }
@@ -837,7 +840,7 @@ String AccessibilityObject::stringForVisiblePositionRange(const VisiblePositionR
             if (!listMarkerText.isEmpty())
                 builder.append(listMarkerText);
 
-            builder.append(it.characters(), it.length());
+            it.appendTextToStringBuilder(builder);
         } else {
             // locate the node and starting offset for this replaced range
             int exception = 0;

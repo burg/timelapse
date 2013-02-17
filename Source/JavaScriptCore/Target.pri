@@ -55,6 +55,9 @@ SOURCES += \
     bytecode/CallLinkInfo.cpp \
     bytecode/CallLinkStatus.cpp \
     bytecode/CodeBlock.cpp \
+    bytecode/CodeBlockHash.cpp \
+    bytecode/CodeOrigin.cpp \
+    bytecode/CodeType.cpp \
     bytecode/DFGExitProfile.cpp \
     bytecode/ExecutionCounter.cpp \
     bytecode/GetByIdStatus.cpp \
@@ -136,14 +139,17 @@ SOURCES += \
     dfg/DFGStructureCheckHoistingPhase.cpp \
     dfg/DFGThunks.cpp \
     dfg/DFGValueSource.cpp \
+    dfg/DFGVariableAccessDataDump.cpp \
     dfg/DFGVariableEvent.cpp \
     dfg/DFGVariableEventStream.cpp \
     dfg/DFGValidate.cpp \
     dfg/DFGVirtualRegisterAllocationPhase.cpp \
+    disassembler/Disassembler.cpp \
     interpreter/AbstractPC.cpp \
     interpreter/CallFrame.cpp \
     interpreter/Interpreter.cpp \
     interpreter/JSStack.cpp \
+    jit/ClosureCallStubRoutine.cpp \
     jit/ExecutableAllocatorFixedVMPool.cpp \
     jit/ExecutableAllocator.cpp \
     jit/HostCallReturnValue.cpp \
@@ -152,7 +158,9 @@ SOURCES += \
     jit/JITArithmetic32_64.cpp \
     jit/JITCall.cpp \
     jit/JITCall32_64.cpp \
+    jit/JITCode.cpp \
     jit/JIT.cpp \
+    jit/JITDisassembler.cpp \
     jit/JITExceptions.cpp \
     jit/JITOpcodes.cpp \
     jit/JITOpcodes32_64.cpp \
@@ -187,6 +195,7 @@ SOURCES += \
     runtime/BooleanPrototype.cpp \
     runtime/CallData.cpp \
     runtime/CodeCache.cpp \
+    runtime/CodeSpecializationKind.cpp \
     runtime/CommonIdentifiers.cpp \
     runtime/Completion.cpp \
     runtime/ConstructData.cpp \

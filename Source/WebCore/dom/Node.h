@@ -32,6 +32,7 @@
 #include "MutationObserver.h"
 #include "RenderStyleConstants.h"
 #include "ScriptWrappable.h"
+#include "SimulatedClickOptions.h"
 #include "TreeShared.h"
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>
@@ -54,7 +55,6 @@ class ClassNodeList;
 class ContainerNode;
 class DOMSettableTokenList;
 class Document;
-class DynamicSubtreeNodeList;
 class Element;
 class Event;
 class EventContext;
@@ -98,7 +98,7 @@ class PropertyNodeList;
 
 typedef int ExceptionCode;
 
-const int nodeStyleChangeShift = 20;
+const int nodeStyleChangeShift = 17;
 
 // SyntheticStyleChange means that we need to go through the entire style change logic even though
 // no style property has actually changed. It is used to restructure the tree when, for instance,
@@ -233,8 +233,11 @@ public:
     virtual bool isCharacterDataNode() const { return false; }
     virtual bool isFrameOwnerElement() const { return false; }
     virtual bool isPluginElement() const { return false; }
+    virtual bool documentFragmentIsShadowRoot() const;
     bool isDocumentNode() const;
-    bool isShadowRoot() const { return getFlag(IsShadowRootFlag); }
+    bool isDocumentFragment() const { return getFlag(IsDocumentFragmentFlag); }
+    bool isShadowRoot() const { return isDocumentFragment() && documentFragmentIsShadowRoot(); }
+    bool isInsertionPoint() const { return getFlag(IsInsertionPointFlag); }
     bool inNamedFlow() const { return getFlag(InNamedFlowFlag); }
     bool hasCustomCallbacks() const { return getFlag(HasCustomCallbacksFlag); }
 
@@ -316,7 +319,7 @@ public:
     virtual void notifyLoadedSheetAndAllCriticalSubresources(bool /* error loading subresource */) { }
     virtual void startLoadingDynamicSheet() { ASSERT_NOT_REACHED(); }
 
-    bool hasName() const { return getFlag(HasNameFlag); }
+    bool hasName() const { return !isTextNode() && getFlag(HasNameOrIsEditingTextFlag); }
     bool hasID() const;
     bool hasClass() const;
 
@@ -330,8 +333,9 @@ public:
     StyleChangeType styleChangeType() const { return static_cast<StyleChangeType>(m_nodeFlags & StyleChangeMask); }
     bool childNeedsStyleRecalc() const { return getFlag(ChildNeedsStyleRecalcFlag); }
     bool isLink() const { return getFlag(IsLinkFlag); }
+    bool isEditingText() const { return isTextNode() && getFlag(HasNameOrIsEditingTextFlag); }
 
-    void setHasName(bool f) { setFlag(f, HasNameFlag); }
+    void setHasName(bool f) { ASSERT(!isTextNode()); setFlag(f, HasNameOrIsEditingTextFlag); }
     void setChildNeedsStyleRecalc() { setFlag(ChildNeedsStyleRecalcFlag); }
     void clearChildNeedsStyleRecalc() { clearFlag(ChildNeedsStyleRecalcFlag); }
 
@@ -355,8 +359,8 @@ public:
     bool hasEventTargetData() const { return getFlag(HasEventTargetDataFlag); }
     void setHasEventTargetData(bool flag) { setFlag(flag, HasEventTargetDataFlag); }
 
-    bool inEden() const { return getFlag(InEdenFlag); }
-    void setEden(bool flag) { setFlag(flag, InEdenFlag); }
+    bool isV8CollectableDuringMinorGC() const { return getFlag(V8CollectableDuringMinorGCFlag); }
+    void setV8CollectableDuringMinorGC(bool flag) { setFlag(flag, V8CollectableDuringMinorGCFlag); }
 
     enum ShouldSetAttached {
         SetAttached,
@@ -452,6 +456,7 @@ public:
     }
 
     bool isReadOnlyNode() const { return nodeType() == ENTITY_REFERENCE_NODE; }
+    bool isDocumentTypeNode() const { return nodeType() == DOCUMENT_TYPE_NODE; }
     virtual bool childTypeAllowed(NodeType) const { return false; }
     unsigned childNodeCount() const;
     Node* childNode(unsigned index) const;
@@ -485,13 +490,6 @@ public:
     bool contains(const Node*) const;
     bool containsIncludingShadowDOM(Node*);
 
-    // This method is used to do strict error-checking when adding children via
-    // the public DOM API (e.g., appendChild()).
-    void checkAddChild(Node* newChild, ExceptionCode&); // Error-checking when adding via the DOM API
-
-    void checkReplaceChild(Node* newChild, Node* oldChild, ExceptionCode&);
-    virtual bool canReplaceChild(Node* newChild, Node* oldChild);
-    
     // Used to determine whether range offsets use characters or node indices.
     virtual bool offsetInCharacters() const;
     // Number of DOM 16-bit units contained in node. Note that rendered text length can be different - e.g. because of
@@ -537,10 +535,6 @@ public:
 
     void reattach();
     void reattachIfAttached();
-    void createRendererIfNeeded();
-    virtual bool rendererIsNeeded(const NodeRenderingContext&);
-    virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const { return true; }
-    virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
     ContainerNode* parentNodeForRenderingAndStyle();
     
     // Wrapper for nodes that don't have a renderer, but still cache the style (like HTMLOptionElement).
@@ -640,7 +634,7 @@ public:
 #if ENABLE(GESTURE_EVENTS)
     bool dispatchGestureEvent(const PlatformGestureEvent&);
 #endif
-    void dispatchSimulatedClick(PassRefPtr<Event> underlyingEvent, bool sendMouseEvents = false, bool showPressedLook = true);
+    void dispatchSimulatedClick(Event* underlyingEvent, SimulatedClickMouseEventOptions = SendNoEvents, SimulatedClickVisualOptions = ShowPressedLook);
     bool dispatchBeforeLoadEvent(const String& sourceURL);
 
     virtual void dispatchFocusEvent(PassRefPtr<Node> oldFocusedNode);
@@ -685,10 +679,6 @@ public:
 
     void textRects(Vector<IntRect>&) const;
 
-    unsigned connectedSubframeCount() const;
-    void incrementConnectedSubframeCount();
-    void decrementConnectedSubframeCount();
-
 private:
     enum NodeFlags {
         IsTextFlag = 1,
@@ -705,39 +695,33 @@ private:
         IsHoveredFlag = 1 << 11,
         InActiveChainFlag = 1 << 12,
         HasRareDataFlag = 1 << 13,
-        IsShadowRootFlag = 1 << 14,
+        IsDocumentFragmentFlag = 1 << 14,
 
         // These bits are used by derived classes, pulled up here so they can
         // be stored in the same memory word as the Node bits above.
         IsParsingChildrenFinishedFlag = 1 << 15, // Element
-        IsStyleAttributeValidFlag = 1 << 16, // StyledElement
 #if ENABLE(SVG)
-        AreSVGAttributesValidFlag = 1 << 17, // Element
-        IsSynchronizingSVGAttributesFlag = 1 << 18, // SVGElement
-        HasSVGRareDataFlag = 1 << 19, // SVGElement
+        HasSVGRareDataFlag = 1 << 16, // SVGElement
 #endif
 
         StyleChangeMask = 1 << nodeStyleChangeShift | 1 << (nodeStyleChangeShift + 1),
 
-        SelfOrAncestorHasDirAutoFlag = 1 << 22,
+        SelfOrAncestorHasDirAutoFlag = 1 << 19,
 
-        HasNameFlag = 1 << 23,
+        HasNameOrIsEditingTextFlag = 1 << 20,
 
-        InNamedFlowFlag = 1 << 24,
-        HasSyntheticAttrChildNodesFlag = 1 << 25,
-        HasCustomCallbacksFlag = 1 << 26,
-        HasScopedHTMLStyleChildFlag = 1 << 27,
-        HasEventTargetDataFlag = 1 << 28,
-        InEdenFlag = 1 << 29,
+        InNamedFlowFlag = 1 << 21,
+        HasSyntheticAttrChildNodesFlag = 1 << 22,
+        HasCustomCallbacksFlag = 1 << 23,
+        HasScopedHTMLStyleChildFlag = 1 << 24,
+        HasEventTargetDataFlag = 1 << 25,
+        V8CollectableDuringMinorGCFlag = 1 << 26,
+        IsInsertionPointFlag = 1 << 27,
 
-#if ENABLE(SVG)
-        DefaultNodeFlags = IsParsingChildrenFinishedFlag | IsStyleAttributeValidFlag | AreSVGAttributesValidFlag,
-#else
-        DefaultNodeFlags = IsParsingChildrenFinishedFlag | IsStyleAttributeValidFlag,
-#endif
+        DefaultNodeFlags = IsParsingChildrenFinishedFlag
     };
 
-    // 2 bits remaining
+    // 4 bits remaining
 
     bool getFlag(NodeFlags mask) const { return m_nodeFlags & mask; }
     void setFlag(bool f, NodeFlags mask) const { m_nodeFlags = (m_nodeFlags & ~mask) | (-(int32_t)f & mask); } 
@@ -750,12 +734,15 @@ protected:
         CreateText = DefaultNodeFlags | IsTextFlag,
         CreateContainer = DefaultNodeFlags | IsContainerFlag, 
         CreateElement = CreateContainer | IsElementFlag, 
-        CreateShadowRoot = CreateContainer | IsShadowRootFlag,
+        CreateShadowRoot = CreateContainer | IsDocumentFragmentFlag,
+        CreateDocumentFragment = CreateContainer | IsDocumentFragmentFlag,
         CreateStyledElement = CreateElement | IsStyledElementFlag, 
         CreateHTMLElement = CreateStyledElement | IsHTMLFlag, 
         CreateFrameOwnerElement = CreateHTMLElement | HasCustomCallbacksFlag,
         CreateSVGElement = CreateStyledElement | IsSVGFlag,
-        CreateDocument = CreateContainer | InDocumentFlag
+        CreateDocument = CreateContainer | InDocumentFlag,
+        CreateInsertionPoint = CreateHTMLElement | IsInsertionPointFlag,
+        CreateEditingText = CreateText | HasNameOrIsEditingTextFlag,
     };
     Node(Document*, ConstructionType);
 
@@ -838,24 +825,12 @@ private:
         NodeRareDataBase* m_rareData;
     } m_data;
 
-public:
-    bool isStyleAttributeValid() const { return getFlag(IsStyleAttributeValidFlag); }
-    void setIsStyleAttributeValid(bool f) { setFlag(f, IsStyleAttributeValidFlag); }
-    void setIsStyleAttributeValid() const { setFlag(IsStyleAttributeValidFlag); }
-    void clearIsStyleAttributeValid() { clearFlag(IsStyleAttributeValidFlag); }
-
 protected:
     bool isParsingChildrenFinished() const { return getFlag(IsParsingChildrenFinishedFlag); }
     void setIsParsingChildrenFinished() { setFlag(IsParsingChildrenFinishedFlag); }
     void clearIsParsingChildrenFinished() { clearFlag(IsParsingChildrenFinishedFlag); }
 
 #if ENABLE(SVG)
-    bool areSVGAttributesValid() const { return getFlag(AreSVGAttributesValidFlag); }
-    void setAreSVGAttributesValid() const { setFlag(AreSVGAttributesValidFlag); }
-    void clearAreSVGAttributesValid() { clearFlag(AreSVGAttributesValidFlag); }
-    bool isSynchronizingSVGAttributes() const { return getFlag(IsSynchronizingSVGAttributesFlag); }
-    void setIsSynchronizingSVGAttributes() const { setFlag(IsSynchronizingSVGAttributesFlag); }
-    void clearIsSynchronizingSVGAttributes() const { clearFlag(IsSynchronizingSVGAttributesFlag); }
     bool hasSVGRareData() const { return getFlag(HasSVGRareDataFlag); }
     void setHasSVGRareData() { setFlag(HasSVGRareDataFlag); }
     void clearHasSVGRareData() { clearFlag(HasSVGRareDataFlag); }
@@ -877,7 +852,7 @@ inline void addSubresourceURL(ListHashSet<KURL>& urls, const KURL& url)
 
 inline ContainerNode* Node::parentNode() const
 {
-    return getFlag(IsShadowRootFlag) ? 0 : parent();
+    return isShadowRoot() ? 0 : parent();
 }
 
 inline void Node::setParentOrHostNode(ContainerNode* parent)
@@ -892,7 +867,7 @@ inline ContainerNode* Node::parentOrHostNode() const
 
 inline ContainerNode* Node::parentNodeGuaranteedHostFree() const
 {
-    ASSERT(!getFlag(IsShadowRootFlag));
+    ASSERT(!isShadowRoot());
     return parentOrHostNode();
 }
 

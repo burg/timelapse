@@ -30,15 +30,18 @@
 
 #import "ArgumentCoders.h"
 #import "DataReference.h"
+#import "PDFAnnotationTextWidgetDetails.h"
 #import "PDFKitImports.h"
 #import "PDFLayerControllerDetails.h"
 #import "PDFPluginAnnotation.h"
 #import "PluginView.h"
 #import "ShareableBitmap.h"
+#import "WebContextMessages.h"
 #import "WebEvent.h"
 #import "WebEventConversion.h"
 #import "WebPage.h"
 #import "WebPageProxyMessages.h"
+#import "WebProcess.h"
 #import <PDFKit/PDFKit.h>
 #import <QuartzCore/QuartzCore.h>
 #import <WebCore/ArchiveResource.h>
@@ -153,15 +156,7 @@ static const char* annotationStyle =
 
 - (void)writeItemsToPasteboard:(NSArray *)items withTypes:(NSArray *)types
 {
-    // FIXME: Handle types other than plain text.
-
-    for (NSUInteger i = 0, count = items.count; i < count; ++i) {
-        NSString *type = [types objectAtIndex:i];
-        if ([type isEqualToString:NSStringPboardType] || [type isEqualToString:NSPasteboardTypeString]) {
-            RetainPtr<NSString> plainTextString(AdoptNS, [[NSString alloc] initWithData:[items objectAtIndex:i] encoding:NSUTF8StringEncoding]);
-            Pasteboard::generalPasteboard()->writePlainText(plainTextString.get(), Pasteboard::CannotSmartReplace);
-        }
-    }
+    _pdfPlugin->writeItemsToPasteboard(items, types);
 }
 
 - (void)showDefinitionForAttributedString:(NSAttributedString *)string atPoint:(CGPoint)point
@@ -303,7 +298,7 @@ void PDFPlugin::pdfDocumentDidLoad()
     [m_pdfLayerController.get() setFrameSize:size()];
     m_pdfLayerController.get().document = document.get();
 
-    [m_pdfLayerController.get() setDeviceScaleFactor:controller()->contentsScaleFactor()];
+    updatePageAndDeviceScaleFactors();
     
     if (handlesPageScaleFactor())
         pluginView()->setPageScaleFactor([m_pdfLayerController.get() contentScaleFactor], IntPoint());
@@ -316,9 +311,18 @@ void PDFPlugin::pdfDocumentDidLoad()
     runScriptsInPDFDocument();
 }
 
-void PDFPlugin::contentsScaleFactorChanged(float contentsScaleFactor)
+void PDFPlugin::updatePageAndDeviceScaleFactors()
 {
-    [m_pdfLayerController.get() setDeviceScaleFactor:contentsScaleFactor];
+    double newScaleFactor = controller()->contentsScaleFactor();
+    if (!handlesPageScaleFactor())
+        newScaleFactor *= webFrame()->page()->pageScaleFactor();
+
+    [m_pdfLayerController.get() setDeviceScaleFactor:newScaleFactor];
+}
+
+void PDFPlugin::contentsScaleFactorChanged(float)
+{
+    updatePageAndDeviceScaleFactors();
 }
 
 void PDFPlugin::calculateSizes()
@@ -405,6 +409,16 @@ PlatformLayer* PDFPlugin::pluginLayer()
     return m_containerLayer.get();
 }
 
+IntPoint PDFPlugin::convertFromRootViewToPlugin(const IntPoint& point) const
+{
+    return m_rootViewToPluginTransform.mapPoint(point);
+}
+
+IntPoint PDFPlugin::convertFromPluginToPDFView(const IntPoint& point) const
+{
+    return IntPoint(point.x(), size().height() - point.y());
+}
+
 void PDFPlugin::geometryDidChange(const IntSize& pluginSize, const IntRect&, const AffineTransform& pluginToRootViewTransform)
 {
     if (size() == pluginSize && pluginView()->pageScaleFactor() == [m_pdfLayerController.get() contentScaleFactor])
@@ -422,10 +436,14 @@ void PDFPlugin::geometryDidChange(const IntSize& pluginSize, const IntRect&, con
     if (handlesPageScaleFactor()) {
         CGFloat magnification = pluginView()->pageScaleFactor() - [m_pdfLayerController.get() contentScaleFactor];
 
-        // FIXME: Instead of m_lastMousePoint, we should use the zoom origin from PluginView::setPageScaleFactor.
+        // FIXME: Instead of m_lastMousePositionInPluginCoordinates, we should use the zoom origin from PluginView::setPageScaleFactor.
         if (magnification)
-            [m_pdfLayerController.get() magnifyWithMagnification:magnification atPoint:m_lastMousePoint immediately:NO];
-    }
+            [m_pdfLayerController.get() magnifyWithMagnification:magnification atPoint:convertFromPluginToPDFView(m_lastMousePositionInPluginCoordinates) immediately:NO];
+    } else {
+        // If we don't handle page scale ourselves, we need to respect our parent page's
+        // scale, which may have changed.
+        updatePageAndDeviceScaleFactors();
+    } 
 
     calculateSizes();
     updateScrollbars();
@@ -493,13 +511,9 @@ static NSEventType eventTypeFromWebEvent(const WebEvent& event)
     
 NSEvent *PDFPlugin::nsEventForWebMouseEvent(const WebMouseEvent& event)
 {
-    IntPoint mousePosition = event.position();
+    m_lastMousePositionInPluginCoordinates = convertFromRootViewToPlugin(event.position());
 
-    IntPoint positionInPDFView(mousePosition);
-    positionInPDFView = m_rootViewToPluginTransform.mapPoint(positionInPDFView);
-    positionInPDFView.setY(size().height() - positionInPDFView.y());
-
-    m_lastMousePoint = positionInPDFView;
+    IntPoint positionInPDFViewCoordinates(convertFromPluginToPDFView(m_lastMousePositionInPluginCoordinates));
 
     NSEventType eventType = eventTypeFromWebEvent(event);
 
@@ -508,26 +522,58 @@ NSEvent *PDFPlugin::nsEventForWebMouseEvent(const WebMouseEvent& event)
 
     NSUInteger modifierFlags = modifierFlagsFromWebEvent(event);
 
-    return [NSEvent mouseEventWithType:eventType location:positionInPDFView modifierFlags:modifierFlags timestamp:0 windowNumber:0 context:nil eventNumber:0 clickCount:event.clickCount() pressure:0];
+    return [NSEvent mouseEventWithType:eventType location:positionInPDFViewCoordinates modifierFlags:modifierFlags timestamp:0 windowNumber:0 context:nil eventNumber:0 clickCount:event.clickCount() pressure:0];
 }
 
 bool PDFPlugin::handleMouseEvent(const WebMouseEvent& event)
 {
+    PlatformMouseEvent platformEvent = platform(event);
+    IntPoint mousePosition = convertFromRootViewToPlugin(event.position());
+
     m_lastMouseEvent = event;
 
-    IntPoint mousePosition = event.position();
+    RefPtr<Scrollbar> targetScrollbar;
+    RefPtr<Scrollbar> targetScrollbarForLastMousePosition;
 
-    // FIXME: Forward mouse events to the appropriate scrollbar.
-    if (IntRect(m_verticalScrollbarLayer.get().frame).contains(mousePosition)
-        || IntRect(m_horizontalScrollbarLayer.get().frame).contains(mousePosition)
-        || IntRect(m_scrollCornerLayer.get().frame).contains(mousePosition))
+    if (m_verticalScrollbarLayer) {
+        IntRect verticalScrollbarFrame(m_verticalScrollbarLayer.get().frame);
+        if (verticalScrollbarFrame.contains(mousePosition))
+            targetScrollbar = verticalScrollbar();
+        if (verticalScrollbarFrame.contains(m_lastMousePositionInPluginCoordinates))
+            targetScrollbarForLastMousePosition = verticalScrollbar();
+    }
+
+    if (m_horizontalScrollbarLayer) {
+        IntRect horizontalScrollbarFrame(m_horizontalScrollbarLayer.get().frame);
+        if (horizontalScrollbarFrame.contains(mousePosition))
+            targetScrollbar = horizontalScrollbar();
+        if (horizontalScrollbarFrame.contains(m_lastMousePositionInPluginCoordinates))
+            targetScrollbarForLastMousePosition = horizontalScrollbar();
+    }
+
+    if (m_scrollCornerLayer && IntRect(m_scrollCornerLayer.get().frame).contains(mousePosition))
         return false;
+
+    // Right-clicks and Control-clicks always call handleContextMenuEvent as well.
+    if (event.button() == WebMouseEvent::RightButton || (event.button() == WebMouseEvent::LeftButton && event.controlKey()))
+        return true;
 
     NSEvent *nsEvent = nsEventForWebMouseEvent(event);
 
     switch (event.type()) {
     case WebEvent::MouseMove:
         mouseMovedInContentArea();
+
+        if (targetScrollbar) {
+            if (!targetScrollbarForLastMousePosition) {
+                targetScrollbar->mouseEntered();
+                return true;
+            }
+            return targetScrollbar->mouseMoved(platformEvent);
+        }
+
+        if (!targetScrollbar && targetScrollbarForLastMousePosition)
+            targetScrollbarForLastMousePosition->mouseExited();
 
         switch (event.button()) {
         case WebMouseEvent::LeftButton:
@@ -543,6 +589,9 @@ bool PDFPlugin::handleMouseEvent(const WebMouseEvent& event)
     case WebEvent::MouseDown:
         switch (event.button()) {
         case WebMouseEvent::LeftButton:
+            if (targetScrollbar)
+                return targetScrollbar->mouseDown(platformEvent);
+
             [m_pdfLayerController.get() mouseDown:nsEvent];
             return true;
         case WebMouseEvent::RightButton:
@@ -555,6 +604,9 @@ bool PDFPlugin::handleMouseEvent(const WebMouseEvent& event)
     case WebEvent::MouseUp:
         switch (event.button()) {
         case WebMouseEvent::LeftButton:
+            if (targetScrollbar)
+                return targetScrollbar->mouseUp(platformEvent);
+
             [m_pdfLayerController.get() mouseUp:nsEvent];
             return true;
         case WebMouseEvent::RightButton:
@@ -574,7 +626,7 @@ bool PDFPlugin::handleContextMenuEvent(const WebMouseEvent& event)
     NSMenu *nsMenu = [m_pdfLayerController.get() menuForEvent:nsEventForWebMouseEvent(event)];
 
     FrameView* frameView = webFrame()->coreFrame()->view();
-    IntPoint point = frameView->contentsToScreen(IntRect(event.position(), IntSize())).location();
+    IntPoint point = frameView->contentsToScreen(IntRect(frameView->windowToContents(event.position()), IntSize())).location();
     if (nsMenu) {
         WKPopupContextMenu(nsMenu, point);
         return true;
@@ -672,6 +724,11 @@ void PDFPlugin::setActiveAnnotation(PDFAnnotation *annotation)
         m_activeAnnotation->commit();
 
     if (annotation) {
+        if ([annotation isKindOfClass:pdfAnnotationTextWidgetClass()] && static_cast<PDFAnnotationTextWidget *>(annotation).isReadOnly) {
+            m_activeAnnotation = 0;
+            return;
+        }
+
         m_activeAnnotation = PDFPluginAnnotation::create(annotation, m_pdfLayerController.get(), this);
         m_activeAnnotation->attach(m_annotationContainer.get());
     } else
@@ -700,6 +757,38 @@ void PDFPlugin::saveToPDF()
     CoreIPC::DataReference dataReference(CFDataGetBytePtr(cfData.get()), CFDataGetLength(cfData.get()));
 
     webFrame()->page()->send(Messages::WebPageProxy::SavePDFToFileInDownloadsFolder(suggestedFilename(), webFrame()->url(), dataReference));
+}
+
+void PDFPlugin::writeItemsToPasteboard(NSArray *items, NSArray *types)
+{
+    Vector<String> pasteboardTypes;
+
+    for (NSString *type in types)
+        pasteboardTypes.append(type);
+
+    WebProcess::shared().connection()->send(Messages::WebContext::SetPasteboardTypes(NSGeneralPboard, pasteboardTypes), 0);
+
+    for (NSUInteger i = 0, count = items.count; i < count; ++i) {
+        NSString *type = [types objectAtIndex:i];
+        NSData *data = [items objectAtIndex:i];
+
+        if ([type isEqualToString:NSStringPboardType] || [type isEqualToString:NSPasteboardTypeString]) {
+            RetainPtr<NSString> plainTextString(AdoptNS, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
+            WebProcess::shared().connection()->send(Messages::WebContext::SetPasteboardStringForType(NSGeneralPboard, type, plainTextString.get()), 0);
+        } else {
+            RefPtr<SharedBuffer> buffer = SharedBuffer::wrapNSData(data);
+
+            if (!buffer)
+                continue;
+
+            SharedMemory::Handle handle;
+            RefPtr<SharedMemory> sharedMemory = SharedMemory::create(buffer->size());
+            memcpy(sharedMemory->data(), buffer->data(), buffer->size());
+            sharedMemory->createHandle(handle, SharedMemory::ReadOnly);
+            WebProcess::shared().connection()->send(Messages::WebContext::SetPasteboardBufferForType(NSGeneralPboard, type, handle, buffer->size()), 0);
+        }
+    }
+
 }
 
 } // namespace WebKit

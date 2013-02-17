@@ -108,6 +108,7 @@
                 'public/WebBindings.h',
                 'public/WebBlob.h',
                 'public/WebCache.h',
+                'public/WebCachedURLRequest.h',
                 'public/WebColorChooser.h',
                 'public/WebColorChooserClient.h',
                 'public/WebColorName.h',
@@ -288,6 +289,7 @@
                 'public/WebWorkerInfo.h',
                 'public/android/WebInputEventFactory.h',
                 'public/android/WebSandboxSupport.h',
+                'public/default/WebRenderTheme.h',
                 'public/gtk/WebInputEventFactory.h',
                 'public/linux/WebFontRenderStyle.h',
                 'public/linux/WebFontRendering.h',
@@ -362,6 +364,8 @@
                 'src/DateTimeChooserImpl.h',
                 'src/ChromeClientImpl.cpp',
                 'src/ChromeClientImpl.h',
+                'src/ColorChooserPopupUIController.cpp',
+                'src/ColorChooserPopupUIController.h',
                 'src/ColorChooserUIController.cpp',
                 'src/ColorChooserUIController.h',
                 'src/CompositionUnderlineBuilder.h',
@@ -394,6 +398,7 @@
                 'src/FindInPageCoordinates.h',
                 'src/FrameLoaderClientImpl.cpp',
                 'src/FrameLoaderClientImpl.h',
+                'src/FrameNetworkingContextImpl.cpp',
                 'src/FrameNetworkingContextImpl.h',
                 'src/GeolocationClientProxy.cpp',
                 'src/GeolocationClientProxy.h',
@@ -429,6 +434,7 @@
                 'src/PrerendererClientImpl.h',
                 'src/PrerendererClientImpl.cpp',
                 'src/android/WebInputEventFactory.cpp',
+                'src/default/WebRenderTheme.cpp',
                 'src/linux/WebFontInfo.cpp',
                 'src/linux/WebFontRendering.cpp',
                 'src/linux/WebFontRenderStyle.cpp',
@@ -486,6 +492,7 @@
                 'src/WebBlob.cpp',
                 'src/WebBlobData.cpp',
                 'src/WebCache.cpp',
+                'src/WebCachedURLRequest.cpp',
                 'src/WebColorName.cpp',
                 'src/WebCommon.cpp',
                 'src/WebCompositorInputHandlerImpl.cpp',
@@ -714,8 +721,10 @@
                                 # functions defined only in !WEBKIT_IMPLEMENTATION.
                                 'tests/AssociatedURLLoaderTest.cpp',
                                 'tests/EventListenerTest.cpp',
+                                'tests/FakeWebPlugin.cpp',
                                 'tests/FrameTestHelpers.cpp',
                                 'tests/IDBBindingUtilitiesTest.cpp',
+                                'tests/IDBRequestTest.cpp',
                                 'tests/LevelDBTest.cpp',
                                 'tests/ListenerLeakTest.cpp',
                                 'tests/LinkHighlightTest.cpp',
@@ -728,6 +737,7 @@
                                 'tests/WebImageTest.cpp',
                                 'tests/WebPageNewSerializerTest.cpp',
                                 'tests/WebPageSerializerTest.cpp',
+                                'tests/WebPluginContainerTest.cpp',
                                 'tests/WebViewTest.cpp',
                             ],
                             'conditions': [
@@ -832,6 +842,20 @@
                                 ],
                             },
                         }],
+                    ],
+                }],
+                ['use_default_render_theme==1', {
+                    'sources/': [
+                        ['exclude', 'src/linux/WebRenderTheme.cpp'],
+                        ['exclude', 'public/linux/WebRenderTheme.h'],
+                    ],
+                    'include_dirs': [
+                        'public/default',
+                    ],
+                }, { # else use_default_render_theme==0
+                    'sources/': [
+                        ['exclude', 'src/default/WebRenderTheme.cpp'],
+                        ['exclude', 'public/default/WebRenderTheme.h'],
                     ],
                 }],
             ],
@@ -1072,7 +1096,7 @@
         },
     ], # targets
     'conditions': [
-        ['os_posix==1 and OS!="mac" and gcc_version>=46', {
+        ['os_posix==1 and OS!="mac" and OS!="ios" and gcc_version>=46', {
             'target_defaults': {
                 # Disable warnings about c++0x compatibility, as some names (such
                 # as nullptr) conflict with upcoming c++0x types.

@@ -88,7 +88,7 @@ public:
 
     PageClientQGraphicsWidget* pageClient() const
     {
-        return static_cast<WebCore::PageClientQGraphicsWidget*> (page->d->client.get());
+        return static_cast<WebCore::PageClientQGraphicsWidget*> (page->d->client.data());
     } 
 };
 
@@ -373,9 +373,6 @@ QVariant QGraphicsWebView::inputMethodQuery(Qt::InputMethodQuery query) const
     QPainter::TextAntialiasing and QPainter::SmoothPixmapTransform are enabled by default and will be
     used to render the item in addition of what has been set on the painter given by QGraphicsScene.
 
-    \note This property is not available on Symbian. However, the getter and
-    setter functions can still be used directly.
-
     \sa QPainter::renderHints()
 */
 
@@ -471,7 +468,7 @@ void QGraphicsWebViewPrivate::detachCurrentPage()
         return;
 
     page->d->view = 0;
-    page->d->client = nullptr;
+    page->d->client.reset();
 
     // if the page was created by us, we own it and need to
     // destroy it as well.
@@ -504,7 +501,7 @@ void QGraphicsWebView::setPage(QWebPage* page)
     if (!d->page)
         return;
 
-    d->page->d->client = adoptPtr(new PageClientQGraphicsWidget(this, page));
+    d->page->d->client.reset(new PageClientQGraphicsWidget(this, page));
 
     if (d->overlay())
         d->overlay()->prepareGraphicsItemGeometryChange();

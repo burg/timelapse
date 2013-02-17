@@ -26,9 +26,14 @@
 #include "config.h"
 #include "WebPlatformStrategies.h"
 
+#include "WebFrameNetworkingContext.h"
 #include <WebCore/Page.h>
 #include <WebCore/PageGroup.h>
+#include <WebCore/PlatformCookieJar.h>
 #include <WebCore/PluginDatabase.h>
+#if USE(CFNETWORK)
+#include <WebKitSystemInterface/WebKitSystemInterface.h>
+#endif
 
 using namespace WebCore;
 
@@ -74,6 +79,61 @@ VisitedLinkStrategy* WebPlatformStrategies::createVisitedLinkStrategy()
 
 void WebPlatformStrategies::notifyCookiesChanged()
 {
+}
+
+#if USE(CFNETWORK)
+RetainPtr<CFHTTPCookieStorageRef> WebPlatformStrategies::defaultCookieStorage()
+{
+    if (CFURLStorageSessionRef session = WebFrameNetworkingContext::defaultStorageSession())
+        return adoptCF(wkCopyHTTPCookieStorage(session));
+
+    return wkGetDefaultHTTPCookieStorage();
+}
+#endif
+
+String WebPlatformStrategies::cookiesForDOM(NetworkingContext* context, const KURL& firstParty, const KURL& url)
+{
+    return WebCore::cookiesForDOM(context, firstParty, url);
+}
+
+void WebPlatformStrategies::setCookiesFromDOM(NetworkingContext* context, const KURL& firstParty, const KURL& url, const String& cookieString)
+{
+    WebCore::setCookiesFromDOM(context, firstParty, url, cookieString);
+}
+
+bool WebPlatformStrategies::cookiesEnabled(NetworkingContext* context, const KURL& firstParty, const KURL& url)
+{
+    return WebCore::cookiesEnabled(context, firstParty, url);
+}
+
+String WebPlatformStrategies::cookieRequestHeaderFieldValue(NetworkingContext* context, const KURL& firstParty, const KURL& url)
+{
+    return WebCore::cookieRequestHeaderFieldValue(context, firstParty, url);
+}
+
+bool WebPlatformStrategies::getRawCookies(NetworkingContext* context, const KURL& firstParty, const KURL& url, Vector<Cookie>& rawCookies)
+{
+    return WebCore::getRawCookies(context, firstParty, url, rawCookies);
+}
+
+void WebPlatformStrategies::deleteCookie(NetworkingContext* context, const KURL& url, const String& cookieName)
+{
+    WebCore::deleteCookie(context, url, cookieName);
+}
+
+void WebPlatformStrategies::getHostnamesWithCookies(NetworkingContext* context, HashSet<String>& hostnames)
+{
+    WebCore::getHostnamesWithCookies(context, hostnames);
+}
+
+void WebPlatformStrategies::deleteCookiesForHostname(NetworkingContext* context, const String& hostname)
+{
+    WebCore::deleteCookiesForHostname(context, hostname);
+}
+
+void WebPlatformStrategies::deleteAllCookies(NetworkingContext* context)
+{
+    WebCore::deleteAllCookies(context);
 }
 
 void WebPlatformStrategies::refreshPlugins()

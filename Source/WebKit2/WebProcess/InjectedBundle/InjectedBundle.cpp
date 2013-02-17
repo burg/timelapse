@@ -40,6 +40,7 @@
 #include "WebCoreArgumentCoders.h"
 #include "WebDatabaseManager.h"
 #include "WebFrame.h"
+#include "WebFrameNetworkingContext.h"
 #include "WebPage.h"
 #include "WebPreferencesStore.h"
 #include "WebProcess.h"
@@ -138,6 +139,11 @@ void InjectedBundle::setAlwaysAcceptCookies(bool accept)
 void InjectedBundle::removeAllVisitedLinks()
 {
     PageGroup::removeAllVisitedLinks();
+}
+
+void InjectedBundle::setCacheModel(uint32_t cacheModel)
+{
+    WebProcess::shared().setCacheModel(cacheModel);
 }
 
 void InjectedBundle::overrideBoolPreferenceForTestRunner(WebPageGroupProxy* pageGroup, const String& preference, bool enabled)
@@ -268,6 +274,12 @@ void InjectedBundle::setJavaScriptCanAccessClipboard(WebPageGroupProxy* pageGrou
 
 void InjectedBundle::setPrivateBrowsingEnabled(WebPageGroupProxy* pageGroup, bool enabled)
 {
+#if (PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(WIN)
+    if (enabled)
+        WebFrameNetworkingContext::ensurePrivateBrowsingSession();
+    else
+        WebFrameNetworkingContext::destroyPrivateBrowsingSession();
+#endif
     const HashSet<Page*>& pages = PageGroup::pageGroup(pageGroup->identifier())->pages();
     for (HashSet<Page*>::iterator iter = pages.begin(); iter != pages.end(); ++iter)
         (*iter)->settings()->setPrivateBrowsingEnabled(enabled);
@@ -283,11 +295,9 @@ void InjectedBundle::setPopupBlockingEnabled(WebPageGroupProxy* pageGroup, bool 
 
 void InjectedBundle::switchNetworkLoaderToNewTestingSession()
 {
-#if PLATFORM(MAC) || USE(CFNETWORK)
-    // Set a private session for testing to avoid interfering with global cookies. This should be different from private browsing session.
+#if (PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(WIN)
     // FIXME (NetworkProcess): Do this in network process, too.
-    RetainPtr<CFURLStorageSessionRef> session = ResourceHandle::createPrivateBrowsingStorageSession(CFSTR("Private WebKit Session"));
-    ResourceHandle::setDefaultStorageSession(session.get());
+    WebFrameNetworkingContext::switchToNewTestingSession();
 #endif
 }
 

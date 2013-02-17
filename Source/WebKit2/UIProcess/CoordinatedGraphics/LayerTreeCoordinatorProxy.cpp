@@ -29,6 +29,11 @@
 #include "WebLayerTreeInfo.h"
 #include "WebPageProxy.h"
 #include "WebProcessProxy.h"
+#include <WebCore/GraphicsSurface.h>
+
+#if ENABLE(CSS_SHADERS)
+#include "CustomFilterProgramInfo.h"
+#endif
 
 namespace WebKit {
 
@@ -115,6 +120,17 @@ void LayerTreeCoordinatorProxy::setCompositingLayerFilters(WebLayerID id, const 
 }
 #endif
 
+#if ENABLE(CSS_SHADERS)
+void LayerTreeCoordinatorProxy::removeCustomFilterProgram(int id)
+{
+    dispatchUpdate(bind(&LayerTreeRenderer::removeCustomFilterProgram, m_renderer.get(), id));
+}
+void LayerTreeCoordinatorProxy::createCustomFilterProgram(int id, const WebCore::CustomFilterProgramInfo& programInfo)
+{
+    dispatchUpdate(bind(&LayerTreeRenderer::createCustomFilterProgram, m_renderer.get(), id, programInfo));
+}
+#endif
+
 void LayerTreeCoordinatorProxy::didRenderFrame(const WebCore::IntSize& contentsSize, const WebCore::IntRect& coveredRect)
 {
     dispatchUpdate(bind(&LayerTreeRenderer::flushLayerChanges, m_renderer.get()));
@@ -127,15 +143,24 @@ void LayerTreeCoordinatorProxy::didRenderFrame(const WebCore::IntSize& contentsS
 #endif
 }
 
-void LayerTreeCoordinatorProxy::createDirectlyCompositedImage(int64_t key, const WebKit::ShareableBitmap::Handle& handle)
+void LayerTreeCoordinatorProxy::createImageBacking(CoordinatedImageBackingID imageID)
 {
-    RefPtr<ShareableBitmap> bitmap = ShareableBitmap::create(handle);
-    dispatchUpdate(bind(&LayerTreeRenderer::createImage, m_renderer.get(), key, bitmap));
+    dispatchUpdate(bind(&LayerTreeRenderer::createImageBacking, m_renderer.get(), imageID));
 }
 
-void LayerTreeCoordinatorProxy::destroyDirectlyCompositedImage(int64_t key)
+void LayerTreeCoordinatorProxy::updateImageBacking(CoordinatedImageBackingID imageID, const ShareableSurface::Handle& handle)
 {
-    dispatchUpdate(bind(&LayerTreeRenderer::destroyImage, m_renderer.get(), key));
+    dispatchUpdate(bind(&LayerTreeRenderer::updateImageBacking, m_renderer.get(), imageID, ShareableSurface::create(handle)));
+}
+
+void LayerTreeCoordinatorProxy::clearImageBackingContents(CoordinatedImageBackingID imageID)
+{
+    dispatchUpdate(bind(&LayerTreeRenderer::clearImageBackingContents, m_renderer.get(), imageID));
+}
+
+void LayerTreeCoordinatorProxy::removeImageBacking(CoordinatedImageBackingID imageID)
+{
+    dispatchUpdate(bind(&LayerTreeRenderer::removeImageBacking, m_renderer.get(), imageID));
 }
 
 void LayerTreeCoordinatorProxy::setContentsSize(const FloatSize& contentsSize)
@@ -193,9 +218,20 @@ void LayerTreeCoordinatorProxy::didChangeScrollPosition(const IntPoint& position
 }
 
 #if USE(GRAPHICS_SURFACE)
-void LayerTreeCoordinatorProxy::syncCanvas(uint32_t id, const IntSize& canvasSize, const GraphicsSurfaceToken& token, uint32_t frontBuffer)
+void LayerTreeCoordinatorProxy::createCanvas(WebLayerID id, const IntSize& canvasSize, const GraphicsSurfaceToken& token)
 {
-    dispatchUpdate(bind(&LayerTreeRenderer::syncCanvas, m_renderer.get(), id, canvasSize, token, frontBuffer));
+    GraphicsSurface::Flags surfaceFlags = GraphicsSurface::SupportsTextureTarget | GraphicsSurface::SupportsSharing;
+    dispatchUpdate(bind(&LayerTreeRenderer::createCanvas, m_renderer.get(), id, canvasSize, GraphicsSurface::create(canvasSize, surfaceFlags, token)));
+}
+
+void LayerTreeCoordinatorProxy::syncCanvas(WebLayerID id, uint32_t frontBuffer)
+{
+    dispatchUpdate(bind(&LayerTreeRenderer::syncCanvas, m_renderer.get(), id, frontBuffer));
+}
+
+void LayerTreeCoordinatorProxy::destroyCanvas(WebLayerID id)
+{
+    dispatchUpdate(bind(&LayerTreeRenderer::destroyCanvas, m_renderer.get(), id));
 }
 #endif
 
@@ -203,6 +239,11 @@ void LayerTreeCoordinatorProxy::purgeBackingStores()
 {
     m_surfaces.clear();
     m_drawingAreaProxy->page()->process()->send(Messages::LayerTreeCoordinator::PurgeBackingStores(), m_drawingAreaProxy->page()->pageID());
+}
+
+void LayerTreeCoordinatorProxy::setBackgroundColor(const WebCore::Color& color)
+{
+    dispatchUpdate(bind(&LayerTreeRenderer::setBackgroundColor, m_renderer.get(), color));
 }
 
 }
