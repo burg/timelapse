@@ -60,7 +60,7 @@ ExclusionShapeInsideInfo::~ExclusionShapeInsideInfo()
 ExclusionShapeInsideInfo* ExclusionShapeInsideInfo::ensureExclusionShapeInsideInfoForRenderBlock(RenderBlock* block)
 {
     ExclusionShapeInsideInfoMap::AddResult result = exclusionShapeInsideInfoMap().add(block, create(block));
-    return result.iterator->second.get();
+    return result.iterator->value.get();
 }
 
 ExclusionShapeInsideInfo* ExclusionShapeInsideInfo::exclusionShapeInsideInfoForRenderBlock(const RenderBlock* block)
@@ -73,7 +73,7 @@ bool ExclusionShapeInsideInfo::isExclusionShapeInsideInfoEnabledForRenderBlock(c
 {
     // FIXME: Bug 89707: Enable shape inside for non-rectangular shapes
     BasicShape* shape = block->style()->shapeInside();
-    return (shape && shape->type() == BasicShape::BASIC_SHAPE_RECTANGLE);
+    return shape && (shape->type() == BasicShape::BASIC_SHAPE_RECTANGLE || shape->type() == BasicShape::BASIC_SHAPE_POLYGON);
 }
 
 void ExclusionShapeInsideInfo::removeExclusionShapeInsideInfoForRenderBlock(const RenderBlock* block)

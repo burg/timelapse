@@ -34,7 +34,6 @@
 #include "DrawingAreaProxy.h"
 #include "EventDispatcherMessages.h"
 #include "FindIndicator.h"
-#include "InjectedBundleMessageKinds.h"
 #include "Logging.h"
 #include "MessageID.h"
 #include "NativeWebKeyboardEvent.h"
@@ -224,6 +223,8 @@ WebPageProxy::WebPageProxy(PageClient* pageClient, PassRefPtr<WebProcessProxy> p
     , m_canShortCircuitHorizontalWheelEvents(true)
     , m_mainFrameIsPinnedToLeftSide(false)
     , m_mainFrameIsPinnedToRightSide(false)
+    , m_mainFrameIsPinnedToTopSide(false)
+    , m_mainFrameIsPinnedToBottomSide(false)
     , m_pageCount(0)
     , m_renderTreeSize(0)
     , m_shouldSendEventsSynchronously(false)
@@ -233,6 +234,10 @@ WebPageProxy::WebPageProxy(PageClient* pageClient, PassRefPtr<WebProcessProxy> p
     , m_visibilityState(PageVisibilityStateVisible)
 #endif
 {
+#if ENABLE(PAGE_VISIBILITY_API)
+    if (!m_isVisible)
+        m_visibilityState = PageVisibilityStateHidden;
+#endif
 #ifndef NDEBUG
     webPageProxyCounter.increment();
 #endif
@@ -410,6 +415,8 @@ void WebPageProxy::initializeWebPage()
 
 #if ENABLE(PAGE_VISIBILITY_API)
     m_process->send(Messages::WebPage::SetVisibilityState(m_visibilityState, /* isInitialState */ true), m_pageID);
+#elif ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
+    m_process->send(Messages::WebPage::SetVisibilityState(m_isVisible ? PageVisibilityStateVisible : PageVisibilityStateHidden, /* isInitialState */ true), m_pageID);
 #endif
 }
 
@@ -470,6 +477,8 @@ void WebPageProxy::close()
 
     m_mainFrameIsPinnedToLeftSide = false;
     m_mainFrameIsPinnedToRightSide = false;
+    m_mainFrameIsPinnedToTopSide = false;
+    m_mainFrameIsPinnedToBottomSide = false;
 
     m_visibleScrollerThumbRect = IntRect();
 
@@ -852,6 +861,11 @@ void WebPageProxy::viewStateDidChange(ViewStateFlags flags)
                 // stop the unresponsiveness timer here.
                 m_process->responsivenessTimer()->stop();
             }
+
+#if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING) && !ENABLE(PAGE_VISIBILITY_API)
+            PageVisibilityState visibilityState = m_isVisible ? PageVisibilityStateVisible : PageVisibilityStateHidden;
+            m_process->send(Messages::WebPage::SetVisibilityState(visibilityState, false), m_pageID);
+#endif
         }
     }
 
@@ -874,7 +888,7 @@ void WebPageProxy::viewStateDidChange(ViewStateFlags flags)
 #if ENABLE(PAGE_VISIBILITY_API)
     PageVisibilityState visibilityState = PageVisibilityStateHidden;
 
-    if (m_pageClient->isViewVisible())
+    if (m_isVisible)
         visibilityState = PageVisibilityStateVisible;
 
     if (visibilityState != m_visibilityState) {
@@ -2087,6 +2101,8 @@ void WebPageProxy::didCommitLoadForFrame(uint64_t frameID, const String& mimeTyp
             // any wheel events and dispatch them to the WKView when necessary.
             m_mainFrameIsPinnedToLeftSide = true;
             m_mainFrameIsPinnedToRightSide = true;
+            m_mainFrameIsPinnedToTopSide = true;
+            m_mainFrameIsPinnedToBottomSide = true;
         }
         m_pageClient->didCommitLoadForMainFrame(frameHasCustomRepresentation);
     }
@@ -2948,8 +2964,13 @@ NativeWebMouseEvent* WebPageProxy::currentlyProcessedMouseDownEvent()
 
 void WebPageProxy::postMessageToInjectedBundle(const String& messageName, APIObject* messageBody)
 {
+    OwnPtr<CoreIPC::ArgumentEncoder> messageData = CoreIPC::ArgumentEncoder::create(0);
+
+    messageData->encode(messageName);
+    messageData->encode(WebContextUserMessageEncoder(messageBody));
+
     // FIXME: We should consider returning false from this function if the messageBody cannot be encoded.
-    process()->deprecatedSend(InjectedBundleMessage::PostMessageToPage, m_pageID, CoreIPC::In(messageName, WebContextUserMessageEncoder(messageBody)));
+    process()->send(Messages::WebPage::PostInjectedBundleMessage(CoreIPC::DataReference(messageData->buffer(), messageData->bufferSize())), m_pageID);
 }
 
 #if PLATFORM(GTK)
@@ -3601,6 +3622,8 @@ void WebPageProxy::processDidCrash()
 
     m_mainFrameIsPinnedToLeftSide = false;
     m_mainFrameIsPinnedToRightSide = false;
+    m_mainFrameIsPinnedToTopSide = false;
+    m_mainFrameIsPinnedToBottomSide = false;
 
     m_visibleScrollerThumbRect = IntRect();
 
@@ -3849,10 +3872,12 @@ void WebPageProxy::didChangeScrollbarsForMainFrame(bool hasHorizontalScrollbar, 
     m_pageClient->didChangeScrollbarsForMainFrame();
 }
 
-void WebPageProxy::didChangeScrollOffsetPinningForMainFrame(bool pinnedToLeftSide, bool pinnedToRightSide)
+void WebPageProxy::didChangeScrollOffsetPinningForMainFrame(bool pinnedToLeftSide, bool pinnedToRightSide, bool pinnedToTopSide, bool pinnedToBottomSide)
 {
     m_mainFrameIsPinnedToLeftSide = pinnedToLeftSide;
     m_mainFrameIsPinnedToRightSide = pinnedToRightSide;
+    m_mainFrameIsPinnedToTopSide = pinnedToTopSide;
+    m_mainFrameIsPinnedToBottomSide = pinnedToBottomSide;
 }
 
 void WebPageProxy::didChangePageCount(unsigned pageCount)

@@ -157,9 +157,30 @@ void DateTimeEditBuilder::visitField(DateTimeFormat::FieldType fieldType, int)
         m_editElement.addField(DateTimeWeekFieldElement::create(document, m_editElement));
         return;
 
-    case DateTimeFormat::FieldTypeYear:
-        m_editElement.addField(DateTimeYearFieldElement::create(document, m_editElement, m_parameters.placeholderForYear));
+    case DateTimeFormat::FieldTypeYear: {
+        DateTimeYearFieldElement::Parameters yearParams;
+        if (m_parameters.minimumYear == m_parameters.undefinedYear()) {
+            yearParams.minimumYear = DateComponents::minimumYear();
+            yearParams.minIsSpecified = false;
+        } else {
+            yearParams.minimumYear = m_parameters.minimumYear;
+            yearParams.minIsSpecified = true;
+        }
+        if (m_parameters.maximumYear == m_parameters.undefinedYear()) {
+            yearParams.maximumYear = DateComponents::maximumYear();
+            yearParams.maxIsSpecified = false;
+        } else {
+            yearParams.maximumYear = m_parameters.maximumYear;
+            yearParams.maxIsSpecified = true;
+        }
+        if (yearParams.minimumYear > yearParams.maximumYear) {
+            std::swap(yearParams.minimumYear, yearParams.maximumYear);
+            std::swap(yearParams.minIsSpecified, yearParams.maxIsSpecified);
+        }
+        yearParams.placeholder = m_parameters.placeholderForYear;
+        m_editElement.addField(DateTimeYearFieldElement::create(document, m_editElement, yearParams));
         return;
+    }
 
     default:
         return;
@@ -331,6 +352,11 @@ bool DateTimeEditElement::focusOnPreviousField(const DateTimeFieldElement& field
 bool DateTimeEditElement::isDisabled() const
 {
     return m_editControlOwner && m_editControlOwner->isEditControlOwnerDisabled();
+}
+
+bool DateTimeEditElement::isFieldOwnerDisabledOrReadOnly() const
+{
+    return isDisabled() || isReadOnly();
 }
 
 bool DateTimeEditElement::isReadOnly() const

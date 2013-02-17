@@ -968,6 +968,7 @@ SET(WebCore_SOURCES
     Modules/websockets/WebSocketDeflater.cpp
     Modules/websockets/WebSocketDeflateFramer.cpp
     Modules/websockets/WebSocketExtensionDispatcher.cpp
+    Modules/websockets/WebSocketExtensionParser.cpp
     Modules/websockets/WebSocketFrame.cpp
     Modules/websockets/WebSocketHandshake.cpp
     Modules/websockets/WebSocketHandshakeRequest.cpp
@@ -1067,6 +1068,10 @@ SET(WebCore_SOURCES
     css/MediaQueryMatcher.cpp
     css/PropertySetCSSStyleDeclaration.cpp
     css/RGBColor.cpp
+    css/RuleFeature.h
+    css/RuleFeature.cpp
+    css/RuleSet.h
+    css/RuleSet.cpp
     css/SelectorChecker.cpp
     css/ShadowValue.cpp
     css/StyleBuilder.cpp
@@ -1076,6 +1081,7 @@ SET(WebCore_SOURCES
     css/StyleResolver.cpp
     css/StyleRule.cpp
     css/StyleRuleImport.cpp
+    css/StyleScopeResolver.cpp
     css/StyleSheet.cpp
     css/StyleSheetContents.cpp
     css/StyleSheetList.cpp
@@ -1632,6 +1638,7 @@ SET(WebCore_SOURCES
     loader/PolicyChecker.cpp
     loader/ProgressTracker.cpp
     loader/NavigationScheduler.cpp
+    loader/ResourceBuffer.cpp
     loader/ResourceLoadNotifier.cpp
     loader/ResourceLoadScheduler.cpp
     loader/ResourceLoader.cpp
@@ -1752,7 +1759,6 @@ SET(WebCore_SOURCES
 
     page/scrolling/ScrollingConstraints.cpp
     page/scrolling/ScrollingCoordinator.cpp
-    page/scrolling/ScrollingCoordinatorNone.cpp
 
     platform/Arena.cpp
     platform/AsyncFileSystem.cpp
@@ -2032,6 +2038,7 @@ SET(WebCore_SOURCES
     rendering/CounterNode.cpp
     rendering/EllipsisBox.cpp
     rendering/ExclusionInterval.cpp
+    rendering/ExclusionPolygon.cpp
     rendering/ExclusionRectangle.cpp
     rendering/ExclusionShape.cpp
     rendering/ExclusionShapeInsideInfo.cpp
@@ -2111,6 +2118,7 @@ SET(WebCore_SOURCES
     rendering/RenderScrollbarTheme.cpp
     rendering/RenderSearchField.cpp
     rendering/RenderSlider.cpp
+    rendering/RenderSnapshottedPlugIn.cpp
     rendering/RenderTable.cpp
     rendering/RenderTableCaption.cpp
     rendering/RenderTableCell.cpp
@@ -2676,7 +2684,6 @@ IF (WTF_USE_3D_GRAPHICS)
 ENDIF ()
 
 SET(WebCoreTestSupport_INCLUDE_DIRECTORIES
-    "${WebCore_INCLUDE_DIRECTORIES}"
     "${WEBCORE_DIR}/testing"
 )
 

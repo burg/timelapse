@@ -23,30 +23,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-module window {
-
-    interface [
+[
 #if defined(V8_BINDING) && V8_BINDING
-        CheckSecurity,
+    CheckSecurity,
 #endif
-        JSCustomGetOwnPropertySlotAndDescriptor,
-        CustomNamedSetter,
-        JSGenerateIsReachable=ImplFrame,
-        CustomDeleteProperty,
-        CustomEnumerateProperty,
-        OmitConstructor
-    ] History {
-        readonly attribute [Nondeterministic] unsigned long length;
-        readonly attribute [CachedAttribute, Custom, ReplayNotImplemented] SerializedScriptValue state;
+    JSCustomGetOwnPropertySlotAndDescriptor,
+    CustomNamedSetter,
+    JSGenerateIsReachable=ImplFrame,
+    CustomDeleteProperty,
+    CustomEnumerateProperty,
+    OmitConstructor
+] interface History {
+    [Nondeterministic] readonly attribute unsigned long length;
+    [CachedAttribute, Custom, ReplayNotImplemented] readonly attribute SerializedScriptValue state;
 
-        [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void back();
-        [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void forward();
-        [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void go(in [Optional=DefaultIsUndefined] long distance);
+    [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void back();
+    [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void forward();
+    [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void go(in [Optional=DefaultIsUndefined] long distance);
 
-        [Custom, ReplayNotImplemented] void pushState(in any data, in DOMString title, in [Optional] DOMString url)
-            raises(DOMException);
-        [Custom, ReplayNotImplemented] void replaceState(in any data, in DOMString title, in [Optional] DOMString url)
-            raises(DOMException);
-    };
+    [Custom, ReplayNotImplemented] void pushState(in any data, in DOMString title, in [Optional] DOMString url)
+        raises(DOMException);
+    [Custom, ReplayNotImplemented] void replaceState(in any data, in DOMString title, in [Optional] DOMString url)
+        raises(DOMException);
+};
 
-}

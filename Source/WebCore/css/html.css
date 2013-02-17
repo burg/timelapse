@@ -396,7 +396,7 @@ button {
 
 /* Form controls don't go vertical. */
 input, textarea, keygen, select, button, isindex, meter, progress {
-    -webkit-block-flow: tb !important;
+    -webkit-writing-mode: horizontal-tb !important;
 }
 
 input, textarea, keygen, select, button, isindex {
@@ -410,7 +410,7 @@ input, textarea, keygen, select, button, isindex {
     text-indent: 0;
     text-shadow: none;
     display: inline-block;
-    text-align: -webkit-auto;
+    text-align: start;
 }
 
 input[type="hidden"] {
@@ -477,13 +477,36 @@ datalist {
 #endif
 
 #if defined(ENABLE_INPUT_MULTIPLE_FIELDS_UI) && ENABLE_INPUT_MULTIPLE_FIELDS_UI
-input[type="datetime"],
-input[type="datetime-local"],
-input[type="month"],
-input[type="time"],
+#if defined(ENABLE_INPUT_TYPE_DATE) && ENABLE_INPUT_TYPE_DATE
+input[type="date"] {
+    font-family: monospace;
+}
+#endif
+#if defined(ENABLE_INPUT_TYPE_DATETIME) && ENABLE_INPUT_TYPE_DATETIME
+input[type="datetime"] {
+    font-family: monospace;
+}
+#endif
+#if defined(ENABLE_INPUT_TYPE_DATETIMELOCAL) && ENABLE_INPUT_TYPE_DATETIMELOCAL
+input[type="datetime-local"] {
+    font-family: monospace;
+}
+#endif
+#if defined(ENABLE_INPUT_TYPE_MONTH) && ENABLE_INPUT_TYPE_MONTH
+input[type="month"] {
+    font-family: monospace;
+}
+#endif
+#if defined(ENABLE_INPUT_TYPE_TIME) && ENABLE_INPUT_TYPE_TIME
+input[type="time"] {
+    font-family: monospace;
+}
+#endif
+#if defined(ENABLE_INPUT_TYPE_WEEK) && ENABLE_INPUT_TYPE_WEEK
 input[type="week"] {
     font-family: monospace;
 }
+#endif
 
 input::-webkit-datetime-edit {
     -webkit-user-modify: read-only !important;
@@ -625,7 +648,7 @@ input::-webkit-input-speech-button {
 #endif
 
 keygen, select {
-    -webkit-border-radius: 5px;
+    border-radius: 5px;
 }
 
 keygen::-webkit-keygen-select {
@@ -852,7 +875,7 @@ select[size][multiple] {
     -webkit-appearance: listbox;
     -webkit-box-align: start;
     border: 1px inset gray;
-    -webkit-border-radius: initial;
+    border-radius: initial;
     white-space: initial;
 }
 
@@ -861,7 +884,7 @@ select[size="1"] {
     -webkit-appearance: menulist;
     -webkit-box-align: center;
     border: 1px solid;
-    -webkit-border-radius: 5px;
+    border-radius: 5px;
     white-space: pre;
 }
 
@@ -902,7 +925,7 @@ output {
     border: solid 2px #400;
     background: -webkit-gradient(linear, left top, left bottom, from(#f8ecec), to(#e8cccc));
     padding: 8px;
-    -webkit-border-radius: 8px;
+    border-radius: 8px;
     -webkit-box-shadow: 4px 4px 4px rgba(100,100,100,0.6),
         inset -2px -2px 1px #d0c4c4,
         inset 2px 2px 1px white;
@@ -1149,7 +1172,7 @@ rt {
 ruby > rt {
     display: block;
     font-size: 50%;
-    text-align: -webkit-auto;
+    text-align: start;
 }
 
 ruby > rp {

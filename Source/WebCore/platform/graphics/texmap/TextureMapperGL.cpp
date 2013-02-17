@@ -72,7 +72,7 @@ public:
         {
             GLContextDataMap::iterator it = glContextDataMap().find(context->platformGraphicsContext3D());
             if (it != glContextDataMap().end())
-                return it->second;
+                return it->value;
 
             return adoptRef(new SharedGLData(context));
         }
@@ -92,7 +92,7 @@ public:
             GLContextDataMap::const_iterator end = glContextDataMap().end();
             GLContextDataMap::iterator it;
             for (it = glContextDataMap().begin(); it != end; ++it) {
-                if (it->second == this)
+                if (it->value == this)
                     break;
             }
 
@@ -650,7 +650,7 @@ void BitmapTextureGL::updateContents(const void* data, const IntRect& targetRect
     else
         swizzleBGRAToRGBA(reinterpret_cast<uint32_t*>(const_cast<void*>(data)), IntRect(sourceOffset, targetRect.size()), bytesPerLine / bytesPerPixel);
 
-    if (bytesPerLine == targetRect.width() / 4 && sourceOffset == IntPoint::zero()) {
+    if (bytesPerLine == targetRect.width() * bytesPerPixel && sourceOffset == IntPoint::zero()) {
         m_context3D->texSubImage2D(GraphicsContext3D::TEXTURE_2D, 0, targetRect.x(), targetRect.y(), targetRect.width(), targetRect.height(), glFormat, DEFAULT_TEXTURE_PIXEL_TRANSFER_TYPE, (const char*)data);
         return;
     }
@@ -697,8 +697,9 @@ void BitmapTextureGL::updateContents(Image* image, const IntRect& targetRect, co
     const char* imageData;
 
 #if PLATFORM(QT)
-    imageData = reinterpret_cast<const char*>(frameImage->constBits());
-    bytesPerLine = frameImage->bytesPerLine();
+    QImage qImage = frameImage->toImage();
+    imageData = reinterpret_cast<const char*>(qImage.constBits());
+    bytesPerLine = qImage.bytesPerLine();
 #elif USE(CAIRO)
     cairo_surface_t* surface = frameImage->surface();
     imageData = reinterpret_cast<const char*>(cairo_image_surface_get_data(surface));

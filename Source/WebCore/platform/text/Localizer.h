@@ -72,13 +72,13 @@ public:
     // Note: Some platforms return same value as timeFormat().
     virtual String shortTimeFormat();
 
-    // Returns a date-time format in Unicode TR35 LDML. It should have a second
+    // Returns a date-time format in Unicode TR35 LDML. It should have a seconds
     // field.
-    String dateTimeFormatWithSecond();
+    String dateTimeFormatWithSeconds();
 
-    // Returns a date-time format in Unicode TR35 LDML. It should have no second
+    // Returns a date-time format in Unicode TR35 LDML. It should have no seconds
     // field.
-    String dateTimeFormatWithoutSecond();
+    String dateTimeFormatWithoutSeconds();
 
     // Returns localized period field(AM/PM) strings.
     virtual const Vector<String>& timeAMPMLabels();
@@ -99,6 +99,10 @@ public:
     virtual unsigned firstDayOfWeek() = 0;
 
     virtual String dateFormatText() = 0;
+
+    // Returns true if people use right-to-left writing in the locale for this
+    // object.
+    virtual bool isRTL() = 0;
 #endif
 
     // Parses a string representation of a date/time string localized
@@ -130,6 +134,8 @@ protected:
     String m_localizedTimeFormatText;
     String m_localizedShortTimeFormatText;
     Vector<String> m_timeAMPMLabels;
+    String m_dateTimeFormatWithSeconds;
+    String m_dateTimeFormatWithoutSeconds;
 #endif
 
     Localizer() : m_hasLocalizerData(false) { }

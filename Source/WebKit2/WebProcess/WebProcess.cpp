@@ -28,7 +28,6 @@
 
 #include "DownloadManager.h"
 #include "InjectedBundle.h"
-#include "InjectedBundleMessageKinds.h"
 #include "InjectedBundleUserMessageCoders.h"
 #include "SandboxExtension.h"
 #include "StatisticsData.h"
@@ -247,9 +246,6 @@ void WebProcess::initializeWebProcess(const WebProcessCreationParameters& parame
 
     setDefaultRequestTimeoutInterval(parameters.defaultRequestTimeoutInterval);
 
-    for (size_t i = 0; i < parameters.mimeTypesWithCustomRepresentation.size(); ++i)
-        m_mimeTypesWithCustomRepresentations.add(parameters.mimeTypesWithCustomRepresentation[i]);
-
     if (parameters.shouldAlwaysUseComplexTextCodePath)
         setAlwaysUsesComplexTextCodePath(true);
 
@@ -346,7 +342,7 @@ void WebProcess::visitedLinkStateChanged(const Vector<WebCore::LinkHash>& linkHa
         HashMap<uint64_t, RefPtr<WebPageGroupProxy> >::const_iterator it = m_pageGroupMap.begin();
         HashMap<uint64_t, RefPtr<WebPageGroupProxy> >::const_iterator end = m_pageGroupMap.end();
         for (; it != end; ++it)
-            Page::visitedStateChanged(PageGroup::pageGroup(it->second->identifier()), linkHashes[i]);
+            Page::visitedStateChanged(PageGroup::pageGroup(it->value->identifier()), linkHashes[i]);
     }
 
     pageCache()->markPagesForVistedLinkStyleRecalc();
@@ -358,7 +354,7 @@ void WebProcess::allVisitedLinkStateChanged()
     HashMap<uint64_t, RefPtr<WebPageGroupProxy> >::const_iterator it = m_pageGroupMap.begin();
     HashMap<uint64_t, RefPtr<WebPageGroupProxy> >::const_iterator end = m_pageGroupMap.end();
     for (; it != end; ++it)
-        Page::allVisitedStateChanged(PageGroup::pageGroup(it->second->identifier()));
+        Page::allVisitedStateChanged(PageGroup::pageGroup(it->value->identifier()));
 
     pageCache()->markPagesForVistedLinkStyleRecalc();
 }
@@ -534,7 +530,7 @@ WebPage* WebProcess::focusedWebPage() const
 {    
     HashMap<uint64_t, RefPtr<WebPage> >::const_iterator end = m_pageMap.end();
     for (HashMap<uint64_t, RefPtr<WebPage> >::const_iterator it = m_pageMap.begin(); it != end; ++it) {
-        WebPage* page = (*it).second.get();
+        WebPage* page = (*it).value.get();
         if (page->windowAndWebPageAreFocused())
             return page;
     }
@@ -552,14 +548,14 @@ void WebProcess::createWebPage(uint64_t pageID, const WebPageCreationParameters&
     // link) the WebPage gets created both in the synchronous handler and through the normal way. 
     HashMap<uint64_t, RefPtr<WebPage> >::AddResult result = m_pageMap.add(pageID, 0);
     if (result.isNewEntry) {
-        ASSERT(!result.iterator->second);
-        result.iterator->second = WebPage::create(pageID, parameters);
+        ASSERT(!result.iterator->value);
+        result.iterator->value = WebPage::create(pageID, parameters);
 
         // Balanced by an enableTermination in removeWebPage.
         disableTermination();
     }
 
-    ASSERT(result.iterator->second);
+    ASSERT(result.iterator->value);
 }
 
 void WebProcess::removeWebPage(uint64_t pageID)
@@ -694,13 +690,6 @@ void WebProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Mes
         return;
     }
 #endif
-
-    if (messageID.is<CoreIPC::MessageClassInjectedBundle>()) {
-        if (!m_injectedBundle)
-            return;
-        m_injectedBundle->didReceiveMessage(connection, messageID, arguments);    
-        return;
-    }
     
     if (messageID.is<CoreIPC::MessageClassWebPageGroupProxy>()) {
         uint64_t pageGroupID = arguments->destinationID();
@@ -794,11 +783,11 @@ WebPageGroupProxy* WebProcess::webPageGroup(const WebPageGroupData& pageGroupDat
 {
     HashMap<uint64_t, RefPtr<WebPageGroupProxy> >::AddResult result = m_pageGroupMap.add(pageGroupData.pageGroupID, 0);
     if (result.isNewEntry) {
-        ASSERT(!result.iterator->second);
-        result.iterator->second = WebPageGroupProxy::create(pageGroupData);
+        ASSERT(!result.iterator->value);
+        result.iterator->value = WebPageGroupProxy::create(pageGroupData);
     }
 
-    return result.iterator->second.get();
+    return result.iterator->value.get();
 }
 
 #if ENABLE(WEB_INTENTS)
@@ -820,26 +809,6 @@ void WebProcess::removeMessagePortChannel(uint64_t channelID)
     m_messagePortChannels.remove(channelID);
 }
 #endif
-
-static bool canPluginHandleResponse(const ResourceResponse& response)
-{
-    String pluginPath;
-    bool blocked;
-
-    if (!WebProcess::shared().connection()->sendSync(Messages::WebProcessProxy::GetPluginPath(response.mimeType(), response.url().string()), Messages::WebProcessProxy::GetPluginPath::Reply(pluginPath, blocked), 0))
-        return false;
-
-    return !blocked && !pluginPath.isEmpty();
-}
-
-bool WebProcess::shouldUseCustomRepresentationForResponse(const ResourceResponse& response) const
-{
-    if (!m_mimeTypesWithCustomRepresentations.contains(response.mimeType()))
-        return false;
-
-    // If a plug-in exists that claims to support this response, it should take precedence over the custom representation.
-    return !canPluginHandleResponse(response);
-}
 
 void WebProcess::clearResourceCaches(ResourceCachesToClear resourceCachesToClear)
 {
@@ -924,7 +893,7 @@ static void fromCountedSetToHashMap(TypeCountSet* countedSet, HashMap<String, ui
 {
     TypeCountSet::const_iterator end = countedSet->end();
     for (TypeCountSet::const_iterator it = countedSet->begin(); it != end; ++it)
-        map.set(it->first, it->second);
+        map.set(it->key, it->value);
 }
 
 static void getWebCoreMemoryCacheStatistics(Vector<HashMap<String, uint64_t> >& result)
@@ -1036,6 +1005,25 @@ void WebProcess::setJavaScriptGarbageCollectorTimerEnabled(bool flag)
     gcController().setJavaScriptGarbageCollectorTimerEnabled(flag);
 }
 
+void WebProcess::postInjectedBundleMessage(const CoreIPC::DataReference& messageData)
+{
+    InjectedBundle* injectedBundle = WebProcess::shared().injectedBundle();
+    if (!injectedBundle)
+        return;
+
+    CoreIPC::ArgumentDecoder messageDecoder(messageData.data(), messageData.size());
+
+    String messageName;
+    if (!messageDecoder.decode(messageName))
+        return;
+
+    RefPtr<APIObject> messageBody;
+    if (!messageDecoder.decode(InjectedBundleUserMessageDecoder(messageBody)))
+        return;
+
+    injectedBundle->didReceiveMessage(messageName, messageBody.get());
+}
+
 #if ENABLE(PLUGIN_PROCESS)
 void WebProcess::pluginProcessCrashed(CoreIPC::Connection*, const String& pluginPath)
 {
@@ -1097,7 +1085,7 @@ void WebProcess::setTextCheckerState(const TextCheckerState& textCheckerState)
 
     HashMap<uint64_t, RefPtr<WebPage> >::iterator end = m_pageMap.end();
     for (HashMap<uint64_t, RefPtr<WebPage> >::iterator it = m_pageMap.begin(); it != end; ++it) {
-        WebPage* page = (*it).second.get();
+        WebPage* page = (*it).value.get();
         if (continuousSpellCheckingTurnedOff)
             page->unmarkAllMisspellings();
         if (grammarCheckingTurnedOff)

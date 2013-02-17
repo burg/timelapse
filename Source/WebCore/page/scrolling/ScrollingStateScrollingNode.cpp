@@ -33,13 +33,13 @@
 
 namespace WebCore {
 
-PassOwnPtr<ScrollingStateScrollingNode> ScrollingStateScrollingNode::create(ScrollingStateTree* stateTree)
+PassOwnPtr<ScrollingStateScrollingNode> ScrollingStateScrollingNode::create(ScrollingStateTree* stateTree, ScrollingNodeID nodeID)
 {
-    return adoptPtr(new ScrollingStateScrollingNode(stateTree));
+    return adoptPtr(new ScrollingStateScrollingNode(stateTree, nodeID));
 }
 
-ScrollingStateScrollingNode::ScrollingStateScrollingNode(ScrollingStateTree* stateTree)
-    : ScrollingStateNode(stateTree)
+ScrollingStateScrollingNode::ScrollingStateScrollingNode(ScrollingStateTree* stateTree, ScrollingNodeID nodeID)
+    : ScrollingStateNode(stateTree, nodeID)
     , m_changedProperties(0)
     , m_wheelEventHandlerCount(0)
     , m_shouldUpdateScrollLayerPositionOnMainThread(0)
@@ -75,6 +75,12 @@ ScrollingStateScrollingNode::ScrollingStateScrollingNode(ScrollingStateScrolling
 
 ScrollingStateScrollingNode::~ScrollingStateScrollingNode()
 {
+}
+
+void ScrollingStateScrollingNode::setHasChangedProperties()
+{
+    m_changedProperties = All;
+    ScrollingStateNode::setHasChangedProperties();
 }
 
 PassOwnPtr<ScrollingStateNode> ScrollingStateScrollingNode::cloneAndResetNode()

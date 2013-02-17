@@ -263,6 +263,13 @@ void InspectorInstrumentation::didScrollImpl(InstrumentingAgents* instrumentingA
         pageAgent->didScroll();
 }
 
+bool InspectorInstrumentation::handleTouchEventImpl(InstrumentingAgents* instrumentingAgents, Node* node)
+{
+    if (InspectorDOMAgent* domAgent = instrumentingAgents->inspectorDOMAgent())
+        return domAgent->handleTouchEvent(node);
+    return false;
+}
+
 bool InspectorInstrumentation::handleMousePressImpl(InstrumentingAgents* instrumentingAgents)
 {
     if (InspectorDOMAgent* domAgent = instrumentingAgents->inspectorDOMAgent())
@@ -767,7 +774,7 @@ void InspectorInstrumentation::didFinishLoadingImpl(InstrumentingAgents* instrum
     double finishTime = 0.0;
     // FIXME: Expose all of the timing details to inspector and have it calculate finishTime.
     if (monotonicFinishTime)
-        finishTime = loader->timing()->convertMonotonicTimeToDocumentTime(monotonicFinishTime);
+        finishTime = loader->timing()->monotonicTimeToPseudoWallTime(monotonicFinishTime);
 
     if (timelineAgent)
         timelineAgent->didFinishLoadingResource(identifier, false, finishTime, loader->frame());

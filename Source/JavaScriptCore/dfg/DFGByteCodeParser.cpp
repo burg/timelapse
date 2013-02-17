@@ -43,6 +43,76 @@
 
 namespace JSC { namespace DFG {
 
+class ConstantBufferKey {
+public:
+    ConstantBufferKey()
+        : m_codeBlock(0)
+        , m_index(0)
+    {
+    }
+    
+    ConstantBufferKey(WTF::HashTableDeletedValueType)
+        : m_codeBlock(0)
+        , m_index(1)
+    {
+    }
+    
+    ConstantBufferKey(CodeBlock* codeBlock, unsigned index)
+        : m_codeBlock(codeBlock)
+        , m_index(index)
+    {
+    }
+    
+    bool operator==(const ConstantBufferKey& other) const
+    {
+        return m_codeBlock == other.m_codeBlock
+            && m_index == other.m_index;
+    }
+    
+    unsigned hash() const
+    {
+        return WTF::PtrHash<CodeBlock*>::hash(m_codeBlock) ^ m_index;
+    }
+    
+    bool isHashTableDeletedValue() const
+    {
+        return !m_codeBlock && m_index;
+    }
+    
+    CodeBlock* codeBlock() const { return m_codeBlock; }
+    unsigned index() const { return m_index; }
+    
+private:
+    CodeBlock* m_codeBlock;
+    unsigned m_index;
+};
+
+struct ConstantBufferKeyHash {
+    static unsigned hash(const ConstantBufferKey& key) { return key.hash(); }
+    static bool equal(const ConstantBufferKey& a, const ConstantBufferKey& b)
+    {
+        return a == b;
+    }
+    
+    static const bool safeToCompareToEmptyOrDeleted = true;
+};
+
+} } // namespace JSC::DFG
+
+namespace WTF {
+
+template<typename T> struct DefaultHash;
+template<> struct DefaultHash<JSC::DFG::ConstantBufferKey> {
+    typedef JSC::DFG::ConstantBufferKeyHash Hash;
+};
+
+template<typename T> struct HashTraits;
+template<> struct HashTraits<JSC::DFG::ConstantBufferKey> : SimpleClassHashTraits<JSC::DFG::ConstantBufferKey> { };
+
+} // namespace WTF
+
+namespace JSC { namespace DFG {
+
 // === ByteCodeParser ===
 //
 // This class is used to compile the dataflow graph from a CodeBlock.
@@ -142,7 +212,7 @@ private:
             return getJSConstant(constant);
         }
 
-        if (operand == RegisterFile::Callee)
+        if (operand == JSStack::Callee)
             return getCallee();
 
         // Is this an argument?
@@ -369,11 +439,11 @@ private:
             InlineCallFrame* inlineCallFrame = stack->m_inlineCallFrame;
             if (!inlineCallFrame)
                 break;
-            if (operand >= static_cast<int>(inlineCallFrame->stackOffset - RegisterFile::CallFrameHeaderSize))
+            if (operand >= static_cast<int>(inlineCallFrame->stackOffset - JSStack::CallFrameHeaderSize))
                 continue;
             if (operand == inlineCallFrame->stackOffset + CallFrame::thisArgumentOffset())
                 continue;
-            if (operand < static_cast<int>(inlineCallFrame->stackOffset - RegisterFile::CallFrameHeaderSize - inlineCallFrame->arguments.size()))
+            if (operand < static_cast<int>(inlineCallFrame->stackOffset - JSStack::CallFrameHeaderSize - inlineCallFrame->arguments.size()))
                 continue;
             int argument = operandToArgument(operand - inlineCallFrame->stackOffset);
             return stack->m_argumentPositions[argument];
@@ -672,9 +742,9 @@ private:
     {
         HashMap<JSCell*, NodeIndex>::AddResult result = m_cellConstantNodes.add(cell, NoNode);
         if (result.isNewEntry)
-            result.iterator->second = addToGraph(WeakJSConstant, OpInfo(cell));
+            result.iterator->value = addToGraph(WeakJSConstant, OpInfo(cell));
         
-        return result.iterator->second;
+        return result.iterator->value;
     }
     
     CodeOrigin currentCodeOrigin()
@@ -761,8 +831,8 @@ private:
         
         addVarArgChild(get(currentInstruction[1].u.operand));
         int argCount = currentInstruction[2].u.operand;
-        if (RegisterFile::CallFrameHeaderSize + (unsigned)argCount > m_parameterSlots)
-            m_parameterSlots = RegisterFile::CallFrameHeaderSize + argCount;
+        if (JSStack::CallFrameHeaderSize + (unsigned)argCount > m_parameterSlots)
+            m_parameterSlots = JSStack::CallFrameHeaderSize + argCount;
 
         int registerOffset = currentInstruction[3].u.operand;
         int dummyThisArgument = op == Call ? 0 : 1;
@@ -1052,6 +1122,8 @@ private:
     Vector<PhiStackEntry, 16> m_argumentPhiStack;
     Vector<PhiStackEntry, 16> m_localPhiStack;
     
+    HashMap<ConstantBufferKey, unsigned> m_constantBufferCache;
+    
     struct InlineStackEntry {
         ByteCodeParser* m_byteCodeParser;
         
@@ -1070,6 +1142,7 @@ private:
         // direct, caller).
         Vector<unsigned> m_identifierRemap;
         Vector<unsigned> m_constantRemap;
+        Vector<unsigned> m_constantBufferRemap;
         
         // Blocks introduced by this code block, which need successor linking.
         // May include up to one basic block that includes the continuation after
@@ -1142,7 +1215,7 @@ private:
                 return result;
             }
 
-            if (operand == RegisterFile::Callee)
+            if (operand == JSStack::Callee)
                 return m_calleeVR;
 
             return operand + m_inlineCallFrame->stackOffset;
@@ -1364,14 +1437,14 @@ bool ByteCodeParser::handleInlining(bool usesResult, int callTarget, NodeIndex c
     
     // FIXME: Don't flush constants!
     
-    int inlineCallFrameStart = m_inlineStackTop->remapOperand(registerOffset) - RegisterFile::CallFrameHeaderSize;
+    int inlineCallFrameStart = m_inlineStackTop->remapOperand(registerOffset) - JSStack::CallFrameHeaderSize;
     
     // Make sure that the area used by the call frame is reserved.
-    for (int arg = inlineCallFrameStart + RegisterFile::CallFrameHeaderSize + codeBlock->m_numVars; arg-- > inlineCallFrameStart;)
+    for (int arg = inlineCallFrameStart + JSStack::CallFrameHeaderSize + codeBlock->m_numVars; arg-- > inlineCallFrameStart;)
         m_preservedVars.set(arg);
     
     // Make sure that we have enough locals.
-    unsigned newNumLocals = inlineCallFrameStart + RegisterFile::CallFrameHeaderSize + codeBlock->m_numCalleeRegisters;
+    unsigned newNumLocals = inlineCallFrameStart + JSStack::CallFrameHeaderSize + codeBlock->m_numCalleeRegisters;
     if (newNumLocals > m_numLocals) {
         m_numLocals = newNumLocals;
         for (size_t i = 0; i < m_graph.m_blocks.size(); ++i)
@@ -1574,6 +1647,8 @@ bool ByteCodeParser::handleIntrinsic(bool usesResult, int resultOperand, Intrins
         case Array::ArrayWithArrayStorageToHole:
             ASSERT_NOT_REACHED();
             
+        case Array::ArrayWithContiguous:
+        case Array::ArrayWithContiguousOutOfBounds:
         case Array::ArrayWithArrayStorage:
         case Array::ArrayWithArrayStorageOutOfBounds: {
             NodeIndex arrayPush = addToGraph(ArrayPush, OpInfo(arrayMode), OpInfo(prediction), get(registerOffset + argumentToOperand(0)), get(registerOffset + argumentToOperand(1)));
@@ -1597,6 +1672,8 @@ bool ByteCodeParser::handleIntrinsic(bool usesResult, int resultOperand, Intrins
         case Array::ArrayWithArrayStorageToHole:
             ASSERT_NOT_REACHED();
             
+        case Array::ArrayWithContiguous:
+        case Array::ArrayWithContiguousOutOfBounds:
         case Array::ArrayWithArrayStorage:
         case Array::ArrayWithArrayStorageOutOfBounds: {
             NodeIndex arrayPop = addToGraph(ArrayPop, OpInfo(arrayMode), OpInfo(prediction), get(registerOffset + argumentToOperand(0)));
@@ -1871,7 +1948,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
         }
 
         case op_create_this: {
-            set(currentInstruction[1].u.operand, addToGraph(CreateThis, get(RegisterFile::Callee)));
+            set(currentInstruction[1].u.operand, addToGraph(CreateThis, get(JSStack::Callee)));
             NEXT_OPCODE(op_create_this);
         }
             
@@ -1892,7 +1969,7 @@ bool ByteCodeParser::parseBlock(unsigned limit)
         case op_new_array_buffer: {
             int startConstant = currentInstruction[2].u.operand;
             int numConstants = currentInstruction[3].u.operand;
-            set(currentInstruction[1].u.operand, addToGraph(NewArrayBuffer, OpInfo(startConstant), OpInfo(numConstants)));
+            set(currentInstruction[1].u.operand, addToGraph(NewArrayBuffer, OpInfo(m_inlineStackTop->m_constantBufferRemap[startConstant]), OpInfo(numConstants)));
             NEXT_OPCODE(op_new_array_buffer);
         }
             
@@ -2756,8 +2833,8 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             addToGraph(CheckArgumentsNotCreated);
             
             unsigned argCount = m_inlineStackTop->m_inlineCallFrame->arguments.size();
-            if (RegisterFile::CallFrameHeaderSize + argCount > m_parameterSlots)
-                m_parameterSlots = RegisterFile::CallFrameHeaderSize + argCount;
+            if (JSStack::CallFrameHeaderSize + argCount > m_parameterSlots)
+                m_parameterSlots = JSStack::CallFrameHeaderSize + argCount;
             
             addVarArgChild(get(currentInstruction[1].u.operand)); // callee
             addVarArgChild(get(currentInstruction[2].u.operand)); // this
@@ -3210,7 +3287,7 @@ ByteCodeParser::InlineStackEntry::InlineStackEntry(
         
         InlineCallFrame inlineCallFrame;
         inlineCallFrame.executable.set(*byteCodeParser->m_globalData, byteCodeParser->m_codeBlock->ownerExecutable(), codeBlock->ownerExecutable());
-        inlineCallFrame.stackOffset = inlineCallFrameStart + RegisterFile::CallFrameHeaderSize;
+        inlineCallFrame.stackOffset = inlineCallFrameStart + JSStack::CallFrameHeaderSize;
         inlineCallFrame.callee.set(*byteCodeParser->m_globalData, byteCodeParser->m_codeBlock->ownerExecutable(), callee);
         inlineCallFrame.caller = byteCodeParser->currentCodeOrigin();
         inlineCallFrame.arguments.resize(argumentCountIncludingThis); // Set the number of arguments including this, but don't configure the value recoveries, yet.
@@ -3247,13 +3324,14 @@ ByteCodeParser::InlineStackEntry::InlineStackEntry(
         
         m_identifierRemap.resize(codeBlock->numberOfIdentifiers());
         m_constantRemap.resize(codeBlock->numberOfConstantRegisters());
+        m_constantBufferRemap.resize(codeBlock->numberOfConstantBuffers());
 
         for (size_t i = 0; i < codeBlock->numberOfIdentifiers(); ++i) {
             StringImpl* rep = codeBlock->identifier(i).impl();
             IdentifierMap::AddResult result = byteCodeParser->m_identifierMap.add(rep, byteCodeParser->m_codeBlock->numberOfIdentifiers());
             if (result.isNewEntry)
                 byteCodeParser->m_codeBlock->addIdentifier(Identifier(byteCodeParser->m_globalData, rep));
-            m_identifierRemap[i] = result.iterator->second;
+            m_identifierRemap[i] = result.iterator->value;
         }
         for (size_t i = 0; i < codeBlock->numberOfConstantRegisters(); ++i) {
             JSValue value = codeBlock->getConstant(i + FirstConstantRegisterIndex);
@@ -3271,10 +3349,24 @@ ByteCodeParser::InlineStackEntry::InlineStackEntry(
                 byteCodeParser->m_codeBlock->addConstant(value);
                 byteCodeParser->m_constants.append(ConstantRecord());
             }
-            m_constantRemap[i] = result.iterator->second;
+            m_constantRemap[i] = result.iterator->value;
         }
         for (unsigned i = 0; i < codeBlock->numberOfGlobalResolveInfos(); ++i)
             byteCodeParser->m_codeBlock->addGlobalResolveInfo(std::numeric_limits<unsigned>::max());
+        for (unsigned i = 0; i < codeBlock->numberOfConstantBuffers(); ++i) {
+            // If we inline the same code block multiple times, we don't want to needlessly
+            // duplicate its constant buffers.
+            HashMap<ConstantBufferKey, unsigned>::iterator iter =
+                byteCodeParser->m_constantBufferCache.find(ConstantBufferKey(codeBlock, i));
+            if (iter != byteCodeParser->m_constantBufferCache.end()) {
+                m_constantBufferRemap[i] = iter->value;
+                continue;
+            }
+            Vector<JSValue>& buffer = codeBlock->constantBufferAsVector(i);
+            unsigned newIndex = byteCodeParser->m_codeBlock->addConstantBuffer(buffer);
+            m_constantBufferRemap[i] = newIndex;
+            byteCodeParser->m_constantBufferCache.add(ConstantBufferKey(codeBlock, i), newIndex);
+        }
         
         m_callsiteBlockHeadNeedsLinking = true;
     } else {
@@ -3290,11 +3382,14 @@ ByteCodeParser::InlineStackEntry::InlineStackEntry(
 
         m_identifierRemap.resize(codeBlock->numberOfIdentifiers());
         m_constantRemap.resize(codeBlock->numberOfConstantRegisters());
+        m_constantBufferRemap.resize(codeBlock->numberOfConstantBuffers());
 
         for (size_t i = 0; i < codeBlock->numberOfIdentifiers(); ++i)
             m_identifierRemap[i] = i;
         for (size_t i = 0; i < codeBlock->numberOfConstantRegisters(); ++i)
             m_constantRemap[i] = i + FirstConstantRegisterIndex;
+        for (size_t i = 0; i < codeBlock->numberOfConstantBuffers(); ++i)
+            m_constantBufferRemap[i] = i;
 
         m_callsiteBlockHeadNeedsLinking = false;
     }

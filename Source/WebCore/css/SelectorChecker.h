@@ -52,7 +52,7 @@ public:
 
     enum SelectorMatch { SelectorMatches, SelectorFailsLocally, SelectorFailsAllSiblings, SelectorFailsCompletely };
     enum VisitedMatchType { VisitedMatchDisabled, VisitedMatchEnabled };
-    enum Mode { ResolvingStyle = 0, CollectingRules, QueryingRules };
+    enum Mode { ResolvingStyle = 0, CollectingRules, QueryingRules, SharingRules };
 
     struct SelectorCheckingContext {
         // Initial selector constructor
@@ -61,10 +61,10 @@ public:
             , element(element)
             , scope(0)
             , visitedMatchType(visitedMatchType)
+            , pseudoStyle(NOPSEUDO)
             , elementStyle(0)
             , elementParentStyle(0)
             , isSubSelector(false)
-            , pseudoStyle(NOPSEUDO)
             , hasScrollbarPseudo(false)
             , hasSelectionPseudo(false)
         { }
@@ -73,16 +73,19 @@ public:
         Element* element;
         const ContainerNode* scope;
         VisitedMatchType visitedMatchType;
+        PseudoId pseudoStyle;
         RenderStyle* elementStyle;
         RenderStyle* elementParentStyle;
         bool isSubSelector;
-        PseudoId pseudoStyle;
         bool hasScrollbarPseudo;
         bool hasSelectionPseudo;
     };
 
     bool checkSelector(CSSSelector*, Element*, bool isFastCheckableSelector = false) const;
     SelectorMatch checkSelector(const SelectorCheckingContext&, PseudoId&, bool& hasUnknownPseudoElements) const;
+    template<typename SiblingTraversalStrategy>
+    bool checkOneSelector(const SelectorCheckingContext&, const SiblingTraversalStrategy&) const;
+
     static bool isFastCheckableSelector(const CSSSelector*);
     bool fastCheckSelector(const CSSSelector*, const Element*) const;
 
@@ -121,7 +124,6 @@ public:
     static bool elementMatchesSelectorScopes(const StyledElement*, const HashSet<AtomicStringImpl*>& idScopes, const HashSet<AtomicStringImpl*>& classScopes);
 
 private:
-    bool checkOneSelector(const SelectorCheckingContext&) const;
     bool checkScrollbarPseudoClass(CSSSelector*) const;
     static bool isFrameFocused(const Element*);
 

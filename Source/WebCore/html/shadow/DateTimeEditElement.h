@@ -66,6 +66,8 @@ public:
         String fallbackDateTimeFormat;
         Localizer& localizer;
         const StepRange stepRange;
+        int minimumYear;
+        int maximumYear;
         String placeholderForDay;
         String placeholderForMonth;
         String placeholderForYear;
@@ -73,8 +75,12 @@ public:
         LayoutParameters(Localizer& localizer, const StepRange& stepRange)
             : localizer(localizer)
             , stepRange(stepRange)
+            , minimumYear(undefinedYear())
+            , maximumYear(undefinedYear())
         {
         }
+
+        static inline int undefinedYear() { return -1; }
     };
 
     static PassRefPtr<DateTimeEditElement> create(Document*, EditControlOwner&);
@@ -125,6 +131,7 @@ private:
     virtual void fieldValueChanged() OVERRIDE FINAL;
     virtual bool focusOnNextField(const DateTimeFieldElement&) OVERRIDE FINAL;
     virtual bool focusOnPreviousField(const DateTimeFieldElement&) OVERRIDE FINAL;
+    virtual bool isFieldOwnerDisabledOrReadOnly() const OVERRIDE FINAL;
     virtual AtomicString localeIdentifier() const OVERRIDE FINAL;
 
     // SpinButtonElement::SpinButtonOwner functions.

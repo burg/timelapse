@@ -2251,7 +2251,7 @@ fast/repaint/scroll-inside-table-cell.html
 fast/repaint/scroll-relative-table-inside-table-cell.html
 fast/table/cell-pref-width-invalidation.html
 
-# The inner <input> should now grow to take the full cell's height.
+# <input> should be horizontal.
 fast/table/colspanMinWidth-vertical.html
 
 # Requires ENABLE(MEDIA_CAPTURE)
@@ -2266,24 +2266,7 @@ fast/block/lineboxcontain/font.html
 
 # Fail until SUBPIXEL_LAYOUT is enabled
 # https://bugs.webkit.org/show_bug.cgi?id=85532
-fast/sub-pixel/client-rect-has-subpixel-precision.html
-fast/sub-pixel/client-width-height-snapping.html
-fast/sub-pixel/file-upload-control-at-fractional-offset.html
-fast/sub-pixel/float-containing-block-with-margin.html
-fast/sub-pixel/float-with-right-margin-zoom.html
-fast/sub-pixel/float-wrap-with-subpixel-top.html
-fast/sub-pixel/inline-block-should-not-wrap.html
-fast/sub-pixel/inline-block-with-margin.html
-fast/sub-pixel/inline-block-with-padding.html
-fast/sub-pixel/large-sizes.html
-fast/sub-pixel/layout-boxes-with-zoom.html
-fast/sub-pixel/position-right-aligns-with-container.html
-fast/sub-pixel/selection/selection-gaps-at-fractional-offsets.html
-fast/sub-pixel/size-of-box-with-zoom.html
-fast/sub-pixel/table-rows-no-gaps.html
-fast/sub-pixel/sub-pixel-accumulates-to-layers.html
-fast/sub-pixel/selection/selection-rect-in-sub-pixel-table.html
-fast/sub-pixel/snap-negative-location.html
+fast/sub-pixel
 
 # No CORS support for media elements is implemented yet.
 http/tests/security/video-cross-origin-readback.html
@@ -2403,6 +2386,9 @@ compositing/backing/no-backing-foreground-layer.html
 # https://bugs.webkit.org/show_bug.cgi?id=88150
 compositing/geometry/clipping-foreground.html
 
+# LAYER_TREE_INCLUDES_VISIBLE_RECTS option to layerTreeAsText is only applicable to Mac.
+compositing/visible-rect [ Skip ]
+
 # Require rebaseline after bug 88171
 # https://bugs.webkit.org/show_bug.cgi?id=88171
 fast/block/float/independent-align-positioning.html
@@ -2492,7 +2478,7 @@ http/tests/security/contentSecurityPolicy/1.1
 fast/text/shaping
 
 # ENABLE(WIDGET_REGION) is disabled
-fast/css/widget-region-parser.html
+fast/css/draggable-region-parser.html
 
 # CSS image-orientation property not yet supported
 fast/css/image-orientation/

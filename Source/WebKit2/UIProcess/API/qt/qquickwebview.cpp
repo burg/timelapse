@@ -331,14 +331,6 @@ void QQuickWebViewPrivate::loadDidStop()
     emit q->loadingChanged(&loadRequest);
 }
 
-void QQuickWebViewPrivate::onComponentComplete()
-{
-    Q_Q(QQuickWebView);
-    m_pageViewportControllerClient.reset(new PageViewportControllerClientQt(q, pageView.data()));
-    m_pageViewportController.reset(new PageViewportController(webPageProxy.get(), m_pageViewportControllerClient.data()));
-    pageView->eventHandler()->setViewportController(m_pageViewportControllerClient.data());
-}
-
 void QQuickWebViewPrivate::setTransparentBackground(bool enable)
 {
     webPageProxy->setDrawsTransparentBackground(enable);
@@ -454,12 +446,16 @@ void QQuickWebViewPrivate::setNeedsDisplay()
         q->page()->d->paint(&painter);
         return;
     }
+    q->page()->update();
+}
 
+void QQuickWebViewPrivate::didRenderFrame()
+{
+    Q_Q(QQuickWebView);
     if (m_betweenLoadCommitAndFirstFrame) {
         emit q->experimental()->loadVisuallyCommitted();
         m_betweenLoadCommitAndFirstFrame = false;
     }
-    q->page()->update();
 }
 
 void QQuickWebViewPrivate::processDidCrash()
@@ -824,12 +820,17 @@ void QQuickWebViewLegacyPrivate::updateViewportSize()
     QSizeF viewportSize = q->boundingRect().size();
     if (viewportSize.isEmpty())
         return;
+
+    float devicePixelRatio = webPageProxy->deviceScaleFactor();
     pageView->setContentsSize(viewportSize);
+    // Make sure that our scale matches the one passed to setVisibleContentsRect.
+    pageView->setContentsScale(devicePixelRatio);
+
     // The fixed layout is handled by the FrameView and the drawing area doesn't behave differently
     // whether its fixed or not. We still need to tell the drawing area which part of it
     // has to be rendered on tiles, and in desktop mode it's all of it.
-    webPageProxy->drawingArea()->setSize(viewportSize.toSize(), IntSize());
-    webPageProxy->drawingArea()->setVisibleContentsRect(FloatRect(FloatPoint(), FloatSize(viewportSize)), 1, FloatPoint());
+    webPageProxy->drawingArea()->setSize((viewportSize / devicePixelRatio).toSize(), IntSize());
+    webPageProxy->drawingArea()->setVisibleContentsRect(FloatRect(FloatPoint(), FloatSize(viewportSize / devicePixelRatio)), devicePixelRatio, FloatPoint());
 }
 
 qreal QQuickWebViewLegacyPrivate::zoomFactor() const
@@ -856,6 +857,11 @@ void QQuickWebViewFlickablePrivate::initialize(WKContextRef contextRef, WKPageGr
 void QQuickWebViewFlickablePrivate::onComponentComplete()
 {
     QQuickWebViewPrivate::onComponentComplete();
+
+    Q_Q(QQuickWebView);
+    m_pageViewportControllerClient.reset(new PageViewportControllerClientQt(q, pageView.data()));
+    m_pageViewportController.reset(new PageViewportController(webPageProxy.get(), m_pageViewportControllerClient.data()));
+    pageView->eventHandler()->setViewportController(m_pageViewportControllerClient.data());
 
     // Trigger setting of correct visibility flags after everything was allocated and initialized.
     _q_onVisibleChanged();

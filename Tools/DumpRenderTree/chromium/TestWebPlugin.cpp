@@ -109,6 +109,12 @@ static void printEventDetails(const WebKit::WebInputEvent& event)
         printTouchList(touch.touches, touch.touchesLength);
         printTouchList(touch.changedTouches, touch.changedTouchesLength);
         printTouchList(touch.targetTouches, touch.targetTouchesLength);
+    } else if (WebKit::WebInputEvent::isMouseEventType(event.type) || event.type == WebKit::WebInputEvent::MouseWheel) {
+        const WebKit::WebMouseEvent& mouse = static_cast<const WebKit::WebMouseEvent&>(event);
+        printf("* %d, %d\n", mouse.x, mouse.y);
+    } else if (WebKit::WebInputEvent::isGestureEventType(event.type)) {
+        const WebKit::WebGestureEvent& gesture = static_cast<const WebKit::WebGestureEvent&>(event);
+        printf("* %d, %d\n", gesture.x, gesture.y);
     }
 }
 
@@ -460,6 +466,29 @@ bool TestWebPlugin::handleInputEvent(const WebKit::WebInputEvent& event, WebKit:
     printf("Plugin received event: %s\n", eventName ? eventName : "unknown");
     if (m_printEventDetails)
         printEventDetails(event);
+    return false;
+}
+
+bool TestWebPlugin::handleDragStatusUpdate(WebKit::WebDragStatus dragStatus, const WebKit::WebDragData&, WebKit::WebDragOperationsMask, const WebKit::WebPoint& position, const WebKit::WebPoint& screenPosition)
+{
+    const char* dragStatusName = 0;
+    switch (dragStatus) {
+    case WebKit::WebDragStatusEnter:
+        dragStatusName = "DragEnter";
+        break;
+    case WebKit::WebDragStatusOver:
+        dragStatusName = "DragOver";
+        break;
+    case WebKit::WebDragStatusLeave:
+        dragStatusName = "DragLeave";
+        break;
+    case WebKit::WebDragStatusDrop:
+        dragStatusName = "DragDrop";
+        break;
+    case WebKit::WebDragStatusUnknown:
+        ASSERT_NOT_REACHED();
+    }
+    printf("Plugin received event: %s\n", dragStatusName);
     return false;
 }
 

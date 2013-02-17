@@ -75,6 +75,7 @@ LIST(APPEND WebCore_SOURCES
   platform/network/soup/GOwnPtrSoup.cpp
   platform/network/soup/ProxyResolverSoup.cpp
   platform/network/soup/ProxyServerSoup.cpp
+  platform/network/soup/ResourceErrorSoup.cpp
   platform/network/soup/ResourceHandleSoup.cpp
   platform/network/soup/ResourceRequestSoup.cpp
   platform/network/soup/ResourceResponseSoup.cpp
@@ -288,9 +289,8 @@ IF (WTF_USE_3D_GRAPHICS)
   LIST(APPEND WebCore_SOURCES
     platform/graphics/OpenGLShims.cpp
     platform/graphics/cairo/DrawingBufferCairo.cpp
-    platform/graphics/cairo/GLContext.cpp
-    platform/graphics/cairo/GraphicsContext3DCairo.cpp
-    platform/graphics/cairo/GraphicsContext3DPrivate.cpp
+    platform/graphics/efl/GraphicsContext3DEfl.cpp
+    platform/graphics/efl/GraphicsContext3DPrivate.cpp
     platform/graphics/opengl/Extensions3DOpenGL.cpp
     platform/graphics/opengl/Extensions3DOpenGLCommon.cpp
     platform/graphics/opengl/GraphicsContext3DOpenGL.cpp

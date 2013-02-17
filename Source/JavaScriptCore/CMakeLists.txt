@@ -37,6 +37,7 @@ SET(JavaScriptCore_SOURCES
     API/JSWeakObjectMapRefPrivate.cpp
     API/OpaqueJSString.cpp
     
+    assembler/MacroAssembler.cpp
     assembler/LinkBuffer.cpp
 
     bytecode/ArrayProfile.cpp
@@ -106,12 +107,15 @@ SET(JavaScriptCore_SOURCES
 
     heap/BlockAllocator.cpp
     heap/CopiedSpace.cpp
+    heap/CopyVisitor.cpp
     heap/ConservativeRoots.cpp
     heap/DFGCodeBlocks.cpp
+    heap/GCThread.cpp
     heap/GCThreadSharedData.cpp
     heap/HandleSet.cpp
     heap/HandleStack.cpp
     heap/Heap.cpp
+    heap/HeapStatistics.cpp
     heap/HeapTimer.cpp
     heap/IncrementalSweeper.cpp
     heap/JITStubRoutineSet.cpp
@@ -132,7 +136,7 @@ SET(JavaScriptCore_SOURCES
     interpreter/AbstractPC.cpp
     interpreter/CallFrame.cpp
     interpreter/Interpreter.cpp
-    interpreter/RegisterFile.cpp
+    interpreter/JSStack.cpp
     interpreter/VMInspector.cpp
 
     jit/ExecutableAllocator.cpp
@@ -190,6 +194,7 @@ SET(JavaScriptCore_SOURCES
     runtime/GCActivityCallback.cpp
     runtime/GetterSetter.cpp
     runtime/Identifier.cpp
+    runtime/IndexingType.cpp
     runtime/InitializeThreading.cpp
     runtime/InternalFunction.cpp
     runtime/JSActivation.cpp

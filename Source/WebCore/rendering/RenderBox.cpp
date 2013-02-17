@@ -403,7 +403,7 @@ void RenderBox::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumul
 
 void RenderBox::absoluteQuads(Vector<FloatQuad>& quads, bool* wasFixed) const
 {
-    quads.append(localToAbsoluteQuad(FloatRect(0, 0, width(), height()), false, wasFixed));
+    quads.append(localToAbsoluteQuad(FloatRect(0, 0, width(), height()), 0 /* mode */, wasFixed));
 }
 
 void RenderBox::updateLayerTransform()
@@ -436,7 +436,7 @@ IntRect RenderBox::absoluteContentBox() const
 {
     // This is wrong with transforms and flipped writing modes.
     IntRect rect = pixelSnappedIntRect(contentBoxRect());
-    FloatPoint absPos = localToAbsolute(FloatPoint());
+    FloatPoint absPos = localToAbsolute();
     rect.move(absPos.x(), absPos.y());
     return rect;
 }
@@ -708,14 +708,14 @@ void RenderBox::clearOverrideSize()
 
 LayoutUnit RenderBox::overrideLogicalContentWidth() const
 {
-    // FIXME: This should probably be returning contentLogicalWidth instead of contentWidth.
-    return hasOverrideWidth() ? gOverrideWidthMap->get(this) : contentWidth();
+    ASSERT(hasOverrideWidth());
+    return gOverrideWidthMap->get(this);
 }
 
 LayoutUnit RenderBox::overrideLogicalContentHeight() const
 {
-    // FIXME: This should probably be returning contentLogicalHeight instead of contentHeight.
-    return hasOverrideHeight() ? gOverrideHeightMap->get(this) : contentHeight();
+    ASSERT(hasOverrideHeight());
+    return gOverrideHeightMap->get(this);
 }
 
 LayoutUnit RenderBox::adjustBorderBoxLogicalWidthForBoxSizing(LayoutUnit width) const
@@ -1258,7 +1258,7 @@ LayoutUnit RenderBox::perpendicularContainingBlockLogicalHeight() const
     return cb->adjustContentBoxLogicalHeightForBoxSizing(logicalHeightLength.value());
 }
 
-void RenderBox::mapLocalToContainer(RenderLayerModelObject* repaintContainer, TransformState& transformState, MapLocalToContainerFlags mode, bool* wasFixed) const
+void RenderBox::mapLocalToContainer(RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags mode, bool* wasFixed) const
 {
     if (repaintContainer == this)
         return;
@@ -1363,18 +1363,18 @@ const RenderObject* RenderBox::pushMappingToContainer(const RenderLayerModelObje
     return ancestorSkipped ? ancestorToStopAt : container;
 }
 
-void RenderBox::mapAbsoluteToLocalPoint(bool fixed, bool useTransforms, TransformState& transformState) const
+void RenderBox::mapAbsoluteToLocalPoint(MapCoordinatesFlags mode, TransformState& transformState) const
 {
     bool isFixedPos = style()->position() == FixedPosition;
     bool hasTransform = hasLayer() && layer()->transform();
-    if (hasTransform) {
+    if (hasTransform && !isFixedPos) {
         // If this box has a transform, it acts as a fixed position container for fixed descendants,
         // and may itself also be fixed position. So propagate 'fixed' up only if this box is fixed position.
-        fixed &= isFixedPos;
-    } else
-        fixed |= isFixedPos;
+        mode &= ~IsFixed;
+    } else if (isFixedPos)
+        mode |= IsFixed;
 
-    RenderBoxModelObject::mapAbsoluteToLocalPoint(fixed, useTransforms, transformState);
+    RenderBoxModelObject::mapAbsoluteToLocalPoint(mode, transformState);
 }
 
 LayoutSize RenderBox::offsetFromContainer(RenderObject* o, const LayoutPoint& point, bool* offsetDependsOnPoint) const
@@ -2341,8 +2341,11 @@ LayoutUnit RenderBox::availableLogicalHeightUsing(const Length& h) const
     // We need to stop here, since we don't want to increase the height of the table
     // artificially.  We're going to rely on this cell getting expanded to some new
     // height, and then when we lay out again we'll use the calculation below.
-    if (isTableCell() && (h.isAuto() || h.isPercent()))
-        return overrideLogicalContentHeight();
+    if (isTableCell() && (h.isAuto() || h.isPercent())) {
+        if (hasOverrideHeight())
+            return overrideLogicalContentHeight();
+        return logicalHeight() - borderAndPaddingLogicalHeight();
+    }
 
     if (h.isPercent() && isOutOfFlowPositioned()) {
         // FIXME: This is wrong if the containingBlock has a perpendicular writing mode.
@@ -3315,7 +3318,7 @@ void RenderBox::computePositionedLogicalWidthReplaced(LogicalExtentComputedValue
 
     LayoutUnit logicalLeftPos = logicalLeftValue + marginLogicalLeftAlias;
     computeLogicalLeftPositionedOffset(logicalLeftPos, this, computedValues.m_extent, containerBlock, containerLogicalWidth);
-    computedValues.m_position = logicalLeftPos.round();
+    computedValues.m_position = logicalLeftPos;
 }
 
 void RenderBox::computePositionedLogicalHeightReplaced(LogicalExtentComputedValues& computedValues) const
@@ -3444,7 +3447,7 @@ void RenderBox::computePositionedLogicalHeightReplaced(LogicalExtentComputedValu
     // Use computed values to calculate the vertical position.
     LayoutUnit logicalTopPos = logicalTopValue + marginBeforeAlias;
     computeLogicalTopPositionedOffset(logicalTopPos, this, computedValues.m_extent, containerBlock, containerLogicalHeight);
-    computedValues.m_position = logicalTopPos.round();
+    computedValues.m_position = logicalTopPos;
 }
 
 LayoutRect RenderBox::localCaretRect(InlineBox* box, int caretOffset, LayoutUnit* extraWidthToEndOfLine)

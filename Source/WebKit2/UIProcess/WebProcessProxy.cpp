@@ -46,7 +46,10 @@
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(MAC)
-#include "BuiltInPDFView.h"
+#include "SimplePDFPlugin.h"
+#if ENABLE(PDFKIT_PLUGIN)
+#include "PDFPlugin.h"
+#endif
 #endif
 
 using namespace WebCore;
@@ -260,9 +263,9 @@ bool WebProcessProxy::checkURLReceivedFromWebProcess(const KURL& url)
     // Items in back/forward list have been already checked.
     // One case where we don't have sandbox extensions for file URLs in b/f list is if the list has been reinstated after a crash or a browser restart.
     for (WebBackForwardListItemMap::iterator iter = m_backForwardListItemMap.begin(), end = m_backForwardListItemMap.end(); iter != end; ++iter) {
-        if (KURL(KURL(), iter->second->url()).fileSystemPath() == path)
+        if (KURL(KURL(), iter->value->url()).fileSystemPath() == path)
             return true;
-        if (KURL(KURL(), iter->second->originalURL()).fileSystemPath() == path)
+        if (KURL(KURL(), iter->value->originalURL()).fileSystemPath() == path)
             return true;
     }
 
@@ -285,15 +288,15 @@ void WebProcessProxy::addBackForwardItem(uint64_t itemID, const String& original
 
     WebBackForwardListItemMap::AddResult result = m_backForwardListItemMap.add(itemID, 0);
     if (result.isNewEntry) {
-        result.iterator->second = WebBackForwardListItem::create(originalURL, url, title, backForwardData.data(), backForwardData.size(), itemID);
+        result.iterator->value = WebBackForwardListItem::create(originalURL, url, title, backForwardData.data(), backForwardData.size(), itemID);
         return;
     }
 
     // Update existing item.
-    result.iterator->second->setOriginalURL(originalURL);
-    result.iterator->second->setURL(url);
-    result.iterator->second->setTitle(title);
-    result.iterator->second->setBackForwardData(backForwardData.data(), backForwardData.size());
+    result.iterator->value->setOriginalURL(originalURL);
+    result.iterator->value->setURL(url);
+    result.iterator->value->setTitle(title);
+    result.iterator->value->setBackForwardData(backForwardData.data(), backForwardData.size());
 }
 
 void WebProcessProxy::sendDidGetPlugins(uint64_t requestID, PassOwnPtr<Vector<PluginInfo> > pluginInfos)
@@ -305,8 +308,12 @@ void WebProcessProxy::sendDidGetPlugins(uint64_t requestID, PassOwnPtr<Vector<Pl
 #if PLATFORM(MAC)
     // Add built-in PDF last, so that it's not used when a real plug-in is installed.
     // NOTE: This has to be done on the main thread as it calls localizedString().
-    if (!m_context->omitPDFSupport())
-        plugins->append(BuiltInPDFView::pluginInfo());
+    if (!m_context->omitPDFSupport()) {
+#if ENABLE(PDFKIT_PLUGIN)
+        plugins->append(PDFPlugin::pluginInfo());
+#endif
+        plugins->append(SimplePDFPlugin::pluginInfo());
+    }
 #endif
 
     send(Messages::WebProcess::DidGetPlugins(requestID, *plugins), 0);
@@ -375,36 +382,14 @@ void WebProcessProxy::didClearPluginSiteData(uint64_t callbackID)
 
 void WebProcessProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::ArgumentDecoder* arguments)
 {
-    if (messageID.is<CoreIPC::MessageClassWebProcessProxy>()) {
-        didReceiveWebProcessProxyMessage(connection, messageID, arguments);
+    // FIXME: Come up with a better way to chain to the WebContext.
+    if (m_context->knowsHowToHandleMessage(messageID)) {
+        m_context->didReceiveMessage(this, messageID, arguments);
         return;
     }
 
-    if (messageID.is<CoreIPC::MessageClassWebContext>()
-        || messageID.is<CoreIPC::MessageClassWebContextLegacy>()
-        || messageID.is<CoreIPC::MessageClassDownloadProxy>()
-        || messageID.is<CoreIPC::MessageClassWebApplicationCacheManagerProxy>()
-#if ENABLE(BATTERY_STATUS)
-        || messageID.is<CoreIPC::MessageClassWebBatteryManagerProxy>()
-#endif
-        || messageID.is<CoreIPC::MessageClassWebCookieManagerProxy>()
-        || messageID.is<CoreIPC::MessageClassWebDatabaseManagerProxy>()
-        || messageID.is<CoreIPC::MessageClassWebGeolocationManagerProxy>()
-        || messageID.is<CoreIPC::MessageClassWebIconDatabase>()
-        || messageID.is<CoreIPC::MessageClassWebKeyValueStorageManagerProxy>()
-        || messageID.is<CoreIPC::MessageClassWebMediaCacheManagerProxy>()
-#if ENABLE(NETWORK_INFO)
-        || messageID.is<CoreIPC::MessageClassWebNetworkInfoManagerProxy>()
-#endif
-        || messageID.is<CoreIPC::MessageClassWebNotificationManagerProxy>()
-#if USE(SOUP)
-        || messageID.is<CoreIPC::MessageClassWebSoupRequestManagerProxy>()
-#endif
-#if ENABLE(VIBRATION)
-        || messageID.is<CoreIPC::MessageClassWebVibrationProxy>()
-#endif
-        || messageID.is<CoreIPC::MessageClassWebResourceCacheManagerProxy>()) {
-        m_context->didReceiveMessage(this, messageID, arguments);
+    if (messageID.is<CoreIPC::MessageClassWebProcessProxy>()) {
+        didReceiveWebProcessProxyMessage(connection, messageID, arguments);
         return;
     }
 
@@ -421,17 +406,14 @@ void WebProcessProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC
 
 void WebProcessProxy::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::ArgumentDecoder* arguments, OwnPtr<CoreIPC::ArgumentEncoder>& reply)
 {
-    if (messageID.is<CoreIPC::MessageClassWebProcessProxy>()) {
-        didReceiveSyncWebProcessProxyMessage(connection, messageID, arguments, reply);
+    // FIXME: Come up with a better way to chain to the WebContext.
+    if (m_context->knowsHowToHandleMessage(messageID)) {
+        m_context->didReceiveSyncMessage(this, messageID, arguments, reply);
         return;
     }
 
-    if (messageID.is<CoreIPC::MessageClassWebContext>() || messageID.is<CoreIPC::MessageClassWebContextLegacy>()
-#if ENABLE(NETWORK_INFO)
-        || messageID.is<CoreIPC::MessageClassWebNetworkInfoManagerProxy>()
-#endif
-        || messageID.is<CoreIPC::MessageClassDownloadProxy>() || messageID.is<CoreIPC::MessageClassWebIconDatabase>()) {
-        m_context->didReceiveSyncMessage(this, messageID, arguments, reply);
+    if (messageID.is<CoreIPC::MessageClassWebProcessProxy>()) {
+        didReceiveSyncWebProcessProxyMessage(connection, messageID, arguments, reply);
         return;
     }
 
@@ -563,7 +545,7 @@ size_t WebProcessProxy::frameCountInPage(WebPageProxy* page) const
 {
     size_t result = 0;
     for (HashMap<uint64_t, RefPtr<WebFrameProxy> >::const_iterator iter = m_frameMap.begin(); iter != m_frameMap.end(); ++iter) {
-        if (iter->second->page() == page)
+        if (iter->value->page() == page)
             ++result;
     }
     return result;

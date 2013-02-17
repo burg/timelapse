@@ -114,6 +114,7 @@ public:
 
     static void mouseDidMoveOverElement(Page*, const HitTestResult&, unsigned modifierFlags);
     static bool handleMousePress(Page*);
+    static bool handleTouchEvent(Page*, Node*);
     static bool forcePseudoState(Element*, CSSSelector::PseudoType);
 
     static void willSendXMLHttpRequest(ScriptExecutionContext*, const String& url);
@@ -314,6 +315,7 @@ private:
     static void didUpdateRegionLayoutImpl(InstrumentingAgents*, Document*, WebKitNamedFlow*);
 
     static void mouseDidMoveOverElementImpl(InstrumentingAgents*, const HitTestResult&, unsigned modifierFlags);
+    static bool handleTouchEventImpl(InstrumentingAgents*, Node*);
     static bool handleMousePressImpl(InstrumentingAgents*);
     static bool forcePseudoStateImpl(InstrumentingAgents*, Element*, CSSSelector::PseudoType);
 
@@ -632,6 +634,16 @@ inline void InspectorInstrumentation::mouseDidMoveOverElement(Page* page, const 
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
         mouseDidMoveOverElementImpl(instrumentingAgents, result, modifierFlags);
 #endif
+}
+
+inline bool InspectorInstrumentation::handleTouchEvent(Page* page, Node* node)
+{
+#if ENABLE(INSPECTOR)
+    FAST_RETURN_IF_NO_FRONTENDS(false);
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        return handleTouchEventImpl(instrumentingAgents, node);
+#endif
+    return false;
 }
 
 inline bool InspectorInstrumentation::handleMousePress(Page* page)

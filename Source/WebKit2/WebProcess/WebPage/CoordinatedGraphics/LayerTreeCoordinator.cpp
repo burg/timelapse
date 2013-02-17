@@ -258,12 +258,12 @@ bool LayerTreeCoordinator::flushPendingLayerChanges()
         m_webPage->send(Messages::LayerTreeCoordinatorProxy::DeleteCompositingLayer(m_detachedLayers[i]));
     m_detachedLayers.clear();
 
-    bool didSync = m_webPage->corePage()->mainFrame()->view()->syncCompositingStateIncludingSubframes();
-    m_nonCompositedContentLayer->syncCompositingStateForThisLayerOnly();
+    bool didSync = m_webPage->corePage()->mainFrame()->view()->flushCompositingStateIncludingSubframes();
+    m_nonCompositedContentLayer->flushCompositingStateForThisLayerOnly();
     if (m_pageOverlayLayer)
-        m_pageOverlayLayer->syncCompositingStateForThisLayerOnly();
+        m_pageOverlayLayer->flushCompositingStateForThisLayerOnly();
 
-    m_rootLayer->syncCompositingStateForThisLayerOnly();
+    m_rootLayer->flushCompositingStateForThisLayerOnly();
 
     if (m_shouldSyncRootLayer) {
         m_webPage->send(Messages::LayerTreeCoordinatorProxy::SetRootCompositingLayer(toCoordinatedGraphicsLayer(m_rootLayer.get())->id()));
@@ -305,11 +305,13 @@ void LayerTreeCoordinator::syncLayerChildren(WebLayerID id, const Vector<WebLaye
     m_webPage->send(Messages::LayerTreeCoordinatorProxy::SetCompositingLayerChildren(id, children));
 }
 
-void LayerTreeCoordinator::syncCanvas(WebLayerID id, const IntSize& canvasSize, uint64_t graphicsSurfaceToken, uint32_t frontBuffer)
+#if USE(GRAPHICS_SURFACE)
+void LayerTreeCoordinator::syncCanvas(WebLayerID id, const IntSize& canvasSize, const GraphicsSurfaceToken& token, uint32_t frontBuffer)
 {
     m_shouldSyncFrame = true;
-    m_webPage->send(Messages::LayerTreeCoordinatorProxy::SyncCanvas(id, canvasSize, graphicsSurfaceToken, frontBuffer));
+    m_webPage->send(Messages::LayerTreeCoordinatorProxy::SyncCanvas(id, canvasSize, token, frontBuffer));
 }
+#endif
 
 #if ENABLE(CSS_FILTERS)
 void LayerTreeCoordinator::syncLayerFilters(WebLayerID id, const FilterOperations& filters)
@@ -451,7 +453,7 @@ int64_t LayerTreeCoordinator::adoptImageBackingStore(Image* image)
     int64_t key = 0;
 
 #if PLATFORM(QT)
-    QImage* nativeImage = image->nativeImageForCurrentFrame();
+    QPixmap* nativeImage = image->nativeImageForCurrentFrame();
 
     if (!nativeImage)
         return InvalidWebLayerID;
@@ -470,7 +472,7 @@ int64_t LayerTreeCoordinator::adoptImageBackingStore(Image* image)
     HashMap<int64_t, int>::iterator it = m_directlyCompositedImageRefCounts.find(key);
 
     if (it != m_directlyCompositedImageRefCounts.end()) {
-        ++(it->second);
+        ++(it->value);
         return key;
     }
 
@@ -495,9 +497,9 @@ void LayerTreeCoordinator::releaseImageBackingStore(int64_t key)
     if (it == m_directlyCompositedImageRefCounts.end())
         return;
 
-    it->second--;
+    it->value--;
 
-    if (it->second)
+    if (it->value)
         return;
 
     m_directlyCompositedImageRefCounts.remove(it);
@@ -514,7 +516,7 @@ void LayerTreeCoordinator::notifyAnimationStarted(const WebCore::GraphicsLayer*,
 {
 }
 
-void LayerTreeCoordinator::notifySyncRequired(const WebCore::GraphicsLayer*)
+void LayerTreeCoordinator::notifyFlushRequired(const WebCore::GraphicsLayer*)
 {
 }
 

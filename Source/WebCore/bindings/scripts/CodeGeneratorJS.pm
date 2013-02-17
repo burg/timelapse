@@ -1274,12 +1274,15 @@ sub GenerateParametersCheckExpression
         my $type = $codeGenerator->StripModule($parameter->type);
 
         # Only DOMString or wrapper types are checked.
-        # For DOMString, Null, Undefined and any Object are accepted too, as
-        # these are acceptable values for a DOMString argument (any Object can
-        # be converted to a string via .toString).
+        # For DOMString with StrictTypeChecking only Null, Undefined and Object
+        # are accepted for compatibility. Otherwise, no restrictions are made to
+        # match the non-overloaded behavior.
+        # FIXME: Implement WebIDL overload resolution algorithm.
         if ($codeGenerator->IsStringType($type)) {
-            push(@andExpression, "(${value}.isUndefinedOrNull() || ${value}.isString() || ${value}.isObject())");
-            $usedArguments{$parameterIndex} = 1;
+            if ($parameter->extendedAttributes->{"StrictTypeChecking"}) {
+                push(@andExpression, "(${value}.isUndefinedOrNull() || ${value}.isString() || ${value}.isObject())");
+                $usedArguments{$parameterIndex} = 1;
+            }
         } elsif ($parameter->extendedAttributes->{"Callback"}) {
             # For Callbacks only checks if the value is null or object.
             push(@andExpression, "(${value}.isNull() || ${value}.isFunction())");
@@ -1416,8 +1419,6 @@ sub GenerateImplementation
 
     push(@implContent, "\nusing namespace JSC;\n\n");
     push(@implContent, "namespace WebCore {\n\n");
-
-    push(@implContent, "ASSERT_CLASS_FITS_IN_CELL($className);\n");
 
     my $numAttributes = GenerateAttributesHashTable($object, $dataNode);
 
@@ -1767,10 +1768,8 @@ sub GenerateImplementation
             push(@implContent, "    ${className}* thisObject = jsCast<${className}*>(cell);\n");
             push(@implContent, "    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);\n");
 
-            # This attempts to sink the somewhat expensive int-to-string conversion that happens when we create PropertyName
-            # to the point where we actually need it. In particular, when we generate this method for classes that can
-            # attempt their indexed getter first, we try to ensure that if that getter succeeds then we don't pay for the
-            # creation of the PropertyName.
+            # Sink the int-to-string conversion that happens when we create a PropertyName
+            # to the point where we actually need it.
             my $generatedPropertyName = 0;
             my $propertyNameGeneration = sub {
                 if ($generatedPropertyName) {
@@ -1780,22 +1779,6 @@ sub GenerateImplementation
                 $generatedPropertyName = 1;
             };
             
-            my $manualLookupGetterGeneration = sub {
-                my $requiresManualLookup = $dataNode->extendedAttributes->{"IndexedGetter"} || $dataNode->extendedAttributes->{"NamedGetter"};
-                if ($requiresManualLookup) {
-                    push(@implContent, "    const HashEntry* entry = ${className}Table.entry(exec, propertyName);\n");
-                    push(@implContent, "    if (entry) {\n");
-                    push(@implContent, "        slot.setCustom(thisObject, entry->propertyGetter());\n");
-                    push(@implContent, "        return true;\n");
-                    push(@implContent, "    }\n");
-                }
-            };
-            
-            if ($dataNode->extendedAttributes->{"NamedGetter"} && !$dataNode->extendedAttributes->{"CustomNamedGetter"}) {
-                &$propertyNameGeneration();
-                &$manualLookupGetterGeneration();
-            }
-
             if ($dataNode->extendedAttributes->{"IndexedGetter"} || $dataNode->extendedAttributes->{"NumericIndexedGetter"}) {
                 if (IndexGetterReturnsStrings($implClassName)) {
                     push(@implContent, "    if (index <= MAX_ARRAY_INDEX) {\n");
@@ -1818,11 +1801,6 @@ sub GenerateImplementation
                 push(@implContent, "        return true;\n");
                 push(@implContent, "    }\n");
                 $implIncludes{"wtf/text/AtomicString.h"} = 1;
-            }
-                
-            if ($dataNode->extendedAttributes->{"CustomNamedGetter"}) {
-                &$propertyNameGeneration();
-                &$manualLookupGetterGeneration();
             }
             
             if ($dataNode->extendedAttributes->{"JSCustomGetOwnPropertySlotAndDescriptor"}) {

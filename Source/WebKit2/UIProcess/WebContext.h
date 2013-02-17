@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2011, 2012 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,13 @@
 
 #include "APIObject.h"
 #include "GenericCallback.h"
+#include "MessageReceiver.h"
+#include "MessageReceiverMap.h"
 #include "PluginInfoStore.h"
 #include "ProcessModel.h"
 #include "VisitedLinkProvider.h"
-#include "WebContextInjectedBundleClient.h"
 #include "WebContextConnectionClient.h"
+#include "WebContextInjectedBundleClient.h"
 #include "WebDownloadClient.h"
 #include "WebHistoryClient.h"
 #include "WebProcessProxy.h"
@@ -43,6 +45,10 @@
 #include <wtf/RefPtr.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
+
+#if ENABLE(NETWORK_PROCESS)
+#include "NetworkProcessProxy.h"
+#endif
 
 namespace WebKit {
 
@@ -83,6 +89,9 @@ public:
     virtual ~WebContext();
 
     static const Vector<WebContext*>& allContexts();
+
+    void addMessageReceiver(CoreIPC::MessageClass, CoreIPC::MessageReceiver*);
+    bool knowsHowToHandleMessage(CoreIPC::MessageID) const;
 
     void initializeInjectedBundleClient(const WKContextInjectedBundleClient*);
     void initializeConnectionClient(const WKContextConnectionClient*);
@@ -230,6 +239,8 @@ public:
 
     void textCheckerStateChanged();
 
+    void setUsesNetworkProcess(bool);
+
 private:
     WebContext(ProcessModel, const String& injectedBundlePath);
 
@@ -237,7 +248,11 @@ private:
 
     void platformInitializeWebProcess(WebProcessCreationParameters&);
     void platformInvalidateContext();
-    
+
+#if ENABLE(NETWORK_PROCESS)
+    void ensureNetworkProcess();
+#endif
+
 #if PLATFORM(MAC)
     void getPasteboardTypes(const String& pasteboardName, Vector<String>& pasteboardTypes);
     void getPasteboardPathnamesForType(const String& pasteboardName, const String& pasteboardType, Vector<String>& pathnames);
@@ -358,8 +373,15 @@ private:
     String m_overrideLocalStorageDirectory;
 
     bool m_processTerminationEnabled;
+
+#if ENABLE(NETWORK_PROCESS)
+    RefPtr<NetworkProcessProxy> m_networkProcess;
+    bool m_usesNetworkProcess;
+#endif
     
     HashMap<uint64_t, RefPtr<DictionaryCallback> > m_dictionaryCallbacks;
+
+    CoreIPC::MessageReceiverMap m_messageReceiverMap;
 };
 
 template<typename U> inline void WebContext::sendToAllProcesses(const U& message)

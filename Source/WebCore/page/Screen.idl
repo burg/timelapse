@@ -27,20 +27,17 @@
  */
 
 
-module window {
+[
+    JSGenerateIsReachable=ImplFrame,
+    OmitConstructor
+] interface Screen {
+    [Nondeterministic] readonly attribute unsigned long height;
+    [Nondeterministic] readonly attribute unsigned long width;
+    [Nondeterministic] readonly attribute unsigned long colorDepth;
+    [Nondeterministic] readonly attribute unsigned long pixelDepth;
+    [Nondeterministic] readonly attribute long availLeft;
+    [Nondeterministic] readonly attribute long availTop;
+    [Nondeterministic] readonly attribute unsigned long availHeight;
+    [Nondeterministic] readonly attribute unsigned long availWidth;
+};
 
-    interface [
-        JSGenerateIsReachable=ImplFrame,
-        OmitConstructor
-    ] Screen {
-        readonly attribute [Nondeterministic] unsigned long height;
-        readonly attribute [Nondeterministic] unsigned long width;
-        readonly attribute [Nondeterministic] unsigned long colorDepth;
-        readonly attribute [Nondeterministic] unsigned long pixelDepth;
-        readonly attribute [Nondeterministic] long availLeft;
-        readonly attribute [Nondeterministic] long availTop;
-        readonly attribute [Nondeterministic] unsigned long availHeight;
-        readonly attribute [Nondeterministic] unsigned long availWidth;
-    };
-
-}

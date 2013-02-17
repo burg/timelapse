@@ -95,6 +95,7 @@ bool RenderLayerBacking::m_creatingPrimaryGraphicsLayer = false;
 
 RenderLayerBacking::RenderLayerBacking(RenderLayer* layer)
     : m_owningLayer(layer)
+    , m_scrollLayerID(0)
     , m_artificiallyInflatedBounds(false)
     , m_isMainFrameRenderViewLayer(false)
     , m_usingTiledCacheLayer(false)
@@ -138,6 +139,7 @@ RenderLayerBacking::~RenderLayerBacking()
     updateForegroundLayer(false);
     updateMaskLayer(false);
     updateScrollingLayers(false);
+    detachFromScrollingCoordinator();
     destroyGraphicsLayers();
 }
 
@@ -963,6 +965,41 @@ bool RenderLayerBacking::updateScrollingLayers(bool needsScrollingLayers)
     return layerChanged;
 }
 
+void RenderLayerBacking::attachToScrollingCoordinator()
+{
+    // If m_scrollLayerID non-zero, then this backing is already attached to the ScrollingCoordinator.
+    if (m_scrollLayerID)
+        return;
+
+    Page* page = renderer()->frame()->page();
+    if (!page)
+        return;
+
+    ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator();
+    if (!scrollingCoordinator)
+        return;
+    
+    m_scrollLayerID = scrollingCoordinator->attachToStateTree(scrollingCoordinator->uniqueScrollLayerID());
+}
+
+void RenderLayerBacking::detachFromScrollingCoordinator()
+{
+    // If m_scrollLayerID is 0, then this backing is not attached to the ScrollingCoordinator.
+    if (!m_scrollLayerID)
+        return;
+
+    Page* page = renderer()->frame()->page();
+    if (!page)
+        return;
+
+    ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator();
+    if (!scrollingCoordinator)
+        return;
+
+    scrollingCoordinator->detachFromStateTree(m_scrollLayerID);
+    m_scrollLayerID = 0;
+}
+
 GraphicsLayerPaintingPhase RenderLayerBacking::paintingPhaseForPrimaryLayer() const
 {
     unsigned phase = GraphicsLayerPaintBackground;
@@ -1676,7 +1713,7 @@ void RenderLayerBacking::notifyAnimationStarted(const GraphicsLayer*, double tim
     renderer()->animation()->notifyAnimationStarted(renderer(), time);
 }
 
-void RenderLayerBacking::notifySyncRequired(const GraphicsLayer*)
+void RenderLayerBacking::notifyFlushRequired(const GraphicsLayer*)
 {
     if (!renderer()->documentBeingDestroyed())
         compositor()->scheduleLayerFlush();
@@ -1828,7 +1865,7 @@ bool RenderLayerBacking::contentsVisible(const GraphicsLayer*, const IntRect& lo
         return false;
 
     IntRect visibleContentRect(view->visibleContentRect());
-    FloatQuad absoluteContentQuad = renderer()->localToAbsoluteQuad(FloatRect(localContentRect));
+    FloatQuad absoluteContentQuad = renderer()->localToAbsoluteQuad(FloatRect(localContentRect), SnapOffsetForTransforms);
     return absoluteContentQuad.enclosingBoundingBox().intersects(visibleContentRect);
 }
 #endif

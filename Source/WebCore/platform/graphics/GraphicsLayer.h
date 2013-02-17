@@ -47,6 +47,7 @@
 enum LayerTreeAsTextBehaviorFlags {
     LayerTreeAsTextBehaviorNormal = 0,
     LayerTreeAsTextDebug = 1 << 0, // Dump extra debugging info like layer addresses.
+    LayerTreeAsTextIncludeVisibleRects = 1 << 1,
 };
 typedef unsigned LayerTreeAsTextBehavior;
 
@@ -385,8 +386,8 @@ public:
     // Some compositing systems may do internal batching to synchronize compositing updates
     // with updates drawn into the window. These methods flush internal batched state on this layer
     // and descendant layers, and this layer only.
-    virtual void syncCompositingState(const FloatRect& /* clipRect */) { }
-    virtual void syncCompositingStateForThisLayerOnly() { }
+    virtual void flushCompositingState(const FloatRect& /* clipRect */) { }
+    virtual void flushCompositingStateForThisLayerOnly() { }
     
     // Return a string with a human readable form of the layer tree, If debug is true 
     // pointers for the layers and timing data will be included in the returned string.
@@ -435,7 +436,12 @@ protected:
 
     GraphicsLayer(GraphicsLayerClient*);
 
+    static void writeIndent(TextStream&, int indent);
+
     void dumpProperties(TextStream&, int indent, LayerTreeAsTextBehavior) const;
+    virtual void dumpAdditionalProperties(TextStream&, int /*indent*/, LayerTreeAsTextBehavior) const { }
+
+    virtual void getDebugBorderInfo(Color&, float& width) const;
 
     GraphicsLayerClient* m_client;
     String m_name;
@@ -471,7 +477,6 @@ protected:
     bool m_acceleratesDrawing : 1;
     bool m_maintainsPixelAlignment : 1;
     bool m_appliesPageScale : 1; // Set for the layer which has the page scale applied to it.
-    bool m_usingTileCache : 1;
 
     GraphicsLayerPaintingPhase m_paintingPhase;
     CompositingCoordinatesOrientation m_contentsOrientation; // affects orientation of layer contents

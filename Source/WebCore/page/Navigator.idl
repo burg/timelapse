@@ -17,30 +17,27 @@
     Boston, MA 02110-1301, USA.
 */
 
-module window {
+[
+    JSGenerateIsReachable=ImplFrame,
+    OmitConstructor
+] interface Navigator {
+    [Nondeterministic] readonly attribute DOMString appCodeName;
+     [Nondeterministic] readonly attribute DOMString appName;
+     [Nondeterministic] readonly attribute DOMString appVersion;
+     [Nondeterministic] readonly attribute DOMString language;
+     [Nondeterministic] readonly attribute DOMString userAgent;
+     [Nondeterministic] readonly attribute DOMString platform;
+    readonly attribute DOMPluginArray plugins;
+    readonly attribute DOMMimeTypeArray mimeTypes;
+    [Nondeterministic] readonly attribute DOMString product;
+    [Nondeterministic] readonly attribute DOMString productSub;
+    [Nondeterministic] readonly attribute DOMString vendor;
+    [Nondeterministic] readonly attribute DOMString vendorSub;
+    [Nondeterministic] readonly attribute boolean cookieEnabled;
+    [Nondeterministic] boolean javaEnabled();
 
-    interface [
-        JSGenerateIsReachable=ImplFrame,
-        OmitConstructor
-    ] Navigator {
-        readonly attribute [Nondeterministic] DOMString appCodeName;
-        readonly attribute [Nondeterministic] DOMString appName;
-        readonly attribute [Nondeterministic] DOMString appVersion;
-        readonly attribute [Nondeterministic] DOMString language;
-        readonly attribute [Nondeterministic] DOMString userAgent;
-        readonly attribute [Nondeterministic] DOMString platform;
-        readonly attribute DOMPluginArray plugins;
-        readonly attribute DOMMimeTypeArray mimeTypes;
-        readonly attribute [Nondeterministic] DOMString product;
-        readonly attribute [Nondeterministic] DOMString productSub;
-        readonly attribute [Nondeterministic] DOMString vendor;
-        readonly attribute [Nondeterministic] DOMString vendorSub;
-        readonly attribute [Nondeterministic] boolean cookieEnabled;
-        [Nondeterministic] boolean javaEnabled();
+    [Nondeterministic] readonly attribute boolean onLine;
 
-        readonly attribute [Nondeterministic] boolean onLine;
+    void getStorageUpdates(); // FIXME: Remove this method or rename to yieldForStorageUpdates.
+};
 
-        void getStorageUpdates(); // FIXME: Remove this method or rename to yieldForStorageUpdates.
-    };
-
-}

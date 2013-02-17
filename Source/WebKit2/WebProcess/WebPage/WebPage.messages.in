@@ -147,6 +147,8 @@ messages -> WebPage {
     SetPageLength(double pageLength);
     SetGapBetweenPages(double gap);
 
+    PostInjectedBundleMessage(CoreIPC::DataReference messageData);
+
     # Find.
     FindString(WTF::String string, uint32_t findOptions, unsigned maxMatchCount)
     HideFindUI()
@@ -298,7 +300,7 @@ messages -> WebPage {
     HandleAlternativeTextUIResult(String result)
 #endif
 
-#if ENABLE(PAGE_VISIBILITY_API)
+#if ENABLE(PAGE_VISIBILITY_API) || ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
     SetVisibilityState(int visibilityState, bool isInitialState);
 #endif
 

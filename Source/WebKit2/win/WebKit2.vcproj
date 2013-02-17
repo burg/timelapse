@@ -619,6 +619,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Shared\WebConnection.messages.in"
+				>
+			</File>
+			<File
 				RelativePath="..\Shared\WebConnectionClient.cpp"
 				>
 			</File>
@@ -4292,6 +4296,14 @@
 			</File>
 			<File
 				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\WebApplicationCacheManagerProxyMessages.h"
+				>
+			</File>
+			<File
+				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\WebConnectionMessageReceiver.cpp"
+				>
+			</File>
+			<File
+				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\WebConnectionMessages.h"
 				>
 			</File>
 			<File

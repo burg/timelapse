@@ -41,31 +41,5 @@ WebInspector.JavaScriptSource = function(url, contentProvider, isEditable)
 }
 
 WebInspector.JavaScriptSource.prototype = {
-    /**
-     * @param {function(?string)} callback
-     */
-    workingCopyCommitted: function(callback)
-    {
-        /**
-         * @param {?string} error
-         */
-        function innerCallback(error)
-        {
-            if (error)
-                this.hasDivergedFromVM = true;
-            else
-                delete this.hasDivergedFromVM;
-
-            callback(error);
-        }
-        var rawLocation = /** @type {WebInspector.DebuggerModel.Location} */ this.uiLocationToRawLocation(0, 0);
-        if (!rawLocation) {
-            callback(null);
-            return;
-        }
-        var script = WebInspector.debuggerModel.scriptForId(rawLocation.scriptId);
-        WebInspector.debuggerModel.setScriptSource(script.scriptId, this.workingCopy(), innerCallback);
-    },
-
     __proto__: WebInspector.UISourceCode.prototype
 }

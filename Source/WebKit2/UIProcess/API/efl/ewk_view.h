@@ -26,6 +26,7 @@
  *
  * The following signals (see evas_object_smart_callback_add()) are emitted:
  *
+ * - "back,forward,list,changed", void: reports that the view's back / forward list had changed.
  * - "close,window", void: window is closed.
  * - "create,window", Evas_Object**: a new window is created.
  * - "download,cancelled", Ewk_Download_Job*: reports that a download was effectively cancelled.
@@ -44,10 +45,10 @@
  *   ewk_form_submission_request_submit() will be called automatically.
  * - "intent,request,new", Ewk_Intent*: reports new Web intent request.
  * - "intent,service,register", Ewk_Intent_Service*: reports new Web intent service registration.
- * - "load,error", const Ewk_Web_Error*: reports main frame load failed.
+ * - "load,error", const Ewk_Error*: reports main frame load failed.
  * - "load,finished", void: reports load finished.
  * - "load,progress", double*: load progress has changed (value from 0.0 to 1.0).
- * - "load,provisional,failed", const Ewk_Web_Error*: view provisional load failed.
+ * - "load,provisional,failed", const Ewk_Error*: view provisional load failed.
  * - "load,provisional,redirect", void: view received redirect for provisional load.
  * - "load,provisional,started", void: view started provisional load.
  * - "policy,decision,navigation", Ewk_Navigation_Policy_Decision*: a navigation policy decision should be taken.
@@ -56,14 +57,14 @@
  * - "policy,decision,new,window", Ewk_Navigation_Policy_Decision*: a new window policy decision should be taken.
  *   To make a policy decision asynchronously, simply increment the reference count of the
  *   #Ewk_Navigation_Policy_Decision object using ewk_navigation_policy_decision_ref().
- * - "resource,request,failed", const Ewk_Web_Resource_Load_Error*: a resource failed loading.
- * - "resource,request,finished", const Ewk_Web_Resource*: a resource finished loading.
- * - "resource,request,new", const Ewk_Web_Resource_Request*: a resource request was initiated.
- * - "resource,request,response", Ewk_Web_Resource_Load_Response*: a response to a resource request was received.
- * - "resource,request,sent", const Ewk_Web_Resource_Request*: a resource request was sent.
+ * - "resource,request,failed", const Ewk_Resource_Load_Error*: a resource failed loading.
+ * - "resource,request,finished", const Ewk_Resource*: a resource finished loading.
+ * - "resource,request,new", const Ewk_Resource_Request*: a resource request was initiated.
+ * - "resource,request,response", Ewk_Resource_Load_Response*: a response to a resource request was received.
+ * - "resource,request,sent", const Ewk_Resource_Request*: a resource request was sent.
  * - "text,found", unsigned int*: the requested text was found and it gives the number of matches.
  * - "title,changed", const char*: title of the main frame was changed.
- * - "uri,changed", const char*: uri of the main frame was changed.
+ * - "url,changed", const char*: url of the main frame was changed.
  * - "webprocess,crashed", Eina_Bool*: expects a @c EINA_TRUE if web process crash is handled; @c EINA_FALSE, otherwise.
  */
 
@@ -73,13 +74,13 @@
 #include "ewk_back_forward_list.h"
 #include "ewk_context.h"
 #include "ewk_download_job.h"
+#include "ewk_error.h"
 #include "ewk_intent.h"
+#include "ewk_resource.h"
 #include "ewk_settings.h"
 #include "ewk_touch.h"
 #include "ewk_url_request.h"
 #include "ewk_url_response.h"
-#include "ewk_web_error.h"
-#include "ewk_web_resource.h"
 #include <Evas.h>
 
 #ifdef __cplusplus
@@ -201,40 +202,40 @@ struct _Ewk_View_Smart_Data {
     } changed;
 };
 
-/// Creates a type name for _Ewk_Web_Resource_Request.
-typedef struct _Ewk_Web_Resource_Request Ewk_Web_Resource_Request;
+/// Creates a type name for _Ewk_Resource_Request.
+typedef struct _Ewk_Resource_Request Ewk_Resource_Request;
 
 /**
  * @brief Structure containing details about a resource request.
  */
-struct _Ewk_Web_Resource_Request {
-    Ewk_Web_Resource *resource; /**< resource being requested */
+struct _Ewk_Resource_Request {
+    Ewk_Resource *resource; /**< resource being requested */
     Ewk_Url_Request *request; /**< URL request for the resource */
     Ewk_Url_Response *redirect_response; /**< Possible redirect response for the resource or @c NULL */
 };
 
-/// Creates a type name for _Ewk_Web_Resource_Load_Response.
-typedef struct _Ewk_Web_Resource_Load_Response Ewk_Web_Resource_Load_Response;
+/// Creates a type name for _Ewk_Resource_Load_Response.
+typedef struct _Ewk_Resource_Load_Response Ewk_Resource_Load_Response;
 
 /**
  * @brief Structure containing details about a response to a resource request.
  */
-struct _Ewk_Web_Resource_Load_Response {
-     Ewk_Web_Resource *resource; /**< resource requested */
-     Ewk_Url_Response *response; /**< resource load response */
+struct _Ewk_Resource_Load_Response {
+    Ewk_Resource *resource; /**< resource requested */
+    Ewk_Url_Response *response; /**< resource load response */
 };
 
-/// Creates a type name for _Ewk_Web_Resource_Load_Error.
-typedef struct _Ewk_Web_Resource_Load_Error Ewk_Web_Resource_Load_Error;
+/// Creates a type name for _Ewk_Resource_Load_Error.
+typedef struct _Ewk_Resource_Load_Error Ewk_Resource_Load_Error;
 
 /**
  * @brief Structure containing details about a resource load error.
  *
  * Details given about a resource load failure.
  */
-struct _Ewk_Web_Resource_Load_Error {
-    Ewk_Web_Resource *resource; /**< resource that failed loading */
-    Ewk_Web_Error *error; /**< load error */
+struct _Ewk_Resource_Load_Error {
+    Ewk_Resource *resource; /**< resource that failed loading */
+    Ewk_Error *error; /**< load error */
 };
 
 /// Creates a type name for _Ewk_Download_Job_Error.
@@ -245,7 +246,7 @@ typedef struct _Ewk_Download_Job_Error Ewk_Download_Job_Error;
  */
 struct _Ewk_Download_Job_Error {
     Ewk_Download_Job *download_job; /**< download that failed */
-    Ewk_Web_Error *error; /**< download error */
+    Ewk_Error *error; /**< download error */
 };
 
 /**
@@ -333,27 +334,27 @@ EAPI Evas_Object *ewk_view_add_with_context(Evas *e, Ewk_Context *context);
 EAPI Ewk_Context *ewk_view_context_get(const Evas_Object *o);
 
 /**
- * Asks the object to load the given URI.
+ * Asks the object to load the given URL.
  *
- * @param o view object to load @a URI
- * @param uri uniform resource identifier to load
+ * @param o view object to load @a URL
+ * @param url uniform resource identifier to load
  *
  * @return @c EINA_TRUE is returned if @a o is valid, irrespective of load,
  *         or @c EINA_FALSE on failure
  */
-EAPI Eina_Bool ewk_view_uri_set(Evas_Object *o, const char *uri);
+EAPI Eina_Bool ewk_view_url_set(Evas_Object *o, const char *url);
 
 /**
- * Returns the current URI string of view object.
+ * Returns the current URL string of view object.
  *
  * It returns an internal string and should not
  * be modified. The string is guaranteed to be stringshared.
  *
- * @param o view object to get current URI
+ * @param o view object to get current URL
  *
- * @return current URI on success or @c NULL on failure
+ * @return current URL on success or @c NULL on failure
  */
-EAPI const char *ewk_view_uri_get(const Evas_Object *o);
+EAPI const char *ewk_view_url_get(const Evas_Object *o);
 
 /**
  * Asks the main frame to reload the current document.
@@ -617,25 +618,48 @@ EAPI const char  *ewk_view_setting_encoding_custom_get(const Evas_Object *o);
 EAPI Eina_Bool    ewk_view_setting_encoding_custom_set(Evas_Object *o, const char *encoding);
 
 /**
-* Searches the given string in the document.
-*
-* @param o view object to find text
-* @param text text to find
-* @param options options to find
-* @param max count to find, unlimited if 0
-*
-* @return @c EINA_TRUE on success, @c EINA_FALSE on errors
-*/
+ * Searches and hightlights the given string in the document.
+ *
+ * @param o view object to find text
+ * @param text text to find
+ * @param options options to find
+ * @param max_match_count maximum match count to find, unlimited if 0
+ *
+ * @return @c EINA_TRUE on success, @c EINA_FALSE on errors
+ */
 EAPI Eina_Bool ewk_view_text_find(Evas_Object *o, const char *text, Ewk_Find_Options options, unsigned max_match_count);
 
 /**
-* Clears the highlight of searched text.
-*
-* @param o view object to find text
-*
-* @return @c EINA_TRUE on success, @c EINA_FALSE on errors
-*/
+ * Clears the highlight of searched text.
+ *
+ * @param o view object to find text
+ *
+ * @return @c EINA_TRUE on success, @c EINA_FALSE on errors
+ */
 EAPI Eina_Bool ewk_view_text_find_highlight_clear(Evas_Object *o);
+
+/**
+ * Counts the given string in the document.
+ *
+ * This does not highlight the matched string and just count the matched string.
+ *
+ * As the search is carried out through the whole document,
+ * only the following EWK_FIND_OPTIONS are valid.
+ *  - EWK_FIND_OPTIONS_NONE
+ *  - EWK_FIND_OPTIONS_CASE_INSENSITIVE
+ *  - EWK_FIND_OPTIONS_AT_WORD_START
+ *  - EWK_FIND_OPTIONS_TREAT_MEDIAL_CAPITAL_AS_WORD_START
+ *
+ * The "text,found" callback will be called with the number of matched string.
+ *
+ * @param o view object to find text
+ * @param text text to find
+ * @param options options to find
+ * @param max_match_count maximum match count to find, unlimited if 0
+ *
+ * @return @c EINA_TRUE on success, @c EINA_FALSE on errors
+ */
+EAPI Eina_Bool ewk_view_text_matches_count(Evas_Object *o, const char *text, Ewk_Find_Options options, unsigned max_match_count);
 
 /**
  * Selects index of current popup menu.
@@ -733,6 +757,26 @@ EAPI Eina_Bool ewk_view_touch_events_enabled_set(Evas_Object *o, Eina_Bool enabl
  * @return @c EINA_TRUE if the touch events are enabled or @c EINA_FALSE otherwise
  */
 EAPI Eina_Bool ewk_view_touch_events_enabled_get(const Evas_Object *o);
+
+/**
+ * Show the inspector to debug a web page.
+ *
+ * @param o The view to show the inspector.
+ *
+ * @return @c EINA_TRUE on success or @c EINA_FALSE on failure
+ *
+ * @see ewk_settings_developer_extras_enabled_set()
+ */
+EAPI Eina_Bool ewk_view_inspector_show(Evas_Object *o);
+
+/**
+ * Close the inspector
+ *
+ * @param o The view to close the inspector.
+ *
+ * @return @c EINA_TRUE on success or @c EINA_FALSE on failure
+ */
+EAPI Eina_Bool ewk_view_inspector_close(Evas_Object *o);
 
 #ifdef __cplusplus
 }

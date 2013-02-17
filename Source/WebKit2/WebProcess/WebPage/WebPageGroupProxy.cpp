@@ -28,6 +28,8 @@
 
 #include "WebProcess.h"
 #include "InjectedBundle.h"
+#include <WebCore/DOMWrapperWorld.h>
+#include <WebCore/PageGroup.h>
 
 namespace WebKit {
 
@@ -49,11 +51,40 @@ void WebPageGroupProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreI
 {
     didReceiveWebPageGroupProxyMessage(connection, messageID, arguments);
 }
-
-void WebPageGroupProxy::didReceiveWebPageGroupProxyMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::ArgumentDecoder*)
+    
+WebPageGroupProxy::WebPageGroupProxy(const WebPageGroupData& data)
+    : m_data(data)
+    , m_pageGroup(WebCore::PageGroup::pageGroup(m_data.identifer))
 {
-    // FIXME: Remove this once WebPageGroupProxy.messages.in contains messages,
-    // in which case this method will be auto-generated.
+    for (size_t i = 0; i < data.userStyleSheets.size(); ++i)
+        addUserStyleSheet(data.userStyleSheets[i]);
+    for (size_t i = 0; i < data.userScripts.size(); ++i)
+        addUserScript(data.userScripts[i]);
+}
+
+void WebPageGroupProxy::addUserStyleSheet(const WebCore::UserStyleSheet& userStyleSheet)
+{
+    m_pageGroup->addUserStyleSheetToWorld(WebCore::mainThreadNormalWorld(), userStyleSheet.source(), userStyleSheet.url(), userStyleSheet.whitelist(), userStyleSheet.blacklist(), userStyleSheet.injectedFrames(), userStyleSheet.level());
+}
+
+void WebPageGroupProxy::addUserScript(const WebCore::UserScript& userScript)
+{
+    m_pageGroup->addUserScriptToWorld(WebCore::mainThreadNormalWorld(), userScript.source(), userScript.url(), userScript.whitelist(), userScript.blacklist(), userScript.injectionTime(), userScript.injectedFrames());
+}
+
+void WebPageGroupProxy::removeAllUserStyleSheets()
+{
+    m_pageGroup->removeUserStyleSheetsFromWorld(WebCore::mainThreadNormalWorld());
+}
+
+void WebPageGroupProxy::removeAllUserScripts()
+{
+    m_pageGroup->removeUserStyleSheetsFromWorld(WebCore::mainThreadNormalWorld());
+}
+
+void WebPageGroupProxy::removeAllUserContent()
+{
+    m_pageGroup->removeAllUserContent();
 }
 
 } // namespace WebKit

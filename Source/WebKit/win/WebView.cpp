@@ -6227,15 +6227,14 @@ void WebView::exitFullscreen()
 #endif
 }
 
-static PassOwnPtr<Vector<String> > toStringVector(unsigned patternsCount, BSTR* patterns)
+static Vector<String> toStringVector(unsigned patternsCount, BSTR* patterns)
 {
-    // Convert the patterns into a Vector.
-    if (patternsCount == 0)
-        return nullptr;
-    OwnPtr<Vector<String> > patternsVector = adoptPtr(new Vector<String>);
+    Vector<String> patternsVector;
+    if (!patternsCount)
+        return patternsVector;
     for (unsigned i = 0; i < patternsCount; ++i)
-        patternsVector->append(toString(patterns[i]));
-    return patternsVector.release();
+        patternsVector.append(toString(patterns[i]));
+    return patternsVector;
 }
 
 HRESULT WebView::addUserScriptToGroup(BSTR groupName, IWebScriptWorld* iWorld, BSTR source, BSTR url, 
@@ -6631,7 +6630,7 @@ void WebView::notifyAnimationStarted(const GraphicsLayer*, double)
     ASSERT_NOT_REACHED();
 }
 
-void WebView::notifySyncRequired(const GraphicsLayer*)
+void WebView::notifyFlushRequired(const GraphicsLayer*)
 {
     flushPendingGraphicsLayerChangesSoon();
 }
@@ -6673,9 +6672,9 @@ void WebView::flushPendingGraphicsLayerChanges()
 
     // Updating layout might have taken us out of compositing mode.
     if (m_backingLayer)
-        m_backingLayer->syncCompositingStateForThisLayerOnly();
+        m_backingLayer->flushCompositingStateForThisLayerOnly();
 
-    view->syncCompositingStateIncludingSubframes();
+    view->flushCompositingStateIncludingSubframes();
 }
 
 #endif

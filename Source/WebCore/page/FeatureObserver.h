@@ -41,7 +41,7 @@ public:
     enum Feature {
         PageDestruction,
         LegacyNotifications,
-        LegacyBlobBuilder,
+        UnusedSlot01, // Prior to 10/2012, we used this slot for LegacyBlobBuilder.
         PrefixedIndexedDB,
         WorkerStart,
         SharedWorkerStart,
@@ -50,6 +50,10 @@ public:
         PrefixedContentSecurityPolicy,
         UnprefixedIndexedDB,
         OpenWebDatabase,
+        LegacyHTMLNotifications,
+        LegacyTextNotifications,
+        UnprefixedRequestAnimationFrame,
+        PrefixedRequestAnimationFrame,
         // Add new features above this line.
         NumberOfFeatures, // This enum value must be last.
     };

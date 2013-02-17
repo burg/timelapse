@@ -32,16 +32,15 @@
 #include "WKURL.h"
 #include "WKURLRequest.h"
 #include "WKURLResponse.h"
+#include "ewk_error_private.h"
+#include "ewk_resource.h"
+#include "ewk_resource_private.h"
 #include "ewk_url_request.h"
 #include "ewk_url_request_private.h"
 #include "ewk_url_response.h"
 #include "ewk_url_response_private.h"
 #include "ewk_view_private.h"
 #include "ewk_view_resource_load_client_private.h"
-#include "ewk_web_error.h"
-#include "ewk_web_error_private.h"
-#include "ewk_web_resource.h"
-#include "ewk_web_resource_private.h"
 #include <wtf/text/CString.h>
 
 using namespace WebCore;
@@ -57,10 +56,10 @@ static void didInitiateLoadForResource(WKPageRef, WKFrameRef wkFrame, uint64_t r
     bool isMainResource = (WKFrameIsMainFrame(wkFrame) && pageIsProvisionallyLoading);
     WKRetainPtr<WKURLRef> wkUrl(AdoptWK, WKURLRequestCopyURL(wkRequest));
 
-    Ewk_Web_Resource* resource = ewk_web_resource_new(toImpl(wkUrl.get())->string().utf8().data(), isMainResource);
+    Ewk_Resource* resource = ewk_resource_new(toImpl(wkUrl.get())->string().utf8().data(), isMainResource);
     Ewk_Url_Request* request = ewk_url_request_new(wkRequest);
     ewk_view_resource_load_initiated(toEwkView(clientInfo), resourceIdentifier, resource, request);
-    ewk_web_resource_unref(resource);
+    ewk_resource_unref(resource);
     ewk_url_request_unref(request);
 }
 
@@ -88,10 +87,10 @@ static void didFinishLoadForResource(WKPageRef, WKFrameRef, uint64_t resourceIde
 
 static void didFailLoadForResource(WKPageRef, WKFrameRef, uint64_t resourceIdentifier, WKErrorRef wkError, const void* clientInfo)
 {
-    Ewk_Web_Error* ewkError = ewk_web_error_new(wkError);
+    Ewk_Error* ewkError = ewk_error_new(wkError);
     ewk_view_resource_load_failed(toEwkView(clientInfo), resourceIdentifier, ewkError);
     ewk_view_resource_load_finished(toEwkView(clientInfo), resourceIdentifier);
-    ewk_web_error_free(ewkError);
+    ewk_error_free(ewkError);
 }
 
 void ewk_view_resource_load_client_attach(WKPageRef pageRef, Evas_Object* ewkView)

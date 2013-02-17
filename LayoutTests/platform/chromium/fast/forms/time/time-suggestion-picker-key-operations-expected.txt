@@ -27,8 +27,7 @@ Reopen popup.
 Check that escape key closes the popup.
 PASS document.getElementById("mock-page-popup") is null
 PASS document.getElementById("time").value is "02:07"
-Reopen popup.
 PASS successfullyParsed is true
 
 TEST COMPLETE
- 
+

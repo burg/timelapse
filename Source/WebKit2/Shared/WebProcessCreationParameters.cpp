@@ -42,6 +42,7 @@ WebProcessCreationParameters::WebProcessCreationParameters()
     , nsURLCacheMemoryCapacity(0)
     , nsURLCacheDiskCapacity(0)
     , shouldForceScreenFontSubstitution(false)
+    , shouldEnableKerningAndLigaturesByDefault(false)
 #elif PLATFORM(WIN)
     , shouldPaintNativeControls(false)
 #endif
@@ -65,7 +66,6 @@ void WebProcessCreationParameters::encode(CoreIPC::ArgumentEncoder* encoder) con
     encoder->encode(urlSchemesRegisteredAsNoAccess);
     encoder->encode(urlSchemesRegisteredAsDisplayIsolated);
     encoder->encode(urlSchemesRegisteredAsCORSEnabled);
-    encoder->encode(mimeTypesWithCustomRepresentation);
     encoder->encodeEnum(cacheModel);
     encoder->encode(shouldTrackVisitedLinks);
     encoder->encode(shouldAlwaysUseComplexTextCodePath);
@@ -90,6 +90,7 @@ void WebProcessCreationParameters::encode(CoreIPC::ArgumentEncoder* encoder) con
     encoder->encode(uiProcessBundleResourcePath);
     encoder->encode(uiProcessBundleResourcePathExtensionHandle);
     encoder->encode(shouldForceScreenFontSubstitution);
+    encoder->encode(shouldEnableKerningAndLigaturesByDefault);
 #elif PLATFORM(WIN)
     encoder->encode(shouldPaintNativeControls);
     encoder->encode(cfURLCachePath);
@@ -145,8 +146,6 @@ bool WebProcessCreationParameters::decode(CoreIPC::ArgumentDecoder* decoder, Web
         return false;
     if (!decoder->decode(parameters.urlSchemesRegisteredAsCORSEnabled))
         return false;
-    if (!decoder->decode(parameters.mimeTypesWithCustomRepresentation))
-        return false;
     if (!decoder->decodeEnum(parameters.cacheModel))
         return false;
     if (!decoder->decode(parameters.shouldTrackVisitedLinks))
@@ -192,6 +191,8 @@ bool WebProcessCreationParameters::decode(CoreIPC::ArgumentDecoder* decoder, Web
     if (!decoder->decode(parameters.uiProcessBundleResourcePathExtensionHandle))
         return false;
     if (!decoder->decode(parameters.shouldForceScreenFontSubstitution))
+        return false;
+    if (!decoder->decode(parameters.shouldEnableKerningAndLigaturesByDefault))
         return false;
 #elif PLATFORM(WIN)
     if (!decoder->decode(parameters.shouldPaintNativeControls))

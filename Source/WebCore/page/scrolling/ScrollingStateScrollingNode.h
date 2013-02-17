@@ -39,7 +39,7 @@ namespace WebCore {
 
 class ScrollingStateScrollingNode : public ScrollingStateNode {
 public:
-    static PassOwnPtr<ScrollingStateScrollingNode> create(ScrollingStateTree*);
+    static PassOwnPtr<ScrollingStateScrollingNode> create(ScrollingStateTree*, ScrollingNodeID);
     virtual ~ScrollingStateScrollingNode();
 
     enum ChangedProperty {
@@ -56,13 +56,17 @@ public:
         VerticalScrollbarMode = 1 << 10,
         ScrollOrigin = 1 << 11,
         RequestedScrollPosition = 1 << 12,
+        All = (1 << 13) - 1 // This will need to be updated if we add or remove anything the ChangedProperties.
     };
+
+    virtual bool isScrollingStateScrollingNode() OVERRIDE { return true; }
 
     virtual PassOwnPtr<ScrollingStateNode> cloneAndResetNode() OVERRIDE;
 
     virtual bool hasChangedProperties() const OVERRIDE { return m_changedProperties; }
     virtual unsigned changedProperties() const OVERRIDE { return m_changedProperties; }
     virtual void resetChangedProperties() OVERRIDE { m_changedProperties = 0; }
+    virtual void setHasChangedProperties();
 
     const IntRect& viewportRect() const { return m_viewportRect; }
     void setViewportRect(const IntRect&);
@@ -106,7 +110,7 @@ public:
     bool requestedScrollPositionRepresentsProgrammaticScroll() const { return m_requestedScrollPositionRepresentsProgrammaticScroll; }
 
 private:
-    ScrollingStateScrollingNode(ScrollingStateTree*);
+    ScrollingStateScrollingNode(ScrollingStateTree*, ScrollingNodeID);
     ScrollingStateScrollingNode(ScrollingStateScrollingNode*);
 
     unsigned m_changedProperties;
@@ -133,6 +137,15 @@ private:
     IntPoint m_requestedScrollPosition;
     IntPoint m_scrollOrigin;
 };
+
+inline ScrollingStateScrollingNode* toScrollingStateScrollingNode(ScrollingStateNode* node)
+{
+    ASSERT(!node || node->isScrollingStateScrollingNode());
+    return static_cast<ScrollingStateScrollingNode*>(node);
+}
+    
+// This will catch anyone doing an unnecessary cast.
+void toScrollingStateScrollingNode(const ScrollingStateScrollingNode*);
 
 } // namespace WebCore
 

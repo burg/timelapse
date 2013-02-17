@@ -435,22 +435,30 @@ bool EventHandler::updateSelectionForMouseDownDispatchingSelectStart(Node* targe
     return true;
 }
 
-void EventHandler::selectClosestWordFromMouseEvent(const MouseEventWithHitTestResults& result)
+void EventHandler::selectClosestWordFromHitTestResult(const HitTestResult& result, AppendTrailingWhitespace appendTrailingWhitespace)
 {
     Node* innerNode = result.targetNode();
     VisibleSelection newSelection;
 
-    if (innerNode && innerNode->renderer() && m_mouseDownMayStartSelect) {
+    if (innerNode && innerNode->renderer()) {
         VisiblePosition pos(innerNode->renderer()->positionForPoint(result.localPoint()));
         if (pos.isNotNull()) {
             newSelection = VisibleSelection(pos);
             newSelection.expandUsingGranularity(WordGranularity);
         }
 
-        if (newSelection.isRange() && result.event().clickCount() == 2 && m_frame->editor()->isSelectTrailingWhitespaceEnabled()) 
+        if (appendTrailingWhitespace == ShouldAppendTrailingWhitespace && newSelection.isRange())
             newSelection.appendTrailingWhitespace();
 
         updateSelectionForMouseDownDispatchingSelectStart(innerNode, newSelection, WordGranularity);
+    }
+}
+
+void EventHandler::selectClosestWordFromMouseEvent(const MouseEventWithHitTestResults& result)
+{
+    if (m_mouseDownMayStartSelect) {
+        selectClosestWordFromHitTestResult(result.hitTestResult(),
+            (result.event().clickCount() == 2 && m_frame->editor()->isSelectTrailingWhitespaceEnabled()) ? ShouldAppendTrailingWhitespace : DontAppendTrailingWhitespace);
     }
 }
 
@@ -1689,8 +1697,8 @@ static RenderLayer* layerForNode(Node* node)
 
 bool EventHandler::mouseMoved(const PlatformMouseEvent& event)
 {
-    MaximumDurationTracker maxDurationTracker(&m_maxMouseMovedDuration);
     RefPtr<FrameView> protector(m_frame->view());
+    MaximumDurationTracker maxDurationTracker(&m_maxMouseMovedDuration);
 
 
 #if ENABLE(TOUCH_EVENTS)
@@ -2171,8 +2179,8 @@ void EventHandler::updateMouseEventTargetNode(Node* targetNode, const PlatformMo
     else {
         // If the target node is a text node, dispatch on the parent node - rdar://4196646
         if (result && result->isTextNode()) {
-            ComposedShadowTreeParentWalker walker(result);
-            walker.parentIncludingInsertionPointAndShadowRoot();
+            AncestorChainWalker walker(result);
+            walker.parent();
             result = walker.get();
         }
     }
@@ -2519,8 +2527,9 @@ bool EventHandler::handleGestureEvent(const PlatformGestureEvent& gestureEvent)
         return handleGestureTap(gestureEvent);
     case PlatformEvent::GestureTapDown:
         return handleGestureTapDown();
-    case PlatformEvent::GestureDoubleTap:
     case PlatformEvent::GestureLongPress:
+        return handleGestureLongPress(gestureEvent);
+    case PlatformEvent::GestureDoubleTap:
     case PlatformEvent::GesturePinchBegin:
     case PlatformEvent::GesturePinchEnd:
     case PlatformEvent::GesturePinchUpdate:
@@ -2565,6 +2574,25 @@ bool EventHandler::handleGestureTap(const PlatformGestureEvent& gestureEvent)
     defaultPrevented |= handleMouseReleaseEvent(fakeMouseUp);
 
     return defaultPrevented;
+}
+
+bool EventHandler::handleGestureLongPress(const PlatformGestureEvent& gestureEvent)
+{
+#if OS(ANDROID)
+    IntPoint hitTestPoint = m_frame->view()->windowToContents(gestureEvent.position());
+    HitTestResult result = hitTestResultAtPoint(hitTestPoint, true);
+    Node* innerNode = result.targetNode();
+    if (!result.isLiveLink() && innerNode && (innerNode->isContentEditable() || innerNode->isTextNode())) {
+        selectClosestWordFromHitTestResult(result, DontAppendTrailingWhitespace);
+        if (m_frame->selection()->isRange())
+            return true;
+    }
+#endif
+#if ENABLE(CONTEXT_MENUS)
+    return sendContextMenuEventForGesture(gestureEvent);
+#else
+    return false;
+#endif
 }
 
 bool EventHandler::handleGestureScrollUpdate(const PlatformGestureEvent& gestureEvent)
@@ -3678,6 +3706,9 @@ bool EventHandler::handleTouchEvent(const PlatformTouchEvent& event)
             if (node->isTextNode())
                 node = node->parentNode();
 
+            if (InspectorInstrumentation::handleTouchEvent(m_frame->page(), node))
+                return true;
+
             Document* doc = node->document();
             if (!doc)
                 continue;
@@ -3731,7 +3762,7 @@ bool EventHandler::handleTouchEvent(const PlatformTouchEvent& event)
         // released or cancelled it will only appear in the changedTouches list.
         if (pointState != PlatformTouchPoint::TouchReleased && pointState != PlatformTouchPoint::TouchCancelled) {
             touches->append(touch);
-            targetTouchesIterator->second->append(touch);
+            targetTouchesIterator->value->append(touch);
         }
 
         // Now build up the correct list for changedTouches.

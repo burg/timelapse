@@ -22955,7 +22955,6 @@
 				>
 			</File>
 			<File
-			<File
 				RelativePath="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\JSWebKitCSSFilterValue.cpp"
 				>
 				<FileConfiguration
@@ -25555,6 +25554,14 @@
 					>
 				</File>
 				<File
+					RelativePath="..\Modules\websockets\WebSocketExtensionParser.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\Modules\websockets\WebSocketExtensionParser.h"
+					>
+				</File>
+				<File
 					RelativePath="..\Modules\websockets\WebSocketExtensionProcessor.h"
 					>
 				</File>
@@ -27252,10 +27259,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\page\scrolling\ScrollingCoordinatorNone.cpp"
-				>
-			</File>
-			<File
 				RelativePath="..\page\SecurityOrigin.cpp"
 				>
 			</File>
@@ -27689,6 +27692,14 @@
 			</File>
 			<File
 				RelativePath="..\loader\ProgressTracker.h"
+				>
+			</File>
+			<File
+				RelativePath="..\loader\ResourceBuffer.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\loader\ResourceBuffer.h"
 				>
 			</File>
 			<File
@@ -31831,6 +31842,10 @@
 					>
 					<File
 						RelativePath="..\platform\graphics\filters\CustomFilterArrayParameter.h"
+						>
+					</File>
+					<File
+						RelativePath="..\platform\graphics\filters\CustomFilterConstants.h"
 						>
 					</File>
 					<File
@@ -37692,6 +37707,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\css\SiblingTraversalStrategies.h"
+				>
+			</File>
+			<File
 				RelativePath="..\css\StyleBuilder.cpp"
 				>
 				<FileConfiguration
@@ -38353,6 +38372,14 @@
                         </File>
                         <File
                                 RelativePath="..\rendering\ExclusionInterval.h"
+                                >
+                        </File>
+                        <File
+                                RelativePath="..\rendering\ExclusionPolygon.cpp"
+                                >
+                        </File>
+                        <File
+                                RelativePath="..\rendering\ExclusionPolygon.h"
                                 >
                         </File>
                         <File
@@ -42149,6 +42176,62 @@
 			</File>
 			<File
 				RelativePath="..\rendering\RenderSlider.h"
+				>
+			</File>
+			<File
+				RelativePath="..\rendering\RenderSnapshottedPlugIn.cpp"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release_Cairo_CFLite|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug_All|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Production|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\rendering\RenderSnapshottedPlugIn.h"
 				>
 			</File>
 			<File

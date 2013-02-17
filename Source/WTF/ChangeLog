@@ -1,3 +1,453 @@
+2012-10-12  Anders Carlsson  <andersca@apple.com>
+
+        Move QDataStream functions into HistoryItemQt.cpp
+        https://bugs.webkit.org/show_bug.cgi?id=99203
+
+        Reviewed by Andreas Kling.
+
+        It seems like the QDataStream stream operators are only used from HistoryItemQt.cpp
+        inside WebCore, so move them there. If in the future they are required elsewhere, they should
+        be moved into a separate header instead of polluting headers unnecessarily.
+
+        * wtf/Vector.h:
+        * wtf/qt/StringQt.cpp:
+        * wtf/text/WTFString.h:
+
+2012-10-12  Michael Saboff  <msaboff@apple.com>
+
+        StringBuilder::append(StringBuilder&) doesn't take into account the bit size of the argument string
+        https://bugs.webkit.org/show_bug.cgi?id=99225
+
+        Reviewed by Benjamin Poulain.
+
+        Added 8 bit path.
+
+        * wtf/text/StringBuilder.h:
+        (WTF::StringBuilder::append):
+
+2012-10-12  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r131224.
+        http://trac.webkit.org/changeset/131224
+        https://bugs.webkit.org/show_bug.cgi?id=99210
+
+        It broke the build (Requested by andersca on #webkit).
+
+        * wtf/Vector.h:
+        (WTF):
+        (WTF::operator<<):
+        (WTF::operator>>):
+        * wtf/qt/StringQt.cpp:
+        (WTF::operator<<):
+        (WTF):
+        (WTF::operator>>):
+        * wtf/text/WTFString.h:
+        (WTF):
+
+2012-10-12  Anders Carlsson  <andersca@apple.com>
+
+        Move QDataStream functions into HistoryItemQt.cpp
+        https://bugs.webkit.org/show_bug.cgi?id=99203
+
+        Reviewed by Andreas Kling.
+
+        It seems like the QDataStream stream operators are only used from HistoryItemQt.cpp
+        inside WebCore, so move them there. If in the future they are required elsewhere, they should
+        be moved into a separate header instead of polluting headers unnecessarily.
+
+        * wtf/Vector.h:
+        * wtf/qt/StringQt.cpp:
+        * wtf/text/WTFString.h:
+
+2012-10-11  Mark Toller  <mark.toller@samsung.com>
+
+        Removed incorrect pthread_mutex_trylock code in an ASSERT in TCMalloc_PageHeap::signalScavenger. This 
+        branch is used by the Webkit GTK code.
+
+        https://bugs.webkit.org/show_bug.cgi?id=97539
+
+        Reviewed by Geoffrey Garen.
+
+        The code was never compiled in, and was functionally broken. There is no need for locking around the 
+        m_scavengeThreadActive flag, however, we should lock pageheap_lock before calling 'shouldScavenge()', as we
+        only want to scavenge when really required, so it's better to wait for any current memory operation to 
+        complete before checking. 
+
+        * wtf/FastMalloc.cpp:
+        (WTF::TCMalloc_PageHeap::signalScavenger):
+
+2012-10-10  Yong Li  <yoli@rim.com>
+
+        [BlackBerry] Define WTF_USE_EXTRA_MACROS in cmake rather than Platform.h
+        https://bugs.webkit.org/show_bug.cgi?id=98819
+
+        Reviewed by Rob Buis.
+
+        And make it depend on SHARED_CORE
+        RIM PR# 221339.
+
+        * wtf/Platform.h:
+
+2012-10-09  Filip Pizlo  <fpizlo@apple.com>
+
+        JSC should infer when indexed storage is contiguous, and optimize for it
+        https://bugs.webkit.org/show_bug.cgi?id=97288
+
+        Reviewed by Mark Hahnenberg.
+
+        Moved out this helpful math utility to MathExtras, since we now use it in
+        multiple places.
+
+        * wtf/MathExtras.h:
+        (timesThreePlusOneDividedByTwo):
+
+2012-10-08  Benjamin Poulain  <benjamin@webkit.org>
+
+        Generalize moving URLComponent's begin position
+        https://bugs.webkit.org/show_bug.cgi?id=98626
+
+        Reviewed by Adam Barth.
+
+        The patch r130609 introduced moving URLComponents's position.
+        It turns out this concept is really useful in the parser so
+        this patch generalize the idea.
+
+        * wtf/url/api/ParsedURL.cpp:
+        (WTF::ParsedURL::removePort):
+        * wtf/url/src/URLCanonEtc.cpp:
+        * wtf/url/src/URLComponent.h:
+        (WTF::URLComponent::moveBy):
+        Rename URLComponent::move() to URLComponent::moveBy() for consistency
+        with some of WebCore types.
+
+        * wtf/url/src/URLParse.cpp:
+        * wtf/url/src/URLParseFile.cpp:
+
+        * wtf/url/src/URLSegments.cpp:
+        (WTF::URLSegments::moveFromComponentBy):
+        Change the semantic to everything from a certain component. This is
+        useful to move everything, including the scheme.
+
+        * wtf/url/src/URLSegments.h:
+        (URLSegments):
+
+2012-10-08  Andreas Kling  <kling@webkit.org>
+
+        Lower minimum table size of WTF::HashTable to reduce memory usage.
+        <http://webkit.org/b/98406>
+        <rdar://problem/12432140>
+
+        Reviewed by Anders Carlsson.
+
+        Lower the default minimumTableSize for WTF hash tables from 64 to 8 entries.
+        This reduces WebProcess memory consumption by ~16MB on Membuster3 (a 6% progression!)
+
+        No significant movement on PLT or JSC benchmarks on my machine. If there's a perf regression somewhere
+        from this, we can tweak individual tables to have a larger minimumTableSize.
+
+        * wtf/HashTraits.h:
+
+2012-10-08  Andreas Kling  <kling@webkit.org>
+
+        Using float/double as WTF hash table key is unreliable.
+        <http://webkit.org/b/98627>
+
+        Reviewed by Geoffrey Garen.
+
+        Change FloatHash::equal() to do a bitwise compare instead of a logical compare.
+        This fixes a problem where the keys with different binary representation but the
+        same logical value (e.g 0 and -0) could block each other from being found if they
+        ended up in the same hash bucket.
+
+        * wtf/HashFunctions.h:
+        (FloatHash):
+        (WTF::FloatHash::hash):
+        (WTF::FloatHash::equal):
+
+2012-10-08  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r130619.
+        http://trac.webkit.org/changeset/130619
+        https://bugs.webkit.org/show_bug.cgi?id=98634
+
+        Causes many crashes on the EFL bots. (Requested by rakuco on
+        #webkit).
+
+        * wtf/efl/MainThreadEfl.cpp:
+        (WTF::pipeObject):
+        (WTF):
+        (WTF::monitorDispatchFunctions):
+        (WTF::initializeMainThreadPlatform):
+        (WTF::scheduleDispatchFunctionsOnMainThread):
+
+2012-10-08  Byungwoo Lee  <bw80.lee@samsung.com>
+
+        [EFL] Use ecore_main_loop_thread_safe_call_async() to wakeup main loop.
+        https://bugs.webkit.org/show_bug.cgi?id=98505
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Instead of ecore_pipe_write(),
+        use ecore_main_loop_thread_safe_call_async() to wakeup ecore main loop.
+
+        According to the EFL API document, this function is designed to dispatch
+        a function on ecore main loop by avoiding dead lock or race condition. 
+        With this function, webkit doesn't need to maintain ecore pipe also.
+
+        * wtf/efl/MainThreadEfl.cpp:
+        (WTF::monitorDispatchFunctions):
+        (WTF::initializeMainThreadPlatform):
+        (WTF::scheduleDispatchFunctionsOnMainThread):
+
+2012-10-07  Caio Marcelo de Oliveira Filho  <caio.oliveira@openbossa.org>
+
+        Rename first/second to key/value in HashMap iterators
+        https://bugs.webkit.org/show_bug.cgi?id=82784
+
+        Reviewed by Eric Seidel.
+
+        Currently HashMap iterators follow the same interface in std::map: given an
+        iterator it, we use it->first to access the key and it->second to access the
+        value. This patch changes these accesses to it->key and it->value, improving the
+        readability at call sites.
+
+        One potential downside of this change would be the confusion between std::map and
+        HashMap interfaces. However, they are already different in other aspects and the
+        usage of std::map is more an exception than a rule in WebKit code, so we consider
+        the confusion will be less likely to happen.
+
+        * wtf/HashCountedSet.h:
+        (WTF::::add):
+        (WTF::::remove):
+        (WTF::copyToVector):
+        * wtf/HashIterators.h:
+        (WTF::HashTableConstKeysIterator::get):
+        (WTF::HashTableConstValuesIterator::get):
+        (WTF::HashTableKeysIterator::get):
+        (WTF::HashTableValuesIterator::get):
+        * wtf/HashMap.h:
+        (WTF::KeyValuePairKeyExtractor::extract):
+        (WTF::HashMapValueTraits::isEmptyValue):
+        (WTF::HashMapTranslator::translate):
+        (WTF::HashMapTranslatorAdapter::translate):
+        (WTF::::set):
+        (WTF::::get):
+        (WTF::::take):
+        (WTF::operator==):
+        (WTF::deleteAllValues):
+        (WTF::deleteAllKeys):
+        Removed deleteAllPairFirsts() and deleteAllPairSeconds() since they are now unused.
+
+        * wtf/HashTable.h:
+        (WTF::hashTableSwap):
+        (WTF::::checkTableConsistencyExceptSize):
+        * wtf/HashTraits.h:
+        (WTF):
+        (WTF::KeyValuePair::KeyValuePair):
+        (KeyValuePair):
+        (WTF::KeyValuePairHashTraits::constructDeletedValue):
+        (WTF::KeyValuePairHashTraits::isDeletedValue):
+        * wtf/MetaAllocator.cpp:
+        (WTF::MetaAllocator::addFreeSpace):
+        (WTF::MetaAllocator::incrementPageOccupancy):
+        (WTF::MetaAllocator::decrementPageOccupancy):
+        * wtf/RefCountedLeakCounter.cpp:
+        (WTF::RefCountedLeakCounter::~RefCountedLeakCounter):
+        * wtf/RefPtrHashMap.h:
+        (WTF::::set):
+        (WTF::::get):
+        (WTF::::inlineGet):
+        (WTF::::take):
+        * wtf/Spectrum.h:
+        (WTF::Spectrum::add):
+        (WTF::Spectrum::get):
+        (WTF::Spectrum::buildList):
+        * wtf/ThreadingPthreads.cpp:
+        (WTF::identifierByPthreadHandle):
+
+2012-10-07  Benjamin Poulain  <benjamin@webkit.org>
+
+        WTFURL: implement URL port removal for HTMLAnchorElement
+        https://bugs.webkit.org/show_bug.cgi?id=98604
+
+        Reviewed by Adam Barth.
+
+        Add hasStandardScheme() (similar to isStandard from Google URL),
+        hasPort() and removePort() to implement the port removal of KURL.
+
+        * wtf/url/api/ParsedURL.cpp:
+        (WTF::ParsedURL::hasStandardScheme):
+        (WTF::ParsedURL::hasPort):
+        (WTF::ParsedURL::removePort):
+        * wtf/url/api/ParsedURL.h:
+        (ParsedURL):
+        * wtf/url/src/URLComponent.h:
+        (WTF::URLComponent::move):
+        * wtf/url/src/URLSegments.cpp:
+        (WTF::URLSegments::moveComponentsAfter):
+        * wtf/url/src/URLSegments.h:
+        (URLSegments):
+        * wtf/url/src/URLUtil.cpp:
+        (URLUtilities):
+        (WTF::URLUtilities::isStandard):
+        * wtf/url/src/URLUtil.h:
+        (URLUtilities):
+        Remove LowerCaseEqualsASCII() from the interface, make it an internal template.
+
+        (WTF::URLUtilities::isStandard):
+        Since in WebKit, LChar is a superset of char, expose LChar and cast char* to LChar*.
+
+2012-10-06  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Web Inspector: NMI fix String instrumentation the way it was discussed in WK97964
+        https://bugs.webkit.org/show_bug.cgi?id=98500
+
+        Reviewed by Benjamin Poulain.
+
+        Current instrumentation incorrectly covers the case when StringImpl object has been created via StringImpl::createWithTerminatingNullCharacter().
+        Looks like the only way to detect the strings that has been created from literals is to compare the addresses of buffer and stringImpl + 1.
+
+        * wtf/MemoryInstrumentationString.h:
+        (WTF::reportMemoryUsage):
+        * wtf/text/StringImpl.h:
+        (WTF::StringImpl::hasInternalBuffer):
+
+2012-10-06  Benjamin Poulain  <benjamin@webkit.org>
+
+        Fix build of WTFURL after r130187
+        https://bugs.webkit.org/show_bug.cgi?id=98588
+
+        Reviewed by Kentaro Hara.
+
+        * wtf/MemoryInstrumentationParsedURL.h:
+        (WTF::reportMemoryUsage):
+        * wtf/url/api/ParsedURL.h:
+        (WTF::ParsedURL::spec):
+
+2012-10-05  Simon Pena  <spena@igalia.com>
+
+        [GTK] Add support for GBytes in GRefPtr
+        https://bugs.webkit.org/show_bug.cgi?id=98489
+
+        Reviewed by Carlos Garcia Campos.
+
+        Adding support for GBytes in GRefPtr makes it easier
+        for them to be used when adding GResources support,
+        and is more consistent with the rest of the port.
+
+        This calls g_bytes_ref and g_bytes_unref in the implementation
+        of the refPtr and derefPtr template functions, in case the GLib
+        version is met. Otherwise, it does nothing.
+
+        * wtf/gobject/GRefPtr.cpp: Implement templates for ref and deref.
+        (WTF::refGPtr):
+        (WTF):
+        (WTF::derefGPtr):
+        * wtf/gobject/GRefPtr.h:
+        (WTF):
+        * wtf/gobject/GTypedefs.h: Define the GBytes datatype.
+
+2012-10-05  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r130478.
+        http://trac.webkit.org/changeset/130478
+        https://bugs.webkit.org/show_bug.cgi?id=98494
+
+        It broke the Qt build (Requested by Ossy on #webkit).
+
+        * wtf/gobject/GRefPtr.cpp:
+        * wtf/gobject/GRefPtr.h:
+        (WTF):
+        * wtf/gobject/GTypedefs.h:
+
+2012-10-05  Simon Pena  <spena@igalia.com>
+
+        [GTK] Add support for GBytes in GRefPtr
+        https://bugs.webkit.org/show_bug.cgi?id=98489
+
+        Reviewed by Carlos Garcia Campos.
+
+        Adding support for GBytes in GRefPtr makes it easier
+        for them to be used when adding GResources support,
+        and is more consistent with the rest of the port.
+
+        This calls g_bytes_ref and g_bytes_unref in the implementation
+        of the refPtr and derefPtr template functions.
+
+        * wtf/gobject/GRefPtr.cpp: Implement templates for ref and deref.
+        (WTF::refGPtr):
+        (WTF):
+        (WTF::derefGPtr):
+        * wtf/gobject/GRefPtr.h:
+        (WTF):
+        * wtf/gobject/GTypedefs.h: Define the GBytes datatype.
+
+2012-10-04  Dirk Pranke  <dpranke@chromium.org>
+
+        Unreviewed, rolling out r130419.
+        http://trac.webkit.org/changeset/130419
+        https://bugs.webkit.org/show_bug.cgi?id=98406
+
+        broke editing/pasteboard/data-transfer-items.html on chromium
+
+        * wtf/HashTraits.h:
+
+2012-10-04  Andreas Kling  <kling@webkit.org>
+
+        Lower minimum table size of WTF::HashTable to reduce memory usage.
+        <http://webkit.org/b/98406>
+        <rdar://problem/12432140>
+
+        Reviewed by Anders Carlsson.
+
+        Lower the default minimumTableSize for WTF hash tables from 64 to 8 entries.
+        This reduces WebProcess memory consumption by ~16MB on Membuster3 (a 6% progression!)
+
+        No significant movement on PLT or JSC benchmarks on my machine. If there's a perf regression somewhere
+        from this, we can tweak individual tables to have a larger minimumTableSize.
+
+        * wtf/HashTraits.h:
+
+2012-10-04  Michael Saboff  <msaboff@apple.com>
+
+        String::remove will convert an 8 bit string to a 16 bit string
+        https://bugs.webkit.org/show_bug.cgi?id=98299
+
+        Reviewed by Benjamin Poulain.
+
+        Added an 8 bit path to remove().  Added a private templated helper removeInternal.
+
+        * wtf/text/WTFString.cpp:
+        (WTF::String::removeInternal):
+        (WTF::String::remove):
+        * wtf/text/WTFString.h:
+        (String):
+
+2012-10-03  Kangil Han  <kangil.han@samsung.com>
+
+        [Refactoring] Tidy NDEBUG optioning in RefCountedBase.
+        https://bugs.webkit.org/show_bug.cgi?id=98252
+
+        Reviewed by Benjamin Poulain.
+
+        Fixed incomplete implementation for NDEBUG option.
+        Additionally, adopted CHECK_REF_COUNTED_LIFECYCLE definition to suppress abusing NDEBUG option.
+
+        * wtf/RefCounted.h:
+        (WTF):
+        (WTF::RefCountedBase::ref):
+        (WTF::RefCountedBase::hasOneRef):
+        (WTF::RefCountedBase::refCount):
+        (WTF::RefCountedBase::turnOffVerifier):
+        (WTF::RefCountedBase::relaxAdoptionRequirement):
+        (WTF::RefCountedBase::RefCountedBase):
+        (WTF::RefCountedBase::~RefCountedBase):
+        (WTF::RefCountedBase::derefBase):
+        (RefCountedBase):
+        (WTF::adopted):
+        (WTF::RefCountedBase::setMutexForVerifier):
+        (WTF::RefCountedBase::setDispatchQueueForVerifier):
+
 2012-10-03  Yury Semikhatsky  <yurys@chromium.org>
 
         Remove MemoryInstrumentation::addCollectionElements

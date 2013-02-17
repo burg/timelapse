@@ -44,6 +44,9 @@
 #include "DefaultTapHighlight.h"
 #include "DeviceMotionClientBlackBerry.h"
 #include "DeviceOrientationClientBlackBerry.h"
+#if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
+#include "DeviceOrientationClientMock.h"
+#endif
 #include "DragClientBlackBerry.h"
 // FIXME: We should be using DumpRenderTreeClient, but I'm not sure where we should
 // create the DRT_BB object. See PR #120355.
@@ -85,6 +88,9 @@
 #endif
 #include "NetworkManager.h"
 #include "NodeRenderStyle.h"
+#if ENABLE(NAVIGATOR_CONTENT_UTILS)
+#include "NavigatorContentUtilsClientBlackBerry.h"
+#endif
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
 #include "NotificationPresenterImpl.h"
 #endif
@@ -131,6 +137,7 @@
 #if ENABLE(WEBDOM)
 #include "WebDOMDocument.h"
 #endif
+#include "WebKitThreadViewportAccessor.h"
 #include "WebKitVersion.h"
 #include "WebOverlay.h"
 #include "WebOverlay_p.h"
@@ -382,6 +389,7 @@ WebPagePrivate::WebPagePrivate(WebPage* webPage, WebPageClient* client, const In
     , m_transformationMatrix(new TransformationMatrix())
     , m_backingStore(0) // Initialized by init.
     , m_backingStoreClient(0) // Initialized by init.
+    , m_webkitThreadViewportAccessor(0) // Initialized by init.
     , m_inPageSearchManager(new InPageSearchManager(this))
     , m_inputHandler(new InputHandler(this))
     , m_selectionHandler(new SelectionHandler(this))
@@ -431,6 +439,8 @@ WebPagePrivate::WebPagePrivate(WebPage* webPage, WebPageClient* client, const In
         BlackBerry::Platform::DeviceInfo::instance();
         defaultUserAgent();
     }
+
+    AuthenticationChallengeManager::instance()->pageCreated(this);
 }
 
 WebPage::WebPage(WebPageClient* client, const WebString& pageGroupName, const Platform::IntRect& rect)
@@ -442,6 +452,7 @@ WebPage::WebPage(WebPageClient* client, const WebString& pageGroupName, const Pl
 
 WebPagePrivate::~WebPagePrivate()
 {
+    AuthenticationChallengeManager::instance()->pageDeleted(this);
     // Hand the backingstore back to another owner if necessary.
     m_webPage->setVisible(false);
     if (BackingStorePrivate::currentBackingStoreOwner() == m_webPage)
@@ -452,6 +463,9 @@ WebPagePrivate::~WebPagePrivate()
 
     delete m_cookieJar;
     m_cookieJar = 0;
+
+    delete m_webkitThreadViewportAccessor;
+    m_webkitThreadViewportAccessor = 0;
 
     delete m_backingStoreClient;
     m_backingStoreClient = 0;
@@ -533,7 +547,13 @@ void WebPagePrivate::init(const WebString& pageGroupName)
 #else
         WebCore::provideGeolocationTo(m_page, new GeolocationControllerClientBlackBerry(this));
 #endif
-    WebCore::provideDeviceOrientationTo(m_page, new DeviceOrientationClientBlackBerry(this));
+#if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
+    if (getenv("drtRun"))
+        WebCore::provideDeviceOrientationTo(m_page, new DeviceOrientationClientMock);
+    else
+#endif
+        WebCore::provideDeviceOrientationTo(m_page, new DeviceOrientationClientBlackBerry(this));
+
     WebCore::provideDeviceMotionTo(m_page, new DeviceMotionClientBlackBerry(this));
 #if ENABLE(VIBRATION)
     WebCore::provideVibrationTo(m_page, new VibrationClientBlackBerry());
@@ -549,6 +569,10 @@ void WebPagePrivate::init(const WebString& pageGroupName)
 
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     WebCore::provideNotification(m_page, NotificationPresenterImpl::instance());
+#endif
+
+#if ENABLE(NAVIGATOR_CONTENT_UTILS)
+    WebCore::provideNavigatorContentUtilsTo(m_page, new NavigatorContentUtilsClientBlackBerry(this));
 #endif
 
 #if ENABLE(NETWORK_INFO)
@@ -597,11 +621,14 @@ void WebPagePrivate::init(const WebString& pageGroupName)
     m_page->settings()->setInteractiveFormValidationEnabled(true);
     m_page->settings()->setAllowUniversalAccessFromFileURLs(false);
     m_page->settings()->setAllowFileAccessFromFileURLs(false);
+    m_page->settings()->setFixedPositionCreatesStackingContext(true);
 
     m_backingStoreClient = BackingStoreClient::create(m_mainFrame, /* parent frame */ 0, m_webPage);
     // The direct access to BackingStore is left here for convenience since it
     // is owned by BackingStoreClient and then deleted by its destructor.
     m_backingStore = m_backingStoreClient->backingStore();
+
+    m_webkitThreadViewportAccessor = new WebKitThreadViewportAccessor(this);
 
     blockClickRadius = int(roundf(0.35 * Platform::Graphics::Screen::primaryScreen()->pixelsPerInch(0).width())); // The clicked rectangle area should be a fixed unit of measurement.
 
@@ -622,7 +649,6 @@ void WebPagePrivate::init(const WebString& pageGroupName)
     Platform::userInterfaceThreadMessageClient()->dispatchSyncMessage(
             createMethodCallMessage(&WebPagePrivate::createCompositor, this));
 #endif
-    m_page->settings()->setDNSPrefetchingEnabled(true);
 }
 
 class DeferredTaskLoadManualScript: public DeferredTask<&WebPagePrivate::m_wouldLoadManualScript> {
@@ -1432,7 +1458,6 @@ void WebPage::scrollBy(const Platform::IntSize& delta)
 void WebPagePrivate::notifyInRegionScrollStopped()
 {
     if (m_inRegionScroller->d->isActive()) {
-        enqueueRenderingOfClippedContentOfScrollableAreaAfterInRegionScrolling();
         // Notify the client side to clear InRegion scrollable areas before we destroy them here.
         std::vector<Platform::ScrollViewBase*> emptyInRegionScrollableAreas;
         m_client->notifyInRegionScrollableAreasChanged(emptyInRegionScrollableAreas);
@@ -1443,52 +1468,6 @@ void WebPagePrivate::notifyInRegionScrollStopped()
 void WebPage::notifyInRegionScrollStopped()
 {
     d->notifyInRegionScrollStopped();
-}
-
-void WebPagePrivate::enqueueRenderingOfClippedContentOfScrollableAreaAfterInRegionScrolling()
-{
-    // If no scrolling was even performed, bail out.
-    if (m_inRegionScroller->d->m_needsActiveScrollableAreaCalculation)
-        return;
-
-    InRegionScrollableArea* scrollableArea = static_cast<InRegionScrollableArea*>(m_inRegionScroller->d->activeInRegionScrollableAreas()[0]);
-    ASSERT(scrollableArea);
-    Node* scrolledNode = scrollableArea->layer()->enclosingElement();
-
-    if (scrolledNode->isDocumentNode()) {
-        Frame* frame = static_cast<const Document*>(scrolledNode)->frame();
-        ASSERT(frame);
-        if (!frame)
-            return;
-        ASSERT(frame != m_mainFrame);
-        FrameView* view = frame->view();
-        if (!view)
-            return;
-
-        // Steps:
-        // #1 - Get frame rect in contents coords.
-        // #2 - Get the clipped scrollview rect in contents coords.
-        // #3 - Take transform into account for 1 and 2.
-        // #4 - Subtract 2 from 1, so we know exactly which areas of the frame
-        //      are offscreen, and need async repainting.
-        FrameView* mainFrameView = m_mainFrame->view();
-        ASSERT(mainFrameView);
-        IntRect frameRect = view->frameRect();
-        frameRect = frame->tree()->parent()->view()->contentsToWindow(frameRect);
-        frameRect = mainFrameView->windowToContents(frameRect);
-
-        IntRect visibleWindowRect = getRecursiveVisibleWindowRect(view);
-        IntRect visibleContentsRect = mainFrameView->windowToContents(visibleWindowRect);
-
-        IntRect transformedFrameRect = mapToTransformed(frameRect);
-        IntRect transformedVisibleContentsRect = mapToTransformed(visibleContentsRect);
-
-        Platform::IntRectRegion offscreenRegionOfIframe
-            = Platform::IntRectRegion::subtractRegions(Platform::IntRect(transformedFrameRect), Platform::IntRect(transformedVisibleContentsRect));
-
-        if (!offscreenRegionOfIframe.isEmpty())
-            m_backingStore->d->m_renderQueue->addToQueue(RenderQueue::RegularRender, offscreenRegionOfIframe.rects());
-    }
 }
 
 void WebPagePrivate::setHasInRegionScrollableAreas(bool b)
@@ -1841,6 +1820,11 @@ IntPoint WebPagePrivate::transformedMaximumScrollPosition() const
 IntSize WebPagePrivate::transformedActualVisibleSize() const
 {
     return IntSize(m_actualVisibleWidth, m_actualVisibleHeight);
+}
+
+Platform::ViewportAccessor* WebPage::webkitThreadViewportAccessor() const
+{
+    return d->m_webkitThreadViewportAccessor;
 }
 
 Platform::IntSize WebPage::viewportSize() const
@@ -2223,18 +2207,19 @@ bool WebPagePrivate::isActive() const
     return m_client->isActive();
 }
 
-void WebPagePrivate::authenticationChallenge(const KURL& url, const ProtectionSpace& protectionSpace, const Credential& inputCredential, AuthenticationChallengeClient* client)
+void WebPagePrivate::authenticationChallenge(const KURL& url, const ProtectionSpace& protectionSpace, const Credential& inputCredential)
 {
     WebString username;
     WebString password;
+    AuthenticationChallengeManager* authmgr = AuthenticationChallengeManager::instance();
 
 #if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
     if (m_dumpRenderTree) {
         Credential credential(inputCredential, inputCredential.persistence());
         if (m_dumpRenderTree->didReceiveAuthenticationChallenge(credential))
-            client->notifyChallengeResult(url, protectionSpace, AuthenticationChallengeSuccess, credential);
+            authmgr->notifyChallengeResult(url, protectionSpace, AuthenticationChallengeSuccess, credential);
         else
-            client->notifyChallengeResult(url, protectionSpace, AuthenticationChallengeCancelled, inputCredential);
+            authmgr->notifyChallengeResult(url, protectionSpace, AuthenticationChallengeCancelled, inputCredential);
         return;
     }
 #endif
@@ -2255,9 +2240,9 @@ void WebPagePrivate::authenticationChallenge(const KURL& url, const ProtectionSp
 #endif
 
     if (isConfirmed)
-        client->notifyChallengeResult(url, protectionSpace, AuthenticationChallengeSuccess, credential);
+        authmgr->notifyChallengeResult(url, protectionSpace, AuthenticationChallengeSuccess, credential);
     else
-        client->notifyChallengeResult(url, protectionSpace, AuthenticationChallengeCancelled, inputCredential);
+        authmgr->notifyChallengeResult(url, protectionSpace, AuthenticationChallengeCancelled, inputCredential);
 }
 
 PageClientBlackBerry::SaveCredentialType WebPagePrivate::notifyShouldSaveCredential(bool isNew)
@@ -3128,6 +3113,9 @@ void WebPage::destroyWebPageCompositor()
 void WebPage::destroy()
 {
     // TODO: need to verify if this call needs to be made before calling
+    // Close the Inspector to resume the JS engine if it's paused.
+    disableWebInspector();
+
     // WebPage::destroyWebPageCompositor()
     d->m_backingStore->d->suspendScreenAndBackingStoreUpdates();
 
@@ -3262,6 +3250,7 @@ void WebPage::setVisible(bool visible)
         return;
 
     d->setVisible(visible);
+    AuthenticationChallengeManager::instance()->pageVisibilityChanged(d, visible);
 
     if (!visible) {
         d->suspendBackingStore();
@@ -3901,6 +3890,7 @@ void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
                 m_scaleBeforeFullScreen = -1.0;
             }
             m_mainFrame->view()->setScrollPosition(m_scrollOffsetBeforeFullScreen);
+            notifyTransformChanged();
         }
 
         m_backingStore->d->resumeScreenAndBackingStoreUpdates(BackingStore::RenderAndBlit);
@@ -4094,10 +4084,6 @@ bool WebPage::touchEvent(const Platform::TouchEvent& event)
         return false;
 
     if (d->m_page->defersLoading())
-        return false;
-
-    // FIXME: this checks if node search on inspector is enabled, though it might not be optimized.
-    if (InspectorInstrumentation::handleMousePress(d->m_mainFrame->page()))
         return false;
 
     PluginView* pluginView = d->m_fullScreenPluginView.get();
@@ -5416,6 +5402,21 @@ void WebPage::onCertificateStoreLocationSet(const WebString& caPath)
 #endif
 }
 
+void WebPage::enableDNSPrefetch()
+{
+    d->m_page->settings()->setDNSPrefetchingEnabled(true);
+}
+
+void WebPage::disableDNSPrefetch()
+{
+    d->m_page->settings()->setDNSPrefetchingEnabled(false);
+}
+
+bool WebPage::isDNSPrefetchEnabled() const
+{
+    return d->m_page->settings()->dnsPrefetchingEnabled();
+}
+
 void WebPage::enableWebInspector()
 {
     if (!d->m_inspectorClient)
@@ -5882,7 +5883,7 @@ void WebPagePrivate::setNeedsOneShotDrawingSynchronization()
     m_needsOneShotDrawingSynchronization = true;
 }
 
-void WebPagePrivate::notifySyncRequired(const GraphicsLayer*)
+void WebPagePrivate::notifyFlushRequired(const GraphicsLayer*)
 {
     scheduleRootLayerCommit();
 }

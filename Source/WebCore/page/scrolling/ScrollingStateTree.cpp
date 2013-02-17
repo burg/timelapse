@@ -36,8 +36,7 @@ PassOwnPtr<ScrollingStateTree> ScrollingStateTree::create()
 }
 
 ScrollingStateTree::ScrollingStateTree()
-    : m_rootStateNode(ScrollingStateScrollingNode::create(this))
-    , m_hasChangedProperties(false)
+    : m_hasChangedProperties(false)
 {
 }
 
@@ -47,14 +46,46 @@ ScrollingStateTree::~ScrollingStateTree()
 
 PassOwnPtr<ScrollingStateTree> ScrollingStateTree::commit()
 {
-    OwnPtr<ScrollingStateTree> treeState = ScrollingStateTree::create();
-    treeState->setRootStateNode(static_pointer_cast<ScrollingStateScrollingNode>(m_rootStateNode->cloneAndResetNode()));
+    // This function clones and resets the current state tree, but leaves the tree structure intact. 
+    OwnPtr<ScrollingStateTree> treeStateClone = ScrollingStateTree::create();
+    treeStateClone->setRootStateNode(static_pointer_cast<ScrollingStateScrollingNode>(m_rootStateNode->cloneAndResetNode()));
+
+    // Copy the IDs of the nodes that have been removed since the last commit into the clone.
+    treeStateClone->m_nodesRemovedSinceLastCommit.swap(m_nodesRemovedSinceLastCommit);
 
     // Now the clone tree has changed properties, and the original tree does not.
-    treeState->setHasChangedProperties(true);
+    treeStateClone->m_hasChangedProperties = true;
     m_hasChangedProperties = false;
 
-    return treeState.release();
+    return treeStateClone.release();
+}
+
+void ScrollingStateTree::removeNode(ScrollingStateNode* node)
+{
+    ASSERT(m_rootStateNode);
+
+    if (node == m_rootStateNode) {
+        didRemoveNode(m_rootStateNode->scrollingNodeID());
+        m_rootStateNode = 0;
+        return;
+    }
+
+    m_rootStateNode->removeChild(node);
+}
+
+void ScrollingStateTree::didRemoveNode(ScrollingNodeID nodeID)
+{
+    m_nodesRemovedSinceLastCommit.append(nodeID);
+}
+
+void ScrollingStateTree::rootLayerDidChange()
+{
+    // If the root layer has changed, then destroyed and re-created the root state node. That means that the
+    // cached properties in ScrollingStateScrollingNode are no longer reflective of the properties we have
+    // cached over in the ScrollingTree. To resolve this, we will mark all of the properties as having changed
+    // so that the ScrollingTree will be in synch with the state tree.
+    setHasChangedProperties(true);
+    rootStateNode()->setHasChangedProperties();
 }
 
 } // namespace WebCore
