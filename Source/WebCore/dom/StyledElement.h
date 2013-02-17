@@ -37,11 +37,11 @@ class StyledElement : public Element {
 public:
     virtual ~StyledElement();
 
-    virtual const StylePropertySet* additionalAttributeStyle() { return 0; }
+    virtual const StylePropertySet* additionalPresentationAttributeStyle() { return 0; }
     void invalidateStyleAttribute();
 
-    const StylePropertySet* inlineStyle() const { return attributeData() ? attributeData()->inlineStyle() : 0; }
-    StylePropertySet* ensureInlineStyle() { return mutableAttributeData()->ensureMutableInlineStyle(this); }
+    const StylePropertySet* inlineStyle() const { return attributeData() ? attributeData()->m_inlineStyle.get() : 0; }
+    StylePropertySet* ensureMutableInlineStyle();
     
     // Unlike StylePropertySet setters, these implement invalidation.
     bool setInlineStyleProperty(CSSPropertyID, int identifier, bool important = false);
@@ -52,9 +52,9 @@ public:
     
     virtual CSSStyleDeclaration* style() OVERRIDE;
 
-    const StylePropertySet* attributeStyle();
+    const StylePropertySet* presentationAttributeStyle();
 
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) { }
+    virtual void collectStyleForPresentationAttribute(const Attribute&, StylePropertySet*) { }
 
     // May be called by ElementAttributeData::cloneDataFrom().
     enum ShouldReparseStyleAttribute { DoNotReparseStyleAttribute = 0, ReparseStyleAttribute = 1 };
@@ -68,18 +68,19 @@ protected:
 
     virtual bool isPresentationAttribute(const QualifiedName&) const { return false; }
 
-    void addPropertyToAttributeStyle(StylePropertySet*, CSSPropertyID, int identifier);
-    void addPropertyToAttributeStyle(StylePropertySet*, CSSPropertyID, double value, CSSPrimitiveValue::UnitTypes);
-    void addPropertyToAttributeStyle(StylePropertySet*, CSSPropertyID, const String& value);
+    void addPropertyToPresentationAttributeStyle(StylePropertySet*, CSSPropertyID, int identifier);
+    void addPropertyToPresentationAttributeStyle(StylePropertySet*, CSSPropertyID, double value, CSSPrimitiveValue::UnitTypes);
+    void addPropertyToPresentationAttributeStyle(StylePropertySet*, CSSPropertyID, const String& value);
 
     virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const;
 
 private:
     virtual void updateStyleAttribute() const;
     void inlineStyleChanged();
+    PropertySetCSSStyleDeclaration* inlineStyleCSSOMWrapper();
 
     void makePresentationAttributeCacheKey(PresentationAttributeCacheKey&) const;
-    void updateAttributeStyle();
+    void rebuildPresentationAttributeStyle();
 };
 
 inline void StyledElement::invalidateStyleAttribute()
@@ -87,11 +88,13 @@ inline void StyledElement::invalidateStyleAttribute()
     clearIsStyleAttributeValid();
 }
 
-inline const StylePropertySet* StyledElement::attributeStyle()
+inline const StylePropertySet* StyledElement::presentationAttributeStyle()
 {
-    if (attributeStyleDirty())
-        updateAttributeStyle();
-    return attributeData() ? attributeData()->attributeStyle() : 0;
+    if (!attributeData())
+        return 0;
+    if (attributeData()->m_presentationAttributeStyleIsDirty)
+        rebuildPresentationAttributeStyle();
+    return attributeData()->presentationAttributeStyle();
 }
 
 } //namespace

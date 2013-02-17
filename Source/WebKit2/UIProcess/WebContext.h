@@ -69,13 +69,15 @@ class WebResourceCacheManagerProxy;
 #if USE(SOUP)
 class WebSoupRequestManagerProxy;
 #endif
-#if ENABLE(VIBRATION)
-class WebVibrationProxy;
-#endif
 struct StatisticsData;
 struct WebProcessCreationParameters;
     
 typedef GenericCallback<WKDictionaryRef> DictionaryCallback;
+
+#if PLATFORM(MAC)
+extern NSString *SchemeForCustomProtocolRegisteredNotificationName;
+extern NSString *SchemeForCustomProtocolUnregisteredNotificationName;
+#endif
 
 class WebContext : public APIObject, private CoreIPC::MessageReceiver {
 public:
@@ -202,9 +204,6 @@ public:
     WebResourceCacheManagerProxy* resourceCacheManagerProxy() const { return m_resourceCacheManagerProxy.get(); }
 #if USE(SOUP)
     WebSoupRequestManagerProxy* soupRequestManagerProxy() const { return m_soupRequestManagerProxy.get(); }
-#endif
-#if ENABLE(VIBRATION)
-    WebVibrationProxy* vibrationProxy() const { return m_vibrationProxy.get(); }
 #endif
 
     struct Statistics {
@@ -379,9 +378,6 @@ private:
 #if USE(SOUP)
     RefPtr<WebSoupRequestManagerProxy> m_soupRequestManagerProxy;
 #endif
-#if ENABLE(VIBRATION)
-    RefPtr<WebVibrationProxy> m_vibrationProxy;
-#endif
 
 #if PLATFORM(WIN)
     bool m_shouldPaintNativeControls;
@@ -390,6 +386,8 @@ private:
 
 #if PLATFORM(MAC)
     RetainPtr<CFTypeRef> m_enhancedAccessibilityObserver;
+    RetainPtr<CFTypeRef> m_customSchemeRegisteredObserver;
+    RetainPtr<CFTypeRef> m_customSchemeUnregisteredObserver;
 #endif
 
     String m_overrideDatabaseDirectory;

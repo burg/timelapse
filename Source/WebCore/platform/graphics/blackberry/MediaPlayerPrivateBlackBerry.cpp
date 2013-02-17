@@ -40,6 +40,7 @@
 #include "WebPageClient.h"
 
 #include <BlackBerryPlatformDeviceInfo.h>
+#include <BlackBerryPlatformPrimitives.h>
 #include <BlackBerryPlatformSettings.h>
 #include <FrameLoaderClientBlackBerry.h>
 #include <set>
@@ -401,7 +402,7 @@ bool MediaPlayerPrivate::hasAvailableVideoFrame() const
 
 bool MediaPlayerPrivate::hasSingleSecurityOrigin() const
 {
-    return false;
+    return true;
 }
 
 MediaPlayer::MovieLoadType MediaPlayerPrivate::movieLoadType() const
@@ -465,9 +466,11 @@ BlackBerry::Platform::Graphics::Window* MediaPlayerPrivate::getPeerWindow(const 
     return m_platformPlayer->getPeerWindow(uniqueID);
 }
 
-int MediaPlayerPrivate::getWindowPosition(unsigned& x, unsigned& y, unsigned& width, unsigned& height) const
+BlackBerry::Platform::IntRect MediaPlayerPrivate::getWindowScreenRect() const
 {
-    return m_platformPlayer->getWindowPosition(x, y, width, height);
+    unsigned x, y, width, height;
+    m_platformPlayer->getWindowPosition(x, y, width, height);
+    return BlackBerry::Platform::IntRect(x, y, width, height);
 }
 
 const char* MediaPlayerPrivate::mmrContextName()
@@ -746,9 +749,9 @@ void MediaPlayerPrivate::notifyChallengeResult(const KURL& url, const Protection
     if (result != AuthenticationChallengeSuccess || !url.isValid())
         return;
 
-    m_platformPlayer->reloadWithCredential(credential.user().utf8(true).data(),
-                                           credential.password().utf8(true).data(),
-                                           static_cast<MMRAuthChallenge::CredentialPersistence>(credential.persistence()));
+    m_platformPlayer->reloadWithCredential(credential.user().utf8(String::StrictConversion).data(),
+                                        credential.password().utf8(String::StrictConversion).data(),
+                                        static_cast<MMRAuthChallenge::CredentialPersistence>(credential.persistence()));
 }
 
 void MediaPlayerPrivate::onAuthenticationAccepted(const MMRAuthChallenge& authChallenge) const

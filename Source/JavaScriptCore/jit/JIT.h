@@ -474,7 +474,9 @@ namespace JSC {
         // Property is int-checked and zero extended. Base is cell checked.
         // Structure is already profiled. Returns the slow cases. Fall-through
         // case contains result in regT0, and it is not yet profiled.
-        JumpList emitContiguousGetByVal(Instruction*, PatchableJump& badType);
+        JumpList emitInt32GetByVal(Instruction* instruction, PatchableJump& badType) { return emitContiguousGetByVal(instruction, badType, Int32Shape); }
+        JumpList emitDoubleGetByVal(Instruction*, PatchableJump& badType);
+        JumpList emitContiguousGetByVal(Instruction*, PatchableJump& badType, IndexingType expectedShape = ContiguousShape);
         JumpList emitArrayStorageGetByVal(Instruction*, PatchableJump& badType);
         JumpList emitIntTypedArrayGetByVal(Instruction*, PatchableJump& badType, const TypedArrayDescriptor&, size_t elementSize, TypedArraySignedness);
         JumpList emitFloatTypedArrayGetByVal(Instruction*, PatchableJump& badType, const TypedArrayDescriptor&, size_t elementSize);
@@ -483,7 +485,19 @@ namespace JSC {
         // The value to store is not yet loaded. Property is int-checked and
         // zero-extended. Base is cell checked. Structure is already profiled.
         // returns the slow cases.
-        JumpList emitContiguousPutByVal(Instruction*, PatchableJump& badType);
+        JumpList emitInt32PutByVal(Instruction* currentInstruction, PatchableJump& badType)
+        {
+            return emitGenericContiguousPutByVal(currentInstruction, badType, Int32Shape);
+        }
+        JumpList emitDoublePutByVal(Instruction* currentInstruction, PatchableJump& badType)
+        {
+            return emitGenericContiguousPutByVal(currentInstruction, badType, DoubleShape);
+        }
+        JumpList emitContiguousPutByVal(Instruction* currentInstruction, PatchableJump& badType)
+        {
+            return emitGenericContiguousPutByVal(currentInstruction, badType);
+        }
+        JumpList emitGenericContiguousPutByVal(Instruction*, PatchableJump& badType, IndexingType indexingShape = ContiguousShape);
         JumpList emitArrayStoragePutByVal(Instruction*, PatchableJump& badType);
         JumpList emitIntTypedArrayPutByVal(Instruction*, PatchableJump& badType, const TypedArrayDescriptor&, size_t elementSize, TypedArraySignedness, TypedArrayRounding);
         JumpList emitFloatTypedArrayPutByVal(Instruction*, PatchableJump& badType, const TypedArrayDescriptor&, size_t elementSize);
@@ -632,6 +646,7 @@ namespace JSC {
         void emit_op_call_put_result(Instruction*);
         void emit_op_catch(Instruction*);
         void emit_op_construct(Instruction*);
+        void emit_op_get_callee(Instruction*);
         void emit_op_create_this(Instruction*);
         void emit_op_convert_this(Instruction*);
         void emit_op_create_arguments(Instruction*);

@@ -202,13 +202,6 @@ if (isInitial) { \
     return; \
 }
 
-#define HANDLE_INHERIT_AND_INITIAL_WITH_VALUE(prop, Prop, Value) \
-HANDLE_INHERIT(prop, Prop) \
-if (isInitial) { \
-    m_style->set##Prop(RenderStyle::initial##Value());\
-    return;\
-}
-
 static RuleSet* defaultStyle;
 static RuleSet* defaultQuirksStyle;
 static RuleSet* defaultPrintStyle;
@@ -478,8 +471,8 @@ StyleResolver::~StyleResolver()
 void StyleResolver::sweepMatchedPropertiesCache(Timer<StyleResolver>*)
 {
     // Look for cache entries containing a style declaration with a single ref and remove them.
-    // This may happen when an element attribute mutation causes it to generate a new attributeStyle(),
-    // potentially leaving this cache with the last ref on the old one.
+    // This may happen when an element attribute mutation causes it to generate a new inlineStyle()
+    // or presentationAttributeStyle(), potentially leaving this cache with the last ref on the old one.
     Vector<unsigned, 16> toRemove;
     MatchedPropertiesCache::iterator it = m_matchedPropertiesCache.begin();
     MatchedPropertiesCache::iterator end = m_matchedPropertiesCache.end();
@@ -927,12 +920,12 @@ void StyleResolver::matchAllRules(MatchResult& result, bool includeSMILPropertie
         
     // Now check author rules, beginning first with presentational attributes mapped from HTML.
     if (m_styledElement) {
-        addElementStyleProperties(result, m_styledElement->attributeStyle());
+        addElementStyleProperties(result, m_styledElement->presentationAttributeStyle());
 
         // Now we check additional mapped declarations.
         // Tables and table cells share an additional mapped rule that must be applied
         // after all attributes, since their mapped style depends on the values of multiple attributes.
-        addElementStyleProperties(result, m_styledElement->additionalAttributeStyle());
+        addElementStyleProperties(result, m_styledElement->additionalPresentationAttributeStyle());
 
         if (m_styledElement->isHTMLElement()) {
             bool isAuto;
@@ -1179,11 +1172,11 @@ bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
     if (element->isSVGElement() && static_cast<SVGElement*>(element)->animatedSMILStyleProperties())
         return false;
 #endif
-    if (!!element->attributeStyle() != !!m_styledElement->attributeStyle())
+    if (!!element->presentationAttributeStyle() != !!m_styledElement->presentationAttributeStyle())
         return false;
-    const StylePropertySet* additionalAttributeStyleA = element->additionalAttributeStyle();
-    const StylePropertySet* additionalAttributeStyleB = m_styledElement->additionalAttributeStyle();
-    if (!additionalAttributeStyleA != !additionalAttributeStyleB)
+    const StylePropertySet* additionalPresentationAttributeStyleA = element->additionalPresentationAttributeStyle();
+    const StylePropertySet* additionalPresentationAttributeStyleB = m_styledElement->additionalPresentationAttributeStyle();
+    if (!additionalPresentationAttributeStyleA != !additionalPresentationAttributeStyleB)
         return false;
     if (element->isLink() != m_element->isLink())
         return false;
@@ -1266,10 +1259,10 @@ bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
             return false;
     }
 
-    if (element->attributeStyle() && !attributeStylesEqual(element->attributeStyle(), m_styledElement->attributeStyle()))
+    if (element->presentationAttributeStyle() && !attributeStylesEqual(element->presentationAttributeStyle(), m_styledElement->presentationAttributeStyle()))
         return false;
 
-    if (additionalAttributeStyleA && !attributeStylesEqual(additionalAttributeStyleA, additionalAttributeStyleB))
+    if (additionalPresentationAttributeStyleA && !attributeStylesEqual(additionalPresentationAttributeStyleA, additionalPresentationAttributeStyleB))
         return false;
 
     if (element->isLink() && m_elementLinkState != style->insideLink())
@@ -2817,13 +2810,14 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
     bool isInitial = value->isInitialValue() || (!m_parentNode && value->isInheritedValue());
 
     ASSERT(!isInherit || !isInitial); // isInherit -> !isInitial && isInitial -> !isInherit
+    ASSERT(!isInherit || (m_parentNode && m_parentStyle)); // isInherit -> (m_parentNode && m_parentStyle)
 
     if (!applyPropertyToRegularStyle() && (!applyPropertyToVisitedLinkStyle() || !isValidVisitedLinkProperty(id))) {
         // Limit the properties that can be applied to only the ones honored by :visited.
         return;
     }
 
-    if (isInherit && m_parentStyle && !m_parentStyle->hasExplicitlyInheritedProperties() && !CSSProperty::isInheritedProperty(id))
+    if (isInherit && !m_parentStyle->hasExplicitlyInheritedProperties() && !CSSProperty::isInheritedProperty(id))
         m_parentStyle->setHasExplicitlyInheritedProperties();
 
 #if ENABLE(CSS_VARIABLES)
@@ -2953,8 +2947,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         }
     case CSSPropertyQuotes:
         if (isInherit) {
-            if (m_parentStyle)
-                m_style->setQuotes(m_parentStyle->quotes());
+            m_style->setQuotes(m_parentStyle->quotes());
             return;
         }
         if (isInitial) {
@@ -3852,6 +3845,7 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
 #if ENABLE(CSS3_TEXT)
     case CSSPropertyWebkitTextDecorationLine:
     case CSSPropertyWebkitTextDecorationStyle:
+    case CSSPropertyWebkitTextAlignLast:
 #endif // CSS3_TEXT
     case CSSPropertyWebkitTextEmphasisColor:
     case CSSPropertyWebkitTextEmphasisPosition:
@@ -3876,8 +3870,8 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
 #if ENABLE(CSS_EXCLUSIONS)
     case CSSPropertyWebkitWrap:
     case CSSPropertyWebkitWrapFlow:
-    case CSSPropertyWebkitWrapMargin:
-    case CSSPropertyWebkitWrapPadding:
+    case CSSPropertyWebkitShapeMargin:
+    case CSSPropertyWebkitShapePadding:
     case CSSPropertyWebkitWrapThrough:
     case CSSPropertyWebkitShapeInside:
     case CSSPropertyWebkitShapeOutside:
@@ -3890,6 +3884,12 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
     case CSSPropertyWordWrap:
     case CSSPropertyZIndex:
     case CSSPropertyZoom:
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+    case CSSPropertyMaxZoom:
+    case CSSPropertyMinZoom:
+    case CSSPropertyOrientation:
+    case CSSPropertyUserZoom:
+#endif
         ASSERT_NOT_REACHED();
         return;
 #if ENABLE(SVG)
@@ -4581,7 +4581,7 @@ void StyleResolver::loadPendingSVGDocuments()
         return;
 
     CachedResourceLoader* cachedResourceLoader = m_element->document()->cachedResourceLoader();
-    Vector<RefPtr<FilterOperation> >& filterOperations = m_style->filter().operations();
+    Vector<RefPtr<FilterOperation> >& filterOperations = m_style->mutableFilter().operations();
     for (unsigned i = 0; i < filterOperations.size(); ++i) {
         RefPtr<FilterOperation> filterOperation = filterOperations.at(i);
         if (filterOperation->getOperationType() == FilterOperation::REFERENCE) {
@@ -4625,7 +4625,7 @@ void StyleResolver::loadPendingShaders()
 
     CachedResourceLoader* cachedResourceLoader = m_element->document()->cachedResourceLoader();
 
-    Vector<RefPtr<FilterOperation> >& filterOperations = m_style->filter().operations();
+    Vector<RefPtr<FilterOperation> >& filterOperations = m_style->mutableFilter().operations();
     for (unsigned i = 0; i < filterOperations.size(); ++i) {
         RefPtr<FilterOperation> filterOperation = filterOperations.at(i);
         if (filterOperation->getOperationType() == FilterOperation::CUSTOM) {

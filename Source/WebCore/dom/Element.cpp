@@ -4,7 +4,7 @@
  *           (C) 2001 Peter Kelly (pmk@post.com)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2007 David Smith (catfish.man@gmail.com)
- * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2012 Apple Inc. All rights reserved.
  *           (C) 2007 Eric Seidel (eric@webkit.org)
  *
  * This library is free software; you can redistribute it and/or
@@ -711,30 +711,29 @@ void Element::setSynchronizedLazyAttribute(const QualifiedName& name, const Atom
 
 inline void Element::setAttributeInternal(size_t index, const QualifiedName& name, const AtomicString& newValue, SynchronizationOfLazyAttribute inSynchronizationOfLazyAttribute)
 {
-    ElementAttributeData* attributeData = mutableAttributeData();
-
-    Attribute* existingAttribute = index != notFound ? attributeData->attributeItem(index) : 0;
     if (newValue.isNull()) {
-        if (existingAttribute)
+        if (index != notFound)
             removeAttributeInternal(index, inSynchronizationOfLazyAttribute);
         return;
     }
 
-    if (!existingAttribute) {
+    if (index == notFound) {
         addAttributeInternal(name, newValue, inSynchronizationOfLazyAttribute);
         return;
     }
 
     if (!inSynchronizationOfLazyAttribute)
-        willModifyAttribute(name, existingAttribute->value(), newValue);
+        willModifyAttribute(name, attributeItem(index)->value(), newValue);
 
-    // If there is an Attr node hooked to this attribute, the Attr::setValue() call below
-    // will write into the ElementAttributeData.
-    // FIXME: Refactor this so it makes some sense.
-    if (RefPtr<Attr> attrNode = attrIfExists(name))
-        attrNode->setValue(newValue);
-    else
-        existingAttribute->setValue(newValue);
+    if (newValue != attributeItem(index)->value()) {
+        // If there is an Attr node hooked to this attribute, the Attr::setValue() call below
+        // will write into the ElementAttributeData.
+        // FIXME: Refactor this so it makes some sense.
+        if (RefPtr<Attr> attrNode = attrIfExists(name))
+            attrNode->setValue(newValue);
+        else
+            mutableAttributeData()->attributeItem(index)->setValue(newValue);
+    }
 
     if (!inSynchronizationOfLazyAttribute)
         didModifyAttribute(name, newValue);
@@ -1636,11 +1635,9 @@ void Element::removeAttributeInternal(size_t index, SynchronizationOfLazyAttribu
 
 void Element::addAttributeInternal(const QualifiedName& name, const AtomicString& value, SynchronizationOfLazyAttribute inSynchronizationOfLazyAttribute)
 {
-    ASSERT(m_attributeData);
-    ASSERT(m_attributeData->isMutable());
     if (!inSynchronizationOfLazyAttribute)
         willModifyAttribute(name, nullAtom, value);
-    m_attributeData->addAttribute(Attribute(name, value));
+    mutableAttributeData()->addAttribute(Attribute(name, value));
     if (!inSynchronizationOfLazyAttribute)
         didAddAttribute(name, value);
 }
@@ -2166,21 +2163,21 @@ const AtomicString& Element::webkitRegionOverset() const
 {
     document()->updateLayoutIgnorePendingStylesheets();
 
-    DEFINE_STATIC_LOCAL(AtomicString, undefinedState, ("undefined"));
+    DEFINE_STATIC_LOCAL(AtomicString, undefinedState, ("undefined", AtomicString::ConstructFromLiteral));
     if (!document()->cssRegionsEnabled() || !renderRegion())
         return undefinedState;
 
     switch (renderRegion()->regionState()) {
     case RenderRegion::RegionFit: {
-        DEFINE_STATIC_LOCAL(AtomicString, fitState, ("fit"));
+        DEFINE_STATIC_LOCAL(AtomicString, fitState, ("fit", AtomicString::ConstructFromLiteral));
         return fitState;
     }
     case RenderRegion::RegionEmpty: {
-        DEFINE_STATIC_LOCAL(AtomicString, emptyState, ("empty"));
+        DEFINE_STATIC_LOCAL(AtomicString, emptyState, ("empty", AtomicString::ConstructFromLiteral));
         return emptyState;
     }
     case RenderRegion::RegionOverset: {
-        DEFINE_STATIC_LOCAL(AtomicString, overflowState, ("overset"));
+        DEFINE_STATIC_LOCAL(AtomicString, overflowState, ("overset", AtomicString::ConstructFromLiteral));
         return overflowState;
     }
     case RenderRegion::RegionUndefined:
@@ -2445,11 +2442,44 @@ void Element::cloneAttributesFromElement(const Element& other)
     if (hasSyntheticAttrChildNodes())
         detachAllAttrNodesFromElement();
 
-    if (const ElementAttributeData* attributeData = other.updatedAttributeData())
-        mutableAttributeData()->cloneDataFrom(*attributeData, other, *this);
-    else if (m_attributeData) {
-        m_attributeData->clearAttributes();
+    setIsStyleAttributeValid(other.isStyleAttributeValid());
+
+    other.updateInvalidAttributes();
+    if (!other.m_attributeData) {
         m_attributeData.clear();
+        return;
+    }
+
+    const AtomicString& oldID = getIdAttribute();
+    const AtomicString& newID = other.getIdAttribute();
+
+    if (!oldID.isNull() || !newID.isNull())
+        updateId(oldID, newID);
+
+    const AtomicString& oldName = getNameAttribute();
+    const AtomicString& newName = other.getNameAttribute();
+
+    if (!oldName.isNull() || !newName.isNull())
+        updateName(oldName, newName);
+
+    // If 'other' has a mutable ElementAttributeData, convert it to an immutable one so we can share it between both elements.
+    // We can only do this if there is no CSSOM wrapper for other's inline style (the isMutable() check.)
+    if (other.m_attributeData->isMutable() && (!other.m_attributeData->inlineStyle() || !other.m_attributeData->inlineStyle()->isMutable()))
+        const_cast<Element&>(other).m_attributeData = other.m_attributeData->makeImmutableCopy();
+
+    if (!other.m_attributeData->isMutable())
+        m_attributeData = other.m_attributeData;
+    else
+        m_attributeData = other.m_attributeData->makeMutableCopy();
+
+    for (unsigned i = 0; i < m_attributeData->length(); ++i) {
+        const Attribute* attribute = const_cast<const ElementAttributeData*>(m_attributeData.get())->attributeItem(i);
+        // This optimization isn't very nicely factored, but a huge win for cloning elements with inline style.
+        if (isStyledElement() && attribute->name() == HTMLNames::styleAttr) {
+            static_cast<StyledElement*>(this)->styleAttributeChanged(attribute->value(), StyledElement::DoNotReparseStyleAttribute);
+            continue;
+        }
+        attributeChanged(attribute->name(), attribute->value());
     }
 }
 

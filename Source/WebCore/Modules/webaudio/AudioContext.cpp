@@ -57,6 +57,9 @@
 #include "ScriptProcessorNode.h"
 #include "WaveShaperNode.h"
 #include "WaveTable.h"
+#include "WebCoreMemoryInstrumentation.h"
+#include <wtf/MemoryInstrumentationHashSet.h>
+#include <wtf/MemoryInstrumentationVector.h>
 
 #if ENABLE(MEDIA_STREAM)
 #include "MediaStream.h"
@@ -496,17 +499,20 @@ PassRefPtr<GainNode> AudioContext::createGain()
     return GainNode::create(this, m_destinationNode->sampleRate());
 }
 
-PassRefPtr<DelayNode> AudioContext::createDelay()
+PassRefPtr<DelayNode> AudioContext::createDelay(ExceptionCode& ec)
 {
     const double defaultMaxDelayTime = 1;
-    return createDelay(defaultMaxDelayTime);
+    return createDelay(defaultMaxDelayTime, ec);
 }
 
-PassRefPtr<DelayNode> AudioContext::createDelay(double maxDelayTime)
+PassRefPtr<DelayNode> AudioContext::createDelay(double maxDelayTime, ExceptionCode& ec)
 {
     ASSERT(isMainThread());
     lazyInitialize();
-    return DelayNode::create(this, m_destinationNode->sampleRate(), maxDelayTime);
+    RefPtr<DelayNode> node = DelayNode::create(this, m_destinationNode->sampleRate(), maxDelayTime, ec);
+    if (ec)
+        return 0;
+    return node;
 }
 
 PassRefPtr<ChannelSplitterNode> AudioContext::createChannelSplitter(ExceptionCode& ec)
@@ -960,6 +966,31 @@ void AudioContext::incrementActiveSourceCount()
 void AudioContext::decrementActiveSourceCount()
 {
     atomicDecrement(&m_activeSourceCount);
+}
+
+void AudioContext::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    AutoLocker locker(const_cast<AudioContext*>(this));
+
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Audio);
+    ActiveDOMObject::reportMemoryUsage(memoryObjectInfo);
+    info.addMember(m_document);
+    info.addMember(m_destinationNode);
+    info.addMember(m_listener);
+    info.addMember(m_finishedNodes);
+    info.addMember(m_referencedNodes);
+    info.addMember(m_nodesMarkedForDeletion);
+    info.addMember(m_nodesToDelete);
+    info.addMember(m_dirtySummingJunctions);
+    info.addMember(m_dirtyAudioNodeOutputs);
+    info.addMember(m_automaticPullNodes);
+    info.addMember(m_renderingAutomaticPullNodes);
+    info.addMember(m_contextGraphMutex);
+    info.addMember(m_deferredFinishDerefList);
+    info.addMember(m_hrtfDatabaseLoader);
+    info.addMember(m_eventTargetData);
+    info.addMember(m_renderTarget);
+    info.addMember(m_audioDecoder);
 }
 
 } // namespace WebCore

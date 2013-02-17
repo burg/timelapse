@@ -218,7 +218,7 @@ private:
 
         if (operand == JSStack::Callee)
             return getCallee();
-
+        
         // Is this an argument?
         if (operandIsArgument(operand))
             return getArgument(operand);
@@ -905,10 +905,15 @@ private:
         return getPrediction(m_graph.size(), m_currentProfilingIndex);
     }
     
-    ArrayMode getArrayMode(ArrayProfile* profile)
+    ArrayMode getArrayMode(ArrayProfile* profile, Array::Action action)
     {
         profile->computeUpdatedPrediction(m_inlineStackTop->m_codeBlock);
-        return ArrayMode::fromObserved(profile, Array::Read, false);
+        return ArrayMode::fromObserved(profile, action, false);
+    }
+    
+    ArrayMode getArrayMode(ArrayProfile* profile)
+    {
+        return getArrayMode(profile, Array::Read);
     }
     
     ArrayMode getArrayModeAndEmitChecks(ArrayProfile* profile, Array::Action action, NodeIndex base)
@@ -1649,7 +1654,12 @@ bool ByteCodeParser::handleIntrinsic(bool usesResult, int resultOperand, Intrins
             return false;
         
         ArrayMode arrayMode = getArrayMode(m_currentInstruction[5].u.arrayProfile);
+        if (!arrayMode.isJSArray())
+            return false;
         switch (arrayMode.type()) {
+        case Array::Undecided:
+        case Array::Int32:
+        case Array::Double:
         case Array::Contiguous:
         case Array::ArrayStorage: {
             NodeIndex arrayPush = addToGraph(ArrayPush, OpInfo(arrayMode.asWord()), OpInfo(prediction), get(registerOffset + argumentToOperand(0)), get(registerOffset + argumentToOperand(1)));
@@ -1669,7 +1679,11 @@ bool ByteCodeParser::handleIntrinsic(bool usesResult, int resultOperand, Intrins
             return false;
         
         ArrayMode arrayMode = getArrayMode(m_currentInstruction[5].u.arrayProfile);
+        if (!arrayMode.isJSArray())
+            return false;
         switch (arrayMode.type()) {
+        case Array::Int32:
+        case Array::Double:
         case Array::Contiguous:
         case Array::ArrayStorage: {
             NodeIndex arrayPop = addToGraph(ArrayPop, OpInfo(arrayMode.asWord()), OpInfo(prediction), get(registerOffset + argumentToOperand(0)));
@@ -1689,7 +1703,7 @@ bool ByteCodeParser::handleIntrinsic(bool usesResult, int resultOperand, Intrins
 
         int thisOperand = registerOffset + argumentToOperand(0);
         int indexOperand = registerOffset + argumentToOperand(1);
-        NodeIndex charCode = addToGraph(StringCharCodeAt, OpInfo(Array::String), get(thisOperand), getToInt32(indexOperand));
+        NodeIndex charCode = addToGraph(StringCharCodeAt, OpInfo(ArrayMode(Array::String).asWord()), get(thisOperand), getToInt32(indexOperand));
 
         if (usesResult)
             set(resultOperand, charCode);
@@ -1702,7 +1716,7 @@ bool ByteCodeParser::handleIntrinsic(bool usesResult, int resultOperand, Intrins
 
         int thisOperand = registerOffset + argumentToOperand(0);
         int indexOperand = registerOffset + argumentToOperand(1);
-        NodeIndex charCode = addToGraph(StringCharAt, OpInfo(Array::String), get(thisOperand), getToInt32(indexOperand));
+        NodeIndex charCode = addToGraph(StringCharAt, OpInfo(ArrayMode(Array::String).asWord()), get(thisOperand), getToInt32(indexOperand));
 
         if (usesResult)
             set(resultOperand, charCode);
@@ -1754,7 +1768,7 @@ bool ByteCodeParser::handleConstantInternalFunction(
         if (argumentCountIncludingThis == 2) {
             setIntrinsicResult(
                 usesResult, resultOperand,
-                addToGraph(NewArrayWithSize, get(registerOffset + argumentToOperand(1))));
+                addToGraph(NewArrayWithSize, OpInfo(ArrayWithUndecided), get(registerOffset + argumentToOperand(1))));
             return true;
         }
         
@@ -1762,7 +1776,7 @@ bool ByteCodeParser::handleConstantInternalFunction(
             addVarArgChild(get(registerOffset + argumentToOperand(i)));
         setIntrinsicResult(
             usesResult, resultOperand,
-            addToGraph(Node::VarArg, NewArray, OpInfo(0), OpInfo(0)));
+            addToGraph(Node::VarArg, NewArray, OpInfo(ArrayWithUndecided), OpInfo(0)));
         return true;
     }
     
@@ -2110,36 +2124,65 @@ bool ByteCodeParser::parseBlock(unsigned limit)
         }
 
         case op_create_this: {
-            set(currentInstruction[1].u.operand, addToGraph(CreateThis, get(JSStack::Callee)));
+            int calleeOperand = currentInstruction[2].u.operand;
+            NodeIndex callee = get(calleeOperand);
+            bool alreadyEmitted = false;
+            if (m_graph[callee].op() == WeakJSConstant) {
+                JSCell* cell = m_graph[callee].weakConstant();
+                ASSERT(cell->inherits(&JSFunction::s_info));
+                
+                JSFunction* function = jsCast<JSFunction*>(cell);
+                Structure* inheritorID = function->tryGetKnownInheritorID();
+                if (inheritorID) {
+                    addToGraph(InheritorIDWatchpoint, OpInfo(function));
+                    set(currentInstruction[1].u.operand, addToGraph(NewObject, OpInfo(inheritorID)));
+                    alreadyEmitted = true;
+                }
+            }
+            if (!alreadyEmitted)
+                set(currentInstruction[1].u.operand, addToGraph(CreateThis, callee));
             NEXT_OPCODE(op_create_this);
         }
             
         case op_new_object: {
-            set(currentInstruction[1].u.operand, addToGraph(NewObject));
+            set(currentInstruction[1].u.operand, addToGraph(NewObject, OpInfo(m_inlineStackTop->m_codeBlock->globalObject()->emptyObjectStructure())));
             NEXT_OPCODE(op_new_object);
         }
             
         case op_new_array: {
             int startOperand = currentInstruction[2].u.operand;
             int numOperands = currentInstruction[3].u.operand;
+            ArrayAllocationProfile* profile = currentInstruction[4].u.arrayAllocationProfile;
             for (int operandIdx = startOperand; operandIdx < startOperand + numOperands; ++operandIdx)
                 addVarArgChild(get(operandIdx));
-            set(currentInstruction[1].u.operand, addToGraph(Node::VarArg, NewArray, OpInfo(0), OpInfo(0)));
+            set(currentInstruction[1].u.operand, addToGraph(Node::VarArg, NewArray, OpInfo(profile->selectIndexingType()), OpInfo(0)));
             NEXT_OPCODE(op_new_array);
         }
             
         case op_new_array_with_size: {
             int lengthOperand = currentInstruction[2].u.operand;
-            set(currentInstruction[1].u.operand, addToGraph(NewArrayWithSize, get(lengthOperand)));
+            ArrayAllocationProfile* profile = currentInstruction[3].u.arrayAllocationProfile;
+            set(currentInstruction[1].u.operand, addToGraph(NewArrayWithSize, OpInfo(profile->selectIndexingType()), get(lengthOperand)));
             NEXT_OPCODE(op_new_array_with_size);
         }
             
         case op_new_array_buffer: {
             int startConstant = currentInstruction[2].u.operand;
             int numConstants = currentInstruction[3].u.operand;
+            ArrayAllocationProfile* profile = currentInstruction[4].u.arrayAllocationProfile;
             NewArrayBufferData data;
             data.startConstant = m_inlineStackTop->m_constantBufferRemap[startConstant];
             data.numConstants = numConstants;
+            data.indexingType = profile->selectIndexingType();
+
+            // If this statement has never executed, we'll have the wrong indexing type in the profile.
+            for (int i = 0; i < numConstants; ++i) {
+                data.indexingType =
+                    leastUpperBoundOfIndexingTypeAndValue(
+                        data.indexingType,
+                        m_codeBlock->constantBuffer(data.startConstant)[i]);
+            }
+            
             m_graph.m_newArrayBufferData.append(data);
             set(currentInstruction[1].u.operand, addToGraph(NewArrayBuffer, OpInfo(&m_graph.m_newArrayBufferData.last())));
             NEXT_OPCODE(op_new_array_buffer);
@@ -2150,6 +2193,22 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             NEXT_OPCODE(op_new_regexp);
         }
             
+        case op_get_callee: {
+            ValueProfile* profile = currentInstruction[2].u.profile;
+            profile->computeUpdatedPrediction();
+            if (profile->m_singletonValueIsTop
+                || !profile->m_singletonValue
+                || !profile->m_singletonValue.isCell())
+                set(currentInstruction[1].u.operand, get(JSStack::Callee));
+            else {
+                ASSERT(profile->m_singletonValue.asCell()->inherits(&JSFunction::s_info));
+                NodeIndex actualCallee = get(JSStack::Callee);
+                addToGraph(CheckFunction, OpInfo(profile->m_singletonValue.asCell()), actualCallee);
+                set(currentInstruction[1].u.operand, addToGraph(WeakJSConstant, OpInfo(profile->m_singletonValue.asCell())));
+            }
+            NEXT_OPCODE(op_get_callee);
+        }
+
         // === Bitwise operations ===
 
         case op_bitand: {

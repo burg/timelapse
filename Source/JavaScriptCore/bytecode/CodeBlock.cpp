@@ -44,7 +44,7 @@
 #include "JSValue.h"
 #include "LowLevelInterpreter.h"
 #include "RepatchBuffer.h"
-#include "SlotVisitorInlineMethods.h"
+#include "SlotVisitorInlines.h"
 #include <stdio.h>
 #include <wtf/StringExtras.h>
 #include <wtf/UnusedParam.h>
@@ -629,6 +629,11 @@ void CodeBlock::dump(ExecState* exec, const Vector<Instruction>::const_iterator&
             dumpBytecodeCommentAndNewLine(location);
             break;
         }
+        case op_get_callee: {
+            int r0 = (++it)->u.operand;
+            dataLog("[%4d] op_get_callee %s\n", location, registerName(exec, r0).data());
+            break;
+        }
         case op_create_this: {
             int r0 = (++it)->u.operand;
             dataLog("[%4d] create_this %s", location, registerName(exec, r0).data());
@@ -654,6 +659,7 @@ void CodeBlock::dump(ExecState* exec, const Vector<Instruction>::const_iterator&
             int argc = (++it)->u.operand;
             dataLog("[%4d] new_array\t %s, %s, %d", location, registerName(exec, dst).data(), registerName(exec, argv).data(), argc);
             dumpBytecodeCommentAndNewLine(location);
+            ++it; // Skip array allocation profile.
             break;
         }
         case op_new_array_with_size: {
@@ -661,6 +667,7 @@ void CodeBlock::dump(ExecState* exec, const Vector<Instruction>::const_iterator&
             int length = (++it)->u.operand;
             dataLog("[%4d] new_array_with_size\t %s, %s", location, registerName(exec, dst).data(), registerName(exec, length).data());
             dumpBytecodeCommentAndNewLine(location);
+            ++it; // Skip array allocation profile.
             break;
         }
         case op_new_array_buffer: {
@@ -669,6 +676,7 @@ void CodeBlock::dump(ExecState* exec, const Vector<Instruction>::const_iterator&
             int argc = (++it)->u.operand;
             dataLog("[%4d] new_array_buffer\t %s, %d, %d", location, registerName(exec, dst).data(), argv, argc);
             dumpBytecodeCommentAndNewLine(location);
+            ++it; // Skip array allocation profile.
             break;
         }
         case op_new_regexp: {
@@ -1746,6 +1754,8 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
 #if ENABLE(DFG_JIT)
     if (size_t size = unlinkedCodeBlock->numberOfArrayProfiles())
         m_arrayProfiles.grow(size);
+    if (size_t size = unlinkedCodeBlock->numberOfArrayAllocationProfiles())
+        m_arrayAllocationProfiles.grow(size);
     if (size_t size = unlinkedCodeBlock->numberOfValueProfiles())
         m_valueProfiles.grow(size);
 #endif
@@ -1786,7 +1796,8 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
         case op_resolve_with_base:
         case op_resolve_with_this:
         case op_get_by_id:
-        case op_call_put_result: {
+        case op_call_put_result:
+        case op_get_callee: {
             ValueProfile* profile = &m_valueProfiles[pc[i + opLength - 1].u.operand];
             ASSERT(profile->m_bytecodeOffset == -1);
             profile->m_bytecodeOffset = i;
@@ -1800,22 +1811,32 @@ CodeBlock::CodeBlock(ScriptExecutable* ownerExecutable, UnlinkedCodeBlock* unlin
             break;
         }
 
+        case op_new_array:
+        case op_new_array_buffer:
+        case op_new_array_with_size: {
+            int arrayAllocationProfileIndex = pc[i + opLength - 1].u.operand;
+            instructions[i + opLength - 1] = &m_arrayAllocationProfiles[arrayAllocationProfileIndex];
+            break;
+        }
+#endif
+
         case op_call:
         case op_call_eval: {
+#if ENABLE(DFG_JIT)
             int arrayProfileIndex = pc[i + opLength - 1].u.operand;
             m_arrayProfiles[arrayProfileIndex] = ArrayProfile(i);
             instructions[i + opLength - 1] = &m_arrayProfiles[arrayProfileIndex];
-            // fallthrough
-#if !ENABLE(LLINT)
-            break;
-#endif
-        }
 #endif
 #if ENABLE(LLINT)
-        case op_construct:
             instructions[i + 4] = &m_llintCallLinkInfos[pc[i + 4].u.operand];
-            break;
 #endif
+            break;
+        }
+        case op_construct:
+#if ENABLE(LLINT)
+            instructions[i + 4] = &m_llintCallLinkInfos[pc[i + 4].u.operand];
+#endif
+            break;
         case op_get_by_id_out_of_line:
         case op_get_by_id_self:
         case op_get_by_id_proto:
@@ -2790,18 +2811,28 @@ void CodeBlock::updateAllPredictionsAndCountLiveness(
 #if ENABLE(DFG_JIT)
     m_lazyOperandValueProfiles.computeUpdatedPredictions(operation);
 #endif
-    
-    // Don't count the array profiles towards statistics, since each array profile
-    // site also has a value profile site - so we already know whether or not it's
-    // live.
+}
+
+void CodeBlock::updateAllValueProfilePredictions(OperationInProgress operation)
+{
+    unsigned ignoredValue1, ignoredValue2;
+    updateAllPredictionsAndCountLiveness(operation, ignoredValue1, ignoredValue2);
+}
+
+void CodeBlock::updateAllArrayPredictions(OperationInProgress operation)
+{
     for (unsigned i = m_arrayProfiles.size(); i--;)
         m_arrayProfiles[i].computeUpdatedPrediction(this, operation);
+    
+    // Don't count these either, for similar reasons.
+    for (unsigned i = m_arrayAllocationProfiles.size(); i--;)
+        m_arrayAllocationProfiles[i].updateIndexingType();
 }
 
 void CodeBlock::updateAllPredictions(OperationInProgress operation)
 {
-    unsigned ignoredValue1, ignoredValue2;
-    updateAllPredictionsAndCountLiveness(operation, ignoredValue1, ignoredValue2);
+    updateAllValueProfilePredictions(operation);
+    updateAllArrayPredictions(operation);
 }
 
 bool CodeBlock::shouldOptimizeNow()
@@ -2817,12 +2848,14 @@ bool CodeBlock::shouldOptimizeNow()
     if (m_optimizationDelayCounter >= Options::maximumOptimizationDelay())
         return true;
     
+    updateAllArrayPredictions();
+    
     unsigned numberOfLiveNonArgumentValueProfiles;
     unsigned numberOfSamplesInProfiles;
     updateAllPredictionsAndCountLiveness(NoOperation, numberOfLiveNonArgumentValueProfiles, numberOfSamplesInProfiles);
 
 #if ENABLE(JIT_VERBOSE_OSR)
-    dataLog("Profile hotness: %lf, %lf\n", (double)numberOfLiveNonArgumentValueProfiles / numberOfValueProfiles(), (double)numberOfSamplesInProfiles / ValueProfile::numberOfBuckets / numberOfValueProfiles());
+    dataLog("Profile hotness: %lf (%u / %u), %lf (%u / %u)\n", (double)numberOfLiveNonArgumentValueProfiles / numberOfValueProfiles(), numberOfLiveNonArgumentValueProfiles, numberOfValueProfiles(), (double)numberOfSamplesInProfiles / ValueProfile::numberOfBuckets / numberOfValueProfiles(), numberOfSamplesInProfiles, ValueProfile::numberOfBuckets * numberOfValueProfiles());
 #endif
 
     if ((!numberOfValueProfiles() || (double)numberOfLiveNonArgumentValueProfiles / numberOfValueProfiles() >= Options::desiredProfileLivenessRate())

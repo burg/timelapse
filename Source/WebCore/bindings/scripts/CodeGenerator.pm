@@ -114,14 +114,6 @@ sub new
     return $reference;
 }
 
-sub StripModule($)
-{
-    my $object = shift;
-    my $name = shift;
-    $name =~ s/[a-zA-Z0-9]*:://;
-    return $name;
-}
-
 sub ProcessDocument
 {
     my $object = shift;
@@ -187,7 +179,7 @@ sub ForAllParents
         my $interface = shift;
 
         for (@{$interface->parents}) {
-            my $interfaceName = $object->StripModule($_);
+            my $interfaceName = $_;
             my $parentInterface = $object->ParseInterface($interfaceName, $parentsOnly);
 
             if ($beforeRecursion) {
@@ -251,31 +243,6 @@ sub AddMethodsConstantsAndAttributesFromParentClasses
         push(@{$dataNode->functions}, @{$interface->functions});
         push(@{$dataNode->attributes}, @{$interface->attributes});
     });
-}
-
-sub GetMethodsAndAttributesFromParentClasses
-{
-    # For the passed interface, recursively parse all parent
-    # IDLs in order to find out all inherited properties/methods.
-
-    my $object = shift;
-    my $dataNode = shift;
-
-    my @parentList = ();
-
-    $object->ForAllParents($dataNode, undef, sub {
-        my $interface = shift;
-
-        my $hash = {
-            "name" => $interface->name,
-            "functions" => $interface->functions,
-            "attributes" => $interface->attributes
-        };
-
-        unshift(@parentList, $hash);
-    });
-
-    return @parentList;
 }
 
 sub FindSuperMethod
@@ -371,15 +338,6 @@ sub IsConstructorTemplate
     my $template = shift;
 
     return $dataNode->extendedAttributes->{"ConstructorTemplate"} && $dataNode->extendedAttributes->{"ConstructorTemplate"} eq $template;
-}
-
-sub IsNumericType
-{
-    my $object = shift;
-    my $type = shift;
-
-    return 1 if $numericTypeHash{$type};
-    return 0;
 }
 
 sub IsPrimitiveType
@@ -567,7 +525,7 @@ sub AttributeNameForGetterAndSetter
     if ($attribute->signature->extendedAttributes->{"ImplementedAs"}) {
         $attributeName = $attribute->signature->extendedAttributes->{"ImplementedAs"};
     }
-    my $attributeType = $generator->StripModule($attribute->signature->type);
+    my $attributeType = $attribute->signature->type;
 
     # Avoid clash with C++ keyword.
     $attributeName = "_operator" if $attributeName eq "operator";
@@ -648,12 +606,6 @@ sub SetterExpression
     return ($functionName, $contentAttributeName);
 }
 
-sub ShouldCheckEnums
-{
-    my $dataNode = shift;
-    return not $dataNode->extendedAttributes->{"DoNotCheckConstants"};
-}
-
 sub GenerateConditionalString
 {
     my $generator = shift;
@@ -689,7 +641,7 @@ sub GenerateCompileTimeCheckForEnumsIfNeeded
     my $interfaceName = $dataNode->name;
     my @checks = ();
     # If necessary, check that all constants are available as enums with the same value.
-    if (ShouldCheckEnums($dataNode) && @{$dataNode->constants}) {
+    if (!$dataNode->extendedAttributes->{"DoNotCheckConstants"} && @{$dataNode->constants}) {
         push(@checks, "\n");
         foreach my $constant (@{$dataNode->constants}) {
             my $reflect = $constant->extendedAttributes->{"Reflect"};
@@ -747,7 +699,7 @@ sub IsStrictSubtype
 
     $object->ForAllParents($dataNode, sub {
         my $interface = shift;
-        if ($object->StripModule($interface->name) eq $interfaceName) {
+        if ($interface->name eq $interfaceName) {
             $found = 1;
         }
         return "prune" if $found;

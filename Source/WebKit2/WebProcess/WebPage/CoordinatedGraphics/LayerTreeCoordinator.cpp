@@ -47,6 +47,7 @@
 #include <WebCore/RenderLayerCompositor.h>
 #include <WebCore/RenderView.h>
 #include <WebCore/Settings.h>
+#include <wtf/TemporaryChange.h>
 
 using namespace WebCore;
 
@@ -65,13 +66,14 @@ LayerTreeCoordinator::~LayerTreeCoordinator()
 
     HashSet<WebCore::CoordinatedGraphicsLayer*>::iterator end = registeredLayers.end();
     for (HashSet<WebCore::CoordinatedGraphicsLayer*>::iterator it = registeredLayers.begin(); it != end; ++it)
-        (*it)->setCoordinatedGraphicsLayerClient(0);
+        (*it)->setCoordinator(0);
 }
 
 LayerTreeCoordinator::LayerTreeCoordinator(WebPage* webPage)
     : LayerTreeHost(webPage)
     , m_notifyAfterScheduledLayerFlush(false)
     , m_isValid(true)
+    , m_isPurging(false)
     , m_waitingForUIProcess(true)
     , m_isSuspended(false)
     , m_contentsScale(1)
@@ -96,7 +98,6 @@ LayerTreeCoordinator::LayerTreeCoordinator(WebPage* webPage)
     m_layerTreeContext.webLayerID = toCoordinatedGraphicsLayer(webRootLayer)->id();
 
     m_nonCompositedContentLayer = GraphicsLayer::create(this, this);
-    toCoordinatedGraphicsLayer(m_rootLayer.get())->setCoordinatedGraphicsLayerClient(this);
 #ifndef NDEBUG
     m_nonCompositedContentLayer->setName("LayerTreeCoordinator non-composited content");
 #endif
@@ -326,15 +327,6 @@ void LayerTreeCoordinator::syncLayerFilters(WebLayerID id, const FilterOperation
 }
 #endif
 
-void LayerTreeCoordinator::attachLayer(CoordinatedGraphicsLayer* layer)
-{
-    ASSERT(!m_registeredLayers.contains(layer));
-    m_registeredLayers.add(layer);
-
-    layer->setContentsScale(m_contentsScale);
-    layer->adjustVisibleRect();
-}
-
 void LayerTreeCoordinator::detachLayer(CoordinatedGraphicsLayer* layer)
 {
     m_registeredLayers.remove(layer);
@@ -449,8 +441,10 @@ void LayerTreeCoordinator::didPerformScheduledLayerFlush()
 
 void LayerTreeCoordinator::purgeReleasedImages()
 {
-    for (size_t i = 0; i < m_releasedDirectlyCompositedImages.size(); ++i)
-        m_webPage->send(Messages::LayerTreeCoordinatorProxy::DestroyDirectlyCompositedImage(m_releasedDirectlyCompositedImages[i]));
+    if (!m_isPurging) {
+        for (size_t i = 0; i < m_releasedDirectlyCompositedImages.size(); ++i)
+            m_webPage->send(Messages::LayerTreeCoordinatorProxy::DestroyDirectlyCompositedImage(m_releasedDirectlyCompositedImages[i]));
+    }
     m_releasedDirectlyCompositedImages.clear();
 }
 
@@ -580,9 +574,12 @@ void LayerTreeCoordinator::paintContents(const WebCore::GraphicsLayer* graphicsL
 
 PassOwnPtr<GraphicsLayer> LayerTreeCoordinator::createGraphicsLayer(GraphicsLayerClient* client)
 {
-    CoordinatedGraphicsLayer* newLayer = new CoordinatedGraphicsLayer(client);
-    newLayer->setCoordinatedGraphicsLayerClient(this);
-    return adoptPtr(newLayer);
+    CoordinatedGraphicsLayer* layer = new CoordinatedGraphicsLayer(client);
+    layer->setCoordinator(this);
+    m_registeredLayers.add(layer);
+    layer->setContentsScale(m_contentsScale);
+    layer->adjustVisibleRect();
+    return adoptPtr(layer);
 }
 
 bool LayerTreeHost::supportsAcceleratedCompositing()
@@ -590,20 +587,22 @@ bool LayerTreeHost::supportsAcceleratedCompositing()
     return true;
 }
 
-void LayerTreeCoordinator::createTile(WebLayerID layerID, int tileID, const SurfaceUpdateInfo& updateInfo, const WebCore::IntRect& targetRect)
+void LayerTreeCoordinator::createTile(WebLayerID layerID, int tileID, const SurfaceUpdateInfo& updateInfo, const WebCore::IntRect& tileRect)
 {
     m_shouldSyncFrame = true;
-    m_webPage->send(Messages::LayerTreeCoordinatorProxy::CreateTileForLayer(layerID, tileID, targetRect, updateInfo));
+    m_webPage->send(Messages::LayerTreeCoordinatorProxy::CreateTileForLayer(layerID, tileID, tileRect, updateInfo));
 }
 
-void LayerTreeCoordinator::updateTile(WebLayerID layerID, int tileID, const SurfaceUpdateInfo& updateInfo, const WebCore::IntRect& targetRect)
+void LayerTreeCoordinator::updateTile(WebLayerID layerID, int tileID, const SurfaceUpdateInfo& updateInfo, const WebCore::IntRect& tileRect)
 {
     m_shouldSyncFrame = true;
-    m_webPage->send(Messages::LayerTreeCoordinatorProxy::UpdateTileForLayer(layerID, tileID, targetRect, updateInfo));
+    m_webPage->send(Messages::LayerTreeCoordinatorProxy::UpdateTileForLayer(layerID, tileID, tileRect, updateInfo));
 }
 
 void LayerTreeCoordinator::removeTile(WebLayerID layerID, int tileID)
 {
+    if (m_isPurging)
+        return;
     m_shouldSyncFrame = true;
     m_webPage->send(Messages::LayerTreeCoordinatorProxy::RemoveTileForLayer(layerID, tileID));
 }
@@ -615,6 +614,8 @@ void LayerTreeCoordinator::createUpdateAtlas(int atlasID, const ShareableSurface
 
 void LayerTreeCoordinator::removeUpdateAtlas(int atlasID)
 {
+    if (m_isPurging)
+        return;
     m_webPage->send(Messages::LayerTreeCoordinatorProxy::RemoveUpdateAtlas(atlasID));
 }
 
@@ -690,6 +691,8 @@ bool LayerTreeCoordinator::layerTreeTileUpdatesAllowed() const
 
 void LayerTreeCoordinator::purgeBackingStores()
 {
+    TemporaryChange<bool> purgingToggle(m_isPurging, true);
+
     HashSet<WebCore::CoordinatedGraphicsLayer*>::iterator end = m_registeredLayers.end();
     for (HashSet<WebCore::CoordinatedGraphicsLayer*>::iterator it = m_registeredLayers.begin(); it != end; ++it)
         (*it)->purgeBackingStores();

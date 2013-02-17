@@ -300,7 +300,7 @@ bool RenderFlowThread::shouldRepaint(const LayoutRect& r) const
     return true;
 }
 
-void RenderFlowThread::repaintRectangleInRegions(const LayoutRect& repaintRect, bool immediate)
+void RenderFlowThread::repaintRectangleInRegions(const LayoutRect& repaintRect, bool immediate) const
 {
     if (!shouldRepaint(repaintRect) || !hasValidRegionInfo())
         return;
@@ -311,7 +311,7 @@ void RenderFlowThread::repaintRectangleInRegions(const LayoutRect& repaintRect, 
     // Let each region figure out the proper enclosing flow thread.
     CurrentRenderFlowThreadDisabler disabler(view());
     
-    for (RenderRegionList::iterator iter = m_regionList.begin(); iter != m_regionList.end(); ++iter) {
+    for (RenderRegionList::const_iterator iter = m_regionList.begin(); iter != m_regionList.end(); ++iter) {
         RenderRegion* region = *iter;
 
         region->repaintFlowThreadContent(repaintRect, immediate);
@@ -856,7 +856,7 @@ bool RenderFlowThread::addForcedRegionBreak(LayoutUnit offsetBreakInFlowThread, 
 
     RenderRegionList::iterator regionIter = m_regionList.find(region);
     ASSERT(regionIter != m_regionList.end());
-    for (; (regionIter != m_regionList.end()) && (currentRegionOffsetInFlowThread < offsetBreakInFlowThread); ++regionIter) {
+    for (; regionIter != m_regionList.end(); ++regionIter) {
         RenderRegion* region = *regionIter;
         if (region->needsOverrideLogicalContentHeightComputation()) {
             mapToUse.set(breakChild, region);
@@ -871,6 +871,12 @@ bool RenderFlowThread::addForcedRegionBreak(LayoutUnit offsetBreakInFlowThread, 
             currentRegionOffsetInFlowThread += regionOverrideLogicalContentHeight;
         } else
             currentRegionOffsetInFlowThread += isHorizontalWritingMode() ? region->flowThreadPortionRect().height() : region->flowThreadPortionRect().width();
+
+        // If the current offset if greater than the break offset, bail out and skip the current region.
+        if (currentRegionOffsetInFlowThread >= offsetBreakInFlowThread) {
+            ++regionIter;
+            break;
+        }
     }
 
     // The remaining auto logical height regions in the chain that were unable to receive content

@@ -294,8 +294,15 @@ void FrameSelection::setSelection(const VisibleSelection& newSelection, SetSelec
     
     if (!s.isNone() && !(options & DoNotSetFocus))
         setFocusedNodeIfNeeded();
-    
-    updateAppearance();
+
+    if (!(options & DoNotUpdateAppearance)) {
+#if ENABLE(TEXT_CARET)
+        m_frame->document()->updateLayoutIgnorePendingStylesheets();
+#else
+        m_frame->document()->updateStyleIfNeeded();
+#endif
+        updateAppearance();
+    }
 
     // Always clear the x position used for vertical arrow navigation.
     // It will be restored by the vertical arrow navigation code if necessary.
@@ -1151,6 +1158,21 @@ void FrameSelection::clear()
     setSelection(VisibleSelection());
 }
 
+void FrameSelection::prepareForDestruction()
+{
+    m_granularity = CharacterGranularity;
+
+#if ENABLE(TEXT_CARET)
+    m_caretBlinkTimer.stop();
+#endif
+
+    RenderView* view = m_frame->contentRenderer();
+    if (view)
+        view->clearSelection();
+
+    setSelection(VisibleSelection(), CloseTyping | ClearTypingStyle | DoNotUpdateAppearance);
+}
+
 void FrameSelection::setStart(const VisiblePosition &pos, EUserTriggered trigger)
 {
     if (m_selection.isBaseFirst())
@@ -1263,10 +1285,15 @@ RenderObject* DragCaretController::caretRenderer() const
     return CaretBase::caretRenderer(m_position.deepEquivalent().deprecatedNode());
 }
 
+static bool isNonOrphanedCaret(const VisibleSelection& selection)
+{
+    return selection.isCaret() && !selection.start().isOrphan() && !selection.end().isOrphan();
+}
+
 LayoutRect FrameSelection::localCaretRect()
 {
     if (shouldUpdateCaretRect()) {
-        if (!isCaret() || m_selection.start().isOrphan() || m_selection.end().isOrphan())
+        if (!isNonOrphanedCaret(m_selection))
             clearCaretRect();
         else if (updateCaretRect(m_frame->document(), VisiblePosition(m_selection.start(), m_selection.affinity())))
             m_absCaretBoundsDirty = true;
@@ -1721,14 +1748,14 @@ inline static bool shouldStopBlinkingDueToTypingCommand(Frame* frame)
 void FrameSelection::updateAppearance()
 {
 #if ENABLE(TEXT_CARET)
-    bool caretRectChanged = recomputeCaretRect();
+    bool caretRectChangedOrCleared = recomputeCaretRect();
 
     bool caretBrowsing = m_frame->settings() && m_frame->settings()->caretBrowsingEnabled();
     bool shouldBlink = caretIsVisible() && isCaret() && (isContentEditable() || caretBrowsing);
 
     // If the caret moved, stop the blink timer so we can restart with a
     // black caret in the new location.
-    if (caretRectChanged || !shouldBlink || shouldStopBlinkingDueToTypingCommand(m_frame))
+    if (caretRectChangedOrCleared || !shouldBlink || shouldStopBlinkingDueToTypingCommand(m_frame))
         m_caretBlinkTimer.stop();
 
     // Start blinking with a black caret. Be sure not to restart if we're
@@ -1743,9 +1770,6 @@ void FrameSelection::updateAppearance()
         }
     }
 #endif
-
-    // We need to update style in case the node containing the selection is made display:none.
-    m_frame->document()->updateStyleIfNeeded();
 
     RenderView* view = m_frame->contentRenderer();
     if (!view)
@@ -1786,19 +1810,19 @@ void FrameSelection::setCaretVisibility(CaretVisibility visibility)
 {
     if (caretVisibility() == visibility)
         return;
-    clearCaretRectIfNeeded();
-    CaretBase::setCaretVisibility(visibility);
-    updateAppearance();
-}
 
-void FrameSelection::clearCaretRectIfNeeded()
-{
 #if ENABLE(TEXT_CARET)
-    if (!m_caretPaint)
-        return;
-    m_caretPaint = false;
-    invalidateCaretRect();
+    m_frame->document()->updateLayoutIgnorePendingStylesheets();
+    if (m_caretPaint) {
+        m_caretPaint = false;
+        invalidateCaretRect();
+    }
+    CaretBase::setCaretVisibility(visibility);
+#else
+    m_frame->document()->updateStyleIfNeeded();
 #endif
+
+    updateAppearance();
 }
 
 void FrameSelection::caretBlinkTimerFired(Timer<FrameSelection>*)

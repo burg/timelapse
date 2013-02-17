@@ -35,6 +35,7 @@
 #include "ScriptWrappable.h"
 #include "StylePropertySet.h"
 #include "StyledElement.h"
+#include <heap/SlotVisitor.h>
 #include <heap/Weak.h>
 #include <runtime/Error.h>
 #include <runtime/FunctionPrototype.h>
@@ -369,7 +370,7 @@ enum ParameterDefaultPolicy {
         for (typename Vector<T, inlineCapacity>::const_iterator iter = iterator.begin(); iter != end; ++iter)
             list.append(TraitsType::arrayJSValue(exec, globalObject, *iter));
 
-        return JSC::constructArray(exec, globalObject, list);
+        return JSC::constructArray(exec, 0, globalObject, list);
     }
 
     JSC::JSValue jsArray(JSC::ExecState*, JSDOMGlobalObject*, PassRefPtr<DOMStringList>);

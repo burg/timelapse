@@ -50,7 +50,6 @@ struct ViewportAttributes {
     float maximumScale;
 
     float userScalable;
-    bool initiallyFitToViewport;
 };
 
 struct ViewportArguments {
@@ -74,32 +73,35 @@ struct ViewportArguments {
 
     ViewportArguments(Type type = Implicit)
         : type(type)
-        , initialScale(ValueAuto)
-        , minimumScale(ValueAuto)
-        , maximumScale(ValueAuto)
         , width(ValueAuto)
         , height(ValueAuto)
-        , userScalable(ValueAuto)
+        , zoom(ValueAuto)
+        , minZoom(ValueAuto)
+        , maxZoom(ValueAuto)
+        , userZoom(ValueAuto)
     {
     }
 
-    float initialScale;
-    float minimumScale;
-    float maximumScale;
+    // All arguments are in CSS units.
+    ViewportAttributes resolve(const FloatSize& initialViewportSize, const FloatSize& deviceSize, int defaultWidth) const;
+
     float width;
     float height;
-    float userScalable;
+    float zoom;
+    float minZoom;
+    float maxZoom;
+    float userZoom;
 
     bool operator==(const ViewportArguments& other) const
     {
         // Used for figuring out whether to reset the viewport or not,
         // thus we are not taking type into account.
-        return initialScale == other.initialScale
-            && minimumScale == other.minimumScale
-            && maximumScale == other.maximumScale
-            && width == other.width
+        return width == other.width
             && height == other.height
-            && userScalable == other.userScalable;
+            && zoom == other.zoom
+            && minZoom == other.minZoom
+            && maxZoom == other.maxZoom
+            && userZoom == other.userZoom;
     }
 
     bool operator!=(const ViewportArguments& other) const

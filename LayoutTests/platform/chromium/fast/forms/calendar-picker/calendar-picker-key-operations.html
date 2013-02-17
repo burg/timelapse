@@ -85,6 +85,10 @@ function test1() {
     shouldBe('currentMonth()', '"2000-01"');
 
     eventSender.keyDown('\n');
+    waitUntilClosing(test1AfterClosing);
+}
+
+function test1AfterClosing() {
     shouldBeNull('document.getElementById("mock-page-popup")');
     shouldBe('document.getElementById("date").value', '"1999-12-26"');
 
@@ -120,7 +124,7 @@ function test2() {
 function testToday() {
     eventSender.keyDown('t');
     var now = new Date();
-    var expectedDate = serializeDate(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    var expectedDate = serializeDate(now.getFullYear(), now.getMonth(), now.getDate());
     var expectedMonth = popupWindow.Month.createFromDate(now).toString();
     return selectedDate() === expectedDate && currentMonth() === expectedMonth;
 }

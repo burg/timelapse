@@ -50,6 +50,8 @@
 
 #define ENABLE_MEMORY_SAMPLER 1
 
+#define ENABLE_CUSTOM_PROTOCOLS 1
+
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreGraphics/CoreGraphics.h>
 

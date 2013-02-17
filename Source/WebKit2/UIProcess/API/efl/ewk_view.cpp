@@ -39,6 +39,7 @@
 #include "WKRetainPtr.h"
 #include "WKString.h"
 #include "WebContext.h"
+#include "WebFullScreenManagerProxy.h"
 #include "WebPageGroup.h"
 #include "WebPreferences.h"
 #include "ewk_back_forward_list_private.h"
@@ -522,7 +523,7 @@ static inline Evas_Object* createEwkView(Evas* canvas, Evas_Smart* smart, PassRe
  */
 Evas_Object* ewk_view_base_add(Evas* canvas, WKContextRef contextRef, WKPageGroupRef pageGroupRef)
 {
-    return createEwkView(canvas, createEwkViewSmartClass(), EwkContext::create(contextRef), pageGroupRef, EwkViewImpl::LegacyBehavior);
+    return createEwkView(canvas, createEwkViewSmartClass(), EwkContext::create(toImpl(contextRef)), pageGroupRef, EwkViewImpl::LegacyBehavior);
 }
 
 Evas_Object* ewk_view_smart_add(Evas* canvas, Evas_Smart* smart, Ewk_Context* context)
@@ -906,4 +907,17 @@ Ewk_Pagination_Mode ewk_view_pagination_mode_get(const Evas_Object* ewkView)
     EWK_VIEW_IMPL_GET_OR_RETURN(ewkView, impl, EWK_PAGINATION_MODE_INVALID);
 
     return static_cast<Ewk_Pagination_Mode>(impl->page()->paginationMode());
+}
+
+Eina_Bool ewk_view_fullscreen_exit(Evas_Object* ewkView)
+{
+#if ENABLE(FULLSCREEN_API)
+    EWK_VIEW_IMPL_GET_OR_RETURN(ewkView, impl, false);
+
+    impl->page()->fullScreenManager()->requestExitFullScreen();
+
+    return true;
+#else
+    return false;
+#endif
 }

@@ -186,7 +186,7 @@ sub GetParentClassName
 
     return $dataNode->extendedAttributes->{"JSLegacyParent"} if $dataNode->extendedAttributes->{"JSLegacyParent"};
     return "JSDOMWrapper" if (@{$dataNode->parents} eq 0);
-    return "JS" . $codeGenerator->StripModule($dataNode->parents(0));
+    return "JS" . $dataNode->parents(0);
 }
 
 sub GetCallbackClassName
@@ -206,7 +206,7 @@ sub IndexGetterReturnsStrings
 
 sub AddIncludesForTypeInImpl
 {
-    my $type = $codeGenerator->StripModule(shift);
+    my $type = shift;
     my $isCallback = @_ ? shift : 0;
     
     AddIncludesForType($type, $isCallback, \%implIncludes);
@@ -233,7 +233,7 @@ sub AddIncludesForTypeInImpl
 
 sub AddIncludesForTypeInHeader
 {
-    my $type = $codeGenerator->StripModule(shift);
+    my $type = shift;
     my $isCallback = @_ ? shift : 0;
     
     AddIncludesForType($type, $isCallback, \%headerIncludes);
@@ -1288,7 +1288,7 @@ sub GenerateParametersCheckExpression
     foreach my $parameter (@{$function->parameters}) {
         last if $parameterIndex >= $numParameters;
         my $value = "arg$parameterIndex";
-        my $type = $codeGenerator->StripModule($parameter->type);
+        my $type = $parameter->type;
 
         # Only DOMString or wrapper types are checked.
         # For DOMString with StrictTypeChecking only Null, Undefined and Object
@@ -1833,7 +1833,7 @@ sub GenerateImplementation
         if ($numAttributes > 0) {
             foreach my $attribute (@{$dataNode->attributes}) {
                 my $name = $attribute->signature->name;
-                my $type = $codeGenerator->StripModule($attribute->signature->type);                
+                my $type = $attribute->signature->type;
                 $codeGenerator->AssertNotSequenceType($type);
                 my $getFunctionName = GetAttributeGetterName($interfaceName, $className, $attribute);
                 my $implGetterFunctionName = $codeGenerator->WK_lcfirst($name);
@@ -1938,7 +1938,7 @@ sub GenerateImplementation
                     push(@implContent, "    }\n");
                     push(@implContent, "    return jsNull();\n");
                 } elsif ($attribute->signature->type =~ /Constructor$/) {
-                    my $constructorType = $codeGenerator->StripModule($attribute->signature->type);
+                    my $constructorType = $attribute->signature->type;
                     $constructorType =~ s/Constructor$//;
                     # When Constructor attribute is used by DOMWindow.idl, it's correct to pass castedThis as the global object
                     # When JSDOMWrappers have a back-pointer to the globalObject we can pass castedThis->globalObject()
@@ -2106,7 +2106,7 @@ sub GenerateImplementation
                 foreach my $attribute (@{$dataNode->attributes}) {
                     if (!IsReadonly($attribute)) {
                         my $name = $attribute->signature->name;
-                        my $type = $codeGenerator->StripModule($attribute->signature->type);
+                        my $type = $attribute->signature->type;
                         my $putFunctionName = GetAttributeSetterName($interfaceName, $className, $attribute);
                         my $implSetterFunctionName = $codeGenerator->WK_ucfirst($name);
 
@@ -2729,7 +2729,7 @@ sub GenerateParametersCheck
     $implIncludes{"JSDOMBinding.h"} = 1;
 
     foreach my $parameter (@{$function->parameters}) {
-        my $argType = $codeGenerator->StripModule($parameter->type);
+        my $argType = $parameter->type;
 
         # Optional arguments with [Optional] should generate an early call with fewer arguments.
         # Optional arguments with [Optional=...] should not generate the early call.
@@ -2769,17 +2769,13 @@ sub GenerateParametersCheck
             if ($optional) {
                 push(@$outputArray, "    RefPtr<$argType> $name;\n");
                 push(@$outputArray, "    if (exec->argumentCount() > $argsIndex && !exec->argument($argsIndex).isUndefinedOrNull()) {\n");
-                push(@$outputArray, "        if (!exec->argument($argsIndex).isFunction()) {\n");
-                push(@$outputArray, "            setDOMException(exec, TYPE_MISMATCH_ERR);\n");
-                push(@$outputArray, "            return JSValue::encode(jsUndefined());\n");
-                push(@$outputArray, "        }\n");
+                push(@$outputArray, "        if (!exec->argument($argsIndex).isFunction())\n");
+                push(@$outputArray, "            return throwVMTypeError(exec);\n");
                 push(@$outputArray, "        $name = ${callbackClassName}::create(asObject(exec->argument($argsIndex)), castedThis->globalObject());\n");
                 push(@$outputArray, "    }\n");
             } else {
-                push(@$outputArray, "    if (exec->argumentCount() <= $argsIndex || !exec->argument($argsIndex).isFunction()) {\n");
-                push(@$outputArray, "        setDOMException(exec, TYPE_MISMATCH_ERR);\n");
-                push(@$outputArray, "        return JSValue::encode(jsUndefined());\n");
-                push(@$outputArray, "    }\n");
+                push(@$outputArray, "    if (exec->argumentCount() <= $argsIndex || !exec->argument($argsIndex).isFunction())\n");
+                push(@$outputArray, "        return throwVMTypeError(exec);\n");
                 push(@$outputArray, "    RefPtr<$argType> $name = ${callbackClassName}::create(asObject(exec->argument($argsIndex)), castedThis->globalObject());\n");
             }
         } elsif ($parameter->extendedAttributes->{"Clamp"}) {
@@ -3103,7 +3099,7 @@ sub GenerateImplementationFunctionCall()
             $implIncludes{"AutoMemoized.h"} = 1;
             $implIncludes{"<wtf/timelapse/DeterminismLog.h>"} = 1;
             my $nativeType = GetNativeTypeFromSignature($function->signature);
-            my $memoizedType = GetNativeTypeForMemoization($codeGenerator->StripModule($function->signature->type));
+            my $memoizedType = GetNativeTypeForMemoization($function->signature->type);
             my $bindingName = $implClassName . "." . $function->signature->name;
             push(@implContent, "#if ENABLE(TIMELAPSE)\n");
             push(@implContent, $indent . "RefPtr<DeterminismLog> log = exec->lexicalGlobalObject()->determinismLog();\n");
@@ -3151,7 +3147,7 @@ sub GenerateImplementationFunctionCall()
 sub GetNativeTypeFromSignature
 {
     my $signature = shift;
-    my $type = $codeGenerator->StripModule($signature->type);
+    my $type = $signature->type;
 
     if ($type eq "unsigned long" and $signature->extendedAttributes->{"IsIndex"}) {
         # Special-case index arguments because we need to check that they aren't < 0.
@@ -3270,7 +3266,7 @@ sub JSValueToNative
     my $value = shift;
 
     my $conditional = $signature->extendedAttributes->{"Conditional"};
-    my $type = $codeGenerator->StripModule($signature->type);
+    my $type = $signature->type;
 
     return "$value.toBoolean(exec)" if $type eq "boolean";
     return "$value.toNumber(exec)" if $type eq "double";
@@ -3357,7 +3353,7 @@ sub NativeToJSValue
     my $thisValue = shift;
 
     my $conditional = $signature->extendedAttributes->{"Conditional"};
-    my $type = $codeGenerator->StripModule($signature->type);
+    my $type = $signature->type;
 
     return "jsBoolean($value)" if $type eq "boolean";
 
@@ -3844,13 +3840,17 @@ sub GenerateConstructorDefinition
     my $dataNode = shift;
     my $generatingNamedConstructor = shift;
 
+    # FIXME: Add support for overloaded constructors to JS as well.
+    # For now mimic the old behaviour by only generating code for the last "Constructor" attribute.
+    my $function = @{$dataNode->constructors}[-1];
+
     my $constructorClassName = $generatingNamedConstructor ? "${className}NamedConstructor" : "${className}Constructor";
     my $numberOfConstructorParameters = $dataNode->extendedAttributes->{"ConstructorParameters"};
     if (!defined $numberOfConstructorParameters) {
         if ($codeGenerator->IsConstructorTemplate($dataNode, "Event")) {
             $numberOfConstructorParameters = 2;
         } elsif ($dataNode->extendedAttributes->{"Constructor"}) {
-            $numberOfConstructorParameters = @{$dataNode->constructor->parameters};
+            $numberOfConstructorParameters = @{$function->parameters};
         }
     }
 
@@ -4012,7 +4012,6 @@ END
 
             push(@$outputArray, "    ${constructorClassName}* castedThis = jsCast<${constructorClassName}*>(exec->callee());\n");
 
-            my $function = $dataNode->constructor;
             my @constructorArgList;
 
             $implIncludes{"<runtime/Error.h>"} = 1;

@@ -23,8 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "RemoteLayerTreeDrawingArea.h"
+#import "config.h"
+#import "RemoteLayerTreeDrawingArea.h"
+
+#import "RemoteLayerTreeContext.h"
 
 using namespace WebCore;
 
@@ -37,6 +39,7 @@ PassOwnPtr<RemoteLayerTreeDrawingArea> RemoteLayerTreeDrawingArea::create(WebPag
 
 RemoteLayerTreeDrawingArea::RemoteLayerTreeDrawingArea(WebPage* webPage, const WebPageCreationParameters&)
     : DrawingArea(DrawingAreaTypeRemoteLayerTree, webPage)
+    , m_RemoteLayerTreeContext(RemoteLayerTreeContext::create(webPage))
 {
 }
 
@@ -52,12 +55,19 @@ void RemoteLayerTreeDrawingArea::scroll(const IntRect& scrollRect, const IntSize
 {
 }
 
-void RemoteLayerTreeDrawingArea::setRootCompositingLayer(GraphicsLayer*)
+GraphicsLayerFactory* RemoteLayerTreeDrawingArea::graphicsLayerFactory()
 {
+    return m_RemoteLayerTreeContext.get();
+}
+
+void RemoteLayerTreeDrawingArea::setRootCompositingLayer(GraphicsLayer* rootLayer)
+{
+    m_RemoteLayerTreeContext->setRootLayer(rootLayer);
 }
 
 void RemoteLayerTreeDrawingArea::scheduleCompositingLayerFlush()
 {
+    m_RemoteLayerTreeContext->scheduleLayerFlush();
 }
 
 } // namespace WebKit

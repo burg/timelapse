@@ -146,13 +146,16 @@ WebInspector.NativeSnapshotNode.prototype = {
     },
 
     _populate: function() {
+        this.removeEventListener("populate", this._populate, this);
         function comparator(a, b) {
             return b.size - a.size;
         }
         if (this._nodeData !== this._profile)
             this._nodeData.children.sort(comparator);
         for (var node in this._nodeData.children) {
-            this.appendChild(new WebInspector.NativeSnapshotNode(this._nodeData.children[node], this._profile));
+            var nodeData = this._nodeData.children[node];
+            if (WebInspector.settings.showNativeSnapshotUninstrumentedSize.get() || nodeData.name !== "Other")
+                this.appendChild(new WebInspector.NativeSnapshotNode(nodeData, this._profile));
         }
     },
 
@@ -208,6 +211,7 @@ WebInspector.NativeMemoryProfileType.prototype = {
             }
             profileHeader._memoryBlock = memoryBlock;
             profileHeader.isTemporary = false;
+            profileHeader.sidebarElement.subtitle = Number.bytesToString(memoryBlock.size);
         }
         MemoryAgent.getProcessMemoryDistribution(didReceiveMemorySnapshot.bind(this));
         return false;
@@ -314,7 +318,7 @@ WebInspector.MemoryBlockViewProperties._initialize = function()
     }
     addBlock("hsl(  0,  0%,  60%)", "ProcessPrivateMemory", "Total");
     addBlock("hsl(  0,  0%,  80%)", "OwnersTypePlaceholder", "OwnersTypePlaceholder");
-    addBlock("hsl(  0,  0%,  80%)", "Other", "Other");
+    addBlock("hsl(  0,  0%,  60%)", "Other", "Other");
     addBlock("hsl(220, 80%,  70%)", "Page", "Page structures");
     addBlock("hsl(100, 60%,  50%)", "JSHeap", "JavaScript heap");
     addBlock("hsl( 90, 40%,  80%)", "JSExternalResources", "JavaScript external resources");

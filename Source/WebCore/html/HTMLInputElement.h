@@ -287,6 +287,8 @@ public:
 
     virtual const AtomicString& name() const OVERRIDE;
 
+    void endEditing();
+
     static Vector<FileChooserFileInfo> filesFromFileInputFormControlState(const FormControlState&);
 
     virtual void setRangeText(const String& replacement, ExceptionCode&) OVERRIDE;
@@ -320,7 +322,6 @@ private:
     virtual bool isEnumeratable() const;
     virtual bool supportLabels() const OVERRIDE;
     virtual void updateFocusAppearance(bool restorePreviousSelection);
-    virtual void aboutToUnload();
     virtual bool shouldUseInputMethod();
 
     virtual bool isTextFormControl() const { return isTextField(); }
@@ -339,7 +340,7 @@ private:
 
     virtual void parseAttribute(const Attribute&) OVERRIDE;
     virtual bool isPresentationAttribute(const QualifiedName&) const OVERRIDE;
-    virtual void collectStyleForAttribute(const Attribute&, StylePropertySet*) OVERRIDE;
+    virtual void collectStyleForPresentationAttribute(const Attribute&, StylePropertySet*) OVERRIDE;
     virtual void finishParsingChildren();
 
     virtual void copyNonAttributePropertiesFromElement(const Element&);
@@ -430,12 +431,6 @@ private:
     OwnPtr<ListAttributeTargetObserver> m_listAttributeTargetObserver;
 #endif
 };
-
-inline bool isHTMLInputElement(Node* node)
-{
-    ASSERT(node);
-    return node->hasTagName(HTMLNames::inputTag);
-}
 
 } //namespace
 #endif

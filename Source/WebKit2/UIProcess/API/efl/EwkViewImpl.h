@@ -58,6 +58,10 @@ class WebPageGroup;
 class WebPageProxy;
 class WebPopupItem;
 class WebPopupMenuProxyEfl;
+
+#if ENABLE(VIBRATION)
+class VibrationClientEfl;
+#endif
 }
 
 namespace WebCore {
@@ -152,7 +156,7 @@ public:
     void dismissColorPicker();
 #endif
 
-    WKPageRef createNewPage();
+    WKPageRef createNewPage(WKDictionaryRef windowFeatures);
     void closePage();
 
     void requestPopupMenu(WebKit::WebPopupMenuProxyEfl*, const WebCore::IntRect&, WebCore::TextDirection, double pageScaleFactor, const Vector<WebKit::WebPopupItem>& items, int32_t selectedIndex);
@@ -195,6 +199,8 @@ public:
     // FIXME: needs refactoring (split callback invoke)
     void informURLChange();
 
+    bool isHardwareAccelerated() const { return m_isHardwareAccelerated; }
+
 private:
     inline Ewk_View_Smart_Data* smartData() const;
     void displayTimerFired(WebCore::Timer<EwkViewImpl>*);
@@ -228,13 +234,16 @@ private:
     OwnPtr<WebKit::ResourceLoadClientEfl> m_resourceLoadClient;
     OwnPtr<WebKit::FindClientEfl> m_findClient;
     OwnPtr<WebKit::FormClientEfl> m_formClient;
+#if ENABLE(VIBRATION)
+    OwnPtr<WebKit::VibrationClientEfl> m_vibrationClient;
+#endif
     OwnPtr<Ewk_Back_Forward_List> m_backForwardList;
 #if USE(TILED_BACKING_STORE)
     float m_scaleFactor;
     WebCore::IntPoint m_scrollPosition;
 #endif
     OwnPtr<Ewk_Settings> m_settings;
-    const char* m_cursorGroup; // This is an address, do not free it or use WKEinaSharedString.
+    const void* m_cursorIdentifier; // This is an address, do not free it.
     WKEinaSharedString m_faviconURL;
     WKEinaSharedString m_url;
     mutable WKEinaSharedString m_title;
@@ -248,6 +257,7 @@ private:
     OwnPtr<Ewk_Popup_Menu> m_popupMenu;
     OwnPtr<WebKit::InputMethodContextEfl> m_inputMethodContext;
     OwnPtr<Ewk_Color_Picker> m_colorPicker;
+    bool m_isHardwareAccelerated;
 };
 
 #endif // EwkViewImpl_h

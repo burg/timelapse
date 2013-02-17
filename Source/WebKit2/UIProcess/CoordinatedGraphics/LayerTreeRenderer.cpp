@@ -92,6 +92,7 @@ LayerTreeRenderer::LayerTreeRenderer(LayerTreeCoordinatorProxy* layerTreeCoordin
 #if ENABLE(REQUEST_ANIMATION_FRAME)
     , m_animationFrameRequested(false)
 #endif
+    , m_accelerationMode(TextureMapper::OpenGLMode)
 {
 }
 
@@ -354,9 +355,9 @@ void LayerTreeRenderer::setRootLayerID(WebLayerID layerID)
     m_rootLayer->addChild(layer);
 }
 
-PassRefPtr<CoordinatedBackingStore> LayerTreeRenderer::getBackingStore(WebLayerID id)
+PassRefPtr<CoordinatedBackingStore> LayerTreeRenderer::getBackingStore(GraphicsLayer* graphicsLayer)
 {
-    TextureMapperLayer* layer = toTextureMapperLayer(layerByID(id));
+    TextureMapperLayer* layer = toTextureMapperLayer(graphicsLayer);
     ASSERT(layer);
     RefPtr<CoordinatedBackingStore> backingStore = static_cast<CoordinatedBackingStore*>(layer->backingStore().get());
     if (!backingStore) {
@@ -367,20 +368,51 @@ PassRefPtr<CoordinatedBackingStore> LayerTreeRenderer::getBackingStore(WebLayerI
     return backingStore;
 }
 
+void LayerTreeRenderer::removeBackingStoreIfNeeded(GraphicsLayer* graphicsLayer)
+{
+    TextureMapperLayer* layer = toTextureMapperLayer(graphicsLayer);
+    ASSERT(layer);
+    RefPtr<CoordinatedBackingStore> backingStore = static_cast<CoordinatedBackingStore*>(layer->backingStore().get());
+    ASSERT(backingStore);
+    if (backingStore->isEmpty())
+        layer->setBackingStore(0);
+}
+
+void LayerTreeRenderer::resetBackingStoreSizeToLayerSize(GraphicsLayer* graphicsLayer)
+{
+    TextureMapperLayer* layer = toTextureMapperLayer(graphicsLayer);
+    ASSERT(layer);
+    RefPtr<CoordinatedBackingStore> backingStore = static_cast<CoordinatedBackingStore*>(layer->backingStore().get());
+    ASSERT(backingStore);
+    backingStore->setSize(graphicsLayer->size());
+}
+
 void LayerTreeRenderer::createTile(WebLayerID layerID, int tileID, float scale)
 {
-    getBackingStore(layerID)->createTile(tileID, scale);
+    GraphicsLayer* layer = layerByID(layerID);
+    ASSERT(layer);
+    RefPtr<CoordinatedBackingStore> backingStore = getBackingStore(layer);
+    backingStore->createTile(tileID, scale);
+    resetBackingStoreSizeToLayerSize(layer);
 }
 
 void LayerTreeRenderer::removeTile(WebLayerID layerID, int tileID)
 {
-    getBackingStore(layerID)->removeTile(tileID);
+    GraphicsLayer* layer = layerByID(layerID);
+    ASSERT(layer);
+    RefPtr<CoordinatedBackingStore> backingStore = getBackingStore(layer);
+    backingStore->removeTile(tileID);
+    resetBackingStoreSizeToLayerSize(layer);
+    removeBackingStoreIfNeeded(layer);
 }
 
 void LayerTreeRenderer::updateTile(WebLayerID layerID, int tileID, const TileUpdate& update)
 {
-    RefPtr<CoordinatedBackingStore> backingStore = getBackingStore(layerID);
-    backingStore->updateTile(tileID, update.sourceRect, update.targetRect, update.surface, update.offset);
+    GraphicsLayer* layer = layerByID(layerID);
+    ASSERT(layer);
+    RefPtr<CoordinatedBackingStore> backingStore = getBackingStore(layer);
+    backingStore->updateTile(tileID, update.sourceRect, update.tileRect, update.surface, update.offset);
+    resetBackingStoreSizeToLayerSize(layer);
     m_backingStoresWithPendingBuffers.add(backingStore);
 }
 
@@ -443,7 +475,7 @@ void LayerTreeRenderer::ensureRootLayer()
     if (m_rootLayer)
         return;
     if (!m_textureMapper) {
-        m_textureMapper = TextureMapper::create(TextureMapper::OpenGLMode);
+        m_textureMapper = TextureMapper::create(m_accelerationMode);
         static_cast<TextureMapperGL*>(m_textureMapper.get())->setEnableEdgeDistanceAntialiasing(true);
     }
 

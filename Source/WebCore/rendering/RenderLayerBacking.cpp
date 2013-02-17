@@ -221,11 +221,22 @@ void RenderLayerBacking::updateDebugIndicators(bool showBorder, bool showRepaint
         m_maskLayer->setShowRepaintCounter(showRepaintCounter);
     }
 
+    if (m_layerForHorizontalScrollbar)
+        m_layerForHorizontalScrollbar->setShowDebugBorder(showBorder);
+
+    if (m_layerForVerticalScrollbar)
+        m_layerForVerticalScrollbar->setShowDebugBorder(showBorder);
+
+    if (m_layerForScrollCorner)
+        m_layerForScrollCorner->setShowDebugBorder(showBorder);
+
     if (m_scrollingLayer)
         m_scrollingLayer->setShowDebugBorder(showBorder);
 
-    if (m_scrollingContentsLayer)
+    if (m_scrollingContentsLayer) {
         m_scrollingContentsLayer->setShowDebugBorder(showBorder);
+        m_scrollingContentsLayer->setShowRepaintCounter(showRepaintCounter);
+    }
 }
 
 void RenderLayerBacking::createPrimaryGraphicsLayer()
@@ -742,9 +753,8 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
             compositor()->scrollingLayerDidChange(m_owningLayer);
 
         m_scrollingContentsLayer->setSize(scrollSize);
-        // FIXME: Scrolling the content layer does not need to trigger a repaint. The offset will be compensated away during painting.
         // FIXME: The paint offset and the scroll offset should really be separate concepts.
-        m_scrollingContentsLayer->setOffsetFromRenderer(scrollingContentsOffset);
+        m_scrollingContentsLayer->setOffsetFromRenderer(scrollingContentsOffset, GraphicsLayer::DontSetNeedsDisplay);
     }
 
     m_graphicsLayer->setContentsRect(contentsBox());
@@ -1303,8 +1313,14 @@ bool RenderLayerBacking::isDirectlyCompositedImage() const
 
     RenderImage* imageRenderer = toRenderImage(renderObject);
     if (CachedImage* cachedImage = imageRenderer->cachedImage()) {
-        if (cachedImage->hasImage())
-            return cachedImage->imageForRenderer(imageRenderer)->isBitmapImage();
+        if (!cachedImage->hasImage())
+            return false;
+
+        Image* image = cachedImage->imageForRenderer(imageRenderer);
+        if (!image->isBitmapImage())
+            return false;
+
+        return m_graphicsLayer->shouldDirectlyCompositeImage(image);
     }
 
     return false;
@@ -1505,8 +1521,7 @@ void RenderLayerBacking::setContentsNeedDisplayInRect(const IntRect& r)
 
 void RenderLayerBacking::paintIntoLayer(RenderLayer* rootLayer, GraphicsContext* context,
                     const IntRect& paintDirtyRect, // In the coords of rootLayer.
-                    PaintBehavior paintBehavior, GraphicsLayerPaintingPhase paintingPhase,
-                    RenderObject* paintingRoot)
+                    PaintBehavior paintBehavior, GraphicsLayerPaintingPhase paintingPhase)
 {
     if (paintsIntoWindow() || paintsIntoCompositedAncestor()) {
         ASSERT_NOT_REACHED();
@@ -1526,10 +1541,11 @@ void RenderLayerBacking::paintIntoLayer(RenderLayer* rootLayer, GraphicsContext*
         paintFlags |= RenderLayer::PaintLayerPaintingOverflowContents;
     
     // FIXME: GraphicsLayers need a way to split for RenderRegions.
-    m_owningLayer->paintLayerContents(rootLayer, context, paintDirtyRect, LayoutSize(), paintBehavior, paintingRoot, 0, 0, paintFlags);
+    RenderLayer::LayerPaintingInfo paintingInfo(rootLayer, paintDirtyRect, paintBehavior, LayoutSize());
+    m_owningLayer->paintLayerContents(context, paintingInfo, paintFlags);
 
     if (m_owningLayer->containsDirtyOverlayScrollbars())
-        m_owningLayer->paintOverlayScrollbars(context, paintDirtyRect, paintBehavior, paintingRoot);
+        m_owningLayer->paintOverlayScrollbars(context, paintDirtyRect, paintBehavior);
 
     ASSERT(!m_owningLayer->m_usedTransparency);
 }
@@ -1565,7 +1581,7 @@ void RenderLayerBacking::paintContents(const GraphicsLayer* graphicsLayer, Graph
             dirtyRect.intersect(compositedBounds());
 
         // We have to use the same root as for hit testing, because both methods can compute and cache clipRects.
-        paintIntoLayer(m_owningLayer, &context, dirtyRect, PaintBehaviorNormal, paintingPhase, renderer());
+        paintIntoLayer(m_owningLayer, &context, dirtyRect, PaintBehaviorNormal, paintingPhase);
 
         if (m_usingTiledCacheLayer)
             m_owningLayer->renderer()->frame()->view()->setLastPaintTime(currentTime());

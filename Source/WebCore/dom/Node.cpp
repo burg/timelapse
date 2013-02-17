@@ -1195,11 +1195,6 @@ static void checkAcceptChild(Node* newParent, Node* newChild, ExceptionCode& ec)
         ec = HIERARCHY_REQUEST_ERR;
         return;
     }
-
-    if (newParent->inDocument() && ChildFrameDisconnector::nodeHasDisconnector(newParent)) {
-        ec = NO_MODIFICATION_ALLOWED_ERR;
-        return;
-    }
 }
 
 void Node::checkReplaceChild(Node* newChild, Node* oldChild, ExceptionCode& ec)
@@ -2827,6 +2822,22 @@ void Node::textRects(Vector<IntRect>& rects) const
     WebCore::ExceptionCode ec = 0;
     range->selectNodeContents(const_cast<Node*>(this), ec);
     range->textRects(rects);
+}
+
+unsigned Node::connectedSubframeCount() const
+{
+    return hasRareData() ? rareData()->connectedSubframeCount() : 0;
+}
+
+void Node::incrementConnectedSubframeCount()
+{
+    ASSERT(isContainerNode());
+    ensureRareData()->incrementConnectedSubframeCount();
+}
+
+void Node::decrementConnectedSubframeCount()
+{
+    rareData()->decrementConnectedSubframeCount();
 }
 
 void Node::registerScopedHTMLStyleChild()

@@ -90,7 +90,6 @@ public:
 #if USE(GRAPHICS_SURFACE)
     virtual void syncCanvas(WebLayerID, const WebCore::IntSize& canvasSize, const WebCore::GraphicsSurfaceToken&, uint32_t frontBuffer) OVERRIDE;
 #endif
-    virtual void attachLayer(WebCore::CoordinatedGraphicsLayer*);
     virtual void detachLayer(WebCore::CoordinatedGraphicsLayer*);
     virtual void syncFixedLayers();
 
@@ -153,6 +152,8 @@ private:
 
     bool m_notifyAfterScheduledLayerFlush;
     bool m_isValid;
+    // We don't send the messages related to releasing resources to UI Process during purging, because UI Process already had removed all resources.
+    bool m_isPurging;
 
     bool m_waitingForUIProcess;
     bool m_isSuspended;

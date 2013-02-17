@@ -1,9 +1,10 @@
 #include "config.h"
 #include "SlotVisitor.h"
+#include "SlotVisitorInlines.h"
 
 #include "ConservativeRoots.h"
 #include "CopiedSpace.h"
-#include "CopiedSpaceInlineMethods.h"
+#include "CopiedSpaceInlines.h"
 #include "GCThread.h"
 #include "JSArray.h"
 #include "JSDestructibleObject.h"
@@ -15,7 +16,7 @@
 namespace JSC {
 
 SlotVisitor::SlotVisitor(GCThreadSharedData& shared)
-    : m_stack(shared.m_segmentAllocator)
+    : m_stack(shared.m_globalData->heap.blockAllocator())
     , m_visitCount(0)
     , m_isInParallelMode(false)
     , m_shared(shared)
