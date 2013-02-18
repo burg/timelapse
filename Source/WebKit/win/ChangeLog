@@ -1,3 +1,89 @@
+2013-01-09  Hajime Morrita  <morrita@google.com>
+
+        [Shadow DOM] Distribution related code on ElementShadow should be minimized.
+        https://bugs.webkit.org/show_bug.cgi?id=106294
+
+        Reviewed by Dimitri Glazkov.
+
+        * WebKit.vcproj/WebKit.def.in:
+
+2013-01-09  Roger Fong  <roger_fong@apple.com>
+
+        Rename export files to make them more easily findable.
+        https://bugs.webkit.org/show_bug.cgi?id=98695.
+
+        Reviewed by Timothy Horton.
+
+        * WebKit.vcproj/WebKit.def.in: Removed.
+        * WebKit.vcproj/WebKit.vcproj:
+        * WebKit.vcproj/WebKitExportGenerator.vcproj:
+        * WebKit.vcproj/WebKitExportGeneratorBuildCmd.cmd:
+        * WebKit.vcproj/WebKitExportGeneratorPostBuild.cmd:
+        * WebKit.vcproj/WebKitExportGeneratorPreBuild.cmd:
+        * WebKit.vcproj/WebKitExports.def.in: Copied from Source/WebKit/win/WebKit.vcproj/WebKit.def.in.
+        * WebKit.vcproj/WebKitLibCommon.vsprops:
+
+2013-01-09  Roger Fong  <roger_fong@apple.com>
+
+        Add WebPreferences for Seamless IFrames on Windows port.
+        https://bugs.webkit.org/show_bug.cgi?id=106468.
+
+        Rubberstamped by Eric Seidel.
+
+        * Interfaces/IWebPreferences.idl:
+        * WebPreferenceKeysPrivate.h:
+        * WebPreferences.cpp:
+        (WebPreferences::areSeamlessIFramesEnabled):
+        (WebPreferences::setSeamlessIFramesEnabled):
+        * WebPreferences.h:
+        (WebPreferences):
+        * WebView.cpp:
+        (WebView::notifyPreferencesChanged):
+
+2013-01-09  peavo@outlook.com  <peavo@outlook.com>
+
+        [WinCairo] Link fix after r138759
+        https://bugs.webkit.org/show_bug.cgi?id=106323
+
+        Reviewed by Kentaro Hara.
+
+        * WebKit.vcproj/WebKitLibDebugCairoCFLite.vsprops: Include WebKitCFLite.vsprops.
+        * WebKit.vcproj/WebKitLibReleaseCairoCFLite.vsprops: Include WebKitCFLite.vsprops.
+
+2013-01-08  Hajime Morrita  <morrita@google.com>
+
+        [Shadow DOM] Distribution related code on ShadowRoot should be minimized.
+        https://bugs.webkit.org/show_bug.cgi?id=106282
+
+        Reviewed by Dimitri Glazkov.
+
+        * WebKit.vcproj/WebKit.def.in:
+
+2013-01-08  Mark Lam  <mark.lam@apple.com>
+
+        Removed the need for the ProposedDatabase mechanism.
+        https://bugs.webkit.org/show_bug.cgi?id=106292.
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebChromeClient.cpp:
+        (WebChromeClient::exceededDatabaseQuota):
+        * WebCoreSupport/WebChromeClient.h:
+        (WebChromeClient):
+
+2013-01-04  Roger Fong  <roger_fong@apple.com>
+
+        Make private browsing work on Windows.
+        https://bugs.webkit.org/show_bug.cgi?id=106032.
+
+        Reviewed by Alexey Proskuryakov.
+
+        Code path never called ensurePrivateBrowsingSession which is what starts up the private browsing session.
+        This was causing many tests to involving private browsing to fail.
+
+        * WebView.cpp:
+        (WebView::notifyPreferencesChanged):
+
 2013-01-03  Roger Fong  <roger_fong@apple.com>
 
         Remove all traces of Windows from WebKit2 folder.

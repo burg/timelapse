@@ -121,12 +121,12 @@ void RenderView::computePreferredLogicalWidths()
     RenderBlock::computePreferredLogicalWidths();
 }
 
-LayoutUnit RenderView::availableLogicalHeight() const
+LayoutUnit RenderView::availableLogicalHeight(AvailableLogicalHeightType heightType) const
 {
     // If we have columns, then the available logical height is reduced to the column height.
     if (hasColumns())
         return columnInfo()->columnHeight();
-    return RenderBlock::availableLogicalHeight();
+    return RenderBlock::availableLogicalHeight(heightType);
 }
 
 bool RenderView::isChildAllowed(RenderObject* child, RenderStyle*) const
@@ -545,6 +545,31 @@ IntRect RenderView::selectionBounds(bool clipToVisibleContent) const
     return pixelSnappedIntRect(selRect);
 }
 
+void RenderView::repaintSelection() const
+{
+    document()->updateStyleIfNeeded();
+
+    HashSet<RenderBlock*> processedBlocks;
+
+    RenderObject* end = rendererAfterPosition(m_selectionEnd, m_selectionEndPos);
+    for (RenderObject* o = m_selectionStart; o && o != end; o = o->nextInPreOrder()) {
+        if (!o->canBeSelectionLeaf() && o != m_selectionStart && o != m_selectionEnd)
+            continue;
+        if (o->selectionState() == SelectionNone)
+            continue;
+
+        RenderSelectionInfo(o, true).repaint();
+
+        // Blocks are responsible for painting line gaps and margin gaps. They must be examined as well.
+        for (RenderBlock* block = o->containingBlock(); block && !block->isRenderView(); block = block->containingBlock()) {
+            if (processedBlocks.contains(block))
+                break;
+            processedBlocks.add(block);
+            RenderSelectionInfo(block, true).repaint();
+        }
+    }
+}
+
 #if USE(ACCELERATED_COMPOSITING)
 // Compositing layer dimensions take outline size into account, so we have to recompute layer
 // bounds when it changes.
@@ -570,6 +595,9 @@ void RenderView::setSelection(RenderObject* start, int startPos, RenderObject* e
     // Just return if the selection hasn't changed.
     if (m_selectionStart == start && m_selectionStartPos == startPos &&
         m_selectionEnd == end && m_selectionEndPos == endPos)
+        return;
+
+    if ((start && end) && (start->enclosingRenderFlowThread() != end->enclosingRenderFlowThread()))
         return;
 
     // Record the old selected objects.  These will be used later
@@ -1030,6 +1058,7 @@ void RenderView::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addMember(m_flowThreadController);
     info.addMember(m_intervalArena);
     info.addWeakPointer(m_renderQuoteHead);
+    info.addMember(m_legacyPrinting);
 }
 
 } // namespace WebCore

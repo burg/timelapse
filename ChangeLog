@@ -1,3 +1,160 @@
+2013-01-11  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        Unreviewed. Update NEWS and configure.ac for 1.11.4 release
+
+        * configure.ac: Bump version numbers.
+
+2013-01-10  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Add API to set the web extensions directory to WebKit2 GTK+
+        https://bugs.webkit.org/show_bug.cgi?id=106462
+
+        Reviewed by Xan Lopez.
+
+        * Source/autotools/symbols.filter: Update
+        WebGtkExtensionManager::initialize symbol.
+
+2013-01-10  Tony Chang  <tony@chromium.org>
+
+        Speed up supplemental dependency computation
+        https://bugs.webkit.org/show_bug.cgi?id=106503
+
+        Reviewed by Adam Barth.
+
+        * Source/cmake/WebKitMacros.cmake: Add --idlAttributesFile to the binding generation step in cmake.
+
+2013-01-10  Zan Dobersek  <zandobersek@gmail.com>
+
+        [Autotools] Add the AM_WEBKIT_FEATURE_CONDITIONAL macro
+        https://bugs.webkit.org/show_bug.cgi?id=106576
+
+        Reviewed by Martin Robinson.
+
+        Replace the AC_CHECK_WEBKIT_FEATURE_ENABLED with the new macro.
+        The former was executing actions based on the passed-in feature being
+        enabled in the (possibly overridden) GNUmakefile.features.am, the actions
+        usually affecting the Automake conditional value that was set up afterwards.
+        The new macro does this directly, setting up an Automake conditional of the
+        same name as the feature that was checked.
+
+        * Source/autotools/webkitfeature.m4:
+
+2013-01-10  Zan Dobersek  <zandobersek@gmail.com>
+
+        Remove the ENABLE_ANIMATION_API feature define occurences
+        https://bugs.webkit.org/show_bug.cgi?id=106544
+
+        Reviewed by Simon Fraser.
+
+        The Animation API code was removed in r137243. The ENABLE_ANIMATION_API
+        feature define handling still lingers in various build systems and configurations
+        but is of no use, so it should be removed.
+
+        * Source/cmake/OptionsBlackBerry.cmake:
+        * Source/cmake/OptionsEfl.cmake:
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2013-01-10  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Add support for loading web process extensions
+        https://bugs.webkit.org/show_bug.cgi?id=105631
+
+        Reviewed by Gustavo Noronha Silva.
+
+        * GNUmakefile.am: Add webkit2_web_extension_h_api.
+        * Source/autotools/symbols.filter: Export WebGtkExtensionManager
+        symbols required by the injected bundle lib.
+
+2013-01-10  Christophe Dumez  <christophe.dumez@intel.com>
+
+        [EFL] Add gstreamer 1.0.5 to jhbuild
+        https://bugs.webkit.org/show_bug.cgi?id=106178
+
+        Reviewed by Laszlo Gombos.
+
+        Update EFL CMake configuration to require gstreamer
+        1.0.5.
+
+        * Source/cmake/FindGStreamer.cmake:
+        * Source/cmake/OptionsEfl.cmake:
+
+2013-01-09  Hajime Morrita  <morrita@google.com>
+
+        [Shadow DOM] Distribution related code on ElementShadow should be minimized.
+        https://bugs.webkit.org/show_bug.cgi?id=106294
+
+        Reviewed by Dimitri Glazkov.
+
+        * Source/autotools/symbols.filter:
+
+2013-01-08  Zan Dobersek  <zandobersek@gmail.com>
+
+        Add an Autoconf macro that checks whether a given feature is enabled
+        https://bugs.webkit.org/show_bug.cgi?id=106380
+
+        Reviewed by Martin Robinson.
+
+        Add the AC_CHECK_WEBKIT_FEATURE_ENABLED macro. It checks the generated
+        Source/WebCore/GNUmakefile.features.am file to determine whether the
+        given feature is enabled or disabled in the build that's being configured.
+
+        * Source/autotools/webkitfeature.m4: Added.
+
+2013-01-08  Hajime Morrita  <morrita@google.com>
+
+        [Shadow DOM] Distribution related code on ShadowRoot should be minimized.
+        https://bugs.webkit.org/show_bug.cgi?id=106282
+
+        Reviewed by Dimitri Glazkov.
+
+        * Source/autotools/symbols.filter:
+
+2013-01-03  Sergio Villar Senin  <svillar@igalia.com>
+
+        [GTK] Add WebP image support
+        https://bugs.webkit.org/show_bug.cgi?id=105915
+
+        Reviewed by Martin Robinson.
+
+        WebP is from now on a dependency for WebKitGtk+.
+
+        * configure.ac: added WebP library detection.
+
+2013-01-07  Xianzhu Wang  <wangxianzhu@chromium.org>
+
+        Add window.internals.nonFastScrollableRects for testing scrollable areas in fast/slow paths
+        https://bugs.webkit.org/show_bug.cgi?id=105546
+
+        Reviewed by James Robinson.
+
+        Export the new symbol.
+
+        * Source/autotools/symbols.filter:
+
+2013-01-04  Adam Klein  <adamk@chromium.org>
+
+        Remove ENABLE_MUTATION_OBSERVERS #define
+        https://bugs.webkit.org/show_bug.cgi?id=105459
+
+        Reviewed by Ryosuke Niwa.
+
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2013-01-04  Zan Dobersek  <zandobersek@gmail.com>
+
+        REGRESSION (r138184): transitions/transitions-parsing.html is failing on GTK
+        https://bugs.webkit.org/show_bug.cgi?id=105522
+
+        Reviewed by Xan Lopez.
+
+        Remove the configuration flag covering unprefixed CSS transition property names.
+        It does not introduce any dependency. The unprefixed property names should be
+        available by default.
+
+        * configure.ac:
+
 2013-01-03  Tony Chang  <tony@chromium.org>
 
         Generate internal.settings from Settings.in

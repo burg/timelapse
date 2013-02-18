@@ -464,7 +464,7 @@ void WebFrameLoaderClient::dispatchDidCommitLoad()
 
     // Notify the UIProcess.
 
-    webPage->send(Messages::WebPageProxy::DidCommitLoadForFrame(m_frame->frameID(), response.mimeType(), m_frameHasCustomRepresentation, PlatformCertificateInfo(response), InjectedBundleUserMessageEncoder(userData.get())));
+    webPage->send(Messages::WebPageProxy::DidCommitLoadForFrame(m_frame->frameID(), response.mimeType(), m_frameHasCustomRepresentation, m_frame->coreFrame()->loader()->loadType(), PlatformCertificateInfo(response), InjectedBundleUserMessageEncoder(userData.get())));
 
     // Only restore the scale factor for standard frame loads (of the main frame).
     if (m_frame->isMainFrame() && m_frame->coreFrame()->loader()->loadType() == FrameLoadTypeStandard) {
@@ -1564,17 +1564,6 @@ NSCachedURLResponse* WebFrameLoaderClient::willCacheResponse(DocumentLoader*, un
 }
 
 #endif // PLATFORM(MAC)
-
-#if PLATFORM(WIN) && USE(CFNETWORK)
-bool WebFrameLoaderClient::shouldCacheResponse(DocumentLoader*, unsigned long identifier, const ResourceResponse&, const unsigned char* data, unsigned long long length)
-{
-    WebPage* webPage = m_frame->page();
-    if (!webPage)
-        return true;
-
-    return webPage->injectedBundleResourceLoadClient().shouldCacheResponse(webPage, m_frame, identifier);
-}
-#endif // PLATFORM(WIN) && USE(CFNETWORK)
 
 #if ENABLE(WEB_INTENTS)
 void WebFrameLoaderClient::dispatchIntent(PassRefPtr<IntentRequest> request)

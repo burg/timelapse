@@ -136,7 +136,7 @@ bool ScrollingCoordinator::coordinatesScrollingForFrameView(FrameView* frameView
 #endif
 }
 
-Region ScrollingCoordinator::computeNonFastScrollableRegion(Frame* frame, const IntPoint& frameLocation)
+Region ScrollingCoordinator::computeNonFastScrollableRegion(const Frame* frame, const IntPoint& frameLocation) const
 {
     Region nonFastScrollableRegion;
     FrameView* frameView = frame->view();
@@ -185,9 +185,16 @@ static void accumulateRendererTouchEventTargetRects(Vector<IntRect>& rects, cons
     if (parentRect.isEmpty() || renderer->isFloating() || renderer->isPositioned() || renderer->hasTransform()) {
         // FIXME: This method is O(N^2) as it walks the tree to the root for every renderer. RenderGeometryMap would fix this.
         IntRect r = enclosingIntRect(renderer->clippedOverflowRectForRepaint(0));
-        if (!r.isEmpty() && !parentRect.contains(r)) {
-            rects.append(r);
-            adjustedParentRect = r;
+        if (!r.isEmpty()) {
+            // Convert to the top-level view's coordinates.
+            ASSERT(renderer->document()->view());
+            for (ScrollView* view = renderer->document()->view(); view && view->parent(); view = view->parent())
+                r = view->convertToContainingView(r);
+
+            if (!parentRect.contains(r)) {
+                rects.append(r);
+                adjustedParentRect = r;
+            }
         }
     }
 
@@ -388,7 +395,7 @@ void ScrollingCoordinator::handleWheelEventPhase(PlatformWheelEventPhase phase)
 }
 #endif
 
-bool ScrollingCoordinator::hasVisibleSlowRepaintFixedObjects(FrameView* frameView) const
+bool ScrollingCoordinator::hasVisibleSlowRepaintViewportConstrainedObjects(FrameView* frameView) const
 {
     const FrameView::ViewportConstrainedObjectSet* viewportConstrainedObjects = frameView->viewportConstrainedObjects();
     if (!viewportConstrainedObjects)
@@ -401,7 +408,7 @@ bool ScrollingCoordinator::hasVisibleSlowRepaintFixedObjects(FrameView* frameVie
             return true;
         RenderLayer* layer = toRenderBoxModelObject(viewportConstrainedObject)->layer();
         // Any explicit reason that a fixed position element is not composited shouldn't cause slow scrolling.
-        if (!layer->isComposited() && layer->compositor()->fixedPositionLayerNotCompositedReason(layer) == RenderLayerCompositor::NoReason)
+        if (!layer->isComposited() && layer->viewportConstrainedNotCompositedReason() == RenderLayer::NoNotCompositedReason)
             return true;
     }
     return false;
@@ -422,8 +429,8 @@ MainThreadScrollingReasons ScrollingCoordinator::mainThreadScrollingReasons() co
         mainThreadScrollingReasons |= HasSlowRepaintObjects;
     if (!supportsFixedPositionLayers() && frameView->hasViewportConstrainedObjects())
         mainThreadScrollingReasons |= HasViewportConstrainedObjectsWithoutSupportingFixedLayers;
-    if (supportsFixedPositionLayers() && hasVisibleSlowRepaintFixedObjects(frameView))
-        mainThreadScrollingReasons |= HasNonLayerFixedObjects;
+    if (supportsFixedPositionLayers() && hasVisibleSlowRepaintViewportConstrainedObjects(frameView))
+        mainThreadScrollingReasons |= HasNonLayerViewportConstrainedObjects;
     if (m_page->mainFrame()->document()->isImageDocument())
         mainThreadScrollingReasons |= IsImageDocument;
 
@@ -465,8 +472,8 @@ String ScrollingCoordinator::mainThreadScrollingReasonsAsText(MainThreadScrollin
         stringBuilder.append("Has slow repaint objects, ");
     if (reasons & ScrollingCoordinator::HasViewportConstrainedObjectsWithoutSupportingFixedLayers)
         stringBuilder.append("Has viewport constrained objects without supporting fixed layers, ");
-    if (reasons & ScrollingCoordinator::HasNonLayerFixedObjects)
-        stringBuilder.append("Has non-layer fixed objects, ");
+    if (reasons & ScrollingCoordinator::HasNonLayerViewportConstrainedObjects)
+        stringBuilder.append("Has non-layer viewport-constrained objects, ");
     if (reasons & ScrollingCoordinator::IsImageDocument)
         stringBuilder.append("Is image document, ");
 

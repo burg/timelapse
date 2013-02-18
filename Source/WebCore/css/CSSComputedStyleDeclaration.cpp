@@ -164,6 +164,7 @@ static const CSSPropertyID computedProperties[] = {
     CSSPropertyOpacity,
     CSSPropertyOrphans,
     CSSPropertyOutlineColor,
+    CSSPropertyOutlineOffset,
     CSSPropertyOutlineStyle,
     CSSPropertyOutlineWidth,
     CSSPropertyOverflowWrap,
@@ -1047,6 +1048,27 @@ static PassRefPtr<CSSValue> valueForGridPosition(const GridPosition& position)
 
     return cssValuePool().createValue(position.integerPosition(), CSSPrimitiveValue::CSS_NUMBER);
 }
+static PassRefPtr<CSSValue> createTransitionPropertyValue(const Animation* animation)
+{
+    RefPtr<CSSValue> propertyValue;
+    if (animation->animationMode() == Animation::AnimateNone)
+        propertyValue = cssValuePool().createIdentifierValue(CSSValueNone);
+    else if (animation->animationMode() == Animation::AnimateAll)
+        propertyValue = cssValuePool().createIdentifierValue(CSSValueAll);
+    else
+        propertyValue = cssValuePool().createValue(getPropertyNameString(animation->property()), CSSPrimitiveValue::CSS_STRING);
+    return propertyValue.release();
+}
+static PassRefPtr<CSSValue> getTransitionPropertyValue(const AnimationList* animList)
+{
+    RefPtr<CSSValueList> list = CSSValueList::createCommaSeparated();
+    if (animList) {
+        for (size_t i = 0; i < animList->size(); ++i)
+            list->append(createTransitionPropertyValue(animList->animation(i)));
+    } else
+        list->append(cssValuePool().createIdentifierValue(CSSValueAll));
+    return list.release();
+}
 
 static PassRefPtr<CSSValue> getDelayValue(const AnimationList* animList)
 {
@@ -1074,7 +1096,7 @@ static PassRefPtr<CSSValue> getDurationValue(const AnimationList* animList)
     return list.release();
 }
 
-static PassRefPtr<CSSValue> createAnimationValue(const TimingFunction* timingFunction)
+static PassRefPtr<CSSValue> createTimingFunctionValue(const TimingFunction* timingFunction)
 {
     if (timingFunction->isCubicBezierTimingFunction()) {
         const CubicBezierTimingFunction* bezierTimingFunction = static_cast<const CubicBezierTimingFunction*>(timingFunction);
@@ -1114,15 +1136,11 @@ static PassRefPtr<CSSValue> getTimingFunctionValue(const AnimationList* animList
 {
     RefPtr<CSSValueList> list = CSSValueList::createCommaSeparated();
     if (animList) {
-        for (size_t i = 0; i < animList->size(); ++i) {
-            RefPtr<TimingFunction> timingFunction = animList->animation(i)->timingFunction();
-            list->append(createAnimationValue(timingFunction.get()));
-        }
-    } else {
+        for (size_t i = 0; i < animList->size(); ++i)
+            list->append(createTimingFunctionValue(animList->animation(i)->timingFunction().get()));
+    } else
         // Note that initialAnimationTimingFunction() is used for both transitions and animations
-        RefPtr<TimingFunction> timingFunction = Animation::initialAnimationTimingFunction();
-        list->append(createAnimationValue(timingFunction.get()));
-    }
+        list->append(createTimingFunctionValue(Animation::initialAnimationTimingFunction().get()));
     return list.release();
 }
 
@@ -1515,12 +1533,8 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
     if (!style)
         return 0;
 
-    if (renderer) {
-        if (m_pseudoElementSpecifier == AFTER)
-            renderer = renderer->afterPseudoElementRenderer();
-        else if (m_pseudoElementSpecifier == BEFORE)
-            renderer = renderer->beforePseudoElementRenderer();
-    }
+    if (node->isElementNode() && (m_pseudoElementSpecifier == BEFORE || m_pseudoElementSpecifier == AFTER))
+        renderer = toElement(node)->pseudoElementRenderer(m_pseudoElementSpecifier);
 
     propertyID = CSSProperty::resolveDirectionAwareProperty(propertyID, style->direction(), style->writingMode());
 
@@ -2473,27 +2487,34 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             return getDelayValue(style->transitions());
         case CSSPropertyWebkitTransitionDuration:
             return getDurationValue(style->transitions());
-        case CSSPropertyWebkitTransitionProperty: {
-            RefPtr<CSSValueList> list = CSSValueList::createCommaSeparated();
-            const AnimationList* t = style->transitions();
-            if (t) {
-                for (size_t i = 0; i < t->size(); ++i) {
-                    RefPtr<CSSValue> propertyValue;
-                    const Animation* animation = t->animation(i);
-                    if (animation->animationMode() == Animation::AnimateNone)
-                        propertyValue = cssValuePool().createIdentifierValue(CSSValueNone);
-                    else if (animation->animationMode() == Animation::AnimateAll)
-                        propertyValue = cssValuePool().createIdentifierValue(CSSValueAll);
-                    else
-                        propertyValue = cssValuePool().createValue(getPropertyNameString(animation->property()), CSSPrimitiveValue::CSS_STRING);
-                    list->append(propertyValue);
-                }
-            } else
-                list->append(cssValuePool().createIdentifierValue(CSSValueAll));
-            return list.release();
-        }
+        case CSSPropertyWebkitTransitionProperty:
+            return getTransitionPropertyValue(style->transitions());
         case CSSPropertyWebkitTransitionTimingFunction:
             return getTimingFunctionValue(style->transitions());
+        case CSSPropertyWebkitTransition: {
+            const AnimationList* animList = style->transitions();
+            if (animList) {
+                RefPtr<CSSValueList> transitionsList = CSSValueList::createCommaSeparated();
+                for (size_t i = 0; i < animList->size(); ++i) {
+                    RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
+                    const Animation* animation = animList->animation(i);
+                    list->append(createTransitionPropertyValue(animation));
+                    list->append(cssValuePool().createValue(animation->duration(), CSSPrimitiveValue::CSS_S));
+                    list->append(createTimingFunctionValue(animation->timingFunction().get()));
+                    list->append(cssValuePool().createValue(animation->delay(), CSSPrimitiveValue::CSS_S));
+                    transitionsList->append(list);
+                }
+                return transitionsList.release();
+            }
+
+            RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
+            // transition-property default value.
+            list->append(cssValuePool().createIdentifierValue(CSSValueAll));
+            list->append(cssValuePool().createValue(Animation::initialAnimationDuration(), CSSPrimitiveValue::CSS_S));
+            list->append(createTimingFunctionValue(Animation::initialAnimationTimingFunction().get()));
+            list->append(cssValuePool().createValue(Animation::initialAnimationDelay(), CSSPrimitiveValue::CSS_S));
+            return list.release();
+        }
         case CSSPropertyPointerEvents:
             return cssValuePool().createValue(style->pointerEvents());
         case CSSPropertyWebkitColorCorrection:
@@ -2699,7 +2720,6 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyWebkitTransformOriginX:
         case CSSPropertyWebkitTransformOriginY:
         case CSSPropertyWebkitTransformOriginZ:
-        case CSSPropertyWebkitTransition:
 #if ENABLE(CSS_EXCLUSIONS)
         case CSSPropertyWebkitWrap:
 #endif

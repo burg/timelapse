@@ -2,14 +2,14 @@ AC_PREREQ(2.60)
 
 m4_define([webkit_major_version], [1])
 m4_define([webkit_minor_version], [11])
-m4_define([webkit_micro_version], [2])
+m4_define([webkit_micro_version], [4])
 
 # This is the version we'll be using as part of our User-Agent string
 # e.g., AppleWebKit/$(webkit_user_agent_version) ...
 #
 # Sourced from Source/WebCore/Configurations/Version.xcconfig
 m4_define([webkit_user_agent_major_version], [537])
-m4_define([webkit_user_agent_minor_version], [20])
+m4_define([webkit_user_agent_minor_version], [26])
 
 AC_INIT([WebKitGTK],[webkit_major_version.webkit_minor_version.webkit_micro_version],[http://bugs.webkit.org/])
 
@@ -35,13 +35,13 @@ AC_CONFIG_SRCDIR([Source/WebCore/config.h])
 
 dnl # Libtool library version, not to confuse with API version
 dnl # see http://www.gnu.org/software/libtool/manual/html_node/Libtool-versioning.html
-LIBWEBKITGTK_VERSION=17:1:17
+LIBWEBKITGTK_VERSION=18:0:18
 AC_SUBST([LIBWEBKITGTK_VERSION])
 
-LIBJAVASCRIPTCOREGTK_VERSION=13:7:13
+LIBJAVASCRIPTCOREGTK_VERSION=13:8:13
 AC_SUBST([LIBJAVASCRIPTCOREGTK_VERSION])
 
-LIBWEBKIT2GTK_VERSION=19:0:19
+LIBWEBKIT2GTK_VERSION=20:0:20
 AC_SUBST([LIBWEBKIT2GTK_VERSION])
 
 AM_INIT_AUTOMAKE([foreign subdir-objects dist-xz no-dist-gzip tar-ustar])
@@ -267,6 +267,9 @@ if test "$png_ok" != yes; then
 fi
 AC_SUBST([PNG_LIBS])
 
+# Check for WEBP Image support
+AC_CHECK_HEADERS([webp/decode.h], [WEBP_LIBS='-lwebp'], [AC_MSG_ERROR([WebP library (libwebp) not found])])
+AC_SUBST([WEBP_LIBS])
 
 if test "$os_win32" = "yes"; then
   WINMM_LIBS=-lwinmm
@@ -672,14 +675,6 @@ AC_ARG_ENABLE(xslt,
                              [enable support for XSLT [default=yes]]),
               [],[enable_xslt="yes"])
 AC_MSG_RESULT([$enable_xslt])
-
-# check whether to enable unprefixed support for CSS Transforms, Animations and Transitions
-AC_MSG_CHECKING([whether to enable support for unprefixed CSS Transforms, Animations and Transitions])
-AC_ARG_ENABLE(xslt,
-              AC_HELP_STRING([--enable-unprefixed-css-transforms-animations-transitions],
-                             [enable support for for unprefixed CSS Transforms, Animations and Transitions [default=yes]]),
-              [],[enable_css_transforms_animations_transitions_unprefixed="yes"])
-AC_MSG_RESULT([$enable_css_transforms_animations_transitions_unprefixed])
 
 # check whether to enable geolocation support
 AC_MSG_CHECKING([whether to enable geolocation support])
@@ -1158,7 +1153,6 @@ AM_CONDITIONAL([ENABLE_WEBKIT2],[test "$enable_webkit2" = "yes"])
 AM_CONDITIONAL([ENABLE_SPELLCHECK],[test "$enable_spellcheck" = "yes"])
 AM_CONDITIONAL([ENABLE_CSS_FILTERS],[test "$enable_css_filters" = "yes"])
 AM_CONDITIONAL([ENABLE_CSS_SHADERS],[test "$enable_css_shaders" = "yes"])
-AM_CONDITIONAL([ENABLE_CSS_TRANSFORMS_ANIMATIONS_TRANSITIONS_UNPREFIXED],[test "$enable_css_transforms_animations_transitions_unprefixed" = "yes"])
 
 # Gtk conditionals
 AM_CONDITIONAL([ENABLE_INTROSPECTION],[test "$enable_introspection" = "yes"])
@@ -1223,7 +1217,6 @@ Features:
  SVG fonts support                                        : $enable_svg_fonts
  SVG support                                              : $enable_svg
  Spellcheck support                                       : $enable_spellcheck
- Unprefixed support for CSS Transforms, animations and transtions : enable_css_transforms_animations_transitions_unprefixed
  Web Audio support                                        : $enable_web_audio
  WebGL                                                    : $enable_webgl
  XSLT support                                             : $enable_xslt

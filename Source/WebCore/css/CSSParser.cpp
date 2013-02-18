@@ -4406,14 +4406,18 @@ PassRefPtr<CSSValue> CSSParser::parseAnimationTimingFunction()
         if (!args || args->size() != 7)
             return 0;
 
-        // There are two points specified.  The values must be between 0 and 1.
+        // There are two points specified. The x values must be between 0 and 1 but the y values can exceed this range.
         double x1, y1, x2, y2;
 
         if (!parseCubicBezierTimingFunctionValue(args, x1))
             return 0;
+        if (x1 < 0 || x1 > 1)
+            return 0;
         if (!parseCubicBezierTimingFunctionValue(args, y1))
             return 0;
         if (!parseCubicBezierTimingFunctionValue(args, x2))
+            return 0;
+        if (x2 < 0 || x2 > 1)
             return 0;
         if (!parseCubicBezierTimingFunctionValue(args, y2))
             return 0;
@@ -8132,13 +8136,12 @@ PassRefPtr<WebKitCSSFilterValue> CSSParser::parseCustomFilter(CSSParserValue* va
     if (meshSizeList->length() > 2)
         return 0;
     
-    // TODO: This is legacy code and shall be removed.
-    // See https://bugs.webkit.org/show_bug.cgi?id=103778
+    // FIXME: For legacy content, we accept the mesh box types. We don't do anything else with them.
+    // Eventually, we'll remove them completely.
+    // https://bugs.webkit.org/show_bug.cgi?id=103778
     if ((arg = argsList->current()) && (arg->id == CSSValueBorderBox || arg->id == CSSValuePaddingBox
-        || arg->id == CSSValueContentBox || arg->id == CSSValueFilterBox)) {
-        meshSizeList->append(cssValuePool().createIdentifierValue(arg->id));
+        || arg->id == CSSValueContentBox || arg->id == CSSValueFilterBox))
         argsList->next();
-    }
     
     if ((arg = argsList->current()) && arg->id == CSSValueDetached) {
         meshSizeList->append(cssValuePool().createIdentifierValue(arg->id));
@@ -9476,43 +9479,59 @@ bool CSSParser::parseNthChildExtra()
 }
 
 template <typename CharacterType>
-inline void CSSParser::detectFunctionTypeToken(int length)
+inline bool CSSParser::detectFunctionTypeToken(int length)
 {
     ASSERT(length > 0);
     CharacterType* name = tokenStart<CharacterType>();
 
     switch (length) {
     case 3:
-        if (isASCIIAlphaCaselessEqual(name[0], 'n') && isASCIIAlphaCaselessEqual(name[1], 'o') && isASCIIAlphaCaselessEqual(name[2], 't'))
+        if (isASCIIAlphaCaselessEqual(name[0], 'n') && isASCIIAlphaCaselessEqual(name[1], 'o') && isASCIIAlphaCaselessEqual(name[2], 't')) {
             m_token = NOTFUNCTION;
-        else if (isASCIIAlphaCaselessEqual(name[0], 'u') && isASCIIAlphaCaselessEqual(name[1], 'r') && isASCIIAlphaCaselessEqual(name[2], 'l'))
+            return true;
+        }
+        if (isASCIIAlphaCaselessEqual(name[0], 'u') && isASCIIAlphaCaselessEqual(name[1], 'r') && isASCIIAlphaCaselessEqual(name[2], 'l')) {
             m_token = URI;
+            return true;
+        }
 #if ENABLE(VIDEO_TRACK)
-        else if (isASCIIAlphaCaselessEqual(name[0], 'c') && isASCIIAlphaCaselessEqual(name[1], 'u') && isASCIIAlphaCaselessEqual(name[2], 'e'))
+        if (isASCIIAlphaCaselessEqual(name[0], 'c') && isASCIIAlphaCaselessEqual(name[1], 'u') && isASCIIAlphaCaselessEqual(name[2], 'e')) {
             m_token = CUEFUNCTION;
+            return true;
+        }
 #endif
-        return;
+        return false;
 
     case 9:
-        if (isEqualToCSSIdentifier(name, "nth-child"))
+        if (isEqualToCSSIdentifier(name, "nth-child")) {
             m_parsingMode = NthChildMode;
-        return;
+            return true;
+        }
+        return false;
 
     case 11:
-        if (isEqualToCSSIdentifier(name, "nth-of-type"))
+        if (isEqualToCSSIdentifier(name, "nth-of-type")) {
             m_parsingMode = NthChildMode;
-        return;
+            return true;
+        }
+        return false;
 
     case 14:
-        if (isEqualToCSSIdentifier(name, "nth-last-child"))
+        if (isEqualToCSSIdentifier(name, "nth-last-child")) {
             m_parsingMode = NthChildMode;
-        return;
+            return true;
+        }
+        return false;
 
     case 16:
-        if (isEqualToCSSIdentifier(name, "nth-last-of-type"))
+        if (isEqualToCSSIdentifier(name, "nth-last-of-type")) {
             m_parsingMode = NthChildMode;
-        return;
+            return true;
+        }
+        return false;
     }
+
+    return false;
 }
 
 template <typename CharacterType>
@@ -9947,13 +9966,23 @@ restartAfterComment:
                     break;
             }
 #endif
-
             m_token = FUNCTION;
-            if (!hasEscape)
-                detectFunctionTypeToken<SrcCharacterType>(result - tokenStart<SrcCharacterType>());
-            ++currentCharacter<SrcCharacterType>();
-            ++result;
-            ++yylval->string.m_length;
+            bool shouldSkipParenthesis = true;
+            if (!hasEscape) {
+                bool detected = detectFunctionTypeToken<SrcCharacterType>(result - tokenStart<SrcCharacterType>());
+                if (!detected && m_parsingMode == MediaQueryMode) {
+                    // ... and(max-width: 480px) ... looks like a function, but in fact it is not,
+                    // so run more detection code in the MediaQueryMode.
+                    detectMediaQueryToken<SrcCharacterType>(result - tokenStart<SrcCharacterType>());
+                    shouldSkipParenthesis = false;
+                }
+            }
+
+            if (LIKELY(shouldSkipParenthesis)) {
+                ++currentCharacter<SrcCharacterType>();
+                ++result;
+                ++yylval->string.m_length;
+            }
 
             if (token() == URI) {
                 m_token = FUNCTION;

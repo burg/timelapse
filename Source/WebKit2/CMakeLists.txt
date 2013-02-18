@@ -181,6 +181,7 @@ set(WebKit2_SOURCES
     Shared/WebImage.cpp
     Shared/WebIntentServiceInfo.cpp
     Shared/WebKeyboardEvent.cpp
+    Shared/WebKit2Initialize.cpp
     Shared/WebMemorySampler.cpp
     Shared/WebMouseEvent.cpp
     Shared/WebNetworkInfo.cpp
@@ -471,6 +472,7 @@ set(WebKit2_SOURCES
     WebProcess/WebCoreSupport/WebColorChooser.cpp
     WebProcess/WebCoreSupport/WebContextMenuClient.cpp
     WebProcess/WebCoreSupport/WebDatabaseManager.cpp
+    WebProcess/WebCoreSupport/WebDeviceProximityClient.cpp
     WebProcess/WebCoreSupport/WebDragClient.cpp
     WebProcess/WebCoreSupport/WebEditorClient.cpp
     WebProcess/WebCoreSupport/WebFrameLoaderClient.cpp

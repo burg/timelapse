@@ -62,6 +62,7 @@
       '../Modules/mediastream',
       '../Modules/navigatorcontentutils',
       '../Modules/notifications',
+      '../Modules/proximity',
       '../Modules/quota',
       '../Modules/speech',
       '../Modules/webaudio',
@@ -400,6 +401,7 @@
             '--output_cpp_dir', '<(SHARED_INTERMEDIATE_DIR)/webcore',
           ],
           'message': 'Generating Inspector protocol sources from Inspector.json',
+          'msvs_cygwin_shell': 1,
         },
       ]
     },
@@ -550,6 +552,7 @@
             '--',
             '<@(_inputs)',
           ],
+          'msvs_cygwin_shell': 1,
         },
       ]
     },
@@ -566,8 +569,6 @@
           },
           'inputs': [
             '../bindings/scripts/preprocess-idls.pl',
-            '../bindings/scripts/IDLParser.pm',
-            '../bindings/scripts/IDLAttributes.txt',
             '<(idl_files_list)',
             '<!@(cat <(idl_files_list))',
           ],
@@ -586,9 +587,6 @@
             '<(idl_files_list)',
             '--supplementalDependencyFile',
             '<(SHARED_INTERMEDIATE_DIR)/supplemental_dependency.tmp',
-            '--idlAttributesFile',
-            '../bindings/scripts/IDLAttributes.txt',
-            '<@(preprocessor)',
           ],
           'message': 'Resolving [Supplemental=XXX] dependencies in all IDL files',
         }
@@ -712,6 +710,7 @@
               ],
             }],
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'CSSValueKeywords',
@@ -740,6 +739,7 @@
               ],
             }],
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'HTMLNames',
@@ -766,6 +766,7 @@
             '--wrapperFactoryV8',
             '--extraDefines', '<(feature_defines)'
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'WebKitFontFamilyNames',
@@ -786,6 +787,7 @@
             '--',
             '--fonts',
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'SVGNames',
@@ -813,6 +815,7 @@
             '--wrapperFactoryV8',
             '--extraDefines', '<(feature_defines)'
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'EventFactory',
@@ -832,6 +835,7 @@
             '--',
             '<@(_inputs)',
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'EventTargetFactory',
@@ -850,6 +854,7 @@
             '--',
             '<@(_inputs)',
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'ExceptionCodeDescription',
@@ -870,6 +875,7 @@
             '--',
             '<@(_inputs)',
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'MathMLNames',
@@ -894,6 +900,7 @@
             '--factory',
             '--extraDefines', '<(feature_defines)'
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'UserAgentStyleSheets',
@@ -940,6 +947,7 @@
             '--',
             '--defines', '<(feature_defines)',
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'PickerCommon',
@@ -1037,6 +1045,7 @@
             '--',
             '--extraDefines', '<(feature_defines)'
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'XMLNSNames',
@@ -1057,6 +1066,7 @@
             '--',
             '--extraDefines', '<(feature_defines)'
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'XMLNames',
@@ -1077,6 +1087,7 @@
             '--',
             '--extraDefines', '<(feature_defines)'
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'action_name': 'derived_sources_all_in_one',
@@ -1167,9 +1178,9 @@
             '../bindings/scripts/CodeGenerator.pm',
             '../bindings/scripts/CodeGeneratorV8.pm',
             '../bindings/scripts/IDLParser.pm',
+            '../bindings/scripts/IDLAttributes.txt',
             '../bindings/scripts/preprocessor.pm',
-            '<(SHARED_INTERMEDIATE_DIR)/supplemental_dependency.tmp',
-            '<@(webcore_test_support_idl_files)',
+            '<!@pymod_do_main(supplemental_idl_files <@(bindings_idl_files))',
           ],
           'outputs': [
             # FIXME:  The .cpp file should be in webkit/bindings once
@@ -1217,6 +1228,8 @@
             '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings',
             '--outputDir',
             '<(SHARED_INTERMEDIATE_DIR)/webcore/bindings',
+            '--idlAttributesFile',
+            '../bindings/scripts/IDLAttributes.txt',
             '--defines',
             '<(feature_defines) LANGUAGE_JAVASCRIPT V8_BINDING',
             '--generator',
@@ -1859,7 +1872,7 @@
             ['include', 'platform/graphics/harfbuzz/HarfBuzzShaperBase\\.(cpp|h)$'],
             ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzNGFaceCoreText\\.cpp$'],
             ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzNGFace\\.(cpp|h)$'],
-            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzShaper\\.(cpp|h)$'],            
+            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzShaper\\.(cpp|h)$'],
           ],
         },{ # OS!="mac"
           'sources/': [
@@ -2253,6 +2266,8 @@
         '<@(webcore_test_support_files)',
         '<(SHARED_INTERMEDIATE_DIR)/webcore/bindings/V8MallocStatistics.cpp',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8MallocStatistics.h',
+        '<(SHARED_INTERMEDIATE_DIR)/webcore/bindings/V8TypeConversions.cpp',
+        '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8TypeConversions.h',
         '<(SHARED_INTERMEDIATE_DIR)/webcore/bindings/V8Internals.cpp',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8Internals.h',
         '<(SHARED_INTERMEDIATE_DIR)/webcore/bindings/V8InternalSettings.cpp',

@@ -162,6 +162,11 @@ public:
     // Printing
     bool isPageBoxVisible(int pageIndex);
 
+    // Authentication
+    void setHandlesAuthenticationChallenges(bool);
+    void setAuthenticationUsername(JSStringRef);
+    void setAuthenticationPassword(JSStringRef);
+
     void setValueForUser(JSContextRef, JSValueRef element, JSStringRef value);
 
     // Audio testing.
@@ -270,6 +275,8 @@ public:
 
     bool callShouldCloseOnWebView();
 
+    void setCustomTimeout(int duration);
+
     // Work queue.
     void queueBackNavigation(unsigned howFarBackward);
     void queueForwardNavigation(unsigned howFarForward);
@@ -321,6 +328,8 @@ private:
     
     bool m_globalFlag;
     bool m_customFullScreenBehavior;
+
+    int m_timeout;
 
     bool m_userStyleSheetEnabled;
     WKRetainPtr<WKStringRef> m_userStyleSheetLocation;

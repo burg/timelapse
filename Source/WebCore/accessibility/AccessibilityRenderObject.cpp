@@ -669,10 +669,12 @@ String AccessibilityRenderObject::textUnderElement() const
         }
     
         // Sometimes text fragments don't have Nodes associated with them (like when
-        // CSS content is used to insert text).
+        // CSS content is used to insert text or when a RenderCounter is used.)
         RenderText* renderTextObject = toRenderText(m_renderer);
         if (renderTextObject->isTextFragment())
             return String(static_cast<RenderTextFragment*>(m_renderer)->contentString());
+        else
+            return String(renderTextObject->text());
     }
     
     return AccessibilityNodeObject::textUnderElement();
@@ -2345,6 +2347,11 @@ AccessibilityObject* AccessibilityRenderObject::correspondingLabelForControlElem
     if (!m_renderer)
         return 0;
 
+    // ARIA: section 2A, bullet #3 says if aria-labeledby or aria-label appears, it should
+    // override the "label" element association.
+    if (hasTextAlternative())
+        return 0;
+
     Node* node = m_renderer->node();
     if (node && node->isHTMLElement()) {
         HTMLLabelElement* label = labelForElement(static_cast<Element*>(node));
@@ -3364,7 +3371,7 @@ void AccessibilityRenderObject::scrollTo(const IntPoint& point) const
         return;
 
     RenderLayer* layer = box->layer();
-    layer->scrollToOffset(toSize(point), RenderLayer::ScrollOffsetClamped);
+    layer->scrollToOffset(toIntSize(point), RenderLayer::ScrollOffsetClamped);
 }
 
 #if ENABLE(MATHML)

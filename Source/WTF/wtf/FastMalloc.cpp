@@ -2137,7 +2137,7 @@ void TCMalloc_PageHeap::IncrementalScavenge(Length n) {
     SpanList* slist = (index == kMaxPages) ? &large_ : &free_[index];
     if (!DLL_IsEmpty(&slist->normal)) {
       // Release the last span on the normal portion of this list
-      Span* s = slist->normal.prev;
+      Span* s = slist->normal.prev();
       DLL_Remove(s);
       TCMalloc_SystemRelease(reinterpret_cast<void*>(s->start << kPageShift),
                              static_cast<size_t>(s->length << kPageShift));
@@ -4382,17 +4382,13 @@ void *(*__memalign_hook)(size_t, size_t, const void *) = MemalignOverride;
 void releaseFastMallocFreeMemory()
 {
     // Flush free pages in the current thread cache back to the page heap.
-    // Low watermark mechanism in Scavenge() prevents full return on the first pass.
-    // The second pass flushes everything.
-    if (TCMalloc_ThreadCache* threadCache = TCMalloc_ThreadCache::GetCacheIfPresent()) {
-        threadCache->Scavenge();
-        threadCache->Scavenge();
-    }
+    if (TCMalloc_ThreadCache* threadCache = TCMalloc_ThreadCache::GetCacheIfPresent())
+        threadCache->Cleanup();
 
     SpinLockHolder h(&pageheap_lock);
     pageheap->ReleaseFreePages();
 }
-    
+
 FastMallocStatistics fastMallocStatistics()
 {
     FastMallocStatistics statistics;

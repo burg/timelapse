@@ -31,6 +31,7 @@
 #include "config.h"
 #include "WebViewHost.h"
 
+#include "DRTDevToolsAgent.h"
 #include "DRTTestRunner.h"
 #include "MockGrammarCheck.h"
 #include "MockWebSpeechInputController.h"
@@ -126,24 +127,6 @@ static string urlSuitableForTestResult(const string& url)
     return filename;
 }
 
-// Used to write a platform neutral file:/// URL by taking the
-// filename and its directory. (e.g., converts
-// "file:///tmp/foo/bar.txt" to just "bar.txt").
-static string descriptionSuitableForTestResult(const string& url)
-{
-    if (url.empty() || string::npos == url.find("file://"))
-        return url;
-
-    size_t pos = url.rfind('/');
-    if (pos == string::npos || !pos)
-        return "ERROR:" + url;
-    pos = url.rfind('/', pos - 1);
-    if (pos == string::npos)
-        return "ERROR:" + url;
-
-    return url.substr(pos + 1);
-}
-
 // Get a debugging string from a WebNavigationType.
 static const char* webNavigationTypeToString(WebNavigationType type)
 {
@@ -171,18 +154,6 @@ static string URLDescription(const GURL& url)
     return url.possibly_invalid_spec();
 }
 
-static void printResponseDescription(const WebURLResponse& response)
-{
-    if (response.isNull()) {
-        fputs("(null)", stdout);
-        return;
-    }
-    string url = response.url().spec();
-    printf("<NSURLResponse %s, http status code %d>",
-           descriptionSuitableForTestResult(url).c_str(),
-           response.httpStatusCode());
-}
-
 static void printNodeDescription(const WebNode& node, int exception)
 {
     if (exception) {
@@ -203,12 +174,10 @@ static void printNodeDescription(const WebNode& node, int exception)
 
 // WebViewClient -------------------------------------------------------------
 
-WebView* WebViewHost::createView(WebFrame* creator, const WebURLRequest& request, const WebWindowFeatures&, const WebString&, WebNavigationPolicy)
+WebView* WebViewHost::createView(WebFrame* creator, const WebURLRequest&, const WebWindowFeatures&, const WebString&, WebNavigationPolicy)
 {
     if (!testRunner()->canOpenWindows())
         return 0;
-    if (testRunner()->shouldDumpCreateView())
-        fprintf(stdout, "createView(%s)\n", URLDescription(request.url()).c_str());
     creator->consumeUserGesture();
     return m_shell->createNewWindow(WebURL())->webView();
 }
@@ -854,26 +823,6 @@ void WebViewHost::unableToImplementPolicyWithError(WebFrame* frame, const WebURL
             error.domain.utf8().data(), error.reason, frame->uniqueName().utf8().data());
 }
 
-void WebViewHost::willPerformClientRedirect(WebFrame* frame, const WebURL& from, const WebURL& to,
-                                            double interval, double fire_time)
-{
-    if (m_shell->shouldDumpFrameLoadCallbacks()) {
-        printFrameDescription(frame);
-        printf(" - willPerformClientRedirectToURL: %s \n", to.spec().data());
-    }
-
-    if (m_shell->shouldDumpUserGestureInFrameLoadCallbacks())
-        printFrameUserGestureStatus(frame, " - in willPerformClientRedirect\n");
-}
-
-void WebViewHost::didCancelClientRedirect(WebFrame* frame)
-{
-    if (!m_shell->shouldDumpFrameLoadCallbacks())
-        return;
-    printFrameDescription(frame);
-    fputs(" - didCancelClientRedirectForFrame\n", stdout);
-}
-
 void WebViewHost::didCreateDataSource(WebFrame*, WebDataSource* ds)
 {
     ds->setExtraData(m_pendingExtraData.leakPtr());
@@ -883,41 +832,19 @@ void WebViewHost::didCreateDataSource(WebFrame*, WebDataSource* ds)
 
 void WebViewHost::didStartProvisionalLoad(WebFrame* frame)
 {
-    if (m_shell->shouldDumpFrameLoadCallbacks()) {
-        printFrameDescription(frame);
-        fputs(" - didStartProvisionalLoadForFrame\n", stdout);
-    }
-
-    if (m_shell->shouldDumpUserGestureInFrameLoadCallbacks())
-        printFrameUserGestureStatus(frame, " - in didStartProvisionalLoadForFrame\n");
-
     if (!m_topLoadingFrame)
         m_topLoadingFrame = frame;
 
-    if (testRunner()->stopProvisionalFrameLoads()) {
-        printFrameDescription(frame);
-        fputs(" - stopping load in didStartProvisionalLoadForFrame callback\n", stdout);
-        frame->stopLoading();
-    }
     updateAddressBar(frame->view());
 }
 
 void WebViewHost::didReceiveServerRedirectForProvisionalLoad(WebFrame* frame)
 {
-    if (m_shell->shouldDumpFrameLoadCallbacks()) {
-        printFrameDescription(frame);
-        fputs(" - didReceiveServerRedirectForProvisionalLoadForFrame\n", stdout);
-    }
     updateAddressBar(frame->view());
 }
 
 void WebViewHost::didFailProvisionalLoad(WebFrame* frame, const WebURLError& error)
 {
-    if (m_shell->shouldDumpFrameLoadCallbacks()) {
-        printFrameDescription(frame);
-        fputs(" - didFailProvisionalLoadWithError\n", stdout);
-    }
-
     locationChangeDone(frame);
 
     // Don't display an error page if we're running layout tests, because
@@ -926,10 +853,6 @@ void WebViewHost::didFailProvisionalLoad(WebFrame* frame, const WebURLError& err
 
 void WebViewHost::didCommitProvisionalLoad(WebFrame* frame, bool isNewNavigation)
 {
-    if (m_shell->shouldDumpFrameLoadCallbacks()) {
-        printFrameDescription(frame);
-        fputs(" - didCommitLoadForFrame\n", stdout);
-    }
     updateForCommittedLoad(frame, isNewNavigation);
 }
 
@@ -940,57 +863,17 @@ void WebViewHost::didClearWindowObject(WebFrame* frame)
 
 void WebViewHost::didReceiveTitle(WebFrame* frame, const WebString& title, WebTextDirection direction)
 {
-    WebCString title8 = title.utf8();
-
-    if (m_shell->shouldDumpFrameLoadCallbacks()) {
-        printFrameDescription(frame);
-        printf(" - didReceiveTitle: %s\n", title8.data());
-    }
-
-    if (testRunner()->shouldDumpTitleChanges())
-        printf("TITLE CHANGED: '%s'\n", title8.data());
-
     setPageTitle(title);
     testRunner()->setTitleTextDirection(direction);
 }
 
-void WebViewHost::didFinishDocumentLoad(WebFrame* frame)
-{
-    if (m_shell->shouldDumpFrameLoadCallbacks()) {
-        printFrameDescription(frame);
-        fputs(" - didFinishDocumentLoadForFrame\n", stdout);
-    } else {
-        unsigned pendingUnloadEvents = frame->unloadListenerCount();
-        if (pendingUnloadEvents) {
-            printFrameDescription(frame);
-            printf(" - has %u onunload handler(s)\n", pendingUnloadEvents);
-        }
-    }
-}
-
-void WebViewHost::didHandleOnloadEvents(WebFrame* frame)
-{
-    if (m_shell->shouldDumpFrameLoadCallbacks()) {
-        printFrameDescription(frame);
-        fputs(" - didHandleOnloadEventsForFrame\n", stdout);
-    }
-}
-
 void WebViewHost::didFailLoad(WebFrame* frame, const WebURLError& error)
 {
-    if (m_shell->shouldDumpFrameLoadCallbacks()) {
-        printFrameDescription(frame);
-        fputs(" - didFailLoadWithError\n", stdout);
-    }
     locationChangeDone(frame);
 }
 
 void WebViewHost::didFinishLoad(WebFrame* frame)
 {
-    if (m_shell->shouldDumpFrameLoadCallbacks()) {
-        printFrameDescription(frame);
-        fputs(" - didFinishLoadForFrame\n", stdout);
-    }
     updateAddressBar(frame->view());
     locationChangeDone(frame);
 }
@@ -1000,27 +883,6 @@ void WebViewHost::didNavigateWithinPage(WebFrame* frame, bool isNewNavigation)
     frame->dataSource()->setExtraData(m_pendingExtraData.leakPtr());
 
     updateForCommittedLoad(frame, isNewNavigation);
-}
-
-void WebViewHost::didChangeLocationWithinPage(WebFrame* frame)
-{
-    if (m_shell->shouldDumpFrameLoadCallbacks()) {
-        printFrameDescription(frame);
-        fputs(" - didChangeLocationWithinPageForFrame\n", stdout);
-    }
-}
-
-void WebViewHost::assignIdentifierToRequest(WebFrame*, unsigned identifier, const WebURLRequest& request)
-{
-     if (!m_shell->shouldDumpResourceLoadCallbacks())
-        return;
-    ASSERT(!m_resourceIdentifierMap.contains(identifier));
-    m_resourceIdentifierMap.set(identifier, descriptionSuitableForTestResult(request.url().spec()));
-}
-
-void WebViewHost::removeIdentifierForRequest(unsigned identifier)
-{
-    m_resourceIdentifierMap.remove(identifier);
 }
 
 static void blockRequest(WebURLRequest& request)
@@ -1038,23 +900,6 @@ static bool hostIsUsedBySomeTestsToGenerateError(const string& host)
     return host == "255.255.255.255";
 }
 
-void WebViewHost::willRequestResource(WebKit::WebFrame* frame, const WebKit::WebCachedURLRequest& request)
-{
-    if (m_shell->shouldDumpResourceRequestCallbacks()) {
-        printFrameDescription(frame);
-        WebElement element = request.initiatorElement();
-        if (!element.isNull()) {
-            printf(" - element with ");
-            if (element.hasAttribute("id"))
-                printf("id '%s'", element.getAttribute("id").utf8().data());
-            else
-                printf("no id");
-        } else
-            printf(" - %s", request.initiatorName().utf8().data());
-        printf(" requested '%s'\n", URLDescription(request.urlRequest().url()).c_str());
-    }
-}
-
 void WebViewHost::willSendRequest(WebFrame* frame, unsigned identifier, WebURLRequest& request, const WebURLResponse& redirectResponse)
 {
     // Need to use GURL for host() and SchemeIs()
@@ -1062,16 +907,6 @@ void WebViewHost::willSendRequest(WebFrame* frame, unsigned identifier, WebURLRe
     string requestURL = url.possibly_invalid_spec();
 
     GURL mainDocumentURL = request.firstPartyForCookies();
-    if (testRunner()->shouldDumpResourceLoadCallbacks()) {
-        printResourceDescription(identifier);
-        printf(" - willSendRequest <NSURLRequest URL %s, main document URL %s,"
-               " http method %s> redirectResponse ",
-               descriptionSuitableForTestResult(requestURL).c_str(),
-               URLDescription(mainDocumentURL).c_str(),
-               request.httpMethod().utf8().data());
-        printResponseDescription(redirectResponse);
-        fputs("\n", stdout);
-    }
 
     request.setExtraData(webkit_support::CreateWebURLRequestExtraData(frame->document().referrerPolicy()));
 
@@ -1103,62 +938,6 @@ void WebViewHost::willSendRequest(WebFrame* frame, unsigned identifier, WebURLRe
 
     // Set the new substituted URL.
     request.setURL(webkit_support::RewriteLayoutTestsURL(request.url().spec()));
-}
-
-void WebViewHost::didReceiveResponse(WebFrame*, unsigned identifier, const WebURLResponse& response)
-{
-    if (m_shell->shouldDumpResourceLoadCallbacks()) {
-        printResourceDescription(identifier);
-        fputs(" - didReceiveResponse ", stdout);
-        printResponseDescription(response);
-        fputs("\n", stdout);
-    }
-    if (m_shell->shouldDumpResourceResponseMIMETypes()) {
-        GURL url = response.url();
-        WebString mimeType = response.mimeType();
-        printf("%s has MIME type %s\n",
-            url.ExtractFileName().c_str(),
-            // Simulate NSURLResponse's mapping of empty/unknown MIME types to application/octet-stream
-            mimeType.isEmpty() ? "application/octet-stream" : mimeType.utf8().data());
-    }
-}
-
-void WebViewHost::didFinishResourceLoad(WebFrame*, unsigned identifier)
-{
-    if (m_shell->shouldDumpResourceLoadCallbacks()) {
-        printResourceDescription(identifier);
-        fputs(" - didFinishLoading\n", stdout);
-    }
-    removeIdentifierForRequest(identifier);
-}
-
-void WebViewHost::didFailResourceLoad(WebFrame*, unsigned identifier, const WebURLError& error)
-{
-    if (m_shell->shouldDumpResourceLoadCallbacks()) {
-        printResourceDescription(identifier);
-        fputs(" - didFailLoadingWithError: ", stdout);
-        fputs(webkit_support::MakeURLErrorDescription(error).c_str(), stdout);
-        fputs("\n", stdout);
-    }
-    removeIdentifierForRequest(identifier);
-}
-
-void WebViewHost::didDisplayInsecureContent(WebFrame*)
-{
-    if (m_shell->shouldDumpFrameLoadCallbacks())
-        fputs("didDisplayInsecureContent\n", stdout);
-}
-
-void WebViewHost::didRunInsecureContent(WebFrame*, const WebSecurityOrigin& origin, const WebURL& insecureURL)
-{
-    if (m_shell->shouldDumpFrameLoadCallbacks())
-        fputs("didRunInsecureContent\n", stdout);
-}
-
-void WebViewHost::didDetectXSS(WebFrame*, const WebURL&, bool)
-{
-    if (m_shell->shouldDumpFrameLoadCallbacks())
-        fputs("didDetectXSS\n", stdout);
 }
 
 void WebViewHost::openFileSystem(WebFrame* frame, WebFileSystem::Type type, long long size, bool create, WebFileSystemCallbacks* callbacks)
@@ -1275,6 +1054,31 @@ WebIntentRequest* WebViewHost::currentWebIntentRequest()
     return &m_currentRequest;
 }
 
+std::string WebViewHost::makeURLErrorDescription(const WebKit::WebURLError& error)
+{
+    return webkit_support::MakeURLErrorDescription(error);
+}
+
+std::string WebViewHost::normalizeLayoutTestURL(const std::string& url)
+{
+    return m_shell->normalizeLayoutTestURL(url);
+}
+
+void WebViewHost::showDevTools()
+{
+    m_shell->showDevTools();
+}
+
+void WebViewHost::closeDevTools()
+{
+    m_shell->closeDevTools();
+}
+
+void WebViewHost::evaluateInWebInspector(long callID, const std::string& script)
+{
+    m_shell->drtDevToolsAgent()->evaluateInWebInspector(callID, script);
+}
+
 // Public functions -----------------------------------------------------------
 
 WebViewHost::WebViewHost(TestShell* shell)
@@ -1369,7 +1173,6 @@ void WebViewHost::reset()
     m_navigationController = adoptPtr(new TestNavigationController(this));
 
     m_pendingExtraData.clear();
-    m_resourceIdentifierMap.clear();
     m_clearHeaders.clear();
     m_editCommandName.clear();
     m_editCommandValue.clear();
@@ -1386,7 +1189,7 @@ void WebViewHost::reset()
     m_windowRect = WebRect();
     // m_proxy is not set when reset() is invoked from the constructor.
     if (m_proxy)
-        proxy()->setPaintRect(WebRect());
+        proxy()->reset();
 
     if (m_webWidget) {
         webView()->mainFrame()->setName(WebString());
@@ -1408,6 +1211,11 @@ void WebViewHost::setSmartInsertDeleteEnabled(bool enabled)
     // In upstream WebKit, smart insert/delete is mutually exclusive with select
     // trailing whitespace, however, we allow both because Chromium on Windows
     // allows both.
+}
+
+void WebViewHost::setClientWindowRect(const WebKit::WebRect& rect)
+{
+    setWindowRect(rect);
 }
 
 void WebViewHost::setLogConsoleOutput(bool enabled)
@@ -1587,18 +1395,6 @@ void WebViewHost::printFrameDescription(WebFrame* webframe)
         return;
     }
     printf("frame \"%s\"", name8.c_str());
-}
-
-void WebViewHost::printFrameUserGestureStatus(WebFrame* webframe, const char* msg)
-{
-    bool isUserGesture = webframe->isProcessingUserGesture();
-    printf("Frame with user gesture \"%s\"%s", isUserGesture ? "true" : "false", msg);
-}
-
-void WebViewHost::printResourceDescription(unsigned identifier)
-{
-    ResourceMap::iterator it = m_resourceIdentifierMap.find(identifier);
-    printf("%s", it != m_resourceIdentifierMap.end() ? it->value.c_str() : "<unknown>");
 }
 
 void WebViewHost::setPendingExtraData(PassOwnPtr<TestShellExtraData> extraData)

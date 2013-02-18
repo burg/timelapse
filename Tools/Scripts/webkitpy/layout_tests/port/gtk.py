@@ -35,8 +35,12 @@ from webkitpy.layout_tests.port.pulseaudio_sanitizer import PulseAudioSanitizer
 from webkitpy.layout_tests.port.xvfbdriver import XvfbDriver
 
 
-class GtkPort(Port, PulseAudioSanitizer):
+class GtkPort(Port):
     port_name = "gtk"
+
+    def __init__(self, *args, **kwargs):
+        super(GtkPort, self).__init__(*args, **kwargs)
+        self._pulseaudio_sanitizer = PulseAudioSanitizer()
 
     def warn_if_bug_missing_in_test_expectations(self):
         return True
@@ -48,20 +52,17 @@ class GtkPort(Port, PulseAudioSanitizer):
         return XvfbDriver
 
     def default_timeout_ms(self):
-        # For now, use the base Port's default timeout value in case of WebKitTestRunner.
-        if self.get_option('webkit_test_runner'):
-            return super(GtkPort, self).default_timeout_ms()
-
         if self.get_option('configuration') == 'Debug':
             return 12 * 1000
         return 6 * 1000
 
     def setup_test_run(self):
-        self._unload_pulseaudio_module()
+        super(GtkPort, self).setup_test_run()
+        self._pulseaudio_sanitizer.unload_pulseaudio_module()
 
     def clean_up_test_run(self):
         super(GtkPort, self).clean_up_test_run()
-        self._restore_pulseaudio_module()
+        self._pulseaudio_sanitizer.restore_pulseaudio_module()
 
     def setup_environ_for_server(self, server_name=None):
         environment = super(GtkPort, self).setup_environ_for_server(server_name)

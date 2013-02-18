@@ -80,6 +80,9 @@ class QtPort(Port):
         # The Qt port builds DRT as part of the main build step
         return True
 
+    def supports_per_test_timeout(self):
+        return True
+
     def _path_to_driver(self):
         return self._build_path('bin/%s' % self.driver_name())
 
@@ -186,3 +189,6 @@ class QtPort(Port):
             return False
         return result
 
+    # Qt port is not ready for parallel testing, see https://bugs.webkit.org/show_bug.cgi?id=77730 for details.
+    def default_child_processes(self):
+        return 1

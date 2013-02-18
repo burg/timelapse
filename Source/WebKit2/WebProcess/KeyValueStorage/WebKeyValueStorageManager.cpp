@@ -55,6 +55,9 @@ void WebKeyValueStorageManager::initialize(const WebProcessCreationParameters& p
 {
     StorageTracker::initializeTracker(parameters.localStorageDirectory, this);
     m_localStorageDirectory = parameters.localStorageDirectory;
+#if ENABLE(INDEXED_DATABASE)
+    m_indexedDBDatabaseDirectory = parameters.databaseDirectory;
+#endif
 }
 
 void WebKeyValueStorageManager::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
@@ -91,8 +94,6 @@ void WebKeyValueStorageManager::dispatchDidGetKeyValueStorageOrigins(const Vecto
 
 void WebKeyValueStorageManager::getKeyValueStorageOrigins(uint64_t callbackID)
 {
-    ChildProcess::LocalTerminationDisabler terminationDisabler(*m_process);
-
     if (!StorageTracker::tracker().originsLoaded()) {
         m_originsRequestCallbackIDs.append(callbackID);
         return;
@@ -123,8 +124,6 @@ void WebKeyValueStorageManager::dispatchDidModifyOrigin(const String&)
 
 void WebKeyValueStorageManager::deleteEntriesForOrigin(const SecurityOriginData& originData)
 {
-    ChildProcess::LocalTerminationDisabler terminationDisabler(*m_process);
-
     RefPtr<SecurityOrigin> origin = SecurityOrigin::create(originData.protocol, originData.host, originData.port);
     if (!origin)
         return;
@@ -134,7 +133,6 @@ void WebKeyValueStorageManager::deleteEntriesForOrigin(const SecurityOriginData&
 
 void WebKeyValueStorageManager::deleteAllEntries()
 {
-    ChildProcess::LocalTerminationDisabler terminationDisabler(*m_process);
     StorageTracker::tracker().deleteAllOrigins();
 }
 

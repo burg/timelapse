@@ -34,6 +34,7 @@
 #include "HTMLTokenizer.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "HTMLParserOptions.h"
 #include "InputTypeNames.h"
 #include "LinkRelAttribute.h"
 #include "MediaList.h"
@@ -161,11 +162,14 @@ private:
     bool m_inputIsImage;
 };
 
-HTMLPreloadScanner::HTMLPreloadScanner(Document* document)
+HTMLPreloadScanner::HTMLPreloadScanner(Document* document, const HTMLParserOptions& options)
     : m_document(document)
     , m_cssScanner(document)
-    , m_tokenizer(HTMLTokenizer::create(HTMLDocumentParser::usePreHTML5ParserQuirks(document)))
+    , m_tokenizer(HTMLTokenizer::create(options))
     , m_inStyle(false)
+#if ENABLE(TEMPLATE_ELEMENT)
+    , m_templateCount(0)
+#endif
 {
 }
 
@@ -198,11 +202,21 @@ void HTMLPreloadScanner::processToken()
         }
     }
 
-    if (m_token.type() != HTMLTokenTypes::StartTag)
+    if (m_token.type() != HTMLTokenTypes::StartTag) {
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (m_templateCount && m_token.type() == HTMLTokenTypes::EndTag && AtomicString(m_token.name().data()) == templateTag)
+            m_templateCount--;
+#endif
         return;
+    }
 
     PreloadTask task(m_token);
-    m_tokenizer->updateStateFor(task.tagName(), m_document->frame());
+    m_tokenizer->updateStateFor(task.tagName());
+
+#if ENABLE(TEMPLATE_ELEMENT)
+    if (task.tagName() == templateTag)
+        m_templateCount++;
+#endif
 
     if (task.tagName() == styleTag)
         m_inStyle = true;
@@ -210,7 +224,15 @@ void HTMLPreloadScanner::processToken()
     if (task.tagName() == baseTag)
         updatePredictedBaseElementURL(KURL(m_document->url(), task.baseElementHref()));
 
-    task.preload(m_document, m_predictedBaseElementURL.isEmpty() ? m_document->baseURL() : m_predictedBaseElementURL);
+    bool preload = true;
+
+#if ENABLE(TEMPLATE_ELEMENT)
+    if (m_templateCount)
+        preload = false;
+#endif
+
+    if (preload)
+        task.preload(m_document, m_predictedBaseElementURL.isEmpty() ? m_document->baseURL() : m_predictedBaseElementURL);
 }
 
 void HTMLPreloadScanner::updatePredictedBaseElementURL(const KURL& baseElementURL)

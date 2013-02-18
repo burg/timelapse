@@ -63,7 +63,6 @@
 #include <WebCore/GCController.h>
 #include <WebCore/GlyphPageTreeNode.h>
 #include <WebCore/IconDatabase.h>
-#include <WebCore/InitializeLogging.h>
 #include <WebCore/JSDOMWindow.h>
 #include <WebCore/Language.h>
 #include <WebCore/MemoryCache.h>
@@ -121,6 +120,10 @@
 #include "PluginProcessConnectionManager.h"
 #endif
 
+#if USE(SECURITY_FRAMEWORK)
+#include "SecItemShim.h"
+#endif
+
 using namespace JSC;
 using namespace WebCore;
 
@@ -174,12 +177,6 @@ WebProcess::WebProcess()
     WebPlatformStrategies::initialize();
 #endif // USE(PLATFORM_STRATEGIES)
 
-#if !LOG_DISABLED
-    WebCore::initializeLoggingChannelsIfNecessary();
-    WebKit::initializeLogChannelsIfNecessary();
-#endif // !LOG_DISABLED
-
-
 
     // FIXME: This should moved to where WebProcess::initialize is called,
     // so that ports have a chance to customize, and ifdefs in this file are
@@ -204,16 +201,22 @@ WebProcess::WebProcess()
 #endif
 }
 
-void WebProcess::initializeConnection(CoreIPC::Connection::Identifier serverIdentifier)
+void WebProcess::initializeProcess(const ChildProcessInitializationParameters& parameters)
 {
-    ASSERT(!m_connection);
+    platformInitializeProcess(parameters);
+}
 
-    m_connection = CoreIPC::Connection::createClientConnection(serverIdentifier, this, RunLoop::main());
-    m_connection->setDidCloseOnConnectionWorkQueueCallback(ChildProcess::didCloseOnConnectionWorkQueue);
-    m_connection->setShouldExitOnSyncMessageSendFailure(true);
-    m_connection->addQueueClient(&m_eventDispatcher);
-    m_connection->addQueueClient(this);
-    m_connection->open();
+void WebProcess::initializeConnection(CoreIPC::Connection* connection)
+{
+    ChildProcess::initializeConnection(connection);
+
+    connection->setShouldExitOnSyncMessageSendFailure(true);
+    connection->addQueueClient(&m_eventDispatcher);
+    connection->addQueueClient(this);
+
+#if USE(SECURITY_FRAMEWORK)
+    connection->addQueueClient(&SecItemShim::shared());
+#endif
 
     m_webConnection = WebConnectionToUIProcess::create(this);
 }
@@ -230,7 +233,7 @@ void WebProcess::didDestroyDownload()
 
 CoreIPC::Connection* WebProcess::downloadProxyConnection()
 {
-    return m_connection.get();
+    return parentProcessConnection();
 }
 
 AuthenticationManager& WebProcess::downloadsAuthenticationManager()
@@ -312,7 +315,7 @@ void WebProcess::initializeWebProcess(const WebProcessCreationParameters& parame
     if (parameters.shouldUseFontSmoothing)
         setShouldUseFontSmoothing(true);
 
-#if (PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(WIN)
+#if PLATFORM(MAC) || USE(CFNETWORK)
     WebFrameNetworkingContext::setPrivateBrowsingStorageSessionIdentifierBase(parameters.uiProcessBundleIdentifier);
 #endif
 
@@ -420,14 +423,14 @@ void WebProcess::fullKeyboardAccessModeChanged(bool fullKeyboardAccessEnabled)
 
 void WebProcess::ensurePrivateBrowsingSession()
 {
-#if (PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(WIN)
+#if PLATFORM(MAC) || USE(CFNETWORK)
     WebFrameNetworkingContext::ensurePrivateBrowsingSession();
 #endif
 }
 
 void WebProcess::destroyPrivateBrowsingSession()
 {
-#if (PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(WIN)
+#if PLATFORM(MAC) || USE(CFNETWORK)
     WebFrameNetworkingContext::destroyPrivateBrowsingSession();
 #endif
 }
@@ -491,7 +494,7 @@ void WebProcess::addVisitedLink(WebCore::LinkHash linkHash)
 {
     if (isLinkVisited(linkHash) || !m_shouldTrackVisitedLinks)
         return;
-    connection()->send(Messages::WebContext::AddVisitedLinkHash(linkHash), 0);
+    parentProcessConnection()->send(Messages::WebContext::AddVisitedLinkHash(linkHash), 0);
 }
 
 void WebProcess::setCacheModel(uint32_t cm)
@@ -572,25 +575,22 @@ void WebProcess::terminate()
     memoryCache()->setDisabled(true);
 #endif
 
-    // Invalidate our connection.
-    m_connection->invalidate();
-    m_connection = nullptr;
-
     m_webConnection->invalidate();
     m_webConnection = nullptr;
 
     platformTerminate();
-    RunLoop::main()->stop();
+
+    ChildProcess::terminate();
 }
 
 void WebProcess::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
 {
-    m_messageReceiverMap.dispatchSyncMessage(connection, messageID, decoder, replyEncoder);
+    messageReceiverMap().dispatchSyncMessage(connection, messageID, decoder, replyEncoder);
 }
 
 void WebProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
 {
-    if (m_messageReceiverMap.dispatchMessage(connection, messageID, decoder))
+    if (messageReceiverMap().dispatchMessage(connection, messageID, decoder))
         return;
 
     if (messageID.is<CoreIPC::MessageClassWebProcess>()) {
@@ -662,10 +662,10 @@ void WebProcess::removeWebFrame(uint64_t frameID)
     // We can end up here after our connection has closed when WebCore's frame life-support timer
     // fires when the application is shutting down. There's no need (and no way) to update the UI
     // process in this case.
-    if (!m_connection)
+    if (!parentProcessConnection())
         return;
 
-    connection()->send(Messages::WebProcessProxy::DidDestroyFrame(frameID), 0);
+    parentProcessConnection()->send(Messages::WebProcessProxy::DidDestroyFrame(frameID), 0);
 }
 
 WebPageGroupProxy* WebProcess::webPageGroup(uint64_t pageGroupID)
@@ -729,8 +729,6 @@ void WebProcess::clearApplicationCache()
 #if ENABLE(NETSCAPE_PLUGIN_API) && !ENABLE(PLUGIN_PROCESS)
 void WebProcess::getSitesWithPluginData(const Vector<String>& pluginPaths, uint64_t callbackID)
 {
-    LocalTerminationDisabler terminationDisabler(*this);
-
     HashSet<String> sitesSet;
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
@@ -750,13 +748,11 @@ void WebProcess::getSitesWithPluginData(const Vector<String>& pluginPaths, uint6
     Vector<String> sites;
     copyToVector(sitesSet, sites);
 
-    connection()->send(Messages::WebProcessProxy::DidGetSitesWithPluginData(sites, callbackID), 0);
+    parentProcessConnection()->send(Messages::WebProcessProxy::DidGetSitesWithPluginData(sites, callbackID), 0);
 }
 
 void WebProcess::clearPluginSiteData(const Vector<String>& pluginPaths, const Vector<String>& sites, uint64_t flags, uint64_t maxAgeInSeconds, uint64_t callbackID)
 {
-    LocalTerminationDisabler terminationDisabler(*this);
-
 #if ENABLE(NETSCAPE_PLUGIN_API)
     for (size_t i = 0; i < pluginPaths.size(); ++i) {
         RefPtr<NetscapePluginModule> netscapePluginModule = NetscapePluginModule::getOrCreate(pluginPaths[i]);
@@ -779,7 +775,7 @@ void WebProcess::clearPluginSiteData(const Vector<String>& pluginPaths, const Ve
     UNUSED_PARAM(maxAgeInSeconds);
 #endif
 
-    connection()->send(Messages::WebProcessProxy::DidClearPluginSiteData(callbackID), 0);
+    parentProcessConnection()->send(Messages::WebProcessProxy::DidClearPluginSiteData(callbackID), 0);
 }
 #endif
 
@@ -798,7 +794,7 @@ void WebProcess::addPlugInAutoStartOrigin(const String& pageOrigin, unsigned plu
         return;
     }
 
-    connection()->send(Messages::WebContext::AddPlugInAutoStartOriginHash(pageOrigin, plugInOriginHash), 0);
+    parentProcessConnection()->send(Messages::WebContext::AddPlugInAutoStartOriginHash(pageOrigin, plugInOriginHash), 0);
 }
 
 void WebProcess::didAddPlugInAutoStartOrigin(unsigned plugInOriginHash, double expirationTime)
@@ -824,7 +820,7 @@ void WebProcess::plugInDidReceiveUserInteraction(unsigned plugInOriginHash)
     if (it->value - currentTime() > plugInAutoStartExpirationTimeUpdateThreshold)
         return;
 
-    connection()->send(Messages::WebContext::PlugInDidReceiveUserInteraction(plugInOriginHash), 0);
+    parentProcessConnection()->send(Messages::WebContext::PlugInDidReceiveUserInteraction(plugInOriginHash), 0);
 }
 
 static void fromCountedSetToHashMap(TypeCountSet* countedSet, HashMap<String, uint64_t>& map)
@@ -930,7 +926,7 @@ void WebProcess::getWebCoreStatistics(uint64_t callbackID)
     // Get WebCore memory cache statistics
     getWebCoreMemoryCacheStatistics(data.webCoreCacheStatistics);
     
-    connection()->send(Messages::WebContext::DidGetWebCoreStatistics(data, callbackID), 0);
+    parentProcessConnection()->send(Messages::WebContext::DidGetWebCoreStatistics(data, callbackID), 0);
 }
 
 void WebProcess::garbageCollectJavaScriptObjects()
@@ -1076,5 +1072,19 @@ void WebProcess::didGetPlugins(CoreIPC::Connection*, uint64_t requestID, const V
 #endif
 }
 #endif // ENABLE(PLUGIN_PROCESS)
+
+#if !PLATFORM(MAC)
+void WebProcess::initializeProcessName(const ChildProcessInitializationParameters&)
+{
+}
+
+void WebProcess::initializeSandbox(const ChildProcessInitializationParameters&)
+{
+}
+
+void WebProcess::platformInitializeProcess(const ChildProcessInitializationParameters&)
+{
+}
+#endif
 
 } // namespace WebKit

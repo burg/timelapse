@@ -51,9 +51,6 @@ messages -> WebProcess {
     SetShouldUseFontSmoothing(bool useFontSmoothing)
     UserPreferredLanguagesChanged(Vector<WTF::String> languages)
     FullKeyboardAccessModeChanged(bool fullKeyboardAccessEnabled)
-#if PLATFORM(WIN)
-    SetShouldPaintNativeControls(bool shouldPaintNativeControls)
-#endif
 #if USE(SOUP)
     SetIgnoreTLSErrors(bool ignoreTLSErrors)
 #endif
@@ -97,10 +94,6 @@ messages -> WebProcess {
     SetJavaScriptGarbageCollectorTimerEnabled(bool enable)
 
     PostInjectedBundleMessage(CoreIPC::DataReference messageData);
-
-#if USE(SECURITY_FRAMEWORK)
-    SecItemResponse(uint64_t requestID, WebKit::SecItemResponseData response) DispatchOnConnectionQueue
-#endif
 
 #if PLATFORM(MAC)
     SetApplicationIsOccluded(bool flag);

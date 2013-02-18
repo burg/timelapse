@@ -243,6 +243,8 @@ SOURCES += \
     Modules/notifications/NotificationCenter.cpp \
     Modules/notifications/NotificationController.cpp \
     Modules/notifications/WorkerContextNotifications.cpp \
+    Modules/proximity/DeviceProximityController.cpp \
+    Modules/proximity/DeviceProximityEvent.cpp \
     css/BasicShapeFunctions.cpp \
     css/CSSAspectRatioValue.cpp \
     css/CSSBasicShapes.cpp \
@@ -261,6 +263,7 @@ SOURCES += \
     css/CSSFontFaceSource.cpp \
     css/CSSFunctionValue.cpp \
     css/CSSGradientValue.cpp \
+    css/CSSGroupingRule.cpp \
     css/CSSImageValue.cpp \
     css/CSSImageGeneratorValue.cpp \
     css/CSSImageSetValue.cpp \
@@ -333,6 +336,7 @@ SOURCES += \
     css/WebKitCSSTransformValue.cpp \
     css/WebKitCSSViewportRule.cpp \
     dom/ActiveDOMObject.cpp \
+    dom/AncestorChainWalker.cpp \
     dom/Attr.cpp \
     dom/BeforeTextInsertedEvent.cpp \
     dom/BeforeUnloadEvent.cpp \
@@ -697,6 +701,7 @@ SOURCES += \
     html/WeekInputType.cpp \
     html/canvas/CanvasGradient.cpp \
     html/canvas/CanvasPattern.cpp \
+    html/canvas/CanvasProxy.cpp \
     html/canvas/CanvasRenderingContext.cpp \
     html/canvas/CanvasRenderingContext2D.cpp \
     html/canvas/CanvasStyle.cpp \
@@ -710,6 +715,7 @@ SOURCES += \
     html/parser/HTMLFormattingElementList.cpp \
     html/parser/HTMLMetaCharsetParser.cpp \
     html/parser/HTMLParserIdioms.cpp \
+    html/parser/HTMLParserOptions.cpp \
     html/parser/HTMLParserScheduler.cpp \
     html/parser/HTMLPreloadScanner.cpp \
     html/parser/HTMLScriptRunner.cpp \
@@ -1419,6 +1425,10 @@ HEADERS += \
     Modules/notifications/NotificationController.h \
     Modules/notifications/WorkerContextNotifications.h \
     \
+    Modules/proximity/DeviceProximityClient.h \
+    Modules/proximity/DeviceProximityController.h \
+    Modules/proximity/DeviceProximityEvent.h \
+    \
     Modules/webdatabase/AbstractDatabase.h \
     Modules/webdatabase/AbstractDatabaseServer.h \
     Modules/webdatabase/ChangeVersionWrapper.h \
@@ -1464,6 +1474,7 @@ HEADERS += \
     css/CSSFontSelector.h \
     css/CSSFunctionValue.h \
     css/CSSGradientValue.h \
+    css/CSSGroupingRule.h \
     css/CSSHelper.h \
     css/CSSImageGeneratorValue.h \
     css/CSSImageValue.h \
@@ -1534,6 +1545,7 @@ HEADERS += \
     css/WebKitCSSTransformValue.h \
     css/WebKitCSSViewportRule.h \
     dom/ActiveDOMObject.h \
+    dom/AncestorChainWalker.h \
     dom/Attr.h \
     dom/Attribute.h \
     dom/BeforeTextInsertedEvent.h \
@@ -1746,6 +1758,7 @@ HEADERS += \
     history/PageCache.h \
     html/canvas/CanvasGradient.h \
     html/canvas/CanvasPattern.h \
+    html/canvas/CanvasProxy.h \
     html/canvas/CanvasRenderingContext.h \
     html/canvas/CanvasRenderingContext2D.h \
     html/canvas/CanvasStyle.h \
@@ -1878,6 +1891,7 @@ HEADERS += \
     html/parser/HTMLScriptRunner.h \
     html/parser/HTMLScriptRunnerHost.h \
     html/parser/HTMLToken.h \
+    html/parser/HTMLTokenTypes.h \
     html/parser/HTMLTokenizer.h \
     html/parser/HTMLTreeBuilder.h \
     html/parser/HTMLViewSourceParser.h \
@@ -2775,6 +2789,7 @@ HEADERS += \
     testing/Internals.h \
     testing/InternalSettings.h \
     testing/MallocStatistics.h \
+    testing/TypeConversions.h \
     workers/AbstractWorker.h \
     workers/DedicatedWorkerContext.h \
     workers/DedicatedWorkerThread.h \
@@ -3034,7 +3049,6 @@ enable?(INDEXED_DATABASE) {
         Modules/indexeddb/IDBFactoryBackendImpl.h \
         Modules/indexeddb/IDBIndex.h \
         Modules/indexeddb/IDBIndexBackendInterface.h \
-        Modules/indexeddb/IDBIndexBackendImpl.h \
         Modules/indexeddb/IDBKey.h \
         Modules/indexeddb/IDBKeyRange.h \
         Modules/indexeddb/IDBObjectStore.h \
@@ -3062,7 +3076,6 @@ enable?(INDEXED_DATABASE) {
         Modules/indexeddb/IDBFactoryBackendInterface.cpp \
         Modules/indexeddb/IDBFactoryBackendImpl.cpp \
         Modules/indexeddb/IDBIndex.cpp \
-        Modules/indexeddb/IDBIndexBackendImpl.cpp \
         Modules/indexeddb/IDBKey.cpp \
         Modules/indexeddb/IDBKeyRange.cpp \
         Modules/indexeddb/IDBObjectStore.cpp \
@@ -3367,6 +3380,7 @@ enable?(WEB_AUDIO) {
         Modules/webaudio/MediaElementAudioSourceNode.h \
         Modules/webaudio/MediaStreamAudioSourceNode.h \
         Modules/webaudio/OfflineAudioCompletionEvent.h \
+        Modules/webaudio/OfflineAudioContext.h \
         Modules/webaudio/OfflineAudioDestinationNode.h \
         Modules/webaudio/OscillatorNode.h \
         Modules/webaudio/RealtimeAnalyser.h \
@@ -3420,8 +3434,10 @@ enable?(WEB_AUDIO) {
     SOURCES += \
         bindings/js/JSAudioBufferSourceNodeCustom.cpp \
         bindings/js/JSAudioContextCustom.cpp \
+        bindings/js/JSBiquadFilterNodeCustom.cpp \
         bindings/js/JSDOMWindowWebAudioCustom.cpp \
         bindings/js/JSOscillatorNodeCustom.cpp \
+        bindings/js/JSPannerNodeCustom.cpp \
         bindings/js/JSScriptProcessorNodeCustom.cpp \
         Modules/webaudio/AsyncAudioDecoder.cpp \
         Modules/webaudio/AudioBasicInspectorNode.cpp \
@@ -3456,6 +3472,7 @@ enable?(WEB_AUDIO) {
         Modules/webaudio/MediaElementAudioSourceNode.cpp \
         Modules/webaudio/MediaStreamAudioSourceNode.cpp \
         Modules/webaudio/OfflineAudioCompletionEvent.cpp \
+        Modules/webaudio/OfflineAudioContext.cpp \
         Modules/webaudio/OfflineAudioDestinationNode.cpp \
         Modules/webaudio/OscillatorNode.cpp \
         Modules/webaudio/RealtimeAnalyser.cpp \
@@ -4002,6 +4019,14 @@ enable?(WEBGL) {
         html/canvas/WebGLTexture.cpp \
         html/canvas/WebGLUniformLocation.cpp \
         html/canvas/WebGLVertexArrayObjectOES.cpp
+}
+
+enable?(CANVAS_PROXY) {
+    HEADERS += \
+        html/canvas/CanvasProxy.h
+
+    SOURCES += \
+        html/canvas/CanvasProxy.cpp
 }
 
 use?(3D_GRAPHICS) {

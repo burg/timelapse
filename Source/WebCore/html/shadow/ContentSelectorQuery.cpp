@@ -45,7 +45,7 @@ bool ContentSelectorChecker::checkContentSelector(CSSSelector* selector, const V
 {
     SelectorChecker::SelectorCheckingContext context(selector, toElement(siblings[nth].get()), SelectorChecker::VisitedMatchEnabled);
     ShadowDOMSiblingTraversalStrategy strategy(siblings, nth);
-    return m_selectorChecker.checkOneSelector(context, strategy);
+    return m_selectorChecker.checkOne(context, strategy);
 }
 
 void ContentSelectorDataList::initialize(const CSSSelectorList& selectors)
@@ -68,8 +68,7 @@ ContentSelectorQuery::ContentSelectorQuery(InsertionPoint* insertionPoint)
     : m_insertionPoint(insertionPoint)
     , m_selectorChecker(insertionPoint->document())
 {
-    if (insertionPoint->isSelectValid())
-        m_selectors.initialize(insertionPoint->selectorList());
+    m_selectors.initialize(insertionPoint->selectorList());
 }
 
 bool ContentSelectorQuery::matches(const Vector<RefPtr<Node> >& siblings, int nth) const
@@ -77,16 +76,17 @@ bool ContentSelectorQuery::matches(const Vector<RefPtr<Node> >& siblings, int nt
     Node* node = siblings[nth].get();
     ASSERT(node);
 
-    if (m_insertionPoint->select().isNull() || m_insertionPoint->select().isEmpty())
+    switch (m_insertionPoint->matchTypeFor(node)) {
+    case InsertionPoint::AlwaysMatches:
         return true;
-
-    if (!m_insertionPoint->isSelectValid())
+    case InsertionPoint::NeverMatches:
         return false;
-
-    if (!node->isElementNode())
+    case InsertionPoint::HasToMatchSelector:
+        return node->isElementNode() && m_selectors.matches(m_selectorChecker, siblings, nth);
+    default:
+        ASSERT_NOT_REACHED();
         return false;
-
-    return m_selectors.matches(m_selectorChecker, siblings, nth);
+    }
 }
 
 }

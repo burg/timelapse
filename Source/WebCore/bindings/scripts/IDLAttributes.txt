@@ -95,6 +95,7 @@ ObjCPolymorphic
 ObjCProtocol
 OmitConstructor
 Optional=|DefaultIsNullString|DefaultIsUndefined
+PassContext
 PassThisToCallback=*
 Reflect=*
 Replaceable

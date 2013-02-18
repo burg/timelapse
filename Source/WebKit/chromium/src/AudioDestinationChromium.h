@@ -47,7 +47,7 @@ class AudioPullFIFO;
 
 class AudioDestinationChromium : public AudioDestination, public WebKit::WebAudioDevice::RenderCallback, public AudioSourceProvider {
 public:
-    AudioDestinationChromium(AudioIOCallback&, float sampleRate);
+    AudioDestinationChromium(AudioIOCallback&, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate);
     virtual ~AudioDestinationChromium();
 
     virtual void start();
@@ -58,13 +58,13 @@ public:
 
     // WebKit::WebAudioDevice::RenderCallback
     virtual void render(const WebKit::WebVector<float*>& sourceData, const WebKit::WebVector<float*>& audioData, size_t numberOfFrames);
-    virtual void render(const WebKit::WebVector<float*>& audioData, size_t numberOfFrames);
 
     // WebCore::AudioSourceProvider
     virtual void provideInput(AudioBus*, size_t framesToProcess);
 
 private:
     AudioIOCallback& m_callback;
+    unsigned m_numberOfOutputChannels;
     AudioBus m_inputBus;
     AudioBus m_renderBus;
     float m_sampleRate;

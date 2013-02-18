@@ -64,6 +64,7 @@
 #include "htmlediting.h"
 #include "visible_units.h"
 
+#include <BlackBerryPlatformDeviceInfo.h>
 #include <BlackBerryPlatformIMF.h>
 #include <BlackBerryPlatformKeyboardEvent.h>
 #include <BlackBerryPlatformLog.h>
@@ -845,6 +846,10 @@ void InputHandler::setElementUnfocused(bool refocusOccuring)
 
         m_webPage->m_client->inputFocusLost();
 
+        // Repaint the element absent of the caret.
+        if (m_currentFocusElement->renderer())
+            m_currentFocusElement->renderer()->repaint();
+
         // If the frame selection isn't focused, focus it.
         if (!m_currentFocusElement->document()->frame()->selection()->isFocused())
             m_currentFocusElement->document()->frame()->selection()->setFocused(true);
@@ -896,7 +901,8 @@ void InputHandler::setElementFocused(Element* element)
         frame->selection()->setFocused(isInputModeEnabled());
 
     // Ensure visible when refocusing.
-    m_shouldEnsureFocusTextElementVisibleOnSelectionChanged = isActiveTextEdit();
+    // If device does not have physical keyboard, wait to ensure visible until VKB resizes viewport so that both animations are combined into one.
+    m_shouldEnsureFocusTextElementVisibleOnSelectionChanged = isActiveTextEdit() || DeviceInfo::instance()->hasPhysicalKeyboard();
 
     // Clear the existing focus node details.
     setElementUnfocused(true /*refocusOccuring*/);

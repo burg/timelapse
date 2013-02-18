@@ -74,7 +74,7 @@
 #include <wtf/OwnArrayPtr.h>
 #include <wtf/PassOwnArrayPtr.h>
 
-#if ENABLE(SHADOW_DOM) || ENABLE(CSS_REGIONS)
+#if ENABLE(SHADOW_DOM) || ENABLE(CSS_REGIONS) || ENABLE(IFRAME_SEAMLESS)
 #include <WebCore/RuntimeEnabledFeatures.h>
 #endif
 
@@ -290,7 +290,7 @@ void InjectedBundle::setJavaScriptCanAccessClipboard(WebPageGroupProxy* pageGrou
 
 void InjectedBundle::setPrivateBrowsingEnabled(WebPageGroupProxy* pageGroup, bool enabled)
 {
-#if (PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(WIN)
+#if PLATFORM(MAC) || USE(CFNETWORK)
     if (enabled)
         WebFrameNetworkingContext::ensurePrivateBrowsingSession();
     else
@@ -311,7 +311,7 @@ void InjectedBundle::setPopupBlockingEnabled(WebPageGroupProxy* pageGroup, bool 
 
 void InjectedBundle::switchNetworkLoaderToNewTestingSession()
 {
-#if (PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(WIN)
+#if PLATFORM(MAC) || USE(CFNETWORK)
     // FIXME (NetworkProcess): Do this in network process, too.
     InitWebCoreSystemInterface();
     NetworkStorageSession::switchToNewTestingSession();
@@ -674,6 +674,15 @@ void InjectedBundle::setCSSRegionsEnabled(bool enabled)
 {
 #if ENABLE(CSS_REGIONS)
     RuntimeEnabledFeatures::setCSSRegionsEnabled(enabled);
+#else
+    UNUSED_PARAM(enabled);
+#endif
+}
+
+void InjectedBundle::setSeamlessIFramesEnabled(bool enabled)
+{
+#if ENABLE(IFRAME_SEAMLESS)
+    RuntimeEnabledFeatures::setSeamlessIFramesEnabled(enabled);
 #else
     UNUSED_PARAM(enabled);
 #endif

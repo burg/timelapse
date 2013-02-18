@@ -259,8 +259,10 @@ void InRegionScrollerPrivate::calculateInRegionScrollableAreasForPoint(const Web
 
         InRegionScrollableArea* curr = static_cast<InRegionScrollableArea*>(*rit);
         RenderLayer* layer = curr->layer();
+        if (!layer)
+            continue;
 
-        if (layer && layer->renderer()->isRenderView()) { // #document case
+        if (layer->renderer()->isRenderView()) { // #document case
             FrameView* view = toRenderView(layer->renderer())->frameView();
             ASSERT(view);
             ASSERT(canScrollInnerFrame(view->frame()));
@@ -311,7 +313,7 @@ bool InRegionScrollerPrivate::setLayerScrollPosition(RenderLayer* layer, const I
     } else {
 
         // RenderBox-based elements case (scrollable boxes (div's, p's, textarea's, etc)).
-        layer->scrollToOffset(toSize(scrollPosition));
+        layer->scrollToOffset(toIntSize(scrollPosition));
     }
 
     layer->renderer()->frame()->selection()->updateAppearance();

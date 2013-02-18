@@ -4677,9 +4677,20 @@ HRESULT WebView::notifyPreferencesChanged(IWebNotification* notification)
         return hr;
     RuntimeEnabledFeatures::setCSSRegionsEnabled(!!enabled);
 
+    hr = preferences->areSeamlessIFramesEnabled(&enabled);
+    if (FAILED(hr))
+        return hr;
+    RuntimeEnabledFeatures::setSeamlessIFramesEnabled(!!enabled);
+
     hr = preferences->privateBrowsingEnabled(&enabled);
     if (FAILED(hr))
         return hr;
+#if PLATFORM(WIN) || USE(CFNETWORK)
+    if (enabled)
+        WebFrameNetworkingContext::ensurePrivateBrowsingSession();
+    else
+        WebFrameNetworkingContext::destroyPrivateBrowsingSession();
+#endif
     settings->setPrivateBrowsingEnabled(!!enabled);
 
     hr = preferences->sansSerifFontFamily(&str);

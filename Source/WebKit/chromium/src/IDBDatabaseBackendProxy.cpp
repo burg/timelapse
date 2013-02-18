@@ -79,12 +79,24 @@ PassRefPtr<IDBObjectStoreBackendInterface> IDBDatabaseBackendProxy::createObject
     return IDBObjectStoreBackendProxy::create(objectStore.release());
 }
 
+void IDBDatabaseBackendProxy::createObjectStore(int64_t transactionId, int64_t objectStoreId, const String& name, const IDBKeyPath& keyPath, bool autoIncrement)
+{
+    if (m_webIDBDatabase)
+        m_webIDBDatabase->createObjectStore(transactionId, objectStoreId, name, keyPath, autoIncrement);
+}
+
 void IDBDatabaseBackendProxy::deleteObjectStore(int64_t objectStoreId, IDBTransactionBackendInterface* transaction, ExceptionCode& ec)
 {
     // The transaction pointer is guaranteed to be a pointer to a proxy object as, in the renderer,
     // all implementations of IDB interfaces are proxy objects.
     IDBTransactionBackendProxy* transactionProxy = static_cast<IDBTransactionBackendProxy*>(transaction);
     m_webIDBDatabase->deleteObjectStore(objectStoreId, *transactionProxy->getWebIDBTransaction(), ec);
+}
+
+void IDBDatabaseBackendProxy::deleteObjectStore(int64_t transactionId, int64_t objectStoreId)
+{
+    if (m_webIDBDatabase)
+        m_webIDBDatabase->deleteObjectStore(transactionId, objectStoreId);
 }
 
 PassRefPtr<IDBTransactionBackendInterface> IDBDatabaseBackendProxy::createTransaction(int64_t id, const Vector<int64_t>& objectStoreIds, IDBTransaction::Mode mode)
@@ -159,6 +171,18 @@ void IDBDatabaseBackendProxy::clear(int64_t transactionId, int64_t objectStoreId
 {
     if (m_webIDBDatabase)
         m_webIDBDatabase->clear(transactionId, objectStoreId, new WebIDBCallbacksImpl(callbacks));
+}
+
+void IDBDatabaseBackendProxy::createIndex(int64_t transactionId, int64_t objectStoreId, int64_t indexId, const String& name, const WebCore::IDBKeyPath& keyPath, bool unique, bool multiEntry)
+{
+    if (m_webIDBDatabase)
+        m_webIDBDatabase->createIndex(transactionId, objectStoreId, indexId, name, keyPath, unique, multiEntry);
+}
+
+void IDBDatabaseBackendProxy::deleteIndex(int64_t transactionId, int64_t objectStoreId, int64_t indexId)
+{
+    if (m_webIDBDatabase)
+        m_webIDBDatabase->deleteIndex(transactionId, objectStoreId, indexId);
 }
 
 void IDBDatabaseBackendProxy::close(PassRefPtr<IDBDatabaseCallbacks>)

@@ -857,7 +857,7 @@ void StyleResolver::collectMatchingRulesForList(const Vector<RuleData>* rules, i
 
         StyleRule* rule = ruleData.rule();
         InspectorInstrumentationCookie cookie = InspectorInstrumentation::willMatchRule(document(), rule, this);
-        if (checkSelector(ruleData, options.scope)) {
+        if (ruleMatches(ruleData, options.scope)) {
             // If the rule has no properties to apply, then ignore it in the non-debug mode.
             const StylePropertySet* properties = rule->properties();
             if (!properties || (properties->isEmpty() && !options.includeEmptyRules)) {
@@ -1239,6 +1239,14 @@ bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
 
     if (element->isLink() && m_elementLinkState != style->insideLink())
         return false;
+
+#if ENABLE(VIDEO_TRACK)
+    if (element->isWebVTTNode() && m_element->isWebVTTNode() && element->isWebVTTFutureNode() != m_element->isWebVTTFutureNode())
+        return false;
+    // Deny sharing styles between WebVTT nodes and non-WebVTT nodes.
+    if (element->isWebVTTNode() != m_element->isWebVTTNode())
+        return false;
+#endif
 
     return true;
 }
@@ -1968,12 +1976,12 @@ void StyleResolver::adjustRenderStyle(RenderStyle* style, RenderStyle* parentSty
         if (style->display() == INLINE && style->styleType() == NOPSEUDO && style->writingMode() != parentStyle->writingMode())
             style->setDisplay(INLINE_BLOCK);
 
-        // After performing the display mutation, check table rows. We do not honor position:relative on
-        // table rows or cells. This has been established in CSS2.1 (and caused a crash in containingBlock()
+        // After performing the display mutation, check table rows. We do not honor position:relative or position:sticky on
+        // table rows or cells. This has been established for position:relative in CSS2.1 (and caused a crash in containingBlock()
         // on some sites).
         if ((style->display() == TABLE_HEADER_GROUP || style->display() == TABLE_ROW_GROUP
-             || style->display() == TABLE_FOOTER_GROUP || style->display() == TABLE_ROW)
-             && style->position() == RelativePosition)
+            || style->display() == TABLE_FOOTER_GROUP || style->display() == TABLE_ROW)
+            && style->hasInFlowPosition())
             style->setPosition(StaticPosition);
 
         // writing-mode does not apply to table row groups, table column groups, table rows, and table columns.
@@ -2230,7 +2238,7 @@ PassRefPtr<CSSRuleList> StyleResolver::pseudoStyleRulesForElement(Element* e, Ps
     return m_ruleList.release();
 }
 
-inline bool StyleResolver::checkSelector(const RuleData& ruleData, const ContainerNode* scope)
+inline bool StyleResolver::ruleMatches(const RuleData& ruleData, const ContainerNode* scope)
 {
     m_dynamicPseudo = NOPSEUDO;
 
@@ -2247,7 +2255,7 @@ inline bool StyleResolver::checkSelector(const RuleData& ruleData, const Contain
             return false;
         if (!SelectorChecker::fastCheckRightmostAttributeSelector(m_element, ruleData.selector()))
             return false;
-        return m_selectorChecker.fastCheckSelector(ruleData.selector(), m_element);
+        return m_selectorChecker.fastCheck(ruleData.selector(), m_element);
     }
 
     // Slow path.
@@ -2256,7 +2264,7 @@ inline bool StyleResolver::checkSelector(const RuleData& ruleData, const Contain
     context.elementParentStyle = m_parentNode ? m_parentNode->renderStyle() : 0;
     context.scope = scope;
     context.pseudoStyle = m_pseudoStyle;
-    SelectorChecker::SelectorMatch match = m_selectorChecker.checkSelector(context, m_dynamicPseudo);
+    SelectorChecker::Match match = m_selectorChecker.match(context, m_dynamicPseudo);
     if (match != SelectorChecker::SelectorMatches)
         return false;
     if (m_pseudoStyle != NOPSEUDO && m_pseudoStyle != m_dynamicPseudo)
@@ -2272,7 +2280,7 @@ bool StyleResolver::checkRegionSelector(CSSSelector* regionSelector, Element* re
     m_pseudoStyle = NOPSEUDO;
 
     for (CSSSelector* s = regionSelector; s; s = CSSSelectorList::next(s))
-        if (m_selectorChecker.checkSelector(s, regionElement))
+        if (m_selectorChecker.matches(s, regionElement))
             return true;
 
     return false;
@@ -2283,12 +2291,12 @@ bool StyleResolver::checkRegionSelector(CSSSelector* regionSelector, Element* re
 
 Length StyleResolver::convertToIntLength(CSSPrimitiveValue* primitiveValue, RenderStyle* style, RenderStyle* rootStyle, double multiplier)
 {
-    return primitiveValue ? primitiveValue->convertToLength<FixedIntegerConversion | PercentConversion | FractionConversion | ViewportPercentageConversion>(style, rootStyle, multiplier) : Length(Undefined);
+    return primitiveValue ? primitiveValue->convertToLength<FixedIntegerConversion | PercentConversion | CalculatedConversion | FractionConversion | ViewportPercentageConversion>(style, rootStyle, multiplier) : Length(Undefined);
 }
 
 Length StyleResolver::convertToFloatLength(CSSPrimitiveValue* primitiveValue, RenderStyle* style, RenderStyle* rootStyle, double multiplier)
 {
-    return primitiveValue ? primitiveValue->convertToLength<FixedFloatConversion | PercentConversion | FractionConversion | ViewportPercentageConversion>(style, rootStyle, multiplier) : Length(Undefined);
+    return primitiveValue ? primitiveValue->convertToLength<FixedFloatConversion | PercentConversion | CalculatedConversion | FractionConversion | ViewportPercentageConversion>(style, rootStyle, multiplier) : Length(Undefined);
 }
 
 template <StyleResolver::StyleApplicationPass pass>
@@ -4193,7 +4201,7 @@ float StyleResolver::getComputedSizeFromSpecifiedSize(Document* document, float 
 
     // Also clamp to a reasonable maximum to prevent insane font sizes from causing crashes on various
     // platforms (I'm looking at you, Windows.)
-    return min(1000000.0f, zoomedSize);
+    return min(maximumAllowedFontSize, zoomedSize);
 }
 
 const int fontSizeTableMax = 16;
@@ -5297,6 +5305,9 @@ void StyleResolver::MatchedPropertiesCacheItem::reportMemoryUsage(MemoryObjectIn
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     info.addMember(matchedProperties);
+    info.addMember(ranges);
+    info.addMember(renderStyle);
+    info.addMember(parentRenderStyle);
 }
 
 void MediaQueryResult::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
@@ -5311,16 +5322,32 @@ void StyleResolver::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addMember(m_style);
     info.addMember(m_authorStyle);
     info.addMember(m_userStyle);
+    info.addMember(m_features);
     info.addMember(m_siblingRuleSet);
     info.addMember(m_uncommonAttributeRuleSet);
     info.addMember(m_keyframesRuleMap);
     info.addMember(m_matchedPropertiesCache);
+    info.addMember(m_matchedPropertiesCacheSweepTimer);
     info.addMember(m_matchedRules);
 
     info.addMember(m_ruleList);
     info.addMember(m_pendingImageProperties);
+    info.addMember(m_medium);
+    info.addMember(m_rootDefaultStyle);
+    info.addMember(m_document);
+
+    // FIXME: pointer to RenderStyle could point to an already deleted object.
+    info.ignoreMember(m_parentStyle);
+    info.ignoreMember(m_rootElementStyle);
+
+    info.addMember(m_element);
+    info.addMember(m_styledElement);
+    info.addMember(m_regionForStyling);
+    info.addMember(m_parentNode);
     info.addMember(m_lineHeightValue);
+    info.addMember(m_fontSelector);
     info.addMember(m_viewportDependentMediaQueryResults);
+    info.ignoreMember(m_styleBuilder);
     info.addMember(m_styleRuleToCSSOMWrapperMap);
     info.addMember(m_styleSheetCSSOMWrapperSet);
 #if ENABLE(CSS_FILTERS) && ENABLE(SVG)

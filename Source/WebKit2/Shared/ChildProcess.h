@@ -31,38 +31,26 @@
 #include "MessageSender.h"
 #include <WebCore/RunLoop.h>
 #include <wtf/RetainPtr.h>
-
-#if PLATFORM(MAC)
-OBJC_CLASS NSString;
-#endif
+#include <wtf/text/WTFString.h>
 
 namespace WebKit {
+
+struct ChildProcessInitializationParameters {
+    String uiProcessName;
+    String clientIdentifier;
+    CoreIPC::Connection::Identifier connectionIdentifier;
+};
 
 class ChildProcess : protected CoreIPC::Connection::Client, public CoreIPC::MessageSender<ChildProcess> {
     WTF_MAKE_NONCOPYABLE(ChildProcess);
 
 public:
+    void initialize(const ChildProcessInitializationParameters&);
+
     // disable and enable termination of the process. when disableTermination is called, the
     // process won't terminate unless a corresponding disableTermination call is made.
     void disableTermination();
     void enableTermination();
-
-    class LocalTerminationDisabler {
-    public:
-        explicit LocalTerminationDisabler(ChildProcess& childProcess)
-            : m_childProcess(childProcess)
-        {
-            m_childProcess.disableTermination();
-        }
-
-        ~LocalTerminationDisabler()
-        {
-            m_childProcess.enableTermination();
-        }
-
-    private:
-        ChildProcess& m_childProcess;
-    };
 
     void addMessageReceiver(CoreIPC::StringReference messageReceiverName, CoreIPC::MessageReceiver*);
     void addMessageReceiver(CoreIPC::StringReference messageReceiverName, uint64_t destinationID, CoreIPC::MessageReceiver*);
@@ -73,11 +61,13 @@ public:
     void setApplicationIsOccluded(bool);
 #endif
 
-    static void didCloseOnConnectionWorkQueue(WorkQueue&, CoreIPC::Connection*);
+    CoreIPC::Connection* parentProcessConnection() const { return m_connection.get(); }
 
     // Used by CoreIPC::MessageSender
-    virtual CoreIPC::Connection* connection() const = 0;
-    virtual uint64_t destinationID() const = 0;
+    CoreIPC::Connection* connection() const { return m_connection.get(); }
+    uint64_t destinationID() const { return 0; }
+
+    CoreIPC::MessageReceiverMap& messageReceiverMap() { return m_messageReceiverMap; }
 
 protected:
     explicit ChildProcess();
@@ -85,13 +75,16 @@ protected:
 
     void setTerminationTimeout(double seconds) { m_terminationTimeout = seconds; }
 
-    CoreIPC::MessageReceiverMap m_messageReceiverMap;
-
-private:
-    void terminationTimerFired();
+    virtual void initializeProcess(const ChildProcessInitializationParameters&);
+    virtual void initializeProcessName(const ChildProcessInitializationParameters&);
+    virtual void initializeSandbox(const ChildProcessInitializationParameters&);
+    virtual void initializeConnection(CoreIPC::Connection*);
 
     virtual bool shouldTerminate() = 0;
     virtual void terminate();
+
+private:
+    void terminationTimerFired();
 
     void platformInitialize();
 
@@ -104,6 +97,9 @@ private:
     unsigned m_terminationCounter;
 
     WebCore::RunLoop::Timer<ChildProcess> m_terminationTimer;
+
+    RefPtr<CoreIPC::Connection> m_connection;
+    CoreIPC::MessageReceiverMap m_messageReceiverMap;
 
 #if PLATFORM(MAC)
     RetainPtr<id> m_processVisibleAssertion;

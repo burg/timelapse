@@ -47,6 +47,17 @@ class PseudoElement;
 class RenderRegion;
 class ShadowRoot;
 
+enum AffectedSelectorType {
+    AffectedSelectorChecked = 1,
+    AffectedSelectorEnabled = 1 << 1,
+    AffectedSelectorDisabled = 1 << 2,
+    AffectedSelectorIndeterminate = 1 << 3,
+    AffectedSelectorLink = 1 << 4,
+    AffectedSelectorTarget = 1 << 5,
+    AffectedSelectorVisited = 1 << 6
+};
+typedef int AffectedSelectorMask;
+
 enum SpellcheckAttributeState {
     SpellcheckAttributeTrue,
     SpellcheckAttributeFalse,
@@ -272,6 +283,7 @@ public:
     virtual RenderObject* createRenderer(RenderArena*, RenderStyle*);
     virtual bool rendererIsNeeded(const NodeRenderingContext&);
     void recalcStyle(StyleChange = NoChange);
+    void didAffectSelector(AffectedSelectorMask);
 
     ElementShadow* shadow() const;
     ElementShadow* ensureShadow();
@@ -368,8 +380,7 @@ public:
 
     bool hasPseudoElements() const;
     PseudoElement* pseudoElement(PseudoId) const;
-    PseudoElement* beforePseudoElement() const { return pseudoElement(BEFORE); }
-    PseudoElement* afterPseudoElement() const { return pseudoElement(AFTER); }
+    RenderObject* pseudoElementRenderer(PseudoId) const;
     bool childNeedsShadowWalker() const;
     void didShadowTreeAwareChildrenChange();
 
@@ -429,11 +440,17 @@ public:
 
 #if ENABLE(SVG)
     virtual bool childShouldCreateRenderer(const NodeRenderingContext&) const;
+    bool hasPendingResources() const;
+    void setHasPendingResources();
+    void clearHasPendingResources();
+    virtual void buildPendingResource() { };
 #endif
 
 #if ENABLE(VIDEO_TRACK)
     bool isWebVTTNode() const;
-    void setIsWebVTTNode(bool flag);
+    void setIsWebVTTNode();
+    bool isWebVTTFutureNode() const;
+    void setIsWebVTTFutureNode();
 #endif
     
 #if ENABLE(FULLSCREEN_API)
@@ -671,7 +688,7 @@ inline const ElementAttributeData* Element::ensureUpdatedAttributeData() const
 
 inline void Element::updateName(const AtomicString& oldName, const AtomicString& newName)
 {
-    if (!inDocument())
+    if (!inDocument() || isInShadowTree())
         return;
 
     if (oldName == newName)

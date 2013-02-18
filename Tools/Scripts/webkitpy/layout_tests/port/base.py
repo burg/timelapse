@@ -154,6 +154,9 @@ class Port(object):
     def additional_drt_flag(self):
         return []
 
+    def supports_per_test_timeout(self):
+        return False
+
     def default_pixel_tests(self):
         # FIXME: Disable until they are run by default on build.webkit.org.
         return False
@@ -1209,13 +1212,17 @@ class Port(object):
     def _is_debian_based(self):
         return self._filesystem.exists('/etc/debian_version')
 
+    def _apache_version(self):
+        config = self._executive.run_command([self._path_to_apache(), '-v'])
+        return re.sub(r'(?:.|\n)*Server version: Apache/(\d+\.\d+)(?:.|\n)*', r'\1', config)
+
     # We pass sys_platform into this method to make it easy to unit test.
     def _apache_config_file_name_for_platform(self, sys_platform):
         if sys_platform == 'cygwin':
             return 'cygwin-httpd.conf'  # CYGWIN is the only platform to still use Apache 1.3.
         if sys_platform.startswith('linux'):
             if self._is_redhat_based():
-                return 'fedora-httpd.conf'  # This is an Apache 2.x config file despite the naming.
+                return 'fedora-httpd-' + self._apache_version() + '.conf'
             if self._is_debian_based():
                 return 'apache2-debian-httpd.conf'
         # All platforms use apache2 except for CYGWIN (and Mac OS X Tiger and prior, which we no longer support).

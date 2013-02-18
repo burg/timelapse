@@ -56,7 +56,9 @@ public:
     virtual IDBDatabaseMetadata metadata() const = 0;
 
     virtual PassRefPtr<IDBObjectStoreBackendInterface> createObjectStore(int64_t, const String& name, const IDBKeyPath&, bool autoIncrement, IDBTransactionBackendInterface*, ExceptionCode&) = 0;
+    virtual void createObjectStore(int64_t transactionId, int64_t objectStoreId, const String& name, const IDBKeyPath&, bool autoIncrement) = 0;
     virtual void deleteObjectStore(int64_t, IDBTransactionBackendInterface*, ExceptionCode&) = 0;
+    virtual void deleteObjectStore(int64_t transactionId, int64_t objectStoreId) = 0;
     // FIXME: Remove this method in https://bugs.webkit.org/show_bug.cgi?id=103923.
     virtual PassRefPtr<IDBTransactionBackendInterface> createTransaction(int64_t transactionId, const Vector<int64_t>& objectStoreIds, IDBTransaction::Mode) = 0;
     virtual void createTransaction(int64_t transactionId, PassRefPtr<IDBDatabaseCallbacks>, const Vector<int64_t>& objectStoreIds, unsigned short mode) = 0;
@@ -65,6 +67,9 @@ public:
     // Transaction-specific operations.
     virtual void commit(int64_t transactionId) = 0;
     virtual void abort(int64_t transactionId) = 0;
+
+    virtual void createIndex(int64_t transactionId, int64_t objectStoreId, int64_t indexId, const String& name, const IDBKeyPath&, bool unique, bool multiEntry) = 0;
+    virtual void deleteIndex(int64_t transactionId, int64_t objectStoreId, int64_t indexId) = 0;
 
     enum TaskType {
         NormalTask = 0,

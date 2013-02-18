@@ -52,6 +52,7 @@
 
 #if USE(JSC)
 #include <runtime/JSLock.h>
+#include <runtime/Operations.h>
 #endif
 
 #if ENABLE(WEBGL)    
@@ -570,6 +571,8 @@ void HTMLCanvasElement::createImageBuffer() const
         return;
     m_imageBuffer->context()->setShadowsIgnoreTransforms(true);
     m_imageBuffer->context()->setImageInterpolationQuality(DefaultInterpolationQuality);
+    if (document()->settings() && !document()->settings()->antialiased2dCanvasEnabled())
+        m_imageBuffer->context()->setShouldAntialias(false);
     m_imageBuffer->context()->setStrokeThickness(1);
     m_contextStateSaver = adoptPtr(new GraphicsContextStateSaver(*m_imageBuffer->context()));
 

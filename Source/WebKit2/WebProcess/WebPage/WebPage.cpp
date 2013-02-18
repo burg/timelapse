@@ -130,6 +130,7 @@
 #include <WebCore/markup.h>
 #include <runtime/JSLock.h>
 #include <runtime/JSValue.h>
+#include <runtime/Operations.h>
 
 #if ENABLE(MHTML)
 #include <WebCore/MHTMLArchive.h>
@@ -156,6 +157,10 @@
 
 #if ENABLE(VIBRATION)
 #include "WebVibrationClient.h"
+#endif
+
+#if ENABLE(PROXIMITY_EVENTS)
+#include "WebDeviceProximityClient.h"
 #endif
 
 #if PLATFORM(MAC)
@@ -241,8 +246,6 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
     , m_isSmartInsertDeleteEnabled(parameters.isSmartInsertDeleteEnabled)
     , m_layerHostingMode(parameters.layerHostingMode)
     , m_keyboardEventBeingInterpreted(0)
-#elif PLATFORM(WIN)
-    , m_nativeWindow(parameters.nativeWindow)
 #elif PLATFORM(GTK)
     , m_accessibilityObject(0)
 #endif
@@ -274,9 +277,6 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
     , m_isShowingContextMenu(false)
 #endif
     , m_willGoToBackForwardItemCallbackEnabled(true)
-#if PLATFORM(WIN)
-    , m_gestureReachedScrollingLimit(false)
-#endif
 #if ENABLE(PAGE_VISIBILITY_API)
     , m_visibilityState(WebCore::PageVisibilityStateVisible)
 #endif
@@ -327,6 +327,9 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
 #endif
 #if ENABLE(VIBRATION)
     WebCore::provideVibrationTo(m_page.get(), new WebVibrationClient(this));
+#endif
+#if ENABLE(PROXIMITY_EVENTS)
+    WebCore::provideDeviceProximityTo(m_page.get(), new WebDeviceProximityClient(this));
 #endif
 
     m_page->setCanStartMedia(false);
@@ -1030,13 +1033,13 @@ void WebPage::sendViewportAttributesChanged()
     // Recalculate the recommended layout size, when the available size (device pixel) changes.
     Settings* settings = m_page->settings();
 
-    int minimumLayoutFallbackWidth = std::max(settings->layoutFallbackWidth(), int(m_viewportSize.width() / m_page->deviceScaleFactor()));
+    int minimumLayoutFallbackWidth = std::max(settings->layoutFallbackWidth(), m_viewportSize.width());
 
     // If unset  we use the viewport dimensions. This fits with the behavior of desktop browsers.
     int deviceWidth = (settings->deviceWidth() > 0) ? settings->deviceWidth() : m_viewportSize.width();
     int deviceHeight = (settings->deviceHeight() > 0) ? settings->deviceHeight() : m_viewportSize.height();
 
-    ViewportAttributes attr = computeViewportAttributes(m_page->viewportArguments(), minimumLayoutFallbackWidth, deviceWidth, deviceHeight, m_page->deviceScaleFactor(), m_viewportSize);
+    ViewportAttributes attr = computeViewportAttributes(m_page->viewportArguments(), minimumLayoutFallbackWidth, deviceWidth, deviceHeight, 1, m_viewportSize);
 
     FrameView* view = m_page->mainFrame()->view();
 
@@ -1046,8 +1049,6 @@ void WebPage::sendViewportAttributesChanged()
     // Put the width and height to the viewport width and height. In css units however.
     // Use FloatSize to avoid truncated values during scale.
     FloatSize contentFixedSize = m_viewportSize;
-
-    contentFixedSize.scale(1 / m_page->deviceScaleFactor());
 
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     // CSS viewport descriptors might be applied to already affected viewport size
@@ -1137,6 +1138,10 @@ double WebPage::textZoomFactor() const
 
 void WebPage::setTextZoomFactor(double zoomFactor)
 {
+    PluginView* pluginView = pluginViewForFrame(m_page->mainFrame());
+    if (pluginView && pluginView->handlesPageScaleFactor())
+        return;
+
     Frame* frame = m_mainFrame->coreFrame();
     if (!frame)
         return;
@@ -1145,6 +1150,10 @@ void WebPage::setTextZoomFactor(double zoomFactor)
 
 double WebPage::pageZoomFactor() const
 {
+    PluginView* pluginView = pluginViewForFrame(m_page->mainFrame());
+    if (pluginView && pluginView->handlesPageScaleFactor())
+        return pluginView->pageScaleFactor();
+
     Frame* frame = m_mainFrame->coreFrame();
     if (!frame)
         return 1;
@@ -1153,6 +1162,12 @@ double WebPage::pageZoomFactor() const
 
 void WebPage::setPageZoomFactor(double zoomFactor)
 {
+    PluginView* pluginView = pluginViewForFrame(m_page->mainFrame());
+    if (pluginView && pluginView->handlesPageScaleFactor()) {
+        pluginView->setPageScaleFactor(zoomFactor, IntPoint());
+        return;
+    }
+
     Frame* frame = m_mainFrame->coreFrame();
     if (!frame)
         return;
@@ -1161,6 +1176,12 @@ void WebPage::setPageZoomFactor(double zoomFactor)
 
 void WebPage::setPageAndTextZoomFactors(double pageZoomFactor, double textZoomFactor)
 {
+    PluginView* pluginView = pluginViewForFrame(m_page->mainFrame());
+    if (pluginView && pluginView->handlesPageScaleFactor()) {
+        pluginView->setPageScaleFactor(pageZoomFactor, IntPoint());
+        return;
+    }
+
     Frame* frame = m_mainFrame->coreFrame();
     if (!frame)
         return;
@@ -1346,10 +1367,6 @@ void WebPage::installPageOverlay(PassRefPtr<PageOverlay> pageOverlay)
         m_pageOverlay->startFadeInAnimation();
 
     m_drawingArea->didInstallPageOverlay();
-#if PLATFORM(WIN)
-    send(Messages::WebPageProxy::DidInstallOrUninstallPageOverlay(true));
-#endif
-
     m_pageOverlay->setNeedsDisplay();
 }
 
@@ -1367,9 +1384,6 @@ void WebPage::uninstallPageOverlay(PageOverlay* pageOverlay, bool fadeOut)
     m_pageOverlay = nullptr;
 
     m_drawingArea->didUninstallPageOverlay();
-#if PLATFORM(WIN)
-    send(Messages::WebPageProxy::DidInstallOrUninstallPageOverlay(false));
-#endif
 }
 
 static ImageOptions snapshotOptionsToImageOptions(SnapshotOptions snapshotOptions)
@@ -2190,7 +2204,7 @@ void WebPage::getWebArchiveOfFrame(uint64_t frameID, uint64_t callbackID)
 {
     CoreIPC::DataReference dataReference;
 
-#if PLATFORM(MAC) || PLATFORM(WIN)
+#if PLATFORM(MAC)
     RetainPtr<CFDataRef> data;
     if (WebFrame* frame = WebProcess::shared().webFrame(frameID)) {
         if ((data = frame->webArchiveData(0, 0)))
@@ -2324,6 +2338,7 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     settings->setShowDebugBorders(store.getBoolValueForKey(WebPreferencesKey::compositingBordersVisibleKey()));
     settings->setShowRepaintCounter(store.getBoolValueForKey(WebPreferencesKey::compositingRepaintCountersVisibleKey()));
     settings->setShowTiledScrollingIndicator(store.getBoolValueForKey(WebPreferencesKey::tiledScrollingIndicatorVisibleKey()));
+    settings->setAggressiveTileRetentionEnabled(store.getBoolValueForKey(WebPreferencesKey::aggressiveTileRetentionEnabledKey()));
     settings->setCSSCustomFilterEnabled(store.getBoolValueForKey(WebPreferencesKey::cssCustomFilterEnabledKey()));
     RuntimeEnabledFeatures::setCSSRegionsEnabled(store.getBoolValueForKey(WebPreferencesKey::cssRegionsEnabledKey()));
     settings->setCSSGridLayoutEnabled(store.getBoolValueForKey(WebPreferencesKey::cssGridLayoutEnabledKey()));
@@ -2462,38 +2477,7 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* evt)
 
 #if ENABLE(DRAG_SUPPORT)
 
-#if PLATFORM(WIN)
-void WebPage::performDragControllerAction(uint64_t action, WebCore::IntPoint clientPosition, WebCore::IntPoint globalPosition, uint64_t draggingSourceOperationMask, const WebCore::DragDataMap& dataMap, uint32_t flags)
-{
-    if (!m_page) {
-        send(Messages::WebPageProxy::DidPerformDragControllerAction(WebCore::DragSession()));
-        return;
-    }
-
-    DragData dragData(dataMap, clientPosition, globalPosition, static_cast<DragOperation>(draggingSourceOperationMask), static_cast<DragApplicationFlags>(flags));
-    switch (action) {
-    case DragControllerActionEntered:
-        send(Messages::WebPageProxy::DidPerformDragControllerAction(m_page->dragController()->dragEntered(&dragData)));
-        break;
-
-    case DragControllerActionUpdated:
-        send(Messages::WebPageProxy::DidPerformDragControllerAction(m_page->dragController()->dragUpdated(&dragData)));
-        break;
-        
-    case DragControllerActionExited:
-        m_page->dragController()->dragExited(&dragData);
-        break;
-        
-    case DragControllerActionPerformDrag:
-        m_page->dragController()->performDrag(&dragData);
-        break;
-        
-    default:
-        ASSERT_NOT_REACHED();
-    }
-}
-
-#elif PLATFORM(QT) || PLATFORM(GTK)
+#if PLATFORM(QT) || PLATFORM(GTK)
 void WebPage::performDragControllerAction(uint64_t action, WebCore::DragData dragData)
 {
     if (!m_page) {
@@ -3298,7 +3282,7 @@ void WebPage::computePagesForPrinting(uint64_t frameID, const PrintInfo& printIn
     send(Messages::WebPageProxy::ComputedPagesCallback(resultPageRects, resultTotalScaleFactorForPrinting, callbackID));
 }
 
-#if PLATFORM(MAC) || PLATFORM(WIN)
+#if PLATFORM(MAC)
 void WebPage::drawRectToImage(uint64_t frameID, const PrintInfo& printInfo, const WebCore::IntRect& rect, const WebCore::IntSize& imageSize, uint64_t callbackID)
 {
     WebFrame* frame = WebProcess::shared().webFrame(frameID);
@@ -3695,11 +3679,11 @@ static Frame* targetFrameForEditing(WebPage* page)
     return targetFrame;
 }
 
-void WebPage::confirmComposition(const String& compositionString, int64_t selectionStart, int64_t selectionLength, EditorState& newState)
+void WebPage::confirmComposition(const String& compositionString, int64_t selectionStart, int64_t selectionLength)
 {
     Frame* targetFrame = targetFrameForEditing(this);
     if (!targetFrame) {
-        newState = editorState();
+        send(Messages::WebPageProxy::EditorStateChanged(editorState()));
         return;
     }
 
@@ -3707,7 +3691,7 @@ void WebPage::confirmComposition(const String& compositionString, int64_t select
     editor->confirmComposition(compositionString);
 
     if (selectionStart == -1) {
-        newState = editorState();
+        send(Messages::WebPageProxy::EditorStateChanged(editorState()));
         return;
     }
 
@@ -3719,19 +3703,14 @@ void WebPage::confirmComposition(const String& compositionString, int64_t select
         VisibleSelection selection(selectionRange.get(), SEL_DEFAULT_AFFINITY);
         targetFrame->selection()->setSelection(selection);
     }
-    newState = editorState();
+    send(Messages::WebPageProxy::EditorStateChanged(editorState()));
 }
 
-void WebPage::setComposition(const String& text, Vector<CompositionUnderline> underlines, uint64_t selectionStart, uint64_t selectionEnd, uint64_t replacementStart, uint64_t replacementLength, EditorState& newState)
+void WebPage::setComposition(const String& text, Vector<CompositionUnderline> underlines, uint64_t selectionStart, uint64_t selectionEnd, uint64_t replacementStart, uint64_t replacementLength)
 {
     Frame* targetFrame = targetFrameForEditing(this);
-    if (!targetFrame) {
-        newState = editorState();
-        return;
-    }
-
-    if (!targetFrame->selection()->isContentEditable()) {
-        newState = editorState();
+    if (!targetFrame || !targetFrame->selection()->isContentEditable()) {
+        send(Messages::WebPageProxy::EditorStateChanged(editorState()));
         return;
     }
 
@@ -3747,19 +3726,14 @@ void WebPage::setComposition(const String& text, Vector<CompositionUnderline> un
     }
 
     targetFrame->editor()->setComposition(text, underlines, selectionStart, selectionEnd);
-    newState = editorState();
+    send(Messages::WebPageProxy::EditorStateChanged(editorState()));
 }
 
-void WebPage::cancelComposition(EditorState& newState)
+void WebPage::cancelComposition()
 {
-    Frame* targetFrame = targetFrameForEditing(this);
-    if (!targetFrame) {
-        newState = editorState();
-        return;
-    }
-
-    targetFrame->editor()->cancelComposition();
-    newState = editorState();
+    if (Frame* targetFrame = targetFrameForEditing(this))
+        targetFrame->editor()->cancelComposition();
+    send(Messages::WebPageProxy::EditorStateChanged(editorState()));
 }
 #endif
 

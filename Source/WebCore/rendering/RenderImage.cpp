@@ -567,7 +567,7 @@ void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, dou
         if (containingBlock->isBox()) {
             RenderBox* box = toRenderBox(containingBlock);
             intrinsicSize.setWidth(box->availableLogicalWidth());
-            intrinsicSize.setHeight(box->availableLogicalHeight());
+            intrinsicSize.setHeight(box->availableLogicalHeight(IncludeMarginBorderPadding));
         }
     }
     // Don't compute an intrinsic ratio to preserve historical WebKit behavior if we're painting alt text and/or a broken image.
@@ -586,7 +586,7 @@ HTMLImageElement* RenderImage::hostImageElement() const
         return toHTMLImageElement(node());
 
     if (node()->hasTagName(webkitInnerImageTag)) {
-        if (Node* ancestor = node()->shadowAncestorNode()) {
+        if (Node* ancestor = node()->shadowHost()) {
             if (ancestor->hasTagName(imgTag))
                 return toHTMLImageElement(ancestor);
         }

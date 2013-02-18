@@ -78,10 +78,6 @@ public:
         WebSize maxUntiledLayerSize;
     };
 
-    // Attempts to initialize this WebLayerTreeView with the given client, root layer, and settings.
-    // If initialization fails, this will return nil.
-    WEBKIT_EXPORT static WebLayerTreeView* create(WebLayerTreeViewClient*, const WebLayer& root, const Settings&);
-
     virtual ~WebLayerTreeView() { }
 
     // Initialization and lifecycle --------------------------------------
@@ -187,7 +183,7 @@ public:
     // Toggles the paint rects in the HUD layer
     virtual void setShowPaintRects(bool) { }
 
-    // Simulates a lost context. For testing only.
+    // FIXME: Remove this.
     virtual void loseCompositorContext(int numTimes) { }
 };
 

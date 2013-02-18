@@ -92,10 +92,6 @@ struct WebProcessCreationParameters;
 class NetworkProcessConnection;
 #endif
 
-#if USE(SECURITY_FRAMEWORK)
-class SecItemResponseData;
-#endif
-
 #if ENABLE(NETWORK_PROCESS)
 class WebResourceLoadScheduler;
 #endif
@@ -120,11 +116,6 @@ public:
         m_supplements.add(T::supplementName(), new T(this));
     }
 
-    void initializeConnection(CoreIPC::Connection::Identifier);
-
-    virtual CoreIPC::Connection* connection() const OVERRIDE { return m_connection.get(); }
-    virtual uint64_t destinationID() const OVERRIDE { return 0; }
-
     WebConnectionToUIProcess* webConnectionToUIProcess() const { return m_webConnection.get(); }
 
     WebPage* webPage(uint64_t pageID) const;
@@ -141,9 +132,6 @@ public:
     InjectedBundle* injectedBundle() const { return m_injectedBundle.get(); }
 
 #if PLATFORM(MAC)
-    void initializeShim();
-    void initializeSandbox(const String& clientIdentifier);
-
 #if USE(ACCELERATED_COMPOSITING)
     mach_port_t compositingRenderServerPort() const { return m_compositingRenderServerPort; }
 #endif
@@ -231,9 +219,6 @@ private:
     void setShouldUseFontSmoothing(bool);
     void userPreferredLanguagesChanged(const Vector<String>&) const;
     void fullKeyboardAccessModeChanged(bool fullKeyboardAccessEnabled);
-#if PLATFORM(WIN)
-    void setShouldPaintNativeControls(bool);
-#endif
 
     void setVisitedLinkTable(const SharedMemory::Handle&);
     void visitedLinkStateChanged(const Vector<WebCore::LinkHash>& linkHashes);
@@ -278,13 +263,16 @@ private:
 
     void postInjectedBundleMessage(const CoreIPC::DataReference& messageData);
 
-#if USE(SECURITY_FRAMEWORK)
-    void secItemResponse(CoreIPC::Connection*, uint64_t requestID, const SecItemResponseData&);
-#endif
-
     // ChildProcess
-    virtual bool shouldTerminate();
-    virtual void terminate();
+    virtual void initializeProcess(const ChildProcessInitializationParameters&) OVERRIDE;
+    virtual void initializeProcessName(const ChildProcessInitializationParameters&) OVERRIDE;
+    virtual void initializeSandbox(const ChildProcessInitializationParameters&) OVERRIDE;
+    virtual void initializeConnection(CoreIPC::Connection*) OVERRIDE;
+    virtual bool shouldTerminate() OVERRIDE;
+    virtual void terminate() OVERRIDE;
+
+    void platformInitializeProcess(const ChildProcessInitializationParameters&);
+
 
     // CoreIPC::Connection::Client
     friend class WebConnectionToUIProcess;
@@ -292,9 +280,6 @@ private:
     virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
     virtual void didClose(CoreIPC::Connection*);
     virtual void didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference messageReceiverName, CoreIPC::StringReference messageName) OVERRIDE;
-#if PLATFORM(WIN)
-    virtual Vector<HWND> windowsToReceiveSentMessagesWhileWaitingForSyncReply();
-#endif
 
     // CoreIPC::Connection::QueueClient
     virtual void didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&, bool& didHandleMessage) OVERRIDE;
@@ -307,7 +292,6 @@ private:
     void didGetPlugins(CoreIPC::Connection*, uint64_t requestID, const Vector<WebCore::PluginInfo>&);
 #endif
 
-    RefPtr<CoreIPC::Connection> m_connection;
     RefPtr<WebConnectionToUIProcess> m_webConnection;
 
     HashMap<uint64_t, RefPtr<WebPage> > m_pageMap;

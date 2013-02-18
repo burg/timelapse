@@ -230,11 +230,13 @@ JSGlobalData::JSGlobalData(GlobalDataType globalDataType, HeapType heapType)
     unlinkedProgramCodeBlockStructure.set(*this, UnlinkedProgramCodeBlock::createStructure(*this, 0, jsNull()));
     unlinkedEvalCodeBlockStructure.set(*this, UnlinkedEvalCodeBlock::createStructure(*this, 0, jsNull()));
     unlinkedFunctionCodeBlockStructure.set(*this, UnlinkedFunctionCodeBlock::createStructure(*this, 0, jsNull()));
+    smallStrings.initializeCommonStrings(*this);
 
     wtfThreadData().setCurrentIdentifierTable(existingEntryIdentifierTable);
 
 #if ENABLE(JIT)
-    jitStubs = adoptPtr(new JITThunks(this));
+    jitStubs = adoptPtr(new JITThunks());
+    performPlatformSpecificJITAssertions(this);
 #endif
     
     interpreter->initialize(this->canUseJIT());
@@ -244,7 +246,7 @@ JSGlobalData::JSGlobalData(GlobalDataType globalDataType, HeapType heapType)
 #endif
 
     heap.notifyIsSafeToCollect();
-    
+
     LLInt::Data::performAssertions(*this);
     
     if (Options::enableProfiler())

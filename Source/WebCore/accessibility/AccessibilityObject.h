@@ -426,6 +426,7 @@ public:
     bool isCheckboxOrRadio() const { return isCheckbox() || isRadioButton(); }
     bool isScrollView() const { return roleValue() == ScrollAreaRole; }
     bool isCanvas() const { return roleValue() == CanvasRole; }
+    bool isPopUpButton() const { return roleValue() == PopUpButtonRole; }
     bool isBlockquote() const;
     bool isLandmark() const;
     
@@ -595,6 +596,7 @@ public:
     virtual FrameView* topDocumentFrameView() const { return 0; }
     virtual FrameView* documentFrameView() const;
     String language() const;
+    // 1-based, to match the aria-level spec.
     virtual unsigned hierarchicalLevel() const { return 0; }
     
     virtual void setFocused(bool) { }

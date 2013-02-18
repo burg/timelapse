@@ -57,6 +57,8 @@ public:
 #if ENABLE(VIDEO_TRACK)
     using NodeRareData::isWebVTTNode;
     using NodeRareData::setIsWebVTTNode;
+    using NodeRareData::isWebVTTFutureNode;
+    using NodeRareData::setIsWebVTTFutureNode;
 #endif
 #if ENABLE(FULLSCREEN_API)
     bool containsFullScreenElement() { return m_containsFullScreenElement; }
@@ -117,6 +119,11 @@ public:
     IntSize savedLayerScrollOffset() const { return m_savedLayerScrollOffset; }
     void setSavedLayerScrollOffset(IntSize size) { m_savedLayerScrollOffset = size; }
 
+#if ENABLE(SVG)
+    bool hasPendingResources() const { return m_hasPendingResources; }
+    void setHasPendingResources(bool has) { m_hasPendingResources = has; }
+#endif
+
 private:
     // Many fields are in NodeRareData for better packing.
     LayoutSize m_minimumSizeForResizing;
@@ -143,8 +150,6 @@ inline IntSize defaultMinimumSizeForResizing()
 
 inline ElementRareData::ElementRareData()
     : m_minimumSizeForResizing(defaultMinimumSizeForResizing())
-    , m_generatedBefore(0)
-    , m_generatedAfter(0)
 {
 }
 

@@ -65,16 +65,46 @@ public:
     {
     }
     
-    CallLinkStatus& setIsProved(bool);
+    CallLinkStatus& setIsProved(bool isProved)
+    {
+        m_isProved = isProved;
+        return *this;
+    }
     
     static CallLinkStatus computeFor(CodeBlock*, unsigned bytecodeIndex);
+    
+    CallLinkStatus& setHasBadFunctionExitSite(bool didHaveExitSite)
+    {
+        ASSERT(!m_isProved);
+        if (didHaveExitSite) {
+            // Turn this into a closure call.
+            m_callTarget = JSValue();
+        }
+        return *this;
+    }
+    
+    CallLinkStatus& setHasBadCacheExitSite(bool didHaveExitSite)
+    {
+        ASSERT(!m_isProved);
+        if (didHaveExitSite)
+            *this = takesSlowPath();
+        return *this;
+    }
+    
+    CallLinkStatus& setHasBadExecutableExitSite(bool didHaveExitSite)
+    {
+        ASSERT(!m_isProved);
+        if (didHaveExitSite)
+            *this = takesSlowPath();
+        return *this;
+    }
     
     bool isSet() const { return m_callTarget || m_executable || m_couldTakeSlowPath; }
     
     bool operator!() const { return !isSet(); }
     
     bool couldTakeSlowPath() const { return m_couldTakeSlowPath; }
-    bool isClosureCall() const { return !m_callTarget; }
+    bool isClosureCall() const { return m_executable && !m_callTarget; }
     
     JSValue callTarget() const { return m_callTarget; }
     JSFunction* function() const;
@@ -85,7 +115,7 @@ public:
     bool isProved() const { return m_isProved; }
     bool canOptimize() const { return (m_callTarget || m_executable) && !m_couldTakeSlowPath; }
     
-    void dump(PrintStream&);
+    void dump(PrintStream&) const;
     
 private:
     static CallLinkStatus computeFromLLInt(CodeBlock*, unsigned bytecodeIndex);

@@ -61,6 +61,7 @@
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/RunLoop.h>
 #include <runtime/InitializeThreading.h>
+#include <runtime/Operations.h>
 #include <wtf/CurrentTime.h>
 #include <wtf/MainThread.h>
 
@@ -136,10 +137,6 @@ WebContext::WebContext(ProcessModel processModel, const String& injectedBundlePa
     , m_cacheModel(CacheModelDocumentViewer)
     , m_memorySamplerEnabled(false)
     , m_memorySamplerInterval(1400.0)
-#if PLATFORM(WIN)
-    , m_shouldPaintNativeControls(true)
-    , m_initialHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicyAlways)
-#endif
 #if USE(SOUP)
     , m_initialHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicyOnlyFromMainDocumentDomain)
 #endif
@@ -167,9 +164,6 @@ WebContext::WebContext(ProcessModel processModel, const String& injectedBundlePa
 #if ENABLE(NETSCAPE_PLUGIN_API)
     m_pluginSiteDataManager = WebPluginSiteDataManager::create(this);
 #endif // ENABLE(NETSCAPE_PLUGIN_API)
-#if USE(SOUP)
-    m_soupRequestManagerProxy = WebSoupRequestManagerProxy::create(this);
-#endif
 
     addSupplement<WebApplicationCacheManagerProxy>();
     addSupplement<WebCookieManagerProxy>();
@@ -180,6 +174,9 @@ WebContext::WebContext(ProcessModel processModel, const String& injectedBundlePa
     addSupplement<WebResourceCacheManagerProxy>();
 #if ENABLE(SQL_DATABASE)
     addSupplement<WebDatabaseManagerProxy>();
+#endif
+#if USE(SOUP)
+    addSupplement<WebSoupRequestManagerProxy>();
 #endif
 
     contexts().append(this);
@@ -234,11 +231,6 @@ WebContext::~WebContext()
 #if ENABLE(NETSCAPE_PLUGIN_API)
     m_pluginSiteDataManager->invalidate();
     m_pluginSiteDataManager->clearContext();
-#endif
-
-#if USE(SOUP)
-    m_soupRequestManagerProxy->invalidate();
-    m_soupRequestManagerProxy->clearContext();
 #endif
 
     invalidateCallbackMap(m_dictionaryCallbacks);
@@ -640,9 +632,6 @@ void WebContext::disconnectProcess(WebProcessProxy* process)
 #endif
 #if ENABLE(NETWORK_INFO)
     m_networkInfoManagerProxy->invalidate();
-#endif
-#if USE(SOUP)
-    m_soupRequestManagerProxy->invalidate();
 #endif
 
     // When out of process plug-ins are enabled, we don't want to invalidate the plug-in site data

@@ -73,9 +73,6 @@ class WebBatteryManagerProxy;
 #if ENABLE(NETWORK_INFO)
 class WebNetworkInfoManagerProxy;
 #endif
-#if USE(SOUP)
-class WebSoupRequestManagerProxy;
-#endif
 #if ENABLE(NETWORK_PROCESS)
 struct NetworkProcessCreationParameters;
 #endif
@@ -189,10 +186,7 @@ public:
     void startMemorySampler(const double interval);
     void stopMemorySampler();
 
-#if PLATFORM(WIN)
-    void setShouldPaintNativeControls(bool);
-#endif
-#if PLATFORM(WIN) || USE(SOUP)
+#if USE(SOUP)
     void setInitialHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicy policy) { m_initialHTTPCookieAcceptPolicy = policy; }
 #endif
     void setEnhancedAccessibility(bool);
@@ -215,9 +209,6 @@ public:
 #endif
 #if ENABLE(NETSCAPE_PLUGIN_API)
     WebPluginSiteDataManager* pluginSiteDataManager() const { return m_pluginSiteDataManager.get(); }
-#endif
-#if USE(SOUP)
-    WebSoupRequestManagerProxy* soupRequestManagerProxy() const { return m_soupRequestManagerProxy.get(); }
 #endif
 
     struct Statistics {
@@ -427,17 +418,11 @@ private:
 #if ENABLE(NETSCAPE_PLUGIN_API)
     RefPtr<WebPluginSiteDataManager> m_pluginSiteDataManager;
 #endif
-#if USE(SOUP)
-    RefPtr<WebSoupRequestManagerProxy> m_soupRequestManagerProxy;
-#endif
 
     typedef HashMap<AtomicString, RefPtr<WebContextSupplement> > WebContextSupplementMap;
     WebContextSupplementMap m_supplements;
 
-#if PLATFORM(WIN)
-    bool m_shouldPaintNativeControls;
-#endif
-#if PLATFORM(WIN) || USE(SOUP)
+#if USE(SOUP)
     HTTPCookieAcceptPolicy m_initialHTTPCookieAcceptPolicy;
 #endif
 

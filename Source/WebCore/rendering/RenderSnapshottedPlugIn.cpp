@@ -42,14 +42,19 @@ namespace WebCore {
 
 static const int autoStartPlugInSizeThresholdWidth = 1;
 static const int autoStartPlugInSizeThresholdHeight = 1;
-static const int startLabelPadding = 10;
-static const double hoverDelay = 1;
+static const int startLabelPadding = 10; // Label should be 10px from edge of box.
+static const int startLabelInset = 20; // But the label is inset from its box also. FIXME: This will be removed when we go to a ShadowDOM approach.
+static const double showLabelAfterMouseOverDelay = 1;
+static const double showLabelAutomaticallyDelay = 3;
 
 RenderSnapshottedPlugIn::RenderSnapshottedPlugIn(HTMLPlugInImageElement* element)
     : RenderEmbeddedObject(element)
     , m_snapshotResource(RenderImageResource::create())
     , m_shouldShowLabel(false)
-    , m_hoverDelayTimer(this, &RenderSnapshottedPlugIn::hoverDelayTimerFired, hoverDelay)
+    , m_shouldShowLabelAutomatically(false)
+    , m_showedLabelOnce(false)
+    , m_showReason(UserMousedOver)
+    , m_showLabelDelayTimer(this, &RenderSnapshottedPlugIn::showLabelDelayTimerFired)
 {
     m_snapshotResource->initialize(this);
 }
@@ -73,6 +78,8 @@ void RenderSnapshottedPlugIn::updateSnapshot(PassRefPtr<Image> image)
 
     m_snapshotResource->setCachedImage(new CachedImage(image.get()));
     repaint();
+    if (m_shouldShowLabelAutomatically)
+        resetDelayTimer(ShouldShowAutomatically);
 }
 
 void RenderSnapshottedPlugIn::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -151,9 +158,10 @@ void RenderSnapshottedPlugIn::paintLabel(PaintInfo& paintInfo, const LayoutPoint
     if (contentBoxRect().isEmpty())
         return;
 
-    if (!plugInImageElement()->hovered())
+    if (!plugInImageElement()->hovered() && m_showReason == UserMousedOver)
         return;
 
+    m_showedLabelOnce = true;
     LayoutRect rect = contentBoxRect();
     LayoutRect labelRect = tryToFitStartLabel(LabelSizeLarge, rect);
     LabelSize size = NoLabel;
@@ -171,7 +179,11 @@ void RenderSnapshottedPlugIn::paintLabel(PaintInfo& paintInfo, const LayoutPoint
     if (!labelImage)
         return;
 
-    paintInfo.context->drawImage(labelImage, ColorSpaceDeviceRGB, roundedIntPoint(paintOffset + labelRect.location()), labelImage->rect());
+    // Remember that the labelRect includes the label inset, so we need to adjust for it.
+    paintInfo.context->drawImage(labelImage, ColorSpaceDeviceRGB,
+                                 IntRect(roundedIntPoint(paintOffset + labelRect.location() - IntSize(startLabelInset, startLabelInset)),
+                                         roundedIntSize(labelRect.size() + IntSize(2 * startLabelInset, 2 * startLabelInset))),
+                                 labelImage->rect());
 }
 
 void RenderSnapshottedPlugIn::repaintLabel()
@@ -180,10 +192,15 @@ void RenderSnapshottedPlugIn::repaintLabel()
     repaint();
 }
 
-void RenderSnapshottedPlugIn::hoverDelayTimerFired(DeferrableOneShotTimer<RenderSnapshottedPlugIn>*)
+void RenderSnapshottedPlugIn::showLabelDelayTimerFired(Timer<RenderSnapshottedPlugIn>*)
 {
     m_shouldShowLabel = true;
     repaintLabel();
+}
+
+void RenderSnapshottedPlugIn::setShouldShowLabelAutomatically(bool show)
+{
+    m_shouldShowLabelAutomatically = show;
 }
 
 CursorDirective RenderSnapshottedPlugIn::getCursor(const LayoutPoint& point, Cursor& overrideCursor) const
@@ -219,18 +236,24 @@ void RenderSnapshottedPlugIn::handleEvent(Event* event)
         if (mouseEvent->button() != LeftButton)
             return;
 
-        if (m_hoverDelayTimer.isActive())
-            m_hoverDelayTimer.stop();
+        if (m_showLabelDelayTimer.isActive())
+            m_showLabelDelayTimer.stop();
 
         event->setDefaultHandled();
     } else if (event->type() == eventNames().mouseoverEvent) {
-        m_hoverDelayTimer.restart();
+        if (!m_showedLabelOnce || m_showReason != ShouldShowAutomatically)
+            resetDelayTimer(UserMousedOver);
         event->setDefaultHandled();
     } else if (event->type() == eventNames().mouseoutEvent) {
-        if (m_hoverDelayTimer.isActive())
-            m_hoverDelayTimer.stop();
-        m_shouldShowLabel = false;
-        repaintLabel();
+        if (m_showLabelDelayTimer.isActive())
+            m_showLabelDelayTimer.stop();
+        if (m_shouldShowLabel) {
+            if (m_showReason == UserMousedOver) {
+                m_shouldShowLabel = false;
+                repaintLabel();
+            }
+        } else if (m_shouldShowLabelAutomatically)
+            resetDelayTimer(ShouldShowAutomatically);
         event->setDefaultHandled();
     }
 }
@@ -241,12 +264,25 @@ LayoutRect RenderSnapshottedPlugIn::tryToFitStartLabel(LabelSize size, const Lay
     if (!labelImage)
         return LayoutRect();
 
-    LayoutSize labelSize = labelImage->size();
+    // Assume that the labelImage has been provided to match our device scale.
+    float scaleFactor = 1;
+    if (document()->page())
+        scaleFactor = document()->page()->deviceScaleFactor();
+    IntSize labelImageSize = labelImage->size();
+    labelImageSize.scale(1 / (scaleFactor ? scaleFactor : 1));
+
+    LayoutSize labelSize = labelImageSize - LayoutSize(2 * startLabelInset, 2 * startLabelInset);
     LayoutRect candidateRect(contentBox.maxXMinYCorner() + LayoutSize(-startLabelPadding, startLabelPadding) + LayoutSize(-labelSize.width(), 0), labelSize);
     // The minimum allowed content box size is the label image placed in the center of the box, surrounded by startLabelPadding.
     if (candidateRect.x() < startLabelPadding || candidateRect.maxY() > contentBox.height() - startLabelPadding)
         return LayoutRect();
     return candidateRect;
+}
+
+void RenderSnapshottedPlugIn::resetDelayTimer(ShowReason reason)
+{
+    m_showReason = reason;
+    m_showLabelDelayTimer.startOneShot(reason == UserMousedOver ? showLabelAfterMouseOverDelay : showLabelAutomaticallyDelay);
 }
 
 } // namespace WebCore

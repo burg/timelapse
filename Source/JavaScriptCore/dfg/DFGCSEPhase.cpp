@@ -39,11 +39,8 @@ public:
     CSEPhase(Graph& graph)
         : Phase(graph, "common subexpression elimination")
     {
-        // Replacements are used to implement local common subexpression elimination.
-        m_replacements.resize(m_graph.size());
-        
         for (unsigned i = 0; i < m_graph.size(); ++i)
-            m_replacements[i] = NoNode;
+            m_graph[i].replacement = NoNode;
         
         m_relevantToOSR.resize(m_graph.size());
     }
@@ -89,9 +86,7 @@ private:
         return result;
     }
 
-    enum InlineCallFrameRequirement { RequireSameInlineCallFrame, DoNotCareAboutInlineCallFrame };
-    template<InlineCallFrameRequirement inlineCallFrameRequirement>
-    NodeIndex genericPureCSE(Node& node)
+    NodeIndex pureCSE(Node& node)
     {
         NodeIndex child1 = canonicalize(node.child1());
         NodeIndex child2 = canonicalize(node.child2());
@@ -110,10 +105,6 @@ private:
                 continue;
             
             if (node.arithNodeFlags() != otherNode.arithNodeFlags())
-                continue;
-            
-            if (inlineCallFrameRequirement == RequireSameInlineCallFrame
-                && node.codeOrigin.inlineCallFrame != otherNode.codeOrigin.inlineCallFrame)
                 continue;
             
             NodeIndex otherChild = canonicalize(otherNode.child1());
@@ -137,16 +128,6 @@ private:
             return index;
         }
         return NoNode;
-    }
-    
-    NodeIndex pureCSE(Node& node)
-    {
-        return genericPureCSE<DoNotCareAboutInlineCallFrame>(node);
-    }
-    
-    NodeIndex pureCSERequiringSameInlineCallFrame(Node& node)
-    {
-        return genericPureCSE<RequireSameInlineCallFrame>(node);
     }
     
     NodeIndex constantCSE(Node& node)
@@ -177,6 +158,27 @@ private:
                 continue;
             
             return index;
+        }
+        return NoNode;
+    }
+    
+    NodeIndex getCalleeLoadElimination(InlineCallFrame* inlineCallFrame)
+    {
+        for (unsigned i = m_indexInBlock; i--;) {
+            NodeIndex index = m_currentBlock->at(i);
+            Node& node = m_graph[index];
+            if (!node.shouldGenerate())
+                continue;
+            if (node.codeOrigin.inlineCallFrame != inlineCallFrame)
+                continue;
+            switch (node.op()) {
+            case GetCallee:
+                return index;
+            case SetCallee:
+                return node.child1().index();
+            default:
+                break;
+            }
         }
         return NoNode;
     }
@@ -416,6 +418,20 @@ private:
         }
         return false;
     }
+    
+    bool checkExecutableElimination(ExecutableBase* executable, NodeIndex child1)
+    {
+        for (unsigned i = endIndexForPureCSE(); i--;) {
+            NodeIndex index = m_currentBlock->at(i);
+            if (index == child1)
+                break;
+
+            Node& node = m_graph[index];
+            if (node.op() == CheckExecutable && node.child1() == child1 && node.executable() == executable)
+                return true;
+        }
+        return false;
+    }
 
     bool checkStructureElimination(const StructureSet& structureSet, NodeIndex child1)
     {
@@ -578,6 +594,7 @@ private:
             case CreateThis:
             case AllocatePropertyStorage:
             case ReallocatePropertyStorage:
+            case TypeOf:
                 return NoNode;
                 
             case GetIndexedPropertyStorage:
@@ -830,6 +847,8 @@ private:
                 return NoNode;
             case GetMyScope:
                 return index;
+            case SetMyScope:
+                return node.child1().index();
             default:
                 break;
             }
@@ -983,7 +1002,7 @@ private:
             return;
         
         // Check if there is any replacement.
-        NodeIndex replacement = m_replacements[child.index()];
+        NodeIndex replacement = m_graph[child.index()].replacement;
         if (replacement == NoNode)
             return;
         
@@ -991,7 +1010,7 @@ private:
         
         // There is definitely a replacement. Assert that the replacement does not
         // have a replacement.
-        ASSERT(m_replacements[child.index()] == NoNode);
+        ASSERT(m_graph[child.index()].replacement == NoNode);
         
         if (addRef)
             m_graph.ref(child);
@@ -1038,7 +1057,7 @@ private:
         eliminateIrrelevantPhantomChildren(node);
         
         // At this point we will eliminate all references to this node.
-        m_replacements[m_compileIndex] = replacement;
+        m_graph[m_compileIndex].replacement = replacement;
         
         m_changed = true;
         
@@ -1144,11 +1163,13 @@ private:
         case SkipTopScope:
         case SkipScope:
         case GetScopeRegisters:
+        case GetScope:
+        case TypeOf:
             setReplacement(pureCSE(node));
             break;
             
         case GetCallee:
-            setReplacement(pureCSERequiringSameInlineCallFrame(node));
+            setReplacement(getCalleeLoadElimination(node.codeOrigin.inlineCallFrame));
             break;
 
         case GetLocal: {
@@ -1351,6 +1372,11 @@ private:
                 eliminate();
             break;
                 
+        case CheckExecutable:
+            if (checkExecutableElimination(node.executable(), node.child1().index()))
+                eliminate();
+            break;
+                
         case CheckArray:
             if (checkArrayElimination(node.child1().index(), node.arrayMode()))
                 eliminate();
@@ -1407,12 +1433,13 @@ private:
         for (unsigned i = 0; i < block->phis.size(); ++i)
             m_relevantToOSR.set(block->phis[i]);
         
-        // Make all of my SetLocal nodes relevant to OSR.
+        // Make all of my SetLocal and GetLocal nodes relevant to OSR.
         for (unsigned i = 0; i < block->size(); ++i) {
             NodeIndex nodeIndex = block->at(i);
             Node& node = m_graph[nodeIndex];
             switch (node.op()) {
             case SetLocal:
+            case GetLocal: // FIXME: The GetLocal case is only necessary until we do https://bugs.webkit.org/show_bug.cgi?id=106707.
                 m_relevantToOSR.set(nodeIndex);
                 break;
             default:
@@ -1429,7 +1456,6 @@ private:
     BasicBlock* m_currentBlock;
     NodeIndex m_compileIndex;
     unsigned m_indexInBlock;
-    Vector<NodeIndex, 16> m_replacements;
     FixedArray<unsigned, LastNodeType> m_lastSeen;
     FastBitVector m_relevantToOSR;
     bool m_changed; // Only tracks changes that have a substantive effect on other optimizations.

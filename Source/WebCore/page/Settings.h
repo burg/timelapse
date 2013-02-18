@@ -260,9 +260,6 @@ namespace WebCore {
         static bool isAVFoundationEnabled() { return gAVFoundationEnabled; }
 #endif
 
-        void setUnifiedTextCheckerEnabled(bool flag) { m_unifiedTextCheckerEnabled = flag; }
-        bool unifiedTextCheckerEnabled() const { return m_unifiedTextCheckerEnabled; }
-
         static const unsigned defaultMaximumHTMLParserDOMTreeDepth = 512;
 
 #if ENABLE(SMOOTH_SCROLLING)
@@ -292,6 +289,9 @@ namespace WebCore {
 
         void setScrollingPerformanceLoggingEnabled(bool);
         bool scrollingPerformanceLoggingEnabled() { return m_scrollingPerformanceLoggingEnabled; }
+        
+        void setAggressiveTileRetentionEnabled(bool);
+        bool aggressiveTileRetentionEnabled() { return m_aggressiveTileRetentionEnabled; }
 
 #if USE(JSC)
         static void setShouldRespectPriorityInCSSAttributeSetters(bool);
@@ -357,7 +357,6 @@ namespace WebCore {
         bool m_showTiledScrollingIndicator : 1;
         bool m_tiledBackingStoreEnabled : 1;
         bool m_dnsPrefetchingEnabled : 1;
-        bool m_unifiedTextCheckerEnabled : 1;
 #if ENABLE(SMOOTH_SCROLLING)
         bool m_scrollAnimatorEnabled : 1;
 #endif
@@ -366,6 +365,7 @@ namespace WebCore {
         bool m_touchEventEmulationEnabled : 1;
 #endif
         bool m_scrollingPerformanceLoggingEnabled : 1;
+        bool m_aggressiveTileRetentionEnabled : 1;
 
         Timer<Settings> m_setImageLoadingSettingsTimer;
         void imageLoadingSettingsTimerFired(Timer<Settings>*);

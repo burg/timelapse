@@ -34,11 +34,14 @@
 #include "Platform/chromium/public/WebString.h"
 #include "Platform/chromium/public/WebURL.h"
 #include "Platform/chromium/public/WebVector.h"
+#include <string>
 
 namespace WebKit {
-struct WebContextMenuData;
 class WebGamepads;
 class WebIntentRequest;
+struct WebContextMenuData;
+struct WebRect;
+struct WebURLError;
 }
 
 namespace WebTestRunner {
@@ -74,6 +77,14 @@ public:
     virtual void applyPreferences() { };
     virtual void setCurrentWebIntentRequest(const WebKit::WebIntentRequest&) { };
     virtual WebKit::WebIntentRequest* currentWebIntentRequest() { return 0; }
+    virtual std::string makeURLErrorDescription(const WebKit::WebURLError&) { return std::string(); }
+    virtual std::string normalizeLayoutTestURL(const std::string&) { return std::string(); }
+    virtual void setClientWindowRect(const WebKit::WebRect&) { }
+    virtual void setSelectTrailingWhitespaceEnabled(bool) { }
+    virtual void setSmartInsertDeleteEnabled(bool) { }
+    virtual void showDevTools() { }
+    virtual void closeDevTools() { }
+    virtual void evaluateInWebInspector(long, const std::string&) { }
 };
 
 }

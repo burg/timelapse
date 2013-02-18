@@ -72,10 +72,21 @@ WebIDBObjectStore* WebIDBDatabaseImpl::createObjectStore(long long id, const Web
     return new WebIDBObjectStoreImpl(objectStore);
 }
 
+void WebIDBDatabaseImpl::createObjectStore(long long transactionId, long long objectStoreId, const WebString& name, const WebIDBKeyPath& keyPath, bool autoIncrement)
+{
+    m_databaseBackend->createObjectStore(transactionId, objectStoreId, name, keyPath, autoIncrement);
+}
+
 void WebIDBDatabaseImpl::deleteObjectStore(long long objectStoreId, const WebIDBTransaction& transaction, WebExceptionCode& ec)
 {
     m_databaseBackend->deleteObjectStore(objectStoreId, transaction.getIDBTransactionBackendInterface(), ec);
 }
+
+void WebIDBDatabaseImpl::deleteObjectStore(long long transactionId, long long objectStoreId)
+{
+    m_databaseBackend->deleteObjectStore(transactionId, objectStoreId);
+}
+
 
 // FIXME: Remove this method in https://bugs.webkit.org/show_bug.cgi?id=103923.
 WebIDBTransaction* WebIDBDatabaseImpl::createTransaction(long long id, const WebVector<long long>& objectStoreIds, unsigned short mode)
@@ -164,7 +175,7 @@ void WebIDBDatabaseImpl::put(long long transactionId, long long objectStoreId, W
         indexKeys[i] = indexKeyList;
     }
 
-    Vector<uint8_t> valueBuffer(value->size());
+    Vector<uint8_t> valueBuffer;
     valueBuffer.append(value->data(), value->size());
     m_databaseBackend->put(transactionId, objectStoreId, &valueBuffer, key, static_cast<IDBDatabaseBackendInterface::PutMode>(putMode), IDBCallbacksProxy::create(adoptPtr(callbacks)), indexIds, indexKeys);
 }
@@ -209,6 +220,18 @@ void WebIDBDatabaseImpl::clear(long long transactionId, long long objectStoreId,
 {
     if (m_databaseBackend)
         m_databaseBackend->clear(transactionId, objectStoreId, IDBCallbacksProxy::create(adoptPtr(callbacks)));
+}
+
+void WebIDBDatabaseImpl::createIndex(long long transactionId, long long objectStoreId, long long indexId, const WebString& name, const WebIDBKeyPath& keyPath, bool unique, bool multiEntry)
+{
+    if (m_databaseBackend)
+        m_databaseBackend->createIndex(transactionId, objectStoreId, indexId, name, keyPath, unique, multiEntry);
+}
+
+void WebIDBDatabaseImpl::deleteIndex(long long transactionId, long long objectStoreId, long long indexId)
+{
+    if (m_databaseBackend)
+        m_databaseBackend->deleteIndex(transactionId, objectStoreId, indexId);
 }
 
 } // namespace WebKit

@@ -32,7 +32,7 @@
 #include "WebExceptionCode.h"
 #include "WebIDBDatabase.h"
 #include "WebIDBTransaction.h"
-#include "platform/WebCommon.h"
+#include <public/WebCommon.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 
@@ -54,7 +54,9 @@ public:
     virtual WebIDBMetadata metadata() const;
 
     virtual WebIDBObjectStore* createObjectStore(long long, const WebString& name, const WebIDBKeyPath&, bool autoIncrement, const WebIDBTransaction&, WebExceptionCode&);
+    virtual void createObjectStore(long long transactionId, long long objectStoreId, const WebString& name, const WebIDBKeyPath&, bool autoIncrement);
     virtual void deleteObjectStore(long long objectStoreId, const WebIDBTransaction&, WebExceptionCode&);
+    virtual void deleteObjectStore(long long objectStoreId, long long transactionId);
     // FIXME: Remove this method in https://bugs.webkit.org/show_bug.cgi?id=103923.
     virtual WebIDBTransaction* createTransaction(long long id, const WebVector<long long>&, unsigned short mode);
     virtual void createTransaction(long long id, WebIDBDatabaseCallbacks*, const WebVector<long long>&, unsigned short mode);
@@ -72,6 +74,8 @@ public:
     virtual void deleteRange(long long transactionId, long long objectStoreId, const WebIDBKeyRange&, WebIDBCallbacks*) OVERRIDE;
     virtual void clear(long long transactionId, long long objectStoreId, WebIDBCallbacks*) OVERRIDE;
 
+    virtual void createIndex(long long transactionId, long long objectStoreId, long long indexId, const WebString& name, const WebIDBKeyPath&, bool unique, bool multiEntry);
+    virtual void deleteIndex(long long transactionId, long long objectStoreId, long long indexId);
 private:
     WTF::RefPtr<WebCore::IDBDatabaseBackendInterface> m_databaseBackend;
     WTF::RefPtr<IDBDatabaseCallbacksProxy> m_databaseCallbacks;

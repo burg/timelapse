@@ -70,6 +70,12 @@ public:
     virtual void setScrollingPerformanceLoggingEnabled(bool) = 0;
     virtual bool scrollingPerformanceLoggingEnabled() const = 0;
     
+    virtual void setAggressivelyRetainsTiles(bool) = 0;
+    virtual bool aggressivelyRetainsTiles() const = 0;
+    
+    virtual void setUnparentsOffscreenTiles(bool) = 0;
+    virtual bool unparentsOffscreenTiles() const = 0;
+
     // Exposed for testing
     virtual IntRect tileCoverageRect() const = 0;
     virtual IntRect tileGridExtent() const = 0;

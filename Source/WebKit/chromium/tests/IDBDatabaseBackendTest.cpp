@@ -30,8 +30,7 @@
 #include "IDBDatabaseCallbacksProxy.h"
 #include "IDBFactoryBackendImpl.h"
 #include "IDBFakeBackingStore.h"
-#include "IDBIndexBackendImpl.h"
-#include "IDBObjectStoreBackendImpl.h"
+#include "IDBTransactionBackendImpl.h"
 #include "WebIDBDatabaseCallbacksImpl.h"
 #include "WebIDBDatabaseImpl.h"
 
@@ -56,20 +55,7 @@ TEST(IDBDatabaseBackendTest, BackingStoreRetention)
     RefPtr<IDBDatabaseBackendImpl> db = IDBDatabaseBackendImpl::create("db", backingStore.get(), factory, "uniqueid");
     EXPECT_GT(backingStore->refCount(), 1);
 
-    const bool autoIncrement = false;
-    RefPtr<IDBObjectStoreBackendImpl> store = IDBObjectStoreBackendImpl::create(db.get(), IDBObjectStoreMetadata("store", 1, IDBKeyPath("keyPath"), autoIncrement, 0));
-    EXPECT_GT(backingStore->refCount(), 1);
-
-    const bool unique = false;
-    const bool multiEntry = false;
-    RefPtr<IDBIndexBackendImpl> index = IDBIndexBackendImpl::create(db.get(), store.get(), IDBIndexMetadata("index", -1, IDBKeyPath("keyPath"), unique, multiEntry));
-    EXPECT_GT(backingStore->refCount(), 1);
-
     db.clear();
-    EXPECT_TRUE(backingStore->hasOneRef());
-    store.clear();
-    EXPECT_TRUE(backingStore->hasOneRef());
-    index.clear();
     EXPECT_TRUE(backingStore->hasOneRef());
 }
 
@@ -151,9 +137,10 @@ public:
     }
 
     virtual IDBDatabaseMetadata metadata() const { return IDBDatabaseMetadata(); }
-    virtual PassRefPtr<IDBObjectStoreBackendInterface> createObjectStore(int64_t, const String& name, const IDBKeyPath&, bool autoIncrement, IDBTransactionBackendInterface*, ExceptionCode&) { return 0; }
-    virtual void deleteObjectStore(const String& name, IDBTransactionBackendInterface*, ExceptionCode&) { }
-    virtual void deleteObjectStore(int64_t, IDBTransactionBackendInterface*, ExceptionCode&) { }
+    virtual PassRefPtr<IDBObjectStoreBackendInterface> createObjectStore(int64_t, const String& name, const IDBKeyPath&, bool autoIncrement, IDBTransactionBackendInterface*, ExceptionCode&) OVERRIDE { return 0; }
+    virtual void createObjectStore(int64_t transactionId, int64_t objectStoreId, const String& name, const IDBKeyPath&, bool autoIncrement) OVERRIDE { };
+    virtual void deleteObjectStore(int64_t transactionId, int64_t objectStoreId) OVERRIDE { }
+    virtual void deleteObjectStore(int64_t, IDBTransactionBackendInterface*, ExceptionCode&) OVERRIDE { }
     // FIXME: Remove this method in https://bugs.webkit.org/show_bug.cgi?id=103923.
     virtual PassRefPtr<IDBTransactionBackendInterface> createTransaction(int64_t, const Vector<int64_t>&, IDBTransaction::Mode) OVERRIDE { return 0; }
     virtual void createTransaction(int64_t, PassRefPtr<IDBDatabaseCallbacks>, const Vector<int64_t>&, unsigned short mode) OVERRIDE { }
@@ -175,6 +162,9 @@ public:
     virtual void setIndexesReady(int64_t transactionId, int64_t objectStoreId, const Vector<int64_t>& indexIds) OVERRIDE { }
     virtual void deleteRange(int64_t transactionId, int64_t objectStoreId, PassRefPtr<IDBKeyRange>, PassRefPtr<IDBCallbacks>) OVERRIDE { }
     virtual void clear(int64_t transactionId, int64_t objectStoreId, PassRefPtr<IDBCallbacks>) OVERRIDE { }
+
+    virtual void createIndex(int64_t transactionId, int64_t objectStoreId, int64_t indexId, const String& name, const IDBKeyPath&, bool unique, bool multiEntry) OVERRIDE { ASSERT_NOT_REACHED(); }
+    virtual void deleteIndex(int64_t transactionId, int64_t objectStoreId, int64_t indexId) OVERRIDE { ASSERT_NOT_REACHED(); }
 
 private:
     MockIDBDatabaseBackendProxy(WebIDBDatabaseImpl& webDatabase)

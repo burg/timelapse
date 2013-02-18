@@ -43,6 +43,10 @@
 #include <WebCore/RunLoop.h>
 #include <wtf/text/CString.h>
 
+#if USE(SECURITY_FRAMEWORK)
+#include "SecItemShim.h"
+#endif
+
 using namespace WebCore;
 
 namespace WebKit {
@@ -72,15 +76,6 @@ DownloadManager& NetworkProcess::downloadManager()
     return downloadManager;
 }
 
-void NetworkProcess::initialize(CoreIPC::Connection::Identifier serverIdentifier, WebCore::RunLoop* runLoop)
-{
-    ASSERT(!m_uiConnection);
-
-    m_uiConnection = CoreIPC::Connection::createClientConnection(serverIdentifier, this, runLoop);
-    m_uiConnection->setDidCloseOnConnectionWorkQueueCallback(didCloseOnConnectionWorkQueue);
-    m_uiConnection->open();
-}
-
 void NetworkProcess::removeNetworkConnectionToWebProcess(NetworkConnectionToWebProcess* connection)
 {
     size_t vectorIndex = m_webProcessConnections.find(connection);
@@ -97,7 +92,7 @@ bool NetworkProcess::shouldTerminate()
 
 void NetworkProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
 {
-    if (m_messageReceiverMap.dispatchMessage(connection, messageID, decoder))
+    if (messageReceiverMap().dispatchMessage(connection, messageID, decoder))
         return;
 
     didReceiveNetworkProcessMessage(connection, messageID, decoder);
@@ -105,7 +100,7 @@ void NetworkProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC:
 
 void NetworkProcess::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
 {
-    m_messageReceiverMap.dispatchSyncMessage(connection, messageID, decoder, replyEncoder);
+    messageReceiverMap().dispatchSyncMessage(connection, messageID, decoder, replyEncoder);
 }
 
 void NetworkProcess::didClose(CoreIPC::Connection*)
@@ -131,7 +126,7 @@ void NetworkProcess::didDestroyDownload()
 
 CoreIPC::Connection* NetworkProcess::downloadProxyConnection()
 {
-    return m_uiConnection.get();
+    return parentProcessConnection();
 }
 
 AuthenticationManager& NetworkProcess::downloadsAuthenticationManager()
@@ -141,12 +136,7 @@ AuthenticationManager& NetworkProcess::downloadsAuthenticationManager()
 
 void NetworkProcess::initializeNetworkProcess(const NetworkProcessCreationParameters& parameters)
 {
-#if !LOG_DISABLED
-    WebCore::initializeLoggingChannelsIfNecessary();
-    WebKit::initializeLogChannelsIfNecessary();
-#endif // !LOG_DISABLED
-
-    platformInitialize(parameters);
+    platformInitializeNetworkProcess(parameters);
 
     setCacheModel(static_cast<uint32_t>(parameters.cacheModel));
 
@@ -163,6 +153,15 @@ void NetworkProcess::initializeNetworkProcess(const NetworkProcessCreationParame
         it->value->initialize(parameters);
 }
 
+void NetworkProcess::initializeConnection(CoreIPC::Connection* connection)
+{
+    ChildProcess::initializeConnection(connection);
+
+#if USE(SECURITY_FRAMEWORK)
+    connection->addQueueClient(&SecItemShim::shared());
+#endif
+}
+
 void NetworkProcess::createNetworkConnectionToWebProcess()
 {
 #if PLATFORM(MAC)
@@ -175,7 +174,7 @@ void NetworkProcess::createNetworkConnectionToWebProcess()
     m_webProcessConnections.append(connection.release());
 
     CoreIPC::Attachment clientPort(listeningPort, MACH_MSG_TYPE_MAKE_SEND);
-    m_uiConnection->send(Messages::NetworkProcessProxy::DidCreateNetworkConnectionToWebProcess(clientPort), 0);
+    parentProcessConnection()->send(Messages::NetworkProcessProxy::DidCreateNetworkConnectionToWebProcess(clientPort), 0);
 #else
     notImplemented();
 #endif
@@ -211,6 +210,16 @@ void NetworkProcess::setCacheModel(uint32_t cm)
         platformSetCacheModel(cacheModel);
     }
 }
+
+#if !PLATFORM(MAC)
+void NetworkProcess::initializeProcessName(const ChildProcessInitializationParameters&)
+{
+}
+
+void NetworkProcess::initializeSandbox(const ChildProcessInitializationParameters&)
+{
+}
+#endif
 
 } // namespace WebKit
 

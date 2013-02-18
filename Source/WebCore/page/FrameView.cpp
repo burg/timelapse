@@ -769,6 +769,15 @@ void FrameView::restoreBackingStores()
     compositor->updateCompositingLayers(CompositingUpdateAfterLayout);
 }
 
+bool FrameView::usesCompositedScrolling() const
+{
+    if (m_frame->settings() && m_frame->settings()->compositedScrollingForFramesEnabled()) {
+        RenderView* root = rootRenderer(this);
+        return root && root->compositor()->inForcedCompositingMode();
+    }
+    return false;
+}
+
 GraphicsLayer* FrameView::layerForHorizontalScrollbar() const
 {
     RenderView* root = rootRenderer(this);
@@ -3106,6 +3115,9 @@ bool FrameView::hasCustomScrollbars() const
 
 FrameView* FrameView::parentFrameView() const
 {
+    if (!parent())
+        return 0;
+
     if (Frame* parentFrame = m_frame->tree()->parent())
         return parentFrame->view();
 

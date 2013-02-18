@@ -58,6 +58,7 @@ namespace WebCore {
     class BackForwardList;
     class Chrome;
     class ChromeClient;
+    class ClientRectList;
 #if ENABLE(CONTEXT_MENUS)
     class ContextMenuClient;
     class ContextMenuController;
@@ -212,6 +213,7 @@ namespace WebCore {
 
         String scrollingStateTreeAsText();
         String mainThreadScrollingReasonsAsText();
+        PassRefPtr<ClientRectList> nonFastScrollableRects(const Frame*);
 
         Settings* settings() const { return m_settings.get(); }
         ProgressTracker* progress() const { return m_progress.get(); }

@@ -50,6 +50,7 @@ X11OffScreenWindow::~X11OffScreenWindow()
 void X11OffScreenWindow::reSizeWindow(const IntRect& newRect, const uint32_t windowId)
 {
     XResizeWindow(m_sharedResources->x11Display(), windowId, newRect.width(), newRect.height());
+    XFlush(m_sharedResources->x11Display());
 }
 
 void X11OffScreenWindow::createOffscreenWindow(uint32_t* handleId)

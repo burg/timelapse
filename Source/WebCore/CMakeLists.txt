@@ -118,6 +118,7 @@ set(WebCore_IDL_INCLUDES
     Modules/mediastream
     Modules/networkinfo
     Modules/notifications
+    Modules/proximity
     Modules/quota
     Modules/speech
     Modules/vibration
@@ -219,7 +220,6 @@ set(WebCore_IDL_FILES
     Modules/mediastream/MediaStreamList.idl
     Modules/mediastream/MediaStreamTrack.idl
     Modules/mediastream/MediaStreamTrackEvent.idl
-    Modules/mediastream/MediaStreamTrackList.idl
     Modules/mediastream/NavigatorMediaStream.idl
     Modules/mediastream/NavigatorUserMediaError.idl
     Modules/mediastream/NavigatorUserMediaErrorCallback.idl
@@ -511,6 +511,7 @@ set(WebCore_IDL_FILES
     html/canvas/ArrayBufferView.idl
     html/canvas/CanvasGradient.idl
     html/canvas/CanvasPattern.idl
+    html/canvas/CanvasProxy.idl
     html/canvas/CanvasRenderingContext2D.idl
     html/canvas/CanvasRenderingContext.idl
     html/canvas/DataView.idl
@@ -824,7 +825,6 @@ set(WebCore_SOURCES
     Modules/indexeddb/IDBFactoryBackendImpl.cpp
     Modules/indexeddb/IDBFactoryBackendInterface.cpp
     Modules/indexeddb/IDBIndex.cpp
-    Modules/indexeddb/IDBIndexBackendImpl.cpp
     Modules/indexeddb/IDBKey.cpp
     Modules/indexeddb/IDBKeyRange.cpp
     Modules/indexeddb/IDBKeyPath.cpp
@@ -860,7 +860,6 @@ set(WebCore_SOURCES
     Modules/mediastream/MediaStreamRegistry.cpp
     Modules/mediastream/MediaStreamTrack.cpp
     Modules/mediastream/MediaStreamTrackEvent.cpp
-    Modules/mediastream/MediaStreamTrackList.cpp
     Modules/mediastream/NavigatorMediaStream.cpp
     Modules/mediastream/RTCDataChannel.cpp
     Modules/mediastream/RTCDataChannelEvent.cpp
@@ -890,6 +889,7 @@ set(WebCore_SOURCES
     Modules/notifications/Notification.cpp
     Modules/notifications/WorkerContextNotifications.cpp
 
+    Modules/proximity/DeviceProximityController.cpp
     Modules/proximity/DeviceProximityEvent.cpp
 
     Modules/quota/DOMWindowQuota.cpp
@@ -1031,6 +1031,7 @@ set(WebCore_SOURCES
     css/CSSFontSelector.cpp
     css/CSSFunctionValue.cpp
     css/CSSGradientValue.cpp
+    css/CSSGroupingRule.cpp
     css/CSSImageGeneratorValue.cpp
     css/CSSImageSetValue.cpp
     css/CSSImageValue.cpp
@@ -1107,6 +1108,7 @@ set(WebCore_SOURCES
     css/WebKitCSSViewportRule.cpp
 
     dom/ActiveDOMObject.cpp
+    dom/AncestorChainWalker.cpp
     dom/Attr.cpp
     dom/BeforeTextInsertedEvent.cpp
     dom/BeforeUnloadEvent.cpp
@@ -1488,6 +1490,7 @@ set(WebCore_SOURCES
     html/canvas/CanvasContextAttributes.cpp
     html/canvas/CanvasGradient.cpp
     html/canvas/CanvasPattern.cpp
+    html/canvas/CanvasProxy.cpp
     html/canvas/CanvasRenderingContext.cpp
     html/canvas/CanvasRenderingContext2D.cpp
     html/canvas/CanvasStyle.cpp
@@ -1528,6 +1531,7 @@ set(WebCore_SOURCES
     html/parser/HTMLEntityParser.cpp
     html/parser/HTMLEntitySearch.cpp
     html/parser/HTMLParserIdioms.cpp
+    html/parser/HTMLParserOptions.cpp
     html/parser/HTMLParserScheduler.cpp
     html/parser/HTMLFormattingElementList.cpp
     html/parser/HTMLMetaCharsetParser.cpp
@@ -2760,6 +2764,7 @@ set(WebCoreTestSupport_IDL_FILES
     testing/Internals.idl
     testing/InternalSettings.idl
     testing/MallocStatistics.idl
+    testing/TypeConversions.idl
 )
 
 set(WebCoreTestSupport_SOURCES

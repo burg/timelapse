@@ -853,6 +853,11 @@ void WebPageProxy::displayView()
     m_pageClient->displayView();
 }
 
+bool WebPageProxy::canScrollView()
+{
+    return m_pageClient->canScrollView();
+}
+
 void WebPageProxy::scrollView(const IntRect& scrollRect, const IntSize& scrollOffset)
 {
     m_pageClient->scrollView(scrollRect, scrollOffset);
@@ -1024,11 +1029,7 @@ void WebPageProxy::performDragControllerAction(DragControllerAction action, Drag
 {
     if (!isValid())
         return;
-#if PLATFORM(WIN)
-    // FIXME: We should pass the drag data map only on DragEnter.
-    m_process->send(Messages::WebPage::PerformDragControllerAction(action, dragData->clientPosition(), dragData->globalPosition(),
-        dragData->draggingSourceOperationMask(), dragData->dragDataMap(), dragData->flags()), m_pageID);
-#elif PLATFORM(QT) || PLATFORM(GTK)
+#if PLATFORM(QT) || PLATFORM(GTK)
     m_process->send(Messages::WebPage::PerformDragControllerAction(action, *dragData), m_pageID);
 #else
     m_process->send(Messages::WebPage::PerformDragControllerAction(action, dragData->clientPosition(), dragData->globalPosition(), dragData->draggingSourceOperationMask(), dragStorageName, dragData->flags(), sandboxExtensionHandle, sandboxExtensionsForUpload), m_pageID);
@@ -1664,6 +1665,11 @@ void WebPageProxy::pageScaleFactorDidChange(double scaleFactor)
     m_pageScaleFactor = scaleFactor;
 }
 
+void WebPageProxy::pageZoomFactorDidChange(double zoomFactor)
+{
+    m_pageZoomFactor = zoomFactor;
+}
+
 void WebPageProxy::setMemoryCacheClientCallsEnabled(bool memoryCacheClientCallsEnabled)
 {
     if (!isValid())
@@ -2111,7 +2117,7 @@ void WebPageProxy::clearLoadDependentCallbacks()
     }
 }
 
-void WebPageProxy::didCommitLoadForFrame(uint64_t frameID, const String& mimeType, bool frameHasCustomRepresentation, const PlatformCertificateInfo& certificateInfo, CoreIPC::MessageDecoder& decoder)
+void WebPageProxy::didCommitLoadForFrame(uint64_t frameID, const String& mimeType, bool frameHasCustomRepresentation, uint32_t opaqueFrameLoadType, const PlatformCertificateInfo& certificateInfo, CoreIPC::MessageDecoder& decoder)
 {
     RefPtr<APIObject> userData;
     WebContextUserMessageDecoder messageDecoder(userData, m_process.get());
@@ -2147,6 +2153,13 @@ void WebPageProxy::didCommitLoadForFrame(uint64_t frameID, const String& mimeTyp
         }
         m_pageClient->didCommitLoadForMainFrame(frameHasCustomRepresentation);
     }
+
+    // Even if WebPage has the default pageScaleFactor (and therefore doesn't reset it),
+    // WebPageProxy's cache of the value can get out of sync (e.g. in the case where a
+    // plugin is handling page scaling itself) so we should reset it to the default
+    // for standard main frame loads.
+    if (frame->isMainFrame() && static_cast<FrameLoadType>(opaqueFrameLoadType) == FrameLoadTypeStandard)
+        m_pageScaleFactor = 1;
 
     m_loaderClient.didCommitLoadForFrame(this, frame, userData.get());
 }
@@ -3465,10 +3478,6 @@ void WebPageProxy::didReceiveEvent(uint32_t opaqueType, bool handled)
 
         if (m_uiClient.implementsDidNotHandleKeyEvent())
             m_uiClient.didNotHandleKeyEvent(this, event);
-#if PLATFORM(WIN)
-        else
-            ::TranslateMessage(event.nativeEvent());
-#endif
         break;
     }
 #if ENABLE(TOUCH_EVENTS)
@@ -3810,9 +3819,6 @@ WebPageCreationParameters WebPageProxy::creationParameters() const
     parameters.colorSpace = m_pageClient->colorSpace();
 #endif
 
-#if PLATFORM(WIN)
-    parameters.nativeWindow = m_pageClient->nativeWindow();
-#endif
     return parameters;
 }
 
@@ -4061,7 +4067,7 @@ void WebPageProxy::computePagesForPrinting(WebFrameProxy* frame, const PrintInfo
     m_process->send(Messages::WebPage::ComputePagesForPrinting(frame->frameID(), printInfo, callbackID), m_pageID, m_isPerformingDOMPrintOperation ? CoreIPC::DispatchMessageEvenWhenWaitingForSyncReply : 0);
 }
 
-#if PLATFORM(MAC) || PLATFORM(WIN)
+#if PLATFORM(MAC)
 void WebPageProxy::drawRectToImage(WebFrameProxy* frame, const PrintInfo& printInfo, const IntRect& rect, const WebCore::IntSize& imageSize, PassRefPtr<ImageCallback> prpCallback)
 {
     RefPtr<ImageCallback> callback = prpCallback;
@@ -4226,7 +4232,7 @@ void WebPageProxy::dictationAlternatives(uint64_t dictationContext, Vector<Strin
 #if USE(SOUP)
 void WebPageProxy::didReceiveURIRequest(String uriString, uint64_t requestID)
 {
-    m_process->context()->soupRequestManagerProxy()->didReceiveURIRequest(uriString, this, requestID);
+    m_process->context()->supplement<WebSoupRequestManagerProxy>()->didReceiveURIRequest(uriString, this, requestID);
 }
 #endif
 
@@ -4237,7 +4243,7 @@ void WebPageProxy::setComposition(const String& text, Vector<CompositionUnderlin
     if (!isValid())
         return;
 
-    process()->sendSync(Messages::WebPage::SetComposition(text, underlines, selectionStart, selectionEnd, replacementRangeStart, replacementRangeEnd), Messages::WebPage::SetComposition::Reply(m_editorState), m_pageID);
+    process()->send(Messages::WebPage::SetComposition(text, underlines, selectionStart, selectionEnd, replacementRangeStart, replacementRangeEnd), m_pageID);
 }
 
 void WebPageProxy::confirmComposition(const String& compositionString, int64_t selectionStart, int64_t selectionLength)
@@ -4245,7 +4251,7 @@ void WebPageProxy::confirmComposition(const String& compositionString, int64_t s
     if (!isValid())
         return;
 
-    process()->sendSync(Messages::WebPage::ConfirmComposition(compositionString, selectionStart, selectionLength), Messages::WebPage::ConfirmComposition::Reply(m_editorState), m_pageID);
+    process()->send(Messages::WebPage::ConfirmComposition(compositionString, selectionStart, selectionLength), m_pageID);
 }
 
 void WebPageProxy::cancelComposition()
@@ -4253,7 +4259,7 @@ void WebPageProxy::cancelComposition()
     if (!isValid())
         return;
 
-    process()->sendSync(Messages::WebPage::CancelComposition(), Messages::WebPage::CancelComposition::Reply(m_editorState), m_pageID);
+    process()->send(Messages::WebPage::CancelComposition(), m_pageID);
 }
 #endif // PLATFORM(QT) || PLATFORM(GTK)
 

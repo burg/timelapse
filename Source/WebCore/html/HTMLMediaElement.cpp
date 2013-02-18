@@ -684,13 +684,13 @@ String HTMLMediaElement::canPlayType(const String& mimeType, const String& keySy
     switch (support)
     {
         case MediaPlayer::IsNotSupported:
-            canPlay = "";
+            canPlay = ASCIILiteral("");
             break;
         case MediaPlayer::MayBeSupported:
-            canPlay = "maybe";
+            canPlay = ASCIILiteral("maybe");
             break;
         case MediaPlayer::IsSupported:
-            canPlay = "probably";
+            canPlay = ASCIILiteral("probably");
             break;
     }
     
@@ -948,7 +948,7 @@ static KURL createFileURLForApplicationCacheResource(const String& path)
 #else
     KURL url;
 
-    url.setProtocol("file");
+    url.setProtocol(ASCIILiteral("file"));
     url.setPath(path);
 #endif
     return url;
@@ -1597,13 +1597,13 @@ static void logMediaLoadRequest(Page* page, const String& mediaEngine, const Str
 static String stringForNetworkState(MediaPlayer::NetworkState state)
 {
     switch (state) {
-    case MediaPlayer::Empty: return "Empty";
-    case MediaPlayer::Idle: return "Idle";
-    case MediaPlayer::Loading: return "Loading";
-    case MediaPlayer::Loaded: return "Loaded";
-    case MediaPlayer::FormatError: return "FormatError";
-    case MediaPlayer::NetworkError: return "NetworkError";
-    case MediaPlayer::DecodeError: return "DecodeError";
+    case MediaPlayer::Empty: return ASCIILiteral("Empty");
+    case MediaPlayer::Idle: return ASCIILiteral("Idle");
+    case MediaPlayer::Loading: return ASCIILiteral("Loading");
+    case MediaPlayer::Loaded: return ASCIILiteral("Loaded");
+    case MediaPlayer::FormatError: return ASCIILiteral("FormatError");
+    case MediaPlayer::NetworkError: return ASCIILiteral("NetworkError");
+    case MediaPlayer::DecodeError: return ASCIILiteral("DecodeError");
     default: return emptyString();
     }
 }
@@ -2336,13 +2336,13 @@ String HTMLMediaElement::preload() const
 {
     switch (m_preload) {
     case MediaPlayer::None:
-        return "none";
+        return ASCIILiteral("none");
         break;
     case MediaPlayer::MetaData:
-        return "metadata";
+        return ASCIILiteral("metadata");
         break;
     case MediaPlayer::Auto:
-        return "auto";
+        return ASCIILiteral("auto");
         break;
     }
 
@@ -2546,9 +2546,6 @@ void HTMLMediaElement::setLoop(bool b)
 {
     LOG(Media, "HTMLMediaElement::setLoop(%s)", boolString(b));
     setBooleanAttribute(loopAttr, b);
-#if PLATFORM(MAC)
-    updateDisableSleep();
-#endif
 }
 
 bool HTMLMediaElement::controls() const
@@ -3008,7 +3005,7 @@ void HTMLMediaElement::configureTextTrackGroup(const TrackGroup& group) const
             // * If the track element has a default attribute specified, and there is no other text track in the media
             // element's list of text tracks whose text track mode is showing or showing by default
             //    Let the text track mode be showing by default.
-            defaultTrack = textTrack.get();
+            defaultTrack = textTrack;
         }
     }
 
@@ -3020,31 +3017,8 @@ void HTMLMediaElement::configureTextTrackGroup(const TrackGroup& group) const
     if (!trackToEnable && fallbackTrack)
         trackToEnable = fallbackTrack;
 
-    for (size_t i = 0; i < group.tracks.size(); ++i) {
-        RefPtr<TextTrack> textTrack = group.tracks[i];
-        
-        if (trackToEnable == textTrack) {
-            textTrack->setMode(TextTrack::showingKeyword());
-            if (defaultTrack == textTrack)
-                textTrack->setShowingByDefault(true);
-        } else {
-            if (textTrack->showingByDefault()) {
-                // If there is a text track in the media element's list of text tracks whose text track
-                // mode is showing by default, the user agent must furthermore change that text track's
-                // text track mode to hidden.
-                textTrack->setShowingByDefault(false);
-                textTrack->setMode(TextTrack::hiddenKeyword());
-            } else
-                textTrack->setMode(TextTrack::disabledKeyword());
-        }
-    }
-
-    if (trackToEnable && group.defaultTrack && group.defaultTrack != trackToEnable) {
-        if (group.defaultTrack && group.defaultTrack->showingByDefault()) {
-            group.defaultTrack->setShowingByDefault(false);
-            group.defaultTrack->setMode(TextTrack::hiddenKeyword());
-        }
-    }
+    if (trackToEnable)
+        trackToEnable->setMode(TextTrack::showingKeyword());
 }
 
 void HTMLMediaElement::toggleTrackAtIndex(int index, bool exclusive)
@@ -3055,7 +3029,6 @@ void HTMLMediaElement::toggleTrackAtIndex(int index, bool exclusive)
 
     for (int i = 0, length = trackList->length(); i < length; ++i) {
         TextTrack* track = trackList->item(i);
-        track->setShowingByDefault(false);
         if (i == index)
             track->setMode(TextTrack::showingKeyword());
         else if (exclusive || index == HTMLMediaElement::textTracksOffIndex())
@@ -3894,7 +3867,8 @@ void HTMLMediaElement::resume()
         // m_error is only left at MEDIA_ERR_ABORTED when the document becomes inactive (it is set to
         //  MEDIA_ERR_ABORTED while the abortEvent is being sent, but cleared immediately afterwards).
         // This behavior is not specified but it seems like a sensible thing to do.
-        load();
+        // As it is not safe to immedately start loading now, let's schedule a load.
+        scheduleLoad(MediaResource);
     }
 
     if (renderer())
@@ -3983,14 +3957,14 @@ void HTMLMediaElement::getPluginProxyParams(KURL& url, Vector<String>& names, Ve
     if (isVideo()) {
         KURL posterURL = getNonEmptyURLAttribute(posterAttr);
         if (!posterURL.isEmpty() && frame && frame->loader()->willLoadMediaElementURL(posterURL)) {
-            names.append("_media_element_poster_");
+            names.append(ASCIILiteral("_media_element_poster_"));
             values.append(posterURL.string());
         }
     }
 
     if (controls()) {
-        names.append("_media_element_controls_");
-        values.append("true");
+        names.append(ASCIILiteral("_media_element_controls_"));
+        values.append(ASCIILiteral("true"));
     }
 
     url = src();
@@ -3999,7 +3973,7 @@ void HTMLMediaElement::getPluginProxyParams(KURL& url, Vector<String>& names, Ve
 
     m_currentSrc = url;
     if (url.isValid() && frame && frame->loader()->willLoadMediaElementURL(url)) {
-        names.append("_media_element_src_");
+        names.append(ASCIILiteral("_media_element_src_"));
         values.append(m_currentSrc.string());
     }
 }
@@ -4163,6 +4137,7 @@ void HTMLMediaElement::setClosedCaptionsVisible(bool closedCaptionVisible)
         m_disableCaptions = !m_closedCaptionsVisible;
 
         markCaptionAndSubtitleTracksAsUnconfigured();
+        mediaControls()->updateTextTrackDisplay();
     }
 #else
     if (hasMediaControls())

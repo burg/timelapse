@@ -143,6 +143,7 @@
 #include "WebTextInputInfo.h"
 #include "WebViewClient.h"
 #include "WheelEvent.h"
+#include "painting/ContinuousPainter.h"
 #include "painting/GraphicsContextBuilder.h"
 #include "src/WebActiveGestureAnimation.h"
 #include <public/Platform.h>
@@ -453,6 +454,7 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
     , m_suppressInvalidations(false)
     , m_showFPSCounter(false)
     , m_showPaintRects(false)
+    , m_continuousPaintingEnabled(false)
 {
     // WebKit/win/WebView.cpp does the same thing, except they call the
     // KJS specific wrapper around this method. We need to have threading
@@ -649,6 +651,12 @@ void WebViewImpl::handleMouseUp(Frame& mainFrame, const WebMouseEvent& event)
 #endif
 }
 
+bool WebViewImpl::handleMouseWheel(Frame& mainFrame, const WebMouseWheelEvent& event)
+{
+    hidePopups();
+    return PageWidgetEventHandler::handleMouseWheel(mainFrame, event);
+}
+
 void WebViewImpl::scrollBy(const WebPoint& delta)
 {
     WebMouseWheelEvent syntheticWheel;
@@ -672,7 +680,7 @@ void WebViewImpl::scrollBy(const WebPoint& delta)
 #if ENABLE(GESTURE_EVENTS)
 bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
 {
-    bool eventSwallowed = false;
+    WebWidgetClient::EventStatus eventStatus = WebWidgetClient::EventStatusUnprocessed;
 
     // Handle link highlighting outside the main switch to avoid getting lost in the
     // complicated set of cases handled below.
@@ -705,7 +713,7 @@ bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
         OwnPtr<WebGestureCurve> flingCurve = adoptPtr(Platform::current()->createFlingAnimationCurve(event.sourceDevice, WebFloatPoint(event.data.flingStart.velocityX, event.data.flingStart.velocityY), WebSize()));
         m_gestureAnimation = WebActiveGestureAnimation::createAtAnimationStart(flingCurve.release(), this);
         scheduleAnimation();
-        eventSwallowed = true;
+        eventStatus = WebWidgetClient::EventStatusProcessed;
         break;
     }
     case WebInputEvent::GestureFlingCancel:
@@ -713,13 +721,13 @@ bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
             m_gestureAnimation.clear();
             if (m_layerTreeView)
                 m_layerTreeView->didStopFlinging();
-            eventSwallowed = true;
+            eventStatus = WebWidgetClient::EventStatusProcessed;
         }
         break;
     case WebInputEvent::GestureTap: {
         m_client->cancelScheduledContentIntents();
         if (detectContentOnTouch(WebPoint(event.x, event.y))) {
-            eventSwallowed = true;
+            eventStatus = WebWidgetClient::EventStatusProcessed;
             break;
         }
 
@@ -735,13 +743,13 @@ bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
             // FIXME: replace touch adjustment code when numberOfGoodTargets == 1?
             // Single candidate case is currently handled by: https://bugs.webkit.org/show_bug.cgi?id=85101
             if (goodTargets.size() >= 2 && m_client && m_client->didTapMultipleTargets(event, goodTargets)) {
-                eventSwallowed = true;
+                eventStatus = WebWidgetClient::EventStatusCancelled;
                 break;
             }
         }
 
         PlatformGestureEventBuilder platformEvent(mainFrameImpl()->frameView(), event);
-        eventSwallowed = mainFrameImpl()->frame()->eventHandler()->handleGestureEvent(platformEvent);
+        eventStatus = mainFrameImpl()->frame()->eventHandler()->handleGestureEvent(platformEvent) ? WebWidgetClient::EventStatusProcessed : WebWidgetClient::EventStatusUnprocessed;
 
         if (m_selectPopup && m_selectPopup == selectPopup) {
             // That tap triggered a select popup which is the same as the one that
@@ -763,7 +771,7 @@ bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
         m_page->contextMenuController()->clearContextMenu();
         m_contextMenuAllowed = true;
         PlatformGestureEventBuilder platformEvent(mainFrameImpl()->frameView(), event);
-        eventSwallowed = mainFrameImpl()->frame()->eventHandler()->handleGestureEvent(platformEvent);
+        eventStatus = mainFrameImpl()->frame()->eventHandler()->handleGestureEvent(platformEvent) ? WebWidgetClient::EventStatusProcessed : WebWidgetClient::EventStatusUnprocessed;
         m_contextMenuAllowed = false;
 
         break;
@@ -771,14 +779,14 @@ bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
     case WebInputEvent::GestureTapDown: {
         m_client->cancelScheduledContentIntents();
         PlatformGestureEventBuilder platformEvent(mainFrameImpl()->frameView(), event);
-        eventSwallowed = mainFrameImpl()->frame()->eventHandler()->handleGestureEvent(platformEvent);
+        eventStatus = mainFrameImpl()->frame()->eventHandler()->handleGestureEvent(platformEvent) ? WebWidgetClient::EventStatusProcessed : WebWidgetClient::EventStatusUnprocessed;
         break;
     }
     case WebInputEvent::GestureDoubleTap:
-        if (m_webSettings->doubleTapToZoomEnabled()) {
+        if (m_webSettings->doubleTapToZoomEnabled() && m_minimumPageScaleFactor != m_maximumPageScaleFactor) {
             m_client->cancelScheduledContentIntents();
             animateZoomAroundPoint(WebPoint(event.x, event.y), DoubleTap);
-            eventSwallowed = true;
+            eventStatus = WebWidgetClient::EventStatusProcessed;
             break;
         }
     case WebInputEvent::GestureScrollBegin:
@@ -790,14 +798,14 @@ bool WebViewImpl::handleGestureEvent(const WebGestureEvent& event)
     case WebInputEvent::GesturePinchEnd:
     case WebInputEvent::GesturePinchUpdate: {
         PlatformGestureEventBuilder platformEvent(mainFrameImpl()->frameView(), event);
-        eventSwallowed = mainFrameImpl()->frame()->eventHandler()->handleGestureEvent(platformEvent);
+        eventStatus = mainFrameImpl()->frame()->eventHandler()->handleGestureEvent(platformEvent) ? WebWidgetClient::EventStatusProcessed : WebWidgetClient::EventStatusUnprocessed;
         break;
     }
     default:
         ASSERT_NOT_REACHED();
     }
-    m_client->didHandleGestureEvent(event, eventSwallowed);
-    return eventSwallowed;
+    m_client->didHandleGestureEvent(event, eventStatus);
+    return eventStatus != WebWidgetClient::EventStatusUnprocessed;
 }
 
 void WebViewImpl::transferActiveWheelFlingAnimation(const WebActiveWheelFlingParameters& parameters)
@@ -1582,18 +1590,8 @@ void WebViewImpl::resize(const WebSize& newSize)
     m_size = newSize;
 
 #if ENABLE(VIEWPORT)
-    if (settings()->viewportEnabled()) {
-        // Fallback width is used to layout sites designed for desktop. The
-        // conventional size used by all mobile browsers is 980. When a mobile
-        // device has a particularly wide screen (such as a 10" tablet held in
-        // landscape), it can be larger.
-        const int standardFallbackWidth = 980;
-        int dpiIndependentViewportWidth = newSize.width / page()->deviceScaleFactor();
-        settings()->setLayoutFallbackWidth(std::max(standardFallbackWidth, dpiIndependentViewportWidth));
-
-        ViewportArguments viewportArguments = mainFrameImpl()->frame()->document()->viewportArguments();
-        m_page->chrome()->client()->dispatchViewportPropertiesDidChange(viewportArguments);
-    }
+    ViewportArguments viewportArguments = mainFrameImpl()->frame()->document()->viewportArguments();
+    m_page->chrome()->client()->dispatchViewportPropertiesDidChange(viewportArguments);
 #endif
 
     WebDevToolsAgentPrivate* agentPrivate = devToolsAgentPrivate();
@@ -1733,11 +1731,6 @@ void WebViewImpl::setCompositorSurfaceReady()
         m_layerTreeView->setSurfaceReady();
 }
 
-WebLayerTreeView* WebViewImpl::webLayerTreeView()
-{
-    return m_layerTreeView;
-}
-
 void WebViewImpl::animate(double)
 {
 #if ENABLE(REQUEST_ANIMATION_FRAME)
@@ -1763,6 +1756,9 @@ void WebViewImpl::willBeginFrame()
 void WebViewImpl::didBeginFrame()
 {
     InspectorInstrumentation::didComposite(m_page.get());
+
+    if (m_continuousPaintingEnabled)
+        ContinuousPainter::setNeedsDisplayRecursive(m_rootGraphicsLayer, m_pageOverlays.get());
 }
 
 void WebViewImpl::updateAnimations(double monotonicFrameBeginTime)
@@ -1921,14 +1917,6 @@ bool WebViewImpl::isInputThrottled() const
         return m_layerTreeView->commitRequested();
 #endif
     return false;
-}
-
-void WebViewImpl::loseCompositorContext(int numTimes)
-{
-#if USE(ACCELERATED_COMPOSITING)
-    if (m_layerTreeView)
-        m_layerTreeView->loseCompositorContext(numTimes);
-#endif
 }
 
 void WebViewImpl::enterFullScreenForElement(WebCore::Element* element)
@@ -2531,6 +2519,12 @@ bool WebViewImpl::isAcceleratedCompositingActive() const
 #else
     return false;
 #endif
+}
+
+void WebViewImpl::willCloseLayerTreeView()
+{
+    setIsAcceleratedCompositingActive(false);
+    m_layerTreeView = 0;
 }
 
 void WebViewImpl::didAcquirePointerLock()
@@ -3143,6 +3137,15 @@ void WebViewImpl::setFixedLayoutSize(const WebSize& layoutSize)
         return;
 
     frame->view()->setFixedLayoutSize(layoutSize);
+}
+
+WebCore::FloatSize WebViewImpl::dipSize() const
+{
+    if (!page() || m_webSettings->applyDeviceScaleFactorInCompositor())
+        return FloatSize(m_size.width, m_size.height);
+
+    float deviceScaleFactor = page()->deviceScaleFactor();
+    return FloatSize(m_size.width / deviceScaleFactor, m_size.height / deviceScaleFactor);
 }
 
 void WebViewImpl::performMediaPlayerAction(const WebMediaPlayerAction& action,

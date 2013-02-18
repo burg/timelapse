@@ -28,6 +28,7 @@
 
 #include "CodeBlock.h"
 #include "LLIntCallLinkInfo.h"
+#include "Operations.h"
 #include <wtf/CommaPrinter.h>
 
 namespace JSC {
@@ -80,12 +81,6 @@ Intrinsic CallLinkStatus::intrinsicFor(CodeSpecializationKind kind) const
     return m_executable->intrinsicFor(kind);
 }
 
-CallLinkStatus& CallLinkStatus::setIsProved(bool isProved)
-{
-    m_isProved = isProved;
-    return *this;
-}
-
 CallLinkStatus CallLinkStatus::computeFromLLInt(CodeBlock* profiledBlock, unsigned bytecodeIndex)
 {
     UNUSED_PARAM(profiledBlock);
@@ -118,6 +113,9 @@ CallLinkStatus CallLinkStatus::computeFor(CodeBlock* profiledBlock, unsigned byt
     JSFunction* target = callLinkInfo.lastSeenCallee.get();
     if (!target)
         return computeFromLLInt(profiledBlock, bytecodeIndex);
+    
+    if (callLinkInfo.hasSeenClosure)
+        return CallLinkStatus(target->executable(), target->structure());
 
     return CallLinkStatus(target);
 #else
@@ -125,7 +123,7 @@ CallLinkStatus CallLinkStatus::computeFor(CodeBlock* profiledBlock, unsigned byt
 #endif
 }
 
-void CallLinkStatus::dump(PrintStream& out)
+void CallLinkStatus::dump(PrintStream& out) const
 {
     if (!isSet()) {
         out.print("Not Set");

@@ -31,9 +31,11 @@
 #include "ArrayConstructor.h"
 #include "CallLinkStatus.h"
 #include "CodeBlock.h"
+#include "CodeBlockWithJITType.h"
 #include "DFGArrayMode.h"
 #include "DFGCapabilities.h"
 #include "GetByIdStatus.h"
+#include "JSValueInlines.h"
 #include "PutByIdStatus.h"
 #include "ResolveGlobalStatus.h"
 #include <wtf/HashMap.h>
@@ -159,9 +161,9 @@ private:
     
     // Handle calls. This resolves issues surrounding inlining and intrinsics.
     void handleCall(Interpreter*, Instruction* currentInstruction, NodeType op, CodeSpecializationKind);
-    void emitFunctionCheck(JSFunction* expectedFunction, NodeIndex callTarget, int registerOffset, CodeSpecializationKind);
+    void emitFunctionChecks(const CallLinkStatus&, NodeIndex callTarget, int registerOffset, CodeSpecializationKind);
     // Handle inlining. Return true if it succeeded, false if we need to plant a call.
-    bool handleInlining(bool usesResult, NodeIndex callTargetNodeIndex, int resultOperand, bool certainAboutExpectedFunction, JSFunction*, int registerOffset, int argumentCountIncludingThis, unsigned nextOffset, CodeSpecializationKind);
+    bool handleInlining(bool usesResult, NodeIndex callTargetNodeIndex, int resultOperand, const CallLinkStatus&, int registerOffset, int argumentCountIncludingThis, unsigned nextOffset, CodeSpecializationKind);
     // Handle setting the result of an intrinsic.
     void setIntrinsicResult(bool usesResult, int resultOperand, NodeIndex);
     // Handle intrinsic functions. Return true if it succeeded, false if we need to plant a call.
@@ -1284,8 +1286,12 @@ void ByteCodeParser::handleCall(Interpreter* interpreter, Instruction* currentIn
 
     if (m_graph.isConstant(callTarget))
         callLinkStatus = CallLinkStatus(m_graph.valueOfJSConstant(callTarget)).setIsProved(true);
-    else
+    else {
         callLinkStatus = CallLinkStatus::computeFor(m_inlineStackTop->m_profiledBlock, m_currentIndex);
+        callLinkStatus.setHasBadFunctionExitSite(m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadFunction));
+        callLinkStatus.setHasBadCacheExitSite(m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadCache));
+        callLinkStatus.setHasBadExecutableExitSite(m_inlineStackTop->m_exitProfile.hasExitSite(m_currentIndex, BadExecutable));
+    }
     
 #if DFG_ENABLE(DEBUG_VERBOSE)
     dataLog("For call at @", m_graph.size(), " bc#", m_currentIndex, ": ", callLinkStatus, "\n");
@@ -1325,55 +1331,60 @@ void ByteCodeParser::handleCall(Interpreter* interpreter, Instruction* currentIn
         return;
     }
         
-    JSFunction* expectedFunction = callLinkStatus.function();
-    if (!expectedFunction) {
-        // For now we have no way of reasoning about what it means to not have a specific function. This will
-        // change soon, though.
-        
-        addCall(interpreter, currentInstruction, op);
-        return;
-    }
-        
     Intrinsic intrinsic = callLinkStatus.intrinsicFor(kind);
     if (intrinsic != NoIntrinsic) {
-        if (!callLinkStatus.isProved())
-            emitFunctionCheck(expectedFunction, callTarget, registerOffset, kind);
+        emitFunctionChecks(callLinkStatus, callTarget, registerOffset, kind);
             
         if (handleIntrinsic(usesResult, resultOperand, intrinsic, registerOffset, argumentCountIncludingThis, prediction)) {
-            if (!callLinkStatus.isProved()) {
-                // Need to keep the call target alive for OSR. We could easily optimize this out if we wanted
-                // to, since at this point we know that the call target is a constant. It's just that OSR isn't
-                // smart enough to figure that out, since it doesn't understand CheckFunction.
-                addToGraph(Phantom, callTarget);
-            }
-                
+            // Need to keep all inputs alive for OSR, and need to ensure that we get
+            // backwards propagation of NodeUsedAsValue. Note that inlining doesn't
+            // need to do this because it already Flushes the arguments, which has a
+            // similar effect.
+            addToGraph(Phantom, callTarget);
+            for (int i = 0; i < argumentCountIncludingThis; ++i)
+                addToGraph(Phantom, get(registerOffset + argumentToOperand(i)));
+            
             return;
         }
-    } else if (handleInlining(usesResult, callTarget, resultOperand, callLinkStatus.isProved(), expectedFunction, registerOffset, argumentCountIncludingThis, nextOffset, kind))
+    } else if (handleInlining(usesResult, callTarget, resultOperand, callLinkStatus, registerOffset, argumentCountIncludingThis, nextOffset, kind))
         return;
     
     addCall(interpreter, currentInstruction, op);
 }
 
-void ByteCodeParser::emitFunctionCheck(JSFunction* expectedFunction, NodeIndex callTarget, int registerOffset, CodeSpecializationKind kind)
+void ByteCodeParser::emitFunctionChecks(const CallLinkStatus& callLinkStatus, NodeIndex callTarget, int registerOffset, CodeSpecializationKind kind)
 {
+    if (callLinkStatus.isProved())
+        return;
+    
+    ASSERT(callLinkStatus.canOptimize());
+    
     NodeIndex thisArgument;
     if (kind == CodeForCall)
         thisArgument = get(registerOffset + argumentToOperand(0));
     else
         thisArgument = NoNode;
-    addToGraph(CheckFunction, OpInfo(expectedFunction), callTarget, thisArgument);
+
+    if (JSFunction* function = callLinkStatus.function())
+        addToGraph(CheckFunction, OpInfo(function), callTarget, thisArgument);
+    else {
+        ASSERT(callLinkStatus.structure());
+        ASSERT(callLinkStatus.executable());
+        
+        addToGraph(CheckStructure, OpInfo(m_graph.addStructureSet(callLinkStatus.structure())), callTarget);
+        addToGraph(CheckExecutable, OpInfo(callLinkStatus.executable()), callTarget, thisArgument);
+    }
 }
 
-bool ByteCodeParser::handleInlining(bool usesResult, NodeIndex callTargetNodeIndex, int resultOperand, bool certainAboutExpectedFunction, JSFunction* expectedFunction, int registerOffset, int argumentCountIncludingThis, unsigned nextOffset, CodeSpecializationKind kind)
+bool ByteCodeParser::handleInlining(bool usesResult, NodeIndex callTargetNodeIndex, int resultOperand, const CallLinkStatus& callLinkStatus, int registerOffset, int argumentCountIncludingThis, unsigned nextOffset, CodeSpecializationKind kind)
 {
     // First, the really simple checks: do we have an actual JS function?
-    if (!expectedFunction)
+    if (!callLinkStatus.executable())
         return false;
-    if (expectedFunction->isHostFunction())
+    if (callLinkStatus.executable()->isHostFunction())
         return false;
     
-    FunctionExecutable* executable = expectedFunction->jsExecutable();
+    FunctionExecutable* executable = jsCast<FunctionExecutable*>(callLinkStatus.executable());
     
     // Does the number of arguments we're passing match the arity of the target? We currently
     // inline only if the number of arguments passed is greater than or equal to the number
@@ -1402,7 +1413,7 @@ bool ByteCodeParser::handleInlining(bool usesResult, NodeIndex callTargetNodeInd
     CodeBlock* codeBlock = executable->baselineCodeBlockFor(kind);
     if (!codeBlock)
         return false;
-    if (!canInlineFunctionFor(codeBlock, kind))
+    if (!canInlineFunctionFor(codeBlock, kind, callLinkStatus.isClosureCall()))
         return false;
     
 #if DFG_ENABLE(DEBUG_VERBOSE)
@@ -1412,8 +1423,7 @@ bool ByteCodeParser::handleInlining(bool usesResult, NodeIndex callTargetNodeInd
     // Now we know without a doubt that we are committed to inlining. So begin the process
     // by checking the callee (if necessary) and making sure that arguments and the callee
     // are flushed.
-    if (!certainAboutExpectedFunction)
-        emitFunctionCheck(expectedFunction, callTargetNodeIndex, registerOffset, kind);
+    emitFunctionChecks(callLinkStatus, callTargetNodeIndex, registerOffset, kind);
     
     // FIXME: Don't flush constants!
     
@@ -1435,7 +1445,7 @@ bool ByteCodeParser::handleInlining(bool usesResult, NodeIndex callTargetNodeInd
 
     InlineStackEntry inlineStackEntry(
         this, codeBlock, codeBlock, m_graph.m_blocks.size() - 1,
-        expectedFunction, (VirtualRegister)m_inlineStackTop->remapOperand(
+        callLinkStatus.function(), (VirtualRegister)m_inlineStackTop->remapOperand(
             usesResult ? resultOperand : InvalidVirtualRegister),
         (VirtualRegister)inlineCallFrameStart, argumentCountIncludingThis, kind);
     
@@ -1446,6 +1456,10 @@ bool ByteCodeParser::handleInlining(bool usesResult, NodeIndex callTargetNodeInd
     m_currentProfilingIndex = 0;
 
     addToGraph(InlineStart, OpInfo(argumentPositionStart));
+    if (callLinkStatus.isClosureCall()) {
+        addToGraph(SetCallee, callTargetNodeIndex);
+        addToGraph(SetMyScope, addToGraph(GetScope, callTargetNodeIndex));
+    }
     
     parseCodeBlock();
     
@@ -3000,15 +3014,14 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             PutToBaseOperation* putToBase = m_codeBlock->putToBaseOperation(operation);
 
             if (putToBase->m_isDynamic) {
-                addToGraph(Phantom, get(base));
                 addToGraph(PutById, OpInfo(identifier), get(base), get(value));
                 NEXT_OPCODE(op_put_to_base);
             }
 
             switch (putToBase->m_kind) {
             case PutToBaseOperation::Uninitialised:
-                addToGraph(Phantom, get(base));
                 addToGraph(ForceOSRExit);
+                addToGraph(Phantom, get(base));
                 break;
 
             case PutToBaseOperation::GlobalVariablePutChecked: {
@@ -3036,8 +3049,8 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             }
             case PutToBaseOperation::GlobalPropertyPut: {
                 if (!putToBase->m_structure) {
-                    addToGraph(Phantom, get(base));
                     addToGraph(ForceOSRExit);
+                    addToGraph(Phantom, get(base));
                     NEXT_OPCODE(op_put_to_base);
                 }
                 NodeIndex baseNode = get(base);
@@ -3057,7 +3070,6 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             }
             case PutToBaseOperation::Readonly:
             case PutToBaseOperation::Generic:
-                addToGraph(Phantom, get(base));
                 addToGraph(PutById, OpInfo(identifier), get(base), get(value));
             }
             NEXT_OPCODE(op_put_to_base);
@@ -3209,6 +3221,12 @@ bool ByteCodeParser::parseBlock(unsigned limit)
             set(currentInstruction[1].u.operand,
                 addToGraph(NewFunctionExpression, OpInfo(currentInstruction[2].u.operand)));
             NEXT_OPCODE(op_new_func_exp);
+        }
+
+        case op_typeof: {
+            set(currentInstruction[1].u.operand,
+                addToGraph(TypeOf, get(currentInstruction[2].u.operand)));
+            NEXT_OPCODE(op_typeof);
         }
 
         default:
@@ -3623,15 +3641,24 @@ void ByteCodeParser::parseCodeBlock()
             *m_globalData->m_perBytecodeProfiler, m_inlineStackTop->m_profiledBlock);
     }
     
+    bool shouldDumpBytecode = Options::dumpBytecodeAtDFGTime();
 #if DFG_ENABLE(DEBUG_VERBOSE)
-    dataLog(
-        "Parsing ", *codeBlock,
-        ": captureCount = ", codeBlock->symbolTable() ? codeBlock->symbolTable()->captureCount() : 0,
-        ", needsFullScopeChain = ", codeBlock->needsFullScopeChain(),
-        ", needsActivation = ", codeBlock->ownerExecutable()->needsActivation(),
-        ", isStrictMode = ", codeBlock->ownerExecutable()->isStrictMode(), "\n");
-    codeBlock->baselineVersion()->dumpBytecode();
+    shouldDumpBytecode |= true;
 #endif
+    if (shouldDumpBytecode) {
+        dataLog("Parsing ", *codeBlock);
+        if (m_inlineStackTop->m_inlineCallFrame) {
+            dataLog(
+                " for inlining at ", CodeBlockWithJITType(m_codeBlock, JITCode::DFGJIT),
+                " ", m_inlineStackTop->m_inlineCallFrame->caller);
+        }
+        dataLog(
+            ": captureCount = ", codeBlock->symbolTable() ? codeBlock->symbolTable()->captureCount() : 0,
+            ", needsFullScopeChain = ", codeBlock->needsFullScopeChain(),
+            ", needsActivation = ", codeBlock->ownerExecutable()->needsActivation(),
+            ", isStrictMode = ", codeBlock->ownerExecutable()->isStrictMode(), "\n");
+        codeBlock->baselineVersion()->dumpBytecode();
+    }
     
     for (unsigned jumpTargetIndex = 0; jumpTargetIndex <= codeBlock->numberOfJumpTargets(); ++jumpTargetIndex) {
         // The maximum bytecode offset to go into the current basicblock is either the next jump target, or the end of the instructions.

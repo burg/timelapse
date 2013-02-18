@@ -26,6 +26,7 @@
 #include "BackForwardList.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "ClientRectList.h"
 #include "ContextMenuClient.h"
 #include "ContextMenuController.h"
 #include "DOMWindow.h"
@@ -280,6 +281,21 @@ String Page::mainThreadScrollingReasonsAsText()
         return scrollingCoordinator->mainThreadScrollingReasonsAsText();
 
     return String();
+}
+
+PassRefPtr<ClientRectList> Page::nonFastScrollableRects(const Frame* frame)
+{
+    if (Document* document = m_mainFrame->document())
+        document->updateLayout();
+
+    Vector<IntRect> rects;
+    if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
+        rects = scrollingCoordinator->computeNonFastScrollableRegion(frame, IntPoint()).rects();
+
+    Vector<FloatQuad> quads(rects.size());
+    for (size_t i = 0; i < rects.size(); ++i)
+        quads[i] = FloatRect(rects[i]);
+    return ClientRectList::create(quads);
 }
 
 struct ViewModeInfo {
@@ -1353,7 +1369,6 @@ void Page::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addMember(m_mainFrame);
     info.addMember(m_pluginData);
     info.addMember(m_theme);
-    info.addWeakPointer(m_editorClient);
     info.addMember(m_featureObserver);
     info.addMember(m_groupName);
     info.addMember(m_pagination);
@@ -1361,13 +1376,18 @@ void Page::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addMember(m_userStyleSheet);
     info.addMember(m_singlePageGroup);
     info.addMember(m_group);
-    info.addWeakPointer(m_debugger);
     info.addMember(m_sessionStorage);
     info.addMember(m_relevantUnpaintedRenderObjects);
     info.addMember(m_relevantPaintedRegion);
     info.addMember(m_relevantUnpaintedRegion);
-    info.addWeakPointer(m_alternativeTextClient);
     info.addMember(m_seenPlugins);
+    info.addMember(m_seenMediaEngines);
+
+    info.ignoreMember(m_debugger);
+    info.ignoreMember(m_alternativeTextClient);
+    info.ignoreMember(m_editorClient);
+    info.ignoreMember(m_plugInClient);
+    info.ignoreMember(m_validationMessageClient);
 }
 
 Page::PageClients::PageClients()

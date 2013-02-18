@@ -59,9 +59,6 @@ webkit.org/b/102651 [ Debug ] networkinformation/updates.html [ Crash ]
 webkit.org/b/102651 [ Debug ] networkinformation/add-listener-from-callback.html [ Crash ]
 webkit.org/b/102651 [ Debug ] networkinformation/basic-operation.html [ Crash ]
 
-# ResourceClient is passed an invalid identifier value (0).
-webkit.org/b/105788 [ Debug ] http/tests/appcache/main-resource-redirect.html [ Crash ]
-
 #////////////////////////////////////////////////////////////////////////////////////////
 # FLAKY TESTS
 #////////////////////////////////////////////////////////////////////////////////////////
@@ -296,6 +293,7 @@ accessibility/table-with-rules.html [ Skip ]
 accessibility/aria-controls-with-tabs.html [ Skip ]
 accessibility/image-map-update-parent-crash.html [ Skip ]
 accessibility/anonymous-render-block-in-continuation-causes-crash.html [ Skip ]
+Bug(EFL) accessibility/heading-level.html [ Failure ]
 
 # WebKitTestRunner needs an implementation for testRunner.titleTextDirection
 webkit.org/b/93470 fast/dom/title-directionality-removeChild.html [ Failure ]
@@ -308,8 +306,8 @@ Bug(EFL) fast/events/touch/basic-single-touch-events.html [ Failure ]
 Bug(EFL) editing/spelling/grammar-edit-word.html [ Failure ]
 Bug(EFL) editing/spelling/markers.html [ Failure ]
 
-# WebKitTestRunner needs an implementation for eventSender.scheduleAsynchronousKeyDown
-webkit.org/b/93979 fast/dom/MutationObserver/end-of-task-delivery.html [ Failure ]
+# Fails because MutationObservers are not notified at end-of-task.
+webkit.org/b/78290 fast/dom/MutationObserver/end-of-task-delivery.html [ Failure ]
 
 # testRunner.setUseDeferredFrameLoading() is not implemented in WK2. Skipped so it does not generate PNG results.
 webkit.org/b/93980 http/tests/appcache/load-from-appcache-defer-resume-crash.html [ Skip ]
@@ -319,9 +317,6 @@ webkit.org/b/93982 storage/domstorage/storage-close-database-on-idle.html [ Fail
 
 # The following test makes the fast/parser/document-write-ignores-later-network-bytes.html test crash
 webkit.org/b/98345 fast/parser/document-open-in-unload.html [ Skip ]
-
-# Requires TestRunner displayInvalidatedRegion() support.
-webkit.org/b/98523 fast/images/repaint-subrect-grid.html [ Failure ]
 
 # NPP_SetWindow is not called with proper size for the first time.
 webkit.org/b/98746 plugins/netscape-plugin-setwindow-size-2.html [ Failure ]
@@ -374,9 +369,6 @@ webkit.org/b/105766 compositing/text-on-scaled-surface.html [ ImageOnlyFailure ]
 Bug(EFL) svg/animations/animate-linear-discrete-additive-b.svg [ ImageOnlyFailure ]
 Bug(EFL) svg/transforms/transformed-text-fill-pattern.html [ ImageOnlyFailure ]
 
-# New compositing test introduced in r137215 that is failing on WK2 EFL.
-webkit.org/b/104637 compositing/repaint/resize-repaint.html [ Failure ]
-
 webkit.org/b/104656 compositing/repaint/clipped-layer-size-change.html [ ImageOnlyFailure Pass ]
 
 # New compositing test introduced in r137828 that is failing on WK2 EFL.
@@ -409,3 +401,8 @@ webkit.org/b/98410 media/context-menu-actions.html [ Failure ]
 
 webkit.org/b/102201 fast/dom/Window/open-window-min-size.html [ Failure ]
 
+# Likely failing because of an old version of libsoup in the jhbuild.
+webkit.org/b/106407 http/tests/loading/basic-auth-resend-wrong-credentials.html [ Failure ]
+webkit.org/b/106407 http/tests/security/401-logout/401-logout.php [ Failure ]
+webkit.org/b/106407 http/tests/xmlhttprequest/failed-auth.html [ Failure ]
+webkit.org/b/106407 http/tests/xmlhttprequest/remember-bad-password.html [ Failure ]

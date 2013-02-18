@@ -43,6 +43,7 @@ JSC::MacroAssemblerX86Common::SSE2CheckState JSC::MacroAssemblerX86Common::s_sse
 #include "JSArray.h"
 #include "JSFunction.h"
 #include "LinkBuffer.h"
+#include "Operations.h"
 #include "RepatchBuffer.h"
 #include "ResultType.h"
 #include "SamplingTool.h"
@@ -700,11 +701,6 @@ JITCode JIT::privateCompile(CodePtr* functionEntryArityCheck, JITCompilationEffo
 
     Label functionBody = label();
     
-#if ENABLE(VALUE_PROFILER)
-    if (canBeOptimized())
-        add32(TrustedImm32(1), AbsoluteAddress(&m_codeBlock->m_executionEntryCount));
-#endif
-
     privateCompileMainPass();
     privateCompileLinkPass();
     privateCompileSlowCases();

@@ -84,6 +84,7 @@
 #include <wtf/text/CString.h>
 
 #if ENABLE(SVG)
+#include "SVGDocumentExtensions.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
 #endif
@@ -202,6 +203,13 @@ Element::~Element()
 
     if (hasSyntheticAttrChildNodes())
         detachAllAttrNodesFromElement();
+
+#if ENABLE(SVG)
+    if (hasPendingResources()) {
+        document()->accessSVGExtensions()->removeElementFromPendingResources(this);
+        ASSERT(!hasPendingResources());
+    }
+#endif
 }
 
 inline ElementRareData* Element::elementRareData() const
@@ -739,7 +747,7 @@ inline void Element::setAttributeInternal(size_t index, const QualifiedName& nam
         // If there is an Attr node hooked to this attribute, the Attr::setValue() call below
         // will write into the ElementAttributeData.
         // FIXME: Refactor this so it makes some sense.
-        if (RefPtr<Attr> attrNode = attrIfExists(name))
+        if (RefPtr<Attr> attrNode = inSynchronizationOfLazyAttribute ? 0 : attrIfExists(name))
             attrNode->setValue(newValue);
         else
             mutableAttributeData()->attributeItem(index)->setValue(newValue);
@@ -909,15 +917,15 @@ void Element::classAttributeChanged(const AtomicString& newClassString)
 bool Element::shouldInvalidateDistributionWhenAttributeChanged(ElementShadow* elementShadow, const QualifiedName& name, const AtomicString& newValue)
 {
     ASSERT(elementShadow);
-    elementShadow->ensureSelectFeatureSetCollected();
+    const SelectRuleFeatureSet& featureSet = elementShadow->distributor().ensureSelectFeatureSet(elementShadow);
 
     if (isIdAttributeName(name)) {
         AtomicString oldId = attributeData()->idForStyleResolution();
         AtomicString newId = makeIdForStyleResolution(newValue, document()->inQuirksMode());
         if (newId != oldId) {
-            if (!oldId.isEmpty() && elementShadow->selectRuleFeatureSet().hasSelectorForId(oldId))
+            if (!oldId.isEmpty() && featureSet.hasSelectorForId(oldId))
                 return true;
-            if (!newId.isEmpty() && elementShadow->selectRuleFeatureSet().hasSelectorForId(newId))
+            if (!newId.isEmpty() && featureSet.hasSelectorForId(newId))
                 return true;
         }
     }
@@ -929,16 +937,16 @@ bool Element::shouldInvalidateDistributionWhenAttributeChanged(ElementShadow* el
             const bool shouldFoldCase = document()->inQuirksMode();
             const SpaceSplitString& oldClasses = attributeData->classNames();
             const SpaceSplitString newClasses(newClassString, shouldFoldCase);
-            if (checkSelectorForClassChange(oldClasses, newClasses, elementShadow->selectRuleFeatureSet()))
+            if (checkSelectorForClassChange(oldClasses, newClasses, featureSet))
                 return true;
         } else if (const ElementAttributeData* attributeData = this->attributeData()) {
             const SpaceSplitString& oldClasses = attributeData->classNames();
-            if (checkSelectorForClassChange(oldClasses, elementShadow->selectRuleFeatureSet()))
+            if (checkSelectorForClassChange(oldClasses, featureSet))
                 return true;
         }
     }
 
-    return elementShadow->selectRuleFeatureSet().hasSelectorForAttribute(name.localName());
+    return featureSet.hasSelectorForAttribute(name.localName());
 }
 
 // Returns true is the given attribute is an event handler.
@@ -972,8 +980,8 @@ void Element::parserSetAttributes(const Vector<Attribute>& attributeVector, Frag
 
     // If the element is created as result of a paste or drag-n-drop operation
     // we want to remove all the script and event handlers.
-    if (scriptingPermission == DisallowScriptingContent) {
-        unsigned i = 0;
+    if (!scriptingContentIsAllowed(scriptingPermission)) {
+        size_t i = 0;
         while (i < filteredAttributes.size()) {
             Attribute& attribute = filteredAttributes[i];
             if (isEventHandlerAttribute(attribute.name())) {
@@ -1126,8 +1134,12 @@ Node::InsertionNotificationRequest Element::insertedInto(ContainerNode* insertio
 
 void Element::removedFrom(ContainerNode* insertionPoint)
 {
+#if ENABLE(SVG)
+    bool wasInDocument = insertionPoint->document();
+#endif
+
 #if ENABLE(DIALOG_ELEMENT)
-    setIsInTopLayer(false);
+    document()->removeFromTopLayer(this);
 #endif
 #if ENABLE(FULLSCREEN_API)
     if (containsFullScreenElement())
@@ -1157,6 +1169,10 @@ void Element::removedFrom(ContainerNode* insertionPoint)
     }
 
     ContainerNode::removedFrom(insertionPoint);
+#if ENABLE(SVG)
+    if (wasInDocument && hasPendingResources())
+        document()->accessSVGExtensions()->removeElementFromPendingResources(this);
+#endif
 }
 
 void Element::createRendererIfNeeded()
@@ -1391,6 +1407,13 @@ ElementShadow* Element::ensureShadow()
     ElementRareData* data = elementRareData();
     data->setShadow(adoptPtr(new ElementShadow()));
     return data->shadow();
+}
+
+void Element::didAffectSelector(AffectedSelectorMask mask)
+{
+    setNeedsStyleRecalc();
+    if (ElementShadow* elementShadow = shadowOfParentForDistribution(this))
+        elementShadow->didAffectSelector(mask);
 }
 
 PassRefPtr<ShadowRoot> Element::createShadowRoot(ExceptionCode& ec)
@@ -2155,6 +2178,12 @@ void Element::setPseudoElement(PseudoId pseudoId, PassRefPtr<PseudoElement> elem
     resetNeedsShadowTreeWalker();
 }
 
+RenderObject* Element::pseudoElementRenderer(PseudoId pseudoId) const
+{
+    if (PseudoElement* element = pseudoElement(pseudoId))
+        return element->renderer();
+    return 0;
+}
 
 // ElementTraversal API
 Element* Element::firstElementChild() const
@@ -2284,9 +2313,19 @@ bool Element::isWebVTTNode() const
     return hasRareData() && elementRareData()->isWebVTTNode();
 }
 
-void Element::setIsWebVTTNode(bool flag)
+void Element::setIsWebVTTNode()
 {
-    ensureElementRareData()->setIsWebVTTNode(flag);
+    ensureElementRareData()->setIsWebVTTNode();
+}
+
+bool Element::isWebVTTFutureNode() const
+{
+    return hasRareData() && elementRareData()->isWebVTTFutureNode();
+}
+
+void Element::setIsWebVTTFutureNode()
+{
+    ensureElementRareData()->setIsWebVTTFutureNode();
 }
 #endif
 
@@ -2335,7 +2374,10 @@ bool Element::isInTopLayer() const
 void Element::setIsInTopLayer(bool inTopLayer)
 {
     ensureElementRareData()->setIsInTopLayer(inTopLayer);
-    setNeedsStyleRecalc(SyntheticStyleChange);
+
+    // We must ensure a reattach occurs so the renderer is inserted in the correct sibling order under RenderView according to its
+    // top layer position, or in its usual place if not in the top layer.
+    reattachIfAttached();
 }
 #endif
 
@@ -2481,10 +2523,8 @@ void Element::willModifyAttribute(const QualifiedName& name, const AtomicString&
             updateLabel(scope, oldValue, newValue);
     }
 
-#if ENABLE(MUTATION_OBSERVERS)
     if (OwnPtr<MutationObserverInterestGroup> recipients = MutationObserverInterestGroup::createForAttributesMutation(this, name))
         recipients->enqueueMutationRecord(MutationRecord::createAttributes(this, name, oldValue));
-#endif
 
 #if ENABLE(INSPECTOR)
     InspectorInstrumentation::willModifyDOMAttr(document(), this, oldValue, newValue);
@@ -2706,5 +2746,22 @@ void Element::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addMember(m_tagName);
     info.addMember(m_attributeData);
 }
+
+#if ENABLE(SVG)
+bool Element::hasPendingResources() const
+{
+    return hasRareData() && elementRareData()->hasPendingResources();
+}
+
+void Element::setHasPendingResources()
+{
+    ensureElementRareData()->setHasPendingResources(true);
+}
+
+void Element::clearHasPendingResources()
+{
+    ensureElementRareData()->setHasPendingResources(false);
+}
+#endif
 
 } // namespace WebCore

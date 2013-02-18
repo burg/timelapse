@@ -27,31 +27,23 @@
 #include "config.h"
 #include "HTMLTreeBuilder.h"
 
-#include "Comment.h"
-#include "DOMWindow.h"
 #include "DocumentFragment.h"
-#include "DocumentType.h"
-#include "Frame.h"
 #include "HTMLDocument.h"
 #include "HTMLDocumentParser.h"
-#include "HTMLElementFactory.h"
 #include "HTMLFormElement.h"
-#include "HTMLHtmlElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
-#include "HTMLScriptElement.h"
 #include "HTMLStackItem.h"
-#include "HTMLTemplateElement.h"
 #include "HTMLToken.h"
 #include "HTMLTokenizer.h"
 #include "LocalizedStrings.h"
 #include "MathMLNames.h"
 #include "NotImplemented.h"
 #include "SVGNames.h"
-#include "Text.h"
 #include "XLinkNames.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
+#include <wtf/MainThread.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
@@ -141,6 +133,7 @@ static bool isFormattingTag(const AtomicString& tagName)
 
 static HTMLFormElement* closestFormAncestor(Element* element)
 {
+    ASSERT(isMainThread());
     while (element) {
         if (element->hasTagName(formTag))
             return static_cast<HTMLFormElement*>(element);
@@ -268,33 +261,38 @@ private:
 };
 
 
-HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser, HTMLDocument* document, bool, bool usePreHTML5ParserQuirks, unsigned maximumDOMTreeDepth)
+HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser, HTMLDocument* document, bool, const HTMLParserOptions& options)
     : m_framesetOk(true)
-    , m_document(document)
-    , m_tree(document, maximumDOMTreeDepth)
+#ifndef NDEBUG
+    , m_isAttached(true)
+#endif
+    , m_tree(document, options.maximumDOMTreeDepth)
     , m_insertionMode(InitialMode)
     , m_originalInsertionMode(InitialMode)
     , m_shouldSkipLeadingNewline(false)
     , m_parser(parser)
     , m_scriptToProcessStartPosition(uninitializedPositionValue1())
-    , m_usePreHTML5ParserQuirks(usePreHTML5ParserQuirks)
+    , m_options(options)
 {
 }
 
 // FIXME: Member variables should be grouped into self-initializing structs to
 // minimize code duplication between these constructors.
-HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser, DocumentFragment* fragment, Element* contextElement, FragmentScriptingPermission scriptingPermission, bool usePreHTML5ParserQuirks, unsigned maximumDOMTreeDepth)
+HTMLTreeBuilder::HTMLTreeBuilder(HTMLDocumentParser* parser, DocumentFragment* fragment, Element* contextElement, FragmentScriptingPermission scriptingPermission, const HTMLParserOptions& options)
     : m_framesetOk(true)
+#ifndef NDEBUG
+    , m_isAttached(true)
+#endif
     , m_fragmentContext(fragment, contextElement, scriptingPermission)
-    , m_document(fragment->document())
-    , m_tree(fragment, scriptingPermission, maximumDOMTreeDepth)
+    , m_tree(fragment, scriptingPermission, options.maximumDOMTreeDepth)
     , m_insertionMode(InitialMode)
     , m_originalInsertionMode(InitialMode)
     , m_shouldSkipLeadingNewline(false)
     , m_parser(parser)
     , m_scriptToProcessStartPosition(uninitializedPositionValue1())
-    , m_usePreHTML5ParserQuirks(usePreHTML5ParserQuirks)
+    , m_options(options)
 {
+    ASSERT(isMainThread());
     // FIXME: This assertion will become invalid if <http://webkit.org/b/60316> is fixed.
     ASSERT(contextElement);
     if (contextElement) {
@@ -320,9 +318,11 @@ HTMLTreeBuilder::~HTMLTreeBuilder()
 
 void HTMLTreeBuilder::detach()
 {
+#ifndef NDEBUG
     // This call makes little sense in fragment mode, but for consistency
     // DocumentParser expects detach() to always be called before it's destroyed.
-    m_document = 0;
+    m_isAttached = false;
+#endif
     // HTMLConstructionSite might be on the callstack when detach() is called
     // otherwise we'd just call m_tree.clear() here instead.
     m_tree.detach();
@@ -359,38 +359,7 @@ PassRefPtr<Element> HTMLTreeBuilder::takeScriptToProcess(TextPosition& scriptSta
     return m_scriptToProcess.release();
 }
 
-void HTMLTreeBuilder::constructTreeFromToken(HTMLToken& rawToken)
-{
-    RefPtr<AtomicHTMLToken> token = AtomicHTMLToken::create(rawToken);
-
-    // We clear the rawToken in case constructTreeFromAtomicToken
-    // synchronously re-enters the parser. We don't clear the token immedately
-    // for Character tokens because the AtomicHTMLToken avoids copying the
-    // characters by keeping a pointer to the underlying buffer in the
-    // HTMLToken. Fortunately, Character tokens can't cause use to re-enter
-    // the parser.
-    //
-    // FIXME: Stop clearing the rawToken once we start running the parser off
-    // the main thread or once we stop allowing synchronous JavaScript
-    // execution from parseAttribute.
-    if (rawToken.type() != HTMLTokenTypes::Character)
-        rawToken.clear();
-
-    constructTreeFromAtomicToken(token.get());
-
-    // AtomicHTMLToken keeps a pointer to the HTMLToken's buffer instead
-    // of copying the characters for performance.
-    // Clear the external characters pointer before the raw token is cleared
-    // to make sure that we won't have a dangling pointer.
-    token->clearExternalCharacters();
-
-    if (!rawToken.isUninitialized()) {
-        ASSERT(rawToken.type() == HTMLTokenTypes::Character);
-        rawToken.clear();
-    }
-}
-
-void HTMLTreeBuilder::constructTreeFromAtomicToken(AtomicHTMLToken* token)
+void HTMLTreeBuilder::constructTree(AtomicHTMLToken* token)
 {
     if (shouldProcessTokenInForeignContent(token))
         processTokenInForeignContent(token);
@@ -813,6 +782,12 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken* token)
         return;
     }
     if (token->name() == appletTag
+        || token->name() == embedTag
+        || token->name() == objectTag) {
+        if (isParsingFragment() && !pluginContentIsAllowed(m_fragmentContext.scriptingPermission()))
+            return;
+    }
+    if (token->name() == appletTag
         || token->name() == marqueeTag
         || token->name() == objectTag) {
         m_tree.reconstructTheActiveFormattingElements();
@@ -822,7 +797,7 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken* token)
         return;
     }
     if (token->name() == tableTag) {
-        if (!m_document->inQuirksMode() && m_tree.openElements()->inButtonScope(pTag))
+        if (!m_tree.inQuirksMode() && m_tree.openElements()->inButtonScope(pTag))
             processFakeEndTag(pTag);
         m_tree.insertHTMLElement(token);
         m_framesetOk = false;
@@ -891,11 +866,11 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken* token)
         processGenericRawTextStartTag(token);
         return;
     }
-    if (token->name() == noembedTag && pluginsEnabled(m_document->frame())) {
+    if (token->name() == noembedTag && m_options.pluginsEnabled) {
         processGenericRawTextStartTag(token);
         return;
     }
-    if (token->name() == noscriptTag && scriptEnabled(m_document->frame())) {
+    if (token->name() == noscriptTag && m_options.scriptEnabled) {
         processGenericRawTextStartTag(token);
         return;
     }
@@ -2174,7 +2149,7 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken* token)
             ASSERT(m_tree.currentStackItem()->hasTagName(scriptTag));
             m_scriptToProcess = m_tree.currentElement();
             m_tree.openElements()->pop();
-            if (isParsingFragment() && m_fragmentContext.scriptingPermission() == DisallowScriptingContent)
+            if (isParsingFragment() && !scriptingContentIsAllowed(m_fragmentContext.scriptingPermission()))
                 m_scriptToProcess->removeAllChildren();
             setInsertionMode(m_originalInsertionMode);
 
@@ -2182,7 +2157,7 @@ void HTMLTreeBuilder::processEndTag(AtomicHTMLToken* token)
             // self-closing script tag was encountered and pre-HTML5 parser
             // quirks are enabled. We must set the tokenizer's state to
             // DataState explicitly if the tokenizer didn't have a chance to.
-            ASSERT(m_parser->tokenizer()->state() == HTMLTokenizerState::DataState || m_usePreHTML5ParserQuirks);
+            ASSERT(m_parser->tokenizer()->state() == HTMLTokenizerState::DataState || m_options.usePreHTML5ParserQuirks);
             m_parser->tokenizer()->setState(HTMLTokenizerState::DataState);
             return;
         }
@@ -2610,8 +2585,7 @@ void HTMLTreeBuilder::processEndOfFile(AtomicHTMLToken* token)
 void HTMLTreeBuilder::defaultForInitial()
 {
     notImplemented();
-    if (!m_fragmentContext.fragment() && !m_document->isSrcdocDocument())
-        m_document->setCompatibilityMode(Document::QuirksMode);
+    m_tree.setDefaultCompatibilityMode();
     // FIXME: parse error
     setInsertionMode(BeforeHTMLMode);
 }
@@ -2687,7 +2661,7 @@ bool HTMLTreeBuilder::processStartTagForInHead(AtomicHTMLToken* token)
         return true;
     }
     if (token->name() == noscriptTag) {
-        if (scriptEnabled(m_document->frame())) {
+        if (m_options.scriptEnabled) {
             processGenericRawTextStartTag(token);
             return true;
         }
@@ -2701,7 +2675,7 @@ bool HTMLTreeBuilder::processStartTagForInHead(AtomicHTMLToken* token)
     }
     if (token->name() == scriptTag) {
         processScriptStartTag(token);
-        if (m_usePreHTML5ParserQuirks && token->selfClosing())
+        if (m_options.usePreHTML5ParserQuirks && token->selfClosing())
             processFakeEndTag(scriptTag);
         return true;
     }
@@ -2901,27 +2875,13 @@ void HTMLTreeBuilder::finished()
     ASSERT(m_templateInsertionModes.isEmpty());
 #endif
 
-    ASSERT(m_document);
+    ASSERT(m_isAttached);
     // Warning, this may detach the parser. Do not do anything else after this.
-    m_document->finishedParsing();
+    m_tree.finishedParsing();
 }
 
 void HTMLTreeBuilder::parseError(AtomicHTMLToken*)
 {
-}
-
-bool HTMLTreeBuilder::scriptEnabled(Frame* frame)
-{
-    if (!frame)
-        return false;
-    return frame->script()->canExecuteScripts(NotAboutToExecuteScript);
-}
-
-bool HTMLTreeBuilder::pluginsEnabled(Frame* frame)
-{
-    if (!frame)
-        return false;
-    return frame->loader()->subframeLoader()->allowPlugins(NotAboutToInstantiatePlugin);
 }
 
 }

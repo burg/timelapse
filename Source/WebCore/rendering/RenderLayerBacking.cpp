@@ -130,6 +130,10 @@ RenderLayerBacking::RenderLayerBacking(RenderLayer* layer)
         if (Page* page = renderer()->frame()->page()) {
             Frame* frame = renderer()->frame();
             tiledBacking->setIsInWindow(page->isOnscreen());
+
+            if (m_isMainFrameRenderViewLayer)
+                tiledBacking->setUnparentsOffscreenTiles(true);
+
             tiledBacking->setScrollingPerformanceLoggingEnabled(frame->settings() && frame->settings()->scrollingPerformanceLoggingEnabled());
             adjustTileCacheCoverage();
         }
@@ -197,7 +201,9 @@ void RenderLayerBacking::adjustTileCacheCoverage()
             tileCoverage |= TiledBacking::CoverageForVerticalScrolling;
 
         if (ScrollingCoordinator* scrollingCoordinator = frame->page()->scrollingCoordinator()) {
-            if (scrollingCoordinator->shouldUpdateScrollLayerPositionOnMainThread())
+            // Ask our TiledBacking for large tiles unless the only reason we're main-thread-scrolling
+            // is a page overlay (find-in-page, the Web Inspector highlight mechanism, etc.).
+            if (scrollingCoordinator->mainThreadScrollingReasons() & ~ScrollingCoordinator::ForcedOnMainThread)
                 tileCoverage |= TiledBacking::CoverageForSlowScrolling;
         }
     }
@@ -245,7 +251,7 @@ void RenderLayerBacking::createPrimaryGraphicsLayer()
 {
     String layerName;
 #ifndef NDEBUG
-    layerName = nameForLayer();
+    layerName = m_owningLayer->name();
 #endif
     
     // The call to createGraphicsLayer ends calling back into here as
@@ -620,7 +626,7 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
         RenderLayer::ClipRectsContext clipRectsContext(compAncestor, 0, TemporaryClipRects, IgnoreOverlayScrollbarSize, RenderLayer::IgnoreOverflowClip);
         IntRect parentClipRect = pixelSnappedIntRect(m_owningLayer->backgroundClipRect(clipRectsContext).rect()); // FIXME: Incorrect for CSS regions.
         ASSERT(parentClipRect != PaintInfo::infiniteRect());
-        m_ancestorClippingLayer->setPosition(FloatPoint() + (parentClipRect.location() - graphicsLayerParentLocation));
+        m_ancestorClippingLayer->setPosition(FloatPoint(parentClipRect.location() - graphicsLayerParentLocation));
         m_ancestorClippingLayer->setSize(parentClipRect.size());
 
         // backgroundRect is relative to compAncestor, so subtract deltaX/deltaY to get back to local coords.
@@ -630,8 +636,8 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
         graphicsLayerParentLocation = parentClipRect.location();
     }
 
-    m_graphicsLayer->setPosition(FloatPoint() + (relativeCompositingBounds.location() - graphicsLayerParentLocation));
-    m_graphicsLayer->setOffsetFromRenderer(localCompositingBounds.location() - IntPoint());
+    m_graphicsLayer->setPosition(FloatPoint(relativeCompositingBounds.location() - graphicsLayerParentLocation));
+    m_graphicsLayer->setOffsetFromRenderer(toIntSize(localCompositingBounds.location()));
     
     FloatSize oldSize = m_graphicsLayer->size();
     FloatSize newSize = relativeCompositingBounds.size();
@@ -648,9 +654,9 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
     IntRect clippingBox;
     if (GraphicsLayer* clipLayer = clippingLayer()) {
         clippingBox = clipBox(toRenderBox(renderer()));
-        clipLayer->setPosition(FloatPoint() + (clippingBox.location() - localCompositingBounds.location()));
+        clipLayer->setPosition(FloatPoint(clippingBox.location() - localCompositingBounds.location()));
         clipLayer->setSize(clippingBox.size());
-        clipLayer->setOffsetFromRenderer(clippingBox.location() - IntPoint());
+        clipLayer->setOffsetFromRenderer(toIntSize(clippingBox.location()));
     }
     
     if (m_maskLayer) {
@@ -705,7 +711,7 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
             // If we have a clipping layer (which clips descendants), then the foreground layer is a child of it,
             // so that it gets correctly sorted with children. In that case, position relative to the clipping layer.
             foregroundSize = FloatSize(clippingBox.size());
-            foregroundOffset = clippingBox.location() - IntPoint();
+            foregroundOffset = toIntSize(clippingBox.location());
         }
 
         m_foregroundLayer->setPosition(foregroundPosition);
@@ -724,7 +730,7 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
         // but the reflected layer is the bounds of this layer, so we need to position it appropriately.
         FloatRect layerBounds = compositedBounds();
         FloatRect reflectionLayerBounds = reflectionBacking->compositedBounds();
-        reflectionBacking->graphicsLayer()->setReplicatedLayerPosition(FloatPoint() + (layerBounds.location() - reflectionLayerBounds.location()));
+        reflectionBacking->graphicsLayer()->setReplicatedLayerPosition(FloatPoint(layerBounds.location() - reflectionLayerBounds.location()));
     }
 
     if (m_scrollingLayer) {
@@ -733,13 +739,13 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
         IntRect paddingBox(renderBox->borderLeft(), renderBox->borderTop(), renderBox->width() - renderBox->borderLeft() - renderBox->borderRight(), renderBox->height() - renderBox->borderTop() - renderBox->borderBottom());
         IntSize scrollOffset = m_owningLayer->scrolledContentOffset();
 
-        m_scrollingLayer->setPosition(FloatPoint() + (paddingBox.location() - localCompositingBounds.location()));
+        m_scrollingLayer->setPosition(FloatPoint(paddingBox.location() - localCompositingBounds.location()));
 
         m_scrollingLayer->setSize(paddingBox.size());
         m_scrollingContentsLayer->setPosition(FloatPoint(-scrollOffset.width(), -scrollOffset.height()));
 
         IntSize oldScrollingLayerOffset = m_scrollingLayer->offsetFromRenderer();
-        m_scrollingLayer->setOffsetFromRenderer(IntPoint() - paddingBox.location());
+        m_scrollingLayer->setOffsetFromRenderer(-toIntSize(paddingBox.location()));
 
         bool paddingBoxOffsetChanged = oldScrollingLayerOffset != m_scrollingLayer->offsetFromRenderer();
 
@@ -747,7 +753,7 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
         if (scrollSize != m_scrollingContentsLayer->size() || paddingBoxOffsetChanged)
             m_scrollingContentsLayer->setNeedsDisplay();
 
-        IntSize scrollingContentsOffset = paddingBox.location() - IntPoint() - scrollOffset;
+        IntSize scrollingContentsOffset = toIntSize(paddingBox.location() - scrollOffset);
         if (scrollingContentsOffset != m_scrollingContentsLayer->offsetFromRenderer() || scrollSize != m_scrollingContentsLayer->size())
             compositor()->scrollingLayerDidChange(m_owningLayer);
 
@@ -990,7 +996,7 @@ bool RenderLayerBacking::updateForegroundLayer(bool needsForegroundLayer)
         if (!m_foregroundLayer) {
             String layerName;
 #ifndef NDEBUG
-            layerName = nameForLayer() + " (foreground)";
+            layerName = m_owningLayer->name() + " (foreground)";
 #endif
             m_foregroundLayer = createGraphicsLayer(layerName);
             m_foregroundLayer->setDrawsContent(true);
@@ -1981,39 +1987,6 @@ AnimatedPropertyID RenderLayerBacking::cssToGraphicsLayerProperty(CSSPropertyID 
             break;
     }
     return AnimatedPropertyInvalid;
-}
-
-String RenderLayerBacking::nameForLayer() const
-{
-    StringBuilder name;
-    name.append(renderer()->renderName());
-    if (Node* node = renderer()->node()) {
-        if (node->isElementNode()) {
-            name.append(' ');
-            name.append(static_cast<Element*>(node)->tagName());
-        }
-        if (node->hasID()) {
-            name.appendLiteral(" id=\'");
-            name.append(static_cast<Element*>(node)->getIdAttribute());
-            name.append('\'');
-        }
-
-        if (node->hasClass()) {
-            name.appendLiteral(" class=\'");
-            StyledElement* styledElement = static_cast<StyledElement*>(node);
-            for (size_t i = 0; i < styledElement->classNames().size(); ++i) {
-                if (i > 0)
-                    name.append(' ');
-                name.append(styledElement->classNames()[i]);
-            }
-            name.append('\'');
-        }
-    }
-
-    if (m_owningLayer->isReflection())
-        name.appendLiteral(" (reflection)");
-
-    return name.toString();
 }
 
 CompositingLayerType RenderLayerBacking::compositingLayerType() const

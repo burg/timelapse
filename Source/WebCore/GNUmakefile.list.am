@@ -79,6 +79,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSCanvasGradient.h \
 	DerivedSources/WebCore/JSCanvasPattern.cpp \
 	DerivedSources/WebCore/JSCanvasPattern.h \
+	DerivedSources/WebCore/JSCanvasProxy.cpp \
+	DerivedSources/WebCore/JSCanvasProxy.h \
 	DerivedSources/WebCore/JSCanvasRenderingContext2D.cpp \
 	DerivedSources/WebCore/JSCanvasRenderingContext2D.h \
 	DerivedSources/WebCore/JSCanvasRenderingContext.cpp \
@@ -519,8 +521,6 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSMediaStreamTrack.h \
 	DerivedSources/WebCore/JSMediaStreamTrackEvent.cpp \
 	DerivedSources/WebCore/JSMediaStreamTrackEvent.h \
-	DerivedSources/WebCore/JSMediaStreamTrackList.cpp \
-	DerivedSources/WebCore/JSMediaStreamTrackList.h \
 	DerivedSources/WebCore/JSMediaQueryList.cpp \
 	DerivedSources/WebCore/JSMediaQueryList.h \
 	DerivedSources/WebCore/JSMemoryInfo.cpp \
@@ -1241,7 +1241,6 @@ dom_binding_idls += \
 	$(WebCore)/Modules/mediastream/MediaStreamList.idl \
 	$(WebCore)/Modules/mediastream/MediaStreamTrack.idl \
 	$(WebCore)/Modules/mediastream/MediaStreamTrackEvent.idl \
-	$(WebCore)/Modules/mediastream/MediaStreamTrackList.idl \
 	$(WebCore)/Modules/mediastream/NavigatorMediaStream.idl \
 	$(WebCore)/Modules/mediastream/NavigatorUserMediaError.idl \
 	$(WebCore)/Modules/mediastream/NavigatorUserMediaErrorCallback.idl \
@@ -1262,6 +1261,7 @@ dom_binding_idls += \
 	$(WebCore)/Modules/notifications/Notification.idl \
 	$(WebCore)/Modules/notifications/NotificationCenter.idl \
 	$(WebCore)/Modules/notifications/NotificationPermissionCallback.idl \
+	$(WebCore)/Modules/proximity/DeviceProximityEvent.idl \
 	$(WebCore)/Modules/quota/DOMWindowQuota.idl \
 	$(WebCore)/Modules/quota/StorageInfo.idl \
 	$(WebCore)/Modules/quota/StorageInfoErrorCallback.idl \
@@ -1514,6 +1514,7 @@ dom_binding_idls += \
 	$(WebCore)/html/canvas/ArrayBufferView.idl \
 	$(WebCore)/html/canvas/CanvasGradient.idl \
 	$(WebCore)/html/canvas/CanvasPattern.idl \
+	$(WebCore)/html/canvas/CanvasProxy.idl \
 	$(WebCore)/html/canvas/CanvasRenderingContext.idl \
 	$(WebCore)/html/canvas/CanvasRenderingContext2D.idl \
 	$(WebCore)/html/canvas/DataView.idl \
@@ -1738,6 +1739,7 @@ dom_binding_idls += \
 	$(WebCore)/testing/Internals.idl \
 	$(WebCore)/testing/InternalSettings.idl \
 	$(WebCore)/testing/MallocStatistics.idl \
+	$(WebCore)/testing/TypeConversions.idl \
 	$(WebCore)/workers/AbstractWorker.idl \
 	$(WebCore)/workers/DedicatedWorkerContext.idl \
 	$(WebCore)/workers/SharedWorker.idl \
@@ -1868,8 +1870,6 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/indexeddb/IDBFactoryBackendInterface.h \
 	Source/WebCore/Modules/indexeddb/IDBFactory.cpp \
 	Source/WebCore/Modules/indexeddb/IDBFactory.h \
-	Source/WebCore/Modules/indexeddb/IDBIndexBackendImpl.cpp \
-	Source/WebCore/Modules/indexeddb/IDBIndexBackendImpl.h \
 	Source/WebCore/Modules/indexeddb/IDBIndexBackendInterface.h \
 	Source/WebCore/Modules/indexeddb/IDBIndex.cpp \
 	Source/WebCore/Modules/indexeddb/IDBIndex.h \
@@ -1936,8 +1936,6 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/mediastream/MediaStreamTrack.h \
 	Source/WebCore/Modules/mediastream/MediaStreamTrackEvent.cpp \
 	Source/WebCore/Modules/mediastream/MediaStreamTrackEvent.h \
-	Source/WebCore/Modules/mediastream/MediaStreamTrackList.cpp \
-	Source/WebCore/Modules/mediastream/MediaStreamTrackList.h \
 	Source/WebCore/Modules/mediastream/NavigatorMediaStream.cpp \
 	Source/WebCore/Modules/mediastream/NavigatorMediaStream.h \
 	Source/WebCore/Modules/mediastream/NavigatorUserMediaError.h \
@@ -1990,6 +1988,11 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/notifications/NotificationPermissionCallback.h \
 	Source/WebCore/Modules/notifications/WorkerContextNotifications.cpp \
 	Source/WebCore/Modules/notifications/WorkerContextNotifications.h \
+	Source/WebCore/Modules/proximity/DeviceProximityClient.h \
+	Source/WebCore/Modules/proximity/DeviceProximityController.cpp \
+	Source/WebCore/Modules/proximity/DeviceProximityController.h \
+	Source/WebCore/Modules/proximity/DeviceProximityEvent.cpp \
+	Source/WebCore/Modules/proximity/DeviceProximityEvent.h \
 	Source/WebCore/Modules/quota/DOMWindowQuota.cpp \
 	Source/WebCore/Modules/quota/DOMWindowQuota.h \
 	Source/WebCore/Modules/quota/StorageInfo.cpp \
@@ -2095,6 +2098,7 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/webdatabase/Database.h \
 	Source/WebCore/Modules/webdatabase/DatabaseAuthorizer.cpp \
 	Source/WebCore/Modules/webdatabase/DatabaseAuthorizer.h \
+	Source/WebCore/Modules/webdatabase/DatabaseBasicTypes.h \
 	Source/WebCore/Modules/webdatabase/DatabaseCallback.h \
 	Source/WebCore/Modules/webdatabase/DatabaseContext.cpp \
 	Source/WebCore/Modules/webdatabase/DatabaseContext.h \
@@ -2255,6 +2259,7 @@ webcore_sources += \
 	Source/WebCore/bindings/js/JSAttrCustom.cpp \
 	Source/WebCore/bindings/js/JSAudioBufferSourceNodeCustom.cpp \
 	Source/WebCore/bindings/js/JSAudioContextCustom.cpp \
+	Source/WebCore/bindings/js/JSBiquadFilterNodeCustom.cpp \
 	Source/WebCore/bindings/js/JSBlobCustom.cpp \
 	Source/WebCore/bindings/js/JSCDATASectionCustom.cpp \
 	Source/WebCore/bindings/js/JSCSSFontFaceRuleCustom.cpp \
@@ -2383,6 +2388,7 @@ webcore_sources += \
 	Source/WebCore/bindings/js/JSNodeIteratorCustom.cpp \
 	Source/WebCore/bindings/js/JSNodeListCustom.cpp \
 	Source/WebCore/bindings/js/JSOscillatorNodeCustom.cpp \
+	Source/WebCore/bindings/js/JSPannerNodeCustom.cpp \
 	Source/WebCore/bindings/js/JSPluginElementFunctions.cpp \
 	Source/WebCore/bindings/js/JSPluginElementFunctions.h \
 	Source/WebCore/bindings/js/JSPopStateEventCustom.cpp \
@@ -2532,6 +2538,8 @@ webcore_sources += \
 	Source/WebCore/css/CSSFunctionValue.h \
 	Source/WebCore/css/CSSGradientValue.cpp \
 	Source/WebCore/css/CSSGradientValue.h \
+	Source/WebCore/css/CSSGroupingRule.cpp \
+	Source/WebCore/css/CSSGroupingRule.h \
 	Source/WebCore/css/CSSHelper.h \
 	Source/WebCore/css/CSSImageGeneratorValue.cpp \
 	Source/WebCore/css/CSSImageGeneratorValue.h \
@@ -2685,9 +2693,12 @@ webcore_sources += \
 	Source/WebCore/css/WebKitCSSViewportRule.h \
 	Source/WebCore/dom/ActiveDOMObject.cpp \
 	Source/WebCore/dom/ActiveDOMObject.h \
+	Source/WebCore/dom/AncestorChainWalker.cpp \
+	Source/WebCore/dom/AncestorChainWalker.h \
 	Source/WebCore/dom/Attr.cpp \
 	Source/WebCore/dom/Attr.h \
 	Source/WebCore/dom/Attribute.h \
+	Source/WebCore/dom/AutocompleteErrorEvent.h \
 	Source/WebCore/dom/BeforeLoadEvent.h \
 	Source/WebCore/dom/BeforeTextInsertedEvent.cpp \
 	Source/WebCore/dom/BeforeTextInsertedEvent.h \
@@ -3196,6 +3207,8 @@ webcore_sources += \
 	Source/WebCore/html/canvas/CanvasGradient.h \
 	Source/WebCore/html/canvas/CanvasPattern.cpp \
 	Source/WebCore/html/canvas/CanvasPattern.h \
+	Source/WebCore/html/canvas/CanvasProxy.cpp \
+	Source/WebCore/html/canvas/CanvasProxy.h \
 	Source/WebCore/html/canvas/CanvasRenderingContext2D.cpp \
 	Source/WebCore/html/canvas/CanvasRenderingContext2D.h \
 	Source/WebCore/html/canvas/CanvasRenderingContext.cpp \
@@ -3531,6 +3544,8 @@ webcore_sources += \
 	Source/WebCore/html/parser/HTMLMetaCharsetParser.h \
 	Source/WebCore/html/parser/HTMLParserIdioms.cpp \
 	Source/WebCore/html/parser/HTMLParserIdioms.h \
+	Source/WebCore/html/parser/HTMLParserOptions.cpp \
+	Source/WebCore/html/parser/HTMLParserOptions.h \
 	Source/WebCore/html/parser/HTMLParserScheduler.cpp \
 	Source/WebCore/html/parser/HTMLParserScheduler.h \
 	Source/WebCore/html/parser/HTMLPreloadScanner.cpp \
@@ -3542,6 +3557,7 @@ webcore_sources += \
 	Source/WebCore/html/parser/HTMLSourceTracker.h \
 	Source/WebCore/html/parser/HTMLStackItem.h \
 	Source/WebCore/html/parser/HTMLToken.h \
+	Source/WebCore/html/parser/HTMLTokenTypes.h \
 	Source/WebCore/html/parser/HTMLTokenizer.cpp \
 	Source/WebCore/html/parser/HTMLTokenizer.h \
 	Source/WebCore/html/parser/HTMLTreeBuilder.cpp \
@@ -5412,6 +5428,7 @@ webcore_platform_sources += \
 	Source/WebCore/platform/graphics/filters/CustomFilterParameterList.h \
 	Source/WebCore/platform/graphics/filters/CustomFilterProgram.cpp \
 	Source/WebCore/platform/graphics/filters/CustomFilterProgram.h \
+	Source/WebCore/platform/graphics/filters/CustomFilterProgramClient.h \
 	Source/WebCore/platform/graphics/filters/CustomFilterProgramInfo.cpp \
 	Source/WebCore/platform/graphics/filters/CustomFilterProgramInfo.h \
 	Source/WebCore/platform/graphics/filters/CustomFilterRenderer.cpp \
@@ -5697,10 +5714,10 @@ webcore_platform_sources += \
 	Source/WebCore/platform/image-decoders/ImageDecoder.h \
 	Source/WebCore/platform/image-decoders/jpeg/JPEGImageDecoder.cpp \
 	Source/WebCore/platform/image-decoders/jpeg/JPEGImageDecoder.h \
-	Source/WebCore/platform/image-decoders/webp/WEBPImageDecoder.cpp \
-	Source/WebCore/platform/image-decoders/webp/WEBPImageDecoder.h \
 	Source/WebCore/platform/image-decoders/png/PNGImageDecoder.cpp \
 	Source/WebCore/platform/image-decoders/png/PNGImageDecoder.h \
+	Source/WebCore/platform/image-decoders/webp/WEBPImageDecoder.cpp \
+	Source/WebCore/platform/image-decoders/webp/WEBPImageDecoder.h \
 	Source/WebCore/platform/LayoutTestSupport.cpp \
 	Source/WebCore/platform/LayoutTestSupport.h \
 	Source/WebCore/platform/linux/GamepadDeviceLinux.cpp \
@@ -5774,6 +5791,7 @@ webcore_platform_sources += \
 	Source/WebCore/platform/network/ProxyServer.h \
 	Source/WebCore/platform/network/NetworkStateNotifier.cpp \
 	Source/WebCore/platform/network/NetworkStateNotifier.h \
+	Source/WebCore/platform/network/NetworkStorageSession.h \
 	Source/WebCore/platform/network/NetworkStorageSessionStub.cpp \
 	Source/WebCore/platform/network/ParsedContentType.cpp \
 	Source/WebCore/platform/network/ParsedContentType.h \

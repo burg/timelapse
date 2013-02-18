@@ -37,7 +37,7 @@ class RenderRegion;
 struct PaintInfo;
 
 enum SizeType { MainOrPreferredSize, MinSize, MaxSize };
-
+enum AvailableLogicalHeightType { ExcludeMarginBorderPadding, IncludeMarginBorderPadding };
 enum OverlayScrollbarSizeRelevancy { IgnoreOverlayScrollbarSize, IncludeOverlayScrollbarSize };
 
 enum ShouldComputePreferred { ComputeActual, ComputePreferred };
@@ -205,9 +205,8 @@ public:
     virtual LayoutUnit offsetWidth() const { return width(); }
     virtual LayoutUnit offsetHeight() const { return height(); }
 
-    // FIXME: The implementation for these functions will change once we move to subpixel layout. See bug 60318.
-    virtual int pixelSnappedOffsetWidth() const { return pixelSnappedWidth(); }
-    virtual int pixelSnappedOffsetHeight() const { return pixelSnappedHeight(); }
+    virtual int pixelSnappedOffsetWidth() const OVERRIDE;
+    virtual int pixelSnappedOffsetHeight() const OVERRIDE;
 
     // More IE extensions.  clientWidth and clientHeight represent the interior of an object
     // excluding border and scrollbar.  clientLeft/Top are just the borderLeftWidth and borderTopWidth.
@@ -294,6 +293,9 @@ public:
     virtual void layout();
     virtual void paint(PaintInfo&, const LayoutPoint&);
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) OVERRIDE;
+
+    LayoutUnit minIntrinsicLogicalWidth() const;
+    LayoutUnit maxIntrinsicLogicalWidth() const;
 
     virtual LayoutUnit minPreferredLogicalWidth() const;
     virtual LayoutUnit maxPreferredLogicalWidth() const;
@@ -383,7 +385,7 @@ public:
     virtual void repaintDuringLayoutIfMoved(const LayoutRect&);
 
     virtual LayoutUnit containingBlockLogicalWidthForContent() const;
-    LayoutUnit containingBlockLogicalHeightForContent() const;
+    LayoutUnit containingBlockLogicalHeightForContent(AvailableLogicalHeightType) const;
 
     LayoutUnit containingBlockLogicalWidthForContentInRegion(RenderRegion*, LayoutUnit offsetFromLogicalTopOfFirstPage) const;
     LayoutUnit containingBlockAvailableLineWidthInRegion(RenderRegion*, LayoutUnit offsetFromLogicalTopOfFirstPage) const;
@@ -429,16 +431,17 @@ public:
 
     // Block flows subclass availableWidth/Height to handle multi column layout (shrinking the width/height available to children when laying out.)
     virtual LayoutUnit availableLogicalWidth() const { return contentLogicalWidth(); }
-    virtual LayoutUnit availableLogicalHeight() const;
-    LayoutUnit availableLogicalHeightUsing(const Length&) const;
+    virtual LayoutUnit availableLogicalHeight(AvailableLogicalHeightType) const;
+    LayoutUnit availableLogicalHeightUsing(const Length&, AvailableLogicalHeightType) const;
     
     // There are a few cases where we need to refer specifically to the available physical width and available physical height.
     // Relative positioning is one of those cases, since left/top offsets are physical.
-    LayoutUnit availableWidth() const { return style()->isHorizontalWritingMode() ? availableLogicalWidth() : availableLogicalHeight(); }
-    LayoutUnit availableHeight() const { return style()->isHorizontalWritingMode() ? availableLogicalHeight() : availableLogicalWidth(); }
+    LayoutUnit availableWidth() const { return style()->isHorizontalWritingMode() ? availableLogicalWidth() : availableLogicalHeight(IncludeMarginBorderPadding); }
+    LayoutUnit availableHeight() const { return style()->isHorizontalWritingMode() ? availableLogicalHeight(IncludeMarginBorderPadding) : availableLogicalWidth(); }
 
     virtual int verticalScrollbarWidth() const;
     int horizontalScrollbarHeight() const;
+    int instrinsicScrollbarLogicalWidth() const;
     int scrollbarLogicalHeight() const { return style()->isHorizontalWritingMode() ? horizontalScrollbarHeight() : verticalScrollbarWidth(); }
     virtual bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1, Node** stopNode = 0);
     virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier = 1, Node** stopNode = 0);
@@ -649,6 +652,8 @@ private:
 
     void computePositionedLogicalHeightReplaced(LogicalExtentComputedValues&) const;
     void computePositionedLogicalWidthReplaced(LogicalExtentComputedValues&) const;
+
+    virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const;
 
     // This function calculates the minimum and maximum preferred widths for an object.
     // These values are used in shrink-to-fit layout systems.

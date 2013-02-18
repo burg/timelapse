@@ -44,9 +44,9 @@ BEGIN {
 my (
     $threeDRenderingSupport,
     $accelerated2DCanvasSupport,
-    $animationAPISupport,
     $batteryStatusSupport,
     $blobSupport,
+    $canvasProxySupport,
     $channelMessagingSupport,
     $cspNextSupport,
     $css3BackgroundSupport,
@@ -158,14 +158,14 @@ my @features = (
     { option => "accelerated-2d-canvas", desc => "Toggle Accelerated 2D Canvas support",
       define => "ENABLE_ACCELERATED_2D_CANVAS", default => 0, value => \$accelerated2DCanvasSupport },
 
-    { option => "animation-api", desc => "Toggle Animation API support",
-      define => "ENABLE_ANIMATION_API", default => (isBlackBerry() || isEfl()), value => \$animationAPISupport },
-
     { option => "battery-status", desc => "Toggle Battery Status support",
       define => "ENABLE_BATTERY_STATUS", default => (isEfl() || isBlackBerry()), value => \$batteryStatusSupport },
 
     { option => "blob", desc => "Toggle Blob support",
       define => "ENABLE_BLOB", default => (isAppleMacWebKit() || isGtk() || isChromium() || isBlackBerry() || isEfl()), value => \$blobSupport },
+
+    { option => "canvas-proxy", desc => "Toggle CanvasProxy support",
+      define => "ENABLE_CANVAS_PROXY", default => 0, value => \$canvasProxySupport },
 
     { option => "channel-messaging", desc => "Toggle Channel Messaging support",
       define => "ENABLE_CHANNEL_MESSAGING", default => 1, value => \$channelMessagingSupport },
@@ -340,9 +340,6 @@ my @features = (
 
     { option => "mouse-cursor-scale", desc => "Toggle Scaled mouse cursor support",
       define => "ENABLE_MOUSE_CURSOR_SCALE", default => 0, value => \$mouseCursorScaleSupport },
-
-    { option => "mutation-observers", desc => "Toggle Mutation Observers support",
-      define => "ENABLE_MUTATION_OBSERVERS", default => 1, value => \$mutationObserversSupport },
 
     { option => "navigator-content-utils", desc => "Toggle Navigator Content Utils support",
       define => "ENABLE_NAVIGATOR_CONTENT_UTILS", default => (isBlackBerry() || isEfl()), value => \$registerProtocolHandlerSupport },

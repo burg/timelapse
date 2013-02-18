@@ -545,12 +545,12 @@ END
         if ($customWrap) {
             push(@headerContent, <<END);
 
-v8::Handle<v8::Object> wrap(${nativeType}* impl, v8::Handle<v8::Object> creationContext, v8::Isolate* = 0);
+v8::Handle<v8::Object> wrap(${nativeType}* impl, v8::Handle<v8::Object> creationContext, v8::Isolate*);
 END
         } else {
             push(@headerContent, <<END);
 
-inline v8::Handle<v8::Object> wrap(${nativeType}* impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate = 0)
+inline v8::Handle<v8::Object> wrap(${nativeType}* impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
 {
     ASSERT(impl);
     ASSERT(DOMDataStore::getWrapper(impl, isolate).IsEmpty());
@@ -929,7 +929,7 @@ END
             # Generate super-compact call for regular attribute getter:
             my ($functionName, @arguments) = $codeGenerator->GetterExpression(\%implIncludes, $interfaceName, $attribute);
             push(@implContentDecls, "    Element* imp = V8Element::toNative(info.Holder());\n");
-            push(@implContentDecls, "    return v8String(imp->${functionName}(" . join(", ", @arguments) . "), info.GetIsolate());\n");
+            push(@implContentDecls, "    return v8String(imp->${functionName}(" . join(", ", @arguments) . "), info.GetIsolate(), ReturnUnsafeHandle);\n");
             push(@implContentDecls, "}\n\n");
             push(@implContentDecls, "#endif // ${conditionalString}\n\n") if $conditionalString;
             return;
@@ -1114,7 +1114,7 @@ END
     return value;
 END
     } else {
-        push(@implContentDecls, "    return " . NativeToJSValue($attribute->signature, $result, "info.Holder()", "info.GetIsolate()", "info", "imp").";\n");
+        push(@implContentDecls, "    return " . NativeToJSValue($attribute->signature, $result, "info.Holder()", "info.GetIsolate()", "info", "imp", "ReturnUnsafeHandle").";\n");
     }
 
     push(@implContentDecls, "}\n\n");  # end of getter
@@ -3252,11 +3252,11 @@ sub GenerateCallbackHeader
 
     push(@headerContent, <<END);
 public:
-    static PassRefPtr<${v8InterfaceName}> create(v8::Handle<v8::Value> value, ScriptExecutionContext* context, v8::Handle<v8::Object> owner = v8::Handle<v8::Object>())
+    static PassRefPtr<${v8InterfaceName}> create(v8::Handle<v8::Value> value, ScriptExecutionContext* context)
     {
         ASSERT(value->IsObject());
         ASSERT(context);
-        return adoptRef(new ${v8InterfaceName}(v8::Handle<v8::Object>::Cast(value), context, owner));
+        return adoptRef(new ${v8InterfaceName}(v8::Handle<v8::Object>::Cast(value), context));
     }
 
     virtual ~${v8InterfaceName}();
@@ -3290,13 +3290,7 @@ END
     virtual ScriptExecutionContext* scriptExecutionContext() const { return ContextDestructionObserver::scriptExecutionContext(); }
 
 private:
-    ${v8InterfaceName}(v8::Handle<v8::Object>, ScriptExecutionContext*, v8::Handle<v8::Object>);
-
-    static void weakCallback(v8::Persistent<v8::Value> wrapper, void* parameter)
-    {
-        ${v8InterfaceName}* object = static_cast<${v8InterfaceName}*>(parameter);
-        object->m_callback.clear();
-    }
+    ${v8InterfaceName}(v8::Handle<v8::Object>, ScriptExecutionContext*);
 
     ScopedPersistent<v8::Object> m_callback;
     WorldContextHandle m_worldContext;
@@ -3328,15 +3322,11 @@ sub GenerateCallbackImplementation
     push(@implContent, "#include <wtf/Assertions.h>\n\n");
     push(@implContent, "namespace WebCore {\n\n");
     push(@implContent, <<END);
-${v8InterfaceName}::${v8InterfaceName}(v8::Handle<v8::Object> callback, ScriptExecutionContext* context, v8::Handle<v8::Object> owner)
+${v8InterfaceName}::${v8InterfaceName}(v8::Handle<v8::Object> callback, ScriptExecutionContext* context)
     : ActiveDOMCallback(context)
     , m_callback(callback)
     , m_worldContext(UseCurrentWorld)
 {
-    if (owner.IsEmpty())
-        return;
-    owner->SetHiddenValue(V8HiddenPropertyName::callback(), callback);
-    m_callback.get().MakeWeak(this, &${v8InterfaceName}::weakCallback);
 }
 
 ${v8InterfaceName}::~${v8InterfaceName}()
@@ -3389,7 +3379,7 @@ END
             @args = ();
             foreach my $param (@params) {
                 my $paramName = $param->name;
-                push(@implContent, "    v8::Handle<v8::Value> ${paramName}Handle = " . NativeToJSValue($param, $paramName) . ";\n");
+                push(@implContent, "    v8::Handle<v8::Value> ${paramName}Handle = " . NativeToJSValue($param, $paramName, "v8::Handle<v8::Object>()", "v8::Isolate::GetCurrent()") . ";\n");
                 push(@implContent, "    if (${paramName}Handle.IsEmpty()) {\n");
                 push(@implContent, "        if (!isScriptControllerTerminating())\n");
                 push(@implContent, "            CRASH();\n");
@@ -3628,9 +3618,9 @@ sub GenerateFunctionCallString()
     my $nativeValue;
     # FIXME: Update for all ScriptWrappables.
     if (IsDOMNodeType($interfaceName)) {
-        $nativeValue = NativeToJSValue($function->signature, $return, "args.Holder()", "args.GetIsolate()", "args", "imp");
+        $nativeValue = NativeToJSValue($function->signature, $return, "args.Holder()", "args.GetIsolate()", "args", "imp", "ReturnUnsafeHandle");
     } else {
-        $nativeValue = NativeToJSValue($function->signature, $return, "args.Holder()", "args.GetIsolate()");
+        $nativeValue = NativeToJSValue($function->signature, $return, "args.Holder()", "args.GetIsolate()", 0, 0, "ReturnUnsafeHandle");
     }
 
     $result .= $indent . "return " . $nativeValue . ";\n";
@@ -4033,13 +4023,14 @@ sub NativeToJSValue
     my $signature = shift;
     my $value = shift;
     my $getCreationContext = shift;
-    my $getCreationContextArg = $getCreationContext ? ", $getCreationContext" : "";
     my $getIsolate = shift;
-    my $getIsolateArg = $getIsolate ? ", $getIsolate" : "";
     my $getHolderContainer = shift;
     my $getHolderContainerArg = $getHolderContainer ? ", $getHolderContainer" : "";
     my $getScriptWrappable = shift;
     my $getScriptWrappableArg = $getScriptWrappable ? ", $getScriptWrappable" : "";
+    my $returnHandleType = shift;
+    my $returnHandleTypeArg = $returnHandleType ? ", $returnHandleType" : "";
+
     my $type = $signature->type;
 
     return ($getIsolate ? "v8Boolean($value, $getIsolate)" : "v8Boolean($value)") if $type eq "boolean";
@@ -4050,16 +4041,16 @@ sub NativeToJSValue
     # should be returned instead.
     if ($signature->extendedAttributes->{"Reflect"} and ($type eq "unsigned long" or $type eq "unsigned short")) {
         $value =~ s/getUnsignedIntegralAttribute/getIntegralAttribute/g;
-        return "v8UnsignedInteger(std::max(0, " . $value . ")$getIsolateArg)";
+        return "v8UnsignedInteger(std::max(0, " . $value . "), $getIsolate)";
     }
 
     # For all the types where we use 'int' as the representation type,
     # we use v8Integer() which has a fast small integer conversion check.
     my $nativeType = GetNativeType($type);
-    return "v8Integer($value$getIsolateArg)" if $nativeType eq "int";
-    return "v8UnsignedInteger($value$getIsolateArg)" if $nativeType eq "unsigned";
+    return "v8Integer($value, $getIsolate)" if $nativeType eq "int";
+    return "v8UnsignedInteger($value, $getIsolate)" if $nativeType eq "unsigned";
 
-    return "v8DateOrNull($value$getIsolateArg)" if $type eq "Date";
+    return "v8DateOrNull($value, $getIsolate)" if $type eq "Date";
     # long long and unsigned long long are not representable in ECMAScript.
     return "v8::Number::New(static_cast<double>($value))" if $type eq "long long" or $type eq "unsigned long long" or $type eq "DOMTimeStamp";
     return "v8::Number::New($value)" if $codeGenerator->IsPrimitiveType($type);
@@ -4068,12 +4059,12 @@ sub NativeToJSValue
     if ($codeGenerator->IsStringType($type)) {
         my $conv = $signature->extendedAttributes->{"TreatReturnedNullStringAs"};
         if (defined $conv) {
-            return "v8StringOrNull($value$getIsolateArg)" if $conv eq "Null";
-            return "v8StringOrUndefined($value$getIsolateArg)" if $conv eq "Undefined";
+            return "v8StringOrNull($value, $getIsolate$returnHandleTypeArg)" if $conv eq "Null";
+            return "v8StringOrUndefined($value, $getIsolate$returnHandleTypeArg)" if $conv eq "Undefined";
 
             die "Unknown value for TreatReturnedNullStringAs extended attribute";
         }
-        return $getIsolate ? "v8String($value, $getIsolate)" : "deprecatedV8String($value)";
+        return $getIsolate ? "v8String($value, $getIsolate$returnHandleTypeArg)" : "deprecatedV8String($value)";
     }
 
     my $arrayType = $codeGenerator->GetArrayType($type);
@@ -4089,7 +4080,7 @@ sub NativeToJSValue
             AddToImplIncludes(GetV8HeaderName($arrayOrSequenceType));
             AddToImplIncludes("${arrayOrSequenceType}.h");
         }
-        return "v8Array(${value}${getIsolateArg})";
+        return "v8Array($value, $getIsolate)";
     }
 
     AddIncludesForType($type);
@@ -4098,7 +4089,7 @@ sub NativeToJSValue
       if ($getScriptWrappable) {
           return "toV8Fast($value$getHolderContainerArg$getScriptWrappableArg)";
       }
-      return "toV8($value$getCreationContextArg$getIsolateArg)";
+      return "toV8($value, $getCreationContext, $getIsolate)";
     }
 
     if ($type eq "EventListener") {
@@ -4118,7 +4109,7 @@ sub NativeToJSValue
     if ($getScriptWrappable) {
           return "toV8Fast($value$getHolderContainerArg$getScriptWrappableArg)";
     }
-    return "toV8($value$getCreationContextArg$getIsolateArg)";
+    return "toV8($value, $getCreationContext, $getIsolate)";
 }
 
 sub WriteData

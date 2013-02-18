@@ -280,11 +280,13 @@ extern "C" {
 #define PRESERVED_S0_OFFSET         64
 #define PRESERVED_S1_OFFSET         68
 #define PRESERVED_S2_OFFSET         72
-#define PRESERVED_RETURN_ADDRESS_OFFSET 76
-#define THUNK_RETURN_ADDRESS_OFFSET 80
-#define REGISTER_FILE_OFFSET        84
-#define GLOBAL_DATA_OFFSET         100
-#define STACK_LENGTH               104
+#define PRESERVED_S3_OFFSET         76
+#define PRESERVED_S4_OFFSET         80
+#define PRESERVED_RETURN_ADDRESS_OFFSET 84
+#define THUNK_RETURN_ADDRESS_OFFSET 88
+#define REGISTER_FILE_OFFSET        92
+#define GLOBAL_DATA_OFFSET         108
+#define STACK_LENGTH               112
 #elif CPU(SH4)
 #define SYMBOL_STRING(name) #name
 /* code (r4), JSStack* (r5), CallFrame* (r6), void* unused1 (r7), void* unused2(sp), JSGlobalData (sp)*/
@@ -451,6 +453,8 @@ asm (
 SYMBOL_STRING(ctiTrampoline) ":" "\n"
     "addiu $29,$29,-" STRINGIZE_VALUE_OF(STACK_LENGTH) "\n"
     "sw    $31," STRINGIZE_VALUE_OF(PRESERVED_RETURN_ADDRESS_OFFSET) "($29)" "\n"
+    "sw    $20," STRINGIZE_VALUE_OF(PRESERVED_S4_OFFSET) "($29)" "\n"
+    "sw    $19," STRINGIZE_VALUE_OF(PRESERVED_S3_OFFSET) "($29)" "\n"
     "sw    $18," STRINGIZE_VALUE_OF(PRESERVED_S2_OFFSET) "($29)" "\n"
     "sw    $17," STRINGIZE_VALUE_OF(PRESERVED_S1_OFFSET) "($29)" "\n"
     "sw    $16," STRINGIZE_VALUE_OF(PRESERVED_S0_OFFSET) "($29)" "\n"
@@ -467,12 +471,17 @@ SYMBOL_STRING(ctiTrampoline) ":" "\n"
     "lw    $16," STRINGIZE_VALUE_OF(PRESERVED_S0_OFFSET) "($29)" "\n"
     "lw    $17," STRINGIZE_VALUE_OF(PRESERVED_S1_OFFSET) "($29)" "\n"
     "lw    $18," STRINGIZE_VALUE_OF(PRESERVED_S2_OFFSET) "($29)" "\n"
+    "lw    $19," STRINGIZE_VALUE_OF(PRESERVED_S3_OFFSET) "($29)" "\n"
+    "lw    $20," STRINGIZE_VALUE_OF(PRESERVED_S4_OFFSET) "($29)" "\n"
     "lw    $31," STRINGIZE_VALUE_OF(PRESERVED_RETURN_ADDRESS_OFFSET) "($29)" "\n"
     "jr    $31" "\n"
     "addiu $29,$29," STRINGIZE_VALUE_OF(STACK_LENGTH) "\n"
 ".set reorder" "\n"
 ".set macro" "\n"
 ".end " SYMBOL_STRING(ctiTrampoline) "\n"
+".globl " SYMBOL_STRING(ctiTrampolineEnd) "\n"
+HIDE_SYMBOL(ctiTrampolineEnd) "\n"
+SYMBOL_STRING(ctiTrampolineEnd) ":" "\n"
 );
 
 asm (
@@ -485,8 +494,8 @@ asm (
 ".ent " SYMBOL_STRING(ctiVMThrowTrampoline) "\n"
 SYMBOL_STRING(ctiVMThrowTrampoline) ":" "\n"
 #if WTF_MIPS_PIC
-    "lw    $28," STRINGIZE_VALUE_OF(PRESERVED_GP_OFFSET) "($29)" "\n"
 ".set macro" "\n"
+".cpload $31" "\n"
     "la    $25," SYMBOL_STRING(cti_vm_throw) "\n"
 ".set nomacro" "\n"
     "bal " SYMBOL_STRING(cti_vm_throw) "\n"
@@ -498,6 +507,8 @@ SYMBOL_STRING(ctiVMThrowTrampoline) ":" "\n"
     "lw    $16," STRINGIZE_VALUE_OF(PRESERVED_S0_OFFSET) "($29)" "\n"
     "lw    $17," STRINGIZE_VALUE_OF(PRESERVED_S1_OFFSET) "($29)" "\n"
     "lw    $18," STRINGIZE_VALUE_OF(PRESERVED_S2_OFFSET) "($29)" "\n"
+    "lw    $19," STRINGIZE_VALUE_OF(PRESERVED_S3_OFFSET) "($29)" "\n"
+    "lw    $20," STRINGIZE_VALUE_OF(PRESERVED_S4_OFFSET) "($29)" "\n"
     "lw    $31," STRINGIZE_VALUE_OF(PRESERVED_RETURN_ADDRESS_OFFSET) "($29)" "\n"
     "jr    $31" "\n"
     "addiu $29,$29," STRINGIZE_VALUE_OF(STACK_LENGTH) "\n"
@@ -518,6 +529,8 @@ SYMBOL_STRING(ctiOpThrowNotCaught) ":" "\n"
     "lw    $16," STRINGIZE_VALUE_OF(PRESERVED_S0_OFFSET) "($29)" "\n"
     "lw    $17," STRINGIZE_VALUE_OF(PRESERVED_S1_OFFSET) "($29)" "\n"
     "lw    $18," STRINGIZE_VALUE_OF(PRESERVED_S2_OFFSET) "($29)" "\n"
+    "lw    $19," STRINGIZE_VALUE_OF(PRESERVED_S3_OFFSET) "($29)" "\n"
+    "lw    $20," STRINGIZE_VALUE_OF(PRESERVED_S4_OFFSET) "($29)" "\n"
     "lw    $31," STRINGIZE_VALUE_OF(PRESERVED_RETURN_ADDRESS_OFFSET) "($29)" "\n"
     "jr    $31" "\n"
     "addiu $29,$29," STRINGIZE_VALUE_OF(STACK_LENGTH) "\n"
@@ -775,6 +788,50 @@ __asm void ctiOpThrowNotCaught()
 #else
     #define CTI_SAMPLER 0
 #endif
+
+void performPlatformSpecificJITAssertions(JSGlobalData* globalData)
+{
+    if (!globalData->canUseJIT())
+        return;
+
+#if CPU(ARM_THUMB2)
+    // Unfortunate the arm compiler does not like the use of offsetof on JITStackFrame (since it contains non POD types),
+    // and the OBJECT_OFFSETOF macro does not appear constantish enough for it to be happy with its use in COMPILE_ASSERT
+    // macros.
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedReturnAddress) == PRESERVED_RETURN_ADDRESS_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedR4) == PRESERVED_R4_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedR5) == PRESERVED_R5_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedR6) == PRESERVED_R6_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedR7) == PRESERVED_R7_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedR8) == PRESERVED_R8_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedR9) == PRESERVED_R9_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedR10) == PRESERVED_R10_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedR11) == PRESERVED_R11_OFFSET);
+
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, stack) == REGISTER_FILE_OFFSET);
+    // The fifth argument is the first item already on the stack.
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, unused1) == FIRST_STACK_ARGUMENT);
+
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, thunkReturnAddress) == THUNK_RETURN_ADDRESS_OFFSET);
+
+#elif CPU(ARM_TRADITIONAL)
+
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, thunkReturnAddress) == THUNK_RETURN_ADDRESS_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedR4) == PRESERVEDR4_OFFSET);
+
+
+#elif CPU(MIPS)
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedGP) == PRESERVED_GP_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedS0) == PRESERVED_S0_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedS1) == PRESERVED_S1_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedS2) == PRESERVED_S2_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, preservedReturnAddress) == PRESERVED_RETURN_ADDRESS_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, thunkReturnAddress) == THUNK_RETURN_ADDRESS_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, stack) == REGISTER_FILE_OFFSET);
+    ASSERT(OBJECT_OFFSETOF(struct JITStackFrame, globalData) == GLOBAL_DATA_OFFSET);
+
+#endif
+}
 
 NEVER_INLINE static void tryCachePutByID(CallFrame* callFrame, CodeBlock* codeBlock, ReturnAddressPtr returnAddress, JSValue baseValue, const PutPropertySlot& slot, StructureStubInfo* stubInfo, bool direct)
 {
@@ -1067,9 +1124,9 @@ template<typename T> static T throwExceptionFromOpCall(JITStackFrame& jitStackFr
         ".globl " SYMBOL_STRING(cti_##op) "\n" \
         ".ent " SYMBOL_STRING(cti_##op) "\n" \
         SYMBOL_STRING(cti_##op) ":" "\n" \
-        "lw    $28," STRINGIZE_VALUE_OF(PRESERVED_GP_OFFSET) "($29)" "\n" \
-        "sw    $31," STRINGIZE_VALUE_OF(THUNK_RETURN_ADDRESS_OFFSET) "($29)" "\n" \
         ".set macro" "\n" \
+        ".cpload $25" "\n" \
+        "sw    $31," STRINGIZE_VALUE_OF(THUNK_RETURN_ADDRESS_OFFSET) "($29)" "\n" \
         "la    $25," SYMBOL_STRING(JITStubThunked_##op) "\n" \
         ".set nomacro" "\n" \
         ".reloc 1f,R_MIPS_JALR," SYMBOL_STRING(JITStubThunked_##op) "\n" \
@@ -2165,6 +2222,7 @@ DEFINE_STUB_FUNCTION(void*, vm_lazyLinkClosureCall)
     if (shouldLink) {
         ASSERT(codePtr);
         JIT::compileClosureCall(globalData, callLinkInfo, callerCodeBlock, calleeCodeBlock, structure, executable, codePtr);
+        callLinkInfo->hasSeenClosure = true;
     } else
         JIT::linkSlowCall(callerCodeBlock, callLinkInfo);
 

@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2011 Igalia S.L
+ *  Copyright (C) 2011, 2012 Igalia S.L
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -26,6 +26,7 @@
 #include "AudioSourceProvider.h"
 #include <wtf/gobject/GOwnPtr.h>
 #include "GRefPtrGStreamer.h"
+#include "Logging.h"
 #include "WebKitWebAudioSourceGStreamer.h"
 #include <gst/gst.h>
 #include <gst/pbutils/pbutils.h>
@@ -41,8 +42,16 @@ gboolean messageCallback(GstBus*, GstMessage* message, AudioDestinationGStreamer
     return destination->handleMessage(message);
 }
 
-PassOwnPtr<AudioDestination> AudioDestination::create(AudioIOCallback& callback, float sampleRate)
+PassOwnPtr<AudioDestination> AudioDestination::create(AudioIOCallback& callback, unsigned numberOfInputChannels, unsigned numberOfOutputChannels, float sampleRate)
 {
+    // FIXME: Add support for local/live audio input.
+    if (numberOfInputChannels)
+        LOG(Media, "AudioDestination::create(%u, %u, %f) - unhandled input channels", numberOfInputChannels, numberOfOutputChannels, sampleRate);
+
+    // FIXME: Add support for multi-channel (> stereo) output.
+    if (numberOfOutputChannels != 2)
+        LOG(Media, "AudioDestination::create(%u, %u, %f) - unhandled output channels", numberOfInputChannels, numberOfOutputChannels, sampleRate);
+
     return adoptPtr(new AudioDestinationGStreamer(callback, sampleRate));
 }
 
@@ -51,10 +60,12 @@ float AudioDestination::hardwareSampleRate()
     return 44100;
 }
 
+#ifndef GST_API_VERSION_1
 static void onGStreamerWavparsePadAddedCallback(GstElement*, GstPad* pad, AudioDestinationGStreamer* destination)
 {
     destination->finishBuildingPipelineAfterWavParserPadReady(pad);
 }
+#endif
 
 AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, float sampleRate)
     : m_callback(callback)
@@ -82,9 +93,16 @@ AudioDestinationGStreamer::AudioDestinationGStreamer(AudioIOCallback& callback, 
     if (!m_wavParserAvailable)
         return;
 
+#ifndef GST_API_VERSION_1
     g_signal_connect(wavParser, "pad-added", G_CALLBACK(onGStreamerWavparsePadAddedCallback), this);
+#endif
     gst_bin_add_many(GST_BIN(m_pipeline), webkitAudioSrc, wavParser, NULL);
     gst_element_link_pads_full(webkitAudioSrc, "src", wavParser, "sink", GST_PAD_LINK_CHECK_NOTHING);
+
+#ifdef GST_API_VERSION_1
+    GRefPtr<GstPad> srcPad = adoptGRef(gst_element_get_static_pad(wavParser, "src"));
+    finishBuildingPipelineAfterWavParserPadReady(srcPad.get());
+#endif
 }
 
 AudioDestinationGStreamer::~AudioDestinationGStreamer()
@@ -125,7 +143,7 @@ void AudioDestinationGStreamer::finishBuildingPipelineAfterWavParserPadReady(Gst
 
     // Link wavparse's src pad to audioconvert sink pad.
     GRefPtr<GstPad> sinkPad = adoptGRef(gst_element_get_static_pad(audioConvert, "sink"));
-    gst_pad_link(pad, sinkPad.get());
+    gst_pad_link_full(pad, sinkPad.get(), GST_PAD_LINK_CHECK_NOTHING);
 
     // Link audioconvert to audiosink and roll states.
     gst_element_link_pads_full(audioConvert, "src", audioSink.get(), "sink", GST_PAD_LINK_CHECK_NOTHING);

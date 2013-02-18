@@ -34,6 +34,7 @@
 #include "DFGSlowPathGenerator.h"
 #include "JSActivation.h"
 #include "ObjectPrototype.h"
+#include "Operations.h"
 
 namespace JSC { namespace DFG {
 
@@ -3969,12 +3970,34 @@ void SpeculativeJIT::compile(Node& node)
         break;
     }
         
+    case SetCallee: {
+        SpeculateCellOperand callee(this, node.child1());
+        m_jit.storePtr(callee.gpr(), JITCompiler::payloadFor(static_cast<VirtualRegister>(node.codeOrigin.stackOffset() + static_cast<int>(JSStack::Callee))));
+        noResult(m_compileIndex);
+        break;
+    }
+        
+    case GetScope: {
+        SpeculateCellOperand function(this, node.child1());
+        GPRTemporary result(this, function);
+        m_jit.loadPtr(JITCompiler::Address(function.gpr(), JSFunction::offsetOfScopeChain()), result.gpr());
+        cellResult(result.gpr(), m_compileIndex);
+        break;
+    }
+        
     case GetMyScope: {
         GPRTemporary result(this);
         GPRReg resultGPR = result.gpr();
 
         m_jit.loadPtr(JITCompiler::payloadFor(static_cast<VirtualRegister>(node.codeOrigin.stackOffset() + static_cast<int>(JSStack::ScopeChain))), resultGPR);
         cellResult(resultGPR, m_compileIndex);
+        break;
+    }
+        
+    case SetMyScope: {
+        SpeculateCellOperand callee(this, node.child1());
+        m_jit.storePtr(callee.gpr(), JITCompiler::payloadFor(static_cast<VirtualRegister>(node.codeOrigin.stackOffset() + static_cast<int>(JSStack::ScopeChain))));
+        noResult(m_compileIndex);
         break;
     }
         
@@ -4137,11 +4160,18 @@ void SpeculativeJIT::compile(Node& node)
         
     case CheckFunction: {
         SpeculateCellOperand function(this, node.child1());
-        speculationCheck(BadCache, JSValueSource::unboxedCell(function.gpr()), node.child1(), m_jit.branchWeakPtr(JITCompiler::NotEqual, function.gpr(), node.function()));
+        speculationCheck(BadFunction, JSValueSource::unboxedCell(function.gpr()), node.child1(), m_jit.branchWeakPtr(JITCompiler::NotEqual, function.gpr(), node.function()));
         noResult(m_compileIndex);
         break;
     }
 
+    case CheckExecutable: {
+        SpeculateCellOperand function(this, node.child1());
+        speculationCheck(BadExecutable, JSValueSource::unboxedCell(function.gpr()), node.child1(), m_jit.branchWeakPtr(JITCompiler::NotEqual, JITCompiler::Address(function.gpr(), JSFunction::offsetOfExecutable()), node.executable()));
+        noResult(m_compileIndex);
+        break;
+    }
+        
     case CheckStructure:
     case ForwardCheckStructure: {
         AbstractValue& value = m_state.forNode(node.child1());
@@ -4553,6 +4583,66 @@ void SpeculativeJIT::compile(Node& node)
         flushRegisters();
         callOperation(operationIsFunction, resultGPR, valueTagGPR, valuePayloadGPR);
         booleanResult(result.gpr(), m_compileIndex);
+        break;
+    }
+    case TypeOf: {
+        JSValueOperand value(this, node.child1());
+        GPRReg tagGPR = value.tagGPR();
+        GPRReg payloadGPR = value.payloadGPR();
+        GPRTemporary temp(this);
+        GPRReg tempGPR = temp.gpr();
+        GPRResult result(this);
+        GPRReg resultGPR = result.gpr();
+        JITCompiler::JumpList doneJumps;
+
+        flushRegisters();
+
+        JITCompiler::Jump isNotCell = m_jit.branch32(JITCompiler::NotEqual, tagGPR, JITCompiler::TrustedImm32(JSValue::CellTag));
+        Node& child = m_jit.graph()[node.child1()];
+        if (child.shouldSpeculateCell())
+            speculationCheck(BadType, JSValueRegs(tagGPR, payloadGPR), node.child1(), isNotCell);
+
+        if (!child.shouldSpeculateNonStringCell()) {
+            m_jit.loadPtr(JITCompiler::Address(payloadGPR, JSCell::structureOffset()), tempGPR);
+            JITCompiler::Jump notString = m_jit.branch8(JITCompiler::NotEqual, JITCompiler::Address(tempGPR, Structure::typeInfoTypeOffset()), TrustedImm32(StringType));
+            if (child.shouldSpeculateString())
+                speculationCheck(BadType, JSValueRegs(tagGPR, payloadGPR), node.child1(), notString);
+            m_jit.move(TrustedImmPtr(m_jit.globalData()->smallStrings.stringString()), resultGPR);
+            doneJumps.append(m_jit.jump());
+            if (!child.shouldSpeculateString()) {
+                notString.link(&m_jit);
+                callOperation(operationTypeOf, resultGPR, payloadGPR);
+                doneJumps.append(m_jit.jump());
+            }
+        } else {
+            callOperation(operationTypeOf, resultGPR, payloadGPR);
+            doneJumps.append(m_jit.jump());
+        }
+
+        if (!child.shouldSpeculateCell()) {
+            isNotCell.link(&m_jit);
+
+            m_jit.add32(TrustedImm32(1), tagGPR, tempGPR);
+            JITCompiler::Jump notNumber = m_jit.branch32(JITCompiler::AboveOrEqual, tempGPR, JITCompiler::TrustedImm32(JSValue::LowestTag + 1));
+            m_jit.move(TrustedImmPtr(m_jit.globalData()->smallStrings.numberString()), resultGPR);
+            doneJumps.append(m_jit.jump());
+            notNumber.link(&m_jit);
+
+            JITCompiler::Jump notUndefined = m_jit.branch32(JITCompiler::NotEqual, tagGPR, TrustedImm32(JSValue::UndefinedTag));
+            m_jit.move(TrustedImmPtr(m_jit.globalData()->smallStrings.undefinedString()), resultGPR);
+            doneJumps.append(m_jit.jump());
+            notUndefined.link(&m_jit);
+
+            JITCompiler::Jump notNull = m_jit.branch32(JITCompiler::NotEqual, tagGPR, TrustedImm32(JSValue::NullTag));
+            m_jit.move(TrustedImmPtr(m_jit.globalData()->smallStrings.objectString()), resultGPR);
+            doneJumps.append(m_jit.jump());
+            notNull.link(&m_jit);
+
+            // Only boolean left
+            m_jit.move(TrustedImmPtr(m_jit.globalData()->smallStrings.booleanString()), resultGPR);
+        }
+        doneJumps.link(&m_jit);
+        cellResult(resultGPR, m_compileIndex);
         break;
     }
 

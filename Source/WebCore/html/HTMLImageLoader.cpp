@@ -36,6 +36,7 @@
 #if USE(JSC)
 #include "JSDOMWindowBase.h"
 #include <runtime/JSLock.h>
+#include <runtime/Operations.h>
 #endif
 
 namespace WebCore {

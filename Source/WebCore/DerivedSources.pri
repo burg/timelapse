@@ -300,6 +300,7 @@ IDL_BINDINGS += \
     $$PWD/html/canvas/CanvasGradient.idl \
     $$PWD/html/canvas/Int32Array.idl \
     $$PWD/html/canvas/CanvasPattern.idl \
+    $$PWD/html/canvas/CanvasProxy.idl \
     $$PWD/html/canvas/CanvasRenderingContext.idl \
     $$PWD/html/canvas/CanvasRenderingContext2D.idl \
     $$PWD/html/canvas/EXTTextureFilterAnisotropic.idl \
@@ -459,6 +460,7 @@ IDL_BINDINGS += \
     $$PWD/testing/Internals.idl \
     $$PWD/testing/InternalSettings.idl \
     $$PWD/testing/MallocStatistics.idl \
+    $$PWD/testing/TypeConversions.idl \
     $$PWD/workers/AbstractWorker.idl \
     $$PWD/workers/DedicatedWorkerContext.idl \
     $$PWD/workers/SharedWorker.idl \
@@ -727,12 +729,10 @@ for(binding, IDL_BINDINGS) {
 preprocessIdls.commands += perl -I$$PWD/bindings/scripts $$preprocessIdls.script \
                                --defines \"$$javascriptFeatureDefines()\" \
                                --idlFilesList $$IDL_FILES_TMP \
-                               --supplementalDependencyFile ${QMAKE_FUNC_FILE_OUT_PATH}/$$SUPPLEMENTAL_DEPENDENCY_FILE \
-                               --idlAttributesFile $${IDL_ATTRIBUTES_FILE} \
-                               --preprocessor \"$${QMAKE_MOC} -E\"
+                               --supplementalDependencyFile ${QMAKE_FUNC_FILE_OUT_PATH}/$$SUPPLEMENTAL_DEPENDENCY_FILE
 preprocessIdls.output = $$SUPPLEMENTAL_DEPENDENCY_FILE
 preprocessIdls.add_output_to_sources = false
-preprocessIdls.depends = $$PWD/bindings/scripts/IDLParser.pm $$IDL_BINDINGS
+preprocessIdls.depends = $$IDL_BINDINGS
 GENERATORS += preprocessIdls
 
 # GENERATOR 1: Generate .h and .cpp from IDLs
@@ -769,6 +769,7 @@ generateBindings.commands = $$setEnvironmentVariable(SOURCE_ROOT, $$toSystemPath
                             --include xml \
                             --outputDir ${QMAKE_FUNC_FILE_OUT_PATH} \
                             --supplementalDependencyFile ${QMAKE_FUNC_FILE_OUT_PATH}/$$SUPPLEMENTAL_DEPENDENCY_FILE \
+                            --idlAttributesFile $${IDL_ATTRIBUTES_FILE} \
                             --preprocessor \"$${QMAKE_MOC} -E\" ${QMAKE_FILE_NAME}
 generateBindings.output = JS${QMAKE_FILE_BASE}.cpp
 generateBindings.depends = ${QMAKE_FUNC_FILE_OUT_PATH}/$$SUPPLEMENTAL_DEPENDENCY_FILE \
@@ -776,7 +777,8 @@ generateBindings.depends = ${QMAKE_FUNC_FILE_OUT_PATH}/$$SUPPLEMENTAL_DEPENDENCY
                            $$PWD/bindings/scripts/CodeGeneratorJS.pm \
                            $$PWD/bindings/scripts/IDLParser.pm \
                            $$PWD/bindings/scripts/InFilesParser.pm \
-                           $$PWD/bindings/scripts/preprocessor.pm
+                           $$PWD/bindings/scripts/preprocessor.pm \
+                           $$IDL_ATTRIBUTES_FILE
 GENERATORS += generateBindings
 
 # GENERATOR 2: inspector idl compiler

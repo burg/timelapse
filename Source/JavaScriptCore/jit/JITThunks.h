@@ -34,10 +34,11 @@
 #include "Intrinsic.h"
 #include "LowLevelInterpreter.h"
 #include "MacroAssemblerCodeRef.h"
-#include "Register.h"
-#include "ResolveOperation.h"
-#include "ThunkGenerators.h"
+#include "ThunkGenerator.h"
+#include "Weak.h"
 #include <wtf/HashMap.h>
+#include <wtf/OwnPtr.h>
+#include <wtf/RefPtr.h>
 
 namespace JSC {
 
@@ -46,7 +47,7 @@ class NativeExecutable;
 
 class JITThunks {
 public:
-    JITThunks(JSGlobalData*);
+    JITThunks();
     ~JITThunks();
 
     MacroAssemblerCodePtr ctiNativeCall(JSGlobalData*);

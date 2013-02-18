@@ -636,7 +636,6 @@ public:
 
     enum CompatibilityMode { QuirksMode, LimitedQuirksMode, NoQuirksMode };
 
-    virtual void setCompatibilityModeFromDoctype() { }
     void setCompatibilityMode(CompatibilityMode m);
     void lockCompatibilityMode() { m_compatibilityModeLocked = true; }
     CompatibilityMode compatibilityMode() const { return m_compatibilityMode; }
@@ -700,8 +699,8 @@ public:
     void setHoverNode(PassRefPtr<Node>);
     Node* hoverNode() const { return m_hoverNode.get(); }
 
-    void setActiveNode(PassRefPtr<Node>);
-    Node* activeNode() const { return m_activeNode.get(); }
+    void setActiveElement(PassRefPtr<Element>);
+    Element* activeElement() const { return m_activeElement.get(); }
 
     void focusedNodeRemoved();
     void removeFocusedNodeOfSubtree(Node*, bool amongChildrenOnly = false);
@@ -783,14 +782,12 @@ public:
     bool hasListenerType(ListenerType listenerType) const { return (m_listenerTypes & listenerType); }
     void addListenerTypeIfNeeded(const AtomicString& eventType);
 
-#if ENABLE(MUTATION_OBSERVERS)
     bool hasMutationObserversOfType(MutationObserver::MutationType type) const
     {
         return m_mutationObserverTypes & type;
     }
     bool hasMutationObservers() const { return m_mutationObserverTypes; }
     void addMutationObserverTypes(MutationObserverOptions types) { m_mutationObserverTypes |= types; }
-#endif
 
     CSSStyleDeclaration* getOverrideStyle(Element*, const String& pseudoElt);
 
@@ -1193,8 +1190,10 @@ public:
 #endif
 
 #if ENABLE(TEMPLATE_ELEMENT)
-    const Document* templateContentsOwnerDocument() const;
-    Document* ensureTemplateContentsOwnerDocument();
+    const Document* templateDocument() const;
+    Document* ensureTemplateDocument();
+    void setTemplateDocumentHost(Document* templateDocumentHost) { m_templateDocumentHost = templateDocumentHost; }
+    Document* templateDocumentHost() { return m_templateDocumentHost; }
 #endif
 
     virtual void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier = 0);
@@ -1344,7 +1343,7 @@ private:
 
     RefPtr<Node> m_focusedNode;
     RefPtr<Node> m_hoverNode;
-    RefPtr<Node> m_activeNode;
+    RefPtr<Element> m_activeElement;
     RefPtr<Element> m_documentElement;
     UserActionElementSet m_userActionElements;
 
@@ -1356,10 +1355,7 @@ private:
 
     unsigned short m_listenerTypes;
 
-#if ENABLE(MUTATION_OBSERVERS)
     MutationObserverOptions m_mutationObserverTypes;
-#endif
-
 
     OwnPtr<DocumentStyleSheetCollection> m_styleSheetCollection;
     RefPtr<StyleSheetList> m_styleSheetList;
@@ -1562,7 +1558,8 @@ private:
     LocaleIdentifierToLocaleMap m_localeCache;
 
 #if ENABLE(TEMPLATE_ELEMENT)
-    RefPtr<Document> m_templateContentsOwnerDocument;
+    RefPtr<Document> m_templateDocument;
+    Document* m_templateDocumentHost; // Manually managed weakref (backpointer from m_templateDocument).
 #endif
 };
 
@@ -1573,13 +1570,13 @@ inline void Document::notifyRemovePendingSheetIfNeeded()
 }
 
 #if ENABLE(TEMPLATE_ELEMENT)
-inline const Document* Document::templateContentsOwnerDocument() const
+inline const Document* Document::templateDocument() const
 {
     // If DOCUMENT does not have a browsing context, Let TEMPLATE CONTENTS OWNER be DOCUMENT and abort these steps.
     if (!m_frame)
         return this;
 
-    return m_templateContentsOwnerDocument.get();
+    return m_templateDocument.get();
 }
 #endif
 

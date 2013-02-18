@@ -63,8 +63,7 @@
 namespace WebCore {
 
 InternalSettings::Backup::Backup(Settings* settings)
-    : m_originalFixedElementsLayoutRelativeToFrame(settings->fixedElementsLayoutRelativeToFrame())
-    , m_originalCSSExclusionsEnabled(RuntimeEnabledFeatures::cssExclusionsEnabled())
+    : m_originalCSSExclusionsEnabled(RuntimeEnabledFeatures::cssExclusionsEnabled())
     , m_originalCSSVariablesEnabled(settings->cssVariablesEnabled())
 #if ENABLE(SHADOW_DOM)
     , m_originalShadowDOMEnabled(RuntimeEnabledFeatures::shadowDOMEnabled())
@@ -74,12 +73,6 @@ InternalSettings::Backup::Backup(Settings* settings)
     , m_originalStyleScoped(RuntimeEnabledFeatures::styleScopedEnabled())
 #endif
     , m_originalEditingBehavior(settings->editingBehaviorType())
-    , m_originalUnifiedSpellCheckerEnabled(settings->unifiedTextCheckerEnabled())
-    , m_originalFixedPositionCreatesStackingContext(settings->fixedPositionCreatesStackingContext())
-    , m_originalSyncXHRInDocumentsEnabled(settings->syncXHRInDocumentsEnabled())
-    , m_originalWindowFocusRestricted(settings->windowFocusRestricted())
-    , m_originalDeviceSupportsTouch(settings->deviceSupportsTouch())
-    , m_originalDeviceSupportsMouse(settings->deviceSupportsMouse())
 #if ENABLE(TEXT_AUTOSIZING)
     , m_originalTextAutosizingEnabled(settings->textAutosizingEnabled())
     , m_originalTextAutosizingWindowSizeOverride(settings->textAutosizingWindowSizeOverride())
@@ -90,10 +83,6 @@ InternalSettings::Backup::Backup(Settings* settings)
 #if ENABLE(DIALOG_ELEMENT)
     , m_originalDialogElementEnabled(RuntimeEnabledFeatures::dialogElementEnabled())
 #endif
-    , m_originalForceCompositingMode(settings->forceCompositingMode())
-    , m_originalCompositingForFixedPositionEnabled(settings->acceleratedCompositingForFixedPositionEnabled())
-    , m_originalCompositingForScrollableFramesEnabled(settings->acceleratedCompositingForScrollableFramesEnabled())
-    , m_originalAcceleratedDrawingEnabled(settings->acceleratedDrawingEnabled())
     , m_originalCanvasUsesAcceleratedDrawing(settings->canvasUsesAcceleratedDrawing())
     , m_originalMockScrollbarsEnabled(settings->mockScrollbarsEnabled())
     , m_langAttributeAwareFormControlUIEnabled(RuntimeEnabledFeatures::langAttributeAwareFormControlUIEnabled())
@@ -108,7 +97,6 @@ InternalSettings::Backup::Backup(Settings* settings)
 
 void InternalSettings::Backup::restoreTo(Settings* settings)
 {
-    settings->setFixedElementsLayoutRelativeToFrame(m_originalFixedElementsLayoutRelativeToFrame);
     RuntimeEnabledFeatures::setCSSExclusionsEnabled(m_originalCSSExclusionsEnabled);
     settings->setCSSVariablesEnabled(m_originalCSSVariablesEnabled);
 #if ENABLE(SHADOW_DOM)
@@ -119,12 +107,6 @@ void InternalSettings::Backup::restoreTo(Settings* settings)
     RuntimeEnabledFeatures::setStyleScopedEnabled(m_originalStyleScoped);
 #endif
     settings->setEditingBehaviorType(m_originalEditingBehavior);
-    settings->setUnifiedTextCheckerEnabled(m_originalUnifiedSpellCheckerEnabled);
-    settings->setFixedPositionCreatesStackingContext(m_originalFixedPositionCreatesStackingContext);
-    settings->setSyncXHRInDocumentsEnabled(m_originalSyncXHRInDocumentsEnabled);
-    settings->setWindowFocusRestricted(m_originalWindowFocusRestricted);
-    settings->setDeviceSupportsTouch(m_originalDeviceSupportsTouch);
-    settings->setDeviceSupportsMouse(m_originalDeviceSupportsMouse);
 #if ENABLE(TEXT_AUTOSIZING)
     settings->setTextAutosizingEnabled(m_originalTextAutosizingEnabled);
     settings->setTextAutosizingWindowSizeOverride(m_originalTextAutosizingWindowSizeOverride);
@@ -135,10 +117,6 @@ void InternalSettings::Backup::restoreTo(Settings* settings)
 #if ENABLE(DIALOG_ELEMENT)
     RuntimeEnabledFeatures::setDialogElementEnabled(m_originalDialogElementEnabled);
 #endif
-    settings->setForceCompositingMode(m_originalForceCompositingMode);
-    settings->setAcceleratedCompositingForFixedPositionEnabled(m_originalCompositingForFixedPositionEnabled);
-    settings->setAcceleratedCompositingForScrollableFramesEnabled(m_originalCompositingForScrollableFramesEnabled);
-    settings->setAcceleratedDrawingEnabled(m_originalAcceleratedDrawingEnabled);
     settings->setCanvasUsesAcceleratedDrawing(m_originalCanvasUsesAcceleratedDrawing);
     settings->setMockScrollbarsEnabled(m_originalMockScrollbarsEnabled);
     RuntimeEnabledFeatures::setLangAttributeAwareFormControlUIEnabled(m_langAttributeAwareFormControlUIEnabled);
@@ -204,64 +182,10 @@ Settings* InternalSettings::settings() const
     return page()->settings();
 }
 
-void InternalSettings::setForceCompositingMode(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setForceCompositingMode(enabled);
-}
-
-void InternalSettings::setAcceleratedFiltersEnabled(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setAcceleratedFiltersEnabled(enabled);
-}
-
-void InternalSettings::setEnableCompositingForFixedPosition(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setAcceleratedCompositingForFixedPositionEnabled(enabled);
-}
-
-void InternalSettings::setEnableCompositingForScrollableFrames(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setAcceleratedCompositingForScrollableFramesEnabled(enabled);
-}
-
-void InternalSettings::setEnableCompositingForOverflowScroll(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setAcceleratedCompositingForOverflowScrollEnabled(enabled);
-}
-
-void InternalSettings::setAcceleratedDrawingEnabled(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setAcceleratedDrawingEnabled(enabled);
-}
-
 void InternalSettings::setMockScrollbarsEnabled(bool enabled, ExceptionCode& ec)
 {
     InternalSettingsGuardForSettings();
     settings()->setMockScrollbarsEnabled(enabled);
-}
-
-void InternalSettings::setFixedElementsLayoutRelativeToFrame(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setFixedElementsLayoutRelativeToFrame(enabled);
-}
-
-void InternalSettings::setUnifiedTextCheckingEnabled(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setUnifiedTextCheckerEnabled(enabled);
-}
-
-bool InternalSettings::unifiedTextCheckingEnabled(ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettingsReturn(false);
-    return settings()->unifiedTextCheckerEnabled();
 }
 
 void InternalSettings::setShadowDOMEnabled(bool enabled, ExceptionCode& ec)
@@ -304,18 +228,6 @@ void InternalSettings::setTouchEventEmulationEnabled(bool enabled, ExceptionCode
     UNUSED_PARAM(enabled);
     UNUSED_PARAM(ec);
 #endif
-}
-
-void InternalSettings::setDeviceSupportsTouch(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setDeviceSupportsTouch(enabled);
-}
-
-void InternalSettings::setDeviceSupportsMouse(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setDeviceSupportsMouse(enabled);
 }
 
 typedef void (Settings::*SetFontFamilyFunction)(const AtomicString&, UScriptCode);
@@ -461,12 +373,6 @@ void InternalSettings::setCanStartMedia(bool enabled, ExceptionCode& ec)
     m_page->setCanStartMedia(enabled);
 }
 
-void InternalSettings::setMediaPlaybackRequiresUserGesture(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setMediaPlaybackRequiresUserGesture(enabled);
-}
-
 void InternalSettings::setEditingBehavior(const String& editingBehavior, ExceptionCode& ec)
 {
     InternalSettingsGuardForSettings();
@@ -478,24 +384,6 @@ void InternalSettings::setEditingBehavior(const String& editingBehavior, Excepti
         settings()->setEditingBehaviorType(EditingUnixBehavior);
     else
         ec = SYNTAX_ERR;
-}
-
-void InternalSettings::setFixedPositionCreatesStackingContext(bool creates, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setFixedPositionCreatesStackingContext(creates);
-}
-
-void InternalSettings::setSyncXHRInDocumentsEnabled(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setSyncXHRInDocumentsEnabled(enabled);
-}
-
-void InternalSettings::setWindowFocusRestricted(bool restricted, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setWindowFocusRestricted(restricted);
 }
 
 void InternalSettings::setDialogElementEnabled(bool enabled, ExceptionCode& ec)
@@ -545,12 +433,6 @@ bool InternalSettings::shouldDisplayTrackKind(const String& kind, ExceptionCode&
     UNUSED_PARAM(kind);
     return false;
 #endif
-}
-
-void InternalSettings::setMemoryInfoEnabled(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setMemoryInfoEnabled(enabled);
 }
 
 void InternalSettings::setStorageBlockingPolicy(const String& mode, ExceptionCode& ec)

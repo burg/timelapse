@@ -602,7 +602,7 @@ WebSize WebFrameImpl::minimumScrollOffset() const
     FrameView* view = frameView();
     if (!view)
         return WebSize();
-    return view->minimumScrollPosition() - IntPoint();
+    return toIntSize(view->minimumScrollPosition());
 }
 
 WebSize WebFrameImpl::maximumScrollOffset() const
@@ -610,7 +610,7 @@ WebSize WebFrameImpl::maximumScrollOffset() const
     FrameView* view = frameView();
     if (!view)
         return WebSize();
-    return view->maximumScrollPosition() - IntPoint();
+    return toIntSize(view->maximumScrollPosition());
 }
 
 void WebFrameImpl::setScrollOffset(const WebSize& offset)
@@ -1386,6 +1386,16 @@ void WebFrameImpl::selectRange(const WebRange& webRange)
 {
     if (RefPtr<Range> range = static_cast<PassRefPtr<Range> >(webRange))
         frame()->selection()->setSelectedRange(range.get(), WebCore::VP_DEFAULT_AFFINITY, false);
+}
+
+void WebFrameImpl::moveCaretSelectionTowardsWindowPoint(const WebPoint& point)
+{
+    Element* editable = frame()->selection()->rootEditableElement();
+    IntPoint contentsPoint = frame()->view()->windowToContents(IntPoint(point));
+    LayoutPoint localPoint(editable->convertFromPage(contentsPoint));
+    VisiblePosition position = editable->renderer()->positionForPoint(localPoint);
+    if (frame()->selection()->shouldChangeSelection(position))
+        frame()->selection()->moveTo(position, UserTriggered);
 }
 
 VisiblePosition WebFrameImpl::visiblePositionForWindowPoint(const WebPoint& point)

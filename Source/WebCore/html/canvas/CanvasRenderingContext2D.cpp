@@ -2088,8 +2088,9 @@ void CanvasRenderingContext2D::setFont(const String& newFont)
         return;
 
     // The parse succeeded.
+    String newFontSafeCopy(newFont); // Create a string copy since newFont can be deleted inside realizeSaves.
     realizeSaves();
-    modifiableState().m_unparsedFont = newFont;
+    modifiableState().m_unparsedFont = newFontSafeCopy;
 
     // Map the <canvas> font into the text style. If the font uses keywords like larger/smaller, these will work
     // relative to the canvas.

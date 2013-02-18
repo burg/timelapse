@@ -65,7 +65,7 @@ public:
     // it only exists to make computePreferredLogicalWidths public.
     virtual void computePreferredLogicalWidths() OVERRIDE;
 
-    virtual LayoutUnit availableLogicalHeight() const OVERRIDE;
+    virtual LayoutUnit availableLogicalHeight(AvailableLogicalHeightType) const OVERRIDE;
 
     // The same as the FrameView's layoutHeight/layoutWidth but with null check guards.
     int viewHeight() const;
@@ -95,6 +95,7 @@ public:
     RenderObject* selectionEnd() const { return m_selectionEnd; }
     IntRect selectionBounds(bool clipToVisibleContent = true) const;
     void selectionStartEnd(int& startPos, int& endPos) const;
+    void repaintSelection() const;
 
     bool printing() const;
 

@@ -120,11 +120,7 @@ IDBTransaction::IDBTransaction(ScriptExecutionContext* context, int64_t id, Pass
 IDBTransaction::~IDBTransaction()
 {
     ASSERT(m_state == Finished);
-}
-
-IDBTransactionBackendInterface* IDBTransaction::backend() const
-{
-    return m_backend.get();
+    ASSERT(m_requestList.isEmpty());
 }
 
 const String& IDBTransaction::mode() const
@@ -176,12 +172,9 @@ PassRefPtr<IDBObjectStore> IDBTransaction::objectStore(const String& name, Excep
         return 0;
     }
 
-    RefPtr<IDBObjectStoreBackendInterface> objectStoreBackend = m_backend->objectStore(objectStoreId, ec);
-    ASSERT(!ec && objectStoreBackend);
-
     const IDBDatabaseMetadata& metadata = m_database->metadata();
 
-    RefPtr<IDBObjectStore> objectStore = IDBObjectStore::create(metadata.objectStores.get(objectStoreId), objectStoreBackend, this);
+    RefPtr<IDBObjectStore> objectStore = IDBObjectStore::create(metadata.objectStores.get(objectStoreId), this);
     objectStoreCreated(name, objectStore);
     return objectStore.release();
 }
@@ -231,7 +224,7 @@ void IDBTransaction::abort(ExceptionCode& ec)
     m_state = Finishing;
 
     while (!m_requestList.isEmpty()) {
-        IDBRequest* request = *m_requestList.begin();
+        RefPtr<IDBRequest> request = *m_requestList.begin();
         m_requestList.remove(request);
         request->abort();
     }
@@ -308,7 +301,7 @@ void IDBTransaction::onAbort(PassRefPtr<IDBDatabaseError> prpError)
         // Abort was not triggered by front-end, so outstanding requests must
         // be aborted now.
         while (!m_requestList.isEmpty()) {
-            IDBRequest* request = *m_requestList.begin();
+            RefPtr<IDBRequest> request = *m_requestList.begin();
             m_requestList.remove(request);
             request->abort();
         }
@@ -461,6 +454,11 @@ EventTargetData* IDBTransaction::eventTargetData()
 EventTargetData* IDBTransaction::ensureEventTargetData()
 {
     return &m_eventTargetData;
+}
+
+IDBDatabaseBackendInterface* IDBTransaction::backendDB() const
+{
+    return db()->backend();
 }
 
 }

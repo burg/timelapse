@@ -259,9 +259,9 @@
                 "name": "deleteCookie",
                 "parameters": [
                     { "name": "cookieName", "type": "string", "description": "Name of the cookie to remove." },
-                    { "name": "domain", "type": "string", "description": "Domain of the cookie to remove." }
+                    { "name": "url", "type": "string", "description": "URL to match cooke domain and path." }
                 ],
-                "description": "Deletes browser cookie with given name for the given domain.",
+                "description": "Deletes browser cookie with given name, domain and path.",
                 "hidden": true
             },
             {
@@ -1652,7 +1652,8 @@
                     { "name": "value", "type": "string", "optional": true, "description": "<code>Attr</code>'s value." },
                     { "name": "frameId", "$ref": "Network.FrameId", "optional": true, "description": "Frame ID for frame owner elements." },
                     { "name": "contentDocument", "$ref": "Node", "optional": true, "description": "Content document for frame owner elements." },
-                    { "name": "shadowRoots", "type": "array", "optional": true, "items": { "$ref": "Node" }, "description": "Shadow root list for given element host." }
+                    { "name": "shadowRoots", "type": "array", "optional": true, "items": { "$ref": "Node" }, "description": "Shadow root list for given element host." },
+                    { "name": "templateContent", "$ref": "Node", "optional": true, "description": "Content document fragment for template elements" }
                 ],
                 "description": "DOM interaction is implemented in terms of mirror objects that represent the actual DOM nodes. DOMNode is a base node mirror type."
             },
@@ -1706,9 +1707,10 @@
             {
                 "name": "requestChildNodes",
                 "parameters": [
-                    { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to get children for." }
+                    { "name": "nodeId", "$ref": "NodeId", "description": "Id of the node to get children for." },
+                    { "name": "depth", "type": "integer", "optional": true, "description": "The maximum depth at which children should be retrieved, defaults to 1. Use -1 for the entire subtree or provide an integer larger than 0." }
                 ],
-                "description": "Requests that children of the node with given id are returned to the caller in form of <code>setChildNodes</code> events."
+                "description": "Requests that children of the node with given id are returned to the caller in form of <code>setChildNodes</code> events where not only immediate children are retrieved, but all children down to the specified depth."
             },
             {
                 "name": "querySelector",
