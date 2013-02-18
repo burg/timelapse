@@ -62,13 +62,13 @@ void CSSImageSetValue::fillImageSet()
     size_t i = 0;
     while (i < length) {
         CSSValue* imageValue = item(i);
-        ASSERT(imageValue->isImageValue());
+        ASSERT_WITH_SECURITY_IMPLICATION(imageValue->isImageValue());
         String imageURL = static_cast<CSSImageValue*>(imageValue)->url();
 
         ++i;
-        ASSERT(i < length);
+        ASSERT_WITH_SECURITY_IMPLICATION(i < length);
         CSSValue* scaleFactorValue = item(i);
-        ASSERT(scaleFactorValue->isPrimitiveValue());
+        ASSERT_WITH_SECURITY_IMPLICATION(scaleFactorValue->isPrimitiveValue());
         float scaleFactor = static_cast<CSSPrimitiveValue*>(scaleFactorValue)->getFloatValue();
 
         ImageWithScale image;
@@ -158,7 +158,7 @@ String CSSImageSetValue::customCssText() const
         result.append(' ');
 
         ++i;
-        ASSERT(i < length);
+        ASSERT_WITH_SECURITY_IMPLICATION(i < length);
         const CSSValue* scaleFactorValue = item(i);
         result.append(scaleFactorValue->cssText());
         // FIXME: Eventually the scale factor should contain it's own unit http://wkb.ug/100120.
@@ -199,13 +199,13 @@ void CSSImageSetValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjec
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     CSSValueList::reportDescendantMemoryUsage(memoryObjectInfo);
-    info.addMember(m_imagesInSet);
+    info.addMember(m_imagesInSet, "imagesInSet");
 }
 
 void CSSImageSetValue::ImageWithScale::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(imageURL);
+    info.addMember(imageURL, "imageURL");
 }
 
 } // namespace WebCore

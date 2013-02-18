@@ -48,11 +48,13 @@ public:
     const AtomicString& name() const { return m_name; }
     const String& value() const { return m_value; }
 
+    bool equals(const CSSVariableValue& other) const { return m_name == other.m_name && m_value == other.m_value; }
+
     void reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     {
         MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-        info.addMember(m_name);
-        info.addMember(m_value);
+        info.addMember(m_name, "name");
+        info.addMember(m_value, "value");
     }
 
 private:

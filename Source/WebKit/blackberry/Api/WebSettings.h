@@ -214,9 +214,6 @@ public:
     bool isFrameFlatteningEnabled() const;
     void setFrameFlatteningEnabled(bool);
 
-    bool isDirectRenderingToWindowEnabled() const;
-    void setDirectRenderingToWindowEnabled(bool);
-
     unsigned maxPluginInstances() const;
     void setMaxPluginInstances(unsigned num);
 
@@ -243,6 +240,9 @@ public:
 
     bool isBackingStoreEnabled() const;
     void setBackingStoreEnabled(bool);
+
+    bool applyDeviceScaleFactorInCompositor() const;
+    void setApplyPageScaleFactorInCompositor(bool);
 
 private:
     WebSettingsPrivate* m_private;

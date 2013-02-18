@@ -529,13 +529,10 @@ RenderBlock* RenderBlock::containingColumnsBlock(bool allowAnonymousColumnBlock)
             || curr->isInlineBlockOrInlineTable())
             return 0;
 
-        // FIXME: Table manages its own table parts, most of which are RenderBoxes.
-        // Multi-column code cannot handle splitting the flow in table. Disabling it
-        // to prevent crashes.
-        // Similarly, RenderButton maintains an anonymous block child and overrides
-        // addChild() to prevent itself from having additional direct children. This
-        // causes problems for split flows.
-        if (curr->isTable() || curr->isRenderButton())
+        // FIXME: Tables, RenderButtons, and RenderListItems all do special management
+        // of their children that breaks when the flow is split through them. Disabling
+        // multi-column for them to avoid this problem.
+        if (curr->isTable() || curr->isRenderButton() || curr->isListItem())
             return 0;
         
         RenderBlock* currBlock = toRenderBlock(curr);
@@ -605,7 +602,7 @@ void RenderBlock::splitBlocks(RenderBlock* fromBlock, RenderBlock* toBlock,
     RenderObject* currChildNextSibling = currChild->nextSibling();
 
     while (curr && curr != fromBlock) {
-        ASSERT(curr->isRenderBlock());
+        ASSERT_WITH_SECURITY_IMPLICATION(curr->isRenderBlock());
         
         RenderBlock* blockCurr = toRenderBlock(curr);
         
@@ -2334,7 +2331,7 @@ void RenderBlock::updateBlockChildDirtyBitsBeforeLayout(bool relayoutChildren, R
 {
     // FIXME: Technically percentage height objects only need a relayout if their percentage isn't going to be turned into
     // an auto value. Add a method to determine this, so that we can avoid the relayout.
-    if (relayoutChildren || (child->hasRelativeLogicalHeight() && !isRenderView()))
+    if (relayoutChildren || (child->hasRelativeLogicalHeight() && !isRenderView()) || child->hasViewportPercentageLogicalHeight())
         child->setChildNeedsLayout(true, MarkOnlyThis);
 
     // If relayoutChildren is set and the child has percentage padding or an embedded content box, we also need to invalidate the childs pref widths.
@@ -3127,7 +3124,7 @@ void RenderBlock::paintObject(PaintInfo& paintInfo, const LayoutPoint& paintOffs
     }
 }
 
-LayoutPoint RenderBlock::flipFloatForWritingModeForChild(const FloatingObject* child, const LayoutPoint& point, FloatRenderingState renderingState) const
+LayoutPoint RenderBlock::flipFloatForWritingModeForChild(const FloatingObject* child, const LayoutPoint& point) const
 {
     if (!style()->isFlippedBlocksWritingMode())
         return point;
@@ -3136,8 +3133,8 @@ LayoutPoint RenderBlock::flipFloatForWritingModeForChild(const FloatingObject* c
     // it's going to get added back in. We hide this complication here so that the calling code looks normal for the unflipped
     // case.
     if (isHorizontalWritingMode())
-        return LayoutPoint(point.x(), point.y() + height() - child->renderer()->height() - 2 * yPositionForFloatIncludingMargin(child, renderingState));
-    return LayoutPoint(point.x() + width() - child->renderer()->width() - 2 * xPositionForFloatIncludingMargin(child, renderingState), point.y());
+        return LayoutPoint(point.x(), point.y() + height() - child->renderer()->height() - 2 * yPositionForFloatIncludingMargin(child));
+    return LayoutPoint(point.x() + width() - child->renderer()->width() - 2 * xPositionForFloatIncludingMargin(child), point.y());
 }
 
 void RenderBlock::paintFloats(PaintInfo& paintInfo, const LayoutPoint& paintOffset, bool preservePhase)
@@ -3153,7 +3150,7 @@ void RenderBlock::paintFloats(PaintInfo& paintInfo, const LayoutPoint& paintOffs
         if (r->shouldPaint() && !r->m_renderer->hasSelfPaintingLayer()) {
             PaintInfo currentPaintInfo(paintInfo);
             currentPaintInfo.phase = preservePhase ? paintInfo.phase : PaintPhaseBlockBackground;
-            LayoutPoint childPoint = flipFloatForWritingModeForChild(r, LayoutPoint(paintOffset.x() + xPositionForFloatIncludingMargin(r, FloatPaint) - r->m_renderer->x(), paintOffset.y() + yPositionForFloatIncludingMargin(r, FloatPaint) - r->m_renderer->y()), FloatPaint);
+            LayoutPoint childPoint = flipFloatForWritingModeForChild(r, LayoutPoint(paintOffset.x() + xPositionForFloatIncludingMargin(r) - r->m_renderer->x(), paintOffset.y() + yPositionForFloatIncludingMargin(r) - r->m_renderer->y()));
             r->m_renderer->paint(currentPaintInfo, childPoint);
             if (!preservePhase) {
                 currentPaintInfo.phase = PaintPhaseChildBlockBackgrounds;
@@ -3484,10 +3481,10 @@ GapRects RenderBlock::blockSelectionGaps(RenderBlock* rootBlock, const LayoutPoi
         if (curr->isFloatingOrOutOfFlowPositioned())
             continue; // We must be a normal flow object in order to even be considered.
 
-        if (curr->isInFlowPositioned() && curr->hasLayer()) {
+        if (curr->hasPaintOffset() && curr->hasLayer()) {
             // If the relposition offset is anything other than 0, then treat this just like an absolute positioned element.
             // Just disregard it completely.
-            LayoutSize relOffset = curr->layer()->offsetForInFlowPosition();
+            LayoutSize relOffset = curr->layer()->paintOffset();
             if (relOffset.width() || relOffset.height())
                 continue;
         }
@@ -4013,18 +4010,8 @@ bool RenderBlock::positionNewFloats()
 
         setLogicalLeftForFloat(floatingObject, floatLogicalLocation.x());
 
-#if ENABLE(CSS_EXCLUSIONS)
-        if (childBox->exclusionShapeOutsideInfo()) {
-            // The CSS Exclusions specification says that the margins are ignored when a float has a shape outside.
-            setLogicalLeftForChild(childBox, floatLogicalLocation.x() - childBox->exclusionShapeOutsideInfo()->shapeLogicalLeft());
-            setLogicalTopForChild(childBox, floatLogicalLocation.y() - childBox->exclusionShapeOutsideInfo()->shapeLogicalTop());
-        } else {
-#endif
-            setLogicalLeftForChild(childBox, floatLogicalLocation.x() + childLogicalLeftMargin);
-            setLogicalTopForChild(childBox, floatLogicalLocation.y() + marginBeforeForChild(childBox));
-#if ENABLE(CSS_EXCLUSIONS)
-        }
-#endif
+        setLogicalLeftForChild(childBox, floatLogicalLocation.x() + childLogicalLeftMargin);
+        setLogicalTopForChild(childBox, floatLogicalLocation.y() + marginBeforeForChild(childBox));
 
         LayoutState* layoutState = view()->layoutState();
         bool isPaginated = layoutState->isPaginated();
@@ -4053,19 +4040,8 @@ bool RenderBlock::positionNewFloats()
                 floatLogicalLocation = computeLogicalLocationForFloat(floatingObject, newLogicalTop);
                 setLogicalLeftForFloat(floatingObject, floatLogicalLocation.x());
 
-#if ENABLE(CSS_EXCLUSIONS)
-                if (childBox->exclusionShapeOutsideInfo()) {
-                    // The CSS Exclusions specification says that the margins are ignored when a float has a shape outside.
-                    setLogicalLeftForChild(childBox, floatLogicalLocation.x() - childBox->exclusionShapeOutsideInfo()->shapeLogicalLeft());
-                    setLogicalTopForChild(childBox, floatLogicalLocation.y() - childBox->exclusionShapeOutsideInfo()->shapeLogicalTop());
-                } else {
-#endif
-                    setLogicalLeftForChild(childBox, floatLogicalLocation.x() + childLogicalLeftMargin);
-                    setLogicalTopForChild(childBox, floatLogicalLocation.y() + marginBeforeForChild(childBox));
-#if ENABLE(CSS_EXCLUSIONS)
-                }
-#endif
-
+                setLogicalLeftForChild(childBox, floatLogicalLocation.x() + childLogicalLeftMargin);
+                setLogicalTopForChild(childBox, floatLogicalLocation.y() + marginBeforeForChild(childBox));
         
                 if (childBlock)
                     childBlock->setChildNeedsLayout(true, MarkOnlyThis);
@@ -4558,7 +4534,6 @@ LayoutUnit RenderBlock::addOverhangingFloats(RenderBlock* child, bool makeChildP
         LayoutUnit logicalBottom = childLogicalTop + logicalBottomForFloat;
         lowestFloatLogicalBottom = max(lowestFloatLogicalBottom, logicalBottom);
 
-        // FIXME: Bug 106927 Handle situations where float and shape-outside overflow differently.
         if (logicalBottom > logicalHeight()) {
             // If the object is not in the list, we add it now.
             if (!containsFloat(r->m_renderer)) {
@@ -5037,8 +5012,8 @@ static inline bool isEditingBoundary(RenderObject* ancestor, RenderObject* child
 static VisiblePosition positionForPointRespectingEditingBoundaries(RenderBlock* parent, RenderBox* child, const LayoutPoint& pointInParentCoordinates)
 {
     LayoutPoint childLocation = child->location();
-    if (child->isInFlowPositioned())
-        childLocation += child->offsetForInFlowPosition();
+    if (child->hasPaintOffset())
+        childLocation += child->paintOffset();
 
     // FIXME: This is wrong if the child's writing-mode is different from the parent's.
     LayoutPoint pointInChildCoordinates(toLayoutPoint(pointInParentCoordinates - childLocation));
@@ -5870,7 +5845,12 @@ void RenderBlock::computeInlinePreferredLogicalWidths()
     autoWrap = oldAutoWrap = styleToUse->autoWrap();
 
     InlineMinMaxIterator childIterator(this);
-    bool addedTextIndent = false; // Only gets added in once.
+
+    // Only gets added to the max preffered width once.
+    bool addedTextIndent = false;
+    // Signals the text indent was more negative than the min preferred width
+    bool hasRemainingNegativeTextIndent = false;
+
     LayoutUnit textIndent = minimumValueForLength(styleToUse->textIndent(), cw, view());
     RenderObject* prevFloat = 0;
     bool isPrevChildInlineFlow = false;
@@ -5976,7 +5956,7 @@ void RenderBlock::computeInlinePreferredLogicalWidths()
 
                 // Add in text-indent.  This is added in only once.
                 LayoutUnit ti = 0;
-                if (!addedTextIndent) {
+                if (!addedTextIndent && !child->isFloating()) {
                     ti = textIndent;
                     childMin += ti.ceilToFloat();
                     childMax += ti.ceilToFloat();
@@ -6056,18 +6036,24 @@ void RenderBlock::computeInlinePreferredLogicalWidths()
 
                 // Add in text-indent.  This is added in only once.
                 float ti = 0;
-                if (!addedTextIndent) {
+                if (!addedTextIndent || hasRemainingNegativeTextIndent) {
                     ti = textIndent.ceilToFloat();
-                    
                     childMin += ti;
-                    childMax += ti;
                     beginMin += ti;
-                    beginMax += ti;
                     
-                    if (childMin < 0)
-                        textIndent = childMin;
-                    else
+                    // It the text indent negative and larger than the child minimum, we re-use the remainder
+                    // in future minimum calculations, but using the negative value again on the maximum
+                    // will lead to under-counting the max pref width.
+                    if (!addedTextIndent) {
+                        childMax += ti;
+                        beginMax += ti;
                         addedTextIndent = true;
+                    }
+                    
+                    if (childMin < 0) {
+                        textIndent = childMin;
+                        hasRemainingNegativeTextIndent = true;
+                    }
                 }
                 
                 // If we have no breakable characters at all,
@@ -6396,7 +6382,7 @@ RenderBlock* RenderBlock::firstLineBlock() const
         if (firstLineBlock->isReplaced() || firstLineBlock->isFloating() || 
             !parentBlock || parentBlock->firstChild() != firstLineBlock || !parentBlock->isBlockFlow())
             break;
-        ASSERT(parentBlock->isRenderBlock());
+        ASSERT_WITH_SECURITY_IMPLICATION(parentBlock->isRenderBlock());
         firstLineBlock = toRenderBlock(parentBlock);
     } 
     
@@ -6922,14 +6908,6 @@ void RenderBlock::updateDragState(bool dragOn)
 RenderStyle* RenderBlock::outlineStyleForRepaint() const
 {
     return isAnonymousBlockContinuation() ? continuation()->style() : style();
-}
-
-void RenderBlock::childBecameNonInline(RenderObject*)
-{
-    makeChildrenNonInline();
-    if (isAnonymousBlock() && parent() && parent()->isRenderBlock())
-        toRenderBlock(parent())->removeLeftoverAnonymousBlock(this);
-    // |this| may be dead here
 }
 
 void RenderBlock::updateHitTestResult(HitTestResult& result, const LayoutPoint& point)
@@ -7838,10 +7816,10 @@ void RenderBlock::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
     RenderBox::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_floatingObjects);
-    info.addMember(m_rareData);
-    info.addMember(m_children);
-    info.addMember(m_lineBoxes);
+    info.addMember(m_floatingObjects, "floatingObjects");
+    info.addMember(m_rareData, "rareData");
+    info.addMember(m_children, "children");
+    info.addMember(m_lineBoxes, "lineBoxes");
 }
 
 void RenderBlock::reportStaticMembersMemoryUsage(MemoryInstrumentation* memoryInstrumentation)

@@ -27,6 +27,7 @@
 
 #include "EditingBoundary.h"
 #include "EventTarget.h"
+#include "FocusDirection.h"
 #include "KURLHash.h"
 #include "LayoutRect.h"
 #include "MutationObserver.h"
@@ -275,10 +276,9 @@ public:
     Node* nonBoundaryShadowTreeRootNode();
 
     // Node's parent, shadow tree host.
-    // FIXME: These methods should be renamed parentOrShadowHost*
-    ContainerNode* parentOrHostNode() const;
-    Element* parentOrHostElement() const;
-    void setParentOrHostNode(ContainerNode*);
+    ContainerNode* parentOrShadowHostNode() const;
+    Element* parentOrShadowHostElement() const;
+    void setParentOrShadowHostNode(ContainerNode*);
     Node* highestAncestor() const;
 
     // Use when it's guaranteed to that shadowHost is 0.
@@ -380,8 +380,10 @@ public:
     bool hasEventTargetData() const { return getFlag(HasEventTargetDataFlag); }
     void setHasEventTargetData(bool flag) { setFlag(flag, HasEventTargetDataFlag); }
 
+#if USE(V8)
     bool isV8CollectableDuringMinorGC() const { return getFlag(V8CollectableDuringMinorGCFlag); }
     void setV8CollectableDuringMinorGC(bool flag) { setFlag(flag, V8CollectableDuringMinorGCFlag); }
+#endif
 
     enum ShouldSetAttached {
         SetAttached,
@@ -390,7 +392,7 @@ public:
     void lazyAttach(ShouldSetAttached = SetAttached);
     void lazyReattach(ShouldSetAttached = SetAttached);
 
-    virtual void setFocus(bool flag = true);
+    virtual void setFocus(bool flag);
     virtual void setActive(bool flag = true, bool pause = false);
     virtual void setHovered(bool flag = true);
 
@@ -638,7 +640,7 @@ public:
     void dispatchSimulatedClick(Event* underlyingEvent, SimulatedClickMouseEventOptions = SendNoEvents, SimulatedClickVisualOptions = ShowPressedLook);
     bool dispatchBeforeLoadEvent(const String& sourceURL);
 
-    virtual void dispatchFocusEvent(PassRefPtr<Node> oldFocusedNode);
+    virtual void dispatchFocusEvent(PassRefPtr<Node> oldFocusedNode, FocusDirection);
     virtual void dispatchBlurEvent(PassRefPtr<Node> newFocusedNode);
     virtual void dispatchChangeEvent();
     virtual void dispatchInputEvent();
@@ -718,7 +720,9 @@ private:
         HasCustomCallbacksFlag = 1 << 21,
         HasScopedHTMLStyleChildFlag = 1 << 22,
         HasEventTargetDataFlag = 1 << 23,
+#if USE(V8)
         V8CollectableDuringMinorGCFlag = 1 << 24,
+#endif
         NeedsShadowTreeWalkerFlag = 1 << 25,
         IsInShadowTreeFlag = 1 << 26,
 
@@ -778,7 +782,7 @@ private:
     friend class TreeShared<Node>;
 
     void removedLastRef();
-    bool hasTreeSharedParent() const { return !!parentOrHostNode(); }
+    bool hasTreeSharedParent() const { return !!parentOrShadowHostNode(); }
 
     enum EditableLevel { Editable, RichlyEditable };
     bool rendererIsEditable(EditableLevel, UserSelectAllTreatment = UserSelectAllIsAlwaysNonEditable) const;
@@ -812,7 +816,7 @@ private:
     HashSet<MutationObserverRegistration*>* transientMutationObserverRegistry();
 
     mutable uint32_t m_nodeFlags;
-    ContainerNode* m_parentOrHostNode;
+    ContainerNode* m_parentOrShadowHostNode;
     TreeScope* m_treeScope;
     Node* m_previous;
     Node* m_next;
@@ -848,27 +852,27 @@ inline void addSubresourceURL(ListHashSet<KURL>& urls, const KURL& url)
         urls.add(url);
 }
 
-inline void Node::setParentOrHostNode(ContainerNode* parent)
+inline void Node::setParentOrShadowHostNode(ContainerNode* parent)
 {
     ASSERT(isMainThread());
-    m_parentOrHostNode = parent;
+    m_parentOrShadowHostNode = parent;
 }
 
-inline ContainerNode* Node::parentOrHostNode() const
+inline ContainerNode* Node::parentOrShadowHostNode() const
 {
     ASSERT(isMainThreadOrGCThread());
-    return m_parentOrHostNode;
+    return m_parentOrShadowHostNode;
 }
 
 inline ContainerNode* Node::parentNode() const
 {
-    return isShadowRoot() ? 0 : parentOrHostNode();
+    return isShadowRoot() ? 0 : parentOrShadowHostNode();
 }
 
 inline ContainerNode* Node::parentNodeGuaranteedHostFree() const
 {
     ASSERT(!isShadowRoot());
-    return parentOrHostNode();
+    return parentOrShadowHostNode();
 }
 
 inline void Node::reattach()

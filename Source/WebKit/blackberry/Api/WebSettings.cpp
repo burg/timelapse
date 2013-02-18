@@ -36,10 +36,10 @@ namespace BlackBerry {
 namespace WebKit {
 
 DEFINE_STATIC_LOCAL(String, BlackBerryAllowCrossSiteRequests, (ASCIILiteral("BlackBerryAllowCrossSiteRequests")));
+DEFINE_STATIC_LOCAL(String, BlackBerryApplyDeviceScaleFactorInCompositor, (ASCIILiteral("BlackBerryApplyDeviceScaleFactorInCompositor")));
 DEFINE_STATIC_LOCAL(String, BlackBerryAsynchronousSpellChecking, (ASCIILiteral("BlackBerryAsynchronousSpellChecking")));
 DEFINE_STATIC_LOCAL(String, BlackBerryBackgroundColor, (ASCIILiteral("BlackBerryBackgroundColor")));
 DEFINE_STATIC_LOCAL(String, BlackBerryCookiesEnabled, (ASCIILiteral("BlackBerryCookiesEnabled")));
-DEFINE_STATIC_LOCAL(String, BlackBerryDirectRenderingToWindowEnabled, (ASCIILiteral("BlackBerryDirectRenderingToWindowEnabled")));
 DEFINE_STATIC_LOCAL(String, BlackBerryDrawBorderWhileLoadingImages, (ASCIILiteral("BlackBerryDrawBorderWhileLoadingImages")));
 DEFINE_STATIC_LOCAL(String, BlackBerryEmailModeEnabled, (ASCIIliteral("BlackBerryEmailModeEnabled")));
 DEFINE_STATIC_LOCAL(String, BlackBerryGetFocusNodeContextEnabled, (ASCIILiteral("BlackBerryGetFocusNodeContextEnabled")));
@@ -179,6 +179,7 @@ WebSettings* WebSettings::standardSettings()
     settings->m_private->setBoolean(BlackBerryCredentialAutofillEnabled, false);
     settings->m_private->setBoolean(BlackBerryFormAutofillEnabled, false);
     settings->m_private->setBoolean(BlackBerryAsynchronousSpellChecking, true);
+    settings->m_private->setBoolean(BlackBerryApplyDeviceScaleFactorInCompositor, false);
 
     if (BlackBerry::Platform::DeviceInfo::instance()->isMobile()) {
         WebCore::FloatSize currentPPI = Platform::Graphics::Screen::primaryScreen()->pixelsPerInch(-1);
@@ -742,16 +743,6 @@ void WebSettings::setFrameFlatteningEnabled(bool enable)
     m_private->setBoolean(WebKitFrameFlatteningEnabled, enable);
 }
 
-bool WebSettings::isDirectRenderingToWindowEnabled() const
-{
-    return m_private->getBoolean(BlackBerryDirectRenderingToWindowEnabled);
-}
-
-void WebSettings::setDirectRenderingToWindowEnabled(bool enable)
-{
-    m_private->setBoolean(BlackBerryDirectRenderingToWindowEnabled, enable);
-}
-
 bool WebSettings::isBackingStoreEnabled() const
 {
     return m_private->getBoolean(BlackBerryBackingStoreEnabled);
@@ -840,6 +831,16 @@ double WebSettings::devicePixelRatio() const
 void WebSettings::setDevicePixelRatio(double ratio)
 {
     m_private->setDouble(BlackBerryDevicePixelRatio, ratio);
+}
+
+bool WebSettings::applyDeviceScaleFactorInCompositor() const
+{
+    return m_private->getBoolean(BlackBerryApplyDeviceScaleFactorInCompositor);
+}
+
+void WebSettings::setApplyPageScaleFactorInCompositor(bool applyDeviceScaleFactorInCompositor)
+{
+    m_private->setBoolean(BlackBerryApplyDeviceScaleFactorInCompositor, applyDeviceScaleFactorInCompositor);
 }
 
 } // namespace WebKit

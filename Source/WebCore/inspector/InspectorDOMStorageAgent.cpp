@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Samsung Electronics. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,6 +57,20 @@ namespace DOMStorageAgentState {
 static const char domStorageAgentEnabled[] = "domStorageAgentEnabled";
 };
 
+static bool hadException(ExceptionCode ec, ErrorString* errorString)
+{
+    switch (ec) {
+    case 0:
+        return false;
+    case SECURITY_ERR:
+        *errorString = "Security error";
+        return true;
+    default:
+        *errorString = "Unknown DOM storage error";
+        return true;
+    }
+}
+
 InspectorDOMStorageAgent::InspectorDOMStorageAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state)
     : InspectorBaseAgent<InspectorDOMStorageAgent>("DOMStorage", instrumentingAgents, state)
     , m_frontend(0)
@@ -109,33 +124,36 @@ void InspectorDOMStorageAgent::disable(ErrorString*)
     m_state->setBoolean(DOMStorageAgentState::domStorageAgentEnabled, m_enabled);
 }
 
-void InspectorDOMStorageAgent::getDOMStorageEntries(ErrorString*, const String& storageId, RefPtr<TypeBuilder::Array<TypeBuilder::Array<String> > >& entries)
+void InspectorDOMStorageAgent::getDOMStorageEntries(ErrorString* errorString, const String& storageId, RefPtr<TypeBuilder::Array<TypeBuilder::Array<String> > >& entries)
 {
-    // FIXME: consider initializing this array after 2 checks below. The checks should return error messages in this case.
-    entries = TypeBuilder::Array<TypeBuilder::Array<String> >::create();
-
     InspectorDOMStorageResource* storageResource = getDOMStorageResourceForId(storageId);
-    if (!storageResource)
+    if (!storageResource) {
+        *errorString = "Storage resource not found for the given storage identifier";
         return;
+    }
     Frame* frame = storageResource->frame();
-    if (!frame)
+    if (!frame) {
+        *errorString = "Frame not found";
         return;
+    }
 
-    // FIXME: Exceptions are not reported here.
+    RefPtr<TypeBuilder::Array<TypeBuilder::Array<String> > > storageEntries = TypeBuilder::Array<TypeBuilder::Array<String> >::create();
+
     ExceptionCode ec = 0;
     StorageArea* storageArea = storageResource->storageArea();
     for (unsigned i = 0; i < storageArea->length(ec, frame); ++i) {
         String name(storageArea->key(i, ec, frame));
-        if (ec)
+        if (hadException(ec, errorString))
             return;
         String value(storageArea->getItem(name, ec, frame));
-        if (ec)
+        if (hadException(ec, errorString))
             return;
         RefPtr<TypeBuilder::Array<String> > entry = TypeBuilder::Array<String>::create();
         entry->addItem(name);
         entry->addItem(value);
-        entries->addItem(entry);
+        storageEntries->addItem(entry);
     }
+    entries = storageEntries.release();
 }
 
 void InspectorDOMStorageAgent::setDOMStorageItem(ErrorString*, const String& storageId, const String& key, const String& value, bool* success)
@@ -205,7 +223,7 @@ void InspectorDOMStorageAgent::didUseDOMStorage(StorageArea* storageArea, bool i
         resource->bind(m_frontend);
 }
 
-void InspectorDOMStorageAgent::didDispatchDOMStorageEvent(const String&, const String&, const String&, StorageType storageType, SecurityOrigin* securityOrigin, Page*)
+void InspectorDOMStorageAgent::didDispatchDOMStorageEvent(const String& key, const String& oldValue, const String& newValue, StorageType storageType, SecurityOrigin* securityOrigin, Page*)
 {
     if (!m_frontend || !m_enabled)
         return;
@@ -215,7 +233,14 @@ void InspectorDOMStorageAgent::didDispatchDOMStorageEvent(const String&, const S
     if (id.isEmpty())
         return;
 
-    m_frontend->domstorage()->domStorageUpdated(id);
+    if (key.isNull())
+        m_frontend->domstorage()->domStorageItemsCleared(id);
+    else if (newValue.isNull())
+        m_frontend->domstorage()->domStorageItemRemoved(id, key);
+    else if (oldValue.isNull())
+        m_frontend->domstorage()->domStorageItemAdded(id, key, newValue);
+    else
+        m_frontend->domstorage()->domStorageItemUpdated(id, key, oldValue, newValue);
 }
 
 void InspectorDOMStorageAgent::clearResources()
@@ -227,7 +252,7 @@ void InspectorDOMStorageAgent::reportMemoryUsage(MemoryObjectInfo* memoryObjectI
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::InspectorDOMStorageAgent);
     InspectorBaseAgent<InspectorDOMStorageAgent>::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_resources);
+    info.addMember(m_resources, "resources");
     info.addWeakPointer(m_frontend);
 }
 

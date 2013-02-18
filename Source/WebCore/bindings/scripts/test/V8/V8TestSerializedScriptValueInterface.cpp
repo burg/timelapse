@@ -19,9 +19,8 @@
 */
 
 #include "config.h"
-#include "V8TestSerializedScriptValueInterface.h"
-
 #if ENABLE(Condition1) || ENABLE(Condition2)
+#include "V8TestSerializedScriptValueInterface.h"
 
 #include "BindingState.h"
 #include "ContextFeatures.h"
@@ -246,7 +245,7 @@ v8::Handle<v8::Value> V8TestSerializedScriptValueInterface::constructorCallback(
     RefPtr<TestSerializedScriptValueInterface> impl = TestSerializedScriptValueInterface::create(hello, data, messagePortArrayTransferList);
     v8::Handle<v8::Object> wrapper = args.Holder();
 
-    V8DOMWrapper::associateObjectWithWrapper(impl.release(), &info, wrapper, args.GetIsolate());
+    V8DOMWrapper::associateObjectWithWrapper(impl.release(), &info, wrapper, args.GetIsolate(), WrapperConfiguration::Dependent);
     return wrapper;
 }
 
@@ -257,7 +256,7 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestSerializedScriptValue
     v8::Local<v8::Signature> defaultSignature;
     defaultSignature = V8DOMConfiguration::configureTemplate(desc, "TestSerializedScriptValueInterface", v8::Persistent<v8::FunctionTemplate>(), V8TestSerializedScriptValueInterface::internalFieldCount,
         V8TestSerializedScriptValueInterfaceAttrs, WTF_ARRAY_LENGTH(V8TestSerializedScriptValueInterfaceAttrs),
-        V8TestSerializedScriptValueInterfaceCallbacks, WTF_ARRAY_LENGTH(V8TestSerializedScriptValueInterfaceCallbacks));
+        V8TestSerializedScriptValueInterfaceCallbacks, WTF_ARRAY_LENGTH(V8TestSerializedScriptValueInterfaceCallbacks), isolate);
     UNUSED_PARAM(defaultSignature); // In some cases, it will not be used.
     desc->SetCallHandler(V8TestSerializedScriptValueInterface::constructorCallback);
     v8::Local<v8::ObjectTemplate> instance = desc->InstanceTemplate();
@@ -273,23 +272,19 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestSerializedScriptValue
 
 v8::Persistent<v8::FunctionTemplate> V8TestSerializedScriptValueInterface::GetRawTemplate(v8::Isolate* isolate)
 {
-    if (!isolate)
-        isolate = v8::Isolate::GetCurrent();
     V8PerIsolateData* data = V8PerIsolateData::from(isolate);
     V8PerIsolateData::TemplateMap::iterator result = data->rawTemplateMap().find(&info);
     if (result != data->rawTemplateMap().end())
         return result->value;
 
     v8::HandleScope handleScope;
-    v8::Persistent<v8::FunctionTemplate> templ = createRawTemplate();
+    v8::Persistent<v8::FunctionTemplate> templ = createRawTemplate(isolate);
     data->rawTemplateMap().add(&info, templ);
     return templ;
 }
 
 v8::Persistent<v8::FunctionTemplate> V8TestSerializedScriptValueInterface::GetTemplate(v8::Isolate* isolate)
 {
-    if (!isolate)
-        isolate = v8::Isolate::GetCurrent();
     V8PerIsolateData* data = V8PerIsolateData::from(isolate);
     V8PerIsolateData::TemplateMap::iterator result = data->templateMap().find(&info);
     if (result != data->templateMap().end())
@@ -302,9 +297,9 @@ v8::Persistent<v8::FunctionTemplate> V8TestSerializedScriptValueInterface::GetTe
     return templ;
 }
 
-bool V8TestSerializedScriptValueInterface::HasInstance(v8::Handle<v8::Value> value)
+bool V8TestSerializedScriptValueInterface::HasInstance(v8::Handle<v8::Value> value, v8::Isolate* isolate)
 {
-    return GetRawTemplate()->HasInstance(value);
+    return GetRawTemplate(isolate)->HasInstance(value);
 }
 
 
@@ -317,14 +312,12 @@ v8::Handle<v8::Object> V8TestSerializedScriptValueInterface::createWrapper(PassR
     checkTypeOrDieTrying(impl.get());
 #endif
 
-    v8::Handle<v8::Object> wrapper = V8DOMWrapper::createWrapper(creationContext, &info, impl.get());
+    v8::Handle<v8::Object> wrapper = V8DOMWrapper::createWrapper(creationContext, &info, impl.get(), isolate);
     if (UNLIKELY(wrapper.IsEmpty()))
         return wrapper;
 
-    installPerContextProperties(wrapper, impl.get());
-    v8::Persistent<v8::Object> wrapperHandle = V8DOMWrapper::associateObjectWithWrapper(impl, &info, wrapper, isolate);
-    if (!hasDependentLifetime)
-        wrapperHandle.MarkIndependent();
+    installPerContextProperties(wrapper, impl.get(), isolate);
+    V8DOMWrapper::associateObjectWithWrapper(impl, &info, wrapper, isolate, hasDependentLifetime ? WrapperConfiguration::Dependent : WrapperConfiguration::Independent);
     return wrapper;
 }
 void V8TestSerializedScriptValueInterface::derefObject(void* object)

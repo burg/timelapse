@@ -226,6 +226,16 @@ struct Node {
         return op() == WeakJSConstant;
     }
     
+    bool isStronglyProvedConstantIn(InlineCallFrame* inlineCallFrame)
+    {
+        return isConstant() && codeOrigin.inlineCallFrame == inlineCallFrame;
+    }
+    
+    bool isStronglyProvedConstantIn(const CodeOrigin& codeOrigin)
+    {
+        return isStronglyProvedConstantIn(codeOrigin.inlineCallFrame);
+    }
+    
     bool isPhantomArguments()
     {
         return op() == PhantomArguments;
@@ -304,6 +314,22 @@ struct Node {
         m_flags &= ~NodeClobbersWorld;
     }
     
+    void convertToPhantomLocal()
+    {
+        ASSERT(m_op == Phantom && (child1()->op() == Phi || child1()->op() == SetLocal || child1()->op() == SetArgument));
+        m_op = PhantomLocal;
+        m_opInfo = child1()->m_opInfo; // Copy the variableAccessData.
+        children.setChild1(Edge());
+    }
+    
+    void convertToGetLocal(VariableAccessData* variable, Node* phi)
+    {
+        ASSERT(m_op == GetLocalUnlinked);
+        m_op = GetLocal;
+        m_opInfo = bitwise_cast<uintptr_t>(variable);
+        children.setChild1(Edge(phi));
+    }
+    
     JSCell* weakConstant()
     {
         ASSERT(op() == WeakJSConstant);
@@ -358,6 +384,7 @@ struct Node {
         case Phi:
         case SetArgument:
         case Flush:
+        case PhantomLocal:
             return true;
         default:
             return false;
@@ -916,6 +943,7 @@ struct Node {
         switch (op()) {
         case SetLocal:
         case Int32ToDouble:
+        case ForwardInt32ToDouble:
         case ValueToInt32:
         case UInt32ToNumber:
         case DoubleAsInt32:
@@ -1065,16 +1093,6 @@ struct Node {
         return isFinalObjectSpeculation(prediction());
     }
     
-    bool shouldSpeculateNonStringCell()
-    {
-        return isNonStringCellSpeculation(prediction());
-    }
-
-    bool shouldSpeculateNonStringCellOrOther()
-    {
-        return isNonStringCellOrOtherSpeculation(prediction());
-    }
-
     bool shouldSpeculateFinalObjectOrOther()
     {
         return isFinalObjectOrOtherSpeculation(prediction());
@@ -1145,6 +1163,11 @@ struct Node {
         return isObjectSpeculation(prediction());
     }
     
+    bool shouldSpeculateObjectOrOther()
+    {
+        return isObjectOrOtherSpeculation(prediction());
+    }
+
     bool shouldSpeculateCell()
     {
         return isCellSpeculation(prediction());

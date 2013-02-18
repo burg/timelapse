@@ -48,7 +48,6 @@ PassRefPtr<ScrollingTree> ScrollingTree::create(ScrollingCoordinator* scrollingC
 
 ScrollingTree::ScrollingTree(ScrollingCoordinator* scrollingCoordinator)
     : m_scrollingCoordinator(scrollingCoordinator)
-    , m_rootNode(ScrollingTreeScrollingNode::create(this))
     , m_hasWheelEventHandlers(false)
     , m_canGoBack(false)
     , m_canGoForward(false)
@@ -100,8 +99,9 @@ void ScrollingTree::updateBackForwardState(bool canGoBack, bool canGoForward)
 void ScrollingTree::handleWheelEvent(const PlatformWheelEvent& wheelEvent)
 {
     ASSERT(ScrollingThread::isCurrentThread());
-
-    m_rootNode->handleWheelEvent(wheelEvent);
+    
+    if (m_rootNode)
+        m_rootNode->handleWheelEvent(wheelEvent);
 }
 
 static void derefScrollingCoordinator(ScrollingCoordinator* scrollingCoordinator)
@@ -128,53 +128,69 @@ void ScrollingTree::commitNewTreeState(PassOwnPtr<ScrollingStateTree> scrollingS
 {
     ASSERT(ScrollingThread::isCurrentThread());
 
-    if (scrollingStateTree->rootStateNode()->changedProperties() & (ScrollingStateScrollingNode::WheelEventHandlerCount | ScrollingStateScrollingNode::NonFastScrollableRegion) || scrollingStateTree->rootStateNode()->scrollLayerDidChange()) {
+    ScrollingStateScrollingNode* rootNode = scrollingStateTree->rootStateNode();
+    if (rootNode
+        && (rootNode->hasChangedProperty(ScrollingStateScrollingNode::WheelEventHandlerCount)
+            || rootNode->hasChangedProperty(ScrollingStateScrollingNode::NonFastScrollableRegion)
+            || rootNode->hasChangedProperty(ScrollingStateNode::ScrollLayer))) {
         MutexLocker lock(m_mutex);
 
-        if (scrollingStateTree->rootStateNode()->scrollLayerDidChange())
+        if (rootNode->hasChangedProperty(ScrollingStateNode::ScrollLayer))
             m_mainFrameScrollPosition = IntPoint();
-        if (scrollingStateTree->rootStateNode()->changedProperties() & ScrollingStateScrollingNode::WheelEventHandlerCount)
+        if (rootNode->hasChangedProperty(ScrollingStateScrollingNode::WheelEventHandlerCount))
             m_hasWheelEventHandlers = scrollingStateTree->rootStateNode()->wheelEventHandlerCount();
-        if (scrollingStateTree->rootStateNode()->changedProperties() & ScrollingStateScrollingNode::NonFastScrollableRegion)
+        if (rootNode->hasChangedProperty(ScrollingStateScrollingNode::NonFastScrollableRegion))
             m_nonFastScrollableRegion = scrollingStateTree->rootStateNode()->nonFastScrollableRegion();
     }
     
-    TemporaryChange<bool> changeHandlingProgrammaticScroll(m_isHandlingProgrammaticScroll, scrollingStateTree->rootStateNode()->requestedScrollPositionRepresentsProgrammaticScroll());
+    bool scrollRequestIsProgammatic = rootNode ? rootNode->requestedScrollPositionRepresentsProgrammaticScroll() : false;
+    TemporaryChange<bool> changeHandlingProgrammaticScroll(m_isHandlingProgrammaticScroll, scrollRequestIsProgammatic);
 
     removeDestroyedNodes(scrollingStateTree.get());
-    updateTreeFromStateNode(scrollingStateTree->rootStateNode());
+    updateTreeFromStateNode(rootNode);
 }
 
 void ScrollingTree::updateTreeFromStateNode(ScrollingStateNode* stateNode)
 {
+    if (!stateNode) {
+        m_nodeMap.clear();
+        m_rootNode = nullptr;
+        return;
+    }
+    
     // This fuction recurses through the ScrollingStateTree and updates the corresponding ScrollingTreeNodes.
     // Find the ScrollingTreeNode associated with the current stateNode using the shared ID and our HashMap.
     ScrollingTreeNodeMap::const_iterator it = m_nodeMap.find(stateNode->scrollingNodeID());
 
+    ScrollingTreeNode* node;
     if (it != m_nodeMap.end()) {
-        ScrollingTreeNode* node = it->value;
-        node->update(stateNode);
+        node = it->value;
+        node->updateBeforeChildren(stateNode);
     } else {
         // If the node isn't found, it's either new and needs to be added to the tree, or there is a new ID for our
         // root node.
+        ScrollingNodeID nodeID = stateNode->scrollingNodeID();
         if (!stateNode->parent()) {
-            // This is the root node.
-            m_rootNode->setScrollingNodeID(stateNode->scrollingNodeID());
-            m_nodeMap.set(stateNode->scrollingNodeID(), m_rootNode.get());
-            m_rootNode->update(stateNode);
+            // This is the root node. Nuke the node map.
+            m_nodeMap.clear();
+
+            m_rootNode = ScrollingTreeScrollingNode::create(this, nodeID);
+            m_nodeMap.set(nodeID, m_rootNode.get());
+            m_rootNode->updateBeforeChildren(stateNode);
+            node = m_rootNode.get();
         } else {
             OwnPtr<ScrollingTreeNode> newNode;
             if (stateNode->isScrollingNode())
-                newNode = ScrollingTreeScrollingNode::create(this);
+                newNode = ScrollingTreeScrollingNode::create(this, nodeID);
             else if (stateNode->isFixedNode())
-                newNode = ScrollingTreeFixedNode::create(this);
+                newNode = ScrollingTreeFixedNode::create(this, nodeID);
             else if (stateNode->isStickyNode())
-                newNode = ScrollingTreeStickyNode::create(this);
+                newNode = ScrollingTreeStickyNode::create(this, nodeID);
             else
                 ASSERT_NOT_REACHED();
 
-            ScrollingTreeNode* newNodeRawPtr = newNode.get();
-            m_nodeMap.set(stateNode->scrollingNodeID(), newNodeRawPtr);
+            node = newNode.get();
+            m_nodeMap.set(nodeID, node);
             ScrollingTreeNodeMap::const_iterator it = m_nodeMap.find(stateNode->parent()->scrollingNodeID());
             ASSERT(it != m_nodeMap.end());
             if (it != m_nodeMap.end()) {
@@ -182,18 +198,18 @@ void ScrollingTree::updateTreeFromStateNode(ScrollingStateNode* stateNode)
                 newNode->setParent(parent);
                 parent->appendChild(newNode.release());
             }
-            newNodeRawPtr->update(stateNode);
+            node->updateBeforeChildren(stateNode);
         }
     }
 
     // Now update the children if we have any.
     Vector<OwnPtr<ScrollingStateNode> >* stateNodeChildren = stateNode->children();
-    if (!stateNodeChildren)
-        return;
-
-    size_t size = stateNodeChildren->size();
-    for (size_t i = 0; i < size; ++i)
-        updateTreeFromStateNode(stateNodeChildren->at(i).get());
+    if (stateNodeChildren) {
+        size_t size = stateNodeChildren->size();
+        for (size_t i = 0; i < size; ++i)
+            updateTreeFromStateNode(stateNodeChildren->at(i).get());
+    }
+    node->updateAfterChildren(stateNode);
 }
 
 void ScrollingTree::removeDestroyedNodes(ScrollingStateTree* stateTree)

@@ -30,9 +30,7 @@
 // This IDL file is for testing the bindings code generator and for tracking
 // changes in its ouput.
 
-#if defined(TESTING_JS) || defined(TESTING_V8)
 enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
-#endif
 
 [
     Constructor(in [Callback] TestCallback testCallback),
@@ -42,12 +40,10 @@ enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
     readonly attribute long            readOnlyLongAttr;
     readonly attribute DOMString       readOnlyStringAttr;
     readonly attribute TestObj         readOnlyTestObjAttr;
-#if defined(TESTING_JS) || defined(TESTING_V8)
     static readonly attribute long     staticReadOnlyLongAttr;
     static attribute DOMString         staticStringAttr;
     static readonly attribute TestSubObjConstructor TestSubObj;
     attribute TestEnumType             enumAttr;
-#endif
     attribute short                    shortAttr;
     attribute unsigned short           unsignedShortAttr;
     attribute long                     longAttr;

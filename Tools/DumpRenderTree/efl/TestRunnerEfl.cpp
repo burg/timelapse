@@ -126,11 +126,6 @@ size_t TestRunner::webHistoryItemCount()
     return ewk_history_back_list_length(history) + ewk_history_forward_list_length(history);
 }
 
-unsigned TestRunner::workerThreadCount() const
-{
-    return DumpRenderTreeSupportEfl::workerThreadCount();
-}
-
 void TestRunner::notifyDone()
 {
     if (m_waitToDump && !topLoadingFrame && !WorkQueue::shared()->count())
@@ -321,11 +316,6 @@ void TestRunner::setJavaScriptCanAccessClipboard(bool flag)
 void TestRunner::setXSSAuditorEnabled(bool flag)
 {
     ewk_view_setting_enable_xss_auditor_set(browser->mainView(), flag);
-}
-
-void TestRunner::setFrameFlatteningEnabled(bool flag)
-{
-    ewk_view_setting_enable_frame_flattening_set(browser->mainView(), flag);
 }
 
 void TestRunner::setSpatialNavigationEnabled(bool flag)
@@ -655,21 +645,6 @@ void TestRunner::setAppCacheMaximumSize(unsigned long long size)
     ewk_settings_application_cache_max_quota_set(size);
 }
 
-bool TestRunner::pauseAnimationAtTimeOnElementWithId(JSStringRef animationName, double time, JSStringRef elementId)
-{
-    return DumpRenderTreeSupportEfl::pauseAnimation(browser->mainFrame(), animationName->string().utf8().data(), elementId->string().utf8().data(), time);
-}
-
-bool TestRunner::pauseTransitionAtTimeOnElementWithId(JSStringRef propertyName, double time, JSStringRef elementId)
-{
-    return DumpRenderTreeSupportEfl::pauseTransition(browser->mainFrame(), propertyName->string().utf8().data(), elementId->string().utf8().data(), time);
-}
-
-unsigned TestRunner::numberOfActiveAnimations() const
-{
-    return DumpRenderTreeSupportEfl::activeAnimationsCount(browser->mainFrame());
-}
-
 static inline bool toBool(JSStringRef value)
 {
     return equals(value, "true") || equals(value, "1");
@@ -816,11 +791,6 @@ void TestRunner::setSerializeHTTPLoads(bool serialize)
     DumpRenderTreeSupportEfl::setSerializeHTTPLoads(serialize);
 }
 
-void TestRunner::setMinimumTimerInterval(double minimumTimerInterval)
-{
-    ewk_view_setting_minimum_timer_interval_set(browser->mainView(), minimumTimerInterval);
-}
-
 void TestRunner::setTextDirection(JSStringRef direction)
 {
     Ewk_Text_Direction ewkDirection;
@@ -899,20 +869,6 @@ void TestRunner::setPageVisibility(const char* visibility)
 void TestRunner::setAutomaticLinkDetectionEnabled(bool)
 {
     notImplemented();
-}
-
-void TestRunner::sendWebIntentResponse(JSStringRef response)
-{
-    Ewk_Intent_Request* request = browser->currentIntentRequest();
-    if (!request)
-        return;
-
-    DumpRenderTreeSupportEfl::sendWebIntentResponse(request, response);
-}
-
-void TestRunner::deliverWebIntent(JSStringRef action, JSStringRef type, JSStringRef data)
-{
-    DumpRenderTreeSupportEfl::deliverWebIntent(browser->mainFrame(), action, type, data);
 }
 
 void TestRunner::setStorageDatabaseIdleInterval(double)

@@ -40,6 +40,7 @@
 #include "EditorClient.h"
 #include "Element.h"
 #include "EventHandler.h"
+#include "ExceptionCodePlaceholder.h"
 #include "FloatRect.h"
 #include "Frame.h"
 #include "FrameLoadRequest.h"
@@ -144,10 +145,9 @@ static PassRefPtr<DocumentFragment> documentFragmentFromDragData(DragData* dragD
                         title = url;
                 }
                 RefPtr<Node> anchorText = document->createTextNode(title);
-                ExceptionCode ec;
-                anchor->appendChild(anchorText, ec);
+                anchor->appendChild(anchorText, IGNORE_EXCEPTION);
                 RefPtr<DocumentFragment> fragment = document->createDocumentFragment();
-                fragment->appendChild(anchor, ec);
+                fragment->appendChild(anchor, IGNORE_EXCEPTION);
                 return fragment.get();
             }
         }
@@ -439,8 +439,7 @@ bool DragController::dispatchTextInputEventFor(Frame* innerFrame, DragData* drag
     ASSERT(m_page->dragCaretController()->hasCaret());
     String text = m_page->dragCaretController()->isContentRichlyEditable() ? "" : dragData->asPlainText(innerFrame);
     Node* target = innerFrame->editor()->findEventTargetFrom(m_page->dragCaretController()->caretPosition());
-    ExceptionCode ec = 0;
-    return target->dispatchEvent(TextEvent::createForDrop(innerFrame->document()->domWindow(), text), ec);
+    return target->dispatchEvent(TextEvent::createForDrop(innerFrame->document()->domWindow(), text), IGNORE_EXCEPTION);
 }
 
 bool DragController::concludeEditDrag(DragData* dragData)
@@ -701,9 +700,7 @@ static void prepareClipboardForImageDrag(Frame* source, Clipboard* clipboard, El
 {
     if (node->isContentRichlyEditable()) {
         RefPtr<Range> range = source->document()->createRange();
-        ExceptionCode ec = 0;
-        range->selectNode(node, ec);
-        ASSERT(!ec);
+        range->selectNode(node, ASSERT_NO_EXCEPTION);
         source->selection()->setSelection(VisibleSelection(range.get(), DOWNSTREAM));
     }
     clipboard->declareAndWriteDragImage(node, !linkURL.isEmpty() ? linkURL : imageURL, label, source);

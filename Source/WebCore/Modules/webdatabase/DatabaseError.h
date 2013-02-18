@@ -28,21 +28,18 @@
 
 #if ENABLE(SQL_DATABASE)
 
-#include <wtf/TypeSafeEnum.h>
+#include <wtf/EnumClass.h>
 
 namespace WebCore {
 
-struct DatabaseErrorDefinition {
-    enum Enums {
-        None = 0,
-        CannotOpenDatabase,
-        DatabaseIsBeingDeleted,
-        DatabaseSizeExceededQuota,
-        DatabaseSizeOverflowed
-    };
-};
-
-typedef TypeSafeEnum<DatabaseErrorDefinition, DatabaseErrorDefinition::None> DatabaseError;
+ENUM_CLASS(DatabaseError) {
+    None = 0,
+    DatabaseIsBeingDeleted,
+    DatabaseSizeExceededQuota,
+    DatabaseSizeOverflowed,
+    GenericSecurityError,
+    InvalidDatabaseState
+} ENUM_CLASS_END(DatabaseError);
 
 } // namespace WebCore
 

@@ -30,7 +30,7 @@ include(yarr/yarr.pri)
 
 INSTALLDEPS += all
 
-debug_and_release: INCLUDEPATH += $$JAVASCRIPTCORE_GENERATED_SOURCES_DIR/$$activeBuildConfig()
+debug_and_release: INCLUDEPATH += $$JAVASCRIPTCORE_GENERATED_SOURCES_DIR/$$targetSubDir()
 
 SOURCES += \
     API/JSBase.cpp \
@@ -68,6 +68,7 @@ SOURCES += \
     bytecode/MethodOfGettingAValueProfile.cpp \
     bytecode/Opcode.cpp \
     bytecode/PolymorphicPutByIdList.cpp \
+    bytecode/PreciseJumpTargets.cpp \
     bytecode/PutByIdStatus.cpp \
     bytecode/ReduceWhitespace.cpp \
     bytecode/ResolveGlobalStatus.cpp \
@@ -117,6 +118,7 @@ SOURCES += \
     dfg/DFGCommon.cpp \
     dfg/DFGCFAPhase.cpp \
     dfg/DFGCFGSimplificationPhase.cpp \
+    dfg/DFGCPSRethreadingPhase.cpp \
     dfg/DFGConstantFoldingPhase.cpp \
     dfg/DFGCSEPhase.cpp \
     dfg/DFGDisassembler.cpp \
@@ -139,12 +141,14 @@ SOURCES += \
     dfg/DFGOSRExitJumpPlaceholder.cpp \
     dfg/DFGPhase.cpp \
     dfg/DFGPredictionPropagationPhase.cpp \
+    dfg/DFGPredictionInjectionPhase.cpp \
     dfg/DFGRepatch.cpp \
     dfg/DFGSpeculativeJIT.cpp \
     dfg/DFGSpeculativeJIT32_64.cpp \
     dfg/DFGSpeculativeJIT64.cpp \
     dfg/DFGStructureCheckHoistingPhase.cpp \
     dfg/DFGThunks.cpp \
+    dfg/DFGUnificationPhase.cpp \
     dfg/DFGValueSource.cpp \
     dfg/DFGVariableAccessDataDump.cpp \
     dfg/DFGVariableEvent.cpp \
@@ -310,6 +314,7 @@ SOURCES += \
     runtime/StringRecursionChecker.cpp \
     runtime/StructureChain.cpp \
     runtime/Structure.cpp \
+    runtime/StructureRareData.cpp \
     runtime/SymbolTable.cpp \
     runtime/TimeoutChecker.cpp \
     tools/CodeProfile.cpp \

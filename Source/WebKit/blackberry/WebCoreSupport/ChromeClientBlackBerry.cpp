@@ -54,6 +54,7 @@
 #include "SVGZoomAndPan.h"
 #include "SearchPopupMenuBlackBerry.h"
 #include "SecurityOrigin.h"
+#include "Settings.h"
 #include "SharedPointer.h"
 #include "ViewportArguments.h"
 #include "WebPage.h"
@@ -165,7 +166,11 @@ FloatRect ChromeClientBlackBerry::windowRect()
     if (Window* window = m_webPagePrivate->m_client->window())
         windowSize = window->windowSize();
 
-    return FloatRect(0, 0, windowSize.width(), windowSize.height());
+    // Use logical (density-independent) pixels instead of physical screen pixels.
+    FloatRect rect = FloatRect(0, 0, windowSize.width(), windowSize.height());
+    if (!m_webPagePrivate->m_page->settings()->applyDeviceScaleFactorInCompositor())
+        rect.scale(1 / m_webPagePrivate->m_page->deviceScaleFactor());
+    return rect;
 }
 
 FloatRect ChromeClientBlackBerry::pageRect()
@@ -230,9 +235,6 @@ Page* ChromeClientBlackBerry::createWindow(Frame* frame, const FrameLoadRequest&
     if (m_webPagePrivate->m_dumpRenderTree && !m_webPagePrivate->m_dumpRenderTree->allowsOpeningWindow())
         return 0;
 #endif
-
-    PageGroupLoadDeferrer deferrer(m_webPagePrivate->m_page, true);
-    TimerBase::fireTimersInNestedEventLoop();
 
     int x = features.xSet ? features.x : 0;
     int y = features.ySet ? features.y : 0;

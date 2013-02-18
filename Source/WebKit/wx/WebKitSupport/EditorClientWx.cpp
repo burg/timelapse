@@ -147,12 +147,6 @@ bool EditorClientWx::shouldDeleteRange(Range*)
     return true;
 }
 
-bool EditorClientWx::shouldShowDeleteInterface(HTMLElement*)
-{
-    notImplemented();
-    return false;
-}
-
 bool EditorClientWx::smartInsertDeleteEnabled()
 {
     notImplemented();
@@ -269,6 +263,16 @@ void EditorClientWx::didEndEditing()
 }
 
 void EditorClientWx::didWriteSelectionToPasteboard()
+{
+    notImplemented();
+}
+
+void EditorClientWx::willWriteSelectionToPasteboard(WebCore::Range*)
+{
+    notImplemented();
+}
+
+void EditorClientWx::getClientPasteboardDataForRange(WebCore::Range*, Vector<String>&, Vector<RefPtr<WebCore::SharedBuffer> >&)
 {
     notImplemented();
 }

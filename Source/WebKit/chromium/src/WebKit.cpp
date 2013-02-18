@@ -53,9 +53,18 @@
 #include <wtf/UnusedParam.h>
 #include <wtf/text/AtomicString.h>
 
+#if ENABLE(INDEXED_DATABASE)
+#include "IDBFactoryBackendProxy.h"
+#endif
+
 #if ENABLE(VIDEO)
 #include "MediaPlayerPrivateChromium.h"
 #include "WebMediaPlayerClientImpl.h"
+#endif
+
+#if ENABLE(WORKERS)
+#include "WebWorkerClientImpl.h"
+#include "WorkerContextProxyChromium.h"
 #endif
 
 #if OS(DARWIN)
@@ -148,8 +157,16 @@ void initializeWithoutV8(WebKitPlatformSupport* webKitPlatformSupport)
     // this, initializing this lazily probably doesn't buy us much.
     WebCore::UTF8Encoding();
 
+#if ENABLE(INDEXED_DATABASE)
+    WebCore::setIDBFactoryBackendInterfaceCreateFunction(WebKit::IDBFactoryBackendProxy::create);
+#endif
+
 #if ENABLE(VIDEO)
     WebCore::MediaPlayerPrivate::setMediaEngineRegisterSelfFunction(WebKit::WebMediaPlayerClientImpl::registerSelf);
+#endif
+
+#if ENABLE(WORKERS)
+    WebCore::setWorkerContextProxyCreateFunction(WebWorkerClientImpl::createWorkerContextProxy);
 #endif
 }
 

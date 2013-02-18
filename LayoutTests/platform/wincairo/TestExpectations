@@ -258,7 +258,6 @@ fast/dom/Document/CaretRangeFromPoint/basic.html
 fast/dom/Document/CaretRangeFromPoint/hittest-relative-to-viewport.html
 fast/dom/Element/class-attribute-whitespace.html 
 fast/dom/Element/getBoundingClientRect.html
-fast/dom/Element/id-in-deletebutton.html 
 fast/dom/Element/null-offset-parent.html 
 fast/dom/HTMLDocument/frameless-location-bugzilla10837.html 
 fast/dom/HTMLElement/bdo.html 
@@ -1092,8 +1091,6 @@ fast/table/frame-and-rules.html
 fast/table/giantCellspacing.html
 
 # Not investigated yet
-editing/deleting/5408255.html
-editing/deleting/deletionUI-single-instance.html
 editing/pasteboard/input-field-1.html
 editing/selection/contains-boundaries.html
 editing/undo/5378473.html
@@ -1618,6 +1615,11 @@ editing/spelling/spelling-marker-description.html
 # IndexedDB is not yet enabled.
 storage/indexeddb
 http/tests/inspector/indexeddb
+http/tests/security/cross-origin-indexeddb-allowed.html
+http/tests/security/cross-origin-indexeddb.html
+http/tests/security/cross-origin-worker-indexeddb-allowed.html
+http/tests/security/cross-origin-worker-indexeddb.html
+http/tests/security/no-indexeddb-from-sandbox.html
 
 # StorageTracker is not enabled.
 storage/domstorage/localstorage/storagetracker
@@ -1743,6 +1745,7 @@ fast/events/constructors/mouse-event-constructor.html
 fast/events/constructors/composition-event-constructor.html
 fast/events/constructors/wheel-event-constructor.html
 fast/events/constructors/keyboard-event-constructor.html
+fast/events/constructors/focus-event-constructor.html
 
 # Disable until the windows WebKit API supports injecting in the top frame only.
 # https://bugs.webkit.org/show_bug.cgi?id=41800
@@ -2145,9 +2148,6 @@ fast/events/platform-wheelevent-paging-y-in-non-scrolling-page.html
 fast/events/platform-wheelevent-paging-y-in-scrolling-div.html
 fast/events/platform-wheelevent-paging-y-in-scrolling-page.html
 
-# Web Intents is not yet enabled.
-webintents/
-
 # Pointer Lock is not implemented.
 pointer-lock/
 http/tests/pointer-lock/
@@ -2518,6 +2518,9 @@ fast/multicol/span/clone-flexbox.html
 # Content Security Policy 1.1 (ENABLE_CSP_NEXT) is not enabled
 # https://bugs.webkit.org/show_bug.cgi?id=85558
 http/tests/security/contentSecurityPolicy/1.1
+
+# X-Content-Type-Options (ENABLE_NOSNIFF) is not enabled.
+http/tests/security/contentTypeOptions
 
 # Skip tests in fast/text/shaping
 fast/text/shaping

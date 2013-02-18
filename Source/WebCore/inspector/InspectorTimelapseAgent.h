@@ -81,7 +81,7 @@ public:
     void clearFrontend();
 
     // Calls from WebKit (InspectorInstrumentation/InstrumentingAgents)
-    void willDispatchEvent(const Event&, DOMWindow*, Node*, const Vector<EventContext>&);
+    void willDispatchEvent(const Event&, DOMWindow*, Node*);
     void didDispatchEvent();
     void willDispatchEventOnWindow(const Event&, DOMWindow*);
     void didDispatchEventOnWindow();

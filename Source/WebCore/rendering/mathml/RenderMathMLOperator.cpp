@@ -83,11 +83,16 @@ void RenderMathMLOperator::styleDidChange(StyleDifference diff, const RenderStyl
 void RenderMathMLOperator::computePreferredLogicalWidths() 
 {
     ASSERT(preferredLogicalWidthsDirty());
+
+#ifndef NDEBUG
+    // FIXME: Remove this once mathml stops modifying the render tree here.
+    SetLayoutNeededForbiddenScope layoutForbiddenScope(this, false);
+#endif
     
     // Check for an uninitialized operator.
     if (!firstChild())
         updateFromElement();
-    
+
     RenderMathMLBlock::computePreferredLogicalWidths();
 }
 

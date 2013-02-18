@@ -32,12 +32,6 @@
 #include "DrawingAreaProxy.h"
 #include "EditorState.h"
 #include "GeolocationPermissionRequestManagerProxy.h"
-#if ENABLE(TOUCH_EVENTS)
-#include "NativeWebTouchEvent.h"
-#endif
-#if PLATFORM(QT)
-#include "QtNetworkRequestData.h"
-#endif
 #include "LayerTreeContext.h"
 #include "NotificationPermissionRequestManagerProxy.h"
 #include "PlatformProcessIdentifier.h"
@@ -81,14 +75,21 @@
 #include <WebCore/DragSession.h>
 #endif
 
+#if ENABLE(TOUCH_EVENTS)
+#include "NativeWebTouchEvent.h"
+#endif
+
 #if PLATFORM(EFL)
 #include <Evas.h>
+#endif
+
+#if PLATFORM(QT)
+#include "QtNetworkRequestData.h"
 #endif
 
 namespace CoreIPC {
     class ArgumentDecoder;
     class Connection;
-    class MessageID;
 }
 
 namespace WebCore {
@@ -122,10 +123,6 @@ class WKView;
 typedef GtkWidget* PlatformWidget;
 #elif PLATFORM(EFL)
 typedef Evas_Object* PlatformWidget;
-#endif
-
-#if ENABLE(WEB_INTENTS)
-class WebIntentData;
 #endif
 
 namespace WebKit {
@@ -165,14 +162,6 @@ class WebGestureEvent;
 
 #if ENABLE(VIBRATION)
 class WebVibrationProxy;
-#endif
-
-#if ENABLE(WEB_INTENTS)
-struct IntentData;
-#endif
-
-#if ENABLE(WEB_INTENTS_TAG)
-struct IntentServiceInfo;
 #endif
 
 typedef GenericCallback<WKStringRef, StringImpl*> StringCallback;
@@ -243,7 +232,8 @@ class WebPageProxy
 #if ENABLE(INPUT_TYPE_COLOR)
     , public WebColorChooserProxy::Client
 #endif
-    , public WebPopupMenuProxy::Client {
+    , public WebPopupMenuProxy::Client
+    , public CoreIPC::MessageReceiver {
 public:
     static const Type APIType = TypePage;
 
@@ -563,10 +553,6 @@ public:
     void runJavaScriptInMainFrame(const String&, PassRefPtr<ScriptValueCallback>);
     void forceRepaint(PassRefPtr<VoidCallback>);
 
-#if ENABLE(WEB_INTENTS)
-    void deliverIntentToFrame(WebFrameProxy*, WebIntentData*);
-#endif
-
     float headerHeight(WebFrameProxy*);
     float footerHeight(WebFrameProxy*);
     void drawHeader(WebFrameProxy*, const WebCore::FloatRect&);
@@ -599,9 +585,6 @@ public:
     void startDrag(const WebCore::DragData&, const ShareableBitmap::Handle& dragImage);
 #endif
 #endif
-
-    void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
-    void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
 
     void processDidBecomeUnresponsive();
     void interactionOccurredWhileProcessUnresponsive();
@@ -766,6 +749,10 @@ private:
 
     virtual Type type() const { return APIType; }
 
+    // CoreIPC::MessageReceiver
+    virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
+    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&) OVERRIDE;
+
     // WebPopupMenuProxy::Client
     virtual void valueChangedForPopupMenu(WebPopupMenuProxy*, int32_t newSelectedIndex);
     virtual void setTextFromItemForPopupMenu(WebPopupMenuProxy*, int32_t index);
@@ -782,9 +769,7 @@ private:
     void didReceiveSyncWebPageProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
 
     void didCreateMainFrame(uint64_t frameID);
-    void didCreateSubframe(uint64_t frameID, uint64_t parentFrameID);
-    void didSaveFrameToPageCache(uint64_t frameID);
-    void didRestoreFrameFromPageCache(uint64_t frameID, uint64_t parentFrameID);
+    void didCreateSubframe(uint64_t frameID);
 
     void didStartProvisionalLoadForFrame(uint64_t frameID, const String& url, const String& unreachableURL, CoreIPC::MessageDecoder&);
     void didReceiveServerRedirectForProvisionalLoadForFrame(uint64_t frameID, const String&, CoreIPC::MessageDecoder&);
@@ -808,13 +793,6 @@ private:
     void didChangeProgress(double);
     void didFinishProgress();
 
-#if ENABLE(WEB_INTENTS)
-    void didReceiveIntentForFrame(uint64_t frameID, const IntentData&, CoreIPC::MessageDecoder&);
-#endif
-#if ENABLE(WEB_INTENTS_TAG)
-    void registerIntentServiceForFrame(uint64_t frameID, const IntentServiceInfo&, CoreIPC::MessageDecoder&);
-#endif
-    
     void decidePolicyForNavigationAction(uint64_t frameID, uint32_t navigationType, uint32_t modifiers, int32_t mouseButton, const WebCore::ResourceRequest&, uint64_t listenerID, CoreIPC::MessageDecoder&, bool& receivedPolicyAction, uint64_t& policyAction, uint64_t& downloadID);
     void decidePolicyForNewWindowAction(uint64_t frameID, uint32_t navigationType, uint32_t modifiers, int32_t mouseButton, const WebCore::ResourceRequest&, const String& frameName, uint64_t listenerID, CoreIPC::MessageDecoder&);
     void decidePolicyForResponse(uint64_t frameID, const WebCore::ResourceResponse&, const WebCore::ResourceRequest&, uint64_t listenerID, CoreIPC::MessageDecoder&, bool& receivedPolicyAction, uint64_t& policyAction, uint64_t& downloadID);
@@ -1036,6 +1014,10 @@ private:
 
     void processNextQueuedWheelEvent();
     void sendWheelEvent(const WebWheelEvent&);
+
+#if ENABLE(NETSCAPE_PLUGIN_API)
+    void getPluginPath(const String& mimeType, const String& urlString, const String& documentURLString, String& pluginPath, uint32_t& pluginLoadPolicy);
+#endif
 
     PageClient* m_pageClient;
     WebLoaderClient m_loaderClient;

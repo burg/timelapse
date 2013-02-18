@@ -54,6 +54,7 @@
       </PrecompiledHeader>
     </ClCompile>
     <Link />
+    <Link />
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\API\JSBase.cpp" />
@@ -276,6 +277,7 @@
     <ClCompile Include="..\runtime\StringRecursionChecker.cpp" />
     <ClCompile Include="..\runtime\Structure.cpp" />
     <ClCompile Include="..\runtime\StructureChain.cpp" />
+    <ClCompile Include="..\runtime\StructureRareData.cpp" />
     <ClCompile Include="..\runtime\SymbolTable.cpp" />
     <ClCompile Include="..\runtime\TimeoutChecker.cpp" />
     <ClCompile Include="..\tools\CodeProfile.cpp" />
@@ -358,6 +360,7 @@
     <ClInclude Include="..\bytecode\CodeOrigin.h" />
     <ClInclude Include="..\bytecode\CodeType.h" />
     <ClInclude Include="..\bytecode\Comment.h" />
+    <ClInclude Include="..\bytecode\DataFormat.h" />
     <ClInclude Include="..\bytecode\EvalCodeCache.h" />
     <ClInclude Include="..\bytecode\ExecutionCounter.h" />
     <ClInclude Include="..\bytecode\ExitKind.h" />
@@ -650,6 +653,8 @@
     <ClInclude Include="..\runtime\StringRecursionChecker.h" />
     <ClInclude Include="..\runtime\Structure.h" />
     <ClInclude Include="..\runtime\StructureChain.h" />
+    <ClInclude Include="..\runtime\StructureRareData.h" />
+    <ClInclude Include="..\runtime\StructureRareDataInlines.h" />
     <ClInclude Include="..\runtime\StructureTransitionTable.h" />
     <ClInclude Include="..\runtime\SymbolTable.h" />
     <ClInclude Include="..\runtime\Terminator.h" />
@@ -676,7 +681,6 @@
     <None Include="copy-files.cmd">
       <FileType>Document</FileType>
     </None>
-    <None Include="JavaScriptCoreExports.def" />
     <None Include="JavaScriptCorePostBuild.cmd">
       <FileType>Document</FileType>
     </None>

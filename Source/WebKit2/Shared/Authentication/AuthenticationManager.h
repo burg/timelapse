@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,7 +50,7 @@ class AuthenticationManager : public WebProcessSupplement, public NetworkProcess
 public:
     explicit AuthenticationManager(ChildProcess*);
 
-    static const AtomicString& supplementName();
+    static const char* supplementName();
 
     // Called for resources in the WebProcess (NetworkProcess disabled)
     void didReceiveAuthenticationChallenge(WebFrame*, const WebCore::AuthenticationChallenge&);
@@ -62,11 +62,12 @@ public:
     void useCredentialForChallenge(uint64_t challengeID, const WebCore::Credential&, const PlatformCertificateInfo&);
     void continueWithoutCredentialForChallenge(uint64_t challengeID);
     void cancelChallenge(uint64_t challengeID);
+    
+    uint64_t outstandingAuthenticationChallengeCount() const { return m_challenges.size(); }
 
 private:
     // CoreIPC::MessageReceiver
     virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
-    void didReceiveAuthenticationManagerMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
 
     bool tryUsePlatformCertificateInfoForChallenge(const WebCore::AuthenticationChallenge&, const PlatformCertificateInfo&);
 

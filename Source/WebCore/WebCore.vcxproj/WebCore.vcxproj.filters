@@ -283,6 +283,9 @@
     <Filter Include="ForwardingHeaders\parser">
       <UniqueIdentifier>{d8f7280f-8103-4245-88f8-e1aa6cb312df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="html\canvas">
+      <UniqueIdentifier>{70b0bcb3-8703-4b6e-81d2-e8aa9ef31af0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(ConfigurationBuildDir)\obj\$(ProjectName)\DerivedSources\ColorData.cpp">
@@ -1836,6 +1839,18 @@
     <ClCompile Include="..\Modules\webdatabase\DatabaseBackend.cpp">
       <Filter>Modules\webdatabase</Filter>
     </ClCompile>
+    <ClCompile Include="..\Modules\webdatabase\DatabaseBackendAsync.cpp">
+      <Filter>Modules\webdatabase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Modules\webdatabase\DatabaseBackendContext.cpp">
+      <Filter>Modules\webdatabase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Modules\webdatabase\DatabaseBackendSync.cpp">
+      <Filter>Modules\webdatabase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Modules\webdatabase\DatabaseBase.cpp">
+      <Filter>Modules\webdatabase</Filter>
+    </ClCompile>
     <ClCompile Include="..\Modules\webdatabase\DatabaseContext.cpp">
       <Filter>Modules\webdatabase</Filter>
     </ClCompile>
@@ -1882,6 +1897,15 @@
       <Filter>Modules\webdatabase</Filter>
     </ClCompile>
     <ClCompile Include="..\Modules\webdatabase\SQLTransaction.cpp">
+      <Filter>Modules\webdatabase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Modules\webdatabase\SQLTransaction.cpp">
+      <Filter>Modules\webdatabase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Modules\webdatabase\SQLTransactionBackend.cpp">
+      <Filter>Modules\webdatabase</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Modules\webdatabase\SQLTransactionBackendSync.cpp">
       <Filter>Modules\webdatabase</Filter>
     </ClCompile>
     <ClCompile Include="..\Modules\webdatabase\SQLTransactionClient.cpp">
@@ -2710,9 +2734,6 @@
       <Filter>platform\win</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\win\WebCoreInstanceHandle.cpp">
-      <Filter>platform\win</Filter>
-    </ClCompile>
-    <ClCompile Include="..\WebCorePrefix.cpp">
       <Filter>platform\win</Filter>
     </ClCompile>
     <ClCompile Include="..\platform\win\WebCoreTextRenderer.cpp">
@@ -5160,21 +5181,6 @@
     <ClCompile Include="..\html\ButtonInputType.cpp">
       <Filter>html</Filter>
     </ClCompile>
-    <ClCompile Include="..\html\canvas\CanvasGradient.cpp">
-      <Filter>html</Filter>
-    </ClCompile>
-    <ClCompile Include="..\html\canvas\CanvasPattern.cpp">
-      <Filter>html</Filter>
-    </ClCompile>
-    <ClCompile Include="..\html\canvas\CanvasRenderingContext.cpp">
-      <Filter>html</Filter>
-    </ClCompile>
-    <ClCompile Include="..\html\canvas\CanvasRenderingContext2D.cpp">
-      <Filter>html</Filter>
-    </ClCompile>
-    <ClCompile Include="..\html\canvas\CanvasStyle.cpp">
-      <Filter>html</Filter>
-    </ClCompile>
     <ClCompile Include="..\html\CheckboxInputType.cpp">
       <Filter>html</Filter>
     </ClCompile>
@@ -5182,9 +5188,6 @@
       <Filter>html</Filter>
     </ClCompile>
     <ClCompile Include="..\html\ColorInputType.cpp">
-      <Filter>html</Filter>
-    </ClCompile>
-    <ClCompile Include="..\html\canvas\DataView.cpp">
       <Filter>html</Filter>
     </ClCompile>
     <ClCompile Include="..\html\DateInputType.cpp">
@@ -5695,6 +5698,9 @@
       <Filter>html\parser</Filter>
     </ClCompile>
     <ClCompile Include="..\html\parser\XSSAuditor.cpp">
+      <Filter>html\parser</Filter>
+    </ClCompile>
+    <ClCompile Include="..\html\parser\XSSAuditorDelegate.cpp">
       <Filter>html\parser</Filter>
     </ClCompile>
     <ClCompile Include="..\html\shadow\ContentDistributor.cpp">
@@ -6486,6 +6492,9 @@
     <ClCompile Include="..\inspector\InspectorFrontendHost.cpp">
       <Filter>inspector</Filter>
     </ClCompile>
+    <ClCompile Include="..\inspector\InspectorHeapProfilerAgent.cpp">
+      <Filter>inspector</Filter>
+    </ClCompile>
     <ClCompile Include="..\inspector\InspectorHistory.cpp">
       <Filter>inspector</Filter>
     </ClCompile>
@@ -6782,6 +6791,37 @@
     </ClCompile>
     <ClCompile Include="..\bindings\js\JSElementCustom.cpp">
       <Filter>bindings\js</Filter>
+    </ClCompile>
+    <ClCompile Include="..\WebCorePrefix.cpp" />
+    <ClCompile Include="..\html\track\TextTrackCueGeneric.cpp">
+      <Filter>html\track</Filter>
+    </ClCompile>
+    <ClCompile Include="..\storage\StorageStrategy.cpp">
+      <Filter>storage</Filter>
+    </ClCompile>
+    <ClCompile Include="..\html\track\WebVTTElement.cpp">
+      <Filter>html\track</Filter>
+    </ClCompile>
+    <ClCompile Include="..\html\canvas\CanvasPathMethods.cpp">
+      <Filter>html\canvas</Filter>
+    </ClCompile>
+    <ClCompile Include="..\html\canvas\CanvasGradient.cpp">
+      <Filter>html\canvas</Filter>
+    </ClCompile>
+    <ClCompile Include="..\html\canvas\CanvasPattern.cpp">
+      <Filter>html\canvas</Filter>
+    </ClCompile>
+    <ClCompile Include="..\html\canvas\CanvasRenderingContext.cpp">
+      <Filter>html\canvas</Filter>
+    </ClCompile>
+    <ClCompile Include="..\html\canvas\CanvasRenderingContext2D.cpp">
+      <Filter>html\canvas</Filter>
+    </ClCompile>
+    <ClCompile Include="..\html\canvas\CanvasStyle.cpp">
+      <Filter>html\canvas</Filter>
+    </ClCompile>
+    <ClCompile Include="..\html\canvas\DataView.cpp">
+      <Filter>html\canvas</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -8444,6 +8484,21 @@
     <ClInclude Include="..\Modules\webdatabase\DatabaseBackend.h">
       <Filter>Modules\webdatabase</Filter>
     </ClInclude>
+    <ClInclude Include="..\Modules\webdatabase\DatabaseBackendAsync.h">
+      <Filter>Modules\webdatabase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Modules\webdatabase\DatabaseBackendContext.h">
+      <Filter>Modules\webdatabase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Modules\webdatabase\DatabaseBackendSync.h">
+      <Filter>Modules\webdatabase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Modules\webdatabase\DatabaseBase.h">
+      <Filter>Modules\webdatabase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Modules\webdatabase\DatabaseBasicTypes.h">
+      <Filter>Modules\webdatabase</Filter>
+    </ClInclude>
     <ClInclude Include="..\Modules\webdatabase\DatabaseCallback.h">
       <Filter>Modules\webdatabase</Filter>
     </ClInclude>
@@ -8508,6 +8563,12 @@
       <Filter>Modules\webdatabase</Filter>
     </ClInclude>
     <ClInclude Include="..\Modules\webdatabase\SQLTransaction.h">
+      <Filter>Modules\webdatabase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Modules\webdatabase\SQLTransactionBackend.h">
+      <Filter>Modules\webdatabase</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Modules\webdatabase\SQLTransactionBackendSync.h">
       <Filter>Modules\webdatabase</Filter>
     </ClInclude>
     <ClInclude Include="..\Modules\webdatabase\SQLTransactionCallback.h">
@@ -9480,9 +9541,6 @@
       <Filter>platform\win</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\win\WebCoreInstanceHandle.h">
-      <Filter>platform\win</Filter>
-    </ClInclude>
-    <ClInclude Include="..\WebCorePrefix.h">
       <Filter>platform\win</Filter>
     </ClInclude>
     <ClInclude Include="..\platform\win\WebCoreTextRenderer.h">
@@ -11255,12 +11313,6 @@
     <ClInclude Include="..\xml\XSLTUnicodeSort.h">
       <Filter>xml</Filter>
     </ClInclude>
-    <ClInclude Include="..\xml\parser\MarkupTokenBase.h">
-      <Filter>xml\parser</Filter>
-    </ClInclude>
-    <ClInclude Include="..\xml\parser\MarkupTokenizerBase.h">
-      <Filter>xml\parser</Filter>
-    </ClInclude>
     <ClInclude Include="..\xml\parser\MarkupTokenizerInlines.h">
       <Filter>xml\parser</Filter>
     </ClInclude>
@@ -12020,21 +12072,6 @@
     <ClInclude Include="..\html\ButtonInputType.h">
       <Filter>html</Filter>
     </ClInclude>
-    <ClInclude Include="..\html\canvas\CanvasGradient.h">
-      <Filter>html</Filter>
-    </ClInclude>
-    <ClInclude Include="..\html\canvas\CanvasPattern.h">
-      <Filter>html</Filter>
-    </ClInclude>
-    <ClInclude Include="..\html\canvas\CanvasRenderingContext.h">
-      <Filter>html</Filter>
-    </ClInclude>
-    <ClInclude Include="..\html\canvas\CanvasRenderingContext2D.h">
-      <Filter>html</Filter>
-    </ClInclude>
-    <ClInclude Include="..\html\canvas\CanvasStyle.h">
-      <Filter>html</Filter>
-    </ClInclude>
     <ClInclude Include="..\html\CheckboxInputType.h">
       <Filter>html</Filter>
     </ClInclude>
@@ -12045,9 +12082,6 @@
       <Filter>html</Filter>
     </ClInclude>
     <ClInclude Include="..\html\ColorInputType.h">
-      <Filter>html</Filter>
-    </ClInclude>
-    <ClInclude Include="..\html\canvas\DataView.h">
       <Filter>html</Filter>
     </ClInclude>
     <ClInclude Include="..\html\DateInputType.h">
@@ -12497,6 +12531,9 @@
     <ClInclude Include="..\html\WeekInputType.h">
       <Filter>html</Filter>
     </ClInclude>
+    <ClInclude Include="..\html\parser\AtomicHTMLToken.h">
+      <Filter>html\parser</Filter>
+    </ClInclude>
     <ClInclude Include="..\html\parser\BackgroundHTMLParser.h">
       <Filter>html\parser</Filter>
     </ClInclude>
@@ -12563,13 +12600,13 @@
     <ClInclude Include="..\html\parser\HTMLTokenizer.h">
       <Filter>html\parser</Filter>
     </ClInclude>
-    <ClInclude Include="..\html\parser\HTMLTokenTypes.h">
-      <Filter>html\parser</Filter>
-    </ClInclude>
     <ClInclude Include="..\html\parser\HTMLTreeBuilder.h">
       <Filter>html\parser</Filter>
     </ClInclude>
     <ClInclude Include="..\html\parser\HTMLViewSourceParser.h">
+      <Filter>html\parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\parser\InputStreamPreprocessor.h">
       <Filter>html\parser</Filter>
     </ClInclude>
     <ClInclude Include="..\html\parser\NestingLevelIncrementer.h">
@@ -12582,6 +12619,9 @@
       <Filter>html\parser</Filter>
     </ClInclude>
     <ClInclude Include="..\html\parser\XSSAuditor.h">
+      <Filter>html\parser</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\parser\XSSAuditorDelegate.h">
       <Filter>html\parser</Filter>
     </ClInclude>
     <ClInclude Include="..\html\shadow\ContentDistributor.h">
@@ -13739,6 +13779,9 @@
     <ClInclude Include="..\inspector\InspectorFrontendHost.h">
       <Filter>inspector</Filter>
     </ClInclude>
+    <ClInclude Include="..\inspector\InspectorHeapProfilerAgent.h">
+      <Filter>inspector</Filter>
+    </ClInclude>
     <ClInclude Include="..\inspector\InspectorHistory.h">
       <Filter>inspector</Filter>
     </ClInclude>
@@ -14237,6 +14280,37 @@
     </ClInclude>
     <ClInclude Include="..\ForwardingHeaders\runtime\JSCJSValue.h">
       <Filter>ForwardingHeaders\runtime</Filter>
+    </ClInclude>
+    <ClInclude Include="..\WebCorePrefix.h" />
+    <ClInclude Include="..\html\track\TextTrackCueGeneric.h">
+      <Filter>html\track</Filter>
+    </ClInclude>
+    <ClInclude Include="..\storage\StorageStrategy.h">
+      <Filter>storage</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\track\WebVTTElement.h">
+      <Filter>html\track</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\canvas\CanvasPathMethods.h">
+      <Filter>html\canvas</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\canvas\CanvasPattern.h">
+      <Filter>html\canvas</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\canvas\CanvasGradient.h">
+      <Filter>html\canvas</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\canvas\CanvasRenderingContext2D.h">
+      <Filter>html\canvas</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\canvas\CanvasRenderingContext.h">
+      <Filter>html\canvas</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\canvas\CanvasStyle.h">
+      <Filter>html\canvas</Filter>
+    </ClInclude>
+    <ClInclude Include="..\html\canvas\DataView.h">
+      <Filter>html\canvas</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -15061,7 +15135,6 @@
     </None>
     <None Include="WebCorePostBuild.cmd" />
     <None Include="WebCorePreBuild.cmd" />
-    <None Include="WebCorePreLink.cmd" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuildStep Include="..\platform\graphics\win\MediaPlayerPrivateFullscreenWindow.h">

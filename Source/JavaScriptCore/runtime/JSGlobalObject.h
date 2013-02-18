@@ -31,6 +31,7 @@
 #include "SpecialPointer.h"
 #include "StringPrototype.h"
 #include "StructureChain.h"
+#include "StructureRareDataInlines.h"
 #include "Watchpoint.h"
 #include <wtf/HashSet.h>
 #include <wtf/OwnPtr.h>
@@ -409,7 +410,6 @@ namespace JSC {
 
         UnlinkedProgramCodeBlock* createProgramCodeBlock(CallFrame*, ProgramExecutable*, JSObject** exception);
         UnlinkedEvalCodeBlock* createEvalCodeBlock(CallFrame*, EvalExecutable*, JSObject** exception);
-        UnlinkedFunctionExecutable* createFunctionExecutableFromGlobalCode(CallFrame*, const Identifier&, const SourceCode&, JSObject** exception);
 
     protected:
 

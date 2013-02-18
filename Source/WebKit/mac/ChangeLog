@@ -1,3 +1,271 @@
+2013-02-12  Joseph Pecoraro  <pecoraro@apple.com>
+
+        [iOS] Enable PAGE_VISIBILITY_API
+        https://bugs.webkit.org/show_bug.cgi?id=109399
+
+        Reviewed by David Kilzer.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-02-12  David Kilzer  <ddkilzer@apple.com>
+
+        BUILD FIX (r142576): WK1 build fails when ENABLE(DELETION_UI) is off
+        <https://bugs.webkit.org/show_bug.cgi?id=109534>
+
+        Fixes the following build failure:
+
+            WebEditorClient.mm:243:23: error: out-of-line definition of 'shouldShowDeleteInterface' does not match any declaration in 'WebEditorClient'
+            bool WebEditorClient::shouldShowDeleteInterface(HTMLElement* element)
+                                  ^~~~~~~~~~~~~~~~~~~~~~~~~
+
+        * WebCoreSupport/WebEditorClient.mm:
+        (WebEditorClient::shouldShowDeleteInterface): Protect with
+        ENABLE(DELETION_UI) macro.
+
+2013-02-11  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Disable delete button controller on non-Mac ports and delete EditorClient::shouldShowDeleteInterface
+        https://bugs.webkit.org/show_bug.cgi?id=109534
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/WebEditorClient.h:
+
+2013-02-11  Benjamin Poulain  <benjamin@webkit.org>
+
+        Kill TestRunner::setMinimumTimerInterval; implement the feature with InternalSettings
+        https://bugs.webkit.org/show_bug.cgi?id=109349
+
+        Reviewed by Sam Weinig.
+
+        * WebView/WebView.mm:
+        * WebView/WebViewPrivate.h:
+
+2013-02-10  Dan Bernstein  <mitz@apple.com>
+
+        Added *.pdf to EXCLUDED_SOURCE_FILE_NAMES_iphoneos.
+
+        Rubber-stamped by Anders Carlsson.
+
+        * Configurations/WebKit.xcconfig:
+
+2013-02-10  Jae Hyun Park  <jae.park08@gmail.com>
+
+        Rename ENABLE(GLIB_SUPPORT) to USE(GLIB)
+        https://bugs.webkit.org/show_bug.cgi?id=104266
+
+        Reviewed by Philippe Normand.
+
+        Using USE(GLIB) instead of ENABLE(GLIB_SUPPORT) is more consistent with
+        the existing macro naming conventions.
+
+        From Platform.h
+        USE() - use a particular third-party library or optional OS service
+        ENABLE() - turn on a specific feature of WebKit
+
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+        (-[WebView _close]):
+        * WebView/WebViewData.h:
+        * WebView/WebViewInternal.h:
+
+2013-02-08  Benjamin Poulain  <bpoulain@apple.com>
+
+        Move workerThreadCount from TestRunner to WebCore Internals
+        https://bugs.webkit.org/show_bug.cgi?id=109239
+
+        Reviewed by Darin Adler.
+
+        Get rid of WebWorkersPrivate, which was only needed for DRT.
+
+        * WebKit.exp:
+        * Workers/WebWorkersPrivate.h: Removed.
+        * Workers/WebWorkersPrivate.mm: Removed.
+
+2013-02-07  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r142212.
+        http://trac.webkit.org/changeset/142212
+        https://bugs.webkit.org/show_bug.cgi?id=109255
+
+        Causes ASSERT(!m_installed) on launch (Requested by smfr on
+        #webkit).
+
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+        (WebInstallMemoryPressureHandler):
+
+2013-02-06  Gavin Barraclough  <barraclough@apple.com>
+
+        PluginProcess should quit immediately if idle in response to low-memory notifications
+        https://bugs.webkit.org/show_bug.cgi?id=109103
+        <rdar://problem/12679827>
+
+        Reviewed by Darin Adler.
+
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+            - MemoryPressureHandler::install is now called via MemoryPressureHandler::initialize.
+        (WebInstallMemoryPressureHandler):
+            - MemoryPressureHandler::install is now called via MemoryPressureHandler::initialize.
+
+2013-02-07  Benjamin Poulain  <bpoulain@apple.com>
+
+        Move pauseAnimation/pauseTransition from TestRunner to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=109107
+
+        Reviewed by Anders Carlsson.
+
+        * WebView/WebFrame.mm:
+        * WebView/WebFramePrivate.h:
+
+2013-02-06  Mike West  <mkwst@chromium.org>
+
+        Add an ENABLE_NOSNIFF feature flag.
+        https://bugs.webkit.org/show_bug.cgi?id=109029
+
+        Reviewed by Jochen Eisinger.
+
+        This new flag will control the behavior of 'X-Content-Type-Options: nosniff'
+        when processing script and other resource types.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-02-04  Benjamin Poulain  <bpoulain@apple.com>
+
+        Kill suspendAnimation(), resumeAnimation() and numberOfActiveAnimations() from DRT/WTR; use Internals
+        https://bugs.webkit.org/show_bug.cgi?id=108741
+
+        Reviewed by Tony Chang.
+
+        * WebView/WebFrame.mm:
+        * WebView/WebFramePrivate.h:
+
+2013-02-04  Enrica Casucci  <enrica@apple.com>
+
+        Add specific EditActions for Bold and Italic commands.
+        https://bugs.webkit.org/show_bug.cgi?id=108842.
+        <rdar://problem/13098252>
+
+        Reviewed by Ryosuke Niwa.
+
+        * WebCoreSupport/WebEditorClient.mm:
+        (undoNameForEditAction):
+
+2013-02-03  David Kilzer  <ddkilzer@apple.com>
+
+        Upstream ENABLE_PDFKIT_PLUGIN settting
+        <http://webkit.org/b/108792>
+
+        Reviewed by Tim Horton.
+
+        * Configurations/FeatureDefines.xcconfig: Disable PDFKIT_PLUGIN
+        on iOS since PDFKit is a Mac-only framework.
+
+2013-02-02  David Kilzer  <ddkilzer@apple.com>
+
+        Upstream iOS FeatureDefines
+        <http://webkit.org/b/108753>
+
+        Reviewed by Anders Carlsson.
+
+        * Configurations/FeatureDefines.xcconfig:
+        - ENABLE_DEVICE_ORIENTATION: Add iOS configurations.
+        - ENABLE_PLUGIN_PROXY_FOR_VIDEO: Ditto.
+        - FEATURE_DEFINES: Add ENABLE_PLUGIN_PROXY_FOR_VIDEO.  Add
+          PLATFORM_NAME variant to reduce future merge conflicts. 
+
+2013-02-01  Alexis Menard  <alexis@webkit.org>
+
+        Enable unprefixed CSS transitions by default.
+        https://bugs.webkit.org/show_bug.cgi?id=108216
+
+        Reviewed by Dean Jackson.
+
+        Rename the flag CSS_TRANSFORMS_ANIMATIONS_TRANSITIONS_UNPREFIXED
+        to CSS_TRANSFORMS_ANIMATIONS_UNPREFIXED which will be used later to 
+        guard the unprefixing work for CSS Transforms and animations.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-01-31  Aurimas Liutikas  <aurimas@chromium.org>
+
+        Editor::m_compositionNode not updated on HTMLInputElement::setValue()
+        https://bugs.webkit.org/show_bug.cgi?id=107737
+
+        Reviewed by Ryosuke Niwa.
+
+        * WebView/WebHTMLView.mm:
+        (-[WebHTMLView _updateSelectionForInputManager]):
+
+2013-01-31  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r141479.
+        http://trac.webkit.org/changeset/141479
+        https://bugs.webkit.org/show_bug.cgi?id=108564
+
+        breaks chromium test (Requested by morrita on #webkit).
+
+        * WebView/WebHTMLView.mm:
+        (-[WebHTMLView _updateSelectionForInputManager]):
+
+2013-01-31  Enrica Casucci  <enrica@apple.com>
+
+        Mac: Editor::baseWritingDirectionForSelectionStart should return WritingDirection instead of NSWritingDirection.
+        https://bugs.webkit.org/show_bug.cgi?id=108519.
+
+        Reviewed by Sam Weinig.
+
+        There is no need to use AppKit types here.
+        baseWritingDirectionForSelectionStart now returns WritingDirection and
+        WebHTMLView toggleWritingDirection has been modified accordingly.
+
+        * WebView/WebHTMLView.mm:
+        (-[WebHTMLView toggleBaseWritingDirection:]):
+
+2013-01-31  Aurimas Liutikas  <aurimas@chromium.org>
+
+        Editor::m_compositionNode not updated on HTMLInputElement::setValue()
+        https://bugs.webkit.org/show_bug.cgi?id=107737
+
+        Reviewed by Ryosuke Niwa.
+
+        * WebView/WebHTMLView.mm:
+        (-[WebHTMLView _updateSelectionForInputManager]):
+
+2013-01-31  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Disable ENABLE_FULLSCREEN_API on iOS
+        https://bugs.webkit.org/show_bug.cgi?id=108250
+
+        Reviewed by Benjamin Poulain.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-01-31  Enrica Casucci  <enrica@apple.com>
+
+        WebKit2: provide new bundle APIs to allow bundle clients to be notified of pasteboard access.
+        https://bugs.webkit.org/show_bug.cgi?id=108396.
+        <rdar://problem/12920461>
+
+        Reviewed by Alexey Proskuryakov.
+
+        Adds stub implementation for WebKit of the new EditorClient methods.
+
+        * WebCoreSupport/WebEditorClient.h:
+        * WebCoreSupport/WebEditorClient.mm:
+        (WebEditorClient::willWriteSelectionToPasteboard):
+        (WebEditorClient::getClientPasteboardDataForRange):
+
+2013-01-31  Brady Eidson  <beidson@apple.com>
+
+        Lack of a log level string should not obliterate compiled in logging channel state.
+        https://bugs.webkit.org/show_bug.cgi?id=108502
+
+        Reviewed by Alexey Proskuryakov and Sam Weinig.
+
+        * Misc/WebKitLogging.m: If there's no log level string, leave the channel state alone.
+
 2013-01-29  Sheriff Bot  <webkit.review.bot@gmail.com>
 
         Unreviewed, rolling out r140983.

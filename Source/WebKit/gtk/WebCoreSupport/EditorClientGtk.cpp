@@ -94,14 +94,6 @@ bool EditorClient::shouldDeleteRange(Range* range)
     return accept;
 }
 
-bool EditorClient::shouldShowDeleteInterface(HTMLElement* element)
-{
-    gboolean accept = FALSE;
-    GRefPtr<WebKitDOMHTMLElement> kitElement(adoptGRef(kit(element)));
-    g_signal_emit_by_name(m_webView, "should-show-delete-interface-for-element", kitElement.get(), &accept);
-    return accept;
-}
-
 bool EditorClient::isContinuousSpellCheckingEnabled()
 {
     WebKitWebSettings* settings = webkit_web_view_get_settings(m_webView);
@@ -262,12 +254,7 @@ void EditorClient::respondToChangedSelection(Frame* frame)
     setSelectionPrimaryClipboardIfNeeded(m_webView);
 #endif
 
-    if (!frame->editor()->hasComposition() || frame->editor()->ignoreCompositionSelectionChange())
-        return;
-
-    unsigned start;
-    unsigned end;
-    if (!frame->editor()->getCompositionSelection(start, end))
+    if (frame->editor()->cancelCompositionIfSelectionIsInvalid())
         m_webView->priv->imFilter.resetContext();
 }
 
@@ -279,6 +266,14 @@ void EditorClient::didEndEditing()
 void EditorClient::didWriteSelectionToPasteboard()
 {
     notImplemented();
+}
+
+void EditorClient::willWriteSelectionToPasteboard(WebCore::Range*)
+{
+}
+
+void EditorClient::getClientPasteboardDataForRange(WebCore::Range*, Vector<String>&, Vector<RefPtr<WebCore::SharedBuffer> >&)
+{
 }
 
 void EditorClient::didSetSelectionTypesForPasteboard()

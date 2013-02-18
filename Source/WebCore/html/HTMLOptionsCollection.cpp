@@ -38,12 +38,12 @@ PassRefPtr<HTMLOptionsCollection> HTMLOptionsCollection::create(Node* select, Co
     return adoptRef(new HTMLOptionsCollection(select));
 }
 
-void HTMLOptionsCollection::add(PassRefPtr<HTMLOptionElement> element, ExceptionCode &ec)
+void HTMLOptionsCollection::add(PassRefPtr<HTMLOptionElement> element, ExceptionCode& ec)
 {
     add(element, length(), ec);
 }
 
-void HTMLOptionsCollection::add(PassRefPtr<HTMLOptionElement> element, int index, ExceptionCode &ec)
+void HTMLOptionsCollection::add(PassRefPtr<HTMLOptionElement> element, int index, ExceptionCode& ec)
 {
     HTMLOptionElement* newOption = element.get();
 
@@ -65,7 +65,7 @@ void HTMLOptionsCollection::add(PassRefPtr<HTMLOptionElement> element, int index
     else
         select->add(newOption, static_cast<HTMLOptionElement*>(item(index)), ec);
 
-    ASSERT(ec == 0);
+    ASSERT(!ec);
 }
 
 void HTMLOptionsCollection::remove(int index)

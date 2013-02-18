@@ -34,21 +34,27 @@
 #include "AccessibilityControllerChromium.h"
 #include "EventSender.h"
 #include "GamepadController.h"
+#include "TestRunner.h"
 #include "TextInputController.h"
+#include "WebCache.h"
 #include <public/WebString.h>
+#include <public/WebURL.h>
+#include <string>
 
-using WebKit::WebFrame;
-using WebKit::WebString;
-using WebKit::WebView;
+using namespace WebKit;
+using namespace std;
 
 namespace WebTestRunner {
 
 TestInterfaces::TestInterfaces()
+    : m_accessibilityController(new AccessibilityController())
+    , m_eventSender(new EventSender())
+    , m_gamepadController(new GamepadController())
+    , m_textInputController(new TextInputController())
+    , m_testRunner(new TestRunner())
+    , m_webView(0)
+    , m_delegate(0)
 {
-    m_accessibilityController = adoptPtr(new AccessibilityController());
-    m_eventSender = adoptPtr(new EventSender());
-    m_gamepadController = adoptPtr(new GamepadController());
-    m_textInputController = adoptPtr(new TextInputController());
 }
 
 TestInterfaces::~TestInterfaces()
@@ -57,27 +63,33 @@ TestInterfaces::~TestInterfaces()
     m_eventSender->setWebView(0);
     // m_gamepadController doesn't depend on WebView.
     m_textInputController->setWebView(0);
+    m_testRunner->setWebView(0);
 
     m_accessibilityController->setDelegate(0);
     m_eventSender->setDelegate(0);
     m_gamepadController->setDelegate(0);
-    // m_textInputController doesn't depend on TestDelegate.
+    // m_textInputController doesn't depend on WebTestDelegate.
+    m_testRunner->setDelegate(0);
 }
 
 void TestInterfaces::setWebView(WebView* webView)
 {
+    m_webView = webView;
     m_accessibilityController->setWebView(webView);
     m_eventSender->setWebView(webView);
     // m_gamepadController doesn't depend on WebView.
     m_textInputController->setWebView(webView);
+    m_testRunner->setWebView(webView);
 }
 
-void TestInterfaces::setDelegate(TestDelegate* delegate)
+void TestInterfaces::setDelegate(WebTestDelegate* delegate)
 {
     m_accessibilityController->setDelegate(delegate);
     m_eventSender->setDelegate(delegate);
     m_gamepadController->setDelegate(delegate);
-    // m_textInputController doesn't depend on TestDelegate.
+    // m_textInputController doesn't depend on WebTestDelegate.
+    m_testRunner->setDelegate(delegate);
+    m_delegate = delegate;
 }
 
 void TestInterfaces::bindTo(WebFrame* frame)
@@ -86,6 +98,8 @@ void TestInterfaces::bindTo(WebFrame* frame)
     m_eventSender->bindToJavascript(frame, WebString::fromUTF8("eventSender"));
     m_gamepadController->bindToJavascript(frame, WebString::fromUTF8("gamepadController"));
     m_textInputController->bindToJavascript(frame, WebString::fromUTF8("textInputController"));
+    m_testRunner->bindToJavascript(frame, WebString::fromUTF8("testRunner"));
+    m_testRunner->bindToJavascript(frame, WebString::fromUTF8("layoutTestController"));
 }
 
 void TestInterfaces::resetAll()
@@ -94,6 +108,27 @@ void TestInterfaces::resetAll()
     m_eventSender->reset();
     m_gamepadController->reset();
     // m_textInputController doesn't have any state to reset.
+    m_testRunner->reset();
+    WebCache::clear();
+}
+
+void TestInterfaces::setTestIsRunning(bool running)
+{
+    m_testRunner->setTestIsRunning(running);
+}
+
+void TestInterfaces::configureForTestWithURL(const WebURL& testURL, bool generatePixels)
+{
+    string spec = GURL(testURL).spec();
+    m_testRunner->setShouldGeneratePixelResults(generatePixels);
+    if (spec.find("loading/") != string::npos)
+        m_testRunner->setShouldDumpFrameLoadCallbacks(true);
+    if (spec.find("/dumpAsText/") != string::npos) {
+        m_testRunner->setShouldDumpAsText(true);
+        m_testRunner->setShouldGeneratePixelResults(false);
+    }
+    if (spec.find("/inspector/") != string::npos)
+        m_testRunner->showDevTools();
 }
 
 AccessibilityController* TestInterfaces::accessibilityController()
@@ -104,6 +139,21 @@ AccessibilityController* TestInterfaces::accessibilityController()
 EventSender* TestInterfaces::eventSender()
 {
     return m_eventSender.get();
+}
+
+TestRunner* TestInterfaces::testRunner()
+{
+    return m_testRunner.get();
+}
+
+WebView* TestInterfaces::webView()
+{
+    return m_webView;
+}
+
+WebTestDelegate* TestInterfaces::delegate()
+{
+    return m_delegate;
 }
 
 }

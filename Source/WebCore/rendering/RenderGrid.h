@@ -48,6 +48,8 @@ private:
     virtual bool isRenderGrid() const OVERRIDE { return true; }
     virtual void computePreferredLogicalWidths() OVERRIDE;
 
+    LayoutUnit computePreferredTrackWidth(const Length&, size_t) const;
+
     enum TrackSizingDirection { ForColumns, ForRows };
     void computedUsedBreadthOfGridTracks(TrackSizingDirection, Vector<GridTrack>& columnTracks, Vector<GridTrack>& rowTracks);
     LayoutUnit computeUsedBreadthOfMinLength(TrackSizingDirection, const Length&) const;
@@ -61,6 +63,9 @@ private:
     typedef void (GridTrack::* AccumulatorGrowFunction)(LayoutUnit);
     void resolveContentBasedTrackSizingFunctionsForItems(TrackSizingDirection, Vector<GridTrack>& columnTracks, Vector<GridTrack>& rowTracks, size_t, SizingFunction, AccumulatorGetter, AccumulatorGrowFunction);
     void distributeSpaceToTracks(Vector<GridTrack*>&, Vector<GridTrack*>* tracksForGrowthAboveMaxBreadth, AccumulatorGetter, AccumulatorGrowFunction, LayoutUnit& availableLogicalSpace);
+
+    const GridTrackSize& gridTrackSize(TrackSizingDirection, size_t);
+    size_t maximumIndexInDirection(TrackSizingDirection) const;
 
     LayoutUnit minContentForChild(RenderBox*, TrackSizingDirection, Vector<GridTrack>& columnTracks);
     LayoutUnit maxContentForChild(RenderBox*, TrackSizingDirection, Vector<GridTrack>& columnTracks);

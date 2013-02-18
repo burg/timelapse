@@ -1185,13 +1185,13 @@ bool RenderLayer::updateLayerPosition()
     }
     
     bool positionOrOffsetChanged = false;
-    if (renderer()->isInFlowPositioned()) {
-        LayoutSize newOffset = toRenderBoxModelObject(renderer())->offsetForInFlowPosition();
-        positionOrOffsetChanged = newOffset != m_offsetForInFlowPosition;
-        m_offsetForInFlowPosition = newOffset;
-        localPoint.move(m_offsetForInFlowPosition);
+    if (renderer()->hasPaintOffset()) {
+        LayoutSize newOffset = toRenderBoxModelObject(renderer())->paintOffset();
+        positionOrOffsetChanged = newOffset != m_paintOffset;
+        m_paintOffset = newOffset;
+        localPoint.move(m_paintOffset);
     } else {
-        m_offsetForInFlowPosition = LayoutSize();
+        m_paintOffset = LayoutSize();
     }
 
     // FIXME: We'd really like to just get rid of the concept of a layer rectangle and rely on the renderers.
@@ -1988,7 +1988,12 @@ void RenderLayer::panScrollFromPoint(const IntPoint& sourcePoint)
     scrollByRecursively(adjustedScrollDelta(delta), ScrollOffsetClamped);
 }
 
-bool RenderLayer::scrollByRecursively(const IntSize& delta, ScrollOffsetClamping clamp)
+void RenderLayer::scrollByRecursively(const IntSize& delta, ScrollOffsetClamping clamp)
+{
+    scrollBy(delta, clamp, ShouldPropagateScroll);
+}
+
+bool RenderLayer::scrollBy(const IntSize& delta, ScrollOffsetClamping clamp, ScrollPropagation shouldPropagate)
 {
     if (delta.isZero())
         return false;
@@ -2001,12 +2006,15 @@ bool RenderLayer::scrollByRecursively(const IntSize& delta, ScrollOffsetClamping
         IntSize newScrollOffset = scrollOffset() + delta;
         scrollToOffset(newScrollOffset, clamp);
 
+        if (shouldPropagate == DontPropagateScroll)
+            return true;
+
         // If this layer can't do the scroll we ask the next layer up that can scroll to try
         IntSize remainingScrollOffset = newScrollOffset - scrollOffset();
         bool didScroll = true;
         if (!remainingScrollOffset.isZero() && renderer()->parent()) {
             if (RenderLayer* scrollableLayer = enclosingScrollableLayer())
-                didScroll = scrollableLayer->scrollByRecursively(remainingScrollOffset, clamp);
+                didScroll = scrollableLayer->scrollBy(remainingScrollOffset, clamp, shouldPropagate);
 
             Frame* frame = renderer()->frame();
             if (frame)
@@ -2018,7 +2026,8 @@ bool RenderLayer::scrollByRecursively(const IntSize& delta, ScrollOffsetClamping
         // have an overflow clip. Which means that it is a document node that can be scrolled.
         FrameView* view = renderer()->view()->frameView();
         IntPoint scrollPositionBefore = view->scrollPosition();
-        view->scrollBy(delta);
+        if (view->isScrollable())
+            view->scrollBy(delta);
         IntPoint scrollPositionAfter = view->scrollPosition();
         return scrollPositionBefore != scrollPositionAfter;
 
@@ -2386,7 +2395,7 @@ void RenderLayer::resize(const PlatformMouseEvent& evt, const LayoutSize& oldOff
     
     LayoutSize difference = (currentSize + newOffset - adjustedOldOffset).expandedTo(minimumSize) - currentSize;
 
-    ASSERT(element->isStyledElement());
+    ASSERT_WITH_SECURITY_IMPLICATION(element->isStyledElement());
     StyledElement* styledElement = static_cast<StyledElement*>(element);
     bool isBoxSizingBorder = renderer->style()->boxSizing() == BORDER_BOX;
 
@@ -4590,7 +4599,7 @@ void RenderLayer::calculateClipRects(const ClipRectsContext& clipRectsContext, C
         clipRects.setPosClipRect(clipRects.fixedClipRect());
         clipRects.setOverflowClipRect(clipRects.fixedClipRect());
         clipRects.setFixed(true);
-    } else if (renderer()->style()->hasInFlowPosition())
+    } else if (renderer()->style()->hasPaintOffset())
         clipRects.setPosClipRect(clipRects.overflowClipRect());
     else if (renderer()->style()->position() == AbsolutePosition)
         clipRects.setOverflowClipRect(clipRects.posClipRect());
@@ -5889,19 +5898,19 @@ void RenderLayer::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addWeakPointer(m_next);
     info.addWeakPointer(m_first);
     info.addWeakPointer(m_last);
-    info.addMember(m_hBar);
-    info.addMember(m_vBar);
-    info.addMember(m_posZOrderList);
-    info.addMember(m_negZOrderList);
-    info.addMember(m_normalFlowList);
-    info.addMember(m_clipRectsCache);
-    info.addMember(m_marquee);
-    info.addMember(m_transform);
+    info.addMember(m_hBar, "hBar");
+    info.addMember(m_vBar, "vBar");
+    info.addMember(m_posZOrderList, "posZOrderList");
+    info.addMember(m_negZOrderList, "negZOrderList");
+    info.addMember(m_normalFlowList, "normalFlowList");
+    info.addMember(m_clipRectsCache, "clipRectsCache");
+    info.addMember(m_marquee, "marquee");
+    info.addMember(m_transform, "transform");
     info.addWeakPointer(m_reflection);
     info.addWeakPointer(m_scrollCorner);
     info.addWeakPointer(m_resizer);
 #if USE(ACCELERATED_COMPOSITING)
-    info.addMember(m_backing);
+    info.addMember(m_backing, "backing");
 #endif
     info.setCustomAllocation(true);
 }

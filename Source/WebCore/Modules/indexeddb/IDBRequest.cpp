@@ -35,6 +35,7 @@
 #include "EventListener.h"
 #include "EventNames.h"
 #include "EventQueue.h"
+#include "ExceptionCodePlaceholder.h"
 #include "IDBBindingUtilities.h"
 #include "IDBCursorWithValue.h"
 #include "IDBDatabase.h"
@@ -405,7 +406,7 @@ bool IDBRequest::hasPendingActivity() const
     // FIXME: In an ideal world, we should return true as long as anyone has a or can
     //        get a handle to us and we have event listeners. This is order to handle
     //        user generated events properly.
-    return m_hasPendingActivity || ActiveDOMObject::hasPendingActivity();
+    return m_hasPendingActivity;
 }
 
 void IDBRequest::stop()
@@ -494,8 +495,7 @@ bool IDBRequest::dispatchEvent(PassRefPtr<Event> event)
         // doesn't receive a second error) and before deactivating (which might trigger commit).
         if (event->type() == eventNames().errorEvent && dontPreventDefault && !m_requestAborted) {
             m_transaction->setError(m_error, m_errorMessage);
-            ExceptionCode unused;
-            m_transaction->abort(unused);
+            m_transaction->abort(IGNORE_EXCEPTION);
         }
 
         // If this was the last request in the transaction's list, it may commit here.
@@ -516,8 +516,7 @@ void IDBRequest::uncaughtExceptionInEventHandler()
 {
     if (m_transaction && !m_requestAborted) {
         m_transaction->setError(DOMError::create(IDBDatabaseException::getErrorName(IDBDatabaseException::AbortError)), "Uncaught exception in event handler.");
-        ExceptionCode unused;
-        m_transaction->abort(unused);
+        m_transaction->abort(IGNORE_EXCEPTION);
     }
 }
 

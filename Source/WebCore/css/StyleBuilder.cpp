@@ -873,7 +873,7 @@ public:
         }
 #if !ASSERT_DISABLED
         else {
-            ASSERT(value->isPrimitiveValue());
+            ASSERT_WITH_SECURITY_IMPLICATION(value->isPrimitiveValue());
             ASSERT(static_cast<CSSPrimitiveValue*>(value)->getIdent() == CSSValueNormal);
         }
 #endif
@@ -1137,7 +1137,7 @@ public:
         ETextDecoration t = RenderStyle::initialTextDecoration();
         for (CSSValueListIterator i(value); i.hasMore(); i.advance()) {
             CSSValue* item = i.value();
-            ASSERT(item->isPrimitiveValue());
+            ASSERT_WITH_SECURITY_IMPLICATION(item->isPrimitiveValue());
             t |= *static_cast<CSSPrimitiveValue*>(item);
         }
         styleResolver->style()->setTextDecoration(t);
@@ -1609,7 +1609,7 @@ public:
 
     static void applyValue(CSSPropertyID, StyleResolver* styleResolver, CSSValue* value)
     {
-        ASSERT(value->isPrimitiveValue());
+        ASSERT_WITH_SECURITY_IMPLICATION(value->isPrimitiveValue());
         CSSPrimitiveValue* primitiveValue = static_cast<CSSPrimitiveValue*>(value);
 
         if (primitiveValue->getIdent() == CSSValueNormal) {
@@ -1949,6 +1949,7 @@ StyleBuilder::StyleBuilder()
     setPropertyHandler(CSSPropertyWebkitBackgroundSize, CSSPropertyBackgroundSize);
 #if ENABLE(CSS_COMPOSITING)
     setPropertyHandler(CSSPropertyWebkitBlendMode, ApplyPropertyDefault<BlendMode, &RenderStyle::blendMode, BlendMode, &RenderStyle::setBlendMode, BlendMode, &RenderStyle::initialBlendMode>::createHandler());
+    setPropertyHandler(CSSPropertyWebkitBackgroundBlendMode, ApplyPropertyFillLayer<BlendMode, CSSPropertyWebkitBackgroundBlendMode, BackgroundFillLayer, &RenderStyle::accessBackgroundLayers, &RenderStyle::backgroundLayers, &FillLayer::isBlendModeSet, &FillLayer::blendMode, &FillLayer::setBlendMode, &FillLayer::clearBlendMode, &FillLayer::initialFillBlendMode, &CSSToStyleMap::mapFillBlendMode>::createHandler());
 #endif
     setPropertyHandler(CSSPropertyWebkitBorderFit, ApplyPropertyDefault<EBorderFit, &RenderStyle::borderFit, EBorderFit, &RenderStyle::setBorderFit, EBorderFit, &RenderStyle::initialBorderFit>::createHandler());
     setPropertyHandler(CSSPropertyWebkitBorderHorizontalSpacing, ApplyPropertyComputeLength<short, &RenderStyle::horizontalBorderSpacing, &RenderStyle::setHorizontalBorderSpacing, &RenderStyle::initialHorizontalBorderSpacing>::createHandler());
@@ -1990,6 +1991,7 @@ StyleBuilder::StyleBuilder()
     setPropertyHandler(CSSPropertyWebkitFlexGrow, ApplyPropertyDefault<float, &RenderStyle::flexGrow, float, &RenderStyle::setFlexGrow, float, &RenderStyle::initialFlexGrow>::createHandler());
     setPropertyHandler(CSSPropertyWebkitFlexShrink, ApplyPropertyDefault<float, &RenderStyle::flexShrink, float, &RenderStyle::setFlexShrink, float, &RenderStyle::initialFlexShrink>::createHandler());
     setPropertyHandler(CSSPropertyWebkitFlexWrap, ApplyPropertyDefault<EFlexWrap, &RenderStyle::flexWrap, EFlexWrap, &RenderStyle::setFlexWrap, EFlexWrap, &RenderStyle::initialFlexWrap>::createHandler());
+    setPropertyHandler(CSSPropertyWebkitGridAutoFlow, ApplyPropertyDefault<GridAutoFlow, &RenderStyle::gridAutoFlow, GridAutoFlow, &RenderStyle::setGridAutoFlow, GridAutoFlow, &RenderStyle::initialGridAutoFlow>::createHandler());
     setPropertyHandler(CSSPropertyWebkitJustifyContent, ApplyPropertyDefault<EJustifyContent, &RenderStyle::justifyContent, EJustifyContent, &RenderStyle::setJustifyContent, EJustifyContent, &RenderStyle::initialJustifyContent>::createHandler());
     setPropertyHandler(CSSPropertyWebkitOrder, ApplyPropertyDefault<int, &RenderStyle::order, int, &RenderStyle::setOrder, int, &RenderStyle::initialOrder>::createHandler());
 #if ENABLE(CSS_REGIONS)

@@ -245,9 +245,7 @@ bool HTMLAttributeEquivalent::valueIsPresentInStyle(Element* element, StylePrope
     RefPtr<CSSValue> value = attributeValueAsCSSValue(element);
     RefPtr<CSSValue> styleValue = style->getPropertyCSSValue(m_propertyID);
     
-    // FIXME: This is very inefficient way of comparing values
-    // but we can't string compare attribute value and CSS property value.
-    return value && styleValue && value->cssText() == styleValue->cssText();
+    return compareCSSValuePtr(value, styleValue);
 }
 
 void HTMLAttributeEquivalent::addToStyle(Element* element, EditingStyle* style) const
@@ -1223,8 +1221,7 @@ PassRefPtr<EditingStyle> EditingStyle::styleAtSelectionStart(const VisibleSelect
     // and find the background color of the common ancestor.
     if (shouldUseBackgroundColorInEffect && (selection.isRange() || hasTransparentBackgroundColor(style->m_mutableStyle.get()))) {
         RefPtr<Range> range(selection.toNormalizedRange());
-        ExceptionCode ec = 0;
-        if (PassRefPtr<CSSValue> value = backgroundColorInEffect(range->commonAncestorContainer(ec)))
+        if (PassRefPtr<CSSValue> value = backgroundColorInEffect(range->commonAncestorContainer(IGNORE_EXCEPTION)))
             style->setProperty(CSSPropertyBackgroundColor, value->cssText());
     }
 

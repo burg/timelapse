@@ -1793,6 +1793,9 @@
       <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">4065;4273;4565;4701;4702;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ICUVersion.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="..\html\canvas\CanvasPathMethods.cpp" />
+    <ClCompile Include="..\html\track\TextTrackCueGeneric.cpp" />
+    <ClCompile Include="..\html\track\WebVTTElement.cpp" />
     <ClCompile Include="..\Modules\filesystem\DirectoryEntry.cpp" />
     <ClCompile Include="..\Modules\filesystem\DirectoryEntrySync.cpp" />
     <ClCompile Include="..\Modules\filesystem\DirectoryReader.cpp" />
@@ -1853,6 +1856,10 @@
     <ClCompile Include="..\Modules\webdatabase\Database.cpp" />
     <ClCompile Include="..\Modules\webdatabase\DatabaseAuthorizer.cpp" />
     <ClCompile Include="..\Modules\webdatabase\DatabaseBackend.cpp" />
+    <ClCompile Include="..\Modules\webdatabase\DatabaseBackendAsync.cpp" />
+    <ClCompile Include="..\Modules\webdatabase\DatabaseBackendContext.cpp" />
+    <ClCompile Include="..\Modules\webdatabase\DatabaseBackendSync.cpp" />
+    <ClCompile Include="..\Modules\webdatabase\DatabaseBase.cpp" />
     <ClCompile Include="..\Modules\webdatabase\DatabaseContext.cpp" />
     <ClCompile Include="..\Modules\webdatabase\DatabaseManager.cpp" />
     <ClCompile Include="..\Modules\webdatabase\DatabaseServer.cpp" />
@@ -1869,6 +1876,8 @@
     <ClCompile Include="..\Modules\webdatabase\SQLStatement.cpp" />
     <ClCompile Include="..\Modules\webdatabase\SQLStatementSync.cpp" />
     <ClCompile Include="..\Modules\webdatabase\SQLTransaction.cpp" />
+    <ClCompile Include="..\Modules\webdatabase\SQLTransactionBackend.cpp" />
+    <ClCompile Include="..\Modules\webdatabase\SQLTransactionBackendSync.cpp" />
     <ClCompile Include="..\Modules\webdatabase\SQLTransactionClient.cpp" />
     <ClCompile Include="..\Modules\webdatabase\SQLTransactionCoordinator.cpp" />
     <ClCompile Include="..\Modules\webdatabase\SQLTransactionSync.cpp" />
@@ -2255,6 +2264,7 @@
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">ICUVersion.h</ForcedIncludeFiles>
     </ClCompile>
     <ClCompile Include="..\platform\win\WebCoreInstanceHandle.cpp" />
+    <ClCompile Include="..\storage\StorageStrategy.cpp" />
     <ClCompile Include="..\WebCorePrefix.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <DisableSpecificWarnings Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4819;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -4881,6 +4891,7 @@
     <ClCompile Include="..\html\parser\HTMLParserScheduler.cpp" />
     <ClCompile Include="..\html\parser\HTMLParserThread.cpp" />
     <ClCompile Include="..\html\parser\HTMLPreloadScanner.cpp" />
+    <ClCompile Include="..\html\parser\HTMLResourcePreloader.cpp" />
     <ClCompile Include="..\html\parser\HTMLScriptRunner.cpp" />
     <ClCompile Include="..\html\parser\HTMLSourceTracker.cpp" />
     <ClCompile Include="..\html\parser\HTMLTokenizer.cpp" />
@@ -4889,6 +4900,7 @@
     <ClCompile Include="..\html\parser\TextDocumentParser.cpp" />
     <ClCompile Include="..\html\parser\TextViewSourceParser.cpp" />
     <ClCompile Include="..\html\parser\XSSAuditor.cpp" />
+    <ClCompile Include="..\html\parser\XSSAuditorDelegate.cpp" />
     <ClCompile Include="..\html\shadow\ContentDistributor.cpp" />
     <ClCompile Include="..\html\shadow\ContentSelectorQuery.cpp" />
     <ClCompile Include="..\html\shadow\DateTimeEditElement.cpp" />
@@ -5680,6 +5692,9 @@
     <ClCompile Include="..\inspector\InspectorFrontendHost.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\inspector\InspectorHeapProfilerAgent.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\inspector\InspectorHistory.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </ClCompile>
@@ -6307,6 +6322,9 @@
     <ClInclude Include="..\ForwardingHeaders\runtime\WeakGCMap.h" />
     <ClInclude Include="..\ForwardingHeaders\runtime\WriteBarrier.h" />
     <ClInclude Include="..\ForwardingHeaders\yarr\YarrJIT.h" />
+    <ClInclude Include="..\html\canvas\CanvasPathMethods.h" />
+    <ClInclude Include="..\html\track\TextTrackCueGeneric.h" />
+    <ClInclude Include="..\html\track\WebVTTElement.h" />
     <ClInclude Include="..\Modules\filesystem\AsyncFileWriter.h" />
     <ClInclude Include="..\Modules\filesystem\AsyncFileWriterClient.h" />
     <ClInclude Include="..\Modules\filesystem\DirectoryEntry.h" />
@@ -6400,6 +6418,11 @@
     <ClInclude Include="..\Modules\webdatabase\Database.h" />
     <ClInclude Include="..\Modules\webdatabase\DatabaseAuthorizer.h" />
     <ClInclude Include="..\Modules\webdatabase\DatabaseBackend.h" />
+    <ClInclude Include="..\Modules\webdatabase\DatabaseBackendAsync.h" />
+    <ClInclude Include="..\Modules\webdatabase\DatabaseBackendContext.h" />
+    <ClInclude Include="..\Modules\webdatabase\DatabaseBackendSync.h" />
+    <ClInclude Include="..\Modules\webdatabase\DatabaseBase.h" />
+    <ClInclude Include="..\Modules\webdatabase\DatabaseBasicTypes.h" />
     <ClInclude Include="..\Modules\webdatabase\DatabaseCallback.h" />
     <ClInclude Include="..\Modules\webdatabase\DatabaseContext.h" />
     <ClInclude Include="..\Modules\webdatabase\DatabaseError.h" />
@@ -6422,6 +6445,8 @@
     <ClInclude Include="..\Modules\webdatabase\SQLStatementErrorCallback.h" />
     <ClInclude Include="..\Modules\webdatabase\SQLStatementSync.h" />
     <ClInclude Include="..\Modules\webdatabase\SQLTransaction.h" />
+    <ClInclude Include="..\Modules\webdatabase\SQLTransactionBackend.h" />
+    <ClInclude Include="..\Modules\webdatabase\SQLTransactionBackendSync.h" />
     <ClInclude Include="..\Modules\webdatabase\SQLTransactionCallback.h" />
     <ClInclude Include="..\Modules\webdatabase\SQLTransactionClient.h" />
     <ClInclude Include="..\Modules\webdatabase\SQLTransactionCoordinator.h" />
@@ -6771,6 +6796,7 @@
     <ClInclude Include="..\platform\graphics\TextRenderingMode.h" />
     <ClInclude Include="..\platform\win\WCDataObject.h" />
     <ClInclude Include="..\platform\win\WebCoreInstanceHandle.h" />
+    <ClInclude Include="..\storage\StorageStrategy.h" />
     <ClInclude Include="..\WebCorePrefix.h" />
     <ClInclude Include="..\platform\win\WebCoreTextRenderer.h" />
     <ClInclude Include="..\platform\win\WindowMessageBroadcaster.h" />
@@ -7487,8 +7513,6 @@
     <ClInclude Include="..\xml\XSLTExtensions.h" />
     <ClInclude Include="..\xml\XSLTProcessor.h" />
     <ClInclude Include="..\xml\XSLTUnicodeSort.h" />
-    <ClInclude Include="..\xml\parser\MarkupTokenBase.h" />
-    <ClInclude Include="..\xml\parser\MarkupTokenizerBase.h" />
     <ClInclude Include="..\xml\parser\MarkupTokenizerInlines.h" />
     <ClInclude Include="..\xml\parser\XMLDocumentParser.h" />
     <ClInclude Include="..\xml\parser\XMLDocumentParserScope.h" />
@@ -7901,6 +7925,7 @@
     <ClInclude Include="..\html\ValidityState.h" />
     <ClInclude Include="..\html\VoidCallback.h" />
     <ClInclude Include="..\html\WeekInputType.h" />
+    <ClInclude Include="..\html\parser\AtomicHTMLToken.h" />
     <ClInclude Include="..\html\parser\BackgroundHTMLParser.h" />
     <ClInclude Include="..\html\parser\CompactHTMLToken.h" />
     <ClInclude Include="..\html\parser\CSSPreloadScanner.h" />
@@ -7917,19 +7942,21 @@
     <ClInclude Include="..\html\parser\HTMLParserScheduler.h" />
     <ClInclude Include="..\html\parser\HTMLParserThread.h" />
     <ClInclude Include="..\html\parser\HTMLPreloadScanner.h" />
+    <ClInclude Include="..\html\parser\HTMLResourcePreloader.h" />
     <ClInclude Include="..\html\parser\HTMLScriptRunner.h" />
     <ClInclude Include="..\html\parser\HTMLScriptRunnerHost.h" />
     <ClInclude Include="..\html\parser\HTMLSourceTracker.h" />
     <ClInclude Include="..\html\parser\HTMLStackItem.h" />
     <ClInclude Include="..\html\parser\HTMLToken.h" />
     <ClInclude Include="..\html\parser\HTMLTokenizer.h" />
-    <ClInclude Include="..\html\parser\HTMLTokenTypes.h" />
     <ClInclude Include="..\html\parser\HTMLTreeBuilder.h" />
     <ClInclude Include="..\html\parser\HTMLViewSourceParser.h" />
+    <ClInclude Include="..\html\parser\InputStreamPreprocessor.h" />
     <ClInclude Include="..\html\parser\NestingLevelIncrementer.h" />
     <ClInclude Include="..\html\parser\TextDocumentParser.h" />
     <ClInclude Include="..\html\parser\TextViewSourceParser.h" />
     <ClInclude Include="..\html\parser\XSSAuditor.h" />
+    <ClInclude Include="..\html\parser\XSSAuditorDelegate.h" />
     <ClInclude Include="..\html\shadow\ContentDistributor.h" />
     <ClInclude Include="..\html\shadow\ContentSelectorQuery.h" />
     <ClInclude Include="..\html\shadow\DateTimeEditElement.h" />
@@ -8345,6 +8372,7 @@
     <ClInclude Include="..\inspector\InspectorFrontendClient.h" />
     <ClInclude Include="..\inspector\InspectorFrontendClientLocal.h" />
     <ClInclude Include="..\inspector\InspectorFrontendHost.h" />
+    <ClInclude Include="..\inspector\InspectorHeapProfilerAgent.h" />
     <ClInclude Include="..\inspector\InspectorHistory.h" />
     <ClInclude Include="..\inspector\InspectorIndexedDBAgent.h" />
     <ClInclude Include="..\inspector\InspectorInputAgent.h" />
@@ -8663,7 +8691,6 @@
     <None Include="..\inspector\front-end\cm\xml.js" />
     <None Include="WebCorePostBuild.cmd" />
     <None Include="WebCorePreBuild.cmd" />
-    <None Include="WebCorePreLink.cmd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

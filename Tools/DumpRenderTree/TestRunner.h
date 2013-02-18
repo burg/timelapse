@@ -56,7 +56,6 @@ public:
     bool callShouldCloseOnWebView();
     JSStringRef copyDecodedHostName(JSStringRef name);
     JSStringRef copyEncodedHostName(JSStringRef name);
-    void deliverWebIntent(JSStringRef action, JSStringRef type, JSStringRef data);
     void dispatchPendingLoadRequests();
     void display();
     void displayInvalidatedRegion();
@@ -81,7 +80,6 @@ public:
     void queueNonLoadingScript(JSStringRef script);
     void queueReload();
     void removeAllVisitedLinks();
-    void sendWebIntentResponse(JSStringRef response);
     void setAcceptsEditing(bool);
     void setAllowUniversalAccessFromFileURLs(bool);
     void setAllowFileAccessFromFileURLs(bool);
@@ -116,7 +114,6 @@ public:
     void setValueForUser(JSContextRef, JSValueRef nodeObject, JSStringRef value);
     void setViewModeMediaFeature(JSStringRef);
     void setXSSAuditorEnabled(bool flag);
-    void setFrameFlatteningEnabled(bool);
     void setSpatialNavigationEnabled(bool);
     void setScrollbarPolicy(JSStringRef orientation, JSStringRef policy);
     void startSpeechInput(JSContextRef inputElement);
@@ -125,7 +122,6 @@ public:
 
     void waitForPolicyDelegate();
     size_t webHistoryItemCount();
-    unsigned workerThreadCount() const;
     int windowCount();
     
 #if PLATFORM(MAC) || PLATFORM(GTK) || PLATFORM(WIN)
@@ -287,10 +283,6 @@ public:
 
     const std::string& encodedAudioData() const { return m_encodedAudioData; }
     void setEncodedAudioData(const std::string& encodedAudioData) { m_encodedAudioData = encodedAudioData; }
-    
-    bool pauseAnimationAtTimeOnElementWithId(JSStringRef animationName, double time, JSStringRef elementId);
-    bool pauseTransitionAtTimeOnElementWithId(JSStringRef propertyName, double time, JSStringRef elementId);
-    unsigned numberOfActiveAnimations() const;
 
     void addOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains);
     void removeOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains);
@@ -349,8 +341,6 @@ public:
 
     static const unsigned maxViewWidth;
     static const unsigned maxViewHeight;
-
-    void setMinimumTimerInterval(double);
 
     void setTextDirection(JSStringRef);
     const std::string& titleTextDirection() const { return m_titleTextDirection; }

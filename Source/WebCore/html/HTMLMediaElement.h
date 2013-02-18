@@ -27,7 +27,6 @@
 #define HTMLMediaElement_h
 
 #if ENABLE(VIDEO)
-
 #include "HTMLElement.h"
 #include "ActiveDOMObject.h"
 #include "GenericEventQueue.h"
@@ -66,6 +65,9 @@ class Widget;
 #endif
 #if PLATFORM(MAC)
 class DisplaySleepDisabler;
+#endif
+#if ENABLE(ENCRYPTED_MEDIA_V2)
+class MediaKeys;
 #endif
 
 #if ENABLE(VIDEO_TRACK)
@@ -188,7 +190,14 @@ public:
     DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitkeyadded);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitkeyerror);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitkeymessage);
+#endif
+#if ENABLE(ENCRYPTED_MEDIA) || ENABLE(ENCRYPTED_MEDIA_V2)
     DEFINE_ATTRIBUTE_EVENT_LISTENER(webkitneedkey);
+#endif
+
+#if ENABLE(ENCRYPTED_MEDIA_V2)
+    MediaKeys* mediaKeys() const { return m_mediaKeys.get(); }
+    void setMediaKeys(MediaKeys*);
 #endif
 
 // controls
@@ -443,6 +452,10 @@ private:
     virtual void mediaPlayerKeyError(MediaPlayer*, const String& keySystem, const String& sessionId, MediaPlayerClient::MediaKeyErrorCode, unsigned short systemCode) OVERRIDE;
     virtual void mediaPlayerKeyMessage(MediaPlayer*, const String& keySystem, const String& sessionId, const unsigned char* message, unsigned messageLength, const KURL& defaultURL) OVERRIDE;
     virtual bool mediaPlayerKeyNeeded(MediaPlayer*, const String& keySystem, const String& sessionId, const unsigned char* initData, unsigned initDataLength) OVERRIDE;
+#endif
+
+#if ENABLE(ENCRYPTED_MEDIA_V2)
+    virtual void mediaPlayerKeyNeeded(MediaPlayer*, Uint8Array*);
 #endif
 
     virtual String mediaPlayerReferrer() const OVERRIDE;
@@ -706,6 +719,10 @@ private:
 #endif
 
     friend class TrackDisplayUpdateScope;
+
+#if ENABLE(ENCRYPTED_MEDIA_V2)
+    RefPtr<MediaKeys> m_mediaKeys;
+#endif
 };
 
 #if ENABLE(VIDEO_TRACK)

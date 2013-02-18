@@ -213,7 +213,12 @@ bool MainResourceLoader::isPostOrRedirectAfterPost(const ResourceRequest& newReq
 
 PassRefPtr<ResourceBuffer> MainResourceLoader::resourceData()
 {
-    return m_resource ? m_resource->resourceBuffer() : 0;
+    ASSERT(!m_resource || !m_substituteData.isValid());
+    if (m_resource)
+        return m_resource->resourceBuffer();
+    if (m_substituteData.isValid())
+        return ResourceBuffer::create(m_substituteData.content()->data(), m_substituteData.content()->size());
+    return 0;
 }
 
 void MainResourceLoader::redirectReceived(CachedResource* resource, ResourceRequest& request, const ResourceResponse& redirectResponse)
@@ -439,7 +444,7 @@ void MainResourceLoader::responseReceived(CachedResource* resource, const Resour
 
     m_response = r;
 
-    if (!loader())
+    if (m_identifierForLoadWithoutResourceLoader)
         frameLoader()->notifier()->dispatchDidReceiveResponse(documentLoader(), identifier(), m_response, 0);
 
     ASSERT(!m_waitingForContentPolicy);
@@ -509,7 +514,7 @@ void MainResourceLoader::dataReceived(CachedResource* resource, const char* data
     }
 #endif
 
-    if (!loader())
+    if (m_identifierForLoadWithoutResourceLoader)
         frameLoader()->notifier()->dispatchDidReceiveData(documentLoader(), identifier(), data, length, -1);
 
     documentLoader()->applicationCacheHost()->mainResourceDataReceived(data, length, -1, false);
@@ -541,7 +546,7 @@ void MainResourceLoader::didFinishLoading(double finishTime)
     RefPtr<MainResourceLoader> protect(this);
     RefPtr<DocumentLoader> dl = documentLoader();
 
-    if (!loader()) {
+    if (m_identifierForLoadWithoutResourceLoader) {
         frameLoader()->notifier()->dispatchDidFinishLoading(documentLoader(), identifier(), finishTime);
         m_identifierForLoadWithoutResourceLoader = 0;
     }
@@ -582,10 +587,13 @@ void MainResourceLoader::notifyFinished(CachedResource* resource)
         return;
     }
 
+    // FIXME: we should fix the design to eliminate the need for a platform ifdef here
+#if !PLATFORM(CHROMIUM)
     if (m_documentLoader->request().cachePolicy() == ReturnCacheDataDontLoad && !m_resource->wasCanceled()) {
         frameLoader()->retryAfterFailedCacheOnlyMainResourceLoad();
         return;
     }
+#endif
 
     const ResourceError& error = m_resource->resourceError();
     if (documentLoader()->applicationCacheHost()->maybeLoadFallbackForMainError(request(), error))
@@ -603,11 +611,11 @@ void MainResourceLoader::notifyFinished(CachedResource* resource)
 void MainResourceLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
-    info.addMember(m_resource);
-    info.addMember(m_initialRequest);
-    info.addMember(m_substituteData);
-    info.addMember(m_dataLoadTimer);
-    info.addMember(m_documentLoader);
+    info.addMember(m_resource, "resource");
+    info.addMember(m_initialRequest, "initialRequest");
+    info.addMember(m_substituteData, "substituteData");
+    info.addMember(m_dataLoadTimer, "dataLoadTimer");
+    info.addMember(m_documentLoader, "documentLoader");
 }
 
 void MainResourceLoader::handleSubstituteDataLoadNow(MainResourceLoaderTimer*)

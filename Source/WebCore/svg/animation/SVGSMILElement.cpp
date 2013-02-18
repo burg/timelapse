@@ -202,10 +202,8 @@ static inline QualifiedName constructQualifiedName(const SVGElement* svgElement,
     
     String prefix;
     String localName;
-    ExceptionCode ec = 0;
-    if (!Document::parseQualifiedName(attributeName, prefix, localName, ec))
+    if (!Document::parseQualifiedName(attributeName, prefix, localName, ASSERT_NO_EXCEPTION))
         return anyQName();
-    ASSERT(!ec);
     
     String namespaceURI = svgElement->lookupNamespaceURI(prefix);    
     if (namespaceURI.isEmpty())
@@ -744,7 +742,7 @@ SMILTime SVGSMILElement::findInstanceTime(BeginOrEnd beginOrEnd, SMILTime minimu
 
     const SMILTimeWithOrigin* result = approximateBinarySearch<const SMILTimeWithOrigin, SMILTime>(list, sizeOfList, minimumTime, extractTimeFromVector);
     int indexOfResult = result - list.begin();
-    ASSERT(indexOfResult < sizeOfList);
+    ASSERT_WITH_SECURITY_IMPLICATION(indexOfResult < sizeOfList);
     const SMILTime& currentTime = list[indexOfResult].time();
 
     // The special value "indefinite" does not yield an instance time in the begin list.

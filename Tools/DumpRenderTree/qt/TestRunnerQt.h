@@ -56,7 +56,6 @@ class DumpRenderTree;
 class TestRunner : public QObject {
     Q_OBJECT
     Q_PROPERTY(int webHistoryItemCount READ webHistoryItemCount)
-    Q_PROPERTY(int workerThreadCount READ workerThreadCount)
     Q_PROPERTY(bool globalFlag READ globalFlag WRITE setGlobalFlag)
 public:
     TestRunner(WebCore::DumpRenderTree*);
@@ -160,7 +159,6 @@ public Q_SLOTS:
     void closeWebInspector();
     void evaluateInWebInspector(long callId, const QString& script);
     void removeAllVisitedLinks();
-    void setFrameFlatteningEnabled(bool);
     void setAllowUniversalAccessFromFileURLs(bool enable);
     void setAllowFileAccessFromFileURLs(bool enable);
     void setAppCacheMaximumSize(unsigned long long quota);
@@ -187,11 +185,7 @@ public Q_SLOTS:
     bool isCommandEnabled(const QString& name) const;
     bool findString(const QString&, const QStringList& optionArray);
 
-    bool pauseAnimationAtTimeOnElementWithId(const QString& animationName, double time, const QString& elementId);
-    bool pauseTransitionAtTimeOnElementWithId(const QString& propertyName, double time, const QString& elementId);
     bool elementDoesAutoCompleteForElementWithId(const QString& elementId);
-
-    unsigned numberOfActiveAnimations() const;
 
     void addOriginAccessWhitelistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
     void removeOriginAccessWhitelistEntry(const QString& sourceOrigin, const QString& destinationProtocol, const QString& destinationHost, bool allowDestinationSubdomains);
@@ -216,7 +210,6 @@ public Q_SLOTS:
     void setUserStyleSheetLocation(const QString& url);
     void setUserStyleSheetEnabled(bool);
     void setDomainRelaxationForbiddenForURLScheme(bool forbidden, const QString& scheme);
-    int workerThreadCount();
     bool callShouldCloseOnWebView();
     // For now, this is a no-op. This may change depending on outcome of
     // https://bugs.webkit.org/show_bug.cgi?id=33333
@@ -264,8 +257,6 @@ public Q_SLOTS:
     void evaluateScriptInIsolatedWorldAndReturnValue(int worldID, const QString& script);
     void evaluateScriptInIsolatedWorld(int worldID, const QString& script);
     void addUserStyleSheet(const QString& sourceCode);
-
-    void setMinimumTimerInterval(double);
     
     void originsWithLocalStorage();
     void deleteAllLocalStorage();

@@ -218,7 +218,7 @@ namespace {
 
         UChar current()
         {
-            ASSERT(m_position < m_length);
+            ASSERT_WITH_SECURITY_IMPLICATION(m_position < m_length);
             return m_sourceString[m_position];
         }
 
@@ -2396,20 +2396,26 @@ WebGLExtension* WebGLRenderingContext::getExtension(const String& name)
         }
         return m_oesElementIndexUint.get();
     }
-    if (equalIgnoringCase(name, "WEBKIT_WEBGL_lose_context")
+    if (equalIgnoringCase(name, "WEBGL_lose_context")
         // FIXME: remove this after a certain grace period.
+        || equalIgnoringCase(name, "WEBKIT_WEBGL_lose_context")
+        // FIXME: Is it safe to remove WEBKIT_lose_context now?
         || equalIgnoringCase(name, "WEBKIT_lose_context")) {
         if (!m_webglLoseContext)
             m_webglLoseContext = WebGLLoseContext::create(this);
         return m_webglLoseContext.get();
     }
-    if (equalIgnoringCase(name, "WEBKIT_WEBGL_compressed_texture_s3tc")) {
-        // Use WEBKIT_ prefix until extension is official.
+    if ((equalIgnoringCase(name, "WEBGL_compressed_texture_s3tc")
+         // FIXME: remove this after a certain grace period.
+         || equalIgnoringCase(name, "WEBKIT_WEBGL_compressed_texture_s3tc"))
+        && WebGLCompressedTextureS3TC::supported(this)) {
         if (!m_webglCompressedTextureS3TC)
             m_webglCompressedTextureS3TC = WebGLCompressedTextureS3TC::create(this);
         return m_webglCompressedTextureS3TC.get();
     }
-    if (equalIgnoringCase(name, "WEBKIT_WEBGL_depth_texture")
+    if ((equalIgnoringCase(name, "WEBGL_depth_texture")
+        // FIXME: remove this after a certain grace period.
+        || equalIgnoringCase(name, "WEBKIT_WEBGL_depth_texture"))
         && WebGLDepthTexture::supported(graphicsContext3D())) {
         if (!m_webglDepthTexture) {
             m_context->getExtensions()->ensureEnabled("GL_CHROMIUM_depth_texture");
@@ -2899,7 +2905,7 @@ Vector<String> WebGLRenderingContext::getSupportedExtensions()
         result.append("OES_vertex_array_object");
     if (m_context->getExtensions()->supports("GL_OES_element_index_uint"))
         result.append("OES_element_index_uint");
-    result.append("WEBKIT_WEBGL_lose_context");
+    result.append("WEBGL_lose_context");
     if (WebGLCompressedTextureS3TC::supported(this))
         result.append("WEBKIT_WEBGL_compressed_texture_s3tc");
     if (WebGLDepthTexture::supported(graphicsContext3D()))

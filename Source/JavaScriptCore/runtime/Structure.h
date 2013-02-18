@@ -35,6 +35,7 @@
 #include "PropertyName.h"
 #include "PropertyNameArray.h"
 #include "Protect.h"
+#include "StructureRareData.h"
 #include "StructureTransitionTable.h"
 #include "JSTypeInfo.h"
 #include "Watchpoint.h"
@@ -178,7 +179,9 @@ namespace JSC {
         Structure* previousID() const
         {
             ASSERT(structure()->classInfo() == &s_info);
-            return m_previous.get();
+            if (typeInfo().structureHasRareData())
+                return rareData()->previousID();
+            return previous();
         }
         bool transitivelyTransitionedFrom(Structure* structureToFind);
 
@@ -193,7 +196,8 @@ namespace JSC {
                 return initialOutOfLineCapacity;
 
             ASSERT(outOfLineSize > initialOutOfLineCapacity);
-            return WTF::roundUpToPowerOf<outOfLineGrowthFactor>(outOfLineSize);
+            COMPILE_ASSERT(outOfLineGrowthFactor == 2, outOfLineGrowthFactor_is_two);
+            return WTF::roundUpToPowerOfTwo(outOfLineSize);
         }
         unsigned outOfLineSize() const
         {
@@ -289,11 +293,18 @@ namespace JSC {
         JSPropertyNameIterator* enumerationCache(); // Defined in JSPropertyNameIterator.h.
         void getPropertyNamesFromStructure(JSGlobalData&, PropertyNameArray&, EnumerationMode);
 
-        JSString* objectToStringValue() { return m_objectToStringValue.get(); }
+        JSString* objectToStringValue()
+        {
+            if (!typeInfo().structureHasRareData())
+                return 0;
+            return rareData()->objectToStringValue();
+        }
 
         void setObjectToStringValue(JSGlobalData& globalData, const JSCell* owner, JSString* value)
         {
-            m_objectToStringValue.set(globalData, owner, value);
+            if (!typeInfo().structureHasRareData())
+                allocateRareData(globalData);
+            rareData()->setObjectToStringValue(globalData, owner, value);
         }
 
         bool staticFunctionsReified()
@@ -394,7 +405,7 @@ namespace JSC {
         void materializePropertyMapIfNecessary(JSGlobalData& globalData)
         {
             ASSERT(structure()->classInfo() == &s_info);
-            if (!m_propertyTable && m_previous)
+            if (!m_propertyTable && previousID())
                 materializePropertyMap(globalData);
         }
         void materializePropertyMapIfNecessaryForPinning(JSGlobalData& globalData)
@@ -402,6 +413,22 @@ namespace JSC {
             ASSERT(structure()->classInfo() == &s_info);
             if (!m_propertyTable)
                 materializePropertyMap(globalData);
+        }
+
+        void setPreviousID(JSGlobalData& globalData, Structure* transition, Structure* structure)
+        {
+            if (typeInfo().structureHasRareData())
+                rareData()->setPreviousID(globalData, transition, structure);
+            else
+                m_previousOrRareData.set(globalData, transition, structure);
+        }
+
+        void clearPreviousID()
+        {
+            if (typeInfo().structureHasRareData())
+                rareData()->clearPreviousID();
+            else
+                m_previousOrRareData.clear();
         }
 
         int transitionCount() const
@@ -415,6 +442,21 @@ namespace JSC {
         
         void pin();
 
+        Structure* previous() const
+        {
+            ASSERT(!typeInfo().structureHasRareData());
+            return static_cast<Structure*>(m_previousOrRareData.get());
+        }
+
+        StructureRareData* rareData() const
+        {
+            ASSERT(typeInfo().structureHasRareData());
+            return static_cast<StructureRareData*>(m_previousOrRareData.get());
+        }
+
+        void allocateRareData(JSGlobalData&);
+        void cloneRareDataFrom(JSGlobalData&, const Structure*);
+
         static const int s_maxTransitionLength = 64;
 
         static const unsigned maxSpecificFunctionThrashCount = 3;
@@ -426,7 +468,8 @@ namespace JSC {
         WriteBarrier<Unknown> m_prototype;
         mutable WriteBarrier<StructureChain> m_cachedPrototypeChain;
 
-        WriteBarrier<Structure> m_previous;
+        WriteBarrier<JSCell> m_previousOrRareData;
+
         RefPtr<StringImpl> m_nameInPrevious;
         WriteBarrier<JSCell> m_specificValueInPrevious;
 
@@ -434,12 +477,8 @@ namespace JSC {
 
         StructureTransitionTable m_transitionTable;
 
-        WriteBarrier<JSPropertyNameIterator> m_enumerationCache;
-
         OwnPtr<PropertyTable> m_propertyTable;
 
-        WriteBarrier<JSString> m_objectToStringValue;
-        
         mutable InlineWatchpointSet m_transitionWatchpointSet;
 
         uint8_t m_inlineCapacity;
@@ -482,6 +521,8 @@ namespace JSC {
         ASSERT(globalData.structureStructure);
         Structure* newStructure = new (NotNull, allocateCell<Structure>(globalData.heap)) Structure(globalData, structure);
         newStructure->finishCreation(globalData);
+        if (structure->typeInfo().structureHasRareData())
+            newStructure->cloneRareDataFrom(globalData, structure);
         return newStructure;
     }
         
@@ -540,6 +581,21 @@ namespace JSC {
                 return true;
         }
         return false;
+    }
+
+    inline void Structure::setEnumerationCache(JSGlobalData& globalData, JSPropertyNameIterator* enumerationCache)
+    {
+        ASSERT(!isDictionary());
+        if (!typeInfo().structureHasRareData())
+            allocateRareData(globalData);
+        rareData()->setEnumerationCache(globalData, this, enumerationCache);
+    }
+
+    inline JSPropertyNameIterator* Structure::enumerationCache()
+    {
+        if (!typeInfo().structureHasRareData())
+            return 0;
+        return rareData()->enumerationCache();
     }
 
 } // namespace JSC

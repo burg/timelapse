@@ -56,6 +56,7 @@
 #include "EventListener.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
+#include "ExceptionCodePlaceholder.h"
 #include "FloatRect.h"
 #include "Frame.h"
 #include "FrameLoadRequest.h"
@@ -348,12 +349,6 @@ FloatRect DOMWindow::adjustWindowRect(Page* page, const FloatRect& pendingChange
     window.setY(max(screen.y(), min(window.y(), screen.maxY() - window.height())));
 
     return window;
-}
-
-// FIXME: We can remove this function once V8 showModalDialog is changed to use DOMWindow.
-void DOMWindow::parseModalDialogFeatures(const String& string, HashMap<String, String>& map)
-{
-    WindowFeatures::parseDialogFeatures(string, map);
 }
 
 bool DOMWindow::allowPopUp(Frame* firstFrame)
@@ -741,7 +736,7 @@ Storage* DOMWindow::sessionStorage(ExceptionCode& ec) const
     if (!document)
         return 0;
 
-    if (!document->securityOrigin()->canAccessLocalStorage(document->topDocument()->securityOrigin())) {
+    if (!document->securityOrigin()->canAccessLocalStorage(document->topOrigin())) {
         ec = SECURITY_ERR;
         return 0;
     }
@@ -778,7 +773,7 @@ Storage* DOMWindow::localStorage(ExceptionCode& ec) const
     if (!document)
         return 0;
 
-    if (!document->securityOrigin()->canAccessLocalStorage(document->topDocument()->securityOrigin())) {
+    if (!document->securityOrigin()->canAccessLocalStorage(document->topOrigin())) {
         ec = SECURITY_ERR;
         return 0;
     }
@@ -1578,9 +1573,8 @@ static void didAddStorageEventListener(DOMWindow* window)
     // notifications about storage events that might be triggered in other processes. Rather
     // than subscribe to these notifications explicitly, we subscribe to them implicitly to
     // simplify the work done by the system. 
-    ExceptionCode unused;
-    window->localStorage(unused);
-    window->sessionStorage(unused);
+    window->localStorage(IGNORE_EXCEPTION);
+    window->sessionStorage(IGNORE_EXCEPTION);
 }
 
 bool DOMWindow::addEventListener(const AtomicString& eventType, PassRefPtr<EventListener> listener, bool useCapture)

@@ -263,7 +263,7 @@ void RenderTableSection::addCell(RenderTableCell* cell, RenderTableRow* row)
 int RenderTableSection::calcRowLogicalHeight()
 {
 #ifndef NDEBUG
-    setNeedsLayoutIsForbidden(true);
+    SetLayoutNeededForbiddenScope layoutForbiddenScope(this);
 #endif
 
     ASSERT(!needsLayout());
@@ -338,10 +338,6 @@ int RenderTableSection::calcRowLogicalHeight()
         m_rowPos[r + 1] += m_grid[r].rowRenderer ? spacing : 0;
         m_rowPos[r + 1] = max(m_rowPos[r + 1], m_rowPos[r]);
     }
-
-#ifndef NDEBUG
-    setNeedsLayoutIsForbidden(false);
-#endif
 
     ASSERT(!needsLayout());
 
@@ -492,7 +488,7 @@ int RenderTableSection::distributeExtraLogicalHeightToRows(int extraLogicalHeigh
 void RenderTableSection::layoutRows()
 {
 #ifndef NDEBUG
-    setNeedsLayoutIsForbidden(true);
+    SetLayoutNeededForbiddenScope layoutForbiddenScope(this);
 #endif
 
     ASSERT(!needsLayout());
@@ -637,10 +633,6 @@ void RenderTableSection::layoutRows()
             }
         }
     }
-
-#ifndef NDEBUG
-    setNeedsLayoutIsForbidden(false);
-#endif
 
     ASSERT(!needsLayout());
 
@@ -1441,25 +1433,25 @@ void RenderTableSection::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) c
 {
     MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
     RenderBox::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_children);
-    info.addMember(m_grid);
-    info.addMember(m_rowPos);
-    info.addMember(m_overflowingCells);
-    info.addMember(m_cellsCollapsedBorders);
+    info.addMember(m_children, "children");
+    info.addMember(m_grid, "grid");
+    info.addMember(m_rowPos, "rowPos");
+    info.addMember(m_overflowingCells, "overflowingCells");
+    info.addMember(m_cellsCollapsedBorders, "cellsCollapsedBorders");
 }
 
 void RenderTableSection::RowStruct::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    info.addMember(row);
-    info.addMember(rowRenderer);
-    info.addMember(logicalHeight);
+    info.addMember(row, "row");
+    info.addMember(rowRenderer, "rowRenderer");
+    info.addMember(logicalHeight, "logicalHeight");
 }
 
 void RenderTableSection::CellStruct::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
-    info.addMember(cells);
+    info.addMember(cells, "cells");
 }
 
 } // namespace WebCore

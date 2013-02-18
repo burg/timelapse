@@ -200,7 +200,7 @@
 #import <WebKit/WebDashboardRegion.h>
 #endif
 
-#if ENABLE(GLIB_SUPPORT)
+#if USE(GLIB)
 #import <glib.h>
 #endif
 
@@ -434,7 +434,7 @@ static PageVisibilityState core(WebPageVisibilityState visibilityState)
 + (void)_preflightSpellChecker;
 - (BOOL)_continuousCheckingAllowed;
 - (NSResponder *)_responderForResponderOperations;
-#if ENABLE(GLIB_SUPPORT)
+#if USE(GLIB)
 - (void)_clearGlibLoopObserver;
 #endif
 @end
@@ -833,7 +833,7 @@ static bool shouldRespectPriorityInCSSAttributeSetters()
     if (!WebKitLinkedOnOrAfter(WEBKIT_FIRST_VERSION_WITHOUT_CONTENT_SNIFFING_FOR_FILE_URLS))
         ResourceHandle::forceContentSniffing();
 
-#if ENABLE(GLIB_SUPPORT)
+#if USE(GLIB)
     [self _scheduleGlibContextIterations];
 #endif
 
@@ -1148,7 +1148,7 @@ static bool fastDocumentTeardownEnabled()
     }
 #endif
     
-#if ENABLE(GLIB_SUPPORT)
+#if USE(GLIB)
     [self _clearGlibLoopObserver];
 #endif
 
@@ -3071,17 +3071,6 @@ static Vector<String> toStringVector(NSArray* patterns)
 {
     WebPlatformStrategies::initialize();
     resourceLoadScheduler()->setSerialLoadingEnabled(serialize);
-}
-
-+ (double)_defaultMinimumTimerInterval
-{
-    return Settings::defaultMinDOMTimerInterval();
-}
-
-- (void)_setMinimumTimerInterval:(double)intervalInSeconds
-{
-    if (_private->page)
-        _private->page->settings()->setMinDOMTimerInterval(intervalInSeconds);
 }
 
 + (BOOL)_HTTPPipeliningEnabled
@@ -6205,7 +6194,7 @@ static inline uint64_t roundUpToPowerOf2(uint64_t num)
 #endif
 }
 
-#if ENABLE(GLIB_SUPPORT)
+#if USE(GLIB)
 - (void)_clearGlibLoopObserver
 {
     if (!_private->glibRunLoopObserver)
@@ -6523,7 +6512,7 @@ bool LayerFlushController::flushLayers()
 }
 #endif
 
-#if ENABLE(GLIB_SUPPORT)
+#if USE(GLIB)
 
 static void glibContextIterationCallback(CFRunLoopObserverRef, CFRunLoopActivity, void*)
 {

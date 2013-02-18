@@ -17,7 +17,12 @@
 
 # 4. FLAKY TESTS
 
-# 5. FAILING TESTS
+# 5. PASSING TESTS WITH INCORRECT EXPECTATIONS
+#    * Test cases that are passing with their generated incorrect expectations.
+#    * It should be checked if the test fails. Remove the line if the test result is correct
+#      otherwise update with new incorrect one.
+
+# 6. FAILING TESTS
 #    * Interim failures that are moved here for further investigation as a result of daily
 #      gardening. They should be analysed quickly and either resolved or moved to 1).
 #    * Remaining failures that are moved here until further investigation after
@@ -60,6 +65,10 @@ webkit.org/b/102651 [ Debug ] networkinformation/basic-all-types-of-events.html 
 webkit.org/b/102651 [ Debug ] networkinformation/updates.html [ Crash ]
 webkit.org/b/102651 [ Debug ] networkinformation/add-listener-from-callback.html [ Crash ]
 webkit.org/b/102651 [ Debug ] networkinformation/basic-operation.html [ Crash ]
+
+# WebGL test cases crashing in WebCore::GraphicsContext3D::readPixels().
+webkit.org/b/109417 webgl/conformance/textures/texture-attachment-formats.html [ Crash ]
+webkit.org/b/109417 webgl/conformance/misc/type-conversion-test.html [ Crash ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # FLAKY TESTS
@@ -144,16 +153,17 @@ Bug(EFL) http/tests/loading/fire-error-event-empty-404-script.html [ Crash Failu
 webkit.org/b/98761 svg/text/selection-tripleclick.svg [ Failure Pass ]
 
 # ASSERTION FAILED: m_suspended in WebCore::SuspendableTimer::resume()
-webkit.org/b/35220 inspector/debugger/debugger-no-nested-pause.html [ Crash Failure Pass ]
-webkit.org/b/35220 inspector/debugger/debugger-pause-in-internal.html [ Crash Failure Pass ]
-webkit.org/b/35220 inspector/debugger/debugger-pause-on-exception.html [ Crash Failure Pass ]
-webkit.org/b/35220 inspector/debugger/debugger-reload-on-pause.html [ Crash Failure Pass ]
-webkit.org/b/35220 inspector/debugger/debugger-scripts.html [ Crash Failure Pass ]
-webkit.org/b/35220 inspector/debugger/debugger-step-in.html [ Crash Failure Pass ]
-webkit.org/b/35220 inspector/debugger/debugger-step-over.html [ Crash Failure Pass ]
-webkit.org/b/35220 inspector/debugger/disable-script.html [ Crash Failure Pass ]
-webkit.org/b/35220 inspector/debugger/function-details.html [ Crash Failure Pass ]
-webkit.org/b/35220 inspector/debugger/script-extract-outline.html [ Crash Failure Pass ]
+webkit.org/b/81574 inspector/debugger/debugger-no-nested-pause.html [ Crash Failure Pass ]
+webkit.org/b/81574 inspector/debugger/debugger-pause-in-internal.html [ Crash Failure Pass ]
+webkit.org/b/81574 inspector/debugger/debugger-pause-on-exception.html [ Crash Failure Pass ]
+webkit.org/b/81574 inspector/debugger/debugger-reload-on-pause.html [ Crash Failure Pass ]
+webkit.org/b/81574 inspector/debugger/debugger-scripts.html [ Crash Failure Pass ]
+webkit.org/b/81574 inspector/debugger/debugger-step-in.html [ Crash Failure Pass ]
+webkit.org/b/81574 inspector/debugger/debugger-step-over.html [ Crash Failure Pass ]
+webkit.org/b/81574 inspector/debugger/disable-script.html [ Crash Failure Pass ]
+webkit.org/b/81574 inspector/debugger/function-details.html [ Crash Failure Pass ]
+webkit.org/b/81574 inspector/debugger/script-extract-outline.html [ Crash Failure Pass ]
+webkit.org/b/81574 inspector/debugger/source-frame-count.html [ Crash Failure Pass ]
 
 # Test is flaky and needs to be fixed
 webkit.org/b/56985 http/tests/loading/bad-server-subframe.html [ Crash Pass ]
@@ -215,20 +225,10 @@ webkit.org/b/108355 fast/js/caller-property.html [ Crash Pass ]
 webkit.org/b/108355 storage/websql/close-during-stress-test.html [ Crash Pass ]
 webkit.org/b/108355 storage/websql/sql-error-codes.html [ Crash Pass ]
 
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests.html [ Crash Pass ]
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-10.html [ Crash Pass ]
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-20.html [ Crash Pass ]
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-30.html [ Crash Pass ]
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-40.html [ Crash Pass ]
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-50.html [ Crash Pass ]
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-60.html [ Crash Pass ]
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-70.html [ Crash Pass ]
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-80.html [ Crash Pass ]
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-90.html [ Crash Pass ]
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-100.html [ Crash Pass ]
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-110.html [ Crash Pass ]
-webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-120.html [ Crash Pass ]
-
+#////////////////////////////////////////////////////////////////////////////////////////
+# PASSING TESTS WITH INCORRECT EXPECTATIONS
+#////////////////////////////////////////////////////////////////////////////////////////
+ 
 #////////////////////////////////////////////////////////////////////////////////////////
 # FAILING TESTS
 #////////////////////////////////////////////////////////////////////////////////////////
@@ -418,6 +418,20 @@ webkit.org/b/98410 media/context-menu-actions.html [ Failure ]
 
 webkit.org/b/102201 fast/dom/Window/open-window-min-size.html [ Failure ]
 
+# Regression(r142112): Several compositing tests started failing.
+webkit.org/b/109431 compositing/iframes/iframe-composited-scrolling.html [ Failure ]
+webkit.org/b/109431 compositing/layer-creation/fixed-position-in-view-dynamic.html [ Failure ]
+webkit.org/b/109431 compositing/layer-creation/fixed-position-out-of-view-dynamic.html [ Failure ]
+webkit.org/b/109431 compositing/layer-creation/fixed-position-out-of-view-scroll-reason.html [ Failure ]
+webkit.org/b/109431 compositing/layer-creation/no-compositing-for-fixed-position-under-transform.html [ Failure ]
+
+# Several new Khronos WebGL conformance tests are failing on WK2 EFL.
+webkit.org/b/109435 webgl/conformance/canvas/texture-bindings-unaffected-on-resize.html [ Failure ]
+webkit.org/b/109435 webgl/conformance/context/context-attributes-alpha-depth-stencil-antialias.html [ Failure ]
+webkit.org/b/109435 webgl/conformance/context/premultiplyalpha-test.html [ Failure ]
+webkit.org/b/109435 webgl/conformance/renderbuffers/framebuffer-state-restoration.html [ Failure ]
+webkit.org/b/109435 webgl/conformance/textures/texture-size-cube-maps.html [ Failure ]
+
 # Likely failing because of an old version of libsoup in the jhbuild.
 webkit.org/b/106407 http/tests/loading/basic-auth-resend-wrong-credentials.html [ Failure ]
 webkit.org/b/106407 http/tests/security/401-logout/401-logout.php [ Failure ]
@@ -444,3 +458,6 @@ webkit.org/b/107286 fast/css/sticky/replaced-sticky.html [ ImageOnlyFailure ]
 
 # New ruby selection test (in r140613) fails to render correctly, not generating an expected result
 webkit.org/b/108315 fast/ruby/select-ruby.html [ Missing ]
+
+# Likely failing after r141310
+webkit.org/b/108618 compositing/geometry/fixed-position-composited-page-scale-smaller-than-viewport.html [ ImageOnlyFailure ]

@@ -129,21 +129,12 @@ public:
 
     // Indicates that the compositing surface associated with this WebWidget is
     // ready to use.
-    virtual void setCompositorSurfaceReady() = 0;
+    virtual void setCompositorSurfaceReady() { }
 
     // Temporary method for the embedder to notify the WebWidget that the widget
     // has taken damage, e.g. due to a window expose. This method will be
     // removed when the WebWidget inversion patch lands --- http://crbug.com/112837
     virtual void setNeedsRedraw() { }
-
-    // Temporary method for the embedder to check for throttled input. When this
-    // is true, the WebWidget is indicating that it would prefer to not receive
-    // additional input events until
-    // WebWidgetClient::didBecomeReadyForAdditionalInput is called.
-    //
-    // This method will be removed when the WebWidget inversion patch lands ---
-    // http://crbug.com/112837
-    virtual bool isInputThrottled() const { return false; }
 
     // Called to inform the WebWidget of a change in theme.
     // Implementors that cache rendered copies of widgets need to re-render
@@ -207,6 +198,10 @@ public:
     // If the selection range is empty, it returns false.
     virtual bool selectionTextDirection(WebTextDirection& start, WebTextDirection& end) const { return false; }
 
+    // Returns true if the selection range is nonempty and its anchor is first
+    // (i.e its anchor is its start).
+    virtual bool isSelectionAnchorFirst() const { return false; }
+
     // Fetch the current selection range of this WebWidget. If there is no
     // selection, it will output a 0-length range with the location at the
     // caret. Returns true and fills the out-paramters on success; returns false
@@ -246,11 +241,6 @@ public:
     // Cancels the effect of instrumentBeginFrame() in case there were no events
     // following the call to instrumentBeginFrame().
     virtual void instrumentCancelFrame() { }
-
-    // Fills in a WebRenderingStats struct containing information about rendering, e.g. count of frames rendered, time spent painting.
-    // This call is relatively expensive in threaded compositing mode, as it blocks on the compositor thread.
-    // It is safe to call in software mode, but will only give stats for rendering done in compositing mode.
-    virtual void renderingStats(WebRenderingStats&) const { }
 
     // The page background color. Can be used for filling in areas without
     // content.

@@ -58,32 +58,31 @@ class MessageInfo {
 public:
     MessageInfo() { }
 
-    MessageInfo(MessageID, size_t bodySize, size_t initialAttachmentCount)
-        : m_messageID(0)
-        , m_bodySize(bodySize)
+    MessageInfo(size_t bodySize, size_t initialAttachmentCount)
+        : m_bodySize(bodySize)
         , m_attachmentCount(initialAttachmentCount)
+        , m_isMessageBodyOutOfLine(false)
     {
-        ASSERT(!(m_messageID & MessageBodyIsOutOfLine));
     }
 
     void setMessageBodyIsOutOfLine()
     {
         ASSERT(!isMessageBodyIsOutOfLine());
 
-        m_messageID |= MessageBodyIsOutOfLine;
+        m_isMessageBodyOutOfLine = true;
         m_attachmentCount++;
     }
 
-    bool isMessageBodyIsOutOfLine() const { return m_messageID & MessageBodyIsOutOfLine; }
+    bool isMessageBodyIsOutOfLine() const { return m_isMessageBodyOutOfLine; }
 
     size_t bodySize() const { return m_bodySize; }
 
     size_t attachmentCount() const { return m_attachmentCount; }
 
 private:
-    uint32_t m_messageID;
     size_t m_bodySize;
     size_t m_attachmentCount;
+    bool m_isMessageBodyOutOfLine;
 };
 
 class AttachmentInfo {
@@ -141,7 +140,7 @@ void Connection::platformInvalidate()
         return;
 
 #if PLATFORM(GTK)
-    m_connectionQueue.unregisterEventSourceHandler(m_socketDescriptor);
+    m_connectionQueue->unregisterEventSourceHandler(m_socketDescriptor);
 #endif
 
 #if PLATFORM(QT)
@@ -150,7 +149,7 @@ void Connection::platformInvalidate()
 #endif
 
 #if PLATFORM(EFL)
-    m_connectionQueue.unregisterSocketEventHandler(m_socketDescriptor);
+    m_connectionQueue->unregisterSocketEventHandler(m_socketDescriptor);
 #endif
 
     m_socketDescriptor = -1;
@@ -208,14 +207,12 @@ bool Connection::processMessage()
     if (m_readBufferSize < messageLength)
         return false;
 
-    Deque<Attachment> attachments;
-    AttachmentResourceGuard<Deque<Attachment>, Deque<Attachment>::iterator> attachementDisposer(attachments);
-    RefPtr<WebKit::SharedMemory> oolMessageBody;
-
     size_t attachmentFileDescriptorCount = 0;
     size_t attachmentCount = messageInfo.attachmentCount();
+    OwnArrayPtr<AttachmentInfo> attachmentInfo;
+
     if (attachmentCount) {
-        OwnArrayPtr<AttachmentInfo> attachmentInfo = adoptArrayPtr(new AttachmentInfo[attachmentCount]);
+        attachmentInfo = adoptArrayPtr(new AttachmentInfo[attachmentCount]);
         memcpy(attachmentInfo.get(), messageData, sizeof(AttachmentInfo) * attachmentCount);
         messageData += sizeof(AttachmentInfo) * attachmentCount;
 
@@ -225,56 +222,62 @@ bool Connection::processMessage()
             case Attachment::SocketType:
                 if (!attachmentInfo[i].isNull())
                     attachmentFileDescriptorCount++;
+                break;
             case Attachment::Uninitialized:
             default:
+                ASSERT_NOT_REACHED();
                 break;
             }
         }
 
         if (messageInfo.isMessageBodyIsOutOfLine())
             attachmentCount--;
+    }
 
-        size_t fdIndex = 0;
-        for (size_t i = 0; i < attachmentCount; ++i) {
-            int fd = -1;
-            switch (attachmentInfo[i].getType()) {
-            case Attachment::MappedMemoryType:
-                if (!attachmentInfo[i].isNull())
-                    fd = m_fileDescriptors[fdIndex++];
-                attachments.append(Attachment(fd, attachmentInfo[i].getSize()));
-                break;
-            case Attachment::SocketType:
-                if (!attachmentInfo[i].isNull())
-                    fd = m_fileDescriptors[fdIndex++];
-                attachments.append(Attachment(fd));
-                break;
-            case Attachment::Uninitialized:
-                attachments.append(Attachment());
-            default:
-                break;
-            }
-        }
+    Vector<Attachment> attachments(attachmentCount);
+    AttachmentResourceGuard<Vector<Attachment>, Vector<Attachment>::iterator> attachementDisposer(attachments);
+    RefPtr<WebKit::SharedMemory> oolMessageBody;
 
-        if (messageInfo.isMessageBodyIsOutOfLine()) {
-            ASSERT(messageInfo.bodySize());
-
-            if (attachmentInfo[attachmentCount].isNull()) {
-                ASSERT_NOT_REACHED();
-                return false;
-            }
-
-            WebKit::SharedMemory::Handle handle;
-            handle.adoptFromAttachment(m_fileDescriptors[attachmentFileDescriptorCount - 1], attachmentInfo[attachmentCount].getSize());
-
-            oolMessageBody = WebKit::SharedMemory::create(handle, WebKit::SharedMemory::ReadOnly);
-            if (!oolMessageBody) {
-                ASSERT_NOT_REACHED();
-                return false;
-            }
+    size_t fdIndex = 0;
+    for (size_t i = 0; i < attachmentCount; ++i) {
+        int fd = -1;
+        switch (attachmentInfo[i].getType()) {
+        case Attachment::MappedMemoryType:
+            if (!attachmentInfo[i].isNull())
+                fd = m_fileDescriptors[fdIndex++];
+            attachments[attachmentCount - i - 1] = Attachment(fd, attachmentInfo[i].getSize());
+            break;
+        case Attachment::SocketType:
+            if (!attachmentInfo[i].isNull())
+                fd = m_fileDescriptors[fdIndex++];
+            attachments[attachmentCount - i - 1] = Attachment(fd);
+            break;
+        case Attachment::Uninitialized:
+            attachments[attachmentCount - i - 1] = Attachment();
+        default:
+            break;
         }
     }
 
-    ASSERT(attachments.size() == messageInfo.isMessageBodyIsOutOfLine() ? messageInfo.attachmentCount() - 1 : messageInfo.attachmentCount());
+    if (messageInfo.isMessageBodyIsOutOfLine()) {
+        ASSERT(messageInfo.bodySize());
+
+        if (attachmentInfo[attachmentCount].isNull()) {
+            ASSERT_NOT_REACHED();
+            return false;
+        }
+
+        WebKit::SharedMemory::Handle handle;
+        handle.adoptFromAttachment(m_fileDescriptors[attachmentFileDescriptorCount - 1], attachmentInfo[attachmentCount].getSize());
+
+        oolMessageBody = WebKit::SharedMemory::create(handle, WebKit::SharedMemory::ReadOnly);
+        if (!oolMessageBody) {
+            ASSERT_NOT_REACHED();
+            return false;
+        }
+    }
+
+    ASSERT(attachments.size() == (messageInfo.isMessageBodyIsOutOfLine() ? messageInfo.attachmentCount() - 1 : messageInfo.attachmentCount()));
 
     uint8_t* messageBody = messageData;
     if (messageInfo.isMessageBodyIsOutOfLine())
@@ -286,7 +289,7 @@ bool Connection::processMessage()
     else
         decoder = MessageDecoder::create(DataReference(messageBody, messageInfo.bodySize()), attachments);
 
-    processIncomingMessage(MessageID(), decoder.release());
+    processIncomingMessage(decoder.release());
 
     if (m_readBufferSize > messageLength) {
         memmove(m_readBuffer.data(), m_readBuffer.data() + messageLength, m_readBufferSize - messageLength);
@@ -419,17 +422,17 @@ bool Connection::open()
 
     m_isConnected = true;
 #if PLATFORM(QT)
-    m_socketNotifier = m_connectionQueue.registerSocketEventHandler(m_socketDescriptor, QSocketNotifier::Read, WTF::bind(&Connection::readyReadHandler, this));
+    m_socketNotifier = m_connectionQueue->registerSocketEventHandler(m_socketDescriptor, QSocketNotifier::Read, WTF::bind(&Connection::readyReadHandler, this));
 #elif PLATFORM(GTK)
-    m_connectionQueue.registerEventSourceHandler(m_socketDescriptor, (G_IO_HUP | G_IO_ERR), WTF::bind(&Connection::connectionDidClose, this));
-    m_connectionQueue.registerEventSourceHandler(m_socketDescriptor, G_IO_IN, WTF::bind(&Connection::readyReadHandler, this));
+    m_connectionQueue->registerEventSourceHandler(m_socketDescriptor, (G_IO_HUP | G_IO_ERR), WTF::bind(&Connection::connectionDidClose, this));
+    m_connectionQueue->registerEventSourceHandler(m_socketDescriptor, G_IO_IN, WTF::bind(&Connection::readyReadHandler, this));
 #elif PLATFORM(EFL)
-    m_connectionQueue.registerSocketEventHandler(m_socketDescriptor, WTF::bind(&Connection::readyReadHandler, this));
+    m_connectionQueue->registerSocketEventHandler(m_socketDescriptor, WTF::bind(&Connection::readyReadHandler, this));
 #endif
 
     // Schedule a call to readyReadHandler. Data may have arrived before installation of the signal
     // handler.
-    m_connectionQueue.dispatch(WTF::bind(&Connection::readyReadHandler, this));
+    m_connectionQueue->dispatch(WTF::bind(&Connection::readyReadHandler, this));
 
     return true;
 }
@@ -439,7 +442,7 @@ bool Connection::platformCanSendOutgoingMessages() const
     return m_isConnected;
 }
 
-bool Connection::sendOutgoingMessage(MessageID messageID, PassOwnPtr<MessageEncoder> encoder)
+bool Connection::sendOutgoingMessage(PassOwnPtr<MessageEncoder> encoder)
 {
 #if PLATFORM(QT)
     ASSERT(m_socketNotifier);
@@ -455,7 +458,7 @@ bool Connection::sendOutgoingMessage(MessageID messageID, PassOwnPtr<MessageEnco
         return false;
     }
 
-    MessageInfo messageInfo(messageID, encoder->bufferSize(), attachments.size());
+    MessageInfo messageInfo(encoder->bufferSize(), attachments.size());
     size_t messageSizeWithBodyInline = sizeof(messageInfo) + (attachments.size() * sizeof(AttachmentInfo)) + encoder->bufferSize();
     if (messageSizeWithBodyInline > messageMaxSize && encoder->bufferSize()) {
         RefPtr<WebKit::SharedMemory> oolMessageBody = WebKit::SharedMemory::create(encoder->bufferSize());
@@ -557,7 +560,7 @@ bool Connection::sendOutgoingMessage(MessageID messageID, PassOwnPtr<MessageEnco
 #if PLATFORM(QT)
 void Connection::setShouldCloseConnectionOnProcessTermination(WebKit::PlatformProcessIdentifier process)
 {
-    m_connectionQueue.dispatchOnTermination(process, WTF::bind(&Connection::connectionDidClose, this));
+    m_connectionQueue->dispatchOnTermination(process, WTF::bind(&Connection::connectionDidClose, this));
 }
 #endif
 

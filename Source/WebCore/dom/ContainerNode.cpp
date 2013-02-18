@@ -26,7 +26,9 @@
 #include "AXObjectCache.h"
 #include "ChildListMutationScope.h"
 #include "ContainerNodeAlgorithms.h"
+#if ENABLE(DELETION_UI)
 #include "DeleteButtonController.h"
+#endif
 #include "EventNames.h"
 #include "ExceptionCode.h"
 #include "FloatRect.h"
@@ -105,15 +107,23 @@ void ContainerNode::takeAllChildrenFrom(ContainerNode* oldParent)
 {
     NodeVector children;
     getChildNodes(oldParent, children);
+
+    if (oldParent->document()->hasMutationObserversOfType(MutationObserver::ChildList)) {
+        ChildListMutationScope mutation(oldParent);
+        for (unsigned i = 0; i < children.size(); ++i)
+            mutation.willRemoveChild(children[i].get());
+    }
+
+    // FIXME: We need to do notifyMutationObserversNodeWillDetach() for each child,
+    // probably inside removeDetachedChildrenInContainer.
+
     oldParent->removeDetachedChildren();
 
     for (unsigned i = 0; i < children.size(); ++i) {
-        ExceptionCode ec = 0;
         if (children[i]->attached())
             children[i]->detach();
         // FIXME: We need a no mutation event version of adoptNode.
-        RefPtr<Node> child = document()->adoptNode(children[i].release(), ec);
-        ASSERT(!ec);
+        RefPtr<Node> child = document()->adoptNode(children[i].release(), ASSERT_NO_EXCEPTION);
         parserAppendChild(child.get());
         // FIXME: Together with adoptNode above, the tree scope might get updated recursively twice
         // (if the document changed or oldParent was in a shadow tree, AND *this is in a shadow tree).
@@ -214,21 +224,19 @@ static inline bool checkAcceptChildGuaranteedNodeTypes(ContainerNode* newParent,
 
 static inline bool checkAddChild(ContainerNode* newParent, Node* newChild, ExceptionCode& ec)
 {
-    if (ExceptionCode code = checkAcceptChild(newParent, newChild, 0)) {
-        ec = code;
+    ec = checkAcceptChild(newParent, newChild, 0);
+    if (ec)
         return false;
-    }
 
     return true;
 }
 
 static inline bool checkReplaceChild(ContainerNode* newParent, Node* newChild, Node* oldChild, ExceptionCode& ec)
 {
-    if (ExceptionCode code = checkAcceptChild(newParent, newChild, oldChild)) {
-        ec = code;
+    ec = checkAcceptChild(newParent, newChild, oldChild);
+    if (ec)
         return false;
-    }
-    
+
     return true;
 }
 
@@ -236,7 +244,7 @@ bool ContainerNode::insertBefore(PassRefPtr<Node> newChild, Node* refChild, Exce
 {
     // Check that this node is not "floating".
     // If it is, it can be deleted as a side effect of sending mutation events.
-    ASSERT(refCount() || parentOrHostNode());
+    ASSERT(refCount() || parentOrShadowHostNode());
 
     RefPtr<Node> protect(this);
 
@@ -319,7 +327,7 @@ void ContainerNode::insertBeforeCommon(Node* nextChild, Node* newChild)
         ASSERT(m_firstChild == nextChild);
         m_firstChild = newChild;
     }
-    newChild->setParentOrHostNode(this);
+    newChild->setParentOrShadowHostNode(this);
     newChild->setPreviousSibling(prev);
     newChild->setNextSibling(nextChild);
 }
@@ -344,6 +352,8 @@ void ContainerNode::parserInsertBefore(PassRefPtr<Node> newChild, Node* nextChil
 
     newChild->updateAncestorConnectedSubframeCountForInsertion();
 
+    ChildListMutationScope(this).childAdded(newChild.get());
+
     childrenChanged(true, newChild->previousSibling(), nextChild, 1);
     ChildNodeInsertionNotifier(this).notify(newChild.get());
 }
@@ -352,7 +362,7 @@ bool ContainerNode::replaceChild(PassRefPtr<Node> newChild, Node* oldChild, Exce
 {
     // Check that this node is not "floating".
     // If it is, it can be deleted as a side effect of sending mutation events.
-    ASSERT(refCount() || parentOrHostNode());
+    ASSERT(refCount() || parentOrShadowHostNode());
 
     RefPtr<Node> protect(this);
 
@@ -474,7 +484,7 @@ bool ContainerNode::removeChild(Node* oldChild, ExceptionCode& ec)
 {
     // Check that this node is not "floating".
     // If it is, it can be deleted as a side effect of sending mutation events.
-    ASSERT(refCount() || parentOrHostNode());
+    ASSERT(refCount() || parentOrShadowHostNode());
 
     RefPtr<Node> protect(this);
 
@@ -551,7 +561,7 @@ void ContainerNode::removeBetween(Node* previousChild, Node* nextChild, Node* ol
 
     oldChild->setPreviousSibling(0);
     oldChild->setNextSibling(0);
-    oldChild->setParentOrHostNode(0);
+    oldChild->setParentOrShadowHostNode(0);
 
     document()->adoptIfNeeded(oldChild);
 }
@@ -566,6 +576,9 @@ void ContainerNode::parserRemoveChild(Node* oldChild)
     Node* next = oldChild->nextSibling();
 
     oldChild->updateAncestorConnectedSubframeCountForRemoval();
+
+    ChildListMutationScope(this).willRemoveChild(oldChild);
+    oldChild->notifyMutationObserversNodeWillDetach();
 
     removeBetween(prev, next, oldChild);
 
@@ -608,7 +621,7 @@ void ContainerNode::removeChildren()
                 // this discrepancy between removeChild() and its optimized version removeChildren().
                 n->setPreviousSibling(0);
                 n->setNextSibling(0);
-                n->setParentOrHostNode(0);
+                n->setParentOrShadowHostNode(0);
                 document()->adoptIfNeeded(n.get());
 
                 m_firstChild = next;
@@ -645,7 +658,7 @@ bool ContainerNode::appendChild(PassRefPtr<Node> newChild, ExceptionCode& ec, bo
 
     // Check that this node is not "floating".
     // If it is, it can be deleted as a side effect of sending mutation events.
-    ASSERT(refCount() || parentOrHostNode());
+    ASSERT(refCount() || parentOrShadowHostNode());
 
     ec = 0;
 
@@ -717,6 +730,8 @@ void ContainerNode::parserAppendChild(PassRefPtr<Node> newChild)
     }
 
     newChild->updateAncestorConnectedSubframeCountForInsertion();
+
+    ChildListMutationScope(this).childAdded(newChild.get());
 
     childrenChanged(true, last, 0, 1);
     ChildNodeInsertionNotifier(this).notify(newChild.get());
@@ -812,9 +827,9 @@ void ContainerNode::attach()
 
 void ContainerNode::detach()
 {
-    Node::detach();
     detachChildren();
     clearChildNeedsStyleRecalc();
+    Node::detach();
 }
 
 void ContainerNode::childrenChanged(bool changedByParser, Node*, Node*, int childCountDelta)
@@ -827,14 +842,17 @@ void ContainerNode::childrenChanged(bool changedByParser, Node*, Node*, int chil
 
 void ContainerNode::cloneChildNodes(ContainerNode *clone)
 {
+#if ENABLE(DELETION_UI)
     HTMLElement* deleteButtonContainerElement = 0;
     if (Frame* frame = document()->frame())
         deleteButtonContainerElement = frame->editor()->deleteButtonController()->containerElement();
-
+#endif
     ExceptionCode ec = 0;
     for (Node* n = firstChild(); n && !ec; n = n->nextSibling()) {
+#if ENABLE(DELETION_UI)
         if (n == deleteButtonContainerElement)
             continue;
+#endif
         clone->appendChild(n->cloneNode(true), ec);
     }
 }
@@ -1055,6 +1073,13 @@ Node *ContainerNode::childNode(unsigned index) const
     return n;
 }
 
+void ContainerNode::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
+    Node::reportMemoryUsage(memoryObjectInfo);
+    info.addMember(m_firstChild, "firstChild");
+    info.addMember(m_lastChild, "lastChild");
+}
 
 static void dispatchChildInsertionEvents(Node* child)
 {

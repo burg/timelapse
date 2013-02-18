@@ -31,6 +31,7 @@
 #include "ArgumentDecoder.h"
 #include "ArgumentEncoder.h"
 #include "PluginProcessConnection.h"
+#include "PluginProcessConnectionManagerMessages.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebProcess.h"
 #include "WebProcessProxyMessages.h"
@@ -47,6 +48,11 @@ PluginProcessConnectionManager::PluginProcessConnectionManager()
 
 PluginProcessConnectionManager::~PluginProcessConnectionManager()
 {
+}
+
+void PluginProcessConnectionManager::initializeConnection(CoreIPC::Connection* connection)
+{
+    connection->addQueueClient(this);
 }
 
 PluginProcessConnection* PluginProcessConnectionManager::getPluginProcessConnection(const String& pluginPath, PluginProcess::Type processType)
@@ -101,10 +107,22 @@ void PluginProcessConnectionManager::removePluginProcessConnection(PluginProcess
     m_pluginProcessConnections.remove(vectorIndex);
 }
 
-void PluginProcessConnectionManager::pluginProcessCrashed(const String& pluginPath, PluginProcess::Type processType)
+void PluginProcessConnectionManager::didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection* connection, OwnPtr<CoreIPC::MessageDecoder>& decoder)
+{
+    if (decoder->messageReceiverName() == Messages::PluginProcessConnectionManager::messageReceiverName()) {
+        didReceivePluginProcessConnectionManagerMessageOnConnectionWorkQueue(connection, decoder);
+        return;
+    }
+}
+
+void PluginProcessConnectionManager::didCloseOnConnectionWorkQueue(CoreIPC::Connection*)
+{
+}
+
+void PluginProcessConnectionManager::pluginProcessCrashed(CoreIPC::Connection*, const String& pluginPath, uint32_t opaquePluginType)
 {
     MutexLocker locker(m_pathsAndConnectionsMutex);
-    CoreIPC::Connection* connection = m_pathsAndConnections.get(std::make_pair(pluginPath, processType)).get();
+    CoreIPC::Connection* connection = m_pathsAndConnections.get(std::make_pair(pluginPath, static_cast<PluginProcess::Type>(opaquePluginType))).get();
 
     // It's OK for connection to be null here; it will happen if this web process doesn't know
     // anything about the plug-in process.

@@ -45,10 +45,11 @@ NetworkResourceLoadParameters::NetworkResourceLoadParameters()
     , m_contentSniffingPolicy(SniffContent)
     , m_allowStoredCredentials(DoNotAllowStoredCredentials)
     , m_inPrivateBrowsingMode(false)
+    , m_shouldClearReferrerOnHTTPSToHTTPRedirect(true)
 {
 }
 
-NetworkResourceLoadParameters::NetworkResourceLoadParameters(ResourceLoadIdentifier identifier, uint64_t webPageID, uint64_t webFrameID, const ResourceRequest& request, ResourceLoadPriority priority, ContentSniffingPolicy contentSniffingPolicy, StoredCredentials allowStoredCredentials, bool inPrivateBrowsingMode)
+NetworkResourceLoadParameters::NetworkResourceLoadParameters(ResourceLoadIdentifier identifier, uint64_t webPageID, uint64_t webFrameID, const ResourceRequest& request, ResourceLoadPriority priority, ContentSniffingPolicy contentSniffingPolicy, StoredCredentials allowStoredCredentials, bool inPrivateBrowsingMode, bool shouldClearReferrerOnHTTPSToHTTPRedirect)
     : m_identifier(identifier)
     , m_webPageID(webPageID)
     , m_webFrameID(webFrameID)
@@ -57,6 +58,7 @@ NetworkResourceLoadParameters::NetworkResourceLoadParameters(ResourceLoadIdentif
     , m_contentSniffingPolicy(contentSniffingPolicy)
     , m_allowStoredCredentials(allowStoredCredentials)
     , m_inPrivateBrowsingMode(inPrivateBrowsingMode)
+    , m_shouldClearReferrerOnHTTPSToHTTPRedirect(shouldClearReferrerOnHTTPSToHTTPRedirect)
 {
 }
 
@@ -103,49 +105,52 @@ void NetworkResourceLoadParameters::encode(CoreIPC::ArgumentEncoder& encoder) co
     encoder.encodeEnum(m_contentSniffingPolicy);
     encoder.encodeEnum(m_allowStoredCredentials);
     encoder.encode(m_inPrivateBrowsingMode);
+    encoder.encode(m_shouldClearReferrerOnHTTPSToHTTPRedirect);
 }
 
-bool NetworkResourceLoadParameters::decode(CoreIPC::ArgumentDecoder* decoder, NetworkResourceLoadParameters& result)
+bool NetworkResourceLoadParameters::decode(CoreIPC::ArgumentDecoder& decoder, NetworkResourceLoadParameters& result)
 {
-    if (!decoder->decode(result.m_identifier))
+    if (!decoder.decode(result.m_identifier))
         return false;
 
-    if (!decoder->decode(result.m_webPageID))
+    if (!decoder.decode(result.m_webPageID))
         return false;
 
-    if (!decoder->decode(result.m_webFrameID))
+    if (!decoder.decode(result.m_webFrameID))
         return false;
 
-    if (!decoder->decode(result.m_request))
+    if (!decoder.decode(result.m_request))
         return false;
 
     bool hasHTTPBody;
-    if (!decoder->decode(hasHTTPBody))
+    if (!decoder.decode(hasHTTPBody))
         return false;
 
     if (hasHTTPBody) {
         CoreIPC::DataReference formData;
-        if (!decoder->decode(formData))
+        if (!decoder.decode(formData))
             return false;
         DecoderAdapter httpBodyDecoderAdapter(formData.data(), formData.size());
         result.m_request.setHTTPBody(FormData::decode(httpBodyDecoderAdapter));
 
-        if (!decoder->decode(result.m_requestBodySandboxExtensions))
+        if (!decoder.decode(result.m_requestBodySandboxExtensions))
             return false;
     }
 
     if (result.m_request.url().isLocalFile()) {
-        if (!decoder->decode(result.m_resourceSandboxExtension))
+        if (!decoder.decode(result.m_resourceSandboxExtension))
             return false;
     }
 
-    if (!decoder->decodeEnum(result.m_priority))
+    if (!decoder.decodeEnum(result.m_priority))
         return false;
-    if (!decoder->decodeEnum(result.m_contentSniffingPolicy))
+    if (!decoder.decodeEnum(result.m_contentSniffingPolicy))
         return false;
-    if (!decoder->decodeEnum(result.m_allowStoredCredentials))
+    if (!decoder.decodeEnum(result.m_allowStoredCredentials))
         return false;
-    if (!decoder->decode(result.m_inPrivateBrowsingMode))
+    if (!decoder.decode(result.m_inPrivateBrowsingMode))
+        return false;
+    if (!decoder.decode(result.m_shouldClearReferrerOnHTTPSToHTTPRedirect))
         return false;
 
     return true;

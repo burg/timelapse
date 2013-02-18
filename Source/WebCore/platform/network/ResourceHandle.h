@@ -29,6 +29,7 @@
 #include "AuthenticationClient.h"
 #include "HTTPHeaderMap.h"
 #include "ResourceHandleTypes.h"
+#include "ResourceLoadPriority.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/RefCounted.h>
 
@@ -190,11 +191,15 @@ public:
 #if PLATFORM(BLACKBERRY)
     void pauseLoad(bool);
 #endif
-      
+
+    void didChangePriority(ResourceLoadPriority);
+
     ResourceRequest& firstRequest();
     const String& lastHTTPMethod() const;
 
     void fireFailure(Timer<ResourceHandle>*);
+
+    NetworkingContext* context() const;
 
     using RefCounted<ResourceHandle>::ref;
     using RefCounted<ResourceHandle>::deref;
@@ -211,7 +216,7 @@ public:
     static void registerBuiltinConstructor(const AtomicString& protocol, BuiltinConstructor);
 
 protected:
-    ResourceHandle(const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff);
+    ResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, bool defersLoading, bool shouldContentSniff);
 
 private:
     enum FailureType {
@@ -224,7 +229,7 @@ private:
 
     void scheduleFailure(FailureType);
 
-    bool start(NetworkingContext*);
+    bool start();
 
     virtual void refAuthenticationClient() { ref(); }
     virtual void derefAuthenticationClient() { deref(); }

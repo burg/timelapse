@@ -109,6 +109,8 @@ public:
     virtual void canOverrideDeviceMetrics(ErrorString*, bool*);
     virtual void setDeviceMetricsOverride(ErrorString*, int width, int height, double fontScaleFactor, bool fitWindow);
     virtual void setShowPaintRects(ErrorString*, bool show);
+    virtual void canShowDebugBorders(ErrorString*, bool*);
+    virtual void setShowDebugBorders(ErrorString*, bool show);
     virtual void canShowFPSCounter(ErrorString*, bool*);
     virtual void setShowFPSCounter(ErrorString*, bool show);
     virtual void canContinuouslyPaint(ErrorString*, bool*);
@@ -126,6 +128,7 @@ public:
     virtual void getCompositingBordersVisible(ErrorString*, bool* out_param);
     virtual void setCompositingBordersVisible(ErrorString*, bool);
     virtual void captureScreenshot(ErrorString*, String* data);
+    virtual void handleJavaScriptDialog(ErrorString*, bool accept);
 
     // Geolocation override helpers.
     GeolocationPosition* overrideGeolocationPosition(GeolocationPosition*);
@@ -144,6 +147,8 @@ public:
     void frameStoppedLoading(Frame*);
     void frameScheduledNavigation(Frame*, double delay);
     void frameClearedScheduledNavigation(Frame*);
+    void willRunJavaScriptDialog(const String& message);
+    void didRunJavaScriptDialog();
     void applyScreenWidthOverride(long*);
     void applyScreenHeightOverride(long*);
     void applyEmulatedMedia(String*);
@@ -151,6 +156,7 @@ public:
     void didLayout();
     void didScroll();
     void didRecalculateStyle();
+    void scriptsEnabled(bool isEnabled);
 
     // Inspector Controller API
     virtual void setFrontend(InspectorFrontend*);
@@ -200,6 +206,7 @@ private:
     bool m_enabled;
     bool m_isFirstLayoutAfterOnLoad;
     bool m_geolocationOverridden;
+    bool m_ignoreScriptsEnabledNotification;
     RefPtr<GeolocationPosition> m_geolocationPosition;
     RefPtr<GeolocationPosition> m_platformGeolocationPosition;
     RefPtr<DeviceOrientationData> m_deviceOrientation;

@@ -83,8 +83,9 @@ namespace WebCore {
     class ResourceHandleInternal {
         WTF_MAKE_NONCOPYABLE(ResourceHandleInternal); WTF_MAKE_FAST_ALLOCATED;
     public:
-        ResourceHandleInternal(ResourceHandle* loader, const ResourceRequest& request, ResourceHandleClient* c, bool defersLoading, bool shouldContentSniff)
-            : m_client(c)
+        ResourceHandleInternal(ResourceHandle* loader, NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff)
+            : m_context(context)
+            , m_client(client)
             , m_firstRequest(request)
             , m_lastHTTPMethod(request.httpMethod())
             , status(0)
@@ -113,6 +114,7 @@ namespace WebCore {
 #if USE(SOUP)
             , m_cancelled(false)
             , m_buffer(0)
+            , m_bufferSize(0)
             , m_bodySize(0)
             , m_bodyDataSent(0)
             , m_redirectCount(0)
@@ -137,8 +139,9 @@ namespace WebCore {
         ~ResourceHandleInternal();
 
         ResourceHandleClient* client() { return m_client; }
+
+        RefPtr<NetworkingContext> m_context;
         ResourceHandleClient* m_client;
-        
         ResourceRequest m_firstRequest;
         String m_lastHTTPMethod;
 
@@ -200,9 +203,9 @@ namespace WebCore {
         GRefPtr<GAsyncResult> m_deferredResult;
         GRefPtr<GSource> m_timeoutSource;
         char* m_buffer;
+        int m_bufferSize;
         unsigned long m_bodySize;
         unsigned long m_bodyDataSent;
-        RefPtr<NetworkingContext> m_context;
         SoupSession* soupSession();
         int m_redirectCount;
 #endif
@@ -214,7 +217,6 @@ namespace WebCore {
 #endif
 #if PLATFORM(QT)
         QNetworkReplyHandler* m_job;
-        RefPtr<NetworkingContext> m_context;
 #endif
 
 #if PLATFORM(MAC)

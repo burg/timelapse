@@ -31,7 +31,6 @@
 #ifndef WebFrameImpl_h
 #define WebFrameImpl_h
 
-#include "WebAnimationControllerImpl.h"
 #include "WebFrame.h"
 
 #include "Frame.h"
@@ -57,9 +56,7 @@ struct WindowFeatures;
 namespace WebKit {
 class ChromePrintContext;
 class WebDataSourceImpl;
-class WebDeliveredIntentClient;
 class WebInputElement;
-class WebIntent;
 class WebFrameClient;
 class WebPerformance;
 class WebPluginContainerImpl;
@@ -106,7 +103,6 @@ public:
     virtual WebFrame* findChildByName(const WebString&) const;
     virtual WebFrame* findChildByExpression(const WebString&) const;
     virtual WebDocument document() const;
-    virtual WebAnimationController* animationController();
     virtual WebPerformance performance() const;
     virtual NPObject* windowObject() const;
     virtual void bindToWindowObject(const WebString& name, NPObject*);
@@ -234,8 +230,6 @@ public:
     virtual void dispatchMessageEventWithOriginCheck(
         const WebSecurityOrigin& intendedTargetOrigin,
         const WebDOMEvent&);
-
-    virtual void deliverIntent(const WebIntent&, WebMessagePortChannelArray*, WebDeliveredIntentClient*);
 
     virtual WebString contentAsText(size_t maxChars) const;
     virtual WebString contentAsMarkup() const;
@@ -495,9 +489,6 @@ private:
     // Valid between calls to BeginPrint() and EndPrint(). Containts the print
     // information. Is used by PrintPage().
     OwnPtr<ChromePrintContext> m_printContext;
-
-    // Keeps a reference to the frame's WebAnimationController.
-    WebAnimationControllerImpl m_animationController;
 
     // The identifier of this frame.
     long long m_identifier;

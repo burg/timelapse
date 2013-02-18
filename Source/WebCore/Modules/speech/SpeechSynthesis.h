@@ -28,18 +28,21 @@
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
+#include "PlatformSpeechSynthesisUtterance.h"
+#include "PlatformSpeechSynthesizer.h"
+#include "SpeechSynthesisUtterance.h"
 #include "SpeechSynthesisVoice.h"
-
+#include <wtf/Deque.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
     
-class SpeechSynthesisUtterance;
+class PlatformSpeechSynthesizerClient;
 class SpeechSynthesisVoice;
     
-class SpeechSynthesis : public RefCounted<SpeechSynthesis> {
+class SpeechSynthesis : public PlatformSpeechSynthesizerClient, public RefCounted<SpeechSynthesis> {
 public:
     static PassRefPtr<SpeechSynthesis> create();
     
@@ -52,13 +55,26 @@ public:
     void pause();
     void resume();
     
-    const Vector<RefPtr<SpeechSynthesisVoice> >& getVoices() { return m_voiceList; };
+    const Vector<RefPtr<SpeechSynthesisVoice> >& getVoices();
     
 private:
     SpeechSynthesis();
     
-    void initializeVoiceList();
+    // PlatformSpeechSynthesizerClient override methods.
+    virtual void voicesDidChange() OVERRIDE;
+    virtual void didStartSpeaking(const PlatformSpeechSynthesisUtterance*) OVERRIDE;
+    virtual void didFinishSpeaking(const PlatformSpeechSynthesisUtterance*) OVERRIDE;
+    virtual void speakingErrorOccurred(const PlatformSpeechSynthesisUtterance*) OVERRIDE;
+
+    void startSpeakingImmediately(SpeechSynthesisUtterance*);
+    void handleSpeakingCompleted(SpeechSynthesisUtterance*, bool errorOccurred);
+    void fireEvent(const AtomicString& type, SpeechSynthesisUtterance*, unsigned long charIndex, const String& name);
+    
+    PlatformSpeechSynthesizer m_platformSpeechSynthesizer;
     Vector<RefPtr<SpeechSynthesisVoice> > m_voiceList;
+    SpeechSynthesisUtterance* m_currentSpeechUtterance;
+    Deque<RefPtr<SpeechSynthesisUtterance> > m_utteranceQueue;
+
 };
     
 } // namespace WebCore

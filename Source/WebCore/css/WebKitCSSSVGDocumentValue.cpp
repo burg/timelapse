@@ -67,10 +67,15 @@ String WebKitCSSSVGDocumentValue::customCssText() const
     return quoteCSSStringIfNeeded(m_url);
 }
 
+bool WebKitCSSSVGDocumentValue::equals(const WebKitCSSSVGDocumentValue& other) const
+{
+    return m_url == other.m_url;
+}
+
 void WebKitCSSSVGDocumentValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_url);
+    info.addMember(m_url, "url");
     // FIXME: add m_document when cached resources are instrumented.
 }
 

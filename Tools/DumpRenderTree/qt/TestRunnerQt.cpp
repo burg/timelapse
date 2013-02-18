@@ -450,11 +450,6 @@ void TestRunner::evaluateInWebInspector(long callId, const QString& script)
     DumpRenderTreeSupportQt::webInspectorExecuteScript(m_drt->pageAdapter(), callId, script);
 }
 
-void TestRunner::setFrameFlatteningEnabled(bool enabled)
-{
-    DumpRenderTreeSupportQt::setFrameFlatteningEnabled(m_drt->pageAdapter(), enabled);
-}
-
 void TestRunner::goBack()
 {
     DumpRenderTreeSupportQt::goBack(m_drt->pageAdapter());
@@ -544,31 +539,6 @@ void TestRunner::setXSSAuditorEnabled(bool enable)
     QWebSettings* globalSettings = QWebSettings::globalSettings();
     globalSettings->setAttribute(QWebSettings::XSSAuditingEnabled, enable);
     m_drt->webPage()->settings()->setAttribute(QWebSettings::XSSAuditingEnabled, enable);
-}
-
-bool TestRunner::pauseAnimationAtTimeOnElementWithId(const QString& animationName,
-                                                               double time,
-                                                               const QString& elementId)
-{
-    QWebFrame* frame = m_drt->webPage()->mainFrame();
-    Q_ASSERT(frame);
-    return DumpRenderTreeSupportQt::pauseAnimation(frame->handle(), animationName, time, elementId);
-}
-
-bool TestRunner::pauseTransitionAtTimeOnElementWithId(const QString& propertyName,
-                                                                double time,
-                                                                const QString& elementId)
-{
-    QWebFrame* frame = m_drt->webPage()->mainFrame();
-    Q_ASSERT(frame);
-    return DumpRenderTreeSupportQt::pauseTransitionOfProperty(frame->handle(), propertyName, time, elementId);
-}
-
-unsigned TestRunner::numberOfActiveAnimations() const
-{
-    QWebFrame* frame = m_drt->webPage()->mainFrame();
-    Q_ASSERT(frame);
-    return DumpRenderTreeSupportQt::numberOfActiveAnimations(frame->handle());
 }
 
 void TestRunner::dispatchPendingLoadRequests()
@@ -724,11 +694,6 @@ void TestRunner::setUserStyleSheetEnabled(bool enabled)
 void TestRunner::setDomainRelaxationForbiddenForURLScheme(bool forbidden, const QString& scheme)
 {
     DumpRenderTreeSupportQt::setDomainRelaxationForbiddenForURLScheme(forbidden, scheme);
-}
-
-int TestRunner::workerThreadCount()
-{
-    return DumpRenderTreeSupportQt::workerThreadCount();
 }
 
 bool TestRunner::callShouldCloseOnWebView()
@@ -901,11 +866,6 @@ void TestRunner::removeAllVisitedLinks()
 void TestRunner::addURLToRedirect(const QString& origin, const QString& destination)
 {
     DumpRenderTreeSupportQt::addURLToRedirect(origin, destination);
-}
-
-void TestRunner::setMinimumTimerInterval(double minimumTimerInterval)
-{
-    DumpRenderTreeSupportQt::setMinimumTimerInterval(m_drt->pageAdapter(), minimumTimerInterval);
 }
 
 void TestRunner::originsWithLocalStorage()

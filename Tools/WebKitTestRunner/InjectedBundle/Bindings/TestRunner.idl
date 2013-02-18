@@ -56,7 +56,6 @@ interface TestRunner {
     void setXSSAuditorEnabled(in boolean value);
     void setAllowUniversalAccessFromFileURLs(in boolean value);
     void setAllowFileAccessFromFileURLs(in boolean value);
-    void setFrameFlatteningEnabled(in boolean value);
     void setPluginsEnabled(in boolean value);
     void setJavaScriptCanAccessClipboard(in boolean value);
     void setPrivateBrowsingEnabled(in boolean value);
@@ -67,7 +66,6 @@ interface TestRunner {
     void removeOriginAccessWhitelistEntry(in DOMString sourceOrigin, in DOMString destinationProtocol, in DOMString destinationHost, in boolean allowDestinationSubdomains);
     void setUserStyleSheetEnabled(in boolean value);
     void setUserStyleSheetLocation(in DOMString location);
-    void setMinimumTimerInterval(in double interval); // Interval specified in seconds.
     void setSpatialNavigationEnabled(in boolean value);
     void setTabKeyCyclesThroughElements(in boolean enabled);
     void setSerializeHTTPLoads();
@@ -84,7 +82,6 @@ interface TestRunner {
 
     // Special DOM variables.
     attribute boolean globalFlag;
-    readonly attribute unsigned long workerThreadCount;
 
     // Repaint testing.
     void testRepaint();
@@ -95,12 +92,6 @@ interface TestRunner {
     boolean isPageBoxVisible(in int pageIndex);
 
     [PassContext] void setValueForUser(in object element, in DOMString value);
-
-    // Animation testing.
-    int numberOfActiveAnimations();
-    boolean pauseAnimationAtTimeOnElementWithId(in DOMString animationName, in double time, in DOMString elementId);
-    boolean pauseTransitionAtTimeOnElementWithId(in DOMString propertyName, in double time, in DOMString elementId);
-    void suspendAnimations();
 
     // UserContent testing.
     void addUserScript(in DOMString source, in boolean runAtStart, in boolean allFrames);
@@ -143,10 +134,6 @@ interface TestRunner {
     void setDefersLoading(in boolean flag);
     void setStopProvisionalFrameLoads();
 
-    // Web intents testing.
-    void sendWebIntentResponse(in DOMString reply);
-    void deliverWebIntent(in DOMString action, in DOMString type, in DOMString data);
-    
     // Focus testing.
     void addChromeInputField(in object callback);
     void removeChromeInputField(in object callback);

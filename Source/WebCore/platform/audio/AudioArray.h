@@ -106,7 +106,7 @@ public:
     {
         // Note that although it is a size_t, m_size is now guaranteed to be
         // no greater than max unsigned. This guarantee is enforced in allocate().
-        ASSERT(i < size());
+        ASSERT_WITH_SECURITY_IMPLICATION(i < size());
         return data()[i];
     }
 
@@ -146,7 +146,7 @@ public:
     void reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     {
         typename MemoryObjectInfo::ClassInfo info(memoryObjectInfo, this);
-        info.addRawBuffer(m_allocation, m_size * sizeof(T));
+        info.addRawBuffer(m_allocation, m_size * sizeof(T), "AudioArrayData", "allocation");
         info.ignoreMember(m_alignedData);
     }
 

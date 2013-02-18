@@ -81,7 +81,7 @@ void Attr::createTextChild()
 
         // This does everything appendChild() would do in this situation (assuming m_ignoreChildrenChanged was set),
         // but much more efficiently.
-        textNode->setParentOrHostNode(this);
+        textNode->setParentOrShadowHostNode(this);
         setFirstChild(textNode.get());
         setLastChild(textNode.get());
     }
@@ -172,7 +172,7 @@ void Attr::childrenChanged(bool, Node*, Node*, int)
             valueBuilder.append(toText(n)->data());
     }
 
-    AtomicString newValue = valueBuilder.toString();
+    AtomicString newValue = valueBuilder.toAtomicString();
     if (m_element)
         m_element->willModifyAttribute(qualifiedName(), value(), newValue);
 

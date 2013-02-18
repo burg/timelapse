@@ -81,10 +81,6 @@
 #include <wtf/HashCountedSet.h>
 #include <wtf/PassRefPtr.h>
 
-#if ENABLE(WEB_INTENTS)
-#include <WebCore/PlatformMessagePortChannel.h>
-#endif
-
 #if ENABLE(NETWORK_INFO)
 #include "WebNetworkInfoManagerMessages.h"
 #endif
@@ -166,9 +162,6 @@ WebProcess::WebProcess()
     , m_usesNetworkProcess(false)
     , m_webResourceLoadScheduler(new WebResourceLoadScheduler)
 #endif
-#if ENABLE(PLUGIN_PROCESS)
-    , m_pluginProcessConnectionManager(new PluginProcessConnectionManager)
-#endif
 #if USE(SOUP)
     , m_soupRequestManager(this)
 #endif
@@ -212,11 +205,15 @@ void WebProcess::initializeConnection(CoreIPC::Connection* connection)
     ChildProcess::initializeConnection(connection);
 
     connection->setShouldExitOnSyncMessageSendFailure(true);
-    connection->addQueueClient(&m_eventDispatcher);
-    connection->addQueueClient(this);
+
+    m_eventDispatcher.initializeConnection(connection);
+
+#if ENABLE(PLUGIN_PROCESS)
+    m_pluginProcessConnectionManager.initializeConnection(connection);
+#endif
 
 #if USE(SECURITY_FRAMEWORK)
-    connection->addQueueClient(&SecItemShim::shared());
+    SecItemShim::shared().initializeConnection(connection);
 #endif
 
     m_webConnection = WebConnectionToUIProcess::create(this);
@@ -449,7 +446,7 @@ DownloadManager& WebProcess::downloadManager()
 #if ENABLE(PLUGIN_PROCESS)
 PluginProcessConnectionManager& WebProcess::pluginProcessConnectionManager()
 {
-    return *m_pluginProcessConnectionManager;
+    return m_pluginProcessConnectionManager;
 }
 #endif
 
@@ -638,14 +635,6 @@ void WebProcess::didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringR
     // we'll let it slide.
 }
 
-void WebProcess::didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, bool& didHandleMessage)
-{
-    if (decoder.messageReceiverName() == Messages::WebProcess::messageReceiverName()) {
-        didReceiveWebProcessMessageOnConnectionWorkQueue(connection, decoder, didHandleMessage);
-        return;
-    }
-}
-
 WebFrame* WebProcess::webFrame(uint64_t frameID) const
 {
     return m_frameMap.get(frameID);
@@ -684,26 +673,6 @@ WebPageGroupProxy* WebProcess::webPageGroup(const WebPageGroupData& pageGroupDat
 
     return result.iterator->value.get();
 }
-
-#if ENABLE(WEB_INTENTS)
-uint64_t WebProcess::addMessagePortChannel(PassRefPtr<PlatformMessagePortChannel> messagePortChannel)
-{
-    static uint64_t channelID = 0;
-    m_messagePortChannels.add(++channelID, messagePortChannel);
-
-    return channelID;
-}
-
-PlatformMessagePortChannel* WebProcess::messagePortChannel(uint64_t channelID)
-{
-    return m_messagePortChannels.get(channelID).get();
-}
-
-void WebProcess::removeMessagePortChannel(uint64_t channelID)
-{
-    m_messagePortChannels.remove(channelID);
-}
-#endif
 
 void WebProcess::clearResourceCaches(ResourceCachesToClear resourceCachesToClear)
 {
@@ -790,6 +759,11 @@ bool WebProcess::isPlugInAutoStartOrigin(unsigned plugInOriginHash)
 
 void WebProcess::addPlugInAutoStartOrigin(const String& pageOrigin, unsigned plugInOriginHash)
 {
+    if (pageOrigin.isEmpty()) {
+        LOG(Plugins, "Not adding empty page origin");
+        return;
+    }
+
     if (isPlugInAutoStartOrigin(plugInOriginHash)) {
         LOG(Plugins, "Hash %x already exists as auto-start origin (request for %s)", plugInOriginHash, pageOrigin.utf8().data());
         return;
@@ -928,7 +902,7 @@ void WebProcess::getWebCoreStatistics(uint64_t callbackID)
     // Get WebCore memory cache statistics
     getWebCoreMemoryCacheStatistics(data.webCoreCacheStatistics);
     
-    parentProcessConnection()->send(Messages::WebContext::DidGetWebCoreStatistics(data, callbackID), 0);
+    parentProcessConnection()->send(Messages::WebContext::DidGetStatistics(data, callbackID), 0);
 }
 
 void WebProcess::garbageCollectJavaScriptObjects()
@@ -993,14 +967,6 @@ WebResourceLoadScheduler& WebProcess::webResourceLoadScheduler()
 {
     return *m_webResourceLoadScheduler;
 }
-
-#endif
-
-#if ENABLE(PLUGIN_PROCESS)
-void WebProcess::pluginProcessCrashed(CoreIPC::Connection*, const String& pluginPath, uint32_t processType)
-{
-    m_pluginProcessConnectionManager->pluginProcessCrashed(pluginPath, static_cast<PluginProcess::Type>(processType));
-}
 #endif
 
 void WebProcess::downloadRequest(uint64_t downloadID, uint64_t initiatingPageID, const ResourceRequest& request)
@@ -1064,16 +1030,6 @@ void WebProcess::setTextCheckerState(const TextCheckerState& textCheckerState)
             page->unmarkAllBadGrammar();
     }
 }
-
-#if ENABLE(NETSCAPE_PLUGIN_API)
-void WebProcess::didGetPlugins(CoreIPC::Connection*, uint64_t requestID, const Vector<WebCore::PluginInfo>& plugins)
-{
-#if USE(PLATFORM_STRATEGIES)
-    // Pass this to WebPlatformStrategies.cpp.
-    handleDidGetPlugins(requestID, plugins);
-#endif
-}
-#endif // ENABLE(PLUGIN_PROCESS)
 
 #if !PLATFORM(MAC)
 void WebProcess::initializeProcessName(const ChildProcessInitializationParameters&)

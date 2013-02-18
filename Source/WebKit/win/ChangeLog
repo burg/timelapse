@@ -1,3 +1,169 @@
+2013-02-11  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Disable delete button controller on non-Mac ports and delete EditorClient::shouldShowDeleteInterface
+        https://bugs.webkit.org/show_bug.cgi?id=109534
+
+        Reviewed by Anders Carlsson.
+
+        * WebCoreSupport/WebEditorClient.cpp:
+        * WebCoreSupport/WebEditorClient.h:
+        (WebEditorClient):
+
+2013-02-11  Benjamin Poulain  <benjamin@webkit.org>
+
+        Build fix for Windows after r142509
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-02-08  Benjamin Poulain  <bpoulain@apple.com>
+
+        Move workerThreadCount from TestRunner to WebCore Internals
+        https://bugs.webkit.org/show_bug.cgi?id=109239
+
+        Reviewed by Darin Adler.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-02-07  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Corrections the exports definition file.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-02-05  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed build fix.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-02-05  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Get rid of redundant exports in export definitions file.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-02-01  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Copy some resource files for VS2010 solution.
+        https://bugs.webkit.org/show_bug.cgi?id=106989.
+
+        * WebKit.resources/WebKit.rc: Added.
+        * WebKit.resources/deleteButton.png: Added.
+        * WebKit.resources/deleteButtonPressed.png: Added.
+        * WebKit.resources/fsVideoAudioVolumeHigh.png: Added.
+        * WebKit.resources/fsVideoAudioVolumeLow.png: Added.
+        * WebKit.resources/fsVideoExitFullscreen.png: Added.
+        * WebKit.resources/fsVideoPause.png: Added.
+        * WebKit.resources/fsVideoPlay.png: Added.
+        * WebKit.resources/missingImage.png: Added.
+        * WebKit.resources/nullplugin.png: Added.
+        * WebKit.resources/panEastCursor.png: Added.
+        * WebKit.resources/panIcon.png: Added.
+        * WebKit.resources/panNorthCursor.png: Added.
+        * WebKit.resources/panNorthEastCursor.png: Added.
+        * WebKit.resources/panNorthWestCursor.png: Added.
+        * WebKit.resources/panSouthCursor.png: Added.
+        * WebKit.resources/panSouthEastCursor.png: Added.
+        * WebKit.resources/panSouthWestCursor.png: Added.
+        * WebKit.resources/panWestCursor.png: Added.
+        * WebKit.resources/searchCancel.png: Added.
+        * WebKit.resources/searchCancelPressed.png: Added.
+        * WebKit.resources/searchMagnifier.png: Added.
+        * WebKit.resources/searchMagnifierResults.png: Added.
+        * WebKit.resources/textAreaResizeCorner.png: Added.
+        * WebKit.resources/verticalTextCursor.png: Added.
+        * WebKit.resources/zoomInCursor.png: Added.
+        * WebKit.resources/zoomOutCursor.png: Added.
+
+2013-02-04  Benjamin Poulain  <bpoulain@apple.com>
+
+        Kill suspendAnimation(), resumeAnimation() and numberOfActiveAnimations() from DRT/WTR; use Internals
+        https://bugs.webkit.org/show_bug.cgi?id=108741
+
+        Reviewed by Tony Chang.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-02-04  Enrica Casucci  <enrica@apple.com>
+
+        Add specific EditActions for Bold and Italic commands.
+        https://bugs.webkit.org/show_bug.cgi?id=108842.
+        <rdar://problem/13098252>
+
+        Reviewed by Ryosuke Niwa.
+
+        * WebCoreSupport/WebEditorClient.cpp:
+        (undoNameForEditAction):
+
+2013-02-03  KwangYong Choi  <ky0.choi@samsung.com>
+
+        Fix build warning after r141473
+        https://bugs.webkit.org/show_bug.cgi?id=108782
+
+        Reviewed by Kentaro Hara.
+
+        Fix -Wunused-parameter build warning.
+
+        * WebCoreSupport/WebEditorClient.cpp:
+        (WebEditorClient::getClientPasteboardDataForRange):
+
+2013-02-01  Philip Rogers  <pdr@google.com>
+
+        Change hasAlpha to isKnownToBeOpaque and correct the return value for SVG images.
+        https://bugs.webkit.org/show_bug.cgi?id=106966
+
+        Reviewed by Stephen White.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-01-31  Aurimas Liutikas  <aurimas@chromium.org>
+
+        Editor::m_compositionNode not updated on HTMLInputElement::setValue()
+        https://bugs.webkit.org/show_bug.cgi?id=107737
+
+        Reviewed by Ryosuke Niwa.
+
+        * WebView.cpp:
+        (WebView::updateSelectionForIME):
+            Adding a call to the newly refactored method.
+
+2013-01-31  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r141479.
+        http://trac.webkit.org/changeset/141479
+        https://bugs.webkit.org/show_bug.cgi?id=108564
+
+        breaks chromium test (Requested by morrita on #webkit).
+
+        * WebView.cpp:
+        (WebView::updateSelectionForIME):
+
+2013-01-31  Aurimas Liutikas  <aurimas@chromium.org>
+
+        Editor::m_compositionNode not updated on HTMLInputElement::setValue()
+        https://bugs.webkit.org/show_bug.cgi?id=107737
+
+        Reviewed by Ryosuke Niwa.
+
+        * WebView.cpp:
+        (WebView::updateSelectionForIME):
+            Adding a call to the newly refactored method.
+
+2013-01-31  Enrica Casucci  <enrica@apple.com>
+
+        WebKit2: provide new bundle APIs to allow bundle clients to be notified of pasteboard access.
+        https://bugs.webkit.org/show_bug.cgi?id=108396.
+        <rdar://problem/12920461>
+
+        Reviewed by Alexey Proskuryakov.
+
+        Adds stub implementation for WebKit of the new EditorClient methods.
+
+        * WebCoreSupport/WebEditorClient.cpp:
+        (WebEditorClient::willWriteSelectionToPasteboard):
+        (WebEditorClient::getClientPasteboardDataForRange):
+        * WebCoreSupport/WebEditorClient.h:
+
 2013-01-29  Shinya Kawanaka  <shinyak@chromium.org>
 
         [Chromium] Cannot copy text when selecting readonly (or disabled) input elements

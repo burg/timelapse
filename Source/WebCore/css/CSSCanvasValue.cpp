@@ -96,12 +96,17 @@ PassRefPtr<Image> CSSCanvasValue::image(RenderObject* renderer, const IntSize& /
     return elt->copiedImage();
 }
 
+bool CSSCanvasValue::equals(const CSSCanvasValue& other) const
+{
+    return m_name == other.m_name;
+}
+
 void CSSCanvasValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     CSSImageGeneratorValue::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addMember(m_name);
-    info.addMember(m_element);
+    info.addMember(m_name, "name");
+    info.addMember(m_element, "element");
 }
 
 } // namespace WebCore

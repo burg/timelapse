@@ -31,6 +31,7 @@
 
 #if ENABLE(SQL_DATABASE)
 
+#include "DatabaseError.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/text/StringHash.h>
@@ -45,7 +46,7 @@
 namespace WebCore {
 
 class DatabaseBackend;
-class ScriptExecutionContext;
+class DatabaseBackendContext;
 class SecurityOrigin;
 
 struct SecurityOriginHash;
@@ -70,7 +71,9 @@ public:
     // m_databaseGuard and m_openDatabaseMapGuard currently don't overlap.
     // notificationMutex() is currently independent of the other locks.
 
-    bool canEstablishDatabase(ScriptExecutionContext*, const String& name, const String& displayName, unsigned long estimatedSize);
+    bool canEstablishDatabase(DatabaseBackendContext*, const String& name, const String& displayName, unsigned long estimatedSize, DatabaseError&);
+    bool retryCanEstablishDatabase(DatabaseBackendContext*, const String& name, const String& displayName, unsigned long estimatedSize, DatabaseError&);
+
     void setDatabaseDetails(SecurityOrigin*, const String& name, const String& displayName, unsigned long estimatedSize);
     String fullPathForDatabase(SecurityOrigin*, const String& name, bool createIfDoesNotExist = true);
 
@@ -81,10 +84,12 @@ public:
     unsigned long long getMaxSizeForDatabase(const DatabaseBackend*);
     void databaseChanged(DatabaseBackend*);
 
-    void interruptAllDatabasesForContext(const ScriptExecutionContext*);
+    void interruptAllDatabasesForContext(const DatabaseBackendContext*);
 
 private:
     explicit DatabaseTracker(const String& databasePath);
+
+    bool hasAdequateQuotaForOrigin(SecurityOrigin*, unsigned long estimatedSize, DatabaseError&);
 
 #if !PLATFORM(CHROMIUM)
 public:
@@ -112,6 +117,8 @@ public:
 
     bool hasEntryForOrigin(SecurityOrigin*);
 
+    void doneCreatingDatabase(DatabaseBackend*);
+
 private:
     bool hasEntryForOriginNoLock(SecurityOrigin* origin);
     String fullPathForDatabaseNoLock(SecurityOrigin*, const String& name, bool createIfDoesNotExist);
@@ -120,7 +127,12 @@ private:
     unsigned long long quotaForOriginNoLock(SecurityOrigin* origin);
 
     String trackerDatabasePath() const;
-    void openTrackerDatabase(bool createIfDoesNotExist);
+
+    enum TrackerCreationAction {
+        DontCreateIfDoesNotExist,
+        CreateIfDoesNotExist
+    };
+    void openTrackerDatabase(TrackerCreationAction);
 
     String originPath(SecurityOrigin*) const;
 
@@ -155,24 +167,27 @@ private:
     typedef HashSet<String> NameSet;
     HashMap<RefPtr<SecurityOrigin>, NameSet*, SecurityOriginHash> m_beingDeleted;
     HashSet<RefPtr<SecurityOrigin>, SecurityOriginHash> m_originsBeingDeleted;
-    bool canCreateDatabase(SecurityOrigin *origin, const String& name);
-    void recordCreatingDatabase(SecurityOrigin *origin, const String& name);
-    void doneCreatingDatabase(SecurityOrigin *origin, const String& name);
-    bool creatingDatabase(SecurityOrigin *origin, const String& name);
-    bool canDeleteDatabase(SecurityOrigin *origin, const String& name);
-    void recordDeletingDatabase(SecurityOrigin *origin, const String& name);
-    void doneDeletingDatabase(SecurityOrigin *origin, const String& name);
-    bool deletingDatabase(SecurityOrigin *origin, const String& name);
-    bool canDeleteOrigin(SecurityOrigin *origin);
-    bool deletingOrigin(SecurityOrigin *origin);
-    void recordDeletingOrigin(SecurityOrigin *origin);
-    void doneDeletingOrigin(SecurityOrigin *origin);
+    bool isDeletingDatabaseOrOriginFor(SecurityOrigin*, const String& name);
+    void recordCreatingDatabase(SecurityOrigin*, const String& name);
+    void doneCreatingDatabase(SecurityOrigin*, const String& name);
+    bool creatingDatabase(SecurityOrigin*, const String& name);
+    bool canDeleteDatabase(SecurityOrigin*, const String& name);
+    void recordDeletingDatabase(SecurityOrigin*, const String& name);
+    void doneDeletingDatabase(SecurityOrigin*, const String& name);
+    bool isDeletingDatabase(SecurityOrigin*, const String& name);
+    bool canDeleteOrigin(SecurityOrigin*);
+    bool isDeletingOrigin(SecurityOrigin*);
+    void recordDeletingOrigin(SecurityOrigin*);
+    void doneDeletingOrigin(SecurityOrigin*);
 
     static void scheduleForNotification();
     static void notifyDatabasesChanged(void*);
-#else
+#else // PLATFORM(CHROMIUM)
 public:
     void closeDatabasesImmediately(const String& originIdentifier, const String& name);
+
+    void prepareToOpenDatabase(DatabaseBackend*);
+    void failedToOpenDatabase(DatabaseBackend*);
 
 private:
     typedef HashSet<DatabaseBackend*> DatabaseSet;
@@ -184,7 +199,7 @@ private:
 
     Mutex m_openDatabaseMapGuard;
     mutable OwnPtr<DatabaseOriginMap> m_openDatabaseMap;
-#endif // !PLATFORM(CHROMIUM)
+#endif // PLATFORM(CHROMIUM)
 };
 
 } // namespace WebCore

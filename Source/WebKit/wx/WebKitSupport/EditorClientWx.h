@@ -48,7 +48,6 @@ public:
     virtual void frameWillDetachPage(WebCore::Frame*) { }
 
     virtual bool shouldDeleteRange(Range*);
-    virtual bool shouldShowDeleteInterface(HTMLElement*);
     virtual bool smartInsertDeleteEnabled();
     virtual bool isSelectTrailingWhitespaceEnabled();
     virtual bool isContinuousSpellCheckingEnabled();
@@ -75,7 +74,9 @@ public:
     virtual void respondToChangedContents();
     virtual void respondToChangedSelection(Frame*);
     virtual void didEndEditing();
+    virtual void willWriteSelectionToPasteboard(WebCore::Range*);
     virtual void didWriteSelectionToPasteboard();
+    virtual void getClientPasteboardDataForRange(WebCore::Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer> >& pasteboardData);
     virtual void didSetSelectionTypesForPasteboard();
 
     virtual void registerUndoStep(PassRefPtr<UndoStep>);

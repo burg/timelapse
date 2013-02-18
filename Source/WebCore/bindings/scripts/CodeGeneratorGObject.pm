@@ -179,11 +179,16 @@ sub SkipAttribute {
         return 1;
     }
 
+    return 1 if $attribute->isStatic;
     return 1 if $codeGenerator->IsTypedArrayType($propType);
 
     $codeGenerator->AssertNotSequenceType($propType);
 
     if ($codeGenerator->GetArrayType($propType)) {
+        return 1;
+    }
+
+    if ($codeGenerator->IsEnumType($propType)) {
         return 1;
     }
 
@@ -240,6 +245,12 @@ sub SkipFunction {
     }
 
     if ($function->signature->name eq "setRangeText" && @{$function->parameters} == 1) {
+        return 1;
+    }
+
+    # This is for DataTransferItemList.idl add(File) method
+    if ($functionName eq "webkit_dom_data_transfer_item_list_add" &&
+        @{$function->parameters} == 1) {
         return 1;
     }
 

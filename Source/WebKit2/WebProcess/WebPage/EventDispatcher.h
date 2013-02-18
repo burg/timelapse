@@ -46,7 +46,7 @@ class WebWheelEvent;
 class WebGestureEvent;
 #endif
 
-class EventDispatcher : public CoreIPC::Connection::QueueClient {
+class EventDispatcher : private CoreIPC::Connection::QueueClient {
     WTF_MAKE_NONCOPYABLE(EventDispatcher);
 
 public:
@@ -58,12 +58,15 @@ public:
     void removeScrollingTreeForPage(WebPage*);
 #endif
 
+    void initializeConnection(CoreIPC::Connection*);
+
 private:
     // CoreIPC::Connection::QueueClient
-    virtual void didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection*, CoreIPC::MessageDecoder&, bool& didHandleMessage) OVERRIDE;
+    virtual void didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection*, OwnPtr<CoreIPC::MessageDecoder>&) OVERRIDE;
+    virtual void didCloseOnConnectionWorkQueue(CoreIPC::Connection*) OVERRIDE;
 
     // Implemented in generated EventDispatcherMessageReceiver.cpp
-    void didReceiveEventDispatcherMessageOnConnectionWorkQueue(CoreIPC::Connection*, CoreIPC::MessageDecoder&, bool& didHandleMessage);
+    void didReceiveEventDispatcherMessageOnConnectionWorkQueue(CoreIPC::Connection*, OwnPtr<CoreIPC::MessageDecoder>&);
 
     // Message handlers
     void wheelEvent(CoreIPC::Connection*, uint64_t pageID, const WebWheelEvent&, bool canGoBack, bool canGoForward);

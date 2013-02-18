@@ -30,6 +30,7 @@
 
 #include "EventException.h"
 #include "EventQueue.h"
+#include "ExceptionCodePlaceholder.h"
 #include "IDBDatabase.h"
 #include "IDBDatabaseException.h"
 #include "IDBEventDispatcher.h"
@@ -121,10 +122,7 @@ IDBTransaction::~IDBTransaction()
 
 const String& IDBTransaction::mode() const
 {
-    ExceptionCode ec = 0;
-    const AtomicString& mode = modeToString(m_mode, ec);
-    ASSERT(!ec);
-    return mode;
+    return modeToString(m_mode);
 }
 
 void IDBTransaction::setError(PassRefPtr<DOMError> error, const String& errorMessage)
@@ -307,6 +305,7 @@ void IDBTransaction::onAbort(PassRefPtr<IDBDatabaseError> prpError)
         for (IDBObjectStoreMetadataMap::iterator it = m_objectStoreCleanupMap.begin(); it != m_objectStoreCleanupMap.end(); ++it)
             it->key->setMetadata(it->value);
         m_database->setMetadata(m_previousMetadata);
+        m_database->close();
     }
     m_objectStoreCleanupMap.clear();
     closeOpenCursors();
@@ -334,7 +333,7 @@ bool IDBTransaction::hasPendingActivity() const
     // FIXME: In an ideal world, we should return true as long as anyone has a or can
     //        get a handle to us or any child request object and any of those have
     //        event listeners. This is  in order to handle user generated events properly.
-    return m_hasPendingActivity || ActiveDOMObject::hasPendingActivity();
+    return m_hasPendingActivity;
 }
 
 IDBTransaction::Mode IDBTransaction::stringToMode(const String& modeString, ScriptExecutionContext* context, ExceptionCode& ec)
@@ -349,7 +348,7 @@ IDBTransaction::Mode IDBTransaction::stringToMode(const String& modeString, Scri
     return IDBTransaction::READ_ONLY;
 }
 
-const AtomicString& IDBTransaction::modeToString(IDBTransaction::Mode mode, ExceptionCode& ec)
+const AtomicString& IDBTransaction::modeToString(IDBTransaction::Mode mode)
 {
     switch (mode) {
     case IDBTransaction::READ_ONLY:
@@ -365,7 +364,7 @@ const AtomicString& IDBTransaction::modeToString(IDBTransaction::Mode mode, Exce
         break;
 
     default:
-        ec = TypeError;
+        ASSERT_NOT_REACHED();
         return IDBTransaction::modeReadOnly();
     }
 }
@@ -426,8 +425,7 @@ void IDBTransaction::stop()
     ActiveDOMObject::stop();
     m_contextStopped = true;
 
-    ExceptionCode unused;
-    abort(unused);
+    abort(IGNORE_EXCEPTION);
 }
 
 void IDBTransaction::enqueueEvent(PassRefPtr<Event> event)

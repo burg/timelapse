@@ -143,7 +143,6 @@ public:
     virtual void didEnterFullScreen();
     virtual void willExitFullScreen();
     virtual void didExitFullScreen();
-    virtual void setCompositorSurfaceReady();
     virtual void animate(double);
     virtual void layout(); // Also implements WebLayerTreeViewClient::layout()
     virtual void enterForceCompositingMode(bool enable) OVERRIDE;
@@ -152,7 +151,6 @@ public:
     virtual void themeChanged();
     virtual void composite(bool finish);
     virtual void setNeedsRedraw();
-    virtual bool isInputThrottled() const;
     virtual bool handleInputEvent(const WebInputEvent&);
     virtual bool hasTouchEventHandlersAt(const WebPoint&);
     virtual void mouseCaptureLost();
@@ -174,6 +172,7 @@ public:
     virtual WebColor backgroundColor() const;
     virtual bool selectionBounds(WebRect& anchor, WebRect& focus) const;
     virtual bool selectionTextDirection(WebTextDirection& start, WebTextDirection& end) const;
+    virtual bool isSelectionAnchorFirst() const;
     virtual bool caretOrSelectionRange(size_t* location, size_t* length);
     virtual void setTextDirection(WebTextDirection direction);
     virtual bool isAcceleratedCompositingActive() const;
@@ -184,7 +183,6 @@ public:
     virtual void didChangeWindowResizerRect();
     virtual void instrumentBeginFrame();
     virtual void instrumentCancelFrame();
-    virtual void renderingStats(WebRenderingStats&) const;
 
     // WebView methods:
     virtual void initializeMainFrame(WebFrameClient*);
@@ -313,6 +311,7 @@ public:
     virtual void transferActiveWheelFlingAnimation(const WebActiveWheelFlingParameters&);
     virtual WebViewBenchmarkSupport* benchmarkSupport();
     virtual void setShowPaintRects(bool);
+    virtual void setShowDebugBorders(bool);
     virtual void setShowFPSCounter(bool);
     virtual void setContinuousPaintingEnabled(bool);
 
@@ -484,6 +483,7 @@ public:
         return m_emulatedTextZoomFactor;
     }
 
+    void setInitialPageScaleFactor(float initialPageScaleFactor) { m_initialPageScaleFactor = initialPageScaleFactor; }
     bool ignoreViewportTagMaximumScale() const { return m_ignoreViewportTagMaximumScale; }
 
     // Determines whether a page should e.g. be opened in a background tab.
@@ -615,7 +615,7 @@ public:
     WebSettingsImpl* settingsImpl();
 
 private:
-    bool computePageScaleFactorLimits();
+    void computePageScaleFactorLimits();
     float clampPageScaleFactorToLimits(float scale);
     WebCore::IntPoint clampOffsetAtScale(const WebCore::IntPoint& offset, float scale) const;
     WebCore::IntSize contentsSize() const;
@@ -755,6 +755,7 @@ private:
     float m_pageDefinedMaximumPageScaleFactor;
     float m_minimumPageScaleFactor;
     float m_maximumPageScaleFactor;
+    float m_initialPageScaleFactor;
     bool m_ignoreViewportTagMaximumScale;
     bool m_pageScaleFactorIsSet;
 
@@ -850,7 +851,6 @@ private:
     WebCore::IntRect m_rootLayerScrollDamage;
     OwnPtr<NonCompositedContentHost> m_nonCompositedContentHost;
     WebLayerTreeView* m_layerTreeView;
-    bool m_ownsLayerTreeView;
     WebLayer* m_rootLayer;
     WebCore::GraphicsLayer* m_rootGraphicsLayer;
     bool m_isAcceleratedCompositingActive;
@@ -858,7 +858,6 @@ private:
     bool m_compositorCreationFailed;
     // If true, the graphics context is being restored.
     bool m_recreatingGraphicsContext;
-    bool m_compositorSurfaceReady;
     int m_inputHandlerIdentifier;
 #endif
     static const WebInputEvent* m_currentInputEvent;
@@ -898,6 +897,7 @@ private:
 
     bool m_showFPSCounter;
     bool m_showPaintRects;
+    bool m_showDebugBorders;
     bool m_continuousPaintingEnabled;
 };
 

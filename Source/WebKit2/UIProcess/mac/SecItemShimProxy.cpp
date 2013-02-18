@@ -46,6 +46,11 @@ SecItemShimProxy::SecItemShimProxy()
 {
 }
 
+void SecItemShimProxy::initializeConnection(CoreIPC::Connection* connection)
+{
+    connection->addQueueClient(this);
+}
+
 static void handleSecItemRequest(CoreIPC::Connection* connection, uint64_t requestID, const SecItemRequestData& request)
 {
     SecItemResponseData response;
@@ -106,14 +111,18 @@ void SecItemShimProxy::secItemRequest(CoreIPC::Connection* connection, uint64_t 
     dispatchFunctionOnQueue(keychainWorkQueue, bind(handleSecItemRequest, RefPtr<CoreIPC::Connection>(connection), requestID, request));
 }
 
-void SecItemShimProxy::didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, bool& didHandleMessage)
+void SecItemShimProxy::didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection* connection, OwnPtr<CoreIPC::MessageDecoder>& decoder)
 {
-    if (decoder.messageReceiverName() == Messages::SecItemShimProxy::messageReceiverName()) {
-        didReceiveSecItemShimProxyMessageOnConnectionWorkQueue(connection, decoder, didHandleMessage);
+    if (decoder->messageReceiverName() == Messages::SecItemShimProxy::messageReceiverName()) {
+        didReceiveSecItemShimProxyMessageOnConnectionWorkQueue(connection, decoder);
         return;
     }
 }
 
+void SecItemShimProxy::didCloseOnConnectionWorkQueue(CoreIPC::Connection*)
+{
 }
+
+} // namespace WebKit
 
 #endif // USE(SECURITY_FRAMEWORK)

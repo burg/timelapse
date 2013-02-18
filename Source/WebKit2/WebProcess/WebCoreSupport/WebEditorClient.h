@@ -45,7 +45,6 @@ private:
     virtual void frameWillDetachPage(WebCore::Frame*) OVERRIDE { }
 
     virtual bool shouldDeleteRange(WebCore::Range*) OVERRIDE;
-    virtual bool shouldShowDeleteInterface(WebCore::HTMLElement*) OVERRIDE;
     virtual bool smartInsertDeleteEnabled() OVERRIDE;
     virtual bool isSelectTrailingWhitespaceEnabled() OVERRIDE;
     virtual bool isContinuousSpellCheckingEnabled() OVERRIDE;
@@ -67,7 +66,9 @@ private:
     virtual void respondToChangedContents() OVERRIDE;
     virtual void respondToChangedSelection(WebCore::Frame*) OVERRIDE;
     virtual void didEndEditing() OVERRIDE;
+    virtual void willWriteSelectionToPasteboard(WebCore::Range*) OVERRIDE;
     virtual void didWriteSelectionToPasteboard() OVERRIDE;
+    virtual void getClientPasteboardDataForRange(WebCore::Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer> >& pasteboardData) OVERRIDE;
     virtual void didSetSelectionTypesForPasteboard() OVERRIDE;
     
     virtual void registerUndoStep(PassRefPtr<WebCore::UndoStep>) OVERRIDE;
@@ -119,6 +120,10 @@ private:
     virtual void toggleAutomaticTextReplacement() OVERRIDE;
     virtual bool isAutomaticSpellingCorrectionEnabled() OVERRIDE;
     virtual void toggleAutomaticSpellingCorrection() OVERRIDE;
+#endif
+
+#if ENABLE(DELETION_UI)
+    virtual bool shouldShowDeleteInterface(WebCore::HTMLElement*) OVERRIDE;
 #endif
 
 #if PLATFORM(GTK)

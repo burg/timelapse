@@ -681,7 +681,7 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
     if (!combinedText) {
         string = textRenderer()->text();
         if (static_cast<unsigned>(length) != string.length() || m_start) {
-            ASSERT(static_cast<unsigned>(m_start + length) <= string.length());
+            ASSERT_WITH_SECURITY_IMPLICATION(static_cast<unsigned>(m_start + length) <= string.length());
             string = string.substringSharingImpl(m_start, length);
         }
         maximumLength = textRenderer()->textLength() - m_start;
@@ -865,7 +865,7 @@ void InlineTextBox::paintSelection(GraphicsContext* context, const FloatPoint& b
     String string = textRenderer()->text();
 
     if (string.length() != static_cast<unsigned>(length) || m_start) {
-        ASSERT(static_cast<unsigned>(m_start + length) <= string.length());
+        ASSERT_WITH_SECURITY_IMPLICATION(static_cast<unsigned>(m_start + length) <= string.length());
         string = string.substringSharingImpl(m_start, length);
     }
 
@@ -1460,8 +1460,8 @@ void InlineTextBox::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Rendering);
     InlineBox::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_prevTextBox);
-    info.addMember(m_nextTextBox);
+    info.addMember(m_prevTextBox, "prevTextBox");
+    info.addMember(m_nextTextBox, "nextTextBox");
 }
 
 } // namespace WebCore

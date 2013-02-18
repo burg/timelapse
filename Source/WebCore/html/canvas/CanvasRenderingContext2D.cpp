@@ -42,7 +42,9 @@
 #include "CanvasPattern.h"
 #include "CanvasStyle.h"
 #include "Console.h"
+#include "DOMPath.h"
 #include "ExceptionCode.h"
+#include "ExceptionCodePlaceholder.h"
 #include "FloatConversion.h"
 #include "FloatQuad.h"
 #include "FontCache.h"
@@ -858,6 +860,20 @@ void CanvasRenderingContext2D::beginPath()
     m_path.clear();
 }
 
+#if ENABLE(CANVAS_PATH)
+PassRefPtr<DOMPath> CanvasRenderingContext2D::currentPath()
+{
+    return DOMPath::create(m_path);
+}
+
+void CanvasRenderingContext2D::setCurrentPath(DOMPath* path)
+{
+    if (!path)
+        return;
+    m_path = path->path();
+}
+#endif
+
 static bool validateRectForCanvas(float& x, float& y, float& width, float& height)
 {
     if (!isfinite(x) | !isfinite(y) | !isfinite(width) | !isfinite(height))
@@ -915,6 +931,11 @@ void CanvasRenderingContext2D::fill(const String& windingRuleString)
     if (!state().m_invertibleCTM)
         return;
 
+    // If gradient size is zero, then paint nothing.
+    Gradient* gradient = c->fillGradient();
+    if (gradient && gradient->isZeroSize())
+        return;
+
     if (!m_path.isEmpty()) {
         WindRule windRule = c->fillRule();
         WindRule newWindRule = RULE_NONZERO;
@@ -948,6 +969,11 @@ void CanvasRenderingContext2D::stroke()
     if (!c)
         return;
     if (!state().m_invertibleCTM)
+        return;
+
+    // If gradient size is zero, then paint nothing.
+    Gradient* gradient = c->strokeGradient();
+    if (gradient && gradient->isZeroSize())
         return;
 
     if (!m_path.isEmpty()) {
@@ -1115,6 +1141,11 @@ void CanvasRenderingContext2D::strokeRect(float x, float y, float width, float h
     if (!c)
         return;
     if (!state().m_invertibleCTM)
+        return;
+
+    // If gradient size is zero, then paint nothing.
+    Gradient* gradient = c->strokeGradient();
+    if (gradient && gradient->isZeroSize())
         return;
 
     FloatRect rect(x, y, width, height);
@@ -1483,8 +1514,7 @@ void CanvasRenderingContext2D::drawImageFromRect(HTMLImageElement* image,
     if (!parseCompositeAndBlendOperator(compositeOperation, op, blendOp) || blendOp != BlendModeNormal)
         op = CompositeSourceOver;
 
-    ExceptionCode ec;
-    drawImage(image, FloatRect(sx, sy, sw, sh), FloatRect(dx, dy, dw, dh), op, BlendModeNormal, ec);
+    drawImage(image, FloatRect(sx, sy, sw, sh), FloatRect(dx, dy, dw, dh), op, BlendModeNormal, IGNORE_EXCEPTION);
 }
 
 void CanvasRenderingContext2D::setAlpha(float alpha)
@@ -2146,6 +2176,15 @@ void CanvasRenderingContext2D::drawTextInternal(const String& text, float x, flo
     if (!isfinite(x) | !isfinite(y))
         return;
     if (useMaxWidth && !isfinite(maxWidth))
+        return;
+
+    // If gradient size is zero, then paint nothing.
+    Gradient* gradient = c->strokeGradient();
+    if (!fill && gradient && gradient->isZeroSize())
+        return;
+
+    gradient = c->fillGradient();
+    if (fill && gradient && gradient->isZeroSize())
         return;
 
     FontCachePurgePreventer fontCachePurgePreventer;

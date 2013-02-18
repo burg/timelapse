@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,11 +33,13 @@
 
 #include "ChangeVersionWrapper.h"
 #include "CrossThreadTask.h"
+#include "DatabaseBackendContext.h"
 #include "DatabaseCallback.h"
 #include "DatabaseContext.h"
 #include "DatabaseManager.h"
 #include "DatabaseTask.h"
 #include "DatabaseThread.h"
+#include "DatabaseTracker.h"
 #include "Document.h"
 #include "Logging.h"
 #include "NotImplemented.h"
@@ -48,7 +50,6 @@
 #include "SQLTransactionCoordinator.h"
 #include "SQLTransactionErrorCallback.h"
 #include "SQLiteStatement.h"
-#include "ScriptController.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "VoidCallback.h"
@@ -65,15 +66,22 @@
 
 namespace WebCore {
 
-Database::Database(PassRefPtr<DatabaseContext> databaseContext, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize)
-    : DatabaseBackend(databaseContext, name, expectedVersion, displayName, estimatedSize, AsyncDatabase)
+PassRefPtr<Database> Database::create(ScriptExecutionContext*, PassRefPtr<DatabaseBackend> backend)
+{
+    return static_cast<Database*>(backend.get());
+}
+
+Database::Database(PassRefPtr<DatabaseBackendContext> databaseContext,
+    const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize)
+    : DatabaseBase(databaseContext->scriptExecutionContext())
+    , DatabaseBackendAsync(databaseContext, name, expectedVersion, displayName, estimatedSize)
     , m_transactionInProgress(false)
     , m_isTransactionQueueEnabled(true)
     , m_deleted(false)
 {
     m_databaseThreadSecurityOrigin = m_contextThreadSecurityOrigin->isolatedCopy();
+    setFrontend(this);
 
-    ScriptController::initializeThreading();
     ASSERT(m_databaseContext->databaseThread());
 }
 
@@ -113,25 +121,21 @@ Database::~Database()
     }
 }
 
+Database* Database::from(DatabaseBackendAsync* backend)
+{
+    return static_cast<Database*>(backend->m_frontend);
+}
+
+PassRefPtr<DatabaseBackendAsync> Database::backend()
+{
+    return this;
+}
+
 String Database::version() const
 {
     if (m_deleted)
         return String();
     return DatabaseBackend::version();
-}
-
-bool Database::openAndVerifyVersion(bool setVersionInNewDatabase, ExceptionCode& e, String& errorMessage)
-{
-    DatabaseTaskSynchronizer synchronizer;
-    if (!databaseContext()->databaseThread() || databaseContext()->databaseThread()->terminationRequested(&synchronizer))
-        return false;
-
-    bool success = false;
-    OwnPtr<DatabaseOpenTask> task = DatabaseOpenTask::create(this, setVersionInNewDatabase, &synchronizer, e, errorMessage, success);
-    databaseContext()->databaseThread()->scheduleImmediateTask(task.release());
-    synchronizer.waitForTaskCompletion();
-
-    return success;
 }
 
 void Database::markAsDeletedAndClose()
@@ -171,7 +175,6 @@ void Database::close()
     RefPtr<Database> protect = this;
     databaseContext()->databaseThread()->recordDatabaseClosed(this);
     databaseContext()->databaseThread()->unscheduleDatabaseTasks(this);
-    DatabaseManager::manager().removeOpenDatabase(this);
 }
 
 void Database::closeImmediately()
@@ -187,18 +190,6 @@ void Database::closeImmediately()
 unsigned long long Database::maximumSize() const
 {
     return DatabaseManager::manager().getMaxSizeForDatabase(this);
-}
-
-bool Database::performOpenAndVerify(bool setVersionInNewDatabase, ExceptionCode& e, String& errorMessage)
-{
-    if (DatabaseBackend::performOpenAndVerify(setVersionInNewDatabase, e, errorMessage)) {
-        if (databaseContext()->databaseThread())
-            databaseContext()->databaseThread()->recordDatabaseOpen(this);
-
-        return true;
-    }
-
-    return false;
 }
 
 void Database::changeVersion(const String& oldVersion, const String& newVersion,
@@ -264,7 +255,7 @@ void Database::scheduleTransaction()
         m_transactionInProgress = false;
 }
 
-void Database::scheduleTransactionStep(SQLTransaction* transaction, bool immediately)
+void Database::scheduleTransactionStep(SQLTransactionBackend* transaction, bool immediately)
 {
     if (!databaseContext()->databaseThread())
         return;

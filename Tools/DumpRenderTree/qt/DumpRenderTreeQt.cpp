@@ -192,7 +192,6 @@ void WebPage::resetSettings()
 
     m_drt->testRunner()->setCaretBrowsingEnabled(false);
     m_drt->testRunner()->setAuthorAndUserStylesEnabled(true);
-    m_drt->testRunner()->setFrameFlatteningEnabled(false);
     m_drt->testRunner()->setSmartInsertDeleteEnabled(true);
     m_drt->testRunner()->setSelectTrailingWhitespaceEnabled(false);
     m_drt->testRunner()->setDefersLoading(false);
@@ -204,8 +203,6 @@ void WebPage::resetSettings()
     settings()->setUserStyleSheetUrl(QUrl()); // reset to default
 
     DumpRenderTreeSupportQt::setSeamlessIFramesEnabled(true);
-
-    DumpRenderTreeSupportQt::setMinimumTimerInterval(handle(), DumpRenderTreeSupportQt::defaultMinimumTimerInterval());
 
     DumpRenderTreeSupportQt::resetInternalsObject(mainFrame()->handle());
 

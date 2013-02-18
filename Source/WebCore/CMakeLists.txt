@@ -5,7 +5,6 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/Modules/gamepad"
     "${WEBCORE_DIR}/Modules/geolocation"
     "${WEBCORE_DIR}/Modules/indexeddb"
-    "${WEBCORE_DIR}/Modules/intents"
     "${WEBCORE_DIR}/Modules/mediasource"
     "${WEBCORE_DIR}/Modules/mediastream"
     "${WEBCORE_DIR}/Modules/navigatorcontentutils"
@@ -44,6 +43,7 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/page"
     "${WEBCORE_DIR}/page/animation"
     "${WEBCORE_DIR}/page/scrolling"
+    "${WEBCORE_DIR}/page/scrolling/coordinatedgraphics"
     "${WEBCORE_DIR}/platform"
     "${WEBCORE_DIR}/platform/animation"
     "${WEBCORE_DIR}/platform/audio"
@@ -55,6 +55,8 @@ set(WebCore_INCLUDE_DIRECTORIES
     "${WEBCORE_DIR}/platform/graphics/harfbuzz"
     "${WEBCORE_DIR}/platform/graphics/harfbuzz/ng"
     "${WEBCORE_DIR}/platform/graphics/opentype"
+    "${WEBCORE_DIR}/platform/graphics/texmap"
+    "${WEBCORE_DIR}/platform/graphics/texmap/coordinated"
     "${WEBCORE_DIR}/platform/graphics/transforms"
     "${WEBCORE_DIR}/platform/image-decoders"
     "${WEBCORE_DIR}/platform/image-decoders/bmp"
@@ -114,7 +116,6 @@ set(WebCore_IDL_INCLUDES
     Modules/gamepad
     Modules/geolocation
     Modules/indexeddb
-    Modules/intents
     Modules/mediastream
     Modules/networkinfo
     Modules/notifications
@@ -200,12 +201,6 @@ set(WebCore_IDL_FILES
     Modules/indexeddb/IDBVersionChangeEvent.idl
     Modules/indexeddb/WorkerContextIndexedDatabase.idl
 
-    Modules/intents/DeliveredIntent.idl
-    Modules/intents/DOMWindowIntents.idl
-    Modules/intents/Intent.idl
-    Modules/intents/IntentResultCallback.idl
-    Modules/intents/NavigatorIntents.idl
-
     Modules/mediasource/MediaSource.idl
     Modules/mediasource/SourceBuffer.idl
     Modules/mediasource/SourceBufferList.idl
@@ -214,13 +209,14 @@ set(WebCore_IDL_FILES
     Modules/mediastream/LocalMediaStream.idl
     Modules/mediastream/MediaStream.idl
     Modules/mediastream/MediaStreamEvent.idl
-    Modules/mediastream/MediaStreamList.idl
     Modules/mediastream/MediaStreamTrack.idl
     Modules/mediastream/MediaStreamTrackEvent.idl
     Modules/mediastream/NavigatorMediaStream.idl
     Modules/mediastream/NavigatorUserMediaError.idl
     Modules/mediastream/NavigatorUserMediaErrorCallback.idl
     Modules/mediastream/NavigatorUserMediaSuccessCallback.idl
+    Modules/mediastream/RTCDTMFSender.idl
+    Modules/mediastream/RTCDTMFToneChangeEvent.idl
     Modules/mediastream/RTCDataChannel.idl
     Modules/mediastream/RTCDataChannelEvent.idl
     Modules/mediastream/RTCErrorCallback.idl
@@ -368,6 +364,7 @@ set(WebCore_IDL_FILES
     dom/EventException.idl
     dom/Event.idl
     dom/EventTarget.idl
+    dom/FocusEvent.idl
     dom/HashChangeEvent.idl
     dom/KeyboardEvent.idl
     dom/MessageChannel.idl
@@ -453,7 +450,6 @@ set(WebCore_IDL_FILES
     html/HTMLHtmlElement.idl
     html/HTMLIFrameElement.idl
     html/HTMLImageElement.idl
-    html/HTMLIntentElement.idl
     html/HTMLInputElement.idl
     html/HTMLKeygenElement.idl
     html/HTMLLabelElement.idl
@@ -844,12 +840,6 @@ set(WebCore_SOURCES
     Modules/indexeddb/PageGroupIndexedDatabase.cpp
     Modules/indexeddb/WorkerContextIndexedDatabase.cpp
 
-    Modules/intents/DOMWindowIntents.cpp
-    Modules/intents/DeliveredIntent.cpp
-    Modules/intents/Intent.cpp
-    Modules/intents/IntentRequest.cpp
-    Modules/intents/NavigatorIntents.cpp
-
     Modules/mediasource/MediaSource.cpp
     Modules/mediasource/SourceBuffer.cpp
     Modules/mediasource/SourceBufferList.cpp
@@ -858,11 +848,12 @@ set(WebCore_SOURCES
     Modules/mediastream/MediaConstraintsImpl.cpp
     Modules/mediastream/MediaStream.cpp
     Modules/mediastream/MediaStreamEvent.cpp
-    Modules/mediastream/MediaStreamList.cpp
     Modules/mediastream/MediaStreamRegistry.cpp
     Modules/mediastream/MediaStreamTrack.cpp
     Modules/mediastream/MediaStreamTrackEvent.cpp
     Modules/mediastream/NavigatorMediaStream.cpp
+    Modules/mediastream/RTCDTMFSender.cpp
+    Modules/mediastream/RTCDTMFToneChangeEvent.cpp
     Modules/mediastream/RTCDataChannel.cpp
     Modules/mediastream/RTCDataChannelEvent.cpp
     Modules/mediastream/RTCIceCandidate.cpp
@@ -948,6 +939,10 @@ set(WebCore_SOURCES
     Modules/webdatabase/Database.cpp
     Modules/webdatabase/DatabaseAuthorizer.cpp
     Modules/webdatabase/DatabaseBackend.cpp
+    Modules/webdatabase/DatabaseBackendAsync.cpp
+    Modules/webdatabase/DatabaseBackendContext.cpp
+    Modules/webdatabase/DatabaseBackendSync.cpp
+    Modules/webdatabase/DatabaseBase.cpp
     Modules/webdatabase/DatabaseContext.cpp
     Modules/webdatabase/DatabaseManager.cpp
     Modules/webdatabase/DatabaseServer.cpp
@@ -963,6 +958,8 @@ set(WebCore_SOURCES
     Modules/webdatabase/SQLStatement.cpp
     Modules/webdatabase/SQLStatementSync.cpp
     Modules/webdatabase/SQLTransaction.cpp
+    Modules/webdatabase/SQLTransactionBackend.cpp
+    Modules/webdatabase/SQLTransactionBackendSync.cpp
     Modules/webdatabase/SQLTransactionClient.cpp
     Modules/webdatabase/SQLTransactionCoordinator.cpp
     Modules/webdatabase/SQLTransactionSync.cpp
@@ -1026,6 +1023,7 @@ set(WebCore_SOURCES
     css/CSSComputedStyleDeclaration.cpp
     css/CSSCrossfadeValue.cpp
     css/CSSCursorImageValue.cpp
+    css/CSSDefaultStyleSheets.cpp
     css/CSSFontFace.cpp
     css/CSSFontFaceRule.cpp
     css/CSSFontFaceSource.cpp
@@ -1065,8 +1063,10 @@ set(WebCore_SOURCES
     css/CSSValue.cpp
     css/CSSValueList.cpp
     css/CSSValuePool.cpp
+    css/DocumentRuleSets.cpp
     css/FontFeatureValue.cpp
     css/FontValue.cpp
+    css/InspectorCSSOMWrappers.cpp
     css/LengthFunctions.cpp
     css/MediaFeatureNames.cpp
     css/MediaList.cpp
@@ -1161,7 +1161,6 @@ set(WebCore_SOURCES
     dom/DocumentStyleSheetCollection.cpp
     dom/DocumentType.cpp
     dom/Element.cpp
-    dom/ElementAttributeData.cpp
     dom/ElementRareData.cpp
     dom/ElementShadow.cpp
     dom/EntityReference.cpp
@@ -1176,6 +1175,7 @@ set(WebCore_SOURCES
     dom/EventTarget.cpp
     dom/ExceptionBase.cpp
     dom/ExceptionCodePlaceholder.cpp
+    dom/FocusEvent.cpp
     dom/GenericEventQueue.cpp
     dom/GestureEvent.cpp
     dom/IconURL.cpp
@@ -1405,7 +1405,6 @@ set(WebCore_SOURCES
     html/HTMLIFrameElement.cpp
     html/HTMLImageElement.cpp
     html/HTMLImageLoader.cpp
-    html/HTMLIntentElement.cpp
     html/HTMLInputElement.cpp
     html/HTMLKeygenElement.cpp
     html/HTMLLIElement.cpp
@@ -1548,6 +1547,7 @@ set(WebCore_SOURCES
     html/parser/HTMLFormattingElementList.cpp
     html/parser/HTMLMetaCharsetParser.cpp
     html/parser/HTMLPreloadScanner.cpp
+    html/parser/HTMLResourcePreloader.cpp
     html/parser/HTMLScriptRunner.cpp
     html/parser/HTMLSourceTracker.cpp
     html/parser/HTMLTokenizer.cpp
@@ -1556,6 +1556,7 @@ set(WebCore_SOURCES
     html/parser/TextDocumentParser.cpp
     html/parser/TextViewSourceParser.cpp
     html/parser/XSSAuditor.cpp
+    html/parser/XSSAuditorDelegate.cpp
 
     html/shadow/ContentDistributor.cpp
     html/shadow/ContentSelectorQuery.cpp
@@ -1624,6 +1625,7 @@ set(WebCore_SOURCES
     inspector/InspectorFileSystemAgent.cpp
     inspector/InspectorFrontendClientLocal.cpp
     inspector/InspectorFrontendHost.cpp
+    inspector/InspectorHeapProfilerAgent.cpp
     inspector/InspectorHistory.cpp
     inspector/InspectorIndexedDBAgent.cpp
     inspector/InspectorInputAgent.cpp
@@ -1807,6 +1809,7 @@ set(WebCore_SOURCES
 
     page/scrolling/ScrollingConstraints.cpp
     page/scrolling/ScrollingCoordinator.cpp
+    page/scrolling/coordinatedgraphics/ScrollingCoordinatorCoordinatedGraphics.cpp
 
     platform/Arena.cpp
     platform/AsyncFileSystem.cpp
@@ -1987,10 +1990,22 @@ set(WebCore_SOURCES
     platform/graphics/filters/SourceGraphic.cpp
     platform/graphics/filters/SpotLightSource.cpp
 
+    platform/graphics/texmap/coordinated/AreaAllocator.cpp
+    platform/graphics/texmap/coordinated/CoordinatedBackingStore.cpp
+    platform/graphics/texmap/coordinated/CoordinatedGraphicsLayer.cpp
+    platform/graphics/texmap/coordinated/CoordinatedGraphicsScene.cpp
+    platform/graphics/texmap/coordinated/CoordinatedImageBacking.cpp
+    platform/graphics/texmap/coordinated/CoordinatedSurface.cpp
+    platform/graphics/texmap/coordinated/CoordinatedTile.cpp
+    platform/graphics/texmap/coordinated/UpdateAtlas.cpp
     platform/graphics/texmap/TextureMapper.cpp
     platform/graphics/texmap/TextureMapperBackingStore.cpp
+    platform/graphics/texmap/TextureMapperFPSCounter.cpp
     platform/graphics/texmap/TextureMapperImageBuffer.cpp
     platform/graphics/texmap/TextureMapperLayer.cpp
+    platform/graphics/texmap/TextureMapperSurfaceBackingStore.cpp
+    platform/graphics/texmap/TextureMapperTile.cpp
+    platform/graphics/texmap/TextureMapperTiledBackingStore.cpp
 
     platform/graphics/transforms/AffineTransform.cpp
     platform/graphics/transforms/Matrix3DTransformOperation.cpp
@@ -2047,7 +2062,6 @@ set(WebCore_SOURCES
     platform/network/HTTPValidation.cpp
     platform/network/MIMEHeader.cpp
     platform/network/NetworkStateNotifier.cpp
-    platform/network/NetworkStorageSessionStub.cpp
     platform/network/ParsedContentType.cpp
     platform/network/ProtectionSpace.cpp
     platform/network/ProxyServer.cpp
@@ -2069,7 +2083,6 @@ set(WebCore_SOURCES
     platform/text/DateTimeFormat.cpp
     platform/text/Hyphenation.cpp
     platform/text/LineEnding.cpp
-    platform/text/LocaleNone.cpp
     platform/text/LocaleToScriptMappingDefault.cpp
     platform/text/PlatformLocale.cpp
     platform/text/QuotedPrintable.cpp

@@ -28,13 +28,16 @@
 
 #include "AppendNodeCommand.h"
 #include "ApplyStyleCommand.h"
+#if ENABLE(DELETION_UI)
 #include "DeleteButtonController.h"
+#endif
 #include "DeleteFromTextNodeCommand.h"
 #include "DeleteSelectionCommand.h"
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "DocumentMarkerController.h"
 #include "EditorInsertAction.h"
+#include "ExceptionCodePlaceholder.h"
 #include "Frame.h"
 #include "HTMLElement.h"
 #include "HTMLNames.h"
@@ -92,28 +95,31 @@ EditCommandComposition::EditCommandComposition(Document* document, const Visible
 void EditCommandComposition::unapply()
 {
     ASSERT(m_document);
-    Frame* frame = m_document->frame();
+    RefPtr<Frame> frame = m_document->frame();
     ASSERT(frame);
 
     // Changes to the document may have been made since the last editing operation that require a layout, as in <rdar://problem/5658603>.
     // Low level operations, like RemoveNodeCommand, don't require a layout because the high level operations that use them perform one
     // if one is necessary (like for the creation of VisiblePositions).
     m_document->updateLayoutIgnorePendingStylesheets();
-    
+
+#if ENABLE(DELETION_UI)
     DeleteButtonController* deleteButtonController = frame->editor()->deleteButtonController();
     deleteButtonController->disable();
+#endif
     size_t size = m_commands.size();
     for (size_t i = size; i != 0; --i)
         m_commands[i - 1]->doUnapply();
+#if ENABLE(DELETION_UI)
     deleteButtonController->enable();
-    
+#endif
     frame->editor()->unappliedEditing(this);
 }
 
 void EditCommandComposition::reapply()
 {
     ASSERT(m_document);
-    Frame* frame = m_document->frame();
+    RefPtr<Frame> frame = m_document->frame();
     ASSERT(frame);
 
     // Changes to the document may have been made since the last editing operation that require a layout, as in <rdar://problem/5658603>.
@@ -121,12 +127,16 @@ void EditCommandComposition::reapply()
     // if one is necessary (like for the creation of VisiblePositions).
     m_document->updateLayoutIgnorePendingStylesheets();
     
+#if ENABLE(DELETION_UI)
     DeleteButtonController* deleteButtonController = frame->editor()->deleteButtonController();
     deleteButtonController->disable();
+#endif
     size_t size = m_commands.size();
     for (size_t i = 0; i != size; ++i)
         m_commands[i]->doReapply();
+#if ENABLE(DELETION_UI)
     deleteButtonController->enable();
+#endif
     
     frame->editor()->reappliedEditing(this);
 }
@@ -200,10 +210,14 @@ void CompositeEditCommand::apply()
     ASSERT(frame);
     {
         EventQueueScope scope;
+#if ENABLE(DELETION_UI)
         DeleteButtonController* deleteButtonController = frame->editor()->deleteButtonController();
         deleteButtonController->disable();
+#endif
         doApply();
+#if ENABLE(DELETION_UI)
         deleteButtonController->enable();
+#endif
     }
 
     // Only need to call appliedEditing for top-level commands,
@@ -895,8 +909,7 @@ void CompositeEditCommand::removePlaceholderAt(const Position& p)
 PassRefPtr<Node> CompositeEditCommand::insertNewDefaultParagraphElementAt(const Position& position)
 {
     RefPtr<Element> paragraphElement = createDefaultParagraphElement(document());
-    ExceptionCode ec;
-    paragraphElement->appendChild(createBreakElement(document()), ec);
+    paragraphElement->appendChild(createBreakElement(document()), IGNORE_EXCEPTION);
     insertNodeAt(paragraphElement, position);
     return paragraphElement.release();
 }

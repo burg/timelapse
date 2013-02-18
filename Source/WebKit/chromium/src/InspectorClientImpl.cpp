@@ -36,6 +36,7 @@
 #include "InspectorInstrumentation.h"
 #include "NotImplemented.h"
 #include "Page.h"
+#include "Settings.h"
 #include "WebDevToolsAgentImpl.h"
 #include "WebViewClient.h"
 #include "WebViewImpl.h"
@@ -162,9 +163,21 @@ void InspectorClientImpl::setShowPaintRects(bool show)
     m_inspectedWebView->setShowPaintRects(show);
 }
 
-bool InspectorClientImpl::canShowFPSCounter()
+bool InspectorClientImpl::canShowDebugBorders()
 {
     return true;
+}
+
+void InspectorClientImpl::setShowDebugBorders(bool show)
+{
+    m_inspectedWebView->setShowDebugBorders(show);
+}
+
+bool InspectorClientImpl::canShowFPSCounter()
+{
+    if (m_inspectedWebView->page())
+        return m_inspectedWebView->page()->settings()->forceCompositingMode();
+    return false;
 }
 
 void InspectorClientImpl::setShowFPSCounter(bool show)
@@ -174,7 +187,9 @@ void InspectorClientImpl::setShowFPSCounter(bool show)
 
 bool InspectorClientImpl::canContinuouslyPaint()
 {
-    return true;
+    if (m_inspectedWebView->page())
+        return m_inspectedWebView->page()->settings()->forceCompositingMode();
+    return false;
 }
 
 void InspectorClientImpl::setContinuousPaintingEnabled(bool enabled)
@@ -203,6 +218,13 @@ bool InspectorClientImpl::captureScreenshot(String* data)
 {
     if (WebDevToolsAgentImpl* agent = devToolsAgent())
         return agent->captureScreenshot(data);
+    return false;
+}
+
+bool InspectorClientImpl::handleJavaScriptDialog(bool accept)
+{
+    if (WebDevToolsAgentImpl* agent = devToolsAgent())
+        return agent->handleJavaScriptDialog(accept);
     return false;
 }
 

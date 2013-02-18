@@ -30,10 +30,10 @@
 #include "WebDOMStringList.h"
 #include "WebExceptionCode.h"
 #include "WebIDBMetadata.h"
-#include "WebIDBTransaction.h"
 
 namespace WebKit {
 
+class WebData;
 class WebFrame;
 class WebIDBCallbacks;
 class WebIDBDatabaseCallbacks;
@@ -41,22 +41,14 @@ class WebIDBDatabaseError;
 class WebIDBKey;
 class WebIDBKeyPath;
 class WebIDBKeyRange;
-class WebIDBTransaction;
 
 // See comment in WebIDBFactory for a high level overview of these classes.
 class WebIDBDatabase {
 public:
     virtual ~WebIDBDatabase() { }
 
-    virtual WebIDBMetadata metadata() const
-    {
-        WEBKIT_ASSERT_NOT_REACHED();
-        return WebIDBMetadata();
-    }
     virtual void createObjectStore(long long transactionId, long long objectStoreId, const WebString& name, const WebIDBKeyPath&, bool autoIncrement) { WEBKIT_ASSERT_NOT_REACHED(); }
     virtual void deleteObjectStore(long long transactionId, long long objectStoreId) { WEBKIT_ASSERT_NOT_REACHED(); }
-    // FIXME: Remove this method in https://bugs.webkit.org/show_bug.cgi?id=103923.
-    virtual WebIDBTransaction* createTransaction(long long id, const WebVector<long long>&, unsigned short mode) { WEBKIT_ASSERT_NOT_REACHED(); return 0; }
     virtual void createTransaction(long long id, WebIDBDatabaseCallbacks* callbacks, const WebVector<long long>&, unsigned short mode) { WEBKIT_ASSERT_NOT_REACHED(); }
     virtual void close() { WEBKIT_ASSERT_NOT_REACHED(); }
     virtual void forceClose() { WEBKIT_ASSERT_NOT_REACHED(); }
@@ -84,6 +76,7 @@ public:
     virtual void get(long long transactionId, long long objectStoreId, long long indexId, const WebIDBKeyRange&, bool keyOnly, WebIDBCallbacks*) { WEBKIT_ASSERT_NOT_REACHED(); }
     // Note that 'value' may be consumed/adopted by this call.
     virtual void put(long long transactionId, long long objectStoreId, WebVector<unsigned char>* value, const WebIDBKey&, PutMode, WebIDBCallbacks*, const WebVector<long long>& indexIds, const WebVector<WebIndexKeys>&) { WEBKIT_ASSERT_NOT_REACHED(); }
+    virtual void put(long long transactionId, long long objectStoreId, const WebData& value, const WebIDBKey&, PutMode, WebIDBCallbacks*, const WebVector<long long>& indexIds, const WebVector<WebIndexKeys>&) { WEBKIT_ASSERT_NOT_REACHED(); }
     virtual void setIndexKeys(long long transactionId, long long objectStoreId, const WebIDBKey&, const WebVector<long long>& indexIds, const WebVector<WebIndexKeys>&) { WEBKIT_ASSERT_NOT_REACHED(); }
     virtual void setIndexesReady(long long transactionId, long long objectStoreId, const WebVector<long long>& indexIds) { WEBKIT_ASSERT_NOT_REACHED(); }
     virtual void openCursor(long long transactionId, long long objectStoreId, long long indexId, const WebIDBKeyRange&, unsigned short direction, bool keyOnly, TaskType, WebIDBCallbacks*) { WEBKIT_ASSERT_NOT_REACHED(); }

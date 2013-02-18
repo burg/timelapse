@@ -47,21 +47,13 @@ private:
     inline EwkView* view() const { return m_view; }
 
     static void didReceiveTitleForFrame(WKPageRef, WKStringRef title, WKFrameRef, WKTypeRef, const void* clientInfo);
-#if ENABLE(WEB_INTENTS)
-    static void didReceiveIntentForFrame(WKPageRef, WKFrameRef, WKIntentDataRef, WKTypeRef, const void* clientInfo);
-#endif
-#if ENABLE(WEB_INTENTS_TAG)
-    static void registerIntentServiceForFrame(WKPageRef, WKFrameRef, WKIntentServiceInfoRef, WKTypeRef, const void* clientInfo);
-#endif
     static void didChangeProgress(WKPageRef, const void* clientInfo);
     static void didFinishLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef userData, const void* clientInfo);
     static void didFailLoadWithErrorForFrame(WKPageRef, WKFrameRef, WKErrorRef, WKTypeRef userData, const void* clientInfo);
     static void didStartProvisionalLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef userData, const void* clientInfo);
     static void didReceiveServerRedirectForProvisionalLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef userData, const void* clientInfo);
     static void didFailProvisionalLoadWithErrorForFrame(WKPageRef, WKFrameRef, WKErrorRef, WKTypeRef userData, const void* clientInfo);
-#if USE(TILED_BACKING_STORE)
     static void didCommitLoadForFrame(WKPageRef, WKFrameRef, WKTypeRef userData, const void* clientInfo);
-#endif
     static void didChangeBackForwardList(WKPageRef, WKBackForwardListItemRef addedItem, WKArrayRef removedItems, const void* clientInfo);
     static void didSameDocumentNavigationForFrame(WKPageRef, WKFrameRef, WKSameDocumentNavigationType, WKTypeRef, const void* clientInfo);
     static void didReceiveAuthenticationChallengeInFrame(WKPageRef, WKFrameRef, WKAuthenticationChallengeRef, const void* clientInfo);

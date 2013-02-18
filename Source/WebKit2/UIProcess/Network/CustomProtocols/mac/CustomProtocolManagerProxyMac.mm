@@ -31,6 +31,7 @@
 #import "ChildProcessProxy.h"
 #import "Connection.h"
 #import "CustomProtocolManagerMessages.h"
+#import "CustomProtocolManagerProxyMessages.h"
 #import "DataReference.h"
 #import "WebCoreArgumentCoders.h"
 #import <WebCore/ResourceError.h>
@@ -125,11 +126,7 @@ CustomProtocolManagerProxy::CustomProtocolManagerProxy(ChildProcessProxy* childP
     : m_childProcessProxy(childProcessProxy)
 {
     ASSERT(m_childProcessProxy);
-}
-
-void CustomProtocolManagerProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
-{
-    didReceiveCustomProtocolManagerProxyMessage(connection, decoder);
+    m_childProcessProxy->addMessageReceiver(Messages::CustomProtocolManagerProxy::messageReceiverName(), this);
 }
 
 void CustomProtocolManagerProxy::startLoading(uint64_t customProtocolID, const ResourceRequest& coreRequest)

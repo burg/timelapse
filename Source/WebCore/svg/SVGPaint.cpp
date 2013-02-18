@@ -112,10 +112,15 @@ PassRefPtr<SVGPaint> SVGPaint::cloneForCSSOM() const
     return adoptRef(new SVGPaint(*this));
 }
 
+bool SVGPaint::equals(const SVGPaint& other) const
+{
+    return m_paintType == other.m_paintType && m_uri == other.m_uri && SVGColor::equals(other);
+}
+
 void SVGPaint::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_uri);
+    info.addMember(m_uri, "uri");
 }
 
 }

@@ -152,12 +152,6 @@ namespace WebCore {
         return V8PerIsolateData::from(isolate)->stringCache()->v8ExternalString(string.impl(), handleType, isolate);
     }
 
-    // FIXME: All call sites of this method should use v8String().
-    inline v8::Handle<v8::String> deprecatedV8String(const String& string)
-    {
-        return v8String(string, v8::Isolate::GetCurrent());
-    }
-
     inline v8::Handle<v8::Value> v8StringOrNull(const String& string, v8::Isolate* isolate, ReturnHandleType handleType = ReturnLocalHandle)
     {
         ASSERT(isolate);
@@ -177,12 +171,6 @@ namespace WebCore {
     inline v8::Handle<v8::Integer> v8Integer(int value, v8::Isolate* isolate)
     {
         return V8PerIsolateData::from(isolate)->integerCache()->v8Integer(value, isolate);
-    }
-
-    // FIXME: All call sites of this method should use v8Integer().
-    inline v8::Handle<v8::Integer> deprecatedV8Integer(int value)
-    {
-        return v8Integer(value, v8::Isolate::GetCurrent());
     }
 
     inline v8::Handle<v8::Integer> v8UnsignedInteger(unsigned value, v8::Isolate* isolate)
@@ -289,7 +277,7 @@ namespace WebCore {
         for (size_t i = 0; i < length; ++i) {
             v8::Handle<v8::Value> element = array->Get(i);
 
-            if (V8T::HasInstance(element)) {
+            if (V8T::HasInstance(element, isolate)) {
                 v8::Handle<v8::Object> object = v8::Handle<v8::Object>::Cast(element);
                 result.append(V8T::toNative(object));
             } else {
@@ -433,10 +421,10 @@ namespace WebCore {
         return isfinite(value) ? v8::Date::New(value) : v8NullWithCheck(isolate);
     }
 
-    v8::Persistent<v8::FunctionTemplate> createRawTemplate();
+    v8::Persistent<v8::FunctionTemplate> createRawTemplate(v8::Isolate*);
 
     PassRefPtr<DOMStringList> toDOMStringList(v8::Handle<v8::Value>, v8::Isolate*);
-    PassRefPtr<XPathNSResolver> toXPathNSResolver(v8::Handle<v8::Value>);
+    PassRefPtr<XPathNSResolver> toXPathNSResolver(v8::Handle<v8::Value>, v8::Isolate*);
 
     v8::Handle<v8::Object> toInnerGlobalObject(v8::Handle<v8::Context>);
     DOMWindow* toDOMWindow(v8::Handle<v8::Context>);
@@ -449,11 +437,28 @@ namespace WebCore {
     // a context, if the window is currently being displayed in the Frame.
     Frame* toFrameIfNotDetached(v8::Handle<v8::Context>);
 
-    inline DOMWrapperWorld* worldForEnteredContextIfIsolated()
+    inline DOMWrapperWorld* worldForEnteredContext()
     {
-        if (!v8::Context::InContext())
+        v8::Handle<v8::Context> context = v8::Context::GetEntered();
+        if (context.IsEmpty())
             return 0;
-        return DOMWrapperWorld::isolated(v8::Context::GetEntered());
+        return DOMWrapperWorld::getWorld(context);
+    }
+
+    // This is a slightly different version of worldForEnteredContext().
+    // The difference is just that worldForEnteredContextWithoutContextCheck()
+    // does not call assertContextHasCorrectPrototype() (which is enabled on
+    // Debug builds only). Because assertContextHasCorrectPrototype() crashes
+    // if it is called when a current context is not completely initialized,
+    // you have to use worldForEnteredContextWithoutContextCheck() if you need
+    // to get a DOMWrapperWorld while a current context is being initialized.
+    // See https://bugs.webkit.org/show_bug.cgi?id=108579#c15 for more details.
+    inline DOMWrapperWorld* worldForEnteredContextWithoutContextCheck()
+    {
+        v8::Handle<v8::Context> context = v8::Context::GetEntered();
+        if (context.IsEmpty())
+            return 0;
+        return DOMWrapperWorld::getWorldWithoutContextCheck(context);
     }
 
     // If the current context causes out of memory, JavaScript setting

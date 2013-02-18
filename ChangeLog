@@ -1,3 +1,421 @@
+2013-02-12  Christophe Dumez  <ch.dumez@sisa.samsung.com>
+
+        Remove remaining traces of Web Intents
+        https://bugs.webkit.org/show_bug.cgi?id=109586
+
+        Reviewed by Eric Seidel.
+
+        Remove references to Web Intents from CMake files as the functionality
+        was removed in r142549.
+
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2013-02-12  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Remove the enable-debug-feature configuration option
+        https://bugs.webkit.org/show_bug.cgi?id=109539
+
+        Reviewed by Philippe Normand.
+
+        Remove the --enable-debug-feature option from configuration. It doesn't
+        do anything that --enable-debug doesn't.
+
+        * Source/autotools/PrintBuildConfiguration.m4: Remove references to --enable-debug-features.
+        * Source/autotools/ReadCommandLineArguments.m4: Ditto.
+        * Source/autotools/SetupAutoconfHeader.m4: Ditto.
+        * Source/autotools/SetupAutomake.m4: Ditto.
+
+2013-02-12  Zan Dobersek  <zdobersek@igalia.com>
+
+        Remove ENABLE_XHR_RESPONSE_BLOB handling from various build systems
+        https://bugs.webkit.org/show_bug.cgi?id=109481
+
+        Reviewed by Daniel Bates.
+
+        The ENABLE_XHR_RESPONSE_BLOB feature define was removed from the code
+        back in r120574. There are still occurrences of it in various build systems
+        which should all be removed as they are useless.
+
+        * Source/cmake/OptionsBlackBerry.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2013-02-11  Eric Carlson  <eric.carlson@apple.com>
+
+        [Mac] Track language selection should be sticky
+        https://bugs.webkit.org/show_bug.cgi?id=109466
+
+        Reviewed by Dean Jackson.
+
+        * Source/autotools/symbols.filter: Export PageGroup::captionPreferences and Page::initGroup.
+
+2013-02-11  Benjamin Poulain  <benjamin@webkit.org>
+
+        Kill TestRunner::setMinimumTimerInterval; implement the feature with InternalSettings
+        https://bugs.webkit.org/show_bug.cgi?id=109349
+
+        Reviewed by Sam Weinig.
+
+        * Source/autotools/symbols.filter:
+
+2013-02-11  Zan Dobersek  <zdobersek@igalia.com>
+
+        * Source/WebCore: Modified property svn:ignore, adding GNUmakefile.features.am
+        to the list of paths to be ignored.
+
+2013-02-10  Laszlo Gombos  <l.gombos@samsung.com>
+
+        Consolidate the way WTF_USE_PTHREADS is enabled
+        https://bugs.webkit.org/show_bug.cgi?id=108191
+
+        Reviewed by Benjamin Poulain.
+
+        Remove duplicated definition of WTF_USE_PTHREADS.
+
+        WTF_USE_PTHREADS is defined to 1 on all OS(UNIX) environments in 
+        Platform.h.
+
+        * Source/cmake/OptionsBlackBerry.cmake:
+        * Source/cmake/OptionsEfl.cmake:
+
+2013-02-10  Jae Hyun Park  <jae.park08@gmail.com>
+
+        Rename ENABLE(GLIB_SUPPORT) to USE(GLIB)
+        https://bugs.webkit.org/show_bug.cgi?id=104266
+
+        Reviewed by Philippe Normand.
+
+        Using USE(GLIB) instead of ENABLE(GLIB_SUPPORT) is more consistent with
+        the existing macro naming conventions.
+
+        From Platform.h
+        USE() - use a particular third-party library or optional OS service
+        ENABLE() - turn on a specific feature of WebKit
+
+        * Source/autotools/SetupAutoconfHeader.m4:
+        * Source/cmake/OptionsEfl.cmake:
+
+2013-02-09  Philippe Normand  <pnormand@igalia.com>
+
+        Unreviewed, another GTK+ build fix after r142343.
+
+        * Source/autotools/symbols.filter: Expose the InlineBox delete operator.
+
+2013-02-08  Benjamin Poulain  <bpoulain@apple.com>
+
+        Move workerThreadCount from TestRunner to WebCore Internals
+        https://bugs.webkit.org/show_bug.cgi?id=109239
+
+        Reviewed by Darin Adler.
+
+        * Source/autotools/symbols.filter:
+
+2013-02-08  Dean Jackson  <dino@apple.com>
+
+        Only a fool would cut and paste from a terminal showing truncated git logs.
+        I am that fool.
+
+        Export the full symbol for InlineBox::nodeAtPoint.
+
+        * Source/autotools/symbols.filter:
+
+2013-02-08  Dean Jackson  <dino@apple.com>
+
+        Snapshotted plug-in should use shadow root
+        https://bugs.webkit.org/show_bug.cgi?id=108284
+
+        Unreviewed GTK+ build fix.
+
+        * Source/autotools/symbols.filter: Export InlineBox symbols.
+
+2013-02-08  Seulgi Kim  <seulgikim@company100.net>
+
+        Update .gitignore for vim swap files.
+        https://bugs.webkit.org/show_bug.cgi?id=109252
+
+        Reviewed by Dirk Pranke.
+
+        When opening the same files multiple with vim, vim creates a .*.sw[a-p]
+        file as the swap file.
+
+        * .gitignore:
+
+2013-02-08  Tomas Popela  <tpopela@redhat.com>
+
+        [GTK] Include files from DerivedSources/webkitdom for introspection
+        https://bugs.webkit.org/show_bug.cgi?id=108631
+
+        Reviewed by Martin Robinson.
+
+        Include files from DerivedSources/webkitdom for introspection
+
+        * /Source/WebKit/gtk/GNUmakefile.am:
+        * /Source/WebKit2/GNUmakefile.am:
+
+2013-02-07  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Split configure.ac into reusable portions
+        https://bugs.webkit.org/show_bug.cgi?id=109246
+
+        Reviewed by Philippe Normand.
+
+        Split up configure.ac into sections based on different "phases"
+        of configuration. This should make it easier to find what you are
+        looking for as well as creating a "right" place to put things.
+        A nice side effect of this is that we can share the different
+        modules with a gyp build.
+
+        * Source/autotools/CheckSystemAndBasicDependencies.m4: Added.
+        * Source/autotools/FindDependencies.m4: Added.
+        * Source/autotools/PrintBuildConfiguration.m4: Added.
+        * Source/autotools/ReadCommandLineArguments.m4: Added.
+        * Source/autotools/SetupAutoconfHeader.m4: Added.
+        * Source/autotools/SetupAutomake.m4: Added.
+        * Source/autotools/SetupCompilerFlags.m4: Added.
+        * Source/autotools/SetupLibtool.m4: Added.
+        * Source/autotools/Versions.m4: Added.
+        * configure.ac:
+
+2013-02-07  David Farler  <dfarler@apple.com>
+
+        Makefiles should work for arbitrary SDKs and architectures on Apple ports
+        https://bugs.webkit.org/show_bug.cgi?id=107863
+
+        Reviewed by Mark Rowe.
+
+        * Makefile:
+        Allow SDKROOT, ARCHS outside of $(ARGS).
+        Setting ARCHS => ONLY_ACTIVE_ARCH=NO.
+        * Makefile.shared: options to webkitdirs based on SDKROOT
+        * Source/Makefile: don't build WebKit2 for iOS
+
+2013-02-07  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Cleanup command-line defines
+        https://bugs.webkit.org/show_bug.cgi?id=109213
+
+        Reviewed by Xan Lopez.
+
+        * GNUmakefile.am: Remove references to flags that are now provided
+        by autotoolsconfig.h
+        * configure.ac: Add new AC_DEFINE invocations for flags that were
+        before manually appended to the compiler CPPFLAGS and clump all
+        AC_DEFINE invocations together.
+
+2013-02-07  ChangSeok Oh  <shivamidow@gmail.com>
+
+        [GTK][AC] Clutter required version up to 1.12
+        https://bugs.webkit.org/show_bug.cgi?id=109037
+
+        Reviewed by Martin Robinson.
+
+        The clutter requried version is changed to 1.12.
+
+        * configure.ac:
+
+2013-02-07  Zan Dobersek  <zdobersek@igalia.com>
+
+        [Autotools] Remove uses of Automake FARSTREAM_(CFLAGS|LIBS) variables, USE_FARSTREAM conditional
+        https://bugs.webkit.org/show_bug.cgi?id=109198
+
+        Reviewed by Martin Robinson.
+
+        * GNUmakefile.am: The USE_FARSTREAM conditional is being removed while the WTF_USE_FARSTREAM
+        define is currently a no-op.
+        * configure.ac: Don't set the Automake conditional as it's currently not needed due
+        to checking for Farstream dependency being removed in r142005.
+
+2013-02-07  Gavin Peters  <gavinp@chromium.org>
+
+        Unreviewed, rolling out r142141.
+        http://trac.webkit.org/changeset/142141
+        https://bugs.webkit.org/show_bug.cgi?id=108990
+
+        Reland r142112, will update Chromium expectations and create a
+        Chromium bug instead for the crash.
+
+        * ManualTests/remove-fixed-position-but-keep-compositing.html: Added.
+
+2013-02-07  Gavin Peters  <gavinp@chromium.org>
+
+        Unreviewed, rolling out r142112.
+        http://trac.webkit.org/changeset/142112
+        https://bugs.webkit.org/show_bug.cgi?id=108990
+
+        The new test scrollingcoordinator/non-fast-scrollable-region-transformed- iframe.html crashes on Lion.
+
+        See http://test-results.appspot.com/dashboards/flakiness_dashboard.html#tests=scrollingcoordinator%2Fnon-fast-scrollable-region-transformed-iframe.html
+
+        * ManualTests/remove-fixed-position-but-keep-compositing.html: Removed.
+
+2013-02-07  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] configure.ac requires a cleanup
+        https://bugs.webkit.org/show_bug.cgi?id=99272
+
+        Reviewed by Martin Robinson.
+
+        Clean up configure.ac. While there is no strict style guideline determined
+        for this file the changes enforce the usual indentation of four spaces along
+        with line wrapping at 130 characters and grammar fixes/updates.
+
+        * configure.ac:
+
+2013-02-07  Caio Marcelo de Oliveira Filho  <caio.oliveira@openbossa.org>
+
+        [CoordinatedGraphics] Use ScrollingCoordinator to track fixed layers
+        https://bugs.webkit.org/show_bug.cgi?id=108990
+
+        Reviewed by Noam Rosenthal.
+
+        Add a new test that allow us to remove the fixed positioning of a layer but still keeping
+        it compositing. Coordinated Graphics had a bug where the CoordinatedSceneGraph would still
+        count this layer as fixed position.
+
+        * ManualTests/remove-fixed-position-but-keep-compositing.html: Added.
+
+2013-02-07  Gustavo Noronha Silva  <gns@gnome.org>
+
+        Unreviewed build fix after r141196 for 32 bits autotools.
+
+        * Source/autotools/symbols.filter: restore 32 bits version of the
+        WebCore::TextIterator::getLocationAndLengthFromRange(WebCore::Node*,
+        WebCore::Range const*, unsigned int&, unsigned int&) symbol.
+
+2013-02-05  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Compile WTF tests of TestWebKitAPI
+        https://bugs.webkit.org/show_bug.cgi?id=108935
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Build gtest on Linux.
+
+        * WebKit.pro:
+
+2013-02-06  Jonathon Jongsma  <jonathon.jongsma@collabora.com>
+
+        [GStreamer] MediaPlayer's code is not easily reusable by other GStreamer-based players
+        https://bugs.webkit.org/show_bug.cgi?id=100261
+
+        Reviewed by Philippe Normand
+
+        * configure.ac: removed farstream requirement for now since it's
+        not actually used yet and makes it more difficult to build and test
+
+2013-02-06  Mike West  <mkwst@chromium.org>
+
+        Add an ENABLE_NOSNIFF feature flag.
+        https://bugs.webkit.org/show_bug.cgi?id=109029
+
+        Reviewed by Jochen Eisinger.
+
+        This new flag will control the behavior of 'X-Content-Type-Options: nosniff'
+        when processing script and other resource types.
+
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2013-02-05  Jocelyn Turcotte  <jocelyn.turcotte@digia.com>
+
+        [Qt] REGRESSION(r137436): It made all inspector tests timeout on developer builds
+        https://bugs.webkit.org/show_bug.cgi?id=106554
+
+        Reviewed by Simon Hausmann.
+
+        Explicitely link WebCore resources in the final DLL only on Windows to
+        support force_static_libs_as_shared on other platforms.
+
+        WebKit1 applications don't get the QtWebKit dynamic library loaded
+        since libQtWebKitWidgets doesn't depend on libQtWebKit if WebCore and
+        WebKit1 are dynamic libraries of their own.
+
+        * Source/api.pri:
+
+2013-02-05  Martin Robinson  <mrobinson@igalia.com>
+
+        Update the NEWS and configuration in preparation for 1.11.5.
+
+        Reviewed by Philippe Normand.
+
+        * configure.ac:
+
+2013-02-04  Benjamin Poulain  <bpoulain@apple.com>
+
+        Kill suspendAnimation(), resumeAnimation() and numberOfActiveAnimations() from DRT/WTR; use Internals
+        https://bugs.webkit.org/show_bug.cgi?id=108741
+
+        Reviewed by Tony Chang.
+
+        * Source/autotools/symbols.filter:
+
+2013-02-02  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake] Adopt the WinCE port to new CMake
+        https://bugs.webkit.org/show_bug.cgi?id=108754
+
+        Reviewed by Laszlo Gombos.
+
+        Remove the entry point hack which isn't required in the new
+        CMake version with offical WindowsCE support.
+
+        * Source/cmake/OptionsWindows.cmake:
+
+2013-02-01  Benjamin Poulain  <bpoulain@apple.com>
+
+        Clean the String->AtomicString conversion for AnimationController::pauseAnimationAtTime
+        https://bugs.webkit.org/show_bug.cgi?id=108558
+
+        Reviewed by Dean Jackson.
+
+        * Source/autotools/symbols.filter:
+
+2013-02-01  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Add WTFURL source files to the build
+        https://bugs.webkit.org/show_bug.cgi?id=108215
+
+        Reviewed by Benjamin Poulain.
+
+        * Source/autotools/symbols.filter: Force the export of the KURL::string() symbol.
+        This is required when using the WTFURL backend but otherwise doesn't affect the build.
+
+2013-02-01  Alexis Menard  <alexis@webkit.org>
+
+        Enable unprefixed CSS transitions by default.
+        https://bugs.webkit.org/show_bug.cgi?id=108216
+
+        Reviewed by Dean Jackson.
+
+        Rename the flag CSS_TRANSFORMS_ANIMATIONS_TRANSITIONS_UNPREFIXED
+        to CSS_TRANSFORMS_ANIMATIONS_UNPREFIXED which will be used later to
+        guard the unprefixing work for CSS Transforms and animations.
+
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+
+2013-01-31  Christophe Dumez  <dchris@gmail.com>
+
+        [EFL] Disable Web Intents
+        https://bugs.webkit.org/show_bug.cgi?id=108457
+
+        Reviewed by Alexey Proskuryakov.
+
+        Turn off WEB_INTENTS flag in EFL CMake project.
+
+        * Source/cmake/OptionsEfl.cmake:
+
+2013-01-31  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Make it possible to compile WebKit2 Qt related files without access to internal WK2 C++ API
+        https://bugs.webkit.org/show_bug.cgi?id=108472
+
+        Reviewed by Andreas Kling.
+
+        When linking WebKit2, also link the WebKit2QML module.
+
+        * Source/api.pri:
+
 2013-01-30  Dominik Röttsches  <dominik.rottsches@intel.com>
 
         [HarfBuzz] Remove the HarfBuzz-old code

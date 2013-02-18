@@ -56,6 +56,7 @@
 #include "InspectorDOMAgent.h"
 #include "InspectorDOMStorageAgent.h"
 #include "InspectorDebuggerAgent.h"
+#include "InspectorHeapProfilerAgent.h"
 #include "InspectorLayerTreeAgent.h"
 #include "InspectorPageAgent.h"
 #include "InspectorProfilerAgent.h"
@@ -93,7 +94,7 @@ static HashSet<InstrumentingAgents*>* instrumentingAgentsSet = 0;
 
 int InspectorInstrumentation::s_frontendCounter = 0;
 
-static bool eventHasListeners(const AtomicString& eventType, DOMWindow* window, Node* node, const Vector<EventContext>& ancestors)
+static bool eventHasListeners(const AtomicString& eventType, DOMWindow* window, Node* node, const EventPath& eventPath)
 {
     if (window && window->hasEventListeners(eventType))
         return true;
@@ -101,9 +102,8 @@ static bool eventHasListeners(const AtomicString& eventType, DOMWindow* window, 
     if (node->hasEventListeners(eventType))
         return true;
 
-    for (size_t i = 0; i < ancestors.size(); i++) {
-        Node* ancestor = ancestors[i].node();
-        if (ancestor->hasEventListeners(eventType))
+    for (size_t i = 0; i < eventPath.size(); i++) {
+        if (eventPath[i]->node()->hasEventListeners(eventType))
             return true;
     }
 
@@ -387,17 +387,17 @@ void InspectorInstrumentation::didDispatchXHRReadyStateChangeEventImpl(const Ins
         timelineAgent->didDispatchXHRReadyStateChangeEvent();
 }
 
-InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventImpl(InstrumentingAgents* instrumentingAgents, const Event& event, DOMWindow* window, Node* node, const Vector<EventContext>& ancestors, Document* document)
+InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventImpl(InstrumentingAgents* instrumentingAgents, const Event& event, DOMWindow* window, Node* node, const EventPath& eventPath, Document* document)
 {
     int timelineAgentId = 0;
     InspectorTimelineAgent* timelineAgent = instrumentingAgents->inspectorTimelineAgent();
-    if (timelineAgent && eventHasListeners(event.type(), window, node, ancestors)) {
+    if (timelineAgent && eventHasListeners(event.type(), window, node, eventPath)) {
         timelineAgent->willDispatchEvent(event, document->frame());
         timelineAgentId = timelineAgent->id();
     }
 #if ENABLE(TIMELAPSE)
     if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->willDispatchEvent(event, window, node, ancestors);
+        timelapseAgent->willDispatchEvent(event, window, node);
 #endif // ENABLE(TIMELAPSE)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
@@ -462,6 +462,12 @@ void InspectorInstrumentation::didEvaluateScriptImpl(const InspectorInstrumentat
 {
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didEvaluateScript();
+}
+
+void InspectorInstrumentation::scriptsEnabledImpl(InstrumentingAgents* instrumentingAgents, bool isEnabled)
+{
+    if (InspectorPageAgent* pageAgent = instrumentingAgents->inspectorPageAgent())
+        pageAgent->scriptsEnabled(isEnabled);
 }
 
 void InspectorInstrumentation::didCreateIsolatedContextImpl(InstrumentingAgents* instrumentingAgents, Frame* frame, ScriptState* scriptState, SecurityOrigin* origin)
@@ -945,6 +951,8 @@ void InspectorInstrumentation::didCommitLoadImpl(InstrumentingAgents* instrument
 #if ENABLE(JAVASCRIPT_DEBUGGER) && USE(JSC)
         if (InspectorProfilerAgent* profilerAgent = instrumentingAgents->inspectorProfilerAgent())
             profilerAgent->resetState();
+        if (InspectorHeapProfilerAgent* heapProfilerAgent = instrumentingAgents->inspectorHeapProfilerAgent())
+            heapProfilerAgent->resetState();
 #endif
         if (InspectorCSSAgent* cssAgent = instrumentingAgents->inspectorCSSAgent())
             cssAgent->reset();
@@ -1001,6 +1009,19 @@ void InspectorInstrumentation::frameClearedScheduledNavigationImpl(Instrumenting
 {
     if (InspectorPageAgent* inspectorPageAgent = instrumentingAgents->inspectorPageAgent())
         inspectorPageAgent->frameClearedScheduledNavigation(frame);
+}
+
+InspectorInstrumentationCookie InspectorInstrumentation::willRunJavaScriptDialogImpl(InstrumentingAgents* instrumentingAgents, const String& message)
+{
+    if (InspectorPageAgent* inspectorPageAgent = instrumentingAgents->inspectorPageAgent())
+        inspectorPageAgent->willRunJavaScriptDialog(message);
+    return InspectorInstrumentationCookie(instrumentingAgents, 0);
+}
+
+void InspectorInstrumentation::didRunJavaScriptDialogImpl(const InspectorInstrumentationCookie& cookie)
+{
+    if (InspectorPageAgent* inspectorPageAgent = cookie.instrumentingAgents()->inspectorPageAgent())
+        inspectorPageAgent->didRunJavaScriptDialog();
 }
 
 void InspectorInstrumentation::willDestroyCachedResourceImpl(CachedResource* cachedResource)

@@ -49,7 +49,7 @@ WebInspector.FileMapping.prototype = {
      */
     _entryMatchesURL: function(entry, url)
     {
-        return url.indexOf(entry.urlPrefix) === 0;
+        return url.startsWith(entry.urlPrefix);
     },
     
     /**
@@ -58,7 +58,7 @@ WebInspector.FileMapping.prototype = {
      */
     _entryURIPrefix: function(entry)
     {
-        return this._fileSystemMapping.uriForPath(entry.pathPrefix);
+        return this._fileSystemMapping.uriPrefixForPathPrefix(entry.pathPrefix);
     },
     
     /**
@@ -91,8 +91,7 @@ WebInspector.FileMapping.prototype = {
      */
     uriForURL: function(url)
     {
-        // FIXME: FileMapping should be network project aware. It should return correct uri for network project uiSourceCodes.
-        return this._innerURIForURL(url) || url;
+        return this._innerURIForURL(url) || WebInspector.SimpleWorkspaceProvider.uriForURL(url, WebInspector.projectTypes.Network);
     },
     
     /**
@@ -104,7 +103,7 @@ WebInspector.FileMapping.prototype = {
         for (var i = 0; i < this._entries.length; ++i) {
             var entry = this._entries[i];
             var uriPrefix = this._entryURIPrefix(entry);
-            if (uriPrefix && uri.indexOf(uriPrefix) === 0)
+            if (uriPrefix && uri.startsWith(uriPrefix))
                 return entry.urlPrefix + uri.substring(uriPrefix.length);
         }
         return "";

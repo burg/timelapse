@@ -58,8 +58,9 @@ set(JavaScriptCore_SOURCES
     bytecode/MethodOfGettingAValueProfile.cpp
     bytecode/Opcode.cpp
     bytecode/PolymorphicPutByIdList.cpp
-    bytecode/SpeculatedType.cpp
+    bytecode/PreciseJumpTargets.cpp
     bytecode/PutByIdStatus.cpp
+    bytecode/SpeculatedType.cpp
     bytecode/ReduceWhitespace.cpp
     bytecode/ResolveGlobalStatus.cpp
     bytecode/SamplingTool.cpp
@@ -81,6 +82,7 @@ set(JavaScriptCore_SOURCES
     dfg/DFGCommon.cpp
     dfg/DFGCFAPhase.cpp
     dfg/DFGCFGSimplificationPhase.cpp
+    dfg/DFGCPSRethreadingPhase.cpp
     dfg/DFGConstantFoldingPhase.cpp
     dfg/DFGCSEPhase.cpp
     dfg/DFGDisassembler.cpp
@@ -103,12 +105,14 @@ set(JavaScriptCore_SOURCES
     dfg/DFGOperations.cpp
     dfg/DFGPhase.cpp
     dfg/DFGPredictionPropagationPhase.cpp
+    dfg/DFGPredictionInjectionPhase.cpp
     dfg/DFGRepatch.cpp
     dfg/DFGSpeculativeJIT.cpp
     dfg/DFGSpeculativeJIT32_64.cpp
     dfg/DFGSpeculativeJIT64.cpp
     dfg/DFGStructureCheckHoistingPhase.cpp
     dfg/DFGThunks.cpp
+    dfg/DFGUnificationPhase.cpp
     dfg/DFGValueSource.cpp
     dfg/DFGVariableAccessDataDump.cpp
     dfg/DFGVariableEvent.cpp
@@ -290,6 +294,7 @@ set(JavaScriptCore_SOURCES
     runtime/StringPrototype.cpp
     runtime/StringRecursionChecker.cpp
     runtime/Structure.cpp
+    runtime/StructureRareData.cpp
     runtime/StructureChain.cpp
     runtime/SymbolTable.cpp
     runtime/TimeoutChecker.cpp

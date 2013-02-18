@@ -36,6 +36,7 @@
 #include "DateComponents.h"
 #include "DateTimeFieldsState.h"
 #include "ElementShadow.h"
+#include "FocusController.h"
 #include "FormController.h"
 #include "HTMLDataListElement.h"
 #include "HTMLInputElement.h"
@@ -240,9 +241,16 @@ void BaseMultipleFieldsDateAndTimeInputType::destroyShadowSubtree()
     BaseDateAndTimeInputType::destroyShadowSubtree();
 }
 
-void BaseMultipleFieldsDateAndTimeInputType::focus(bool)
+void BaseMultipleFieldsDateAndTimeInputType::handleFocusEvent(Node* oldFocusedNode, FocusDirection direction)
 {
-    if (m_dateTimeEditElement)
+    if (!m_dateTimeEditElement)
+        return;
+    if (direction == FocusDirectionBackward) {
+        if (element()->document()->page())
+            element()->document()->page()->focusController()->advanceFocus(direction, 0);
+    } else if (direction == FocusDirectionNone) {
+        m_dateTimeEditElement->focusByOwner(oldFocusedNode);
+    } else
         m_dateTimeEditElement->focusByOwner();
 }
 
@@ -283,19 +291,14 @@ bool BaseMultipleFieldsDateAndTimeInputType::hasBadInput() const
     return element()->value().isEmpty() && m_dateTimeEditElement && m_dateTimeEditElement->anyEditableFieldsHaveValues();
 }
 
-bool BaseMultipleFieldsDateAndTimeInputType::isFocusableByClickOnLabel() const
+bool BaseMultipleFieldsDateAndTimeInputType::isKeyboardFocusable(KeyboardEvent*) const
 {
     return element()->isTextFormControlFocusable();
 }
 
-bool BaseMultipleFieldsDateAndTimeInputType::isKeyboardFocusable(KeyboardEvent*) const
-{
-    return false;
-}
-
 bool BaseMultipleFieldsDateAndTimeInputType::isMouseFocusable() const
 {
-    return false;
+    return element()->isTextFormControlFocusable();
 }
 
 AtomicString BaseMultipleFieldsDateAndTimeInputType::localeIdentifier() const

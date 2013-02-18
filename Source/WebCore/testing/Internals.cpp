@@ -87,6 +87,7 @@
 #include "TreeScope.h"
 #include "TypeConversions.h"
 #include "ViewportArguments.h"
+#include "WorkerThread.h"
 #include <wtf/text/StringBuffer.h>
 
 #if ENABLE(INPUT_TYPE_COLOR)
@@ -124,6 +125,16 @@
 #include "GraphicsLayer.h"
 #include "GraphicsLayerChromium.h"
 #include "RenderLayerBacking.h"
+#endif
+
+#if ENABLE(ENCRYPTED_MEDIA_V2)
+#include "CDM.h"
+#include "MockCDM.h"
+#endif
+
+#if ENABLE(VIDEO_TRACK)
+#include "CaptionUserPreferences.h"
+#include "PageGroup.h"
 #endif
 
 namespace WebCore {
@@ -248,11 +259,18 @@ void Internals::resetToConsistentState(Page* page)
     if (page->inspectorController())
         page->inspectorController()->setProfilerEnabled(false);
 #endif
+#if ENABLE(VIDEO_TRACK) && !PLATFORM(WIN)
+    page->group().captionPreferences()->setTestingMode(false);
+#endif
 }
 
 Internals::Internals(Document* document)
     : ContextDestructionObserver(document)
 {
+#if ENABLE(VIDEO_TRACK) && !PLATFORM(WIN)
+    if (document && document->page())
+        document->page()->group().captionPreferences()->setTestingMode(true);
+#endif
 }
 
 Document* Internals::contextDocument() const
@@ -276,6 +294,15 @@ InternalSettings* Internals::settings() const
     if (!page)
         return 0;
     return InternalSettings::from(page);
+}
+
+unsigned Internals::workerThreadCount() const
+{
+#if ENABLE(WORKERS)
+    return WorkerThread::workerThreadCount();
+#else
+    return 0;
+#endif
 }
 
 String Internals::address(Node* node)
@@ -406,6 +433,52 @@ bool Internals::hasSelectorForPseudoClassInShadow(Element* host, const String& p
     return false;
 }
 
+unsigned Internals::numberOfActiveAnimations() const
+{
+    Frame* contextFrame = frame();
+    if (AnimationController* controller = contextFrame->animation())
+        return controller->numberOfActiveAnimations(contextFrame->document());
+    return 0;
+}
+
+void Internals::suspendAnimations(Document* document, ExceptionCode& ec) const
+{
+    if (!document || !document->frame()) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+
+    AnimationController* controller = document->frame()->animation();
+    if (!controller)
+        return;
+
+    controller->suspendAnimations();
+}
+
+void Internals::resumeAnimations(Document* document, ExceptionCode& ec) const
+{
+    if (!document || !document->frame()) {
+        ec = INVALID_ACCESS_ERR;
+        return;
+    }
+
+    AnimationController* controller = document->frame()->animation();
+    if (!controller)
+        return;
+
+    controller->resumeAnimations();
+}
+
+bool Internals::pauseAnimationAtTimeOnElement(const String& animationName, double pauseTime, Element* element, ExceptionCode& ec)
+{
+    if (!element || pauseTime < 0) {
+        ec = INVALID_ACCESS_ERR;
+        return false;
+    }
+    AnimationController* controller = frame()->animation();
+    return controller->pauseAnimationAtTime(element->renderer(), AtomicString(animationName), pauseTime);
+}
+
 bool Internals::pauseAnimationAtTimeOnPseudoElement(const String& animationName, double pauseTime, Element* element, const String& pseudoId, ExceptionCode& ec)
 {
     if (!element || pauseTime < 0) {
@@ -424,7 +497,17 @@ bool Internals::pauseAnimationAtTimeOnPseudoElement(const String& animationName,
         return false;
     }
 
-    return frame()->animation()->pauseAnimationAtTime(pseudoElement->renderer(), animationName, pauseTime);
+    return frame()->animation()->pauseAnimationAtTime(pseudoElement->renderer(), AtomicString(animationName), pauseTime);
+}
+
+bool Internals::pauseTransitionAtTimeOnElement(const String& propertyName, double pauseTime, Element* element, ExceptionCode& ec)
+{
+    if (!element || pauseTime < 0) {
+        ec = INVALID_ACCESS_ERR;
+        return false;
+    }
+    AnimationController* controller = frame()->animation();
+    return controller->pauseTransitionAtTime(element->renderer(), propertyName, pauseTime);
 }
 
 bool Internals::pauseTransitionAtTimeOnPseudoElement(const String& property, double pauseTime, Element* element, const String& pseudoId, ExceptionCode& ec)
@@ -1502,34 +1585,6 @@ bool Internals::isPageBoxVisible(Document* document, int pageNumber, ExceptionCo
     return document->isPageBoxVisible(pageNumber);
 }
 
-void Internals::suspendAnimations(Document* document, ExceptionCode& ec) const
-{
-    if (!document || !document->frame()) {
-        ec = INVALID_ACCESS_ERR;
-        return;
-    }
-
-    AnimationController* controller = document->frame()->animation();
-    if (!controller)
-        return;
-
-    controller->suspendAnimations();
-}
-
-void Internals::resumeAnimations(Document* document, ExceptionCode& ec) const
-{
-    if (!document || !document->frame()) {
-        ec = INVALID_ACCESS_ERR;
-        return;
-    }
-
-    AnimationController* controller = document->frame()->animation();
-    if (!controller)
-        return;
-
-    controller->resumeAnimations();
-}
-
 String Internals::layerTreeAsText(Document* document, ExceptionCode& ec) const
 {
     return layerTreeAsText(document, 0, ec);
@@ -1903,5 +1958,12 @@ void Internals::setUsesOverlayScrollbars(bool enabled)
 {
     WebCore::Settings::setUsesOverlayScrollbars(enabled);
 }
+
+#if ENABLE(ENCRYPTED_MEDIA_V2)
+void Internals::initializeMockCDM()
+{
+    CDM::registerCDMFactory(MockCDM::create, MockCDM::supportsKeySytem);
+}
+#endif
 
 }

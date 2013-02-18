@@ -252,7 +252,7 @@ private:
                 break;
             if (!node->variableAccessData()->shouldUseDoubleFormat())
                 break;
-            fixDoubleEdge(0);
+            fixDoubleEdge(0, ForwardSpeculation);
             break;
         }
             
@@ -305,7 +305,7 @@ private:
         case ArithDiv: {
             if (Node::shouldSpeculateIntegerForArithmetic(node->child1().node(), node->child2().node())
                 && node->canSpeculateInteger()) {
-                if (isX86())
+                if (isX86() || isARMv7s())
                     break;
                 injectInt32ToDoubleNode(0);
                 injectInt32ToDoubleNode(1);
@@ -508,7 +508,7 @@ private:
         edge = newEdge;
     }
     
-    void fixDoubleEdge(unsigned childIndex)
+    void fixDoubleEdge(unsigned childIndex, SpeculationDirection direction = BackwardSpeculation)
     {
         Node* source = m_currentNode;
         Edge& edge = m_graph.child(source, childIndex);
@@ -518,13 +518,14 @@ private:
             return;
         }
         
-        injectInt32ToDoubleNode(childIndex);
+        injectInt32ToDoubleNode(childIndex, direction);
     }
 
-    void injectInt32ToDoubleNode(unsigned childIndex)
+    void injectInt32ToDoubleNode(unsigned childIndex, SpeculationDirection direction = BackwardSpeculation)
     {
         Node* result = m_insertionSet.insertNode(
-            m_indexInBlock, DontRefChildren, RefNode, SpecDouble, Int32ToDouble,
+            m_indexInBlock, DontRefChildren, RefNode, SpecDouble,
+            direction == BackwardSpeculation ? Int32ToDouble : ForwardInt32ToDouble,
             m_currentNode->codeOrigin, m_graph.child(m_currentNode, childIndex).node());
         
 #if DFG_ENABLE(DEBUG_PROPAGATION_VERBOSE)

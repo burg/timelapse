@@ -184,11 +184,6 @@ void TestRunner::setXSSAuditorEnabled(bool enabled)
     // FIXME: implement
 }
 
-void TestRunner::setFrameFlatteningEnabled(bool enabled)
-{
-    // FIXME: implement
-}
-
 void TestRunner::setAllowUniversalAccessFromFileURLs(bool enabled)
 {
     // FIXME: implement
@@ -304,27 +299,9 @@ void TestRunner::setAppCacheMaximumSize(unsigned long long size)
     // FIXME: implement
 }
 
-unsigned TestRunner::numberOfActiveAnimations() const
-{
-    // FIXME: implement
-    return 0;
-}
-
-unsigned TestRunner::workerThreadCount() const
-{
-    // FIXME: implement
-    return 0;
-}
-
 void TestRunner::setSelectTrailingWhitespaceEnabled(bool flag)
 {
     // FIXME: implement
-}
-
-bool TestRunner::pauseTransitionAtTimeOnElementWithId(JSStringRef propertyName, double time, JSStringRef elementId)
-{
-    // FIXME: implement
-    return false;
 }
 
 void TestRunner::setMockDeviceOrientation(bool canProvideAlpha, double alpha, bool canProvideBeta, double beta, bool canProvideGamma, double gamma)
@@ -378,12 +355,6 @@ void TestRunner::startSpeechInput(JSContextRef inputElement)
 void TestRunner::setIconDatabaseEnabled(bool iconDatabaseEnabled)
 {
     // FIXME: implement
-}
-
-bool TestRunner::pauseAnimationAtTimeOnElementWithId(JSStringRef animationName, double time, JSStringRef elementId)
-{
-    // FIXME: implement
-    return false;
 }
 
 void TestRunner::setCacheModel(int)
@@ -526,11 +497,6 @@ void TestRunner::setSerializeHTTPLoads(bool)
     // FIXME: Implement.
 }
 
-void TestRunner::setMinimumTimerInterval(double interval)
-{
-
-}
-
 void TestRunner::syncLocalStorage()
 {
     // FIXME: Implement.
@@ -594,16 +560,6 @@ void TestRunner::setPageVisibility(const char*)
 }
 
 void TestRunner::setAutomaticLinkDetectionEnabled(bool)
-{
-    // FIXME: Implement this.
-}
-
-void TestRunner::sendWebIntentResponse(JSStringRef)
-{
-    // FIXME: Implement this.
-}
-
-void TestRunner::deliverWebIntent(JSStringRef, JSStringRef, JSStringRef)
 {
     // FIXME: Implement this.
 }

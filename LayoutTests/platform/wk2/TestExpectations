@@ -176,9 +176,9 @@ platform/mac/fast/text/justified-text-rect.html
 
 # WebKitTestRunner needs to support needsDeletionUI mechanism to show deletion UI
 # <https://bugs.webkit.org/show_bug.cgi?id=42535>
-fast/dom/Element/id-in-deletebutton.html
-editing/deleting/5408255.html
-editing/deleting/deletionUI-single-instance.html
+platform/mac/editing/deleting/id-in-deletebutton.html
+platform/mac/editing/deleting/deletionUI-click-on-delete-button.html
+platform/mac/editing/deleting/deletionUI-single-instance.html
 platform/mac/editing/deleting/deletionUI-borders.html
 platform/mac/editing/deleting/deletionUI-differing-background.html
 platform/mac/editing/deleting/deletionUI-minimum-size.html
@@ -308,14 +308,6 @@ editing/pasteboard/drag-files-to-editable-element.html
 # https://bugs.webkit.org/show_bug.cgi?id=63806
 http/tests/cache/history-only-cached-subresource-loads-max-age-https.html
 
-# [WK2] New tests introduced in 100895 fail
-# https://bugs.webkit.org/show_bug.cgi?id=73913
-http/tests/security/referrer-policy-https-always.html
-http/tests/security/referrer-policy-https-origin.html
-http/tests/security/referrer-policy-redirect.html
-http/tests/security/referrer-policy-https-never.html
-http/tests/security/referrer-policy-https-default.html
-
 # Frame::findString does nothing on pages that prevent selection
 # https://bugs.webkit.org/show_bug.cgi?id=40361
 editing/text-iterator/findString-selection-disabled.html
@@ -333,11 +325,6 @@ fast/selectors/selection-window-inactive.html
 # WebKit2 needs an implementation of InspectorClient::overrideDeviceMetrics() and
 # autoZoomPageToFitWidth().
 inspector/styles/override-screen-size.html
-
-# The network stack unconditionally strips the header on transitions from
-# secure to insecure. It should take the referrer policy into account instead.
-# https://bugs.webkit.org/show_bug.cgi?id=86000
-http/tests/security/referrer-policy-redirect-link.html
 
 # css3-conditionals support is not yet enabled.
 webkit.org/b/86146 css3/supports.html
@@ -530,6 +517,7 @@ fast/events/context-nodrag.html
 # eventSender.dragMode is unimplemented in WKTR
 # Mac: https://bugs.webkit.org/show_bug.cgi?id=68552
 # Qt: https://bugs.webkit.org/show_bug.cgi?id=69946
+fast/events/controlclick-no-onclick.html
 fast/events/moving-text-should-fire-drop-and-dragend-events.html
 fast/events/moving-text-should-fire-drop-and-dragend-events-2.html
 editing/pasteboard/drag-drop-url-with-style.html
@@ -566,6 +554,7 @@ editing/spelling/spelling-marker-description.html
 
 # WTR needs an implementation of setAutomaticLinkDetectionEnabled.
 # https://bugs.webkit.org/show_bug.cgi?id=87162
+editing/inserting/smart-link-when-caret-is-moved-before-URL.html
 editing/inserting/typing-space-to-trigger-smart-link.html
 
 # No CORS support for media elements is implemented yet.
@@ -574,6 +563,9 @@ http/tests/security/video-cross-origin-readback.html
 # Content Security Policy 1.1 (ENABLE_CSP_NEXT) is not enabled
 # https://bugs.webkit.org/show_bug.cgi?id=85558
 http/tests/security/contentSecurityPolicy/1.1
+
+# X-Content-Type-Options (ENABLE_NOSNIFF) is not enabled.
+http/tests/security/contentTypeOptions
 
 # Unexpected redirection happens.
 http/tests/loading/redirect-methods.html
@@ -908,6 +900,7 @@ http/tests/local/formdata/send-form-data-with-sliced-file.html
 http/tests/local/formdata/send-form-data.html
 http/tests/local/formdata/upload-events.html
 http/tests/security/clipboard/clipboard-file-access.html
+media/video-src-blob.html
 storage/indexeddb/noblobs.html
 storage/indexeddb/structured-clone.html
 

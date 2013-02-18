@@ -19,6 +19,26 @@ InspectorTest.fillEditorWithText = function(textEditor, lineCount)
     textModel.setText(lines.join("\n"));
 }
 
+InspectorTest.textWithSelection = function(text, selection)
+{
+    if (!selection)
+        return text;
+
+    function lineWithCursor(line, column, cursorChar)
+    {
+        return line.substring(0, column) + cursorChar + line.substring(column);
+    }
+
+    var lines = text.split("\n");
+    selection = selection.normalize();
+    var endCursorChar = selection.isEmpty() ? "|" : "<";
+    lines[selection.endLine] = lineWithCursor(lines[selection.endLine], selection.endColumn, endCursorChar);
+    if (!selection.isEmpty()) {
+        lines[selection.startLine] = lineWithCursor(lines[selection.startLine], selection.startColumn, ">");
+    }
+    return lines.join("\n");
+}
+
 InspectorTest.insertTextLine = function(line)
 {
     function enter()
@@ -73,6 +93,7 @@ InspectorTest.dumpEditorHTML = function(textEditor, mainPanelOnly)
 {
     var element = mainPanelOnly ? textEditor._mainPanel.element : textEditor.element;
     var dumpedHTML = element.innerHTML.replace(/<div/g, "\n<div");
+    var dumpedHTML = dumpedHTML.replace(/height: [0-9]+/g, "height: <number>");
     InspectorTest.addResult(dumpedHTML);
 };
 

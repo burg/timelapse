@@ -64,7 +64,7 @@ String CSSFontFaceRule::cssText() const
 void CSSFontFaceRule::reattach(StyleRuleBase* rule)
 {
     ASSERT(rule);
-    ASSERT(rule->isFontFaceRule());
+    ASSERT_WITH_SECURITY_IMPLICATION(rule->isFontFaceRule());
     m_fontFaceRule = static_cast<StyleRuleFontFace*>(rule);
     if (m_propertiesCSSOMWrapper)
         m_propertiesCSSOMWrapper->reattach(m_fontFaceRule->mutableProperties());
@@ -74,8 +74,8 @@ void CSSFontFaceRule::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) cons
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     CSSRule::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_fontFaceRule);
-    info.addMember(m_propertiesCSSOMWrapper);
+    info.addMember(m_fontFaceRule, "fontFaceRule");
+    info.addMember(m_propertiesCSSOMWrapper, "propertiesCSSOMWrapper");
 }
 
 } // namespace WebCore

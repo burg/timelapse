@@ -42,7 +42,6 @@
 #include "Settings.h"
 #include "WorkQueue.h"
 #include "WorkQueueItem.h"
-#include "WorkerThread.h"
 
 #include <JavaScriptCore/APICast.h>
 #include <SharedPointer.h>
@@ -341,75 +340,6 @@ void TestRunner::setWindowIsKey(bool windowIsKey)
     notImplemented();
 }
 
-bool TestRunner::pauseAnimationAtTimeOnElementWithId(JSStringRef animationName, double time, JSStringRef elementId)
-{
-    if (!mainFrame)
-        return false;
-
-    int nameLen = JSStringGetMaximumUTF8CStringSize(animationName);
-    int idLen = JSStringGetMaximumUTF8CStringSize(elementId);
-    OwnArrayPtr<char> name = adoptArrayPtr(new char[nameLen]);
-    OwnArrayPtr<char> eId = adoptArrayPtr(new char[idLen]);
-
-    JSStringGetUTF8CString(animationName, name.get(), nameLen);
-    JSStringGetUTF8CString(elementId, eId.get(), idLen);
-
-    WebCore::AnimationController* animationController = mainFrame->animation();
-    if (!animationController)
-        return false;
-
-    WebCore::Node* node = mainFrame->document()->getElementById(eId.get());
-    if (!node || !node->renderer())
-        return false;
-
-    return animationController->pauseAnimationAtTime(node->renderer(), name.get(), time);
-}
-
-bool TestRunner::pauseTransitionAtTimeOnElementWithId(JSStringRef propertyName, double time, JSStringRef elementId)
-{
-    if (!mainFrame)
-        return false;
-
-    int nameLen = JSStringGetMaximumUTF8CStringSize(propertyName);
-    int idLen = JSStringGetMaximumUTF8CStringSize(elementId);
-    OwnArrayPtr<char> name = adoptArrayPtr(new char[nameLen]);
-    OwnArrayPtr<char> eId = adoptArrayPtr(new char[idLen]);
-
-    JSStringGetUTF8CString(propertyName, name.get(), nameLen);
-    JSStringGetUTF8CString(elementId, eId.get(), idLen);
-
-    WebCore::AnimationController* animationController = mainFrame->animation();
-    if (!animationController)
-        return false;
-
-    WebCore::Node* node = mainFrame->document()->getElementById(eId.get());
-    if (!node || !node->renderer())
-        return false;
-
-    return animationController->pauseTransitionAtTime(node->renderer(), name.get(), time);
-}
-
-unsigned TestRunner::numberOfActiveAnimations() const
-{
-    if (!mainFrame)
-        return false;
-
-    WebCore::AnimationController* animationController = mainFrame->animation();
-    if (!animationController)
-        return false;
-
-    return animationController->numberOfActiveAnimations(mainFrame->document());
-}
-
-unsigned TestRunner::workerThreadCount() const
-{
-#if ENABLE_WORKERS
-    return WebCore::WorkerThread::workerThreadCount();
-#else
-    return 0;
-#endif
-}
-
 void TestRunner::removeAllVisitedLinks()
 {
     notImplemented();
@@ -521,11 +451,6 @@ bool TestRunner::callShouldCloseOnWebView()
 {
     notImplemented();
     return false;
-}
-
-void TestRunner::setFrameFlatteningEnabled(bool enable)
-{
-    BlackBerry::WebKit::DumpRenderTree::currentInstance()->page()->settings()->setFrameFlatteningEnabled(enable);
 }
 
 void TestRunner::setSpatialNavigationEnabled(bool enable)
@@ -645,11 +570,6 @@ void TestRunner::setViewModeMediaFeature(const JSStringRef mode)
 void TestRunner::setSerializeHTTPLoads(bool)
 {
     // FIXME: Implement if needed for https://bugs.webkit.org/show_bug.cgi?id=50758.
-    notImplemented();
-}
-
-void TestRunner::setMinimumTimerInterval(double)
-{
     notImplemented();
 }
 
@@ -835,16 +755,6 @@ void TestRunner::setPageVisibility(const char*)
 }
 
 void TestRunner::setAutomaticLinkDetectionEnabled(bool)
-{
-    notImplemented();
-}
-
-void TestRunner::sendWebIntentResponse(JSStringRef)
-{
-    notImplemented();
-}
-
-void TestRunner::deliverWebIntent(JSStringRef, JSStringRef, JSStringRef)
 {
     notImplemented();
 }

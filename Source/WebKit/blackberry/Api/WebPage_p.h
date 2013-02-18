@@ -421,7 +421,6 @@ public:
     void releaseLayerResourcesCompositingThread();
     void suspendRootLayerCommit();
     void resumeRootLayerCommit();
-    void blitVisibleContents();
 
     void scheduleCompositingRun();
 #endif
@@ -582,7 +581,7 @@ public:
 
     int m_pendingOrientation;
 
-    RefPtr<WebCore::Node> m_fullscreenVideoNode;
+    RefPtr<WebCore::Node> m_fullscreenNode;
     RefPtr<WebCore::PluginView> m_fullScreenPluginView;
 
     typedef HashMap<const WebCore::Frame*, BackingStoreClient*> BackingStoreClientForFrameMap;

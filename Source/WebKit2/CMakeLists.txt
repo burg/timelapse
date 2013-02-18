@@ -50,7 +50,6 @@ set(WebKit2_INCLUDE_DIRECTORIES
     "${WEBKIT2_DIR}/WebProcess/WebPage/CoordinatedGraphics"
     "${WEBCORE_DIR}"
     "${WEBCORE_DIR}/Modules/battery"
-    "${WEBCORE_DIR}/Modules/intents"
     "${WEBCORE_DIR}/Modules/networkinfo"
     "${WEBCORE_DIR}/Modules/notifications"
     "${WEBCORE_DIR}/Modules/vibration"
@@ -151,8 +150,6 @@ set(WebKit2_SOURCES
     Shared/FontInfo.cpp
     Shared/ImmutableArray.cpp
     Shared/ImmutableDictionary.cpp
-    Shared/IntentData.cpp
-    Shared/IntentServiceInfo.cpp
     Shared/MutableArray.cpp
     Shared/MutableDictionary.cpp
     Shared/OriginAndDatabases.cpp
@@ -179,7 +176,6 @@ set(WebKit2_SOURCES
     Shared/WebGraphicsContext.cpp
     Shared/WebHitTestResult.cpp
     Shared/WebImage.cpp
-    Shared/WebIntentServiceInfo.cpp
     Shared/WebKeyboardEvent.cpp
     Shared/WebKit2Initialize.cpp
     Shared/WebMemorySampler.cpp
@@ -224,7 +220,6 @@ set(WebKit2_SOURCES
     Shared/API/c/WKUserContentURLPattern.cpp
 
     Shared/CoordinatedGraphics/CoordinatedGraphicsArgumentCoders.cpp
-    Shared/CoordinatedGraphics/CoordinatedSurface.cpp
     Shared/CoordinatedGraphics/WebCoordinatedSurface.cpp
     Shared/CoordinatedGraphics/WebCustomFilterProgramProxy.cpp
 
@@ -248,6 +243,7 @@ set(WebKit2_SOURCES
 
     UIProcess/PageViewportController.cpp
     UIProcess/ResponsivenessTimer.cpp
+    UIProcess/StatisticsRequest.cpp
     UIProcess/VisitedLinkProvider.cpp
     UIProcess/WebApplicationCacheManagerProxy.cpp
     UIProcess/WebBackForwardList.cpp
@@ -281,7 +277,6 @@ set(WebKit2_SOURCES
     UIProcess/WebIconDatabase.cpp
     UIProcess/WebIconDatabaseClient.cpp
     UIProcess/WebInspectorProxy.cpp
-    UIProcess/WebIntentData.cpp
     UIProcess/WebKeyValueStorageManagerProxy.cpp
 
     UIProcess/WebLoaderClient.cpp
@@ -326,8 +321,6 @@ set(WebKit2_SOURCES
     UIProcess/API/C/WKHitTestResult.cpp
     UIProcess/API/C/WKIconDatabase.cpp
     UIProcess/API/C/WKInspector.cpp
-    UIProcess/API/C/WKIntentData.cpp
-    UIProcess/API/C/WKIntentServiceInfo.cpp
     UIProcess/API/C/WKKeyValueStorageManager.cpp
     UIProcess/API/C/WKMediaCacheManager.cpp
     UIProcess/API/C/WKNavigationData.cpp
@@ -352,9 +345,7 @@ set(WebKit2_SOURCES
     UIProcess/Authentication/WebCredential.cpp
     UIProcess/Authentication/WebProtectionSpace.cpp
 
-    UIProcess/CoordinatedGraphics/CoordinatedBackingStore.cpp
     UIProcess/CoordinatedGraphics/CoordinatedLayerTreeHostProxy.cpp
-    UIProcess/CoordinatedGraphics/LayerTreeRenderer.cpp
 
     UIProcess/Downloads/DownloadProxy.cpp
     UIProcess/Downloads/DownloadProxyMap.cpp
@@ -405,8 +396,6 @@ set(WebKit2_SOURCES
     WebProcess/InjectedBundle/InjectedBundleClient.cpp
     WebProcess/InjectedBundle/InjectedBundleDOMWindowExtension.cpp
     WebProcess/InjectedBundle/InjectedBundleHitTestResult.cpp
-    WebProcess/InjectedBundle/InjectedBundleIntent.cpp
-    WebProcess/InjectedBundle/InjectedBundleIntentRequest.cpp
     WebProcess/InjectedBundle/InjectedBundleNavigationAction.cpp
     WebProcess/InjectedBundle/InjectedBundlePageDiagnosticLoggingClient.cpp
     WebProcess/InjectedBundle/InjectedBundlePageContextMenuClient.cpp
@@ -426,8 +415,6 @@ set(WebKit2_SOURCES
     WebProcess/InjectedBundle/API/c/WKBundleFrame.cpp
     WebProcess/InjectedBundle/API/c/WKBundleHitTestResult.cpp
     WebProcess/InjectedBundle/API/c/WKBundleInspector.cpp
-    WebProcess/InjectedBundle/API/c/WKBundleIntent.cpp
-    WebProcess/InjectedBundle/API/c/WKBundleIntentRequest.cpp
     WebProcess/InjectedBundle/API/c/WKBundleNavigationAction.cpp
     WebProcess/InjectedBundle/API/c/WKBundleNodeHandle.cpp
     WebProcess/InjectedBundle/API/c/WKBundlePage.cpp
@@ -505,12 +492,7 @@ set(WebKit2_SOURCES
     WebProcess/WebPage/WebPageGroupProxy.cpp
     WebProcess/WebPage/WebUndoStep.cpp
 
-    WebProcess/WebPage/CoordinatedGraphics/AreaAllocator.cpp
-    WebProcess/WebPage/CoordinatedGraphics/CoordinatedImageBacking.cpp
-    WebProcess/WebPage/CoordinatedGraphics/CoordinatedGraphicsLayer.cpp
-    WebProcess/WebPage/CoordinatedGraphics/CoordinatedTile.cpp
     WebProcess/WebPage/CoordinatedGraphics/CoordinatedLayerTreeHost.cpp
-    WebProcess/WebPage/CoordinatedGraphics/UpdateAtlas.cpp
 )
 
 set(WebKit2_MESSAGES_IN_FILES
@@ -523,6 +505,7 @@ set(WebKit2_MESSAGES_IN_FILES
     Shared/Plugins/NPObjectMessageReceiver.messages.in
 
     UIProcess/DrawingAreaProxy.messages.in
+    UIProcess/Storage/StorageManager.messages.in
     UIProcess/WebApplicationCacheManagerProxy.messages.in
     UIProcess/WebBatteryManagerProxy.messages.in
     UIProcess/WebContext.messages.in
@@ -572,6 +555,7 @@ set(WebKit2_MESSAGES_IN_FILES
     WebProcess/Notifications/WebNotificationManager.messages.in
 
     WebProcess/Plugins/PluginProcessConnection.messages.in
+    WebProcess/Plugins/PluginProcessConnectionManager.messages.in
     WebProcess/Plugins/PluginProxy.messages.in
 
     WebProcess/ResourceCache/WebResourceCacheManager.messages.in

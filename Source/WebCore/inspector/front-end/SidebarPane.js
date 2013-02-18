@@ -33,106 +33,349 @@
 WebInspector.SidebarPane = function(title)
 {
     WebInspector.View.call(this);
-    this.element.className = "pane";
+    this.element.className = "sidebar-pane";
 
     this.titleElement = document.createElement("div");
-    this.titleElement.className = "title";
-    this.titleElement.tabIndex = 0;
-    this.titleElement.addEventListener("click", this.toggleExpanded.bind(this), false);
-    this.titleElement.addEventListener("keydown", this._onTitleKeyDown.bind(this), false);
+    this.titleElement.className = "sidebar-pane-toolbar";
 
-    this.bodyElement = document.createElement("div");
-    this.bodyElement.className = "body";
+    this.bodyElement = this.element.createChild("div", "body");
 
-    this.element.appendChild(this.titleElement);
-    this.element.appendChild(this.bodyElement);
+    this._title = title;
 
-    this.title = title;
-    this.growbarVisible = false;
-    this.expanded = false;
+    this._expandCallback = null;
+    this._showCallback = null;
 }
 
 WebInspector.SidebarPane.prototype = {
-    get title()
+    title: function()
     {
         return this._title;
     },
 
-    set title(x)
+    /**
+     * @param {function()} callback
+     */
+    prepareContent: function(callback)
     {
-        if (this._title === x)
-            return;
-        this._title = x;
-        this.titleElement.textContent = x;
+        if (callback)
+            callback();
     },
 
-    get growbarVisible()
-    {
-        return this._growbarVisible;
-    },
-
-    set growbarVisible(x)
-    {
-        if (this._growbarVisible === x)
-            return;
-
-        this._growbarVisible = x;
-
-        if (x && !this._growbarElement) {
-            this._growbarElement = document.createElement("div");
-            this._growbarElement.className = "growbar";
-            this.element.appendChild(this._growbarElement);
-        } else if (!x && this._growbarElement) {
-            if (this._growbarElement.parentNode)
-                this._growbarElement.parentNode(this._growbarElement);
-            delete this._growbarElement;
-        }
-    },
-
-    get expanded()
+    expanded: function()
     {
         return this._expanded;
     },
 
-    set expanded(x)
-    {
-        if (x)
-            this.expand();
-        else
-            this.collapse();
-    },
-
     expand: function()
     {
-        if (this._expanded)
-            return;
         this._expanded = true;
-        this.element.addStyleClass("expanded");
-        this.onexpand();
-    },
-
-    onexpand: function()
-    {
+        this.prepareContent(this.onContentReady.bind(this));
     },
 
     collapse: function()
     {
-        if (!this._expanded)
-            return;
         this._expanded = false;
-        this.element.removeStyleClass("expanded");
     },
 
-    toggleExpanded: function()
+    onContentReady: function()
     {
-        this.expanded = !this.expanded;
+        if (this._expandCallback)
+            this._expandCallback();
     },
 
-    _onTitleKeyDown: function(event)
+    /**
+     * @param {function()} callback
+     */
+    _setExpandCallback: function(callback)
     {
-        if (isEnterKey(event) || event.keyCode === WebInspector.KeyboardShortcut.Keys.Space.code)
-            this.toggleExpanded();
+        this._expandCallback = callback;
+    },
+
+    /**
+     * @param {function()} callback
+     */
+    setShowCallback: function(callback)
+    {
+        this._showCallback = callback;
+    },
+
+    wasShown: function()
+    {
+        WebInspector.View.prototype.wasShown.call(this);
+        if (this._showCallback)
+            this._showCallback();
     },
 
     __proto__: WebInspector.View.prototype
 }
+
+/**
+ * @constructor
+ * @extends {WebInspector.View}
+ */
+WebInspector.SidebarPaneStack = function()
+{
+    WebInspector.View.call(this);
+    this.element.className = "sidebar-pane-stack fill";
+
+    this._titles = [];
+    this._panes = [];
+}
+
+WebInspector.SidebarPaneStack.prototype = {
+    /**
+     * @param {WebInspector.SidebarPane} pane
+     */
+    addPane: function(pane)
+    {
+        var index = this._panes.length;
+        this._panes.push(pane);
+
+        var title = this.element.createChild("div", "pane-title");
+        title.textContent = pane.title();
+        title.tabIndex = 0;
+        title.addEventListener("click", this._togglePane.bind(this, index), false);
+        title.addEventListener("keydown", this._onTitleKeyDown.bind(this, index), false);
+        this._titles.push(title);
+
+        pane.titleElement.removeSelf();
+        title.appendChild(pane.titleElement);
+
+        pane._setExpandCallback(this._onPaneExpanded.bind(this, index));
+        this._setExpanded(index, pane.expanded());
+    },
+
+    activePaneId: function()
+    {
+        return this._activePaneIndex;
+    },
+
+    /**
+     * @param {number} index
+     */
+    setActivePaneId: function(index)
+    {
+        this._panes[index].expand();
+    },
+
+    /**
+     * @param {number} index
+     */
+    _isExpanded: function(index)
+    {
+        var title = this._titles[index];
+        return title.hasStyleClass("expanded");
+    },
+
+    /**
+     * @param {number} index
+     * @param {boolean} on
+     */
+    _setExpanded: function(index, on)
+    {
+        if (on)
+            this._panes[index].expand();
+        else
+            this._collapsePane(index);
+    },
+
+    /**
+     * @param {number} index
+     */
+    _onPaneExpanded: function(index)
+    {
+        this._activePaneIndex = index;
+        var pane = this._panes[index];
+        var title = this._titles[index];
+        title.addStyleClass("expanded");
+        pane.show(this.element, title.nextSibling);
+    },
+
+    /**
+     * @param {number} index
+     */
+    _collapsePane: function(index)
+    {
+        var pane = this._panes[index];
+        var title = this._titles[index];
+        title.removeStyleClass("expanded");
+        pane.collapse();
+        if (pane.element.parentNode == this.element)
+            pane.detach();
+    },
+
+    /**
+     * @param {number} index
+     * @private
+     */
+    _togglePane: function(index)
+    {
+        this._setExpanded(index, !this._isExpanded(index));
+    },
+    
+    /**
+     * @param {number} index
+     * @param {Event} event
+     * @private
+     */
+    _onTitleKeyDown: function(index, event)
+    {
+        if (isEnterKey(event) || event.keyCode === WebInspector.KeyboardShortcut.Keys.Space.code)
+            this._togglePane(index);
+    },
+
+    __proto__: WebInspector.View.prototype
+}
+
+/**
+ * @constructor
+ * @extends {WebInspector.TabbedPane}
+ */
+WebInspector.SidebarTabbedPane = function()
+{
+    WebInspector.TabbedPane.call(this);
+    this.element.addStyleClass("sidebar-tabbed-pane");
+
+    this._panes = [];
+}
+
+WebInspector.SidebarTabbedPane.prototype = {
+    /**
+     * @param {WebInspector.SidebarPane} pane
+     */
+    addPane: function(pane)
+    {
+        var index = this._panes.length;
+        this._panes.push(pane);
+        this.appendTab(index.toString(), pane.title(), pane);
+
+        pane.titleElement.removeSelf();
+        pane.element.appendChild(pane.titleElement);
+
+        pane._setExpandCallback(this.setActivePaneId.bind(this, index));
+    },
+
+    activePaneId: function()
+    {
+        return this.selectedTabId;
+    },
+
+    /**
+     * @param {number} index
+     */
+    setActivePaneId: function(index)
+    {
+        this.selectTab(index.toString());
+    },
+
+    __proto__: WebInspector.TabbedPane.prototype
+}
+
+/**
+ * @constructor
+ * @extends {WebInspector.View}
+ */
+WebInspector.SidebarPaneGroup = function()
+{
+    WebInspector.View.call(this);
+    this.element.className = "fill";
+
+    this._panes = [];
+}
+
+WebInspector.SidebarPaneGroup.prototype = {
+    /**
+     * @param {boolean} stacked
+     */
+    setStacked: function(stacked)
+    {
+        if (this._stacked === stacked)
+            return;
+
+        this._stacked = stacked;
+
+        var activePaneId;
+        if (this._currentView) {
+            activePaneId = this._currentView.activePaneId();
+            this._currentView.detach();
+        }
+
+        if (this._stacked)
+            this._currentView = new WebInspector.SidebarPaneStack();
+        else
+            this._currentView = new WebInspector.SidebarTabbedPane();
+
+        for (var i = 0; i < this._panes.length; i++)
+            this._currentView.addPane(this._panes[i]);
+
+        this._currentView.show(this.element);
+
+        if (typeof activePaneId !== "undefined")
+            this._currentView.setActivePaneId(activePaneId);
+    },
+
+    /**
+     * @param {WebInspector.SidebarPane} pane
+     */
+    addPane: function(pane)
+    {
+        this._panes.push(pane);
+        if (this._currentView)
+            this._currentView.addPane(pane);
+    },
+
+    /**
+     * @param {WebInspector.Panel} panel
+     */
+    attachToPanel: function(panel)
+    {
+        this._sidebarView = panel.splitView;
+
+        this._sidebarView.sidebarElement.addEventListener("contextmenu", this._contextMenuEventFired.bind(this), false);
+
+        var splitDirectionSettingName = panel.name + "PanelSplitHorizontally";
+        if (!WebInspector.settings[splitDirectionSettingName])
+            WebInspector.settings[splitDirectionSettingName] = WebInspector.settings.createSetting(splitDirectionSettingName, false);
+        this._splitDirectionSetting = WebInspector.settings[splitDirectionSettingName];
+        this._splitDirectionSetting.addChangeListener(this._onSplitDirectionSettingChanged.bind(this));
+
+        this._updateSplitDirection();
+
+        this.show(this._sidebarView.sidebarElement);
+    },
+
+    populateContextMenu: function(contextMenu)
+    {
+        if (!WebInspector.experimentsSettings.horizontalPanelSplit.isEnabled())
+            return;
+
+        function toggleSplitDirection()
+        {
+            this._splitDirectionSetting.set(!this._splitDirectionSetting.get());
+        }
+        contextMenu.appendCheckboxItem(WebInspector.UIString(WebInspector.useLowerCaseMenuTitles() ? "Split horizontally" : "Split Horizontally"), toggleSplitDirection.bind(this), this._splitDirectionSetting.get());
+    },
+
+    _contextMenuEventFired: function(event)
+    {
+        var contextMenu = new WebInspector.ContextMenu(event);
+        this.populateContextMenu(contextMenu);
+        contextMenu.show();
+    },
+
+    _updateSplitDirection: function()
+    {
+        var vertical = !WebInspector.experimentsSettings.horizontalPanelSplit.isEnabled() || !this._splitDirectionSetting.get();
+        this._sidebarView.setVertical(vertical);
+        this.setStacked(vertical);
+    },
+
+    _onSplitDirectionSettingChanged: function()
+    {
+        // Cannot call _updateSplitDirection directly because View.prototype.show() does not work properly from inside notifications.
+        setTimeout(this._updateSplitDirection.bind(this), 0);
+    },
+
+    __proto__: WebInspector.View.prototype
+}
+

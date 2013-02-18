@@ -26,24 +26,37 @@
 #include "config.h"
 #include "StorageAreaProxy.h"
 
+#include "SecurityOriginData.h"
+#include "StorageManagerMessages.h"
+#include "StorageNamespaceProxy.h"
+#include "WebProcess.h"
+#include <WebCore/Frame.h>
 #include <WebCore/SecurityOrigin.h>
 
 using namespace WebCore;
 
 namespace WebKit {
 
+static uint64_t generateStorageAreaID()
+{
+    static uint64_t storageAreaID;
+    return ++storageAreaID;
+}
+
 PassRefPtr<StorageAreaProxy> StorageAreaProxy::create(StorageNamespaceProxy* storageNamespaceProxy, PassRefPtr<SecurityOrigin> securityOrigin)
 {
     return adoptRef(new StorageAreaProxy(storageNamespaceProxy, securityOrigin));
 }
 
-StorageAreaProxy::StorageAreaProxy(StorageNamespaceProxy*, PassRefPtr<SecurityOrigin>)
+StorageAreaProxy::StorageAreaProxy(StorageNamespaceProxy* storageNamespaceProxy, PassRefPtr<SecurityOrigin> securityOrigin)
+    : m_storageAreaID(generateStorageAreaID())
 {
-    // FIXME: Implement.
+    WebProcess::shared().connection()->send(Messages::StorageManager::CreateStorageArea(m_storageAreaID, storageNamespaceProxy->storageNamespaceID(), SecurityOriginData::fromSecurityOrigin(securityOrigin.get())), 0);
 }
 
 StorageAreaProxy::~StorageAreaProxy()
 {
+    WebProcess::shared().connection()->send(Messages::StorageManager::DestroyStorageArea(m_storageAreaID), 0);
 }
 
 unsigned StorageAreaProxy::length(ExceptionCode&, Frame* sourceFrame) const
@@ -88,15 +101,12 @@ void StorageAreaProxy::clear(ExceptionCode&, Frame* sourceFrame)
 bool StorageAreaProxy::contains(const String& key, ExceptionCode&, Frame* sourceFrame) const
 {
     // FIXME: Implement this.
-    ASSERT_NOT_REACHED();
     return false;
 }
 
-bool StorageAreaProxy::canAccessStorage(Frame*) const
+bool StorageAreaProxy::canAccessStorage(Frame* frame) const
 {
-    // FIXME: Implement this.
-    ASSERT_NOT_REACHED();
-    return false;
+    return frame && frame->page();
 }
 
 size_t StorageAreaProxy::memoryBytesUsedByCache() const
@@ -108,14 +118,12 @@ size_t StorageAreaProxy::memoryBytesUsedByCache() const
 
 void StorageAreaProxy::incrementAccessCount()
 {
-    // FIXME: Implement this.
-    ASSERT_NOT_REACHED();
+    // Storage access is handled in the UI process, so there's nothing to do here.
 }
 
 void StorageAreaProxy::decrementAccessCount()
 {
-    // FIXME: Implement this.
-    ASSERT_NOT_REACHED();
+    // Storage access is handled in the UI process, so there's nothing to do here.
 }
 
 void StorageAreaProxy::closeDatabaseIfIdle()

@@ -46,7 +46,8 @@
 #endif
 
 namespace WebCore {
-    class KURL;
+class KURL;
+struct PluginInfo;
 };
 
 namespace WebKit {
@@ -57,7 +58,7 @@ class WebContext;
 class WebPageGroup;
 struct WebNavigationDataStore;
 
-class WebProcessProxy : public ThreadSafeRefCounted<WebProcessProxy>, public ChildProcessProxy, ResponsivenessTimer::Client, CoreIPC::Connection::QueueClient {
+class WebProcessProxy : public ChildProcessProxy, ResponsivenessTimer::Client {
 public:
     typedef HashMap<uint64_t, RefPtr<WebBackForwardListItem> > WebBackForwardListItemMap;
     typedef HashMap<uint64_t, RefPtr<WebFrameProxy> > WebFrameProxyMap;
@@ -71,10 +72,6 @@ public:
         return static_cast<WebProcessProxy*>(ChildProcessProxy::fromConnection(connection));
     }
 
-    void addMessageReceiver(CoreIPC::StringReference messageReceiverName, CoreIPC::MessageReceiver*);
-    void addMessageReceiver(CoreIPC::StringReference messageReceiverName, uint64_t destinationID, CoreIPC::MessageReceiver*);
-    void removeMessageReceiver(CoreIPC::StringReference messageReceiverName, uint64_t destinationID);
-
     WebConnection* webConnection() const { return m_webConnection.get(); }
 
     WebContext* context() const { return m_context.get(); }
@@ -84,10 +81,6 @@ public:
     void addExistingWebPage(WebPageProxy*, uint64_t pageID);
     void removeWebPage(uint64_t pageID);
     Vector<WebPageProxy*> pages() const;
-
-#if ENABLE(WEB_INTENTS)
-    void removeMessagePortChannel(uint64_t channelID);
-#endif
 
     WebBackForwardListItem* webBackForwardItem(uint64_t itemID) const;
 
@@ -125,8 +118,11 @@ public:
 private:
     explicit WebProcessProxy(PassRefPtr<WebContext>);
 
-    void getLaunchOptions(ProcessLauncher::LaunchOptions&);
+    // From ChildProcessProxy
+    virtual void getLaunchOptions(ProcessLauncher::LaunchOptions&) OVERRIDE;
     void platformGetLaunchOptions(ProcessLauncher::LaunchOptions&);
+    virtual void connectionWillOpen(CoreIPC::Connection*) OVERRIDE;
+    virtual void connectionWillClose(CoreIPC::Connection*) OVERRIDE;
 
     // Called when the web process has crashed or we know that it will terminate soon.
     // Will potentially cause the WebProcessProxy object to be freed.
@@ -140,10 +136,7 @@ private:
 
     // Plugins
 #if ENABLE(NETSCAPE_PLUGIN_API)
-    void getPlugins(CoreIPC::Connection*, uint64_t requestID, bool refresh);
-    void getPluginPath(const String& mimeType, const String& urlString, String& pluginPath, uint32_t& pluginLoadPolicy);
-    void handleGetPlugins(uint64_t requestID, bool refresh);
-    void sendDidGetPlugins(uint64_t requestID, PassOwnPtr<Vector<WebCore::PluginInfo> >);
+    void getPlugins(bool refresh, Vector<WebCore::PluginInfo>& plugins);
 #endif // ENABLE(NETSCAPE_PLUGIN_API)
 #if ENABLE(PLUGIN_PROCESS)
     void getPluginProcessConnection(const String& pluginPath, uint32_t processType, PassRefPtr<Messages::WebProcessProxy::GetPluginProcessConnection::DelayedReply>);
@@ -165,9 +158,6 @@ private:
     virtual void didClose(CoreIPC::Connection*) OVERRIDE;
     virtual void didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference messageReceiverName, CoreIPC::StringReference messageName) OVERRIDE;
 
-    // CoreIPC::Connection::QueueClient
-    virtual void didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection*, CoreIPC::MessageDecoder&, bool& didHandleMessage) OVERRIDE;
-
     // ResponsivenessTimer::Client
     void didBecomeUnresponsive(ResponsivenessTimer*) OVERRIDE;
     void interactionOccurredWhileUnresponsive(ResponsivenessTimer*) OVERRIDE;
@@ -185,13 +175,10 @@ private:
     // Implemented in generated WebProcessProxyMessageReceiver.cpp
     void didReceiveWebProcessProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
     void didReceiveSyncWebProcessProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
-    void didReceiveWebProcessProxyMessageOnConnectionWorkQueue(CoreIPC::Connection*, CoreIPC::MessageDecoder&, bool& didHandleMessage);
 
     ResponsivenessTimer m_responsivenessTimer;
     
     RefPtr<WebConnectionToWebProcess> m_webConnection;
-    CoreIPC::MessageReceiverMap m_messageReceiverMap;
-
     RefPtr<WebContext> m_context;
 
     bool m_mayHaveUniversalFileReadSandboxExtension; // True if a read extension for "/" was ever granted - we don't track whether WebProcess still has it.

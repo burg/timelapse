@@ -151,7 +151,7 @@ void InspectorTimelapseAgent::clearFrontend()
     m_frontend = 0;
 }
 
-void InspectorTimelapseAgent::willDispatchEvent(const Event& event, DOMWindow* window, Node* node, const Vector<EventContext>&)
+void InspectorTimelapseAgent::willDispatchEvent(const Event& event, DOMWindow* window, Node* node)
 {
     if (capturing() || replaying())
         m_inspectedPage->determinismController()->willDispatchEvent(event, window, node, reuseMark());

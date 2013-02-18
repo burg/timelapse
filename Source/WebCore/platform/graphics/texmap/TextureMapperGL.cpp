@@ -321,11 +321,12 @@ void TextureMapperGL::drawBorder(const Color& color, float width, const FloatRec
     draw(targetRect, modelViewMatrix, program.get(), GraphicsContext3D::LINE_LOOP, color.hasAlpha() ? ShouldBlend : 0);
 }
 
-void TextureMapperGL::drawRepaintCounter(int repaintCount, const Color& color, const FloatPoint& targetPoint, const TransformationMatrix& modelViewMatrix)
+// FIXME: drawNumber() should save a number texture-atlas and re-use whenever possible.
+void TextureMapperGL::drawNumber(int number, const Color& color, const FloatPoint& targetPoint, const TransformationMatrix& modelViewMatrix)
 {
     int pointSize = 8;
 #if PLATFORM(QT)
-    QString counterString = QString::number(repaintCount);
+    QString counterString = QString::number(number);
 
     QFont font(QString::fromLatin1("Monospace"), pointSize, QFont::Bold);
     font.setStyleHint(QFont::TypeWriter);
@@ -351,7 +352,7 @@ void TextureMapperGL::drawRepaintCounter(int repaintCount, const Color& color, c
     drawTexture(*texture, targetRect, modelViewMatrix, 1.0f, 0, AllEdges);
 
 #elif USE(CAIRO)
-    CString counterString = String::number(repaintCount).ascii();
+    CString counterString = String::number(number).ascii();
     // cairo_text_extents() requires a cairo_t, so dimensions need to be guesstimated.
     int width = counterString.length() * pointSize * 1.2;
     int height = pointSize * 1.5;
@@ -385,7 +386,7 @@ void TextureMapperGL::drawRepaintCounter(int repaintCount, const Color& color, c
     cairo_destroy(cr);
 
 #else
-    UNUSED_PARAM(repaintCount);
+    UNUSED_PARAM(number);
     UNUSED_PARAM(pointSize);
     UNUSED_PARAM(targetPoint);
     UNUSED_PARAM(modelViewMatrix);
@@ -581,14 +582,16 @@ static void swizzleBGRAToRGBA(uint32_t* data, const IntRect& rect, int stride = 
     }
 }
 
-static bool driverSupportsBGRASwizzling()
+// If GL_EXT_texture_format_BGRA8888 is supported in the OpenGLES
+// internal and external formats need to be BGRA
+static bool driverSupportsExternalTextureBGRA(GraphicsContext3D* context)
 {
-#if defined(TEXMAP_OPENGL_ES_2)
-    // FIXME: Implement reliable detection. See also https://bugs.webkit.org/show_bug.cgi?id=81103.
-    return false;
-#else
+    if (context->isGLES2Compliant()) {
+        static bool supportsExternalTextureBGRA = context->getExtensions()->supports("GL_EXT_texture_format_BGRA8888");
+        return supportsExternalTextureBGRA;
+    }
+
     return true;
-#endif
 }
 
 static bool driverSupportsSubImage()
@@ -610,7 +613,6 @@ void BitmapTextureGL::didReset()
     if (m_textureSize == contentSize())
         return;
 
-    Platform3DObject format = driverSupportsBGRASwizzling() ? GraphicsContext3D::BGRA : GraphicsContext3D::RGBA;
 
     m_textureSize = contentSize();
     m_context3D->bindTexture(GraphicsContext3D::TEXTURE_2D, m_id);
@@ -618,7 +620,17 @@ void BitmapTextureGL::didReset()
     m_context3D->texParameteri(GraphicsContext3D::TEXTURE_2D, GraphicsContext3D::TEXTURE_MAG_FILTER, GraphicsContext3D::LINEAR);
     m_context3D->texParameteri(GraphicsContext3D::TEXTURE_2D, GraphicsContext3D::TEXTURE_WRAP_S, GraphicsContext3D::CLAMP_TO_EDGE);
     m_context3D->texParameteri(GraphicsContext3D::TEXTURE_2D, GraphicsContext3D::TEXTURE_WRAP_T, GraphicsContext3D::CLAMP_TO_EDGE);
-    m_context3D->texImage2DDirect(GraphicsContext3D::TEXTURE_2D, 0, GraphicsContext3D::RGBA, m_textureSize.width(), m_textureSize.height(), 0, format, DEFAULT_TEXTURE_PIXEL_TRANSFER_TYPE, 0);
+
+    Platform3DObject internalFormat = GraphicsContext3D::RGBA;
+    Platform3DObject externalFormat = GraphicsContext3D::BGRA;
+    if (m_context3D->isGLES2Compliant()) {
+        if (driverSupportsExternalTextureBGRA(m_context3D.get()))
+            internalFormat = GraphicsContext3D::BGRA;
+        else
+            externalFormat = GraphicsContext3D::RGBA;
+    }
+
+    m_context3D->texImage2DDirect(GraphicsContext3D::TEXTURE_2D, 0, internalFormat, m_textureSize.width(), m_textureSize.height(), 0, externalFormat, DEFAULT_TEXTURE_PIXEL_TRANSFER_TYPE, 0);
 }
 
 void BitmapTextureGL::updateContentsNoSwizzle(const void* srcData, const IntRect& targetRect, const IntPoint& sourceOffset, int bytesPerLine, unsigned bytesPerPixel, Platform3DObject glFormat)
@@ -657,7 +669,7 @@ void BitmapTextureGL::updateContents(const void* srcData, const IntRect& targetR
         && !(bytesPerLine == static_cast<int>(targetRect.width() * bytesPerPixel) && adjustedSourceOffset == IntPoint::zero());
 
     // prepare temporaryData if necessary
-    if ((!driverSupportsBGRASwizzling() && updateContentsFlag == UpdateCannotModifyOriginalImageData) || requireSubImageBuffer) {
+    if ((!driverSupportsExternalTextureBGRA(m_context3D.get()) && updateContentsFlag == UpdateCannotModifyOriginalImageData) || requireSubImageBuffer) {
         temporaryData.resize(targetRect.width() * targetRect.height() * bytesPerPixel);
         data = temporaryData.data();
         const char* bits = static_cast<const char*>(srcData);
@@ -674,7 +686,7 @@ void BitmapTextureGL::updateContents(const void* srcData, const IntRect& targetR
         adjustedSourceOffset = IntPoint(0, 0);
     }
 
-    if (driverSupportsBGRASwizzling())
+    if (driverSupportsExternalTextureBGRA(m_context3D.get()))
         glFormat = GraphicsContext3D::BGRA;
     else
         swizzleBGRAToRGBA(reinterpret_cast<uint32_t*>(data), IntRect(adjustedSourceOffset, targetRect.size()), bytesPerLine / bytesPerPixel);

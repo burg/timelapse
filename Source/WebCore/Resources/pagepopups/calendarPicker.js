@@ -760,7 +760,7 @@ CalendarPicker.prototype.handleClear = function() {
 CalendarPicker.prototype.fixWindowSize = function() {
     var yearMonthRightElement = this._element.getElementsByClassName(ClassNames.YearMonthButtonRight)[0];
     var daysAreaElement = this._element.getElementsByClassName(ClassNames.DaysArea)[0];
-    var clearButton = this._element.getElementsByClassName(ClassNames.ClearButton)[0];
+    var todayClearArea = this._element.getElementsByClassName(ClassNames.TodayClearArea)[0];
     var headers = daysAreaElement.getElementsByClassName(ClassNames.DayLabel);
     var maxCellWidth = 0;
     for (var i = 1; i < headers.length; ++i) {
@@ -779,11 +779,11 @@ CalendarPicker.prototype.fixWindowSize = function() {
         var startOffset = this._element.offsetLeft + this._element.offsetWidth;
         yearMonthEnd = startOffset - yearMonthRightElement.offsetLeft;
         daysAreaEnd = startOffset - (daysAreaElement.offsetLeft + daysAreaElement.offsetWidth) + weekColumnWidth + maxCellWidth * 7 + DaysAreaContainerBorder;
-        todayClearAreaEnd = startOffset - clearButton.offsetLeft;
+        todayClearAreaEnd = startOffset - todayClearArea.offsetLeft;
     } else {
         yearMonthEnd = yearMonthRightElement.offsetLeft + yearMonthRightElement.offsetWidth;
         daysAreaEnd = daysAreaElement.offsetLeft + weekColumnWidth + maxCellWidth * 7 + DaysAreaContainerBorder;
-        todayClearAreaEnd = clearButton.offsetLeft + clearButton.offsetWidth;
+        todayClearAreaEnd = todayClearArea.offsetLeft + todayClearArea.offsetWidth;
     }
     var maxEnd = Math.max(yearMonthEnd, daysAreaEnd, todayClearAreaEnd);
     var MainPadding = 10; // FIXME: Fix name.
@@ -794,6 +794,7 @@ CalendarPicker.prototype.fixWindowSize = function() {
     this._element.style.width = "auto";
     daysAreaElement.style.width = "100%";
     daysAreaElement.style.tableLayout = "fixed";
+    todayClearArea.style.display = "block";
     this._element.getElementsByClassName(ClassNames.YearMonthUpper)[0].style.display = "-webkit-box";
     this._element.getElementsByClassName(ClassNames.MonthSelectorBox)[0].style.display = "block";
     resizeWindow(desiredBodyWidth, elementHeight);
@@ -860,6 +861,11 @@ CalendarPicker.prototype.currentMonth = function() {
 function YearMonthController(picker) {
     this.picker = picker;
 }
+
+YearMonthController.LeftPointingTriangle = "<svg width='4' height='7'><polygon points='0,3.5 4,7 4,0' style='fill:#6e6e6e;' /></svg>";
+YearMonthController.LeftPointingDoubleTriangle = "<svg width='9' height='7'><polygon points='0,3.5 4,7 4,0' style='fill:#6e6e6e;' /><polygon points='5,3.5 9,7 9,0' style='fill:#6e6e6e;' /></svg>";
+YearMonthController.RightPointingTriangle = "<svg width='4' height='7'><polygon points='0,7 0,0, 4,3.5' style='fill:#6e6e6e;' /></svg>";
+YearMonthController.RightPointingDoubleTriangle = "<svg width='9' height='7'><polygon points='4,3.5 0,7 0,0' style='fill:#6e6e6e;' /><polygon points='9,3.5 5,7 5,0' style='fill:#6e6e6e;' /></svg>";
 
 /**
  * @param {!Element} element
@@ -935,12 +941,12 @@ YearMonthController.prototype._attachLeftButtonsTo = function(parent) {
     }
 
     this._left2 = createElement("button", ClassNames.YearMonthButton);
-    this._left2.innerHTML = "<svg width='9' height='7'><polygon points='0,3.5 4,7 4,0' style='fill:#6e6e6e;' /><polygon points='5,3.5 9,7 9,0' style='fill:#6e6e6e;' /></svg>";
+    this._left2.innerHTML = global.params.isLocaleRTL ? YearMonthController.RightPointingDoubleTriangle : YearMonthController.LeftPointingDoubleTriangle;
     this._left2.addEventListener("click", this._handleButtonClick.bind(this), false);
     container.appendChild(this._left2);
 
     this._left1 = createElement("button", ClassNames.YearMonthButton);
-    this._left1.innerHTML = "<svg width='4' height='7'><polygon points='0,3.5 4,7 4,0' style='fill:#6e6e6e;' /></svg>";
+    this._left1.innerHTML = global.params.isLocaleRTL ? YearMonthController.RightPointingTriangle : YearMonthController.LeftPointingTriangle;
     this._left1.addEventListener("click", this._handleButtonClick.bind(this), false);
     container.appendChild(this._left1);
 };
@@ -952,12 +958,12 @@ YearMonthController.prototype._attachRightButtonsTo = function(parent) {
     var container = createElement("div", ClassNames.YearMonthButtonRight);
     parent.appendChild(container);
     this._right1 = createElement("button", ClassNames.YearMonthButton);
-    this._right1.innerHTML = "<svg width='4' height='7'><polygon points='0,7 0,0, 4,3.5' style='fill:#6e6e6e;' /></svg>";
+    this._right1.innerHTML = global.params.isLocaleRTL ? YearMonthController.LeftPointingTriangle : YearMonthController.RightPointingTriangle;
     this._right1.addEventListener("click", this._handleButtonClick.bind(this), false);
     container.appendChild(this._right1);
 
     this._right2 = createElement("button", ClassNames.YearMonthButton);
-    this._right2.innerHTML = "<svg width='9' height='7'><polygon points='4,3.5 0,7 0,0' style='fill:#6e6e6e;' /><polygon points='9,3.5 5,7 5,0' style='fill:#6e6e6e;' /></svg>";
+    this._right2.innerHTML = global.params.isLocaleRTL ? YearMonthController.LeftPointingDoubleTriangle : YearMonthController.RightPointingDoubleTriangle;
     this._right2.addEventListener("click", this._handleButtonClick.bind(this), false);
     container.appendChild(this._right2);
 

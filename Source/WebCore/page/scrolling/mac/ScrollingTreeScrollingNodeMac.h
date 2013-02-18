@@ -38,12 +38,13 @@ namespace WebCore {
 
 class ScrollingTreeScrollingNodeMac : public ScrollingTreeScrollingNode, private ScrollElasticityControllerClient {
 public:
-    explicit ScrollingTreeScrollingNodeMac(ScrollingTree*);
+    explicit ScrollingTreeScrollingNodeMac(ScrollingTree*, ScrollingNodeID);
     virtual ~ScrollingTreeScrollingNodeMac();
 
 private:
     // ScrollingTreeNode member functions.
-    virtual void update(ScrollingStateNode*) OVERRIDE;
+    virtual void updateBeforeChildren(ScrollingStateNode*) OVERRIDE;
+    virtual void updateAfterChildren(ScrollingStateNode*) OVERRIDE;
     virtual void handleWheelEvent(const PlatformWheelEvent&) OVERRIDE;
 
     // ScrollElasticityController member functions.

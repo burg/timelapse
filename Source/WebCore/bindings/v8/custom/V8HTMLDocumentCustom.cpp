@@ -52,15 +52,15 @@
 
 namespace WebCore {
 
-v8::Local<v8::Object> V8HTMLDocument::wrapInShadowObject(v8::Local<v8::Object> wrapper, Node* impl)
+v8::Local<v8::Object> V8HTMLDocument::wrapInShadowObject(v8::Local<v8::Object> wrapper, Node* impl, v8::Isolate* isolate)
 {
     DEFINE_STATIC_LOCAL(v8::Persistent<v8::FunctionTemplate>, shadowTemplate, ());
     if (shadowTemplate.IsEmpty()) {
-        shadowTemplate = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New());
+        shadowTemplate = v8::Persistent<v8::FunctionTemplate>::New(isolate, v8::FunctionTemplate::New());
         if (shadowTemplate.IsEmpty())
             return v8::Local<v8::Object>();
         shadowTemplate->SetClassName(v8::String::NewSymbol("HTMLDocument"));
-        shadowTemplate->Inherit(V8HTMLDocument::GetTemplate());
+        shadowTemplate->Inherit(V8HTMLDocument::GetTemplate(isolate));
         shadowTemplate->InstanceTemplate()->SetInternalFieldCount(V8HTMLDocument::internalFieldCount);
     }
 
@@ -171,7 +171,7 @@ v8::Handle<v8::Object> wrap(HTMLDocument* impl, v8::Handle<v8::Object> creationC
     v8::Handle<v8::Object> wrapper = V8HTMLDocument::createWrapper(impl, creationContext, isolate);
     if (wrapper.IsEmpty())
         return wrapper;
-    if (!worldForEnteredContextIfIsolated()) {
+    if (!worldForEnteredContext()) {
         if (Frame* frame = impl->frame())
             frame->script()->windowShell(mainThreadNormalWorld())->updateDocumentWrapper(wrapper);
     }

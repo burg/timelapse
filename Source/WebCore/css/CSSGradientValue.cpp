@@ -48,8 +48,8 @@ namespace WebCore {
 void CSSGradientColorStop::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_position);
-    info.addMember(m_color);
+    info.addMember(m_position, "position");
+    info.addMember(m_color, "color");
 }
 
 PassRefPtr<Image> CSSGradientValue::image(RenderObject* renderer, const IntSize& size)
@@ -462,24 +462,24 @@ bool CSSGradientValue::isCacheable() const
     return true;
 }
 
-bool CSSGradientValue::hasAlpha(const RenderObject*) const
+bool CSSGradientValue::knownToBeOpaque(const RenderObject*) const
 {
     for (size_t i = 0; i < m_stops.size(); ++i) {
         if (m_stops[i].m_resolvedColor.hasAlpha())
-            return true;
+            return false;
     }
-    return false;
+    return true;
 }
 
 void CSSGradientValue::reportBaseClassMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     CSSImageGeneratorValue::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addMember(m_firstX);
-    info.addMember(m_firstY);
-    info.addMember(m_secondX);
-    info.addMember(m_secondY);
-    info.addMember(m_stops);
+    info.addMember(m_firstX, "firstX");
+    info.addMember(m_firstY, "firstY");
+    info.addMember(m_secondX, "secondX");
+    info.addMember(m_secondY, "secondY");
+    info.addMember(m_stops, "stops");
 }
 
 String CSSLinearGradientValue::customCssText() const
@@ -723,11 +723,43 @@ PassRefPtr<Gradient> CSSLinearGradientValue::createGradient(RenderObject* render
     return gradient.release();
 }
 
+bool CSSLinearGradientValue::equals(const CSSLinearGradientValue& other) const
+{
+    if (m_gradientType == CSSDeprecatedLinearGradient)
+        return other.m_gradientType == m_gradientType
+            && compareCSSValuePtr(m_firstX, other.m_firstX)
+            && compareCSSValuePtr(m_firstY, other.m_firstY)
+            && compareCSSValuePtr(m_secondX, other.m_secondX)
+            && compareCSSValuePtr(m_secondY, other.m_secondY)
+            && m_stops == other.m_stops;
+
+    if (m_repeating != other.m_repeating)
+        return false;
+
+    if (m_angle)
+        return compareCSSValuePtr(m_angle, other.m_angle) && m_stops == other.m_stops;
+
+    if (other.m_angle)
+        return false;
+
+    bool equalXorY = false;
+    if (m_firstX && m_firstY)
+        equalXorY = compareCSSValuePtr(m_firstX, other.m_firstX) && compareCSSValuePtr(m_firstY, other.m_firstY);
+    else if (m_firstX)
+        equalXorY =compareCSSValuePtr(m_firstX, other.m_firstX) && !other.m_firstY;
+    else if (m_firstY)
+        equalXorY = compareCSSValuePtr(m_firstY, other.m_firstY) && !other.m_firstX;
+    else
+        equalXorY = !other.m_firstX || !other.m_firstY;
+
+    return equalXorY && m_stops == other.m_stops;
+}
+
 void CSSLinearGradientValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     CSSGradientValue::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addMember(m_angle);
+    info.addMember(m_angle, "angle");
 }
 
 String CSSRadialGradientValue::customCssText() const
@@ -1112,16 +1144,62 @@ PassRefPtr<Gradient> CSSRadialGradientValue::createGradient(RenderObject* render
     return gradient.release();
 }
 
+bool CSSRadialGradientValue::equals(const CSSRadialGradientValue& other) const
+{
+    if (m_gradientType == CSSDeprecatedRadialGradient)
+        return other.m_gradientType == m_gradientType
+            && compareCSSValuePtr(m_firstX, other.m_firstX)
+            && compareCSSValuePtr(m_firstY, other.m_firstY)
+            && compareCSSValuePtr(m_secondX, other.m_secondX)
+            && compareCSSValuePtr(m_secondY, other.m_secondY)
+            && compareCSSValuePtr(m_firstRadius, other.m_firstRadius)
+            && compareCSSValuePtr(m_secondRadius, other.m_secondRadius)
+            && m_stops == other.m_stops;
+
+    if (m_repeating != other.m_repeating)
+        return false;
+
+    bool equalXorY = false;
+    if (m_firstX && m_firstY)
+        equalXorY = compareCSSValuePtr(m_firstX, other.m_firstX) && compareCSSValuePtr(m_firstY, other.m_firstY);
+    else if (m_firstX)
+        equalXorY = compareCSSValuePtr(m_firstX, other.m_firstX) && !other.m_firstY;
+    else if (m_firstY)
+        equalXorY = compareCSSValuePtr(m_firstY, other.m_firstY) && !other.m_firstX;
+    else
+        equalXorY == !other.m_firstX || !other.m_firstY;
+
+    if (!equalXorY)
+        return false;
+
+    bool equalShape = true;
+    bool equalSizingBehavior = true;
+    bool equalHorizontalAndVerticalSize = true;
+
+    if (m_shape)
+        equalShape = compareCSSValuePtr(m_shape, other.m_shape);
+    else if (m_sizingBehavior)
+        equalSizingBehavior = compareCSSValuePtr(m_sizingBehavior, other.m_sizingBehavior);
+    else if (m_endHorizontalSize && m_endVerticalSize)
+        equalHorizontalAndVerticalSize = compareCSSValuePtr(m_endHorizontalSize, other.m_endHorizontalSize) && compareCSSValuePtr(m_endVerticalSize, other.m_endVerticalSize);
+    else {
+        equalShape = !other.m_shape;
+        equalSizingBehavior = !other.m_sizingBehavior;
+        equalHorizontalAndVerticalSize = !other.m_endHorizontalSize && !other.m_endVerticalSize;
+    }
+    return equalShape && equalSizingBehavior && equalHorizontalAndVerticalSize && m_stops == other.m_stops;
+}
+
 void CSSRadialGradientValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     CSSGradientValue::reportBaseClassMemoryUsage(memoryObjectInfo);
-    info.addMember(m_firstRadius);
-    info.addMember(m_secondRadius);
-    info.addMember(m_shape);
-    info.addMember(m_sizingBehavior);
-    info.addMember(m_endHorizontalSize);
-    info.addMember(m_endVerticalSize);
+    info.addMember(m_firstRadius, "firstRadius");
+    info.addMember(m_secondRadius, "secondRadius");
+    info.addMember(m_shape, "shape");
+    info.addMember(m_sizingBehavior, "sizingBehavior");
+    info.addMember(m_endHorizontalSize, "endHorizontalSize");
+    info.addMember(m_endVerticalSize, "endVerticalSize");
 }
 
 } // namespace WebCore

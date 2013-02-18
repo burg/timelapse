@@ -62,10 +62,10 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-SelectorChecker::SelectorChecker(Document* document)
+SelectorChecker::SelectorChecker(Document* document, Mode mode)
     : m_strictParsing(!document->inQuirksMode())
     , m_documentIsHTML(document->isHTMLDocument())
-    , m_mode(ResolvingStyle)
+    , m_mode(mode)
 {
 }
 
@@ -139,9 +139,9 @@ inline bool checkTagValue(const Element* element, const CSSSelector* selector)
 
 }
 
-inline bool SelectorChecker::fastCheckRightmostSelector(const CSSSelector* selector, const Element* element, VisitedMatchType visitedMatchType) const
+bool SelectorChecker::fastCheckRightmostSelector(const CSSSelector* selector, const Element* element, SelectorChecker::VisitedMatchType visitedMatchType)
 {
-    ASSERT(isFastCheckableSelector(selector));
+    ASSERT(SelectorChecker::isFastCheckableSelector(selector));
 
     switch (selector->m_match) {
     case CSSSelector::Tag:
@@ -161,7 +161,7 @@ inline bool SelectorChecker::fastCheckRightmostSelector(const CSSSelector* selec
     return false;
 }
 
-bool SelectorChecker::fastCheck(const CSSSelector* selector, const Element* element) const
+bool SelectorChecker::fastCheck(const CSSSelector* selector, const Element* element)
 {
     ASSERT(fastCheckRightmostSelector(selector, element, VisitedMatchEnabled));
 
@@ -819,7 +819,13 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context, const Sib
             break;
         case CSSSelector::PseudoLang:
             {
-                AtomicString value = element->computeInheritedLanguage();
+                AtomicString value;
+#if ENABLE(VIDEO_TRACK)
+                if (element->isWebVTTElement())
+                    value = toWebVTTElement(element)->language();
+                else
+#endif
+                    value = element->computeInheritedLanguage();
                 const AtomicString& argument = selector->argument();
                 if (value.isEmpty() || !value.startsWith(argument, false))
                     break;
@@ -869,9 +875,9 @@ bool SelectorChecker::checkOne(const SelectorCheckingContext& context, const Sib
             return element->isOutOfRange();
 #if ENABLE(VIDEO_TRACK)
         case CSSSelector::PseudoFutureCue:
-            return (element->isWebVTTElement() && toWebVTTElement(element)->webVTTNodeType() == WebVTTNodeTypeFuture);
+            return (element->isWebVTTElement() && !toWebVTTElement(element)->isPastNode());
         case CSSSelector::PseudoPastCue:
-            return (element->isWebVTTElement() && toWebVTTElement(element)->webVTTNodeType() == WebVTTNodeTypePast);
+            return (element->isWebVTTElement() && toWebVTTElement(element)->isPastNode());
 #endif
 
         case CSSSelector::PseudoHorizontal:
@@ -993,7 +999,7 @@ bool SelectorChecker::checkScrollbarPseudoClass(Document* document, const CSSSel
     }
 }
 
-bool SelectorChecker::commonPseudoClassSelectorMatches(const Element* element, const CSSSelector* selector, VisitedMatchType visitedMatchType) const
+bool SelectorChecker::commonPseudoClassSelectorMatches(const Element* element, const CSSSelector* selector, VisitedMatchType visitedMatchType)
 {
     ASSERT(isCommonPseudoClassSelector(selector));
     switch (selector->pseudoType()) {
@@ -1058,6 +1064,13 @@ unsigned SelectorChecker::determineLinkMatchType(const CSSSelector* selector)
 bool SelectorChecker::isFrameFocused(const Element* element)
 {
     return element->document()->frame() && element->document()->frame()->selection()->isFocusedAndActive();
+}
+
+bool SelectorChecker::matchesFocusPseudoClass(const Element* element)
+{
+    if (InspectorInstrumentation::forcePseudoState(const_cast<Element*>(element), CSSSelector::PseudoFocus))
+        return true;
+    return element->focused() && isFrameFocused(element);
 }
 
 template

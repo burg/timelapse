@@ -29,6 +29,8 @@
 #if ENABLE(VIDEO)
 #include "MediaControls.h"
 
+#include "ExceptionCodePlaceholder.h"
+
 namespace WebCore {
 
 MediaControls::MediaControls(Document* document)
@@ -109,12 +111,7 @@ void MediaControls::reset()
         }
     }
 
-    if (m_toggleClosedCaptionsButton) {
-        if (m_mediaController->hasClosedCaptions())
-            m_toggleClosedCaptionsButton->show();
-        else
-            m_toggleClosedCaptionsButton->hide();
-    }
+    refreshClosedCaptionsButtonVisibility();
 
     if (m_fullScreenButton) {
         if (m_mediaController->supportsFullscreen() && m_mediaController->hasVideo())
@@ -222,8 +219,7 @@ void MediaControls::updateCurrentTimeDisplay()
     if (!page)
         return;
 
-    ExceptionCode ec;
-    m_currentTimeDisplay->setInnerText(page->theme()->formatMediaControlsTime(now), ec);
+    m_currentTimeDisplay->setInnerText(page->theme()->formatMediaControlsTime(now), IGNORE_EXCEPTION);
     m_currentTimeDisplay->setCurrentValue(now);
 }
 
@@ -252,7 +248,7 @@ void MediaControls::changedClosedCaptionsVisibility()
         m_toggleClosedCaptionsButton->updateDisplayType();
 }
 
-void MediaControls::closedCaptionTracksChanged()
+void MediaControls::refreshClosedCaptionsButtonVisibility()
 {
     if (!m_toggleClosedCaptionsButton)
         return;
@@ -261,6 +257,11 @@ void MediaControls::closedCaptionTracksChanged()
         m_toggleClosedCaptionsButton->show();
     else
         m_toggleClosedCaptionsButton->hide();
+}
+
+void MediaControls::closedCaptionTracksChanged()
+{
+    refreshClosedCaptionsButtonVisibility();
 }
 
 void MediaControls::enteredFullscreen()
@@ -380,8 +381,7 @@ void MediaControls::createTextTrackDisplay()
         m_textDisplayContainer->setMediaController(m_mediaController);
 
     // Insert it before the first controller element so it always displays behind the controls.
-    ExceptionCode ec;
-    insertBefore(textDisplayContainer, m_panel, ec, true);
+    insertBefore(textDisplayContainer, m_panel, IGNORE_EXCEPTION, true);
     textDisplayContainer->createSubtrees(document());
     textDisplayContainer.release();
 }
@@ -406,6 +406,12 @@ void MediaControls::updateTextTrackDisplay()
         createTextTrackDisplay();
 
     m_textDisplayContainer->updateDisplay();
+}
+    
+void MediaControls::textTrackPreferencesChanged()
+{
+    if (m_textDisplayContainer)
+        m_textDisplayContainer->updateSizes(true);
 }
 #endif
 

@@ -109,6 +109,8 @@ public:
     enum TextTrackType { TrackElement, AddTrack, InBand };
     TextTrackType trackType() const { return m_trackType; }
 
+    virtual bool isClosedCaptions() const { return false; }
+
     int trackIndex();
     void invalidateTrackIndex();
 

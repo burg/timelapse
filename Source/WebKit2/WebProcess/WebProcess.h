@@ -30,6 +30,7 @@
 #include "ChildProcess.h"
 #include "DownloadManager.h"
 #include "EventDispatcher.h"
+#include "PluginProcessConnectionManager.h"
 #include "ResourceCachesToClear.h"
 #include "SandboxExtension.h"
 #include "SharedMemory.h"
@@ -67,10 +68,6 @@ QT_END_NAMESPACE
 namespace WebCore {
     class ResourceRequest;
     struct PluginInfo;
-
-#if ENABLE(WEB_INTENTS)
-    class PlatformMessagePortChannel;
-#endif
 }
 
 namespace WebKit {
@@ -96,11 +93,7 @@ class NetworkProcessConnection;
 class WebResourceLoadScheduler;
 #endif
 
-#if ENABLE(PLUGIN_PROCESS)
-class PluginProcessConnectionManager;
-#endif
-
-class WebProcess : public ChildProcess, private CoreIPC::Connection::QueueClient, private DownloadManager::Client {
+class WebProcess : public ChildProcess, private DownloadManager::Client {
 public:
     static WebProcess& shared();
 
@@ -113,7 +106,7 @@ public:
     template <typename T>
     void addSupplement()
     {
-        m_supplements.add(T::supplementName(), new T(this));
+        m_supplements.add(T::supplementName(), adoptPtr<WebProcessSupplement>(new T(this)));
     }
 
     WebConnectionToUIProcess* webConnectionToUIProcess() const { return m_webConnection.get(); }
@@ -122,12 +115,6 @@ public:
     void createWebPage(uint64_t pageID, const WebPageCreationParameters&);
     void removeWebPage(uint64_t pageID);
     WebPage* focusedWebPage() const;
-
-#if ENABLE(WEB_INTENTS) 
-    uint64_t addMessagePortChannel(PassRefPtr<WebCore::PlatformMessagePortChannel>);
-    WebCore::PlatformMessagePortChannel* messagePortChannel(uint64_t);
-    void removeMessagePortChannel(uint64_t);
-#endif
 
     InjectedBundle* injectedBundle() const { return m_injectedBundle.get(); }
 
@@ -239,10 +226,6 @@ private:
     void clearPluginSiteData(const Vector<String>& pluginPaths, const Vector<String>& sites, uint64_t flags, uint64_t maxAgeInSeconds, uint64_t callbackID);
 #endif
 
-#if ENABLE(PLUGIN_PROCESS)
-    void pluginProcessCrashed(CoreIPC::Connection*, const String& pluginPath, uint32_t processType);
-#endif
-
     void startMemorySampler(const SandboxExtension::Handle&, const String&, const double);
     void stopMemorySampler();
 
@@ -281,16 +264,8 @@ private:
     virtual void didClose(CoreIPC::Connection*);
     virtual void didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference messageReceiverName, CoreIPC::StringReference messageName) OVERRIDE;
 
-    // CoreIPC::Connection::QueueClient
-    virtual void didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection*, CoreIPC::MessageDecoder&, bool& didHandleMessage) OVERRIDE;
-
     // Implemented in generated WebProcessMessageReceiver.cpp
     void didReceiveWebProcessMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
-    void didReceiveWebProcessMessageOnConnectionWorkQueue(CoreIPC::Connection*, CoreIPC::MessageDecoder&, bool& didHandleMessage);
-
-#if ENABLE(NETSCAPE_PLUGIN_API)
-    void didGetPlugins(CoreIPC::Connection*, uint64_t requestID, const Vector<WebCore::PluginInfo>&);
-#endif
 
     RefPtr<WebConnectionToUIProcess> m_webConnection;
 
@@ -328,11 +303,7 @@ private:
 
     HashMap<uint64_t, WebFrame*> m_frameMap;
 
-#if ENABLE(WEB_INTENTS)
-    HashMap<uint64_t, RefPtr<WebCore::PlatformMessagePortChannel> > m_messagePortChannels;
-#endif
-
-    typedef HashMap<AtomicString, WebProcessSupplement*> WebProcessSupplementMap;
+    typedef HashMap<const char*, OwnPtr<WebProcessSupplement>, PtrHash<const char*> > WebProcessSupplementMap;
     WebProcessSupplementMap m_supplements;
 
     TextCheckerState m_textCheckerState;
@@ -353,7 +324,7 @@ private:
 #endif
 
 #if ENABLE(PLUGIN_PROCESS)
-    PluginProcessConnectionManager* m_pluginProcessConnectionManager;
+    PluginProcessConnectionManager m_pluginProcessConnectionManager;
 #endif
 
 #if USE(SOUP)

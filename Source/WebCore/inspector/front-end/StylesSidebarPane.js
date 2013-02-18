@@ -239,7 +239,7 @@ WebInspector.StylesSidebarPane.prototype = {
                 userCallback();
         }
 
-        if (this._computedStylePane.expanded || forceFetchComputedStyle) {
+        if (this._computedStylePane.isShowing() || forceFetchComputedStyle) {
             this._refreshUpdateInProgress = true;
             WebInspector.cssModel.getComputedStyleAsync(node.id, computedStyleCallback.bind(this));
         } else {
@@ -302,7 +302,7 @@ WebInspector.StylesSidebarPane.prototype = {
             resultStyles.computedStyle = computedStyle;
         }
 
-        if (this._computedStylePane.expanded)
+        if (this._computedStylePane.isShowing())
             WebInspector.cssModel.getComputedStyleAsync(node.id, computedCallback.bind(this));
         WebInspector.cssModel.getInlineStylesAsync(node.id, inlineCallback.bind(this));
         WebInspector.cssModel.getMatchedStylesAsync(node.id, true, true, stylesCallback.bind(this));
@@ -671,7 +671,7 @@ WebInspector.StylesSidebarPane.prototype = {
     _createNewRule: function(event)
     {
         event.consume();
-        this.expanded = true;
+        this.expand();
         this.addBlankSection().startEditingSelector();
     },
 
@@ -799,16 +799,25 @@ WebInspector.ComputedStyleSidebarPane = function()
 }
 
 WebInspector.ComputedStyleSidebarPane.prototype = {
-
-    // Overriding expand() rather than onexpand() to eliminate the visual slowness due to a possible backend trip.
-    expand: function()
+    wasShown: function()
     {
-        function callback()
-        {
-            WebInspector.SidebarPane.prototype.expand.call(this);
-        }
+        WebInspector.SidebarPane.prototype.wasShown.call(this);
+        if (!this._hasFreshContent)
+            this.prepareContent();
+    },
 
-        this._stylesSidebarPane._refreshUpdate(null, true, callback.bind(this));
+    /**
+     * @param {function()=} callback
+     */
+    prepareContent: function(callback)
+    {
+        function wrappedCallback() {
+            this._hasFreshContent = true;
+            if (callback)
+                callback();
+            delete this._hasFreshContent;
+        }
+        this._stylesSidebarPane._refreshUpdate(null, true, wrappedCallback.bind(this));
     },
 
     __proto__: WebInspector.SidebarPane.prototype
@@ -1747,12 +1756,12 @@ WebInspector.StylePropertyTreeElement.prototype = {
 
             function processColor(text)
             {
-                try {
-                    var color = new WebInspector.Color(text);
-                } catch (e) {
-                    return document.createTextNode(text);
-                }
+                var color = WebInspector.Color.parse(text);
 
+                // We can be called with valid non-color values of |text| (like 'none' from border style) 
+                if (!color) 
+                    return document.createTextNode(text);
+                
                 var format = getFormat();
                 var hasSpectrum = self._parentPane;
                 var spectrumHelper = hasSpectrum ? self._parentPane._spectrumHelper : null;

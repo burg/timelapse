@@ -26,8 +26,7 @@
 #ifndef RenderSnapshottedPlugIn_h
 #define RenderSnapshottedPlugIn_h
 
-#include "RenderEmbeddedObject.h"
-
+#include "RenderBlock.h"
 #include "RenderImageResource.h"
 #include "Timer.h"
 
@@ -35,16 +34,10 @@ namespace WebCore {
 
 class HTMLPlugInImageElement;
 
-class RenderSnapshottedPlugIn : public RenderEmbeddedObject {
+class RenderSnapshottedPlugIn : public RenderBlock {
 public:
     explicit RenderSnapshottedPlugIn(HTMLPlugInImageElement*);
     virtual ~RenderSnapshottedPlugIn();
-
-    enum LabelSize {
-        LabelSizeSmall,
-        LabelSizeLarge,
-        NoLabel,
-    };
 
     void updateSnapshot(PassRefPtr<Image>);
 
@@ -60,15 +53,13 @@ private:
     virtual CursorDirective getCursor(const LayoutPoint&, Cursor&) const OVERRIDE;
     virtual bool isSnapshottedPlugIn() const OVERRIDE { return true; }
     virtual void paint(PaintInfo&, const LayoutPoint&) OVERRIDE;
-    virtual void paintReplaced(PaintInfo&, const LayoutPoint&) OVERRIDE;
 
-    void paintReplacedSnapshot(PaintInfo&, const LayoutPoint&);
-    void paintReplacedSnapshotWithLabel(PaintInfo&, const LayoutPoint&);
-    void paintSnapshot(Image*, PaintInfo&, const LayoutPoint&);
+    void paintSnapshot(PaintInfo&, const LayoutPoint&);
+    void paintSnapshotWithLabel(PaintInfo&, const LayoutPoint&);
+    void paintSnapshotImage(Image*, PaintInfo&, const LayoutPoint&);
     void repaintLabel();
 
-    LayoutRect tryToFitStartLabel(LabelSize, const LayoutRect& contentBox) const;
-    Image* startLabelImage(LabelSize) const;
+    virtual void layout() OVERRIDE;
 
     enum ShowReason {
         UserMousedOver,

@@ -74,8 +74,6 @@ typedef bool (*WKPageShouldGoToBackForwardListItemCallback)(WKPageRef page, WKBa
 typedef void (*WKPageDidNewFirstVisuallyNonEmptyLayoutCallback)(WKPageRef page, WKTypeRef userData, const void *clientInfo);
 typedef void (*WKPageWillGoToBackForwardListItemCallback)(WKPageRef page, WKBackForwardListItemRef item, WKTypeRef userData, const void *clientInfo);
 typedef void (*WKPagePluginDidFailCallback)(WKPageRef page, WKErrorCode errorCode, WKStringRef mimeType, WKStringRef pluginIdentifier, WKStringRef pluginVersion, const void* clientInfo);
-typedef void (*WKPageDidReceiveIntentForFrameCallback)(WKPageRef page, WKFrameRef frame, WKIntentDataRef intent, WKTypeRef userData, const void *clientInfo);
-typedef void (*WKPageRegisterIntentServiceForFrameCallback)(WKPageRef page, WKFrameRef frame, WKIntentServiceInfoRef serviceInfo, WKTypeRef userData, const void *clientInfo);
 typedef void (*WKPageDidLayoutCallback)(WKPageRef page, WKLayoutMilestones milestones, WKTypeRef userData, const void *clientInfo);
 
 // Deprecated
@@ -127,8 +125,8 @@ struct WKPageLoaderClient {
     WKPagePluginDidFailCallback                                         pluginDidFail;
 
     // Version 2
-    WKPageDidReceiveIntentForFrameCallback                              didReceiveIntentForFrame;
-    WKPageRegisterIntentServiceForFrameCallback                         registerIntentServiceForFrame;
+    void                                                                (*didReceiveIntentForFrame_unavailable)(void);
+    void                                                                (*registerIntentServiceForFrame_unavailable)(void);
 
     WKPageDidLayoutCallback                                             didLayout;
 };
@@ -173,6 +171,13 @@ enum {
 };
 typedef uint32_t WKPluginUnavailabilityReason;
 
+enum {
+    kWKPluginLoadPolicyLoadNormally = 0,
+    kWKPluginLoadPolicyBlocked,
+    kWKPluginLoadPolicyInactive,
+};
+typedef uint32_t WKPluginLoadPolicy;
+
 // UI Client
 typedef WKPageRef (*WKPageCreateNewPageCallback)(WKPageRef page, WKURLRequestRef urlRequest, WKDictionaryRef features, WKEventModifiers modifiers, WKEventMouseButton mouseButton, const void *clientInfo);
 typedef void (*WKPageRunJavaScriptAlertCallback)(WKPageRef page, WKStringRef alertText, WKFrameRef frame, const void *clientInfo);
@@ -210,6 +215,7 @@ typedef void (*WKPageDecidePolicyForNotificationPermissionRequestCallback)(WKPag
 typedef void (*WKPageUnavailablePluginButtonClickedCallback)(WKPageRef page, WKPluginUnavailabilityReason pluginUnavailabilityReason, WKStringRef mimeType, WKStringRef url, WKStringRef pluginsPageURL, const void* clientInfo);
 typedef void (*WKPageShowColorPickerCallback)(WKPageRef page, WKStringRef initialColor, WKColorPickerResultListenerRef listener, const void* clientInfo);
 typedef void (*WKPageHideColorPickerCallback)(WKPageRef page, const void* clientInfo);
+typedef WKPluginLoadPolicy (*WKPagePluginLoadPolicyCallback)(WKPageRef page, WKStringRef identifier, WKStringRef displayName, WKURLRef documentURL, WKPluginLoadPolicy currentPluginLoadPolicy, const void* clientInfo);
 
 // Deprecated    
 typedef WKPageRef (*WKPageCreateNewPageCallback_deprecatedForUseWithV0)(WKPageRef page, WKDictionaryRef features, WKEventModifiers modifiers, WKEventMouseButton mouseButton, const void *clientInfo);
@@ -270,6 +276,7 @@ struct WKPageUIClient {
     // Version 2
     WKPageShowColorPickerCallback                                       showColorPicker;
     WKPageHideColorPickerCallback                                       hideColorPicker;
+    WKPagePluginLoadPolicyCallback                                      pluginLoadPolicy;
 };
 typedef struct WKPageUIClient WKPageUIClient;
 
@@ -488,8 +495,6 @@ WK_EXPORT void WKPageGetSelectionAsWebArchiveData(WKPageRef page, void* context,
 
 typedef void (*WKPageForceRepaintFunction)(WKErrorRef, void*);
 WK_EXPORT void WKPageForceRepaint(WKPageRef page, void* context, WKPageForceRepaintFunction function);
-
-WK_EXPORT void WKPageDeliverIntentToFrame(WKPageRef page, WKFrameRef frame, WKIntentDataRef intent);
 
 /*
     Some of the more common command name strings include the following, although any WebCore EditorCommand string is supported:

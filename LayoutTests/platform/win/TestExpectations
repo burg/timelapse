@@ -44,6 +44,10 @@ css3/filters/effect-sepia-hw.html
 # Custom filters not yet supported on Windows
 css3/filters/custom
 
+# Remove from list after enabling CANVAS_PATH
+fast/canvas/canvas-currentPath.html
+fast/canvas/canvas-path-constructors.html
+
 # Needs rebaseline after bug 97217 is fixed
 # https://bugs.webkit.org/show_bug.cgi?id=97325
 css3/masking/clip-path-circle-relative-overflow.html
@@ -53,6 +57,9 @@ fast/css/image-set-parsing.html
 fast/css/image-set-parsing-invalid.html
 fast/css/cursor-parsing-image-set.html
 fast/events/mouse-cursor-image-set.html
+
+# X-Content-Type-Options (ENABLE_NOSNIFF) is not enabled.
+http/tests/security/contentTypeOptions
 
 # https://bugs.webkit.org/show_bug.cgi?id=77645
 css3/filters/filtered-compositing-descendant.html
@@ -567,8 +574,6 @@ fast/table/frame-and-rules.html
 fast/table/giantCellspacing.html
 
 # Not investigated yet
-editing/deleting/5408255.html
-editing/deleting/deletionUI-single-instance.html
 editing/pasteboard/input-field-1.html
 editing/selection/contains-boundaries.html
 editing/undo/5378473.html
@@ -1093,6 +1098,11 @@ editing/spelling/spelling-marker-description.html
 # IndexedDB is not yet enabled.
 storage/indexeddb
 http/tests/inspector/indexeddb
+http/tests/security/cross-origin-indexeddb-allowed.html
+http/tests/security/cross-origin-indexeddb.html
+http/tests/security/cross-origin-worker-indexeddb-allowed.html
+http/tests/security/cross-origin-worker-indexeddb.html
+http/tests/security/no-indexeddb-from-sandbox.html
 
 # StorageTracker is not enabled.
 storage/domstorage/localstorage/storagetracker
@@ -1216,6 +1226,7 @@ fast/events/constructors/mouse-event-constructor.html
 fast/events/constructors/composition-event-constructor.html
 fast/events/constructors/wheel-event-constructor.html
 fast/events/constructors/keyboard-event-constructor.html
+fast/events/constructors/focus-event-constructor.html
 
 # Disable until the windows WebKit API supports injecting in the top frame only.
 # https://bugs.webkit.org/show_bug.cgi?id=41800
@@ -1517,6 +1528,7 @@ http/tests/security/webgl-remote-read-remote-image-allowed-with-credentials.html
 http/tests/security/webgl-remote-read-remote-image-blocked-no-crossorigin.html
 inspector/profiler/webgl
 fast/images/webgl-teximage2d.html
+webgl
 
 # Tests that require ENABLE(DOWNLOAD_ATTRIBUTE).
 fast/dom/HTMLAnchorElement/anchor-nodownload.html
@@ -1637,9 +1649,6 @@ fast/events/platform-wheelevent-paging-y-in-non-scrolling-div.html
 fast/events/platform-wheelevent-paging-y-in-non-scrolling-page.html
 fast/events/platform-wheelevent-paging-y-in-scrolling-div.html
 fast/events/platform-wheelevent-paging-y-in-scrolling-page.html
-
-# Web Intents is not yet enabled.
-webintents/
 
 # Pointer Lock is not implemented.
 pointer-lock/
@@ -1819,9 +1828,6 @@ inspector/styles/override-screen-size.html
 # Interferes with the other requestAnimationFrame tests
 # https://bugs.webkit.org/show_bug.cgi?id=85689
 fast/animation/request-animation-frame-disabled.html
-
-# https://bugs.webkit.org/show_bug.cgi?id=86000
-http/tests/security/referrer-policy-redirect-link.html
 
 # Inspector only supports evaluation in content script world with v8, see https://bugs.webkit.org/show_bug.cgi?id=85709
 inspector/extensions/extensions-eval-content-script.html 
@@ -2044,6 +2050,9 @@ fast/forms/datetimelocal-multiple-fields
 fast/forms/month-multiple-fields
 fast/forms/time-multiple-fields
 fast/forms/week-multiple-fields
+
+# Needs a rebaseline after WK108429 lands.
+svg/custom/text-ctm.svg
 
 # Require rebaseline after https://bugs.webkit.org/show_bug.cgi?id=84286
 fast/block/float/avoidance-rtl.html
@@ -2489,6 +2498,7 @@ fast/js/kde/Array.html
 # No support for exposing in-band text tracks
 webkit.org/b/103770 media/track/track-in-band.html [ Skip ]
 webkit.org/b/103770 media/track/track-in-band-cues-added-once.html [ Skip ]
+webkit.org/b/103770 media/track/track-in-band-style.html [ Skip ]
 
 # https://bugs.webkit.org/show_bug.cgi?id=97026
 fast/events/keydown-leftright-keys.html
@@ -2513,6 +2523,7 @@ media/track/track-cue-rendering-snap-to-lines-not-set.html
 media/track/track-cue-rendering-vertical.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=106477
+media/track/track-user-preferences.html
 media/video-controls-captions-trackmenu-localized.html
 media/video-controls-captions-trackmenu-sorted.html
 media/video-controls-captions-trackmenu.html
@@ -2589,6 +2600,18 @@ fast/js/reentrant-caching.html
 fast/repaint/caret-with-transformation.html
 http/tests/incremental/pause-in-script-element.pl
 fast/text/international/harfbuzz-buffer-overrun.html
+compositing/filters/sw-nested-shadow-overlaps-hw-nested-shadow.html
+compositing/iframes/iframe-size-from-zero.html
+compositing/iframes/overlapped-iframe-iframe.html
+compositing/tiling/tiled-layer-resize.html
+css3/filters/custom-with-at-rule-syntax/parsing-custom-function-valid.html
+editing/input/ime-composition-clearpreedit.html
+fast/canvas/canvas-composite-alpha.html
+fast/canvas/canvas-quadratic-same-endpoint.html
+fast/events/ime-composition-events-001.html
+fast/text/international/hebrew-vowels.html
+jquery/attributes.html
+media/W3C/video/events/event_canplaythrough.html		
 
 # Spellchecker behavior tests.
 webkit.org/b/108370 editing/spelling/spelling-double-clicked-word.html [ Skip ]

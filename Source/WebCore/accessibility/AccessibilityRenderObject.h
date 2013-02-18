@@ -94,7 +94,6 @@ public:
     
     // Provides common logic used by all elements when determining isIgnored.
     AccessibilityObjectInclusion accessibilityIsIgnoredBase() const;
-    virtual bool accessibilityIsIgnored() const;
     
     virtual int layoutCount() const;
     virtual double estimatedLoadingProgress() const;
@@ -173,6 +172,7 @@ public:
     virtual void visibleChildren(AccessibilityChildrenVector&);
     virtual void tabChildren(AccessibilityChildrenVector&);
     virtual bool shouldFocusActiveDescendant() const;
+    bool shouldNotifyActiveDescendant() const;
     virtual AccessibilityObject* activeDescendant() const;
     virtual void handleActiveDescendantChanged();
     virtual void handleAriaExpandedChanged();
@@ -223,6 +223,7 @@ protected:
     virtual bool isDetached() const { return !m_renderer; }
 
     virtual AccessibilityRole determineAccessibilityRole();
+    virtual bool computeAccessibilityIsIgnored() const;
 
 private:
     void ariaListboxSelectedChildren(AccessibilityChildrenVector&);
@@ -277,7 +278,7 @@ private:
     virtual bool ariaLiveRegionBusy() const;    
     
     bool inheritsPresentationalRole() const;
-    
+
 #if ENABLE(MATHML)
     // All math elements return true for isMathElement().
     virtual bool isMathElement() const;

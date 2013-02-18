@@ -35,11 +35,13 @@
 #include "ExceptionCode.h"
 #include "Frame.h"
 #include "GroupSettings.h"
+#include "HistogramSupport.h"
 #include "IDBBindingUtilities.h"
 #include "IDBDatabase.h"
 #include "IDBDatabaseCallbacksImpl.h"
 #include "IDBDatabaseException.h"
 #include "IDBFactoryBackendInterface.h"
+#include "IDBHistograms.h"
 #include "IDBKey.h"
 #include "IDBKeyRange.h"
 #include "IDBOpenDBRequest.h"
@@ -95,10 +97,14 @@ static String getIndexedDBDatabasePath(ScriptExecutionContext* context)
 }
 }
 
-PassRefPtr<IDBRequest> IDBFactory::getDatabaseNames(ScriptExecutionContext* context, ExceptionCode&)
+PassRefPtr<IDBRequest> IDBFactory::getDatabaseNames(ScriptExecutionContext* context, ExceptionCode& ec)
 {
     if (!isContextValid(context))
         return 0;
+    if (!context->securityOrigin()->canAccessDatabase(context->topOrigin())) {
+        ec = SECURITY_ERR;
+        return 0;
+    }
 
     RefPtr<IDBRequest> request = IDBRequest::create(context, IDBAny::create(this), 0);
     m_backend->getDatabaseNames(request, context->securityOrigin(), context, getIndexedDBDatabasePath(context));
@@ -118,6 +124,7 @@ PassRefPtr<IDBOpenDBRequest> IDBFactory::open(ScriptExecutionContext* context, c
 
 PassRefPtr<IDBOpenDBRequest> IDBFactory::openInternal(ScriptExecutionContext* context, const String& name, int64_t version, ExceptionCode& ec)
 {
+    HistogramSupport::histogramEnumeration("WebCore.IndexedDB.FrontEndAPICalls", IDBOpenCall, IDBMethodsMax);
     ASSERT(version >= 1 || version == IDBDatabaseMetadata::NoIntVersion);
     if (name.isNull()) {
         ec = TypeError;
@@ -125,6 +132,10 @@ PassRefPtr<IDBOpenDBRequest> IDBFactory::openInternal(ScriptExecutionContext* co
     }
     if (!isContextValid(context))
         return 0;
+    if (!context->securityOrigin()->canAccessDatabase(context->topOrigin())) {
+        ec = SECURITY_ERR;
+        return 0;
+    }
 
     RefPtr<IDBDatabaseCallbacksImpl> databaseCallbacks = IDBDatabaseCallbacksImpl::create();
     int64_t transactionId = IDBDatabase::nextTransactionId();
@@ -140,12 +151,17 @@ PassRefPtr<IDBOpenDBRequest> IDBFactory::open(ScriptExecutionContext* context, c
 
 PassRefPtr<IDBOpenDBRequest> IDBFactory::deleteDatabase(ScriptExecutionContext* context, const String& name, ExceptionCode& ec)
 {
+    HistogramSupport::histogramEnumeration("WebCore.IndexedDB.FrontEndAPICalls", IDBDeleteDatabaseCall, IDBMethodsMax);
     if (name.isNull()) {
         ec = TypeError;
         return 0;
     }
     if (!isContextValid(context))
         return 0;
+    if (!context->securityOrigin()->canAccessDatabase(context->topOrigin())) {
+        ec = SECURITY_ERR;
+        return 0;
+    }
 
     RefPtr<IDBOpenDBRequest> request = IDBOpenDBRequest::create(context, 0, 0, IDBDatabaseMetadata::DefaultIntVersion);
     m_backend->deleteDatabase(name, request, context->securityOrigin(), context, getIndexedDBDatabasePath(context));

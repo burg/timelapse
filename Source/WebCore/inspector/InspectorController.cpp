@@ -54,6 +54,7 @@
 #include "InspectorFileSystemAgent.h"
 #include "InspectorFrontend.h"
 #include "InspectorFrontendClient.h"
+#include "InspectorHeapProfilerAgent.h"
 #include "InspectorIndexedDBAgent.h"
 #include "InspectorInputAgent.h"
 #include "InspectorInstrumentation.h"
@@ -154,6 +155,9 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     OwnPtr<InspectorProfilerAgent> profilerAgentPtr(InspectorProfilerAgent::create(m_instrumentingAgents.get(), consoleAgent, page, m_state.get(), m_injectedScriptManager.get()));
     m_profilerAgent = profilerAgentPtr.get();
     m_agents.append(profilerAgentPtr.release());
+
+    m_agents.append(InspectorHeapProfilerAgent::create(m_instrumentingAgents.get(), m_state.get(), m_injectedScriptManager.get()));
+
 #endif
 
 #if ENABLE(WORKERS)
@@ -401,28 +405,28 @@ void InspectorController::setResourcesDataSizeLimitsFromInternals(int maximumRes
 void InspectorController::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::InspectorController);
-    info.addMember(m_inspectorAgent);
-    info.addMember(m_instrumentingAgents);
-    info.addMember(m_injectedScriptManager);
-    info.addMember(m_state);
-    info.addMember(m_overlay);
+    info.addMember(m_inspectorAgent, "inspectorAgent");
+    info.addMember(m_instrumentingAgents, "instrumentingAgents");
+    info.addMember(m_injectedScriptManager, "injectedScriptManager");
+    info.addMember(m_state, "state");
+    info.addMember(m_overlay, "overlay");
 
-    info.addMember(m_inspectorAgent);
-    info.addMember(m_domAgent);
-    info.addMember(m_resourceAgent);
-    info.addMember(m_pageAgent);
+    info.addMember(m_inspectorAgent, "inspectorAgent");
+    info.addMember(m_domAgent, "domAgent");
+    info.addMember(m_resourceAgent, "resourceAgent");
+    info.addMember(m_pageAgent, "pageAgent");
 #if ENABLE(JAVASCRIPT_DEBUGGER)
-    info.addMember(m_debuggerAgent);
-    info.addMember(m_domDebuggerAgent);
-    info.addMember(m_profilerAgent);
+    info.addMember(m_debuggerAgent, "debuggerAgent");
+    info.addMember(m_domDebuggerAgent, "domDebuggerAgent");
+    info.addMember(m_profilerAgent, "profilerAgent");
 #endif
 
-    info.addMember(m_inspectorBackendDispatcher);
-    info.addMember(m_inspectorFrontendClient);
-    info.addMember(m_inspectorFrontend);
-    info.addMember(m_page);
+    info.addMember(m_inspectorBackendDispatcher, "inspectorBackendDispatcher");
+    info.addMember(m_inspectorFrontendClient, "inspectorFrontendClient");
+    info.addMember(m_inspectorFrontend, "inspectorFrontend");
+    info.addMember(m_page, "page");
     info.addWeakPointer(m_inspectorClient);
-    info.addMember(m_agents);
+    info.addMember(m_agents, "agents");
 }
 
 void InspectorController::willProcessTask()
@@ -447,8 +451,7 @@ void InspectorController::didProcessTask()
 HashMap<String, size_t> InspectorController::processMemoryDistribution() const
 {
     HashMap<String, size_t> memoryInfo;
-    RefPtr<InspectorObject> graph;
-    m_memoryAgent->getProcessMemoryDistributionAsMap(false, graph, &memoryInfo);
+    m_memoryAgent->getProcessMemoryDistributionMap(&memoryInfo);
     return memoryInfo;
 }
 

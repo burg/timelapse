@@ -465,7 +465,9 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::requestResource(Cache
     if (!resource)
         return 0;
 
-    resource->setLoadPriority(request.priority());
+    if (!request.forPreload() || policy != Use)
+        resource->setLoadPriority(request.priority());
+
     if ((policy != Use || resource->stillNeedsLoad()) && CachedResourceRequest::NoDefer == request.defer()) {
         resource->load(this, request.options());
 
@@ -477,10 +479,9 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::requestResource(Cache
         }
     }
 
-#if PLATFORM(CHROMIUM) || PLATFORM(MAC)
+#if PLATFORM(CHROMIUM)
     // FIXME: Temporarily leave main resource caching disabled for chromium, see https://bugs.webkit.org/show_bug.cgi?id=107962
     // Ensure main resources aren't preloaded, and other main resource loads are removed from cache to prevent reuse.
-    // FIXME: Temporarily leave main resource caching disabled on Mac port per webkit.org/b/108380 until we track down the root cause.
     if (type == CachedResource::MainResource) {
         ASSERT(policy != Use);
         ASSERT(policy != Revalidate);
@@ -583,7 +584,7 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
         return Use;
     
     // CachePolicyHistoryBuffer uses the cache no matter what.
-    if (cachePolicy() == CachePolicyHistoryBuffer)
+    if (cachePolicy(type) == CachePolicyHistoryBuffer)
         return Use;
 
     // Don't reuse resources with Cache-control: no-store.
@@ -608,7 +609,7 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
         return Use;
 
     // CachePolicyReload always reloads
-    if (cachePolicy() == CachePolicyReload) {
+    if (cachePolicy(type) == CachePolicyReload) {
         LOG(ResourceLoading, "CachedResourceLoader::determineRevalidationPolicy reloading due to CachePolicyReload.");
         return Reload;
     }
@@ -624,7 +625,7 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
         return Use;
 
     // Check if the cache headers requires us to revalidate (cache expiration for example).
-    if (existingResource->mustRevalidateDueToCacheHeaders(cachePolicy())) {
+    if (existingResource->mustRevalidateDueToCacheHeaders(cachePolicy(type))) {
         // See if the resource has usable ETag or Last-modified headers.
         if (existingResource->canUseCacheValidator())
             return Revalidate;
@@ -700,9 +701,17 @@ void CachedResourceLoader::reloadImagesIfNotDeferred()
     }
 }
 
-CachePolicy CachedResourceLoader::cachePolicy() const
+CachePolicy CachedResourceLoader::cachePolicy(CachedResource::Type type) const
 {
-    return frame() ? frame()->loader()->subresourceCachePolicy() : CachePolicyVerify;
+    if (!frame())
+        return CachePolicyVerify;
+
+    if (type != CachedResource::MainResource)
+        return frame()->loader()->subresourceCachePolicy();
+    
+    if (frame()->loader()->loadType() == FrameLoadTypeReloadFromOrigin || frame()->loader()->loadType() == FrameLoadTypeReload)
+        return CachePolicyReload;
+    return CachePolicyVerify;
 }
 
 void CachedResourceLoader::removeCachedResource(CachedResource* resource) const
@@ -962,13 +971,13 @@ void CachedResourceLoader::printPreloadStats()
 void CachedResourceLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
-    info.addMember(m_documentResources);
-    info.addMember(m_document);
-    info.addMember(m_documentLoader);
-    info.addMember(m_validatedURLs);
-    info.addMember(m_preloads);
-    info.addMember(m_pendingPreloads);
-    info.addMember(m_garbageCollectDocumentResourcesTimer);
+    info.addMember(m_documentResources, "documentResources");
+    info.addMember(m_document, "document");
+    info.addMember(m_documentLoader, "documentLoader");
+    info.addMember(m_validatedURLs, "validatedURLs");
+    info.addMember(m_preloads, "preloads");
+    info.addMember(m_pendingPreloads, "pendingPreloads");
+    info.addMember(m_garbageCollectDocumentResourcesTimer, "garbageCollectDocumentResourcesTimer");
 #if ENABLE(RESOURCE_TIMING)
     // FIXME: m_initiatorMap has pointers to already deleted CachedResources
     info.ignoreMember(m_initiatorMap);

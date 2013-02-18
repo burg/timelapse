@@ -43,23 +43,32 @@ namespace WebCore {
 PassRefPtr<Database> WorkerContextWebDatabase::openDatabase(WorkerContext* context, const String& name, const String& version, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback> creationCallback, ExceptionCode& ec)
 {
     DatabaseManager& dbManager = DatabaseManager::manager();
-    if (!context->securityOrigin()->canAccessDatabase(context->topOrigin()) || !dbManager.isAvailable()) {
+    RefPtr<Database> database;
+    DatabaseError error = DatabaseError::None;
+    if (dbManager.isAvailable() && context->securityOrigin()->canAccessDatabase(context->topOrigin())) {
+        database = dbManager.openDatabase(context, name, version, displayName, estimatedSize, creationCallback, error);
+        ASSERT(database || error != DatabaseError::None);
+        ec = DatabaseManager::exceptionCodeForDatabaseError(error);
+    } else
         ec = SECURITY_ERR;
-        return 0;
-    }
 
-    return dbManager.openDatabase(context, name, version, displayName, estimatedSize, creationCallback, ec);
+    return database.release();
 }
 
 PassRefPtr<DatabaseSync> WorkerContextWebDatabase::openDatabaseSync(WorkerContext* context, const String& name, const String& version, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback> creationCallback, ExceptionCode& ec)
 {
     DatabaseManager& dbManager = DatabaseManager::manager();
-    if (!context->securityOrigin()->canAccessDatabase(context->topOrigin()) || !dbManager.isAvailable()) {
-        ec = SECURITY_ERR;
-        return 0;
-    }
+    RefPtr<DatabaseSync> database;
+    DatabaseError error =  DatabaseError::None;
+    if (dbManager.isAvailable() && context->securityOrigin()->canAccessDatabase(context->topOrigin())) {
+        database = dbManager.openDatabaseSync(context, name, version, displayName, estimatedSize, creationCallback, error);
 
-    return dbManager.openDatabaseSync(context, name, version, displayName, estimatedSize, creationCallback, ec);
+        ASSERT(database || error != DatabaseError::None);
+        ec = DatabaseManager::exceptionCodeForDatabaseError(error);
+    } else
+        ec = SECURITY_ERR;
+
+    return database.release();
 }
 
 } // namespace WebCore

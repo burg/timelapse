@@ -50,7 +50,7 @@ namespace WebCore {
 
 // Use an array to hold dependents. It works like a ref-counted scheme.
 // A value can be added more than once to the DOM object.
-void createHiddenDependency(v8::Handle<v8::Object> object, v8::Local<v8::Value> value, int cacheIndex)
+void createHiddenDependency(v8::Handle<v8::Object> object, v8::Local<v8::Value> value, int cacheIndex, v8::Isolate* isolate)
 {
     v8::Local<v8::Value> cache = object->GetInternalField(cacheIndex);
     if (cache->IsNull() || cache->IsUndefined()) {
@@ -59,7 +59,7 @@ void createHiddenDependency(v8::Handle<v8::Object> object, v8::Local<v8::Value> 
     }
 
     v8::Local<v8::Array> cacheArray = v8::Local<v8::Array>::Cast(cache);
-    cacheArray->Set(deprecatedV8Integer(cacheArray->Length()), value);
+    cacheArray->Set(v8Integer(cacheArray->Length(), isolate), value);
 }
 
 bool extractTransferables(v8::Local<v8::Value> value, MessagePortArray& ports, ArrayBufferArray& arrayBuffers, v8::Isolate* isolate)
@@ -90,7 +90,7 @@ bool extractTransferables(v8::Local<v8::Value> value, MessagePortArray& ports, A
             return false;
         }
         // Validation of Objects implementing an interface, per WebIDL spec 4.1.15.
-        if (V8MessagePort::HasInstance(transferrable)) {
+        if (V8MessagePort::HasInstance(transferrable, isolate)) {
             RefPtr<MessagePort> port = V8MessagePort::toNative(v8::Handle<v8::Object>::Cast(transferrable));
             // Check for duplicate MessagePorts.
             if (ports.contains(port)) {
@@ -98,7 +98,7 @@ bool extractTransferables(v8::Local<v8::Value> value, MessagePortArray& ports, A
                 return false;
             }
             ports.append(port.release());
-        } else if (V8ArrayBuffer::HasInstance(transferrable))
+        } else if (V8ArrayBuffer::HasInstance(transferrable, isolate))
             arrayBuffers.append(V8ArrayBuffer::toNative(v8::Handle<v8::Object>::Cast(transferrable)));
         else {
             throwTypeError(0, isolate);
@@ -121,14 +121,14 @@ bool getMessagePortArray(v8::Local<v8::Value> value, MessagePortArray& ports, v8
     return true;
 }
 
-void removeHiddenDependency(v8::Handle<v8::Object> object, v8::Local<v8::Value> value, int cacheIndex)
+void removeHiddenDependency(v8::Handle<v8::Object> object, v8::Local<v8::Value> value, int cacheIndex, v8::Isolate* isolate)
 {
     v8::Local<v8::Value> cache = object->GetInternalField(cacheIndex);
     if (!cache->IsArray())
         return;
     v8::Local<v8::Array> cacheArray = v8::Local<v8::Array>::Cast(cache);
     for (int i = cacheArray->Length() - 1; i >= 0; --i) {
-        v8::Local<v8::Value> cached = cacheArray->Get(deprecatedV8Integer(i));
+        v8::Local<v8::Value> cached = cacheArray->Get(v8Integer(i, isolate));
         if (cached->StrictEquals(value)) {
             cacheArray->Delete(i);
             return;
@@ -136,21 +136,18 @@ void removeHiddenDependency(v8::Handle<v8::Object> object, v8::Local<v8::Value> 
     }
 }
     
-void transferHiddenDependency(v8::Handle<v8::Object> object,
-                              EventListener* oldValue, 
-                              v8::Local<v8::Value> newValue, 
-                              int cacheIndex)
+void transferHiddenDependency(v8::Handle<v8::Object> object, EventListener* oldValue, v8::Local<v8::Value> newValue, int cacheIndex, v8::Isolate* isolate)
 {
     if (oldValue) {
         V8AbstractEventListener* oldListener = V8AbstractEventListener::cast(oldValue);
         if (oldListener) {
             v8::Local<v8::Object> oldListenerObject = oldListener->getExistingListenerObject();
             if (!oldListenerObject.IsEmpty())
-                removeHiddenDependency(object, oldListenerObject, cacheIndex);
+                removeHiddenDependency(object, oldListenerObject, cacheIndex, isolate);
         }
     }
     if (!newValue->IsNull() && !newValue->IsUndefined())
-        createHiddenDependency(object, newValue, cacheIndex);
+        createHiddenDependency(object, newValue, cacheIndex, isolate);
 }
 
 ScriptExecutionContext* getScriptExecutionContext()

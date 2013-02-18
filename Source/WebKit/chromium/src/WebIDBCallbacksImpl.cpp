@@ -34,13 +34,11 @@
 #include "IDBDatabaseBackendProxy.h"
 #include "IDBDatabaseError.h"
 #include "IDBKey.h"
-#include "IDBTransactionBackendProxy.h"
 #include "WebDOMStringList.h"
 #include "WebIDBCallbacks.h"
 #include "WebIDBDatabase.h"
 #include "WebIDBDatabaseError.h"
 #include "WebIDBKey.h"
-#include "WebIDBTransaction.h"
 #include "WebSerializedScriptValue.h"
 
 using namespace WebCore;
@@ -69,18 +67,6 @@ void WebIDBCallbacksImpl::onSuccess(const WebDOMStringList& domStringList)
 void WebIDBCallbacksImpl::onSuccess(WebIDBCursor* cursor, const WebIDBKey& key, const WebIDBKey& primaryKey, const WebSerializedScriptValue& value)
 {
     m_callbacks->onSuccess(IDBCursorBackendProxy::create(adoptPtr(cursor)), key, primaryKey, value);
-}
-
-void WebIDBCallbacksImpl::onSuccess(WebIDBDatabase* webKitInstance)
-{
-    if (m_databaseProxy) {
-        IDBDatabaseMetadata metadata = m_databaseProxy->metadata();
-        m_callbacks->onSuccess(m_databaseProxy.release(), metadata);
-        return;
-    }
-    RefPtr<IDBDatabaseBackendInterface> localDatabaseProxy = IDBDatabaseBackendProxy::create(adoptPtr(webKitInstance));
-    IDBDatabaseMetadata metadata = localDatabaseProxy->metadata();
-    m_callbacks->onSuccess(localDatabaseProxy.release(), metadata);
 }
 
 void WebIDBCallbacksImpl::onSuccess(WebIDBDatabase* webKitInstance, const WebIDBMetadata& metadata)
@@ -126,12 +112,6 @@ void WebIDBCallbacksImpl::onSuccess(const WebIDBKey& key, const WebIDBKey& prima
 void WebIDBCallbacksImpl::onBlocked(long long oldVersion)
 {
     m_callbacks->onBlocked(oldVersion);
-}
-
-void WebIDBCallbacksImpl::onUpgradeNeeded(long long oldVersion, WebIDBTransaction*, WebIDBDatabase* database)
-{
-    m_databaseProxy = IDBDatabaseBackendProxy::create(adoptPtr(database));
-    m_callbacks->onUpgradeNeeded(oldVersion, m_databaseProxy, m_databaseProxy->metadata());
 }
 
 void WebIDBCallbacksImpl::onUpgradeNeeded(long long oldVersion, WebIDBDatabase* database, const WebIDBMetadata& metadata)

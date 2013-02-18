@@ -136,6 +136,7 @@
 #include "JSFileWriterSync.cpp"
 #include "JSFloat32Array.cpp"
 #include "JSFloat64Array.cpp"
+#include "JSFocusEvent.cpp"
 #include "JSGeolocation.cpp"
 #include "JSGeoposition.cpp"
 #include "JSHashChangeEvent.cpp"
@@ -474,9 +475,7 @@
 #include "JSTouch.cpp"
 #include "JSTouchEvent.cpp"
 #include "JSTouchList.cpp"
-#if ENABLE(CSS_TRANSFORMS_ANIMATIONS_TRANSITIONS_UNPREFIXED)
 #include "JSTransitionEvent.cpp"
-#endif
 #include "JSTreeWalker.cpp"
 #include "JSUint16Array.cpp"
 #include "JSUint32Array.cpp"

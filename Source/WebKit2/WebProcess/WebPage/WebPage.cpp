@@ -37,7 +37,6 @@
 #include "InjectedBundleBackForwardList.h"
 #include "InjectedBundleUserMessageCoders.h"
 #include "LayerTreeHost.h"
-#include "MessageID.h"
 #include "NetscapePlugin.h"
 #include "NotificationPermissionRequestManager.h"
 #include "PageOverlay.h"
@@ -148,11 +147,6 @@
 
 #if ENABLE(NETWORK_INFO)
 #include "WebNetworkInfoClient.h"
-#endif
-
-#if ENABLE(WEB_INTENTS)
-#include "IntentData.h"
-#include <WebCore/Intent.h>
 #endif
 
 #if ENABLE(VIBRATION)
@@ -508,9 +502,9 @@ PassRefPtr<Plugin> WebPage::createPlugin(WebFrame* frame, HTMLPlugInElement* plu
 {
     String pluginPath;
     uint32_t pluginLoadPolicy;
-    if (!WebProcess::shared().connection()->sendSync(
-            Messages::WebProcessProxy::GetPluginPath(parameters.mimeType, parameters.url.string()),
-            Messages::WebProcessProxy::GetPluginPath::Reply(pluginPath, pluginLoadPolicy), 0)) {
+
+    String documentURLString = pluginElement->document()->url().string();
+    if (!sendSync(Messages::WebPageProxy::GetPluginPath(parameters.mimeType, parameters.url.string(), documentURLString), Messages::WebPageProxy::GetPluginPath::Reply(pluginPath, pluginLoadPolicy))) {
         return 0;
     }
 
@@ -1774,7 +1768,7 @@ void WebPage::highlightPotentialActivation(const IntPoint& point, const IntSize&
 #endif
         // Find the node to highlight. This is not the same as the node responding the tap gesture, because many
         // pages has a global click handler and we do not want to highlight the body.
-        for (Node* node = adjustedNode; node; node = node->parentOrHostNode()) {
+        for (Node* node = adjustedNode; node; node = node->parentOrShadowHostNode()) {
             if (node->isDocumentNode() || node->isFrameOwnerElement())
                 break;
 
@@ -2253,23 +2247,6 @@ void WebPage::forceRepaint(uint64_t callbackID)
     forceRepaintWithoutCallback();
     send(Messages::WebPageProxy::VoidCallback(callbackID));
 }
-
-#if ENABLE(WEB_INTENTS)
-void WebPage::deliverIntentToFrame(uint64_t frameID, const IntentData& intentData)
-{
-    WebFrame* frame = WebProcess::shared().webFrame(frameID);
-    if (!frame)
-        return;
-
-    frame->deliverIntent(intentData);
-}
-
-void WebPage::deliverCoreIntentToFrame(uint64_t frameID, Intent* coreIntent)
-{
-    if (WebFrame* frame = WebProcess::shared().webFrame(frameID))
-        frame->deliverIntent(coreIntent);
-}
-#endif
 
 void WebPage::preferencesDidChange(const WebPreferencesStore& store)
 {
@@ -3689,13 +3666,13 @@ void WebPage::setScrollingPerformanceLoggingEnabled(bool enabled)
     frameView->setScrollingPerformanceLoggingEnabled(enabled);
 }
 
-static bool canPluginHandleResponse(const ResourceResponse& response)
+bool WebPage::canPluginHandleResponse(const ResourceResponse& response)
 {
 #if ENABLE(NETSCAPE_PLUGIN_API)
     String pluginPath;
     uint32_t pluginLoadPolicy;
     
-    if (!WebProcess::shared().connection()->sendSync(Messages::WebProcessProxy::GetPluginPath(response.mimeType(), response.url().string()), Messages::WebProcessProxy::GetPluginPath::Reply(pluginPath, pluginLoadPolicy), 0))
+    if (!sendSync(Messages::WebPageProxy::GetPluginPath(response.mimeType(), response.url().string(), response.url().string()), Messages::WebPageProxy::GetPluginPath::Reply(pluginPath, pluginLoadPolicy)))
         return false;
 
     return pluginLoadPolicy != PluginModuleBlocked && !pluginPath.isEmpty();
@@ -3704,7 +3681,7 @@ static bool canPluginHandleResponse(const ResourceResponse& response)
 #endif
 }
 
-bool WebPage::shouldUseCustomRepresentationForResponse(const ResourceResponse& response) const
+bool WebPage::shouldUseCustomRepresentationForResponse(const ResourceResponse& response)
 {
     if (!m_mimeTypesWithCustomRepresentations.contains(response.mimeType()))
         return false;

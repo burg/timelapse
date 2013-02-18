@@ -563,11 +563,6 @@ KURL KURL::copy() const
     return result;
 }
 
-bool KURL::hasPath() const
-{
-    return m_pathEnd != m_portEnd;
-}
-
 String KURL::lastPathComponent() const
 {
     if (!hasPath())
@@ -1927,11 +1922,22 @@ void KURL::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this);
 #if USE(GOOGLEURL)
-    info.addMember(m_url);
+    info.addMember(m_url, "url");
 #elif USE(WTFURL)
-    info.addMember(m_urlImpl);
+    info.addMember(m_urlImpl, "urlImpl");
 #else // !USE(GOOGLEURL)
-    info.addMember(m_string);
+    info.addMember(m_string, "string");
+#endif
+}
+
+bool KURL::isSafeToSendToAnotherThread() const
+{
+#if USE(GOOGLEURL)
+    return m_url.isSafeToSendToAnotherThread();
+#elif USE(WTFURL)
+    return m_urlImpl->isSafeToSendToAnotherThread();
+#else // !USE(GOOGLEURL)
+    return m_string.isSafeToSendToAnotherThread();
 #endif
 }
 

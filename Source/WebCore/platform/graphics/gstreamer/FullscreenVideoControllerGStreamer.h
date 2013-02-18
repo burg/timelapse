@@ -29,13 +29,14 @@
 namespace WebCore {
 
 class GStreamerGWorld;
-class MediaPlayerPrivateGStreamer;
+class MediaPlayerPrivateGStreamerBase;
 class MediaPlayerClient;
 
 class FullscreenVideoControllerGStreamer {
     WTF_MAKE_NONCOPYABLE(FullscreenVideoControllerGStreamer);
 public:
-    FullscreenVideoControllerGStreamer(MediaPlayerPrivateGStreamer*);
+    static PassOwnPtr<FullscreenVideoControllerGStreamer> create(MediaPlayerPrivateGStreamerBase*);
+    FullscreenVideoControllerGStreamer(MediaPlayerPrivateGStreamerBase*);
     virtual ~FullscreenVideoControllerGStreamer();
 
     void enterFullscreen();
@@ -55,7 +56,7 @@ public:
 protected:
     String timeToString(float time);
 
-    MediaPlayerPrivateGStreamer* m_player;
+    MediaPlayerPrivateGStreamerBase* m_player;
     MediaPlayerClient* m_client;
     GStreamerGWorld* m_gstreamerGWorld;
 

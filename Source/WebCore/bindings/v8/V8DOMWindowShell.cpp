@@ -208,12 +208,12 @@ bool V8DOMWindowShell::initializeIfNeeded()
     if (m_context.isEmpty())
         return false;
 
+    m_world->setIsolatedWorldField(m_context.get());
+
     bool isMainWorld = m_world->isMainWorld();
 
     v8::Local<v8::Context> context = v8::Local<v8::Context>::New(m_context.get());
     v8::Context::Scope contextScope(context);
-
-    m_world->setIsolatedWorldField(m_context.get());
 
     if (m_global.isEmpty()) {
         m_global.set(context->Global());
@@ -315,7 +315,7 @@ bool V8DOMWindowShell::installDOMWindow()
     if (windowWrapper.IsEmpty())
         return false;
 
-    V8DOMWindow::installPerContextProperties(windowWrapper, window);
+    V8DOMWindow::installPerContextProperties(windowWrapper, window, m_isolate);
 
     V8DOMWrapper::setNativeInfo(v8::Handle<v8::Object>::Cast(windowWrapper->GetPrototype()), &V8DOMWindow::info, window);
 
@@ -335,7 +335,7 @@ bool V8DOMWindowShell::installDOMWindow()
     v8::Handle<v8::Object> innerGlobalObject = toInnerGlobalObject(m_context.get());
     V8DOMWrapper::setNativeInfo(innerGlobalObject, &V8DOMWindow::info, window);
     innerGlobalObject->SetPrototype(windowWrapper);
-    V8DOMWrapper::associateObjectWithWrapper(PassRefPtr<DOMWindow>(window), &V8DOMWindow::info, windowWrapper, m_isolate);
+    V8DOMWrapper::associateObjectWithWrapper(PassRefPtr<DOMWindow>(window), &V8DOMWindow::info, windowWrapper, m_isolate, WrapperConfiguration::Dependent);
     return true;
 }
 

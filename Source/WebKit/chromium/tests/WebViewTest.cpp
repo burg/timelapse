@@ -47,10 +47,13 @@
 #include "WebViewClient.h"
 #include "WebViewImpl.h"
 #include <gtest/gtest.h>
+#include <public/Platform.h>
 #include <public/WebSize.h>
-#include <webkit/support/webkit_support.h>
+#include <public/WebThread.h>
+#include <public/WebUnitTestSupport.h>
 
 using namespace WebKit;
+using WebKit::FrameTestHelpers::runPendingTasks;
 using WebKit::URLTestHelpers::toKURL;
 
 namespace {
@@ -163,7 +166,7 @@ public:
 
     virtual void TearDown()
     {
-        webkit_support::UnregisterAllMockedURLs();
+        Platform::current()->unitTestSupport()->unregisterAllMockedURLs();
     }
 
 protected:
@@ -456,6 +459,23 @@ TEST_F(WebViewTest, SetCompositionFromExistingText)
     webView->close();
 }
 
+TEST_F(WebViewTest, IsSelectionAnchorFirst)
+{
+    URLTestHelpers::registerMockedURLFromBaseURL(WebString::fromUTF8(m_baseURL.c_str()), WebString::fromUTF8("input_field_populated.html"));
+    WebView* webView = FrameTestHelpers::createWebViewAndLoad(m_baseURL + "input_field_populated.html");
+    WebFrame* frame = webView->mainFrame();
+
+    webView->setInitialFocus(false);
+    webView->setEditableSelectionOffsets(4, 10);
+    EXPECT_TRUE(webView->isSelectionAnchorFirst());
+    WebRect anchor;
+    WebRect focus;
+    webView->selectionBounds(anchor, focus);
+    frame->selectRange(WebPoint(focus.x, focus.y), WebPoint(anchor.x, anchor.y));
+    EXPECT_FALSE(webView->isSelectionAnchorFirst());
+    webView->close();
+}
+
 TEST_F(WebViewTest, ResetScrollAndScaleState)
 {
     URLTestHelpers::registerMockedURLFromBaseURL(WebString::fromUTF8(m_baseURL.c_str()), WebString::fromUTF8("hello_world.html"));
@@ -552,7 +572,7 @@ static bool tapElementById(WebView* webView, WebInputEvent::Type type, const Web
     event.y = center.y();
 
     webView->handleInputEvent(event);
-    webkit_support::RunAllPendingMessages();
+    runPendingTasks();
     return true;
 }
 
@@ -564,7 +584,7 @@ TEST_F(WebViewTest, DetectContentAroundPosition)
     WebView* webView = FrameTestHelpers::createWebViewAndLoad(m_baseURL + "content_listeners.html", true, 0, &client);
     webView->resize(WebSize(500, 300));
     webView->layout();
-    webkit_support::RunAllPendingMessages();
+    runPendingTasks();
 
     WebString clickListener = WebString::fromUTF8("clickListener");
     WebString touchstartListener = WebString::fromUTF8("touchstartListener");
@@ -601,7 +621,7 @@ TEST_F(WebViewTest, DetectContentAroundPosition)
     WebGestureEvent event;
     event.type = WebInputEvent::GestureTap;
     webView->handleInputEvent(event);
-    webkit_support::RunAllPendingMessages();
+    runPendingTasks();
     EXPECT_TRUE(client.pendingIntentsCancelled());
     webView->close();
 }
@@ -616,7 +636,7 @@ TEST_F(WebViewTest, ClientTapHandling)
     event.x = 3;
     event.y = 8;
     webView->handleInputEvent(event);
-    webkit_support::RunAllPendingMessages();
+    runPendingTasks();
     EXPECT_EQ(3, client.tapX());
     EXPECT_EQ(8, client.tapY());
     client.reset();
@@ -624,7 +644,7 @@ TEST_F(WebViewTest, ClientTapHandling)
     event.x = 25;
     event.y = 7;
     webView->handleInputEvent(event);
-    webkit_support::RunAllPendingMessages();
+    runPendingTasks();
     EXPECT_EQ(25, client.longpressX());
     EXPECT_EQ(7, client.longpressY());
     webView->close();
@@ -638,7 +658,7 @@ TEST_F(WebViewTest, LongPressSelection)
     WebView* webView = FrameTestHelpers::createWebViewAndLoad(m_baseURL + "longpress_selection.html", true);
     webView->resize(WebSize(500, 300));
     webView->layout();
-    webkit_support::RunAllPendingMessages();
+    runPendingTasks();
 
     WebString target = WebString::fromUTF8("target");
     WebString onselectstartfalse = WebString::fromUTF8("onselectstartfalse");
@@ -658,7 +678,7 @@ TEST_F(WebViewTest, SelectionOnDisabledInput)
     WebView* webView = FrameTestHelpers::createWebViewAndLoad(m_baseURL + "selection_disabled.html", true);
     webView->resize(WebSize(640, 480));
     webView->layout();
-    webkit_support::RunAllPendingMessages();
+    runPendingTasks();
 
     std::string testWord = "This text should be selected.";
 
@@ -682,7 +702,7 @@ TEST_F(WebViewTest, SelectionOnReadOnlyInput)
     WebView* webView = FrameTestHelpers::createWebViewAndLoad(m_baseURL + "selection_readonly.html", true);
     webView->resize(WebSize(640, 480));
     webView->layout();
-    webkit_support::RunAllPendingMessages();
+    runPendingTasks();
 
     std::string testWord = "This text should be selected.";
 

@@ -70,23 +70,23 @@ v8::Handle<v8::Value> V8Document::evaluateCallback(const v8::Arguments& args)
     ExceptionCode ec = 0;
     String expression = toWebCoreString(args[0]);
     RefPtr<Node> contextNode;
-    if (V8Node::HasInstance(args[1]))
+    if (V8Node::HasInstance(args[1], args.GetIsolate()))
         contextNode = V8Node::toNative(v8::Handle<v8::Object>::Cast(args[1]));
 
-    RefPtr<XPathNSResolver> resolver = toXPathNSResolver(args[2]);
+    RefPtr<XPathNSResolver> resolver = toXPathNSResolver(args[2], args.GetIsolate());
     if (!resolver && !args[2]->IsNull() && !args[2]->IsUndefined())
         return setDOMException(TYPE_MISMATCH_ERR, args.GetIsolate());
 
     int type = toInt32(args[3]);
     RefPtr<XPathResult> inResult;
-    if (V8XPathResult::HasInstance(args[4]))
+    if (V8XPathResult::HasInstance(args[4], args.GetIsolate()))
         inResult = V8XPathResult::toNative(v8::Handle<v8::Object>::Cast(args[4]));
 
     V8TRYCATCH(RefPtr<XPathResult>, result, document->evaluate(expression, contextNode.get(), resolver.get(), type, inResult.get(), ec));
     if (ec)
         return setDOMException(ec, args.GetIsolate());
 
-    return toV8(result.release(), args.Holder(), args.GetIsolate());
+    return toV8Fast(result.release(), args, document.get());
 }
 
 v8::Handle<v8::Object> wrap(Document* impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
@@ -101,7 +101,7 @@ v8::Handle<v8::Object> wrap(Document* impl, v8::Handle<v8::Object> creationConte
     v8::Handle<v8::Object> wrapper = V8Document::createWrapper(impl, creationContext, isolate);
     if (wrapper.IsEmpty())
         return wrapper;
-    if (!worldForEnteredContextIfIsolated()) {
+    if (!worldForEnteredContext()) {
         if (Frame* frame = impl->frame())
             frame->script()->windowShell(mainThreadNormalWorld())->updateDocumentWrapper(wrapper);
     }

@@ -28,8 +28,9 @@
 
 #if ENABLE(SQL_DATABASE)
 
-#include "AbstractDatabaseServer.h"
 #include "DatabaseBasicTypes.h"
+#include "DatabaseDetails.h"
+#include "DatabaseError.h"
 #include <wtf/Assertions.h>
 #include <wtf/HashMap.h>
 #include <wtf/PassRefPtr.h>
@@ -39,6 +40,7 @@ namespace WebCore {
 
 class AbstractDatabaseServer;
 class Database;
+class DatabaseBackend;
 class DatabaseCallback;
 class DatabaseContext;
 class DatabaseManagerClient;
@@ -77,8 +79,10 @@ public:
     void didDestructDatabaseContext() { }
 #endif
 
-    PassRefPtr<Database> openDatabase(ScriptExecutionContext*, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback>, ExceptionCode&);
-    PassRefPtr<DatabaseSync> openDatabaseSync(ScriptExecutionContext*, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback>, ExceptionCode&);
+    static ExceptionCode exceptionCodeForDatabaseError(DatabaseError);
+
+    PassRefPtr<Database> openDatabase(ScriptExecutionContext*, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback>, DatabaseError&);
+    PassRefPtr<DatabaseSync> openDatabaseSync(ScriptExecutionContext*, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, PassRefPtr<DatabaseCallback>, DatabaseError&);
 
     bool hasOpenDatabases(ScriptExecutionContext*);
     void stopDatabases(ScriptExecutionContext*, DatabaseTaskSynchronizer*);
@@ -111,11 +115,6 @@ public:
 
     void interruptAllDatabasesForContext(ScriptExecutionContext*);
 
-    bool canEstablishDatabase(ScriptExecutionContext*, const String& name, const String& displayName, unsigned long estimatedSize);
-    void addOpenDatabase(DatabaseBackend*);
-    void removeOpenDatabase(DatabaseBackend*);
-
-    void setDatabaseDetails(SecurityOrigin*, const String& name, const String& displayName, unsigned long estimatedSize);
     unsigned long long getMaxSizeForDatabase(const DatabaseBackend*);
 
 private:
@@ -125,6 +124,12 @@ private:
     // This gets a DatabaseContext for the specified ScriptExecutionContext if
     // it already exist previously. Otherwise, it returns 0.
     PassRefPtr<DatabaseContext> existingDatabaseContextFor(ScriptExecutionContext*);
+
+    PassRefPtr<DatabaseBackend> openDatabaseBackend(ScriptExecutionContext*,
+        DatabaseType, const String& name, const String& expectedVersion, const String& displayName,
+        unsigned long estimatedSize, bool setVersionInNewDatabase, DatabaseError&, String& errorMessage);
+
+    static void logErrorMessage(ScriptExecutionContext*, const String& message);
 
     AbstractDatabaseServer* m_server;
     DatabaseManagerClient* m_client;

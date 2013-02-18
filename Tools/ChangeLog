@@ -1,3 +1,4061 @@
+2013-02-12  Adenilson Cavalcanti  <cavalcantii@gmail.com>
+
+        [WK2] Page reloading will crash UIProcess after WebProcess was killed
+        https://bugs.webkit.org/show_bug.cgi?id=109305
+
+        Reviewed by Benjamin Poulain.
+
+        Adding a new test to simulate the case of WebProcess crash followed by a trying
+        to load a new page.
+
+        * TestWebKitAPI/GNUmakefile.am:
+        * TestWebKitAPI/PlatformEfl.cmake:
+        * TestWebKitAPI/TestWebKitAPI.xcodeproj/project.pbxproj:
+        * TestWebKitAPI/Tests/WebKit2/ReloadPageAfterCrash.cpp: Added.
+        (TestWebKitAPI):
+        (TestWebKitAPI::didFinishLoad):
+        (TestWebKitAPI::TEST):
+
+2013-02-11  Brent Fulgham  <bfulgham@webkit.org>
+
+        Update WebKitDirs.pm for new Windows paths
+        https://bugs.webkit.org/show_bug.cgi?id=107714
+
+        Reviewed by Daniel Bates.
+
+        * Scripts/webkitdirs.pm: For each existing Windows environment
+        variable, also include creation of the 'new' variables. The
+        'old' variables will be removed in a future update.
+        (windowsSourceSourceDir): New helper routine to return the
+        actual 'Source' folder of the WebKit source tree.
+
+2013-02-12  Alec Flett  <alecflett@chromium.org>
+
+        Fix signedness in WebTestProxy
+        https://bugs.webkit.org/show_bug.cgi?id=109623
+
+        Reviewed by Adam Barth.
+
+        Fix signedness problem, using size_t instead of int.
+
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+
+2013-02-12  Raymond Toy  <rtoy@google.com>
+
+        Add alias
+        https://bugs.webkit.org/show_bug.cgi?id=109621
+
+        No review needed.
+
+        * Scripts/webkitpy/common/config/committers.py:
+
+2013-02-12  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] move text dump generation to TestRunner library
+        https://bugs.webkit.org/show_bug.cgi?id=109575
+
+        Reviewed by Adam Barth.
+
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestDelegate.h:
+        (WebKit):
+        (WebTestRunner::WebTestDelegate::captureHistoryForWindow):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestRunner.h:
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestCommon.cpp: Copied from Tools/DumpRenderTree/chromium/TestRunner/src/TestCommon.h.
+        (WebTestRunner::normalizeLayoutTestURL):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestCommon.h:
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::checkResponseMimeType):
+        (WebTestRunner):
+        (WebTestRunner::TestRunner::shouldDumpAsText):
+        (WebTestRunner::TestRunner::shouldGeneratePixelResults):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/WebPermissions.cpp:
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::captureTree):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestShell.cpp:
+        (TestShell::dump):
+        (TestShell::captureHistoryForWindow):
+        * DumpRenderTree/chromium/TestShell.h:
+        (TestShell):
+        * DumpRenderTree/chromium/WebViewHost.cpp:
+        (WebViewHost::captureHistoryForWindow):
+        * DumpRenderTree/chromium/WebViewHost.h:
+
+2013-02-12  Jessie Berlin  <jberlin@apple.com>
+
+        Rollout r142618, it broke all the Mac builds.
+
+        * TestWebKitAPI/TestWebKitAPI.gypi:
+        * TestWebKitAPI/TestWebKitAPI.xcodeproj/project.pbxproj:
+        * TestWebKitAPI/Tests/WebCore/HeapGraphSerializerTest.cpp: Removed.
+        * TestWebKitAPI/win/TestWebKitAPI.vcproj:
+
+2013-02-12  Yury Semikhatsky  <yurys@chromium.org>
+
+        Unreviewed. Fix Chromium compilation after r142618.
+
+        * TestWebKitAPI/Tests/WebCore/HeapGraphSerializerTest.cpp:
+        (TestWebKitAPI::HeapGraphReceiver::printNode):
+
+2013-02-12  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Add an optional moduleset with hard to get packages (including libsecret)
+        https://bugs.webkit.org/show_bug.cgi?id=109195
+
+        Reviewed by Philippe Normand.
+
+        Add an optional moduleset that includes libsecret. This moduleset will
+        be used to install some annoyingly hard to obtain dependencies on older
+        distributions.
+
+        * gtk/jhbuild-optional.modules: Added.
+        * gtk/jhbuild.modules: Add a reference to the new moduleset file.
+
+2013-02-12  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Web Inspector: Native Memory Instrumentation: reportLeaf method doesn't report the leaf node properly.
+        https://bugs.webkit.org/show_bug.cgi?id=109554
+
+        In some cases leaves have no pointer. As example when we report a leaf via addPrivateBuffer.
+        This patch has new set of tests for HeapGraphSerializer.
+
+        Reviewed by Yury Semikhatsky.
+
+        * TestWebKitAPI/TestWebKitAPI.gypi:
+        * TestWebKitAPI/TestWebKitAPI.xcodeproj/project.pbxproj:
+        * TestWebKitAPI/Tests/WebCore/HeapGraphSerializerTest.cpp: Added.
+        * TestWebKitAPI/win/TestWebKitAPI.vcproj:
+
+2013-02-12  Zan Dobersek  <zdobersek@igalia.com>
+
+        Unreviewed followup to r142606, the EFL port also enables the CSS image-set
+        feature so the new configuration option's default value should reflect that.
+
+        * Scripts/webkitperl/FeatureList.pm:
+
+2013-02-12  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Enable CSS Variables feature in development builds
+        https://bugs.webkit.org/show_bug.cgi?id=109474
+
+        Reviewed by Martin Robinson.
+
+        * Scripts/webkitperl/FeatureList.pm: Enable the feature on development
+        builds of the GTK port.
+
+2013-02-12  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Enable CSS image-set support in development builds
+        https://bugs.webkit.org/show_bug.cgi?id=109475
+
+        Reviewed by Martin Robinson.
+
+        * Scripts/webkitperl/FeatureList.pm: Add the configuration option for the feature.
+        Note that the Mac port also enables the feature but does so in Platform.h as the feature
+        is also enabled for the iOS port which can't at the moment be detected via webkitperl.
+
+2013-02-12  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Enable DOM4 events constructors in development builds
+        https://bugs.webkit.org/show_bug.cgi?id=109471
+
+        Reviewed by Martin Robinson.
+
+        * Scripts/webkitperl/FeatureList.pm: Enable the feature for the GTK port as well.
+
+2013-02-12  Zan Dobersek  <zdobersek@igalia.com>
+
+        Remove unnecessary variables from FeatureList.pm
+        https://bugs.webkit.org/show_bug.cgi?id=109558
+
+        Reviewed by Daniel Bates.
+
+        A small cleanup, removing unused variables for which the related configuration
+        options were already removed.
+
+        * Scripts/webkitperl/FeatureList.pm:
+
+2013-02-12  Zan Dobersek  <zdobersek@igalia.com>
+
+        Remove ENABLE_XHR_RESPONSE_BLOB handling from various build systems
+        https://bugs.webkit.org/show_bug.cgi?id=109481
+
+        Reviewed by Daniel Bates.
+
+        The ENABLE_XHR_RESPONSE_BLOB feature define was removed from the code
+        back in r120574. There are still occurrences of it in various build systems
+        which should all be removed as they are useless.
+
+        * Scripts/webkitperl/FeatureList.pm:
+
+2013-02-12  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] move webrtc mocks to testrunner library
+        https://bugs.webkit.org/show_bug.cgi?id=109041
+
+        Reviewed by Adam Barth.
+
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/DumpRenderTree.cpp:
+        (WebKitSupportTestEnvironment):
+        (WebKitSupportTestEnvironment::mockPlatform):
+        (main):
+        * DumpRenderTree/chromium/MockWebKitPlatformSupport.cpp:
+        (MockWebKitPlatformSupport::setInterfaces):
+        (MockWebKitPlatformSupport::createMediaStreamCenter):
+        (MockWebKitPlatformSupport::createRTCPeerConnectionHandler):
+        * DumpRenderTree/chromium/MockWebKitPlatformSupport.h:
+        (WebTestRunner):
+        (MockWebKitPlatformSupport):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        (WebKit):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        (WebKit):
+        (WebTestRunner):
+        (WebTestRunner::WebTestProxy::showContextMenu):
+        (WebTestRunner::WebTestProxy::userMediaClient):
+        * DumpRenderTree/chromium/TestRunner/src/MockConstraints.cpp: Renamed from Tools/DumpRenderTree/chromium/MockConstraints.cpp.
+        (WebTestRunner::MockConstraints::verifyConstraints):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/MockConstraints.h: Renamed from Tools/DumpRenderTree/chromium/MockConstraints.h.
+        (WebKit):
+        (WebTestRunner):
+        (MockConstraints):
+        * DumpRenderTree/chromium/TestRunner/src/MockWebMediaStreamCenter.cpp: Renamed from Tools/DumpRenderTree/chromium/MockWebMediaStreamCenter.cpp.
+        (WebTestRunner):
+        (WebTestRunner::MockWebMediaStreamCenter::MockWebMediaStreamCenter):
+        (WebTestRunner::MockWebMediaStreamCenter::queryMediaStreamSources):
+        (WebTestRunner::MockWebMediaStreamCenter::didEnableMediaStreamTrack):
+        (WebTestRunner::MockWebMediaStreamCenter::didDisableMediaStreamTrack):
+        (WebTestRunner::MockWebMediaStreamCenter::didAddMediaStreamTrack):
+        (WebTestRunner::MockWebMediaStreamCenter::didRemoveMediaStreamTrack):
+        (WebTestRunner::MockWebMediaStreamCenter::didStopLocalMediaStream):
+        (MockWebAudioDestinationConsumer):
+        (WebTestRunner::MockWebAudioDestinationConsumer::~MockWebAudioDestinationConsumer):
+        (WebTestRunner::MockWebMediaStreamCenter::didCreateMediaStream):
+        * DumpRenderTree/chromium/TestRunner/src/MockWebMediaStreamCenter.h: Renamed from Tools/DumpRenderTree/chromium/MockWebMediaStreamCenter.h.
+        (WebKit):
+        (WebTestRunner):
+        (MockWebMediaStreamCenter):
+        (WebTestRunner::MockWebMediaStreamCenter::MockWebMediaStreamCenter):
+        * DumpRenderTree/chromium/TestRunner/src/MockWebRTCDTMFSenderHandler.cpp: Renamed from Tools/DumpRenderTree/chromium/MockWebRTCDTMFSenderHandler.cpp.
+        (WebTestRunner):
+        (DTMFSenderToneTask):
+        (WebTestRunner::DTMFSenderToneTask::DTMFSenderToneTask):
+        (WebTestRunner::MockWebRTCDTMFSenderHandler::MockWebRTCDTMFSenderHandler):
+        (WebTestRunner::MockWebRTCDTMFSenderHandler::setClient):
+        (WebTestRunner::MockWebRTCDTMFSenderHandler::currentToneBuffer):
+        (WebTestRunner::MockWebRTCDTMFSenderHandler::canInsertDTMF):
+        (WebTestRunner::MockWebRTCDTMFSenderHandler::insertDTMF):
+        * DumpRenderTree/chromium/TestRunner/src/MockWebRTCDTMFSenderHandler.h: Renamed from Tools/DumpRenderTree/chromium/MockWebRTCDTMFSenderHandler.h.
+        (WebTestRunner):
+        (MockWebRTCDTMFSenderHandler):
+        (WebTestRunner::MockWebRTCDTMFSenderHandler::taskList):
+        (WebTestRunner::MockWebRTCDTMFSenderHandler::clearToneBuffer):
+        * DumpRenderTree/chromium/TestRunner/src/MockWebRTCDataChannelHandler.cpp: Renamed from Tools/DumpRenderTree/chromium/MockWebRTCDataChannelHandler.cpp.
+        (WebTestRunner):
+        (DataChannelReadyStateTask):
+        (WebTestRunner::DataChannelReadyStateTask::DataChannelReadyStateTask):
+        (WebTestRunner::MockWebRTCDataChannelHandler::MockWebRTCDataChannelHandler):
+        (WebTestRunner::MockWebRTCDataChannelHandler::setClient):
+        (WebTestRunner::MockWebRTCDataChannelHandler::bufferedAmount):
+        (WebTestRunner::MockWebRTCDataChannelHandler::sendStringData):
+        (WebTestRunner::MockWebRTCDataChannelHandler::sendRawData):
+        (WebTestRunner::MockWebRTCDataChannelHandler::close):
+        * DumpRenderTree/chromium/TestRunner/src/MockWebRTCDataChannelHandler.h: Renamed from Tools/DumpRenderTree/chromium/MockWebRTCDataChannelHandler.h.
+        (WebTestRunner):
+        (MockWebRTCDataChannelHandler):
+        (WebTestRunner::MockWebRTCDataChannelHandler::taskList):
+        * DumpRenderTree/chromium/TestRunner/src/MockWebRTCPeerConnectionHandler.cpp: Renamed from Tools/DumpRenderTree/chromium/MockWebRTCPeerConnectionHandler.cpp.
+        (WebTestRunner):
+        (RTCSessionDescriptionRequestSuccededTask):
+        (WebTestRunner::RTCSessionDescriptionRequestSuccededTask::RTCSessionDescriptionRequestSuccededTask):
+        (RTCSessionDescriptionRequestFailedTask):
+        (WebTestRunner::RTCSessionDescriptionRequestFailedTask::RTCSessionDescriptionRequestFailedTask):
+        (RTCStatsRequestSucceededTask):
+        (WebTestRunner::RTCStatsRequestSucceededTask::RTCStatsRequestSucceededTask):
+        (RTCVoidRequestTask):
+        (WebTestRunner::RTCVoidRequestTask::RTCVoidRequestTask):
+        (RTCPeerConnectionStateTask):
+        (WebTestRunner::RTCPeerConnectionStateTask::RTCPeerConnectionStateTask):
+        (RemoteDataChannelTask):
+        (WebTestRunner::RemoteDataChannelTask::RemoteDataChannelTask):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::MockWebRTCPeerConnectionHandler):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::initialize):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::createOffer):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::createAnswer):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::setLocalDescription):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::setRemoteDescription):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::localDescription):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::remoteDescription):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::updateICE):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::addICECandidate):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::addStream):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::removeStream):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::getStats):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::createDataChannel):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::createDTMFSender):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::stop):
+        * DumpRenderTree/chromium/TestRunner/src/MockWebRTCPeerConnectionHandler.h: Renamed from Tools/DumpRenderTree/chromium/MockWebRTCPeerConnectionHandler.h.
+        (WebKit):
+        (WebTestRunner):
+        (MockWebRTCPeerConnectionHandler):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::taskList):
+        (WebTestRunner::MockWebRTCPeerConnectionHandler::MockWebRTCPeerConnectionHandler):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::TestInterfaces):
+        (WebTestRunner::TestInterfaces::setDelegate):
+        (WebTestRunner::TestInterfaces::delegate):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::createMediaStreamCenter):
+        (WebTestRunner):
+        (WebTestRunner::WebTestInterfaces::createWebRTCPeerConnectionHandler):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::userMediaClient):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/WebUserMediaClientMock.cpp: Renamed from Tools/DumpRenderTree/chromium/WebUserMediaClientMock.cpp.
+        (WebTestRunner):
+        (UserMediaRequestTask):
+        (WebTestRunner::UserMediaRequestTask::UserMediaRequestTask):
+        (MockExtraData):
+        (WebTestRunner::WebUserMediaClientMock::WebUserMediaClientMock):
+        (WebTestRunner::WebUserMediaClientMock::requestUserMedia):
+        (WebTestRunner::WebUserMediaClientMock::cancelUserMediaRequest):
+        * DumpRenderTree/chromium/TestRunner/src/WebUserMediaClientMock.h: Renamed from Tools/DumpRenderTree/chromium/WebUserMediaClientMock.h.
+        (WebTestRunner):
+        (WebUserMediaClientMock):
+        (WebTestRunner::WebUserMediaClientMock::~WebUserMediaClientMock):
+        (WebTestRunner::WebUserMediaClientMock::taskList):
+        * DumpRenderTree/chromium/TestShell.cpp:
+        (TestShell::initialize):
+        * DumpRenderTree/chromium/TestShell.h:
+        (TestShell):
+        * DumpRenderTree/chromium/WebViewHost.cpp:
+        * DumpRenderTree/chromium/WebViewHost.h:
+        (WebViewHost):
+
+2013-02-11  Timothy Loh  <timloh@chromium.com>
+
+        webkit-patch upload regenerates the WebCore ChangeLog every time it's called
+        https://bugs.webkit.org/show_bug.cgi?id=108983
+
+        Reviewed by Ryosuke Niwa.
+
+        This patch puts the behaviour from Bug 74358 behind the flag (default=OFF)
+        `--update-changelogs', and removes the flag `--no-prepare-changelogs'.
+        The flag name change from prepare to update is since we still want to
+        prepare changelogs in the default case when none currently exist.
+
+        * Scripts/webkitpy/tool/commands/commandtest.py:
+        (CommandsTest.assert_execute_outputs):
+        * Scripts/webkitpy/tool/steps/options.py:
+        (Options):
+        * Scripts/webkitpy/tool/steps/preparechangelog.py:
+        (PrepareChangeLog.options):
+        (PrepareChangeLog.run):
+
+2013-02-11  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] move printPage() implementation to testRunner library
+        https://bugs.webkit.org/show_bug.cgi?id=109436
+
+        Reviewed by Adam Barth.
+
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        (WebTestRunner::WebTestProxy::showContextMenu):
+        (WebTestRunner::WebTestProxy::printPage):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner):
+        (WebTestRunner::WebTestProxyBase::printPage):
+        * DumpRenderTree/chromium/WebViewHost.cpp:
+        * DumpRenderTree/chromium/WebViewHost.h:
+
+2013-02-11  James Robinson  <jamesr@chromium.org>
+
+        [Chromium] Get rid of WebAnimationController
+        https://bugs.webkit.org/show_bug.cgi?id=109235
+
+        Reviewed by Benjamin Poulain.
+
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (TestRunner):
+
+2013-02-11  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Disable delete button controller on non-Mac ports and delete EditorClient::shouldShowDeleteInterface
+        https://bugs.webkit.org/show_bug.cgi?id=109534
+
+        Reviewed by Anders Carlsson.
+
+        * DumpRenderTree/gtk/EditingCallbacks.cpp:
+        (shouldShowDeleteInterfaceForElement):
+
+2013-02-11  Nico Weber  <thakis@chromium.org>
+
+        Remove web intents code
+        https://bugs.webkit.org/show_bug.cgi?id=109501
+
+        Reviewed by Eric Seidel.
+
+        See thread "Removing ENABLE(WEB_INTENTS) code" on webkit-dev.
+
+        * DumpRenderTree/TestRunner.cpp:
+        (TestRunner::staticFunctions):
+        * DumpRenderTree/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/blackberry/TestRunnerBlackBerry.cpp:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestDelegate.h:
+        (WebKit):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        (WebKit):
+        (WebTestRunner::WebTestProxy::didEndEditing):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        * DumpRenderTree/chromium/WebViewHost.cpp:
+        * DumpRenderTree/chromium/WebViewHost.h:
+        (WebViewHost):
+        * DumpRenderTree/efl/TestRunnerEfl.cpp:
+        * DumpRenderTree/gtk/TestRunnerGtk.cpp:
+        * DumpRenderTree/mac/TestRunnerMac.mm:
+        * DumpRenderTree/win/TestRunnerWin.cpp:
+        * DumpRenderTree/wx/TestRunnerWx.cpp:
+        * Scripts/webkitperl/FeatureList.pm:
+
+2013-02-11  Benjamin Poulain  <benjamin@webkit.org>
+
+        Kill TestRunner::setMinimumTimerInterval; implement the feature with InternalSettings
+        https://bugs.webkit.org/show_bug.cgi?id=109349
+
+        Reviewed by Sam Weinig.
+
+        Get rid of TestRunner's setMinimumTimerInterval and all the related functions.
+
+        This also fixes an oddity:
+        TestRunners were initialized with a minimum timer interval of 10 milliseconds instead
+        of using the default value. All with the same copy of an outdated comment.
+
+        * DumpRenderTree/TestRunner.cpp:
+        (TestRunner::staticFunctions):
+        * DumpRenderTree/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/blackberry/TestRunnerBlackBerry.cpp:
+        * DumpRenderTree/chromium/TestRunner/public/WebPreferences.h:
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/WebPreferences.cpp:
+        (WebTestRunner::WebPreferences::reset):
+        (WebTestRunner::WebPreferences::applyTo):
+        * DumpRenderTree/chromium/WebViewHost.cpp:
+        (WebViewHost::reset):
+        * DumpRenderTree/efl/DumpRenderTreeChrome.cpp:
+        (DumpRenderTreeChrome::resetDefaultsToConsistentValues):
+        * DumpRenderTree/efl/TestRunnerEfl.cpp:
+        * DumpRenderTree/gtk/DumpRenderTree.cpp:
+        (resetDefaultsToConsistentValues):
+        * DumpRenderTree/gtk/TestRunnerGtk.cpp:
+        * DumpRenderTree/mac/DumpRenderTree.mm:
+        (resetWebViewToConsistentStateBeforeTesting):
+        * DumpRenderTree/mac/TestRunnerMac.mm:
+        * DumpRenderTree/qt/DumpRenderTreeQt.cpp:
+        (WebCore::WebPage::resetSettings):
+        * DumpRenderTree/qt/TestRunnerQt.cpp:
+        * DumpRenderTree/qt/TestRunnerQt.h:
+        (TestRunner):
+        * DumpRenderTree/win/DumpRenderTree.cpp:
+        (resetWebViewToConsistentStateBeforeTesting):
+        * DumpRenderTree/win/TestRunnerWin.cpp:
+        * DumpRenderTree/wx/TestRunnerWx.cpp:
+        * WebKitTestRunner/InjectedBundle/Bindings/TestRunner.idl:
+        * WebKitTestRunner/InjectedBundle/InjectedBundle.cpp:
+        (WTR::InjectedBundle::beginTesting):
+        * WebKitTestRunner/InjectedBundle/TestRunner.cpp:
+        * WebKitTestRunner/InjectedBundle/TestRunner.h:
+        (TestRunner):
+
+2013-02-11  Dean Jackson  <dino@apple.com>
+
+        Remove use of plugInStartLabelImage
+        https://bugs.webkit.org/show_bug.cgi?id=108273
+
+        Reviewed by Simon Fraser.
+
+        Take two - after rollout in r142405.
+        Removed plugInStartLabelImage entry from client structure.
+
+        * WebKitTestRunner/InjectedBundle/InjectedBundlePage.cpp:
+        (WTR::InjectedBundlePage::InjectedBundlePage):
+
+2013-02-11  Tony Chang  <tony@chromium.org>
+
+        Move setFrameFlatteningEnabled from layoutTestController to window.internals.settings
+        https://bugs.webkit.org/show_bug.cgi?id=87149
+
+        Reviewed by Simon Fraser.
+
+        Remove testRunner.setFrameFlatteningEnabled from DRT and WTR. WebKit API
+        methods are left because there may be users of it. Add a test for Apple Mac
+        to ensure that the API for the preference still works using overridePreference.
+
+        * DumpRenderTree/TestRunner.cpp:
+        (TestRunner::staticFunctions):
+        * DumpRenderTree/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/blackberry/DumpRenderTree.cpp:
+        (BlackBerry::WebKit::DumpRenderTree::resetToConsistentStateBeforeTesting):
+        * DumpRenderTree/blackberry/TestRunnerBlackBerry.cpp:
+        * DumpRenderTree/efl/TestRunnerEfl.cpp:
+        * DumpRenderTree/gtk/DumpRenderTree.cpp:
+        (resetDefaultsToConsistentValues):
+        * DumpRenderTree/gtk/TestRunnerGtk.cpp:
+        * DumpRenderTree/mac/TestRunnerMac.mm:
+        * DumpRenderTree/qt/DumpRenderTreeQt.cpp:
+        (WebCore::WebPage::resetSettings):
+        * DumpRenderTree/qt/TestRunnerQt.cpp:
+        * DumpRenderTree/qt/TestRunnerQt.h:
+        (TestRunner):
+        * DumpRenderTree/win/DumpRenderTree.cpp:
+        (resetDefaultsToConsistentValues):
+        * DumpRenderTree/win/TestRunnerWin.cpp:
+        * DumpRenderTree/wx/TestRunnerWx.cpp:
+        * WebKitTestRunner/InjectedBundle/Bindings/TestRunner.idl:
+        * WebKitTestRunner/InjectedBundle/TestRunner.cpp:
+        * WebKitTestRunner/InjectedBundle/TestRunner.h:
+        (TestRunner):
+
+2013-02-11  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Windows 7 Debug mode build fix.
+
+        * DumpRenderTree/TestNetscapePlugIn/win/TestNetscapePlugin.vcproj:
+
+2013-02-11  Tiancheng Jiang  <tijiang@rim.com>
+
+        [BlackBerry] Set mouse document position for mouse event in DRT.
+        https://bugs.webkit.org/show_bug.cgi?id=109094.
+
+        Reviewed by Rob Buis.
+
+        RIM PR 246976.
+        Internally Reviewed by Nima Ghanavatian & Genevieve Mak.
+
+        Set mouse document position when we create mouse event in DRT.
+
+        * DumpRenderTree/blackberry/EventSender.cpp:
+        (setMouseEventDocumentPos):
+        (mouseDownCallback):
+        (mouseUpCallback):
+        (mouseMoveToCallback):
+
+2013-02-11  Mike Lattanzio  <mlattanzio@rim.com>
+
+        [BlackBerry] Add graphics subdirectory to include path.
+        https://bugs.webkit.org/show_bug.cgi?id=109437
+
+        Reviewed by Rob Buis.
+
+        Add browser/platform/graphics to include path.
+
+        Internal review by Jeff Rogers.
+
+        * Scripts/webkitdirs.pm:
+        (blackberryCMakeArguments):
+
+2013-02-11  Christophe Dumez  <ch.dumez@sisa.samsung.com>
+
+        [EFL][WKTR] Regression(r141836) fast/dom/Window/mozilla-focus-blur.html started failing
+        https://bugs.webkit.org/show_bug.cgi?id=109438
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Some refactoring in r141836 caused the view not to get focus if the focused
+        frame is not the main one. The idea of the code was to remove focus from the
+        view if the focused frame was not the main one, and then focus the view again.
+        However, after the refactoring, the second step never happened: Focus was
+        removed but not given again.
+
+        * WebKitTestRunner/efl/PlatformWebViewEfl.cpp:
+        (WTR::PlatformWebView::focus):
+
+2013-02-11  Zan Dobersek  <zdobersek@igalia.com>
+
+        [GTK] Don't generate documentation if building neither WebKit1 nor WebKit2
+        https://bugs.webkit.org/show_bug.cgi?id=109420
+
+        Reviewed by Philippe Normand.
+
+        Don't generate the GTK documentation if neither of the WebKit1 and WebKit2
+        layers was built. This just results in unnecessary errors being spewed out
+        by the gtkdoc utilities.
+
+        * Scripts/webkitdirs.pm:
+        (buildAutotoolsProject):
+
+2013-02-11  Antoine Quint  <graouts@apple.com>
+
+        Unreviewed change to add myself to the Inspector IDLs watchlist.
+
+        * Scripts/webkitpy/common/config/watchlist:
+
+2013-02-11  Krzysztof Czech  <k.czech@samsung.com>
+
+        [GTK][EFL] Shares WebKit-GTK's DumpRenderTree accessibility implementation with other Webkit ports
+        https://bugs.webkit.org/show_bug.cgi?id=105007
+
+        Reviewed by Martin Robinson.
+
+        Shares specific ATK's accessibility implementation.
+        Keeps platform specific methods in EFL and GTK's directories.
+
+        * DumpRenderTree/atk/AccessibilityCallbacks.h: Renamed from Tools/DumpRenderTree/gtk/AccessibilityCallbacks.h.
+        * DumpRenderTree/atk/AccessibilityCallbacksAtk.cpp: Renamed from Tools/DumpRenderTree/gtk/AccessibilityCallbacks.cpp.
+        (printAccessibilityEvent):
+        (axObjectEventListener):
+        (connectAccessibilityCallbacks):
+        (disconnectAccessibilityCallbacks):
+        * DumpRenderTree/atk/AccessibilityControllerAtk.cpp: Copied from Tools/DumpRenderTree/gtk/AccessibilityControllerGtk.cpp.
+        (AccessibilityController::AccessibilityController):
+        (AccessibilityController::~AccessibilityController):
+        (AccessibilityController::elementAtPoint):
+        (AccessibilityController::setLogFocusEvents):
+        (AccessibilityController::setLogScrollingStartEvents):
+        (AccessibilityController::setLogValueChangeEvents):
+        (AccessibilityController::setLogAccessibilityEvents):
+        (AccessibilityController::addNotificationListener):
+        (AccessibilityController::removeNotificationListener):
+        * DumpRenderTree/atk/AccessibilityUIElementAtk.cpp: Copied from Tools/DumpRenderTree/gtk/AccessibilityUIElementGtk.cpp.
+        (coreAttributeToAtkAttribute):
+        (roleToString):
+        (replaceCharactersForResults):
+        (AccessibilityUIElement::AccessibilityUIElement):
+        (AccessibilityUIElement::~AccessibilityUIElement):
+        (AccessibilityUIElement::getLinkedUIElements):
+        (AccessibilityUIElement::getDocumentLinks):
+        (AccessibilityUIElement::getChildren):
+        (AccessibilityUIElement::getChildrenWithRange):
+        (AccessibilityUIElement::rowCount):
+        (AccessibilityUIElement::columnCount):
+        (AccessibilityUIElement::childrenCount):
+        (AccessibilityUIElement::elementAtPoint):
+        (AccessibilityUIElement::linkedUIElementAtIndex):
+        (AccessibilityUIElement::getChildAtIndex):
+        (AccessibilityUIElement::indexOfChild):
+        (attributeSetToString):
+        (AccessibilityUIElement::allAttributes):
+        (AccessibilityUIElement::attributesOfLinkedUIElements):
+        (AccessibilityUIElement::attributesOfDocumentLinks):
+        (AccessibilityUIElement::titleUIElement):
+        (AccessibilityUIElement::parentElement):
+        (AccessibilityUIElement::attributesOfChildren):
+        (AccessibilityUIElement::parameterizedAttributeNames):
+        (AccessibilityUIElement::role):
+        (AccessibilityUIElement::subrole):
+        (AccessibilityUIElement::roleDescription):
+        (AccessibilityUIElement::title):
+        (AccessibilityUIElement::description):
+        (AccessibilityUIElement::stringValue):
+        (AccessibilityUIElement::language):
+        (AccessibilityUIElement::x):
+        (AccessibilityUIElement::y):
+        (AccessibilityUIElement::width):
+        (AccessibilityUIElement::height):
+        (AccessibilityUIElement::clickPointX):
+        (AccessibilityUIElement::clickPointY):
+        (AccessibilityUIElement::orientation):
+        (AccessibilityUIElement::intValue):
+        (AccessibilityUIElement::minValue):
+        (AccessibilityUIElement::maxValue):
+        (AccessibilityUIElement::valueDescription):
+        (checkElementState):
+        (AccessibilityUIElement::isEnabled):
+        (AccessibilityUIElement::insertionPointLineNumber):
+        (AccessibilityUIElement::isPressActionSupported):
+        (AccessibilityUIElement::isIncrementActionSupported):
+        (AccessibilityUIElement::isDecrementActionSupported):
+        (AccessibilityUIElement::isRequired):
+        (AccessibilityUIElement::isFocused):
+        (AccessibilityUIElement::isSelected):
+        (AccessibilityUIElement::hierarchicalLevel):
+        (AccessibilityUIElement::ariaIsGrabbed):
+        (AccessibilityUIElement::ariaDropEffects):
+        (AccessibilityUIElement::isExpanded):
+        (AccessibilityUIElement::isChecked):
+        (AccessibilityUIElement::attributesOfColumnHeaders):
+        (AccessibilityUIElement::attributesOfRowHeaders):
+        (AccessibilityUIElement::attributesOfColumns):
+        (AccessibilityUIElement::attributesOfRows):
+        (AccessibilityUIElement::attributesOfVisibleCells):
+        (AccessibilityUIElement::attributesOfHeader):
+        (AccessibilityUIElement::indexInTable):
+        (indexRangeInTable):
+        (AccessibilityUIElement::rowIndexRange):
+        (AccessibilityUIElement::columnIndexRange):
+        (AccessibilityUIElement::lineForIndex):
+        (AccessibilityUIElement::boundsForRange):
+        (AccessibilityUIElement::stringForRange):
+        (AccessibilityUIElement::attributedStringForRange):
+        (AccessibilityUIElement::attributedStringRangeIsMisspelled):
+        (AccessibilityUIElement::uiElementForSearchPredicate):
+        (AccessibilityUIElement::cellForColumnAndRow):
+        (AccessibilityUIElement::selectedTextRange):
+        (AccessibilityUIElement::setSelectedTextRange):
+        (AccessibilityUIElement::stringAttributeValue):
+        (AccessibilityUIElement::numberAttributeValue):
+        (AccessibilityUIElement::boolAttributeValue):
+        (AccessibilityUIElement::isAttributeSettable):
+        (AccessibilityUIElement::isAttributeSupported):
+        (alterCurrentValue):
+        (AccessibilityUIElement::increment):
+        (AccessibilityUIElement::decrement):
+        (AccessibilityUIElement::press):
+        (AccessibilityUIElement::showMenu):
+        (AccessibilityUIElement::disclosedRowAtIndex):
+        (AccessibilityUIElement::ariaOwnsElementAtIndex):
+        (AccessibilityUIElement::ariaFlowToElementAtIndex):
+        (AccessibilityUIElement::selectedRowAtIndex):
+        (AccessibilityUIElement::rowAtIndex):
+        (AccessibilityUIElement::disclosedByRow):
+        (AccessibilityUIElement::accessibilityValue):
+        (AccessibilityUIElement::documentEncoding):
+        (AccessibilityUIElement::documentURI):
+        (AccessibilityUIElement::url):
+        (AccessibilityUIElement::addNotificationListener):
+        (AccessibilityUIElement::removeNotificationListener):
+        (AccessibilityUIElement::isFocusable):
+        (AccessibilityUIElement::isSelectable):
+        (AccessibilityUIElement::isMultiSelectable):
+        (AccessibilityUIElement::isSelectedOptionActive):
+        (AccessibilityUIElement::isVisible):
+        (AccessibilityUIElement::isOffScreen):
+        (AccessibilityUIElement::isCollapsed):
+        (AccessibilityUIElement::isIgnored):
+        (AccessibilityUIElement::hasPopup):
+        (AccessibilityUIElement::takeFocus):
+        (AccessibilityUIElement::takeSelection):
+        (AccessibilityUIElement::addSelection):
+        (AccessibilityUIElement::removeSelection):
+        (AccessibilityUIElement::scrollToMakeVisible):
+        (AccessibilityUIElement::scrollToMakeVisibleWithSubFocus):
+        (AccessibilityUIElement::scrollToGlobalPoint):
+        * DumpRenderTree/efl/CMakeLists.txt: Adds ATK headers, libraries, new sources.
+        * DumpRenderTree/gtk/AccessibilityControllerGtk.cpp:
+        (AccessibilityController::focusedElement):
+        (AccessibilityController::rootElement):
+        (AccessibilityController::accessibleElementById):
+        * DumpRenderTree/gtk/AccessibilityUIElementGtk.cpp:
+        (AccessibilityUIElement::helpText):
+        * GNUmakefile.am: Adds renamed sources.
+
+2013-02-11  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] clear the webcache from within the TestRunner library
+        https://bugs.webkit.org/show_bug.cgi?id=109405
+
+        Reviewed by Kentaro Hara.
+
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::resetAll):
+        * DumpRenderTree/chromium/TestShell.cpp:
+        (TestShell::resetTestController):
+
+2013-02-11  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] add a destructor to EventSender
+        https://bugs.webkit.org/show_bug.cgi?id=109401
+
+        Reviewed by Kentaro Hara.
+
+        Otherwise, the compiler will automatically generate a destructor, for
+        which we need to unnecessarily include WebContextMenuData.h in the
+        header.
+
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::~EventSender):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.h:
+        (WebKit):
+        (EventSender):
+
+2013-02-10  Tim Horton  <timothy_horton@apple.com>
+
+        Unreviewed attempted build fix for Gtk after r142412
+
+        * WebKitTestRunner/gtk/PlatformWebViewGtk.cpp:
+        (WTR::PlatformWebView::PlatformWebView):
+
+2013-02-10  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r142413.
+        http://trac.webkit.org/changeset/142413
+        https://bugs.webkit.org/show_bug.cgi?id=109383
+
+        didn't fix the gtk build (Requested by thorton on #webkit).
+
+        * WebKitTestRunner/gtk/PlatformWebViewGtk.cpp:
+
+2013-02-10  Tim Horton  <timothy_horton@apple.com>
+
+        Unreviewed attempted build fix for Gtk after r142412
+        * WebKitTestRunner/gtk/PlatformWebViewGtk.cpp:
+
+2013-02-10  Tim Horton  <timothy_horton@apple.com>
+
+        WKTR should propagate view creation options to opened windows
+        https://bugs.webkit.org/show_bug.cgi?id=109381
+
+        Reviewed by Simon Fraser.
+
+        * WebKitTestRunner/PlatformWebView.h:
+        (WTR::PlatformWebView::options):
+        Add storage and a getter for PlatformWebView's creation options dictionary.
+        * WebKitTestRunner/TestController.cpp:
+        (WTR::TestController::createOtherPage):
+        Propagate creation options from parent to child PlatformWebView when creating subwindows.
+        * WebKitTestRunner/efl/PlatformWebViewEfl.cpp:
+        (WTR::PlatformWebView::PlatformWebView):
+        * WebKitTestRunner/gtk/PlatformWebViewGtk.cpp:
+        (WTR::PlatformWebView::PlatformWebView):
+        * WebKitTestRunner/mac/PlatformWebViewMac.mm:
+        (WTR::PlatformWebView::PlatformWebView):
+        * WebKitTestRunner/qt/PlatformWebViewQt.cpp:
+        (WTR::PlatformWebView::PlatformWebView):
+        Store creation options on the PlatformWebView.
+
+2013-02-10  Kent Tamura  <tkent@chromium.org>
+
+        Unreviewed, rolling out r142347.
+        http://trac.webkit.org/changeset/142347
+        https://bugs.webkit.org/show_bug.cgi?id=108273
+
+        Because a depending change r142343 was rolled out.
+
+        * WebKitTestRunner/InjectedBundle/InjectedBundlePage.cpp:
+        (WTR::InjectedBundlePage::InjectedBundlePage):
+
+2013-02-10  Kent Tamura  <tkent@chromium.org>
+
+        [Chromium] Build fix for r142371
+        https://bugs.webkit.org/show_bug.cgi?id=109313
+
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.h:
+        (WebKit):
+
+2013-02-10  Zan Dobersek  <zdobersek@igalia.com>
+
+        gtkdoc-scangobj throwing warnings when using Clang, causes generate-gtkdoc to fail
+        https://bugs.webkit.org/show_bug.cgi?id=109315
+
+        Reviewed by Philippe Normand.
+
+        * GNUmakefile.am: Define the CC environment variable to the CC compiler that the whole
+        project was configured to use. This ensures both the regular build and the gtkdoc-scangobj
+        program use the same compiler.
+        * gtk/generate-gtkdoc: Add '-Qunused-arguments' to the CFLAGS in case we're using Clang. This
+        forces Clang to suppress unused arguments warnings that can unnecessarily cause generate-gtkdoc
+        script to fail.
+
+2013-02-09  David Farler  <dfarler@apple.com>
+
+        Make TestWebKitAPI work for iOS
+        https://bugs.webkit.org/show_bug.cgi?id=108978
+
+        Reviewed by Joseph Pecoraro.
+
+        * TestWebKitAPI/Configurations/Base.xcconfig:
+        Added back FRAMEWORK_SEARCH_PATHS for Lion builds.
+
+2013-02-09  David Farler  <dfarler@apple.com>
+
+        Make TestWebKitAPI work for iOS
+        https://bugs.webkit.org/show_bug.cgi?id=108978
+
+        Reviewed by David Kilzer.
+
+        * Makefile: Added TestWebKitAPI to iOS MODULES list.
+        * TestWebKitAPI/Configurations/Base.xcconfig:
+        - Include FeatureDefines
+        - Removed VALID_ARCHS
+        - Removed FRAMEWORK_SEARCH_PATHS - allows building against other SDKs
+        - Excluded source files per platform
+        * TestWebKitAPI/Configurations/TestWebKitAPI.xcconfig:
+        - framework and library switches per platform
+        * TestWebKitAPI/TestWebKitAPI.xcodeproj/project.pbxproj:
+        - Remove explicit framework and library linking (moved to xcconfigs)
+        - Added iOS main.mm
+        * TestWebKitAPI/config.h:
+        - Guard importing Cocoa.h and WebKit2_C.h on iOS
+        * TestWebKitAPI/ios/mainIOS.mm: Copied from Tools/TestWebKitAPI/mac/main.mm.
+        * TestWebKitAPI/mac/mainMac.mm: Renamed from Tools/TestWebKitAPI/mac/main.mm.
+
+2013-02-09  Justin Schuh  <jschuh@chromium.org>
+
+        [CHROMIUM] Suppress c4267 build warnings for Win64 tests
+        https://bugs.webkit.org/show_bug.cgi?id=109359
+
+        Reviewed by Abhishek Arya.
+
+        * DumpRenderTree/DumpRenderTree.gyp/DumpRenderTree.gyp:
+
+2013-02-09  Ryosuke Niwa  <rniwa@webkit.org>
+
+        Add a link to EFL perf bot on build.webkit.org
+        https://bugs.webkit.org/show_bug.cgi?id=109342
+
+        Reviewed by Gyuyoung Kim.
+
+        Added.
+
+        * BuildSlaveSupport/build.webkit.org-config/templates/root.html:
+
+2013-02-09  Christophe Dumez  <ch.dumez@sisa.samsung.com>
+
+        Unreviewed. Update my IRC nickname in committers.py.
+
+        * Scripts/webkitpy/common/config/committers.py:
+
+2013-02-09  David Farler  <dfarler@apple.com>
+
+        build-webkit: document sdk, debug, release, device, and simulator options
+        https://bugs.webkit.org/show_bug.cgi?id=109221
+
+        Reviewed by David Kilzer.
+
+        * Scripts/build-webkit: Add options to usage
+        * Scripts/webkitdirs.pm: Remove --deploy and --devel checks
+
+2013-02-09  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] move context menu data tracking to TestRunner library
+        https://bugs.webkit.org/show_bug.cgi?id=109313
+
+        Reviewed by Adam Barth.
+
+        * DumpRenderTree/chromium/TestRunner/public/WebTestDelegate.h:
+        (WebKit):
+        (WebTestDelegate):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        (WebKit):
+        (WebTestRunner::WebTestProxy::showContextMenu):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::setContextMenuData):
+        (WebTestRunner::EventSender::contextClick):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.h:
+        (WebKit):
+        (EventSender):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::showContextMenu):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/WebViewHost.cpp:
+        (WebViewHost::showContextMenu):
+        * DumpRenderTree/chromium/WebViewHost.h:
+        (WebViewHost):
+
+2013-02-09  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] move methods that change initial testRunner state to TestRunner library
+        https://bugs.webkit.org/show_bug.cgi?id=109043
+
+        Reviewed by Adam Barth.
+
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        (WebKit):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestRunner.h:
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::configureForTestWithURL):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (WebKit):
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::showDevTools):
+        (WebTestRunner):
+        (WebTestRunner::TestRunner::showWebInspector):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::configureForTestWithURL):
+        * DumpRenderTree/chromium/TestShell.cpp:
+        (TestShell::runFileTest):
+
+2013-02-09  Nico Weber  <thakis@chromium.org>
+
+        Add myself as a reviewer. (Yay!!!!!)
+        https://bugs.webkit.org/show_bug.cgi?id=109110
+
+        Unreviewed.
+
+        * Scripts/webkitpy/common/config/committers.py:
+
+2013-02-08  Benjamin Poulain  <bpoulain@apple.com>
+
+        Move workerThreadCount from TestRunner to WebCore Internals
+        https://bugs.webkit.org/show_bug.cgi?id=109239
+
+        Reviewed by Darin Adler.
+
+        * DumpRenderTree/TestRunner.cpp:
+        (TestRunner::staticValues):
+        * DumpRenderTree/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/blackberry/TestRunnerBlackBerry.cpp:
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/efl/TestRunnerEfl.cpp:
+        * DumpRenderTree/gtk/TestRunnerGtk.cpp:
+        * DumpRenderTree/mac/TestRunnerMac.mm:
+        (TestRunner::webHistoryItemCount):
+        * DumpRenderTree/qt/TestRunnerQt.cpp:
+        * DumpRenderTree/qt/TestRunnerQt.h:
+        (TestRunner):
+        * DumpRenderTree/win/TestRunnerWin.cpp:
+        * DumpRenderTree/wx/TestRunnerWx.cpp:
+        * WebKitTestRunner/InjectedBundle/Bindings/TestRunner.idl:
+        * WebKitTestRunner/InjectedBundle/TestRunner.cpp:
+        * WebKitTestRunner/InjectedBundle/TestRunner.h:
+
+2013-02-08  Dean Jackson  <dino@apple.com>
+
+        Remove use of plugInStartLabelImage
+        https://bugs.webkit.org/show_bug.cgi?id=108273
+
+        Reviewed by Simon Fraser.
+
+        Removed plugInStartLabelImage entry from client structure.
+
+        * WebKitTestRunner/InjectedBundle/InjectedBundlePage.cpp:
+        (WTR::InjectedBundlePage::InjectedBundlePage):
+
+2013-02-07  Timothy Hatcher  <timothy@apple.com>
+
+        Fix the WebInspectorAPI watch list.
+
+        Reviewed by Joseph Pecoraro.
+
+        * Scripts/webkitpy/common/config/watchlist: Fix the regrexs.
+        Added InjectedScriptSource.js and Console.idl.
+
+2013-02-08  Roger Fong  <roger_fong@apple.com>
+
+        DumpRenderTree, ImageDiff and TestNetscapePlugin projects, property sheets and resources for VS2010 solution.
+        https://bugs.webkit.org/show_bug.cgi?id=107034.
+
+        Reviewed by Brent Fulgham.
+
+        * DumpRenderTree/DumpRenderTree.vcxproj: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTree.vcxproj: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTree.vcxproj.filters: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTreeApple.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTreeCommon.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTreeDebug.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTreeLauncher.vcxproj: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTreeLauncherCommon.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTreeLauncherDebug.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTreeLauncherRelease.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTreePostBuild.cmd: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTreePreBuild.cmd: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/DumpRenderTree/DumpRenderTreeRelease.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/ImageDiff: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/ImageDiff/ImageDiff.vcxproj: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/ImageDiff/ImageDiffCommon.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/ImageDiff/ImageDiffDebug.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/ImageDiff/ImageDiffLauncher.vcxproj: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/ImageDiff/ImageDiffLauncherCommon.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/ImageDiff/ImageDiffLauncherDebug.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/ImageDiff/ImageDiffLauncherRelease.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/ImageDiff/ImageDiffPostBuild.cmd: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/ImageDiff/ImageDiffPreBuild.cmd: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/ImageDiff/ImageDiffRelease.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/TestNetscapePlugin: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/TestNetscapePlugin/TestNetscapePlugin.def: Copied from DumpRenderTree/TestNetscapePlugIn/win/TestNetscapePlugin.def.
+        * DumpRenderTree/DumpRenderTree.vcxproj/TestNetscapePlugin/TestNetscapePlugin.rc: Copied from DumpRenderTree/TestNetscapePlugIn/win/TestNetscapePlugin.rc.
+        * DumpRenderTree/DumpRenderTree.vcxproj/TestNetscapePlugin/TestNetscapePlugin.vcxproj: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/TestNetscapePlugin/TestNetscapePlugin.vcxproj.filters: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/TestNetscapePlugin/TestNetscapePluginCommon.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/TestNetscapePlugin/TestNetscapePluginDebug.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/TestNetscapePlugin/TestNetscapePluginPostBuild.cmd: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/TestNetscapePlugin/TestNetscapePluginPreBuild.cmd: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/TestNetscapePlugin/TestNetscapePluginRelease.props: Added.
+        * DumpRenderTree/DumpRenderTree.vcxproj/TestNetscapePlugin/resource.h: Copied from DumpRenderTree/TestNetscapePlugIn/win/resource.h.
+        * DumpRenderTree/TestNetscapePlugIn/Tests/win/CallJSThatDestroysPlugin.cpp: Copied from DumpRenderTree/TestNetscapePlugIn/win/CallJSThatDestroysPlugin.cpp.
+        * DumpRenderTree/TestNetscapePlugIn/win/CallJSThatDestroysPlugin.cpp: Removed.
+
+2013-02-08  Harald Alvestrand  <hta@google.com>
+
+        Fix and test for missing return
+
+        RTCPeerConnection.getStats() fails when remote stats are instantiated.
+        https://bugs.webkit.org/show_bug.cgi?id=109292
+
+        Reviewed by Adam Barth.
+
+        * DumpRenderTree/chromium/MockWebRTCPeerConnectionHandler.cpp:
+        (MockWebRTCPeerConnectionHandler::getStats):
+
+2013-02-08  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Removing the deprecated WebMediaStreamDescriptor and WebMediaStreamComponent shims
+        https://bugs.webkit.org/show_bug.cgi?id=109296
+
+        Reviewed by Adam Barth.
+
+        * DumpRenderTree/chromium/MockWebRTCDTMFSenderHandler.cpp:
+        (MockWebRTCDTMFSenderHandler::MockWebRTCDTMFSenderHandler):
+        * DumpRenderTree/chromium/MockWebRTCDTMFSenderHandler.h:
+        (MockWebRTCDTMFSenderHandler):
+        * DumpRenderTree/chromium/MockWebRTCPeerConnectionHandler.cpp:
+        (MockWebRTCPeerConnectionHandler::createDTMFSender):
+
+2013-02-08  Caio Marcelo de Oliveira Filho  <caio.oliveira@openbossa.org>
+
+        Update my entries in the watchlist
+
+        Unreviewed.
+
+        * Scripts/webkitpy/common/config/watchlist:
+
+2013-02-08  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] copy normalizeLayoutTestURL code to TestRunner library
+        https://bugs.webkit.org/show_bug.cgi?id=109269
+
+        Reviewed by Kent Tamura.
+
+        The method doesn't have any external dependencies, so there's no reason
+        it should be on the delegate. It's still required by TestShell, however,
+        by making a copy, we can avoid implementing this in content shell.
+
+        * DumpRenderTree/chromium/TestRunner/public/WebTestDelegate.h:
+        (WebTestDelegate):
+        * DumpRenderTree/chromium/TestRunner/src/WebPermissions.cpp:
+        (WebTestRunner::WebPermissions::allowImage):
+        (WebTestRunner::WebPermissions::allowScriptFromSource):
+        * DumpRenderTree/chromium/TestShell.cpp:
+        (TestShell::windowCount):
+        * DumpRenderTree/chromium/TestShell.h:
+        * DumpRenderTree/chromium/WebViewHost.cpp:
+        * DumpRenderTree/chromium/WebViewHost.h:
+        (WebViewHost):
+
+2013-02-08  Raphael Kubo da Costa  <raphael.kubo.da.costa@intel.com>
+
+        [EFL] Make the Performance bot also build WebKit.
+        https://bugs.webkit.org/show_bug.cgi?id=109273
+
+        Reviewed by Philippe Normand.
+
+        There has not been much benefit in fetching binaries compiled by
+        another bot; it makes the build bot take 6 to 7 minutes to upload
+        the binaries to build.webkit.org, we need to manually override
+        LD_LIBRARY_PATH to find the compiled libraries and still have
+        other path-related problems.
+
+        Since we have enough horsepower in the perf bot, let's experiment
+        with building WebKit there instead.
+
+        * BuildSlaveSupport/build.webkit.org-config/config.json:
+
+2013-02-07  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] turn TestRunner library into a component build
+        https://bugs.webkit.org/show_bug.cgi?id=108466
+
+        Reviewed by Adam Barth.
+
+        To achieve this, we need to drop all dependencies on WTF.
+
+        * DumpRenderTree/DumpRenderTree.gyp/DumpRenderTree.gyp:
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebPreferences.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTask.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestCommon.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.cpp:
+        (WebTestRunner::AccessibilityUIElement::AccessibilityUIElement):
+        (WebTestRunner::AccessibilityUIElementList::getOrCreate):
+        (WebTestRunner::AccessibilityUIElementList::createRoot):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.h:
+        (AccessibilityUIElementList):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.cpp:
+        (WebTestRunner::CppBoundClass::~CppBoundClass):
+        (WebTestRunner::CppBoundClass::invoke):
+        (WebTestRunner::CppBoundClass::getProperty):
+        (WebTestRunner::CppBoundClass::setProperty):
+        (WebTestRunner::CppBoundClass::bindCallback):
+        (WebTestRunner::CppBoundClass::bindGetterCallback):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::getAsCppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.h:
+        (WebTestRunner):
+        (CppBoundClass):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::bindFallbackCallback):
+        (WebTestRunner::CppBoundClass::bindFallbackMethod):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.cpp:
+        (WebTestRunner::CppVariant::toString):
+        (WebTestRunner::CppVariant::toInt32):
+        (WebTestRunner::CppVariant::toDouble):
+        (WebTestRunner::CppVariant::toBoolean):
+        (WebTestRunner::CppVariant::toStringVector):
+        (WebTestRunner::CppVariant::invoke):
+        (WebTestRunner::CppVariant::invokeDefault):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.h:
+        (CppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::reset):
+        (WebTestRunner::EventSender::mouseDown):
+        (WebTestRunner::EventSender::mouseUp):
+        (WebTestRunner::EventSender::mouseMoveTo):
+        (WebTestRunner::EventSender::keyDown):
+        (WebTestRunner::EventSender::dispatchMessage):
+        (WebTestRunner::EventSender::leapForward):
+        (WebTestRunner::EventSender::replaySavedEvents):
+        (WebTestRunner::makeMenuItemStringsFor):
+        (WebTestRunner::EventSender::contextClick):
+        (WebTestRunner::EventSender::beginDragWithFiles):
+        (WebTestRunner::EventSender::addTouchPoint):
+        (WebTestRunner::EventSender::releaseTouchPoint):
+        (WebTestRunner::EventSender::updateTouchPoint):
+        (WebTestRunner::EventSender::cancelTouchPoint):
+        (WebTestRunner::EventSender::sendCurrentTouchEvent):
+        (WebTestRunner::EventSender::gestureEvent):
+        * DumpRenderTree/chromium/TestRunner/src/KeyCodeMapping.cpp:
+        (WebTestRunner::NativeKeyCodeForWindowsKeyCode):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.cpp:
+        (WebTestRunner::MockGrammarCheck::checkGrammarOfString):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.h:
+        (WebTestRunner):
+        (MockGrammarCheck):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.cpp:
+        (WebTestRunner::MockSpellCheck::spellCheckWord):
+        (WebTestRunner::MockSpellCheck::initializeIfNeeded):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.h:
+        (MockSpellCheck):
+        * DumpRenderTree/chromium/TestRunner/src/SpellCheckClient.cpp:
+        (WebTestRunner::SpellCheckClient::checkTextOfParagraph):
+        (WebTestRunner::SpellCheckClient::finishLastTextCheck):
+        * DumpRenderTree/chromium/TestRunner/src/TestCommon.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+        (isASCIIAlpha):
+        (isNotASCIIAlpha):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.cpp:
+        (WebTestRunner::TestPlugin::TestPlugin):
+        (WebTestRunner::TestPlugin::initialize):
+        (WebTestRunner::TestPlugin::destroy):
+        (WebTestRunner::TestPlugin::parsePrimitive):
+        (WebTestRunner::TestPlugin::parseColor):
+        (WebTestRunner::TestPlugin::initProgram):
+        (WebTestRunner::TestPlugin::initPrimitive):
+        (WebTestRunner::TestPlugin::drawPrimitive):
+        (WebTestRunner::TestPlugin::loadShader):
+        (WebTestRunner::TestPlugin::loadProgram):
+        (WebTestRunner::TestPlugin::handleDragStatusUpdate):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.h:
+        (TestPlugin):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::WorkQueue::processWorkSoon):
+        (WebTestRunner::TestRunner::WorkQueue::processWork):
+        (WebTestRunner::TestRunner::WorkQueue::reset):
+        (WebTestRunner::TestRunner::WorkQueue::addWork):
+        (WebTestRunner::TestRunner::TestRunner):
+        (WebTestRunner::TestRunner::reset):
+        (WebTestRunner::TestRunner::policyDelegateDone):
+        (WebTestRunner::TestRunner::findString):
+        (WebTestRunner::TestRunner::setTextSubpixelPositioning):
+        (WebTestRunner::TestRunner::overridePreference):
+        (WebTestRunner::TestRunner::deliverWebIntent):
+        (WebTestRunner::TestRunner::setBackingScaleFactor):
+        (WebTestRunner::TestRunner::simulateLegacyWebNotificationClick):
+        (WebTestRunner::TestRunner::setMockSpeechInputDumpRect):
+        (WebTestRunner::TestRunner::wasMockSpeechRecognitionAborted):
+        (WebTestRunner::TestRunner::setPointerLockWillFailSynchronously):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (WebTestRunner::TestRunner::WorkQueue::isEmpty):
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TextInputController.cpp:
+        (WebTestRunner::TextInputController::markedRange):
+        (WebTestRunner::TextInputController::selectedRange):
+        (WebTestRunner::TextInputController::firstRectForCharacterRange):
+        * DumpRenderTree/chromium/TestRunner/src/WebPreferences.cpp:
+        (WebTestRunner::WebPreferences::reset):
+        * DumpRenderTree/chromium/TestRunner/src/WebTask.cpp:
+        (WebTestRunner::WebTaskList::~WebTaskList):
+        (WebTestRunner::WebTaskList::registerTask):
+        (WebTestRunner::WebTaskList::unregisterTask):
+        (WebTestRunner::WebTaskList::revokeAll):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::~WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::testInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::~WebTestProxyBase):
+        (WebTestRunner::WebTestProxyBase::spellCheckClient):
+        (WebTestRunner::WebTestProxyBase::registerIntentService):
+        (WebTestRunner::WebTestProxyBase::dispatchIntent):
+        (WebTestRunner::WebTestProxyBase::assignIdentifierToRequest):
+        * DumpRenderTree/chromium/TestRunner/src/config.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+
+2013-02-07  Zan Dobersek  <zdobersek@igalia.com>
+
+        Unreviewed followup to r142232.
+
+        Work around a bug in jhbuild that was incorrectly composing the source
+        package URL by adjusting slightly the repository and module paths.
+
+        * gtk/jhbuild.modules:
+
+2013-02-07  Zan Dobersek  <zdobersek@igalia.com>
+
+        Use a mirror for the sourceware.org repo used in jhbuild
+
+        Unreviewed.
+
+        The ftp://sourceware.org site is down, causing errors when running jhbuild
+        and subsequently failing complete builds on the builders. Use the mirrors.kernel.org
+        mirror to get sources for the desired libffi dependency.
+
+        * gtk/jhbuild.modules:
+
+2013-02-07  David Farler  <dfarler@apple.com>
+
+        Makefiles should work for arbitrary SDKs and architectures on Apple ports
+        https://bugs.webkit.org/show_bug.cgi?id=107863
+
+        Reviewed by Mark Rowe.
+
+        * DumpRenderTree/Makefile: SDKROOT=iphone* => -target All-iOS
+        * Makefile: Only build some projects for iOS
+
+2013-02-07  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Another temporary EWS bot fix. It'll totally work this time.
+
+        * Scripts/webkitpy/tool/steps/runtests.py:
+        (RunTests.run):
+
+2013-02-07  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Fix syntax error in runtests.py.
+
+        * Scripts/webkitpy/tool/steps/runtests.py:
+        (RunTests.run):
+
+2013-02-07  Roger Fong  <roger_fong@apple.com>
+
+        Temporary fix for Win EWS bots.
+        Don't build DRT since it has already been built in the build step.
+
+        * Scripts/webkitpy/tool/steps/runtests.py:
+        (RunTests.run):
+
+2013-02-07  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Cleanup command-line defines
+        https://bugs.webkit.org/show_bug.cgi?id=109213
+
+        Reviewed by Xan Lopez.
+
+        * TestWebKitAPI/config.h: Include the autotoolsconfig.h header to pick
+        up defines from autoconf.
+
+2013-02-07  Ryosuke Niwa  <rniwa@webkit.org>
+
+        git.svn_revision doesn't fetch the same revision as svn.svn_revision
+        https://bugs.webkit.org/show_bug.cgi?id=108684
+
+        Reviewed by Dirk Pranke.
+
+        Always call git log on the checkout root.
+
+        * Scripts/webkitpy/common/checkout/scm/git.py:
+        (Git.svn_revision):
+
+2013-02-07  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Patch for testing Win EWS bots.
+
+        * Scripts/webkitpy/tool/steps/runtests.py:
+        (RunTests.run):
+
+2013-02-07  Gavin Peters  <gavinp@chromium.org>
+
+        Unreviewed, rolling out r142165.
+        http://trac.webkit.org/changeset/142165
+        https://bugs.webkit.org/show_bug.cgi?id=108466
+
+        Broke linux_aura builds.
+
+        * DumpRenderTree/DumpRenderTree.gyp/DumpRenderTree.gyp:
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebPreferences.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTask.h:
+        (WebTaskList):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestCommon.h: Removed.
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        (WebTestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        (WebTestProxyBase):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.cpp:
+        (WebTestRunner::AccessibilityUIElement::AccessibilityUIElement):
+        (WebTestRunner::AccessibilityUIElementList::getOrCreate):
+        (WebTestRunner::AccessibilityUIElementList::createRoot):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.h:
+        (AccessibilityUIElementList):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.cpp:
+        (WebTestRunner::CppBoundClass::~CppBoundClass):
+        (WebTestRunner::CppBoundClass::invoke):
+        (WebTestRunner::CppBoundClass::getProperty):
+        (WebTestRunner::CppBoundClass::setProperty):
+        (WebTestRunner::CppBoundClass::bindCallback):
+        (WebTestRunner::CppBoundClass::bindGetterCallback):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::getAsCppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.h:
+        (WebTestRunner):
+        (CppBoundClass):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::bindFallbackCallback):
+        (WebTestRunner::CppBoundClass::bindFallbackMethod):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.cpp:
+        (WebTestRunner::CppVariant::toString):
+        (WebTestRunner::CppVariant::toInt32):
+        (WebTestRunner::CppVariant::toDouble):
+        (WebTestRunner::CppVariant::toBoolean):
+        (WebTestRunner::CppVariant::toStringVector):
+        (WebTestRunner::CppVariant::invoke):
+        (WebTestRunner::CppVariant::invokeDefault):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.h:
+        (CppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::reset):
+        (WebTestRunner::EventSender::mouseDown):
+        (WebTestRunner::EventSender::mouseUp):
+        (WebTestRunner::EventSender::mouseMoveTo):
+        (WebTestRunner::EventSender::keyDown):
+        (WebTestRunner::EventSender::dispatchMessage):
+        (WebTestRunner::EventSender::leapForward):
+        (WebTestRunner::EventSender::replaySavedEvents):
+        (WebTestRunner::makeMenuItemStringsFor):
+        (WebTestRunner::EventSender::contextClick):
+        (WebTestRunner::EventSender::beginDragWithFiles):
+        (WebTestRunner::EventSender::addTouchPoint):
+        (WebTestRunner::EventSender::releaseTouchPoint):
+        (WebTestRunner::EventSender::updateTouchPoint):
+        (WebTestRunner::EventSender::cancelTouchPoint):
+        (WebTestRunner::EventSender::sendCurrentTouchEvent):
+        (WebTestRunner::EventSender::gestureEvent):
+        * DumpRenderTree/chromium/TestRunner/src/KeyCodeMapping.cpp:
+        (WebTestRunner::NativeKeyCodeForWindowsKeyCode):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.cpp:
+        (MockGrammarCheck::checkGrammarOfString):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.h:
+        (MockGrammarCheck):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.cpp:
+        (append):
+        (isNotASCIIAlpha):
+        (MockSpellCheck::spellCheckWord):
+        (MockSpellCheck::initializeIfNeeded):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.h:
+        (MockSpellCheck):
+        * DumpRenderTree/chromium/TestRunner/src/SpellCheckClient.cpp:
+        (WebTestRunner::SpellCheckClient::checkTextOfParagraph):
+        (WebTestRunner::SpellCheckClient::finishLastTextCheck):
+        * DumpRenderTree/chromium/TestRunner/src/TestCommon.h: Removed.
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.cpp:
+        (WebTestRunner::TestPlugin::TestPlugin):
+        (WebTestRunner::TestPlugin::initialize):
+        (WebTestRunner::TestPlugin::destroy):
+        (WebTestRunner::TestPlugin::parsePrimitive):
+        (WebTestRunner::TestPlugin::parseColor):
+        (WebTestRunner::TestPlugin::initProgram):
+        (WebTestRunner::TestPlugin::initPrimitive):
+        (WebTestRunner::TestPlugin::drawPrimitive):
+        (WebTestRunner::TestPlugin::loadShader):
+        (WebTestRunner::TestPlugin::loadProgram):
+        (WebTestRunner::TestPlugin::handleDragStatusUpdate):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.h:
+        (TestPlugin):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::WorkQueue::processWorkSoon):
+        (WebTestRunner::TestRunner::WorkQueue::processWork):
+        (WebTestRunner::TestRunner::WorkQueue::reset):
+        (WebTestRunner::TestRunner::WorkQueue::addWork):
+        (WebTestRunner::TestRunner::TestRunner):
+        (WebTestRunner::TestRunner::reset):
+        (WebTestRunner::TestRunner::policyDelegateDone):
+        (WebTestRunner::TestRunner::findString):
+        (WebTestRunner::TestRunner::setTextSubpixelPositioning):
+        (WebTestRunner::TestRunner::overridePreference):
+        (WebTestRunner):
+        (WebTestRunner::TestRunner::setBackingScaleFactor):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (WebTestRunner::TestRunner::WorkQueue::isEmpty):
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TextInputController.cpp:
+        (WebTestRunner::TextInputController::markedRange):
+        (WebTestRunner::TextInputController::selectedRange):
+        (WebTestRunner::TextInputController::firstRectForCharacterRange):
+        * DumpRenderTree/chromium/TestRunner/src/WebPreferences.cpp:
+        (WebTestRunner::WebPreferences::reset):
+        * DumpRenderTree/chromium/TestRunner/src/WebTask.cpp:
+        (WebTestRunner):
+        (WebTestRunner::WebTaskList::WebTaskList):
+        (WebTestRunner::WebTaskList::~WebTaskList):
+        (WebTestRunner::WebTaskList::registerTask):
+        (WebTestRunner::WebTaskList::unregisterTask):
+        (WebTestRunner::WebTaskList::revokeAll):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::~WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::testInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::~WebTestProxyBase):
+        (WebTestRunner::WebTestProxyBase::spellCheckClient):
+        (WebTestRunner::WebTestProxyBase::registerIntentService):
+        (WebTestRunner::WebTestProxyBase::dispatchIntent):
+        (WebTestRunner::WebTestProxyBase::assignIdentifierToRequest):
+        * DumpRenderTree/chromium/TestRunner/src/config.h: Removed.
+
+2013-02-07  Benjamin Poulain  <bpoulain@apple.com>
+
+        Move pauseAnimation/pauseTransition from TestRunner to Internals
+        https://bugs.webkit.org/show_bug.cgi?id=109107
+
+        Reviewed by Anders Carlsson.
+
+        * DumpRenderTree/TestRunner.cpp:
+        (TestRunner::staticFunctions):
+        * DumpRenderTree/TestRunner.h:
+        * DumpRenderTree/blackberry/TestRunnerBlackBerry.cpp:
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/efl/TestRunnerEfl.cpp:
+        * DumpRenderTree/gtk/TestRunnerGtk.cpp:
+        * DumpRenderTree/mac/TestRunnerMac.mm:
+        * DumpRenderTree/qt/TestRunnerQt.cpp:
+        * DumpRenderTree/qt/TestRunnerQt.h:
+        (TestRunner):
+        * DumpRenderTree/win/TestRunnerWin.cpp:
+        * DumpRenderTree/wx/TestRunnerWx.cpp:
+        * WebKitTestRunner/InjectedBundle/Bindings/TestRunner.idl:
+        * WebKitTestRunner/InjectedBundle/TestRunner.cpp:
+        * WebKitTestRunner/InjectedBundle/TestRunner.h:
+
+2013-02-07  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] turn TestRunner library into a component build
+        https://bugs.webkit.org/show_bug.cgi?id=108466
+
+        Reviewed by Adam Barth.
+
+        To achieve this, we need to drop all dependencies on WTF.
+
+        * DumpRenderTree/DumpRenderTree.gyp/DumpRenderTree.gyp:
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebPreferences.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTask.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestCommon.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.cpp:
+        (WebTestRunner::AccessibilityUIElement::AccessibilityUIElement):
+        (WebTestRunner::AccessibilityUIElementList::getOrCreate):
+        (WebTestRunner::AccessibilityUIElementList::createRoot):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.h:
+        (AccessibilityUIElementList):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.cpp:
+        (WebTestRunner::CppBoundClass::~CppBoundClass):
+        (WebTestRunner::CppBoundClass::invoke):
+        (WebTestRunner::CppBoundClass::getProperty):
+        (WebTestRunner::CppBoundClass::setProperty):
+        (WebTestRunner::CppBoundClass::bindCallback):
+        (WebTestRunner::CppBoundClass::bindGetterCallback):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::getAsCppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.h:
+        (WebTestRunner):
+        (CppBoundClass):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::bindFallbackCallback):
+        (WebTestRunner::CppBoundClass::bindFallbackMethod):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.cpp:
+        (WebTestRunner::CppVariant::toString):
+        (WebTestRunner::CppVariant::toInt32):
+        (WebTestRunner::CppVariant::toDouble):
+        (WebTestRunner::CppVariant::toBoolean):
+        (WebTestRunner::CppVariant::toStringVector):
+        (WebTestRunner::CppVariant::invoke):
+        (WebTestRunner::CppVariant::invokeDefault):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.h:
+        (CppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::reset):
+        (WebTestRunner::EventSender::mouseDown):
+        (WebTestRunner::EventSender::mouseUp):
+        (WebTestRunner::EventSender::mouseMoveTo):
+        (WebTestRunner::EventSender::keyDown):
+        (WebTestRunner::EventSender::dispatchMessage):
+        (WebTestRunner::EventSender::leapForward):
+        (WebTestRunner::EventSender::replaySavedEvents):
+        (WebTestRunner::makeMenuItemStringsFor):
+        (WebTestRunner::EventSender::contextClick):
+        (WebTestRunner::EventSender::beginDragWithFiles):
+        (WebTestRunner::EventSender::addTouchPoint):
+        (WebTestRunner::EventSender::releaseTouchPoint):
+        (WebTestRunner::EventSender::updateTouchPoint):
+        (WebTestRunner::EventSender::cancelTouchPoint):
+        (WebTestRunner::EventSender::sendCurrentTouchEvent):
+        (WebTestRunner::EventSender::gestureEvent):
+        * DumpRenderTree/chromium/TestRunner/src/KeyCodeMapping.cpp:
+        (WebTestRunner::NativeKeyCodeForWindowsKeyCode):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.cpp:
+        (WebTestRunner::MockGrammarCheck::checkGrammarOfString):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.h:
+        (WebTestRunner):
+        (MockGrammarCheck):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.cpp:
+        (WebTestRunner::MockSpellCheck::spellCheckWord):
+        (WebTestRunner::MockSpellCheck::initializeIfNeeded):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.h:
+        (MockSpellCheck):
+        * DumpRenderTree/chromium/TestRunner/src/SpellCheckClient.cpp:
+        (WebTestRunner::SpellCheckClient::checkTextOfParagraph):
+        (WebTestRunner::SpellCheckClient::finishLastTextCheck):
+        * DumpRenderTree/chromium/TestRunner/src/TestCommon.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+        (isASCIIAlpha):
+        (isNotASCIIAlpha):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.cpp:
+        (WebTestRunner::TestPlugin::TestPlugin):
+        (WebTestRunner::TestPlugin::initialize):
+        (WebTestRunner::TestPlugin::destroy):
+        (WebTestRunner::TestPlugin::parsePrimitive):
+        (WebTestRunner::TestPlugin::parseColor):
+        (WebTestRunner::TestPlugin::initProgram):
+        (WebTestRunner::TestPlugin::initPrimitive):
+        (WebTestRunner::TestPlugin::drawPrimitive):
+        (WebTestRunner::TestPlugin::loadShader):
+        (WebTestRunner::TestPlugin::loadProgram):
+        (WebTestRunner::TestPlugin::handleDragStatusUpdate):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.h:
+        (TestPlugin):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::WorkQueue::processWorkSoon):
+        (WebTestRunner::TestRunner::WorkQueue::processWork):
+        (WebTestRunner::TestRunner::WorkQueue::reset):
+        (WebTestRunner::TestRunner::WorkQueue::addWork):
+        (WebTestRunner::TestRunner::TestRunner):
+        (WebTestRunner::TestRunner::reset):
+        (WebTestRunner::TestRunner::policyDelegateDone):
+        (WebTestRunner::TestRunner::findString):
+        (WebTestRunner::TestRunner::setTextSubpixelPositioning):
+        (WebTestRunner::TestRunner::overridePreference):
+        (WebTestRunner::TestRunner::deliverWebIntent):
+        (WebTestRunner::TestRunner::setBackingScaleFactor):
+        (WebTestRunner::TestRunner::simulateLegacyWebNotificationClick):
+        (WebTestRunner::TestRunner::setMockSpeechInputDumpRect):
+        (WebTestRunner::TestRunner::wasMockSpeechRecognitionAborted):
+        (WebTestRunner::TestRunner::setPointerLockWillFailSynchronously):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (WebTestRunner::TestRunner::WorkQueue::isEmpty):
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TextInputController.cpp:
+        (WebTestRunner::TextInputController::markedRange):
+        (WebTestRunner::TextInputController::selectedRange):
+        (WebTestRunner::TextInputController::firstRectForCharacterRange):
+        * DumpRenderTree/chromium/TestRunner/src/WebPreferences.cpp:
+        (WebTestRunner::WebPreferences::reset):
+        * DumpRenderTree/chromium/TestRunner/src/WebTask.cpp:
+        (WebTestRunner::WebTaskList::~WebTaskList):
+        (WebTestRunner::WebTaskList::registerTask):
+        (WebTestRunner::WebTaskList::unregisterTask):
+        (WebTestRunner::WebTaskList::revokeAll):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::~WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::testInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::~WebTestProxyBase):
+        (WebTestRunner::WebTestProxyBase::spellCheckClient):
+        (WebTestRunner::WebTestProxyBase::registerIntentService):
+        (WebTestRunner::WebTestProxyBase::dispatchIntent):
+        (WebTestRunner::WebTestProxyBase::assignIdentifierToRequest):
+        * DumpRenderTree/chromium/TestRunner/src/config.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+
+2013-02-07  Eunmi Lee  <eunmi15.lee@samsung.com>
+
+        Do not check enum's casing for WebKit2 C API.
+        https://bugs.webkit.org/show_bug.cgi?id=109128
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Add "-readability/enum_casing" for WebKit2 C APIs because we use word
+        which starts with non-capital letter 'k' for types of enums.
+
+        * Scripts/webkitpy/style/checker.py:
+
+2013-02-07  Csaba Osztrogonác  <ossy@webkit.org>
+
+        Unreviewed warning fix.
+
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        (BuildAndTestFactory.__init__):
+        (DownloadAndPerfTestWebKit2Factory.__init__):
+
+2013-02-07  Csaba Osztrogonác  <ossy@webkit.org>
+
+        Unreviewed typo fix after r142121.
+
+        * BuildSlaveSupport/build.webkit.org-config/config.json:
+
+2013-02-07  Vivek Galatage  <vivek.vg@samsung.com>
+
+        [Qt] QtTestBrowser should provide option to enable/disable Javascript
+        https://bugs.webkit.org/show_bug.cgi?id=107461
+
+        Reviewed by Jocelyn Turcotte.
+
+        Option to enable/disable Javascript would be handy option to test
+        certain functionalities of web pages with/without Javascript.
+
+        * QtTestBrowser/launcherwindow.cpp:
+        (LauncherWindow::createChrome):
+        (LauncherWindow::toggleJavaScriptEnabled):
+        * QtTestBrowser/launcherwindow.h:
+        (LauncherWindow):
+
+2013-02-07  Raphael Kubo da Costa  <raphael.kubo.da.costa@intel.com>
+
+        [EFL] Add a WebKit2 Performance bot.
+        https://bugs.webkit.org/show_bug.cgi?id=109188
+
+        Reviewed by Csaba Osztrogonác.
+
+        * BuildSlaveSupport/build.webkit.org-config/config.json: Add the
+        efl-linux-perf-1 slave (a 64-bit Release WK2 Perf bot), and make
+        the "EFL Linux 64-bit Release" bot trigger it.
+
+2013-02-07  Xiaobo Wang  <xbwang@torchmobile.com.cn>
+
+        [BlackBerry] CHHW - Characters that are using 32 bits encoding get trunked to 16bits
+        https://bugs.webkit.org/show_bug.cgi?id=109126
+        PR 292540
+
+        Reviewed by Yong Li.
+
+        Change char code to 4 bytes.
+
+        * DumpRenderTree/blackberry/EventSender.cpp:
+        (keyDownCallback):
+
+2013-02-07  Gavin Peters  <gavinp@chromium.org>
+
+        Unreviewed, rolling out r142090.
+        http://trac.webkit.org/changeset/142090
+        https://bugs.webkit.org/show_bug.cgi?id=108466
+
+        lots of selection expectations failures
+
+        * DumpRenderTree/DumpRenderTree.gyp/DumpRenderTree.gyp:
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebPreferences.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTask.h:
+        (WebTaskList):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestCommon.h: Removed.
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        (WebTestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        (WebTestProxyBase):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.cpp:
+        (WebTestRunner::AccessibilityUIElement::AccessibilityUIElement):
+        (WebTestRunner::AccessibilityUIElementList::getOrCreate):
+        (WebTestRunner::AccessibilityUIElementList::createRoot):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.h:
+        (AccessibilityUIElementList):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.cpp:
+        (WebTestRunner::CppBoundClass::~CppBoundClass):
+        (WebTestRunner::CppBoundClass::invoke):
+        (WebTestRunner::CppBoundClass::getProperty):
+        (WebTestRunner::CppBoundClass::setProperty):
+        (WebTestRunner::CppBoundClass::bindCallback):
+        (WebTestRunner::CppBoundClass::bindGetterCallback):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::getAsCppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.h:
+        (WebTestRunner):
+        (CppBoundClass):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::bindFallbackCallback):
+        (WebTestRunner::CppBoundClass::bindFallbackMethod):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.cpp:
+        (WebTestRunner::CppVariant::toString):
+        (WebTestRunner::CppVariant::toInt32):
+        (WebTestRunner::CppVariant::toDouble):
+        (WebTestRunner::CppVariant::toBoolean):
+        (WebTestRunner::CppVariant::toStringVector):
+        (WebTestRunner::CppVariant::invoke):
+        (WebTestRunner::CppVariant::invokeDefault):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.h:
+        (CppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::reset):
+        (WebTestRunner::EventSender::mouseDown):
+        (WebTestRunner::EventSender::mouseUp):
+        (WebTestRunner::EventSender::mouseMoveTo):
+        (WebTestRunner::EventSender::keyDown):
+        (WebTestRunner::EventSender::dispatchMessage):
+        (WebTestRunner::EventSender::leapForward):
+        (WebTestRunner::EventSender::replaySavedEvents):
+        (WebTestRunner::makeMenuItemStringsFor):
+        (WebTestRunner::EventSender::contextClick):
+        (WebTestRunner::EventSender::beginDragWithFiles):
+        (WebTestRunner::EventSender::addTouchPoint):
+        (WebTestRunner::EventSender::releaseTouchPoint):
+        (WebTestRunner::EventSender::updateTouchPoint):
+        (WebTestRunner::EventSender::cancelTouchPoint):
+        (WebTestRunner::EventSender::sendCurrentTouchEvent):
+        (WebTestRunner::EventSender::gestureEvent):
+        * DumpRenderTree/chromium/TestRunner/src/KeyCodeMapping.cpp:
+        (WebTestRunner::NativeKeyCodeForWindowsKeyCode):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.cpp:
+        (MockGrammarCheck::checkGrammarOfString):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.h:
+        (MockGrammarCheck):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.cpp:
+        (append):
+        (isNotASCIIAlpha):
+        (MockSpellCheck::spellCheckWord):
+        (MockSpellCheck::initializeIfNeeded):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.h:
+        (MockSpellCheck):
+        * DumpRenderTree/chromium/TestRunner/src/SpellCheckClient.cpp:
+        (WebTestRunner::SpellCheckClient::checkTextOfParagraph):
+        (WebTestRunner::SpellCheckClient::finishLastTextCheck):
+        * DumpRenderTree/chromium/TestRunner/src/TestCommon.h: Removed.
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.cpp:
+        (WebTestRunner::TestPlugin::TestPlugin):
+        (WebTestRunner::TestPlugin::initialize):
+        (WebTestRunner::TestPlugin::destroy):
+        (WebTestRunner::TestPlugin::parsePrimitive):
+        (WebTestRunner::TestPlugin::parseColor):
+        (WebTestRunner::TestPlugin::initProgram):
+        (WebTestRunner::TestPlugin::initPrimitive):
+        (WebTestRunner::TestPlugin::drawPrimitive):
+        (WebTestRunner::TestPlugin::loadShader):
+        (WebTestRunner::TestPlugin::loadProgram):
+        (WebTestRunner::TestPlugin::handleDragStatusUpdate):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.h:
+        (TestPlugin):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::WorkQueue::processWorkSoon):
+        (WebTestRunner::TestRunner::WorkQueue::processWork):
+        (WebTestRunner::TestRunner::WorkQueue::reset):
+        (WebTestRunner::TestRunner::WorkQueue::addWork):
+        (WebTestRunner::TestRunner::TestRunner):
+        (WebTestRunner::TestRunner::reset):
+        (WebTestRunner::TestRunner::policyDelegateDone):
+        (WebTestRunner::TestRunner::findString):
+        (WebTestRunner::TestRunner::setTextSubpixelPositioning):
+        (WebTestRunner::TestRunner::overridePreference):
+        (WebTestRunner):
+        (WebTestRunner::TestRunner::setBackingScaleFactor):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (WebTestRunner::TestRunner::WorkQueue::isEmpty):
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TextInputController.cpp:
+        (WebTestRunner::TextInputController::markedRange):
+        (WebTestRunner::TextInputController::selectedRange):
+        (WebTestRunner::TextInputController::firstRectForCharacterRange):
+        * DumpRenderTree/chromium/TestRunner/src/WebPreferences.cpp:
+        (WebTestRunner::WebPreferences::reset):
+        * DumpRenderTree/chromium/TestRunner/src/WebTask.cpp:
+        (WebTestRunner):
+        (WebTestRunner::WebTaskList::WebTaskList):
+        (WebTestRunner::WebTaskList::~WebTaskList):
+        (WebTestRunner::WebTaskList::registerTask):
+        (WebTestRunner::WebTaskList::unregisterTask):
+        (WebTestRunner::WebTaskList::revokeAll):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::~WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::testInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::~WebTestProxyBase):
+        (WebTestRunner::WebTestProxyBase::spellCheckClient):
+        (WebTestRunner::WebTestProxyBase::registerIntentService):
+        (WebTestRunner::WebTestProxyBase::dispatchIntent):
+        (WebTestRunner::WebTestProxyBase::assignIdentifierToRequest):
+        * DumpRenderTree/chromium/TestRunner/src/config.h: Removed.
+
+2013-02-07  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] turn TestRunner library into a component build
+        https://bugs.webkit.org/show_bug.cgi?id=108466
+
+        Reviewed by Adam Barth.
+
+        To achieve this, we need to drop all dependencies on WTF.
+
+        * DumpRenderTree/DumpRenderTree.gyp/DumpRenderTree.gyp:
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebPreferences.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTask.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestCommon.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.cpp:
+        (WebTestRunner::AccessibilityUIElement::AccessibilityUIElement):
+        (WebTestRunner::AccessibilityUIElementList::getOrCreate):
+        (WebTestRunner::AccessibilityUIElementList::createRoot):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.h:
+        (AccessibilityUIElementList):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.cpp:
+        (WebTestRunner::CppBoundClass::~CppBoundClass):
+        (WebTestRunner::CppBoundClass::invoke):
+        (WebTestRunner::CppBoundClass::getProperty):
+        (WebTestRunner::CppBoundClass::setProperty):
+        (WebTestRunner::CppBoundClass::bindCallback):
+        (WebTestRunner::CppBoundClass::bindGetterCallback):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::getAsCppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.h:
+        (WebTestRunner):
+        (CppBoundClass):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::bindFallbackCallback):
+        (WebTestRunner::CppBoundClass::bindFallbackMethod):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.cpp:
+        (WebTestRunner::CppVariant::toString):
+        (WebTestRunner::CppVariant::toInt32):
+        (WebTestRunner::CppVariant::toDouble):
+        (WebTestRunner::CppVariant::toBoolean):
+        (WebTestRunner::CppVariant::toStringVector):
+        (WebTestRunner::CppVariant::invoke):
+        (WebTestRunner::CppVariant::invokeDefault):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.h:
+        (CppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::reset):
+        (WebTestRunner::EventSender::mouseDown):
+        (WebTestRunner::EventSender::mouseUp):
+        (WebTestRunner::EventSender::mouseMoveTo):
+        (WebTestRunner::EventSender::keyDown):
+        (WebTestRunner::EventSender::dispatchMessage):
+        (WebTestRunner::EventSender::leapForward):
+        (WebTestRunner::EventSender::replaySavedEvents):
+        (WebTestRunner::makeMenuItemStringsFor):
+        (WebTestRunner::EventSender::contextClick):
+        (WebTestRunner::EventSender::beginDragWithFiles):
+        (WebTestRunner::EventSender::addTouchPoint):
+        (WebTestRunner::EventSender::releaseTouchPoint):
+        (WebTestRunner::EventSender::updateTouchPoint):
+        (WebTestRunner::EventSender::cancelTouchPoint):
+        (WebTestRunner::EventSender::sendCurrentTouchEvent):
+        (WebTestRunner::EventSender::gestureEvent):
+        * DumpRenderTree/chromium/TestRunner/src/KeyCodeMapping.cpp:
+        (WebTestRunner::NativeKeyCodeForWindowsKeyCode):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.cpp:
+        (WebTestRunner::MockGrammarCheck::checkGrammarOfString):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.h:
+        (WebTestRunner):
+        (MockGrammarCheck):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.cpp:
+        (WebTestRunner::MockSpellCheck::spellCheckWord):
+        (WebTestRunner::MockSpellCheck::initializeIfNeeded):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.h:
+        (MockSpellCheck):
+        * DumpRenderTree/chromium/TestRunner/src/SpellCheckClient.cpp:
+        (WebTestRunner::SpellCheckClient::checkTextOfParagraph):
+        (WebTestRunner::SpellCheckClient::finishLastTextCheck):
+        * DumpRenderTree/chromium/TestRunner/src/TestCommon.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+        (isASCIIAlpha):
+        (isNotASCIIAlpha):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.cpp:
+        (WebTestRunner::TestPlugin::TestPlugin):
+        (WebTestRunner::TestPlugin::initialize):
+        (WebTestRunner::TestPlugin::destroy):
+        (WebTestRunner::TestPlugin::parsePrimitive):
+        (WebTestRunner::TestPlugin::parseColor):
+        (WebTestRunner::TestPlugin::initProgram):
+        (WebTestRunner::TestPlugin::initPrimitive):
+        (WebTestRunner::TestPlugin::drawPrimitive):
+        (WebTestRunner::TestPlugin::loadShader):
+        (WebTestRunner::TestPlugin::loadProgram):
+        (WebTestRunner::TestPlugin::handleDragStatusUpdate):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.h:
+        (TestPlugin):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::WorkQueue::processWorkSoon):
+        (WebTestRunner::TestRunner::WorkQueue::processWork):
+        (WebTestRunner::TestRunner::WorkQueue::reset):
+        (WebTestRunner::TestRunner::WorkQueue::addWork):
+        (WebTestRunner::TestRunner::TestRunner):
+        (WebTestRunner::TestRunner::reset):
+        (WebTestRunner::TestRunner::policyDelegateDone):
+        (WebTestRunner::TestRunner::findString):
+        (WebTestRunner::TestRunner::setTextSubpixelPositioning):
+        (WebTestRunner::TestRunner::overridePreference):
+        (WebTestRunner::TestRunner::deliverWebIntent):
+        (WebTestRunner::TestRunner::setBackingScaleFactor):
+        (WebTestRunner::TestRunner::simulateLegacyWebNotificationClick):
+        (WebTestRunner::TestRunner::setMockSpeechInputDumpRect):
+        (WebTestRunner::TestRunner::wasMockSpeechRecognitionAborted):
+        (WebTestRunner::TestRunner::setPointerLockWillFailSynchronously):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (WebTestRunner::TestRunner::WorkQueue::isEmpty):
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TextInputController.cpp:
+        (WebTestRunner::TextInputController::markedRange):
+        (WebTestRunner::TextInputController::selectedRange):
+        (WebTestRunner::TextInputController::firstRectForCharacterRange):
+        * DumpRenderTree/chromium/TestRunner/src/WebPreferences.cpp:
+        (WebTestRunner::WebPreferences::reset):
+        * DumpRenderTree/chromium/TestRunner/src/WebTask.cpp:
+        (WebTestRunner::WebTaskList::~WebTaskList):
+        (WebTestRunner::WebTaskList::registerTask):
+        (WebTestRunner::WebTaskList::unregisterTask):
+        (WebTestRunner::WebTaskList::revokeAll):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::~WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::testInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::~WebTestProxyBase):
+        (WebTestRunner::WebTestProxyBase::spellCheckClient):
+        (WebTestRunner::WebTestProxyBase::registerIntentService):
+        (WebTestRunner::WebTestProxyBase::dispatchIntent):
+        (WebTestRunner::WebTestProxyBase::assignIdentifierToRequest):
+        * DumpRenderTree/chromium/TestRunner/src/config.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+
+2013-02-07  Andras Becsi  <andras.becsi@digia.com>
+
+        [Qt] Use GNU ar's thin archive format for intermediate static libs
+        https://bugs.webkit.org/show_bug.cgi?id=109052
+
+        Reviewed by Jocelyn Turcotte.
+
+        With debug builds we exceed the 4GiB limit of GNU ar when creating the WebCore
+        intermediate static library which results in build failure even with a x86_64
+        toolchain (http://sourceware.org/bugzilla/show_bug.cgi?id=14625).
+
+        When using a GNU toolchain we can use the thin archive format for these static
+        libraries which also has the benefit of not copying the object files, thus
+        drastically reducing disk usage and overall compile time.
+
+        Currently qmake does not support GNU ar's thin archive format so for
+        now we need to do the magic in the build system as a stopgap solution.
+
+        * qmake/mkspecs/features/configure.prf:
+        * qmake/mkspecs/features/default_post.prf:
+        * qmake/mkspecs/features/functions.prf:
+
+2013-02-05  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Compile WTF tests of TestWebKitAPI
+        https://bugs.webkit.org/show_bug.cgi?id=108935
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Add initial stubs and files for building at least the WTF tests.
+        The WK2 tests need more platform code, in particular PlatformWebView
+        and injected bundle support.
+
+        * TestWebKitAPI/TestWebKitAPI.pri: Added.
+        * TestWebKitAPI/TestWebKitAPI.pro: Added.
+        * TestWebKitAPI/Tests/WTF/WTF.pro: Added.
+        * TestWebKitAPI/qt/InjectedBundleControllerQt.cpp: Added.
+        (TestWebKitAPI):
+        (TestWebKitAPI::InjectedBundleController::platformInitialize):
+        * TestWebKitAPI/qt/PlatformUtilitiesQt.cpp: Added.
+        (Util):
+        (TestWebKitAPI::Util::run):
+        (TestWebKitAPI::Util::sleep):
+        (TestWebKitAPI::Util::createInjectedBundlePath):
+        (TestWebKitAPI::Util::createURLForResource):
+        (TestWebKitAPI::Util::URLForNonExistentResource):
+        * TestWebKitAPI/qt/main.cpp: Added.
+        (main):
+        * Tools.pro:
+        * qmake/mkspecs/features/default_post.prf:
+
+2013-02-06  Roger Fong  <roger_fong@apple.com>
+
+        VS2010 WinLauncher project, property sheets and resources.
+        https://bugs.webkit.org/show_bug.cgi?id=107037.
+
+        Reviewed by Brent Fulgham.
+
+        * WinLauncher/WinLauncher.vcxproj: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncher.ico: Copied from WinLauncher/WinLauncher.ico.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncher.rc: Copied from WinLauncher/WinLauncherLauncher.rc.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncher.vcxproj: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncher.vcxproj.filters: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncher.vcxproj.user: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherCommon.props: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherDebug.props: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLib.rc: Copied from WinLauncher/WinLauncher.rc.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLib.vcxproj: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLib.vcxproj.filters: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLib.vcxproj.user: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLibCommon.props: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLibDebug.props: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLibPostBuild.cmd: Copied from WinLauncher/WinLauncherPostBuild.cmd.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLibPreBuild.cmd: Copied from WinLauncher/WinLauncherPreBuild.cmd.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLibRelease.props: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherLibResource.h: Copied from WinLauncher/resource.h.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherPostBuild.cmd: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherPreBuild.cmd: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherRelease.props: Added.
+        * WinLauncher/WinLauncher.vcxproj/WinLauncherResource.h: Copied from WinLauncher/WinLauncherLauncherResource.h.
+        * WinLauncher/WinLauncher.vcxproj/small.ico: Copied from WinLauncher/small.ico.
+
+2013-02-06  Terry Anderson  <tdanderson@chromium.org>
+
+        Add support for gesture scroll events that do not propagate to enclosing scrollables
+        https://bugs.webkit.org/show_bug.cgi?id=108849
+
+        Reviewed by Antonio Gomes.
+
+        Modify chromium's DRT EventSender to support the new event type
+        GestureScrollUpdateWithoutPropagation.
+
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::gestureScrollUpdateWithoutPropagation):
+        (WebTestRunner::EventSender::gestureEvent):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.h:
+        (EventSender):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.cpp:
+        (WebTestRunner::TestPlugin::handleInputEvent):
+
+2013-02-06  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r142032.
+        http://trac.webkit.org/changeset/142032
+        https://bugs.webkit.org/show_bug.cgi?id=109095
+
+        component build still broken (Requested by jochen__ on
+        #webkit).
+
+        * DumpRenderTree/DumpRenderTree.gyp/DumpRenderTree.gyp:
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebPreferences.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTask.h:
+        (WebTaskList):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestCommon.h: Removed.
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        (WebTestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        (WebTestProxyBase):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.cpp:
+        (WebTestRunner::AccessibilityUIElement::AccessibilityUIElement):
+        (WebTestRunner::AccessibilityUIElementList::getOrCreate):
+        (WebTestRunner::AccessibilityUIElementList::createRoot):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.h:
+        (AccessibilityUIElementList):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.cpp:
+        (WebTestRunner::CppBoundClass::~CppBoundClass):
+        (WebTestRunner::CppBoundClass::invoke):
+        (WebTestRunner::CppBoundClass::getProperty):
+        (WebTestRunner::CppBoundClass::setProperty):
+        (WebTestRunner::CppBoundClass::bindCallback):
+        (WebTestRunner::CppBoundClass::bindGetterCallback):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::getAsCppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.h:
+        (WebTestRunner):
+        (CppBoundClass):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::bindFallbackCallback):
+        (WebTestRunner::CppBoundClass::bindFallbackMethod):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.cpp:
+        (WebTestRunner::CppVariant::toString):
+        (WebTestRunner::CppVariant::toInt32):
+        (WebTestRunner::CppVariant::toDouble):
+        (WebTestRunner::CppVariant::toBoolean):
+        (WebTestRunner::CppVariant::toStringVector):
+        (WebTestRunner::CppVariant::invoke):
+        (WebTestRunner::CppVariant::invokeDefault):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.h:
+        (CppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::reset):
+        (WebTestRunner::EventSender::mouseDown):
+        (WebTestRunner::EventSender::mouseUp):
+        (WebTestRunner::EventSender::mouseMoveTo):
+        (WebTestRunner::EventSender::keyDown):
+        (WebTestRunner::EventSender::dispatchMessage):
+        (WebTestRunner::EventSender::leapForward):
+        (WebTestRunner::EventSender::replaySavedEvents):
+        (WebTestRunner::makeMenuItemStringsFor):
+        (WebTestRunner::EventSender::contextClick):
+        (WebTestRunner::EventSender::beginDragWithFiles):
+        (WebTestRunner::EventSender::addTouchPoint):
+        (WebTestRunner::EventSender::releaseTouchPoint):
+        (WebTestRunner::EventSender::updateTouchPoint):
+        (WebTestRunner::EventSender::cancelTouchPoint):
+        (WebTestRunner::EventSender::sendCurrentTouchEvent):
+        (WebTestRunner::EventSender::gestureEvent):
+        * DumpRenderTree/chromium/TestRunner/src/KeyCodeMapping.cpp:
+        (WebTestRunner::NativeKeyCodeForWindowsKeyCode):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.cpp:
+        (MockGrammarCheck::checkGrammarOfString):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.h:
+        (MockGrammarCheck):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.cpp:
+        (append):
+        (isNotASCIIAlpha):
+        (MockSpellCheck::spellCheckWord):
+        (MockSpellCheck::initializeIfNeeded):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.h:
+        (MockSpellCheck):
+        * DumpRenderTree/chromium/TestRunner/src/SpellCheckClient.cpp:
+        (WebTestRunner::SpellCheckClient::checkTextOfParagraph):
+        (WebTestRunner::SpellCheckClient::finishLastTextCheck):
+        * DumpRenderTree/chromium/TestRunner/src/TestCommon.h: Removed.
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.cpp:
+        (WebTestRunner::TestPlugin::TestPlugin):
+        (WebTestRunner::TestPlugin::initialize):
+        (WebTestRunner::TestPlugin::destroy):
+        (WebTestRunner::TestPlugin::parsePrimitive):
+        (WebTestRunner::TestPlugin::parseColor):
+        (WebTestRunner::TestPlugin::initProgram):
+        (WebTestRunner::TestPlugin::initPrimitive):
+        (WebTestRunner::TestPlugin::drawPrimitive):
+        (WebTestRunner::TestPlugin::loadShader):
+        (WebTestRunner::TestPlugin::loadProgram):
+        (WebTestRunner::TestPlugin::handleDragStatusUpdate):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.h:
+        (TestPlugin):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::WorkQueue::processWorkSoon):
+        (WebTestRunner::TestRunner::WorkQueue::processWork):
+        (WebTestRunner::TestRunner::WorkQueue::reset):
+        (WebTestRunner::TestRunner::WorkQueue::addWork):
+        (WebTestRunner::TestRunner::TestRunner):
+        (WebTestRunner::TestRunner::reset):
+        (WebTestRunner::TestRunner::policyDelegateDone):
+        (WebTestRunner::TestRunner::findString):
+        (WebTestRunner::TestRunner::setTextSubpixelPositioning):
+        (WebTestRunner::TestRunner::overridePreference):
+        (WebTestRunner):
+        (WebTestRunner::TestRunner::setBackingScaleFactor):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (WebTestRunner::TestRunner::WorkQueue::isEmpty):
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TextInputController.cpp:
+        (WebTestRunner::TextInputController::markedRange):
+        (WebTestRunner::TextInputController::selectedRange):
+        (WebTestRunner::TextInputController::firstRectForCharacterRange):
+        * DumpRenderTree/chromium/TestRunner/src/WebPreferences.cpp:
+        (WebTestRunner::WebPreferences::reset):
+        * DumpRenderTree/chromium/TestRunner/src/WebTask.cpp:
+        (WebTestRunner):
+        (WebTestRunner::WebTaskList::WebTaskList):
+        (WebTestRunner::WebTaskList::~WebTaskList):
+        (WebTestRunner::WebTaskList::registerTask):
+        (WebTestRunner::WebTaskList::unregisterTask):
+        (WebTestRunner::WebTaskList::revokeAll):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::~WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::testInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::~WebTestProxyBase):
+        (WebTestRunner::WebTestProxyBase::spellCheckClient):
+        (WebTestRunner::WebTestProxyBase::registerIntentService):
+        (WebTestRunner::WebTestProxyBase::dispatchIntent):
+        (WebTestRunner::WebTestProxyBase::assignIdentifierToRequest):
+        * DumpRenderTree/chromium/TestRunner/src/config.h: Removed.
+
+2013-02-06  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] turn TestRunner library into a component build
+        https://bugs.webkit.org/show_bug.cgi?id=108466
+
+        Reviewed by Adam Barth.
+
+        To achieve this, we need to drop all dependencies on WTF.
+
+        * DumpRenderTree/DumpRenderTree.gyp/DumpRenderTree.gyp:
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebPreferences.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTask.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestCommon.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.cpp:
+        (WebTestRunner::AccessibilityUIElement::AccessibilityUIElement):
+        (WebTestRunner::AccessibilityUIElementList::getOrCreate):
+        (WebTestRunner::AccessibilityUIElementList::createRoot):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.h:
+        (AccessibilityUIElementList):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.cpp:
+        (WebTestRunner::CppBoundClass::~CppBoundClass):
+        (WebTestRunner::CppBoundClass::invoke):
+        (WebTestRunner::CppBoundClass::getProperty):
+        (WebTestRunner::CppBoundClass::setProperty):
+        (WebTestRunner::CppBoundClass::bindCallback):
+        (WebTestRunner::CppBoundClass::bindGetterCallback):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::getAsCppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.h:
+        (WebTestRunner):
+        (CppBoundClass):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::bindFallbackCallback):
+        (WebTestRunner::CppBoundClass::bindFallbackMethod):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.cpp:
+        (WebTestRunner::CppVariant::toString):
+        (WebTestRunner::CppVariant::toInt32):
+        (WebTestRunner::CppVariant::toDouble):
+        (WebTestRunner::CppVariant::toBoolean):
+        (WebTestRunner::CppVariant::toStringVector):
+        (WebTestRunner::CppVariant::invoke):
+        (WebTestRunner::CppVariant::invokeDefault):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.h:
+        (CppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::reset):
+        (WebTestRunner::EventSender::mouseDown):
+        (WebTestRunner::EventSender::mouseUp):
+        (WebTestRunner::EventSender::mouseMoveTo):
+        (WebTestRunner::EventSender::keyDown):
+        (WebTestRunner::EventSender::dispatchMessage):
+        (WebTestRunner::EventSender::leapForward):
+        (WebTestRunner::EventSender::replaySavedEvents):
+        (WebTestRunner::makeMenuItemStringsFor):
+        (WebTestRunner::EventSender::contextClick):
+        (WebTestRunner::EventSender::beginDragWithFiles):
+        (WebTestRunner::EventSender::addTouchPoint):
+        (WebTestRunner::EventSender::releaseTouchPoint):
+        (WebTestRunner::EventSender::updateTouchPoint):
+        (WebTestRunner::EventSender::cancelTouchPoint):
+        (WebTestRunner::EventSender::sendCurrentTouchEvent):
+        (WebTestRunner::EventSender::gestureEvent):
+        * DumpRenderTree/chromium/TestRunner/src/KeyCodeMapping.cpp:
+        (WebTestRunner::NativeKeyCodeForWindowsKeyCode):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.cpp:
+        (WebTestRunner::MockGrammarCheck::checkGrammarOfString):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.h:
+        (WebTestRunner):
+        (MockGrammarCheck):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.cpp:
+        (WebTestRunner::MockSpellCheck::spellCheckWord):
+        (WebTestRunner::MockSpellCheck::initializeIfNeeded):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.h:
+        (MockSpellCheck):
+        * DumpRenderTree/chromium/TestRunner/src/SpellCheckClient.cpp:
+        (WebTestRunner::SpellCheckClient::checkTextOfParagraph):
+        (WebTestRunner::SpellCheckClient::finishLastTextCheck):
+        * DumpRenderTree/chromium/TestRunner/src/TestCommon.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+        (isASCIIAlpha):
+        (isNotASCIIAlpha):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.cpp:
+        (WebTestRunner::TestPlugin::TestPlugin):
+        (WebTestRunner::TestPlugin::initialize):
+        (WebTestRunner::TestPlugin::destroy):
+        (WebTestRunner::TestPlugin::parsePrimitive):
+        (WebTestRunner::TestPlugin::parseColor):
+        (WebTestRunner::TestPlugin::initProgram):
+        (WebTestRunner::TestPlugin::initPrimitive):
+        (WebTestRunner::TestPlugin::drawPrimitive):
+        (WebTestRunner::TestPlugin::loadShader):
+        (WebTestRunner::TestPlugin::loadProgram):
+        (WebTestRunner::TestPlugin::handleDragStatusUpdate):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.h:
+        (TestPlugin):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::WorkQueue::processWorkSoon):
+        (WebTestRunner::TestRunner::WorkQueue::processWork):
+        (WebTestRunner::TestRunner::WorkQueue::reset):
+        (WebTestRunner::TestRunner::WorkQueue::addWork):
+        (WebTestRunner::TestRunner::TestRunner):
+        (WebTestRunner::TestRunner::reset):
+        (WebTestRunner::TestRunner::policyDelegateDone):
+        (WebTestRunner::TestRunner::findString):
+        (WebTestRunner::TestRunner::setTextSubpixelPositioning):
+        (WebTestRunner::TestRunner::overridePreference):
+        (WebTestRunner::TestRunner::deliverWebIntent):
+        (WebTestRunner::TestRunner::setBackingScaleFactor):
+        (WebTestRunner::TestRunner::simulateLegacyWebNotificationClick):
+        (WebTestRunner::TestRunner::setMockSpeechInputDumpRect):
+        (WebTestRunner::TestRunner::wasMockSpeechRecognitionAborted):
+        (WebTestRunner::TestRunner::setPointerLockWillFailSynchronously):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (WebTestRunner::TestRunner::WorkQueue::isEmpty):
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TextInputController.cpp:
+        (WebTestRunner::TextInputController::markedRange):
+        (WebTestRunner::TextInputController::selectedRange):
+        (WebTestRunner::TextInputController::firstRectForCharacterRange):
+        * DumpRenderTree/chromium/TestRunner/src/WebPreferences.cpp:
+        (WebTestRunner::WebPreferences::reset):
+        * DumpRenderTree/chromium/TestRunner/src/WebTask.cpp:
+        (WebTestRunner::WebTaskList::~WebTaskList):
+        (WebTestRunner::WebTaskList::registerTask):
+        (WebTestRunner::WebTaskList::unregisterTask):
+        (WebTestRunner::WebTaskList::revokeAll):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::~WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::testInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::~WebTestProxyBase):
+        (WebTestRunner::WebTestProxyBase::spellCheckClient):
+        (WebTestRunner::WebTestProxyBase::registerIntentService):
+        (WebTestRunner::WebTestProxyBase::dispatchIntent):
+        (WebTestRunner::WebTestProxyBase::assignIdentifierToRequest):
+        * DumpRenderTree/chromium/TestRunner/src/config.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+
+2013-02-06  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r142025.
+        http://trac.webkit.org/changeset/142025
+        https://bugs.webkit.org/show_bug.cgi?id=109091
+
+        broke the build (Requested by tdanderson on #webkit).
+
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::gestureEvent):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.h:
+        (EventSender):
+
+2013-02-06  Terry Anderson  <tdanderson@chromium.org>
+
+        Add support for gesture scroll events that do not propagate to enclosing scrollables
+        https://bugs.webkit.org/show_bug.cgi?id=108849
+
+        Reviewed by Antonio Gomes.
+
+        Modify chromium's DRT EventSender to support the new event type
+        GestureScrollUpdateWithoutPropagation.
+
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::gestureScrollUpdateWithoutPropagation):
+        (WebTestRunner::EventSender::gestureEvent):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.h:
+        (EventSender):
+
+2013-02-06  Zan Dobersek  <zdobersek@igalia.com>
+
+        [TestResultServer] Adjust the name of the GTK 64-bit debug builder
+        https://bugs.webkit.org/show_bug.cgi?id=109016
+
+        Reviewed by Ojan Vafai.
+
+        * TestResultServer/static-dashboards/builders.jsonp: The GTK 64-bit debug
+        builder was adjusted to build WebKit1 only, with the name changed accordingly.
+        Reflect that change here as well.
+
+2013-02-06  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r141991.
+        http://trac.webkit.org/changeset/141991
+        https://bugs.webkit.org/show_bug.cgi?id=109047
+
+        Fails to compile on all Chromium platforms (Requested by
+        schenney on #webkit).
+
+        * DumpRenderTree/DumpRenderTree.gyp/DumpRenderTree.gyp:
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebPreferences.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTask.h:
+        (WebTaskList):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestCommon.h: Removed.
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        (WebTestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        (WebTestProxyBase):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.cpp:
+        (WebTestRunner::AccessibilityUIElement::AccessibilityUIElement):
+        (WebTestRunner::AccessibilityUIElementList::getOrCreate):
+        (WebTestRunner::AccessibilityUIElementList::createRoot):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.h:
+        (AccessibilityUIElementList):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.cpp:
+        (WebTestRunner::CppBoundClass::~CppBoundClass):
+        (WebTestRunner::CppBoundClass::invoke):
+        (WebTestRunner::CppBoundClass::getProperty):
+        (WebTestRunner::CppBoundClass::setProperty):
+        (WebTestRunner::CppBoundClass::bindCallback):
+        (WebTestRunner::CppBoundClass::bindGetterCallback):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::getAsCppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.h:
+        (WebTestRunner):
+        (CppBoundClass):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::bindFallbackCallback):
+        (WebTestRunner::CppBoundClass::bindFallbackMethod):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.cpp:
+        (WebTestRunner::CppVariant::toString):
+        (WebTestRunner::CppVariant::toInt32):
+        (WebTestRunner::CppVariant::toDouble):
+        (WebTestRunner::CppVariant::toBoolean):
+        (WebTestRunner::CppVariant::toStringVector):
+        (WebTestRunner::CppVariant::invoke):
+        (WebTestRunner::CppVariant::invokeDefault):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.h:
+        (CppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::reset):
+        (WebTestRunner::EventSender::mouseDown):
+        (WebTestRunner::EventSender::mouseUp):
+        (WebTestRunner::EventSender::mouseMoveTo):
+        (WebTestRunner::EventSender::keyDown):
+        (WebTestRunner::EventSender::dispatchMessage):
+        (WebTestRunner::EventSender::leapForward):
+        (WebTestRunner::EventSender::replaySavedEvents):
+        (WebTestRunner::makeMenuItemStringsFor):
+        (WebTestRunner::EventSender::contextClick):
+        (WebTestRunner::EventSender::beginDragWithFiles):
+        (WebTestRunner::EventSender::addTouchPoint):
+        (WebTestRunner::EventSender::releaseTouchPoint):
+        (WebTestRunner::EventSender::updateTouchPoint):
+        (WebTestRunner::EventSender::cancelTouchPoint):
+        (WebTestRunner::EventSender::sendCurrentTouchEvent):
+        (WebTestRunner::EventSender::gestureEvent):
+        * DumpRenderTree/chromium/TestRunner/src/KeyCodeMapping.cpp:
+        (WebTestRunner::NativeKeyCodeForWindowsKeyCode):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.cpp:
+        (MockGrammarCheck::checkGrammarOfString):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.h:
+        (MockGrammarCheck):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.cpp:
+        (append):
+        (isNotASCIIAlpha):
+        (MockSpellCheck::spellCheckWord):
+        (MockSpellCheck::initializeIfNeeded):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.h:
+        (MockSpellCheck):
+        * DumpRenderTree/chromium/TestRunner/src/SpellCheckClient.cpp:
+        (WebTestRunner::SpellCheckClient::checkTextOfParagraph):
+        (WebTestRunner::SpellCheckClient::finishLastTextCheck):
+        * DumpRenderTree/chromium/TestRunner/src/TestCommon.h: Removed.
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.cpp:
+        (WebTestRunner::TestPlugin::TestPlugin):
+        (WebTestRunner::TestPlugin::initialize):
+        (WebTestRunner::TestPlugin::destroy):
+        (WebTestRunner::TestPlugin::parsePrimitive):
+        (WebTestRunner::TestPlugin::parseColor):
+        (WebTestRunner::TestPlugin::initProgram):
+        (WebTestRunner::TestPlugin::initPrimitive):
+        (WebTestRunner::TestPlugin::drawPrimitive):
+        (WebTestRunner::TestPlugin::loadShader):
+        (WebTestRunner::TestPlugin::loadProgram):
+        (WebTestRunner::TestPlugin::handleDragStatusUpdate):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.h:
+        (TestPlugin):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::WorkQueue::processWorkSoon):
+        (WebTestRunner::TestRunner::WorkQueue::processWork):
+        (WebTestRunner::TestRunner::WorkQueue::reset):
+        (WebTestRunner::TestRunner::WorkQueue::addWork):
+        (WebTestRunner::TestRunner::TestRunner):
+        (WebTestRunner::TestRunner::reset):
+        (WebTestRunner::TestRunner::policyDelegateDone):
+        (WebTestRunner::TestRunner::findString):
+        (WebTestRunner::TestRunner::setTextSubpixelPositioning):
+        (WebTestRunner::TestRunner::overridePreference):
+        (WebTestRunner):
+        (WebTestRunner::TestRunner::setBackingScaleFactor):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (WebTestRunner::TestRunner::WorkQueue::isEmpty):
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TextInputController.cpp:
+        (WebTestRunner::TextInputController::markedRange):
+        (WebTestRunner::TextInputController::selectedRange):
+        (WebTestRunner::TextInputController::firstRectForCharacterRange):
+        * DumpRenderTree/chromium/TestRunner/src/WebPreferences.cpp:
+        (WebTestRunner::WebPreferences::reset):
+        * DumpRenderTree/chromium/TestRunner/src/WebTask.cpp:
+        (WebTestRunner):
+        (WebTestRunner::WebTaskList::WebTaskList):
+        (WebTestRunner::WebTaskList::~WebTaskList):
+        (WebTestRunner::WebTaskList::registerTask):
+        (WebTestRunner::WebTaskList::unregisterTask):
+        (WebTestRunner::WebTaskList::revokeAll):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::~WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::testInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::~WebTestProxyBase):
+        (WebTestRunner::WebTestProxyBase::spellCheckClient):
+        (WebTestRunner::WebTestProxyBase::registerIntentService):
+        (WebTestRunner::WebTestProxyBase::dispatchIntent):
+        (WebTestRunner::WebTestProxyBase::assignIdentifierToRequest):
+        * DumpRenderTree/chromium/TestRunner/src/config.h: Removed.
+
+2013-02-06  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r141995.
+        http://trac.webkit.org/changeset/141995
+        https://bugs.webkit.org/show_bug.cgi?id=109046
+
+        May allow me to roll out the real problem (Requested by
+        schenney on #webkit).
+
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::sendWebIntentResponse):
+        (WebTestRunner::TestRunner::deliverWebIntent):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::registerIntentService):
+        (WebTestRunner::WebTestProxyBase::dispatchIntent):
+
+2013-02-06  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] fix android build which doesn't support intents
+
+        Unreviewed build fix.
+
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::sendWebIntentResponse):
+        (WebTestRunner::TestRunner::deliverWebIntent):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::registerIntentService):
+        (WebTestRunner::WebTestProxyBase::dispatchIntent):
+
+2013-02-06  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] turn TestRunner library into a component build
+        https://bugs.webkit.org/show_bug.cgi?id=108466
+
+        Reviewed by Adam Barth.
+
+        To achieve this, we need to drop all dependencies on WTF.
+
+        * DumpRenderTree/DumpRenderTree.gyp/DumpRenderTree.gyp:
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebPreferences.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTask.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestCommon.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.cpp:
+        (WebTestRunner::AccessibilityUIElement::AccessibilityUIElement):
+        (WebTestRunner::AccessibilityUIElementList::getOrCreate):
+        (WebTestRunner::AccessibilityUIElementList::createRoot):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityUIElementChromium.h:
+        (AccessibilityUIElementList):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.cpp:
+        (WebTestRunner::CppBoundClass::~CppBoundClass):
+        (WebTestRunner::CppBoundClass::invoke):
+        (WebTestRunner::CppBoundClass::getProperty):
+        (WebTestRunner::CppBoundClass::setProperty):
+        (WebTestRunner::CppBoundClass::bindCallback):
+        (WebTestRunner::CppBoundClass::bindGetterCallback):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::getAsCppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/CppBoundClass.h:
+        (WebTestRunner):
+        (CppBoundClass):
+        (WebTestRunner::CppBoundClass::bindProperty):
+        (WebTestRunner::CppBoundClass::bindFallbackCallback):
+        (WebTestRunner::CppBoundClass::bindFallbackMethod):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.cpp:
+        (WebTestRunner::CppVariant::toString):
+        (WebTestRunner::CppVariant::toInt32):
+        (WebTestRunner::CppVariant::toDouble):
+        (WebTestRunner::CppVariant::toBoolean):
+        (WebTestRunner::CppVariant::toStringVector):
+        (WebTestRunner::CppVariant::invoke):
+        (WebTestRunner::CppVariant::invokeDefault):
+        * DumpRenderTree/chromium/TestRunner/src/CppVariant.h:
+        (CppVariant):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::reset):
+        (WebTestRunner::EventSender::mouseDown):
+        (WebTestRunner::EventSender::mouseUp):
+        (WebTestRunner::EventSender::mouseMoveTo):
+        (WebTestRunner::EventSender::keyDown):
+        (WebTestRunner::EventSender::dispatchMessage):
+        (WebTestRunner::EventSender::leapForward):
+        (WebTestRunner::EventSender::replaySavedEvents):
+        (WebTestRunner::makeMenuItemStringsFor):
+        (WebTestRunner::EventSender::contextClick):
+        (WebTestRunner::EventSender::beginDragWithFiles):
+        (WebTestRunner::EventSender::addTouchPoint):
+        (WebTestRunner::EventSender::releaseTouchPoint):
+        (WebTestRunner::EventSender::updateTouchPoint):
+        (WebTestRunner::EventSender::cancelTouchPoint):
+        (WebTestRunner::EventSender::sendCurrentTouchEvent):
+        (WebTestRunner::EventSender::gestureEvent):
+        * DumpRenderTree/chromium/TestRunner/src/KeyCodeMapping.cpp:
+        (WebTestRunner::NativeKeyCodeForWindowsKeyCode):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.cpp:
+        (WebTestRunner::MockGrammarCheck::checkGrammarOfString):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/MockGrammarCheck.h:
+        (WebTestRunner):
+        (MockGrammarCheck):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.cpp:
+        (WebTestRunner::MockSpellCheck::spellCheckWord):
+        (WebTestRunner::MockSpellCheck::initializeIfNeeded):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.h:
+        (MockSpellCheck):
+        * DumpRenderTree/chromium/TestRunner/src/SpellCheckClient.cpp:
+        (WebTestRunner::SpellCheckClient::checkTextOfParagraph):
+        (WebTestRunner::SpellCheckClient::finishLastTextCheck):
+        * DumpRenderTree/chromium/TestRunner/src/TestCommon.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+        (isASCIIAlpha):
+        (isNotASCIIAlpha):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.cpp:
+        (WebTestRunner::TestPlugin::TestPlugin):
+        (WebTestRunner::TestPlugin::initialize):
+        (WebTestRunner::TestPlugin::destroy):
+        (WebTestRunner::TestPlugin::parsePrimitive):
+        (WebTestRunner::TestPlugin::parseColor):
+        (WebTestRunner::TestPlugin::initProgram):
+        (WebTestRunner::TestPlugin::initPrimitive):
+        (WebTestRunner::TestPlugin::drawPrimitive):
+        (WebTestRunner::TestPlugin::loadShader):
+        (WebTestRunner::TestPlugin::loadProgram):
+        (WebTestRunner::TestPlugin::handleDragStatusUpdate):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.h:
+        (TestPlugin):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::WorkQueue::processWorkSoon):
+        (WebTestRunner::TestRunner::WorkQueue::processWork):
+        (WebTestRunner::TestRunner::WorkQueue::reset):
+        (WebTestRunner::TestRunner::WorkQueue::addWork):
+        (WebTestRunner::TestRunner::TestRunner):
+        (WebTestRunner::TestRunner::reset):
+        (WebTestRunner::TestRunner::policyDelegateDone):
+        (WebTestRunner::TestRunner::findString):
+        (WebTestRunner::TestRunner::setTextSubpixelPositioning):
+        (WebTestRunner::TestRunner::overridePreference):
+        (WebTestRunner::TestRunner::deliverWebIntent):
+        (WebTestRunner::TestRunner::setBackingScaleFactor):
+        (WebTestRunner::TestRunner::simulateLegacyWebNotificationClick):
+        (WebTestRunner::TestRunner::setMockSpeechInputDumpRect):
+        (WebTestRunner::TestRunner::wasMockSpeechRecognitionAborted):
+        (WebTestRunner::TestRunner::setPointerLockWillFailSynchronously):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (WebTestRunner::TestRunner::WorkQueue::isEmpty):
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TextInputController.cpp:
+        (WebTestRunner::TextInputController::markedRange):
+        (WebTestRunner::TextInputController::selectedRange):
+        (WebTestRunner::TextInputController::firstRectForCharacterRange):
+        * DumpRenderTree/chromium/TestRunner/src/WebPreferences.cpp:
+        (WebTestRunner::WebPreferences::reset):
+        * DumpRenderTree/chromium/TestRunner/src/WebTask.cpp:
+        (WebTestRunner::WebTaskList::~WebTaskList):
+        (WebTestRunner::WebTaskList::registerTask):
+        (WebTestRunner::WebTaskList::unregisterTask):
+        (WebTestRunner::WebTaskList::revokeAll):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::~WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::testInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::~WebTestProxyBase):
+        (WebTestRunner::WebTestProxyBase::spellCheckClient):
+        (WebTestRunner::WebTestProxyBase::registerIntentService):
+        (WebTestRunner::WebTestProxyBase::dispatchIntent):
+        (WebTestRunner::WebTestProxyBase::assignIdentifierToRequest):
+        * DumpRenderTree/chromium/TestRunner/src/config.h: Copied from Tools/DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h.
+
+2013-02-06  Mike West  <mkwst@chromium.org>
+
+        Add an ENABLE_NOSNIFF feature flag.
+        https://bugs.webkit.org/show_bug.cgi?id=109029
+
+        Reviewed by Jochen Eisinger.
+
+        This new flag will control the behavior of 'X-Content-Type-Options: nosniff'
+        when processing script and other resource types.
+
+        * Scripts/webkitperl/FeatureList.pm:
+        * qmake/mkspecs/features/features.pri:
+
+2013-02-06  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Implement DTMF support in RTCPeerConnection
+        https://bugs.webkit.org/show_bug.cgi?id=106782
+
+        Reviewed by Adam Barth.
+
+        Adding Mock functionality for the DTMFSender.
+
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/MockWebRTCDTMFSenderHandler.cpp: Added.
+        (DTMFSenderToneTask):
+        (DTMFSenderToneTask::DTMFSenderToneTask):
+        (MockWebRTCDTMFSenderHandler::MockWebRTCDTMFSenderHandler):
+        (MockWebRTCDTMFSenderHandler::setClient):
+        (MockWebRTCDTMFSenderHandler::currentToneBuffer):
+        (MockWebRTCDTMFSenderHandler::canInsertDTMF):
+        (MockWebRTCDTMFSenderHandler::insertDTMF):
+        * DumpRenderTree/chromium/MockWebRTCDTMFSenderHandler.h: Copied from Source/Platform/chromium/public/WebMediaStreamTrack.h.
+        (MockWebRTCDTMFSenderHandler):
+        (MockWebRTCDTMFSenderHandler::taskList):
+        (MockWebRTCDTMFSenderHandler::clearToneBuffer):
+        * DumpRenderTree/chromium/MockWebRTCPeerConnectionHandler.cpp:
+        (MockWebRTCPeerConnectionHandler::createDTMFSender):
+        * DumpRenderTree/chromium/MockWebRTCPeerConnectionHandler.h:
+        (MockWebRTCPeerConnectionHandler):
+
+2013-02-06  Christophe Dumez  <ch.dumez@sisa.samsung.com>
+
+        Unreviewed. Update my email address in committers.py.
+
+        * Scripts/webkitpy/common/config/committers.py:
+
+2013-02-05  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        [CMake] Don't warn unused cmake variables which aren't used by cmake ports
+        https://bugs.webkit.org/show_bug.cgi?id=108761
+
+        Reviewed by Laszlo Gombos.
+
+        Ignore unused macro variables which aren't used by cmake ports.
+
+        * Scripts/webkitdirs.pm:
+        (generateBuildSystemFromCMakeProject):
+
+2013-02-05  Julie Parent  <jparent@chromium.org>
+
+        Add cc_unittests to the dashboards
+        https://bugs.webkit.org/show_bug.cgi?id=108878
+
+        Reviewed by Dirk Pranke.
+
+        * TestResultServer/static-dashboards/builders.js:
+        (loadBuildersList):
+        * TestResultServer/static-dashboards/dashboard_base.js:
+        (currentBuilderGroupCategory):
+
+2013-02-05  Adam Barth  <abarth@webkit.org>
+
+        DumpRenderTree should be able to enable the threaded parser
+        https://bugs.webkit.org/show_bug.cgi?id=108970
+
+        Reviewed by Eric Seidel.
+
+        We can now enable the parser at runtime using --enable-threaded-html-parser.
+
+        * DumpRenderTree/chromium/DumpRenderTree.cpp:
+        (main):
+        * DumpRenderTree/chromium/TestRunner/public/WebPreferences.h:
+        (WebPreferences):
+        * DumpRenderTree/chromium/TestRunner/src/WebPreferences.cpp:
+        (WebTestRunner::WebPreferences::reset):
+        (WebTestRunner::WebPreferences::applyTo):
+        * DumpRenderTree/chromium/TestShell.cpp:
+        (TestShell::TestShell):
+        (TestShell::resetWebSettings):
+        * DumpRenderTree/chromium/TestShell.h:
+        (TestShell::setThreadedHTMLParser):
+        (TestShell):
+
+2013-02-05  Benjamin Poulain  <bpoulain@apple.com>
+
+        Make StringBuilder::toAtomicString() consistent with StringBuilder::toString() for strings of null length
+        https://bugs.webkit.org/show_bug.cgi?id=108894
+
+        Reviewed by Andreas Kling.
+
+        * TestWebKitAPI/Tests/WTF/StringBuilder.cpp:
+        Extend the tests to check toAtomicString() on an empty builder.
+
+2013-02-05  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] remove methods from the WebTestRunner interface that are only used by WebTestProxyBase
+        https://bugs.webkit.org/show_bug.cgi?id=108926
+
+        Reviewed by Adam Barth.
+
+        * DumpRenderTree/chromium/TestRunner/public/WebTestRunner.h:
+        (WebKit):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (TestRunner):
+
+2013-02-05  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] remove unneccessary 0 checks for testRunner now that the TestRunner library owns it
+        https://bugs.webkit.org/show_bug.cgi?id=108923
+
+        Reviewed by Kentaro Hara.
+
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner):
+        (WebTestRunner::WebTestProxyBase::shouldBeginEditing):
+        (WebTestRunner::WebTestProxyBase::shouldEndEditing):
+        (WebTestRunner::WebTestProxyBase::shouldInsertNode):
+        (WebTestRunner::WebTestProxyBase::shouldInsertText):
+        (WebTestRunner::WebTestProxyBase::shouldChangeSelectedRange):
+        (WebTestRunner::WebTestProxyBase::shouldDeleteRange):
+        (WebTestRunner::WebTestProxyBase::shouldApplyStyle):
+        (WebTestRunner::WebTestProxyBase::didBeginEditing):
+        (WebTestRunner::WebTestProxyBase::didChangeSelection):
+        (WebTestRunner::WebTestProxyBase::didChangeContents):
+        (WebTestRunner::WebTestProxyBase::didEndEditing):
+        (WebTestRunner::WebTestProxyBase::createView):
+        (WebTestRunner::WebTestProxyBase::setStatusText):
+        (WebTestRunner::WebTestProxyBase::didStopLoading):
+        (WebTestRunner::WebTestProxyBase::isSmartInsertDeleteEnabled):
+        (WebTestRunner::WebTestProxyBase::isSelectTrailingWhitespaceEnabled):
+        (WebTestRunner::WebTestProxyBase::willPerformClientRedirect):
+        (WebTestRunner::WebTestProxyBase::didCancelClientRedirect):
+        (WebTestRunner::WebTestProxyBase::didStartProvisionalLoad):
+        (WebTestRunner::WebTestProxyBase::didReceiveServerRedirectForProvisionalLoad):
+        (WebTestRunner::WebTestProxyBase::didFailProvisionalLoad):
+        (WebTestRunner::WebTestProxyBase::didCommitProvisionalLoad):
+        (WebTestRunner::WebTestProxyBase::didReceiveTitle):
+        (WebTestRunner::WebTestProxyBase::didFinishDocumentLoad):
+        (WebTestRunner::WebTestProxyBase::didHandleOnloadEvents):
+        (WebTestRunner::WebTestProxyBase::didFailLoad):
+        (WebTestRunner::WebTestProxyBase::didFinishLoad):
+        (WebTestRunner::WebTestProxyBase::didChangeLocationWithinPage):
+        (WebTestRunner::WebTestProxyBase::didDisplayInsecureContent):
+        (WebTestRunner::WebTestProxyBase::didRunInsecureContent):
+        (WebTestRunner::WebTestProxyBase::didDetectXSS):
+        (WebTestRunner::WebTestProxyBase::assignIdentifierToRequest):
+        (WebTestRunner::WebTestProxyBase::willRequestResource):
+        (WebTestRunner::WebTestProxyBase::didCreateDataSource):
+        (WebTestRunner::WebTestProxyBase::willSendRequest):
+        (WebTestRunner::WebTestProxyBase::didReceiveResponse):
+        (WebTestRunner::WebTestProxyBase::didFinishResourceLoad):
+        (WebTestRunner::WebTestProxyBase::didFailResourceLoad):
+        (WebTestRunner::WebTestProxyBase::runModalBeforeUnloadDialog):
+        (WebTestRunner::WebTestProxyBase::locationChangeDone):
+        (WebTestRunner::WebTestProxyBase::decidePolicyForNavigation):
+        (WebTestRunner::WebTestProxyBase::willCheckAndDispatchMessageEvent):
+
+2013-02-04  Alan Cutter  <alancutter@chromium.org>
+
+        EWS bots don't remove untracked files after processing a patch
+        https://bugs.webkit.org/show_bug.cgi?id=108891
+
+        Reviewed by Adam Barth.
+
+        Added option to remove untracked files in the bot's repo.
+
+        * EWSTools/start-queue.sh:
+
+2013-02-04  Benjamin Poulain  <bpoulain@apple.com>
+
+        Kill suspendAnimation(), resumeAnimation() and numberOfActiveAnimations() from DRT/WTR; use Internals
+        https://bugs.webkit.org/show_bug.cgi?id=108741
+
+        Reviewed by Tony Chang.
+
+        Remove all support for suspendAnimation(), resumeAnimation() and numberOfActiveAnimations().
+
+        * DumpRenderTree/TestRunner.cpp:
+        (TestRunner::staticFunctions):
+        * DumpRenderTree/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/blackberry/TestRunnerBlackBerry.cpp:
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/efl/TestRunnerEfl.cpp:
+        * DumpRenderTree/gtk/TestRunnerGtk.cpp:
+        * DumpRenderTree/mac/TestRunnerMac.mm:
+        * DumpRenderTree/qt/TestRunnerQt.cpp:
+        * DumpRenderTree/qt/TestRunnerQt.h:
+        (TestRunner):
+        * DumpRenderTree/win/TestRunnerWin.cpp:
+        * DumpRenderTree/wx/TestRunnerWx.cpp:
+        * WebKitTestRunner/InjectedBundle/Bindings/TestRunner.idl:
+        * WebKitTestRunner/InjectedBundle/TestRunner.cpp:
+        * WebKitTestRunner/InjectedBundle/TestRunner.h:
+        (TestRunner):
+
+2013-02-04  Nico Weber  <thakis@chromium.org>
+
+        [chromium] Try to get WebKit building with enable_web_intents set to 0 on Windows too.
+        https://bugs.webkit.org/show_bug.cgi?id=108887
+
+        Reviewed by Kentaro Hara.
+
+        This is a follow-up to http://trac.webkit.org/changeset/141614. The
+        Mac and Linux linkers didn't complain about the reference to
+        WebIntent in that function for some reason (probably because it's
+        a dead function that's stripped).
+
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (TestRunner):
+
+2013-02-04  Julie Parent  <jparent@chromium.org>
+
+        Dashboard cleanup: Make builder a real dashboardSpecificParameter.
+        https://bugs.webkit.org/show_bug.cgi?id=108706
+
+        Reviewed by Dirk Pranke.
+        
+        Add builder to g_defaultDashboardSpecificParameter maps for the
+        dashboards where it is used (flakiness, timeline, treemap).
+        Default it to null, and then update reads of it to check the
+        builder group's default if one is not set, rather than trying to
+        set and track this everywhere.
+        This allows us to remove tons of special-casing of builder parsing,
+        including where we used to add it to the query string even when the
+        user did not specify it.
+
+        * TestResultServer/static-dashboards/dashboard_base.js:
+        (parseParameters):
+        * TestResultServer/static-dashboards/flakiness_dashboard.js:
+        (generatePage):
+        (handleQueryParameterChange):
+        * TestResultServer/static-dashboards/loader.js:
+        (.):
+        * TestResultServer/static-dashboards/timeline_explorer.html:
+        * TestResultServer/static-dashboards/treemap.html:
+
+2013-02-04  Julie Parent  <jparent@chromium.org>
+
+        Setting tests on flakiness dashboard should invalidate builder.
+        https://bugs.webkit.org/show_bug.cgi?id=108521
+
+        Reviewed by Dirk Pranke.
+        
+        When you move into a cross builder view, builder should not still be
+        set.  Currently, it is deleted from the internal state, but still shows
+        up in the url, causing the current state and the hash to not match.
+        
+        To see this in action, load the flakiness dashboard, select a builder,
+        and then click on an individual test, to get into individual test view.
+        The url will still have the builder you selected listed, even though it
+        is cleared in the UI.
+        
+        The fix is to consider 'tests' to be a parameter that invalidates builder.
+
+        * TestResultServer/static-dashboards/flakiness_dashboard.js:
+
+2013-02-04  Kenneth Rohde Christiansen  <kenneth@webkit.org>
+
+        [EFL][WK2] Introduce a WebView class as counterpart for WKViewRef
+        https://bugs.webkit.org/show_bug.cgi?id=107931
+
+        Reviewed by Anders Carlsson.
+
+        Change platformView to be a WKView and use WKViewGetEvasObject
+        for the places where an Evas_Object is needed.
+
+        Instead of extracting the Ecore_Evas* from the m_view we use
+        the m_window instead, which actually holds the it.
+
+        * TestWebKitAPI/PlatformWebView.h:
+        * TestWebKitAPI/efl/PlatformWebView.cpp:
+        (TestWebKitAPI::PlatformWebView::PlatformWebView):
+        (TestWebKitAPI::PlatformWebView::~PlatformWebView):
+        (TestWebKitAPI::PlatformWebView::resizeTo):
+        (TestWebKitAPI::PlatformWebView::page):
+        (TestWebKitAPI::PlatformWebView::simulateSpacebarKeyPress):
+        (TestWebKitAPI::PlatformWebView::simulateMouseMove):
+        (TestWebKitAPI::PlatformWebView::simulateRightClick):
+        * WebKitTestRunner/PlatformWebView.h:
+        * WebKitTestRunner/efl/EventSenderProxyEfl.cpp:
+        (WTR::EventSenderProxy::sendTouchEvent):
+        (WTR::EventSenderProxy::setTouchModifier):
+        * WebKitTestRunner/efl/PlatformWebViewEfl.cpp:
+        (WTR::PlatformWebView::PlatformWebView):
+        (WTR::PlatformWebView::~PlatformWebView):
+        (WTR::PlatformWebView::resizeTo):
+        (WTR::PlatformWebView::page):
+        (WTR::PlatformWebView::focus):
+        (WTR::PlatformWebView::windowFrame):
+        (WTR::PlatformWebView::setWindowFrame):
+        (WTR::PlatformWebView::windowSnapshotImage):
+
+2013-02-04  Timothy Loh  <timloh@chromium.com>
+
+        Don't update author info in PrepareChangeLog and allow users to skip the PrepareChangeLog step entirely.
+        https://bugs.webkit.org/show_bug.cgi?id=108788
+
+        Reviewed by Ryosuke Niwa.
+
+        As per discussion in Bug 74358, it's probably preferable to remove the
+        behaviour of updating the author details in a ChangeLog entry. We also
+        want to be able to skip preparing change logs (e.g. rebaselining many
+        tests), so a --no-prepare-changelogs option is added to webkit-patch.
+
+        * Scripts/webkitpy/common/checkout/changelog.py:
+        (ChangeLogEntry._parse_entry):
+        (ChangeLogEntry.date): Added
+        * Scripts/webkitpy/common/checkout/changelog_unittest.py:
+        (test_parse_log_entries_from_changelog):
+        * Scripts/webkitpy/tool/commands/commandtest.py:
+        (CommandsTest.assert_execute_outputs):
+        * Scripts/webkitpy/tool/steps/options.py:
+        (Options): Added --no-prepare-changelogs
+        * Scripts/webkitpy/tool/steps/preparechangelog.py:
+        (PrepareChangeLog.options):
+        (PrepareChangeLog._merge_entries): date_line() gets the entire line, including
+        the author's name and email, but we only want to replace the date.
+        (PrepareChangeLog.run):
+        * Scripts/webkitpy/tool/steps/preparechangelog_unittest.py:
+        (PrepareChangeLogTest.test_resolve_existing_entry): Added tests for changed
+        authors. Removed unneeded variable.
+
+2013-02-04  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] Remove WebEventSender and WebAccessibilityController from public TestRunner API
+        https://bugs.webkit.org/show_bug.cgi?id=108467
+
+        Reviewed by Adam Barth.
+
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebAccessibilityController.h: Removed.
+        * DumpRenderTree/chromium/TestRunner/public/WebEventSender.h: Removed.
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        (WebTestRunner):
+        (WebTestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        (WebTestRunner):
+        (WebTestProxyBase):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestRunner.h:
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::TestInterfaces):
+        (WebTestRunner::TestInterfaces::setWebView):
+        (WebTestRunner::TestInterfaces::webView):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/WebAccessibilityController.cpp: Removed.
+        * DumpRenderTree/chromium/TestRunner/src/WebEventSender.cpp: Removed.
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::~WebTestInterfaces):
+        (WebTestRunner::WebTestInterfaces::setWebView):
+        (WebTestRunner::WebTestInterfaces::setDelegate):
+        (WebTestRunner::WebTestInterfaces::bindTo):
+        (WebTestRunner::WebTestInterfaces::resetAll):
+        (WebTestRunner::WebTestInterfaces::setTestIsRunning):
+        (WebTestRunner::WebTestInterfaces::webView):
+        (WebTestRunner::WebTestInterfaces::testRunner):
+        (WebTestRunner::WebTestInterfaces::testInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::setInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestRunner.cpp: Removed.
+        * DumpRenderTree/chromium/TestShell.h:
+        * DumpRenderTree/chromium/WebViewHost.cpp:
+        * DumpRenderTree/chromium/WebViewHost.h:
+
+2013-02-04  Bruno de Oliveira Abinader  <bruno.abinader@basyskom.com>
+
+        [EFL] Add "full screen" parameter to MiniBrowser
+        https://bugs.webkit.org/show_bug.cgi?id=108850
+
+        Reviewed by Antonio Gomes.
+
+        Implements the {-F,--full-screen}={true,false} parameter to WebKit EFL's
+        MiniBrowser.
+
+        * MiniBrowser/efl/main.c:
+        (window_create):
+        (elm_main):
+        Added '-F/--full-screen' parameter functionality.
+
+2013-02-04  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] remove WebTestPlugin from the public TestRunner API
+        https://bugs.webkit.org/show_bug.cgi?id=108467
+
+        Reviewed by Adam Barth.
+
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestPlugin.h: Removed.
+        * DumpRenderTree/chromium/TestRunner/public/WebTestProxy.h:
+        (WebKit):
+        (WebTestProxyBase):
+        (WebTestRunner::WebTestProxy::createPlugin):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.cpp: Renamed from Tools/DumpRenderTree/chromium/TestRunner/src/WebTestPlugin.cpp.
+        (WebTestRunner::TestPlugin::TestPlugin):
+        (WebTestRunner):
+        (WebTestRunner::TestPlugin::~TestPlugin):
+        (WebTestRunner::TestPlugin::initialize):
+        (WebTestRunner::TestPlugin::destroy):
+        (WebTestRunner::TestPlugin::updateGeometry):
+        (WebTestRunner::TestPlugin::parsePrimitive):
+        (WebTestRunner::TestPlugin::parseColor):
+        (WebTestRunner::TestPlugin::parseOpacity):
+        (WebTestRunner::TestPlugin::parseBoolean):
+        (WebTestRunner::TestPlugin::initScene):
+        (WebTestRunner::TestPlugin::drawScene):
+        (WebTestRunner::TestPlugin::destroyScene):
+        (WebTestRunner::TestPlugin::initProgram):
+        (WebTestRunner::TestPlugin::initPrimitive):
+        (WebTestRunner::TestPlugin::drawPrimitive):
+        (WebTestRunner::TestPlugin::loadShader):
+        (WebTestRunner::TestPlugin::loadProgram):
+        (WebTestRunner::TestPlugin::handleInputEvent):
+        (WebTestRunner::TestPlugin::handleDragStatusUpdate):
+        (WebTestRunner::TestPlugin::create):
+        (WebTestRunner::TestPlugin::mimeType):
+        * DumpRenderTree/chromium/TestRunner/src/TestPlugin.h: Added.
+        (WebTestRunner):
+        (TestPlugin):
+        (WebTestRunner::TestPlugin::scriptableObject):
+        (WebTestRunner::TestPlugin::canProcessDrag):
+        (WebTestRunner::TestPlugin::paint):
+        (WebTestRunner::TestPlugin::updateFocus):
+        (WebTestRunner::TestPlugin::updateVisibility):
+        (WebTestRunner::TestPlugin::acceptsInputEvents):
+        (WebTestRunner::TestPlugin::didReceiveResponse):
+        (WebTestRunner::TestPlugin::didReceiveData):
+        (WebTestRunner::TestPlugin::didFinishLoading):
+        (WebTestRunner::TestPlugin::didFailLoading):
+        (WebTestRunner::TestPlugin::didFinishLoadingFrameRequest):
+        (WebTestRunner::TestPlugin::didFailLoadingFrameRequest):
+        (WebTestRunner::TestPlugin::isPlaceholder):
+        (WebTestRunner::TestPlugin::prepareTexture):
+        (WebTestRunner::TestPlugin::context):
+        (Scene):
+        (WebTestRunner::TestPlugin::Scene::Scene):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::createPlugin):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/WebViewHost.cpp:
+        (WebViewHost::createPlugin):
+
+2013-02-04  Gustavo Noronha Silva  <gns@gnome.org>
+
+        Add a new method for obtaining a build-type-dependent path,
+        instead of modifying all call sites to pass it in.
+
+        Reviewed by Martin Robinson.
+
+        * Scripts/run-gtk-tests:
+        (TestRunner.__init__): use the new method, which takes a tuple.
+        (TestRunner._setup_testing_environment): ditto.
+        * gtk/common.py:
+        (get_build_path): accept a tuple that may include Release and
+        Debug as build types, for searching.
+        (build_path_for_build_types): new method that finds the path when
+        it is dependent on the build type.
+        (build_path): restore its original behaviour.
+
+2013-02-04  David Kilzer  <ddkilzer@apple.com>
+
+        Remove duplicate entry from DumpRenderTree Xcode project
+
+            $ uniq Tools/DumpRenderTree/DumpRenderTree.xcodeproj/project.pbxproj | diff -u - Tools/DumpRenderTree/DumpRenderTree.xcodeproj/project.pbxproj | patch -p0 -R
+            patching file Tools/DumpRenderTree/DumpRenderTree.xcodeproj/project.pbxproj
+
+        * DumpRenderTree/DumpRenderTree.xcodeproj/project.pbxproj:
+        Remove duplicate.
+
+2013-02-04  David Kilzer  <ddkilzer@apple.com>
+
+        Sort TestWebKitAPI Xcode project file
+
+        * TestWebKitAPI/TestWebKitAPI.xcodeproj/project.pbxproj:
+
+2013-02-03  Alan Cutter  <alancutter@chromium.org>
+
+        PatchLogs are not getting created on QueueStatusServer
+        https://bugs.webkit.org/show_bug.cgi?id=108593
+
+        Reviewed by Eric Seidel.
+
+        Added missing "added" patch event to submit-to-ews handler.
+
+        * QueueStatusServer/app.yaml:
+        * QueueStatusServer/handlers/submittoews.py:
+        (SubmitToEWS._add_attachment_to_ews_queues):
+
+2013-02-03  Douglas Stockwell  <dstockwell@chromium.org>
+
+        Unreviewed. Add dstockwell as a contributor in comitters.py and to the watchlist for animation
+        https://bugs.webkit.org/show_bug.cgi?id=108777
+
+        * Scripts/webkitpy/common/config/committers.py:
+        * Scripts/webkitpy/common/config/watchlist:
+
+2013-02-03  Sam Weinig  <sam@webkit.org>
+
+        Fix failing test.
+
+        * TestWebKitAPI/Tests/WebKit2/ShouldGoToBackForwardListItem.cpp:
+        (TestWebKitAPI::didFinishLoadForFrame):
+
+2013-02-03  Timothy Loh  <timloh@chromium.com>
+
+        Make ChangeLogEntry detect annotations by prepare-ChangeLog (Added/Removed/Copied from/Renamed from) as clean.
+        https://bugs.webkit.org/show_bug.cgi?id=108433
+
+        Reviewed by Eric Seidel.
+
+        PrepareChangeLog is supposed to update the file/function list if we
+        haven't touched it, but the existing regex doesn't handle the
+        annotations prepare-ChangeLog adds (e.g. "Added.")
+
+        * Scripts/webkitpy/common/checkout/changelog.py:
+        (ChangeLogEntry.is_touched_files_text_clean):
+        * Scripts/webkitpy/common/checkout/changelog_unittest.py:
+        (test_is_touched_files_text_clean):
+
+2013-02-02  Dean Jackson  <dino@apple.com>
+
+        Add Antoine Quint to the list of committers
+        https://bugs.webkit.org/show_bug.cgi?id=108750
+
+        No review necessary.
+
+        * Scripts/webkitpy/common/config/committers.py:
+
+2013-02-02  Patrick Gansterer  <paroga@webkit.org>
+
+        [CMake] Adopt the WinCE port to new CMake
+        https://bugs.webkit.org/show_bug.cgi?id=108754
+
+        Reviewed by Laszlo Gombos.
+
+        * WinCELauncher/CMakeLists.txt: Mark WinCELauncher
+        as WIN32 target to use the correct entry point.
+
+2013-02-02  Alexey Proskuryakov  <ap@apple.com>
+
+        One is not allowed to use commit-queue to make oneself a committer.
+
+        * Scripts/webkitpy/common/config/committers.py: Rolled out r141693.
+        Also, changed e-mail order for Yongjun Zhang, so that Bugzilla autocomplete works.
+
+2013-02-02  Antoine Quint  <graouts@apple.com>
+
+        Add Antoine Quint to the list of committers
+        https://bugs.webkit.org/show_bug.cgi?id=108750
+
+        Reviewed by Dean Jackson.
+
+        * Scripts/webkitpy/common/config/committers.py:
+
+2013-02-01  Adrian Perez de Castro  <aperez@igalia.com>
+
+        [GTK] Building fails in an armv5tel board
+        https://bugs.webkit.org/show_bug.cgi?id=108083
+
+        Reviewed by Martin Robinson.
+
+        In some systems in which $architecture is filled-in from "uname -m"
+        the value may not start with "arm-", but with "armvN", where "N" is
+        an architecture version number. The regexp in isARM() is modified
+        so it covers these kind of cases.
+
+        * Scripts/webkitdirs.pm:
+        (isARM):
+
+2013-02-01  Gregg Tavares  <gman@google.com>
+
+        Update LayoutTests scripts to skip webgl folder on ports
+        https://bugs.webkit.org/show_bug.cgi?id=108705
+
+        Reviewed by Dirk Pranke.
+
+        I'm working on checking in the WebGL Conformance Tests
+        as layout tests into LayoutTests/webgl. For ports
+        that do not have WebGL enabled this changes will
+        skip tests in the "webgl" folder.
+
+        * Scripts/webkitpy/layout_tests/port/base.py:
+        (Port._missing_symbol_to_skipped_tests):
+        * Scripts/webkitpy/layout_tests/port/port_testcase.py:
+        (PortTestCase.test_skipped_directories_for_symbols):
+
+2013-02-01  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Fix for webkitpy tests.
+
+        * Scripts/webkitpy/tool/steps/runtests.py:
+        (RunTests.run):
+        * Scripts/webkitpy/tool/steps/runtests_unittest.py:
+
+2013-02-01  Jer Noble  <jer.noble@apple.com>
+
+        LLDB: add synthetic provider for WTF::HashTable
+        https://bugs.webkit.org/show_bug.cgi?id=108718
+
+        Reviewed by Darin Adler.
+
+        Add a synthetic provider which will emit the contents of a given
+        WTF::HashTable. This allows clients using Xcode/lldb to enumerate
+        the hash contents.
+
+        * lldb/lldb_webkit.py:
+        (__lldb_init_module):
+        (__lldb_init_module.lldb_webkit):
+        (WTFHashTable_SummaryProvider):
+        (WTFVectorProvider.has_children):
+        (WTFHashTableProvider):
+        (WTFHashTableProvider.__init__):
+        (WTFHashTableProvider.num_children):
+        (WTFHashTableProvider.get_child_index):
+        (WTFHashTableProvider.get_child_at_index):
+        (WTFHashTableProvider.tableSize):
+        (WTFHashTableProvider.keyCount):
+        (WTFHashTableProvider.update):
+        (WTFHashTableProvider.has_children):
+
+2013-02-01  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Fix webkitpy tests since a build_style is not specified in some cases.
+
+        * Scripts/webkitpy/tool/steps/runtests.py:
+        (RunTests.run):
+
+2013-02-01  Roger Fong  <roger_fong@apple.com>
+
+        Unreviewed. Re-try enabling Win-EWS tests for the third time. 
+        https://bugs.webkit.org/show_bug.cgi?id=107968
+
+        * Scripts/webkitpy/tool/commands/earlywarningsystem.py:
+        (WinEWS):
+
+2013-01-31  Roger Fong  <roger_fong@apple.com>
+
+        Fix test scripts for EWS bots to get them running once and for all.
+        https://bugs.webkit.org/show_bug.cgi?id=108422
+
+        Reviewed by Timothy Horton.
+
+        Disabling --quiet option on Windows for now because that fails when we try to use /dev/null.
+        runtests.py was not passing in a configuration to run-webkit-tests which causes DRT to build in release by default.
+        However, we build in Debug only on the EWS Windows bots, which caused the build to fail.
+
+        * Scripts/webkitpy/tool/steps/runtests.py:
+        (RunTests.options):
+        (RunTests.run):
+
+2013-02-01  Nico Weber  <thakis@chromium.org>
+
+        [chromium] Build webkit with enable_web_intents set to 0.
+        https://bugs.webkit.org/show_bug.cgi?id=108408
+
+        Reviewed by Tony Chang.
+
+        I'll then make chromium build fine with that, then switch
+        enable_web_intents to 0, roll that into webkit, and then
+        actually remove the code hidden behind this flag.
+
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestProxy.cpp:
+        (WebTestRunner::WebTestProxyBase::registerIntentService):
+        (WebTestRunner::WebTestProxyBase::dispatchIntent):
+        * DumpRenderTree/chromium/WebViewHost.cpp:
+        * DumpRenderTree/chromium/WebViewHost.h:
+        (WebViewHost):
+
+2013-02-01  Zan Dobersek  <zdobersek@igalia.com>
+
+        Set the GTK 64-bit Debug builder to build and test only WebKit1
+        https://bugs.webkit.org/show_bug.cgi?id=108648
+
+        Reviewed by Philippe Normand.
+
+        * BuildSlaveSupport/build.webkit.org-config/config.json: Change the builder name, type and
+        build directory to note that the builder builds and tests only the WebKit1 port on the GTK platform.
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        (CompileWebKit1Only): Add the new build class that builds only the WebKit1 port of the builder's platform.
+        (BuildAndTestWebKit1OnlyFactory): Add the new factory that uses the CompileWebKit1Only build class
+        for building and testing only WebKit1 on the builder's platform.
+
+2013-02-01  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] move ownership of TestRunner object to TestInterfaces
+        https://bugs.webkit.org/show_bug.cgi?id=108464
+
+        Reviewed by Adam Barth.
+
+        Before, TestShell owned the class. This also removes the last include
+        from DumpRenderTree to TestRunner/src.
+
+        This also deletes TestDelegate and uses WebTestDelegate everywhere
+        instead.
+
+        * DumpRenderTree/DumpRenderTree.gypi:
+        * DumpRenderTree/chromium/TestRunner/public/WebTestInterfaces.h:
+        (WebTestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/public/WebTestRunner.h:
+        (WebKit):
+        (WebTestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityControllerChromium.cpp:
+        * DumpRenderTree/chromium/TestRunner/src/AccessibilityControllerChromium.h:
+        (WebTestRunner):
+        (WebTestRunner::AccessibilityController::setDelegate):
+        (AccessibilityController):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::makeMenuItemStringsFor):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.h:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::setDelegate):
+        (EventSender):
+        * DumpRenderTree/chromium/TestRunner/src/GamepadController.cpp:
+        (WebTestRunner::GamepadController::setDelegate):
+        * DumpRenderTree/chromium/TestRunner/src/GamepadController.h:
+        (WebTestRunner):
+        (GamepadController):
+        * DumpRenderTree/chromium/TestRunner/src/TestDelegate.h: Removed.
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.cpp:
+        (WebTestRunner::TestInterfaces::TestInterfaces):
+        (WebTestRunner::TestInterfaces::~TestInterfaces):
+        (WebTestRunner::TestInterfaces::setWebView):
+        (WebTestRunner::TestInterfaces::setDelegate):
+        (WebTestRunner::TestInterfaces::bindTo):
+        (WebTestRunner::TestInterfaces::resetAll):
+        (WebTestRunner):
+        (WebTestRunner::TestInterfaces::setTestIsRunning):
+        (WebTestRunner::TestInterfaces::testRunner):
+        * DumpRenderTree/chromium/TestRunner/src/TestInterfaces.h:
+        (WebTestRunner):
+        (TestInterfaces):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.cpp:
+        (WebTestRunner::TestRunner::TestRunner):
+        (WebTestRunner::TestRunner::reset):
+        * DumpRenderTree/chromium/TestRunner/src/TestRunner.h:
+        (WebKit):
+        (TestRunner):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestInterfaces.cpp:
+        (WebTestRunner::WebTestInterfaces::Internal::testRunner):
+        (WebTestInterfaces::Internal):
+        (WebTestRunner::WebTestInterfaces::Internal::Internal):
+        (WebTestRunner::WebTestInterfaces::Internal::setDelegate):
+        (WebTestRunner::WebTestInterfaces::Internal::setTestIsRunning):
+        * DumpRenderTree/chromium/TestRunner/src/WebTestRunner.cpp: Added.
+        (WebTestRunner):
+        (WebTestRunner::WebTestRunner::WebTestRunner):
+        (WebTestRunner::WebTestRunner::shouldDumpEditingCallbacks):
+        (WebTestRunner::WebTestRunner::shouldDumpAsText):
+        (WebTestRunner::WebTestRunner::setShouldDumpAsText):
+        (WebTestRunner::WebTestRunner::shouldGeneratePixelResults):
+        (WebTestRunner::WebTestRunner::setShouldGeneratePixelResults):
+        (WebTestRunner::WebTestRunner::shouldDumpChildFrameScrollPositions):
+        (WebTestRunner::WebTestRunner::shouldDumpChildFramesAsText):
+        (WebTestRunner::WebTestRunner::shouldDumpAsAudio):
+        (WebTestRunner::WebTestRunner::audioData):
+        (WebTestRunner::WebTestRunner::shouldDumpFrameLoadCallbacks):
+        (WebTestRunner::WebTestRunner::setShouldDumpFrameLoadCallbacks):
+        (WebTestRunner::WebTestRunner::shouldDumpUserGestureInFrameLoadCallbacks):
+        (WebTestRunner::WebTestRunner::stopProvisionalFrameLoads):
+        (WebTestRunner::WebTestRunner::shouldDumpTitleChanges):
+        (WebTestRunner::WebTestRunner::shouldDumpCreateView):
+        (WebTestRunner::WebTestRunner::canOpenWindows):
+        (WebTestRunner::WebTestRunner::shouldDumpResourceLoadCallbacks):
+        (WebTestRunner::WebTestRunner::shouldDumpResourceRequestCallbacks):
+        (WebTestRunner::WebTestRunner::shouldDumpResourceResponseMIMETypes):
+        (WebTestRunner::WebTestRunner::webPermissions):
+        (WebTestRunner::WebTestRunner::shouldDumpStatusCallbacks):
+        (WebTestRunner::WebTestRunner::shouldDumpProgressFinishedCallback):
+        (WebTestRunner::WebTestRunner::shouldDumpBackForwardList):
+        (WebTestRunner::WebTestRunner::deferMainResourceDataLoad):
+        (WebTestRunner::WebTestRunner::shouldDumpSelectionRect):
+        (WebTestRunner::WebTestRunner::testRepaint):
+        (WebTestRunner::WebTestRunner::sweepHorizontally):
+        (WebTestRunner::WebTestRunner::isPrinting):
+        (WebTestRunner::WebTestRunner::shouldStayOnPageAfterHandlingBeforeUnload):
+        (WebTestRunner::WebTestRunner::setTitleTextDirection):
+        (WebTestRunner::WebTestRunner::httpHeadersToClear):
+        (WebTestRunner::WebTestRunner::shouldBlockRedirects):
+        (WebTestRunner::WebTestRunner::willSendRequestShouldReturnNull):
+        (WebTestRunner::WebTestRunner::setTopLoadingFrame):
+        (WebTestRunner::WebTestRunner::topLoadingFrame):
+        (WebTestRunner::WebTestRunner::policyDelegateDone):
+        (WebTestRunner::WebTestRunner::policyDelegateEnabled):
+        (WebTestRunner::WebTestRunner::policyDelegateIsPermissive):
+        (WebTestRunner::WebTestRunner::policyDelegateShouldNotifyDone):
+        (WebTestRunner::WebTestRunner::shouldInterceptPostMessage):
+        (WebTestRunner::WebTestRunner::isSmartInsertDeleteEnabled):
+        (WebTestRunner::WebTestRunner::isSelectTrailingWhitespaceEnabled):
+        * DumpRenderTree/chromium/TestShell.cpp:
+        (TestShell::initialize):
+        (TestShell::createMainWindow):
+        (TestShell::~TestShell):
+        (TestShell::runFileTest):
+        (TestShell::resetTestController):
+        (TestShell::dump):
+        (TestShell::bindJSObjectsToWindow):
+        * DumpRenderTree/chromium/TestShell.h:
+        (TestShell::testRunner):
+        (TestShell):
+
+2013-02-01  Alan Cutter  <alancutter@chromium.org>
+
+        PatchLog process durations are increasing linearly with time (faulty data logging)
+        https://bugs.webkit.org/show_bug.cgi?id=108621
+
+        Reviewed by Eric Seidel.
+
+        Added a check to prevent a stop event from happening to the same patch multiple times.
+
+        * QueueStatusServer/loggers/recordpatchevent.py:
+        (RecordPatchEvent.stopped):
+
+2013-02-01  Manuel Rego Casasnovas  <rego@igalia.com>
+
+        [GTK][WK2] MiniBrowser fullscreen signals support
+        https://bugs.webkit.org/show_bug.cgi?id=108005
+
+        Reviewed by Carlos Garcia Campos.
+
+        Shows a label for 2 seconds using overlay (if GTK >= 3.2.0) and hides
+        the toolbar when entering fullscreen. When leaving fullscreen the
+        label is hidden (if it's not hidden yet) and the toolbar is shown again.
+
+        * MiniBrowser/gtk/BrowserWindow.c:
+        (_BrowserWindow):
+        (fullScreenMessageTimeoutCallback):
+        (webViewEnterFullScreen):
+        (webViewLeaveFullScreen):
+        (browserWindowFinalize):
+        (browserWindowConstructed):
+
+2013-02-01  Alexis Menard  <alexis@webkit.org>
+
+        Enable unprefixed CSS transitions by default.
+        https://bugs.webkit.org/show_bug.cgi?id=108216
+
+        Reviewed by Dean Jackson.
+
+        Rename the flag CSS_TRANSFORMS_ANIMATIONS_TRANSITIONS_UNPREFIXED
+        to CSS_TRANSFORMS_ANIMATIONS_UNPREFIXED which will be used later to 
+        guard the unprefixing work for CSS Transforms and animations.
+
+        * Scripts/webkitperl/FeatureList.pm:
+        * qmake/mkspecs/features/features.pri:
+
+2013-01-31  David Farler  <dfarler@apple.com>
+
+        Provide a sensible default architecture when building on iOS SDKs
+        https://bugs.webkit.org/show_bug.cgi?id=108395
+
+        Reviewed by Anders Carlsson.
+
+        * Scripts/webkitdirs.pm:
+        (determineArchitecture): Anchor SDK regex matches at the beginning.
+
+2013-01-31  Ryosuke Niwa  <rniwa@webkit.org>
+
+        buildbot should not rely on webkitpy
+        https://bugs.webkit.org/show_bug.cgi?id=107379
+
+        Reviewed by Eric Seidel.
+
+        Move all Python files used in buildbot configuration into BuildSlaveSupport directory.
+        Once this patch is landed, we can stop restarting the master on webkitpy changes.
+
+        * BuildSlaveSupport/build.webkit.org-config/committer_auth.py:
+        * BuildSlaveSupport/build.webkit.org-config/htdigestparser.py: Copied from Tools/Scripts/webkitpy/common/net/htdigestparser.py.
+        * BuildSlaveSupport/build.webkit.org-config/htdigestparser_unittest.py: Copied from Tools/Scripts/webkitpy/common/net/htdigestparser_unittest.py.
+        * BuildSlaveSupport/build.webkit.org-config/master.cfg:
+        * BuildSlaveSupport/build.webkit.org-config/wkbuild.py: Copied from Tools/Scripts/webkitpy/common/config/build.py.
+        * BuildSlaveSupport/build.webkit.org-config/wkbuild_unittest.py: Copied from Tools/Scripts/webkitpy/common/config/build_unittest.py.
+        (ShouldBuildTest.test_should_build):
+        * Scripts/webkitpy/common/config/build.py: Removed.
+        * Scripts/webkitpy/common/config/build_unittest.py: Removed.
+        * Scripts/webkitpy/common/net/htdigestparser.py: Removed.
+        * Scripts/webkitpy/common/net/htdigestparser_unittest.py: Removed.
+
+2013-01-31  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r141349.
+        http://trac.webkit.org/changeset/141349
+        https://bugs.webkit.org/show_bug.cgi?id=108422
+
+        "yet another windows ews fix needed" (Requested by lforschler
+        on #webkit).
+
+        * Scripts/webkitpy/tool/commands/earlywarningsystem.py:
+        (WinEWS):
+
+2013-01-31  Rouslan Solomakhin  <rouslan@chromium.org>
+
+        [Chromium] Suggest 'uppercase' for multi-word misspelling 'upper case'
+        https://bugs.webkit.org/show_bug.cgi?id=108509
+
+        Reviewed by Tony Chang.
+
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.cpp:
+        (append): Added utility function to append WebString to WebVector.
+        (MockSpellCheck::fillSuggestionList): Suggest 'uppercase' for misspelling 'upper case'.
+
+2013-01-31  David Farler  <dfarler@apple.com>
+
+        Provide a sensible default architecture when building on iOS SDKs
+        https://bugs.webkit.org/show_bug.cgi?id=108395
+
+        Reviewed by Joseph Pecoraro.
+
+        * Scripts/webkitdirs.pm:
+        (determineArchitecture):
+        Check for iphoneos and iphonesimulator SDKs for a default arch.
+        (determineXcodeSDK): Added.
+        (xcodeSDK): Added.
+        (XcodeOptions): Add ARCHS= if defined.
+
+2013-01-31  Christopher Cameron  <ccameron@chromium.org>
+
+        Fix rubber-band effect on non-scrollable pages
+        https://bugs.webkit.org/show_bug.cgi?id=107611
+
+        Add mouseWheelBegin function to EventSender to allow
+        event-based rubber-banding tests.
+
+        Reviewed by Antonio Gomes.
+
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.cpp:
+        (WebTestRunner):
+        (WebTestRunner::EventSender::EventSender):
+        (WebTestRunner::EventSender::mouseDragBegin):
+        * DumpRenderTree/chromium/TestRunner/src/EventSender.h:
+        (EventSender):
+
+2013-01-31  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Notify the WebWidget when the WebViewHost is about to tear down compositing support
+        https://bugs.webkit.org/show_bug.cgi?id=108518
+
+        Reviewed by Adrienne Walker.
+
+        * DumpRenderTree/chromium/WebViewHost.cpp:
+        (WebViewHost::shutdown):
+
+2013-01-31  Pratik Solanki  <psolanki@apple.com>
+
+        DumpRenderTree should put NSSound calls inside USE(APPKIT)
+        https://bugs.webkit.org/show_bug.cgi?id=108499
+
+        Reviewed by Andy Estes.
+
+        * DumpRenderTree/mac/DumpRenderTree.mm:
+        (dumpRenderTree):
+
+2013-01-30  Brian Weinstein  <bweinstein@apple.com>
+
+        Add a call to the page UI client to determine if a plug-in should load
+        https://bugs.webkit.org/show_bug.cgi?id=108407
+        <rdar://problem/13066332>
+
+        Add entries for the new function in the necessary structs.
+
+        Reviewed by Anders Carlsson.
+
+        * MiniBrowser/mac/WK2BrowserWindowController.m:
+        (-[WK2BrowserWindowController awakeFromNib]):
+        * WebKitTestRunner/TestController.cpp:
+        (WTR::TestController::createOtherPage):
+        (WTR::TestController::createWebViewWithOptions):
+
+2013-01-31  Florin Malita  <fmalita@chromium.org>
+
+        [Chromium] Unreviewed gardening.
+
+        Win build fix after http://trac.webkit.org/changeset/141471.
+
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.cpp:
+        (MockSpellCheck::spellCheckWord):
+
+2013-01-31  Enrica Casucci  <enrica@apple.com>
+
+        WebKit2: provide new bundle APIs to allow bundle clients to be notified of pasteboard access.
+        https://bugs.webkit.org/show_bug.cgi?id=108396.
+        <rdar://problem/12920461>
+
+        Reviewed by Alexey Proskuryakov.
+        
+        Adding new WebKit2 test with relevant bundle, to test the new APIs.
+
+        * TestWebKitAPI/TestWebKitAPI.xcodeproj/project.pbxproj:
+        * TestWebKitAPI/Tests/WebKit2/PasteboardNotifications.mm: Added.
+        (TestWebKitAPI::didReceiveMessageFromInjectedBundle):
+        (TestWebKitAPI::setInjectedBundleClient):
+        * TestWebKitAPI/Tests/WebKit2/PasteboardNotifications_Bundle.cpp: Added.
+        (PasteboardNotificationsTest):
+        (TestWebKitAPI::willWriteToPasteboard):
+        (TestWebKitAPI::getPasteboardDataForRange):
+        (TestWebKitAPI::didWriteToPasteboard):
+        (TestWebKitAPI::PasteboardNotificationsTest::PasteboardNotificationsTest):
+        (TestWebKitAPI::PasteboardNotificationsTest::didCreatePage):
+        * TestWebKitAPI/Tests/WebKit2/execCopy.html: Added.
+        * WebKitTestRunner/InjectedBundle/InjectedBundlePage.cpp: Updated to reflect
+        changes in InjectedBundleEditorClient.
+        (WTR::InjectedBundlePage::InjectedBundlePage):
+
+2013-01-31  Rouslan Solomakhin  <rouslan@chromium.org>
+
+        [Chromium] Add two-word misspelling to mock spellchecker
+        https://bugs.webkit.org/show_bug.cgi?id=108498
+
+        Reviewed by Tony Chang.
+
+        Some layout tests verify spellcheck behavior when multiple words are
+        marked as a single misspelling. This change adds a two-word misspelling
+        'upper case' to the mock spellchecker used by layout tests.
+
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.cpp:
+        (MockSpellCheck::spellCheckWord): Modified to handle spaces in misspellings.
+        (MockSpellCheck::initializeIfNeeded):  Modified to use a vector instead of a hash table.
+        * DumpRenderTree/chromium/TestRunner/src/MockSpellCheck.h:
+        (MockSpellCheck): Changed misspellings container from hash table to vector.
+
+2013-01-31  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Prospective build fix.
+
+        Reviewed by Jocelyn Turcotte.
+
+        Don't create .prl files for intermediate libs as their contents get
+        injected within -Wl,-whole-archive -lFoo -wl,-no-whole-archive.
+
+        * qmake/mkspecs/features/default_post.prf:
+
+2013-01-31  Alan Cutter  <alancutter@chromium.org>
+
+        EWS graphs have unusual data for patch waiting times
+        https://bugs.webkit.org/show_bug.cgi?id=108427
+
+        Reviewed by Eric Seidel.
+
+        The max_patches_waiting QueueLog property may have missed recording patches waiting in idle times when no events are fired to update it. I added a cron job to take care of this issue.
+        The patch wait duration in PatchLogs was being incorrectly updated after a patch expired and was picked up again from the queue. That period should really count towards the processing time instead.
+        Added a WarningLog to record if any erroneous situations occur due to invalid contents in the datastore. These basically highlight if any "impossible" execution paths get executed.
+
+        * QueueStatusServer/app.yaml:
+        * QueueStatusServer/cron.yaml:
+        * QueueStatusServer/handlers/syncqueuelogs.py: Copied from Tools/QueueStatusServer/model/patchlog.py.
+        (SyncQueueLogs):
+        (SyncQueueLogs.get):
+        * QueueStatusServer/loggers/recordpatchevent.py:
+        (RecordPatchEvent.added):
+        (RecordPatchEvent.retrying):
+        (RecordPatchEvent.started):
+        (RecordPatchEvent.stopped):
+        (RecordPatchEvent.updated):
+        * QueueStatusServer/main.py:
+        * QueueStatusServer/model/patchlog.py:
+        (PatchLog.lookup):
+        (PatchLog):
+        (PatchLog.lookup_if_exists):
+        (PatchLog.calculate_process_duration):
+        (PatchLog._generate_key):
+        * QueueStatusServer/model/queuelog.py:
+        (QueueLog.update_max_patches_waiting):
+        (QueueLog._get_or_create_txn):
+        (QueueLog):
+        (QueueLog._get_patches_waiting):
+        * QueueStatusServer/model/warninglog.py: Copied from Tools/QueueStatusServer/model/patchlog.py.
+        (WarningLog):
+        (WarningLog.record):
+
+2013-01-31  Anders Carlsson  <andersca@apple.com>
+
+        Remove Web Intents code from WebKit2
+        https://bugs.webkit.org/show_bug.cgi?id=108506
+
+        Reviewed by Simon Fraser.
+
+        * WebKitTestRunner/InjectedBundle/Bindings/TestRunner.idl:
+        * WebKitTestRunner/InjectedBundle/InjectedBundlePage.cpp:
+        (WTR::InjectedBundlePage::InjectedBundlePage):
+        * WebKitTestRunner/InjectedBundle/InjectedBundlePage.h:
+        (InjectedBundlePage):
+        * WebKitTestRunner/InjectedBundle/TestRunner.cpp:
+        * WebKitTestRunner/InjectedBundle/TestRunner.h:
+        (TestRunner):
+
+2013-01-31  Tommy Widenflycht  <tommyw@google.com>
+
+        [chromium] MediaStream API: Rename WebMediaStreamDescriptor and WebMediaStreamComponent to WebMediaStream and WebMediaStreamTrack
+        https://bugs.webkit.org/show_bug.cgi?id=108458
+
+        Reviewed by Adam Barth.
+
+        Only renames, no other code changes.
+
+        * DumpRenderTree/chromium/MockWebMediaStreamCenter.cpp:
+        (MockWebMediaStreamCenter::didEnableMediaStreamTrack):
+        (MockWebMediaStreamCenter::didDisableMediaStreamTrack):
+        (MockWebMediaStreamCenter::didAddMediaStreamTrack):
+        (MockWebMediaStreamCenter::didRemoveMediaStreamTrack):
+        (MockWebMediaStreamCenter::didStopLocalMediaStream):
+        (MockWebMediaStreamCenter::didCreateMediaStream):
+        * DumpRenderTree/chromium/MockWebMediaStreamCenter.h:
+        (MockWebMediaStreamCenter):
+        * DumpRenderTree/chromium/MockWebRTCPeerConnectionHandler.cpp:
+        (MockWebRTCPeerConnectionHandler::addStream):
+        (MockWebRTCPeerConnectionHandler::removeStream):
+        (MockWebRTCPeerConnectionHandler::getStats):
+        * DumpRenderTree/chromium/MockWebRTCPeerConnectionHandler.h:
+        (MockWebRTCPeerConnectionHandler):
+        * DumpRenderTree/chromium/WebUserMediaClientMock.cpp:
+        (UserMediaRequestTask::UserMediaRequestTask):
+        (WebUserMediaClientMock::requestUserMedia):
+
+2013-01-31  Zan Dobersek  <zdobersek@igalia.com>
+
+        REGRESSION (r141402): incorrectly set injected bundle path when running GTK unit tests
+        https://bugs.webkit.org/show_bug.cgi?id=108496
+
+        Reviewed by Philippe Normand.
+
+        * Scripts/run-gtk-tests:
+        (TestRunner.__init__): Add the build type as a member on the TestRunner interface.
+        (TestRunner._setup_testing_environment): Use the build type member to determine correct path
+        to the injected bundle.
+
+2013-01-31  Christophe Dumez  <dchris@gmail.com>
+
+        [EFL] Disable Web Intents
+        https://bugs.webkit.org/show_bug.cgi?id=108457
+
+        Reviewed by Alexey Proskuryakov.
+
+        Remove EFL DRT code related to Web intents.
+
+        * DumpRenderTree/efl/DumpRenderTreeChrome.cpp:
+        (DumpRenderTreeChrome::createView):
+        (DumpRenderTreeChrome::resetDefaultsToConsistentValues):
+        (DumpRenderTreeChrome::onFrameCreated):
+        * DumpRenderTree/efl/DumpRenderTreeChrome.h:
+        (DumpRenderTreeChrome):
+        * DumpRenderTree/efl/TestRunnerEfl.cpp:
+        (TestRunner::sendWebIntentResponse):
+        (TestRunner::deliverWebIntent):
+        * Scripts/webkitperl/FeatureList.pm: Turn off WEB_INTENTS flag
+        for EFL port.
+
+2013-01-31  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Disable force_static_libs_as_shared in developer builds if wk2 is enabled
+
+        Reviewed by Jocelyn Turcotte.
+
+        This is a temporary workaround during the development of #108471, where we move files around
+        but some link time dependencies might remain.
+
+        * qmake/mkspecs/features/default_post.prf:
+
+2013-01-31  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Make it possible to compile WebKit2 Qt related files without access to internal WK2 C++ API
+        https://bugs.webkit.org/show_bug.cgi?id=108472
+
+        Reviewed by Andreas Kling.
+
+        Add a new module to the qmake build system that represents the part of the WebKit2 Qt integration
+        that doesn't depend on WebKit2 internals.
+
+        * qmake/mkspecs/features/webkit_modules.prf:
+        * qmake/mkspecs/modules/webkit2qml.prf: Copied from Source/WebKit2/WebKit2.pro.
+
+2013-01-31  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Remove dead transitional code from WebViewImpl
+        https://bugs.webkit.org/show_bug.cgi?id=107889
+
+        Reviewed by Adam Barth.
+
+        ScrollingCoordinatorChromiumTests need to initialize compositing, so its implementation of
+        WebWidgetClient has to support the new compositor initialization path.
+
+        * DumpRenderTree/chromium/WebViewHost.cpp:
+        (WebViewHost::initializeLayerTreeView):
+        (WebViewHost::setWebWidget):
+
 2013-01-31  Gustavo Noronha Silva  <gns@gnome.org>
 
         [GTK] run-gtk-tests does not respect the -d argument

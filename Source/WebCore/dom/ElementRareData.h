@@ -240,7 +240,6 @@ inline PseudoElement* ElementRareData::pseudoElement(PseudoId pseudoId) const
     case AFTER:
         return m_generatedAfter.get();
     default:
-        ASSERT_NOT_REACHED();
         return 0;
     }
 }
@@ -256,7 +255,7 @@ inline void ElementRareData::releasePseudoElement(PseudoElement* element)
     ASSERT(!element->nextSibling());
     ASSERT(!element->previousSibling());
 
-    element->setParentOrHostNode(0);
+    element->setParentOrShadowHostNode(0);
 }
 
 inline void ElementRareData::resetComputedStyle()

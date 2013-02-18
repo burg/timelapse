@@ -50,9 +50,11 @@ public:
 
     bool hasFailedOrCanceledSubresources() const;
 
+    bool equals(const CSSImageValue&) const;
+
     void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
 
-    bool hasAlpha(const RenderObject*) const;
+    bool knownToBeOpaque(const RenderObject*) const;
 
     void setInitiator(const AtomicString& name) { m_initiatorName = name; }
 

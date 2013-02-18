@@ -222,11 +222,13 @@ bool WebEditorClient::shouldDeleteRange(Range* range)
         shouldDeleteDOMRange:kit(range)];
 }
 
+#if ENABLE(DELETION_UI)
 bool WebEditorClient::shouldShowDeleteInterface(HTMLElement* element)
 {
     return [[m_webView _editingDelegateForwarder] webView:m_webView
         shouldShowDeleteInterfaceForElement:kit(element)];
 }
+#endif
 
 bool WebEditorClient::smartInsertDeleteEnabled()
 {
@@ -309,6 +311,16 @@ void WebEditorClient::didEndEditing()
 void WebEditorClient::didWriteSelectionToPasteboard()
 {
     [[m_webView _editingDelegateForwarder] webView:m_webView didWriteSelectionToPasteboard:[NSPasteboard generalPasteboard]];
+}
+
+void WebEditorClient::willWriteSelectionToPasteboard(WebCore::Range*)
+{
+    // Not implemented WebKit, only WebKit2.
+}
+
+void WebEditorClient::getClientPasteboardDataForRange(WebCore::Range*, Vector<String>& pasteboardTypes, Vector<RefPtr<WebCore::SharedBuffer> >& pasteboardData)
+{
+    // Not implemented WebKit, only WebKit2.
 }
 
 void WebEditorClient::didSetSelectionTypesForPasteboard()
@@ -509,6 +521,8 @@ static NSString* undoNameForEditAction(EditAction editAction)
         case EditActionFormatBlock: return UI_STRING_KEY_INTERNAL("Formatting", "Format Block (Undo action name)", "Undo action name");
         case EditActionIndent: return UI_STRING_KEY_INTERNAL("Indent", "Indent (Undo action name)", "Undo action name");
         case EditActionOutdent: return UI_STRING_KEY_INTERNAL("Outdent", "Outdent (Undo action name)", "Undo action name");
+        case EditActionBold: return UI_STRING_KEY_INTERNAL("Bold", "Bold (Undo action name)", "Undo action name");
+        case EditActionItalics: return UI_STRING_KEY_INTERNAL("Italics", "Italics (Undo action name)", "Undo action name");
     }
     return nil;
 }

@@ -27,11 +27,13 @@
 #include "config.h"
 #include "HTMLTreeBuilder.h"
 
+#include "AtomicHTMLToken.h"
 #include "Comment.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
 #include "Element.h"
 #include "Frame.h"
+#include "FrameLoaderClient.h"
 #include "HTMLDocument.h"
 #include "HTMLElementFactory.h"
 #include "HTMLFormElement.h"
@@ -339,7 +341,7 @@ void HTMLConstructionSite::finishedParsing()
 
 void HTMLConstructionSite::insertDoctype(AtomicHTMLToken* token)
 {
-    ASSERT(token->type() == HTMLTokenTypes::DOCTYPE);
+    ASSERT(token->type() == HTMLToken::DOCTYPE);
 
     const String& publicId = String::adopt(token->publicIdentifier());
     const String& systemId = String::adopt(token->systemIdentifier());
@@ -364,19 +366,19 @@ void HTMLConstructionSite::insertDoctype(AtomicHTMLToken* token)
 
 void HTMLConstructionSite::insertComment(AtomicHTMLToken* token)
 {
-    ASSERT(token->type() == HTMLTokenTypes::Comment);
+    ASSERT(token->type() == HTMLToken::Comment);
     attachLater(currentNode(), Comment::create(ownerDocumentForCurrentNode(), token->comment()));
 }
 
 void HTMLConstructionSite::insertCommentOnDocument(AtomicHTMLToken* token)
 {
-    ASSERT(token->type() == HTMLTokenTypes::Comment);
+    ASSERT(token->type() == HTMLToken::Comment);
     attachLater(m_attachmentRoot, Comment::create(m_document, token->comment()));
 }
 
 void HTMLConstructionSite::insertCommentOnHTMLHtmlElement(AtomicHTMLToken* token)
 {
-    ASSERT(token->type() == HTMLTokenTypes::Comment);
+    ASSERT(token->type() == HTMLToken::Comment);
     ContainerNode* parent = m_openElements.rootNode();
     attachLater(parent, Comment::create(parent->document(), token->comment()));
 }
@@ -395,6 +397,8 @@ void HTMLConstructionSite::insertHTMLBodyElement(AtomicHTMLToken* token)
     RefPtr<Element> body = createHTMLElement(token);
     attachLater(currentNode(), body);
     m_openElements.pushHTMLBodyElement(HTMLStackItem::create(body.release(), token));
+    if (Frame* frame = m_document->frame())
+        frame->loader()->client()->dispatchWillInsertBody();
 }
 
 void HTMLConstructionSite::insertHTMLFormElement(AtomicHTMLToken* token, bool isDemoted)
@@ -416,7 +420,7 @@ void HTMLConstructionSite::insertHTMLElement(AtomicHTMLToken* token)
 
 void HTMLConstructionSite::insertSelfClosingHTMLElement(AtomicHTMLToken* token)
 {
-    ASSERT(token->type() == HTMLTokenTypes::StartTag);
+    ASSERT(token->type() == HTMLToken::StartTag);
     // Normally HTMLElementStack is responsible for calling finishParsingChildren,
     // but self-closing elements are never in the element stack so the stack
     // doesn't get a chance to tell them that we're done parsing their children.
@@ -452,7 +456,7 @@ void HTMLConstructionSite::insertScriptElement(AtomicHTMLToken* token)
 
 void HTMLConstructionSite::insertForeignElement(AtomicHTMLToken* token, const AtomicString& namespaceURI)
 {
-    ASSERT(token->type() == HTMLTokenTypes::StartTag);
+    ASSERT(token->type() == HTMLToken::StartTag);
     notImplemented(); // parseError when xmlns or xmlns:xlink are wrong.
 
     RefPtr<Element> element = createElement(token, namespaceURI);

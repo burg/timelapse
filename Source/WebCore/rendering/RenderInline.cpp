@@ -1012,7 +1012,7 @@ LayoutRect RenderInline::clippedOverflowRectForRepaint(const RenderLayerModelObj
             break;
         }
         if (inlineFlow->style()->hasInFlowPosition() && inlineFlow->hasLayer())
-            repaintRect.move(toRenderInline(inlineFlow)->layer()->offsetForInFlowPosition());
+            repaintRect.move(toRenderInline(inlineFlow)->layer()->paintOffset());
     }
 
     LayoutUnit outlineSize = style()->outlineSize();
@@ -1059,7 +1059,7 @@ void RenderInline::computeRectForRepaint(const RenderLayerModelObject* repaintCo
         if (v->layoutStateEnabled() && !repaintContainer) {
             LayoutState* layoutState = v->layoutState();
             if (style()->hasInFlowPosition() && layer())
-                rect.move(layer()->offsetForInFlowPosition());
+                rect.move(layer()->paintOffset());
             rect.move(layoutState->m_paintOffset);
             if (layoutState->m_clipped)
                 rect.intersect(layoutState->m_clipRect);
@@ -1092,7 +1092,7 @@ void RenderInline::computeRectForRepaint(const RenderLayerModelObject* repaintCo
         // is translated, but the render box isn't, so we need to do this to get the
         // right dirty rect. Since this is called from RenderObject::setStyle, the relative or sticky position
         // flag on the RenderObject has been cleared, so use the one on the style().
-        topLeft += layer()->offsetForInFlowPosition();
+        topLeft += layer()->paintOffset();
     }
     
     // FIXME: We ignore the lightweight clipping rect that controls use, since if |o| is in mid-layout,
@@ -1144,7 +1144,7 @@ void RenderInline::mapLocalToContainer(const RenderLayerModelObject* repaintCont
             LayoutState* layoutState = v->layoutState();
             LayoutSize offset = layoutState->m_paintOffset;
             if (style()->hasInFlowPosition() && layer())
-                offset += layer()->offsetForInFlowPosition();
+                offset += layer()->paintOffset();
             transformState.move(offset);
             return;
         }
@@ -1222,17 +1222,6 @@ void RenderInline::updateDragState(bool dragOn)
     RenderBoxModelObject::updateDragState(dragOn);
     if (continuation())
         continuation()->updateDragState(dragOn);
-}
-
-void RenderInline::childBecameNonInline(RenderObject* child)
-{
-    // We have to split the parent flow.
-    RenderBlock* newBox = containingBlock()->createAnonymousBlock();
-    RenderBoxModelObject* oldContinuation = continuation();
-    setContinuation(newBox);
-    RenderObject* beforeChild = child->nextSibling();
-    children()->removeChildNode(this, child);
-    splitFlow(beforeChild, newBox, child, oldContinuation);
 }
 
 void RenderInline::updateHitTestResult(HitTestResult& result, const LayoutPoint& point)
@@ -1621,8 +1610,8 @@ void RenderInline::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
     RenderBoxModelObject::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_children);
-    info.addMember(m_lineBoxes);
+    info.addMember(m_children, "children");
+    info.addMember(m_lineBoxes, "lineBoxes");
 }
 
 } // namespace WebCore

@@ -1,3 +1,266 @@
+2013-02-11  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Add WebUnitTestSupport::createLayerTreeViewForTesting for webkit_unit_tests
+        https://bugs.webkit.org/show_bug.cgi?id=109403
+
+        Reviewed by Adam Barth.
+
+        webkit_unit_tests that need compositing support need only a simple WebLayerTreeView implementation, not the full
+        thing.
+
+        * chromium/public/WebCompositorSupport.h:
+        (WebCompositorSupport):
+        (WebKit::WebCompositorSupport::createLayerTreeView):
+        * chromium/public/WebUnitTestSupport.h:
+        (WebKit):
+        (WebUnitTestSupport):
+        (WebKit::WebUnitTestSupport::createLayerTreeViewForTesting):
+
+2013-02-11  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r142568.
+        http://trac.webkit.org/changeset/142568
+        https://bugs.webkit.org/show_bug.cgi?id=109541
+
+        Broke the build, won't compile. (Requested by alancutter on
+        #webkit).
+
+        * chromium/public/WebCompositorSupport.h:
+        (WebCompositorSupport):
+        (WebKit::WebCompositorSupport::createLayerTreeView):
+        * chromium/public/WebUnitTestSupport.h:
+
+2013-02-11  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Add WebUnitTestSupport::createLayerTreeViewForTesting for webkit_unit_tests
+        https://bugs.webkit.org/show_bug.cgi?id=109403
+
+        Reviewed by Adam Barth.
+
+        webkit_unit_tests that need compositing support need only a simple WebLayerTreeView implementation, not the full
+        thing.
+
+        * chromium/public/WebCompositorSupport.h:
+        (WebCompositorSupport):
+        (WebKit::WebCompositorSupport::createLayerTreeView):
+        * chromium/public/WebUnitTestSupport.h:
+        (WebKit):
+        (WebUnitTestSupport):
+        (WebKit::WebUnitTestSupport::createLayerTreeViewForTesting):
+
+2013-02-10  Florin Malita  <fmalita@chromium.org>
+
+        [Chromium] FilterTypeSaturatingBrightness enum
+        https://bugs.webkit.org/show_bug.cgi?id=109380
+
+        Introduce a new WebFilterOperation::FilterType enum (FilterTypeSaturatingBrightness)
+        to support existing interntal clients which rely on the current saturating brightness
+        behavior (in preparation of switching to the new brightness implementation).
+
+        Reviewed by James Robinson.
+
+        * chromium/public/WebFilterOperation.h:
+        (WebKit::WebFilterOperation::amount):
+        (WebKit::WebFilterOperation::createSaturatingBrightnessFilter):
+        (WebKit::WebFilterOperation::setAmount):
+
+2013-02-09  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Enable more of webkit_unit_tests in component builds
+        https://bugs.webkit.org/show_bug.cgi?id=109369
+
+        Reviewed by Darin Fisher.
+
+        Add a set of testing APIs to a WebUnitTestSupport interface available off of Platform for unit tests to access
+        in component builds.
+
+        * chromium/public/Platform.h:
+        (WebKit):
+        (Platform):
+        (WebKit::Platform::unitTestSupport):
+        * chromium/public/WebUnitTestSupport.h: Added.
+        (WebKit):
+        (WebUnitTestSupport):
+        (WebKit::WebUnitTestSupport::registerMockedURL):
+        (WebKit::WebUnitTestSupport::registerMockedErrorURL):
+        (WebKit::WebUnitTestSupport::unregisterMockedURL):
+        (WebKit::WebUnitTestSupport::unregisterAllMockedURLs):
+        (WebKit::WebUnitTestSupport::serveAsynchronousMockedRequests):
+        (WebKit::WebUnitTestSupport::webKitRootDir):
+
+2013-02-08  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Removing the deprecated WebMediaStreamDescriptor and WebMediaStreamComponent shims
+        https://bugs.webkit.org/show_bug.cgi?id=109296
+
+        Reviewed by Adam Barth.
+
+        * Platform.gypi:
+        * chromium/public/WebMediaStreamComponent.h: Removed.
+        * chromium/public/WebMediaStreamDescriptor.h: Removed.
+
+2013-02-07  Eberhard Graether  <egraether@google.com>
+
+        Web Inspector: Add settings checkbox for composited layer borders
+        https://bugs.webkit.org/show_bug.cgi?id=109096
+
+        Reviewed by Pavel Feldman.
+
+        This change adds a checkbox to show composited layer borders to the WebInspector's
+        rendering settings and plumbs the setting to Chromium's WebLayerTreeView. The setting
+        is visible if InspectorClient::canShowDebugBorders() returns true.
+
+        * chromium/public/WebLayerTreeView.h:
+        (WebLayerTreeView):
+        (WebKit::WebLayerTreeView::setShowDebugBorders):
+
+2013-02-06  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Implement DTMF support in RTCPeerConnection
+        https://bugs.webkit.org/show_bug.cgi?id=106782
+
+        Reviewed by Adam Barth.
+
+        The WebRTC specification have added support for DTMF:
+        http://dev.w3.org/2011/webrtc/editor/webrtc.html#peer-to-peer-dtmf
+
+        Implementation wise this is implemented using the same pattern as RTCDataChannel;
+        where a RTCDTMFSenderHandler is created by the UA through a new method on
+        RTCPeerConnectionHandler.
+
+        * Platform.gypi:
+        * chromium/public/WebMediaStreamTrack.h:
+        (WebMediaStreamTrack):
+        * chromium/public/WebRTCDTMFSenderHandler.h: Copied from Source/Platform/chromium/public/WebMediaStreamTrack.h.
+        (WebKit):
+        (WebRTCDTMFSenderHandler):
+        (WebKit::WebRTCDTMFSenderHandler::~WebRTCDTMFSenderHandler):
+        * chromium/public/WebRTCDTMFSenderHandlerClient.h: Copied from Source/Platform/chromium/public/WebMediaStreamTrack.h.
+        (WebKit):
+        (WebRTCDTMFSenderHandlerClient):
+        (WebKit::WebRTCDTMFSenderHandlerClient::~WebRTCDTMFSenderHandlerClient):
+        * chromium/public/WebRTCPeerConnectionHandler.h:
+        (WebKit):
+        (WebKit::WebRTCPeerConnectionHandler::createDTMFSender):
+
+2013-02-05  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Provide compositor offscreen context through the WebLayerTreeViewClient interface
+        https://bugs.webkit.org/show_bug.cgi?id=107776
+
+        Make "createGrGLInterface" the preferred virtual method for
+        WebGraphicsContext3D implementations to override. For now it
+        just calls the old method in its default implementation.
+
+        Reviewed by James Robinson.
+
+        * chromium/public/WebGraphicsContext3D.h:
+        (WebGraphicsContext3D):
+        (WebKit::WebGraphicsContext3D::createGrGLInterface):
+
+2013-02-05  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Remove optionalness of second parameter to WebLayerTreeView::setViewportSize
+        https://bugs.webkit.org/show_bug.cgi?id=108972
+
+        Reviewed by Adam Barth.
+
+        This was added to ease the transition of adding this parameter, but it's now always set.
+
+        * chromium/public/WebLayerTreeView.h:
+        (WebLayerTreeView):
+
+2013-02-02  Michael Nordman  <michaeln@google.com>
+
+        [chromium] FileSystem mods: Changes to snapshot file creation to reduce dependencies on blobs.
+        This patch just alters the WebKitAPI in advance of coding to the new API in chromium and webkit
+        sources, defining two new virtual methods (unimplemented and uncalled). The existing API remains
+        in place and in use.
+        https://bugs.webkit.org/show_bug.cgi?id=108736
+
+        Reviewed by Darin Fisher.
+
+        * chromium/public/WebFileSystem.h:
+        (WebFileSystem):
+        (WebKit::WebFileSystem::createSnapshotFileAndReadMetadata):
+
+2013-02-01  James Simonsen  <simonjam@chromium.org>
+
+        Add didChangePriority() to ResourceHandle
+        https://bugs.webkit.org/show_bug.cgi?id=107995
+
+        Reviewed by Darin Fisher.
+
+        * chromium/public/WebURLLoader.h:
+        (WebKit):
+        (WebURLLoader):
+        (WebKit::WebURLLoader::didChangePriority): Added.
+
+2013-02-01  Kevin Ellis  <kevers@chromium.org>
+
+        [chromium] Fat scrollbars on Windows in high-DPI mode.
+        https://bugs.webkit.org/show_bug.cgi?id=108637
+
+        Updates mechanism for retrieving scrollbar metrics on the
+        Windows port of Chromium.  Previously, GetSystemMetrics calls
+        were used, which fetches prescaled sizes in pixel rather than
+        logical units, resulting in a double scaling when a device
+        scale factor is set.  With the patch, the size is retrieved
+        from the theme engine in DIP.
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/win/WebThemeEngine.h:
+        (WebThemeEngine):
+
+2013-01-31  Tommy Widenflycht  <tommyw@google.com>
+
+        [chromium] MediaStream API: Rename WebMediaStreamDescriptor and WebMediaStreamComponent to WebMediaStream and WebMediaStreamTrack
+        https://bugs.webkit.org/show_bug.cgi?id=108458
+
+        Only renames, no other code changes.
+
+        Reviewed by Adam Barth.
+
+        * Platform.gypi:
+        * chromium/public/WebMediaStream.h: Copied from Source/Platform/chromium/public/WebMediaStreamDescriptor.h.
+        (WebCore):
+        (WebKit):
+        (WebMediaStream):
+        (ExtraData):
+        (WebKit::WebMediaStream::ExtraData::~ExtraData):
+        (WebKit::WebMediaStream::WebMediaStream):
+        (WebKit::WebMediaStream::~WebMediaStream):
+        (WebKit::WebMediaStream::operator=):
+        (WebKit::WebMediaStream::isNull):
+        * chromium/public/WebMediaStreamCenter.h:
+        (WebKit):
+        (WebMediaStreamCenter):
+        (WebKit::WebMediaStreamCenter::didAddMediaStreamTrack):
+        (WebKit::WebMediaStreamCenter::didRemoveMediaStreamTrack):
+        * chromium/public/WebMediaStreamCenterClient.h:
+        (WebKit):
+        (WebMediaStreamCenterClient):
+        * chromium/public/WebMediaStreamComponent.h:
+        * chromium/public/WebMediaStreamDescriptor.h:
+        * chromium/public/WebMediaStreamTrack.h: Added.
+        (WebCore):
+        (WebKit):
+        (WebMediaStreamTrack):
+        (WebKit::WebMediaStreamTrack::WebMediaStreamTrack):
+        (WebKit::WebMediaStreamTrack::~WebMediaStreamTrack):
+        (WebKit::WebMediaStreamTrack::operator=):
+        (WebKit::WebMediaStreamTrack::isNull):
+        * chromium/public/WebRTCPeerConnectionHandler.h:
+        (WebKit):
+        (WebRTCPeerConnectionHandler):
+        * chromium/public/WebRTCPeerConnectionHandlerClient.h:
+        (WebKit):
+        (WebRTCPeerConnectionHandlerClient):
+        * chromium/public/WebRTCStatsRequest.h:
+        (WebKit):
+        (WebRTCStatsRequest):
+
 2013-01-30  Yusuf Ozuysal  <yusufo@google.com>
 
         Start sending scrollType as NonBubblingGesture for flings

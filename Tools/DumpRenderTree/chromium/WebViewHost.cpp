@@ -45,7 +45,6 @@
 #include "WebDeviceOrientationClientMock.h"
 #include "WebDocument.h"
 #include "WebElement.h"
-#include "WebEventSender.h"
 #include "WebFrame.h"
 #include "WebGeolocationClientMock.h"
 #include "WebHistoryItem.h"
@@ -59,8 +58,6 @@
 #include "WebScreenInfo.h"
 #include "WebSerializedScriptValue.h"
 #include "WebStorageNamespace.h"
-#include "WebTestPlugin.h"
-#include "WebUserMediaClientMock.h"
 #include "WebView.h"
 #include "WebWindowFeatures.h"
 #include "skia/ext/platform_canvas.h"
@@ -238,7 +235,6 @@ bool WebViewHost::runModalPromptDialog(WebFrame* frame, const WebString& message
 
 void WebViewHost::showContextMenu(WebFrame*, const WebContextMenuData& contextMenuData)
 {
-    m_lastContextMenuData = adoptPtr(new WebContextMenuData(contextMenuData));
 }
 
 void WebViewHost::didUpdateLayout()
@@ -323,20 +319,6 @@ WebDeviceOrientationClient* WebViewHost::deviceOrientationClient()
     return deviceOrientationClientMock();
 }
 
-#if ENABLE(MEDIA_STREAM)
-WebUserMediaClient* WebViewHost::userMediaClient()
-{
-    return userMediaClientMock();
-}
-
-WebUserMediaClientMock* WebViewHost::userMediaClientMock()
-{
-    if (!m_userMediaClientMock.get())
-        m_userMediaClientMock = WebUserMediaClientMock::create();
-    return m_userMediaClientMock.get();
-}
-#endif
-
 // WebWidgetClient -----------------------------------------------------------
 
 void WebViewHost::didAutoResize(const WebSize& newSize)
@@ -349,6 +331,8 @@ void WebViewHost::didAutoResize(const WebSize& newSize)
 void WebViewHost::initializeLayerTreeView(WebLayerTreeViewClient* client, const WebLayer& rootLayer, const WebLayerTreeView::Settings& settings)
 {
     m_layerTreeView = adoptPtr(Platform::current()->compositorSupport()->createLayerTreeView(client, rootLayer, settings));
+    if (m_layerTreeView)
+        m_layerTreeView->setSurfaceReady();
 }
 
 WebLayerTreeView* WebViewHost::layerTreeView()
@@ -534,9 +518,6 @@ void WebViewHost::exitFullScreen()
 
 WebPlugin* WebViewHost::createPlugin(WebFrame* frame, const WebPluginParams& params)
 {
-    if (params.mimeType == WebTestPlugin::mimeType())
-        return WebTestPlugin::create(frame, params, this);
-
     return webkit_support::CreateWebPlugin(frame, params);
 }
 
@@ -641,16 +622,6 @@ bool WebViewHost::willCheckAndDispatchMessageEvent(WebFrame* sourceFrame, WebFra
 
 // WebTestDelegate ------------------------------------------------------------
 
-WebContextMenuData* WebViewHost::lastContextMenuData() const
-{
-    return m_lastContextMenuData.get();
-}
-
-void WebViewHost::clearContextMenuData()
-{
-    m_lastContextMenuData.clear();
-}
-
 void WebViewHost::setEditCommand(const string& name, const string& value)
 {
     m_editCommandName = name;
@@ -718,24 +689,9 @@ void WebViewHost::applyPreferences()
     m_shell->applyPreferences();
 }
 
-void WebViewHost::setCurrentWebIntentRequest(const WebIntentRequest& request)
-{
-    m_currentRequest = request;
-}
-
-WebIntentRequest* WebViewHost::currentWebIntentRequest()
-{
-    return &m_currentRequest;
-}
-
 std::string WebViewHost::makeURLErrorDescription(const WebKit::WebURLError& error)
 {
     return webkit_support::MakeURLErrorDescription(error);
-}
-
-std::string WebViewHost::normalizeLayoutTestURL(const std::string& url)
-{
-    return m_shell->normalizeLayoutTestURL(url);
 }
 
 void WebViewHost::showDevTools()
@@ -911,7 +867,7 @@ void WebViewHost::displayInvalidatedRegion()
 
 void WebViewHost::testFinished()
 {
-    m_shell->testFinished();
+    m_shell->testFinished(this);
 }
 
 void WebViewHost::testTimedOut()
@@ -967,6 +923,11 @@ bool WebViewHost::allowExternalPages()
     return m_shell->allowExternalPages();
 }
 
+void WebViewHost::captureHistoryForWindow(size_t windowIndex, WebVector<WebHistoryItem>* history, size_t* currentEntryIndex)
+{
+    m_shell->captureHistoryForWindow(windowIndex, history, currentEntryIndex);
+}
+
 // Public functions -----------------------------------------------------------
 
 WebViewHost::WebViewHost(TestShell* shell)
@@ -1001,6 +962,7 @@ void WebViewHost::shutdown()
          it < m_popupmenus.end(); ++it)
         (*it)->close();
 
+    webWidget()->willCloseLayerTreeView();
     m_layerTreeView.clear();
     webWidget()->close();
     m_webWidget = 0;
@@ -1012,7 +974,6 @@ void WebViewHost::setWebWidget(WebKit::WebWidget* widget)
     m_webWidget = widget;
     webView()->setSpellCheckClient(proxy()->spellCheckClient());
     webView()->setPrerendererClient(this);
-    webView()->setCompositorSurfaceReady();
 }
 
 WebView* WebViewHost::webView() const
@@ -1076,7 +1037,6 @@ void WebViewHost::reset()
 
     if (m_webWidget) {
         webView()->mainFrame()->setName(WebString());
-        webView()->settings()->setMinimumTimerInterval(webkit_support::GetForegroundTabTimerInterval());
     }
 }
 
@@ -1348,13 +1308,4 @@ void WebViewHost::discardBackingStore()
 void WebViewHost::displayRepaintMask()
 {
     canvas()->drawARGB(167, 0, 0, 0);
-}
-
-// Simulate a print by going into print mode and then exit straight away.
-void WebViewHost::printPage(WebKit::WebFrame* frame)
-{
-    WebSize pageSizeInPixels = webWidget()->size();
-    WebPrintParams printParams(pageSizeInPixels);
-    frame->printBegin(printParams);
-    frame->printEnd();
 }

@@ -21,12 +21,15 @@
 #ifndef EwkView_h
 #define EwkView_h
 
+#include "EvasGLContext.h"
+#include "EvasGLSurface.h"
 #include "EwkViewCallbacks.h"
 #include "ImmutableDictionary.h"
 #include "RefPtrEfl.h"
 #include "WKEinaSharedString.h"
 #include "WKGeometry.h"
 #include "WKRetainPtr.h"
+#include "WebView.h"
 #include "ewk_url_request_private.h"
 #include <Evas.h>
 #include <WebCore/FloatPoint.h>
@@ -44,10 +47,10 @@
 #include "ewk_touch.h"
 #endif
 
-#if USE(ACCELERATED_COMPOSITING)
-#include "EvasGLContext.h"
-#include "EvasGLSurface.h"
-#endif
+
+#include "WebContext.h"
+#include "WebPageGroup.h"
+#include "WebPreferences.h"
 
 namespace WebKit {
 class ContextMenuClientEfl;
@@ -68,10 +71,6 @@ class WebPopupMenuProxyEfl;
 #if ENABLE(VIBRATION)
 class VibrationClientEfl;
 #endif
-
-#if USE(COORDINATED_GRAPHICS)
-class LayerTreeRenderer;
-#endif
 }
 
 namespace WebCore {
@@ -79,6 +78,7 @@ class AffineTransform;
 class Color;
 class Cursor;
 class IntSize;
+class CoordinatedGraphicsScene;
 }
 
 class EwkContext;
@@ -89,13 +89,13 @@ class EwkPopupMenu;
 class EwkSettings;
 class EwkWindowFeatures;
 
-#if USE(ACCELERATED_COMPOSITING)
 typedef struct _Evas_GL_Context Evas_GL_Context;
 typedef struct _Evas_GL_Surface Evas_GL_Surface;
-#endif
 
 typedef struct Ewk_View_Smart_Data Ewk_View_Smart_Data;
+typedef struct Ewk_View_Smart_Class Ewk_View_Smart_Class;
 
+// EwkView object is owned by the evas object, obtained from EwkView::createEvasObject().
 class EwkView {
 public:
 
@@ -103,14 +103,20 @@ public:
         LegacyBehavior,
         DefaultBehavior
     };
-    EwkView(Evas_Object* view, PassRefPtr<EwkContext> context, PassRefPtr<WebKit::WebPageGroup> pageGroup, ViewBehavior);
-    ~EwkView();
 
-    static EwkView* fromEvasObject(const Evas_Object* view);
-    Evas_Object* view() { return m_evasObject; }
+    static Evas_Object* createEvasObject(Evas* canvas, Evas_Smart* smart, PassRefPtr<EwkContext> context,  WKPageGroupRef pageGroupRef = 0, ViewBehavior behavior = EwkView::DefaultBehavior);
+    static Evas_Object* createEvasObject(Evas* canvas, PassRefPtr<EwkContext> context, WKPageGroupRef pageGroupRef = 0, ViewBehavior behavior = EwkView::DefaultBehavior);
 
-    WKPageRef wkPage();
-    WebKit::WebPageProxy* page() { return m_pageProxy.get(); }
+    static bool initSmartClassInterface(Ewk_View_Smart_Class&);
+
+    static const Evas_Object* toEvasObject(WKPageRef);
+
+    Evas_Object* evasObject() { return m_evasObject; }
+
+    WKViewRef wkView() const { return toAPI(m_webView.get()); }
+    WKPageRef wkPage() const;
+
+    WebKit::WebPageProxy* page() { return m_webView->page(); }
     EwkContext* ewkContext() { return m_context.get(); }
     EwkSettings* settings() { return m_settings.get(); }
     EwkBackForwardList* backForwardList() { return m_backForwardList.get(); }
@@ -147,11 +153,7 @@ public:
     void setCursor(const WebCore::Cursor& cursor);
     void setImageData(void* imageData, const WebCore::IntSize& size);
 
-    void update(const WebCore::IntRect& rect = WebCore::IntRect());
-
-    static void addToPageViewMap(EwkView* view);
-    static void removeFromPageViewMap(EwkView* view);
-    static const Evas_Object* viewFromPageViewMap(const WKPageRef);
+    void scheduleUpdateDisplay();
 
 #if ENABLE(FULLSCREEN_API)
     void enterFullScreen();
@@ -161,12 +163,10 @@ public:
     WKRect windowGeometry() const;
     void setWindowGeometry(const WKRect&);
 
-#if USE(ACCELERATED_COMPOSITING)
     bool createGLSurface(const WebCore::IntSize& viewSize);
     bool enterAcceleratedCompositingMode();
     bool exitAcceleratedCompositingMode();
     void setNeedsSurfaceResize() { m_pendingSurfaceResize = true; }
-#endif
 
 #if ENABLE(INPUT_TYPE_COLOR)
     void requestColorPicker(WKColorPickerResultListenerRef listener, const WebCore::Color&);
@@ -196,7 +196,6 @@ public:
 
     unsigned long long informDatabaseQuotaReached(const String& databaseName, const String& displayName, unsigned long long currentQuota, unsigned long long currentOriginUsage, unsigned long long currentDatabaseUsage, unsigned long long expectedUsage);
 
-#if USE(TILED_BACKING_STORE)
     WebKit::PageClientBase* pageClient() { return m_pageClient.get(); }
 
     void setPageScaleFactor(float scaleFactor) { m_pageScaleFactor = scaleFactor; }
@@ -204,48 +203,64 @@ public:
 
     void setPagePosition(const WebCore::FloatPoint& position) { m_pagePosition = position; }
     const WebCore::FloatPoint pagePosition() const { return m_pagePosition; }
-#endif
 
     // FIXME: needs refactoring (split callback invoke)
     void informURLChange();
 
     bool isHardwareAccelerated() const { return m_isHardwareAccelerated; }
-    void setDrawsBackground(bool enable) { m_setDrawsBackground = enable; }
 
     PassRefPtr<cairo_surface_t> takeSnapshot();
 
 private:
-    inline Ewk_View_Smart_Data* smartData() const;
+    EwkView(Evas_Object* evasObject, PassRefPtr<EwkContext> context, WKPageGroupRef pageGroup, ViewBehavior);
+    ~EwkView();
+
+    Ewk_View_Smart_Data* smartData() const;
+
     void displayTimerFired(WebCore::Timer<EwkView>*);
 
-#if USE(COORDINATED_GRAPHICS)
-    WebKit::LayerTreeRenderer* layerTreeRenderer();
-#endif
+    WebCore::CoordinatedGraphicsScene* coordinatedGraphicsScene();
 
     void informIconChange();
 
-    static void onMouseDown(void* data, Evas*, Evas_Object*, void* eventInfo);
-    static void onMouseUp(void* data, Evas*, Evas_Object*, void* eventInfo);
-    static void onMouseMove(void* data, Evas*, Evas_Object*, void* eventInfo);
+    // Evas_Smart_Class callback interface:
+    static void handleEvasObjectAdd(Evas_Object*);
+    static void handleEvasObjectDelete(Evas_Object*);
+    static void handleEvasObjectMove(Evas_Object*, Evas_Coord x, Evas_Coord y);
+    static void handleEvasObjectResize(Evas_Object*, Evas_Coord width, Evas_Coord height);
+    static void handleEvasObjectShow(Evas_Object*);
+    static void handleEvasObjectHide(Evas_Object*);
+    static void handleEvasObjectColorSet(Evas_Object*, int red, int green, int blue, int alpha);
+    static void handleEvasObjectCalculate(Evas_Object*);
+
+    // Ewk_View_Smart_Class callback interface:
+    static Eina_Bool handleEwkViewFocusIn(Ewk_View_Smart_Data* smartData);
+    static Eina_Bool handleEwkViewFocusOut(Ewk_View_Smart_Data* smartData);
+    static Eina_Bool handleEwkViewMouseWheel(Ewk_View_Smart_Data* smartData, const Evas_Event_Mouse_Wheel* wheelEvent);
+    static Eina_Bool handleEwkViewMouseDown(Ewk_View_Smart_Data* smartData, const Evas_Event_Mouse_Down* downEvent);
+    static Eina_Bool handleEwkViewMouseUp(Ewk_View_Smart_Data* smartData, const Evas_Event_Mouse_Up* upEvent);
+    static Eina_Bool handleEwkViewMouseMove(Ewk_View_Smart_Data* smartData, const Evas_Event_Mouse_Move* moveEvent);
+    static Eina_Bool handleEwkViewKeyDown(Ewk_View_Smart_Data* smartData, const Evas_Event_Key_Down* downEvent);
+    static Eina_Bool handleEwkViewKeyUp(Ewk_View_Smart_Data* smartData, const Evas_Event_Key_Up* upEvent);
+
 #if ENABLE(TOUCH_EVENTS)
     void feedTouchEvents(Ewk_Touch_Event_Type type);
-    static void onTouchDown(void* /* data */, Evas* /* canvas */, Evas_Object* ewkView, void* /* eventInfo */);
-    static void onTouchUp(void* /* data */, Evas* /* canvas */, Evas_Object* ewkView, void* /* eventInfo */);
-    static void onTouchMove(void* /* data */, Evas* /* canvas */, Evas_Object* ewkView, void* /* eventInfo */);
+    static void handleTouchDown(void* data, Evas*, Evas_Object*, void* eventInfo);
+    static void handleTouchUp(void* data, Evas*, Evas_Object*, void* eventInfo);
+    static void handleTouchMove(void* data, Evas*, Evas_Object*, void* eventInfo);
 #endif
-    static void onFaviconChanged(const char* pageURL, void* eventInfo);
+    static void handleFaviconChanged(const char* pageURL, void* eventInfo);
 
+private:
     // Note, initialization order matters.
     Evas_Object* m_evasObject;
     RefPtr<EwkContext> m_context;
-#if USE(ACCELERATED_COMPOSITING)
     OwnPtr<Evas_GL> m_evasGL;
     OwnPtr<WebKit::EvasGLContext> m_evasGLContext;
     OwnPtr<WebKit::EvasGLSurface> m_evasGLSurface;
     bool m_pendingSurfaceResize;
-#endif
     OwnPtr<WebKit::PageClientBase> m_pageClient;
-    RefPtr<WebKit::WebPageProxy> m_pageProxy;
+    RefPtr<WebKit::WebView> m_webView;
     OwnPtr<WebKit::PageLoadClientEfl> m_pageLoadClient;
     OwnPtr<WebKit::PagePolicyClientEfl> m_pagePolicyClient;
     OwnPtr<WebKit::PageUIClientEfl> m_pageUIClient;
@@ -256,10 +271,8 @@ private:
     OwnPtr<WebKit::VibrationClientEfl> m_vibrationClient;
 #endif
     OwnPtr<EwkBackForwardList> m_backForwardList;
-#if USE(TILED_BACKING_STORE)
     float m_pageScaleFactor;
     WebCore::FloatPoint m_pagePosition;
-#endif
     OwnPtr<EwkSettings> m_settings;
     RefPtr<EwkWindowFeatures> m_windowFeatures;
     const void* m_cursorIdentifier; // This is an address, do not free it.
@@ -280,7 +293,13 @@ private:
     OwnPtr<EwkColorPicker> m_colorPicker;
 #endif
     bool m_isHardwareAccelerated;
-    bool m_setDrawsBackground;
+
+    static Evas_Smart_Class parentSmartClass;
 };
+
+EwkView* toEwkView(const Evas_Object*);
+EwkView* toEwkView(const Ewk_View_Smart_Data* smartData);
+
+bool isViewEvasObject(const Evas_Object* evasObject);
 
 #endif // EwkView_h

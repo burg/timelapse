@@ -1606,25 +1606,53 @@ LayoutBoxExtent RenderStyle::imageOutsets(const NinePieceImage& image) const
                            NinePieceImage::computeOutset(image.outset().left(), borderLeftWidth()));
 }
 
+void RenderStyle::setBorderImageSource(PassRefPtr<StyleImage> image)
+{
+    if (surround->border.m_image.image() == image.get())
+        return;
+    surround.access()->border.m_image.setImage(image);
+}
+
+void RenderStyle::setBorderImageSlices(LengthBox slices)
+{
+    if (surround->border.m_image.imageSlices() == slices)
+        return;
+    surround.access()->border.m_image.setImageSlices(slices);
+}
+
+void RenderStyle::setBorderImageWidth(LengthBox slices)
+{
+    if (surround->border.m_image.borderSlices() == slices)
+        return;
+    surround.access()->border.m_image.setBorderSlices(slices);
+}
+
+void RenderStyle::setBorderImageOutset(LengthBox outset)
+{
+    if (surround->border.m_image.outset() == outset)
+        return;
+    surround.access()->border.m_image.setOutset(outset);
+}
+
 void RenderStyle::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_box);
-    info.addMember(visual);
+    info.addMember(m_box, "box");
+    info.addMember(visual, "visual");
     // FIXME: m_background contains RefPtr<StyleImage> that might need to be instrumented.
-    info.addMember(m_background);
+    info.addMember(m_background, "background");
     // FIXME: surrond contains some fields e.g. BorderData that might need to be instrumented.
-    info.addMember(surround);
-    info.addMember(rareNonInheritedData);
-    info.addMember(rareInheritedData);
+    info.addMember(surround, "surround");
+    info.addMember(rareNonInheritedData, "rareNonInheritedData");
+    info.addMember(rareInheritedData, "rareInheritedData");
     // FIXME: inherited contains StyleImage and Font fields that might need to be instrumented.
-    info.addMember(inherited);
-    info.addMember(m_cachedPseudoStyles);
+    info.addMember(inherited, "inherited");
+    info.addMember(m_cachedPseudoStyles, "cachedPseudoStyles");
 #if ENABLE(SVG)
-    info.addMember(m_svgStyle);
+    info.addMember(m_svgStyle, "svgStyle");
 #endif
-    info.addMember(inherited_flags);
-    info.addMember(noninherited_flags);
+    info.addMember(inherited_flags, "inherited_flags");
+    info.addMember(noninherited_flags, "noninherited_flags");
 }
 
 } // namespace WebCore

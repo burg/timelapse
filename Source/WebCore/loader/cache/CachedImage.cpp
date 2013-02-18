@@ -499,19 +499,19 @@ void CachedImage::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CachedResourceImage);
     memoryObjectInfo->setClassName("CachedImage");
     CachedResource::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_pendingContainerSizeRequests);
+    info.addMember(m_pendingContainerSizeRequests, "pendingContainerSizeRequests");
     info.addMember(m_image, "m_image");
 #if ENABLE(SVG)
-    info.addMember(m_svgImageCache);
+    info.addMember(m_svgImageCache, "svgImageCache");
 #endif
 }
 
-bool CachedImage::currentFrameHasAlpha(const RenderObject* renderer)
+bool CachedImage::currentFrameKnownToBeOpaque(const RenderObject* renderer)
 {
     Image* image = imageForRenderer(renderer);
     if (image->isBitmapImage())
         image->nativeImageForCurrentFrame(); // force decode
-    return image->currentFrameHasAlpha();
+    return image->currentFrameKnownToBeOpaque();
 }
 
 } // namespace WebCore

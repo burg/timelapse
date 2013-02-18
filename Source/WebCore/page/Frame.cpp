@@ -630,7 +630,7 @@ Frame* Frame::frameForWidget(const Widget* widget)
 
     // Assume all widgets are either a FrameView or owned by a RenderWidget.
     // FIXME: That assumption is not right for scroll bars!
-    ASSERT(widget->isFrameView());
+    ASSERT_WITH_SECURITY_IMPLICATION(widget->isFrameView());
     return static_cast<const FrameView*>(widget)->frame();
 }
 
@@ -668,11 +668,11 @@ void Frame::dispatchVisibilityStateChangeEvent()
 void Frame::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    info.addMember(m_doc);
+    info.addMember(m_doc, "doc");
     info.ignoreMember(m_view);
-    info.addMember(m_ownerElement);
-    info.addMember(m_page);
-    info.addMember(m_loader);
+    info.addMember(m_ownerElement, "ownerElement");
+    info.addMember(m_page, "page");
+    info.addMember(m_loader, "loader");
     info.ignoreMember(m_destructionObservers);
 }
 

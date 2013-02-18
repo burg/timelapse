@@ -278,6 +278,8 @@ void ScrollView::setFixedLayoutSize(const IntSize& newSize)
         return;
     m_fixedLayoutSize = newSize;
     updateScrollbars(scrollOffset());
+    if (m_useFixedLayout)
+        contentsResized();
 }
 
 bool ScrollView::useFixedLayout() const
@@ -291,6 +293,7 @@ void ScrollView::setUseFixedLayout(bool enable)
         return;
     m_useFixedLayout = enable;
     updateScrollbars(scrollOffset());
+    contentsResized();
 }
 
 IntSize ScrollView::contentsSize() const
@@ -1048,14 +1051,11 @@ void ScrollView::paint(GraphicsContext* context, const IntRect& rect)
 
     notifyPageThatContentAreaWillPaint();
 
-    IntRect clipRect = frameRect();
-    if (verticalScrollbar() && !verticalScrollbar()->isOverlayScrollbar())
-        clipRect.setWidth(clipRect.width() - verticalScrollbar()->width());
-    if (horizontalScrollbar() && !horizontalScrollbar()->isOverlayScrollbar())
-        clipRect.setHeight(clipRect.height() - horizontalScrollbar()->height());
-
     IntRect documentDirtyRect = rect;
-    documentDirtyRect.intersect(clipRect);
+    if (!paintsEntireContents()) {
+        IntRect visibleAreaWithoutScrollbars(location(), visibleContentRect(false).size());
+        documentDirtyRect.intersect(visibleAreaWithoutScrollbars);
+    }
 
     if (!documentDirtyRect.isEmpty()) {
         GraphicsContextStateSaver stateSaver(*context);
@@ -1084,7 +1084,8 @@ void ScrollView::paint(GraphicsContext* context, const IntRect& rect)
     if (!m_scrollbarsSuppressed && (m_horizontalScrollbar || m_verticalScrollbar)) {
         GraphicsContextStateSaver stateSaver(*context);
         IntRect scrollViewDirtyRect = rect;
-        scrollViewDirtyRect.intersect(frameRect());
+        IntRect visibleAreaWithScrollbars(location(), visibleContentRect(true).size());
+        scrollViewDirtyRect.intersect(visibleAreaWithScrollbars);
         context->translate(x(), y());
         scrollViewDirtyRect.moveBy(-location());
 

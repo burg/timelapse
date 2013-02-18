@@ -39,8 +39,7 @@
 namespace WebKit {
 class WebDeviceOrientation;
 class WebGamepads;
-class WebIntentRequest;
-struct WebContextMenuData;
+class WebHistoryItem;
 struct WebRect;
 struct WebURLError;
 }
@@ -52,11 +51,8 @@ class WebTask;
 
 class WebTestDelegate {
 public:
-    virtual void clearContextMenuData() = 0;
     virtual void clearEditCommand() = 0;
-    virtual void fillSpellingSuggestionList(const WebKit::WebString&, WebKit::WebVector<WebKit::WebString>*) { }
     virtual void setEditCommand(const std::string& name, const std::string& value) = 0;
-    virtual WebKit::WebContextMenuData* lastContextMenuData() const = 0;
     virtual void setGamepadData(const WebKit::WebGamepads&) = 0;
     virtual void printMessage(const std::string& message) = 0;
 
@@ -76,10 +72,7 @@ public:
     virtual WebKit::WebURL rewriteLayoutTestsURL(const std::string&) { return WebKit::WebURL(); }
     virtual WebPreferences* preferences() { return 0; }
     virtual void applyPreferences() { };
-    virtual void setCurrentWebIntentRequest(const WebKit::WebIntentRequest&) { };
-    virtual WebKit::WebIntentRequest* currentWebIntentRequest() { return 0; }
     virtual std::string makeURLErrorDescription(const WebKit::WebURLError&) { return std::string(); }
-    virtual std::string normalizeLayoutTestURL(const std::string&) { return std::string(); }
     virtual void setClientWindowRect(const WebKit::WebRect&) { }
     virtual void showDevTools() { }
     virtual void closeDevTools() { }
@@ -121,6 +114,7 @@ public:
     virtual void reload() { }
     virtual void loadURLForFrame(const WebKit::WebURL&, const std::string&) { }
     virtual bool allowExternalPages() { return false; }
+    virtual void captureHistoryForWindow(size_t windowIndex, WebKit::WebVector<WebKit::WebHistoryItem>* history, size_t* currentEntryIndex) { }
 };
 
 }

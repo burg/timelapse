@@ -278,6 +278,10 @@ bool FatFingers::findIntersectingRegions(Document* document, Vector<Intersecting
 
     // Create fingerRect.
     IntPoint frameContentPos(document->frame()->view()->windowToContents(m_webPage->m_mainFrame->view()->contentsToWindow(m_contentPos)));
+    IntRect viewportRect = m_webPage->mainFrame()->view()->visibleContentRect();
+
+    // Ensure the frameContentPos is inside the viewport.
+    frameContentPos = Platform::pointClampedToRect(frameContentPos, viewportRect);
 
 #if DEBUG_FAT_FINGERS
     IntRect fingerRect(fingerRectForPoint(frameContentPos));
@@ -445,7 +449,7 @@ void FatFingers::getNodesFromRect(Document* document, const IntPoint& contentPos
 
     // The user functions checkForText() and findIntersectingRegions() uses the Node.wholeText() to checkFingerIntersection()
     // not the text in its shadow tree.
-    HitTestRequest::HitTestRequestType requestType = HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::IgnoreClipping;
+    HitTestRequest::HitTestRequestType requestType = HitTestRequest::ReadOnly | HitTestRequest::Active;
     if (m_targetType == Text)
         requestType |= HitTestRequest::AllowShadowContent;
     HitTestResult result(contentPos, topPadding, rightPadding, bottomPadding, leftPadding);
@@ -478,7 +482,7 @@ void FatFingers::setSuccessfulFatFingersResult(FatFingersResult& result, Node* b
 
     bool isTextInputElement = false;
     if (m_targetType == ClickableElement) {
-        ASSERT(bestNode->isElementNode());
+        ASSERT_WITH_SECURITY_IMPLICATION(bestNode->isElementNode());
         Element* bestElement = static_cast<Element*>(bestNode);
         isTextInputElement = DOMSupport::isTextInputElement(bestElement);
     }

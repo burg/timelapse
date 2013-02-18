@@ -192,7 +192,7 @@ static JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, WebGLExten
     if (!extension)
         return jsNull();
     switch (extension->getName()) {
-    case WebGLExtension::WebKitWebGLLoseContextName:
+    case WebGLExtension::WebGLLoseContextName:
         return toJS(exec, globalObject, static_cast<WebGLLoseContext*>(extension));
     case WebGLExtension::EXTTextureFilterAnisotropicName:
         return toJS(exec, globalObject, static_cast<EXTTextureFilterAnisotropic*>(extension));
@@ -208,9 +208,9 @@ static JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, WebGLExten
         return toJS(exec, globalObject, static_cast<WebGLDebugRendererInfo*>(extension));
     case WebGLExtension::WebGLDebugShadersName:
         return toJS(exec, globalObject, static_cast<WebGLDebugShaders*>(extension));
-    case WebGLExtension::WebKitWebGLCompressedTextureS3TCName:
+    case WebGLExtension::WebGLCompressedTextureS3TCName:
         return toJS(exec, globalObject, static_cast<WebGLCompressedTextureS3TC*>(extension));
-    case WebGLExtension::WebKitWebGLDepthTextureName:
+    case WebGLExtension::WebGLDepthTextureName:
         return toJS(exec, globalObject, static_cast<WebGLDepthTexture*>(extension));
     }
     ASSERT_NOT_REACHED();

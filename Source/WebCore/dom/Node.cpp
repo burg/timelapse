@@ -59,6 +59,8 @@
 #include "EventListener.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
+#include "ExceptionCodePlaceholder.h"
+#include "FocusEvent.h"
 #include "Frame.h"
 #include "FrameView.h"
 #include "HTMLElement.h"
@@ -380,6 +382,11 @@ Node::StyleChange Node::diff(const RenderStyle* s1, const RenderStyle* s2, Docum
     if ((s1 && s2) && (s1->regionThread() != s2->regionThread()))
         ch = Detach;
 
+    // Re-attach the renderer when either the element changes from position:static to position:absolute/fixed, vice-versa
+    // or float:none to floating, vice-versa.
+    if ((s1 && s2 ) && (s1->isFloating() != s2->isFloating() || s1->hasOutOfFlowPosition() != s2->hasOutOfFlowPosition()))
+        ch = Detach;
+
     return ch;
 }
 
@@ -603,8 +610,7 @@ void Node::normalize()
         if (!text->length()) {
             // Care must be taken to get the next node before removing the current node.
             node = NodeTraversal::nextPostOrder(node.get());
-            ExceptionCode ec;
-            text->remove(ec);
+            text->remove(IGNORE_EXCEPTION);
             continue;
         }
 
@@ -616,17 +622,15 @@ void Node::normalize()
 
             // Remove empty text nodes.
             if (!nextText->length()) {
-                ExceptionCode ec;
-                nextText->remove(ec);
+                nextText->remove(IGNORE_EXCEPTION);
                 continue;
             }
 
             // Both non-empty text nodes. Merge them.
             unsigned offset = text->length();
-            ExceptionCode ec;
-            text->appendData(nextText->data(), ec);
+            text->appendData(nextText->data(), IGNORE_EXCEPTION);
             document()->textNodesMerged(nextText.get(), offset);
-            nextText->remove(ec);
+            nextText->remove(IGNORE_EXCEPTION);
         }
 
         node = NodeTraversal::nextPostOrder(node.get());
@@ -810,7 +814,7 @@ inline void Node::setStyleChange(StyleChangeType changeType)
 
 inline void Node::markAncestorsWithChildNeedsStyleRecalc()
 {
-    for (ContainerNode* p = parentOrHostNode(); p && !p->childNeedsStyleRecalc(); p = p->parentOrHostNode())
+    for (ContainerNode* p = parentOrShadowHostNode(); p && !p->childNeedsStyleRecalc(); p = p->parentOrShadowHostNode())
         p->setChildNeedsStyleRecalc();
 
     if (document()->childNeedsStyleRecalc())
@@ -1035,7 +1039,7 @@ bool Node::contains(const Node* node) const
 
 bool Node::containsIncludingShadowDOM(const Node* node) const
 {
-    for (; node; node = node->parentOrHostNode()) {
+    for (; node; node = node->parentOrShadowHostNode()) {
         if (node == this)
             return true;
     }
@@ -1051,7 +1055,7 @@ bool Node::containsIncludingHostElements(const Node* node) const
         if (node->isDocumentFragment() && static_cast<const DocumentFragment*>(node)->isTemplateContent())
             node = static_cast<const TemplateContentDocumentFragment*>(node)->host();
         else
-            node = node->parentOrHostNode();
+            node = node->parentOrShadowHostNode();
     }
     return false;
 #else
@@ -1102,23 +1106,9 @@ void Node::detach()
     detachingNode = this;
 #endif
 
-    if (renderer()) {
+    if (renderer())
         renderer()->destroyAndCleanupAnonymousWrappers();
-#ifndef NDEBUG
-        for (Node* node = this; node; node = NodeTraversal::next(node, this)) {
-            RenderObject* renderer = node->renderer();
-            // RenderFlowThread and the top layer remove elements from the regular tree
-            // hierarchy. They will be cleaned up when we call detach on them.
-#if ENABLE(DIALOG_ELEMENT)
-            ASSERT(!renderer || renderer->inRenderFlowThread() || (renderer->enclosingLayer()->isInTopLayerSubtree()));
-#else
-            ASSERT(!renderer || renderer->inRenderFlowThread());
-#endif
-        }
-#endif
-    }
-
-    ASSERT(!renderer());
+    setRenderer(0);
 
     Document* doc = document();
     if (isUserActionElement()) {
@@ -1196,7 +1186,7 @@ ContainerNode* Node::parentNodeForRenderingAndStyle()
 
 RenderStyle* Node::virtualComputedStyle(PseudoId pseudoElementSpecifier)
 {
-    return parentOrHostNode() ? parentOrHostNode()->computedStyle(pseudoElementSpecifier) : 0;
+    return parentOrShadowHostNode() ? parentOrShadowHostNode()->computedStyle(pseudoElementSpecifier) : 0;
 }
 
 int Node::maxCharacterOffset() const
@@ -1219,7 +1209,7 @@ bool Node::canStartSelection() const
         if (style->userDrag() == DRAG_ELEMENT && style->userSelect() == SELECT_NONE)
             return false;
     }
-    return parentOrHostNode() ? parentOrHostNode()->canStartSelection() : true;
+    return parentOrShadowHostNode() ? parentOrShadowHostNode()->canStartSelection() : true;
 }
 
 Element* Node::shadowHost() const
@@ -1264,9 +1254,9 @@ ContainerNode* Node::nonShadowBoundaryParentNode() const
     return parent && !parent->isShadowRoot() ? parent : 0;
 }
 
-Element* Node::parentOrHostElement() const
+Element* Node::parentOrShadowHostElement() const
 {
-    ContainerNode* parent = parentOrHostNode();
+    ContainerNode* parent = parentOrShadowHostNode();
     if (!parent)
         return 0;
 
@@ -1901,9 +1891,9 @@ void Node::showNodePathForThis() const
 {
     Vector<const Node*, 16> chain;
     const Node* node = this;
-    while (node->parentOrHostNode()) {
+    while (node->parentOrShadowHostNode()) {
         chain.append(node);
-        node = node->parentOrHostNode();
+        node = node->parentOrShadowHostNode();
     }
     for (unsigned index = chain.size(); index > 0; --index) {
         const Node* node = chain[index - 1];
@@ -1958,7 +1948,7 @@ static void traverseTreeAndMark(const String& baseIndent, const Node* rootNode, 
 
         StringBuilder indent;
         indent.append(baseIndent);
-        for (const Node* tmpNode = node; tmpNode && tmpNode != rootNode; tmpNode = tmpNode->parentOrHostNode())
+        for (const Node* tmpNode = node; tmpNode && tmpNode != rootNode; tmpNode = tmpNode->parentOrShadowHostNode())
             indent.append('\t');
         fprintf(stderr, "%s", indent.toString().utf8().data());
         node->showNode();
@@ -1975,8 +1965,8 @@ void Node::showTreeAndMark(const Node* markedNode1, const char* markedLabel1, co
 {
     const Node* rootNode;
     const Node* node = this;
-    while (node->parentOrHostNode() && !node->hasTagName(bodyTag))
-        node = node->parentOrHostNode();
+    while (node->parentOrShadowHostNode() && !node->hasTagName(bodyTag))
+        node = node->parentOrShadowHostNode();
     rootNode = node;
 
     String startingIndent;
@@ -1997,9 +1987,9 @@ void Node::formatForDebugger(char* buffer, unsigned length) const
     strncpy(buffer, result.utf8().data(), length - 1);
 }
 
-static ContainerNode* parentOrHostOrFrameOwner(const Node* node)
+static ContainerNode* parentOrShadowHostOrFrameOwner(const Node* node)
 {
-    ContainerNode* parent = node->parentOrHostNode();
+    ContainerNode* parent = node->parentOrShadowHostNode();
     if (!parent && node->document() && node->document()->frame())
         parent = node->document()->frame()->ownerElement();
     return parent;
@@ -2027,8 +2017,8 @@ static void showSubTreeAcrossFrame(const Node* node, const Node* markedNode, con
 void Node::showTreeForThisAcrossFrame() const
 {
     Node* rootNode = const_cast<Node*>(this);
-    while (parentOrHostOrFrameOwner(rootNode))
-        rootNode = parentOrHostOrFrameOwner(rootNode);
+    while (parentOrShadowHostOrFrameOwner(rootNode))
+        rootNode = parentOrShadowHostOrFrameOwner(rootNode);
     showSubTreeAcrossFrame(rootNode, this, "");
 }
 
@@ -2061,7 +2051,7 @@ void Node::getSubresourceURLs(ListHashSet<KURL>& urls) const
 
 Node* Node::enclosingLinkEventParentOrSelf()
 {
-    for (Node* node = this; node; node = node->parentOrHostNode()) {
+    for (Node* node = this; node; node = node->parentOrShadowHostNode()) {
         // For imagemaps, the enclosing link node is the associated area element not the image itself.
         // So we don't let images be the enclosingLinkNode, even though isLink sometimes returns true
         // for them.
@@ -2351,14 +2341,20 @@ void Node::dispatchFocusInEvent(const AtomicString& eventType, PassRefPtr<Node> 
 {
     ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
     ASSERT(eventType == eventNames().focusinEvent || eventType == eventNames().DOMFocusInEvent);
-    dispatchScopedEventDispatchMediator(FocusInEventDispatchMediator::create(UIEvent::create(eventType, true, false, document()->defaultView(), 0), oldFocusedNode));
+    // FIXME: We should pass oldFocusedNode to FocusEvent::create() and
+    // remove oldFocusedNode from FocusInEventDispatchMediator::create().
+    // See https://bugs.webkit.org/show_bug.cgi?id=109261
+    dispatchScopedEventDispatchMediator(FocusInEventDispatchMediator::create(FocusEvent::create(eventType, true, false, document()->defaultView(), 0, 0), oldFocusedNode));
 }
 
 void Node::dispatchFocusOutEvent(const AtomicString& eventType, PassRefPtr<Node> newFocusedNode)
 {
     ASSERT(!NoEventDispatchAssertion::isEventDispatchForbidden());
     ASSERT(eventType == eventNames().focusoutEvent || eventType == eventNames().DOMFocusOutEvent);
-    dispatchScopedEventDispatchMediator(FocusOutEventDispatchMediator::create(UIEvent::create(eventType, true, false, document()->defaultView(), 0), newFocusedNode));
+    // FIXME: We should pass newFocusedNode to FocusEvent::create() and
+    // remove newFocusedNode from FocusOutEventDispatchMediator::create().
+    // See https://bugs.webkit.org/show_bug.cgi?id=109261
+    dispatchScopedEventDispatchMediator(FocusOutEventDispatchMediator::create(FocusEvent::create(eventType, true, false, document()->defaultView(), 0, 0), newFocusedNode));
 }
 
 bool Node::dispatchDOMActivateEvent(int detail, PassRefPtr<Event> underlyingEvent)
@@ -2412,12 +2408,16 @@ bool Node::dispatchWheelEvent(const PlatformWheelEvent& event)
     return EventDispatcher::dispatchEvent(this, WheelEventDispatchMediator::create(event, document()->defaultView()));
 }
 
-void Node::dispatchFocusEvent(PassRefPtr<Node> oldFocusedNode)
+void Node::dispatchFocusEvent(PassRefPtr<Node> oldFocusedNode, FocusDirection)
 {
     if (document()->page())
         document()->page()->chrome()->client()->elementDidFocus(this);
-    
-    EventDispatcher::dispatchEvent(this, FocusEventDispatchMediator::create(oldFocusedNode));
+
+    // FIXME: We should pass oldFocusedNode to FocusEvent::create() and
+    // remove oldFocusedNode from FocusEventDispatchMediator::create().
+    // See https://bugs.webkit.org/show_bug.cgi?id=109261
+    RefPtr<FocusEvent> event = FocusEvent::create(eventNames().focusEvent, false, false, document()->defaultView(), 0, 0);
+    EventDispatcher::dispatchEvent(this, FocusEventDispatchMediator::create(event.release(), oldFocusedNode));
 }
 
 void Node::dispatchBlurEvent(PassRefPtr<Node> newFocusedNode)
@@ -2425,7 +2425,11 @@ void Node::dispatchBlurEvent(PassRefPtr<Node> newFocusedNode)
     if (document()->page())
         document()->page()->chrome()->client()->elementDidBlur(this);
 
-    EventDispatcher::dispatchEvent(this, BlurEventDispatchMediator::create(newFocusedNode));
+    // FIXME: We should pass newFocusedNode to FocusEvent::create() and
+    // remove newFocusedNode from BlurEventDispatchMediator::create().
+    // See https://bugs.webkit.org/show_bug.cgi?id=109261
+    RefPtr<FocusEvent> event = FocusEvent::create(eventNames().blurEvent, false, false, document()->defaultView(), 0, 0);
+    EventDispatcher::dispatchEvent(this, BlurEventDispatchMediator::create(event.release(), newFocusedNode));
 }
 
 void Node::dispatchChangeEvent()
@@ -2490,7 +2494,7 @@ void Node::defaultEventHandler(Event* event)
         // This is needed for <option> and <optgroup> elements so that <select>s get a wheel scroll.
         Node* startNode = this;
         while (startNode && !startNode->renderer())
-            startNode = startNode->parentOrHostNode();
+            startNode = startNode->parentOrShadowHostNode();
         
         if (startNode && startNode->renderer())
             if (Frame* frame = document()->frame())
@@ -2583,24 +2587,23 @@ void Node::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
     ScriptWrappable::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_parentOrHostNode);
-    info.addMember(m_treeScope);
-    info.addMember(m_next);
-    info.addMember(m_previous);
-    info.addMember(this->renderer());
+    info.addMember(m_parentOrShadowHostNode, "parentOrShadowHostNode");
+    info.addMember(m_treeScope, "treeScope");
+    info.addMember(m_next, "next");
+    info.addMember(m_previous, "previous");
+    info.addMember(this->renderer(), "renderer");
     if (hasRareData()) {
         if (isElementNode())
-            info.addMember(static_cast<ElementRareData*>(rareData()));
+            info.addMember(static_cast<ElementRareData*>(rareData()), "elementRareData");
         else
-            info.addMember(rareData());
+            info.addMember(rareData(), "rareData");
     }
 }
 
 void Node::textRects(Vector<IntRect>& rects) const
 {
     RefPtr<Range> range = Range::create(document());
-    WebCore::ExceptionCode ec = 0;
-    range->selectNodeContents(const_cast<Node*>(this), ec);
+    range->selectNodeContents(const_cast<Node*>(this), IGNORE_EXCEPTION);
     range->textRects(rects);
 }
 
@@ -2627,7 +2630,7 @@ void Node::updateAncestorConnectedSubframeCountForRemoval() const
     if (!count)
         return;
 
-    for (Node* node = parentOrHostNode(); node; node = node->parentOrHostNode())
+    for (Node* node = parentOrShadowHostNode(); node; node = node->parentOrShadowHostNode())
         node->decrementConnectedSubframeCount(count);
 }
 
@@ -2638,7 +2641,7 @@ void Node::updateAncestorConnectedSubframeCountForInsertion() const
     if (!count)
         return;
 
-    for (Node* node = parentOrHostNode(); node; node = node->parentOrHostNode())
+    for (Node* node = parentOrShadowHostNode(); node; node = node->parentOrShadowHostNode())
         node->incrementConnectedSubframeCount(count);
 }
 

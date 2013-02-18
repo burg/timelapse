@@ -73,7 +73,6 @@
 #import <WebKit/WebTypesInternal.h>
 #import <WebKit/WebView.h>
 #import <WebKit/WebViewPrivate.h>
-#import <WebKit/WebWorkersPrivate.h>
 #import <wtf/CurrentTime.h>
 #import <wtf/HashMap.h>
 #import <wtf/RetainPtr.h>
@@ -297,11 +296,6 @@ int TestRunner::numberOfPendingGeolocationPermissionRequests()
 size_t TestRunner::webHistoryItemCount()
 {
     return [[[WebHistory optionalSharedHistory] allItems] count];
-}
-
-unsigned TestRunner::workerThreadCount() const
-{
-    return [WebWorkersPrivate workerThreadCount];
 }
 
 JSRetainPtr<JSStringRef> TestRunner::platformName() const
@@ -553,11 +547,6 @@ void TestRunner::setXSSAuditorEnabled(bool enabled)
     [[[mainFrame webView] preferences] setXSSAuditorEnabled:enabled];
 }
 
-void TestRunner::setFrameFlatteningEnabled(bool enabled)
-{
-    [[[mainFrame webView] preferences] setFrameFlatteningEnabled:enabled];
-}
-
 void TestRunner::setSpatialNavigationEnabled(bool enabled)
 {
     [[[mainFrame webView] preferences] setSpatialNavigationEnabled:enabled];
@@ -785,31 +774,6 @@ bool TestRunner::isCommandEnabled(JSStringRef name)
     if (![validator respondsToSelector:@selector(validateUserInterfaceItem:)])
         return true;
     return [validator validateUserInterfaceItem:target.get()];
-}
-
-bool TestRunner::pauseAnimationAtTimeOnElementWithId(JSStringRef animationName, double time, JSStringRef elementId)
-{
-    RetainPtr<CFStringRef> idCF(AdoptCF, JSStringCopyCFString(kCFAllocatorDefault, elementId));
-    NSString *idNS = (NSString *)idCF.get();
-    RetainPtr<CFStringRef> nameCF(AdoptCF, JSStringCopyCFString(kCFAllocatorDefault, animationName));
-    NSString *nameNS = (NSString *)nameCF.get();
-    
-    return [mainFrame _pauseAnimation:nameNS onNode:[[mainFrame DOMDocument] getElementById:idNS] atTime:time];
-}
-
-bool TestRunner::pauseTransitionAtTimeOnElementWithId(JSStringRef propertyName, double time, JSStringRef elementId)
-{
-    RetainPtr<CFStringRef> idCF(AdoptCF, JSStringCopyCFString(kCFAllocatorDefault, elementId));
-    NSString *idNS = (NSString *)idCF.get();
-    RetainPtr<CFStringRef> nameCF(AdoptCF, JSStringCopyCFString(kCFAllocatorDefault, propertyName));
-    NSString *nameNS = (NSString *)nameCF.get();
-    
-    return [mainFrame _pauseTransitionOfProperty:nameNS onNode:[[mainFrame DOMDocument] getElementById:idNS] atTime:time];
-}
-
-unsigned TestRunner::numberOfActiveAnimations() const
-{
-    return [mainFrame _numberOfActiveAnimations];
 }
 
 void TestRunner::waitForPolicyDelegate()
@@ -1105,11 +1069,6 @@ void TestRunner::setSerializeHTTPLoads(bool serialize)
     [WebView _setLoadResourcesSerially:serialize];
 }
 
-void TestRunner::setMinimumTimerInterval(double minimumTimerInterval)
-{
-    [[mainFrame webView] _setMinimumTimerInterval:minimumTimerInterval];
-}
-
 void TestRunner::setTextDirection(JSStringRef directionName)
 {
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1060
@@ -1173,16 +1132,6 @@ void TestRunner::setPageVisibility(const char* newVisibility)
         [webView _setVisibilityState:WebPageVisibilityStatePrerender isInitialState:NO];
     else if (!strcmp(newVisibility, "preview"))
         [webView _setVisibilityState:WebPageVisibilityStatePreview isInitialState:NO];
-}
-
-void TestRunner::sendWebIntentResponse(JSStringRef)
-{
-    // FIXME: Implement.
-}
-
-void TestRunner::deliverWebIntent(JSStringRef, JSStringRef, JSStringRef)
-{
-    // FIXME: Implement.
 }
 
 void TestRunner::grantWebNotificationPermission(JSStringRef jsOrigin)

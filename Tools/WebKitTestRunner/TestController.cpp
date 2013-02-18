@@ -180,9 +180,11 @@ int TestController::getCustomTimeout()
     return m_timeout;
 }
 
-WKPageRef TestController::createOtherPage(WKPageRef oldPage, WKURLRequestRef, WKDictionaryRef, WKEventModifiers, WKEventMouseButton, const void*)
+WKPageRef TestController::createOtherPage(WKPageRef oldPage, WKURLRequestRef, WKDictionaryRef, WKEventModifiers, WKEventMouseButton, const void* clientInfo)
 {
-    PlatformWebView* view = new PlatformWebView(WKPageGetContext(oldPage), WKPageGetPageGroup(oldPage));
+    PlatformWebView* parentView = static_cast<PlatformWebView*>(const_cast<void*>(clientInfo));
+
+    PlatformWebView* view = new PlatformWebView(WKPageGetContext(oldPage), WKPageGetPageGroup(oldPage), parentView->options());
     WKPageRef newPage = view->page();
 
     view->resizeTo(800, 600);
@@ -235,6 +237,7 @@ WKPageRef TestController::createOtherPage(WKPageRef oldPage, WKURLRequestRef, WK
         0, // unavailablePluginButtonClicked
         0, // showColorPicker
         0, // hideColorPicker
+        0, // shouldInstantiatePlugin
     };
     WKPageSetPageUIClient(newPage, &otherPageUIClient);
 
@@ -425,6 +428,7 @@ void TestController::createWebViewWithOptions(WKDictionaryRef options)
         unavailablePluginButtonClicked,
         0, // showColorPicker
         0, // hideColorPicker
+        0, // shouldInstantiatePlugin
     };
     WKPageSetPageUIClient(m_mainWebView->page(), &pageUIClient);
 

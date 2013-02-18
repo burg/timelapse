@@ -28,6 +28,11 @@
 
 #if ENABLE(SQL_DATABASE)
 
+#include "Database.h"
+#include "DatabaseBackendAsync.h"
+#include "DatabaseBackendContext.h"
+#include "DatabaseBackendSync.h"
+#include "DatabaseSync.h"
 #include "DatabaseTracker.h"
 #include <wtf/UnusedParam.h>
 
@@ -141,29 +146,50 @@ void DatabaseServer::closeDatabasesImmediately(const String& originIdentifier, c
 }
 #endif // PLATFORM(CHROMIUM)
 
-void DatabaseServer::interruptAllDatabasesForContext(const ScriptExecutionContext* context)
+void DatabaseServer::interruptAllDatabasesForContext(const DatabaseBackendContext* context)
 {
     DatabaseTracker::tracker().interruptAllDatabasesForContext(context);
 }
 
-bool DatabaseServer::canEstablishDatabase(ScriptExecutionContext* context, const String& name, const String& displayName, unsigned long estimatedSize)
+PassRefPtr<DatabaseBackend> DatabaseServer::openDatabase(RefPtr<DatabaseBackendContext>& backendContext,
+    DatabaseType type, const String& name, const String& expectedVersion, const String& displayName,
+    unsigned long estimatedSize, bool setVersionInNewDatabase, DatabaseError &error, String& errorMessage,
+    OpenAttempt attempt)
 {
-    return DatabaseTracker::tracker().canEstablishDatabase(context, name, displayName, estimatedSize);
+    RefPtr<DatabaseBackend> database;
+    bool success = false; // Make some older compilers happy.
+    
+    switch (attempt) {
+    case FirstTryToOpenDatabase:
+        success = DatabaseTracker::tracker().canEstablishDatabase(backendContext.get(), name, displayName, estimatedSize, error);
+        break;
+    case RetryOpenDatabase:
+        success = DatabaseTracker::tracker().retryCanEstablishDatabase(backendContext.get(), name, displayName, estimatedSize, error);
+    }
+
+    if (success)
+        database = createDatabase(backendContext, type, name, expectedVersion, displayName, estimatedSize, setVersionInNewDatabase, error, errorMessage);
+    return database.release();
 }
 
-void DatabaseServer::addOpenDatabase(DatabaseBackend* database)
+PassRefPtr<DatabaseBackend> DatabaseServer::createDatabase(RefPtr<DatabaseBackendContext>& backendContext,
+    DatabaseType type, const String& name, const String& expectedVersion, const String& displayName,
+    unsigned long estimatedSize, bool setVersionInNewDatabase, DatabaseError& error, String& errorMessage)
 {
-    DatabaseTracker::tracker().addOpenDatabase(database);
-}
+    RefPtr<DatabaseBackend> database;
+    switch (type) {
+    case DatabaseType::Async:
+        database = adoptRef(new Database(backendContext, name, expectedVersion, displayName, estimatedSize));
+        break;
+    case DatabaseType::Sync:
+        database = adoptRef(new DatabaseSync(backendContext, name, expectedVersion, displayName, estimatedSize));
+    }
 
-void DatabaseServer::removeOpenDatabase(DatabaseBackend* database)
-{
-    DatabaseTracker::tracker().removeOpenDatabase(database);
-}
+    if (!database->openAndVerifyVersion(setVersionInNewDatabase, error, errorMessage))
+        return 0;
 
-void DatabaseServer::setDatabaseDetails(SecurityOrigin* origin, const String& name, const String& displayName, unsigned long estimatedSize)
-{
-    DatabaseTracker::tracker().setDatabaseDetails(origin, name, displayName, estimatedSize);
+    DatabaseTracker::tracker().setDatabaseDetails(backendContext->securityOrigin(), name, displayName, estimatedSize);
+    return database.release();
 }
 
 unsigned long long DatabaseServer::getMaxSizeForDatabase(const DatabaseBackend* database)

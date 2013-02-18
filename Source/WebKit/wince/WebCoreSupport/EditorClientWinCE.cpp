@@ -55,11 +55,6 @@ bool EditorClientWinCE::shouldDeleteRange(Range*)
     return true;
 }
 
-bool EditorClientWinCE::shouldShowDeleteInterface(HTMLElement*)
-{
-    return false;
-}
-
 bool EditorClientWinCE::isContinuousSpellCheckingEnabled()
 {
     notImplemented();
@@ -135,6 +130,16 @@ void EditorClientWinCE::didEndEditing()
 }
 
 void EditorClientWinCE::didWriteSelectionToPasteboard()
+{
+    notImplemented();
+}
+
+void EditorClientWinCE::willWriteSelectionToPasteboard(WebCore::Range*)
+{
+    notImplemented();
+}
+
+void EditorClientWinCE::getClientPasteboardDataForRange(WebCore::Range*, Vector<String>&, Vector<RefPtr<WebCore::SharedBuffer> >&)
 {
     notImplemented();
 }

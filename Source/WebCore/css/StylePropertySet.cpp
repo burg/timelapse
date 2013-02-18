@@ -322,9 +322,9 @@ String StylePropertySet::get4Values(const StylePropertyShorthand& shorthand) con
     if (top.isImportant() != right.isImportant() || right.isImportant() != bottom.isImportant() || bottom.isImportant() != left.isImportant())
         return String();
 
-    bool showLeft = right.value()->cssText() != left.value()->cssText();
-    bool showBottom = (top.value()->cssText() != bottom.value()->cssText()) || showLeft;
-    bool showRight = (top.value()->cssText() != right.value()->cssText()) || showBottom;
+    bool showLeft = !right.value()->equals(*left.value());
+    bool showBottom = !top.value()->equals(*bottom.value()) || showLeft;
+    bool showRight = !top.value()->equals(*right.value()) || showBottom;
 
     StringBuilder result;
     result.append(top.value()->cssText());
@@ -1114,7 +1114,7 @@ bool StylePropertySet::propertyMatches(const PropertyReference& property) const
     int foundPropertyIndex = findPropertyIndex(property.id());
     if (foundPropertyIndex == -1)
         return false;
-    return propertyAt(foundPropertyIndex).value()->cssText() == property.value()->cssText();
+    return propertyAt(foundPropertyIndex).value()->equals(*property.value());
 }
     
 void StylePropertySet::removeEquivalentProperties(const StylePropertySet* style)
@@ -1212,10 +1212,10 @@ void StylePropertySet::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) con
     size_t actualSize = m_isMutable ? sizeof(StylePropertySet) : sizeForImmutableStylePropertySetWithPropertyCount(m_arraySize);
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS, actualSize);
     if (m_isMutable)
-        info.addMember(mutablePropertyVector());
+        info.addMember(mutablePropertyVector(), "mutablePropertyVector()");
     else {
         for (unsigned i = 0; i < propertyCount(); ++i)
-            info.addMember(propertyAt(i).value());
+            info.addMember(propertyAt(i).value(), "value");
     }
 }
 

@@ -77,6 +77,7 @@ list(APPEND WebCore_SOURCES
     platform/image-encoders/skia/JPEGImageEncoder.cpp
     platform/posix/FileSystemPOSIX.cpp
     platform/posix/SharedBufferPOSIX.cpp
+    platform/text/LocaleNone.cpp
     platform/text/TextBreakIteratorICU.cpp
     platform/text/TextCodecICU.cpp
     platform/text/TextEncodingDetectorICU.cpp
@@ -86,6 +87,7 @@ list(APPEND WebCore_SOURCES
 # Networking sources
 list(APPEND WebCore_SOURCES
     platform/network/MIMESniffing.cpp
+    platform/network/NetworkStorageSessionStub.cpp
     platform/network/ProxyServer.cpp
     platform/network/blackberry/AutofillBackingStore.cpp
     platform/network/blackberry/DNSBlackBerry.cpp

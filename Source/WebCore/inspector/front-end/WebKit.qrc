@@ -78,7 +78,7 @@
     <file>FileSystemMapping.js</file>
     <file>FileSystemModel.js</file>
     <file>FileSystemView.js</file>
-    <file>FileSystemWorkspaceProvider.js</file>
+    <file>FileSystemProjectDelegate.js</file>
     <file>FileUtils.js</file>
     <file>FilteredItemSelectionDialog.js</file>
     <file>FontView.js</file>
@@ -114,6 +114,7 @@
     <file>MetricsSidebarPane.js</file>
     <file>NativeBreakpointsSidebarPane.js</file>
     <file>NativeHeapSnapshot.js</file>
+    <file>NativeMemoryGraph.js</file>
     <file>NativeMemorySnapshotView.js</file>
     <file>NavigatorOverlayController.js</file>
     <file>NavigatorView.js</file>
@@ -197,6 +198,7 @@
     <file>StyleSheetOutlineDialog.js</file>
     <file>StylesSourceMapping.js</file>
     <file>StylesSidebarPane.js</file>
+    <file>SuggestBox.js</file>
     <file>TabbedEditorContainer.js</file>
     <file>TabbedPane.js</file>
     <file>TestController.js</file>
@@ -204,9 +206,7 @@
     <file>TextEditorHighlighter.js</file>
     <file>TextEditorModel.js</file>
     <file>TextPrompt.js</file>
-    <file>TextViewer.js</file>
-    <file>TimelapsePanel.js</file>
-    <file>TimelapseOverview.js</file>
+    <file>TextUtils.js</file>
     <file>TimelineFrameController.js</file>
     <file>TimelineManager.js</file>
     <file>TimelineModel.js</file>

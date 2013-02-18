@@ -42,12 +42,12 @@ namespace WebCore {
 v8::Handle<v8::Value> V8DOMFormData::constructorCallbackCustom(const v8::Arguments& args)
 {
     HTMLFormElement* form = 0;
-    if (args.Length() > 0 && V8HTMLFormElement::HasInstance(args[0]))
+    if (args.Length() > 0 && V8HTMLFormElement::HasInstance(args[0], args.GetIsolate()))
         form = V8HTMLFormElement::toNative(args[0]->ToObject());
     RefPtr<DOMFormData> domFormData = DOMFormData::create(form);
 
     v8::Handle<v8::Object> wrapper = args.Holder();
-    V8DOMWrapper::associateObjectWithWrapper(domFormData.release(), &info, wrapper, args.GetIsolate());
+    V8DOMWrapper::associateObjectWithWrapper(domFormData.release(), &info, wrapper, args.GetIsolate(), WrapperConfiguration::Dependent);
     return wrapper;
 }
 
@@ -61,7 +61,7 @@ v8::Handle<v8::Value> V8DOMFormData::appendCallback(const v8::Arguments& args)
     String name = toWebCoreStringWithNullCheck(args[0]);
 
     v8::Handle<v8::Value> arg = args[1];
-    if (V8Blob::HasInstance(arg)) {
+    if (V8Blob::HasInstance(arg, args.GetIsolate())) {
         v8::Handle<v8::Object> object = v8::Handle<v8::Object>::Cast(arg);
         Blob* blob = V8Blob::toNative(object);
         ASSERT(blob);

@@ -26,14 +26,67 @@
 #include "config.h"
 #include "StorageManager.h"
 
+#include "StorageManagerMessages.h"
+#include "WebProcessProxy.h"
+#include "WorkQueue.h"
+
 namespace WebKit {
 
+PassRefPtr<StorageManager> StorageManager::create()
+{
+    return adoptRef(new StorageManager);
+}
+
 StorageManager::StorageManager()
+    : m_queue(WorkQueue::create("com.apple.WebKit.StorageManager"))
 {
 }
 
 StorageManager::~StorageManager()
 {
+}
+
+void StorageManager::processWillOpenConnection(WebProcessProxy* webProcessProxy)
+{
+    webProcessProxy->connection()->addQueueClient(this);
+}
+
+void StorageManager::processWillCloseConnection(WebProcessProxy* webProcessProxy)
+{
+    webProcessProxy->connection()->removeQueueClient(this);
+}
+
+void StorageManager::didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection* connection, OwnPtr<CoreIPC::MessageDecoder>& decoder)
+{
+    if (decoder->messageReceiverName() == Messages::StorageManager::messageReceiverName()) {
+        // FIXME: We should come up with a better way to automatically dispatch messages on a given work queue.
+        m_queue->dispatch(bind(&StorageManager::dispatchMessageOnStorageManagerQueue, this, RefPtr<CoreIPC::Connection>(connection), decoder.leakPtr()));
+        return;
+    }
+}
+
+void StorageManager::didCloseOnConnectionWorkQueue(CoreIPC::Connection*)
+{
+}
+
+void StorageManager::createStorageArea(CoreIPC::Connection*, uint64_t storageAreaID, uint64_t storageNamespaceID, const SecurityOriginData&)
+{
+    UNUSED_PARAM(storageAreaID);
+    UNUSED_PARAM(storageNamespaceID);
+}
+
+void StorageManager::destroyStorageArea(CoreIPC::Connection*, uint64_t)
+{
+}
+
+void StorageManager::dispatchMessageOnStorageManagerQueue(CoreIPC::Connection* connection, CoreIPC::MessageDecoder* decoder)
+{
+    ASSERT(decoder->messageReceiverName() == Messages::StorageManager::messageReceiverName());
+
+    OwnPtr<CoreIPC::MessageDecoder> decoderPtr = adoptPtr(decoder);
+    didReceiveStorageManagerMessageOnConnectionWorkQueue(connection, decoderPtr);
+
+    ASSERT(!decoderPtr);
 }
 
 } // namespace WebKit

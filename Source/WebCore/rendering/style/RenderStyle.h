@@ -460,6 +460,14 @@ public:
     EPosition position() const { return static_cast<EPosition>(noninherited_flags._position); }
     bool hasOutOfFlowPosition() const { return position() == AbsolutePosition || position() == FixedPosition; }
     bool hasInFlowPosition() const { return position() == RelativePosition || position() == StickyPosition; }
+    bool hasPaintOffset() const
+    {
+        bool paintOffset = hasInFlowPosition();
+#if ENABLE(CSS_EXCLUSIONS)
+        paintOffset = paintOffset || (isFloating() && shapeOutside());
+#endif
+        return paintOffset;
+    }
     bool hasViewportConstrainedPosition() const { return position() == FixedPosition || position() == StickyPosition; }
     EFloat floating() const { return static_cast<EFloat>(noninherited_flags._floating); }
 
@@ -764,6 +772,7 @@ public:
 
     const Vector<GridTrackSize>& gridColumns() const { return rareNonInheritedData->m_grid->m_gridColumns; }
     const Vector<GridTrackSize>& gridRows() const { return rareNonInheritedData->m_grid->m_gridRows; }
+    GridAutoFlow gridAutoFlow() const { return rareNonInheritedData->m_grid->m_gridAutoFlow; }
 
     const GridPosition& gridItemColumn() const { return rareNonInheritedData->m_gridItem->m_gridColumn; }
     const GridPosition& gridItemRow() const { return rareNonInheritedData->m_gridItem->m_gridRow; }
@@ -1019,10 +1028,10 @@ public:
     void setBackgroundSizeLength(LengthSize s) { SET_VAR(m_background, m_background.m_sizeLength, s); }
     
     void setBorderImage(const NinePieceImage& b) { SET_VAR(surround, border.m_image, b); }
-    void setBorderImageSource(PassRefPtr<StyleImage> v) { surround.access()->border.m_image.setImage(v); }
-    void setBorderImageSlices(LengthBox slices) { surround.access()->border.m_image.setImageSlices(slices); }
-    void setBorderImageWidth(LengthBox slices) { surround.access()->border.m_image.setBorderSlices(slices); }
-    void setBorderImageOutset(LengthBox outset) { surround.access()->border.m_image.setOutset(outset); }
+    void setBorderImageSource(PassRefPtr<StyleImage>);
+    void setBorderImageSlices(LengthBox);
+    void setBorderImageWidth(LengthBox);
+    void setBorderImageOutset(LengthBox);
 
     void setBorderTopLeftRadius(LengthSize s) { SET_VAR(surround, border.m_topLeft, s); }
     void setBorderTopRightRadius(LengthSize s) { SET_VAR(surround, border.m_topRight, s); }
@@ -1252,6 +1261,7 @@ public:
     void setJustifyContent(EJustifyContent p) { SET_VAR(rareNonInheritedData, m_justifyContent, p); }
     void setGridColumns(const Vector<GridTrackSize>& lengths) { SET_VAR(rareNonInheritedData.access()->m_grid, m_gridColumns, lengths); }
     void setGridRows(const Vector<GridTrackSize>& lengths) { SET_VAR(rareNonInheritedData.access()->m_grid, m_gridRows, lengths); }
+    void setGridAutoFlow(GridAutoFlow flow) { SET_VAR(rareNonInheritedData.access()->m_grid, m_gridAutoFlow, flow); }
     void setGridItemColumn(const GridPosition& columnPosition) { SET_VAR(rareNonInheritedData.access()->m_gridItem, m_gridColumn, columnPosition); }
     void setGridItemRow(const GridPosition& rowPosition) { SET_VAR(rareNonInheritedData.access()->m_gridItem, m_gridRow, rowPosition); }
 
@@ -1652,6 +1662,8 @@ public:
     // The initial value is 'none' for grid tracks.
     static Vector<GridTrackSize> initialGridColumns() { return Vector<GridTrackSize>(); }
     static Vector<GridTrackSize> initialGridRows() { return Vector<GridTrackSize>(); }
+
+    static GridAutoFlow initialGridAutoFlow() { return AutoFlowNone; }
 
     // 'auto' is the default.
     static GridPosition initialGridItemColumn() { return GridPosition(); }

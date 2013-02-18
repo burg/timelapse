@@ -84,6 +84,15 @@ static CString certificatePath()
     return CString();
 }
 
+static char* cookieJarPath()
+{
+    char* cookieJarPath = getenv("CURL_COOKIE_JAR_PATH");
+    if (cookieJarPath)
+        return fastStrDup(cookieJarPath);
+
+    return fastStrDup("cookies.dat");
+}
+
 static Mutex* sharedResourceMutex(curl_lock_data data) {
     DEFINE_STATIC_LOCAL(Mutex, cookieMutex, ());
     DEFINE_STATIC_LOCAL(Mutex, dnsMutex, ());
@@ -119,7 +128,7 @@ static void curl_unlock_callback(CURL* handle, curl_lock_data data, void* userPt
 
 ResourceHandleManager::ResourceHandleManager()
     : m_downloadTimer(this, &ResourceHandleManager::downloadTimerCallback)
-    , m_cookieJarFileName(0)
+    , m_cookieJarFileName(cookieJarPath())
     , m_certificatePath (certificatePath())
     , m_runningJobs(0)
 
@@ -142,9 +151,19 @@ ResourceHandleManager::~ResourceHandleManager()
     curl_global_cleanup();
 }
 
+CURLSH* ResourceHandleManager::getCurlShareHandle() const
+{
+    return m_curlShareHandle;
+}
+
 void ResourceHandleManager::setCookieJarFileName(const char* cookieJarFileName)
 {
     m_cookieJarFileName = fastStrDup(cookieJarFileName);
+}
+
+const char* ResourceHandleManager::getCookieJarFileName() const
+{
+    return m_cookieJarFileName;
 }
 
 ResourceHandleManager* ResourceHandleManager::sharedInstance()

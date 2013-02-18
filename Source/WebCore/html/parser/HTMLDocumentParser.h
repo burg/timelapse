@@ -28,6 +28,7 @@
 
 #include "BackgroundHTMLInputStream.h"
 #include "CachedResourceClient.h"
+#include "CompactHTMLToken.h"
 #include "FragmentScriptingPermission.h"
 #include "HTMLInputStream.h"
 #include "HTMLParserOptions.h"
@@ -38,6 +39,7 @@
 #include "SegmentedString.h"
 #include "Timer.h"
 #include "XSSAuditor.h"
+#include "XSSAuditorDelegate.h"
 #include <wtf/Deque.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/WeakPtr.h>
@@ -45,6 +47,7 @@
 
 namespace WebCore {
 
+class BackgroundHTMLParser;
 class CompactHTMLToken;
 class Document;
 class DocumentFragment;
@@ -54,6 +57,7 @@ class HTMLTokenizer;
 class HTMLScriptRunner;
 class HTMLTreeBuilder;
 class HTMLPreloadScanner;
+class HTMLResourcePreloader;
 class ScriptController;
 class ScriptSourceCode;
 
@@ -74,7 +78,6 @@ public:
     static void parseDocumentFragment(const String&, DocumentFragment*, Element* contextElement, FragmentScriptingPermission = AllowScriptingContent);
 
     HTMLTokenizer* tokenizer() const { return m_tokenizer.get(); }
-    String sourceForToken(const HTMLToken&);
 
     virtual TextPosition textPosition() const;
     virtual OrdinalNumber lineNumber() const;
@@ -99,6 +102,8 @@ protected:
     HTMLDocumentParser(DocumentFragment*, Element* contextElement, FragmentScriptingPermission);
 
     HTMLTreeBuilder* treeBuilder() const { return m_treeBuilder.get(); }
+
+    void forcePlaintextForTextDocument();
 
 private:
     static PassRefPtr<HTMLDocumentParser> create(DocumentFragment* fragment, Element* contextElement, FragmentScriptingPermission permission)
@@ -129,9 +134,12 @@ private:
 #if ENABLE(THREADED_HTML_PARSER)
     void startBackgroundParser();
     void stopBackgroundParser();
+    void checkForSpeculationFailure();
     void didFailSpeculation(PassOwnPtr<HTMLToken>, PassOwnPtr<HTMLTokenizer>);
     void processParsedChunkFromBackgroundParser(PassOwnPtr<ParsedChunk>);
 #endif
+
+    Document* contextForParsingSession();
 
     enum SynchronousMode {
         AllowYield,
@@ -175,12 +183,15 @@ private:
     HTMLSourceTracker m_sourceTracker;
     TextPosition m_textPosition;
     XSSAuditor m_xssAuditor;
+    XSSAuditorDelegate m_xssAuditorDelegate;
 
 #if ENABLE(THREADED_HTML_PARSER)
     OwnPtr<ParsedChunk> m_currentChunk;
     Deque<OwnPtr<ParsedChunk> > m_speculations;
     WeakPtrFactory<HTMLDocumentParser> m_weakFactory;
+    WeakPtr<BackgroundHTMLParser> m_backgroundParser;
 #endif
+    OwnPtr<HTMLResourcePreloader> m_preloader;
 
     bool m_endWasDelayed;
     bool m_haveBackgroundParser;

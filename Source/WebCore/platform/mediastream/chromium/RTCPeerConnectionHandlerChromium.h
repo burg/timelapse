@@ -41,7 +41,7 @@
 #include <wtf/PassRefPtr.h>
 
 namespace WebKit {
-class WebMediaStreamDescriptor;
+class WebMediaStream;
 class WebRTCICECandidate;
 }
 
@@ -70,6 +70,7 @@ public:
     virtual void removeStream(PassRefPtr<MediaStreamDescriptor>) OVERRIDE;
     virtual void getStats(PassRefPtr<RTCStatsRequest>) OVERRIDE;
     virtual PassOwnPtr<RTCDataChannelHandler> createDataChannel(const String& label, bool reliable) OVERRIDE;
+    virtual PassOwnPtr<RTCDTMFSenderHandler> createDTMFSender(PassRefPtr<MediaStreamComponent>) OVERRIDE;
     virtual void stop() OVERRIDE;
 
     // WebKit::WebRTCPeerConnectionHandlerClient implementation.
@@ -78,8 +79,8 @@ public:
     virtual void didChangeSignalingState(WebKit::WebRTCPeerConnectionHandlerClient::SignalingState) OVERRIDE;
     virtual void didChangeICEGatheringState(WebKit::WebRTCPeerConnectionHandlerClient::ICEGatheringState) OVERRIDE;
     virtual void didChangeICEConnectionState(WebKit::WebRTCPeerConnectionHandlerClient::ICEConnectionState) OVERRIDE;
-    virtual void didAddRemoteStream(const WebKit::WebMediaStreamDescriptor&) OVERRIDE;
-    virtual void didRemoveRemoteStream(const WebKit::WebMediaStreamDescriptor&) OVERRIDE;
+    virtual void didAddRemoteStream(const WebKit::WebMediaStream&) OVERRIDE;
+    virtual void didRemoveRemoteStream(const WebKit::WebMediaStream&) OVERRIDE;
     virtual void didAddRemoteDataChannel(WebKit::WebRTCDataChannelHandler*) OVERRIDE;
 
     static WebKit::WebRTCPeerConnectionHandler* toWebRTCPeerConnectionHandler(RTCPeerConnectionHandler*);

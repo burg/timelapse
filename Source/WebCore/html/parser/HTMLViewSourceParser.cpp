@@ -51,10 +51,10 @@ void HTMLViewSourceParser::insert(const SegmentedString&)
 void HTMLViewSourceParser::pumpTokenizer()
 {
     while (true) {
-        m_sourceTracker.start(m_input, m_tokenizer.get(), m_token);
+        m_sourceTracker.start(m_input.current(), m_tokenizer.get(), m_token);
         if (!m_tokenizer->nextToken(m_input.current(), m_token))
             break;
-        m_sourceTracker.end(m_input, m_tokenizer.get(), m_token);
+        m_sourceTracker.end(m_input.current(), m_tokenizer.get(), m_token);
 
         document()->addSource(sourceForToken(), m_token);
         updateTokenizerState();
@@ -76,11 +76,9 @@ String HTMLViewSourceParser::sourceForToken()
 void HTMLViewSourceParser::updateTokenizerState()
 {
     // FIXME: The tokenizer should do this work for us.
-    if (m_token.type() != HTMLTokenTypes::StartTag)
+    if (m_token.type() != HTMLToken::StartTag)
         return;
-
-    AtomicString tagName(m_token.name().data(), m_token.name().size());
-    m_tokenizer->updateStateFor(tagName);
+    m_tokenizer->updateStateFor(AtomicString(m_token.name()));
 }
 
 void HTMLViewSourceParser::finish()

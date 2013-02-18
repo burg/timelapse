@@ -35,15 +35,17 @@
 #include <public/WebCommon.h>
 #include <public/WebURLLoader.h>
 #include <public/WebURLLoaderClient.h>
+#include <public/WebURLRequest.h>
 
 namespace WebCore {
 
+class NetworkingContext;
 class ResourceHandle;
 class ResourceHandleClient;
 
 class ResourceHandleInternal : public WebKit::WebURLLoaderClient {
 public:
-    ResourceHandleInternal(const ResourceRequest&, ResourceHandleClient*);
+    ResourceHandleInternal(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*);
 
     virtual ~ResourceHandleInternal() { }
 
@@ -51,6 +53,7 @@ public:
     void cancel();
     void setDefersLoading(bool);
     bool allowStoredCredentials() const;
+    void didChangePriority(WebKit::WebURLRequest::Priority);
 
     // WebURLLoaderClient methods:
     virtual void willSendRequest(WebKit::WebURLLoader*, WebKit::WebURLRequest&, const WebKit::WebURLResponse&);
@@ -78,10 +81,12 @@ public:
     ResourceHandleClient* client() const { return m_client; }
     void setClient(ResourceHandleClient* client) { m_client = client; }
     WebKit::WebURLLoader* loader() const { return m_loader.get(); }
+    NetworkingContext* context() const { return m_context.get(); }
 
     static ResourceHandleInternal* FromResourceHandle(ResourceHandle*);
 
 private:
+    RefPtr<NetworkingContext> m_context;
     ResourceRequest m_request;
     ResourceHandle* m_owner;
     ResourceHandleClient* m_client;

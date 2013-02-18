@@ -96,7 +96,7 @@ public:
 
     // View properties ---------------------------------------------------
 
-    virtual void setViewportSize(const WebSize& layoutViewportSize, const WebSize& deviceViewportSize = WebSize()) = 0;
+    virtual void setViewportSize(const WebSize& layoutViewportSize, const WebSize& deviceViewportSize) = 0;
     // Gives the viewport size in layer space.
     virtual WebSize layoutViewportSize() const = 0;
     // Gives the viewport size in physical device pixels (may be different
@@ -183,6 +183,9 @@ public:
 
     // Toggles the paint rects in the HUD layer
     virtual void setShowPaintRects(bool) { }
+
+    // Toggles the debug borders on layers
+    virtual void setShowDebugBorders(bool) { }
 
     // Toggles continuous painting
     virtual void setContinuousPaintingEnabled(bool) { }

@@ -100,7 +100,6 @@ public:
     void setXSSAuditorEnabled(bool);
     void setAllowUniversalAccessFromFileURLs(bool);
     void setAllowFileAccessFromFileURLs(bool);
-    void setFrameFlatteningEnabled(bool);
     void setPluginsEnabled(bool);
     void setJavaScriptCanAccessClipboard(bool);
     void setPrivateBrowsingEnabled(bool);
@@ -111,7 +110,6 @@ public:
     void removeOriginAccessWhitelistEntry(JSStringRef sourceOrigin, JSStringRef destinationProtocol, JSStringRef destinationHost, bool allowDestinationSubdomains);
     void setUserStyleSheetEnabled(bool);
     void setUserStyleSheetLocation(JSStringRef);
-    void setMinimumTimerInterval(double seconds); // Interval specified in seconds.
     void setSpatialNavigationEnabled(bool);
     void setTabKeyCyclesThroughElements(bool);
     void setSerializeHTTPLoads();
@@ -130,12 +128,6 @@ public:
     void testRepaint() { m_testRepaint = true; }
     void repaintSweepHorizontally() { m_testRepaintSweepHorizontally = true; }
     void display();
-
-    // Animation testing.
-    unsigned numberOfActiveAnimations() const;
-    bool pauseAnimationAtTimeOnElementWithId(JSStringRef animationName, double time, JSStringRef elementId);
-    bool pauseTransitionAtTimeOnElementWithId(JSStringRef propertyName, double time, JSStringRef elementId);
-    void suspendAnimations();
     
     // UserContent testing.
     void addUserScript(JSStringRef source, bool runAtStart, bool allFrames);
@@ -229,8 +221,6 @@ public:
     bool globalFlag() const { return m_globalFlag; }
     void setGlobalFlag(bool value) { m_globalFlag = value; }
 
-    unsigned workerThreadCount();
-    
     void addChromeInputField(JSValueRef);
     void removeChromeInputField(JSValueRef);
     void focusWebView(JSValueRef);
@@ -244,10 +234,6 @@ public:
     void callSetBackingScaleFactorCallback();
 
     void overridePreference(JSStringRef preference, JSStringRef value);
-
-    // Web intents testing.
-    void sendWebIntentResponse(JSStringRef reply);
-    void deliverWebIntent(JSStringRef action, JSStringRef type, JSStringRef data);
 
     // Cookies testing
     void setAlwaysAcceptCookies(bool);

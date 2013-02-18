@@ -27,6 +27,7 @@
 #define PrototypeMap_h
 
 #include "WeakGCMap.h"
+#include <wtf/TriState.h>
 
 namespace JSC {
 
@@ -39,7 +40,7 @@ public:
     JS_EXPORT_PRIVATE Structure* emptyObjectStructureForPrototype(JSObject*, unsigned inlineCapacity);
     void clearEmptyObjectStructureForPrototype(JSObject*, unsigned inlineCapacity);
     void addPrototype(JSObject*);
-    bool isPrototype(JSObject*); // Returns a conservative estimate.
+    TriState isPrototype(JSObject*) const; // Returns a conservative estimate.
 
 private:
     WeakGCMap<JSObject*, JSObject> m_prototypes;
@@ -47,9 +48,16 @@ private:
     StructureMap m_structures;
 };
 
-inline bool PrototypeMap::isPrototype(JSObject* object)
+inline TriState PrototypeMap::isPrototype(JSObject* object) const
 {
-    return m_prototypes.contains(object);
+    if (!m_prototypes.contains(object))
+        return FalseTriState;
+
+    // We know that 'object' was used as a prototype at one time, so be
+    // conservative and say that it might still be so. (It would be expensive
+    // to find out for sure, and we don't know of any cases where being precise
+    // would improve performance.)
+    return MixedTriState;
 }
 
 } // namespace JSC

@@ -155,6 +155,7 @@ var TEST_TYPES = [
     'androidwebview_instrumentation_tests',
     'chromiumtestshell_instrumentation_tests',
     'contentshell_instrumentation_tests',
+    'cc_unittests'
 ];
 
 var RELOAD_REQUIRING_PARAMETERS = ['showAllRuns', 'group', 'testType'];
@@ -336,14 +337,9 @@ function parseParameters()
     }
 
     parseDashboardSpecificParameters();
-    parseParameter(queryHashAsMap(), 'builder');
-
     var dashboardSpecificDiffState = diffStates(oldDashboardSpecificState, g_currentState);
 
     fillMissingValues(g_currentState, g_defaultDashboardSpecificStateValues);
-
-    if (!g_crossDashboardState.useTestData)
-        fillMissingValues(g_currentState, {'builder': currentBuilderGroup().defaultBuilder()});
 
     // FIXME: dashboard_base shouldn't know anything about specific dashboard specific keys.
     if (dashboardSpecificDiffState.builder)
@@ -419,6 +415,8 @@ function currentBuilderGroupCategory()
     case 'chromiumtestshell_instrumentation_tests':
     case 'contentshell_instrumentation_tests':
         return CHROMIUM_INSTRUMENTATION_TESTS_BUILDER_GROUPS;
+    case 'cc_unittests':
+        return CC_UNITTEST_BUILDER_GROUPS;
     default:
         return CHROMIUM_GTESTS_BUILDER_GROUPS;
     }

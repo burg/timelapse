@@ -35,8 +35,6 @@
 #endif
 
 typedef struct _Ewk_History_Item Ewk_History_Item;
-typedef struct _Ewk_Intent Ewk_Intent;
-typedef struct _Ewk_Intent_Request Ewk_Intent_Request;
 
 typedef Vector<Ewk_History_Item*> HistoryItemChildrenVector;
 
@@ -55,7 +53,6 @@ public:
     static void setDumpRenderTreeModeEnabled(bool);
     static bool dumpRenderTreeModeEnabled();
 
-    static unsigned activeAnimationsCount(const Evas_Object* ewkFrame);
     static bool callShouldCloseOnWebView(Evas_Object* ewkFrame);
     static void clearFrameName(Evas_Object* ewkFrame);
     static void clearOpener(Evas_Object* ewkFrame);
@@ -64,8 +61,6 @@ public:
     static Eina_List* frameChildren(const Evas_Object* ewkFrame);
     static WebCore::Frame* frameParent(const Evas_Object* ewkFrame);
     static void layoutFrame(Evas_Object* ewkFrame);
-    static bool pauseAnimation(Evas_Object* ewkFrame, const char* name, const char* elementId, double time);
-    static bool pauseTransition(Evas_Object* ewkFrame, const char* name, const char* elementId, double time);
     static unsigned pendingUnloadEventCount(const Evas_Object* ewkFrame);
     static String renderTreeDump(Evas_Object* ewkFrame);
     static String responseMimeType(const Evas_Object* ewkFrame);
@@ -100,7 +95,6 @@ public:
     static void garbageCollectorCollect();
     static void garbageCollectorCollectOnAlternateThread(bool waitUntilDone);
     static size_t javaScriptObjectsCount();
-    static unsigned workerThreadCount();
 
     static void setDeadDecodedDataDeletionInterval(double);
 
@@ -123,11 +117,6 @@ public:
     static void setSerializeHTTPLoads(bool);
     static void setShouldTrackVisitedLinks(bool);
     
-    // Web Intents
-    static void sendWebIntentResponse(Ewk_Intent_Request*, JSStringRef response);
-    static WebCore::MessagePortChannelArray* intentMessagePorts(const Ewk_Intent*);
-    static void deliverWebIntent(Evas_Object* ewkFrame, JSStringRef action, JSStringRef type, JSStringRef data);
-
     // TextInputController
     static void setComposition(Evas_Object*, const char*, int, int);
     static bool hasComposition(const Evas_Object*);

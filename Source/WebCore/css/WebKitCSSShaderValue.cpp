@@ -83,10 +83,15 @@ String WebKitCSSShaderValue::customCssText() const
     return "url(" + quoteCSSURLIfNeeded(m_url) + ")";
 }
 
+bool WebKitCSSShaderValue::equals(const WebKitCSSShaderValue& other) const
+{
+    return m_url == other.m_url;
+}
+
 void WebKitCSSShaderValue::reportDescendantMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
-    info.addMember(m_url);
+    info.addMember(m_url, "url");
 }
     
 } // namespace WebCore

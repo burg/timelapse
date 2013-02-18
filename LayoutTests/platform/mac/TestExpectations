@@ -2,6 +2,9 @@
 #
 # See http://trac.webkit.org/wiki/TestExpectations for more information on this file.
 
+# https://bugs.webkit.org/show_bug.cgi?id=89812
+fast/parser/parser-yield-timing.html [ Pass Failure ]
+
 # <rdar://problem/5647952> fast/events/mouseout-on-window.html needs mac DRT to issue mouse out events
 fast/events/mouseout-on-window.html
 
@@ -135,6 +138,16 @@ canvas/philip/tests/2d.drawImage.outsidesource.html
 # IndexedDB is not yet enabled.
 storage/indexeddb
 http/tests/inspector/indexeddb
+http/tests/security/cross-origin-indexeddb-allowed.html
+http/tests/security/cross-origin-indexeddb.html
+http/tests/security/cross-origin-worker-indexeddb-allowed.html
+http/tests/security/cross-origin-worker-indexeddb.html
+http/tests/security/no-indexeddb-from-sandbox.html
+
+# Remove from list after enabling CANVAS_PATH
+fast/canvas/canvas-currentPath.html
+fast/canvas/canvas-path-constructors.html
+fast/canvas/canvas-currentPath-crash.html
 
 # This port doesn't support DeviceMotion or DeviceOrientation.
 fast/dom/DeviceMotion
@@ -184,6 +197,9 @@ fast/forms/week
 
 # ENABLE_GAMEPAD not enabled.
 gamepad/
+
+# X-Content-Type-Options (ENABLE_NOSNIFF) is not enabled.
+http/tests/security/contentTypeOptions
 
 # Speech input is not yet enabled.
 fast/speech
@@ -240,7 +256,8 @@ animations/play-state.html
 # window.eventSender doesn't exist in devtools front-end on mac.
 # https://bugs.webkit.org/show_bug.cgi?id=106793
 inspector/editor/text-editor-formatter.html [ Skip ]
-inspector/editor/text-editor-ctrl-movements.html [ Skip ]
+inspector/editor/text-editor-word-jumps.html [ Skip ]
+inspector/editor/text-editor-home-button.html [ Skip ]
 
 # https://bugs.webkit.org/show_bug.cgi?id=71120
 inspector/debugger/selected-call-frame-after-formatting-source.html
@@ -290,6 +307,8 @@ http/tests/inspector/compiler-source-mapping-debug.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=96942
 http/tests/inspector/network/network-xhr-replay.html
+
+webkit.org/b/109546 inspector/script-execution-state-change-notification.html [ Skip ]
 
 # Safari doesn't allow to customize outermost scrollbars.
 # https://bugs.webkit.org/show_bug.cgi?id=43960
@@ -536,9 +555,6 @@ fast/events/platform-wheelevent-paging-y-in-non-scrolling-page.html
 fast/events/platform-wheelevent-paging-y-in-scrolling-div.html
 fast/events/platform-wheelevent-paging-y-in-scrolling-page.html
 
-# Web Intents is not yet enabled.
-webintents/
-
 # Pointer Lock is not implemented.
 pointer-lock/
 http/tests/pointer-lock/
@@ -760,9 +776,6 @@ media/video-played-reset.html
 # https://bugs.webkit.org/show_bug.cgi?id=85969
 http/tests/loading/post-in-iframe-with-back-navigation.html
 
-# https://bugs.webkit.org/show_bug.cgi?id=86000
-http/tests/security/referrer-policy-redirect-link.html
-
 # Inspector only supports evaluation in content script world with v8, see https://bugs.webkit.org/show_bug.cgi?id=85709
 inspector/extensions/extensions-eval-content-script.html
 inspector/extensions/extensions-audits-content-script.html
@@ -928,8 +941,15 @@ canvas/philip/tests/2d.gradient.interpolate.colouralpha.html
 canvas/philip/tests/2d.line.miter.lineedge.html
 canvas/philip/tests/2d.strokeRect.zero.4.html
 
+# https://bugs.webkit.org/show_bug.cgi?id=107118
+fast/canvas/canvas-quadratic-same-endpoint.html
+
 # --- Compositing ----
 css3/filters/composited-during-transition-layertree.html
+
+# --- Custom Filters ---
+# This test is currently skipped on Mac for slight color differences, please see the relevant bug: http://webkit.org/b/107487
+webkit.org/b/107487 css3/filters/custom/custom-filter-blend-fractional-destination-alpha.html [ Skip ]
 
 # --- Text ---
 fast/forms/text-control-intrinsic-widths.html
@@ -1138,6 +1158,9 @@ webkit.org/b/101177 svg/repaint/inner-svg-change-viewBox.svg [ ImageOnlyFailure 
 webkit.org/b/98687 fast/css-generated-content/table-row-group-to-inline.html [ Failure ]
 webkit.org/b/104595 fast/css/empty-generated-content.html [ Failure ]
 
+# Needs a rebaseline after WK108429 lands.
+webkit.org/b/108429 svg/custom/text-ctm.svg [ Pass Failure ]
+
 webkit.org/b/93247 [ Debug ] fast/lists/list-marker-remove-crash.html [ Crash ]
 
 # (r125790): Newly added test inspector/timeline/timeline-decode-resize.html is failing on mac
@@ -1218,6 +1241,7 @@ Bug(jernoble) [ MountainLion Lion SnowLeopard ] media/video-src-blob.html
 # Mountain Lion and prior do not allow access to in-band text tracks
 webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band.html
 webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band-cues-added-once.html
+webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band-style.html
 
 webkit.org/b/104104 fast/overflow/scrollbar-click-retains-focus.html [ Failure ]
 
@@ -1227,9 +1251,6 @@ webkit.org/b/104954 http/tests/canvas/canvas-slow-font-loading.html [ ImageOnlyF
 
 webkit.org/b/104962 platform/mac/fast/loader/file-url-mimetypes-2.html [ Failure ]
 
-webkit.org/b/105049 compositing/layer-creation/fixed-position-out-of-view-scaled-iframe-scroll.html [ Failure ]
-webkit.org/b/105049 compositing/layer-creation/fixed-position-out-of-view-scaled-iframe.html [ Failure ]
-
 webkit.org/b/104848 fast/frames/sandboxed-iframe-parsing-space-characters.html [ Failure Pass ]
 
 webkit.org/b/105601 svg/zoom/page/zoom-replaced-intrinsic-ratio-001.htm [ Crash Pass ]
@@ -1237,8 +1258,6 @@ webkit.org/b/105601 svg/zoom/page/zoom-replaced-intrinsic-ratio-001.htm [ Crash 
 webkit.org/b/105603 http/tests/cookies/single-quoted-value.html [ Failure Pass ]
 
 webkit.org/b/105777 platform/mac/editing/spelling/autocorrection-in-textarea.html [ Failure Pass ]
-
-webkit.org/b/105932 [ MountainLion Debug ] http/tests/inspector/resource-har-pages.html [ Crash ]
 
 webkit.org/b/105986 [ Debug ] transitions/hang-with-bad-transition-list.html [ Pass Crash ]
 webkit.org/b/105986 [ Debug ] svg/dynamic-updates/SVGFEMorphologyElement-dom-in-attr.html [ Pass Crash ]
@@ -1293,8 +1312,6 @@ webkit.org/b/106415 fast/workers/worker-close-more.html [ Pass Failure ]
 webkit.org/b/106415 fast/workers/worker-document-leak.html [ Pass Failure ] 
 webkit.org/b/106415 fast/workers/worker-lifecycle.html [ Pass Failure ]
 
-webkit.org/b/108291 [ Lion ] accessibility/lists.html [ Failure ]
-
 # Spellchecker behavior tests.
 webkit.org/b/108370 editing/spelling/spelling-double-clicked-word.html [ Skip ]
 webkit.org/b/108370 editing/spelling/spelling-double-clicked-word-with-underscores.html [ Skip ]
@@ -1307,3 +1324,13 @@ webkit.org/b/108370 editing/spelling/spelling-subword-selection.html [ Skip ]
 webkit.org/b/108370 editing/spelling/spelling-with-punctuation-selection.html [ Skip ]
 webkit.org/b/108370 editing/spelling/spelling-with-underscore-selection.html [ Skip ]
 webkit.org/b/108370 editing/spelling/spelling-with-whitespace-selection.html [ Skip ]
+
+webkit.org/b/108257 [ Debug ] compositing/overflow/composited-scrolling-creates-a-stacking-container.html [ Crash ]
+webkit.org/b/108257 [ Debug ] compositing/overflow/automatically-opt-into-composited-scrolling.html [ Crash ]
+
+
+# Rebaseline required after https://webkit.org/b/95772
+webkit.org/b/109209 fast/text/international/bidi-ignored-for-first-child-inline.html [ Failure ]
+
+# Crashing after https://webkit.org/b/105667
+webkit.org/b/109232 [ Debug ] inspector/debugger/debugger-reload-on-pause.html [ Crash ]

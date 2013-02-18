@@ -37,6 +37,7 @@
 #include "Operations.h"
 #include "PolymorphicPutByIdList.h"
 #include "RepatchBuffer.h"
+#include "StructureRareDataInlines.h"
 #include <wtf/StringPrintStream.h>
 
 namespace JSC { namespace DFG {
@@ -1214,12 +1215,12 @@ void dfgLinkClosureCall(ExecState* exec, CallLinkInfo& callLinkInfo, CodeBlock* 
     JITCompiler::Jump done = stubJit.jump();
     
     slowPath.link(&stubJit);
-    stubJit.move(CCallHelpers::TrustedImmPtr(callLinkInfo.callReturnLocation.executableAddress()), GPRInfo::nonArgGPR2);
-    stubJit.restoreReturnAddressBeforeReturn(GPRInfo::nonArgGPR2);
     stubJit.move(calleeGPR, GPRInfo::nonArgGPR0);
 #if USE(JSVALUE32_64)
     stubJit.move(CCallHelpers::TrustedImm32(JSValue::CellTag), GPRInfo::nonArgGPR1);
 #endif
+    stubJit.move(CCallHelpers::TrustedImmPtr(callLinkInfo.callReturnLocation.executableAddress()), GPRInfo::nonArgGPR2);
+    stubJit.restoreReturnAddressBeforeReturn(GPRInfo::nonArgGPR2);
     JITCompiler::Jump slow = stubJit.jump();
     
     LinkBuffer patchBuffer(*globalData, &stubJit, callerCodeBlock);

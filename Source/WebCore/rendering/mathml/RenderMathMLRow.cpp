@@ -54,7 +54,12 @@ RenderMathMLRow* RenderMathMLRow::createAnonymousWithParentRenderer(const Render
 void RenderMathMLRow::computePreferredLogicalWidths()
 {
     ASSERT(preferredLogicalWidthsDirty() && needsLayout());
-    
+
+#ifndef NDEBUG
+    // FIXME: Remove this once mathml stops modifying the render tree here.
+    SetLayoutNeededForbiddenScope layoutForbiddenScope(this, false);
+#endif
+
     computeChildrenPreferredLogicalHeights();
     int stretchLogicalHeight = 0;
     for (RenderObject* child = firstChild(); child; child = child->nextSibling()) {
@@ -77,7 +82,7 @@ void RenderMathMLRow::computePreferredLogicalWidths()
                 renderMo->stretchToHeight(stretchLogicalHeight);
         }
     }
-    
+
     RenderMathMLBlock::computePreferredLogicalWidths();
     
     // Shrink our logical width to its probable value now without triggering unnecessary relayout of our children.

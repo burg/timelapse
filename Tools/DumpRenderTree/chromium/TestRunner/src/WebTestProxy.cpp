@@ -31,30 +31,37 @@
 #include "config.h"
 #include "WebTestProxy.h"
 
+#include "AccessibilityControllerChromium.h"
+#include "EventSender.h"
 #include "SpellCheckClient.h"
-#include "WebAccessibilityController.h"
+#include "TestCommon.h"
+#include "TestInterfaces.h"
+#include "TestPlugin.h"
+#include "TestRunner.h"
 #include "WebAccessibilityNotification.h"
 #include "WebAccessibilityObject.h"
 #include "WebCachedURLRequest.h"
 #include "WebConsoleMessage.h"
 #include "WebDataSource.h"
+#include "WebDocument.h"
 #include "WebElement.h"
-#include "WebEventSender.h"
 #include "WebFrame.h"
-#include "WebIntent.h"
-#include "WebIntentRequest.h"
-#include "WebIntentServiceInfo.h"
+#include "WebHistoryItem.h"
 #include "WebNode.h"
+#include "WebPluginParams.h"
+#include "WebPrintParams.h"
 #include "WebRange.h"
+#include "WebScriptController.h"
 #include "WebTestDelegate.h"
 #include "WebTestInterfaces.h"
 #include "WebTestRunner.h"
+#include "WebUserMediaClientMock.h"
 #include "WebView.h"
+#include <cctype>
 #include <public/WebCString.h>
 #include <public/WebURLError.h>
 #include <public/WebURLRequest.h>
 #include <public/WebURLResponse.h>
-#include <wtf/StringExtras.h>
 
 using namespace WebKit;
 using namespace std;
@@ -208,7 +215,7 @@ string urlSuitableForTestResult(const string& url)
 
     size_t pos = url.rfind('/');
     if (pos == string::npos) {
-#if OS(WINDOWS)
+#ifdef WIN32
         pos = url.rfind('\\');
         if (pos == string::npos)
             pos = 0;
@@ -251,6 +258,156 @@ const char* webNavigationTypeToString(WebNavigationType type)
     return illegalString;
 }
 
+string dumpDocumentText(WebFrame* frame)
+{
+    // We use the document element's text instead of the body text here because
+    // not all documents have a body, such as XML documents.
+    WebElement documentElement = frame->document().documentElement();
+    if (documentElement.isNull())
+        return string();
+    return documentElement.innerText().utf8();
+}
+
+string dumpFramesAsText(WebFrame* frame, bool recursive)
+{
+    string result;
+
+    // Add header for all but the main frame. Skip empty frames.
+    if (frame->parent() && !frame->document().documentElement().isNull()) {
+        result.append("\n--------\nFrame: '");
+        result.append(frame->uniqueName().utf8().data());
+        result.append("'\n--------\n");
+    }
+
+    result.append(dumpDocumentText(frame));
+    result.append("\n");
+
+    if (recursive) {
+        for (WebFrame* child = frame->firstChild(); child; child = child->nextSibling())
+            result.append(dumpFramesAsText(child, recursive));
+    }
+
+    return result;
+}
+
+string dumpFramesAsPrintedText(WebFrame* frame, bool recursive)
+{
+    string result;
+
+    // Cannot do printed format for anything other than HTML
+    if (!frame->document().isHTMLDocument())
+        return string();
+
+    // Add header for all but the main frame. Skip empty frames.
+    if (frame->parent() && !frame->document().documentElement().isNull()) {
+        result.append("\n--------\nFrame: '");
+        result.append(frame->uniqueName().utf8().data());
+        result.append("'\n--------\n");
+    }
+
+    result.append(frame->renderTreeAsText(WebFrame::RenderAsTextPrinting).utf8());
+    result.append("\n");
+
+    if (recursive) {
+        for (WebFrame* child = frame->firstChild(); child; child = child->nextSibling())
+            result.append(dumpFramesAsPrintedText(child, recursive));
+    }
+
+    return result;
+}
+
+string dumpFrameScrollPosition(WebFrame* frame, bool recursive)
+{
+    string result;
+    WebSize offset = frame->scrollOffset();
+    if (offset.width > 0 || offset.height > 0) {
+        if (frame->parent())
+            result = string("frame '") + frame->uniqueName().utf8().data() + "' ";
+        char data[100];
+        snprintf(data, sizeof(data), "scrolled to %d,%d\n", offset.width, offset.height);
+        result += data;
+    }
+
+    if (!recursive)
+        return result;
+    for (WebFrame* child = frame->firstChild(); child; child = child->nextSibling())
+        result += dumpFrameScrollPosition(child, recursive);
+    return result;
+}
+
+struct ToLower {
+    char16 operator()(char16 c) { return tolower(c); }
+};
+
+// Returns True if item1 < item2.
+bool HistoryItemCompareLess(const WebHistoryItem& item1, const WebHistoryItem& item2)
+{
+    string16 target1 = item1.target();
+    string16 target2 = item2.target();
+    std::transform(target1.begin(), target1.end(), target1.begin(), ToLower());
+    std::transform(target2.begin(), target2.end(), target2.begin(), ToLower());
+    return target1 < target2;
+}
+
+string dumpHistoryItem(const WebHistoryItem& item, int indent, bool isCurrent)
+{
+    string result;
+
+    if (isCurrent) {
+        result.append("curr->");
+        result.append(indent - 6, ' '); // 6 == "curr->".length()
+    } else
+        result.append(indent, ' ');
+
+    string url = normalizeLayoutTestURL(item.urlString().utf8());
+    result.append(url);
+    if (!item.target().isEmpty()) {
+        result.append(" (in frame \"");
+        result.append(item.target().utf8());
+        result.append("\")");
+    }
+    if (item.isTargetItem())
+        result.append("  **nav target**");
+    result.append("\n");
+
+    const WebVector<WebHistoryItem>& children = item.children();
+    if (!children.isEmpty()) {
+        // Must sort to eliminate arbitrary result ordering which defeats
+        // reproducible testing.
+        // FIXME: WebVector should probably just be a std::vector!!
+        std::vector<WebHistoryItem> sortedChildren;
+        for (size_t i = 0; i < children.size(); ++i)
+            sortedChildren.push_back(children[i]);
+        std::sort(sortedChildren.begin(), sortedChildren.end(), HistoryItemCompareLess);
+        for (size_t i = 0; i < sortedChildren.size(); ++i)
+            result += dumpHistoryItem(sortedChildren[i], indent + 4, false);
+    }
+
+    return result;
+}
+
+void dumpBackForwardList(const WebVector<WebHistoryItem>& history, size_t currentEntryIndex, string& result)
+{
+    result.append("\n============== Back Forward List ==============\n");
+    for (size_t index = 0; index < history.size(); ++index)
+        result.append(dumpHistoryItem(history[index], 8, index == currentEntryIndex));
+    result.append("===============================================\n");
+}
+
+string dumpAllBackForwardLists(WebTestDelegate* delegate)
+{
+    string result;
+    unsigned windowCount = delegate->windowCount();
+    fprintf(stderr, "windowCount = %d\n", windowCount);
+    for (unsigned i = 0; i < windowCount; ++i) {
+        size_t currentEntryIndex = 0;
+        WebVector<WebHistoryItem> history;
+        delegate->captureHistoryForWindow(i, &history, &currentEntryIndex);
+        dumpBackForwardList(history, currentEntryIndex, result);
+    }
+    return result;
+}
+
 }
 
 WebTestProxyBase::WebTestProxyBase()
@@ -263,12 +420,11 @@ WebTestProxyBase::WebTestProxyBase()
 
 WebTestProxyBase::~WebTestProxyBase()
 {
-    delete m_spellcheck;
 }
 
 void WebTestProxyBase::setInterfaces(WebTestInterfaces* interfaces)
 {
-    m_testInterfaces = interfaces;
+    m_testInterfaces = interfaces->testInterfaces();
 }
 
 void WebTestProxyBase::setDelegate(WebTestDelegate* delegate)
@@ -286,7 +442,7 @@ void WebTestProxyBase::reset()
 
 WebSpellCheckClient* WebTestProxyBase::spellCheckClient() const
 {
-    return m_spellcheck;
+    return m_spellcheck.get();
 }
 
 void WebTestProxyBase::setPaintRect(const WebRect& rect)
@@ -297,6 +453,34 @@ void WebTestProxyBase::setPaintRect(const WebRect& rect)
 WebRect WebTestProxyBase::paintRect() const
 {
     return m_paintRect;
+}
+
+string WebTestProxyBase::captureTree(bool debugRenderTree)
+{
+    WebScriptController::flushConsoleMessages();
+
+    bool shouldDumpAsText = m_testInterfaces->testRunner()->shouldDumpAsText();
+    bool shouldDumpAsPrinted = m_testInterfaces->testRunner()->isPrinting();
+    WebFrame* frame = m_testInterfaces->webView()->mainFrame();
+    string dataUtf8;
+    if (shouldDumpAsText) {
+        bool recursive = m_testInterfaces->testRunner()->shouldDumpChildFramesAsText();
+        dataUtf8 = shouldDumpAsPrinted ? dumpFramesAsPrintedText(frame, recursive) : dumpFramesAsText(frame, recursive);
+    } else {
+        bool recursive = m_testInterfaces->testRunner()->shouldDumpChildFrameScrollPositions();
+        WebFrame::RenderAsTextControls renderTextBehavior = WebFrame::RenderAsTextNormal;
+        if (shouldDumpAsPrinted)
+            renderTextBehavior |= WebFrame::RenderAsTextPrinting;
+        if (debugRenderTree)
+            renderTextBehavior |= WebFrame::RenderAsTextDebug;
+        dataUtf8 = frame->renderTreeAsText(renderTextBehavior).utf8();
+        dataUtf8 += dumpFrameScrollPosition(frame, recursive);
+    }
+
+    if (m_testInterfaces->testRunner()->shouldDumpBackForwardList())
+        dataUtf8 += dumpAllBackForwardLists(m_delegate);
+
+    return dataUtf8;
 }
 
 void WebTestProxyBase::setLogConsoleOutput(bool enabled)
@@ -451,12 +635,9 @@ void WebTestProxyBase::startDragging(WebFrame*, const WebDragData& data, WebDrag
 // The output from these methods in layout test mode should match that
 // expected by the layout tests. See EditingDelegate.m in DumpRenderTree.
 
-// FIXME: Remove the 0 checks for m_testInterfaces->testRunner() once the
-// TestInterfaces class owns the TestRunner.
-
 bool WebTestProxyBase::shouldBeginEditing(const WebRange& range)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
         m_delegate->printMessage("EDITING DELEGATE: shouldBeginEditingInDOMRange:");
         printRangeDescription(m_delegate, range);
         m_delegate->printMessage("\n");
@@ -466,7 +647,7 @@ bool WebTestProxyBase::shouldBeginEditing(const WebRange& range)
 
 bool WebTestProxyBase::shouldEndEditing(const WebRange& range)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
         m_delegate->printMessage("EDITING DELEGATE: shouldEndEditingInDOMRange:");
         printRangeDescription(m_delegate, range);
         m_delegate->printMessage("\n");
@@ -476,7 +657,7 @@ bool WebTestProxyBase::shouldEndEditing(const WebRange& range)
 
 bool WebTestProxyBase::shouldInsertNode(const WebNode& node, const WebRange& range, WebEditingAction action)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
         m_delegate->printMessage("EDITING DELEGATE: shouldInsertNode:");
         printNodeDescription(m_delegate, node, 0);
         m_delegate->printMessage(" replacingDOMRange:");
@@ -488,7 +669,7 @@ bool WebTestProxyBase::shouldInsertNode(const WebNode& node, const WebRange& ran
 
 bool WebTestProxyBase::shouldInsertText(const WebString& text, const WebRange& range, WebEditingAction action)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
         m_delegate->printMessage(string("EDITING DELEGATE: shouldInsertText:") + text.utf8().data() + " replacingDOMRange:");
         printRangeDescription(m_delegate, range);
         m_delegate->printMessage(string(" givenAction:") + editingActionDescription(action) + "\n");
@@ -499,7 +680,7 @@ bool WebTestProxyBase::shouldInsertText(const WebString& text, const WebRange& r
 bool WebTestProxyBase::shouldChangeSelectedRange(
     const WebRange& fromRange, const WebRange& toRange, WebTextAffinity affinity, bool stillSelecting)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
         m_delegate->printMessage("EDITING DELEGATE: shouldChangeSelectedDOMRange:");
         printRangeDescription(m_delegate, fromRange);
         m_delegate->printMessage(" toDOMRange:");
@@ -511,7 +692,7 @@ bool WebTestProxyBase::shouldChangeSelectedRange(
 
 bool WebTestProxyBase::shouldDeleteRange(const WebRange& range)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
         m_delegate->printMessage("EDITING DELEGATE: shouldDeleteDOMRange:");
         printRangeDescription(m_delegate, range);
         m_delegate->printMessage("\n");
@@ -521,7 +702,7 @@ bool WebTestProxyBase::shouldDeleteRange(const WebRange& range)
 
 bool WebTestProxyBase::shouldApplyStyle(const WebString& style, const WebRange& range)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpEditingCallbacks()) {
         m_delegate->printMessage(string("EDITING DELEGATE: shouldApplyStyle:") + style.utf8().data() + " toElementsInDOMRange:");
         printRangeDescription(m_delegate, range);
         m_delegate->printMessage("\n");
@@ -531,109 +712,102 @@ bool WebTestProxyBase::shouldApplyStyle(const WebString& style, const WebRange& 
 
 void WebTestProxyBase::didBeginEditing()
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpEditingCallbacks())
+    if (m_testInterfaces->testRunner()->shouldDumpEditingCallbacks())
         m_delegate->printMessage("EDITING DELEGATE: webViewDidBeginEditing:WebViewDidBeginEditingNotification\n");
 }
 
 void WebTestProxyBase::didChangeSelection(bool isEmptySelection)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpEditingCallbacks())
+    if (m_testInterfaces->testRunner()->shouldDumpEditingCallbacks())
         m_delegate->printMessage("EDITING DELEGATE: webViewDidChangeSelection:WebViewDidChangeSelectionNotification\n");
 }
 
 void WebTestProxyBase::didChangeContents()
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpEditingCallbacks())
+    if (m_testInterfaces->testRunner()->shouldDumpEditingCallbacks())
         m_delegate->printMessage("EDITING DELEGATE: webViewDidChange:WebViewDidChangeNotification\n");
 }
 
 void WebTestProxyBase::didEndEditing()
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpEditingCallbacks())
+    if (m_testInterfaces->testRunner()->shouldDumpEditingCallbacks())
         m_delegate->printMessage("EDITING DELEGATE: webViewDidEndEditing:WebViewDidEndEditingNotification\n");
-}
-
-void WebTestProxyBase::registerIntentService(WebFrame*, const WebIntentServiceInfo& service)
-{
-    m_delegate->printMessage(string("Registered Web Intent Service: action=") + service.action().utf8().data() + " type=" + service.type().utf8().data() + " title=" + service.title().utf8().data() + " url=" + service.url().spec().data() + " disposition=" + service.disposition().utf8().data() + "\n");
-}
-
-void WebTestProxyBase::dispatchIntent(WebFrame* source, const WebIntentRequest& request)
-{
-    m_delegate->printMessage(string("Received Web Intent: action=") + request.intent().action().utf8().data() + " type=" + request.intent().type().utf8().data() + "\n");
-    WebMessagePortChannelArray* ports = request.intent().messagePortChannelsRelease();
-    m_delegate->setCurrentWebIntentRequest(request);
-    if (ports) {
-        char data[100];
-        snprintf(data, sizeof(data), "Have %d ports\n", static_cast<int>(ports->size()));
-        m_delegate->printMessage(data);
-        for (size_t i = 0; i < ports->size(); ++i)
-            (*ports)[i]->destroy();
-        delete ports;
-    }
-
-    if (!request.intent().service().isEmpty())
-        m_delegate->printMessage(string("Explicit intent service: ") + request.intent().service().spec().data() + "\n");
-
-    WebVector<WebString> extras = request.intent().extrasNames();
-    for (size_t i = 0; i < extras.size(); ++i)
-        m_delegate->printMessage(string("Extras[") + extras[i].utf8().data() + "] = " + request.intent().extrasValue(extras[i]).utf8().data() + "\n");
-
-    WebVector<WebURL> suggestions = request.intent().suggestions();
-    for (size_t i = 0; i < suggestions.size(); ++i)
-        m_delegate->printMessage(string("Have suggestion ") + suggestions[i].spec().data() + "\n");
 }
 
 bool WebTestProxyBase::createView(WebFrame*, const WebURLRequest& request, const WebWindowFeatures&, const WebString&, WebNavigationPolicy)
 {
-    if (!m_testInterfaces->testRunner() || !m_testInterfaces->testRunner()->canOpenWindows())
+    if (!m_testInterfaces->testRunner()->canOpenWindows())
         return false;
     if (m_testInterfaces->testRunner()->shouldDumpCreateView())
         m_delegate->printMessage(string("createView(") + URLDescription(request.url()) + ")\n");
     return true;
 }
 
+WebPlugin* WebTestProxyBase::createPlugin(WebFrame* frame, const WebPluginParams& params)
+{
+    if (params.mimeType == TestPlugin::mimeType())
+        return TestPlugin::create(frame, params, m_delegate);
+    return 0;
+}
+
 void WebTestProxyBase::setStatusText(const WebString& text)
 {
-    if (!m_testInterfaces->testRunner() || !m_testInterfaces->testRunner()->shouldDumpStatusCallbacks())
+    if (!m_testInterfaces->testRunner()->shouldDumpStatusCallbacks())
         return;
     m_delegate->printMessage(string("UI DELEGATE STATUS CALLBACK: setStatusText:") + text.utf8().data() + "\n");
 }
 
 void WebTestProxyBase::didStopLoading()
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpProgressFinishedCallback())
+    if (m_testInterfaces->testRunner()->shouldDumpProgressFinishedCallback())
         m_delegate->printMessage("postProgressFinishedNotification\n");
 }
 
 bool WebTestProxyBase::isSmartInsertDeleteEnabled()
 {
-    if (m_testInterfaces->testRunner())
-        return m_testInterfaces->testRunner()->isSmartInsertDeleteEnabled();
-    return true;
+    return m_testInterfaces->testRunner()->isSmartInsertDeleteEnabled();
 }
 
 bool WebTestProxyBase::isSelectTrailingWhitespaceEnabled()
 {
-    if (m_testInterfaces->testRunner())
-        return m_testInterfaces->testRunner()->isSelectTrailingWhitespaceEnabled();
-    return false;
+    return m_testInterfaces->testRunner()->isSelectTrailingWhitespaceEnabled();
+}
+
+void WebTestProxyBase::showContextMenu(WebFrame*, const WebContextMenuData& contextMenuData)
+{
+    m_testInterfaces->eventSender()->setContextMenuData(contextMenuData);
+}
+
+WebUserMediaClient* WebTestProxyBase::userMediaClient()
+{
+    if (!m_userMediaClient.get())
+        m_userMediaClient = auto_ptr<WebUserMediaClientMock>(new WebUserMediaClientMock(m_delegate));
+    return m_userMediaClient.get();
+}
+
+// Simulate a print by going into print mode and then exit straight away.
+void WebTestProxyBase::printPage(WebFrame* frame)
+{
+    WebSize pageSizeInPixels = m_testInterfaces->webView()->size();
+    WebPrintParams printParams(pageSizeInPixels);
+    frame->printBegin(printParams);
+    frame->printEnd();
 }
 
 void WebTestProxyBase::willPerformClientRedirect(WebFrame* frame, const WebURL&, const WebURL& to, double, double)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(string(" - willPerformClientRedirectToURL: ") + to.spec().data() + " \n");
     }
 
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpUserGestureInFrameLoadCallbacks())
+    if (m_testInterfaces->testRunner()->shouldDumpUserGestureInFrameLoadCallbacks())
         printFrameUserGestureStatus(m_delegate, frame, " - in willPerformClientRedirect\n");
 }
 
 void WebTestProxyBase::didCancelClientRedirect(WebFrame* frame)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didCancelClientRedirectForFrame\n");
     }
@@ -641,18 +815,18 @@ void WebTestProxyBase::didCancelClientRedirect(WebFrame* frame)
 
 void WebTestProxyBase::didStartProvisionalLoad(WebFrame* frame)
 {
-    if (m_testInterfaces->testRunner() && !m_testInterfaces->testRunner()->topLoadingFrame())
+    if (!m_testInterfaces->testRunner()->topLoadingFrame())
         m_testInterfaces->testRunner()->setTopLoadingFrame(frame, false);
 
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didStartProvisionalLoadForFrame\n");
     }
 
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpUserGestureInFrameLoadCallbacks())
+    if (m_testInterfaces->testRunner()->shouldDumpUserGestureInFrameLoadCallbacks())
         printFrameUserGestureStatus(m_delegate, frame, " - in didStartProvisionalLoadForFrame\n");
 
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->stopProvisionalFrameLoads()) {
+    if (m_testInterfaces->testRunner()->stopProvisionalFrameLoads()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - stopping load in didStartProvisionalLoadForFrame callback\n");
         frame->stopLoading();
@@ -661,7 +835,7 @@ void WebTestProxyBase::didStartProvisionalLoad(WebFrame* frame)
 
 void WebTestProxyBase::didReceiveServerRedirectForProvisionalLoad(WebFrame* frame)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didReceiveServerRedirectForProvisionalLoadForFrame\n");
     }
@@ -669,7 +843,7 @@ void WebTestProxyBase::didReceiveServerRedirectForProvisionalLoad(WebFrame* fram
 
 void WebTestProxyBase::didFailProvisionalLoad(WebFrame* frame, const WebURLError&)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didFailProvisionalLoadWithError\n");
     }
@@ -678,7 +852,7 @@ void WebTestProxyBase::didFailProvisionalLoad(WebFrame* frame, const WebURLError
 
 void WebTestProxyBase::didCommitProvisionalLoad(WebFrame* frame, bool)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didCommitLoadForFrame\n");
     }
@@ -688,21 +862,20 @@ void WebTestProxyBase::didReceiveTitle(WebFrame* frame, const WebString& title, 
 {
     WebCString title8 = title.utf8();
 
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(string(" - didReceiveTitle: ") + title8.data() + "\n");
     }
 
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpTitleChanges())
+    if (m_testInterfaces->testRunner()->shouldDumpTitleChanges())
         m_delegate->printMessage(string("TITLE CHANGED: '") + title8.data() + "'\n");
 
-    if (m_testInterfaces->testRunner())
-        m_testInterfaces->testRunner()->setTitleTextDirection(direction);
+    m_testInterfaces->testRunner()->setTitleTextDirection(direction);
 }
 
 void WebTestProxyBase::didFinishDocumentLoad(WebFrame* frame)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didFinishDocumentLoadForFrame\n");
     } else {
@@ -718,7 +891,7 @@ void WebTestProxyBase::didFinishDocumentLoad(WebFrame* frame)
 
 void WebTestProxyBase::didHandleOnloadEvents(WebFrame* frame)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didHandleOnloadEventsForFrame\n");
     }
@@ -726,7 +899,7 @@ void WebTestProxyBase::didHandleOnloadEvents(WebFrame* frame)
 
 void WebTestProxyBase::didFailLoad(WebFrame* frame, const WebURLError&)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didFailLoadWithError\n");
     }
@@ -735,7 +908,7 @@ void WebTestProxyBase::didFailLoad(WebFrame* frame, const WebURLError&)
 
 void WebTestProxyBase::didFinishLoad(WebFrame* frame)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didFinishLoadForFrame\n");
     }
@@ -744,7 +917,7 @@ void WebTestProxyBase::didFinishLoad(WebFrame* frame)
 
 void WebTestProxyBase::didChangeLocationWithinPage(WebFrame* frame)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didChangeLocationWithinPageForFrame\n");
     }
@@ -752,33 +925,33 @@ void WebTestProxyBase::didChangeLocationWithinPage(WebFrame* frame)
 
 void WebTestProxyBase::didDisplayInsecureContent(WebFrame*)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks())
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks())
         m_delegate->printMessage("didDisplayInsecureContent\n");
 }
 
 void WebTestProxyBase::didRunInsecureContent(WebFrame*, const WebSecurityOrigin&, const WebURL&)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks())
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks())
         m_delegate->printMessage("didRunInsecureContent\n");
 }
 
 void WebTestProxyBase::didDetectXSS(WebFrame*, const WebURL&, bool)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks())
+    if (m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks())
         m_delegate->printMessage("didDetectXSS\n");
 }
 
 void WebTestProxyBase::assignIdentifierToRequest(WebFrame*, unsigned identifier, const WebKit::WebURLRequest& request)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpResourceLoadCallbacks()) {
-        ASSERT(m_resourceIdentifierMap.find(identifier) == m_resourceIdentifierMap.end());
+    if (m_testInterfaces->testRunner()->shouldDumpResourceLoadCallbacks()) {
+        WEBKIT_ASSERT(m_resourceIdentifierMap.find(identifier) == m_resourceIdentifierMap.end());
         m_resourceIdentifierMap[identifier] = descriptionSuitableForTestResult(request.url().spec());
     }
 }
 
 void WebTestProxyBase::willRequestResource(WebFrame* frame, const WebKit::WebCachedURLRequest& request)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpResourceRequestCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpResourceRequestCallbacks()) {
         printFrameDescription(m_delegate, frame);
         WebElement element = request.initiatorElement();
         if (!element.isNull()) {
@@ -814,7 +987,7 @@ WebURLError WebTestProxyBase::cannotHandleRequestError(WebFrame*, const WebURLRe
 
 void WebTestProxyBase::didCreateDataSource(WebFrame*, WebDataSource* ds)
 {
-    if (m_testInterfaces->testRunner() && !m_testInterfaces->testRunner()->deferMainResourceDataLoad())
+    if (!m_testInterfaces->testRunner()->deferMainResourceDataLoad())
         ds->setDeferMainResourceDataLoad(false);
 }
 
@@ -826,7 +999,7 @@ void WebTestProxyBase::willSendRequest(WebFrame*, unsigned identifier, WebKit::W
 
     GURL mainDocumentURL = request.firstPartyForCookies();
 
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpResourceLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpResourceLoadCallbacks()) {
         if (m_resourceIdentifierMap.find(identifier) == m_resourceIdentifierMap.end())
             m_delegate->printMessage("<unknown>");
         else
@@ -842,18 +1015,18 @@ void WebTestProxyBase::willSendRequest(WebFrame*, unsigned identifier, WebKit::W
         m_delegate->printMessage("\n");
     }
 
-    if (!redirectResponse.isNull() && m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldBlockRedirects()) {
+    if (!redirectResponse.isNull() && m_testInterfaces->testRunner()->shouldBlockRedirects()) {
         m_delegate->printMessage("Returning null for this redirect\n");
         blockRequest(request);
         return;
     }
 
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->willSendRequestShouldReturnNull()) {
+    if (m_testInterfaces->testRunner()->willSendRequestShouldReturnNull()) {
         blockRequest(request);
         return;
     }
 
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->httpHeadersToClear()) {
+    if (m_testInterfaces->testRunner()->httpHeadersToClear()) {
         const set<string> *clearHeaders = m_testInterfaces->testRunner()->httpHeadersToClear();
         for (set<string>::const_iterator header = clearHeaders->begin(); header != clearHeaders->end(); ++header)
             request.clearHTTPHeaderField(WebString::fromUTF8(*header));
@@ -876,7 +1049,7 @@ void WebTestProxyBase::willSendRequest(WebFrame*, unsigned identifier, WebKit::W
 
 void WebTestProxyBase::didReceiveResponse(WebFrame*, unsigned identifier, const WebKit::WebURLResponse& response)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpResourceLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpResourceLoadCallbacks()) {
         if (m_resourceIdentifierMap.find(identifier) == m_resourceIdentifierMap.end())
             m_delegate->printMessage("<unknown>");
         else
@@ -885,7 +1058,7 @@ void WebTestProxyBase::didReceiveResponse(WebFrame*, unsigned identifier, const 
         printResponseDescription(m_delegate, response);
         m_delegate->printMessage("\n");
     }
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpResourceResponseMIMETypes()) {
+    if (m_testInterfaces->testRunner()->shouldDumpResourceResponseMIMETypes()) {
         GURL url = response.url();
         WebString mimeType = response.mimeType();
         m_delegate->printMessage(url.ExtractFileName());
@@ -898,7 +1071,7 @@ void WebTestProxyBase::didReceiveResponse(WebFrame*, unsigned identifier, const 
 
 void WebTestProxyBase::didFinishResourceLoad(WebFrame*, unsigned identifier)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpResourceLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpResourceLoadCallbacks()) {
         if (m_resourceIdentifierMap.find(identifier) == m_resourceIdentifierMap.end())
             m_delegate->printMessage("<unknown>");
         else
@@ -910,7 +1083,7 @@ void WebTestProxyBase::didFinishResourceLoad(WebFrame*, unsigned identifier)
 
 void WebTestProxyBase::didFailResourceLoad(WebFrame*, unsigned identifier, const WebKit::WebURLError& error)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpResourceLoadCallbacks()) {
+    if (m_testInterfaces->testRunner()->shouldDumpResourceLoadCallbacks()) {
         if (m_resourceIdentifierMap.find(identifier) == m_resourceIdentifierMap.end())
             m_delegate->printMessage("<unknown>");
         else
@@ -975,15 +1148,11 @@ bool WebTestProxyBase::runModalPromptDialog(WebFrame* frame, const WebString& me
 bool WebTestProxyBase::runModalBeforeUnloadDialog(WebFrame*, const WebString& message)
 {
     m_delegate->printMessage(string("CONFIRM NAVIGATION: ") + message.utf8().data() + "\n");
-    if (!m_testInterfaces->testRunner())
-        return true;
     return !m_testInterfaces->testRunner()->shouldStayOnPageAfterHandlingBeforeUnload();
 }
 
 void WebTestProxyBase::locationChangeDone(WebFrame* frame)
 {
-    if (!m_testInterfaces->testRunner())
-        return;
     if (frame != m_testInterfaces->testRunner()->topLoadingFrame())
         return;
     m_testInterfaces->testRunner()->setTopLoadingFrame(frame, true);
@@ -992,7 +1161,7 @@ void WebTestProxyBase::locationChangeDone(WebFrame* frame)
 WebNavigationPolicy WebTestProxyBase::decidePolicyForNavigation(WebFrame*, const WebURLRequest& request, WebNavigationType type, const WebNode& originatingNode, WebNavigationPolicy defaultPolicy, bool isRedirect)
 {
     WebNavigationPolicy result;
-    if (!(m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->policyDelegateEnabled()))
+    if (!m_testInterfaces->testRunner()->policyDelegateEnabled())
         return defaultPolicy;
 
     m_delegate->printMessage(string("Policy delegate: attempt to load ") + URLDescription(request.url()) + " with navigation type '" + webNavigationTypeToString(type) + "'");
@@ -1013,7 +1182,7 @@ WebNavigationPolicy WebTestProxyBase::decidePolicyForNavigation(WebFrame*, const
 
 bool WebTestProxyBase::willCheckAndDispatchMessageEvent(WebFrame*, WebFrame*, WebSecurityOrigin, WebDOMMessageEvent)
 {
-    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldInterceptPostMessage()) {
+    if (m_testInterfaces->testRunner()->shouldInterceptPostMessage()) {
         m_delegate->printMessage("intercepted postMessage\n");
         return true;
     }

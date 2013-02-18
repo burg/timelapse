@@ -33,6 +33,7 @@
 #include "MediaControlElementTypes.h"
 
 #include "CSSValueKeywords.h"
+#include "ExceptionCodePlaceholder.h"
 #include "FloatConversion.h"
 #include "HTMLNames.h"
 #include "MouseEvent.h"
@@ -66,7 +67,7 @@ HTMLMediaElement* toParentMediaElement(Node* node)
 
 MediaControlElementType mediaControlElementType(Node* node)
 {
-    ASSERT(node->isMediaControlElement());
+    ASSERT_WITH_SECURITY_IMPLICATION(node->isMediaControlElement());
     HTMLElement* element = toHTMLElement(node);
     if (element->hasTagName(inputTag))
         return static_cast<MediaControlInputElement*>(element)->displayType();
@@ -263,9 +264,8 @@ float MediaControlSeekButtonElement::nextRate() const
 void MediaControlSeekButtonElement::seekTimerFired(Timer<MediaControlSeekButtonElement>*)
 {
     if (m_seekType == Skip) {
-        ExceptionCode ec;
         float skipTime = isForwardButton() ? cSkipTime : -cSkipTime;
-        mediaController()->setCurrentTime(mediaController()->currentTime() + skipTime, ec);
+        mediaController()->setCurrentTime(mediaController()->currentTime() + skipTime, IGNORE_EXCEPTION);
     } else
         mediaController()->setPlaybackRate(nextRate());
 }
@@ -293,11 +293,8 @@ void MediaControlVolumeSliderElement::defaultEventHandler(Event* event)
         return;
 
     float volume = narrowPrecisionToFloat(value().toDouble());
-    if (volume != mediaController()->volume()) {
-        ExceptionCode ec = 0;
-        mediaController()->setVolume(volume, ec);
-        ASSERT(!ec);
-    }
+    if (volume != mediaController()->volume())
+        mediaController()->setVolume(volume, ASSERT_NO_EXCEPTION);
     if (m_clearMutedOnUserInteraction)
         mediaController()->setMuted(false);
 }

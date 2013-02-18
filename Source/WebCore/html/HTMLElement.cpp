@@ -1134,7 +1134,7 @@ static RGBA32 parseColorStringWithCrazyLegacyRules(const String& colorString)
     ASSERT(greenIndex >= componentLength);
     ASSERT(greenIndex + 1 < componentLength * 2);
     ASSERT(blueIndex >= componentLength * 2);
-    ASSERT(blueIndex + 1 < digitBuffer.size());
+    ASSERT_WITH_SECURITY_IMPLICATION(blueIndex + 1 < digitBuffer.size());
 
     int redValue = toASCIIHexValue(digitBuffer[redIndex], digitBuffer[redIndex + 1]);
     int greenValue = toASCIIHexValue(digitBuffer[greenIndex], digitBuffer[greenIndex + 1]);
@@ -1161,11 +1161,6 @@ void HTMLElement::addHTMLColorToStyle(StylePropertySet* style, CSSPropertyID pro
         parsedColor.setRGB(parseColorStringWithCrazyLegacyRules(colorString));
 
     style->setProperty(propertyID, cssValuePool().createColorValue(parsedColor.rgb()));
-}
-
-bool HTMLElement::isFocusableByClickOnLabel() const
-{
-    return isMouseFocusable();
 }
 
 } // namespace WebCore

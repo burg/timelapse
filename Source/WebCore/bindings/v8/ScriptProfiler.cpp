@@ -189,13 +189,14 @@ private:
 
 } // namespace
 
+// FIXME: This method should receive a ScriptState, from which we should retrieve an Isolate.
 PassRefPtr<ScriptHeapSnapshot> ScriptProfiler::takeHeapSnapshot(const String& title, HeapSnapshotProgress* control)
 {
     v8::HandleScope hs;
     ASSERT(control);
     ActivityControlAdapter adapter(control);
     GlobalObjectNameResolver resolver;
-    const v8::HeapSnapshot* snapshot = v8::HeapProfiler::TakeSnapshot(deprecatedV8String(title), v8::HeapSnapshot::kFull, &adapter, &resolver);
+    const v8::HeapSnapshot* snapshot = v8::HeapProfiler::TakeSnapshot(v8String(title, v8::Isolate::GetCurrent()), v8::HeapSnapshot::kFull, &adapter, &resolver);
     return snapshot ? ScriptHeapSnapshot::create(snapshot) : 0;
 }
 
@@ -217,10 +218,15 @@ void ScriptProfiler::visitNodeWrappers(WrappedNodeVisitor* visitor)
 {
     v8::HandleScope scope;
 
+    // visitNodeWrappers() should receive a ScriptState and retrieve an Isolate
+    // from the ScriptState.
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+
     class DOMNodeWrapperVisitor : public v8::PersistentHandleVisitor {
     public:
-        explicit DOMNodeWrapperVisitor(WrappedNodeVisitor* visitor)
+        DOMNodeWrapperVisitor(WrappedNodeVisitor* visitor, v8::Isolate* isolate)
             : m_visitor(visitor)
+            , m_isolate(isolate)
         {
         }
 
@@ -228,7 +234,8 @@ void ScriptProfiler::visitNodeWrappers(WrappedNodeVisitor* visitor)
         {
             if (classId != v8DOMNodeClassId)
                 return;
-            ASSERT(V8Node::HasInstance(value));
+            UNUSED_PARAM(m_isolate);
+            ASSERT(V8Node::HasInstance(value, m_isolate));
             ASSERT(value->IsObject());
             v8::Persistent<v8::Object> wrapper = v8::Persistent<v8::Object>::Cast(value);
             m_visitor->visitNode(V8Node::toNative(wrapper));
@@ -236,7 +243,8 @@ void ScriptProfiler::visitNodeWrappers(WrappedNodeVisitor* visitor)
 
     private:
         WrappedNodeVisitor* m_visitor;
-    } wrapperVisitor(visitor);
+        v8::Isolate* m_isolate;
+    } wrapperVisitor(visitor, isolate);
 
     v8::V8::VisitHandlesWithClassIds(&wrapperVisitor);
 }

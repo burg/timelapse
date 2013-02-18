@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +34,7 @@
 
 #include "DatabaseBasicTypes.h"
 #include "DatabaseDetails.h"
+#include "DatabaseError.h"
 #include "SQLiteDatabase.h"
 #include <wtf/Forward.h>
 #include <wtf/RefPtr.h>
@@ -46,8 +48,8 @@
 namespace WebCore {
 
 class DatabaseAuthorizer;
-class DatabaseContext;
-class ScriptExecutionContext;
+class DatabaseBackendContext;
+class DatabaseBase;
 class SecurityOrigin;
 
 class DatabaseBackend : public ThreadSafeRefCounted<DatabaseBackend> {
@@ -60,7 +62,6 @@ public:
     bool isNew() const { return m_new; }
     bool isSyncDatabase() const { return m_isSyncDatabase; }
 
-    virtual ScriptExecutionContext* scriptExecutionContext() const;
     virtual SecurityOrigin* securityOrigin() const;
     virtual String stringIdentifier() const;
     virtual String displayName() const;
@@ -87,26 +88,23 @@ public:
     virtual void markAsDeletedAndClose() = 0;
     virtual void closeImmediately() = 0;
 
-    DatabaseContext* databaseContext() const { return m_databaseContext.get(); }
+    DatabaseBackendContext* databaseContext() const { return m_databaseContext.get(); }
+    void setFrontend(DatabaseBase* frontend) { m_frontend = frontend; }
 
 protected:
     friend class ChangeVersionWrapper;
     friend class SQLStatement;
     friend class SQLStatementSync;
-    friend class SQLTransactionSync;
-    friend class SQLTransaction;
+    friend class SQLTransactionBackend;
+    friend class SQLTransactionBackendSync;
 
-    enum DatabaseType {
-        AsyncDatabase,
-        SyncDatabase
-    };
-
-    DatabaseBackend(PassRefPtr<DatabaseContext>, const String& name, const String& expectedVersion,
+    DatabaseBackend(PassRefPtr<DatabaseBackendContext>, const String& name, const String& expectedVersion,
         const String& displayName, unsigned long estimatedSize, DatabaseType);
 
     void closeDatabase();
 
-    virtual bool performOpenAndVerify(bool shouldSetVersionInNewDatabase, ExceptionCode&, String& errorMessage);
+    virtual bool openAndVerifyVersion(bool setVersionInNewDatabase, DatabaseError&, String& errorMessage) = 0;
+    virtual bool performOpenAndVerify(bool shouldSetVersionInNewDatabase, DatabaseError&, String& errorMessage);
 
     bool getVersionFromDatabase(String& version, bool shouldCacheVersion = true);
     bool setVersionInDatabase(const String& version, bool shouldCacheVersion = true);
@@ -115,8 +113,6 @@ protected:
     String getCachedVersion()const;
     void setCachedVersion(const String&);
     bool getActualVersionForTransaction(String& version);
-
-    void logErrorMessage(const String& message);
 
     void reportOpenDatabaseResult(int errorSite, int webSqlErrorCode, int sqliteErrorCode);
     void reportChangeVersionResult(int errorSite, int webSqlErrorCode, int sqliteErrorCode);
@@ -128,14 +124,15 @@ protected:
     static const char* databaseInfoTableName();
 
     RefPtr<SecurityOrigin> m_contextThreadSecurityOrigin;
-    RefPtr<DatabaseContext> m_databaseContext; // Associated with m_scriptExecutionContext.
-    RefPtr<ScriptExecutionContext> m_scriptExecutionContext;
+    RefPtr<DatabaseBackendContext> m_databaseContext; // Associated with m_scriptExecutionContext.
 
     String m_name;
     String m_expectedVersion;
     String m_displayName;
     unsigned long m_estimatedSize;
     String m_filename;
+
+    DatabaseBase* m_frontend;
 
 #if !LOG_DISABLED || !ERROR_DISABLED
     String databaseDebugName() const { return m_contextThreadSecurityOrigin->toString() + "::" + m_name; }
@@ -150,6 +147,8 @@ private:
     SQLiteDatabase m_sqliteDatabase;
 
     RefPtr<DatabaseAuthorizer> m_databaseAuthorizer;
+
+    friend class DatabaseServer;
 };
 
 } // namespace WebCore

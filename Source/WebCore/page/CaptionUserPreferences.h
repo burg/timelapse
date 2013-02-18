@@ -28,6 +28,9 @@
 
 #if ENABLE(VIDEO_TRACK)
 
+#include "Language.h"
+#include "LocalizedStrings.h"
+#include "TextTrack.h"
 #include <wtf/PassOwnPtr.h>
 #include <wtf/text/AtomicString.h>
 
@@ -47,20 +50,50 @@ public:
     static PassOwnPtr<CaptionUserPreferences> create(PageGroup* group) { return adoptPtr(new CaptionUserPreferences(group)); }
     virtual ~CaptionUserPreferences() { }
 
-    virtual bool userPrefersCaptions() const { return false; }
     virtual bool userHasCaptionPreferences() const { return false; }
-    virtual float captionFontSizeScale() const { return 0.05f; }
+    virtual bool userPrefersCaptions() const { return m_testingMode ? m_userPrefersCaptions : false; }
+    virtual void setUserPrefersCaptions(bool preference) { m_userPrefersCaptions = preference; }
+    virtual float captionFontSizeScale(bool& important) const { important = false; return 0.05f; }
     virtual String captionsStyleSheetOverride() const { return emptyString(); }
-    virtual void registerForCaptionPreferencesChangedCallbacks(CaptionPreferencesChangedListener*) { }
-    virtual void unregisterForCaptionPreferencesChangedCallbacks(CaptionPreferencesChangedListener*) { }
+    virtual void registerForPreferencesChangedCallbacks(CaptionPreferencesChangedListener*) { }
+    virtual void unregisterForPreferencesChangedCallbacks(CaptionPreferencesChangedListener*) { }
+
+    virtual void setPreferredLanguage(String language) { m_userPreferredLanguage = language; }
+    virtual Vector<String> preferredLanguages() const
+    {
+        Vector<String> languages = userPreferredLanguages();
+        if (m_testingMode && !m_userPreferredLanguage.isEmpty())
+            languages.insert(0, m_userPreferredLanguage);
+        return languages;
+    }
+
+    virtual String displayNameForTrack(TextTrack* track) const
+    {
+        if (track->label().isEmpty() && track->language().isEmpty())
+            return textTrackNoLabelText();
+        if (!track->label().isEmpty())
+            return track->label();
+        return track->language();
+    }
+
+    virtual bool testingMode() const { return m_testingMode; }
+    virtual void setTestingMode(bool override) { m_testingMode = override; }
 
     PageGroup* pageGroup() { return m_pageGroup; }
 
 protected:
-    CaptionUserPreferences(PageGroup* group) : m_pageGroup(group) { }
+    CaptionUserPreferences(PageGroup* group)
+        : m_pageGroup(group)
+        , m_testingMode(false)
+        , m_userPrefersCaptions(false)
+    {
+    }
 
 private:
     PageGroup* m_pageGroup;
+    String m_userPreferredLanguage;
+    bool m_testingMode;
+    bool m_userPrefersCaptions;
 };
     
 }

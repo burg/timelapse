@@ -31,9 +31,9 @@
 #include "Arguments.h"
 #include "MessageDecoder.h"
 #include "MessageEncoder.h"
-#include "MessageID.h"
 #include "MessageReceiver.h"
 #include "WorkQueue.h"
+#include <wtf/Deque.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/Threading.h>
@@ -61,7 +61,6 @@ class RunLoop;
 namespace CoreIPC {
 
 class BinarySemaphore;
-class MessageID;
     
 enum MessageSendFlags {
     // Whether this message should be dispatched when waiting for a sync reply.
@@ -93,9 +92,13 @@ public:
         virtual ~Client() { }
     };
 
+    class WorkQueueMessageReceiver : public MessageReceiver, public ThreadSafeRefCounted<WorkQueueMessageReceiver> {
+    };
+
     class QueueClient {
     public:
-        virtual void didReceiveMessageOnConnectionWorkQueue(Connection*, MessageDecoder&, bool& didHandleMessage) = 0;
+        virtual void didReceiveMessageOnConnectionWorkQueue(Connection*, OwnPtr<MessageDecoder>&) = 0;
+        virtual void didCloseOnConnectionWorkQueue(Connection*) = 0;
 
     protected:
         virtual ~QueueClient() { }
@@ -162,8 +165,11 @@ public:
     // In the future we might want a more generic way to handle sync or async messages directly
     // on the work queue, for example if we want to handle them on some other thread we could avoid
     // handling the message on the client thread first.
-    typedef void (*DidCloseOnConnectionWorkQueueCallback)(WorkQueue&, Connection*);
+    typedef void (*DidCloseOnConnectionWorkQueueCallback)(Connection*);
     void setDidCloseOnConnectionWorkQueueCallback(DidCloseOnConnectionWorkQueueCallback callback);
+
+    void addWorkQueueMessageReceiver(StringReference messageReceiverName, WorkQueue*, WorkQueueMessageReceiver*);
+    void removeWorkQueueMessageReceiver(StringReference messageReceiverName);
 
     void addQueueClient(QueueClient*);
     void removeQueueClient(QueueClient*);
@@ -192,46 +198,6 @@ public:
     void decrementDispatchMessageMarkedDispatchWhenWaitingForSyncReplyCount() { --m_inDispatchMessageMarkedDispatchWhenWaitingForSyncReplyCount; }
 
 private:
-    template<typename T> class Message {
-    public:
-        Message()
-            : m_arguments(0)
-        {
-        }
-
-        Message(MessageID messageID, PassOwnPtr<T> arguments)
-            : m_messageID(messageID)
-            , m_arguments(arguments.leakPtr())
-        {
-        }
-        
-        MessageID messageID() const { return m_messageID; }
-        uint64_t destinationID() const { return m_arguments->destinationID(); }
-
-        T* arguments() const { return m_arguments; }
-        
-        PassOwnPtr<T> releaseArguments()
-        {
-            OwnPtr<T> arguments = adoptPtr(m_arguments);
-            m_arguments = 0;
-
-            return arguments.release();
-        }
-        
-    private:
-        MessageID m_messageID;
-        // The memory management of this class is very unusual. The class acts
-        // as if it has an owning reference to m_arguments (e.g., accepting a
-        // PassOwnPtr in its constructor) in all ways except that it does not
-        // deallocate m_arguments on destruction.
-        // FIXME: Does this leak m_arguments on destruction?
-        T* m_arguments;
-    };
-
-public:
-    typedef Message<MessageEncoder> OutgoingMessage;
-
-private:
     Connection(Identifier, bool isServer, Client*, WebCore::RunLoop* clientRunLoop);
     void platformInitialize(Identifier);
     void platformInvalidate();
@@ -243,8 +209,12 @@ private:
     PassOwnPtr<MessageDecoder> waitForSyncReply(uint64_t syncRequestID, double timeout, unsigned syncSendFlags);
 
     // Called on the connection work queue.
-    void processIncomingMessage(MessageID, PassOwnPtr<MessageDecoder>);
+    void processIncomingMessage(PassOwnPtr<MessageDecoder>);
     void processIncomingSyncReply(PassOwnPtr<MessageDecoder>);
+
+    void addWorkQueueMessageReceiverOnConnectionWorkQueue(StringReference messageReceiverName, WorkQueue*, WorkQueueMessageReceiver*);
+    void removeWorkQueueMessageReceiverOnConnectionWorkQueue(StringReference messageReceiverName);
+    void dispatchWorkQueueMessageReceiverMessage(WorkQueueMessageReceiver*, MessageDecoder*);
 
     void addQueueClientOnWorkQueue(QueueClient*);
     void removeQueueClientOnWorkQueue(QueueClient*);
@@ -252,21 +222,19 @@ private:
     bool canSendOutgoingMessages() const;
     bool platformCanSendOutgoingMessages() const;
     void sendOutgoingMessages();
-    bool sendOutgoingMessage(MessageID, PassOwnPtr<MessageEncoder>);
+    bool sendOutgoingMessage(PassOwnPtr<MessageEncoder>);
     void connectionDidClose();
     
-    typedef Message<MessageDecoder> IncomingMessage;
-
     // Called on the listener thread.
     void dispatchConnectionDidClose();
     void dispatchOneMessage();
-    void dispatchMessage(IncomingMessage&);
-    void dispatchMessage(MessageID, MessageDecoder&);
-    void dispatchSyncMessage(MessageID, MessageDecoder&);
+    void dispatchMessage(PassOwnPtr<MessageDecoder>);
+    void dispatchMessage(MessageDecoder&);
+    void dispatchSyncMessage(MessageDecoder&);
     void didFailToSendSyncMessage();
 
     // Can be called on any thread.
-    void enqueueIncomingMessage(IncomingMessage&);
+    void enqueueIncomingMessage(PassOwnPtr<MessageDecoder>);
 
     Client* m_client;
     bool m_isServer;
@@ -277,10 +245,12 @@ private:
     DidCloseOnConnectionWorkQueueCallback m_didCloseOnConnectionWorkQueueCallback;
 
     bool m_isConnected;
-    WorkQueue m_connectionQueue;
+    RefPtr<WorkQueue> m_connectionQueue;
     WebCore::RunLoop* m_clientRunLoop;
 
     Vector<QueueClient*> m_connectionQueueClients;
+
+    HashMap<StringReference, std::pair<RefPtr<WorkQueue>, RefPtr<WorkQueueMessageReceiver> > > m_workQueueMessageReceivers;
 
     unsigned m_inDispatchMessageCount;
     unsigned m_inDispatchMessageMarkedDispatchWhenWaitingForSyncReplyCount;
@@ -288,11 +258,11 @@ private:
 
     // Incoming messages.
     Mutex m_incomingMessagesLock;
-    Deque<IncomingMessage> m_incomingMessages;
+    Deque<OwnPtr<MessageDecoder> > m_incomingMessages;
 
     // Outgoing messages.
     Mutex m_outgoingMessagesLock;
-    Deque<OutgoingMessage> m_outgoingMessages;
+    Deque<OwnPtr<MessageEncoder> > m_outgoingMessages;
     
     ThreadCondition m_waitForMessageCondition;
     Mutex m_waitForMessageMutex;

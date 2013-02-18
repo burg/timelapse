@@ -53,6 +53,11 @@ struct CSSGradientColorStop {
     Color m_resolvedColor;
     bool m_colorIsDerivedFromElement;
     void reportMemoryUsage(MemoryObjectInfo*) const;
+    bool operator==(const CSSGradientColorStop& other) const
+    {
+        return compareCSSValuePtr(m_color, other.m_color)
+            && compareCSSValuePtr(m_position, other.m_position);
+    }
 };
 
 class CSSGradientValue : public CSSImageGeneratorValue {
@@ -81,7 +86,7 @@ public:
     IntSize fixedSize(const RenderObject*) const { return IntSize(); }
 
     bool isPending() const { return false; }
-    bool hasAlpha(const RenderObject*) const;
+    bool knownToBeOpaque(const RenderObject*) const;
 
     void loadSubimages(CachedResourceLoader*) { }
     PassRefPtr<CSSGradientValue> gradientWithStylesResolved(StyleResolver*);
@@ -152,6 +157,8 @@ public:
         return adoptRef(new CSSLinearGradientValue(*this));
     }
 
+    bool equals(const CSSLinearGradientValue&) const;
+
     void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
 
 private:
@@ -194,6 +201,8 @@ public:
 
     // Create the gradient for a given size.
     PassRefPtr<Gradient> createGradient(RenderObject*, const IntSize&);
+
+    bool equals(const CSSRadialGradientValue&) const;
 
     void reportDescendantMemoryUsage(MemoryObjectInfo*) const;
 

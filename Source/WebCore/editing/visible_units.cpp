@@ -513,7 +513,7 @@ static VisiblePosition previousBoundary(const VisiblePosition& c, BoundarySearch
     if (!next)
         return VisiblePosition(it.atEnd() ? it.range()->startPosition() : pos, DOWNSTREAM);
 
-    Node* node = it.range()->startContainer(ec);
+    Node* node = it.range()->startContainer();
     if ((node->isTextNode() && static_cast<int>(next) <= node->maxCharacterOffset()) || (node->renderer() && node->renderer()->isBR() && !next))
         // The next variable contains a usable index into a text node
         return VisiblePosition(createLegacyEditingPosition(node, next), DOWNSTREAM);
@@ -539,10 +539,9 @@ static VisiblePosition nextBoundary(const VisiblePosition& c, BoundarySearchFunc
     Vector<UChar, 1024> string;
     unsigned prefixLength = 0;
 
-    ExceptionCode ec = 0;
     if (requiresContextForWordBoundary(c.characterAfter())) {
         RefPtr<Range> backwardsScanRange(d->createRange());
-        backwardsScanRange->setEnd(start.deprecatedNode(), start.deprecatedEditingOffset(), ec);
+        backwardsScanRange->setEnd(start.deprecatedNode(), start.deprecatedEditingOffset(), IGNORE_EXCEPTION);
         SimplifiedBackwardsTextIterator backwardsIterator(backwardsScanRange.get());
         while (!backwardsIterator.atEnd()) {
             const UChar* characters = backwardsIterator.characters();
@@ -556,8 +555,8 @@ static VisiblePosition nextBoundary(const VisiblePosition& c, BoundarySearchFunc
         }
     }
 
-    searchRange->selectNodeContents(boundary, ec);
-    searchRange->setStart(start.deprecatedNode(), start.deprecatedEditingOffset(), ec);
+    searchRange->selectNodeContents(boundary, IGNORE_EXCEPTION);
+    searchRange->setStart(start.deprecatedNode(), start.deprecatedEditingOffset(), IGNORE_EXCEPTION);
     TextIterator it(searchRange.get(), TextIteratorEmitsCharactersBetweenAllVisiblePositions);
     unsigned next = 0;
     bool inTextSecurityMode = start.deprecatedNode() && start.deprecatedNode()->renderer() && start.deprecatedNode()->renderer()->style()->textSecurity() != TSNONE;
@@ -1136,7 +1135,7 @@ VisiblePosition startOfParagraph(const VisiblePosition& c, EditingBoundaryCrossi
             break;
 
         if (r->isText() && toRenderText(r)->renderedTextLength()) {
-            ASSERT(n->isTextNode());
+            ASSERT_WITH_SECURITY_IMPLICATION(n->isTextNode());
             type = Position::PositionIsOffsetInAnchor;
             if (style->preserveNewline()) {
                 const UChar* chars = toRenderText(r)->characters();
@@ -1218,7 +1217,7 @@ VisiblePosition endOfParagraph(const VisiblePosition &c, EditingBoundaryCrossing
 
         // FIXME: We avoid returning a position where the renderer can't accept the caret.
         if (r->isText() && toRenderText(r)->renderedTextLength()) {
-            ASSERT(n->isTextNode());
+            ASSERT_WITH_SECURITY_IMPLICATION(n->isTextNode());
             int length = toRenderText(r)->textLength();
             type = Position::PositionIsOffsetInAnchor;
             if (style->preserveNewline()) {

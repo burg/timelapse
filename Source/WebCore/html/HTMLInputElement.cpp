@@ -370,16 +370,6 @@ void HTMLInputElement::defaultBlur()
     HTMLTextFormControlElement::blur();
 }
 
-void HTMLInputElement::defaultFocus(bool restorePreviousSelection)
-{
-    HTMLTextFormControlElement::focus(restorePreviousSelection);
-}
-
-void HTMLInputElement::focus(bool restorePreviousSelection)
-{
-    m_inputType->focus(restorePreviousSelection);
-}
-
 bool HTMLInputElement::hasCustomFocusLogic() const
 {
     return m_inputType->hasCustomFocusLogic();
@@ -437,9 +427,9 @@ bool HTMLInputElement::shouldUseInputMethod()
     return m_inputType->shouldUseInputMethod();
 }
 
-void HTMLInputElement::handleFocusEvent()
+void HTMLInputElement::handleFocusEvent(Node* oldFocusedNode, FocusDirection direction)
 {
-    m_inputType->handleFocusEvent();
+    m_inputType->handleFocusEvent(oldFocusedNode, direction);
 }
 
 void HTMLInputElement::handleBlurEvent()
@@ -1232,11 +1222,6 @@ bool HTMLInputElement::isURLAttribute(const Attribute& attribute) const
     return attribute.name() == srcAttr || attribute.name() == formactionAttr || HTMLTextFormControlElement::isURLAttribute(attribute);
 }
 
-bool HTMLInputElement::isFocusableByClickOnLabel() const
-{
-    return m_inputType->isFocusableByClickOnLabel();
-}
-
 String HTMLInputElement::defaultValue() const
 {
     return fastGetAttribute(valueAttr);
@@ -1966,12 +1951,12 @@ void HTMLInputElement::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) con
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
     HTMLTextFormControlElement::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_name);
-    info.addMember(m_valueIfDirty);
-    info.addMember(m_suggestedValue);
-    info.addMember(m_inputType);
+    info.addMember(m_name, "name");
+    info.addMember(m_valueIfDirty, "valueIfDirty");
+    info.addMember(m_suggestedValue, "suggestedValue");
+    info.addMember(m_inputType, "inputType");
 #if ENABLE(DATALIST_ELEMENT)
-    info.addMember(m_listAttributeTargetObserver);
+    info.addMember(m_listAttributeTargetObserver, "listAttributeTargetObserver");
 #endif
 }
 

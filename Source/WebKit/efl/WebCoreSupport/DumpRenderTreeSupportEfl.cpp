@@ -25,7 +25,6 @@
 #include "FrameLoaderClientEfl.h"
 #include "ewk_frame_private.h"
 #include "ewk_history_private.h"
-#include "ewk_intent_private.h"
 #include "ewk_private.h"
 #include "ewk_view_private.h"
 
@@ -43,7 +42,6 @@
 #include <HTMLInputElement.h>
 #include <InspectorController.h>
 #include <IntRect.h>
-#include <Intent.h>
 #include <JSCSSStyleDeclaration.h>
 #include <JSElement.h>
 #include <JavaScriptCore/OpaqueJSString.h>
@@ -60,7 +58,6 @@
 #include <TextIterator.h>
 #include <bindings/js/GCController.h>
 #include <history/HistoryItem.h>
-#include <workers/WorkerThread.h>
 #include <wtf/HashMap.h>
 #include <wtf/UnusedParam.h>
 
@@ -98,18 +95,6 @@ void DumpRenderTreeSupportEfl::setDumpRenderTreeModeEnabled(bool enabled)
 bool DumpRenderTreeSupportEfl::dumpRenderTreeModeEnabled()
 {
     return s_drtRun;
-}
-
-unsigned DumpRenderTreeSupportEfl::activeAnimationsCount(const Evas_Object* ewkFrame)
-{
-    DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, 0);
-
-    WebCore::AnimationController* animationController = frame->animation();
-
-    if (!animationController)
-        return 0;
-
-    return animationController->numberOfActiveAnimations(frame->document());
 }
 
 bool DumpRenderTreeSupportEfl::callShouldCloseOnWebView(Evas_Object* ewkFrame)
@@ -189,30 +174,6 @@ void DumpRenderTreeSupportEfl::layoutFrame(Evas_Object* ewkFrame)
         return;
 
     frame->view()->layout();
-}
-
-bool DumpRenderTreeSupportEfl::pauseAnimation(Evas_Object* ewkFrame, const char* name, const char* elementId, double time)
-{
-    DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, false);
-
-    WebCore::Element* element = frame->document()->getElementById(elementId);
-
-    if (!element || !element->renderer())
-        return false;
-
-    return frame->animation()->pauseAnimationAtTime(element->renderer(), name, time);
-}
-
-bool DumpRenderTreeSupportEfl::pauseTransition(Evas_Object* ewkFrame, const char* name, const char* elementId, double time)
-{
-    DRT_SUPPORT_FRAME_GET_OR_RETURN(ewkFrame, frame, false);
-
-    WebCore::Element* element = frame->document()->getElementById(elementId);
-
-    if (!element || !element->renderer())
-        return false;
-
-    return frame->animation()->pauseTransitionAtTime(element->renderer(), name, time);
 }
 
 unsigned DumpRenderTreeSupportEfl::pendingUnloadEventCount(const Evas_Object* ewkFrame)
@@ -477,15 +438,6 @@ size_t DumpRenderTreeSupportEfl::javaScriptObjectsCount()
     return WebCore::JSDOMWindow::commonJSGlobalData()->heap.objectCount();
 }
 
-unsigned DumpRenderTreeSupportEfl::workerThreadCount()
-{
-#if ENABLE(WORKERS)
-    return WebCore::WorkerThread::workerThreadCount();
-#else
-    return 0;
-#endif
-}
-
 void DumpRenderTreeSupportEfl::setDeadDecodedDataDeletionInterval(double interval)
 {
     WebCore::memoryCache()->setDeadDecodedDataDeletionInterval(interval);
@@ -657,43 +609,6 @@ void DumpRenderTreeSupportEfl::setSerializeHTTPLoads(bool enabled)
 void DumpRenderTreeSupportEfl::setShouldTrackVisitedLinks(bool shouldTrack)
 {
     WebCore::PageGroup::setShouldTrackVisitedLinks(shouldTrack);
-}
-
-void DumpRenderTreeSupportEfl::sendWebIntentResponse(Ewk_Intent_Request* request, JSStringRef response)
-{
-#if ENABLE(WEB_INTENTS)
-    String responseString = response->string();
-    if (responseString.isEmpty())
-        ewk_intent_request_failure_post(request, WebCore::SerializedScriptValue::create(String::fromUTF8("ERROR")));
-    else
-        ewk_intent_request_result_post(request, WebCore::SerializedScriptValue::create(String(responseString.impl())));
-#endif
-}
-
-WebCore::MessagePortChannelArray* DumpRenderTreeSupportEfl::intentMessagePorts(const Ewk_Intent* intent)
-{
-#if ENABLE(WEB_INTENTS)
-    const WebCore::Intent* coreIntent = EWKPrivate::coreIntent(intent);
-    return coreIntent ? coreIntent->messagePorts() : 0;
-#else
-    UNUSED_PARAM(intent);
-    return 0;
-#endif
-}
-
-void DumpRenderTreeSupportEfl::deliverWebIntent(Evas_Object* ewkFrame, JSStringRef action, JSStringRef type, JSStringRef data)
-{
-#if ENABLE(WEB_INTENTS)
-    RefPtr<WebCore::SerializedScriptValue> serializedData = WebCore::SerializedScriptValue::create(data->string());
-    WebCore::ExceptionCode ec = 0;
-    WebCore::MessagePortArray ports;
-    RefPtr<WebCore::Intent> coreIntent = WebCore::Intent::create(action->string(), type->string(), serializedData.get(), ports, ec);
-    if (ec)
-        return;
-    Ewk_Intent* ewkIntent = ewk_intent_new(coreIntent.get());
-    ewk_frame_intent_deliver(ewkFrame, ewkIntent);
-    ewk_intent_free(ewkIntent);
-#endif
 }
 
 void DumpRenderTreeSupportEfl::setComposition(Evas_Object* ewkView, const char* text, int start, int length)

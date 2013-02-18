@@ -67,17 +67,15 @@ DOMWrapperWorld* mainThreadNormalWorld()
     return cachedNormalWorld.get();
 }
 
-#ifndef NDEBUG
 void DOMWrapperWorld::assertContextHasCorrectPrototype(v8::Handle<v8::Context> context)
 {
     ASSERT(isMainThread());
     ASSERT(V8DOMWrapper::isWrapperOfType(toInnerGlobalObject(context), &V8DOMWindow::info));
 }
-#endif
 
-static void isolatedWorldWeakCallback(v8::Persistent<v8::Value> object, void* parameter)
+static void isolatedWorldWeakCallback(v8::Isolate* isolate, v8::Persistent<v8::Value> object, void* parameter)
 {
-    object.Dispose();
+    object.Dispose(isolate);
     object.Clear();
     static_cast<DOMWrapperWorld*>(parameter)->deref();
 }
@@ -85,8 +83,9 @@ static void isolatedWorldWeakCallback(v8::Persistent<v8::Value> object, void* pa
 void DOMWrapperWorld::makeContextWeak(v8::Handle<v8::Context> context)
 {
     ASSERT(isIsolatedWorld());
-    ASSERT(isolated(context) == this);
-    v8::Persistent<v8::Context>::New(context).MakeWeak(this, isolatedWorldWeakCallback);
+    ASSERT(getWorld(context) == this);
+    v8::Isolate* isolate = context->GetIsolate();
+    v8::Persistent<v8::Context>::New(isolate, context).MakeWeak(isolate, this, isolatedWorldWeakCallback);
     // Matching deref is in weak callback.
     this->ref();
 }

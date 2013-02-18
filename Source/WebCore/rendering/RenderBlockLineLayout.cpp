@@ -455,7 +455,7 @@ InlineFlowBox* RenderBlock::createLineBoxes(RenderObject* obj, const LineInfo& l
     InlineFlowBox* result = 0;
     bool hasDefaultLineBoxContain = style()->lineBoxContain() == RenderStyle::initialLineBoxContain();
     do {
-        ASSERT(obj->isRenderInline() || obj == this);
+        ASSERT_WITH_SECURITY_IMPLICATION(obj->isRenderInline() || obj == this);
 
         RenderInline* inlineFlow = (obj != this) ? toRenderInline(obj) : 0;
 
@@ -475,7 +475,7 @@ InlineFlowBox* RenderBlock::createLineBoxes(RenderObject* obj, const LineInfo& l
             // We need to make a new box for this render object.  Once
             // made, we need to place it at the end of the current line.
             InlineBox* newBox = createInlineBoxForRenderer(obj, obj == this);
-            ASSERT(newBox->isInlineFlowBox());
+            ASSERT_WITH_SECURITY_IMPLICATION(newBox->isInlineFlowBox());
             parentBox = toInlineFlowBox(newBox);
             parentBox->setFirstLineStyleBit(lineInfo.isFirstLine());
             parentBox->setIsHorizontal(isHorizontalWritingMode());
@@ -1616,10 +1616,12 @@ void RenderBlock::layoutRunsAndFloatsInRange(LineLayoutState& layoutState, Inlin
                         lineBox->setContainingRegion(regionAtBlockOffset(lineBox->lineTopWithLeading()));
                 }
             }
+        }
 
-            for (size_t i = 0; i < lineBreaker.positionedObjects().size(); ++i)
-                setStaticPositions(this, lineBreaker.positionedObjects()[i]);
+        for (size_t i = 0; i < lineBreaker.positionedObjects().size(); ++i)
+            setStaticPositions(this, lineBreaker.positionedObjects()[i]);
 
+        if (!layoutState.lineInfo().isEmpty()) {
             layoutState.lineInfo().setFirstLine(false);
             newLine(lineBreaker.clear());
         }
@@ -1912,7 +1914,7 @@ void RenderBlock::checkFloatsInCleanLine(RootInlineBox* line, Vector<FloatWithRe
         RenderBox* floatingBox = *it;
         floatingBox->layoutIfNeeded();
         LayoutSize newSize(floatingBox->width() + floatingBox->marginWidth(), floatingBox->height() + floatingBox->marginHeight());
-        ASSERT(floatIndex < floats.size());
+        ASSERT_WITH_SECURITY_IMPLICATION(floatIndex < floats.size());
         if (floats[floatIndex].object != floatingBox) {
             encounteredNewFloat = true;
             return;
@@ -2279,8 +2281,8 @@ void RenderBlock::LineBreaker::skipLeadingWhitespace(InlineBidiResolver& resolve
             }
         } else if (object->isFloating()) {
             // The top margin edge of a self-collapsing block that clears a float intrudes up into it by the height of the margin,
-            // so in order to place this child float at the top content edge of the self-collapsing block add the margin back in before placement.
-            LayoutUnit marginOffset = (m_block->isSelfCollapsingBlock() && m_block->style()->clear() && m_block->getClearDelta(m_block, LayoutUnit())) ? m_block->collapsedMarginBeforeForChild(m_block) : LayoutUnit();
+            // so in order to place this first child float at the top content edge of the self-collapsing block add the margin back in before placement.
+            LayoutUnit marginOffset = (!object->previousSibling() && m_block->isSelfCollapsingBlock() && m_block->style()->clear() && m_block->getClearDelta(m_block, LayoutUnit())) ? m_block->collapsedMarginBeforeForChild(m_block) : LayoutUnit();
             LayoutUnit oldLogicalHeight = m_block->logicalHeight();
             m_block->setLogicalHeight(oldLogicalHeight + marginOffset);
             m_block->positionNewFloatOnLine(m_block->insertFloatingObject(toRenderBox(object)), lastFloatFromPreviousLine, lineInfo, width);
@@ -2656,6 +2658,7 @@ InlineIterator RenderBlock::LineBreaker::nextSegmentBreak(InlineBidiResolver& re
                 trailingObjects.appendBoxIfNeeded(box);
             } else
                 m_positionedObjects.append(box);
+            width.addUncommittedWidth(inlineLogicalWidth(current.m_obj));
         } else if (current.m_obj->isFloating()) {
             RenderBox* floatBox = toRenderBox(current.m_obj);
             FloatingObject* f = m_block->insertFloatingObject(floatBox);
@@ -2700,7 +2703,7 @@ InlineIterator RenderBlock::LineBreaker::nextSegmentBreak(InlineBidiResolver& re
                 }
             }
 
-            width.addUncommittedWidth(borderPaddingMarginStart(flowBox) + borderPaddingMarginEnd(flowBox));
+            width.addUncommittedWidth(inlineLogicalWidth(current.m_obj) + borderPaddingMarginStart(flowBox) + borderPaddingMarginEnd(flowBox));
         } else if (current.m_obj->isReplaced()) {
             RenderBox* replacedBox = toRenderBox(current.m_obj);
 

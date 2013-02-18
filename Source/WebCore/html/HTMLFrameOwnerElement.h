@@ -74,7 +74,7 @@ private:
 
 inline HTMLFrameOwnerElement* toFrameOwnerElement(Node* node)
 {
-    ASSERT(!node || node->isFrameOwnerElement());
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isFrameOwnerElement());
     return static_cast<HTMLFrameOwnerElement*>(node);
 }
 
@@ -93,7 +93,7 @@ public:
 
     static bool canLoadFrame(HTMLFrameOwnerElement* owner)
     {
-        for (Node* node = owner; node; node = node->parentOrHostNode()) {
+        for (Node* node = owner; node; node = node->parentOrShadowHostNode()) {
             if (disabledSubtreeRoots().contains(node))
                 return false;
         }

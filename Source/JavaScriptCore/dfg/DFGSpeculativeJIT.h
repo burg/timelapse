@@ -54,7 +54,6 @@ class SpeculateCellOperand;
 class SpeculateBooleanOperand;
 
 enum GeneratedOperandType { GeneratedOperandTypeUnknown, GeneratedOperandInteger, GeneratedOperandDouble, GeneratedOperandJSValue};
-enum SpeculationDirection { ForwardSpeculation, BackwardSpeculation };
 
 // === SpeculativeJIT ===
 //
@@ -2041,9 +2040,9 @@ public:
     void compileObjectEquality(Node*);
     void compileObjectToObjectOrOtherEquality(Edge leftChild, Edge rightChild);
     void compileValueAdd(Node*);
-    void compileNonStringCellOrOtherLogicalNot(Edge value, bool needSpeculationCheck);
+    void compileObjectOrOtherLogicalNot(Edge value, bool needSpeculationCheck);
     void compileLogicalNot(Node*);
-    void emitNonStringCellOrOtherBranch(Edge value, BlockIndex taken, BlockIndex notTaken, bool needSpeculationCheck);
+    void emitObjectOrOtherBranch(Edge value, BlockIndex taken, BlockIndex notTaken, bool needSpeculationCheck);
     void emitBranch(Node*);
     
     void compileIntegerCompare(Node*, MacroAssembler::RelationalCondition);
@@ -2089,6 +2088,8 @@ public:
     void compileArithMul(Node*);
 #if CPU(X86) || CPU(X86_64)
     void compileIntegerArithDivForX86(Node*);
+#elif CPU(APPLE_ARMV7S)
+    void compileIntegerArithDivForARMv7s(Node*);
 #endif
     void compileArithMod(Node*);
     void compileSoftModulo(Node*);

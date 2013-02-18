@@ -71,12 +71,12 @@ void SandboxExtension::Handle::encode(CoreIPC::ArgumentEncoder& encoder) const
     m_sandboxExtension = 0;
 }
 
-bool SandboxExtension::Handle::decode(CoreIPC::ArgumentDecoder* decoder, Handle& result)
+bool SandboxExtension::Handle::decode(CoreIPC::ArgumentDecoder& decoder, Handle& result)
 {
     ASSERT(!result.m_sandboxExtension);
 
     CoreIPC::DataReference dataReference;
-    if (!decoder->decode(dataReference))
+    if (!decoder.decode(dataReference))
         return false;
 
     if (dataReference.isEmpty())
@@ -111,13 +111,13 @@ void SandboxExtension::HandleArray::allocate(size_t size)
 
 SandboxExtension::Handle& SandboxExtension::HandleArray::operator[](size_t i)
 {
-    ASSERT(i < m_size);    
+    ASSERT_WITH_SECURITY_IMPLICATION(i < m_size); 
     return m_data[i];
 }
 
 const SandboxExtension::Handle& SandboxExtension::HandleArray::operator[](size_t i) const
 {
-    ASSERT(i < m_size);
+    ASSERT_WITH_SECURITY_IMPLICATION(i < m_size);
     return m_data[i];
 }
 
@@ -134,14 +134,14 @@ void SandboxExtension::HandleArray::encode(CoreIPC::ArgumentEncoder& encoder) co
     
 }
 
-bool SandboxExtension::HandleArray::decode(CoreIPC::ArgumentDecoder* decoder, SandboxExtension::HandleArray& handles)
+bool SandboxExtension::HandleArray::decode(CoreIPC::ArgumentDecoder& decoder, SandboxExtension::HandleArray& handles)
 {
     uint64_t size;
-    if (!decoder->decode(size))
+    if (!decoder.decode(size))
         return false;
     handles.allocate(size);
     for (size_t i = 0; i < size; i++) {
-        if (!decoder->decode(handles[i]))
+        if (!decoder.decode(handles[i]))
             return false;
     }
     return true;

@@ -32,6 +32,7 @@
  * @constructor
  * @extends {WebInspector.View}
  * @param {WebInspector.ProfilesPanel} parent
+ * @param {WebInspector.HeapProfileHeader} profile
  */
 WebInspector.HeapSnapshotView = function(parent, profile)
 {
@@ -40,8 +41,7 @@ WebInspector.HeapSnapshotView = function(parent, profile)
     this.element.addStyleClass("heap-snapshot-view");
 
     this.parent = parent;
-    this.parent.addEventListener("profile added", this._updateBaseOptions, this);
-    this.parent.addEventListener("profile added", this._updateFilterOptions, this);
+    this.parent.addEventListener("profile added", this._onProfileHeaderAdded, this);
 
     this.viewsContainer = document.createElement("div");
     this.viewsContainer.addStyleClass("views-container");
@@ -120,6 +120,7 @@ WebInspector.HeapSnapshotView = function(parent, profile)
     }
 
     this._profileUid = profile.uid;
+    this._profileTypeId = profile.profileType().id;
 
     this.baseSelectElement = document.createElement("select");
     this.baseSelectElement.className = "status-bar-item";
@@ -734,6 +735,17 @@ WebInspector.HeapSnapshotView.prototype = {
         }
     },
 
+    /**
+     * @param {WebInspector.Event} event
+     */
+    _onProfileHeaderAdded: function(event)
+    {
+        if (!event.data || event.data.type !== this._profileTypeId)
+            return;
+        this._updateBaseOptions();
+        this._updateFilterOptions();
+    },
+
     __proto__: WebInspector.View.prototype
 }
 
@@ -763,7 +775,7 @@ WebInspector.HeapSnapshotProfileType.prototype = {
     buttonClicked: function(profilesPanel)
     {
         profilesPanel.takeHeapSnapshot();
-        return false;
+        return true;
     },
 
     get treeItemTitle()
@@ -789,7 +801,7 @@ WebInspector.HeapSnapshotProfileType.prototype = {
 
     /**
      * @override
-     * @param {ProfilerAgent.ProfileHeader} profile
+     * @param {HeapProfilerAgent.ProfileHeader} profile
      * @return {WebInspector.ProfileHeader}
      */
     createProfile: function(profile)
@@ -867,7 +879,7 @@ WebInspector.HeapProfileHeader.prototype = {
 
     startSnapshotTransfer: function()
     {
-        ProfilerAgent.getHeapSnapshot(this.uid);
+        HeapProfilerAgent.getHeapSnapshot(this.uid);
     },
 
     snapshotConstructorName: function()
@@ -974,7 +986,7 @@ WebInspector.HeapProfileHeader.prototype = {
             this._receiver = fileOutputStream;
             this._savedChunks = 0;
             this._updateTransferProgress(0, this._totalNumberOfChunks);
-            ProfilerAgent.getHeapSnapshot(this.uid);
+            HeapProfilerAgent.getHeapSnapshot(this.uid);
         }
         this._savingToFile = true;
         this._fileName = this._fileName || "Heap-" + new Date().toISO8601Compact() + ".heapsnapshot";

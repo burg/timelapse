@@ -79,7 +79,7 @@ String WebKitCSSViewportRule::cssText() const
 void WebKitCSSViewportRule::reattach(StyleRuleBase* rule)
 {
     ASSERT(rule);
-    ASSERT(rule->isViewportRule());
+    ASSERT_WITH_SECURITY_IMPLICATION(rule->isViewportRule());
     m_viewportRule = static_cast<StyleRuleViewport*>(rule);
 
     if (m_propertiesCSSOMWrapper)
@@ -90,8 +90,8 @@ void WebKitCSSViewportRule::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CSS);
     CSSRule::reportMemoryUsage(memoryObjectInfo);
-    info.addMember(m_viewportRule);
-    info.addMember(m_propertiesCSSOMWrapper);
+    info.addMember(m_viewportRule, "viewportRule");
+    info.addMember(m_propertiesCSSOMWrapper, "propertiesCSSOMWrapper");
 }
 
 } // namespace WebCore

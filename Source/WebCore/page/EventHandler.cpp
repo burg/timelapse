@@ -43,6 +43,7 @@
 #include "Editor.h"
 #include "EditorClient.h"
 #include "EventNames.h"
+#include "ExceptionCodePlaceholder.h"
 #include "FloatPoint.h"
 #include "FloatRect.h"
 #include "FocusController.h"
@@ -256,17 +257,18 @@ public:
 };
 #endif
 
-static inline ScrollGranularity wheelGranularityToScrollGranularity(WheelEvent::DeltaMode deltaMode)
+static inline ScrollGranularity wheelGranularityToScrollGranularity(unsigned deltaMode)
 {
     switch (deltaMode) {
-    case WheelEvent::DOMDeltaPage:
+    case WheelEvent::DOM_DELTA_PAGE:
         return ScrollByPage;
-    case WheelEvent::DOMDeltaLine:
+    case WheelEvent::DOM_DELTA_LINE:
         return ScrollByLine;
-    case WheelEvent::DOMDeltaPixel:
+    case WheelEvent::DOM_DELTA_PIXEL:
+        return ScrollByPixel;
+    default:
         return ScrollByPixel;
     }
-    return ScrollByPixel;
 }
 
 static inline bool scrollNode(float delta, ScrollGranularity granularity, ScrollDirection positiveDirection, ScrollDirection negativeDirection, Node* node, Node** stopNode)
@@ -286,7 +288,7 @@ static inline bool shouldGesturesTriggerActive()
     // If the platform we're on supports GestureTapDown and GestureTapCancel then we'll
     // rely on them to set the active state. Unfortunately there's no generic way to
     // know in advance what event types are supported.
-#if PLATFORM(CHROMIUM) && !OS(ANDROID)
+#if PLATFORM(CHROMIUM)
     return true;
 #else
     return false;
@@ -1921,8 +1923,7 @@ bool EventHandler::dispatchDragEvent(const AtomicString& eventType, Node* dragTa
         event.ctrlKey(), event.altKey(), event.shiftKey(), event.metaKey(),
         0, 0, clipboard);
 
-    ExceptionCode ec;
-    dragTarget->dispatchEvent(me.get(), ec);
+    dragTarget->dispatchEvent(me.get(), IGNORE_EXCEPTION);
     return me->defaultPrevented();
 }
 
@@ -2264,16 +2265,15 @@ bool EventHandler::dispatchMouseEvent(const AtomicString& eventType, Node* targe
                 // node on mouse down if it's selected and inside a focused node. It will be
                 // focused if the user does a mouseup over it, however, because the mouseup
                 // will set a selection inside it, which will call setFocuseNodeIfNeeded.
-                ExceptionCode ec = 0;
                 Node* n = node->isShadowRoot() ? toShadowRoot(node)->host() : node;
                 if (m_frame->selection()->isRange()
-                    && m_frame->selection()->toNormalizedRange()->compareNode(n, ec) == Range::NODE_INSIDE
+                    && m_frame->selection()->toNormalizedRange()->compareNode(n, IGNORE_EXCEPTION) == Range::NODE_INSIDE
                     && n->isDescendantOf(m_frame->document()->focusedNode()))
                     return true;
                     
                 break;
             }
-            node = node->parentOrHostNode();
+            node = node->parentOrShadowHostNode();
         }
 
         // Only change the focus when clicking scrollbars if it can transfered to a mouse focusable node.
@@ -2438,7 +2438,9 @@ bool EventHandler::handleGestureEvent(const PlatformGestureEvent& gestureEvent)
 
     Node* eventTarget = 0;
     Scrollbar* scrollbar = 0;
-    if (gestureEvent.type() == PlatformEvent::GestureScrollEnd || gestureEvent.type() == PlatformEvent::GestureScrollUpdate) {
+    if (gestureEvent.type() == PlatformEvent::GestureScrollEnd
+        || gestureEvent.type() == PlatformEvent::GestureScrollUpdate
+        || gestureEvent.type() == PlatformEvent::GestureScrollUpdateWithoutPropagation) {
         scrollbar = m_scrollbarHandlingScrollGesture.get();
         eventTarget = m_scrollGestureHandlingNode.get();
     }
@@ -2500,6 +2502,7 @@ bool EventHandler::handleGestureEvent(const PlatformGestureEvent& gestureEvent)
     case PlatformEvent::GestureScrollBegin:
         return handleGestureScrollBegin(gestureEvent);
     case PlatformEvent::GestureScrollUpdate:
+    case PlatformEvent::GestureScrollUpdateWithoutPropagation:
         return handleGestureScrollUpdate(gestureEvent);
     case PlatformEvent::GestureTap:
         return handleGestureTap(gestureEvent);
@@ -2639,11 +2642,11 @@ bool EventHandler::passGestureEventToWidgetIfPossible(const PlatformGestureEvent
     return false;
 }
 
-static const Node* closestScrollableNodeInDocumentIfPossibleOrSelfIfNotScrollable(const Node* node)
+static const Node* closestScrollableNodeCandidate(const Node* node)
 {
     for (const Node* scrollableNode = node; scrollableNode; scrollableNode = scrollableNode->parentNode()) {
         if (scrollableNode->isDocumentNode())
-            break;
+            return scrollableNode;
         RenderObject* renderer = scrollableNode->renderer();
         if (renderer && renderer->isBox() && toRenderBox(renderer)->canBeScrolledAndHasScrollableArea())
             return scrollableNode;
@@ -2700,7 +2703,7 @@ bool EventHandler::handleGestureScrollUpdate(const PlatformGestureEvent& gesture
 
     // Otherwise if this is the correct view for the event, find the closest scrollable
     // ancestor of the targeted node and scroll the layer that contains this node's renderer.
-    node = closestScrollableNodeInDocumentIfPossibleOrSelfIfNotScrollable(node);
+    node = closestScrollableNodeCandidate(node);
     if (!node)
         return false;
 
@@ -2708,10 +2711,14 @@ bool EventHandler::handleGestureScrollUpdate(const PlatformGestureEvent& gesture
     if (!latchedRenderer)
         return false;
 
+    RenderLayer::ScrollPropagation shouldPropagate = RenderLayer::ShouldPropagateScroll;
+    if (gestureEvent.type() == PlatformEvent::GestureScrollUpdateWithoutPropagation)
+        shouldPropagate = RenderLayer::DontPropagateScroll;
+
     const float scaleFactor = m_frame->pageZoomFactor() * m_frame->frameScaleFactor();
     delta.scale(1 / scaleFactor, 1 / scaleFactor);
 
-    bool result = latchedRenderer->enclosingLayer()->scrollByRecursively(delta, RenderLayer::ScrollOffsetClamped);
+    bool result = latchedRenderer->enclosingLayer()->scrollBy(delta, RenderLayer::ScrollOffsetClamped, shouldPropagate);
 
     if (result)
         setFrameWasScrolledByUser();
@@ -3133,7 +3140,6 @@ bool EventHandler::keyEvent(const PlatformKeyboardEvent& initialKeyEvent)
 
     bool backwardCompatibilityMode = needsKeyboardEventDisambiguationQuirks();
 
-    ExceptionCode ec;
     PlatformKeyboardEvent keyDownEvent = initialKeyEvent;    
     if (keyDownEvent.type() != PlatformEvent::RawKeyDown)
         keyDownEvent.disambiguateKeyDownEvent(PlatformEvent::RawKeyDown, backwardCompatibilityMode);
@@ -3143,7 +3149,7 @@ bool EventHandler::keyEvent(const PlatformKeyboardEvent& initialKeyEvent)
     keydown->setTarget(node);
 
     if (initialKeyEvent.type() == PlatformEvent::RawKeyDown) {
-        node->dispatchEvent(keydown, ec);
+        node->dispatchEvent(keydown, IGNORE_EXCEPTION);
         // If frame changed as a result of keydown dispatch, then return true to avoid sending a subsequent keypress message to the new frame.
         bool changedFocusedFrame = m_frame->page() && m_frame != m_frame->page()->focusController()->focusedOrMainFrame();
         return keydown->defaultHandled() || keydown->defaultPrevented() || changedFocusedFrame;
@@ -3166,7 +3172,7 @@ bool EventHandler::keyEvent(const PlatformKeyboardEvent& initialKeyEvent)
         keydown->setDefaultHandled();
     }
 
-    node->dispatchEvent(keydown, ec);
+    node->dispatchEvent(keydown, IGNORE_EXCEPTION);
     // If frame changed as a result of keydown dispatch, then return early to avoid sending a subsequent keypress message to the new frame.
     bool changedFocusedFrame = m_frame->page() && m_frame != m_frame->page()->focusController()->focusedOrMainFrame();
     bool keydownResult = keydown->defaultHandled() || keydown->defaultPrevented() || changedFocusedFrame;
@@ -3192,7 +3198,7 @@ bool EventHandler::keyEvent(const PlatformKeyboardEvent& initialKeyEvent)
 #if PLATFORM(MAC)
     keypress->keypressCommands() = keydown->keypressCommands();
 #endif
-    node->dispatchEvent(keypress, ec);
+    node->dispatchEvent(keypress, IGNORE_EXCEPTION);
 
     return keydownResult || keypress->defaultPrevented() || keypress->defaultHandled();
 }
@@ -3546,8 +3552,7 @@ bool EventHandler::handleTextInputEvent(const String& text, Event* underlyingEve
     RefPtr<TextEvent> event = TextEvent::create(m_frame->document()->domWindow(), text, inputType);
     event->setUnderlyingEvent(underlyingEvent);
 
-    ExceptionCode ec;
-    target->dispatchEvent(event, ec);
+    target->dispatchEvent(event, IGNORE_EXCEPTION);
     return event->defaultHandled();
 }
     
@@ -3992,8 +3997,7 @@ bool EventHandler::handleTouchEvent(const PlatformTouchEvent& event)
                 TouchEvent::create(effectiveTouches.get(), targetTouches.get(), changedTouches[state].m_touches.get(),
                                    stateName, touchEventTarget->toNode()->document()->defaultView(),
                                    0, 0, 0, 0, event.ctrlKey(), event.altKey(), event.shiftKey(), event.metaKey());
-            ExceptionCode ec = 0;
-            touchEventTarget->dispatchEvent(touchEvent.get(), ec);
+            touchEventTarget->dispatchEvent(touchEvent.get(), IGNORE_EXCEPTION);
             swallowedEvent = swallowedEvent || touchEvent->defaultPrevented() || touchEvent->defaultHandled();
         }
     }

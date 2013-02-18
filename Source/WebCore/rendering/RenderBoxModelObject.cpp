@@ -534,6 +534,19 @@ LayoutSize RenderBoxModelObject::offsetForInFlowPosition() const
     return LayoutSize();
 }
 
+LayoutSize RenderBoxModelObject::paintOffset() const
+{
+    LayoutSize offset = offsetForInFlowPosition();
+
+#if ENABLE(CSS_EXCLUSIONS)
+    if (isBox() && isFloating())
+        if (ExclusionShapeOutsideInfo* shapeOutside = toRenderBox(this)->exclusionShapeOutsideInfo())
+            offset -= shapeOutside->shapeLogicalOffset();
+#endif
+
+    return offset;
+}
+
 LayoutUnit RenderBoxModelObject::offsetLeft() const
 {
     // Note that RenderInline and RenderBox override this to pass a different
@@ -558,95 +571,10 @@ int RenderBoxModelObject::pixelSnappedOffsetHeight() const
     return snapSizeToPixel(offsetHeight(), offsetTop());
 }
 
-LayoutUnit RenderBoxModelObject::computedCSSPaddingTop() const
+LayoutUnit RenderBoxModelObject::computedCSSPadding(Length padding) const
 {
     LayoutUnit w = 0;
     RenderView* renderView = 0;
-    Length padding = style()->paddingTop();
-    if (padding.isPercent())
-        w = containingBlockLogicalWidthForContent();
-    else if (padding.isViewportPercentage())
-        renderView = view();
-    return minimumValueForLength(padding, w, renderView);
-}
-
-LayoutUnit RenderBoxModelObject::computedCSSPaddingBottom() const
-{
-    LayoutUnit w = 0;
-    RenderView* renderView = 0;
-    Length padding = style()->paddingBottom();
-    if (padding.isPercent())
-        w = containingBlockLogicalWidthForContent();
-    else if (padding.isViewportPercentage())
-        renderView = view();
-    return minimumValueForLength(padding, w, renderView);
-}
-
-LayoutUnit RenderBoxModelObject::computedCSSPaddingLeft() const
-{
-    LayoutUnit w = 0;
-    RenderView* renderView = 0;
-    Length padding = style()->paddingLeft();
-    if (padding.isPercent())
-        w = containingBlockLogicalWidthForContent();
-    else if (padding.isViewportPercentage())
-        renderView = view();
-    return minimumValueForLength(padding, w, renderView);
-}
-
-LayoutUnit RenderBoxModelObject::computedCSSPaddingRight() const
-{
-    LayoutUnit w = 0;
-    RenderView* renderView = 0;
-    Length padding = style()->paddingRight();
-    if (padding.isPercent())
-        w = containingBlockLogicalWidthForContent();
-    else if (padding.isViewportPercentage())
-        renderView = view();
-    return minimumValueForLength(padding, w, renderView);
-}
-
-LayoutUnit RenderBoxModelObject::computedCSSPaddingBefore() const
-{
-    LayoutUnit w = 0;
-    RenderView* renderView = 0;
-    Length padding = style()->paddingBefore();
-    if (padding.isPercent())
-        w = containingBlockLogicalWidthForContent();
-    else if (padding.isViewportPercentage())
-        renderView = view();
-    return minimumValueForLength(padding, w, renderView);
-}
-
-LayoutUnit RenderBoxModelObject::computedCSSPaddingAfter() const
-{
-    LayoutUnit w = 0;
-    RenderView* renderView = 0;
-    Length padding = style()->paddingAfter();
-    if (padding.isPercent())
-        w = containingBlockLogicalWidthForContent();
-    else if (padding.isViewportPercentage())
-        renderView = view();
-    return minimumValueForLength(padding, w, renderView);
-}
-
-LayoutUnit RenderBoxModelObject::computedCSSPaddingStart() const
-{
-    LayoutUnit w = 0;
-    RenderView* renderView = 0;
-    Length padding = style()->paddingStart();
-    if (padding.isPercent())
-        w = containingBlockLogicalWidthForContent();
-    else if (padding.isViewportPercentage())
-        renderView = view();
-    return minimumValueForLength(padding, w, renderView);
-}
-
-LayoutUnit RenderBoxModelObject::computedCSSPaddingEnd() const
-{
-    LayoutUnit w = 0;
-    RenderView* renderView = 0;
-    Length padding = style()->paddingEnd();
     if (padding.isPercent())
         w = containingBlockLogicalWidthForContent();
     else if (padding.isViewportPercentage())
@@ -1094,7 +1022,7 @@ IntSize RenderBoxModelObject::calculateFillTileSize(const FillLayer* fillLayer, 
 
             if (layerWidth.isFixed())
                 tileSize.setWidth(layerWidth.value());
-            else if (layerWidth.isPercent() || layerHeight.isViewportPercentage())
+            else if (layerWidth.isPercent() || layerWidth.isViewportPercentage())
                 tileSize.setWidth(valueForLength(layerWidth, positioningAreaSize.width(), renderView));
             
             if (layerHeight.isFixed())

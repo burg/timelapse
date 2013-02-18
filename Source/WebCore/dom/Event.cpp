@@ -122,6 +122,11 @@ bool Event::isMouseEvent() const
     return false;
 }
 
+bool Event::isFocusEvent() const
+{
+    return false;
+}
+
 bool Event::isKeyboardEvent() const
 {
     return false;
@@ -159,10 +164,10 @@ void Event::storeResult(const String&)
 void Event::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::DOM);
-    info.addMember(m_type);
-    info.addMember(m_currentTarget);
-    info.addMember(m_target);
-    info.addMember(m_underlyingEvent);
+    info.addMember(m_type, "type");
+    info.addMember(m_currentTarget, "currentTarget");
+    info.addMember(m_target, "target");
+    info.addMember(m_underlyingEvent, "underlyingEvent");
 }
 
 PassRefPtr<Event> Event::cloneFor(HTMLIFrameElement*) const

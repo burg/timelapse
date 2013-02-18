@@ -60,7 +60,6 @@ WebInspector.FilteredItemSelectionDialog = function(delegate)
     this._itemElementsContainer = this._viewportControl.element;
     this._itemElementsContainer.addStyleClass("container");
     this._itemElementsContainer.addStyleClass("monospace");
-    this._itemElementsContainer.addEventListener("mousemove", this._onMouseMove.bind(this), false);
     this._itemElementsContainer.addEventListener("click", this._onClick.bind(this), false);
     this.element.appendChild(this._itemElementsContainer);
 
@@ -113,8 +112,6 @@ WebInspector.FilteredItemSelectionDialog.prototype = {
 
     onEnter: function()
     {
-        if (typeof this._selectedIndexInFiltered !== "number")
-            return;
         this._delegate.selectItem(this._filteredItems[this._selectedIndexInFiltered], this._promptElement.value.trim());
     },
 
@@ -150,14 +147,14 @@ WebInspector.FilteredItemSelectionDialog.prototype = {
         itemElement._titleSuffixElement = itemElement.createChild("span");
         itemElement._titleSuffixElement.textContent = this._delegate.itemSuffixAt(index);
         itemElement._subtitleElement = itemElement.createChild("div", "filtered-item-list-dialog-subtitle");
-        itemElement._subtitleElement.textContent = this._delegate.itemSubtitleAt(index);
+        itemElement._subtitleElement.textContent = this._delegate.itemSubtitleAt(index) || "\u200B";
         itemElement._index = index;
 
         var key = this._delegate.itemKeyAt(index);
         var ranges = [];
         var match;
         if (this._query) {
-            var regex = this._createSearchRegExp(this._query, true);
+            var regex = this._createSearchRegex(this._query, true);
             while ((match = regex.exec(key)) !== null && match[0])
                 ranges.push({ offset: match.index, length: regex.lastIndex - match.index });
             if (ranges.length)
@@ -170,94 +167,156 @@ WebInspector.FilteredItemSelectionDialog.prototype = {
     },
 
     /**
-     * @param {string} query
-     * @param {boolean=} isGlobal
-     */
-    _createSearchRegExp: function(query, isGlobal)
-    {
-        return this._innerCreateSearchRegExp(this._delegate.rewriteQuery(query), isGlobal);
-    },
-
-    /**
      * @param {?string} query
      * @param {boolean=} isGlobal
      */
-    _innerCreateSearchRegExp: function(query, isGlobal)
+    _createSearchRegex: function(query, isGlobal)
     {
-        if (!query)
-            return new RegExp(".*");
-        query = query.trim();
+        const toEscape = String.regexSpecialCharacters();
+        var regexString = "";
+        for (var i = 0; i < query.length; ++i) {
+            var c = query.charAt(i);
+            if (toEscape.indexOf(c) !== -1)
+                c = "\\" + c;
+            if (i)
+                regexString += "[^" + c + "]*";
+            regexString += c;
+        }
+        return new RegExp(regexString, "i" + (isGlobal ? "g" : ""));
+    },
 
-        var ignoreCase = (query === query.toLowerCase());
-        var regExpString = query.escapeForRegExp().replace(/\\\*/g, ".*").replace(/\\\?/g, ".")
-        if (ignoreCase)
-            regExpString = regExpString.replace(/(?!^)(\\\.|[_:-])/g, "[^._:-]*$1");
-        else
-            regExpString = regExpString.replace(/(?!^)(\\\.|[A-Z_:-])/g, "[^.A-Z_:-]*$1");
-        regExpString = regExpString;
-        return new RegExp(regExpString, (ignoreCase ? "i" : "") + (isGlobal ? "g" : ""));
+    /**
+     * @param {string} query
+     * @param {boolean} ignoreCase
+     * @param {boolean} camelCase
+     * @return {RegExp}
+     */
+    _createScoringRegex: function(query, ignoreCase, camelCase)
+    {
+        if (!camelCase || (camelCase && ignoreCase))
+            query = query.toUpperCase();
+        var regexString = "";
+        for (var i = 0; i < query.length; ++i) {
+            var c = query.charAt(i);
+            if (c < "A" || c > "Z")
+               continue;
+            if (regexString)
+               regexString += camelCase ? "[^A-Z]*" : "[^-_ .]*[-_ .]";
+            regexString += c;
+        }
+        if (!camelCase)
+            regexString = "(?:^|[-_ .])" + regexString;
+        return new RegExp(regexString, camelCase ? "" : "i");
     },
 
     _filterItems: function()
     {
         delete this._filterTimer;
 
-        var query = this._promptElement.value;
-        this._query = query.trim();
-        var regex = this._createSearchRegExp(query);
+        var query = this._delegate.rewriteQuery(this._promptElement.value.trim());
+        this._query = query;
 
-        var oldSelectedAbsoluteIndex = this._filteredItems[this._selectedIndexInFiltered];
+        var ignoreCase = (query === query.toLowerCase());
+
+        var filterRegex = query ? this._createSearchRegex(query) : null;
+        var camelCaseScoringRegex = query ? this._createScoringRegex(query, ignoreCase, true) : null;
+        var underscoreScoringRegex = query ? this._createScoringRegex(query, ignoreCase, false) : null;
+
+        var oldSelectedAbsoluteIndex = this._selectedIndexInFiltered ? this._filteredItems[this._selectedIndexInFiltered] : null;
         this._filteredItems = [];
         this._selectedIndexInFiltered = 0;
+
+        var cachedKeys = new Array(this._delegate.itemsCount());
+        var scores = query ? new Array(this._delegate.itemsCount()) : null;
+
         for (var i = 0; i < this._delegate.itemsCount(); ++i) {
-            var title = this._delegate.itemTitleAt(i);
-            if (regex.test(this._delegate.itemKeyAt(i))) {
-                if (i === oldSelectedAbsoluteIndex) 
-                    this._selectedIndexInFiltered = this._filteredItems.length;
-                this._filteredItems.push(i);
+            var key = this._delegate.itemKeyAt(i);
+            if (filterRegex && !filterRegex.test(key))
+                continue;
+            cachedKeys[i] = key;
+            this._filteredItems.push(i);
+
+            if (!filterRegex)
+                continue;
+
+            var score = 0;
+            if (underscoreScoringRegex.test(key))
+                score += 10;
+            if (camelCaseScoringRegex.test(key))
+                score += ignoreCase ? 10 : 20;
+            for (var j = 0; j < key.length && j < query.length; ++j) {
+                if (key[j] === query[j])
+                    score++;
+                if (key[j].toUpperCase() === query[j].toUpperCase())
+                    score++;
+                else
+                    break;
             }
+            scores[i] = score;
         }
 
+        function compareFunction(index1, index2)
+        {
+            if (scores) {
+                var score1 = scores[index1];
+                var score2 = scores[index2];
+                if (score1 > score2)
+                    return -1;
+                if (score1 < score2)
+                    return 1;
+            }
+            var key1 = cachedKeys[index1];
+            var key2 = cachedKeys[index2];
+            return key1.compareTo(key2);
+        }
+
+        const numberOfItemsToSort = 100;
+        if (this._filteredItems.length > numberOfItemsToSort)
+            this._filteredItems.sortRange(compareFunction.bind(this), 0, this._filteredItems.length - 1, numberOfItemsToSort);
+        else
+            this._filteredItems.sort(compareFunction.bind(this));
+
+        for (var i = 0; i < this._filteredItems.length; ++i) {
+            if (this._filteredItems[i] === oldSelectedAbsoluteIndex) {
+                this._selectedIndexInFiltered = i;
+                break;
+            }
+        }
         this._viewportControl.refresh();
-        this._updateSelection(this._selectedIndexInFiltered);
+        this._updateSelection(this._selectedIndexInFiltered, false);
     },
 
     _onKeyDown: function(event)
     {
-        if (typeof this._selectedIndexInFiltered === "number") {
-            var newSelectedIndex = this._selectedIndexInFiltered;
+        var newSelectedIndex = this._selectedIndexInFiltered;
 
-            function updateSelection(makeLast)
-            {
-                this._viewportControl.scrollItemIntoView(newSelectedIndex, makeLast); 
-                this._updateSelection(newSelectedIndex);
-                event.consume(true);
-            }
-
-            switch (event.keyCode) {
-            case WebInspector.KeyboardShortcut.Keys.Down.code:
-                if (++newSelectedIndex >= this._filteredItems.length)
-                    newSelectedIndex = this._filteredItems.length - 1;
-                updateSelection.call(this, true);
-                break;
-            case WebInspector.KeyboardShortcut.Keys.Up.code:
-                if (--newSelectedIndex < 0)
-                    newSelectedIndex = 0;
-                updateSelection.call(this, false);
-                break;
-            case WebInspector.KeyboardShortcut.Keys.PageDown.code:
-                newSelectedIndex = Math.min(newSelectedIndex + this._viewportControl.rowsPerViewport(), this._filteredItems.length - 1);
-                updateSelection.call(this, true);
-                break;
-            case WebInspector.KeyboardShortcut.Keys.PageUp.code:
-                newSelectedIndex = Math.max(newSelectedIndex - this._viewportControl.rowsPerViewport(), 0);
-                updateSelection.call(this, false);
-                break;
-            }
+        switch (event.keyCode) {
+        case WebInspector.KeyboardShortcut.Keys.Down.code:
+            if (++newSelectedIndex >= this._filteredItems.length)
+                newSelectedIndex = this._filteredItems.length - 1;
+            this._updateSelection(newSelectedIndex, true);
+            event.consume(true);
+            break;
+        case WebInspector.KeyboardShortcut.Keys.Up.code:
+            if (--newSelectedIndex < 0)
+                newSelectedIndex = 0;
+            this._updateSelection(newSelectedIndex, false);
+            event.consume(true);
+            break;
+        case WebInspector.KeyboardShortcut.Keys.PageDown.code:
+            newSelectedIndex = Math.min(newSelectedIndex + this._viewportControl.rowsPerViewport(), this._filteredItems.length - 1);
+            this._updateSelection(newSelectedIndex, true);
+            event.consume(true);
+            break;
+        case WebInspector.KeyboardShortcut.Keys.PageUp.code:
+            newSelectedIndex = Math.max(newSelectedIndex - this._viewportControl.rowsPerViewport(), 0);
+            this._updateSelection(newSelectedIndex, false);
+            event.consume(true);
+            break;
+        default:
+            if (event.keyIdentifier !== "Shift" && event.keyIdentifier !== "Ctrl" && event.keyIdentifier !== "Meta" && event.keyIdentifier !== "Left" && event.keyIdentifier !== "Right")
+                this._scheduleFilter();
         }
-
-        if (event.keyIdentifier !== "Shift" && event.keyIdentifier !== "Ctrl" && event.keyIdentifier !== "Meta" && event.keyIdentifier !== "Left" && event.keyIdentifier !== "Right")
-            this._scheduleFilter();
     },
 
     _scheduleFilter: function()
@@ -269,39 +328,27 @@ WebInspector.FilteredItemSelectionDialog.prototype = {
 
     /**
      * @param {number} index  
+     * @param {boolean} makeLast
      */
-    _updateSelection: function(index)
+    _updateSelection: function(index, makeLast)
     { 
         var element = this._viewportControl.renderedElementAt(this._selectedIndexInFiltered);
         if (element)
             element.removeStyleClass("selected");
+        this._viewportControl.scrollItemIntoView(index, makeLast);
         this._selectedIndexInFiltered = index;
-        element = this._viewportControl.renderedElementAt(index); 
+        element = this._viewportControl.renderedElementAt(index);
         if (element)
             element.addStyleClass("selected");
-        else
-            this._viewportControl.refresh();
     },
 
     _onClick: function(event)
     {
-        var itemElement = event.target.enclosingNodeOrSelfWithClass("item");
+        var itemElement = event.target.enclosingNodeOrSelfWithClass("filtered-item-list-dialog-item");
         if (!itemElement)
             return;
         this._delegate.selectItem(itemElement._index, this._promptElement.value.trim());
         WebInspector.Dialog.hide();
-    },
-
-    _onMouseMove: function(event)
-    {
-        if (event.pageX === this._lastMouseX && event.pageY === this._lastMouseY)
-            return;
-        this._lastMouseX = event.pageX;
-        this._lastMouseY = event.pageY;
-        var itemElement = event.target.enclosingNodeOrSelfWithClass("item");
-        if (!itemElement)
-            return;
-        this._updateSelection(itemElement._index);
     },
 
     /**
@@ -319,7 +366,9 @@ WebInspector.FilteredItemSelectionDialog.prototype = {
     itemElement: function(index)
     {
         var delegateIndex = this._filteredItems[index];
-        return this._createItemElement(delegateIndex); 
+        var element = this._createItemElement(delegateIndex);
+        element._filteredIndex = index;
+        return element;
     },
 
     __proto__: WebInspector.DialogDelegate.prototype
@@ -539,16 +588,6 @@ WebInspector.OpenResourceDialog = function(panel)
         return !!uiSourceCode.parsedURL.lastPathComponent;
     }
     this._uiSourceCodes = this._uiSourceCodes.filter(filterOutEmptyURLs);
-
-    function compareFunction(uiSourceCode1, uiSourceCode2)
-    {
-        return uiSourceCode1.parsedURL.lastPathComponent.compareTo(uiSourceCode2.parsedURL.lastPathComponent);
-    }
-    if (this._uiSourceCodes.length > 1000) {
-        this._uiSourceCodes.sortRange(compareFunction, 0, this._uiSourceCodes.length - 1, 1000);
-        setTimeout(function() { this._uiSourceCodes.sort(compareFunction); }.bind(this), 0);
-    } else
-        this._uiSourceCodes.sort(compareFunction);
 }
 
 WebInspector.OpenResourceDialog.prototype = {

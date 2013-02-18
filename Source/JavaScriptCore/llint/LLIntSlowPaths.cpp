@@ -49,6 +49,7 @@
 #include "LowLevelInterpreter.h"
 #include "ObjectConstructor.h"
 #include "Operations.h"
+#include "StructureRareDataInlines.h"
 #include <wtf/StringPrintStream.h>
 
 namespace JSC { namespace LLInt {
@@ -1430,7 +1431,7 @@ inline SlowPathReturnType setUpCall(ExecState* execCallee, Instruction* pc, Code
             codePtr = functionExecutable->jsCodeEntryFor(kind);
     }
     
-    if (callLinkInfo) {
+    if (!LLINT_ALWAYS_ACCESS_SLOW && callLinkInfo) {
         if (callLinkInfo->isOnList())
             callLinkInfo->remove();
         ExecState* execCaller = execCallee->callerFrame();

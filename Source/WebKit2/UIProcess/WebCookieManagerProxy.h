@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,11 +40,6 @@
 #include "SoupCookiePersistentStorageType.h"
 #endif
 
-namespace CoreIPC {
-    class Connection;
-    class MessageID;
-}
-
 namespace WebKit {
 
 class WebContext;
@@ -57,7 +52,7 @@ class WebCookieManagerProxy : public APIObject, public WebContextSupplement, pri
 public:
     static const Type APIType = TypeCookieManager;
 
-    static const AtomicString& supplementName();
+    static const char* supplementName();
 
     static PassRefPtr<WebCookieManagerProxy> create(WebContext*);
     virtual ~WebCookieManagerProxy();
@@ -102,7 +97,6 @@ private:
 
     // CoreIPC::MessageReceiver
     virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
-    void didReceiveWebCookieManagerProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
 
 #if PLATFORM(MAC)
     void persistHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicy);

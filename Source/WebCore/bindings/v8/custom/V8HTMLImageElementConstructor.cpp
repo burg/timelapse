@@ -77,7 +77,7 @@ static v8::Handle<v8::Value> v8HTMLImageElementConstructorCallback(const v8::Arg
 
     RefPtr<HTMLImageElement> image = HTMLImageElement::createForJSConstructor(document, optionalWidth, optionalHeight);
     v8::Handle<v8::Object> wrapper = args.Holder();
-    V8DOMWrapper::associateObjectWithWrapper(image.release(), &V8HTMLImageElementConstructor::info, wrapper, args.GetIsolate());
+    V8DOMWrapper::associateObjectWithWrapper(image.release(), &V8HTMLImageElementConstructor::info, wrapper, args.GetIsolate(), WrapperConfiguration::Dependent);
     return wrapper;
 }
 
@@ -95,7 +95,7 @@ v8::Persistent<v8::FunctionTemplate> V8HTMLImageElementConstructor::GetTemplate(
     result->SetClassName(v8::String::NewSymbol("HTMLImageElement"));
     result->Inherit(V8HTMLImageElement::GetTemplate(isolate));
 
-    cachedTemplate = v8::Persistent<v8::FunctionTemplate>::New(result);
+    cachedTemplate = v8::Persistent<v8::FunctionTemplate>::New(isolate, result);
     return cachedTemplate;
 }
 

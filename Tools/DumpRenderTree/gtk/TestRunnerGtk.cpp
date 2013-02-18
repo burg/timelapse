@@ -127,11 +127,6 @@ size_t TestRunner::webHistoryItemCount()
             webkit_web_back_forward_list_get_forward_length(list);
 }
 
-unsigned TestRunner::workerThreadCount() const
-{
-    return DumpRenderTreeSupportGtk::workerThreadCount();
-}
-
 JSRetainPtr<JSStringRef> TestRunner::platformName() const
 {
     JSRetainPtr<JSStringRef> platformName(Adopt, JSStringCreateWithUTF8CString("gtk"));
@@ -385,15 +380,6 @@ void TestRunner::setXSSAuditorEnabled(bool flag)
 
     WebKitWebSettings* settings = webkit_web_view_get_settings(view);
     g_object_set(G_OBJECT(settings), "enable-xss-auditor", flag, NULL);
-}
-
-void TestRunner::setFrameFlatteningEnabled(bool flag)
-{
-    WebKitWebView* view = webkit_web_frame_get_web_view(mainFrame);
-    ASSERT(view);
-
-    WebKitWebSettings* settings = webkit_web_view_get_settings(view);
-    g_object_set(G_OBJECT(settings), "enable-frame-flattening", flag, NULL);
 }
 
 void TestRunner::setSpatialNavigationEnabled(bool flag)
@@ -720,31 +706,6 @@ void TestRunner::setAppCacheMaximumSize(unsigned long long size)
     webkit_application_cache_set_maximum_size(size);
 }
 
-bool TestRunner::pauseAnimationAtTimeOnElementWithId(JSStringRef animationName, double time, JSStringRef elementId)
-{    
-    gchar* name = JSStringCopyUTF8CString(animationName);
-    gchar* element = JSStringCopyUTF8CString(elementId);
-    bool returnValue = DumpRenderTreeSupportGtk::pauseAnimation(mainFrame, name, time, element);
-    g_free(name);
-    g_free(element);
-    return returnValue;
-}
-
-bool TestRunner::pauseTransitionAtTimeOnElementWithId(JSStringRef propertyName, double time, JSStringRef elementId)
-{    
-    gchar* name = JSStringCopyUTF8CString(propertyName);
-    gchar* element = JSStringCopyUTF8CString(elementId);
-    bool returnValue = DumpRenderTreeSupportGtk::pauseTransition(mainFrame, name, time, element);
-    g_free(name);
-    g_free(element);
-    return returnValue;
-}
-
-unsigned TestRunner::numberOfActiveAnimations() const
-{
-    return DumpRenderTreeSupportGtk::numberOfActiveAnimations(mainFrame);
-}
-
 static gboolean booleanFromValue(gchar* value)
 {
     return !g_ascii_strcasecmp(value, "true") || !g_ascii_strcasecmp(value, "1");
@@ -931,12 +892,6 @@ void TestRunner::setSerializeHTTPLoads(bool serialize)
     DumpRenderTreeSupportGtk::setSerializeHTTPLoads(serialize);
 }
 
-void TestRunner::setMinimumTimerInterval(double minimumTimerInterval)
-{
-    WebKitWebView* webView = webkit_web_frame_get_web_view(mainFrame);
-    DumpRenderTreeSupportGtk::setMinimumTimerInterval(webView, minimumTimerInterval);
-}
-
 void TestRunner::setTextDirection(JSStringRef direction)
 {
     GOwnPtr<gchar> writingDirection(JSStringCopyUTF8CString(direction));
@@ -1001,16 +956,6 @@ void TestRunner::setPageVisibility(const char*)
 }
 
 void TestRunner::setAutomaticLinkDetectionEnabled(bool)
-{
-    // FIXME: Implement this.
-}
-
-void TestRunner::sendWebIntentResponse(JSStringRef)
-{
-    // FIXME: Implement this.
-}
-
-void TestRunner::deliverWebIntent(JSStringRef, JSStringRef, JSStringRef)
 {
     // FIXME: Implement this.
 }

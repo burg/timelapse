@@ -31,27 +31,59 @@ namespace WebCore {
 
 enum WebVTTNodeType {
     WebVTTNodeTypeNone = 0,
-    WebVTTNodeTypeFuture,
-    WebVTTNodeTypePast
+    WebVTTNodeTypeClass,
+    WebVTTNodeTypeItalic,
+    WebVTTNodeTypeLanguage,
+    WebVTTNodeTypeBold,
+    WebVTTNodeTypeUnderline,
+    WebVTTNodeTypeRuby,
+    WebVTTNodeTypeRubyText,
+    WebVTTNodeTypeVoice
 };
 
-class WebVTTElement : public HTMLElement {
+class WebVTTElement : public Element {
 public:
+    static PassRefPtr<WebVTTElement> create(const WebVTTNodeType, Document*);
     static PassRefPtr<WebVTTElement> create(const QualifiedName&, Document*);
+    PassRefPtr<HTMLElement> createEquivalentHTMLElement(Document*);
+
     virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren() OVERRIDE;
 
-    void setWebVTTNodeType(WebVTTNodeType type) { m_webVTTNodeType = type; }
-    WebVTTNodeType webVTTNodeType() const { return m_webVTTNodeType; }
+    void setWebVTTNodeType(WebVTTNodeType type) { m_webVTTNodeType = static_cast<unsigned>(type); }
+    WebVTTNodeType webVTTNodeType() const { return static_cast<WebVTTNodeType>(m_webVTTNodeType); }
+
+    bool isPastNode() const { return m_isPastNode; }
+    void setIsPastNode(bool value) { m_isPastNode = value; }
+
     virtual bool isWebVTTElement() const OVERRIDE { return true; }
+    AtomicString language() const { return m_language; }
+    void setLanguage(AtomicString value) { m_language = value; }
+
+    static const QualifiedName& voiceAttributeName()
+    {
+        DEFINE_STATIC_LOCAL(QualifiedName, voiceAttr, (nullAtom, "voice", nullAtom));
+        return voiceAttr;
+    }
+    
+    static const QualifiedName& langAttributeName()
+    {
+        DEFINE_STATIC_LOCAL(QualifiedName, voiceAttr, (nullAtom, "lang", nullAtom));
+        return voiceAttr;
+    }
 
 private:
     WebVTTElement(const QualifiedName&, Document*);
-    WebVTTNodeType m_webVTTNodeType;
+    WebVTTElement(WebVTTNodeType, Document*);
+
+    unsigned m_isPastNode : 1;
+    unsigned m_webVTTNodeType : 4;
+    
+    AtomicString m_language;
 };
 
 inline WebVTTElement* toWebVTTElement(Node* node)
 {
-    ASSERT(!node || node->isWebVTTElement());
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isWebVTTElement());
     return static_cast<WebVTTElement*>(node);
 }
 

@@ -64,7 +64,7 @@ public:
     virtual bool resetStyleInheritance() const OVERRIDE { return m_resetStyleInheritance; }
     void setResetStyleInheritance(bool);
 
-    Element* host() const { return toElement(parentOrHostNode()); }
+    Element* host() const { return toElement(parentOrShadowHostNode()); }
     ElementShadow* owner() const { return host() ? host()->shadow() : 0; }
 
     String innerHTML() const;
@@ -128,7 +128,7 @@ inline Element* ShadowRoot::activeElement() const
 
 inline const ShadowRoot* toShadowRoot(const Node* node)
 {
-    ASSERT(!node || node->isShadowRoot());
+    ASSERT_WITH_SECURITY_IMPLICATION(!node || node->isShadowRoot());
     return static_cast<const ShadowRoot*>(node);
 }
 

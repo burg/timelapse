@@ -68,7 +68,49 @@ template<> struct SequenceMemoryInstrumentationTraits<WebCore::CachedResourceCli
 using namespace WTF;
 
 namespace WebCore {
-    
+
+// These response headers are not copied from a revalidated response to the
+// cached response headers. For compatibility, this list is based on Chromium's
+// net/http/http_response_headers.cc.
+const char* const headersToIgnoreAfterRevalidation[] = {
+    "allow",
+    "connection",
+    "etag",
+    "expires",
+    "keep-alive",
+    "last-modified"
+    "proxy-authenticate",
+    "proxy-connection",
+    "trailer",
+    "transfer-encoding",
+    "upgrade",
+    "www-authenticate",
+    "x-frame-options",
+    "x-xss-protection",
+};
+
+// Some header prefixes mean "Don't copy this header from a 304 response.".
+// Rather than listing all the relevant headers, we can consolidate them into
+// this list, also grabbed from Chromium's net/http/http_response_headers.cc.
+const char* const headerPrefixesToIgnoreAfterRevalidation[] = {
+    "content-",
+    "x-content-",
+    "x-webkit-"
+};
+
+static inline bool shouldUpdateHeaderAfterRevalidation(const AtomicString& header)
+{
+    for (size_t i = 0; i < WTF_ARRAY_LENGTH(headersToIgnoreAfterRevalidation); i++) {
+        if (header == headersToIgnoreAfterRevalidation[i])
+            return false;
+    }
+    for (size_t i = 0; i < WTF_ARRAY_LENGTH(headerPrefixesToIgnoreAfterRevalidation); i++) {
+        if (header.startsWith(headerPrefixesToIgnoreAfterRevalidation[i]))
+            return false;
+    }
+    return true;
+}
+
 static ResourceLoadPriority defaultPriorityForResourceType(CachedResource::Type type)
 {
     switch (type) {
@@ -283,8 +325,8 @@ void CachedResource::load(CachedResourceLoader* cachedResourceLoader, const Reso
         const String& lastModified = resourceToRevalidate->response().httpHeaderField("Last-Modified");
         const String& eTag = resourceToRevalidate->response().httpHeaderField("ETag");
         if (!lastModified.isEmpty() || !eTag.isEmpty()) {
-            ASSERT(cachedResourceLoader->cachePolicy() != CachePolicyReload);
-            if (cachedResourceLoader->cachePolicy() == CachePolicyRevalidate)
+            ASSERT(cachedResourceLoader->cachePolicy(type()) != CachePolicyReload);
+            if (cachedResourceLoader->cachePolicy(type()) == CachePolicyRevalidate)
                 m_resourceRequest.setHTTPHeaderField("Cache-Control", "max-age=0");
             if (!lastModified.isEmpty())
                 m_resourceRequest.setHTTPHeaderField("If-Modified-Since", lastModified);
@@ -728,19 +770,22 @@ void CachedResource::switchClientsToRevalidatedResource()
     }
     m_switchingClientsToRevalidatedResource = false;
 }
-    
+
 void CachedResource::updateResponseAfterRevalidation(const ResourceResponse& validatingResponse)
 {
     m_responseTimestamp = currentTime();
 
-    DEFINE_STATIC_LOCAL(const AtomicString, contentHeaderPrefix, ("content-", AtomicString::ConstructFromLiteral));
     // RFC2616 10.3.5
     // Update cached headers from the 304 response
     const HTTPHeaderMap& newHeaders = validatingResponse.httpHeaderFields();
     HTTPHeaderMap::const_iterator end = newHeaders.end();
     for (HTTPHeaderMap::const_iterator it = newHeaders.begin(); it != end; ++it) {
-        // Don't allow 304 response to update content headers, these can't change but some servers send wrong values.
-        if (it->key.startsWith(contentHeaderPrefix, false))
+        // Entity headers should not be sent by servers when generating a 304
+        // response; misconfigured servers send them anyway. We shouldn't allow
+        // such headers to update the original request. We'll base this on the
+        // list defined by RFC2616 7.1, with a few additions for extension headers
+        // we care about.
+        if (!shouldUpdateHeaderAfterRevalidation(it->key))
             continue;
         m_response.setHTTPHeaderField(it->key, it->value);
     }
@@ -863,12 +908,16 @@ unsigned CachedResource::overheadSize() const
     static const int kAverageClientsHashMapSize = 384;
     return sizeof(CachedResource) + m_response.memoryUsage() + kAverageClientsHashMapSize + m_resourceRequest.url().string().length() * 2;
 }
-    
-void CachedResource::setLoadPriority(ResourceLoadPriority loadPriority) 
-{ 
+
+void CachedResource::setLoadPriority(ResourceLoadPriority loadPriority)
+{
     if (loadPriority == ResourceLoadPriorityUnresolved)
+        loadPriority = defaultPriorityForResourceType(type());
+    if (loadPriority == m_loadPriority)
         return;
     m_loadPriority = loadPriority;
+    if (m_loader && m_loader->handle())
+        m_loader->handle()->didChangePriority(loadPriority);
 }
 
 
@@ -895,28 +944,28 @@ void CachedResource::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::CachedResource);
     memoryObjectInfo->setName(url().string());
-    info.addMember(m_resourceRequest);
-    info.addMember(m_fragmentIdentifierForRequest);
-    info.addMember(m_clients);
-    info.addMember(m_accept);
-    info.addMember(m_loader);
-    info.addMember(m_response);
-    info.addMember(m_data);
-    info.addMember(m_cachedMetadata);
-    info.addMember(m_nextInAllResourcesList);
-    info.addMember(m_prevInAllResourcesList);
-    info.addMember(m_nextInLiveResourcesList);
-    info.addMember(m_prevInLiveResourcesList);
-    info.addMember(m_owningCachedResourceLoader);
-    info.addMember(m_resourceToRevalidate);
-    info.addMember(m_proxyResource);
-    info.addMember(m_handlesToRevalidate);
-    info.addMember(m_options);
-    info.addMember(m_decodedDataDeletionTimer);
+    info.addMember(m_resourceRequest, "resourceRequest");
+    info.addMember(m_fragmentIdentifierForRequest, "fragmentIdentifierForRequest");
+    info.addMember(m_clients, "clients");
+    info.addMember(m_accept, "accept");
+    info.addMember(m_loader, "loader");
+    info.addMember(m_response, "response");
+    info.addMember(m_data, "data");
+    info.addMember(m_cachedMetadata, "cachedMetadata");
+    info.addMember(m_nextInAllResourcesList, "nextInAllResourcesList");
+    info.addMember(m_prevInAllResourcesList, "prevInAllResourcesList");
+    info.addMember(m_nextInLiveResourcesList, "nextInLiveResourcesList");
+    info.addMember(m_prevInLiveResourcesList, "prevInLiveResourcesList");
+    info.addMember(m_owningCachedResourceLoader, "owningCachedResourceLoader");
+    info.addMember(m_resourceToRevalidate, "resourceToRevalidate");
+    info.addMember(m_proxyResource, "proxyResource");
+    info.addMember(m_handlesToRevalidate, "handlesToRevalidate");
+    info.addMember(m_options, "options");
+    info.addMember(m_decodedDataDeletionTimer, "decodedDataDeletionTimer");
     info.ignoreMember(m_clientsAwaitingCallback);
 
     if (m_purgeableData && !m_purgeableData->wasPurged())
-        info.addRawBuffer(m_purgeableData.get(), m_purgeableData->size());
+        info.addRawBuffer(m_purgeableData.get(), m_purgeableData->size(), "PurgeableData", "purgeableData");
 }
 
 }

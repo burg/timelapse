@@ -101,13 +101,6 @@ bool EditorClientQt::shouldDeleteRange(Range* range)
     return true;
 }
 
-bool EditorClientQt::shouldShowDeleteInterface(HTMLElement* element)
-{
-    if (QWebPageAdapter::drtRun)
-        return element->getAttribute(classAttr) == "needsDeletionUI";
-    return false;
-}
-
 bool EditorClientQt::isContinuousSpellCheckingEnabled()
 {
     return m_textCheckerClient.isContinousSpellCheckingEnabled();
@@ -230,6 +223,14 @@ void EditorClientQt::didEndEditing()
 }
 
 void EditorClientQt::didWriteSelectionToPasteboard()
+{
+}
+
+void EditorClientQt::willWriteSelectionToPasteboard(Range*)
+{
+}
+
+void EditorClientQt::getClientPasteboardDataForRange(Range*, Vector<String>&, Vector<RefPtr<SharedBuffer> >&)
 {
 }
 

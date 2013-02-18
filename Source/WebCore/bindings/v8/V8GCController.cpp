@@ -156,7 +156,7 @@ static void addImplicitReferencesForNodeWithEventListeners(Node* node, v8::Persi
     v8::V8::AddImplicitReferences(wrapper, listeners.data(), listeners.size());
 }
 
-Node* V8GCController::opaqueRootForGC(Node* node)
+Node* V8GCController::opaqueRootForGC(Node* node, v8::Isolate*)
 {
     // FIXME: Remove the special handling for image elements.
     // The same special handling is in V8GCController::gcTree().
@@ -172,82 +172,13 @@ Node* V8GCController::opaqueRootForGC(Node* node)
         node = ownerElement;
     }
 
-    while (Node* parent = node->parentOrHostNode())
+    while (Node* parent = node->parentOrShadowHostNode())
         node = parent;
 
     return node;
 }
 
-class WrapperVisitor : public v8::PersistentHandleVisitor {
-public:
-    virtual void VisitPersistentHandle(v8::Persistent<v8::Value> value, uint16_t classId) OVERRIDE
-    {
-        ASSERT(value->IsObject());
-        v8::Persistent<v8::Object> wrapper = v8::Persistent<v8::Object>::Cast(value);
-
-        if (classId != v8DOMNodeClassId && classId != v8DOMObjectClassId)
-            return;
-
-        ASSERT(V8DOMWrapper::maybeDOMWrapper(value));
-
-        if (value.IsIndependent())
-            return;
-
-        WrapperTypeInfo* type = toWrapperTypeInfo(wrapper);
-        void* object = toNative(wrapper);
-
-        if (V8MessagePort::info.equals(type)) {
-            // Mark each port as in-use if it's entangled. For simplicity's sake,
-            // we assume all ports are remotely entangled, since the Chromium port
-            // implementation can't tell the difference.
-            MessagePort* port = static_cast<MessagePort*>(object);
-            if (port->isEntangled() || port->hasPendingActivity())
-                m_grouper.keepAlive(wrapper);
-        } else if (V8MutationObserver::info.equals(type)) {
-            // FIXME: Allow opaqueRootForGC to operate on multiple roots and move this logic into V8MutationObserverCustom.
-            MutationObserver* observer = static_cast<MutationObserver*>(object);
-            HashSet<Node*> observedNodes = observer->getObservedNodes();
-            for (HashSet<Node*>::iterator it = observedNodes.begin(); it != observedNodes.end(); ++it)
-                m_grouper.addNodeToGroup(V8GCController::opaqueRootForGC(*it), wrapper);
-        } else {
-            ActiveDOMObject* activeDOMObject = type->toActiveDOMObject(wrapper);
-            if (activeDOMObject && activeDOMObject->hasPendingActivity())
-                m_grouper.keepAlive(wrapper);
-        }
-
-        if (classId == v8DOMNodeClassId) {
-            ASSERT(V8Node::HasInstance(wrapper));
-            ASSERT(!wrapper.IsIndependent());
-
-            Node* node = static_cast<Node*>(object);
-
-            if (node->hasEventListeners())
-                addImplicitReferencesForNodeWithEventListeners(node, wrapper);
-
-            m_grouper.addNodeToGroup(V8GCController::opaqueRootForGC(node), wrapper);
-        } else if (classId == v8DOMObjectClassId) {
-            m_grouper.addObjectToGroup(type->opaqueRootForGC(object, wrapper), wrapper);
-        } else {
-            ASSERT_NOT_REACHED();
-        }
-    }
-
-    void notifyFinished()
-    {
-        m_grouper.apply();
-    }
-
-private:
-    WrapperGrouper m_grouper;
-};
-
-// Regarding a minor GC algorithm for DOM nodes, see this document:
-// https://docs.google.com/a/google.com/presentation/d/1uifwVYGNYTZDoGLyCb7sXa7g49mWNMW2gaWvMN5NLk8/edit#slide=id.p
-//
-// m_edenNodes stores nodes that have wrappers that have been created since the last minor/major GC.
-Vector<Node*>* V8GCController::m_edenNodes = 0;
-
-static void gcTree(Node* startNode)
+static void gcTree(v8::Isolate* isolate, Node* startNode)
 {
     Vector<v8::Persistent<v8::Value>, initialNodeVectorSize> newSpaceWrappers;
 
@@ -265,13 +196,11 @@ static void gcTree(Node* startNode)
             // Maybe should image elements be active DOM nodes?
             // See https://code.google.com/p/chromium/issues/detail?id=164882
             if (!node->isV8CollectableDuringMinorGC() || (node->hasTagName(HTMLNames::imgTag) && static_cast<HTMLImageElement*>(node)->hasPendingActivity())) {
-                // The fact that we encounter a node that is not in the Eden space
-                // implies that its wrapper might be in the old space of V8.
-                // This indicates that the minor GC cannot anyway judge reachability
-                // of this DOM tree. Thus we give up traversing the DOM tree.
+                // This node is not in the new space of V8. This indicates that
+                // the minor GC cannot anyway judge reachability of this DOM tree.
+                // Thus we give up traversing the DOM tree.
                 return;
             }
-            // A once traversed node is removed from the Eden space.
             node->setV8CollectableDuringMinorGC(false);
             newSpaceWrappers.append(node->wrapper());
         }
@@ -292,53 +221,155 @@ static void gcTree(Node* startNode)
     // stored in newSpaceWrappers and are expected to exist in the new space of V8.
     // We report those wrappers to V8 as an object group.
     for (size_t i = 0; i < newSpaceWrappers.size(); i++)
-        newSpaceWrappers[i].MarkPartiallyDependent();
+        newSpaceWrappers[i].MarkPartiallyDependent(isolate);
     if (newSpaceWrappers.size() > 0)
         v8::V8::AddObjectGroup(&newSpaceWrappers[0], newSpaceWrappers.size());
 }
 
-void V8GCController::didCreateWrapperForNode(Node* node)
-{
-    // To make minor GC cycle time bounded, we limit the number of wrappers handled
-    // by each minor GC cycle to 10000. This value was selected so that the minor
-    // GC cycle time is bounded to 20 ms in a case where the new space size
-    // is 16 MB and it is full of wrappers (which is almost the worst case).
-    // Practically speaking, as far as I crawled real web applications,
-    // the number of wrappers handled by each minor GC cycle is at most 3000.
-    // So this limit is mainly for pathological micro benchmarks.
-    const unsigned wrappersHandledByEachMinorGC = 10000;
-    ASSERT(!node->wrapper().IsEmpty());
-    if (!m_edenNodes)
-        m_edenNodes = adoptPtr(new Vector<Node*>).leakPtr();
-    if (m_edenNodes->size() <= wrappersHandledByEachMinorGC) {
-        // A node of a newly created wrapper is put into the Eden space.
-        m_edenNodes->append(node);
+// Regarding a minor GC algorithm for DOM nodes, see this document:
+// https://docs.google.com/a/google.com/presentation/d/1uifwVYGNYTZDoGLyCb7sXa7g49mWNMW2gaWvMN5NLk8/edit#slide=id.p
+class MinorGCWrapperVisitor : public v8::PersistentHandleVisitor {
+public:
+    explicit MinorGCWrapperVisitor(v8::Isolate* isolate)
+        : m_isolate(isolate)
+    {
+        UNUSED_PARAM(m_isolate);
+    }
+
+    virtual void VisitPersistentHandle(v8::Persistent<v8::Value> value, uint16_t classId) OVERRIDE
+    {
+        // A minor DOM GC can collect only Nodes.
+        if (classId != v8DOMNodeClassId)
+            return;
+
+        // To make minor GC cycle time bounded, we limit the number of wrappers handled
+        // by each minor GC cycle to 10000. This value was selected so that the minor
+        // GC cycle time is bounded to 20 ms in a case where the new space size
+        // is 16 MB and it is full of wrappers (which is almost the worst case).
+        // Practically speaking, as far as I crawled real web applications,
+        // the number of wrappers handled by each minor GC cycle is at most 3000.
+        // So this limit is mainly for pathological micro benchmarks.
+        const unsigned wrappersHandledByEachMinorGC = 10000;
+        if (m_nodesInNewSpace.size() >= wrappersHandledByEachMinorGC)
+            return;
+
+        ASSERT(value->IsObject());
+        v8::Persistent<v8::Object> wrapper = v8::Persistent<v8::Object>::Cast(value);
+        ASSERT(V8DOMWrapper::maybeDOMWrapper(value));
+        ASSERT(V8Node::HasInstance(wrapper, m_isolate));
+        Node* node = V8Node::toNative(wrapper);
+        m_nodesInNewSpace.append(node);
         node->setV8CollectableDuringMinorGC(true);
     }
-}
+
+    void notifyFinished()
+    {
+        for (size_t i = 0; i < m_nodesInNewSpace.size(); i++) {
+            ASSERT(!m_nodesInNewSpace[i]->wrapper().IsEmpty());
+            if (m_nodesInNewSpace[i]->isV8CollectableDuringMinorGC()) // This branch is just for performance.
+                gcTree(m_isolate, m_nodesInNewSpace[i]);
+        }
+    }
+
+private:
+    Vector<Node*> m_nodesInNewSpace;
+    v8::Isolate* m_isolate;
+};
+
+class MajorGCWrapperVisitor : public v8::PersistentHandleVisitor {
+public:
+    explicit MajorGCWrapperVisitor(v8::Isolate* isolate)
+        : m_isolate(isolate)
+    {
+    }
+
+    virtual void VisitPersistentHandle(v8::Persistent<v8::Value> value, uint16_t classId) OVERRIDE
+    {
+        ASSERT(value->IsObject());
+        v8::Persistent<v8::Object> wrapper = v8::Persistent<v8::Object>::Cast(value);
+
+        if (classId != v8DOMNodeClassId && classId != v8DOMObjectClassId)
+            return;
+
+        ASSERT(V8DOMWrapper::maybeDOMWrapper(value));
+
+        if (value.IsIndependent(m_isolate))
+            return;
+
+        WrapperTypeInfo* type = toWrapperTypeInfo(wrapper);
+        void* object = toNative(wrapper);
+
+        if (V8MessagePort::info.equals(type)) {
+            // Mark each port as in-use if it's entangled. For simplicity's sake,
+            // we assume all ports are remotely entangled, since the Chromium port
+            // implementation can't tell the difference.
+            MessagePort* port = static_cast<MessagePort*>(object);
+            if (port->isEntangled() || port->hasPendingActivity())
+                m_grouper.keepAlive(wrapper);
+        } else if (V8MutationObserver::info.equals(type)) {
+            // FIXME: Allow opaqueRootForGC to operate on multiple roots and move this logic into V8MutationObserverCustom.
+            MutationObserver* observer = static_cast<MutationObserver*>(object);
+            HashSet<Node*> observedNodes = observer->getObservedNodes();
+            for (HashSet<Node*>::iterator it = observedNodes.begin(); it != observedNodes.end(); ++it)
+                m_grouper.addNodeToGroup(V8GCController::opaqueRootForGC(*it, m_isolate), wrapper);
+        } else {
+            ActiveDOMObject* activeDOMObject = type->toActiveDOMObject(wrapper);
+            if (activeDOMObject && activeDOMObject->hasPendingActivity())
+                m_grouper.keepAlive(wrapper);
+        }
+
+        if (classId == v8DOMNodeClassId) {
+            UNUSED_PARAM(m_isolate);
+            ASSERT(V8Node::HasInstance(wrapper, m_isolate));
+            ASSERT(!wrapper.IsIndependent(m_isolate));
+
+            Node* node = static_cast<Node*>(object);
+
+            if (node->hasEventListeners())
+                addImplicitReferencesForNodeWithEventListeners(node, wrapper);
+
+            m_grouper.addNodeToGroup(V8GCController::opaqueRootForGC(node, m_isolate), wrapper);
+        } else if (classId == v8DOMObjectClassId) {
+            m_grouper.addObjectToGroup(type->opaqueRootForGC(object, wrapper, m_isolate), wrapper);
+        } else {
+            ASSERT_NOT_REACHED();
+        }
+    }
+
+    void notifyFinished()
+    {
+        m_grouper.apply();
+    }
+
+private:
+    WrapperGrouper m_grouper;
+    v8::Isolate* m_isolate;
+};
 
 void V8GCController::gcPrologue(v8::GCType type, v8::GCCallbackFlags flags)
 {
+    // It would be nice if the GC callbacks passed the Isolate directly....
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
     if (type == v8::kGCTypeScavenge)
-        minorGCPrologue();
+        minorGCPrologue(isolate);
     else if (type == v8::kGCTypeMarkSweepCompact)
         majorGCPrologue();
-
-    if (isMainThreadOrGCThread() && m_edenNodes) {
-        // The Eden space is cleared at every minor/major GC.
-        m_edenNodes->clear();
-    }
 }
 
-void V8GCController::minorGCPrologue()
+void V8GCController::minorGCPrologue(v8::Isolate* isolate)
 {
     TRACE_EVENT_BEGIN0("v8", "GC");
 
-    if (isMainThreadOrGCThread() && m_edenNodes) {
-        for (size_t i = 0; i < m_edenNodes->size(); i++) {
-            ASSERT(!m_edenNodes->at(i)->wrapper().IsEmpty());
-            if (m_edenNodes->at(i)->isV8CollectableDuringMinorGC()) // This branch is just for performance.
-                gcTree(m_edenNodes->at(i));
+    if (isMainThread()) {
+        v8::Isolate* isolate = v8::Isolate::GetCurrent();
+        v8::HandleScope scope;
+
+        // A minor GC can handle the main world only.
+        DOMWrapperWorld* world = worldForEnteredContextWithoutContextCheck();
+        if (world && world->isMainWorld()) {
+            MinorGCWrapperVisitor visitor(isolate);
+            v8::V8::VisitHandlesForPartialDependence(isolate, &visitor);
+            visitor.notifyFinished();
         }
     }
 }
@@ -348,14 +379,14 @@ void V8GCController::majorGCPrologue()
 {
     TRACE_EVENT_BEGIN0("v8", "GC");
 
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
     v8::HandleScope scope;
 
-    WrapperVisitor visitor;
+    MajorGCWrapperVisitor visitor(isolate);
     v8::V8::VisitHandlesWithClassIds(&visitor);
     visitor.notifyFinished();
 
-    V8PerIsolateData* data = V8PerIsolateData::current();
-    data->stringCache()->clearOnGC();
+    V8PerIsolateData::from(isolate)->stringCache()->clearOnGC();
 }
 
 static int workingSetEstimateMB = 0;

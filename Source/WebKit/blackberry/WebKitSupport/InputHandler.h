@@ -97,6 +97,10 @@ public:
 
     void setInputValue(const WTF::String&);
 
+    void focusNextField();
+    void focusPreviousField();
+    void submitForm();
+
     void setDelayKeyboardVisibilityChange(bool value);
     void processPendingKeyboardVisibilityChange();
 
@@ -153,6 +157,8 @@ public:
 
     void callRequestCheckingFor(PassRefPtr<WebCore::SpellCheckRequest>);
     void setSystemSpellCheckStatus(bool enabled) { m_spellCheckStatusConfirmed = true; m_globalSpellCheckStatus = enabled; }
+
+    void restoreViewState();
 
 private:
     enum PendingKeyboardStateChange { NoChange, Visible, NotVisible };
@@ -213,11 +219,17 @@ private:
     bool shouldSpellCheckElement(const WebCore::Element*) const;
     bool didSpellCheckWord() const { return m_didSpellCheckWord; }
 
+    void updateFormState();
+
     bool shouldNotifyWebView(const Platform::KeyboardEvent&);
 
     WebPagePrivate* m_webPage;
 
     RefPtr<WebCore::Element> m_currentFocusElement;
+    RefPtr<WebCore::Element> m_previousFocusableTextElement;
+    RefPtr<WebCore::Element> m_nextFocusableTextElement;
+
+    bool m_hasSubmitButton;
     bool m_inputModeEnabled;
 
     bool m_processingChange;
@@ -236,7 +248,7 @@ private:
     int32_t m_processingTransactionId;
 
     bool m_shouldNotifyWebView;
-    unsigned short m_expectedKeyUpChar;
+    unsigned m_expectedKeyUpChar;
 
     imf_sp_text_t m_spellCheckingOptionsRequest;
     WebCore::IntSize m_screenOffset;

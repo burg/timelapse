@@ -130,6 +130,9 @@ private:
 InputHandler::InputHandler(WebPagePrivate* page)
     : m_webPage(page)
     , m_currentFocusElement(0)
+    , m_previousFocusableTextElement(0)
+    , m_nextFocusableTextElement(0)
+    , m_hasSubmitButton(false)
     , m_inputModeEnabled(false)
     , m_processingChange(false)
     , m_shouldEnsureFocusTextElementVisibleOnSelectionChanged(false)
@@ -139,6 +142,7 @@ InputHandler::InputHandler(WebPagePrivate* page)
     , m_composingTextEnd(0)
     , m_pendingKeyboardVisibilityChange(NoChange)
     , m_delayKeyboardVisibilityChange(false)
+    , m_sendFormStateOnNextKeyboardRequest(false)
     , m_request(0)
     , m_processingTransactionId(-1)
     , m_shouldNotifyWebView(true)
@@ -857,8 +861,10 @@ void InputHandler::setElementUnfocused(bool refocusOccuring)
         finishComposition();
 
         // Only hide the keyboard if we aren't refocusing on a new input field.
-        if (!refocusOccuring)
+        if (!refocusOccuring) {
             notifyClientOfKeyboardVisibilityChange(false, true /* triggeredByFocusChange */);
+            m_webPage->m_client->showFormControls(false /* visible */);
+        }
 
         m_webPage->m_client->inputFocusLost();
 
@@ -877,6 +883,9 @@ void InputHandler::setElementUnfocused(bool refocusOccuring)
     // Clear the node details.
     m_currentFocusElement = 0;
     m_currentFocusElementType = TextEdit;
+    m_previousFocusableTextElement = 0;
+    m_nextFocusableTextElement = 0;
+    m_hasSubmitButton = false;
 }
 
 bool InputHandler::isInputModeEnabled() const
@@ -897,6 +906,113 @@ void InputHandler::setInputModeEnabled(bool active)
     // If the frame selection isn't focused, focus it.
     if (isInputModeEnabled() && isActiveTextEdit() && !m_currentFocusElement->document()->frame()->selection()->isFocused())
         m_currentFocusElement->document()->frame()->selection()->setFocused(true);
+}
+
+void InputHandler::updateFormState()
+{
+    m_previousFocusableTextElement = 0;
+    m_nextFocusableTextElement = 0;
+    m_hasSubmitButton = false;
+
+    if (!m_currentFocusElement || !m_currentFocusElement->isFormControlElement())
+        return;
+
+    HTMLFormElement* formElement = static_cast<HTMLFormControlElement*>(m_currentFocusElement.get())->form();
+    if (!formElement)
+        return;
+
+    const Vector<FormAssociatedElement*> formElementList = formElement->associatedElements();
+    int formElementCount = formElementList.size();
+    if (formElementCount < 2)
+        return;
+
+    InputLog(Platform::LogLevelInfo, "InputHandler::updateFormState form has %d fields", formElementCount);
+
+    m_hasSubmitButton = true;
+    for (int focusElementId = 0; focusElementId < formElementCount; focusElementId++) {
+        if (toHTMLElement(formElementList[focusElementId]) != m_currentFocusElement)
+            continue;
+
+        // Found the focused element, get the next and previous elements if they exist.
+
+        // Previous
+        for (int previousElementId = focusElementId - 1; previousElementId >= 0; previousElementId--) {
+            Element* element = const_cast<HTMLElement*>(toHTMLElement(formElementList[previousElementId]));
+            if (DOMSupport::isTextBasedContentEditableElement(element)) {
+                m_previousFocusableTextElement = element;
+                InputLog(Platform::LogLevelInfo, "InputHandler::updateFormState found previous element");
+                break;
+            }
+        }
+        // Next
+        for (int nextElementId = focusElementId + 1; nextElementId < formElementCount; nextElementId++) {
+            Element* element = const_cast<HTMLElement*>(toHTMLElement(formElementList[nextElementId]));
+            if (DOMSupport::isTextBasedContentEditableElement(element)) {
+                m_nextFocusableTextElement = element;
+                InputLog(Platform::LogLevelInfo, "InputHandler::updateFormState found next element");
+                break;
+            }
+        }
+    }
+
+    if (!m_nextFocusableTextElement && !m_previousFocusableTextElement) {
+        m_hasSubmitButton = false;
+        InputLog(Platform::LogLevelInfo, "InputHandler::updateFormState no valid elements found, clearing state.");
+}
+
+void InputHandler::focusNextField()
+{
+    if (!m_nextFocusableTextElement)
+        return;
+
+    m_nextFocusableTextElement->focus();
+}
+
+void InputHandler::focusPreviousField()
+{
+    if (!m_previousFocusableTextElement)
+        return;
+
+    m_previousFocusableTextElement->focus();
+}
+
+void InputHandler::submitForm()
+{
+    if (!m_hasSubmitButton)
+        return;
+
+    HTMLFormElement* formElement = static_cast<HTMLFormControlElement*>(m_currentFocusElement.get())->form();
+    if (!formElement)
+        return;
+
+    InputLog(Platform::LogLevelInfo, "InputHandler::submitForm triggered");
+    if (elementType(m_currentFocusElement.get()) == InputTypeTextArea)
+        formElement->submit();
+    else
+        handleKeyboardInput(Platform::KeyboardEvent(KEYCODE_RETURN, Platform::KeyboardEvent::KeyChar, 0), false /* changeIsPartOfComposition */);
+}
+
+static void addInputStyleMaskForKeyboardType(int64_t& inputMask, VirtualKeyboardType keyboardType)
+{
+    switch (keyboardType) {
+    case VKBTypeUrl:
+        inputMask |= IMF_URL_TYPE;
+        break;
+    case VKBTypePassword:
+        inputMask |= IMF_PASSWORD_TYPE;
+        break;
+    case VKBTypePin:
+        inputMask |= IMF_PIN_TYPE;
+        break;
+    case VKBTypePhone:
+        inputMask |= IMF_PHONE_TYPE;
+        break;
+    case VKBTypeEmail:
+        inputMask |= IMF_EMAIL_TYPE;
+        break;
+    default:
+        break;
+    }
 }
 
 void InputHandler::setElementFocused(Element* element)
@@ -929,6 +1045,12 @@ void InputHandler::setElementFocused(Element* element)
     // Mark this element as active and add to frame set.
     m_currentFocusElement = element;
     m_currentFocusElementType = TextEdit;
+    updateFormState();
+
+    if (isInputModeEnabled() && !m_delayKeyboardVisibilityChange)
+        m_webPage->m_client->showFormControls(m_hasSubmitButton /* visible */, m_previousFocusableTextElement, m_nextFocusableTextElement);
+    else
+        m_sendFormStateOnNextKeyboardRequest = true;
 
     // Send details to the client about this element.
     BlackBerryInputType type = elementType(element);
@@ -937,6 +1059,8 @@ void InputHandler::setElementFocused(Element* element)
     VirtualKeyboardType keyboardType = keyboardTypeAttribute(element);
     if (keyboardType == VKBTypeNotSet)
         keyboardType = convertInputTypeToVKBType(type);
+
+    addInputStyleMaskForKeyboardType(m_currentFocusElementTextEditMask, keyboardType);
 
     VirtualKeyboardEnterKeyType enterKeyType = keyboardEnterKeyTypeAttribute(element);
 
@@ -1365,6 +1489,10 @@ void InputHandler::notifyClientOfKeyboardVisibilityChange(bool visible, bool tri
         return;
 
     if (!m_delayKeyboardVisibilityChange) {
+        if (m_sendFormStateOnNextKeyboardRequest) {
+            m_webPage->m_client->showFormControls(m_hasSubmitButton /* visible */, m_previousFocusableTextElement, m_nextFocusableTextElement);
+            m_sendFormStateOnNextKeyboardRequest = false;
+        }
         m_webPage->showVirtualKeyboard(visible);
         return;
     }
@@ -1528,7 +1656,7 @@ void InputHandler::cancelSelection()
 bool InputHandler::handleKeyboardInput(const Platform::KeyboardEvent& keyboardEvent, bool changeIsPartOfComposition)
 {
     InputLog(Platform::LogLevelInfo,
-        "InputHandler::handleKeyboardInput received character='%c', type=%d",
+        "InputHandler::handleKeyboardInput received character='%lc', type=%d",
         keyboardEvent.character(), keyboardEvent.type());
 
     // Clearing the m_shouldNotifyWebView state on any KeyboardEvent.
@@ -2397,6 +2525,12 @@ int32_t InputHandler::commitText(spannable_string_t* spannableString, int32_t re
     InputLog(Platform::LogLevelInfo, "InputHandler::commitText");
 
     return setSpannableTextAndRelativeCursor(spannableString, relativeCursorPosition, false /* markTextAsComposing */) ? 0 : -1;
+}
+
+void InputHandler::restoreViewState()
+{
+    setInputModeEnabled();
+    focusedNodeChanged();
 }
 
 }

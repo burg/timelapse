@@ -226,13 +226,11 @@ public:
 #ifndef NDEBUG
     void setHasAXObject(bool flag) { m_hasAXObject = flag; }
     bool hasAXObject() const { return m_hasAXObject; }
-    bool isSetNeedsLayoutForbidden() const { return m_setNeedsLayoutForbidden; }
-    void setNeedsLayoutIsForbidden(bool flag) { m_setNeedsLayoutForbidden = flag; }
 
     // Helper class forbidding calls to setNeedsLayout() during its lifetime.
     class SetLayoutNeededForbiddenScope {
     public:
-        explicit SetLayoutNeededForbiddenScope(RenderObject*);
+        explicit SetLayoutNeededForbiddenScope(RenderObject*, bool isForbidden = true);
         ~SetLayoutNeededForbiddenScope();
     private:
         RenderObject* m_renderObject;
@@ -244,11 +242,6 @@ public:
     // children.
     virtual RenderBlock* firstLineBlock() const;
 
-    // Called when an object that was floating or positioned becomes a normal flow object
-    // again.  We have to make sure the render tree updates as needed to accommodate the new
-    // normal flow object.
-    void handleDynamicFloatPositionChange();
-    
     // RenderObject tree manipulation
     //////////////////////////////////////////
     virtual bool canHaveChildren() const { return virtualChildren(); }
@@ -270,13 +263,18 @@ protected:
     void setParent(RenderObject* parent)
     {
         m_parent = parent;
-        if (parent && parent->inRenderFlowThread())
-            setInRenderFlowThread(true);
+        if (parent && parent->inRenderFlowThread() && !inRenderFlowThread())
+            setInRenderFlowThreadIncludingDescendants(true);
         else if (!parent && inRenderFlowThread())
-            setInRenderFlowThread(false);
+            setInRenderFlowThreadIncludingDescendants(false);
     }
     //////////////////////////////////////////
 private:
+#ifndef NDEBUG
+    bool isSetNeedsLayoutForbidden() const { return m_setNeedsLayoutForbidden; }
+    void setNeedsLayoutIsForbidden(bool flag) { m_setNeedsLayoutForbidden = flag; }
+#endif
+
     void addAbsoluteRectForLayer(LayoutRect& result);
     void setLayerNeedsFullRepaint();
     void setLayerNeedsFullRepaintForPositionedMovementLayout();
@@ -434,6 +432,8 @@ public:
     bool inRenderFlowThread() const { return m_bitfields.inRenderFlowThread(); }
     void setInRenderFlowThread(bool b = true) { m_bitfields.setInRenderFlowThread(b); }
 
+    void setInRenderFlowThreadIncludingDescendants(bool = true);
+
     virtual bool requiresForcedStyleRecalcPropagation() const { return false; }
 
 #if ENABLE(MATHML)
@@ -525,6 +525,16 @@ public:
 
     bool isOutOfFlowPositioned() const { return m_bitfields.isOutOfFlowPositioned(); } // absolute or fixed positioning
     bool isInFlowPositioned() const { return m_bitfields.isRelPositioned() || m_bitfields.isStickyPositioned(); } // relative or sticky positioning
+    bool hasPaintOffset() const
+    {
+        bool positioned = isInFlowPositioned();
+#if ENABLE(CSS_EXCLUSIONS)
+        // Shape outside on a float can reposition the float in much the
+        // same way as relative positioning, so treat it as such.
+        positioned = positioned || (m_bitfields.floating() && m_bitfields.isBox() && style()->shapeOutside());
+#endif
+        return positioned;
+    }
     bool isRelPositioned() const { return m_bitfields.isRelPositioned(); } // relative positioning
     bool isStickyPositioned() const { return m_bitfields.isStickyPositioned(); }
     bool isPositioned() const { return m_bitfields.isPositioned(); }
@@ -611,7 +621,7 @@ public:
     // Returns the styled node that caused the generation of this renderer.
     // This is the same as node() except for renderers of :before and :after
     // pseudo elements for which their parent node is returned.
-    Node* generatingNode() const { return isPseudoElement() ? node()->parentOrHostNode() : node(); }
+    Node* generatingNode() const { return isPseudoElement() ? node()->parentOrShadowHostNode() : node(); }
 
     Document* document() const { return m_node->document(); }
     Frame* frame() const { return document()->frame(); }
@@ -1138,10 +1148,6 @@ private:
     void setPaintBackground(bool b) { m_bitfields.setPaintBackground(b); }
     void setIsDragging(bool b) { m_bitfields.setIsDragging(b); }
     void setEverHadLayout(bool b) { m_bitfields.setEverHadLayout(b); }
-
-private:
-    // Store state between styleWillChange and styleDidChange
-    static bool s_affectsParentBlock;
 };
 
 inline bool RenderObject::documentBeingDestroyed() const

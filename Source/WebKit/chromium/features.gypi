@@ -51,7 +51,7 @@
       'ENABLE_CSS_IMAGE_RESOLUTION=0',
       'ENABLE_CSS_REGIONS=1',
       'ENABLE_CSS_SHADERS=1',
-      'ENABLE_CSS_TRANSFORMS_ANIMATIONS_TRANSITIONS_UNPREFIXED=0',
+      'ENABLE_CSS_TRANSFORMS_ANIMATIONS_UNPREFIXED=0',
       'ENABLE_CSS_VARIABLES=1',
       'ENABLE_CSS_STICKY_POSITION=1',
       'ENABLE_CUSTOM_SCHEME_HANDLER=0',
@@ -75,7 +75,6 @@
       'ENABLE_IFRAME_SEAMLESS=1',
       'ENABLE_INDEXED_DATABASE=1',
       'ENABLE_INPUT_TYPE_DATE=1',
-      'ENABLE_INPUT_TYPE_DATETIME=1',
       'ENABLE_INPUT_TYPE_DATETIMELOCAL=1',
       'ENABLE_INPUT_TYPE_MONTH=1',
       'ENABLE_INPUT_TYPE_TIME=1',
@@ -96,6 +95,7 @@
       'ENABLE_MICRODATA=0',
       'ENABLE_MOUSE_CURSOR_SCALE=1',
       'ENABLE_NAVIGATOR_CONTENT_UTILS=1',
+      'ENABLE_NOSNIFF=1',
       'ENABLE_PAGE_VISIBILITY_API=1',
       'ENABLE_PERFORMANCE_TIMELINE=1',
       'ENABLE_POINTER_LOCK=1',
@@ -130,11 +130,9 @@
       'ENABLE_VIDEO_TRACK=1',
       'ENABLE_VIEWPORT=1',
       'ENABLE_WEBGL=1',
-      'ENABLE_WEB_INTENTS=1',
       'ENABLE_WEB_SOCKETS=1',
       'ENABLE_WEB_TIMING=1',
       'ENABLE_WORKERS=1',
-      'ENABLE_XHR_RESPONSE_BLOB=1',
       'ENABLE_XHR_TIMEOUT=0',
       'ENABLE_XSLT=1',
       'WTF_USE_LEVELDB=1',
@@ -164,7 +162,6 @@
     'conditions': [
       ['OS=="android"', {
         'feature_defines': [
-          'ENABLE_ACCELERATED_OVERFLOW_SCROLLING=1',
           'ENABLE_CALENDAR_PICKER=0',
           'ENABLE_DATALIST_ELEMENT=0',
           'ENABLE_FAST_MOBILE_SCROLLING=1',
@@ -187,7 +184,6 @@
         'enable_touch_icon_loading': 1,
       }, { # OS!="android"
         'feature_defines': [
-          'ENABLE_ACCELERATED_OVERFLOW_SCROLLING=0',
           'ENABLE_CALENDAR_PICKER=1',
           'ENABLE_DATALIST_ELEMENT=1',
           'ENABLE_INPUT_SPEECH=1',
@@ -204,7 +200,7 @@
           'ENABLE_WEB_AUDIO=1',
         ],
       }],
-      ['OS=="linux"', {
+      ['OS=="linux" or OS=="mac"', {
         'feature_defines': [
           'ENABLE_BINDING_INTEGRITY=1',
         ],
@@ -229,16 +225,6 @@
       ['OS=="win" or OS=="android" or use_x11==1', {
         'feature_defines': [
           'ENABLE_OPENTYPE_VERTICAL=1',
-        ],
-      }],
-      ['enable_web_intents==1', {
-        'feature_defines': [
-          'ENABLE_WEB_INTENTS=1',
-        ],
-      }],
-      ['enable_web_intents_tag==1', {
-        'feature_defines': [
-          'ENABLE_WEB_INTENTS_TAG=1',
         ],
       }],
       ['OS=="mac"', {

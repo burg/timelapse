@@ -29,6 +29,7 @@
 #include "AXObjectCache.h"
 #include "Document.h"
 #include "Editor.h"
+#include "ExceptionCodePlaceholder.h"
 #include "Frame.h"
 #include "HTMLBRElement.h"
 #include "HTMLDivElement.h"
@@ -96,8 +97,7 @@ int comparePositions(const Position& a, const Position& b)
             bias = 1;
     }
 
-    ExceptionCode ec;
-    int result = Range::compareBoundaryPoints(nodeA, offsetA, nodeB, offsetB, ec);
+    int result = Range::compareBoundaryPoints(nodeA, offsetA, nodeB, offsetB, IGNORE_EXCEPTION);
     return result ? result : bias;
 }
 
@@ -558,8 +558,7 @@ PassRefPtr<Range> extendRangeToWrappingNodes(PassRefPtr<Range> range, const Rang
     ASSERT(range);
     ASSERT(maximumRange);
 
-    ExceptionCode ec = 0;
-    Node* ancestor = range->commonAncestorContainer(ec);// find the cloeset common ancestor
+    Node* ancestor = range->commonAncestorContainer(IGNORE_EXCEPTION); // Find the closest common ancestor.
     Node* highestNode = 0;
     // traverse through ancestors as long as they are contained within the range, content-editable, and below rootNode (could be =0).
     while (ancestor && ancestor->rendererIsEditable() && isNodeVisiblyContainedWithin(ancestor, maximumRange) && ancestor != rootNode) {
@@ -572,7 +571,7 @@ PassRefPtr<Range> extendRangeToWrappingNodes(PassRefPtr<Range> range, const Rang
 
     // Create new range with the highest editable node contained within the range
     RefPtr<Range> extendedRange = Range::create(range->ownerDocument());
-    extendedRange->selectNode(highestNode, ec);
+    extendedRange->selectNode(highestNode, IGNORE_EXCEPTION);
     return extendedRange.release();
 }
 
@@ -939,9 +938,7 @@ PassRefPtr<Element> createTabSpanElement(Document* document, PassRefPtr<Node> pr
     if (!tabTextNode)
         tabTextNode = document->createEditingTextNode("\t");
 
-    ExceptionCode ec = 0;
-    spanElement->appendChild(tabTextNode.release(), ec);
-    ASSERT(ec == 0);
+    spanElement->appendChild(tabTextNode.release(), ASSERT_NO_EXCEPTION);
 
     return spanElement.release();
 }
@@ -1136,8 +1133,7 @@ bool isNodeVisiblyContainedWithin(Node* node, const Range* selectedRange)
     ASSERT(node);
     ASSERT(selectedRange);
     // If the node is inside the range, then it surely is contained within
-    ExceptionCode ec = 0;
-    if (selectedRange->compareNode(node, ec) == Range::NODE_INSIDE)
+    if (selectedRange->compareNode(node, IGNORE_EXCEPTION) == Range::NODE_INSIDE)
         return true;
 
     bool startIsVisuallySame = visiblePositionBeforeNode(node) == selectedRange->startPosition();
@@ -1186,62 +1182,7 @@ bool isNonTableCellHTMLBlockElement(const Node* node)
         || node->hasTagName(h4Tag)
         || node->hasTagName(h5Tag);
 }
-
-PassRefPtr<Range> avoidIntersectionWithNode(const Range* range, Node* node)
-{
-    if (!range)
-        return 0;
-
-    Document* document = range->ownerDocument();
-
-    Node* startContainer = range->startContainer();
-    int startOffset = range->startOffset();
-    Node* endContainer = range->endContainer();
-    int endOffset = range->endOffset();
-
-    if (!startContainer)
-        return 0;
-
-    ASSERT(endContainer);
-
-    if (startContainer == node || startContainer->isDescendantOf(node)) {
-        ASSERT(node->parentNode());
-        startContainer = node->parentNode();
-        startOffset = node->nodeIndex();
-    }
-    if (endContainer == node || endContainer->isDescendantOf(node)) {
-        ASSERT(node->parentNode());
-        endContainer = node->parentNode();
-        endOffset = node->nodeIndex();
-    }
-
-    return Range::create(document, startContainer, startOffset, endContainer, endOffset);
-}
-
-VisibleSelection avoidIntersectionWithNode(const VisibleSelection& selection, Node* node)
-{
-    if (selection.isNone())
-        return VisibleSelection(selection);
-
-    VisibleSelection updatedSelection(selection);
-    Node* base = selection.base().deprecatedNode();
-    Node* extent = selection.extent().deprecatedNode();
-    ASSERT(base);
-    ASSERT(extent);
-
-    if (base == node || base->isDescendantOf(node)) {
-        ASSERT(node->parentNode());
-        updatedSelection.setBase(positionInParentBeforeNode(node));
-    }
-
-    if (extent == node || extent->isDescendantOf(node)) {
-        ASSERT(node->parentNode());
-        updatedSelection.setExtent(positionInParentBeforeNode(node));
-    }
-
-    return updatedSelection;
-}
-
+    
 Position adjustedSelectionStartForStyleComputation(const VisibleSelection& selection)
 {
     // This function is used by range style computations to avoid bugs like:

@@ -41,23 +41,28 @@
 #include "WebDragOperation.h"
 #include "WebInputEvent.h"
 #include "WebTask.h"
+#include <memory>
 #include <public/WebPoint.h>
 
 namespace WebKit {
 class WebDragData;
 class WebView;
+struct WebContextMenuData;
 }
 
 namespace WebTestRunner {
 
-class TestDelegate;
+class WebTestDelegate;
 
 class EventSender : public CppBoundClass {
 public:
     EventSender();
+    ~EventSender();
 
-    void setDelegate(TestDelegate* delegate) { m_delegate = delegate; }
+    void setDelegate(WebTestDelegate* delegate) { m_delegate = delegate; }
     void setWebView(WebKit::WebView* webView) { m_webView = webView; }
+
+    void setContextMenuData(const WebKit::WebContextMenuData&);
 
     // Resets some static variable state.
     void reset();
@@ -83,6 +88,7 @@ public:
     void zoomPageOut(const CppArgumentList&, CppVariant*);
     void scalePageBy(const CppArgumentList&, CppVariant*);
 
+    void mouseDragBegin(const CppArgumentList&, CppVariant*);
     void mouseScrollBy(const CppArgumentList&, CppVariant*);
     void continuousMouseScrollBy(const CppArgumentList&, CppVariant*);
     void scheduleAsynchronousClick(const CppArgumentList&, CppVariant*);
@@ -107,6 +113,7 @@ public:
     void gestureScrollEnd(const CppArgumentList&, CppVariant*);
     void gestureScrollFirstPoint(const CppArgumentList&, CppVariant*);
     void gestureScrollUpdate(const CppArgumentList&, CppVariant*);
+    void gestureScrollUpdateWithoutPropagation(const CppArgumentList&, CppVariant*);
     void gestureTap(const CppArgumentList&, CppVariant*);
     void gestureTapDown(const CppArgumentList&, CppVariant*);
     void gestureTapCancel(const CppArgumentList&, CppVariant*);
@@ -169,8 +176,10 @@ private:
 
     WebTaskList m_taskList;
 
-    TestDelegate* m_delegate;
+    WebTestDelegate* m_delegate;
     WebKit::WebView* m_webView;
+
+    std::auto_ptr<WebKit::WebContextMenuData> m_lastContextMenuData;
 
     // Location of the touch point that initiated a gesture.
     WebKit::WebPoint m_currentGestureLocation;

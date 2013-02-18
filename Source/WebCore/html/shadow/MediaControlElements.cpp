@@ -32,9 +32,11 @@
 #if ENABLE(VIDEO)
 #include "MediaControlElements.h"
 
+#include "CaptionUserPreferences.h"
 #include "DOMTokenList.h"
 #include "EventNames.h"
 #include "EventTarget.h"
+#include "ExceptionCodePlaceholder.h"
 #include "FloatConversion.h"
 #include "Frame.h"
 #include "GraphicsContext.h"
@@ -171,8 +173,7 @@ void MediaControlPanelElement::setPosition(const LayoutPoint& position)
     setInlineStyleProperty(CSSPropertyMarginLeft, 0.0, CSSPrimitiveValue::CSS_PX);
     setInlineStyleProperty(CSSPropertyMarginTop, 0.0, CSSPrimitiveValue::CSS_PX);
 
-    ExceptionCode ignored;
-    classList()->add("dragged", ignored);
+    classList()->add("dragged", IGNORE_EXCEPTION);
 }
 
 void MediaControlPanelElement::resetPosition()
@@ -182,8 +183,7 @@ void MediaControlPanelElement::resetPosition()
     removeInlineStyleProperty(CSSPropertyMarginLeft);
     removeInlineStyleProperty(CSSPropertyMarginTop);
 
-    ExceptionCode ignored;
-    classList()->remove("dragged", ignored);
+    classList()->remove("dragged", IGNORE_EXCEPTION);
 
     m_cumulativeDragOffset.setX(0);
     m_cumulativeDragOffset.setY(0);
@@ -383,8 +383,6 @@ void MediaControlStatusDisplayElement::update()
     if (newStateToDisplay == m_stateBeingDisplayed)
         return;
 
-    ExceptionCode e;
-
     if (m_stateBeingDisplayed == Nothing)
         show();
     else if (newStateToDisplay == Nothing)
@@ -394,13 +392,13 @@ void MediaControlStatusDisplayElement::update()
 
     switch (m_stateBeingDisplayed) {
     case Nothing:
-        setInnerText("", e);
+        setInnerText("", IGNORE_EXCEPTION);
         break;
     case Loading:
-        setInnerText(mediaElementLoadingStateText(), e);
+        setInnerText(mediaElementLoadingStateText(), IGNORE_EXCEPTION);
         break;
     case LiveBroadcast:
-        setInnerText(mediaElementLiveBroadcastStateText(), e);
+        setInnerText(mediaElementLiveBroadcastStateText(), IGNORE_EXCEPTION);
         break;
     }
 }
@@ -604,8 +602,7 @@ PassRefPtr<MediaControlRewindButtonElement> MediaControlRewindButtonElement::cre
 void MediaControlRewindButtonElement::defaultEventHandler(Event* event)
 {
     if (event->type() == eventNames().clickEvent) {
-        ExceptionCode ignoredCode;
-        mediaController()->setCurrentTime(max(0.0f, mediaController()->currentTime() - 30), ignoredCode);
+        mediaController()->setCurrentTime(max(0.0f, mediaController()->currentTime() - 30), IGNORE_EXCEPTION);
         event->setDefaultHandled();
     }
     HTMLInputElement::defaultEventHandler(event);
@@ -745,9 +742,6 @@ void MediaControlClosedCaptionsTrackListElement::defaultEventHandler(Event* even
 {
 #if ENABLE(VIDEO_TRACK)
     if (event->type() == eventNames().clickEvent) {
-        // FIXME: Add modifier key for exclusivity override.
-        // http://webkit.org/b/103361
-
         Node* target = event->target()->toNode();
         if (!target || !target->isElementNode())
             return;
@@ -871,18 +865,12 @@ void MediaControlClosedCaptionsTrackListElement::rebuildTrackListMenu()
         return;
 
     Document* doc = document();
+    CaptionUserPreferences* captionsUserPreferences = doc->page()->group().captionPreferences();
 
-    RefPtr<Element> captionsSection = doc->createElement(sectionTag, ASSERT_NO_EXCEPTION);
     RefPtr<Element> captionsHeader = doc->createElement(h3Tag, ASSERT_NO_EXCEPTION);
-    captionsHeader->appendChild(doc->createTextNode(textTrackClosedCaptionsText()));
-    captionsSection->appendChild(captionsHeader);
+    captionsHeader->appendChild(doc->createTextNode(textTrackSubtitlesText()));
+    appendChild(captionsHeader);
     RefPtr<Element> captionsMenuList = doc->createElement(ulTag, ASSERT_NO_EXCEPTION);
-
-    RefPtr<Element> subtitlesSection = doc->createElement(sectionTag, ASSERT_NO_EXCEPTION);
-    RefPtr<Element> subtitlesHeader = doc->createElement(h3Tag, ASSERT_NO_EXCEPTION);
-    subtitlesHeader->appendChild(doc->createTextNode(textTrackSubtitlesText()));
-    subtitlesSection->appendChild(subtitlesHeader);
-    RefPtr<Element> subtitlesMenuList = doc->createElement(ulTag, ASSERT_NO_EXCEPTION);
 
     RefPtr<Element> trackItem;
 
@@ -891,15 +879,6 @@ void MediaControlClosedCaptionsTrackListElement::rebuildTrackListMenu()
     trackItem->setAttribute(trackIndexAttributeName(), textTracksOffAttrValue, ASSERT_NO_EXCEPTION);
     captionsMenuList->appendChild(trackItem);
     m_menuItems.append(trackItem);
-
-    trackItem = doc->createElement(liTag, ASSERT_NO_EXCEPTION);
-    trackItem->appendChild(doc->createTextNode(textTrackOffText()));
-    trackItem->setAttribute(trackIndexAttributeName(), textTracksOffAttrValue, ASSERT_NO_EXCEPTION);
-    subtitlesMenuList->appendChild(trackItem);
-    m_menuItems.append(trackItem);
-
-    bool hasCaptions = false;
-    bool hasSubtitles = false;
 
     for (unsigned i = 0, length = trackList->length(); i < length; ++i) {
         TextTrack* track = trackList->item(i);
@@ -911,31 +890,16 @@ void MediaControlClosedCaptionsTrackListElement::rebuildTrackListMenu()
         // should always be in sync.
         trackItem->setAttribute(trackIndexAttributeName(), String::number(i), ASSERT_NO_EXCEPTION);
 
-        AtomicString labelText = track->label();
-        if (labelText.isNull() || labelText.isEmpty())
-            labelText = displayNameForLanguageLocale(track->language());
-        if (labelText.isNull() || labelText.isEmpty())
-            labelText = textTrackNoLabelText();
-        trackItem->appendChild(doc->createTextNode(labelText));
+        if (captionsUserPreferences)
+            trackItem->appendChild(doc->createTextNode(captionsUserPreferences->displayNameForTrack(track)));
+        else
+            trackItem->appendChild(doc->createTextNode(track->label()));
 
-        if (track->kind() == track->captionsKeyword()) {
-            hasCaptions = true;
-            insertTextTrackMenuItemIntoSortedContainer(trackItem, captionsMenuList);
-        }
-        if (track->kind() == track->subtitlesKeyword()) {
-            hasSubtitles = true;
-            insertTextTrackMenuItemIntoSortedContainer(trackItem, subtitlesMenuList);
-        }
+        insertTextTrackMenuItemIntoSortedContainer(trackItem, captionsMenuList);
         m_menuItems.append(trackItem);
     }
 
-    captionsSection->appendChild(captionsMenuList);
-    subtitlesSection->appendChild(subtitlesMenuList);
-
-    if (hasCaptions)
-        appendChild(captionsSection);
-    if (hasSubtitles)
-        appendChild(subtitlesSection);
+    appendChild(captionsMenuList);
 
     updateDisplay();
 #endif
@@ -981,10 +945,8 @@ void MediaControlTimelineElement::defaultEventHandler(Event* event)
         return;
 
     float time = narrowPrecisionToFloat(value().toDouble());
-    if (event->type() == eventNames().inputEvent && time != mediaController()->currentTime()) {
-        ExceptionCode ec;
-        mediaController()->setCurrentTime(time, ec);
-    }
+    if (event->type() == eventNames().inputEvent && time != mediaController()->currentTime())
+        mediaController()->setCurrentTime(time, IGNORE_EXCEPTION);
 
     RenderSlider* slider = toRenderSlider(renderer());
     if (slider && slider->inDragMode())
@@ -1333,7 +1295,7 @@ void MediaControlTextTrackContainerElement::updateDisplay()
     }
 }
 
-void MediaControlTextTrackContainerElement::updateSizes()
+void MediaControlTextTrackContainerElement::updateSizes(bool forceUpdate)
 {
     HTMLMediaElement* mediaElement = toParentMediaElement(this);
     if (!mediaElement)
@@ -1352,7 +1314,7 @@ void MediaControlTextTrackContainerElement::updateSizes()
         videoBox = toRenderVideo(mediaElement->renderer())->videoBox();
     }
 
-    if (m_videoDisplaySize == videoBox)
+    if (!forceUpdate && m_videoDisplaySize == videoBox)
         return;
     m_videoDisplaySize = videoBox;
 
@@ -1363,10 +1325,11 @@ void MediaControlTextTrackContainerElement::updateSizes()
 
     float smallestDimension = std::min(m_videoDisplaySize.size().height(), m_videoDisplaySize.size().width());
 
-    float fontSize = smallestDimension * (document()->page()->group().captionFontSizeScale());
+    bool important;
+    float fontSize = smallestDimension * (document()->page()->group().captionPreferences()->captionFontSizeScale(important));
     if (fontSize != m_fontSize) {
         m_fontSize = fontSize;
-        setInlineStyleProperty(CSSPropertyFontSize, String::number(fontSize) + "px");
+        setInlineStyleProperty(CSSPropertyFontSize, String::number(fontSize) + "px", important);
     }
 }
 

@@ -52,8 +52,9 @@ using namespace WebKit;
 namespace WebCore {
 
 // ResourceHandleInternal -----------------------------------------------------
-ResourceHandleInternal::ResourceHandleInternal(const ResourceRequest& request, ResourceHandleClient* client)
-    : m_request(request)
+ResourceHandleInternal::ResourceHandleInternal(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client)
+    : m_context(context)
+    , m_request(request)
     , m_owner(0)
     , m_client(client)
     , m_state(ConnectionStateNew)
@@ -86,6 +87,11 @@ void ResourceHandleInternal::cancel()
 void ResourceHandleInternal::setDefersLoading(bool value)
 {
     m_loader->setDefersLoading(value);
+}
+
+void ResourceHandleInternal::didChangePriority(WebURLRequest::Priority newPriority)
+{
+    m_loader->didChangePriority(newPriority);
 }
 
 bool ResourceHandleInternal::allowStoredCredentials() const
@@ -173,11 +179,8 @@ ResourceHandleInternal* ResourceHandleInternal::FromResourceHandle(ResourceHandl
 
 // ResourceHandle -------------------------------------------------------------
 
-ResourceHandle::ResourceHandle(const ResourceRequest& request,
-                               ResourceHandleClient* client,
-                               bool defersLoading,
-                               bool shouldContentSniff)
-    : d(adoptPtr(new ResourceHandleInternal(request, client)))
+ResourceHandle::ResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff)
+    : d(adoptPtr(new ResourceHandleInternal(context, request, client)))
 {
     d->setOwner(this);
 
@@ -191,9 +194,9 @@ PassRefPtr<ResourceHandle> ResourceHandle::create(NetworkingContext* context,
                                                   bool shouldContentSniff)
 {
     RefPtr<ResourceHandle> newHandle = adoptRef(new ResourceHandle(
-        request, client, defersLoading, shouldContentSniff));
+        context, request, client, defersLoading, shouldContentSniff));
 
-    if (newHandle->start(context))
+    if (newHandle->start())
         return newHandle.release();
 
     return 0;
@@ -202,6 +205,11 @@ PassRefPtr<ResourceHandle> ResourceHandle::create(NetworkingContext* context,
 ResourceRequest& ResourceHandle::firstRequest()
 {
     return d->request();
+}
+
+NetworkingContext* ResourceHandle::context() const
+{
+    return d->context();
 }
 
 ResourceHandleClient* ResourceHandle::client() const
@@ -219,9 +227,9 @@ void ResourceHandle::setDefersLoading(bool value)
     d->setDefersLoading(value);
 }
 
-bool ResourceHandle::start(NetworkingContext* context)
+bool ResourceHandle::start()
 {
-    if (!context)
+    if (!d->context())
         return false;
 
     d->start();
@@ -274,6 +282,11 @@ void ResourceHandle::loadResourceSynchronously(NetworkingContext* context,
     error = errorOut;
     data.clear();
     data.append(dataOut.data(), dataOut.size());
+}
+
+void ResourceHandle::didChangePriority(ResourceLoadPriority newPriority)
+{
+    d->didChangePriority(static_cast<WebURLRequest::Priority>(newPriority));
 }
 
 // static

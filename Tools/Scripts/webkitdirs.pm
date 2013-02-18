@@ -80,6 +80,7 @@ my $numberOfCPUs;
 my $baseProductDir;
 my @baseProductDirOption;
 my $configuration;
+my $xcodeSDK;
 my $configurationForVisualStudio;
 my $configurationProductDir;
 my $sourceDir;
@@ -186,7 +187,7 @@ sub determineBaseProductDir
     determineSourceDir();
 
     my $setSharedPrecompsDir;
-    $baseProductDir = $ENV{"WEBKITOUTPUTDIR"};
+    $baseProductDir = $ENV{"WEBKITOUTPUTDIR"}; # FIXME: Switch to WEBKIT_OUTPUTDIR as part of https://bugs.webkit.org/show_bug.cgi?id=109472
 
     if (!defined($baseProductDir) and isAppleMacWebKit()) {
         # Silently remove ~/Library/Preferences/xcodebuild.plist which can
@@ -259,6 +260,7 @@ sub determineBaseProductDir
         my $dosBuildPath = `cygpath --windows \"$baseProductDir\"`;
         chomp $dosBuildPath;
         $ENV{"WEBKITOUTPUTDIR"} = $dosBuildPath;
+        $ENV{"WEBKIT_OUTPUTDIR"} = $dosBuildPath;
         my $unixBuildPath = `cygpath --unix \"$baseProductDir\"`;
         chomp $unixBuildPath;
         $baseProductDir = $unixBuildPath;
@@ -301,6 +303,7 @@ sub determineArchitecture
     $architecture = "";
 
     determineBaseProductDir();
+    determineXcodeSDK();
 
     if (isGtk()) {
         determineConfigurationProductDir();
@@ -317,9 +320,15 @@ sub determineArchitecture
         if ($architecture) {
             chomp $architecture;
         } else {
-            my $supports64Bit = `sysctl -n hw.optional.x86_64`;
-            chomp $supports64Bit;
-            $architecture = 'x86_64' if $supports64Bit;
+            if (not defined $xcodeSDK or $xcodeSDK =~ /^(\/$|macosx)/) {
+                my $supports64Bit = `sysctl -n hw.optional.x86_64`;
+                chomp $supports64Bit;
+                $architecture = 'x86_64' if $supports64Bit;
+            } elsif ($xcodeSDK =~ /^iphonesimulator/) {
+                $architecture = 'i386';
+            } elsif ($xcodeSDK =~ /^iphoneos/) {
+                $architecture = 'armv7';
+            }
         }
     } elsif (isEfl()) {
         my $host_processor = "";
@@ -394,6 +403,30 @@ sub argumentsForConfiguration()
     push(@args, '--chromium-android') if isChromiumAndroid();
     push(@args, '--inspector-frontend') if isInspectorFrontend();
     return @args;
+}
+
+sub determineXcodeSDK
+{
+    return if defined $xcodeSDK;
+    for (my $i = 0; $i <= $#ARGV; $i++) {
+        my $opt = $ARGV[$i];
+        if ($opt =~ /^--sdk$/i) {
+            splice(@ARGV, $i, 1);
+            $xcodeSDK = splice(@ARGV, $i, 1);
+        } elsif ($opt =~ /^--device$/i) {
+            splice(@ARGV, $i, 1);
+            $xcodeSDK = 'iphoneos.internal';
+        } elsif ($opt =~ /^--sim(ulator)?/i) {
+            splice(@ARGV, $i, 1);
+            $xcodeSDK = 'iphonesimulator';
+        }
+    }
+}
+
+sub xcodeSDK
+{
+    determineXcodeSDK();
+    return $xcodeSDK;
 }
 
 sub determineConfigurationForVisualStudio
@@ -520,7 +553,12 @@ sub XcodeOptions
     determineBaseProductDir();
     determineConfiguration();
     determineArchitecture();
-    return (@baseProductDirOption, "-configuration", $configuration, "ARCHS=$architecture", argumentsForXcode());
+    determineXcodeSDK();
+
+    my @sdkOption = ($xcodeSDK ? "SDKROOT=$xcodeSDK" : ());
+    my @architectureOption = ($architecture ? "ARCHS=$architecture" : ());
+
+    return (@baseProductDirOption, "-configuration", $configuration, @architectureOption, @sdkOption, argumentsForXcode());
 }
 
 sub XcodeOptionString
@@ -553,13 +591,13 @@ sub determinePassedConfiguration
 
     for my $i (0 .. $#ARGV) {
         my $opt = $ARGV[$i];
-        if ($opt =~ /^--debug$/i || $opt =~ /^--devel/i) {
+        if ($opt =~ /^--debug$/i) {
             splice(@ARGV, $i, 1);
             $passedConfiguration = "Debug";
             $passedConfiguration .= "_Cairo_CFLite" if (isWinCairo() && isCygwin());
             return;
         }
-        if ($opt =~ /^--release$/i || $opt =~ /^--deploy/i) {
+        if ($opt =~ /^--release$/i) {
             splice(@ARGV, $i, 1);
             $passedConfiguration = "Release";
             $passedConfiguration .= "_Cairo_CFLite" if (isWinCairo() && isCygwin());
@@ -1016,6 +1054,7 @@ sub blackberryCMakeArguments()
     push @includeSystemDirectories, File::Spec->catdir($stageInc, "jpeg-turbo") if $arch=~/arm/;
     push @includeSystemDirectories, $stageInc;
     push @includeSystemDirectories, File::Spec->catdir($stageInc, "browser", "platform");
+    push @includeSystemDirectories, File::Spec->catdir($stageInc, "browser", "platform", "graphics");
     push @includeSystemDirectories, File::Spec->catdir($stageInc, "browser", "qsk");
     push @includeSystemDirectories, File::Spec->catdir($stageInc, "ots");
 
@@ -1320,7 +1359,7 @@ sub isFreeBSD()
 
 sub isARM()
 {
-    return $Config{archname} =~ /^arm-/;
+    return $Config{archname} =~ /^arm[v\-]/;
 }
 
 sub isCrossCompilation()
@@ -1605,6 +1644,11 @@ sub windowsSourceDir()
     return $windowsSourceDir;
 }
 
+sub windowsSourceSourceDir()
+{
+    return windowsSourceDir() . "\\Source";
+}
+
 sub windowsLibrariesDir()
 {
     return windowsSourceDir() . "\\WebKitLibraries\\win";
@@ -1635,12 +1679,15 @@ sub setupAppleWinEnv()
         
         # Those environment variables must be set to be able to build inside Visual Studio.
         $variablesToSet{WEBKITLIBRARIESDIR} = windowsLibrariesDir() unless $ENV{WEBKITLIBRARIESDIR};
+        $variablesToSet{WEBKIT_LIBRARIES} = windowsLibrariesDir() unless $ENV{WEBKIT_LIBRARIES};
         $variablesToSet{WEBKITOUTPUTDIR} = windowsOutputDir() unless $ENV{WEBKITOUTPUTDIR};
+        $variablesToSet{WEBKIT_OUTPUTDIR} = windowsOutputDir() unless $ENV{WEBKIT_OUTPUTDIR};
+        $variablesToSet{WEBKIT_SOURCE} = windowsSourceSourceDir() unless $ENV{WEBKIT_SOURCE};
 
         foreach my $variable (keys %variablesToSet) {
             print "Setting the Environment Variable '" . $variable . "' to '" . $variablesToSet{$variable} . "'\n\n";
             system qw(regtool -s set), '\\HKEY_CURRENT_USER\\Environment\\' . $variable, $variablesToSet{$variable};
-            $restartNeeded ||= $variable eq "WEBKITLIBRARIESDIR" || $variable eq "WEBKITOUTPUTDIR";
+            $restartNeeded ||= $variable eq "WEBKITLIBRARIESDIR" || $variable eq "WEBKITOUTPUTDIR" || $variable eq "WEBKIT_LIBRARIES" || $variable eq "WEBKIT_OUTPUTDIR" || $variable eq "WEBKIT_SOURCE";
         }
 
         if ($restartNeeded) {
@@ -1648,14 +1695,34 @@ sub setupAppleWinEnv()
         }
     } else {
         if (!$ENV{'WEBKITLIBRARIESDIR'}) {
+            # VS2005 version.  This will be removed as part of https://bugs.webkit.org/show_bug.cgi?id=109472.
             print "Warning: You must set the 'WebKitLibrariesDir' environment variable\n";
-            print "         to be able build WebKit from within Visual Studio.\n";
+            print "         to be able build WebKit from within Visual Studio 2005.\n";
             print "         Make sure that 'WebKitLibrariesDir' points to the\n";
             print "         'WebKitLibraries/win' directory, not the 'WebKitLibraries/' directory.\n\n";
         }
+        if (!$ENV{'WEBKIT_LIBRARIES'}) {
+            # VS2010 (and newer) version. This will replace the VS2005 version as part of
+            # https://bugs.webkit.org/show_bug.cgi?id=109472. 
+            print "Warning: You must set the 'WebKit_Libraries' environment variable\n";
+            print "         to be able build WebKit from within Visual Studio 2010 and newer.\n";
+            print "         Make sure that 'WebKit_Libraries' points to the\n";
+            print "         'WebKitLibraries/win' directory, not the 'WebKitLibraries/' directory.\n\n";
+        }
         if (!$ENV{'WEBKITOUTPUTDIR'}) {
+            # VS2005 version.  This will be removed as part of https://bugs.webkit.org/show_bug.cgi?id=109472.
             print "Warning: You must set the 'WebKitOutputDir' environment variable\n";
-            print "         to be able build WebKit from within Visual Studio.\n\n";
+            print "         to be able build WebKit from within Visual Studio 2005.\n\n";
+        }
+        if (!$ENV{'WEBKIT_OUTPUTDIR'}) {
+            # VS2010 (and newer) version. This will replace the VS2005 version as part of
+            # https://bugs.webkit.org/show_bug.cgi?id=109472. 
+            print "Warning: You must set the 'WebKit_OutputDir' environment variable\n";
+            print "         to be able build WebKit from within Visual Studio 2010 and newer.\n\n";
+        }
+        if (!$ENV{'WEBKIT_SOURCE'}) {
+            print "Warning: You must set the 'WebKit_Source' environment variable\n";
+            print "         to be able build WebKit from within Visual Studio 2010 and newer.\n\n";
         }
     }
 }
@@ -1707,10 +1774,16 @@ sub setupCygwinEnv()
         $ENV{'WEBKITLIBRARIESDIR'} = File::Spec->catdir($sourceDir, "WebKitLibraries", "win");
         chomp($ENV{WEBKITLIBRARIESDIR} = `cygpath -wa '$ENV{WEBKITLIBRARIESDIR}'`) if isCygwin();
     }
+    unless ($ENV{WEBKIT_LIBRARIES}) {
+        $ENV{'WEBKIT_LIBRARIES'} = File::Spec->catdir($sourceDir, "WebKitLibraries", "win");
+        chomp($ENV{WEBKIT_LIBRARIES} = `cygpath -wa '$ENV{WEBKIT_LIBRARIES}'`) if isCygwin();
+    }
 
     print "Building results into: ", baseProductDir(), "\n";
     print "WEBKITOUTPUTDIR is set to: ", $ENV{"WEBKITOUTPUTDIR"}, "\n";
+    print "WEBKIT_OUTPUTDIR is set to: ", $ENV{"WEBKIT_OUTPUTDIR"}, "\n";
     print "WEBKITLIBRARIESDIR is set to: ", $ENV{"WEBKITLIBRARIESDIR"}, "\n";
+    print "WEBKIT_LIBRARIES is set to: ", $ENV{"WEBKIT_LIBRARIES"}, "\n";
 }
 
 sub dieIfWindowsPlatformSDKNotInstalled
@@ -2145,7 +2218,7 @@ sub buildAutotoolsProject($@)
 
     chdir ".." or die;
 
-    if ($project eq 'WebKit' && !isCrossCompilation()) {
+    if ($project eq 'WebKit' && !isCrossCompilation() && !($noWebKit1 && $noWebKit2)) {
         my @docGenerationOptions = ("$sourceDir/Tools/gtk/generate-gtkdoc", "--skip-html");
         push(@docGenerationOptions, productDir());
 
@@ -2200,6 +2273,8 @@ sub generateBuildSystemFromCMakeProject
     } elsif ($config =~ /debug/i) {
         push @args, "-DCMAKE_BUILD_TYPE=Debug";
     }
+    # Don't warn variables which aren't used by cmake ports.
+    push @args, "--no-warn-unused-cli";
     push @args, @cmakeArgs if @cmakeArgs;
     push @args, $additionalCMakeArgs if $additionalCMakeArgs;
 

@@ -70,6 +70,7 @@ public:
     LayoutSize stickyPositionLogicalOffset() const { return style()->isHorizontalWritingMode() ? stickyPositionOffset() : stickyPositionOffset().transposedSize(); }
 
     LayoutSize offsetForInFlowPosition() const;
+    LayoutSize paintOffset() const;
 
     // IE extensions. Used to calculate offsetWidth/Height.  Overridden by inlines (RenderFlow)
     // to return the remaining width on a given line (and the height of a single line).
@@ -91,14 +92,14 @@ public:
     virtual IntRect borderBoundingBox() const = 0;
 
     // These return the CSS computed padding values.
-    LayoutUnit computedCSSPaddingTop() const;
-    LayoutUnit computedCSSPaddingBottom() const;
-    LayoutUnit computedCSSPaddingLeft() const;
-    LayoutUnit computedCSSPaddingRight() const;
-    LayoutUnit computedCSSPaddingBefore() const;
-    LayoutUnit computedCSSPaddingAfter() const;
-    LayoutUnit computedCSSPaddingStart() const;
-    LayoutUnit computedCSSPaddingEnd() const;
+    LayoutUnit computedCSSPaddingTop() const { return computedCSSPadding(style()->paddingTop()); }
+    LayoutUnit computedCSSPaddingBottom() const { return computedCSSPadding(style()->paddingBottom()); }
+    LayoutUnit computedCSSPaddingLeft() const { return computedCSSPadding(style()->paddingLeft()); }
+    LayoutUnit computedCSSPaddingRight() const { return computedCSSPadding(style()->paddingRight()); }
+    LayoutUnit computedCSSPaddingBefore() const { return computedCSSPadding(style()->paddingBefore()); }
+    LayoutUnit computedCSSPaddingAfter() const { return computedCSSPadding(style()->paddingAfter()); }
+    LayoutUnit computedCSSPaddingStart() const { return computedCSSPadding(style()->paddingStart()); }
+    LayoutUnit computedCSSPaddingEnd() const { return computedCSSPadding(style()->paddingEnd()); }
 
     // These functions are used during layout. Table cells and the MathML
     // code override them to include some extra intrinsic padding.
@@ -145,8 +146,6 @@ public:
     bool hasInlineDirectionBordersOrPadding() const { return borderStart() || borderEnd() || paddingStart()|| paddingEnd(); }
 
     virtual LayoutUnit containingBlockLogicalWidthForContent() const;
-
-    virtual void childBecameNonInline(RenderObject* /*child*/) { }
 
     void paintBorder(const PaintInfo&, const LayoutRect&, const RenderStyle*, BackgroundBleedAvoidance = BackgroundBleedNone, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true);
     bool paintNinePieceImage(GraphicsContext*, const LayoutRect&, const RenderStyle*, const NinePieceImage&, CompositeOperator = CompositeSourceOver);
@@ -278,6 +277,7 @@ public:
     void moveChildrenTo(RenderBoxModelObject* toBoxModelObject, RenderObject* startChild, RenderObject* endChild, RenderObject* beforeChild, bool fullRemoveInsert = false);
 
 private:
+    LayoutUnit computedCSSPadding(Length) const;
     virtual bool isBoxModelObject() const { return true; }
     
     virtual LayoutRect frameRectForStickyPositioning() const = 0;

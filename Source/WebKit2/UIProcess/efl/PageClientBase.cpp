@@ -27,10 +27,10 @@
 #include "PageClientBase.h"
 
 #include "CoordinatedLayerTreeHostProxy.h"
+#include "DownloadManagerEfl.h"
 #include "DrawingAreaProxyImpl.h"
 #include "EwkView.h"
 #include "InputMethodContextEfl.h"
-#include "LayerTreeRenderer.h"
 #include "NativeWebKeyboardEvent.h"
 #include "NotImplemented.h"
 #include "TextureMapper.h"
@@ -73,9 +73,9 @@ PassOwnPtr<DrawingAreaProxy> PageClientBase::createDrawingAreaProxy()
     return drawingArea.release();
 }
 
-void PageClientBase::setViewNeedsDisplay(const WebCore::IntRect& rect)
+void PageClientBase::setViewNeedsDisplay(const WebCore::IntRect&)
 {
-    m_view->update(rect);
+    m_view->scheduleUpdateDisplay();
 }
 
 void PageClientBase::displayView()
@@ -118,7 +118,7 @@ bool PageClientBase::isViewInWindow()
 void PageClientBase::processDidCrash()
 {
     // Check if loading was ongoing, when web process crashed.
-    double loadProgress = ewk_view_load_progress_get(m_view->view());
+    double loadProgress = ewk_view_load_progress_get(m_view->evasObject());
     if (loadProgress >= 0 && loadProgress < 1) {
         loadProgress = 1;
         m_view->smartCallback<LoadProgress>().call(&loadProgress);
@@ -134,7 +134,7 @@ void PageClientBase::processDidCrash()
         WARN("WARNING: The web process experienced a crash on '%s'.\n", url.data());
 
         // Display an error page
-        ewk_view_html_string_load(m_view->view(), "The web process has crashed.", 0, url.data());
+        ewk_view_html_string_load(m_view->evasObject(), "The web process has crashed.", 0, url.data());
     }
 }
 
@@ -235,7 +235,6 @@ void PageClientBase::setFindIndicator(PassRefPtr<FindIndicator>, bool, bool)
     notImplemented();
 }
 
-#if USE(ACCELERATED_COMPOSITING)
 void PageClientBase::enterAcceleratedCompositingMode(const LayerTreeContext&)
 {
     m_view->enterAcceleratedCompositingMode();
@@ -250,7 +249,6 @@ void PageClientBase::updateAcceleratedCompositingMode(const LayerTreeContext&)
 {
     notImplemented();
 }
-#endif // USE(ACCELERATED_COMPOSITING)
 
 void PageClientBase::didCommitLoadForMainFrame(bool)
 {

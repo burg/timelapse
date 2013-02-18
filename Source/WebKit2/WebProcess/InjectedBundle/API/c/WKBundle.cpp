@@ -264,11 +264,6 @@ WKArrayRef WKBundleCopyOriginsWithApplicationCache(WKBundleRef bundleRef)
     return toAPI(origins.release().leakRef());
 }
 
-void WKBundleSetMinimumTimerInterval(WKBundleRef bundleRef, WKBundlePageGroupRef pageGroupRef, double seconds)
-{
-    toImpl(bundleRef)->setMinimumTimerInterval(toImpl(pageGroupRef), seconds);
-}
-
 WKDataRef WKBundleCreateWKDataFromUInt8Array(WKBundleRef bundle, JSContextRef context, JSValueRef data)
 {
     RefPtr<WebData> webData = toImpl(bundle)->createWebDataFromUint8Array(context, data);
@@ -298,12 +293,6 @@ bool WKBundleIsPageBoxVisible(WKBundleRef bundleRef, WKBundleFrameRef frameRef, 
 bool WKBundleIsProcessingUserGesture(WKBundleRef)
 {
     return InjectedBundle::isProcessingUserGesture();
-}
-
-size_t WKBundleGetWorkerThreadCount(WKBundleRef)
-{
-    // Actually do not need argument here, keeping it however for consistency.
-    return InjectedBundle::workerThreadCount();
 }
 
 void WKBundleSetUserStyleSheetLocation(WKBundleRef bundleRef, WKBundlePageGroupRef pageGroupRef, WKStringRef location)

@@ -252,10 +252,11 @@ namespace WTF {
         void allocateBuffer(size_t newCapacity)
         {
             ASSERT(newCapacity);
-            m_capacity = newCapacity;
             if (newCapacity > std::numeric_limits<size_t>::max() / sizeof(T))
                 CRASH();
-            m_buffer = static_cast<T*>(fastMalloc(newCapacity * sizeof(T)));
+            size_t sizeToAllocate = fastMallocGoodSize(newCapacity * sizeof(T));
+            m_capacity = sizeToAllocate / sizeof(T);
+            m_buffer = static_cast<T*>(fastMalloc(sizeToAllocate));
         }
 
         bool tryAllocateBuffer(size_t newCapacity)
@@ -264,9 +265,10 @@ namespace WTF {
             if (newCapacity > std::numeric_limits<size_t>::max() / sizeof(T))
                 return false;
 
+            size_t sizeToAllocate = fastMallocGoodSize(newCapacity * sizeof(T));
             T* newBuffer;
-            if (tryFastMalloc(newCapacity * sizeof(T)).getValue(newBuffer)) {
-                m_capacity = newCapacity;
+            if (tryFastMalloc(sizeToAllocate).getValue(newBuffer)) {
+                m_capacity = sizeToAllocate / sizeof(T);
                 m_buffer = newBuffer;
                 return true;
             }
@@ -281,10 +283,11 @@ namespace WTF {
         void reallocateBuffer(size_t newCapacity)
         {
             ASSERT(shouldReallocateBuffer(newCapacity));
-            m_capacity = newCapacity;
             if (newCapacity > std::numeric_limits<size_t>::max() / sizeof(T))
                 CRASH();
-            m_buffer = static_cast<T*>(fastRealloc(m_buffer, newCapacity * sizeof(T)));
+            size_t sizeToAllocate = fastMallocGoodSize(newCapacity * sizeof(T));
+            m_capacity = sizeToAllocate / sizeof(T);
+            m_buffer = static_cast<T*>(fastRealloc(m_buffer, sizeToAllocate));
         }
 
         void deallocateBuffer(T* bufferToDeallocate)
@@ -1045,7 +1048,7 @@ namespace WTF {
     template<typename T, size_t inlineCapacity> template<typename U>
     void Vector<T, inlineCapacity>::insert(size_t position, const U* data, size_t dataSize)
     {
-        ASSERT(position <= size());
+        ASSERT_WITH_SECURITY_IMPLICATION(position <= size());
         size_t newSize = m_size + dataSize;
         if (newSize > capacity()) {
             data = expandCapacity(newSize, data);
@@ -1064,7 +1067,7 @@ namespace WTF {
     template<typename T, size_t inlineCapacity> template<typename U>
     inline void Vector<T, inlineCapacity>::insert(size_t position, const U& val)
     {
-        ASSERT(position <= size());
+        ASSERT_WITH_SECURITY_IMPLICATION(position <= size());
         const U* data = &val;
         if (size() == capacity()) {
             data = expandCapacity(size() + 1, data);
@@ -1104,7 +1107,7 @@ namespace WTF {
     template<typename T, size_t inlineCapacity>
     inline void Vector<T, inlineCapacity>::remove(size_t position)
     {
-        ASSERT(position < size());
+        ASSERT_WITH_SECURITY_IMPLICATION(position < size());
         T* spot = begin() + position;
         spot->~T();
         TypeOperations::moveOverlapping(spot + 1, end(), spot);
@@ -1114,8 +1117,8 @@ namespace WTF {
     template<typename T, size_t inlineCapacity>
     inline void Vector<T, inlineCapacity>::remove(size_t position, size_t length)
     {
-        ASSERT(position <= size());
-        ASSERT(position + length <= size());
+        ASSERT_WITH_SECURITY_IMPLICATION(position <= size());
+        ASSERT_WITH_SECURITY_IMPLICATION(position + length <= size());
         T* beginSpot = begin() + position;
         T* endSpot = beginSpot + length;
         TypeOperations::destruct(beginSpot, endSpot); 

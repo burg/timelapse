@@ -170,7 +170,7 @@ void ResourceLoader::start()
     ASSERT(m_deferredRequest.isNull());
 
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
-    if (m_documentLoader->scheduleArchiveLoad(this, m_request, m_request.url()))
+    if (m_documentLoader->scheduleArchiveLoad(this, m_request))
         return;
 #endif
 
@@ -555,14 +555,14 @@ AsyncFileStream* ResourceLoader::createAsyncFileStream(FileStreamClient* client)
 void ResourceLoader::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
 {
     MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Loader);
-    info.addMember(m_handle);
-    info.addMember(m_frame);
-    info.addMember(m_documentLoader);
-    info.addMember(m_request);
-    info.addMember(m_originalRequest);
-    info.addMember(m_resourceData);
-    info.addMember(m_deferredRequest);
-    info.addMember(m_options);
+    info.addMember(m_handle, "handle");
+    info.addMember(m_frame, "frame");
+    info.addMember(m_documentLoader, "documentLoader");
+    info.addMember(m_request, "request");
+    info.addMember(m_originalRequest, "originalRequest");
+    info.addMember(m_resourceData, "resourceData");
+    info.addMember(m_deferredRequest, "deferredRequest");
+    info.addMember(m_options, "options");
 }
 
 }

@@ -34,8 +34,6 @@
 #include "ewk_auth_request_private.h"
 #include "ewk_back_forward_list_private.h"
 #include "ewk_error_private.h"
-#include "ewk_intent_private.h"
-#include "ewk_intent_service_private.h"
 #include "ewk_view.h"
 
 using namespace EwkViewCallbacks;
@@ -55,24 +53,6 @@ void PageLoadClientEfl::didReceiveTitleForFrame(WKPageRef, WKStringRef title, WK
     EwkView* view = toPageLoadClientEfl(clientInfo)->view();
     view->smartCallback<TitleChange>().call(toImpl(title)->string());
 }
-
-#if ENABLE(WEB_INTENTS)
-void PageLoadClientEfl::didReceiveIntentForFrame(WKPageRef, WKFrameRef, WKIntentDataRef intent, WKTypeRef, const void* clientInfo)
-{
-    EwkView* view = toPageLoadClientEfl(clientInfo)->view();
-    RefPtr<EwkIntent> ewkIntent = EwkIntent::create(intent);
-    view->smartCallback<IntentRequest>().call(ewkIntent.get());
-}
-#endif
-
-#if ENABLE(WEB_INTENTS_TAG)
-void PageLoadClientEfl::registerIntentServiceForFrame(WKPageRef, WKFrameRef, WKIntentServiceInfoRef serviceInfo, WKTypeRef, const void* clientInfo)
-{
-    EwkView* view = toPageLoadClientEfl(clientInfo)->view();
-    RefPtr<EwkIntentService> ewkIntentService = EwkIntentService::create(serviceInfo);
-    view->smartCallback<IntentServiceRegistration>().call(ewkIntentService.get());
-}
-#endif
 
 void PageLoadClientEfl::didChangeProgress(WKPageRef page, const void* clientInfo)
 {
@@ -131,7 +111,6 @@ void PageLoadClientEfl::didFailProvisionalLoadWithErrorForFrame(WKPageRef, WKFra
     view->smartCallback<ProvisionalLoadFailed>().call(ewkError.get());
 }
 
-#if USE(TILED_BACKING_STORE)
 void PageLoadClientEfl::didCommitLoadForFrame(WKPageRef, WKFrameRef frame, WKTypeRef, const void* clientInfo)
 {
     if (!WKFrameIsMainFrame(frame))
@@ -140,14 +119,13 @@ void PageLoadClientEfl::didCommitLoadForFrame(WKPageRef, WKFrameRef frame, WKTyp
     EwkView* view = toPageLoadClientEfl(clientInfo)->view();
     view->pageClient()->didCommitLoad();
 }
-#endif
 
 void PageLoadClientEfl::didChangeBackForwardList(WKPageRef, WKBackForwardListItemRef addedItem, WKArrayRef removedItems, const void* clientInfo)
 {
     EwkView* view = toPageLoadClientEfl(clientInfo)->view();
     ASSERT(view);
 
-    Ewk_Back_Forward_List* list = ewk_view_back_forward_list_get(view->view());
+    Ewk_Back_Forward_List* list = ewk_view_back_forward_list_get(view->evasObject());
     ASSERT(list);
     list->update(addedItem, removedItems);
 
@@ -167,7 +145,7 @@ void PageLoadClientEfl::didReceiveAuthenticationChallengeInFrame(WKPageRef, WKFr
 {
     EwkView* view = toPageLoadClientEfl(clientInfo)->view();
 
-    RefPtr<EwkAuthRequest> authenticationRequest = EwkAuthRequest::create(toImpl(authenticationChallenge));
+    RefPtr<EwkAuthRequest> authenticationRequest = EwkAuthRequest::create(authenticationChallenge);
     view->smartCallback<AuthenticationRequest>().call(authenticationRequest.get());
 }
 
@@ -182,12 +160,6 @@ PageLoadClientEfl::PageLoadClientEfl(EwkView* view)
     loadClient.version = kWKPageLoaderClientCurrentVersion;
     loadClient.clientInfo = this;
     loadClient.didReceiveTitleForFrame = didReceiveTitleForFrame;
-#if ENABLE(WEB_INTENTS)
-    loadClient.didReceiveIntentForFrame = didReceiveIntentForFrame;
-#endif
-#if ENABLE(WEB_INTENTS_TAG)
-    loadClient.registerIntentServiceForFrame = registerIntentServiceForFrame;
-#endif
     loadClient.didStartProgress = didChangeProgress;
     loadClient.didChangeProgress = didChangeProgress;
     loadClient.didFinishProgress = didChangeProgress;
@@ -196,9 +168,7 @@ PageLoadClientEfl::PageLoadClientEfl(EwkView* view)
     loadClient.didStartProvisionalLoadForFrame = didStartProvisionalLoadForFrame;
     loadClient.didReceiveServerRedirectForProvisionalLoadForFrame = didReceiveServerRedirectForProvisionalLoadForFrame;
     loadClient.didFailProvisionalLoadWithErrorForFrame = didFailProvisionalLoadWithErrorForFrame;
-#if USE(TILED_BACKING_STORE)
     loadClient.didCommitLoadForFrame = didCommitLoadForFrame;
-#endif
     loadClient.didChangeBackForwardList = didChangeBackForwardList;
     loadClient.didSameDocumentNavigationForFrame = didSameDocumentNavigationForFrame;
     loadClient.didReceiveAuthenticationChallengeInFrame = didReceiveAuthenticationChallengeInFrame;

@@ -80,11 +80,11 @@ WebInspector.ScriptsNavigator.prototype = {
     /**
      * @param {WebInspector.UISourceCode} uiSourceCode
      */
-    _snippetsNavigatorViewForUISourceCode: function(uiSourceCode)
+    _navigatorViewForUISourceCode: function(uiSourceCode)
     {
         if (uiSourceCode.isContentScript)
             return this._contentScriptsView;
-        else if (uiSourceCode.isSnippet)
+        else if (uiSourceCode.project().type() === WebInspector.projectTypes.Snippets)
             return this._snippetsView;
         else
             return this._scriptsView;
@@ -95,7 +95,7 @@ WebInspector.ScriptsNavigator.prototype = {
      */
     addUISourceCode: function(uiSourceCode)
     {
-        this._snippetsNavigatorViewForUISourceCode(uiSourceCode).addUISourceCode(uiSourceCode);
+        this._navigatorViewForUISourceCode(uiSourceCode).addUISourceCode(uiSourceCode);
     },
 
     /**
@@ -103,16 +103,7 @@ WebInspector.ScriptsNavigator.prototype = {
      */
     removeUISourceCode: function(uiSourceCode)
     {
-        this._snippetsNavigatorViewForUISourceCode(uiSourceCode).removeUISourceCode(uiSourceCode);
-    },
-
-    /**
-     * @param {WebInspector.UISourceCode} uiSourceCode
-     * @return {boolean}
-     */
-    isScriptSourceAdded: function(uiSourceCode)
-    {
-        return this._snippetsNavigatorViewForUISourceCode(uiSourceCode).isScriptSourceAdded(uiSourceCode);
+        this._navigatorViewForUISourceCode(uiSourceCode).removeUISourceCode(uiSourceCode);
     },
 
     /**
@@ -120,10 +111,10 @@ WebInspector.ScriptsNavigator.prototype = {
      */
     revealUISourceCode: function(uiSourceCode)
     {
-        this._snippetsNavigatorViewForUISourceCode(uiSourceCode).revealUISourceCode(uiSourceCode);
+        this._navigatorViewForUISourceCode(uiSourceCode).revealUISourceCode(uiSourceCode);
         if (uiSourceCode.isContentScript)
             this._tabbedPane.selectTab(WebInspector.ScriptsNavigator.ContentScriptsTab);
-        else if (uiSourceCode.isSnippet)
+        else if (uiSourceCode.project().type() === WebInspector.projectTypes.Snippets)
             this._tabbedPane.selectTab(WebInspector.ScriptsNavigator.SnippetsTab);
         else
             this._tabbedPane.selectTab(WebInspector.ScriptsNavigator.ScriptsTab);
@@ -135,7 +126,7 @@ WebInspector.ScriptsNavigator.prototype = {
      */
     rename: function(uiSourceCode, callback)
     {
-        this._snippetsNavigatorViewForUISourceCode(uiSourceCode).rename(uiSourceCode, callback);
+        this._navigatorViewForUISourceCode(uiSourceCode).rename(uiSourceCode, callback);
     },
 
     /**
@@ -216,39 +207,33 @@ WebInspector.SnippetsNavigatorView.prototype = {
 
     /**
      * @param {WebInspector.UISourceCode} uiSourceCode
-     * @param {Event} event
      */
-    _handleEvaluateSnippet: function(uiSourceCode, event)
+    _handleEvaluateSnippet: function(uiSourceCode)
     {
-        if (!uiSourceCode.isSnippet)
+        if (!uiSourceCode.project().type() === WebInspector.projectTypes.Snippets)
             return;
         WebInspector.scriptSnippetModel.evaluateScriptSnippet(uiSourceCode);
     },
 
     /**
      * @param {WebInspector.UISourceCode} uiSourceCode
-     * @param {Event} event
      */
-    _handleRenameSnippet: function(uiSourceCode, event)
+    _handleRenameSnippet: function(uiSourceCode)
     {
         this.dispatchEventToListeners(WebInspector.ScriptsNavigator.Events.ItemRenamingRequested, uiSourceCode);
     },
 
     /**
      * @param {WebInspector.UISourceCode} uiSourceCode
-     * @param {Event} event
      */
-    _handleRemoveSnippet: function(uiSourceCode, event)
+    _handleRemoveSnippet: function(uiSourceCode)
     {
-        if (!uiSourceCode.isSnippet)
+        if (!uiSourceCode.project().type() === WebInspector.projectTypes.Snippets)
             return;
         WebInspector.scriptSnippetModel.deleteScriptSnippet(uiSourceCode);
     },
 
-    /**
-     * @param {Event} event
-     */
-    _handleCreateSnippet: function(event)
+    _handleCreateSnippet: function()
     {
         this._snippetCreationRequested();
     },

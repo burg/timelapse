@@ -44,17 +44,25 @@ class PatchLog(db.Model):
 
     @classmethod
     def lookup(cls, attachment_id, queue_name):
-        key = "%s-%s" % (attachment_id, queue_name)
+        key = cls._generate_key(attachment_id, queue_name)
         return cls.get_or_insert(key, attachment_id=attachment_id, queue_name=queue_name)
+
+    @classmethod
+    def lookup_if_exists(cls, attachment_id, queue_name):
+        key = cls._generate_key(attachment_id, queue_name)
+        return cls.get_by_key_name(key)
 
     def calculate_wait_duration(self):
         time_delta = datetime.utcnow() - self.date
         self.wait_duration = int(self._time_delta_to_seconds(time_delta))
 
     def calculate_process_duration(self):
-        if self.wait_duration:
-            time_delta = datetime.utcnow() - self.date
-            self.process_duration = int(self._time_delta_to_seconds(time_delta)) - self.wait_duration
+        time_delta = datetime.utcnow() - self.date
+        self.process_duration = int(self._time_delta_to_seconds(time_delta)) - (self.wait_duration or 0)
+
+    @classmethod
+    def _generate_key(cls, attachment_id, queue_name):
+        return "%s-%s" % (attachment_id, queue_name)
 
     # Needed to support Python 2.5's lack of timedelta.total_seconds().
     @classmethod
