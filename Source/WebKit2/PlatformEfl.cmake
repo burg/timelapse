@@ -37,9 +37,10 @@ list(APPEND WebKit2_SOURCES
     UIProcess/API/cpp/efl/WKEinaSharedString.cpp
 
     UIProcess/API/C/soup/WKContextSoup.cpp
+    UIProcess/API/C/soup/WKCookieManagerSoup.cpp
     UIProcess/API/C/soup/WKSoupRequestManager.cpp
 
-    UIProcess/API/efl/EwkViewImpl.cpp
+    UIProcess/API/efl/EwkView.cpp
     UIProcess/API/efl/EvasGLContext.cpp
     UIProcess/API/efl/EvasGLSurface.cpp
     UIProcess/API/efl/SnapshotImageGL.cpp
@@ -65,7 +66,6 @@ list(APPEND WebKit2_SOURCES
     UIProcess/API/efl/ewk_object.cpp
     UIProcess/API/efl/ewk_popup_menu.cpp
     UIProcess/API/efl/ewk_popup_menu_item.cpp
-    UIProcess/API/efl/ewk_resource.cpp
     UIProcess/API/efl/ewk_security_origin.cpp
     UIProcess/API/efl/ewk_settings.cpp
     UIProcess/API/efl/ewk_storage_manager.cpp
@@ -94,7 +94,6 @@ list(APPEND WebKit2_SOURCES
     UIProcess/efl/PageUIClientEfl.cpp
     UIProcess/efl/PageViewportControllerClientEfl.cpp
     UIProcess/efl/RequestManagerClientEfl.cpp
-    UIProcess/efl/ResourceLoadClientEfl.cpp
     UIProcess/efl/TextCheckerEfl.cpp
     UIProcess/efl/VibrationClientEfl.cpp
     UIProcess/efl/WebContextEfl.cpp
@@ -137,6 +136,7 @@ list(APPEND WebKit2_SOURCES
 
     WebProcess/WebCoreSupport/soup/WebFrameNetworkingContext.cpp
 
+    WebProcess/WebPage/atk/WebPageAccessibilityObjectAtk.cpp
     WebProcess/WebPage/efl/WebInspectorEfl.cpp
     WebProcess/WebPage/efl/WebPageEfl.cpp
 
@@ -195,6 +195,7 @@ list(APPEND WebKit2_INCLUDE_DIRECTORIES
 
 if (WTF_USE_3D_GRAPHICS)
     list(APPEND WebKit2_INCLUDE_DIRECTORIES
+        "${THIRDPARTY_DIR}/ANGLE/include/KHR"
         "${THIRDPARTY_DIR}/ANGLE/include/GLSLANG"
     )
 endif ()
@@ -282,7 +283,6 @@ set(EWebKit2_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_object.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_popup_menu.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_popup_menu_item.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_resource.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_security_origin.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_settings.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_storage_manager.h"
@@ -365,7 +365,6 @@ target_link_libraries(ewk2UnitTestUtils ${EWK2UnitTests_LIBRARIES})
 # The "ewk" on the test name needs to be suffixed with "2", otherwise it
 # will clash with tests from the WebKit 1 test suite.
 set(EWK2UnitTests_BINARIES
-    test_ewk2_auth_request
     test_ewk2_back_forward_list
     test_ewk2_color_picker
     test_ewk2_context
@@ -388,6 +387,11 @@ set(EWK2UnitTests_BINARIES
     test_ewk2_window_features
 )
 
+# Skipped unit tests list:
+#
+# webkit.org/b/107422: test_ewk2_auth_request
+#
+
 if (ENABLE_API_TESTS)
     foreach (testName ${EWK2UnitTests_BINARIES})
         add_executable(${testName} ${WEBKIT2_EFL_TEST_DIR}/${testName}.cpp)
@@ -406,5 +410,15 @@ if (ENABLE_SPELLCHECK)
     )
     list(APPEND WebKit2_LIBRARIES
         ${ENCHANT_LIBRARIES}
+    )
+endif ()
+
+if (ENABLE_ACCESSIBILITY)
+    list(APPEND WebKit2_INCLUDE_DIRECTORIES
+        "${WEBKIT2_DIR}/WebProcess/WebPage/atk"
+        ${ATK_INCLUDE_DIRS}
+    )
+    list(APPEND WebKit2_LIBRARIES
+        ${ATK_LIBRARIES}
     )
 endif ()

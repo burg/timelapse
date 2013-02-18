@@ -120,7 +120,6 @@ list(APPEND WebCore_SOURCES
     bindings/v8/custom/V8HTMLSelectElementCustom.cpp
     bindings/v8/custom/V8HistoryCustom.cpp
     bindings/v8/custom/V8IDBAnyCustom.cpp
-    bindings/v8/custom/V8IDBKeyCustom.cpp
     bindings/v8/custom/V8ImageDataCustom.cpp
     bindings/v8/custom/V8InjectedScriptHostCustom.cpp
     bindings/v8/custom/V8InjectedScriptManager.cpp
@@ -178,8 +177,6 @@ if (ENABLE_JAVASCRIPT_DEBUGGER)
         bindings/v8/ScriptProfiler.cpp
 
         bindings/v8/custom/V8JavaScriptCallFrameCustom.cpp
-        bindings/v8/custom/V8ScriptProfileCustom.cpp
-        bindings/v8/custom/V8ScriptProfileNodeCustom.cpp
     )
 endif ()
 

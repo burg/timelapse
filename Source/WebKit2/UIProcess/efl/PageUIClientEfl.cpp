@@ -27,7 +27,7 @@
 #include "config.h"
 #include "PageUIClientEfl.h"
 
-#include "EwkViewImpl.h"
+#include "EwkView.h"
 #include "WKAPICast.h"
 #include "WKEvent.h"
 #include "WKString.h"
@@ -45,157 +45,20 @@ static inline PageUIClientEfl* toPageUIClientEfl(const void* clientInfo)
     return static_cast<PageUIClientEfl*>(const_cast<void*>(clientInfo));
 }
 
-void PageUIClientEfl::closePage(WKPageRef, const void* clientInfo)
+PageUIClientEfl::PageUIClientEfl(EwkView* view)
+    : m_view(view)
 {
-    toPageUIClientEfl(clientInfo)->m_viewImpl->closePage();
-}
-
-WKPageRef PageUIClientEfl::createNewPage(WKPageRef, WKURLRequestRef wkRequest, WKDictionaryRef wkWindowFeatures, WKEventModifiers, WKEventMouseButton, const void* clientInfo)
-{
-    RefPtr<EwkUrlRequest> request = EwkUrlRequest::create(wkRequest);
-    return toPageUIClientEfl(clientInfo)->m_viewImpl->createNewPage(request, toImpl(wkWindowFeatures));
-}
-
-void PageUIClientEfl::runJavaScriptAlert(WKPageRef, WKStringRef alertText, WKFrameRef, const void* clientInfo)
-{
-    toPageUIClientEfl(clientInfo)->m_viewImpl->requestJSAlertPopup(WKEinaSharedString(alertText));
-}
-
-bool PageUIClientEfl::runJavaScriptConfirm(WKPageRef, WKStringRef message, WKFrameRef, const void* clientInfo)
-{
-    return toPageUIClientEfl(clientInfo)->m_viewImpl->requestJSConfirmPopup(WKEinaSharedString(message));
-}
-
-WKStringRef PageUIClientEfl::runJavaScriptPrompt(WKPageRef, WKStringRef message, WKStringRef defaultValue, WKFrameRef, const void* clientInfo)
-{
-    WKEinaSharedString value = toPageUIClientEfl(clientInfo)->m_viewImpl->requestJSPromptPopup(WKEinaSharedString(message), WKEinaSharedString(defaultValue));
-    return value ? WKStringCreateWithUTF8CString(value) : 0;
-}
-
-bool PageUIClientEfl::toolbarsAreVisible(WKPageRef, const void* clientInfo)
-{
-    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_viewImpl->windowFeatures();
-    ASSERT(features);
-    return features->toolbarVisible();
-}
-
-void PageUIClientEfl::setToolbarsAreVisible(WKPageRef, bool toolbarVisible, const void* clientInfo)
-{
-    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_viewImpl->windowFeatures();
-    ASSERT(features);
-    features->setToolbarVisible(toolbarVisible);
-}
-
-bool PageUIClientEfl::menuBarIsVisible(WKPageRef, const void* clientInfo)
-{
-    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_viewImpl->windowFeatures();
-    ASSERT(features);
-    return features->menuBarVisible();
-}
-
-void PageUIClientEfl::setMenuBarIsVisible(WKPageRef, bool menuBarVisible, const void* clientInfo)
-{
-    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_viewImpl->windowFeatures();
-    ASSERT(features);
-    features->setMenuBarVisible(menuBarVisible);
-}
-
-bool PageUIClientEfl::statusBarIsVisible(WKPageRef, const void* clientInfo)
-{
-    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_viewImpl->windowFeatures();
-    ASSERT(features);
-    return features->statusBarVisible();
-}
-
-void PageUIClientEfl::setStatusBarIsVisible(WKPageRef, bool statusBarVisible, const void* clientInfo)
-{
-    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_viewImpl->windowFeatures();
-    ASSERT(features);
-    features->setStatusBarVisible(statusBarVisible);
-}
-
-bool PageUIClientEfl::isResizable(WKPageRef, const void* clientInfo)
-{
-    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_viewImpl->windowFeatures();
-    ASSERT(features);
-    return features->resizable();
-}
-
-void PageUIClientEfl::setIsResizable(WKPageRef, bool resizable, const void* clientInfo)
-{
-    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_viewImpl->windowFeatures();
-    ASSERT(features);
-    features->setResizable(resizable);
-}
-
-#if ENABLE(INPUT_TYPE_COLOR)
-void PageUIClientEfl::showColorPicker(WKPageRef, WKStringRef initialColor, WKColorPickerResultListenerRef listener, const void* clientInfo)
-{
-    PageUIClientEfl* pageUIClient = toPageUIClientEfl(clientInfo);
-    WebCore::Color color = WebCore::Color(WebKit::toWTFString(initialColor));
-    pageUIClient->m_viewImpl->requestColorPicker(listener, color);
-}
-
-void PageUIClientEfl::hideColorPicker(WKPageRef, const void* clientInfo)
-{
-    PageUIClientEfl* pageUIClient = toPageUIClientEfl(clientInfo);
-    pageUIClient->m_viewImpl->dismissColorPicker();
-}
-#endif
-
-#if ENABLE(SQL_DATABASE)
-unsigned long long PageUIClientEfl::exceededDatabaseQuota(WKPageRef, WKFrameRef, WKSecurityOriginRef, WKStringRef databaseName, WKStringRef displayName, unsigned long long currentQuota, unsigned long long currentOriginUsage, unsigned long long currentDatabaseUsage, unsigned long long expectedUsage, const void* clientInfo)
-{
-    EwkViewImpl* viewImpl = toPageUIClientEfl(clientInfo)->m_viewImpl;
-    return viewImpl->informDatabaseQuotaReached(toImpl(databaseName)->string(), toImpl(displayName)->string(), currentQuota, currentOriginUsage, currentDatabaseUsage, expectedUsage);
-}
-#endif
-
-void PageUIClientEfl::focus(WKPageRef, const void* clientInfo)
-{
-    evas_object_focus_set(toPageUIClientEfl(clientInfo)->m_viewImpl->view(), true);
-}
-
-void PageUIClientEfl::unfocus(WKPageRef, const void* clientInfo)
-{
-    evas_object_focus_set(toPageUIClientEfl(clientInfo)->m_viewImpl->view(), false);
-}
-
-void PageUIClientEfl::takeFocus(WKPageRef, WKFocusDirection, const void* clientInfo)
-{
-    // FIXME: this is only a partial implementation.
-    evas_object_focus_set(toPageUIClientEfl(clientInfo)->m_viewImpl->view(), false);
-}
-
-WKRect PageUIClientEfl::getWindowFrame(WKPageRef, const void* clientInfo)
-{
-    return toPageUIClientEfl(clientInfo)->m_viewImpl->windowGeometry();
-}
-
-void PageUIClientEfl::setWindowFrame(WKPageRef, WKRect frame, const void* clientInfo)
-{
-    toPageUIClientEfl(clientInfo)->m_viewImpl->setWindowGeometry(frame);
-}
-
-void PageUIClientEfl::runOpenPanel(WKPageRef, WKFrameRef, WKOpenPanelParametersRef parameters, WKOpenPanelResultListenerRef listener, const void* clientInfo)
-{
-    EwkViewImpl* viewImpl = toPageUIClientEfl(clientInfo)->m_viewImpl;
-    RefPtr<EwkFileChooserRequest> fileChooserRequest = EwkFileChooserRequest::create(toImpl(parameters), toImpl(listener));
-    viewImpl->smartCallback<FileChooserRequest>().call(fileChooserRequest.get());
-}
-
-PageUIClientEfl::PageUIClientEfl(EwkViewImpl* viewImpl)
-    : m_viewImpl(viewImpl)
-{
-    WKPageRef pageRef = m_viewImpl->wkPage();
+    WKPageRef pageRef = m_view->wkPage();
     ASSERT(pageRef);
 
     WKPageUIClient uiClient;
     memset(&uiClient, 0, sizeof(WKPageUIClient));
     uiClient.version = kWKPageUIClientCurrentVersion;
     uiClient.clientInfo = this;
-    uiClient.close = closePage;
-    uiClient.createNewPage = createNewPage;
+    uiClient.close = close;
+    uiClient.takeFocus = takeFocus;
+    uiClient.focus = focus;
+    uiClient.unfocus = unfocus;
     uiClient.runJavaScriptAlert = runJavaScriptAlert;
     uiClient.runJavaScriptConfirm = runJavaScriptConfirm;
     uiClient.runJavaScriptPrompt = runJavaScriptPrompt;
@@ -207,16 +70,13 @@ PageUIClientEfl::PageUIClientEfl(EwkViewImpl* viewImpl)
     uiClient.setStatusBarIsVisible = setStatusBarIsVisible;
     uiClient.isResizable = isResizable;
     uiClient.setIsResizable = setIsResizable;
-    uiClient.takeFocus = takeFocus;
-    uiClient.focus = focus;
-    uiClient.unfocus = unfocus;
     uiClient.getWindowFrame = getWindowFrame;
     uiClient.setWindowFrame = setWindowFrame;
-    uiClient.runOpenPanel = runOpenPanel;
 #if ENABLE(SQL_DATABASE)
     uiClient.exceededDatabaseQuota = exceededDatabaseQuota;
 #endif
-
+    uiClient.runOpenPanel = runOpenPanel;
+    uiClient.createNewPage = createNewPage;
 #if ENABLE(INPUT_TYPE_COLOR)
     uiClient.showColorPicker = showColorPicker;
     uiClient.hideColorPicker = hideColorPicker;
@@ -224,5 +84,145 @@ PageUIClientEfl::PageUIClientEfl(EwkViewImpl* viewImpl)
 
     WKPageSetPageUIClient(pageRef, &uiClient);
 }
+
+
+void PageUIClientEfl::close(WKPageRef, const void* clientInfo)
+{
+    toPageUIClientEfl(clientInfo)->m_view->close();
+}
+
+void PageUIClientEfl::takeFocus(WKPageRef, WKFocusDirection, const void* clientInfo)
+{
+    // FIXME: this is only a partial implementation.
+    evas_object_focus_set(toPageUIClientEfl(clientInfo)->m_view->view(), false);
+}
+
+void PageUIClientEfl::focus(WKPageRef, const void* clientInfo)
+{
+    evas_object_focus_set(toPageUIClientEfl(clientInfo)->m_view->view(), true);
+}
+
+void PageUIClientEfl::unfocus(WKPageRef, const void* clientInfo)
+{
+    evas_object_focus_set(toPageUIClientEfl(clientInfo)->m_view->view(), false);
+}
+
+void PageUIClientEfl::runJavaScriptAlert(WKPageRef, WKStringRef alertText, WKFrameRef, const void* clientInfo)
+{
+    toPageUIClientEfl(clientInfo)->m_view->requestJSAlertPopup(WKEinaSharedString(alertText));
+}
+
+bool PageUIClientEfl::runJavaScriptConfirm(WKPageRef, WKStringRef message, WKFrameRef, const void* clientInfo)
+{
+    return toPageUIClientEfl(clientInfo)->m_view->requestJSConfirmPopup(WKEinaSharedString(message));
+}
+
+WKStringRef PageUIClientEfl::runJavaScriptPrompt(WKPageRef, WKStringRef message, WKStringRef defaultValue, WKFrameRef, const void* clientInfo)
+{
+    WKEinaSharedString value = toPageUIClientEfl(clientInfo)->m_view->requestJSPromptPopup(WKEinaSharedString(message), WKEinaSharedString(defaultValue));
+    return value ? WKStringCreateWithUTF8CString(value) : 0;
+}
+
+bool PageUIClientEfl::toolbarsAreVisible(WKPageRef, const void* clientInfo)
+{
+    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_view->windowFeatures();
+    ASSERT(features);
+    return features->toolbarVisible();
+}
+
+void PageUIClientEfl::setToolbarsAreVisible(WKPageRef, bool toolbarVisible, const void* clientInfo)
+{
+    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_view->windowFeatures();
+    ASSERT(features);
+    features->setToolbarVisible(toolbarVisible);
+}
+
+bool PageUIClientEfl::menuBarIsVisible(WKPageRef, const void* clientInfo)
+{
+    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_view->windowFeatures();
+    ASSERT(features);
+    return features->menuBarVisible();
+}
+
+void PageUIClientEfl::setMenuBarIsVisible(WKPageRef, bool menuBarVisible, const void* clientInfo)
+{
+    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_view->windowFeatures();
+    ASSERT(features);
+    features->setMenuBarVisible(menuBarVisible);
+}
+
+bool PageUIClientEfl::statusBarIsVisible(WKPageRef, const void* clientInfo)
+{
+    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_view->windowFeatures();
+    ASSERT(features);
+    return features->statusBarVisible();
+}
+
+void PageUIClientEfl::setStatusBarIsVisible(WKPageRef, bool statusBarVisible, const void* clientInfo)
+{
+    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_view->windowFeatures();
+    ASSERT(features);
+    features->setStatusBarVisible(statusBarVisible);
+}
+
+bool PageUIClientEfl::isResizable(WKPageRef, const void* clientInfo)
+{
+    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_view->windowFeatures();
+    ASSERT(features);
+    return features->resizable();
+}
+
+void PageUIClientEfl::setIsResizable(WKPageRef, bool resizable, const void* clientInfo)
+{
+    EwkWindowFeatures* features = toPageUIClientEfl(clientInfo)->m_view->windowFeatures();
+    ASSERT(features);
+    features->setResizable(resizable);
+}
+
+WKRect PageUIClientEfl::getWindowFrame(WKPageRef, const void* clientInfo)
+{
+    return toPageUIClientEfl(clientInfo)->m_view->windowGeometry();
+}
+
+void PageUIClientEfl::setWindowFrame(WKPageRef, WKRect frame, const void* clientInfo)
+{
+    toPageUIClientEfl(clientInfo)->m_view->setWindowGeometry(frame);
+}
+
+#if ENABLE(SQL_DATABASE)
+unsigned long long PageUIClientEfl::exceededDatabaseQuota(WKPageRef, WKFrameRef, WKSecurityOriginRef, WKStringRef databaseName, WKStringRef displayName, unsigned long long currentQuota, unsigned long long currentOriginUsage, unsigned long long currentDatabaseUsage, unsigned long long expectedUsage, const void* clientInfo)
+{
+    EwkView* view = toPageUIClientEfl(clientInfo)->m_view;
+    return view->informDatabaseQuotaReached(toImpl(databaseName)->string(), toImpl(displayName)->string(), currentQuota, currentOriginUsage, currentDatabaseUsage, expectedUsage);
+}
+#endif
+
+void PageUIClientEfl::runOpenPanel(WKPageRef, WKFrameRef, WKOpenPanelParametersRef parameters, WKOpenPanelResultListenerRef listener, const void* clientInfo)
+{
+    EwkView* view = toPageUIClientEfl(clientInfo)->m_view;
+    RefPtr<EwkFileChooserRequest> fileChooserRequest = EwkFileChooserRequest::create(toImpl(parameters), toImpl(listener));
+    view->smartCallback<FileChooserRequest>().call(fileChooserRequest.get());
+}
+
+WKPageRef PageUIClientEfl::createNewPage(WKPageRef, WKURLRequestRef wkRequest, WKDictionaryRef wkWindowFeatures, WKEventModifiers, WKEventMouseButton, const void* clientInfo)
+{
+    RefPtr<EwkUrlRequest> request = EwkUrlRequest::create(wkRequest);
+    return toPageUIClientEfl(clientInfo)->m_view->createNewPage(request, toImpl(wkWindowFeatures));
+}
+
+#if ENABLE(INPUT_TYPE_COLOR)
+void PageUIClientEfl::showColorPicker(WKPageRef, WKStringRef initialColor, WKColorPickerResultListenerRef listener, const void* clientInfo)
+{
+    PageUIClientEfl* pageUIClient = toPageUIClientEfl(clientInfo);
+    WebCore::Color color = WebCore::Color(WebKit::toWTFString(initialColor));
+    pageUIClient->m_view->requestColorPicker(listener, color);
+}
+
+void PageUIClientEfl::hideColorPicker(WKPageRef, const void* clientInfo)
+{
+    PageUIClientEfl* pageUIClient = toPageUIClientEfl(clientInfo);
+    pageUIClient->m_view->dismissColorPicker();
+}
+#endif
 
 } // namespace WebKit

@@ -44,16 +44,17 @@
 #include "EventSender.h"
 
 #include "KeyCodeMapping.h"
+#include "MockSpellCheck.h"
 #include "TestDelegate.h"
 #include "WebContextMenuData.h"
 #include "WebDragOperation.h"
 #include "WebEventSender.h"
 #include "WebTouchPoint.h"
 #include "WebView.h"
-#include "platform/WebDragData.h"
-#include "platform/WebPoint.h"
-#include "platform/WebString.h"
-#include "platform/WebVector.h"
+#include <public/WebDragData.h>
+#include <public/WebPoint.h>
+#include <public/WebString.h>
+#include <public/WebVector.h>
 #include <wtf/Deque.h>
 #include <wtf/StringExtras.h>
 
@@ -468,10 +469,17 @@ void EventSender::doMouseUp(const WebMouseEvent& e)
     // If we're in a drag operation, complete it.
     if (currentDragData.isNull())
         return;
+
     WebPoint clientPoint(e.x, e.y);
     WebPoint screenPoint(e.globalX, e.globalY);
+    finishDragAndDrop(e, webview()->dragTargetDragOver(clientPoint, screenPoint, currentDragEffectsAllowed, 0));
+}
 
-    currentDragEffect = webview()->dragTargetDragOver(clientPoint, screenPoint, currentDragEffectsAllowed, 0);
+void EventSender::finishDragAndDrop(const WebMouseEvent& e, WebKit::WebDragOperation dragEffect)
+{
+    WebPoint clientPoint(e.x, e.y);
+    WebPoint screenPoint(e.globalX, e.globalY);
+    currentDragEffect = dragEffect;
     if (currentDragEffect)
         webview()->dragTargetDrop(clientPoint, screenPoint, 0);
     else
@@ -648,6 +656,12 @@ void EventSender::keyDown(const CppArgumentList& arguments, CppVariant* result)
 
     webview()->handleInputEvent(eventDown);
 
+    if (code == VKEY_ESCAPE && !currentDragData.isNull()) {
+        WebMouseEvent event;
+        initMouseEvent(WebInputEvent::MouseDown, pressedButton, lastMousePos, &event, getCurrentEventTimeSec(m_delegate));
+        finishDragAndDrop(event, WebKit::WebDragOperationNone);
+    }
+
     m_delegate->clearEditCommand();
 
     if (generateChar) {
@@ -814,7 +828,7 @@ static Vector<WebString> makeMenuItemStringsFor(WebContextMenuData* contextMenu,
         for (const char** item = editableMenuStrings; *item; ++item) 
             strings.append(WebString::fromUTF8(*item));
         WebVector<WebString> suggestions;
-        delegate->fillSpellingSuggestionList(contextMenu->misspelledWord, &suggestions);
+        MockSpellCheck::fillSuggestionList(contextMenu->misspelledWord, &suggestions);
         for (size_t i = 0; i < suggestions.size(); ++i) 
             strings.append(suggestions[i]);
     } else {

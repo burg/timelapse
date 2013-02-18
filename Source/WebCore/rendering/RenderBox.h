@@ -44,7 +44,7 @@ enum ShouldComputePreferred { ComputeActual, ComputePreferred };
 
 class RenderBox : public RenderBoxModelObject {
 public:
-    RenderBox(Node*);
+    explicit RenderBox(ContainerNode*);
     virtual ~RenderBox();
 
     // hasAutoZIndex only returns true if the element is positioned or a flex-item since
@@ -447,8 +447,9 @@ public:
     virtual bool logicalScroll(ScrollLogicalDirection, ScrollGranularity, float multiplier = 1, Node** stopNode = 0);
     bool canBeScrolledAndHasScrollableArea() const;
     virtual bool canBeProgramaticallyScrolled() const;
-    virtual void autoscroll();
+    virtual void autoscroll(const IntPoint&);
     bool canAutoscroll() const;
+    IntSize calculateAutoscrollDirection(const IntPoint& windowPoint) const;
     static RenderBox* findAutoscrollable(RenderObject*);
     virtual void stopAutoscroll() { }
     virtual void panScroll(const IntPoint&);
@@ -688,13 +689,13 @@ private:
 
 inline RenderBox* toRenderBox(RenderObject* object)
 { 
-    ASSERT(!object || object->isBox());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isBox());
     return static_cast<RenderBox*>(object);
 }
 
 inline const RenderBox* toRenderBox(const RenderObject* object)
 { 
-    ASSERT(!object || object->isBox());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isBox());
     return static_cast<const RenderBox*>(object);
 }
 

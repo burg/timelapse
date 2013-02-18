@@ -121,7 +121,6 @@ IDL_BINDINGS += \
     $$PWD/Modules/indexeddb/IDBDatabase.idl \
     $$PWD/Modules/indexeddb/IDBFactory.idl \
     $$PWD/Modules/indexeddb/IDBIndex.idl \
-    $$PWD/Modules/indexeddb/IDBKey.idl \
     $$PWD/Modules/indexeddb/IDBKeyRange.idl \
     $$PWD/Modules/indexeddb/IDBObjectStore.idl \
     $$PWD/Modules/indexeddb/IDBRequest.idl \
@@ -189,6 +188,7 @@ IDL_BINDINGS += \
     $$PWD/css/Counter.idl \
     $$PWD/css/CSSCharsetRule.idl \
     $$PWD/css/CSSFontFaceRule.idl \
+    $$PWD/css/CSSHostRule.idl \
     $$PWD/css/CSSImportRule.idl \
     $$PWD/css/CSSMediaRule.idl \
     $$PWD/css/CSSPageRule.idl \
@@ -198,6 +198,7 @@ IDL_BINDINGS += \
     $$PWD/css/CSSStyleDeclaration.idl \
     $$PWD/css/CSSStyleRule.idl \
     $$PWD/css/CSSStyleSheet.idl \
+    $$PWD/css/CSSSupportsRule.idl \
     $$PWD/css/CSSValue.idl \
     $$PWD/css/CSSValueList.idl \
     $$PWD/css/MediaList.idl \
@@ -277,6 +278,7 @@ IDL_BINDINGS += \
     $$PWD/dom/Touch.idl \
     $$PWD/dom/TouchEvent.idl \
     $$PWD/dom/TouchList.idl \
+    $$PWD/dom/TransitionEvent.idl \
     $$PWD/dom/TreeWalker.idl \
     $$PWD/dom/UIEvent.idl \
     $$PWD/dom/WebKitAnimationEvent.idl \
@@ -303,6 +305,7 @@ IDL_BINDINGS += \
     $$PWD/html/canvas/CanvasProxy.idl \
     $$PWD/html/canvas/CanvasRenderingContext.idl \
     $$PWD/html/canvas/CanvasRenderingContext2D.idl \
+    $$PWD/html/canvas/DOMPath.idl \
     $$PWD/html/canvas/EXTTextureFilterAnisotropic.idl \
     $$PWD/html/canvas/OESStandardDerivatives.idl \
     $$PWD/html/canvas/OESTextureFloat.idl \
@@ -607,6 +610,7 @@ enable?(SVG) {
     $$PWD/svg/SVGStopElement.idl \
     $$PWD/svg/SVGStringList.idl \
     $$PWD/svg/SVGStyleElement.idl \
+    $$PWD/svg/SVGStyledElement.idl \
     $$PWD/svg/SVGSVGElement.idl \
     $$PWD/svg/SVGSwitchElement.idl \
     $$PWD/svg/SVGSymbolElement.idl \

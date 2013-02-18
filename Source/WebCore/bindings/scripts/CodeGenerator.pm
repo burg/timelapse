@@ -322,14 +322,6 @@ sub SkipIncludeHeader
     return 0;
 }
 
-sub IsArrayType
-{
-    my $object = shift;
-    my $type = shift;
-    # FIXME: Add proper support for T[], T[]?, sequence<T>.
-    return $type =~ m/\[\]$/;
-}
-
 sub IsConstructorTemplate
 {
     my $object = shift;
@@ -402,6 +394,8 @@ sub IsRefPtrType
     my $type = shift;
 
     return 0 if $object->IsPrimitiveType($type);
+    return 0 if $object->GetArrayType($type);
+    return 0 if $object->GetSequenceType($type);
     return 0 if $type eq "DOMString";
 
     return 1;
@@ -654,6 +648,19 @@ sub GenerateConditionalString
     }
 }
 
+sub GenerateConstructorConditionalString
+{
+    my $generator = shift;
+    my $node = shift;
+
+    my $conditional = $node->extendedAttributes->{"ConstructorConditional"};
+    if ($conditional) {
+        return $generator->GenerateConditionalStringFromAttributeValue($conditional);
+    } else {
+        return "";
+    }
+}
+
 sub GenerateConditionalStringFromAttributeValue
 {
     my $generator = shift;
@@ -725,6 +732,7 @@ sub GetVisibleInterfaceName
     return $interfaceName ? $interfaceName : $interface->name;
 }
 
+# FIXME: Rename to InheritsInterface
 sub IsSubType
 {
     my $object = shift;
@@ -738,7 +746,26 @@ sub IsSubType
         if ($currentInterface->name eq $interfaceName) {
             $found = 1;
         }
-        return "prune" if $found;
+        return 1 if $found;
+    }, 0, 1);
+
+    return $found;
+}
+
+sub InheritsExtendedAttribute
+{
+    my $object = shift;
+    my $interface = shift;
+    my $extendedAttribute = shift;
+    my $found = 0;
+
+    return 1 if $interface->extendedAttributes->{$extendedAttribute};
+    $object->ForAllParents($interface, sub {
+        my $currentInterface = shift;
+        if ($currentInterface->extendedAttributes->{$extendedAttribute}) {
+            $found = 1;
+        }
+        return 1 if $found;
     }, 0, 1);
 
     return $found;

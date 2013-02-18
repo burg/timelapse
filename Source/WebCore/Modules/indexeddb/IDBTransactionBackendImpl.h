@@ -44,7 +44,7 @@ class IDBDatabaseBackendImpl;
 
 class IDBTransactionBackendImpl : public IDBTransactionBackendInterface {
 public:
-    static PassRefPtr<IDBTransactionBackendImpl> create(int64_t transactionId, const Vector<int64_t>&, IDBTransaction::Mode, IDBDatabaseBackendImpl*);
+    static PassRefPtr<IDBTransactionBackendImpl> create(int64_t transactionId, PassRefPtr<IDBDatabaseCallbacks>, const Vector<int64_t>&, IDBTransaction::Mode, IDBDatabaseBackendImpl*);
     static IDBTransactionBackendImpl* from(IDBTransactionBackendInterface* interface)
     {
         return static_cast<IDBTransactionBackendImpl*>(interface);
@@ -52,10 +52,9 @@ public:
     virtual ~IDBTransactionBackendImpl();
 
     // IDBTransactionBackendInterface
-    virtual PassRefPtr<IDBObjectStoreBackendInterface> objectStore(int64_t, ExceptionCode&) { ASSERT_NOT_REACHED(); return 0; }
     virtual void abort();
     void commit();
-    virtual void setCallbacks(IDBTransactionCallbacks* callbacks) { m_callbacks = callbacks; }
+    virtual void setCallbacks(IDBTransactionCallbacks* callbacks) { }
 
     class Operation {
     public:
@@ -80,7 +79,7 @@ public:
     IDBDatabaseBackendImpl* database() const { return m_database.get(); }
 
 private:
-    IDBTransactionBackendImpl(int64_t id, const HashSet<int64_t>& objectStoreIds, IDBTransaction::Mode, IDBDatabaseBackendImpl*);
+    IDBTransactionBackendImpl(int64_t id, PassRefPtr<IDBDatabaseCallbacks>, const HashSet<int64_t>& objectStoreIds, IDBTransaction::Mode, IDBDatabaseBackendImpl*);
 
     enum State {
         Unused, // Created, but no tasks yet.
@@ -103,7 +102,7 @@ private:
 
     State m_state;
     bool m_commitPending;
-    RefPtr<IDBTransactionCallbacks> m_callbacks;
+    RefPtr<IDBDatabaseCallbacks> m_callbacks;
     RefPtr<IDBDatabaseBackendImpl> m_database;
 
     typedef Deque<OwnPtr<Operation> > TaskQueue;

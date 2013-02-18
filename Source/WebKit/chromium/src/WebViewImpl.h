@@ -68,6 +68,7 @@ class DocumentLoader;
 class FloatSize;
 class Frame;
 class GraphicsContext3D;
+class GraphicsLayerFactory;
 class HistoryItem;
 class HitTestResult;
 class KeyboardEvent;
@@ -91,7 +92,6 @@ class BatteryClientImpl;
 class ContextFeaturesClientImpl;
 class ContextMenuClientImpl;
 class DeviceOrientationClientProxy;
-class DragScrollTimer;
 class GeolocationClientProxy;
 class LinkHighlight;
 class NonCompositedContentHost;
@@ -135,7 +135,7 @@ public:
 
     // WebWidget methods:
     virtual void close();
-    virtual WebSize size() { return m_size; }
+    virtual WebSize size();
     virtual void willStartLiveResize();
     virtual void resize(const WebSize&);
     virtual void willEndLiveResize();
@@ -242,7 +242,6 @@ public:
     virtual void enableFixedLayoutMode(bool enable);
     virtual WebSize fixedLayoutSize() const;
     virtual void setFixedLayoutSize(const WebSize&);
-    virtual WebCore::FloatSize dipSize() const;
     virtual void enableAutoResizeMode(
         const WebSize& minSize,
         const WebSize& maxSize);
@@ -459,6 +458,9 @@ public:
         return m_maxAutoSize;
     }
 
+    WebCore::IntSize dipSize() const;
+    WebCore::IntSize layoutSize() const;
+
     // Set the disposition for how this webview is to be initially shown.
     void setInitialNavigationPolicy(WebNavigationPolicy policy)
     {
@@ -543,6 +545,7 @@ public:
     void paintRootLayer(WebCore::GraphicsContext&, const WebCore::IntRect& contentRect);
     NonCompositedContentHost* nonCompositedContentHost();
     void setBackgroundColor(const WebCore::Color&);
+    WebCore::GraphicsLayerFactory* graphicsLayerFactory() const;
 #endif
 #if ENABLE(REQUEST_ANIMATION_FRAME)
     void scheduleAnimation();
@@ -817,7 +820,6 @@ private:
 
     typedef HashMap<WTF::String, WTF::String> SettingsMap;
     OwnPtr<SettingsMap> m_inspectorSettingsMap;
-    OwnPtr<DragScrollTimer> m_dragScrollTimer;
 
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     // The provider of desktop notifications;
@@ -849,7 +851,6 @@ private:
     // If true, the graphics context is being restored.
     bool m_recreatingGraphicsContext;
     bool m_compositorSurfaceReady;
-    float m_deviceScaleInCompositor;
     int m_inputHandlerIdentifier;
 #endif
     static const WebInputEvent* m_currentInputEvent;
@@ -876,9 +877,10 @@ private:
     OwnPtr<NavigatorContentUtilsClientImpl> m_navigatorContentUtilsClient;
 #endif
     OwnPtr<WebActiveGestureAnimation> m_gestureAnimation;
-    WebPoint m_lastWheelPosition;
-    WebPoint m_lastWheelGlobalPosition;
+    WebPoint m_positionOnFlingStart;
+    WebPoint m_globalPositionOnFlingStart;
     int m_flingModifier;
+    bool m_flingSourceDevice;
 #if ENABLE(GESTURE_EVENTS)
     OwnPtr<LinkHighlight> m_linkHighlight;
 #endif

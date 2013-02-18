@@ -30,6 +30,7 @@
 # WebKit's Python module for committer and reviewer validation.
 
 from webkitpy.common.editdistance import edit_distance
+import fnmatch
 
 class Account(object):
     def __init__(self, name, email_or_emails, irc_nickname_or_nicknames=None):
@@ -66,6 +67,18 @@ class Account(object):
                     return True
         for email in self.emails:
             if string in email:
+                return True
+        return False
+
+    def matches_glob(self, glob_string):
+        if fnmatch.fnmatch(self.full_name, glob_string):
+            return True
+        if self.irc_nicknames:
+            for nickname in self.irc_nicknames:
+                if fnmatch.fnmatch(nickname, glob_string):
+                    return True
+        for email in self.emails:
+            if fnmatch.fnmatch(email, glob_string):
                 return True
         return False
 
@@ -151,6 +164,7 @@ contributors_who_are_not_committers = [
     Contributor("Kulanthaivel Palanichamy", "kulanthaivel@codeaurora.org", "kvel"),
     Contributor("Kiran Muppala", "cmuppala@apple.com", "kiranm"),
     Contributor("Koji Ishii", "kojiishi@gmail.com"),
+    Contributor("Michael Pruett", "michael@68k.org", "mpruett"),
     Contributor("Mihai Balan", "mibalan@adobe.com", "miChou"),
     Contributor("Mihai Maerean", "mmaerean@adobe.com", "mmaerean"),
     Contributor("Min Qin", "qinmin@chromium.org"),
@@ -167,6 +181,7 @@ contributors_who_are_not_committers = [
     Contributor("Tab Atkins", ["tabatkins@google.com", "jackalmage@gmail.com"], "tabatkins"),
     Contributor("Tamas Czene", ["tczene@inf.u-szeged.hu", "Czene.Tamas@stud.u-szeged.hu"], "tczene"),
     Contributor("Tien-Ren Chen", "trchen@chromium.org", "trchen"),
+    Contributor("Tim 'mithro' Ansell", "mithro@mithis.com", "mithro"),
     Contributor("Tim Volodine", "timvolodine@chromium.org", "timvolodine"),
     Contributor("WebKit Review Bot", "webkit.review.bot@gmail.com", "sheriff-bot"),
     Contributor("Web Components Team", "webcomponents-bugzilla@chromium.org"),
@@ -403,7 +418,7 @@ committers_unable_to_review = [
     Committer("Simon Pena", "spena@igalia.com", "spenap"),
     Committer("Stephen Chenney", "schenney@chromium.org", "schenney"),
     Committer("Steve Lacey", "sjl@chromium.org", "stevela"),
-    Committer("Sudarsana Nagineni", ["naginenis@gmail.com", "sudarsana.nagineni@linux.intel.com"], "babu"),
+    Committer("Sudarsana Nagineni", ["naginenis@gmail.com", "sudarsana.nagineni@linux.intel.com", "sudarsana.nagineni@intel.com"], "babu"),
     Committer("Taiju Tsuiki", "tzik@chromium.org", "tzik"),
     Committer("Takashi Sakamoto", "tasak@google.com", "tasak"),
     Committer("Takashi Toyoshima", "toyoshim@chromium.org", "toyoshim"),
@@ -417,7 +432,7 @@ committers_unable_to_review = [
     Committer("Tristan O'Tierney", ["tristan@otierney.net", "tristan@apple.com"]),
     Committer("Vangelis Kokkevis", "vangelis@chromium.org", "vangelis"),
     Committer("Viatcheslav Ostapenko", ["ostap73@gmail.com", "v.ostapenko@samsung.com", "v.ostapenko@sisa.samsung.com"], "ostap"),
-    Committer("Victor Carbune", "victor@rosedu.org", "vcarbune"),
+    Committer("Victor Carbune", ["vcarbune@chromium.org", "victor@rosedu.org"], "vcarbune"),
     Committer("Victor Wang", "victorw@chromium.org", "victorw"),
     Committer("Victoria Kirst", ["vrk@chromium.org", "vrk@google.com"], "vrk"),
     Committer("Vincent Scheib", "scheib@chromium.org", "scheib"),
@@ -656,7 +671,8 @@ class CommitterList(object):
         return None
 
     def contributors_by_search_string(self, string):
-        return filter(lambda contributor: contributor.contains_string(string), self.contributors())
+        glob_matches = filter(lambda contributor: contributor.matches_glob(string), self.contributors())
+        return glob_matches or filter(lambda contributor: contributor.contains_string(string), self.contributors())
 
     def contributors_by_email_username(self, string):
         string = string + '@'

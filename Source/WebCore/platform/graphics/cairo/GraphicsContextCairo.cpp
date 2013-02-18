@@ -983,15 +983,21 @@ void GraphicsContext::setAlpha(float alpha)
     platformContext()->setGlobalAlpha(alpha);
 }
 
-void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendMode)
+void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendMode blendOp)
 {
     if (paintingDisabled())
         return;
 
-    cairo_set_operator(platformContext()->cr(), toCairoOperator(op));
+    cairo_operator_t cairo_op;
+    if (blendOp == BlendModeNormal)
+        cairo_op = toCairoOperator(op);
+    else
+        cairo_op = toCairoOperator(blendOp);
+
+    cairo_set_operator(platformContext()->cr(), cairo_op);
 }
 
-void GraphicsContext::clip(const Path& path)
+void GraphicsContext::clip(const Path& path, WindRule windRule)
 {
     if (paintingDisabled())
         return;
@@ -1003,15 +1009,18 @@ void GraphicsContext::clip(const Path& path)
         cairo_append_path(cr, pathCopy.get());
     }
     cairo_fill_rule_t savedFillRule = cairo_get_fill_rule(cr);
-    cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
+    if (windRule == RULE_NONZERO)
+        cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
+    else
+        cairo_set_fill_rule(cr, CAIRO_FILL_RULE_EVEN_ODD);
     cairo_clip(cr);
     cairo_set_fill_rule(cr, savedFillRule);
     m_data->clip(path);
 }
 
-void GraphicsContext::canvasClip(const Path& path)
+void GraphicsContext::canvasClip(const Path& path, WindRule windRule)
 {
-    clip(path);
+    clip(path, windRule);
 }
 
 void GraphicsContext::clipOut(const Path& path)

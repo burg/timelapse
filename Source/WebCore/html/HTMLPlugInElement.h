@@ -25,7 +25,7 @@
 
 #include "HTMLFrameOwnerElement.h"
 #include "Image.h"
-#include "ImageLoaderClient.h"
+
 #include "ScriptInstance.h"
 
 #if ENABLE(NETSCAPE_PLUGIN_API)

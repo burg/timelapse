@@ -323,13 +323,18 @@ void ContainerNode::parserInsertBefore(PassRefPtr<Node> newChild, Node* nextChil
     ASSERT(newChild);
     ASSERT(nextChild);
     ASSERT(nextChild->parentNode() == this);
-    ASSERT(document() == newChild->document());
     ASSERT(!newChild->isDocumentFragment());
+    ASSERT_WITH_SECURITY_IMPLICATION(document() == newChild->document());
 
     if (nextChild->previousSibling() == newChild || nextChild == newChild) // nothing to do
         return;
 
     insertBeforeCommon(nextChild, newChild.get());
+
+    if (unsigned count = newChild->connectedSubframeCount()) {
+        for (Node* node = newChild->parentOrHostNode(); node; node = node->parentOrHostNode())
+            node->incrementConnectedSubframeCount(count);
+    }
 
     childrenChanged(true, newChild->previousSibling(), nextChild, 1);
     ChildNodeInsertionNotifier(this).notify(newChild.get());
@@ -449,7 +454,7 @@ static void willRemoveChildren(ContainerNode* container)
         dispatchChildRemovalEvents(child);
     }
 
-    ChildFrameDisconnector(container, ChildFrameDisconnector::DoNotIncludeRoot).disconnect();
+    ChildFrameDisconnector(container).disconnect(ChildFrameDisconnector::DescendantsOnly);
 }
 
 void ContainerNode::disconnectDescendantFrames()
@@ -552,6 +557,11 @@ void ContainerNode::parserRemoveChild(Node* oldChild)
     Node* prev = oldChild->previousSibling();
     Node* next = oldChild->nextSibling();
 
+    if (unsigned count = oldChild->connectedSubframeCount()) {
+        for (Node* node = oldChild->parentOrHostNode(); node; node = node->parentOrHostNode())
+            node->decrementConnectedSubframeCount(count);
+    }
+
     removeBetween(prev, next, oldChild);
 
     childrenChanged(true, prev, next, -1);
@@ -582,43 +592,42 @@ void ContainerNode::removeChildren()
     Vector<RefPtr<Node>, 10> removedChildren;
     {
         WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
-        NoEventDispatchAssertion assertNoEventDispatch;
-        removedChildren.reserveInitialCapacity(childNodeCount());
-        while (RefPtr<Node> n = m_firstChild) {
-            Node* next = n->nextSibling();
+        {
+            NoEventDispatchAssertion assertNoEventDispatch;
+            removedChildren.reserveInitialCapacity(childNodeCount());
+            while (RefPtr<Node> n = m_firstChild) {
+                Node* next = n->nextSibling();
 
-            // Remove the node from the tree before calling detach or removedFromDocument (4427024, 4129744).
-            // removeChild() does this after calling detach(). There is no explanation for
-            // this discrepancy between removeChild() and its optimized version removeChildren().
-            n->setPreviousSibling(0);
-            n->setNextSibling(0);
-            n->setParentOrHostNode(0);
-            document()->adoptIfNeeded(n.get());
+                // Remove the node from the tree before calling detach or removedFromDocument (4427024, 4129744).
+                // removeChild() does this after calling detach(). There is no explanation for
+                // this discrepancy between removeChild() and its optimized version removeChildren().
+                n->setPreviousSibling(0);
+                n->setNextSibling(0);
+                n->setParentOrHostNode(0);
+                document()->adoptIfNeeded(n.get());
 
-            m_firstChild = next;
-            if (n == m_lastChild)
-                m_lastChild = 0;
-            removedChildren.append(n.release());
+                m_firstChild = next;
+                if (n == m_lastChild)
+                    m_lastChild = 0;
+                removedChildren.append(n.release());
+            }
+
+            // Detach the nodes only after properly removed from the tree because
+            // a. detaching requires a proper DOM tree (for counters and quotes for
+            // example) and during the previous loop the next sibling still points to
+            // the node being removed while the node being removed does not point back
+            // and does not point to the same parent as its next sibling.
+            // b. destroying Renderers of standalone nodes is sometimes faster.
+            for (size_t i = 0; i < removedChildren.size(); ++i) {
+                Node* removedChild = removedChildren[i].get();
+                if (removedChild->attached())
+                    removedChild->detach();
+            }
         }
 
-        size_t removedChildrenCount = removedChildren.size();
-        size_t i;
-
-        // Detach the nodes only after properly removed from the tree because
-        // a. detaching requires a proper DOM tree (for counters and quotes for
-        // example) and during the previous loop the next sibling still points to
-        // the node being removed while the node being removed does not point back
-        // and does not point to the same parent as its next sibling.
-        // b. destroying Renderers of standalone nodes is sometimes faster.
-        for (i = 0; i < removedChildrenCount; ++i) {
-            Node* removedChild = removedChildren[i].get();
-            if (removedChild->attached())
-                removedChild->detach();
-        }
-
-        childrenChanged(false, 0, 0, -static_cast<int>(removedChildrenCount));
-
-        for (i = 0; i < removedChildrenCount; ++i)
+        childrenChanged(false, 0, 0, -static_cast<int>(removedChildren.size()));
+        
+        for (size_t i = 0; i < removedChildren.size(); ++i)
             ChildNodeRemovalNotifier(this).notify(removedChildren[i].get());
     }
 
@@ -687,7 +696,7 @@ void ContainerNode::parserAppendChild(PassRefPtr<Node> newChild)
     ASSERT(newChild);
     ASSERT(!newChild->parentNode()); // Use appendChild if you need to handle reparenting (and want DOM mutation events).
     ASSERT(!newChild->isDocumentFragment());
-    ASSERT(document() == newChild->document());
+    ASSERT_WITH_SECURITY_IMPLICATION(document() == newChild->document());
 
     Node* last = m_lastChild;
     {
@@ -695,6 +704,11 @@ void ContainerNode::parserAppendChild(PassRefPtr<Node> newChild)
         // FIXME: This method should take a PassRefPtr.
         appendChildToContainer(newChild.get(), this);
         treeScope()->adoptIfNeeded(newChild.get());
+    }
+
+    if (unsigned count = newChild->connectedSubframeCount()) {
+        for (Node* node = newChild->parentOrHostNode(); node; node = node->parentOrHostNode())
+            node->incrementConnectedSubframeCount(count);
     }
 
     childrenChanged(true, last, 0, 1);

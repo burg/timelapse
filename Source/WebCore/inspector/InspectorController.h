@@ -104,6 +104,7 @@ public:
     void hideHighlight();
     Node* highlightedNode() const;
 
+    bool isUnderTest();
     void evaluateForTestInFrontend(long callId, const String& script);
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
@@ -129,7 +130,7 @@ private:
     friend class PostWorkerNotificationToFrontendTask;
     friend InstrumentingAgents* instrumentationForPage(Page*);
 
-    OwnPtr<InstrumentingAgents> m_instrumentingAgents;
+    RefPtr<InstrumentingAgents> m_instrumentingAgents;
     OwnPtr<InjectedScriptManager> m_injectedScriptManager;
     OwnPtr<InspectorCompositeState> m_state;
     OwnPtr<InspectorOverlay> m_overlay;
@@ -137,7 +138,6 @@ private:
     InspectorAgent* m_inspectorAgent;
     InspectorDOMAgent* m_domAgent;
     InspectorResourceAgent* m_resourceAgent;
-    //TODO: inspector timelapse agent
     InspectorPageAgent* m_pageAgent;
 #if ENABLE(JAVASCRIPT_DEBUGGER)
     InspectorDebuggerAgent* m_debuggerAgent;
@@ -151,6 +151,7 @@ private:
     Page* m_page;
     InspectorClient* m_inspectorClient;
     InspectorAgentRegistry m_agents;
+    bool m_isUnderTest;
 };
 
 }

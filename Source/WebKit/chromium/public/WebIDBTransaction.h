@@ -26,14 +26,13 @@
 #ifndef WebIDBTransaction_h
 #define WebIDBTransaction_h
 
+#include "../../../Platform/chromium/public/WebString.h"
 #include "WebExceptionCode.h"
-#include "platform/WebString.h"
 
 namespace WebCore { class IDBTransactionBackendInterface; }
 
 namespace WebKit {
 
-class WebIDBObjectStore;
 class WebIDBTransactionCallbacks;
 
 // See comment in WebIDBFactory for a high level overview of these classes.
@@ -46,14 +45,8 @@ public:
         PreemptiveTask
     };
 
-    virtual WebIDBObjectStore* objectStore(long long, WebExceptionCode&)
-    {
-        WEBKIT_ASSERT_NOT_REACHED();
-        return 0;
-    }
     virtual void commit() { WEBKIT_ASSERT_NOT_REACHED(); }
     virtual void abort() { WEBKIT_ASSERT_NOT_REACHED(); }
-    virtual void didCompleteTaskEvents() { WEBKIT_ASSERT_NOT_REACHED(); }
     virtual void setCallbacks(WebIDBTransactionCallbacks*) { WEBKIT_ASSERT_NOT_REACHED(); }
 
     // FIXME: this is never called from WebCore. Find a cleaner solution.

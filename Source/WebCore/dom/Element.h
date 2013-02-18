@@ -34,6 +34,7 @@
 
 namespace WebCore {
 
+class Attr;
 class Attribute;
 class ClientRect;
 class ClientRectList;
@@ -225,7 +226,9 @@ public:
 
     PassRefPtr<Attr> attrIfExists(const QualifiedName&);
     PassRefPtr<Attr> ensureAttr(const QualifiedName&);
-    
+
+    const Vector<RefPtr<Attr> >& attrNodeList();
+
     virtual CSSStyleDeclaration* style();
 
     const QualifiedName& tagQName() const { return m_tagName; }
@@ -446,13 +449,6 @@ public:
     virtual void buildPendingResource() { };
 #endif
 
-#if ENABLE(VIDEO_TRACK)
-    bool isWebVTTNode() const;
-    void setIsWebVTTNode();
-    bool isWebVTTFutureNode() const;
-    void setIsWebVTTFutureNode();
-#endif
-    
 #if ENABLE(FULLSCREEN_API)
     enum {
         ALLOW_KEYBOARD_INPUT = 1 << 0,
@@ -514,6 +510,11 @@ protected:
     virtual bool shouldRegisterAsNamedItem() const { return false; }
     virtual bool shouldRegisterAsExtraNamedItem() const { return false; }
 
+    void clearTabIndexExplicitlyIfNeeded();    
+    void setTabIndexExplicitly(short);
+    virtual bool supportsFocus() const OVERRIDE;
+    virtual short tabIndex() const OVERRIDE;
+
     PassRefPtr<HTMLCollection> ensureCachedHTMLCollection(CollectionType);
     HTMLCollection* cachedHTMLCollection(CollectionType);
 
@@ -574,7 +575,6 @@ private:
     virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren();
 
     QualifiedName m_tagName;
-    virtual PassOwnPtr<NodeRareData> createRareData();
     bool rareDataStyleAffectedByEmpty() const;
     bool rareDataChildrenAffectedByHover() const;
     bool rareDataChildrenAffectedByActive() const;

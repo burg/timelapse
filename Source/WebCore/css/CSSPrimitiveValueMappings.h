@@ -32,6 +32,7 @@
 
 #include "CSSCalculationValue.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSReflectionDirection.h"
 #include "ColorSpace.h"
 #include "CSSValueKeywords.h"
 #include "FontDescription.h"
@@ -139,6 +140,42 @@ template<> inline CSSPrimitiveValue::operator LineClampValue() const
 
     ASSERT_NOT_REACHED();
     return LineClampValue();
+}
+
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(CSSReflectionDirection e)
+    : CSSValue(PrimitiveClass)
+{
+    m_primitiveUnitType = CSS_IDENT;
+    switch (e) {
+    case ReflectionAbove:
+        m_value.ident = CSSValueAbove;
+        break;
+    case ReflectionBelow:
+        m_value.ident = CSSValueBelow;
+        break;
+    case ReflectionLeft:
+        m_value.ident = CSSValueLeft;
+        break;
+    case ReflectionRight:
+        m_value.ident = CSSValueRight;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator CSSReflectionDirection() const
+{
+    switch (m_value.ident) {
+    case CSSValueAbove:
+        return ReflectionAbove;
+    case CSSValueBelow:
+        return ReflectionBelow;
+    case CSSValueLeft:
+        return ReflectionLeft;
+    case CSSValueRight:
+        return ReflectionRight;
+    }
+
+    ASSERT_NOT_REACHED();
+    return ReflectionBelow;
 }
 
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ColumnSpan columnSpan)
@@ -2238,7 +2275,7 @@ template<> inline CSSPrimitiveValue::operator ETextAlign() const
 }
 
 #if ENABLE(CSS3_TEXT)
-template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ETextAlignLast e)
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(TextAlignLast e)
     : CSSValue(PrimitiveClass)
 {
     m_primitiveUnitType = CSS_IDENT;
@@ -2267,7 +2304,7 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ETextAlignLast e)
     }
 }
 
-template<> inline CSSPrimitiveValue::operator ETextAlignLast() const
+template<> inline CSSPrimitiveValue::operator TextAlignLast() const
 {
     switch (m_value.ident) {
     case CSSValueAuto:
@@ -4077,6 +4114,9 @@ enum LengthConversion {
 
 template<int supported> Length CSSPrimitiveValue::convertToLength(RenderStyle* style, RenderStyle* rootStyle, double multiplier, bool computingFontSize)
 {
+#if ENABLE(CSS_VARIABLES)
+    ASSERT(!hasVariableReference());
+#endif
     if ((supported & (FixedIntegerConversion | FixedFloatConversion)) && isFontRelativeLength() && (!style || !rootStyle))
         return Length(Undefined);
     if ((supported & FixedIntegerConversion) && isLength())

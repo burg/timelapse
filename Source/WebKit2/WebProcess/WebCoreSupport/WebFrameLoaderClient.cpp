@@ -174,7 +174,6 @@ void WebFrameLoaderClient::assignIdentifierToInitialRequest(unsigned long identi
         pageIsProvisionallyLoading = frameLoader->provisionalDocumentLoader() == loader;
 
     webPage->injectedBundleResourceLoadClient().didInitiateLoadForResource(webPage, m_frame, identifier, request, pageIsProvisionallyLoading);
-    webPage->send(Messages::WebPageProxy::DidInitiateLoadForResource(m_frame->frameID(), identifier, request, pageIsProvisionallyLoading));
 }
 
 void WebFrameLoaderClient::dispatchWillSendRequest(DocumentLoader*, unsigned long identifier, ResourceRequest& request, const ResourceResponse& redirectResponse)
@@ -184,13 +183,6 @@ void WebFrameLoaderClient::dispatchWillSendRequest(DocumentLoader*, unsigned lon
         return;
 
     webPage->injectedBundleResourceLoadClient().willSendRequestForFrame(webPage, m_frame, identifier, request, redirectResponse);
-
-    if (request.isNull()) {
-        // FIXME: We should probably send a message saying we cancelled the request for the resource.
-        return;
-    }
-
-    webPage->send(Messages::WebPageProxy::DidSendRequestForResource(m_frame->frameID(), identifier, request, redirectResponse));
 }
 
 bool WebFrameLoaderClient::shouldUseCredentialStorage(DocumentLoader*, unsigned long identifier)
@@ -244,7 +236,6 @@ void WebFrameLoaderClient::dispatchDidReceiveResponse(DocumentLoader*, unsigned 
         return;
 
     webPage->injectedBundleResourceLoadClient().didReceiveResponseForResource(webPage, m_frame, identifier, response);
-    webPage->send(Messages::WebPageProxy::DidReceiveResponseForResource(m_frame->frameID(), identifier, response));
 }
 
 void WebFrameLoaderClient::dispatchDidReceiveContentLength(DocumentLoader*, unsigned long identifier, int dataLength)
@@ -254,7 +245,6 @@ void WebFrameLoaderClient::dispatchDidReceiveContentLength(DocumentLoader*, unsi
         return;
 
     webPage->injectedBundleResourceLoadClient().didReceiveContentLengthForResource(webPage, m_frame, identifier, dataLength);
-    webPage->send(Messages::WebPageProxy::DidReceiveContentLengthForResource(m_frame->frameID(), identifier, dataLength));
 }
 
 void WebFrameLoaderClient::dispatchDidFinishLoading(DocumentLoader*, unsigned long identifier)
@@ -264,7 +254,6 @@ void WebFrameLoaderClient::dispatchDidFinishLoading(DocumentLoader*, unsigned lo
         return;
 
     webPage->injectedBundleResourceLoadClient().didFinishLoadForResource(webPage, m_frame, identifier);
-    webPage->send(Messages::WebPageProxy::DidFinishLoadForResource(m_frame->frameID(), identifier));
 }
 
 void WebFrameLoaderClient::dispatchDidFailLoading(DocumentLoader*, unsigned long identifier, const ResourceError& error)
@@ -274,7 +263,6 @@ void WebFrameLoaderClient::dispatchDidFailLoading(DocumentLoader*, unsigned long
         return;
 
     webPage->injectedBundleResourceLoadClient().didFailLoadForResource(webPage, m_frame, identifier, error);
-    webPage->send(Messages::WebPageProxy::DidFailLoadForResource(m_frame->frameID(), identifier, error));
 }
 
 bool WebFrameLoaderClient::dispatchDidLoadResourceFromMemoryCache(DocumentLoader*, const ResourceRequest&, const ResourceResponse&, int /*length*/)
@@ -1228,26 +1216,34 @@ void WebFrameLoaderClient::transitionToCommittedForNewPage()
     bool isMainFrame = webPage->mainWebFrame() == m_frame;
     bool isTransparent = !webPage->drawsBackground();
     bool shouldUseFixedLayout = isMainFrame && webPage->useFixedLayout();
+    bool shouldDisableScrolling = isMainFrame && !webPage->mainFrameIsScrollable();
+    bool shouldHideScrollbars = shouldUseFixedLayout || shouldDisableScrolling;
     IntRect currentFixedVisibleContentRect = m_frame->coreFrame()->view() ? m_frame->coreFrame()->view()->fixedVisibleContentRect() : IntRect();
 
     const ResourceResponse& response = m_frame->coreFrame()->loader()->documentLoader()->response();
     m_frameHasCustomRepresentation = isMainFrame && webPage->shouldUseCustomRepresentationForResponse(response);
     m_frameCameFromPageCache = false;
 
+    ScrollbarMode defaultScrollbarMode = shouldHideScrollbars ? ScrollbarAlwaysOff : ScrollbarAuto;
+
+    m_frame->coreFrame()->createView(webPage->size(), backgroundColor, isTransparent,
+        IntSize(), currentFixedVisibleContentRect, shouldUseFixedLayout,
+        defaultScrollbarMode, /* lock */ shouldHideScrollbars, defaultScrollbarMode, /* lock */ shouldHideScrollbars);
+
+    int minimumLayoutWidth = webPage->minimumLayoutWidth();
+    int maximumSize = std::numeric_limits<int>::max();
+    if (minimumLayoutWidth)
+        m_frame->coreFrame()->view()->enableAutoSizeMode(true, IntSize(minimumLayoutWidth, 1), IntSize(maximumSize, maximumSize));
+
+    m_frame->coreFrame()->view()->setProhibitsScrolling(shouldDisableScrolling);
+
 #if USE(TILED_BACKING_STORE)
     if (shouldUseFixedLayout) {
-        m_frame->coreFrame()->createView(webPage->size(), backgroundColor, isTransparent,
-            IntSize(), currentFixedVisibleContentRect, shouldUseFixedLayout,
-            ScrollbarAlwaysOff, /* lock */ true, ScrollbarAlwaysOff, /* lock */ true);
-
         m_frame->coreFrame()->view()->setDelegatesScrolling(shouldUseFixedLayout);
         m_frame->coreFrame()->view()->setPaintsEntireContents(shouldUseFixedLayout);
         return;
     }
 #endif
-
-    m_frame->coreFrame()->createView(webPage->size(), backgroundColor, isTransparent,
-        IntSize(), currentFixedVisibleContentRect, shouldUseFixedLayout);
 }
 
 void WebFrameLoaderClient::didSaveToPageCache()
@@ -1485,7 +1481,7 @@ void WebFrameLoaderClient::dispatchDidClearWindowObjectInWorld(DOMWrapperWorld* 
 
     webPage->injectedBundleLoaderClient().didClearWindowObjectForFrame(webPage, m_frame, world);
 
-#if PLATFORM(GTK)
+#if HAVE(ACCESSIBILITY) && (PLATFORM(GTK) || PLATFORM(EFL))
     // Ensure the accessibility hierarchy is updated.
     webPage->updateAccessibilityTree();
 #endif

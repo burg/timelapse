@@ -402,6 +402,7 @@ void WebDevToolsAgentImpl::reattach(const WebString& savedState)
 
     ClientMessageLoopAdapter::ensureClientMessageLoopCreated(m_client);
     inspectorController()->reconnectFrontend(this, savedState);
+    WebKit::Platform::current()->currentThread()->addTaskObserver(this);
     m_attached = true;
 }
 
@@ -748,7 +749,8 @@ bool WebDevToolsAgent::shouldInterruptForMessage(const WebString& message)
         || commandName == InspectorBackendDispatcher::commandNames[InspectorBackendDispatcher::kDebugger_setBreakpointsActiveCmd]
         || commandName == InspectorBackendDispatcher::commandNames[InspectorBackendDispatcher::kProfiler_startCmd]
         || commandName == InspectorBackendDispatcher::commandNames[InspectorBackendDispatcher::kProfiler_stopCmd]
-        || commandName == InspectorBackendDispatcher::commandNames[InspectorBackendDispatcher::kProfiler_getProfileCmd];
+        || commandName == InspectorBackendDispatcher::commandNames[InspectorBackendDispatcher::kProfiler_getCPUProfileCmd]
+        || commandName == InspectorBackendDispatcher::commandNames[InspectorBackendDispatcher::kProfiler_getHeapSnapshotCmd];
 }
 
 void WebDevToolsAgent::processPendingMessages()

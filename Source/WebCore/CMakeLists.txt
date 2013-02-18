@@ -192,7 +192,6 @@ set(WebCore_IDL_FILES
     Modules/indexeddb/IDBDatabase.idl
     Modules/indexeddb/IDBFactory.idl
     Modules/indexeddb/IDBIndex.idl
-    Modules/indexeddb/IDBKey.idl
     Modules/indexeddb/IDBKeyRange.idl
     Modules/indexeddb/IDBObjectStore.idl
     Modules/indexeddb/IDBOpenDBRequest.idl
@@ -200,7 +199,6 @@ set(WebCore_IDL_FILES
     Modules/indexeddb/IDBTransaction.idl
     Modules/indexeddb/IDBUpgradeNeededEvent.idl
     Modules/indexeddb/IDBVersionChangeEvent.idl
-    Modules/indexeddb/IDBVersionChangeRequest.idl
     Modules/indexeddb/WorkerContextIndexedDatabase.idl
 
     Modules/intents/DeliveredIntent.idl
@@ -312,6 +310,7 @@ set(WebCore_IDL_FILES
     css/Counter.idl
     css/CSSCharsetRule.idl
     css/CSSFontFaceRule.idl
+    css/CSSHostRule.idl
     css/CSSImportRule.idl
     css/CSSMediaRule.idl
     css/CSSPageRule.idl
@@ -321,6 +320,7 @@ set(WebCore_IDL_FILES
     css/CSSStyleDeclaration.idl
     css/CSSStyleRule.idl
     css/CSSStyleSheet.idl
+    css/CSSSupportsRule.idl
     css/CSSValue.idl
     css/CSSValueList.idl
     css/MediaList.idl
@@ -400,6 +400,7 @@ set(WebCore_IDL_FILES
     dom/TouchEvent.idl
     dom/Touch.idl
     dom/TouchList.idl
+    dom/TransitionEvent.idl
     dom/TreeWalker.idl
     dom/UIEvent.idl
     dom/WebKitAnimationEvent.idl
@@ -515,6 +516,7 @@ set(WebCore_IDL_FILES
     html/canvas/CanvasRenderingContext2D.idl
     html/canvas/CanvasRenderingContext.idl
     html/canvas/DataView.idl
+    html/canvas/DOMPath.idl
     html/canvas/EXTTextureFilterAnisotropic.idl
     html/canvas/Float32Array.idl
     html/canvas/Float64Array.idl
@@ -749,6 +751,7 @@ set(WebCore_SVG_IDL_FILES
     svg/SVGStopElement.idl
     svg/SVGStringList.idl
     svg/SVGStyleElement.idl
+    svg/SVGStyledElement.idl
     svg/SVGSwitchElement.idl
     svg/SVGSymbolElement.idl
     svg/SVGTRefElement.idl
@@ -832,13 +835,14 @@ set(WebCore_SOURCES
     Modules/indexeddb/IDBLevelDBCoding.cpp
     Modules/indexeddb/IDBObjectStore.cpp
     Modules/indexeddb/IDBObjectStoreBackendImpl.cpp
+    Modules/indexeddb/IDBOpenDBRequest.cpp
     Modules/indexeddb/IDBPendingTransactionMonitor.cpp
     Modules/indexeddb/IDBRequest.cpp
     Modules/indexeddb/IDBTransaction.cpp
     Modules/indexeddb/IDBTransactionBackendImpl.cpp
     Modules/indexeddb/IDBTransactionCoordinator.cpp
+    Modules/indexeddb/IDBUpgradeNeededEvent.cpp
     Modules/indexeddb/IDBVersionChangeEvent.cpp
-    Modules/indexeddb/IDBVersionChangeRequest.cpp
     Modules/indexeddb/PageGroupIndexedDatabase.cpp
     Modules/indexeddb/WorkerContextIndexedDatabase.cpp
 
@@ -1032,6 +1036,7 @@ set(WebCore_SOURCES
     css/CSSFunctionValue.cpp
     css/CSSGradientValue.cpp
     css/CSSGroupingRule.cpp
+    css/CSSHostRule.cpp
     css/CSSImageGeneratorValue.cpp
     css/CSSImageSetValue.cpp
     css/CSSImageValue.cpp
@@ -1055,6 +1060,7 @@ set(WebCore_SOURCES
     css/CSSSelectorList.cpp
     css/CSSStyleRule.cpp
     css/CSSStyleSheet.cpp
+    css/CSSSupportsRule.cpp
     css/CSSTimingFunctionValue.cpp
     css/CSSToStyleMap.cpp
     css/CSSUnicodeRangeValue.cpp
@@ -1238,6 +1244,7 @@ set(WebCore_SOURCES
     dom/TouchEvent.cpp
     dom/TouchList.cpp
     dom/TransformSourceLibxslt.cpp
+    dom/TransitionEvent.cpp
     dom/Traversal.cpp
     dom/TreeScope.cpp
     dom/TreeScopeAdopter.cpp
@@ -1489,6 +1496,7 @@ set(WebCore_SOURCES
 
     html/canvas/CanvasContextAttributes.cpp
     html/canvas/CanvasGradient.cpp
+    html/canvas/CanvasPathMethods.cpp
     html/canvas/CanvasPattern.cpp
     html/canvas/CanvasProxy.cpp
     html/canvas/CanvasRenderingContext.cpp
@@ -1524,7 +1532,9 @@ set(WebCore_SOURCES
     html/canvas/WebGLUniformLocation.cpp
     html/canvas/WebGLVertexArrayObjectOES.cpp
 
+    html/parser/BackgroundHTMLParser.cpp
     html/parser/CSSPreloadScanner.cpp
+    html/parser/CompactHTMLToken.cpp
     html/parser/HTMLConstructionSite.cpp
     html/parser/HTMLDocumentParser.cpp
     html/parser/HTMLElementStack.cpp
@@ -1533,6 +1543,7 @@ set(WebCore_SOURCES
     html/parser/HTMLParserIdioms.cpp
     html/parser/HTMLParserOptions.cpp
     html/parser/HTMLParserScheduler.cpp
+    html/parser/HTMLParserThread.cpp
     html/parser/HTMLFormattingElementList.cpp
     html/parser/HTMLMetaCharsetParser.cpp
     html/parser/HTMLPreloadScanner.cpp
@@ -1555,7 +1566,6 @@ set(WebCore_SOURCES
     html/shadow/DetailsMarkerControl.cpp
     html/shadow/HTMLContentElement.cpp
     html/shadow/HTMLShadowElement.cpp
-    html/shadow/ImageInnerElement.cpp
     html/shadow/InsertionPoint.cpp
     html/shadow/MediaControlElementTypes.cpp
     html/shadow/MediaControlElements.cpp
@@ -1572,10 +1582,12 @@ set(WebCore_SOURCES
     html/track/LoadableTextTrack.cpp
     html/track/TextTrack.cpp
     html/track/TextTrackCue.cpp
+    html/track/TextTrackCueGeneric.cpp
     html/track/TextTrackCueList.cpp
     html/track/TextTrackList.cpp
     html/track/TrackBase.cpp
     html/track/TrackEvent.cpp
+    html/track/WebVTTElement.cpp
     html/track/WebVTTParser.cpp
     html/track/WebVTTTokenizer.cpp
 
@@ -2300,6 +2312,7 @@ set(WebCore_SOURCES
     storage/StorageMap.cpp
     storage/StorageNamespace.cpp
     storage/StorageNamespaceImpl.cpp
+    storage/StorageStrategy.cpp
     storage/StorageSyncManager.cpp
     storage/StorageTracker.cpp
 
@@ -2432,7 +2445,6 @@ set(WebCore_SOURCES
     svg/SVGSetElement.cpp
     svg/SVGStopElement.cpp
     svg/SVGStringList.cpp
-    svg/SVGStylable.cpp
     svg/SVGStyleElement.cpp
     svg/SVGStyledElement.cpp
     svg/SVGStyledLocatableElement.cpp
@@ -2658,6 +2670,7 @@ if (WTF_USE_3D_GRAPHICS)
         ${OPENGL_INCLUDE_DIR}
         "${THIRDPARTY_DIR}/ANGLE/src"
         "${THIRDPARTY_DIR}/ANGLE/include"
+        "${THIRDPARTY_DIR}/ANGLE/include/KHR"
         "${THIRDPARTY_DIR}/ANGLE/include/GLSLANG"
         "${WEBCORE_DIR}/platform/graphics/gpu"
     )
@@ -2710,24 +2723,17 @@ if (WTF_USE_3D_GRAPHICS)
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/parseConst.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/ParseHelper.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/PoolAlloc.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/atom.c
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/cpp.c
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/cppstruct.c
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/memory.c
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/DiagnosticsBase.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/DirectiveHandlerBase.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/DirectiveParser.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/ExpressionParser.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Input.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Lexer.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Macro.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/MacroExpander.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Preprocessor.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Token.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/new/Tokenizer.cpp
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/scanner.c
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/symbols.c
-        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/tokens.c
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/DiagnosticsBase.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/DirectiveHandlerBase.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/DirectiveParser.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/ExpressionParser.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/Input.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/Lexer.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/Macro.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/MacroExpander.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/Preprocessor.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/Token.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/preprocessor/Tokenizer.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/QualifierAlive.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/RemoveTree.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/SearchSymbol.cpp
@@ -2742,6 +2748,7 @@ if (WTF_USE_3D_GRAPHICS)
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/util.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/ValidateLimitations.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/VariableInfo.cpp
+        ${THIRDPARTY_DIR}/ANGLE/src/compiler/VariablePacker.cpp
         ${THIRDPARTY_DIR}/ANGLE/src/compiler/VersionGLSL.cpp
     )
 

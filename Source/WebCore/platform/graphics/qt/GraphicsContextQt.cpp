@@ -1251,19 +1251,19 @@ void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendM
     m_data->p()->setCompositionMode(toQtCompositionMode(op));
 }
 
-void GraphicsContext::clip(const Path& path)
+void GraphicsContext::clip(const Path& path, WindRule windRule)
 {
     if (paintingDisabled())
         return;
 
     QPainterPath clipPath = path.platformPath();
-    clipPath.setFillRule(Qt::WindingFill);
+    clipPath.setFillRule(toQtFillRule(windRule));
     m_data->p()->setClipPath(clipPath, Qt::IntersectClip);
 }
 
-void GraphicsContext::canvasClip(const Path& path)
+void GraphicsContext::canvasClip(const Path& path, WindRule windRule)
 {
-    clip(path);
+    clip(path, windRule);
 }
 
 void GraphicsContext::clipOut(const Path& path)

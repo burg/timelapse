@@ -71,6 +71,9 @@ private:
     virtual void updatePreferences(const WebPreferencesStore&) OVERRIDE;
     virtual void mainFrameContentSizeChanged(const WebCore::IntSize&) OVERRIDE;
 
+    virtual void setExposedRect(const WebCore::IntRect&) OVERRIDE;
+    virtual void mainFrameScrollabilityChanged(bool) OVERRIDE;
+
     virtual void dispatchAfterEnsuringUpdatedScrollPosition(const Function<void ()>&) OVERRIDE;
 
     // WebCore::GraphicsLayerClient
@@ -85,7 +88,7 @@ private:
     // Message handlers.
     virtual void suspendPainting() OVERRIDE;
     virtual void resumePainting() OVERRIDE;
-    virtual void updateGeometry(const WebCore::IntSize& viewSize, double minimumLayoutWidth) OVERRIDE;
+    virtual void updateGeometry(const WebCore::IntSize& viewSize) OVERRIDE;
     virtual void setDeviceScaleFactor(float) OVERRIDE;
     virtual void setLayerHostingMode(uint32_t) OVERRIDE;
     virtual void setColorSpace(const ColorSpaceData&) OVERRIDE;
@@ -113,7 +116,8 @@ private:
 
     bool m_isPaintingSuspended;
 
-    double m_minimumLayoutWidth;
+    WebCore::IntRect m_exposedRect;
+
     WebCore::IntSize m_lastSentIntrinsicContentSize;
     bool m_inUpdateGeometry;
 };

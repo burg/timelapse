@@ -20,7 +20,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-messages -> WebPageProxy {
+messages -> WebPageProxy LegacyReceiver {
     # UI messages
     CreateNewPage(WebCore::ResourceRequest request, WebCore::WindowFeatures windowFeatures, uint32_t modifiers, int32_t mouseButton) -> (uint64_t newPageID, WebKit::WebPageCreationParameters newPageParameters)
     ShowPage()
@@ -144,17 +144,9 @@ messages -> WebPageProxy {
 
     FrameDidBecomeFrameSet(uint64_t frameID, bool value)
 
-    # Resource load messages
-    DidInitiateLoadForResource(uint64_t frameID, uint64_t resourceIdentifier, WebCore::ResourceRequest request, bool pageIsProvisionallyLoading)
-    DidSendRequestForResource(uint64_t frameID, uint64_t resourceIdentifier, WebCore::ResourceRequest request, WebCore::ResourceResponse redirectResponse)
-    DidReceiveResponseForResource(uint64_t frameID, uint64_t resourceIdentifier, WebCore::ResourceResponse response)
-    DidReceiveContentLengthForResource(uint64_t frameID, uint64_t resourceIdentifier, uint64_t contentLength)
-    DidFinishLoadForResource(uint64_t frameID, uint64_t resourceIdentifier)
-    DidFailLoadForResource(uint64_t frameID, uint64_t resourceIdentifier, WebCore::ResourceError error)
 #if PLATFORM(QT)
     ResolveApplicationSchemeRequest(WebKit::QtNetworkRequestData request)
 #endif
-
 
     # Custom representations
     DidFinishLoadingDataForCustomRepresentation(WTF::String suggestedFilename, CoreIPC::DataReference data)
@@ -213,6 +205,8 @@ messages -> WebPageProxy {
     SetFindIndicator(WebCore::FloatRect selectionRect, Vector<WebCore::FloatRect> textRects, float contentImageScaleFactor, WebKit::ShareableBitmap::Handle contentImageHandle, bool fadeOut, bool animate)
     DidFindString(WTF::String string, uint32_t matchCount)
     DidFailToFindString(WTF::String string)
+    DidFindStringMatches(WTF::String string, Vector<Vector<WebCore::IntRect> > matches, int32_t firstIndexAfterSelection)
+    DidGetImageForFindMatch(WebKit::ShareableBitmap::Handle contentImageHandle, uint32_t matchIndex)
 
     # PopupMenu messages
     ShowPopupMenu(WebCore::IntRect rect, uint64_t textDirection, Vector<WebKit::WebPopupItem> items, int32_t selectedIndex, WebKit::PlatformPopupMenuData data)

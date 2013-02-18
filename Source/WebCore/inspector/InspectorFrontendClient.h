@@ -71,6 +71,13 @@ public:
     virtual void inspectedURLChanged(const String&) = 0;
 
     virtual void sendMessageToBackend(const String&) = 0;
+
+    virtual bool supportsFileSystems() = 0;
+    virtual void requestFileSystems() = 0;
+    virtual void addFileSystem() = 0;
+    virtual void removeFileSystem(const String& fileSystemPath) = 0;
+
+    virtual bool isUnderTest() = 0;
 };
 
 } // namespace WebCore

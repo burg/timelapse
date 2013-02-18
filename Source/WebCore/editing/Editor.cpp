@@ -110,7 +110,7 @@ VisibleSelection Editor::selectionForCommand(Event* event)
     // If the target is a text control, and the current selection is outside of its shadow tree,
     // then use the saved selection for that text control.
     HTMLTextFormControlElement* textFormControlOfSelectionStart = enclosingTextFormControl(selection.start());
-    HTMLTextFormControlElement* textFromControlOfTarget = toTextFormControl(event->target()->toNode());
+    HTMLTextFormControlElement* textFromControlOfTarget = isHTMLTextFormControlElement(event->target()->toNode()) ? toHTMLTextFormControlElement(event->target()->toNode()) : 0;
     if (textFromControlOfTarget && (selection.start().isNull() || textFromControlOfTarget != textFormControlOfSelectionStart)) {
         if (RefPtr<Range> range = textFromControlOfTarget->selection())
             return VisibleSelection(range.get(), DOWNSTREAM, selection.isDirectional());
@@ -1294,7 +1294,7 @@ void Editor::toggleUnderline()
 void Editor::setBaseWritingDirection(WritingDirection direction)
 {
     Node* focusedNode = frame()->document()->focusedNode();
-    if (toTextFormControl(focusedNode)) {
+    if (focusedNode && isHTMLTextFormControlElement(focusedNode)) {
         if (direction == NaturalWritingDirection)
             return;
         toHTMLElement(focusedNode)->setAttribute(dirAttr, direction == LeftToRightWritingDirection ? "ltr" : "rtl");
@@ -2709,9 +2709,9 @@ PassRefPtr<Range> Editor::rangeOfString(const String& target, Range* referenceRa
     if (resultRange->collapsed() && shadowTreeRoot) {
         searchRange = rangeOfContents(m_frame->document());
         if (forward)
-            searchRange->setStartAfter(shadowTreeRoot->shadowAncestorNode());
+            searchRange->setStartAfter(shadowTreeRoot->deprecatedShadowAncestorNode());
         else
-            searchRange->setEndBefore(shadowTreeRoot->shadowAncestorNode());
+            searchRange->setEndBefore(shadowTreeRoot->deprecatedShadowAncestorNode());
 
         resultRange = findPlainText(searchRange.get(), target, options);
     }
@@ -2742,12 +2742,7 @@ static bool isFrameInRange(Frame* frame, Range* range)
     return inRange;
 }
 
-unsigned Editor::countMatchesForText(const String& target, FindOptions options, unsigned limit, bool markMatches)
-{
-    return countMatchesForText(target, 0, options, limit, markMatches);
-}
-
-unsigned Editor::countMatchesForText(const String& target, Range* range, FindOptions options, unsigned limit, bool markMatches)
+unsigned Editor::countMatchesForText(const String& target, Range* range, FindOptions options, unsigned limit, bool markMatches, Vector<RefPtr<Range> >* matches)
 {
     if (target.isEmpty())
         return 0;
@@ -2773,12 +2768,15 @@ unsigned Editor::countMatchesForText(const String& target, Range* range, FindOpt
             if (!resultRange->startContainer()->isInShadowTree())
                 break;
 
-            searchRange->setStartAfter(resultRange->startContainer()->shadowAncestorNode(), exception);
+            searchRange->setStartAfter(resultRange->startContainer()->deprecatedShadowAncestorNode(), exception);
             searchRange->setEnd(originalEndContainer, originalEndOffset, exception);
             continue;
         }
 
         ++matchCount;
+        if (matches)
+            matches->append(resultRange);
+        
         if (markMatches)
             m_frame->document()->markers()->addMarker(resultRange.get(), DocumentMarker::TextMatch);
 
@@ -2797,7 +2795,7 @@ unsigned Editor::countMatchesForText(const String& target, Range* range, FindOpt
             searchRange->setEnd(shadowTreeRoot, shadowTreeRoot->childNodeCount(), exception);
     } while (true);
 
-    if (markMatches) {
+    if (markMatches || matches) {
         // Do a "fake" paint in order to execute the code that computes the rendered rect for each text match.
         if (m_frame->view() && m_frame->contentRenderer()) {
             m_frame->document()->updateLayout(); // Ensure layout is up to date.

@@ -81,7 +81,7 @@ layer {
     display: block
 }
 
-article, aside, footer, header, hgroup, nav, section {
+article, aside, footer, header, hgroup, main, nav, section {
     display: block
 }
 
@@ -1116,10 +1116,6 @@ progress::-webkit-progress-value {
 #endif
 
 /* inline elements */
-
-img {
-    display: inline-block;
-}
 
 u, ins {
     text-decoration: underline

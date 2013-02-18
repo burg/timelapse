@@ -30,12 +30,13 @@
 #include "V8Collection.h"
 #include "V8DOMWrapper.h"
 #include "V8Event.h"
+#include "V8EventListenerList.h"
 #include "V8Node.h"
 #include <wtf/UnusedParam.h>
 
 namespace WebCore {
 
-WrapperTypeInfo V8TestEventTarget::info = { V8TestEventTarget::GetTemplate, V8TestEventTarget::derefObject, 0, 0, V8TestEventTarget::installPerContextPrototypeProperties, 0, WrapperTypeObjectPrototype };
+WrapperTypeInfo V8TestEventTarget::info = { V8TestEventTarget::GetTemplate, V8TestEventTarget::derefObject, 0, V8TestEventTarget::toEventTarget, 0, V8TestEventTarget::installPerContextPrototypeProperties, 0, WrapperTypeObjectPrototype };
 
 namespace TestEventTargetV8Internal {
 
@@ -61,7 +62,7 @@ static v8::Handle<v8::Value> itemCallback(const v8::Arguments& args)
 
 static v8::Handle<v8::Value> addEventListenerCallback(const v8::Arguments& args)
 {
-    RefPtr<EventListener> listener = V8DOMWrapper::getEventListener(args[1], false, ListenerFindOrCreate);
+    RefPtr<EventListener> listener = V8EventListenerList::getEventListener(args[1], false, ListenerFindOrCreate);
     if (listener) {
         V8TRYCATCH_FOR_V8STRINGRESOURCE(V8StringResource<WithNullCheck>, stringResource, args[0]);
         V8TestEventTarget::toNative(args.Holder())->addEventListener(stringResource, listener, args[2]->BooleanValue());
@@ -72,7 +73,7 @@ static v8::Handle<v8::Value> addEventListenerCallback(const v8::Arguments& args)
 
 static v8::Handle<v8::Value> removeEventListenerCallback(const v8::Arguments& args)
 {
-    RefPtr<EventListener> listener = V8DOMWrapper::getEventListener(args[1], false, ListenerFindOnly);
+    RefPtr<EventListener> listener = V8EventListenerList::getEventListener(args[1], false, ListenerFindOnly);
     if (listener) {
         V8TRYCATCH_FOR_V8STRINGRESOURCE(V8StringResource<WithNullCheck>, stringResource, args[0]);
         V8TestEventTarget::toNative(args.Holder())->removeEventListener(stringResource, listener.get(), args[2]->BooleanValue());
@@ -135,9 +136,11 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestEventTargetTemplate(v
     return desc;
 }
 
-v8::Persistent<v8::FunctionTemplate> V8TestEventTarget::GetRawTemplate()
+v8::Persistent<v8::FunctionTemplate> V8TestEventTarget::GetRawTemplate(v8::Isolate* isolate)
 {
-    V8PerIsolateData* data = V8PerIsolateData::current();
+    if (!isolate)
+        isolate = v8::Isolate::GetCurrent();
+    V8PerIsolateData* data = V8PerIsolateData::from(isolate);
     V8PerIsolateData::TemplateMap::iterator result = data->rawTemplateMap().find(&info);
     if (result != data->rawTemplateMap().end())
         return result->value;
@@ -148,9 +151,11 @@ v8::Persistent<v8::FunctionTemplate> V8TestEventTarget::GetRawTemplate()
     return templ;
 }
 
-v8::Persistent<v8::FunctionTemplate> V8TestEventTarget::GetTemplate()
+v8::Persistent<v8::FunctionTemplate> V8TestEventTarget::GetTemplate(v8::Isolate* isolate)
 {
-    V8PerIsolateData* data = V8PerIsolateData::current();
+    if (!isolate)
+        isolate = v8::Isolate::GetCurrent();
+    V8PerIsolateData* data = V8PerIsolateData::from(isolate);
     V8PerIsolateData::TemplateMap::iterator result = data->templateMap().find(&info);
     if (result != data->templateMap().end())
         return result->value;
@@ -165,6 +170,11 @@ v8::Persistent<v8::FunctionTemplate> V8TestEventTarget::GetTemplate()
 bool V8TestEventTarget::HasInstance(v8::Handle<v8::Value> value)
 {
     return GetRawTemplate()->HasInstance(value);
+}
+
+EventTarget* V8TestEventTarget::toEventTarget(v8::Handle<v8::Object> object)
+{
+    return toNative(object);
 }
 
 
@@ -183,7 +193,6 @@ v8::Handle<v8::Object> V8TestEventTarget::createWrapper(PassRefPtr<TestEventTarg
         wrapperHandle.MarkIndependent();
     return wrapper;
 }
-
 void V8TestEventTarget::derefObject(void* object)
 {
     static_cast<TestEventTarget*>(object)->deref();

@@ -80,7 +80,9 @@ private:
     RetainPtr<CFRunLoopTimerRef> m_snapRubberbandTimer;
 
     RetainPtr<CALayer> m_scrollLayer;
+    RetainPtr<CALayer> m_counterScrollingLayer;
     IntPoint m_probableMainThreadScrollPosition;
+    bool m_lastScrollHadUnfilledPixels;
 };
 
 } // namespace WebCore

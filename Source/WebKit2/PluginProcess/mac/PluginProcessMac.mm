@@ -42,6 +42,8 @@
 
 #import "NetscapeSandboxFunctions.h"
 
+using namespace WebCore;
+
 namespace WebKit {
 
 class FullscreenWindowTracker {
@@ -270,6 +272,8 @@ static void initializeCocoaOverrides()
 
 void PluginProcess::platformInitializeProcess(const ChildProcessInitializationParameters&)
 {
+    RunLoop::setUseApplicationRunLoopOnMainRunLoop();
+
 #if defined(__i386__)
     // Initialize the shim.
     initializeShim();
@@ -321,11 +325,11 @@ static void initializeSandbox(const String& pluginPath, const String& sandboxPro
     RetainPtr<CFStringRef> sandboxFileName = CFStringCreateWithFormat(0, 0, CFSTR("%@.sb"), bundleIdentifier);
     RetainPtr<CFURLRef> sandboxURL = adoptCF(CFURLCreateWithFileSystemPathRelativeToBase(0, sandboxFileName.get(), kCFURLPOSIXPathStyle, FALSE, sandboxProfileDirectory.get()));
 
-    RetainPtr<NSString> profileString = [[NSString alloc] initWithContentsOfURL:(NSURL *)sandboxURL.get() encoding:NSUTF8StringEncoding error:NULL];
+    RetainPtr<NSString> profileString = adoptNS([[NSString alloc] initWithContentsOfURL:(NSURL *)sandboxURL.get() encoding:NSUTF8StringEncoding error:NULL]);
     if (!profileString)
         return;
 
-    enterSandbox([profileString.get() UTF8String], 0, 0);
+    enterSandbox([profileString.get() UTF8String]);
 }
 
 static void muteAudio(void)
@@ -348,6 +352,7 @@ void PluginProcess::platformInitializePluginProcess(const PluginProcessCreationP
     
     WKSetVisibleApplicationName((CFStringRef)applicationName);
 
+    // FIXME: Use ChildProcess::initializeSandbox.
     WebKit::initializeSandbox(m_pluginPath, parameters.sandboxProfileDirectoryPath);
 
     if (parameters.processType == TypeSnapshotProcess)

@@ -22,7 +22,6 @@ HEADERS += \
     Platform/CoreIPC/Attachment.h \
     Platform/CoreIPC/BinarySemaphore.h \
     Platform/CoreIPC/Connection.h \
-    Platform/CoreIPC/CoreIPCMessageKinds.h \
     Platform/CoreIPC/DataReference.h \
     Platform/CoreIPC/HandleMessage.h \
     Platform/CoreIPC/MessageDecoder.h \
@@ -285,7 +284,6 @@ HEADERS += \
     UIProcess/WebPreferences.h \
     UIProcess/WebProcessProxy.h \
     UIProcess/WebResourceCacheManagerProxy.h \
-    UIProcess/WebResourceLoadClient.h \
     UIProcess/WebTextChecker.h \
     UIProcess/WebTextCheckerClient.h \
     UIProcess/WebUIClient.h \
@@ -513,7 +511,6 @@ SOURCES += \
     Shared/WebURLResponse.cpp \
     Shared/WebWheelEvent.cpp \
     Shared/CoordinatedGraphics/CoordinatedGraphicsArgumentCoders.cpp \
-    Shared/CoordinatedGraphics/CoordinatedLayerInfo.cpp \
     Shared/CoordinatedGraphics/WebCoordinatedSurface.cpp \
     Shared/CoordinatedGraphics/WebCustomFilterProgramProxy.cpp \
     Shared/qt/ArgumentCodersQt.cpp \
@@ -652,7 +649,6 @@ SOURCES += \
     UIProcess/WebPreferences.cpp \
     UIProcess/WebProcessProxy.cpp \
     UIProcess/WebResourceCacheManagerProxy.cpp \
-    UIProcess/WebResourceLoadClient.cpp \
     UIProcess/WebTextChecker.cpp \
     UIProcess/WebTextCheckerClient.cpp \
     UIProcess/WebUIClient.cpp \
@@ -884,6 +880,9 @@ have?(QTQUICK) {
 mac: {
     use?(QTKIT) {
         DEFINES += NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
+        isEqual(QT_ARCH, "i386") {
+            DEFINES+=NS_BUILD_32_LIKE_64
+        }
         INCLUDEPATH += \
             $$PWD/../../WebKitLibraries/
         HEADERS += \

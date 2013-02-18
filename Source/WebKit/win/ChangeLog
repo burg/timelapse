@@ -1,3 +1,85 @@
+2013-01-23  Tony Chang  <tony@chromium.org>
+
+        Unreviewed, set svn:eol-style to CRLF on Windows .sln files.
+
+        * WebKit.vcproj/WebKit.sln: Modified property svn:eol-style.
+        * WebKit.vcproj/WebKit.submit.sln: Modified property svn:eol-style.
+
+2013-01-23  Pavel Feldman  <pfeldman@chromium.org>
+
+        Follow up to 140539, adding exports for Win build.
+
+        Not reviewed.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-01-22  Anders Carlsson  <andersca@apple.com>
+
+        Use a platforom strategy for local storage
+        https://bugs.webkit.org/show_bug.cgi?id=107600
+
+        Reviewed by Andreas Kling.
+
+        Update for new storage strategy.
+
+        * WebCoreSupport/WebPlatformStrategies.cpp:
+        (WebPlatformStrategies::createStorageStrategy):
+        * WebCoreSupport/WebPlatformStrategies.h:
+        (WebPlatformStrategies):
+
+2013-01-18  Jer Noble  <jer.noble@apple.com>
+
+        Unreviewed build fix. Remove deleted symbol from windows export list.
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-01-18  Seokju Kwon  <seokju.kwon@gmail.com>
+
+        Add explicit keyword to constructors in platform-specific InspectorClient
+        https://bugs.webkit.org/show_bug.cgi?id=107255
+
+        Reviewed by Kentaro Hara.
+
+        Add explicit keyword to constructors that take one argument
+        in platform-specific implementation of InspectorClient.
+
+        * WebCoreSupport/WebInspectorClient.h:
+        (WebInspectorClient):
+
+2013-01-18  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r140005.
+        http://trac.webkit.org/changeset/140005
+        https://bugs.webkit.org/show_bug.cgi?id=107235
+
+        broke downstream Chromium interactive_ui_tests (Requested by
+        dominicc on #webkit).
+
+        * WebKit.vcproj/WebKitExports.def.in:
+
+2013-01-17  Nate Chapin  <japhet@chromium.org>
+
+        Enable reuse of cached main resources
+        https://bugs.webkit.org/show_bug.cgi?id=105667
+
+        Reviewed by Antti Koivisto.
+
+        * WebKit.vcproj/WebKitExports.def.in: Expose some MemoryCache symbols for use in Internals.
+
+2013-01-15  peavo@outlook.com  <peavo@outlook.com>
+
+        Crash when saving history with no items in it.
+        https://bugs.webkit.org/show_bug.cgi?id=104261
+
+        Reviewed by Darin Adler.
+
+        * WebHistory.cpp:
+        (WebHistory::saveHistoryGuts): Added null pointer check
+
+2013-01-09  Levi Weintraub <leviw@chromium.org>
+
+        Rolling out r139683. It broke a bunch of webkit_unit_tests. 
+
 2013-01-09  Hajime Morrita  <morrita@google.com>
 
         [Shadow DOM] Distribution related code on ElementShadow should be minimized.

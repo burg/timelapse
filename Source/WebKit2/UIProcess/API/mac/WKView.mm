@@ -210,6 +210,7 @@ struct WKViewInterpretKeyEventsParameters {
     String _promisedURL;
 
     NSSize _intrinsicContentSize;
+    BOOL _expandsToFitContentViaAutoLayout;
 }
 
 @end
@@ -362,9 +363,12 @@ struct WKViewInterpretKeyEventsParameters {
         _data->_windowHasValidBackingStore = NO;
 
     [super setFrameSize:size];
-    
-    if (![self frameSizeUpdatesDisabled])
+
+    if (![self frameSizeUpdatesDisabled]) {
+        if (_data->_expandsToFitContentViaAutoLayout)
+            _data->_page->viewExposedRectChanged(enclosingIntRect([self visibleRect]));
         [self _setDrawingAreaSize:size];
+    }
 }
 
 - (void)_updateWindowAndViewFrames
@@ -377,6 +381,8 @@ struct WKViewInterpretKeyEventsParameters {
     NSPoint accessibilityPosition = [[self accessibilityAttributeValue:NSAccessibilityPositionAttribute] pointValue];
     
     _data->_page->windowAndViewFramesChanged(enclosingIntRect(windowFrameInScreenCoordinates), enclosingIntRect(viewFrameInWindowCoordinates), IntPoint(accessibilityPosition));
+    if (_data->_expandsToFitContentViaAutoLayout)
+        _data->_page->viewExposedRectChanged(enclosingIntRect([self visibleRect]));
 }
 
 - (void)renewGState
@@ -2851,7 +2857,15 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
 
 - (void)_setIntrinsicContentSize:(NSSize)intrinsicContentSize
 {
-    _data->_intrinsicContentSize = intrinsicContentSize;
+    // If the intrinsic content size is the same as the minimum layout width, the content flowed to fit,
+    // so we can report that that dimension is flexible. If not, we need to report our greater intrinsic width
+    // so that autolayout will know to provide space for us.
+
+    NSSize intrinsicContentSizeAcknowledgingFlexibleWidth = intrinsicContentSize;
+    if (intrinsicContentSize.width <= _data->_page->minimumLayoutWidth())
+        intrinsicContentSizeAcknowledgingFlexibleWidth.width = NSViewNoInstrinsicMetric;
+
+    _data->_intrinsicContentSize = intrinsicContentSizeAcknowledgingFlexibleWidth;
     [self invalidateIntrinsicContentSize];
 }
 
@@ -2944,6 +2958,7 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
 #endif
     _data->_mouseDownEvent = nil;
     _data->_ignoringMouseDraggedEvents = NO;
+    _data->_expandsToFitContentViaAutoLayout = NO;
 
     _data->_intrinsicContentSize = NSMakeSize(NSViewNoInstrinsicMetric, NSViewNoInstrinsicMetric);
 
@@ -2969,7 +2984,10 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
 
 - (void)updateLayer
 {
-    self.layer.backgroundColor = CGColorGetConstantColor(kCGColorWhite);
+    if ([self drawsBackground] && ![self drawsTransparentBackground])
+        self.layer.backgroundColor = CGColorGetConstantColor(kCGColorWhite);
+    else
+        self.layer.backgroundColor = CGColorGetConstantColor(kCGColorClear);
 
     if (DrawingAreaProxy* drawingArea = _data->_page->drawingArea())
         drawingArea->waitForPossibleGeometryUpdate();
@@ -3027,8 +3045,11 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
     if (!_data->_frameSizeUpdatesDisabledCount)
         return;
     
-    if (!(--_data->_frameSizeUpdatesDisabledCount))
+    if (!(--_data->_frameSizeUpdatesDisabledCount)) {
+        if (_data->_expandsToFitContentViaAutoLayout)
+            _data->_page->viewExposedRectChanged(enclosingIntRect([self visibleRect]));
         [self _setDrawingAreaSize:[self frame].size];
+    }
 }
 
 - (BOOL)frameSizeUpdatesDisabled
@@ -3052,12 +3073,44 @@ static NSString *pathWithUniqueFilenameForPath(NSString *path)
 
 - (CGFloat)minimumLayoutWidth
 {
+    static BOOL loggedDeprecationWarning = NO;
+
+    if (!loggedDeprecationWarning) {
+        NSLog(@"Please use minimumWidthForAutoLayout instead of minimumLayoutWidth.");
+        loggedDeprecationWarning = YES;
+    }
+
     return _data->_page->minimumLayoutWidth();
 }
 
 - (void)setMinimumLayoutWidth:(CGFloat)minimumLayoutWidth
 {
+    static BOOL loggedDeprecationWarning = NO;
+
+    if (!loggedDeprecationWarning) {
+        NSLog(@"Please use minimumWidthForAutoLayout instead of minimumLayoutWidth.");
+        loggedDeprecationWarning = YES;
+    }
+
+    [self setMinimumWidthForAutoLayout:minimumLayoutWidth];
+}
+
+- (CGFloat)minimumWidthForAutoLayout
+{
+    return _data->_page->minimumLayoutWidth();
+}
+
+- (void)setMinimumWidthForAutoLayout:(CGFloat)minimumLayoutWidth
+{
+    BOOL expandsToFit = minimumLayoutWidth > 0;
+
+    _data->_expandsToFitContentViaAutoLayout = expandsToFit;
     _data->_page->setMinimumLayoutWidth(minimumLayoutWidth);
+
+    if (expandsToFit)
+        _data->_page->viewExposedRectChanged(enclosingIntRect([self visibleRect]));
+
+    _data->_page->setMainFrameIsScrollable(!expandsToFit);
 }
 
 @end

@@ -33,9 +33,9 @@
 
 namespace WebCore {
 
-RenderTextTrackCue::RenderTextTrackCue(TextTrackCueBox* node)
-    : RenderBlock(static_cast<Node*>(node))
-    , m_cue(node->getCue())
+RenderTextTrackCue::RenderTextTrackCue(TextTrackCueBox* element)
+    : RenderBlock(element)
+    , m_cue(element->getCue())
 {
 }
 

@@ -32,6 +32,7 @@
 #include "DateTimeLocalInputType.h"
 
 #include "DateComponents.h"
+#include "FeatureObserver.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "InputTypeNames.h"
@@ -57,6 +58,7 @@ static const int dateTimeLocalStepScaleFactor = 1000;
 
 PassOwnPtr<InputType> DateTimeLocalInputType::create(HTMLInputElement* element)
 {
+    FeatureObserver::observe(element->document(), FeatureObserver::InputTypeDateTimeLocal);
     return adoptPtr(new DateTimeLocalInputType(element));
 }
 
@@ -153,10 +155,10 @@ void DateTimeLocalInputType::setupLayoutParameters(DateTimeEditElement::LayoutPa
 {
     if (shouldHaveSecondField(date)) {
         layoutParameters.dateTimeFormat = layoutParameters.locale.dateTimeFormatWithSeconds();
-        layoutParameters.fallbackDateTimeFormat = "dd/MM/yyyy HH:mm:ss";
+        layoutParameters.fallbackDateTimeFormat = "yyyy-MM-dd'T'HH:mm:ss";
     } else {
         layoutParameters.dateTimeFormat = layoutParameters.locale.dateTimeFormatWithoutSeconds();
-        layoutParameters.fallbackDateTimeFormat = "dd/MM/yyyy HH:mm";
+        layoutParameters.fallbackDateTimeFormat = "yyyy-MM-dd'T'HH:mm";
     }
     if (!parseToDateComponents(element()->fastGetAttribute(minAttr), &layoutParameters.minimum))
         layoutParameters.minimum = DateComponents();

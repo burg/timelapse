@@ -340,10 +340,14 @@ void RenderLayerCompositor::flushPendingLayerChanges(bool isFlushRoot)
     }
 }
 
-void RenderLayerCompositor::didFlushChangesForLayer(RenderLayer* layer)
+void RenderLayerCompositor::didFlushChangesForLayer(RenderLayer* layer, const GraphicsLayer* graphicsLayer)
 {
     if (m_viewportConstrainedLayers.contains(layer))
         m_viewportConstrainedLayersNeedingUpdate.add(layer);
+
+    RenderLayerBacking* backing = layer->backing();
+    if (backing->backgroundLayerPaintsFixedRootBackground() && graphicsLayer == backing->backgroundLayer())
+        fixedRootBackgroundLayerChanged();
 }
 
 void RenderLayerCompositor::notifyFlushBeforeDisplayRefresh(const GraphicsLayer*)
@@ -729,7 +733,7 @@ void RenderLayerCompositor::layerWillBeRemoved(RenderLayer* parent, RenderLayer*
 RenderLayer* RenderLayerCompositor::enclosingNonStackingClippingLayer(const RenderLayer* layer) const
 {
     for (RenderLayer* curr = layer->parent(); curr != 0; curr = curr->parent()) {
-        if (curr->isStackingContext())
+        if (curr->isStackingContainer())
             return 0;
 
         if (curr->renderer()->hasClipOrOverflowClip())
@@ -776,7 +780,7 @@ void RenderLayerCompositor::addToOverlapMapRecursive(OverlapMap& overlapMap, Ren
     LayerListMutationDetector mutationChecker(layer);
 #endif
 
-    if (layer->isStackingContext()) {
+    if (layer->isStackingContainer()) {
         if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {
             size_t listSize = negZOrderList->size();
             for (size_t i = 0; i < listSize; ++i) {
@@ -794,7 +798,7 @@ void RenderLayerCompositor::addToOverlapMapRecursive(OverlapMap& overlapMap, Ren
         }
     }
 
-    if (layer->isStackingContext()) {
+    if (layer->isStackingContainer()) {
         if (Vector<RenderLayer*>* posZOrderList = layer->posZOrderList()) {
             size_t listSize = posZOrderList->size();
             for (size_t i = 0; i < listSize; ++i) {
@@ -879,7 +883,7 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
 
     bool anyDescendantHas3DTransform = false;
 
-    if (layer->isStackingContext()) {
+    if (layer->isStackingContainer()) {
         if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {
             size_t listSize = negZOrderList->size();
             for (size_t i = 0; i < listSize; ++i) {
@@ -911,7 +915,7 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
         }
     }
 
-    if (layer->isStackingContext()) {
+    if (layer->isStackingContainer()) {
         if (Vector<RenderLayer*>* posZOrderList = layer->posZOrderList()) {
             size_t listSize = posZOrderList->size();
             for (size_t i = 0; i < listSize; ++i) {
@@ -965,10 +969,10 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
     // so test that again.
     bool isCompositedClippingLayer = canBeComposited(layer) && clipsCompositingDescendants(layer);
 
-    // Turn overlap testing off for later layers if it's already off, or if we have a 3D transform or an animating transform.
+    // Turn overlap testing off for later layers if it's already off, or if we have an animating transform.
     // Note that if the layer clips its descendants, there's no reason to propagate the child animation to the parent layers. That's because
     // we know for sure the animation is contained inside the clipping rectangle, which is already added to the overlap map.
-    if ((!childState.m_testingOverlap && !isCompositedClippingLayer) || layer->has3DTransform() || isRunningAcceleratedTransformAnimation(layer->renderer()))
+    if ((!childState.m_testingOverlap && !isCompositedClippingLayer) || isRunningAcceleratedTransformAnimation(layer->renderer()))
         compositingState.m_testingOverlap = false;
     
     if (isCompositedClippingLayer) {
@@ -1066,7 +1070,9 @@ void RenderLayerCompositor::rebuildCompositingLayerTree(RenderLayer* layer, Vect
                 reflection->backing()->updateCompositedBounds();
         }
 
-        layerBacking->updateGraphicsLayerConfiguration();
+        if (layerBacking->updateGraphicsLayerConfiguration())
+            layerBacking->updateDebugIndicators(m_showDebugBorders, m_showRepaintCounter);
+        
         layerBacking->updateGraphicsLayerGeometry();
 
         if (!layer->parent())
@@ -1090,7 +1096,7 @@ void RenderLayerCompositor::rebuildCompositingLayerTree(RenderLayer* layer, Vect
     LayerListMutationDetector mutationChecker(layer);
 #endif
 
-    if (layer->isStackingContext()) {
+    if (layer->isStackingContainer()) {
         if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {
             size_t listSize = negZOrderList->size();
             for (size_t i = 0; i < listSize; ++i) {
@@ -1112,7 +1118,7 @@ void RenderLayerCompositor::rebuildCompositingLayerTree(RenderLayer* layer, Vect
         }
     }
     
-    if (layer->isStackingContext()) {
+    if (layer->isStackingContainer()) {
         if (Vector<RenderLayer*>* posZOrderList = layer->posZOrderList()) {
             size_t listSize = posZOrderList->size();
             for (size_t i = 0; i < listSize; ++i) {
@@ -1194,6 +1200,9 @@ void RenderLayerCompositor::frameViewDidScroll()
     }
 
     m_scrollLayer->setPosition(FloatPoint(-scrollPosition.x(), -scrollPosition.y()));
+
+    if (GraphicsLayer* fixedBackgroundLayer = fixedRootBackgroundLayer())
+        fixedBackgroundLayer->setPosition(IntPoint(frameView->scrollOffsetForFixedPosition()));
 }
 
 void RenderLayerCompositor::frameViewDidLayout()
@@ -1203,11 +1212,29 @@ void RenderLayerCompositor::frameViewDidLayout()
         renderViewBacking->adjustTileCacheCoverage();
 }
 
+void RenderLayerCompositor::rootFixedBackgroundsChanged()
+{
+    RenderLayerBacking* renderViewBacking = m_renderView->layer()->backing();
+    if (renderViewBacking && renderViewBacking->usingTileCache())
+        setCompositingLayersNeedRebuild();
+}
+
 void RenderLayerCompositor::scrollingLayerDidChange(RenderLayer* layer)
 {
     RenderLayerBacking* backing = layer->backing();
     if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
         scrollingCoordinator->scrollableAreaScrollLayerDidChange(layer, backing ? backing->scrollingContentsLayer() : 0);
+}
+
+void RenderLayerCompositor::fixedRootBackgroundLayerChanged()
+{
+    if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator()) {
+        RenderLayerBacking* renderViewBacking = m_renderView->layer()->backing();
+        if (!renderViewBacking)
+            return;
+
+        scrollingCoordinator->updateScrollingNode(renderViewBacking->scrollLayerID(), scrollLayer(), fixedRootBackgroundLayer());
+    }
 }
 
 String RenderLayerCompositor::layerTreeAsText(LayerTreeFlags flags)
@@ -1307,7 +1334,7 @@ void RenderLayerCompositor::updateLayerTreeGeometry(RenderLayer* layer, int dept
     LayerListMutationDetector mutationChecker(layer);
 #endif
 
-    if (layer->isStackingContext()) {
+    if (layer->isStackingContainer()) {
         if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {
             size_t listSize = negZOrderList->size();
             for (size_t i = 0; i < listSize; ++i)
@@ -1321,7 +1348,7 @@ void RenderLayerCompositor::updateLayerTreeGeometry(RenderLayer* layer, int dept
             updateLayerTreeGeometry(normalFlowList->at(i), depth + 1);
     }
     
-    if (layer->isStackingContext()) {
+    if (layer->isStackingContainer()) {
         if (Vector<RenderLayer*>* posZOrderList = layer->posZOrderList()) {
             size_t listSize = posZOrderList->size();
             for (size_t i = 0; i < listSize; ++i)
@@ -1358,7 +1385,7 @@ void RenderLayerCompositor::updateCompositingDescendantGeometry(RenderLayer* com
     LayerListMutationDetector mutationChecker(layer);
 #endif
     
-    if (layer->isStackingContext()) {
+    if (layer->isStackingContainer()) {
         if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {
             size_t listSize = negZOrderList->size();
             for (size_t i = 0; i < listSize; ++i)
@@ -1372,7 +1399,7 @@ void RenderLayerCompositor::updateCompositingDescendantGeometry(RenderLayer* com
             updateCompositingDescendantGeometry(compositingAncestor, normalFlowList->at(i), compositedChildrenOnly);
     }
     
-    if (layer->isStackingContext()) {
+    if (layer->isStackingContainer()) {
         if (Vector<RenderLayer*>* posZOrderList = layer->posZOrderList()) {
             size_t listSize = posZOrderList->size();
             for (size_t i = 0; i < listSize; ++i)
@@ -2006,7 +2033,7 @@ bool RenderLayerCompositor::requiresCompositingForPosition(RenderObject* rendere
     
     EPosition position = renderer->style()->position();
     bool isFixed = renderer->isOutOfFlowPositioned() && position == FixedPosition;
-    if (isFixed && !layer->isStackingContext())
+    if (isFixed && !layer->isStackingContainer())
         return false;
     
     bool isSticky = renderer->isInFlowPositioned() && position == StickyPosition;
@@ -2045,6 +2072,8 @@ bool RenderLayerCompositor::requiresCompositingForPosition(RenderObject* rendere
         if (!viewBounds.intersects(enclosingIntRect(layerBounds))) {
             if (viewportConstrainedNotCompositedReason)
                 *viewportConstrainedNotCompositedReason = RenderLayer::NotCompositedForBoundsOutOfView;
+            // Reevaluate compositing after layout because the layer bounds may change and become composited.
+            m_reevaluateCompositingAfterLayout = true;
             return false;
         }
     }
@@ -2121,6 +2150,33 @@ void RenderLayerCompositor::paintContents(const GraphicsLayer* graphicsLayer, Gr
         view->calculateAndPaintOverhangAreas(&context, clip);
 #endif
     }
+}
+
+bool RenderLayerCompositor::supportsFixedRootBackgroundCompositing() const
+{
+    RenderLayerBacking* renderViewBacking = m_renderView->layer()->backing();
+    return renderViewBacking && renderViewBacking->usingTileCache();
+}
+
+bool RenderLayerCompositor::needsFixedRootBackgroundLayer(const RenderLayer* layer) const
+{
+    if (layer != m_renderView->layer())
+        return false;
+
+    return supportsFixedRootBackgroundCompositing() && m_renderView->rootBackgroundIsEntirelyFixed();
+}
+
+GraphicsLayer* RenderLayerCompositor::fixedRootBackgroundLayer() const
+{
+    // Get the fixed root background from the RenderView layer's backing.
+    RenderLayer* viewLayer = m_renderView->layer();
+    if (!viewLayer)
+        return 0;
+    
+    if (viewLayer->isComposited() && viewLayer->backing()->backgroundLayerPaintsFixedRootBackground())
+        return viewLayer->backing()->backgroundLayer();
+
+    return 0;
 }
 
 static void resetTrackedRepaintRectsRecursive(GraphicsLayer* graphicsLayer)
@@ -2222,8 +2278,8 @@ bool RenderLayerCompositor::requiresOverhangAreasLayer() const
     if (m_renderView->document()->ownerElement())
         return false;
 
-    // We do want a layer if we have a scrolling coordinator.
-    if (scrollingCoordinator())
+    // We do want a layer if we have a scrolling coordinator and can scroll.
+    if (scrollingCoordinator() && m_renderView->frameView()->hasOpaqueBackground() && !m_renderView->frameView()->prohibitsScrolling())
         return true;
 
     // Chromium always wants a layer.
@@ -2241,8 +2297,8 @@ bool RenderLayerCompositor::requiresContentShadowLayer() const
         return false;
 
 #if PLATFORM(MAC)
-    // On Mac, we want a content shadow layer if we have a scrolling coordinator.
-    if (scrollingCoordinator())
+    // On Mac, we want a content shadow layer if we have a scrolling coordinator and can scroll.
+    if (scrollingCoordinator() && !m_renderView->frameView()->prohibitsScrolling())
         return true;
 #endif
 
@@ -2588,7 +2644,7 @@ bool RenderLayerCompositor::layerHas3DContent(const RenderLayer* layer) const
     LayerListMutationDetector mutationChecker(const_cast<RenderLayer*>(layer));
 #endif
 
-    if (layer->isStackingContext()) {
+    if (layer->isStackingContainer()) {
         if (Vector<RenderLayer*>* negZOrderList = layer->negZOrderList()) {
             size_t listSize = negZOrderList->size();
             for (size_t i = 0; i < listSize; ++i) {
@@ -2626,7 +2682,7 @@ void RenderLayerCompositor::deviceOrPageScaleFactorChanged()
     if (!viewLayer->isComposited())
         return;
 
-    if (GraphicsLayer* rootLayer = viewLayer->backing()->graphicsLayer())
+    if (GraphicsLayer* rootLayer = viewLayer->backing()->childForSuperlayers())
         rootLayer->noteDeviceOrPageScaleFactorChangedIncludingDescendants();
 }
 
@@ -2638,8 +2694,8 @@ static bool isRootmostFixedOrStickyLayer(RenderLayer* layer)
     if (layer->renderer()->style()->position() != FixedPosition)
         return false;
 
-    for (RenderLayer* stackingContext = layer->stackingContext(); stackingContext; stackingContext = stackingContext->stackingContext()) {
-        if (stackingContext->isComposited() && stackingContext->renderer()->style()->position() == FixedPosition)
+    for (RenderLayer* stackingContainer = layer->stackingContainer(); stackingContainer; stackingContainer = stackingContainer->stackingContainer()) {
+        if (stackingContainer->isComposited() && stackingContainer->renderer()->style()->position() == FixedPosition)
             return false;
     }
 
@@ -2674,9 +2730,7 @@ FixedPositionViewportConstraints RenderLayerCompositor::computeFixedViewportCons
     ASSERT(layer->isComposited());
 
     FrameView* frameView = m_renderView->frameView();
-
-    LayoutRect viewportRect = frameView->visibleContentRect();
-    viewportRect.setLocation(toPoint(frameView->scrollOffsetForFixedPosition()));
+    LayoutRect viewportRect = frameView->viewportConstrainedVisibleContentRect();
 
     FixedPositionViewportConstraints constraints = FixedPositionViewportConstraints();
 
@@ -2714,7 +2768,7 @@ StickyPositionViewportConstraints RenderLayerCompositor::computeStickyViewportCo
     ASSERT(layer->isComposited());
 
     FrameView* frameView = m_renderView->frameView();
-    LayoutRect viewportRect = frameView->visibleContentRect();
+    LayoutRect viewportRect = frameView->viewportConstrainedVisibleContentRect();
 
     StickyPositionViewportConstraints constraints = StickyPositionViewportConstraints();
 

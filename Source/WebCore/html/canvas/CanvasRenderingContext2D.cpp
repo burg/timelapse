@@ -852,125 +852,6 @@ void CanvasRenderingContext2D::beginPath()
     m_path.clear();
 }
 
-void CanvasRenderingContext2D::closePath()
-{
-    if (m_path.isEmpty())
-        return;
-
-    FloatRect boundRect = m_path.fastBoundingRect();
-    if (boundRect.width() || boundRect.height())
-        m_path.closeSubpath();
-}
-
-void CanvasRenderingContext2D::moveTo(float x, float y)
-{
-    if (!isfinite(x) | !isfinite(y))
-        return;
-    if (!state().m_invertibleCTM)
-        return;
-    m_path.moveTo(FloatPoint(x, y));
-}
-
-void CanvasRenderingContext2D::lineTo(float x, float y)
-{
-    if (!isfinite(x) | !isfinite(y))
-        return;
-    if (!state().m_invertibleCTM)
-        return;
-
-    FloatPoint p1 = FloatPoint(x, y);
-    if (!m_path.hasCurrentPoint())
-        m_path.moveTo(p1);
-    else if (p1 != m_path.currentPoint())
-        m_path.addLineTo(FloatPoint(x, y));
-}
-
-void CanvasRenderingContext2D::quadraticCurveTo(float cpx, float cpy, float x, float y)
-{
-    if (!isfinite(cpx) | !isfinite(cpy) | !isfinite(x) | !isfinite(y))
-        return;
-    if (!state().m_invertibleCTM)
-        return;
-    if (!m_path.hasCurrentPoint())
-        m_path.moveTo(FloatPoint(cpx, cpy));
-
-    FloatPoint p1 = FloatPoint(x, y);
-    if (p1 != m_path.currentPoint())
-        m_path.addQuadCurveTo(FloatPoint(cpx, cpy), p1);
-}
-
-void CanvasRenderingContext2D::bezierCurveTo(float cp1x, float cp1y, float cp2x, float cp2y, float x, float y)
-{
-    if (!isfinite(cp1x) | !isfinite(cp1y) | !isfinite(cp2x) | !isfinite(cp2y) | !isfinite(x) | !isfinite(y))
-        return;
-    if (!state().m_invertibleCTM)
-        return;
-    if (!m_path.hasCurrentPoint())
-        m_path.moveTo(FloatPoint(cp1x, cp1y));
-
-    FloatPoint p1 = FloatPoint(x, y);
-    if (p1 != m_path.currentPoint())
-        m_path.addBezierCurveTo(FloatPoint(cp1x, cp1y), FloatPoint(cp2x, cp2y), p1);
-}
-
-void CanvasRenderingContext2D::arcTo(float x1, float y1, float x2, float y2, float r, ExceptionCode& ec)
-{
-    ec = 0;
-    if (!isfinite(x1) | !isfinite(y1) | !isfinite(x2) | !isfinite(y2) | !isfinite(r))
-        return;
-
-    if (r < 0) {
-        ec = INDEX_SIZE_ERR;
-        return;
-    }
-
-    if (!state().m_invertibleCTM)
-        return;
-
-    FloatPoint p1 = FloatPoint(x1, y1);
-    FloatPoint p2 = FloatPoint(x2, y2);
-
-    if (!m_path.hasCurrentPoint())
-        m_path.moveTo(p1);
-    else if (p1 == m_path.currentPoint() || p1 == p2 || !r)
-        lineTo(x1, y1);
-    else
-        m_path.addArcTo(p1, p2, r);
-}
-
-void CanvasRenderingContext2D::arc(float x, float y, float r, float sa, float ea, bool anticlockwise, ExceptionCode& ec)
-{
-    ec = 0;
-    if (!isfinite(x) | !isfinite(y) | !isfinite(r) | !isfinite(sa) | !isfinite(ea))
-        return;
-
-    if (r < 0) {
-        ec = INDEX_SIZE_ERR;
-        return;
-    }
-
-    if (!r || sa == ea) {
-        // The arc is empty but we still need to draw the connecting line
-        lineTo(x + r * cosf(sa), y + r * sinf(sa));
-        return;
-    }
-
-    if (!state().m_invertibleCTM)
-        return;
-
-    // If 'sa' and 'ea' differ by more than 2Pi, just add a circle starting/ending at 'sa'
-    if (anticlockwise && sa - ea >= 2 * piFloat) {
-        m_path.addArc(FloatPoint(x, y), r, sa, sa - 2 * piFloat, anticlockwise);
-        return;
-    }
-    if (!anticlockwise && ea - sa >= 2 * piFloat) {
-        m_path.addArc(FloatPoint(x, y), r, sa, sa + 2 * piFloat, anticlockwise);
-        return;
-    }
-
-    m_path.addArc(FloatPoint(x, y), r, sa, ea, anticlockwise);
-}
-
 static bool validateRectForCanvas(float& x, float& y, float& width, float& height)
 {
     if (!isfinite(x) | !isfinite(y) | !isfinite(width) | !isfinite(height))
@@ -992,22 +873,6 @@ static bool validateRectForCanvas(float& x, float& y, float& width, float& heigh
     return true;
 }
 
-void CanvasRenderingContext2D::rect(float x, float y, float width, float height)
-{
-    if (!state().m_invertibleCTM)
-        return;
-
-    if (!isfinite(x) || !isfinite(y) || !isfinite(width) || !isfinite(height))
-        return;
-
-    if (!width && !height) {
-        m_path.moveTo(FloatPoint(x, y));
-        return;
-    }
-
-    m_path.addRect(FloatRect(x, y, width, height));
-}
-
 #if ENABLE(DASHBOARD_SUPPORT)
 void CanvasRenderingContext2D::clearPathForDashboardBackwardCompatibilityMode()
 {
@@ -1024,7 +889,19 @@ static bool isFullCanvasCompositeMode(CompositeOperator op)
     return op == CompositeSourceIn || op == CompositeSourceOut || op == CompositeDestinationIn || op == CompositeDestinationAtop;
 }
 
-void CanvasRenderingContext2D::fill()
+static bool parseWinding(const String& windingRuleString, WindRule& windRule)
+{
+    if (windingRuleString == "nonzero")
+        windRule = RULE_NONZERO;
+    else if (windingRuleString == "evenodd")
+        windRule = RULE_EVENODD;
+    else
+        return false;
+    
+    return true;
+}
+
+void CanvasRenderingContext2D::fill(const String& windingRuleString)
 {
     GraphicsContext* c = drawingContext();
     if (!c)
@@ -1033,6 +910,12 @@ void CanvasRenderingContext2D::fill()
         return;
 
     if (!m_path.isEmpty()) {
+        WindRule windRule = c->fillRule();
+        WindRule newWindRule = RULE_NONZERO;
+        if (!parseWinding(windingRuleString, newWindRule))
+            return;
+        c->setFillRule(newWindRule);
+
         if (isFullCanvasCompositeMode(state().m_globalComposite)) {
             fullCanvasCompositedFill(m_path);
             didDrawEntireCanvas();
@@ -1044,6 +927,8 @@ void CanvasRenderingContext2D::fill()
             c->fillPath(m_path);
             didDraw(m_path.fastBoundingRect());
         }
+        
+        c->setFillRule(windRule);
     }
 
 #if ENABLE(DASHBOARD_SUPPORT)
@@ -1072,21 +957,27 @@ void CanvasRenderingContext2D::stroke()
 #endif
 }
 
-void CanvasRenderingContext2D::clip()
+void CanvasRenderingContext2D::clip(const String& windingRuleString)
 {
     GraphicsContext* c = drawingContext();
     if (!c)
         return;
     if (!state().m_invertibleCTM)
         return;
+
+    WindRule newWindRule = RULE_NONZERO;
+    if (!parseWinding(windingRuleString, newWindRule))
+        return;
+
     realizeSaves();
-    c->canvasClip(m_path);
+    c->canvasClip(m_path, newWindRule);
+    
 #if ENABLE(DASHBOARD_SUPPORT)
     clearPathForDashboardBackwardCompatibilityMode();
 #endif
 }
 
-bool CanvasRenderingContext2D::isPointInPath(const float x, const float y)
+bool CanvasRenderingContext2D::isPointInPath(const float x, const float y, const String& windingRuleString)
 {
     GraphicsContext* c = drawingContext();
     if (!c)
@@ -1099,7 +990,12 @@ bool CanvasRenderingContext2D::isPointInPath(const float x, const float y)
     FloatPoint transformedPoint = ctm.inverse().mapPoint(point);
     if (!isfinite(transformedPoint.x()) || !isfinite(transformedPoint.y()))
         return false;
-    return m_path.contains(transformedPoint);
+
+    WindRule windRule = RULE_NONZERO;
+    if (!parseWinding(windingRuleString, windRule))
+        return false;
+    
+    return m_path.contains(transformedPoint, windRule);
 }
 
 void CanvasRenderingContext2D::clearRect(float x, float y, float width, float height)
@@ -2296,11 +2192,7 @@ void CanvasRenderingContext2D::drawTextInternal(const String& text, float x, flo
     if (drawStyle->canvasGradient() || drawStyle->canvasPattern()) {
         IntRect maskRect = enclosingIntRect(textRect);
 
-#if USE(IOSURFACE_CANVAS_BACKING_STORE)
-        OwnPtr<ImageBuffer> maskImage = ImageBuffer::create(maskRect.size(), 1, ColorSpaceDeviceRGB, Accelerated);
-#else
-        OwnPtr<ImageBuffer> maskImage = ImageBuffer::create(maskRect.size(), 1);
-#endif
+        OwnPtr<ImageBuffer> maskImage = c->createCompatibleBuffer(maskRect.size());
 
         GraphicsContext* maskImageContext = maskImage->context();
 
@@ -2398,7 +2290,9 @@ void CanvasRenderingContext2D::setWebkitImageSmoothingEnabled(bool enabled)
 
     realizeSaves();
     modifiableState().m_imageSmoothingEnabled = enabled;
-    drawingContext()->setImageInterpolationQuality(enabled ? DefaultInterpolationQuality : InterpolationNone);
+    GraphicsContext* c = drawingContext();
+    if (c)
+        c->setImageInterpolationQuality(enabled ? DefaultInterpolationQuality : InterpolationNone);
 }
 
 } // namespace WebCore

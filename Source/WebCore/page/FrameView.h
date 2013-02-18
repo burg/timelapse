@@ -164,6 +164,9 @@ public:
 
     bool isTransparent() const;
     void setTransparent(bool isTransparent);
+    
+    // True if the FrameView is not transparent, and the base background color is opaque.
+    bool hasOpaqueBackground() const;
 
     Color baseBackgroundColor() const;
     void setBaseBackgroundColor(const Color&);
@@ -187,6 +190,11 @@ public:
     virtual void updateFixedElementsAfterScrolling();
     virtual bool shouldRubberBandInDirection(ScrollDirection) const;
     virtual bool requestScrollPositionUpdate(const IntPoint&) OVERRIDE;
+    virtual bool isRubberBandInProgress() const OVERRIDE;
+
+    // This is different than visibleContentRect() in that it ignores negative (or overly positive)
+    // offsets from rubber-banding, and it takes zooming into account. 
+    LayoutRect viewportConstrainedVisibleContentRect() const;
 
     String mediaType() const;
     void setMediaType(const String&);
@@ -346,8 +354,10 @@ public:
     String trackedRepaintRectsAsText() const;
 
     typedef HashSet<ScrollableArea*> ScrollableAreaSet;
-    void addScrollableArea(ScrollableArea*);
-    void removeScrollableArea(ScrollableArea*);
+    // Returns whether the scrollable area has just been newly added.
+    bool addScrollableArea(ScrollableArea*);
+    // Returns whether the scrollable area has just been removed.
+    bool removeScrollableArea(ScrollableArea*);
     bool containsScrollableArea(ScrollableArea*) const;
     const ScrollableAreaSet* scrollableAreas() const { return m_scrollableAreas.get(); }
 

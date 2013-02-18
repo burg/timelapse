@@ -41,7 +41,7 @@
 #include "WebIDBDatabaseError.h"
 #include "WebIDBKey.h"
 #include "WebIDBTransaction.h"
-#include "platform/WebSerializedScriptValue.h"
+#include "WebSerializedScriptValue.h"
 
 using namespace WebCore;
 
@@ -108,11 +108,6 @@ void WebIDBCallbacksImpl::onSuccess()
 void WebIDBCallbacksImpl::onSuccess(const WebIDBKey& key, const WebIDBKey& primaryKey, const WebSerializedScriptValue& value)
 {
     m_callbacks->onSuccess(key, primaryKey, value);
-}
-
-void WebIDBCallbacksImpl::onBlocked()
-{
-    m_callbacks->onBlocked();
 }
 
 void WebIDBCallbacksImpl::onBlocked(long long oldVersion)

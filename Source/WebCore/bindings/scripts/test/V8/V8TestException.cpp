@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-WrapperTypeInfo V8TestException::info = { V8TestException::GetTemplate, V8TestException::derefObject, 0, 0, V8TestException::installPerContextPrototypeProperties, 0, WrapperTypeErrorPrototype };
+WrapperTypeInfo V8TestException::info = { V8TestException::GetTemplate, V8TestException::derefObject, 0, 0, 0, V8TestException::installPerContextPrototypeProperties, 0, WrapperTypeErrorPrototype };
 
 namespace TestExceptionV8Internal {
 
@@ -66,9 +66,11 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestExceptionTemplate(v8:
     return desc;
 }
 
-v8::Persistent<v8::FunctionTemplate> V8TestException::GetRawTemplate()
+v8::Persistent<v8::FunctionTemplate> V8TestException::GetRawTemplate(v8::Isolate* isolate)
 {
-    V8PerIsolateData* data = V8PerIsolateData::current();
+    if (!isolate)
+        isolate = v8::Isolate::GetCurrent();
+    V8PerIsolateData* data = V8PerIsolateData::from(isolate);
     V8PerIsolateData::TemplateMap::iterator result = data->rawTemplateMap().find(&info);
     if (result != data->rawTemplateMap().end())
         return result->value;
@@ -79,9 +81,11 @@ v8::Persistent<v8::FunctionTemplate> V8TestException::GetRawTemplate()
     return templ;
 }
 
-v8::Persistent<v8::FunctionTemplate> V8TestException::GetTemplate()
+v8::Persistent<v8::FunctionTemplate> V8TestException::GetTemplate(v8::Isolate* isolate)
 {
-    V8PerIsolateData* data = V8PerIsolateData::current();
+    if (!isolate)
+        isolate = v8::Isolate::GetCurrent();
+    V8PerIsolateData* data = V8PerIsolateData::from(isolate);
     V8PerIsolateData::TemplateMap::iterator result = data->templateMap().find(&info);
     if (result != data->templateMap().end())
         return result->value;
@@ -114,7 +118,6 @@ v8::Handle<v8::Object> V8TestException::createWrapper(PassRefPtr<TestException> 
         wrapperHandle.MarkIndependent();
     return wrapper;
 }
-
 void V8TestException::derefObject(void* object)
 {
     static_cast<TestException*>(object)->deref();

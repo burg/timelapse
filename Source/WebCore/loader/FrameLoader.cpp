@@ -76,12 +76,14 @@
 #include "HistoryItem.h"
 #include "InspectorController.h"
 #include "InspectorInstrumentation.h"
+#include "LoaderStrategy.h"
 #include "Logging.h"
 #include "MIMETypeRegistry.h"
 #include "MainResourceLoader.h"
 #include "Page.h"
 #include "PageCache.h"
 #include "PageTransitionEvent.h"
+#include "PlatformStrategies.h"
 #include "PluginData.h"
 #include "PluginDatabase.h"
 #include "PluginDocument.h"
@@ -2581,7 +2583,14 @@ unsigned long FrameLoader::loadResourceSynchronously(const ResourceRequest& requ
         ASSERT(!newRequest.isNull());
         
         if (!documentLoader()->applicationCacheHost()->maybeLoadSynchronously(newRequest, error, response, data)) {
+#if USE(PLATFORM_STRATEGIES)
+            unsigned long identifier = 0;
+            if (m_frame->page())
+                identifier = m_frame->page()->progress()->createUniqueIdentifier();
+            platformStrategies()->loaderStrategy()->loadResourceSynchronously(networkingContext(), identifier, newRequest, storedCredentials, error, response, data);
+#else
             ResourceHandle::loadResourceSynchronously(networkingContext(), newRequest, storedCredentials, error, response, data);
+#endif
             documentLoader()->applicationCacheHost()->maybeLoadFallbackSynchronously(newRequest, error, response, data);
         }
     }

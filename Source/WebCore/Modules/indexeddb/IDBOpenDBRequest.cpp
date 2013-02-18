@@ -37,15 +37,15 @@
 
 namespace WebCore {
 
-PassRefPtr<IDBOpenDBRequest> IDBOpenDBRequest::create(ScriptExecutionContext* context, PassRefPtr<IDBAny> source, PassRefPtr<IDBDatabaseCallbacksImpl> callbacks, int64_t transactionId, int64_t version)
+PassRefPtr<IDBOpenDBRequest> IDBOpenDBRequest::create(ScriptExecutionContext* context, PassRefPtr<IDBDatabaseCallbacksImpl> callbacks, int64_t transactionId, int64_t version)
 {
-    RefPtr<IDBOpenDBRequest> request(adoptRef(new IDBOpenDBRequest(context, source, callbacks, transactionId, version)));
+    RefPtr<IDBOpenDBRequest> request(adoptRef(new IDBOpenDBRequest(context, callbacks, transactionId, version)));
     request->suspendIfNeeded();
     return request.release();
 }
 
-IDBOpenDBRequest::IDBOpenDBRequest(ScriptExecutionContext* context, PassRefPtr<IDBAny> source, PassRefPtr<IDBDatabaseCallbacksImpl> callbacks, int64_t transactionId, int64_t version)
-    : IDBRequest(context, source, IDBTransactionBackendInterface::NormalTask, 0)
+IDBOpenDBRequest::IDBOpenDBRequest(ScriptExecutionContext* context, PassRefPtr<IDBDatabaseCallbacksImpl> callbacks, int64_t transactionId, int64_t version)
+    : IDBRequest(context, IDBAny::createNull(), IDBTransactionBackendInterface::NormalTask, 0)
     , m_databaseCallbacks(callbacks)
     , m_transactionId(transactionId)
     , m_version(version)
@@ -69,13 +69,12 @@ void IDBOpenDBRequest::onBlocked(int64_t oldVersion)
     enqueueEvent(IDBUpgradeNeededEvent::create(oldVersion, m_version, eventNames().blockedEvent));
 }
 
-void IDBOpenDBRequest::onUpgradeNeeded(int64_t oldVersion, PassRefPtr<IDBTransactionBackendInterface> prpTransactionBackend, PassRefPtr<IDBDatabaseBackendInterface> prpDatabaseBackend)
+void IDBOpenDBRequest::onUpgradeNeeded(int64_t oldVersion, PassRefPtr<IDBTransactionBackendInterface>, PassRefPtr<IDBDatabaseBackendInterface> prpDatabaseBackend)
 {
     IDB_TRACE("IDBOpenDBRequest::onUpgradeNeeded()");
     if (m_contextStopped || !scriptExecutionContext()) {
-        RefPtr<IDBTransactionBackendInterface> transaction = prpTransactionBackend;
-        transaction->abort();
         RefPtr<IDBDatabaseBackendInterface> db = prpDatabaseBackend;
+        db->abort(m_transactionId);
         db->close(m_databaseCallbacks);
         return;
     }
@@ -89,7 +88,6 @@ void IDBOpenDBRequest::onUpgradeNeeded(int64_t oldVersion, PassRefPtr<IDBTransac
     // were passed in during the (asynchronous) onUpgradeNeeded call from the backend. http://wkbug.com/103920
     IDBDatabaseMetadata metadata = databaseBackend->metadata();
 
-    RefPtr<IDBTransactionBackendInterface> transactionBackend = prpTransactionBackend;
     RefPtr<IDBDatabase> idbDatabase = IDBDatabase::create(scriptExecutionContext(), databaseBackend, m_databaseCallbacks);
     idbDatabase->setMetadata(metadata);
     m_databaseCallbacks->connect(idbDatabase.get());
@@ -101,9 +99,7 @@ void IDBOpenDBRequest::onUpgradeNeeded(int64_t oldVersion, PassRefPtr<IDBTransac
     }
     metadata.intVersion = oldVersion;
 
-    RefPtr<IDBTransaction> frontend = IDBTransaction::create(scriptExecutionContext(), m_transactionId, transactionBackend, idbDatabase.get(), this, metadata);
-    transactionBackend->setCallbacks(frontend.get());
-    m_transaction = frontend;
+    m_transaction = IDBTransaction::create(scriptExecutionContext(), m_transactionId, idbDatabase.get(), this, metadata);
     m_result = IDBAny::create(idbDatabase.release());
 
     if (m_version == IDBDatabaseMetadata::NoIntVersion)
@@ -151,7 +147,7 @@ bool IDBOpenDBRequest::dispatchEvent(PassRefPtr<Event> event)
 {
     // If the connection closed between onUpgradeNeeded and the delivery of the "success" event,
     // an "error" event should be fired instead.
-    if (event->type() == eventNames().successEvent && m_result->idbDatabase()->isClosePending()) {
+    if (event->type() == eventNames().successEvent && m_result->type() == IDBAny::IDBDatabaseType && m_result->idbDatabase()->isClosePending()) {
         m_result.clear();
         onError(IDBDatabaseError::create(IDBDatabaseException::AbortError, "The connection was closed."));
         return false;

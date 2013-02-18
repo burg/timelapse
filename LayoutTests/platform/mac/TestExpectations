@@ -188,11 +188,15 @@ gamepad/
 # Speech input is not yet enabled.
 fast/speech
 
+# Speech synthesis is not yet enabled.
+platform/mac/fast/speechsynthesis
+
 # Speech JavaScript API is not yet enabled.
 fast/events/constructors/speech-recognition-event-constructor.html
 
 # Media Stream API is not yet enabled.
 fast/mediastream
+fast/events/constructors/media-stream-event-constructor.html
 
 # Needs to be fixed at image decoder layer for Safari.
 fast/images/large-size-image-crash.html
@@ -264,6 +268,7 @@ webkit.org/b/50485 inspector-protocol/take-heap-snapshot.html [ Skip ]
 # New inspector/profiler/memory-instrumentation-canvas.html fails on JSC platforms
 webkit.org/b/99001 inspector/profiler/memory-instrumentation-canvas.html
 webkit.org/b/73936 inspector/profiler/canvas2d/canvas-has-uninstrumented-canvases.html
+webkit.org/b/73936 inspector/profiler/canvas2d/canvas-stack-trace.html
 
 # Skipping newly added tests while I'm finding out what is wrong.
 # https://bugs.webkit.org/show_bug.cgi?id=59706
@@ -376,10 +381,6 @@ webarchive/test-link-rel-icon.html
 http/tests/inspector/network/network-size-chunked.html
 http/tests/inspector/network/network-size-sync.html
 
-# https://bugs.webkit.org/show_bug.cgi?id=64097
-http/tests/inspector/network/network-disable-cache-memory.html
-http/tests/inspector/network/network-disable-cache-xhrs.html
-
 # Quota API is not supported.
 storage/storageinfo-missing-arguments.html
 storage/storageinfo-no-callbacks.html
@@ -403,13 +404,6 @@ plugins/mouse-click-iframe-to-plugin.html
 # HTTP 204 (No Content) should be ignored
 # https://bugs.webkit.org/show_bug.cgi?id=60206
 http/tests/navigation/response204.html
-
-# This platform does not support the Page Visibility API.
-fast/events/page-visibility-iframe-delete-test.html
-fast/events/page-visibility-iframe-move-test.html
-fast/events/page-visibility-iframe-propagation-test.html
-fast/events/page-visibility-null-view.html
-fast/events/page-visibility-transition-test.html
 
 # console long eval test is timeout 60616
 inspector/console/console-long-eval-crash.html
@@ -439,6 +433,9 @@ accessibility/corresponding-control-deleted-crash.html
 # ENABLE(TEMPLATE_ELEMENT) is disabled.
 fast/dom/HTMLTemplateElement
 html5lib/run-template.html
+fast/xsl/xslt-xhtml-template.xml
+fast/xpath/xpath-template-element.html
+fast/xsl/xslt-processor-template.html
 
 # JSC does not support setIsolatedWorldSecurityOrigin (http://webkit.org/b/61540)
 http/tests/security/isolatedWorld/cross-origin-xhr.html
@@ -518,7 +515,7 @@ fast/events/constructors/media-key-event-constructor.html
 css3/font-feature-settings-rendering.html
 
 # This test verifies that a mismatch reftest will fail as intended if both results are same.
-fast/harness/sample-fail-mismatch-reftest.html
+fast/harness/sample-fail-mismatch-reftest.html [ WontFix ImageOnlyFailure ]
 
 # https://bugs.webkit.org/show_bug.cgi?id=67716
 media/media-controls-invalid-url.html
@@ -836,9 +833,6 @@ compositing/iframes/overlapped-nested-iframes.html [ Failure Pass ]
 # https://bugs.webkit.org/show_bug.cgi?id=90725
 media/media-blocked-by-beforeload.html
 
-# https://bugs.webkit.org/show_bug.cgi?id=90742
-sputnik/Conformance/08_Types/8.4_The_String_Type/S8.4_A7.2.html
-
 # https://bugs.webkit.org/show_bug.cgi?id=90833
 fast/js/global-constructors.html
 
@@ -1077,7 +1071,6 @@ webkit.org/b/73766 css3/unicode-bidi-isolate-aharon-failing.html [ ImageOnlyFail
 
 # Flakey media tests
 webkit.org/b/34331 http/tests/media/video-referer.html [ Failure Pass ]
-webkit.org/b/97259 media/track/track-cue-rendering-inner-timestamps.html [ Skip ]
 
 # Failing ref tests
 webkit.org/b/84759 ietestcenter/css3/multicolumn/column-containing-block-001.htm [ ImageOnlyFailure ]
@@ -1112,7 +1105,6 @@ webkit.org/b/85689 fast/animation/request-animation-frame-disabled.html [ Skip ]
 
 # Hits assert https://bugs.webkit.org/show_bug.cgi?id=86208
 webkit.org/b/85308 ietestcenter/css3/valuesandunits/units-000.htm [ Skip ]
-webkit.org/b/85310 ietestcenter/css3/valuesandunits/units-010.htm [ ImageOnlyFailure ]
 
 # IETC namespace failures
 webkit.org/b/86142 ietestcenter/css3/namespaces/syntax-021.xml [ ImageOnlyFailure ]
@@ -1161,6 +1153,7 @@ webkit.org/b/92464 [ Debug ] fast/events/tabindex-focus-blur-all.html [ Crash Pa
 
 # css3-conditionals support is not yet enabled.
 webkit.org/b/86146 css3/supports.html
+webkit.org/b/104822 css3/supports-cssom.html
 
 # CSS Device Adaptation is not enabled.
 webkit.org/b/95959 css3/device-adapt [ Skip ]
@@ -1265,10 +1258,6 @@ webkit.org/b/106151 [ Lion ] http/tests/misc/link-rel-icon-beforeload.html [ Pas
 
 webkit.org/b/106185 fast/frames/flattening/iframe-flattening-fixed-height.html [ Pass Failure ]
 
-webkit.org/b/106361 [ Debug ] svg/custom/text-use-click-crash.xhtml [ Crash ]
-
-webkit.org/b/106318 fast/events/drag-and-drop-autoscroll.html [ Failure ]
-
 webkit.org/b/106412 [ Debug ] editing/style/justify-without-enclosing-block.xhtml [ Crash ]
 webkit.org/b/106412 [ Debug ] editing/execCommand/insert-list-xml.xhtml [ Crash ]
 webkit.org/b/106412 [ Debug ] editing/pasteboard/paste-noscript-xhtml.xhtml [ Crash ]
@@ -1278,12 +1267,37 @@ webkit.org/b/106415 fast/workers/worker-close-more.html [ Pass Failure ]
 webkit.org/b/106415 fast/workers/worker-document-leak.html [ Pass Failure ]
 webkit.org/b/106415 fast/workers/worker-lifecycle.html [ Pass Failure ]
 
+# Enable when support drag-and-drop autoscrolling
+webkit.org/b/39725 fast/events/drag-and-drop-autoscroll.html [ Skip ]
+
 # Transient. Needs rebaseline.
 webkit.org/b/103955 fast/repaint/4774354.html [ ImageOnlyFailure ]
 webkit.org/b/103955 fast/repaint/4776765.html [ ImageOnlyFailure ]
 webkit.org/b/103955 fast/repaint/caret-outside-block.html [ ImageOnlyFailure ]
-webkit.org/b/103955 fast/repaint/japanese-rl-selection-repaint-in-regions.html [ ImageOnlyFailure ]
-webkit.org/b/103955 fast/repaint/japanese-rl-selection-repaint.html [ ImageOnlyFailure ]
-webkit.org/b/103955 fast/repaint/repaint-across-writing-mode-boundary.html [ ImageOnlyFailure ]
 webkit.org/b/103955 fast/repaint/selection-rl.html [ ImageOnlyFailure ]
 webkit.org/b/103955 fast/repaint/caret-with-transformation.html [ Missing ]
+
+# Needs rebaseline.
+webkit.org/b/105574 editing/input/caret-at-the-edge-of-contenteditable.html [ Failure ]
+webkit.org/b/105574 editing/input/reveal-caret-of-multiline-contenteditable.html [ Failure ]
+webkit.org/b/105574 editing/input/reveal-caret-of-multiline-input.html [ Failure ]
+webkit.org/b/105574 fast/spatial-navigation/snav-div-overflow-scrol-hidden.html [ Failure ]
+
+# Rebaseline required after https://webkit.org/b/107208
+webkit.org/b/107208 fast/regions/overflow-moving-below-floats-in-variable-width-regions.html [ Pass Failure ImageOnlyFailure ]
+webkit.org/b/107208 fast/regions/overflow-size-change-in-variable-width-regions.html [ Pass Failure ImageOnlyFailure ]
+webkit.org/b/107208 fast/regions/overflow-size-change-with-stacking-context.html [ Pass Failure ImageOnlyFailure ]
+
+# Rebaseline required after https://webkit.org/b/31397
+webkit.org/b/107567 svg/batik/text/xmlSpace.svg [ Failure ] 
+webkit.org/b/107567 fast/text/capitalize-empty-generated-string.html [ Failure ] 
+webkit.org/b/107567 fast/text/whitespace/007.html [ Failure ] 
+webkit.org/b/107567 fast/text/whitespace/006.html [ Failure ] 
+webkit.org/b/107567 fast/inline/drawStyledEmptyInlinesWithWS.html [ Failure ] 
+webkit.org/b/107567 tables/mozilla/bugs/bug1318.html [ Failure ] 
+webkit.org/b/107567 fast/inline/drawStyledEmptyInlines.html [ Failure ] 
+webkit.org/b/107567 tables/mozilla/bugs/bug113235-3.html [ Failure ] 
+webkit.org/b/107567 css2.1/t0505-c16-descendant-01-e.html [ Failure ] 
+webkit.org/b/107567 tables/mozilla/bugs/bug1188.html [ Failure ] 
+webkit.org/b/107567 editing/selection/extend-by-sentence-001.html [ Failure ] 
+webkit.org/b/107567 svg/carto.net/combobox.svg [ Failure ] 

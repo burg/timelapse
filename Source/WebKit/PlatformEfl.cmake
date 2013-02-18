@@ -78,6 +78,7 @@ if (WTF_USE_3D_GRAPHICS)
     list(APPEND WebKit_INCLUDE_DIRECTORIES
         "${WEBCORE_DIR}/platform/graphics/surfaces"
         "${WEBCORE_DIR}/platform/graphics/texmap"
+        "${THIRDPARTY_DIR}/ANGLE/include/KHR"
         "${THIRDPARTY_DIR}/ANGLE/include/GLSLANG"
     )
 endif ()
@@ -85,6 +86,17 @@ endif ()
 if (ENABLE_GEOLOCATION)
     list(APPEND WebKit_INCLUDE_DIRECTORIES
         "${WEBCORE_DIR}/Modules/geolocation"
+    )
+endif ()
+
+if (ENABLE_ACCESSIBILITY)
+    list(APPEND WebKit_INCLUDE_DIRECTORIES
+        "${WEBCORE_DIR}/accessibility"
+        "${WEBCORE_DIR}/accessibility/atk"
+        ${ATK_INCLUDE_DIRS}
+    )
+    list(APPEND WebKit_LIBRARIES
+        ${ATK_LIBRARIES}
     )
 endif ()
 

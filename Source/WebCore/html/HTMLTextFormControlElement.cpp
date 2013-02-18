@@ -31,6 +31,7 @@
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "FeatureObserver.h"
 #include "Frame.h"
 #include "HTMLBRElement.h"
 #include "HTMLFormElement.h"
@@ -330,8 +331,8 @@ void HTMLTextFormControlElement::setSelectionRange(int start, int end, TextField
     // startPosition and endPosition can be null position for example when
     // "-webkit-user-select: none" style attribute is specified.
     if (startPosition.isNotNull() && endPosition.isNotNull()) {
-        ASSERT(startPosition.deepEquivalent().deprecatedNode()->shadowAncestorNode() == this
-            && endPosition.deepEquivalent().deprecatedNode()->shadowAncestorNode() == this);
+        ASSERT(startPosition.deepEquivalent().deprecatedNode()->shadowHost() == this
+            && endPosition.deepEquivalent().deprecatedNode()->shadowHost() == this);
     }
     VisibleSelection newSelection;
     if (direction == SelectionHasBackwardDirection)
@@ -510,9 +511,10 @@ void HTMLTextFormControlElement::selectionChanged(bool userTriggered)
 
 void HTMLTextFormControlElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (name == placeholderAttr)
+    if (name == placeholderAttr) {
         updatePlaceholderVisibility(true);
-    else if (name == onselectAttr)
+        FeatureObserver::observe(document(), FeatureObserver::PlaceholderAttribute);
+    } else if (name == onselectAttr)
         setAttributeEventListener(eventNames().selectEvent, createAttributeEventListener(this, name, value));
     else if (name == onchangeAttr)
         setAttributeEventListener(eventNames().changeEvent, createAttributeEventListener(this, name, value));
@@ -639,12 +641,14 @@ String HTMLTextFormControlElement::valueWithHardLineBreaks() const
 HTMLTextFormControlElement* enclosingTextFormControl(const Position& position)
 {
     ASSERT(position.isNull() || position.anchorType() == Position::PositionIsOffsetInAnchor
-           || position.containerNode() || !position.anchorNode()->shadowAncestorNode());
+        || position.containerNode() || !position.anchorNode()->shadowHost()
+        || (position.anchorNode()->parentNode() && position.anchorNode()->parentNode()->isShadowRoot()));
+        
     Node* container = position.containerNode();
     if (!container)
         return 0;
-    Node* ancestor = container->shadowAncestorNode();
-    return ancestor != container ? toTextFormControl(ancestor) : 0;
+    Element* ancestor = container->shadowHost();
+    return ancestor && isHTMLTextFormControlElement(ancestor) ? toHTMLTextFormControlElement(ancestor) : 0;
 }
 
 static const Element* parentHTMLElement(const Element* element)

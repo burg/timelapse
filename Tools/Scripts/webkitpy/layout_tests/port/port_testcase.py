@@ -34,7 +34,7 @@ import os
 import socket
 import sys
 import time
-import unittest
+import unittest2 as unittest
 
 from webkitpy.common.system.executive_mock import MockExecutive
 from webkitpy.common.system.filesystem_mock import MockFileSystem
@@ -433,7 +433,7 @@ class PortTestCase(unittest.TestCase):
         port._filesystem.write_text_file('/tmp/foo', 'foo')
         port._filesystem.write_text_file('/tmp/bar', 'bar')
         ordered_dict = port.expectations_dict()
-        self.assertEqual(ordered_dict.keys()[-2:], options.additional_expectations)  # pylint: disable-msg=E1101
+        self.assertEqual(ordered_dict.keys()[-2:], options.additional_expectations)  # pylint: disable=E1101
         self.assertEqual(ordered_dict.values()[-2:], ['foo', 'bar'])
 
     def test_path_to_test_expectations_file(self):

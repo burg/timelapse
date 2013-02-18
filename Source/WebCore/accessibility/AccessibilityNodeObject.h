@@ -123,6 +123,7 @@ public:
     virtual String title() const;
     virtual String text() const;
     virtual String stringValue() const;
+    virtual void colorValue(int& r, int& g, int& b) const;
     virtual String ariaLabeledByAttribute() const;
 
     virtual Element* actionElement() const;
@@ -152,6 +153,9 @@ protected:
     AccessibilityRole m_ariaRole;
     bool m_childrenDirty;
     mutable AccessibilityRole m_roleForMSAA;
+#ifndef NDEBUG
+    bool m_initialized;
+#endif
 
     virtual bool isDetached() const { return !m_node; }
 

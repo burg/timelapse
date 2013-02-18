@@ -44,6 +44,7 @@ public:
     virtual void sendMessageToBackend(const WebString&) { }
 
     virtual void activateWindow() { }
+    virtual void changeAttachedWindowHeight(unsigned height) { }
     virtual void closeWindow() { }
     virtual void requestDockWindow() { }
     virtual void requestUndockWindow() { }
@@ -52,6 +53,12 @@ public:
     virtual void openInNewTab(const WebString& side) { }
     virtual void save(const WebString& url, const WebString& content, bool saveAs) { }
     virtual void append(const WebString& url, const WebString& content) { }
+
+    virtual void requestFileSystems() { }
+    virtual void addFileSystem() { }
+    virtual void removeFileSystem(const WebString& fileSystemPath) { }
+
+    virtual bool isUnderTest() { return false; }
 
 protected:
     virtual ~WebDevToolsFrontendClient() {}

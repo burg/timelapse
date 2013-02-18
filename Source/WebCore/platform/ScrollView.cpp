@@ -374,13 +374,13 @@ void ScrollView::scrollTo(const IntSize& newOffset)
     if (scrollbarsSuppressed())
         return;
 
-    repaintFixedElementsAfterScrolling();
 #if USE(TILED_BACKING_STORE)
     if (delegatesScrolling()) {
         hostWindow()->delegatedScrollRequested(IntPoint(newOffset));
         return;
     }
 #endif
+    repaintFixedElementsAfterScrolling();
     scrollContents(scrollDelta);
     updateFixedElementsAfterScrolling();
 }
@@ -612,11 +612,8 @@ void ScrollView::updateScrollbars(const IntSize& desiredOffset)
     }
 
     IntPoint adjustedScrollPosition = IntPoint(desiredOffset);
-
-    if (ScrollAnimator* scrollAnimator = existingScrollAnimator()) {
-        if (!scrollAnimator->isRubberBandInProgress())
-            adjustedScrollPosition = adjustScrollPositionWithinRange(adjustedScrollPosition);
-    }
+    if (!isRubberBandInProgress())
+        adjustedScrollPosition = adjustScrollPositionWithinRange(adjustedScrollPosition);
 
     if (adjustedScrollPosition != scrollPosition() || scrollOriginChanged()) {
         ScrollableArea::scrollToOffsetWithoutAnimation(adjustedScrollPosition + IntSize(scrollOrigin().x(), scrollOrigin().y()));

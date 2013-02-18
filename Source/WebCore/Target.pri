@@ -264,6 +264,7 @@ SOURCES += \
     css/CSSFunctionValue.cpp \
     css/CSSGradientValue.cpp \
     css/CSSGroupingRule.cpp \
+    css/CSSHostRule.cpp \
     css/CSSImageValue.cpp \
     css/CSSImageGeneratorValue.cpp \
     css/CSSImageSetValue.cpp \
@@ -287,6 +288,7 @@ SOURCES += \
     css/CSSSegmentedFontFace.cpp \
     css/CSSStyleRule.cpp \
     css/CSSStyleSheet.cpp \
+    css/CSSSupportsRule.cpp \
     css/CSSTimingFunctionValue.cpp \
     css/CSSToStyleMap.cpp \
     css/CSSUnicodeRangeValue.cpp \
@@ -363,7 +365,7 @@ SOURCES += \
     dom/DeviceMotionData.cpp \
     dom/DeviceMotionEvent.cpp \
     dom/DeviceOrientationController.cpp \
-    dom/DeviceOrientationData.cpp \    
+    dom/DeviceOrientationData.cpp \
     dom/DeviceOrientationEvent.cpp \
     dom/Document.cpp \
     dom/DocumentEventQueue.cpp \
@@ -465,6 +467,7 @@ SOURCES += \
     dom/Touch.cpp \
     dom/TouchEvent.cpp \
     dom/TouchList.cpp \
+    dom/TransitionEvent.cpp \
     dom/Traversal.cpp \
     dom/TreeScope.cpp \
     dom/TreeScopeAdopter.cpp \
@@ -700,13 +703,16 @@ SOURCES += \
     html/ValidityState.cpp \
     html/WeekInputType.cpp \
     html/canvas/CanvasGradient.cpp \
+    html/canvas/CanvasPathMethods.cpp \
     html/canvas/CanvasPattern.cpp \
     html/canvas/CanvasProxy.cpp \
     html/canvas/CanvasRenderingContext.cpp \
     html/canvas/CanvasRenderingContext2D.cpp \
     html/canvas/CanvasStyle.cpp \
     html/canvas/DataView.cpp \
+    html/parser/BackgroundHTMLParser.cpp \
     html/parser/CSSPreloadScanner.cpp \
+    html/parser/CompactHTMLToken.cpp \
     html/parser/HTMLConstructionSite.cpp \
     html/parser/HTMLDocumentParser.cpp \
     html/parser/HTMLElementStack.cpp \
@@ -717,6 +723,7 @@ SOURCES += \
     html/parser/HTMLParserIdioms.cpp \
     html/parser/HTMLParserOptions.cpp \
     html/parser/HTMLParserScheduler.cpp \
+    html/parser/HTMLParserThread.cpp \
     html/parser/HTMLPreloadScanner.cpp \
     html/parser/HTMLScriptRunner.cpp \
     html/parser/HTMLSourceTracker.cpp \
@@ -737,7 +744,6 @@ SOURCES += \
     html/shadow/HTMLContentElement.cpp \
     html/shadow/HTMLShadowElement.cpp \
     html/shadow/InsertionPoint.cpp \
-    html/shadow/ImageInnerElement.cpp \
     html/shadow/MediaControls.cpp \
     html/shadow/MediaControlsApple.cpp \
     html/shadow/MeterShadowElement.cpp \
@@ -1272,6 +1278,7 @@ SOURCES += \
     storage/StorageNamespace.cpp \
     storage/StorageNamespaceImpl.cpp \
     storage/StorageSyncManager.cpp \
+    storage/StorageStrategy.cpp \
     storage/StorageTracker.cpp \
     testing/Internals.cpp \
     testing/InternalSettings.cpp \
@@ -1298,11 +1305,7 @@ SOURCES += \
     xml/XPathUtil.cpp \
     xml/XPathValue.cpp \
     xml/XPathVariableReference.cpp \
-    xml/parser/NewXMLDocumentParser.cpp \
-    xml/parser/XMLCharacterReferenceParser.cpp \
     xml/parser/XMLDocumentParser.cpp \
-    xml/parser/XMLTokenizer.cpp \
-    xml/parser/XMLTreeBuilder.cpp
 
 HEADERS += \
     accessibility/AccessibilityARIAGridCell.h \
@@ -1498,6 +1501,7 @@ HEADERS += \
     css/CSSStyleDeclaration.h \
     css/CSSStyleRule.h \
     css/CSSStyleSheet.h \
+    css/CSSSupportsRule.h \
     css/CSSTimingFunctionValue.h \
     css/CSSToStyleMap.h \
     css/CSSUnicodeRangeValue.h \
@@ -1665,6 +1669,7 @@ HEADERS += \
     dom/TouchEvent.h \
     dom/TouchList.h \
     dom/TransformSource.h \
+    dom/TransitionEvent.h \
     dom/Traversal.h \
     dom/TreeDepthLimit.h \
     dom/TreeScope.h \
@@ -1757,12 +1762,14 @@ HEADERS += \
     history/HistoryItem.h \
     history/PageCache.h \
     html/canvas/CanvasGradient.h \
+    html/canvas/CanvasPathMethods.h \
     html/canvas/CanvasPattern.h \
     html/canvas/CanvasProxy.h \
     html/canvas/CanvasRenderingContext.h \
     html/canvas/CanvasRenderingContext2D.h \
     html/canvas/CanvasStyle.h \
     html/canvas/DataView.h \
+    html/canvas/DOMPath.h \
     html/ClassList.h \
     html/DOMFormData.h \
     html/DOMSettableTokenList.h \
@@ -1879,6 +1886,7 @@ HEADERS += \
     html/TypeAhead.h \
     html/ValidityState.h \
     html/parser/CSSPreloadScanner.h \
+    html/parser/CompactHTMLToken.h \
     html/parser/HTMLConstructionSite.h \
     html/parser/HTMLDocumentParser.h \
     html/parser/HTMLElementStack.h \
@@ -1909,6 +1917,7 @@ HEADERS += \
     html/track/LoadableTextTrack.h \
     html/track/TextTrack.h \
     html/track/TextTrackCue.h \
+    html/track/TextTrackCueGeneric.h \
     html/track/TextTrackCueList.h \
     html/track/TextTrackList.h \
     html/track/TrackBase.h \
@@ -2302,6 +2311,7 @@ HEADERS += \
     platform/network/qt/QNetworkReplyHandler.h \
     platform/network/ResourceErrorBase.h \
     platform/network/ResourceHandle.h \
+    platform/network/ResourceHandleTypes.h \
     platform/network/ResourceLoadInfo.h \
     platform/network/ResourceLoadPriority.h \
     platform/network/ResourceLoadTiming.h \
@@ -2759,11 +2769,10 @@ HEADERS += \
     svg/SVGSetElement.h \
     svg/SVGStopElement.h \
     svg/SVGStringList.h \
-    svg/SVGStylable.h \
+    svg/SVGStyleElement.h \
     svg/SVGStyledElement.h \
     svg/SVGStyledLocatableElement.h \
     svg/SVGStyledTransformableElement.h \
-    svg/SVGStyleElement.h \
     svg/SVGSVGElement.h \
     svg/SVGSwitchElement.h \
     svg/SVGSymbolElement.h \
@@ -2806,12 +2815,7 @@ HEADERS += \
     xml/parser/MarkupTokenBase.h \
     xml/parser/MarkupTokenizerBase.h \
     xml/parser/MarkupTokenizerInlines.h \
-    xml/parser/NewXMLDocumentParser.h \
-    xml/parser/XMLCharacterReferenceParser.h \
     xml/parser/XMLDocumentParser.h \
-    xml/parser/XMLTokenizer.h \
-    xml/parser/XMLToken.h \
-    xml/parser/XMLTreeBuilder.h \
     xml/DOMParser.h \
     xml/NativeXPathNSResolver.h \
     xml/XMLHttpRequest.h \
@@ -3048,20 +3052,17 @@ enable?(INDEXED_DATABASE) {
         Modules/indexeddb/IDBFactoryBackendInterface.h \
         Modules/indexeddb/IDBFactoryBackendImpl.h \
         Modules/indexeddb/IDBIndex.h \
-        Modules/indexeddb/IDBIndexBackendInterface.h \
         Modules/indexeddb/IDBKey.h \
         Modules/indexeddb/IDBKeyRange.h \
         Modules/indexeddb/IDBObjectStore.h \
         Modules/indexeddb/IDBObjectStoreBackendImpl.h \
-        Modules/indexeddb/IDBObjectStoreBackendInterface.h \
         Modules/indexeddb/IDBRequest.h \
         Modules/indexeddb/IDBTransaction.h \
         Modules/indexeddb/IDBTransactionBackendInterface.h
 
     SOURCES += \
         bindings/js/IDBBindingUtilities.cpp \
-        bindings/js/JSIDBAnyCustom.cpp \
-        bindings/js/JSIDBKeyCustom.cpp
+        bindings/js/JSIDBAnyCustom.cpp
 
     SOURCES += \
         Modules/indexeddb/DOMWindowIndexedDatabase.cpp \
@@ -3310,7 +3311,7 @@ enable?(VIDEO) {
             platform/mac/WebWindowAnimation.mm
 
         DEFINES+=NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
-        contains(CONFIG, "x86") {
+        isEqual(QT_ARCH, "i386") {
             DEFINES+=NS_BUILD_32_LIKE_64
         }
 
@@ -3855,7 +3856,6 @@ enable?(SVG) {
         svg/SVGSetElement.cpp \
         svg/SVGStopElement.cpp \
         svg/SVGStringList.cpp \
-        svg/SVGStylable.cpp \
         svg/SVGStyleElement.cpp \
         svg/SVGStyledElement.cpp \
         svg/SVGStyledLocatableElement.cpp \
@@ -4040,7 +4040,7 @@ use?(3D_GRAPHICS) {
         platform/graphics/gpu/TilingData.h \
         platform/graphics/opengl/Extensions3DOpenGL.h \
         platform/graphics/texmap/TextureMapperGL.h \
-        platform/graphics/texmap/TextureMapperShaderManager.h
+        platform/graphics/texmap/TextureMapperShaderProgram.h
 
     SOURCES += \
         platform/graphics/ANGLEWebKitBridge.cpp \
@@ -4053,7 +4053,7 @@ use?(3D_GRAPHICS) {
         platform/graphics/opengl/Extensions3DOpenGLCommon.cpp \
         platform/graphics/qt/GraphicsContext3DQt.cpp \
         platform/graphics/texmap/TextureMapperGL.cpp \
-        platform/graphics/texmap/TextureMapperShaderManager.cpp
+        platform/graphics/texmap/TextureMapperShaderProgram.cpp
 
     INCLUDEPATH += $$PWD/platform/graphics/gpu
 

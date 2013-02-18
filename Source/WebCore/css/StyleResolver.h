@@ -29,6 +29,7 @@
 #include "MediaQueryExp.h"
 #include "RenderStyle.h"
 #include "RuleFeature.h"
+#include "RuleSet.h"
 #include "RuntimeEnabledFeatures.h"
 #include "SelectorChecker.h"
 #include "SelectorFilter.h"
@@ -309,6 +310,12 @@ private:
 
     void addMatchedRule(const RuleData* rule) { m_matchedRules.append(rule); }
 
+    struct RuleRange {
+        RuleRange(int& firstRuleIndex, int& lastRuleIndex): firstRuleIndex(firstRuleIndex), lastRuleIndex(lastRuleIndex) { }
+        int& firstRuleIndex;
+        int& lastRuleIndex;
+    };
+
     struct MatchRanges {
         MatchRanges() : firstUARule(-1), lastUARule(-1), firstAuthorRule(-1), lastAuthorRule(-1), firstUserRule(-1), lastUserRule(-1) { }
         int firstUARule;
@@ -317,6 +324,9 @@ private:
         int lastAuthorRule;
         int firstUserRule;
         int lastUserRule;
+        RuleRange UARuleRange() { return RuleRange(firstUARule, lastUARule); }
+        RuleRange authorRuleRange() { return RuleRange(firstAuthorRule, lastAuthorRule); }
+        RuleRange userRuleRange() { return RuleRange(firstUserRule, lastUserRule); }
     };
 
     struct MatchedProperties {
@@ -327,7 +337,7 @@ private:
         union {
             struct {
                 unsigned linkMatchType : 2;
-                unsigned isInRegionRule : 1;
+                unsigned whitelistType : 2;
             };
             // Used to make sure all memory is zero-initialized since we compute the hash over the bytes of this object.
             void* possiblyPaddedMember;
@@ -342,13 +352,17 @@ private:
         bool isCacheable;
     };
 
-    struct MatchOptions {
-        MatchOptions(bool includeEmptyRules, const ContainerNode* scope = 0) : scope(scope), includeEmptyRules(includeEmptyRules) { }
+    struct MatchRequest {
+        MatchRequest(RuleSet* ruleSet, bool includeEmptyRules = false, const ContainerNode* scope = 0)
+            : ruleSet(ruleSet)
+            , includeEmptyRules(includeEmptyRules)
+            , scope(scope) { }
+        const RuleSet* ruleSet;
+        const bool includeEmptyRules;
         const ContainerNode* scope;
-        bool includeEmptyRules;
     };
 
-    static void addMatchedProperties(MatchResult&, const StylePropertySet* properties, StyleRule* = 0, unsigned linkMatchType = SelectorChecker::MatchAll, bool inRegionRule = false);
+    static void addMatchedProperties(MatchResult&, const StylePropertySet* properties, StyleRule* = 0, unsigned linkMatchType = SelectorChecker::MatchAll, PropertyWhitelistType = PropertyWhitelistNone);
     void addElementStyleProperties(MatchResult&, const StylePropertySet*, bool isCacheable = true);
 
     void matchAllRules(MatchResult&, bool includeSMILProperties);
@@ -358,15 +372,17 @@ private:
     void matchUserRules(MatchResult&, bool includeEmptyRules);
     void matchScopedAuthorRules(MatchResult&, bool includeEmptyRules);
     void matchHostRules(MatchResult&, bool includeEmptyRules);
-    void collectMatchingRules(RuleSet*, int& firstRuleIndex, int& lastRuleIndex, const MatchOptions&);
-    void collectMatchingRulesForRegion(RuleSet*, int& firstRuleIndex, int& lastRuleIndex, const MatchOptions&);
-    void collectMatchingRulesForList(const Vector<RuleData>*, int& firstRuleIndex, int& lastRuleIndex, const MatchOptions&);
+
+    void collectMatchingRules(const MatchRequest&, RuleRange&);
+    void collectMatchingRulesForRegion(const MatchRequest&, RuleRange&);
+    void collectMatchingRulesForList(const Vector<RuleData>*, const MatchRequest&, RuleRange&);
+
     bool fastRejectSelector(const RuleData&) const;
     void sortMatchedRules();
     void sortAndTransferMatchedRules(MatchResult&);
 
     bool ruleMatches(const RuleData&, const ContainerNode* scope);
-    bool checkRegionSelector(CSSSelector* regionSelector, Element* regionElement);
+    bool checkRegionSelector(const CSSSelector* regionSelector, Element* regionElement);
     void applyMatchedProperties(const MatchResult&, const Element*);
     enum StyleApplicationPass {
 #if ENABLE(CSS_VARIABLES)
@@ -378,12 +394,14 @@ private:
     template <StyleApplicationPass pass>
     void applyMatchedProperties(const MatchResult&, bool important, int startIndex, int endIndex, bool inheritedOnly);
     template <StyleApplicationPass pass>
-    void applyProperties(const StylePropertySet* properties, StyleRule*, bool isImportant, bool inheritedOnly, bool filterRegionProperties);
+    void applyProperties(const StylePropertySet* properties, StyleRule*, bool isImportant, bool inheritedOnly, PropertyWhitelistType = PropertyWhitelistNone);
 #if ENABLE(CSS_VARIABLES)
     void resolveVariables(CSSPropertyID, CSSValue*, Vector<std::pair<CSSPropertyID, String> >& knownExpressions);
 #endif
     static bool isValidRegionStyleProperty(CSSPropertyID);
-
+#if ENABLE(VIDEO_TRACK)
+    static bool isValidCueStyleProperty(CSSPropertyID);
+#endif
     void matchPageRules(MatchResult&, RuleSet*, bool isLeftPage, bool isFirstPage, const String& pageName);
     void matchPageRulesForList(Vector<StyleRulePage*>& matchedRules, const Vector<StyleRulePage*>&, bool isLeftPage, bool isFirstPage, const String& pageName);
     Settings* documentSettings() { return m_document->settings(); }

@@ -206,6 +206,7 @@ EXPORTS
         ?doDispatchMessageOnFrontendPage@InspectorClient@WebCore@@SA_NPAVPage@2@ABVString@WTF@@@Z
         ?frontendLoaded@InspectorFrontendClientLocal@WebCore@@UAEXXZ
         ?getProperty@Settings@InspectorFrontendClientLocal@WebCore@@UAE?AVString@WTF@@ABV45@@Z
+        ?isUnderTest@InspectorFrontendClientLocal@WebCore@@UAE_NXZ
         ?moveWindowBy@InspectorFrontendClientLocal@WebCore@@UAEXMM@Z
         ?openInNewTab@InspectorFrontendClientLocal@WebCore@@UAEXABVString@WTF@@@Z
         ?requestSetDockSide@InspectorFrontendClientLocal@WebCore@@UAEXW4DockSide@InspectorFrontendClient@2@@Z
@@ -321,7 +322,6 @@ EXPORTS
         ?suspendAnimations@AnimationController@WebCore@@QAEXXZ
         ?resumeAnimations@AnimationController@WebCore@@QAEXXZ
         ?setAllowsRoundingHacks@TextRun@WebCore@@SAX_N@Z
-        ?jsStringWithCacheSlowCase@WebCore@@YA?AVJSValue@JSC@@PAVExecState@3@AAV?$HashMap@PAVStringImpl@WTF@@V?$Weak@VJSString@JSC@@@JSC@@U?$PtrHash@PAVStringImpl@WTF@@@2@U?$HashTraits@PAVStringImpl@WTF@@@2@U?$HashTraits@V?$Weak@VJSString@JSC@@@JSC@@@2@@WTF@@PAVStringImpl@6@@Z
         ?registerURLSchemeAsBypassingContentSecurityPolicy@SchemeRegistry@WebCore@@SAXABVString@WTF@@@Z
         ?removeURLSchemeRegisteredAsBypassingContentSecurityPolicy@SchemeRegistry@WebCore@@SAXABVString@WTF@@@Z
         ?iconURLs@Document@WebCore@@QAEABV?$Vector@UIconURL@WebCore@@$0A@@WTF@@XZ
@@ -708,7 +708,6 @@ EXPORTS
         ?suspendAnimations@AnimationController@WebCore@@QAEXXZ
         ?resumeAnimations@AnimationController@WebCore@@QAEXXZ
         ?setAllowsRoundingHacks@TextRun@WebCore@@SAX_N@Z
-        ?jsStringWithCacheSlowCase@WebCore@@YA?AVJSValue@JSC@@PAVExecState@3@AAV?$HashMap@PAVStringImpl@WTF@@V?$Weak@VJSString@JSC@@@JSC@@U?$PtrHash@PAVStringImpl@WTF@@@2@U?$HashTraits@PAVStringImpl@WTF@@@2@U?$HashTraits@V?$Weak@VJSString@JSC@@@JSC@@@2@@WTF@@PAVStringImpl@6@@Z
         ?registerURLSchemeAsBypassingContentSecurityPolicy@SchemeRegistry@WebCore@@SAXABVString@WTF@@@Z
         ?removeURLSchemeRegisteredAsBypassingContentSecurityPolicy@SchemeRegistry@WebCore@@SAXABVString@WTF@@@Z
         ?iconURLs@Document@WebCore@@QAEABV?$Vector@UIconURL@WebCore@@$0A@@WTF@@XZ
@@ -1095,7 +1094,6 @@ EXPORTS
         ?suspendAnimations@AnimationController@WebCore@@QAEXXZ
         ?resumeAnimations@AnimationController@WebCore@@QAEXXZ
         ?setAllowsRoundingHacks@TextRun@WebCore@@SAX_N@Z
-        ?jsStringWithCacheSlowCase@WebCore@@YA?AVJSValue@JSC@@PAVExecState@3@AAV?$HashMap@PAVStringImpl@WTF@@V?$Weak@VJSString@JSC@@@JSC@@U?$PtrHash@PAVStringImpl@WTF@@@2@U?$HashTraits@PAVStringImpl@WTF@@@2@U?$HashTraits@V?$Weak@VJSString@JSC@@@JSC@@@2@@WTF@@PAVStringImpl@6@@Z
         ?registerURLSchemeAsBypassingContentSecurityPolicy@SchemeRegistry@WebCore@@SAXABVString@WTF@@@Z
         ?removeURLSchemeRegisteredAsBypassingContentSecurityPolicy@SchemeRegistry@WebCore@@SAXABVString@WTF@@@Z
         ?iconURLs@Document@WebCore@@QAEABV?$Vector@UIconURL@WebCore@@$0A@@WTF@@XZ
@@ -1486,7 +1484,6 @@ EXPORTS
         ?suspendAnimations@AnimationController@WebCore@@QAEXXZ
         ?resumeAnimations@AnimationController@WebCore@@QAEXXZ
         ?setAllowsRoundingHacks@TextRun@WebCore@@SAX_N@Z
-        ?jsStringWithCacheSlowCase@WebCore@@YA?AVJSValue@JSC@@PAVExecState@3@AAV?$HashMap@PAVStringImpl@WTF@@V?$Weak@VJSString@JSC@@@JSC@@U?$PtrHash@PAVStringImpl@WTF@@@2@U?$HashTraits@PAVStringImpl@WTF@@@2@U?$HashTraits@V?$Weak@VJSString@JSC@@@JSC@@@2@@WTF@@PAVStringImpl@6@@Z
         ?registerURLSchemeAsBypassingContentSecurityPolicy@SchemeRegistry@WebCore@@SAXABVString@WTF@@@Z
         ?removeURLSchemeRegisteredAsBypassingContentSecurityPolicy@SchemeRegistry@WebCore@@SAXABVString@WTF@@@Z
         ?iconURLs@Document@WebCore@@QAEABV?$Vector@UIconURL@WebCore@@$0A@@WTF@@XZ

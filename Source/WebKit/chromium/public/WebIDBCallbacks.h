@@ -26,8 +26,8 @@
 #ifndef WebIDBCallbacks_h
 #define WebIDBCallbacks_h
 
-#include "platform/WebCommon.h"
-#include "platform/WebVector.h"
+#include "../../../Platform/chromium/public/WebCommon.h"
+#include "../../../Platform/chromium/public/WebVector.h"
 
 namespace WebKit {
 
@@ -38,7 +38,6 @@ class WebIDBDatabaseError;
 class WebIDBKey;
 class WebIDBKeyPath;
 class WebIDBIndex;
-class WebIDBObjectStore;
 class WebIDBTransaction;
 class WebSerializedScriptValue;
 
@@ -58,6 +57,7 @@ public:
     virtual void onSuccess(long long) { WEBKIT_ASSERT_NOT_REACHED(); }
     virtual void onSuccess() { WEBKIT_ASSERT_NOT_REACHED(); }
     virtual void onSuccess(const WebIDBKey& key, const WebIDBKey& primaryKey, const WebSerializedScriptValue&) { WEBKIT_ASSERT_NOT_REACHED(); }
+    // FIXME: Remove the following overload once callers are updated:
     virtual void onBlocked() { WEBKIT_ASSERT_NOT_REACHED(); }
     virtual void onBlocked(long long oldVersion) { WEBKIT_ASSERT_NOT_REACHED(); }
     virtual void onSuccessWithPrefetch(const WebVector<WebIDBKey>& keys, const WebVector<WebIDBKey>& primaryKeys, const WebVector<WebSerializedScriptValue>& values) { WEBKIT_ASSERT_NOT_REACHED(); }

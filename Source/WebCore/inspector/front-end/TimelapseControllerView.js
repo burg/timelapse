@@ -361,7 +361,7 @@ WebInspector.TimelapseReplayView = function(model, recording)
     this._model = model;
     this._recording = recording;
 
-    this._splitView = new WebInspector.SplitView(WebInspector.SplitView.SidebarPosition.Right,
+    this._splitView = new WebInspector.SplitView(true,
                         "timelapseControllerSplitView", 200);
     this._splitView.show(this.element);
 

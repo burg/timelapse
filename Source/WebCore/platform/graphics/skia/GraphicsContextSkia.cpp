@@ -314,12 +314,12 @@ void GraphicsContext::clip(const FloatRect& rect)
     platformContext()->clipRect(rect);
 }
 
-void GraphicsContext::clip(const Path& path)
+void GraphicsContext::clip(const Path& path, WindRule clipRule)
 {
     if (paintingDisabled() || path.isEmpty())
         return;
 
-    platformContext()->clipPath(*path.platformPath(), PlatformContextSkia::AntiAliased);
+    clipPath(path, clipRule);
 }
 
 void GraphicsContext::clipRoundedRect(const RoundedRect& rect)
@@ -337,12 +337,22 @@ void GraphicsContext::clipRoundedRect(const RoundedRect& rect)
     platformContext()->clipRRect(r, PlatformContextSkia::AntiAliased);
 }
 
-void GraphicsContext::canvasClip(const Path& path)
+void GraphicsContext::canvasClip(const Path& pathToClip, WindRule clipRule)
 {
     if (paintingDisabled())
         return;
 
-    platformContext()->clipPath(path.isNull() ? SkPath() : *path.platformPath());
+    const SkPath* path = pathToClip.platformPath();
+    SkPath::FillType ftype = (clipRule == RULE_EVENODD) ? SkPath::kEvenOdd_FillType : SkPath::kWinding_FillType;
+    SkPath storage;
+
+    if (path && (path->getFillType() != ftype)) {
+        storage = *path;
+        storage.setFillType(ftype);
+        path = &storage;
+    }
+
+    platformContext()->clipPath(path ? *path : SkPath());
 }
 
 void GraphicsContext::clipOut(const IntRect& rect)

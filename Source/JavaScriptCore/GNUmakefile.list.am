@@ -176,6 +176,7 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/dfg/DFGAssemblyHelpers.cpp \
 	Source/JavaScriptCore/dfg/DFGAssemblyHelpers.h \
 	Source/JavaScriptCore/dfg/DFGBasicBlock.h \
+	Source/JavaScriptCore/dfg/DFGBasicBlockInlines.h \
 	Source/JavaScriptCore/dfg/DFGBranchDirection.h \
 	Source/JavaScriptCore/dfg/DFGByteCodeParser.cpp \
 	Source/JavaScriptCore/dfg/DFGByteCodeParser.h \
@@ -264,6 +265,7 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/dfg/DFGVariableAccessData.h \
 	Source/JavaScriptCore/dfg/DFGVariableAccessDataDump.cpp \
 	Source/JavaScriptCore/dfg/DFGVariableAccessDataDump.h \
+	Source/JavaScriptCore/dfg/DFGVariadicFunction.h \
 	Source/JavaScriptCore/dfg/DFGVirtualRegisterAllocationPhase.cpp \
 	Source/JavaScriptCore/dfg/DFGVirtualRegisterAllocationPhase.h \
 	Source/JavaScriptCore/disassembler/Disassembler.cpp \
@@ -405,6 +407,7 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/jit/ClosureCallStubRoutine.h \
 	Source/JavaScriptCore/jit/ExecutableAllocator.cpp \
 	Source/JavaScriptCore/jit/ExecutableAllocator.h \
+	Source/JavaScriptCore/jit/ExecutableAllocatorFixedVMPool.cpp \
 	Source/JavaScriptCore/jit/GCAwareJITStubRoutine.cpp \
 	Source/JavaScriptCore/jit/GCAwareJITStubRoutine.h \
 	Source/JavaScriptCore/jit/HostCallReturnValue.cpp \
@@ -694,6 +697,8 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/runtime/PropertyOffset.h \
 	Source/JavaScriptCore/runtime/PropertySlot.cpp \
 	Source/JavaScriptCore/runtime/PropertySlot.h \
+	Source/JavaScriptCore/runtime/PrototypeMap.cpp \
+	Source/JavaScriptCore/runtime/PrototypeMap.h \
 	Source/JavaScriptCore/runtime/PropertyStorage.h \
 	Source/JavaScriptCore/runtime/Protect.h \
 	Source/JavaScriptCore/runtime/PutDirectIndexMode.h \
@@ -764,12 +769,6 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/yarr/YarrPattern.h \
 	Source/JavaScriptCore/yarr/YarrSyntaxChecker.cpp \
 	Source/JavaScriptCore/yarr/YarrSyntaxChecker.h
-
-if TARGET_WIN32
-else
-javascriptcore_sources += \
-	Source/JavaScriptCore/jit/ExecutableAllocatorFixedVMPool.cpp
-endif
 
 llint_nosources += \
 	Source/JavaScriptCore/llint/LowLevelInterpreter32_64.asm \

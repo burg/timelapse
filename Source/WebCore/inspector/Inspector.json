@@ -494,6 +494,39 @@
                     { "name": "frameId", "$ref": "Network.FrameId", "description": "Id of the frame that has been detached." }
                 ],
                 "hidden": true
+            },
+            {
+                "name": "frameStartedLoading",
+                "description": "Fired when frame has started loading.",
+                "parameters": [
+                    { "name": "frameId", "$ref": "Network.FrameId", "description": "Id of the frame that has started loading." }
+                ],
+                "hidden": true
+            },
+            {
+                "name": "frameStoppedLoading",
+                "description": "Fired when frame has stopped loading.",
+                "parameters": [
+                    { "name": "frameId", "$ref": "Network.FrameId", "description": "Id of the frame that has stopped loading." }
+                ],
+                "hidden": true
+            },
+            {
+                "name": "frameScheduledNavigation",
+                "description": "Fired when frame schedules a potential navigation.",
+                "parameters": [
+                    { "name": "frameId", "$ref": "Network.FrameId", "description": "Id of the frame that has scheduled a navigation." },
+                    { "name": "delay", "type": "number", "description": "Delay (in seconds) until the navigation is scheduled to begin. The navigation is not guaranteed to start." }
+                ],
+                "hidden": true
+            },
+            {
+                "name": "frameClearedScheduledNavigation",
+                "description": "Fired when frame no longer has a scheduled navigation.",
+                "parameters": [
+                    { "name": "frameId", "$ref": "Network.FrameId", "description": "Id of the frame that has cleared its scheduled navigation." }
+                ],
+                "hidden": true
             }
         ]
     },
@@ -865,7 +898,6 @@
                 "description": "WebSocket request data.",
                 "hidden": true,
                 "properties": [
-                    { "name": "requestKey3", "type": "string", "description": "HTTP response status text." },
                     { "name": "headers", "$ref": "Headers", "description": "HTTP response headers." }
                 ]
             },
@@ -877,8 +909,7 @@
                 "properties": [
                     { "name": "status", "type": "number", "description": "HTTP response status code." },
                     { "name": "statusText", "type": "string", "description": "HTTP response status text." },
-                    { "name": "headers", "$ref": "Headers", "description": "HTTP response headers." },
-                    { "name": "challengeResponse", "type": "string", "description": "Challenge response." }
+                    { "name": "headers", "$ref": "Headers", "description": "HTTP response headers." }
                 ]
             },
             {
@@ -3139,7 +3170,7 @@
                 ]
             },
             {
-                "id": "Profile",
+                "id": "CPUProfile",
                 "type": "object",
                 "description": "Profile.",
                 "properties": [
@@ -3192,13 +3223,18 @@
                 ]
             },
             {
-                "name": "getProfile",
+                "name": "getCPUProfile",
                 "parameters": [
-                    { "name": "type", "type": "string" },
                     { "name": "uid", "type": "integer" }
                 ],
                 "returns": [
-                    { "name": "profile", "$ref": "Profile" }
+                    { "name": "profile", "$ref": "CPUProfile" }
+                ]
+            },
+            {
+                "name": "getHeapSnapshot",
+                "parameters": [
+                    { "name": "uid", "type": "integer" }
                 ]
             },
             {
@@ -3344,20 +3380,45 @@
         "hidden": true,
         "types": [
             {
-                "id": "ContextId",
+                "id": "ResourceId",
                 "type": "string",
-                "description": "Unique context identifier."
+                "description": "Unique resource identifier."
+            },
+            {
+                "id": "ResourceInfo",
+                "type": "object",
+                "properties": [
+                    { "name": "id", "$ref": "ResourceId" },
+                    { "name": "description", "type": "string" }
+                ]
+            },
+            {
+                "id": "ResourceState",
+                "type": "object",
+                "properties": [
+                    { "name": "id", "$ref": "ResourceId" },
+                    { "name": "traceLogId", "$ref": "TraceLogId" },
+                    { "name": "imageURL", "type": "string", "optional": true, "description": "Screenshot image data URL." }
+                ]
+            },
+            {
+                "id": "CallArgument",
+                "type": "object",
+                "properties": [
+                    { "name": "description", "type": "string" }
+                ]
             },
             {
                 "id": "Call",
                 "type": "object",
                 "properties": [
-                    { "name": "contextId", "$ref": "ContextId" },
+                    { "name": "contextId", "$ref": "ResourceId" },
                     { "name": "functionName", "type": "string", "optional": true },
-                    { "name": "arguments", "type": "array", "items": { "type": "string" }, "optional": true },
+                    { "name": "arguments", "type": "array", "items": { "$ref": "CallArgument" }, "optional": true },
+                    { "name": "result", "$ref": "CallArgument", "optional": true },
+                    { "name": "isDrawingCall", "type": "boolean", "optional": true },
                     { "name": "property", "type": "string", "optional": true },
-                    { "name": "value", "type": "string", "optional": true },
-                    { "name": "result", "type": "string", "optional": true },
+                    { "name": "value", "$ref": "CallArgument", "optional": true },
                     { "name": "sourceURL", "type": "string", "optional": true },
                     { "name": "lineNumber", "type": "integer", "optional": true },
                     { "name": "columnNumber", "type": "integer", "optional": true }
@@ -3374,8 +3435,9 @@
                 "properties": [
                     { "name": "id", "$ref": "TraceLogId" },
                     { "name": "calls", "type": "array", "items": { "$ref": "Call" } },
-                    { "name": "startOffset", "type": "integer", "optional": true },
-                    { "name": "alive", "type": "boolean", "optional": true }
+                    { "name": "startOffset", "type": "integer" },
+                    { "name": "alive", "type": "boolean" },
+                    { "name": "totalAvailableCalls", "type": "number" }
                 ]
             }
         ],
@@ -3423,7 +3485,8 @@
                 "name": "getTraceLog",
                 "parameters": [
                     { "name": "traceLogId", "$ref": "TraceLogId" },
-                    { "name": "startOffset", "type": "integer", "optional": true }
+                    { "name": "startOffset", "type": "integer", "optional": true },
+                    { "name": "maxLength", "type": "integer", "optional": true }
                 ],
                 "returns": [
                     { "name": "traceLog", "$ref": "TraceLog" }
@@ -3436,7 +3499,26 @@
                     { "name": "stepNo", "type": "integer" }
                 ],
                 "returns": [
-                    { "name": "screenshotDataUrl", "type": "string" }
+                    { "name": "resourceState", "$ref": "ResourceState" }
+                ]
+            },
+            {
+                "name": "getResourceInfo",
+                "parameters": [
+                    { "name": "resourceId", "$ref": "ResourceId" }
+                ],
+                "returns": [
+                    { "name": "resourceInfo", "$ref": "ResourceInfo" }
+                ]
+            },
+            {
+                "name": "getResourceState",
+                "parameters": [
+                    { "name": "traceLogId", "$ref": "TraceLogId" },
+                    { "name": "resourceId", "$ref": "ResourceId" }
+                ],
+                "returns": [
+                    { "name": "resourceState", "$ref": "ResourceState" }
                 ]
             }
         ],
@@ -3469,10 +3551,10 @@
                 "name": "dispatchMouseEvent",
                 "parameters": [
                     { "name": "type", "type": "string", "enum": ["mousePressed", "mouseReleased", "mouseMoved"], "description": "Type of the mouse event." },
-                    { "name": "x", "type": "integer", "description": "X coordinate of the event relative to the main frame's viewport."},
-                    { "name": "y", "type": "integer", "description": "Y coordinate of the event relative to the main frame's viewport. 0 refers to the top of the viewport and Y increases as it proceeds towards the bottom of the viewport."},
                     { "name": "modifiers", "type": "integer", "optional": true, "description": "Bit field representing pressed modifier keys. Alt=1, Ctrl=2, Meta/Command=4, Shift=8 (default: 0)." },
                     { "name": "timestamp", "type": "number", "optional": true, "description": "Time at which the event occurred. Measured in UTC time in seconds since January 1, 1970 (default: current time)." },
+                    { "name": "x", "type": "integer", "description": "X coordinate of the event relative to the main frame's viewport."},
+                    { "name": "y", "type": "integer", "description": "Y coordinate of the event relative to the main frame's viewport. 0 refers to the top of the viewport and Y increases as it proceeds towards the bottom of the viewport."},
                     { "name": "button", "type": "string", "enum": ["none", "left", "middle", "right"], "optional": true, "description": "Mouse button (default: \"none\")." },
                     { "name": "clickCount", "type": "integer", "optional": true, "description": "Number of times the mouse button was clicked (default: 0)." }
                 ],

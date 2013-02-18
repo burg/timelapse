@@ -115,6 +115,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSCSSCharsetRule.h \
 	DerivedSources/WebCore/JSCSSFontFaceRule.cpp \
 	DerivedSources/WebCore/JSCSSFontFaceRule.h \
+	DerivedSources/WebCore/JSCSSHostRule.cpp \
+	DerivedSources/WebCore/JSCSSHostRule.h \
 	DerivedSources/WebCore/JSCSSImportRule.cpp \
 	DerivedSources/WebCore/JSCSSImportRule.h \
 	DerivedSources/WebCore/JSCSSMediaRule.cpp \
@@ -133,6 +135,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSCSSStyleRule.h \
 	DerivedSources/WebCore/JSCSSStyleSheet.cpp \
 	DerivedSources/WebCore/JSCSSStyleSheet.h \
+	DerivedSources/WebCore/JSCSSSupportsRule.cpp \
+	DerivedSources/WebCore/JSCSSSupportsRule.h \
 	DerivedSources/WebCore/JSCSSValue.cpp \
 	DerivedSources/WebCore/JSCSSValue.h \
 	DerivedSources/WebCore/JSCSSValueList.cpp \
@@ -193,6 +197,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSDOMMimeType.h \
 	DerivedSources/WebCore/JSDOMNamedFlowCollection.cpp \
 	DerivedSources/WebCore/JSDOMNamedFlowCollection.h \
+	DerivedSources/WebCore/JSDOMPath.cpp \
+	DerivedSources/WebCore/JSDOMPath.h \
 	DerivedSources/WebCore/JSDOMParser.cpp \
 	DerivedSources/WebCore/JSDOMParser.h \
 	DerivedSources/WebCore/JSDOMPluginArray.cpp \
@@ -459,8 +465,6 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSIDBFactory.h \
 	DerivedSources/WebCore/JSIDBIndex.cpp \
 	DerivedSources/WebCore/JSIDBIndex.h \
-	DerivedSources/WebCore/JSIDBKey.cpp \
-	DerivedSources/WebCore/JSIDBKey.h \
 	DerivedSources/WebCore/JSIDBKeyRange.cpp \
 	DerivedSources/WebCore/JSIDBKeyRange.h \
 	DerivedSources/WebCore/JSIDBObjectStore.cpp \
@@ -475,8 +479,6 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSIDBVersionChangeEvent.h \
 	DerivedSources/WebCore/JSIDBUpgradeNeededEvent.cpp \
 	DerivedSources/WebCore/JSIDBUpgradeNeededEvent.h \
-	DerivedSources/WebCore/JSIDBVersionChangeRequest.cpp \
-	DerivedSources/WebCore/JSIDBVersionChangeRequest.h \
 	DerivedSources/WebCore/JSImageData.cpp \
 	DerivedSources/WebCore/JSImageData.h \
 	DerivedSources/WebCore/JSInjectedScriptHost.cpp \
@@ -603,6 +605,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSPerformanceMeasure.h \
 	DerivedSources/WebCore/JSPerformanceNavigation.cpp \
 	DerivedSources/WebCore/JSPerformanceNavigation.h \
+	DerivedSources/WebCore/JSPerformanceResourceTiming.cpp \
+	DerivedSources/WebCore/JSPerformanceResourceTiming.h \
 	DerivedSources/WebCore/JSPerformanceTiming.cpp \
 	DerivedSources/WebCore/JSPerformanceTiming.h \
 	DerivedSources/WebCore/JSPopStateEvent.cpp \
@@ -745,6 +749,8 @@ webcore_built_sources += \
 	DerivedSources/WebCore/JSTouchList.h \
 	DerivedSources/WebCore/JSTrackEvent.cpp \
 	DerivedSources/WebCore/JSTrackEvent.h \
+	DerivedSources/WebCore/JSTransitionEvent.cpp \
+	DerivedSources/WebCore/JSTransitionEvent.h \
 	DerivedSources/WebCore/JSTreeWalker.cpp \
 	DerivedSources/WebCore/JSTreeWalker.h \
 	DerivedSources/WebCore/JSUIEvent.cpp \
@@ -1134,9 +1140,10 @@ webcore_svg_built_sources += \
 	DerivedSources/WebCore/JSSVGStopElement.h \
 	DerivedSources/WebCore/JSSVGStringList.cpp \
 	DerivedSources/WebCore/JSSVGStringList.h \
-	DerivedSources/WebCore/JSSVGStylable.h \
 	DerivedSources/WebCore/JSSVGStyleElement.cpp \
 	DerivedSources/WebCore/JSSVGStyleElement.h \
+	DerivedSources/WebCore/JSSVGStyledElement.cpp \
+	DerivedSources/WebCore/JSSVGStyledElement.h \
 	DerivedSources/WebCore/JSSVGSVGElement.cpp \
 	DerivedSources/WebCore/JSSVGSVGElement.h \
 	DerivedSources/WebCore/JSSVGSwitchElement.cpp \
@@ -1220,7 +1227,6 @@ dom_binding_idls += \
 	$(WebCore)/Modules/indexeddb/IDBDatabase.idl \
 	$(WebCore)/Modules/indexeddb/IDBFactory.idl \
 	$(WebCore)/Modules/indexeddb/IDBIndex.idl \
-	$(WebCore)/Modules/indexeddb/IDBKey.idl \
 	$(WebCore)/Modules/indexeddb/IDBKeyRange.idl \
 	$(WebCore)/Modules/indexeddb/IDBObjectStore.idl \
 	$(WebCore)/Modules/indexeddb/IDBOpenDBRequest.idl \
@@ -1229,7 +1235,6 @@ dom_binding_idls += \
 	$(WebCore)/Modules/indexeddb/IDBUpgradeNeededEvent.idl \
 	$(WebCore)/Modules/indexeddb/IDBVersionChangeEvent.idl \
 	$(WebCore)/Modules/indexeddb/IDBUpgradeNeededEvent.idl \
-	$(WebCore)/Modules/indexeddb/IDBVersionChangeRequest.idl \
 	$(WebCore)/Modules/indexeddb/WorkerContextIndexedDatabase.idl \
 	$(WebCore)/Modules/mediasource/MediaSource.idl \
 	$(WebCore)/Modules/mediasource/SourceBuffer.idl \
@@ -1318,6 +1323,7 @@ dom_binding_idls += \
 	$(WebCore)/Modules/websockets/WorkerContextWebSocket.idl \
 	$(WebCore)/css/CSSCharsetRule.idl \
 	$(WebCore)/css/CSSFontFaceRule.idl \
+	$(WebCore)/css/CSSHostRule.idl \
 	$(WebCore)/css/CSSImportRule.idl \
 	$(WebCore)/css/CSSMediaRule.idl \
 	$(WebCore)/css/CSSPageRule.idl \
@@ -1327,6 +1333,7 @@ dom_binding_idls += \
 	$(WebCore)/css/CSSStyleDeclaration.idl \
 	$(WebCore)/css/CSSStyleRule.idl \
 	$(WebCore)/css/CSSStyleSheet.idl \
+	$(WebCore)/css/CSSSupportsRule.idl \
 	$(WebCore)/css/CSSValue.idl \
 	$(WebCore)/css/CSSValueList.idl \
 	$(WebCore)/css/Counter.idl \
@@ -1407,6 +1414,7 @@ dom_binding_idls += \
 	$(WebCore)/dom/Touch.idl \
 	$(WebCore)/dom/TouchEvent.idl \
 	$(WebCore)/dom/TouchList.idl \
+	$(WebCore)/dom/TransitionEvent.idl \
 	$(WebCore)/dom/TreeWalker.idl \
 	$(WebCore)/dom/UIEvent.idl \
 	$(WebCore)/dom/WebKitAnimationEvent.idl \
@@ -1518,6 +1526,7 @@ dom_binding_idls += \
 	$(WebCore)/html/canvas/CanvasRenderingContext.idl \
 	$(WebCore)/html/canvas/CanvasRenderingContext2D.idl \
 	$(WebCore)/html/canvas/DataView.idl \
+	$(WebCore)/html/canvas/DOMPath.idl \
 	$(WebCore)/html/canvas/EXTTextureFilterAnisotropic.idl \
 	$(WebCore)/html/canvas/Float32Array.idl \
 	$(WebCore)/html/canvas/Float64Array.idl \
@@ -1718,6 +1727,7 @@ dom_binding_idls += \
 	$(WebCore)/svg/SVGStopElement.idl \
 	$(WebCore)/svg/SVGStringList.idl \
 	$(WebCore)/svg/SVGStyleElement.idl \
+	$(WebCore)/svg/SVGStyledElement.idl \
 	$(WebCore)/svg/SVGSwitchElement.idl \
 	$(WebCore)/svg/SVGSymbolElement.idl \
 	$(WebCore)/svg/SVGTRefElement.idl \
@@ -1870,7 +1880,6 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/indexeddb/IDBFactoryBackendInterface.h \
 	Source/WebCore/Modules/indexeddb/IDBFactory.cpp \
 	Source/WebCore/Modules/indexeddb/IDBFactory.h \
-	Source/WebCore/Modules/indexeddb/IDBIndexBackendInterface.h \
 	Source/WebCore/Modules/indexeddb/IDBIndex.cpp \
 	Source/WebCore/Modules/indexeddb/IDBIndex.h \
 	Source/WebCore/Modules/indexeddb/IDBKey.cpp \
@@ -1884,7 +1893,6 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/indexeddb/IDBMetadata.h \
 	Source/WebCore/Modules/indexeddb/IDBObjectStoreBackendImpl.cpp \
 	Source/WebCore/Modules/indexeddb/IDBObjectStoreBackendImpl.h \
-	Source/WebCore/Modules/indexeddb/IDBObjectStoreBackendInterface.h \
 	Source/WebCore/Modules/indexeddb/IDBObjectStore.cpp \
 	Source/WebCore/Modules/indexeddb/IDBObjectStore.h \
 	Source/WebCore/Modules/indexeddb/IDBOpenDBRequest.cpp \
@@ -1906,8 +1914,6 @@ webcore_modules_sources += \
 	Source/WebCore/Modules/indexeddb/IDBUpgradeNeededEvent.h \
 	Source/WebCore/Modules/indexeddb/IDBVersionChangeEvent.cpp \
 	Source/WebCore/Modules/indexeddb/IDBVersionChangeEvent.h \
-	Source/WebCore/Modules/indexeddb/IDBVersionChangeRequest.cpp \
-	Source/WebCore/Modules/indexeddb/IDBVersionChangeRequest.h \
 	Source/WebCore/Modules/indexeddb/PageGroupIndexedDatabase.cpp \
 	Source/WebCore/Modules/indexeddb/PageGroupIndexedDatabase.h \
 	Source/WebCore/Modules/indexeddb/WorkerContextIndexedDatabase.cpp \
@@ -2350,11 +2356,11 @@ webcore_sources += \
 	Source/WebCore/bindings/js/JSHTMLSelectElementCustom.cpp \
 	Source/WebCore/bindings/js/JSHTMLSelectElementCustom.h \
 	Source/WebCore/bindings/js/JSHTMLStyleElementCustom.cpp \
+	Source/WebCore/bindings/js/JSHTMLTemplateElementCustom.cpp \
 	Source/WebCore/bindings/js/JSHistoryCustom.cpp \
 	Source/WebCore/bindings/js/JSHistoryCustom.h \
 	Source/WebCore/bindings/js/JSIDBAnyCustom.cpp \
 	Source/WebCore/bindings/js/JSIDBDatabaseCustom.cpp \
-	Source/WebCore/bindings/js/JSIDBKeyCustom.cpp \
 	Source/WebCore/bindings/js/JSIDBObjectStoreCustom.cpp \
 	Source/WebCore/bindings/js/JSImageConstructor.cpp \
 	Source/WebCore/bindings/js/JSImageConstructor.h \
@@ -2389,6 +2395,7 @@ webcore_sources += \
 	Source/WebCore/bindings/js/JSNodeListCustom.cpp \
 	Source/WebCore/bindings/js/JSOscillatorNodeCustom.cpp \
 	Source/WebCore/bindings/js/JSPannerNodeCustom.cpp \
+	Source/WebCore/bindings/js/JSPerformanceEntryCustom.cpp \
 	Source/WebCore/bindings/js/JSPluginElementFunctions.cpp \
 	Source/WebCore/bindings/js/JSPluginElementFunctions.h \
 	Source/WebCore/bindings/js/JSPopStateEventCustom.cpp \
@@ -2541,6 +2548,8 @@ webcore_sources += \
 	Source/WebCore/css/CSSGroupingRule.cpp \
 	Source/WebCore/css/CSSGroupingRule.h \
 	Source/WebCore/css/CSSHelper.h \
+	Source/WebCore/css/CSSHostRule.cpp \
+	Source/WebCore/css/CSSHostRule.h \
 	Source/WebCore/css/CSSImageGeneratorValue.cpp \
 	Source/WebCore/css/CSSImageGeneratorValue.h \
 	Source/WebCore/css/CSSImageSetValue.cpp \
@@ -2591,6 +2600,8 @@ webcore_sources += \
 	Source/WebCore/css/CSSStyleRule.h \
 	Source/WebCore/css/CSSStyleSheet.cpp \
 	Source/WebCore/css/CSSStyleSheet.h \
+	Source/WebCore/css/CSSSupportsRule.cpp \
+	Source/WebCore/css/CSSSupportsRule.h \
 	Source/WebCore/css/CSSTimingFunctionValue.cpp \
 	Source/WebCore/css/CSSTimingFunctionValue.h \
 	Source/WebCore/css/CSSToStyleMap.cpp \
@@ -2981,6 +2992,8 @@ webcore_sources += \
 	Source/WebCore/dom/TouchList.h \
 	Source/WebCore/dom/TransformSource.h \
 	Source/WebCore/dom/TransformSourceLibxslt.cpp \
+	Source/WebCore/dom/TransitionEvent.cpp \
+	Source/WebCore/dom/TransitionEvent.h \
 	Source/WebCore/dom/Traversal.cpp \
 	Source/WebCore/dom/Traversal.h \
 	Source/WebCore/dom/TreeDepthLimit.h \
@@ -3205,6 +3218,8 @@ webcore_sources += \
 	Source/WebCore/html/canvas/CanvasContextAttributes.h \
 	Source/WebCore/html/canvas/CanvasGradient.cpp \
 	Source/WebCore/html/canvas/CanvasGradient.h \
+	Source/WebCore/html/canvas/CanvasPathMethods.cpp \
+	Source/WebCore/html/canvas/CanvasPathMethods.h \
 	Source/WebCore/html/canvas/CanvasPattern.cpp \
 	Source/WebCore/html/canvas/CanvasPattern.h \
 	Source/WebCore/html/canvas/CanvasProxy.cpp \
@@ -3218,6 +3233,7 @@ webcore_sources += \
 	Source/WebCore/html/canvas/CheckedInt.h \
 	Source/WebCore/html/canvas/DataView.cpp \
 	Source/WebCore/html/canvas/DataView.h \
+	Source/WebCore/html/canvas/DOMPath.h \
 	Source/WebCore/html/canvas/EXTTextureFilterAnisotropic.cpp \
 	Source/WebCore/html/canvas/EXTTextureFilterAnisotropic.h \
 	Source/WebCore/html/canvas/OESStandardDerivatives.cpp \
@@ -3524,8 +3540,12 @@ webcore_sources += \
 	Source/WebCore/html/MonthInputType.h \
 	Source/WebCore/html/NumberInputType.cpp \
 	Source/WebCore/html/NumberInputType.h \
+	Source/WebCore/html/parser/BackgroundHTMLParser.cpp \
+	Source/WebCore/html/parser/BackgroundHTMLParser.h \
 	Source/WebCore/html/parser/CSSPreloadScanner.cpp \
 	Source/WebCore/html/parser/CSSPreloadScanner.h \
+	Source/WebCore/html/parser/CompactHTMLToken.cpp \
+	Source/WebCore/html/parser/CompactHTMLToken.h \
 	Source/WebCore/html/parser/HTMLConstructionSite.cpp \
 	Source/WebCore/html/parser/HTMLConstructionSite.h \
 	Source/WebCore/html/parser/HTMLDocumentParser.cpp \
@@ -3548,6 +3568,8 @@ webcore_sources += \
 	Source/WebCore/html/parser/HTMLParserOptions.h \
 	Source/WebCore/html/parser/HTMLParserScheduler.cpp \
 	Source/WebCore/html/parser/HTMLParserScheduler.h \
+	Source/WebCore/html/parser/HTMLParserThread.cpp \
+	Source/WebCore/html/parser/HTMLParserThread.h \
 	Source/WebCore/html/parser/HTMLPreloadScanner.cpp \
 	Source/WebCore/html/parser/HTMLPreloadScanner.h \
 	Source/WebCore/html/parser/HTMLScriptRunner.cpp \
@@ -3593,8 +3615,6 @@ webcore_sources += \
 	Source/WebCore/html/shadow/HTMLContentElement.h \
 	Source/WebCore/html/shadow/InsertionPoint.cpp \
 	Source/WebCore/html/shadow/InsertionPoint.h \
-	Source/WebCore/html/shadow/ImageInnerElement.cpp \
-	Source/WebCore/html/shadow/ImageInnerElement.h \
 	Source/WebCore/html/shadow/MediaControlElements.cpp \
 	Source/WebCore/html/shadow/MediaControlElements.h \
 	Source/WebCore/html/shadow/MediaControlElementTypes.cpp \
@@ -3655,6 +3675,8 @@ webcore_sources += \
 	Source/WebCore/html/track/TextTrack.h \
 	Source/WebCore/html/track/TextTrackCue.cpp \
 	Source/WebCore/html/track/TextTrackCue.h \
+	Source/WebCore/html/track/TextTrackCueGeneric.cpp \
+	Source/WebCore/html/track/TextTrackCueGeneric.h \
 	Source/WebCore/html/track/TextTrackCueList.cpp \
 	Source/WebCore/html/track/TextTrackCueList.h \
 	Source/WebCore/html/track/TextTrackList.cpp \
@@ -3663,6 +3685,8 @@ webcore_sources += \
 	Source/WebCore/html/track/TrackBase.h \
 	Source/WebCore/html/track/TrackEvent.cpp \
 	Source/WebCore/html/track/TrackEvent.h \
+	Source/WebCore/html/track/WebVTTElement.cpp \
+	Source/WebCore/html/track/WebVTTElement.h \
 	Source/WebCore/html/track/WebVTTParser.cpp \
 	Source/WebCore/html/track/WebVTTParser.h \
 	Source/WebCore/html/track/WebVTTToken.h \
@@ -3954,7 +3978,6 @@ webcore_sources += \
 	Source/WebCore/loader/icon/PageURLRecord.h \
 	Source/WebCore/loader/ImageLoader.cpp \
 	Source/WebCore/loader/ImageLoader.h \
-	Source/WebCore/loader/ImageLoaderClient.h \
 	Source/WebCore/loader/LinkLoader.h \
 	Source/WebCore/loader/LinkLoader.cpp \
 	Source/WebCore/loader/LinkLoaderClient.h \
@@ -4599,6 +4622,8 @@ webcore_sources += \
 	Source/WebCore/storage/StorageNamespace.h \
 	Source/WebCore/storage/StorageNamespaceImpl.cpp \
 	Source/WebCore/storage/StorageNamespaceImpl.h \
+	Source/WebCore/storage/StorageStrategy.cpp \
+	Source/WebCore/storage/StorageStrategy.h \
 	Source/WebCore/storage/StorageSyncManager.cpp \
 	Source/WebCore/storage/StorageSyncManager.h \
 	Source/WebCore/storage/StorageTracker.cpp \
@@ -4646,20 +4671,11 @@ webcore_sources += \
 	Source/WebCore/xml/parser/MarkupTokenBase.h \
 	Source/WebCore/xml/parser/MarkupTokenizerBase.h \
 	Source/WebCore/xml/parser/MarkupTokenizerInlines.h \
-	Source/WebCore/xml/parser/NewXMLDocumentParser.cpp \
-	Source/WebCore/xml/parser/NewXMLDocumentParser.h \
-	Source/WebCore/xml/parser/XMLCharacterReferenceParser.cpp \
-	Source/WebCore/xml/parser/XMLCharacterReferenceParser.h \
 	Source/WebCore/xml/parser/XMLDocumentParser.cpp \
 	Source/WebCore/xml/parser/XMLDocumentParser.h \
 	Source/WebCore/xml/parser/XMLDocumentParserLibxml2.cpp \
 	Source/WebCore/xml/parser/XMLDocumentParserScope.cpp \
 	Source/WebCore/xml/parser/XMLDocumentParserScope.h \
-	Source/WebCore/xml/parser/XMLTokenizer.cpp \
-	Source/WebCore/xml/parser/XMLTokenizer.h \
-	Source/WebCore/xml/parser/XMLToken.h \
-	Source/WebCore/xml/parser/XMLTreeBuilder.cpp \
-	Source/WebCore/xml/parser/XMLTreeBuilder.h \
 	Source/WebCore/xml/DOMParser.cpp \
 	Source/WebCore/xml/DOMParser.h \
 	Source/WebCore/xml/NativeXPathNSResolver.cpp \
@@ -5170,16 +5186,14 @@ webcore_svg_sources += \
 	Source/WebCore/svg/SVGStopElement.h \
 	Source/WebCore/svg/SVGStringList.cpp \
 	Source/WebCore/svg/SVGStringList.h \
-	Source/WebCore/svg/SVGStylable.cpp \
-	Source/WebCore/svg/SVGStylable.h \
+	Source/WebCore/svg/SVGStyleElement.cpp \
+	Source/WebCore/svg/SVGStyleElement.h \
 	Source/WebCore/svg/SVGStyledElement.cpp \
 	Source/WebCore/svg/SVGStyledElement.h \
 	Source/WebCore/svg/SVGStyledLocatableElement.cpp \
 	Source/WebCore/svg/SVGStyledLocatableElement.h \
 	Source/WebCore/svg/SVGStyledTransformableElement.cpp \
 	Source/WebCore/svg/SVGStyledTransformableElement.h \
-	Source/WebCore/svg/SVGStyleElement.cpp \
-	Source/WebCore/svg/SVGStyleElement.h \
 	Source/WebCore/svg/SVGSVGElement.cpp \
 	Source/WebCore/svg/SVGSVGElement.h \
 	Source/WebCore/svg/SVGSwitchElement.cpp \
@@ -5805,6 +5819,7 @@ webcore_platform_sources += \
 	Source/WebCore/platform/network/ResourceHandle.cpp \
 	Source/WebCore/platform/network/ResourceHandle.h \
 	Source/WebCore/platform/network/ResourceHandleInternal.h \
+	Source/WebCore/platform/network/ResourceHandleTypes.h \
 	Source/WebCore/platform/network/ResourceLoadInfo.h \
 	Source/WebCore/platform/network/ResourceLoadPriority.h \
 	Source/WebCore/platform/network/ResourceLoadTiming.cpp \
@@ -6311,48 +6326,32 @@ webcore_sources += \
 	Source/ThirdParty/ANGLE/src/compiler/PoolAlloc.cpp \
 	Source/ThirdParty/ANGLE/src/compiler/PoolAlloc.h \
 	Source/ThirdParty/ANGLE/src/compiler/Pragma.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/atom.c \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/atom.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/compile.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/cpp.c \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/cpp.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/cppstruct.c \
 	Source/ThirdParty/ANGLE/src/compiler/preprocessor/length_limits.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/memory.c \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/memory.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/DiagnosticsBase.cpp \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Diagnostics.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/DirectiveHandlerBase.cpp \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/DirectiveHandler.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/DirectiveParser.cpp \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/DirectiveParser.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/ExpressionParser.cpp \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/ExpressionParser.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Input.cpp \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Input.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Lexer.cpp \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Lexer.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Macro.cpp \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Macro.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/MacroExpander.cpp \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/MacroExpander.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Preprocessor.cpp \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Preprocessor.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/SourceLocation.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Token.cpp \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Token.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Tokenizer.cpp \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/Tokenizer.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/new/pp_utils.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/parser.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/preprocess.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/scanner.c \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/scanner.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/slglobals.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/symbols.c \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/symbols.h \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/tokens.c \
-	Source/ThirdParty/ANGLE/src/compiler/preprocessor/tokens.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/numeric_lex.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/DiagnosticsBase.cpp \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Diagnostics.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/DirectiveHandlerBase.cpp \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/DirectiveHandlerBase.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/DirectiveParser.cpp \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/DirectiveParser.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/ExpressionParser.cpp \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/ExpressionParser.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Input.cpp \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Input.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Lexer.cpp \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Lexer.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Macro.cpp \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Macro.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/MacroExpander.cpp \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/MacroExpander.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Preprocessor.cpp \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Preprocessor.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/SourceLocation.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Token.cpp \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Token.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Tokenizer.cpp \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/Tokenizer.h \
+	Source/ThirdParty/ANGLE/src/compiler/preprocessor/pp_utils.h \
 	Source/ThirdParty/ANGLE/src/compiler/QualifierAlive.cpp \
 	Source/ThirdParty/ANGLE/src/compiler/QualifierAlive.h \
 	Source/ThirdParty/ANGLE/src/compiler/RemoveTree.cpp \
@@ -6364,6 +6363,8 @@ webcore_sources += \
 	Source/ThirdParty/ANGLE/src/compiler/ShHandle.h \
 	Source/ThirdParty/ANGLE/src/compiler/SymbolTable.cpp \
 	Source/ThirdParty/ANGLE/src/compiler/SymbolTable.h \
+	Source/ThirdParty/ANGLE/src/compiler/VariablePacker.cpp \
+	Source/ThirdParty/ANGLE/src/compiler/VariablePacker.h \
 	Source/ThirdParty/ANGLE/src/compiler/VersionGLSL.cpp \
 	Source/ThirdParty/ANGLE/src/compiler/VersionGLSL.h \
 	Source/ThirdParty/ANGLE/src/compiler/timing/RestrictFragmentShaderTiming.cpp \
@@ -6419,8 +6420,8 @@ if USE_TEXTURE_MAPPER_CAIRO
 webcore_sources += \
 	Source/WebCore//platform/graphics/filters/texmap/CustomFilterValidatedProgramTextureMapper.cpp \
 	Source/WebCore//platform/graphics/filters/texmap/TextureMapperPlatformCompiledProgram.h \
-	Source/WebCore/platform/graphics/texmap/TextureMapperShaderManager.cpp \
-	Source/WebCore/platform/graphics/texmap/TextureMapperShaderManager.h \
+	Source/WebCore/platform/graphics/texmap/TextureMapperShaderProgram.cpp \
+	Source/WebCore/platform/graphics/texmap/TextureMapperShaderProgram.h \
 	Source/WebCore/platform/graphics/texmap/GraphicsLayerTextureMapper.cpp \
 	Source/WebCore/platform/graphics/texmap/GraphicsLayerTextureMapper.h \
 	Source/WebCore/platform/graphics/GraphicsLayerTransform.cpp \
@@ -6444,8 +6445,8 @@ webcore_sources += \
 	Source/WebCore//platform/graphics/filters/texmap/TextureMapperPlatformCompiledProgram.h \
 	Source/WebCore/platform/graphics/texmap/TextureMapperGL.cpp \
 	Source/WebCore/platform/graphics/texmap/TextureMapperGL.h \
-	Source/WebCore/platform/graphics/texmap/TextureMapperShaderManager.cpp \
-	Source/WebCore/platform/graphics/texmap/TextureMapperShaderManager.h \
+	Source/WebCore/platform/graphics/texmap/TextureMapperShaderProgram.cpp \
+	Source/WebCore/platform/graphics/texmap/TextureMapperShaderProgram.h \
 	Source/WebCore/platform/graphics/texmap/GraphicsLayerTextureMapper.cpp \
 	Source/WebCore/platform/graphics/texmap/GraphicsLayerTextureMapper.h \
 	Source/WebCore/platform/graphics/GraphicsLayerTransform.cpp \
@@ -6463,3 +6464,95 @@ webcore_sources += \
 	Source/WebCore/platform/graphics/texmap/TextureMapperPlatformLayer.h
 endif  # END USE_TEXTURE_MAPPER_GL
 endif  # USE_ACCELERATED_COMPOSITING
+
+libLevelDB_la_SOURCES = \
+	Source/ThirdParty/leveldb/db/builder.cc\
+	Source/ThirdParty/leveldb/db/builder.h \
+	Source/ThirdParty/leveldb/db/c.cc \
+	Source/ThirdParty/leveldb/db/dbformat.cc \
+	Source/ThirdParty/leveldb/db/dbformat.h \
+	Source/ThirdParty/leveldb/db/db_impl.cc \
+	Source/ThirdParty/leveldb/db/db_impl.h \
+	Source/ThirdParty/leveldb/db/db_iter.cc \
+	Source/ThirdParty/leveldb/db/db_iter.h \
+	Source/ThirdParty/leveldb/db/filename.cc \
+	Source/ThirdParty/leveldb/db/filename.h \
+	Source/ThirdParty/leveldb/db/log_format.h \
+	Source/ThirdParty/leveldb/db/log_reader.cc \
+	Source/ThirdParty/leveldb/db/log_reader.h \
+	Source/ThirdParty/leveldb/db/log_writer.cc \
+	Source/ThirdParty/leveldb/db/log_writer.h \
+	Source/ThirdParty/leveldb/db/memtable.cc \
+	Source/ThirdParty/leveldb/db/memtable.h \
+	Source/ThirdParty/leveldb/db/repair.cc \
+	Source/ThirdParty/leveldb/db/skiplist.h \
+	Source/ThirdParty/leveldb/db/snapshot.h \
+	Source/ThirdParty/leveldb/db/table_cache.cc \
+	Source/ThirdParty/leveldb/db/table_cache.h \
+	Source/ThirdParty/leveldb/db/version_edit.cc \
+	Source/ThirdParty/leveldb/db/version_edit.h \
+	Source/ThirdParty/leveldb/db/version_set.cc \
+	Source/ThirdParty/leveldb/db/version_set.h \
+	Source/ThirdParty/leveldb/db/write_batch.cc \
+	Source/ThirdParty/leveldb/db/write_batch_internal.h \
+	Source/ThirdParty/leveldb/helpers/memenv/memenv.cc \
+	Source/ThirdParty/leveldb/helpers/memenv/memenv.h \
+	Source/ThirdParty/leveldb/include/leveldb/cache.h \
+	Source/ThirdParty/leveldb/include/leveldb/c.h \
+	Source/ThirdParty/leveldb/include/leveldb/comparator.h \
+	Source/ThirdParty/leveldb/include/leveldb/db.h \
+	Source/ThirdParty/leveldb/include/leveldb/env.h \
+	Source/ThirdParty/leveldb/include/leveldb/filter_policy.h \
+	Source/ThirdParty/leveldb/include/leveldb/iterator.h \
+	Source/ThirdParty/leveldb/include/leveldb/options.h \
+	Source/ThirdParty/leveldb/include/leveldb/slice.h \
+	Source/ThirdParty/leveldb/include/leveldb/status.h \
+	Source/ThirdParty/leveldb/include/leveldb/table_builder.h \
+	Source/ThirdParty/leveldb/include/leveldb/table.h \
+	Source/ThirdParty/leveldb/include/leveldb/write_batch.h \
+	Source/ThirdParty/leveldb/port/atomic_pointer.h \
+	Source/ThirdParty/leveldb/port/port_example.h \
+	Source/ThirdParty/leveldb/port/port.h \
+	Source/ThirdParty/leveldb/port/port_posix.cc \
+	Source/ThirdParty/leveldb/port/port_posix.h \
+	Source/ThirdParty/leveldb/port/thread_annotations.h \
+	Source/ThirdParty/leveldb/port/win/stdint.h \
+	Source/ThirdParty/leveldb/table/block_builder.cc \
+	Source/ThirdParty/leveldb/table/block_builder.h \
+	Source/ThirdParty/leveldb/table/block.cc \
+	Source/ThirdParty/leveldb/table/block.h \
+	Source/ThirdParty/leveldb/table/filter_block.cc \
+	Source/ThirdParty/leveldb/table/filter_block.h \
+	Source/ThirdParty/leveldb/table/format.cc \
+	Source/ThirdParty/leveldb/table/format.h \
+	Source/ThirdParty/leveldb/table/iterator.cc \
+	Source/ThirdParty/leveldb/table/iterator_wrapper.h \
+	Source/ThirdParty/leveldb/table/merger.cc \
+	Source/ThirdParty/leveldb/table/merger.h \
+	Source/ThirdParty/leveldb/table/table_builder.cc \
+	Source/ThirdParty/leveldb/table/table.cc \
+	Source/ThirdParty/leveldb/table/two_level_iterator.cc \
+	Source/ThirdParty/leveldb/table/two_level_iterator.h \
+	Source/ThirdParty/leveldb/util/arena.cc \
+	Source/ThirdParty/leveldb/util/arena.h \
+	Source/ThirdParty/leveldb/util/bloom.cc \
+	Source/ThirdParty/leveldb/util/cache.cc \
+	Source/ThirdParty/leveldb/util/coding.cc \
+	Source/ThirdParty/leveldb/util/coding.h \
+	Source/ThirdParty/leveldb/util/comparator.cc \
+	Source/ThirdParty/leveldb/util/crc32c.cc \
+	Source/ThirdParty/leveldb/util/crc32c.h \
+	Source/ThirdParty/leveldb/util/env.cc \
+	Source/ThirdParty/leveldb/util/env_posix.cc \
+	Source/ThirdParty/leveldb/util/filter_policy.cc \
+	Source/ThirdParty/leveldb/util/hash.cc \
+	Source/ThirdParty/leveldb/util/hash.h \
+	Source/ThirdParty/leveldb/util/histogram.cc \
+	Source/ThirdParty/leveldb/util/histogram.h \
+	Source/ThirdParty/leveldb/util/logging.cc \
+	Source/ThirdParty/leveldb/util/logging.h \
+	Source/ThirdParty/leveldb/util/mutexlock.h \
+	Source/ThirdParty/leveldb/util/options.cc \
+	Source/ThirdParty/leveldb/util/posix_logger.h \
+	Source/ThirdParty/leveldb/util/random.h \
+	Source/ThirdParty/leveldb/util/status.cc

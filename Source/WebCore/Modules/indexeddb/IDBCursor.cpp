@@ -152,7 +152,7 @@ PassRefPtr<IDBRequest> IDBCursor::update(ScriptState* state, ScriptValue& value,
         }
     }
 
-    return objectStore->put(IDBObjectStoreBackendInterface::CursorUpdate, IDBAny::create(this), state, value, m_currentPrimaryKey, ec);
+    return objectStore->put(IDBDatabaseBackendInterface::CursorUpdate, IDBAny::create(this), state, value, m_currentPrimaryKey, ec);
 }
 
 void IDBCursor::advance(long long count, ExceptionCode& ec)
@@ -178,6 +178,13 @@ void IDBCursor::advance(long long count, ExceptionCode& ec)
     m_gotValue = false;
     m_backend->advance(count, m_request, ec);
     ASSERT(!ec);
+}
+
+void IDBCursor::continueFunction(ScriptExecutionContext* context, const ScriptValue& keyValue, ExceptionCode& ec)
+{
+    DOMRequestState requestState(context);
+    RefPtr<IDBKey> key = scriptValueToIDBKey(&requestState, keyValue);
+    continueFunction(key.release(), ec);
 }
 
 void IDBCursor::continueFunction(PassRefPtr<IDBKey> key, ExceptionCode& ec)

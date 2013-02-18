@@ -53,6 +53,7 @@
 #include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -81,7 +82,6 @@ class DocumentParser;
 class DocumentSharedObjectPool;
 class DocumentStyleSheetCollection;
 class DocumentType;
-class DocumentWeakReference;
 class Element;
 class EntityReference;
 class Event;
@@ -1476,7 +1476,7 @@ private:
     RenderObject* m_renderer;
     RefPtr<DocumentEventQueue> m_eventQueue;
 
-    RefPtr<DocumentWeakReference> m_weakReference;
+    WeakPtrFactory<Document> m_weakFactory;
 
     HashSet<MediaCanStartListener*> m_mediaCanStartListeners;
 
@@ -1589,6 +1589,7 @@ inline bool Node::isDocumentNode() const
 
 inline Node::Node(Document* document, ConstructionType type)
     : m_nodeFlags(type)
+    , m_parentOrHostNode(0)
     , m_treeScope(document)
     , m_previous(0)
     , m_next(0)

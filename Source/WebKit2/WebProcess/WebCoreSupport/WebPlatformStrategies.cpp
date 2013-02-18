@@ -29,19 +29,24 @@
 #if USE(PLATFORM_STRATEGIES)
 
 #include "BlockingResponseMap.h"
+#include "DataReference.h"
+#include "NetworkResourceLoadParameters.h"
 #include "PluginInfoStore.h"
 #include "WebContextMessages.h"
 #include "WebCookieManager.h"
 #include "WebCoreArgumentCoders.h"
+#include "WebErrors.h"
 #include "WebProcess.h"
 #include "WebProcessProxyMessages.h"
 #include <WebCore/Color.h>
 #include <WebCore/KURL.h>
 #include <WebCore/LoaderStrategy.h>
 #include <WebCore/NetworkStorageSession.h>
+#include <WebCore/NetworkingContext.h>
 #include <WebCore/Page.h>
 #include <WebCore/PlatformCookieJar.h>
 #include <WebCore/PlatformPasteboard.h>
+#include <WebCore/ResourceError.h>
 #include <wtf/Atomics.h>
 
 #if ENABLE(NETWORK_PROCESS)
@@ -94,6 +99,11 @@ PluginStrategy* WebPlatformStrategies::createPluginStrategy()
 }
 
 SharedWorkerStrategy* WebPlatformStrategies::createSharedWorkerStrategy()
+{
+    return this;
+}
+
+StorageStrategy* WebPlatformStrategies::createStorageStrategy()
 {
     return this;
 }
@@ -208,6 +218,29 @@ ResourceLoadScheduler* WebPlatformStrategies::resourceLoadScheduler()
     
     return scheduler;
 }
+
+void WebPlatformStrategies::loadResourceSynchronously(NetworkingContext* context, unsigned long resourceLoadIdentifier, const ResourceRequest& request, StoredCredentials storedCredentials, ResourceError& error, ResourceResponse& response, Vector<char>& data)
+{
+    if (!WebProcess::shared().usesNetworkProcess()) {
+        LoaderStrategy::loadResourceSynchronously(context, resourceLoadIdentifier, request, storedCredentials, error, response, data);
+        return;
+    }
+
+    CoreIPC::DataReference dataReference;
+
+    NetworkResourceLoadParameters loadParameters(resourceLoadIdentifier, request, ResourceLoadPriorityHighest, SniffContent, storedCredentials, context->storageSession().isPrivateBrowsingSession());
+    if (!WebProcess::shared().networkConnection()->connection()->sendSync(Messages::NetworkConnectionToWebProcess::PerformSynchronousLoad(loadParameters), Messages::NetworkConnectionToWebProcess::PerformSynchronousLoad::Reply(error, response, dataReference), 0)) {
+        response = ResourceResponse();
+        error = internalError(request.url());
+        data.resize(0);
+
+        return;
+    }
+
+    data.resize(dataReference.size());
+    memcpy(data.data(), dataReference.data(), dataReference.size());
+}
+
 #endif
 
 // PluginStrategy

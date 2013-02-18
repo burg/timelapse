@@ -36,6 +36,7 @@
 #include "DFGBasicBlock.h"
 #include "DFGDominators.h"
 #include "DFGNode.h"
+#include "DFGVariadicFunction.h"
 #include "JSStack.h"
 #include "MethodOfGettingAValueProfile.h"
 #include <wtf/BitVector.h>
@@ -99,23 +100,23 @@ public:
     const Node& at(Edge nodeUse) const { return at(nodeUse.index()); }
     
     // Mark a node as being referenced.
-    void ref(NodeIndex nodeIndex)
+    NodeIndex ref(NodeIndex nodeIndex)
     {
         Node& node = at(nodeIndex);
         // If the value (before incrementing) was at refCount zero then we need to ref its children.
-        if (node.ref())
+        if (!node.postfixRef())
             refChildren(nodeIndex);
+        return nodeIndex;
     }
-    void ref(Edge nodeUse)
+    Edge ref(Edge nodeUse)
     {
         ref(nodeUse.index());
+        return nodeUse;
     }
     
     void deref(NodeIndex nodeIndex)
     {
-        if (!at(nodeIndex).refCount())
-            dump();
-        if (at(nodeIndex).deref())
+        if (at(nodeIndex).postfixDeref() == 1)
             derefChildren(nodeIndex);
     }
     void deref(Edge nodeUse)
@@ -179,6 +180,24 @@ public:
         node.children.child3() = Edge();
     }
     
+#define DFG_DEFINE_ADD_NODE(templatePre, templatePost, typeParams, valueParamsComma, valueParams, valueArgs) \
+    templatePre typeParams templatePost NodeIndex addNode(RefChildrenMode refChildrenMode, RefNodeMode refNodeMode, SpeculatedType type valueParamsComma valueParams) \
+    { \
+        Node node = Node(valueArgs); \
+        node.predict(type); \
+        if (node.flags() & NodeMustGenerate) \
+            node.ref(); \
+        if (refNodeMode == RefNode) \
+            node.ref(); \
+        NodeIndex result = size(); \
+        append(node); \
+        if (refChildrenMode == RefChildren) \
+            refChildren(result); \
+        return result; \
+    }
+    DFG_VARIADIC_TEMPLATE_FUNCTION(DFG_DEFINE_ADD_NODE)
+#undef DFG_DEFINE_ADD_NODE
+
     // Call this if you've modified the reference counts of nodes that deal with
     // local variables. This is necessary because local variable references can form
     // cycles, and hence reference counting is not enough. This will reset the
@@ -550,7 +569,7 @@ public:
         case PutByValAlias:
             return !byValIsPure(node);
         default:
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
             return true; // If by some oddity we hit this case in release build it's safer to have CSE assume the worst.
         }
     }

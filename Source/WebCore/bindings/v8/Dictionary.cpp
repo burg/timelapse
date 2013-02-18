@@ -30,6 +30,7 @@
 #include "DOMStringList.h"
 #include "V8Binding.h"
 #include "V8DOMWindow.h"
+#include "V8EventTarget.h"
 #include "V8Storage.h"
 #include "V8Uint8Array.h"
 #include "V8Utilities.h"
@@ -56,6 +57,11 @@
 #include "V8SpeechRecognitionError.h"
 #include "V8SpeechRecognitionResult.h"
 #include "V8SpeechRecognitionResultList.h"
+#endif
+
+#if ENABLE(MEDIA_STREAM)
+#include "MediaStream.h"
+#include "V8MediaStream.h"
 #endif
 
 namespace WebCore {
@@ -433,6 +439,40 @@ bool Dictionary::get(const String& key, RefPtr<SpeechRecognitionResultList>& val
 }
 
 #endif
+
+#if ENABLE(MEDIA_STREAM)
+bool Dictionary::get(const String& key, RefPtr<MediaStream>& value) const
+{
+    v8::Local<v8::Value> v8Value;
+    if (!getKey(key, v8Value))
+        return false;
+
+    MediaStream* stream = 0;
+    if (v8Value->IsObject()) {
+        v8::Handle<v8::Object> wrapper = v8::Handle<v8::Object>::Cast(v8Value);
+        v8::Handle<v8::Object> error = wrapper->FindInstanceInPrototypeChain(V8MediaStream::GetTemplate());
+        if (!error.IsEmpty())
+            stream = V8MediaStream::toNative(error);
+    }
+    value = stream;
+    return true;
+}
+#endif
+
+bool Dictionary::get(const String& key, RefPtr<EventTarget>& value) const
+{
+    v8::Local<v8::Value> v8Value;
+    if (!getKey(key, v8Value))
+        return false;
+
+    EventTarget* target = 0;
+    if (V8DOMWrapper::isDOMWrapper(v8Value)) {
+        v8::Handle<v8::Object> wrapper = v8::Handle<v8::Object>::Cast(v8Value);
+        target = toWrapperTypeInfo(wrapper)->toEventTarget(wrapper);
+    }
+    value = target;
+    return true;
+}
 
 bool Dictionary::get(const String& key, Dictionary& value) const
 {

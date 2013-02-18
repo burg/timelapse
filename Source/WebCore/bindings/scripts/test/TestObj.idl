@@ -83,7 +83,6 @@
         raises(DOMException);
 
     void serializedValue(in SerializedScriptValue serializedArg);
-    void idbKey(in IDBKey key);
     void optionsObject(in Dictionary oo, in [Optional] Dictionary ooo);
 
     // Exceptions
@@ -219,6 +218,7 @@
 #endif
 #if defined(TESTING_V8) || defined(TESTING_JS)
     DOMString[] stringArrayFunction(in DOMString[] values) raises(DOMException);
+    DOMStringList domStringListFunction(in DOMStringList values) raises(DOMException);
 #endif
 
     [CheckSecurityForNode] readonly attribute Document contentDocument;

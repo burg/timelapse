@@ -32,10 +32,10 @@
 #include "AccessibilityUIElementChromium.h"
 
 #include "WebAccessibilityObject.h"
-#include "platform/WebCString.h"
-#include "platform/WebPoint.h"
-#include "platform/WebRect.h"
-#include "platform/WebString.h"
+#include <public/WebCString.h>
+#include <public/WebPoint.h>
+#include <public/WebRect.h>
+#include <public/WebString.h>
 #include <wtf/Assertions.h>
 #include <wtf/StringExtras.h>
 
@@ -285,7 +285,15 @@ string getHelpText(const WebAccessibilityObject& object)
 
 string getStringValue(const WebAccessibilityObject& object)
 {
-    string value = object.stringValue().utf8();
+    string value;
+    if (object.roleValue() == WebAccessibilityRoleColorWell) {
+        int r, g, b;
+        char buffer[100];
+        object.colorValue(r, g, b);
+        snprintf(buffer, sizeof(buffer), "rgb %7.5f %7.5f %7.5f 1", r / 255., g / 255., b / 255.);
+        value = buffer;
+    } else
+        value = object.stringValue().utf8();
     return value.insert(0, "AXValue: ");
 }
 
@@ -518,7 +526,12 @@ void AccessibilityUIElement::heightGetterCallback(CppVariant* result)
 
 void AccessibilityUIElement::intValueGetterCallback(CppVariant* result)
 {
-    result->set(accessibilityObject().valueForRange());
+    if (accessibilityObject().supportsRangeValue())
+        result->set(accessibilityObject().valueForRange());
+    else if (accessibilityObject().roleValue() == WebAccessibilityRoleHeading)
+        result->set(accessibilityObject().headingLevel());
+    else
+        result->set(atoi(accessibilityObject().stringValue().utf8().data()));
 }
 
 void AccessibilityUIElement::minValueGetterCallback(CppVariant* result)
@@ -862,7 +875,13 @@ void AccessibilityUIElement::isDecrementActionSupportedCallback(const CppArgumen
 
 void AccessibilityUIElement::parentElementCallback(const CppArgumentList&, CppVariant* result)
 {
-    result->setNull();
+    AccessibilityUIElement* parent = m_factory->getOrCreate(accessibilityObject().parentObject());
+    if (!parent) {
+        result->setNull();
+        return;
+    }
+
+    result->set(*(parent->getAsCppVariant()));
 }
 
 void AccessibilityUIElement::incrementCallback(const CppArgumentList&, CppVariant* result)

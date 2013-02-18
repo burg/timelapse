@@ -28,10 +28,17 @@
 
 namespace WebCore {
 
+static bool s_useApplicationRunLoopOnMainRunLoop;
+
+void RunLoop::setUseApplicationRunLoopOnMainRunLoop()
+{
+    s_useApplicationRunLoopOnMainRunLoop = true;
+}
+
 void RunLoop::run()
 {
     current()->m_nestingLevel++;
-    if (current() == main() && current()->m_nestingLevel == 1) {
+    if (current() == main() && current()->m_nestingLevel == 1 && s_useApplicationRunLoopOnMainRunLoop) {
         // Use -[NSApplication run] for the main run loop.
         [NSApp run];
     } else {
@@ -45,9 +52,11 @@ void RunLoop::run()
 void RunLoop::stop()
 {
     ASSERT(m_runLoop == CFRunLoopGetCurrent());
-    
-    if (m_runLoop == main()->m_runLoop && m_nestingLevel == 1) {
-        [[NSApplication sharedApplication] stop:nil];
+
+    // Nesting level can be 0 if the run loop is started externally (such as the case for XPC services).
+    if (m_runLoop == main()->m_runLoop && m_nestingLevel <= 1 && s_useApplicationRunLoopOnMainRunLoop) {
+        ASSERT([NSApp isRunning]);
+        [NSApp stop:nil];
         NSEvent *event = [NSEvent otherEventWithType:NSApplicationDefined
                                             location:NSMakePoint(0, 0)
                                        modifierFlags:0

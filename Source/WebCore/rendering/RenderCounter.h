@@ -49,7 +49,7 @@ private:
     virtual PassRefPtr<StringImpl> originalText() const;
     
     virtual void updateText() OVERRIDE;
-    virtual void computePreferredLogicalWidths(float leadWidth);
+    virtual void computePreferredLogicalWidths(float leadWidth) OVERRIDE;
 
     // Removes the reference to the CounterNode associated with this renderer.
     // This is used to cause a counter display update when the CounterNode tree changes.
@@ -63,7 +63,7 @@ private:
 
 inline RenderCounter* toRenderCounter(RenderObject* object)
 {
-    ASSERT(!object || object->isCounter());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isCounter());
     return static_cast<RenderCounter*>(object);
 }
 

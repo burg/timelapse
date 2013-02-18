@@ -383,7 +383,6 @@ webkit2_sources += \
 	Source/WebKit2/Shared/ConnectionStack.h \
 	Source/WebKit2/Shared/CoreIPCSupport/WebConnectionMessageKinds.h \
 	Source/WebKit2/Shared/CoreIPCSupport/WebContextMessageKinds.h \
-	Source/WebKit2/Shared/CoreIPCSupport/WebPageProxyMessageKinds.h \
 	Source/WebKit2/Shared/DrawingAreaInfo.h \
 	Source/WebKit2/Shared/EditorState.cpp \
 	Source/WebKit2/Shared/EditorState.h \
@@ -723,8 +722,6 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/API/gtk/WebKitPrivate.cpp \
 	Source/WebKit2/UIProcess/API/gtk/WebKitRequestManagerClient.cpp \
 	Source/WebKit2/UIProcess/API/gtk/WebKitRequestManagerClient.h \
-	Source/WebKit2/UIProcess/API/gtk/WebKitResourceLoadClient.cpp \
-	Source/WebKit2/UIProcess/API/gtk/WebKitResourceLoadClient.h \
 	Source/WebKit2/UIProcess/API/gtk/WebKitResponsePolicyDecision.cpp \
 	Source/WebKit2/UIProcess/API/gtk/WebKitResponsePolicyDecision.h \
 	Source/WebKit2/UIProcess/API/gtk/WebKitResponsePolicyDecisionPrivate.h \
@@ -950,8 +947,6 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/WebProcessProxy.h \
 	Source/WebKit2/UIProcess/WebResourceCacheManagerProxy.h \
 	Source/WebKit2/UIProcess/WebResourceCacheManagerProxy.cpp \
-	Source/WebKit2/UIProcess/WebResourceLoadClient.cpp \
-	Source/WebKit2/UIProcess/WebResourceLoadClient.h \
 	Source/WebKit2/UIProcess/WebTextChecker.cpp \
 	Source/WebKit2/UIProcess/WebTextChecker.h \
 	Source/WebKit2/UIProcess/WebTextCheckerClient.cpp \

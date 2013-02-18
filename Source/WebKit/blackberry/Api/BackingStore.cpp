@@ -324,6 +324,8 @@ void BackingStorePrivate::resumeBackingStoreUpdates()
         setTileMatrixNeedsUpdate();
 
     atomic_sub(&m_suspendBackingStoreUpdates, 1);
+
+    dispatchRenderJob();
 }
 
 void BackingStorePrivate::resumeScreenUpdates(BackingStore::ResumeUpdateOperation op)
@@ -542,7 +544,7 @@ bool BackingStorePrivate::shouldSuppressNonVisibleRegularRenderJobs() const
 
 bool BackingStorePrivate::shouldPerformRenderJobs() const
 {
-    return (m_webPage->isVisible() || shouldDirectRenderingToWindow()) && !m_suspendRenderJobs && !m_suspendBackingStoreUpdates && !m_renderQueue->isEmpty(!m_suspendRegularRenderJobs);
+    return (isActive() || shouldDirectRenderingToWindow()) && !m_suspendRenderJobs && !m_suspendBackingStoreUpdates && !m_renderQueue->isEmpty(!m_suspendRegularRenderJobs);
 }
 
 bool BackingStorePrivate::shouldPerformRegularRenderJobs() const
@@ -2455,18 +2457,13 @@ bool BackingStore::isDirectRenderingToWindow() const
     return d->shouldDirectRenderingToWindow();
 }
 
-void BackingStore::createBackingStoreMemory()
+void BackingStore::acquireBackingStoreMemory()
 {
-    if (BackingStorePrivate::s_currentBackingStoreOwner == d->m_webPage)
-        SurfacePool::globalSurfacePool()->createBuffers();
-    resumeBackingStoreUpdates();
-    resumeScreenUpdates(BackingStore::RenderAndBlit);
+    SurfacePool::globalSurfacePool()->createBuffers();
 }
 
-void BackingStore::releaseBackingStoreMemory()
+void BackingStore::releaseOwnedBackingStoreMemory()
 {
-    suspendBackingStoreUpdates();
-    suspendScreenUpdates();
     if (BackingStorePrivate::s_currentBackingStoreOwner == d->m_webPage)
         SurfacePool::globalSurfacePool()->releaseBuffers();
 }

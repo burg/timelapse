@@ -27,7 +27,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
-import unittest
+import unittest2 as unittest
 
 from webkitpy.common.system import outputcapture
 from webkitpy.common.system.executive_mock import MockExecutive
@@ -74,7 +74,7 @@ class ChromiumWinTest(chromium_port_testcase.ChromiumPortTestCase):
 
     def test_versions(self):
         port = self.make_port()
-        self.assertTrue(port.name() in ('chromium-win-xp', 'chromium-win-win7'))
+        self.assertIn(port.name(), ('chromium-win-xp', 'chromium-win-win7'))
 
         self.assert_name(None, 'xp', 'chromium-win-xp')
         self.assert_name('chromium-win', 'xp', 'chromium-win-xp')
@@ -131,3 +131,11 @@ class ChromiumWinTest(chromium_port_testcase.ChromiumPortTestCase):
 
     def test_path_to_image_diff(self):
         self.assertEqual(self.make_port()._path_to_image_diff(), '/mock-checkout/out/Release/ImageDiff.exe')
+
+    def test_default_max_locked_shards(self):
+        # FIXME: Remove this test when we remove the override for default_max_locked_shards() in chromium_win.py
+        port = self.make_port()
+        port.default_child_processes = lambda: 16
+        self.assertEqual(port.default_max_locked_shards(), 1)
+        port.default_child_processes = lambda: 2
+        self.assertEqual(port.default_max_locked_shards(), 1)

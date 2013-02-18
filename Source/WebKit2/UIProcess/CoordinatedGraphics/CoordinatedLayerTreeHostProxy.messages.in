@@ -18,7 +18,7 @@
 #
 
 #if USE(COORDINATED_GRAPHICS)
-messages -> CoordinatedLayerTreeHostProxy {
+messages -> CoordinatedLayerTreeHostProxy LegacyReceiver {
     SetCompositingLayerState(uint32_t id, WebKit::CoordinatedLayerInfo layerInfo)
     SetCompositingLayerChildren(uint32_t id, Vector<uint32_t> children)
 #if ENABLE(CSS_FILTERS)
@@ -29,8 +29,8 @@ messages -> CoordinatedLayerTreeHostProxy {
     RemoveCustomFilterProgram(int id)
 #endif
     SetRootCompositingLayer(uint32_t id)
-    CreateCompositingLayer(uint32_t id)
-    DeleteCompositingLayer(uint32_t id)
+    CreateCompositingLayers(Vector<uint32_t> ids)
+    DeleteCompositingLayers(Vector<uint32_t> ids)
     CreateTileForLayer(uint32_t layerID, uint32_t tileID, WebCore::IntRect tileRect, WebKit::SurfaceUpdateInfo updateInfo)
     UpdateTileForLayer(uint32_t layerID, uint32_t tileID, WebCore::IntRect tileRect, WebKit::SurfaceUpdateInfo updateInfo)
     RemoveTileForLayer(uint32_t layerID, uint32_t tileID)

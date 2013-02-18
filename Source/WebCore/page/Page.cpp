@@ -582,6 +582,37 @@ bool Page::findString(const String& target, FindOptions options)
     return false;
 }
 
+void Page::findStringMatchingRanges(const String& target, FindOptions options, int limit, Vector<RefPtr<Range> >* matchRanges, int& indexForSelection)
+{
+    indexForSelection = 0;
+    if (!mainFrame())
+        return;
+
+    Frame* frame = mainFrame();
+    Frame* frameWithSelection = 0;
+    do {
+        frame->editor()->countMatchesForText(target, 0, options, limit ? (limit - matchRanges->size()) : 0, true, matchRanges);
+        if (frame->selection()->isRange())
+            frameWithSelection = frame;
+        frame = incrementFrame(frame, true, false);
+    } while (frame);
+
+    if (matchRanges->isEmpty())
+        return;
+
+    if (frameWithSelection) {
+        indexForSelection = NoMatchBeforeUserSelection;
+        RefPtr<Range> selectedRange = frameWithSelection->selection()->selection().firstRange();
+        for (size_t i = 0; i < matchRanges->size(); ++i) {
+            ExceptionCode ec;
+            if (selectedRange->compareBoundaryPoints(Range::START_TO_END, matchRanges->at(i).get(), ec) < 0) {
+                indexForSelection = i;
+                break;
+            }
+        }
+    }
+}
+
 PassRefPtr<Range> Page::rangeOfString(const String& target, Range* referenceRange, FindOptions options)
 {
     if (target.isEmpty() || !mainFrame())
@@ -625,7 +656,7 @@ unsigned int Page::markAllMatchesForText(const String& target, FindOptions optio
     Frame* frame = mainFrame();
     do {
         frame->editor()->setMarkedTextMatchesAreHighlighted(shouldHighlight);
-        matches += frame->editor()->countMatchesForText(target, options, limit ? (limit - matches) : 0, true);
+        matches += frame->editor()->countMatchesForText(target, 0, options, limit ? (limit - matches) : 0, true, 0);
         frame = incrementFrame(frame, true, false);
     } while (frame);
 
@@ -1166,14 +1197,19 @@ void Page::setVisibilityState(PageVisibilityState visibilityState, bool isInitia
         m_mainFrame->dispatchVisibilityStateChangeEvent();
 #endif
 
+    if (visibilityState == WebCore::PageVisibilityStateHidden) {
 #if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
-    if (visibilityState == WebCore::PageVisibilityStateHidden)
         setTimerAlignmentInterval(Settings::hiddenPageDOMTimerAlignmentInterval());
-    else
+#endif
+        mainFrame()->animation()->suspendAnimations();
+    } else {
+#if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
         setTimerAlignmentInterval(Settings::defaultDOMTimerAlignmentInterval());
+#endif
+        mainFrame()->animation()->resumeAnimations();
+    }
 #if !ENABLE(PAGE_VISIBILITY_API)
     UNUSED_PARAM(isInitialState);
-#endif
 #endif
 }
 #endif // ENABLE(PAGE_VISIBILITY_API) || ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)

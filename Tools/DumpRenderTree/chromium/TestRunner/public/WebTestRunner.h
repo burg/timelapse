@@ -31,6 +31,10 @@
 #ifndef WebTestRunner_h
 #define WebTestRunner_h
 
+#include "WebKit/chromium/public/WebTextDirection.h"
+#include <set>
+#include <string>
+
 namespace WebKit {
 class WebArrayBufferView;
 class WebPermissionClient;
@@ -63,6 +67,19 @@ public:
     virtual bool shouldDumpResourceRequestCallbacks() const { return false; }
     virtual bool shouldDumpResourceResponseMIMETypes() const { return false; }
     virtual WebKit::WebPermissionClient* webPermissions() const { return 0; }
+    virtual bool shouldDumpStatusCallbacks() const { return false; }
+    virtual bool shouldDumpProgressFinishedCallback() const { return false; }
+    virtual bool shouldDumpBackForwardList() const { return false; }
+    virtual bool deferMainResourceDataLoad() const { return false; }
+    virtual bool shouldDumpSelectionRect() const { return false; }
+    virtual bool testRepaint() const { return false; }
+    virtual bool sweepHorizontally() const { return false; }
+    virtual bool isPrinting() const { return false; }
+    virtual bool shouldStayOnPageAfterHandlingBeforeUnload() const { return false; }
+    virtual void setTitleTextDirection(WebKit::WebTextDirection) { }
+    virtual const std::set<std::string>* httpHeadersToClear() const { return 0; }
+    virtual bool shouldBlockRedirects() const { return false; }
+    virtual bool willSendRequestShouldReturnNull() const { return false; }
 };
 
 }

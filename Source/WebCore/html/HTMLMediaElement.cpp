@@ -121,6 +121,10 @@
 #include "MediaSourceRegistry.h"
 #endif
 
+#if ENABLE(MEDIA_STREAM)
+#include "MediaStreamRegistry.h"
+#endif
+
 using namespace std;
 
 namespace WebCore {
@@ -1017,6 +1021,11 @@ void HTMLMediaElement::loadResource(const KURL& initialURL, ContentType& content
 
     LOG(Media, "HTMLMediaElement::loadResource - m_currentSrc -> %s", urlForLoggingMedia(m_currentSrc).utf8().data());
 
+#if ENABLE(MEDIA_STREAM)
+    if (MediaStreamRegistry::registry().lookupMediaStreamDescriptor(url.string()))
+        removeBehaviorRestriction(RequireUserGestureForRateChangeRestriction);
+#endif
+
     if (m_sendProgressEvents) 
         startProgressEventTimer();
 
@@ -1166,8 +1175,15 @@ void HTMLMediaElement::updateActiveTextTrackCues(float movieTime)
             activeSetChanged = true;
     }
 
-    if (!activeSetChanged)
+    if (!activeSetChanged) {
+        // Even though the active set has not changed, it is possible that the
+        // the mode of a track has changed from 'hidden' to 'showing' and the
+        // cues have not yet been rendered.
+        if (hasMediaControls())
+            mediaControls()->updateTextTrackDisplay();
+
         return;
+    }
 
     // 7 - If the time was reached through the usual monotonic increase of the
     // current playback position during normal playback, and there are cues in
@@ -1361,6 +1377,7 @@ void HTMLMediaElement::textTrackModeChanged(TextTrack* track)
     }
 
     configureTextTrackDisplay();
+    updateActiveTextTrackCues(currentTime());
 }
 
 void HTMLMediaElement::textTrackKindChanged(TextTrack* track)
@@ -3811,6 +3828,11 @@ void HTMLMediaElement::clearMediaPlayer(int flags)
 
     m_pendingLoadFlags &= ~flags;
     m_loadState = WaitingForSource;
+
+#if ENABLE(VIDEO_TRACK)
+    if (m_textTracks)
+        configureTextTrackDisplay();
+#endif
 }
 
 bool HTMLMediaElement::canSuspend() const
@@ -4219,6 +4241,11 @@ void HTMLMediaElement::clearMediaCache()
 void HTMLMediaElement::clearMediaCacheForSite(const String& site)
 {
     MediaPlayer::clearMediaCacheForSite(site);
+}
+
+void HTMLMediaElement::requeryMediaEngines()
+{
+    MediaPlayer::requeryMediaEngines();
 }
 
 void HTMLMediaElement::privateBrowsingStateDidChange()

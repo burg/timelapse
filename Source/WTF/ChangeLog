@@ -1,3 +1,391 @@
+2013-01-24  Brent Fulgham  <bfulgham@webkit.org>
+
+        Stipulate build order between WTFGenerated and WTF
+        https://bugs.webkit.org/show_bug.cgi?id=107844
+
+        Reviewed by Tim Horton.
+
+        * WTF.vcxproj/WTF.vcxproj: Use VS2010 project dependency
+        declaration so WTF depends on a completed WTFGenerated build.
+
+2013-01-23  Abhishek Arya  <inferno@chromium.org>
+
+        Add support for ASSERT_WITH_SECURITY_IMPLICATION.
+        https://bugs.webkit.org/show_bug.cgi?id=107699
+
+        Reviewed by Eric Seidel.
+
+        * wtf/Assertions.h: Add ASSERT_WITH_SECURITY_IMPLICATION to
+        indicate possible security vulnerabily and enable it by default
+        in fuzzing builds.
+        * wtf/Vector.h: Use ASSERT_WITH_SECURITY_IMPLICATION for
+        bounds check on [] operator.
+
+2013-01-23  Tony Chang  <tony@chromium.org>
+
+        Unreviewed, set svn:eol-style to CRLF on Windows .sln files.
+
+        * WTF.vcproj/WTF.sln: Added property svn:eol-style.
+
+2013-01-23  Adam Barth  <abarth@webkit.org>
+
+        BackgroundHTMLParser::sendTokensToMainThread should use bind
+        https://bugs.webkit.org/show_bug.cgi?id=107637
+
+        Reviewed by Eric Seidel.
+
+        * wtf/Functional.h:
+            - I had to re-work the approach to validating WeakPtr |this|
+              arguments a bit. Previously you couldn't pass a WeakPtr as a
+              non-|this| argument to a function because we would try to unwrap
+              it into a raw pointer.
+        * wtf/WeakPtr.h:
+        (WTF::WeakPtrFactory::revokeAll):
+        (WeakPtrFactory):
+            - Let clients revoke all outstanding WeakPtrs without needing to
+              destroy the WeakPtrFactory.
+        * wtf/chromium/MainThreadChromium.cpp:
+        (WTF::callFunctionObject):
+        (WTF::callOnMainThread):
+            - Implement callOnMainThread for Function objects. The non-Chromium
+              implementation of MainThread.cpp already implements this feature.
+
+2013-01-23  Justin Schuh  <jschuh@chromium.org>
+
+        [CHROMIUM] Suppress c4267 build warnings in WTF for Win64 targets
+        https://bugs.webkit.org/show_bug.cgi?id=107721
+
+        Reviewed by Abhishek Arya.
+
+        * WTF.gyp/WTF.gyp:
+
+2013-01-23  Oliver Hunt  <oliver@apple.com>
+
+        Add RELEASE_ASSERT (and a few friends)
+        https://bugs.webkit.org/show_bug.cgi?id=107725
+
+        Reviewed by Filip Pizlo.
+
+        Adding a few macros to make release mode assertions easier and more readable.
+        Also makes same assertions more useful in debug builds.
+
+        * wtf/Assertions.h:
+
+2013-01-22  Joshua Bell  <jsbell@chromium.org>
+
+        Prevent race condition during Worker shutdown
+        https://bugs.webkit.org/show_bug.cgi?id=107577
+
+        Reviewed by Dmitry Titov.
+
+        Add MessageQueue::appendAndKill() which wraps those two steps with a mutex so other
+        threads can't sneak a message in between.
+
+        * wtf/MessageQueue.h: Added appendAndKill() method.
+
+2013-01-22  Roger Fong  <roger_fong@apple.com>
+
+        WTF project files and property sheets for getting WebKit to compile in VS2010.
+        https://bugs.webkit.org/show_bug.cgi?id=106986
+
+        Reviewed by Timothy Horton and Brent Fulgham.
+
+        * WTF.vcproj/WTF.sln:
+        * WTF.vcxproj: Added.
+        * WTF.vcxproj/WTF.vcxproj: Added.
+        * WTF.vcxproj/WTF.vcxproj.filters: Added.
+        * WTF.vcxproj/WTF.vcxproj.user: Added.
+        * WTF.vcxproj/WTFCommon.props: Added.
+        * WTF.vcxproj/WTFDebug.props: Added.
+        * WTF.vcxproj/WTFGenerated.make: Added.
+        * WTF.vcxproj/WTFGenerated.vcxproj: Added.
+        * WTF.vcxproj/WTFGenerated.vcxproj.filters: Added.
+        * WTF.vcxproj/WTFGenerated.vcxproj.user: Added.
+        * WTF.vcxproj/WTFGeneratedCommon.props: Added.
+        * WTF.vcxproj/WTFGeneratedDebug.props: Added.
+        * WTF.vcxproj/WTFGeneratedRelease.props: Added.
+        * WTF.vcxproj/WTFPostBuild.cmd: Added.
+        * WTF.vcxproj/WTFPreBuild.cmd: Added.
+        * WTF.vcxproj/WTFPreLink.cmd: Added.
+        * WTF.vcxproj/WTFRelease.props: Added.
+        * WTF.vcxproj/build-generated-files.sh: Added.
+        * WTF.vcxproj/copy-files.cmd: Added.
+        * WTF.vcxproj/work-around-vs-dependency-tracking-bugs.py: Added.
+        * config.h:
+
+2013-01-22  David Kilzer  <ddkilzer@apple.com>
+
+        Fix DateMath.cpp to compile with -Wshorten-64-to-32
+        <http://webkit.org/b/107503>
+
+        Reviewed by Darin Adler.
+
+        Fixes the following build errors with -Wshorten-64-to-32:
+
+            DateMath.cpp:742:47: error: implicit conversion loses integer precision: 'long' to 'int' [-Werror,-Wshorten-64-to-32]
+                if (month == 2 && day > 28 && !isLeapYear(year))
+                                               ~~~~~~~~~~ ^~~~
+            DateMath.cpp:757:48: error: implicit conversion loses integer precision: 'long' to 'int' [-Werror,-Wshorten-64-to-32]
+                double dateSeconds = ymdhmsToSeconds(year, month, day, hours, minutes, seconds) - timeZoneSeconds;
+                                     ~~~~~~~~~~~~~~~       ^~~~~
+            DateMath.cpp:757:55: error: implicit conversion loses integer precision: 'long' to 'int' [-Werror,-Wshorten-64-to-32]
+                double dateSeconds = ymdhmsToSeconds(year, month, day, hours, minutes, seconds) - timeZoneSeconds;
+                                     ~~~~~~~~~~~~~~~              ^~~
+            DateMath.cpp:757:60: error: implicit conversion loses integer precision: 'long' to 'int' [-Werror,-Wshorten-64-to-32]
+                double dateSeconds = ymdhmsToSeconds(year, month, day, hours, minutes, seconds) - timeZoneSeconds;
+                                     ~~~~~~~~~~~~~~~                   ^~~~~
+            DateMath.cpp:757:67: error: implicit conversion loses integer precision: 'long' to 'int' [-Werror,-Wshorten-64-to-32]
+                double dateSeconds = ymdhmsToSeconds(year, month, day, hours, minutes, seconds) - timeZoneSeconds;
+                                     ~~~~~~~~~~~~~~~                          ^~~~~~~
+            DateMath.cpp:996:59: error: implicit conversion loses integer precision: 'long' to 'int' [-Werror,-Wshorten-64-to-32]
+                                offset = ((o / 100) * 60 + (o % 100)) * sgn;
+                                       ~ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~
+            DateMath.cpp:998:37: error: implicit conversion loses integer precision: 'long' to 'int' [-Werror,-Wshorten-64-to-32]
+                                offset = o * 60 * sgn;
+                                       ~ ~~~~~~~^~~~~
+            DateMath.cpp:1005:40: error: implicit conversion loses integer precision: 'long' to 'int' [-Werror,-Wshorten-64-to-32]
+                            offset = (o * 60 + o2) * sgn;
+                                   ~ ~~~~~~~~~~~~~~^~~~~
+            DateMath.cpp:1041:40: error: implicit conversion loses integer precision: 'long' to 'int' [-Werror,-Wshorten-64-to-32]
+                return ymdhmsToSeconds(year, month + 1, day, hour, minute, second) * msPerSecond;
+                       ~~~~~~~~~~~~~~~       ~~~~~~^~~
+            DateMath.cpp:1041:45: error: implicit conversion loses integer precision: 'long' to 'int' [-Werror,-Wshorten-64-to-32]
+                return ymdhmsToSeconds(year, month + 1, day, hour, minute, second) * msPerSecond;
+                       ~~~~~~~~~~~~~~~                  ^~~
+            DateMath.cpp:1041:50: error: implicit conversion loses integer precision: 'long' to 'int' [-Werror,-Wshorten-64-to-32]
+                return ymdhmsToSeconds(year, month + 1, day, hour, minute, second) * msPerSecond;
+                       ~~~~~~~~~~~~~~~                       ^~~~
+            DateMath.cpp:1041:56: error: implicit conversion loses integer precision: 'long' to 'int' [-Werror,-Wshorten-64-to-32]
+                return ymdhmsToSeconds(year, month + 1, day, hour, minute, second) * msPerSecond;
+                       ~~~~~~~~~~~~~~~                             ^~~~~~
+            12 errors generated.
+
+        * wtf/DateMath.cpp:
+        (WTF::ymdhmsToSeconds): Change year argument from long to int.
+        Change mon, day, hour, minute arguments from int to long.
+        (WTF::parseInt): Add.  Identical to parseLong but bounds checks
+        for type int.
+        (WTF::parseLong): Switch to std::numeric_limits<long> instead of
+        macros.
+        (WTF::parseES5DatePortion): Change year argument from long to
+        int.
+        (WTF::parseES5DateFromNullTerminatedCharacters): Change year
+        local variable from long to int.
+        (WTF::parseDateFromNullTerminatedCharacters): Change year and
+        offset local variables from long to int.  Switch from using
+        parseLong() to parseInt() as needed.  Ditto for labs() to abs().
+        Add overflow check when switching from "MM/DD/YYYY" to
+        "YYYY/MM/DD" parsing.
+
+2013-01-17  Andy Estes  <aestes@apple.com>
+
+        Add a USE() macro for content filtering code
+        https://bugs.webkit.org/show_bug.cgi?id=107098
+
+        Reviewed by Mark Rowe.
+
+        * wtf/Platform.h: Define WTF_USE_CONTENT_FILTERING on Mac platforms
+        more recent than Lion.
+
+2013-01-18  Laszlo Gombos  <l.gombos@samsung.com>
+
+        Remove unnecessary PLATFORM() tests
+        https://bugs.webkit.org/show_bug.cgi?id=107360
+
+        Reviewed by Eric Seidel.
+
+        PLATFORM(WIN), PLATFORM(CHROMIUM) and PLATFORM(QT) are mutually
+        exclusive. Remove redundant PLATFORM() tests based on this
+        invariant.
+
+        * wtf/Platform.h:
+
+2013-01-18  Laszlo Gombos  <l.gombos@samsung.com>
+
+        Remove PLATFORM(TORCHMOBILE) from Assertions.h
+        https://bugs.webkit.org/show_bug.cgi?id=107355
+
+        Reviewed by Eric Seidel.
+
+        This appears to be the only place where PLATFORM(TORCHMOBILE) is
+        used. I don't believe this ifdef is needed anymore.
+
+        * wtf/Assertions.h:
+
+2013-01-18  Michael Saboff  <msaboff@apple.com>
+
+        Refactor isPowerOf2() and add getLSBSet()
+        https://bugs.webkit.org/show_bug.cgi?id=107306
+
+        Reviewed by Filip Pizlo.
+
+        Moved runtime/PropertyMapHashTable.h:PowerOf2() to new hasOneBitSet() and added getLSBSet().
+
+        * wtf/MathExtras.h:
+        (hasOneBitSet):
+        (getLSBSet):
+
+2013-01-18  David Kilzer  <ddkilzer@apple.com>
+
+        Fix WTF::copyLCharsFromUCharSource() to compile with -Wshorten-64-to-32
+        <http://webkit.org/b/107227>
+
+        Reviewed by Benjamin Poulain.
+
+        Fixes the following build error:
+
+            ASCIIFastPath.h:117:59: error: implicit conversion loses integer precision: 'unsigned long' to 'const unsigned int' [-Werror,-Wshorten-64-to-32]
+                    const unsigned endLength = length - ucharsPerLoop + 1;
+                                   ~~~~~~~~~   ~~~~~~~~~~~~~~~~~~~~~~~^~~
+            1 error generated.
+
+        * wtf/text/ASCIIFastPath.h:
+        (WTF::copyLCharsFromUCharSource): Change local variables from
+        unsigned to size_t.
+
+2013-01-14  Dominik Röttsches  <dominik.rottsches@intel.com>
+
+        [EFL] Update freetype in jhbuild to 2.4.11 and activate subpixel layout
+        https://bugs.webkit.org/show_bug.cgi?id=106774
+
+        In order to fix a long standing linespacing/font ascent & descent issue
+        we found that FreeType commit b0962ac34e660 solves that problem.
+        Let's update FreeType accordingly, but bump it to 2.4.11 due to the
+        maintainer recommending several security updates after that said commit.
+
+        Also, in order to avoid extra rebaselining, let's activate subpixel
+        layout at the same time.
+
+        Reviewed by Martin Robinson.
+
+        * wtf/Platform.h: Activate Subpixel Layout for EFL.
+
+2013-01-17  Adam Barth  <abarth@webkit.org>
+
+        Teach Functional.h about WeakPtr
+        https://bugs.webkit.org/show_bug.cgi?id=107105
+
+        Reviewed by Anders Carlsson.
+
+        A common pattern in cross-thread communication is to call member
+        functions of an object on a remote thread. If the caller's reference to
+        the object on the remote thread is a WeakPtr, the caller usually wants
+        to validate that the object still exists when the call actually takes
+        place.
+
+        It's possible to do this manually for every cross-thread call, but that
+        is tiresome and error prone. Instead, we can teach bind to validate
+        WeakPtr arguments when passed as the "this" parameter to a member
+        function.
+
+        * wtf/Functional.h:
+        (WTF::ParamStorageTraits::validate):
+
+2013-01-17  David Kilzer  <ddkilzer@apple.com>
+
+        Fix vprintf_stderr_common() to compile with -Wshorten-64-to-32
+        <http://webkit.org/b/107126>
+
+        Reviewed by Darin Adler.
+
+        Fixes the following build error:
+
+            Assertions.cpp:92:22: error: implicit conversion loses integer precision: 'CFIndex' (aka 'long') to 'int' [-Werror,-Wshorten-64-to-32]
+                    int length = CFStringGetMaximumSizeForEncoding(CFStringGetLength(str), kCFStringEncodingUTF8);
+                        ~~~~~~   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+            1 error generated.
+
+        * wtf/Assertions.cpp:
+        (vprintf_stderr_common): Use CFIndex type instead of int for the
+        return value of CFStringGetMaximumSizeForEncoding().
+
+2013-01-17  Zan Dobersek  <zdobersek@igalia.com>
+
+        [Autotools] Unify WTF sources list regardless of the target OS, Unicode backend
+        https://bugs.webkit.org/show_bug.cgi?id=105886
+
+        Reviewed by Gustavo Noronha Silva.
+
+        Rather than including files in the sources list in an OS-specific way,
+        guard specific files with OS(UNIX|WINDOWS), USE((GLIB|ICU)_UNICODE) guards
+        and include all of them in the list.
+
+        Proper comments for namespace and #if guard closings are also added or adjusted
+        where necessary in the affected files.
+
+        * GNUmakefile.list.am:
+        * wtf/OSAllocatorPosix.cpp: Add OS(UNIX) guards.
+        * wtf/OSAllocatorWin.cpp: Add OS(WINDOWS) guards.
+        * wtf/ThreadSpecificWin.cpp: Ditto.
+        * wtf/ThreadingWin.cpp: Ditto.
+        * wtf/unicode/glib/UnicodeGLib.cpp: Add USE(GLIB_UNICODE) guards.
+        (WTF):
+        * wtf/unicode/glib/UnicodeGLib.h: Ditto.
+        (WTF):
+        * wtf/unicode/icu/CollatorICU.cpp: Style changes.
+        * wtf/unicode/icu/UnicodeIcu.h: Add USE(ICU_UNICODE) guards.
+        (WTF):
+        * wtf/win/OwnPtrWin.cpp: Add OS(WINDOWS) guards.
+
+2013-01-16  Benjamin Poulain  <benjamin@webkit.org>
+
+        Use GCC's implementation of atomicIncrement/Decrement on Mac
+        https://bugs.webkit.org/show_bug.cgi?id=106976
+
+        Reviewed by Filip Pizlo.
+
+        * wtf/Atomics.h:
+        GCC and LLVM have builtin for atomic ADD and SUB: __sync_add_and_fetch,
+        __sync_sub_and_fetch.
+
+        Using them let the compiler just generate the atomic operations inline
+        instead of generating a function call to LibC. It also simplify the
+        code a bit.
+
+2013-01-15  Adam Barth  <abarth@webkit.org>
+
+        Generalize DocumentWeakReference into WTF::WeakPtr
+        https://bugs.webkit.org/show_bug.cgi?id=106854
+
+        Reviewed by Darin Adler.
+
+        This patch adds a simple WeakPtr object to WTF. To use WeakPtr, objects
+        must hold a WeakPtrFactory member variable, which clears the WeakPtrs
+        when the object is destructed. The underlying storage is a
+        ThreadSafeRefCounted "WeakReference" object, which is shared by all the
+        WeakPtrs.
+
+        WeakPtr is a generalization of DocumentWeakReference, which is used to
+        check whether the Document object is alive when tasks arive on the main
+        thread from worker threads. We plan to use a similar pattern in the
+        threaded HTML parser, but we want to send tasks to objects other than
+        Document.
+
+        * GNUmakefile.list.am:
+        * WTF.gypi:
+        * WTF.pro:
+        * WTF.vcproj/WTF.vcproj:
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/CMakeLists.txt:
+        * wtf/WeakPtr.h: Added.
+        (WeakReference):
+            - The ThreadSafeRefCounted object shared by all the WeakPtr
+              instances. This patch uses ThreadSafeRefCounted so that we can
+              use WeakPtrs to cancel cross-thread messages.
+        (WTF::WeakReference::create):
+        (WTF::WeakReference::get):
+        (WTF::WeakReference::clear):
+            - When the object is destroyed, WeakPtrFactory calls this function
+              to clear all the WeakPtrs.
+        (WTF::WeakReference::WeakReference):
+        (WTF::WeakPtr::WeakPtr):
+        (WTF::WeakPtr::get):
+            - We might want to add implicit conversions and Boolean operators
+              in the future, but I've kept this class simple for now.
+        (WTF::WeakPtrFactory::WeakPtrFactory):
+        (WTF::WeakPtrFactory::~WeakPtrFactory):
+        (WTF::WeakPtrFactory::createWeakPtr):
+
 2013-01-12  Csaba Osztrogonác  <ossy@webkit.org>
 
         Use __sync_add_and_fetch instead of __gnu_cxx::__exchange_and_add

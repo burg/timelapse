@@ -89,10 +89,6 @@ inspector/elements/edit-dom-actions.html
 inspector/extensions/extensions-events.html
 inspector/styles/styles-computed-trace.html
 
-# Fail until SUBPIXEL_LAYOUT is enabled
-# https://bugs.webkit.org/show_bug.cgi?id=85532
-fast/sub-pixel
-
 # [WK2][WTR] svg/animations/animate-text-nested-transforms.html fails
 # https://bugs.webkit.org/show_bug.cgi?id=95191
 svg/animations/animate-text-nested-transforms.html
@@ -345,6 +341,7 @@ http/tests/security/referrer-policy-redirect-link.html
 
 # css3-conditionals support is not yet enabled.
 webkit.org/b/86146 css3/supports.html
+webkit.org/b/104822 css3/supports-cssom.html
 
 # Text Autosizing is not yet enabled.
 # https://bugs.webkit.org/show_bug.cgi?id=84186
@@ -680,7 +677,6 @@ plugins/embed-attributes-style.html
 plugins/plugin-initiate-popup-window.html
 storage/websql/open-database-while-transaction-in-progress.html
 svg/custom/clip-path-referencing-use2.svg
-svg/dom/fuzz-path-parser.html
 svg/hixie/cascade/002.xml
 tables/mozilla_expected_failures/bugs/bug8499.html
 transitions/font-family-during-transition.html

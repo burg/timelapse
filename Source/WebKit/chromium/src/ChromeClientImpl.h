@@ -38,6 +38,7 @@
 #include "SearchPopupMenu.h"
 #include "WebNavigationPolicy.h"
 #include <public/WebColor.h>
+#include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
 
 namespace WebCore {
@@ -46,6 +47,7 @@ class ColorChooser;
 class ColorChooserClient;
 class Element;
 class FileChooser;
+class GraphicsLayerFactory;
 class PopupContainer;
 class PopupMenuClient;
 class RenderBox;
@@ -163,6 +165,8 @@ public:
 #endif
 
 #if USE(ACCELERATED_COMPOSITING)
+    virtual WebCore::GraphicsLayerFactory* graphicsLayerFactory() const OVERRIDE;
+
     // Pass 0 as the GraphicsLayer to detatch the root layer.
     virtual void attachRootGraphicsLayer(WebCore::Frame*, WebCore::GraphicsLayer*);
 
@@ -221,6 +225,8 @@ public:
     virtual bool shouldRubberBandInDirection(WebCore::ScrollDirection) const;
     virtual void numWheelEventHandlersChanged(unsigned);
 
+    virtual bool shouldAutoscrollForDragAndDrop(WebCore::RenderBox* scrollable) const OVERRIDE;
+
 #if ENABLE(POINTER_LOCK)
     virtual bool requestPointerLock();
     virtual void requestPointerUnlock();
@@ -243,6 +249,10 @@ private:
     WebNavigationPolicy m_nextNewWindowNavigationPolicy;
 #if ENABLE(PAGE_POPUP)
     WebCore::PagePopupDriver* m_pagePopupDriver;
+#endif
+
+#if USE(ACCELERATED_COMPOSITING)
+    OwnPtr<WebCore::GraphicsLayerFactory> m_graphicsLayerFactory;
 #endif
 };
 

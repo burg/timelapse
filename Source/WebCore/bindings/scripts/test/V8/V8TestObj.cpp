@@ -29,8 +29,6 @@
 #include "FeatureObserver.h"
 #include "Frame.h"
 #include "HTMLNames.h"
-#include "IDBBindingUtilities.h"
-#include "IDBKey.h"
 #include "RuntimeEnabledFeatures.h"
 #include "SVGPropertyTearOff.h"
 #include "SVGStaticPropertyTearOff.h"
@@ -43,6 +41,7 @@
 #include "V8DOMStringList.h"
 #include "V8DOMWrapper.h"
 #include "V8Document.h"
+#include "V8EventListenerList.h"
 #include "V8Float32Array.h"
 #include "V8Node.h"
 #include "V8SVGDocument.h"
@@ -75,7 +74,7 @@
 
 namespace WebCore {
 
-WrapperTypeInfo V8TestObj::info = { V8TestObj::GetTemplate, V8TestObj::derefObject, 0, 0, V8TestObj::installPerContextPrototypeProperties, 0, WrapperTypeObjectPrototype };
+WrapperTypeInfo V8TestObj::info = { V8TestObj::GetTemplate, V8TestObj::derefObject, 0, 0, 0, V8TestObj::installPerContextPrototypeProperties, 0, WrapperTypeObjectPrototype };
 
 namespace TestObjV8Internal {
 
@@ -995,7 +994,7 @@ static v8::Handle<v8::Value> methodWithSequenceArgCallback(const v8::Arguments& 
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
     TestObj* imp = V8TestObj::toNative(args.Holder());
-    V8TRYCATCH(Vector<RefPtr<ScriptProfile> >, sequenceArg, (toRefPtrNativeArray<ScriptProfile, V8ScriptProfile>(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined))));
+    V8TRYCATCH(Vector<RefPtr<ScriptProfile> >, sequenceArg, (toRefPtrNativeArray<ScriptProfile, V8ScriptProfile>(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined), args.GetIsolate())));
     imp->methodWithSequenceArg(sequenceArg);
     return v8Undefined();
 }
@@ -1040,16 +1039,6 @@ static v8::Handle<v8::Value> serializedValueCallback(const v8::Arguments& args)
     return v8Undefined();
 }
 
-static v8::Handle<v8::Value> idbKeyCallback(const v8::Arguments& args)
-{
-    if (args.Length() < 1)
-        return throwNotEnoughArgumentsError(args.GetIsolate());
-    TestObj* imp = V8TestObj::toNative(args.Holder());
-    V8TRYCATCH(RefPtr<IDBKey>, key, createIDBKeyFromValue(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
-    imp->idbKey(key.get());
-    return v8Undefined();
-}
-
 static v8::Handle<v8::Value> optionsObjectCallback(const v8::Arguments& args)
 {
     if (args.Length() < 1)
@@ -1081,7 +1070,7 @@ static v8::Handle<v8::Value> methodWithExceptionCallback(const v8::Arguments& ar
 
 static v8::Handle<v8::Value> addEventListenerCallback(const v8::Arguments& args)
 {
-    RefPtr<EventListener> listener = V8DOMWrapper::getEventListener(args[1], false, ListenerFindOrCreate);
+    RefPtr<EventListener> listener = V8EventListenerList::getEventListener(args[1], false, ListenerFindOrCreate);
     if (listener) {
         V8TRYCATCH_FOR_V8STRINGRESOURCE(V8StringResource<WithNullCheck>, stringResource, args[0]);
         V8TestObj::toNative(args.Holder())->addEventListener(stringResource, listener, args[2]->BooleanValue());
@@ -1092,7 +1081,7 @@ static v8::Handle<v8::Value> addEventListenerCallback(const v8::Arguments& args)
 
 static v8::Handle<v8::Value> removeEventListenerCallback(const v8::Arguments& args)
 {
-    RefPtr<EventListener> listener = V8DOMWrapper::getEventListener(args[1], false, ListenerFindOnly);
+    RefPtr<EventListener> listener = V8EventListenerList::getEventListener(args[1], false, ListenerFindOnly);
     if (listener) {
         V8TRYCATCH_FOR_V8STRINGRESOURCE(V8StringResource<WithNullCheck>, stringResource, args[0]);
         V8TestObj::toNative(args.Holder())->removeEventListener(stringResource, listener.get(), args[2]->BooleanValue());
@@ -1471,7 +1460,7 @@ static v8::Handle<v8::Value> overloadedMethod7Callback(const v8::Arguments& args
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
     TestObj* imp = V8TestObj::toNative(args.Holder());
-    V8TRYCATCH(RefPtr<DOMStringList>, arrayArg, toDOMStringList(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined), args.GetIsolate()));
+    V8TRYCATCH(Vector<String>, arrayArg, toNativeArray<String>(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
     imp->overloadedMethod(arrayArg);
     return v8Undefined();
 }
@@ -1491,7 +1480,7 @@ static v8::Handle<v8::Value> overloadedMethod9Callback(const v8::Arguments& args
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
     TestObj* imp = V8TestObj::toNative(args.Holder());
-    V8TRYCATCH(RefPtr<DOMStringList>, arrayArg, toDOMStringList(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined), args.GetIsolate()));
+    V8TRYCATCH(Vector<String>, arrayArg, toNativeArray<String>(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
     imp->overloadedMethod(arrayArg);
     return v8Undefined();
 }
@@ -1665,11 +1654,28 @@ static v8::Handle<v8::Value> stringArrayFunctionCallback(const v8::Arguments& ar
     TestObj* imp = V8TestObj::toNative(args.Holder());
     ExceptionCode ec = 0;
     {
-    V8TRYCATCH(RefPtr<DOMStringList>, values, toDOMStringList(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined), args.GetIsolate()));
-    RefPtr<DOMStringList> result = imp->stringArrayFunction(values, ec);
+    V8TRYCATCH(Vector<String>, values, toNativeArray<String>(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
+    Vector<String> result = imp->stringArrayFunction(values, ec);
     if (UNLIKELY(ec))
         goto fail;
-    return v8Array(result.release(), args.GetIsolate());
+    return v8Array(result, args.GetIsolate());
+    }
+    fail:
+    return setDOMException(ec, args.GetIsolate());
+}
+
+static v8::Handle<v8::Value> domStringListFunctionCallback(const v8::Arguments& args)
+{
+    if (args.Length() < 1)
+        return throwNotEnoughArgumentsError(args.GetIsolate());
+    TestObj* imp = V8TestObj::toNative(args.Holder());
+    ExceptionCode ec = 0;
+    {
+    V8TRYCATCH(RefPtr<DOMStringList>, values, toDOMStringList(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined), args.GetIsolate()));
+    RefPtr<DOMStringList> result = imp->domStringListFunction(values, ec);
+    if (UNLIKELY(ec))
+        goto fail;
+    return toV8(result.release(), args.Holder(), args.GetIsolate());
     }
     fail:
     return setDOMException(ec, args.GetIsolate());
@@ -1946,7 +1952,6 @@ static const V8DOMConfiguration::BatchedCallback V8TestObjCallbacks[] = {
     {"objMethod", TestObjV8Internal::objMethodCallback},
     {"methodReturningSequence", TestObjV8Internal::methodReturningSequenceCallback},
     {"serializedValue", TestObjV8Internal::serializedValueCallback},
-    {"idbKey", TestObjV8Internal::idbKeyCallback},
     {"optionsObject", TestObjV8Internal::optionsObjectCallback},
     {"methodWithException", TestObjV8Internal::methodWithExceptionCallback},
     {"customMethod", V8TestObj::customMethodCallback},
@@ -1982,7 +1987,6 @@ static const V8DOMConfiguration::BatchedCallback V8TestObjCallbacks[] = {
 #endif
     {"overloadedMethod", TestObjV8Internal::overloadedMethodCallback},
     {"classMethodWithClamp", TestObjV8Internal::classMethodWithClampCallback},
-    {"stringArrayFunction", TestObjV8Internal::stringArrayFunctionCallback},
     {"getSVGDocument", TestObjV8Internal::getSVGDocumentCallback},
     {"mutablePointFunction", TestObjV8Internal::mutablePointFunctionCallback},
     {"immutablePointFunction", TestObjV8Internal::immutablePointFunctionCallback},
@@ -2031,7 +2035,7 @@ v8::Handle<v8::Value> V8TestObj::constructorCallback(const v8::Arguments& args)
 {
     
     if (!args.IsConstructCall())
-        return throwTypeError("DOM object constructor cannot be called as a function.");
+        return throwTypeError("DOM object constructor cannot be called as a function.", args.GetIsolate());
 
     if (ConstructorMode::current() == ConstructorMode::WrapExistingObject)
         return args.Holder();
@@ -2116,6 +2120,18 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestObjTemplate(v8::Persi
     if (RuntimeEnabledFeatures::featureNameEnabled())
         proto->Set(v8::String::NewSymbol("enabledAtRuntimeMethod2"), v8::FunctionTemplate::New(TestObjV8Internal::enabledAtRuntimeMethod2Callback, v8Undefined(), defaultSignature));
 
+    // Custom Signature 'stringArrayFunction'
+    const int stringArrayFunctionArgc = 1;
+    v8::Handle<v8::FunctionTemplate> stringArrayFunctionArgv[stringArrayFunctionArgc] = { V8DOMString[]::GetRawTemplate() };
+    v8::Handle<v8::Signature> stringArrayFunctionSignature = v8::Signature::New(desc, stringArrayFunctionArgc, stringArrayFunctionArgv);
+    proto->Set(v8::String::NewSymbol("stringArrayFunction"), v8::FunctionTemplate::New(TestObjV8Internal::stringArrayFunctionCallback, v8Undefined(), stringArrayFunctionSignature));
+
+    // Custom Signature 'domStringListFunction'
+    const int domStringListFunctionArgc = 1;
+    v8::Handle<v8::FunctionTemplate> domStringListFunctionArgv[domStringListFunctionArgc] = { V8DOMStringList::GetRawTemplate() };
+    v8::Handle<v8::Signature> domStringListFunctionSignature = v8::Signature::New(desc, domStringListFunctionArgc, domStringListFunctionArgv);
+    proto->Set(v8::String::NewSymbol("domStringListFunction"), v8::FunctionTemplate::New(TestObjV8Internal::domStringListFunctionCallback, v8Undefined(), domStringListFunctionSignature));
+
     // Custom Signature 'convert1'
     const int convert1Argc = 1;
     v8::Handle<v8::FunctionTemplate> convert1Argv[convert1Argc] = { V8a::GetRawTemplate() };
@@ -2152,9 +2168,11 @@ static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestObjTemplate(v8::Persi
     return desc;
 }
 
-v8::Persistent<v8::FunctionTemplate> V8TestObj::GetRawTemplate()
+v8::Persistent<v8::FunctionTemplate> V8TestObj::GetRawTemplate(v8::Isolate* isolate)
 {
-    V8PerIsolateData* data = V8PerIsolateData::current();
+    if (!isolate)
+        isolate = v8::Isolate::GetCurrent();
+    V8PerIsolateData* data = V8PerIsolateData::from(isolate);
     V8PerIsolateData::TemplateMap::iterator result = data->rawTemplateMap().find(&info);
     if (result != data->rawTemplateMap().end())
         return result->value;
@@ -2165,9 +2183,11 @@ v8::Persistent<v8::FunctionTemplate> V8TestObj::GetRawTemplate()
     return templ;
 }
 
-v8::Persistent<v8::FunctionTemplate> V8TestObj::GetTemplate()
+v8::Persistent<v8::FunctionTemplate> V8TestObj::GetTemplate(v8::Isolate* isolate)
 {
-    V8PerIsolateData* data = V8PerIsolateData::current();
+    if (!isolate)
+        isolate = v8::Isolate::GetCurrent();
+    V8PerIsolateData* data = V8PerIsolateData::from(isolate);
     V8PerIsolateData::TemplateMap::iterator result = data->templateMap().find(&info);
     if (result != data->templateMap().end())
         return result->value;
@@ -2202,6 +2222,7 @@ void V8TestObj::installPerContextProperties(v8::Handle<v8::Object> instance, Tes
         V8DOMConfiguration::configureAttribute(instance, proto, attrData);
     }
 }
+
 void V8TestObj::installPerContextPrototypeProperties(v8::Handle<v8::Object> proto)
 {
     UNUSED_PARAM(proto);
@@ -2216,6 +2237,7 @@ void V8TestObj::installPerContextPrototypeProperties(v8::Handle<v8::Object> prot
         proto->Set(v8::String::NewSymbol("enabledPerContextMethod2"), v8::FunctionTemplate::New(TestObjV8Internal::enabledPerContextMethod2Callback, v8Undefined(), defaultSignature)->GetFunction());
     }
 }
+
 
 v8::Handle<v8::Object> V8TestObj::createWrapper(PassRefPtr<TestObj> impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
 {
@@ -2232,7 +2254,6 @@ v8::Handle<v8::Object> V8TestObj::createWrapper(PassRefPtr<TestObj> impl, v8::Ha
         wrapperHandle.MarkIndependent();
     return wrapper;
 }
-
 void V8TestObj::derefObject(void* object)
 {
     static_cast<TestObj*>(object)->deref();

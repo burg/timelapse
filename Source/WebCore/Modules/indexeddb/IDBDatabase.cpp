@@ -43,7 +43,6 @@
 #include "IDBTransaction.h"
 #include "IDBUpgradeNeededEvent.h"
 #include "IDBVersionChangeEvent.h"
-#include "IDBVersionChangeRequest.h"
 #include "ScriptCallStack.h"
 #include "ScriptExecutionContext.h"
 #include <limits>
@@ -186,7 +185,7 @@ PassRefPtr<IDBObjectStore> IDBDatabase::createObjectStore(const String& name, co
     int64_t objectStoreId = m_metadata.maxObjectStoreId + 1;
     m_backend->createObjectStore(m_versionChangeTransaction->id(), objectStoreId, name, keyPath, autoIncrement);
 
-    IDBObjectStoreMetadata metadata(name, objectStoreId, keyPath, autoIncrement, IDBObjectStoreBackendInterface::MinimumIndexId);
+    IDBObjectStoreMetadata metadata(name, objectStoreId, keyPath, autoIncrement, IDBDatabaseBackendInterface::MinimumIndexId);
     RefPtr<IDBObjectStore> objectStore = IDBObjectStore::create(metadata, m_versionChangeTransaction.get());
     m_metadata.objectStores.set(metadata.id, metadata);
     ++m_metadata.maxObjectStoreId;
@@ -243,19 +242,10 @@ PassRefPtr<IDBTransaction> IDBDatabase::transaction(ScriptExecutionContext* cont
         objectStoreIds.append(objectStoreId);
     }
 
-    // We need to create a new transaction synchronously. Locks are acquired asynchronously. Operations
-    // can be queued against the transaction at any point. They will start executing as soon as the
-    // appropriate locks have been acquired.
-    // Also note that each backend object corresponds to exactly one IDBTransaction object.
     int64_t transactionId = nextTransactionId();
-    RefPtr<IDBTransactionBackendInterface> transactionBackend = m_backend->createTransaction(transactionId, objectStoreIds, mode);
-    if (!transactionBackend) {
-        ASSERT(ec);
-        return 0;
-    }
+    m_backend->createTransaction(transactionId, m_databaseCallbacks, objectStoreIds, mode);
 
-    RefPtr<IDBTransaction> transaction = IDBTransaction::create(context, transactionId, transactionBackend, scope, mode, this);
-    transactionBackend->setCallbacks(transaction.get());
+    RefPtr<IDBTransaction> transaction = IDBTransaction::create(context, transactionId, scope, mode, this);
     return transaction.release();
 }
 

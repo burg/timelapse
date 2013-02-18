@@ -32,6 +32,7 @@
 #include "MonthInputType.h"
 
 #include "DateComponents.h"
+#include "FeatureObserver.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "InputTypeNames.h"
@@ -59,6 +60,7 @@ static const int monthStepScaleFactor = 1;
 
 PassOwnPtr<InputType> MonthInputType::create(HTMLInputElement* element)
 {
+    FeatureObserver::observe(element->document(), FeatureObserver::InputTypeMonth);
     return adoptPtr(new MonthInputType(element));
 }
 
@@ -155,7 +157,7 @@ String MonthInputType::formatDateTimeFieldsState(const DateTimeFieldsState& date
 void MonthInputType::setupLayoutParameters(DateTimeEditElement::LayoutParameters& layoutParameters, const DateComponents& date) const
 {
     layoutParameters.dateTimeFormat = layoutParameters.locale.monthFormat();
-    layoutParameters.fallbackDateTimeFormat = "MM/yyyy";
+    layoutParameters.fallbackDateTimeFormat = "yyyy-MM";
     if (!parseToDateComponents(element()->fastGetAttribute(minAttr), &layoutParameters.minimum))
         layoutParameters.minimum = DateComponents();
     if (!parseToDateComponents(element()->fastGetAttribute(maxAttr), &layoutParameters.maximum))

@@ -76,11 +76,15 @@ modules = [
             "DebuggerModel.js",
             "DebuggerScriptMapping.js",
             "FileManager.js",
+            "FileMapping.js",
+            "FileSystemMapping.js",
             "FileSystemModel.js",
+            "FileSystemWorkspaceProvider.js",
             "FileUtils.js",
             "HAREntry.js",
             "IndexedDBModel.js",
             "InspectorBackend.js",
+            "IsolatedFileSystemModel.js",
             "Linkifier.js",
             "NetworkLog.js",
             "NetworkUISourceCodeProvider.js",
@@ -335,6 +339,7 @@ modules = [
             "HeapSnapshotWorkerDispatcher.js",
             "JSHeapSnapshot.js",
             "NativeHeapGraph.js",
+            "NativeHeapSnapshot.js",
             "NativeMemorySnapshotView.js",
             "ProfileDataGridTree.js",
             "ProfilesPanel.js",
@@ -417,6 +422,7 @@ if not process_recursively:
     os.system("cat  " + inspector_path + "/" + "InjectedScriptSource.js" + " >> " + inspector_path + "/" + "InjectedScriptSourceTmp.js")
     command = compiler_command
     command += "    --externs " + inspector_path + "/" + "InjectedScriptExterns.js" + " \\\n"
+    command += "    --externs " + protocol_externs_path + " \\\n"
     command += "    --module " + jsmodule_name_prefix + "injected_script" + ":" + "1" + " \\\n"
     command += "        --js " + inspector_path + "/" + "InjectedScriptSourceTmp.js" + " \\\n"
     command += "\n"
@@ -428,6 +434,7 @@ if not process_recursively:
     os.system("cat  " + inspector_path + "/" + "InjectedScriptCanvasModuleSource.js" + " >> " + inspector_path + "/" + "InjectedScriptCanvasModuleSourceTmp.js")
     command = compiler_command
     command += "    --externs " + inspector_path + "/" + "InjectedScriptExterns.js" + " \\\n"
+    command += "    --externs " + protocol_externs_path + " \\\n"
     command += "    --module " + jsmodule_name_prefix + "injected_script" + ":" + "1" + " \\\n"
     command += "        --js " + inspector_path + "/" + "InjectedScriptCanvasModuleSourceTmp.js" + " \\\n"
     command += "\n"

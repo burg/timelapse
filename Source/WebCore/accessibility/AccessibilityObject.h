@@ -355,6 +355,15 @@ protected:
     
 public:
     virtual ~AccessibilityObject();
+
+    // After constructing an AccessibilityObject, it must be given a
+    // unique ID, then added to AXObjectCache, and finally init() must
+    // be called last.
+    void setAXObjectID(AXID axObjectID) { m_id = axObjectID; }
+    virtual void init() { }
+
+    // When the corresponding WebCore object that this AccessibilityObject
+    // wraps is deleted, it must be detached.
     virtual void detach();
     virtual bool isDetached() const;
 
@@ -429,6 +438,7 @@ public:
     bool isPopUpButton() const { return roleValue() == PopUpButtonRole; }
     bool isBlockquote() const;
     bool isLandmark() const;
+    bool isColorWell() const { return roleValue() == ColorWellRole; }
     
     virtual bool isChecked() const { return false; }
     virtual bool isEnabled() const { return false; }
@@ -560,12 +570,14 @@ public:
     virtual String ariaDescribedByAttribute() const { return String(); }
     const AtomicString& placeholderValue() const;
 
+    // Only if isColorWell()
+    virtual void colorValue(int& r, int& g, int& b) const { r = 0; g = 0; b = 0; }
+
     void setRoleValue(AccessibilityRole role) { m_role = role; }
     virtual AccessibilityRole roleValue() const { return m_role; }
 
     virtual AXObjectCache* axObjectCache() const;
     AXID axObjectID() const { return m_id; }
-    void setAXObjectID(AXID axObjectID) { m_id = axObjectID; }
     
     static AccessibilityObject* anchorElementForNode(Node*);
     virtual Element* anchorElement() const { return 0; }

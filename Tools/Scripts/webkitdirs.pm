@@ -1220,7 +1220,12 @@ sub determineIsChromiumNinja()
           $statMake = stat('Makefile.chromium')->mtime;
         }
 
-        $hasUpToDateNinjabuild = $statNinja > $statXcode && $statNinja > $statMake;
+        my $statVisualStudio = 0;
+        if (-e 'Source/WebKit/chromium/All.sln') {
+          $statVisualStudio = stat('Source/WebKit/chromium/All.sln')->mtime;
+        }
+
+        $hasUpToDateNinjabuild = $statNinja > $statXcode && $statNinja > $statMake && $statNinja > $statVisualStudio;
     }
     $isChromiumNinja = $hasUpToDateNinjabuild;
 }
@@ -2043,7 +2048,7 @@ sub mustReRunAutogen($@)
 
 sub buildAutotoolsProject($@)
 {
-    my ($project, $clean, $prefix, $makeArgs, $noWebKit2, @features) = @_;
+    my ($project, $clean, $prefix, $makeArgs, $noWebKit1, $noWebKit2, @features) = @_;
 
     my $make = 'make';
     my $dir = productDir();
@@ -2064,6 +2069,9 @@ sub buildAutotoolsProject($@)
     }
 
     my @buildArgs = @ARGV;
+    if ($noWebKit1) {
+        unshift(@buildArgs, "--disable-webkit1");
+    }
     if ($noWebKit2) {
         unshift(@buildArgs, "--disable-webkit2");
     }
@@ -2117,9 +2125,6 @@ sub buildAutotoolsProject($@)
         push @buildArgs, "--disable-debug";
     }
 
-    # Enable unstable features when building through build-webkit.
-    push @buildArgs, "--enable-unstable-features";
-
     if (checkForArgumentAndRemoveFromArrayRef("--update-gtk", \@buildArgs)) {
         # Force autogen to run, to catch the possibly updated libraries.
         system("rm -f previous-autogen-arguments.txt");
@@ -2168,7 +2173,7 @@ sub jhbuildWrapperPrefixIfNeeded()
         return @prefix;
     }
 
-    return "";
+    return ();
 }
 
 sub removeCMakeCache()
@@ -2484,13 +2489,13 @@ EOF
 
 sub buildGtkProject
 {
-    my ($project, $clean, $prefix, $makeArgs, $noWebKit2, @features) = @_;
+    my ($project, $clean, $prefix, $makeArgs, $noWebKit1, $noWebKit2, @features) = @_;
 
     if ($project ne "WebKit" and $project ne "JavaScriptCore" and $project ne "WTF") {
         die "Unsupported project: $project. Supported projects: WebKit, JavaScriptCore, WTF\n";
     }
 
-    return buildAutotoolsProject($project, $clean, $prefix, $makeArgs, $noWebKit2, @features);
+    return buildAutotoolsProject($project, $clean, $prefix, $makeArgs, $noWebKit1, $noWebKit2, @features);
 }
 
 sub buildChromiumMakefile($$@)
@@ -2595,7 +2600,7 @@ sub buildChromium($@)
     if (isDarwin() && !isChromiumAndroid() && !isChromiumMacMake() && !isChromiumNinja()) {
         # Mac build - builds the root xcode project.
         $result = buildXCodeProject("Source/WebKit/chromium/All", $clean, "-configuration", configuration(), @options);
-    } elsif (isCygwin() || isWindows()) {
+    } elsif ((isCygwin() || isWindows()) && !isChromiumNinja()) {
         # Windows build - builds the root visual studio solution.
         $result = buildChromiumVisualStudioProject("Source/WebKit/chromium/All.sln", $clean);
     } elsif (isChromiumNinja()) {
@@ -2723,7 +2728,7 @@ sub execMacWebKitAppForDebugging($)
             die "Targetting the Web Process is not compatible with using an XPC Service for the Web Process at this time.";
         }
         
-        my $webProcessShimPath = File::Spec->catfile($productDir, "WebProcessShim.dylib");
+        my $webProcessShimPath = File::Spec->catfile($productDir, "SecItemShim.dylib");
         my $webProcessPath = File::Spec->catdir($productDir, "WebProcess.app");
         my $webKit2ExecutablePath = File::Spec->catfile($productDir, "WebKit2.framework", "WebKit2");
 

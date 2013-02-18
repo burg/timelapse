@@ -53,7 +53,7 @@ typedef ListHashSet<RenderRegion*> RenderRegionList;
 
 class RenderFlowThread: public RenderBlock {
 public:
-    RenderFlowThread(Node*);
+    RenderFlowThread(Document*);
     virtual ~RenderFlowThread() { };
     
     virtual bool isRenderFlowThread() const { return true; }
@@ -154,7 +154,7 @@ protected:
     // Override if the flow thread implementation supports dispatching events when the flow layout is updated (e.g. for named flows)
     virtual void dispatchRegionLayoutUpdateEvent() { m_dispatchRegionLayoutUpdateEvent = false; }
 
-    void clearOverrideLogicalContentHeightInRegions(RenderRegion* startRegion = 0);
+    void initializeRegionsOverrideLogicalContentHeight(RenderRegion* = 0);
 
     RenderRegionList m_regionList;
 
@@ -203,13 +203,13 @@ protected:
 
 inline RenderFlowThread* toRenderFlowThread(RenderObject* object)
 {
-    ASSERT(!object || object->isRenderFlowThread());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderFlowThread());
     return static_cast<RenderFlowThread*>(object);
 }
 
 inline const RenderFlowThread* toRenderFlowThread(const RenderObject* object)
 {
-    ASSERT(!object || object->isRenderFlowThread());
+    ASSERT_WITH_SECURITY_IMPLICATION(!object || object->isRenderFlowThread());
     return static_cast<const RenderFlowThread*>(object);
 }
 

@@ -133,18 +133,18 @@ static inline int unicodeBidiAttributeForDirAuto(HTMLElement* element)
     return CSSValueWebkitIsolate;
 }
 
-static unsigned parseBorderWidthAttribute(const Attribute& attribute)
+unsigned HTMLElement::parseBorderWidthAttribute(const QualifiedName& name, const AtomicString& value) const
 {
-    ASSERT(attribute.name() == borderAttr);
+    ASSERT_UNUSED(name, name == borderAttr);
     unsigned borderWidth = 0;
-    if (!attribute.isEmpty())
-        parseHTMLNonNegativeInteger(attribute.value(), borderWidth);
+    if (value.isEmpty() || !parseHTMLNonNegativeInteger(value, borderWidth))
+        return hasLocalName(tableTag) ? 1 : borderWidth;
     return borderWidth;
 }
 
 void HTMLElement::applyBorderAttributeToStyle(const Attribute& attribute, StylePropertySet* style)
 {
-    addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderWidth, parseBorderWidthAttribute(attribute), CSSPrimitiveValue::CSS_PX);
+    addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderWidth, parseBorderWidthAttribute(attribute.name(), attribute.value()), CSSPrimitiveValue::CSS_PX);
     addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderStyle, CSSValueSolid);
 }
 
@@ -223,7 +223,7 @@ void HTMLElement::parseAttribute(const QualifiedName& name, const AtomicString& 
     else if (name == tabindexAttr) {
         int tabindex = 0;
         if (value.isEmpty())
-            clearTabIndexExplicitly();
+            clearTabIndexExplicitlyIfNeeded();
         else if (parseHTMLInteger(value, tabindex)) {
             // Clamp tabindex to the range of 'short' to match Firefox's behavior.
             setTabIndexExplicitly(max(static_cast<int>(std::numeric_limits<short>::min()), min(tabindex, static_cast<int>(std::numeric_limits<short>::max()))));
@@ -312,6 +312,8 @@ void HTMLElement::parseAttribute(const QualifiedName& name, const AtomicString& 
         setAttributeEventListener(eventNames().webkitAnimationEndEvent, createAttributeEventListener(this, name, value));
     } else if (name == onwebkittransitionendAttr) {
         setAttributeEventListener(eventNames().webkitTransitionEndEvent, createAttributeEventListener(this, name, value));
+    } else if (name == ontransitionendAttr) {
+        setAttributeEventListener(eventNames().transitionendEvent, createAttributeEventListener(this, name, value));
     } else if (name == oninputAttr) {
         setAttributeEventListener(eventNames().inputEvent, createAttributeEventListener(this, name, value));
     } else if (name == oninvalidAttr) {
@@ -852,7 +854,8 @@ TextDirection HTMLElement::directionalityIfhasDirAutoAttribute(bool& isAuto) con
 
 TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) const
 {
-    if (HTMLTextFormControlElement* textElement = toTextFormControl(const_cast<HTMLElement*>(this))) {
+    if (isHTMLTextFormControlElement(this)) {
+        HTMLTextFormControlElement* textElement = toHTMLTextFormControlElement(const_cast<HTMLElement*>(this));
         bool hasStrongDirectionality;
         Unicode::Direction textDirection = textElement->value().defaultWritingDirection(&hasStrongDirectionality);
         if (strongDirectionalityTextNode)

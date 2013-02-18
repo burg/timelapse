@@ -493,6 +493,21 @@ void WKPageCenterSelectionInVisibleArea(WKPageRef pageRef)
     return toImpl(pageRef)->centerSelectionInVisibleArea();
 }
 
+void WKPageFindStringMatches(WKPageRef pageRef, WKStringRef string, WKFindOptions options, unsigned maxMatchCount)
+{
+    toImpl(pageRef)->findStringMatches(toImpl(string)->string(), toFindOptions(options), maxMatchCount);
+}
+
+void WKPageGetImageForFindMatch(WKPageRef pageRef, int32_t matchIndex)
+{
+    toImpl(pageRef)->getImageForFindMatch(matchIndex);
+}
+
+void WKPageSelectFindMatch(WKPageRef pageRef, int32_t matchIndex)
+{
+    toImpl(pageRef)->selectFindMatch(matchIndex);
+}
+
 void WKPageFindString(WKPageRef pageRef, WKStringRef string, WKFindOptions options, unsigned maxMatchCount)
 {
     toImpl(pageRef)->findString(toImpl(string)->string(), toFindOptions(options), maxMatchCount);
@@ -520,6 +535,11 @@ void WKPageSetPageFindClient(WKPageRef pageRef, const WKPageFindClient* wkClient
     toImpl(pageRef)->initializeFindClient(wkClient);
 }
 
+void WKPageSetPageFindMatchesClient(WKPageRef pageRef, const WKPageFindMatchesClient* wkClient)
+{
+    toImpl(pageRef)->initializeFindMatchesClient(wkClient);
+}
+
 void WKPageSetPageFormClient(WKPageRef pageRef, const WKPageFormClient* wkClient)
 {
     toImpl(pageRef)->initializeFormClient(wkClient);
@@ -533,11 +553,6 @@ void WKPageSetPageLoaderClient(WKPageRef pageRef, const WKPageLoaderClient* wkCl
 void WKPageSetPagePolicyClient(WKPageRef pageRef, const WKPagePolicyClient* wkClient)
 {
     toImpl(pageRef)->initializePolicyClient(wkClient);
-}
-
-void WKPageSetPageResourceLoadClient(WKPageRef pageRef, const WKPageResourceLoadClient* wkClient)
-{
-    toImpl(pageRef)->initializeResourceLoadClient(wkClient);
 }
 
 void WKPageSetPageUIClient(WKPageRef pageRef, const WKPageUIClient* wkClient)

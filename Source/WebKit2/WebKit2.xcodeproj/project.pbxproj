@@ -194,6 +194,8 @@
 		1A91010B1268C8CA001842F5 /* FindIndicatorWindow.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1A9101091268C8CA001842F5 /* FindIndicatorWindow.mm */; };
 		1A92DC1112F8BA460017AF65 /* LayerTreeContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 1A92DC1012F8BA460017AF65 /* LayerTreeContext.h */; };
 		1A92DC1312F8BAB90017AF65 /* LayerTreeContextMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1A92DC1212F8BAB90017AF65 /* LayerTreeContextMac.mm */; };
+		1A97E07616A5F9E0000BC9E5 /* LayerTreeHostMac.h in Headers */ = {isa = PBXBuildFile; fileRef = 1A97E07316A5F578000BC9E5 /* LayerTreeHostMac.h */; };
+		1A97E07716A5F9E0000BC9E5 /* LayerTreeHostMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1A97E07416A5F578000BC9E5 /* LayerTreeHostMac.mm */; };
 		1A9FBA8D13FF04E600DEED67 /* PluginComplexTextInputState.h in Headers */ = {isa = PBXBuildFile; fileRef = 1A9FBA8C13FF04E600DEED67 /* PluginComplexTextInputState.h */; };
 		1AA2E51D12E4C05E00BC4966 /* CGUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = 1AA2E51B12E4C05E00BC4966 /* CGUtilities.h */; };
 		1AA2E51E12E4C05E00BC4966 /* CGUtilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1AA2E51C12E4C05E00BC4966 /* CGUtilities.cpp */; };
@@ -468,6 +470,8 @@
 		51795571162877D200FA43B6 /* NetworkProcessCreationParameters.h in Headers */ = {isa = PBXBuildFile; fileRef = 51A8A60F1627F2BD000D90E9 /* NetworkProcessCreationParameters.h */; };
 		517CF0E3163A486C00C2950E /* NetworkProcessConnectionMessageReceiver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 517CF0E1163A486C00C2950E /* NetworkProcessConnectionMessageReceiver.cpp */; };
 		517CF0E4163A486C00C2950E /* NetworkProcessConnectionMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = 517CF0E2163A486C00C2950E /* NetworkProcessConnectionMessages.h */; };
+		51815B9F16A622210054501F /* SyncNetworkResourceLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51815B9D16A622210054501F /* SyncNetworkResourceLoader.cpp */; };
+		51815BA016A622210054501F /* SyncNetworkResourceLoader.h in Headers */ = {isa = PBXBuildFile; fileRef = 51815B9E16A622210054501F /* SyncNetworkResourceLoader.h */; };
 		51829DA51637C70C000953D6 /* NetworkResourceLoadScheduler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51829DA31637C70C000953D6 /* NetworkResourceLoadScheduler.cpp */; };
 		51829DA61637C70C000953D6 /* NetworkResourceLoadScheduler.h in Headers */ = {isa = PBXBuildFile; fileRef = 51829DA41637C70C000953D6 /* NetworkResourceLoadScheduler.h */; };
 		51834592134532E90092B696 /* WebIconDatabaseClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51834590134532E80092B696 /* WebIconDatabaseClient.cpp */; };
@@ -482,6 +486,8 @@
 		518D2CAE12D5153B003BB93B /* WebBackForwardListItem.h in Headers */ = {isa = PBXBuildFile; fileRef = 518D2CAC12D5153B003BB93B /* WebBackForwardListItem.h */; };
 		518D2CCA12D51DFB003BB93B /* SessionState.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 518D2CC812D51DFB003BB93B /* SessionState.cpp */; };
 		518D2CCB12D51DFB003BB93B /* SessionState.h in Headers */ = {isa = PBXBuildFile; fileRef = 518D2CC912D51DFB003BB93B /* SessionState.h */; };
+		519B4FF416A9EA970066874D /* SchedulableLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 519B4FF216A9EA970066874D /* SchedulableLoader.cpp */; };
+		519B4FF516A9EA970066874D /* SchedulableLoader.h in Headers */ = {isa = PBXBuildFile; fileRef = 519B4FF316A9EA970066874D /* SchedulableLoader.h */; };
 		51A555F5128C6C47009ABCEC /* WKContextMenuItem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 51A555F3128C6C47009ABCEC /* WKContextMenuItem.cpp */; };
 		51A555F6128C6C47009ABCEC /* WKContextMenuItem.h in Headers */ = {isa = PBXBuildFile; fileRef = 51A555F4128C6C47009ABCEC /* WKContextMenuItem.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		51A55601128C6D92009ABCEC /* WKContextMenuItemTypes.h in Headers */ = {isa = PBXBuildFile; fileRef = 51A55600128C6D92009ABCEC /* WKContextMenuItemTypes.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -566,6 +572,8 @@
 		9F4F59441648B67F00493B7E /* SharedWorkerProcessProxyMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9F4F59431648B67F00493B7E /* SharedWorkerProcessProxyMac.mm */; };
 		9F54F88F16488E87007DF81A /* ChildProcessMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9F54F88E16488E87007DF81A /* ChildProcessMac.mm */; };
 		9F54F8951648AE0F007DF81A /* PluginProcessManagerMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9F54F8941648AE0E007DF81A /* PluginProcessManagerMac.mm */; };
+		9FB5F394169E6A80002C25BF /* WKContextPrivateMac.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9FB5F392169E6A80002C25BF /* WKContextPrivateMac.cpp */; };
+		9FB5F395169E6A80002C25BF /* WKContextPrivateMac.h in Headers */ = {isa = PBXBuildFile; fileRef = 9FB5F393169E6A80002C25BF /* WKContextPrivateMac.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		B62E7310143047A60069EC35 /* WKHitTestResult.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B62E730F143047A60069EC35 /* WKHitTestResult.cpp */; };
 		B62E7312143047B00069EC35 /* WKHitTestResult.h in Headers */ = {isa = PBXBuildFile; fileRef = B62E7311143047B00069EC35 /* WKHitTestResult.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		B63403F914910D57001070B5 /* APIObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B63403F814910D57001070B5 /* APIObject.cpp */; };
@@ -642,7 +650,6 @@
 		BC111B51112F619200337BAB /* PageClientImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC111B4C112F619200337BAB /* PageClientImpl.mm */; };
 		BC111B5D112F629800337BAB /* WebEventFactory.h in Headers */ = {isa = PBXBuildFile; fileRef = BC111B5B112F629800337BAB /* WebEventFactory.h */; };
 		BC111B5E112F629800337BAB /* WebEventFactory.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC111B5C112F629800337BAB /* WebEventFactory.mm */; };
-		BC131BC911726C2800B69727 /* CoreIPCMessageKinds.h in Headers */ = {isa = PBXBuildFile; fileRef = BC131BC811726C2800B69727 /* CoreIPCMessageKinds.h */; };
 		BC14DF77120B5B7900826C0C /* InjectedBundleScriptWorld.h in Headers */ = {isa = PBXBuildFile; fileRef = BC14DF75120B5B7900826C0C /* InjectedBundleScriptWorld.h */; };
 		BC14DF78120B5B7900826C0C /* InjectedBundleScriptWorld.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BC14DF76120B5B7900826C0C /* InjectedBundleScriptWorld.cpp */; };
 		BC14DF9E120B635F00826C0C /* WKBundleScriptWorld.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BC14DF9C120B635F00826C0C /* WKBundleScriptWorld.cpp */; };
@@ -799,8 +806,6 @@
 		BC857FE612B843D800EDEB2E /* WKOpenPanelParameters.h in Headers */ = {isa = PBXBuildFile; fileRef = BC857FE412B843D800EDEB2E /* WKOpenPanelParameters.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		BC85806212B8505700EDEB2E /* WKOpenPanelResultListener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BC1DFE8E12B31CA8005DF730 /* WKOpenPanelResultListener.cpp */; };
 		BC85806312B8505700EDEB2E /* WKOpenPanelParameters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BC857FE512B843D800EDEB2E /* WKOpenPanelParameters.cpp */; };
-		BC858A2012C0357B00EDEB2E /* WebResourceLoadClient.h in Headers */ = {isa = PBXBuildFile; fileRef = BC858A1E12C0357B00EDEB2E /* WebResourceLoadClient.h */; };
-		BC858A2112C0357B00EDEB2E /* WebResourceLoadClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BC858A1F12C0357B00EDEB2E /* WebResourceLoadClient.cpp */; };
 		BC8699B5116AADAA002A925B /* WKView.h in Headers */ = {isa = PBXBuildFile; fileRef = BC8699B2116AADAA002A925B /* WKView.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		BC8699B6116AADAA002A925B /* WKView.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC8699B3116AADAA002A925B /* WKView.mm */; };
 		BC8699B7116AADAA002A925B /* WKViewInternal.h in Headers */ = {isa = PBXBuildFile; fileRef = BC8699B4116AADAA002A925B /* WKViewInternal.h */; };
@@ -829,7 +834,6 @@
 		BC9BA50816991C3C00E44616 /* ChildProcessMain.mm in Sources */ = {isa = PBXBuildFile; fileRef = BC9BA50616991C3C00E44616 /* ChildProcessMain.mm */; };
 		BC9BA50916991C3C00E44616 /* ChildProcessMain.h in Headers */ = {isa = PBXBuildFile; fileRef = BC9BA50716991C3C00E44616 /* ChildProcessMain.h */; };
 		BC9FA520160D3B430054DF9A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BC3DE46815A91763008D26FC /* Foundation.framework */; };
-		BC9FA522160D4A0C0054DF9A /* com.apple.WebKit.PluginProcess.sb in Resources */ = {isa = PBXBuildFile; fileRef = E1967E35150AB5D500C73169 /* com.apple.WebKit.PluginProcess.sb */; };
 		BC9FA523160D4A0F0054DF9A /* com.apple.WebProcess.sb in Resources */ = {isa = PBXBuildFile; fileRef = E1967E37150AB5E200C73169 /* com.apple.WebProcess.sb */; };
 		BCA0EF7F12331E78007D3CFB /* WebUndoStep.h in Headers */ = {isa = PBXBuildFile; fileRef = BCA0EF7D12331E78007D3CFB /* WebUndoStep.h */; };
 		BCA0EF8012331E78007D3CFB /* WebUndoStep.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BCA0EF7E12331E78007D3CFB /* WebUndoStep.cpp */; };
@@ -986,18 +990,14 @@
 		C0337DD3127A2A0E008FF4F4 /* WebKeyboardEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0337DD2127A2A0E008FF4F4 /* WebKeyboardEvent.cpp */; };
 		C0337DD8127A51B6008FF4F4 /* WebTouchEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0337DD7127A51B6008FF4F4 /* WebTouchEvent.cpp */; };
 		C0337DDD127A521C008FF4F4 /* WebPlatformTouchPoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0337DDC127A521C008FF4F4 /* WebPlatformTouchPoint.cpp */; };
-		C03A136C133BEBF900D767D1 /* LayerTreeHostCAMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = C03A136B133BEBF900D767D1 /* LayerTreeHostCAMac.mm */; };
-		C064504A133BE709003470E2 /* LayerTreeHostCA.h in Headers */ = {isa = PBXBuildFile; fileRef = C098A053133BE1C500B199A4 /* LayerTreeHostCA.h */; };
 		C06C6095124C144B0001682F /* WebPageCreationParameters.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C06C6093124C14430001682F /* WebPageCreationParameters.cpp */; };
 		C09AE5E9125257C20025825D /* WKNativeEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = C09AE5E8125257C20025825D /* WKNativeEvent.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C0CE72A01247E71D00BC0EC4 /* WebPageMessageReceiver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0CE729E1247E71D00BC0EC4 /* WebPageMessageReceiver.cpp */; };
 		C0CE72A11247E71D00BC0EC4 /* WebPageMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = C0CE729F1247E71D00BC0EC4 /* WebPageMessages.h */; };
 		C0CE72AD1247E78D00BC0EC4 /* HandleMessage.h in Headers */ = {isa = PBXBuildFile; fileRef = C0CE72AC1247E78D00BC0EC4 /* HandleMessage.h */; };
-		C0D74DDE133BE2D90089CD44 /* LayerTreeHostCA.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C098A054133BE1C500B199A4 /* LayerTreeHostCA.cpp */; };
 		C0E3AA7A1209E83000A49D01 /* ModuleMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = C0E3AA481209E45000A49D01 /* ModuleMac.mm */; };
 		C0E3AA7B1209E83500A49D01 /* Module.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C0E3AA451209E2BA00A49D01 /* Module.cpp */; };
 		C0E3AA7C1209E83C00A49D01 /* Module.h in Headers */ = {isa = PBXBuildFile; fileRef = C0E3AA441209E2BA00A49D01 /* Module.h */; };
-		C0FA52431345694A0028E8C2 /* LayerTreeHostCAMac.h in Headers */ = {isa = PBXBuildFile; fileRef = C0FA52421345694A0028E8C2 /* LayerTreeHostCAMac.h */; };
 		C45A6E2A15CF6D970043C6F1 /* InterpretedKeyCommands.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C45A6E2815CF6D970043C6F1 /* InterpretedKeyCommands.cpp */; };
 		C45A6E2B15CF6D970043C6F1 /* InterpretedKeyCommands.h in Headers */ = {isa = PBXBuildFile; fileRef = C45A6E2915CF6D970043C6F1 /* InterpretedKeyCommands.h */; };
 		C517388112DF8F4F00EE3F47 /* DragControllerAction.h in Headers */ = {isa = PBXBuildFile; fileRef = C517388012DF8F4F00EE3F47 /* DragControllerAction.h */; };
@@ -1044,7 +1044,6 @@
 		E18E6918169B667B009B6670 /* SecItemShimProxyMessages.h in Headers */ = {isa = PBXBuildFile; fileRef = E18E6914169B667B009B6670 /* SecItemShimProxyMessages.h */; };
 		E19582D3153CBFD700B60875 /* PDFKitImports.h in Headers */ = {isa = PBXBuildFile; fileRef = E19582D2153CBFD700B60875 /* PDFKitImports.h */; };
 		E19582D6153CC05400B60875 /* PDFKitImports.mm in Sources */ = {isa = PBXBuildFile; fileRef = E19582D4153CC05300B60875 /* PDFKitImports.mm */; };
-		E1967E36150AB5D500C73169 /* com.apple.WebKit.PluginProcess.sb in Resources */ = {isa = PBXBuildFile; fileRef = E1967E35150AB5D500C73169 /* com.apple.WebKit.PluginProcess.sb */; };
 		E1967E38150AB5E200C73169 /* com.apple.WebProcess.sb in Resources */ = {isa = PBXBuildFile; fileRef = E1967E37150AB5E200C73169 /* com.apple.WebProcess.sb */; };
 		E199875E142C045400BB2DE7 /* SimplePDFPlugin.mm in Sources */ = {isa = PBXBuildFile; fileRef = E199875C142BFC9700BB2DE7 /* SimplePDFPlugin.mm */; };
 		E1A31732134CEA6C007C9A4F /* AttributedString.h in Headers */ = {isa = PBXBuildFile; fileRef = E1A31731134CEA6C007C9A4F /* AttributedString.h */; };
@@ -1056,6 +1055,8 @@
 		E1B78473163F253E0007B692 /* RemoteNetworkingContext.mm in Sources */ = {isa = PBXBuildFile; fileRef = E1B78472163F253E0007B692 /* RemoteNetworkingContext.mm */; };
 		E1CC1B9012D7EADF00625838 /* PrintInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = E1CC1B8E12D7EADF00625838 /* PrintInfo.h */; };
 		E1CC1B9112D7EADF00625838 /* PrintInfoMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = E1CC1B8F12D7EADF00625838 /* PrintInfoMac.mm */; };
+		E1E552C416AE065F004ED653 /* SandboxInitialiationParametersMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = E1E552C216AE065E004ED653 /* SandboxInitialiationParametersMac.mm */; };
+		E1E552C516AE065F004ED653 /* SandboxInitializationParameters.h in Headers */ = {isa = PBXBuildFile; fileRef = E1E552C316AE065E004ED653 /* SandboxInitializationParameters.h */; };
 		E1EDFDA61628868E0039ECDA /* MainMacProcess.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A6FA31011E3921E00DB1371 /* MainMacProcess.cpp */; };
 		E1EDFDA7162886960039ECDA /* SharedWorkerProcessMainMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = E1EDFD9B16287D0B0039ECDA /* SharedWorkerProcessMainMac.mm */; };
 		E1EDFDA8162886990039ECDA /* SharedWorkerProcessMac.mm in Sources */ = {isa = PBXBuildFile; fileRef = E1EDFDA21628838C0039ECDA /* SharedWorkerProcessMac.mm */; };
@@ -1425,6 +1426,8 @@
 		1A9101091268C8CA001842F5 /* FindIndicatorWindow.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FindIndicatorWindow.mm; sourceTree = "<group>"; };
 		1A92DC1012F8BA460017AF65 /* LayerTreeContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LayerTreeContext.h; sourceTree = "<group>"; };
 		1A92DC1212F8BAB90017AF65 /* LayerTreeContextMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LayerTreeContextMac.mm; sourceTree = "<group>"; };
+		1A97E07316A5F578000BC9E5 /* LayerTreeHostMac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LayerTreeHostMac.h; sourceTree = "<group>"; };
+		1A97E07416A5F578000BC9E5 /* LayerTreeHostMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LayerTreeHostMac.mm; sourceTree = "<group>"; };
 		1A9FBA8C13FF04E600DEED67 /* PluginComplexTextInputState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PluginComplexTextInputState.h; sourceTree = "<group>"; };
 		1AA1C79A100E7FC50078DEBC /* WebCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = WebCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		1AA1C7DE100E846E0078DEBC /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = JavaScriptCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -1734,6 +1737,8 @@
 		517A33B4130B308C00F80CB5 /* WKApplicationCacheManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKApplicationCacheManager.h; sourceTree = "<group>"; };
 		517CF0E1163A486C00C2950E /* NetworkProcessConnectionMessageReceiver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NetworkProcessConnectionMessageReceiver.cpp; sourceTree = "<group>"; };
 		517CF0E2163A486C00C2950E /* NetworkProcessConnectionMessages.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetworkProcessConnectionMessages.h; sourceTree = "<group>"; };
+		51815B9D16A622210054501F /* SyncNetworkResourceLoader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SyncNetworkResourceLoader.cpp; path = NetworkProcess/SyncNetworkResourceLoader.cpp; sourceTree = "<group>"; };
+		51815B9E16A622210054501F /* SyncNetworkResourceLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SyncNetworkResourceLoader.h; path = NetworkProcess/SyncNetworkResourceLoader.h; sourceTree = "<group>"; };
 		51829DA31637C70C000953D6 /* NetworkResourceLoadScheduler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NetworkResourceLoadScheduler.cpp; path = NetworkProcess/NetworkResourceLoadScheduler.cpp; sourceTree = "<group>"; };
 		51829DA41637C70C000953D6 /* NetworkResourceLoadScheduler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetworkResourceLoadScheduler.h; path = NetworkProcess/NetworkResourceLoadScheduler.h; sourceTree = "<group>"; };
 		51834590134532E80092B696 /* WebIconDatabaseClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebIconDatabaseClient.cpp; sourceTree = "<group>"; };
@@ -1748,6 +1753,8 @@
 		518D2CAC12D5153B003BB93B /* WebBackForwardListItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebBackForwardListItem.h; sourceTree = "<group>"; };
 		518D2CC812D51DFB003BB93B /* SessionState.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SessionState.cpp; sourceTree = "<group>"; };
 		518D2CC912D51DFB003BB93B /* SessionState.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SessionState.h; sourceTree = "<group>"; };
+		519B4FF216A9EA970066874D /* SchedulableLoader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SchedulableLoader.cpp; path = NetworkProcess/SchedulableLoader.cpp; sourceTree = "<group>"; };
+		519B4FF316A9EA970066874D /* SchedulableLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SchedulableLoader.h; path = NetworkProcess/SchedulableLoader.h; sourceTree = "<group>"; };
 		51A555F3128C6C47009ABCEC /* WKContextMenuItem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WKContextMenuItem.cpp; sourceTree = "<group>"; };
 		51A555F4128C6C47009ABCEC /* WKContextMenuItem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKContextMenuItem.h; sourceTree = "<group>"; };
 		51A55600128C6D92009ABCEC /* WKContextMenuItemTypes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKContextMenuItemTypes.h; sourceTree = "<group>"; };
@@ -1849,6 +1856,8 @@
 		9F4F59431648B67F00493B7E /* SharedWorkerProcessProxyMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = SharedWorkerProcessProxyMac.mm; sourceTree = "<group>"; };
 		9F54F88E16488E87007DF81A /* ChildProcessMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ChildProcessMac.mm; sourceTree = "<group>"; };
 		9F54F8941648AE0E007DF81A /* PluginProcessManagerMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PluginProcessManagerMac.mm; sourceTree = "<group>"; };
+		9FB5F392169E6A80002C25BF /* WKContextPrivateMac.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = WKContextPrivateMac.cpp; path = mac/WKContextPrivateMac.cpp; sourceTree = "<group>"; };
+		9FB5F393169E6A80002C25BF /* WKContextPrivateMac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = WKContextPrivateMac.h; path = mac/WKContextPrivateMac.h; sourceTree = "<group>"; };
 		A72D5D7F1236CBA800A88B15 /* WebSerializedScriptValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebSerializedScriptValue.h; sourceTree = "<group>"; };
 		B396EA5512E0ED2D00F4FEB7 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 		B62E730F143047A60069EC35 /* WKHitTestResult.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WKHitTestResult.cpp; sourceTree = "<group>"; };
@@ -1931,7 +1940,6 @@
 		BC111B5C112F629800337BAB /* WebEventFactory.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebEventFactory.mm; sourceTree = "<group>"; };
 		BC122FA3132707F300F7EAC1 /* PluginProcess.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = PluginProcess.xcconfig; sourceTree = "<group>"; };
 		BC122FA61327087400F7EAC1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = PluginProcess/Info.plist; sourceTree = "<group>"; };
-		BC131BC811726C2800B69727 /* CoreIPCMessageKinds.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CoreIPCMessageKinds.h; sourceTree = "<group>"; };
 		BC14DF75120B5B7900826C0C /* InjectedBundleScriptWorld.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InjectedBundleScriptWorld.h; sourceTree = "<group>"; };
 		BC14DF76120B5B7900826C0C /* InjectedBundleScriptWorld.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InjectedBundleScriptWorld.cpp; sourceTree = "<group>"; };
 		BC14DF9C120B635F00826C0C /* WKBundleScriptWorld.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WKBundleScriptWorld.cpp; sourceTree = "<group>"; };
@@ -1979,7 +1987,7 @@
 		BC33E0D012408E8600360F3F /* InjectedBundleRangeHandle.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InjectedBundleRangeHandle.cpp; sourceTree = "<group>"; };
 		BC39C4331626366F008BC689 /* WKDOMRange.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WKDOMRange.mm; sourceTree = "<group>"; };
 		BC39C4341626366F008BC689 /* WKDOMRange.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKDOMRange.h; sourceTree = "<group>"; };
-		BC3DE46615A91763008D26FC /* com.apple.WebKit2.WebProcessService.xpc */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = com.apple.WebKit2.WebProcessService.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
+		BC3DE46615A91763008D26FC /* com.apple.WebKit.WebContent.xpc */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = com.apple.WebKit.WebContent.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
 		BC3DE46815A91763008D26FC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		BC4075D7124FF0270068F20A /* WKArray.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WKArray.cpp; sourceTree = "<group>"; };
 		BC4075D8124FF0270068F20A /* WKArray.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKArray.h; sourceTree = "<group>"; };
@@ -2090,8 +2098,6 @@
 		BC857FB412B830E600EDEB2E /* WebOpenPanelParameters.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebOpenPanelParameters.cpp; sourceTree = "<group>"; };
 		BC857FE412B843D800EDEB2E /* WKOpenPanelParameters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKOpenPanelParameters.h; sourceTree = "<group>"; };
 		BC857FE512B843D800EDEB2E /* WKOpenPanelParameters.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WKOpenPanelParameters.cpp; sourceTree = "<group>"; };
-		BC858A1E12C0357B00EDEB2E /* WebResourceLoadClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebResourceLoadClient.h; sourceTree = "<group>"; };
-		BC858A1F12C0357B00EDEB2E /* WebResourceLoadClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebResourceLoadClient.cpp; sourceTree = "<group>"; };
 		BC8699B2116AADAA002A925B /* WKView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKView.h; sourceTree = "<group>"; };
 		BC8699B3116AADAA002A925B /* WKView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WKView.mm; sourceTree = "<group>"; };
 		BC8699B4116AADAA002A925B /* WKViewInternal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKViewInternal.h; sourceTree = "<group>"; };
@@ -2137,12 +2143,13 @@
 		BCA8C6A711E3BA5F00812FB7 /* InjectedBundlePageLoaderClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InjectedBundlePageLoaderClient.h; sourceTree = "<group>"; };
 		BCA8C6AD11E3C08700812FB7 /* InjectedBundlePageUIClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InjectedBundlePageUIClient.cpp; sourceTree = "<group>"; };
 		BCA8C6AE11E3C08700812FB7 /* InjectedBundlePageUIClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InjectedBundlePageUIClient.h; sourceTree = "<group>"; };
-		BCA8D46A15BCE160009DC1F1 /* WebProcessService.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = WebProcessService.xcconfig; sourceTree = "<group>"; };
 		BCAC111D12C92C1F00B08EEE /* WebDatabaseManagerProxyClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebDatabaseManagerProxyClient.h; sourceTree = "<group>"; };
 		BCAC111E12C92C1F00B08EEE /* WebDatabaseManagerProxyClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebDatabaseManagerProxyClient.cpp; sourceTree = "<group>"; };
-		BCAE9DE9160C097400A33217 /* com.apple.WebKit2.WebProcessServiceForWebKitDevelopment.xpc */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = com.apple.WebKit2.WebProcessServiceForWebKitDevelopment.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
+		BCACC40D16B0B7BE00B6E092 /* BaseXPCService.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BaseXPCService.xcconfig; sourceTree = "<group>"; };
+		BCACC40E16B0B8A800B6E092 /* WebContentService.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = WebContentService.xcconfig; sourceTree = "<group>"; };
+		BCACC40F16B0B8A800B6E092 /* WebContentService.Development.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = WebContentService.Development.xcconfig; sourceTree = "<group>"; };
+		BCAE9DE9160C097400A33217 /* com.apple.WebKit.WebContentForDevelopment.xpc */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = com.apple.WebKit.WebContentForDevelopment.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
 		BCAE9DEF160C097500A33217 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		BCAE9E00160C0B4100A33217 /* WebProcessServiceForWebKitDevelopment.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = WebProcessServiceForWebKitDevelopment.xcconfig; sourceTree = "<group>"; };
 		BCAE9E01160C12DA00A33217 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = WebProcessService/Info.plist; sourceTree = "<group>"; };
 		BCAE9E04160C137800A33217 /* WebProcessServiceForWebKitDevelopmentMain.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebProcessServiceForWebKitDevelopmentMain.mm; sourceTree = "<group>"; };
 		BCAE9E06160C139A00A33217 /* WebProcessServiceMain.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = WebProcessServiceMain.mm; path = WebProcessService/WebProcessServiceMain.mm; sourceTree = "<group>"; };
@@ -2286,11 +2293,8 @@
 		C0337DD2127A2A0E008FF4F4 /* WebKeyboardEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebKeyboardEvent.cpp; sourceTree = "<group>"; };
 		C0337DD7127A51B6008FF4F4 /* WebTouchEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebTouchEvent.cpp; sourceTree = "<group>"; };
 		C0337DDC127A521C008FF4F4 /* WebPlatformTouchPoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebPlatformTouchPoint.cpp; sourceTree = "<group>"; };
-		C03A136B133BEBF900D767D1 /* LayerTreeHostCAMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LayerTreeHostCAMac.mm; sourceTree = "<group>"; };
 		C06C6093124C14430001682F /* WebPageCreationParameters.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebPageCreationParameters.cpp; sourceTree = "<group>"; };
 		C06C6094124C14430001682F /* WebPageCreationParameters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebPageCreationParameters.h; sourceTree = "<group>"; };
-		C098A053133BE1C500B199A4 /* LayerTreeHostCA.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LayerTreeHostCA.h; sourceTree = "<group>"; };
-		C098A054133BE1C500B199A4 /* LayerTreeHostCA.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LayerTreeHostCA.cpp; sourceTree = "<group>"; };
 		C09AE5E8125257C20025825D /* WKNativeEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WKNativeEvent.h; sourceTree = "<group>"; };
 		C0CE72581247E4DA00BC0EC4 /* WebPage.messages.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = WebPage.messages.in; sourceTree = "<group>"; };
 		C0CE729E1247E71D00BC0EC4 /* WebPageMessageReceiver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = WebPageMessageReceiver.cpp; sourceTree = "<group>"; };
@@ -2302,7 +2306,6 @@
 		C0E3AA441209E2BA00A49D01 /* Module.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Module.h; sourceTree = "<group>"; };
 		C0E3AA451209E2BA00A49D01 /* Module.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Module.cpp; sourceTree = "<group>"; };
 		C0E3AA481209E45000A49D01 /* ModuleMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ModuleMac.mm; sourceTree = "<group>"; };
-		C0FA52421345694A0028E8C2 /* LayerTreeHostCAMac.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LayerTreeHostCAMac.h; sourceTree = "<group>"; };
 		C45A6E2815CF6D970043C6F1 /* InterpretedKeyCommands.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = InterpretedKeyCommands.cpp; path = UIProcess/timelapse/InterpretedKeyCommands.cpp; sourceTree = SOURCE_ROOT; };
 		C45A6E2915CF6D970043C6F1 /* InterpretedKeyCommands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InterpretedKeyCommands.h; path = UIProcess/timelapse/InterpretedKeyCommands.h; sourceTree = SOURCE_ROOT; };
 		C517388012DF8F4F00EE3F47 /* DragControllerAction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DragControllerAction.h; sourceTree = "<group>"; };
@@ -2354,7 +2357,6 @@
 		E179FD9E134D38250015B883 /* ArgumentCodersMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = ArgumentCodersMac.mm; sourceTree = "<group>"; };
 		E17BF99514D0A73E00A5A069 /* NetscapeSandboxFunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NetscapeSandboxFunctions.h; sourceTree = "<group>"; };
 		E17BF99714D0AA8300A5A069 /* NetscapeSandboxFunctions.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = NetscapeSandboxFunctions.mm; sourceTree = "<group>"; };
-		E17BF99914D0CBF100A5A069 /* com.apple.WebKit.PluginProcess.sb.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = com.apple.WebKit.PluginProcess.sb.in; sourceTree = "<group>"; };
 		E18C92F312DB9E7100CF2AEB /* PrintInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PrintInfo.cpp; sourceTree = "<group>"; };
 		E18E6909169B563F009B6670 /* SecItemShimProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SecItemShimProxy.cpp; sourceTree = "<group>"; };
 		E18E690A169B563F009B6670 /* SecItemShimProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecItemShimProxy.h; sourceTree = "<group>"; };
@@ -2368,7 +2370,6 @@
 		E18E6948169B77C8009B6670 /* SecItemShim.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecItemShim.h; sourceTree = "<group>"; };
 		E19582D2153CBFD700B60875 /* PDFKitImports.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PDFKitImports.h; sourceTree = "<group>"; };
 		E19582D4153CC05300B60875 /* PDFKitImports.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PDFKitImports.mm; sourceTree = "<group>"; };
-		E1967E35150AB5D500C73169 /* com.apple.WebKit.PluginProcess.sb */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = com.apple.WebKit.PluginProcess.sb; sourceTree = "<group>"; };
 		E1967E37150AB5E200C73169 /* com.apple.WebProcess.sb */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = com.apple.WebProcess.sb; sourceTree = "<group>"; };
 		E199875A142BF9B800BB2DE7 /* SimplePDFPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SimplePDFPlugin.h; path = PDF/SimplePDFPlugin.h; sourceTree = "<group>"; };
 		E199875C142BFC9700BB2DE7 /* SimplePDFPlugin.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = SimplePDFPlugin.mm; path = PDF/SimplePDFPlugin.mm; sourceTree = "<group>"; };
@@ -2380,6 +2381,8 @@
 		E1B78472163F253E0007B692 /* RemoteNetworkingContext.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = RemoteNetworkingContext.mm; sourceTree = "<group>"; };
 		E1CC1B8E12D7EADF00625838 /* PrintInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PrintInfo.h; sourceTree = "<group>"; };
 		E1CC1B8F12D7EADF00625838 /* PrintInfoMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PrintInfoMac.mm; sourceTree = "<group>"; };
+		E1E552C216AE065E004ED653 /* SandboxInitialiationParametersMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = SandboxInitialiationParametersMac.mm; sourceTree = "<group>"; };
+		E1E552C316AE065E004ED653 /* SandboxInitializationParameters.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SandboxInitializationParameters.h; sourceTree = "<group>"; };
 		E1EDFD9816287BD10039ECDA /* SharedWorkerProcessMain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SharedWorkerProcessMain.h; sourceTree = "<group>"; };
 		E1EDFD9B16287D0B0039ECDA /* SharedWorkerProcessMainMac.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = SharedWorkerProcessMainMac.mm; sourceTree = "<group>"; };
 		E1EDFD9D16287F190039ECDA /* SharedWorkerProcess.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SharedWorkerProcess.h; sourceTree = "<group>"; };
@@ -2487,8 +2490,8 @@
 		034768DFFF38A50411DB9C8B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				BC3DE46615A91763008D26FC /* com.apple.WebKit2.WebProcessService.xpc */,
-				BCAE9DE9160C097400A33217 /* com.apple.WebKit2.WebProcessServiceForWebKitDevelopment.xpc */,
+				BC3DE46615A91763008D26FC /* com.apple.WebKit.WebContent.xpc */,
+				BCAE9DE9160C097400A33217 /* com.apple.WebKit.WebContentForDevelopment.xpc */,
 				510CC80E1613C79900D03ED3 /* NetworkProcess.app */,
 				BCDE094213272496001259FB /* PluginProcess.app */,
 				1AC25FB012A48EA700BD2671 /* PluginProcessShim.dylib */,
@@ -2610,7 +2613,6 @@
 			isa = PBXGroup;
 			children = (
 				E14E99F914D879C9001D221F /* add-entitlements.sh */,
-				E17BF99914D0CBF100A5A069 /* com.apple.WebKit.PluginProcess.sb.in */,
 				1A2D91A51281D739001EB962 /* PluginControllerProxyMac.mm */,
 				E14E99F814D879B4001D221F /* PluginProcess.entitlements */,
 				1AA4792212A59FD9008236C3 /* PluginProcessMac.mm */,
@@ -2644,6 +2646,7 @@
 			children = (
 				1A4F976A100E7B6600637A18 /* Base.xcconfig */,
 				5DAD73F1116FF90C00EE5396 /* BaseTarget.xcconfig */,
+				BCACC40D16B0B7BE00B6E092 /* BaseXPCService.xcconfig */,
 				1A4F976B100E7B6600637A18 /* DebugRelease.xcconfig */,
 				1A4F976C100E7B6600637A18 /* FeatureDefines.xcconfig */,
 				510CC8461613C7C600D03ED3 /* NetworkProcess.xcconfig */,
@@ -2651,10 +2654,10 @@
 				E13A8A4B16287A1B00392929 /* SharedWorkerProcess.xcconfig */,
 				5183B3931379F85C00E8754E /* Shim.xcconfig */,
 				1A4F976E100E7B6600637A18 /* Version.xcconfig */,
+				BCACC40E16B0B8A800B6E092 /* WebContentService.xcconfig */,
+				BCACC40F16B0B8A800B6E092 /* WebContentService.Development.xcconfig */,
 				BCB86F4B116AAACD00CE20B7 /* WebKit2.xcconfig */,
 				5DAD7294116FF70B00EE5396 /* WebProcess.xcconfig */,
-				BCA8D46A15BCE160009DC1F1 /* WebProcessService.xcconfig */,
-				BCAE9E00160C0B4100A33217 /* WebProcessServiceForWebKitDevelopment.xcconfig */,
 			);
 			path = Configurations;
 			sourceTree = "<group>";
@@ -2840,6 +2843,7 @@
 				F6A0C13F13281E6E0070430F /* ResourceCachesToClear.h */,
 				BC2D021612AC41CB00E732A3 /* SameDocumentNavigationType.h */,
 				1AAB4A8C1296F0A20023952F /* SandboxExtension.h */,
+				E1E552C316AE065E004ED653 /* SandboxInitializationParameters.h */,
 				33152973130D0CB200ED2483 /* SecurityOriginData.cpp */,
 				33152974130D0CB200ED2483 /* SecurityOriginData.h */,
 				518D2CC812D51DFB003BB93B /* SessionState.cpp */,
@@ -2987,7 +2991,6 @@
 				1AC41AC51263C88300054E94 /* BinarySemaphore.h */,
 				BC032DA210F437D10058C15A /* Connection.cpp */,
 				BC032DA310F437D10058C15A /* Connection.h */,
-				BC131BC811726C2800B69727 /* CoreIPCMessageKinds.h */,
 				1A8EFDFD1253CB6E00F7067F /* DataReference.cpp */,
 				1A8EFDF91253CAA200F7067F /* DataReference.h */,
 				C0CE72AC1247E78D00BC0EC4 /* HandleMessage.h */,
@@ -3197,6 +3200,10 @@
 				515705521657018C00101A90 /* NetworkResourceLoader.messages.in */,
 				51829DA31637C70C000953D6 /* NetworkResourceLoadScheduler.cpp */,
 				51829DA41637C70C000953D6 /* NetworkResourceLoadScheduler.h */,
+				519B4FF216A9EA970066874D /* SchedulableLoader.cpp */,
+				519B4FF316A9EA970066874D /* SchedulableLoader.h */,
+				51815B9D16A622210054501F /* SyncNetworkResourceLoader.cpp */,
+				51815B9E16A622210054501F /* SyncNetworkResourceLoader.h */,
 			);
 			name = NetworkProcess;
 			sourceTree = "<group>";
@@ -3350,6 +3357,8 @@
 		6EE849C41368D9040038D481 /* mac */ = {
 			isa = PBXGroup;
 			children = (
+				9FB5F392169E6A80002C25BF /* WKContextPrivateMac.cpp */,
+				9FB5F393169E6A80002C25BF /* WKContextPrivateMac.h */,
 				6EE849C61368D92D0038D481 /* WKInspectorPrivateMac.h */,
 				BCE17B7B1381F1170012A641 /* WKPagePrivateMac.cpp */,
 				BCE17B7C1381F1170012A641 /* WKPagePrivateMac.h */,
@@ -3466,7 +3475,6 @@
 		BC032D5E10F4372B0058C15A /* WebPage */ = {
 			isa = PBXGroup;
 			children = (
-				C098A052133BE1C500B199A4 /* ca */,
 				BC963D6C113DD19500574BE2 /* mac */,
 				93FC679D12D3CC7400A60610 /* DecoderAdapter.cpp */,
 				93FC679E12D3CC7400A60610 /* DecoderAdapter.h */,
@@ -3641,8 +3649,6 @@
 				33367632130C99B2006C9DE2 /* WebResourceCacheManagerProxy.cpp */,
 				33367633130C99B2006C9DE2 /* WebResourceCacheManagerProxy.h */,
 				33367634130C99B2006C9DE2 /* WebResourceCacheManagerProxy.messages.in */,
-				BC858A1F12C0357B00EDEB2E /* WebResourceLoadClient.cpp */,
-				BC858A1E12C0357B00EDEB2E /* WebResourceLoadClient.h */,
 				1A594AB8112A1FB6009DE7C7 /* WebUIClient.cpp */,
 				1A594AB9112A1FB6009DE7C7 /* WebUIClient.h */,
 			);
@@ -3856,6 +3862,7 @@
 				1AF1AC6A1651759E00C17D7F /* RemoteLayerTreeTransaction.h */,
 				1AF1AC691651759E00C17D7F /* RemoteLayerTreeTransaction.mm */,
 				1AAB4AA91296F1540023952F /* SandboxExtensionMac.mm */,
+				E1E552C216AE065E004ED653 /* SandboxInitialiationParametersMac.mm */,
 				51D1304F1382EAC000351EDD /* SecItemRequestData.cpp */,
 				51D130501382EAC000351EDD /* SecItemRequestData.h */,
 				51D130511382EAC000351EDD /* SecItemResponseData.cpp */,
@@ -4089,6 +4096,8 @@
 		BC963D6C113DD19500574BE2 /* mac */ = {
 			isa = PBXGroup;
 			children = (
+				1A97E07316A5F578000BC9E5 /* LayerTreeHostMac.h */,
+				1A97E07416A5F578000BC9E5 /* LayerTreeHostMac.mm */,
 				1AB16AEC164B41E400290D62 /* RemoteGraphicsLayer.h */,
 				1AB16AEB164B41E400290D62 /* RemoteGraphicsLayer.mm */,
 				1AB16AE8164B3A8800290D62 /* RemoteLayerTreeContext.h */,
@@ -4283,31 +4292,11 @@
 			path = cg;
 			sourceTree = "<group>";
 		};
-		C03A136A133BEBF900D767D1 /* mac */ = {
-			isa = PBXGroup;
-			children = (
-				C0FA52421345694A0028E8C2 /* LayerTreeHostCAMac.h */,
-				C03A136B133BEBF900D767D1 /* LayerTreeHostCAMac.mm */,
-			);
-			path = mac;
-			sourceTree = "<group>";
-		};
-		C098A052133BE1C500B199A4 /* ca */ = {
-			isa = PBXGroup;
-			children = (
-				C03A136A133BEBF900D767D1 /* mac */,
-				C098A054133BE1C500B199A4 /* LayerTreeHostCA.cpp */,
-				C098A053133BE1C500B199A4 /* LayerTreeHostCA.h */,
-			);
-			path = ca;
-			sourceTree = "<group>";
-		};
 		C0CE729D1247E71D00BC0EC4 /* Derived Sources */ = {
 			isa = PBXGroup;
 			children = (
 				512F58A012A883AD00629530 /* AuthenticationManagerMessageReceiver.cpp */,
 				512F58A112A883AD00629530 /* AuthenticationManagerMessages.h */,
-				E1967E35150AB5D500C73169 /* com.apple.WebKit.PluginProcess.sb */,
 				E1967E37150AB5E200C73169 /* com.apple.WebProcess.sb */,
 				2984F586164BA095004BC0C6 /* CustomProtocolManagerMessageReceiver.cpp */,
 				2984F587164BA095004BC0C6 /* CustomProtocolManagerMessages.h */,
@@ -4600,7 +4589,6 @@
 				37C4E9F6131C6E7E0029BD5A /* config.h in Headers */,
 				BC032DAB10F437D10058C15A /* Connection.h in Headers */,
 				5136183E163126DA00A99DDE /* ConnectionStack.h in Headers */,
-				BC131BC911726C2800B69727 /* CoreIPCMessageKinds.h in Headers */,
 				B878B615133428DC006888E9 /* CorrectionPanel.h in Headers */,
 				2989A414167D184B004F96D2 /* CustomProtocolManager.h in Headers */,
 				2984F589164BA095004BC0C6 /* CustomProtocolManagerMessages.h in Headers */,
@@ -4665,8 +4653,6 @@
 				BCE0937814FB128C001138D9 /* LayerHostingContext.h in Headers */,
 				1A92DC1112F8BA460017AF65 /* LayerTreeContext.h in Headers */,
 				1A186EEA12EF7618008E5F37 /* LayerTreeHost.h in Headers */,
-				C064504A133BE709003470E2 /* LayerTreeHostCA.h in Headers */,
-				C0FA52431345694A0028E8C2 /* LayerTreeHostCAMac.h in Headers */,
 				51A7F2F3125BF820008AEB1D /* Logging.h in Headers */,
 				BCC56F791159957D001CCAF9 /* MachPort.h in Headers */,
 				1A24B5F311F531E800C38269 /* MachUtilities.h in Headers */,
@@ -4935,7 +4921,6 @@
 				33367656130C9ECA006C9DE2 /* WebResourceCacheManagerMessages.h in Headers */,
 				33367636130C99B2006C9DE2 /* WebResourceCacheManagerProxy.h in Headers */,
 				33367658130C9ECB006C9DE2 /* WebResourceCacheManagerProxyMessages.h in Headers */,
-				BC858A2012C0357B00EDEB2E /* WebResourceLoadClient.h in Headers */,
 				510AFFBA16542048001BA05E /* WebResourceLoader.h in Headers */,
 				51F060E01654317F00F3281B /* WebResourceLoaderMessages.h in Headers */,
 				D3B9484911FF4B6500032B39 /* WebSearchPopupMenu.h in Headers */,
@@ -4992,6 +4977,7 @@
 				51A555F6128C6C47009ABCEC /* WKContextMenuItem.h in Headers */,
 				51A55601128C6D92009ABCEC /* WKContextMenuItemTypes.h in Headers */,
 				BCC938E11180DE440085E5FE /* WKContextPrivate.h in Headers */,
+				9FB5F395169E6A80002C25BF /* WKContextPrivateMac.h in Headers */,
 				3309345B1315B9980097A7BC /* WKCookieManager.h in Headers */,
 				512F58FA12A88A5400629530 /* WKCredential.h in Headers */,
 				518ACF1112B015F800B04B83 /* WKCredentialTypes.h in Headers */,
@@ -5085,6 +5071,10 @@
 				BC2E6E8E1141971500A63B1E /* WorkQueue.h in Headers */,
 				E179088F169BAA6A006904C7 /* SecItemShim.h in Headers */,
 				E1790891169BAA82006904C7 /* SecItemShimMessages.h in Headers */,
+				1A97E07616A5F9E0000BC9E5 /* LayerTreeHostMac.h in Headers */,
+				51815BA016A622210054501F /* SyncNetworkResourceLoader.h in Headers */,
+				519B4FF516A9EA970066874D /* SchedulableLoader.h in Headers */,
+				E1E552C516AE065F004ED653 /* SandboxInitializationParameters.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5189,9 +5179,9 @@
 			productReference = 8DC2EF5B0486A6940098B216 /* WebKit2.framework */;
 			productType = "com.apple.product-type.framework";
 		};
-		BC3DE46515A91763008D26FC /* WebProcessService */ = {
+		BC3DE46515A91763008D26FC /* WebContent */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = BC3DE47615A91764008D26FC /* Build configuration list for PBXNativeTarget "WebProcessService" */;
+			buildConfigurationList = BC3DE47615A91764008D26FC /* Build configuration list for PBXNativeTarget "WebContent" */;
 			buildPhases = (
 				BC3DE46215A91763008D26FC /* Sources */,
 				BCDC308D15FDB99A006B6695 /* Frameworks */,
@@ -5201,14 +5191,14 @@
 			);
 			dependencies = (
 			);
-			name = WebProcessService;
+			name = WebContent;
 			productName = WebKit2Service;
-			productReference = BC3DE46615A91763008D26FC /* com.apple.WebKit2.WebProcessService.xpc */;
+			productReference = BC3DE46615A91763008D26FC /* com.apple.WebKit.WebContent.xpc */;
 			productType = "com.apple.product-type.bundle";
 		};
-		BCAE9DE8160C097400A33217 /* WebProcessServiceForWebKitDevelopment */ = {
+		BCAE9DE8160C097400A33217 /* WebContent.Development */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = BCAE9DF6160C097500A33217 /* Build configuration list for PBXNativeTarget "WebProcessServiceForWebKitDevelopment" */;
+			buildConfigurationList = BCAE9DF6160C097500A33217 /* Build configuration list for PBXNativeTarget "WebContent.Development" */;
 			buildPhases = (
 				BCAE9DE5160C097400A33217 /* Sources */,
 				BCAE9DE6160C097400A33217 /* Frameworks */,
@@ -5218,9 +5208,9 @@
 			);
 			dependencies = (
 			);
-			name = WebProcessServiceForWebKitDevelopment;
+			name = WebContent.Development;
 			productName = WebProcessServiceForWebKitDevelopment;
-			productReference = BCAE9DE9160C097400A33217 /* com.apple.WebKit2.WebProcessServiceForWebKitDevelopment.xpc */;
+			productReference = BCAE9DE9160C097400A33217 /* com.apple.WebKit.WebContentForDevelopment.xpc */;
 			productType = "com.apple.product-type.bundle";
 		};
 		BCDE093313272496001259FB /* PluginProcess */ = {
@@ -5294,8 +5284,8 @@
 				C0CE72851247E66800BC0EC4 /* Derived Sources */,
 				1AC25FAF12A48EA700BD2671 /* PluginProcessShim */,
 				510031EA1379CACB00C8DFE4 /* SecItemShim */,
-				BC3DE46515A91763008D26FC /* WebProcessService */,
-				BCAE9DE8160C097400A33217 /* WebProcessServiceForWebKitDevelopment */,
+				BC3DE46515A91763008D26FC /* WebContent */,
+				BCAE9DE8160C097400A33217 /* WebContent.Development */,
 			);
 		};
 /* End PBXProject section */
@@ -5322,7 +5312,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BC9FA522160D4A0C0054DF9A /* com.apple.WebKit.PluginProcess.sb in Resources */,
 				BC9FA523160D4A0F0054DF9A /* com.apple.WebProcess.sb in Resources */,
 				1CBC945E16515ED200D68AAE /* Dock.pdf in Resources */,
 				8DC2EF530486A6940098B216 /* InfoPlist.strings in Resources */,
@@ -5349,7 +5338,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E1967E36150AB5D500C73169 /* com.apple.WebKit.PluginProcess.sb in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5473,17 +5461,17 @@
 			files = (
 			);
 			inputPaths = (
-				"$(BUILT_PRODUCTS_DIR)/com.apple.WebKit2.WebProcessService.xpc",
-				"$(BUILT_PRODUCTS_DIR)/com.apple.WebKit2.WebProcessServiceForWebKitDevelopment.xpc",
+				"$(BUILT_PRODUCTS_DIR)/com.apple.WebKit.WebContent.xpc",
+				"$(BUILT_PRODUCTS_DIR)/com.apple.WebKit.WebContent.Development.xpc",
 			);
 			name = "Copy XPC services for engineering builds";
 			outputPaths = (
-				"$(BUILT_PRODUCTS_DIR)/${WRAPPER_NAME}/WebKit2.framework/Versions/A/XPCServices/com.apple.WebKit2.WebProcessService.xpc",
-				"$(BUILT_PRODUCTS_DIR)/${WRAPPER_NAME}/WebKit2.framework/Versions/A/XPCServices/com.apple.WebKit2.WebProcessServiceForWebKitDevelopment.xpc",
+				"$(BUILT_PRODUCTS_DIR)/${WRAPPER_NAME}/WebKit2.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc",
+				"$(BUILT_PRODUCTS_DIR)/${WRAPPER_NAME}/WebKit2.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.Development.xpc",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if [[ \"${CONFIGURATION}\" == \"Production\" ]]; then\n    exit\nfi\n\nXPC_SERVICES_PATH=\"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/WebKit2.framework/Versions/A/XPCServices\"\nmkdir -p \"${XPC_SERVICES_PATH}\"\nditto \"${BUILT_PRODUCTS_DIR}/com.apple.WebKit2.WebProcessService.xpc\" \"${XPC_SERVICES_PATH}/com.apple.WebKit2.WebProcessService.xpc\"\nditto \"${BUILT_PRODUCTS_DIR}/com.apple.WebKit2.WebProcessServiceForWebKitDevelopment.xpc\" \"${XPC_SERVICES_PATH}/com.apple.WebKit2.WebProcessServiceForWebKitDevelopment.xpc\"\n";
+			shellScript = "if [[ \"${CONFIGURATION}\" == \"Production\" ]]; then\n    exit\nfi\n\nXPC_SERVICES_PATH=\"${BUILT_PRODUCTS_DIR}/${WRAPPER_NAME}/WebKit2.framework/Versions/A/XPCServices\"\nmkdir -p \"${XPC_SERVICES_PATH}\"\nditto \"${BUILT_PRODUCTS_DIR}/com.apple.WebKit.WebContent.xpc\" \"${XPC_SERVICES_PATH}/com.apple.WebKit.WebContent.xpc\"\nditto \"${BUILT_PRODUCTS_DIR}/com.apple.WebKit.WebContent.Development.xpc\" \"${XPC_SERVICES_PATH}/com.apple.WebKit.WebContent.Development.xpc\"\n";
 		};
 		C0CE72841247E66800BC0EC4 /* Generate Derived Sources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -5644,8 +5632,6 @@
 				BCE0937714FB128C001138D9 /* LayerHostingContext.mm in Sources */,
 				1A92DC1312F8BAB90017AF65 /* LayerTreeContextMac.mm in Sources */,
 				1A186EEB12EF7618008E5F37 /* LayerTreeHost.cpp in Sources */,
-				C0D74DDE133BE2D90089CD44 /* LayerTreeHostCA.cpp in Sources */,
-				C03A136C133BEBF900D767D1 /* LayerTreeHostCAMac.mm in Sources */,
 				51A7F2F5125BF8D4008AEB1D /* Logging.cpp in Sources */,
 				5160BFE113381DF900918999 /* Logging.mac.mm in Sources */,
 				1A24B5F211F531E800C38269 /* MachUtilities.cpp in Sources */,
@@ -5947,7 +5933,6 @@
 				33367655130C9ECA006C9DE2 /* WebResourceCacheManagerMessageReceiver.cpp in Sources */,
 				33367635130C99B2006C9DE2 /* WebResourceCacheManagerProxy.cpp in Sources */,
 				33367657130C9ECA006C9DE2 /* WebResourceCacheManagerProxyMessageReceiver.cpp in Sources */,
-				BC858A2112C0357B00EDEB2E /* WebResourceLoadClient.cpp in Sources */,
 				510AFFB916542048001BA05E /* WebResourceLoader.cpp in Sources */,
 				51F060E11654318500F3281B /* WebResourceLoaderMessageReceiver.cpp in Sources */,
 				51FB08FF1639DE1A00EC324A /* WebResourceLoadScheduler.cpp in Sources */,
@@ -5991,6 +5976,7 @@
 				BC4A6296147313A0006C681A /* WKConnectionRef.cpp in Sources */,
 				BCB9E24C1120E15C00A137E0 /* WKContext.cpp in Sources */,
 				51A555F5128C6C47009ABCEC /* WKContextMenuItem.cpp in Sources */,
+				9FB5F394169E6A80002C25BF /* WKContextPrivateMac.cpp in Sources */,
 				3309345A1315B9980097A7BC /* WKCookieManager.cpp in Sources */,
 				512F58F912A88A5400629530 /* WKCredential.cpp in Sources */,
 				BC4075F7124FF0270068F20A /* WKData.cpp in Sources */,
@@ -6065,6 +6051,10 @@
 				BC0092F8115837A300E0AE2A /* WorkQueueMac.cpp in Sources */,
 				E179088D169BAA62006904C7 /* SecItemShim.cpp in Sources */,
 				E1790890169BAA7F006904C7 /* SecItemShimMessageReceiver.cpp in Sources */,
+				1A97E07716A5F9E0000BC9E5 /* LayerTreeHostMac.mm in Sources */,
+				51815B9F16A622210054501F /* SyncNetworkResourceLoader.cpp in Sources */,
+				519B4FF416A9EA970066874D /* SchedulableLoader.cpp in Sources */,
+				E1E552C416AE065F004ED653 /* SandboxInitialiationParametersMac.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6135,12 +6125,12 @@
 		};
 		BCA8D46815BCE0D6009DC1F1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = BC3DE46515A91763008D26FC /* WebProcessService */;
+			target = BC3DE46515A91763008D26FC /* WebContent */;
 			targetProxy = BCA8D46715BCE0D6009DC1F1 /* PBXContainerItemProxy */;
 		};
 		BCAE9DFD160C0AB000A33217 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = BCAE9DE8160C097400A33217 /* WebProcessServiceForWebKitDevelopment */;
+			target = BCAE9DE8160C097400A33217 /* WebContent.Development */;
 			targetProxy = BCAE9DFC160C0AB000A33217 /* PBXContainerItemProxy */;
 		};
 		BCDE093413272496001259FB /* PBXTargetDependency */ = {
@@ -6365,42 +6355,42 @@
 		};
 		BC3DE47315A91764008D26FC /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BCA8D46A15BCE160009DC1F1 /* WebProcessService.xcconfig */;
+			baseConfigurationReference = BCACC40E16B0B8A800B6E092 /* WebContentService.xcconfig */;
 			buildSettings = {
 			};
 			name = Debug;
 		};
 		BC3DE47415A91764008D26FC /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BCA8D46A15BCE160009DC1F1 /* WebProcessService.xcconfig */;
+			baseConfigurationReference = BCACC40E16B0B8A800B6E092 /* WebContentService.xcconfig */;
 			buildSettings = {
 			};
 			name = Release;
 		};
 		BC3DE47515A91764008D26FC /* Production */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BCA8D46A15BCE160009DC1F1 /* WebProcessService.xcconfig */;
+			baseConfigurationReference = BCACC40E16B0B8A800B6E092 /* WebContentService.xcconfig */;
 			buildSettings = {
 			};
 			name = Production;
 		};
 		BCAE9DF7160C097500A33217 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BCAE9E00160C0B4100A33217 /* WebProcessServiceForWebKitDevelopment.xcconfig */;
+			baseConfigurationReference = BCACC40F16B0B8A800B6E092 /* WebContentService.Development.xcconfig */;
 			buildSettings = {
 			};
 			name = Debug;
 		};
 		BCAE9DF8160C097500A33217 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BCAE9E00160C0B4100A33217 /* WebProcessServiceForWebKitDevelopment.xcconfig */;
+			baseConfigurationReference = BCACC40F16B0B8A800B6E092 /* WebContentService.Development.xcconfig */;
 			buildSettings = {
 			};
 			name = Release;
 		};
 		BCAE9DF9160C097500A33217 /* Production */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = BCAE9E00160C0B4100A33217 /* WebProcessServiceForWebKitDevelopment.xcconfig */;
+			baseConfigurationReference = BCACC40F16B0B8A800B6E092 /* WebContentService.Development.xcconfig */;
 			buildSettings = {
 			};
 			name = Production;
@@ -6549,7 +6539,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Production;
 		};
-		BC3DE47615A91764008D26FC /* Build configuration list for PBXNativeTarget "WebProcessService" */ = {
+		BC3DE47615A91764008D26FC /* Build configuration list for PBXNativeTarget "WebContent" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BC3DE47315A91764008D26FC /* Debug */,
@@ -6559,7 +6549,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Production;
 		};
-		BCAE9DF6160C097500A33217 /* Build configuration list for PBXNativeTarget "WebProcessServiceForWebKitDevelopment" */ = {
+		BCAE9DF6160C097500A33217 /* Build configuration list for PBXNativeTarget "WebContent.Development" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BCAE9DF7160C097500A33217 /* Debug */,

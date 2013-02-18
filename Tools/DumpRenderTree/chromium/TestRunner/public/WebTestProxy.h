@@ -41,6 +41,8 @@
 #include <map>
 #include <string>
 
+#define TEST_RUNNER_MOVED_PRINTING 1
+
 namespace WebKit {
 class WebAccessibilityObject;
 class WebCachedURLRequest;
@@ -53,11 +55,13 @@ class WebNode;
 class WebRange;
 class WebSecurityOrigin;
 class WebSerializedScriptValue;
+class WebSpellCheckClient;
 class WebString;
 class WebURL;
 class WebURLRequest;
 class WebURLResponse;
 class WebView;
+struct WebConsoleMessage;
 struct WebPoint;
 struct WebSize;
 struct WebURLError;
@@ -66,6 +70,7 @@ struct WebWindowFeatures;
 
 namespace WebTestRunner {
 
+class SpellCheckClient;
 class WebTestDelegate;
 class WebTestInterfaces;
 class WebTestRunner;
@@ -77,8 +82,12 @@ public:
 
     void reset();
 
+    WebKit::WebSpellCheckClient *spellCheckClient() const;
+
     void setPaintRect(const WebKit::WebRect&);
     WebKit::WebRect paintRect() const;
+
+    void setLogConsoleOutput(bool enabled);
 
 protected:
     WebTestProxyBase();
@@ -107,6 +116,9 @@ protected:
     void registerIntentService(WebKit::WebFrame*, const WebKit::WebIntentServiceInfo&);
     void dispatchIntent(WebKit::WebFrame* source, const WebKit::WebIntentRequest&);
     WebKit::WebView* createView(WebKit::WebFrame* creator, const WebKit::WebURLRequest&, const WebKit::WebWindowFeatures&, const WebKit::WebString& frameName, WebKit::WebNavigationPolicy);
+    void setStatusText(const WebKit::WebString&);
+    void didStopLoading();
+
     void willPerformClientRedirect(WebKit::WebFrame*, const WebKit::WebURL& from, const WebKit::WebURL& to, double interval, double fire_time);
     void didCancelClientRedirect(WebKit::WebFrame*);
     void didStartProvisionalLoad(WebKit::WebFrame*);
@@ -128,13 +140,23 @@ protected:
     void didReceiveResponse(WebKit::WebFrame*, unsigned identifier, const WebKit::WebURLResponse&);
     void didFinishResourceLoad(WebKit::WebFrame*, unsigned identifier);
     void didFailResourceLoad(WebKit::WebFrame*, unsigned identifier, const WebKit::WebURLError&);
+    void unableToImplementPolicyWithError(WebKit::WebFrame*, const WebKit::WebURLError&);
+    void didAddMessageToConsole(const WebKit::WebConsoleMessage&, const WebKit::WebString& sourceName, unsigned sourceLine);
+    void runModalAlertDialog(WebKit::WebFrame*, const WebKit::WebString&);
+    bool runModalConfirmDialog(WebKit::WebFrame*, const WebKit::WebString&);
+    bool runModalPromptDialog(WebKit::WebFrame*, const WebKit::WebString& message, const WebKit::WebString& defaultValue, WebKit::WebString* actualValue);
+    bool runModalBeforeUnloadDialog(WebKit::WebFrame*, const WebKit::WebString&);
 
 private:
     WebTestInterfaces* m_testInterfaces;
     WebTestDelegate* m_delegate;
 
+    SpellCheckClient* m_spellcheck;
+
     WebKit::WebRect m_paintRect;
     std::map<unsigned, std::string> m_resourceIdentifierMap;
+
+    bool m_logConsoleOutput;
 };
 
 // Use this template to inject methods into your WebViewClient/WebFrameClient
@@ -265,6 +287,16 @@ public:
         WebTestProxyBase::createView(creator, request, features, frameName, policy);
         return Base::createView(creator, request, features, frameName, policy);
     }
+    virtual void setStatusText(const WebKit::WebString& text)
+    {
+        WebTestProxyBase::setStatusText(text);
+        Base::setStatusText(text);
+    }
+    virtual void didStopLoading()
+    {
+        WebTestProxyBase::didStopLoading();
+        Base::didStopLoading();
+    }
 
     // WebFrameClient implementation.
     virtual void willPerformClientRedirect(WebKit::WebFrame* frame, const WebKit::WebURL& from, const WebKit::WebURL& to, double interval, double fireTime)
@@ -371,6 +403,36 @@ public:
     {
         WebTestProxyBase::didFailResourceLoad(frame, identifier, error);
         Base::didFailResourceLoad(frame, identifier, error);
+    }
+    virtual void unableToImplementPolicyWithError(WebKit::WebFrame* frame, const WebKit::WebURLError& error)
+    {
+        WebTestProxyBase::unableToImplementPolicyWithError(frame, error);
+        Base::unableToImplementPolicyWithError(frame, error);
+    }
+    virtual void didAddMessageToConsole(const WebKit::WebConsoleMessage& message, const WebKit::WebString& sourceName, unsigned sourceLine)
+    {
+        WebTestProxyBase::didAddMessageToConsole(message, sourceName, sourceLine);
+        Base::didAddMessageToConsole(message, sourceName, sourceLine);
+    }
+    virtual void runModalAlertDialog(WebKit::WebFrame* frame, const WebKit::WebString& message)
+    {
+        WebTestProxyBase::runModalAlertDialog(frame, message);
+        Base::runModalAlertDialog(frame, message);
+    }
+    virtual bool runModalConfirmDialog(WebKit::WebFrame* frame, const WebKit::WebString& message)
+    {
+        WebTestProxyBase::runModalConfirmDialog(frame, message);
+        return Base::runModalConfirmDialog(frame, message);
+    }
+    virtual bool runModalPromptDialog(WebKit::WebFrame* frame, const WebKit::WebString& message, const WebKit::WebString& defaultValue, WebKit::WebString* actualValue)
+    {
+        WebTestProxyBase::runModalPromptDialog(frame, message, defaultValue, actualValue);
+        return Base::runModalPromptDialog(frame, message, defaultValue, actualValue);
+    }
+    virtual bool runModalBeforeUnloadDialog(WebKit::WebFrame* frame, const WebKit::WebString& message)
+    {
+        WebTestProxyBase::runModalBeforeUnloadDialog(frame, message);
+        return Base::runModalBeforeUnloadDialog(frame, message);
     }
 };
 

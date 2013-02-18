@@ -66,8 +66,6 @@ static void didCloseOnConnectionWorkQueue(WorkQueue& workQueue, CoreIPC::Connect
 
 void ChildProcess::initialize(const ChildProcessInitializationParameters& parameters)
 {
-    InitializeWebKit2();
-
     platformInitialize();
 
     initializeProcess(parameters);
@@ -88,7 +86,13 @@ void ChildProcess::initializeProcessName(const ChildProcessInitializationParamet
 {
 }
 
+#if !PLATFORM(MAC)
 void ChildProcess::initializeSandbox(const ChildProcessInitializationParameters&)
+{
+}
+#endif
+
+void ChildProcess::processUpdateSandboxInitializationParameters(const ChildProcessInitializationParameters&, SandboxInitializationParameters&)
 {
 }
 
@@ -144,7 +148,6 @@ void ChildProcess::terminationTimerFired()
 void ChildProcess::terminate()
 {
     m_connection->invalidate();
-    m_connection = nullptr;
 
     RunLoop::main()->stop();
 }

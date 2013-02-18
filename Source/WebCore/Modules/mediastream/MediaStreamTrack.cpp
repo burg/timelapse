@@ -122,7 +122,6 @@ bool MediaStreamTrack::ended() const
     return m_stopped || (m_component->source()->readyState() == MediaStreamSource::ReadyStateEnded);
 }
 
-
 void MediaStreamTrack::sourceChangedState()
 {
     if (m_stopped)

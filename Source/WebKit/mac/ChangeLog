@@ -1,3 +1,133 @@
+2013-01-22  Anders Carlsson  <andersca@apple.com>
+
+        Use a platforom strategy for local storage
+        https://bugs.webkit.org/show_bug.cgi?id=107600
+
+        Reviewed by Andreas Kling.
+
+        Update for new storage strategy.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        (WebPlatformStrategies):
+        * WebCoreSupport/WebPlatformStrategies.mm:
+        (WebPlatformStrategies::createStorageStrategy):
+
+2013-01-21  Kentaro Hara  <haraken@chromium.org>
+
+        Implement UIEvent constructor
+        https://bugs.webkit.org/show_bug.cgi?id=107430
+
+        Reviewed by Adam Barth.
+
+        Editor's draft: https://dvcs.w3.org/hg/d4e/raw-file/tip/source_respec.htm
+
+        UIEvent constructor is implemented under a DOM4_EVENTS_CONSTRUCTOR flag,
+        which is enabled on Safari and Chromium for now.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-01-22  Joseph Pecoraro  <pecoraro@apple.com>
+
+        [Mac] Enable Page Visibility (PAGE_VISIBILITY_API)
+        https://bugs.webkit.org/show_bug.cgi?id=107230
+
+        Reviewed by David Kilzer.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-01-22  Tim Horton  <timothy_horton@apple.com>
+
+        PDFPlugin: Build PDFPlugin everywhere, enable at runtime
+        https://bugs.webkit.org/show_bug.cgi?id=107117
+
+        Reviewed by Alexey Proskuryakov.
+
+        Since PDFLayerController SPI is all forward-declared, the plugin should build
+        on all Mac platforms, and can be enabled at runtime.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-01-21  Dirk Schulze  <dschulze@adobe.com>
+
+        Add build flag for Canvas's Path object (disabled by default)
+        https://bugs.webkit.org/show_bug.cgi?id=107473
+
+        Reviewed by Dean Jackson.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-01-17  Andy Estes  <aestes@apple.com>
+
+        Add a USE() macro for content filtering code
+        https://bugs.webkit.org/show_bug.cgi?id=107098
+
+        Reviewed by Mark Rowe.
+
+        * WebCoreSupport/WebSystemInterface.mm:
+        (InitWebCoreSystemInterface): Use USE(CONTENT_FILTERING).
+
+2013-01-19  Philip Rogers  <pdr@google.com>
+
+        Merge SVGStylable into SVGStyledElement
+        https://bugs.webkit.org/show_bug.cgi?id=106877
+
+        SVG2 changes element inheritance so all SVGElements are stylable. As a first-step towards a
+        cleaner class hierarchy, this patch moves SVGStylable into SVGStyledElement.
+
+        Reviewed by Dirk Schulze.
+
+        * MigrateHeaders.make:
+
+2013-01-18  Seokju Kwon  <seokju.kwon@gmail.com>
+
+        Add explicit keyword to constructors in platform-specific InspectorClient
+        https://bugs.webkit.org/show_bug.cgi?id=107255
+
+        Reviewed by Kentaro Hara.
+
+        Add explicit keyword to constructors that take one argument
+        in platform-specific implementation of InspectorClient.
+
+        * WebCoreSupport/WebInspectorClient.h:
+        (WebInspectorClient):
+
+2013-01-15  Jer Noble  <jer.noble@apple.com>
+
+        Add a Setting to disable QTKit media engine.
+        https://bugs.webkit.org/show_bug.cgi?id=106972
+
+        Reviewed by Eric Carlson.
+
+        Add WebKit API to set QTKit enabled setting from user defaults.
+
+        * WebView/WebPreferenceKeysPrivate.h:
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]): Set WebCore settings based on user defaults.
+        (-[WebPreferences setQTKitEnabled:]): Pass through to WebCore.
+        (-[WebPreferences isQTKitEnabled]): Ditto.
+        * WebView/WebPreferencesPrivate.h:
+        * WebView/WebView.mm:
+        (-[WebView _preferencesChanged:]): Synchronize WebKit/WebCore settings.
+
+2013-01-15  Enrica Casucci  <enrica@apple.com>
+
+        Add a new set of WebKit2 APIs for text search and
+        search results management.
+        https://bugs.webkit.org/show_bug.cgi?id=106834.
+        <rdar://problem/12597159>
+
+        Reviewed by Simon Fraser.
+        
+        Adding new API to perform text search in WebKit2 without using
+        the stock UI. The new interface provides all the information
+        necessary to write a custom UI for search.
+
+        Added new TextWebKitAPI test.
+
+        * WebView/WebHTMLView.mm:
+        (-[WebHTMLView countMatchesForText:inDOMRange:options:limit:markMatches:]):
+        Modified to reflect the changes to Editor::countMatchesForText interface.
+
 2013-01-10  Zan Dobersek  <zandobersek@gmail.com>
 
         Remove the ENABLE_ANIMATION_API feature define occurences

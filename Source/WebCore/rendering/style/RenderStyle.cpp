@@ -438,7 +438,7 @@ StyleDifference RenderStyle::diff(const RenderStyle* other, unsigned& changedCon
         }
 
         if (rareNonInheritedData->m_grid.get() != other->rareNonInheritedData->m_grid.get()
-            && rareNonInheritedData->m_gridItem.get() != other->rareNonInheritedData->m_gridItem.get())
+            || rareNonInheritedData->m_gridItem.get() != other->rareNonInheritedData->m_gridItem.get())
             return StyleDifferenceLayout;
 
 #if !USE(ACCELERATED_COMPOSITING)
@@ -1001,16 +1001,16 @@ RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect, 
 {
     bool horizontal = isHorizontalWritingMode();
 
-    LayoutUnit leftWidth = (!horizontal || includeLogicalLeftEdge) ? borderLeftWidth() : 0;
-    LayoutUnit rightWidth = (!horizontal || includeLogicalRightEdge) ? borderRightWidth() : 0;
-    LayoutUnit topWidth = (horizontal || includeLogicalLeftEdge) ? borderTopWidth() : 0;
-    LayoutUnit bottomWidth = (horizontal || includeLogicalRightEdge) ? borderBottomWidth() : 0;
+    int leftWidth = (!horizontal || includeLogicalLeftEdge) ? borderLeftWidth() : 0;
+    int rightWidth = (!horizontal || includeLogicalRightEdge) ? borderRightWidth() : 0;
+    int topWidth = (horizontal || includeLogicalLeftEdge) ? borderTopWidth() : 0;
+    int bottomWidth = (horizontal || includeLogicalRightEdge) ? borderBottomWidth() : 0;
 
     return getRoundedInnerBorderFor(borderRect, topWidth, bottomWidth, leftWidth, rightWidth, includeLogicalLeftEdge, includeLogicalRightEdge);
 }
 
 RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect,
-    LayoutUnit topWidth, LayoutUnit bottomWidth, LayoutUnit leftWidth, LayoutUnit rightWidth, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const
+    int topWidth, int bottomWidth, int leftWidth, int rightWidth, bool includeLogicalLeftEdge, bool includeLogicalRightEdge) const
 {
     LayoutRect innerRect(borderRect.x() + leftWidth, 
                borderRect.y() + topWidth, 
@@ -1025,6 +1025,21 @@ RoundedRect RenderStyle::getRoundedInnerBorderFor(const LayoutRect& borderRect,
         roundedRect.includeLogicalEdges(radii, isHorizontalWritingMode(), includeLogicalLeftEdge, includeLogicalRightEdge);
     }
     return roundedRect;
+}
+
+static bool allLayersAreFixed(const FillLayer* layer)
+{
+    bool allFixed = true;
+    
+    for (const FillLayer* currLayer = layer; currLayer; currLayer = currLayer->next())
+        allFixed &= (currLayer->image() && currLayer->attachment() == FixedBackgroundAttachment);
+
+    return layer && allFixed;
+}
+
+bool RenderStyle::hasEntirelyFixedBackground() const
+{
+    return allLayersAreFixed(backgroundLayers());
 }
 
 const CounterDirectiveMap* RenderStyle::counterDirectives() const

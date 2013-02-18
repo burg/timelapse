@@ -1,3 +1,38 @@
+2013-01-22  Anders Carlsson  <andersca@apple.com>
+
+        Use a platforom strategy for local storage
+        https://bugs.webkit.org/show_bug.cgi?id=107600
+
+        Reviewed by Andreas Kling.
+
+        Update for new storage strategy.
+
+        * WebCoreSupport/PlatformStrategiesEfl.cpp:
+        (PlatformStrategiesEfl::createStorageStrategy):
+        * WebCoreSupport/PlatformStrategiesEfl.h:
+        (PlatformStrategiesEfl):
+
+2013-01-22  Krzysztof Czech  <k.czech@samsung.com>
+
+        [EFL] Adds Accessibility support to wk1.
+        https://bugs.webkit.org/show_bug.cgi?id=107440
+
+        Reviewed by Gyuyoung Kim.
+
+        Adds possibility of focusing and retrieving accessible object.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::rootAccessibleElement):
+        (DumpRenderTreeSupportEfl::focusedAccessibleElement):
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h:
+
+2013-01-15  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        Unreviewed. Fix build break by r139796.
+
+        * ewk/ewk_frame.cpp:
+        (ewk_frame_text_matches_mark):
+
 2013-01-13  KwangYong Choi  <ky0.choi@samsung.com>
 
         [EFL] Unreviewed build fix after r139541

@@ -64,7 +64,7 @@ enum CompositingUpdateType {
 class RenderLayerCompositor : public GraphicsLayerClient, public GraphicsLayerUpdaterClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    RenderLayerCompositor(RenderView*);
+    explicit RenderLayerCompositor(RenderView*);
     ~RenderLayerCompositor();
 
     // Return true if this RenderView is in "compositing mode" (i.e. has one or more
@@ -104,7 +104,7 @@ public:
     RenderLayerCompositor* enclosingCompositorFlushingLayers() const;
 
     // Called when the GraphicsLayer for the given RenderLayer has flushed changes inside of flushPendingLayerChanges().
-    void didFlushChangesForLayer(RenderLayer*);
+    void didFlushChangesForLayer(RenderLayer*, const GraphicsLayer*);
     
     // Rebuild the tree of compositing layers
     void updateCompositingLayers(CompositingUpdateType, RenderLayer* updateRoot = 0);
@@ -129,6 +129,11 @@ public:
 
     // Whether the given layer needs an extra 'contents' layer.
     bool needsContentsCompositingLayer(const RenderLayer*) const;
+
+    bool supportsFixedRootBackgroundCompositing() const;
+    bool needsFixedRootBackgroundLayer(const RenderLayer*) const;
+    GraphicsLayer* fixedRootBackgroundLayer() const;
+    
     // Return the bounding box required for compositing layer and its childern, relative to ancestorLayer.
     // If layerBoundingBox is not 0, on return it contains the bounding box of this layer only.
     IntRect calculateCompositedBounds(const RenderLayer*, const RenderLayer* ancestorLayer) const;
@@ -196,8 +201,10 @@ public:
     void frameViewDidChangeSize();
     void frameViewDidScroll();
     void frameViewDidLayout();
+    void rootFixedBackgroundsChanged();
 
     void scrollingLayerDidChange(RenderLayer*);
+    void fixedRootBackgroundLayerChanged();
 
     String layerTreeAsText(LayerTreeFlags);
 

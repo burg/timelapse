@@ -30,6 +30,7 @@
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/WeakPtr.h>
 
 #if PLATFORM(MAC) && COMPILER_SUPPORTS(BLOCKS)
 #include <Block.h>
@@ -173,6 +174,14 @@ public:
         return (c->*m_function)();
     }
 
+    R operator()(const WeakPtr<C>& c)
+    {
+        C* obj = c.get();
+        if (!obj)
+            return R();
+        return (obj->*m_function)();
+    }
+
 private:
     R (C::*m_function)();
 };
@@ -191,6 +200,14 @@ public:
     R operator()(C* c, P1 p1)
     {
         return (c->*m_function)(p1);
+    }
+
+    R operator()(const WeakPtr<C>& c, P1 p1)
+    {
+        C* obj = c.get();
+        if (!obj)
+            return R();
+        return (obj->*m_function)(p1);
     }
 
 private:
@@ -213,6 +230,14 @@ public:
         return (c->*m_function)(p1, p2);
     }
 
+    R operator()(const WeakPtr<C>& c, P1 p1, P2 p2)
+    {
+        C* obj = c.get();
+        if (!obj)
+            return R();
+        return (obj->*m_function)(p1, p2);
+    }
+
 private:
     R (C::*m_function)(P1, P2);
 };
@@ -231,6 +256,14 @@ public:
     R operator()(C* c, P1 p1, P2 p2, P3 p3)
     {
         return (c->*m_function)(p1, p2, p3);
+    }
+
+    R operator()(const WeakPtr<C>& c, P1 p1, P2 p2, P3 p3)
+    {
+        C* obj = c.get();
+        if (!obj)
+            return R();
+        return (obj->*m_function)(p1, p2, p3);
     }
 
 private:
@@ -253,6 +286,14 @@ public:
         return (c->*m_function)(p1, p2, p3, p4);
     }
 
+    R operator()(const WeakPtr<C>& c, P1 p1, P2 p2, P3 p3, P4 p4)
+    {
+        C* obj = c.get();
+        if (!obj)
+            return R();
+        return (obj->*m_function)(p1, p2, p3, p4);
+    }
+
 private:
     R (C::*m_function)(P1, P2, P3, P4);
 };
@@ -271,6 +312,14 @@ public:
     R operator()(C* c, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
     {
         return (c->*m_function)(p1, p2, p3, p4, p5);
+    }
+
+    R operator()(const WeakPtr<C>& c, P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
+    {
+        C* obj = c.get();
+        if (!obj)
+            return R();
+        return (obj->*m_function)(p1, p2, p3, p4, p5);
     }
 
 private:
@@ -340,7 +389,6 @@ template<typename T> struct ParamStorageTraits<RefPtr<T> > {
     static T* unwrap(const StorageType& value) { return value.get(); }
 };
 
-
 template<typename> class RetainPtr;
 
 template<typename T> struct ParamStorageTraits<RetainPtr<T> > {
@@ -375,7 +423,7 @@ public:
     {
     }
 
-    virtual R operator()()
+    virtual typename FunctionWrapper::ResultType operator()()
     {
         return m_functionWrapper();
     }
@@ -386,7 +434,6 @@ private:
 
 template<typename FunctionWrapper, typename R, typename P1>
 class BoundFunctionImpl<FunctionWrapper, R (P1)> : public FunctionImpl<typename FunctionWrapper::ResultType ()> {
-
 public:
     BoundFunctionImpl(FunctionWrapper functionWrapper, const P1& p1)
         : m_functionWrapper(functionWrapper)
@@ -400,7 +447,7 @@ public:
         RefAndDeref<P1, FunctionWrapper::shouldRefFirstParameter>::deref(m_p1);
     }
 
-    virtual R operator()()
+    virtual typename FunctionWrapper::ResultType operator()()
     {
         return m_functionWrapper(ParamStorageTraits<P1>::unwrap(m_p1));
     }

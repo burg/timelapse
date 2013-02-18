@@ -50,11 +50,17 @@ public:
         // <https://bugs.webkit.org/show_bug.cgi?id=71293>.
         WEBKIT_KEYFRAMES_RULE,
         WEBKIT_KEYFRAME_RULE,
+#if ENABLE(CSS3_CONDITIONAL_RULES)
+        SUPPORTS_RULE = 12,
+#endif
 #if ENABLE(CSS_DEVICE_ADAPTATION)
         WEBKIT_VIEWPORT_RULE = 15,
 #endif
 #if ENABLE(CSS_REGIONS)
-        WEBKIT_REGION_RULE = 16
+        WEBKIT_REGION_RULE = 16,
+#endif
+#if ENABLE(SHADOW_DOM)
+        HOST_RULE = 1001,
 #endif
     };
 

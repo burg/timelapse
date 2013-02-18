@@ -224,7 +224,6 @@ set(WebKit2_SOURCES
     Shared/API/c/WKUserContentURLPattern.cpp
 
     Shared/CoordinatedGraphics/CoordinatedGraphicsArgumentCoders.cpp
-    Shared/CoordinatedGraphics/CoordinatedLayerInfo.cpp
     Shared/CoordinatedGraphics/WebCoordinatedSurface.cpp
     Shared/CoordinatedGraphics/WebCustomFilterProgramProxy.cpp
 
@@ -297,7 +296,6 @@ set(WebKit2_SOURCES
     UIProcess/WebPreferences.cpp
     UIProcess/WebProcessProxy.cpp
     UIProcess/WebResourceCacheManagerProxy.cpp
-    UIProcess/WebResourceLoadClient.cpp
     UIProcess/WebTextChecker.cpp
     UIProcess/WebTextCheckerClient.cpp
     UIProcess/WebUIClient.cpp

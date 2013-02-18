@@ -178,12 +178,12 @@
 #include "WebRange.h"
 #include "WebScriptSource.h"
 #include "WebSecurityOrigin.h"
+#include "WebSerializedScriptValue.h"
 #include "WebViewImpl.h"
 #include "XPathResult.h"
 #include "htmlediting.h"
 #include "markup.h"
 #include "painting/GraphicsContextBuilder.h"
-#include "platform/WebSerializedScriptValue.h"
 #include <algorithm>
 #include <public/Platform.h>
 #include <public/WebFileSystem.h>
@@ -912,7 +912,7 @@ v8::Local<v8::Context> WebFrameImpl::mainWorldScriptContext() const
 v8::Handle<v8::Value> WebFrameImpl::createFileSystem(WebFileSystem::Type type, const WebString& name, const WebString& path)
 {
     ASSERT(frame());
-    return toV8(DOMFileSystem::create(frame()->document(), name, static_cast<WebCore::FileSystemType>(type), KURL(ParsedURLString, path.utf8().data()), AsyncFileSystemChromium::create()));
+    return toV8(DOMFileSystem::create(frame()->document(), name, static_cast<WebCore::FileSystemType>(type), KURL(ParsedURLString, path.utf8().data()), AsyncFileSystemChromium::create()), v8::Handle<v8::Object>(), frame()->script()->currentWorldContext()->GetIsolate());
 }
 
 v8::Handle<v8::Value> WebFrameImpl::createSerializableFileSystem(WebFileSystem::Type type, const WebString& name, const WebString& path)
@@ -920,7 +920,7 @@ v8::Handle<v8::Value> WebFrameImpl::createSerializableFileSystem(WebFileSystem::
     ASSERT(frame());
     RefPtr<DOMFileSystem> fileSystem = DOMFileSystem::create(frame()->document(), name, static_cast<WebCore::FileSystemType>(type), KURL(ParsedURLString, path.utf8().data()), AsyncFileSystemChromium::create());
     fileSystem->makeClonable();
-    return toV8(fileSystem.release());
+    return toV8(fileSystem.release(), v8::Handle<v8::Object>(), frame()->script()->currentWorldContext()->GetIsolate());
 }
 
 v8::Handle<v8::Value> WebFrameImpl::createFileEntry(WebFileSystem::Type type, const WebString& fileSystemName, const WebString& fileSystemPath, const WebString& filePath, bool isDirectory)
@@ -929,8 +929,8 @@ v8::Handle<v8::Value> WebFrameImpl::createFileEntry(WebFileSystem::Type type, co
 
     RefPtr<DOMFileSystemBase> fileSystem = DOMFileSystem::create(frame()->document(), fileSystemName, static_cast<WebCore::FileSystemType>(type), KURL(ParsedURLString, fileSystemPath.utf8().data()), AsyncFileSystemChromium::create());
     if (isDirectory)
-        return toV8(DirectoryEntry::create(fileSystem, filePath));
-    return toV8(FileEntry::create(fileSystem, filePath));
+        return toV8(DirectoryEntry::create(fileSystem, filePath), v8::Handle<v8::Object>(), frame()->script()->currentWorldContext()->GetIsolate());
+    return toV8(FileEntry::create(fileSystem, filePath), v8::Handle<v8::Object>(), frame()->script()->currentWorldContext()->GetIsolate());
 }
 
 void WebFrameImpl::reload(bool ignoreCache)
@@ -1682,7 +1682,7 @@ void WebFrameImpl::scopeStringMatches(int identifier, const WebString& searchTex
                 break;
 
             searchRange->setStartAfter(
-                resultRange->startContainer()->shadowAncestorNode(), ec);
+                resultRange->startContainer()->deprecatedShadowAncestorNode(), ec);
             searchRange->setEnd(originalEndContainer, originalEndOffset, ec);
             continue;
         }
@@ -2336,7 +2336,7 @@ void WebFrameImpl::setFindEndstateFocusAndSelection()
         // example, focus links if we have found text within the link.
         Node* node = m_activeMatch->firstNode();
         if (node && node->isInShadowTree()) {
-            Node* host = node->shadowAncestorNode();
+            Node* host = node->deprecatedShadowAncestorNode();
             if (host->hasTagName(HTMLNames::inputTag) || host->hasTagName(HTMLNames::textareaTag))
                 node = host;
         }

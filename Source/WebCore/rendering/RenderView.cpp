@@ -53,9 +53,9 @@
 
 namespace WebCore {
 
-RenderView::RenderView(Node* node, FrameView* view)
-    : RenderBlock(node)
-    , m_frameView(view)
+RenderView::RenderView(Document* document)
+    : RenderBlock(document)
+    , m_frameView(document->view())
     , m_selectionStart(0)
     , m_selectionEnd(0)
     , m_selectionStartPos(-1)
@@ -69,10 +69,6 @@ RenderView::RenderView(Node* node, FrameView* view)
     , m_renderCounterCount(0)
     , m_layoutPhase(RenderViewNormalLayout)
 {
-    // Clear our anonymous bit, set because RenderObject assumes
-    // any renderer with document as the node is anonymous.
-    setIsAnonymous(false);
-
     // init RenderObject attributes
     setInline(false);
     
@@ -114,13 +110,6 @@ void RenderView::updateLogicalWidth()
         setLogicalWidth(viewLogicalWidth());
 }
 
-void RenderView::computePreferredLogicalWidths()
-{
-    ASSERT(preferredLogicalWidthsDirty());
-
-    RenderBlock::computePreferredLogicalWidths();
-}
-
 LayoutUnit RenderView::availableLogicalHeight(AvailableLogicalHeightType heightType) const
 {
     // If we have columns, then the available logical height is reduced to the column height.
@@ -155,6 +144,34 @@ void RenderView::checkLayoutState(const LayoutState& state)
     ASSERT(m_layoutState == &state);
 }
 #endif
+
+// The algorithm to layout the flow thread content in auto height regions has to make sure
+// that when a two-pass layout is needed, the auto height regions always start the first
+// pass without a computed override logical content height (from previous layouts).
+// This way, the layout algorithm gives the same result in all situations.
+// If the flow thread content does not need layout, the decision of whether we need a full
+// two pass layout cannot be made up-front. Therefore, we do a first layout, and if an auto
+// height region needs layout or a non-auto height region changes its box dimensions,
+// we need to perform a full two pass layout.
+void RenderView::layoutContentInAutoLogicalHeightRegions(const LayoutState& state)
+{
+    ASSERT(!flowThreadController()->needsTwoPassLayoutForAutoHeightRegions());
+
+    if (!flowThreadController()->hasRenderNamedFlowThreadsNeedingLayout()) {
+        layoutContent(state);
+        if (!flowThreadController()->needsTwoPassLayoutForAutoHeightRegions())
+            return;
+    }
+
+    // Start a full two phase layout for regions with auto logical height.
+    flowThreadController()->resetRegionsOverrideLogicalContentHeight();
+    layoutContent(state);
+
+    m_layoutPhase = ConstrainedFlowThreadsLayoutInAutoLogicalHeightRegions;
+    flowThreadController()->markAutoLogicalHeightRegionsForLayout();
+    layoutContent(state);
+    flowThreadController()->setNeedsTwoPassLayoutForAutoHeightRegions(false);
+}
 
 void RenderView::layout()
 {
@@ -192,20 +209,10 @@ void RenderView::layout()
     m_layoutState = &state;
 
     m_layoutPhase = RenderViewNormalLayout;
-    bool needsTwoPassLayoutForAutoLogicalHeightRegions = hasRenderNamedFlowThreads()
-        && flowThreadController()->hasAutoLogicalHeightRegions()
-        && flowThreadController()->hasRenderNamedFlowThreadsNeedingLayout();
-
-    if (needsTwoPassLayoutForAutoLogicalHeightRegions)
-        flowThreadController()->resetRegionsOverrideLogicalContentHeight();
-
-    layoutContent(state);
-
-    if (needsTwoPassLayoutForAutoLogicalHeightRegions) {
-        m_layoutPhase = ConstrainedFlowThreadsLayoutInAutoLogicalHeightRegions;
-        flowThreadController()->markAutoLogicalHeightRegionsForLayout();
+    if (checkTwoPassLayoutForAutoHeightRegions())
+        layoutContentInAutoLogicalHeightRegions(state);
+    else
         layoutContent(state);
-    }
 
 #ifndef NDEBUG
     checkLayoutState(state);
@@ -356,6 +363,9 @@ void RenderView::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint&)
     }
 
     if (document()->ownerElement() || !view())
+        return;
+
+    if (paintInfo.skipRootBackground())
         return;
 
     bool rootFillsViewport = false;
@@ -851,6 +861,16 @@ IntRect RenderView::unscaledDocumentRect() const
     return pixelSnappedIntRect(overflowRect);
 }
 
+bool RenderView::rootBackgroundIsEntirelyFixed() const
+{
+    RenderObject* rootObject = document()->documentElement() ? document()->documentElement()->renderer() : 0;
+    if (!rootObject)
+        return false;
+
+    RenderObject* rootRenderer = rootObject->rendererForRootBackground();
+    return rootRenderer->hasEntirelyFixedBackground();
+}
+
 LayoutRect RenderView::backgroundRect(RenderBox* backgroundRenderer) const
 {
     if (!hasColumns())
@@ -1023,6 +1043,11 @@ void RenderView::styleDidChange(StyleDifference diff, const RenderStyle* oldStyl
 bool RenderView::hasRenderNamedFlowThreads() const
 {
     return m_flowThreadController && m_flowThreadController->hasRenderNamedFlowThreads();
+}
+
+bool RenderView::checkTwoPassLayoutForAutoHeightRegions() const
+{
+    return hasRenderNamedFlowThreads() && m_flowThreadController->hasAutoLogicalHeightRegions();
 }
 
 FlowThreadController* RenderView::flowThreadController()

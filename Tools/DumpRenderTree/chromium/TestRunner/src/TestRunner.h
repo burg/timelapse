@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2010 Pawel Hajdan (phajdan.jr@chromium.org)
+ * Copyright (C) 2012 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,10 +34,11 @@
 #define TestRunner_h
 
 #include "CppBoundClass.h"
+#include "WebArrayBufferView.h"
 #include "WebDeliveredIntentClient.h"
+#include "WebTask.h"
 #include "WebTestRunner.h"
-#include "platform/WebArrayBufferView.h"
-#include "platform/WebURL.h"
+#include <public/WebURL.h>
 
 namespace WebKit {
 class WebView;
@@ -58,6 +60,8 @@ public:
     void setWebView(WebKit::WebView* webView) { m_webView = webView; }
 
     void reset();
+
+    WebTaskList* taskList() { return &m_taskList; }
 
     // WebTestRunner implementation.
     virtual void setTestIsRunning(bool) OVERRIDE;
@@ -81,6 +85,19 @@ public:
     virtual bool shouldDumpResourceRequestCallbacks() const OVERRIDE;
     virtual bool shouldDumpResourceResponseMIMETypes() const OVERRIDE;
     virtual WebKit::WebPermissionClient* webPermissions() const OVERRIDE;
+    virtual bool shouldDumpStatusCallbacks() const OVERRIDE;
+    virtual bool shouldDumpProgressFinishedCallback() const OVERRIDE;
+    virtual bool shouldDumpBackForwardList() const OVERRIDE;
+    virtual bool deferMainResourceDataLoad() const OVERRIDE;
+    virtual bool shouldDumpSelectionRect() const OVERRIDE;
+    virtual bool testRepaint() const OVERRIDE;
+    virtual bool sweepHorizontally() const OVERRIDE;
+    virtual bool isPrinting() const OVERRIDE;
+    virtual bool shouldStayOnPageAfterHandlingBeforeUnload() const OVERRIDE;
+    virtual void setTitleTextDirection(WebKit::WebTextDirection) OVERRIDE;
+    virtual const std::set<std::string>* httpHeadersToClear() const OVERRIDE;
+    virtual bool shouldBlockRedirects() const OVERRIDE;
+    virtual bool willSendRequestShouldReturnNull() const OVERRIDE;
 
 protected:
     // FIXME: make these private once the move from DRTTestRunner to TestRunner
@@ -176,6 +193,17 @@ private:
     void setSelectTrailingWhitespaceEnabled(const CppArgumentList&, CppVariant*);
     void enableAutoResizeMode(const CppArgumentList&, CppVariant*);
     void disableAutoResizeMode(const CppArgumentList&, CppVariant*);
+
+    // DeviceOrientation related functions
+    void setMockDeviceOrientation(const CppArgumentList&, CppVariant*);
+
+#if ENABLE(POINTER_LOCK)
+    void didAcquirePointerLock(const CppArgumentList&, CppVariant*);
+    void didNotAcquirePointerLock(const CppArgumentList&, CppVariant*);
+    void didLosePointerLock(const CppArgumentList&, CppVariant*);
+    void setPointerLockWillFailSynchronously(const CppArgumentList&, CppVariant*);
+    void setPointerLockWillRespondAsynchronously(const CppArgumentList&, CppVariant*);
+#endif
 
     ///////////////////////////////////////////////////////////////////////////
     // Methods modifying WebPreferences.
@@ -278,6 +306,39 @@ private:
     void setAllowRunningOfInsecureContent(const CppArgumentList&, CppVariant*);
     void dumpPermissionClientCallbacks(const CppArgumentList&, CppVariant*);
 
+    // This function sets a flag that tells the test_shell to dump all calls
+    // to window.status().
+    // It takes no arguments, and ignores any that may be present.
+    void dumpWindowStatusChanges(const CppArgumentList&, CppVariant*);
+
+    // This function sets a flag that tells the test_shell to print a line of
+    // descriptive text for the progress finished callback. It takes no
+    // arguments, and ignores any that may be present.
+    void dumpProgressFinishedCallback(const CppArgumentList&, CppVariant*);
+
+    // This function sets a flag that tells the test_shell to print out a text
+    // representation of the back/forward list. It ignores all arguments.
+    void dumpBackForwardList(const CppArgumentList&, CppVariant*);
+
+    void setDeferMainResourceDataLoad(const CppArgumentList&, CppVariant*);
+    void dumpSelectionRect(const CppArgumentList&, CppVariant*);
+    void testRepaint(const CppArgumentList&, CppVariant*);
+    void repaintSweepHorizontally(const CppArgumentList&, CppVariant*);
+
+    // Causes layout to happen as if targetted to printed pages.
+    void setPrinting(const CppArgumentList&, CppVariant*);
+
+    void setShouldStayOnPageAfterHandlingBeforeUnload(const CppArgumentList&, CppVariant*);
+
+    // Causes WillSendRequest to clear certain headers.
+    void setWillSendRequestClearHeader(const CppArgumentList&, CppVariant*);
+
+    // Causes WillSendRequest to block redirects.
+    void setWillSendRequestReturnsNullOnRedirect(const CppArgumentList&, CppVariant*);
+
+    // Causes WillSendRequest to return an empty request.
+    void setWillSendRequestReturnsNull(const CppArgumentList&, CppVariant*);
+
     ///////////////////////////////////////////////////////////////////////////
     // Methods interacting with the WebTestProxy
 
@@ -298,11 +359,61 @@ private:
     // Allows layout tests to exec scripts at WebInspector side.
     void evaluateInWebInspector(const CppArgumentList&, CppVariant*);
 
+    // Clears all databases.
+    void clearAllDatabases(const CppArgumentList&, CppVariant*);
+    // Sets the default quota for all origins
+    void setDatabaseQuota(const CppArgumentList&, CppVariant*);
+
+    // Changes the cookie policy from the default to allow all cookies.
+    void setAlwaysAcceptCookies(const CppArgumentList&, CppVariant*);
+
+    // Gives focus to the window.
+    void setWindowIsKey(const CppArgumentList&, CppVariant*);
+
+    // Converts a URL starting with file:///tmp/ to the local mapping.
+    void pathToLocalResource(const CppArgumentList&, CppVariant*);
+
+    // Used to set the device scale factor.
+    void setBackingScaleFactor(const CppArgumentList&, CppVariant*);
+
+    // Calls setlocale(LC_ALL, ...) for a specified locale.
+    // Resets between tests.
+    void setPOSIXLocale(const CppArgumentList&, CppVariant*);
+
+    // Gets the number of geolocation permissions requests pending.
+    void numberOfPendingGeolocationPermissionRequests(const CppArgumentList&, CppVariant*);
+
+    // Geolocation related functions.
+    void setGeolocationPermission(const CppArgumentList&, CppVariant*);
+    void setMockGeolocationPosition(const CppArgumentList&, CppVariant*);
+    void setMockGeolocationPositionUnavailableError(const CppArgumentList&, CppVariant*);
+
+#if ENABLE(NOTIFICATIONS)
+    // Grants permission for desktop notifications to an origin
+    void grantWebNotificationPermission(const CppArgumentList&, CppVariant*);
+    // Simulates a click on a desktop notification.
+    void simulateLegacyWebNotificationClick(const CppArgumentList&, CppVariant*);
+#endif
+
+    // Speech input related functions.
+#if ENABLE(INPUT_SPEECH)
+    void addMockSpeechInputResult(const CppArgumentList&, CppVariant*);
+    void setMockSpeechInputDumpRect(const CppArgumentList&, CppVariant*);
+#endif
+#if ENABLE(SCRIPTED_SPEECH)
+    void addMockSpeechRecognitionResult(const CppArgumentList&, CppVariant*);
+    void setMockSpeechRecognitionError(const CppArgumentList&, CppVariant*);
+    void wasMockSpeechRecognitionAborted(const CppArgumentList&, CppVariant*);
+#endif
+
+    void display(const CppArgumentList&, CppVariant*);
+    void displayInvalidatedRegion(const CppArgumentList&, CppVariant*);
+
     ///////////////////////////////////////////////////////////////////////////
     // Properties
     void workerThreadCount(CppVariant*);
 
-    ///////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////
     // Fallback and stub methods
 
     // The fallback method is called when a nonexistent method is called on
@@ -331,6 +442,9 @@ private:
 
     // Bound variable to return the name of this platform (chromium).
     CppVariant m_platformName;
+
+    // Bound variable tracking the directionality of the <title> tag.
+    CppVariant m_titleTextDirection;
 
     // If true, the test_shell will write a descriptive line for each editing
     // command.
@@ -390,8 +504,48 @@ private:
     // was loaded.
     bool m_dumpResourceResponseMIMETypes;
 
+    // If true, the test_shell will dump all changes to window.status.
+    bool m_dumpWindowStatusChanges;
+
+    // If true, the test_shell will output a descriptive line for the progress
+    // finished callback.
+    bool m_dumpProgressFinishedCallback;
+
+    // If true, the test_shell will produce a dump of the back forward list as
+    // well.
+    bool m_dumpBackForwardList;
+
+    // If false, all new requests will not defer the main resource data load.
+    bool m_deferMainResourceDataLoad;
+
+    // If true, the test_shell will draw the bounds of the current selection rect
+    // taking possible transforms of the selection rect into account.
+    bool m_dumpSelectionRect;
+
+    // If true, pixel dump will be produced as a series of 1px-tall, view-wide
+    // individual paints over the height of the view.
+    bool m_testRepaint;
+
+    // If true and test_repaint_ is true as well, pixel dump will be produced as
+    // a series of 1px-wide, view-tall paints across the width of the view.
+    bool m_sweepHorizontally;
+
+    // If true, layout is to target printed pages.
+    bool m_isPrinting;
+
+    bool m_shouldStayOnPageAfterHandlingBeforeUnload;
+
+    bool m_shouldBlockRedirects;
+
+    bool m_willSendRequestShouldReturnNull;
+
+    std::set<std::string> m_httpHeadersToClear;
+
     // WAV audio data is stored here.
     WebKit::WebArrayBufferView m_audioData;
+
+    // Used for test timeouts.
+    WebTaskList m_taskList;
 
     WebTestDelegate* m_delegate;
     WebKit::WebView* m_webView;

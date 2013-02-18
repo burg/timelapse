@@ -28,7 +28,7 @@
 
 #if USE(TILED_BACKING_STORE)
 
-#include "EwkViewImpl.h"
+#include "EwkView.h"
 #include "PageClientBase.h"
 #include "PageViewportControllerClient.h"
 #include <wtf/PassOwnPtr.h>
@@ -37,7 +37,7 @@ namespace WebKit {
 
 class PageViewportControllerClientEfl : public PageViewportControllerClient {
 public:
-    static PassOwnPtr<PageViewportControllerClientEfl> create(EwkViewImpl* viewImpl)
+    static PassOwnPtr<PageViewportControllerClientEfl> create(EwkView* viewImpl)
     {
         return adoptPtr(new PageViewportControllerClientEfl(viewImpl));
     }
@@ -45,14 +45,13 @@ public:
 
     DrawingAreaProxy* drawingArea() const;
     WebCore::IntSize viewSize() { return m_viewportSize; }
-    float scaleFactor() const { return m_viewImpl->scaleFactor(); }
     WebCore::FloatPoint contentPosition() const { return m_contentPosition; }
 
     void updateViewportSize();
     void setRendererActive(bool);
 
     virtual void setViewportPosition(const WebCore::FloatPoint& contentsPoint);
-    virtual void setContentsScale(float);
+    virtual void setPageScaleFactor(float);
 
     virtual void didResumeContent();
     virtual void didChangeContentsSize(const WebCore::IntSize&);
@@ -62,9 +61,9 @@ public:
     virtual void setController(PageViewportController*);
 
 private:
-    explicit PageViewportControllerClientEfl(EwkViewImpl*);
+    explicit PageViewportControllerClientEfl(EwkView*);
 
-    EwkViewImpl* m_viewImpl;
+    EwkView* m_view;
     WebCore::IntSize m_viewportSize;
     WebCore::FloatPoint m_contentPosition;
     PageViewportController* m_controller;

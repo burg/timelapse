@@ -31,8 +31,8 @@
 #ifndef WebSettings_h
 #define WebSettings_h
 
-#include "platform/WebCommon.h"
-#include "platform/WebSize.h"
+#include "../../../Platform/chromium/public/WebCommon.h"
+#include "../../../Platform/chromium/public/WebSize.h"
 #include <unicode/uscript.h>
 
 namespace WebKit {
@@ -175,9 +175,6 @@ public:
 
     // DEPRECATED (renamed. remove this after all call sites changed to the new name)
     void setApplyDefaultDeviceScaleFactorInCompositor(bool enabled) { setApplyDeviceScaleFactorInCompositor(enabled); }
-
-    // DEPRECATED
-    void setExperimentalCSSRegionsEnabled(bool) { }
 
 protected:
     ~WebSettings() { }

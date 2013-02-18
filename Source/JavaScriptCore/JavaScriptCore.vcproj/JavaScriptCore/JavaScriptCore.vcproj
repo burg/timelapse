@@ -1174,6 +1174,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\runtime\PrototypeMap.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\runtime\PrototypeMap.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\runtime\PropertyStorage.h"
 				>
 			</File>
@@ -2197,6 +2205,7 @@
 				RelativePath="..\..\jit\JITStubs.h"
 				>
 			</File>
+            <File
 				RelativePath="..\..\jit\JITThunks.cpp"
 				>
 			</File>

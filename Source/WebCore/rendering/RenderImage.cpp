@@ -52,13 +52,20 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderImage::RenderImage(Node* node)
-    : RenderReplaced(node, IntSize())
+RenderImage::RenderImage(Element* element)
+    : RenderReplaced(element, IntSize())
     , m_needsToSetSizeForAltText(false)
     , m_didIncrementVisuallyNonEmptyPixelCount(false)
     , m_isGeneratedContent(false)
 {
     updateAltText();
+}
+
+RenderImage* RenderImage::createAnonymous(Document* document)
+{
+    RenderImage* image = new (document->renderArena()) RenderImage(0);
+    image->setDocumentForAnonymous(document);
+    return image;
 }
 
 RenderImage::~RenderImage()
@@ -459,7 +466,7 @@ void RenderImage::paintIntoRect(GraphicsContext* context, const LayoutRect& rect
     if (!img || img->isNull())
         return;
 
-    HTMLImageElement* imageElt = hostImageElement();
+    HTMLImageElement* imageElt = (node() && node()->hasTagName(imgTag)) ? static_cast<HTMLImageElement*>(node()) : 0;
     CompositeOperator compositeOperator = imageElt ? imageElt->compositeOperator() : CompositeSourceOver;
     Image* image = m_imageResource->image().get();
     bool useLowQualityScaling = shouldPaintAtLowQuality(context, image, image, alignedRect.size());
@@ -507,7 +514,7 @@ LayoutUnit RenderImage::minimumReplacedHeight() const
 
 HTMLMapElement* RenderImage::imageMap() const
 {
-    HTMLImageElement* i = hostImageElement();
+    HTMLImageElement* i = node() && node()->hasTagName(imgTag) ? static_cast<HTMLImageElement*>(node()) : 0;
     return i ? i->treeScope()->getImageMap(i->fastGetAttribute(usemapAttr)) : 0;
 }
 
@@ -542,8 +549,8 @@ void RenderImage::updateAltText()
 
     if (node()->hasTagName(inputTag))
         m_altText = static_cast<HTMLInputElement*>(node())->altText();
-    else if (HTMLImageElement* image = hostImageElement())
-        m_altText = image->altText();
+    else if (node()->hasTagName(imgTag))
+        m_altText = static_cast<HTMLImageElement*>(node())->altText();
 }
 
 void RenderImage::layout()
@@ -575,24 +582,6 @@ void RenderImage::computeIntrinsicRatioInformation(FloatSize& intrinsicSize, dou
         intrinsicRatio = 1;
         return;
     }
-}
-
-HTMLImageElement* RenderImage::hostImageElement() const
-{
-    if (!node())
-        return 0;
-
-    if (isHTMLImageElement(node()))
-        return toHTMLImageElement(node());
-
-    if (node()->hasTagName(webkitInnerImageTag)) {
-        if (Node* ancestor = node()->shadowHost()) {
-            if (ancestor->hasTagName(imgTag))
-                return toHTMLImageElement(ancestor);
-        }
-    }
-
-    return 0;
 }
 
 bool RenderImage::needsPreferredWidthsRecalculation() const

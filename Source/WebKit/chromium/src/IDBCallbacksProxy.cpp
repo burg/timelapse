@@ -37,7 +37,6 @@
 #include "IDBDatabaseBackendProxy.h"
 #include "IDBDatabaseCallbacksProxy.h"
 #include "IDBDatabaseError.h"
-#include "IDBObjectStoreBackendInterface.h"
 #include "IDBTransactionBackendInterface.h"
 #include "WebIDBCallbacks.h"
 #include "WebIDBCursorImpl.h"
@@ -47,7 +46,7 @@
 #include "WebIDBDatabaseImpl.h"
 #include "WebIDBKey.h"
 #include "WebIDBTransactionImpl.h"
-#include "platform/WebSerializedScriptValue.h"
+#include "WebSerializedScriptValue.h"
 
 using namespace WebCore;
 
@@ -150,11 +149,6 @@ void IDBCallbacksProxy::onSuccessWithPrefetch(const Vector<RefPtr<IDBKey> >& key
     }
 
     m_callbacks->onSuccessWithPrefetch(webKeys, webPrimaryKeys, webValues);
-}
-
-void IDBCallbacksProxy::onBlocked()
-{
-    m_callbacks->onBlocked();
 }
 
 void IDBCallbacksProxy::onBlocked(int64_t existingVersion)

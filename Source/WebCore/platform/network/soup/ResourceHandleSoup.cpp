@@ -117,7 +117,12 @@ public:
     ~WebCoreSynchronousLoader()
     {
         adjustMaxConnections(-1);
-        g_main_context_pop_thread_default(g_main_context_get_thread_default());
+
+        GMainContext* context = g_main_context_get_thread_default();
+        while (g_main_context_pending(context))
+            g_main_context_iteration(context, FALSE);
+
+        g_main_context_pop_thread_default(context);
         loadingSynchronousRequest = false;
     }
 
@@ -375,7 +380,7 @@ static void applyAuthenticationToRequest(ResourceHandle* handle, ResourceRequest
 
 // Called each time the message is going to be sent again except the first time.
 // This happens when libsoup handles HTTP authentication.
-static void restartedCallback(SoupMessage* message, gpointer data)
+static void restartedCallback(SoupMessage*, gpointer data)
 {
     ResourceHandle* handle = static_cast<ResourceHandle*>(data);
     if (!handle)
@@ -486,12 +491,17 @@ static void doRedirect(ResourceHandle* handle)
     handle->sendPendingRequest();
 }
 
-static void redirectCloseCallback(GObject*, GAsyncResult* res, gpointer data)
+static void redirectCloseCallback(GObject*, GAsyncResult* result, gpointer data)
 {
     RefPtr<ResourceHandle> handle = static_cast<ResourceHandle*>(data);
     ResourceHandleInternal* d = handle->getInternal();
 
-    g_input_stream_close_finish(d->m_inputStream.get(), res, 0);
+    if (d->m_cancelled || !handle->client()) {
+        cleanupSoupRequestOperation(handle.get());
+        return;
+    }
+
+    g_input_stream_close_finish(d->m_inputStream.get(), result, 0);
     doRedirect(handle.get());
 }
 
@@ -508,7 +518,7 @@ static void redirectSkipCallback(GObject*, GAsyncResult* asyncResult, gpointer d
     }
 
     GOwnPtr<GError> error;
-    gssize bytesSkipped = g_input_stream_skip_finish(d->m_inputStream.get(), asyncResult, &error.outPtr());
+    gssize bytesSkipped = g_input_stream_read_finish(d->m_inputStream.get(), asyncResult, &error.outPtr());
     if (error) {
         client->didFail(handle.get(), ResourceError::genericIOError(error.get(), d->m_soupRequest.get()));
         cleanupSoupRequestOperation(handle.get());
@@ -516,7 +526,7 @@ static void redirectSkipCallback(GObject*, GAsyncResult* asyncResult, gpointer d
     }
 
     if (bytesSkipped > 0) {
-        g_input_stream_skip_async(d->m_inputStream.get(), G_MAXSSIZE, G_PRIORITY_DEFAULT,
+        g_input_stream_read_async(d->m_inputStream.get(), d->m_buffer, READ_BUFFER_SIZE, G_PRIORITY_DEFAULT,
             d->m_cancellable.get(), redirectSkipCallback, handle.get());
         return;
     }
@@ -663,10 +673,15 @@ static void sendRequestCallback(GObject*, GAsyncResult* result, gpointer data)
         return;
     }
 
+    d->m_buffer = static_cast<char*>(g_slice_alloc(READ_BUFFER_SIZE));
+
     if (soupMessage) {
         if (SOUP_STATUS_IS_REDIRECTION(soupMessage->status_code) && shouldRedirect(handle.get())) {
             d->m_inputStream = inputStream;
-            g_input_stream_skip_async(d->m_inputStream.get(), G_MAXSSIZE, G_PRIORITY_DEFAULT,
+            // We use read_async() rather than skip_async() to work around
+            // https://bugzilla.gnome.org/show_bug.cgi?id=691489 until we can
+            // depend on glib > 2.35.4
+            g_input_stream_read_async(d->m_inputStream.get(), d->m_buffer, READ_BUFFER_SIZE, G_PRIORITY_DEFAULT,
                 d->m_cancellable.get(), redirectSkipCallback, handle.get());
             return;
         }
@@ -696,8 +711,6 @@ static void sendRequestCallback(GObject*, GAsyncResult* result, gpointer data)
         cleanupSoupRequestOperation(handle.get());
         return;
     }
-
-    d->m_buffer = static_cast<char*>(g_slice_alloc(READ_BUFFER_SIZE));
 
     if (soupMessage && d->m_response.isMultipart()) {
         d->m_multipartInputStream = adoptGRef(soup_multipart_input_stream_new(soupMessage, inputStream.get()));
@@ -985,6 +998,9 @@ static bool createSoupRequestAndMessageForHandle(ResourceHandle* handle, const R
     GOwnPtr<GError> error;
 
     GOwnPtr<SoupURI> soupURI(request.soupURI());
+    if (!soupURI)
+        return false;
+
     d->m_soupRequest = adoptGRef(soup_requester_request_uri(requester, soupURI.get(), &error.outPtr()));
     if (error) {
         d->m_soupRequest.clear();

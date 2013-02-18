@@ -79,7 +79,7 @@ public:
     virtual IntRect visibleRect() const OVERRIDE { return m_visibleRect; }
 
     unsigned blankPixelCount() const;
-    static unsigned blankPixelCountForTiles(const WebTileLayerList&, IntRect, IntPoint);
+    static unsigned blankPixelCountForTiles(const WebTileLayerList&, const IntRect&, const IntPoint&);
 
     // Only public for the WebTileCacheMapLayer.
     void drawTileMapContents(CGContextRef, CGRect);
@@ -106,6 +106,8 @@ private:
 
     // TiledBacking member functions.
     virtual void setVisibleRect(const IntRect&) OVERRIDE;
+    virtual void setExposedRect(const IntRect&) OVERRIDE;
+    virtual void setClipsToExposedRect(bool) OVERRIDE;
     virtual void prepopulateRect(const IntRect&) OVERRIDE;
     virtual void setIsInWindow(bool) OVERRIDE;
     virtual void setTileCoverage(TileCoverage) OVERRIDE;
@@ -168,6 +170,7 @@ private:
     IntSize m_tileSize;
     IntRect m_visibleRect;
     IntRect m_visibleRectAtLastRevalidate;
+    IntRect m_exposedRect; // The exposed area of containing platform views.
 
     typedef HashMap<TileIndex, TileInfo> TileMap;
     TileMap m_tiles;
@@ -197,6 +200,7 @@ private:
     bool m_unparentsOffscreenTiles;
     bool m_acceleratesDrawing;
     bool m_tilesAreOpaque;
+    bool m_clipsToExposedRect;
 
     RetainPtr<CGColorRef> m_tileDebugBorderColor;
     float m_tileDebugBorderWidth;

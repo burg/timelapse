@@ -126,6 +126,10 @@ AM_PROG_CC_C_O
 AC_PROG_INSTALL
 AC_SYS_LARGEFILE
 
+if test -z "$AR_FLAGS"; then
+   AR_FLAGS="cruT"
+fi
+
 # Check whether a C++ was found (AC_PROG_CXX sets $CXX to "g++" even when it
 # doesn't exist)
 AC_LANG_PUSH([C++])
@@ -279,6 +283,12 @@ fi
 AC_SUBST([WINMM_LIBS])
 AC_SUBST([SHLWAPI_LIBS])
 AC_SUBST([OLE32_LIBS])
+
+
+# check whether dlopen() is in the core libc like on FreeBSD, or in a separate
+# libdl like on GNU/Linux (in which case we want to link to libdl)
+AC_CHECK_FUNC([dlopen], [], [AC_CHECK_LIB([dl], [dlopen], [DLOPEN_LIBS="-ldl"])])
+AC_SUBST([DLOPEN_LIBS])
 
 
 # determine the GTK+ version to use
@@ -1028,7 +1038,7 @@ if test "$with_acceleration_backend" = "opengl"; then
    if test "$enable_glx" = "yes"; then
     acceleration_backend_description+=", glx"
    fi
-   OPENGL_LIBS+=" -ldl"
+   OPENGL_LIBS+=" $DLOPEN_LIBS"
    acceleration_backend_description+=")"
 fi
 AC_SUBST([OPENGL_LIBS])
@@ -1048,12 +1058,18 @@ if test "$enable_coverage" = "yes"; then
    AC_SUBST([COVERAGE_LDFLAGS])
 fi
 
+# WebKit1
+AC_MSG_CHECKING([whether to build WebKit1])
+AC_ARG_ENABLE(webkit1,
+    AC_HELP_STRING([--enable-webkit1], [build WebKit1 [default=yes]]),
+    [], [enable_webkit1="yes"])
+
 # WebKit2
 # If you change the default here, please also make sure the assumptions made
 # in Tools/Scripts/webkitdirs.pm:buildAutotoolsProject still make sense.
-AC_MSG_CHECKING([whether to build Webkit2])
+AC_MSG_CHECKING([whether to build WebKit2])
 AC_ARG_ENABLE(webkit2,
-    AC_HELP_STRING([--enable-webkit2], [build webkit2 [default=yes]]),
+    AC_HELP_STRING([--enable-webkit2], [build WebKit2 [default=yes]]),
     [], [enable_webkit2="yes"])
 AC_MSG_RESULT([$enable_webkit2])
 if test "$enable_webkit2" = "yes"; then
@@ -1096,6 +1112,10 @@ if test "$enable_webkit2" = "yes"; then
    AC_SUBST([ATSPI2_LIBS])
 fi
 
+# For the moment we need to check whether or not indexed database
+# is enabled because it determines if we build leveldb or not.
+AM_WEBKIT_FEATURE_CONDITIONAL([ENABLE_INDEXED_DATABASE])
+
 # OS conditionals
 AM_CONDITIONAL([OS_WIN32],[test "$os_win32" = "yes"])
 AM_CONDITIONAL([OS_UNIX],[test "$os_win32" = "no"])
@@ -1135,6 +1155,14 @@ AM_CONDITIONAL([USE_GLX], [test "$enable_glx" = "yes"])
 # Farstream feature conditional
 AM_CONDITIONAL([USE_FARSTREAM], [test "$have_farstream" = "yes"])
 
+#######################################################################################
+#                                     ATTENTION                                       #
+# Please refer to the following guidelines if you're about to add an Automake         #
+# conditional that reflects any configuration option you've probably also added.      #
+# Chances are neither of these changes are required.                                  #
+# http://trac.webkit.org/wiki/AddingFeatures#ActivatingafeatureforAutotoolsbasedports #
+#######################################################################################
+
 # WebKit feature conditionals
 AM_CONDITIONAL([ENABLE_DEBUG],[test "$enable_debug_features" = "yes"])
 AM_CONDITIONAL([ENABLE_WEBGL],[test "$enable_webgl" = "yes"])
@@ -1149,6 +1177,7 @@ AM_CONDITIONAL([ENABLE_COVERAGE],[test "$enable_coverage" = "yes"])
 AM_CONDITIONAL([ENABLE_FAST_MALLOC],[test "$enable_fast_malloc" = "yes"])
 AM_CONDITIONAL([ENABLE_WEB_AUDIO],[test "$enable_web_audio" = "yes"])
 AM_CONDITIONAL([ENABLE_OPCODE_STATS],[test "$enable_opcode_stats" = "yes"])
+AM_CONDITIONAL([ENABLE_WEBKIT1],[test "$enable_webkit1" = "yes"])
 AM_CONDITIONAL([ENABLE_WEBKIT2],[test "$enable_webkit2" = "yes"])
 AM_CONDITIONAL([ENABLE_SPELLCHECK],[test "$enable_spellcheck" = "yes"])
 AM_CONDITIONAL([ENABLE_CSS_FILTERS],[test "$enable_css_filters" = "yes"])
@@ -1160,22 +1189,30 @@ AM_CONDITIONAL([ENABLE_INTROSPECTION],[test "$enable_introspection" = "yes"])
 AC_CONFIG_FILES([
 GNUmakefile
 ])
- 
 
 AC_CONFIG_FILES([
-Source/WebKit/gtk/webkit/webkitversion.h
-Source/WebKit/gtk/po/POTFILES
 DerivedSources/WebCore/UserAgentGtk.h:Source/WebCore/platform/gtk/UserAgentGtk.h.in
 ])
 
 AC_CONFIG_FILES([
-Source/WebKit/gtk/${WEBKITGTK_PC_NAME}-${WEBKITGTK_API_VERSION}.pc:Source/WebKit/gtk/webkit.pc.in
-Source/WebKit/gtk/JSCore-${WEBKITGTK_API_VERSION}.gir:Source/WebKit/gtk/JSCore.gir.in
 Source/JavaScriptCore/javascriptcoregtk-${WEBKITGTK_API_VERSION}.pc:Source/JavaScriptCore/javascriptcoregtk.pc.in
+Source/WebKit/gtk/JSCore-${WEBKITGTK_API_VERSION}.gir:Source/WebKit/gtk/JSCore.gir.in
 ]
 ,[WEBKITGTK_API_VERSION=$WEBKITGTK_API_VERSION,WEBKITGTK_PC_NAME=$WEBKITGTK_PC_NAME]
 )
 
+if test "$enable_webkit1" = "yes"; then
+    AC_CONFIG_FILES([
+    Source/WebKit/gtk/webkit/webkitversion.h
+    Source/WebKit/gtk/po/POTFILES
+    ])
+
+    AC_CONFIG_FILES([
+    Source/WebKit/gtk/${WEBKITGTK_PC_NAME}-${WEBKITGTK_API_VERSION}.pc:Source/WebKit/gtk/webkit.pc.in
+    ]
+    ,[WEBKITGTK_API_VERSION=$WEBKITGTK_API_VERSION,WEBKITGTK_PC_NAME=$WEBKITGTK_PC_NAME]
+    )
+fi
 
 if test "$enable_webkit2" = "yes"; then
     AC_CONFIG_FILES([
@@ -1206,6 +1243,7 @@ Build configuration:
 
 Features:
 =======
+ WebKit1 support                                          : $enable_webkit1
  WebKit2 support                                          : $enable_webkit2
  Accelerated Compositing                                  : $enable_accelerated_compositing
  Gamepad support                                          : $enable_gamepad

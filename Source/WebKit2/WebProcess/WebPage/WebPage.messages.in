@@ -20,7 +20,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-messages -> WebPage {
+messages -> WebPage LegacyReceiver LegacyReceiver {
     SetActive(bool active)
     SetFocused(bool focused)
     SetInitialFocus(bool forward, bool isKeyboardEventValid, WebKit::WebKeyboardEvent event)
@@ -151,6 +151,9 @@ messages -> WebPage {
 
     # Find.
     FindString(WTF::String string, uint32_t findOptions, unsigned maxMatchCount)
+    FindStringMatches(WTF::String string, uint32_t findOptions, unsigned maxMatchCount)
+    GetImageForFindMatch(uint32_t matchIndex)
+    SelectFindMatch(uint32_t matchIndex)
     HideFindUI()
     CountStringMatches(WTF::String string, uint32_t findOptions, unsigned maxMatchCount)
 
@@ -259,6 +262,8 @@ messages -> WebPage {
 
     SetWindowIsVisible(bool windowIsVisible)
     WindowAndViewFramesChanged(WebCore::IntRect windowFrameInScreenCoordinates, WebCore::IntRect viewFrameInWindowCoordinates, WebCore::IntPoint accessibilityViewCoordinates)
+    ViewExposedRectChanged(WebCore::IntRect exposedRect)
+    SetMainFrameIsScrollable(bool isScrollable)
     RegisterUIProcessAccessibilityTokens(CoreIPC::DataReference elemenToken, CoreIPC::DataReference windowToken)
     GetStringSelectionForPasteboard() -> (WTF::String stringValue)
     GetDataSelectionForPasteboard(WTF::String pasteboardType) -> (WebKit::SharedMemory::Handle handle, uint64_t size)
@@ -279,6 +284,9 @@ messages -> WebPage {
     AcceptsFirstMouse(int eventNumber, WebKit::WebMouseEvent event) -> (bool result)
     InsertDictatedText(WTF::String text, uint64_t replacementRangeStart, uint64_t replacementRangeEnd, WTF::Vector<WebCore::DictationAlternative> dictationAlternatives) -> (bool handled, WebKit::EditorState newState)
 #endif
+
+    SetMinimumLayoutWidth(double minimumLayoutWidth)
+
 #if PLATFORM(EFL)
     ConfirmComposition(WTF::String compositionString)
     SetComposition(WTF::String compositionString, WTF::Vector<WebCore::CompositionUnderline> underlines, uint64_t cursorPosition)

@@ -140,7 +140,7 @@ public:
     PassRefPtr<CSSValue> parseAnimationIterationCount();
     PassRefPtr<CSSValue> parseAnimationName();
     PassRefPtr<CSSValue> parseAnimationPlayState();
-    PassRefPtr<CSSValue> parseAnimationProperty();
+    PassRefPtr<CSSValue> parseAnimationProperty(bool& allowAnimationProperty);
     PassRefPtr<CSSValue> parseAnimationTimingFunction();
 
     bool parseTransformOriginShorthand(RefPtr<CSSValue>&, RefPtr<CSSValue>&, RefPtr<CSSValue>&);
@@ -214,6 +214,8 @@ public:
     bool parseDeprecatedGradient(CSSParserValueList*, RefPtr<CSSValue>&);
     bool parseDeprecatedLinearGradient(CSSParserValueList*, RefPtr<CSSValue>&, CSSGradientRepeat repeating);
     bool parseDeprecatedRadialGradient(CSSParserValueList*, RefPtr<CSSValue>&, CSSGradientRepeat repeating);
+    bool parseLinearGradient(CSSParserValueList*, RefPtr<CSSValue>&, CSSGradientRepeat repeating);
+    bool parseRadialGradient(CSSParserValueList*, RefPtr<CSSValue>&, CSSGradientRepeat repeating);
     bool parseGradientColorStops(CSSParserValueList*, CSSGradientValue*, bool expectComma);
 
     bool parseCrossfade(CSSParserValueList*, RefPtr<CSSValue>&);
@@ -264,6 +266,7 @@ public:
     bool parseFontVariantLigatures(bool important);
 
     CSSParserSelector* createFloatingSelector();
+    CSSParserSelector* createFloatingSelectorWithTagName(const QualifiedName&);
     PassOwnPtr<CSSParserSelector> sinkFloatingSelector(CSSParserSelector*);
 
     Vector<OwnPtr<CSSParserSelector> >* createFloatingSelectorVector();
@@ -290,6 +293,11 @@ public:
     StyleRuleBase* createPageRule(PassOwnPtr<CSSParserSelector> pageSelector);
     StyleRuleBase* createRegionRule(Vector<OwnPtr<CSSParserSelector> >* regionSelector, RuleList* rules);
     StyleRuleBase* createMarginAtRule(CSSSelector::MarginBoxType);
+#if ENABLE(CSS3_CONDITIONAL_RULES)
+    StyleRuleBase* createSupportsRule(bool conditionIsSupported, RuleList*);
+    void markSupportsRuleHeaderStart();
+    void markSupportsRuleHeaderEnd();
+#endif
 #if ENABLE(SHADOW_DOM)
     StyleRuleBase* createHostRule(RuleList* rules);
 #endif
@@ -309,7 +317,8 @@ public:
 
     void addNamespace(const AtomicString& prefix, const AtomicString& uri);
     QualifiedName determineNameInNamespace(const AtomicString& prefix, const AtomicString& localName);
-    void updateSpecifiersWithElementName(const AtomicString& namespacePrefix, const AtomicString& elementName, CSSParserSelector*);
+    void updateSpecifiersWithElementName(const AtomicString& namespacePrefix, const AtomicString& elementName, CSSParserSelector*, bool isNamespacePlaceholder = false);
+    void updateSpecifiersWithNamespaceIfNeeded(CSSParserSelector*);
     CSSParserSelector* updateSpecifiers(CSSParserSelector*, CSSParserSelector*);
 
     void invalidBlockHit();
@@ -563,6 +572,10 @@ private:
     Vector<OwnPtr<CSSParserSelector> > m_reusableRegionSelectorVector;
 
     RefPtr<CSSCalcValue> m_parsedCalculation;
+
+#if ENABLE(CSS3_CONDITIONAL_RULES)
+    OwnPtr<RuleSourceDataList> m_supportsRuleDataStack;
+#endif
 
     // defines units allowed for a certain property, used in parseUnit
     enum Units {

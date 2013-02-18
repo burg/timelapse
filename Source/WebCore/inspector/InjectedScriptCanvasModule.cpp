@@ -124,12 +124,14 @@ void InjectedScriptCanvasModule::callVoidFunctionWithTraceLogIdArgument(const St
         *errorString = "Internal error: " + functionName;
 }
 
-void InjectedScriptCanvasModule::traceLog(ErrorString* errorString, const String& traceLogId, const int* startOffset, RefPtr<TypeBuilder::Canvas::TraceLog>* traceLog)
+void InjectedScriptCanvasModule::traceLog(ErrorString* errorString, const String& traceLogId, const int* startOffset, const int* maxLength, RefPtr<TypeBuilder::Canvas::TraceLog>* traceLog)
 {
     ScriptFunctionCall function(injectedScriptObject(), "traceLog");
     function.appendArgument(traceLogId);
     if (startOffset)
         function.appendArgument(*startOffset);
+    if (maxLength)
+        function.appendArgument(*maxLength);
     RefPtr<InspectorValue> resultValue;
     makeCall(function, &resultValue);
     if (!resultValue || resultValue->type() != InspectorValue::TypeObject) {
@@ -140,15 +142,48 @@ void InjectedScriptCanvasModule::traceLog(ErrorString* errorString, const String
     *traceLog = TypeBuilder::Canvas::TraceLog::runtimeCast(resultValue);
 }
 
-void InjectedScriptCanvasModule::replayTraceLog(ErrorString* errorString, const String& traceLogId, int stepNo, String* result)
+void InjectedScriptCanvasModule::replayTraceLog(ErrorString* errorString, const String& traceLogId, int stepNo, RefPtr<TypeBuilder::Canvas::ResourceState>* result)
 {
     ScriptFunctionCall function(injectedScriptObject(), "replayTraceLog");
     function.appendArgument(traceLogId);
     function.appendArgument(stepNo);
     RefPtr<InspectorValue> resultValue;
     makeCall(function, &resultValue);
-    if (!resultValue || resultValue->type() != InspectorValue::TypeString || !resultValue->asString(result))
-        *errorString = "Internal error: replayTraceLog";
+    if (!resultValue || resultValue->type() != InspectorValue::TypeObject) {
+        if (!resultValue->asString(errorString))
+            *errorString = "Internal error: replayTraceLog";
+        return;
+    }
+    *result = TypeBuilder::Canvas::ResourceState::runtimeCast(resultValue);
+}
+
+void InjectedScriptCanvasModule::resourceInfo(ErrorString* errorString, const String& resourceId, RefPtr<TypeBuilder::Canvas::ResourceInfo>* result)
+{
+    ScriptFunctionCall function(injectedScriptObject(), "resourceInfo");
+    function.appendArgument(resourceId);
+    RefPtr<InspectorValue> resultValue;
+    makeCall(function, &resultValue);
+    if (!resultValue || resultValue->type() != InspectorValue::TypeObject) {
+        if (!resultValue->asString(errorString))
+            *errorString = "Internal error: resourceInfo";
+        return;
+    }
+    *result = TypeBuilder::Canvas::ResourceInfo::runtimeCast(resultValue);
+}
+
+void InjectedScriptCanvasModule::resourceState(ErrorString* errorString, const String& traceLogId, const String& resourceId, RefPtr<TypeBuilder::Canvas::ResourceState>* result)
+{
+    ScriptFunctionCall function(injectedScriptObject(), "resourceState");
+    function.appendArgument(traceLogId);
+    function.appendArgument(resourceId);
+    RefPtr<InspectorValue> resultValue;
+    makeCall(function, &resultValue);
+    if (!resultValue || resultValue->type() != InspectorValue::TypeObject) {
+        if (!resultValue->asString(errorString))
+            *errorString = "Internal error: resourceState";
+        return;
+    }
+    *result = TypeBuilder::Canvas::ResourceState::runtimeCast(resultValue);
 }
 
 } // namespace WebCore

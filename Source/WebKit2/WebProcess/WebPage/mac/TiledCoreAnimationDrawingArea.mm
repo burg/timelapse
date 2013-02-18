@@ -70,7 +70,6 @@ TiledCoreAnimationDrawingArea::TiledCoreAnimationDrawingArea(WebPage* webPage, c
     , m_layerTreeStateIsFrozen(false)
     , m_layerFlushScheduler(this)
     , m_isPaintingSuspended(!parameters.isVisible)
-    , m_minimumLayoutWidth(0)
 {
     Page* page = m_webPage->corePage();
 
@@ -112,13 +111,6 @@ void TiledCoreAnimationDrawingArea::scroll(const IntRect& scrollRect, const IntS
 void TiledCoreAnimationDrawingArea::setRootCompositingLayer(GraphicsLayer* graphicsLayer)
 {
     CALayer *rootCompositingLayer = graphicsLayer ? graphicsLayer->platformLayer() : nil;
-
-    // Since we'll always be in accelerated compositing mode, the only time that layer will be nil
-    // is when the WKView is removed from its containing window. In that case, the layer will already be
-    // removed from the layer tree hierarchy over in the UI process, so there's no reason to remove it locally.
-    // In addition, removing the layer here will cause flashes when switching between tabs.
-    if (!rootCompositingLayer)
-        return;
 
     if (m_layerTreeStateIsFrozen) {
         m_pendingRootCompositingLayer = rootCompositingLayer;
@@ -227,7 +219,7 @@ void TiledCoreAnimationDrawingArea::updatePreferences(const WebPreferencesStore&
 
 void TiledCoreAnimationDrawingArea::mainFrameContentSizeChanged(const IntSize& contentSize)
 {
-    if (!m_minimumLayoutWidth)
+    if (!m_webPage->minimumLayoutWidth())
         return;
 
     if (m_inUpdateGeometry)
@@ -341,28 +333,38 @@ void TiledCoreAnimationDrawingArea::resumePainting()
         m_webPage->corePage()->resumeScriptedAnimations();
 }
 
-void TiledCoreAnimationDrawingArea::updateGeometry(const IntSize& viewSize, double minimumLayoutWidth)
+void TiledCoreAnimationDrawingArea::setExposedRect(const IntRect& exposedRect)
+{
+    // FIXME: This should be mapped through the scroll offset, but we need to keep it up to date.
+    m_exposedRect = exposedRect;
+
+    mainFrameTiledBacking()->setExposedRect(exposedRect);
+}
+
+void TiledCoreAnimationDrawingArea::mainFrameScrollabilityChanged(bool isScrollable)
+{
+    mainFrameTiledBacking()->setClipsToExposedRect(!isScrollable);
+}
+
+void TiledCoreAnimationDrawingArea::updateGeometry(const IntSize& viewSize)
 {
     m_inUpdateGeometry = true;
-
-    m_minimumLayoutWidth = minimumLayoutWidth;
 
     IntSize size = viewSize;
     IntSize contentSize = IntSize(-1, -1);
 
-    if (m_minimumLayoutWidth > 0) {
-        m_webPage->setSize(IntSize(m_minimumLayoutWidth, 0));
-        m_webPage->layoutIfNeeded();
+    if (!m_webPage->minimumLayoutWidth())
+        m_webPage->setSize(size);
 
+    m_webPage->layoutIfNeeded();
+
+    if (m_webPage->minimumLayoutWidth()) {
         contentSize = m_webPage->mainWebFrame()->contentBounds().size();
         size = contentSize;
     }
 
-    m_webPage->setSize(size);
-    m_webPage->layoutIfNeeded();
-
     if (m_pageOverlayLayer)
-        m_pageOverlayLayer->setSize(viewSize);
+        m_pageOverlayLayer->setSize(size);
 
     if (!m_layerTreeStateIsFrozen)
         flushLayers();
@@ -370,7 +372,7 @@ void TiledCoreAnimationDrawingArea::updateGeometry(const IntSize& viewSize, doub
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
 
-    m_rootLayer.get().frame = CGRectMake(0, 0, viewSize.width(), viewSize.height());
+    m_rootLayer.get().frame = CGRectMake(0, 0, size.width(), size.height());
 
     [CATransaction commit];
     
@@ -439,19 +441,21 @@ void TiledCoreAnimationDrawingArea::updateLayerHostingContext()
 
 void TiledCoreAnimationDrawingArea::setRootCompositingLayer(CALayer *layer)
 {
-    ASSERT(layer);
     ASSERT(!m_layerTreeStateIsFrozen);
 
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
 
-    m_rootLayer.get().sublayers = [NSArray arrayWithObject:layer];
+    m_rootLayer.get().sublayers = layer ? [NSArray arrayWithObject:layer] : [NSArray array];
 
     if (m_pageOverlayLayer)
         [m_rootLayer.get() addSublayer:m_pageOverlayLayer->platformLayer()];
 
-    if (TiledBacking* tiledBacking = mainFrameTiledBacking())
+    if (TiledBacking* tiledBacking = mainFrameTiledBacking()) {
         tiledBacking->setAggressivelyRetainsTiles(m_webPage->corePage()->settings()->aggressiveTileRetentionEnabled());
+        tiledBacking->setExposedRect(m_exposedRect);
+        tiledBacking->setClipsToExposedRect(!m_webPage->mainFrameIsScrollable());
+    }
 
     updateDebugInfoLayer(m_webPage->corePage()->settings()->showTiledScrollingIndicator());
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc.  All rights reserved.
- * Copyright (C) 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -41,11 +41,13 @@
 #include "Event.h"
 #include "HTMLDivElement.h"
 #include "HTMLMediaElement.h"
+#include "HTMLSpanElement.h"
 #include "NodeTraversal.h"
 #include "RenderTextTrackCue.h"
 #include "Text.h"
 #include "TextTrack.h"
 #include "TextTrackCueList.h"
+#include "WebVTTElement.h"
 #include "WebVTTParser.h"
 #include <wtf/MathExtras.h>
 #include <wtf/text/StringBuilder.h>
@@ -105,7 +107,7 @@ TextTrackCue* TextTrackCueBox::getCue() const
     return m_cue;
 }
 
-void TextTrackCueBox::applyCSSProperties()
+void TextTrackCueBox::applyCSSProperties(const IntSize&)
 {
     // FIXME: Apply all the initial CSS positioning properties. http://wkb.ug/79916
 
@@ -200,16 +202,14 @@ TextTrackCue::TextTrackCue(ScriptExecutionContext* context, double start, double
     , m_cueIndex(invalidCueIndex)
     , m_writingDirection(Horizontal)
     , m_cueAlignment(Middle)
-    , m_documentFragment(0)
+    , m_webVTTNodeTree(0)
     , m_track(0)
     , m_scriptExecutionContext(context)
     , m_isActive(false)
     , m_pauseOnExit(false)
     , m_snapToLines(true)
-    , m_hasInnerTimestamps(false)
     , m_allDocumentNodes(HTMLDivElement::create(static_cast<Document*>(context)))
     , m_displayTreeShouldChange(true)
-    , m_displayTree(TextTrackCueBox::create(static_cast<Document*>(m_scriptExecutionContext), this))
 {
     ASSERT(m_scriptExecutionContext->isDocument());
 
@@ -225,6 +225,18 @@ TextTrackCue::TextTrackCue(ScriptExecutionContext* context, double start, double
 
 TextTrackCue::~TextTrackCue()
 {
+}
+
+PassRefPtr<TextTrackCueBox> TextTrackCue::createDisplayTree()
+{
+    return TextTrackCueBox::create(ownerDocument(), this);
+}
+
+PassRefPtr<TextTrackCueBox> TextTrackCue::displayTreeInternal()
+{
+    if (!m_displayTree)
+        m_displayTree = createDisplayTree();
+    return m_displayTree;
 }
 
 void TextTrackCue::cueWillChange()
@@ -437,7 +449,7 @@ void TextTrackCue::setAlign(const String& value, ExceptionCode& ec)
     // match for the new value, if any. If none of the values match, then the user
     // agent must instead throw a SyntaxError exception.
     
-    Alignment alignment = m_cueAlignment;
+    CueAlignment alignment = m_cueAlignment;
     if (value == startKeyword())
         alignment = Start;
     else if (value == middleKeyword())
@@ -463,7 +475,7 @@ void TextTrackCue::setText(const String& text)
     cueWillChange();
     // Clear the document fragment but don't bother to create it again just yet as we can do that
     // when it is requested.
-    m_documentFragment = 0;
+    m_webVTTNodeTree = 0;
     m_content = text;
     cueDidChange();
 }
@@ -481,29 +493,46 @@ void TextTrackCue::invalidateCueIndex()
     m_cueIndex = invalidCueIndex;
 }
 
+void TextTrackCue::createWebVTTNodeTree()
+{
+    if (!m_webVTTNodeTree)
+        m_webVTTNodeTree = WebVTTParser::create(0, m_scriptExecutionContext)->createDocumentFragmentFromCueText(m_content);
+}
+
+void TextTrackCue::copyWebVTTNodeToDOMTree(ContainerNode* webVTTNode, ContainerNode* parent)
+{
+    for (Node* node = webVTTNode->firstChild(); node; node = node->nextSibling()) {
+        RefPtr<Node> clonedNode;
+        // Specs require voice and class WebVTT elements to be spans for DOM trees.
+        if (node->hasTagName(voiceElementTagName()) || node->hasTagName(classElementTagName())) {
+            clonedNode = HTMLSpanElement::create(spanTag, static_cast<Document*>(m_scriptExecutionContext));
+            toElement(clonedNode.get())->setAttribute(classAttr, toElement(node)->getAttribute(classAttr));
+            toElement(clonedNode.get())->setAttribute(titleAttr, toElement(node)->getAttribute(voiceAttributeName()));
+        } else
+            clonedNode = node->cloneNode(false);
+
+        parent->appendChild(clonedNode, ASSERT_NO_EXCEPTION);
+        if (node->isContainerNode())
+            copyWebVTTNodeToDOMTree(toContainerNode(node), toContainerNode(clonedNode.get()));
+    }
+}
+
 PassRefPtr<DocumentFragment> TextTrackCue::getCueAsHTML()
 {
+    createWebVTTNodeTree();
+    Document* document = static_cast<Document*>(m_scriptExecutionContext);
+    RefPtr<DocumentFragment> clonedFragment = DocumentFragment::create(document);
+    copyWebVTTNodeToDOMTree(m_webVTTNodeTree.get(), clonedFragment.get());
+    return clonedFragment.release();
+}
+
+PassRefPtr<DocumentFragment> TextTrackCue::createCueRenderingTree()
+{
     RefPtr<DocumentFragment> clonedFragment;
-    Document* document;
-
-    if (!m_documentFragment) {
-        m_hasInnerTimestamps = false;
-        m_documentFragment = WebVTTParser::create(0, m_scriptExecutionContext)->createDocumentFragmentFromCueText(m_content);
-
-        if (!m_documentFragment)
-          return 0;
-
-        for (Node *child = m_documentFragment->firstChild(); !m_hasInnerTimestamps && child; child = child->nextSibling()) {
-            if (child->nodeName() == "timestamp")
-                m_hasInnerTimestamps = true;
-        }
-    }
-
-    document = static_cast<Document*>(m_scriptExecutionContext);
-
+    createWebVTTNodeTree();
+    Document* document = static_cast<Document*>(m_scriptExecutionContext);
     clonedFragment = DocumentFragment::create(document);
-    m_documentFragment->cloneChildNodes(clonedFragment.get());
-
+    m_webVTTNodeTree->cloneChildNodes(clonedFragment.get());
     return clonedFragment.release();
 }
 
@@ -527,8 +556,7 @@ void TextTrackCue::setIsActive(bool active)
 
     if (!active) {
         // Remove the display tree as soon as the cue becomes inactive.
-        ExceptionCode ec;
-        m_displayTree->remove(ec);
+        displayTreeInternal()->remove(ASSERT_NO_EXCEPTION);
     }
 }
 
@@ -658,7 +686,7 @@ void TextTrackCue::calculateDisplayParameters()
     m_computedLinePosition = calculateComputedLinePosition();
 }
     
-void TextTrackCue::markFutureAndPastNodes(Node* root, double previousTimestamp, double movieTime)
+void TextTrackCue::markFutureAndPastNodes(ContainerNode* root, double previousTimestamp, double movieTime)
 {
     DEFINE_STATIC_LOCAL(const String, timestampTag, (ASCIILiteral("timestamp")));
     
@@ -678,11 +706,11 @@ void TextTrackCue::markFutureAndPastNodes(Node* root, double previousTimestamp, 
                 isPastNode = false;
         }
         
-        if (child->isElementNode()) {
-            if (!isPastNode)
-                toElement(child)->setIsWebVTTFutureNode();
-            else
-                toElement(child)->setIsWebVTTNode();
+        if (child->isWebVTTElement()) {
+            toWebVTTElement(child)->setWebVTTNodeType(isPastNode ? WebVTTNodeTypePast : WebVTTNodeTypeFuture);
+            // Make an elemenet id match a cue id for style matching purposes.
+            if (!m_id.isEmpty())
+                toElement(child)->setIdAttribute(AtomicString(m_id.characters(), m_id.length()));
         }
     }
 }
@@ -699,15 +727,16 @@ void TextTrackCue::updateDisplayTree(float movieTime)
     m_allDocumentNodes->removeChildren();
 
     // Update the two sets containing past and future WebVTT objects.
-    RefPtr<DocumentFragment> referenceTree = getCueAsHTML();
+    RefPtr<DocumentFragment> referenceTree = createCueRenderingTree();
     markFutureAndPastNodes(referenceTree.get(), startTime(), movieTime);
     m_allDocumentNodes->appendChild(referenceTree);
 }
 
-PassRefPtr<TextTrackCueBox> TextTrackCue::getDisplayTree()
+PassRefPtr<TextTrackCueBox> TextTrackCue::getDisplayTree(const IntSize& videoSize)
 {
+    RefPtr<TextTrackCueBox> displayTree = displayTreeInternal();
     if (!m_displayTreeShouldChange || !track()->isRendered())
-        return m_displayTree;
+        return displayTree;
 
     // 10.1 - 10.10
     calculateDisplayParameters();
@@ -715,7 +744,7 @@ PassRefPtr<TextTrackCueBox> TextTrackCue::getDisplayTree()
     // 10.11. Apply the terms of the CSS specifications to nodes within the
     // following constraints, thus obtaining a set of CSS boxes positioned
     // relative to an initial containing block:
-    m_displayTree->removeChildren();
+    displayTree->removeChildren();
 
     // The document tree is the tree of WebVTT Node Objects rooted at nodes.
 
@@ -725,7 +754,7 @@ PassRefPtr<TextTrackCueBox> TextTrackCue::getDisplayTree()
 
     // Note: This is contained by default in m_allDocumentNodes.
     m_allDocumentNodes->setPseudo(allNodesShadowPseudoId());
-    m_displayTree->appendChild(m_allDocumentNodes, ASSERT_NO_EXCEPTION, true);
+    displayTree->appendChild(m_allDocumentNodes, ASSERT_NO_EXCEPTION, true);
 
     // FIXME(BUG 79916): Runs of children of WebVTT Ruby Objects that are not
     // WebVTT Ruby Text Objects must be wrapped in anonymous boxes whose
@@ -738,21 +767,18 @@ PassRefPtr<TextTrackCueBox> TextTrackCue::getDisplayTree()
     // is no line breaking opportunity. (Thus, normally text wraps as needed,
     // but if there is a particularly long word, it does not overflow as it
     // normally would in CSS, it is instead forcibly wrapped at the box's edge.)
-    m_displayTree->applyCSSProperties();
-
-    if (m_hasInnerTimestamps)
-        updateDisplayTree(track()->mediaElement()->currentTime());
+    displayTree->applyCSSProperties(videoSize);
 
     m_displayTreeShouldChange = false;
 
     // 10.15. Let cue's text track cue display state have the CSS boxes in
     // boxes.
-    return m_displayTree;
+    return displayTree;
 }
 
 void TextTrackCue::removeDisplayTree()
 {
-    m_displayTree->remove(ASSERT_NO_EXCEPTION);
+    displayTreeInternal()->remove(ASSERT_NO_EXCEPTION);
 }
 
 std::pair<double, double> TextTrackCue::getPositionCoordinates() const
@@ -1049,6 +1075,33 @@ EventTargetData* TextTrackCue::eventTargetData()
 EventTargetData* TextTrackCue::ensureEventTargetData()
 {
     return &m_eventTargetData;
+}
+
+bool TextTrackCue::operator==(const TextTrackCue& cue) const
+{
+    if (cueType() != cue.cueType())
+        return false;
+
+    if (m_endTime != cue.endTime())
+        return false;
+    if (m_startTime != cue.startTime())
+        return false;
+    if (m_content != cue.text())
+        return false;
+    if (m_settings != cue.cueSettings())
+        return false;
+    if (m_id != cue.id())
+        return false;
+    if (m_textPosition != cue.position())
+        return false;
+    if (m_linePosition != cue.line())
+        return false;
+    if (m_cueSize != cue.size())
+        return false;
+    if (align() != cue.align())
+        return false;
+    
+    return true;
 }
 
 } // namespace WebCore

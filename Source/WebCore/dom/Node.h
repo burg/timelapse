@@ -115,14 +115,16 @@ public:
     RenderObject* renderer() const { return m_renderer; }
     void setRenderer(RenderObject* renderer) { m_renderer = renderer; }
 
-    virtual ~NodeRareDataBase() { }
 protected:
-    NodeRareDataBase() { }
+    NodeRareDataBase(RenderObject* renderer)
+        : m_renderer(renderer)
+    { }
+
 private:
     RenderObject* m_renderer;
 };
 
-class Node : public EventTarget, public ScriptWrappable, public TreeShared<Node, ContainerNode> {
+class Node : public EventTarget, public ScriptWrappable, public TreeShared<Node> {
     friend class Document;
     friend class TreeScope;
     friend class TreeScopeAdopter;
@@ -234,6 +236,9 @@ public:
 
     virtual bool isMediaControlElement() const { return false; }
     virtual bool isMediaControls() const { return false; }
+#if ENABLE(VIDEO_TRACK)
+    virtual bool isWebVTTElement() const { return false; }
+#endif
     bool isStyledElement() const { return getFlag(IsStyledElementFlag); }
     virtual bool isAttributeNode() const { return false; }
     virtual bool isCharacterDataNode() const { return false; }
@@ -262,7 +267,7 @@ public:
     Element* shadowHost() const;
     // If this node is in a shadow tree, returns its shadow host. Otherwise, returns this.
     // Deprecated. Should use shadowHost() and check the return value.
-    Node* shadowAncestorNode() const;
+    Node* deprecatedShadowAncestorNode() const;
     ShadowRoot* containingShadowRoot() const;
     ShadowRoot* youngestShadowRoot() const;
 
@@ -580,6 +585,7 @@ public:
 
     void invalidateNodeListCachesInAncestors(const QualifiedName* attrName = 0, Element* attributeOwnerElement = 0);
     NodeListsNodeData* nodeLists();
+    void clearNodeLists();
 
     PassRefPtr<NodeList> getElementsByTagName(const AtomicString&);
     PassRefPtr<NodeList> getElementsByTagNameNS(const AtomicString& namespaceURI, const AtomicString& localName);
@@ -644,8 +650,8 @@ public:
     // to event listeners, and prevents DOMActivate events from being sent at all.
     virtual bool disabled() const;
 
-    using TreeShared<Node, ContainerNode>::ref;
-    using TreeShared<Node, ContainerNode>::deref;
+    using TreeShared<Node>::ref;
+    using TreeShared<Node>::deref;
 
     virtual EventTargetData* eventTargetData();
     virtual EventTargetData* ensureEventTargetData();
@@ -671,6 +677,10 @@ public:
     virtual void reportMemoryUsage(MemoryObjectInfo*) const;
 
     void textRects(Vector<IntRect>&) const;
+
+    unsigned connectedSubframeCount() const;
+    void incrementConnectedSubframeCount(unsigned amount = 1);
+    void decrementConnectedSubframeCount(unsigned amount = 1);
 
 private:
     enum NodeFlags {
@@ -748,9 +758,7 @@ protected:
     virtual void didMoveToNewDocument(Document* oldDocument);
     
     virtual void addSubresourceAttributeURLs(ListHashSet<KURL>&) const { }
-    void setTabIndexExplicitly(short);
-    void clearTabIndexExplicitly();
-    
+
     bool hasRareData() const { return getFlag(HasRareDataFlag); }
 
     NodeRareData* rareData() const;
@@ -765,9 +773,10 @@ protected:
     void setTreeScope(TreeScope* scope) { m_treeScope = scope; }
 
 private:
-    friend class TreeShared<Node, ContainerNode>;
+    friend class TreeShared<Node>;
 
     void removedLastRef();
+    bool hasTreeSharedParent() const { return !!parentOrHostNode(); }
 
     enum EditableLevel { Editable, RichlyEditable };
     bool rendererIsEditable(EditableLevel, UserSelectAllTreatment = UserSelectAllIsAlwaysNonEditable) const;
@@ -786,8 +795,6 @@ private:
     virtual void refEventTarget();
     virtual void derefEventTarget();
 
-    virtual PassOwnPtr<NodeRareData> createRareData();
-
     virtual RenderStyle* nonRendererStyle() const { return 0; }
 
     virtual const AtomicString& virtualPrefix() const;
@@ -797,18 +804,13 @@ private:
 
     Element* ancestorElement() const;
 
-    // Use Node::parentNode as the consistent way of querying a parent node.
-    // This method is made private to ensure a compiler error on call sites that
-    // don't follow this rule.
-    using TreeShared<Node, ContainerNode>::parent;
-    using TreeShared<Node, ContainerNode>::setParent;
-
     void trackForDebugging();
 
     Vector<OwnPtr<MutationObserverRegistration> >* mutationObserverRegistry();
     HashSet<MutationObserverRegistration*>* transientMutationObserverRegistry();
 
     mutable uint32_t m_nodeFlags;
+    ContainerNode* m_parentOrHostNode;
     TreeScope* m_treeScope;
     Node* m_previous;
     Node* m_next;
@@ -844,19 +846,21 @@ inline void addSubresourceURL(ListHashSet<KURL>& urls, const KURL& url)
         urls.add(url);
 }
 
-inline ContainerNode* Node::parentNode() const
-{
-    return isShadowRoot() ? 0 : parent();
-}
-
 inline void Node::setParentOrHostNode(ContainerNode* parent)
 {
-    setParent(parent);
+    ASSERT(isMainThread());
+    m_parentOrHostNode = parent;
 }
 
 inline ContainerNode* Node::parentOrHostNode() const
 {
-    return parent();
+    ASSERT(isMainThreadOrGCThread());
+    return m_parentOrHostNode;
+}
+
+inline ContainerNode* Node::parentNode() const
+{
+    return isShadowRoot() ? 0 : parentOrHostNode();
 }
 
 inline ContainerNode* Node::parentNodeGuaranteedHostFree() const

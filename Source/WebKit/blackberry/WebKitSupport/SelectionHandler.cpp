@@ -954,13 +954,12 @@ void SelectionHandler::selectionPositionChanged(bool forceUpdateWithoutChange)
         return;
 
     m_lastSelectionRegion = unclippedRegion;
+    bool isRTL = directionOfEnclosingBlock(frame->selection()) == RTL;
 
     IntRectRegion visibleSelectionRegion;
     if (!unclippedRegion.isEmpty()) {
         WebCore::IntRect unclippedStartCaret;
         WebCore::IntRect unclippedEndCaret;
-
-        bool isRTL = directionOfEnclosingBlock(frame->selection()) == RTL;
 
         WebCore::IntPoint startCaretReferencePoint = referencePoint(frame->selection()->selection().visibleStart(), unclippedRegion.extents(), framePos, true /* isStartCaret */, isRTL);
         WebCore::IntPoint endCaretReferencePoint = referencePoint(frame->selection()->selection().visibleEnd(), unclippedRegion.extents(), framePos, false /* isStartCaret */, isRTL);
@@ -999,6 +998,13 @@ void SelectionHandler::selectionPositionChanged(bool forceUpdateWithoutChange)
         }
     }
 
+    if (!frame->selection()->selection().isBaseFirst() || isRTL ) {
+        // End handle comes before start, invert the caret reference points.
+        WebCore::IntRect tmpCaret(startCaret);
+        startCaret = endCaret;
+        endCaret = tmpCaret;
+    }
+
     SelectionLog(Platform::LogLevelInfo,
         "SelectionHandler::selectionPositionChanged Start Rect=%s End Rect=%s",
         Platform::IntRect(startCaret).toString().c_str(),
@@ -1028,12 +1034,14 @@ void SelectionHandler::caretPositionChanged(bool userTouchTriggered)
 {
     SelectionLog(Platform::LogLevelInfo, "SelectionHandler::caretPositionChanged");
 
+    bool isFatFingerOnTextField = userTouchTriggered && m_webPage->m_touchEventHandler->lastFatFingersResult().isTextInput();
+
     WebCore::IntRect caretLocation;
     // If the input field is not active, we must be turning off the caret.
     if (!m_webPage->m_inputHandler->isInputMode() && m_caretActive) {
         m_caretActive = false;
         // Send an empty caret change to turn off the caret.
-        m_webPage->m_client->notifyCaretChanged(caretLocation, userTouchTriggered);
+        m_webPage->m_client->notifyCaretChanged(caretLocation, isFatFingerOnTextField);
         return;
     }
 
@@ -1074,7 +1082,7 @@ void SelectionHandler::caretPositionChanged(bool userTouchTriggered)
         Platform::IntRect(nodeBoundingBox).toString().c_str(),
         m_webPage->m_inputHandler->elementText().isEmpty() ? ", empty text field" : "");
 
-    m_webPage->m_client->notifyCaretChanged(caretLocation, userTouchTriggered, isSingleLineInput, nodeBoundingBox, m_webPage->m_inputHandler->elementText().isEmpty());
+    m_webPage->m_client->notifyCaretChanged(caretLocation, isFatFingerOnTextField, isSingleLineInput, nodeBoundingBox, m_webPage->m_inputHandler->elementText().isEmpty());
 }
 
 bool SelectionHandler::selectionContains(const WebCore::IntPoint& point)

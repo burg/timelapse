@@ -63,6 +63,11 @@ public:
         return v8::Local<v8::Context>::New(m_context.get());
     }
 
+    v8::Isolate* isolate()
+    {
+        return m_context->GetIsolate();
+    }
+
     DOMWindow* domWindow() const;
     ScriptExecutionContext* scriptExecutionContext() const;
 

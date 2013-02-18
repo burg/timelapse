@@ -172,10 +172,8 @@
       '../svg/SVGExternalResourcesRequired.idl',
       '../svg/SVGFilterPrimitiveStandardAttributes.idl',
       '../svg/SVGFitToViewBox.idl',
-
       '../svg/SVGLangSpace.idl',
       '../svg/SVGLocatable.idl',
-      '../svg/SVGStylable.idl',
       '../svg/SVGTests.idl',
       '../svg/SVGTransformable.idl',
 
@@ -1146,6 +1144,7 @@
             '<(SHARED_INTERMEDIATE_DIR)/webkit',
             '<(bison_exe)',
           ],
+          'msvs_cygwin_shell': 1,
         },
         {
           'rule_name': 'gperf',
@@ -1365,7 +1364,8 @@
             'include_dirs+++': ['../dom'],
           },
           # In generated bindings code: 'switch contains default but no case'.
-          'msvs_disabled_warnings': [ 4065 ],
+          # Disable c4267 warnings until we fix size_t to int truncations.
+          'msvs_disabled_warnings': [ 4065, 4267 ],
         }],
         ['OS in ("linux", "android") and "WTF_USE_WEBAUDIO_IPP=1" in feature_defines', {
           'cflags': [
@@ -1921,6 +1921,11 @@
             ['include', 'platform/graphics/opentype/OpenTypeSanitizer\\.cpp$'],
           ],
         }],
+        ['OS=="win" and chromium_win_pch==1', {
+          'sources/': [
+            ['include', '<(win_pch_dir)/WinPrecompile.cpp'],
+          ],
+        }],
         ['OS=="android"', {
           'sources/': [
             ['include', 'platform/chromium/ClipboardChromiumLinux\\.cpp$'],
@@ -2015,6 +2020,11 @@
         },{ # OS!="win"
           'sources/': [
             ['exclude', 'Win\\.cpp$'],
+          ],
+        }],
+        ['OS=="win" and chromium_win_pch==1', {
+          'sources/': [
+            ['include', '<(win_pch_dir)/WinPrecompile.cpp'],
           ],
         }],
         ['OS=="mac"', {

@@ -4310,7 +4310,7 @@ PassRefPtr<CSSValue> CSSParser::parseAnimationPlayState()
     return 0;
 }
 
-PassRefPtr<CSSValue> CSSParser::parseAnimationProperty()
+PassRefPtr<CSSValue> CSSParser::parseAnimationProperty(bool& allowAnimationProperty)
 {
     CSSParserValue* value = m_valueList->current();
     if (value->unit != CSSPrimitiveValue::CSS_IDENT)
@@ -4320,8 +4320,10 @@ PassRefPtr<CSSValue> CSSParser::parseAnimationProperty()
         return cssValuePool().createIdentifierValue(result);
     if (equalIgnoringCase(value->string, "all"))
         return cssValuePool().createIdentifierValue(CSSValueAll);
-    if (equalIgnoringCase(value->string, "none"))
+    if (equalIgnoringCase(value->string, "none")) {
+        allowAnimationProperty = false;
         return cssValuePool().createIdentifierValue(CSSValueNone);
+    }
     return 0;
 }
 
@@ -4434,6 +4436,7 @@ bool CSSParser::parseAnimationProperty(CSSPropertyID propId, RefPtr<CSSValue>& r
     CSSParserValue* val;
     RefPtr<CSSValue> value;
     bool allowComma = false;
+    bool allowAnimationProperty = true;
 
     result = 0;
 
@@ -4485,7 +4488,10 @@ bool CSSParser::parseAnimationProperty(CSSPropertyID propId, RefPtr<CSSValue>& r
                         m_valueList->next();
                     break;
                 case CSSPropertyWebkitTransitionProperty:
-                    currValue = parseAnimationProperty();
+                    if (allowAnimationProperty)
+                        currValue = parseAnimationProperty(allowAnimationProperty);
+                    if (value && !allowAnimationProperty)
+                        return false;
                     if (currValue)
                         m_valueList->next();
                     break;
@@ -5850,7 +5856,8 @@ inline double CSSParser::parsedDouble(CSSParserValue *v, ReleaseParsedCalcValueC
 bool CSSParser::isCalculation(CSSParserValue* value) 
 {
     return (value->unit == CSSParserValue::Function) 
-        && (equalIgnoringCase(value->function->name, "-webkit-calc(")
+        && (equalIgnoringCase(value->function->name, "calc(")
+            || equalIgnoringCase(value->function->name, "-webkit-calc(")
             || equalIgnoringCase(value->function->name, "-webkit-min(")
             || equalIgnoringCase(value->function->name, "-webkit-max("));
 }
@@ -6207,19 +6214,18 @@ bool CSSParser::parseReflect(CSSPropertyID propId, bool important)
 
     // Direction comes first.
     CSSParserValue* val = m_valueList->current();
-    CSSReflectionDirection direction;
+    RefPtr<CSSPrimitiveValue> direction;
+#if ENABLE(CSS_VARIABLES)
+    if (val->unit == CSSPrimitiveValue::CSS_VARIABLE_NAME)
+        direction = createPrimitiveVariableNameValue(val);
+    else
+#endif
     switch (val->id) {
         case CSSValueAbove:
-            direction = ReflectionAbove;
-            break;
         case CSSValueBelow:
-            direction = ReflectionBelow;
-            break;
         case CSSValueLeft:
-            direction = ReflectionLeft;
-            break;
         case CSSValueRight:
-            direction = ReflectionRight;
+            direction = cssValuePool().createIdentifierValue(val->id);
             break;
         default:
             return false;
@@ -6244,7 +6250,7 @@ bool CSSParser::parseReflect(CSSPropertyID propId, bool important)
             return false;
     }
 
-    RefPtr<CSSReflectValue> reflectValue = CSSReflectValue::create(direction, offset.release(), mask.release());
+    RefPtr<CSSReflectValue> reflectValue = CSSReflectValue::create(direction.release(), offset.release(), mask.release());
     addProperty(propId, reflectValue.release(), important);
     m_valueList->next();
     return true;
@@ -7327,6 +7333,203 @@ bool CSSParser::parseDeprecatedRadialGradient(CSSParserValueList* valueList, Ref
     return true;
 }
 
+bool CSSParser::parseLinearGradient(CSSParserValueList* valueList, RefPtr<CSSValue>& gradient, CSSGradientRepeat repeating)
+{
+    RefPtr<CSSLinearGradientValue> result = CSSLinearGradientValue::create(repeating, CSSLinearGradient);
+
+    CSSParserValueList* args = valueList->current()->function->args.get();
+    if (!args || !args->size())
+        return false;
+
+    CSSParserValue* a = args->current();
+    if (!a)
+        return false;
+
+    bool expectComma = false;
+    // Look for angle.
+    if (validUnit(a, FAngle, CSSStrictMode)) {
+        result->setAngle(createPrimitiveNumericValue(a));
+
+        args->next();
+        expectComma = true;
+    } else if (a->unit == CSSPrimitiveValue::CSS_IDENT && equalIgnoringCase(a->string, "to")) {
+        // to [ [left | right] || [top | bottom] ]
+        a = args->next();
+        if (!a)
+            return false;
+
+        RefPtr<CSSPrimitiveValue> endX, endY;
+        RefPtr<CSSPrimitiveValue> location;
+        bool isHorizontal = false;
+
+        location = valueFromSideKeyword(a, isHorizontal);
+        if (!location)
+            return false;
+
+        if (isHorizontal)
+            endX = location;
+        else
+            endY = location;
+
+        a = args->next();
+        if (!a)
+            return false;
+
+        location = valueFromSideKeyword(a, isHorizontal);
+        if (location) {
+            if (isHorizontal) {
+                if (endX)
+                    return false;
+                endX = location;
+            } else {
+                if (endY)
+                    return false;
+                endY = location;
+            }
+
+            args->next();
+        }
+
+        expectComma = true;
+        result->setFirstX(endX.release());
+        result->setFirstY(endY.release());
+    }
+
+    if (!parseGradientColorStops(args, result.get(), expectComma))
+        return false;
+
+    if (!result->stopCount())
+        return false;
+
+    gradient = result.release();
+    return true;
+}
+
+bool CSSParser::parseRadialGradient(CSSParserValueList* valueList, RefPtr<CSSValue>& gradient, CSSGradientRepeat repeating)
+{
+    RefPtr<CSSRadialGradientValue> result = CSSRadialGradientValue::create(repeating, CSSRadialGradient);
+
+    CSSParserValueList* args = valueList->current()->function->args.get();
+    if (!args || !args->size())
+        return false;
+
+    CSSParserValue* a = args->current();
+    if (!a)
+        return false;
+
+    bool expectComma = false;
+
+    RefPtr<CSSPrimitiveValue> shapeValue;
+    RefPtr<CSSPrimitiveValue> sizeValue;
+    RefPtr<CSSPrimitiveValue> horizontalSize;
+    RefPtr<CSSPrimitiveValue> verticalSize;
+
+    // First part of grammar, the size/shape clause:
+    // [ circle || <length> ] |
+    // [ ellipse || [ <length> | <percentage> ]{2} ] |
+    // [ [ circle | ellipse] || <size-keyword> ]
+    for (int i = 0; i < 3; ++i) {
+        if (a->unit == CSSPrimitiveValue::CSS_IDENT) {
+            bool badIdent = false;
+            switch (a->id) {
+            case CSSValueCircle:
+            case CSSValueEllipse:
+                if (shapeValue)
+                    return false;
+                shapeValue = cssValuePool().createIdentifierValue(a->id);
+                break;
+            case CSSValueClosestSide:
+            case CSSValueClosestCorner:
+            case CSSValueFarthestSide:
+            case CSSValueFarthestCorner:
+                if (sizeValue || horizontalSize)
+                    return false;
+                sizeValue = cssValuePool().createIdentifierValue(a->id);
+                break;
+            default:
+                badIdent = true;
+            }
+
+            if (badIdent)
+                break;
+
+            a = args->next();
+            if (!a)
+                return false;
+        } else if (validUnit(a, FLength | FPercent)) {
+
+            if (sizeValue || horizontalSize)
+                return false;
+            horizontalSize = createPrimitiveNumericValue(a);
+
+            a = args->next();
+            if (!a)
+                return false;
+
+            if (validUnit(a, FLength | FPercent)) {
+                verticalSize = createPrimitiveNumericValue(a);
+                ++i;
+                a = args->next();
+                if (!a)
+                    return false;
+            }
+        } else
+            break;
+    }
+
+    // You can specify size as a keyword or a length/percentage, not both.
+    if (sizeValue && horizontalSize)
+        return false;
+    // Circles must have 0 or 1 lengths.
+    if (shapeValue && shapeValue->getIdent() == CSSValueCircle && verticalSize)
+        return false;
+    // Ellipses must have 0 or 2 length/percentages.
+    if (shapeValue && shapeValue->getIdent() == CSSValueEllipse && horizontalSize && !verticalSize)
+        return false;
+    // If there's only one size, it must be a length.
+    if (!verticalSize && horizontalSize && horizontalSize->isPercentage())
+        return false;
+
+    result->setShape(shapeValue);
+    result->setSizingBehavior(sizeValue);
+    result->setEndHorizontalSize(horizontalSize);
+    result->setEndVerticalSize(verticalSize);
+
+    // Second part of grammar, the center-position clause:
+    // at <position>
+    RefPtr<CSSValue> centerX;
+    RefPtr<CSSValue> centerY;
+    if (equalIgnoringCase(a->string, "at")) {
+        a = args->next();
+        if (!a)
+            return false;
+
+        parseFillPosition(args, centerX, centerY);
+        ASSERT(centerX->isPrimitiveValue());
+        ASSERT(centerY->isPrimitiveValue());
+        if (!(centerX && centerY))
+            return false;
+
+        a = args->current();
+        if (!a)
+            return false;
+        result->setFirstX(static_cast<CSSPrimitiveValue*>(centerX.get()));
+        result->setFirstY(static_cast<CSSPrimitiveValue*>(centerY.get()));
+        // Right now, CSS radial gradients have the same start and end centers.
+        result->setSecondX(static_cast<CSSPrimitiveValue*>(centerX.get()));
+        result->setSecondY(static_cast<CSSPrimitiveValue*>(centerY.get()));
+    }
+
+    if (shapeValue || sizeValue || horizontalSize || centerX || centerY)
+        expectComma = true;
+
+    if (!parseGradientColorStops(args, result.get(), expectComma))
+        return false;
+
+    gradient = result.release();
+    return true;
+}
+
 bool CSSParser::parseGradientColorStops(CSSParserValueList* valueList, CSSGradientValue* gradient, bool expectComma)
 {
     CSSParserValue* a = valueList->current();
@@ -7372,9 +7575,13 @@ bool CSSParser::isGeneratedImageValue(CSSParserValue* val) const
 
     return equalIgnoringCase(val->function->name, "-webkit-gradient(")
         || equalIgnoringCase(val->function->name, "-webkit-linear-gradient(")
+        || equalIgnoringCase(val->function->name, "linear-gradient(")
         || equalIgnoringCase(val->function->name, "-webkit-repeating-linear-gradient(")
+        || equalIgnoringCase(val->function->name, "repeating-linear-gradient(")
         || equalIgnoringCase(val->function->name, "-webkit-radial-gradient(")
+        || equalIgnoringCase(val->function->name, "radial-gradient(")
         || equalIgnoringCase(val->function->name, "-webkit-repeating-radial-gradient(")
+        || equalIgnoringCase(val->function->name, "repeating-radial-gradient(")
         || equalIgnoringCase(val->function->name, "-webkit-canvas(")
         || equalIgnoringCase(val->function->name, "-webkit-cross-fade(");
 }
@@ -7392,14 +7599,26 @@ bool CSSParser::parseGeneratedImage(CSSParserValueList* valueList, RefPtr<CSSVal
     if (equalIgnoringCase(val->function->name, "-webkit-linear-gradient("))
         return parseDeprecatedLinearGradient(valueList, value, NonRepeating);
 
+    if (equalIgnoringCase(val->function->name, "linear-gradient("))
+        return parseLinearGradient(valueList, value, NonRepeating);
+
     if (equalIgnoringCase(val->function->name, "-webkit-repeating-linear-gradient("))
         return parseDeprecatedLinearGradient(valueList, value, Repeating);
+
+    if (equalIgnoringCase(val->function->name, "repeating-linear-gradient("))
+        return parseLinearGradient(valueList, value, Repeating);
 
     if (equalIgnoringCase(val->function->name, "-webkit-radial-gradient("))
         return parseDeprecatedRadialGradient(valueList, value, NonRepeating);
 
+    if (equalIgnoringCase(val->function->name, "radial-gradient("))
+        return parseRadialGradient(valueList, value, NonRepeating);
+
     if (equalIgnoringCase(val->function->name, "-webkit-repeating-radial-gradient("))
         return parseDeprecatedRadialGradient(valueList, value, Repeating);
+
+    if (equalIgnoringCase(val->function->name, "repeating-radial-gradient("))
+        return parseRadialGradient(valueList, value, Repeating);
 
     if (equalIgnoringCase(val->function->name, "-webkit-canvas("))
         return parseCanvas(valueList, value);
@@ -8270,7 +8489,7 @@ PassRefPtr<WebKitCSSFilterValue> CSSParser::parseBuiltinFilterArguments(CSSParse
         break;
     }
     case WebKitCSSFilterValue::BrightnessFilterOperation: {
-        // One optional argument, -1 to +1 or -100% to +100%, if missing use 0,
+        // One optional argument, if missing use 100%.
         if (args->size() > 1)
             return 0;
 
@@ -8278,14 +8497,8 @@ PassRefPtr<WebKitCSSFilterValue> CSSParser::parseBuiltinFilterArguments(CSSParse
             CSSParserValue* value = args->current();
             if (!validUnit(value, FNumber | FPercent, CSSStrictMode))
                 return 0;
-                
-            double amount = value->fValue;
-            double minAllowed = value->unit == CSSPrimitiveValue::CSS_PERCENTAGE ? -100.0 : -1.0;
-            double maxAllowed = value->unit == CSSPrimitiveValue::CSS_PERCENTAGE ? 100.0 : 1.0;
-            if (amount < minAllowed || amount > maxAllowed)
-                return 0;
 
-            filterValue->append(cssValuePool().createValue(amount, static_cast<CSSPrimitiveValue::UnitTypes>(value->unit)));
+            filterValue->append(cssValuePool().createValue(value->fValue, static_cast<CSSPrimitiveValue::UnitTypes>(value->unit)));
         }
         break;
     }
@@ -9502,6 +9715,13 @@ inline bool CSSParser::detectFunctionTypeToken(int length)
 #endif
         return false;
 
+    case 4:
+        if (isEqualToCSSIdentifier(name, "calc")) {
+            m_token = CALCFUNCTION;
+            return true;
+        }
+        return false;
+
     case 9:
         if (isEqualToCSSIdentifier(name, "nth-child")) {
             m_parsingMode = NthChildMode;
@@ -10333,6 +10553,13 @@ restartAfterComment:
     return token();
 }
 
+CSSParserSelector* CSSParser::createFloatingSelectorWithTagName(const QualifiedName& tagQName)
+{
+    CSSParserSelector* selector = new CSSParserSelector(tagQName);
+    m_floatingSelectors.add(selector);
+    return selector;
+}
+
 CSSParserSelector* CSSParser::createFloatingSelector()
 {
     CSSParserSelector* selector = new CSSParserSelector;
@@ -10496,6 +10723,62 @@ StyleRuleBase* CSSParser::createMediaRule(MediaQuerySet* media, RuleList* rules)
     return result;
 }
 
+#if ENABLE(CSS3_CONDITIONAL_RULES)
+StyleRuleBase* CSSParser::createSupportsRule(bool conditionIsSupported, RuleList* rules)
+{
+    m_allowImportRules = m_allowNamespaceDeclarations = false;
+
+    ASSERT(!m_supportsRuleDataStack->isEmpty());
+    RefPtr<CSSRuleSourceData> data = m_supportsRuleDataStack->last();
+    m_supportsRuleDataStack->removeLast();
+    if (m_supportsRuleDataStack->isEmpty())
+        m_supportsRuleDataStack.clear();
+
+    RefPtr<StyleRuleSupports> rule;
+    String conditionText;
+    unsigned conditionOffset = data->ruleHeaderRange.start + 9;
+    unsigned conditionLength = data->ruleHeaderRange.length() - 9;
+
+    if (is8BitSource())
+        conditionText = String(m_dataStart8.get() + conditionOffset, conditionLength).stripWhiteSpace();
+    else
+        conditionText = String(m_dataStart16.get() + conditionOffset, conditionLength).stripWhiteSpace();
+
+    if (rules)
+        rule = StyleRuleSupports::create(conditionText, conditionIsSupported, *rules);
+    else {
+        RuleList emptyRules;
+        rule = StyleRuleSupports::create(conditionText, conditionIsSupported, emptyRules);
+    }
+
+    StyleRuleSupports* result = rule.get();
+    m_parsedRules.append(rule.release());
+    processAndAddNewRuleToSourceTreeIfNeeded();
+
+    return result;
+}
+
+void CSSParser::markSupportsRuleHeaderStart()
+{
+    if (!m_supportsRuleDataStack)
+        m_supportsRuleDataStack = adoptPtr(new RuleSourceDataList());
+
+    RefPtr<CSSRuleSourceData> data = CSSRuleSourceData::create(CSSRuleSourceData::SUPPORTS_RULE);
+    data->ruleHeaderRange.start = tokenStartOffset();
+    m_supportsRuleDataStack->append(data);
+}
+
+void CSSParser::markSupportsRuleHeaderEnd()
+{
+    ASSERT(!m_supportsRuleDataStack->isEmpty());
+
+    if (is8BitSource())
+        m_supportsRuleDataStack->last()->ruleHeaderRange.end = tokenStart<LChar>() - m_dataStart8.get();
+    else
+        m_supportsRuleDataStack->last()->ruleHeaderRange.end = tokenStart<UChar>() - m_dataStart16.get();
+}
+#endif
+
 CSSParser::RuleList* CSSParser::createRuleList()
 {
     OwnPtr<RuleList> list = adoptPtr(new RuleList);
@@ -10632,15 +10915,24 @@ QualifiedName CSSParser::determineNameInNamespace(const AtomicString& prefix, co
     return QualifiedName(prefix, localName, m_styleSheet->determineNamespace(prefix));
 }
 
-void CSSParser::updateSpecifiersWithElementName(const AtomicString& namespacePrefix, const AtomicString& elementName, CSSParserSelector* specifiers)
+void CSSParser::updateSpecifiersWithNamespaceIfNeeded(CSSParserSelector* specifiers)
+{
+    if (m_defaultNamespace != starAtom || specifiers->isCustomPseudoElement())
+        updateSpecifiersWithElementName(nullAtom, starAtom, specifiers, /*tagIsForNamespaceRule*/true);
+}
+
+void CSSParser::updateSpecifiersWithElementName(const AtomicString& namespacePrefix, const AtomicString& elementName, CSSParserSelector* specifiers, bool tagIsForNamespaceRule)
 {
     AtomicString determinedNamespace = namespacePrefix != nullAtom && m_styleSheet ? m_styleSheet->determineNamespace(namespacePrefix) : m_defaultNamespace;
-    QualifiedName tag = QualifiedName(namespacePrefix, elementName, determinedNamespace);
+    QualifiedName tag(namespacePrefix, elementName, determinedNamespace);
+
     if (!specifiers->isCustomPseudoElement()) {
+        if (tag == anyQName())
+            return;
 #if ENABLE(VIDEO_TRACK)
         if (!(specifiers->pseudoType() == CSSSelector::PseudoCue))
 #endif
-            specifiers->setTag(tag);
+            specifiers->prependTagSelector(tag, tagIsForNamespaceRule);
         return;
     }
 
@@ -10653,14 +10945,14 @@ void CSSParser::updateSpecifiersWithElementName(const AtomicString& namespacePre
     }
 
     if (lastShadowDescendant->tagHistory()) {
-        lastShadowDescendant->tagHistory()->setTag(tag);
+        if (tag != anyQName())
+            lastShadowDescendant->tagHistory()->prependTagSelector(tag, tagIsForNamespaceRule);
         return;
     }
 
     // For shadow-ID pseudo-elements to be correctly matched, the ShadowDescendant combinator has to be used.
     // We therefore create a new Selector with that combinator here in any case, even if matching any (host) element in any namespace (i.e. '*').
-    OwnPtr<CSSParserSelector> elementNameSelector = adoptPtr(new CSSParserSelector);
-    elementNameSelector->setTag(tag);
+    OwnPtr<CSSParserSelector> elementNameSelector = adoptPtr(new CSSParserSelector(tag));
     lastShadowDescendant->setTagHistory(elementNameSelector.release());
     lastShadowDescendant->setRelation(CSSSelector::ShadowDescendant);
 }

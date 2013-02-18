@@ -88,6 +88,9 @@ AccessibilityNodeObject::AccessibilityNodeObject(Node* node)
     , m_ariaRole(UnknownRole)
     , m_childrenDirty(false)
     , m_roleForMSAA(UnknownRole)
+#ifndef NDEBUG
+    , m_initialized(false)
+#endif
     , m_node(node)
 {
 }
@@ -99,14 +102,16 @@ AccessibilityNodeObject::~AccessibilityNodeObject()
 
 void AccessibilityNodeObject::init()
 {
+#ifndef NDEBUG
+    ASSERT(!m_initialized);
+    m_initialized = true;
+#endif
     m_role = determineAccessibilityRole();
 }
 
 PassRefPtr<AccessibilityNodeObject> AccessibilityNodeObject::create(Node* node)
 {
-    AccessibilityNodeObject* obj = new AccessibilityNodeObject(node);
-    obj->init();
-    return adoptRef(obj);
+    return adoptRef(new AccessibilityNodeObject(node));
 }
 
 void AccessibilityNodeObject::detach()
@@ -284,6 +289,13 @@ AccessibilityRole AccessibilityNodeObject::determineAccessibilityRole()
             return buttonRoleType();
         if (input->isRangeControl())
             return SliderRole;
+
+#if ENABLE(INPUT_TYPE_COLOR)
+        const AtomicString& type = input->getAttribute(typeAttr);
+        if (equalIgnoringCase(type, "color"))
+            return ColorWellRole;
+#endif
+
         return TextFieldRole;
     }
     if (node()->hasTagName(selectTag)) {
@@ -379,6 +391,12 @@ bool AccessibilityNodeObject::canHaveChildren() const
 
 bool AccessibilityNodeObject::accessibilityIsIgnored() const
 {
+#ifndef NDEBUG
+    // Double-check that an AccessibilityObject is never accessed before
+    // it's been initialized.
+    ASSERT(m_initialized);
+#endif
+
     // If this element is within a parent that cannot have children, it should not be exposed.
     if (isDescendantOfBarrenParent())
         return true;
@@ -1609,6 +1627,30 @@ String AccessibilityNodeObject::stringValue() const
     // this would require subclassing or making accessibilityAttributeNames do something other than return a
     // single static array.
     return String();
+}
+
+void AccessibilityNodeObject::colorValue(int& r, int& g, int& b) const
+{
+    r = 0;
+    g = 0;
+    b = 0;
+
+    if (!isColorWell())
+        return;
+
+    if (!node() || !node()->hasTagName(inputTag))
+        return;
+
+    HTMLInputElement* input = static_cast<HTMLInputElement*>(node());
+    const AtomicString& type = input->getAttribute(typeAttr);
+    if (!equalIgnoringCase(type, "color"))
+        return;
+
+    // HTMLInputElement::value always returns a string parseable by Color().
+    Color color(input->value());
+    r = color.red();
+    g = color.green();
+    b = color.blue();
 }
 
 // This function implements the ARIA accessible name as described by the Mozilla                                        

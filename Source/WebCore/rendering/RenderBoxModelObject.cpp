@@ -310,7 +310,7 @@ bool RenderBoxModelObject::shouldPaintAtLowQuality(GraphicsContext* context, Ima
     return imageQualityController()->shouldPaintAtLowQuality(context, this, image, layer, size);
 }
 
-RenderBoxModelObject::RenderBoxModelObject(Node* node)
+RenderBoxModelObject::RenderBoxModelObject(ContainerNode* node)
     : RenderLayerModelObject(node)
 {
 }
@@ -509,7 +509,7 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
 
 LayoutSize RenderBoxModelObject::stickyPositionOffset() const
 {
-    LayoutRect viewportRect = view()->frameView()->visibleContentRect();
+    LayoutRect viewportRect = view()->frameView()->viewportConstrainedVisibleContentRect();
     float scale = 1;
     if (Frame* frame = view()->frameView()->frame())
         scale = frame->frameScaleFactor();
@@ -870,7 +870,7 @@ void RenderBoxModelObject::paintFillLayerExtended(const PaintInfo& paintInfo, co
 
         // Now add the text to the clip.  We do this by painting using a special paint phase that signals to
         // InlineTextBoxes that they should just add their contents to the clip.
-        PaintInfo info(maskImageContext, maskRect, PaintPhaseTextClip, true, 0, paintInfo.renderRegion, 0);
+        PaintInfo info(maskImageContext, maskRect, PaintPhaseTextClip, PaintBehaviorForceBlackText, 0, paintInfo.renderRegion);
         if (box) {
             RootInlineBox* root = box->root();
             box->paint(info, LayoutPoint(scrolledPaintRect.x() - box->x(), scrolledPaintRect.y() - box->y()), root->lineTop(), root->lineBottom());
@@ -1172,7 +1172,26 @@ IntPoint RenderBoxModelObject::BackgroundImageGeometry::relativePhase() const
     return phase;
 }
 
-void RenderBoxModelObject::calculateBackgroundImageGeometry(const FillLayer* fillLayer, const LayoutRect& paintRect, 
+bool RenderBoxModelObject::fixedBackgroundPaintsInLocalCoordinates() const
+{
+#if USE(ACCELERATED_COMPOSITING)
+    if (!isRoot())
+        return false;
+
+    if (view()->frameView() && view()->frameView()->paintBehavior() & PaintBehaviorFlattenCompositingLayers)
+        return false;
+
+    RenderLayer* rootLayer = view()->layer();
+    if (!rootLayer || !rootLayer->isComposited())
+        return false;
+
+    return rootLayer->backing()->backgroundLayerPaintsFixedRootBackground();
+#else
+    return false;
+#endif
+}
+
+void RenderBoxModelObject::calculateBackgroundImageGeometry(const FillLayer* fillLayer, const LayoutRect& paintRect,
                                                             BackgroundImageGeometry& geometry)
 {
     LayoutUnit left = 0;
@@ -1224,8 +1243,11 @@ void RenderBoxModelObject::calculateBackgroundImageGeometry(const FillLayer* fil
             positioningAreaSize = pixelSnappedIntSize(paintRect.size() - LayoutSize(left + right, top + bottom), paintRect.location());
     } else {
         IntRect viewportRect = pixelSnappedIntRect(viewRect());
-        if (FrameView* frameView = view()->frameView())
+        if (fixedBackgroundPaintsInLocalCoordinates())
+            viewportRect.setLocation(IntPoint());
+        else if (FrameView* frameView = view()->frameView())
             viewportRect.setLocation(IntPoint(frameView->scrollOffsetForFixedPosition()));
+        
         geometry.setDestRect(pixelSnappedIntRect(viewportRect));
         positioningAreaSize = geometry.destRect().size();
     }
@@ -2834,8 +2856,8 @@ void RenderBoxModelObject::moveChildrenTo(RenderBoxModelObject* toBoxModelObject
     // or when fullRemoveInsert is false.
     if (fullRemoveInsert && isRenderBlock()) {
         RenderBlock* block = toRenderBlock(this);
-        if (block->hasPositionedObjects())
-            block->removePositionedObjects(0);
+        block->removePositionedObjects(0);
+        block->removeFloatingObjects(); 
     }
 
     ASSERT(!beforeChild || toBoxModelObject == beforeChild->parent());

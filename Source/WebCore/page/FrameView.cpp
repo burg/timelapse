@@ -1496,6 +1496,13 @@ void FrameView::removeViewportConstrainedObject(RenderObject* object)
     }
 }
 
+LayoutRect FrameView::viewportConstrainedVisibleContentRect() const
+{
+    LayoutRect viewportRect = visibleContentRect();
+    viewportRect.setLocation(toPoint(scrollOffsetForFixedPosition()));
+    return viewportRect;
+}
+
 IntSize FrameView::scrollOffsetForFixedPosition() const
 {
     IntRect visibleContentRect = this->visibleContentRect();
@@ -1794,6 +1801,7 @@ void FrameView::setFixedVisibleContentRect(const IntRect& visibleContentRect)
     IntSize offset = scrollOffset();
     ScrollView::setFixedVisibleContentRect(visibleContentRect);
     if (offset != scrollOffset()) {
+        repaintFixedElementsAfterScrolling();
         if (m_frame->page()->settings()->acceleratedCompositingForFixedPositionEnabled())
             updateFixedElementsAfterScrolling();
         scrollAnimator()->setCurrentPosition(scrollPosition());
@@ -1899,6 +1907,28 @@ bool FrameView::shouldRubberBandInDirection(ScrollDirection direction) const
     if (!page)
         return ScrollView::shouldRubberBandInDirection(direction);
     return page->chrome()->client()->shouldRubberBandInDirection(direction);
+}
+
+bool FrameView::isRubberBandInProgress() const
+{
+    if (scrollbarsSuppressed())
+        return false;
+
+    // If the scrolling thread updates the scroll position for this FrameView, then we should return
+    // ScrollingCoordinator::isRubberBandInProgress().
+    if (Page* page = m_frame->page()) {
+        if (ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator()) {
+            if (!scrollingCoordinator->shouldUpdateScrollLayerPositionOnMainThread())
+                return scrollingCoordinator->isRubberBandInProgress();
+        }
+    }
+
+    // If the main thread updates the scroll position for this FrameView, we should return
+    // ScrollAnimator::isRubberBandInProgress().
+    if (ScrollAnimator* scrollAnimator = existingScrollAnimator())
+        return scrollAnimator->isRubberBandInProgress();
+
+    return false;
 }
 
 bool FrameView::requestScrollPositionUpdate(const IntPoint& position)
@@ -2325,6 +2355,11 @@ bool FrameView::isTransparent() const
 void FrameView::setTransparent(bool isTransparent)
 {
     m_isTransparent = isTransparent;
+}
+
+bool FrameView::hasOpaqueBackground() const
+{
+    return !m_isTransparent && !m_baseBackgroundColor.hasAlpha();
 }
 
 Color FrameView::baseBackgroundColor() const
@@ -2845,8 +2880,11 @@ ScrollableArea* FrameView::enclosingScrollableArea() const
 
 IntRect FrameView::scrollableAreaBoundingBox() const
 {
-    // FIXME: This isn't correct for transformed frames. We probably need to ask the renderer instead.
-    return frameRect();
+    RenderPart* ownerRenderer = frame()->ownerRenderer();
+    if (!ownerRenderer)
+        return frameRect();
+
+    return ownerRenderer->absoluteContentQuad().enclosingBoundingBox();
 }
 
 bool FrameView::isScrollable()
@@ -3013,7 +3051,7 @@ void FrameView::updateScrollCorner()
 
     if (cornerStyle) {
         if (!m_scrollCorner)
-            m_scrollCorner = new (renderer->renderArena()) RenderScrollbarPart(renderer->document());
+            m_scrollCorner = RenderScrollbarPart::createAnonymous(renderer->document());
         m_scrollCorner->setStyle(cornerStyle.release());
         invalidateScrollCorner(cornerRect);
     } else if (m_scrollCorner) {
@@ -3735,18 +3773,24 @@ String FrameView::trackedRepaintRectsAsText() const
     return ts.release();
 }
 
-void FrameView::addScrollableArea(ScrollableArea* scrollableArea)
+bool FrameView::addScrollableArea(ScrollableArea* scrollableArea)
 {
     if (!m_scrollableAreas)
         m_scrollableAreas = adoptPtr(new ScrollableAreaSet);
-    m_scrollableAreas->add(scrollableArea);
+    return m_scrollableAreas->add(scrollableArea).isNewEntry;
 }
 
-void FrameView::removeScrollableArea(ScrollableArea* scrollableArea)
+bool FrameView::removeScrollableArea(ScrollableArea* scrollableArea)
 {
     if (!m_scrollableAreas)
-        return;
-    m_scrollableAreas->remove(scrollableArea);
+        return false;
+
+    ScrollableAreaSet::iterator it = m_scrollableAreas->find(scrollableArea);
+    if (it == m_scrollableAreas->end())
+        return false;
+
+    m_scrollableAreas->remove(it);
+    return true;
 }
 
 bool FrameView::containsScrollableArea(ScrollableArea* scrollableArea) const

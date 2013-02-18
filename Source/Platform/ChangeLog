@@ -1,3 +1,104 @@
+2013-01-22  Nat Duca  <nduca@chromium.org>
+
+        [chromium] Add WebDiscardableMemory to platform
+        https://bugs.webkit.org/show_bug.cgi?id=107183
+
+        Reviewed by James Robinson.
+
+        WebDiscardable provides a wrapper around memory that can be
+        relcaimed by the underlying kernel when it is under heavy memory
+        pressure. This will be used in a followup patch in the Chromium
+        image decoding store for decoded/resized images.
+
+        * Platform.gypi:
+        * chromium/public/Platform.h:
+        (WebKit):
+        (Platform):
+        (WebKit::Platform::allocateDiscardableMemory):
+        * chromium/public/WebDiscardableMemory.h: Added.
+        (WebKit):
+        (WebDiscardableMemory):
+        (WebKit::WebDiscardableMemory::~WebDiscardableMemory):
+
+2013-01-21  Justin Schuh  <jschuh@chromium.org>
+
+        [CHROMIUM] Suppress c4267 build warnings for Win64 targets
+        https://bugs.webkit.org/show_bug.cgi?id=107499
+
+        Reviewed by Abhishek Arya.
+
+        * Platform.gyp/Platform.gyp:
+
+2013-01-21  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Update the RTCPeerConnection states to match the latest specification
+        https://bugs.webkit.org/show_bug.cgi?id=107120
+
+        Reviewed by Adam Barth.
+
+        Updating the chromium WebKit API for the new states.
+
+        * chromium/public/WebRTCPeerConnectionHandlerClient.h:
+        (WebKit::WebRTCPeerConnectionHandlerClient::~WebRTCPeerConnectionHandlerClient):
+        (WebRTCPeerConnectionHandlerClient):
+        (WebKit::WebRTCPeerConnectionHandlerClient::didChangeSignalingState):
+        (WebKit::WebRTCPeerConnectionHandlerClient::didChangeICEGatheringState):
+        (WebKit::WebRTCPeerConnectionHandlerClient::didChangeICEConnectionState):
+        (WebKit::WebRTCPeerConnectionHandlerClient::didAddRemoteDataChannel):
+        (WebKit::WebRTCPeerConnectionHandlerClient::didChangeReadyState):
+        (WebKit::WebRTCPeerConnectionHandlerClient::didChangeICEState):
+
+2013-01-18  Ali Juma  <ajuma@chromium.org>
+
+        [chromium] Convert WebTransformOperations into pure virtual
+        https://bugs.webkit.org/show_bug.cgi?id=105553
+
+        Reviewed by James Robinson.
+
+        * chromium/public/WebCompositorSupport.h:
+        (WebKit):
+        (WebKit::WebCompositorSupport::createTransformOperations):
+        (WebCompositorSupport):
+        * chromium/public/WebTransformKeyframe.h:
+        (WebTransformKeyframe):
+        * chromium/public/WebTransformOperations.h:
+        (WebKit::WebTransformOperations::~WebTransformOperations):
+        (WebTransformOperations):
+
+2013-01-18  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r140158.
+        http://trac.webkit.org/changeset/140158
+        https://bugs.webkit.org/show_bug.cgi?id=107297
+
+        Broke android build (Requested by danakj on #webkit).
+
+        * chromium/public/WebVideoFrame.h:
+        (WebKit):
+        (WebKit::WebVideoFrame::format):
+        (WebKit::WebVideoFrame::width):
+        (WebKit::WebVideoFrame::height):
+        (WebKit::WebVideoFrame::planes):
+        (WebKit::WebVideoFrame::stride):
+        (WebKit::WebVideoFrame::data):
+        (WebKit::WebVideoFrame::textureId):
+        (WebKit::WebVideoFrame::textureTarget):
+        (WebKit::WebVideoFrame::visibleRect):
+        (WebKit::WebVideoFrame::textureSize):
+
+2013-01-18  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Remove the contents of WebVideoFrame class
+        https://bugs.webkit.org/show_bug.cgi?id=106037
+
+        Reviewed by James Robinson.
+
+        This class becomes an empty base class now, used only for the API
+        boundary.
+
+        * chromium/public/WebVideoFrame.h:
+        (WebKit):
+
 2013-01-10  Tommy Widenflycht  <tommyw@google.com>
 
         MediaStream API: Adding the new id attribute to MediaStream and MediaStreamTrack

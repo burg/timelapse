@@ -314,6 +314,8 @@ webkit.org/b/106405 http/tests/xmlhttprequest/basic-auth-nouser.html [ Failure ]
 webkit.org/b/106405 http/tests/xmlhttprequest/failed-auth.html [ Failure ]
 webkit.org/b/106405 http/tests/xmlhttprequest/remember-bad-password.html [ Failure ]
 
+webkit.org/b/107356 fast/css/sticky/sticky-top-zoomed.html [ ImageOnlyFailure ]
+
 ### END OF (1) Classified failures with bug reports
 ########################################
 
@@ -354,7 +356,6 @@ storage/websql/statement-error-callback-isolated-world.html
 
 # All tests that failed more than once on the Lion WebKit2 Debug bot between r111808 and r111849
 http/tests/cookies/simple-cookies-max-age.html
-fast/events/drag-selects-image.html
 fast/workers/worker-cloneport.html
 
 # All additional tests that failed more than once on the Lion WebKit2 Release bot between r111814 and r111865
@@ -408,7 +409,6 @@ sputnik/Unicode/Unicode_218/S7.6_A5.2_T1.html
 ### START OF (5) Features that are not supported in WebKit1, so skipped in mac/TestExpectations then re-enabled here
 
 platform/mac/tiled-drawing/ [ Pass ]
-fast/css/sticky/sticky-top-zoomed.html [ Pass ]
 
 ### END OF (5) Features that are not supported in WebKit1, so skipped in mac/TestExpectations then re-enabled here
 ########################################

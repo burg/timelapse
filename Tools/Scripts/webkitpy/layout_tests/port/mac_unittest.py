@@ -87,9 +87,9 @@ java/
         port._filesystem = MockFileSystem(dirs=platform_dir_paths)
 
         dirs_to_skip = port._tests_for_other_platforms()
-        self.assertTrue('platform/chromium-linux' in dirs_to_skip)
-        self.assertFalse('platform/mac' in dirs_to_skip)
-        self.assertFalse('platform/mac-snowleopard' in dirs_to_skip)
+        self.assertIn('platform/chromium-linux', dirs_to_skip)
+        self.assertNotIn('platform/mac', dirs_to_skip)
+        self.assertNotIn('platform/mac-snowleopard', dirs_to_skip)
 
     def test_version(self):
         port = self.make_port()
@@ -130,10 +130,10 @@ java/
         self._assert_search_path('mac-lion', 'mac-lion', ['mac-lion', 'mac'])
         self._assert_search_path('mac-mountainlion', 'mac', ['mac'])
         self._assert_search_path('mac-future', 'mac', ['mac'])
-        self._assert_search_path('mac-snowleopard', 'mac-wk2', ['mac-wk2', 'mac-snowleopard', 'mac-lion', 'mac'], use_webkit2=True)
-        self._assert_search_path('mac-lion', 'mac-wk2', ['mac-wk2', 'mac-lion', 'mac'], use_webkit2=True)
-        self._assert_search_path('mac-mountainlion', 'mac-wk2', ['mac-wk2', 'mac'], use_webkit2=True)
-        self._assert_search_path('mac-future', 'mac-wk2', ['mac-wk2', 'mac'], use_webkit2=True)
+        self._assert_search_path('mac-snowleopard', 'mac-wk2', ['mac-wk2', 'wk2', 'mac-snowleopard', 'mac-lion', 'mac'], use_webkit2=True)
+        self._assert_search_path('mac-lion', 'mac-wk2', ['mac-wk2', 'wk2', 'mac-lion', 'mac'], use_webkit2=True)
+        self._assert_search_path('mac-mountainlion', 'mac-wk2', ['mac-wk2', 'wk2', 'mac'], use_webkit2=True)
+        self._assert_search_path('mac-future', 'mac-wk2', ['mac-wk2', 'wk2', 'mac'], use_webkit2=True)
 
     def test_show_results_html_file(self):
         port = self.make_port()

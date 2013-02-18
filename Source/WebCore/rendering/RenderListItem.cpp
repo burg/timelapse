@@ -39,8 +39,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderListItem::RenderListItem(Node* node)
-    : RenderBlock(node)
+RenderListItem::RenderListItem(Element* element)
+    : RenderBlock(element)
     , m_marker(0)
     , m_hasExplicitValue(false)
     , m_isValueUpToDate(false)
@@ -60,7 +60,7 @@ void RenderListItem::styleDidChange(StyleDifference diff, const RenderStyle* old
         // up (e.g., in some deeply nested line box). See CSS3 spec.
         newStyle->inheritFrom(style()); 
         if (!m_marker)
-            m_marker = new (renderArena()) RenderListMarker(this);
+            m_marker = RenderListMarker::createAnonymous(this);
         m_marker->setStyle(newStyle.release());
     } else if (m_marker) {
         m_marker->destroy();
@@ -265,22 +265,12 @@ void RenderListItem::updateMarkerLocation()
             if (!lineBoxParent)
                 lineBoxParent = this;
             lineBoxParent->addChild(m_marker, firstNonMarkerChild(lineBoxParent));
-            if (m_marker->preferredLogicalWidthsDirty())
-                m_marker->computePreferredLogicalWidths();
+            m_marker->updateMarginsAndContent();
             // If markerPar is an anonymous block that has lost all its children, destroy it.
             if (markerPar && markerPar->isAnonymousBlock() && !markerPar->firstChild() && !toRenderBlock(markerPar)->continuation())
                 markerPar->destroy();
         }
     }
-}
-
-void RenderListItem::computePreferredLogicalWidths()
-{
-    ASSERT(preferredLogicalWidthsDirty());
-    
-    updateMarkerLocation();
-
-    RenderBlock::computePreferredLogicalWidths();
 }
 
 void RenderListItem::layout()

@@ -329,7 +329,7 @@ public:
     };
 
     // Scrolling methods for layers that can scroll their overflow.
-    void scrollByRecursively(const IntSize&, ScrollOffsetClamping = ScrollOffsetUnclamped);
+    bool scrollByRecursively(const IntSize&, ScrollOffsetClamping = ScrollOffsetUnclamped);
     void scrollToOffset(const IntSize&, ScrollOffsetClamping = ScrollOffsetUnclamped);
     void scrollToXOffset(int x, ScrollOffsetClamping clamp = ScrollOffsetUnclamped) { scrollToOffset(IntSize(x, scrollYOffset()), clamp); }
     void scrollToYOffset(int y, ScrollOffsetClamping clamp = ScrollOffsetUnclamped) { scrollToOffset(IntSize(scrollXOffset(), y), clamp); }
@@ -373,7 +373,7 @@ public:
     void updateScrollInfoAfterLayout();
 
     bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1);
-    void autoscroll();
+    void autoscroll(const IntPoint&);
 
     void resize(const PlatformMouseEvent&, const LayoutSize&);
     bool inResizeMode() const { return m_inResizeMode; }
@@ -427,18 +427,23 @@ public:
     void clearBlockSelectionGapsBounds();
     void repaintBlockSelectionGaps();
 
-    // Get the enclosing stacking context for this layer.  A stacking context is a layer
-    // that has a non-auto z-index.
-    RenderLayer* stackingContext() const;
+    // A stacking context is a layer that has a non-auto z-index.
     bool isStackingContext() const { return isStackingContext(renderer()->style()); }
 
+    // A stacking container can have z-order lists. All stacking contexts are
+    // stacking containers, but the converse is not true.
+    bool isStackingContainer() const { return isStackingContext(); }
+
+    // Gets the enclosing stacking container for this layer.
+    RenderLayer* stackingContainer() const;
+
     void dirtyZOrderLists();
-    void dirtyStackingContextZOrderLists();
+    void dirtyStackingContainerZOrderLists();
 
     Vector<RenderLayer*>* posZOrderList() const
     {
         ASSERT(!m_zOrderListsDirty);
-        ASSERT(isStackingContext() || !m_posZOrderList);
+        ASSERT(isStackingContainer() || !m_posZOrderList);
         return m_posZOrderList.get();
     }
 
@@ -447,7 +452,7 @@ public:
     Vector<RenderLayer*>* negZOrderList() const
     {
         ASSERT(!m_zOrderListsDirty);
-        ASSERT(isStackingContext() || !m_negZOrderList);
+        ASSERT(isStackingContainer() || !m_negZOrderList);
         return m_negZOrderList.get();
     }
 
@@ -474,6 +479,7 @@ public:
     // automatically opt into composited scrolling since this out of flow
     // positioned descendant would become clipped by us, possibly altering the 
     // rendering of the page.
+    // FIXME: We should ASSERT(!m_hasOutOfFlowPositionedDescendantDirty); here but we may hit the same bugs as visible content above.
     bool hasOutOfFlowPositionedDescendant() const { return m_hasOutOfFlowPositionedDescendant; }
 
     // Gets the nearest enclosing positioned ancestor layer (also includes
@@ -528,6 +534,8 @@ public:
         PaintLayerPaintingCompositingForegroundPhase = 1 << 6,
         PaintLayerPaintingCompositingMaskPhase = 1 << 7,
         PaintLayerPaintingOverflowContents = 1 << 8,
+        PaintLayerPaintingRootBackgroundOnly = 1 << 9,
+        PaintLayerPaintingSkipRootBackground = 1 << 10,
         PaintLayerPaintingCompositingAllPhases = (PaintLayerPaintingCompositingBackgroundPhase | PaintLayerPaintingCompositingForegroundPhase | PaintLayerPaintingCompositingMaskPhase)
     };
     
@@ -757,7 +765,8 @@ private:
     void updateNormalFlowList();
 
     bool isStackingContext(const RenderStyle* style) const { return !style->hasAutoZIndex() || isRootLayer(); }
-    bool isDirtyStackingContext() const { return m_zOrderListsDirty && isStackingContext(); }
+
+    bool isDirtyStackingContainer() const { return m_zOrderListsDirty && isStackingContainer(); }
 
     void setAncestorChainHasSelfPaintingLayerDescendant();
     void dirtyAncestorChainHasSelfPaintingLayerDescendantStatus();
@@ -982,8 +991,8 @@ private:
     bool mustCompositeForIndirectReasons() const { return m_indirectCompositingReason; }
 #endif
 
-    // Returns true if z ordering would not change if this layer were to establish a stacking context.
-    bool canSafelyEstablishAStackingContext() const;
+    // Returns true if z ordering would not change if this layer were a stacking container.
+    bool canBeStackingContainer() const;
 
     friend class RenderLayerBacking;
     friend class RenderLayerCompositor;
@@ -1150,7 +1159,7 @@ private:
 
 inline void RenderLayer::clearZOrderLists()
 {
-    ASSERT(!isStackingContext());
+    ASSERT(!isStackingContainer());
 
     m_posZOrderList.clear();
     m_negZOrderList.clear();
@@ -1161,7 +1170,7 @@ inline void RenderLayer::updateZOrderLists()
     if (!m_zOrderListsDirty)
         return;
 
-    if (!isStackingContext()) {
+    if (!isStackingContainer()) {
         clearZOrderLists();
         m_zOrderListsDirty = false;
         return;

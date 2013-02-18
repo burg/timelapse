@@ -35,6 +35,7 @@
 #include "DRTDevToolsClient.h"
 #include "DRTTestRunner.h"
 #include "MockWebPrerenderingSupport.h"
+#include "WebArrayBufferView.h"
 #include "WebCache.h"
 #include "WebDataSource.h"
 #include "WebDocument.h"
@@ -49,7 +50,6 @@
 #include "WebTestProxy.h"
 #include "WebView.h"
 #include "WebViewHost.h"
-#include "platform/WebArrayBufferView.h"
 #include "skia/ext/platform_canvas.h"
 #include "webkit/support/webkit_support.h"
 #include "webkit/support/webkit_support_gfx.h"
@@ -202,6 +202,8 @@ TestShell::~TestShell()
     m_testRunner->setDelegate(0);
     m_testRunner->setWebView(0);
     m_drtDevToolsAgent->setWebView(0);
+    if (m_webViewHost)
+        m_webViewHost->shutdown();
 }
 
 void TestShell::createDRTDevToolsClient(DRTDevToolsAgent* agent)
@@ -219,7 +221,7 @@ void TestShell::showDevTools()
         }
         m_devTools = createNewWindow(url, 0, m_devToolsTestInterfaces.get());
         m_devTools->webView()->settings()->setMemoryInfoEnabled(true);
-        m_devTools->setLogConsoleOutput(false);
+        m_devTools->proxy()->setLogConsoleOutput(false);
         m_devToolsTestInterfaces->setDelegate(m_devTools);
         m_devToolsTestInterfaces->setWebView(m_devTools->webView());
         ASSERT(m_devTools);
@@ -332,9 +334,6 @@ void TestShell::resetTestController()
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     m_notificationPresenter->reset();
 #endif
-#if OS(ANDROID)
-    webkit_support::ReleaseMediaResources();
-#endif
     m_drtDevToolsAgent->reset();
     if (m_drtDevToolsClient)
         m_drtDevToolsClient->reset();
@@ -344,6 +343,8 @@ void TestShell::resetTestController()
     webView()->mainFrame()->clearOpener();
     WebTestingSupport::resetInternalsObject(webView()->mainFrame());
     WebCache::clear();
+
+    webkit_support::ResetTestEnvironment();
 }
 
 void TestShell::loadURL(const WebURL& url)
@@ -795,6 +796,7 @@ void TestShell::closeWindow(WebViewHost* window)
     if (window->webWidget() == m_focusedWidget)
         focusedWidget = 0;
 
+    window->shutdown();
     delete window;
     // We set the focused widget after deleting the web view host because it
     // can change the focus.

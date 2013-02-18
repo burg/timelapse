@@ -37,10 +37,14 @@
 #include "SegmentedString.h"
 #include "Timer.h"
 #include "XSSAuditor.h"
+#include <wtf/Deque.h>
 #include <wtf/OwnPtr.h>
+#include <wtf/WeakPtr.h>
+#include <wtf/text/TextPosition.h>
 
 namespace WebCore {
 
+class CompactHTMLToken;
 class Document;
 class DocumentFragment;
 class HTMLDocument;
@@ -77,6 +81,10 @@ public:
     virtual void suspendScheduledTasks();
     virtual void resumeScheduledTasks();
 
+#if ENABLE(THREADED_HTML_PARSER)
+    void didReceiveTokensFromBackgroundParser(PassOwnPtr<CompactHTMLTokenStream>);
+#endif
+
 protected:
     virtual void insert(const SegmentedString&);
     virtual void append(const SegmentedString&);
@@ -96,7 +104,6 @@ private:
     // DocumentParser
     virtual void detach();
     virtual bool hasInsertionPoint();
-    virtual bool finishWasCalled();
     virtual bool processingData() const;
     virtual void prepareToStopParsing();
     virtual void stopParsing();
@@ -108,11 +115,17 @@ private:
     virtual void watchForLoad(CachedResource*);
     virtual void stopWatchingForLoad(CachedResource*);
     virtual HTMLInputStream& inputStream() { return m_input; }
-    virtual bool hasPreloadScanner() const { return m_preloadScanner.get(); }
+    virtual bool hasPreloadScanner() const { return m_preloadScanner.get() && !shouldUseThreading(); }
     virtual void appendCurrentInputStreamToPreloadScannerAndScan();
 
     // CachedResourceClient
     virtual void notifyFinished(CachedResource*);
+
+#if ENABLE(THREADED_HTML_PARSER)
+    void startBackgroundParser();
+    void stopBackgroundParser();
+    void processTokensFromBackgroundParser(PassOwnPtr<CompactHTMLTokenStream>);
+#endif
 
     enum SynchronousMode {
         AllowYield,
@@ -122,6 +135,9 @@ private:
     void pumpTokenizer(SynchronousMode);
     void pumpTokenizerIfPossible(SynchronousMode);
     void constructTreeFromHTMLToken(HTMLToken&);
+#if ENABLE(THREADED_HTML_PARSER)
+    void constructTreeFromCompactHTMLToken(const CompactHTMLToken&);
+#endif
 
     void runScriptsForPausedTreeBuilder();
     void resumeParsingAfterScriptExecution();
@@ -130,6 +146,8 @@ private:
     void endIfDelayed();
     void attemptToRunDeferredScriptsAndEnd();
     void end();
+
+    bool shouldUseThreading() const { return m_options.useThreading && !isParsingFragment(); }
 
     bool isParsingFragment() const;
     bool isScheduledForResume() const;
@@ -149,9 +167,16 @@ private:
     OwnPtr<HTMLPreloadScanner> m_insertionPreloadScanner;
     OwnPtr<HTMLParserScheduler> m_parserScheduler;
     HTMLSourceTracker m_sourceTracker;
+    TextPosition m_textPosition;
     XSSAuditor m_xssAuditor;
 
+#if ENABLE(THREADED_HTML_PARSER)
+    Deque<OwnPtr<CompactHTMLTokenStream> > m_pendingTokens;
+    WeakPtrFactory<HTMLDocumentParser> m_weakFactory;
+#endif
+
     bool m_endWasDelayed;
+    bool m_haveBackgroundParser;
     unsigned m_pumpSessionNestingLevel;
 };
 

@@ -87,6 +87,17 @@ struct Node {
     
     Node() { }
     
+    Node(NodeType op, CodeOrigin codeOrigin, const AdjacencyList& children)
+        : codeOrigin(codeOrigin)
+        , children(children)
+        , m_virtualRegister(InvalidVirtualRegister)
+        , m_refCount(0)
+        , m_prediction(SpecNone)
+    {
+        setOpAndDefaultFlags(op);
+        ASSERT(!!(m_flags & NodeHasVarArgs) == (children.kind() == AdjacencyList::Variable));
+    }
+    
     // Construct a node with up to 3 children, no immediate value.
     Node(NodeType op, CodeOrigin codeOrigin, NodeIndex child1 = NoNode, NodeIndex child2 = NoNode, NodeIndex child3 = NoNode)
         : codeOrigin(codeOrigin)
@@ -306,7 +317,7 @@ struct Node {
         case PhantomArguments:
             return JSValue();
         default:
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
             return JSValue(); // Have to return something in release mode.
         }
     }
@@ -634,7 +645,7 @@ struct Node {
         case 1:
             return notTakenBlockIndex();
         default:
-            ASSERT_NOT_REACHED();
+            RELEASE_ASSERT_NOT_REACHED();
             return NoBlock;
         }
     }
@@ -909,10 +920,14 @@ struct Node {
         return m_refCount;
     }
 
-    // returns true when ref count passes from 0 to 1.
-    bool ref()
+    void ref()
     {
-        return !m_refCount++;
+        m_refCount++;
+    }
+
+    unsigned postfixRef()
+    {
+        return m_refCount++;
     }
 
     unsigned adjustedRefCount()
@@ -925,13 +940,16 @@ struct Node {
         m_refCount = refCount;
     }
     
-    // Derefs the node and returns true if the ref count reached zero.
-    // In general you don't want to use this directly; use Graph::deref
-    // instead.
-    bool deref()
+    void deref()
     {
         ASSERT(m_refCount);
-        return !--m_refCount;
+        --m_refCount;
+    }
+    
+    unsigned postfixDeref()
+    {
+        ASSERT(m_refCount);
+        return m_refCount--;
     }
     
     Edge child1()

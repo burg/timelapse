@@ -30,6 +30,7 @@
 #include "NetworkProcess.h"
 #include "NetworkResourceLoader.h"
 #include "RemoteNetworkingContext.h"
+#include "SyncNetworkResourceLoader.h"
 #include <WebCore/PlatformCookieJar.h>
 #include <WebCore/ResourceLoaderOptions.h>
 #include <WebCore/ResourceRequest.h>
@@ -56,19 +57,6 @@ NetworkConnectionToWebProcess::NetworkConnectionToWebProcess(CoreIPC::Connection
 
 NetworkConnectionToWebProcess::~NetworkConnectionToWebProcess()
 {
-    ASSERT(m_observers.isEmpty());
-}
-
-void NetworkConnectionToWebProcess::registerObserver(NetworkConnectionToWebProcessObserver* observer)
-{
-    ASSERT(!m_observers.contains(observer));
-    m_observers.add(observer);
-}
-
-void NetworkConnectionToWebProcess::unregisterObserver(NetworkConnectionToWebProcessObserver* observer)
-{
-    ASSERT(m_observers.contains(observer));
-    m_observers.remove(observer);
 }
     
 void NetworkConnectionToWebProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
@@ -79,7 +67,7 @@ void NetworkConnectionToWebProcess::didReceiveMessage(CoreIPC::Connection* conne
     }
     
     if (messageID.is<CoreIPC::MessageClassNetworkResourceLoader>()) {
-        NetworkResourceLoader* loader = NetworkProcess::shared().networkResourceLoadScheduler().networkResourceLoaderForIdentifier(decoder.destinationID());
+        NetworkResourceLoader* loader = m_networkResourceLoaders.get(decoder.destinationID()).get();
         if (loader)
             loader->didReceiveNetworkResourceLoaderMessage(connection, messageID, decoder);
         return;
@@ -100,34 +88,43 @@ void NetworkConnectionToWebProcess::didClose(CoreIPC::Connection*)
 {
     // Protect ourself as we might be otherwise be deleted during this function.
     RefPtr<NetworkConnectionToWebProcess> protector(this);
-    
-    NetworkProcess::shared().removeNetworkConnectionToWebProcess(this);
 
-    Vector<NetworkConnectionToWebProcessObserver*> observers;
-    copyToVector(m_observers, observers);
-    for (size_t i = 0; i < observers.size(); ++i)
-        observers[i]->connectionToWebProcessDidClose(this);
+    HashMap<ResourceLoadIdentifier, RefPtr<NetworkResourceLoader> >::iterator end = m_networkResourceLoaders.end();
+    for (HashMap<ResourceLoadIdentifier, RefPtr<NetworkResourceLoader> >::iterator i = m_networkResourceLoaders.begin(); i != end; ++i)
+        i->value->connectionToWebProcessDidClose();
 
-    // The object may be destroyed now.
+    HashMap<ResourceLoadIdentifier, RefPtr<SyncNetworkResourceLoader> >::iterator syncEnd = m_syncNetworkResourceLoaders.end();
+    for (HashMap<ResourceLoadIdentifier, RefPtr<SyncNetworkResourceLoader> >::iterator i = m_syncNetworkResourceLoaders.begin(); i != syncEnd; ++i)
+        i->value->connectionToWebProcessDidClose();
+
+    m_networkResourceLoaders.clear();
 }
 
 void NetworkConnectionToWebProcess::didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference, CoreIPC::StringReference)
 {
 }
 
-void NetworkConnectionToWebProcess::scheduleResourceLoad(const NetworkResourceLoadParameters& loadParameters, ResourceLoadIdentifier& resourceLoadIdentifier)
+void NetworkConnectionToWebProcess::scheduleResourceLoad(const NetworkResourceLoadParameters& loadParameters)
 {
-    resourceLoadIdentifier = NetworkProcess::shared().networkResourceLoadScheduler().scheduleResourceLoad(loadParameters, this);
+    RefPtr<NetworkResourceLoader> loader = NetworkResourceLoader::create(loadParameters, this);
+    m_networkResourceLoaders.add(loadParameters.identifier(), loader);
+    NetworkProcess::shared().networkResourceLoadScheduler().scheduleLoader(loader.get());
 }
 
-void NetworkConnectionToWebProcess::addLoadInProgress(const KURL& url, ResourceLoadIdentifier& identifier)
+void NetworkConnectionToWebProcess::performSynchronousLoad(const NetworkResourceLoadParameters& loadParameters, PassRefPtr<Messages::NetworkConnectionToWebProcess::PerformSynchronousLoad::DelayedReply> reply)
 {
-    identifier = NetworkProcess::shared().networkResourceLoadScheduler().addLoadInProgress(url);
+    RefPtr<SyncNetworkResourceLoader> loader = SyncNetworkResourceLoader::create(loadParameters, this, reply);
+    m_syncNetworkResourceLoaders.add(loadParameters.identifier(), loader);
+    NetworkProcess::shared().networkResourceLoadScheduler().scheduleLoader(loader.get());
 }
 
 void NetworkConnectionToWebProcess::removeLoadIdentifier(ResourceLoadIdentifier identifier)
 {
-    NetworkProcess::shared().networkResourceLoadScheduler().removeLoadIdentifier(identifier);
+    RefPtr<SchedulableLoader> loader = m_networkResourceLoaders.take(identifier);
+    if (!loader)
+        loader = m_syncNetworkResourceLoaders.take(identifier);
+
+    NetworkProcess::shared().networkResourceLoadScheduler().removeLoader(loader.get());
 }
 
 void NetworkConnectionToWebProcess::servePendingRequests(uint32_t resourceLoadPriority)

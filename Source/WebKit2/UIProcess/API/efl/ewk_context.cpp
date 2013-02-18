@@ -136,7 +136,7 @@ PassRefPtr<EwkContext> EwkContext::defaultContext()
 EwkCookieManager* EwkContext::cookieManager()
 {
     if (!m_cookieManager)
-        m_cookieManager = EwkCookieManager::create(m_context->supplement<WebCookieManagerProxy>());
+        m_cookieManager = EwkCookieManager::create(WKContextGetCookieManager(toAPI(m_context.get())));
 
     return m_cookieManager.get();
 }
@@ -151,7 +151,7 @@ void EwkContext::ensureFaviconDatabase()
     if (m_faviconDatabase)
         return;
 
-    m_faviconDatabase = EwkFaviconDatabase::create(m_context.get()->iconDatabase());
+    m_faviconDatabase = EwkFaviconDatabase::create(WKContextGetIconDatabase(toAPI(m_context.get())));
 }
 
 bool EwkContext::setFaviconDatabaseDirectoryPath(const String& databaseDirectory)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2010, 2011, 2012 Research In Motion Limited. All rights reserved.
+ * Copyright (C) 2009, 2010, 2011, 2012, 2013 Research In Motion Limited. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -63,7 +63,7 @@ inline static bool isUnauthorized(int statusCode)
     return statusCode == 401;
 }
 
-static char* const appendableHeaders[] = {"access-control-allow-origin", "allow",
+static const char* const appendableHeaders[] = {"access-control-allow-origin", "allow",
     "set-cookie", "set-cookie2", "vary", "via", "warning"};
 
 static bool isAppendableHeader(const String& key)
@@ -72,7 +72,7 @@ static bool isAppendableHeader(const String& key)
     if (key.startsWith("x-"))
         return true;
 
-    for (int i = 0; i < sizeof(appendableHeaders) /sizeof(char*); i++)
+    for (size_t i = 0; i < sizeof(appendableHeaders) /sizeof(char*); i++)
         if (key == appendableHeaders[i])
             return true;
 
@@ -268,43 +268,57 @@ void NetworkJob::notifyMultipartHeaderReceived(const char* key, const char* valu
         handleNotifyMultipartHeaderReceived(key, value);
 }
 
-void NetworkJob::notifyAuthReceived(BlackBerry::Platform::NetworkRequest::AuthType authType, const char* realm, AuthResult result, bool requireCredentials)
+void NetworkJob::notifyAuthReceived(BlackBerry::Platform::NetworkRequest::AuthType authType, BlackBerry::Platform::NetworkRequest::AuthScheme authScheme, const char* realm, AuthResult result, bool requireCredentials)
 {
     using BlackBerry::Platform::NetworkRequest;
 
-    ProtectionSpaceServerType serverType = ProtectionSpaceServerHTTP;
-    ProtectionSpaceAuthenticationScheme scheme = ProtectionSpaceAuthenticationSchemeDefault;
-
-    if (m_response.url().protocolIs("https"))
-        serverType = ProtectionSpaceServerHTTPS;
-
+    ProtectionSpaceServerType serverType;
     switch (authType) {
-    case NetworkRequest::AuthHTTPBasic:
+    case NetworkRequest::AuthTypeHTTP:
+        serverType = ProtectionSpaceServerHTTP;
+        break;
+    case NetworkRequest::AuthTypeHTTPS:
+        serverType = ProtectionSpaceServerHTTPS;
+        break;
+    case NetworkRequest::AuthTypeFTP:
+        serverType = ProtectionSpaceServerFTP;
+        break;
+    case NetworkRequest::AuthTypeFTPS:
+        serverType = ProtectionSpaceServerFTPS;
+        break;
+    case NetworkRequest::AuthTypeProxyHTTP:
+        serverType = ProtectionSpaceProxyHTTP;
+        break;
+    case NetworkRequest::AuthTypeProxyHTTPS:
+        serverType = ProtectionSpaceProxyHTTPS;
+        break;
+    case NetworkRequest::AuthTypeProxyFTP:
+        serverType = ProtectionSpaceProxyFTP;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    ProtectionSpaceAuthenticationScheme scheme;
+    switch (authScheme) {
+    case NetworkRequest::AuthSchemeDefault:
+        scheme = ProtectionSpaceAuthenticationSchemeDefault;
+        break;
+    case NetworkRequest::AuthSchemeHTTPBasic:
         scheme = ProtectionSpaceAuthenticationSchemeHTTPBasic;
         break;
-    case NetworkRequest::AuthHTTPDigest:
+    case NetworkRequest::AuthSchemeHTTPDigest:
         scheme = ProtectionSpaceAuthenticationSchemeHTTPDigest;
         break;
-    case NetworkRequest::AuthNegotiate:
+    case NetworkRequest::AuthSchemeNegotiate:
         scheme = ProtectionSpaceAuthenticationSchemeNegotiate;
         break;
-    case NetworkRequest::AuthHTTPNTLM:
+    case NetworkRequest::AuthSchemeNTLM:
         scheme = ProtectionSpaceAuthenticationSchemeNTLM;
         break;
-    case NetworkRequest::AuthFTP:
-        if (m_response.url().protocolIs("ftps"))
-            serverType = ProtectionSpaceServerFTPS;
-        else
-            serverType = ProtectionSpaceServerFTP;
-        break;
-    case NetworkRequest::AuthProxy:
-        if (m_response.url().protocolIs("https"))
-            serverType = ProtectionSpaceProxyHTTPS;
-        else
-            serverType = ProtectionSpaceProxyHTTP;
-        break;
-    case NetworkRequest::AuthNone:
     default:
+        ASSERT_NOT_REACHED();
         return;
     }
 
@@ -762,6 +776,9 @@ bool NetworkJob::sendRequestWithCredentials(ProtectionSpaceServerType type, Prot
     if (!newURL.isValid())
         return false;
 
+    // IMPORTANT: if a new source of credentials is added to this method, be sure to handle it in
+    // purgeCredentials as well!
+
     String host;
     int port;
     BlackBerry::Platform::ProxyInfo proxyInfo;
@@ -832,18 +849,7 @@ bool NetworkJob::sendRequestWithCredentials(ProtectionSpaceServerType type, Prot
         }
 
         // Before asking the user for credentials, we check if the URL contains that.
-        if (!username.isEmpty() || !password.isEmpty()) {
-            // Prevent them from been used again if they are wrong.
-            // If they are correct, they will be put into CredentialStorage.
-            if (!proxyInfo.address.empty()) {
-                proxyInfo.username.clear();
-                proxyInfo.password.clear();
-                BlackBerry::Platform::Settings::instance()->storeProxyCredentials(proxyInfo);
-            } else {
-                m_handle->getInternal()->m_user = "";
-                m_handle->getInternal()->m_pass = "";
-            }
-        } else {
+        if (username.isEmpty() && password.isEmpty()) {
             if (m_handle->firstRequest().targetType() != ResourceRequest::TargetIsMainFrame && BlackBerry::Platform::Settings::instance()->isChromeProcess())
                 return false;
 
@@ -909,6 +915,25 @@ void NetworkJob::purgeCredentials()
     AuthenticationChallenge& challenge = m_handle->getInternal()->m_currentWebChallenge;
     if (challenge.isNull())
         return;
+
+    const String& purgeUsername = challenge.proposedCredential().user();
+    const String& purgePassword = challenge.proposedCredential().password();
+
+    // Since this credential didn't work, remove it from all sources which would return it
+    // IMPORTANT: every source that is checked for a password in sendRequestWithCredentials should
+    // be handled here!
+
+    if (challenge.protectionSpace().serverType() == ProtectionSpaceProxyHTTP || challenge.protectionSpace().serverType() == ProtectionSpaceProxyHTTPS) {
+        BlackBerry::Platform::ProxyInfo proxyInfo = BlackBerry::Platform::Settings::instance()->proxyInfo(m_handle->firstRequest().url().string());
+        if (!proxyInfo.address.empty() && purgeUsername == proxyInfo.username.c_str() && purgePassword == proxyInfo.password.c_str()) {
+            proxyInfo.username.clear();
+            proxyInfo.password.clear();
+            BlackBerry::Platform::Settings::instance()->storeProxyCredentials(proxyInfo);
+        }
+    } else if (m_handle->getInternal()->m_user == purgeUsername && m_handle->getInternal()->m_pass == purgePassword) {
+        m_handle->getInternal()->m_user = "";
+        m_handle->getInternal()->m_pass = "";
+    }
 
     CredentialStorage::remove(challenge.protectionSpace());
     challenge.setStored(false);

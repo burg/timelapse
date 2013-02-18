@@ -185,7 +185,7 @@ sub IndexGetterReturnsStrings
 {
     my $type = shift;
 
-    return 1 if $type eq "CSSStyleDeclaration" or $type eq "MediaList" or $type eq "DOMStringList" or $type eq "DOMString[]"  or $type eq "DOMTokenList" or $type eq "DOMSettableTokenList";
+    return 1 if $type eq "CSSStyleDeclaration" or $type eq "MediaList" or $type eq "DOMStringList" or $type eq "DOMTokenList" or $type eq "DOMSettableTokenList";
     return 0;
 }
 
@@ -241,9 +241,6 @@ sub AddIncludesForType
     } elsif ($type eq "XPathNSResolver") {
         $includesRef->{"JSXPathNSResolver.h"} = 1;
         $includesRef->{"JSCustomXPathNSResolver.h"} = 1;
-    } elsif ($type eq "DOMString[]") {
-        # FIXME: Consider replacing DOMStringList with DOMString[] or sequence<DOMString>.
-        $includesRef->{"JSDOMStringList.h"} = 1;
     } elsif ($type eq "SerializedScriptValue") {
         $includesRef->{"SerializedScriptValue.h"} = 1;
     } elsif ($isCallback) {
@@ -251,6 +248,7 @@ sub AddIncludesForType
     } elsif ($codeGenerator->IsTypedArrayType($type)) {
         $includesRef->{"<wtf/${type}.h>"} = 1;
     } elsif ($codeGenerator->GetSequenceType($type)) {
+    } elsif ($codeGenerator->GetArrayType($type)) {
     } else {
         # default, include the same named file
         $includesRef->{"${type}.h"} = 1;
@@ -1301,7 +1299,7 @@ sub GenerateParametersCheckExpression
             # For Callbacks only checks if the value is null or object.
             push(@andExpression, "(${value}.isNull() || ${value}.isFunction())");
             $usedArguments{$parameterIndex} = 1;
-        } elsif ($codeGenerator->IsArrayType($type) || $codeGenerator->GetSequenceType($type)) {
+        } elsif ($codeGenerator->GetArrayType($type) || $codeGenerator->GetSequenceType($type)) {
             # FIXME: Add proper support for T[], T[]?, sequence<T>
             if ($parameter->isNullable) {
                 push(@andExpression, "(${value}.isNull() || (${value}.isObject() && isJSArray(${value})))");
@@ -2526,7 +2524,7 @@ sub GenerateImplementation
             push(@implContent, "{\n");
             push(@implContent, "    ${className}* thisObj = jsCast<$className*>(asObject(slotBase));\n");
             if ($interfaceName eq "HTMLPropertiesCollection") {
-                push(@implContent, "    return toJS(exec, thisObj->globalObject(), static_cast<$interfaceName*>(thisObj->impl())->propertyNodeList(propertyNameToAtomicString(propertyName)));\n");
+                push(@implContent, "    return toJS(exec, thisObj->globalObject(), WTF::getPtr(static_cast<$interfaceName*>(thisObj->impl())->propertyNodeList(propertyNameToAtomicString(propertyName))));\n");
             } else {
                 push(@implContent, "    return toJS(exec, thisObj->globalObject(), static_cast<$interfaceName*>(thisObj->impl())->namedItem(propertyNameToAtomicString(propertyName)));\n");
             }
@@ -3160,12 +3158,9 @@ sub GetNativeTypeFromSignature
 my %nativeType = (
     "CompareHow" => "Range::CompareHow",
     "DOMString" => "const String&",
-    # FIXME: Consider replacing DOMStringList with DOMString[] or sequence<DOMString>.
-    "DOMString[]" => "RefPtr<DOMStringList>",
     "DOMObject" => "ScriptValue",
     "NodeFilter" => "RefPtr<NodeFilter>",
     "SerializedScriptValue" => "RefPtr<SerializedScriptValue>",
-    "IDBKey" => "PassRefPtr<IDBKey>",
     "Dictionary" => "Dictionary",
     "any" => "ScriptValue",
     "boolean" => "bool",
@@ -3187,7 +3182,7 @@ sub GetNativeType
 
     my $svgNativeType = $codeGenerator->GetSVGTypeNeedingTearOff($type);
     return "${svgNativeType}*" if $svgNativeType;
-    return "RefPtr<DOMStringList>" if $type eq "DOMStringList" or $type eq "DOMString[]";
+    return "RefPtr<DOMStringList>" if $type eq "DOMStringList";
     return $nativeType{$type} if exists $nativeType{$type};
 
     my $arrayType = $codeGenerator->GetArrayType($type);
@@ -3213,7 +3208,7 @@ sub GetNativeTypeForCallbacks
 {
     my $type = shift;
     return "SerializedScriptValue*" if $type eq "SerializedScriptValue";
-    return "PassRefPtr<DOMStringList>" if $type eq "DOMStringList" or $type eq "DOMString[]";
+    return "PassRefPtr<DOMStringList>" if $type eq "DOMStringList";
 
     return GetNativeType($type);
 }
@@ -3322,18 +3317,12 @@ sub JSValueToNative
         return "SerializedScriptValue::create(exec, $value, 0, 0)";
     }
 
-    if ($type eq "IDBKey") {
-        AddToImplIncludes("IDBBindingUtilities.h", $conditional);
-        AddToImplIncludes("IDBKey.h", $conditional);
-        return "createIDBKeyFromValue(exec, $value)";
-    }
-
     if ($type eq "Dictionary") {
         AddToImplIncludes("Dictionary.h", $conditional);
         return "exec, $value";
     }
 
-    if ($type eq "DOMString[]" or $type eq "DOMStringList" ) {
+    if ($type eq "DOMStringList" ) {
         AddToImplIncludes("JSDOMStringList.h", $conditional);
         return "toDOMStringList(exec, $value)";
     }
@@ -3809,7 +3798,10 @@ sub GenerateConstructorDeclaration
             }
         }
 
+        my $conditionalString = $codeGenerator->GenerateConstructorConditionalString($interface);
+        push(@$outputArray, "#if $conditionalString\n") if $conditionalString;
         push(@$outputArray, "    static JSC::ConstructType getConstructData(JSC::JSCell*, JSC::ConstructData&);\n");
+        push(@$outputArray, "#endif // $conditionalString\n") if $conditionalString;
     }
     push(@$outputArray, "};\n\n");
 
@@ -4177,11 +4169,15 @@ sub GenerateConstructorHelperMethods
 
     if (IsConstructable($interface)) {
         if (!$interface->extendedAttributes->{"NamedConstructor"} || $generatingNamedConstructor) {
+            my $conditionalString = $codeGenerator->GenerateConstructorConditionalString($interface);
+            push(@$outputArray, "#if $conditionalString\n") if $conditionalString;
             push(@$outputArray, "ConstructType ${constructorClassName}::getConstructData(JSCell*, ConstructData& constructData)\n");
             push(@$outputArray, "{\n");
             push(@$outputArray, "    constructData.native.function = construct${className};\n");
             push(@$outputArray, "    return ConstructTypeHost;\n");
-            push(@$outputArray, "}\n\n");
+            push(@$outputArray, "}\n");
+            push(@$outputArray, "#endif // $conditionalString\n") if $conditionalString;
+            push(@$outputArray, "\n");
         }
     }
 }
