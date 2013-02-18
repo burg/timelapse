@@ -409,7 +409,7 @@ static const char* viewportErrorMessageTemplate(ViewportErrorCode errorCode)
 {
     static const char* const errors[] = {
         "Viewport argument key \"%replacement1\" not recognized and ignored.",
-        "Viewport argument value \"%replacement1\" for key \"%replacement2\" not recognized. Content ignored.",
+        "Viewport argument value \"%replacement1\" for key \"%replacement2\" is invalid, and has been ignored.",
         "Viewport argument value \"%replacement1\" for key \"%replacement2\" was truncated to its numeric prefix.",
         "Viewport maximum-scale cannot be larger than 10.0. The maximum-scale will be set to 10.0.",
         "Viewport target-densitydpi is not supported.",
@@ -423,7 +423,7 @@ static MessageLevel viewportErrorMessageLevel(ViewportErrorCode errorCode)
     switch (errorCode) {
     case TruncatedViewportArgumentValueError:
     case TargetDensityDpiUnsupported:
-        return TipMessageLevel;
+        return WarningMessageLevel;
     case UnrecognizedViewportArgumentKeyError:
     case UnrecognizedViewportArgumentValueError:
     case MaximumScaleTooLargeError:
@@ -432,18 +432,6 @@ static MessageLevel viewportErrorMessageLevel(ViewportErrorCode errorCode)
 
     ASSERT_NOT_REACHED();
     return ErrorMessageLevel;
-}
-
-// FIXME: Why is this different from SVGDocumentExtensions parserLineNumber?
-// FIXME: Callers should probably use ScriptController::eventHandlerLineNumber()
-static int parserLineNumber(Document* document)
-{
-    if (!document)
-        return 0;
-    ScriptableDocumentParser* parser = document->scriptableDocumentParser();
-    if (!parser)
-        return 0;
-    return parser->lineNumber().oneBasedInt();
 }
 
 void reportViewportWarning(Document* document, ViewportErrorCode errorCode, const String& replacement1, const String& replacement2)
@@ -461,7 +449,8 @@ void reportViewportWarning(Document* document, ViewportErrorCode errorCode, cons
     if ((errorCode == UnrecognizedViewportArgumentValueError || errorCode == TruncatedViewportArgumentValueError) && replacement1.find(';') != WTF::notFound)
         message.append(" Note that ';' is not a separator in viewport values. The list should be comma-separated.");
 
-    document->domWindow()->console()->addMessage(HTMLMessageSource, LogMessageType, viewportErrorMessageLevel(errorCode), message, document->url().string(), parserLineNumber(document));
+    // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
+    document->addConsoleMessage(HTMLMessageSource, viewportErrorMessageLevel(errorCode), message);
 }
 
 } // namespace WebCore

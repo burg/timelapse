@@ -27,7 +27,8 @@
 #define IDBTransactionBackendInterface_h
 
 #include "IDBCallbacks.h"
-#include <wtf/Threading.h>
+#include <wtf/PassRefPtr.h>
+#include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(INDEXED_DATABASE)
@@ -40,11 +41,10 @@ class IDBTransactionCallbacks;
 
 typedef int ExceptionCode;
 
-// This class is shared by IDBTransaction (async) and IDBTransactionSync (sync).
 // This is implemented by IDBTransactionBackendImpl and optionally others (in order to proxy
 // calls across process barriers). All calls to these classes should be non-blocking and
 // trigger work on a background thread if necessary.
-class IDBTransactionBackendInterface : public ThreadSafeRefCounted<IDBTransactionBackendInterface> {
+class IDBTransactionBackendInterface : public RefCounted<IDBTransactionBackendInterface> {
 public:
     virtual ~IDBTransactionBackendInterface() { }
 

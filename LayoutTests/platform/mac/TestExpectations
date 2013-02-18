@@ -255,6 +255,7 @@ inspector/profiler/heap-snapshot-summary-show-ranges.html
 inspector/profiler/heap-snapshot-summary-sorting-fields.html
 inspector/profiler/heap-snapshot-summary-sorting.html
 inspector/profiler/heap-snapshot-summary-sorting-instances.html
+webkit.org/b/50485 inspector-protocol/take-heap-snapshot.html [ Skip ]
 
 # New inspector/profiler/memory-instrumentation-canvas.html fails on JSC platforms
 webkit.org/b/99001 inspector/profiler/memory-instrumentation-canvas.html
@@ -394,9 +395,6 @@ fast/dom/title-directionality.html
 # https://bugs.webkit.org/show_bug.cgi?id=58924
 plugins/mouse-click-iframe-to-plugin.html
 
-# Animation API is disabled by default
-animations/animation-api-1.html
-
 # HTTP 204 (No Content) should be ignored
 # https://bugs.webkit.org/show_bug.cgi?id=60206
 http/tests/navigation/response204.html
@@ -431,6 +429,10 @@ fast/regions/style-scoped-in-flow.html
 fast/dom/shadow
 editing/shadow
 inspector/elements/update-shadowdom.html
+
+# ENABLE(TEMPLATE_ELEMENT) is disabled.
+fast/dom/HTMLTemplateElement
+html5lib/run-template.html
 
 # JSC does not support setIsolatedWorldSecurityOrigin (http://webkit.org/b/61540)
 http/tests/security/isolatedWorld/cross-origin-xhr.html
@@ -467,6 +469,41 @@ media/track/track-cue-rendering-horizontal.html
 media/track/track-cue-rendering-snap-to-lines-not-set.html
 media/track/track-cue-rendering-vertical.html
 media/track/track-webvtt-tc028-unsupported-markup.html
+
+# Opera-submitted tests to W3C for <track>, a lot of failures still.
+# Opera-submitted tests to W3C for <track>, a lot of failures still.
+webkit.org/b/103926 media/track/opera/idl/media-idl-tests.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/HTMLElement/HTMLMediaElement/crossOrigin.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/HTMLElement/HTMLTrackElement/kind.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/HTMLElement/HTMLTrackElement/src.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrack/activeCues.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrack/removeCue.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TrackEvent/constructor.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TrackEvent/createEvent.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/align.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/id.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/getCueAsHTML.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/line.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/onenter.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/onexit.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/pauseOnExit.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/snapToLines.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/text.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/track.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/vertical.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCueList/getter.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackList/getter.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackList/onremovetrack.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/track-element/cloneNode.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/track-element/src-clear-cues.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/parsing/001.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/parsing-cue-data/tests/entities.html [ Skip ] 
+webkit.org/b/103926 media/track/opera/track/webvtt/parsing-cue-data/tests/tags.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/rendering/adhoc/12345_timestamps.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/parsing-cue-data/tests/timestamps.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/parsing-cue-data/tests/tree-building.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/rendering/adhoc/cue_font_size_transition.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/rendering/adhoc/voice_with_evil_timestamp.html [ Skip ]
 
 # Tests for MediaSource API. Feature is not yet functional.
 # https://bugs.webkit.org/show_bug.cgi?id=64731
@@ -575,7 +612,7 @@ batterystatus/
 networkinformation
 
 # Proximity Events is not supported.
-fast/dom/Proximity
+proximity
 fast/events/constructors/device-proximity-event-constructor.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=81410
@@ -983,9 +1020,6 @@ webkit.org/b/76439 [ Debug ] fast/dom/shadow/content-element-outside-shadow.html
 webkit.org/b/85580 fast/css/variables
 webkit.org/b/85580 inspector/styles/variables
 
-# UndoManager is not yet enabled.
-webkit.org/b/87908 editing/undomanager
-
 # CSS image-resolution is not yet enabled.
 webkit.org/b/85262 fast/css/image-resolution
 
@@ -999,9 +1033,6 @@ webkit.org/b/89052 fast/css/image-orientation
 # CSS3 Text support is not yet enabled (needs ENABLE_CSS3_TEXT).
 webkit.org/b/58491 fast/css3-text/css3-text-decoration
 webkit.org/b/76173 fast/css3-text/css3-text-align-last
-
-# CSS3 Background is not yet enabled (needs ENABLE_CSS3_BACKGROUND).
-webkit.org/b/37514 fast/backgrounds/background-position-parsing-2.html [ Text ]
 
 # Our slow tests, in alphabetical order.
 webkit.org/b/57672 http/tests/local/fileapi/send-sliced-dragged-file.html [ Failure Pass ]
@@ -1017,6 +1048,9 @@ webkit.org/b/57688 fast/text/international/thai-line-breaks.html [ Failure Pass 
 
 # Fails on WK1, but passes on WK2.  (No syntax available for this situation.)
 webkit.org/b/58192 plugins/npp-set-window-called-during-destruction.html [ Failure Pass ]
+
+# https://bugs.webkit.org/show_bug.cgi?id=104054
+webkit.org/b/104054 svg/custom/use-href-update-crash.svg [ Failure Pass ]
 
 # Flakey plugin tests
 webkit.org/b/82752 plugins/netscape-dom-access-and-reload.html [ Failure Pass ]
@@ -1117,6 +1151,10 @@ webkit.org/b/90951 fast/text/shaping
 webkit.org/b/101177 svg/dynamic-updates/SVGUseElement-dom-requiredFeatures.html [ ImageOnlyFailure Pass ]
 webkit.org/b/101177 svg/repaint/inner-svg-change-viewBox.svg [ ImageOnlyFailure Pass ]
 
+# Needs rebaseline after bug https://bugs.webkit.org/show_bug.cgi?id=104462
+webkit.org/b/98687 fast/css-generated-content/table-row-group-to-inline.html [ Failure ]
+webkit.org/b/104595 fast/css/empty-generated-content.html [ Failure ]
+
 webkit.org/b/93247 [ Debug ] fast/lists/list-marker-remove-crash.html [ Crash ]
 
 # (r124484) inspector/device-orientation-success.html failing on Mac ports
@@ -1178,15 +1216,12 @@ webkit.org/b/61138 http/tests/w3c/webperf/submission/Intel/resource-timing [ Ski
 # TileCache tests that don't apply to WK1 (they are re-enabled via the WK2 TestExpectations file)
 platform/mac/tiled-drawing/ [ Skip ]
 
-# DRT is not firing fake mouse events. Safari fires them fine. Looks like a bug with Apple's Mac DRT.
-webkit.org/b/101808 fast/scrolling/fake-mouse-event-throttling.html [ Skip ]
-
 webkit.org/b/100846 inspector-protocol/debugger-pause-dedicated-worker.html [ Skip ]
 webkit.org/b/100846 inspector-protocol/debugger-terminate-dedicated-worker-while-paused.html [ Skip ]
 
-webkit.org/b/100142 css3/filters/effect-reference-hw.html [ Fail ]
-webkit.org/b/100142 css3/filters/effect-reference-ordering-hw.html [ Fail ]
-webkit.org/b/100142 css3/filters/effect-reference.html [ Fail ]
+webkit.org/b/100142 css3/filters/effect-reference-hw.html [ Failure ]
+webkit.org/b/100142 css3/filters/effect-reference-ordering-hw.html [ Failure ]
+webkit.org/b/100142 css3/filters/effect-reference.html [ Failure ]
 
 # Mac doesn't have a toggle for CC any more, it's based on a menu of choices.
 webkit.org/b/101670 media/video-controls-captions.html [ Skip ]
@@ -1199,3 +1234,12 @@ webkit.org/b/67434 [ Debug ] fast/block/float/overhanging-tall-block.html [ Skip
 
 # Mountain Lion and prior do not support custom media data loading
 Bug(jernoble) [ MountainLion Lion SnowLeopard ] media/video-src-blob.html
+
+# Needs ENABLE(MOUSE_CURSOR_SCALE)
+webkit.org/b/102579 fast/css/cursor-parsing-image-set.html [ Failure ]
+webkit.org/b/102579 fast/events/mouse-cursor-image-set.html [ Failure ]
+
+# Mountain Lion and prior do not allow access to in-band text tracks
+webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band.html
+
+webkit.org/b/104104 fast/overflow/scrollbar-click-retains-focus.html [ Failure ]

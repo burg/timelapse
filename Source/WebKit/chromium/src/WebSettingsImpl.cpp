@@ -52,6 +52,7 @@ WebSettingsImpl::WebSettingsImpl(Settings* settings)
     , m_showPlatformLayerTree(false)
     , m_showPaintRects(false)
     , m_renderVSyncEnabled(true)
+    , m_lowLatencyRenderingEnabled(false)
     , m_viewportEnabled(false)
     , m_applyDeviceScaleFactorInCompositor(false)
     , m_gestureTapHighlightEnabled(true)
@@ -371,11 +372,6 @@ void WebSettingsImpl::setCSSStickyPositionEnabled(bool enabled)
     m_settings->setCSSStickyPositionEnabled(enabled);
 }
 
-void WebSettingsImpl::setExperimentalCSSRegionsEnabled(bool enabled)
-{
-    m_settings->setCSSRegionsEnabled(enabled);
-}
-
 void WebSettingsImpl::setExperimentalCSSGridLayoutEnabled(bool enabled)
 {
     m_settings->setCSSGridLayoutEnabled(enabled);
@@ -404,6 +400,11 @@ void WebSettingsImpl::setPrivilegedWebGLExtensionsEnabled(bool enabled)
 void WebSettingsImpl::setRenderVSyncEnabled(bool enabled)
 {
     m_renderVSyncEnabled = enabled;
+}
+
+void WebSettingsImpl::setLowLatencyRenderingEnabled(bool lowLatencyRenderingEnabled)
+{
+    m_lowLatencyRenderingEnabled = lowLatencyRenderingEnabled;
 }
 
 void WebSettingsImpl::setWebGLErrorsToConsoleEnabled(bool enabled)
@@ -486,6 +487,11 @@ void WebSettingsImpl::setAcceleratedCompositingForCanvasEnabled(bool enabled)
 void WebSettingsImpl::setAcceleratedCompositingForAnimationEnabled(bool enabled)
 {
     m_settings->setAcceleratedCompositingForAnimationEnabled(enabled);
+}
+
+void WebSettingsImpl::setAcceleratedCompositingForScrollableFramesEnabled(bool enabled)
+{
+    m_settings->setAcceleratedCompositingForScrollableFramesEnabled(enabled);
 }
 
 void WebSettingsImpl::setAcceleratedFiltersEnabled(bool enabled)

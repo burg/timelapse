@@ -20,14 +20,14 @@
 #ifndef UndoStepQt_h
 #define UndoStepQt_h
 
+#include <PlatformExportMacros.h>
 #include <UndoStep.h>
-
 #include <qstring.h>
+#include <qwebkitglobal.h>
 #include <wtf/RefPtr.h>
 
-class UndoStepQt {
+class WEBKIT_EXPORTDATA UndoStepQt  {
     public:
-        UndoStepQt(WTF::RefPtr<WebCore::UndoStep>);
         ~UndoStepQt();
 
         void redo();
@@ -35,9 +35,12 @@ class UndoStepQt {
         QString text() const;
 
     private:
+        UndoStepQt(WTF::RefPtr<WebCore::UndoStep>);
+
         WTF::RefPtr<WebCore::UndoStep> m_step;
         bool m_first;
         QString m_text;
+        friend class QWebPageAdapter;
 };
 
 #endif

@@ -436,6 +436,8 @@ static AtkAttributeSet* webkitAccessibleGetAttributes(AtkObject* object)
     AtkAttributeSet* attributeSet = 0;
 #if PLATFORM(GTK)
     attributeSet = addToAtkAttributeSet(attributeSet, "toolkit", "WebKitGtk");
+#elif PLATFORM(EFL)
+    attributeSet = addToAtkAttributeSet(attributeSet, "toolkit", "WebKitEfl");
 #endif
 
     AccessibilityObject* coreObject = core(object);
@@ -452,6 +454,10 @@ static AtkAttributeSet* webkitAccessibleGetAttributes(AtkObject* object)
     // Technologies know when an exposed table is not data table.
     if (coreObject->isAccessibilityTable() && !coreObject->isDataTable())
         attributeSet = addToAtkAttributeSet(attributeSet, "layout-guess", "true");
+
+    String placeholder = coreObject->placeholderValue();
+    if (!placeholder.isEmpty())
+        attributeSet = addToAtkAttributeSet(attributeSet, "placeholder-text", placeholder.utf8().data());
 
     return attributeSet;
 }

@@ -35,6 +35,7 @@
 
 #if defined(ENABLE_SHADOW_DOM) && ENABLE_SHADOW_DOM
     ShadowRoot ensureShadowRoot(in Element host) raises (DOMException);
+    ShadowRoot createShadowRoot(in Element host) raises (DOMException);
     ShadowRoot shadowRoot(in Element host) raises (DOMException);
     ShadowRoot youngestShadowRoot(in Element host) raises (DOMException);
     ShadowRoot oldestShadowRoot(in Element host) raises (DOMException);
@@ -42,6 +43,7 @@
     ShadowRoot olderShadowRoot(in Node root) raises (DOMException);
 #else
     Node ensureShadowRoot(in Element host) raises (DOMException);
+    Node createShadowRoot(in Element host) raises (DOMException);
     Node shadowRoot(in Element host) raises (DOMException);
     Node youngestShadowRoot(in Element host) raises (DOMException);
     Node oldestShadowRoot(in Element host) raises (DOMException);
@@ -55,7 +57,6 @@
     DOMString shadowPseudoId(in Element element) raises (DOMException);
     void setShadowPseudoId(in Element element, in DOMString id) raises (DOMException);
     Element createContentElement(in Document document) raises(DOMException);
-    Element getElementByIdInShadowRoot(in Node shadowRoot, in DOMString id) raises(DOMException);
     boolean isValidContentSelect(in Element contentElement) raises(DOMException);
     Node treeScopeRootNode(in Node node) raises (DOMException);
     Node parentTreeScope(in Node node) raises (DOMException);
@@ -133,8 +134,8 @@
     long lastSpellCheckRequestSequence(in Document document) raises (DOMException);
     long lastSpellCheckProcessedSequence(in Document document) raises (DOMException);
 
-    sequence<String> userPreferredLanguages();
-    void setUserPreferredLanguages(in sequence<String> languages);
+    sequence<DOMString> userPreferredLanguages();
+    void setUserPreferredLanguages(in sequence<DOMString> languages);
 
     unsigned long wheelEventHandlerCount(in Document document) raises (DOMException);
     unsigned long touchEventHandlerCount(in Document document) raises (DOMException);
@@ -166,12 +167,16 @@
     DOMString layerTreeAsText(in Document document, in [Optional] unsigned short flags) raises (DOMException);
 
     DOMString scrollingStateTreeAsText(in Document document) raises (DOMException);
+    DOMString mainThreadScrollingReasons(in Document document) raises (DOMException);
 
     DOMString repaintRectsAsText(in Document document) raises (DOMException);
 
     void garbageCollectDocumentResources(in Document document) raises (DOMException);
 
     void allowRoundingHacks();
+
+    void insertAuthorCSS(in Document document, in DOMString css);
+    void insertUserCSS(in Document document, in DOMString css);
 
 #if defined(ENABLE_BATTERY_STATUS) && ENABLE_BATTERY_STATUS
     void setBatteryStatus(in Document document, in DOMString eventType, in boolean charging, in double chargingTime, in double dischargingTime, in double level) raises (DOMException);
@@ -183,7 +188,7 @@
 
     [Conditional=INSPECTOR] unsigned long numberOfLiveNodes();
     [Conditional=INSPECTOR] unsigned long numberOfLiveDocuments();
-    [Conditional=INSPECTOR] sequence<String> consoleMessageArgumentCounts(in Document document);
+    [Conditional=INSPECTOR] sequence<DOMString> consoleMessageArgumentCounts(in Document document);
     [Conditional=INSPECTOR] DOMWindow openDummyInspectorFrontend(in DOMString url);
     [Conditional=INSPECTOR] void closeDummyInspectorFrontend();
     [Conditional=INSPECTOR] void setInspectorResourcesDataSizeLimits(in long maximumResourcesContentSize, in long maximumSingleResourceContentSize) raises(DOMException);

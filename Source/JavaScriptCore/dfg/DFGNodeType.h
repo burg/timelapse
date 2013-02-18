@@ -150,7 +150,9 @@ namespace JSC { namespace DFG {
     macro(GetByOffset, NodeResultJS) \
     macro(PutByOffset, NodeMustGenerate) \
     macro(GetArrayLength, NodeResultInt32) \
-    macro(GetScope, NodeResultJS) \
+    macro(GetMyScope, NodeResultJS) \
+    macro(SkipTopScope, NodeResultJS) \
+    macro(SkipScope, NodeResultJS) \
     macro(GetScopeRegisters, NodeResultStorage) \
     macro(GetScopedVar, NodeResultJS) \
     macro(PutScopedVar, NodeMustGenerate) \
@@ -242,6 +244,9 @@ namespace JSC { namespace DFG {
     macro(ThrowReferenceError, NodeMustGenerate) \
     \
     macro(GarbageValue, NodeResultJS | NodeClobbersWorld) \
+    \
+    /* Count execution. */\
+    macro(CountExecution, NodeMustGenerate) \
     \
     /* This is a pseudo-terminal. It means that execution should fall out of DFG at */\
     /* this point, but execution does continue in the basic block - just in a */\

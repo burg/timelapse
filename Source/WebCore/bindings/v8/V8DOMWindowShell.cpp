@@ -78,7 +78,7 @@ static void setInjectedScriptContextDebugId(v8::Handle<v8::Context> targetContex
         snprintf(buffer, sizeof(buffer), "injected");
     else
         snprintf(buffer, sizeof(buffer), "injected,%d", debugId);
-    targetContext->SetEmbedderData(0, v8::String::New(buffer));
+    targetContext->SetEmbedderData(0, v8::String::NewSymbol(buffer));
 }
 
 PassOwnPtr<V8DOMWindowShell> V8DOMWindowShell::create(Frame* frame, PassRefPtr<DOMWrapperWorld> world)
@@ -152,7 +152,7 @@ void V8DOMWindowShell::clearForNavigation()
     // will be protected by the security checks on the DOMWindow wrapper.
     clearDocumentProperty();
 
-    v8::Handle<v8::Object> windowWrapper = V8DOMWrapper::lookupDOMWrapper(V8DOMWindow::GetTemplate(), m_global.get());
+    v8::Handle<v8::Object> windowWrapper = m_global->FindInstanceInPrototypeChain(V8DOMWindow::GetTemplate());
     ASSERT(!windowWrapper.IsEmpty());
     windowWrapper->TurnOnAccessCheck();
     m_context->DetachGlobal();
@@ -245,7 +245,7 @@ bool V8DOMWindowShell::initializeIfNeeded()
         if (m_frame->document()) {
             ContentSecurityPolicy* csp = m_frame->document()->contentSecurityPolicy();
             context->AllowCodeGenerationFromStrings(csp->allowEval(0, ContentSecurityPolicy::SuppressReport));
-            context->SetErrorMessageForCodeGenerationFromStrings(v8String(csp->evalDisabledErrorMessage()));
+            context->SetErrorMessageForCodeGenerationFromStrings(deprecatedV8String(csp->evalDisabledErrorMessage()));
         }
     } else {
         // Using the default security token means that the canAccess is always
@@ -316,7 +316,7 @@ bool V8DOMWindowShell::installDOMWindow()
 
     V8DOMWindow::installPerContextProperties(windowWrapper, window);
 
-    V8DOMWrapper::setDOMWrapper(v8::Handle<v8::Object>::Cast(windowWrapper->GetPrototype()), &V8DOMWindow::info, window);
+    V8DOMWrapper::setNativeInfo(v8::Handle<v8::Object>::Cast(windowWrapper->GetPrototype()), &V8DOMWindow::info, window);
 
     // Install the windowWrapper as the prototype of the innerGlobalObject.
     // The full structure of the global object is as follows:
@@ -332,9 +332,9 @@ bool V8DOMWindowShell::installDOMWindow()
     //       JavaScript object.
     //
     v8::Handle<v8::Object> innerGlobalObject = toInnerGlobalObject(m_context.get());
-    V8DOMWrapper::setDOMWrapper(innerGlobalObject, &V8DOMWindow::info, window);
+    V8DOMWrapper::setNativeInfo(innerGlobalObject, &V8DOMWindow::info, window);
     innerGlobalObject->SetPrototype(windowWrapper);
-    V8DOMWrapper::createDOMWrapper(PassRefPtr<DOMWindow>(window), &V8DOMWindow::info, windowWrapper);
+    V8DOMWrapper::associateObjectWithWrapper(PassRefPtr<DOMWindow>(window), &V8DOMWindow::info, windowWrapper);
     return true;
 }
 
@@ -366,7 +366,7 @@ void V8DOMWindowShell::updateDocumentProperty()
         return;
     }
     ASSERT(documentWrapper->IsObject());
-    m_context->Global()->ForceSet(v8::String::New("document"), documentWrapper, static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete));
+    m_context->Global()->ForceSet(v8::String::NewSymbol("document"), documentWrapper, static_cast<v8::PropertyAttribute>(v8::ReadOnly | v8::DontDelete));
 
     // We also stash a reference to the document on the inner global object so that
     // DOMWindow objects we obtain from JavaScript references are guaranteed to have
@@ -379,7 +379,7 @@ void V8DOMWindowShell::clearDocumentProperty()
     ASSERT(!m_context.isEmpty());
     if (!m_world->isMainWorld())
         return;
-    m_context->Global()->ForceDelete(v8::String::New("document"));
+    m_context->Global()->ForceDelete(v8::String::NewSymbol("document"));
 }
 
 void V8DOMWindowShell::setSecurityToken()
@@ -452,7 +452,7 @@ void V8DOMWindowShell::namedItemAdded(HTMLDocument* document, const AtomicString
 
     ASSERT(!m_document.isEmpty());
     checkDocumentWrapper(m_document.get(), document);
-    m_document->SetAccessor(v8String(name), getter);
+    m_document->SetAccessor(deprecatedV8String(name), getter);
 }
 
 void V8DOMWindowShell::namedItemRemoved(HTMLDocument* document, const AtomicString& name)
@@ -470,7 +470,7 @@ void V8DOMWindowShell::namedItemRemoved(HTMLDocument* document, const AtomicStri
 
     ASSERT(!m_document.isEmpty());
     checkDocumentWrapper(m_document.get(), document);
-    m_document->Delete(v8String(name));
+    m_document->Delete(deprecatedV8String(name));
 }
 
 void V8DOMWindowShell::updateSecurityOrigin()

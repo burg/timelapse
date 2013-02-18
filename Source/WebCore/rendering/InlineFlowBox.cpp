@@ -369,15 +369,24 @@ void InlineFlowBox::determineSpacingForFlowBoxes(bool lastLine, bool isLogically
 float InlineFlowBox::placeBoxesInInlineDirection(float logicalLeft, bool& needsWordSpacing, GlyphOverflowAndFallbackFontsMap& textBoxDataMap)
 {
     // Set our x position.
-    setLogicalLeft(logicalLeft);
-  
+    beginPlacingBoxRangesInInlineDirection(logicalLeft);
+
     float startLogicalLeft = logicalLeft;
     logicalLeft += borderLogicalLeft() + paddingLogicalLeft();
 
     float minLogicalLeft = startLogicalLeft;
     float maxLogicalRight = logicalLeft;
 
-    for (InlineBox* curr = firstChild(); curr; curr = curr->nextOnLine()) {
+    placeBoxRangeInInlineDirection(firstChild(), 0, logicalLeft, minLogicalLeft, maxLogicalRight, needsWordSpacing, textBoxDataMap);
+
+    logicalLeft += borderLogicalRight() + paddingLogicalRight();
+    endPlacingBoxRangesInInlineDirection(startLogicalLeft, logicalLeft, minLogicalLeft, maxLogicalRight);
+    return logicalLeft;
+}
+
+float InlineFlowBox::placeBoxRangeInInlineDirection(InlineBox* firstChild, InlineBox* lastChild, float& logicalLeft, float& minLogicalLeft, float& maxLogicalRight, bool& needsWordSpacing, GlyphOverflowAndFallbackFontsMap& textBoxDataMap)
+{
+    for (InlineBox* curr = firstChild; curr && curr != lastChild; curr = curr->nextOnLine()) {
         if (curr->renderer()->isText()) {
             InlineTextBox* text = toInlineTextBox(curr);
             RenderText* rt = toRenderText(text->renderer());
@@ -426,14 +435,11 @@ float InlineFlowBox::placeBoxesInInlineDirection(float logicalLeft, bool& needsW
                 if (knownToHaveNoOverflow())
                     maxLogicalRight = max(logicalLeft, maxLogicalRight);
                 logicalLeft += logicalRightMargin;
+                // If we encounter any space after this inline block then ensure it is treated as the space between two words.
+                needsWordSpacing = true;
             }
         }
     }
-
-    logicalLeft += borderLogicalRight() + paddingLogicalRight();
-    setLogicalWidth(logicalLeft - startLogicalLeft);
-    if (knownToHaveNoOverflow() && (minLogicalLeft < startLogicalLeft || maxLogicalRight > logicalLeft))
-        clearKnownToHaveNoOverflow();
     return logicalLeft;
 }
 
@@ -442,7 +448,7 @@ bool InlineFlowBox::requiresIdeographicBaseline(const GlyphOverflowAndFallbackFo
     if (isHorizontal())
         return false;
     
-    if (renderer()->style(isFirstLineStyle())->fontDescription().textOrientation() == TextOrientationUpright
+    if (renderer()->style(isFirstLineStyle())->fontDescription().nonCJKGlyphOrientation() == NonCJKGlyphOrientationUpright
         || renderer()->style(isFirstLineStyle())->font().primaryFont()->hasVerticalGlyphs())
         return true;
 

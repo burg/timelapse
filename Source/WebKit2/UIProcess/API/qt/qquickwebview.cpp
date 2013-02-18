@@ -280,6 +280,7 @@ QQuickWebViewPrivate::QQuickWebViewPrivate(QQuickWebView* viewport)
     viewport->setPixelAligned(true);
     QObject::connect(viewport, SIGNAL(visibleChanged()), viewport, SLOT(_q_onVisibleChanged()));
     QObject::connect(viewport, SIGNAL(urlChanged()), viewport, SLOT(_q_onUrlChanged()));
+    QObject::connect(experimental, SIGNAL(devicePixelRatioChanged()), experimental->test(), SIGNAL(devicePixelRatioChanged()));
     pageView.reset(new QQuickWebPage(viewport));
 }
 
@@ -319,13 +320,14 @@ void QQuickWebViewPrivate::initialize(WKContextRef contextRef, WKPageGroupRef pa
     webPageProxy->pageGroup()->preferences()->setAcceleratedCompositingEnabled(true);
     webPageProxy->pageGroup()->preferences()->setForceCompositingMode(true);
     webPageProxy->pageGroup()->preferences()->setFrameFlatteningEnabled(true);
+    webPageProxy->pageGroup()->preferences()->setWebGLEnabled(true);
 
     pageClient.initialize(q_ptr, pageViewPrivate->eventHandler.data(), &undoController);
     webPageProxy->initializeWebPage();
 
     q_ptr->setAcceptedMouseButtons(Qt::MouseButtonMask);
     q_ptr->setAcceptHoverEvents(true);
-    q_ptr->setFlags(QQuickItem::ItemAcceptsDrops);
+    q_ptr->setFlag(QQuickItem::ItemAcceptsDrops, true);
 }
 
 void QQuickWebViewPrivate::loadDidStop()
@@ -865,6 +867,11 @@ void QQuickWebViewFlickablePrivate::onComponentComplete()
     m_pageViewportControllerClient.reset(new PageViewportControllerClientQt(q, pageView.data()));
     m_pageViewportController.reset(new PageViewportController(webPageProxy.get(), m_pageViewportControllerClient.data()));
     pageView->eventHandler()->setViewportController(m_pageViewportControllerClient.data());
+
+    // Notify about device pixel ratio here because due to the delayed instantiation
+    // of the viewport controller the correct value might not have reached QWebKitTest
+    // in time it was used from QML.
+    emit experimental->test()->devicePixelRatioChanged();
 
     // Trigger setting of correct visibility flags after everything was allocated and initialized.
     _q_onVisibleChanged();

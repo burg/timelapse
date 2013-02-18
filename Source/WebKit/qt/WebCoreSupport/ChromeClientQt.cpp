@@ -33,7 +33,7 @@
 #include "ApplicationCacheStorage.h"
 #include "ColorChooser.h"
 #include "ColorChooserClient.h"
-#include "DatabaseTracker.h"
+#include "DatabaseManager.h"
 #include "Document.h"
 #include "FileChooser.h"
 #include "FileIconLoader.h"
@@ -60,6 +60,7 @@
 #include "ScrollbarTheme.h"
 #include "SearchPopupMenuQt.h"
 #include "SecurityOrigin.h"
+#include "TextureMapperLayerClientQt.h"
 #include "TiledBackingStore.h"
 #include "ViewportArguments.h"
 #include "WindowFeatures.h"
@@ -165,7 +166,11 @@ bool ChromeClientQt::allowsAcceleratedCompositing() const
 {
     if (!platformPageClient())
         return false;
-    return platformPageClient()->allowsAcceleratedCompositing();
+#if USE(ACCELERATED_COMPOSITING)
+    return true;
+#else
+    return false;
+#endif
 }
 
 FloatRect ChromeClientQt::pageRect()
@@ -302,7 +307,7 @@ void ChromeClientQt::setResizable(bool)
     notImplemented();
 }
 
-void ChromeClientQt::addMessageToConsole(MessageSource, MessageType, MessageLevel, const String& message, unsigned lineNumber, const String& sourceID)
+void ChromeClientQt::addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, const String& sourceID)
 {
     QString x = message;
     QString y = sourceID;
@@ -456,7 +461,8 @@ void ChromeClientQt::scroll(const IntSize& delta, const IntRect& scrollViewRect,
 void ChromeClientQt::delegatedScrollRequested(const IntPoint& point)
 {
 
-    IntSize currentPosition = m_webPage->mainFrameAdapter()->scrollPosition();
+    const QPoint ofs = m_webPage->mainFrameAdapter()->scrollPosition();
+    IntSize currentPosition(ofs.x(), ofs.y());
     int x = point.x() - currentPosition.width();
     int y = point.y() - currentPosition.height();
     const QRect rect(QPoint(0, 0), m_webPage->viewportSize());
@@ -533,8 +539,8 @@ void ChromeClientQt::exceededDatabaseQuota(Frame* frame, const String& databaseN
 {
     quint64 quota = QWebSettings::offlineStorageDefaultQuota();
 
-    if (!DatabaseTracker::tracker().hasEntryForOrigin(frame->document()->securityOrigin()))
-        DatabaseTracker::tracker().setQuota(frame->document()->securityOrigin(), quota);
+    if (!DatabaseManager::manager().hasEntryForOrigin(frame->document()->securityOrigin()))
+        DatabaseManager::manager().setQuota(frame->document()->securityOrigin(), quota);
 
     m_webPage->databaseQuotaExceeded(QWebFrameAdapter::kit(frame), databaseName);
 }
@@ -626,27 +632,28 @@ void ChromeClientQt::serviceScriptedAnimations()
 #if USE(ACCELERATED_COMPOSITING)
 void ChromeClientQt::attachRootGraphicsLayer(Frame* frame, GraphicsLayer* graphicsLayer)
 {
-    if (platformPageClient())
-        platformPageClient()->setRootGraphicsLayer(graphicsLayer);
+    if (!m_textureMapperLayerClient)
+        m_textureMapperLayerClient = adoptPtr(new TextureMapperLayerClientQt(m_webPage->mainFrameAdapter()));
+    m_textureMapperLayerClient->setRootGraphicsLayer(graphicsLayer);
 }
 
 void ChromeClientQt::setNeedsOneShotDrawingSynchronization()
 {
     // we want the layers to synchronize next time we update the screen anyway
-    if (platformPageClient())
-        platformPageClient()->markForSync(false);
+    if (m_textureMapperLayerClient)
+        m_textureMapperLayerClient->markForSync(false);
 }
 
 void ChromeClientQt::scheduleCompositingLayerFlush()
 {
     // we want the layers to synchronize ASAP
-    if (platformPageClient())
-        platformPageClient()->markForSync(true);
+    if (m_textureMapperLayerClient)
+        m_textureMapperLayerClient->markForSync(true);
 }
 
 ChromeClient::CompositingTriggerFlags ChromeClientQt::allowedCompositingTriggers() const
 {
-    if (platformPageClient() && platformPageClient()->allowsAcceleratedCompositing())
+    if (allowsAcceleratedCompositing())
         return ThreeDTransformTrigger | VideoTrigger | CanvasTrigger | AnimationTrigger;
 
     return 0;
@@ -661,7 +668,8 @@ IntRect ChromeClientQt::visibleRectForTiledBackingStore() const
         return IntRect();
 
     if (!platformPageClient()->viewResizesToContentsEnabled()) {
-        IntSize offset = m_webPage->mainFrameAdapter()->scrollPosition();
+        const QPoint ofs = m_webPage->mainFrameAdapter()->scrollPosition();
+        IntSize offset(ofs.x(), ofs.y());
         return QRect(QPoint(offset.width(), offset.height()), m_webPage->mainFrameAdapter()->frameRect().size());
     }
 

@@ -37,6 +37,7 @@
 #include "FrameTree.h"
 #include "FrameView.h"
 #include "HTMLNames.h"
+#include "NodeTraversal.h"
 #include "RenderObject.h"
 #include "RenderPart.h"
 #include "RenderSVGResource.h"
@@ -282,12 +283,21 @@ void SVGSVGElement::parseAttribute(const QualifiedName& name, const AtomicString
 void SVGSVGElement::svgAttributeChanged(const QualifiedName& attrName)
 { 
     bool updateRelativeLengthsOrViewBox = false;
-    if (attrName == SVGNames::widthAttr
+    bool widthChanged = attrName == SVGNames::widthAttr;
+    if (widthChanged
         || attrName == SVGNames::heightAttr
         || attrName == SVGNames::xAttr
         || attrName == SVGNames::yAttr) {
         updateRelativeLengthsOrViewBox = true;
         updateRelativeLengthsInformation();
+
+        // At the SVG/HTML boundary (aka RenderSVGRoot), the width attribute can
+        // affect the replaced size so we need to mark it for updating.
+        if (widthChanged) {
+            RenderObject* renderObject = renderer();
+            if (renderObject && renderObject->isSVGRoot())
+                toRenderSVGRoot(renderObject)->setNeedsLayoutAndPrefWidthsRecalc();
+        }
     }
 
     if (SVGFitToViewBox::isKnownAttribute(attrName)) {
@@ -336,19 +346,19 @@ void SVGSVGElement::forceRedraw()
 PassRefPtr<NodeList> SVGSVGElement::collectIntersectionOrEnclosureList(const FloatRect& rect, SVGElement* referenceElement, CollectIntersectionOrEnclosure collect) const
 {
     Vector<RefPtr<Node> > nodes;
-    Node* node = traverseNextNode(referenceElement ? referenceElement : this);
-    while (node) {
-        if (node->isSVGElement()) { 
+    Element* element = ElementTraversal::next(referenceElement ? referenceElement : this);
+    while (element) {
+        if (element->isSVGElement()) { 
             if (collect == CollectIntersectionList) {
-                if (checkIntersection(static_cast<SVGElement*>(node), rect))
-                    nodes.append(node);
+                if (checkIntersection(static_cast<SVGElement*>(element), rect))
+                    nodes.append(element);
             } else {
-                if (checkEnclosure(static_cast<SVGElement*>(node), rect))
-                    nodes.append(node);
+                if (checkEnclosure(static_cast<SVGElement*>(element), rect))
+                    nodes.append(element);
             }
         }
 
-        node = node->traverseNextNode(referenceElement ? referenceElement : this);
+        element = ElementTraversal::next(element, referenceElement ? referenceElement : this);
     }
     return StaticNodeList::adopt(nodes);
 }
@@ -468,6 +478,17 @@ AffineTransform SVGSVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMSc
     }
 
     return transform.multiply(viewBoxTransform);
+}
+
+bool SVGSVGElement::rendererIsNeeded(const NodeRenderingContext& context)
+{
+    // FIXME: We should respect display: none on the documentElement svg element
+    // but many things in FrameView and SVGImage depend on the RenderSVGRoot when
+    // they should instead depend on the RenderView.
+    // https://bugs.webkit.org/show_bug.cgi?id=103493
+    if (document()->documentElement() == this)
+        return true;
+    return StyledElement::rendererIsNeeded(context);
 }
 
 RenderObject* SVGSVGElement::createRenderer(RenderArena* arena, RenderStyle*)
@@ -767,7 +788,7 @@ Element* SVGSVGElement::getElementById(const AtomicString& id) const
 
     // Fall back to traversing our subtree. Duplicate ids are allowed, the first found will
     // be returned.
-    for (Node* node = firstChild(); node; node = node->traverseNextNode(this)) {
+    for (Node* node = firstChild(); node; node = NodeTraversal::next(node, this)) {
         if (!node->isElementNode())
             continue;
 

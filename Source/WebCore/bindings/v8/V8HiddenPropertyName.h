@@ -40,16 +40,13 @@ namespace WebCore {
     V(callback) \
     V(detail) \
     V(document) \
-    V(domStringMap) \
-    V(domTokenList) \
     V(event) \
     V(listener) \
-    V(ownerNode) \
     V(scriptState) \
     V(sleepFunction) \
     V(state) \
-    V(textTracks) \
-    V(toStringString)
+    V(toStringString) \
+    V(typedArrayHiddenCopyMethod)
 
     enum V8HiddenPropertyCreationType { NewSymbol, NewString };
 

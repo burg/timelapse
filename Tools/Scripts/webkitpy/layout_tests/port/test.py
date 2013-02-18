@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2010 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -98,6 +97,15 @@ class TestList(object):
     def __getitem__(self, item):
         return self.tests[item]
 
+#
+# These numbers may need to be updated whenever we add or delete tests.
+#
+TOTAL_TESTS = 104
+TOTAL_SKIPS = 28
+TOTAL_RETRIES = 14
+
+UNEXPECTED_PASSES = 6
+UNEXPECTED_FAILURES = 17
 
 def unit_test_list():
     tests = TestList()
@@ -434,9 +442,7 @@ class TestPort(Port):
     def webkit_base(self):
         return '/test.checkout'
 
-    def skipped_layout_tests(self, test_list):
-        # This allows us to test the handling Skipped files, both with a test
-        # that actually passes, and a test that does fail.
+    def _skipped_tests_for_unsupported_features(self, test_list):
         return set(['failures/expected/skip_text.html',
                     'failures/unexpected/skip_pass.html',
                     'virtual/skipped'])
@@ -536,12 +542,23 @@ class TestPort(Port):
 
 class TestDriver(Driver):
     """Test/Dummy implementation of the DumpRenderTree interface."""
+    next_pid = 1
+
+    def __init__(self, *args, **kwargs):
+        super(TestDriver, self).__init__(*args, **kwargs)
+        self.started = False
+        self.pid = 0
 
     def cmd_line(self, pixel_tests, per_test_args):
         pixel_tests_flag = '-p' if pixel_tests else ''
         return [self._port._path_to_driver()] + [pixel_tests_flag] + self._port.get_option('additional_drt_flag', []) + per_test_args
 
     def run_test(self, test_input, stop_when_done):
+        if not self.started:
+            self.started = True
+            self.pid = TestDriver.next_pid
+            TestDriver.next_pid += 1
+
         start_time = time.time()
         test_name = test_input.test_name
         test_args = test_input.args or []
@@ -589,10 +606,7 @@ class TestDriver(Driver):
         return DriverOutput(actual_text, image, test.actual_checksum, audio,
             crash=test.crash or test.web_process_crash, crashed_process_name=crashed_process_name,
             crashed_pid=crashed_pid, crash_log=crash_log,
-            test_time=time.time() - start_time, timeout=test.timeout, error=test.error)
-
-    def start(self, pixel_tests, per_test_args):
-        pass
+            test_time=time.time() - start_time, timeout=test.timeout, error=test.error, pid=self.pid)
 
     def stop(self):
-        pass
+        self.started = False

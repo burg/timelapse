@@ -37,6 +37,7 @@
 #include "DatasetDOMStringMap.h"
 #include "Document.h"
 #include "DocumentFragment.h"
+#include "DocumentSharedObjectPool.h"
 #include "ElementRareData.h"
 #include "ExceptionCode.h"
 #include "FlowThreadController.h"
@@ -61,8 +62,10 @@
 #include "NodeList.h"
 #include "NodeRenderStyle.h"
 #include "NodeRenderingContext.h"
+#include "NodeTraversal.h"
 #include "Page.h"
 #include "PointerLockController.h"
+#include "PseudoElement.h"
 #include "RenderRegion.h"
 #include "RenderView.h"
 #include "RenderWidget.h"
@@ -74,7 +77,6 @@
 #include "TextIterator.h"
 #include "VoidCallback.h"
 #include "WebCoreMemoryInstrumentation.h"
-#include "WebKitAnimationList.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
 #include "htmlediting.h"
@@ -187,9 +189,15 @@ Element::~Element()
     }
 #endif
 
+    if (hasRareData()) {
+        ElementRareData* data = elementRareData();
+        data->setPseudoElement(BEFORE, 0);
+        data->setPseudoElement(AFTER, 0);
+    }
+
     if (ElementShadow* elementShadow = shadow()) {
         elementShadow->removeAllShadowRoots();
-        elementRareData()->m_shadow.clear();
+        elementRareData()->setShadow(nullptr);
     }
 
     if (hasSyntheticAttrChildNodes())
@@ -206,10 +214,10 @@ inline ElementRareData* Element::ensureElementRareData()
 {
     return static_cast<ElementRareData*>(ensureRareData());
 }
-    
-OwnPtr<NodeRareData> Element::createRareData()
+
+PassOwnPtr<NodeRareData> Element::createRareData()
 {
-    return adoptPtr(new ElementRareData);
+    return adoptPtr(new ElementRareData(documentInternal()));
 }
 
 DEFINE_VIRTUAL_ATTRIBUTE_EVENT_LISTENER(Element, blur);
@@ -286,11 +294,11 @@ NamedNodeMap* Element::attributes() const
 {
     ensureUpdatedAttributeData();
     ElementRareData* rareData = const_cast<Element*>(this)->ensureElementRareData();
-    if (NamedNodeMap* attributeMap = rareData->m_attributeMap.get())
+    if (NamedNodeMap* attributeMap = rareData->attributeMap())
         return attributeMap;
 
-    rareData->m_attributeMap = NamedNodeMap::create(const_cast<Element*>(this));
-    return rareData->m_attributeMap.get();
+    rareData->setAttributeMap(NamedNodeMap::create(const_cast<Element*>(this)));
+    return rareData->attributeMap();
 }
 
 Node::NodeType Element::nodeType() const
@@ -791,6 +799,9 @@ void Element::attributeChanged(const QualifiedName& name, const AtomicString& ne
 
     invalidateNodeListCachesInAncestors(&name, this);
 
+    // If there is currently no StyleResolver, we can't be sure that this attribute change won't affect style.
+    shouldInvalidateStyle |= !styleResolver;
+
     if (shouldInvalidateStyle)
         setNeedsStyleRecalc();
 
@@ -976,12 +987,10 @@ void Element::parserSetAttributes(const Vector<Attribute>& attributeVector, Frag
         }
     }
 
-    // When the document is in parsing state, we cache immutable ElementAttributeData objects with the
-    // input attribute vector as key. (This cache is held by Document.)
-    if (!document() || !document()->parsing())
-        m_attributeData = ElementAttributeData::createImmutable(filteredAttributes);
+    if (document() && document()->sharedObjectPool())
+        m_attributeData = document()->sharedObjectPool()->cachedImmutableElementAttributeData(filteredAttributes);
     else
-        m_attributeData = document()->cachedImmutableAttributeData(filteredAttributes);
+        m_attributeData = ElementAttributeData::createImmutable(filteredAttributes);
 
     // Iterate over the set of attributes we already have on the stack in case
     // attributeChanged mutates m_attributeData.
@@ -1054,20 +1063,20 @@ const QualifiedName& Element::imageSourceAttributeName() const
 
 bool Element::rendererIsNeeded(const NodeRenderingContext& context)
 {
-    return (document()->documentElement() == this) || (context.style()->display() != NONE);
+    return context.style()->display() != NONE;
 }
 
-RenderObject* Element::createRenderer(RenderArena* arena, RenderStyle* style)
+RenderObject* Element::createRenderer(RenderArena*, RenderStyle* style)
 {
-    if (document()->documentElement() == this && style->display() == NONE) {
-        // Ignore display: none on root elements.  Force a display of block in that case.
-        RenderBlock* result = new (arena) RenderBlock(this);
-        if (result)
-            result->setAnimatableStyle(style);
-        return result;
-    }
     return RenderObject::createObject(this, style);
 }
+
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+bool Element::isDateTimeFieldElement() const
+{
+    return false;
+}
+#endif
 
 bool Element::wasChangedSinceLastFormControlChangeEvent() const
 {
@@ -1151,36 +1160,36 @@ void Element::createRendererIfNeeded()
 
 void Element::attach()
 {
-    suspendPostAttachCallbacks();
-    {
-        WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
-        createRendererIfNeeded();
+    PostAttachCallbackDisabler callbackDisabler(this);
+    StyleResolverParentPusher parentPusher(this);
+    WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
 
-        StyleResolverParentPusher parentPusher(this);
+    createRendererIfNeeded();
 
-        if (parentElement() && parentElement()->isInCanvasSubtree())
-            setIsInCanvasSubtree(true);
+    if (parentElement() && parentElement()->isInCanvasSubtree())
+        setIsInCanvasSubtree(true);
 
-        // When a shadow root exists, it does the work of attaching the children.
-        if (ElementShadow* shadow = this->shadow()) {
-            parentPusher.push();
-            shadow->attach();
-        } else {
-            if (firstChild())
-                parentPusher.push();
-        }
-        ContainerNode::attach();
+    updatePseudoElement(BEFORE);
 
-        if (hasRareData()) {   
-            ElementRareData* data = elementRareData();
-            if (data->needsFocusAppearanceUpdateSoonAfterAttach()) {
-                if (isFocusable() && document()->focusedNode() == this)
-                    document()->updateFocusAppearanceSoon(false /* don't restore selection */);
-                data->setNeedsFocusAppearanceUpdateSoonAfterAttach(false);
-            }
+    // When a shadow root exists, it does the work of attaching the children.
+    if (ElementShadow* shadow = this->shadow()) {
+        parentPusher.push();
+        shadow->attach();
+    } else if (firstChild())
+        parentPusher.push();
+
+    ContainerNode::attach();
+
+    updatePseudoElement(AFTER);
+
+    if (hasRareData()) {   
+        ElementRareData* data = elementRareData();
+        if (data->needsFocusAppearanceUpdateSoonAfterAttach()) {
+            if (isFocusable() && document()->focusedNode() == this)
+                document()->updateFocusAppearanceSoon(false /* don't restore selection */);
+            data->setNeedsFocusAppearanceUpdateSoonAfterAttach(false);
         }
     }
-    resumePostAttachCallbacks();
 }
 
 void Element::unregisterNamedFlowContentNode()
@@ -1196,6 +1205,8 @@ void Element::detach()
     cancelFocusAppearanceUpdate();
     if (hasRareData()) {
         ElementRareData* data = elementRareData();
+        data->setPseudoElement(BEFORE, 0);
+        data->setPseudoElement(AFTER, 0);
         data->setIsInCanvasSubtree(false);
         data->resetComputedStyle();
         data->resetDynamicRestyleObservations();
@@ -1301,7 +1312,7 @@ void Element::recalcStyle(StyleChange change)
         // If "rem" units are used anywhere in the document, and if the document element's font size changes, then go ahead and force font updating
         // all the way down the tree. This is simpler than having to maintain a cache of objects (and such font size changes should be rare anyway).
         if (document()->styleSheetCollection()->usesRemUnits() && document()->documentElement() == this && ch != NoChange && currentStyle && newStyle && currentStyle->fontSize() != newStyle->fontSize()) {
-            // Cached RenderStyles may depend on the rem units.
+            // Cached RenderStyles may depend on the re units.
             document()->styleResolver()->invalidateMatchedPropertiesCache();
             change = Force;
         }
@@ -1322,6 +1333,8 @@ void Element::recalcStyle(StyleChange change)
             shadow->recalcStyle(change);
         }
     }
+
+    updatePseudoElement(BEFORE, change);
 
     // FIXME: This check is good enough for :hover + foo, but it is not good enough for :hover + foo + bar.
     // For now we will just worry about the common case, since it's a lot trickier to get the second case right
@@ -1347,6 +1360,8 @@ void Element::recalcStyle(StyleChange change)
         forceCheckOfAnyElementSibling = forceCheckOfAnyElementSibling || (childRulesChanged && hasIndirectAdjacentRules);
     }
 
+    updatePseudoElement(AFTER, change);
+
     clearNeedsStyleRecalc();
     clearChildNeedsStyleRecalc();
     
@@ -1359,22 +1374,33 @@ ElementShadow* Element::shadow() const
     if (!hasRareData())
         return 0;
 
-    return elementRareData()->m_shadow.get();
+    return elementRareData()->shadow();
 }
 
 ElementShadow* Element::ensureShadow()
 {
-    if (ElementShadow* shadow = ensureElementRareData()->m_shadow.get())
+    if (ElementShadow* shadow = ensureElementRareData()->shadow())
         return shadow;
 
     ElementRareData* data = elementRareData();
-    data->m_shadow = adoptPtr(new ElementShadow());
-    return data->m_shadow.get();
+    data->setShadow(adoptPtr(new ElementShadow()));
+    return data->shadow();
 }
 
 PassRefPtr<ShadowRoot> Element::createShadowRoot(ExceptionCode& ec)
 {
     return ShadowRoot::create(this, ec);
+}
+
+ShadowRoot* Element::shadowRoot() const
+{
+    ElementShadow* elementShadow = shadow();
+    if (!elementShadow)
+        return 0;
+    ShadowRoot* shadowRoot = elementShadow->youngestShadowRoot();
+    if (!shadowRoot->isAccessible())
+        return 0;
+    return shadowRoot;
 }
 
 ShadowRoot* Element::userAgentShadowRoot() const
@@ -1862,14 +1888,14 @@ void Element::setPseudo(const AtomicString& value)
 
 LayoutSize Element::minimumSizeForResizing() const
 {
-    return hasRareData() ? elementRareData()->m_minimumSizeForResizing : defaultMinimumSizeForResizing();
+    return hasRareData() ? elementRareData()->minimumSizeForResizing() : defaultMinimumSizeForResizing();
 }
 
 void Element::setMinimumSizeForResizing(const LayoutSize& size)
 {
-    if (size == defaultMinimumSizeForResizing() && !hasRareData())
+    if (!hasRareData() && size == defaultMinimumSizeForResizing())
         return;
-    ensureElementRareData()->m_minimumSizeForResizing = size;
+    ensureElementRareData()->setMinimumSizeForResizing(size);
 }
 
 RenderStyle* Element::computedStyle(PseudoId pseudoElementSpecifier)
@@ -1891,9 +1917,9 @@ RenderStyle* Element::computedStyle(PseudoId pseudoElementSpecifier)
         return 0;
 
     ElementRareData* data = ensureElementRareData();
-    if (!data->m_computedStyle)
-        data->m_computedStyle = document()->styleForElementIgnoringPendingStylesheets(this);
-    return pseudoElementSpecifier ? data->m_computedStyle->getCachedPseudoStyle(pseudoElementSpecifier) : data->m_computedStyle.get();
+    if (!data->computedStyle())
+        data->setComputedStyle(document()->styleForElementIgnoringPendingStylesheets(this));
+    return pseudoElementSpecifier ? data->computedStyle()->getCachedPseudoStyle(pseudoElementSpecifier) : data->computedStyle();
 }
 
 void Element::setStyleAffectedByEmpty()
@@ -2062,17 +2088,65 @@ void Element::cancelFocusAppearanceUpdate()
 
 void Element::normalizeAttributes()
 {
-    updateInvalidAttributes();
-    if (AttrNodeList* attrNodeList = attrNodeListForElement(this)) {
-        for (unsigned i = 0; i < attrNodeList->size(); ++i)
-            attrNodeList->at(i)->normalize();
+    if (!hasAttributes())
+        return;
+    for (unsigned i = 0; i < attributeCount(); ++i) {
+        if (RefPtr<Attr> attr = attrIfExists(attributeItem(i)->name()))
+            attr->normalize();
     }
+}
+
+void Element::updatePseudoElement(PseudoId pseudoId, StyleChange change)
+{
+    PseudoElement* existing = hasRareData() ? elementRareData()->pseudoElement(pseudoId) : 0;
+    if (existing) {
+        // PseudoElement styles hang off their parent element's style so if we needed
+        // a style recalc we should Force one on the pseudo.
+        existing->recalcStyle(needsStyleRecalc() ? Force : change);
+
+        // Wait until our parent is not displayed or pseudoElementRendererIsNeeded
+        // is false, otherwise we could continously create and destroy PseudoElements
+        // when RenderObject::isChildAllowed on our parent returns false for the
+        // PseudoElement's renderer for each style recalc.
+        if (!renderer() || !pseudoElementRendererIsNeeded(renderer()->getCachedPseudoStyle(pseudoId)))
+            elementRareData()->setPseudoElement(pseudoId, 0);
+    } else if (RefPtr<PseudoElement> element = createPseudoElementIfNeeded(pseudoId)) {
+        element->attach();
+        ensureElementRareData()->setPseudoElement(pseudoId, element.release());
+    }
+}
+
+PassRefPtr<PseudoElement> Element::createPseudoElementIfNeeded(PseudoId pseudoId)
+{
+    if (!document()->styleSheetCollection()->usesBeforeAfterRules())
+        return 0;
+
+    if (!renderer() || !renderer()->canHaveGeneratedChildren())
+        return 0;
+
+    if (isPseudoElement())
+        return 0;
+
+    if (!pseudoElementRendererIsNeeded(renderer()->getCachedPseudoStyle(pseudoId)))
+        return 0;
+
+    return PseudoElement::create(this, pseudoId);
+}
+
+PseudoElement* Element::beforePseudoElement() const
+{
+    return hasRareData() ? elementRareData()->pseudoElement(BEFORE) : 0;
+}
+
+PseudoElement* Element::afterPseudoElement() const
+{
+    return hasRareData() ? elementRareData()->pseudoElement(AFTER) : 0;
 }
 
 // ElementTraversal API
 Element* Element::firstElementChild() const
 {
-    return WebCore::firstElementChild(this);
+    return ElementTraversal::firstWithin(this);
 }
 
 Element* Element::lastElementChild() const
@@ -2094,12 +2168,12 @@ unsigned Element::childElementCount() const
     return count;
 }
 
-bool Element::shouldMatchReadOnlySelector() const
+bool Element::matchesReadOnlyPseudoClass() const
 {
     return false;
 }
 
-bool Element::shouldMatchReadWriteSelector() const
+bool Element::matchesReadWritePseudoClass() const
 {
     return false;
 }
@@ -2120,24 +2194,24 @@ bool Element::webkitMatchesSelector(const String& selector, ExceptionCode& ec)
 DOMTokenList* Element::classList()
 {
     ElementRareData* data = ensureElementRareData();
-    if (!data->m_classList)
-        data->m_classList = ClassList::create(this);
-    return data->m_classList.get();
+    if (!data->classList())
+        data->setClassList(ClassList::create(this));
+    return data->classList();
 }
 
 DOMTokenList* Element::optionalClassList() const
 {
     if (!hasRareData())
         return 0;
-    return elementRareData()->m_classList.get();
+    return elementRareData()->classList();
 }
 
 DOMStringMap* Element::dataset()
 {
     ElementRareData* data = ensureElementRareData();
-    if (!data->m_datasetDOMStringMap)
-        data->m_datasetDOMStringMap = DatasetDOMStringMap::create(this);
-    return data->m_datasetDOMStringMap.get();
+    if (!data->dataset())
+        data->setDataset(DatasetDOMStringMap::create(this));
+    return data->dataset();
 }
 
 KURL Element::getURLAttribute(const QualifiedName& name) const
@@ -2242,15 +2316,7 @@ bool Element::isInTopLayer() const
 
 void Element::setIsInTopLayer(bool inTopLayer)
 {
-    if (isInTopLayer() == inTopLayer)
-        return;
-
     ensureElementRareData()->setIsInTopLayer(inTopLayer);
-
-    if (inTopLayer)
-        document()->addToTopLayer(this);
-    else
-        document()->removeFromTopLayer(this);
     setNeedsStyleRecalc(SyntheticStyleChange);
 }
 #endif
@@ -2290,19 +2356,6 @@ bool Element::isSpellCheckingEnabled() const
     }
 
     return true;
-}
-
-PassRefPtr<WebKitAnimationList> Element::webkitGetAnimations() const
-{
-    if (!renderer())
-        return 0;
-
-    AnimationController* animController = renderer()->animation();
-
-    if (!animController)
-        return 0;
-    
-    return animController->animationsForRenderer(renderer());
 }
 
 RenderRegion* Element::renderRegion() const
@@ -2378,7 +2431,7 @@ bool Element::fastAttributeLookupAllowed(const QualifiedName& name) const
 #ifdef DUMP_NODE_STATISTICS
 bool Element::hasNamedNodeMap() const
 {
-    return hasRareData() && elementRareData()->m_attributeMap;
+    return hasRareData() && elementRareData()->attributeMap();
 }
 #endif
 
@@ -2496,14 +2549,14 @@ HTMLCollection* Element::cachedHTMLCollection(CollectionType type)
 
 IntSize Element::savedLayerScrollOffset() const
 {
-    return hasRareData() ? elementRareData()->m_savedLayerScrollOffset : IntSize();
+    return hasRareData() ? elementRareData()->savedLayerScrollOffset() : IntSize();
 }
 
 void Element::setSavedLayerScrollOffset(const IntSize& size)
 {
     if (size.isZero() && !hasRareData())
         return;
-    ensureElementRareData()->m_savedLayerScrollOffset = size;
+    ensureElementRareData()->setSavedLayerScrollOffset(size);
 }
 
 PassRefPtr<Attr> Element::attrIfExists(const QualifiedName& name)

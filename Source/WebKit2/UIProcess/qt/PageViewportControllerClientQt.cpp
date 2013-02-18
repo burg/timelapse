@@ -88,7 +88,7 @@ void PageViewportControllerClientQt::setContentRectVisiblePositionAtScale(const 
 
     // To animate the position together with the scale we multiply the position with the current scale
     // and add it to the page position (displacement on the flickable contentItem because of additional items).
-    QPointF newPosition(m_pageItem->pos() + location * itemScale);
+    QPointF newPosition(m_pageItem->position() + location * itemScale);
 
     m_viewportItem->setContentPos(newPosition);
 }
@@ -204,7 +204,7 @@ void PageViewportControllerClientQt::focusEditableArea(const QRectF& caretArea, 
     const QPointF viewportHotspot = QPointF(x, /* FIXME: visibleCenter */ viewportRect.center().y());
 
     QPointF endPosition = hotspot - viewportHotspot / targetScale;
-    endPosition = m_controller->clampViewportToContents(endPosition, targetScale);
+    endPosition = m_controller->boundContentsPositionAtScale(endPosition, targetScale);
     QRectF endVisibleContentRect(endPosition, viewportRect.size() / targetScale);
 
     animateContentRectVisible(endVisibleContentRect);
@@ -238,7 +238,7 @@ void PageViewportControllerClientQt::zoomToAreaGestureEnded(const QPointF& touch
     const QPointF viewportHotspot = viewportRect.center();
 
     QPointF endPosition = hotspot - viewportHotspot / targetScale;
-    endPosition = m_controller->clampViewportToContents(endPosition, targetScale);
+    endPosition = m_controller->boundContentsPositionAtScale(endPosition, targetScale);
     QRectF endVisibleContentRect(endPosition, viewportRect.size() / targetScale);
 
     enum { ZoomIn, ZoomBack, ZoomOut, NoZoom } zoomAction = ZoomIn;
@@ -279,7 +279,7 @@ void PageViewportControllerClientQt::zoomToAreaGestureEnded(const QPointF& touch
             endPosition.setY(hotspot.y() - viewportHotspot.y() / targetScale);
             endPosition.setX(lastScale.xPosition);
         }
-        endPosition = m_controller->clampViewportToContents(endPosition, targetScale);
+        endPosition = m_controller->boundContentsPositionAtScale(endPosition, targetScale);
         endVisibleContentRect = QRectF(endPosition, viewportRect.size() / targetScale);
         break;
     }
@@ -311,24 +311,20 @@ QRectF PageViewportControllerClientQt::nearestValidVisibleContentsRect() const
     // Keep the center at the position of the old center, and substract viewportHotspot / targetScale to get the top left position.
     QPointF endPosition = m_viewportItem->mapToWebContent(viewportHotspot) - viewportHotspot / targetScale;
 
-    endPosition = m_controller->clampViewportToContents(endPosition, targetScale);
+    endPosition = m_controller->boundContentsPositionAtScale(endPosition, targetScale);
     return QRectF(endPosition, viewportRect.size() / targetScale);
 }
 
 void PageViewportControllerClientQt::setViewportPosition(const FloatPoint& contentsPoint)
 {
-    QPointF newPosition((m_pageItem->pos() + QPointF(contentsPoint)) * m_pageItem->contentsScale());
+    QPointF newPosition((m_pageItem->position() + QPointF(contentsPoint)) * m_pageItem->contentsScale());
     m_viewportItem->setContentPos(newPosition);
     updateViewportController();
 }
 
-void PageViewportControllerClientQt::setContentsScale(float localScale, bool treatAsInitialValue)
+void PageViewportControllerClientQt::setContentsScale(float localScale)
 {
-    if (treatAsInitialValue) {
-        clearRelativeZoomState();
-        setContentRectVisiblePositionAtScale(QPointF(), localScale);
-    } else
-        scaleContent(localScale);
+    scaleContent(localScale);
 }
 
 void PageViewportControllerClientQt::setContentsRectToNearestValidBounds()

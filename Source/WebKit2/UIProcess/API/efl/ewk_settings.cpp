@@ -348,3 +348,79 @@ Eina_Bool ewk_settings_local_storage_enabled_get(const Ewk_Settings* settings)
 
     return settings->preferences()->localStorageEnabled();
 }
+
+Eina_Bool ewk_settings_plugins_enabled_set(Ewk_Settings* settings, Eina_Bool enable)
+{
+    EINA_SAFETY_ON_NULL_RETURN_VAL(settings, false);
+
+    settings->preferences()->setPluginsEnabled(enable);
+
+    return true;
+}
+
+Eina_Bool ewk_settings_plugins_enabled_get(const Ewk_Settings* settings)
+{
+    EINA_SAFETY_ON_NULL_RETURN_VAL(settings, false);
+
+    return settings->preferences()->pluginsEnabled();
+}
+
+Eina_Bool ewk_settings_default_font_size_set(Ewk_Settings* settings, int size)
+{
+    EINA_SAFETY_ON_NULL_RETURN_VAL(settings, false);
+
+    settings->preferences()->setDefaultFontSize(size);
+
+    return true;
+}
+
+int ewk_settings_default_font_size_get(const Ewk_Settings* settings)
+{
+    EINA_SAFETY_ON_NULL_RETURN_VAL(settings, 0);
+
+    return settings->preferences()->defaultFontSize();
+}
+
+Eina_Bool ewk_settings_private_browsing_enabled_set(Ewk_Settings* settings, Eina_Bool enable)
+{
+    EINA_SAFETY_ON_NULL_RETURN_VAL(settings, false);
+
+    settings->preferences()->setPrivateBrowsingEnabled(enable);
+
+    return true;
+}
+
+Eina_Bool ewk_settings_private_browsing_enabled_get(const Ewk_Settings* settings)
+{
+    EINA_SAFETY_ON_NULL_RETURN_VAL(settings, false);
+
+    return settings->preferences()->privateBrowsingEnabled();
+}
+
+Eina_Bool ewk_settings_text_autosizing_enabled_set(Ewk_Settings* settings, Eina_Bool enable)
+{
+#if ENABLE(TEXT_AUTOSIZING)
+    EINA_SAFETY_ON_NULL_RETURN_VAL(settings, false);
+
+    settings->preferences()->setTextAutosizingEnabled(enable);
+
+    return true;
+#else
+    UNUSED_PARAM(settings);
+    UNUSED_PARAM(enable);
+    return false;
+#endif
+}
+
+Eina_Bool ewk_settings_text_autosizing_enabled_get(const Ewk_Settings* settings)
+{
+#if ENABLE(TEXT_AUTOSIZING)
+    EINA_SAFETY_ON_NULL_RETURN_VAL(settings, false);
+
+    return settings->preferences()->textAutosizingEnabled();
+#else
+    UNUSED_PARAM(settings);
+    return false;
+#endif
+}
+

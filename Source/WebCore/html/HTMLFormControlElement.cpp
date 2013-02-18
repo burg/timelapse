@@ -51,7 +51,7 @@ HTMLFormControlElement::HTMLFormControlElement(const QualifiedName& tagName, Doc
     : LabelableElement(tagName, document)
     , m_disabled(false)
     , m_readOnly(false)
-    , m_required(false)
+    , m_isRequired(false)
     , m_valueMatchesRenderer(false)
     , m_ancestorDisabledState(AncestorDisabledStateUnknown)
     , m_dataListAncestorState(Unknown)
@@ -139,9 +139,9 @@ void HTMLFormControlElement::parseAttribute(const QualifiedName& name, const Ato
                 renderer()->theme()->stateChanged(renderer(), ReadOnlyState);
         }
     } else if (name == requiredAttr) {
-        bool oldRequired = m_required;
-        m_required = !value.isNull();
-        if (oldRequired != m_required)
+        bool wasRequired = m_isRequired;
+        m_isRequired = !value.isNull();
+        if (wasRequired != m_isRequired)
             requiredAttributeChanged();
     } else
         HTMLElement::parseAttribute(name, value);
@@ -166,7 +166,7 @@ void HTMLFormControlElement::requiredAttributeChanged()
 
 static bool shouldAutofocus(HTMLFormControlElement* element)
 {
-    if (!element->autofocus())
+    if (!element->fastHasAttribute(autofocusAttr))
         return false;
     if (!element->renderer())
         return false;
@@ -174,7 +174,7 @@ static bool shouldAutofocus(HTMLFormControlElement* element)
         return false;
     if (element->document()->isSandboxed(SandboxAutomaticFeatures)) {
         // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
-        element->document()->addConsoleMessage(HTMLMessageSource, LogMessageType, ErrorMessageLevel, "Blocked autofocusing on a form control because the form's frame is sandboxed and the 'allow-scripts' permission is not set.");
+        element->document()->addConsoleMessage(HTMLMessageSource, ErrorMessageLevel, "Blocked autofocusing on a form control because the form's frame is sandboxed and the 'allow-scripts' permission is not set.");
         return false;
     }
     if (element->hasAutofocused())
@@ -204,9 +204,7 @@ static void focusPostAttach(Node* element, unsigned)
 
 void HTMLFormControlElement::attach()
 {
-    ASSERT(!attached());
-
-    suspendPostAttachCallbacks();
+    PostAttachCallbackDisabler disabler(this);
 
     HTMLElement::attach();
 
@@ -221,8 +219,6 @@ void HTMLFormControlElement::attach()
         ref();
         queuePostAttachCallback(focusPostAttach, this);
     }
-
-    resumePostAttachCallbacks();
 }
 
 void HTMLFormControlElement::didMoveToNewDocument(Document* oldDocument)
@@ -282,19 +278,9 @@ bool HTMLFormControlElement::disabled() const
     return m_ancestorDisabledState == AncestorDisabledStateDisabled;
 }
 
-void HTMLFormControlElement::setDisabled(bool b)
+bool HTMLFormControlElement::isRequired() const
 {
-    setAttribute(disabledAttr, b ? "" : 0);
-}
-
-bool HTMLFormControlElement::autofocus() const
-{
-    return hasAttribute(autofocusAttr);
-}
-
-bool HTMLFormControlElement::required() const
-{
-    return m_required;
+    return m_isRequired;
 }
 
 static void updateFromElementCallback(Node* node, unsigned)
@@ -364,7 +350,7 @@ bool HTMLFormControlElement::recalcWillValidate() const
         if (m_dataListAncestorState == Unknown)
             m_dataListAncestorState = NotInsideDataList;
     }
-    return m_dataListAncestorState == NotInsideDataList && !disabled() && !m_readOnly;
+    return m_dataListAncestorState == NotInsideDataList && !isDisabledOrReadOnly();
 }
 
 bool HTMLFormControlElement::willValidate() const

@@ -30,6 +30,7 @@
 #include "GenericCallback.h"
 #include "MessageReceiver.h"
 #include "MessageReceiverMap.h"
+#include "PlugInAutoStartProvider.h"
 #include "PluginInfoStore.h"
 #include "ProcessModel.h"
 #include "VisitedLinkProvider.h"
@@ -103,6 +104,9 @@ public:
     void setProcessModel(ProcessModel); // Can only be called when there are no processes running.
     ProcessModel processModel() const { return m_processModel; }
 
+    void setMaximumNumberOfProcesses(unsigned); // Can only be called when there are no processes running.
+    unsigned maximumNumberOfProcesses() const { return m_webProcessCountLimit; }
+
     // FIXME (Multi-WebProcess): Remove. No code should assume that there is a shared process.
     WebProcessProxy* deprecatedSharedProcess();
 
@@ -165,10 +169,10 @@ public:
 
 #if PLATFORM(WIN)
     void setShouldPaintNativeControls(bool);
-
+#endif
+#if PLATFORM(WIN) || USE(SOUP)
     void setInitialHTTPCookieAcceptPolicy(HTTPCookieAcceptPolicy policy) { m_initialHTTPCookieAcceptPolicy = policy; }
 #endif
-
     void setEnhancedAccessibility(bool);
     
     // Downloads.
@@ -219,7 +223,7 @@ public:
     void setCookieStorageDirectory(const String& dir) { m_overrideCookieStorageDirectory = dir; }
 
     WebProcessProxy* ensureSharedWebProcess();
-    PassRefPtr<WebProcessProxy> createNewWebProcess();
+    WebProcessProxy* createNewWebProcessRespectingProcessCountLimit(); // Will return an existing one if limit is met.
     void warmInitialProcess();
 
     bool shouldTerminate(WebProcessProxy*);
@@ -244,18 +248,25 @@ public:
     void textCheckerStateChanged();
 
     void setUsesNetworkProcess(bool);
+    bool usesNetworkProcess() const;
 
 #if PLATFORM(MAC)
     static bool applicationIsOccluded() { return s_applicationIsOccluded; }
 #endif
 
+    static void willStartUsingPrivateBrowsing();
+    static void willStopUsingPrivateBrowsing();
+
 private:
     WebContext(ProcessModel, const String& injectedBundlePath);
+    void platformInitialize();
 
     virtual Type type() const { return APIType; }
 
     void platformInitializeWebProcess(WebProcessCreationParameters&);
     void platformInvalidateContext();
+
+    WebProcessProxy* createNewWebProcess();
 
 #if PLATFORM(MAC)
     void getPasteboardTypes(const String& pasteboardName, Vector<String>& pasteboardTypes);
@@ -310,7 +321,10 @@ private:
     static void registerOcclusionNotificationHandlers();
 #endif
 
+    void addPlugInAutoStartOriginHash(const String& pageOrigin, unsigned plugInOriginHash);
+
     ProcessModel m_processModel;
+    unsigned m_webProcessCountLimit; // The limit has no effect when process model is ProcessModelSharedSecondaryProcess.
     
     Vector<RefPtr<WebProcessProxy> > m_processes;
     bool m_haveInitialEmptyProcess;
@@ -329,6 +343,7 @@ private:
     PluginInfoStore m_pluginInfoStore;
 #endif
     VisitedLinkProvider m_visitedLinkProvider;
+    PlugInAutoStartProvider m_plugInAutoStartProvider;
         
     HashSet<String> m_schemesToRegisterAsEmptyDocument;
     HashSet<String> m_schemesToRegisterAsSecure;
@@ -340,6 +355,10 @@ private:
 
     bool m_alwaysUsesComplexTextCodePath;
     bool m_shouldUseFontSmoothing;
+
+    // How many times an API call was used to enable the preference.
+    // The variable can be 0 when private browsing is used if it's enabled due to a persistent preference.
+    static unsigned m_privateBrowsingEnterCount;
 
     // Messages that were posted before any pages were created.
     // The client should use initialization messages instead, so that a restarted process would get the same state.
@@ -379,6 +398,8 @@ private:
 
 #if PLATFORM(WIN)
     bool m_shouldPaintNativeControls;
+#endif
+#if PLATFORM(WIN) || USE(SOUP)
     HTTPCookieAcceptPolicy m_initialHTTPCookieAcceptPolicy;
 #endif
 

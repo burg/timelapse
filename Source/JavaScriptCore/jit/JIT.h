@@ -48,8 +48,8 @@
 #include "Interpreter.h"
 #include "JITDisassembler.h"
 #include "JSInterfaceJIT.h"
+#include "LegacyProfiler.h"
 #include "Opcode.h"
-#include "Profiler.h"
 #include <bytecode/SamplingTool.h>
 
 namespace JSC {
@@ -947,6 +947,7 @@ namespace JSC {
 #endif
 #endif
         OwnPtr<JITDisassembler> m_disassembler;
+        RefPtr<Profiler::Compilation> m_compilation;
         WeakRandom m_randomGenerator;
         static CodeRef stringGetByValStubGenerator(JSGlobalData*);
 

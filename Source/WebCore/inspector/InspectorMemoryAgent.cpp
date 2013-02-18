@@ -49,6 +49,7 @@
 #include "MemoryInstrumentationImpl.h"
 #include "MemoryUsageSupport.h"
 #include "Node.h"
+#include "NodeTraversal.h"
 #include "Page.h"
 #include "ScriptGCEvent.h"
 #include "ScriptProfiler.h"
@@ -85,6 +86,14 @@ public:
     {
         m_sizesMap = m_client->sizesMap();
 
+        // FIXME: We filter out Rendering type because the coverage is not good enough at the moment
+        // and report RenderArena size instead.
+        for (TypeNameToSizeMap::iterator i = m_sizesMap.begin(); i != m_sizesMap.end(); ++i) {
+            if (i->key == PlatformMemoryTypes::Rendering) {
+                m_sizesMap.remove(i);
+                break;
+            }
+        }
         Vector<String> objectTypes;
         objectTypes.appendRange(m_sizesMap.keys().begin(), m_sizesMap.keys().end());
 
@@ -231,7 +240,7 @@ private:
     {
         Node* currentNode = rootNode;
         collectListenersInfo(rootNode);
-        while ((currentNode = currentNode->traverseNextNode(rootNode))) {
+        while ((currentNode = NodeTraversal::next(currentNode, rootNode))) {
             ++m_totalNodeCount;
             collectNodeStatistics(currentNode);
         }
@@ -536,7 +545,8 @@ void InspectorMemoryAgent::getProcessMemoryDistribution(ErrorString*, RefPtr<Ins
     reportRenderTreeInfo(memoryInstrumentationClient, m_page);
     collectDomTreeInfo(memoryInstrumentation, m_page); // FIXME: collect for all pages?
 
-    PlatformMemoryInstrumentation::reportMemoryUsage(&memoryInstrumentation);
+    PlatformMemoryInstrumentation::reportStaticMembersMemoryUsage(&memoryInstrumentation);
+    WebCoreMemoryInstrumentation::reportStaticMembersMemoryUsage(&memoryInstrumentation);
 
     RefPtr<InspectorMemoryBlocks> children = InspectorMemoryBlocks::create();
     addPlatformComponentsInfo(children);

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2010 Google Inc. All rights reserved.
 # Copyright (C) 2010 Gabor Rapcsanyi (rgabor@inf.u-szeged.hu), University of Szeged
 # Copyright (C) 2011 Apple Inc. All rights reserved.
@@ -29,7 +28,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import errno
 import logging
 import optparse
 import os
@@ -38,10 +36,10 @@ import sys
 import traceback
 
 from webkitpy.common.host import Host
-from webkitpy.common.system import stack_utils
-from webkitpy.layout_tests.controllers.manager import Manager, WorkerException, TestRunInterruptedException
+from webkitpy.layout_tests.controllers.manager import Manager
 from webkitpy.layout_tests.models import test_expectations
 from webkitpy.layout_tests.port import configuration_options, platform_options
+from webkitpy.layout_tests.views import buildbot_results
 from webkitpy.layout_tests.views import printing
 
 
@@ -56,8 +54,11 @@ INTERRUPTED_EXIT_STATUS = signal.SIGINT + 128
 EXCEPTIONAL_EXIT_STATUS = 254
 
 
-def lint(port, options):
+def lint(port, options, logging_stream):
     host = port.host
+    logging.getLogger().setLevel(logging.DEBUG if options.debug_rwt_logging else logging.INFO)
+    printer = printing.Printer(port, options, logging_stream, logger=logging.getLogger())
+
     if options.platform:
         ports_to_lint = [port]
     else:
@@ -68,6 +69,8 @@ def lint(port, options):
 
     for port_to_lint in ports_to_lint:
         expectations_dict = port_to_lint.expectations_dict()
+
+        # FIXME: This won't work if multiple ports share a TestExpectations file but support different modifiers in the file.
         for expectations_file in expectations_dict.keys():
             if expectations_file in files_linted:
                 continue
@@ -84,49 +87,30 @@ def lint(port, options):
 
     if lint_failed:
         _log.error('Lint failed.')
+        printer.cleanup()
         return -1
     _log.info('Lint succeeded.')
+    printer.cleanup()
     return 0
 
 
-def run(port, options, args, regular_output=sys.stderr, buildbot_output=sys.stdout):
+def run(port, options, args, logging_stream):
     try:
-        warnings = _set_up_derived_options(port, options)
+        printer = printing.Printer(port, options, logging_stream, logger=logging.getLogger())
 
-        printer = printing.Printer(port, options, regular_output, buildbot_output, logger=logging.getLogger())
-
-        for warning in warnings:
-            _log.warning(warning)
-
-        if options.lint_test_files:
-            return lint(port, options)
-
-        # We wrap any parts of the run that are slow or likely to raise exceptions
-        # in a try/finally to ensure that we clean up the logging configuration.
-        unexpected_result_count = -1
-
+        _set_up_derived_options(port, options)
         manager = Manager(port, options, printer)
         printer.print_config(port.results_directory())
 
-        unexpected_result_count = manager.run(args)
-        _log.debug("Testing completed, Exit status: %d" % unexpected_result_count)
-    except Exception:
-        exception_type, exception_value, exception_traceback = sys.exc_info()
-        if exception_type not in (KeyboardInterrupt, TestRunInterruptedException, WorkerException):
-            print >> sys.stderr, '\n%s raised: %s' % (exception_type.__name__, exception_value)
-            stack_utils.log_traceback(_log.error, exception_traceback)
-        raise
+        run_details = manager.run(args)
+        _log.debug("Testing completed, Exit status: %d" % run_details.exit_code)
+        return run_details
     finally:
         printer.cleanup()
-
-    return unexpected_result_count
 
 
 def _set_up_derived_options(port, options):
     """Sets the options values that depend on other options values."""
-    # We return a list of warnings to print after the printer is initialized.
-    warnings = []
-
     if not options.child_processes:
         options.child_processes = os.environ.get("WEBKIT_TEST_CHILD_PROCESSES",
                                                  str(port.default_child_processes()))
@@ -152,11 +136,11 @@ def _set_up_derived_options(port, options):
         options.additional_platform_directory = additional_platform_directories
 
     if not options.http and options.skipped in ('ignore', 'only'):
-        warnings.append("--force/--skipped=%s overrides --no-http." % (options.skipped))
+        _log.warning("--force/--skipped=%s overrides --no-http." % (options.skipped))
         options.http = True
 
     if options.ignore_metrics and (options.new_baseline or options.reset_results):
-        warnings.append("--ignore-metrics has no effect with --new-baselines or with --reset-results")
+        _log.warning("--ignore-metrics has no effect with --new-baselines or with --reset-results")
 
     if options.new_baseline:
         options.reset_results = True
@@ -172,7 +156,7 @@ def _set_up_derived_options(port, options):
             # to Port.
             filesystem = port.host.filesystem
             if not filesystem.isdir(filesystem.join(port.layout_tests_dir(), directory)):
-                warnings.append("'%s' was passed to --pixel-test-directories, which doesn't seem to be a directory" % str(directory))
+                _log.warning("'%s' was passed to --pixel-test-directories, which doesn't seem to be a directory" % str(directory))
             else:
                 varified_dirs.add(directory)
 
@@ -181,24 +165,8 @@ def _set_up_derived_options(port, options):
     if options.run_singly:
         options.verbose = True
 
-    return warnings
-
-
-def _compat_shim_callback(option, opt_str, value, parser):
-    print "Ignoring unsupported option: %s" % opt_str
-
-
-def _compat_shim_option(option_name, **kwargs):
-    return optparse.make_option(option_name, action="callback",
-        callback=_compat_shim_callback,
-        help="Ignored, for old-run-webkit-tests compat only.", **kwargs)
-
 
 def parse_args(args=None):
-    """Provides a default set of command line args.
-
-    Returns a tuple of options, args from optparse"""
-
     option_group_definitions = []
 
     option_group_definitions.append(("Platform options", platform_options()))
@@ -236,12 +204,6 @@ def parse_args(args=None):
         # FIXME: We should merge this w/ --build-directory and only have one flag.
         optparse.make_option("--root", action="store",
             help="Path to a directory containing the executables needed to run tests."),
-    ]))
-
-    option_group_definitions.append(("ORWT Compatibility Options", [
-        # FIXME: Remove this option once the bots don't refer to it.
-        # results.html is smart enough to figure this out itself.
-        _compat_shim_option("--use-remote-links-to-tests"),
     ]))
 
     option_group_definitions.append(("Results Options", [
@@ -303,18 +265,11 @@ def parse_args(args=None):
             default=True, dest="show_results",
             help="Don't launch a browser with results after the tests "
                  "are done"),
-        # FIXME: We should have a helper function to do this sort of
-        # deprectated mapping and automatically log, etc.
-        optparse.make_option("--noshow-results", action="store_false", dest="show_results", help="Deprecated, same as --no-show-results."),
-        optparse.make_option("--no-launch-safari", action="store_false", dest="show_results", help="Deprecated, same as --no-show-results."),
         optparse.make_option("--full-results-html", action="store_true",
             default=False,
             help="Show all failures in results.html, rather than only regressions"),
         optparse.make_option("--clobber-old-results", action="store_true",
             default=False, help="Clobbers test results from previous runs."),
-        optparse.make_option("--no-record-results", action="store_false",
-            default=True, dest="record_results",
-            help="Don't record the results."),
         optparse.make_option("--http", action="store_true", dest="http",
             default=True, help="Run HTTP and WebSocket tests (default)"),
         optparse.make_option("--no-http", action="store_false", dest="http",
@@ -425,37 +380,47 @@ def parse_args(args=None):
     return option_parser.parse_args(args)
 
 
-def main(argv=None):
+def main(argv=None, stdout=sys.stdout, stderr=sys.stderr):
+    options, args = parse_args(argv)
+    if options.platform and 'test' in options.platform:
+        # It's a bit lame to import mocks into real code, but this allows the user
+        # to run tests against the test platform interactively, which is useful for
+        # debugging test failures.
+        from webkitpy.common.host_mock import MockHost
+        host = MockHost()
+    else:
+        host = Host()
+
     try:
-        options, args = parse_args(argv)
-        if options.platform and 'test' in options.platform:
-            # It's a bit lame to import mocks into real code, but this allows the user
-            # to run tests against the test platform interactively, which is useful for
-            # debugging test failures.
-            from webkitpy.common.host_mock import MockHost
-            host = MockHost()
-        else:
-            host = Host()
         port = host.port_factory.get(options.platform, options)
     except NotImplementedError, e:
         # FIXME: is this the best way to handle unsupported port names?
-        print >> sys.stderr, str(e)
+        print >> stderr, str(e)
         return EXCEPTIONAL_EXIT_STATUS
-    except Exception, e:
-        print >> sys.stderr, '\n%s raised: %s' % (e.__class__.__name__, str(e))
-        traceback.print_exc(file=sys.stderr)
-        raise
 
     logging.getLogger().setLevel(logging.DEBUG if options.debug_rwt_logging else logging.INFO)
-    return run(port, options, args)
+
+    if options.lint_test_files:
+        return lint(port, options, stderr)
+
+    try:
+        run_details = run(port, options, args, stderr)
+        if run_details.exit_code != -1:
+            bot_printer = buildbot_results.BuildBotPrinter(stdout, options.debug_rwt_logging)
+            bot_printer.print_results(run_details)
+
+        return run_details.exit_code
+    except Exception, e:
+        print >> stderr, '\n%s raised: %s' % (e.__class__.__name__, str(e))
+        traceback.print_exc(file=stderr)
+        raise
 
 
 if '__main__' == __name__:
     try:
-        return_code = main()
+        exit_status = main()
+    except KeyboardInterrupt:
+        exit_status = INTERRUPTED_EXIT_STATUS
     except BaseException, e:
-        if e.__class__ in (KeyboardInterrupt, TestRunInterruptedException):
-            sys.exit(INTERRUPTED_EXIT_STATUS)
-        sys.exit(EXCEPTIONAL_EXIT_STATUS)
-
-    sys.exit(return_code)
+        exit_status = EXCEPTIONAL_EXIT_STATUS
+    sys.exit(exit_status)

@@ -38,7 +38,6 @@
 #include "Task.h"
 #include "TestNavigationController.h"
 #include "TestShell.h"
-#include "TestWebPlugin.h"
 #include "WebCachedURLRequest.h"
 #include "WebConsoleMessage.h"
 #include "WebContextMenuData.h"
@@ -62,12 +61,11 @@
 #include "WebRange.h"
 #include "WebScreenInfo.h"
 #include "WebStorageNamespace.h"
+#include "WebTestPlugin.h"
 #include "WebTextCheckingCompletion.h"
 #include "WebTextCheckingResult.h"
 #include "WebUserMediaClientMock.h"
 #include "WebView.h"
-#include "WebViewHostOutputSurface.h"
-#include "WebViewHostSoftwareOutputDevice.h"
 #include "WebWindowFeatures.h"
 #include "platform/WebSerializedScriptValue.h"
 #include "skia/ext/platform_canvas.h"
@@ -75,6 +73,7 @@
 #include "webkit/support/webkit_support.h"
 #include <public/WebCString.h>
 #include <public/WebCompositorOutputSurface.h>
+#include <public/WebCompositorSupport.h>
 #include <public/WebDragData.h>
 #include <public/WebRect.h>
 #include <public/WebSize.h>
@@ -288,8 +287,10 @@ WebCompositorOutputSurface* WebViewHost::createOutputSurface()
         return 0;
 
     if (m_shell->softwareCompositingEnabled())
-        return WebViewHostOutputSurface::createSoftware(adoptPtr(new WebViewHostSoftwareOutputDevice)).leakPtr();
-    return WebViewHostOutputSurface::create3d(adoptPtr(webkit_support::CreateGraphicsContext3D(WebGraphicsContext3D::Attributes(), webView()))).leakPtr();
+        return WebKit::Platform::current()->compositorSupport()->createOutputSurfaceForSoftware();
+
+    WebGraphicsContext3D* context = webkit_support::CreateGraphicsContext3D(WebGraphicsContext3D::Attributes(), webView());
+    return WebKit::Platform::current()->compositorSupport()->createOutputSurfaceFor3D(context);
 }
 
 void WebViewHost::didAddMessageToConsole(const WebConsoleMessage& message, const WebString& sourceName, unsigned sourceLine)
@@ -866,8 +867,8 @@ void WebViewHost::exitFullScreen()
 
 WebPlugin* WebViewHost::createPlugin(WebFrame* frame, const WebPluginParams& params)
 {
-    if (params.mimeType == TestWebPlugin::mimeType())
-        return new TestWebPlugin(frame, params);
+    if (params.mimeType == WebTestPlugin::mimeType())
+        return WebTestPlugin::create(frame, params, this);
 
     return webkit_support::CreateWebPlugin(frame, params);
 }
@@ -1389,6 +1390,26 @@ long long WebViewHost::getCurrentTimeInMillisecond()
 WebKit::WebString WebViewHost::getAbsoluteWebStringFromUTF8Path(const std::string& path)
 {
     return webkit_support::GetAbsoluteWebStringFromUTF8Path(path);
+}
+
+WebURL WebViewHost::localFileToDataURL(const WebKit::WebURL& url)
+{
+    return webkit_support::LocalFileToDataURL(url);
+}
+
+WebURL WebViewHost::rewriteLayoutTestsURL(const std::string& url)
+{
+    return webkit_support::RewriteLayoutTestsURL(url);
+}
+
+WebPreferences* WebViewHost::preferences()
+{
+    return m_shell->preferences();
+}
+
+void WebViewHost::applyPreferences()
+{
+    m_shell->applyPreferences();
 }
 
 // Public functions -----------------------------------------------------------

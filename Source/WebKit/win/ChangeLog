@@ -1,3 +1,118 @@
+2012-12-12  Mark Lam  <mark.lam@apple.com>
+
+        Encapsulate externally used webdatabase APIs in DatabaseManager.
+        https://bugs.webkit.org/show_bug.cgi?id=104741.
+
+        Reviewed by Sam Weinig.
+
+        Use DatabaseManager instead of accessing DatabaseTracker, AbstractDatabase,
+        and DatabaseContext directly. This is to prepare for upcoming webkit2
+        refactoring.
+
+        * WebDatabaseManager.cpp:
+        (WebDatabaseManager::sharedWebDatabaseManager):
+        (WebDatabaseManager::origins):
+        (WebDatabaseManager::databasesWithOrigin):
+        (WebDatabaseManager::detailsForDatabase):
+        (WebDatabaseManager::deleteAllDatabases):
+        (WebDatabaseManager::deleteOrigin):
+        (WebDatabaseManager::deleteDatabase):
+        (WebDatabaseManager::setQuota):
+        (WebKitInitializeWebDatabasesIfNecessary):
+        * WebDatabaseManager.h:
+        (WebDatabaseManager):
+        * WebSecurityOrigin.cpp:
+        (WebSecurityOrigin::usage):
+        (WebSecurityOrigin::quota):
+        (WebSecurityOrigin::setQuota):
+        * WebView.cpp:
+        (WebView::notifyPreferencesChanged):
+
+2012-12-12  Alexey Proskuryakov  <ap@apple.com>
+
+        Make LOG() work in WebProcess and NetworkProcess
+        https://bugs.webkit.org/show_bug.cgi?id=104718
+
+        Reviewed by Tim Horton.
+
+        * WebView.cpp: Updated for a new include file to use in WebKits.
+
+2012-12-11  Mike West  <mkwst@chromium.org>
+
+        Web Inspector: ConsoleTypes should not expose MessageType - it should be private to inspector.
+        https://bugs.webkit.org/show_bug.cgi?id=66371
+
+        Reviewed by Pavel Feldman.
+
+        Drops WebCore::MessageType from the addMessageToConsole method.
+
+        * WebCoreSupport/WebChromeClient.cpp:
+        (WebChromeClient::addMessageToConsole):
+        * WebCoreSupport/WebChromeClient.h:
+        (WebChromeClient):
+
+2012-12-10  Xueqing Huang  <huangxueqing@baidu.com>
+
+        ASSERTION failed in Windows: css3/css3-modsel-33.html
+        https://bugs.webkit.org/show_bug.cgi?id=104472
+
+        Reviewed by Tim Horton.
+
+        In WebFrameLoaderClient::dispatchDidLayout, milestones maybe
+        DidFirstLayout & DidFirstVisualNonEmptyLayout, we should
+        use seperate COMPtrs for the two cases rather than reuse one. 
+
+        * WebCoreSupport/WebFrameLoaderClient.cpp:
+        (WebFrameLoaderClient::dispatchDidLayout):
+
+2012-12-08  Seokju Kwon  <seokju.kwon@gmail.com>
+
+        Remove unused headers
+        https://bugs.webkit.org/show_bug.cgi?id=104428
+
+        Reviewed by Kentaro Hara.
+
+        Header inclusion cleanup.
+        Remove <WebCore/NotImplement.h>.
+
+        * WebCoreSupport/WebInspectorClient.cpp:
+        * WebMutableURLRequest.cpp:
+
+2012-12-07  Anders Carlsson  <andersca@apple.com>
+
+        Remove WebKit2 related projects from WebKit.sln
+        https://bugs.webkit.org/show_bug.cgi?id=104395
+
+        Reviewed by Tim Horton.
+
+        * WebKit.vcproj/WebKit.sln:
+
+2012-11-30  Brent Fulgham  <bfulgham@webkit.org>
+
+        [Windows, WinCairo] Generate library export definition file.
+        https://bugs.webkit.org/show_bug.cgi?id=103687
+
+        Reviewed by Tim Horton.
+
+        Update project solutions to use the new generated *.def files.
+
+        * WebKit.vcproj/WebKit.sln: Update for new project and file
+        locations.
+
+2012-11-30  Mihai Maerean  <mmaerean@adobe.com>
+
+        [CSSRegions] when WebKit uses V8, there should be a single variable to store if the CSS Regions feature is enabled
+        https://bugs.webkit.org/show_bug.cgi?id=101192
+
+        Reviewed by Hajime Morita.
+
+        Removed the CSS Regions flag in Settings and switched to using the new flag I have added in RuntimeEnabledFeatures.
+
+        Tests: No new tests because there is no functional change.
+
+        * WebView.cpp:
+        (WebView::notifyPreferencesChanged):
+
 2012-11-29  Alexey Proskuryakov  <ap@apple.com>
 
         [WK2] Forward cookie jar calls to NetworkProcess

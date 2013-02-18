@@ -54,9 +54,9 @@
 #include "WebProcessMessages.h"
 #include "WebProcessProxy.h"
 #include "WebResourceCacheManagerProxy.h"
+#include <WebCore/InitializeLogging.h>
 #include <WebCore/Language.h>
 #include <WebCore/LinkHash.h>
-#include <WebCore/Logging.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/RunLoop.h>
 #include <runtime/InitializeThreading.h>
@@ -73,6 +73,8 @@
 
 #if ENABLE(NETWORK_PROCESS)
 #include "NetworkProcessManager.h"
+#include "NetworkProcessMessages.h"
+#include "NetworkProcessProxy.h"
 #endif
 
 #if USE(SOUP)
@@ -88,6 +90,8 @@ using namespace WebCore;
 namespace WebKit {
 
 static const double sharedSecondaryProcessShutdownTimeout = 60;
+
+unsigned WebContext::m_privateBrowsingEnterCount;
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, webContextCounter, ("WebContext"));
 
@@ -116,10 +120,12 @@ const Vector<WebContext*>& WebContext::allContexts()
 
 WebContext::WebContext(ProcessModel processModel, const String& injectedBundlePath)
     : m_processModel(processModel)
+    , m_webProcessCountLimit(UINT_MAX)
     , m_haveInitialEmptyProcess(false)
     , m_defaultPageGroup(WebPageGroup::create())
     , m_injectedBundlePath(injectedBundlePath)
     , m_visitedLinkProvider(this)
+    , m_plugInAutoStartProvider(this)
     , m_alwaysUsesComplexTextCodePath(false)
     , m_shouldUseFontSmoothing(true)
     , m_cacheModel(CacheModelDocumentViewer)
@@ -134,6 +140,8 @@ WebContext::WebContext(ProcessModel processModel, const String& injectedBundlePa
     , m_usesNetworkProcess(false)
 #endif
 {
+    platformInitialize();
+
     addMessageReceiver(Messages::WebContext::messageReceiverName(), this);
     addMessageReceiver(CoreIPC::MessageKindTraits<WebContextLegacyMessage::Kind>::messageReceiverName(), this);
 
@@ -162,22 +170,25 @@ WebContext::WebContext(ProcessModel processModel, const String& injectedBundlePa
     m_soupRequestManagerProxy = WebSoupRequestManagerProxy::create(this);
 #endif
     
-#if !LOG_DISABLED
-    WebKit::initializeLogChannelsIfNecessary();
-#endif
-
     contexts().append(this);
 
     addLanguageChangeObserver(this, languageChanged);
 
 #if !LOG_DISABLED
     WebCore::initializeLoggingChannelsIfNecessary();
+    WebKit::initializeLogChannelsIfNecessary();
 #endif // !LOG_DISABLED
 
 #ifndef NDEBUG
     webContextCounter.increment();
 #endif
 }
+
+#if !PLATFORM(MAC)
+void WebContext::platformInitialize()
+{
+}
+#endif
 
 WebContext::~WebContext()
 {
@@ -285,6 +296,18 @@ void WebContext::setProcessModel(ProcessModel processModel)
     m_processModel = processModel;
 }
 
+void WebContext::setMaximumNumberOfProcesses(unsigned maximumNumberOfProcesses)
+{
+    // Guard against API misuse.
+    if (!m_processes.isEmpty())
+        CRASH();
+
+    if (maximumNumberOfProcesses == 0)
+        m_webProcessCountLimit = UINT_MAX;
+    else
+        m_webProcessCountLimit = maximumNumberOfProcesses;
+}
+
 WebProcessProxy* WebContext::deprecatedSharedProcess()
 {
     ASSERT(m_processModel == ProcessModelSharedSecondaryProcess);
@@ -322,6 +345,59 @@ void WebContext::setUsesNetworkProcess(bool usesNetworkProcess)
 #endif
 }
 
+bool WebContext::usesNetworkProcess() const
+{
+#if ENABLE(NETWORK_PROCESS)
+    return m_usesNetworkProcess;
+#else
+    return false;
+#endif
+}
+
+#if ENABLE(NETWORK_PROCESS)
+static bool anyContextUsesNetworkProcess()
+{
+    const Vector<WebContext*>& contexts = WebContext::allContexts();
+    for (size_t i = 0, count = contexts.size(); i < count; ++i)
+    if (contexts[i]->usesNetworkProcess())
+        return true;
+
+    return false;
+}
+#endif
+
+void WebContext::willStartUsingPrivateBrowsing()
+{
+    if (m_privateBrowsingEnterCount++)
+        return;
+
+#if ENABLE(NETWORK_PROCESS)
+    if (anyContextUsesNetworkProcess())
+        NetworkProcessManager::shared().process()->send(Messages::NetworkProcess::EnsurePrivateBrowsingSession(), 0);
+#endif
+
+    const Vector<WebContext*>& contexts = allContexts();
+    for (size_t i = 0, count = contexts.size(); i < count; ++i)
+        contexts[i]->sendToAllProcesses(Messages::WebProcess::EnsurePrivateBrowsingSession());
+}
+
+void WebContext::willStopUsingPrivateBrowsing()
+{
+    // If the client asks to disable private browsing without enabling it first, it may be resetting a persistent preference,
+    // so it is still necessary to destroy any existing private browsing session.
+    if (m_privateBrowsingEnterCount && --m_privateBrowsingEnterCount)
+        return;
+
+#if ENABLE(NETWORK_PROCESS)
+    if (anyContextUsesNetworkProcess())
+        NetworkProcessManager::shared().process()->send(Messages::NetworkProcess::DestroyPrivateBrowsingSession(), 0);
+#endif
+
+    const Vector<WebContext*>& contexts = allContexts();
+    for (size_t i = 0, count = contexts.size(); i < count; ++i)
+        contexts[i]->sendToAllProcesses(Messages::WebProcess::DestroyPrivateBrowsingSession());
+}
+
 WebProcessProxy* WebContext::ensureSharedWebProcess()
 {
     ASSERT(m_processModel == ProcessModelSharedSecondaryProcess);
@@ -330,7 +406,7 @@ WebProcessProxy* WebContext::ensureSharedWebProcess()
     return m_processes[0].get();
 }
 
-PassRefPtr<WebProcessProxy> WebContext::createNewWebProcess()
+WebProcessProxy* WebContext::createNewWebProcess()
 {
 #if ENABLE(NETWORK_PROCESS)
     if (m_usesNetworkProcess)
@@ -398,6 +474,8 @@ PassRefPtr<WebProcessProxy> WebContext::createNewWebProcess()
     parameters.usesNetworkProcess = m_usesNetworkProcess;
 #endif
 
+    parameters.plugInAutoStartOrigins = m_plugInAutoStartProvider.autoStartOriginsCopy();
+
     // Add any platform specific parameters
     platformInitializeWebProcess(parameters);
 
@@ -422,8 +500,7 @@ PassRefPtr<WebProcessProxy> WebContext::createNewWebProcess()
     } else
         ASSERT(m_messagesToInjectedBundlePostedToEmptyContext.isEmpty());
 
-
-    return process.release();
+    return process.get();
 }
 
 void WebContext::warmInitialProcess()  
@@ -432,6 +509,9 @@ void WebContext::warmInitialProcess()
         ASSERT(!m_processes.isEmpty());
         return;
     }
+
+    if (m_processes.size() >= m_webProcessCountLimit)
+        return;
 
     createNewWebProcess();
     m_haveInitialEmptyProcess = true;
@@ -557,6 +637,23 @@ void WebContext::disconnectProcess(WebProcessProxy* process)
     m_processes.remove(m_processes.find(process));
 }
 
+WebProcessProxy* WebContext::createNewWebProcessRespectingProcessCountLimit()
+{
+    if (m_processes.size() < m_webProcessCountLimit)
+        return createNewWebProcess();
+
+    // Choose a process with fewest pages, to achieve flat distribution.
+    WebProcessProxy* result = 0;
+    unsigned fewestPagesSeen = UINT_MAX;
+    for (unsigned i = 0; i < m_processes.size(); ++i) {
+        if (fewestPagesSeen > m_processes[i]->pages().size()) {
+            result = m_processes[i].get();
+            fewestPagesSeen = m_processes[i]->pages().size();
+        }
+    }
+    return result;
+}
+
 PassRefPtr<WebPageProxy> WebContext::createWebPage(PageClient* pageClient, WebPageGroup* pageGroup, WebPageProxy* relatedPage)
 {
     RefPtr<WebProcessProxy> process;
@@ -569,10 +666,8 @@ PassRefPtr<WebPageProxy> WebContext::createWebPage(PageClient* pageClient, WebPa
         } else if (relatedPage) {
             // Sharing processes, e.g. when creating the page via window.open().
             process = relatedPage->process();
-        } else {
-            // FIXME (Multi-WebProcess): <rdar://problem/12239661> Consider limiting the number of web processes in per-tab process model.
-            process = createNewWebProcess();
-        }
+        } else
+            process = createNewWebProcessRespectingProcessCountLimit();
     }
 
     if (!pageGroup)
@@ -1023,6 +1118,11 @@ void WebContext::garbageCollectJavaScriptObjects()
 void WebContext::setJavaScriptGarbageCollectorTimerEnabled(bool flag)
 {
     sendToAllProcesses(Messages::WebProcess::SetJavaScriptGarbageCollectorTimerEnabled(flag));
+}
+
+void WebContext::addPlugInAutoStartOriginHash(const String& pageOrigin, unsigned plugInOriginHash)
+{
+    m_plugInAutoStartProvider.addAutoStartOrigin(pageOrigin, plugInOriginHash);
 }
 
 } // namespace WebKit

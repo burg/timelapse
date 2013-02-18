@@ -58,6 +58,8 @@ public:
 
     bool contains(const Node* node) const { return m_indices.contains(node); }
     size_t find(const Node*) const;
+    Node* nextTo(const Node*) const;
+    Node* previousTo(const Node*) const;
 
     void swap(ContentDistribution& other);
 
@@ -75,12 +77,9 @@ public:
     InsertionPoint* insertionPointAssignedTo() const { return m_insertionPointAssignedTo; }
     void setInsertionPointAssignedTo(InsertionPoint* insertionPoint) { m_insertionPointAssignedTo = insertionPoint; }
 
-    void incrementNumberOfShadowElementChildren() { ++m_numberOfShadowElementChildren; invalidateInsertionPointList(); }
-    void decrementNumberOfShadowElementChildren() { ASSERT(m_numberOfShadowElementChildren > 0); --m_numberOfShadowElementChildren; invalidateInsertionPointList(); }
+    void regiterInsertionPoint(ShadowRoot*, InsertionPoint*);
+    void unregisterInsertionPoint(ShadowRoot*, InsertionPoint*);
     bool hasShadowElementChildren() const { return m_numberOfShadowElementChildren > 0; }
-
-    void incrementNumberOfContentElementChildren() { ++m_numberOfContentElementChildren; invalidateInsertionPointList(); }
-    void decrementNumberOfContentElementChildren() { ASSERT(m_numberOfContentElementChildren > 0); --m_numberOfContentElementChildren; invalidateInsertionPointList(); }
     bool hasContentElementChildren() const { return m_numberOfContentElementChildren > 0; }
 
     void incrementNumberOfElementShadowChildren() { ++m_numberOfElementShadowChildren; }

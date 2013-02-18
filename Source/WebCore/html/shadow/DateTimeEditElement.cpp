@@ -33,10 +33,13 @@
 #include "DateTimeFormat.h"
 #include "DateTimeSymbolicFieldElement.h"
 #include "EventHandler.h"
+#include "FontCache.h"
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
 #include "MouseEvent.h"
 #include "PlatformLocale.h"
+#include "RenderStyle.h"
+#include "StyleResolver.h"
 #include "Text.h"
 #include <wtf/DateMath.h>
 #include <wtf/text/StringBuilder.h>
@@ -44,6 +47,7 @@
 namespace WebCore {
 
 using namespace HTMLNames;
+using namespace WTF::Unicode;
 
 class DateTimeEditBuilder : private DateTimeFormat::TokenHandler {
     WTF_MAKE_NONCOPYABLE(DateTimeEditBuilder);
@@ -209,7 +213,16 @@ void DateTimeEditBuilder::visitField(DateTimeFormat::FieldType fieldType, int co
     }
 
     case DateTimeFormat::FieldTypeFractionalSecond: {
-        RefPtr<DateTimeNumericFieldElement> field = DateTimeMillisecondFieldElement::create(document, m_editElement);
+        ASSERT(!m_parameters.stepRange.step().isZero());
+        int step = 1;
+        int stepBase = 0;
+        const Decimal decimalMsPerSecond(static_cast<int>(msPerSecond));
+
+        if (decimalMsPerSecond.remainder(m_parameters.stepRange.step()).isZero() && m_parameters.stepRange.step().remainder(Decimal(1)).isZero()) {
+            step = static_cast<int>(m_parameters.stepRange.step().toDouble());
+            stepBase = static_cast<int>(m_parameters.stepRange.stepBase().remainder(decimalMsPerSecond).toDouble());
+        }
+        RefPtr<DateTimeNumericFieldElement> field = DateTimeMillisecondFieldElement::create(document, m_editElement, step, stepBase);
         m_editElement.addField(field);
         if (shouldMillisecondFieldReadOnly()) {
             field->setValueAsDate(m_dateValue);
@@ -285,6 +298,11 @@ void DateTimeEditBuilder::visitLiteral(const String& text)
     ASSERT(text.length());
     RefPtr<HTMLDivElement> element = HTMLDivElement::create(m_editElement.document());
     element->setPseudo(textPseudoId);
+    if (m_parameters.locale.isRTL() && text.length()) {
+        Direction dir = direction(text[0]);
+        if (dir == SegmentSeparator || dir == WhiteSpaceNeutral || dir == OtherNeutral)
+            element->appendChild(Text::create(m_editElement.document(), String(&rightToLeftMark, 1)));
+    }
     element->appendChild(Text::create(m_editElement.document(), text));
     m_editElement.appendChild(element);
 }
@@ -301,6 +319,7 @@ DateTimeEditElement::DateTimeEditElement(Document* document, EditControlOwner& e
 {
     DEFINE_STATIC_LOCAL(AtomicString, dateTimeEditPseudoId, ("-webkit-datetime-edit", AtomicString::ConstructFromLiteral));
     setPseudo(dateTimeEditPseudoId);
+    setHasCustomCallbacks();
 }
 
 DateTimeEditElement::~DateTimeEditElement()
@@ -336,6 +355,31 @@ PassRefPtr<DateTimeEditElement> DateTimeEditElement::create(Document* document, 
 {
     RefPtr<DateTimeEditElement> container = adoptRef(new DateTimeEditElement(document, editControlOwner));
     return container.release();
+}
+
+PassRefPtr<RenderStyle> DateTimeEditElement::customStyleForRenderer()
+{
+    // FIXME: This is a kind of layout. We might want to introduce new renderer.
+    FontCachePurgePreventer fontCachePurgePreventer;
+    RefPtr<RenderStyle> originalStyle = document()->styleResolver()->styleForElement(this);
+    RefPtr<RenderStyle> style = RenderStyle::clone(originalStyle.get());
+    float width = 0;
+    for (Node* child = firstChild(); child; child = child->nextSibling()) {
+        if (!child->isElementNode())
+            continue;
+        Element* childElement = toElement(child);
+        if (childElement->isDateTimeFieldElement()) {
+            // We need to pass the Font of this element because child elements
+            // can't resolve inherited style at this timing.
+            width += static_cast<DateTimeFieldElement*>(childElement)->maximumWidth(style->font());
+        } else {
+            // ::-webkit-datetime-edit-text case. It has no
+            // border/padding/margin in html.css.
+            width += style->font().width(childElement->textContent());
+        }
+    }
+    style->setMinWidth(Length(ceilf(width), Fixed));
+    return style.release();
 }
 
 void DateTimeEditElement::didBlurFromField()

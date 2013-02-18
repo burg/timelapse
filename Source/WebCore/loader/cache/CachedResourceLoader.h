@@ -120,7 +120,7 @@ public:
     void clearDocumentLoader() { m_documentLoader = 0; }
 
     void removeCachedResource(CachedResource*) const;
-    void loadDone();
+    void loadDone(CachedResource*);
     void garbageCollectDocumentResources();
     
     void incrementRequestCount(const CachedResource*);
@@ -143,9 +143,9 @@ private:
     explicit CachedResourceLoader(DocumentLoader*);
 
     CachedResourceHandle<CachedResource> requestResource(CachedResource::Type, CachedResourceRequest&);
-    CachedResourceHandle<CachedResource> revalidateResource(CachedResource*);
-    CachedResourceHandle<CachedResource> loadResource(CachedResource::Type, ResourceRequest&, const String& charset);
-    void requestPreload(CachedResource::Type, ResourceRequest&, const String& charset);
+    CachedResourceHandle<CachedResource> revalidateResource(const CachedResourceRequest&, CachedResource*);
+    CachedResourceHandle<CachedResource> loadResource(CachedResource::Type, CachedResourceRequest&, const String& charset);
+    void requestPreload(CachedResource::Type, CachedResourceRequest&, const String& charset);
 
     enum RevalidationPolicy { Use, Revalidate, Reload, Load };
     RevalidationPolicy determineRevalidationPolicy(CachedResource::Type, ResourceRequest&, bool forPreload, CachedResource* existingResource, CachedResourceRequest::DeferOption) const;
@@ -169,12 +169,20 @@ private:
     OwnPtr<ListHashSet<CachedResource*> > m_preloads;
     struct PendingPreload {
         CachedResource::Type m_type;
-        ResourceRequest m_request;
+        CachedResourceRequest m_request;
         String m_charset;
     };
     Deque<PendingPreload> m_pendingPreloads;
 
     Timer<CachedResourceLoader> m_garbageCollectDocumentResourcesTimer;
+
+#if ENABLE(RESOURCE_TIMING)
+    struct InitiatorInfo {
+        AtomicString name;
+        double startTime;
+    };
+    HashMap<CachedResource*, InitiatorInfo> m_initiatorMap;
+#endif
 
     // 29 bits left
     bool m_autoLoadImages : 1;

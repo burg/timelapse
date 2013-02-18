@@ -387,8 +387,7 @@ static void _ewk_view_smart_calculate(Evas_Object* ewkView)
             impl->page()->drawingArea()->setSize(IntSize(width, height), IntSize());
 
 #if USE(ACCELERATED_COMPOSITING)
-        if (width && height)
-            impl->createGLSurface(IntSize(width, height));
+        impl->setNeedsSurfaceResize();
 #endif
 #if USE(TILED_BACKING_STORE)
         impl->pageClient()->updateViewportSize(IntSize(width, height));
@@ -508,8 +507,10 @@ static inline Evas_Object* createEwkView(Evas* canvas, Evas_Smart* smart, PassRe
     }
 
     ASSERT(!smartData->priv);
-    RefPtr<WebPageGroup> pageGroup = pageGroupRef ? toImpl(pageGroupRef) : WebPageGroup::create();
-    smartData->priv = new EwkViewImpl(ewkView, context, pageGroup, behavior);
+
+    // Default WebPageGroup is created in WebContext constructor if the pageGroupRef is 0,
+    // so we do not need to create it here.
+    smartData->priv = new EwkViewImpl(ewkView, context, toImpl(pageGroupRef), behavior);
     return ewkView;
 }
 
@@ -519,7 +520,7 @@ static inline Evas_Object* createEwkView(Evas* canvas, Evas_Smart* smart, PassRe
  */
 Evas_Object* ewk_view_base_add(Evas* canvas, WKContextRef contextRef, WKPageGroupRef pageGroupRef, EwkViewImpl::ViewBehavior behavior)
 {
-    return createEwkView(canvas, createEwkViewSmartClass(), EwkContext::create(toImpl(contextRef)), pageGroupRef, behavior);
+    return createEwkView(canvas, createEwkViewSmartClass(), contextRef ? EwkContext::create(toImpl(contextRef)) : EwkContext::defaultContext(), pageGroupRef, behavior);
 }
 
 Evas_Object* ewk_view_smart_add(Evas* canvas, Evas_Smart* smart, Ewk_Context* context)

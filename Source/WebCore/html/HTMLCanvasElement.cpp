@@ -229,6 +229,11 @@ void HTMLCanvasElement::didDraw(const FloatRect& rect)
         ro->repaintRectangle(enclosingIntRect(m_dirtyRect));
     }
 
+    notifyObserversCanvasChanged(rect);
+}
+
+void HTMLCanvasElement::notifyObserversCanvasChanged(const FloatRect& rect)
+{
     HashSet<CanvasObserver*>::iterator end = m_observers.end();
     for (HashSet<CanvasObserver*>::iterator it = m_observers.begin(); it != end; ++it)
         (*it)->canvasChanged(this, rect);
@@ -349,7 +354,7 @@ void HTMLCanvasElement::paint(GraphicsContext* context, const LayoutRect& r, boo
             if (m_presentedImage)
                 context->drawImage(m_presentedImage.get(), ColorSpaceDeviceRGB, pixelSnappedIntRect(r), CompositeSourceOver, DoNotRespectImageOrientation, useLowQualityScale);
             else
-                context->drawImageBuffer(imageBuffer, ColorSpaceDeviceRGB, pixelSnappedIntRect(r), CompositeSourceOver, useLowQualityScale);
+                context->drawImageBuffer(imageBuffer, ColorSpaceDeviceRGB, pixelSnappedIntRect(r), CompositeSourceOver, BlendModeNormal, useLowQualityScale);
         }
     }
 

@@ -1,5 +1,6 @@
 /*
     Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
+    Copyright (C) 2009 Robert Hogan <robert@roberthogan.net>
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -21,21 +22,28 @@
 #define QWEBKITGLOBAL_H
 
 #include <QtCore/qglobal.h>
+#include <QtCore/qstring.h>
 
-#define QTWEBKIT_VERSION_STR "2.2.0"
-// QTWEBKIT_VERSION is (major << 16) + (minor << 8) + patch. Similar to Qt.
-#define QTWEBKIT_VERSION 0x020200
-// Use: #if (QTWEBKIT_VERSION >= QTWEBKIT_VERSION_CHECK(2, 0, 0)). Similar to Qt.
 #define QTWEBKIT_VERSION_CHECK(major, minor, patch) ((major<<16)|(minor<<8)|(patch))
 
 #ifndef QT_STATIC
-#  if defined(BUILDING_WEBKIT)
+#  if !defined(QT_BUILD_WEBKITWIDGETS_LIB) && defined(BUILDING_WEBKIT)
 #      define QWEBKIT_EXPORT Q_DECL_EXPORT
 #  else
 #      define QWEBKIT_EXPORT Q_DECL_IMPORT
 #  endif
+#  if defined(QT_BUILD_WEBKITWIDGETS_LIB)
+#      define QWEBKITWIDGETS_EXPORT Q_DECL_EXPORT
+#  else
+#      define QWEBKITWIDGETS_EXPORT Q_DECL_IMPORT
+#  endif
 #else
+#  define QWEBKITWIDGETS_EXPORT
 #  define QWEBKIT_EXPORT
 #endif
+
+QWEBKIT_EXPORT QString qWebKitVersion();
+QWEBKIT_EXPORT int qWebKitMajorVersion();
+QWEBKIT_EXPORT int qWebKitMinorVersion();
 
 #endif // QWEBKITGLOBAL_H

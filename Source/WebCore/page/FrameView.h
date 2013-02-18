@@ -156,6 +156,7 @@ public:
 
     void resetScrollbars();
     void resetScrollbarsAndClearContentsSize();
+    void prepareForDetach();
     void detachCustomScrollbars();
     virtual void recalculateScrollbarOverlayStyle();
 
@@ -322,7 +323,7 @@ public:
     // On each repaint the delay increses by this amount
     static void setRepaintThrottlingDeferredRepaintDelayIncrementDuringLoading(double p);
 
-    virtual IntPoint currentMousePosition() const;
+    virtual IntPoint lastKnownMousePosition() const;
 
     virtual bool scrollbarsCanBeActive() const OVERRIDE;
 
@@ -372,6 +373,10 @@ public:
 #if ENABLE(CSS_FILTERS)
     void setHasSoftwareFilters(bool hasSoftwareFilters) { m_hasSoftwareFilters = hasSoftwareFilters; }
     bool hasSoftwareFilters() const { return m_hasSoftwareFilters; }
+#endif
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+    IntSize initialViewportSize() const { return m_initialViewportSize; }
+    void setInitialViewportSize(const IntSize& size) { m_initialViewportSize = size; }
 #endif
 
 protected:
@@ -466,6 +471,7 @@ private:
 
     virtual AXObjectCache* axObjectCache() const;
     void notifyWidgetsInAllFrames(WidgetNotification);
+    void removeFromAXObjectCache();
     
     static double sCurrentPaintTimeStamp; // used for detecting decoded resource thrash in the cache
 
@@ -572,6 +578,11 @@ private:
 
 #if ENABLE(CSS_FILTERS)
     bool m_hasSoftwareFilters;
+#endif
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+    // Size of viewport before any UA or author styles have overridden
+    // the viewport given by the window or viewing area of the UA.
+    IntSize m_initialViewportSize;
 #endif
 };
 

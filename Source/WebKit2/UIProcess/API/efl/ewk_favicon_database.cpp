@@ -53,6 +53,7 @@ EwkFaviconDatabase::EwkFaviconDatabase(WebIconDatabase* iconDatabase)
 
 EwkFaviconDatabase::~EwkFaviconDatabase()
 {
+    WKIconDatabaseSetIconDatabaseClient(toAPI(m_iconDatabase.get()), 0);
 }
 
 String EwkFaviconDatabase::iconURLForPageURL(const String& pageURL) const
@@ -127,7 +128,7 @@ void EwkFaviconDatabase::iconForPageURL(const String& pageURL, const IconRequest
 
 void EwkFaviconDatabase::didChangeIconForPageURL(WKIconDatabaseRef, WKURLRef pageURLRef, const void* clientInfo)
 {
-    const Ewk_Favicon_Database* ewkIconDatabase = static_cast<const Ewk_Favicon_Database*>(clientInfo);
+    const EwkFaviconDatabase* ewkIconDatabase = static_cast<const EwkFaviconDatabase*>(clientInfo);
 
     if (ewkIconDatabase->m_changeListeners.isEmpty())
         return;
@@ -157,7 +158,7 @@ PassRefPtr<cairo_surface_t> EwkFaviconDatabase::getIconSurfaceSynchronously(cons
 
 void EwkFaviconDatabase::iconDataReadyForPageURL(WKIconDatabaseRef, WKURLRef pageURL, const void* clientInfo)
 {
-    Ewk_Favicon_Database* ewkIconDatabase = const_cast<Ewk_Favicon_Database*>(static_cast<const Ewk_Favicon_Database*>(clientInfo));
+    EwkFaviconDatabase* ewkIconDatabase = const_cast<EwkFaviconDatabase*>(static_cast<const EwkFaviconDatabase*>(clientInfo));
 
     String urlString = toImpl(pageURL)->string();
     if (!ewkIconDatabase->m_iconRequests.contains(urlString))

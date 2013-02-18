@@ -26,6 +26,7 @@
 #ifndef V8ValueCache_h
 #define V8ValueCache_h
 
+#include "ScopedPersistent.h"
 #include <v8.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
@@ -70,34 +71,26 @@ const int numberOfCachedSmallIntegers = 64;
 
 class IntegerCache {
 public:
-     IntegerCache() : m_initialized(false) { };
-    ~IntegerCache();
+    IntegerCache();
 
     v8::Handle<v8::Integer> v8Integer(int value, v8::Isolate* isolate)
     {
-        if (!m_initialized)
-            createSmallIntegers(isolate);
         if (0 <= value && value < numberOfCachedSmallIntegers)
-            return m_smallIntegers[value];
+            return m_smallIntegers[value].get();
         return v8::Integer::New(value, isolate);
     }
 
     v8::Handle<v8::Integer> v8UnsignedInteger(unsigned value, v8::Isolate* isolate)
     {
-        if (!m_initialized)
-            createSmallIntegers(isolate);
         if (value < static_cast<unsigned>(numberOfCachedSmallIntegers))
-            return m_smallIntegers[value];
+            return m_smallIntegers[value].get();
         return v8::Integer::NewFromUnsigned(value, isolate);
     }
 
 private:
-    void createSmallIntegers(v8::Isolate*);
-
-    v8::Persistent<v8::Integer> m_smallIntegers[numberOfCachedSmallIntegers];
-    bool m_initialized;
+    ScopedPersistent<v8::Integer> m_smallIntegers[numberOfCachedSmallIntegers];
 };
-    
+
 } // namespace WebCore
 
 #endif // V8ValueCache_h

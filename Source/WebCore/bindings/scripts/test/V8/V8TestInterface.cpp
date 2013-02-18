@@ -119,7 +119,7 @@ static v8::Handle<v8::Value> supplementalNodeAttrGetter(v8::Local<v8::String> na
 {
     INC_STATS("DOM.TestInterface.supplementalNode._get");
     TestInterface* imp = V8TestInterface::toNative(info.Holder());
-    return toV8(TestSupplemental::supplementalNode(imp), info.Holder(), info.GetIsolate());
+    return toV8Fast(TestSupplemental::supplementalNode(imp), info, imp);
 }
 
 #endif // ENABLE(Condition11) || ENABLE(Condition12)
@@ -262,7 +262,7 @@ v8::Handle<v8::Value> V8TestInterface::constructorCallback(const v8::Arguments& 
     if (ec)
         goto fail;
 
-    V8DOMWrapper::createDOMWrapper(impl.release(), &info, wrapper, args.GetIsolate());
+    V8DOMWrapper::associateObjectWithWrapper(impl.release(), &info, wrapper, args.GetIsolate());
     return wrapper;
   fail:
     return setDOMException(ec, args.GetIsolate());
@@ -341,14 +341,14 @@ ActiveDOMObject* V8TestInterface::toActiveDOMObject(v8::Handle<v8::Object> objec
 v8::Handle<v8::Object> V8TestInterface::createWrapper(PassRefPtr<TestInterface> impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
 {
     ASSERT(impl.get());
-    ASSERT(DOMDataStore::current(isolate)->get(impl.get()).IsEmpty());
+    ASSERT(DOMDataStore::getWrapper(impl.get(), isolate).IsEmpty());
 
-    v8::Handle<v8::Object> wrapper = V8DOMWrapper::instantiateV8Object(creationContext, &info, impl.get());
+    v8::Handle<v8::Object> wrapper = V8DOMWrapper::createWrapper(creationContext, &info, impl.get());
     if (UNLIKELY(wrapper.IsEmpty()))
         return wrapper;
 
     installPerContextProperties(wrapper, impl.get());
-    v8::Persistent<v8::Object> wrapperHandle = V8DOMWrapper::createDOMWrapper(impl, &info, wrapper, isolate);
+    v8::Persistent<v8::Object> wrapperHandle = V8DOMWrapper::associateObjectWithWrapper(impl, &info, wrapper, isolate);
     if (!hasDependentLifetime)
         wrapperHandle.MarkIndependent();
     return wrapper;

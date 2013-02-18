@@ -60,6 +60,7 @@ SOURCES += \
     bytecode/CodeType.cpp \
     bytecode/DFGExitProfile.cpp \
     bytecode/ExecutionCounter.cpp \
+    bytecode/ExitKind.cpp \
     bytecode/GetByIdStatus.cpp \
     bytecode/JumpTable.cpp \
     bytecode/LazyOperandValueProfile.cpp \
@@ -67,6 +68,7 @@ SOURCES += \
     bytecode/Opcode.cpp \
     bytecode/PolymorphicPutByIdList.cpp \
     bytecode/PutByIdStatus.cpp \
+    bytecode/ReduceWhitespace.cpp \
     bytecode/ResolveGlobalStatus.cpp \
     bytecode/SamplingTool.cpp \
     bytecode/SpecialPointer.cpp \
@@ -182,10 +184,31 @@ SOURCES += \
     parser/ParserArena.cpp \
     parser/Parser.cpp \
     parser/SourceProviderCache.cpp \
+    profiler/ProfilerBytecode.cpp \
+    profiler/ProfilerBytecode.h \
+    profiler/ProfilerBytecodeSequence.cpp \
+    profiler/ProfilerBytecodes.cpp \
+    profiler/ProfilerBytecodes.h \
+    profiler/ProfilerCompilation.cpp \
+    profiler/ProfilerCompilation.h \
+    profiler/ProfilerCompilationKind.cpp \
+    profiler/ProfilerCompilationKind.h \
+    profiler/ProfilerCompiledBytecode.cpp \
+    profiler/ProfilerCompiledBytecode.h \
+    profiler/ProfilerDatabase.cpp \
+    profiler/ProfilerDatabase.h \
+    profiler/ProfilerExecutionCounter.h \
+    profiler/ProfilerOrigin.cpp \
+    profiler/ProfilerOrigin.h \
+    profiler/ProfilerOriginStack.cpp \
+    profiler/ProfilerOriginStack.h \
+    profiler/ProfilerOSRExit.cpp \
+    profiler/ProfilerOSRExitSite.cpp \
+    profiler/ProfilerProfiledBytecodes.cpp \
     profiler/Profile.cpp \
     profiler/ProfileGenerator.cpp \
     profiler/ProfileNode.cpp \
-    profiler/Profiler.cpp \
+    profiler/LegacyProfiler.cpp \
     runtime/ArgList.cpp \
     runtime/Arguments.cpp \
     runtime/ArrayConstructor.cpp \

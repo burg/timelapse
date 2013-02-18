@@ -200,6 +200,9 @@ void FrameLoaderClientBlackBerry::dispatchDecidePolicyForResponse(FramePolicyFun
     else if (ResourceRequest::TargetIsMainFrame == request.targetType() && m_webPagePrivate->m_client->downloadAllowed(request.url().string()))
         policy = PolicyDownload;
 
+    if (m_webPagePrivate->m_dumpRenderTree)
+        m_webPagePrivate->m_dumpRenderTree->didDecidePolicyForResponse(response);
+
     (m_frame->loader()->policyChecker()->*function)(policy);
 }
 
@@ -243,10 +246,10 @@ void FrameLoaderClientBlackBerry::dispatchDecidePolicyForNavigationAction(FrameP
     if (decision == PolicyIgnore)
         dispatchDidCancelClientRedirect();
 
-    (m_frame->loader()->policyChecker()->*function)(decision);
-
     if (m_webPagePrivate->m_dumpRenderTree)
-        m_webPagePrivate->m_dumpRenderTree->didDecidePolicyForNavigationAction(action, request);
+        m_webPagePrivate->m_dumpRenderTree->didDecidePolicyForNavigationAction(action, request, m_frame);
+
+    (m_frame->loader()->policyChecker()->*function)(decision);
 }
 
 void FrameLoaderClientBlackBerry::delayPolicyCheckUntilFragmentExists(const String& fragment, FramePolicyFunction function)
@@ -341,8 +344,14 @@ PassRefPtr<Widget> FrameLoaderClientBlackBerry::createPlugin(const IntSize& plug
     if (PluginDatabase::installedPlugins()->isMIMETypeRegistered(mimeType))
         return PluginView::create(m_frame, pluginSize, element, url, paramNames, paramValues, mimeType, loadManually);
 
-    // If it's not the plugin type we support, try load directly from browser.
-    if (m_frame->loader() && m_frame->loader()->subframeLoader() && !url.isNull())
+    // This is not a plugin type that is currently supported or enabled. Try
+    // to load the url directly. This check is performed to allow video and
+    // audio to be referenced as the source of embed or object elements.
+    // For media of this kind the mime type passed into this function
+    // will generally be a valid media mime type, or it may be null. We
+    // explicitly check for Flash content so it does not get rendered as
+    // text at this point, producing garbled characters.
+    if (mimeType != "application/x-shockwave-flash" && m_frame->loader() && m_frame->loader()->subframeLoader() && !url.isNull())
         m_frame->loader()->subframeLoader()->requestFrame(element, url, String());
 
     return 0;
@@ -447,16 +456,16 @@ void FrameLoaderClientBlackBerry::transitionToCommittedForNewPage()
     Color backgroundColor(m_webPagePrivate->m_webSettings->backgroundColor());
 
     m_frame->createView(m_webPagePrivate->viewportSize(),      /* viewport */
-                        backgroundColor,                       /* background color */
-                        backgroundColor.hasAlpha(),            /* is transparent */
-                        m_webPagePrivate->actualVisibleSize(), /* fixed reported size */
-                        m_webPagePrivate->fixedLayoutSize(),   /* fixed layout size */
-                        IntRect(),                             /* fixed visible content rect */
-                        m_webPagePrivate->useFixedLayout(),    /* use fixed layout */
-                        ScrollbarAlwaysOff,                    /* hor mode */
-                        true,                                  /* lock the mode */
-                        ScrollbarAlwaysOff,                    /* ver mode */
-                        true);                                 /* lock the mode */
+        backgroundColor,                       /* background color */
+        backgroundColor.hasAlpha(),            /* is transparent */
+        m_webPagePrivate->actualVisibleSize(), /* fixed reported size */
+        m_webPagePrivate->fixedLayoutSize(),   /* fixed layout size */
+        IntRect(),                             /* fixed visible content rect */
+        m_webPagePrivate->useFixedLayout(),    /* use fixed layout */
+        ScrollbarAlwaysOff,                    /* hor mode */
+        true,                                  /* lock the mode */
+        ScrollbarAlwaysOff,                    /* ver mode */
+        true);                                 /* lock the mode */
 
     if (isMainFrame() && m_webPagePrivate->backingStoreClient()) {
         // FIXME: Do we really need to suspend/resume both backingstore and screen here?
@@ -601,7 +610,7 @@ void FrameLoaderClientBlackBerry::dispatchDidFinishLoad()
 
     // Process document metadata.
     RefPtr<NodeList> nodeList = headElement->getElementsByTagName(HTMLNames::metaTag.localName());
-    unsigned int size = nodeList->length();
+    unsigned size = nodeList->length();
     ScopeArray<BlackBerry::Platform::String> headers;
 
     // This may allocate more space than needed since not all meta elements will be http-equiv.
@@ -697,7 +706,7 @@ void FrameLoaderClientBlackBerry::dispatchDidFailProvisionalLoad(const ResourceE
         m_webPagePrivate->setLoadState(WebPagePrivate::Failed);
 
         if (error.domain() == ResourceError::platformErrorDomain
-                && (error.errorCode() == BlackBerry::Platform::FilterStream::StatusErrorAlreadyHandled)) {
+            && (error.errorCode() == BlackBerry::Platform::FilterStream::StatusErrorAlreadyHandled)) {
             // Error has already been displayed by client.
             return;
         }
@@ -962,7 +971,8 @@ void FrameLoaderClientBlackBerry::notifyBackForwardListChanged() const
 
 Frame* FrameLoaderClientBlackBerry::dispatchCreatePage(const NavigationAction& navigation)
 {
-    WebPage* webPage = m_webPagePrivate->m_client->createWindow(0, 0, -1, -1, WebPageClient::FlagWindowDefault, navigation.url().string(), BlackBerry::Platform::String::emptyString());
+    UNUSED_PARAM(navigation);
+    WebPage* webPage = m_webPagePrivate->m_client->createWindow(0, 0, -1, -1, WebPageClient::FlagWindowDefault, BlackBerry::Platform::String::emptyString(), BlackBerry::Platform::String::emptyString());
     if (!webPage)
         return 0;
 
@@ -978,7 +988,7 @@ void FrameLoaderClientBlackBerry::detachedFromParent2()
     m_webPagePrivate->m_client->notifyFrameDetached(m_frame);
 }
 
-void FrameLoaderClientBlackBerry::dispatchWillSendRequest(DocumentLoader* docLoader, long unsigned int, ResourceRequest& request, const ResourceResponse&)
+void FrameLoaderClientBlackBerry::dispatchWillSendRequest(DocumentLoader* docLoader, long unsigned, ResourceRequest& request, const ResourceResponse&)
 {
     // If the request is being loaded by the provisional document loader, then
     // it is a new top level request which has not been commited.
@@ -1152,9 +1162,9 @@ PolicyAction FrameLoaderClientBlackBerry::decidePolicyForExternalLoad(const Reso
 #endif
 
     if (m_webPagePrivate->m_webSettings->areLinksHandledExternally()
-            && isMainFrame()
-            && !request.mustHandleInternally()
-            && !isFragmentScroll) {
+        && isMainFrame()
+        && !request.mustHandleInternally()
+        && !isFragmentScroll) {
         NetworkRequest platformRequest;
         request.initializePlatformRequest(platformRequest, cookiesEnabled());
         if (platformRequest.getTargetType() == NetworkRequest::TargetIsUnknown)

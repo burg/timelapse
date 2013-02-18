@@ -245,10 +245,16 @@ JSGlobalData::JSGlobalData(GlobalDataType globalDataType, HeapType heapType)
     heap.notifyIsSafeToCollect();
     
     LLInt::Data::performAssertions(*this);
+    
+    if (Options::enableProfiler())
+        m_perBytecodeProfiler = adoptPtr(new Profiler::Database(*this));
 }
 
 JSGlobalData::~JSGlobalData()
 {
+    // Clear this first to ensure that nobody tries to remove themselves from it.
+    m_perBytecodeProfiler.clear();
+    
     ASSERT(!m_apiLock.currentThreadIsHoldingLock());
     heap.didStartVMShutdown();
 
@@ -423,6 +429,13 @@ void JSGlobalData::startSampling()
 void JSGlobalData::stopSampling()
 {
     interpreter->stopSampling();
+}
+
+void JSGlobalData::discardAllCode()
+{
+    m_codeCache->clear();
+    heap.deleteAllCompiledCode();
+    heap.reportAbandonedObjectGraph();
 }
 
 void JSGlobalData::dumpSampleData(ExecState* exec)

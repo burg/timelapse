@@ -43,9 +43,9 @@ class ElementRareData;
 class ElementShadow;
 class IntSize;
 class Locale;
+class PseudoElement;
 class RenderRegion;
 class ShadowRoot;
-class WebKitAnimationList;
 
 enum SpellcheckAttributeState {
     SpellcheckAttributeTrue,
@@ -276,6 +276,7 @@ public:
     ElementShadow* shadow() const;
     ElementShadow* ensureShadow();
     PassRefPtr<ShadowRoot> createShadowRoot(ExceptionCode&);
+    ShadowRoot* shadowRoot() const;
 
     virtual void willAddAuthorShadowRoot() { }
     virtual bool areAuthorShadowsAllowed() const { return true; }
@@ -365,6 +366,9 @@ public:
     virtual void finishParsingChildren();
     virtual void beginParsingChildren();
 
+    PseudoElement* beforePseudoElement() const;
+    PseudoElement* afterPseudoElement() const;
+
     // ElementTraversal API
     Element* firstElementChild() const;
     Element* lastElementChild() const;
@@ -372,8 +376,8 @@ public:
     Element* nextElementSibling() const;
     unsigned childElementCount() const;
 
-    virtual bool shouldMatchReadOnlySelector() const;
-    virtual bool shouldMatchReadWriteSelector() const;
+    virtual bool matchesReadOnlyPseudoClass() const;
+    virtual bool matchesReadWritePseudoClass() const;
     bool webkitMatchesSelector(const String& selectors, ExceptionCode&);
 
     DOMTokenList* classList();
@@ -393,6 +397,9 @@ public:
 
 #if ENABLE(INPUT_SPEECH)
     virtual bool isInputFieldSpeechButtonElement() const { return false; }
+#endif
+#if ENABLE(INPUT_MULTIPLE_FIELDS_UI)
+    virtual bool isDateTimeFieldElement() const;
 #endif
 
     virtual bool isFormControlElement() const { return false; }
@@ -437,8 +444,8 @@ public:
 #endif
 
 #if ENABLE(DIALOG_ELEMENT)
-    virtual bool isInTopLayer() const;
-    virtual void setIsInTopLayer(bool);
+    bool isInTopLayer() const;
+    void setIsInTopLayer(bool);
 #endif
 
 #if ENABLE(POINTER_LOCK)
@@ -446,8 +453,6 @@ public:
 #endif
 
     virtual bool isSpellCheckingEnabled() const;
-
-    PassRefPtr<WebKitAnimationList> webkitGetAnimations() const;
 
     PassRefPtr<RenderStyle> styleForRenderer();
 
@@ -493,6 +498,9 @@ protected:
     void classAttributeChanged(const AtomicString& newClassString);
 
 private:
+    void updatePseudoElement(PseudoId, StyleChange = NoChange);
+    PassRefPtr<PseudoElement> createPseudoElementIfNeeded(PseudoId);
+
     // FIXME: Remove the need for Attr to call willModifyAttribute/didModifyAttribute.
     friend class Attr;
 
@@ -536,11 +544,11 @@ private:
     
     // cloneNode is private so that non-virtual cloneElementWithChildren and cloneElementWithoutChildren
     // are used instead.
-    virtual PassRefPtr<Node> cloneNode(bool deep);
+    virtual PassRefPtr<Node> cloneNode(bool deep) OVERRIDE;
     virtual PassRefPtr<Element> cloneElementWithoutAttributesAndChildren();
 
     QualifiedName m_tagName;
-    virtual OwnPtr<NodeRareData> createRareData();
+    virtual PassOwnPtr<NodeRareData> createRareData();
     bool rareDataStyleAffectedByEmpty() const;
     bool rareDataChildrenAffectedByHover() const;
     bool rareDataChildrenAffectedByActive() const;
@@ -783,15 +791,6 @@ inline void Element::updateInvalidAttributes() const
     if (attributeData()->m_animatedSVGAttributesAreDirty)
         updateAnimatedSVGAttribute(anyQName());
 #endif
-}
-
-inline Element* firstElementChild(const ContainerNode* container)
-{
-    ASSERT_ARG(container, container);
-    Node* child = container->firstChild();
-    while (child && !child->isElementNode())
-        child = child->nextSibling();
-    return static_cast<Element*>(child);
 }
 
 inline bool Element::hasID() const

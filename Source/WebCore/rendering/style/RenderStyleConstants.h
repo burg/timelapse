@@ -153,6 +153,9 @@ enum EFillLayerType {
 // CSS3 Background Values
 enum EFillSizeType { Contain, Cover, SizeLength, SizeNone };
 
+// CSS3 Background Position
+enum BackgroundEdgeOrigin { TopEdge, RightEdge, BottomEdge, LeftEdge };
+
 // CSS3 Marquee Properties
 
 enum EMarqueeBehavior { MNONE, MSCROLL, MSLIDE, MALTERNATE };
@@ -450,6 +453,8 @@ enum TextEmphasisFill { TextEmphasisFillFilled, TextEmphasisFillOpen };
 enum TextEmphasisMark { TextEmphasisMarkNone, TextEmphasisMarkAuto, TextEmphasisMarkDot, TextEmphasisMarkCircle, TextEmphasisMarkDoubleCircle, TextEmphasisMarkTriangle, TextEmphasisMarkSesame, TextEmphasisMarkCustom };
 
 enum TextEmphasisPosition { TextEmphasisPositionOver, TextEmphasisPositionUnder };
+
+enum TextOrientation { TextOrientationVerticalRight, TextOrientationUpright, TextOrientationSideways, TextOrientationSidewaysRight };
 
 enum TextOverflow { TextOverflowClip = 0, TextOverflowEllipsis };
 

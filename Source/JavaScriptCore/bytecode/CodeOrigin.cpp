@@ -26,6 +26,7 @@
 #include "config.h"
 #include "CodeOrigin.h"
 
+#include "CodeBlock.h"
 #include "Executable.h"
 
 namespace JSC {
@@ -50,12 +51,37 @@ Vector<CodeOrigin> CodeOrigin::inlineStack() const
     unsigned index = result.size() - 2;
     for (InlineCallFrame* current = inlineCallFrame; current; current = current->caller.inlineCallFrame)
         result[index--] = current->caller;
+    ASSERT(!result[0].inlineCallFrame);
     return result;
+}
+
+void CodeOrigin::dump(PrintStream& out) const
+{
+    Vector<CodeOrigin> stack = inlineStack();
+    for (unsigned i = 0; i < stack.size(); ++i) {
+        if (i)
+            out.print(" --> ");
+        
+        if (InlineCallFrame* frame = stack[i].inlineCallFrame)
+            out.print("#", frame->hash(), ":<", RawPointer(frame->executable.get()), "> ");
+        
+        out.print("bc#", stack[i].bytecodeIndex);
+    }
 }
 
 CodeBlockHash InlineCallFrame::hash() const
 {
     return executable->hashFor(specializationKind());
+}
+
+CodeBlock* InlineCallFrame::baselineCodeBlock() const
+{
+    return jsCast<FunctionExecutable*>(executable.get())->baselineCodeBlockFor(specializationKind());
+}
+
+void InlineCallFrame::dump(PrintStream& out) const
+{
+    out.print("#", hash(), ":<", RawPointer(executable.get()), ", bc#", caller.bytecodeIndex, ", ", specializationKind(), ">");
 }
 
 } // namespace JSC

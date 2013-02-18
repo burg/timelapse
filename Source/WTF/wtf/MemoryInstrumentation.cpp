@@ -42,12 +42,16 @@ namespace WTF {
 
 MemoryInstrumentation::MemoryInstrumentation(MemoryInstrumentationClient* client)
     : m_client(client)
-    , m_rootObjectInfo(adoptPtr(new MemoryObjectInfo(this, 0)))
 {
 }
 
 MemoryInstrumentation::~MemoryInstrumentation()
 {
+}
+
+void MemoryInstrumentation::reportEdge(MemoryObjectInfo* ownerObjectInfo, const void* target, const char* name)
+{
+    m_client->reportEdge(ownerObjectInfo->reportedPointer(), target, name);
 }
 
 MemoryObjectType MemoryInstrumentation::getObjectType(MemoryObjectInfo* objectInfo)
@@ -60,8 +64,17 @@ void MemoryInstrumentation::callReportObjectInfo(MemoryObjectInfo* memoryObjectI
     memoryObjectInfo->reportObjectInfo(pointer, objectType, objectSize);
 }
 
-MemoryInstrumentation::InstrumentedPointerBase::InstrumentedPointerBase(MemoryObjectInfo* memoryObjectInfo)
-    : m_ownerObjectType(memoryObjectInfo->objectType())
+void MemoryInstrumentation::reportLinkToBuffer(const void* owner, const void* buffer, MemoryObjectType ownerObjectType, size_t size, const char* nodeName, const char* edgeName)
+{
+    MemoryObjectInfo memoryObjectInfo(this, ownerObjectType, 0);
+    memoryObjectInfo.reportObjectInfo(buffer, ownerObjectType, size);
+    memoryObjectInfo.setName(nodeName);
+    m_client->reportLeaf(owner, memoryObjectInfo, edgeName);
+}
+
+MemoryInstrumentation::WrapperBase::WrapperBase(MemoryObjectType objectType, const void* pointer)
+    : m_pointer(pointer)
+    , m_ownerObjectType(objectType)
 {
 #if DEBUG_POINTER_INSTRUMENTATION
     m_callStackSize = s_maxCallStackSize;
@@ -69,17 +82,21 @@ MemoryInstrumentation::InstrumentedPointerBase::InstrumentedPointerBase(MemoryOb
 #endif
 }
 
-void MemoryInstrumentation::InstrumentedPointerBase::process(MemoryInstrumentation* memoryInstrumentation)
+void MemoryInstrumentation::WrapperBase::process(MemoryInstrumentation* memoryInstrumentation)
 {
-    MemoryObjectInfo memoryObjectInfo(memoryInstrumentation, m_ownerObjectType);
-    const void* originalPointer = callReportMemoryUsage(&memoryObjectInfo);
+    MemoryObjectInfo memoryObjectInfo(memoryInstrumentation, m_ownerObjectType, m_pointer);
+    callReportMemoryUsage(&memoryObjectInfo);
 
-    const void* pointer = memoryObjectInfo.reportedPointer();
-    ASSERT(pointer);
-    if (pointer != originalPointer && memoryInstrumentation->visited(pointer))
-        return;
-    memoryInstrumentation->countObjectSize(pointer, memoryObjectInfo.objectType(), memoryObjectInfo.objectSize());
-    if (!memoryInstrumentation->checkCountedObject(pointer)) {
+    const void* realAddress = memoryObjectInfo.reportedPointer();
+    ASSERT(realAddress);
+    if (realAddress != m_pointer) {
+        memoryInstrumentation->m_client->reportBaseAddress(m_pointer, realAddress);
+        if (!memoryObjectInfo.firstVisit())
+            return;
+    }
+    memoryInstrumentation->countObjectSize(realAddress, memoryObjectInfo.objectType(), memoryObjectInfo.objectSize());
+    memoryInstrumentation->m_client->reportNode(memoryObjectInfo);
+    if (!memoryInstrumentation->checkCountedObject(realAddress)) {
 #if DEBUG_POINTER_INSTRUMENTATION
         fputs("Unknown object counted:\n", stderr);
         WTFPrintBacktrace(m_callStack, m_callStackSize);
@@ -87,25 +104,39 @@ void MemoryInstrumentation::InstrumentedPointerBase::process(MemoryInstrumentati
     }
 }
 
-void MemoryClassInfo::init(const void* pointer, MemoryObjectType objectType, size_t actualSize)
+void MemoryInstrumentation::WrapperBase::processRootObjectRef(MemoryInstrumentation* memoryInstrumentation)
 {
-    m_memoryObjectInfo->reportObjectInfo(pointer, objectType, actualSize);
+    MemoryObjectInfo memoryObjectInfo(memoryInstrumentation, m_ownerObjectType, m_pointer);
+    callReportMemoryUsage(&memoryObjectInfo);
+
+    ASSERT(m_pointer == memoryObjectInfo.reportedPointer());
+    memoryInstrumentation->m_client->reportNode(memoryObjectInfo);
+}
+
+void MemoryClassInfo::init(const void* objectAddress, MemoryObjectType objectType, size_t actualSize)
+{
+    m_memoryObjectInfo->reportObjectInfo(objectAddress, objectType, actualSize);
     m_memoryInstrumentation = m_memoryObjectInfo->memoryInstrumentation();
     m_objectType = m_memoryObjectInfo->objectType();
+    m_skipMembers = !m_memoryObjectInfo->firstVisit();
 }
 
-void MemoryClassInfo::addRawBuffer(const void* const& buffer, size_t size)
+void MemoryClassInfo::addRawBuffer(const void* buffer, size_t size, const char* nodeName, const char* edgeName)
 {
-    m_memoryInstrumentation->addRawBuffer(buffer, m_objectType, size);
+    if (!m_skipMembers)
+        m_memoryInstrumentation->addRawBuffer(m_memoryObjectInfo->reportedPointer(), buffer, m_objectType, size, nodeName, edgeName);
 }
 
-void MemoryClassInfo::addPrivateBuffer(size_t size, MemoryObjectType ownerObjectType)
+void MemoryClassInfo::addPrivateBuffer(size_t size, MemoryObjectType ownerObjectType, const char* nodeName, const char* edgeName)
 {
     if (!size)
+        return;
+    if (m_skipMembers)
         return;
     if (!ownerObjectType)
         ownerObjectType = m_objectType;
     m_memoryInstrumentation->countObjectSize(0, ownerObjectType, size);
+    m_memoryInstrumentation->reportLinkToBuffer(m_memoryObjectInfo->reportedPointer(), 0, ownerObjectType, size, nodeName, edgeName);
 }
 
 } // namespace WTF

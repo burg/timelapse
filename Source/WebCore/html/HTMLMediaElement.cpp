@@ -126,7 +126,7 @@ using namespace std;
 namespace WebCore {
 
 #if !LOG_DISABLED
-static String urlForLogging(const KURL& url)
+static String urlForLoggingMedia(const KURL& url)
 {
     static const unsigned maximumURLLengthForLogging = 128;
 
@@ -940,7 +940,7 @@ void HTMLMediaElement::loadResource(const KURL& initialURL, ContentType& content
 {
     ASSERT(isSafeToLoadURL(initialURL, Complain));
 
-    LOG(Media, "HTMLMediaElement::loadResource(%s, %s, %s)", urlForLogging(initialURL).utf8().data(), contentType.raw().utf8().data(), keySystem.utf8().data());
+    LOG(Media, "HTMLMediaElement::loadResource(%s, %s, %s)", urlForLoggingMedia(initialURL).utf8().data(), contentType.raw().utf8().data(), keySystem.utf8().data());
 
     Frame* frame = document()->frame();
     if (!frame) {
@@ -992,11 +992,11 @@ void HTMLMediaElement::loadResource(const KURL& initialURL, ContentType& content
 #if !PLATFORM(CHROMIUM)
     if (resource) {
         url = createFileURLForApplicationCacheResource(resource->path());
-        LOG(Media, "HTMLMediaElement::loadResource - will load from app cache -> %s", urlForLogging(url).utf8().data());
+        LOG(Media, "HTMLMediaElement::loadResource - will load from app cache -> %s", urlForLoggingMedia(url).utf8().data());
     }
 #endif
 
-    LOG(Media, "HTMLMediaElement::loadResource - m_currentSrc -> %s", urlForLogging(m_currentSrc).utf8().data());
+    LOG(Media, "HTMLMediaElement::loadResource - m_currentSrc -> %s", urlForLoggingMedia(m_currentSrc).utf8().data());
 
     if (m_sendProgressEvents) 
         startProgressEventTimer();
@@ -1397,7 +1397,7 @@ void HTMLMediaElement::textTrackRemoveCue(TextTrack*, PassRefPtr<TextTrackCue> c
 bool HTMLMediaElement::isSafeToLoadURL(const KURL& url, InvalidURLAction actionIfInvalid)
 {
     if (!url.isValid()) {
-        LOG(Media, "HTMLMediaElement::isSafeToLoadURL(%s) -> FALSE because url is invalid", urlForLogging(url).utf8().data());
+        LOG(Media, "HTMLMediaElement::isSafeToLoadURL(%s) -> FALSE because url is invalid", urlForLoggingMedia(url).utf8().data());
         return false;
     }
 
@@ -1405,12 +1405,12 @@ bool HTMLMediaElement::isSafeToLoadURL(const KURL& url, InvalidURLAction actionI
     if (!frame || !document()->securityOrigin()->canDisplay(url)) {
         if (actionIfInvalid == Complain)
             FrameLoader::reportLocalLoadFailed(frame, url.string());
-        LOG(Media, "HTMLMediaElement::isSafeToLoadURL(%s) -> FALSE rejected by SecurityOrigin", urlForLogging(url).utf8().data());
+        LOG(Media, "HTMLMediaElement::isSafeToLoadURL(%s) -> FALSE rejected by SecurityOrigin", urlForLoggingMedia(url).utf8().data());
         return false;
     }
 
     if (!document()->contentSecurityPolicy()->allowMediaFromSource(url)) {
-        LOG(Media, "HTMLMediaElement::isSafeToLoadURL(%s) -> rejected by Content Security Policy", urlForLogging(url).utf8().data());
+        LOG(Media, "HTMLMediaElement::isSafeToLoadURL(%s) -> rejected by Content Security Policy", urlForLoggingMedia(url).utf8().data());
         return false;
     }
 
@@ -1744,10 +1744,6 @@ void HTMLMediaElement::setReadyState(MediaPlayer::ReadyState state)
         prepareMediaFragmentURI();
         scheduleEvent(eventNames().durationchangeEvent);
         scheduleEvent(eventNames().loadedmetadataEvent);
-#if ENABLE(VIDEO_TRACK)
-        if (m_player && m_player->hasClosedCaptions())
-            processInbandTextTracks();
-#endif
         if (hasMediaControls())
             mediaControls()->loadedMetadata();
         if (renderer())
@@ -2072,11 +2068,6 @@ void HTMLMediaElement::seek(float time, ExceptionCode& ec)
     }
     m_lastSeekTime = time;
     m_sentEndEvent = false;
-
-#if ENABLE(MEDIA_SOURCE)
-    if (m_mediaSource && m_mediaSource->readyState() == MediaSource::endedKeyword())
-        setSourceState(MediaSource::openKeyword());
-#endif
 
     // 8 - Set the current playback position to the given new playback position
     m_player->seek(time);
@@ -2726,48 +2717,64 @@ float HTMLMediaElement::percentLoaded() const
 }
 
 #if ENABLE(VIDEO_TRACK)
-void HTMLMediaElement::processInbandTextTracks()
+
+void HTMLMediaElement::mediaPlayerDidAddTrack(PassRefPtr<InbandTextTrackPrivate> prpTrack)
 {
     if (!RuntimeEnabledFeatures::webkitVideoTrackEnabled())
         return;
+    
+    // 4.8.10.12.2 Sourcing in-band text tracks
+    // 1. Associate the relevant data with a new text track and its corresponding new TextTrack object.
+    RefPtr<InbandTextTrack> textTrack = InbandTextTrack::create(ActiveDOMObject::scriptExecutionContext(), this, prpTrack);
+    
+    // 2. Set the new text track's kind, label, and language based on the semantics of the relevant data,
+    // as defined by the relevant specification. If there is no label in that data, then the label must
+    // be set to the empty string.
+    // 3. Associate the text track list of cues with the rules for updating the text track rendering appropriate
+    // for the format in question.
+    // 4. If the new text track's kind is metadata, then set the text track in-band metadata track dispatch type
+    // as follows, based on the type of the media resource:
+    // 5. Populate the new text track's list of cues with the cues parsed so far, folllowing the guidelines for exposing
+    // cues, and begin updating it dynamically as necessary.
+    //   - Thess are all done by the media engine.
+    
+    // 6. Set the new text track's readiness state to loaded.
+    textTrack->setReadinessState(TextTrack::Loaded);
+    
+    // 7. Set the new text track's mode to the mode consistent with the user's preferences and the requirements of
+    // the relevant specification for the data.
+    //  - This will happen in configureTextTracks()
+    scheduleLoad(TextTrackResource);
+    
+    // 8. Add the new text track to the media element's list of text tracks.
+    // 9. Fire an event with the name addtrack, that does not bubble and is not cancelable, and that uses the TrackEvent
+    // interface, with the track attribute initialized to the text track's TextTrack object, at the media element's
+    // textTracks attribute's TextTrackList object.
+    textTracks()->append(textTrack);
+}
 
-    Vector<RefPtr<InbandTextTrackPrivate> > privateTextTracks;
-    m_player->getTextTracks(privateTextTracks);
-
-    if (!privateTextTracks.size())
+void HTMLMediaElement::mediaPlayerDidRemoveTrack(PassRefPtr<InbandTextTrackPrivate> prpTrack)
+{
+    if (!RuntimeEnabledFeatures::webkitVideoTrackEnabled())
+        return;
+    
+    if (!m_textTracks)
         return;
 
-    for (size_t i = 0; i < privateTextTracks.size(); ++i) {
-        // 4.8.10.12.2 Sourcing in-band text tracks
-        // 1. Associate the relevant data with a new text track and its corresponding new TextTrack object.
-        
-        // 2. Set the new text track's kind, label, and language based on the semantics of the relevant data,
-        // as defined by the relevant specification. If there is no label in that data, then the label must
-        // be set to the empty string.
-        //   - This is done by the media engine when it creates the InbandTextTrackPrivate.
-        RefPtr<TextTrack> textTrack = InbandTextTrack::create(ActiveDOMObject::scriptExecutionContext(), this, privateTextTracks[i]);
-        
-        // 5. Populate the new text track's list of cues with the cues parsed so far, folllowing the guidelines for exposing
-        // cues, and begin updating it dynamically as necessary.
-        //   - This will happen automatically as the media engine loads the cues
-        
-        // 6. Set the new text track's readiness state to loaded.
-        textTrack->setReadinessState(TextTrack::Loaded);
-        
-        // 7. Set the new text track's mode to the mode consistent with the user's preferences and the requirements of
-        // the relevant specification for the data.
-        //  - This will happen in configureTextTracks()
-        
-        // 8. Add the new text track to the media element's list of text tracks.
-        textTracks()->append(textTrack);
-        
-        // 9. Fire an event with the name addtrack, that does not bubble and is not cancelable, and that uses the TrackEvent
-        // interface, with the track attribute initialized to the text track's TextTrack object, at the media element's
-        // textTracks attribute's TextTrackList object.
-        //  - This was done in TextTrackList::append
-    }
+    // This cast is safe because we created the InbandTextTrack with the InbandTextTrackPrivate
+    // passed to mediaPlayerDidAddTrack.
+    RefPtr<InbandTextTrack> textTrack = static_cast<InbandTextTrack*>(prpTrack->client());
+    if (!textTrack)
+        return;
 
-    configureTextTracks();
+    m_textTracks->remove(textTrack.get());
+    TextTrackCueList* cues = textTrack->cues();
+    if (cues) {
+        beginIgnoringTrackDisplayUpdateRequests();
+        for (size_t i = 0; i < cues->length(); ++i)
+            textTrackRemoveCue(cues->item(i)->track(), cues->item(i));
+        endIgnoringTrackDisplayUpdateRequests();
+    }
 }
 
 PassRefPtr<TextTrack> HTMLMediaElement::addTextTrack(const String& kind, const String& label, const String& language, ExceptionCode& ec)
@@ -2803,6 +2810,9 @@ PassRefPtr<TextTrack> HTMLMediaElement::addTextTrack(const String& kind, const S
 
     // ... its text track mode to the text track hidden mode, and its text track list of cues to an empty list ...
     textTrack->setMode(TextTrack::hiddenKeyword());
+
+    if (hasMediaControls())
+        mediaControls()->closedCaptionTracksChanged();
 
     return textTrack.release();
 }
@@ -2851,7 +2861,7 @@ void HTMLMediaElement::didRemoveTrack(HTMLTrackElement* trackElement)
 #if !LOG_DISABLED
     if (trackElement->hasTagName(trackTag)) {
         KURL url = trackElement->getNonEmptyURLAttribute(srcAttr);
-        LOG(Media, "HTMLMediaElement::didRemoveTrack - 'src' is %s", urlForLogging(url).utf8().data());
+        LOG(Media, "HTMLMediaElement::didRemoveTrack - 'src' is %s", urlForLoggingMedia(url).utf8().data());
     }
 #endif
 
@@ -2876,6 +2886,9 @@ void HTMLMediaElement::didRemoveTrack(HTMLTrackElement* trackElement)
             textTrackRemoveCue(cues->item(i)->track(), cues->item(i));
         endIgnoringTrackDisplayUpdateRequests();
     }
+
+    if (hasMediaControls())
+        mediaControls()->closedCaptionTracksChanged();
 
     size_t index = m_textTracksWhenResourceSelectionBegan.find(textTrack.get());
     if (index != notFound)
@@ -3072,6 +3085,9 @@ void HTMLMediaElement::configureTextTracks()
         configureTextTrackGroup(metadataTracks);
     if (otherTracks.tracks.size())
         configureTextTrackGroup(otherTracks);
+
+    if (hasMediaControls())
+        mediaControls()->closedCaptionTracksChanged();
 }
 #endif
 
@@ -3136,7 +3152,7 @@ KURL HTMLMediaElement::selectNextSourceChild(ContentType* contentType, String* k
         mediaURL = source->getNonEmptyURLAttribute(srcAttr);
 #if !LOG_DISABLED
         if (shouldLog)
-            LOG(Media, "HTMLMediaElement::selectNextSourceChild - 'src' is %s", urlForLogging(mediaURL).utf8().data());
+            LOG(Media, "HTMLMediaElement::selectNextSourceChild - 'src' is %s", urlForLoggingMedia(mediaURL).utf8().data());
 #endif
         if (mediaURL.isEmpty())
             goto check_again;
@@ -3200,7 +3216,7 @@ check_again:
 
 #if !LOG_DISABLED
     if (shouldLog)
-        LOG(Media, "HTMLMediaElement::selectNextSourceChild -> %p, %s", m_currentSourceNode.get(), canUseSourceElement ? urlForLogging(mediaURL).utf8().data() : "");
+        LOG(Media, "HTMLMediaElement::selectNextSourceChild -> %p, %s", m_currentSourceNode.get(), canUseSourceElement ? urlForLoggingMedia(mediaURL).utf8().data() : "");
 #endif
     return canUseSourceElement ? mediaURL : KURL();
 }
@@ -3212,7 +3228,7 @@ void HTMLMediaElement::sourceWasAdded(HTMLSourceElement* source)
 #if !LOG_DISABLED
     if (source->hasTagName(sourceTag)) {
         KURL url = source->getNonEmptyURLAttribute(srcAttr);
-        LOG(Media, "HTMLMediaElement::sourceWasAdded - 'src' is %s", urlForLogging(url).utf8().data());
+        LOG(Media, "HTMLMediaElement::sourceWasAdded - 'src' is %s", urlForLoggingMedia(url).utf8().data());
     }
 #endif
     
@@ -3260,7 +3276,7 @@ void HTMLMediaElement::sourceWasRemoved(HTMLSourceElement* source)
 #if !LOG_DISABLED
     if (source->hasTagName(sourceTag)) {
         KURL url = source->getNonEmptyURLAttribute(srcAttr);
-        LOG(Media, "HTMLMediaElement::sourceWasRemoved - 'src' is %s", urlForLogging(url).utf8().data());
+        LOG(Media, "HTMLMediaElement::sourceWasRemoved - 'src' is %s", urlForLoggingMedia(url).utf8().data());
     }
 #endif
 

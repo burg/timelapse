@@ -31,7 +31,7 @@
 #include "config.h"
 #include "WebRuntimeFeatures.h"
 
-#include "AbstractDatabase.h"
+#include "DatabaseManager.h"
 #include "RuntimeEnabledFeatures.h"
 #include "WebMediaPlayerClientImpl.h"
 #include "Modules/websockets/WebSocket.h"
@@ -45,14 +45,14 @@ namespace WebKit {
 void WebRuntimeFeatures::enableDatabase(bool enable)
 {
 #if ENABLE(SQL_DATABASE)
-    AbstractDatabase::setIsAvailable(enable);
+    DatabaseManager::manager().setIsAvailable(enable);
 #endif
 }
 
 bool WebRuntimeFeatures::isDatabaseEnabled()
 {
 #if ENABLE(SQL_DATABASE)
-    return AbstractDatabase::isAvailable();
+    return DatabaseManager::manager().isAvailable();
 #else
     return false;
 #endif
@@ -611,6 +611,24 @@ bool WebRuntimeFeatures::isDialogElementEnabled()
 #endif
 }
 
+void WebRuntimeFeatures::enableExperimentalContentSecurityPolicyFeatures(bool enable)
+{
+#if ENABLE(CSP_NEXT)
+    RuntimeEnabledFeatures::setExperimentalContentSecurityPolicyFeaturesEnabled(enable);
+#else
+    UNUSED_PARAM(enable);
+#endif
+}
+
+bool WebRuntimeFeatures::isExperimentalContentSecurityPolicyFeaturesEnabled()
+{
+#if ENABLE(CSP_NEXT)
+    return RuntimeEnabledFeatures::experimentalContentSecurityPolicyFeaturesEnabled();
+#else
+    return false;
+#endif
+}
+
 void WebRuntimeFeatures::enableCSSExclusions(bool enable)
 {
     RuntimeEnabledFeatures::setCSSExclusionsEnabled(enable);
@@ -619,6 +637,16 @@ void WebRuntimeFeatures::enableCSSExclusions(bool enable)
 bool WebRuntimeFeatures::isCSSExclusionsEnabled()
 {
     return RuntimeEnabledFeatures::cssExclusionsEnabled();
+}
+
+void WebRuntimeFeatures::enableCSSRegions(bool enable)
+{
+    RuntimeEnabledFeatures::setCSSRegionsEnabled(enable);
+}
+
+bool WebRuntimeFeatures::isCSSRegionsEnabled()
+{
+    return RuntimeEnabledFeatures::cssRegionsEnabled();
 }
 
 void WebRuntimeFeatures::enableRequestAutocomplete(bool enable)
@@ -634,6 +662,24 @@ bool WebRuntimeFeatures::isRequestAutocompleteEnabled()
 {
 #if ENABLE(REQUEST_AUTOCOMPLETE)
     return RuntimeEnabledFeatures::requestAutocompleteEnabled();
+#else
+    return false;
+#endif
+}
+
+void WebRuntimeFeatures::enableWebIntents(bool enable)
+{
+#if ENABLE(WEB_INTENTS)
+    RuntimeEnabledFeatures::setWebIntentsEnabled(enable);
+#else
+    UNUSED_PARAM(enable);
+#endif
+}
+
+bool WebRuntimeFeatures::isWebIntentsEnabled()
+{
+#if ENABLE(WEB_INTENTS)
+    return RuntimeEnabledFeatures::webkitStartActivityEnabled();
 #else
     return false;
 #endif

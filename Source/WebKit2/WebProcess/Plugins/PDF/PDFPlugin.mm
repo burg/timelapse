@@ -29,7 +29,9 @@
 #import "PDFPlugin.h"
 
 #import "ArgumentCoders.h"
+#import "AttributedString.h"
 #import "DataReference.h"
+#import "DictionaryPopupInfo.h"
 #import "PDFAnnotationTextWidgetDetails.h"
 #import "PDFKitImports.h"
 #import "PDFLayerControllerDetails.h"
@@ -63,6 +65,7 @@
 #import <WebCore/Page.h>
 #import <WebCore/Pasteboard.h>
 #import <WebCore/PluginData.h>
+#import <WebCore/PluginDocument.h>
 #import <WebCore/RenderBoxModelObject.h>
 #import <WebCore/ScrollAnimator.h>
 #import <WebCore/ScrollbarTheme.h>
@@ -161,7 +164,7 @@ static const char* annotationStyle =
 
 - (void)showDefinitionForAttributedString:(NSAttributedString *)string atPoint:(CGPoint)point
 {
-    // FIXME: Implement.
+    _pdfPlugin->showDefinitionForAttributedString(string, point);
 }
 
 - (void)performWebSearch:(NSString *)string
@@ -699,9 +702,17 @@ void PDFPlugin::invalidateScrollCornerRect(const IntRect& rect)
     [m_scrollCornerLayer.get() setNeedsDisplay];
 }
 
+bool PDFPlugin::isFullFramePlugin()
+{
+    // <object> or <embed> plugins will appear to be in their parent frame, so we have to
+    // check whether our frame's widget is exactly our PluginView.
+    Document* document = webFrame()->coreFrame()->document();
+    return document->isPluginDocument() && static_cast<PluginDocument*>(document)->pluginWidget() == pluginView();
+}
+
 bool PDFPlugin::handlesPageScaleFactor()
 {
-    return webFrame()->isMainFrame();
+    return webFrame()->isMainFrame() && isFullFramePlugin();
 }
 
 void PDFPlugin::clickedLink(NSURL *url)
@@ -737,8 +748,8 @@ void PDFPlugin::setActiveAnnotation(PDFAnnotation *annotation)
 
 bool PDFPlugin::supportsForms()
 {
-    // FIXME: Should we support forms for inline PDFs? Since we touch the document, this might be difficult.
-    return webFrame()->isMainFrame();
+    // FIXME: We support forms for full-main-frame and <iframe> PDFs, but not <embed> or <object>, because those cases do not have their own Document into which to inject form elements.
+    return isFullFramePlugin();
 }
 
 void PDFPlugin::notifyContentScaleFactorChanged(CGFloat scaleFactor)
@@ -772,6 +783,12 @@ void PDFPlugin::writeItemsToPasteboard(NSArray *items, NSArray *types)
         NSString *type = [types objectAtIndex:i];
         NSData *data = [items objectAtIndex:i];
 
+        // We don't expect the data for any items to be empty, but aren't completely sure.
+        // Avoid crashing in the SharedMemory constructor in release builds if we're wrong.
+        ASSERT(data.length);
+        if (!data.length)
+            continue;
+
         if ([type isEqualToString:NSStringPboardType] || [type isEqualToString:NSPasteboardTypeString]) {
             RetainPtr<NSString> plainTextString(AdoptNS, [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding]);
             WebProcess::shared().connection()->send(Messages::WebContext::SetPasteboardStringForType(NSGeneralPboard, type, plainTextString.get()), 0);
@@ -789,6 +806,24 @@ void PDFPlugin::writeItemsToPasteboard(NSArray *items, NSArray *types)
         }
     }
 
+}
+
+IntPoint PDFPlugin::convertFromPDFViewToRootView(const IntPoint& point) const
+{
+    IntPoint pointInPluginCoordinates(point.x(), size().height() - point.y());
+    return m_rootViewToPluginTransform.inverse().mapPoint(pointInPluginCoordinates);
+}
+
+void PDFPlugin::showDefinitionForAttributedString(NSAttributedString *string, CGPoint point)
+{
+    DictionaryPopupInfo dictionaryPopupInfo;
+    dictionaryPopupInfo.type = DictionaryPopupInfo::ContextMenu;
+    dictionaryPopupInfo.origin = convertFromPDFViewToRootView(IntPoint(point));
+
+    AttributedString attributedString;
+    attributedString.string = string;
+
+    webFrame()->page()->send(Messages::WebPageProxy::DidPerformDictionaryLookup(attributedString, dictionaryPopupInfo));
 }
 
 } // namespace WebKit

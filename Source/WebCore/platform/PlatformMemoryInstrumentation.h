@@ -43,6 +43,8 @@ class PlatformMemoryTypes {
 public:
     static MemoryObjectType Image;
     static MemoryObjectType Loader;
+    static MemoryObjectType Rendering;
+    static MemoryObjectType Layers;
 
     static MemoryObjectType Audio;
     static MemoryObjectType AudioSharedData;
@@ -50,7 +52,7 @@ public:
 
 class PlatformMemoryInstrumentation {
 public:
-    static void reportMemoryUsage(WTF::MemoryInstrumentation*);
+    static void reportStaticMembersMemoryUsage(WTF::MemoryInstrumentation*);
 };
 
 } // namespace WebCore

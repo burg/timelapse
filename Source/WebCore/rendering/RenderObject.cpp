@@ -68,6 +68,7 @@
 #include "Settings.h"
 #include "StyleResolver.h"
 #include "TransformState.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include "htmlediting.h"
 #include <algorithm>
 #include <stdio.h>
@@ -142,7 +143,7 @@ RenderObject* RenderObject::createObject(Node* node, RenderStyle* style)
     // Works only if we have exactly one piece of content and it's a URL.
     // Otherwise acts as if we didn't support this feature.
     const ContentData* contentData = style->contentData();
-    if (contentData && !contentData->next() && contentData->isImage() && doc != node) {
+    if (contentData && !contentData->next() && contentData->isImage() && doc != node && !node->isPseudoElement()) {
         RenderImage* image = new (arena) RenderImage(node);
         // RenderImageResourceStyleImage requires a style being present on the image but we don't want to
         // trigger a style change now as the node is not fully attached. Moving this code to style change
@@ -1756,6 +1757,23 @@ StyleDifference RenderObject::adjustStyleDifference(StyleDifference diff, unsign
     return diff;
 }
 
+void RenderObject::setPseudoStyle(PassRefPtr<RenderStyle> pseudoStyle)
+{
+    ASSERT(pseudoStyle->styleType() == BEFORE || pseudoStyle->styleType() == AFTER);
+
+    // Images are special and must inherit the pseudoStyle so the width and height of
+    // the pseudo element doesn't change the size of the image. In all other cases we
+    // can just share the style.
+    if (isImage()) {
+        RefPtr<RenderStyle> style = RenderStyle::create();
+        style->inheritFrom(pseudoStyle.get());
+        setStyle(style.release());
+        return;
+    }
+
+    setStyle(pseudoStyle);
+}
+
 void RenderObject::setStyle(PassRefPtr<RenderStyle> style)
 {
     if (m_style == style) {
@@ -2755,21 +2773,25 @@ void RenderObject::getTextDecorationColors(int decorations, Color& underline, Co
 {
     RenderObject* curr = this;
     RenderStyle* styleToUse = 0;
+    ETextDecoration currDecs = TDNONE;
+    Color resultColor;
     do {
         styleToUse = curr->style(firstlineStyle);
-        int currDecs = styleToUse->textDecoration();
+        currDecs = styleToUse->textDecoration();
+        resultColor = decorationColor(styleToUse);
+        // Parameter 'decorations' is cast as an int to enable the bitwise operations below.
         if (currDecs) {
             if (currDecs & UNDERLINE) {
                 decorations &= ~UNDERLINE;
-                underline = decorationColor(styleToUse);
+                underline = resultColor;
             }
             if (currDecs & OVERLINE) {
                 decorations &= ~OVERLINE;
-                overline = decorationColor(styleToUse);
+                overline = resultColor;
             }
             if (currDecs & LINE_THROUGH) {
                 decorations &= ~LINE_THROUGH;
-                linethrough = decorationColor(styleToUse);
+                linethrough = resultColor;
             }
         }
         if (curr->isRubyText())
@@ -2783,12 +2805,13 @@ void RenderObject::getTextDecorationColors(int decorations, Color& underline, Co
     // If we bailed out, use the element we bailed out at (typically a <font> or <a> element).
     if (decorations && curr) {
         styleToUse = curr->style(firstlineStyle);
+        resultColor = decorationColor(styleToUse);
         if (decorations & UNDERLINE)
-            underline = decorationColor(styleToUse);
+            underline = resultColor;
         if (decorations & OVERLINE)
-            overline = decorationColor(styleToUse);
+            overline = resultColor;
         if (decorations & LINE_THROUGH)
-            linethrough = decorationColor(styleToUse);
+            linethrough = resultColor;
     }
 }
 
@@ -2967,7 +2990,7 @@ RenderBoxModelObject* RenderObject::offsetParent() const
 VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affinity)
 {
     // If this is a non-anonymous renderer in an editable area, then it's simple.
-    if (Node* node = this->node()) {
+    if (Node* node = nonPseudoNode()) {
         if (!node->rendererIsEditable()) {
             // If it can be found, we prefer a visually equivalent position that is editable. 
             Position position = createLegacyEditingPosition(node, offset);
@@ -2993,7 +3016,7 @@ VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affini
         // Find non-anonymous content after.
         RenderObject* renderer = child;
         while ((renderer = renderer->nextInPreOrder(parent))) {
-            if (Node* node = renderer->node())
+            if (Node* node = renderer->nonPseudoNode())
                 return VisiblePosition(firstPositionInOrBeforeNode(node), DOWNSTREAM);
         }
 
@@ -3002,12 +3025,12 @@ VisiblePosition RenderObject::createVisiblePosition(int offset, EAffinity affini
         while ((renderer = renderer->previousInPreOrder())) {
             if (renderer == parent)
                 break;
-            if (Node* node = renderer->node())
+            if (Node* node = renderer->nonPseudoNode())
                 return VisiblePosition(lastPositionInOrAfterNode(node), DOWNSTREAM);
         }
 
         // Use the parent itself unless it too is anonymous.
-        if (Node* node = parent->node())
+        if (Node* node = parent->nonPseudoNode())
             return VisiblePosition(firstPositionInOrBeforeNode(node), DOWNSTREAM);
 
         // Repeat at the next level up.
@@ -3053,6 +3076,16 @@ bool RenderObject::canHaveGeneratedChildren() const
 bool RenderObject::canBeReplacedWithInlineRunIn() const
 {
     return true;
+}
+
+void RenderObject::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
+    info.addMember(m_style);
+    info.addWeakPointer(m_node);
+    info.addWeakPointer(m_parent);
+    info.addWeakPointer(m_previous);
+    info.addWeakPointer(m_next);
 }
 
 #if ENABLE(SVG)

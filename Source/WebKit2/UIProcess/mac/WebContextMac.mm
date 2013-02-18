@@ -39,9 +39,7 @@
 #import <WebCore/PlatformPasteboard.h>
 #import <sys/param.h>
 
-#if HAVE(HOSTED_CORE_ANIMATION) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
 #import <QuartzCore/CARemoteLayerServer.h>
-#endif
 
 using namespace WebCore;
 
@@ -61,6 +59,27 @@ NSString *SchemeForCustomProtocolRegisteredNotificationName = @"WebKitSchemeForC
 NSString *SchemeForCustomProtocolUnregisteredNotificationName = @"WebKitSchemeForCustomProtocolUnregisteredNotification";
 
 bool WebContext::s_applicationIsOccluded = false;
+
+static void registerUserDefaultsIfNeeded()
+{
+    static bool didRegister;
+    if (didRegister)
+        return;
+
+    didRegister = true;
+    NSMutableDictionary *registrationDictionary = [NSMutableDictionary dictionary];
+    
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
+    [registrationDictionary setObject:[NSNumber numberWithBool:YES] forKey:WebKitKerningAndLigaturesEnabledByDefaultDefaultsKey];
+#endif
+
+    [[NSUserDefaults standardUserDefaults] registerDefaults:registrationDictionary];
+}
+
+void WebContext::platformInitialize()
+{
+    registerUserDefaultsIfNeeded();
+}
 
 String WebContext::applicationCacheDirectory()
 {
@@ -84,40 +103,21 @@ String WebContext::applicationCacheDirectory()
     return [cacheDir stringByAppendingPathComponent:appName];
 }
 
-static void registerUserDefaultsIfNeeded()
-{
-    static bool didRegister;
-    if (didRegister)
-        return;
-
-    didRegister = true;
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    [[NSUserDefaults standardUserDefaults] registerDefaults:[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:WebKitKerningAndLigaturesEnabledByDefaultDefaultsKey]];
-#endif
-}
-
 void WebContext::platformInitializeWebProcess(WebProcessCreationParameters& parameters)
 {
     parameters.presenterApplicationPid = getpid();
-
-    parameters.parentProcessName = [[NSProcessInfo processInfo] processName];    
 
     NSURLCache *urlCache = [NSURLCache sharedURLCache];
     parameters.nsURLCacheMemoryCapacity = [urlCache memoryCapacity];
     parameters.nsURLCacheDiskCapacity = [urlCache diskCapacity];
 
-    registerUserDefaultsIfNeeded();
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
     parameters.shouldForceScreenFontSubstitution = [[NSUserDefaults standardUserDefaults] boolForKey:@"NSFontDefaultScreenFontSubstitutionEnabled"];
 #endif
     parameters.shouldEnableKerningAndLigaturesByDefault = [[NSUserDefaults standardUserDefaults] boolForKey:WebKitKerningAndLigaturesEnabledByDefaultDefaultsKey];
 
 #if USE(ACCELERATED_COMPOSITING) && HAVE(HOSTED_CORE_ANIMATION)
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
     mach_port_t renderServerPort = [[CARemoteLayerServer sharedServer] serverPort];
-#else
-    mach_port_t renderServerPort = WKInitializeRenderServer();
-#endif
     if (renderServerPort != MACH_PORT_NULL)
         parameters.acceleratedCompositingPort = CoreIPC::MachPort(renderServerPort, MACH_MSG_TYPE_COPY_SEND);
 #endif
@@ -131,7 +131,9 @@ void WebContext::platformInitializeWebProcess(WebProcessCreationParameters& para
     NSArray *schemes = [[WKBrowsingContextController customSchemes] allObjects];
     for (size_t i = 0; i < [schemes count]; ++i)
         parameters.urlSchemesRegisteredForCustomProtocols.append([schemes objectAtIndex:i]);
-    
+
+    // FIXME(Multi-WebProcess): We register observers for every process that is created, which makes no sense.
+
     m_customSchemeRegisteredObserver = [[NSNotificationCenter defaultCenter] addObserverForName:WebKit::SchemeForCustomProtocolRegisteredNotificationName object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
         NSString *scheme = [notification object];
         ASSERT([scheme isKindOfClass:[NSString class]]);

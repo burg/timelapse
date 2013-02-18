@@ -29,6 +29,7 @@
 #include "DownloadManager.h"
 #include "InjectedBundle.h"
 #include "InjectedBundleUserMessageCoders.h"
+#include "Logging.h"
 #include "SandboxExtension.h"
 #include "StatisticsData.h"
 #include "WebApplicationCacheManager.h"
@@ -61,9 +62,9 @@
 #include <WebCore/GCController.h>
 #include <WebCore/GlyphPageTreeNode.h>
 #include <WebCore/IconDatabase.h>
+#include <WebCore/InitializeLogging.h>
 #include <WebCore/JSDOMWindow.h>
 #include <WebCore/Language.h>
-#include <WebCore/Logging.h>
 #include <WebCore/MemoryCache.h>
 #include <WebCore/MemoryPressureHandler.h>
 #include <WebCore/Page.h>
@@ -181,6 +182,7 @@ WebProcess::WebProcess()
 
 #if !LOG_DISABLED
     WebCore::initializeLoggingChannelsIfNecessary();
+    WebKit::initializeLogChannelsIfNecessary();
 #endif // !LOG_DISABLED
 }
 
@@ -274,6 +276,18 @@ void WebProcess::initializeWebProcess(const WebProcessCreationParameters& parame
     for (size_t i = 0; i < parameters.urlSchemesForWhichDomainRelaxationIsForbidden.size(); ++i)
         setDomainRelaxationForbiddenForURLScheme(parameters.urlSchemesForWhichDomainRelaxationIsForbidden[i]);
 
+    for (size_t i = 0; i < parameters.urlSchemesRegisteredAsLocal.size(); ++i)
+        registerURLSchemeAsLocal(parameters.urlSchemesRegisteredAsLocal[i]);
+
+    for (size_t i = 0; i < parameters.urlSchemesRegisteredAsNoAccess.size(); ++i)
+        registerURLSchemeAsNoAccess(parameters.urlSchemesRegisteredAsNoAccess[i]);
+
+    for (size_t i = 0; i < parameters.urlSchemesRegisteredAsDisplayIsolated.size(); ++i)
+        registerURLSchemeAsDisplayIsolated(parameters.urlSchemesRegisteredAsDisplayIsolated[i]);
+
+    for (size_t i = 0; i < parameters.urlSchemesRegisteredAsCORSEnabled.size(); ++i)
+        registerURLSchemeAsCORSEnabled(parameters.urlSchemesRegisteredAsCORSEnabled[i]);
+
     setDefaultRequestTimeoutInterval(parameters.defaultRequestTimeoutInterval);
 
     if (parameters.shouldAlwaysUseComplexTextCodePath)
@@ -283,7 +297,6 @@ void WebProcess::initializeWebProcess(const WebProcessCreationParameters& parame
         setShouldUseFontSmoothing(true);
 
 #if (PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(WIN)
-    // FIXME (NetworkProcess): Send this identifier to network process.
     WebFrameNetworkingContext::setPrivateBrowsingStorageSessionIdentifierBase(parameters.uiProcessBundleIdentifier);
 #endif
 
@@ -292,6 +305,9 @@ void WebProcess::initializeWebProcess(const WebProcessCreationParameters& parame
     ensureNetworkProcessConnection();
 #endif
     setTerminationTimeout(parameters.terminationTimeout);
+
+    for (size_t i = 0; i < parameters.plugInAutoStartOrigins.size(); ++i)
+        didAddPlugInAutoStartOrigin(parameters.plugInAutoStartOrigins[i]);
 }
 
 #if ENABLE(NETWORK_PROCESS)
@@ -385,6 +401,20 @@ void WebProcess::userPreferredLanguagesChanged(const Vector<String>& languages) 
 void WebProcess::fullKeyboardAccessModeChanged(bool fullKeyboardAccessEnabled)
 {
     m_fullKeyboardAccessEnabled = fullKeyboardAccessEnabled;
+}
+
+void WebProcess::ensurePrivateBrowsingSession()
+{
+#if (PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(WIN)
+    WebFrameNetworkingContext::ensurePrivateBrowsingSession();
+#endif
+}
+
+void WebProcess::destroyPrivateBrowsingSession()
+{
+#if (PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(WIN)
+    WebFrameNetworkingContext::destroyPrivateBrowsingSession();
+#endif
 }
 
 void WebProcess::setVisitedLinkTable(const SharedMemory::Handle& handle)
@@ -912,7 +942,27 @@ void WebProcess::clearPluginSiteData(const Vector<String>& pluginPaths, const Ve
     connection()->send(Messages::WebProcessProxy::DidClearPluginSiteData(callbackID), 0);
 }
 #endif
-    
+
+bool WebProcess::isPlugInAutoStartOrigin(unsigned plugInOriginHash)
+{
+    return m_plugInAutoStartOrigins.contains(plugInOriginHash);
+}
+
+void WebProcess::addPlugInAutoStartOrigin(const String& pageOrigin, unsigned plugInOriginHash)
+{
+    if (isPlugInAutoStartOrigin(plugInOriginHash)) {
+        LOG(Plugins, "Hash %x already exists as auto-start origin (request for %s)", plugInOriginHash, pageOrigin.utf8().data());
+        return;
+    }
+
+    connection()->send(Messages::WebContext::AddPlugInAutoStartOriginHash(pageOrigin, plugInOriginHash), 0);
+}
+
+void WebProcess::didAddPlugInAutoStartOrigin(unsigned plugInOriginHash)
+{
+    m_plugInAutoStartOrigins.add(plugInOriginHash);
+}
+
 static void fromCountedSetToHashMap(TypeCountSet* countedSet, HashMap<String, uint64_t>& map)
 {
     TypeCountSet::const_iterator end = countedSet->end();

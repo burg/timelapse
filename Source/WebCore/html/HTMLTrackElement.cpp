@@ -36,15 +36,15 @@
 #include "RuntimeEnabledFeatures.h"
 #include "ScriptCallStack.h"
 #include "ScriptEventListener.h"
-
 using namespace std;
+
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
 #if !LOG_DISABLED
-static String urlForLogging(const KURL& url)
+static String urlForLoggingTrack(const KURL& url)
 {
     static const unsigned maximumURLLengthForLogging = 128;
     
@@ -97,7 +97,7 @@ void HTMLTrackElement::parseAttribute(const QualifiedName& name, const AtomicStr
             // 4.8.10.12.3 Sourcing out-of-band text tracks
             // As the kind, label, and srclang attributes are set, changed, or removed, the text track must update accordingly...
         } else if (name == kindAttr)
-            track()->setKind(value);
+            track()->setKind(value.lower());
         else if (name == labelAttr)
             track()->setLabel(value);
         else if (name == srclangAttr)
@@ -168,7 +168,7 @@ LoadableTextTrack* HTMLTrackElement::ensureTrack()
 {
     if (!m_track) {
         // The kind attribute is an enumerated attribute, limited only to know values. It defaults to 'subtitles' if missing or invalid.
-        String kind = getAttribute(kindAttr);
+        String kind = getAttribute(kindAttr).lower();
         if (!TextTrack::isValidKindKeyword(kind))
             kind = TextTrack::subtitlesKeyword();
         m_track = LoadableTextTrack::create(this, kind, label(), srclang());
@@ -230,8 +230,8 @@ bool HTMLTrackElement::canLoadUrl(const KURL& url)
 
     if (!document()->contentSecurityPolicy()->allowMediaFromSource(url)) {
         DEFINE_STATIC_LOCAL(String, consoleMessage, (ASCIILiteral("Text track load denied by Content Security Policy.")));
-        document()->addConsoleMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, consoleMessage);
-        LOG(Media, "HTMLTrackElement::canLoadUrl(%s) -> rejected by Content Security Policy", urlForLogging(url).utf8().data());
+        document()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, consoleMessage);
+        LOG(Media, "HTMLTrackElement::canLoadUrl(%s) -> rejected by Content Security Policy", urlForLoggingTrack(url).utf8().data());
         return false;
     }
     

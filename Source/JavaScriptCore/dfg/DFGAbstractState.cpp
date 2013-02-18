@@ -1383,10 +1383,22 @@ bool AbstractState::execute(unsigned indexInBlock)
         forNode(nodeIndex).set(SpecFunction);
         break;
             
-    case GetScope:
+    case GetMyScope:
+    case SkipTopScope:
         node.setCanExit(false);
         forNode(nodeIndex).set(SpecCellOther);
         break;
+
+    case SkipScope: {
+        node.setCanExit(false);
+        JSValue child = forNode(node.child1()).value();
+        if (child && trySetConstant(nodeIndex, JSValue(jsCast<JSScope*>(child.asCell())->next()))) {
+            m_foundConstants = true;
+            break;
+        }
+        forNode(nodeIndex).set(SpecCellOther);
+        break;
+    }
 
     case GetScopeRegisters:
         node.setCanExit(false);
@@ -1560,7 +1572,8 @@ bool AbstractState::execute(unsigned indexInBlock)
             node.setCanExit(false);
             break;
         }
-        ASSERT(node.arrayMode().conversion() == Array::Convert);
+        ASSERT(node.arrayMode().conversion() == Array::Convert
+            || node.arrayMode().conversion() == Array::RageConvert);
         node.setCanExit(true);
         forNode(node.child1()).filter(SpecCell);
         if (node.child2())
@@ -1577,22 +1590,15 @@ bool AbstractState::execute(unsigned indexInBlock)
             || value.m_currentKnownStructure.isSubsetOf(set))
             m_foundConstants = true;
         node.setCanExit(true);
+        if (node.child2())
+            forNode(node.child2()).filter(SpecInt32);
         clobberStructures(indexInBlock);
         value.filter(set);
         m_haveStructures = true;
         break;
     }
     case GetIndexedPropertyStorage: {
-        switch (node.arrayMode().type()) {
-        case Array::String:
-            // Strings are weird - we may spec fail if the string was a rope. That is of course
-            // stupid, and we should fix that, but for now let's at least be honest about it.
-            node.setCanExit(true);
-            break;
-        default:
-            node.setCanExit(false);
-            break;
-        }
+        node.setCanExit(false);
         forNode(nodeIndex).clear();
         break; 
     }
@@ -1722,6 +1728,7 @@ bool AbstractState::execute(unsigned indexInBlock)
     case Phantom:
     case InlineStart:
     case Nop:
+    case CountExecution:
         node.setCanExit(false);
         break;
         

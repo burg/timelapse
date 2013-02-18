@@ -30,6 +30,7 @@
 #include "CSSAspectRatioValue.h"
 #include "CSSBasicShapes.h"
 #include "CSSBorderImage.h"
+#include "CSSFunctionValue.h"
 #include "CSSLineBoxContainValue.h"
 #include "CSSParser.h"
 #include "CSSPrimitiveValue.h"
@@ -595,6 +596,22 @@ static PassRefPtr<CSSValue> valueForReflection(const StyleReflection* reflection
     return CSSReflectValue::create(reflection->direction(), offset.release(), valueForNinePieceImage(reflection->mask()));
 }
 
+static PassRefPtr<CSSValueList> createPositionListForLayer(CSSPropertyID propertyID, const FillLayer* layer, const RenderStyle* style)
+{
+    RefPtr<CSSValueList> positionList = CSSValueList::createSpaceSeparated();
+    if (layer->isBackgroundOriginSet()) {
+        ASSERT_UNUSED(propertyID, propertyID == CSSPropertyBackgroundPosition || propertyID == CSSPropertyWebkitMaskPosition);
+        positionList->append(cssValuePool().createValue(layer->backgroundXOrigin()));
+    }
+    positionList->append(zoomAdjustedPixelValueForLength(layer->xPosition(), style));
+    if (layer->isBackgroundOriginSet()) {
+        ASSERT(propertyID == CSSPropertyBackgroundPosition || propertyID == CSSPropertyWebkitMaskPosition);
+        positionList->append(cssValuePool().createValue(layer->backgroundYOrigin()));
+    }
+    positionList->append(zoomAdjustedPixelValueForLength(layer->yPosition(), style));
+    return positionList.release();
+}
+
 static PassRefPtr<CSSValue> getPositionOffsetValue(RenderStyle* style, CSSPropertyID propertyID, RenderView* renderView)
 {
     if (!style)
@@ -983,25 +1000,45 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::valueForFilter(const RenderObj
 }
 #endif
 
-static PassRefPtr<CSSValue> valueForGridTrackBreadth(const GridTrackSize& trackSize, const RenderStyle* style)
+static PassRefPtr<CSSValue> valueForGridTrackBreadth(const Length& trackBreadth, const RenderStyle* style, RenderView *renderView)
 {
-    if (trackSize.length().isPercent())
-        return cssValuePool().createValue(trackSize.length());
-    if (trackSize.length().isAuto())
+    if (trackBreadth.isAuto())
         return cssValuePool().createIdentifierValue(CSSValueAuto);
-    return zoomAdjustedPixelValue(trackSize.length().value(), style);
+    if (trackBreadth.isViewportPercentage())
+        return zoomAdjustedPixelValue(valueForLength(trackBreadth, 0, renderView), style);
+    return zoomAdjustedPixelValueForLength(trackBreadth, style);
 }
 
-static PassRefPtr<CSSValue> valueForGridTrackList(const Vector<GridTrackSize>& trackSizes, const RenderStyle* style)
+static PassRefPtr<CSSValue> valueForGridTrackMinMax(const GridTrackSize& trackSize, const RenderStyle* style, RenderView* renderView)
+{
+    switch (trackSize.type()) {
+    case LengthTrackSizing:
+        return valueForGridTrackBreadth(trackSize.length(), style, renderView);
+    case MinMaxTrackSizing:
+        RefPtr<CSSValueList> minMaxTrackBreadths = CSSValueList::createCommaSeparated();
+        minMaxTrackBreadths->append(valueForGridTrackBreadth(trackSize.minTrackBreadth(), style, renderView));
+        minMaxTrackBreadths->append(valueForGridTrackBreadth(trackSize.maxTrackBreadth(), style, renderView));
+        return CSSFunctionValue::create("minmax(", minMaxTrackBreadths);
+    }
+    ASSERT_NOT_REACHED();
+    return 0;
+}
+
+static PassRefPtr<CSSValue> valueForGridTrackGroup(const Vector<GridTrackSize>& trackSizes, const RenderStyle* style, RenderView* renderView)
+{
+    RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
+    for (size_t i = 0; i < trackSizes.size(); ++i)
+        list->append(valueForGridTrackMinMax(trackSizes[i], style, renderView));
+    return list.release();
+}
+
+static PassRefPtr<CSSValue> valueForGridTrackList(const Vector<GridTrackSize>& trackSizes, const RenderStyle* style, RenderView *renderView)
 {
     // Handle the 'none' case here.
     if (!trackSizes.size())
         return cssValuePool().createIdentifierValue(CSSValueNone);
 
-    RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
-    for (size_t i = 0; i < trackSizes.size(); ++i)
-        list->append(valueForGridTrackBreadth(trackSizes[i], style));
-    return list.release();
+    return valueForGridTrackGroup(trackSizes, style, renderView);
 }
 
 static PassRefPtr<CSSValue> valueForGridPosition(const GridPosition& position)
@@ -1571,21 +1608,12 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyBackgroundPosition:
         case CSSPropertyWebkitMaskPosition: {
             const FillLayer* layers = propertyID == CSSPropertyWebkitMaskPosition ? style->maskLayers() : style->backgroundLayers();
-            if (!layers->next()) {
-                RefPtr<CSSValueList> list = CSSValueList::createSpaceSeparated();
-                list->append(zoomAdjustedPixelValueForLength(layers->xPosition(), style.get()));
-                list->append(zoomAdjustedPixelValueForLength(layers->yPosition(), style.get()));
-                return list.release();
-            }
+            if (!layers->next())
+                return createPositionListForLayer(propertyID, layers, style.get());
 
             RefPtr<CSSValueList> list = CSSValueList::createCommaSeparated();
-            for (const FillLayer* currLayer = layers; currLayer; currLayer = currLayer->next()) {
-                RefPtr<CSSValueList> positionList = CSSValueList::createSpaceSeparated();
-                positionList->append(zoomAdjustedPixelValueForLength(currLayer->xPosition(), style.get()));
-                positionList->append(zoomAdjustedPixelValueForLength(currLayer->yPosition(), style.get()));
-                list->append(positionList);
-            }
-
+            for (const FillLayer* currLayer = layers; currLayer; currLayer = currLayer->next())
+                list->append(createPositionListForLayer(propertyID, currLayer, style.get()));
             return list.release();
         }
         case CSSPropertyBackgroundPositionX:
@@ -1823,10 +1851,10 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
             return list.release();
         }
         case CSSPropertyWebkitGridColumns: {
-            return valueForGridTrackList(style->gridColumns(), style.get());
+            return valueForGridTrackList(style->gridColumns(), style.get(), m_node->document()->renderView());
         }
         case CSSPropertyWebkitGridRows: {
-            return valueForGridTrackList(style->gridRows(), style.get());
+            return valueForGridTrackList(style->gridRows(), style.get(), m_node->document()->renderView());
         }
 
         case CSSPropertyWebkitGridColumn:
@@ -1972,6 +2000,8 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyOpacity:
             return cssValuePool().createValue(style->opacity(), CSSPrimitiveValue::CSS_NUMBER);
         case CSSPropertyOrphans:
+            if (style->hasAutoOrphans())
+                return cssValuePool().createIdentifierValue(CSSValueAuto);
             return cssValuePool().createValue(style->orphans(), CSSPrimitiveValue::CSS_NUMBER);
         case CSSPropertyOutlineColor:
             return m_allowVisitedStyle ? cssValuePool().createColorValue(style->visitedDependentColor(CSSPropertyOutlineColor).rgb()) : currentColorOrValidColor(style.get(), style->outlineColor());
@@ -2122,6 +2152,8 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyWhiteSpace:
             return cssValuePool().createValue(style->whiteSpace());
         case CSSPropertyWidows:
+            if (style->hasAutoWidows())
+                return cssValuePool().createIdentifierValue(CSSValueAuto);
             return cssValuePool().createValue(style->widows(), CSSPrimitiveValue::CSS_NUMBER);
         case CSSPropertyWidth:
             if (renderer) {
@@ -2460,7 +2492,7 @@ PassRefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropert
         case CSSPropertyWebkitTextCombine:
             return cssValuePool().createValue(style->textCombine());
         case CSSPropertyWebkitTextOrientation:
-            return CSSPrimitiveValue::create(style->fontDescription().textOrientation());
+            return CSSPrimitiveValue::create(style->textOrientation());
         case CSSPropertyWebkitLineBoxContain:
             return createLineBoxContainValue(style->lineBoxContain());
         case CSSPropertyContent:

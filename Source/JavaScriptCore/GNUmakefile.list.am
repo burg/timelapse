@@ -110,6 +110,8 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/bytecode/EvalCodeCache.h \
 	Source/JavaScriptCore/bytecode/ExecutionCounter.cpp \
 	Source/JavaScriptCore/bytecode/ExecutionCounter.h \
+	Source/JavaScriptCore/bytecode/ExitKind.cpp \
+	Source/JavaScriptCore/bytecode/ExitKind.h \
 	Source/JavaScriptCore/bytecode/ExpressionRangeInfo.h \
 	Source/JavaScriptCore/bytecode/GetByIdStatus.cpp \
 	Source/JavaScriptCore/bytecode/GetByIdStatus.h \
@@ -133,6 +135,8 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/bytecode/PutByIdStatus.cpp \
 	Source/JavaScriptCore/bytecode/PutByIdStatus.h \
 	Source/JavaScriptCore/bytecode/PutKind.h \
+	Source/JavaScriptCore/bytecode/ReduceWhitespace.cpp \
+	Source/JavaScriptCore/bytecode/ReduceWhitespace.h \
 	Source/JavaScriptCore/bytecode/ResolveGlobalStatus.cpp \
 	Source/JavaScriptCore/bytecode/ResolveGlobalStatus.h \
 	Source/JavaScriptCore/bytecode/ResolveOperation.h \
@@ -263,12 +267,14 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/disassembler/Disassembler.h \
 	Source/JavaScriptCore/heap/CopiedAllocator.h \
 	Source/JavaScriptCore/heap/CopiedBlock.h \
+	Source/JavaScriptCore/heap/CopiedBlockInlines.h \
 	Source/JavaScriptCore/heap/CopiedSpace.cpp \
 	Source/JavaScriptCore/heap/CopiedSpace.h \
 	Source/JavaScriptCore/heap/CopiedSpaceInlines.h \
-    Source/JavaScriptCore/heap/CopyVisitor.h \
-    Source/JavaScriptCore/heap/CopyVisitorInlines.h \
-    Source/JavaScriptCore/heap/CopyVisitor.cpp \
+	Source/JavaScriptCore/heap/CopyVisitor.h \
+	Source/JavaScriptCore/heap/CopyVisitorInlines.h \
+	Source/JavaScriptCore/heap/CopyVisitor.cpp \
+	Source/JavaScriptCore/heap/CopyWorkList.h \
 	Source/JavaScriptCore/heap/CardSet.h \
 	Source/JavaScriptCore/heap/ConservativeRoots.cpp \
 	Source/JavaScriptCore/heap/ConservativeRoots.h \
@@ -471,14 +477,39 @@ javascriptcore_sources += \
 	Source/JavaScriptCore/parser/SourceProviderCacheItem.h \
 	Source/JavaScriptCore/parser/SyntaxChecker.h \
 	Source/JavaScriptCore/profiler/CallIdentifier.h \
+	Source/JavaScriptCore/profiler/ProfilerBytecode.cpp \
+	Source/JavaScriptCore/profiler/ProfilerBytecode.h \
+	Source/JavaScriptCore/profiler/ProfilerBytecodeSequence.cpp \
+	Source/JavaScriptCore/profiler/ProfilerBytecodeSequence.h \
+	Source/JavaScriptCore/profiler/ProfilerBytecodes.cpp \
+	Source/JavaScriptCore/profiler/ProfilerBytecodes.h \
+	Source/JavaScriptCore/profiler/ProfilerCompilation.cpp \
+	Source/JavaScriptCore/profiler/ProfilerCompilation.h \
+	Source/JavaScriptCore/profiler/ProfilerCompilationKind.cpp \
+	Source/JavaScriptCore/profiler/ProfilerCompilationKind.h \
+	Source/JavaScriptCore/profiler/ProfilerCompiledBytecode.cpp \
+	Source/JavaScriptCore/profiler/ProfilerCompiledBytecode.h \
+	Source/JavaScriptCore/profiler/ProfilerDatabase.cpp \
+	Source/JavaScriptCore/profiler/ProfilerDatabase.h \
+	Source/JavaScriptCore/profiler/ProfilerExecutionCounter.h \
+	Source/JavaScriptCore/profiler/ProfilerOrigin.cpp \
+	Source/JavaScriptCore/profiler/ProfilerOrigin.h \
+	Source/JavaScriptCore/profiler/ProfilerOriginStack.cpp \
+	Source/JavaScriptCore/profiler/ProfilerOriginStack.h \
+	Source/JavaScriptCore/profiler/ProfilerOSRExit.cpp \
+	Source/JavaScriptCore/profiler/ProfilerOSRExit.h \
+	Source/JavaScriptCore/profiler/ProfilerOSRExitSite.cpp \
+	Source/JavaScriptCore/profiler/ProfilerOSRExitSite.h \
+	Source/JavaScriptCore/profiler/ProfilerProfiledBytecodes.cpp \
+	Source/JavaScriptCore/profiler/ProfilerProfiledBytecodes.h \
 	Source/JavaScriptCore/profiler/Profile.cpp \
 	Source/JavaScriptCore/profiler/ProfileGenerator.cpp \
 	Source/JavaScriptCore/profiler/ProfileGenerator.h \
 	Source/JavaScriptCore/profiler/Profile.h \
 	Source/JavaScriptCore/profiler/ProfileNode.cpp \
 	Source/JavaScriptCore/profiler/ProfileNode.h \
-	Source/JavaScriptCore/profiler/Profiler.cpp \
-	Source/JavaScriptCore/profiler/Profiler.h \
+	Source/JavaScriptCore/profiler/LegacyProfiler.cpp \
+	Source/JavaScriptCore/profiler/LegacyProfiler.h \
 	Source/JavaScriptCore/runtime/ArgList.cpp \
 	Source/JavaScriptCore/runtime/ArgList.h \
 	Source/JavaScriptCore/runtime/Arguments.cpp \

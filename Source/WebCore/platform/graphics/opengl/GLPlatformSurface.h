@@ -29,6 +29,7 @@
 #if USE(ACCELERATED_COMPOSITING)
 
 #include "GLDefs.h"
+#include "IntRect.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
 
@@ -58,14 +59,12 @@ public:
 
     virtual void swapBuffers();
 
-    virtual void copyTexture(uint32_t texture, const IntRect& sourceRect);
-
-    // Convenience Function to update surface backbuffer with texture contents and restore current FBO.
+    // Convenience Function to update surface backbuffer with texture contents, restore current FBO and Texture.
     // Function does the following(in order):
-    // a)Blits texture contents to back buffer.
-    // b)Calls Swap Buffers.
-    // c)Sets current FBO as bindFboId.
-    virtual void updateContents(uint32_t texture, const IntRect& sourceRect, const GLuint bindFboId);
+    // a) Blits texture contents to back buffer.
+    // b) Calls Swap Buffers.
+    // c) Sets current FBO as bindFboId.
+    virtual void updateContents(const uint32_t texture, const GLuint bindFboId, const uint32_t bindTexture);
 
     virtual void setGeometry(const IntRect& newRect);
 

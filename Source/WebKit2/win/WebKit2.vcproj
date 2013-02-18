@@ -423,6 +423,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\Shared\ChildProcessProxy.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\Shared\ChildProcessProxy.h"
+				>
+			</File>
+			<File
 				RelativePath="..\Shared\CommandLine.h"
 				>
 			</File>
@@ -1935,6 +1943,14 @@
 				</File>
 				<File
 					RelativePath="..\WebProcess\WebCoreSupport\WebPlatformStrategies.h"
+					>
+				</File>
+				<File
+					RelativePath="..\WebProcess\WebCoreSupport\WebPlugInClient.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\WebProcess\WebCoreSupport\WebPlugInClient.h"
 					>
 				</File>
 				<File
@@ -3866,6 +3882,14 @@
 				Name="Plugins"
 				>
 				<File
+					RelativePath="..\UIProcess\Plugins\PlugInAutoStartProvider.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\UIProcess\Plugins\PlugInAutoStartProvider.h"
+					>
+				</File>
+				<File
 					RelativePath="..\UIProcess\Plugins\PluginInfoStore.cpp"
 					>
 				</File>
@@ -4580,7 +4604,7 @@
 			>
 		</File>
 		<File
-			RelativePath=".\WebKit2.def"
+			RelativePath="$(ConfigurationBuildDir)\obj\WebKit2ExportGenerator\WebKit2.def"
 			>
 		</File>
 		<File

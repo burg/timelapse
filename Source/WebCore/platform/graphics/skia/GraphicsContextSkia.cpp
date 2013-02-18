@@ -334,7 +334,7 @@ void GraphicsContext::canvasClip(const Path& path)
     if (paintingDisabled())
         return;
 
-    platformContext()->canvasClipPath(path.isNull() ? SkPath() : *path.platformPath());
+    platformContext()->clipPath(path.isNull() ? SkPath() : *path.platformPath());
 }
 
 void GraphicsContext::clipOut(const IntRect& rect)
@@ -874,7 +874,7 @@ void GraphicsContext::setAlpha(float alpha)
     platformContext()->setAlpha(alpha);
 }
 
-void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op)
+void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendMode)
 {
     if (paintingDisabled())
         return;

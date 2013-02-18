@@ -43,6 +43,7 @@ static const char* dfgOpNames[] = {
 Graph::Graph(JSGlobalData& globalData, CodeBlock* codeBlock, unsigned osrEntryBytecodeIndex, const Operands<JSValue>& mustHandleValues)
     : m_globalData(globalData)
     , m_codeBlock(codeBlock)
+    , m_compilation(globalData.m_perBytecodeProfiler ? globalData.m_perBytecodeProfiler->newCompilation(codeBlock, Profiler::DFG) : 0)
     , m_profiledBlock(codeBlock->alternative())
     , m_hasArguments(false)
     , m_osrEntryBytecodeIndex(osrEntryBytecodeIndex)
@@ -63,15 +64,15 @@ static void printWhiteSpace(PrintStream& out, unsigned amount)
         out.print(" ");
 }
 
-void Graph::dumpCodeOrigin(PrintStream& out, const char* prefix, NodeIndex prevNodeIndex, NodeIndex nodeIndex)
+bool Graph::dumpCodeOrigin(PrintStream& out, const char* prefix, NodeIndex prevNodeIndex, NodeIndex nodeIndex)
 {
     if (prevNodeIndex == NoNode)
-        return;
+        return false;
     
     Node& currentNode = at(nodeIndex);
     Node& previousNode = at(prevNodeIndex);
     if (previousNode.codeOrigin.inlineCallFrame == currentNode.codeOrigin.inlineCallFrame)
-        return;
+        return false;
     
     Vector<CodeOrigin> previousInlineStack = previousNode.codeOrigin.inlineStack();
     Vector<CodeOrigin> currentInlineStack = currentNode.codeOrigin.inlineStack();
@@ -84,19 +85,25 @@ void Graph::dumpCodeOrigin(PrintStream& out, const char* prefix, NodeIndex prevN
         }
     }
     
+    bool hasPrinted = false;
+    
     // Print the pops.
     for (unsigned i = previousInlineStack.size(); i-- > indexOfDivergence;) {
         out.print(prefix);
         printWhiteSpace(out, i * 2);
-        out.print("<-- #", previousInlineStack[i].inlineCallFrame->hash(), "\n");
+        out.print("<-- ", *previousInlineStack[i].inlineCallFrame, "\n");
+        hasPrinted = true;
     }
     
     // Print the pushes.
     for (unsigned i = indexOfDivergence; i < currentInlineStack.size(); ++i) {
         out.print(prefix);
         printWhiteSpace(out, i * 2);
-        out.print("--> #", currentInlineStack[i].inlineCallFrame->hash(), "\n");
+        out.print("--> ", *currentInlineStack[i].inlineCallFrame, "\n");
+        hasPrinted = true;
     }
+    
+    return hasPrinted;
 }
 
 int Graph::amountOfNodeWhiteSpace(Node& node)
@@ -189,7 +196,7 @@ void Graph::dump(PrintStream& out, const char* prefix, NodeIndex nodeIndex)
         hasPrinted = true;
     }
     if (node.hasArrayMode()) {
-        out.print(hasPrinted ? ", " : "", node.arrayMode().toString());
+        out.print(hasPrinted ? ", " : "", node.arrayMode());
         hasPrinted = true;
     }
     if (node.hasVarNumber()) {
@@ -245,7 +252,7 @@ void Graph::dump(PrintStream& out, const char* prefix, NodeIndex nodeIndex)
         for (unsigned i = 0; i < node.numConstants(); ++i) {
             if (i)
                 out.print(", ");
-            out.print(m_codeBlock->constantBuffer(node.startConstant())[i].description());
+            out.print(m_codeBlock->constantBuffer(node.startConstant())[i]);
         }
         out.print("]");
         hasPrinted = true;
@@ -254,11 +261,18 @@ void Graph::dump(PrintStream& out, const char* prefix, NodeIndex nodeIndex)
         if (hasPrinted)
             out.print(", ");
         out.print(indexingTypeToString(node.indexingType()));
+        hasPrinted = true;
+    }
+    if (node.hasExecutionCounter()) {
+        if (hasPrinted)
+            out.print(", ");
+        out.print(RawPointer(node.executionCounter()));
+        hasPrinted = true;
     }
     if (op == JSConstant) {
         out.print(hasPrinted ? ", " : "", "$", node.constantNumber());
         JSValue value = valueOfJSConstant(nodeIndex);
-        out.print(" = ", value.description());
+        out.print(" = ", value);
         hasPrinted = true;
     }
     if (op == WeakJSConstant) {
@@ -294,7 +308,7 @@ void Graph::dumpBlockHeader(PrintStream& out, const char* prefix, BlockIndex blo
 {
     BasicBlock* block = m_blocks[blockIndex].get();
 
-    out.print(prefix, "Block #", blockIndex, " (bc#", block->bytecodeBegin, "): ", block->isReachable ? "" : "(skipped)", block->isOSRTarget ? " (OSR target)" : "", "\n");
+    out.print(prefix, "Block #", blockIndex, " (", at(block->at(0)).codeOrigin, "): ", block->isReachable ? "" : "(skipped)", block->isOSRTarget ? " (OSR target)" : "", "\n");
     out.print(prefix, "  Predecessors:");
     for (size_t i = 0; i < block->m_predecessors.size(); ++i)
         out.print(" #", block->m_predecessors[i]);
@@ -321,7 +335,7 @@ void Graph::dumpBlockHeader(PrintStream& out, const char* prefix, BlockIndex blo
         Node& phiNode = at(phiNodeIndex);
         if (!phiNode.shouldGenerate() && phiNodeDumpMode == DumpLivePhisOnly)
             continue;
-        out.print(" @", phiNodeIndex, "->(");
+        out.print(" @", phiNodeIndex, "<", phiNode.refCount(), ">->(");
         if (phiNode.child1()) {
             out.print("@", phiNode.child1().index());
             if (phiNode.child2()) {

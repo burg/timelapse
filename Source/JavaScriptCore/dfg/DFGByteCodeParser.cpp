@@ -176,6 +176,8 @@ private:
         int destinationOperand, SpeculatedType, NodeIndex base, unsigned identifierNumber,
         const GetByIdStatus&);
 
+    NodeIndex getScope(bool skipTop, unsigned skipCount);
+    
     // Convert a set of ResolveOperations into graph nodes
     bool parseResolveOperations(SpeculatedType, unsigned identifierNumber, unsigned operations, unsigned putToBaseOperation, NodeIndex* base, NodeIndex* value);
 
@@ -1882,6 +1884,23 @@ void ByteCodeParser::prepareToParseBlock()
     m_cellConstantNodes.clear();
 }
 
+NodeIndex ByteCodeParser::getScope(bool skipTop, unsigned skipCount)
+{
+    NodeIndex localBase;
+    if (m_inlineStackTop->m_inlineCallFrame) {
+        ASSERT(m_inlineStackTop->m_inlineCallFrame->callee);
+        localBase = cellConstant(m_inlineStackTop->m_inlineCallFrame->callee->scope());
+    } else
+        localBase = addToGraph(GetMyScope);
+    if (skipTop) {
+        ASSERT(!m_inlineStackTop->m_inlineCallFrame);
+        localBase = addToGraph(SkipTopScope, localBase);
+    }
+    for (unsigned n = skipCount; n--;)
+        localBase = addToGraph(SkipScope, localBase);
+    return localBase;
+}
+
 bool ByteCodeParser::parseResolveOperations(SpeculatedType prediction, unsigned identifier, unsigned operations, unsigned putToBaseOperation, NodeIndex* base, NodeIndex* value)
 {
     ResolveOperations* resolveOperations = m_codeBlock->resolveOperations(operations);
@@ -1891,6 +1910,7 @@ bool ByteCodeParser::parseResolveOperations(SpeculatedType prediction, unsigned 
     }
     JSGlobalObject* globalObject = m_inlineStackTop->m_codeBlock->globalObject();
     int skipCount = 0;
+    bool skipTop = false;
     bool skippedScopes = false;
     bool setBase = false;
     ResolveOperation* pc = resolveOperations->data();
@@ -1918,7 +1938,7 @@ bool ByteCodeParser::parseResolveOperations(SpeculatedType prediction, unsigned 
             break;
 
         case ResolveOperation::SetBaseToScope:
-            localBase = addToGraph(GetScope, OpInfo(skipCount));
+            localBase = getScope(skipTop, skipCount);
             *base = localBase;
             setBase = true;
 
@@ -1929,21 +1949,18 @@ bool ByteCodeParser::parseResolveOperations(SpeculatedType prediction, unsigned 
             ++pc;
             break;
         case ResolveOperation::ReturnScopeAsBase:
-            *base = addToGraph(GetScope, OpInfo(skipCount));
+            *base = getScope(skipTop, skipCount);
             ASSERT(!value);
             return true;
 
         case ResolveOperation::SkipTopScopeNode:
-            if (m_inlineStackTop->m_inlineCallFrame)
-                return false;
-            skipCount = 1;
+            ASSERT(!m_inlineStackTop->m_inlineCallFrame);
+            skipTop = true;
             skippedScopes = true;
             ++pc;
             break;
 
         case ResolveOperation::SkipScopes:
-            if (m_inlineStackTop->m_inlineCallFrame)
-                return false;
             skipCount += pc->m_scopesToSkip;
             skippedScopes = true;
             ++pc;
@@ -1960,7 +1977,7 @@ bool ByteCodeParser::parseResolveOperations(SpeculatedType prediction, unsigned 
         }
     }
     if (skippedScopes)
-        localBase = addToGraph(GetScope, OpInfo(skipCount));
+        localBase = getScope(skipTop, skipCount);
 
     if (base && !setBase)
         *base = localBase;
@@ -2097,6 +2114,12 @@ bool ByteCodeParser::parseBlock(unsigned limit)
         Instruction* currentInstruction = instructionsBegin + m_currentIndex;
         m_currentInstruction = currentInstruction; // Some methods want to use this, and we'd rather not thread it through calls.
         OpcodeID opcodeID = interpreter->getOpcodeID(currentInstruction->u.opcode);
+        
+        if (m_graph.m_compilation && opcodeID != op_call_put_result) {
+            addToGraph(CountExecution, OpInfo(m_graph.m_compilation->executionCounterFor(
+                Profiler::OriginStack(*m_globalData->m_perBytecodeProfiler, m_codeBlock, currentCodeOrigin()))));
+        }
+        
         switch (opcodeID) {
 
         // === Function entry opcodes ===
@@ -3050,10 +3073,9 @@ bool ByteCodeParser::parseBlock(unsigned limit)
                            get(value));
                 break;
             case PutToBaseOperation::VariablePut: {
-                addToGraph(Phantom, get(base));
-                NodeIndex getScope = addToGraph(GetScope, OpInfo(putToBase->m_scopeDepth));
-                NodeIndex getScopeRegisters = addToGraph(GetScopeRegisters, getScope);
-                addToGraph(PutScopedVar, OpInfo(putToBase->m_offset), getScope, getScopeRegisters, get(value));
+                NodeIndex scope = get(base);
+                NodeIndex scopeRegisters = addToGraph(GetScopeRegisters, scope);
+                addToGraph(PutScopedVar, OpInfo(putToBase->m_offset), scope, scopeRegisters, get(value));
                 break;
             }
             case PutToBaseOperation::GlobalPropertyPut: {
@@ -3644,6 +3666,11 @@ void ByteCodeParser::parseCodeBlock()
 {
     CodeBlock* codeBlock = m_inlineStackTop->m_codeBlock;
     
+    if (m_graph.m_compilation) {
+        m_graph.m_compilation->addProfiledBytecodes(
+            *m_globalData->m_perBytecodeProfiler, m_inlineStackTop->m_profiledBlock);
+    }
+    
 #if DFG_ENABLE(DEBUG_VERBOSE)
     dataLog(
         "Parsing ", *codeBlock,
@@ -3659,7 +3686,7 @@ void ByteCodeParser::parseCodeBlock()
         unsigned limit = jumpTargetIndex < codeBlock->numberOfJumpTargets() ? codeBlock->jumpTarget(jumpTargetIndex) : codeBlock->instructions().size();
 #if DFG_ENABLE(DEBUG_VERBOSE)
         dataLog(
-            "Parsing bytecode with limit ", m_inlineStackTop->m_inlineCallFrame->hash(),
+            "Parsing bytecode with limit ", pointerDump(m_inlineStackTop->m_inlineCallFrame),
             " bc#", limit, " at inline depth ",
             CodeOrigin::inlineDepthForCallFrame(m_inlineStackTop->m_inlineCallFrame), ".\n");
 #endif
@@ -3692,6 +3719,12 @@ void ByteCodeParser::parseCodeBlock()
                     dataLogF("Creating basic block %p, #%zu for %p bc#%u at inline depth %u.\n", block.get(), m_graph.m_blocks.size(), m_inlineStackTop->executable(), m_currentIndex, CodeOrigin::inlineDepthForCallFrame(m_inlineStackTop->m_inlineCallFrame));
 #endif
                     m_currentBlock = block.get();
+                    // This assertion checks two things:
+                    // 1) If the bytecodeBegin is greater than currentIndex, then something has gone
+                    //    horribly wrong. So, we're probably generating incorrect code.
+                    // 2) If the bytecodeBegin is equal to the currentIndex, then we failed to do
+                    //    a peephole coalescing of this block in the if statement above. So, we're
+                    //    generating suboptimal code and leaving more work for the CFG simplifier.
                     ASSERT(m_inlineStackTop->m_unlinkedBlocks.isEmpty() || m_graph.m_blocks[m_inlineStackTop->m_unlinkedBlocks.last().m_blockIndex]->bytecodeBegin < m_currentIndex);
                     m_inlineStackTop->m_unlinkedBlocks.append(UnlinkedBlock(m_graph.m_blocks.size()));
                     m_inlineStackTop->m_blockLinkingTargets.append(m_graph.m_blocks.size());

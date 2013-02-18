@@ -34,6 +34,7 @@
 #include "EventListener.h"
 #include "EventNames.h"
 #include "EventTarget.h"
+#include "IDBMetadata.h"
 #include "IDBTransactionCallbacks.h"
 #include "ScriptWrappable.h"
 #include <wtf/HashSet.h>
@@ -57,7 +58,7 @@ public:
     };
 
     static PassRefPtr<IDBTransaction> create(ScriptExecutionContext*, int64_t, PassRefPtr<IDBTransactionBackendInterface>, const Vector<String>& objectStoreNames, Mode, IDBDatabase*);
-    static PassRefPtr<IDBTransaction> create(ScriptExecutionContext*, int64_t, PassRefPtr<IDBTransactionBackendInterface>, const Vector<String>& objectStoreNames, Mode, IDBDatabase*, IDBOpenDBRequest*);
+    static PassRefPtr<IDBTransaction> create(ScriptExecutionContext*, int64_t, PassRefPtr<IDBTransactionBackendInterface>, IDBDatabase*, IDBOpenDBRequest*, const IDBDatabaseMetadata& previousMetadata);
     virtual ~IDBTransaction();
 
     static const AtomicString& modeReadOnly();
@@ -98,7 +99,8 @@ public:
     void objectStoreCreated(const String&, PassRefPtr<IDBObjectStore>);
     void objectStoreDeleted(const String&);
     void setActive(bool);
-    void setError(PassRefPtr<DOMError>);
+    void setError(PassRefPtr<DOMError>, const String& errorMessage);
+    String webkitErrorMessage() const;
 
     DEFINE_ATTRIBUTE_EVENT_LISTENER(abort);
     DEFINE_ATTRIBUTE_EVENT_LISTENER(complete);
@@ -123,7 +125,7 @@ public:
     using RefCounted<IDBTransactionCallbacks>::deref;
 
 private:
-    IDBTransaction(ScriptExecutionContext*, int64_t, PassRefPtr<IDBTransactionBackendInterface>, const Vector<String>&, Mode, IDBDatabase*, IDBOpenDBRequest*);
+    IDBTransaction(ScriptExecutionContext*, int64_t, PassRefPtr<IDBTransactionBackendInterface>, const Vector<String>&, Mode, IDBDatabase*, IDBOpenDBRequest*, const IDBDatabaseMetadata&);
 
     void enqueueEvent(PassRefPtr<Event>);
     void closeOpenCursors();
@@ -155,6 +157,7 @@ private:
     bool m_hasPendingActivity;
     bool m_contextStopped;
     RefPtr<DOMError> m_error;
+    String m_errorMessage;
 
     ListHashSet<IDBRequest*> m_requestList;
 
@@ -166,6 +169,7 @@ private:
 
     typedef HashMap<RefPtr<IDBObjectStore>, IDBObjectStoreMetadata> IDBObjectStoreMetadataMap;
     IDBObjectStoreMetadataMap m_objectStoreCleanupMap;
+    IDBDatabaseMetadata m_previousMetadata;
 
     HashSet<IDBCursor*> m_openCursors;
 

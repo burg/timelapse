@@ -55,6 +55,7 @@ public:
     static PassRefPtr<IDBDatabase> create(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackendInterface>, PassRefPtr<IDBDatabaseCallbacks>);
     ~IDBDatabase();
 
+    void setMetadata(const IDBDatabaseMetadata& metadata) { m_metadata = metadata; }
     void transactionCreated(IDBTransaction*);
     void transactionFinished(IDBTransaction*);
 
@@ -77,6 +78,8 @@ public:
     // IDBDatabaseCallbacks
     virtual void onVersionChange(int64_t oldVersion, int64_t newVersion);
     virtual void onVersionChange(const String& requestedVersion);
+    virtual void onAbort(int64_t, PassRefPtr<IDBDatabaseError>);
+    virtual void onComplete(int64_t);
 
     // ActiveDOMObject
     virtual void stop() OVERRIDE;
@@ -106,7 +109,6 @@ public:
 private:
     IDBDatabase(ScriptExecutionContext*, PassRefPtr<IDBDatabaseBackendInterface>, PassRefPtr<IDBDatabaseCallbacks>);
 
-
     // EventTarget
     virtual void refEventTarget() { ref(); }
     virtual void derefEventTarget() { deref(); }
@@ -118,7 +120,8 @@ private:
     IDBDatabaseMetadata m_metadata;
     RefPtr<IDBDatabaseBackendInterface> m_backend;
     RefPtr<IDBTransaction> m_versionChangeTransaction;
-    HashSet<IDBTransaction*> m_transactions;
+    typedef HashMap<int64_t, IDBTransaction*> TransactionMap;
+    TransactionMap m_transactions;
 
     bool m_closePending;
     bool m_contextStopped;

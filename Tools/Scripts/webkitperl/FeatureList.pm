@@ -105,6 +105,7 @@ my (
     $meterTagSupport,
     $mhtmlSupport,
     $microdataSupport,
+    $mouseCursorScaleSupport,
     $mutationObserversSupport,
     $netscapePluginAPISupport,
     $networkInfoSupport,
@@ -126,6 +127,7 @@ my (
     $svgFontsSupport,
     $svgSupport,
     $systemMallocSupport,
+    $templateTagSupport,
     $textAutosizingSupport,
     $tiledBackingStoreSupport,
     $timelapseSupport,
@@ -167,7 +169,7 @@ my @features = (
       define => "ENABLE_CHANNEL_MESSAGING", default => 1, value => \$channelMessagingSupport },
 
     { option => "csp-next", desc => "Toggle Content Security Policy 1.1 support",
-      define => "ENABLE_CSP_NEXT", default => 0, value => \$cspNextSupport },
+      define => "ENABLE_CSP_NEXT", default => isGtk(), value => \$cspNextSupport },
 
     { option => "css-device-adaptation", desc => "Toggle CSS Device Adaptation support",
       define => "ENABLE_CSS_DEVICE_ADAPTATION", default => isEfl(), value => \$cssDeviceAdaptation },
@@ -178,14 +180,11 @@ my @features = (
     { option => "css-filters", desc => "Toggle CSS Filters support",
       define => "ENABLE_CSS_FILTERS", default => isAppleWebKit() || isBlackBerry(), value => \$cssFiltersSupport },
 
-    { option => "css3-background", desc => "Toggle CSS3 Background support",
-      define => "ENABLE_CSS3_BACKGROUND", default => 0, value => \$css3BackgroundSupport },
-
     { option => "css3-conditional-rules", desc => "Toggle CSS3 Conditional Rules support (i.e. \@supports)",
       define => "ENABLE_CSS3_CONDITIONAL_RULES", default => 0, value => \$css3ConditionalRulesSupport },
 
     { option => "css3-text", desc => "Toggle CSS3 Text support",
-      define => "ENABLE_CSS3_TEXT", default => isEfl(), value => \$css3TextSupport },
+      define => "ENABLE_CSS3_TEXT", default => (isEfl() || isGtk()), value => \$css3TextSupport },
 
     { option => "css-box-decoration-break", desc => "Toggle CSS box-decoration-break support",
       define => "ENABLE_CSS_BOX_DECORATION_BREAK", default => 1, value => \$cssBoxDecorationBreakSupport },
@@ -194,7 +193,7 @@ my @features = (
       define => "ENABLE_CSS_IMAGE_ORIENTATION", default => 0, value => \$cssImageOrientationSupport },
 
     { option => "css-image-resolution", desc => "Toggle CSS image-resolution support",
-      define => "ENABLE_CSS_IMAGE_RESOLUTION", default => 0, value => \$cssImageResolutionSupport },
+      define => "ENABLE_CSS_IMAGE_RESOLUTION", default => isBlackBerry(), value => \$cssImageResolutionSupport },
 
     { option => "css-regions", desc => "Toggle CSS Regions support",
       define => "ENABLE_CSS_REGIONS", default => 1, value => \$cssRegionsSupport },
@@ -320,7 +319,7 @@ my @features = (
       define => "ENABLE_MEDIA_STATISTICS", default => 0, value => \$mediaStatisticsSupport },
 
     { option => "media-stream", desc => "Toggle Media Stream support",
-      define => "ENABLE_MEDIA_STREAM", default => (isChromium() || isGtk() || isBlackBerry()), value => \$mediaStreamSupport },
+      define => "ENABLE_MEDIA_STREAM", default => (isChromium() || isBlackBerry()), value => \$mediaStreamSupport },
 
     { option => "meter-tag", desc => "Toggle Meter Tag support",
       define => "ENABLE_METER_ELEMENT", default => !isAppleWinWebKit(), value => \$meterTagSupport },
@@ -329,7 +328,10 @@ my @features = (
       define => "ENABLE_MHTML", default => isGtk(), value => \$mhtmlSupport },
 
     { option => "microdata", desc => "Toggle Microdata support",
-      define => "ENABLE_MICRODATA", default => (isEfl() || isBlackBerry()), value => \$microdataSupport },
+      define => "ENABLE_MICRODATA", default => (isEfl() || isBlackBerry() || isGtk()), value => \$microdataSupport },
+
+    { option => "mouse-cursor-scale", desc => "Toggle Scaled mouse cursor support",
+      define => "ENABLE_MOUSE_CURSOR_SCALE", default => 0, value => \$mouseCursorScaleSupport },
 
     { option => "mutation-observers", desc => "Toggle Mutation Observers support",
       define => "ENABLE_MUTATION_OBSERVERS", default => 1, value => \$mutationObserversSupport },
@@ -380,7 +382,7 @@ my @features = (
       define => "ENABLE_SQL_DATABASE", default => 1, value => \$sqlDatabaseSupport },
 
     { option => "style-scoped", desc => "Toggle Style Scoped support",
-      define => "ENABLE_STYLE_SCOPED", default => isBlackBerry(), value => \$styleScopedSupport },
+      define => "ENABLE_STYLE_SCOPED", default => (isBlackBerry() || isGtk()), value => \$styleScopedSupport },
 
     { option => "svg", desc => "Toggle SVG support",
       define => "ENABLE_SVG", default => 1, value => \$svgSupport },
@@ -393,6 +395,9 @@ my @features = (
 
     { option => "system-malloc", desc => "Toggle system allocator instead of TCmalloc",
       define => "USE_SYSTEM_MALLOC", default => isWinCE(), value => \$systemMallocSupport },
+
+    { option => "template-tag", desc => "Toggle Templates Tag support",
+      define => "ENABLE_TEMPLATE_ELEMENT", default => 0, value => \$templateTagSupport },
 
     { option => "text-autosizing", desc => "Toggle Text Autosizing support",
       define => "ENABLE_TEXT_AUTOSIZING", default => 0, value => \$textAutosizingSupport },
@@ -419,10 +424,10 @@ my @features = (
       define => "ENABLE_VIDEO", default => (isAppleWebKit() || isGtk() || isBlackBerry() || isEfl()), value => \$videoSupport },
 
     { option => "video-track", desc => "Toggle Video Track support",
-      define => "ENABLE_VIDEO_TRACK", default => (isAppleWebKit() || isGtk() || isEfl() || isBlackBerry()), value => \$videoTrackSupport },
+      define => "ENABLE_VIDEO_TRACK", default => (isAppleWebKit() || isGtk() || isEfl()), value => \$videoTrackSupport },
 
     { option => "webgl", desc => "Toggle WebGL support",
-      define => "ENABLE_WEBGL", default => (isAppleMacWebKit() || isGtk()), value => \$webglSupport },
+      define => "ENABLE_WEBGL", default => (isAppleMacWebKit() || isGtk() || isEfl()), value => \$webglSupport },
 
     { option => "web-audio", desc => "Toggle Web Audio support",
       define => "ENABLE_WEB_AUDIO", default => 0, value => \$webAudioSupport },

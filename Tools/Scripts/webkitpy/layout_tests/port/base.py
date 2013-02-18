@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2010 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -606,8 +605,9 @@ class Port(object):
                                       '.htm', '.php', '.svg', '.mht'])
 
     @staticmethod
+    # If any changes are made here be sure to update the isUsedInReftest method in old-run-webkit-tests as well.
     def is_reference_html_file(filesystem, dirname, filename):
-        if filename.startswith('ref-') or filename.endswith('notref-'):
+        if filename.startswith('ref-') or filename.startswith('notref-'):
             return True
         filename_wihout_ext, unused = filesystem.splitext(filename)
         for suffix in ['-expected', '-expected-mismatch', '-ref', '-notref']:
@@ -899,6 +899,9 @@ class Port(object):
             # Most ports (?):
             'WEBKIT_TESTFONTS',
             'WEBKITOUTPUTDIR',
+
+            # Chromium:
+            'CHROME_DEVEL_SANDBOX',
         ]
         for variable in variables_to_copy:
             self._copy_value_from_environ_if_set(clean_env, variable)

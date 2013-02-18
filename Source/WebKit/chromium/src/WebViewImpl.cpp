@@ -179,10 +179,6 @@
 #include "RenderThemeChromiumWin.h"
 #endif
 #else
-#if OS(UNIX) && !OS(DARWIN) && !ENABLE(DEFAULT_RENDER_THEME)
-#include "PlatformThemeChromiumLinux.h"
-#include "RenderThemeChromiumLinux.h"
-#endif
 #include "RenderTheme.h"
 #endif
 
@@ -431,7 +427,6 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
     , m_compositorSurfaceReady(false)
     , m_deviceScaleInCompositor(1)
     , m_inputHandlerIdentifier(-1)
-    , m_isFontAtlasLoaded(false)
 #endif
 #if ENABLE(INPUT_SPEECH)
     , m_speechInputClient(SpeechInputClientImpl::create(client))
@@ -454,6 +449,8 @@ WebViewImpl::WebViewImpl(WebViewClient* client)
     , m_flingModifier(0)
     , m_validationMessage(ValidationMessageClientImpl::create(*client))
     , m_suppressInvalidations(false)
+    , m_showFPSCounter(false)
+    , m_showPaintRects(false)
 {
     // WebKit/win/WebView.cpp does the same thing, except they call the
     // KJS specific wrapper around this method. We need to have threading
@@ -840,12 +837,9 @@ void WebViewImpl::setShowFPSCounter(bool show)
 {
     if (isAcceleratedCompositingActive()) {
         TRACE_EVENT0("webkit", "WebViewImpl::setShowFPSCounter");
-#if USE(ACCELERATED_COMPOSITING)
-        loadFontAtlasIfNecessary();
-#endif
         m_layerTreeView->setShowFPSCounter(show);
     }
-    settingsImpl()->setShowFPSCounter(show);
+    m_showFPSCounter = show;
 }
 
 void WebViewImpl::setShowPaintRects(bool show)
@@ -854,7 +848,7 @@ void WebViewImpl::setShowPaintRects(bool show)
         TRACE_EVENT0("webkit", "WebViewImpl::setShowPaintRects");
         m_layerTreeView->setShowPaintRects(show);
     }
-    settingsImpl()->setShowPaintRects(show);
+    m_showPaintRects = show;
 }
 
 bool WebViewImpl::handleKeyEvent(const WebKeyboardEvent& event)
@@ -1223,6 +1217,10 @@ Node* WebViewImpl::bestTouchLinkNode(const WebGestureEvent& touchEvent)
     while (bestTouchNode && !invokesHandCursor(bestTouchNode, shiftKey, m_page->mainFrame()))
         bestTouchNode = bestTouchNode->parentNode();
 
+    // We should pick the largest enclosing node with hand cursor set.
+    while (bestTouchNode && bestTouchNode->parentNode() && invokesHandCursor(bestTouchNode->parentNode(), shiftKey, m_page->mainFrame()))
+        bestTouchNode = bestTouchNode->parentNode();
+
     return bestTouchNode;
 }
 
@@ -1464,7 +1462,7 @@ PagePopup* WebViewImpl::openPagePopup(PagePopupClient* client, const IntRect& or
     WebWidget* popupWidget = m_client->createPopupMenu(WebPopupTypePage);
     ASSERT(popupWidget);
     m_pagePopup = static_cast<WebPagePopupImpl*>(popupWidget);
-    if (!m_pagePopup->init(this, client, originBoundsInRootView)) {
+    if (!m_pagePopup->initialize(this, client, originBoundsInRootView)) {
         m_pagePopup->closePopup();
         m_pagePopup = 0;
     }
@@ -1497,7 +1495,7 @@ WebHelperPluginImpl* WebViewImpl::createHelperPlugin(const String& pluginType)
     ASSERT(popupWidget);
     WebHelperPluginImpl* helperPlugin = static_cast<WebHelperPluginImpl*>(popupWidget);
 
-    if (!helperPlugin->init(this, pluginType)) {
+    if (!helperPlugin->initialize(this, pluginType)) {
         helperPlugin->closeHelperPlugin();
         helperPlugin = 0;
     }
@@ -1527,15 +1525,12 @@ PageGroup* WebViewImpl::defaultPageGroup()
 
 void WebViewImpl::close()
 {
-    RefPtr<WebFrameImpl> mainFrameImpl;
-
     if (m_page) {
         // Initiate shutdown for the entire frameset.  This will cause a lot of
         // notifications to be sent.
-        if (m_page->mainFrame()) {
-            mainFrameImpl = WebFrameImpl::fromFrame(m_page->mainFrame());
+        if (m_page->mainFrame())
             m_page->mainFrame()->loader()->frameDetached();
-        }
+
         m_page.clear();
     }
 
@@ -2276,7 +2271,7 @@ WebTextInputType WebViewImpl::textInputType()
     if (node->hasTagName(HTMLNames::inputTag)) {
         HTMLInputElement* input = static_cast<HTMLInputElement*>(node);
 
-        if (input->readOnly() || input->disabled())
+        if (input->isDisabledOrReadOnly())
             return WebTextInputTypeNone;
 
         if (input->isPasswordField())
@@ -2310,11 +2305,8 @@ WebTextInputType WebViewImpl::textInputType()
     }
 
     if (node->hasTagName(HTMLNames::textareaTag)) {
-        HTMLTextAreaElement* textarea = static_cast<HTMLTextAreaElement*>(node);
-
-        if (textarea->readOnly() || textarea->disabled())
+        if (static_cast<HTMLTextAreaElement*>(node)->isDisabledOrReadOnly())
             return WebTextInputTypeNone;
-
         return WebTextInputTypeTextArea;
     }
 
@@ -3573,8 +3565,6 @@ void WebViewImpl::setScrollbarColors(unsigned inactiveColor,
                                      unsigned trackColor) {
 #if ENABLE(DEFAULT_RENDER_THEME)
     PlatformThemeChromiumDefault::setScrollbarColors(inactiveColor, activeColor, trackColor);
-#elif OS(UNIX) && !OS(DARWIN) && !OS(ANDROID)
-    PlatformThemeChromiumLinux::setScrollbarColors(inactiveColor, activeColor, trackColor);
 #endif
 }
 
@@ -3584,9 +3574,6 @@ void WebViewImpl::setSelectionColors(unsigned activeBackgroundColor,
                                      unsigned inactiveForegroundColor) {
 #if ENABLE(DEFAULT_RENDER_THEME)
     RenderThemeChromiumDefault::setSelectionColors(activeBackgroundColor, activeForegroundColor, inactiveBackgroundColor, inactiveForegroundColor);
-    theme()->platformColorsDidChange();
-#elif OS(UNIX) && !OS(DARWIN) && !OS(ANDROID)
-    RenderThemeChromiumLinux::setSelectionColors(activeBackgroundColor, activeForegroundColor, inactiveBackgroundColor, inactiveForegroundColor);
     theme()->platformColorsDidChange();
 #endif
 }
@@ -4004,6 +3991,7 @@ void WebViewImpl::setIsAcceleratedCompositingActive(bool active)
 
         WebLayerTreeView::Settings layerTreeViewSettings;
         layerTreeViewSettings.acceleratePainting = page()->settings()->acceleratedDrawingEnabled();
+        layerTreeViewSettings.lowLatencyRenderingEnabled = settingsImpl()->lowLatencyRenderingEnabled();
         layerTreeViewSettings.showDebugBorders = page()->settings()->showDebugBorders();
         layerTreeViewSettings.showFPSCounter = settingsImpl()->showFPSCounter();
         layerTreeViewSettings.showPlatformLayerTree = settingsImpl()->showPlatformLayerTree();
@@ -4039,15 +4027,10 @@ void WebViewImpl::setIsAcceleratedCompositingActive(bool active)
             m_client->didActivateCompositor(m_inputHandlerIdentifier);
             m_isAcceleratedCompositingActive = true;
             m_compositorCreationFailed = false;
-            m_isFontAtlasLoaded = false;
             if (m_pageOverlays)
                 m_pageOverlays->update();
-
-            if (layerTreeViewSettings.showPlatformLayerTree)
-                loadFontAtlasIfNecessary();
-
-            if (settingsImpl()->showFPSCounter())
-                setShowFPSCounter(true);
+            m_layerTreeView->setShowFPSCounter(m_showFPSCounter);
+            m_layerTreeView->setShowPaintRects(m_showPaintRects);
         } else {
             m_nonCompositedContentHost.clear();
             m_isAcceleratedCompositingActive = false;
@@ -4059,65 +4042,7 @@ void WebViewImpl::setIsAcceleratedCompositingActive(bool active)
         page()->mainFrame()->view()->setClipsRepaints(!m_isAcceleratedCompositingActive);
 }
 
-void WebViewImpl::loadFontAtlasIfNecessary()
-{
-    ASSERT(m_layerTreeView);
-
-    if (m_isFontAtlasLoaded)
-        return;
-
-    TRACE_EVENT0("webkit", "WebViewImpl::loadFontAtlas");
-    WebRect asciiToRectTable[128];
-    int fontHeight;
-    SkBitmap bitmap = WebCore::CompositorHUDFontAtlas::generateFontAtlas(asciiToRectTable, fontHeight);
-    m_layerTreeView->setFontAtlas(asciiToRectTable, bitmap, fontHeight);
-    m_isFontAtlasLoaded = true;
-}
-
 #endif
-
-namespace {
-
-// Adapts a pure WebGraphicsContext3D into a WebCompositorOutputSurface until
-// downstream code can be updated to produce output surfaces directly.
-class WebGraphicsContextToOutputSurfaceAdapter : public WebCompositorOutputSurface {
-public:
-    explicit WebGraphicsContextToOutputSurfaceAdapter(PassOwnPtr<WebGraphicsContext3D> context)
-        : m_context3D(context)
-        , m_client(0)
-    {
-    }
-
-    virtual bool bindToClient(WebCompositorOutputSurfaceClient* client) OVERRIDE
-    {
-        ASSERT(client);
-        if (!m_context3D->makeContextCurrent())
-            return false;
-        m_client = client;
-        return true;
-    }
-
-    virtual const Capabilities& capabilities() const OVERRIDE
-    {
-        return m_capabilities;
-    }
-
-    virtual WebGraphicsContext3D* context3D() const OVERRIDE
-    {
-        return m_context3D.get();
-    }
-
-    virtual void sendFrameToParentCompositor(const WebCompositorFrame&) OVERRIDE
-    {
-    }
-
-private:
-    OwnPtr<WebGraphicsContext3D> m_context3D;
-    Capabilities m_capabilities;
-    WebCompositorOutputSurfaceClient* m_client;
-};
-
-} // namespace
 
 WebCompositorOutputSurface* WebViewImpl::createOutputSurface()
 {

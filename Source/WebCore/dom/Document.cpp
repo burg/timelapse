@@ -55,6 +55,7 @@
 #include "DocumentFragment.h"
 #include "DocumentLoader.h"
 #include "DocumentMarkerController.h"
+#include "DocumentSharedObjectPool.h"
 #include "DocumentStyleSheetCollection.h"
 #include "DocumentType.h"
 #include "Editor.h"
@@ -117,6 +118,7 @@
 #include "NodeFilter.h"
 #include "NodeIterator.h"
 #include "NodeRareData.h"
+#include "NodeTraversal.h"
 #include "NodeWithIndex.h"
 #include "Page.h"
 #include "PageGroup.h"
@@ -157,6 +159,7 @@
 #include "Timer.h"
 #include "TransformSource.h"
 #include "TreeWalker.h"
+#include "UserActionElementSet.h"
 #include "UserContentURLPattern.h"
 #include "WebCoreMemoryInstrumentation.h"
 #include "WebKitNamedFlow.h"
@@ -436,6 +439,8 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
     : ContainerNode(0, CreateDocument)
     , TreeScope(this)
     , m_guardRefCount(0)
+    , m_styleResolverThrowawayTimer(this, &Document::styleResolverThrowawayTimerFired)
+    , m_lastStyleResolverAccessTime(0)
     , m_contextFeatures(ContextFeatures::defaultSwitch())
     , m_compatibilityMode(NoQuirksMode)
     , m_compatibilityModeLocked(false)
@@ -500,6 +505,7 @@ Document::Document(Frame* frame, const KURL& url, bool isXHTML, bool isHTML)
     , m_scheduledTasksAreSuspended(false)
     , m_visualUpdatesAllowed(true)
     , m_visualUpdatesSuppressionTimer(this, &Document::visualUpdatesSuppressionTimerFired)
+    , m_sharedObjectPoolClearTimer(this, &Document::sharedObjectPoolClearTimerFired)
 #ifndef NDEBUG
     , m_didDispatchViewportPropertiesChanged(false)
 #endif
@@ -687,6 +693,7 @@ void Document::removedLastRef()
         m_titleElement = 0;
         m_documentElement = 0;
         m_contextFeatures = ContextFeatures::defaultSwitch();
+        m_userActionElements.documentDidRemoveLastRef();
 #if ENABLE(FULLSCREEN_API)
         m_fullScreenElement = 0;
         m_fullScreenElementStack.clear();
@@ -743,15 +750,12 @@ void Document::buildAccessKeyMap(TreeScope* scope)
 {
     ASSERT(scope);
     Node* rootNode = scope->rootNode();
-    for (Node* node = rootNode; node; node = node->traverseNextNode(rootNode)) {
-        if (!node->isElementNode())
-            continue;
-        Element* element = static_cast<Element*>(node);
+    for (Element* element = ElementTraversal::firstWithin(rootNode); element; element = ElementTraversal::next(element, rootNode)) {
         const AtomicString& accessKey = element->getAttribute(accesskeyAttr);
         if (!accessKey.isEmpty())
             m_elementsByAccessKey.set(accessKey.impl(), element);
 
-        for (ShadowRoot* root = node->youngestShadowRoot(); root; root = root->olderShadowRoot())
+        for (ShadowRoot* root = element->youngestShadowRoot(); root; root = root->olderShadowRoot())
             buildAccessKeyMap(root);
     }
 }
@@ -785,7 +789,7 @@ void Document::setCompatibilityMode(CompatibilityMode mode)
     selectorQueryCache()->invalidate();
     if (inQuirksMode() != wasInQuirksMode) {
         // All user stylesheets have to reparse using the different mode.
-        m_styleSheetCollection->clearPageUserStyleSheet();
+        m_styleSheetCollection->clearPageUserSheet();
         m_styleSheetCollection->invalidateInjectedStyleSheetCache();
     }
 }
@@ -837,7 +841,7 @@ void Document::childrenChanged(bool changedByParser, Node* beforeChange, Node* a
 {
     ContainerNode::childrenChanged(changedByParser, beforeChange, afterChange, childCountDelta);
     
-    Element* newDocumentElement = firstElementChild(this);
+    Element* newDocumentElement = ElementTraversal::firstWithin(this);
     if (newDocumentElement == m_documentElement)
         return;
     m_documentElement = newDocumentElement;
@@ -1124,7 +1128,7 @@ bool Document::cssStickyPositionEnabled() const
 
 bool Document::cssRegionsEnabled() const
 {
-    return settings() && settings()->cssRegionsEnabled(); 
+    return RuntimeEnabledFeatures::cssRegionsEnabled(); 
 }
 
 bool Document::cssGridLayoutEnabled() const
@@ -1811,8 +1815,8 @@ void Document::recalcStyle(StyleChange change)
         m_styleSheetCollection->setUsesRemUnit(true);
 
     m_inStyleRecalc = true;
-    suspendPostAttachCallbacks();
     {
+        PostAttachCallbackDisabler disabler(this);
         WidgetHierarchyUpdatesSuspensionScope suspendWidgetHierarchyUpdates;
 
         RefPtr<FrameView> frameView = view();
@@ -1868,7 +1872,6 @@ void Document::recalcStyle(StyleChange change)
             frameView->endDeferredRepaints();
         }
     }
-    resumePostAttachCallbacks();
 
     // If we wanted to call implicitClose() during recalcStyle, do so now that we're finished.
     if (m_closeAfterStyleRecalc) {
@@ -2152,7 +2155,7 @@ void Document::removeAllEventListeners()
 
     if (DOMWindow* domWindow = this->domWindow())
         domWindow->removeAllEventListeners();
-    for (Node* node = firstChild(); node; node = node->traverseNextNode())
+    for (Node* node = firstChild(); node; node = NodeTraversal::next(node))
         node->removeAllEventListeners();
 }
 
@@ -2491,6 +2494,10 @@ void Document::implicitClose()
 void Document::setParsing(bool b)
 {
     m_bParsing = b;
+
+    if (m_bParsing && !m_sharedObjectPool)
+        m_sharedObjectPool = DocumentSharedObjectPool::create();
+
     if (!m_bParsing && view())
         view()->scheduleRelayout();
 
@@ -2609,7 +2616,7 @@ EventTarget* Document::errorEventTarget()
 
 void Document::logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, PassRefPtr<ScriptCallStack> callStack)
 {
-    addConsoleMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, errorMessage, sourceURL, lineNumber, callStack);
+    addMessage(JSMessageSource, ErrorMessageLevel, errorMessage, sourceURL, lineNumber, callStack);
 }
 
 void Document::setURL(const KURL& url)
@@ -2657,9 +2664,9 @@ void Document::updateBaseURL()
     if (!equalIgnoringFragmentIdentifier(oldBaseURL, m_baseURL)) {
         // Base URL change changes any relative visited links.
         // FIXME: There are other URLs in the tree that would need to be re-evaluated on dynamic base URL change. Style should be invalidated too.
-        for (Node* node = firstChild(); node; node = node->traverseNextNode()) {
-            if (node->hasTagName(aTag))
-                static_cast<HTMLAnchorElement*>(node)->invalidateCachedVisitedLinkHash();
+        for (Element* element = ElementTraversal::firstWithin(this); element; element = ElementTraversal::next(element)) {
+            if (element->hasTagName(aTag))
+                static_cast<HTMLAnchorElement*>(element)->invalidateCachedVisitedLinkHash();
         }
     }
 }
@@ -2675,15 +2682,15 @@ void Document::processBaseElement()
     // Find the first href attribute in a base element and the first target attribute in a base element.
     const AtomicString* href = 0;
     const AtomicString* target = 0;
-    for (Node* node = document()->firstChild(); node && (!href || !target); node = node->traverseNextNode()) {
-        if (node->hasTagName(baseTag)) {
+    for (Element* element = ElementTraversal::firstWithin(this); element && (!href || !target); element = ElementTraversal::next(element)) {
+        if (element->hasTagName(baseTag)) {
             if (!href) {
-                const AtomicString& value = static_cast<Element*>(node)->fastGetAttribute(hrefAttr);
+                const AtomicString& value = element->fastGetAttribute(hrefAttr);
                 if (!value.isNull())
                     href = &value;
             }
             if (!target) {
-                const AtomicString& value = static_cast<Element*>(node)->fastGetAttribute(targetAttr);
+                const AtomicString& value = element->fastGetAttribute(targetAttr);
                 if (!value.isNull())
                     target = &value;
             }
@@ -2819,7 +2826,7 @@ int Document::nodeAbsIndex(Node *node)
     ASSERT(node->document() == this);
 
     int absIndex = 0;
-    for (Node* n = node; n && n != this; n = n->traversePreviousNode())
+    for (Node* n = node; n && n != this; n = NodeTraversal::previous(n))
         absIndex++;
     return absIndex;
 }
@@ -2828,7 +2835,7 @@ Node* Document::nodeWithAbsIndex(int absIndex)
 {
     Node* n = this;
     for (int i = 0; n && (i < absIndex); i++)
-        n = n->traverseNextNode();
+        n = NodeTraversal::next(n);
     return n;
 }
 
@@ -2878,7 +2885,7 @@ void Document::processHttpEquiv(const String& equiv, const String& content)
                 String message = "Refused to display '" + url().string() + "' in a frame because it set 'X-Frame-Options' to '" + content + "'.";
                 frameLoader->stopAllLoaders();
                 frame->navigationScheduler()->scheduleLocationChange(securityOrigin(), blankURL(), String());
-                addConsoleMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, message, url().string(), 0, 0, requestIdentifier);
+                addConsoleMessage(JSMessageSource, ErrorMessageLevel, message, requestIdentifier);
             }
         }
     } else if (equalIgnoringCase(equiv, "content-security-policy"))
@@ -3179,7 +3186,7 @@ void Document::styleResolverChanged(StyleResolverUpdateFlag updateFlag)
     if (didLayoutWithPendingStylesheets() && !m_styleSheetCollection->hasPendingSheets()) {
         m_pendingSheetLayout = IgnoreLayoutWithPendingSheets;
         if (renderer())
-            renderer()->repaint();
+            renderView()->repaintViewAndCompositedLayers();
     }
 
     if (!stylesheetChangeRequiresStyleRecalc)
@@ -3434,7 +3441,7 @@ void Document::getFocusableNodes(Vector<RefPtr<Node> >& nodes)
 {
     updateLayout();
 
-    for (Node* node = firstChild(); node; node = node->traverseNextNode()) {
+    for (Node* node = firstChild(); node; node = NodeTraversal::next(node)) {
         if (node->isFocusable())
             nodes.append(node);
     }
@@ -4424,9 +4431,35 @@ void Document::finishedParsing()
         InspectorInstrumentation::domContentLoadedEventFired(f.get());
     }
 
-    // The ElementAttributeData sharing cache is only used during parsing since
-    // that's when the majority of immutable attribute data will be created.
-    m_immutableAttributeDataCache.clear();
+    // Schedule dropping of the DocumentSharedObjectPool. We keep it alive for a while after parsing finishes
+    // so that dynamically inserted content can also benefit from sharing optimizations.
+    // Note that we don't refresh the timer on pool access since that could lead to huge caches being kept
+    // alive indefinitely by something innocuous like JS setting .innerHTML repeatedly on a timer.
+    static const int timeToKeepSharedObjectPoolAliveAfterParsingFinishedInSeconds = 10;
+    m_sharedObjectPoolClearTimer.startOneShot(timeToKeepSharedObjectPoolAliveAfterParsingFinishedInSeconds);
+}
+
+void Document::sharedObjectPoolClearTimerFired(Timer<Document>*)
+{
+    m_sharedObjectPool.clear();
+}
+
+void Document::didAccessStyleResolver()
+{
+    static const int timeBeforeThrowingAwayStyleResolverAfterLastUseInSeconds = 60;
+    static const int holdOffTimeBeforeReschedulingTimerInSeconds = 5;
+
+    double currentTime = WTF::currentTime();
+
+    if (currentTime > m_lastStyleResolverAccessTime + holdOffTimeBeforeReschedulingTimerInSeconds) {
+        m_styleResolverThrowawayTimer.startOneShot(timeBeforeThrowingAwayStyleResolverAfterLastUseInSeconds);
+        m_lastStyleResolverAccessTime = currentTime;
+    }
+}
+
+void Document::styleResolverThrowawayTimerFired(Timer<Document>*)
+{
+    clearStyleResolver();
 }
 
 PassRefPtr<XPathExpression> Document::createExpression(const String& expression,
@@ -4550,17 +4583,6 @@ void Document::initSecurityContext()
     enforceSandboxFlags(m_frame->loader()->effectiveSandboxFlags());
     setSecurityOrigin(isSandboxed(SandboxOrigin) ? SecurityOrigin::createUnique() : SecurityOrigin::create(m_url));
     setContentSecurityPolicy(ContentSecurityPolicy::create(this));
-
-    if (SecurityPolicy::allowSubstituteDataAccessToLocal()) {
-        // If this document was loaded with substituteData, then the document can
-        // load local resources.  See https://bugs.webkit.org/show_bug.cgi?id=16756
-        // and https://bugs.webkit.org/show_bug.cgi?id=19760 for further
-        // discussion.
-        
-        DocumentLoader* documentLoader = loader();
-        if (documentLoader && documentLoader->substituteData().isValid())
-            securityOrigin()->grantLoadLocalResources();
-    }
 
     if (Settings* settings = this->settings()) {
         if (!settings->webSecurityEnabled()) {
@@ -4750,16 +4772,29 @@ void Document::parseDNSPrefetchControlHeader(const String& dnsPrefetchControl)
     m_haveExplicitlyDisabledDNSPrefetch = true;
 }
 
-void Document::addMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, PassRefPtr<ScriptCallStack> callStack, unsigned long requestIdentifier)
+void Document::addConsoleMessage(MessageSource source, MessageLevel level, const String& message, unsigned long requestIdentifier)
 {
     if (!isContextThread()) {
-        postTask(AddConsoleMessageTask::create(source, type, level, message));
+        postTask(AddConsoleMessageTask::create(source, level, message));
         return;
     }
 
     if (DOMWindow* window = domWindow()) {
         if (Console* console = window->console())
-            console->addMessage(source, type, level, message, sourceURL, lineNumber, callStack, requestIdentifier);
+            console->addMessage(source, level, message, requestIdentifier, this);
+    }
+}
+
+void Document::addMessage(MessageSource source, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, PassRefPtr<ScriptCallStack> callStack, ScriptState* state, unsigned long requestIdentifier)
+{
+    if (!isContextThread()) {
+        postTask(AddConsoleMessageTask::create(source, level, message));
+        return;
+    }
+
+    if (DOMWindow* window = domWindow()) {
+        if (Console* console = window->console())
+            console->addMessage(source, level, message, sourceURL, lineNumber, callStack, state, requestIdentifier);
     }
 }
 
@@ -5432,15 +5467,21 @@ void Document::addDocumentToFullScreenChangeEventQueue(Document* doc)
 #if ENABLE(DIALOG_ELEMENT)
 void Document::addToTopLayer(Element* element)
 {
+    if (element->isInTopLayer())
+        return;
     ASSERT(!m_topLayerElements.contains(element));
     m_topLayerElements.append(element);
+    element->setIsInTopLayer(true);
 }
 
 void Document::removeFromTopLayer(Element* element)
 {
+    if (!element->isInTopLayer())
+        return;
     size_t position = m_topLayerElements.find(element);
     ASSERT(position != notFound);
     m_topLayerElements.remove(position);
+    element->setIsInTopLayer(false);
 }
 #endif
 
@@ -5652,6 +5693,15 @@ IntSize Document::viewportSize() const
     return view()->visibleContentRect(/* includeScrollbars */ true).size();
 }
 
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+IntSize Document::initialViewportSize() const
+{
+    if (!view())
+        return IntSize();
+    return view()->initialViewportSize();
+}
+#endif
+
 Node* eventTargetNodeForDocument(Document* doc)
 {
     if (!doc)
@@ -5737,7 +5787,7 @@ void Document::updateHoverActiveState(const HitTestRequest& request, HitTestResu
         for (RenderObject* curr = oldActiveNode->renderer(); curr; curr = curr->parent()) {
             if (curr->node() && !curr->isText()) {
                 curr->node()->setActive(false);
-                curr->node()->clearInActiveChain();
+                m_userActionElements.setInActiveChain(curr->node(), false);
             }
         }
         setActiveNode(0);
@@ -5748,7 +5798,7 @@ void Document::updateHoverActiveState(const HitTestRequest& request, HitTestResu
             // will need to reference this chain.
             for (RenderObject* curr = newActiveNode->renderer(); curr; curr = curr->parent()) {
                 if (curr->node() && !curr->isText())
-                    curr->node()->setInActiveChain();
+                    m_userActionElements.setInActiveChain(curr->node(), true);
             }
             setActiveNode(newActiveNode);
         }
@@ -5869,65 +5919,6 @@ void Document::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addMember(m_listsInvalidatedAtDocument);
 }
 
-class ImmutableAttributeDataCacheKey {
-public:
-    ImmutableAttributeDataCacheKey(const Attribute* attributes, unsigned attributeCount)
-        : m_attributes(attributes)
-        , m_attributeCount(attributeCount)
-    { }
-
-    bool operator!=(const ImmutableAttributeDataCacheKey& other) const
-    {
-        if (m_attributeCount != other.m_attributeCount)
-            return true;
-        return memcmp(m_attributes, other.m_attributes, sizeof(Attribute) * m_attributeCount);
-    }
-
-    unsigned hash() const
-    {
-        return StringHasher::hashMemory(m_attributes, m_attributeCount * sizeof(Attribute));
-    }
-
-private:
-    const Attribute* m_attributes;
-    unsigned m_attributeCount;
-};
-
-struct ImmutableAttributeDataCacheEntry {
-    ImmutableAttributeDataCacheEntry(const ImmutableAttributeDataCacheKey& k, PassRefPtr<ElementAttributeData> v)
-        : key(k)
-        , value(v)
-    { }
-
-    ImmutableAttributeDataCacheKey key;
-    RefPtr<ElementAttributeData> value;
-};
-
-PassRefPtr<ElementAttributeData> Document::cachedImmutableAttributeData(const Vector<Attribute>& attributes)
-{
-    ASSERT(!attributes.isEmpty());
-
-    ImmutableAttributeDataCacheKey cacheKey(attributes.data(), attributes.size());
-    unsigned cacheHash = cacheKey.hash();
-
-    ImmutableAttributeDataCache::iterator cacheIterator = m_immutableAttributeDataCache.add(cacheHash, nullptr).iterator;
-    if (cacheIterator->value && cacheIterator->value->key != cacheKey)
-        cacheHash = 0;
-
-    RefPtr<ElementAttributeData> attributeData;
-    if (cacheHash && cacheIterator->value)
-        attributeData = cacheIterator->value->value;
-    else
-        attributeData = ElementAttributeData::createImmutable(attributes);
-
-    if (!cacheHash || cacheIterator->value)
-        return attributeData.release();
-
-    cacheIterator->value = adoptPtr(new ImmutableAttributeDataCacheEntry(ImmutableAttributeDataCacheKey(attributeData->immutableAttributeArray(), attributeData->length()), attributeData));
-
-    return attributeData.release();
-}
-
 bool Document::haveStylesheetsLoaded() const
 {
     return !m_styleSheetCollection->hasPendingSheets() || m_ignorePendingStylesheets;
@@ -5943,5 +5934,23 @@ Locale& Document::getCachedLocale(const AtomicString& locale)
         result.iterator->value = Locale::create(localeKey);
     return *(result.iterator->value);
 }
+
+#if ENABLE(TEMPLATE_ELEMENT)
+Document* Document::templateContentsOwnerDocument()
+{
+    // If DOCUMENT does not have a browsing context, Let TEMPLATE CONTENTS OWNER be DOCUMENT and abort these steps.
+    if (!m_frame)
+        return this;
+
+    if (!m_templateContentsOwnerDocument) {
+        if (isHTMLDocument())
+            m_templateContentsOwnerDocument = HTMLDocument::create(0, blankURL());
+        else
+            m_templateContentsOwnerDocument = Document::create(0, blankURL());
+    }
+
+    return m_templateContentsOwnerDocument.get();
+}
+#endif
 
 } // namespace WebCore

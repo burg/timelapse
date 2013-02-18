@@ -28,6 +28,7 @@
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
 #include "NodeRareData.h"
+#include "NodeTraversal.h"
 
 namespace WebCore {
 
@@ -41,8 +42,8 @@ HTMLNameCollection::HTMLNameCollection(Node* document, CollectionType type, cons
 
 HTMLNameCollection::~HTMLNameCollection()
 {
-    ASSERT(base());
-    ASSERT(base()->isDocumentNode());
+    ASSERT(ownerNode());
+    ASSERT(ownerNode()->isDocumentNode());
     ASSERT(type() == WindowNamedItems || type() == DocumentNamedItems);
 
     ownerNode()->nodeLists()->removeCacheWithAtomicName(this, type(), m_name);
@@ -51,51 +52,49 @@ HTMLNameCollection::~HTMLNameCollection()
 Element* HTMLNameCollection::virtualItemAfter(unsigned& offsetInArray, Element* previous) const
 {
     ASSERT_UNUSED(offsetInArray, !offsetInArray);
-    ASSERT(previous != base());
+    ASSERT(previous != ownerNode());
 
-    Node* current;
+    Element* current;
     if (!previous)
-        current = base()->firstChild();
+        current = ElementTraversal::firstWithin(ownerNode());
     else
-        current = previous->traverseNextNode(base());
+        current = ElementTraversal::next(previous, ownerNode());
 
-    for (; current; current = current->traverseNextNode(base())) {
-        if (!current->isElementNode())
-            continue;
-        Element* e = static_cast<Element*>(current);
+    for (; current; current = ElementTraversal::next(current, ownerNode())) {
         switch (type()) {
-            case WindowNamedItems:
-                // find only images, forms, applets, embeds and objects by name, 
-                // but anything by id
-                if (e->hasTagName(imgTag) ||
-                    e->hasTagName(formTag) ||
-                    e->hasTagName(appletTag) ||
-                    e->hasTagName(embedTag) ||
-                    e->hasTagName(objectTag))
-                    if (e->getNameAttribute() == m_name)
-                        return e;
-                if (e->getIdAttribute() == m_name)
-                    return e;
-                break;
-            case DocumentNamedItems:
-                // find images, forms, applets, embeds, objects and iframes by name, 
-                // applets and object by id, and images by id but only if they have
-                // a name attribute (this very strange rule matches IE)
-                if (e->hasTagName(formTag) || e->hasTagName(embedTag) || e->hasTagName(iframeTag)) {
-                    if (e->getNameAttribute() == m_name)
-                        return e;
-                } else if (e->hasTagName(appletTag)) {
-                    if (e->getNameAttribute() == m_name || e->getIdAttribute() == m_name)
-                        return e;
-                } else if (e->hasTagName(objectTag)) {
-                    if ((e->getNameAttribute() == m_name || e->getIdAttribute() == m_name)
-                            && static_cast<HTMLObjectElement*>(e)->isDocNamedItem())
-                        return e;
-                } else if (e->hasTagName(imgTag)) {
-                    if (e->getNameAttribute() == m_name || (e->getIdAttribute() == m_name && e->hasName()))
-                        return e;
-                }
-                break;
+        case WindowNamedItems:
+            // find only images, forms, applets, embeds and objects by name, 
+            // but anything by id
+            if (current->hasTagName(imgTag)
+                || current->hasTagName(formTag)
+                || current->hasTagName(appletTag)
+                || current->hasTagName(embedTag)
+                || current->hasTagName(objectTag)) {
+                if (current->getNameAttribute() == m_name)
+                    return current;
+            }
+            if (current->getIdAttribute() == m_name)
+                return current;
+            break;
+        case DocumentNamedItems:
+            // find images, forms, applets, embeds, objects and iframes by name, 
+            // applets and object by id, and images by id but only if they have
+            // a name attribute (this very strange rule matches IE)
+            if (current->hasTagName(formTag) || current->hasTagName(embedTag) || current->hasTagName(iframeTag)) {
+                if (current->getNameAttribute() == m_name)
+                    return current;
+            } else if (current->hasTagName(appletTag)) {
+                if (current->getNameAttribute() == m_name || current->getIdAttribute() == m_name)
+                    return current;
+            } else if (current->hasTagName(objectTag)) {
+                if ((current->getNameAttribute() == m_name || current->getIdAttribute() == m_name)
+                    && static_cast<HTMLObjectElement*>(current)->isDocNamedItem())
+                    return current;
+            } else if (current->hasTagName(imgTag)) {
+                if (current->getNameAttribute() == m_name || (current->getIdAttribute() == m_name && current->hasName()))
+                    return current;
+            }
+            break;
         default:
             ASSERT_NOT_REACHED();
         }

@@ -46,6 +46,7 @@
 #include "StringWithDirection.h"
 #include "Timer.h"
 #include "TreeScope.h"
+#include "UserActionElementSet.h"
 #include "ViewportArguments.h"
 #include <wtf/Deque.h>
 #include <wtf/FixedArray.h>
@@ -77,11 +78,11 @@ class DocumentFragment;
 class DocumentLoader;
 class DocumentMarkerController;
 class DocumentParser;
+class DocumentSharedObjectPool;
 class DocumentStyleSheetCollection;
 class DocumentType;
 class DocumentWeakReference;
 class Element;
-class ElementAttributeData;
 class EntityReference;
 class Event;
 class EventListener;
@@ -205,9 +206,6 @@ enum NodeListInvalidationType {
     InvalidateOnAnyAttrChange,
 };
 const int numNodeListInvalidationTypes = InvalidateOnAnyAttrChange + 1;
-
-struct ImmutableAttributeDataCacheEntry;
-typedef HashMap<unsigned, OwnPtr<ImmutableAttributeDataCacheEntry>, AlreadyHashed> ImmutableAttributeDataCache;
 
 class Document : public ContainerNode, public TreeScope, public ScriptExecutionContext {
 public:
@@ -499,6 +497,8 @@ public:
      */
     void styleResolverChanged(StyleResolverUpdateFlag);
 
+    void didAccessStyleResolver();
+
     void evaluateMediaQueryList();
 
     // Never returns 0.
@@ -683,6 +683,8 @@ public:
 
     bool setFocusedNode(PassRefPtr<Node>);
     Node* focusedNode() const { return m_focusedNode.get(); }
+    UserActionElementSet& userActionElements()  { return m_userActionElements; }
+    const UserActionElementSet& userActionElements() const { return m_userActionElements; }
 
     void getFocusableNodes(Vector<RefPtr<Node> >&);
     
@@ -1138,6 +1140,10 @@ public:
 
     IntSize viewportSize() const;
 
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+    IntSize initialViewportSize() const;
+#endif
+
 #if ENABLE(LINK_PRERENDER)
     Prerenderer* prerenderer() { return m_prerenderer.get(); }
 #endif
@@ -1154,7 +1160,7 @@ public:
 
     virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
 
-    PassRefPtr<ElementAttributeData> cachedImmutableAttributeData(const Vector<Attribute>&);
+    DocumentSharedObjectPool* sharedObjectPool() { return m_sharedObjectPool.get(); }
 
     void didRemoveAllPendingStylesheet();
     void setNeedsNotifyRemoveAllPendingStylesheet() { m_needsNotifyRemoveAllPendingStylesheet = true; }
@@ -1171,6 +1177,12 @@ public:
     void removeFromTopLayer(Element*);
     const Vector<RefPtr<Element> >& topLayerElements() const { return m_topLayerElements; }
 #endif
+
+#if ENABLE(TEMPLATE_ELEMENT)
+    Document* templateContentsOwnerDocument();
+#endif
+
+    virtual void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier = 0);
 
 protected:
     Document(Frame*, const KURL&, bool isXHTML, bool isHTML);
@@ -1205,7 +1217,7 @@ private:
     virtual const KURL& virtualURL() const; // Same as url(), but needed for ScriptExecutionContext to implement it without a performance loss for direct calls.
     virtual KURL virtualCompleteURL(const String&) const; // Same as completeURL() for the same reason as above.
 
-    virtual void addMessage(MessageSource, MessageType, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, PassRefPtr<ScriptCallStack>, unsigned long requestIdentifier = 0);
+    virtual void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, PassRefPtr<ScriptCallStack>, ScriptState* = 0, unsigned long requestIdentifier = 0);
 
     virtual double minimumTimerInterval() const;
 
@@ -1253,6 +1265,10 @@ private:
     void addMutationEventListenerTypeIfEnabled(ListenerType);
 
     int m_guardRefCount;
+
+    void styleResolverThrowawayTimerFired(Timer<Document>*);
+    Timer<Document> m_styleResolverThrowawayTimer;
+    double m_lastStyleResolverAccessTime;
 
     OwnPtr<StyleResolver> m_styleResolver;
     bool m_didCalculateStyleResolver;
@@ -1315,6 +1331,7 @@ private:
     RefPtr<Node> m_hoverNode;
     RefPtr<Node> m_activeNode;
     RefPtr<Element> m_documentElement;
+    UserActionElementSet m_userActionElements;
 
     uint64_t m_domTreeVersion;
     static uint64_t s_globalTreeVersion;
@@ -1516,7 +1533,10 @@ private:
     RefPtr<DOMSecurityPolicy> m_domSecurityPolicy;
 #endif
 
-    ImmutableAttributeDataCache m_immutableAttributeDataCache;
+    void sharedObjectPoolClearTimerFired(Timer<Document>*);
+    Timer<Document> m_sharedObjectPoolClearTimer;
+
+    OwnPtr<DocumentSharedObjectPool> m_sharedObjectPool;
 
 #ifndef NDEBUG
     bool m_didDispatchViewportPropertiesChanged;
@@ -1524,6 +1544,10 @@ private:
 
     typedef HashMap<AtomicString, OwnPtr<Locale> > LocaleIdentifierToLocaleMap;
     LocaleIdentifierToLocaleMap m_localeCache;
+
+#if ENABLE(TEMPLATE_ELEMENT)
+    RefPtr<Document> m_templateContentsOwnerDocument;
+#endif
 };
 
 inline void Document::notifyRemovePendingSheetIfNeeded()
@@ -1537,6 +1561,11 @@ inline void Document::notifyRemovePendingSheetIfNeeded()
 inline bool Node::isDocumentNode() const
 {
     return this == m_document;
+}
+
+inline TreeScope* Node::treeScope() const
+{
+    return hasRareData() ? m_data.m_rareData->treeScope() : documentInternal();
 }
 
 inline Node::Node(Document* document, ConstructionType type)

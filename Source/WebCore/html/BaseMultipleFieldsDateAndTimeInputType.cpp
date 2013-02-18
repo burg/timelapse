@@ -42,6 +42,7 @@
 #include "HTMLOptionElement.h"
 #include "KeyboardEvent.h"
 #include "LocalizedStrings.h"
+#include "NodeTraversal.h"
 #include "Page.h"
 #include "PickerIndicatorElement.h"
 #include "PlatformLocale.h"
@@ -86,12 +87,12 @@ bool BaseMultipleFieldsDateAndTimeInputType::hasCustomFocusLogic() const
 
 bool BaseMultipleFieldsDateAndTimeInputType::isEditControlOwnerDisabled() const
 {
-    return element()->readOnly();
+    return element()->disabled();
 }
 
 bool BaseMultipleFieldsDateAndTimeInputType::isEditControlOwnerReadOnly() const
 {
-    return element()->disabled();
+    return element()->readOnly();
 }
 
 void BaseMultipleFieldsDateAndTimeInputType::focusAndSelectSpinButtonOwner()
@@ -102,7 +103,7 @@ void BaseMultipleFieldsDateAndTimeInputType::focusAndSelectSpinButtonOwner()
 
 bool BaseMultipleFieldsDateAndTimeInputType::shouldSpinButtonRespondToMouseEvents()
 {
-    return !element()->disabled() && !element()->readOnly();
+    return !element()->isDisabledOrReadOnly();
 }
 
 bool BaseMultipleFieldsDateAndTimeInputType::shouldSpinButtonRespondToWheelEvents()
@@ -126,7 +127,7 @@ void BaseMultipleFieldsDateAndTimeInputType::spinButtonStepUp()
 
 bool BaseMultipleFieldsDateAndTimeInputType::isPickerIndicatorOwnerDisabledOrReadOnly() const
 {
-    return element()->disabled() || element()->readOnly();
+    return element()->isDisabledOrReadOnly();
 }
 
 void BaseMultipleFieldsDateAndTimeInputType::pickerIndicatorChooseValue(const String& value)
@@ -358,7 +359,7 @@ void BaseMultipleFieldsDateAndTimeInputType::updateInnerTextValue()
         return;
 
     AtomicString direction = element()->locale().isRTL() ? AtomicString("rtl", AtomicString::ConstructFromLiteral) : AtomicString("ltr", AtomicString::ConstructFromLiteral);
-    if (Element* container = firstElementChild(element()->userAgentShadowRoot()))
+    if (Element* container = ElementTraversal::firstWithin(element()->userAgentShadowRoot()))
         container->setAttribute(HTMLNames::dirAttr, direction);
 
     DateTimeEditElement::LayoutParameters layoutParameters(element()->locale(), createStepRange(AnyIsDefaultStep));

@@ -63,6 +63,7 @@
 #include "MediaFeatureNames.h"
 #include "Navigator.h"
 #include "NodeList.h"
+#include "NodeTraversal.h"
 #include "Page.h"
 #include "PageCache.h"
 #include "PageGroup.h"
@@ -255,7 +256,7 @@ void Frame::setView(PassRefPtr<FrameView> view)
     // from messing with the view such that its scroll bars won't be torn down.
     // FIXME: We should revisit this.
     if (m_view)
-        m_view->detachCustomScrollbars();
+        m_view->prepareForDetach();
 
     // Prepare for destruction now, so any unload event handlers get run and the DOMWindow is
     // notified. If we wait until the view is destroyed, then things won't be hooked up enough for
@@ -375,7 +376,7 @@ String Frame::searchForLabelsAboveCell(RegularExpression* regExp, HTMLTableCellE
     if (aboveCell) {
         // search within the above cell we found for a match
         size_t lengthSearched = 0;    
-        for (Node* n = aboveCell->firstChild(); n; n = n->traverseNextNode(aboveCell)) {
+        for (Node* n = aboveCell->firstChild(); n; n = NodeTraversal::next(n, aboveCell)) {
             if (n->isTextNode() && n->renderer() && n->renderer()->style()->visibility() == VISIBLE) {
                 // For each text chunk, run the regexp
                 String nodeString = n->nodeValue();
@@ -416,10 +417,7 @@ String Frame::searchForLabelsBeforeElement(const Vector<String>& labels, Element
     // walk backwards in the node tree, until another element, or form, or end of tree
     int unsigned lengthSearched = 0;
     Node* n;
-    for (n = element->traversePreviousNode();
-         n && lengthSearched < charsSearchedThreshold;
-         n = n->traversePreviousNode())
-    {
+    for (n = NodeTraversal::previous(element); n && lengthSearched < charsSearchedThreshold; n = NodeTraversal::previous(n)) {
         if (n->hasTagName(formTag)
             || (n->isHTMLElement() && static_cast<Element*>(n)->isFormControlElement()))
         {

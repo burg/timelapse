@@ -30,6 +30,7 @@
 #include "HTMLNames.h"
 #include "HitTestResult.h"
 #include "IntSize.h"
+#include "NodeTraversal.h"
 #include "RenderObject.h"
 
 using namespace std;
@@ -61,10 +62,10 @@ HTMLMapElement::~HTMLMapElement()
 bool HTMLMapElement::mapMouseEvent(LayoutPoint location, const LayoutSize& size, HitTestResult& result)
 {
     HTMLAreaElement* defaultArea = 0;
-    Node *node = this;
-    while ((node = node->traverseNextNode(this))) {
-        if (node->hasTagName(areaTag)) {
-            HTMLAreaElement* areaElt = static_cast<HTMLAreaElement*>(node);
+    Element* element = this;
+    while ((element = ElementTraversal::next(element, this))) {
+        if (element->hasTagName(areaTag)) {
+            HTMLAreaElement* areaElt = static_cast<HTMLAreaElement*>(element);
             if (areaElt->isDefault()) {
                 if (!defaultArea)
                     defaultArea = areaElt;

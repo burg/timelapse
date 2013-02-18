@@ -22,11 +22,11 @@
 #include "EwkViewImpl.h"
 
 #include "ContextMenuClientEfl.h"
+#include "CoordinatedLayerTreeHostProxy.h"
 #include "EflScreenUtilities.h"
 #include "FindClientEfl.h"
 #include "FormClientEfl.h"
 #include "InputMethodContextEfl.h"
-#include "LayerTreeCoordinatorProxy.h"
 #include "LayerTreeRenderer.h"
 #include "PageClientBase.h"
 #include "PageClientDefaultImpl.h"
@@ -114,6 +114,9 @@ const Evas_Object* EwkViewImpl::viewFromPageViewMap(const WKPageRef page)
 EwkViewImpl::EwkViewImpl(Evas_Object* view, PassRefPtr<EwkContext> context, PassRefPtr<WebPageGroup> pageGroup, ViewBehavior behavior)
     : m_view(view)
     , m_context(context)
+#if USE(ACCELERATED_COMPOSITING)
+    , m_pendingSurfaceResize(false)
+#endif
     , m_pageClient(behavior == DefaultBehavior ? PageClientDefaultImpl::create(this) : PageClientLegacyImpl::create(this))
     , m_pageProxy(m_context->webContext()->createWebPage(m_pageClient.get(), pageGroup.get()))
     , m_pageLoadClient(PageLoadClientEfl::create(this))
@@ -126,11 +129,11 @@ EwkViewImpl::EwkViewImpl(Evas_Object* view, PassRefPtr<EwkContext> context, Pass
 #if ENABLE(VIBRATION)
     , m_vibrationClient(VibrationClientEfl::create(this))
 #endif
-    , m_backForwardList(Ewk_Back_Forward_List::create(toAPI(m_pageProxy->backForwardList())))
+    , m_backForwardList(EwkBackForwardList::create(toAPI(m_pageProxy->backForwardList())))
 #if USE(TILED_BACKING_STORE)
     , m_scaleFactor(1)
 #endif
-    , m_settings(Ewk_Settings::create(this))
+    , m_settings(EwkSettings::create(this))
     , m_cursorIdentifier(0)
     , m_mouseEventsEnabled(false)
 #if ENABLE(TOUCH_EVENTS)
@@ -168,7 +171,7 @@ EwkViewImpl::EwkViewImpl(Evas_Object* view, PassRefPtr<EwkContext> context, Pass
     setMouseEventsEnabled(true);
 
     // Listen for favicon changes.
-    Ewk_Favicon_Database* iconDatabase = m_context->faviconDatabase();
+    EwkFaviconDatabase* iconDatabase = m_context->faviconDatabase();
     ASSERT(iconDatabase);
 
     iconDatabase->watchChanges(IconChangeCallbackData(EwkViewImpl::onFaviconChanged, this));
@@ -181,7 +184,7 @@ EwkViewImpl::~EwkViewImpl()
     m_pageProxy->close();
 
     // Unregister icon change callback.
-    Ewk_Favicon_Database* iconDatabase = m_context->faviconDatabase();
+    EwkFaviconDatabase* iconDatabase = m_context->faviconDatabase();
     ASSERT(iconDatabase);
 
     iconDatabase->unwatchChanges(EwkViewImpl::onFaviconChanged);
@@ -292,7 +295,7 @@ AffineTransform EwkViewImpl::transformFromScene() const
 
 #if USE(TILED_BACKING_STORE)
     transform.scale(1 / m_scaleFactor);
-    transform.translate(discretePagePosition().x(), discretePagePosition().y());
+    transform.translate(pagePosition().x(), pagePosition().y());
 #endif
 
     Ewk_View_Smart_Data* sd = smartData();
@@ -348,11 +351,11 @@ LayerTreeRenderer* EwkViewImpl::layerTreeRenderer()
     if (!drawingArea)
         return 0;
 
-    WebKit::LayerTreeCoordinatorProxy* layerTreeCoordinatorProxy = drawingArea->layerTreeCoordinatorProxy();
-    if (!layerTreeCoordinatorProxy)
+    WebKit::CoordinatedLayerTreeHostProxy* coordinatedLayerTreeHostProxy = drawingArea->coordinatedLayerTreeHostProxy();
+    if (!coordinatedLayerTreeHostProxy)
         return 0;
 
-    return layerTreeCoordinatorProxy->layerTreeRenderer();
+    return coordinatedLayerTreeHostProxy->layerTreeRenderer();
 }
 #endif
 
@@ -361,7 +364,12 @@ void EwkViewImpl::displayTimerFired(Timer<EwkViewImpl>*)
 #if USE(COORDINATED_GRAPHICS)
     Ewk_View_Smart_Data* sd = smartData();
 
-    evas_gl_make_current(m_evasGL.get(), evasGLSurface(), evasGLContext());
+    if (m_pendingSurfaceResize) {
+        // Create a GL surface here so that Evas has no chance of painting to an empty GL surface.
+        createGLSurface(IntSize(sd->view.w, sd->view.h));
+        m_pendingSurfaceResize = false;
+    } else
+        evas_gl_make_current(m_evasGL.get(), evasGLSurface(), evasGLContext());
 
     // We are supposed to clip to the actual viewport, nothing less.
     IntRect viewport(sd->view.x, sd->view.y, sd->view.w, sd->view.h);
@@ -383,7 +391,7 @@ void EwkViewImpl::displayTimerFired(Timer<EwkViewImpl>*)
             return;
 
         RefPtr<cairo_t> graphicsContext = adoptRef(cairo_create(surface.get()));
-        cairo_translate(graphicsContext.get(), - discretePagePosition().x(), - discretePagePosition().y());
+        cairo_translate(graphicsContext.get(), - pagePosition().x(), - pagePosition().y());
         cairo_scale(graphicsContext.get(), m_scaleFactor, m_scaleFactor);
         renderer->paintToGraphicsContext(graphicsContext.get());
         evas_object_image_data_update_add(sd->image, 0, 0, viewport.width(), viewport.height());
@@ -608,7 +616,7 @@ void EwkViewImpl::setTouchEventsEnabled(bool enabled)
  */
 void EwkViewImpl::informIconChange()
 {
-    Ewk_Favicon_Database* iconDatabase = m_context->faviconDatabase();
+    EwkFaviconDatabase* iconDatabase = m_context->faviconDatabase();
     ASSERT(iconDatabase);
 
     m_faviconURL = ewk_favicon_database_icon_url_get(iconDatabase, m_url);
@@ -710,7 +718,7 @@ void EwkViewImpl::requestColorPicker(WKColorPickerResultListenerRef listener, co
     if (m_colorPicker)
         dismissColorPicker();
 
-    m_colorPicker = Ewk_Color_Picker::create(listener, color);
+    m_colorPicker = EwkColorPicker::create(listener, color);
 
     sd->api->input_picker_color_request(sd, m_colorPicker.get());
 }
@@ -733,15 +741,6 @@ void EwkViewImpl::dismissColorPicker()
     m_colorPicker.clear();
 }
 #endif
-
-void EwkViewImpl::informContentsSizeChange(const IntSize& size)
-{
-#if USE(COORDINATED_GRAPHICS)
-    m_pageClient->didChangeContentsSize(size);
-#else
-    UNUSED_PARAM(size);
-#endif
-}
 
 COMPILE_ASSERT_MATCHING_ENUM(EWK_TEXT_DIRECTION_RIGHT_TO_LEFT, RTL);
 COMPILE_ASSERT_MATCHING_ENUM(EWK_TEXT_DIRECTION_LEFT_TO_RIGHT, LTR);
@@ -791,7 +790,7 @@ void EwkViewImpl::requestPopupMenu(WebPopupMenuProxyEfl* popupMenuProxy, const I
     if (m_popupMenu)
         closePopupMenu();
 
-    m_popupMenu = Ewk_Popup_Menu::create(this, popupMenuProxy, items, selectedIndex);
+    m_popupMenu = EwkPopupMenu::create(this, popupMenuProxy, items, selectedIndex);
 
     sd->api->popup_menu_show(sd, rect, static_cast<Ewk_Text_Direction>(textDirection), pageScaleFactor, m_popupMenu.get());
 }

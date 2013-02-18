@@ -193,7 +193,14 @@ bool FrameLoaderClient::shouldUseCredentialStorage(WebCore::DocumentLoader*, uns
 void FrameLoaderClient::dispatchDidReceiveAuthenticationChallenge(WebCore::DocumentLoader*, unsigned long  identifier, const AuthenticationChallenge& challenge)
 {
     if (DumpRenderTreeSupportGtk::dumpRenderTreeModeEnabled()) {
-        challenge.authenticationClient()->receivedRequestToContinueWithoutCredential(challenge);
+        CString username;
+        CString password;
+        if (!DumpRenderTreeSupportGtk::s_authenticationCallback || !DumpRenderTreeSupportGtk::s_authenticationCallback(username, password)) {
+            challenge.authenticationClient()->receivedRequestToContinueWithoutCredential(challenge);
+            return;
+        }
+
+        challenge.authenticationClient()->receivedCredential(challenge, Credential(String::fromUTF8(username.data()), String::fromUTF8(password.data()), CredentialPersistenceForSession));
         return;
     }
 
@@ -652,7 +659,9 @@ bool FrameLoaderClient::shouldStopLoadingForHistoryItem(HistoryItem* item) const
 
 void FrameLoaderClient::didDisplayInsecureContent()
 {
-    notImplemented();
+    if (!DumpRenderTreeSupportGtk::dumpRenderTreeModeEnabled() || !DumpRenderTreeSupportGtk::s_frameLoadEventCallback)
+        return;
+    DumpRenderTreeSupportGtk::s_frameLoadEventCallback(m_frame, DumpRenderTreeSupportGtk::DidDisplayInsecureContent, 0);
 }
 
 void FrameLoaderClient::didRunInsecureContent(SecurityOrigin* coreOrigin, const KURL& url)
@@ -662,7 +671,9 @@ void FrameLoaderClient::didRunInsecureContent(SecurityOrigin* coreOrigin, const 
 
 void FrameLoaderClient::didDetectXSS(const KURL&, bool)
 {
-    notImplemented();
+    if (!DumpRenderTreeSupportGtk::dumpRenderTreeModeEnabled() || !DumpRenderTreeSupportGtk::s_frameLoadEventCallback)
+        return;
+    DumpRenderTreeSupportGtk::s_frameLoadEventCallback(m_frame, DumpRenderTreeSupportGtk::DidDetectXSS, 0);
 }
 
 void FrameLoaderClient::forceLayout()
@@ -699,17 +710,23 @@ void FrameLoaderClient::dispatchDidHandleOnloadEvents()
 
 void FrameLoaderClient::dispatchDidReceiveServerRedirectForProvisionalLoad()
 {
-    notImplemented();
+    if (!DumpRenderTreeSupportGtk::dumpRenderTreeModeEnabled() || !DumpRenderTreeSupportGtk::s_frameLoadEventCallback)
+        return;
+    DumpRenderTreeSupportGtk::s_frameLoadEventCallback(m_frame, DumpRenderTreeSupportGtk::DidReceiveServerRedirectForProvisionalLoad, 0);
 }
 
 void FrameLoaderClient::dispatchDidCancelClientRedirect()
 {
-    notImplemented();
+    if (!DumpRenderTreeSupportGtk::dumpRenderTreeModeEnabled() || !DumpRenderTreeSupportGtk::s_frameLoadEventCallback)
+        return;
+    DumpRenderTreeSupportGtk::s_frameLoadEventCallback(m_frame, DumpRenderTreeSupportGtk::DidCancelClientRedirect, 0);
 }
 
-void FrameLoaderClient::dispatchWillPerformClientRedirect(const KURL&, double, double)
+void FrameLoaderClient::dispatchWillPerformClientRedirect(const KURL& url, double, double)
 {
-    notImplemented();
+    if (!DumpRenderTreeSupportGtk::dumpRenderTreeModeEnabled() || !DumpRenderTreeSupportGtk::s_frameLoadEventCallback)
+        return;
+    DumpRenderTreeSupportGtk::s_frameLoadEventCallback(m_frame, DumpRenderTreeSupportGtk::WillPerformClientRedirectToURL, url.string().utf8().data());
 }
 
 void FrameLoaderClient::dispatchDidChangeLocationWithinPage()

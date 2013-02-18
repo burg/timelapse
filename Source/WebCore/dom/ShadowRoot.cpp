@@ -44,6 +44,7 @@
 #include "RuntimeEnabledFeatures.h"
 #include "SVGNames.h"
 #include "StyleResolver.h"
+#include "Text.h"
 #include "markup.h"
 
 // FIXME: This shouldn't happen. https://bugs.webkit.org/show_bug.cgi?id=88834
@@ -164,15 +165,10 @@ PassRefPtr<Node> ShadowRoot::cloneNode(bool)
     return 0;
 }
 
-PassRefPtr<Node> ShadowRoot::cloneNode(bool deep, ExceptionCode& ec)
+PassRefPtr<Node> ShadowRoot::cloneNode(bool, ExceptionCode& ec)
 {
-    RefPtr<Node> clone = cloneNode(deep);
-    if (!clone) {
-        ec = DATA_CLONE_ERR;
-        return 0;
-    }
-
-    return clone;
+    ec = DATA_CLONE_ERR;
+    return 0;
 }
 
 String ShadowRoot::innerHTML() const
@@ -201,6 +197,26 @@ bool ShadowRoot::childTypeAllowed(NodeType type) const
     default:
         return false;
     }
+}
+
+void ShadowRoot::recalcStyle(StyleChange change)
+{
+    // ShadowRoot doesn't support custom callbacks.
+    ASSERT(!hasCustomCallbacks());
+
+    StyleResolver* styleResolver = document()->styleResolver();
+    styleResolver->pushParentShadowRoot(this);
+
+    for (Node* child = firstChild(); child; child = child->nextSibling()) {
+        if (child->isElementNode())
+            static_cast<Element*>(child)->recalcStyle(change);
+        else if (child->isTextNode())
+            toText(child)->recalcTextStyle(change);
+    }
+
+    styleResolver->popParentShadowRoot(this);
+    clearNeedsStyleRecalc();
+    clearChildNeedsStyleRecalc();
 }
 
 ElementShadow* ShadowRoot::owner() const
@@ -267,7 +283,7 @@ Node::InsertionNotificationRequest ShadowRoot::insertedInto(ContainerNode* inser
     if (m_registeredWithParentShadowRoot)
         return InsertionDone;
 
-    if (ShadowRoot* root = host()->shadowRoot()) {
+    if (ShadowRoot* root = host()->containingShadowRoot()) {
         root->registerElementShadow();
         m_registeredWithParentShadowRoot = true;
     }
@@ -278,9 +294,9 @@ Node::InsertionNotificationRequest ShadowRoot::insertedInto(ContainerNode* inser
 void ShadowRoot::removedFrom(ContainerNode* insertionPoint)
 {
     if (insertionPoint->inDocument() && m_registeredWithParentShadowRoot) {
-        ShadowRoot* root = host()->shadowRoot();
+        ShadowRoot* root = host()->containingShadowRoot();
         if (!root)
-            root = insertionPoint->shadowRoot();
+            root = insertionPoint->containingShadowRoot();
 
         if (root)
             root->unregisterElementShadow();
@@ -342,14 +358,14 @@ inline ShadowRootContentDistributionData* ShadowRoot::ensureDistributionData()
     return m_distributionData.get();
 }   
 
-void ShadowRoot::registerShadowElement()
+void ShadowRoot::registerInsertionPoint(InsertionPoint* point)
 {
-    ensureDistributionData()->incrementNumberOfShadowElementChildren();
+    ensureDistributionData()->regiterInsertionPoint(this, point);
 }
 
-void ShadowRoot::unregisterShadowElement()
+void ShadowRoot::unregisterInsertionPoint(InsertionPoint* point)
 {
-    distributionData()->decrementNumberOfShadowElementChildren();
+    ensureDistributionData()->unregisterInsertionPoint(this, point);
 }
 
 bool ShadowRoot::hasShadowInsertionPoint() const
@@ -358,16 +374,6 @@ bool ShadowRoot::hasShadowInsertionPoint() const
         return false;
 
     return distributionData()->hasShadowElementChildren();
-}
-
-void ShadowRoot::registerContentElement()
-{
-    ensureDistributionData()->incrementNumberOfContentElementChildren();
-}
-
-void ShadowRoot::unregisterContentElement()
-{
-    distributionData()->decrementNumberOfContentElementChildren();
 }
 
 bool ShadowRoot::hasContentElement() const

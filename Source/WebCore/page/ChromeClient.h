@@ -23,6 +23,7 @@
 #define ChromeClient_h
 
 #include "AXObjectCache.h"
+#include "ConsoleAPITypes.h"
 #include "ConsoleTypes.h"
 #include "Cursor.h"
 #include "FocusDirection.h"
@@ -32,6 +33,7 @@
 #include "PopupMenu.h"
 #include "PopupMenuClient.h"
 #include "RenderEmbeddedObject.h"
+#include "RenderSnapshottedPlugIn.h"
 #include "ScrollTypes.h"
 #include "SearchPopupMenu.h"
 #include "WebCoreKeyboardUIMode.h"
@@ -134,7 +136,12 @@ namespace WebCore {
 
         virtual void setResizable(bool) = 0;
         
-        virtual void addMessageToConsole(MessageSource, MessageType, MessageLevel, const String& message, unsigned int lineNumber, const String& sourceID) = 0;
+        virtual void addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, const String& sourceID) = 0;
+        // FIXME: Remove this MessageType variant once all the clients are updated.
+        virtual void addMessageToConsole(MessageSource source, MessageType, MessageLevel level, const String& message, unsigned lineNumber, const String& sourceID)
+        {
+            addMessageToConsole(source, level, message, lineNumber, sourceID);
+        }
 
         virtual bool canRunBeforeUnloadConfirmPanel() = 0;
         virtual bool runBeforeUnloadConfirmPanel(const String& message, Frame* frame) = 0;
@@ -371,6 +378,8 @@ namespace WebCore {
         virtual FloatSize minimumWindowSize() const { return FloatSize(100, 100); };
 
         virtual bool isEmptyChromeClient() const { return false; }
+
+        virtual PassRefPtr<Image> plugInStartLabelImage(RenderSnapshottedPlugIn::LabelSize) const { return 0; }
 
     protected:
         virtual ~ChromeClient() { }

@@ -461,6 +461,8 @@ void RenderBoxModelObject::computeStickyPositionConstraints(StickyPositionViewpo
 
     LayoutRect containerContentRect = containingBlock->contentBoxRect();
 
+    // Sticky positioned element ignore any override logical width on the containing block (as they don't call
+    // containingBlockLogicalWidthForContent). It's unclear whether this is totally fine.
     LayoutUnit minLeftMargin = minimumValueForLength(style()->marginLeft(), containingBlock->availableLogicalWidth(), view());
     LayoutUnit minTopMargin = minimumValueForLength(style()->marginTop(), containingBlock->availableLogicalWidth(), view());
     LayoutUnit minRightMargin = minimumValueForLength(style()->marginRight(), containingBlock->availableLogicalWidth(), view());
@@ -555,7 +557,7 @@ LayoutUnit RenderBoxModelObject::computedCSSPaddingTop() const
     RenderView* renderView = 0;
     Length padding = style()->paddingTop();
     if (padding.isPercent())
-        w = containingBlock()->availableLogicalWidth();
+        w = containingBlockLogicalWidthForContent();
     else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
@@ -567,7 +569,7 @@ LayoutUnit RenderBoxModelObject::computedCSSPaddingBottom() const
     RenderView* renderView = 0;
     Length padding = style()->paddingBottom();
     if (padding.isPercent())
-        w = containingBlock()->availableLogicalWidth();
+        w = containingBlockLogicalWidthForContent();
     else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
@@ -579,7 +581,7 @@ LayoutUnit RenderBoxModelObject::computedCSSPaddingLeft() const
     RenderView* renderView = 0;
     Length padding = style()->paddingLeft();
     if (padding.isPercent())
-        w = containingBlock()->availableLogicalWidth();
+        w = containingBlockLogicalWidthForContent();
     else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
@@ -591,7 +593,7 @@ LayoutUnit RenderBoxModelObject::computedCSSPaddingRight() const
     RenderView* renderView = 0;
     Length padding = style()->paddingRight();
     if (padding.isPercent())
-        w = containingBlock()->availableLogicalWidth();
+        w = containingBlockLogicalWidthForContent();
     else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
@@ -603,7 +605,7 @@ LayoutUnit RenderBoxModelObject::computedCSSPaddingBefore() const
     RenderView* renderView = 0;
     Length padding = style()->paddingBefore();
     if (padding.isPercent())
-        w = containingBlock()->availableLogicalWidth();
+        w = containingBlockLogicalWidthForContent();
     else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
@@ -615,7 +617,7 @@ LayoutUnit RenderBoxModelObject::computedCSSPaddingAfter() const
     RenderView* renderView = 0;
     Length padding = style()->paddingAfter();
     if (padding.isPercent())
-        w = containingBlock()->availableLogicalWidth();
+        w = containingBlockLogicalWidthForContent();
     else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
@@ -627,7 +629,7 @@ LayoutUnit RenderBoxModelObject::computedCSSPaddingStart() const
     RenderView* renderView = 0;
     Length padding = style()->paddingStart();
     if (padding.isPercent())
-        w = containingBlock()->availableLogicalWidth();
+        w = containingBlockLogicalWidthForContent();
     else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
@@ -639,7 +641,7 @@ LayoutUnit RenderBoxModelObject::computedCSSPaddingEnd() const
     RenderView* renderView = 0;
     Length padding = style()->paddingEnd();
     if (padding.isPercent())
-        w = containingBlock()->availableLogicalWidth();
+        w = containingBlockLogicalWidthForContent();
     else if (padding.isViewportPercentage())
         renderView = view();
     return minimumValueForLength(padding, w, renderView);
@@ -1225,18 +1227,23 @@ void RenderBoxModelObject::calculateBackgroundImageGeometry(const FillLayer* fil
     EFillRepeat backgroundRepeatX = fillLayer->repeatX();
     EFillRepeat backgroundRepeatY = fillLayer->repeatY();
     RenderView* renderView = view();
+    int availableWidth = positioningAreaSize.width() - geometry.tileSize().width();
+    int availableHeight = positioningAreaSize.height() - geometry.tileSize().height();
 
-    LayoutUnit xPosition = minimumValueForLength(fillLayer->xPosition(), positioningAreaSize.width() - geometry.tileSize().width(), renderView, true);
+    LayoutUnit computedXPosition = minimumValueForLength(fillLayer->xPosition(), availableWidth, renderView, true);
     if (backgroundRepeatX == RepeatFill)
-        geometry.setPhaseX(geometry.tileSize().width() ? geometry.tileSize().width() - roundToInt(xPosition + left) % geometry.tileSize().width() : 0);
-    else
-        geometry.setNoRepeatX(xPosition + left);
-
-    LayoutUnit yPosition = minimumValueForLength(fillLayer->yPosition(), positioningAreaSize.height() - geometry.tileSize().height(), renderView, true);
+        geometry.setPhaseX(geometry.tileSize().width() ? geometry.tileSize().width() - roundToInt(computedXPosition + left) % geometry.tileSize().width() : 0);
+    else {
+        int xOffset = fillLayer->backgroundXOrigin() == RightEdge ? availableWidth - computedXPosition : computedXPosition;
+        geometry.setNoRepeatX(left + xOffset);
+    }
+    LayoutUnit computedYPosition = minimumValueForLength(fillLayer->yPosition(), availableHeight, renderView, true);
     if (backgroundRepeatY == RepeatFill)
-        geometry.setPhaseY(geometry.tileSize().height() ? geometry.tileSize().height() - roundToInt(yPosition + top) % geometry.tileSize().height() : 0);
-    else 
-        geometry.setNoRepeatY(yPosition + top);
+        geometry.setPhaseY(geometry.tileSize().height() ? geometry.tileSize().height() - roundToInt(computedYPosition + top) % geometry.tileSize().height() : 0);
+    else {
+        int yOffset = fillLayer->backgroundYOrigin() == BottomEdge ? availableHeight - computedYPosition : computedYPosition;
+        geometry.setNoRepeatY(top + yOffset);
+    }
 
     if (fixedAttachment)
         geometry.useFixedAttachment(snappedPaintRect.location());
@@ -2758,7 +2765,7 @@ LayoutRect RenderBoxModelObject::localCaretRectForEmptyElement(LayoutUnit width,
 
     LayoutUnit y = paddingTop() + borderTop();
 
-    return LayoutRect(x, y, caretWidth, height);
+    return currentStyle->isHorizontalWritingMode() ? LayoutRect(x, y, caretWidth, height) : LayoutRect(y, x, height, caretWidth);
 }
 
 bool RenderBoxModelObject::shouldAntialiasLines(GraphicsContext* context)

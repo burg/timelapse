@@ -29,12 +29,14 @@
 #include "SkTypes.h"
 #include "SkBitmap.h"
 #include "SkSize.h"
+#include "ThreadSafeDataTransport.h"
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/ThreadingPrimitives.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -66,21 +68,22 @@ public:
 
 private:
     // These methods are called while m_decodeMutex is locked.
-    const ScaledImageFragment* tryToLockCache(const SkISize& scaledSize);
+    const ScaledImageFragment* tryToLockCompleteCache(const SkISize& scaledSize);
     const ScaledImageFragment* tryToScale(const ScaledImageFragment* fullSizeImage, const SkISize& scaledSize);
+    const ScaledImageFragment* tryToResumeDecodeAndScale(const SkISize& scaledSize);
     const ScaledImageFragment* tryToDecodeAndScale(const SkISize& scaledSize);
 
+    // Use the given decoder to decode. If a decoder is not given then try to create one.
+    PassOwnPtr<ScaledImageFragment> decode(ImageDecoder**);
+
     SkISize m_fullSize;
-    RefPtr<SharedBuffer> m_data;
-    bool m_allDataReceived;
+    ThreadSafeDataTransport m_data;
+    bool m_decodeFailedAndEmpty;
 
     OwnPtr<ImageDecoderFactory> m_imageDecoderFactory;
 
     // Prevents multiple decode operations on the same data.
     Mutex m_decodeMutex;
-
-    // Prevents concurrent access to m_data.
-    Mutex m_dataMutex;
 };
 
 } // namespace WebCore

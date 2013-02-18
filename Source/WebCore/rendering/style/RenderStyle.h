@@ -64,7 +64,6 @@
 #include "StyleTransformData.h"
 #include "StyleVisualData.h"
 #include "TextDirection.h"
-#include "TextOrientation.h"
 #include "ThemeTypes.h"
 #include "TransformOperations.h"
 #include "UnicodeBidi.h"
@@ -707,6 +706,8 @@ public:
 
     short widows() const { return rareInheritedData->widows; }
     short orphans() const { return rareInheritedData->orphans; }
+    bool hasAutoWidows() const { return rareInheritedData->m_hasAutoWidows; }
+    bool hasAutoOrphans() const { return rareInheritedData->m_hasAutoOrphans; }
     EPageBreak pageBreakInside() const { return static_cast<EPageBreak>(noninherited_flags._page_break_inside); }
     EPageBreak pageBreakBefore() const { return static_cast<EPageBreak>(noninherited_flags._page_break_before); }
     EPageBreak pageBreakAfter() const { return static_cast<EPageBreak>(noninherited_flags._page_break_after); }
@@ -838,6 +839,8 @@ public:
 
     RubyPosition rubyPosition() const { return static_cast<RubyPosition>(rareInheritedData->m_rubyPosition); }
 
+    TextOrientation textOrientation() const { return static_cast<TextOrientation>(rareInheritedData->m_textOrientation); }
+    
     // Return true if any transform related property (currently transform, transformStyle3D or perspective) 
     // indicates that we are transforming
     bool hasTransformRelatedProperty() const { return hasTransform() || preserves3D() || hasPerspective(); }
@@ -1199,8 +1202,12 @@ public:
     int zIndex() const { return m_box->zIndex(); }
     void setZIndex(int v) { SET_VAR(m_box, m_hasAutoZIndex, false); SET_VAR(m_box, m_zIndex, v) }
 
-    void setWidows(short w) { SET_VAR(rareInheritedData, widows, w); }
-    void setOrphans(short o) { SET_VAR(rareInheritedData, orphans, o); }
+    void setHasAutoWidows() { SET_VAR(rareInheritedData, m_hasAutoWidows, true); SET_VAR(rareInheritedData, widows, initialWidows()) }
+    void setWidows(short w) { SET_VAR(rareInheritedData, m_hasAutoWidows, false); SET_VAR(rareInheritedData, widows, w); }
+
+    void setHasAutoOrphans() { SET_VAR(rareInheritedData, m_hasAutoOrphans, true); SET_VAR(rareInheritedData, orphans, initialOrphans()) }
+    void setOrphans(short o) { SET_VAR(rareInheritedData, m_hasAutoOrphans, false); SET_VAR(rareInheritedData, orphans, o); }
+
     // For valid values of page-break-inside see http://www.w3.org/TR/CSS21/page.html#page-break-props
     void setPageBreakInside(EPageBreak b) { ASSERT(b == PBAUTO || b == PBAVOID); noninherited_flags._page_break_inside = b; }
     void setPageBreakBefore(EPageBreak b) { noninherited_flags._page_break_before = b; }
@@ -1301,6 +1308,7 @@ public:
     void setTextEmphasisMark(TextEmphasisMark mark) { SET_VAR(rareInheritedData, textEmphasisMark, mark); }
     void setTextEmphasisCustomMark(const AtomicString& mark) { SET_VAR(rareInheritedData, textEmphasisCustomMark, mark); }
     void setTextEmphasisPosition(TextEmphasisPosition position) { SET_VAR(rareInheritedData, textEmphasisPosition, position); }
+    bool setTextOrientation(TextOrientation);
 
     void setRubyPosition(RubyPosition position) { SET_VAR(rareInheritedData, m_rubyPosition, position); }
 
@@ -1472,7 +1480,14 @@ public:
             || display() == LIST_ITEM;
     }
 
-    void setWritingMode(WritingMode v) { inherited_flags.m_writingMode = v; }
+    bool setWritingMode(WritingMode v)
+    {
+        if (v == writingMode())
+            return false;
+
+        inherited_flags.m_writingMode = v;
+        return true;
+    }
 
     // A unique style is one that has matches something that makes it impossible to share.
     bool unique() const { return noninherited_flags.unique; }
@@ -1789,6 +1804,15 @@ inline bool RenderStyle::setTextSizeAdjust(bool b)
     if (compareEqual(rareInheritedData->textSizeAdjust, b))
         return false;
     rareInheritedData.access()->textSizeAdjust = b;
+    return true;
+}
+
+inline bool RenderStyle::setTextOrientation(TextOrientation textOrientation)
+{
+    if (compareEqual(rareInheritedData->m_textOrientation, textOrientation))
+        return false;
+
+    rareInheritedData.access()->m_textOrientation = textOrientation;
     return true;
 }
 

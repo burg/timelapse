@@ -372,6 +372,7 @@ public:
     virtual void setShowRepaintCounter(bool show) { m_showRepaintCounter = show; }
     bool isShowingRepaintCounter() const { return m_showRepaintCounter; }
 
+    // FIXME: this is really a paint count.
     int repaintCount() const { return m_repaintCount; }
     int incrementRepaintCount() { return ++m_repaintCount; }
 
@@ -424,7 +425,18 @@ public:
     static void setGraphicsLayerFactory(GraphicsLayerFactoryCallback);
 #endif
 
+    static bool supportsBackgroundColorContent()
+    {
+#if USE(CA) || USE(TEXTURE_MAPPER)
+        return true;
+#else
+        return false;
+#endif
+    }
+
     void updateDebugIndicators();
+
+    virtual void reportMemoryUsage(MemoryObjectInfo*) const;
 
 protected:
     // Should be called from derived class destructors. Should call willBeDestroyed() on super.

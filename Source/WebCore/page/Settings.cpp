@@ -83,6 +83,7 @@ static inline const AtomicString& getGenericFontFamilyForScript(const ScriptFont
 
 double Settings::gDefaultMinDOMTimerInterval = 0.010; // 10 milliseconds
 double Settings::gDefaultDOMTimerAlignmentInterval = 0;
+double Settings::gHiddenPageDOMTimerAlignmentInterval = 1.0;
 
 #if USE(SAFARI_THEME)
 bool Settings::gShouldPaintNativeControls = true;
@@ -164,15 +165,13 @@ Settings::Settings(Page* page)
 #if ENABLE(CSS_STICKY_POSITION)
     , m_cssStickyPositionEnabled(true)
 #endif
-#if ENABLE(CSS_REGIONS)
-    , m_cssRegionsEnabled(false)
-#endif
 #if ENABLE(CSS_VARIABLES)
     , m_cssVariablesEnabled(false)
 #endif
     , m_acceleratedCompositingEnabled(true)
     , m_showDebugBorders(false)
     , m_showRepaintCounter(false)
+    , m_showTiledScrollingIndicator(false)
     , m_tiledBackingStoreEnabled(false)
     , m_dnsPrefetchingEnabled(false)
 #if USE(UNIFIED_TEXT_CHECKING)
@@ -200,6 +199,16 @@ PassOwnPtr<Settings> Settings::create(Page* page)
 {
     return adoptPtr(new Settings(page));
 } 
+
+void Settings::setHiddenPageDOMTimerAlignmentInterval(double hiddenPageDOMTimerAlignmentinterval)
+{
+    gHiddenPageDOMTimerAlignmentInterval = hiddenPageDOMTimerAlignmentinterval;
+}
+
+double Settings::hiddenPageDOMTimerAlignmentInterval()
+{
+    return gHiddenPageDOMTimerAlignmentInterval;
+}
 
 #if !PLATFORM(MAC) && !PLATFORM(BLACKBERRY)
 void Settings::initializeDefaultFontFamilies()
@@ -590,6 +599,14 @@ void Settings::setShowRepaintCounter(bool enabled)
         
     m_showRepaintCounter = enabled;
     m_page->setNeedsRecalcStyleInAllFrames();
+}
+
+void Settings::setShowTiledScrollingIndicator(bool enabled)
+{
+    if (m_showTiledScrollingIndicator == enabled)
+        return;
+        
+    m_showTiledScrollingIndicator = enabled;
 }
 
 #if PLATFORM(WIN) || (OS(WINDOWS) && PLATFORM(WX))

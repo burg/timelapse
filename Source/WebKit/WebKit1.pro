@@ -12,6 +12,10 @@ include(WebKit1.pri)
 WEBKIT += wtf javascriptcore webcore
 QT += gui
 
+# This is relied upon by our export macros and seems not to be properly
+# defined by the logic in qt_module.prf as it should
+DEFINES += QT_BUILD_WEBKIT_LIB
+
 CONFIG += staticlib
 
 SOURCES += \
@@ -20,6 +24,8 @@ SOURCES += \
     $$PWD/qt/Api/qwebelement.cpp \
     $$PWD/qt/Api/qwebhistory.cpp \
     $$PWD/qt/Api/qwebhistoryinterface.cpp \
+    $$PWD/qt/Api/qwebkitglobal.cpp \
+    $$PWD/qt/Api/qwebplugindatabase.cpp \
     $$PWD/qt/Api/qwebpluginfactory.cpp \
     $$PWD/qt/Api/qwebsecurityorigin.cpp \
     $$PWD/qt/Api/qwebsettings.cpp \
@@ -39,10 +45,13 @@ SOURCES += \
     $$PWD/qt/WebCoreSupport/PlatformStrategiesQt.cpp \
     $$PWD/qt/WebCoreSupport/PopupMenuQt.cpp \
     $$PWD/qt/WebCoreSupport/QtPlatformPlugin.cpp \
+    $$PWD/qt/WebCoreSupport/QtPluginWidgetAdapter.cpp \
+    $$PWD/qt/WebCoreSupport/QtPrintContext.cpp \
     $$PWD/qt/WebCoreSupport/QWebFrameAdapter.cpp \
     $$PWD/qt/WebCoreSupport/QWebPageAdapter.cpp \
     $$PWD/qt/WebCoreSupport/SearchPopupMenuQt.cpp \
     $$PWD/qt/WebCoreSupport/TextCheckerClientQt.cpp \
+    $$PWD/qt/WebCoreSupport/TextureMapperLayerClientQt.cpp \
     $$PWD/qt/WebCoreSupport/UndoStepQt.cpp \
     $$PWD/qt/WebCoreSupport/WebEventConversion.cpp
 
@@ -54,10 +63,12 @@ HEADERS += \
     $$PWD/qt/Api/qwebhistory.h \
     $$PWD/qt/Api/qwebhistory_p.h \
     $$PWD/qt/Api/qwebhistoryinterface.h \
+    $$PWD/qt/Api/qwebplugindatabase_p.h \
     $$PWD/qt/Api/qwebpluginfactory.h \
     $$PWD/qt/Api/qwebsecurityorigin.h \
     $$PWD/qt/Api/qwebsettings.h \
     $$PWD/qt/Api/qwebscriptworld_p.h \
+    $$PWD/qt/Api/qwebkitplatformplugin.h \
     $$PWD/qt/WebCoreSupport/ChromeClientQt.h \
     $$PWD/qt/WebCoreSupport/ContextMenuClientQt.h \
     $$PWD/qt/WebCoreSupport/DragClientQt.h \
@@ -73,10 +84,12 @@ HEADERS += \
     $$PWD/qt/WebCoreSupport/PopupMenuQt.h \
     $$PWD/qt/WebCoreSupport/QtPlatformPlugin.h \
     $$PWD/qt/WebCoreSupport/QtPluginWidgetAdapter.h \
+    $$PWD/qt/WebCoreSupport/QtPrintContext.h \
     $$PWD/qt/WebCoreSupport/QWebFrameAdapter.h \
     $$PWD/qt/WebCoreSupport/QWebPageAdapter.h \
     $$PWD/qt/WebCoreSupport/SearchPopupMenuQt.h \
     $$PWD/qt/WebCoreSupport/TextCheckerClientQt.h \
+    $$PWD/qt/WebCoreSupport/TextureMapperLayerClientQt.h \
     $$PWD/qt/WebCoreSupport/UndoStepQt.h \
     $$PWD/qt/WebCoreSupport/WebEventConversion.h
 

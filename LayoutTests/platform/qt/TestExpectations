@@ -109,9 +109,6 @@ http/tests/inspector/indexeddb
 
 inspector/timeline/timeline-animation-frame.html
 
-# ENABLE(ANIMATION_API) is disabled.
-animations/animation-api-1.html
-
 # ENABLE(WEB_ARCHIVE) is disabled.
 svg/custom/image-with-prefix-in-webarchive.svg
 http/tests/webarchive
@@ -188,6 +185,13 @@ fast/dom/shadow
 fast/frames/detached-shadow-frame.html
 inspector/elements/update-shadowdom.html
 
+# ENABLE(MOUSE_CURSOR_SCALE) is disabled
+fast/css/cursor-parsing-image-set.html
+
+# ENABLE(TEMPLATE_ELEMENT) is disabled.
+fast/dom/HTMLTemplateElement
+html5lib/run-template.html
+
 # Fail until SUBPIXEL_LAYOUT is enabled
 # https://bugs.webkit.org/show_bug.cgi?id=85532
 fast/sub-pixel
@@ -258,6 +262,7 @@ inspector/profiler/heap-snapshot-summary-show-ranges.html
 inspector/profiler/heap-snapshot-summary-sorting-fields.html
 inspector/profiler/heap-snapshot-summary-sorting.html
 inspector/profiler/heap-snapshot-summary-sorting-instances.html
+webkit.org/b/50485 inspector-protocol/take-heap-snapshot.html [ Skip ]
 
 # https://bugs.webkit.org/show_bug.cgi?id=40300
 inspector/debugger/live-edit.html
@@ -316,13 +321,6 @@ webkit.org/b/84635 fast/dom/HTMLDialogElement
 # Missing test infrastructure, no gamepads available.
 webkit.org/b/92873 gamepad/gamepad-polling-access.html
 
-# CSS Variables are not yet enabled.
-webkit.org/b/85580 fast/css/variables
-webkit.org/b/85580 inspector/styles/variables
-
-# UndoManager is not yet enabled.
-webkit.org/b/87908 editing/undomanager
-
 # CSS image-resolution is not yet enabled.
 webkit.org/b/85262 fast/css/image-resolution
 
@@ -332,9 +330,6 @@ webkit.org/b/89052 fast/css/image-orientation
 # CSS3 Text support is not yet enabled (needs ENABLE_CSS3_TEXT).
 webkit.org/b/58491 fast/css3-text/css3-text-decoration
 webkit.org/b/76173 fast/css3-text/css3-text-align-last
-
-# CSS3 Background is not yet enabled (needs ENABLE_CSS3_BACKGROUND).
-webkit.org/b/37514 fast/backgrounds/background-position-parsing-2.html [ Text ]
 
 # Web Inspector: Implement support for InspectorClient::overrideDeviceMetrics() in platforms other than Chromium
 # https://bugs.webkit.org/show_bug.cgi?id=82886
@@ -450,7 +445,7 @@ http/tests/security/video-cross-origin-readback.html
 http/tests/security/contentSecurityPolicy/1.1
 
 # Proximity Events is now supported.
-fast/dom/Proximity
+proximity
 fast/events/constructors/device-proximity-event-constructor.html
 
 # Missing support in DRT for Geolocation's Coordinate attributes.
@@ -898,6 +893,40 @@ http/tests/misc/webtiming-origins.html
 # https://bugs.webkit.org/show_bug.cgi?id=57983
 media
 
+# Opera-submitted tests to W3C for <track>, a lot of failures still.
+webkit.org/b/103926 media/track/opera/idl/media-idl-tests.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/HTMLElement/HTMLMediaElement/crossOrigin.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/HTMLElement/HTMLTrackElement/kind.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/HTMLElement/HTMLTrackElement/src.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrack/activeCues.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrack/removeCue.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TrackEvent/constructor.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TrackEvent/createEvent.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/align.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/id.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/getCueAsHTML.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/line.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/onenter.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/onexit.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/pauseOnExit.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/snapToLines.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/text.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/track.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCue/vertical.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackCueList/getter.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackList/getter.html [ Skip ]
+webkit.org/b/103926 media/track/opera/interfaces/TextTrackList/onremovetrack.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/track-element/cloneNode.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/track-element/src-clear-cues.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/parsing/001.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/parsing-cue-data/tests/entities.html [ Skip ] 
+webkit.org/b/103926 media/track/opera/track/webvtt/parsing-cue-data/tests/tags.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/rendering/adhoc/12345_timestamps.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/parsing-cue-data/tests/timestamps.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/parsing-cue-data/tests/tree-building.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/rendering/adhoc/cue_font_size_transition.html [ Skip ]
+webkit.org/b/103926 media/track/opera/track/webvtt/rendering/adhoc/voice_with_evil_timestamp.html [ Skip ]
+
 # https://bugs.webkit.org/show_bug.cgi?id=38376
 media/media-document-audio-size.html
 
@@ -1063,6 +1092,7 @@ fast/canvas/2d.backingStorePixelRatio.html
 fast/canvas/2d.imageDataHD.html
 fast/canvas/canvas-as-image-hidpi.html
 fast/canvas/canvas-resize-reset-pixelRatio.html
+fast/events/mouse-cursor-image-set.html
 svg/as-image/svg-as-image-canvas.html
 
 # This requires didClearWindowObjectForFrameInIsolatedWorld foo in FrameLoaderClient
@@ -1163,6 +1193,7 @@ fast/events/constructors/media-key-event-constructor.html
 
 # missing testRunner.setStorageDatabaseIdleInterval() implementation
 storage/domstorage/storage-close-database-on-idle.html
+storage/domstorage/localstorage/close-idle-localstorage-databases-immediately.html
 
 # Missing targetDiv1.webkitRequestFullscreen() implementation
 # https://bugs.webkit.org/show_bug.cgi?id=92078
@@ -1255,6 +1286,9 @@ svg/text/text-intro-05-t.svg
 svg/text/text-tselect-02-f.svg
 
 webkit.org/b/98718 svg/animations/animate-css-xml-attributeType.html [ Failure Pass ]
+
+# https://bugs.webkit.org/show_bug.cgi?id=104054
+webkit.org/b/104054 svg/custom/use-href-update-crash.svg [ Failure Pass ]
 
 # [Qt] svg/animations/animate-path-nested-transforms.html fails
 # https://bugs.webkit.org/show_bug.cgi?id=48987
@@ -1656,6 +1690,7 @@ fast/text/international/wrap-CJK-001.html
 fast/repaint/japanese-rl-selection-clear.html
 fast/repaint/japanese-rl-selection-repaint.html
 fast/repaint/japanese-rl-selection-repaint-in-regions.html
+fast/text/decorations-with-text-combine.html
 fast/text/international/bdi-neutral-wrapped.html
 fast/text/international/bidi-mirror-he-ar.html
 fast/text/international/bold-bengali.html
@@ -1664,6 +1699,7 @@ fast/text/international/plane2.html
 fast/text/international/unicode-bidi-plaintext.html
 fast/text/international/vertical-text-glyph-test.html
 fast/text/international/vertical-text-metrics-test.html
+fast/text/orientation-sideways.html
 fast/writing-mode/japanese-ruby-horizontal-bt.html
 fast/writing-mode/japanese-ruby-vertical-lr.html
 fast/writing-mode/japanese-ruby-vertical-rl.html
@@ -2098,7 +2134,6 @@ svg/animations/animateTransform-rotate-around-point.svg
 svg/animations/animateMotion-additive-1.svg
 svg/transforms/transformed-text-fill-gradient.html
 fast/regions/floats-basic-in-variable-width-regions.html
-fast/regions/positioned-objects-block-static-spanning-regions-rtl.html
 fast/regions/region-style-rule-position.html
 
 # Failing fast/css/sticky/ tests with minor pixel differences
@@ -2162,6 +2197,12 @@ css2.1/20110323/vertical-align-boxes-001.htm [ Failure Pass ]
 svg/as-image/svg-intrinsic-size-rectangular-vertical.html
 fast/css/word-spacing-characters.html
 css2.1/20110323/c541-word-sp-001.htm [ Failure Pass ]
+webkit.org/b/104696 fast/block/float/floats-offset-image-quirk-lineheight.html
+webkit.org/b/104696 fast/block/float/floats-offset-image-quirk.html
+webkit.org/b/104696 fast/block/float/floats-offset-image-strict-lineheight.html
+webkit.org/b/104696 fast/block/float/floats-offset-image-strict.html
+webkit.org/b/104696 fast/block/float/floats-wrap-inside-inline-007.html
+
 
 # [Qt] css3/filters/huge-region-composited.html makes css3/filters/huge-region.html crash
 # https://bugs.webkit.org/show_bug.cgi?id=90165
@@ -2348,7 +2389,6 @@ webkit.org/b/99306 animations/additive-transform-animations.html [ ImageOnlyFail
 webkit.org/b/99306 animations/cross-fade-webkit-mask-box-image.html [ ImageOnlyFailure ]
 webkit.org/b/99306 animations/missing-values-first-keyframe.html [ ImageOnlyFailure ]
 webkit.org/b/99306 animations/missing-values-last-keyframe.html [ ImageOnlyFailure ]
-webkit.org/b/99306 animations/opacity-transform-animation.html [ ImageOnlyFailure ]
 webkit.org/b/99306 css3/filters/effect-blur-hw.html [ ImageOnlyFailure ] # Blur effect radius is too small on WebKit1, the effect not applied at all on WebKit2.
 
 # REGRESSION(r132143): It made fast/xmlhttprequest/xmlhttprequest-recursive-sync-event.html flakey
@@ -2398,3 +2438,17 @@ webkit.org/b/61138 http/tests/w3c/webperf/submission/resource-timing [ Skip ]
 
 # [Qt] A new compositing bug uncovered by r135859
 webkit.org/b/103424 fast/backgrounds/background-opaque-images-over-color.html
+
+# No support for exposing in-band text tracks
+webkit.org/b/103769 media/track/track-in-band.html [ Skip ]
+
+webkit.org/b/104150 fast/media/implicit-media-all.html [ ImageOnlyFailure ]
+
+# [Qt] new http/tests/xmlhttprequest/post-blob-content-type-sync.html and ~async.html fail since introduced in r136893
+# https://bugs.webkit.org/show_bug.cgi?id=104352
+http/tests/xmlhttprequest/post-blob-content-type-async.html
+http/tests/xmlhttprequest/post-blob-content-type-sync.html
+
+webkit.org/b/104788 css3/flexbox/flex-algorithm.html [ Failure ]
+webkit.org/b/104788 fast/css/large-number-round-trip.html [ Failure ]
+webkit.org/b/104788 fast/css/large-numbers.html [ Failure ]

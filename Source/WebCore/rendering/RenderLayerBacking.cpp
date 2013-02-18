@@ -55,6 +55,7 @@
 #include "Settings.h"
 #include "StyleResolver.h"
 #include "TiledBacking.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -100,6 +101,7 @@ RenderLayerBacking::RenderLayerBacking(RenderLayer* layer)
     : m_owningLayer(layer)
     , m_scrollLayerID(0)
     , m_artificiallyInflatedBounds(false)
+    , m_boundsConstrainedByClipping(false)
     , m_isMainFrameRenderViewLayer(false)
     , m_usingTiledCacheLayer(false)
     , m_requiresOwnBackingStore(true)
@@ -354,7 +356,7 @@ bool RenderLayerBacking::shouldClipCompositedBounds() const
         return false;
 
     if (m_usingTiledCacheLayer)
-        return true;
+        return false;
 
     if (!compositor()->compositingConsultsOverlap())
         return false;
@@ -364,7 +366,6 @@ bool RenderLayerBacking::shouldClipCompositedBounds() const
 
     return true;
 }
-
 
 void RenderLayerBacking::updateCompositedBounds()
 {
@@ -377,7 +378,7 @@ void RenderLayerBacking::updateCompositedBounds()
         RenderView* view = m_owningLayer->renderer()->view();
         RenderLayer* rootLayer = view->layer();
 
-        // Start by clipping to the view's bounds.
+        // Start by clipping to the document's bounds.
         LayoutRect clippingBounds = view->unscaledDocumentRect();
 
         if (m_owningLayer != rootLayer)
@@ -388,7 +389,9 @@ void RenderLayerBacking::updateCompositedBounds()
         clippingBounds.move(-delta.x(), -delta.y());
 
         layerBounds.intersect(pixelSnappedIntRect(clippingBounds));
-    }
+        m_boundsConstrainedByClipping = true;
+    } else
+        m_boundsConstrainedByClipping = false;
     
     // If the element has a transform-origin that has fixed lengths, and the renderer has zero size,
     // then we need to ensure that the compositing layer has non-zero size so that we can apply
@@ -479,6 +482,8 @@ bool RenderLayerBacking::updateGraphicsLayerConfiguration()
     } else
         m_graphicsLayer->setReplicatedByLayer(0);
 
+    updateBackgroundColor(isSimpleContainerCompositingLayer());
+
     if (isDirectlyCompositedImage())
         updateImageContents();
 
@@ -500,19 +505,6 @@ bool RenderLayerBacking::updateGraphicsLayerConfiguration()
         layerConfigChanged = true;
     }
 #endif
-#if ENABLE(FULLSCREEN_API)
-    else if (renderer->isRenderFullScreen()) {
-        // RenderFullScreen renderers have no content, and only a solid
-        // background color.  They also can be large enough to trigger the
-        // creation of a tiled-layer, which can cause flashing problems
-        // during repainting.  Special case the RenderFullScreen case because
-        // we know its style does not come from CSS and it is therefore will
-        // not contain paintable content (e.g. background images, gradients,
-        // etc), so safe to set the layer's background color to the renderer's 
-        // style's background color.
-        updateBackgroundColor();
-    }
-#endif
     if (renderer->isRenderPart())
         layerConfigChanged = RenderLayerCompositor::parentFrameContentLayers(toRenderPart(renderer));
 
@@ -529,6 +521,7 @@ static IntRect clipBox(RenderBox* renderer)
         result.intersect(renderer->clipRect(LayoutPoint(), 0)); // FIXME: Incorrect for CSS regions.
 
     return pixelSnappedIntRect(result);
+
 }
 
 void RenderLayerBacking::updateGraphicsLayerGeometry()
@@ -553,6 +546,8 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
 #if ENABLE(CSS_COMPOSITING)
     updateLayerBlendMode(renderer()->style());
 #endif
+
+    bool isSimpleContainer = isSimpleContainerCompositingLayer();
     
     m_owningLayer->updateDescendantDependentFlags();
 
@@ -640,10 +635,11 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
     FloatSize newSize = relativeCompositingBounds.size();
     if (oldSize != newSize) {
         m_graphicsLayer->setSize(newSize);
-        // A bounds change will almost always require redisplay. Usually that redisplay
-        // will happen because of a repaint elsewhere, but not always:
-        // e.g. see RenderView::setMaximalOutlineSize()
-        m_graphicsLayer->setNeedsDisplay();
+        // Usually invalidation will happen via layout etc, but if we've affected the layer
+        // size by constraining relative to a clipping ancestor or the viewport, we
+        // have to invalidate to avoid showing stretched content.
+        if (m_boundsConstrainedByClipping)
+            m_graphicsLayer->setNeedsDisplay();
     }
 
     // If we have a layer that clips children, position it.
@@ -758,12 +754,11 @@ void RenderLayerBacking::updateGraphicsLayerGeometry()
         m_scrollingContentsLayer->setOffsetFromRenderer(scrollingContentsOffset, GraphicsLayer::DontSetNeedsDisplay);
     }
 
-    m_graphicsLayer->setContentsRect(contentsBox());
-
     // If this layer was created just for clipping or to apply perspective, it doesn't need its own backing store.
     setRequiresOwnBackingStore(compositor()->requiresOwnBackingStore(m_owningLayer, compAncestor));
 
-    updateDrawsContent();
+    updateContentsRect(isSimpleContainer);
+    updateDrawsContent(isSimpleContainer);
     updateAfterWidgetResize();
 }
 
@@ -805,7 +800,23 @@ void RenderLayerBacking::updateInternalHierarchy()
     }
 }
 
+void RenderLayerBacking::updateContentsRect(bool isSimpleContainer)
+{
+    IntRect contentsRect;
+    if (isSimpleContainer && renderer()->hasBackground())
+        contentsRect = backgroundBox();
+    else
+        contentsRect = contentsBox();
+
+    m_graphicsLayer->setContentsRect(contentsRect);
+}
+
 void RenderLayerBacking::updateDrawsContent()
+{
+    updateDrawsContent(isSimpleContainerCompositingLayer());
+}
+
+void RenderLayerBacking::updateDrawsContent(bool isSimpleContainer)
 {
     if (m_scrollingLayer) {
         // We don't have to consider overflow controls, because we know that the scrollbars are drawn elsewhere.
@@ -820,7 +831,7 @@ void RenderLayerBacking::updateDrawsContent()
         return;
     }
 
-    bool hasPaintedContent = containsPaintedContent();
+    bool hasPaintedContent = !isSimpleContainer && containsPaintedContent();
 
     // FIXME: we could refine this to only allocate backing for one of these layers if possible.
     m_graphicsLayer->setDrawsContent(hasPaintedContent);
@@ -1137,9 +1148,35 @@ Color RenderLayerBacking::rendererBackgroundColor() const
     return backgroundRenderer->style()->visitedDependentColor(CSSPropertyBackgroundColor);
 }
 
-void RenderLayerBacking::updateBackgroundColor()
+void RenderLayerBacking::updateBackgroundColor(bool isSimpleContainer)
 {
-    m_graphicsLayer->setContentsToBackgroundColor(rendererBackgroundColor());
+    Color backgroundColor = Color::transparent;
+    if (isSimpleContainer)
+        backgroundColor = rendererBackgroundColor();
+    m_graphicsLayer->setContentsToBackgroundColor(backgroundColor);
+    if (backgroundColor == Color::transparent)
+        m_graphicsLayer->clearBackgroundColor();
+}
+
+static bool supportsDirectBoxDecorationsComposition(const RenderObject* renderer)
+{
+    if (!GraphicsLayer::supportsBackgroundColorContent())
+        return false;
+
+    if (renderer->hasClip())
+        return false;
+
+    if (hasBoxDecorationsOrBackgroundImage(renderer->style()))
+        return false;
+
+    // FIXME: we should be able to allow backgroundComposite; However since this is not a common use case it has been deferred for now.
+    if (renderer->style()->backgroundComposite() != CompositeSourceOver)
+        return false;
+
+    if (renderer->style()->backgroundClip() == TextFillBox)
+        return false;
+
+    return true;
 }
 
 bool RenderLayerBacking::paintsBoxDecorations() const
@@ -1147,7 +1184,10 @@ bool RenderLayerBacking::paintsBoxDecorations() const
     if (!m_owningLayer->hasVisibleContent())
         return false;
 
-    if (hasBoxDecorationsOrBackground(renderer()))
+    if (!hasBoxDecorationsOrBackground(renderer()))
+        return false;
+
+    if (!supportsDirectBoxDecorationsComposition(renderer()))
         return true;
 
     if (m_owningLayer->hasOverflowControls())
@@ -1333,7 +1373,7 @@ void RenderLayerBacking::contentChanged(ContentChangeType changeType)
         updateImageContents();
         return;
     }
-    
+
     if ((changeType == MaskImageChanged) && m_maskLayer) {
         // The composited layer bounds relies on box->maskClipRect(), which changes
         // when the mask image becomes available.
@@ -1368,7 +1408,8 @@ void RenderLayerBacking::updateImageContents()
 
     // This is a no-op if the layer doesn't have an inner layer for the image.
     m_graphicsLayer->setContentsToImage(image);
-    updateDrawsContent();
+    bool isSimpleContainer = false;
+    updateDrawsContent(isSimpleContainer);
     
     // Image animation is "lazy", in that it automatically stops unless someone is drawing
     // the image. So we have to kick the animation each time; this has the downside that the
@@ -1422,9 +1463,36 @@ IntRect RenderLayerBacking::contentsBox() const
 #endif
         contentsRect = pixelSnappedIntRect(toRenderBox(renderer())->contentBoxRect());
 
-    IntSize contentOffset = contentOffsetInCompostingLayer();
-    contentsRect.move(contentOffset);
+    contentsRect.move(contentOffsetInCompostingLayer());
     return contentsRect;
+}
+
+static LayoutRect backgroundRectForBox(const RenderBox* box)
+{
+    EFillBox clip = box->style()->backgroundClip();
+    switch (clip) {
+    case BorderFillBox:
+        return box->borderBoxRect();
+    case PaddingFillBox:
+        return box->paddingBoxRect();
+    case ContentFillBox:
+        return box->contentBoxRect();
+    case TextFillBox:
+        break;
+    }
+
+    ASSERT_NOT_REACHED();
+    return LayoutRect();
+}
+
+IntRect RenderLayerBacking::backgroundBox() const
+{
+    if (!renderer()->isBox())
+        return IntRect();
+
+    IntRect pixelSnappedBackgroundBox = pixelSnappedIntRect(backgroundRectForBox(toRenderBox(renderer())));
+    pixelSnappedBackgroundBox.move(contentOffsetInCompostingLayer());
+    return pixelSnappedBackgroundBox;
 }
 
 GraphicsLayer* RenderLayerBacking::parentForSublayers() const
@@ -1968,6 +2036,22 @@ bool RenderLayerBacking::contentsVisible(const GraphicsLayer*, const IntRect& lo
     return absoluteContentQuad.enclosingBoundingBox().intersects(visibleContentRect);
 }
 #endif
+
+void RenderLayerBacking::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
+    info.addWeakPointer(m_owningLayer);
+    info.addMember(m_ancestorClippingLayer);
+    info.addMember(m_graphicsLayer);
+    info.addMember(m_foregroundLayer);
+    info.addMember(m_containmentLayer);
+    info.addMember(m_maskLayer);
+    info.addMember(m_layerForHorizontalScrollbar);
+    info.addMember(m_layerForVerticalScrollbar);
+    info.addMember(m_layerForScrollCorner);
+    info.addMember(m_scrollingLayer);
+    info.addMember(m_scrollingContentsLayer);
+}
 
 } // namespace WebCore
 

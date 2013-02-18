@@ -28,6 +28,8 @@
 
 #if ENABLE(VIDEO_TRACK)
 
+#include "InbandTextTrackPrivate.h"
+#include "InbandTextTrackPrivateClient.h"
 #include "TextTrack.h"
 #include <wtf/RefPtr.h>
 
@@ -38,19 +40,9 @@ class InbandTextTrackPrivate;
 class MediaPlayer;
 class TextTrackCue;
 
-class InbandTextTrackClient {
+class InbandTextTrack : public TextTrack, public InbandTextTrackPrivateClient {
 public:
-    virtual ~InbandTextTrackClient() { }
-
-    virtual void addCue(InbandTextTrackPrivate*, double /*start*/, double /*end*/, const String& /*id*/, const String& /*content*/, const String& /*settings*/) { }
-};
-
-class InbandTextTrack : public TextTrack, public InbandTextTrackClient {
-public:
-    static PassRefPtr<InbandTextTrack> create(ScriptExecutionContext* context, TextTrackClient* client, PassRefPtr<InbandTextTrackPrivate> playerPrivate)
-    {
-        return adoptRef(new InbandTextTrack(context, client, playerPrivate));
-    }
+    static PassRefPtr<InbandTextTrack> create(ScriptExecutionContext*, TextTrackClient*, PassRefPtr<InbandTextTrackPrivate>);
     virtual ~InbandTextTrack();
 
     virtual void setMode(const AtomicString&) OVERRIDE;
@@ -59,7 +51,7 @@ public:
 private:
     InbandTextTrack(ScriptExecutionContext*, TextTrackClient*, PassRefPtr<InbandTextTrackPrivate>);
 
-    virtual void addCue(InbandTextTrackPrivate*, double, double, const String&, const String&, const String&);
+    virtual void addCue(InbandTextTrackPrivate*, double, double, const String&, const String&, const String&) OVERRIDE;
 
     RefPtr<InbandTextTrackPrivate> m_private;
 };

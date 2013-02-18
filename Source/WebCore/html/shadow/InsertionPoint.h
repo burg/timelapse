@@ -43,6 +43,11 @@ namespace WebCore {
 
 class InsertionPoint : public HTMLElement {
 public:
+    enum Type {
+        ShadowInsertionPoint,
+        ContentInsertionPoint
+    };
+
     virtual ~InsertionPoint();
 
     bool hasDistribution() const { return !m_distribution.isEmpty(); }
@@ -56,6 +61,7 @@ public:
     virtual const AtomicString& select() const = 0;
     virtual bool isSelectValid() = 0;
     virtual const CSSSelectorList& selectorList() = 0;
+    virtual Type insertionPointType() const = 0;
 
     bool resetStyleInheritance() const;
     void setResetStyleInheritance(bool);
@@ -71,8 +77,8 @@ public:
     Node* at(size_t index)  const { return m_distribution.at(index).get(); }
     Node* first() const { return m_distribution.isEmpty() ? 0 : m_distribution.first().get(); }
     Node* last() const { return m_distribution.isEmpty() ? 0 : m_distribution.last().get(); }
-    Node* nextTo(const Node*) const;
-    Node* previousTo(const Node*) const;
+    Node* nextTo(const Node* node) const { return m_distribution.nextTo(node); }
+    Node* previousTo(const Node* node) const { return m_distribution.previousTo(node); }
 
 protected:
     InsertionPoint(const QualifiedName&, Document*);
@@ -80,10 +86,12 @@ protected:
     virtual void childrenChanged(bool changedByParser, Node* beforeChange, Node* afterChange, int childCountDelta) OVERRIDE;
     virtual InsertionNotificationRequest insertedInto(ContainerNode*) OVERRIDE;
     virtual void removedFrom(ContainerNode*) OVERRIDE;
+    virtual void parseAttribute(const QualifiedName&, const AtomicString&) OVERRIDE;
 
 private:
+
     ContentDistribution m_distribution;
-    bool m_shouldResetStyleInheritance : 1;
+    bool m_registeredWithShadowRoot;
 };
 
 inline InsertionPoint* toInsertionPoint(Node* node)

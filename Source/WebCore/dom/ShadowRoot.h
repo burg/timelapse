@@ -58,7 +58,7 @@ public:
     };
     static PassRefPtr<ShadowRoot> create(Element*, ShadowRootType, ExceptionCode& = ASSERT_NO_EXCEPTION);
 
-    void recalcShadowTreeStyle(StyleChange);
+    void recalcStyle(StyleChange);
 
     virtual bool applyAuthorStyles() const OVERRIDE;
     void setApplyAuthorStyles(bool);
@@ -91,14 +91,12 @@ public:
     InsertionPoint* assignedTo() const;
     void setAssignedTo(InsertionPoint*);
 
-    void registerShadowElement();
-    void unregisterShadowElement();
     bool hasShadowInsertionPoint() const;
-
-    void registerContentElement();
-    void unregisterContentElement();
     bool hasContentElement() const;
 
+    void registerInsertionPoint(InsertionPoint*);
+    void unregisterInsertionPoint(InsertionPoint*);
+    
     void registerElementShadow();
     void unregisterElementShadow();
     bool hasElementShadow() const;
@@ -110,6 +108,7 @@ public:
     virtual void unregisterScopedHTMLStyleChild() OVERRIDE;
 
     ShadowRootType type() const { return m_isAuthorShadowRoot ? AuthorShadowRoot : UserAgentShadowRoot; }
+    bool isAccessible() const { return type() == AuthorShadowRoot; }
 
     PassRefPtr<Node> cloneNode(bool, ExceptionCode&);
 

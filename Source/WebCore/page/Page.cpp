@@ -55,6 +55,7 @@
 #include "NetworkStateNotifier.h"
 #include "PageCache.h"
 #include "PageGroup.h"
+#include "PlugInClient.h"
 #include "PluginData.h"
 #include "PluginView.h"
 #include "PointerLockController.h"
@@ -89,7 +90,6 @@
 namespace WebCore {
 
 static HashSet<Page*>* allPages;
-static const double hiddenPageTimerAlignmentInterval = 1.0; // once a second
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, pageCounter, ("Page"));
 
@@ -147,6 +147,7 @@ Page::Page(PageClients& pageClients)
     , m_backForwardController(BackForwardController::create(this, pageClients.backForwardClient))
     , m_theme(RenderTheme::themeForPage(this))
     , m_editorClient(pageClients.editorClient)
+    , m_plugInClient(pageClients.plugInClient)
     , m_validationMessageClient(pageClients.validationMessageClient)
     , m_subframeCount(0)
     , m_openedByDOM(false)
@@ -212,6 +213,8 @@ Page::~Page()
     }
 
     m_editorClient->pageDestroyed();
+    if (m_plugInClient)
+        m_plugInClient->pageDestroyed();
     if (m_alternativeTextClient)
         m_alternativeTextClient->pageDestroyed();
 
@@ -264,6 +267,17 @@ String Page::scrollingStateTreeAsText()
 
     if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
         return scrollingCoordinator->scrollingStateTreeAsText();
+
+    return String();
+}
+
+String Page::mainThreadScrollingReasonsAsText()
+{
+    if (Document* document = m_mainFrame->document())
+        document->updateLayout();
+
+    if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
+        return scrollingCoordinator->mainThreadScrollingReasonsAsText();
 
     return String();
 }
@@ -868,7 +882,7 @@ void Page::userStyleSheetLocationChanged()
 
     for (Frame* frame = mainFrame(); frame; frame = frame->tree()->traverseNext()) {
         if (frame->document())
-            frame->document()->styleSheetCollection()->updatePageUserStyleSheet();
+            frame->document()->styleSheetCollection()->updatePageUserSheet();
     }
 }
 
@@ -1142,7 +1156,7 @@ void Page::setVisibilityState(PageVisibilityState visibilityState, bool isInitia
 
 #if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
     if (visibilityState == WebCore::PageVisibilityStateHidden)
-        setTimerAlignmentInterval(hiddenPageTimerAlignmentInterval);
+        setTimerAlignmentInterval(Settings::hiddenPageDOMTimerAlignmentInterval());
     else
         setTimerAlignmentInterval(Settings::defaultDOMTimerAlignmentInterval());
 #if !ENABLE(PAGE_VISIBILITY_API)
@@ -1195,11 +1209,17 @@ void Page::addRelevantRepaintedObject(RenderObject* object, const LayoutRect& ob
     if (!isCountingRelevantRepaintedObjects())
         return;
 
+    // Objects inside sub-frames are not considered to be relevant.
+    if (object->document()->frame() != mainFrame())
+        return;
+
+    RenderView* view = object->view();
+    if (!view)
+        return;
+
     // The objects are only relevant if they are being painted within the viewRect().
-    if (RenderView* view = object->view()) {
-        if (!objectPaintRect.intersects(pixelSnappedIntRect(view->viewRect())))
-            return;
-    }
+    if (!objectPaintRect.intersects(pixelSnappedIntRect(view->viewRect())))
+        return;
 
     IntRect snappedPaintRect = pixelSnappedIntRect(objectPaintRect);
 
@@ -1212,10 +1232,6 @@ void Page::addRelevantRepaintedObject(RenderObject* object, const LayoutRect& ob
     }
 
     m_relevantPaintedRegion.unite(snappedPaintRect);
-
-    RenderView* view = object->view();
-    if (!view)
-        return;
     
     float viewArea = view->viewRect().width() * view->viewRect().height();
     float ratioOfViewThatIsPainted = m_relevantPaintedRegion.totalArea() / viewArea;
@@ -1348,6 +1364,7 @@ Page::PageClients::PageClients()
     , editorClient(0)
     , dragClient(0)
     , inspectorClient(0)
+    , plugInClient(0)
     , validationMessageClient(0)
 {
 }

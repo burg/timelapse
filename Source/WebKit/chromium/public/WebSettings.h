@@ -64,6 +64,7 @@ public:
     virtual void setAcceleratedCompositingForFixedPositionEnabled(bool)  = 0;
     virtual void setAcceleratedCompositingForOverflowScrollEnabled(bool) = 0;
     virtual void setAcceleratedCompositingForPluginsEnabled(bool) = 0;
+    virtual void setAcceleratedCompositingForScrollableFramesEnabled(bool) = 0;
     virtual void setAcceleratedCompositingForVideoEnabled(bool) = 0;
     virtual void setAcceleratedFiltersEnabled(bool) = 0;
     virtual void setAcceleratedPaintingEnabled(bool) = 0;
@@ -101,7 +102,6 @@ public:
     virtual void setExperimentalCSSCustomFilterEnabled(bool) = 0;
     virtual void setExperimentalCSSGridLayoutEnabled(bool) = 0;
     virtual void setCSSStickyPositionEnabled(bool) = 0;
-    virtual void setExperimentalCSSRegionsEnabled(bool) = 0;
     virtual void setExperimentalCSSVariablesEnabled(bool) = 0;
     virtual void setExperimentalWebGLEnabled(bool) = 0;
     virtual void setFantasyFontFamily(const WebString&, UScriptCode = USCRIPT_COMMON) = 0;
@@ -123,6 +123,7 @@ public:
     virtual void setLayoutFallbackWidth(int) = 0;
     virtual void setLoadsImagesAutomatically(bool) = 0;
     virtual void setLocalStorageEnabled(bool) = 0;
+    virtual void setLowLatencyRenderingEnabled(bool) = 0;
     virtual void setMaxUntiledLayerSize(WebSize) = 0;
     virtual void setMediaPlaybackRequiresUserGesture(bool) = 0;
     virtual void setMemoryInfoEnabled(bool) = 0;
@@ -173,6 +174,9 @@ public:
 
     // DEPRECATED (renamed. remove this after all call sites changed to the new name)
     void setApplyDefaultDeviceScaleFactorInCompositor(bool enabled) { setApplyDeviceScaleFactorInCompositor(enabled); }
+
+    // DEPRECATED
+    void setExperimentalCSSRegionsEnabled(bool) { }
 
 protected:
     ~WebSettings() { }

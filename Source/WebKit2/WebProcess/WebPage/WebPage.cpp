@@ -60,7 +60,6 @@
 #include "WebEvent.h"
 #include "WebEventConversion.h"
 #include "WebFrame.h"
-#include "WebFrameNetworkingContext.h"
 #include "WebFullScreenManager.h"
 #include "WebFullScreenManagerMessages.h"
 #include "WebGeolocationClient.h"
@@ -75,15 +74,16 @@
 #include "WebPageGroupProxy.h"
 #include "WebPageMessages.h"
 #include "WebPageProxyMessages.h"
+#include "WebPlugInClient.h"
 #include "WebPopupMenu.h"
 #include "WebPreferencesStore.h"
 #include "WebProcess.h"
 #include "WebProcessProxyMessages.h"
 #include <JavaScriptCore/APICast.h>
-#include <WebCore/AbstractDatabase.h>
 #include <WebCore/ArchiveResource.h>
 #include <WebCore/Chrome.h>
 #include <WebCore/ContextMenuController.h>
+#include <WebCore/DatabaseManager.h>
 #include <WebCore/DocumentFragment.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/DocumentMarkerController.h>
@@ -114,6 +114,7 @@
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/ResourceResponse.h>
 #include <WebCore/RunLoop.h>
+#include <WebCore/RuntimeEnabledFeatures.h>
 #include <WebCore/SchemeRegistry.h>
 #include <WebCore/ScriptValue.h>
 #include <WebCore/SerializedScriptValue.h>
@@ -183,7 +184,7 @@
 #endif
 
 #if USE(COORDINATED_GRAPHICS)
-#include "LayerTreeCoordinatorMessages.h"
+#include "CoordinatedLayerTreeHostMessages.h"
 #endif
 
 using namespace JSC;
@@ -302,7 +303,8 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
 #if USE(AUTOCORRECTION_PANEL)
     pageClients.alternativeTextClient = new WebAlternativeTextClient(this);
 #endif
-    
+    pageClients.plugInClient = new WebPlugInClient(this);
+
     m_page = adoptPtr(new Page(pageClients));
 
 #if ENABLE(BATTERY_STATUS)
@@ -367,12 +369,15 @@ WebPage::WebPage(uint64_t pageID, const WebPageCreationParameters& parameters)
     
     setMediaVolume(parameters.mediaVolume);
 
+    // We use the DidFirstLayout milestone to determine when to unfreeze the layer tree.
+    m_page->addLayoutMilestones(DidFirstLayout);
+
     WebProcess::shared().addMessageReceiver(Messages::WebPage::messageReceiverName(), m_pageID, this);
 
     // FIXME: This should be done in the object constructors, and the objects themselves should be message receivers.
     WebProcess::shared().addMessageReceiver(Messages::DrawingArea::messageReceiverName(), m_pageID, this);
 #if USE(COORDINATED_GRAPHICS)
-    WebProcess::shared().addMessageReceiver(Messages::LayerTreeCoordinator::messageReceiverName(), m_pageID, this);
+    WebProcess::shared().addMessageReceiver(Messages::CoordinatedLayerTreeHost::messageReceiverName(), m_pageID, this);
 #endif
 #if ENABLE(INSPECTOR)
     WebProcess::shared().addMessageReceiver(Messages::WebInspector::messageReceiverName(), m_pageID, this);
@@ -403,7 +408,7 @@ WebPage::~WebPage()
     // FIXME: This should be done in the object destructors, and the objects themselves should be message receivers.
     WebProcess::shared().removeMessageReceiver(Messages::DrawingArea::messageReceiverName(), m_pageID);
 #if USE(COORDINATED_GRAPHICS)
-    WebProcess::shared().removeMessageReceiver(Messages::LayerTreeCoordinator::messageReceiverName(), m_pageID);
+    WebProcess::shared().removeMessageReceiver(Messages::CoordinatedLayerTreeHost::messageReceiverName(), m_pageID);
 #endif
 #if ENABLE(INSPECTOR)
     WebProcess::shared().removeMessageReceiver(Messages::WebInspector::messageReceiverName(), m_pageID);
@@ -521,8 +526,9 @@ PassRefPtr<Plugin> WebPage::createPlugin(WebFrame* frame, HTMLPlugInElement* plu
 
     if (pluginPath.isNull()) {
 #if PLATFORM(MAC)
-        if (parameters.mimeType == "application/pdf"
-            || (parameters.mimeType.isEmpty() && parameters.url.path().lower().endsWith(".pdf"))) {
+        String path = parameters.url.path();
+        if ((parameters.mimeType == "application/pdf" || parameters.mimeType == "application/postscript")
+            || (parameters.mimeType.isEmpty() && (path.endsWith(".pdf", false) || path.endsWith(".ps", false)))) {
 #if ENABLE(PDFKIT_PLUGIN)
             if (pdfPluginEnabled())
                 return PDFPlugin::create(frame);
@@ -1025,10 +1031,31 @@ void WebPage::sendViewportAttributesChanged()
     int deviceHeight = (settings->deviceHeight() > 0) ? settings->deviceHeight() : m_viewportSize.height();
 
     ViewportAttributes attr = computeViewportAttributes(m_page->viewportArguments(), minimumLayoutFallbackWidth, deviceWidth, deviceHeight, m_page->deviceScaleFactor(), m_viewportSize);
+
+    // Keep the current position, update size only.
+    // For the new loads position is already reset to (0,0).
+    FrameView* view = m_page->mainFrame()->view();
+    IntPoint contentFixedOrigin = view->fixedVisibleContentRect().location();
+
+    // Put the width and height to the viewport width and height. In css units however.
+    IntSize contentFixedSize = m_viewportSize;
+
+    contentFixedSize.scale(1 / m_page->deviceScaleFactor());
+
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+    // CSS viewport descriptors might be applied to already affected viewport size
+    // if the page enables/disables stylesheets, so need to keep initial viewport size.
+    view->setInitialViewportSize(contentFixedSize);
+#endif
+
+    contentFixedSize.scale(1 / attr.initialScale);
+    setFixedVisibleContentRect(IntRect(contentFixedOrigin, contentFixedSize));
+
     attr.initialScale = m_page->viewportArguments().zoom; // Resets auto (-1) if no value was set by user.
 
     // This also takes care of the relayout.
-    setFixedLayoutSize(IntSize(static_cast<int>(attr.layoutSize.width()), static_cast<int>(attr.layoutSize.height())));
+    setFixedLayoutSize(roundedIntSize(attr.layoutSize));
+
     send(Messages::WebPageProxy::DidChangeViewportProperties(attr));
 }
 
@@ -1136,6 +1163,11 @@ void WebPage::setPageAndTextZoomFactors(double pageZoomFactor, double textZoomFa
 void WebPage::windowScreenDidChange(uint64_t displayID)
 {
     m_page->windowScreenDidChange(static_cast<PlatformDisplayID>(displayID));
+}
+
+void WebPage::setViewMode(Page::ViewMode mode)
+{
+    m_page->setViewMode(mode);
 }
 
 void WebPage::scalePage(double scale, const IntPoint& origin)
@@ -2207,12 +2239,8 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     settings->setFrameFlatteningEnabled(store.getBoolValueForKey(WebPreferencesKey::frameFlatteningEnabledKey()));
 
     bool privateBrowsingEnabled = store.getBoolValueForKey(WebPreferencesKey::privateBrowsingEnabledKey());
-#if (PLATFORM(MAC) || USE(CFNETWORK)) && !PLATFORM(WIN)
     if (privateBrowsingEnabled)
-        WebFrameNetworkingContext::ensurePrivateBrowsingSession();
-    else
-        WebFrameNetworkingContext::destroyPrivateBrowsingSession();
-#endif
+        WebProcess::shared().ensurePrivateBrowsingSession();
     settings->setPrivateBrowsingEnabled(privateBrowsingEnabled);
 
     settings->setDeveloperExtrasEnabled(store.getBoolValueForKey(WebPreferencesKey::developerExtrasEnabledKey()));
@@ -2257,8 +2285,9 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     settings->setCanvasUsesAcceleratedDrawing(store.getBoolValueForKey(WebPreferencesKey::canvasUsesAcceleratedDrawingKey()) && LayerTreeHost::supportsAcceleratedCompositing());
     settings->setShowDebugBorders(store.getBoolValueForKey(WebPreferencesKey::compositingBordersVisibleKey()));
     settings->setShowRepaintCounter(store.getBoolValueForKey(WebPreferencesKey::compositingRepaintCountersVisibleKey()));
+    settings->setShowTiledScrollingIndicator(store.getBoolValueForKey(WebPreferencesKey::tiledScrollingIndicatorVisibleKey()));
     settings->setCSSCustomFilterEnabled(store.getBoolValueForKey(WebPreferencesKey::cssCustomFilterEnabledKey()));
-    settings->setCSSRegionsEnabled(store.getBoolValueForKey(WebPreferencesKey::cssRegionsEnabledKey()));
+    RuntimeEnabledFeatures::setCSSRegionsEnabled(store.getBoolValueForKey(WebPreferencesKey::cssRegionsEnabledKey()));
     settings->setCSSGridLayoutEnabled(store.getBoolValueForKey(WebPreferencesKey::cssGridLayoutEnabledKey()));
     settings->setRegionBasedColumnsEnabled(store.getBoolValueForKey(WebPreferencesKey::regionBasedColumnsEnabledKey()));
     settings->setWebGLEnabled(store.getBoolValueForKey(WebPreferencesKey::webGLEnabledKey()));
@@ -2274,7 +2303,7 @@ void WebPage::updatePreferences(const WebPreferencesStore& store)
     settings->setInteractiveFormValidationEnabled(store.getBoolValueForKey(WebPreferencesKey::interactiveFormValidationEnabledKey()));
 
 #if ENABLE(SQL_DATABASE)
-    AbstractDatabase::setIsAvailable(store.getBoolValueForKey(WebPreferencesKey::databasesEnabledKey()));
+    DatabaseManager::manager().setIsAvailable(store.getBoolValueForKey(WebPreferencesKey::databasesEnabledKey()));
 #endif
 
 #if ENABLE(FULLSCREEN_API)
@@ -2883,9 +2912,9 @@ void WebPage::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::Messag
     }
 
 #if USE(TILED_BACKING_STORE) && USE(ACCELERATED_COMPOSITING)
-    if (messageID.is<CoreIPC::MessageClassLayerTreeCoordinator>()) {
+    if (messageID.is<CoreIPC::MessageClassCoordinatedLayerTreeHost>()) {
         if (m_drawingArea)
-            m_drawingArea->didReceiveLayerTreeCoordinatorMessage(connection, messageID, decoder);
+            m_drawingArea->didReceiveCoordinatedLayerTreeHostMessage(connection, messageID, decoder);
         return;
     }
 #endif
@@ -3246,20 +3275,23 @@ void WebPage::drawRectToImage(uint64_t frameID, const PrintInfo& printInfo, cons
 #else
         ASSERT(coreFrame->document()->printing());
 #endif
+
+        RefPtr<ShareableBitmap> bitmap = ShareableBitmap::createShareable(rect.size(), ShareableBitmap::SupportsAlpha);
+        OwnPtr<GraphicsContext> graphicsContext = bitmap->createGraphicsContext();
+
 #if PLATFORM(MAC)
         if (RetainPtr<PDFDocument> pdfDocument = pdfDocumentForPrintingFrame(coreFrame)) {
             ASSERT(!m_printContext);
-            RefPtr<ShareableBitmap> bitmap = ShareableBitmap::createShareable(rect.size(), ShareableBitmap::SupportsAlpha);
-            OwnPtr<GraphicsContext> graphicsContext = bitmap->createGraphicsContext();
             graphicsContext->scale(FloatSize(1, -1));
             graphicsContext->translate(0, -rect.height());
             drawPDFDocument(graphicsContext->platformContext(), pdfDocument.get(), printInfo, rect);
-            image = WebImage::create(bitmap.release());
         } else
 #endif
         {
-            image = scaledSnapshotWithOptions(rect, 1, SnapshotOptionsShareable | SnapshotOptionsExcludeSelectionHighlighting);
+            m_printContext->spoolRect(*graphicsContext, rect);
         }
+
+        image = WebImage::create(bitmap.release());
     }
 #endif
 
@@ -3384,7 +3416,7 @@ void WebPage::commitPageTransitionViewport()
 }
 #endif
 
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070
+#if PLATFORM(MAC)
 void WebPage::handleAlternativeTextUIResult(const String& result)
 {
     Frame* frame = m_page->focusController()->focusedOrMainFrame();

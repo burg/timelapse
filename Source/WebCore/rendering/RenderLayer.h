@@ -390,9 +390,6 @@ public:
 
     bool canRender3DTransforms() const;
 
-    // Returns true if the position changed.
-    bool updateLayerPosition();
-
     enum UpdateLayerPositionsFlag {
         CheckForRepaint = 1,
         IsCompositingUpdateRoot = 1 << 1,
@@ -576,21 +573,23 @@ public:
     // Pass offsetFromRoot if known.
     bool intersectsDamageRect(const LayoutRect& layerBounds, const LayoutRect& damageRect, const RenderLayer* rootLayer, const LayoutPoint* offsetFromRoot = 0) const;
 
-    // Bounding box relative to some ancestor layer. Pass offsetFromRoot if known.
-    LayoutRect boundingBox(const RenderLayer* rootLayer, const LayoutPoint* offsetFromRoot = 0) const;
-    // Bounding box in the coordinates of this layer.
-    LayoutRect localBoundingBox() const;
-    // Pixel snapped bounding box relative to the root.
-    IntRect absoluteBoundingBox() const;
-
     enum CalculateLayerBoundsFlag {
         IncludeSelfTransform = 1 << 0,
         UseLocalClipRectIfPossible = 1 << 1,
         IncludeLayerFilterOutsets = 1 << 2,
         ExcludeHiddenDescendants = 1 << 3,
+        DontConstrainForMask = 1 << 4,
         DefaultCalculateLayerBoundsFlags =  IncludeSelfTransform | UseLocalClipRectIfPossible | IncludeLayerFilterOutsets
     };
     typedef unsigned CalculateLayerBoundsFlags;
+
+    // Bounding box relative to some ancestor layer. Pass offsetFromRoot if known.
+    LayoutRect boundingBox(const RenderLayer* rootLayer, const LayoutPoint* offsetFromRoot = 0) const;
+    // Bounding box in the coordinates of this layer.
+    LayoutRect localBoundingBox(CalculateLayerBoundsFlags = 0) const;
+    // Pixel snapped bounding box relative to the root.
+    IntRect absoluteBoundingBox() const;
+
     // Can pass offsetFromRoot if known.
     IntRect calculateLayerBounds(const RenderLayer* ancestorLayer, const LayoutPoint* offsetFromRoot = 0, CalculateLayerBoundsFlags = DefaultCalculateLayerBoundsFlags) const;
     
@@ -710,6 +709,8 @@ public:
     bool isInTopLayerSubtree() const;
 #endif
 
+    virtual void reportMemoryUsage(MemoryObjectInfo*) const OVERRIDE;
+
 private:
     void updateZOrderLists();
     void rebuildZOrderLists();
@@ -738,6 +739,9 @@ private:
 
     void updateScrollbarsAfterStyleChange(const RenderStyle* oldStyle);
     void updateScrollbarsAfterLayout();
+
+    // Returns true if the position changed.
+    bool updateLayerPosition();
 
     void updateLayerPositions(RenderGeometryMap* = 0, UpdateLayerPositionsFlags = defaultFlags);
 
@@ -823,6 +827,8 @@ private:
     void computeScrollDimensions();
     bool hasHorizontalOverflow() const;
     bool hasVerticalOverflow() const;
+    bool hasScrollableHorizontalOverflow() const;
+    bool hasScrollableVerticalOverflow() const;
 
     bool shouldBeNormalFlowOnly() const;
 
@@ -850,7 +856,7 @@ private:
     virtual int visibleWidth() const;
     virtual IntSize contentsSize() const;
     virtual IntSize overhangAmount() const;
-    virtual IntPoint currentMousePosition() const;
+    virtual IntPoint lastKnownMousePosition() const;
     virtual bool shouldSuspendScrollAnimations() const;
     virtual bool scrollbarsCanBeActive() const;
     virtual IntRect scrollableAreaBoundingBox() const OVERRIDE;

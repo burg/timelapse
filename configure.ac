@@ -336,44 +336,12 @@ esac
 
 AC_MSG_RESULT([$with_target])
 
-AC_MSG_CHECKING([the GStreamer version to use])
-AC_ARG_WITH([gstreamer],
-        [AS_HELP_STRING([--with-gstreamer=0.10|1.0], [the GStreamer version to use (default: 0.10)])],
-        [case "$with_gstreamer" in
-        0.10|1.0) ;;
-        *) AC_MSG_ERROR([invalid GStreamer version specified]) ;;
-        esac],
-        [with_gstreamer=0.10])
-AC_MSG_RESULT([$with_gstreamer])
-
-GSTREAMER_0_10_REQUIRED_VERSION=0.10
-GSTREAMER_0_10_PLUGINS_BASE_REQUIRED_VERSION=0.10.30
-GSTREAMER_1_0_REQUIRED_VERSION=0.11.90
-GSTREAMER_1_0_PLUGINS_BASE_REQUIRED_VERSION=0.11.90
-
-case "$with_gstreamer" in
-     0.10) GSTREAMER_REQUIRED_VERSION=$GSTREAMER_0_10_REQUIRED_VERSION
-           GSTREAMER_PLUGINS_BASE_REQUIRED_VERSION=$GSTREAMER_0_10_PLUGINS_BASE_REQUIRED_VERSION
-           GST_API_VERSION=0.10
-           ;;
-     1.0) GSTREAMER_REQUIRED_VERSION=$GSTREAMER_1_0_REQUIRED_VERSION
-           GSTREAMER_PLUGINS_BASE_REQUIRED_VERSION=$GSTREAMER_1_0_PLUGINS_BASE_REQUIRED_VERSION
-           GST_API_VERSION=1.0
-           ;;
-esac
-
-AC_SUBST([GST_API_VERSION])
-if test "$GST_API_VERSION" = "1.0"; then
-AC_DEFINE([GST_USE_UNSTABLE_API], [1], [Using unstable GStreamer API])
-AC_DEFINE([GST_API_VERSION_1],[1], [Using GStreamer 1.0])
-fi
-
 # minimum base dependencies
 CAIRO_REQUIRED_VERSION=1.10
 FONTCONFIG_REQUIRED_VERSION=2.4
 FREETYPE2_REQUIRED_VERSION=9.0
 GLIB_REQUIRED_VERSION=2.32.0
-LIBSOUP_REQUIRED_VERSION=2.39.2
+LIBSOUP_REQUIRED_VERSION=2.40.0
 LIBXML_REQUIRED_VERSION=2.6
 PANGO_REQUIRED_VERSION=1.21.0
 
@@ -473,18 +441,6 @@ if test "$enable_spellcheck" = "yes"; then
 PKG_CHECK_MODULES(ENCHANT, enchant >= $ENCHANT_REQUIRED_VERSION, [], [enable_spellcheck="no"])
 AC_SUBST(ENCHANT_CFLAGS)
 AC_SUBST(ENCHANT_LIBS)
-fi
-
-# farstream-0.1 depends on gstreamer 0.10 currently. Disable
-# media_stream if gstreamer 0.11 build support is enabled.
-if test "$GST_API_VERSION" = "1.0"; then
-   enable_media_stream=false
-fi
-if test "$enable_media_stream" = "yes"; then
-   PKG_CHECK_MODULES([FARSTREAM], [farstream-0.1],
-                     [have_farstream=yes], [enable_media_stream=false])
-   AC_SUBST([FARSTREAM_CFLAGS])
-   AC_SUBST([FARSTREAM_LIBS])
 fi
 
 PKG_CHECK_MODULES(GAIL, $GAIL_PC_NAME >= $GAIL_REQUIRED_VERSION)
@@ -701,14 +657,6 @@ if test "$enable_gamepad" = "yes" && test "$os_linux" = no; then
    enable_gamepad=no;
 fi
 
-# check whether to enable the indexed database API
-AC_MSG_CHECKING([whether to enable the indexed database API])
-AC_ARG_ENABLE(indexed_database,
-              AC_HELP_STRING([--enable-indexed-database],
-                             [enable the indexed database API (incomplete) [default=no]]),
-              [],[enable_indexed_database="no"])
-AC_MSG_RESULT([$enable_indexed_database])
-
 # check whether to enable HTML5 audio/video support
 AC_MSG_CHECKING([whether to enable HTML5 video support])
 AC_ARG_ENABLE(video,
@@ -724,14 +672,6 @@ AC_ARG_ENABLE(media_stream,
                              [enable media stream support (incomplete) [default=no]]),
               [],[enable_media_stream=$enable_unstable_features])
 AC_MSG_RESULT([$enable_media_stream])
-
-# check whether to enable XHR timeout support
-AC_MSG_CHECKING([whether to enable XHR timeout support])
-AC_ARG_ENABLE(xhr_timeout,
-              AC_HELP_STRING([--enable-xhr-timeout],
-                             [enable support for XHR timeout [default=yes]]),
-              [],[enable_xhr_timeout="yes"])
-AC_MSG_RESULT([$enable_xhr_timeout])
 
 # check whether to enable XSLT support
 AC_MSG_CHECKING([whether to enable XSLT support])
@@ -762,14 +702,6 @@ if test "$enable_svg" = "no"; then
    enable_svg_fonts=no
 fi
 
-# check whether to enable support for filters
-AC_MSG_CHECKING([whether to enable support for filters])
-AC_ARG_ENABLE(filters,
-              AC_HELP_STRING([--enable-filters],
-                             [enable support for filters (experimental) [default=yes]]),
-              [],[enable_filters="yes"])
-AC_MSG_RESULT([$enable_filters])
-
 # check whether to enable support for SVG fonts
 AC_MSG_CHECKING([whether to enable support for SVG fonts])
 AC_ARG_ENABLE(svg_fonts,
@@ -783,14 +715,6 @@ if test "$enable_svg_fonts" = "yes" && test "$enable_svg" = "no"; then
    AC_MSG_WARN([SVG feature(s) requested but SVG is disabled.. Enabling SVG support])
    enable_svg=yes
 fi
-
-# check whether to enable Web Socket support
-AC_MSG_CHECKING([whether to enable Web Sockets support])
-AC_ARG_ENABLE(web_sockets,
-              AC_HELP_STRING([--enable-web-sockets],
-                             [enable support for Web Sockets [default=yes]]),
-              [],[enable_web_sockets="yes"])
-AC_MSG_RESULT([$enable_web_sockets])
 
 # check whether to enable Web Audio support
 AC_MSG_CHECKING([whether to enable Web Audio support])
@@ -807,22 +731,6 @@ AC_ARG_ENABLE(coverage,
                              [enable code coverage support [default=no]]),
               [],[enable_coverage="no"])
 AC_MSG_RESULT([$enable_coverage])
-
-# check whether to enable CSS3 background support
-AC_MSG_CHECKING([whether to enable CSS3 background support])
-AC_ARG_ENABLE(css3_background,
-              AC_HELP_STRING([--enable-css3-background],
-                             [enable CSS3 background support [default=no]]),
-              [],[enable_css3_background="no"])
-AC_MSG_RESULT([$enable_css3_background])
-
-# check whether to enable CSS conditional rules support
-AC_MSG_CHECKING([whether to enable CSS3 conditional rules support])
-AC_ARG_ENABLE(css3_conditional_rules,
-              AC_HELP_STRING([--enable-css3-conditional-rules],
-                             [enable CSS3 conditional rules support [default=no]]),
-              [],[enable_css3_conditional_rules="no"])
-AC_MSG_RESULT([$enable_css3_conditional_rules])
 
 # check whether to enable FastMalloc
 AC_MSG_CHECKING([whether to enable optimized memory allocator])
@@ -845,6 +753,57 @@ case "$enable_debug_symbols" in
   *) AC_MSG_ERROR([Invalid debug symbols option: must be yes, no, min or full.]) ;;
 esac
 AC_MSG_RESULT([$enable_debug_symbols])
+
+#selecting GStreamer version
+AC_MSG_CHECKING([the GStreamer version to use])
+AC_ARG_WITH([gstreamer],
+        [AS_HELP_STRING([--with-gstreamer=1.0|0.10|auto], [the GStreamer version to use (default: auto, tries 1.0 first, 0.10 is fallback)])],
+        [case "$with_gstreamer" in
+        0.10|1.0|auto) ;;
+        *) AC_MSG_ERROR([invalid GStreamer version specified]) ;;
+        esac],
+        [with_gstreamer=auto])
+AC_MSG_RESULT([$with_gstreamer])
+
+GSTREAMER_0_10_REQUIRED_VERSION=0.10
+GSTREAMER_0_10_PLUGINS_BASE_REQUIRED_VERSION=0.10.30
+GSTREAMER_1_0_REQUIRED_VERSION=1.0.3
+GSTREAMER_1_0_PLUGINS_BASE_REQUIRED_VERSION=1.0.3
+
+if test "$enable_video" = "yes" || test "$enable_web_audio" = "yes"; then
+   if test "$with_gstreamer" = "auto"; then
+       gstreamer_modules="gstreamer-1.0 >= $GSTREAMER_1_0_REQUIRED_VERSION
+                          gstreamer-app-1.0
+                          gstreamer-audio-1.0
+                          gstreamer-fft-1.0
+                          gstreamer-base-1.0
+                          gstreamer-pbutils-1.0
+                          gstreamer-plugins-base-1.0 >= $GSTREAMER_1_0_PLUGINS_BASE_REQUIRED_VERSION
+                          gstreamer-video-1.0";
+       PKG_CHECK_MODULES([GSTREAMER_1_0], [$gstreamer_modules], [with_gstreamer=1.0], [with_gstreamer=0.10])
+       AC_MSG_NOTICE([Selected GStreamer $with_gstreamer])
+   fi
+else
+   if test "$with_gstreamer" != "auto"; then
+       AC_MSG_WARN([You have specified GStreamer $with_gstreamer version but it will not be used because neither HTML5 Video nor Web Audio are enabled])
+   fi
+fi
+
+case "$with_gstreamer" in
+     0.10) GSTREAMER_REQUIRED_VERSION=$GSTREAMER_0_10_REQUIRED_VERSION
+           GSTREAMER_PLUGINS_BASE_REQUIRED_VERSION=$GSTREAMER_0_10_PLUGINS_BASE_REQUIRED_VERSION
+           GST_API_VERSION=0.10
+           ;;
+     1.0) GSTREAMER_REQUIRED_VERSION=$GSTREAMER_1_0_REQUIRED_VERSION
+           GSTREAMER_PLUGINS_BASE_REQUIRED_VERSION=$GSTREAMER_1_0_PLUGINS_BASE_REQUIRED_VERSION
+           GST_API_VERSION=1.0
+           ;;
+esac
+
+AC_SUBST([GST_API_VERSION])
+if test "$GST_API_VERSION" = "1.0"; then
+   AC_DEFINE([GST_API_VERSION_1],[1], [Using GStreamer 1.0])
+fi
 
 # check whether to enable debug features
 AC_MSG_CHECKING([whether to enable debug features])
@@ -897,14 +856,6 @@ if test "$enable_unstable_features" = "yes" && test "$enable_accelerated_composi
 fi
 AC_MSG_RESULT([$enable_css_filters])
 
-# CSS Device Adaptation
-AC_MSG_CHECKING([whether to enable CSS Device Adaptation])
-AC_ARG_ENABLE(css_device_adaptation,
-              AC_HELP_STRING([--enable-css-device-adaptation],
-                             [enable support for CSS Device Adaptation [default=no]]),
-              [],[enable_css_device_adaptation="no"])
-AC_MSG_RESULT([$enable_css_device_adaptation])
-
 G_IR_SCANNER=
 G_IR_COMPILER=
 G_IR_GENERATE=
@@ -924,19 +875,6 @@ fi
 AC_SUBST([G_IR_SCANNER])
 AC_SUBST([G_IR_COMPILER])
 AC_SUBST([G_IR_GENERATE])
-
-# determine the font backend
-AC_MSG_CHECKING([the font backend to use])
-AC_ARG_WITH(font_backend,
-            AC_HELP_STRING([--with-font-backend=@<:@freetype/pango@:>@],
-                           [Select font backend [default=freetype]]),
-            [],[with_font_backend="freetype"])
-
-case "$with_font_backend" in
-     freetype|pango) ;;
-     *) AC_MSG_ERROR([Invalid font backend: must be freetype or pango.]) ;;
-esac
-AC_MSG_RESULT([$with_font_backend])
 
 if test "$host_cpu" = "sh4"; then
    CXXFLAGS="$CXXFLAGS -mieee -w"
@@ -975,20 +913,20 @@ AC_SUBST([LIBSECRET_CFLAGS])
 AC_SUBST([LIBSECRET_LIBS])
 
 # check if FreeType/FontConfig are available
-if test "$with_font_backend" = "freetype"; then
-   if test "$with_target" = "directfb"; then
-   PKG_CHECK_MODULES([FREETYPE],
-                     [fontconfig >= $FONTCONFIG_REQUIRED_VERSION
-                     freetype2 >= $FREETYPE2_REQUIRED_VERSION])
-   else
-   PKG_CHECK_MODULES([FREETYPE],
-                     [cairo-ft
-                     fontconfig >= $FONTCONFIG_REQUIRED_VERSION
-                     freetype2 >= $FREETYPE2_REQUIRED_VERSION])
-   fi
-   AC_SUBST([FREETYPE_CFLAGS])
-   AC_SUBST([FREETYPE_LIBS])
+if test "$with_target" = "directfb"; then
+PKG_CHECK_MODULES([FREETYPE],
+                  [fontconfig >= $FONTCONFIG_REQUIRED_VERSION
+                  freetype2 >= $FREETYPE2_REQUIRED_VERSION
+                  harfbuzz])
+else
+PKG_CHECK_MODULES([FREETYPE],
+                  [cairo-ft
+                  fontconfig >= $FONTCONFIG_REQUIRED_VERSION
+                  freetype2 >= $FREETYPE2_REQUIRED_VERSION
+                  harfbuzz])
 fi
+AC_SUBST([FREETYPE_CFLAGS])
+AC_SUBST([FREETYPE_LIBS])
 
 # check if SQLite3 is available. Error out only if one of the
 # features hard-depending on it is enabled while SQLite3 is
@@ -1047,6 +985,21 @@ if test "$enable_video" = "yes" || test "$enable_web_audio" = "yes"; then
    PKG_CHECK_MODULES([GSTREAMER], [$gstreamer_modules], [have_gstreamer=yes])
    AC_SUBST([GSTREAMER_CFLAGS])
    AC_SUBST([GSTREAMER_LIBS])
+fi
+
+# farstream-0.1 depends on gstreamer 0.10 currently. Disable
+# media_stream if gstreamer 1.0 build support is enabled.
+if test "$have_gstreamer" != "yes" || test "$GST_API_VERSION" = "1.0"; then
+   if test "$enable_media_stream" = "yes"; then
+      AC_MSG_WARN([Disabling Media Stream because no GStreamer 0.10 support is enabled])
+   fi
+   enable_media_stream=false
+fi
+if test "$enable_media_stream" = "yes"; then
+   PKG_CHECK_MODULES([FARSTREAM], [farstream-0.1],
+                     [have_farstream=yes], [enable_media_stream=false])
+   AC_SUBST([FARSTREAM_CFLAGS])
+   AC_SUBST([FARSTREAM_LIBS])
 fi
 
 acceleration_backend_description=$with_acceleration_backend
@@ -1175,10 +1128,6 @@ AM_CONDITIONAL([TARGET_DIRECTFB], [test "$with_target" = "directfb"])
 AM_CONDITIONAL([USE_ICU_UNICODE], [test "$with_unicode_backend" = "icu"])
 AM_CONDITIONAL([USE_GLIB_UNICODE], [test "$with_unicode_backend" = "glib"])
 
-# Font backend conditionals
-AM_CONDITIONAL([USE_FREETYPE], [test "$with_font_backend" = "freetype"])
-AM_CONDITIONAL([USE_PANGO], [test "$with_font_backend" = "pango"])
-
 # GStreamer feature conditional
 AM_CONDITIONAL([USE_GSTREAMER], [test "$have_gstreamer" = "yes"])
 AM_CONDITIONAL([USE_WEBAUDIO_GSTREAMER], [test "$enable_web_audio" = "yes"])
@@ -1198,10 +1147,6 @@ AM_CONDITIONAL([USE_EGL], [test "$enable_egl" = "yes"])
 AM_CONDITIONAL([USE_GLES2], [test "$enable_gles2" = "yes"])
 AM_CONDITIONAL([USE_GLX], [test "$enable_glx" = "yes"])
 
-# IndexedDB implies LevelDB, but other features may one day require LevelDB.
-AM_CONDITIONAL([ENABLE_INDEXED_DATABASE],[test "$enable_indexed_database" = "yes"])
-AM_CONDITIONAL([USE_LEVELDB],[test "$enable_indexed_database" = "yes"])
-
 # Farstream feature conditional
 AM_CONDITIONAL([USE_FARSTREAM], [test "$have_farstream" = "yes"])
 
@@ -1210,24 +1155,19 @@ AM_CONDITIONAL([ENABLE_DEBUG],[test "$enable_debug_features" = "yes"])
 AM_CONDITIONAL([ENABLE_UNSTABLE_FEATURES],[test "$enable_unstable_features" = "yes"])
 AM_CONDITIONAL([ENABLE_WEBGL],[test "$enable_webgl" = "yes"])
 AM_CONDITIONAL([ENABLE_GAMEPAD],[test "$enable_gamepad" = "yes"])
-AM_CONDITIONAL([ENABLE_XHR_TIMEOUT],[test "$enable_xhr_timeout" = "yes"])
 AM_CONDITIONAL([ENABLE_XSLT],[test "$enable_xslt" = "yes"])
-AM_CONDITIONAL([ENABLE_FILTERS],[test "$enable_filters" = "yes"])
 AM_CONDITIONAL([ENABLE_GEOLOCATION], [test "$enable_geolocation" = "yes"])
 AM_CONDITIONAL([ENABLE_VIDEO],[test "$enable_video" = "yes"])
 AM_CONDITIONAL([ENABLE_MEDIA_STREAM],[test "$enable_media_stream" = "yes"])
 AM_CONDITIONAL([ENABLE_SVG],[test "$enable_svg" = "yes"])
 AM_CONDITIONAL([ENABLE_SVG_FONTS],[test "$enable_svg_fonts" = "yes"])
 AM_CONDITIONAL([ENABLE_COVERAGE],[test "$enable_coverage" = "yes"])
-AM_CONDITIONAL([ENABLE_CSS3_BACKGROUND],[test "$enable_css3_background" = "yes"])
-AM_CONDITIONAL([ENABLE_CSS3_CONDITIONAL_RULES],[test "$enable_css3_conditional_rules" = "yes"])
 AM_CONDITIONAL([ENABLE_FAST_MALLOC],[test "$enable_fast_malloc" = "yes"])
 AM_CONDITIONAL([ENABLE_WEB_AUDIO],[test "$enable_web_audio" = "yes"])
 AM_CONDITIONAL([ENABLE_OPCODE_STATS],[test "$enable_opcode_stats" = "yes"])
 AM_CONDITIONAL([ENABLE_WEBKIT2],[test "$enable_webkit2" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_PROCESS],[test "$enable_plugin_process" = "yes"])
 AM_CONDITIONAL([ENABLE_SPELLCHECK],[test "$enable_spellcheck" = "yes"])
-AM_CONDITIONAL([ENABLE_CSS_DEVICE_ADAPTATION],[test "$enable_css_device_adaptation" = "yes"])
 AM_CONDITIONAL([ENABLE_CSS_FILTERS],[test "$enable_css_filters" = "yes"])
 AM_CONDITIONAL([ENABLE_CSS_SHADERS],[test "$enable_css_shaders" = "yes"])
 
@@ -1278,16 +1218,12 @@ Build configuration:
  Enable GCC build optimization                            : $enable_optimizations
  Code coverage support                                    : $enable_coverage
  Unicode backend                                          : $with_unicode_backend
- Font backend                                             : $with_font_backend
  Optimized memory allocator                               : $enable_fast_malloc
  Accelerated rendering backend                            : $acceleration_backend_description
 
 Features:
 =======
  Accelerated Compositing                                  : $enable_accelerated_compositing
- CSS3 Conditional Rules support                           : $enable_css3_conditional_rules
- CSS3 background support                                  : $enable_css3_background
- Filters support                                          : $enable_filters
  Gamepad support                                          : $enable_gamepad
  Geolocation support                                      : $enable_geolocation
  HTML5 video element support                              : $enable_video
@@ -1299,7 +1235,6 @@ Features:
  Spellcheck support                                       : $enable_spellcheck
  Web Audio support                                        : $enable_web_audio
  WebGL                                                    : $enable_webgl
- XHR timeout support                                      : $enable_xhr_timeout
  XSLT support                                             : $enable_xslt
 
 WebKit2 support:

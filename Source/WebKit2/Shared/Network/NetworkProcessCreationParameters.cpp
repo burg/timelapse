@@ -40,7 +40,9 @@ void NetworkProcessCreationParameters::encode(CoreIPC::ArgumentEncoder& encoder)
 {
 #if PLATFORM(MAC)
     encoder << parentProcessName;
+    encoder << uiProcessBundleIdentifier;
 #endif
+    encoder << privateBrowsingEnabled;
 }
 
 bool NetworkProcessCreationParameters::decode(CoreIPC::ArgumentDecoder* decoder, NetworkProcessCreationParameters& result)
@@ -48,7 +50,11 @@ bool NetworkProcessCreationParameters::decode(CoreIPC::ArgumentDecoder* decoder,
 #if PLATFORM(MAC)
     if (!decoder->decode(result.parentProcessName))
         return false;
+    if (!decoder->decode(result.uiProcessBundleIdentifier))
+        return false;
 #endif
+    if (!decoder->decode(result.privateBrowsingEnabled))
+        return false;
 
     return true;
 }

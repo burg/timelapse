@@ -899,6 +899,8 @@ farthest-corner
 // cover
 
 // -webkit-text-orientation
+sideways
+sideways-right
 upright
 vertical-right
 

@@ -66,6 +66,8 @@ public:
     virtual void setContentsRect(const IntRect& r);
     virtual void setReplicatedByLayer(GraphicsLayer*);
     virtual void setContentsToImage(Image*);
+    virtual void setContentsToBackgroundColor(const Color&);
+    Color backgroundColor() const { return m_backgroundColor; }
     virtual void setContentsToMedia(PlatformLayer*);
     virtual void setContentsToCanvas(PlatformLayer* canvas) { setContentsToMedia(canvas); }
     virtual void flushCompositingState(const FloatRect&);
@@ -95,6 +97,7 @@ public:
     void setFixedToViewport(bool fixed) { m_fixedToViewport = fixed; }
     bool fixedToViewport() const { return m_fixedToViewport; }
 
+    void drawRepaintCounter(GraphicsContext*);
 private:
     virtual void willBeDestroyed();
     void didFlushCompositingState();
@@ -102,7 +105,6 @@ private:
     void updateBackingStore();
     void prepareBackingStore();
     bool shouldHaveBackingStore() const;
-    void drawRepaintCounter(GraphicsContext*);
     void animationStartedTimerFired(Timer<GraphicsLayerTextureMapper>*);
 
     OwnPtr<TextureMapperLayer> m_layer;
@@ -114,6 +116,7 @@ private:
     bool m_needsDisplay;
     bool m_hasOwnBackingStore;
     bool m_fixedToViewport;
+    Color m_backgroundColor;
 
     Color m_debugBorderColor;
     float m_debugBorderWidth;

@@ -580,11 +580,6 @@
       'dependencies': [
         'generate_supplemental_dependency',
       ],
-      'variables': {
-        # Write sources into a file, so that the action command line won't
-        # exceed OS limits.
-        'additional_idl_files_list': '<|(additional_idl_files_list.tmp <@(webcore_test_support_idl_files))',
-      },
       'sources': [
         # bison rule
         '<(SHARED_INTERMEDIATE_DIR)/webkit/CSSGrammar.y',
@@ -1169,8 +1164,7 @@
             '../bindings/scripts/IDLParser.pm',
             '../bindings/scripts/preprocessor.pm',
             '<(SHARED_INTERMEDIATE_DIR)/supplemental_dependency.tmp',
-            '<(additional_idl_files_list)',
-            '<!@(cat <(additional_idl_files_list))',
+            '<@(webcore_test_support_idl_files)',
           ],
           'outputs': [
             # FIXME:  The .cpp file should be in webkit/bindings once
@@ -1224,8 +1218,8 @@
             '<@(generator_include_dirs)',
             '--supplementalDependencyFile',
             '<(SHARED_INTERMEDIATE_DIR)/supplemental_dependency.tmp',
-            '--additionalIdlFilesList',
-            '<(additional_idl_files_list)',
+            '--additionalIdlFiles',
+            '<(webcore_test_support_idl_files)',
             '<(RULE_INPUT_PATH)',
             '<@(preprocessor)',
           ],
@@ -1601,7 +1595,6 @@
         'webcore_prerequisites',
       ],
       'sources': [
-        '<@(webcore_dom_privateheader_files)',
         '<@(webcore_dom_files)',
       ],
       'sources!': [
@@ -1623,7 +1616,6 @@
         'webcore_prerequisites',
       ],
       'sources': [
-        '<@(webcore_html_privateheader_files)',
         '<@(webcore_html_files)',
       ],
       'sources/': [
@@ -1644,7 +1636,6 @@
         'webcore_prerequisites',
       ],
       'sources': [
-        '<@(webcore_svg_privateheader_files)',
         '<@(webcore_svg_files)',
       ],
       'sources/': [
@@ -1661,7 +1652,6 @@
       # if this hard dependency could be split off the rest.
       'hard_dependency': 1,
       'sources': [
-        '<@(webcore_privateheader_files)',
         '<@(webcore_platform_files)',
 
         # For WebCoreSystemInterface, Mac-only.
@@ -1700,17 +1690,12 @@
         }],
         ['use_default_render_theme==1', {
           'sources/': [
-            ['exclude', 'platform/chromium/PlatformThemeChromiumLinux.h'],
-            ['exclude', 'platform/chromium/PlatformThemeChromiumLinux.cpp'],
             ['exclude', 'platform/chromium/PlatformThemeChromiumWin.h'],
             ['exclude', 'platform/chromium/PlatformThemeChromiumWin.cpp'],
-            ['exclude', 'platform/chromium/ScrollbarThemeChromiumLinux.cpp'],
-            ['exclude', 'platform/chromium/ScrollbarThemeChromiumLinux.h'],
             ['exclude', 'platform/chromium/ScrollbarThemeChromiumWin.cpp'],
             ['exclude', 'platform/chromium/ScrollbarThemeChromiumWin.h'],
           ],
-        }],
-        ['use_default_render_theme==0', {
+        }, { # use_default_render_theme==0
           'sources/': [
             ['exclude', 'platform/chromium/PlatformThemeChromiumDefault.cpp'],
             ['exclude', 'platform/chromium/PlatformThemeChromiumDefault.h'],
@@ -1991,7 +1976,6 @@
         'webcore_prerequisites',
       ],
       'sources': [
-        '<@(webcore_privateheader_files)',
         '<@(webcore_files)',
       ],
       'sources/': [
@@ -2013,7 +1997,6 @@
         }],
         ['use_default_render_theme==1', {
           'sources/': [
-            ['exclude', 'RenderThemeChromiumLinux.*'],
             ['exclude', 'RenderThemeChromiumWin.*'],
           ],
         }],
@@ -2060,7 +2043,7 @@
         ['OS=="android"', {
           'sources/': [
             ['include', 'rendering/RenderThemeChromiumFontProviderLinux\\.cpp$'],
-            ['include', 'rendering/RenderThemeChromiumLinux\\.cpp$'],
+            ['include', 'rendering/RenderThemeChromiumDefault\\.cpp$'],
           ],
         },{ # OS!="android"
           'sources/': [
@@ -2080,7 +2063,6 @@
       # if this hard dependency could be split off the rest.
       'hard_dependency': 1,
       'sources': [
-        '<@(webcore_privateheader_files)',
         '<@(webcore_files)',
       ],
       'sources/': [
@@ -2107,7 +2089,7 @@
 
         ['exclude', 'Modules/filesystem/LocalFileSystem\\.cpp$'],
         ['exclude', 'Modules/indexeddb/IDBFactoryBackendInterface\\.cpp$'],
-        ['exclude', 'Modules/webdatabase/DatabaseTrackerClient\\.h$'],
+        ['exclude', 'Modules/webdatabase/DatabaseManagerClient\\.h$'],
         ['exclude', 'Modules/webdatabase/DatabaseTracker\\.cpp$'],
         ['exclude', 'Modules/webdatabase/OriginQuotaManager\\.(cpp|h)$'],
         ['exclude', 'Modules/webdatabase/OriginUsageRecord\\.(cpp|h)$'],

@@ -39,8 +39,8 @@
 #include "CredentialTransformData.h"
 #include "DOMSupport.h"
 #include "Database.h"
+#include "DatabaseManager.h"
 #include "DatabaseSync.h"
-#include "DatabaseTracker.h"
 #include "DefaultTapHighlight.h"
 #include "DeviceMotionClientBlackBerry.h"
 #include "DeviceOrientationClientBlackBerry.h"
@@ -90,6 +90,7 @@
 #endif
 #include "NetworkManager.h"
 #include "NodeRenderStyle.h"
+#include "NodeTraversal.h"
 #if ENABLE(NAVIGATOR_CONTENT_UTILS)
 #include "NavigatorContentUtilsClientBlackBerry.h"
 #endif
@@ -405,11 +406,13 @@ WebPagePrivate::WebPagePrivate(WebPage* webPage, WebPageClient* client, const In
     , m_initialScale(-1.0)
     , m_minimumScale(-1.0)
     , m_maximumScale(-1.0)
+    , m_forceRespectViewportArguments(false)
     , m_blockZoomFinalScale(1.0)
     , m_anchorInNodeRectRatio(-1, -1)
     , m_currentBlockZoomNode(0)
     , m_currentBlockZoomAdjustedNode(0)
     , m_shouldReflowBlock(false)
+    , m_shouldConstrainScrollingToContentEdge(true)
     , m_lastUserEventTimestamp(0.0)
     , m_pluginMouseButtonPressed(false)
     , m_pluginMayOpenNewTab(false)
@@ -1080,12 +1083,13 @@ void WebPagePrivate::setLoadState(LoadState state)
 
             m_previousContentsSize = IntSize();
             m_backingStore->d->resetRenderQueue();
-            m_backingStore->d->resetTiles(true /* resetBackground */);
+            m_backingStore->d->resetTiles();
             m_backingStore->d->setScrollingOrZooming(false, false /* shouldBlit */);
             m_shouldZoomToInitialScaleAfterLoadFinished = false;
             m_userPerformedManualZoom = false;
             m_userPerformedManualScroll = false;
             m_shouldUseFixedDesktopMode = false;
+            m_forceRespectViewportArguments = false;
             if (m_resetVirtualViewportOnCommitted) // For DRT.
                 m_virtualViewportSize = IntSize();
             if (m_webSettings->viewportWidth() > 0)
@@ -1107,6 +1111,8 @@ void WebPagePrivate::setLoadState(LoadState state)
                 // to any fallback values. If there is a meta viewport in the
                 // content it will overwrite the fallback arguments soon.
                 dispatchViewportPropertiesDidChange(m_userViewportArguments);
+                if (m_userViewportArguments != defaultViewportArguments)
+                    m_forceRespectViewportArguments = true;
             } else {
                 Platform::IntSize virtualViewport = recomputeVirtualViewportFromViewportArguments();
                 m_webPage->setVirtualViewportSize(virtualViewport);
@@ -1179,10 +1185,8 @@ bool WebPagePrivate::shouldZoomAboutPoint(double scale, const FloatPoint&, bool 
     ASSERT(clampedScale);
     *clampedScale = scale;
 
-    if (currentScale() == scale) {
-        m_client->scaleChanged();
+    if (currentScale() == scale)
         return false;
-    }
 
     return true;
 }
@@ -1551,6 +1555,17 @@ void WebPagePrivate::contentsSizeChanged(const IntSize& contentsSize)
 #endif
 }
 
+void WebPagePrivate::overflowExceedsContentsSize()
+{
+    m_overflowExceedsContentsSize = true;
+    if (absoluteVisibleOverflowSize().width() < DEFAULT_MAX_LAYOUT_WIDTH && !hasVirtualViewport()) {
+        if (setViewMode(viewMode())) {
+            setNeedsLayout();
+            requestLayoutIfNeeded();
+        }
+    }
+}
+
 void WebPagePrivate::layoutFinished()
 {
     if (!m_contentsSizeChanged && !m_overflowExceedsContentsSize)
@@ -1696,9 +1711,15 @@ double WebPagePrivate::zoomToFitScale() const
     return std::min(zoomToFitScale, maximumImageDocumentZoomToFitScale);
 }
 
+bool WebPagePrivate::respectViewport() const
+{
+    return m_forceRespectViewportArguments || contentsSize().width() <= m_virtualViewportSize.width();
+}
+
 double WebPagePrivate::initialScale() const
 {
-    if (m_initialScale > 0.0)
+
+    if (m_initialScale > 0.0 && respectViewport())
         return m_initialScale;
 
     if (m_webSettings->isZoomToFitOnLoad())
@@ -1754,7 +1775,7 @@ void WebPage::setMaximumScale(double maximumScale)
 
 double WebPagePrivate::maximumScale() const
 {
-    if (m_maximumScale >= zoomToFitScale() && m_maximumScale >= m_minimumScale)
+    if (m_maximumScale >= zoomToFitScale() && m_maximumScale >= m_minimumScale && respectViewport())
         return m_maximumScale;
 
     return hasVirtualViewport() ? std::max<double>(zoomToFitScale(), 4.0) : 4.0;
@@ -2965,6 +2986,13 @@ void WebPagePrivate::zoomBlock()
     m_backingStore->d->suspendScreenUpdates();
     updateViewportSize();
 
+    FrameView* mainFrameView = m_mainFrame->view();
+    bool constrainsScrollingToContentEdge = true;
+    if (mainFrameView) {
+        constrainsScrollingToContentEdge = mainFrameView->constrainsScrollingToContentEdge();
+        mainFrameView->setConstrainsScrollingToContentEdge(m_shouldConstrainScrollingToContentEdge);
+    }
+
 #if ENABLE(VIEWPORT_REFLOW)
     requestLayoutIfNeeded();
     if (willUseTextReflow && m_shouldReflowBlock) {
@@ -3019,6 +3047,10 @@ void WebPagePrivate::zoomBlock()
 
     notifyTransformChanged();
     m_client->scaleChanged();
+
+    if (mainFrameView)
+        mainFrameView->setConstrainsScrollingToContentEdge(constrainsScrollingToContentEdge);
+
     // FIXME: Do we really need to suspend/resume both backingstore and screen here?
     m_backingStore->d->resumeBackingStoreUpdates();
     m_backingStore->d->resumeScreenUpdates(BackingStore::RenderAndBlit);
@@ -3039,6 +3071,7 @@ void WebPagePrivate::resetBlockZoom()
     m_currentBlockZoomNode = 0;
     m_currentBlockZoomAdjustedNode = 0;
     m_shouldReflowBlock = false;
+    m_shouldConstrainScrollingToContentEdge = true;
 }
 
 void WebPage::destroyWebPageCompositor()
@@ -3448,9 +3481,10 @@ void WebPagePrivate::dispatchViewportPropertiesDidChange(const ViewportArguments
 
     // If the caller is trying to reset to default arguments, use the user supplied ones instead.
     static const ViewportArguments defaultViewportArguments;
-    if (arguments == defaultViewportArguments)
+    if (arguments == defaultViewportArguments) {
         m_viewportArguments = m_userViewportArguments;
-    else
+        m_forceRespectViewportArguments = m_userViewportArguments != defaultViewportArguments;
+    } else
         m_viewportArguments = arguments;
 
     // 0 width or height in viewport arguments makes no sense, and results in a very large initial scale.
@@ -3513,8 +3547,6 @@ void WebPagePrivate::resumeBackingStore()
     if (!m_backingStore->d->isActive()
         || shouldResetTilesWhenShown()
         || directRendering) {
-        // We need to reset all tiles so that we do not show any tiles whose content may
-        // have been replaced by another WebPage instance (i.e. another tab).
         BackingStorePrivate::setCurrentBackingStoreOwner(m_webPage);
 
         // If we're OpenGL compositing, switching to accel comp drawing of the root layer
@@ -3523,7 +3555,7 @@ void WebPagePrivate::resumeBackingStore()
             setCompositorDrawsRootLayer(!m_backingStore->d->isActive());
 
         m_backingStore->d->orientationChanged(); // Updates tile geometry and creates visible tile buffer.
-        m_backingStore->d->resetTiles(true /* resetBackground */);
+        m_backingStore->d->resetTiles();
         m_backingStore->d->updateTiles(false /* updateVisible */, false /* immediate */);
 
         // This value may have changed, so we need to update it.
@@ -3572,6 +3604,9 @@ void WebPage::applyPendingOrientationIfNeeded()
 {
     if (d->m_pendingOrientation != -1)
         d->setScreenOrientation(d->m_pendingOrientation);
+
+    // After rotation, we should redraw the dialog box instead of just moving it since rotation dismisses all dialogs.
+    d->m_inputHandler->redrawSpellCheckDialogIfRequired(false /* shouldMoveDialog */);
 }
 
 void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize, bool ensureFocusElementVisible)
@@ -3581,9 +3616,9 @@ void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
 
     // Suspend all screen updates to the backingstore to make sure no-one tries to blit
     // while the window surface and the BackingStore are out of sync.
-    // FIXME: Do we really need to suspend/resume both backingstore and screen here?
-    m_backingStore->d->suspendBackingStoreUpdates();
+    BackingStore::ResumeUpdateOperation screenResumeOperation = BackingStore::Blit;
     m_backingStore->d->suspendScreenUpdates();
+    m_backingStore->d->suspendBackingStoreUpdates();
 
     // The screen rotation is a major state transition that in this case is not properly
     // communicated to the backing store, since it does early return in most methods when
@@ -3699,9 +3734,7 @@ void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
 
     // Need to resume so that the backingstore will start recording the invalidated
     // rects from below.
-    // FIXME: Do we really need to suspend/resume both backingstore and screen here?
     m_backingStore->d->resumeBackingStoreUpdates();
-    m_backingStore->d->resumeScreenUpdates(BackingStore::None);
 
     // We might need to layout here to get a correct contentsSize so that zoomToFit
     // is calculated correctly.
@@ -3773,10 +3806,8 @@ void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
 
     } else {
 
-        // Suspend all screen updates to the backingstore.
-        // FIXME: Do we really need to suspend/resume both backingstore and screen here?
+        // Suspend all updates to the backingstore.
         m_backingStore->d->suspendBackingStoreUpdates();
-        m_backingStore->d->suspendScreenUpdates();
 
         // If the zoom failed, then we should still preserve the special case of scroll position.
         IntPoint scrollPosition = this->scrollPosition();
@@ -3799,15 +3830,17 @@ void WebPagePrivate::setViewportSize(const IntSize& transformedActualVisibleSize
             ensureContentVisible(!newVisibleRectContainsOldVisibleRect);
 
         if (needsLayout) {
-            m_backingStore->d->resetTiles(true);
+            m_backingStore->d->resetTiles();
             m_backingStore->d->updateTiles(false /* updateVisible */, false /* immediate */);
+            screenResumeOperation = BackingStore::RenderAndBlit;
         }
 
         // If we need layout then render and blit, otherwise just blit as our viewport has changed.
-        // FIXME: Do we really need to suspend/resume both backingstore and screen here?
         m_backingStore->d->resumeBackingStoreUpdates();
-        m_backingStore->d->resumeScreenUpdates(needsLayout ? BackingStore::RenderAndBlit : BackingStore::Blit);
     }
+
+    m_backingStore->d->resumeScreenUpdates(screenResumeOperation);
+    m_inputHandler->redrawSpellCheckDialogIfRequired();
 }
 
 void WebPage::setViewportSize(const Platform::IntSize& viewportSize, bool ensureFocusElementVisible)
@@ -4010,8 +4043,15 @@ bool WebPage::touchEvent(const Platform::TouchEvent& event)
     else if (tEvent.m_type == Platform::TouchEvent::TouchStart || tEvent.m_type == Platform::TouchEvent::TouchCancel)
         d->m_pluginMayOpenNewTab = false;
 
-    if (tEvent.m_type == Platform::TouchEvent::TouchStart)
+    if (tEvent.m_type == Platform::TouchEvent::TouchStart) {
         d->clearCachedHitTestResult();
+        d->m_touchEventHandler->doFatFingers(tEvent.m_points[0]);
+
+        // Draw tap highlight as soon as possible if we can
+        Element* elementUnderFatFinger = d->m_touchEventHandler->lastFatFingersResult().nodeAsElementIfApplicable();
+        if (elementUnderFatFinger)
+            d->m_touchEventHandler->drawTapHighlight();
+    }
 
     bool handled = false;
 
@@ -4069,7 +4109,6 @@ void WebPage::touchPointAsMouseEvent(const Platform::TouchPoint& point)
 
     Platform::TouchPoint tPoint = point;
     tPoint.m_pos = d->mapFromTransformed(tPoint.m_pos);
-    tPoint.m_screenPos = tPoint.m_screenPos;
 
     d->m_touchEventHandler->handleTouchPoint(tPoint);
 }
@@ -5678,7 +5717,7 @@ void WebPagePrivate::exitFullscreenForNode(Node* node)
 // TODO: We should remove this helper class when we decide to support all elements.
 static bool containsVideoTags(Element* element)
 {
-    for (Node* node = element->firstChild(); node; node = node->traverseNextNode(element)) {
+    for (Node* node = element->firstChild(); node; node = NodeTraversal::next(node, element)) {
         if (node->hasTagName(HTMLNames::videoTag))
             return true;
     }
@@ -5804,13 +5843,13 @@ void WebPagePrivate::didChangeSettings(WebSettings* webSettings)
     coreSettings->setCookieEnabled(webSettings->areCookiesEnabled());
 
 #if ENABLE(SQL_DATABASE)
-    // DatabaseTracker can only be initialized for once, so it doesn't
-    // make sense to change database path after DatabaseTracker has
+    // DatabaseManager can only be initialized for once, so it doesn't
+    // make sense to change database path after DatabaseManager has
     // already been initialized.
     static bool dbinit = false;
     if (!dbinit && !webSettings->databasePath().empty()) {
         dbinit = true;
-        DatabaseTracker::initializeTracker(webSettings->databasePath());
+        DatabaseManager::initialize(webSettings->databasePath());
     }
 
     // The directory of cacheStorage for one page group can only be initialized once.

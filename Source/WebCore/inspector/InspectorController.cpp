@@ -55,7 +55,9 @@
 #include "InspectorFrontend.h"
 #include "InspectorFrontendClient.h"
 #include "InspectorIndexedDBAgent.h"
+#include "InspectorInputAgent.h"
 #include "InspectorInstrumentation.h"
+#include "InspectorLayerTreeAgent.h"
 #include "InspectorMemoryAgent.h"
 #include "InspectorOverlay.h"
 #include "InspectorPageAgent.h"
@@ -138,7 +140,7 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     m_agents.append(consoleAgentPtr.release());
 
 #if ENABLE(JAVASCRIPT_DEBUGGER)
-    OwnPtr<InspectorDebuggerAgent> debuggerAgentPtr(PageDebuggerAgent::create(m_instrumentingAgents.get(), m_state.get(), page, m_injectedScriptManager.get(), m_overlay.get()));
+    OwnPtr<InspectorDebuggerAgent> debuggerAgentPtr(PageDebuggerAgent::create(m_instrumentingAgents.get(), m_state.get(), pageAgent, m_injectedScriptManager.get(), m_overlay.get()));
     m_debuggerAgent = debuggerAgentPtr.get();
     m_agents.append(debuggerAgentPtr.release());
 
@@ -154,6 +156,12 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
 #endif
 
     m_agents.append(InspectorCanvasAgent::create(m_instrumentingAgents.get(), m_state.get(), page, m_injectedScriptManager.get()));
+
+    m_agents.append(InspectorInputAgent::create(m_instrumentingAgents.get(), m_state.get(), page));
+
+#if USE(ACCELERATED_COMPOSITING)
+    m_agents.append(InspectorLayerTreeAgent::create(m_instrumentingAgents.get(), m_state.get(), page));
+#endif
 
     ASSERT_ARG(inspectorClient, inspectorClient);
     m_injectedScriptManager->injectedScriptHost()->init(m_inspectorAgent
@@ -248,6 +256,8 @@ void InspectorController::disconnectFrontend()
 
     m_inspectorFrontend.clear();
 
+    // relese overlay page resources
+    m_overlay->freePage();
     InspectorInstrumentation::frontendDeleted();
 }
 
@@ -401,6 +411,18 @@ void InspectorController::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) 
     info.addMember(m_page);
     info.addWeakPointer(m_inspectorClient);
     info.addMember(m_agents);
+}
+
+void InspectorController::willProcessTask()
+{
+    if (InspectorTimelineAgent* timelineAgent = m_instrumentingAgents->inspectorTimelineAgent())
+        timelineAgent->willProcessTask();
+}
+
+void InspectorController::didProcessTask()
+{
+    if (InspectorTimelineAgent* timelineAgent = m_instrumentingAgents->inspectorTimelineAgent())
+        timelineAgent->didProcessTask();
 }
 
 } // namespace WebCore

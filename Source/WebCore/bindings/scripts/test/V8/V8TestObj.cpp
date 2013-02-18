@@ -100,7 +100,7 @@ static v8::Handle<v8::Value> readOnlyTestObjAttrAttrGetter(v8::Local<v8::String>
     INC_STATS("DOM.TestObj.readOnlyTestObjAttr._get");
     TestObj* imp = V8TestObj::toNative(info.Holder());
     RefPtr<TestObj> result = imp->readOnlyTestObjAttr();
-    v8::Handle<v8::Value> wrapper = result.get() ? v8::Handle<v8::Value>(DOMDataStore::current(info.GetIsolate())->get(result.get())) : v8Undefined();
+    v8::Handle<v8::Value> wrapper = result.get() ? v8::Handle<v8::Value>(DOMDataStore::getWrapper(result.get(), info.GetIsolate())) : v8Undefined();
     if (wrapper.IsEmpty()) {
         wrapper = toV8(result.get(), info.Holder(), info.GetIsolate());
         if (!wrapper.IsEmpty())
@@ -189,7 +189,7 @@ static void longLongAttrAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Val
     INC_STATS("DOM.TestObj.longLongAttr._set");
     TestObj* imp = V8TestObj::toNative(info.Holder());
     long long v = toInt64(value);
-    imp->setLongLongAttr(WTF::getPtr(v));
+    imp->setLongLongAttr(v);
     return;
 }
 
@@ -205,7 +205,7 @@ static void unsignedLongLongAttrAttrSetter(v8::Local<v8::String> name, v8::Local
     INC_STATS("DOM.TestObj.unsignedLongLongAttr._set");
     TestObj* imp = V8TestObj::toNative(info.Holder());
     unsigned long long v = toInt64(value);
-    imp->setUnsignedLongLongAttr(WTF::getPtr(v));
+    imp->setUnsignedLongLongAttr(v);
     return;
 }
 
@@ -230,7 +230,7 @@ static v8::Handle<v8::Value> testObjAttrAttrGetter(v8::Local<v8::String> name, c
     INC_STATS("DOM.TestObj.testObjAttr._get");
     FeatureObserver::observe(activeDOMWindow(BindingState::instance()), FeatureObserver::TestFeature);
     TestObj* imp = V8TestObj::toNative(info.Holder());
-    return toV8(imp->testObjAttr(), info.Holder(), info.GetIsolate());
+    return toV8Fast(imp->testObjAttr(), info, imp);
 }
 
 static void testObjAttrAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
@@ -247,7 +247,7 @@ static v8::Handle<v8::Value> XMLObjAttrAttrGetter(v8::Local<v8::String> name, co
 {
     INC_STATS("DOM.TestObj.XMLObjAttr._get");
     TestObj* imp = V8TestObj::toNative(info.Holder());
-    return toV8(imp->xmlObjAttr(), info.Holder(), info.GetIsolate());
+    return toV8Fast(imp->xmlObjAttr(), info, imp);
 }
 
 static void XMLObjAttrAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
@@ -423,7 +423,7 @@ static v8::Handle<v8::Value> typedArrayAttrAttrGetter(v8::Local<v8::String> name
 {
     INC_STATS("DOM.TestObj.typedArrayAttr._get");
     TestObj* imp = V8TestObj::toNative(info.Holder());
-    return toV8(imp->typedArrayAttr(), info.Holder(), info.GetIsolate());
+    return toV8Fast(imp->typedArrayAttr(), info, imp);
 }
 
 static void typedArrayAttrAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
@@ -544,7 +544,7 @@ static v8::Handle<v8::Value> withScriptExecutionContextAttributeAttrGetter(v8::L
     INC_STATS("DOM.TestObj.withScriptExecutionContextAttribute._get");
     TestObj* imp = V8TestObj::toNative(info.Holder());
     ScriptExecutionContext* scriptContext = getScriptExecutionContext();
-    return toV8(imp->withScriptExecutionContextAttribute(scriptContext), info.Holder(), info.GetIsolate());
+    return toV8Fast(imp->withScriptExecutionContextAttribute(scriptContext), info, imp);
 }
 
 static void withScriptExecutionContextAttributeAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
@@ -571,7 +571,7 @@ static v8::Handle<v8::Value> withScriptStateAttributeRaisesAttrGetter(v8::Local<
         return setDOMException(ec, info.GetIsolate());
     if (state.hadException())
         return throwError(state.exception(), info.GetIsolate());
-    return toV8(v.release(), info.Holder(), info.GetIsolate());
+    return toV8Fast(v.release(), info, imp);
 }
 
 static void withScriptStateAttributeRaisesAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
@@ -598,7 +598,7 @@ static v8::Handle<v8::Value> withScriptExecutionContextAttributeRaisesAttrGetter
     RefPtr<TestObj> v = imp->withScriptExecutionContextAttributeRaises(scriptContext, ec);
     if (UNLIKELY(ec))
         return setDOMException(ec, info.GetIsolate());
-    return toV8(v.release(), info.Holder(), info.GetIsolate());
+    return toV8Fast(v.release(), info, imp);
 }
 
 static void withScriptExecutionContextAttributeRaisesAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
@@ -620,7 +620,7 @@ static v8::Handle<v8::Value> withScriptExecutionContextAndScriptStateAttributeAt
         return v8Undefined();
     ScriptState& state = *currentState;
     ScriptExecutionContext* scriptContext = getScriptExecutionContext();
-    return toV8(imp->withScriptExecutionContextAndScriptStateAttribute(&state, scriptContext), info.Holder(), info.GetIsolate());
+    return toV8Fast(imp->withScriptExecutionContextAndScriptStateAttribute(&state, scriptContext), info, imp);
 }
 
 static void withScriptExecutionContextAndScriptStateAttributeAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
@@ -654,7 +654,7 @@ static v8::Handle<v8::Value> withScriptExecutionContextAndScriptStateAttributeRa
         return setDOMException(ec, info.GetIsolate());
     if (state.hadException())
         return throwError(state.exception(), info.GetIsolate());
-    return toV8(v.release(), info.Holder(), info.GetIsolate());
+    return toV8Fast(v.release(), info, imp);
 }
 
 static void withScriptExecutionContextAndScriptStateAttributeRaisesAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
@@ -682,7 +682,7 @@ static v8::Handle<v8::Value> withScriptExecutionContextAndScriptStateWithSpacesA
         return v8Undefined();
     ScriptState& state = *currentState;
     ScriptExecutionContext* scriptContext = getScriptExecutionContext();
-    return toV8(imp->withScriptExecutionContextAndScriptStateWithSpacesAttribute(&state, scriptContext), info.Holder(), info.GetIsolate());
+    return toV8Fast(imp->withScriptExecutionContextAndScriptStateWithSpacesAttribute(&state, scriptContext), info, imp);
 }
 
 static void withScriptExecutionContextAndScriptStateWithSpacesAttributeAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
@@ -705,7 +705,7 @@ static v8::Handle<v8::Value> withScriptArgumentsAndCallStackAttributeAttrGetter(
 {
     INC_STATS("DOM.TestObj.withScriptArgumentsAndCallStackAttribute._get");
     TestObj* imp = V8TestObj::toNative(info.Holder());
-    return toV8(imp->withScriptArgumentsAndCallStackAttribute(), info.Holder(), info.GetIsolate());
+    return toV8Fast(imp->withScriptArgumentsAndCallStackAttribute(), info, imp);
 }
 
 static void withScriptArgumentsAndCallStackAttributeAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
@@ -920,16 +920,16 @@ static v8::Handle<v8::Value> contentDocumentAttrGetter(v8::Local<v8::String> nam
     INC_STATS("DOM.TestObj.contentDocument._get");
     TestObj* imp = V8TestObj::toNative(info.Holder());
     if (!BindingSecurity::shouldAllowAccessToNode(BindingState::instance(), imp->contentDocument()))
-        return v8::Handle<v8::Value>(v8::Null(info.GetIsolate()));
+        return v8::Handle<v8::Value>(v8Null(info.GetIsolate()));
 
-    return toV8(imp->contentDocument(), info.Holder(), info.GetIsolate());
+    return toV8Fast(imp->contentDocument(), info, imp);
 }
 
 static v8::Handle<v8::Value> mutablePointAttrGetter(v8::Local<v8::String> name, const v8::AccessorInfo& info)
 {
     INC_STATS("DOM.TestObj.mutablePoint._get");
     TestObj* imp = V8TestObj::toNative(info.Holder());
-    return toV8(WTF::getPtr(SVGStaticPropertyTearOff<TestObj, FloatPoint>::create(imp, imp->mutablePoint(), &TestObj::updateMutablePoint)), info.Holder(), info.GetIsolate());
+    return toV8Fast(WTF::getPtr(SVGStaticPropertyTearOff<TestObj, FloatPoint>::create(imp, imp->mutablePoint(), &TestObj::updateMutablePoint)), info, imp);
 }
 
 static void mutablePointAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
@@ -945,7 +945,7 @@ static v8::Handle<v8::Value> immutablePointAttrGetter(v8::Local<v8::String> name
 {
     INC_STATS("DOM.TestObj.immutablePoint._get");
     TestObj* imp = V8TestObj::toNative(info.Holder());
-    return toV8(WTF::getPtr(SVGPropertyTearOff<FloatPoint>::create(imp->immutablePoint())), info.Holder(), info.GetIsolate());
+    return toV8Fast(WTF::getPtr(SVGPropertyTearOff<FloatPoint>::create(imp->immutablePoint())), info, imp);
 }
 
 static void immutablePointAttrSetter(v8::Local<v8::String> name, v8::Local<v8::Value> value, const v8::AccessorInfo& info)
@@ -1108,7 +1108,7 @@ static v8::Handle<v8::Value> methodWithSequenceArgCallback(const v8::Arguments& 
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
     TestObj* imp = V8TestObj::toNative(args.Holder());
-    V8TRYCATCH(Vector<ScriptProfile>, sequenceArg, toNativeArray<ScriptProfile>(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
+    V8TRYCATCH(Vector<RefPtr<ScriptProfile> >, sequenceArg, (toRefPtrNativeArray<ScriptProfile, V8ScriptProfile>(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined))));
     imp->methodWithSequenceArg(sequenceArg);
     return v8Undefined();
 }
@@ -1609,7 +1609,7 @@ static v8::Handle<v8::Value> overloadedMethod6Callback(const v8::Arguments& args
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
     TestObj* imp = V8TestObj::toNative(args.Holder());
-    V8TRYCATCH(RefPtr<DOMStringList>, listArg, toDOMStringList(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
+    V8TRYCATCH(RefPtr<DOMStringList>, listArg, toDOMStringList(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined), args.GetIsolate()));
     imp->overloadedMethod(listArg);
     return v8Undefined();
 }
@@ -1620,7 +1620,7 @@ static v8::Handle<v8::Value> overloadedMethod7Callback(const v8::Arguments& args
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
     TestObj* imp = V8TestObj::toNative(args.Holder());
-    V8TRYCATCH(RefPtr<DOMStringList>, arrayArg, toDOMStringList(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
+    V8TRYCATCH(RefPtr<DOMStringList>, arrayArg, toDOMStringList(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined), args.GetIsolate()));
     imp->overloadedMethod(arrayArg);
     return v8Undefined();
 }
@@ -1642,7 +1642,7 @@ static v8::Handle<v8::Value> overloadedMethod9Callback(const v8::Arguments& args
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
     TestObj* imp = V8TestObj::toNative(args.Holder());
-    V8TRYCATCH(RefPtr<DOMStringList>, arrayArg, toDOMStringList(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
+    V8TRYCATCH(RefPtr<DOMStringList>, arrayArg, toDOMStringList(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined), args.GetIsolate()));
     imp->overloadedMethod(arrayArg);
     return v8Undefined();
 }
@@ -1653,7 +1653,7 @@ static v8::Handle<v8::Value> overloadedMethod10Callback(const v8::Arguments& arg
     if (args.Length() < 1)
         return throwNotEnoughArgumentsError(args.GetIsolate());
     TestObj* imp = V8TestObj::toNative(args.Holder());
-    V8TRYCATCH(Vector<unsigned long>, arrayArg, toNativeArray<unsigned long>(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
+    V8TRYCATCH(Vector<unsigned>, arrayArg, toNativeArray<unsigned>(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
     imp->overloadedMethod(arrayArg);
     return v8Undefined();
 }
@@ -1830,7 +1830,7 @@ static v8::Handle<v8::Value> stringArrayFunctionCallback(const v8::Arguments& ar
     TestObj* imp = V8TestObj::toNative(args.Holder());
     ExceptionCode ec = 0;
     {
-    V8TRYCATCH(RefPtr<DOMStringList>, values, toDOMStringList(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined)));
+    V8TRYCATCH(RefPtr<DOMStringList>, values, toDOMStringList(MAYBE_MISSING_PARAMETER(args, 0, DefaultIsUndefined), args.GetIsolate()));
     RefPtr<DOMStringList> result = imp->stringArrayFunction(values, ec);
     if (UNLIKELY(ec))
         goto fail;
@@ -1847,7 +1847,7 @@ static v8::Handle<v8::Value> getSVGDocumentCallback(const v8::Arguments& args)
     ExceptionCode ec = 0;
     {
     if (!BindingSecurity::shouldAllowAccessToNode(BindingState::instance(), imp->getSVGDocument(ec)))
-        return v8::Handle<v8::Value>(v8::Null(args.GetIsolate()));
+        return v8::Handle<v8::Value>(v8Null(args.GetIsolate()));
     RefPtr<SVGDocument> result = imp->getSVGDocument(ec);
     if (UNLIKELY(ec))
         goto fail;
@@ -2222,7 +2222,7 @@ v8::Handle<v8::Value> V8TestObj::constructorCallback(const v8::Arguments& args)
     RefPtr<TestObj> impl = TestObj::create(testCallback);
     v8::Handle<v8::Object> wrapper = args.Holder();
 
-    V8DOMWrapper::createDOMWrapper(impl.release(), &info, wrapper, args.GetIsolate());
+    V8DOMWrapper::associateObjectWithWrapper(impl.release(), &info, wrapper, args.GetIsolate());
     return wrapper;
 }
 
@@ -2398,14 +2398,14 @@ void V8TestObj::installPerContextPrototypeProperties(v8::Handle<v8::Object> prot
 v8::Handle<v8::Object> V8TestObj::createWrapper(PassRefPtr<TestObj> impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
 {
     ASSERT(impl.get());
-    ASSERT(DOMDataStore::current(isolate)->get(impl.get()).IsEmpty());
+    ASSERT(DOMDataStore::getWrapper(impl.get(), isolate).IsEmpty());
 
-    v8::Handle<v8::Object> wrapper = V8DOMWrapper::instantiateV8Object(creationContext, &info, impl.get());
+    v8::Handle<v8::Object> wrapper = V8DOMWrapper::createWrapper(creationContext, &info, impl.get());
     if (UNLIKELY(wrapper.IsEmpty()))
         return wrapper;
 
     installPerContextProperties(wrapper, impl.get());
-    v8::Persistent<v8::Object> wrapperHandle = V8DOMWrapper::createDOMWrapper(impl, &info, wrapper, isolate);
+    v8::Persistent<v8::Object> wrapperHandle = V8DOMWrapper::associateObjectWithWrapper(impl, &info, wrapper, isolate);
     if (!hasDependentLifetime)
         wrapperHandle.MarkIndependent();
     return wrapper;

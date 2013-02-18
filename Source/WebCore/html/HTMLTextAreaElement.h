@@ -80,7 +80,7 @@ private:
     virtual bool isEmptyValue() const { return value().isEmpty(); }
 
     virtual bool isOptionalFormControl() const { return !isRequiredFormControl(); }
-    virtual bool isRequiredFormControl() const { return required(); }
+    virtual bool isRequiredFormControl() const { return isRequired(); }
 
     virtual void defaultEventHandler(Event*);
     
@@ -112,10 +112,10 @@ private:
 
     virtual bool shouldUseInputMethod();
     virtual void attach() OVERRIDE;
-    virtual bool shouldMatchReadOnlySelector() const OVERRIDE;
-    virtual bool shouldMatchReadWriteSelector() const OVERRIDE;
+    virtual bool matchesReadOnlyPseudoClass() const OVERRIDE;
+    virtual bool matchesReadWritePseudoClass() const OVERRIDE;
 
-    bool valueMissing(const String& value) const { return isRequiredFormControl() && !disabled() && !readOnly() && value.isEmpty(); }
+    bool valueMissing(const String& value) const { return isRequiredFormControl() && !isDisabledOrReadOnly() && value.isEmpty(); }
     bool tooLong(const String&, NeedsToCheckDirtyFlag) const;
 
     int m_rows;

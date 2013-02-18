@@ -47,4 +47,3 @@
     NodeList getElementsByTagNameNS(in [TreatNullAs=NullString,Optional=DefaultIsUndefined] DOMString namespaceURI,
                                     in [Optional=DefaultIsUndefined] DOMString localName);
 };
-

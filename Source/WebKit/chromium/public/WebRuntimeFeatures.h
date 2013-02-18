@@ -157,6 +157,15 @@ public:
     WEBKIT_EXPORT static void enableRequestAutocomplete(bool);
     WEBKIT_EXPORT static bool isRequestAutocompleteEnabled();
 
+    WEBKIT_EXPORT static void enableCSSRegions(bool);
+    WEBKIT_EXPORT static bool isCSSRegionsEnabled();
+
+    WEBKIT_EXPORT static void enableExperimentalContentSecurityPolicyFeatures(bool);
+    WEBKIT_EXPORT static bool isExperimentalContentSecurityPolicyFeaturesEnabled();
+
+    WEBKIT_EXPORT static void enableWebIntents(bool);
+    WEBKIT_EXPORT static bool isWebIntentsEnabled();
+
 private:
     WebRuntimeFeatures();
 };

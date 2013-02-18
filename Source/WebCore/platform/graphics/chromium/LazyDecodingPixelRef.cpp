@@ -34,8 +34,7 @@
 namespace WebCore {
 
 LazyDecodingPixelRef::LazyDecodingPixelRef(PassRefPtr<ImageFrameGenerator> frameGenerator, const SkISize& scaledSize, const SkIRect& scaledSubset)
-    : SkPixelRef(0)
-    , m_frameGenerator(frameGenerator)
+    : m_frameGenerator(frameGenerator)
     , m_scaledSize(scaledSize)
     , m_scaledSubset(scaledSubset)
     , m_lockedCachedImage(0)
@@ -61,7 +60,8 @@ void* LazyDecodingPixelRef::onLockPixels(SkColorTable**)
     m_mutex.lock();
     ASSERT(!m_lockedCachedImage);
 
-    m_lockedCachedImage = ImageDecodingStore::instance()->lockCompleteCache(m_frameGenerator.get(), m_scaledSize);
+    if (!ImageDecodingStore::instance()->lockCache(m_frameGenerator.get(), m_scaledSize, ImageDecodingStore::CacheMustBeComplete, &m_lockedCachedImage))
+        m_lockedCachedImage = 0;
 
     // Use ImageFrameGenerator to generate the image. It will lock the cache
     // entry for us.
@@ -89,5 +89,23 @@ bool LazyDecodingPixelRef::onLockPixelsAreWritable() const
 {
     return false;
 }
+
+bool LazyDecodingPixelRef::PrepareToDecode(const LazyPixelRef::PrepareParams& params)
+{
+    // TODO: check if only a particular rect is available in image cache.
+    UNUSED_PARAM(params);
+    const ScaledImageFragment* cachedImage = 0;
+    bool cached = ImageDecodingStore::instance()->lockCache(m_frameGenerator.get(), m_scaledSize, ImageDecodingStore::CacheMustBeComplete, &cachedImage);
+    if (cached)
+        ImageDecodingStore::instance()->unlockCache(m_frameGenerator.get(), cachedImage);
+    return cached;
+}
+
+void LazyDecodingPixelRef::Decode()
+{
+    lockPixels();
+    unlockPixels();
+}
+
 
 } // namespace WebKit

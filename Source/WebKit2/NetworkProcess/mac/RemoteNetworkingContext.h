@@ -32,14 +32,18 @@ namespace WebKit {
 
 class RemoteNetworkingContext : public WebCore::NetworkingContext {
 public:
-    static PassRefPtr<RemoteNetworkingContext> create(bool needsSiteSpecificQuirks, bool localFileContentSniffingEnabled)
+    static PassRefPtr<RemoteNetworkingContext> create(bool needsSiteSpecificQuirks, bool localFileContentSniffingEnabled, bool privateBrowsingEnabled)
     {
-        return adoptRef(new RemoteNetworkingContext(needsSiteSpecificQuirks, localFileContentSniffingEnabled));
+        return adoptRef(new RemoteNetworkingContext(needsSiteSpecificQuirks, localFileContentSniffingEnabled, privateBrowsingEnabled));
     }
     virtual ~RemoteNetworkingContext();
 
+    static void setPrivateBrowsingStorageSessionIdentifierBase(const String&);
+    static void ensurePrivateBrowsingSession();
+    static void destroyPrivateBrowsingSession();
+
 private:
-    RemoteNetworkingContext(bool needsSiteSpecificQuirks, bool localFileContentSniffingEnabled);
+    RemoteNetworkingContext(bool needsSiteSpecificQuirks, bool localFileContentSniffingEnabled, bool privateBrowsingEnabled);
 
     virtual bool isValid() const OVERRIDE;
 
@@ -51,6 +55,7 @@ private:
 
     bool m_needsSiteSpecificQuirks;
     bool m_localFileContentSniffingEnabled;
+    bool m_privateBrowsingEnabled;
 };
 
 }

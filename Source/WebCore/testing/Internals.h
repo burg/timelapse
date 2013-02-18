@@ -80,6 +80,7 @@ public:
     typedef Node ShadowRootIfShadowDOMEnabledOrNode;
 #endif
     ShadowRootIfShadowDOMEnabledOrNode* ensureShadowRoot(Element* host, ExceptionCode&);
+    ShadowRootIfShadowDOMEnabledOrNode* createShadowRoot(Element* host, ExceptionCode&);
     ShadowRootIfShadowDOMEnabledOrNode* shadowRoot(Element* host, ExceptionCode&);
     ShadowRootIfShadowDOMEnabledOrNode* youngestShadowRoot(Element* host, ExceptionCode&);
     ShadowRootIfShadowDOMEnabledOrNode* oldestShadowRoot(Element* host, ExceptionCode&);
@@ -94,7 +95,6 @@ public:
     void setShadowPseudoId(Element*, const String&, ExceptionCode&);
 
     PassRefPtr<Element> createContentElement(Document*, ExceptionCode&);
-    Element* getElementByIdInShadowRoot(Node* shadowRoot, const String& id, ExceptionCode&);
     bool isValidContentSelect(Element* insertionPoint, ExceptionCode&);
     Node* treeScopeRootNode(Node*, ExceptionCode&);
     Node* parentTreeScope(Node*, ExceptionCode&);
@@ -209,9 +209,14 @@ public:
     String repaintRectsAsText(Document*, ExceptionCode&) const;
     String scrollingStateTreeAsText(Document*, ExceptionCode&) const;
 
+    String mainThreadScrollingReasons(Document*, ExceptionCode&) const;
+
     void garbageCollectDocumentResources(Document*, ExceptionCode&) const;
 
     void allowRoundingHacks() const;
+
+    void insertAuthorCSS(Document*, const String&) const;
+    void insertUserCSS(Document*, const String&) const;
 
 #if ENABLE(INSPECTOR)
     unsigned numberOfLiveNodes() const;

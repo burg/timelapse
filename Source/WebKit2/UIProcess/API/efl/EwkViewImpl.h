@@ -161,6 +161,7 @@ public:
     bool createGLSurface(const WebCore::IntSize& viewSize);
     bool enterAcceleratedCompositingMode();
     bool exitAcceleratedCompositingMode();
+    void setNeedsSurfaceResize() { m_pendingSurfaceResize = true; }
 #endif
 
 #if ENABLE(INPUT_TYPE_COLOR)
@@ -192,7 +193,6 @@ public:
 #if USE(TILED_BACKING_STORE)
     void informLoadCommitted();
 #endif
-    void informContentsSizeChange(const WebCore::IntSize& size);
     unsigned long long informDatabaseQuotaReached(const String& databaseName, const String& displayName, unsigned long long currentQuota, unsigned long long currentOriginUsage, unsigned long long currentDatabaseUsage, unsigned long long expectedUsage);
 
 #if USE(TILED_BACKING_STORE)
@@ -202,7 +202,7 @@ public:
     float scaleFactor() const { return m_scaleFactor; }
 
     void setPagePosition(const WebCore::FloatPoint& position) { m_pagePosition = position; }
-    const WebCore::IntPoint discretePagePosition() const { return roundedIntPoint(m_pagePosition); }
+    const WebCore::FloatPoint pagePosition() const { return m_pagePosition; }
 #endif
 
     // FIXME: needs refactoring (split callback invoke)
@@ -246,6 +246,7 @@ private:
     OwnPtr<Evas_GL> m_evasGL;
     OwnPtr<WebKit::EvasGLContext> m_evasGLContext;
     OwnPtr<WebKit::EvasGLSurface> m_evasGLSurface;
+    bool m_pendingSurfaceResize;
 #endif
     OwnPtr<WebKit::PageClientBase> m_pageClient;
     RefPtr<WebKit::WebPageProxy> m_pageProxy;

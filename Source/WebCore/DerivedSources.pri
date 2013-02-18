@@ -118,7 +118,6 @@ IDL_BINDINGS += \
     $$PWD/Modules/indexeddb/DOMWindowIndexedDatabase.idl \
     $$PWD/Modules/indexeddb/IDBAny.idl \
     $$PWD/Modules/indexeddb/IDBCursor.idl \
-    $$PWD/Modules/indexeddb/IDBDatabaseException.idl \
     $$PWD/Modules/indexeddb/IDBDatabase.idl \
     $$PWD/Modules/indexeddb/IDBFactory.idl \
     $$PWD/Modules/indexeddb/IDBIndex.idl \
@@ -161,6 +160,7 @@ IDL_BINDINGS += \
     $$PWD/Modules/webaudio/ScriptProcessorNode.idl \
     $$PWD/Modules/webaudio/MediaElementAudioSourceNode.idl \
     $$PWD/Modules/webaudio/MediaStreamAudioSourceNode.idl \
+    $$PWD/Modules/webaudio/OfflineAudioContext.idl \
     $$PWD/Modules/webaudio/OfflineAudioCompletionEvent.idl \
     $$PWD/Modules/webaudio/OscillatorNode.idl \
     $$PWD/Modules/webaudio/AnalyserNode.idl \
@@ -448,8 +448,6 @@ IDL_BINDINGS += \
     $$PWD/page/SpeechInputEvent.idl \
     $$PWD/page/SpeechInputResult.idl \
     $$PWD/page/SpeechInputResultList.idl \
-    $$PWD/page/WebKitAnimation.idl \
-    $$PWD/page/WebKitAnimationList.idl \
     $$PWD/page/WebKitPoint.idl \
     $$PWD/page/WorkerNavigator.idl \
     $$PWD/plugins/DOMPlugin.idl \
@@ -650,6 +648,8 @@ enable?(MEDIA_SOURCE) {
     $$PWD/Modules/mediasource/SourceBuffer.idl \
     $$PWD/Modules/mediasource/SourceBufferList.idl
 }
+
+qtPrepareTool(QMAKE_MOC, moc)
 
 mathmlnames.output = MathMLNames.cpp
 mathmlnames.input = MATHML_NAMES

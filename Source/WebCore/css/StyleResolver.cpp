@@ -297,8 +297,17 @@ StyleResolver::StyleResolver(Document* document, bool matchAuthorAndUserStyles)
             loadFullDefaultStyle();
     }
 
+    // construct document root element default style. this is needed
+    // to evaluate media queries that contain relative constraints, like "screen and (max-width: 10em)"
+    // This is here instead of constructor, because when constructor is run,
+    // document doesn't have documentElement
+    // NOTE: this assumes that element that gets passed to styleForElement -call
+    // is always from the document that owns the style selector
     FrameView* view = document->view();
-    m_medium = adoptPtr(new MediaQueryEvaluator(view ? view->mediaType() : "all"));
+    if (view)
+        m_medium = adoptPtr(new MediaQueryEvaluator(view->mediaType()));
+    else
+        m_medium = adoptPtr(new MediaQueryEvaluator("all"));
 
     if (root)
         m_rootDefaultStyle = styleForElement(root, 0, DisallowStyleSharing, MatchOnlyUserAgentRules);
@@ -307,6 +316,15 @@ StyleResolver::StyleResolver(Document* document, bool matchAuthorAndUserStyles)
         m_medium = adoptPtr(new MediaQueryEvaluator(view->mediaType(), view->frame(), m_rootDefaultStyle.get()));
 
     resetAuthorStyle();
+
+    DocumentStyleSheetCollection* styleSheetCollection = document->styleSheetCollection();
+    OwnPtr<RuleSet> tempUserStyle = RuleSet::create();
+    if (CSSStyleSheet* pageUserSheet = styleSheetCollection->pageUserSheet())
+        tempUserStyle->addRulesFromSheet(pageUserSheet->contents(), *m_medium, this);
+    collectRulesFromUserStyleSheets(styleSheetCollection->injectedUserStyleSheets(), *tempUserStyle);
+    collectRulesFromUserStyleSheets(styleSheetCollection->documentUserStyleSheets(), *tempUserStyle);
+    if (tempUserStyle->m_ruleCount > 0 || tempUserStyle->m_pageRules.size() > 0)
+        m_userStyle = tempUserStyle.release();
 
 #if ENABLE(SVG_FONTS)
     if (document->svgExtensions()) {
@@ -317,20 +335,15 @@ StyleResolver::StyleResolver(Document* document, bool matchAuthorAndUserStyles)
     }
 #endif
 
-    DocumentStyleSheetCollection* styleSheetCollection = document->styleSheetCollection();
-    collectRulesFromUserStyleSheets(styleSheetCollection->activeUserStyleSheets());
     appendAuthorStyleSheets(0, styleSheetCollection->activeAuthorStyleSheets());
 }
 
-void StyleResolver::collectRulesFromUserStyleSheets(const Vector<RefPtr<CSSStyleSheet> >& userSheets)
+void StyleResolver::collectRulesFromUserStyleSheets(const Vector<RefPtr<CSSStyleSheet> >& userSheets, RuleSet& userStyle)
 {
-    OwnPtr<RuleSet> userStyleRuleSet = RuleSet::create();
     for (unsigned i = 0; i < userSheets.size(); ++i) {
         ASSERT(userSheets[i]->contents()->isUserStyleSheet());
-        userStyleRuleSet->addRulesFromSheet(userSheets[i]->contents(), *m_medium, this);
+        userStyle.addRulesFromSheet(userSheets[i]->contents(), *m_medium, this);
     }
-    if (userStyleRuleSet->m_ruleCount > 0 || userStyleRuleSet->m_pageRules.size() > 0)
-        m_userStyle = userStyleRuleSet.release();
 }
 
 static PassOwnPtr<RuleSet> makeRuleSet(const Vector<RuleFeature>& rules)
@@ -343,23 +356,6 @@ static PassOwnPtr<RuleSet> makeRuleSet(const Vector<RuleFeature>& rules)
         ruleSet->addRule(rules[i].rule, rules[i].selectorIndex, rules[i].hasDocumentSecurityOrigin ? RuleHasDocumentSecurityOrigin : RuleHasNoSpecialState);
     ruleSet->shrinkToFit();
     return ruleSet.release();
-}
-
-void StyleResolver::collectFeatures()
-{
-    m_features.clear();
-    // Collect all ids and rules using sibling selectors (:first-child and similar)
-    // in the current set of stylesheets. Style sharing code uses this information to reject
-    // sharing candidates.
-    m_features.add(defaultStyle->features());
-    m_features.add(m_authorStyle->features());
-    if (m_scopeResolver)
-        m_scopeResolver->collectFeaturesTo(m_features);
-    if (m_userStyle)
-        m_features.add(m_userStyle->features());
-
-    m_siblingRuleSet = makeRuleSet(m_features.siblingRules);
-    m_uncommonAttributeRuleSet = makeRuleSet(m_features.uncommonAttributeRules);
 }
 
 void StyleResolver::resetAuthorStyle()
@@ -851,7 +847,7 @@ void StyleResolver::collectMatchingRulesForList(const Vector<RuleData>* rules, i
             continue;
 
         StyleRule* rule = ruleData.rule();
-        InspectorInstrumentationCookie cookie = InspectorInstrumentation::willMatchRule(document(), rule);
+        InspectorInstrumentationCookie cookie = InspectorInstrumentation::willMatchRule(document(), rule, this);
         if (checkSelector(ruleData, options.scope)) {
             // If the rule has no properties to apply, then ignore it in the non-debug mode.
             const StylePropertySet* properties = rule->properties();
@@ -948,6 +944,15 @@ void StyleResolver::matchAllRules(MatchResult& result, bool includeSMILPropertie
 #endif
 }
 
+bool StyleResolver::classNamesAffectedByRules(const SpaceSplitString& classNames) const
+{
+    for (unsigned i = 0; i < classNames.size(); ++i) {
+        if (m_features.classesInRules.contains(classNames[i].impl()))
+            return true;
+    }
+    return false;
+}
+
 inline void StyleResolver::initElement(Element* e)
 {
     if (m_element != e) {
@@ -961,17 +966,6 @@ inline void StyleResolver::initElement(Element* e)
     }
 }
 
-inline bool shouldResetStyleInheritance(NodeRenderingContext& context)
-{
-    if (context.resetStyleInheritance())
-        return true;
-
-    if (InsertionPoint* insertionPoint = context.insertionPoint())
-        return insertionPoint->resetStyleInheritance();
-
-    return false;
-}
-
 inline void StyleResolver::initForStyleResolve(Element* e, RenderStyle* parentStyle, PseudoId pseudoID)
 {
     m_pseudoStyle = pseudoID;
@@ -979,7 +973,7 @@ inline void StyleResolver::initForStyleResolve(Element* e, RenderStyle* parentSt
     if (e) {
         NodeRenderingContext context(e);
         m_parentNode = context.parentNodeForRenderingAndStyle();
-        m_parentStyle = shouldResetStyleInheritance(context) ? 0 :
+        m_parentStyle = context.resetStyleInheritance() ? 0 :
             parentStyle ? parentStyle :
             m_parentNode ? m_parentNode->renderStyle() : 0;
         m_distributedToInsertionPoint = context.insertionPoint();
@@ -1087,7 +1081,7 @@ bool StyleResolver::canShareStyleWithControl(StyledElement* element) const
         return false;
     if (thisInputElement->isIndeterminate() != otherInputElement->isIndeterminate())
         return false;
-    if (thisInputElement->required() != otherInputElement->required())
+    if (thisInputElement->isRequired() != otherInputElement->isRequired())
         return false;
 
     if (element->isEnabledFormControl() != m_element->isEnabledFormControl())
@@ -1121,32 +1115,40 @@ static inline bool elementHasDirectionAuto(Element* element)
     return element->isHTMLElement() && toHTMLElement(element)->hasDirectionAuto();
 }
 
-static inline bool haveIdenticalStyleAffectingAttributes(StyledElement* a, StyledElement* b)
+bool StyleResolver::sharingCandidateHasIdenticalStyleAffectingAttributes(StyledElement* sharingCandidate) const
 {
-    if (a->attributeData() == b->attributeData())
+    if (m_element->attributeData() == sharingCandidate->attributeData())
         return true;
-    if (a->fastGetAttribute(XMLNames::langAttr) != b->fastGetAttribute(XMLNames::langAttr))
+    if (m_element->fastGetAttribute(XMLNames::langAttr) != sharingCandidate->fastGetAttribute(XMLNames::langAttr))
         return false;
-    if (a->fastGetAttribute(langAttr) != b->fastGetAttribute(langAttr))
+    if (m_element->fastGetAttribute(langAttr) != sharingCandidate->fastGetAttribute(langAttr))
         return false;
-    if (a->hasClass()) {
+
+    if (!m_elementAffectedByClassRules) {
+        if (sharingCandidate->hasClass() && classNamesAffectedByRules(sharingCandidate->classNames()))
+            return false;
+    } else if (sharingCandidate->hasClass()) {
 #if ENABLE(SVG)
         // SVG elements require a (slow!) getAttribute comparision because "class" is an animatable attribute for SVG.
-        if (a->isSVGElement()) {
-            if (a->getAttribute(classAttr) != b->getAttribute(classAttr))
+        if (m_element->isSVGElement()) {
+            if (m_element->getAttribute(classAttr) != sharingCandidate->getAttribute(classAttr))
                 return false;
-        } else
+        } else {
 #endif
-        if (a->attributeData()->classNames() != b->attributeData()->classNames())
-            return false;
-    }
+            if (m_element->classNames() != sharingCandidate->classNames())
+                return false;
+#if ENABLE(SVG)
+        }
+#endif
+    } else
+        return false;
 
-    if (a->presentationAttributeStyle() != b->presentationAttributeStyle())
+    if (m_styledElement->presentationAttributeStyle() != sharingCandidate->presentationAttributeStyle())
         return false;
 
 #if ENABLE(PROGRESS_ELEMENT)
-    if (a->hasTagName(progressTag)) {
-        if (static_cast<HTMLProgressElement*>(a)->isDeterminate() != static_cast<HTMLProgressElement*>(b)->isDeterminate())
+    if (m_element->hasTagName(progressTag)) {
+        if (static_cast<HTMLProgressElement*>(m_element)->isDeterminate() != static_cast<HTMLProgressElement*>(sharingCandidate)->isDeterminate())
             return false;
     }
 #endif
@@ -1163,8 +1165,6 @@ bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
     if (style->unique())
         return false;
     if (element->tagQName() != m_element->tagQName())
-        return false;
-    if (element->hasClass() != m_element->hasClass())
         return false;
     if (element->inlineStyle())
         return false;
@@ -1186,7 +1186,7 @@ bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
         return false;
     if (element == element->document()->cssTarget())
         return false;
-    if (!haveIdenticalStyleAffectingAttributes(element, m_styledElement))
+    if (!sharingCandidateHasIdenticalStyleAffectingAttributes(element))
         return false;
     if (element->additionalPresentationAttributeStyle() != m_styledElement->additionalPresentationAttributeStyle())
         return false;
@@ -1279,6 +1279,10 @@ RenderStyle* StyleResolver::locateSharedStyle()
         return 0;
     if (elementHasDirectionAuto(m_element))
         return 0;
+
+    // Cache whether m_element is affected by any known class selectors.
+    // FIXME: This shouldn't be a member variable. The style sharing code could be factored out of StyleResolver.
+    m_elementAffectedByClassRules = m_element && m_element->hasClass() && classNamesAffectedByRules(m_element->classNames());
 
     // Check previous siblings and their cousins.
     unsigned count = 0;
@@ -1374,6 +1378,45 @@ static void setStylesForPaginationMode(Pagination::Mode paginationMode, RenderSt
     }
 }
 
+static void getFontAndGlyphOrientation(const RenderStyle* style, FontOrientation& fontOrientation, NonCJKGlyphOrientation& glyphOrientation)
+{
+    if (style->isHorizontalWritingMode()) {
+        fontOrientation = Horizontal;
+        glyphOrientation = NonCJKGlyphOrientationVerticalRight;
+        return;
+    }
+
+    switch (style->textOrientation()) {
+    case TextOrientationVerticalRight:
+        fontOrientation = Vertical;
+        glyphOrientation = NonCJKGlyphOrientationVerticalRight;
+        return;
+    case TextOrientationUpright:
+        fontOrientation = Vertical;
+        glyphOrientation = NonCJKGlyphOrientationUpright;
+        return;
+    case TextOrientationSideways:
+        if (style->writingMode() == LeftToRightWritingMode) {
+            // FIXME: This should map to sideways-left, which is not supported yet.
+            fontOrientation = Vertical;
+            glyphOrientation = NonCJKGlyphOrientationVerticalRight;
+            return;
+        }
+        fontOrientation = Horizontal;
+        glyphOrientation = NonCJKGlyphOrientationVerticalRight;
+        return;
+    case TextOrientationSidewaysRight:
+        fontOrientation = Horizontal;
+        glyphOrientation = NonCJKGlyphOrientationVerticalRight;
+        return;
+    default:
+        ASSERT_NOT_REACHED();
+        fontOrientation = Horizontal;
+        glyphOrientation = NonCJKGlyphOrientationVerticalRight;
+        return;
+    }
+}
+
 PassRefPtr<RenderStyle> StyleResolver::styleForDocument(Document* document, CSSFontSelector* fontSelector)
 {
     Frame* frame = document->frame();
@@ -1455,6 +1498,12 @@ PassRefPtr<RenderStyle> StyleResolver::styleForDocument(Document* document, CSSF
     } else
         fontDescription.setUsePrinterFont(document->printing());
 
+    FontOrientation fontOrientation;
+    NonCJKGlyphOrientation glyphOrientation;
+    getFontAndGlyphOrientation(documentStyle.get(), fontOrientation, glyphOrientation);
+    fontDescription.setOrientation(fontOrientation);
+    fontDescription.setNonCJKGlyphOrientation(glyphOrientation);
+
     documentStyle->setFontDescription(fontDescription);
     documentStyle->font().update(fontSelector);
 
@@ -1493,19 +1542,13 @@ PassRefPtr<RenderStyle> StyleResolver::styleForElement(Element* element, RenderS
             return sharedStyle;
     }
 
-    m_style = RenderStyle::create();
-
     RefPtr<RenderStyle> cloneForParent;
 
-    if (m_parentStyle)
+    if (m_parentStyle) {
+        m_style = RenderStyle::create();
         m_style->inheritFrom(m_parentStyle, isAtShadowBoundary(element) ? RenderStyle::AtShadowBoundary : RenderStyle::NotAtShadowBoundary);
-    else {
-        // Make sure our fonts are initialized if we don't inherit them from our parent style.
-        if (Settings* settings = documentSettings()) {
-            initializeFontStyle(settings);
-            m_style->font().update(fontSelector());
-        } else
-            m_style->font().update(0);
+    } else {
+        m_style = defaultStyleForElement();
         cloneForParent = RenderStyle::clone(style());
         m_parentStyle = cloneForParent.get();
     }
@@ -1540,6 +1583,8 @@ PassRefPtr<RenderStyle> StyleResolver::styleForElement(Element* element, RenderS
 
     if (cloneForParent)
         m_parentStyle = 0;
+
+    document()->didAccessStyleResolver();
 
     // Now return the style.
     return m_style.release();
@@ -1593,6 +1638,8 @@ PassRefPtr<RenderStyle> StyleResolver::styleForKeyframe(const RenderStyle* eleme
                 keyframeValue.addProperty(property);
         }
     }
+
+    document()->didAccessStyleResolver();
 
     return m_style.release();
 }
@@ -1697,6 +1744,8 @@ PassRefPtr<RenderStyle> StyleResolver::pseudoStyleForElement(PseudoId pseudo, El
     // Start loading resources referenced by this style.
     loadPendingResources();
 
+    document()->didAccessStyleResolver();
+
     // Now return the style.
     return m_style.release();
 }
@@ -1736,8 +1785,33 @@ PassRefPtr<RenderStyle> StyleResolver::styleForPage(int pageIndex)
     // Start loading resources referenced by this style.
     loadPendingResources();
 
+    document()->didAccessStyleResolver();
+
     // Now return the style.
     return m_style.release();
+}
+
+PassRefPtr<RenderStyle> StyleResolver::defaultStyleForElement()
+{
+    m_style = RenderStyle::create();
+    // Make sure our fonts are initialized if we don't inherit them from our parent style.
+    if (Settings* settings = documentSettings()) {
+        initializeFontStyle(settings);
+        m_style->font().update(fontSelector());
+    } else
+        m_style->font().update(0);
+
+    return m_style.release();
+}
+
+PassRefPtr<RenderStyle> StyleResolver::styleForText(Text* textNode)
+{
+    ASSERT(textNode);
+
+    NodeRenderingContext context(textNode);
+    Node* parentNode = context.parentNodeForRenderingAndStyle();
+    return context.resetStyleInheritance() || !parentNode ?
+        defaultStyleForElement() : parentNode->renderStyle();
 }
 
 static void addIntrinsicMargins(RenderStyle* style)
@@ -2072,6 +2146,26 @@ bool StyleResolver::checkRegionStyle(Element* regionElement)
     return false;
 }
 
+static void checkForOrientationChange(RenderStyle* style, const RenderStyle* parentStyle)
+{
+    FontOrientation childFontOrientation;
+    NonCJKGlyphOrientation childGlyphOrientation;
+    getFontAndGlyphOrientation(style, childFontOrientation, childGlyphOrientation);
+
+    FontOrientation parentFontOrientation;
+    NonCJKGlyphOrientation parentGlyphOrientation;
+    getFontAndGlyphOrientation(parentStyle, parentFontOrientation, parentGlyphOrientation);
+
+    if (childFontOrientation == parentFontOrientation && childGlyphOrientation == parentGlyphOrientation)
+        return;
+
+    const FontDescription& childFont = style->fontDescription();
+    FontDescription newFontDescription(childFont);
+    newFontDescription.setNonCJKGlyphOrientation(childGlyphOrientation);
+    newFontDescription.setOrientation(childFontOrientation);
+    style->setFontDescription(newFontDescription);
+}
+
 void StyleResolver::updateFont()
 {
     if (!m_fontDirty)
@@ -2080,6 +2174,7 @@ void StyleResolver::updateFont()
     checkForTextSizeAdjust();
     checkForGenericFamilyChange(style(), m_parentStyle);
     checkForZoomChange(style(), m_parentStyle);
+    checkForOrientationChange(style(), m_parentStyle);
     m_style->font().update(m_fontSelector);
     m_fontDirty = false;
 }
@@ -2198,7 +2293,7 @@ template <StyleResolver::StyleApplicationPass pass>
 void StyleResolver::applyProperties(const StylePropertySet* properties, StyleRule* rule, bool isImportant, bool inheritedOnly, bool filterRegionProperties)
 {
     ASSERT(!filterRegionProperties || m_regionForStyling);
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willProcessRule(document(), rule);
+    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willProcessRule(document(), rule, this);
 
     unsigned propertyCount = properties->propertyCount();
     for (unsigned i = 0; i < propertyCount; ++i) {
@@ -2564,7 +2659,9 @@ static void collectCSSOMWrappers(HashMap<StyleRule*, RefPtr<CSSStyleRule> >& wra
 static void collectCSSOMWrappers(HashMap<StyleRule*, RefPtr<CSSStyleRule> >& wrapperMap, DocumentStyleSheetCollection* styleSheetCollection)
 {
     collectCSSOMWrappers(wrapperMap, styleSheetCollection->activeAuthorStyleSheets());
-    collectCSSOMWrappers(wrapperMap, styleSheetCollection->activeUserStyleSheets());
+    collectCSSOMWrappers(wrapperMap, styleSheetCollection->pageUserSheet());
+    collectCSSOMWrappers(wrapperMap, styleSheetCollection->injectedUserStyleSheets());
+    collectCSSOMWrappers(wrapperMap, styleSheetCollection->documentUserStyleSheets());
 }
 
 CSSStyleRule* StyleResolver::ensureFullCSSOMWrapperForInspector(StyleRule* rule)
@@ -2659,16 +2756,65 @@ bool StyleResolver::useSVGZoomRules()
     return m_element && m_element->isSVGElement();
 }
 
-static bool createGridTrackBreadth(CSSPrimitiveValue* primitiveValue, StyleResolver* selector, GridTrackSize& trackSize)
+static bool createGridTrackBreadth(CSSPrimitiveValue* primitiveValue, StyleResolver* selector, Length& workingLength)
 {
-    Length workingLength = primitiveValue->convertToLength<FixedIntegerConversion | PercentConversion | ViewportPercentageConversion | AutoConversion>(selector->style(), selector->rootElementStyle(), selector->style()->effectiveZoom());
+    if (primitiveValue->getIdent() == CSSValueWebkitMinContent) {
+        workingLength = Length(MinContent);
+        return true;
+    }
+
+    if (primitiveValue->getIdent() == CSSValueWebkitMaxContent) {
+        workingLength = Length(MaxContent);
+        return true;
+    }
+
+    workingLength = primitiveValue->convertToLength<FixedIntegerConversion | PercentConversion | ViewportPercentageConversion | AutoConversion>(selector->style(), selector->rootElementStyle(), selector->style()->effectiveZoom());
     if (workingLength.isUndefined())
         return false;
 
     if (primitiveValue->isLength())
         workingLength.setQuirk(primitiveValue->isQuirkValue());
 
-    trackSize.setLength(workingLength);
+    return true;
+}
+
+static bool createGridTrackMinMax(CSSPrimitiveValue* primitiveValue, StyleResolver* selector, GridTrackSize& trackSize)
+{
+    Pair* minMaxTrackBreadth = primitiveValue->getPairValue();
+    if (!minMaxTrackBreadth) {
+        Length workingLength;
+        if (!createGridTrackBreadth(primitiveValue, selector, workingLength))
+            return false;
+
+        trackSize.setLength(workingLength);
+        return true;
+    }
+
+    Length minTrackBreadth;
+    Length maxTrackBreadth;
+    if (!createGridTrackBreadth(minMaxTrackBreadth->first(), selector, minTrackBreadth) || !createGridTrackBreadth(minMaxTrackBreadth->second(), selector, maxTrackBreadth))
+        return false;
+
+    trackSize.setMinMax(minTrackBreadth, maxTrackBreadth);
+    return true;
+}
+
+static bool createGridTrackGroup(CSSValue* value, StyleResolver* selector, Vector<GridTrackSize>& trackSizes)
+{
+    if (!value->isValueList())
+        return false;
+
+    for (CSSValueListIterator i = value; i.hasMore(); i.advance()) {
+        CSSValue* currValue = i.value();
+        if (!currValue->isPrimitiveValue())
+            return false;
+
+        GridTrackSize trackSize;
+        if (!createGridTrackMinMax(static_cast<CSSPrimitiveValue*>(currValue), selector, trackSize))
+            return false;
+
+        trackSizes.append(trackSize);
+    }
     return true;
 }
 
@@ -2680,22 +2826,7 @@ static bool createGridTrackList(CSSValue* value, Vector<GridTrackSize>& trackSiz
         return primitiveValue->getIdent() == CSSValueNone;
     }
 
-    if (value->isValueList()) {
-        for (CSSValueListIterator i = value; i.hasMore(); i.advance()) {
-            CSSValue* currValue = i.value();
-            if (!currValue->isPrimitiveValue())
-                return false;
-
-            GridTrackSize trackSize;
-            if (!createGridTrackBreadth(static_cast<CSSPrimitiveValue*>(currValue), selector, trackSize))
-                return false;
-
-            trackSizes.append(trackSize);
-        }
-        return true;
-    }
-
-    return false;
+    return createGridTrackGroup(value, selector, trackSizes);
 }
 
 
@@ -3478,14 +3609,21 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
         HANDLE_INHERIT_AND_INITIAL(writingMode, WritingMode);
         
         if (primitiveValue)
-            m_style->setWritingMode(*primitiveValue);
-        
+            setWritingMode(*primitiveValue);
+
         // FIXME: It is not ok to modify document state while applying style.
         if (m_element && m_element == m_element->document()->documentElement())
             m_element->document()->setWritingModeSetOnDocumentElement(true);
-        FontDescription fontDescription = m_style->fontDescription();
-        fontDescription.setOrientation(m_style->isHorizontalWritingMode() ? Horizontal : Vertical);
-        setFontDescription(fontDescription);
+
+        return;
+    }
+
+    case CSSPropertyWebkitTextOrientation: {
+        HANDLE_INHERIT_AND_INITIAL(textOrientation, TextOrientation);
+
+        if (primitiveValue)
+            setTextOrientation(*primitiveValue);
+
         return;
     }
 
@@ -3812,7 +3950,6 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
     case CSSPropertyWebkitTextEmphasisPosition:
     case CSSPropertyWebkitTextEmphasisStyle:
     case CSSPropertyWebkitTextFillColor:
-    case CSSPropertyWebkitTextOrientation:
     case CSSPropertyWebkitTextSecurity:
     case CSSPropertyWebkitTextStrokeColor:
     case CSSPropertyWebkitTransformOrigin:
@@ -3878,6 +4015,9 @@ PassRefPtr<StyleImage> StyleResolver::styleImage(CSSPropertyID property, CSSValu
         return setOrPendingFromValue(property, static_cast<CSSImageSetValue*>(value));
 #endif
 
+    if (value->isCursorImageValue())
+        return cursorOrPendingFromValue(property, static_cast<CSSCursorImageValue*>(value));
+
     return 0;
 }
 
@@ -3907,6 +4047,14 @@ PassRefPtr<StyleImage> StyleResolver::setOrPendingFromValue(CSSPropertyID proper
     return image.release();
 }
 #endif
+
+PassRefPtr<StyleImage> StyleResolver::cursorOrPendingFromValue(CSSPropertyID property, CSSCursorImageValue* value)
+{
+    RefPtr<StyleImage> image = value->cachedOrPendingImage(document());
+    if (image && image->isPendingImage())
+        m_pendingImageProperties.set(property, value);
+    return image.release();
+}
 
 void StyleResolver::checkForTextSizeAdjust()
 {
@@ -5007,13 +5155,18 @@ PassRefPtr<StyleImage> StyleResolver::loadPendingImage(StylePendingImage* pendin
 
     if (pendingImage->cssImageValue()) {
         CSSImageValue* imageValue = pendingImage->cssImageValue();
-        return imageValue->cachedImage(cachedResourceLoader, m_element);
+        return imageValue->cachedImage(cachedResourceLoader);
     }
 
     if (pendingImage->cssImageGeneratorValue()) {
         CSSImageGeneratorValue* imageGeneratorValue = pendingImage->cssImageGeneratorValue();
         imageGeneratorValue->loadSubimages(cachedResourceLoader);
         return StyleGeneratedImage::create(imageGeneratorValue);
+    }
+
+    if (pendingImage->cssCursorImageValue()) {
+        CSSCursorImageValue* cursorImageValue = pendingImage->cssCursorImageValue();
+        return cursorImageValue->cachedImage(cachedResourceLoader);
     }
 
 #if ENABLE(CSS_IMAGE_SET)
@@ -5122,6 +5275,29 @@ void StyleResolver::loadPendingResources()
     // Start loading the SVG Documents referenced by this style.
     loadPendingSVGDocuments();
 #endif
+}
+
+void StyleResolver::collectFeatures()
+{
+    m_features.clear();
+    // Collect all ids and rules using sibling selectors (:first-child and similar)
+    // in the current set of stylesheets. Style sharing code uses this information to reject
+    // sharing candidates.
+    m_features.add(defaultStyle->features());
+    m_features.add(m_authorStyle->features());
+    if (document()->isViewSource()) {
+        if (!defaultViewSourceStyle)
+            loadViewSourceStyle();
+        m_features.add(defaultViewSourceStyle->features());
+    }
+
+    if (m_scopeResolver)
+        m_scopeResolver->collectFeaturesTo(m_features);
+    if (m_userStyle)
+        m_features.add(m_userStyle->features());
+
+    m_siblingRuleSet = makeRuleSet(m_features.siblingRules);
+    m_uncommonAttributeRuleSet = makeRuleSet(m_features.uncommonAttributeRules);
 }
 
 void StyleResolver::MatchedProperties::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const

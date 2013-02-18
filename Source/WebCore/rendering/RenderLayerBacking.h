@@ -164,6 +164,7 @@ public:
 #endif
 
     IntRect contentsBox() const;
+    IntRect backgroundBox() const;
     
     // For informative purposes only.
     CompositingLayerType compositingLayerType() const;
@@ -184,6 +185,7 @@ public:
 #if ENABLE(CSS_COMPOSITING)
     void setBlendMode(BlendMode);
 #endif
+    void reportMemoryUsage(MemoryObjectInfo*) const;
 
 private:
     void createPrimaryGraphicsLayer();
@@ -203,6 +205,7 @@ private:
     bool requiresVerticalScrollbarLayer() const;
     bool requiresScrollCornerLayer() const;
     bool updateScrollingLayers(bool scrollingLayers);
+    void updateDrawsContent(bool isSimpleContainer);
 
     GraphicsLayerPaintingPhase paintingPhaseForPrimaryLayer() const;
     
@@ -237,7 +240,8 @@ private:
     void updateImageContents();
 
     Color rendererBackgroundColor() const;
-    void updateBackgroundColor();
+    void updateBackgroundColor(bool isSimpleContainer);
+    void updateContentsRect(bool isSimpleContainer);
 
     bool containsNonEmptyRenderers() const;
     bool hasVisibleNonCompositingDescendantLayers() const;
@@ -271,7 +275,8 @@ private:
 
     IntRect m_compositedBounds;
 
-    bool m_artificiallyInflatedBounds;      // bounds had to be made non-zero to make transform-origin work
+    bool m_artificiallyInflatedBounds; // bounds had to be made non-zero to make transform-origin work
+    bool m_boundsConstrainedByClipping;
     bool m_isMainFrameRenderViewLayer;
     bool m_usingTiledCacheLayer;
     bool m_requiresOwnBackingStore;

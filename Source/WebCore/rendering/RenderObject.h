@@ -106,11 +106,6 @@ enum MarkingBehavior {
     MarkContainingBlockChain,
 };
 
-enum PlaceGeneratedRunInFlag {
-    PlaceGeneratedRunIn,
-    DoNotPlaceGeneratedRunIn
-};
-
 enum MapCoordinatesMode {
     IsFixed = 1 << 0,
     UseTransforms = 1 << 1,
@@ -282,6 +277,8 @@ public:
     virtual bool createsAnonymousWrapper() const { return false; }
     //////////////////////////////////////////
 
+    virtual void reportMemoryUsage(MemoryObjectInfo*) const;
+
 protected:
     //////////////////////////////////////////
     // Helper functions. Dangerous to use!
@@ -329,6 +326,8 @@ private:
 
 public:
     RenderArena* renderArena() const { return document()->renderArena(); }
+
+    bool isPseudoElement() const { return node() && node()->isPseudoElement(); }
 
     virtual bool isBR() const { return false; }
     virtual bool isBlockFlow() const { return false; }
@@ -395,6 +394,8 @@ public:
     virtual bool isRenderFullScreen() const { return false; }
     virtual bool isRenderFullScreenPlaceholder() const { return false; }
 #endif
+
+    virtual bool isRenderGrid() const { return false; }
 
     virtual bool isRenderFlowThread() const { return false; }
     virtual bool isRenderNamedFlowThread() const { return false; }
@@ -484,6 +485,7 @@ public:
     // to inherit from RenderSVGObject -> RenderObject (some need RenderBlock inheritance for instance)
     virtual void setNeedsTransformUpdate() { }
     virtual void setNeedsBoundariesUpdate();
+    virtual bool needsBoundariesUpdate() { return false; }
 
     // Per SVG 1.1 objectBoundingBox ignores clipping, masking, filter effects, opacity and stroke-width.
     // This is used for all computation of objectBoundingBox relative units and by SVGLocatable::getBBox().
@@ -617,12 +619,15 @@ public:
     bool isRooted(RenderView** = 0) const;
 
     Node* node() const { return isAnonymous() ? 0 : m_node; }
+    Node* nonPseudoNode() const { return isPseudoElement() ? 0 : node(); }
+
+    // FIXME: Why does RenderWidget need this?
+    void clearNode() { m_node = 0; }
 
     // Returns the styled node that caused the generation of this renderer.
     // This is the same as node() except for renderers of :before and :after
     // pseudo elements for which their parent node is returned.
-    Node* generatingNode() const { return m_node == document() ? 0 : m_node; }
-    void setNode(Node* node) { m_node = node; }
+    Node* generatingNode() const { return isPseudoElement() ? node()->parentOrHostNode() : node(); }
 
     Document* document() const { return m_node->document(); }
     Frame* frame() const { return document()->frame(); }
@@ -710,6 +715,9 @@ public:
 
     // Set the style of the object and update the state of the object accordingly.
     virtual void setStyle(PassRefPtr<RenderStyle>);
+
+    // Set the style of the object if it's generated content.
+    void setPseudoStyle(PassRefPtr<RenderStyle>);
 
     // Updates only the local style ptr of the object.  Does not update the state of the object,
     // and so only should be called when the style is known not to have changed (or from setStyle).

@@ -136,11 +136,6 @@ Bug(EFL) fast/layers/no-clipping-overflow-hidden-hardware-acceleration.html [ Im
 Bug(EFL) fast/events/domactivate-sets-underlying-click-event-as-handled.html [ Failure Pass ]
 Bug(EFL) http/tests/inspector/change-iframe-src.html [ Failure Pass ]
 Bug(EFL) http/tests/loading/fire-error-event-empty-404-script.html [ Crash Failure Pass ]
-Bug(EFL) svg/dom/viewspec-parser-3.html [ Failure Pass ]
-Bug(EFL) svg/dom/viewspec-parser-1.html [ Failure Pass ]
-Bug(EFL) svg/dom/viewspec-parser-4.html [ Failure Pass ]
-Bug(EFL) svg/dom/viewspec-parser-2.html [ Failure Pass ]
-Bug(EFL) svg/dom/viewspec-parser-5.html [ Failure Pass ]
 
 webkit.org/b/98761 svg/text/selection-tripleclick.svg [ Failure Pass ]
 
@@ -179,9 +174,6 @@ webkit.org/b/102370 fast/writing-mode/japanese-ruby-vertical-lr.html [ Failure P
 webkit.org/b/102370 fast/writing-mode/japanese-ruby-vertical-rl.html [ Failure Pass ]
 webkit.org/b/102370 fast/text/international/002.html [ Failure Pass ]
 
-# All debug bots timeout (crash) on this one
-webkit.org/b/56496 [ Debug ] fast/js/array-sort-modifying-tostring.html [ Crash Pass ]
-
 webkit.org/b/102204 http/tests/security/frameNavigation/inactive-function-in-popup-navigate-child.html [ Crash Pass ]
 
 # Flaky on Debug bot. See also webkit.org/b/102190
@@ -205,9 +197,100 @@ webkit.org/b/103399 [ Debug ] fast/forms/basic-buttons.html [ Failure Pass ]
 webkit.org/b/103400 [ Debug ] compositing/overflow/content-gains-scrollbars.html [ Crash Pass ]
 webkit.org/b/103400 [ Debug ] compositing/overflow/content-loses-scrollbars.html [ Crash Pass ]
 
+# Easily reproducable flakiness on EFL WK2 only
+webkit.org/b/103882 css3/device-adapt/viewport-width-not-affecting-next-page.html [ Failure Pass ]
+
+webkit.org/b/103883 css3/selectors3/html/css3-modsel-1.html [ Failure Pass ]
+webkit.org/b/103883 css3/selectors3/xml/css3-modsel-1.xml [ Failure Pass ]
+webkit.org/b/103883 css3/selectors3/xhtml/css3-modsel-1.xml [ Failure Pass ]
+
 #////////////////////////////////////////////////////////////////////////////////////////
 # FAILING TESTS
 #////////////////////////////////////////////////////////////////////////////////////////
+
+# Missing EFL's accessibility functions
+accessibility/accessibility-node-memory-management.html [ Skip ]
+accessibility/accessibility-node-reparent.html [ Skip ]
+accessibility/aria-describedby-on-input.html [ Skip ]
+accessibility/aria-help.html [ Skip ]
+accessibility/aria-hidden-updates-alldescendants.html [ Skip ]
+accessibility/aria-hidden-with-elements.html [ Skip ]
+accessibility/aria-hidden.html [ Skip ]
+accessibility/aria-invalid.html [ Skip ]
+accessibility/aria-labelledby-overrides-label.html [ Skip ]
+accessibility/aria-link-supports-press.html [ Skip ]
+accessibility/aria-presentational-role.html [ Skip ]
+accessibility/aria-readonly.html [ Skip ]
+accessibility/aria-scrollbar-role.html [ Skip ]
+accessibility/aria-text-role.html [ Skip ]
+accessibility/aria-used-on-image-maps.html [ Skip ]
+accessibility/button-press-action.html [ Skip ]
+accessibility/canvas-accessibilitynodeobject.html [ Skip ]
+accessibility/canvas-fallback-content-2.html [ Skip ]
+accessibility/canvas-fallback-content.html [ Skip ]
+accessibility/disabled-controls-not-focusable.html [ Skip ]
+accessibility/ellipsis-text.html [ Skip ]
+accessibility/file-upload-button-with-axpress.html [ Skip ]
+accessibility/hidden-legend.html [ Skip ]
+accessibility/ignore-spacer-elements.html [ Skip ]
+accessibility/inline-continuations.html [ Skip ]
+accessibility/label-for-control-hittest.html [ Skip ]
+accessibility/language-attribute.html [ Skip ]
+accessibility/loading-iframe-sends-notification.html [ Skip ]
+accessibility/onclick-handlers.html [ Skip ]
+accessibility/placeholder.html [ Skip ]
+accessibility/radio-button-title-label.html [ Skip ]
+accessibility/secure-textfield-title-ui.html [ Skip ]
+accessibility/selection-states.html [ Skip ]
+accessibility/spinbutton-value.html [ Skip ]
+accessibility/svg-remote-element.html [ Skip ]
+accessibility/textarea-insertion-point-line-number.html [ Skip ]
+accessibility/textarea-line-for-index.html [ Skip ]
+accessibility/textarea-selected-text-range.html [ Skip ]
+accessibility/textbox-role-reports-selection.html [ Skip ]
+accessibility/th-as-title-ui.html [ Skip ]
+accessibility/title-ui-element-correctness.html [ Skip ]
+accessibility/transformed-element.html [ Skip ]
+accessibility/visible-elements.html [ Skip ]
+accessibility/adjacent-continuations-cause-assertion-failure.html [ Skip ]
+accessibility/aria-checkbox-sends-notification.html [ Skip ]
+accessibility/aria-checkbox-text.html [ Skip ]
+accessibility/aria-combobox.html [ Skip ]
+accessibility/aria-fallback-roles.html [ Skip ]
+accessibility/aria-labelledby-overrides-aria-label.html [ Skip ]
+accessibility/aria-list-and-listitem.html [ Skip ]
+accessibility/aria-menubar-menuitems.html [ Skip ]
+accessibility/aria-option-role.html [ Skip ]
+accessibility/aria-roles.html [ Skip ]
+accessibility/aria-tab-roles.html [ Skip ]
+accessibility/aria-tables.html [ Skip ]
+accessibility/aria-toggle-button-with-title.html [ Skip ]
+accessibility/canvas-description-and-role.html [ Skip ]
+accessibility/deleting-iframe-destroys-axcache.html [ Skip ]
+accessibility/div-within-anchors-causes-crash.html [ Skip ]
+accessibility/image-link.html [ Skip ]
+accessibility/image-map1.html [ Skip ]
+accessibility/image-map2.html [ Skip ]
+accessibility/img-alt-tag-only-whitespace.html [ Skip ]
+accessibility/img-fallsback-to-title.html [ Skip ]
+accessibility/internal-link-anchors2.html [ Skip ]
+accessibility/legend.html [ Skip ]
+accessibility/lists.html [ Skip ]
+accessibility/media-element.html [ Skip ]
+accessibility/menu-list-sends-change-notification.html [ Skip ]
+accessibility/multiselect-list-reports-active-option.html [ Skip ]
+accessibility/notification-listeners.html [ Skip ]
+accessibility/platform-name.html [ Skip ]
+accessibility/plugin.html [ Skip ]
+accessibility/radio-button-group-members.html [ Skip ]
+accessibility/svg-bounds.html [ Skip ]
+accessibility/svg-image.html [ Skip ]
+accessibility/table-attributes.html [ Skip ]
+accessibility/table-detection.html [ Skip ]
+accessibility/table-one-cell.html [ Skip ]
+accessibility/table-sections.html [ Skip ]
+accessibility/table-with-aria-role.html [ Skip ]
+accessibility/table-with-rules.html [ Skip ]
 
 # WebKitTestRunner needs an implementation for testRunner.titleTextDirection
 webkit.org/b/93470 fast/dom/title-directionality-removeChild.html [ Failure ]
@@ -215,15 +298,6 @@ webkit.org/b/93470 fast/dom/title-directionality.html [ Failure ]
 
 # WebKitTestRunner setTouchPointRadius() is not supported
 Bug(EFL) fast/events/touch/basic-single-touch-events.html [ Failure ]
-
-# WebKitTestRunner needs an implementation for testRunner.setViewModeMediaFeature
-Bug(EFL) fast/media/media-query-list-02.html [ Failure ]
-Bug(EFL) fast/media/media-query-list-03.html [ Failure ]
-Bug(EFL) fast/media/media-query-list-04.html [ Failure ]
-Bug(EFL) fast/media/media-query-list-05.html [ Failure ]
-Bug(EFL) fast/media/media-query-list-06.html [ Failure ]
-Bug(EFL) fast/media/media-query-list-07.html [ Failure ]
-Bug(EFL) fast/media/view-mode-media-feature.html [ Failure ]
 
 # Needs grammar checking
 Bug(EFL) editing/spelling/grammar-edit-word.html [ Failure ]
@@ -269,10 +343,6 @@ webkit.org/b/103127 css3/device-adapt/opera/constrain-022.xhtml [ Failure ]
 # Page client doesn't react to orientation changes from CSS Viewport rules.
 webkit.org/b/103130 css3/device-adapt/opera/orientation-001.xhtml [ Failure ]
 
-# Issue with viewport width and relative units.
-webkit.org/b/102922 css3/device-adapt/opera/constrain-006.xhtml [ Failure ]
-webkit.org/b/102922 css3/device-adapt/opera/constrain-007.xhtml [ Failure ]
-
 # Text input controller needs selectedRange implementation
 webkit.org/b/99438 editing/selection/mixed-editability-10.html [ Failure ]
 
@@ -291,6 +361,15 @@ webkit.org/b/82020 plugins/netscape-dom-access-and-reload.html [ Failure ]
 # Plugin test failures having wrong object reference count problem.
 webkit.org/b/98741 plugins/npruntime/browser-object-identity.html [ Failure ]
 webkit.org/b/98741 plugins/refcount-leaks.html [ Failure ]
+
+# New compositing tests introduced in r137051 that fail on WK2 EFL.
+webkit.org/b/104476 compositing/background-color/background-color-padding-change.html [ ImageOnlyFailure ]
+webkit.org/b/104476 compositing/background-color/background-color-text-change.html [ ImageOnlyFailure ]
+
+# New compositing test introduced in r137215 that is failing on WK2 EFL.
+webkit.org/b/104637 compositing/repaint/resize-repaint.html [ Failure ]
+
+webkit.org/b/104656 compositing/repaint/clipped-layer-size-change.html [ ImageOnlyFailure Pass ]
 
 # NPP_SetWindow is not called during plugin destruction on X11.
 webkit.org/b/63261 plugins/npp-set-window-called-during-destruction.html [ Failure ]
@@ -318,9 +397,6 @@ webkit.org/b/98410 editing/pasteboard/copy-standalone-image-crash.html [ Failure
 webkit.org/b/98410 media/context-menu-actions.html [ Failure ]
 
 webkit.org/b/102201 fast/dom/Window/open-window-min-size.html [ Failure ]
-
-webkit.org/b/102216 inspector-protocol/nmi-webaudio.html [ Failure ]
-webkit.org/b/102216 inspector-protocol/nmi-webaudio-leak-test.html [ Failure ]
 
 # flaky ref tests after r135935, need to be investigated
 webkit.org/b/103468 css2.1/20110323/text-indent-intrinsic-002.htm [ ImageOnlyFailure Pass ]
@@ -415,7 +491,6 @@ webkit.org/b/103468 fast/regions/overflow-in-uniform-regions.html [ ImageOnlyFai
 webkit.org/b/103468 fast/regions/position-writing-modes-in-variable-width-regions.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/regions/positioned-objects-block-static-in-regions.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/regions/positioned-objects-block-static-in-rtl-regions.html [ ImageOnlyFailure Pass ]
-webkit.org/b/103468 fast/regions/positioned-objects-block-static-spanning-regions.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/regions/positioned-objects-clipped-spanning-regions.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/regions/positioned-objects-in-regions.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/regions/positioned-objects-in-rtl-regions.html [ ImageOnlyFailure Pass ]
@@ -477,8 +552,17 @@ webkit.org/b/103468 fast/dom/shadow/reprojection-className-modified.html [ Image
 webkit.org/b/103468 fast/dom/shadow/reprojection-id-modified.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/dom/shadow/shadow-reprojection-dynamic.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/dom/shadow/shadowdom-for-image-dynamic.html [ ImageOnlyFailure Pass ]
+webkit.org/b/103468 fast/dom/shadow/content-reprojection-dynamic.html [ ImageOnlyFailure Pass ]
+webkit.org/b/103468 fast/dom/shadow/invalidate-distribution.html [ ImageOnlyFailure Pass ]
+webkit.org/b/103468 fast/dom/shadow/pseudo-attribute-dynamic.html [ ImageOnlyFailure Pass ]
+webkit.org/b/103468 fast/dom/shadow/pseudoclass-update-disabled-input.html [ ImageOnlyFailure Pass ]
+webkit.org/b/103468 fast/dom/shadow/pseudoclass-update-disabled-select.html [ ImageOnlyFailure Pass ]
+webkit.org/b/103468 fast/dom/shadow/pseudoclass-update-enabled-textarea.html [ ImageOnlyFailure Pass ]
+webkit.org/b/103468 fast/dom/shadow/pseudoclass-update-visited-area.html [ ImageOnlyFailure Pass ]
+webkit.org/b/103468 fast/dom/shadow/shadowdom-for-meter-dynamic.html [ ImageOnlyFailure Pass ]
+webkit.org/b/103468 fast/dom/shadow/shadowdom-for-progress-dynamic.html [ ImageOnlyFailure Pass ]
+webkit.org/b/103468 fast/dom/shadow/shadow-on-image.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/forms/checkbox-appearance-change-by-checked.html [ ImageOnlyFailure Pass ]
-webkit.org/b/103468 fast/regions/autowidth-normalflow-maxwidth.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/repaint/percent-minheight-resize.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/replaced/replaced-last-line-layout.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 svg/animations/mpath-remove-from-dependents-on-delete-crash.html [ ImageOnlyFailure Pass ]
@@ -611,13 +695,6 @@ webkit.org/b/103468 ietestcenter/css3/multicolumn/column-width-applies-to-008.ht
 webkit.org/b/103468 ietestcenter/css3/multicolumn/column-width-applies-to-013.htm [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 ietestcenter/css3/multicolumn/column-width-applies-to-014.htm [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 ietestcenter/css3/multicolumn/column-width-percentage-001.htm [ ImageOnlyFailure Pass ]
-webkit.org/b/103468 mathml/presentation/dynamic.html [ ImageOnlyFailure Pass ]
-webkit.org/b/103468 mathml/presentation/mfenced-add-child1.html [ ImageOnlyFailure Pass ]
-webkit.org/b/103468 mathml/presentation/msub-base-changed.xhtml [ ImageOnlyFailure Pass ]
-webkit.org/b/103468 mathml/presentation/msub-sub-changed.xhtml [ ImageOnlyFailure Pass ]
-webkit.org/b/103468 mathml/presentation/msubsup-sub-changed.xhtml [ ImageOnlyFailure Pass ]
-webkit.org/b/103468 mathml/presentation/msup-sup-changed.xhtml [ ImageOnlyFailure Pass ]
-webkit.org/b/103468 mathml/presentation/style-changed.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 svg/animations/animate-linear-discrete-additive-c.svg [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 svg/animations/animateColor-additive-2a.svg [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 svg/animations/animateColor-additive-2b.svg [ ImageOnlyFailure Pass ]
@@ -691,7 +768,6 @@ webkit.org/b/103468 fast/css/heightless-list-item.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/text/international/lang-sensitive-fonts-xml.xhtml [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 ietestcenter/css3/namespaces/prefix-007.xml [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 css3/viewport-percentage-lengths/viewport-percentage-vertical-align.html [ ImageOnlyFailure Pass ]
-webkit.org/b/103468 fast/writing-mode/vertical-font-vmtx-units-per-em.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/css/font-face-unexpected-end.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/writing-mode/logical-height-after-clear.html [ ImageOnlyFailure Pass ]
 webkit.org/b/103468 fast/backgrounds/size/backgroundSize-in-background-shorthand.html [ ImageOnlyFailure Pass ]

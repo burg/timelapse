@@ -68,6 +68,7 @@ WebKitWebView
 WebKitLoadEvent
 WebKitPolicyDecisionType
 WebKitSaveMode
+WebKitInsecureContentEvent
 
 <SUBSECTION Editing Commands>
 WEBKIT_EDITING_COMMAND_CUT
@@ -526,6 +527,7 @@ webkit_hit_test_result_get_link_title
 webkit_hit_test_result_get_link_label
 webkit_hit_test_result_get_image_uri
 webkit_hit_test_result_get_media_uri
+webkit_hit_test_result_context_is_scrollbar
 
 <SUBSECTION Standard>
 WebKitHitTestResultClass

@@ -58,6 +58,7 @@ struct ViewportArguments;
 #if ENABLE(VIDEO)
 class FullScreenVideoQt;
 #endif
+class TextureMapperLayerClientQt;
 
 class ChromeClientQt : public ChromeClient {
 public:
@@ -100,7 +101,7 @@ public:
 
     virtual void setResizable(bool);
 
-    virtual void addMessageToConsole(MessageSource, MessageType, MessageLevel, const String& message, unsigned lineNumber, const String& sourceID);
+    virtual void addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, const String& sourceID);
 
     virtual bool canRunBeforeUnloadConfirmPanel();
     virtual bool runBeforeUnloadConfirmPanel(const String& message, Frame*);
@@ -222,6 +223,10 @@ public:
     static bool dumpVisitedLinksCallbacks;
 
     mutable QtPlatformPlugin m_platformPlugin;
+
+#if USE(ACCELERATED_COMPOSITING)
+    OwnPtr<TextureMapperLayerClientQt> m_textureMapperLayerClient;
+#endif
 };
 }
 

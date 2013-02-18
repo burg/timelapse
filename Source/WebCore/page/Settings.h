@@ -192,6 +192,9 @@ namespace WebCore {
         static void setDefaultMinDOMTimerInterval(double); // Interval specified in seconds.
         static double defaultMinDOMTimerInterval();
         
+        static void setHiddenPageDOMTimerAlignmentInterval(double); // Interval specified in seconds.
+        static double hiddenPageDOMTimerAlignmentInterval();
+
         void setMinDOMTimerInterval(double); // Per-page; initialized to default value.
         double minDOMTimerInterval();
 
@@ -224,14 +227,6 @@ namespace WebCore {
         bool cssStickyPositionEnabled() const { return false; }
 #endif
 
-#if ENABLE(CSS_REGIONS)
-        void setCSSRegionsEnabled(bool enabled) { m_cssRegionsEnabled = enabled; }
-        bool cssRegionsEnabled() const { return m_cssRegionsEnabled; }
-#else
-        void setCSSRegionsEnabled(bool) { }
-        bool cssRegionsEnabled() const { return false; }
-#endif
-
 #if ENABLE(CSS_VARIABLES)
         void setCSSVariablesEnabled(bool enabled) { m_cssVariablesEnabled = enabled; }
         bool cssVariablesEnabled() const { return m_cssVariablesEnabled; }
@@ -248,6 +243,9 @@ namespace WebCore {
 
         void setShowRepaintCounter(bool);
         bool showRepaintCounter() const { return m_showRepaintCounter; }
+
+        void setShowTiledScrollingIndicator(bool);
+        bool showTiledScrollingIndicator() const { return m_showTiledScrollingIndicator; }
 
 #if PLATFORM(WIN) || (OS(WINDOWS) && PLATFORM(WX))
         static void setShouldUseHighResolutionTimers(bool);
@@ -349,9 +347,6 @@ namespace WebCore {
         bool m_isCSSCustomFilterEnabled : 1;
 #if ENABLE(CSS_STICKY_POSITION)
         bool m_cssStickyPositionEnabled : 1;
-#endif        
-#if ENABLE(CSS_REGIONS)
-        bool m_cssRegionsEnabled : 1;
 #endif
 #if ENABLE(CSS_VARIABLES)
         bool m_cssVariablesEnabled : 1;
@@ -359,6 +354,7 @@ namespace WebCore {
         bool m_acceleratedCompositingEnabled : 1;
         bool m_showDebugBorders : 1;
         bool m_showRepaintCounter : 1;
+        bool m_showTiledScrollingIndicator : 1;
         bool m_tiledBackingStoreEnabled : 1;
         bool m_dnsPrefetchingEnabled : 1;
         bool m_unifiedTextCheckerEnabled : 1;
@@ -392,6 +388,8 @@ namespace WebCore {
 #if USE(JSC)
         static bool gShouldRespectPriorityInCSSAttributeSetters;
 #endif
+
+        static double gHiddenPageDOMTimerAlignmentInterval;
     };
 
 } // namespace WebCore

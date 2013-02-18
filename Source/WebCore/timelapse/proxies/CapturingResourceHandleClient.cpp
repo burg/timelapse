@@ -50,7 +50,6 @@
 #include "ResourceLoaderDestroyed.h"
 #include "ResourceRequest.h"
 #include "ResourceWasBlocked.h"
-#include "ResourceWillCacheResponse.h"
 #include "ResourceWillSendRequest.h"
 
 namespace WebCore {
@@ -120,12 +119,6 @@ void CapturingResourceHandleClient::cannotShowURL(ResourceHandle* handle)
 {
     m_proxy->controller()->capturePageInput(new ResourceCannotShowURL(m_id));
     m_client->cannotShowURL(handle);
-}
-
-void CapturingResourceHandleClient::willCacheResponse(ResourceHandle* handle, CacheStoragePolicy& policy)
-{
-    m_proxy->controller()->capturePageInput(new ResourceWillCacheResponse(m_id, policy));
-    m_client->willCacheResponse(handle, policy);
 }
 
 bool CapturingResourceHandleClient::shouldUseCredentialStorage(ResourceHandle* handle)

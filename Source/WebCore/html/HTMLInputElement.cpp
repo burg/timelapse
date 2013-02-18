@@ -774,7 +774,7 @@ RenderObject* HTMLInputElement::createRenderer(RenderArena* arena, RenderStyle* 
 
 void HTMLInputElement::attach()
 {
-    suspendPostAttachCallbacks();
+    PostAttachCallbackDisabler disabler(this);
 
     if (!m_hasType)
         updateType();
@@ -785,8 +785,6 @@ void HTMLInputElement::attach()
 
     if (document()->focusedNode() == this)
         document()->updateFocusAppearanceSoon(true /* restore selection */);
-
-    resumePostAttachCallbacks();
 }
 
 void HTMLInputElement::detach()
@@ -1051,16 +1049,6 @@ void HTMLInputElement::setValueAsNumber(double newValue, ExceptionCode& ec, Text
         return;
     }
     m_inputType->setValueAsDouble(newValue, eventBehavior, ec);
-}
-
-String HTMLInputElement::placeholder() const
-{
-    return fastGetAttribute(placeholderAttr).string();
-}
-
-void HTMLInputElement::setPlaceholder(const String& value)
-{
-    setAttribute(placeholderAttr, value);
 }
 
 void HTMLInputElement::setValueFromRenderer(const String& value)
@@ -1435,15 +1423,15 @@ void HTMLInputElement::unregisterForSuspensionCallbackIfNeeded()
 
 bool HTMLInputElement::isRequiredFormControl() const
 {
-    return m_inputType->supportsRequired() && required();
+    return m_inputType->supportsRequired() && isRequired();
 }
 
-bool HTMLInputElement::shouldMatchReadOnlySelector() const
+bool HTMLInputElement::matchesReadOnlyPseudoClass() const
 {
     return m_inputType->supportsReadOnly() && readOnly();
 }
 
-bool HTMLInputElement::shouldMatchReadWriteSelector() const
+bool HTMLInputElement::matchesReadWritePseudoClass() const
 {
     return m_inputType->supportsReadOnly() && !readOnly();
 }
@@ -1890,7 +1878,7 @@ bool HTMLInputElement::setupDateTimeChooserParameters(DateTimeChooserParameters&
     parameters.type = type();
     parameters.minimum = minimum();
     parameters.maximum = maximum();
-    parameters.required = required();
+    parameters.required = isRequired();
     if (!RuntimeEnabledFeatures::langAttributeAwareFormControlUIEnabled())
         parameters.locale = defaultLanguage();
     else {

@@ -78,7 +78,7 @@ class DriverOutput(object):
 
     def __init__(self, text, image, image_hash, audio, crash=False,
             test_time=0, measurements=None, timeout=False, error='', crashed_process_name='??',
-            crashed_pid=None, crash_log=None):
+            crashed_pid=None, crash_log=None, pid=None):
         # FIXME: Args could be renamed to better clarify what they do.
         self.text = text
         self.image = image  # May be empty-string if the test crashes.
@@ -93,6 +93,7 @@ class DriverOutput(object):
         self.measurements = measurements
         self.timeout = timeout
         self.error = error  # stderr output
+        self.pid = pid
 
     def has_stderr(self):
         return bool(self.error)
@@ -173,6 +174,7 @@ class Driver(object):
 
         crashed = self.has_crashed()
         timed_out = self._server_process.timed_out
+        pid = self._server_process.pid()
 
         if stop_when_done or crashed or timed_out:
             # We call stop() even if we crashed or timed out in order to get any remaining stdout/stderr output.
@@ -204,7 +206,7 @@ class Driver(object):
             crash=crashed, test_time=time.time() - test_begin_time, measurements=self._measurements,
             timeout=timed_out, error=self.error_from_test,
             crashed_process_name=self._crashed_process_name,
-            crashed_pid=self._crashed_pid, crash_log=crash_log)
+            crashed_pid=self._crashed_pid, crash_log=crash_log, pid=pid)
 
     def _get_crash_log(self, stdout, stderr, newer_than):
         return self._port._get_crash_log(self._crashed_process_name, self._crashed_pid, stdout, stderr, newer_than)
@@ -274,12 +276,9 @@ class Driver(object):
         # into run_test() directly.
         if not self._server_process:
             self._start(pixel_tests, per_test_args)
+            self._run_post_start_tasks()
 
-    def _start(self, pixel_tests, per_test_args):
-        self.stop()
-        self._driver_tempdir = self._port._filesystem.mkdtemp(prefix='%s-' % self._port.driver_name())
-        server_name = self._port.driver_name()
-        environment = self._port.setup_environ_for_server(server_name)
+    def _setup_environ_for_driver(self, environment):
         environment['DYLD_LIBRARY_PATH'] = self._port._build_path()
         environment['DYLD_FRAMEWORK_PATH'] = self._port._build_path()
         # FIXME: We're assuming that WebKitTestRunner checks this DumpRenderTree-named environment variable.
@@ -289,12 +288,27 @@ class Driver(object):
             environment['WEBKITOUTPUTDIR'] = os.environ['WEBKITOUTPUTDIR']
         if self._profiler:
             environment = self._profiler.adjusted_environment(environment)
+        return environment
+
+    def _start(self, pixel_tests, per_test_args):
+        self.stop()
+        self._driver_tempdir = self._port._filesystem.mkdtemp(prefix='%s-' % self._port.driver_name())
+        server_name = self._port.driver_name()
+        environment = self._port.setup_environ_for_server(server_name)
+        environment = self._setup_environ_for_driver(environment)
         self._crashed_process_name = None
         self._crashed_pid = None
         self._server_process = self._port._server_process_constructor(self._port, server_name, self.cmd_line(pixel_tests, per_test_args), environment)
         self._server_process.start()
+
+    def _run_post_start_tasks(self):
+        # Remote drivers may override this to delay post-start tasks until the server has ack'd.
         if self._profiler:
-            self._profiler.attach_to_pid(self._server_process.pid())
+            self._profiler.attach_to_pid(self._pid_on_target())
+
+    def _pid_on_target(self):
+        # Remote drivers will override this method to return the pid on the device.
+        return self._server_process.pid()
 
     def stop(self):
         if self._server_process:

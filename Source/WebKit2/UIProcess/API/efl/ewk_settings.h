@@ -424,6 +424,104 @@ EAPI Eina_Bool ewk_settings_local_storage_enabled_set(Ewk_Settings *settings, Ei
  */
 EAPI Eina_Bool ewk_settings_local_storage_enabled_get(const Ewk_Settings *settings);
 
+/**
+ * Toggles plug-ins support.
+ *
+ * By default, plug-ins support is enabled.
+ *
+ * @param settings settings object to set plug-ins support
+ * @param enable @c EINA_TRUE to enable plug-ins support
+ *        @c EINA_FALSE to disable
+ *
+ * @return @c EINA_TRUE on success or @c EINA_FALSE on failure
+ */
+EAPI Eina_Bool ewk_settings_plugins_enabled_set(Ewk_Settings *settings, Eina_Bool enable);
+
+/**
+ * Returns whether plug-ins support is enabled or not.
+ *
+ * @param settings settings object to query whether plug-ins support is enabled
+ *
+ * @return @c EINA_TRUE if plug-ins support is enabled
+ *         @c EINA_FALSE if not or on failure
+ */
+EAPI Eina_Bool ewk_settings_plugins_enabled_get(const Ewk_Settings *settings);
+
+/**
+ * Sets the default font size.
+ *
+ * By default, the default font size is @c 16.
+ *
+ * @param settings settings object to set the default font size
+ * @param size a new default font size to set
+ *
+ * @return @c EINA_TRUE on success or @c EINA_FALSE on failure
+ */
+EAPI Eina_Bool ewk_settings_default_font_size_set(Ewk_Settings *settings, int size);
+
+/**
+ * Returns the default font size.
+ *
+ * @param settings settings object to get the default font size
+ *
+ * @return @c the default font size or @c 0 on failure
+ */
+EAPI int ewk_settings_default_font_size_get(const Ewk_Settings *settings);
+
+/**
+ * Enables/disables private browsing.
+ *
+ * By default, private browsing is disabled.
+ *
+ * @param settings settings object to set private browsing
+ * @param enable @c EINA_TRUE to enable private browsing
+ *        @c EINA_FALSE to disable
+ *
+ * @return @c EINA_TRUE on success or @c EINA_FALSE on failure
+ */
+EAPI Eina_Bool ewk_settings_private_browsing_enabled_set(Ewk_Settings *settings, Eina_Bool enable);
+
+/**
+ * Returns whether private browsing is enabled or not.
+ *
+ * Private Browsing allows a user to browse the Internet without saving any information
+ * about which sites and pages a user has visited.
+ *
+ * @param settings settings object to query whether private browsing is enabled
+ *
+ * @return @c EINA_TRUE if private browsing is enabled
+ *         @c EINA_FALSE if not or on failure
+ */
+EAPI Eina_Bool ewk_settings_private_browsing_enabled_get(const Ewk_Settings *settings);
+
+/**
+ * Enables/disables text autosizing.
+ *
+ * By default, the text autosizing is disabled.
+ *
+ * @param settings settings object to set the text autosizing
+ * @param enable @c EINA_TRUE to enable the text autosizing
+ *               @c EINA_FALSE to disable
+ *
+ * @return @c EINA_TRUE on success or @c EINA_FALSE on failure
+ *
+ * @see ewk_settings_text_autosizing_enabled_get()
+ */
+EAPI Eina_Bool ewk_settings_text_autosizing_enabled_set(Ewk_Settings *settings, Eina_Bool enable);
+
+/**
+ * Returns whether the text autosizing is enabled.
+ *
+ * The text autosizing is a feature which adjusts the font size of text in wide
+ * columns, and makes text more legible.
+ *
+ * @param settings settings object to query whether text autosizing is enabled
+ *
+ * @return @c EINA_TRUE if the text autosizing is enabled
+ *         @c EINA_FALSE if not or on failure
+ */
+EAPI Eina_Bool ewk_settings_text_autosizing_enabled_get(const Ewk_Settings *settings);
+
 #ifdef __cplusplus
 }
 #endif

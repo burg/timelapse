@@ -67,7 +67,6 @@ public:
     virtual void didFail(ResourceHandle*, const ResourceError&) OVERRIDE;
     virtual void wasBlocked(ResourceHandle*) OVERRIDE;
     virtual void cannotShowURL(ResourceHandle*) OVERRIDE;
-    virtual void willCacheResponse(ResourceHandle*, CacheStoragePolicy&) OVERRIDE;
     virtual bool shouldUseCredentialStorage(ResourceHandle*) OVERRIDE;
     virtual void didReceiveAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge&) OVERRIDE;
     virtual void didCancelAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge&) OVERRIDE;

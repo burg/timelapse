@@ -44,6 +44,7 @@
 #include "HTMLStyleElement.h"
 #include "InspectorInstrumentation.h"
 #include "NodeRenderStyle.h"
+#include "NodeTraversal.h"
 #include "Page.h"
 #include "PageGroup.h"
 #include "RenderObject.h"
@@ -206,18 +207,14 @@ void SelectorChecker::collectIdentifierHashes(const CSSSelector* selector, unsig
     *hash = 0;
 }
 
-static inline const AtomicString* linkAttribute(Node* node)
+static inline const AtomicString* linkAttribute(Element* element)
 {
-    if (!node->isLink())
+    if (!element->isLink())
         return 0;
-
-    ASSERT(node->isElementNode());
-    Element* element = static_cast<Element*>(node);
     if (element->isHTMLElement())
         return &element->fastGetAttribute(hrefAttr);
     if (element->isSVGElement())
         return &element->getAttribute(XLinkNames::hrefAttr);
-
     return 0;
 }
 
@@ -448,7 +445,7 @@ SelectorChecker::SelectorMatch SelectorChecker::checkSelector(const SelectorChec
 
     if (context.selector->m_match == CSSSelector::PseudoElement) {
         if (context.selector->isCustomPseudoElement()) {
-            if (ShadowRoot* root = context.element->shadowRoot()) {
+            if (ShadowRoot* root = context.element->containingShadowRoot()) {
                 if (context.element->shadowPseudoId() != context.selector->value())
                     return SelectorFailsLocally;
 
@@ -1031,9 +1028,9 @@ bool SelectorChecker::checkOneSelector(const SelectorCheckingContext& context, c
                 return !element->isEnabledFormControl();
             break;
         case CSSSelector::PseudoReadOnly:
-            return element && element->shouldMatchReadOnlySelector();
+            return element && element->matchesReadOnlyPseudoClass();
         case CSSSelector::PseudoReadWrite:
-            return element && element->shouldMatchReadWriteSelector();
+            return element && element->matchesReadWritePseudoClass();
         case CSSSelector::PseudoOptional:
             return element && element->isOptionalFormControl();
         case CSSSelector::PseudoRequired:
@@ -1224,9 +1221,9 @@ void SelectorChecker::allVisitedStateChanged()
 {
     if (m_linksCheckedForVisitedState.isEmpty())
         return;
-    for (Node* node = m_document; node; node = node->traverseNextNode()) {
-        if (node->isLink())
-            node->setNeedsStyleRecalc();
+    for (Element* element = ElementTraversal::firstWithin(m_document); element; element = ElementTraversal::next(element)) {
+        if (element->isLink())
+            element->setNeedsStyleRecalc();
     }
 }
 
@@ -1234,14 +1231,14 @@ void SelectorChecker::visitedStateChanged(LinkHash visitedHash)
 {
     if (!m_linksCheckedForVisitedState.contains(visitedHash))
         return;
-    for (Node* node = m_document; node; node = node->traverseNextNode()) {
+    for (Element* element = ElementTraversal::firstWithin(m_document); element; element = ElementTraversal::next(element)) {
         LinkHash hash = 0;
-        if (node->hasTagName(aTag))
-            hash = static_cast<HTMLAnchorElement*>(node)->visitedLinkHash();
-        else if (const AtomicString* attr = linkAttribute(node))
+        if (element->hasTagName(aTag))
+            hash = static_cast<HTMLAnchorElement*>(element)->visitedLinkHash();
+        else if (const AtomicString* attr = linkAttribute(element))
             hash = visitedLinkHash(m_document->baseURL(), *attr);
         if (hash == visitedHash)
-            node->setNeedsStyleRecalc();
+            element->setNeedsStyleRecalc();
     }
 }
 

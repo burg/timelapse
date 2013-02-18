@@ -45,7 +45,6 @@
 #endif
 #include "Console.h"
 #include "Cursor.h"
-#include "DatabaseTracker.h"
 #include "DateTimeChooser.h"
 #include "DateTimeChooserImpl.h"
 #include "Document.h"
@@ -392,7 +391,6 @@ void ChromeClientImpl::setResizable(bool value)
 }
 
 void ChromeClientImpl::addMessageToConsole(MessageSource source,
-                                           MessageType type,
                                            MessageLevel level,
                                            const String& message,
                                            unsigned lineNumber,
@@ -805,7 +803,7 @@ void ChromeClientImpl::popupOpened(PopupContainer* popupContainer,
         // transparent to the WebView.
         m_webView->popupOpened(popupContainer);
     }
-    static_cast<WebPopupMenuImpl*>(webwidget)->init(popupContainer, bounds);
+    static_cast<WebPopupMenuImpl*>(webwidget)->initialize(popupContainer, bounds);
 }
 
 void ChromeClientImpl::popupClosed(WebCore::PopupContainer* popupContainer)
@@ -825,6 +823,12 @@ void ChromeClientImpl::setCursorHiddenUntilMouseMoves(bool)
 
 void ChromeClientImpl::setCursor(const WebCursorInfo& cursor)
 {
+#if OS(DARWIN)
+    // On Mac the mousemove event propagates to both the popup and main window.
+    // If a popup is open we don't want the main window to change the cursor.
+    if (m_webView->hasOpenedPopup())
+        return;
+#endif
     if (m_webView->client())
         m_webView->client()->didChangeCursor(cursor);
 }

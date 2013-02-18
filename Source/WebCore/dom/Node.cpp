@@ -40,6 +40,7 @@
 #include "CSSStyleSheet.h"
 #include "ChildNodeList.h"
 #include "ClassNodeList.h"
+#include "ComposedShadowTreeWalker.h"
 #include "ContainerNodeAlgorithms.h"
 #include "ContextMenuController.h"
 #include "DOMImplementation.h"
@@ -75,6 +76,7 @@
 #include "NamedNodeMap.h"
 #include "NodeRareData.h"
 #include "NodeRenderingContext.h"
+#include "NodeTraversal.h"
 #include "Page.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
@@ -99,6 +101,7 @@
 #include "TreeScopeAdopter.h"
 #include "UIEvent.h"
 #include "UIEventWithKeyState.h"
+#include "UserActionElementSet.h"
 #include "WebCoreMemoryInstrumentation.h"
 #include "WheelEvent.h"
 #include "WindowEventContext.h"
@@ -439,30 +442,12 @@ void Node::setDocument(Document* document)
     m_document = document;
 }
 
-NodeRareData* Node::setTreeScope(TreeScope* scope)
+void Node::setTreeScope(TreeScope* scope)
 {
-    if (!scope) {
-        if (hasRareData()) {
-            NodeRareData* data = rareData();
-            data->setTreeScope(0);
-            return data;
-        }
+    if (!hasRareData() && scope->rootNode()->isDocumentNode())
+        return;
 
-        return 0;
-    }
-
-    NodeRareData* data = ensureRareData();
-    data->setTreeScope(scope);
-    return data;
-}
-
-TreeScope* Node::treeScope() const
-{
-    // FIXME: Using m_document directly is not good -> see comment with document() in the header file.
-    if (!hasRareData())
-        return m_document;
-    TreeScope* scope = rareData()->treeScope();
-    return scope ? scope : m_document;
+    ensureRareData()->setTreeScope(scope);
 }
 
 NodeRareData* Node::rareData() const
@@ -484,9 +469,9 @@ NodeRareData* Node::ensureRareData()
     return data;
 }
 
-OwnPtr<NodeRareData> Node::createRareData()
+PassOwnPtr<NodeRareData> Node::createRareData()
 {
-    return adoptPtr(new NodeRareData);
+    return adoptPtr(new NodeRareData(documentInternal()));
 }
 
 void Node::clearRareData()
@@ -550,13 +535,7 @@ void Node::setNodeValue(const String& /*nodeValue*/, ExceptionCode& ec)
 
 PassRefPtr<NodeList> Node::childNodes()
 {
-    NodeRareData* data = ensureRareData();
-    if (data->childNodeList())
-        return PassRefPtr<NodeList>(data->childNodeList());
-
-    RefPtr<ChildNodeList> list = ChildNodeList::create(this);
-    data->setChildNodeList(list.get());
-    return list.release();
+    return ensureRareData()->ensureNodeLists()->ensureChildNodeList(this);
 }
 
 Node *Node::lastDescendant() const
@@ -634,7 +613,7 @@ void Node::normalize()
             break;
 
         if (type != TEXT_NODE) {
-            node = node->traverseNextNodePostOrder();
+            node = NodeTraversal::nextPostOrder(node.get());
             continue;
         }
 
@@ -643,7 +622,7 @@ void Node::normalize()
         // Remove empty text nodes.
         if (!text->length()) {
             // Care must be taken to get the next node before removing the current node.
-            node = node->traverseNextNodePostOrder();
+            node = NodeTraversal::nextPostOrder(node.get());
             ExceptionCode ec;
             text->remove(ec);
             continue;
@@ -670,7 +649,7 @@ void Node::normalize()
             nextText->remove(ec);
         }
 
-        node = node->traverseNextNodePostOrder();
+        node = NodeTraversal::nextPostOrder(node.get());
     }
 }
 
@@ -720,8 +699,11 @@ void Node::inspect()
 
 bool Node::rendererIsEditable(EditableLevel editableLevel, UserSelectAllTreatment treatment) const
 {
-    if (document()->frame() && document()->frame()->page() && document()->frame()->page()->isEditable() && !shadowRoot())
+    if (document()->frame() && document()->frame()->page() && document()->frame()->page()->isEditable() && !containingShadowRoot())
         return true;
+
+    if (isPseudoElement())
+        return false;
 
     // Ideally we'd call ASSERT(!needsStyleRecalc()) here, but
     // ContainerNode::setFocus() calls setNeedsStyleRecalc(), so the assertion
@@ -881,7 +863,7 @@ void Node::setNeedsStyleRecalc(StyleChangeType changeType)
 
 void Node::lazyAttach(ShouldSetAttached shouldSetAttached)
 {
-    for (Node* n = this; n; n = n->traverseNextNode(this)) {
+    for (Node* n = this; n; n = NodeTraversal::next(n, this)) {
         if (n->hasChildNodes())
             n->setChildNeedsStyleRecalc();
         n->setStyleChange(FullStyleChange);
@@ -889,18 +871,6 @@ void Node::lazyAttach(ShouldSetAttached shouldSetAttached)
             n->setAttached();
     }
     markAncestorsWithChildNeedsStyleRecalc();
-}
-
-void Node::setFocus(bool b)
-{ 
-    if (b || hasRareData())
-        ensureRareData()->setFocused(b);
-}
-
-bool Node::rareDataFocused() const
-{
-    ASSERT(hasRareData());
-    return rareData()->isFocused();
 }
 
 bool Node::supportsFocus() const
@@ -1004,8 +974,10 @@ void Document::invalidateNodeListCaches(const QualifiedName* attrName)
 
 void Node::invalidateNodeListCachesInAncestors(const QualifiedName* attrName, Element* attributeOwnerElement)
 {
-    if (hasRareData() && (!attrName || isAttributeNode()))
-        rareData()->clearChildNodeListCache();
+    if (hasRareData() && (!attrName || isAttributeNode())) {
+        if (NodeListsNodeData* lists = rareData()->nodeLists())
+            lists->clearChildNodeListCache();
+    }
 
     // Modifications to attributes that are not associated with an Element can't invalidate NodeList caches.
     if (attrName && !attributeOwnerElement)
@@ -1028,102 +1000,6 @@ void Node::invalidateNodeListCachesInAncestors(const QualifiedName* attrName, El
 NodeListsNodeData* Node::nodeLists()
 {
     return hasRareData() ? rareData()->nodeLists() : 0;
-}
-
-void Node::removeCachedChildNodeList()
-{
-    ASSERT(rareData());
-    rareData()->setChildNodeList(0);
-}
-
-Node* Node::traverseNextAncestorSibling() const
-{
-    ASSERT(!nextSibling());
-    for (const Node* node = parentNode(); node; node = node->parentNode()) {
-        if (node->nextSibling())
-            return node->nextSibling();
-    }
-    return 0;
-}
-
-Node* Node::traverseNextAncestorSibling(const Node* stayWithin) const
-{
-    ASSERT(!nextSibling());
-    ASSERT(this != stayWithin);
-    for (const Node* node = parentNode(); node; node = node->parentNode()) {
-        if (node == stayWithin)
-            return 0;
-        if (node->nextSibling())
-            return node->nextSibling();
-    }
-    return 0;
-}
-
-Node* Node::traverseNextNodePostOrder() const
-{
-    Node* next = nextSibling();
-    if (!next)
-        return parentNode();
-    while (Node* firstChild = next->firstChild())
-        next = firstChild;
-    return next;
-}
-
-Node* Node::traversePreviousNode(const Node* stayWithin) const
-{
-    if (this == stayWithin)
-        return 0;
-    if (previousSibling()) {
-        Node *n = previousSibling();
-        while (n->lastChild())
-            n = n->lastChild();
-        return n;
-    }
-    return parentNode();
-}
-
-Node* Node::traversePreviousSibling(const Node* stayWithin) const
-{
-    if (this == stayWithin)
-        return 0;
-    if (previousSibling())
-        return previousSibling();
-    const Node *n = this;
-    while (n && !n->previousSibling() && (!stayWithin || n->parentNode() != stayWithin))
-        n = n->parentNode();
-    if (n)
-        return n->previousSibling();
-    return 0;
-}
-
-Node* Node::traversePreviousNodePostOrder(const Node* stayWithin) const
-{
-    if (lastChild())
-        return lastChild();
-    if (this == stayWithin)
-        return 0;
-    if (previousSibling())
-        return previousSibling();
-    const Node *n = this;
-    while (n && !n->previousSibling() && (!stayWithin || n->parentNode() != stayWithin))
-        n = n->parentNode();
-    if (n)
-        return n->previousSibling();
-    return 0;
-}
-
-Node* Node::traversePreviousSiblingPostOrder(const Node* stayWithin) const
-{
-    if (this == stayWithin)
-        return 0;
-    if (previousSibling())
-        return previousSibling();
-    const Node *n = this;
-    while (n && !n->previousSibling() && (!stayWithin || n->parentNode() != stayWithin))
-        n = n->parentNode();
-    if (n)
-        return n->previousSibling();
-    return 0;
 }
 
 void Node::checkSetPrefix(const AtomicString& prefix, ExceptionCode& ec)
@@ -1230,7 +1106,7 @@ void Node::detach()
     if (renderer()) {
         renderer()->destroyAndCleanupAnonymousWrappers();
 #ifndef NDEBUG
-        for (Node* node = this; node; node = node->traverseNextNode(this)) {
+        for (Node* node = this; node; node = NodeTraversal::next(node, this)) {
             RenderObject* renderer = node->renderer();
             // RenderFlowThread and the top layer remove elements from the regular tree
             // hierarchy. They will be cleaned up when we call detach on them.
@@ -1246,14 +1122,14 @@ void Node::detach()
     ASSERT(!renderer());
 
     Document* doc = document();
-    if (hovered())
-        doc->hoveredNodeDetached(this);
-    if (inActiveChain())
-        doc->activeChainNodeDetached(this);
+    if (isUserActionElement()) {
+        if (hovered())
+            doc->hoveredNodeDetached(this);
+        if (inActiveChain())
+            doc->activeChainNodeDetached(this);
+        doc->userActionElements().didDetach(this);
+    }
 
-    clearFlag(IsActiveFlag);
-    clearFlag(IsHoveredFlag);
-    clearFlag(InActiveChainFlag);
     clearFlag(IsAttachedFlag);
 
 #ifndef NDEBUG
@@ -1349,20 +1225,20 @@ bool Node::canStartSelection() const
 
 Element* Node::shadowHost() const
 {
-    if (ShadowRoot* root = shadowRoot())
+    if (ShadowRoot* root = containingShadowRoot())
         return root->host();
     return 0;
 }
 
 Node* Node::shadowAncestorNode() const
 {
-    if (ShadowRoot* root = shadowRoot())
+    if (ShadowRoot* root = containingShadowRoot())
         return root->host();
 
     return const_cast<Node*>(this);
 }
 
-ShadowRoot* Node::shadowRoot() const
+ShadowRoot* Node::containingShadowRoot() const
 {
     Node* root = const_cast<Node*>(this);
     while (root) {
@@ -2083,7 +1959,7 @@ void Node::showNodePathForThis() const
 
 static void traverseTreeAndMark(const String& baseIndent, const Node* rootNode, const Node* markedNode1, const char* markedLabel1, const Node* markedNode2, const char* markedLabel2)
 {
-    for (const Node* node = rootNode; node; node = node->traverseNextNode()) {
+    for (const Node* node = rootNode; node; node = NodeTraversal::next(node)) {
         if (node == markedNode1)
             fprintf(stderr, "%s", markedLabel1);
         if (node == markedNode2)
@@ -2468,6 +2344,8 @@ void Node::dispatchScopedEventDispatchMediator(PassRefPtr<EventDispatchMediator>
 
 bool Node::dispatchEvent(PassRefPtr<Event> event)
 {
+    if (event->isMouseEvent())
+        return EventDispatcher::dispatchEvent(this, MouseEventDispatchMediator::create(adoptRef(toMouseEvent(event.leakRef())), MouseEventDispatchMediator::SyntheticMouseEvent));
     return EventDispatcher::dispatchEvent(this, EventDispatchMediator::create(event));
 }
 
@@ -2724,8 +2602,7 @@ void Node::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addMember(m_document);
     info.addMember(m_next);
     info.addMember(m_previous);
-    if (RenderObject* renderer = this->renderer())
-        info.addMember(renderer->style());
+    info.addMember(this->renderer());
     if (hasRareData())
         info.addMember(rareData());
 }
@@ -2758,6 +2635,48 @@ size_t Node::numberOfScopedHTMLStyleChildren() const
     }
 
     return count;
+}
+
+void Node::setFocus(bool flag)
+{
+    if (Document* document = this->document())
+        document->userActionElements().setFocused(this, flag);
+}
+
+void Node::setActive(bool flag, bool)
+{
+    if (Document* document = this->document())
+        document->userActionElements().setActive(this, flag);
+}
+
+void Node::setHovered(bool flag)
+{
+    if (Document* document = this->document())
+        document->userActionElements().setHovered(this, flag);
+}
+
+bool Node::isUserActionElementActive() const
+{
+    ASSERT(isUserActionElement());
+    return document()->userActionElements().isActive(this);
+}
+
+bool Node::isUserActionElementInActiveChain() const
+{
+    ASSERT(isUserActionElement());
+    return document()->userActionElements().isInActiveChain(this);
+}
+
+bool Node::isUserActionElementHovered() const
+{
+    ASSERT(isUserActionElement());
+    return document()->userActionElements().isHovered(this);
+}
+
+bool Node::isUserActionElementFocused() const
+{
+    ASSERT(isUserActionElement());
+    return document()->userActionElements().isFocused(this);
 }
 
 } // namespace WebCore

@@ -71,9 +71,9 @@ HEADERS += \
     Shared/API/c/qt/WKImageQt.h \
     Shared/APIClientTraits.h \
     Shared/ShareableBitmap.h \
-    Shared/ShareableSurface.h \
     Shared/CacheModel.h \
     Shared/ChildProcess.h \
+    Shared/ChildProcessProxy.h \
     Shared/ConnectionStack.h \
     Shared/DictionaryPopupInfo.h \
     Shared/EditorState.h \
@@ -120,7 +120,6 @@ HEADERS += \
     Shared/WebHitTestResult.h \
     Shared/WebImage.h \
     Shared/WebIntentServiceInfo.h \
-    Shared/WebLayerTreeInfo.h \
     Shared/WebNavigationDataStore.h \
     Shared/WebNumber.h \
     Shared/WebOpenPanelParameters.h \
@@ -135,6 +134,9 @@ HEADERS += \
     Shared/WebURLResponse.h \
     Shared/WebUserContentURLPattern.h \
     Shared/CoordinatedGraphics/CoordinatedGraphicsArgumentCoders.h \
+    Shared/CoordinatedGraphics/CoordinatedLayerInfo.h \
+    Shared/CoordinatedGraphics/CoordinatedSurface.h \
+    Shared/CoordinatedGraphics/WebCoordinatedSurface.h \
     Shared/CoordinatedGraphics/WebCustomFilterProgram.h \
     Shared/Plugins/Netscape/NetscapePluginModule.h \
     Shared/Plugins/NPRemoteObjectMap.h \
@@ -209,7 +211,7 @@ HEADERS += \
     UIProcess/BackingStore.h \
     UIProcess/Downloads/DownloadProxy.h \
     UIProcess/CoordinatedGraphics/CoordinatedBackingStore.h \
-    UIProcess/CoordinatedGraphics/LayerTreeCoordinatorProxy.h \
+    UIProcess/CoordinatedGraphics/CoordinatedLayerTreeHostProxy.h \
     UIProcess/CoordinatedGraphics/LayerTreeRenderer.h \
     UIProcess/DefaultUndoController.h \
     UIProcess/DrawingAreaProxy.h \
@@ -227,6 +229,7 @@ HEADERS += \
     UIProcess/PageClient.h \
     UIProcess/PageViewportController.h \
     UIProcess/PageViewportControllerClient.h \
+    UIProcess/Plugins/PlugInAutoStartProvider.h \
     UIProcess/Plugins/PluginInfoStore.h \
     UIProcess/Plugins/PluginProcessProxy.h \
     UIProcess/Plugins/PluginProcessManager.h \
@@ -359,22 +362,23 @@ HEADERS += \
     WebProcess/WebCoreSupport/WebNetworkInfoClient.h \
     WebProcess/WebCoreSupport/WebNotificationClient.h \
     WebProcess/WebCoreSupport/WebPlatformStrategies.h \
+    WebProcess/WebCoreSupport/WebPlugInClient.h \
     WebProcess/WebCoreSupport/WebPopupMenu.h \
     WebProcess/WebCoreSupport/WebSearchPopupMenu.h \
     WebProcess/WebCoreSupport/WebVibrationClient.h \
     WebProcess/WebCoreSupport/qt/WebFrameNetworkingContext.h \
-    WebProcess/WebPage/AreaAllocator.h \
     WebProcess/WebPage/DrawingArea.h \
     WebProcess/WebPage/DrawingAreaImpl.h \
     WebProcess/WebPage/EventDispatcher.h \
     WebProcess/WebPage/FindController.h \
+    WebProcess/WebPage/CoordinatedGraphics/AreaAllocator.h \
     WebProcess/WebPage/CoordinatedGraphics/CoordinatedGraphicsLayer.h \
     WebProcess/WebPage/CoordinatedGraphics/CoordinatedImageBacking.h \
+    WebProcess/WebPage/CoordinatedGraphics/CoordinatedLayerTreeHost.h \
     WebProcess/WebPage/CoordinatedGraphics/CoordinatedTile.h \
-    WebProcess/WebPage/CoordinatedGraphics/LayerTreeCoordinator.h \
+    WebProcess/WebPage/CoordinatedGraphics/UpdateAtlas.h \
     WebProcess/WebPage/TapHighlightController.h \
     WebProcess/WebPage/PageOverlay.h \
-    WebProcess/WebPage/UpdateAtlas.h \
     WebProcess/WebPage/WebContextMenu.h \
     WebProcess/WebPage/WebFrame.h \
     WebProcess/WebPage/WebInspector.h \
@@ -441,7 +445,6 @@ SOURCES += \
     Shared/Plugins/Netscape/NetscapePluginModuleNone.cpp \
     Shared/Plugins/Netscape/x11/NetscapePluginModuleX11.cpp \
     Shared/ShareableBitmap.cpp \
-    Shared/ShareableSurface.cpp \
     Shared/Plugins/NPRemoteObjectMap.cpp \
     Shared/Plugins/NPIdentifierData.cpp \
     Shared/Plugins/NPObjectMessageReceiver.cpp \
@@ -450,6 +453,7 @@ SOURCES += \
     Shared/Plugins/PluginModuleInfo.cpp \
     Shared/Plugins/PluginProcessCreationParameters.cpp \
     Shared/ChildProcess.cpp \
+    Shared/ChildProcessProxy.cpp \
     Shared/ConnectionStack.cpp \
     Shared/DictionaryPopupInfo.cpp \
     Shared/EditorState.cpp \
@@ -486,7 +490,6 @@ SOURCES += \
     Shared/WebKeyboardEvent.cpp \
     Shared/WebImage.cpp \
     Shared/WebIntentServiceInfo.cpp \
-    Shared/WebLayerTreeInfo.cpp \
     Shared/WebMouseEvent.cpp \
     Shared/WebNetworkInfo.cpp \
     Shared/WebOpenPanelParameters.cpp \
@@ -503,6 +506,8 @@ SOURCES += \
     Shared/WebURLResponse.cpp \
     Shared/WebWheelEvent.cpp \
     Shared/CoordinatedGraphics/CoordinatedGraphicsArgumentCoders.cpp \
+    Shared/CoordinatedGraphics/CoordinatedLayerInfo.cpp \
+    Shared/CoordinatedGraphics/WebCoordinatedSurface.cpp \
     Shared/CoordinatedGraphics/WebCustomFilterProgramProxy.cpp \
     Shared/qt/ArgumentCodersQt.cpp \
     Shared/qt/LayerTreeContextQt.cpp \
@@ -566,7 +571,7 @@ SOURCES += \
     UIProcess/BackingStore.cpp \
     UIProcess/qt/BackingStoreQt.cpp \
     UIProcess/CoordinatedGraphics/CoordinatedBackingStore.cpp \
-    UIProcess/CoordinatedGraphics/LayerTreeCoordinatorProxy.cpp \
+    UIProcess/CoordinatedGraphics/CoordinatedLayerTreeHostProxy.cpp \
     UIProcess/CoordinatedGraphics/LayerTreeRenderer.cpp \
     UIProcess/DefaultUndoController.cpp \
     UIProcess/Downloads/DownloadProxy.cpp \
@@ -583,6 +588,7 @@ SOURCES += \
     UIProcess/Notifications/WebNotificationManagerProxy.cpp \
     UIProcess/Notifications/WebNotificationProvider.cpp \
     UIProcess/PageViewportController.cpp \
+    UIProcess/Plugins/PlugInAutoStartProvider.cpp \
     UIProcess/Plugins/PluginInfoStore.cpp \
     UIProcess/Plugins/PluginProcessProxy.cpp \
     UIProcess/Plugins/PluginProcessManager.cpp \
@@ -736,6 +742,7 @@ SOURCES += \
     WebProcess/WebCoreSupport/WebNetworkInfoClient.cpp \
     WebProcess/WebCoreSupport/WebNotificationClient.cpp \
     WebProcess/WebCoreSupport/WebPlatformStrategies.cpp \
+    WebProcess/WebCoreSupport/WebPlugInClient.cpp \
     WebProcess/WebCoreSupport/WebPopupMenu.cpp \
     WebProcess/WebCoreSupport/WebSearchPopupMenu.cpp \
     WebProcess/WebCoreSupport/WebVibrationClient.cpp \
@@ -744,21 +751,21 @@ SOURCES += \
     WebProcess/WebCoreSupport/qt/WebDragClientQt.cpp \
     WebProcess/WebCoreSupport/qt/WebFrameNetworkingContext.cpp \
     WebProcess/WebCoreSupport/qt/WebPopupMenuQt.cpp \
-    WebProcess/WebPage/AreaAllocator.cpp \
     WebProcess/WebPage/DecoderAdapter.cpp \
     WebProcess/WebPage/DrawingArea.cpp \
     WebProcess/WebPage/DrawingAreaImpl.cpp \
     WebProcess/WebPage/EncoderAdapter.cpp \
     WebProcess/WebPage/EventDispatcher.cpp \
     WebProcess/WebPage/FindController.cpp \
+    WebProcess/WebPage/CoordinatedGraphics/AreaAllocator.cpp \
     WebProcess/WebPage/CoordinatedGraphics/CoordinatedGraphicsLayer.cpp \
     WebProcess/WebPage/CoordinatedGraphics/CoordinatedImageBacking.cpp \
+    WebProcess/WebPage/CoordinatedGraphics/CoordinatedLayerTreeHost.cpp \
     WebProcess/WebPage/CoordinatedGraphics/CoordinatedTile.cpp \
-    WebProcess/WebPage/CoordinatedGraphics/LayerTreeCoordinator.cpp \
+    WebProcess/WebPage/CoordinatedGraphics/UpdateAtlas.cpp \
     WebProcess/WebPage/TapHighlightController.cpp \
     WebProcess/WebPage/LayerTreeHost.cpp \
     WebProcess/WebPage/PageOverlay.cpp \
-    WebProcess/WebPage/UpdateAtlas.cpp \
     WebProcess/WebPage/WebBackForwardListProxy.cpp \
     WebProcess/WebPage/WebContextMenu.cpp \
     WebProcess/WebPage/WebFrame.cpp \

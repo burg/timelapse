@@ -8,6 +8,7 @@
 # Copyright (C) Research In Motion Limited 2010. All rights reserved.
 # Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
 # Copyright (C) 2011 Patrick Gansterer <paroga@webkit.org>
+# Copyright (C) 2012 Ericsson AB. All rights reserved.
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Library General Public
@@ -241,7 +242,7 @@ sub AddIncludesForType
         $includesRef->{"JSXPathNSResolver.h"} = 1;
         $includesRef->{"JSCustomXPathNSResolver.h"} = 1;
     } elsif ($type eq "DOMString[]") {
-        # FIXME: Add proper support for T[], T[]?, sequence<T>
+        # FIXME: Consider replacing DOMStringList with DOMString[] or sequence<DOMString>.
         $includesRef->{"JSDOMStringList.h"} = 1;
     } elsif ($type eq "SerializedScriptValue") {
         $includesRef->{"SerializedScriptValue.h"} = 1;
@@ -2421,28 +2422,26 @@ sub GenerateImplementation
         }
     }
 
-    if ($numFunctions > 0 || $numCachedAttributes > 0) {
-        if ($needsMarkChildren && !$interface->extendedAttributes->{"JSCustomMarkFunction"}) {
-            push(@implContent, "void ${className}::visitChildren(JSCell* cell, SlotVisitor& visitor)\n");
-            push(@implContent, "{\n");
-            push(@implContent, "    ${className}* thisObject = jsCast<${className}*>(cell);\n");
-            push(@implContent, "    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);\n");
-            push(@implContent, "    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);\n");
-            push(@implContent, "    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());\n");
-            push(@implContent, "    Base::visitChildren(thisObject, visitor);\n");
-            if ($interface->extendedAttributes->{"EventTarget"} || $interface->name eq "EventTarget") {
-                push(@implContent, "    thisObject->impl()->visitJSEventListeners(visitor);\n");
-            }
-            if ($numCachedAttributes > 0) {
-                foreach (@{$interface->attributes}) {
-                    my $attribute = $_;
-                    if ($attribute->signature->extendedAttributes->{"CachedAttribute"}) {
-                        push(@implContent, "    visitor.append(&thisObject->m_" . $attribute->signature->name . ");\n");
-                    }
+    if ($needsMarkChildren && !$interface->extendedAttributes->{"JSCustomMarkFunction"}) {
+        push(@implContent, "void ${className}::visitChildren(JSCell* cell, SlotVisitor& visitor)\n");
+        push(@implContent, "{\n");
+        push(@implContent, "    ${className}* thisObject = jsCast<${className}*>(cell);\n");
+        push(@implContent, "    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);\n");
+        push(@implContent, "    COMPILE_ASSERT(StructureFlags & OverridesVisitChildren, OverridesVisitChildrenWithoutSettingFlag);\n");
+        push(@implContent, "    ASSERT(thisObject->structure()->typeInfo().overridesVisitChildren());\n");
+        push(@implContent, "    Base::visitChildren(thisObject, visitor);\n");
+        if ($interface->extendedAttributes->{"EventTarget"} || $interface->name eq "EventTarget") {
+            push(@implContent, "    thisObject->impl()->visitJSEventListeners(visitor);\n");
+        }
+        if ($numCachedAttributes > 0) {
+            foreach (@{$interface->attributes}) {
+                my $attribute = $_;
+                if ($attribute->signature->extendedAttributes->{"CachedAttribute"}) {
+                    push(@implContent, "    visitor.append(&thisObject->m_" . $attribute->signature->name . ");\n");
                 }
             }
-            push(@implContent, "}\n\n");
         }
+        push(@implContent, "}\n\n");
     }
 
     # Cached attributes are indeed allowed when there is a custom mark/visitChildren function.
@@ -2519,7 +2518,11 @@ sub GenerateImplementation
             push(@implContent, "JSValue ${className}::nameGetter(ExecState* exec, JSValue slotBase, PropertyName propertyName)\n");
             push(@implContent, "{\n");
             push(@implContent, "    ${className}* thisObj = jsCast<$className*>(asObject(slotBase));\n");
-            push(@implContent, "    return toJS(exec, thisObj->globalObject(), static_cast<$interfaceName*>(thisObj->impl())->namedItem(propertyNameToAtomicString(propertyName)));\n");
+            if ($interfaceName eq "HTMLPropertiesCollection") {
+                push(@implContent, "    return toJS(exec, thisObj->globalObject(), static_cast<$interfaceName*>(thisObj->impl())->propertyNodeList(propertyNameToAtomicString(propertyName)));\n");
+            } else {
+                push(@implContent, "    return toJS(exec, thisObj->globalObject(), static_cast<$interfaceName*>(thisObj->impl())->namedItem(propertyNameToAtomicString(propertyName)));\n");
+            }
             push(@implContent, "}\n\n");
         }
     }
@@ -2577,8 +2580,8 @@ sub GenerateImplementation
                 $rootString .= "    void* root = WebCore::root(element);\n";
             } elsif ($interfaceName eq "CanvasRenderingContext") {
                 $rootString  = "    void* root = WebCore::root(js${interfaceName}->impl()->canvas());\n";
-            } elsif (GetGenerateIsReachable($interface) eq "ImplBaseRoot") {
-                $rootString  = "    void* root = WebCore::root(js${interfaceName}->impl()->base());\n";
+            } elsif (GetGenerateIsReachable($interface) eq "ImplOwnerNodeRoot") {
+                $rootString  = "    void* root = WebCore::root(js${interfaceName}->impl()->ownerNode());\n";
             } else {
                 $rootString  = "    void* root = WebCore::root(js${interfaceName}->impl());\n";
             }
@@ -3147,7 +3150,7 @@ sub GetNativeTypeFromSignature
 my %nativeType = (
     "CompareHow" => "Range::CompareHow",
     "DOMString" => "const String&",
-    # FIXME: Add proper support for T[], T[]?, sequence<T>
+    # FIXME: Consider replacing DOMStringList with DOMString[] or sequence<DOMString>.
     "DOMString[]" => "RefPtr<DOMStringList>",
     "DOMObject" => "ScriptValue",
     "NodeFilter" => "RefPtr<NodeFilter>",
@@ -3177,11 +3180,23 @@ sub GetNativeType
     return "RefPtr<DOMStringList>" if $type eq "DOMStringList" or $type eq "DOMString[]";
     return $nativeType{$type} if exists $nativeType{$type};
 
+    my $arrayType = $codeGenerator->GetArrayType($type);
     my $sequenceType = $codeGenerator->GetSequenceType($type);
-    return "Vector<${sequenceType}>" if $sequenceType;
+    my $arrayOrSequenceType = $arrayType || $sequenceType;
+
+    return "Vector<" . GetNativeVectorInnerType($arrayOrSequenceType) . ">" if $arrayOrSequenceType;
 
     # For all other types, the native type is a pointer with same type name as the IDL type.
     return "${type}*";
+}
+
+sub GetNativeVectorInnerType
+{
+    my $arrayOrSequenceType = shift;
+
+    return "String" if $arrayOrSequenceType eq "DOMString";
+    return $nativeType{$arrayOrSequenceType} if exists $nativeType{$arrayOrSequenceType};
+    return "RefPtr<${arrayOrSequenceType}> ";
 }
 
 sub GetNativeTypeForCallbacks
@@ -3317,13 +3332,15 @@ sub JSValueToNative
     AddToImplIncludes("Event.h", $conditional) if $type eq "Event";
 
     my $arrayType = $codeGenerator->GetArrayType($type);
-    if ($arrayType) {
-        return "toNativeArray<$arrayType>(exec, $value)";
-    }
-
     my $sequenceType = $codeGenerator->GetSequenceType($type);
-    if ($sequenceType) {
-        return "toNativeArray<$sequenceType>(exec, $value)";
+    my $arrayOrSequenceType = $arrayType || $sequenceType;
+
+    if ($arrayOrSequenceType) {
+        if ($codeGenerator->IsRefPtrType($arrayOrSequenceType)) {
+            AddToImplIncludes("JS${arrayOrSequenceType}.h");
+            return "(toRefPtrNativeArray<${arrayOrSequenceType}, JS${arrayOrSequenceType}>(exec, $value, &to${arrayOrSequenceType}))";
+        }
+        return "toNativeArray<" . GetNativeVectorInnerType($arrayOrSequenceType) . ">(exec, $value)";
     }
 
     # Default, assume autogenerated type conversion routines
@@ -3385,23 +3402,17 @@ sub NativeToJSValue
     }
 
     my $arrayType = $codeGenerator->GetArrayType($type);
-    if ($arrayType) {
-        if ($type eq "DOMString[]") {
+    my $sequenceType = $codeGenerator->GetSequenceType($type);
+    my $arrayOrSequenceType = $arrayType || $sequenceType;
+
+    if ($arrayOrSequenceType) {
+        if ($arrayType eq "DOMString") {
             AddToImplIncludes("JSDOMStringList.h", $conditional);
             AddToImplIncludes("DOMStringList.h", $conditional);
-        } elsif (!$codeGenerator->SkipIncludeHeader($arrayType)) {
-            AddToImplIncludes("JS$arrayType.h", $conditional);
-            AddToImplIncludes("$arrayType.h", $conditional);
-        }
-        AddToImplIncludes("<runtime/JSArray.h>", $conditional);
-        return "jsArray(exec, $thisValue->globalObject(), $value)";
-    }
 
-    my $sequenceType = $codeGenerator->GetSequenceType($type);
-    if ($sequenceType) {
-        if (!$codeGenerator->SkipIncludeHeader($sequenceType)) {
-            AddToImplIncludes("JS$sequenceType.h", $conditional);
-            AddToImplIncludes("$sequenceType.h", $conditional);
+        } elsif ($codeGenerator->IsRefPtrType($arrayOrSequenceType)) {
+            AddToImplIncludes("JS${arrayOrSequenceType}.h", $conditional);
+            AddToImplIncludes("${arrayOrSequenceType}.h", $conditional);
         }
         AddToImplIncludes("<runtime/JSArray.h>", $conditional);
         return "jsArray(exec, $thisValue->globalObject(), $value)";

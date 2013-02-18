@@ -24,7 +24,7 @@
 #include "BackingStoreClient.h"
 #include "BackingStore_p.h"
 #include "ColorChooser.h"
-#include "DatabaseTracker.h"
+#include "DatabaseManager.h"
 #include "Document.h"
 #include "DumpRenderTreeClient.h"
 #include "DumpRenderTreeSupport.h"
@@ -89,7 +89,7 @@ ChromeClientBlackBerry::ChromeClientBlackBerry(WebPagePrivate* pagePrivate)
 {
 }
 
-void ChromeClientBlackBerry::addMessageToConsole(MessageSource, MessageType, MessageLevel, const String& message, unsigned int lineNumber, const String& sourceID)
+void ChromeClientBlackBerry::addMessageToConsole(MessageSource, MessageLevel, const String& message, unsigned lineNumber, const String& sourceID)
 {
 #if !defined(PUBLIC_BUILD) || !PUBLIC_BUILD
     if (m_webPagePrivate->m_dumpRenderTree) {
@@ -496,12 +496,12 @@ void ChromeClientBlackBerry::exceededDatabaseQuota(Frame* frame, const String& n
     }
 #endif
 
-    DatabaseTracker& tracker = DatabaseTracker::tracker();
+    DatabaseManager& manager = DatabaseManager::manager();
 
-    unsigned long long totalUsage = tracker.totalDatabaseUsage();
-    unsigned long long originUsage = tracker.usageForOrigin(origin);
+    unsigned long long totalUsage = manager.totalDatabaseUsage();
+    unsigned long long originUsage = manager.usageForOrigin(origin);
 
-    DatabaseDetails details = tracker.detailsForNameAndOrigin(name, origin);
+    DatabaseDetails details = manager.detailsForNameAndOrigin(name, origin);
     unsigned long long estimatedSize = details.expectedUsage();
     const String& nameStr = details.displayName();
 
@@ -510,7 +510,7 @@ void ChromeClientBlackBerry::exceededDatabaseQuota(Frame* frame, const String& n
     unsigned long long quota = m_webPagePrivate->m_client->databaseQuota(originStr.characters(), originStr.length(),
         nameStr.characters(), nameStr.length(), totalUsage, originUsage, estimatedSize);
 
-    tracker.setQuota(origin, quota);
+    manager.setQuota(origin, quota);
 #endif
 }
 
@@ -615,6 +615,9 @@ void ChromeClientBlackBerry::scroll(const IntSize& delta, const IntRect& scrollV
     backingStoreClient->checkOriginOfCurrentScrollOperation();
 
     m_webPagePrivate->m_backingStore->d->scroll(delta, scrollViewRect, clipRect);
+
+    // Shift the spell check dialog box as we scroll.
+    m_webPagePrivate->m_inputHandler->redrawSpellCheckDialogIfRequired();
 }
 
 void ChromeClientBlackBerry::scrollableAreasDidChange()

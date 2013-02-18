@@ -46,13 +46,13 @@ public:
     DrawingAreaProxy* drawingArea() const;
     WebCore::IntSize viewSize() { return m_viewportSize; }
     float scaleFactor() const { return m_viewImpl->scaleFactor(); }
-    WebCore::IntPoint contentPosition() const { return m_contentPosition; }
+    WebCore::FloatPoint contentPosition() const { return m_contentPosition; }
 
     void updateViewportSize(const WebCore::IntSize& viewportSize);
     void setRendererActive(bool);
 
     virtual void setViewportPosition(const WebCore::FloatPoint& contentsPoint);
-    virtual void setContentsScale(float, bool treatAsInitialValue);
+    virtual void setContentsScale(float);
 
     virtual void didResumeContent();
     virtual void didChangeContentsSize(const WebCore::IntSize&);
@@ -66,7 +66,7 @@ private:
 
     EwkViewImpl* m_viewImpl;
     WebCore::IntSize m_viewportSize;
-    WebCore::IntPoint m_contentPosition;
+    WebCore::FloatPoint m_contentPosition;
     PageViewportController* m_controller;
 };
 

@@ -37,13 +37,6 @@
 
 namespace WebCore {
 
-CSSImageValue::CSSImageValue(ClassType classType, const String& url)
-    : CSSValue(classType)
-    , m_url(url)
-    , m_accessedImage(false)
-{
-}
-
 CSSImageValue::CSSImageValue(const String& url)
     : CSSValue(ImageClass)
     , m_url(url)
@@ -71,43 +64,23 @@ StyleImage* CSSImageValue::cachedOrPendingImage()
     return m_image.get();
 }
 
-StyleCachedImage* CSSImageValue::cachedImage(CachedResourceLoader* loader, Element* initiatorElement)
-{
-    if (isCursorImageValue())
-        return static_cast<CSSCursorImageValue*>(this)->cachedImage(loader);
-    return cachedImage(loader, m_url, initiatorElement);
-}
-
-StyleCachedImage* CSSImageValue::cachedImage(CachedResourceLoader* loader, const String& url, Element* initiatorElement)
+StyleCachedImage* CSSImageValue::cachedImage(CachedResourceLoader* loader)
 {
     ASSERT(loader);
 
     if (!m_accessedImage) {
         m_accessedImage = true;
 
-        CachedResourceRequest request(ResourceRequest(loader->document()->completeURL(url)));
-        if (initiatorElement)
-            request.setInitiator(initiatorElement);
-        else
+        CachedResourceRequest request(ResourceRequest(loader->document()->completeURL(m_url)));
+        if (m_initiatorName.isEmpty())
             request.setInitiator(cachedResourceRequestInitiators().css);
+        else
+            request.setInitiator(m_initiatorName);
         if (CachedResourceHandle<CachedImage> cachedImage = loader->requestImage(request))
             m_image = StyleCachedImage::create(cachedImage.get());
     }
 
     return (m_image && m_image->isCachedImage()) ? static_cast<StyleCachedImage*>(m_image.get()) : 0;
-}
-
-String CSSImageValue::cachedImageURL()
-{
-    if (!m_image || !m_image->isCachedImage())
-        return String();
-    return static_cast<StyleCachedImage*>(m_image.get())->cachedImage()->url();
-}
-
-void CSSImageValue::clearCachedImage()
-{
-    m_image = 0;
-    m_accessedImage = false;
 }
 
 bool CSSImageValue::hasFailedOrCanceledSubresources() const

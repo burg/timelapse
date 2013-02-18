@@ -26,10 +26,10 @@
 #include "config.h"
 #include "PageClientBase.h"
 
+#include "CoordinatedLayerTreeHostProxy.h"
 #include "DrawingAreaProxyImpl.h"
 #include "EwkViewImpl.h"
 #include "InputMethodContextEfl.h"
-#include "LayerTreeCoordinatorProxy.h"
 #include "LayerTreeRenderer.h"
 #include "NativeWebKeyboardEvent.h"
 #include "NotImplemented.h"
@@ -251,11 +251,6 @@ void PageClientBase::updateAcceleratedCompositingMode(const LayerTreeContext&)
     notImplemented();
 }
 #endif // USE(ACCELERATED_COMPOSITING)
-
-void PageClientBase::didChangeScrollbarsForMainFrame() const
-{
-    notImplemented();
-}
 
 void PageClientBase::didCommitLoadForMainFrame(bool)
 {

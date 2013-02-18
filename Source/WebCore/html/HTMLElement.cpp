@@ -44,7 +44,9 @@
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "HTMLTemplateElement.h"
 #include "HTMLTextFormControlElement.h"
+#include "NodeTraversal.h"
 #include "RenderWordBreak.h"
 #include "ScriptEventListener.h"
 #include "Settings.h"
@@ -343,8 +345,14 @@ String HTMLElement::outerHTML() const
 
 void HTMLElement::setInnerHTML(const String& html, ExceptionCode& ec)
 {
-    if (RefPtr<DocumentFragment> fragment = createFragmentForInnerOuterHTML(html, this, AllowScriptingContent, ec))
-        replaceChildrenWithFragment(this, fragment.release(), ec);
+    if (RefPtr<DocumentFragment> fragment = createFragmentForInnerOuterHTML(html, this, AllowScriptingContent, ec)) {
+        ContainerNode* container = this;
+#if ENABLE(TEMPLATE_ELEMENT)
+        if (hasLocalName(templateTag))
+            container = toHTMLTemplateElement(this)->content();
+#endif
+        replaceChildrenWithFragment(container, fragment.release(), ec);
+    }
 }
 
 static void mergeWithNextTextNode(PassRefPtr<Node> node, ExceptionCode& ec)
@@ -809,13 +817,13 @@ static void setHasDirAutoFlagRecursively(Node* firstNode, bool flag, Node* lastN
         if (elementAffectsDirectionality(node)) {
             if (node == lastNode)
                 return;
-            node = node->traverseNextSibling(firstNode);
+            node = NodeTraversal::nextSkippingChildren(node, firstNode);
             continue;
         }
         node->setSelfOrAncestorHasDirAutoAttribute(flag);
         if (node == lastNode)
             return;
-        node = node->traverseNextNode(firstNode);
+        node = NodeTraversal::next(node, firstNode);
     }
 }
 
@@ -857,7 +865,7 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
         // Skip bdi, script, style and text form controls.
         if (equalIgnoringCase(node->nodeName(), "bdi") || node->hasTagName(scriptTag) || node->hasTagName(styleTag) 
             || (node->isElementNode() && toElement(node)->isTextFormControl())) {
-            node = node->traverseNextSibling(this);
+            node = NodeTraversal::nextSkippingChildren(node, this);
             continue;
         }
 
@@ -865,7 +873,7 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
         if (node->isElementNode()) {
             AtomicString dirAttributeValue = toElement(node)->fastGetAttribute(dirAttr);
             if (equalIgnoringCase(dirAttributeValue, "rtl") || equalIgnoringCase(dirAttributeValue, "ltr") || equalIgnoringCase(dirAttributeValue, "auto")) {
-                node = node->traverseNextSibling(this);
+                node = NodeTraversal::nextSkippingChildren(node, this);
                 continue;
             }
         }
@@ -879,7 +887,7 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
                 return (textDirection == WTF::Unicode::LeftToRight) ? LTR : RTL;
             }
         }
-        node = node->traverseNextNode(this);
+        node = NodeTraversal::next(node, this);
     }
     if (strongDirectionalityTextNode)
         *strongDirectionalityTextNode = 0;
@@ -926,8 +934,8 @@ void HTMLElement::calculateAndAdjustDirectionality()
 void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Node* beforeChange, int childCountDelta)
 {
     if ((!document() || document()->renderer()) && childCountDelta < 0) {
-        Node* node = beforeChange ? beforeChange->traverseNextSibling() : 0;
-        for (int counter = 0; node && counter < childCountDelta; counter++, node = node->traverseNextSibling()) {
+        Node* node = beforeChange ? NodeTraversal::nextSkippingChildren(beforeChange) : 0;
+        for (int counter = 0; node && counter < childCountDelta; counter++, node = NodeTraversal::nextSkippingChildren(node)) {
             if (elementAffectsDirectionality(node))
                 continue;
 
@@ -938,9 +946,9 @@ void HTMLElement::adjustDirectionalityIfNeededAfterChildrenChanged(Node* beforeC
     if (!selfOrAncestorHasDirAutoAttribute())
         return;
 
-    Node* oldMarkedNode = beforeChange ? beforeChange->traverseNextSibling() : 0;
+    Node* oldMarkedNode = beforeChange ? NodeTraversal::nextSkippingChildren(beforeChange) : 0;
     while (oldMarkedNode && elementAffectsDirectionality(oldMarkedNode))
-        oldMarkedNode = oldMarkedNode->traverseNextSibling(this);
+        oldMarkedNode = NodeTraversal::nextSkippingChildren(oldMarkedNode, this);
     if (oldMarkedNode)
         setHasDirAutoFlagRecursively(oldMarkedNode, false);
 
@@ -1021,7 +1029,7 @@ void HTMLElement::getItemRefElements(Vector<HTMLElement*>& itemRefElements)
             rootNode = parent;
     }
 
-    for (Node* current = rootNode; current; current = current->traverseNextNode(rootNode)) {
+    for (Node* current = rootNode; current; current = NodeTraversal::next(current, rootNode)) {
         if (!current->isHTMLElement())
             continue;
         HTMLElement* element = toHTMLElement(current);

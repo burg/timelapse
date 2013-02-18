@@ -60,6 +60,7 @@ class WebMediaStreamCenter;
 class WebMediaStreamCenterClient;
 class WebMessagePortChannel;
 class WebMimeRegistry;
+class WebPluginListBuilder;
 class WebRTCPeerConnectionHandler;
 class WebRTCPeerConnectionHandlerClient;
 class WebSandboxSupport;
@@ -211,6 +212,10 @@ public:
     // false on platform specific error conditions.
     virtual bool processMemorySizesInBytes(size_t* privateBytes, size_t* sharedBytes) { return false; }
 
+    // Reports number of bytes used by memory allocator for internal needs.
+    // Returns true if the size has been reported, or false otherwise.
+    virtual bool memoryAllocatorWasteInBytes(size_t*) { return false; }
+
 
     // Message Ports -------------------------------------------------------
 
@@ -235,6 +240,13 @@ public:
 
     // A suggestion to cache this metadata in association with this URL.
     virtual void cacheMetadata(const WebURL&, double responseTime, const char* data, size_t dataSize) { }
+
+
+    // Plugins -------------------------------------------------------------
+
+    // If refresh is true, then cached information should not be used to
+    // satisfy this call.
+    virtual void getPluginList(bool refresh, WebPluginListBuilder*) { }
 
 
     // Resources -----------------------------------------------------------

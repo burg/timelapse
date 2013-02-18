@@ -32,6 +32,7 @@
 #include "ConsoleTypes.h"
 #include "KURL.h"
 #include "ScriptCallStack.h"
+#include "ScriptState.h"
 #include "SecurityContext.h"
 #include "Supplementable.h"
 #include <wtf/Forward.h>
@@ -84,8 +85,9 @@ public:
 
     bool sanitizeScriptError(String& errorMessage, int& lineNumber, String& sourceURL, CachedScript* = 0);
     void reportException(const String& errorMessage, int lineNumber, const String& sourceURL, PassRefPtr<ScriptCallStack>, CachedScript* = 0);
-    void addConsoleMessage(MessageSource, MessageType, MessageLevel, const String& message, const String& sourceURL = String(), unsigned lineNumber = 0, PassRefPtr<ScriptCallStack> = 0, unsigned long requestIdentifier = 0);
-    void addConsoleMessage(MessageSource, MessageType, MessageLevel, const String& message, PassRefPtr<ScriptCallStack>, unsigned long requestIdentifier = 0);
+
+    void addConsoleMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, ScriptState* = 0, unsigned long requestIdentifier = 0);
+    virtual void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier = 0) = 0;
 
 #if ENABLE(BLOB)
     PublicURLManager& publicURLManager();
@@ -170,21 +172,19 @@ public:
 protected:
     class AddConsoleMessageTask : public Task {
     public:
-        static PassOwnPtr<AddConsoleMessageTask> create(MessageSource source, MessageType type, MessageLevel level, const String& message)
+        static PassOwnPtr<AddConsoleMessageTask> create(MessageSource source, MessageLevel level, const String& message)
         {
-            return adoptPtr(new AddConsoleMessageTask(source, type, level, message));
+            return adoptPtr(new AddConsoleMessageTask(source, level, message));
         }
         virtual void performTask(ScriptExecutionContext*);
     private:
-        AddConsoleMessageTask(MessageSource source, MessageType type, MessageLevel level, const String& message)
+        AddConsoleMessageTask(MessageSource source, MessageLevel level, const String& message)
             : m_source(source)
-            , m_type(type)
             , m_level(level)
             , m_message(message.isolatedCopy())
         {
         }
         MessageSource m_source;
-        MessageType m_type;
         MessageLevel m_level;
         String m_message;
     };
@@ -193,7 +193,7 @@ private:
     virtual const KURL& virtualURL() const = 0;
     virtual KURL virtualCompleteURL(const String&) const = 0;
 
-    virtual void addMessage(MessageSource, MessageType, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, PassRefPtr<ScriptCallStack>, unsigned long requestIdentifier = 0) = 0;
+    virtual void addMessage(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, PassRefPtr<ScriptCallStack>, ScriptState* = 0, unsigned long requestIdentifier = 0) = 0;
     virtual EventTarget* errorEventTarget() = 0;
     virtual void logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, PassRefPtr<ScriptCallStack>) = 0;
     bool dispatchErrorEvent(const String& errorMessage, int lineNumber, const String& sourceURL, CachedScript*);

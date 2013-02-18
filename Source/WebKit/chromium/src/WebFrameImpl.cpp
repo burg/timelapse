@@ -118,6 +118,7 @@
 #include "KURL.h"
 #include "MessagePort.h"
 #include "Node.h"
+#include "NodeTraversal.h"
 #include "Page.h"
 #include "PageOverlay.h"
 #include "Performance.h"
@@ -841,7 +842,7 @@ void WebFrameImpl::addMessageToConsole(const WebConsoleMessage& message)
         return;
     }
 
-    frame()->document()->addConsoleMessage(OtherMessageSource, LogMessageType, webCoreMessageLevel, message.text);
+    frame()->document()->addConsoleMessage(OtherMessageSource, webCoreMessageLevel, message.text);
 }
 
 void WebFrameImpl::collectGarbage()
@@ -2349,7 +2350,7 @@ void WebFrameImpl::setFindEndstateFocusAndSelection()
                 frame()->document()->setFocusedNode(node);
                 return;
             }
-            node = node->traverseNextNode();
+            node = NodeTraversal::next(node);
         }
 
         // No node related to the active match was focusable, so set the

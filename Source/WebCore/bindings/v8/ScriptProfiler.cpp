@@ -37,6 +37,8 @@
 #include "ScriptObject.h"
 #include "V8ArrayBufferView.h"
 #include "V8Binding.h"
+#include "V8DOMWindow.h"
+#include "V8DOMWrapper.h"
 #include "V8Node.h"
 #include "WebCoreMemoryInstrumentation.h"
 #include "WrapperTypeInfo.h"
@@ -48,7 +50,7 @@ namespace WebCore {
 void ScriptProfiler::start(ScriptState* state, const String& title)
 {
     v8::HandleScope hs;
-    v8::CpuProfiler::StartProfiling(v8String(title));
+    v8::CpuProfiler::StartProfiling(deprecatedV8String(title));
 }
 
 void ScriptProfiler::startForPage(Page*, const String& title)
@@ -67,8 +69,8 @@ PassRefPtr<ScriptProfile> ScriptProfiler::stop(ScriptState* state, const String&
 {
     v8::HandleScope hs;
     const v8::CpuProfile* profile = state ?
-        v8::CpuProfiler::StopProfiling(v8String(title), state->context()->GetSecurityToken()) :
-        v8::CpuProfiler::StopProfiling(v8String(title));
+        v8::CpuProfiler::StopProfiling(deprecatedV8String(title), state->context()->GetSecurityToken()) :
+        v8::CpuProfiler::StopProfiling(deprecatedV8String(title));
     return profile ? ScriptProfile::create(profile) : 0;
 }
 
@@ -145,6 +147,25 @@ private:
     bool m_firstReport;
 };
 
+class GlobalObjectNameResolver : public v8::HeapProfiler::ObjectNameResolver {
+public:
+    virtual const char* GetName(v8::Handle<v8::Object> object)
+    {
+        if (V8DOMWrapper::isWrapperOfType(object, &V8DOMWindow::info)) {
+            DOMWindow* window = V8DOMWindow::toNative(object);
+            if (window) {
+                CString url = window->document()->url().string().utf8();
+                m_strings.append(url);
+                return url.data();
+            }
+        }
+        return 0;
+    }
+
+private:
+    Vector<CString> m_strings;
+};
+
 } // namespace
 
 PassRefPtr<ScriptHeapSnapshot> ScriptProfiler::takeHeapSnapshot(const String& title, HeapSnapshotProgress* control)
@@ -152,7 +173,8 @@ PassRefPtr<ScriptHeapSnapshot> ScriptProfiler::takeHeapSnapshot(const String& ti
     v8::HandleScope hs;
     ASSERT(control);
     ActivityControlAdapter adapter(control);
-    const v8::HeapSnapshot* snapshot = v8::HeapProfiler::TakeSnapshot(v8String(title), v8::HeapSnapshot::kFull, &adapter);
+    GlobalObjectNameResolver resolver;
+    const v8::HeapSnapshot* snapshot = v8::HeapProfiler::TakeSnapshot(deprecatedV8String(title), v8::HeapSnapshot::kFull, &adapter, &resolver);
     return snapshot ? ScriptHeapSnapshot::create(snapshot) : 0;
 }
 
@@ -218,7 +240,7 @@ void ScriptProfiler::visitExternalArrays(ExternalArrayVisitor* visitor)
                 return;
             ASSERT(value->IsObject());
             v8::Persistent<v8::Object> wrapper = v8::Persistent<v8::Object>::Cast(value);
-            if (!V8DOMWrapper::domWrapperType(wrapper)->isSubclass(&V8ArrayBufferView::info))
+            if (!toWrapperTypeInfo(wrapper)->isSubclass(&V8ArrayBufferView::info))
                 return;
             m_visitor->visitJSExternalArray(V8ArrayBufferView::toNative(wrapper));
         }

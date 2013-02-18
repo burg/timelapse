@@ -61,6 +61,7 @@
 #include "LocalizedStrings.h"
 #include "MathMLNames.h"
 #include "NodeList.h"
+#include "NodeTraversal.h"
 #include "Page.h"
 #include "ProgressTracker.h"
 #include "RenderButton.h"
@@ -623,12 +624,10 @@ String AccessibilityRenderObject::textUnderElement() const
 {
     if (!m_renderer)
         return String();
-    
+
     if (m_renderer->isFileUploadControl())
         return toRenderFileUploadControl(m_renderer)->buttonValue();
     
-    Node* node = m_renderer->node();
-
 #if ENABLE(MATHML)
     // Math operators create RenderText nodes on the fly that are not tied into the DOM in a reasonable way,
     // so rangeOfContents does not work for them (nor does regular text selection).
@@ -639,28 +638,28 @@ String AccessibilityRenderObject::textUnderElement() const
         }
     }
 #endif
-    
-    if (node) {
-        if (Frame* frame = node->document()->frame()) {
-            // catch stale WebCoreAXObject (see <rdar://problem/3960196>)
-            if (frame->document() != node->document())
-                return String();
 
-            return plainText(rangeOfContents(node).get(), textIteratorBehaviorForTextRange());
-        }
-    }
-    
-    // Sometimes text fragments don't have Node's associated with them (like when
-    // CSS content is used to insert text).
     if (m_renderer->isText()) {
+        // If possible, use a text iterator to get the text, so that whitespace
+        // is handled consistently.
+        if (Node* node = this->node()) {
+            if (Frame* frame = node->document()->frame()) {
+                // catch stale WebCoreAXObject (see <rdar://problem/3960196>)
+                if (frame->document() != node->document())
+                    return String();
+
+                return plainText(rangeOfContents(node).get(), textIteratorBehaviorForTextRange());
+            }
+        }
+    
+        // Sometimes text fragments don't have Nodes associated with them (like when
+        // CSS content is used to insert text).
         RenderText* renderTextObject = toRenderText(m_renderer);
         if (renderTextObject->isTextFragment())
             return String(static_cast<RenderTextFragment*>(m_renderer)->contentString());
     }
     
-    // return the null string for anonymous text because it is non-trivial to get
-    // the actual text and, so far, that is not needed
-    return String();
+    return AccessibilityNodeObject::textUnderElement();
 }
 
 Node* AccessibilityRenderObject::node() const
@@ -1264,8 +1263,25 @@ bool AccessibilityRenderObject::accessibilityIsIgnored() const
     // check if there's some kind of accessible name for the element)
     // to decide an element's visibility is not as definitive as
     // previous checks, so this should remain as one of the last.
-    if (!helpText().isEmpty() || !title().isEmpty() || !accessibilityDescription().isEmpty())
+    //
+    // These checks are simplified in the interest of execution speed;
+    // for example, any element having an alt attribute will make it
+    // not ignored, rather than just images.
+    if (!getAttribute(aria_helpAttr).isEmpty() || !getAttribute(aria_describedbyAttr).isEmpty() || !getAttribute(altAttr).isEmpty() || !getAttribute(titleAttr).isEmpty())
         return false;
+
+    // Don't ignore generic focusable elements like <div tabindex=0>
+    // unless they're completely empty, with no children.
+    if (isGenericFocusableElement() && node->firstChild())
+        return false;
+
+    if (!ariaAccessibilityDescription().isEmpty())
+        return false;
+
+#if ENABLE(MATHML)
+    if (!getAttribute(MathMLNames::alttextAttr).isEmpty())
+        return false;
+#endif
     
     // By default, objects should be ignored so that the AX hierarchy is not 
     // filled with unnecessary items.
@@ -2656,8 +2672,7 @@ void AccessibilityRenderObject::addImageMapChildren()
     if (!map)
         return;
 
-    for (Node* current = map->firstChild(); current; current = current->traverseNextNode(map)) {
-        
+    for (Element* current = ElementTraversal::firstWithin(map); current; current = ElementTraversal::next(current, map)) {
         // add an <area> element for this child if it has a link
         if (current->hasTagName(areaTag) && current->isLink()) {
             AccessibilityImageMapLink* areaObject = static_cast<AccessibilityImageMapLink*>(axObjectCache()->getOrCreate(ImageMapLinkRole));

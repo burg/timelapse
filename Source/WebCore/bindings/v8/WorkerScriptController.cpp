@@ -61,8 +61,8 @@ WorkerScriptController::WorkerScriptController(WorkerContext* workerContext)
     , m_executionForbidden(false)
     , m_executionScheduledToTerminate(false)
 {
-    V8PerIsolateData* data = V8PerIsolateData::create(m_isolate);
     m_isolate->Enter();
+    V8PerIsolateData* data = V8PerIsolateData::create(m_isolate);
     m_domDataStore = adoptPtr(new DOMDataStore(DOMDataStore::Worker));
     data->setDOMDataStore(m_domDataStore.get());
 
@@ -112,7 +112,7 @@ bool WorkerScriptController::initializeContextIfNeeded()
     }
 
     // Set DebugId for the new context.
-    context->SetEmbedderData(0, v8::String::New("worker"));
+    context->SetEmbedderData(0, v8::String::NewSymbol("worker"));
 
     // Create a new JS object and use it as the prototype for the shadow global object.
     WrapperTypeInfo* contextType = &V8DedicatedWorkerContext::info;
@@ -127,7 +127,7 @@ bool WorkerScriptController::initializeContextIfNeeded()
         return false;
     }
 
-    V8DOMWrapper::createDOMWrapper(PassRefPtr<WorkerContext>(m_workerContext), contextType, jsWorkerContext);
+    V8DOMWrapper::associateObjectWithWrapper(PassRefPtr<WorkerContext>(m_workerContext), contextType, jsWorkerContext);
 
     // Insert the object instance as the prototype of the shadow object.
     v8::Handle<v8::Object> globalObject = v8::Handle<v8::Object>::Cast(m_context->Global()->GetPrototype());
@@ -147,7 +147,7 @@ ScriptValue WorkerScriptController::evaluate(const String& script, const String&
 
     if (!m_disableEvalPending.isEmpty()) {
         m_context->AllowCodeGenerationFromStrings(false);
-        m_context->SetErrorMessageForCodeGenerationFromStrings(v8String(m_disableEvalPending));
+        m_context->SetErrorMessageForCodeGenerationFromStrings(deprecatedV8String(m_disableEvalPending));
         m_disableEvalPending = String();
     }
 
@@ -155,7 +155,7 @@ ScriptValue WorkerScriptController::evaluate(const String& script, const String&
 
     v8::TryCatch block;
 
-    v8::Local<v8::String> scriptString = v8ExternalString(script);
+    v8::Handle<v8::String> scriptString = deprecatedV8String(script);
     v8::Handle<v8::Script> compiledScript = ScriptSourceCode::compileScript(scriptString, fileName, scriptStartPosition);
     v8::Local<v8::Value> result = ScriptRunner::runCompiledScript(compiledScript, m_workerContext);
 
@@ -248,7 +248,7 @@ WorkerScriptController* WorkerScriptController::controllerForContext()
         return 0;
     v8::Handle<v8::Context> context = v8::Context::GetCurrent();
     v8::Handle<v8::Object> global = context->Global();
-    global = V8DOMWrapper::lookupDOMWrapper(V8WorkerContext::GetTemplate(), global);
+    global = global->FindInstanceInPrototypeChain(V8WorkerContext::GetTemplate());
     // Return 0 if the current executing context is not the worker context.
     if (global.IsEmpty())
         return 0;

@@ -78,11 +78,11 @@
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "SpellChecker.h"
+#include "StyleSheetContents.h"
 #include "TextIterator.h"
 #include "TreeScope.h"
 #include "ViewportArguments.h"
 #include <wtf/text/StringBuffer.h>
-
 
 #if ENABLE(INPUT_TYPE_COLOR)
 #include "ColorChooser.h"
@@ -103,6 +103,10 @@
 
 #if ENABLE(TOUCH_ADJUSTMENT)
 #include "WebKitPoint.h"
+#endif
+
+#if ENABLE(MOUSE_CURSOR_SCALE)
+#include <wtf/dtoa.h>
 #endif
 
 #if PLATFORM(CHROMIUM)
@@ -289,15 +293,6 @@ PassRefPtr<Element> Internals::createContentElement(Document* document, Exceptio
     }
 
     return HTMLContentElement::create(document);
-}
-
-Element* Internals::getElementByIdInShadowRoot(Node* shadowRoot, const String& id, ExceptionCode& ec)
-{
-    if (!shadowRoot || !shadowRoot->isShadowRoot()) {
-        ec = INVALID_ACCESS_ERR;
-        return 0;
-    }
-    return toShadowRoot(shadowRoot)->getElementById(id);
 }
 
 bool Internals::isValidContentSelect(Element* insertionPoint, ExceptionCode& ec)
@@ -523,6 +518,15 @@ Internals::ShadowRootIfShadowDOMEnabledOrNode* Internals::ensureShadowRoot(Eleme
     if (ElementShadow* shadow = host->shadow())
         return shadow->youngestShadowRoot();
 
+    return ShadowRoot::create(host, ec).get();
+}
+
+Internals::ShadowRootIfShadowDOMEnabledOrNode* Internals::createShadowRoot(Element* host, ExceptionCode& ec)
+{
+    if (!host) {
+        ec = INVALID_ACCESS_ERR;
+        return 0;
+    }
     return ShadowRoot::create(host, ec).get();
 }
 
@@ -1465,6 +1469,20 @@ String Internals::scrollingStateTreeAsText(Document* document, ExceptionCode& ec
     return page->scrollingStateTreeAsText();
 }
 
+String Internals::mainThreadScrollingReasons(Document* document, ExceptionCode& ec) const
+{
+    if (!document || !document->frame()) {
+        ec = INVALID_ACCESS_ERR;
+        return String();
+    }
+
+    Page* page = document->page();
+    if (!page)
+        return String();
+
+    return page->mainThreadScrollingReasonsAsText();
+}
+
 void Internals::garbageCollectDocumentResources(Document* document, ExceptionCode& ec) const
 {
     if (!document) {
@@ -1481,6 +1499,22 @@ void Internals::garbageCollectDocumentResources(Document* document, ExceptionCod
 void Internals::allowRoundingHacks() const
 {
     TextRun::setAllowsRoundingHacks(true);
+}
+
+void Internals::insertAuthorCSS(Document* document, const String& css) const
+{
+    RefPtr<StyleSheetContents> parsedSheet = StyleSheetContents::create(document);
+    parsedSheet->setIsUserStyleSheet(false);
+    parsedSheet->parseString(css);
+    document->styleSheetCollection()->addAuthorSheet(parsedSheet);
+}
+
+void Internals::insertUserCSS(Document* document, const String& css) const
+{
+    RefPtr<StyleSheetContents> parsedSheet = StyleSheetContents::create(document);
+    parsedSheet->setIsUserStyleSheet(true);
+    parsedSheet->parseString(css);
+    document->styleSheetCollection()->addUserSheet(parsedSheet);
 }
 
 String Internals::counterValue(Element* element)
@@ -1706,6 +1740,13 @@ String Internals::getCurrentCursorInfo(Document* document, ExceptionCode& ec)
         result.append("x");
         result.appendNumber(size.height());
     }
+#if ENABLE(MOUSE_CURSOR_SCALE)
+    if (cursor.imageScaleFactor() != 1) {
+        result.append(" scale=");
+        NumberToStringBuffer buffer;
+        result.append(numberToFixedPrecisionString(cursor.imageScaleFactor(), 8, buffer, true));
+    }
+#endif
     return result.toString();
 #else
     return "FAIL: Cursor details not available on this platform.";
@@ -1714,14 +1755,25 @@ String Internals::getCurrentCursorInfo(Document* document, ExceptionCode& ec)
 
 PassRefPtr<ArrayBuffer> Internals::serializeObject(PassRefPtr<SerializedScriptValue> value) const
 {
+#if USE(V8)
     String stringValue = value->toWireString();
     return ArrayBuffer::create(static_cast<const void*>(stringValue.impl()->characters()), stringValue.sizeInBytes());
+#else
+    Vector<uint8_t> bytes = value->data();
+    return ArrayBuffer::create(bytes.data(), bytes.size());
+#endif
 }
 
 PassRefPtr<SerializedScriptValue> Internals::deserializeBuffer(PassRefPtr<ArrayBuffer> buffer) const
 {
+#if USE(V8)
     String value(static_cast<const UChar*>(buffer->data()), buffer->byteLength() / sizeof(UChar));
     return SerializedScriptValue::createFromWire(value);
+#else
+    Vector<uint8_t> bytes;
+    bytes.append(static_cast<const uint8_t*>(buffer->data()), buffer->byteLength());
+    return SerializedScriptValue::adopt(bytes);
+#endif
 }
 
 void Internals::setUsesOverlayScrollbars(bool enabled)

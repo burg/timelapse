@@ -416,9 +416,9 @@ public:
 #endif
 
 #if PLATFORM(QT)
-    String(const QString&);
-    String(const QStringRef&);
-    operator QString() const;
+    WTF_EXPORT_STRING_API String(const QString&);
+    WTF_EXPORT_STRING_API String(const QStringRef&);
+    WTF_EXPORT_STRING_API operator QString() const;
 #endif
 
 #if PLATFORM(WX)
@@ -440,6 +440,7 @@ public:
     WTF_EXPORT_STRING_API static String fromUTF8(const LChar*);
     static String fromUTF8(const char* s, size_t length) { return fromUTF8(reinterpret_cast<const LChar*>(s), length); };
     static String fromUTF8(const char* s) { return fromUTF8(reinterpret_cast<const LChar*>(s)); };
+    static String fromUTF8(const CString&);
 
     // Tries to convert the passed in string to UTF-8, but will fall back to Latin-1 if the string is not valid UTF-8.
     WTF_EXPORT_STRING_API static String fromUTF8WithLatin1Fallback(const LChar*, size_t);

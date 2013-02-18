@@ -39,6 +39,7 @@
 #include "MemoryCache.h"
 #include "MutationEvent.h"
 #include "NodeRenderStyle.h"
+#include "NodeTraversal.h"
 #include "ResourceLoadScheduler.h"
 #include "Page.h"
 #include "PlatformStrategies.h"
@@ -75,15 +76,6 @@ ChildNodesLazySnapshot* ChildNodesLazySnapshot::latestSnapshot = 0;
 #ifndef NDEBUG
 unsigned NoEventDispatchAssertion::s_count = 0;
 #endif
-
-static void collectTargetNodes(Node* node, NodeVector& nodes)
-{
-    if (node->nodeType() != Node::DOCUMENT_FRAGMENT_NODE) {
-        nodes.append(node);
-        return;
-    }
-    getChildNodes(node, nodes);
-}
 
 static void collectChildrenAndRemoveFromOldParent(Node* node, NodeVector& nodes, ExceptionCode& ec)
 {
@@ -151,7 +143,7 @@ static inline ExceptionCode checkAcceptChild(ContainerNode* newParent, Node* new
     if (!newChild)
         return NOT_FOUND_ERR;
 
-    // Goes common casae fast path if possible.
+    // Use common case fast path if possible.
     if ((newChild->isElementNode() || newChild->isTextNode()) && newParent->isElementNode()) {
         ASSERT(!newParent->isReadOnlyNode());
         ASSERT(!newParent->isDocumentTypeNode());
@@ -160,6 +152,11 @@ static inline ExceptionCode checkAcceptChild(ContainerNode* newParent, Node* new
             return HIERARCHY_REQUEST_ERR;
         return 0;
     }
+
+    // This should never happen, but also protect release builds from tree corruption.
+    ASSERT(!newChild->isPseudoElement());
+    if (newChild->isPseudoElement())
+        return HIERARCHY_REQUEST_ERR;
 
     if (newParent->isReadOnlyNode())
         return NO_MODIFICATION_ALLOWED_ERR;
@@ -175,6 +172,19 @@ static inline ExceptionCode checkAcceptChild(ContainerNode* newParent, Node* new
         return HIERARCHY_REQUEST_ERR;
 
     return 0;
+}
+
+static inline bool checkAcceptChildGuaranteedNodeTypes(ContainerNode* newParent, Node* newChild, ExceptionCode& ec)
+{
+    ASSERT(!newParent->isReadOnlyNode());
+    ASSERT(!newParent->isDocumentTypeNode());
+    ASSERT(isChildTypeAllowed(newParent, newChild));
+    if (newChild->contains(newParent)) {
+        ec = HIERARCHY_REQUEST_ERR;
+        return false;
+    }
+
+    return true;
 }
 
 static inline bool checkAddChild(ContainerNode* newParent, Node* newChild, ExceptionCode& ec)
@@ -232,6 +242,10 @@ bool ContainerNode::insertBefore(PassRefPtr<Node> newChild, Node* refChild, Exce
         return false;
     if (targets.isEmpty())
         return true;
+
+    // We need this extra check because collectChildrenAndRemoveFromOldParent() can fire mutation events.
+    if (!checkAcceptChildGuaranteedNodeTypes(this, newChild.get(), ec))
+        return false;
 
     InspectorInstrumentation::willInsertDOMNode(document(), this);
 
@@ -293,25 +307,16 @@ void ContainerNode::parserInsertBefore(PassRefPtr<Node> newChild, Node* nextChil
     ASSERT(newChild);
     ASSERT(nextChild);
     ASSERT(nextChild->parentNode() == this);
-
-    NodeVector targets;
-    collectTargetNodes(newChild.get(), targets);
-    if (targets.isEmpty())
-        return;
+    ASSERT(document() == newChild->document());
+    ASSERT(!newChild->isDocumentFragment());
 
     if (nextChild->previousSibling() == newChild || nextChild == newChild) // nothing to do
         return;
 
-    RefPtr<Node> next = nextChild;
-    RefPtr<Node> nextChildPreviousSibling = nextChild->previousSibling();
-    for (NodeVector::const_iterator it = targets.begin(); it != targets.end(); ++it) {
-        Node* child = it->get();
+    insertBeforeCommon(nextChild, newChild.get());
 
-        insertBeforeCommon(next.get(), child);
-
-        childrenChanged(true, nextChildPreviousSibling.get(), nextChild, 1);
-        ChildNodeInsertionNotifier(this).notify(child);
-    }
+    childrenChanged(true, newChild->previousSibling(), nextChild, 1);
+    ChildNodeInsertionNotifier(this).notify(newChild.get());
 }
 
 bool ContainerNode::replaceChild(PassRefPtr<Node> newChild, Node* oldChild, ExceptionCode& ec, bool shouldLazyAttach)
@@ -537,6 +542,7 @@ void ContainerNode::parserRemoveChild(Node* oldChild)
 {
     ASSERT(oldChild);
     ASSERT(oldChild->parentNode() == this);
+    ASSERT(!oldChild->isDocumentFragment());
 
     Node* prev = oldChild->previousSibling();
     Node* next = oldChild->nextSibling();
@@ -639,6 +645,10 @@ bool ContainerNode::appendChild(PassRefPtr<Node> newChild, ExceptionCode& ec, bo
     if (targets.isEmpty())
         return true;
 
+    // We need this extra check because collectChildrenAndRemoveFromOldParent() can fire mutation events.
+    if (!checkAcceptChildGuaranteedNodeTypes(this, newChild.get(), ec))
+        return false;
+
     InspectorInstrumentation::willInsertDOMNode(document(), this);
 
 #if ENABLE(MUTATION_OBSERVERS)
@@ -674,6 +684,8 @@ void ContainerNode::parserAppendChild(PassRefPtr<Node> newChild)
 {
     ASSERT(newChild);
     ASSERT(!newChild->parentNode()); // Use appendChild if you need to handle reparenting (and want DOM mutation events).
+    ASSERT(!newChild->isDocumentFragment());
+    ASSERT(document() == newChild->document());
 
     Node* last = m_lastChild;
     {
@@ -1036,7 +1048,7 @@ static void dispatchChildInsertionEvents(Node* child)
 
     // dispatch the DOMNodeInsertedIntoDocument event to all descendants
     if (c->inDocument() && document->hasListenerType(Document::DOMNODEINSERTEDINTODOCUMENT_LISTENER)) {
-        for (; c; c = c->traverseNextNode(child))
+        for (; c; c = NodeTraversal::next(c.get(), child))
             c->dispatchScopedEvent(MutationEvent::create(eventNames().DOMNodeInsertedIntoDocumentEvent, false));
     }
 }
@@ -1064,7 +1076,7 @@ static void dispatchChildRemovalEvents(Node* child)
 
     // dispatch the DOMNodeRemovedFromDocument event to all descendants
     if (c->inDocument() && document->hasListenerType(Document::DOMNODEREMOVEDFROMDOCUMENT_LISTENER)) {
-        for (; c; c = c->traverseNextNode(child))
+        for (; c; c = NodeTraversal::next(c.get(), child))
             c->dispatchScopedEvent(MutationEvent::create(eventNames().DOMNodeRemovedFromDocumentEvent, false));
     }
 }

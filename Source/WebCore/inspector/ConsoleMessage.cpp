@@ -43,11 +43,26 @@
 #include "ScriptArguments.h"
 #include "ScriptCallFrame.h"
 #include "ScriptCallStack.h"
+#include "ScriptCallStackFactory.h"
 #include "ScriptValue.h"
+#include <wtf/MainThread.h>
 
 namespace WebCore {
 
-ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, const String& url, unsigned line, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(bool canGenerateCallStack, MessageSource source, MessageType type, MessageLevel level, const String& message, unsigned long requestIdentifier)
+    : m_source(source)
+    , m_type(type)
+    , m_level(level)
+    , m_message(message)
+    , m_url()
+    , m_line(0)
+    , m_repeatCount(1)
+    , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
+{
+    autogenerateMetadata(canGenerateCallStack);
+}
+
+ConsoleMessage::ConsoleMessage(bool canGenerateCallStack, MessageSource source, MessageType type, MessageLevel level, const String& message, const String& url, unsigned line, ScriptState* state, unsigned long requestIdentifier)
     : m_source(source)
     , m_type(type)
     , m_level(level)
@@ -57,14 +72,15 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     , m_repeatCount(1)
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
 {
+    autogenerateMetadata(canGenerateCallStack, state);
 }
 
-ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLevel level, const String& message, PassRefPtr<ScriptArguments> arguments, PassRefPtr<ScriptCallStack> callStack, unsigned long requestIdentifier)
+ConsoleMessage::ConsoleMessage(bool, MessageSource source, MessageType type, MessageLevel level, const String& message, PassRefPtr<ScriptCallStack> callStack, unsigned long requestIdentifier)
     : m_source(source)
     , m_type(type)
     , m_level(level)
     , m_message(message)
-    , m_arguments(arguments)
+    , m_arguments(0)
     , m_line(0)
     , m_repeatCount(1)
     , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
@@ -77,8 +93,44 @@ ConsoleMessage::ConsoleMessage(MessageSource source, MessageType type, MessageLe
     m_callStack = callStack;
 }
 
+ConsoleMessage::ConsoleMessage(bool canGenerateCallStack, MessageSource source, MessageType type, MessageLevel level, const String& message, PassRefPtr<ScriptArguments> arguments, ScriptState* state, unsigned long requestIdentifier)
+    : m_source(source)
+    , m_type(type)
+    , m_level(level)
+    , m_message(message)
+    , m_arguments(arguments)
+    , m_url()
+    , m_line(0)
+    , m_repeatCount(1)
+    , m_requestId(IdentifiersFactory::requestId(requestIdentifier))
+{
+    autogenerateMetadata(canGenerateCallStack, state);
+}
+
 ConsoleMessage::~ConsoleMessage()
 {
+}
+
+void ConsoleMessage::autogenerateMetadata(bool canGenerateCallStack, ScriptState* state)
+{
+    if (m_type == EndGroupMessageType)
+        return;
+
+    if (state)
+        m_callStack = createScriptCallStackForConsole(state);
+    else if (canGenerateCallStack)
+        m_callStack = createScriptCallStack(ScriptCallStack::maxCallStackSizeToCapture, true);
+    else
+        return;
+
+    if (m_callStack && m_callStack->size()) {
+        const ScriptCallFrame& frame = m_callStack->at(0);
+        m_url = frame.sourceURL();
+        m_line = frame.lineNumber();
+        return;
+    }
+
+    m_callStack.clear();
 }
 
 // Keep in sync with inspector/front-end/ConsoleView.js
@@ -107,6 +159,7 @@ static TypeBuilder::Console::ConsoleMessage::Type::Enum messageTypeValue(Message
     case StartGroupCollapsedMessageType: return TypeBuilder::Console::ConsoleMessage::Type::StartGroupCollapsed;
     case EndGroupMessageType: return TypeBuilder::Console::ConsoleMessage::Type::EndGroup;
     case AssertMessageType: return TypeBuilder::Console::ConsoleMessage::Type::Assert;
+    case TimingMessageType: return TypeBuilder::Console::ConsoleMessage::Type::Timing;
     }
     return TypeBuilder::Console::ConsoleMessage::Type::Log;
 }
@@ -166,6 +219,11 @@ bool ConsoleMessage::isEqual(ConsoleMessage* msg) const
     if (m_arguments) {
         if (!m_arguments->isEqual(msg->m_arguments.get()))
             return false;
+        // Never treat objects as equal - their properties might change over time.
+        for (size_t i = 0; i < m_arguments->argumentCount(); ++i) {
+            if (m_arguments->argumentAt(i).isObject())
+                return false;
+        }
     } else if (msg->m_arguments)
         return false;
 

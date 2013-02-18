@@ -134,7 +134,7 @@ TEST_F(EWK2UnitTestBase, ewk_view_navigation)
     ASSERT_FALSE(ewk_view_forward_possible(webView()));
 }
 
-TEST_F(EWK2UnitTestBase, ewk_view_setting_encoding_custom)
+TEST_F(EWK2UnitTestBase, DISABLED_ewk_view_setting_encoding_custom)
 {
     ASSERT_FALSE(ewk_view_custom_encoding_get(webView()));
     ASSERT_TRUE(ewk_view_custom_encoding_set(webView(), "UTF-8"));
@@ -881,3 +881,38 @@ TEST_F(EWK2UnitTestBase, ewk_context_vibration_client_callbacks_set)
     ASSERT_FALSE(data.didReceiveCancelVibration);
 }
 
+static void onContentsSizeChanged(void* userData, Evas_Object*, void* eventInfo)
+{
+    bool* result = static_cast<bool*>(userData);
+    Ewk_CSS_Size* size = static_cast<Ewk_CSS_Size*>(eventInfo);
+
+    if (size->w == 2000 && size->h == 3000)
+        *result = true;
+}
+
+TEST_F(EWK2UnitTestBase, ewk_view_contents_size_changed)
+{
+    const char contentsSizeHTML[] =
+        "<!DOCTYPE html>"
+        "<body style=\"margin:0px;width:2000px;height:3000px\"></body>";
+
+    bool sizeChanged = false;
+    evas_object_smart_callback_add(webView(), "contents,size,changed", onContentsSizeChanged, &sizeChanged);
+    ewk_view_html_string_load(webView(), contentsSizeHTML, 0, 0);
+    while (!sizeChanged)
+        ecore_main_loop_iterate();
+
+    ewk_view_device_pixel_ratio_set(webView(), 2);
+    ewk_view_html_string_load(webView(), contentsSizeHTML, 0, 0);
+    sizeChanged = false;
+    while (!sizeChanged)
+        ecore_main_loop_iterate();
+
+    ewk_view_scale_set(webView(), 3, 0, 0);
+    ewk_view_html_string_load(webView(), contentsSizeHTML, 0, 0);
+    sizeChanged = false;
+    while (!sizeChanged)
+        ecore_main_loop_iterate();
+
+    evas_object_smart_callback_del(webView(), "contents,size,changed", onContentsSizeChanged);
+}

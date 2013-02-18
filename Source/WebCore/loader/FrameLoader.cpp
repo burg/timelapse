@@ -46,9 +46,9 @@
 #include "ChromeClient.h"
 #include "Console.h"
 #include "ContentSecurityPolicy.h"
-#include "DatabaseContext.h"
 #include "DOMImplementation.h"
 #include "DOMWindow.h"
+#include "DatabaseManager.h"
 #include "Document.h"
 #include "DocumentLoadTiming.h"
 #include "DocumentLoader.h"
@@ -333,8 +333,11 @@ void FrameLoader::submitForm(PassRefPtr<FormSubmission> submission)
     if (submission->action().isEmpty())
         return;
 
-    if (isDocumentSandboxed(m_frame, SandboxForms))
+    if (isDocumentSandboxed(m_frame, SandboxForms)) {
+        // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
+        m_frame->document()->addConsoleMessage(HTMLMessageSource, ErrorMessageLevel, "Blocked form submission to '" + submission->action().string() + "' because the form's frame is sandboxed and the 'allow-forms' permission is not set.");
         return;
+    }
 
     if (protocolIsJavaScript(submission->action())) {
         if (!m_frame->document()->contentSecurityPolicy()->allowFormAction(KURL(submission->action())))
@@ -447,8 +450,8 @@ void FrameLoader::stopLoading(UnloadEventPolicy unloadEventPolicy)
         doc->setReadyState(Document::Complete);
 
 #if ENABLE(SQL_DATABASE)
-        // FIXME: Should the DatabaseContext watch for something like ActiveDOMObject::stop() rather than being special-cased here?
-        DatabaseContext::stopDatabases(doc, 0);
+        // FIXME: Should the DatabaseManager watch for something like ActiveDOMObject::stop() rather than being special-cased here?
+        DatabaseManager::manager().stopDatabases(doc, 0);
 #endif
     }
 
@@ -675,6 +678,14 @@ void FrameLoader::didBeginDocument(bool dispatch)
             headerContentLanguage = headerContentLanguage.stripWhiteSpace(isHTMLSpace);
             if (!headerContentLanguage.isEmpty())
                 m_frame->document()->setContentLanguage(headerContentLanguage);
+        }
+
+        if (SecurityPolicy::allowSubstituteDataAccessToLocal() && m_documentLoader->substituteData().isValid()) {
+            // If this document was loaded with substituteData, then the document can
+            // load local resources. See https://bugs.webkit.org/show_bug.cgi?id=16756
+            // and https://bugs.webkit.org/show_bug.cgi?id=19760 for further
+            // discussion.
+            m_frame->document()->securityOrigin()->grantLoadLocalResources();
         }
     }
 
@@ -940,6 +951,9 @@ Frame* FrameLoader::opener()
 
 void FrameLoader::setOpener(Frame* opener)
 {
+    if (m_opener && !opener)
+        m_client->didDisownOpener();
+
     if (m_opener)
         m_opener->loader()->m_openedFrames.remove(m_frame);
     if (opener)
@@ -1392,7 +1406,7 @@ void FrameLoader::reportLocalLoadFailed(Frame* frame, const String& url)
     if (!frame)
         return;
 
-    frame->document()->addConsoleMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, "Not allowed to load local resource: " + url);
+    frame->document()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, "Not allowed to load local resource: " + url);
 }
 
 const ResourceRequest& FrameLoader::initialRequest() const
@@ -2907,7 +2921,7 @@ bool FrameLoader::shouldInterruptLoadForXFrameOptions(const String& content, con
             return true;
     } else {
         String message = "Invalid 'X-Frame-Options' header encountered when loading '" + url.string() + "': '" + content + "' is not a recognized directive. The header will be ignored.";
-        m_frame->document()->addConsoleMessage(JSMessageSource, LogMessageType, ErrorMessageLevel, message, url.string(), 0, 0, requestIdentifier);
+        m_frame->document()->addConsoleMessage(JSMessageSource, ErrorMessageLevel, message, requestIdentifier);
     }
 
     return false;
@@ -3278,8 +3292,11 @@ Frame* createWindow(Frame* openerFrame, Frame* lookupFrame, const FrameLoadReque
     }
 
     // Sandboxed frames cannot open new auxiliary browsing contexts.
-    if (isDocumentSandboxed(openerFrame, SandboxPopups))
+    if (isDocumentSandboxed(openerFrame, SandboxPopups)) {
+        // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
+        openerFrame->document()->addConsoleMessage(HTMLMessageSource, ErrorMessageLevel, "Blocked opening '" + request.resourceRequest().url().string() + "' in a new window because the request was made in a sandboxed frame whose 'allow-popups' permission is not set.");
         return 0;
+    }
 
     // FIXME: Setting the referrer should be the caller's responsibility.
     FrameLoadRequest requestWithReferrer = request;

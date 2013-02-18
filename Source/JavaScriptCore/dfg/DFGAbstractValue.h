@@ -374,10 +374,10 @@ struct AbstractValue {
     void dump(PrintStream& out) const
     {
         out.print(
-            "(", SpeculationDump(m_type), ", ", arrayModesToString(m_arrayModes), ", ",
+            "(", SpeculationDump(m_type), ", ", ArrayModesDump(m_arrayModes), ", ",
             m_currentKnownStructure, ", ", m_futurePossibleStructure);
         if (!!m_value)
-            out.print(", ", m_value.description());
+            out.print(", ", m_value);
         out.print(")");
     }
     

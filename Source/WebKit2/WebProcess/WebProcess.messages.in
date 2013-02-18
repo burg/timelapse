@@ -55,6 +55,10 @@ messages -> WebProcess {
     SetShouldPaintNativeControls(bool shouldPaintNativeControls)
 #endif
 
+    // Private browsing session is per process. Individual pages or page groups may use the private session or the default one as appropriate.
+    EnsurePrivateBrowsingSession()
+    DestroyPrivateBrowsingSession()
+
     # Plug-ins.
 #if ENABLE(NETSCAPE_PLUGIN_API)
     DidGetPlugins(uint64_t requestID, Vector<WebCore::PluginInfo> plugins) DispatchOnConnectionQueue
@@ -63,6 +67,7 @@ messages -> WebProcess {
     GetSitesWithPluginData(Vector<WTF::String> pluginPaths, uint64_t callbackID)
     ClearPluginSiteData(Vector<WTF::String> pluginPaths, Vector<WTF::String> sites, uint64_t flags, uint64_t maxAgeInSeconds, uint64_t callbackID)
 #endif
+    DidAddPlugInAutoStartOrigin(uint32_t hash)
 
 #if ENABLE(NETWORK_PROCESS)
     NetworkProcessCrashed() DispatchOnConnectionQueue
@@ -95,7 +100,6 @@ messages -> WebProcess {
 
 #if USE(SECURITY_FRAMEWORK)
     SecItemResponse(uint64_t requestID, WebKit::SecItemResponseData response) DispatchOnConnectionQueue
-    SecKeychainItemResponse(uint64_t requestID, WebKit::SecKeychainItemResponseData response) DispatchOnConnectionQueue
 #endif
 
 #if PLATFORM(MAC)

@@ -83,7 +83,7 @@ SVGElement::~SVGElement()
         rareDataMap.remove(it);
     }
     ASSERT(document());
-    document()->accessSVGExtensions()->removeAllAnimationElementsFromTarget(this);
+    document()->accessSVGExtensions()->rebuildAllElementReferencesForTarget(this);
     document()->accessSVGExtensions()->removeAllElementReferencesForTarget(this);
 }
 
@@ -183,7 +183,7 @@ void SVGElement::removedFrom(ContainerNode* rootParent)
     StyledElement::removedFrom(rootParent);
 
     if (wasInDocument) {
-        document()->accessSVGExtensions()->removeAllAnimationElementsFromTarget(this);
+        document()->accessSVGExtensions()->rebuildAllElementReferencesForTarget(this);
         document()->accessSVGExtensions()->removeAllElementReferencesForTarget(this);
         document()->accessSVGExtensions()->removeElementFromPendingResources(this);
     }
@@ -303,7 +303,7 @@ void SVGElement::cursorImageValueRemoved()
 
 SVGElement* SVGElement::correspondingElement()
 {
-    ASSERT(!hasSVGRareData() || !svgRareData()->correspondingElement() || shadowRoot());
+    ASSERT(!hasSVGRareData() || !svgRareData()->correspondingElement() || containingShadowRoot());
     return hasSVGRareData() ? svgRareData()->correspondingElement() : 0;
 }
 
@@ -358,7 +358,7 @@ bool SVGElement::haveLoadedRequiredResources()
 static inline void collectInstancesForSVGElement(SVGElement* element, HashSet<SVGElementInstance*>& instances)
 {
     ASSERT(element);
-    if (element->shadowRoot())
+    if (element->containingShadowRoot())
         return;
 
     if (!element->isStyled())
@@ -537,10 +537,8 @@ void SVGElement::attributeChanged(const QualifiedName& name, const AtomicString&
 {
     StyledElement::attributeChanged(name, newValue);
 
-    if (isIdAttributeName(name)) {
-        document()->accessSVGExtensions()->removeAllAnimationElementsFromTarget(this);
-        document()->accessSVGExtensions()->removeAllElementReferencesForTarget(this);
-    }
+    if (isIdAttributeName(name))
+        document()->accessSVGExtensions()->rebuildAllElementReferencesForTarget(this);
 
     // Changes to the style attribute are processed lazily (see Element::getAttribute() and related methods),
     // so we don't want changes to the style attribute to result in extra work here.

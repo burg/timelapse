@@ -585,9 +585,6 @@ css3/masking/clip-path-circle-relative-overflow.html
 fast/css/image-set-parsing.html
 fast/css/image-set-parsing-invalid.html
 
-# CSS3 Background is not yet enabled (needs ENABLE_CSS3_BACKGROUND).
-webkit.org/b/37514 fast/backgrounds/background-position-parsing-2.html [ Text ]
-
 # https://bugs.webkit.org/show_bug.cgi?id=77645
 css3/filters/filtered-compositing-descendant.html
 
@@ -1145,7 +1142,6 @@ accessibility/aria-text-role.html
 accessibility/aria-used-on-image-maps.html
 accessibility/button-press-action.html
 accessibility/document-attributes.html
-accessibility/editable-webarea-context-menu-point.html
 accessibility/hidden-legend.html
 accessibility/ignore-spacer-elements.html
 accessibility/image-link.html
@@ -2061,6 +2057,10 @@ fast/regions/style-scoped-in-flow.html
 editing/shadow
 fast/dom/shadow
 
+# ENABLE(TEMPLATE_ELEMENT) is disabled.
+fast/dom/HTMLTemplateElement
+html5lib/run-template.html
+
 # CSS Regions support not yet enabled. http://webkit.org/b/57312
 fast/regions
 
@@ -2354,10 +2354,6 @@ ietestcenter/css3/valuesandunits/units-000.htm
 
 # Network Information is not supported yet.
 networkinformation
-
-# UndoManager is not yet enabled.
-# https://bugs.webkit.org/show_bug.cgi?id=87908
-editing/undomanager
 
 # Asserts/crashes in PluginView::didFinishLoading
 fast/loader/reload-zero-byte-plugin.html
@@ -2794,8 +2790,8 @@ editing/pasteboard/paste-global-selection.html
 editing/selection/select-from-textfield-outwards.html
 editing/spelling/grammar-edit-word.html
 fast/dom/constructed-objects-prototypes.html
-fast/dom/Proximity/check-event-deviceproximity.html
-fast/dom/Proximity/create-event-deviceproximity.html
+proximity/check-event-deviceproximity.html
+proximity/create-event-deviceproximity.html
 fast/events/constructors/device-proximity-event-constructor.html
 fast/forms/state-restore-broken-state.html
 fast/html/progress-user-modify.html

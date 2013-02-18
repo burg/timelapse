@@ -236,9 +236,7 @@ FrameView::~FrameView()
         m_actionScheduler->clear();
     }
     
-    if (AXObjectCache::accessibilityEnabled() && axObjectCache())
-        axObjectCache()->remove(this);
-    
+    removeFromAXObjectCache();
     resetScrollbars();
 
     // Custom scrollbars should already be destroyed at this point
@@ -301,7 +299,13 @@ void FrameView::reset()
     m_disableRepaints = 0;
 }
 
-bool FrameView::isFrameView() const 
+void FrameView::removeFromAXObjectCache()
+{
+    if (AXObjectCache::accessibilityEnabled() && axObjectCache())
+        axObjectCache()->remove(this);
+}
+
+bool FrameView::isFrameView() const
 { 
     return true; 
 }
@@ -352,6 +356,14 @@ void FrameView::init()
         if (marginHeight != -1)
             setMarginHeight(marginHeight);
     }
+}
+    
+void FrameView::prepareForDetach()
+{
+    detachCustomScrollbars();
+    // When the view is no longer associated with a frame, it needs to be removed from the ax object cache
+    // right now, otherwise it won't be able to reach the topDocument()'s axObject cache later.
+    removeFromAXObjectCache();
 }
 
 void FrameView::detachCustomScrollbars()
@@ -1337,6 +1349,7 @@ String FrameView::mediaType() const
 {
     // See if we have an override type.
     String overrideType = m_frame->loader()->client()->overrideMediaType();
+    InspectorInstrumentation::applyEmulatedMedia(m_frame.get(), &overrideType);
     if (!overrideType.isNull())
         return overrideType;
     return m_mediaType;
@@ -1493,9 +1506,9 @@ bool FrameView::fixedElementsLayoutRelativeToFrame() const
     return m_frame->settings()->fixedElementsLayoutRelativeToFrame();
 }
 
-IntPoint FrameView::currentMousePosition() const
+IntPoint FrameView::lastKnownMousePosition() const
 {
-    return m_frame ? m_frame->eventHandler()->currentMousePosition() : IntPoint();
+    return m_frame ? m_frame->eventHandler()->lastKnownMousePosition() : IntPoint();
 }
 
 bool FrameView::scrollContentsFastPath(const IntSize& scrollDelta, const IntRect& rectToScroll, const IntRect& clipRect)
@@ -1882,6 +1895,12 @@ bool FrameView::shouldRubberBandInDirection(ScrollDirection direction) const
 bool FrameView::requestScrollPositionUpdate(const IntPoint& position)
 {
 #if ENABLE(THREADED_SCROLLING)
+    if (TiledBacking* tiledBacking = this->tiledBacking()) {
+        IntRect visibleRect = visibleContentRect();
+        visibleRect.setLocation(position);
+        tiledBacking->prepopulateRect(visibleRect);
+    }
+
     if (Page* page = m_frame->page()) {
         if (ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator())
             return scrollingCoordinator->requestScrollPositionUpdate(this, position);

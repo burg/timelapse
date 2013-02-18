@@ -54,10 +54,18 @@
 #include "RenderView.h"
 #include "ScrollbarTheme.h"
 #include "TransformState.h"
+#include "WebCoreMemoryInstrumentation.h"
 #include <algorithm>
 #include <math.h>
+#include <wtf/MemoryInstrumentationHashMap.h>
 
 using namespace std;
+
+namespace WTF {
+template<> struct SequenceMemoryInstrumentationTraits<WebCore::LayoutUnit> {
+    template <typename I> static void reportMemoryUsage(I, I, MemoryClassInfo&) { }
+};
+}
 
 namespace WebCore {
 
@@ -263,6 +271,7 @@ void RenderBox::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle
         if (viewStyle->writingMode() != newStyle->writingMode() && (isRootRenderer || !document()->writingModeSetOnDocumentElement())) {
             viewStyle->setWritingMode(newStyle->writingMode());
             viewRenderer->setHorizontalWritingMode(newStyle->isHorizontalWritingMode());
+            viewRenderer->markAllDescendantsWithFloatsForLayout();
             if (isBodyRenderer) {
                 document()->documentElement()->renderer()->style()->setWritingMode(newStyle->writingMode());
                 document()->documentElement()->renderer()->setHorizontalWritingMode(newStyle->isHorizontalWritingMode());
@@ -879,7 +888,7 @@ BackgroundBleedAvoidance RenderBox::determineBackgroundBleedAvoidance(GraphicsCo
     FloatSize contextScaling(static_cast<float>(ctm.xScale()), static_cast<float>(ctm.yScale()));
     if (borderObscuresBackgroundEdge(contextScaling))
         return BackgroundBleedShrinkBackground;
-    if (!style->hasAppearance() && borderObscuresBackground() && backgroundIsSingleOpaqueLayer())
+    if (!style->hasAppearance() && borderObscuresBackground() && backgroundHasOpaqueTopLayer())
         return BackgroundBleedBackgroundOverBorder;
 
     return BackgroundBleedUseTransparencyLayer;
@@ -952,21 +961,25 @@ void RenderBox::paintBackground(const PaintInfo& paintInfo, const LayoutRect& pa
     }
 }
 
-bool RenderBox::backgroundIsSingleOpaqueLayer() const
+bool RenderBox::backgroundHasOpaqueTopLayer() const
 {
     const FillLayer* fillLayer = style()->backgroundLayers();
-    if (!fillLayer || fillLayer->next() || fillLayer->clip() != BorderFillBox || fillLayer->composite() != CompositeSourceOver)
+    if (!fillLayer || fillLayer->clip() != BorderFillBox)
         return false;
 
     // Clipped with local scrolling
     if (hasOverflowClip() && fillLayer->attachment() == LocalBackgroundAttachment)
         return false;
 
-    Color bgColor = style()->visitedDependentColor(CSSPropertyBackgroundColor);
-    if (bgColor.isValid() && bgColor.alpha() == 255)
+    if (fillLayer->hasOpaqueImage(this) && fillLayer->hasRepeatXY() && fillLayer->image()->canRender(this, style()->effectiveZoom()))
         return true;
-    
-    // FIXME: return true if a background image is present and is opaque
+
+    // If there is only one layer and no image, check whether the background color is opaque
+    if (!fillLayer->next() && !fillLayer->hasImage()) {
+        Color bgColor = style()->visitedDependentColor(CSSPropertyBackgroundColor);
+        if (bgColor.isValid() && bgColor.alpha() == 255)
+            return true;
+    }
 
     return false;
 }
@@ -1047,18 +1060,27 @@ LayoutRect RenderBox::maskClipRect()
 void RenderBox::paintFillLayers(const PaintInfo& paintInfo, const Color& c, const FillLayer* fillLayer, const LayoutRect& rect,
     BackgroundBleedAvoidance bleedAvoidance, CompositeOperator op, RenderObject* backgroundObject)
 {
-    if (!fillLayer)
-        return;
+    Vector<const FillLayer*, 8> layers;
+    const FillLayer* curLayer = fillLayer;
+    while (curLayer) {
+        layers.append(curLayer);
+        // Stop traversal when an opaque layer is encountered.
+        // FIXME : It would be possible for the following occlusion culling test to be more aggressive 
+        // on layers with no repeat by testing whether the image covers the layout rect.
+        // Testing that here would imply duplicating a lot of calculations that are currently done in
+        // RenderBoxModelObject::paintFillLayerExtended. A more efficient solution might be to move
+        // the layer recursion into paintFillLayerExtended, or to compute the layer geometry here
+        // and pass it down.
+        
+        // The clipOccludesNextLayers condition must be evaluated first to avoid short-circuiting.
+        if (curLayer->clipOccludesNextLayers(curLayer == fillLayer) && curLayer->hasOpaqueImage(this) && curLayer->image()->canRender(this, style()->effectiveZoom()) && curLayer->hasRepeatXY())
+            break;
+        curLayer = curLayer->next();
+    }
 
-    // FIXME : It would be possible for the following occlusion culling test to be more aggressive 
-    // on layers with no repeat by testing whether the image covers the layout rect.
-    // Testing that here would imply duplicating a lot of calculations that are currently done in
-    // RenderBoxModelOBject::paintFillLayerExtended. A more efficient solution might be to move
-    // the layer recursion into paintFillLayerExtended, or to compute the layer geometry here
-    // and pass it down.
-    if (fillLayer->next() && (!fillLayer->hasOpaqueImage(this) || !fillLayer->image()->canRender(this, style()->effectiveZoom()) || !fillLayer->hasRepeatXY()))
-        paintFillLayers(paintInfo, c, fillLayer->next(), rect, bleedAvoidance, op, backgroundObject);
-    paintFillLayer(paintInfo, c, fillLayer, rect, bleedAvoidance, op, backgroundObject);
+    Vector<const FillLayer*>::const_reverse_iterator topLayer = layers.rend();
+    for (Vector<const FillLayer*>::const_reverse_iterator it = layers.rbegin(); it != topLayer; ++it)
+        paintFillLayer(paintInfo, c, *it, rect, bleedAvoidance, op, backgroundObject);
 }
 
 void RenderBox::paintFillLayer(const PaintInfo& paintInfo, const Color& c, const FillLayer* fillLayer, const LayoutRect& rect,
@@ -1821,7 +1843,7 @@ void RenderBox::computeLogicalWidthInRegion(LogicalExtentComputedValues& compute
     }
     
     if (!hasPerpendicularContainingBlock && containerLogicalWidth && containerLogicalWidth != (computedValues.m_extent + computedValues.m_margins.m_start + computedValues.m_margins.m_end)
-            && !isFloating() && !isInline() && !cb->isFlexibleBoxIncludingDeprecated()) {
+        && !isFloating() && !isInline() && !cb->isFlexibleBoxIncludingDeprecated() && !cb->isRenderGrid()) {
         LayoutUnit newMargin = containerLogicalWidth - computedValues.m_extent - cb->marginStartForChild(this);
         bool hasInvertedDirection = cb->style()->isLeftToRightDirection() != style()->isLeftToRightDirection();
         if (hasInvertedDirection)
@@ -2845,6 +2867,8 @@ void RenderBox::computePositionedLogicalWidthUsing(SizeType widthSizeType, Lengt
 
     LayoutUnit logicalLeftValue = 0;
 
+    const LayoutUnit containerRelativeLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock, 0, 0, false);
+
     bool logicalWidthIsAuto = logicalWidth.isIntrinsicOrAuto();
     bool logicalLeftIsAuto = logicalLeft.isAuto();
     bool logicalRightIsAuto = logicalRight.isAuto();
@@ -2892,16 +2916,16 @@ void RenderBox::computePositionedLogicalWidthUsing(SizeType widthSizeType, Lengt
             }
         } else if (marginLogicalLeft.isAuto()) {
             // Solve for left margin
-            marginLogicalRightValue = valueForLength(marginLogicalRight, containerLogicalWidth, renderView);
+            marginLogicalRightValue = valueForLength(marginLogicalRight, containerRelativeLogicalWidth, renderView);
             marginLogicalLeftValue = availableSpace - marginLogicalRightValue;
         } else if (marginLogicalRight.isAuto()) {
             // Solve for right margin
-            marginLogicalLeftValue = valueForLength(marginLogicalLeft, containerLogicalWidth, renderView);
+            marginLogicalLeftValue = valueForLength(marginLogicalLeft, containerRelativeLogicalWidth, renderView);
             marginLogicalRightValue = availableSpace - marginLogicalLeftValue;
         } else {
             // Over-constrained, solve for left if direction is RTL
-            marginLogicalLeftValue = valueForLength(marginLogicalLeft, containerLogicalWidth, renderView);
-            marginLogicalRightValue = valueForLength(marginLogicalRight, containerLogicalWidth, renderView);
+            marginLogicalLeftValue = valueForLength(marginLogicalLeft, containerRelativeLogicalWidth, renderView);
+            marginLogicalRightValue = valueForLength(marginLogicalRight, containerRelativeLogicalWidth, renderView);
 
             // Use the containing block's direction rather than the parent block's
             // per CSS 2.1 reference test abspos-non-replaced-width-margin-000.
@@ -2951,8 +2975,8 @@ void RenderBox::computePositionedLogicalWidthUsing(SizeType widthSizeType, Lengt
         // because the value is not used for any further calculations.
 
         // Calculate margins, 'auto' margins are ignored.
-        marginLogicalLeftValue = minimumValueForLength(marginLogicalLeft, containerLogicalWidth, renderView);
-        marginLogicalRightValue = minimumValueForLength(marginLogicalRight, containerLogicalWidth, renderView);
+        marginLogicalLeftValue = minimumValueForLength(marginLogicalLeft, containerRelativeLogicalWidth, renderView);
+        marginLogicalRightValue = minimumValueForLength(marginLogicalRight, containerRelativeLogicalWidth, renderView);
 
         const LayoutUnit availableSpace = containerLogicalWidth - (marginLogicalLeftValue + marginLogicalRightValue + bordersPlusPadding);
 
@@ -3177,6 +3201,8 @@ void RenderBox::computePositionedLogicalHeightUsing(SizeType heightSizeType, Len
     LayoutUnit logicalHeightValue;
     LayoutUnit contentLogicalHeight = logicalHeight - bordersPlusPadding;
 
+    const LayoutUnit containerRelativeLogicalWidth = containingBlockLogicalWidthForPositioned(containerBlock, 0, 0, false);
+
     LayoutUnit logicalTopValue = 0;
 
     bool logicalHeightIsAuto = logicalHeightLength.isAuto();
@@ -3215,16 +3241,16 @@ void RenderBox::computePositionedLogicalHeightUsing(SizeType heightSizeType, Len
             computedValues.m_margins.m_after = availableSpace - computedValues.m_margins.m_before; // account for odd valued differences
         } else if (marginBefore.isAuto()) {
             // Solve for top margin
-            computedValues.m_margins.m_after = valueForLength(marginAfter, containerLogicalHeight, renderView);
+            computedValues.m_margins.m_after = valueForLength(marginAfter, containerRelativeLogicalWidth, renderView);
             computedValues.m_margins.m_before = availableSpace - computedValues.m_margins.m_after;
         } else if (marginAfter.isAuto()) {
             // Solve for bottom margin
-            computedValues.m_margins.m_before = valueForLength(marginBefore, containerLogicalHeight, renderView);
+            computedValues.m_margins.m_before = valueForLength(marginBefore, containerRelativeLogicalWidth, renderView);
             computedValues.m_margins.m_after = availableSpace - computedValues.m_margins.m_before;
         } else {
             // Over-constrained, (no need solve for bottom)
-            computedValues.m_margins.m_before = valueForLength(marginBefore, containerLogicalHeight, renderView);
-            computedValues.m_margins.m_after = valueForLength(marginAfter, containerLogicalHeight, renderView);
+            computedValues.m_margins.m_before = valueForLength(marginBefore, containerRelativeLogicalWidth, renderView);
+            computedValues.m_margins.m_after = valueForLength(marginAfter, containerRelativeLogicalWidth, renderView);
         }
     } else {
         /*--------------------------------------------------------------------*\
@@ -3253,8 +3279,8 @@ void RenderBox::computePositionedLogicalHeightUsing(SizeType heightSizeType, Len
         // because the value is not used for any further calculations.
 
         // Calculate margins, 'auto' margins are ignored.
-        computedValues.m_margins.m_before = minimumValueForLength(marginBefore, containerLogicalHeight, renderView);
-        computedValues.m_margins.m_after = minimumValueForLength(marginAfter, containerLogicalHeight, renderView);
+        computedValues.m_margins.m_before = minimumValueForLength(marginBefore, containerRelativeLogicalWidth, renderView);
+        computedValues.m_margins.m_after = minimumValueForLength(marginAfter, containerRelativeLogicalWidth, renderView);
 
         const LayoutUnit availableSpace = containerLogicalHeight - (computedValues.m_margins.m_before + computedValues.m_margins.m_after + bordersPlusPadding);
 
@@ -3624,6 +3650,10 @@ LayoutRect RenderBox::localCaretRect(InlineBox* box, int caretOffset, LayoutUnit
 
     // Move to local coords
     rect.moveBy(-location());
+
+    if (!isHorizontalWritingMode())
+        return rect.transposedRect();
+
     return rect;
 }
 
@@ -4211,6 +4241,22 @@ RenderObject* RenderBox::splitAnonymousBoxesAroundChild(RenderObject* beforeChil
 
     ASSERT(beforeChild->parent() == this);
     return beforeChild;
+}
+
+void RenderBox::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
+    RenderBoxModelObject::reportMemoryUsage(memoryObjectInfo);
+    info.addWeakPointer(m_inlineBoxWrapper);
+    info.addMember(m_overflow);
+}
+
+void RenderBox::reportStaticMembersMemoryUsage(MemoryInstrumentation* memoryInstrumentation)
+{
+    memoryInstrumentation->addRootObject(gOverrideHeightMap, WebCoreMemoryTypes::RenderingStructures);
+    memoryInstrumentation->addRootObject(gOverrideWidthMap, WebCoreMemoryTypes::RenderingStructures);
+    memoryInstrumentation->addRootObject(gOverrideContainingBlockLogicalHeightMap, WebCoreMemoryTypes::RenderingStructures);
+    memoryInstrumentation->addRootObject(gOverrideContainingBlockLogicalWidthMap, WebCoreMemoryTypes::RenderingStructures);
 }
 
 } // namespace WebCore

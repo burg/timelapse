@@ -106,7 +106,6 @@ class NetworkProcessConnection;
 
 #if USE(SECURITY_FRAMEWORK)
 class SecItemResponseData;
-class SecKeychainItemResponseData;
 #endif
 
 class WebProcess : public ChildProcess, private CoreIPC::Connection::QueueClient {
@@ -151,6 +150,9 @@ public:
     void setShouldTrackVisitedLinks(bool);
     void addVisitedLink(WebCore::LinkHash);
     bool isLinkVisited(WebCore::LinkHash) const;
+
+    bool isPlugInAutoStartOrigin(unsigned plugInOriginhash);
+    void addPlugInAutoStartOrigin(const String& pageOrigin, unsigned plugInOriginHash);
 
     bool fullKeyboardAccessEnabled() const { return m_fullKeyboardAccessEnabled; }
 
@@ -210,6 +212,9 @@ public:
 
     void setCacheModel(uint32_t);
 
+    void ensurePrivateBrowsingSession();
+    void destroyPrivateBrowsingSession();
+
 private:
     WebProcess();
 
@@ -235,6 +240,8 @@ private:
     void setVisitedLinkTable(const SharedMemory::Handle&);
     void visitedLinkStateChanged(const Vector<WebCore::LinkHash>& linkHashes);
     void allVisitedLinkStateChanged();
+
+    void didAddPlugInAutoStartOrigin(unsigned plugInOriginHash);
 
     void platformSetCacheModel(CacheModel);
     static void calculateCacheSizes(CacheModel cacheModel, uint64_t memorySize, uint64_t diskFreeSize,
@@ -276,7 +283,6 @@ private:
 
 #if USE(SECURITY_FRAMEWORK)
     void secItemResponse(CoreIPC::Connection*, uint64_t requestID, const SecItemResponseData&);
-    void secKeychainItemResponse(CoreIPC::Connection*, uint64_t requestID, const SecKeychainItemResponseData&);
 #endif
 
     // ChildProcess
@@ -327,6 +333,8 @@ private:
     // FIXME: The visited link table should not be per process.
     VisitedLinkTable m_visitedLinkTable;
     bool m_shouldTrackVisitedLinks;
+
+    HashSet<unsigned> m_plugInAutoStartOrigins;
 
     bool m_hasSetCacheModel;
     CacheModel m_cacheModel;

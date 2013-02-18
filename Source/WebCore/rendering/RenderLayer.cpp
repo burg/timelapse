@@ -99,6 +99,8 @@
 #include "TextStream.h"
 #include "TransformationMatrix.h"
 #include "TranslateTransformOperation.h"
+#include "WebCoreMemoryInstrumentation.h"
+#include <wtf/MemoryInstrumentationVector.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/UnusedParam.h>
 #include <wtf/text/CString.h>
@@ -981,8 +983,10 @@ FloatPoint RenderLayer::perspectiveOrigin() const
 RenderLayer* RenderLayer::stackingContext() const
 {
     RenderLayer* layer = parent();
-    while (layer && !layer->isRootLayer() && !layer->renderer()->isRoot() && layer->renderer()->style()->hasAutoZIndex())
+    while (layer && !layer->isStackingContext())
         layer = layer->parent();
+
+    ASSERT(!layer || layer->isStackingContext());
     return layer;
 }
 
@@ -1654,16 +1658,16 @@ void RenderLayer::panScrollFromPoint(const IntPoint& sourcePoint)
     if (!frame)
         return;
     
-    IntPoint currentMousePosition = frame->eventHandler()->currentMousePosition();
+    IntPoint lastKnownMousePosition = frame->eventHandler()->lastKnownMousePosition();
     
-    // We need to check if the current mouse position is out of the window. When the mouse is out of the window, the position is incoherent
+    // We need to check if the last known mouse position is out of the window. When the mouse is out of the window, the position is incoherent
     static IntPoint previousMousePosition;
-    if (currentMousePosition.x() < 0 || currentMousePosition.y() < 0)
-        currentMousePosition = previousMousePosition;
+    if (lastKnownMousePosition.x() < 0 || lastKnownMousePosition.y() < 0)
+        lastKnownMousePosition = previousMousePosition;
     else
-        previousMousePosition = currentMousePosition;
+        previousMousePosition = lastKnownMousePosition;
 
-    IntSize delta = currentMousePosition - sourcePoint;
+    IntSize delta = lastKnownMousePosition - sourcePoint;
 
     if (abs(delta.width()) <= ScrollView::noPanScrollRadius) // at the center we let the space for the icon
         delta.setWidth(0);
@@ -2014,7 +2018,7 @@ void RenderLayer::autoscroll()
     frame->eventHandler()->updateSelectionForMouseDrag();
 #endif
 
-    IntPoint currentDocumentPosition = frameView->windowToContents(frame->eventHandler()->currentMousePosition());
+    IntPoint currentDocumentPosition = frameView->windowToContents(frame->eventHandler()->lastKnownMousePosition());
     scrollRectToVisible(LayoutRect(currentDocumentPosition, LayoutSize(1, 1)), ScrollAlignment::alignToEdgeIfNeeded, ScrollAlignment::alignToEdgeIfNeeded);
 }
 
@@ -2293,9 +2297,9 @@ bool RenderLayer::scrollbarsCanBeActive() const
     return view->frameView()->scrollbarsCanBeActive();
 }
 
-IntPoint RenderLayer::currentMousePosition() const
+IntPoint RenderLayer::lastKnownMousePosition() const
 {
-    return renderer()->frame() ? renderer()->frame()->eventHandler()->currentMousePosition() : IntPoint();
+    return renderer()->frame() ? renderer()->frame()->eventHandler()->lastKnownMousePosition() : IntPoint();
 }
 
 IntRect RenderLayer::rectForHorizontalScrollbar(const IntRect& borderBoxRect) const
@@ -2634,6 +2638,16 @@ void RenderLayer::computeScrollDimensions()
     setScrollOrigin(IntPoint(-scrollableLeftOverflow, -scrollableTopOverflow));
 }
 
+bool RenderLayer::hasScrollableHorizontalOverflow() const
+{
+    return hasHorizontalOverflow() && renderBox()->scrollsOverflowX();
+}
+
+bool RenderLayer::hasScrollableVerticalOverflow() const
+{
+    return hasVerticalOverflow() && renderBox()->scrollsOverflowY();
+}
+
 bool RenderLayer::hasHorizontalOverflow() const
 {
     ASSERT(!m_scrollDimensionsDirty);
@@ -2716,7 +2730,7 @@ void RenderLayer::updateScrollbarsAfterLayout()
         m_vBar->setProportion(clientHeight, m_scrollSize.height());
     }
 
-    updateScrollableAreaSet((hasHorizontalOverflow || hasVerticalOverflow) && scrollsOverflow() && allowsScrolling());
+    updateScrollableAreaSet(hasScrollableHorizontalOverflow() || hasScrollableVerticalOverflow());
 }
 
 void RenderLayer::updateScrollInfoAfterLayout()
@@ -2971,6 +2985,8 @@ bool RenderLayer::hitTestOverflowControls(HitTestResult& result, const IntPoint&
 
     int resizeControlSize = max(resizeControlRect.height(), 0);
 
+    // FIXME: We should hit test the m_scrollCorner and pass it back through the result.
+
     if (m_vBar && m_vBar->shouldParticipateInHitTesting()) {
         LayoutRect vBarRect(verticalScrollbarStart(0, box->width()),
                             box->borderTop(),
@@ -3130,6 +3146,10 @@ void RenderLayer::paintLayer(GraphicsContext* context, const LayerPaintingInfo& 
             // If this RenderLayer should paint into its backing, that will be done via RenderLayerBacking::paintIntoLayer().
             return;
         }
+    } else if (compositor()->fixedPositionLayerNotCompositedReason(this) == RenderLayerCompositor::LayerBoundsOutOfView) {
+        // Don't paint out-of-view fixed position layers (when doing prepainting) because they will never be visible
+        // unless their position or viewport size is changed.
+        return;
     }
 #endif
 
@@ -4456,7 +4476,7 @@ bool RenderLayer::intersectsDamageRect(const LayoutRect& layerBounds, const Layo
     return boundingBox(rootLayer, offsetFromRoot).intersects(damageRect);
 }
 
-LayoutRect RenderLayer::localBoundingBox() const
+LayoutRect RenderLayer::localBoundingBox(CalculateLayerBoundsFlags flags) const
 {
     // There are three special cases we need to consider.
     // (1) Inline Flows.  For inline flows we will create a bounding box that fully encompasses all of the lines occupied by the
@@ -4484,7 +4504,7 @@ LayoutRect RenderLayer::localBoundingBox() const
     } else {
         RenderBox* box = renderBox();
         ASSERT(box);
-        if (box->hasMask()) {
+        if (!(flags & DontConstrainForMask) && box->hasMask()) {
             result = box->maskClipRect();
             box->flipForWritingMode(result); // The mask clip rect is in physical coordinates, so we have to flip, since localBoundingBox is not.
         } else {
@@ -4543,7 +4563,7 @@ IntRect RenderLayer::calculateLayerBounds(const RenderLayer* ancestorLayer, cons
         return renderer->view()->unscaledDocumentRect();
     }
 
-    LayoutRect boundingBoxRect = localBoundingBox();
+    LayoutRect boundingBoxRect = localBoundingBox(flags);
 
     if (renderer->isBox())
         toRenderBox(renderer)->flipForWritingMode(boundingBoxRect);
@@ -5094,7 +5114,7 @@ void RenderLayer::updateScrollbarsAfterStyleChange(const RenderStyle* oldStyle)
     }
 
     if (!m_scrollDimensionsDirty)
-        updateScrollableAreaSet((hasHorizontalOverflow() || hasVerticalOverflow()) && scrollsOverflow() && allowsScrolling());
+        updateScrollableAreaSet(hasScrollableHorizontalOverflow() || hasScrollableVerticalOverflow());
 }
 
 void RenderLayer::styleChanged(StyleDifference, const RenderStyle* oldStyle)
@@ -5403,6 +5423,32 @@ void RenderLayer::filterNeedsRepaint()
         renderer()->repaint();
 }
 #endif
+
+void RenderLayer::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, WebCoreMemoryTypes::Rendering);
+    ScrollableArea::reportMemoryUsage(memoryObjectInfo);
+    info.addWeakPointer(m_renderer);
+    info.addWeakPointer(m_parent);
+    info.addWeakPointer(m_previous);
+    info.addWeakPointer(m_next);
+    info.addWeakPointer(m_first);
+    info.addWeakPointer(m_last);
+    info.addMember(m_hBar);
+    info.addMember(m_vBar);
+    info.addMember(m_posZOrderList);
+    info.addMember(m_negZOrderList);
+    info.addMember(m_normalFlowList);
+    info.addMember(m_clipRectsCache);
+    info.addMember(m_marquee);
+    info.addMember(m_transform);
+    info.addWeakPointer(m_reflection);
+    info.addWeakPointer(m_scrollCorner);
+    info.addWeakPointer(m_resizer);
+#if USE(ACCELERATED_COMPOSITING)
+    info.addMember(m_backing);
+#endif
+}
 
 } // namespace WebCore
 

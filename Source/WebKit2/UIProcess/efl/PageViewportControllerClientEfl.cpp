@@ -28,8 +28,8 @@
 
 #if USE(TILED_BACKING_STORE)
 
+#include "CoordinatedLayerTreeHostProxy.h"
 #include "EwkViewImpl.h"
-#include "LayerTreeCoordinatorProxy.h"
 #include "LayerTreeRenderer.h"
 #include "PageViewportController.h"
 #include "TransformationMatrix.h"
@@ -56,7 +56,7 @@ DrawingAreaProxy* PageViewportControllerClientEfl::drawingArea() const
 
 void PageViewportControllerClientEfl::setRendererActive(bool active)
 {
-    drawingArea()->layerTreeCoordinatorProxy()->layerTreeRenderer()->setActive(active);
+    drawingArea()->coordinatedLayerTreeHostProxy()->layerTreeRenderer()->setActive(active);
 }
 
 void PageViewportControllerClientEfl::updateViewportSize(const IntSize& viewportSize)
@@ -69,13 +69,13 @@ void PageViewportControllerClientEfl::updateViewportSize(const IntSize& viewport
 
 void PageViewportControllerClientEfl::didChangeContentsSize(const WebCore::IntSize& contentsSize)
 {
-    drawingArea()->layerTreeCoordinatorProxy()->setContentsSize(contentsSize);
+    drawingArea()->coordinatedLayerTreeHostProxy()->setContentsSize(contentsSize);
     m_viewImpl->update();
 }
 
 void PageViewportControllerClientEfl::setViewportPosition(const WebCore::FloatPoint& contentsPoint)
 {
-    m_contentPosition = roundedIntPoint(contentsPoint);
+    m_contentPosition = contentsPoint;
 
     FloatPoint pos(contentsPoint);
     pos.scale(scaleFactor(), scaleFactor());
@@ -84,11 +84,8 @@ void PageViewportControllerClientEfl::setViewportPosition(const WebCore::FloatPo
     m_controller->didChangeContentsVisibility(m_contentPosition, scaleFactor());
 }
 
-void PageViewportControllerClientEfl::setContentsScale(float newScale, bool treatAsInitialValue)
+void PageViewportControllerClientEfl::setContentsScale(float newScale)
 {
-    if (treatAsInitialValue)
-        setViewportPosition(FloatPoint(0, 0));
-
     m_viewImpl->setScaleFactor(newScale);
 }
 

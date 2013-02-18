@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Copyright (C) 2010 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -277,10 +276,6 @@ class ChromiumPort(Port):
             "ff_mp3_decoder": ["webaudio/codec-tests/mp3"],
             "ff_aac_decoder": ["webaudio/codec-tests/aac"],
         }
-
-    def skipped_layout_tests(self, test_list):
-        # FIXME: Merge w/ WebKitPort.skipped_layout_tests()
-        return set(self._skipped_tests_for_unsupported_features(test_list))
 
     def setup_test_run(self):
         # Delete the disk cache if any to ensure a clean test run.

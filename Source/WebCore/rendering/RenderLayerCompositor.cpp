@@ -40,6 +40,8 @@
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
 #include "HitTestResult.h"
+#include "InspectorInstrumentation.h"
+#include "Logging.h"
 #include "NodeList.h"
 #include "Page.h"
 #include "RenderApplet.h"
@@ -57,6 +59,7 @@
 #include "Settings.h"
 #include "TiledBacking.h"
 #include "TransformState.h"
+#include "WebCoreMemoryInstrumentation.h"
 
 #if ENABLE(PLUGIN_PROXY_FOR_VIDEO)
 #include "HTMLMediaElement.h"
@@ -451,6 +454,7 @@ void RenderLayerCompositor::updateCompositingLayers(CompositingUpdateType update
         CompositingState compState(updateRoot, m_compositingConsultsOverlap);
         bool layersChanged = false;
         bool saw3DTransform = false;
+        m_fixedPositionLayerNotCompositedReasonMap.clear();
         if (m_compositingConsultsOverlap) {
             OverlapMap overlapTestRequestMap;
             computeCompositingRequirements(0, updateRoot, &overlapTestRequestMap, compState, layersChanged, saw3DTransform);
@@ -508,6 +512,18 @@ void RenderLayerCompositor::updateCompositingLayers(CompositingUpdateType update
 
     if (!hasAcceleratedCompositing())
         enableCompositingMode(false);
+
+    // Inform the inspector that the layer tree has changed.
+    InspectorInstrumentation::layerTreeDidChange(page());
+}
+
+void RenderLayerCompositor::layerBecameNonComposited(const RenderLayer* renderLayer)
+{
+    // Inform the inspector that the given RenderLayer was destroyed.
+    InspectorInstrumentation::renderLayerDestroyed(page(), renderLayer);
+
+    ASSERT(m_compositedLayerCount > 0);
+    --m_compositedLayerCount;
 }
 
 #if !LOG_DISABLED
@@ -678,7 +694,7 @@ IntRect RenderLayerCompositor::calculateCompositedBounds(const RenderLayer* laye
 {
     if (!canBeComposited(layer))
         return IntRect();
-    return layer->calculateLayerBounds(ancestorLayer, 0, RenderLayer::DefaultCalculateLayerBoundsFlags | RenderLayer::ExcludeHiddenDescendants);
+    return layer->calculateLayerBounds(ancestorLayer, 0, RenderLayer::DefaultCalculateLayerBoundsFlags | RenderLayer::ExcludeHiddenDescendants | RenderLayer::DontConstrainForMask);
 }
 
 void RenderLayerCompositor::layerWasAdded(RenderLayer* /*parent*/, RenderLayer* /*child*/)
@@ -829,7 +845,8 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
     CompositingState childState(compositingState);
     childState.m_subtreeIsCompositing = false;
 
-    bool willBeComposited = needsToBeComposited(layer);
+    FixedPositionLayerNotCompositedReason fixedPositionLayerNotCompositedReason = NoReason;
+    bool willBeComposited = needsToBeComposited(layer, &fixedPositionLayerNotCompositedReason);
     if (willBeComposited) {
         // Tell the parent it has compositing descendants.
         compositingState.m_subtreeIsCompositing = true;
@@ -838,7 +855,8 @@ void RenderLayerCompositor::computeCompositingRequirements(RenderLayer* ancestor
 
         if (overlapMap)
             overlapMap->pushCompositingContainer();
-    }
+    } else if (fixedPositionLayerNotCompositedReason != NoReason)
+        m_fixedPositionLayerNotCompositedReasonMap.set(layer, fixedPositionLayerNotCompositedReason);
 
 #if !ASSERT_DISABLED
     LayerListMutationDetector mutationChecker(layer);
@@ -1340,16 +1358,20 @@ void RenderLayerCompositor::updateCompositingDescendantGeometry(RenderLayer* com
 }
 
 
-void RenderLayerCompositor::repaintCompositedLayersAbsoluteRect(const IntRect& absRect)
+void RenderLayerCompositor::repaintCompositedLayers(const IntRect* absRect)
 {
-    recursiveRepaintLayerRect(rootRenderLayer(), absRect);
+    recursiveRepaintLayer(rootRenderLayer(), absRect);
 }
 
-void RenderLayerCompositor::recursiveRepaintLayerRect(RenderLayer* layer, const IntRect& rect)
+void RenderLayerCompositor::recursiveRepaintLayer(RenderLayer* layer, const IntRect* rect)
 {
     // FIXME: This method does not work correctly with transforms.
-    if (layer->isComposited() && !layer->backing()->paintsIntoCompositedAncestor())
-        layer->setBackingNeedsRepaintInRect(rect);
+    if (layer->isComposited() && !layer->backing()->paintsIntoCompositedAncestor()) {
+        if (rect)
+            layer->setBackingNeedsRepaintInRect(*rect);
+        else
+            layer->setBackingNeedsRepaint();
+    }
 
 #if !ASSERT_DISABLED
     LayerListMutationDetector mutationChecker(layer);
@@ -1360,9 +1382,12 @@ void RenderLayerCompositor::recursiveRepaintLayerRect(RenderLayer* layer, const 
             size_t listSize = negZOrderList->size();
             for (size_t i = 0; i < listSize; ++i) {
                 RenderLayer* curLayer = negZOrderList->at(i);
-                IntRect childRect(rect);
-                curLayer->convertToPixelSnappedLayerCoords(layer, childRect);
-                recursiveRepaintLayerRect(curLayer, childRect);
+                if (rect) {
+                    IntRect childRect(*rect);
+                    curLayer->convertToPixelSnappedLayerCoords(layer, childRect);
+                    recursiveRepaintLayer(curLayer, &childRect);
+                } else
+                    recursiveRepaintLayer(curLayer);
             }
         }
 
@@ -1370,9 +1395,12 @@ void RenderLayerCompositor::recursiveRepaintLayerRect(RenderLayer* layer, const 
             size_t listSize = posZOrderList->size();
             for (size_t i = 0; i < listSize; ++i) {
                 RenderLayer* curLayer = posZOrderList->at(i);
-                IntRect childRect(rect);
-                curLayer->convertToPixelSnappedLayerCoords(layer, childRect);
-                recursiveRepaintLayerRect(curLayer, childRect);
+                if (rect) {
+                    IntRect childRect(*rect);
+                    curLayer->convertToPixelSnappedLayerCoords(layer, childRect);
+                    recursiveRepaintLayer(curLayer, &childRect);
+                } else
+                    recursiveRepaintLayer(curLayer);
             }
         }
     }
@@ -1380,9 +1408,12 @@ void RenderLayerCompositor::recursiveRepaintLayerRect(RenderLayer* layer, const 
         size_t listSize = normalFlowList->size();
         for (size_t i = 0; i < listSize; ++i) {
             RenderLayer* curLayer = normalFlowList->at(i);
-            IntRect childRect(rect);
-            curLayer->convertToPixelSnappedLayerCoords(layer, childRect);
-            recursiveRepaintLayerRect(curLayer, childRect);
+            if (rect) {
+                IntRect childRect(*rect);
+                curLayer->convertToPixelSnappedLayerCoords(layer, childRect);
+                recursiveRepaintLayer(curLayer, &childRect);
+            } else
+                recursiveRepaintLayer(curLayer);
         }
     }
 }
@@ -1528,18 +1559,18 @@ bool RenderLayerCompositor::shouldPropagateCompositingToEnclosingFrame() const
     return false;
 }
 
-bool RenderLayerCompositor::needsToBeComposited(const RenderLayer* layer) const
+bool RenderLayerCompositor::needsToBeComposited(const RenderLayer* layer, FixedPositionLayerNotCompositedReason* fixedPositionLayerNotCompositedReason) const
 {
     if (!canBeComposited(layer))
         return false;
 
-    return requiresCompositingLayer(layer) || layer->mustCompositeForIndirectReasons() || (inCompositingMode() && layer->isRootLayer());
+    return requiresCompositingLayer(layer, fixedPositionLayerNotCompositedReason) || layer->mustCompositeForIndirectReasons() || (inCompositingMode() && layer->isRootLayer());
 }
 
 // Note: this specifies whether the RL needs a compositing layer for intrinsic reasons.
 // Use needsToBeComposited() to determine if a RL actually needs a compositing layer.
 // static
-bool RenderLayerCompositor::requiresCompositingLayer(const RenderLayer* layer) const
+bool RenderLayerCompositor::requiresCompositingLayer(const RenderLayer* layer, FixedPositionLayerNotCompositedReason* fixedPositionLayerNotCompositedReason) const
 {
     RenderObject* renderer = layer->renderer();
     // The compositing state of a reflection should match that of its reflected layer.
@@ -1557,7 +1588,7 @@ bool RenderLayerCompositor::requiresCompositingLayer(const RenderLayer* layer) c
         || clipsCompositingDescendants(layer)
         || requiresCompositingForAnimation(renderer)
         || requiresCompositingForFilters(renderer)
-        || requiresCompositingForPosition(renderer, layer)
+        || requiresCompositingForPosition(renderer, layer, fixedPositionLayerNotCompositedReason)
         || requiresCompositingForOverflowScrolling(layer)
         || requiresCompositingForBlending(renderer);
 }
@@ -1935,7 +1966,7 @@ bool RenderLayerCompositor::requiresCompositingForBlending(RenderObject* rendere
 #endif
 }
 
-bool RenderLayerCompositor::requiresCompositingForPosition(RenderObject* renderer, const RenderLayer* layer) const
+bool RenderLayerCompositor::requiresCompositingForPosition(RenderObject* renderer, const RenderLayer* layer, FixedPositionLayerNotCompositedReason* fixedPositionLayerNotCompositedReason) const
 {
     // position:fixed elements that create their own stacking context (e.g. have an explicit z-index,
     // opacity, transform) can get their own composited layer. A stacking context is required otherwise
@@ -1956,15 +1987,22 @@ bool RenderLayerCompositor::requiresCompositingForPosition(RenderObject* rendere
 
     // Don't promote fixed position elements that are descendants of transformed elements.
     // They will stay fixed wrt the transformed element rather than the enclosing frame.
-    if (container != m_renderView)
+    if (container != m_renderView) {
+        if (fixedPositionLayerNotCompositedReason)
+            *fixedPositionLayerNotCompositedReason = DescendantOfTransformedElement;
         return false;
+    }
 
     // Fixed position elements that are invisible in the current view don't get their own layer.
     if (FrameView* frameView = m_renderView->frameView()) {
-        IntRect viewBounds = IntRect(IntPoint(frameView->scrollOffsetForFixedPosition()), frameView->layoutSize());
-        IntRect layerBounds = calculateCompositedBounds(layer, rootRenderLayer());
-        if (!viewBounds.intersects(layerBounds))
+        IntRect viewBounds = frameView->visibleContentRect();
+        LayoutRect layerBounds = calculateCompositedBounds(layer, rootRenderLayer());
+        layerBounds.scale(pageScaleFactor());
+        if (!viewBounds.intersects(enclosingIntRect(layerBounds))) {
+            if (fixedPositionLayerNotCompositedReason)
+                *fixedPositionLayerNotCompositedReason = LayerBoundsOutOfView;
             return false;
+        }
     }
 
     return true;
@@ -2749,6 +2787,27 @@ Page* RenderLayerCompositor::page() const
         return frame->page();
     
     return 0;
+}
+
+void RenderLayerCompositor::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
+{
+    MemoryClassInfo info(memoryObjectInfo, this, PlatformMemoryTypes::Rendering);
+    info.addWeakPointer(m_renderView);
+    info.addMember(m_rootContentLayer);
+    info.addMember(m_updateCompositingLayersTimer);
+    info.addMember(m_clipLayer);
+    info.addMember(m_scrollLayer);
+    info.addMember(m_viewportConstrainedLayers);
+    info.addMember(m_viewportConstrainedLayersNeedingUpdate);
+    info.addMember(m_overflowControlsHostLayer);
+    info.addMember(m_layerForHorizontalScrollbar);
+    info.addMember(m_layerForVerticalScrollbar);
+    info.addMember(m_layerForScrollCorner);
+#if ENABLE(RUBBER_BANDING)
+    info.addMember(m_layerForOverhangAreas);
+    info.addMember(m_contentShadowLayer);
+#endif
+    info.addMember(m_layerUpdater);
 }
 
 } // namespace WebCore

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
- * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2011, 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,11 +59,11 @@ public:
     virtual void updateStatusDisplay() OVERRIDE;
 
     virtual void changedClosedCaptionsVisibility() OVERRIDE;
-    void toggleClosedCaptionTrackList();
+    virtual void toggleClosedCaptionTrackList() OVERRIDE;
+    virtual void closedCaptionTracksChanged() OVERRIDE;
 
 private:
     MediaControlsApple(Document*);
-
 
     MediaControlRewindButtonElement* m_rewindButton;
     MediaControlReturnToRealtimeButtonElement* m_returnToRealTimeButton;

@@ -1,3 +1,361 @@
+2012-12-12  Gavin Peters  <gavinp@chromium.org>
+
+        [chromium] Add destructor to WebPrerender
+        https://bugs.webkit.org/show_bug.cgi?id=104820
+
+        Reviewed by James Robinson.
+
+        When making WebPrerender default constructible and assignable, the destructor should have been moved out of WEBKIT_IMPLEMENTATION.
+
+        * chromium/public/WebPrerender.h:
+        (WebKit::WebPrerender::~WebPrerender):
+        (WebPrerender):
+
+2012-12-12  Alexei Filippov  <alph@chromium.org>
+
+        Web Inspector: add memory used by memory allocator itself to NMI
+        https://bugs.webkit.org/show_bug.cgi?id=93372
+
+        Make native memory instrumentation report memory retained
+        for the memory allocator internal purposes.
+
+        Reviewed by Yury Semikhatsky.
+
+        * chromium/public/Platform.h:
+        (Platform):
+        (WebKit::Platform::memoryAllocatorWasteInBytes):
+
+2012-12-12  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Change the data channel descriptor pattern to a handler pattern
+        https://bugs.webkit.org/show_bug.cgi?id=104543
+
+        Reviewed by Kent Tamura.
+
+        In short the code is refactured to use the Handler/Client pattern (see RTCPeerConnectionHandler)
+        instead of the Descriptor pattern.
+        This will fix lifetime/memory/code structure issues in the chromium port.
+
+        * Platform.gypi:
+        * chromium/public/WebRTCDataChannel.h: Removed.
+        * chromium/public/WebRTCDataChannelHandler.h: Added.
+        (WebKit):
+        (WebRTCDataChannelHandler):
+        (WebKit::WebRTCDataChannelHandler::~WebRTCDataChannelHandler):
+        * chromium/public/WebRTCDataChannelHandlerClient.h: Added.
+        (WebKit):
+        (WebRTCDataChannelHandlerClient):
+        (WebKit::WebRTCDataChannelHandlerClient::~WebRTCDataChannelHandlerClient):
+        * chromium/public/WebRTCPeerConnectionHandler.h:
+        (WebKit):
+        (WebKit::WebRTCPeerConnectionHandler::createDataChannel):
+        * chromium/public/WebRTCPeerConnectionHandlerClient.h:
+        (WebKit):
+        (WebKit::WebRTCPeerConnectionHandlerClient::didAddRemoteDataChannel):
+
+2012-12-11  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Remove deprecated WebGraphicsContext3D entry points
+        https://bugs.webkit.org/show_bug.cgi?id=104603
+
+        Reviewed by Darin Fisher.
+
+        * chromium/public/WebGraphicsContext3D.h:
+        (WebGraphicsContext3D):
+
+2012-12-10  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Remove WebCompositorFrame(Ack) as these classes are not needed now that they are passed through cc::OutputSurface.
+        https://bugs.webkit.org/show_bug.cgi?id=104635
+
+        Reviewed by James Robinson.
+
+        These have been supplanted by cc::CompositorFrame(Ack) which do not
+        need to inherit from them.
+
+        * chromium/public/WebCompositorFrame.h: Removed.
+        * chromium/public/WebCompositorFrameAck.h: Removed.
+
+2012-12-10  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Remove WebCompositorOutputSurface implementations from DRT
+        https://bugs.webkit.org/show_bug.cgi?id=104046
+
+        Reviewed by Darin Fisher.
+
+        Remove now-unused definitions for these classes. The cc::OutputSurface
+        and its related classes have replaced these, with the
+        WebCompositorOutputSurface class as an empty base class.
+
+        * Platform.gypi:
+        * chromium/public/WebCompositorOutputSurface.h:
+        (WebKit):
+        * chromium/public/WebCompositorOutputSurfaceClient.h: Removed.
+        * chromium/public/WebCompositorSoftwareOutputDevice.h: Removed.
+
+2012-12-10  Mark Pilgrim  <pilgrim@chromium.org>
+
+        [Chromium] Move getPluginsList out of PlatformSupport
+        https://bugs.webkit.org/show_bug.cgi?id=96507
+
+        Reviewed by Darin Fisher.
+
+        Part of a refactoring series. See tracking bug 82948.
+
+        * Platform.gypi:
+        * chromium/public/Platform.h:
+        (WebKit):
+        (Platform):
+        (WebKit::Platform::getPluginList):
+        * chromium/public/WebPluginListBuilder.h: Added.
+        (WebKit):
+        (WebPluginListBuilder):
+
+2012-12-08  Gavin Peters  <gavinp@chromium.org>
+
+        Add status events on <link rel=prerender> elements.
+        https://bugs.webkit.org/show_bug.cgi?id=96474
+
+        Reviewed by Adam Barth.
+
+        The new PrerenderStatusEvent is sent to link elements when
+        prerenders are started by the embedder, and also sent when they
+        are stopped. Pages using this feature can now serialize launching
+        prerenders, and track timing performance.
+
+        * chromium/public/WebPrerender.h:
+        (WebKit::WebPrerender::WebPrerender):
+        (WebKit::WebPrerender::operator=):
+        (WebPrerender):
+
+2012-12-07  Scott Violet  <sky@chromium.org>
+
+        [chromium] Remove linux theme related files and switch to default
+        https://bugs.webkit.org/show_bug.cgi?id=103897
+
+        Reviewed by Dimitri Glazkov.
+
+        * Platform.gypi: Remove WebThemeEngine.h
+        * chromium/public/linux/WebThemeEngine.h: Removed.
+
+2012-12-06  Sami Kyostila  <skyostil@chromium.org>
+
+        [chromium] Introduce setting for low latency rendering
+        https://bugs.webkit.org/show_bug.cgi?id=104011
+
+        Reviewed by James Robinson.
+
+        This low latency rendering setting will be used to enable alternate
+        render signaling and scheduling to reduce latency.
+
+        * chromium/public/WebLayerTreeView.h:
+        (WebKit::WebLayerTreeView::Settings::Settings):
+        (Settings):
+
+2012-12-06  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Rename non-standard discard/ensureFramebufferCHROMIUM extensions so we can use real GL_EXT_discard_framebuffer
+        https://bugs.webkit.org/show_bug.cgi?id=104316
+
+        Reviewed by Kenneth Russell.
+
+        GL_EXT_discard_framebuffer is a GL extension that enables optimizations for GPUs that aggressively defer
+        operations. We've 'borrowed' the extension namespace to enable backbuffer management, but this makes it
+        impossible to use the actual extension.  This adds new entry points for backbuffer management. After callers
+        (which aren't in the WebKit repo) are updated, we can remove the overlapping entry points.
+
+        * chromium/public/WebGraphicsContext3D.h:
+        (WebGraphicsContext3D):
+        (WebKit::WebGraphicsContext3D::discardFramebufferCHROMIUM):
+        (WebKit::WebGraphicsContext3D::discardBackbufferCHROMIUM):
+        (WebKit::WebGraphicsContext3D::ensureBackbufferCHROMIUM):
+
+2012-12-06  Kenneth Russell  <kbr@google.com>
+
+        Associate URLs with GraphicsContext3D instances created for WebGL
+        https://bugs.webkit.org/show_bug.cgi?id=103793
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/WebGraphicsContext3D.h:
+        (Attributes):
+            Add top document's URL to context creation attributes.
+
+2012-12-06  David Reveman  <reveman@chromium.org>
+
+        [Chromium] Add GL_CHROMIUM_async_pixel_transfers extension support.
+        https://bugs.webkit.org/show_bug.cgi?id=103995
+
+        Reviewed by Kenneth Russell.
+
+        Add asyncTexImage2DCHROMIUM and asyncTexSubImage2DCHROMIUM to
+        WebGraphicsContext3D.h.
+
+        * chromium/public/WebGraphicsContext3D.h:
+        (WebGraphicsContext3D):
+        (WebKit::WebGraphicsContext3D::asyncTexImage2DCHROMIUM):
+        (WebKit::WebGraphicsContext3D::asyncTexSubImage2DCHROMIUM):
+
+2012-12-06  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r136784 and r136802.
+        http://trac.webkit.org/changeset/136784
+        http://trac.webkit.org/changeset/136802
+        https://bugs.webkit.org/show_bug.cgi?id=104231
+
+        breaks chromium canary (Requested by morrita on #webkit).
+
+        * Platform.gypi:
+        * chromium/public/linux/WebThemeEngine.h: Added.
+        (WebKit):
+        (WebThemeEngine):
+        (ScrollbarTrackExtraParams):
+        (ButtonExtraParams):
+        (TextFieldExtraParams):
+        (MenuListExtraParams):
+        (SliderExtraParams):
+        (InnerSpinButtonExtraParams):
+        (ProgressBarExtraParams):
+        (WebKit::WebThemeEngine::getSize):
+        (WebKit::WebThemeEngine::paint):
+
+2012-12-05  Scott Violet  <sky@chromium.org>
+
+        [chromium] Remove linux theme related files and switch to default
+        https://bugs.webkit.org/show_bug.cgi?id=103897
+
+        Reviewed by Tony Chang.
+
+        * Platform.gypi: Remove WebThemeEngine.h
+        * chromium/public/linux/WebThemeEngine.h: Removed.
+
+2012-12-05  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Make WebCompositorOutputSurface an empty class when USE_CC_OUTPUT_SURFACE is defined.
+        https://bugs.webkit.org/show_bug.cgi?id=103967
+
+        Reviewed by James Robinson.
+
+        When the USE_CC_OUTPUT_SURFACE flag is set:
+        - Make the WebCompositorOutputSurface class empty.
+        - Don't define the OutputSurfaceClient.
+        - Don't define the SoftwareOutputDevice.
+
+        WebCompositorSupport has methods to create a WebCompositorOutputSurface. They
+        will return NULL until the chromium side lands, and then they will be used
+        in place of the existing WebViewHost methods.
+
+        * chromium/public/WebCompositorOutputSurface.h:
+        (WebKit):
+        * chromium/public/WebCompositorOutputSurfaceClient.h:
+        (WebKit):
+        * chromium/public/WebCompositorSoftwareOutputDevice.h:
+        (WebKit):
+        * chromium/public/WebCompositorSupport.h:
+        (WebKit):
+        (WebCompositorSupport):
+        (WebKit::WebCompositorSupport::createOutputSurfaceFor3D):
+        (WebKit::WebCompositorSupport::createOutputSurfaceForSoftware):
+
+2012-12-05  Eberhard Graether  <egraether@google.com>
+
+        [chromium] Remove WebLayerTreeView API to set font atlas
+        https://bugs.webkit.org/show_bug.cgi?id=102960
+
+        Reviewed by James Robinson.
+
+        Removes old font atlas creation from WebViewImpl.
+
+        * chromium/public/WebLayerTreeView.h:
+
+2012-12-05  Stephen White  <senorblanco@chromium.org>
+
+        Unreviewed, rolling out r136609.
+        http://trac.webkit.org/changeset/136609
+        https://bugs.webkit.org/show_bug.cgi?id=103793
+
+        Breaking Chrome/Mac Debug builds.
+
+        * Platform.gyp/Platform.gyp:
+        * chromium/public/WebGraphicsContext3D.h:
+        (Attributes):
+
+2012-12-04  Kenneth Russell  <kbr@google.com>
+
+        Associate URLs with GraphicsContext3D instances created for WebGL
+        https://bugs.webkit.org/show_bug.cgi?id=103793
+
+        Reviewed by Adam Barth.
+
+        * Platform.gyp/Platform.gyp:
+            Allow WebURL.h to be included directly or indirectly from Platform.h.
+        * chromium/public/WebGraphicsContext3D.h:
+        (Attributes):
+            Add top document's URL to context creation attributes.
+
+2012-12-04  Glenn Hartmann  <hartmanng@chromium.org>
+
+        Gut WebRenderingStats since we no longer use its member variables.
+        https://bugs.webkit.org/show_bug.cgi?id=103460
+
+        Reviewed by Darin Fisher.
+
+        This was used as an intermediate location to move stats from
+        chromium's RenderStats. The chromium code has been updated to
+        remove this dependency (see https://codereview.chromium.org/11364221/).
+
+        * chromium/public/WebRenderingStats.h:
+        (WebKit::WebRenderingStats::WebRenderingStats):
+
+2012-12-03  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r136460.
+        http://trac.webkit.org/changeset/136460
+        https://bugs.webkit.org/show_bug.cgi?id=103958
+
+        This patch caused compile error when building DumpRenderTree
+        (Requested by tasak on #webkit).
+
+        * Platform.gypi:
+        * chromium/public/linux/WebThemeEngine.h: Added.
+        (WebKit):
+        (WebThemeEngine):
+        (ScrollbarTrackExtraParams):
+        (ButtonExtraParams):
+        (TextFieldExtraParams):
+        (MenuListExtraParams):
+        (SliderExtraParams):
+        (InnerSpinButtonExtraParams):
+        (ProgressBarExtraParams):
+        (WebKit::WebThemeEngine::getSize):
+        (WebKit::WebThemeEngine::paint):
+
+2012-12-03  Scott Violet  <sky@chromium.org>
+
+        [chromium] Remove linux theme related files and switch to default
+        https://bugs.webkit.org/show_bug.cgi?id=103897
+
+        Reviewed by Darin Fisher.
+
+        * Platform.gypi: remove WebThemeEngine.h
+        * chromium/public/linux/WebThemeEngine.h: Removed.
+
+2012-12-03  Sami Kyostila  <skyostil@chromium.org>
+
+        [chromium] Tell WebInputHandlerClient when end of input is reached for current vsync period
+        https://bugs.webkit.org/show_bug.cgi?id=103648
+
+        Reviewed by James Robinson.
+
+        Let the WebInputHandlerClient know when we've received the final input event
+        for the current vsync period.
+
+        Test: WebCompositorInputHandlerImplTest.lastInputEventForVSync
+
+        * chromium/public/WebInputHandlerClient.h:
+        (WebKit::WebInputHandlerClient::didReceiveLastInputEventForVSync):
+        (WebInputHandlerClient):
+
 2012-11-28  Tommy Widenflycht  <tommyw@google.com>
 
         Add basic implementation for MediaStreamAudioDestinationNode

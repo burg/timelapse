@@ -22,10 +22,9 @@
 
 #include "qwebplugindatabase_p.h"
 
-#include "AbstractDatabase.h"
 #include "ApplicationCacheStorage.h"
 #include "CrossOriginPreflightResultCache.h"
-#include "DatabaseTracker.h"
+#include "DatabaseManager.h"
 #include "FileSystem.h"
 #include "FontCache.h"
 #include "IconDatabase.h"
@@ -41,6 +40,7 @@
 #include "Page.h"
 #include "PageCache.h"
 #include "PluginDatabase.h"
+#include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
 #include <QDir>
 #include <QFileInfo>
@@ -54,7 +54,7 @@
 
 
 
-void QWEBKIT_EXPORT qt_networkAccessAllowed(bool isAllowed)
+QWEBKIT_EXPORT void qt_networkAccessAllowed(bool isAllowed)
 {
 #ifndef QT_NO_BEARERMANAGEMENT
     WebCore::networkStateNotifier().setNetworkAccessAllowed(isAllowed);
@@ -167,7 +167,7 @@ void QWebSettingsPrivate::apply()
 
         value = attributes.value(QWebSettings::CSSRegionsEnabled,
                                  global->attributes.value(QWebSettings::CSSRegionsEnabled));
-        settings->setCSSRegionsEnabled(value);
+        WebCore::RuntimeEnabledFeatures::setCSSRegionsEnabled(value);
         value = attributes.value(QWebSettings::CSSGridLayoutEnabled,
                                  global->attributes.value(QWebSettings::CSSGridLayoutEnabled));
         settings->setCSSGridLayoutEnabled(value);
@@ -230,7 +230,7 @@ void QWebSettingsPrivate::apply()
 #if ENABLE(SQL_DATABASE)
         value = attributes.value(QWebSettings::OfflineStorageDatabaseEnabled,
                                       global->attributes.value(QWebSettings::OfflineStorageDatabaseEnabled));
-        WebCore::AbstractDatabase::setIsAvailable(value);
+        WebCore::DatabaseManager::manager().setIsAvailable(value);
 #endif
 
         value = attributes.value(QWebSettings::OfflineWebApplicationCacheEnabled,
@@ -533,7 +533,7 @@ QWebSettings::QWebSettings()
     d->attributes.insert(QWebSettings::LocalContentCanAccessRemoteUrls, false);
     d->attributes.insert(QWebSettings::LocalContentCanAccessFileUrls, true);
     d->attributes.insert(QWebSettings::AcceleratedCompositingEnabled, true);
-    d->attributes.insert(QWebSettings::WebGLEnabled, false);
+    d->attributes.insert(QWebSettings::WebGLEnabled, true);
     d->attributes.insert(QWebSettings::CSSRegionsEnabled, true);
     d->attributes.insert(QWebSettings::CSSGridLayoutEnabled, false);
     d->attributes.insert(QWebSettings::HyperlinkAuditingEnabled, false);
@@ -1003,7 +1003,7 @@ void QWebSettings::setOfflineStoragePath(const QString& path)
 {
     WebCore::initializeWebCoreQt();
 #if ENABLE(SQL_DATABASE)
-    WebCore::DatabaseTracker::tracker().setDatabaseDirectoryPath(path);
+    WebCore::DatabaseManager::manager().setDatabaseDirectoryPath(path);
 #endif
 }
 
@@ -1019,7 +1019,7 @@ QString QWebSettings::offlineStoragePath()
 {
     WebCore::initializeWebCoreQt();
 #if ENABLE(SQL_DATABASE)
-    return WebCore::DatabaseTracker::tracker().databaseDirectoryPath();
+    return WebCore::DatabaseManager::manager().databaseDirectoryPath();
 #else
     return QString();
 #endif

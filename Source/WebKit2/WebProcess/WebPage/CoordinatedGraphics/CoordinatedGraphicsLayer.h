@@ -22,6 +22,7 @@
 #define CoordinatedGraphicsLayer_h
 
 #include "CoordinatedImageBacking.h"
+#include "CoordinatedLayerInfo.h"
 #include "CoordinatedTile.h"
 #include "FloatPoint3D.h"
 #include "GraphicsLayer.h"
@@ -29,12 +30,10 @@
 #include "GraphicsLayerTransform.h"
 #include "Image.h"
 #include "IntSize.h"
-#include "ShareableBitmap.h"
 #include "TiledBackingStore.h"
 #include "TiledBackingStoreClient.h"
 #include "TransformationMatrix.h"
 #include "UpdateInfo.h"
-#include "WebLayerTreeInfo.h"
 #include "WebProcess.h"
 #if USE(GRAPHICS_SURFACE)
 #include <WebCore/GraphicsSurfaceToken.h>
@@ -53,29 +52,29 @@ namespace WebKit {
 class CoordinatedGraphicsLayerClient {
 public:
     // CoordinatedTileClient
-    virtual void createTile(WebLayerID, int tileID, const SurfaceUpdateInfo&, const WebCore::IntRect&) = 0;
-    virtual void updateTile(WebLayerID, int tileID, const SurfaceUpdateInfo&, const WebCore::IntRect&) = 0;
-    virtual void removeTile(WebLayerID, int tileID) = 0;
+    virtual void createTile(CoordinatedLayerID, uint32_t tileID, const SurfaceUpdateInfo&, const WebCore::IntRect&) = 0;
+    virtual void updateTile(CoordinatedLayerID, uint32_t tileID, const SurfaceUpdateInfo&, const WebCore::IntRect&) = 0;
+    virtual void removeTile(CoordinatedLayerID, uint32_t tileID) = 0;
 
-    virtual WebCore::IntRect visibleContentsRect() const = 0;
+    virtual WebCore::FloatRect visibleContentsRect() const = 0;
     virtual bool layerTreeTileUpdatesAllowed() const = 0;
     virtual PassRefPtr<CoordinatedImageBacking> createImageBackingIfNeeded(WebCore::Image*) = 0;
-    virtual void syncLayerState(WebLayerID, const WebLayerInfo&) = 0;
-    virtual void syncLayerChildren(WebLayerID, const Vector<WebLayerID>&) = 0;
+    virtual void syncLayerState(CoordinatedLayerID, const CoordinatedLayerInfo&) = 0;
+    virtual void syncLayerChildren(CoordinatedLayerID, const Vector<CoordinatedLayerID>&) = 0;
 #if ENABLE(CSS_FILTERS)
-    virtual void syncLayerFilters(WebLayerID, const WebCore::FilterOperations&) = 0;
+    virtual void syncLayerFilters(CoordinatedLayerID, const WebCore::FilterOperations&) = 0;
 #endif
 #if USE(GRAPHICS_SURFACE)
-    virtual void createCanvas(WebLayerID, WebCore::PlatformLayer*) = 0;
-    virtual void syncCanvas(WebLayerID, WebCore::PlatformLayer*) = 0;
-    virtual void destroyCanvas(WebLayerID) = 0;
+    virtual void createCanvas(CoordinatedLayerID, WebCore::PlatformLayer*) = 0;
+    virtual void syncCanvas(CoordinatedLayerID, WebCore::PlatformLayer*) = 0;
+    virtual void destroyCanvas(CoordinatedLayerID) = 0;
 #endif
 
-    virtual void setLayerAnimations(WebLayerID, const WebCore::GraphicsLayerAnimations&) = 0;
+    virtual void setLayerAnimations(CoordinatedLayerID, const WebCore::GraphicsLayerAnimations&) = 0;
 
     virtual void detachLayer(WebCore::CoordinatedGraphicsLayer*) = 0;
     virtual void syncFixedLayers() = 0;
-    virtual PassOwnPtr<WebCore::GraphicsContext> beginContentUpdate(const WebCore::IntSize&, ShareableBitmap::Flags, int& atlasID, WebCore::IntPoint&) = 0;
+    virtual PassOwnPtr<WebCore::GraphicsContext> beginContentUpdate(const WebCore::IntSize&, CoordinatedSurface::Flags, uint32_t& atlasID, WebCore::IntPoint&) = 0;
 };
 }
 
@@ -111,6 +110,7 @@ public:
     virtual void setOpacity(float) OVERRIDE;
     virtual void setContentsRect(const IntRect&) OVERRIDE;
     virtual void setContentsToImage(Image*) OVERRIDE;
+    virtual void setContentsToBackgroundColor(const Color&) OVERRIDE;
     virtual bool shouldDirectlyCompositeImage(Image*) const OVERRIDE;
     virtual void setContentsToCanvas(PlatformLayer*) OVERRIDE;
     virtual void setMaskLayer(GraphicsLayer*) OVERRIDE;
@@ -128,13 +128,16 @@ public:
     virtual void removeAnimation(const String&) OVERRIDE;
     virtual void suspendAnimations(double time) OVERRIDE;
     virtual void resumeAnimations() OVERRIDE;
-    
+
+    FloatPoint computePositionRelativeToBase();
+    void computePixelAlignment(FloatPoint& position, FloatSize&, FloatPoint3D& anchorPoint, FloatSize& alignmentOffset);
+
     void setContentsScale(float);
     void setVisibleContentRectTrajectoryVector(const FloatPoint&);
 
     void setRootLayer(bool);
 
-    WebKit::WebLayerID id() const;
+    WebKit::CoordinatedLayerID id() const;
 
     void setFixedToViewport(bool isFixed) { m_fixedToViewport = isFixed; }
 
@@ -152,10 +155,10 @@ public:
     virtual Color tiledBackingStoreBackgroundColor() const OVERRIDE;
 
     // CoordinatedTileClient
-    virtual void createTile(int tileID, const WebKit::SurfaceUpdateInfo&, const IntRect&) OVERRIDE;
-    virtual void updateTile(int tileID, const WebKit::SurfaceUpdateInfo&, const IntRect&) OVERRIDE;
-    virtual void removeTile(int tileID) OVERRIDE;
-    virtual PassOwnPtr<GraphicsContext> beginContentUpdate(const IntSize&, int& atlasID, IntPoint&) OVERRIDE;
+    virtual void createTile(uint32_t tileID, const WebKit::SurfaceUpdateInfo&, const IntRect&) OVERRIDE;
+    virtual void updateTile(uint32_t tileID, const WebKit::SurfaceUpdateInfo&, const IntRect&) OVERRIDE;
+    virtual void removeTile(uint32_t tileID) OVERRIDE;
+    virtual PassOwnPtr<GraphicsContext> beginContentUpdate(const IntSize&, uint32_t& atlasID, IntPoint&) OVERRIDE;
 
     void setCoordinator(WebKit::CoordinatedGraphicsLayerClient*);
 
@@ -195,6 +198,7 @@ private:
     void destroyCanvasIfNeeded();
     void createCanvasIfNeeded();
 
+    bool shouldHaveBackingStore() const;
     bool selfOrAncestorHasActiveTransformAnimation() const;
     bool selfOrAncestorHaveNonAffineTransforms();
     void adjustContentsScale();
@@ -204,10 +208,15 @@ private:
 
     void animationStartedTimerFired(Timer<CoordinatedGraphicsLayer>*);
 
-    WebKit::WebLayerID m_id;
-    WebKit::WebLayerInfo m_layerInfo;
+    WebKit::CoordinatedLayerID m_id;
+    WebKit::CoordinatedLayerInfo m_layerInfo;
     GraphicsLayerTransform m_layerTransform;
     TransformationMatrix m_cachedInverseTransform;
+    FloatSize m_pixelAlignmentOffset;
+    FloatSize m_adjustedSize;
+    FloatPoint m_adjustedPosition;
+    FloatPoint3D m_adjustedAnchorPoint;
+
     bool m_inUpdateMode : 1;
     bool m_shouldUpdateVisibleRect: 1;
     bool m_shouldSyncLayerState: 1;
@@ -231,6 +240,7 @@ private:
 
     PlatformLayer* m_canvasPlatformLayer;
 #if USE(GRAPHICS_SURFACE)
+    IntSize m_canvasSize;
     GraphicsSurfaceToken m_canvasToken;
 #endif
     Timer<CoordinatedGraphicsLayer> m_animationStartedTimer;

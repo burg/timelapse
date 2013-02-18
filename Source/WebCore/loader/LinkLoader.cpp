@@ -90,6 +90,30 @@ void LinkLoader::notifyFinished(CachedResource* resource)
     m_cachedLinkResource = 0;
 }
 
+#if ENABLE(LINK_PRERENDER)
+
+void LinkLoader::didStartPrerender()
+{
+    m_client->didStartLinkPrerender();
+}
+
+void LinkLoader::didStopPrerender()
+{
+    m_client->didStopLinkPrerender();
+}
+
+void LinkLoader::didSendLoadForPrerender()
+{
+    m_client->didSendLoadForLinkPrerender();
+}
+
+void LinkLoader::didSendDOMContentLoadedForPrerender()
+{
+    m_client->didSendDOMContentLoadedForLinkPrerender();
+}
+
+#endif
+
 bool LinkLoader::loadLink(const LinkRelAttribute& relAttribute, const String& type,
                           const String& sizes, const KURL& href, Document* document)
 {
@@ -135,7 +159,7 @@ bool LinkLoader::loadLink(const LinkRelAttribute& relAttribute, const String& ty
 #if ENABLE(LINK_PRERENDER)
     if (relAttribute.m_isLinkPrerender) {
         ASSERT(!m_prerenderHandle);
-        m_prerenderHandle = document->prerenderer()->render(href);
+        m_prerenderHandle = document->prerenderer()->render(this, href);
     }
 #endif
     return true;

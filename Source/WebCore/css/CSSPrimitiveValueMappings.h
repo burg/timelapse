@@ -46,7 +46,6 @@
 #include "RenderStyleConstants.h"
 #include "SVGRenderStyleDefs.h"
 #include "TextDirection.h"
-#include "TextOrientation.h"
 #include "TextRenderingMode.h"
 #include "ThemeTypes.h"
 #include "UnicodeBidi.h"
@@ -784,6 +783,43 @@ template<> inline CSSPrimitiveValue::operator EBoxDecorationBreak() const
     return DSLICE;
 }
 #endif
+
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(BackgroundEdgeOrigin e)
+    : CSSValue(PrimitiveClass)
+{
+    m_primitiveUnitType = CSS_IDENT;
+    switch (e) {
+    case TopEdge:
+        m_value.ident = CSSValueTop;
+        break;
+    case RightEdge:
+        m_value.ident = CSSValueRight;
+        break;
+    case BottomEdge:
+        m_value.ident = CSSValueBottom;
+        break;
+    case LeftEdge:
+        m_value.ident = CSSValueLeft;
+        break;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator BackgroundEdgeOrigin() const
+{
+    switch (m_value.ident) {
+    case CSSValueTop:
+        return TopEdge;
+    case CSSValueRight:
+        return RightEdge;
+    case CSSValueBottom:
+        return BottomEdge;
+    case CSSValueLeft:
+        return LeftEdge;
+    }
+
+    ASSERT_NOT_REACHED();
+    return TopEdge;
+}
 
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(EBoxSizing e)
     : CSSValue(PrimitiveClass)
@@ -2974,6 +3010,12 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(TextOrientation e)
 {
     m_primitiveUnitType = CSS_IDENT;
     switch (e) {
+    case TextOrientationSideways:
+        m_value.ident = CSSValueSideways;
+        break;
+    case TextOrientationSidewaysRight:
+        m_value.ident = CSSValueSidewaysRight;
+        break;
     case TextOrientationVerticalRight:
         m_value.ident = CSSValueVerticalRight;
         break;
@@ -2986,6 +3028,10 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(TextOrientation e)
 template<> inline CSSPrimitiveValue::operator TextOrientation() const
 {
     switch (m_value.ident) {
+    case CSSValueSideways:
+        return TextOrientationSideways;
+    case CSSValueSidewaysRight:
+        return TextOrientationSidewaysRight;
     case CSSValueVerticalRight:
         return TextOrientationVerticalRight;
     case CSSValueUpright:
