@@ -26,8 +26,8 @@
 #include "config.h"
 #include "NetworkProcessProxy.h"
 
+#include "DownloadProxyMessages.h"
 #include "NetworkProcessCreationParameters.h"
-#include "NetworkProcessManager.h"
 #include "NetworkProcessMessages.h"
 #include "WebContext.h"
 #include "WebProcessMessages.h"
@@ -39,14 +39,17 @@ using namespace WebCore;
 
 namespace WebKit {
 
-PassRefPtr<NetworkProcessProxy> NetworkProcessProxy::create(NetworkProcessManager* manager)
+PassRefPtr<NetworkProcessProxy> NetworkProcessProxy::create(WebContext* webContext)
 {
-    return adoptRef(new NetworkProcessProxy(manager));
+    return adoptRef(new NetworkProcessProxy(webContext));
 }
 
-NetworkProcessProxy::NetworkProcessProxy(NetworkProcessManager* manager)
-    : m_networkProcessManager(manager)
+NetworkProcessProxy::NetworkProcessProxy(WebContext* webContext)
+    : m_webContext(webContext)
     , m_numPendingConnectionRequests(0)
+#if ENABLE(CUSTOM_PROTOCOLS)
+    , m_customProtocolManagerProxy(this)
+#endif
 {
     connect();
 }
@@ -80,6 +83,14 @@ void NetworkProcessProxy::getNetworkProcessConnection(PassRefPtr<Messages::WebPr
     connection()->send(Messages::NetworkProcess::CreateNetworkConnectionToWebProcess(), 0, CoreIPC::DispatchMessageEvenWhenWaitingForSyncReply);
 }
 
+DownloadProxy* NetworkProcessProxy::createDownloadProxy()
+{
+    if (!m_downloadProxyMap)
+        m_downloadProxyMap = adoptPtr(new DownloadProxyMap(m_messageReceiverMap));
+
+    return m_downloadProxyMap->createDownloadProxy(m_webContext);
+}
+
 void NetworkProcessProxy::networkProcessCrashedOrFailedToLaunch()
 {
     // The network process must have crashed or exited, send any pending sync replies we might have.
@@ -94,20 +105,39 @@ void NetworkProcessProxy::networkProcessCrashedOrFailedToLaunch()
     }
 
     // Tell the network process manager to forget about this network process proxy. This may cause us to be deleted.
-    m_networkProcessManager->removeNetworkProcessProxy(this);
+    m_webContext->removeNetworkProcessProxy(this);
 }
 
 void NetworkProcessProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
 {
+    if (m_messageReceiverMap.dispatchMessage(connection, messageID, decoder))
+        return;
+
+    if (m_webContext->dispatchMessage(connection, messageID, decoder))
+        return;
+
+#if ENABLE(CUSTOM_PROTOCOLS)
+    if (messageID.is<CoreIPC::MessageClassCustomProtocolManagerProxy>()) {
+        m_customProtocolManagerProxy.didReceiveMessage(connection, messageID, decoder);
+        return;
+    }
+#endif
+
     didReceiveNetworkProcessProxyMessage(connection, messageID, decoder);
+}
+
+void NetworkProcessProxy::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
+{
+    if (m_messageReceiverMap.dispatchSyncMessage(connection, messageID, decoder, replyEncoder))
+        return;
+
+    ASSERT_NOT_REACHED();
 }
 
 void NetworkProcessProxy::didClose(CoreIPC::Connection*)
 {
-    // Notify all WebProcesses that the NetworkProcess crashed.
-    const Vector<WebContext*>& contexts = WebContext::allContexts();
-    for (size_t i = 0; i < contexts.size(); ++i)
-        contexts[i]->sendToAllProcesses(Messages::WebProcess::NetworkProcessCrashed());
+    if (m_downloadProxyMap)
+        m_downloadProxyMap->processDidClose();
 
     // This may cause us to be deleted.
     networkProcessCrashedOrFailedToLaunch();
@@ -139,12 +169,6 @@ void NetworkProcessProxy::didFinishLaunching(ProcessLauncher* launcher, CoreIPC:
         // FIXME: Do better cleanup here.
         return;
     }
-
-    NetworkProcessCreationParameters parameters;
-    platformInitializeNetworkProcess(parameters);
-
-    // Initialize the network host process.
-    connection()->send(Messages::NetworkProcess::InitializeNetworkProcess(parameters), 0);
 
     for (unsigned i = 0; i < m_numPendingConnectionRequests; ++i)
         connection()->send(Messages::NetworkProcess::CreateNetworkConnectionToWebProcess(), 0);

@@ -73,6 +73,10 @@ public:
     virtual bool supportsKeyboardFocus() const { return false; }
     virtual bool canProcessDrag() const { return false; }
 
+    virtual bool shouldAlwaysAutoStart() const { return false; }
+
+    virtual bool shouldAllowNavigationFromDrags() const { return false; }
+
 protected:
     explicit PluginViewBase(PlatformWidget widget = 0) : Widget(widget) { }
     

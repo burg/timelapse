@@ -146,16 +146,14 @@ void IDBIndexBackendImpl::OpenIndexCursorOperation::perform(IDBTransactionBacken
     RefPtr<IDBBackingStore::Cursor> backingStoreCursor;
 
     switch (m_cursorType) {
-    case IDBCursorBackendInterface::IndexKeyCursor:
+    case IDBCursorBackendInterface::KeyOnly:
         backingStoreCursor = m_index->backingStore()->openIndexKeyCursor(transaction->backingStoreTransaction(), m_index->databaseId(), m_index->m_objectStoreBackend->id(), m_index->id(), m_keyRange.get(), direction);
         break;
-    case IDBCursorBackendInterface::IndexCursor:
+    case IDBCursorBackendInterface::KeyAndValue:
         backingStoreCursor = m_index->backingStore()->openIndexCursor(transaction->backingStoreTransaction(), m_index->databaseId(), m_index->m_objectStoreBackend->id(), m_index->id(), m_keyRange.get(), direction);
         break;
-    case IDBCursorBackendInterface::ObjectStoreCursor:
-    case IDBCursorBackendInterface::InvalidCursorType:
+    default:
         ASSERT_NOT_REACHED();
-        break;
     }
 
     if (!backingStoreCursor) {
@@ -172,8 +170,7 @@ void IDBIndexBackendImpl::openCursor(PassRefPtr<IDBKeyRange> keyRange, unsigned 
     IDB_TRACE("IDBIndexBackendImpl::openCursor");
     RefPtr<IDBCallbacks> callbacks = prpCallbacks;
     RefPtr<IDBTransactionBackendImpl> transaction = IDBTransactionBackendImpl::from(transactionPtr);
-    if (!transaction->scheduleTask(OpenIndexCursorOperation::create(this, keyRange, direction, IDBCursorBackendInterface::IndexCursor, callbacks)))
-        callbacks->onError(IDBDatabaseError::create(IDBDatabaseException::AbortError));
+    transaction->scheduleTask(OpenIndexCursorOperation::create(this, keyRange, direction, IDBCursorBackendInterface::KeyAndValue, callbacks));
 }
 
 void IDBIndexBackendImpl::openKeyCursor(PassRefPtr<IDBKeyRange> keyRange, unsigned short direction, PassRefPtr<IDBCallbacks> prpCallbacks, IDBTransactionBackendInterface* transactionPtr, ExceptionCode&)
@@ -181,8 +178,7 @@ void IDBIndexBackendImpl::openKeyCursor(PassRefPtr<IDBKeyRange> keyRange, unsign
     IDB_TRACE("IDBIndexBackendImpl::openKeyCursor");
     RefPtr<IDBCallbacks> callbacks = prpCallbacks;
     RefPtr<IDBTransactionBackendImpl> transaction = IDBTransactionBackendImpl::from(transactionPtr);
-    if (!transaction->scheduleTask(OpenIndexCursorOperation::create(this, keyRange, direction, IDBCursorBackendInterface::IndexKeyCursor, callbacks)))
-        callbacks->onError(IDBDatabaseError::create(IDBDatabaseException::AbortError));
+    transaction->scheduleTask(OpenIndexCursorOperation::create(this, keyRange, direction, IDBCursorBackendInterface::KeyOnly, callbacks));
 }
 
 void IDBIndexBackendImpl::IndexCountOperation::perform(IDBTransactionBackendImpl* transaction)
@@ -208,8 +204,7 @@ void IDBIndexBackendImpl::count(PassRefPtr<IDBKeyRange> range, PassRefPtr<IDBCal
     IDB_TRACE("IDBIndexBackendImpl::count");
     RefPtr<IDBCallbacks> callbacks = prpCallbacks;
     RefPtr<IDBTransactionBackendImpl> transaction = IDBTransactionBackendImpl::from(transactionPtr);
-    if (!transaction->scheduleTask(IndexCountOperation::create(this, range, callbacks)))
-        callbacks->onError(IDBDatabaseError::create(IDBDatabaseException::AbortError));
+    transaction->scheduleTask(IndexCountOperation::create(this, range, callbacks));
 }
 
 void IDBIndexBackendImpl::IndexReferencedValueRetrievalOperation::perform(IDBTransactionBackendImpl* transaction)
@@ -237,22 +232,22 @@ void IDBIndexBackendImpl::IndexReferencedValueRetrievalOperation::perform(IDBTra
         return;
     }
 
-    String value;
+    Vector<uint8_t> value;
     ok = m_index->backingStore()->getRecord(transaction->backingStoreTransaction(), m_index->databaseId(), m_index->m_objectStoreBackend->id(), *primaryKey, value);
     if (!ok) {
         m_callbacks->onError(IDBDatabaseError::create(IDBDatabaseException::UnknownError, "Internal error in getRecord."));
         return;
     }
 
-    if (value.isNull()) {
+    if (value.isEmpty()) {
         m_callbacks->onSuccess();
         return;
     }
     if (m_index->m_objectStoreBackend->autoIncrement() && !m_index->m_objectStoreBackend->keyPath().isNull()) {
-        m_callbacks->onSuccess(SerializedScriptValue::createFromWire(value), primaryKey, m_index->m_objectStoreBackend->keyPath());
+        m_callbacks->onSuccess(SerializedScriptValue::createFromWireBytes(value), primaryKey, m_index->m_objectStoreBackend->keyPath());
         return;
     }
-    m_callbacks->onSuccess(SerializedScriptValue::createFromWire(value));
+    m_callbacks->onSuccess(SerializedScriptValue::createFromWireBytes(value));
 }
 
 
@@ -285,8 +280,7 @@ void IDBIndexBackendImpl::get(PassRefPtr<IDBKeyRange> keyRange, PassRefPtr<IDBCa
     IDB_TRACE("IDBIndexBackendImpl::get");
     RefPtr<IDBCallbacks> callbacks = prpCallbacks;
     RefPtr<IDBTransactionBackendImpl> transaction = IDBTransactionBackendImpl::from(transactionPtr);
-    if (!transaction->scheduleTask(IndexReferencedValueRetrievalOperation::create(this, keyRange, callbacks)))
-        callbacks->onError(IDBDatabaseError::create(IDBDatabaseException::AbortError));
+    transaction->scheduleTask(IndexReferencedValueRetrievalOperation::create(this, keyRange, callbacks));
 }
 
 void IDBIndexBackendImpl::getKey(PassRefPtr<IDBKeyRange> keyRange, PassRefPtr<IDBCallbacks> prpCallbacks, IDBTransactionBackendInterface* transactionPtr, ExceptionCode&)
@@ -294,8 +288,7 @@ void IDBIndexBackendImpl::getKey(PassRefPtr<IDBKeyRange> keyRange, PassRefPtr<ID
     IDB_TRACE("IDBIndexBackendImpl::getKey");
     RefPtr<IDBCallbacks> callbacks = prpCallbacks;
     RefPtr<IDBTransactionBackendImpl> transaction = IDBTransactionBackendImpl::from(transactionPtr);
-    if (!transaction->scheduleTask(IndexValueRetrievalOperation::create(this, keyRange, callbacks)))
-        callbacks->onError(IDBDatabaseError::create(IDBDatabaseException::AbortError));
+    transaction->scheduleTask(IndexValueRetrievalOperation::create(this, keyRange, callbacks));
 }
 
 } // namespace WebCore

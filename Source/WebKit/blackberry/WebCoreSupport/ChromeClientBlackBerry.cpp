@@ -498,8 +498,9 @@ void ChromeClientBlackBerry::exceededDatabaseQuota(Frame* frame, const String& n
 
     DatabaseManager& manager = DatabaseManager::manager();
 
-    unsigned long long totalUsage = manager.totalDatabaseUsage();
-    unsigned long long originUsage = manager.usageForOrigin(origin);
+    unsigned long long totalUsage = tracker.totalDatabaseUsage();
+    unsigned long long originUsage = tracker.usageForOrigin(origin);
+    unsigned long long currentQuota = tracker.quotaForOrigin(origin);
 
     DatabaseDetails details = manager.detailsForNameAndOrigin(name, origin);
     unsigned long long estimatedSize = details.expectedUsage();
@@ -508,7 +509,7 @@ void ChromeClientBlackBerry::exceededDatabaseQuota(Frame* frame, const String& n
     String originStr = origin->databaseIdentifier();
 
     unsigned long long quota = m_webPagePrivate->m_client->databaseQuota(originStr.characters(), originStr.length(),
-        nameStr.characters(), nameStr.length(), totalUsage, originUsage, estimatedSize);
+        nameStr.characters(), nameStr.length(), originUsage, currentQuota, estimatedSize);
 
     manager.setQuota(origin, quota);
 #endif
@@ -690,11 +691,11 @@ void ChromeClientBlackBerry::overflowExceedsContentsSize(Frame* frame) const
         return;
 
 #if DEBUG_OVERFLOW_DETECTION
-    BBLOG(BlackBerry::Platform::LogLevelInfo, "ChromeClientBlackBerry::overflowExceedsContentsSize contents=%dx%d overflow=%dx%d",
-                           frame->contentRenderer()->rightLayoutOverflow(),
-                           frame->contentRenderer()->bottomLayoutOverflow(),
-                           frame->contentRenderer()->rightAbsoluteVisibleOverflow(),
-                           frame->contentRenderer()->bottomAbsoluteVisibleOverflow());
+    BlackBerry::Platform::logAlways(BlackBerry::Platform::LogLevelInfo,
+        "ChromeClientBlackBerry::overflowExceedsContentsSize contents=%s overflow=%f x %f",
+        BlackBerry::Platform::IntRect(frame->contentRenderer()->documentRect()).toString().c_str(),
+        frame->contentRenderer()->rightAbsoluteVisibleOverflow().toFloat(),
+        frame->contentRenderer()->bottomAbsoluteVisibleOverflow().toFloat());
 #endif
     m_webPagePrivate->overflowExceedsContentsSize();
 }

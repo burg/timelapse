@@ -28,7 +28,7 @@
 
 #include "EditingBehaviorTypes.h"
 #include "IntSize.h"
-#include "RefCountedSupplement.h"
+#include "InternalSettingsGenerated.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -42,15 +42,13 @@ class Document;
 class Page;
 class Settings;
 
-class InternalSettings : public RefCountedSupplement<Page, InternalSettings> {
+class InternalSettings : public InternalSettingsGenerated {
 public:
     class Backup {
     public:
-        Backup(Page*, Settings*);
-        void restoreTo(Page*, Settings*);
+        explicit Backup(Settings*);
+        void restoreTo(Settings*);
 
-        double m_originalPasswordEchoDurationInSeconds;
-        bool m_originalPasswordEchoEnabled;
         bool m_originalFixedElementsLayoutRelativeToFrame;
         bool m_originalCSSExclusionsEnabled;
         bool m_originalCSSVariablesEnabled;
@@ -78,11 +76,11 @@ public:
 #if ENABLE(DIALOG_ELEMENT)
         bool m_originalDialogElementEnabled;
 #endif
-        bool m_canStartMedia;
         bool m_originalForceCompositingMode;
         bool m_originalCompositingForFixedPositionEnabled;
         bool m_originalCompositingForScrollableFramesEnabled;
         bool m_originalAcceleratedDrawingEnabled;
+        bool m_originalCanvasUsesAcceleratedDrawing;
         bool m_originalMockScrollbarsEnabled;
         bool m_originalUsesOverlayScrollbars;
         bool m_langAttributeAwareFormControlUIEnabled;
@@ -94,21 +92,24 @@ public:
 #endif
     };
 
-    typedef RefCountedSupplement<Page, InternalSettings> SuperType;
+    static PassRefPtr<InternalSettings> create(Page* page)
+    {
+        return adoptRef(new InternalSettings(page));
+    }
     static InternalSettings* from(Page*);
+    void hostDestroyed() { m_page = 0; }
 
     virtual ~InternalSettings();
-    void reset();
+    void resetToConsistentState();
 
     void setForceCompositingMode(bool enabled, ExceptionCode&);
     void setEnableCompositingForFixedPosition(bool enabled, ExceptionCode&);
     void setEnableCompositingForScrollableFrames(bool enabled, ExceptionCode&);
+    void setEnableCompositingForOverflowScroll(bool enabled, ExceptionCode&);
     void setAcceleratedDrawingEnabled(bool enabled, ExceptionCode&);
     void setAcceleratedFiltersEnabled(bool enabled, ExceptionCode&);
     void setMockScrollbarsEnabled(bool enabled, ExceptionCode&);
     void setUsesOverlayScrollbars(bool enabled, ExceptionCode&);
-    void setPasswordEchoEnabled(bool enabled, ExceptionCode&);
-    void setPasswordEchoDurationInSeconds(double durationInSeconds, ExceptionCode&);
     void setFixedElementsLayoutRelativeToFrame(bool, ExceptionCode&);
     void setUnifiedTextCheckingEnabled(bool, ExceptionCode&);
     bool unifiedTextCheckingEnabled(ExceptionCode&);
@@ -151,7 +152,6 @@ public:
 
 private:
     explicit InternalSettings(Page*);
-    virtual void hostDestroyed() OVERRIDE { m_page = 0; }
 
     Settings* settings() const;
     Page* page() const { return m_page; }

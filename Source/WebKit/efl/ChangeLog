@@ -1,3 +1,205 @@
+2012-12-23  Alexey Proskuryakov  <ap@apple.com>
+
+        <rdar://problem/12808377> Network process should respect cookie accept policy
+        https://bugs.webkit.org/show_bug.cgi?id=105684
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/PlatformStrategiesEfl.cpp:
+        * WebCoreSupport/PlatformStrategiesEfl.h:
+        CookiesStrategy no longer has notifyCookiesChanged(). This port didn't use it anyway.
+
+2012-12-22  Alexey Proskuryakov  <ap@apple.com>
+
+        Add a separate class for networking related storage
+        https://bugs.webkit.org/show_bug.cgi?id=105676
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/PlatformStrategiesEfl.cpp:
+        (PlatformStrategiesEfl::cookiesForDOM):
+        (PlatformStrategiesEfl::setCookiesFromDOM):
+        (PlatformStrategiesEfl::cookiesEnabled):
+        (PlatformStrategiesEfl::cookieRequestHeaderFieldValue):
+        (PlatformStrategiesEfl::getRawCookies):
+        (PlatformStrategiesEfl::deleteCookie):
+        * WebCoreSupport/PlatformStrategiesEfl.h:
+        Cookie functions now take a NetworkStorageSession, not a NetworkingContext.
+
+2012-12-21  Seokju Kwon  <seokju.kwon@gmail.com>
+
+        [EFL] Add guard around ContextMenuItemTagInspectElement
+        https://bugs.webkit.org/show_bug.cgi?id=105267
+
+        Reviewed by Ryosuke Niwa.
+
+        Need INSPECTOR guard for using ContextMenuItemTagInspectElement.
+
+        * WebCoreSupport/AssertMatchingEnums.cpp:
+
+2012-12-21  Kangil Han  <kangil.han@samsung.com>
+
+        [EFL][WK1] Obsolete a case in test_ewk_frame api test to not make bot sick
+        https://bugs.webkit.org/show_bug.cgi?id=105142
+
+        Reviewed by Gyuyoung Kim.
+
+        BUG 49246 has changed load behavior on malformed url input.
+        That is why test_ewk_frame api test is timed out.
+        To not make bot sick, this patch comments out that test case at a moment.
+
+        * tests/test_ewk_frame.cpp:
+        (TEST_F):
+
+2012-12-20  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Build break with latest EFL libraries.
+        https://bugs.webkit.org/show_bug.cgi?id=104827
+
+        Reviewed by Laszlo Gombos.
+
+        * WebCoreSupport/ChromeClientEfl.h: Removed unnecessary declaration.
+        * WebCoreSupport/DumpRenderTreeSupportEfl.h: Ditto.
+        * WebCoreSupport/EditorClientEfl.h: Ditto.
+        * WebCoreSupport/FrameNetworkingContextEfl.h: Ditto.
+        * WebCoreSupport/PageClientEfl.h: Ditto.
+
+2012-12-18  Alexey Proskuryakov  <ap@apple.com>
+
+        Remove unnecessary functions from CookiesStrategy
+        https://bugs.webkit.org/show_bug.cgi?id=105369
+
+        Reviewed by Brady Eidson.
+
+        * WebCoreSupport/PlatformStrategiesEfl.cpp:
+        * WebCoreSupport/PlatformStrategiesEfl.h:
+
+2012-12-16  Seokju Kwon  <seokju.kwon@gmail.com>
+
+        Fix unused parameter compile warnings
+        https://bugs.webkit.org/show_bug.cgi?id=105089
+
+        Reviewed by Kentaro Hara.
+
+        Use UNUSED_PARAM macro to fix build warning -Wunused-parameter.
+
+        * ewk/ewk_view.cpp:
+        (ewk_view_inspector_show):
+        (ewk_view_inspector_close):
+        (ewk_view_inspector_view_get):
+        (ewk_view_inspector_view_set):
+
+2012-12-15  Anders Carlsson  <andersca@apple.com>
+
+        Rename FrameLoaderClient::download to convertMainResourceLoadToDownload
+        https://bugs.webkit.org/show_bug.cgi?id=105122
+
+        Reviewed by Andreas Kling.
+
+        Update for WebCore changes.
+
+        * WebCoreSupport/FrameLoaderClientEfl.cpp:
+        (WebCore::FrameLoaderClientEfl::convertMainResourceLoadToDownload):
+        * WebCoreSupport/FrameLoaderClientEfl.h:
+        (FrameLoaderClientEfl):
+
+2012-12-15  Mark Lam  <mark.lam@apple.com>
+
+        Re-landing patch for "Introducing the DatabaseStrategy and database servers".
+        https://bugs.webkit.org/show_bug.cgi?id=104934.
+
+        Not reviewed.
+
+        Merged from r137767. Previously reviewed by Sam Weinig.
+
+        * WebCoreSupport/PlatformStrategiesEfl.cpp:
+        (PlatformStrategiesEfl::createDatabaseStrategy):
+        * WebCoreSupport/PlatformStrategiesEfl.h:
+        (PlatformStrategiesEfl):
+
+2012-12-14  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r137767.
+        http://trac.webkit.org/changeset/137767
+        https://bugs.webkit.org/show_bug.cgi?id=105062
+
+        Broke Mac builds. (Requested by mlam on #webkit).
+
+        * WebCoreSupport/PlatformStrategiesEfl.cpp:
+        * WebCoreSupport/PlatformStrategiesEfl.h:
+        (PlatformStrategiesEfl):
+
+2012-12-14  Mark Lam  <mark.lam@apple.com>
+
+        Introducing the DatabaseStrategy and database servers.
+        https://bugs.webkit.org/show_bug.cgi?id=104934.
+
+        Reviewed by Sam Weinig.
+
+        The database server is currently a placeholder that does nothing.
+
+        * WebCoreSupport/PlatformStrategiesEfl.cpp:
+        (PlatformStrategiesEfl::createDatabaseStrategy):
+        * WebCoreSupport/PlatformStrategiesEfl.h:
+        (PlatformStrategiesEfl):
+
+2012-12-13  Seokju Kwon  <seokju.kwon@gmail.com>
+
+        Fix unused parameter compile warnings
+        https://bugs.webkit.org/show_bug.cgi?id=104907
+
+        Reviewed by Kentaro Hara.
+
+        Use UNUSED_PARAM macro to fix build warning -Wunused-parameter
+        when ENABLE_INSPECTOR is disabled.
+
+        * WebCoreSupport/DumpRenderTreeSupportEfl.cpp:
+        (DumpRenderTreeSupportEfl::evaluateInWebInspector):
+
+2012-12-13  Jussi Kukkonen  <jussi.kukkonen@intel.com>
+
+        [EFL][GTK] Don't call deprecated g_type_init when glib => 2.35
+        https://bugs.webkit.org/show_bug.cgi?id=103209
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        g_type_init() is deprecated from 2.35.0 onwards. Don't call it
+        in that case to avoid warnings and/or build failure.
+
+        * ewk/ewk_main.cpp:
+        (_ewk_init_body):
+
+2012-12-13  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        Regression(r137568): Broke layout test on EFL WK1
+        https://bugs.webkit.org/show_bug.cgi?id=104895
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Fix layout test crash after r137568 because ewk_view.cpp has kept unused networkInfoClient member variable
+        using OwnPtr. The r137568 lets NetworkInfoClientEfl destroy by WebCore::NetworkInfoController.
+
+        * ewk/ewk_view.cpp:
+        (_Ewk_View_Private_Data):
+        (_ewk_view_priv_new):
+
+2012-12-12  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        NetworkInfoController needs to support destructor
+        https://bugs.webkit.org/show_bug.cgi?id=104642
+
+        Reviewed by Kentaro Hara.
+
+        Though NetworkInfoController can be referenced by each port in order to update network status change,
+        there is no virtual interface to destroy it. Beside each port client also needs to be destroyed when
+        controller is destroyed.
+
+        * WebCoreSupport/NetworkInfoClientEfl.cpp:
+        (WebCore::NetworkInfoClientEfl::networkInfoControllerDestroyed):
+        (WebCore):
+        * WebCoreSupport/NetworkInfoClientEfl.h:
+        (NetworkInfoClientEfl):
+
 2012-12-12  Seokju Kwon  <seokju.kwon@gmail.com>
 
         [EFL] Refactor duplicate code into EflInspectorUtilities

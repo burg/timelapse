@@ -21,6 +21,7 @@
 
 #include "BlackBerryGlobal.h"
 #include <BlackBerryPlatformGraphics.h>
+#include <BlackBerryPlatformMisc.h>
 
 namespace WebCore {
 class ChromeClientBlackBerry;
@@ -65,11 +66,6 @@ public:
     void blitVisibleContents();
     void repaint(int x, int y, int width, int height, bool contentChanged, bool immediate);
 
-    // In the defers blit mode, any blit requests will just return early, and
-    // a blit job will be queued that is executed by calling blitOnIdle().
-    bool defersBlit() const;
-    void setDefersBlit(bool);
-
     bool hasBlitJobs() const;
     void blitOnIdle();
 
@@ -90,6 +86,7 @@ private:
     friend class WebCore::FrameLoaderClientBlackBerry;
     friend class WebCore::GLES2Context;
     BackingStorePrivate *d;
+    DISABLE_COPY(BackingStore)
 };
 }
 }

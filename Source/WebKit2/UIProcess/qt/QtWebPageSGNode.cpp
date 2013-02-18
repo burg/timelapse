@@ -23,7 +23,10 @@
 
 #include "LayerTreeRenderer.h"
 #include <QtGui/QPolygonF>
+#include <QtQuick/QQuickItem>
+#include <QtQuick/QQuickWindow>
 #include <QtQuick/QSGSimpleRectNode>
+#include <WebCore/TransformationMatrix.h>
 #include <private/qsgrendernode_p.h>
 
 using namespace WebCore;
@@ -45,7 +48,13 @@ public:
 
     virtual void render(const RenderState& state)
     {
-        QMatrix4x4 renderMatrix = matrix() ? *matrix() : QMatrix4x4();
+        TransformationMatrix renderMatrix;
+        if (pageNode()->devicePixelRatio() != 1.0) {
+            renderMatrix.scale(pageNode()->devicePixelRatio());
+            if (matrix())
+                renderMatrix.multiply(*matrix());
+        } else if (matrix())
+            renderMatrix = *matrix();
 
         // When rendering to an intermediate surface, Qt will
         // mirror the projection matrix to fit on the destination coordinate system.
@@ -61,6 +70,13 @@ public:
         layerTreeRenderer()->purgeGLResources();
     }
 
+    const QtWebPageSGNode* pageNode() const
+    {
+        const QtWebPageSGNode* parent = static_cast<QtWebPageSGNode*>(this->parent());
+        ASSERT(parent);
+        return parent;
+    }
+
     LayerTreeRenderer* layerTreeRenderer() const { return m_renderer.get(); }
 
 private:
@@ -73,6 +89,8 @@ private:
             QMatrix4x4 clipMatrix;
             if (clip->matrix())
                 clipMatrix = *clip->matrix();
+            clipMatrix.scale(pageNode()->devicePixelRatio());
+
             QRectF currentClip;
 
             if (clip->isRectangular())
@@ -111,6 +129,7 @@ private:
 QtWebPageSGNode::QtWebPageSGNode()
     : m_contentsNode(0)
     , m_backgroundNode(new QSGSimpleRectNode)
+    , m_devicePixelRatio(1)
 {
     appendChildNode(m_backgroundNode);
 }
@@ -135,6 +154,7 @@ void QtWebPageSGNode::setRenderer(PassRefPtr<LayerTreeRenderer> renderer)
 
     delete m_contentsNode;
     m_contentsNode = new ContentsSGNode(renderer);
+    // This sets the parent node of the content to QtWebPageSGNode.
     appendChildNode(m_contentsNode);
 }
 

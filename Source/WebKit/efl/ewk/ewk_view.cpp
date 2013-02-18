@@ -82,6 +82,7 @@
 #include <limits>
 #include <math.h>
 #include <sys/time.h>
+#include <wtf/UnusedParam.h>
 
 #if ENABLE(DEVICE_ORIENTATION)
 #include "DeviceMotionClientEfl.h"
@@ -263,9 +264,6 @@ struct _Ewk_View_Private_Data {
     OwnPtr<WebCore::AcceleratedCompositingContext> acceleratedCompositingContext;
     bool isCompositingActive;
     RefPtr<Evas_Object> compositingObject;
-#endif
-#if ENABLE(NETWORK_INFO)
-    OwnPtr<WebCore::NetworkInfoClientEfl> networkInfoClient;
 #endif
 #if ENABLE(INPUT_TYPE_COLOR)
     WebCore::ColorChooserClient* colorChooserClient;
@@ -775,8 +773,7 @@ static Ewk_View_Private_Data* _ewk_view_priv_new(Ewk_View_Smart_Data* smartData)
 #endif
 
 #if ENABLE(NETWORK_INFO)
-    priv->networkInfoClient = adoptPtr(new WebCore::NetworkInfoClientEfl);
-    WebCore::provideNetworkInfoTo(priv->page.get(), priv->networkInfoClient.get());
+    WebCore::provideNetworkInfoTo(priv->page.get(), new WebCore::NetworkInfoClientEfl);
 #endif
 
 #if ENABLE(VIBRATION)
@@ -4488,6 +4485,8 @@ void ewk_view_inspector_show(const Evas_Object* ewkView)
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv);
 
     priv->page->inspectorController()->show();
+#else
+    UNUSED_PARAM(ewkView);
 #endif
 }
 
@@ -4498,6 +4497,8 @@ void ewk_view_inspector_close(const Evas_Object* ewkView)
     EWK_VIEW_PRIV_GET_OR_RETURN(smartData, priv);
 
     priv->page->inspectorController()->close();
+#else
+    UNUSED_PARAM(ewkView);
 #endif
 }
 
@@ -4509,6 +4510,7 @@ Evas_Object* ewk_view_inspector_view_get(const Evas_Object* ewkView)
 
     return priv->inspectorView;
 #else
+    UNUSED_PARAM(ewkView);
     return 0;
 #endif
 }
@@ -4520,6 +4522,9 @@ void ewk_view_inspector_view_set(Evas_Object* ewkView, Evas_Object* inspectorVie
     EWK_VIEW_PRIV_GET(smartData, priv);
 
     priv->inspectorView = inspectorView;
+#else
+    UNUSED_PARAM(ewkView);
+    UNUSED_PARAM(inspectorView);
 #endif
 }
 

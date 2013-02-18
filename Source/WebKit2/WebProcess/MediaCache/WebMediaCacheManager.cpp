@@ -26,8 +26,7 @@
 #include "config.h"
 #include "WebMediaCacheManager.h"
 
-#include "MessageID.h"
-#include "SecurityOriginData.h"
+#include "WebMediaCacheManagerMessages.h"
 #include "WebMediaCacheManagerProxyMessages.h"
 #include "WebProcess.h"
 #include <WebCore/HTMLMediaElement.h>
@@ -36,14 +35,16 @@ using namespace WebCore;
 
 namespace WebKit {
 
-WebMediaCacheManager& WebMediaCacheManager::shared()
+const AtomicString& WebMediaCacheManager::supplementName()
 {
-    static WebMediaCacheManager& shared = *new WebMediaCacheManager;
-    return shared;
+    DEFINE_STATIC_LOCAL(AtomicString, name, ("WebMediaCacheManager", AtomicString::ConstructFromLiteral));
+    return name;
 }
 
-WebMediaCacheManager::WebMediaCacheManager()
+WebMediaCacheManager::WebMediaCacheManager(WebProcess* process)
+    : m_process(process)
 {
+    m_process->addMessageReceiver(Messages::WebMediaCacheManager::messageReceiverName(), this);
 }
 
 void WebMediaCacheManager::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
@@ -53,7 +54,7 @@ void WebMediaCacheManager::didReceiveMessage(CoreIPC::Connection* connection, Co
 
 void WebMediaCacheManager::getHostnamesWithMediaCache(uint64_t callbackID)
 {
-    WebProcess::LocalTerminationDisabler terminationDisabler(WebProcess::shared());
+    ChildProcess::LocalTerminationDisabler terminationDisabler(*m_process);
 
     Vector<String> mediaCacheHostnames;
 
@@ -61,12 +62,12 @@ void WebMediaCacheManager::getHostnamesWithMediaCache(uint64_t callbackID)
     HTMLMediaElement::getSitesInMediaCache(mediaCacheHostnames);
 #endif
 
-    WebProcess::shared().connection()->send(Messages::WebMediaCacheManagerProxy::DidGetHostnamesWithMediaCache(mediaCacheHostnames, callbackID), 0);
+    m_process->send(Messages::WebMediaCacheManagerProxy::DidGetHostnamesWithMediaCache(mediaCacheHostnames, callbackID), 0);
 }
 
 void WebMediaCacheManager::clearCacheForHostname(const String& hostname)
 {
-    WebProcess::LocalTerminationDisabler terminationDisabler(WebProcess::shared());
+    ChildProcess::LocalTerminationDisabler terminationDisabler(*m_process);
 
 #if ENABLE(VIDEO)
     HTMLMediaElement::clearMediaCacheForSite(hostname);
@@ -75,7 +76,7 @@ void WebMediaCacheManager::clearCacheForHostname(const String& hostname)
 
 void WebMediaCacheManager::clearCacheForAllHostnames()
 {
-    WebProcess::LocalTerminationDisabler terminationDisabler(WebProcess::shared());
+    ChildProcess::LocalTerminationDisabler terminationDisabler(*m_process);
 
 #if ENABLE(VIDEO)
     HTMLMediaElement::clearMediaCache();

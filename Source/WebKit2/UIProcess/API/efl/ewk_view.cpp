@@ -52,6 +52,7 @@
 #include "ewk_view_private.h"
 #include <Ecore_Evas.h>
 #include <WebKit2/WKPageGroup.h>
+#include <wtf/UnusedParam.h>
 #include <wtf/text/CString.h>
 
 #if ENABLE(INSPECTOR)
@@ -390,7 +391,7 @@ static void _ewk_view_smart_calculate(Evas_Object* ewkView)
         impl->setNeedsSurfaceResize();
 #endif
 #if USE(TILED_BACKING_STORE)
-        impl->pageClient()->updateViewportSize(IntSize(width, height));
+        impl->pageClient()->updateViewportSize();
 #endif
     }
 }
@@ -639,7 +640,7 @@ Eina_Bool ewk_view_device_pixel_ratio_set(Evas_Object* ewkView, float ratio)
 {
     EWK_VIEW_IMPL_GET_OR_RETURN(ewkView, impl, false);
 
-    impl->page()->setCustomDeviceScaleFactor(ratio);
+    impl->setDeviceScaleFactor(ratio);
 
     return true;
 }
@@ -864,6 +865,7 @@ Eina_Bool ewk_view_inspector_show(Evas_Object* ewkView)
 
     return true;
 #else
+    UNUSED_PARAM(ewkView);
     return false;
 #endif
 }
@@ -879,6 +881,7 @@ Eina_Bool ewk_view_inspector_close(Evas_Object* ewkView)
 
     return true;
 #else
+    UNUSED_PARAM(ewkView);
     return false;
 #endif
 }

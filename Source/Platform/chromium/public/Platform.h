@@ -212,6 +212,18 @@ public:
     // false on platform specific error conditions.
     virtual bool processMemorySizesInBytes(size_t* privateBytes, size_t* sharedBytes) { return false; }
 
+    // A callback interface for requestProcessMemorySizes
+    class ProcessMemorySizesCallback {
+    public:
+        virtual ~ProcessMemorySizesCallback() { }
+        virtual void dataReceived(size_t privateBytes, size_t sharedBytes) = 0;
+    };
+
+    // Requests private and shared usage, in bytes. Private bytes is the amount of
+    // memory currently allocated to this process that cannot be shared.
+    // The callback ownership is passed to the callee.
+    virtual void requestProcessMemorySizes(ProcessMemorySizesCallback* requestCallback) { }
+
     // Reports number of bytes used by memory allocator for internal needs.
     // Returns true if the size has been reported, or false otherwise.
     virtual bool memoryAllocatorWasteInBytes(size_t*) { return false; }
@@ -346,8 +358,7 @@ public:
     virtual const unsigned char* getTraceCategoryEnabledFlag(const char* categoryName) { return 0; }
 
     // Add a trace event to the platform tracing system. Depending on the actual
-    // enabled state, this event may be recorded or dropped. Returns
-    // thresholdBeginId for use in a corresponding end addTraceEvent call.
+    // enabled state, this event may be recorded or dropped. 
     // - phase specifies the type of event:
     //   - BEGIN ('B'): Marks the beginning of a scoped event.
     //   - END ('E'): Marks the end of a scoped event.
@@ -393,7 +404,7 @@ public:
     //     matching with other events of the same name.
     //   - MANGLE_ID (0x4): specify this flag if the id parameter is the value
     //     of a pointer.
-    virtual int addTraceEvent(
+    virtual void addTraceEvent(
         char phase,
         const unsigned char* categoryEnabledFlag,
         const char* name,
@@ -402,9 +413,7 @@ public:
         const char** argNames,
         const unsigned char* argTypes,
         const unsigned long long* argValues,
-        int thresholdBeginId,
-        long long threshold,
-        unsigned char flags) { return -1; }
+        unsigned char flags) { }
 
     // Callbacks for reporting histogram data.
     // CustomCounts histogram has exponential bucket sizes, so that min=1, max=1000000, bucketCount=50 would do.

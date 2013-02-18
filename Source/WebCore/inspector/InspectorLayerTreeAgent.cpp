@@ -53,7 +53,7 @@ namespace LayerTreeAgentState {
 static const char layerTreeAgentEnabled[] = "layerTreeAgentEnabled";
 };
 
-InspectorLayerTreeAgent::InspectorLayerTreeAgent(InstrumentingAgents* instrumentingAgents, InspectorState* state, Page* page)
+InspectorLayerTreeAgent::InspectorLayerTreeAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, Page* page)
     : InspectorBaseAgent<InspectorLayerTreeAgent>("LayerTree", instrumentingAgents, state)
     , m_inspectedPage(page)
     , m_frontend(0)
@@ -78,7 +78,8 @@ void InspectorLayerTreeAgent::clearFrontend()
 
 void InspectorLayerTreeAgent::restore()
 {
-    enable(0);
+    if (m_state->getBoolean(LayerTreeAgentState::layerTreeAgentEnabled))
+        enable(0);
 }
 
 void InspectorLayerTreeAgent::reset()
@@ -136,6 +137,7 @@ PassRefPtr<TypeBuilder::LayerTree::Layer> InspectorLayerTreeAgent::buildObjectFo
         RenderLayerBacking* backing = renderLayer->backing();
         layerObject->setMemory(backing->backingStoreMemoryEstimate());
         layerObject->setCompositedBounds(buildObjectForIntRect(backing->compositedBounds()));
+        layerObject->setPaintCount(backing->graphicsLayer()->repaintCount());
     }
 
     // Process children layers.

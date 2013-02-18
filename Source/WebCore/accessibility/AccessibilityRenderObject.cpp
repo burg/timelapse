@@ -467,7 +467,7 @@ RenderObject* AccessibilityRenderObject::renderParentObject() const
 AccessibilityObject* AccessibilityRenderObject::parentObjectIfExists() const
 {
     // WebArea's parent should be the scroll view containing it.
-    if (isWebArea())
+    if (isWebArea() || isSeamlessWebArea())
         return axObjectCache()->get(m_renderer->frame()->view());
 
     return axObjectCache()->get(renderParentObject());
@@ -493,7 +493,7 @@ AccessibilityObject* AccessibilityRenderObject::parentObject() const
         return axObjectCache()->getOrCreate(parentObj);
     
     // WebArea's parent should be the scroll view containing it.
-    if (isWebArea())
+    if (isWebArea() || isSeamlessWebArea())
         return axObjectCache()->getOrCreate(m_renderer->frame()->view());
     
     return 0;
@@ -639,6 +639,22 @@ String AccessibilityRenderObject::textUnderElement() const
     }
 #endif
 
+#if PLATFORM(GTK)
+    // On GTK, always use a text iterator in order to get embedded object characters.
+    // TODO: Add support for embedded object characters to the other codepaths that try
+    // to build the accessible text recursively, so this special case isn't needed.
+    // https://bugs.webkit.org/show_bug.cgi?id=105214
+    if (Node* node = this->node()) {
+        if (Frame* frame = node->document()->frame()) {
+            // catch stale WebCoreAXObject (see <rdar://problem/3960196>)
+            if (frame->document() != node->document())
+                return String();
+
+            return plainText(rangeOfContents(node).get(), textIteratorBehaviorForTextRange());
+        }
+    }
+#endif
+
     if (m_renderer->isText()) {
         // If possible, use a text iterator to get the text, so that whitespace
         // is handled consistently.
@@ -767,10 +783,16 @@ LayoutRect AccessibilityRenderObject::boundingBoxRect() const
     
     // absoluteFocusRingQuads will query the hierarchy below this element, which for large webpages can be very slow.
     // For a web area, which will have the most elements of any element, absoluteQuads should be used.
+    // We should also use absoluteQuads for SVG elements, otherwise transforms won't be applied.
     Vector<FloatQuad> quads;
+    bool isSVGRoot = false;
+#if ENABLE(SVG)
+    if (obj->isSVGRoot())
+        isSVGRoot = true;
+#endif
     if (obj->isText())
         toRenderText(obj)->absoluteQuads(quads, 0, RenderText::ClipToEllipsis);
-    else if (isWebArea())
+    else if (isWebArea() || isSeamlessWebArea() || isSVGRoot)
         obj->absoluteQuads(quads);
     else
         obj->absoluteFocusRingQuads(quads);
@@ -784,7 +806,7 @@ LayoutRect AccessibilityRenderObject::boundingBoxRect() const
 #endif
     
     // The size of the web area should be the content size, not the clipped size.
-    if (isWebArea() && obj->frame()->view())
+    if ((isWebArea() || isSeamlessWebArea()) && obj->frame()->view())
         result.setSize(obj->frame()->view()->contentsSize());
     
     return result;
@@ -1256,7 +1278,7 @@ bool AccessibilityRenderObject::accessibilityIsIgnored() const
         // Otherwise fall through; use presence of help text, title, or description to decide.
     }
 
-    if (isWebArea() || m_renderer->isListMarker())
+    if (isWebArea() || isSeamlessWebArea() || m_renderer->isListMarker())
         return false;
     
     // Using the help text, title or accessibility description (so we
@@ -2146,8 +2168,8 @@ AccessibilityObject* AccessibilityRenderObject::remoteSVGElementHitTest(const In
     if (!remote)
         return 0;
     
-    IntSize offsetPoint = point - roundedIntPoint(boundingBoxRect().location());
-    return remote->accessibilityHitTest(toPoint(offsetPoint));
+    IntSize offset = point - roundedIntPoint(boundingBoxRect().location());
+    return remote->accessibilityHitTest(IntPoint(offset));
 }
 
 AccessibilityObject* AccessibilityRenderObject::elementAccessibilityHitTest(const IntPoint& point) const
@@ -2411,8 +2433,12 @@ AccessibilityRole AccessibilityRenderObject::determineAccessibilityRole()
     if (node && node->hasTagName(canvasTag))
         return CanvasRole;
 
-    if (cssBox && cssBox->isRenderView())
+    if (cssBox && cssBox->isRenderView()) {
+        // If the iframe is seamless, it should not be announced as a web area to AT clients.
+        if (document() && document()->shouldDisplaySeamlesslyWithParent())
+            return SeamlessWebAreaRole;
         return WebAreaRole;
+    }
     
     if (cssBox && cssBox->isTextField())
         return TextFieldRole;

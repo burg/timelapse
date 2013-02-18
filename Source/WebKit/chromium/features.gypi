@@ -49,6 +49,7 @@
       'ENABLE_CSS_IMAGE_RESOLUTION=0',
       'ENABLE_CSS_REGIONS=1',
       'ENABLE_CSS_SHADERS=1',
+      'ENABLE_CSS_TRANSFORMS_ANIMATIONS_TRANSITIONS_UNPREFIXED=0',
       'ENABLE_CSS_VARIABLES=1',
       'ENABLE_CSS_STICKY_POSITION=1',
       'ENABLE_CUSTOM_SCHEME_HANDLER=0',
@@ -86,6 +87,7 @@
       'ENABLE_MATHML=1',
       'ENABLE_MEDIA_SOURCE=1',
       'ENABLE_MEDIA_STATISTICS=1',
+      'ENABLE_MEDIA_STREAM=<(enable_webrtc)',
       'ENABLE_METER_ELEMENT=1',
       'ENABLE_MHTML=1',
       'ENABLE_MICRODATA=0',
@@ -116,6 +118,7 @@
       'ENABLE_TOUCH_ADJUSTMENT=1',
       'ENABLE_TOUCH_EVENTS=<(enable_touch_events)',
       'ENABLE_TOUCH_ICON_LOADING=<(enable_touch_icon_loading)',
+      'ENABLE_TOUCH_EVENT_TRACKING=<(enable_touch_events)',
       'ENABLE_TOUCH_SLIDER=1',
       'ENABLE_USER_TIMING=1',
       'ENABLE_V8_SCRIPT_DEBUG_SERVER=1',
@@ -167,7 +170,6 @@
           'ENABLE_INPUT_TYPE_WEEK=0',
           'ENABLE_LEGACY_NOTIFICATIONS=0',
           'ENABLE_MEDIA_CAPTURE=1',
-          'ENABLE_MEDIA_STREAM=0',
           'ENABLE_NOTIFICATIONS=0',
           'ENABLE_ORIENTATION_EVENTS=1',
           'ENABLE_PAGE_POPUP=0',
@@ -191,7 +193,6 @@
           'ENABLE_INPUT_MULTIPLE_FIELDS_UI=1',
           'ENABLE_LEGACY_NOTIFICATIONS=1',
           'ENABLE_MEDIA_CAPTURE=0',
-          'ENABLE_MEDIA_STREAM=1',
           'ENABLE_NOTIFICATIONS=1',
           'ENABLE_ORIENTATION_EVENTS=0',
           'ENABLE_PAGE_POPUP=1',
@@ -234,7 +235,7 @@
           'WTF_USE_SKIA_ON_MAC_CHROMIUM=1',
         ],
       }],
-      ['use_x11==1', {
+      ['use_x11==1 or OS=="android"', {
         'feature_defines': [
           'WTF_USE_HARFBUZZ_NG=1',
         ],

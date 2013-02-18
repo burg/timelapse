@@ -27,9 +27,11 @@
 #include "WKEinaSharedString.h"
 #include "WKGeometry.h"
 #include "WKRetainPtr.h"
+#include "ewk_url_request_private.h"
 #include <Evas.h>
 #include <WebCore/FloatPoint.h>
 #include <WebCore/IntRect.h>
+#include <WebCore/RefPtrCairo.h>
 #include <WebCore/TextDirection.h>
 #include <WebCore/Timer.h>
 #include <WebKit2/WKBase.h>
@@ -106,8 +108,8 @@ public:
     ~EwkViewImpl();
 
     static EwkViewImpl* fromEvasObject(const Evas_Object* view);
-
     Evas_Object* view() { return m_view; }
+
     WKPageRef wkPage();
     WebKit::WebPageProxy* page() { return m_pageProxy.get(); }
     EwkContext* ewkContext() { return m_context.get(); }
@@ -118,6 +120,8 @@ public:
     WebCore::IntSize size() const;
     bool isFocused() const;
     bool isVisible() const;
+
+    void setDeviceScaleFactor(float scale);
 
     WebCore::AffineTransform transformToScene() const;
     WebCore::AffineTransform transformFromScene() const;
@@ -169,7 +173,7 @@ public:
     void dismissColorPicker();
 #endif
 
-    WKPageRef createNewPage(WebKit::ImmutableDictionary* windowFeatures);
+    WKPageRef createNewPage(PassRefPtr<EwkUrlRequest>, WebKit::ImmutableDictionary* windowFeatures);
     void closePage();
 
     void requestPopupMenu(WebKit::WebPopupMenuProxyEfl*, const WebCore::IntRect&, WebCore::TextDirection, double pageScaleFactor, const Vector<WebKit::WebPopupItem>& items, int32_t selectedIndex);
@@ -211,7 +215,7 @@ public:
     bool isHardwareAccelerated() const { return m_isHardwareAccelerated; }
     void setDrawsBackground(bool enable) { m_setDrawsBackground = enable; }
 
-    WKImageRef takeSnapshot();
+    PassRefPtr<cairo_surface_t> takeSnapshot();
 
 private:
 #if USE(ACCELERATED_COMPOSITING)
@@ -281,7 +285,9 @@ private:
     OwnPtr<EwkContextMenu> m_contextMenu;
     OwnPtr<EwkPopupMenu> m_popupMenu;
     OwnPtr<WebKit::InputMethodContextEfl> m_inputMethodContext;
+#if ENABLE(INPUT_TYPE_COLOR)
     OwnPtr<EwkColorPicker> m_colorPicker;
+#endif
     bool m_isHardwareAccelerated;
     bool m_setDrawsBackground;
 };

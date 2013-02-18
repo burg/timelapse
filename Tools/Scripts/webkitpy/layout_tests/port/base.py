@@ -88,15 +88,17 @@ class Port(object):
     def determine_full_port_name(cls, host, options, port_name):
         """Return a fully-specified port name that can be used to construct objects."""
         # Subclasses will usually override this.
-        return cls.port_name
+        options = options or {}
+        assert port_name.startswith(cls.port_name)
+        if getattr(options, 'webkit_test_runner', False) and not '-wk2' in port_name:
+            return port_name + '-wk2'
+        return port_name
 
-    def __init__(self, host, port_name=None, options=None, **kwargs):
+    def __init__(self, host, port_name, options=None, **kwargs):
 
         # This value may be different from cls.port_name by having version modifiers
         # and other fields appended to it (for example, 'qt-arm' or 'mac-wk2').
-
-        # FIXME: port_name should be a required parameter. It isn't yet because lots of tests need to be updatd.
-        self._name = port_name or self.port_name
+        self._name = port_name
 
         # These are default values that should be overridden in a subclasses.
         self._version = ''
@@ -106,6 +108,9 @@ class Port(object):
         # well-formed options object that had all of the necessary
         # options defined on it.
         self._options = options or optparse.Values()
+
+        if self._name and '-wk2' in self._name:
+            self._options.webkit_test_runner = True
 
         self.host = host
         self._executive = host.executive
@@ -823,12 +828,6 @@ class Port(object):
         else:
             return self.host.filesystem.abspath(filename)
 
-    def relative_perf_test_filename(self, filename):
-        if filename.startswith(self.perf_tests_dir()):
-            return self.host.filesystem.relpath(filename, self.perf_tests_dir())
-        else:
-            return self.host.filesystem.abspath(filename)
-
     @memoized
     def abspath_for_test(self, test_name):
         """Returns the full path to the file for a given test name. This is the
@@ -1072,13 +1071,15 @@ class Port(object):
         # Unlike baseline_search_path, we only want to search [WK2-PORT, PORT-VERSION, PORT] and any directories
         # included via --additional-platform-directory, not the full casade.
         search_paths = [self.port_name]
-        if self.name() != self.port_name:
-            search_paths.append(self.name())
+
+        non_wk2_name = self.name().replace('-wk2', '')
+        if non_wk2_name != self.port_name:
+            search_paths.append(non_wk2_name)
 
         if self.get_option('webkit_test_runner'):
             # Because nearly all of the skipped tests for WebKit 2 are due to cross-platform
             # issues, all wk2 ports share a skipped list under platform/wk2.
-            search_paths.extend([self._wk2_port_name(), "wk2"])
+            search_paths.extend(["wk2", self._wk2_port_name()])
 
         search_paths.extend(self.get_option("additional_platform_directory", []))
 

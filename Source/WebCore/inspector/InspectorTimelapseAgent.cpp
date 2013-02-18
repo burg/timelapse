@@ -119,10 +119,9 @@ static const char CaptureEnd[] = "CaptureEnd";
 
 namespace WebCore {
 
-InspectorTimelapseAgent::InspectorTimelapseAgent(InstrumentingAgents* instrumentingAgents, InspectorState *inspectorState, Page* inspectedPage)
-: InspectorBaseAgent<InspectorTimelapseAgent>("Timelapse", instrumentingAgents, inspectorState)
+InspectorTimelapseAgent::InspectorTimelapseAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState *state, Page* inspectedPage)
+: InspectorBaseAgent<InspectorTimelapseAgent>("Timelapse", instrumentingAgents, state)
 , m_instrumentingAgents(instrumentingAgents)
-, m_inspectorState(inspectorState)
 , m_inspectedPage(inspectedPage)
 , m_nextMarkIndex(0)
 , m_lastHitMarkIndex(numeric_limits<unsigned>::max())
@@ -133,14 +132,14 @@ InspectorTimelapseAgent::~InspectorTimelapseAgent()
     // if destroying timelapseAgent, then stop instrumenting for marks (if we are)
     m_instrumentingAgents->setInspectorTimelapseAgent(0);
     m_instrumentingAgents = 0;
-    m_inspectorState = 0;
+    m_state = 0;
     m_inspectedPage = 0;
 }
 
 void InspectorTimelapseAgent::setFrontend(InspectorFrontend* frontend)
 {
     m_frontend = frontend->timelapse();
-    if (m_inspectorState->getBoolean(TimelapsePersistentAgentState::timelapseEnabled)) {
+    if (m_state->getBoolean(TimelapsePersistentAgentState::timelapseEnabled)) {
         ErrorString error;
         enable(&error);
     }
@@ -251,7 +250,7 @@ void InspectorTimelapseAgent::captureStarted()
 {
     LOG(Timelapse, "-----CAPTURE START-----");
     
-    m_state.advanceTo(TimelapseAgentStateMachine::Capturing);
+    m_stateMachine.advanceTo(TimelapseAgentStateMachine::Capturing);
     m_inputLocked = false;
     if (m_frontend) {
         m_frontend->captureWasStarted();
@@ -264,7 +263,7 @@ void InspectorTimelapseAgent::captureFinished()
 {
     LOG(Timelapse, "-----CAPTURE STOP-----");
     
-    m_state.advanceTo(TimelapseAgentStateMachine::EnabledCanReplayOrCapture);
+    m_stateMachine.advanceTo(TimelapseAgentStateMachine::EnabledCanReplayOrCapture);
     
     if (m_frontend)
         m_frontend->captureWasStopped();
@@ -274,7 +273,7 @@ void InspectorTimelapseAgent::playbackStarted()
 {
     LOG(Timelapse, "-----REPLAY START-----");
     
-    m_state.advanceTo(TimelapseAgentStateMachine::Replaying);
+    m_stateMachine.advanceTo(TimelapseAgentStateMachine::Replaying);
     m_inputLocked = true;
     if (m_frontend) {
         m_frontend->playbackWasStarted();
@@ -286,7 +285,7 @@ void InspectorTimelapseAgent::playbackPaused(PositionMarkIndex index)
 {
     LOG(Timelapse, "-----REPLAY PAUSED-----");
 
-    m_state.advanceTo(TimelapseAgentStateMachine::ReplayPaused);
+    m_stateMachine.advanceTo(TimelapseAgentStateMachine::ReplayPaused);
     if (m_frontend)
         m_frontend->playbackWasPaused(index);
 }
@@ -305,7 +304,7 @@ void InspectorTimelapseAgent::playbackFinished()
 {
     LOG(Timelapse, "-----REPLAY STOP-----");
     
-    m_state.advanceTo(TimelapseAgentStateMachine::EnabledCanReplayOrCapture);
+    m_stateMachine.advanceTo(TimelapseAgentStateMachine::EnabledCanReplayOrCapture);
     if (m_frontend)
         m_frontend->playbackFinished();
 }
@@ -367,16 +366,16 @@ void InspectorTimelapseAgent::stop()
 
 void InspectorTimelapseAgent::isEnabled(ErrorString*, bool* result)
 {
-    *result = m_state.enabled();
+    *result = m_stateMachine.enabled();
 }
 
 void InspectorTimelapseAgent::enable(ErrorString*)
 {
-    if (m_state.enabled())
+    if (m_stateMachine.enabled())
         return;
     
-    m_state.advanceTo(TimelapseAgentStateMachine::EnabledCanCapture);
-    m_inspectorState->setBoolean(TimelapsePersistentAgentState::timelapseEnabled, true);
+    m_stateMachine.advanceTo(TimelapseAgentStateMachine::EnabledCanCapture);
+    m_state->setBoolean(TimelapsePersistentAgentState::timelapseEnabled, true);
     m_instrumentingAgents->setInspectorTimelapseAgent(this);
     
     if (m_frontend)
@@ -385,11 +384,11 @@ void InspectorTimelapseAgent::enable(ErrorString*)
 
 void InspectorTimelapseAgent::disable(ErrorString*)
 {
-    if (m_state.disabled())
+    if (m_stateMachine.disabled())
         return;
 
-    m_state.advanceTo(TimelapseAgentStateMachine::Disabled);
-    m_inspectorState->setBoolean(TimelapsePersistentAgentState::timelapseEnabled, false);
+    m_stateMachine.advanceTo(TimelapseAgentStateMachine::Disabled);
+    m_state->setBoolean(TimelapsePersistentAgentState::timelapseEnabled, false);
     m_instrumentingAgents->setInspectorTimelapseAgent(0);
 
     if (m_frontend)
@@ -398,7 +397,7 @@ void InspectorTimelapseAgent::disable(ErrorString*)
 
 void InspectorTimelapseAgent::startCapture(ErrorString*)
 {   
-    m_state.advanceTo(TimelapseAgentStateMachine::WaitingForCapture);
+    m_stateMachine.advanceTo(TimelapseAgentStateMachine::WaitingForCapture);
     m_nextMarkIndex = 0;
 
     PositionMark mark = createMark();
@@ -418,7 +417,7 @@ void InspectorTimelapseAgent::replayUpToMarkIndex(ErrorString*, int markIndex, b
     InspectorDebuggerAgent* debuggerAgent = m_instrumentingAgents->inspectorDebuggerAgent();
     ASSERT(!debuggerAgent || !debuggerAgent->isPaused());
 #endif
-    m_state.advanceTo(TimelapseAgentStateMachine::WaitingForReplay);
+    m_stateMachine.advanceTo(TimelapseAgentStateMachine::WaitingForReplay);
     m_inspectedPage->determinismController()->replayUpToMarkIndex((unsigned)markIndex, (fastReplay) ? FullSpeed : Realtime);
 }
 
@@ -429,7 +428,7 @@ void InspectorTimelapseAgent::replayToCompletion(ErrorString*, bool fastReplay)
     InspectorDebuggerAgent* debuggerAgent = m_instrumentingAgents->inspectorDebuggerAgent();
     ASSERT(!debuggerAgent || !debuggerAgent->isPaused());
 #endif
-    m_state.advanceTo(TimelapseAgentStateMachine::WaitingForReplay);
+    m_stateMachine.advanceTo(TimelapseAgentStateMachine::WaitingForReplay);
     m_inspectedPage->determinismController()->replayToCompletion((fastReplay) ? FullSpeed : Realtime);
 }
 

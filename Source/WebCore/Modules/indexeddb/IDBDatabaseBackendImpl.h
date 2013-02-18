@@ -55,8 +55,7 @@ public:
     static const int64_t InvalidId = 0;
     int64_t id() const { return m_metadata.id; }
 
-    void openConnection(PassRefPtr<IDBCallbacks>, PassRefPtr<IDBDatabaseCallbacks>, int64_t transactionId);
-    void openConnectionWithVersion(PassRefPtr<IDBCallbacks>, PassRefPtr<IDBDatabaseCallbacks>, int64_t transactionId, int64_t version);
+    void openConnection(PassRefPtr<IDBCallbacks>, PassRefPtr<IDBDatabaseCallbacks>, int64_t transactionId, int64_t version);
     void deleteDatabase(PassRefPtr<IDBCallbacks>);
 
     // IDBDatabaseBackendInterface
@@ -79,7 +78,7 @@ public:
     void transactionFinishedAndAbortFired(PassRefPtr<IDBTransactionBackendImpl>);
 
     virtual void get(int64_t transactionId, int64_t objectStoreId, int64_t indexId, PassRefPtr<IDBKeyRange>, bool keyOnly, PassRefPtr<IDBCallbacks>) OVERRIDE;
-    virtual void put(int64_t transactionId, int64_t objectStoreId, const Vector<uint8_t>&, PassRefPtr<IDBKey>, PutMode, PassRefPtr<IDBCallbacks>, const Vector<int64_t>& indexIds, const Vector<IndexKeys>&) OVERRIDE;
+    virtual void put(int64_t transactionId, int64_t objectStoreId, Vector<uint8_t>* value, PassRefPtr<IDBKey>, PutMode, PassRefPtr<IDBCallbacks>, const Vector<int64_t>& indexIds, const Vector<IndexKeys>&) OVERRIDE;
     virtual void setIndexKeys(int64_t transactionId, int64_t objectStoreId, PassRefPtr<IDBKey> prpPrimaryKey, const Vector<int64_t>& indexIds, const Vector<IndexKeys>&) OVERRIDE;
     virtual void setIndexesReady(int64_t transactionId, int64_t objectStoreId, const Vector<int64_t>& indexIds) OVERRIDE;
     virtual void openCursor(int64_t transactionId, int64_t objectStoreId, int64_t indexId, PassRefPtr<IDBKeyRange>, unsigned short direction, bool keyOnly, TaskType, PassRefPtr<IDBCallbacks>) OVERRIDE;
@@ -95,6 +94,9 @@ private:
     void loadObjectStores();
     size_t connectionCount();
     void processPendingCalls();
+
+    bool isDeleteDatabaseBlocked();
+    void deleteDatabaseFinal(PassRefPtr<IDBCallbacks>);
 
     class CreateObjectStoreOperation;
     class DeleteObjectStoreOperation;
@@ -123,10 +125,7 @@ private:
 
     class PendingOpenCall;
     Deque<OwnPtr<PendingOpenCall> > m_pendingOpenCalls;
-
-    class PendingOpenWithVersionCall;
-    Deque<OwnPtr<PendingOpenWithVersionCall> > m_pendingOpenWithVersionCalls;
-    OwnPtr<PendingOpenWithVersionCall> m_pendingSecondHalfOpenWithVersion;
+    OwnPtr<PendingOpenCall> m_pendingSecondHalfOpen;
 
     class PendingDeleteCall;
     Deque<OwnPtr<PendingDeleteCall> > m_pendingDeleteCalls;

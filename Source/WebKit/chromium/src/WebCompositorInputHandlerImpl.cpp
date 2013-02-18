@@ -71,6 +71,7 @@ WebCompositorInputHandlerImpl::WebCompositorInputHandlerImpl()
 #endif
     , m_gestureScrollOnImplThread(false)
     , m_gesturePinchOnImplThread(false)
+    , m_flingActiveOnMainThread(false)
 {
 }
 
@@ -198,6 +199,14 @@ WebCompositorInputHandlerImpl::EventDisposition WebCompositorInputHandlerImpl::h
     } else if (event.type == WebInputEvent::GestureFlingCancel) {
         if (cancelCurrentFling())
             return DidHandle;
+        else if (!m_flingActiveOnMainThread)
+            return DropEvent;
+#if ENABLE(TOUCH_EVENT_TRACKING)
+    } else if (event.type == WebInputEvent::TouchStart) {
+        const WebTouchEvent& touchEvent = *static_cast<const WebTouchEvent*>(&event);
+        if (!m_inputHandlerClient->haveTouchEventHandlersAt(touchEvent.touches[0].position))
+            return DropEvent;
+#endif
     } else if (WebInputEvent::isKeyboardEventType(event.type)) {
          cancelCurrentFling();
     }
@@ -210,25 +219,26 @@ WebCompositorInputHandlerImpl::EventDisposition WebCompositorInputHandlerImpl::h
     WebInputHandlerClient::ScrollStatus scrollStatus = m_inputHandlerClient->scrollBegin(WebPoint(gestureEvent.x, gestureEvent.y), WebInputHandlerClient::ScrollInputTypeGesture);
     switch (scrollStatus) {
     case WebInputHandlerClient::ScrollStatusStarted: {
-        if (gestureEvent.data.flingStart.sourceDevice == WebGestureEvent::Touchpad)
+        if (gestureEvent.sourceDevice == WebGestureEvent::Touchpad)
             m_inputHandlerClient->scrollEnd();
-        m_flingCurve = adoptPtr(Platform::current()->createFlingAnimationCurve(gestureEvent.data.flingStart.sourceDevice, WebFloatPoint(gestureEvent.data.flingStart.velocityX, gestureEvent.data.flingStart.velocityY), WebSize()));
+        m_flingCurve = adoptPtr(Platform::current()->createFlingAnimationCurve(gestureEvent.sourceDevice, WebFloatPoint(gestureEvent.data.flingStart.velocityX, gestureEvent.data.flingStart.velocityY), WebSize()));
         TRACE_EVENT_ASYNC_BEGIN0("webkit", "WebCompositorInputHandlerImpl::handleGestureFling::started", this);
         m_flingParameters.delta = WebFloatPoint(gestureEvent.data.flingStart.velocityX, gestureEvent.data.flingStart.velocityY);
         m_flingParameters.point = WebPoint(gestureEvent.x, gestureEvent.y);
         m_flingParameters.globalPoint = WebPoint(gestureEvent.globalX, gestureEvent.globalY);
         m_flingParameters.modifiers = gestureEvent.modifiers;
-        m_flingParameters.sourceDevice = gestureEvent.data.flingStart.sourceDevice;
+        m_flingParameters.sourceDevice = gestureEvent.sourceDevice;
         m_inputHandlerClient->scheduleAnimation();
         return DidHandle;
     }
     case WebInputHandlerClient::ScrollStatusOnMainThread: {
         TRACE_EVENT_INSTANT0("webkit", "WebCompositorInputHandlerImpl::handleGestureFling::scrollOnMainThread");
+        m_flingActiveOnMainThread =  true;
         return DidNotHandle;
     }
     case WebInputHandlerClient::ScrollStatusIgnored: {
         TRACE_EVENT_INSTANT0("webkit", "WebCompositorInputHandlerImpl::handleGestureFling::ignored");
-        if (gestureEvent.data.flingStart.sourceDevice == WebGestureEvent::Touchpad) {
+        if (gestureEvent.sourceDevice == WebGestureEvent::Touchpad) {
             // We still pass the curve to the main thread if there's nothing scrollable, in case something
             // registers a handler before the curve is over.
             return DidNotHandle;
@@ -312,6 +322,7 @@ bool WebCompositorInputHandlerImpl::touchpadFlingScroll(const WebPoint& incremen
         // scroll on the thread if the fling starts outside the subarea but then is flung "under" the
         // pointer.
         m_client->transferActiveWheelFlingAnimation(m_flingParameters);
+        m_flingActiveOnMainThread = true;
         cancelCurrentFling();
         break;
     }
@@ -341,6 +352,11 @@ void WebCompositorInputHandlerImpl::scrollBy(const WebPoint& increment)
         m_flingParameters.cumulativeScroll.width += increment.x;
         m_flingParameters.cumulativeScroll.height += increment.y;
     }
+}
+
+void WebCompositorInputHandlerImpl::mainThreadHasStoppedFlinging()
+{
+    m_flingActiveOnMainThread =  false;
 }
 
 }

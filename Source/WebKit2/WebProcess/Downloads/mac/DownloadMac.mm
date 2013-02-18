@@ -26,6 +26,7 @@
 #import "config.h"
 #import "Download.h"
 
+#import <WebCore/AuthenticationChallenge.h>
 #import <WebCore/AuthenticationMac.h>
 #import <WebCore/NotImplemented.h>
 #import <WebCore/ResourceHandle.h>
@@ -52,7 +53,7 @@ using namespace WebCore;
 
 namespace WebKit {
 
-void Download::start(WebPage* initiatingPage)
+void Download::start()
 {
     ASSERT(!m_nsURLDownload);
     ASSERT(!m_delegate);
@@ -64,7 +65,7 @@ void Download::start(WebPage* initiatingPage)
     [m_nsURLDownload.get() setDeletesFileUponFailure:NO];
 }
 
-void Download::startWithHandle(WebPage* initiatingPage, ResourceHandle* handle, const ResourceResponse& response)
+void Download::startWithHandle(ResourceHandle* handle, const ResourceResponse& response)
 {
     ASSERT(!m_nsURLDownload);
     ASSERT(!m_delegate);
@@ -109,7 +110,6 @@ void Download::platformDidFinish()
 {
 }
 
-// FIXME (NetworkProcess): Downloads and their credentials have to go through the NetworkProcess
 void Download::receivedCredential(const AuthenticationChallenge& authenticationChallenge, const Credential& credential)
 {
     [authenticationChallenge.sender() useCredential:mac(credential) forAuthenticationChallenge:authenticationChallenge.nsURLAuthenticationChallenge()];

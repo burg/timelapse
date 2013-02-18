@@ -83,14 +83,13 @@ loader.Loader.prototype = {
     _loadBuildersList: function()
     {
         loadBuildersList(g_crossDashboardState.group, g_crossDashboardState.testType);
-        initBuilders();
         this._loadNext();
     },
     _loadResultsFiles: function()
     {
         parseParameters();
 
-        for (var builderName in g_builders)
+        for (var builderName in currentBuilders())
             this._loadResultsFileForBuilder(builderName);
     },
     _loadResultsFileForBuilder: function(builderName)
@@ -167,22 +166,18 @@ loader.Loader.prototype = {
 
         // Remove this builder from builders, so we don't try to use the
         // data that isn't there.
-        delete g_builders[builderName];
+        delete currentBuilders()[builderName];
 
         // Change the default builder name if it has been deleted.
-        if (g_defaultBuilderName == builderName) {
-            g_defaultBuilderName = null;
-            for (var availableBuilderName in g_builders) {
-                g_defaultBuilderName = availableBuilderName;
-                g_defaultDashboardSpecificStateValues.builder = availableBuilderName;
-                break;
-            }
-            if (!g_defaultBuilderName) {
+        if (g_defaultDashboardSpecificStateValues.builder == builderName) {
+            var defaultBuilderName = currentBuilderGroup().defaultBuilder();
+            g_defaultDashboardSpecificStateValues.builder = defaultBuilderName;
+            if (!defaultBuilderName) {
                 var error = 'No tests results found for ' + g_crossDashboardState.testType + '. Reload the page to try fetching it again.';
                 console.error(error);
                 addError(error);
             }
-        }
+       }
 
         // Proceed as if the resource had loaded.
         this._handleResourceLoad();
@@ -194,7 +189,7 @@ loader.Loader.prototype = {
     },
     _haveResultsFilesLoaded: function()
     {
-        for (var builder in g_builders) {
+        for (var builder in currentBuilders()) {
             if (!g_resultsByBuilder[builder])
                 return false;
         }

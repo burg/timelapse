@@ -144,7 +144,6 @@
       '../rendering/style',
       '../rendering/svg',
       '../storage',
-      '../storage/chromium',
       '../svg',
       '../svg/animation',
       '../svg/graphics',
@@ -247,10 +246,6 @@
       ['use_x11==1 or OS=="android"', {
         'webcore_include_dirs': [
           '../platform/graphics/harfbuzz',
-        ],
-      }],
-      ['use_x11==1', {
-        'webcore_include_dirs': [
           '../platform/graphics/harfbuzz/ng',
         ],
       }],
@@ -533,10 +528,36 @@
       ]
     },
     {
+      'target_name': 'generate_settings',
+      'type': 'none',
+      'actions': [
+        {
+          'action_name': 'Settings',
+          'inputs': [
+            '../page/make_settings.pl',
+            '../page/Settings.in',
+          ],
+          'outputs': [
+            '<(SHARED_INTERMEDIATE_DIR)/webkit/SettingsMacros.h',
+            '<(SHARED_INTERMEDIATE_DIR)/webkit/InternalSettingsGenerated.idl',
+            '<(SHARED_INTERMEDIATE_DIR)/webkit/InternalSettingsGenerated.cpp',
+            '<(SHARED_INTERMEDIATE_DIR)/webkit/InternalSettingsGenerated.h',
+          ],
+          'action': [
+            'python',
+            'scripts/action_makenames.py',
+            '<@(_outputs)',
+            '--',
+            '<@(_inputs)',
+          ],
+        },
+      ]
+    },
+    {
       'target_name': 'generate_supplemental_dependency',
       'type': 'none',
       'actions': [
-         {
+        {
           'action_name': 'generateSupplementalDependency',
           'variables': {
             # Write sources into a file, so that the action command line won't
@@ -579,6 +600,7 @@
       'hard_dependency': 1,
       'dependencies': [
         'generate_supplemental_dependency',
+        'generate_settings',
       ],
       'sources': [
         # bison rule
@@ -871,23 +893,6 @@
             '--',
             '--factory',
             '--extraDefines', '<(feature_defines)'
-          ],
-        },
-        {
-          'action_name': 'Settings',
-          'inputs': [
-            '../page/make_settings.pl',
-            '../page/Settings.in',
-          ],
-          'outputs': [
-            '<(SHARED_INTERMEDIATE_DIR)/webkit/SettingsMacros.h',
-          ],
-          'action': [
-            'python',
-            'scripts/action_makenames.py',
-            '<@(_outputs)',
-            '--',
-            '<@(_inputs)',
           ],
         },
         {
@@ -1194,6 +1199,7 @@
               '--include', '../testing',
               '--include', '../workers',
               '--include', '../xml',
+              '--include', '<(SHARED_INTERMEDIATE_DIR)/webkit',
             ],
           },
           'msvs_cygwin_shell': 0,
@@ -1703,7 +1709,7 @@
             ['exclude', 'platform/chromium/ScrollbarThemeChromiumDefault.h'],
           ],
         }],
-        ['use_x11 == 1', {
+        ['use_x11==1 or OS=="android"', {
           'sources/': [
             # Cherry-pick files excluded by the broader regular expressions above.
             ['include', 'platform/graphics/harfbuzz/FontHarfBuzz\\.cpp$'],
@@ -1716,10 +1722,17 @@
             ['include', 'platform/graphics/opentype/OpenTypeVerticalData\\.(cpp|h)$'],
             ['include', 'platform/graphics/skia/SimpleFontDataSkia\\.cpp$'],
           ],
-        }, { # use_x11==0
+          'dependencies': [
+            '<(chromium_src_dir)/third_party/harfbuzz-ng/harfbuzz.gyp:harfbuzz-ng',
+          ],
+        }, { # use_x11==0 and OS!="android"
+          'sources/': [
+            ['exclude', 'Harfbuzz[^/]+\\.(cpp|h)$'],
+          ],
+        }],
+        ['use_x11!=1', {
           'sources/': [
             ['exclude', 'Linux\\.cpp$'],
-            ['exclude', 'Harfbuzz[^/]+\\.(cpp|h)$'],
           ],
         }],
         ['toolkit_uses_gtk == 1', {
@@ -1730,16 +1743,6 @@
         }, { # toolkit_uses_gtk==0
           'sources/': [
             ['exclude', 'Gtk\\.cpp$'],
-          ],
-        }],
-        ['use_x11==1', {
-          'dependencies': [
-            '<(chromium_src_dir)/third_party/harfbuzz-ng/harfbuzz.gyp:harfbuzz-ng',
-          ],
-        }],
-        ['OS=="android"', {
-          'dependencies': [
-            '<(chromium_src_dir)/third_party/harfbuzz/harfbuzz.gyp:harfbuzz',
           ],
         }],
         ['OS=="mac"', {
@@ -1912,15 +1915,7 @@
             ['include', 'platform/graphics/chromium/GlyphPageTreeNodeLinux\\.cpp$'],
             ['exclude', 'platform/graphics/chromium/IconChromium\\.cpp$'],
             ['include', 'platform/graphics/chromium/VDMXParser\\.cpp$'],
-            ['include', 'platform/graphics/harfbuzz/ComplexTextControllerHarfBuzz\\.cpp$'],
-            ['include', 'platform/graphics/harfbuzz/FontHarfBuzz\\.cpp$'],
-            ['include', 'platform/graphics/harfbuzz/FontPlatformDataHarfBuzz\\.cpp$'],
-            ['include', 'platform/graphics/harfbuzz/HarfBuzzSkia\\.cpp$'],
-            ['include', 'platform/graphics/harfbuzz/HarfBuzzShaperBase\\.cpp$'],
-            ['include', 'platform/graphics/opentype/OpenTypeTypes\\.h$'],
-            ['include', 'platform/graphics/opentype/OpenTypeVerticalData\\.(cpp|h)$'],
             ['exclude', 'platform/graphics/skia/FontCacheSkia\\.cpp$'],
-            ['include', 'platform/graphics/skia/SimpleFontDataSkia\\.cpp$'],
           ],
         }, { # OS!="android"
           'sources/': [
@@ -2262,6 +2257,8 @@
         '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8Internals.h',
         '<(SHARED_INTERMEDIATE_DIR)/webcore/bindings/V8InternalSettings.cpp',
         '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8InternalSettings.h',
+        '<(SHARED_INTERMEDIATE_DIR)/webcore/bindings/V8InternalSettingsGenerated.cpp',
+        '<(SHARED_INTERMEDIATE_DIR)/webkit/bindings/V8InternalSettingsGenerated.h',
       ],
       'sources/': [
         ['exclude', 'testing/js'],

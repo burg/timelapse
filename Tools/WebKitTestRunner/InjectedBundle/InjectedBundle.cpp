@@ -176,6 +176,8 @@ void InjectedBundle::didReceiveMessage(WKStringRef messageName, WKTypeRef messag
         resetLocalSettings();
         m_testRunner->removeAllWebNotificationPermissions();
 
+        page()->resetAfterTest();
+
         return;
     }
     if (WKStringIsEqualToUTF8CString(messageName, "CallAddChromeInputFieldCallback")) {
@@ -294,11 +296,12 @@ void InjectedBundle::done()
     WKRetainPtr<WKStringRef> repaintRectsKey = adoptWK(WKStringCreateWithUTF8CString("RepaintRects"));
     WKDictionaryAddItem(doneMessageBody.get(), repaintRectsKey.get(), m_repaintRects.get());
 
+    WKRetainPtr<WKStringRef> audioResultKey = adoptWK(WKStringCreateWithUTF8CString("AudioResult"));
+    WKDictionaryAddItem(doneMessageBody.get(), audioResultKey.get(), m_audioResult.get());
+
     WKBundlePostMessage(m_bundle, doneMessageName.get(), doneMessageBody.get());
 
     closeOtherPages();
-
-    page()->resetAfterTest();
 
     m_state = Idle;
 }

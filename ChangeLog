@@ -1,3 +1,369 @@
+2013-01-03  Tony Chang  <tony@chromium.org>
+
+        Generate internal.settings from Settings.in
+        https://bugs.webkit.org/show_bug.cgi?id=104740
+
+        Reviewed by Adam Barth.
+
+        * Source/cmake/WebKitMacros.cmake: Specify additional output files from make_settings.pl.
+
+2013-01-02  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        [EFL][CMAKE] Remove duplicated conditionals
+        https://bugs.webkit.org/show_bug.cgi?id=105905
+
+        Reviewed by Laszlo Gombos.
+
+        * Source/cmake/OptionsEfl.cmake: Remove set(WTF_USE_GLX 1).
+
+2013-01-02  Tony Chang  <tony@chromium.org>
+
+        Unreviewed, rolling out r138661.
+        http://trac.webkit.org/changeset/138661
+        https://bugs.webkit.org/show_bug.cgi?id=104740
+
+        Compile problems on EFL
+
+        * Source/cmake/WebKitMacros.cmake:
+
+2013-01-02  Tony Chang  <tony@chromium.org>
+
+        Generate internal.settings from Settings.in
+        https://bugs.webkit.org/show_bug.cgi?id=104740
+
+        Reviewed by Adam Barth.
+
+        * Source/cmake/WebKitMacros.cmake: Specify additional output files from make_settings.pl.
+
+2013-01-02  Elliott Sprehn  <esprehn@chromium.org>
+
+        Transitions and animations do not apply to CSS ::before and ::after pseudo-elements
+        https://bugs.webkit.org/show_bug.cgi?id=92591
+
+        Reviewed by Eric Seidel.
+
+        Expose Element::pseudoElement for Internals.
+
+        * Source/autotools/symbols.filter:
+
+2013-01-01  KwangYong Choi  <ky0.choi@samsung.com>
+
+        [EFL] Enable MHTML feature
+        https://bugs.webkit.org/show_bug.cgi?id=105815
+
+        Reviewed by Laszlo Gombos.
+
+        ENABLE_MHTML is now ON for EFL.
+
+        * Source/cmake/OptionsEfl.cmake:
+
+2012-12-31  Kondapally Kalyan  <kalyan.kondapally@intel.com>
+
+        [EFL][WebGL] Add compile time support for GLES2.
+        https://bugs.webkit.org/show_bug.cgi?id=105816
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        This patch adds build support for GLES2.
+        GLES2 support can be enabled during compile time by passing -DENABLE_GLES2=ON as
+        cmake config parameter. GLES2 options is not enabled by default. This patch doesn't
+        address all the build issues related to GLES2 but only adds the needed support in
+        OptionsEfl.cmake.
+
+        * Source/cmake/OptionsEfl.cmake:
+
+2012-12-31  Carlos Garcia Campos  <cgarcia@igalia.com>
+
+        [GTK] Move ImageDiff to the Tools directory root
+        https://bugs.webkit.org/show_bug.cgi?id=105421
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * GNUmakefile.am: Remove the old ImageDiff makefile include.
+
+2012-12-30  Kondapally Kalyan  <kalyan.kondapally@intel.com>
+
+        [EFL] [WebGL] Rename EGLConfigHelper as EGLConfigSelector.
+        https://bugs.webkit.org/show_bug.cgi?id=105876
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        This is to sync the naming conventions of our classes in both EGL and GLX implementations. 
+        In our GLX implementation, class responsible for the same functionality is named as GLXConfigSelector. 
+        This patch renames EGLConfigHelper as EGLConfigSelector.
+
+        * Source/cmake/OptionsEfl.cmake:
+
+2012-12-30  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        [EFL] Enable TEMPLATE_ELEMENT feature
+        https://bugs.webkit.org/show_bug.cgi?id=105865
+
+        Reviewed by Laszlo Gombos.
+
+        * Source/cmake/OptionsEfl.cmake: Add ENABLE_TEMPLATE_ELEMENT macro.
+
+2012-12-27  Kondapally Kalyan  <kalyan.kondapally@intel.com>
+
+        [EFL][WebGL] Implement EGL support with GLX.
+        https://bugs.webkit.org/show_bug.cgi?id=105602
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Adds support for EGL with GLX backend. EGL support can be enabled during compile time
+        by passing -DENABLE_EGL=ON as cmake config parameter.
+
+        * Source/cmake/OptionsEfl.cmake:
+
+2012-12-24  Kondapally Kalyan  <kalyan.kondapally@intel.com>
+
+        [EFL [WebGL] GLES2 detection is broken.
+        https://bugs.webkit.org/show_bug.cgi?id=105677
+
+        We use the logic in FindGLES.cmake to detect GLES2 support during compile time.
+        OPENGLES2_FOUND is never set, even though OPENGLES2_INCLUDE_DIR and OPENGLES2_LIBRARY
+        contain right information. The name passed to find_package_handle_standard_args seems to be the issue here.
+        This patch changes the name passed to find_package_handle_standard_args to OPENGLES2.
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * Source/cmake/FindGLES.cmake:
+
+2012-12-20  Martin Robinson  <mrobinson@igalia.com>
+
+        [GTK] Remove plugin process configuration option
+        https://bugs.webkit.org/show_bug.cgi?id=105564
+
+        Reviewed by Carlos Garcia Campos.
+
+        Remove the --enable-plugin-process configuration option, opting instead to
+        always build the plugin process when building WebKit2. It isn't very interesting
+        for downstream to enable or disable the plugin process. It should always be
+        enabled for WebKit2 and it's better for us not to have to keep a disabled plugin
+        process building. Additionally, the in-process plugin isn't functional, since
+        plugins depend on GTK+ 2 and WebKit2 depends on GTK+ 3.
+
+        * configure.ac: Remove the configuration option.
+
+2012-12-21  Elliott Sprehn  <esprehn@chromium.org>
+
+        Replace documentFragmentIsShadowRoot with isTreeScope
+        https://bugs.webkit.org/show_bug.cgi?id=105345
+
+        Reviewed by Dimitri Glazkov.
+
+        Expose isTreeScope symbol.
+
+        * Source/autotools/symbols.filter:
+
+2012-12-21  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r138338.
+        http://trac.webkit.org/changeset/138338
+        https://bugs.webkit.org/show_bug.cgi?id=105621
+
+        speculative rollout because fast/dom/shadow/content-element-
+        distributed-nodes.html is crashing on linux debug. (Requested
+        by loislo on #webkit).
+
+        * Source/autotools/symbols.filter:
+
+2012-12-20  Elliott Sprehn  <esprehn@chromium.org>
+
+        Replace documentFragmentIsShadowRoot with isTreeScope
+        https://bugs.webkit.org/show_bug.cgi?id=105345
+
+        Reviewed by Dimitri Glazkov.
+
+        Expose isTreeScope symbol.
+
+        * Source/autotools/symbols.filter:
+
+2012-12-20  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Build break with latest EFL libraries.
+        https://bugs.webkit.org/show_bug.cgi?id=104827
+
+        Reviewed by Laszlo Gombos.
+
+        The eo EFL package is introduced and evas and ecore use it since 1.8.
+        While introducing Eo, EFL changed several structures of Evas and Ecore
+        from own specific class to Eo.
+
+        So, this patch adds FindEo and changes declaration of Evas, Evas_Object,
+        Ecore_Timer to build with latest EFL libraries.
+
+        * Source/cmake/FindEo.cmake: Added.
+        * Source/cmake/OptionsEfl.cmake:
+        Modified to check Eo when version of EFL libraries is 1.8.
+
+2012-12-20  Kondapally Kalyan  <kalyan.kondapally@intel.com>
+
+        [EFL][WebGL][Wk2] Replace HAVE(GLX) checks with USE(GLX).
+        https://bugs.webkit.org/show_bug.cgi?id=105431
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        This patch changes the check HAVE(GLX) to USE(GLX).
+        This would enable us to choose our preferred GL backend during build time.
+
+        * Source/cmake/OptionsEfl.cmake:
+
+2012-12-20  Zan Dobersek  <zandobersek@gmail.com>
+
+        [GTK] Remove the --enable-unstable-features configuration option
+        https://bugs.webkit.org/show_bug.cgi?id=105327
+
+        Reviewed by Martin Robinson.
+
+        Remove the unnecessary feature_defines_unstable variable.
+        Remove the unstable-features configuration option.
+
+        * configure.ac:
+        * GNUmakefile.am:
+
+2012-12-20  Dominik Röttsches  <dominik.rottsches@intel.com>
+
+        [EFL] MiniBrowser does not play Infinite Gangnam Style
+        https://bugs.webkit.org/show_bug.cgi?id=103531
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        WebAudio now switched to ON for EFL.
+
+        * Source/cmake/OptionsEfl.cmake:
+
+2012-12-19  Yael Aharon  <yael.aharon@intel.com>
+
+        [EFL] Allow the build system to find OpenGL ES
+        https://bugs.webkit.org/show_bug.cgi?id=104760
+
+        Reviewed by Laszlo Gombos.
+
+        Add a way to find if GLESv2 is supported by the build system.
+        Support for GLESv2 will be added separately.
+
+        * Source/cmake/FindGLES.cmake: Added.
+
+2012-12-19  Alexis Menard  <alexis@webkit.org>
+
+        Implement CSS parsing for CSS transitions unprefixed.
+        https://bugs.webkit.org/show_bug.cgi?id=104804
+
+        Reviewed by Dean Jackson.
+
+        Add a new flag ENABLE_CSS_TRANSFORMS_ANIMATIONS_TRANSITIONS_UNPREFIXED
+        to cover the work of unprefixing Transforms, Animations and
+        Transitions. It will let the possibility of each ports to turn it off
+        in their release branches until we're confident that these CSS
+        properties are ready to be unprefixed.
+
+        * Source/cmake/WebKitFeatures.cmake:
+        * Source/cmakeconfig.h.cmake:
+        * configure.ac:
+
+2012-12-18  Ming Xie  <mxie@rim.com>
+
+        [BlackBerry] Add -fno-exceptions to CXX_FLAGS
+        https://bugs.webkit.org/show_bug.cgi?id=105306
+
+        Reviewed by Rob Buis.
+
+        Disable exception handling. We don't have any try or catch
+        constructs in our code.
+
+        * Source/cmake/OptionsBlackBerry.cmake:
+
+2012-12-18  Kondapally Kalyan  <kalyan.kondapally@intel.com>
+
+        [EFL] Allow the build system to detect EGL support.
+        https://bugs.webkit.org/show_bug.cgi?id=105287
+
+        Reviewed by Laszlo Gombos.
+
+        Currently, we don't have any way to determine if EGL is supported by the build.
+        This patch adds support for this. The patch doesn't make any changes to take this into
+        use. This will be done in another patch.
+
+        * Source/cmake/FindEGL.cmake:
+
+2012-12-17  Halton Huo  <halton.huo@intel.com>
+
+        [EFL] Add ecore_imf_evas to FindEcore.cmake
+        https://bugs.webkit.org/show_bug.cgi?id=105159
+
+        Reviewed by Laszlo Gombos.
+
+        ecore_imf_evas is a separate library, we should add for EFL port as well.
+
+        * Source/cmake/FindEcore.cmake: Add finding FIND_EFL_LIBRARY for ecore_imf_evas
+
+2012-12-17  Kenneth Rohde Christiansen  <kenneth@webkit.org>
+
+        Add manual test to verify that geometry methods (moveTo, etc) work
+        https://bugs.webkit.org/show_bug.cgi?id=105160
+
+        Reviewed by Alexis Menard.
+
+        * ManualTests/window-geometry.html: Added.
+
+2012-12-16  ChangSeok Oh  <shivamidow@gmail.com>
+
+        [GTK][AC] Build failure with an option --with-acceleration-backend=clutter
+        https://bugs.webkit.org/show_bug.cgi?id=105027
+
+        Reviewed by Gustavo Noronha Silva.
+
+        I turned off opengl related variables, enable_glx, enable_egl and enable_gles2
+        when selecting clutter as the acceleration-backend. Because they seem useless for the AC by clutter.
+
+        * configure.ac:
+
+2012-12-15  Simon Fraser  <simon.fraser@apple.com>
+
+        Fix repaint issues when resizing a window with centered content, for platforms with a tile cache
+        https://bugs.webkit.org/show_bug.cgi?id=105073
+
+        Reviewed by Dan Bernstein.
+
+        Add a manual test for window resize with a centered element.
+
+        * ManualTests/resize-repaint.html: Added.
+
+2012-12-13  Stephen White  <senorblanco@chromium.org>
+
+        Added manual test for canvas setFont speed.
+        https://bugs.webkit.org/show_bug.cgi?id=104923
+
+        Reviewed by James Robinson.
+
+        * ManualTests/canvas-font-speed.html: Added.
+
+2012-12-13  Jerome Pasion  <jerome.pasion@digia.com>
+
+        [Qt] Doc: Fixing Qt WebKit reference documentation.
+
+        Reviewed by Simon Hausmann.
+
+        Fixes:
+        -added \module for C++ classes and \qmlmodule for QML types
+        -added links to the Qt WebKit Examples pages
+        -fixed the qhp settings for Qt Creator
+
+        Task-number: QTBUG-28583
+        Task-number: QTBUG-28418
+        Task-number: QTBUG-27646
+
+        * Source/qtwebkit.qdocconf:
+
+2012-12-13  Jerome Pasion <Jerome.Pasion@digia.com>
+
+        [Qt] Fix missing doc dependency to examples
+
+        Reviewed by Simon Hausmann.
+
+        * Source/qtwebkit.qdocconf:
+
 2012-12-12  John Griggs  <jgriggs@rim.com>
 
         2012-12-12  John Griggs  <jgriggs@rim.com>

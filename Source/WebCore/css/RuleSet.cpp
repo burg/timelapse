@@ -36,6 +36,7 @@
 #include "MediaQueryEvaluator.h"
 #include "SecurityOrigin.h"
 #include "SelectorChecker.h"
+#include "SelectorFilter.h"
 #include "StyleResolver.h"
 #include "StyleRule.h"
 #include "StyleRuleImport.h"
@@ -122,7 +123,7 @@ RuleData::RuleData(StyleRule* rule, unsigned selectorIndex, unsigned position, A
 {
     ASSERT(m_position == position);
     ASSERT(m_selectorIndex == selectorIndex);
-    SelectorChecker::collectIdentifierHashes(selector(), m_descendantSelectorIdentifierHashes, maximumIdentifierCount);
+    SelectorFilter::collectIdentifierHashes(selector(), m_descendantSelectorIdentifierHashes, maximumIdentifierCount);
 }
 
 void RuleData::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
@@ -145,6 +146,9 @@ void RuleSet::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     reportAtomRuleMap(&info, m_tagRules);
     reportAtomRuleMap(&info, m_shadowPseudoElementRules);
     info.addMember(m_linkPseudoClassRules);
+#if ENABLE(VIDEO_TRACK)
+    info.addMember(m_cuePseudoRules);
+#endif
     info.addMember(m_focusPseudoClassRules);
     info.addMember(m_universalRules);
     info.addMember(m_pageRules);
@@ -191,10 +195,6 @@ void RuleSet::addToRuleSet(AtomicStringImpl* key, AtomRuleMap& map, const RuleDa
 void RuleSet::addRule(StyleRule* rule, unsigned selectorIndex, AddRuleFlags addRuleFlags)
 {
     RuleData ruleData(rule, selectorIndex, m_ruleCount++, addRuleFlags);
-    static const unsigned athostRuleSpecificity = 0x100000;
-
-    if (addRuleFlags & RuleIsHostRule)
-        ruleData.increaseSpecificity(athostRuleSpecificity);
 
     collectFeaturesFromRuleData(m_features, ruleData);
 
@@ -212,6 +212,12 @@ void RuleSet::addRule(StyleRule* rule, unsigned selectorIndex, AddRuleFlags addR
         addToRuleSet(selector->value().impl(), m_shadowPseudoElementRules, ruleData);
         return;
     }
+#if ENABLE(VIDEO_TRACK)
+    if (selector->pseudoType() == CSSSelector::PseudoCue) {
+        m_cuePseudoRules.append(ruleData);
+        return;
+    }
+#endif
     if (SelectorChecker::isCommonPseudoClassSelector(selector)) {
         switch (selector->pseudoType()) {
         case CSSSelector::PseudoLink:
@@ -381,6 +387,9 @@ void RuleSet::shrinkToFit()
     shrinkMapVectorsToFit(m_tagRules);
     shrinkMapVectorsToFit(m_shadowPseudoElementRules);
     m_linkPseudoClassRules.shrinkToFit();
+#if ENABLE(VIDEO_TRACK)
+    m_cuePseudoRules.shrinkToFit();
+#endif
     m_focusPseudoClassRules.shrinkToFit();
     m_universalRules.shrinkToFit();
     m_pageRules.shrinkToFit();

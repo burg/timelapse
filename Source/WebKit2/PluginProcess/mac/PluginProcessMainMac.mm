@@ -109,29 +109,42 @@ int PluginProcessMain(const CommandLine& commandLine)
     signal(SIGSEGV, _exit);
 #endif
 
-    // FIXME: It would be better to proxy set cursor calls over to the UI process instead of
-    // allowing plug-ins to change the mouse cursor at any time.
-    WKEnableSettingCursorWhenInBackground();
+    @autoreleasepool {
+        // FIXME: It would be better to proxy set cursor calls over to the UI process instead of
+        // allowing plug-ins to change the mouse cursor at any time.
+        WKEnableSettingCursorWhenInBackground();
 
-    JSC::initializeThreading();
-    WTF::initializeMainThread();
-    RunLoop::initializeMainRunLoop();
+        JSC::initializeThreading();
+        WTF::initializeMainThread();
+        RunLoop::initializeMainRunLoop();
 
 #if defined(__i386__)
-    // Initialize the shim for 32-bit only.
-    PluginProcess::shared().initializeShim();
+        // Initialize the shim for 32-bit only.
+        PluginProcess::shared().initializeShim();
 #endif
 
-    // Initialize Cocoa overrides. 
-    PluginProcess::shared().initializeCocoaOverrides();
+        // Initialize Cocoa overrides.
+        PluginProcess::shared().initializeCocoaOverrides();
 
-    // Initialize the plug-in process connection.
-    PluginProcess::shared().initialize(CoreIPC::Connection::Identifier(serverPort), RunLoop::main());
+        // Initialize the plug-in process connection.
+        PluginProcess::shared().initialize(CoreIPC::Connection::Identifier(serverPort), RunLoop::main());
 
-    [NSApplication sharedApplication];
+        [NSApplication sharedApplication];
+    }
 
     RunLoop::run();
     
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
+    // If we have private temporary and cache directories, clean them up.
+    if (getenv("DIRHELPER_USER_DIR_SUFFIX")) {
+        char darwinDirectory[PATH_MAX];
+        if (confstr(_CS_DARWIN_USER_TEMP_DIR, darwinDirectory, sizeof(darwinDirectory)))
+            [[NSFileManager defaultManager] removeItemAtPath:[[NSFileManager defaultManager] stringWithFileSystemRepresentation:darwinDirectory length:strlen(darwinDirectory)] error:nil];
+        if (confstr(_CS_DARWIN_USER_CACHE_DIR, darwinDirectory, sizeof(darwinDirectory)))
+            [[NSFileManager defaultManager] removeItemAtPath:[[NSFileManager defaultManager] stringWithFileSystemRepresentation:darwinDirectory length:strlen(darwinDirectory)] error:nil];
+    }
+#endif
+
     return 0;
 }
 

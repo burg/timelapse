@@ -45,7 +45,11 @@ typedef QTimer PlatformTimerRef;
 #elif PLATFORM(GTK)
 typedef unsigned int PlatformTimerRef;
 #elif PLATFORM(EFL)
+#if USE(EO)
+typedef struct _Eo Ecore_Timer;
+#else
 typedef struct _Ecore_Timer Ecore_Timer;
+#endif
 typedef Ecore_Timer* PlatformTimerRef;
 #endif
 
@@ -160,7 +164,10 @@ public:
 
     void setValueForUser(JSContextRef, JSValueRef element, JSStringRef value);
 
-    enum WhatToDump { RenderTree, MainFrameText, AllFramesText };
+    // Audio testing.
+    void setAudioData(JSContextRef, JSValueRef data);
+
+    enum WhatToDump { RenderTree, MainFrameText, AllFramesText, Audio };
     WhatToDump whatToDump() const { return m_whatToDump; }
 
     bool shouldDumpAllFrameScrollPositions() const { return m_shouldDumpAllFrameScrollPositions; }

@@ -29,9 +29,10 @@
 #include "WebContext.h"
 
 #include "Logging.h"
-#include "WebCookieManagerProxy.h";
+#include "WebCookieManagerProxy.h"
 #include "WebInspectorServer.h"
 #include "WebProcessCreationParameters.h"
+#include "WebProcessMessages.h"
 #include "WebSoupRequestManagerProxy.h"
 #include <WebCore/FileSystem.h>
 #include <WebCore/NotImplemented.h>
@@ -88,7 +89,9 @@ void WebContext::platformInitializeWebProcess(WebProcessCreationParameters& para
     initInspectorServer();
 
     parameters.urlSchemesRegistered = m_soupRequestManagerProxy->registeredURISchemes();
-    m_cookieManagerProxy->getCookiePersistentStorage(parameters.cookiePersistentStoragePath, parameters.cookieAcceptPolicy);
+    supplement<WebCookieManagerProxy>()->getCookiePersistentStorage(parameters.cookiePersistentStoragePath, parameters.cookiePersistentStorageType);
+    parameters.cookieAcceptPolicy = m_initialHTTPCookieAcceptPolicy;
+    parameters.ignoreTLSErrors = m_ignoreTLSErrors;
 }
 
 void WebContext::platformInvalidateContext()
@@ -123,6 +126,12 @@ String WebContext::platformDefaultCookieStorageDirectory() const
 {
     notImplemented();
     return String();
+}
+
+void WebContext::setIgnoreTLSErrors(bool ignoreTLSErrors)
+{
+    m_ignoreTLSErrors = ignoreTLSErrors;
+    sendToAllProcesses(Messages::WebProcess::SetIgnoreTLSErrors(m_ignoreTLSErrors));
 }
 
 } // namespace WebKit

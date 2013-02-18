@@ -50,8 +50,6 @@
 #include "WebFrame.h"
 #include "WebGeolocationClientMock.h"
 #include "WebHistoryItem.h"
-#include "WebIntent.h"
-#include "WebIntentServiceInfo.h"
 #include "WebKit.h"
 #include "WebNode.h"
 #include "WebPluginParams.h"
@@ -203,45 +201,6 @@ static void printNodeDescription(const WebNode& node, int exception)
     }
 }
 
-static void printRangeDescription(const WebRange& range)
-{
-    if (range.isNull()) {
-        fputs("(null)", stdout);
-        return;
-    }
-    printf("range from %d of ", range.startOffset());
-    int exception = 0;
-    WebNode startNode = range.startContainer(exception);
-    printNodeDescription(startNode, exception);
-    printf(" to %d of ", range.endOffset());
-    WebNode endNode = range.endContainer(exception);
-    printNodeDescription(endNode, exception);
-}
-
-static string editingActionDescription(WebEditingAction action)
-{
-    switch (action) {
-    case WebKit::WebEditingActionTyped:
-        return "WebViewInsertActionTyped";
-    case WebKit::WebEditingActionPasted:
-        return "WebViewInsertActionPasted";
-    case WebKit::WebEditingActionDropped:
-        return "WebViewInsertActionDropped";
-    }
-    return "(UNKNOWN ACTION)";
-}
-
-static string textAffinityDescription(WebTextAffinity affinity)
-{
-    switch (affinity) {
-    case WebKit::WebTextAffinityUpstream:
-        return "NSSelectionAffinityUpstream";
-    case WebKit::WebTextAffinityDownstream:
-        return "NSSelectionAffinityDownstream";
-    }
-    return "(UNKNOWN AFFINITY)";
-}
-
 // WebViewClient -------------------------------------------------------------
 
 WebView* WebViewHost::createView(WebFrame* creator, const WebURLRequest& request, const WebWindowFeatures&, const WebString&, WebNavigationPolicy)
@@ -325,83 +284,39 @@ void WebViewHost::didStopLoading()
     m_shell->setIsLoading(false);
 }
 
-// The output from these methods in layout test mode should match that
-// expected by the layout tests. See EditingDelegate.m in DumpRenderTree.
-
 bool WebViewHost::shouldBeginEditing(const WebRange& range)
 {
-    if (testRunner()->shouldDumpEditingCallbacks()) {
-        fputs("EDITING DELEGATE: shouldBeginEditingInDOMRange:", stdout);
-        printRangeDescription(range);
-        fputs("\n", stdout);
-    }
     return true;
 }
 
 bool WebViewHost::shouldEndEditing(const WebRange& range)
 {
-    if (testRunner()->shouldDumpEditingCallbacks()) {
-        fputs("EDITING DELEGATE: shouldEndEditingInDOMRange:", stdout);
-        printRangeDescription(range);
-        fputs("\n", stdout);
-    }
     return true;
 }
 
 bool WebViewHost::shouldInsertNode(const WebNode& node, const WebRange& range, WebEditingAction action)
 {
-    if (testRunner()->shouldDumpEditingCallbacks()) {
-        fputs("EDITING DELEGATE: shouldInsertNode:", stdout);
-        printNodeDescription(node, 0);
-        fputs(" replacingDOMRange:", stdout);
-        printRangeDescription(range);
-        printf(" givenAction:%s\n", editingActionDescription(action).c_str());
-    }
     return true;
 }
 
 bool WebViewHost::shouldInsertText(const WebString& text, const WebRange& range, WebEditingAction action)
 {
-    if (testRunner()->shouldDumpEditingCallbacks()) {
-        printf("EDITING DELEGATE: shouldInsertText:%s replacingDOMRange:", text.utf8().data());
-        printRangeDescription(range);
-        printf(" givenAction:%s\n", editingActionDescription(action).c_str());
-    }
     return true;
 }
 
 bool WebViewHost::shouldChangeSelectedRange(
     const WebRange& fromRange, const WebRange& toRange, WebTextAffinity affinity, bool stillSelecting)
 {
-    if (testRunner()->shouldDumpEditingCallbacks()) {
-        fputs("EDITING DELEGATE: shouldChangeSelectedDOMRange:", stdout);
-        printRangeDescription(fromRange);
-        fputs(" toDOMRange:", stdout);
-        printRangeDescription(toRange);
-        printf(" affinity:%s stillSelecting:%s\n",
-               textAffinityDescription(affinity).c_str(),
-               (stillSelecting ? "TRUE" : "FALSE"));
-    }
     return true;
 }
 
 bool WebViewHost::shouldDeleteRange(const WebRange& range)
 {
-    if (testRunner()->shouldDumpEditingCallbacks()) {
-        fputs("EDITING DELEGATE: shouldDeleteDOMRange:", stdout);
-        printRangeDescription(range);
-        fputs("\n", stdout);
-    }
     return true;
 }
 
 bool WebViewHost::shouldApplyStyle(const WebString& style, const WebRange& range)
 {
-    if (testRunner()->shouldDumpEditingCallbacks()) {
-        printf("EDITING DELEGATE: shouldApplyStyle:%s toElementsInDOMRange:", style.utf8().data());
-        printRangeDescription(range);
-        fputs("\n", stdout);
-    }
     return true;
 }
 
@@ -413,34 +328,6 @@ bool WebViewHost::isSmartInsertDeleteEnabled()
 bool WebViewHost::isSelectTrailingWhitespaceEnabled()
 {
     return m_selectTrailingWhitespaceEnabled;
-}
-
-void WebViewHost::didBeginEditing()
-{
-    if (!testRunner()->shouldDumpEditingCallbacks())
-        return;
-    fputs("EDITING DELEGATE: webViewDidBeginEditing:WebViewDidBeginEditingNotification\n", stdout);
-}
-
-void WebViewHost::didChangeSelection(bool isEmptySelection)
-{
-    if (testRunner()->shouldDumpEditingCallbacks())
-        fputs("EDITING DELEGATE: webViewDidChangeSelection:WebViewDidChangeSelectionNotification\n", stdout);
-    // No need to update clipboard with the selected text in DRT.
-}
-
-void WebViewHost::didChangeContents()
-{
-    if (!testRunner()->shouldDumpEditingCallbacks())
-        return;
-    fputs("EDITING DELEGATE: webViewDidChange:WebViewDidChangeNotification\n", stdout);
-}
-
-void WebViewHost::didEndEditing()
-{
-    if (!testRunner()->shouldDumpEditingCallbacks())
-        return;
-    fputs("EDITING DELEGATE: webViewDidEndEditing:WebViewDidEndEditingNotification\n", stdout);
 }
 
 bool WebViewHost::handleCurrentKeyboardEvent()
@@ -687,6 +574,16 @@ void WebViewHost::didAutoResize(const WebSize& newSize)
     // Purposely don't include the virtualWindowBorder in this case so that
     // window.inner[Width|Height] is the same as window.outer[Width|Height]
     setWindowRect(WebRect(0, 0, newSize.width, newSize.height));
+}
+
+void WebViewHost::initializeLayerTreeView(WebLayerTreeViewClient* client, const WebLayer& rootLayer, const WebLayerTreeView::Settings& settings)
+{
+    m_layerTreeView = adoptPtr(Platform::current()->compositorSupport()->createLayerTreeView(client, rootLayer, settings));
+}
+
+WebLayerTreeView* WebViewHost::layerTreeView()
+{
+    return m_layerTreeView.get();
 }
 
 void WebViewHost::scheduleAnimation()
@@ -1284,50 +1181,6 @@ bool WebViewHost::willCheckAndDispatchMessageEvent(WebFrame* sourceFrame, WebFra
     return false;
 }
 
-void WebViewHost::registerIntentService(WebKit::WebFrame*, const WebKit::WebIntentServiceInfo& service)
-{
-    printf("Registered Web Intent Service: action=%s type=%s title=%s url=%s disposition=%s\n",
-           service.action().utf8().data(), service.type().utf8().data(), service.title().utf8().data(), service.url().spec().data(), service.disposition().utf8().data());
-}
-
-void WebViewHost::dispatchIntent(WebFrame* source, const WebIntentRequest& request)
-{
-    printf("Received Web Intent: action=%s type=%s\n",
-           request.intent().action().utf8().data(),
-           request.intent().type().utf8().data());
-    WebMessagePortChannelArray* ports = request.intent().messagePortChannelsRelease();
-    m_currentRequest = request;
-    if (ports) {
-        printf("Have %d ports\n", static_cast<int>(ports->size()));
-        for (size_t i = 0; i < ports->size(); ++i)
-            (*ports)[i]->destroy();
-        delete ports;
-    }
-
-    if (!request.intent().service().isEmpty())
-        printf("Explicit intent service: %s\n", request.intent().service().spec().data());
-
-    WebVector<WebString> extras = request.intent().extrasNames();
-    for (size_t i = 0; i < extras.size(); ++i) {
-        printf("Extras[%s] = %s\n", extras[i].utf8().data(),
-               request.intent().extrasValue(extras[i]).utf8().data());
-    }
-
-    WebVector<WebURL> suggestions = request.intent().suggestions();
-    for (size_t i = 0; i < suggestions.size(); ++i)
-        printf("Have suggestion %s\n", suggestions[i].spec().data());
-}
-
-void WebViewHost::deliveredIntentResult(WebFrame* frame, int id, const WebSerializedScriptValue& data)
-{
-    printf("Web intent success for id %d\n", id);
-}
-
-void WebViewHost::deliveredIntentFailure(WebFrame* frame, int id, const WebSerializedScriptValue& data)
-{
-    printf("Web intent failure for id %d\n", id);
-}
-
 // WebTestDelegate ------------------------------------------------------------
 
 WebContextMenuData* WebViewHost::lastContextMenuData() const
@@ -1412,6 +1265,16 @@ void WebViewHost::applyPreferences()
     m_shell->applyPreferences();
 }
 
+void WebViewHost::setCurrentWebIntentRequest(const WebIntentRequest& request)
+{
+    m_currentRequest = request;
+}
+
+WebIntentRequest* WebViewHost::currentWebIntentRequest()
+{
+    return &m_currentRequest;
+}
+
 // Public functions -----------------------------------------------------------
 
 WebViewHost::WebViewHost(TestShell* shell)
@@ -1437,6 +1300,7 @@ WebViewHost::~WebViewHost()
          it < m_popupmenus.end(); ++it)
         (*it)->close();
 
+    m_layerTreeView.clear();
     webWidget()->close();
     if (m_inModalLoop)
         webkit_support::QuitMessageLoop();

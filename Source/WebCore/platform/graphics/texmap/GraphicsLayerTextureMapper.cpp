@@ -44,8 +44,6 @@ PassOwnPtr<GraphicsLayer> GraphicsLayer::create(GraphicsLayerFactory* factory, G
 
 PassOwnPtr<GraphicsLayer> GraphicsLayer::create(GraphicsLayerClient* client)
 {
-    if (s_graphicsLayerFactory)
-        return (*s_graphicsLayerFactory)(client);
     return adoptPtr(new GraphicsLayerTextureMapper(client));
 }
 
@@ -122,18 +120,13 @@ void GraphicsLayerTextureMapper::setNeedsDisplayInRect(const FloatRect& rect)
 
 /* \reimp (GraphicsLayer.h)
 */
-void GraphicsLayerTextureMapper::setParent(GraphicsLayer* layer)
-{
-    notifyChange(TextureMapperLayer::ParentChange);
-    GraphicsLayer::setParent(layer);
-}
-
-/* \reimp (GraphicsLayer.h)
-*/
 bool GraphicsLayerTextureMapper::setChildren(const Vector<GraphicsLayer*>& children)
 {
-    notifyChange(TextureMapperLayer::ChildrenChange);
-    return GraphicsLayer::setChildren(children);
+    if (GraphicsLayer::setChildren(children)) {
+        notifyChange(TextureMapperLayer::ChildrenChange);
+        return true;
+    }
+    return false;
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -177,16 +170,6 @@ bool GraphicsLayerTextureMapper::replaceChild(GraphicsLayer* oldChild, GraphicsL
         return true;
     }
     return false;
-}
-
-/* \reimp (GraphicsLayer.h)
-*/
-void GraphicsLayerTextureMapper::removeFromParent()
-{
-    if (!parent())
-        return;
-    notifyChange(TextureMapperLayer::ParentChange);
-    GraphicsLayer::removeFromParent();
 }
 
 /* \reimp (GraphicsLayer.h)
@@ -351,13 +334,12 @@ void GraphicsLayerTextureMapper::setContentsRect(const IntRect& value)
     notifyChange(TextureMapperLayer::ContentsRectChange);
 }
 
-void GraphicsLayerTextureMapper::setContentsToBackgroundColor(const Color& color)
+void GraphicsLayerTextureMapper::setContentsToSolidColor(const Color& color)
 {
-    if (color == m_backgroundColor)
+    if (color == m_solidColor)
         return;
 
-    m_backgroundColor = color;
-    setBackgroundColor(color);
+    m_solidColor = color;
     notifyChange(TextureMapperLayer::ContentChange);
 }
 
@@ -405,36 +387,31 @@ void GraphicsLayerTextureMapper::setContentsToMedia(TextureMapperPlatformLayer* 
 */
 void GraphicsLayerTextureMapper::flushCompositingStateForThisLayerOnly()
 {
-    m_layer->flushCompositingState(this);
+    m_layer->flushCompositingStateForThisLayerOnly(this);
+    updateBackingStore();
     didFlushCompositingState();
 }
 
 /* \reimp (GraphicsLayer.h)
 */
-void GraphicsLayerTextureMapper::flushCompositingState(const FloatRect&)
+void GraphicsLayerTextureMapper::flushCompositingState(const FloatRect& rect)
 {
     if (!m_layer->textureMapper())
         return;
 
-    m_layer->flushCompositingState(this, TextureMapperLayer::TraverseDescendants);
-    didFlushCompositingStateRecursive();
+    flushCompositingStateForThisLayerOnly();
+
+    if (maskLayer())
+        maskLayer()->flushCompositingState(rect);
+    if (replicaLayer())
+        replicaLayer()->flushCompositingState(rect);
+    for (size_t i = 0; i < children().size(); ++i)
+        children()[i]->flushCompositingState(rect);
 }
 
 void GraphicsLayerTextureMapper::didFlushCompositingState()
 {
-    updateBackingStore();
     m_changeMask = 0;
-}
-
-void GraphicsLayerTextureMapper::didFlushCompositingStateRecursive()
-{
-    didFlushCompositingState();
-    for (size_t i = 0; i < children().size(); ++i)
-        toGraphicsLayerTextureMapper(children()[i])->didFlushCompositingStateRecursive();
-    if (maskLayer())
-        toGraphicsLayerTextureMapper(maskLayer())->didFlushCompositingStateRecursive();
-    if (replicaLayer())
-        toGraphicsLayerTextureMapper(replicaLayer())->didFlushCompositingStateRecursive();
 }
 
 void GraphicsLayerTextureMapper::updateBackingStore()

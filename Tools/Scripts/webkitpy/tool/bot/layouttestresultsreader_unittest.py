@@ -46,7 +46,7 @@ class LayoutTestResultsReaderTest(unittest.TestCase):
         # Make sure that our filesystem mock functions as we expect.
         self.assertRaises(IOError, tool.filesystem.read_text_file, layout_tests_results_path)
         self.assertRaises(IOError, tool.filesystem.read_text_file, unit_tests_results_path)
-        # layout_test_results shouldn't raise even if the results.html file is missing.
+        # layout_test_results shouldn't raise even if the results.json file is missing.
         self.assertEqual(reader.results(), None)
 
     def test_create_unit_test_results(self):
@@ -66,7 +66,7 @@ class LayoutTestResultsReaderTest(unittest.TestCase):
 
     def test_missing_unit_test_results_path(self):
         tool = MockTool()
-        tool.port().unit_tests_results_path = lambda: None
+        tool.deprecated_port().unit_tests_results_path = lambda: None
         reader = LayoutTestResultsReader(tool, "/var/logs")
         reader._create_layout_test_results = lambda: LayoutTestResults([])
         # layout_test_results shouldn't raise even if the unit tests xml file is missing.

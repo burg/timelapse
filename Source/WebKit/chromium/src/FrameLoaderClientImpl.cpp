@@ -1456,7 +1456,7 @@ bool FrameLoaderClientImpl::canCachePage() const
 
 // Downloading is handled in the browser process, not WebKit. If we get to this
 // point, our download detection code in the ResourceDispatcherHost is broken!
-void FrameLoaderClientImpl::download(ResourceHandle* handle,
+void FrameLoaderClientImpl::convertMainResourceLoadToDownload(MainResourceLoader* mainResourceLoader,
                                      const ResourceRequest& request,
                                      const ResourceResponse& response)
 {
@@ -1633,6 +1633,13 @@ bool FrameLoaderClientImpl::willCheckAndDispatchMessageEvent(
         source = WebFrameImpl::fromFrame(event->source()->document()->frame());
     return m_webFrame->client()->willCheckAndDispatchMessageEvent(
         source, m_webFrame, WebSecurityOrigin(target), WebDOMMessageEvent(event));
+}
+
+void FrameLoaderClientImpl::didChangeName(const String& name)
+{
+    if (!m_webFrame->client())
+        return;
+    m_webFrame->client()->didChangeName(m_webFrame, name);
 }
 
 #if ENABLE(WEB_INTENTS_TAG)

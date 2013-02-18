@@ -27,14 +27,13 @@
 #include "AuthenticationManager.h"
 
 #include "AuthenticationManagerMessages.h"
+#include "ChildProcess.h"
 #include "Download.h"
 #include "DownloadProxyMessages.h"
-#include "MessageID.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebFrame.h"
 #include "WebPage.h"
 #include "WebPageProxyMessages.h"
-#include "WebProcess.h"
 #include <WebCore/AuthenticationChallenge.h>
 #include <WebCore/AuthenticationClient.h>
 
@@ -48,15 +47,16 @@ static uint64_t generateAuthenticationChallengeID()
     return uniqueAuthenticationChallengeID++;
 }
 
-AuthenticationManager& AuthenticationManager::shared()
+const AtomicString& AuthenticationManager::supplementName()
 {
-    static AuthenticationManager& manager = *new AuthenticationManager;
-    return manager;
+    DEFINE_STATIC_LOCAL(AtomicString, name, ("AuthenticationManager", AtomicString::ConstructFromLiteral));
+    return name;
 }
 
-AuthenticationManager::AuthenticationManager()
+AuthenticationManager::AuthenticationManager(ChildProcess* process)
+    : m_process(process)
 {
-    WebProcess::shared().addMessageReceiver(Messages::AuthenticationManager::messageReceiverName(), this);
+    m_process->addMessageReceiver(Messages::AuthenticationManager::messageReceiverName(), this);
 }
 
 void AuthenticationManager::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
@@ -72,7 +72,7 @@ void AuthenticationManager::didReceiveAuthenticationChallenge(WebFrame* frame, c
     uint64_t challengeID = generateAuthenticationChallengeID();
     m_challenges.set(challengeID, authenticationChallenge);    
     
-    WebProcess::shared().connection()->send(Messages::WebPageProxy::DidReceiveAuthenticationChallenge(frame->frameID(), authenticationChallenge, challengeID), frame->page()->pageID());
+    m_process->send(Messages::WebPageProxy::DidReceiveAuthenticationChallenge(frame->frameID(), authenticationChallenge, challengeID), frame->page()->pageID());
 }
 
 void AuthenticationManager::didReceiveAuthenticationChallenge(Download* download, const AuthenticationChallenge& authenticationChallenge)
@@ -104,7 +104,6 @@ void AuthenticationManager::useCredentialForChallenge(uint64_t challengeID, cons
         // This authentication challenge comes from a download.
         Download::receivedCredential(challenge, credential);
         return;
-        
     }
 
     coreClient->receivedCredential(challenge, credential);

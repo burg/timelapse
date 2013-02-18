@@ -246,14 +246,16 @@ class NodeRareData : public NodeRareDataBase {
 #endif
 
 public:    
-    NodeRareData(Document* document)
-        : NodeRareDataBase(document)
-        , m_tabIndex(0)
+    NodeRareData()
+        : m_tabIndex(0)
         , m_childIndex(0)
         , m_tabIndexWasSetExplicitly(false)
         , m_needsFocusAppearanceUpdateSoonAfterAttach(false)
         , m_styleAffectedByEmpty(false)
         , m_isInCanvasSubtree(false)
+#if ENABLE(VIDEO_TRACK)
+        , m_isWebVTTNode(false)
+#endif
 #if ENABLE(FULLSCREEN_API)
         , m_containsFullScreenElement(false)
 #endif
@@ -367,12 +369,19 @@ public:
     virtual void reportMemoryUsage(MemoryObjectInfo*) const;
 
 protected:
+#if ENABLE(VIDEO_TRACK)
+    bool isWebVTTNode() { return m_isWebVTTNode; }
+    void setIsWebVTTNode(bool value) { m_isWebVTTNode = value; }
+#endif
     short m_tabIndex;
     unsigned short m_childIndex;
     bool m_tabIndexWasSetExplicitly : 1;
     bool m_needsFocusAppearanceUpdateSoonAfterAttach : 1;
     bool m_styleAffectedByEmpty : 1;
     bool m_isInCanvasSubtree : 1;
+#if ENABLE(VIDEO_TRACK)
+    bool m_isWebVTTNode : 1;
+#endif
 #if ENABLE(FULLSCREEN_API)
     bool m_containsFullScreenElement : 1;
 #endif

@@ -67,6 +67,11 @@ Intrinsic ExecutableBase::intrinsic() const
         return nativeExecutable->intrinsic();
     return NoIntrinsic;
 }
+#else
+Intrinsic ExecutableBase::intrinsic() const
+{
+    return NoIntrinsic;
+}
 #endif
 
 const ClassInfo NativeExecutable::s_info = { "NativeExecutable", &ExecutableBase::s_info, 0, 0, CREATE_METHOD_TABLE(NativeExecutable) };
@@ -481,11 +486,6 @@ bool FunctionExecutable::jitCompileForConstruct(ExecState* exec)
     return jitCompileFunctionIfAppropriate(exec, m_codeBlockForConstruct, m_jitCodeForConstruct, m_jitCodeForConstructWithArityCheck, JITCode::bottomTierJIT(), UINT_MAX, JITCompilationCanFail);
 }
 #endif
-
-FunctionCodeBlock* FunctionExecutable::codeBlockWithBytecodeFor(CodeSpecializationKind kind)
-{
-    return baselineCodeBlockFor(kind);
-}
 
 PassOwnPtr<FunctionCodeBlock> FunctionExecutable::produceCodeBlockFor(JSScope* scope, CodeSpecializationKind specializationKind, JSObject*& exception)
 {

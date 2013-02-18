@@ -784,15 +784,22 @@ sub GenerateHeader
 
     $implIncludes{"${className}Custom.h"} = 1 if !$interface->extendedAttributes->{"JSCustomHeader"} && ($interface->extendedAttributes->{"CustomPutFunction"} || $interface->extendedAttributes->{"CustomNamedSetter"});
 
+    my $hasImpureNamedGetter =
+        $interface->extendedAttributes->{"NamedGetter"}
+        || $interface->extendedAttributes->{"CustomNamedGetter"}
+        || $interface->extendedAttributes->{"CustomGetOwnPropertySlot"};
+
     my $hasComplexGetter =
         $interface->extendedAttributes->{"IndexedGetter"}
         || $interface->extendedAttributes->{"NumericIndexedGetter"}
-        || $interface->extendedAttributes->{"CustomGetOwnPropertySlot"}
         || $interface->extendedAttributes->{"JSCustomGetOwnPropertySlotAndDescriptor"}
-        || $interface->extendedAttributes->{"NamedGetter"}
-        || $interface->extendedAttributes->{"CustomNamedGetter"};
+        || $hasImpureNamedGetter;
     
     my $hasGetter = $numAttributes > 0 || !$interface->extendedAttributes->{"OmitConstructor"} || $hasComplexGetter;
+
+    if ($hasImpureNamedGetter) {
+        $structureFlags{"JSC::HasImpureGetOwnPropertySlot"} = 1;
+    }
 
     # Getters
     if ($hasGetter) {
@@ -1521,9 +1528,9 @@ sub GenerateImplementation
         push(@implContent, $codeGenerator->GenerateCompileTimeCheckForEnumsIfNeeded($interface));
 
         my $protoClassName = "${className}Prototype";
-        GenerateConstructorDefinition(\@implContent, $className, $protoClassName, $interfaceName, $visibleInterfaceName, $interface);
+        GenerateConstructorDefinitions(\@implContent, $className, $protoClassName, $interfaceName, $visibleInterfaceName, $interface);
         if ($interface->extendedAttributes->{"NamedConstructor"}) {
-            GenerateConstructorDefinition(\@implContent, $className, $protoClassName, $interfaceName, $interface->extendedAttributes->{"NamedConstructor"}, $interface, "GeneratingNamedConstructor");
+            GenerateConstructorDefinitions(\@implContent, $className, $protoClassName, $interfaceName, $interface->extendedAttributes->{"NamedConstructor"}, $interface, "GeneratingNamedConstructor");
         }
     }
 
@@ -2888,6 +2895,9 @@ sub GenerateCallbackHeader
     push(@headerContent, "        return adoptRef(new $className(callback, globalObject));\n");
     push(@headerContent, "    }\n\n");
 
+    # ScriptExecutionContext
+    push(@headerContent, "    virtual ScriptExecutionContext* scriptExecutionContext() const { return ContextDestructionObserver::scriptExecutionContext(); }\n\n");
+
     # Destructor
     push(@headerContent, "    virtual ~$className();\n");
 
@@ -3788,6 +3798,17 @@ sub GenerateConstructorDeclaration
 
     if (IsConstructable($interface) && !$interface->extendedAttributes->{"NamedConstructor"}) {
         push(@$outputArray, "    static JSC::EncodedJSValue JSC_HOST_CALL construct${className}(JSC::ExecState*);\n");
+
+        if (!HasCustomConstructor($interface)) {
+            my @constructors = @{$interface->constructors};
+            if (@constructors > 1) {
+                foreach my $constructor (@constructors) {
+                    my $overloadedIndex = "" . $constructor->{overloadedIndex};
+                    push(@$outputArray, "    static JSC::EncodedJSValue JSC_HOST_CALL construct${className}${overloadedIndex}(JSC::ExecState*);\n");
+                }
+            }
+        }
+
         push(@$outputArray, "    static JSC::ConstructType getConstructData(JSC::JSCell*, JSC::ConstructData&);\n");
     }
     push(@$outputArray, "};\n\n");
@@ -3827,10 +3848,9 @@ END
     }
 }
 
-sub GenerateConstructorDefinition
+sub GenerateConstructorDefinitions
 {
     my $outputArray = shift;
-
     my $className = shift;
     my $protoClassName = shift;
     my $interfaceName = shift;
@@ -3838,82 +3858,77 @@ sub GenerateConstructorDefinition
     my $interface = shift;
     my $generatingNamedConstructor = shift;
 
-    # FIXME: Add support for overloaded constructors to JS as well.
-    # For now mimic the old behaviour by only generating code for the last "Constructor" attribute.
-    my $function = @{$interface->constructors}[-1];
+    if (IsConstructable($interface)) {
+        my @constructors = @{$interface->constructors};
+        if (@constructors > 1) {
+            foreach my $constructor (@constructors) {
+                GenerateConstructorDefinition($outputArray, $className, $protoClassName, $interfaceName, $visibleInterfaceName, $interface, $generatingNamedConstructor, $constructor);
+            }
+            GenerateOverloadedConstructorDefinition($outputArray, $className, $interface);
+        } elsif (@constructors == 1) {
+            GenerateConstructorDefinition($outputArray, $className, $protoClassName, $interfaceName, $visibleInterfaceName, $interface, $generatingNamedConstructor, $constructors[0]);
+        } else {
+            GenerateConstructorDefinition($outputArray, $className, $protoClassName, $interfaceName, $visibleInterfaceName, $interface, $generatingNamedConstructor);
+        }
+    }
+
+    GenerateConstructorHelperMethods($outputArray, $className, $protoClassName, $interfaceName, $visibleInterfaceName, $interface, $generatingNamedConstructor);
+}
+
+sub GenerateOverloadedConstructorDefinition
+{
+    my $outputArray = shift;
+    my $className = shift;
+    my $interface = shift;
+
+    my $functionName = "${className}Constructor::construct${className}";
+    push(@$outputArray, <<END);
+EncodedJSValue JSC_HOST_CALL ${functionName}(ExecState* exec)
+{
+    size_t argsCount = exec->argumentCount();
+END
+
+    my %fetchedArguments = ();
+    my $leastNumMandatoryParams = 255;
+
+    my @constructors = @{$interface->constructors};
+    foreach my $overload (@constructors) {
+        my ($numMandatoryParams, $parametersCheck, @neededArguments) = GenerateFunctionParametersCheck($overload);
+        $leastNumMandatoryParams = $numMandatoryParams if ($numMandatoryParams < $leastNumMandatoryParams);
+
+        foreach my $parameterIndex (@neededArguments) {
+            next if exists $fetchedArguments{$parameterIndex};
+            push(@$outputArray, "    JSValue arg$parameterIndex(exec->argument($parameterIndex));\n");
+            $fetchedArguments{$parameterIndex} = 1;
+        }
+
+        push(@$outputArray, "    if ($parametersCheck)\n");
+        push(@$outputArray, "        return ${functionName}$overload->{overloadedIndex}(exec);\n");
+    }
+
+    if ($leastNumMandatoryParams >= 1) {
+        push(@$outputArray, "    if (argsCount < $leastNumMandatoryParams)\n");
+        push(@$outputArray, "        return throwVMError(exec, createNotEnoughArgumentsError(exec));\n");
+    }
+    push(@$outputArray, <<END);
+    return throwVMTypeError(exec);
+}
+
+END
+}
+
+sub GenerateConstructorDefinition
+{
+    my $outputArray = shift;
+    my $className = shift;
+    my $protoClassName = shift;
+    my $interfaceName = shift;
+    my $visibleInterfaceName = shift;
+    my $interface = shift;
+    my $generatingNamedConstructor = shift;
+    my $function = shift;
 
     my $constructorClassName = $generatingNamedConstructor ? "${className}NamedConstructor" : "${className}Constructor";
-    my $numberOfConstructorParameters = $interface->extendedAttributes->{"ConstructorParameters"};
-    if (!defined $numberOfConstructorParameters) {
-        if ($codeGenerator->IsConstructorTemplate($interface, "Event")) {
-            $numberOfConstructorParameters = 2;
-        } elsif ($interface->extendedAttributes->{"Constructor"}) {
-            $numberOfConstructorParameters = @{$function->parameters};
-        }
-    }
-
-    if ($generatingNamedConstructor) {
-        push(@$outputArray, "const ClassInfo ${constructorClassName}::s_info = { \"${visibleInterfaceName}Constructor\", &Base::s_info, 0, 0, CREATE_METHOD_TABLE($constructorClassName) };\n\n");
-        push(@$outputArray, "${constructorClassName}::${constructorClassName}(Structure* structure, JSDOMGlobalObject* globalObject)\n");
-        push(@$outputArray, "    : DOMConstructorWithDocument(structure, globalObject)\n");
-        push(@$outputArray, "{\n");
-        push(@$outputArray, "}\n\n");
-    } else {
-        if ($interface->extendedAttributes->{"JSNoStaticTables"}) {
-            push(@$outputArray, "static const HashTable* get${constructorClassName}Table(ExecState* exec)\n");
-            push(@$outputArray, "{\n");
-            push(@$outputArray, "    return getHashTableForGlobalData(exec->globalData(), &${constructorClassName}Table);\n");
-            push(@$outputArray, "}\n\n");
-            push(@$outputArray, "const ClassInfo ${constructorClassName}::s_info = { \"${visibleInterfaceName}Constructor\", &Base::s_info, 0, get${constructorClassName}Table, CREATE_METHOD_TABLE($constructorClassName) };\n\n");
-        } else {
-            push(@$outputArray, "const ClassInfo ${constructorClassName}::s_info = { \"${visibleInterfaceName}Constructor\", &Base::s_info, &${constructorClassName}Table, 0, CREATE_METHOD_TABLE($constructorClassName) };\n\n");
-        }
-
-        push(@$outputArray, "${constructorClassName}::${constructorClassName}(Structure* structure, JSDOMGlobalObject* globalObject)\n");
-        push(@$outputArray, "    : DOMConstructorObject(structure, globalObject)\n");
-        push(@$outputArray, "{\n");
-        push(@$outputArray, "}\n\n");
-    }
-
-    push(@$outputArray, "void ${constructorClassName}::finishCreation(ExecState* exec, JSDOMGlobalObject* globalObject)\n");
-    push(@$outputArray, "{\n");
-    if ($interfaceName eq "DOMWindow") {
-        push(@$outputArray, "    Base::finishCreation(exec->globalData());\n");
-        push(@$outputArray, "    ASSERT(inherits(&s_info));\n");
-        push(@$outputArray, "    putDirect(exec->globalData(), exec->propertyNames().prototype, globalObject->prototype(), DontDelete | ReadOnly);\n");
-    } elsif ($generatingNamedConstructor) {
-        push(@$outputArray, "    Base::finishCreation(globalObject);\n");
-        push(@$outputArray, "    ASSERT(inherits(&s_info));\n");
-        push(@$outputArray, "    putDirect(exec->globalData(), exec->propertyNames().prototype, ${className}Prototype::self(exec, globalObject), None);\n");
-    } else {
-        push(@$outputArray, "    Base::finishCreation(exec->globalData());\n");
-        push(@$outputArray, "    ASSERT(inherits(&s_info));\n");
-        push(@$outputArray, "    putDirect(exec->globalData(), exec->propertyNames().prototype, ${protoClassName}::self(exec, globalObject), DontDelete | ReadOnly);\n");
-    }
-    push(@$outputArray, "    putDirect(exec->globalData(), exec->propertyNames().length, jsNumber(${numberOfConstructorParameters}), ReadOnly | DontDelete | DontEnum);\n") if defined $numberOfConstructorParameters;
-    push(@$outputArray, "}\n\n");
-
-    if (!$generatingNamedConstructor) {
-        my $hasStaticFunctions = 0;
-        foreach my $function (@{$interface->functions}) {
-            if ($function->isStatic) {
-                $hasStaticFunctions = 1;
-                last;
-            }
-        }
-
-        my $kind = $hasStaticFunctions ? "Property" : "Value";
-
-        push(@$outputArray, "bool ${constructorClassName}::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot& slot)\n");
-        push(@$outputArray, "{\n");
-        push(@$outputArray, "    return getStatic${kind}Slot<${constructorClassName}, JSDOMWrapper>(exec, " . constructorHashTableAccessor($interface->extendedAttributes->{"JSNoStaticTables"}, $constructorClassName) . ", jsCast<${constructorClassName}*>(cell), propertyName, slot);\n");
-        push(@$outputArray, "}\n\n");
-
-        push(@$outputArray, "bool ${constructorClassName}::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)\n");
-        push(@$outputArray, "{\n");
-        push(@$outputArray, "    return getStatic${kind}Descriptor<${constructorClassName}, JSDOMWrapper>(exec, " . constructorHashTableAccessor($interface->extendedAttributes->{"JSNoStaticTables"}, $constructorClassName) . ", jsCast<${constructorClassName}*>(object), propertyName, descriptor);\n");
-        push(@$outputArray, "}\n\n");
-    }
 
     if (IsConstructable($interface)) {
         if ($codeGenerator->IsConstructorTemplate($interface, "Event")) {
@@ -4004,10 +4019,14 @@ END
                 push(@$outputArray, "    impl()->set(index, value.toNumber(exec));\n");
                 push(@$outputArray, "}\n\n");
             }
-        } elsif (!($interface->extendedAttributes->{"JSCustomConstructor"} || $interface->extendedAttributes->{"CustomConstructor"}) && (!$interface->extendedAttributes->{"NamedConstructor"} || $generatingNamedConstructor)) {
-            push(@$outputArray, "EncodedJSValue JSC_HOST_CALL ${constructorClassName}::construct${className}(ExecState* exec)\n");
-            push(@$outputArray, "{\n");
+        } elsif (!HasCustomConstructor($interface) && (!$interface->extendedAttributes->{"NamedConstructor"} || $generatingNamedConstructor)) {
+            my $overloadedIndexString = "";
+            if ($function->{overloadedIndex} && $function->{overloadedIndex} > 0) {
+                $overloadedIndexString .= $function->{overloadedIndex};
+            }
 
+            push(@$outputArray, "EncodedJSValue JSC_HOST_CALL ${constructorClassName}::construct${className}${overloadedIndexString}(ExecState* exec)\n");
+            push(@$outputArray, "{\n");
             push(@$outputArray, "    ${constructorClassName}* castedThis = jsCast<${constructorClassName}*>(exec->callee());\n");
 
             my @constructorArgList;
@@ -4064,7 +4083,99 @@ END
             push(@$outputArray, "    return JSValue::encode(asObject(toJS(exec, castedThis->globalObject(), object.get())));\n");
             push(@$outputArray, "}\n\n");
         }
+    }
+}
 
+sub GenerateConstructorHelperMethods
+{
+    my $outputArray = shift;
+    my $className = shift;
+    my $protoClassName = shift;
+    my $interfaceName = shift;
+    my $visibleInterfaceName = shift;
+    my $interface = shift;
+    my $generatingNamedConstructor = shift;
+
+    my $constructorClassName = $generatingNamedConstructor ? "${className}NamedConstructor" : "${className}Constructor";
+    my $numberOfConstructorParameters = $interface->extendedAttributes->{"ConstructorParameters"};
+    if (!defined $numberOfConstructorParameters) {
+        if ($codeGenerator->IsConstructorTemplate($interface, "Event")) {
+            $numberOfConstructorParameters = 2;
+        } elsif ($interface->extendedAttributes->{"Constructor"}) {
+            my @constructors = @{$interface->constructors};
+            $numberOfConstructorParameters = 255;
+            foreach my $constructor (@constructors) {
+                my $currNumberOfParameters = @{$constructor->parameters};
+                if ($currNumberOfParameters < $numberOfConstructorParameters) {
+                    $numberOfConstructorParameters = $currNumberOfParameters;
+                }
+            }
+        }
+    }
+
+    if ($generatingNamedConstructor) {
+        push(@$outputArray, "const ClassInfo ${constructorClassName}::s_info = { \"${visibleInterfaceName}Constructor\", &Base::s_info, 0, 0, CREATE_METHOD_TABLE($constructorClassName) };\n\n");
+        push(@$outputArray, "${constructorClassName}::${constructorClassName}(Structure* structure, JSDOMGlobalObject* globalObject)\n");
+        push(@$outputArray, "    : DOMConstructorWithDocument(structure, globalObject)\n");
+        push(@$outputArray, "{\n");
+        push(@$outputArray, "}\n\n");
+    } else {
+        if ($interface->extendedAttributes->{"JSNoStaticTables"}) {
+            push(@$outputArray, "static const HashTable* get${constructorClassName}Table(ExecState* exec)\n");
+            push(@$outputArray, "{\n");
+            push(@$outputArray, "    return getHashTableForGlobalData(exec->globalData(), &${constructorClassName}Table);\n");
+            push(@$outputArray, "}\n\n");
+            push(@$outputArray, "const ClassInfo ${constructorClassName}::s_info = { \"${visibleInterfaceName}Constructor\", &Base::s_info, 0, get${constructorClassName}Table, CREATE_METHOD_TABLE($constructorClassName) };\n\n");
+        } else {
+            push(@$outputArray, "const ClassInfo ${constructorClassName}::s_info = { \"${visibleInterfaceName}Constructor\", &Base::s_info, &${constructorClassName}Table, 0, CREATE_METHOD_TABLE($constructorClassName) };\n\n");
+        }
+
+        push(@$outputArray, "${constructorClassName}::${constructorClassName}(Structure* structure, JSDOMGlobalObject* globalObject)\n");
+        push(@$outputArray, "    : DOMConstructorObject(structure, globalObject)\n");
+        push(@$outputArray, "{\n}\n\n");
+    }
+
+    push(@$outputArray, "void ${constructorClassName}::finishCreation(ExecState* exec, JSDOMGlobalObject* globalObject)\n");
+    push(@$outputArray, "{\n");
+    if ($interfaceName eq "DOMWindow") {
+        push(@$outputArray, "    Base::finishCreation(exec->globalData());\n");
+        push(@$outputArray, "    ASSERT(inherits(&s_info));\n");
+        push(@$outputArray, "    putDirect(exec->globalData(), exec->propertyNames().prototype, globalObject->prototype(), DontDelete | ReadOnly);\n");
+    } elsif ($generatingNamedConstructor) {
+        push(@$outputArray, "    Base::finishCreation(globalObject);\n");
+        push(@$outputArray, "    ASSERT(inherits(&s_info));\n");
+        push(@$outputArray, "    putDirect(exec->globalData(), exec->propertyNames().prototype, ${className}Prototype::self(exec, globalObject), None);\n");
+    } else {
+        push(@$outputArray, "    Base::finishCreation(exec->globalData());\n");
+        push(@$outputArray, "    ASSERT(inherits(&s_info));\n");
+        push(@$outputArray, "    putDirect(exec->globalData(), exec->propertyNames().prototype, ${protoClassName}::self(exec, globalObject), DontDelete | ReadOnly);\n");
+    }
+    push(@$outputArray, "    putDirect(exec->globalData(), exec->propertyNames().length, jsNumber(${numberOfConstructorParameters}), ReadOnly | DontDelete | DontEnum);\n") if defined $numberOfConstructorParameters;
+    push(@$outputArray, "}\n\n");
+
+    if (!$generatingNamedConstructor) {
+        my $hasStaticFunctions = 0;
+        foreach my $function (@{$interface->functions}) {
+            if ($function->isStatic) {
+                $hasStaticFunctions = 1;
+                last;
+            }
+        }
+
+        my $kind = $hasStaticFunctions ? "Property" : "Value";
+
+        push(@$outputArray, "bool ${constructorClassName}::getOwnPropertySlot(JSCell* cell, ExecState* exec, PropertyName propertyName, PropertySlot& slot)\n");
+        push(@$outputArray, "{\n");
+        push(@$outputArray, "    return getStatic${kind}Slot<${constructorClassName}, JSDOMWrapper>(exec, " . constructorHashTableAccessor($interface->extendedAttributes->{"JSNoStaticTables"}, $constructorClassName) . ", jsCast<${constructorClassName}*>(cell), propertyName, slot);\n");
+        push(@$outputArray, "}\n\n");
+
+        push(@$outputArray, "bool ${constructorClassName}::getOwnPropertyDescriptor(JSObject* object, ExecState* exec, PropertyName propertyName, PropertyDescriptor& descriptor)\n");
+        push(@$outputArray, "{\n");
+        push(@$outputArray, "    return getStatic${kind}Descriptor<${constructorClassName}, JSDOMWrapper>(exec, " . constructorHashTableAccessor($interface->extendedAttributes->{"JSNoStaticTables"}, $constructorClassName) . ", jsCast<${constructorClassName}*>(object), propertyName, descriptor);\n");
+        push(@$outputArray, "}\n\n");
+    }
+
+    if (IsConstructable($interface)) {
         if (!$interface->extendedAttributes->{"NamedConstructor"} || $generatingNamedConstructor) {
             push(@$outputArray, "ConstructType ${constructorClassName}::getConstructData(JSCell*, ConstructData& constructData)\n");
             push(@$outputArray, "{\n");
@@ -4075,11 +4186,18 @@ END
     }
 }
 
+sub HasCustomConstructor
+{
+    my $interface = shift;
+
+    return $interface->extendedAttributes->{"CustomConstructor"} || $interface->extendedAttributes->{"JSCustomConstructor"};
+}
+
 sub IsConstructable
 {
     my $interface = shift;
 
-    return $interface->extendedAttributes->{"CustomConstructor"} || $interface->extendedAttributes->{"JSCustomConstructor"} || $interface->extendedAttributes->{"Constructor"} || $interface->extendedAttributes->{"NamedConstructor"} || $interface->extendedAttributes->{"ConstructorTemplate"};
+    return HasCustomConstructor($interface) || $interface->extendedAttributes->{"Constructor"} || $interface->extendedAttributes->{"NamedConstructor"} || $interface->extendedAttributes->{"ConstructorTemplate"};
 }
 
 1;

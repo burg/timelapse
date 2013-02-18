@@ -37,9 +37,6 @@
 #include <runtime/InitializeThreading.h>
 #include <wtf/MainThread.h>
 
-#if USE(ACCELERATED_COMPOSITING)
-#include "CoordinatedGraphicsLayer.h"
-#endif
 #if USE(QTKIT)
 #include "WebSystemInterface.h"
 #endif
@@ -186,11 +183,8 @@ Q_DECL_EXPORT int WebProcessMainQt(QGuiApplication* app)
     identifier = static_cast<CoreIPC::Connection::Identifier>(id);
 #endif
 #endif
-#if USE(ACCELERATED_COMPOSITING)
-    CoordinatedGraphicsLayer::initFactory();
-#endif
 
-    WebKit::WebProcess::shared().initialize(identifier, RunLoop::main());
+    WebKit::WebProcess::shared().initializeConnection(identifier);
 
     RunLoop::run();
 

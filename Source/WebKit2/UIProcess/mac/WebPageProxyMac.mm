@@ -42,6 +42,7 @@
 #import <WebCore/DictationAlternative.h>
 #import <WebCore/GraphicsLayer.h>
 #import <WebCore/SharedBuffer.h>
+#import <WebCore/SystemVersionMac.h>
 #import <WebCore/TextAlternativeWithRange.h>
 #import <WebKitSystemInterface.h>
 #import <wtf/text/StringConcatenate.h>
@@ -64,42 +65,13 @@ namespace WebKit {
 #error Unknown architecture
 #endif
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
-
-static String macOSXVersionString()
+static NSString *systemMarketingVersionForUserAgentString()
 {
     // Use underscores instead of dots because when we first added the Mac OS X version to the user agent string
     // we were concerned about old DHTML libraries interpreting "4." as Netscape 4. That's no longer a concern for us
     // but we're sticking with the underscores for compatibility with the format used by older versions of Safari.
-    return [WKGetMacOSXVersionString() stringByReplacingOccurrencesOfString:@"." withString:@"_"];
+    return [systemMarketingVersion() stringByReplacingOccurrencesOfString:@"." withString:@"_"];
 }
-
-#else
-
-static inline int callGestalt(OSType selector)
-{
-    SInt32 value = 0;
-    Gestalt(selector, &value);
-    return value;
-}
-
-// Uses underscores instead of dots because if "4." ever appears in a user agent string, old DHTML libraries treat it as Netscape 4.
-static String macOSXVersionString()
-{
-    // Can't use -[NSProcessInfo operatingSystemVersionString] because it has too much stuff we don't want.
-    int major = callGestalt(gestaltSystemVersionMajor);
-    ASSERT(major);
-
-    int minor = callGestalt(gestaltSystemVersionMinor);
-    int bugFix = callGestalt(gestaltSystemVersionBugFix);
-    if (bugFix)
-        return String::format("%d_%d_%d", major, minor, bugFix);
-    if (minor)
-        return String::format("%d_%d", major, minor);
-    return String::format("%d", major);
-}
-
-#endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 
 static String userVisibleWebKitVersionString()
 {
@@ -117,7 +89,7 @@ static String userVisibleWebKitVersionString()
 
 String WebPageProxy::standardUserAgent(const String& applicationNameForUserAgent)
 {
-    DEFINE_STATIC_LOCAL(String, osVersion, (macOSXVersionString()));
+    DEFINE_STATIC_LOCAL(String, osVersion, (systemMarketingVersionForUserAgentString()));
     DEFINE_STATIC_LOCAL(String, webKitVersion, (userVisibleWebKitVersionString()));
 
     if (applicationNameForUserAgent.isEmpty())
@@ -482,6 +454,104 @@ void WebPageProxy::intrinsicContentSizeDidChange(const IntSize& intrinsicContent
 void WebPageProxy::setAcceleratedCompositingRootLayer(const GraphicsLayer* rootLayer)
 {
     m_pageClient->setAcceleratedCompositingRootLayer(rootLayer->platformLayer());
+}
+
+static NSString *temporaryPDFDirectoryPath()
+{
+    static NSString *temporaryPDFDirectoryPath;
+
+    if (!temporaryPDFDirectoryPath) {
+        NSString *temporaryDirectoryTemplate = [NSTemporaryDirectory() stringByAppendingPathComponent:@"WebKitPDFs-XXXXXX"];
+        CString templateRepresentation = [temporaryDirectoryTemplate fileSystemRepresentation];
+
+        if (mkdtemp(templateRepresentation.mutableData()))
+            temporaryPDFDirectoryPath = [[[NSFileManager defaultManager] stringWithFileSystemRepresentation:templateRepresentation.data() length:templateRepresentation.length()] copy];
+    }
+
+    return temporaryPDFDirectoryPath;
+}
+
+static NSString *pathToPDFOnDisk(const String& suggestedFilename)
+{
+    NSString *pdfDirectoryPath = temporaryPDFDirectoryPath();
+    if (!pdfDirectoryPath) {
+        WTFLogAlways("Cannot create temporary PDF download directory.");
+        return nil;
+    }
+
+    NSString *path = [pdfDirectoryPath stringByAppendingPathComponent:suggestedFilename];
+
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    if ([fileManager fileExistsAtPath:path]) {
+        NSString *pathTemplatePrefix = [pdfDirectoryPath stringByAppendingPathComponent:@"XXXXXX-"];
+        NSString *pathTemplate = [pathTemplatePrefix stringByAppendingString:suggestedFilename];
+        CString pathTemplateRepresentation = [pathTemplate fileSystemRepresentation];
+
+        int fd = mkstemps(pathTemplateRepresentation.mutableData(), pathTemplateRepresentation.length() - strlen([pathTemplatePrefix fileSystemRepresentation]) + 1);
+        if (fd < 0) {
+            WTFLogAlways("Cannot create PDF file in the temporary directory (%s).", suggestedFilename.utf8().data());
+            return nil;
+        }
+
+        close(fd);
+        path = [fileManager stringWithFileSystemRepresentation:pathTemplateRepresentation.data() length:pathTemplateRepresentation.length()];
+    }
+
+    return path;
+}
+
+void WebPageProxy::savePDFToTemporaryFolderAndOpenWithNativeApplicationRaw(const String& suggestedFilename, const String& originatingURLString, const uint8_t* data, unsigned long size, const String& pdfUUID)
+{
+    // FIXME: Write originatingURLString to the file's originating URL metadata (perhaps WKSetMetadataURL?).
+    UNUSED_PARAM(originatingURLString);
+
+    if (!suggestedFilename.endsWith(".pdf", false)) {
+        WTFLogAlways("Cannot save file without .pdf extension to the temporary directory.");
+        return;
+    }
+
+    if (!size) {
+        WTFLogAlways("Cannot save empty PDF file to the temporary directory.");
+        return;
+    }
+
+    NSString *nsPath = pathToPDFOnDisk(suggestedFilename);
+
+    if (!nsPath)
+        return;
+
+    RetainPtr<NSNumber> permissions = adoptNS([[NSNumber alloc] initWithInt:S_IRUSR]);
+    RetainPtr<NSDictionary> fileAttributes = adoptNS([[NSDictionary alloc] initWithObjectsAndKeys:permissions.get(), NSFilePosixPermissions, nil]);
+    RetainPtr<NSData> nsData = adoptNS([[NSData alloc] initWithBytesNoCopy:(void*)data length:size freeWhenDone:NO]);
+
+    if (![[NSFileManager defaultManager] createFileAtPath:nsPath contents:nsData.get() attributes:fileAttributes.get()]) {
+        WTFLogAlways("Cannot create PDF file in the temporary directory (%s).", suggestedFilename.utf8().data());
+        return;
+    }
+
+    m_temporaryPDFFiles.add(pdfUUID, nsPath);
+
+    [[NSWorkspace sharedWorkspace] openFile:nsPath];
+}
+
+void WebPageProxy::savePDFToTemporaryFolderAndOpenWithNativeApplication(const String& suggestedFilename, const String& originatingURLString, const CoreIPC::DataReference& data, const String& pdfUUID)
+{
+    if (data.isEmpty()) {
+        WTFLogAlways("Cannot save empty PDF file to the temporary directory.");
+        return;
+    }
+
+    savePDFToTemporaryFolderAndOpenWithNativeApplicationRaw(suggestedFilename, originatingURLString, data.data(), data.size(), pdfUUID);
+}
+
+void WebPageProxy::openPDFFromTemporaryFolderWithNativeApplication(const String& pdfUUID)
+{
+    String pdfFilename = m_temporaryPDFFiles.get(pdfUUID);
+
+    if (!pdfFilename.endsWith(".pdf", false))
+        return;
+
+    [[NSWorkspace sharedWorkspace] openFile:pdfFilename];
 }
 
 } // namespace WebKit

@@ -122,15 +122,7 @@ BuilderGroup.prototype.append = function(builders) {
     }, this);
 };
 
-BuilderGroup.prototype.setup = function()
-{
-    // FIXME: instead of copying these to globals, it would be better if
-    // the rest of the code read things from the BuilderGroup instance directly
-    g_defaultBuilderName = this._defaultBuilder();
-    g_builders = this.builders;
-};
-
-BuilderGroup.prototype._defaultBuilder = function()
+BuilderGroup.prototype.defaultBuilder = function()
 {
     for (var builder in this.builders)
         return builder;
@@ -139,7 +131,7 @@ BuilderGroup.prototype._defaultBuilder = function()
 
 BuilderGroup.prototype.master = function()
 {
-    return builderMaster(this._defaultBuilder());
+    return builderMaster(this.defaultBuilder());
 }
 
 BuilderGroup.TOT_WEBKIT = true;

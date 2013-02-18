@@ -33,29 +33,39 @@
  * @implements {WebInspector.WorkspaceProvider}
  * @extends {WebInspector.Object}
  */
-WebInspector.NetworkWorkspaceProvider = function()
+WebInspector.ContentProviderWorkspaceProvider = function()
 {
     /** @type {Object.<string, WebInspector.ContentProvider>} */
     this._contentProviders = {};
 }
 
-WebInspector.NetworkWorkspaceProvider.prototype = {
+/**
+ * @param {string} url
+ * @return {string}
+ */
+WebInspector.ContentProviderWorkspaceProvider.uriForURL = function(url)
+{
+    var uri = url;
+    return uri;
+},
+
+WebInspector.ContentProviderWorkspaceProvider.prototype = {
     /**
-     * @param {string} path
+     * @param {string} uri
      * @param {function(?string,boolean,string)} callback
      */
-    requestFileContent: function(path, callback)
+    requestFileContent: function(uri, callback)
     {
-        var contentProvider = this._contentProviders[path];
+        var contentProvider = this._contentProviders[uri];
         contentProvider.requestContent(callback);
     },
 
     /**
-     * @param {string} path
+     * @param {string} uri
      * @param {string} newContent
      * @param {function(?string)} callback
      */
-    setFileContent: function(path, newContent, callback)
+    setFileContent: function(uri, newContent, callback)
     {
         callback(null);
     },
@@ -66,33 +76,47 @@ WebInspector.NetworkWorkspaceProvider.prototype = {
      * @param {boolean} isRegex
      * @param {function(Array.<WebInspector.ContentProvider.SearchMatch>)} callback
      */
-    searchInFileContent: function(path, query, caseSensitive, isRegex, callback)
+    searchInFileContent: function(uri, query, caseSensitive, isRegex, callback)
     {
-        var contentProvider = this._contentProviders[path];
+        var contentProvider = this._contentProviders[uri];
         contentProvider.searchInContent(query, caseSensitive, isRegex, callback);
     },
 
     /**
-     * @param {string} path
+     * @param {string} uri
+     * @param {string} url
      * @param {WebInspector.ContentProvider} contentProvider
      * @param {boolean} isEditable
      * @param {boolean=} isContentScript
      * @param {boolean=} isSnippet
      */
-    addFile: function(path, contentProvider, isEditable, isContentScript, isSnippet)
+    addFile: function(uri, url, contentProvider, isEditable, isContentScript, isSnippet)
     {
-        var fileDescriptor = new WebInspector.FileDescriptor(path, contentProvider.contentType(), isEditable, isContentScript, isSnippet);
-        this._contentProviders[path] = contentProvider;
+        console.assert(!this._contentProviders[uri]);
+        var fileDescriptor = new WebInspector.FileDescriptor(uri, url, contentProvider.contentType(), isEditable, isContentScript, isSnippet);
+        this._contentProviders[uri] = contentProvider;
         this.dispatchEventToListeners(WebInspector.WorkspaceProvider.Events.FileAdded, fileDescriptor);
     },
 
     /**
-     * @param {string} path
+     * @param {string} uri
      */
-    removeFile: function(path)
+    removeFile: function(uri)
     {
-        delete this._contentProviders[path];
-        this.dispatchEventToListeners(WebInspector.WorkspaceProvider.Events.FileRemoved, path);
+        delete this._contentProviders[uri];
+        this.dispatchEventToListeners(WebInspector.WorkspaceProvider.Events.FileRemoved, uri);
+    },
+
+    /**
+     * @param {string} uri
+     * @return {string}
+     */
+    uniqueURI: function(uri)
+    {
+        var uniqueURI = uri;
+        for (var i = 1; this._contentProviders[uniqueURI]; ++i)
+            uniqueURI = uri + " (" + i + ")";
+        return uniqueURI;
     },
 
     reset: function()
@@ -101,6 +125,32 @@ WebInspector.NetworkWorkspaceProvider.prototype = {
     },
     
     __proto__: WebInspector.Object.prototype
+}
+
+/**
+ * @constructor
+ * @extends {WebInspector.ContentProviderWorkspaceProvider}
+ */
+WebInspector.NetworkWorkspaceProvider = function()
+{
+    WebInspector.ContentProviderWorkspaceProvider.call(this);
+}
+
+WebInspector.NetworkWorkspaceProvider.prototype = {
+    /**
+     * @param {string} url
+     * @param {WebInspector.ContentProvider} contentProvider
+     * @param {boolean} isEditable
+     * @param {boolean=} isContentScript
+     * @param {boolean=} isSnippet
+     */
+    addNetworkFile: function(url, contentProvider, isEditable, isContentScript, isSnippet)
+    {
+        var uri = WebInspector.ContentProviderWorkspaceProvider.uriForURL(url);
+        this.addFile(uri, url, contentProvider, isEditable, isContentScript, isSnippet);
+    },
+    
+    __proto__: WebInspector.ContentProviderWorkspaceProvider.prototype
 }
 
 /**

@@ -122,6 +122,7 @@ JSGlobalObject::JSGlobalObject(JSGlobalData& globalData, Structure* structure, c
 #endif
     , m_evalEnabled(true)
     , m_globalObjectMethodTable(globalObjectMethodTable ? globalObjectMethodTable : &s_globalObjectMethodTable)
+    , m_apiData(0)
 {
 }
 

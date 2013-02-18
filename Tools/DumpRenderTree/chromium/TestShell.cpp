@@ -112,6 +112,7 @@ TestShell::TestShell()
     , m_allowExternalPages(false)
     , m_acceleratedCompositingForVideoEnabled(false)
     , m_acceleratedCompositingForFixedPositionEnabled(false)
+    , m_acceleratedCompositingForOverflowScrollEnabled(false)
     , m_softwareCompositingEnabled(false)
     , m_threadedCompositingEnabled(false)
     , m_forceCompositingMode(false)
@@ -162,6 +163,7 @@ void TestShell::initialize()
     m_webPermissions = adoptPtr(new WebPermissions(this));
     m_testInterfaces = adoptPtr(new WebTestInterfaces());
     m_testRunner = adoptPtr(new DRTTestRunner(this));
+    m_testInterfaces->setTestRunner(m_testRunner.get());
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     m_notificationPresenter = adoptPtr(new NotificationPresenter(this));
 #endif
@@ -238,6 +240,7 @@ void TestShell::resetWebSettings(WebView& webView)
     m_prefs.acceleratedCompositingEnabled = true;
     m_prefs.acceleratedCompositingForVideoEnabled = m_acceleratedCompositingForVideoEnabled;
     m_prefs.acceleratedCompositingForFixedPositionEnabled = m_acceleratedCompositingForFixedPositionEnabled;
+    m_prefs.acceleratedCompositingForOverflowScrollEnabled = m_acceleratedCompositingForOverflowScrollEnabled;
     m_prefs.forceCompositingMode = m_forceCompositingMode;
     m_prefs.accelerated2dCanvasEnabled = m_accelerated2dCanvasEnabled;
     m_prefs.deferred2dCanvasEnabled = m_deferred2dCanvasEnabled;
@@ -749,7 +752,7 @@ WebViewHost* TestShell::createNewWindow(const WebKit::WebURL& url)
 
 WebViewHost* TestShell::createNewWindow(const WebKit::WebURL& url, DRTDevToolsAgent* devToolsAgent)
 {
-    WebTestRunner::WebTestProxy<WebViewHost, TestShell*>* host = new WebTestRunner::WebTestProxy<WebViewHost, TestShell*>(this);
+    WebTestProxy<WebViewHost, TestShell*>* host = new WebTestProxy<WebViewHost, TestShell*>(this);
     host->setInterfaces(m_testInterfaces.get());
     if (m_webViewHost)
         host->setDelegate(m_webViewHost.get());

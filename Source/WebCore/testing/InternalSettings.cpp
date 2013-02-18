@@ -35,6 +35,7 @@
 #include "Page.h"
 #include "RuntimeEnabledFeatures.h"
 #include "Settings.h"
+#include "Supplementable.h"
 #include "TextRun.h"
 
 #if ENABLE(INPUT_TYPE_COLOR)
@@ -61,10 +62,8 @@
 
 namespace WebCore {
 
-InternalSettings::Backup::Backup(Page* page, Settings* settings)
-    : m_originalPasswordEchoDurationInSeconds(settings->passwordEchoDurationInSeconds())
-    , m_originalPasswordEchoEnabled(settings->passwordEchoEnabled())
-    , m_originalFixedElementsLayoutRelativeToFrame(settings->fixedElementsLayoutRelativeToFrame())
+InternalSettings::Backup::Backup(Settings* settings)
+    : m_originalFixedElementsLayoutRelativeToFrame(settings->fixedElementsLayoutRelativeToFrame())
     , m_originalCSSExclusionsEnabled(RuntimeEnabledFeatures::cssExclusionsEnabled())
     , m_originalCSSVariablesEnabled(settings->cssVariablesEnabled())
 #if ENABLE(SHADOW_DOM)
@@ -91,11 +90,11 @@ InternalSettings::Backup::Backup(Page* page, Settings* settings)
 #if ENABLE(DIALOG_ELEMENT)
     , m_originalDialogElementEnabled(RuntimeEnabledFeatures::dialogElementEnabled())
 #endif
-    , m_canStartMedia(page->canStartMedia())
     , m_originalForceCompositingMode(settings->forceCompositingMode())
     , m_originalCompositingForFixedPositionEnabled(settings->acceleratedCompositingForFixedPositionEnabled())
     , m_originalCompositingForScrollableFramesEnabled(settings->acceleratedCompositingForScrollableFramesEnabled())
     , m_originalAcceleratedDrawingEnabled(settings->acceleratedDrawingEnabled())
+    , m_originalCanvasUsesAcceleratedDrawing(settings->canvasUsesAcceleratedDrawing())
     , m_originalMockScrollbarsEnabled(settings->mockScrollbarsEnabled())
     , m_langAttributeAwareFormControlUIEnabled(RuntimeEnabledFeatures::langAttributeAwareFormControlUIEnabled())
     , m_imagesEnabled(settings->areImagesEnabled())
@@ -107,11 +106,8 @@ InternalSettings::Backup::Backup(Page* page, Settings* settings)
 {
 }
 
-
-void InternalSettings::Backup::restoreTo(Page* page, Settings* settings)
+void InternalSettings::Backup::restoreTo(Settings* settings)
 {
-    settings->setPasswordEchoDurationInSeconds(m_originalPasswordEchoDurationInSeconds);
-    settings->setPasswordEchoEnabled(m_originalPasswordEchoEnabled);
     settings->setFixedElementsLayoutRelativeToFrame(m_originalFixedElementsLayoutRelativeToFrame);
     RuntimeEnabledFeatures::setCSSExclusionsEnabled(m_originalCSSExclusionsEnabled);
     settings->setCSSVariablesEnabled(m_originalCSSVariablesEnabled);
@@ -139,11 +135,11 @@ void InternalSettings::Backup::restoreTo(Page* page, Settings* settings)
 #if ENABLE(DIALOG_ELEMENT)
     RuntimeEnabledFeatures::setDialogElementEnabled(m_originalDialogElementEnabled);
 #endif
-    page->setCanStartMedia(m_canStartMedia);
     settings->setForceCompositingMode(m_originalForceCompositingMode);
     settings->setAcceleratedCompositingForFixedPositionEnabled(m_originalCompositingForFixedPositionEnabled);
     settings->setAcceleratedCompositingForScrollableFramesEnabled(m_originalCompositingForScrollableFramesEnabled);
     settings->setAcceleratedDrawingEnabled(m_originalAcceleratedDrawingEnabled);
+    settings->setCanvasUsesAcceleratedDrawing(m_originalCanvasUsesAcceleratedDrawing);
     settings->setMockScrollbarsEnabled(m_originalMockScrollbarsEnabled);
     RuntimeEnabledFeatures::setLangAttributeAwareFormControlUIEnabled(m_langAttributeAwareFormControlUIEnabled);
     settings->setImagesEnabled(m_imagesEnabled);
@@ -154,12 +150,29 @@ void InternalSettings::Backup::restoreTo(Page* page, Settings* settings)
 #endif
 }
 
+// We can't use RefCountedSupplement because that would try to make InternalSettings RefCounted
+// and InternalSettings is already RefCounted via its base class, InternalSettingsGenerated.
+// Instead, we manually make InternalSettings supplement Page.
+class InternalSettingsWrapper : public Supplement<Page> {
+public:
+    explicit InternalSettingsWrapper(Page* page)
+        : m_internalSettings(InternalSettings::create(page)) { }
+    virtual ~InternalSettingsWrapper() { m_internalSettings->hostDestroyed(); }
+#if !ASSERT_DISABLED
+    virtual bool isRefCountedWrapper() const OVERRIDE { return true; }
+#endif
+    InternalSettings* internalSettings() const { return m_internalSettings.get(); }
+
+private:
+    RefPtr<InternalSettings> m_internalSettings;
+};
+
 InternalSettings* InternalSettings::from(Page* page)
 {
     DEFINE_STATIC_LOCAL(AtomicString, name, ("InternalSettings", AtomicString::ConstructFromLiteral));
-    if (!SuperType::from(page, name))
-        SuperType::provideTo(page, name, adoptRef(new InternalSettings(page)));
-    return static_cast<InternalSettings*>(SuperType::from(page, name));
+    if (!Supplement<Page>::from(page, name))
+        Supplement<Page>::provideTo(page, name, adoptPtr(new InternalSettingsWrapper(page)));
+    return static_cast<InternalSettingsWrapper*>(Supplement<Page>::from(page, name))->internalSettings();
 }
 
 InternalSettings::~InternalSettings()
@@ -167,17 +180,21 @@ InternalSettings::~InternalSettings()
 }
 
 InternalSettings::InternalSettings(Page* page)
-    : m_page(page)
-    , m_backup(page, page->settings())
+    : InternalSettingsGenerated(page)
+    , m_page(page)
+    , m_backup(page->settings())
 {
 }
 
-void InternalSettings::reset()
+void InternalSettings::resetToConsistentState()
 {
     page()->setPageScaleFactor(1, IntPoint(0, 0));
+    page()->setCanStartMedia(true);
 
-    m_backup.restoreTo(page(), settings());
-    m_backup = Backup(page(), settings());
+    m_backup.restoreTo(settings());
+    m_backup = Backup(settings());
+
+    InternalSettingsGenerated::resetToConsistentState();
 }
 
 Settings* InternalSettings::settings() const
@@ -211,6 +228,12 @@ void InternalSettings::setEnableCompositingForScrollableFrames(bool enabled, Exc
     settings()->setAcceleratedCompositingForScrollableFramesEnabled(enabled);
 }
 
+void InternalSettings::setEnableCompositingForOverflowScroll(bool enabled, ExceptionCode& ec)
+{
+    InternalSettingsGuardForSettings();
+    settings()->setAcceleratedCompositingForOverflowScrollEnabled(enabled);
+}
+
 void InternalSettings::setAcceleratedDrawingEnabled(bool enabled, ExceptionCode& ec)
 {
     InternalSettingsGuardForSettings();
@@ -221,18 +244,6 @@ void InternalSettings::setMockScrollbarsEnabled(bool enabled, ExceptionCode& ec)
 {
     InternalSettingsGuardForSettings();
     settings()->setMockScrollbarsEnabled(enabled);
-}
-
-void InternalSettings::setPasswordEchoEnabled(bool enabled, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setPasswordEchoEnabled(enabled);
-}
-
-void InternalSettings::setPasswordEchoDurationInSeconds(double durationInSeconds, ExceptionCode& ec)
-{
-    InternalSettingsGuardForSettings();
-    settings()->setPasswordEchoDurationInSeconds(durationInSeconds);
 }
 
 void InternalSettings::setFixedElementsLayoutRelativeToFrame(bool enabled, ExceptionCode& ec)

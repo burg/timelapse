@@ -49,6 +49,7 @@ list(APPEND WebCore_SOURCES
     bindings/js/JSClipboardCustom.cpp
     bindings/js/JSConsoleCustom.cpp
     bindings/js/JSCoordinatesCustom.cpp
+    bindings/js/JSCryptoCustom.cpp
     bindings/js/JSCustomXPathNSResolver.cpp
     bindings/js/JSDictionary.cpp
     bindings/js/JSDOMBinding.cpp
@@ -202,13 +203,9 @@ if (ENABLE_INDEXED_DATABASE)
     list(APPEND WebCore_SOURCES
         bindings/js/IDBBindingUtilities.cpp
         bindings/js/JSIDBAnyCustom.cpp
+        bindings/js/JSIDBDatabaseCustom.cpp
         bindings/js/JSIDBKeyCustom.cpp
-    )
-endif ()
-
-if (ENABLE_WEB_SOCKETS)
-    list(APPEND WebCore_SOURCES
-        bindings/js/JSWebSocketCustom.cpp
+        bindings/js/JSIDBObjectStoreCustom.cpp
     )
 endif ()
 
@@ -271,6 +268,7 @@ if (ENABLE_WEB_AUDIO)
     list(APPEND WebCore_SOURCES
         bindings/js/JSAudioBufferSourceNodeCustom.cpp
         bindings/js/JSAudioContextCustom.cpp
+        bindings/js/JSOscillatorNodeCustom.cpp
         bindings/js/JSScriptProcessorNodeCustom.cpp
     )
 endif ()
@@ -305,6 +303,10 @@ endforeach ()
 foreach (_idl ${WebCoreTestSupport_IDL_FILES})
     set(IDL_FILES_LIST "${IDL_FILES_LIST}${WEBCORE_DIR}/${_idl}\n")
 endforeach ()
+
+set(IDL_FILES_LIST "${IDL_FILES_LIST}${DERIVED_SOURCES_WEBCORE_DIR}/InternalSettingsGenerated.idl\n")
+list(APPEND IDL_INCLUDES --include=${DERIVED_SOURCES_WEBCORE_DIR})
+list(APPEND WebCoreTestSupport_IDL_FILES ${DERIVED_SOURCES_WEBCORE_DIR}/InternalSettingsGenerated.idl)
 
 file(WRITE ${IDL_FILES_TMP} ${IDL_FILES_LIST})
 

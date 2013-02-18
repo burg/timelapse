@@ -26,14 +26,13 @@
 #ifndef GLXContext_h
 #define GLXContext_h
 
-#if USE(ACCELERATED_COMPOSITING) && HAVE(GLX)
+#if USE(ACCELERATED_COMPOSITING) && USE(GLX)
 
 #include "GLPlatformContext.h"
 
 namespace WebCore {
 
 class GLXCurrentContextWrapper : public GLPlatformContext {
-    WTF_MAKE_NONCOPYABLE(GLXCurrentContextWrapper);
 
 public:
     GLXCurrentContextWrapper()
@@ -46,16 +45,15 @@ public:
 };
 
 class GLXOffScreenContext : public GLPlatformContext {
-    WTF_MAKE_NONCOPYABLE(GLXOffScreenContext);
 
 public:
     GLXOffScreenContext();
     virtual ~GLXOffScreenContext();
-    bool initialize(GLPlatformSurface*);
-    bool platformMakeCurrent(GLPlatformSurface*);
-    void platformReleaseCurrent();
-    void destroy();
-    bool isCurrentContext() const;
+    virtual bool initialize(GLPlatformSurface*) OVERRIDE;
+    virtual bool platformMakeCurrent(GLPlatformSurface*) OVERRIDE;
+    virtual void platformReleaseCurrent() OVERRIDE;
+    virtual void destroy() OVERRIDE;
+    virtual bool isCurrentContext() const OVERRIDE;
 
 private:
     void freeResources();

@@ -27,13 +27,10 @@
 #define AuthenticationManager_h
 
 #include "MessageReceiver.h"
+#include "NetworkProcessSupplement.h"
+#include "WebProcessSupplement.h"
+#include <wtf/Forward.h>
 #include <wtf/HashMap.h>
-
-namespace CoreIPC {
-    class ArgumentDecoder;
-    class Connection;
-    class MessageID;
-}
 
 namespace WebCore {
     class AuthenticationChallenge;
@@ -42,15 +39,17 @@ namespace WebCore {
 
 namespace WebKit {
 
+class ChildProcess;
 class Download;
 class PlatformCertificateInfo;
 class WebFrame;
 
-class AuthenticationManager : private CoreIPC::MessageReceiver {
+class AuthenticationManager : public WebProcessSupplement, public NetworkProcessSupplement, public CoreIPC::MessageReceiver {
     WTF_MAKE_NONCOPYABLE(AuthenticationManager);
-
 public:
-    static AuthenticationManager& shared();
+    explicit AuthenticationManager(ChildProcess*);
+
+    static const AtomicString& supplementName();
 
     void didReceiveAuthenticationChallenge(WebFrame*, const WebCore::AuthenticationChallenge&);
     void didReceiveAuthenticationChallenge(Download*, const WebCore::AuthenticationChallenge&);
@@ -60,14 +59,14 @@ public:
     void cancelChallenge(uint64_t challengeID);
 
 private:
-    AuthenticationManager();
-
     // CoreIPC::MessageReceiver
     virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&) OVERRIDE;
     void didReceiveAuthenticationManagerMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
 
     bool tryUsePlatformCertificateInfoForChallenge(const WebCore::AuthenticationChallenge&, const PlatformCertificateInfo&);
-    
+
+    ChildProcess* m_process;
+
     typedef HashMap<uint64_t, WebCore::AuthenticationChallenge> AuthenticationChallengeMap;
     AuthenticationChallengeMap m_challenges;
 };

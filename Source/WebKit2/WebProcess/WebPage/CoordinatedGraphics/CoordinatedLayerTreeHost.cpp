@@ -71,13 +71,10 @@ CoordinatedLayerTreeHost::~CoordinatedLayerTreeHost()
 #if ENABLE(CSS_SHADERS)
     disconnectCustomFilterPrograms();
 #endif
+    purgeBackingStores();
 
-    // Prevent setCoordinatedGraphicsLayerClient(0) -> detachLayer() from modifying the set while we iterate it.
-    HashSet<WebCore::CoordinatedGraphicsLayer*> registeredLayers;
-    registeredLayers.swap(m_registeredLayers);
-
-    HashSet<WebCore::CoordinatedGraphicsLayer*>::iterator end = registeredLayers.end();
-    for (HashSet<WebCore::CoordinatedGraphicsLayer*>::iterator it = registeredLayers.begin(); it != end; ++it)
+    HashSet<WebCore::CoordinatedGraphicsLayer*>::iterator end = m_registeredLayers.end();
+    for (HashSet<WebCore::CoordinatedGraphicsLayer*>::iterator it = m_registeredLayers.begin(); it != end; ++it)
         (*it)->setCoordinator(0);
 }
 
@@ -86,6 +83,7 @@ CoordinatedLayerTreeHost::CoordinatedLayerTreeHost(WebPage* webPage)
     , m_notifyAfterScheduledLayerFlush(false)
     , m_isValid(true)
     , m_isPurging(false)
+    , m_isFlushingLayerChanges(false)
     , m_waitingForUIProcess(true)
     , m_isSuspended(false)
     , m_contentsScale(1)
@@ -269,6 +267,10 @@ bool CoordinatedLayerTreeHost::flushPendingLayerChanges()
     if (m_waitingForUIProcess)
         return false;
 
+    TemporaryChange<bool> protector(m_isFlushingLayerChanges, true);
+
+    createCompositingLayers();
+
     initializeRootCompositingLayerIfNeeded();
 
     m_rootLayer->flushCompositingStateForThisLayerOnly();
@@ -280,9 +282,7 @@ bool CoordinatedLayerTreeHost::flushPendingLayerChanges()
 
     flushPendingImageBackingChanges();
 
-    for (size_t i = 0; i < m_detachedLayers.size(); ++i)
-        m_webPage->send(Messages::CoordinatedLayerTreeHostProxy::DeleteCompositingLayer(m_detachedLayers[i]));
-    m_detachedLayers.clear();
+    deleteCompositingLayers();
 
     if (m_shouldSyncFrame) {
         didSync = true;
@@ -301,6 +301,42 @@ bool CoordinatedLayerTreeHost::flushPendingLayerChanges()
     }
 
     return didSync;
+}
+
+void CoordinatedLayerTreeHost::createCompositingLayers()
+{
+    if (m_layersToCreate.isEmpty())
+        return;
+
+    // If a layer gets created and deleted in the same cycle, we can simply remove it from m_layersToCreate and m_layersToDelete.
+    for (int i = m_layersToCreate.size() - 1; i >= 0; --i) {
+        size_t index = m_layersToDelete.find(m_layersToCreate[i]);
+        if (index != notFound) {
+            m_layersToCreate.remove(i);
+            m_layersToDelete.remove(index);
+        }
+    }
+
+    for (size_t i = 0; i < m_layersToCreate.size(); ++i)
+        m_webPage->send(Messages::CoordinatedLayerTreeHostProxy::CreateCompositingLayer(m_layersToCreate[i]));
+    m_layersToCreate.clear();
+    m_shouldSyncFrame = true;
+}
+
+void CoordinatedLayerTreeHost::deleteCompositingLayers()
+{
+    if (m_layersToDelete.isEmpty())
+        return;
+
+    if (m_isPurging) {
+        m_layersToDelete.clear();
+        return;
+    }
+
+    for (size_t i = 0; i < m_layersToDelete.size(); ++i)
+        m_webPage->send(Messages::CoordinatedLayerTreeHostProxy::DeleteCompositingLayer(m_layersToDelete[i]));
+    m_layersToDelete.clear();
+    m_shouldSyncFrame = true;
 }
 
 void CoordinatedLayerTreeHost::initializeRootCompositingLayerIfNeeded()
@@ -422,8 +458,7 @@ void CoordinatedLayerTreeHost::disconnectCustomFilterPrograms()
 void CoordinatedLayerTreeHost::detachLayer(CoordinatedGraphicsLayer* layer)
 {
     m_registeredLayers.remove(layer);
-    m_shouldSyncFrame = true;
-    m_detachedLayers.append(layer->id());
+    m_layersToDelete.append(layer->id());
     scheduleLayerFlush();
 }
 
@@ -614,6 +649,7 @@ void CoordinatedLayerTreeHost::notifyAnimationStarted(const WebCore::GraphicsLay
 
 void CoordinatedLayerTreeHost::notifyFlushRequired(const WebCore::GraphicsLayer*)
 {
+    scheduleLayerFlush();
 }
 
 void CoordinatedLayerTreeHost::paintContents(const WebCore::GraphicsLayer* graphicsLayer, WebCore::GraphicsContext& graphicsContext, WebCore::GraphicsLayerPaintingPhase, const WebCore::IntRect& clipRect)
@@ -636,8 +672,10 @@ PassOwnPtr<GraphicsLayer> CoordinatedLayerTreeHost::createGraphicsLayer(Graphics
     CoordinatedGraphicsLayer* layer = new CoordinatedGraphicsLayer(client);
     layer->setCoordinator(this);
     m_registeredLayers.add(layer);
+    m_layersToCreate.append(layer->id());
     layer->setContentsScale(m_contentsScale);
-    layer->adjustVisibleRect();
+    layer->setNeedsVisibleRectAdjustment();
+    scheduleLayerFlush();
     return adoptPtr(layer);
 }
 
@@ -719,7 +757,7 @@ void CoordinatedLayerTreeHost::setVisibleContentsRect(const FloatRect& rect, flo
             if (contentsScaleDidChange)
                 (*it)->setContentsScale(scale);
             if (contentsRectDidChange)
-                (*it)->adjustVisibleRect();
+                (*it)->setNeedsVisibleRectAdjustment();
         }
     }
 
@@ -757,11 +795,6 @@ void CoordinatedLayerTreeHost::renderNextFrame()
     scheduleLayerFlush();
     for (unsigned i = 0; i < m_updateAtlases.size(); ++i)
         m_updateAtlases[i]->didSwapBuffers();
-}
-
-bool CoordinatedLayerTreeHost::layerTreeTileUpdatesAllowed() const
-{
-    return !m_isSuspended && !m_waitingForUIProcess;
 }
 
 void CoordinatedLayerTreeHost::purgeBackingStores()

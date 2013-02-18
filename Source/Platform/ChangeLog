@@ -1,3 +1,168 @@
+2013-01-03  Sami Kyostila  <skyostil@chromium.org>
+
+        [chromium] Rename low latency rendering mode setting to vsync notification
+        https://bugs.webkit.org/show_bug.cgi?id=106020
+
+        Reviewed by James Robinson.
+
+        Rename low latency rendering mode setting to vsync notification because
+        the old name was ambiguous and bad. This setting is meant to control
+        whether the renderer uses a vsync signal provided by the browser to
+        schedule rendering.
+
+2013-01-03  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: Add a missing state to RTCPeerConnection
+        https://bugs.webkit.org/show_bug.cgi?id=106017
+
+        Reviewed by Adam Barth.
+
+        Adding the missing ReadyStateHaveRemoteOffer which will show up in the spec soon.
+
+        * chromium/public/WebRTCPeerConnectionHandlerClient.h:
+
+2013-01-02  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Remove unused transitional #defines from Platform API
+        https://bugs.webkit.org/show_bug.cgi?id=105971
+
+        Reviewed by Adrienne Walker.
+
+        These are leftovers from multi-sided patches that landed months ago.
+
+        * chromium/public/WebContentLayerClient.h:
+        (WebContentLayerClient):
+        * chromium/public/WebLayer.h:
+        * chromium/public/WebLayerTreeView.h:
+        * chromium/public/WebThread.h:
+
+2013-01-02  David Tseng  <dtseng@google.com>
+
+        AX: Chromium needs platform localized strings for media controls.
+        https://bugs.webkit.org/show_bug.cgi?id=105940
+
+        Reviewed by Tony Chang.
+
+        * chromium/public/WebLocalizedString.h:
+
+2012-12-24  Alexei Filippov  <alph@chromium.org>
+
+        Web Inspector: add async API for passing renderer process memory stats
+        https://bugs.webkit.org/show_bug.cgi?id=105278
+
+        Reviewed by Yury Semikhatsky.
+
+        On some platforms (e.g. Linux) it may take some time to collect
+        total process memory information as it involves an IPC out of a
+        sandboxed renderer process. So add an async way to collect the statistics.
+
+        * chromium/public/Platform.h:
+        (Platform):
+        (ProcessMemorySizesCallback):
+        (WebKit::Platform::ProcessMemorySizesCallback::~ProcessMemorySizesCallback):
+        (WebKit::Platform::requestProcessMemorySizes):
+
+2012-12-18  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Make WebLayerTreeView::loseCompositorContext non-pure virtual
+        https://bugs.webkit.org/show_bug.cgi?id=105328
+
+        Reviewed by James Robinson.
+
+        This allows us to decouple the chromium and webkit sides and remove this
+        function entirely on each side.
+
+        * chromium/public/WebLayerTreeView.h:
+        (WebKit::WebLayerTreeView::loseCompositorContext):
+
+2012-12-18  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Fix include style in WebTransformOperations.h
+        https://bugs.webkit.org/show_bug.cgi?id=105259
+
+        Reviewed by Adrienne Walker.
+
+        Changes include of WebTransformationMatrix.h from '#include <public/..h>' to '#include "....h". The latter
+        always works, since #include "foo.h" always finds foo.h in the same directory, and doesn't require all
+        downstream users of this header to have Source/Platform/chromium/ on the include path.
+
+        * chromium/public/WebTransformOperations.h:
+
+2012-12-17  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Add the GL_CHROMIUM_lose_context to WebGraphicsContext3D
+        https://bugs.webkit.org/show_bug.cgi?id=105238
+
+        Reviewed by James Robinson.
+
+        * chromium/public/WebGraphicsContext3D.h:
+        (WebGraphicsContext3D):
+        (WebKit::WebGraphicsContext3D::loseContext):
+
+2012-12-12  Andrey Kosyakov  <caseq@chromium.org>
+
+        [Chromium] Remove support for TRACE_EVENT_IF_LONGER_THANx macros
+        https://bugs.webkit.org/show_bug.cgi?id=104784
+
+        Reviewed by Pavel Feldman.
+
+        - remove threshold and id of related begin event from arguments of addTraceEvent()
+        - do not return the index of added event from addTraceEvent()
+
+        * chromium/public/Platform.h:
+        (Platform):
+        (WebKit::Platform::addTraceEvent):
+
+2012-12-14  Yusuf Ozuysal  <yusufo@google.com>
+
+        Send a message from WebViewImpl to the compositor to inform about end of flings
+        https://bugs.webkit.org/show_bug.cgi?id=104947
+
+        Reviewed by James Robinson.
+
+        Whenever we have a fling animation finished on cancelled on main thread this sends
+        a message that will be relayed to the compositor input handler. Then the input handler
+        keeps track of main thread fling with a boolean and doesn't send flingCancels
+        unnecessarily
+
+        * chromium/public/WebInputHandler.h:
+        (WebInputHandler):
+        * chromium/public/WebLayerTreeView.h:
+        (WebLayerTreeView):
+        (WebKit::WebLayerTreeView::mainThreadHasStoppedFlinging):
+
+2012-12-14  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r137765.
+        http://trac.webkit.org/changeset/137765
+        https://bugs.webkit.org/show_bug.cgi?id=105067
+
+        Breaks webkit_unit_tests and transferred flings (Requested by
+        jamesr_ on #webkit).
+
+        * chromium/public/WebInputHandler.h:
+        (WebInputHandler):
+        * chromium/public/WebLayerTreeView.h:
+        (WebLayerTreeView):
+
+2012-12-14  Yusuf Ozuysal  <yusufo@google.com>
+
+        Send a message from WebViewImpl to the compositor to inform about end of flings
+        https://bugs.webkit.org/show_bug.cgi?id=104947
+
+        Reviewed by James Robinson.
+
+        Whenever we have a fling animation finished on cancelled on main thread this sends
+        a message that will be relayed to the compositor input handler. Then the input handler
+        keeps track of main thread fling with a boolean and doesn't send flingCancels
+        unnecessarily
+
+        * chromium/public/WebInputHandler.h:
+        (WebInputHandler):
+        * chromium/public/WebLayerTreeView.h:
+        (WebLayerTreeView):
+        (WebKit::WebLayerTreeView::mainThreadHasStoppedFlinging):
+
 2012-12-12  Gavin Peters  <gavinp@chromium.org>
 
         [chromium] Add destructor to WebPrerender

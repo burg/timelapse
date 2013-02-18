@@ -51,24 +51,31 @@ void CachedRawResource::data(PassRefPtr<ResourceBuffer> data, bool allDataReceiv
         // If we are buffering data, then we are saving the buffer in m_data and need to manually
         // calculate the incremental data. If we are not buffering, then m_data will be null and
         // the buffer contains only the incremental data.
-        size_t previousDataLength = (m_options.shouldBufferData == BufferData) ? encodedSize() : 0;
+        size_t previousDataLength = (m_options.dataBufferingPolicy == BufferData) ? encodedSize() : 0;
         ASSERT(data->size() >= previousDataLength);
         incrementalData = data->data() + previousDataLength;
         incrementalDataLength = data->size() - previousDataLength;
     }
-    
-    if (m_options.shouldBufferData == BufferData) {
+
+    if (m_options.dataBufferingPolicy == BufferData) {
         if (data)
             setEncodedSize(data->size());
         m_data = data;
     }
-    
+
+    DataBufferingPolicy dataBufferingPolicy = m_options.dataBufferingPolicy;
     if (incrementalDataLength) {
         CachedResourceClientWalker<CachedRawResourceClient> w(m_clients);
         while (CachedRawResourceClient* c = w.next())
             c->dataReceived(this, incrementalData, incrementalDataLength);
     }
     CachedResource::data(m_data, allDataReceived);
+
+    if (dataBufferingPolicy == BufferData && m_options.dataBufferingPolicy == DoNotBufferData) {
+        if (m_loader)
+            m_loader->setDataBufferingPolicy(DoNotBufferData);
+        clear();
+    }
 }
 
 void CachedRawResource::didAddClient(CachedResourceClient* c)
@@ -98,6 +105,7 @@ void CachedRawResource::allClientsRemoved()
 
 void CachedRawResource::willSendRequest(ResourceRequest& request, const ResourceResponse& response)
 {
+    CachedResourceHandle<CachedRawResource> protect(this);
     if (!response.isNull()) {
         CachedResourceClientWalker<CachedRawResourceClient> w(m_clients);
         while (CachedRawResourceClient* c = w.next())
@@ -106,11 +114,11 @@ void CachedRawResource::willSendRequest(ResourceRequest& request, const Resource
     CachedResource::willSendRequest(request, response);
 }
 
-void CachedRawResource::setResponse(const ResourceResponse& response)
+void CachedRawResource::responseReceived(const ResourceResponse& response)
 {
     if (!m_identifier)
         m_identifier = m_loader->identifier();
-    CachedResource::setResponse(response);
+    CachedResource::responseReceived(response);
     CachedResourceClientWalker<CachedRawResourceClient> w(m_clients);
     while (CachedRawResourceClient* c = w.next())
         c->responseReceived(this, m_response);
@@ -129,9 +137,9 @@ void CachedRawResource::setDefersLoading(bool defers)
         m_loader->setDefersLoading(defers);
 }
 
-void CachedRawResource::setShouldBufferData(DataBufferingPolicy shouldBufferData)
+void CachedRawResource::setDataBufferingPolicy(DataBufferingPolicy dataBufferingPolicy)
 {
-    m_options.shouldBufferData = shouldBufferData;
+    m_options.dataBufferingPolicy = dataBufferingPolicy;
 }
 
 static bool shouldIgnoreHeaderForCacheReuse(AtomicString headerName)
@@ -154,7 +162,7 @@ static bool shouldIgnoreHeaderForCacheReuse(AtomicString headerName)
 
 bool CachedRawResource::canReuse(const ResourceRequest& newRequest) const
 {
-    if (m_options.shouldBufferData == DoNotBufferData)
+    if (m_options.dataBufferingPolicy == DoNotBufferData)
         return false;
 
     if (m_resourceRequest.httpMethod() != newRequest.httpMethod())

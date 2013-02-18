@@ -25197,6 +25197,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\Modules\webdatabase\AbstractDatabaseServer.h"
+					>
+				</File>
+				<File
 					RelativePath="..\Modules\webdatabase\ChangeVersionWrapper.cpp"
 					>
 				</File>
@@ -25270,6 +25274,14 @@
 				</File>
 				<File
 					RelativePath="..\Modules\webdatabase\DatabaseTracker.h"
+					>
+				</File>
+				<File
+					RelativePath="..\Modules\webdatabase\DBBackendServer.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\Modules\webdatabase\DBBackendServer.h"
 					>
 				</File>
 				<File
@@ -26795,6 +26807,14 @@
 			</File>
 			<File
 				RelativePath="..\page\animation\AnimationControllerPrivate.h"
+				>
+			</File>
+			<File
+				RelativePath="..\page\AutoscrollController.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\page\AutoscrollController.h"
 				>
 			</File>
 			<File
@@ -28382,6 +28402,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\platform\DatabaseStrategy.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\platform\DatabaseStrategy.h"
+				>
+			</File>
+			<File
 				RelativePath="..\platform\DateComponents.cpp"
 				>
 			</File>
@@ -29858,6 +29886,14 @@
 				</File>
 				<File
 					RelativePath="..\platform\graphics\TextRun.h"
+					>
+				</File>
+				<File
+					RelativePath="..\platform\graphics\TextTrackRepresentation.cpp"
+					>
+				</File>
+				<File
+					RelativePath="..\platform\graphics\TextTrackRepresentation.h"
 					>
 				</File>
 				<File
@@ -32585,6 +32621,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\platform\network\NetworkStorageSession.h"
+					>
+				</File>
+				<File
 					RelativePath="..\platform\network\NetworkingContext.h"
 					>
 				</File>
@@ -32808,10 +32848,6 @@
 						</FileConfiguration>
 					</File>
 					<File
-						RelativePath="..\platform\network\cf\CookieStorageCFNet.h"
-						>
-					</File>
-					<File
 						RelativePath="..\platform\network\cf\CredentialStorageCFNet.cpp"
 						>
 						<FileConfiguration
@@ -32901,6 +32937,10 @@
 					</File>
 					<File
 						RelativePath="..\platform\network\cf\LoaderRunLoopCF.h"
+						>
+					</File>
+					<File
+						RelativePath="..\platform\network\cf\NetworkStorageSessionCFNet.cpp"
 						>
 					</File>
 					<File
@@ -38539,6 +38579,14 @@
 			</File>
 			<File
 				RelativePath="..\rendering\ExclusionSRectangle.h"
+				>
+			</File>
+			<File
+				RelativePath="..\rendering\ExclusionShapeOutsideInfo.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\rendering\ExclusionShapeOutsideInfo.h"
 				>
 			</File>
 			<File
@@ -54942,6 +54990,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\dom\TemplateContentDocumentFragment.h"
+				>
+			</File>
+			<File
 				RelativePath="..\dom\Text.cpp"
 				>
 				<FileConfiguration
@@ -71316,59 +71368,7 @@
 						/>
 					</FileConfiguration>
 				</File>
-				<File
-					RelativePath="..\bindings\js\JSWebSocketCustom.cpp"
-					>
-					<FileConfiguration
-						Name="Debug|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_Cairo_CFLite|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release_Cairo_CFLite|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug_All|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Production|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-				</File>
-				<File
+                                <File
 					RelativePath="..\bindings\js\JSWorkerContextBase.cpp"
 					>
 					<FileConfiguration
@@ -74814,6 +74814,30 @@
 				>
 			</File>
 			<File
+				RelativePath="..\inspector\HeapGraphSerializer.cpp"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Production|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\inspector\HeapGraphSerializer.h"
+				>
+			</File>
+			<File
 				RelativePath="..\inspector\IdentifiersFactory.cpp"
 				>
 				<FileConfiguration
@@ -76401,11 +76425,7 @@
 					>
 				</File>
 				<File
-					RelativePath="..\inspector\front-end\CSSCompletions.js"
-					>
-				</File>
-				<File
-					RelativePath="..\inspector\front-end\CSSKeywordCompletions.js"
+					RelativePath="..\inspector\front-end\CSSMetadata.js"
 					>
 				</File>
 				<File
@@ -76454,6 +76474,10 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\DebuggerScriptMapping.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\DefaultScriptMapping.js"
 					>
 				</File>
 				<File
@@ -76705,6 +76729,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\inspector\front-end\JSHeapSnapshot.js"
+					>
+				</File>
+				<File
 					RelativePath="..\inspector\front-end\JavaScriptFormatter.js"
 					>
 				</File>
@@ -76729,6 +76757,10 @@
 					>
 				</File>
 				<File
+					RelativePath="..\inspector\front-end\LiveEditSupport.js"
+					>
+				</File>
+				<File
 					RelativePath="..\inspector\front-end\MetricsSidebarPane.js"
 					>
 				</File>
@@ -76738,6 +76770,10 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\nativeMemoryProfiler.css"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\NativeHeapGraph.js"
 					>
 				</File>
 				<File
@@ -77078,6 +77114,10 @@
 				</File>
 				<File
 					RelativePath="..\inspector\front-end\SourceJavaScriptTokenizer.js"
+					>
+				</File>
+				<File
+					RelativePath="..\inspector\front-end\SourceMap.js"
 					>
 				</File>
 				<File

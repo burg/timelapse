@@ -27,8 +27,10 @@
 
 #include "ScrollingCoordinator.h"
 
+#include "Document.h"
 #include "Frame.h"
 #include "FrameView.h"
+#include "GraphicsLayer.h"
 #include "IntRect.h"
 #include "Page.h"
 #include "PlatformWheelEvent.h"
@@ -176,6 +178,65 @@ Region ScrollingCoordinator::computeNonFastScrollableRegion(Frame* frame, const 
     return nonFastScrollableRegion;
 }
 
+#if ENABLE(TOUCH_EVENT_TRACKING)
+static void accumulateRendererTouchEventTargetRects(Vector<IntRect>& rects, const RenderObject* renderer, const IntRect& parentRect = IntRect())
+{
+    IntRect adjustedParentRect = parentRect;
+    if (parentRect.isEmpty() || renderer->isFloating() || renderer->isPositioned() || renderer->hasTransform()) {
+        // FIXME: This method is O(N^2) as it walks the tree to the root for every renderer. RenderGeometryMap would fix this.
+        IntRect r = enclosingIntRect(renderer->clippedOverflowRectForRepaint(0));
+        if (!r.isEmpty() && !parentRect.contains(r)) {
+            rects.append(r);
+            adjustedParentRect = r;
+        }
+    }
+
+    for (RenderObject* child = renderer->firstChild(); child; child = child->nextSibling())
+        accumulateRendererTouchEventTargetRects(rects, child, adjustedParentRect);
+}
+
+static void accumulateDocumentEventTargetRects(Vector<IntRect>& rects, const Document* document)
+{
+    ASSERT(document);
+    if (!document->touchEventTargets())
+        return;
+
+    const TouchEventTargetSet* targets = document->touchEventTargets();
+    for (TouchEventTargetSet::const_iterator iter = targets->begin(); iter != targets->end(); ++iter) {
+        const Node* touchTarget = iter->key;
+        if (!touchTarget->inDocument())
+            continue;
+
+        if (touchTarget == document) {
+            if (RenderView* view = document->renderView()) {
+                IntRect r = enclosingIntRect(view->clippedOverflowRectForRepaint(0));
+                if (!r.isEmpty())
+                    rects.append(r);
+            }
+            return;
+        }
+
+        if (touchTarget->isDocumentNode() && touchTarget != document) {
+            accumulateDocumentEventTargetRects(rects, static_cast<const Document*>(touchTarget));
+            continue;
+        }
+
+        if (RenderObject* renderer = touchTarget->renderer())
+            accumulateRendererTouchEventTargetRects(rects, renderer);
+    }
+}
+
+void ScrollingCoordinator::computeAbsoluteTouchEventTargetRects(const Document* document, Vector<IntRect>& rects)
+{
+    ASSERT(document);
+    if (!document->view())
+        return;
+
+    // FIXME: These rects won't be properly updated if the renderers are in a sub-tree that scrolls.
+    accumulateDocumentEventTargetRects(rects, document);
+}
+#endif
+
 unsigned ScrollingCoordinator::computeCurrentWheelEventHandlerCount()
 {
     unsigned wheelEventHandlerCount = 0;
@@ -302,7 +363,7 @@ void ScrollingCoordinator::updateMainFrameScrollPosition(const IntPoint& scrollP
         else {
             scrollLayer->syncPosition(-frameView->scrollPosition());
             LayoutRect viewportRect = frameView->visibleContentRect();
-            viewportRect.setLocation(toPoint(frameView->scrollOffsetForFixedPosition()));
+            viewportRect.setLocation(IntPoint(frameView->scrollOffsetForFixedPosition()));
             syncChildPositions(viewportRect);
         }
     }

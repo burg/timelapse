@@ -33,21 +33,17 @@ messages -> NetworkConnectionToWebProcess {
     RemoveLoadIdentifier(uint64_t resourceLoadIdentifier)
     
     ServePendingRequests(uint32_t resourceLoadPriority)
-
-    SuspendPendingRequests() -> ()
-    ResumePendingRequests() -> ()
     
     SetSerialLoadingEnabled(bool enabled) -> ()
 
-    CookiesForDOM(WebCore::KURL firstParty, WebCore::KURL url) -> (WTF::String result)
-    SetCookiesFromDOM(WebCore::KURL firstParty, WebCore::KURL url, WTF::String cookieString)
-    CookiesEnabled(WebCore::KURL firstParty, WebCore::KURL url) -> (bool enabled)
-    CookieRequestHeaderFieldValue(WebCore::KURL firstParty, WebCore::KURL url) -> (WTF::String result)
-    GetRawCookies(WebCore::KURL firstParty, WebCore::KURL url) -> (WTF::Vector<WebCore::Cookie> cookies)
-    DeleteCookie(WebCore::KURL url, WTF::String cookieName)
-    GetHostnamesWithCookies() -> (WTF::Vector<WTF::String> hostnames)
-    DeleteCookiesForHostname(WTF::String hostname)
-    DeleteAllCookies()
+    StartDownload(bool privateBrowsingEnabled, uint64_t downloadID, WebCore::ResourceRequest request)
+
+    CookiesForDOM(bool privateBrowsingEnabled, WebCore::KURL firstParty, WebCore::KURL url) -> (WTF::String result)
+    SetCookiesFromDOM(bool privateBrowsingEnabled, WebCore::KURL firstParty, WebCore::KURL url, WTF::String cookieString)
+    CookiesEnabled(bool privateBrowsingEnabled, WebCore::KURL firstParty, WebCore::KURL url) -> (bool enabled)
+    CookieRequestHeaderFieldValue(bool privateBrowsingEnabled, WebCore::KURL firstParty, WebCore::KURL url) -> (WTF::String result)
+    GetRawCookies(bool privateBrowsingEnabled, WebCore::KURL firstParty, WebCore::KURL url) -> (WTF::Vector<WebCore::Cookie> cookies)
+    DeleteCookie(bool privateBrowsingEnabled, WebCore::KURL url, WTF::String cookieName)
 }
 
 #endif // ENABLE(NETWORK_PROCESS)

@@ -164,6 +164,9 @@ EwkViewImpl::EwkViewImpl(Evas_Object* view, PassRefPtr<EwkContext> context, Pass
     m_pageProxy->fullScreenManager()->setWebView(m_view);
     m_pageProxy->pageGroup()->preferences()->setFullScreenEnabled(true);
 #endif
+#if ENABLE(WEB_AUDIO)
+    m_pageProxy->pageGroup()->preferences()->setWebAudioEnabled(true);
+#endif
 
     m_pageProxy->pageGroup()->preferences()->setOfflineWebApplicationCacheEnabled(true);
 
@@ -289,11 +292,17 @@ void EwkViewImpl::setCursor(const Cursor& cursor)
     ecore_evas_object_cursor_set(ecoreEvas, cursorObject.release().leakRef(), EVAS_LAYER_MAX, hotspotX, hotspotY);
 }
 
+void EwkViewImpl::setDeviceScaleFactor(float scale)
+{
+    page()->setIntrinsicDeviceScaleFactor(scale);
+}
+
 AffineTransform EwkViewImpl::transformFromScene() const
 {
     AffineTransform transform;
 
 #if USE(TILED_BACKING_STORE)
+    // Note that the scale factor incl page and device scale for now.
     transform.scale(1 / m_scaleFactor);
     transform.translate(pagePosition().x(), pagePosition().y());
 #endif
@@ -367,6 +376,9 @@ void EwkViewImpl::displayTimerFired(Timer<EwkViewImpl>*)
     if (m_pendingSurfaceResize) {
         // Create a GL surface here so that Evas has no chance of painting to an empty GL surface.
         createGLSurface(IntSize(sd->view.w, sd->view.h));
+        if (!m_evasGLSurface)
+            return;
+
         m_pendingSurfaceResize = false;
     } else
         evas_gl_make_current(m_evasGL.get(), evasGLSurface(), evasGLContext());
@@ -903,7 +915,7 @@ EwkWindowFeatures* EwkViewImpl::windowFeatures()
     return m_windowFeatures.get();
 }
 
-WKPageRef EwkViewImpl::createNewPage(ImmutableDictionary* windowFeatures)
+WKPageRef EwkViewImpl::createNewPage(PassRefPtr<EwkUrlRequest> request, ImmutableDictionary* windowFeatures)
 {
     Ewk_View_Smart_Data* sd = smartData();
     ASSERT(sd->api);
@@ -913,7 +925,7 @@ WKPageRef EwkViewImpl::createNewPage(ImmutableDictionary* windowFeatures)
 
     RefPtr<EwkWindowFeatures> ewkWindowFeatures = EwkWindowFeatures::create(windowFeatures, this);
 
-    Evas_Object* newEwkView = sd->api->window_create(sd, ewkWindowFeatures.get());
+    Evas_Object* newEwkView = sd->api->window_create(sd, request->url(), ewkWindowFeatures.get());
     if (!newEwkView)
         return 0;
 
@@ -1017,21 +1029,31 @@ void EwkViewImpl::onFaviconChanged(const char* pageURL, void* eventInfo)
     viewImpl->informIconChange();
 }
 
-WKImageRef EwkViewImpl::takeSnapshot()
+PassRefPtr<cairo_surface_t> EwkViewImpl::takeSnapshot()
 {
+    // Suspend all animations before taking the snapshot.
+    m_pageProxy->suspendActiveDOMObjectsAndAnimations();
+
+    // Wait for the pending repaint events to be processed.
+    while (m_displayTimer.isActive())
+        ecore_main_loop_iterate();
+
     Ewk_View_Smart_Data* sd = smartData();
 #if USE(ACCELERATED_COMPOSITING)
-    if (!m_isHardwareAccelerated)
+    if (!m_isHardwareAccelerated) {
 #endif
-        return WKImageCreateFromCairoSurface(createSurfaceForImage(sd->image).get(), 0);
+        RefPtr<cairo_surface_t> snapshot = createSurfaceForImage(sd->image);
+        // Resume all animations.
+        m_pageProxy->resumeActiveDOMObjectsAndAnimations();
 
+        return snapshot.release();
 #if USE(ACCELERATED_COMPOSITING)
-    Evas_Native_Surface* nativeSurface = evas_object_image_native_surface_get(sd->image);
-    unsigned char* buffer = getImageFromCurrentTexture(sd->view.w, sd->view.h, nativeSurface->data.opengl.texture_id);
-    RefPtr<cairo_surface_t> surface = adoptRef(cairo_image_surface_create_for_data(buffer, CAIRO_FORMAT_ARGB32, sd->view.w, sd->view.h, sd->view.w * 4));
-    WKImageRef image = WKImageCreateFromCairoSurface(surface.get(), 0);
-    delete[] buffer;
+    }
 
-    return image;
+    RefPtr<cairo_surface_t> snapshot = getImageSurfaceFromFrameBuffer(0, 0, sd->view.w, sd->view.h);
+    // Resume all animations.
+    m_pageProxy->resumeActiveDOMObjectsAndAnimations();
+
+    return snapshot.release();
 #endif
 }

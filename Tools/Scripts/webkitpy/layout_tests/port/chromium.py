@@ -84,15 +84,25 @@ class ChromiumPort(Port):
         if build_directory:
             return filesystem.join(build_directory, configuration, *comps)
 
+        hits = []
         for directory in cls.DEFAULT_BUILD_DIRECTORIES:
             base_dir = filesystem.join(chromium_base, directory, configuration)
-            if filesystem.exists(base_dir):
-                return filesystem.join(base_dir, *comps)
+            path = filesystem.join(base_dir, *comps)
+            if filesystem.exists(path):
+                hits.append((filesystem.mtime(path), path))
+        if hits:
+            hits.sort(reverse=True)
+            return hits[0][1]  # Return the newest file found.
 
         for directory in cls.DEFAULT_BUILD_DIRECTORIES:
             base_dir = filesystem.join(webkit_base, directory, configuration)
-            if filesystem.exists(base_dir):
-                return filesystem.join(base_dir, *comps)
+            path = filesystem.join(base_dir, *comps)
+            if filesystem.exists(path):
+                hits.append((filesystem.mtime(path), path))
+
+        if hits:
+            hits.sort(reverse=True)
+            return hits[0][1]  # Return the newest file found.
 
         # We have to default to something, so pick the last one.
         return filesystem.join(base_dir, *comps)
@@ -391,6 +401,12 @@ class ChromiumPort(Port):
             VirtualTestSuite('platform/chromium/virtual/deferred/fast/images',
                              'fast/images',
                              ['--enable-deferred-image-decoding', '--enable-per-tile-painting', '--force-compositing-mode']),
+            VirtualTestSuite('platform/chromium/virtual/gpu/compositedscrolling/overflow',
+                             'compositing/overflow',
+                             ['--enable-accelerated-overflow-scroll']),
+            VirtualTestSuite('platform/chromium/virtual/gpu/compositedscrolling/scrollbars',
+                             'scrollbars',
+                             ['--enable-accelerated-overflow-scroll']),
         ]
 
     #

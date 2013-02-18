@@ -61,7 +61,9 @@ my (
     $cssImageResolutionSupport,
     $cssRegionsSupport,
     $cssShadersSupport,
+    $cssStickyPositionSupport,
     $cssCompositingSupport,
+    $cssAnimationsTransitionsTransformsUnprefixedSupport,
     $cssVariablesSupport,
     $customSchemeHandlerSupport,
     $dataTransferItemsSupport,
@@ -127,7 +129,7 @@ my (
     $svgFontsSupport,
     $svgSupport,
     $systemMallocSupport,
-    $templateTagSupport,
+    $templateElementSupport,
     $textAutosizingSupport,
     $tiledBackingStoreSupport,
     $timelapseSupport,
@@ -201,8 +203,14 @@ my @features = (
     { option => "css-shaders", desc => "Toggle CSS Shaders support",
       define => "ENABLE_CSS_SHADERS", default => isAppleMacWebKit(), value => \$cssShadersSupport },
 
+    { option => "css-sticky-position", desc => "Toggle CSS sticky position support",
+      define => "ENABLE_CSS_STICKY_POSITION", default => (isGtk() || isEfl()), value => \$cssStickyPositionSupport },
+
     { option => "css-compositing", desc => "Toggle CSS Compositing support",
       define => "ENABLE_CSS_COMPOSITING", default => isAppleWebKit(), value => \$cssCompositingSupport },
+
+    { option => "css-transforms-animations-transitions-unprefixed", desc => "Toggle support for unprefixed CSS animations, transitions and transforms",
+      define => "ENABLE_CSS_TRANSFORMS_ANIMATIONS_TRANSITIONS_UNPREFIXED", default => 1, value => \$cssAnimationsTransitionsTransformsUnprefixedSupport },
 
     { option => "css-variables", desc => "Toggle CSS Variable support",
       define => "ENABLE_CSS_VARIABLES", default => (isBlackBerry() || isEfl()), value => \$cssVariablesSupport },
@@ -325,7 +333,7 @@ my @features = (
       define => "ENABLE_METER_ELEMENT", default => !isAppleWinWebKit(), value => \$meterTagSupport },
 
     { option => "mhtml", desc => "Toggle MHTML support",
-      define => "ENABLE_MHTML", default => isGtk(), value => \$mhtmlSupport },
+      define => "ENABLE_MHTML", default => (isGtk() || isEfl()), value => \$mhtmlSupport },
 
     { option => "microdata", desc => "Toggle Microdata support",
       define => "ENABLE_MICRODATA", default => (isEfl() || isBlackBerry() || isGtk()), value => \$microdataSupport },
@@ -396,8 +404,8 @@ my @features = (
     { option => "system-malloc", desc => "Toggle system allocator instead of TCmalloc",
       define => "USE_SYSTEM_MALLOC", default => isWinCE(), value => \$systemMallocSupport },
 
-    { option => "template-tag", desc => "Toggle Templates Tag support",
-      define => "ENABLE_TEMPLATE_ELEMENT", default => 0, value => \$templateTagSupport },
+    { option => "template-element", desc => "Toggle HTMLTemplateElement support",
+      define => "ENABLE_TEMPLATE_ELEMENT", default => isEfl(), value => \$templateElementSupport },
 
     { option => "text-autosizing", desc => "Toggle Text Autosizing support",
       define => "ENABLE_TEXT_AUTOSIZING", default => 0, value => \$textAutosizingSupport },
@@ -424,13 +432,13 @@ my @features = (
       define => "ENABLE_VIDEO", default => (isAppleWebKit() || isGtk() || isBlackBerry() || isEfl()), value => \$videoSupport },
 
     { option => "video-track", desc => "Toggle Video Track support",
-      define => "ENABLE_VIDEO_TRACK", default => (isAppleWebKit() || isGtk() || isEfl()), value => \$videoTrackSupport },
+      define => "ENABLE_VIDEO_TRACK", default => (isAppleWebKit() || isGtk() || isEfl() || isBlackBerry()), value => \$videoTrackSupport },
 
     { option => "webgl", desc => "Toggle WebGL support",
       define => "ENABLE_WEBGL", default => (isAppleMacWebKit() || isGtk() || isEfl()), value => \$webglSupport },
 
     { option => "web-audio", desc => "Toggle Web Audio support",
-      define => "ENABLE_WEB_AUDIO", default => 0, value => \$webAudioSupport },
+      define => "ENABLE_WEB_AUDIO", default => (isEfl()), value => \$webAudioSupport },
 
     { option => "web-intents", desc => "Toggle Web Intents support",
       define => "ENABLE_WEB_INTENTS", default => isEfl(), value => \$webIntentsSupport },

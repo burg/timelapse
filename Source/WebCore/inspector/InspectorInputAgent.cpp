@@ -51,7 +51,7 @@
 
 namespace WebCore {
 
-InspectorInputAgent::InspectorInputAgent(InstrumentingAgents* instrumentingAgents, InspectorState* inspectorState, Page* page)
+InspectorInputAgent::InspectorInputAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* inspectorState, Page* page)
     : InspectorBaseAgent<InspectorInputAgent>("Input", instrumentingAgents, inspectorState)
     , m_page(page)
 {
@@ -93,7 +93,7 @@ void InspectorInputAgent::dispatchKeyEvent(ErrorString* error, const String& typ
     m_page->mainFrame()->eventHandler()->keyEvent(event);
 }
 
-void InspectorInputAgent::dispatchMouseEvent(ErrorString* error, const String& type, const int* modifiers, const double* timestamp, const String* button, const int* clickCount, int x, int y)
+void InspectorInputAgent::dispatchMouseEvent(ErrorString* error, const String& type, int x, int y, const int* modifiers, const double* timestamp, const String* button, const int* clickCount)
 {
     PlatformEvent::Type convertedType;
     if (type == "mousePressed")

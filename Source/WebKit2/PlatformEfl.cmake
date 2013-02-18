@@ -181,6 +181,7 @@ list(APPEND WebKit2_INCLUDE_DIRECTORIES
     ${EDJE_INCLUDE_DIRS}
     ${EFREET_INCLUDE_DIRS}
     ${EINA_INCLUDE_DIRS}
+    ${EO_INCLUDE_DIRS}
     ${EVAS_INCLUDE_DIRS}
     ${HARFBUZZ_INCLUDE_DIRS}
     ${LIBSOUP_INCLUDE_DIRS}
@@ -205,6 +206,7 @@ list(APPEND WebKit2_LIBRARIES
     ${EDJE_LIBRARIES}
     ${EFREET_LIBRARIES}
     ${EINA_LIBRARIES}
+    ${EO_LIBRARIES}
     ${EVAS_LIBRARIES}
     ${Freetype_LIBRARIES}
     ${HARFBUZZ_LIBRARIES}
@@ -228,6 +230,7 @@ list(APPEND WebProcess_SOURCES
 list(APPEND WebProcess_LIBRARIES
     ${CAIRO_LIBRARIES}
     ${ECORE_IMF_LIBRARIES}
+    ${ECORE_IMF_EVAS_LIBRARIES}
     ${EDJE_LIBRARIES}
     ${EFLDEPS_LIBRARIES}
     ${EVAS_LIBRARIES}
@@ -261,6 +264,8 @@ set(EWebKit2_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_back_forward_list_item.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_color_picker.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_context.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_context_menu.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_context_menu_item.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_cookie_manager.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_database_manager.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/UIProcess/API/efl/ewk_defines.h"
@@ -387,7 +392,7 @@ if (ENABLE_API_TESTS)
     foreach (testName ${EWK2UnitTests_BINARIES})
         add_executable(${testName} ${WEBKIT2_EFL_TEST_DIR}/${testName}.cpp)
         add_test(${testName} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${testName})
-        set_tests_properties(${testName} PROPERTIES TIMEOUT 180)
+        set_tests_properties(${testName} PROPERTIES TIMEOUT 60)
         target_link_libraries(${testName} ${EWK2UnitTests_LIBRARIES} ewk2UnitTestUtils)
     endforeach ()
 

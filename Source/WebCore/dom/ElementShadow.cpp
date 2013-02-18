@@ -87,6 +87,9 @@ void ElementShadow::addShadowRoot(Element* shadowHost, PassRefPtr<ShadowRoot> sh
     invalidateDistribution(shadowHost);
     ChildNodeInsertionNotifier(shadowHost).notify(shadowRoot.get());
 
+    // Existence of shadow roots requires the host and its children to do traversal using ComposedShadowTreeWalker.
+    shadowHost->setNeedsShadowTreeWalker();
+
     // FIXME(94905): ShadowHost should be reattached during recalcStyle.
     // Set some flag here and recreate shadow hosts' renderer in
     // Element::recalcStyle.
@@ -110,9 +113,9 @@ void ElementShadow::removeAllShadowRoots()
 
         m_shadowRoots.removeHead();
         oldRoot->setHost(0);
+        oldRoot->setParentTreeScope(shadowHost->document());
         oldRoot->setPrev(0);
         oldRoot->setNext(0);
-        shadowHost->document()->adoptIfNeeded(oldRoot.get());
         ChildNodeRemovalNotifier(shadowHost).notify(oldRoot.get());
     }
 

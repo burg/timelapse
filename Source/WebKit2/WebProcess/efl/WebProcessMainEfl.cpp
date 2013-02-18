@@ -32,6 +32,8 @@
 #include "WKBase.h"
 #include <Ecore.h>
 #include <Efreet.h>
+#include <WebCore/AuthenticationChallenge.h>
+#include <WebCore/NetworkingContext.h>
 #include <WebCore/ResourceHandle.h>
 #include <WebCore/RunLoop.h>
 #include <WebKit2/WebProcess.h>
@@ -50,10 +52,6 @@ static int dummyExtensionErrorHandler(Display*, _Xconst char*, _Xconst char*)
 {
     return 0;
 }
-#endif
-
-#if USE(COORDINATED_GRAPHICS)
-#include "CoordinatedGraphicsLayer.h"
 #endif
 
 using namespace WebCore;
@@ -88,7 +86,9 @@ WK_EXPORT int WebProcessMainEfl(int argc, char* argv[])
     }
 #endif
 
+#if !GLIB_CHECK_VERSION(2, 35, 0)
     g_type_init();
+#endif
 
     if (!ecore_main_loop_glib_integrate())
         return 1;
@@ -113,14 +113,8 @@ WK_EXPORT int WebProcessMainEfl(int argc, char* argv[])
     soup_session_add_feature(session, SOUP_SESSION_FEATURE(soupCache));
     soup_cache_load(soupCache);
 
-#if USE(COORDINATED_GRAPHICS)
-    CoordinatedGraphicsLayer::initFactory();
-#endif
-
-    WebCore::ResourceHandle::setIgnoreSSLErrors(true);
-
     int socket = atoi(argv[1]);
-    WebProcess::shared().initialize(socket, RunLoop::main());
+    WebProcess::shared().initializeConnection(socket);
     RunLoop::run();
 
     soup_cache_flush(soupCache);

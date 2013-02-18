@@ -143,7 +143,9 @@ class Driver(object):
 
         self._measurements = {}
         if self._port.get_option("profile"):
-            self._profiler = ProfilerFactory.create_profiler(self._port.host, self._port._path_to_driver(), self._port.results_directory())
+            profiler_name = self._port.get_option("profiler")
+            self._profiler = ProfilerFactory.create_profiler(self._port.host,
+                self._port._path_to_driver(), self._port.results_directory(), profiler_name)
         else:
             self._profiler = None
 
@@ -538,16 +540,6 @@ class DriverProxy(object):
             self._running_drivers[cmd_line_key] = self._make_driver(pixel_tests_needed)
 
         return self._running_drivers[cmd_line_key].run_test(driver_input, stop_when_done)
-
-    def start(self):
-        # FIXME: Callers shouldn't normally call this, since this routine
-        # may not be specifying the correct combination of pixel test and
-        # per_test args.
-        #
-        # The only reason we have this routine at all is so the perftestrunner
-        # can pause before running a test; it might be better to push that
-        # into run_test() directly.
-        self._driver.start(self._port.get_option('pixel_tests'), [])
 
     def has_crashed(self):
         return any(driver.has_crashed() for driver in self._running_drivers.values())

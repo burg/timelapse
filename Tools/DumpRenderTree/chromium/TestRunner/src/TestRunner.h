@@ -33,6 +33,8 @@
 #define TestRunner_h
 
 #include "CppBoundClass.h"
+#include "WebDeliveredIntentClient.h"
+#include "WebTestRunner.h"
 #include "platform/WebURL.h"
 
 namespace WebKit {
@@ -43,9 +45,10 @@ namespace WebTestRunner {
 
 class WebTestDelegate;
 
-class TestRunner : public CppBoundClass {
+class TestRunner : public CppBoundClass, public WebTestRunner {
 public:
     TestRunner();
+    virtual ~TestRunner();
 
     // FIXME: once DRTTestRunner is moved entirely to this class, change this
     // method to take a TestDelegate* instead.
@@ -54,13 +57,15 @@ public:
 
     void reset();
 
+    // WebTestRunner implementation.
+    virtual bool shouldDumpEditingCallbacks() const OVERRIDE;
+
 protected:
     // FIXME: make these private once the move from DRTTestRunner to TestRunner
     // is complete.
     bool cppVariantToBool(const CppVariant&);
     int32_t cppVariantToInt32(const CppVariant&);
     WebKit::WebString cppVariantToWebString(const CppVariant&);
-    Vector<WebKit::WebString> cppVariantToWebStringArray(const CppVariant&);
 
     void printErrorMessage(const std::string&);
 
@@ -71,9 +76,6 @@ private:
     // Method that controls whether pressing Tab key cycles through page elements
     // or inserts a '\t' char in text area
     void setTabKeyCyclesThroughElements(const CppArgumentList&, CppVariant*);
-
-    // Changes asynchronous spellchecking flag on the settings.
-    void setAsynchronousSpellCheckingEnabled(const CppArgumentList&, CppVariant*);
 
     // Executes an internal command (superset of document.execCommand() commands).
     void execCommand(const CppArgumentList&, CppVariant*);
@@ -114,8 +116,6 @@ private:
     void markerTextForListItem(const CppArgumentList&, CppVariant*);
     void findString(const CppArgumentList&, CppVariant*);
 
-    void setMinimumTimerInterval(const CppArgumentList&, CppVariant*);
-
     // Expects the first argument to be an input element and the second argument to be a boolean.
     // Forwards the setAutofilled() call to the element.
     void setAutofilled(const CppArgumentList&, CppVariant*);
@@ -148,7 +148,6 @@ private:
     // point coordinates relative to the node and the fourth the maximum text
     // length to retrieve.
     void textSurroundingNode(const CppArgumentList&, CppVariant*);
-    void setTouchDragDropEnabled(const CppArgumentList&, CppVariant*);
 
     ///////////////////////////////////////////////////////////////////////////
     // Methods modifying WebPreferences.
@@ -172,6 +171,30 @@ private:
 
     // Enable or disable plugins.
     void setPluginsEnabled(const CppArgumentList&, CppVariant*);
+
+    // Changes asynchronous spellchecking flag on the settings.
+    void setAsynchronousSpellCheckingEnabled(const CppArgumentList&, CppVariant*);
+
+    void setMinimumTimerInterval(const CppArgumentList&, CppVariant*);
+    void setTouchDragDropEnabled(const CppArgumentList&, CppVariant*);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Methods that modify the state of TestRunner
+
+    // This function sets a flag that tells the test_shell to print a line of
+    // descriptive text for each editing command. It takes no arguments, and
+    // ignores any that may be present.
+    void dumpEditingCallbacks(const CppArgumentList&, CppVariant*);
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Methods interacting with the WebTestProxy
+
+    // Expects one string argument for sending successful result, zero
+    // arguments for sending a failure result.
+    void sendWebIntentResponse(const CppArgumentList&, CppVariant*);
+
+    // Cause the web intent to be delivered to this context.
+    void deliverWebIntent(const CppArgumentList&, CppVariant*);
 
     ///////////////////////////////////////////////////////////////////////////
     // Properties
@@ -205,8 +228,15 @@ private:
     // Bound variable to return the name of this platform (chromium).
     CppVariant m_platformName;
 
+    // If true, the test_shell will write a descriptive line for each editing
+    // command.
+    bool m_dumpEditingCallbacks;
+
     WebTestDelegate* m_delegate;
     WebKit::WebView* m_webView;
+
+    // Mock object for testing delivering web intents.
+    OwnPtr<WebKit::WebDeliveredIntentClient> m_intentClient;
 };
 
 }

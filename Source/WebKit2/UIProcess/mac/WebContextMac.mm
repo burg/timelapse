@@ -26,20 +26,24 @@
 #import "config.h"
 #import "WebContext.h"
 
-#import "NetworkProcessManager.h"
 #import "PluginProcessManager.h"
 #import "SharedWorkerProcessManager.h"
+#import "WKBrowsingContextControllerInternal.h"
 #import "WKBrowsingContextControllerInternal.h"
 #import "WebKitSystemInterface.h"
 #import "WebProcessCreationParameters.h"
 #import "WebProcessMessages.h"
+#import <QuartzCore/CARemoteLayerServer.h>
 #import <WebCore/Color.h>
 #import <WebCore/FileSystem.h>
-#include <WebCore/NotImplemented.h>
+#import <WebCore/NotImplemented.h>
 #import <WebCore/PlatformPasteboard.h>
 #import <sys/param.h>
 
-#import <QuartzCore/CARemoteLayerServer.h>
+#if ENABLE(NETWORK_PROCESS)
+#import "NetworkProcessCreationParameters.h"
+#import "NetworkProcessProxy.h"
+#endif
 
 using namespace WebCore;
 
@@ -79,6 +83,7 @@ static void registerUserDefaultsIfNeeded()
 void WebContext::platformInitialize()
 {
     registerUserDefaultsIfNeeded();
+    registerNotificationObservers();
 }
 
 String WebContext::applicationCacheDirectory()
@@ -127,34 +132,35 @@ void WebContext::platformInitializeWebProcess(WebProcessCreationParameters& para
     SandboxExtension::createHandle(parameters.uiProcessBundleResourcePath, SandboxExtension::ReadOnly, parameters.uiProcessBundleResourcePathExtensionHandle);
 
     parameters.uiProcessBundleIdentifier = String([[NSBundle mainBundle] bundleIdentifier]);
-    
-    NSArray *schemes = [[WKBrowsingContextController customSchemes] allObjects];
-    for (size_t i = 0; i < [schemes count]; ++i)
-        parameters.urlSchemesRegisteredForCustomProtocols.append([schemes objectAtIndex:i]);
 
-    // FIXME(Multi-WebProcess): We register observers for every process that is created, which makes no sense.
-
-    m_customSchemeRegisteredObserver = [[NSNotificationCenter defaultCenter] addObserverForName:WebKit::SchemeForCustomProtocolRegisteredNotificationName object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
-        NSString *scheme = [notification object];
-        ASSERT([scheme isKindOfClass:[NSString class]]);
-        sendToAllProcesses(Messages::WebProcess::RegisterSchemeForCustomProtocol(scheme));
-    }];
-    
-    m_customSchemeUnregisteredObserver = [[NSNotificationCenter defaultCenter] addObserverForName:WebKit::SchemeForCustomProtocolUnregisteredNotificationName object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
-        NSString *scheme = [notification object];
-        ASSERT([scheme isKindOfClass:[NSString class]]);
-        sendToAllProcesses(Messages::WebProcess::UnregisterSchemeForCustomProtocol(scheme));
-    }];
-    
-    // Listen for enhanced accessibility changes and propagate them to the WebProcess.
-    m_enhancedAccessibilityObserver = [[NSNotificationCenter defaultCenter] addObserverForName:WebKitApplicationDidChangeAccessibilityEnhancedUserInterfaceNotification object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *note) {
-        setEnhancedAccessibility([[[note userInfo] objectForKey:@"AXEnhancedUserInterface"] boolValue]);
-    }];
+#if ENABLE(NETWORK_PROCESS)
+    if (!m_usesNetworkProcess) {
+#endif
+        for (NSString *scheme in [WKBrowsingContextController customSchemes])
+            parameters.urlSchemesRegisteredForCustomProtocols.append(scheme);
+#if ENABLE(NETWORK_PROCESS)
+    }
+#endif
 }
+
+#if ENABLE(NETWORK_PROCESS)
+void WebContext::platformInitializeNetworkProcess(NetworkProcessCreationParameters& parameters)
+{
+    NSURLCache *urlCache = [NSURLCache sharedURLCache];
+    parameters.nsURLCacheMemoryCapacity = [urlCache memoryCapacity];
+    parameters.nsURLCacheDiskCapacity = [urlCache diskCapacity];
+
+    parameters.parentProcessName = [[NSProcessInfo processInfo] processName];
+    parameters.uiProcessBundleIdentifier = [[NSBundle mainBundle] bundleIdentifier];
+
+    for (NSString *scheme in [WKBrowsingContextController customSchemes])
+        parameters.urlSchemesRegisteredForCustomProtocols.append(scheme);
+}
+#endif
 
 void WebContext::platformInvalidateContext()
 {
-    [[NSNotificationCenter defaultCenter] removeObserver:(id)m_enhancedAccessibilityObserver.get()];
+    unregisterNotificationObservers();
 }
 
 String WebContext::platformDefaultDiskCacheDirectory() const
@@ -291,14 +297,17 @@ void WebContext::applicationBecameVisible(uint32_t, void*, uint32_t, void*, uint
         s_applicationIsOccluded = false;
 
         const Vector<WebContext*>& contexts = WebContext::allContexts();
-        for (size_t i = 0, count = contexts.size(); i < count; ++i)
+        for (size_t i = 0, count = contexts.size(); i < count; ++i) {
+#if ENABLE(NETWORK_PROCESS)
+            if (contexts[i]->usesNetworkProcess() && contexts[i]->networkProcess())
+                contexts[i]->networkProcess()->setApplicationIsOccluded(false);
+#endif
+
             contexts[i]->sendToAllProcesses(Messages::WebProcess::SetApplicationIsOccluded(false));
+        }
 
 #if ENABLE(PLUGIN_PROCESS)
         PluginProcessManager::shared().setApplicationIsOccluded(false);
-#endif
-#if ENABLE(NETWORK_PROCESS)
-        NetworkProcessManager::shared().setApplicationIsOccluded(false);
 #endif
 #if ENABLE(SHARED_WORKER_PROCESS)
         SharedWorkerProcessManager::shared().setApplicationIsOccluded(false);
@@ -311,14 +320,17 @@ void WebContext::applicationBecameOccluded(uint32_t, void*, uint32_t, void*, uin
     if (!s_applicationIsOccluded) {
         s_applicationIsOccluded = true;
         const Vector<WebContext*>& contexts = WebContext::allContexts();
-        for (size_t i = 0, count = contexts.size(); i < count; ++i)
+        for (size_t i = 0, count = contexts.size(); i < count; ++i) {
+#if ENABLE(NETWORK_PROCESS)
+            if (contexts[i]->usesNetworkProcess() && contexts[i]->networkProcess())
+                contexts[i]->networkProcess()->setApplicationIsOccluded(true);
+#endif
+
             contexts[i]->sendToAllProcesses(Messages::WebProcess::SetApplicationIsOccluded(true));
+        }
 
 #if ENABLE(PLUGIN_PROCESS)
         PluginProcessManager::shared().setApplicationIsOccluded(true);
-#endif
-#if ENABLE(NETWORK_PROCESS)
-        NetworkProcessManager::shared().setApplicationIsOccluded(true);
 #endif
 #if ENABLE(SHARED_WORKER_PROCESS)
         SharedWorkerProcessManager::shared().setApplicationIsOccluded(true);
@@ -351,6 +363,33 @@ void WebContext::registerOcclusionNotificationHandlers()
     if (!WKRegisterOcclusionNotificationHandler(WKOcclusionNotificationTypeApplicationBecameOccluded, applicationBecameOccluded))
         WTFLogAlways("Registeration of \"App Became Occluded\" notification handler failed.\n");
 #endif
+}
+    
+void WebContext::registerNotificationObservers()
+{
+    m_customSchemeRegisteredObserver = [[NSNotificationCenter defaultCenter] addObserverForName:WebKit::SchemeForCustomProtocolRegisteredNotificationName object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
+        NSString *scheme = [notification object];
+        ASSERT([scheme isKindOfClass:[NSString class]]);
+        registerSchemeForCustomProtocol(scheme);
+    }];
+    
+    m_customSchemeUnregisteredObserver = [[NSNotificationCenter defaultCenter] addObserverForName:WebKit::SchemeForCustomProtocolUnregisteredNotificationName object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *notification) {
+        NSString *scheme = [notification object];
+        ASSERT([scheme isKindOfClass:[NSString class]]);
+        unregisterSchemeForCustomProtocol(scheme);
+    }];
+    
+    // Listen for enhanced accessibility changes and propagate them to the WebProcess.
+    m_enhancedAccessibilityObserver = [[NSNotificationCenter defaultCenter] addObserverForName:WebKitApplicationDidChangeAccessibilityEnhancedUserInterfaceNotification object:nil queue:[NSOperationQueue currentQueue] usingBlock:^(NSNotification *note) {
+        setEnhancedAccessibility([[[note userInfo] objectForKey:@"AXEnhancedUserInterface"] boolValue]);
+    }];
+}
+
+void WebContext::unregisterNotificationObservers()
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:(id)m_customSchemeRegisteredObserver.get()];
+    [[NSNotificationCenter defaultCenter] removeObserver:(id)m_customSchemeUnregisteredObserver.get()];
+    [[NSNotificationCenter defaultCenter] removeObserver:(id)m_enhancedAccessibilityObserver.get()];
 }
 
 } // namespace WebKit

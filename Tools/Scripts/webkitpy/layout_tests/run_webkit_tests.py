@@ -37,7 +37,6 @@ import traceback
 
 from webkitpy.common.host import Host
 from webkitpy.layout_tests.controllers.manager import Manager
-from webkitpy.layout_tests.models import test_expectations
 from webkitpy.layout_tests.port import configuration_options, platform_options
 from webkitpy.layout_tests.views import buildbot_results
 from webkitpy.layout_tests.views import printing
@@ -54,119 +53,46 @@ INTERRUPTED_EXIT_STATUS = signal.SIGINT + 128
 EXCEPTIONAL_EXIT_STATUS = 254
 
 
-def lint(port, options, logging_stream):
-    host = port.host
-    logging.getLogger().setLevel(logging.DEBUG if options.debug_rwt_logging else logging.INFO)
-    printer = printing.Printer(port, options, logging_stream, logger=logging.getLogger())
+def main(argv, stdout, stderr):
+    options, args = parse_args(argv)
 
-    if options.platform:
-        ports_to_lint = [port]
+    if options.platform and 'test' in options.platform:
+        # It's a bit lame to import mocks into real code, but this allows the user
+        # to run tests against the test platform interactively, which is useful for
+        # debugging test failures.
+        from webkitpy.common.host_mock import MockHost
+        host = MockHost()
     else:
-        ports_to_lint = [host.port_factory.get(name) for name in host.port_factory.all_port_names()]
+        host = Host()
 
-    files_linted = set()
-    lint_failed = False
+    if options.lint_test_files:
+        from webkitpy.layout_tests.lint_test_expectations import lint
+        return lint(host, options, stderr)
 
-    for port_to_lint in ports_to_lint:
-        expectations_dict = port_to_lint.expectations_dict()
-
-        # FIXME: This won't work if multiple ports share a TestExpectations file but support different modifiers in the file.
-        for expectations_file in expectations_dict.keys():
-            if expectations_file in files_linted:
-                continue
-
-            try:
-                test_expectations.TestExpectations(port_to_lint, expectations_to_lint={expectations_file: expectations_dict[expectations_file]})
-            except test_expectations.ParseError, e:
-                lint_failed = True
-                _log.error('')
-                for warning in e.warnings:
-                    _log.error(warning)
-                _log.error('')
-            files_linted.add(expectations_file)
-
-    if lint_failed:
-        _log.error('Lint failed.')
-        printer.cleanup()
-        return -1
-    _log.info('Lint succeeded.')
-    printer.cleanup()
-    return 0
-
-
-def run(port, options, args, logging_stream):
     try:
-        printer = printing.Printer(port, options, logging_stream, logger=logging.getLogger())
+        port = host.port_factory.get(options.platform, options)
+    except NotImplementedError, e:
+        # FIXME: is this the best way to handle unsupported port names?
+        print >> stderr, str(e)
+        return EXCEPTIONAL_EXIT_STATUS
 
-        _set_up_derived_options(port, options)
-        manager = Manager(port, options, printer)
-        printer.print_config(port.results_directory())
+    try:
+        run_details = run(port, options, args, stderr)
+        if run_details.exit_code != -1:
+            bot_printer = buildbot_results.BuildBotPrinter(stdout, options.debug_rwt_logging)
+            bot_printer.print_results(run_details)
 
-        run_details = manager.run(args)
-        _log.debug("Testing completed, Exit status: %d" % run_details.exit_code)
-        return run_details
-    finally:
-        printer.cleanup()
-
-
-def _set_up_derived_options(port, options):
-    """Sets the options values that depend on other options values."""
-    if not options.child_processes:
-        options.child_processes = os.environ.get("WEBKIT_TEST_CHILD_PROCESSES",
-                                                 str(port.default_child_processes()))
-    if not options.max_locked_shards:
-        options.max_locked_shards = int(os.environ.get("WEBKIT_TEST_MAX_LOCKED_SHARDS",
-                                                       str(port.default_max_locked_shards())))
-
-    if not options.configuration:
-        options.configuration = port.default_configuration()
-
-    if options.pixel_tests is None:
-        options.pixel_tests = port.default_pixel_tests()
-
-    if not options.time_out_ms:
-        options.time_out_ms = str(port.default_timeout_ms())
-
-    options.slow_time_out_ms = str(5 * int(options.time_out_ms))
-
-    if options.additional_platform_directory:
-        additional_platform_directories = []
-        for path in options.additional_platform_directory:
-            additional_platform_directories.append(port.host.filesystem.abspath(path))
-        options.additional_platform_directory = additional_platform_directories
-
-    if not options.http and options.skipped in ('ignore', 'only'):
-        _log.warning("--force/--skipped=%s overrides --no-http." % (options.skipped))
-        options.http = True
-
-    if options.ignore_metrics and (options.new_baseline or options.reset_results):
-        _log.warning("--ignore-metrics has no effect with --new-baselines or with --reset-results")
-
-    if options.new_baseline:
-        options.reset_results = True
-        options.add_platform_exceptions = True
-
-    if options.pixel_test_directories:
-        options.pixel_tests = True
-        varified_dirs = set()
-        pixel_test_directories = options.pixel_test_directories
-        for directory in pixel_test_directories:
-            # FIXME: we should support specifying the directories all the ways we support it for additional
-            # arguments specifying which tests and directories to run. We should also move the logic for that
-            # to Port.
-            filesystem = port.host.filesystem
-            if not filesystem.isdir(filesystem.join(port.layout_tests_dir(), directory)):
-                _log.warning("'%s' was passed to --pixel-test-directories, which doesn't seem to be a directory" % str(directory))
-            else:
-                varified_dirs.add(directory)
-
-        options.pixel_test_directories = list(varified_dirs)
-
-    if options.run_singly:
-        options.verbose = True
+        return run_details.exit_code
+    except KeyboardInterrupt:
+        return INTERRUPTED_EXIT_STATUS
+    except BaseException as e:
+        if isinstance(e, Exception):
+            print >> stderr, '\n%s raised: %s' % (e.__class__.__name__, str(e))
+            traceback.print_exc(file=stderr)
+        return EXCEPTIONAL_EXIT_STATUS
 
 
-def parse_args(args=None):
+def parse_args(args):
     option_group_definitions = []
 
     option_group_definitions.append(("Platform options", platform_options()))
@@ -380,47 +306,79 @@ def parse_args(args=None):
     return option_parser.parse_args(args)
 
 
-def main(argv=None, stdout=sys.stdout, stderr=sys.stderr):
-    options, args = parse_args(argv)
-    if options.platform and 'test' in options.platform:
-        # It's a bit lame to import mocks into real code, but this allows the user
-        # to run tests against the test platform interactively, which is useful for
-        # debugging test failures.
-        from webkitpy.common.host_mock import MockHost
-        host = MockHost()
-    else:
-        host = Host()
+def _set_up_derived_options(port, options):
+    """Sets the options values that depend on other options values."""
+    if not options.child_processes:
+        options.child_processes = os.environ.get("WEBKIT_TEST_CHILD_PROCESSES",
+                                                 str(port.default_child_processes()))
+    if not options.max_locked_shards:
+        options.max_locked_shards = int(os.environ.get("WEBKIT_TEST_MAX_LOCKED_SHARDS",
+                                                       str(port.default_max_locked_shards())))
+
+    if not options.configuration:
+        options.configuration = port.default_configuration()
+
+    if options.pixel_tests is None:
+        options.pixel_tests = port.default_pixel_tests()
+
+    if not options.time_out_ms:
+        options.time_out_ms = str(port.default_timeout_ms())
+
+    options.slow_time_out_ms = str(5 * int(options.time_out_ms))
+
+    if options.additional_platform_directory:
+        additional_platform_directories = []
+        for path in options.additional_platform_directory:
+            additional_platform_directories.append(port.host.filesystem.abspath(path))
+        options.additional_platform_directory = additional_platform_directories
+
+    if not options.http and options.skipped in ('ignore', 'only'):
+        _log.warning("--force/--skipped=%s overrides --no-http." % (options.skipped))
+        options.http = True
+
+    if options.ignore_metrics and (options.new_baseline or options.reset_results):
+        _log.warning("--ignore-metrics has no effect with --new-baselines or with --reset-results")
+
+    if options.new_baseline:
+        options.reset_results = True
+        options.add_platform_exceptions = True
+
+    if options.pixel_test_directories:
+        options.pixel_tests = True
+        varified_dirs = set()
+        pixel_test_directories = options.pixel_test_directories
+        for directory in pixel_test_directories:
+            # FIXME: we should support specifying the directories all the ways we support it for additional
+            # arguments specifying which tests and directories to run. We should also move the logic for that
+            # to Port.
+            filesystem = port.host.filesystem
+            if not filesystem.isdir(filesystem.join(port.layout_tests_dir(), directory)):
+                _log.warning("'%s' was passed to --pixel-test-directories, which doesn't seem to be a directory" % str(directory))
+            else:
+                varified_dirs.add(directory)
+
+        options.pixel_test_directories = list(varified_dirs)
+
+    if options.run_singly:
+        options.verbose = True
+
+
+def run(port, options, args, logging_stream):
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG if options.debug_rwt_logging else logging.INFO)
 
     try:
-        port = host.port_factory.get(options.platform, options)
-    except NotImplementedError, e:
-        # FIXME: is this the best way to handle unsupported port names?
-        print >> stderr, str(e)
-        return EXCEPTIONAL_EXIT_STATUS
+        printer = printing.Printer(port, options, logging_stream, logger=logger)
 
-    logging.getLogger().setLevel(logging.DEBUG if options.debug_rwt_logging else logging.INFO)
+        _set_up_derived_options(port, options)
+        manager = Manager(port, options, printer)
+        printer.print_config(port.results_directory())
 
-    if options.lint_test_files:
-        return lint(port, options, stderr)
+        run_details = manager.run(args)
+        _log.debug("Testing completed, Exit status: %d" % run_details.exit_code)
+        return run_details
+    finally:
+        printer.cleanup()
 
-    try:
-        run_details = run(port, options, args, stderr)
-        if run_details.exit_code != -1:
-            bot_printer = buildbot_results.BuildBotPrinter(stdout, options.debug_rwt_logging)
-            bot_printer.print_results(run_details)
-
-        return run_details.exit_code
-    except Exception, e:
-        print >> stderr, '\n%s raised: %s' % (e.__class__.__name__, str(e))
-        traceback.print_exc(file=stderr)
-        raise
-
-
-if '__main__' == __name__:
-    try:
-        exit_status = main()
-    except KeyboardInterrupt:
-        exit_status = INTERRUPTED_EXIT_STATUS
-    except BaseException, e:
-        exit_status = EXCEPTIONAL_EXIT_STATUS
-    sys.exit(exit_status)
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:], sys.stdout, sys.stderr))

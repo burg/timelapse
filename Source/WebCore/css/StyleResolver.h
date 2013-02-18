@@ -31,6 +31,7 @@
 #include "RuleFeature.h"
 #include "RuntimeEnabledFeatures.h"
 #include "SelectorChecker.h"
+#include "SelectorFilter.h"
 #include "StyleInheritedData.h"
 #include "StyleScopeResolver.h"
 #include "ViewportStyleResolver.h"
@@ -163,7 +164,7 @@ public:
     RenderStyle* parentStyle() const { return m_parentStyle; }
     RenderStyle* rootElementStyle() const { return m_rootElementStyle; }
     Element* element() const { return m_element; }
-    Document* document() const { return m_checker.document(); }
+    Document* document() const { return m_document; }
     const FontDescription& fontDescription() { return style()->fontDescription(); }
     const FontDescription& parentFontDescription() { return parentStyle()->fontDescription(); }
     void setFontDescription(const FontDescription& fontDescription) { m_fontDirty |= style()->setFontDescription(fontDescription); }
@@ -261,9 +262,6 @@ public:
     void addViewportDependentMediaQueryResult(const MediaQueryExp*, bool result);
     bool hasViewportDependentMediaQueries() const { return !m_viewportDependentMediaQueryResults.isEmpty(); }
     bool affectedByViewportChange() const;
-
-    void allVisitedStateChanged() { m_checker.allVisitedStateChanged(); }
-    void visitedStateChanged(LinkHash visitedHash) { m_checker.visitedStateChanged(visitedHash); }
 
     void addKeyframeStyle(PassRefPtr<StyleRuleKeyframes>);
 
@@ -388,7 +386,7 @@ private:
 
     void matchPageRules(MatchResult&, RuleSet*, bool isLeftPage, bool isFirstPage, const String& pageName);
     void matchPageRulesForList(Vector<StyleRulePage*>& matchedRules, const Vector<StyleRulePage*>&, bool isLeftPage, bool isFirstPage, const String& pageName);
-    Settings* documentSettings() { return m_checker.document()->settings(); }
+    Settings* documentSettings() { return m_document->settings(); }
 
     bool isLeftPage(int pageIndex) const;
     bool isRightPage(int pageIndex) const { return !isLeftPage(pageIndex); }
@@ -490,7 +488,9 @@ private:
     PseudoId m_dynamicPseudo;
     PseudoId m_pseudoStyle;
 
-    SelectorChecker m_checker;
+    Document* m_document;
+    SelectorChecker m_selectorChecker;
+    SelectorFilter m_selectorFilter;
 
     RefPtr<RenderStyle> m_style;
     RenderStyle* m_parentStyle;

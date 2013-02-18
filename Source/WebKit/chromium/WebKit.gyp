@@ -413,6 +413,7 @@
                 'src/IDBDatabaseCallbacksProxy.h',
                 'src/IDBDatabaseBackendProxy.cpp',
                 'src/IDBDatabaseBackendProxy.h',
+                'src/IDBFactoryBackendInterface.cpp',
                 'src/IDBFactoryBackendProxy.cpp',
                 'src/IDBFactoryBackendProxy.h',
                 'src/IDBIndexBackendProxy.cpp',
@@ -458,7 +459,6 @@
                 'src/PageWidgetDelegate.h',
                 'src/PlatformMessagePortChannel.cpp',
                 'src/PlatformMessagePortChannel.h',
-                'src/PlatformSupport.cpp',
                 'src/ScrollbarGroup.cpp',
                 'src/ScrollbarGroup.h',
                 'src/SharedWorkerRepository.cpp',
@@ -854,6 +854,11 @@
                     ],
                 }],
             ],
+            'direct_dependent_settings': {
+                'include_dirs': [
+                    '../../Platform/chromium/',
+                ],
+            },
             'target_conditions': [
                 ['OS=="android"', {
                     'sources/': [
@@ -902,6 +907,7 @@
                     'include_dirs': [
                         'public',
                         '../../WebCore/testing/v8', # for WebCoreTestSupport.h, needed to link in window.internals code.
+                        '../../Platform/chromium/',
                     ],
                     'sources': [
                         'src/WebTestingSupport.cpp',
@@ -1281,6 +1287,7 @@
                             '../../WebCore/inspector/front-end/HeapSnapshot.js',
                             '../../WebCore/inspector/front-end/HeapSnapshotLoader.js',
                             '../../WebCore/inspector/front-end/HeapSnapshotWorkerDispatcher.js',
+                            '../../WebCore/inspector/front-end/JSHeapSnapshot.js',
                             '../../WebCore/inspector/front-end/utilities.js',
                         ],
                         'search_path': '../../WebCore/inspector/front-end',

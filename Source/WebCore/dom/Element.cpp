@@ -217,7 +217,7 @@ inline ElementRareData* Element::ensureElementRareData()
 
 PassOwnPtr<NodeRareData> Element::createRareData()
 {
-    return adoptPtr(new ElementRareData(documentInternal()));
+    return adoptPtr(new ElementRareData());
 }
 
 DEFINE_VIRTUAL_ATTRIBUTE_EVENT_LISTENER(Element, blur);
@@ -899,8 +899,8 @@ void Element::classAttributeChanged(const AtomicString& newClassString)
         attributeData->clearClass();
     }
 
-    if (DOMTokenList* classList = optionalClassList())
-        static_cast<ClassList*>(classList)->reset(newClassString);
+    if (hasRareData())
+        elementRareData()->clearClassListValueForQuirksMode();
 
     if (shouldInvalidateStyle)
         setNeedsStyleRecalc();
@@ -1098,19 +1098,25 @@ Node::InsertionNotificationRequest Element::insertedInto(ContainerNode* insertio
         setContainsFullScreenElementOnAncestorsCrossingFrameBoundaries(true);
 #endif
 
-    if (!insertionPoint->inDocument())
+    if (!insertionPoint->isInTreeScope())
+        return InsertionDone;
+
+    if (hasRareData())
+        elementRareData()->clearClassListValueForQuirksMode();
+
+    TreeScope* scope = insertionPoint->treeScope();
+    if (scope != treeScope())
         return InsertionDone;
 
     const AtomicString& idValue = getIdAttribute();
     if (!idValue.isNull())
-        updateId(nullAtom, idValue);
+        updateId(scope, nullAtom, idValue);
 
     const AtomicString& nameValue = getNameAttribute();
     if (!nameValue.isNull())
         updateName(nullAtom, nameValue);
 
     if (hasTagName(labelTag)) {
-        TreeScope* scope = treeScope();
         if (scope->shouldCacheLabelsByForAttribute())
             updateLabel(scope, nullAtom, fastGetAttribute(forAttr));
     }
@@ -1134,9 +1140,9 @@ void Element::removedFrom(ContainerNode* insertionPoint)
 
     setSavedLayerScrollOffset(IntSize());
 
-    if (insertionPoint->inDocument()) {
+    if (insertionPoint->isInTreeScope() && treeScope() == document()) {
         const AtomicString& idValue = getIdAttribute();
-        if (!idValue.isNull() && inDocument())
+        if (!idValue.isNull())
             updateId(insertionPoint->treeScope(), idValue, nullAtom);
 
         const AtomicString& nameValue = getNameAttribute();
@@ -2098,7 +2104,7 @@ void Element::normalizeAttributes()
 
 void Element::updatePseudoElement(PseudoId pseudoId, StyleChange change)
 {
-    PseudoElement* existing = hasRareData() ? elementRareData()->pseudoElement(pseudoId) : 0;
+    PseudoElement* existing = pseudoElement(pseudoId);
     if (existing) {
         // PseudoElement styles hang off their parent element's style so if we needed
         // a style recalc we should Force one on the pseudo.
@@ -2109,10 +2115,10 @@ void Element::updatePseudoElement(PseudoId pseudoId, StyleChange change)
         // when RenderObject::isChildAllowed on our parent returns false for the
         // PseudoElement's renderer for each style recalc.
         if (!renderer() || !pseudoElementRendererIsNeeded(renderer()->getCachedPseudoStyle(pseudoId)))
-            elementRareData()->setPseudoElement(pseudoId, 0);
+            setPseudoElement(pseudoId, 0);
     } else if (RefPtr<PseudoElement> element = createPseudoElementIfNeeded(pseudoId)) {
         element->attach();
-        ensureElementRareData()->setPseudoElement(pseudoId, element.release());
+        setPseudoElement(pseudoId, element.release());
     }
 }
 
@@ -2133,15 +2139,22 @@ PassRefPtr<PseudoElement> Element::createPseudoElementIfNeeded(PseudoId pseudoId
     return PseudoElement::create(this, pseudoId);
 }
 
-PseudoElement* Element::beforePseudoElement() const
+bool Element::hasPseudoElements() const
 {
-    return hasRareData() ? elementRareData()->pseudoElement(BEFORE) : 0;
+    return hasRareData() && elementRareData()->hasPseudoElements();
 }
 
-PseudoElement* Element::afterPseudoElement() const
+PseudoElement* Element::pseudoElement(PseudoId pseudoId) const
 {
-    return hasRareData() ? elementRareData()->pseudoElement(AFTER) : 0;
+    return hasRareData() ? elementRareData()->pseudoElement(pseudoId) : 0;
 }
+
+void Element::setPseudoElement(PseudoId pseudoId, PassRefPtr<PseudoElement> element)
+{
+    ensureElementRareData()->setPseudoElement(pseudoId, element);
+    resetNeedsShadowTreeWalker();
+}
+
 
 // ElementTraversal API
 Element* Element::firstElementChild() const
@@ -2197,13 +2210,6 @@ DOMTokenList* Element::classList()
     if (!data->classList())
         data->setClassList(ClassList::create(this));
     return data->classList();
-}
-
-DOMTokenList* Element::optionalClassList() const
-{
-    if (!hasRareData())
-        return 0;
-    return elementRareData()->classList();
 }
 
 DOMStringMap* Element::dataset()
@@ -2271,7 +2277,19 @@ bool Element::childShouldCreateRenderer(const NodeRenderingContext& childContext
     return ContainerNode::childShouldCreateRenderer(childContext);
 }
 #endif
-    
+
+#if ENABLE(VIDEO_TRACK)
+bool Element::isWebVTTNode() const
+{
+    return hasRareData() && elementRareData()->isWebVTTNode();
+}
+
+void Element::setIsWebVTTNode(bool flag)
+{
+    ensureElementRareData()->setIsWebVTTNode(flag);
+}
+#endif
+
 #if ENABLE(FULLSCREEN_API)
 void Element::webkitRequestFullscreen()
 {
@@ -2421,7 +2439,7 @@ bool Element::fastAttributeLookupAllowed(const QualifiedName& name) const
 
 #if ENABLE(SVG)
     if (isSVGElement())
-        return !SVGElement::isAnimatableAttribute(name);
+        return !static_cast<const SVGElement*>(this)->isAnimatableAttribute(name);
 #endif
 
     return true;

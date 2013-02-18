@@ -31,11 +31,9 @@
 #include "CSSSelector.h"
 #include "CSSSelectorList.h"
 #include "Document.h"
-#include "DocumentStyleSheetCollection.h"
 #include "FocusController.h"
 #include "Frame.h"
 #include "FrameSelection.h"
-#include "HTMLAnchorElement.h"
 #include "HTMLFrameElementBase.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
@@ -44,9 +42,7 @@
 #include "HTMLStyleElement.h"
 #include "InspectorInstrumentation.h"
 #include "NodeRenderStyle.h"
-#include "NodeTraversal.h"
 #include "Page.h"
-#include "PageGroup.h"
 #include "RenderObject.h"
 #include "RenderScrollbar.h"
 #include "RenderStyle.h"
@@ -56,12 +52,6 @@
 #include "SiblingTraversalStrategies.h"
 #include "StyledElement.h"
 #include "Text.h"
-#include "XLinkNames.h"
-
-#if USE(PLATFORM_STRATEGIES)
-#include "PlatformStrategies.h"
-#include "VisitedLinkStrategy.h"
-#endif
 
 namespace WebCore {
 
@@ -69,192 +59,11 @@ using namespace HTMLNames;
 
 static bool htmlAttributeHasCaseInsensitiveValue(const QualifiedName& attr);
 
-SelectorChecker::SelectorChecker(Document* document, bool strictParsing)
-    : m_document(document)
-    , m_strictParsing(strictParsing)
+SelectorChecker::SelectorChecker(Document* document)
+    : m_strictParsing(!document->inQuirksMode())
     , m_documentIsHTML(document->isHTMLDocument())
     , m_mode(ResolvingStyle)
 {
-}
-
-// Salt to separate otherwise identical string hashes so a class-selector like .article won't match <article> elements.
-enum { TagNameSalt = 13, IdAttributeSalt = 17, ClassAttributeSalt = 19 };
-
-static inline void collectElementIdentifierHashes(const Element* element, Vector<unsigned, 4>& identifierHashes)
-{
-    identifierHashes.append(element->localName().impl()->existingHash() * TagNameSalt);
-    if (element->hasID())
-        identifierHashes.append(element->idForStyleResolution().impl()->existingHash() * IdAttributeSalt);
-    const StyledElement* styledElement = element->isStyledElement() ? static_cast<const StyledElement*>(element) : 0;
-    if (styledElement && styledElement->hasClass()) {
-        const SpaceSplitString& classNames = styledElement->classNames();
-        size_t count = classNames.size();
-        for (size_t i = 0; i < count; ++i)
-            identifierHashes.append(classNames[i].impl()->existingHash() * ClassAttributeSalt);
-    }
-}
-
-void SelectorChecker::pushParentStackFrame(Element* parent)
-{
-    ASSERT(m_ancestorIdentifierFilter);
-    ASSERT(m_parentStack.isEmpty() || m_parentStack.last().element == parent->parentOrHostElement());
-    ASSERT(!m_parentStack.isEmpty() || !parent->parentOrHostElement());
-    m_parentStack.append(ParentStackFrame(parent));
-    ParentStackFrame& parentFrame = m_parentStack.last();
-    // Mix tags, class names and ids into some sort of weird bouillabaisse.
-    // The filter is used for fast rejection of child and descendant selectors.
-    collectElementIdentifierHashes(parent, parentFrame.identifierHashes);
-    size_t count = parentFrame.identifierHashes.size();
-    for (size_t i = 0; i < count; ++i)
-        m_ancestorIdentifierFilter->add(parentFrame.identifierHashes[i]);
-}
-
-void SelectorChecker::popParentStackFrame()
-{
-    ASSERT(!m_parentStack.isEmpty());
-    ASSERT(m_ancestorIdentifierFilter);
-    const ParentStackFrame& parentFrame = m_parentStack.last();
-    size_t count = parentFrame.identifierHashes.size();
-    for (size_t i = 0; i < count; ++i)
-        m_ancestorIdentifierFilter->remove(parentFrame.identifierHashes[i]);
-    m_parentStack.removeLast();
-    if (m_parentStack.isEmpty()) {
-        ASSERT(m_ancestorIdentifierFilter->likelyEmpty());
-        m_ancestorIdentifierFilter.clear();
-    }
-}
-
-void SelectorChecker::setupParentStack(Element* parent)
-{
-    ASSERT(m_parentStack.isEmpty() == !m_ancestorIdentifierFilter);
-    // Kill whatever we stored before.
-    m_parentStack.shrink(0);
-    m_ancestorIdentifierFilter = adoptPtr(new BloomFilter<bloomFilterKeyBits>);
-    // Fast version if parent is a root element:
-    if (!parent->parentOrHostNode()) {
-        pushParentStackFrame(parent);
-        return;
-    }
-    // Otherwise climb up the tree.
-    Vector<Element*, 30> ancestors;
-    for (Element* ancestor = parent; ancestor; ancestor = ancestor->parentOrHostElement())
-        ancestors.append(ancestor);
-    for (size_t n = ancestors.size(); n; --n)
-        pushParentStackFrame(ancestors[n - 1]);
-}
-
-void SelectorChecker::pushParent(Element* parent)
-{
-    ASSERT(m_ancestorIdentifierFilter);
-    // We may get invoked for some random elements in some wacky cases during style resolve.
-    // Pause maintaining the stack in this case.
-    if (m_parentStack.last().element != parent->parentOrHostElement())
-        return;
-    pushParentStackFrame(parent);
-}
-
-static inline void collectDescendantSelectorIdentifierHashes(const CSSSelector* selector, unsigned*& hash, const unsigned* end)
-{
-    switch (selector->m_match) {
-    case CSSSelector::Id:
-        if (!selector->value().isEmpty())
-            (*hash++) = selector->value().impl()->existingHash() * IdAttributeSalt;
-        break;
-    case CSSSelector::Class:
-        if (!selector->value().isEmpty())
-            (*hash++) = selector->value().impl()->existingHash() * ClassAttributeSalt;
-        break;
-    default:
-        break;
-    }
-    if (hash == end)
-        return;
-    const AtomicString& localName = selector->tag().localName();
-    if (localName != starAtom)
-        (*hash++) = localName.impl()->existingHash() * TagNameSalt;
-}
-
-void SelectorChecker::collectIdentifierHashes(const CSSSelector* selector, unsigned* identifierHashes, unsigned maximumIdentifierCount)
-{
-    unsigned* hash = identifierHashes;
-    unsigned* end = identifierHashes + maximumIdentifierCount;
-    CSSSelector::Relation relation = selector->relation();
-
-    // Skip the topmost selector. It is handled quickly by the rule hashes.
-    bool skipOverSubselectors = true;
-    for (selector = selector->tagHistory(); selector; selector = selector->tagHistory()) {
-        // Only collect identifiers that match ancestors.
-        switch (relation) {
-        case CSSSelector::SubSelector:
-            if (!skipOverSubselectors)
-                collectDescendantSelectorIdentifierHashes(selector, hash, end);
-            break;
-        case CSSSelector::DirectAdjacent:
-        case CSSSelector::IndirectAdjacent:
-        case CSSSelector::ShadowDescendant:
-            skipOverSubselectors = true;
-            break;
-        case CSSSelector::Descendant:
-        case CSSSelector::Child:
-            skipOverSubselectors = false;
-            collectDescendantSelectorIdentifierHashes(selector, hash, end);
-            break;
-        }
-        if (hash == end)
-            return;
-        relation = selector->relation();
-    }
-    *hash = 0;
-}
-
-static inline const AtomicString* linkAttribute(Element* element)
-{
-    if (!element->isLink())
-        return 0;
-    if (element->isHTMLElement())
-        return &element->fastGetAttribute(hrefAttr);
-    if (element->isSVGElement())
-        return &element->getAttribute(XLinkNames::hrefAttr);
-    return 0;
-}
-
-EInsideLink SelectorChecker::determineLinkStateSlowCase(Element* element) const
-{
-    ASSERT(element->isLink());
-
-    const AtomicString* attribute = linkAttribute(element);
-    if (!attribute || attribute->isNull())
-        return NotInsideLink;
-
-    // An empty href refers to the document itself which is always visited. It is useful to check this explicitly so
-    // that visited links can be tested in platform independent manner, without explicit support in the test harness.
-    if (attribute->isEmpty())
-        return InsideVisitedLink;
-    
-    LinkHash hash;
-    if (element->hasTagName(aTag)) 
-        hash = static_cast<HTMLAnchorElement*>(element)->visitedLinkHash();
-    else
-        hash = visitedLinkHash(m_document->baseURL(), *attribute);
-
-    if (!hash)
-        return InsideUnvisitedLink;
-
-    Frame* frame = m_document->frame();
-    if (!frame)
-        return InsideUnvisitedLink;
-
-    Page* page = frame->page();
-    if (!page)
-        return InsideUnvisitedLink;
-
-    m_linksCheckedForVisitedState.add(hash);
-
-#if USE(PLATFORM_STRATEGIES)
-    return platformStrategies()->visitedLinkStrategy()->isLinkVisited(page, hash, m_document->baseURL(), *attribute) ? InsideVisitedLink : InsideUnvisitedLink;
-#else
-    return page->group().isLinkVisited(hash) ? InsideVisitedLink : InsideUnvisitedLink;
-#endif
 }
 
 bool SelectorChecker::checkSelector(CSSSelector* sel, Element* element, bool isFastCheckableSelector) const
@@ -781,10 +590,10 @@ bool SelectorChecker::checkOneSelector(const SelectorCheckingContext& context, c
         } else if (context.hasScrollbarPseudo) {
             // CSS scrollbars match a specific subset of pseudo classes, and they have specialized rules for each
             // (since there are no elements involved).
-            return checkScrollbarPseudoClass(selector);
+            return checkScrollbarPseudoClass(element->document(), selector);
         } else if (context.hasSelectionPseudo) {
             if (selector->pseudoType() == CSSSelector::PseudoWindowInactive)
-                return !m_document->page()->focusController()->isActive();
+                return !element->document()->page()->focusController()->isActive();
         }
 
         // Normal element pseudo class checking.
@@ -1114,6 +923,12 @@ bool SelectorChecker::checkOneSelector(const SelectorCheckingContext& context, c
                 return false;
             return true;
 #endif
+#if ENABLE(IFRAME_SEAMLESS)
+        case CSSSelector::PseudoSeamlessDocument:
+            // While a document is rendered in a seamless iframe, the 'seamless-document' pseudoclass applies
+            // to all elements of that Document.
+            return element->document()->shouldDisplaySeamlesslyWithParent();
+#endif
         case CSSSelector::PseudoInRange:
             if (!element)
                 return false;
@@ -1132,11 +947,25 @@ bool SelectorChecker::checkOneSelector(const SelectorCheckingContext& context, c
         }
         return false;
     }
+#if ENABLE(VIDEO_TRACK)
+    else if (selector->m_match == CSSSelector::PseudoElement && selector->pseudoType() == CSSSelector::PseudoCue) {
+        SelectorCheckingContext subContext(context);
+        subContext.isSubSelector = true;
+
+        PseudoId ignoreDynamicPseudo = NOPSEUDO;
+        CSSSelector* const & selector = context.selector;
+        for (subContext.selector = selector->selectorList()->first(); subContext.selector; subContext.selector = CSSSelectorList::next(subContext.selector)) {
+            if (checkSelector(subContext, ignoreDynamicPseudo) == SelectorMatches)
+                return true;
+        }
+        return false;
+    }
+#endif
     // ### add the rest of the checks...
     return true;
 }
 
-bool SelectorChecker::checkScrollbarPseudoClass(CSSSelector* sel) const
+bool SelectorChecker::checkScrollbarPseudoClass(Document* document, CSSSelector* sel) const
 {
     RenderScrollbar* scrollbar = RenderScrollbar::scrollbarForStyleResolve();
     ScrollbarPart part = RenderScrollbar::partForStyleResolve();
@@ -1144,7 +973,7 @@ bool SelectorChecker::checkScrollbarPseudoClass(CSSSelector* sel) const
     // FIXME: This is a temporary hack for resizers and scrollbar corners. Eventually :window-inactive should become a real
     // pseudo class and just apply to everything.
     if (sel->pseudoType() == CSSSelector::PseudoWindowInactive)
-        return !m_document->page()->focusController()->isActive();
+        return !document->page()->focusController()->isActive();
 
     if (!scrollbar)
         return false;
@@ -1214,31 +1043,6 @@ bool SelectorChecker::checkScrollbarPseudoClass(CSSSelector* sel) const
         return scrollbar->scrollableArea()->isScrollCornerVisible();
     default:
         return false;
-    }
-}
-
-void SelectorChecker::allVisitedStateChanged()
-{
-    if (m_linksCheckedForVisitedState.isEmpty())
-        return;
-    for (Element* element = ElementTraversal::firstWithin(m_document); element; element = ElementTraversal::next(element)) {
-        if (element->isLink())
-            element->setNeedsStyleRecalc();
-    }
-}
-
-void SelectorChecker::visitedStateChanged(LinkHash visitedHash)
-{
-    if (!m_linksCheckedForVisitedState.contains(visitedHash))
-        return;
-    for (Element* element = ElementTraversal::firstWithin(m_document); element; element = ElementTraversal::next(element)) {
-        LinkHash hash = 0;
-        if (element->hasTagName(aTag))
-            hash = static_cast<HTMLAnchorElement*>(element)->visitedLinkHash();
-        else if (const AtomicString* attr = linkAttribute(element))
-            hash = visitedLinkHash(m_document->baseURL(), *attr);
-        if (hash == visitedHash)
-            element->setNeedsStyleRecalc();
     }
 }
 

@@ -40,7 +40,7 @@ public:
     // This can be fixed by splitting CORS preflighting out of DocumentThreacableLoader.
     virtual void setDefersLoading(bool);
 
-    virtual void setShouldBufferData(DataBufferingPolicy);
+    virtual void setDataBufferingPolicy(DataBufferingPolicy);
     
     // FIXME: This is exposed for the InpsectorInstrumentation for preflights in DocumentThreadableLoader. It's also really lame.
     unsigned long identifier() const { return m_identifier; }
@@ -60,7 +60,7 @@ private:
     virtual void allClientsRemoved();
 
     virtual void willSendRequest(ResourceRequest&, const ResourceResponse&);
-    virtual void setResponse(const ResourceResponse&);
+    virtual void responseReceived(const ResourceResponse&);
     virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
 #if PLATFORM(CHROMIUM)
     virtual void didDownloadData(int);

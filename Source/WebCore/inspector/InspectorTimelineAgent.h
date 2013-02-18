@@ -67,7 +67,7 @@ class InspectorTimelineAgent
 public:
     enum InspectorType { PageInspector, WorkerInspector };
 
-    static PassOwnPtr<InspectorTimelineAgent> create(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent, InspectorState* state, InspectorType type, InspectorClient* client)
+    static PassOwnPtr<InspectorTimelineAgent> create(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent, InspectorCompositeState* state, InspectorType type, InspectorClient* client)
     {
         return adoptPtr(new InspectorTimelineAgent(instrumentingAgents, pageAgent, state, type, client));
     }
@@ -153,10 +153,11 @@ public:
     void willFireAnimationFrame(int callbackId, Frame*);
     void didFireAnimationFrame();
 
-    virtual void didGC(double, double, size_t);
-
     void willProcessTask();
     void didProcessTask();
+
+    // ScriptGCEventListener methods.
+    virtual void didGC(double, double, size_t);
 
     // PlatformInstrumentationClient methods.
     virtual void willDecodeImage(const String& imageType) OVERRIDE;
@@ -178,7 +179,7 @@ private:
         size_t usedHeapSizeAtStart;
     };
         
-    InspectorTimelineAgent(InstrumentingAgents*, InspectorPageAgent*, InspectorState*, InspectorType, InspectorClient*);
+    InspectorTimelineAgent(InstrumentingAgents*, InspectorPageAgent*, InspectorCompositeState*, InspectorType, InspectorClient*);
 
     void pushCurrentRecord(PassRefPtr<InspectorObject>, const String& type, bool captureCallStack, Frame*, bool hasLowLevelDetails = false);
     void setHeapSizeStatistics(InspectorObject* record);

@@ -68,6 +68,8 @@ private:
 
     OwnPtr<WebIDBCallbacks> m_callbacks;
     RefPtr<IDBDatabaseCallbacksProxy> m_databaseCallbacks;
+    bool m_didComplete;
+    bool m_didCreateProxy;
 };
 
 } // namespace WebKit

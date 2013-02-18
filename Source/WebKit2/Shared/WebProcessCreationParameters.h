@@ -84,6 +84,7 @@ struct WebProcessCreationParameters {
     String cookiePersistentStoragePath;
     uint32_t cookiePersistentStorageType;
     HTTPCookieAcceptPolicy cookieAcceptPolicy;
+    bool ignoreTLSErrors;
 #endif
 
     CacheModel cacheModel;
@@ -143,7 +144,7 @@ struct WebProcessCreationParameters {
     bool usesNetworkProcess;
 #endif
 
-    Vector<unsigned> plugInAutoStartOrigins;
+    HashMap<unsigned, double> plugInAutoStartOrigins;
 };
 
 } // namespace WebKit

@@ -35,7 +35,12 @@ using namespace WebCore;
 
 namespace WebKit {
 
-static CFURLStorageSessionRef privateBrowsingStorageSession;
+static OwnPtr<NetworkStorageSession>& privateBrowsingStorageSession()
+{
+    ASSERT(isMainThread());
+    DEFINE_STATIC_LOCAL(OwnPtr<NetworkStorageSession>, session, ());
+    return session;
+}
 
 RemoteNetworkingContext::RemoteNetworkingContext(bool needsSiteSpecificQuirks, bool localFileContentSniffingEnabled, bool privateBrowsingEnabled)
     : m_needsSiteSpecificQuirks(needsSiteSpecificQuirks)
@@ -63,14 +68,20 @@ bool RemoteNetworkingContext::localFileContentSniffingEnabled() const
     return m_localFileContentSniffingEnabled;
 }
 
-CFURLStorageSessionRef RemoteNetworkingContext::storageSession() const
+NetworkStorageSession& RemoteNetworkingContext::storageSession() const
 {
     if (m_privateBrowsingEnabled) {
-        ASSERT(privateBrowsingStorageSession);
-        return privateBrowsingStorageSession;
+        ASSERT(privateBrowsingStorageSession());
+        return *privateBrowsingStorageSession();
     }
-    // FIXME (NetworkProcess): Return a default session that's used for testing.
-    return 0;
+
+    return NetworkStorageSession::defaultStorageSession();
+}
+
+NetworkStorageSession& RemoteNetworkingContext::privateBrowsingSession()
+{
+    ASSERT(privateBrowsingStorageSession());
+    return *privateBrowsingStorageSession();
 }
 
 NSOperationQueue *RemoteNetworkingContext::scheduledOperationQueue() const
@@ -103,23 +114,18 @@ void RemoteNetworkingContext::setPrivateBrowsingStorageSessionIdentifierBase(con
 
 void RemoteNetworkingContext::ensurePrivateBrowsingSession()
 {
-    ASSERT(isMainThread());
-    if (privateBrowsingStorageSession)
+    if (privateBrowsingStorageSession())
         return;
 
     ASSERT(!privateBrowsingStorageSessionIdentifierBase().isNull());
     RetainPtr<CFStringRef> cfIdentifier = String(privateBrowsingStorageSessionIdentifierBase() + ".PrivateBrowsing").createCFString();
 
-    privateBrowsingStorageSession = WKCreatePrivateStorageSession(cfIdentifier.get());
+    privateBrowsingStorageSession() = NetworkStorageSession::createPrivateBrowsingSession(privateBrowsingStorageSessionIdentifierBase());
 }
 
 void RemoteNetworkingContext::destroyPrivateBrowsingSession()
 {
-    if (!privateBrowsingStorageSession)
-        return;
-
-    CFRelease(privateBrowsingStorageSession);
-    privateBrowsingStorageSession = 0;
+    privateBrowsingStorageSession() = nullptr;
 }
 
 }

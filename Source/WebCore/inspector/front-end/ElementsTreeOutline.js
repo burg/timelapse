@@ -476,12 +476,13 @@ WebInspector.ElementsTreeOutline.prototype = {
      */
     _onkeydown: function(event)
     {
+        var keyboardEvent = /** @type {KeyboardEvent} */ (event);
         var node = this.selectedDOMNode();
         var treeElement = this.getCachedTreeElement(node);
         if (!treeElement)
             return;
 
-        if (!treeElement._editing && WebInspector.KeyboardShortcut.hasNoModifiers(event) && event.keyCode === WebInspector.KeyboardShortcut.Keys.H.code) {
+        if (!treeElement._editing && WebInspector.KeyboardShortcut.hasNoModifiers(keyboardEvent) && keyboardEvent.keyCode === WebInspector.KeyboardShortcut.Keys.H.code) {
             WebInspector.cssModel.toggleInlineVisibility(node.id);
             event.consume(true);
             return;
@@ -1184,7 +1185,8 @@ WebInspector.ElementsTreeElement.prototype = {
         var newAttribute = event.target.enclosingNodeOrSelfWithClass("add-attribute");
 
         // Add attribute-related actions.
-        contextMenu.appendItem(WebInspector.UIString(WebInspector.useLowerCaseMenuTitles() ? "Add attribute" : "Add Attribute"), this._addNewAttribute.bind(this));
+        var treeElement = this._elementCloseTag ? this.treeOutline.findTreeElement(this.representedObject) : this;
+        contextMenu.appendItem(WebInspector.UIString(WebInspector.useLowerCaseMenuTitles() ? "Add attribute" : "Add Attribute"), this._addNewAttribute.bind(treeElement));
         if (attribute && !newAttribute)
             contextMenu.appendItem(WebInspector.UIString(WebInspector.useLowerCaseMenuTitles() ? "Edit attribute" : "Edit Attribute"), this._startEditingAttribute.bind(this, attribute, event.target));
         contextMenu.appendSeparator();
@@ -1262,6 +1264,7 @@ WebInspector.ElementsTreeElement.prototype = {
 
         var tag = this.listItemElement.getElementsByClassName("webkit-html-tag")[0];
         this._insertInLastAttributePosition(tag, attr);
+        attr.scrollIntoViewIfNeeded(true);
         return this._startEditingAttribute(attr, attr);
     },
 

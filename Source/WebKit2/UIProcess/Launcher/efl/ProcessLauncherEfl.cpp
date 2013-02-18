@@ -22,7 +22,9 @@
 
 #include "Connection.h"
 #include "ProcessExecutablePath.h"
+#include <WebCore/AuthenticationChallenge.h>
 #include <WebCore/FileSystem.h>
+#include <WebCore/NetworkingContext.h>
 #include <WebCore/ResourceHandle.h>
 #include <WebCore/RunLoop.h>
 #include <wtf/text/CString.h>
@@ -40,38 +42,51 @@ void ProcessLauncher::launchProcess()
         return;
     }
 
-    pid_t pid = fork();
-    if (!pid) { // child process
-        close(sockets[1]);
-        String socket = String::format("%d", sockets[0]);
-        String executablePath;
-        switch (m_launchOptions.processType) {
-        case WebProcess:
-            executablePath = executablePathOfWebProcess();
-            break;
+    CString executablePath;
+    switch (m_launchOptions.processType) {
+    case WebProcess:
+        executablePath = executablePathOfWebProcess().utf8();
+        break;
 #if ENABLE(PLUGIN_PROCESS)
-        case PluginProcess:
-            executablePath = executablePathOfPluginProcess();
-            break;
+    case PluginProcess:
+        executablePath = executablePathOfPluginProcess().utf8();
+        break;
 #endif
-        default:
-            ASSERT_NOT_REACHED();
-            return;
-        }
+    default:
+        ASSERT_NOT_REACHED();
+        return;
+    }
+
+    char socket[5];
+    snprintf(socket, sizeof(socket), "%d", sockets[0]);
 
 #ifndef NDEBUG
-        if (m_launchOptions.processCmdPrefix.isEmpty())
+    CString prefixedExecutablePath;
+    if (!m_launchOptions.processCmdPrefix.isEmpty()) {
+        String prefixedExecutablePathStr = m_launchOptions.processCmdPrefix + ' ' + String::fromUTF8(executablePath.data()) + ' ' + socket;
+        prefixedExecutablePath = prefixedExecutablePathStr.utf8();
+    }
 #endif
-            execl(executablePath.utf8().data(), executablePath.utf8().data(), socket.utf8().data(), static_cast<char*>(0));
+
+    // Do not perform memory allocation in the middle of the fork()
+    // exec() below. FastMalloc can potentially deadlock because
+    // the fork() doesn't inherit the running threads.
+    pid_t pid = fork();
+    if (!pid) { // Child process.
+        close(sockets[1]);
 #ifndef NDEBUG
-        else {
-            String cmd = makeString(m_launchOptions.processCmdPrefix, ' ', executablePath, ' ', socket);
-            if (system(cmd.utf8().data()) == -1) {
+        if (!prefixedExecutablePath.isNull()) {
+            // FIXME: This is not correct because it invokes the shell
+            // and keeps this process waiting. Should be changed to
+            // something like execvp().
+            if (system(prefixedExecutablePath.data()) == -1) {
                 ASSERT_NOT_REACHED();
-                return;
-            }
+                exit(EXIT_FAILURE);
+            } else
+                exit(EXIT_SUCCESS);
         }
 #endif
+        execl(executablePath.data(), executablePath.data(), socket, static_cast<char*>(0));
     } else if (pid > 0) { // parent process;
         close(sockets[0]);
         m_processIdentifier = pid;

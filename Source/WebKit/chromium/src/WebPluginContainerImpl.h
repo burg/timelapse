@@ -35,7 +35,6 @@
 #include "WebPluginContainer.h"
 #include "Widget.h"
 
-#include <public/WebIOSurfaceLayer.h>
 #include <wtf/OwnPtr.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
@@ -101,17 +100,11 @@ public:
     virtual void invalidateRect(const WebRect&);
     virtual void scrollRect(int dx, int dy, const WebRect&);
     virtual void reportGeometry();
-    virtual void setBackingTextureId(unsigned);
-    virtual void setBackingIOSurfaceId(int width,
-                                       int height,
-                                       uint32_t ioSurfaceId);
-    virtual void commitBackingTexture();
     virtual void clearScriptObjects();
     virtual NPObject* scriptableObjectForElement();
     virtual WebString executeScriptURL(const WebURL&, bool popupsAllowed);
     virtual void loadFrameRequest(const WebURLRequest&, const WebString& target, bool notifyNeeded, void* notifyData);
     virtual void zoomLevelChanged(double zoomLevel);    
-    virtual void setOpaque(bool);
     virtual bool isRectTopmost(const WebRect&);
     virtual void requestTouchEventType(TouchEventRequestType);
     virtual void setWantsWheelEvents(bool);
@@ -124,6 +117,8 @@ public:
     virtual float deviceScaleFactor();
     virtual float pageScaleFactor();
     virtual float pageZoomFactor();
+
+    virtual void setWebLayer(WebLayer*);
 
     // Printing interface. The plugin can support custom printing
     // (which means it controls the layout, number of pages etc).
@@ -189,15 +184,7 @@ private:
     WebPlugin* m_webPlugin;
     Vector<WebPluginLoadObserver*> m_pluginLoadObservers;
 
-#if USE(ACCELERATED_COMPOSITING)
-    // A composited plugin will either have no composited layer, a texture layer, or an IOSurface layer.
-    // It will never have both a texture and IOSurface output.
-    unsigned m_textureId;
-    OwnPtr<WebExternalTextureLayer> m_textureLayer;
-
-    unsigned m_ioSurfaceId;
-    OwnPtr<WebIOSurfaceLayer> m_ioSurfaceLayer;
-#endif
+    WebLayer* m_webLayer;
 
     // The associated scrollbar group object, created lazily. Used for Pepper
     // scrollbars.

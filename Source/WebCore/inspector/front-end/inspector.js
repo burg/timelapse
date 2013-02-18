@@ -460,7 +460,7 @@ WebInspector._doLoadedDoneWithCapabilities = function()
     this.console.addEventListener(WebInspector.ConsoleModel.Events.MessageAdded, this._updateErrorAndWarningCounts, this);
     this.console.addEventListener(WebInspector.ConsoleModel.Events.RepeatCountUpdated, this._updateErrorAndWarningCounts, this);
 
-    WebInspector.CSSCompletions.requestCSSNameCompletions();
+    WebInspector.CSSMetadata.requestCSSShorthandData();
 
     this.drawer = new WebInspector.Drawer();
 
@@ -497,6 +497,7 @@ WebInspector._doLoadedDoneWithCapabilities = function()
 
     this.networkWorkspaceProvider = new WebInspector.NetworkWorkspaceProvider();
     this.workspace = new WebInspector.Workspace();
+    this.debuggerWorkspaceProvider = new WebInspector.DebuggerWorkspaceProvider(this.workspace);
     this.workspace.addProject("network", this.networkWorkspaceProvider);
     this.workspaceController = new WebInspector.WorkspaceController(this.workspace);
 
@@ -507,7 +508,8 @@ WebInspector._doLoadedDoneWithCapabilities = function()
     this.timelapseControllerView = new WebInspector.TimelapseControllerView(this.timelapseModel);
 
     this.scriptSnippetModel = new WebInspector.ScriptSnippetModel(this.workspace, this.networkWorkspaceProvider);
-    new WebInspector.DebuggerScriptMapping(this.workspace, this.networkWorkspaceProvider);
+    new WebInspector.DebuggerScriptMapping(this.workspace, this.debuggerWorkspaceProvider, this.networkWorkspaceProvider);
+    this.liveEditSupport = new WebInspector.LiveEditSupport(this.workspace);
     this.styleContentBinding = new WebInspector.StyleContentBinding(this.cssModel);
     new WebInspector.NetworkUISourceCodeProvider(this.workspace, this.networkWorkspaceProvider);
     new WebInspector.StylesSourceMapping(this.workspace);

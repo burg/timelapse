@@ -29,6 +29,7 @@ static const char DEFAULT_URL[] = "http://www.google.com/";
 static const char APP_NAME[] = "EFL MiniBrowser";
 static const int TOOL_BAR_ICON_SIZE = 24;
 static const int TOOL_BAR_BUTTON_SIZE = 32;
+static const double TOOLTIP_DELAY_SECONDS = 1.0;
 
 #define info(format, args...)       \
     do {                            \
@@ -75,6 +76,13 @@ static Ewk_View_Smart_Class *miniBrowserViewSmartClass()
     return &ewkViewClass;
 }
 
+typedef struct _Tooltip_Information {
+    Ecore_Timer *show_timer;
+    Eina_Bool activated;
+    Eina_Bool text_set;
+    Eina_Bool shown;
+} Tooltip_Information;
+
 typedef struct _Browser_Window {
     Evas_Object *elm_window;
     Evas_Object *ewk_view;
@@ -82,6 +90,7 @@ typedef struct _Browser_Window {
     Evas_Object *back_button;
     Evas_Object *forward_button;
     int current_zoom_level; 
+    Tooltip_Information tooltip;
 } Browser_Window;
 
 typedef struct _File_Selector_Data {
@@ -132,7 +141,7 @@ static const Ecore_Getopt options = {
     }
 };
 
-static Browser_Window *window_create(const char *url, int width, int height);
+static Browser_Window *window_create(Evas_Object* opener, const char *url, int width, int height);
 
 static Browser_Window *window_find_with_elm_window(Evas_Object *elm_window)
 {
@@ -166,11 +175,77 @@ static Browser_Window *window_find_with_ewk_view(Evas_Object *ewk_view)
     return NULL;
 }
 
+static Eina_Bool
+on_tooltip_show(void *user_data)
+{
+    Browser_Window *window = (Browser_Window *)user_data;
+
+    window->tooltip.show_timer = NULL;
+    elm_object_tooltip_show(window->elm_window);
+    window->tooltip.shown = EINA_TRUE;
+    return ECORE_CALLBACK_CANCEL;
+}
+
+static void
+window_tooltip_hide(Browser_Window *window)
+{
+    if (window->tooltip.show_timer) {
+        ecore_timer_del(window->tooltip.show_timer);
+        window->tooltip.show_timer = NULL;
+    }
+
+    if (window->tooltip.shown) {
+        elm_object_tooltip_hide(window->elm_window);
+        window->tooltip.shown = EINA_FALSE;
+    }
+}
+
+static void
+window_tooltip_update(Browser_Window *window)
+{
+    window_tooltip_hide(window);
+
+    if (window->tooltip.activated && window->tooltip.text_set)
+        window->tooltip.show_timer = ecore_timer_add(TOOLTIP_DELAY_SECONDS, on_tooltip_show, window);
+}
+
+static void
+on_mouse_in(void *user_data, Evas *e, Evas_Object *ewk_view, void *event_info)
+{
+    Browser_Window *window = (Browser_Window *)user_data;
+
+    window->tooltip.activated = EINA_TRUE;
+    window_tooltip_update(window);
+}
+
+static void
+on_mouse_move(void *user_data, Evas *e, Evas_Object *ewk_view, void *event_info)
+{
+    window_tooltip_update((Browser_Window *)user_data);
+}
+
+static void
+on_mouse_out(void *user_data, Evas *e, Evas_Object *ewk_view, void *event_info)
+{
+    Browser_Window *window = (Browser_Window *)user_data;
+
+    window->tooltip.activated = EINA_FALSE;
+    window_tooltip_update(window);
+}
+
 static void window_free(Browser_Window *window)
 {
+    evas_object_event_callback_del(window->ewk_view, EVAS_CALLBACK_MOUSE_IN, on_mouse_in);
+    evas_object_event_callback_del(window->ewk_view, EVAS_CALLBACK_MOUSE_OUT, on_mouse_out);
+    evas_object_event_callback_del(window->ewk_view, EVAS_CALLBACK_MOUSE_MOVE, on_mouse_move);
+
     evas_object_del(window->ewk_view);
     /* The elm_win will take care of freeing its children */
     evas_object_del(window->elm_window);
+
+    if (window->tooltip.show_timer)
+        ecore_timer_del(window->tooltip.show_timer);
+
     free(window);
 }
 
@@ -224,7 +299,7 @@ on_key_down(void *user_data, Evas *e, Evas_Object *ewk_view, void *event_info)
             info("Change Pagination Mode (F7) was pressed, but NOT changed!");
     } else if (!strcmp(ev->key, "n") && ctrlPressed) {
         info("Create new window (Ctrl+n) was pressed.\n");
-        Browser_Window *window = window_create(DEFAULT_URL, 0, 0);
+        Browser_Window *window = window_create(0, DEFAULT_URL, 0, 0);
         // 0 equals default width and height.
         windows = eina_list_append(windows, window);
     } else if (!strcmp(ev->key, "i") && ctrlPressed) {
@@ -789,7 +864,7 @@ static Eina_Bool on_fullscreen_exit(Ewk_View_Smart_Data *sd)
 }
 
 static Evas_Object *
-on_window_create(Ewk_View_Smart_Data *smartData, const Ewk_Window_Features *window_features)
+on_window_create(Ewk_View_Smart_Data *smartData, const char *url, const Ewk_Window_Features *window_features)
 {
     int x = 0;
     int y = 0;
@@ -804,12 +879,12 @@ on_window_create(Ewk_View_Smart_Data *smartData, const Ewk_Window_Features *wind
     if (!height)
         height = window_height;
 
-    Browser_Window *window = window_create(NULL, width, height);
+    Browser_Window *window = window_create(smartData->self, url, width, height);
     Evas_Object *new_view = window->ewk_view;
 
     windows = eina_list_append(windows, window);
 
-    info("minibrowser: location(%d,%d) size=(%d,%d)\n", x, y, width, height);
+    info("minibrowser: location(%d,%d) size=(%d,%d) url=%s\n", x, y, width, height, url);
 
     return new_view;
 }
@@ -954,8 +1029,9 @@ on_tooltip_text_set(void *user_data, Evas_Object *obj, void *event_info)
     Browser_Window *window = (Browser_Window *)user_data;
     const char *message = (const char*)event_info;
 
-    elm_object_tooltip_text_set(window->ewk_view, message);
-    elm_object_tooltip_show(window->ewk_view);
+    elm_object_tooltip_text_set(window->elm_window, message);
+    window->tooltip.text_set = EINA_TRUE;
+    window_tooltip_update(window);
 }
 
 static void
@@ -963,7 +1039,9 @@ on_tooltip_text_unset(void *user_data, Evas_Object *obj, void *event_info)
 {
     Browser_Window *window = (Browser_Window *)user_data;
 
-    elm_object_tooltip_unset(window->ewk_view);
+    window_tooltip_hide(window);
+    elm_object_tooltip_unset(window->elm_window);
+    window->tooltip.text_set = EINA_FALSE;
 }
 
 static void
@@ -996,13 +1074,19 @@ create_toolbar_button(Evas_Object *elm_window, const char *icon_name)
     return button;
 }
 
-static Browser_Window *window_create(const char *url, int width, int height)
+static Browser_Window *window_create(Evas_Object *opener, const char *url, int width, int height)
 {
     Browser_Window *window = malloc(sizeof(Browser_Window));
     if (!window) {
         info("ERROR: could not create browser window.\n");
         return NULL;
     }
+
+    /* Initialize tooltip information */
+    window->tooltip.show_timer = NULL;
+    window->tooltip.activated = EINA_FALSE;
+    window->tooltip.text_set = EINA_FALSE;
+    window->tooltip.shown = EINA_FALSE;
 
     /* Create window */
     window->elm_window = elm_win_add(NULL, "minibrowser-window", ELM_WIN_BASIC);
@@ -1097,7 +1181,8 @@ static Browser_Window *window_create(const char *url, int width, int height)
         window->ewk_view = (Evas_Object*)WKViewCreate(evas, 0, 0);
     } else {
         Evas_Smart *smart = evas_smart_class_new(&ewkViewClass->sc);
-        window->ewk_view = ewk_view_smart_add(evas, smart, ewk_context_default_get());
+        Ewk_Context* context = opener ? ewk_view_context_get(opener) : ewk_context_default_get();
+        window->ewk_view = ewk_view_smart_add(evas, smart, context);
     }
     ewk_view_theme_set(window->ewk_view, THEME_DIR "/default.edj");
     if (device_pixel_ratio)
@@ -1144,6 +1229,10 @@ static Browser_Window *window_create(const char *url, int width, int height)
     evas_object_show(window->elm_window);
 
     view_focus_set(window, EINA_TRUE);
+
+    evas_object_event_callback_add(window->ewk_view, EVAS_CALLBACK_MOUSE_IN, on_mouse_in, window);
+    evas_object_event_callback_add(window->ewk_view, EVAS_CALLBACK_MOUSE_OUT, on_mouse_out, window);
+    evas_object_event_callback_add(window->ewk_view, EVAS_CALLBACK_MOUSE_MOVE, on_mouse_move, window);
 
     return window;
 }
@@ -1228,10 +1317,10 @@ elm_main(int argc, char *argv[])
 
     if (args < argc) {
         char *url = url_from_user_input(argv[args]);
-        window = window_create(url, 0, 0);
+        window = window_create(0, url, 0, 0);
         free(url);
     } else
-        window = window_create(DEFAULT_URL, 0, 0);
+        window = window_create(0, DEFAULT_URL, 0, 0);
 
     if (!window)
         return quit(EINA_FALSE, "ERROR: could not create browser window.\n");

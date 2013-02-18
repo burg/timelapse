@@ -172,6 +172,10 @@ protected:
     virtual bool handlesPageScaleFactor() OVERRIDE;
 
     virtual bool shouldAllowScripting() OVERRIDE { return false; }
+    virtual bool shouldAllowNavigationFromDrags() { return true; }
+
+    virtual unsigned countFindMatches(const String&, WebCore::FindOptions, unsigned) OVERRIDE { return 0; }
+    virtual bool findString(const String&, WebCore::FindOptions, unsigned) OVERRIDE { return false; }
 
     WebCore::IntSize m_scrollOffset;
 
@@ -181,6 +185,8 @@ private:
     static JSValueRef jsPDFDocPrint(JSContextRef, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception);
 
     void convertPostScriptDataIfNeeded();
+
+    virtual bool shouldAlwaysAutoStart() const OVERRIDE { return true; }
 
     WebCore::IntSize m_size;
 

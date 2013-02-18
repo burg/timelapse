@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2012, 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -498,7 +498,7 @@ void SpeculativeJIT::nonSpeculativeUInt32ToNumber(Node& node)
 void SpeculativeJIT::cachedGetById(CodeOrigin codeOrigin, GPRReg baseGPR, GPRReg resultGPR, unsigned identifierNumber, JITCompiler::Jump slowPathTarget, SpillRegistersMode spillMode)
 {
     JITCompiler::DataLabelPtr structureToCompare;
-    JITCompiler::PatchableJump structureCheck = m_jit.patchableBranchPtrWithPatch(JITCompiler::NotEqual, JITCompiler::Address(baseGPR, JSCell::structureOffset()), structureToCompare, JITCompiler::TrustedImmPtr(reinterpret_cast<void*>(-1)));
+    JITCompiler::PatchableJump structureCheck = m_jit.patchableBranchPtrWithPatch(JITCompiler::NotEqual, JITCompiler::Address(baseGPR, JSCell::structureOffset()), structureToCompare, JITCompiler::TrustedImmPtr(reinterpret_cast<void*>(unusedPointer)));
     
     JITCompiler::ConvertibleLoadLabel propertyStorageLoad =
         m_jit.convertibleLoadPtr(JITCompiler::Address(baseGPR, JSObject::butterflyOffset()), resultGPR);
@@ -532,7 +532,7 @@ void SpeculativeJIT::cachedPutById(CodeOrigin codeOrigin, GPRReg baseGPR, GPRReg
 {
     
     JITCompiler::DataLabelPtr structureToCompare;
-    JITCompiler::PatchableJump structureCheck = m_jit.patchableBranchPtrWithPatch(JITCompiler::NotEqual, JITCompiler::Address(baseGPR, JSCell::structureOffset()), structureToCompare, JITCompiler::TrustedImmPtr(reinterpret_cast<void*>(-1)));
+    JITCompiler::PatchableJump structureCheck = m_jit.patchableBranchPtrWithPatch(JITCompiler::NotEqual, JITCompiler::Address(baseGPR, JSCell::structureOffset()), structureToCompare, JITCompiler::TrustedImmPtr(reinterpret_cast<void*>(unusedPointer)));
 
     writeBarrier(baseGPR, valueGPR, valueUse, WriteBarrierForPropertyAccess, scratchGPR);
 
@@ -2599,7 +2599,7 @@ void SpeculativeJIT::compile(Node& node)
                 
                 GPRTemporary result(this);
                 m_jit.load64(MacroAssembler::BaseIndex(storageReg, propertyReg, MacroAssembler::TimesEight), result.gpr());
-                speculationCheck(OutOfBounds, JSValueRegs(), NoNode, m_jit.branchTest64(MacroAssembler::Zero, result.gpr()));
+                speculationCheck(LoadFromHole, JSValueRegs(), NoNode, m_jit.branchTest64(MacroAssembler::Zero, result.gpr()));
                 jsValueResult(result.gpr(), m_compileIndex, node.arrayMode().type() == Array::Int32 ? DataFormatJSInteger : DataFormatJS);
                 break;
             }
@@ -2657,7 +2657,7 @@ void SpeculativeJIT::compile(Node& node)
                 FPRTemporary result(this);
                 m_jit.loadDouble(MacroAssembler::BaseIndex(storageReg, propertyReg, MacroAssembler::TimesEight), result.fpr());
                 if (!node.arrayMode().isSaneChain())
-                    speculationCheck(OutOfBounds, JSValueRegs(), NoNode, m_jit.branchDouble(MacroAssembler::DoubleNotEqualOrUnordered, result.fpr(), result.fpr()));
+                    speculationCheck(LoadFromHole, JSValueRegs(), NoNode, m_jit.branchDouble(MacroAssembler::DoubleNotEqualOrUnordered, result.fpr(), result.fpr()));
                 doubleResult(result.fpr(), m_compileIndex);
                 break;
             }
@@ -2711,7 +2711,7 @@ void SpeculativeJIT::compile(Node& node)
             
                 GPRTemporary result(this);
                 m_jit.load64(MacroAssembler::BaseIndex(storageReg, propertyReg, MacroAssembler::TimesEight, OBJECT_OFFSETOF(ArrayStorage, m_vector[0])), result.gpr());
-                speculationCheck(OutOfBounds, JSValueRegs(), NoNode, m_jit.branchTest64(MacroAssembler::Zero, result.gpr()));
+                speculationCheck(LoadFromHole, JSValueRegs(), NoNode, m_jit.branchTest64(MacroAssembler::Zero, result.gpr()));
             
                 jsValueResult(result.gpr(), m_compileIndex);
                 break;
@@ -2874,19 +2874,19 @@ void SpeculativeJIT::compile(Node& node)
             GPRTemporary temporary;
             GPRReg temporaryReg = temporaryRegisterForPutByVal(temporary, node);
 
-            MacroAssembler::JumpList slowCases;
+            MacroAssembler::Jump slowCase;
             
             if (arrayMode.isInBounds()) {
                 speculationCheck(
-                    Uncountable, JSValueRegs(), NoNode,
+                    StoreToHoleOrOutOfBounds, JSValueRegs(), NoNode,
                     m_jit.branch32(MacroAssembler::AboveOrEqual, propertyReg, MacroAssembler::Address(storageReg, Butterfly::offsetOfPublicLength())));
             } else {
                 MacroAssembler::Jump inBounds = m_jit.branch32(MacroAssembler::Below, propertyReg, MacroAssembler::Address(storageReg, Butterfly::offsetOfPublicLength()));
                 
-                slowCases.append(m_jit.branch32(MacroAssembler::AboveOrEqual, propertyReg, MacroAssembler::Address(storageReg, Butterfly::offsetOfVectorLength())));
+                slowCase = m_jit.branch32(MacroAssembler::AboveOrEqual, propertyReg, MacroAssembler::Address(storageReg, Butterfly::offsetOfVectorLength()));
                 
                 if (!arrayMode.isOutOfBounds())
-                    speculationCheck(Uncountable, JSValueRegs(), NoNode, slowCases);
+                    speculationCheck(OutOfBounds, JSValueRegs(), NoNode, slowCase);
                 
                 m_jit.add32(TrustedImm32(1), propertyReg, temporaryReg);
                 m_jit.store32(temporaryReg, MacroAssembler::Address(storageReg, Butterfly::offsetOfPublicLength()));
@@ -2904,7 +2904,7 @@ void SpeculativeJIT::compile(Node& node)
             if (arrayMode.isOutOfBounds()) {
                 addSlowPathGenerator(
                     slowPathCall(
-                        slowCases, this,
+                        slowCase, this,
                         m_jit.codeBlock()->isStrictMode() ? operationPutByValBeyondArrayBoundsStrict : operationPutByValBeyondArrayBoundsNonStrict,
                         NoResult, baseReg, propertyReg, valueReg));
             }
@@ -2958,11 +2958,8 @@ void SpeculativeJIT::compile(Node& node)
 
             // Check if we're writing to a hole; if so increment m_numValuesInVector.
             if (arrayMode.isInBounds()) {
-                // This is uncountable because if we take this exit, then the baseline JIT
-                // will immediately count the hole store. So there is no need for exit
-                // profiling.
                 speculationCheck(
-                    Uncountable, JSValueRegs(), NoNode,
+                    StoreToHole, JSValueRegs(), NoNode,
                     m_jit.branchTest64(MacroAssembler::Zero, MacroAssembler::BaseIndex(storageReg, propertyReg, MacroAssembler::TimesEight, OBJECT_OFFSETOF(ArrayStorage, m_vector[0]))));
             } else {
                 MacroAssembler::Jump notHoleValue = m_jit.branchTest64(MacroAssembler::NonZero, MacroAssembler::BaseIndex(storageReg, propertyReg, MacroAssembler::TimesEight, OBJECT_OFFSETOF(ArrayStorage, m_vector[0])));
@@ -3919,7 +3916,7 @@ void SpeculativeJIT::compile(Node& node)
 
     case GetCallee: {
         GPRTemporary result(this);
-        m_jit.loadPtr(JITCompiler::addressFor(static_cast<VirtualRegister>(JSStack::Callee)), result.gpr());
+        m_jit.loadPtr(JITCompiler::addressFor(static_cast<VirtualRegister>(node.codeOrigin.stackOffset() + static_cast<int>(JSStack::Callee))), result.gpr());
         cellResult(result.gpr(), m_compileIndex);
         break;
     }
@@ -3928,7 +3925,7 @@ void SpeculativeJIT::compile(Node& node)
         GPRTemporary result(this);
         GPRReg resultGPR = result.gpr();
 
-        m_jit.loadPtr(JITCompiler::addressFor(static_cast<VirtualRegister>(JSStack::ScopeChain)), resultGPR);
+        m_jit.loadPtr(JITCompiler::addressFor(static_cast<VirtualRegister>(node.codeOrigin.stackOffset() + static_cast<int>(JSStack::ScopeChain))), resultGPR);
         cellResult(resultGPR, m_compileIndex);
         break;
     }

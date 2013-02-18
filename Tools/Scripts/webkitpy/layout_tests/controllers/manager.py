@@ -47,6 +47,7 @@ from webkitpy.layout_tests.layout_package import json_layout_results_generator
 from webkitpy.layout_tests.layout_package import json_results_generator
 from webkitpy.layout_tests.models import test_expectations
 from webkitpy.layout_tests.models import test_failures
+from webkitpy.layout_tests.models import test_run_results
 from webkitpy.layout_tests.models.test_input import TestInput
 
 _log = logging.getLogger(__name__)
@@ -56,178 +57,6 @@ BUILDER_BASE_URL = "http://build.chromium.org/buildbot/layout_test_results/"
 
 TestExpectations = test_expectations.TestExpectations
 
-
-class RunDetails(object):
-    def __init__(self, exit_code, summarized_results=None, result_summary=None, retry_summary=None):
-        self.exit_code = exit_code
-        self.summarized_results = summarized_results
-        self.result_summary = result_summary
-        self.retry_summary = retry_summary
-
-
-def interpret_test_failures(failures):
-    test_dict = {}
-    failure_types = [type(failure) for failure in failures]
-    # FIXME: get rid of all this is_* values once there is a 1:1 map between
-    # TestFailure type and test_expectations.EXPECTATION.
-    if test_failures.FailureMissingAudio in failure_types:
-        test_dict['is_missing_audio'] = True
-
-    if test_failures.FailureMissingResult in failure_types:
-        test_dict['is_missing_text'] = True
-
-    if test_failures.FailureMissingImage in failure_types or test_failures.FailureMissingImageHash in failure_types:
-        test_dict['is_missing_image'] = True
-
-    for failure in failures:
-        if isinstance(failure, test_failures.FailureImageHashMismatch) or isinstance(failure, test_failures.FailureReftestMismatch):
-            test_dict['image_diff_percent'] = failure.diff_percent
-
-    return test_dict
-
-
-def use_trac_links_in_results_html(port_obj):
-    # We only use trac links on the buildbots.
-    # Use existence of builder_name as a proxy for knowing we're on a bot.
-    return port_obj.get_option("builder_name")
-
-
-# FIXME: This should be on the Manager class (since that's the only caller)
-# or split off from Manager onto another helper class, but should not be a free function.
-# Most likely this should be made into its own class, and this super-long function
-# split into many helper functions.
-def summarize_results(port_obj, expectations, result_summary, retry_summary):
-    """Returns a dictionary containing a summary of the test runs, with the following fields:
-        'version': a version indicator
-        'fixable': The number of fixable tests (NOW - PASS)
-        'skipped': The number of skipped tests (NOW & SKIPPED)
-        'num_regressions': The number of non-flaky failures
-        'num_flaky': The number of flaky failures
-        'num_missing': The number of tests with missing results
-        'num_passes': The number of unexpected passes
-        'tests': a dict of tests -> {'expected': '...', 'actual': '...'}
-    """
-    results = {}
-    results['version'] = 3
-
-    tbe = result_summary.tests_by_expectation
-    tbt = result_summary.tests_by_timeline
-    results['fixable'] = len(tbt[test_expectations.NOW] - tbe[test_expectations.PASS])
-    results['skipped'] = len(tbt[test_expectations.NOW] & tbe[test_expectations.SKIP])
-
-    num_passes = 0
-    num_flaky = 0
-    num_missing = 0
-    num_regressions = 0
-    keywords = {}
-    for expecation_string, expectation_enum in TestExpectations.EXPECTATIONS.iteritems():
-        keywords[expectation_enum] = expecation_string.upper()
-
-    for modifier_string, modifier_enum in TestExpectations.MODIFIERS.iteritems():
-        keywords[modifier_enum] = modifier_string.upper()
-
-    tests = {}
-
-    for test_name, result in result_summary.results.iteritems():
-        # Note that if a test crashed in the original run, we ignore
-        # whether or not it crashed when we retried it (if we retried it),
-        # and always consider the result not flaky.
-        expected = expectations.get_expectations_string(test_name)
-        result_type = result.type
-        actual = [keywords[result_type]]
-
-        if result_type == test_expectations.SKIP:
-            continue
-
-        test_dict = {}
-        if result.has_stderr:
-            test_dict['has_stderr'] = True
-
-        if result.reftest_type:
-            test_dict.update(reftest_type=list(result.reftest_type))
-
-        if expectations.has_modifier(test_name, test_expectations.WONTFIX):
-            test_dict['wontfix'] = True
-
-        if result_type == test_expectations.PASS:
-            num_passes += 1
-            # FIXME: include passing tests that have stderr output.
-            if expected == 'PASS':
-                continue
-        elif result_type == test_expectations.CRASH:
-            if test_name in result_summary.unexpected_results:
-                num_regressions += 1
-        elif result_type == test_expectations.MISSING:
-            if test_name in result_summary.unexpected_results:
-                num_missing += 1
-        elif test_name in result_summary.unexpected_results:
-            if retry_summary and test_name not in retry_summary.unexpected_results:
-                actual.extend(expectations.get_expectations_string(test_name).split(" "))
-                num_flaky += 1
-            elif retry_summary:
-                retry_result_type = retry_summary.unexpected_results[test_name].type
-                if result_type != retry_result_type:
-                    actual.append(keywords[retry_result_type])
-                    num_flaky += 1
-                else:
-                    num_regressions += 1
-            else:
-                num_regressions += 1
-
-        test_dict['expected'] = expected
-        test_dict['actual'] = " ".join(actual)
-
-        test_dict.update(interpret_test_failures(result.failures))
-
-        # Store test hierarchically by directory. e.g.
-        # foo/bar/baz.html: test_dict
-        # foo/bar/baz1.html: test_dict
-        #
-        # becomes
-        # foo: {
-        #     bar: {
-        #         baz.html: test_dict,
-        #         baz1.html: test_dict
-        #     }
-        # }
-        parts = test_name.split('/')
-        current_map = tests
-        for i, part in enumerate(parts):
-            if i == (len(parts) - 1):
-                current_map[part] = test_dict
-                break
-            if part not in current_map:
-                current_map[part] = {}
-            current_map = current_map[part]
-
-    results['tests'] = tests
-    results['num_passes'] = num_passes
-    results['num_flaky'] = num_flaky
-    results['num_missing'] = num_missing
-    results['num_regressions'] = num_regressions
-    results['uses_expectations_file'] = port_obj.uses_test_expectations_file()
-    results['interrupted'] = result_summary.interrupted  # Does results.html have enough information to compute this itself? (by checking total number of results vs. total number of tests?)
-    results['layout_tests_dir'] = port_obj.layout_tests_dir()
-    results['has_wdiff'] = port_obj.wdiff_available()
-    results['has_pretty_patch'] = port_obj.pretty_patch_available()
-    results['pixel_tests_enabled'] = port_obj.get_option('pixel_tests')
-
-    try:
-        # We only use the svn revision for using trac links in the results.html file,
-        # Don't do this by default since it takes >100ms.
-        # FIXME: Do we really need to populate this both here and in the json_results_generator?
-        if use_trac_links_in_results_html(port_obj):
-            port_obj.host.initialize_scm()
-            results['revision'] = port_obj.host.scm().head_svn_revision()
-    except Exception, e:
-        _log.warn("Failed to determine svn revision for checkout (cwd: %s, webkit_base: %s), leaving 'revision' key blank in full_results.json.\n%s" % (port_obj._filesystem.getcwd(), port_obj.path_from_webkit_base(), e))
-        # Handle cases where we're running outside of version control.
-        import traceback
-        _log.debug('Failed to learn head svn revision:')
-        _log.debug(traceback.format_exc())
-        results['revision'] = ""
-
-    return results
 
 
 class Manager(object):
@@ -346,7 +175,7 @@ class Manager(object):
             paths, test_names = self._collect_tests(args)
         except IOError:
             # This is raised if --test-list doesn't exist
-            return RunDetails(exit_code=-1)
+            return test_run_results.RunDetails(exit_code=-1)
 
         self._printer.write_update("Parsing expectations ...")
         self._expectations = test_expectations.TestExpectations(self._port, test_names)
@@ -357,25 +186,25 @@ class Manager(object):
         # Check to make sure we're not skipping every test.
         if not tests_to_run:
             _log.critical('No tests to run.')
-            return RunDetails(exit_code=-1)
+            return test_run_results.RunDetails(exit_code=-1)
 
         if not self._set_up_run(tests_to_run):
-            return RunDetails(exit_code=-1)
+            return test_run_results.RunDetails(exit_code=-1)
 
         start_time = time.time()
         try:
-            result_summary = self._run_tests(tests_to_run, tests_to_skip, self._options.repeat_each, self._options.iterations,
+            initial_results = self._run_tests(tests_to_run, tests_to_skip, self._options.repeat_each, self._options.iterations,
                 int(self._options.child_processes), retrying=False)
 
-            tests_to_retry = self._test_to_retry(result_summary, include_crashes=self._port.should_retry_crashes())
-            if self._options.retry_failures and tests_to_retry and not result_summary.interrupted:
+            tests_to_retry = self._tests_to_retry(initial_results, include_crashes=self._port.should_retry_crashes())
+            if self._options.retry_failures and tests_to_retry and not initial_results.interrupted:
                 _log.info('')
                 _log.info("Retrying %d unexpected failure(s) ..." % len(tests_to_retry))
                 _log.info('')
-                retry_summary = self._run_tests(tests_to_retry, tests_to_skip=set(), repeat_each=1, iterations=1,
+                retry_results = self._run_tests(tests_to_retry, tests_to_skip=set(), repeat_each=1, iterations=1,
                     num_workers=1, retrying=True)
             else:
-                retry_summary = None
+                retry_results = None
         finally:
             self._clean_up_run()
 
@@ -383,25 +212,25 @@ class Manager(object):
 
         # Some crash logs can take a long time to be written out so look
         # for new logs after the test run finishes.
-        self._look_for_new_crash_logs(result_summary, start_time)
-        if retry_summary:
-            self._look_for_new_crash_logs(retry_summary, start_time)
+        self._look_for_new_crash_logs(initial_results, start_time)
+        if retry_results:
+            self._look_for_new_crash_logs(retry_results, start_time)
 
-        summarized_results = summarize_results(self._port, self._expectations, result_summary, retry_summary)
-        self._printer.print_results(end_time - start_time, result_summary, summarized_results)
+        summarized_results = test_run_results.summarize_results(self._port, self._expectations, initial_results, retry_results)
+        self._printer.print_results(end_time - start_time, initial_results, summarized_results)
 
         if not self._options.dry_run:
             self._port.print_leaks_summary()
-            self._upload_json_files(summarized_results, result_summary)
+            self._upload_json_files(summarized_results, initial_results)
 
             results_path = self._filesystem.join(self._results_directory, "results.html")
             self._copy_results_html_file(results_path)
-            if self._options.show_results and (result_summary.unexpected_results or
-                                               (self._options.full_results_html and result_summary.total_failures)):
+            if self._options.show_results and (initial_results.unexpected_results_by_name or
+                                               (self._options.full_results_html and initial_results.total_failures)):
                 self._port.show_results_html_file(results_path)
 
-        return RunDetails(self._port.exit_code_from_summarized_results(summarized_results),
-                          summarized_results, result_summary, retry_summary)
+        return test_run_results.RunDetails(self._port.exit_code_from_summarized_results(summarized_results),
+                                           summarized_results, initial_results, retry_results)
 
     def _run_tests(self, tests_to_run, tests_to_skip, repeat_each, iterations, num_workers, retrying):
         needs_http = self._port.requires_http_server() or any(self._is_http_test(test) for test in tests_to_run)
@@ -426,16 +255,16 @@ class Manager(object):
         _log.debug("cleaning up port")
         self._port.clean_up_test_run()
 
-    def _look_for_new_crash_logs(self, result_summary, start_time):
+    def _look_for_new_crash_logs(self, run_results, start_time):
         """Since crash logs can take a long time to be written out if the system is
            under stress do a second pass at the end of the test run.
 
-           result_summary: the results of the test run
+           run_results: the results of the test run
            start_time: time the tests started at.  We're looking for crash
                logs after that time.
         """
         crashed_processes = []
-        for test, result in result_summary.unexpected_results.iteritems():
+        for test, result in run_results.unexpected_results_by_name.iteritems():
             if (result.type != test_expectations.CRASH):
                 continue
             for failure in result.failures:
@@ -461,28 +290,28 @@ class Manager(object):
             if self._filesystem.isdir(self._filesystem.join(layout_tests_dir, dirname)):
                 self._filesystem.rmtree(self._filesystem.join(self._results_directory, dirname))
 
-    def _test_to_retry(self, result_summary, include_crashes):
-        return [result.test_name for result in result_summary.unexpected_results.values() if
+    def _tests_to_retry(self, run_results, include_crashes):
+        return [result.test_name for result in run_results.unexpected_results_by_name.values() if
                    ((result.type != test_expectations.PASS) and
                     (result.type != test_expectations.MISSING) and
                     (result.type != test_expectations.CRASH or include_crashes))]
 
-    def _upload_json_files(self, summarized_results, result_summary):
+    def _upload_json_files(self, summarized_results, initial_results):
         """Writes the results of the test run as JSON files into the results
         dir and upload the files to the appengine server.
 
         Args:
           summarized_results: dict of results
-          result_summary: full summary object
+          initial_results: full summary object
         """
         _log.debug("Writing JSON files in %s." % self._results_directory)
 
         # FIXME: Upload stats.json to the server and delete times_ms.
-        times_trie = json_results_generator.test_timings_trie(self._port, result_summary.results.values())
+        times_trie = json_results_generator.test_timings_trie(self._port, initial_results.results_by_name.values())
         times_json_path = self._filesystem.join(self._results_directory, "times_ms.json")
         json_results_generator.write_json(self._filesystem, times_trie, times_json_path)
 
-        stats_trie = self._stats_trie(result_summary)
+        stats_trie = self._stats_trie(initial_results)
         stats_path = self._filesystem.join(self._results_directory, "stats.json")
         self._filesystem.write_text_file(stats_path, json.dumps(stats_trie))
 
@@ -494,7 +323,7 @@ class Manager(object):
             self._port, self._options.builder_name, self._options.build_name,
             self._options.build_number, self._results_directory,
             BUILDER_BASE_URL,
-            self._expectations, result_summary,
+            self._expectations, initial_results,
             self._options.test_results_server,
             "layout-tests",
             self._options.master_name)
@@ -521,12 +350,12 @@ class Manager(object):
         if self._filesystem.exists(results_file):
             self._filesystem.copyfile(results_file, destination_path)
 
-    def _stats_trie(self, result_summary):
+    def _stats_trie(self, initial_results):
         def _worker_number(worker_name):
             return int(worker_name.split('/')[1]) if worker_name else -1
 
         stats = {}
-        for result in result_summary.results.values():
+        for result in initial_results.results_by_name.values():
             if result.type != test_expectations.SKIP:
                 stats[result.test_name] = {'results': (_worker_number(result.worker_name), result.test_number, result.pid, int(result.test_run_time * 1000), int(result.total_run_time * 1000))}
         stats_trie = {}

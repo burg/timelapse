@@ -35,9 +35,9 @@ public:
     TouchEventHandler(WebPagePrivate* webpage);
     ~TouchEventHandler();
 
-    void doFatFingers(Platform::TouchPoint&);
-    void handleTouchPoint(Platform::TouchPoint&);
-    void sendClickAtFatFingersPoint();
+    void doFatFingers(const Platform::TouchPoint&);
+    void handleTouchPoint(const Platform::TouchPoint&, unsigned modifiers);
+    void sendClickAtFatFingersPoint(unsigned modifiers = 0);
 
     const FatFingersResult& lastFatFingersResult() const { return m_lastFatFingersResult; }
     void resetLastFatFingersResult() { m_lastFatFingersResult.reset(); }
@@ -47,7 +47,7 @@ public:
     void drawTapHighlight();
 
 private:
-    void handleFatFingerPressed();
+    void handleFatFingerPressed(bool shiftActive = false, bool altActive = false, bool ctrlActive = false);
 
 private:
     WebPagePrivate* m_webPage;

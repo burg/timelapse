@@ -172,8 +172,8 @@ public:
     virtual void didRestoreFromPageCache();
     virtual void dispatchDidBecomeFrameset(bool);
     virtual bool canCachePage() const;
-    virtual void download(
-        WebCore::ResourceHandle*, const WebCore::ResourceRequest&,
+    virtual void convertMainResourceLoadToDownload(
+        WebCore::MainResourceLoader*, const WebCore::ResourceRequest&,
         const WebCore::ResourceResponse&);
     virtual PassRefPtr<WebCore::Frame> createFrame(
         const WebCore::KURL& url, const WTF::String& name,
@@ -209,6 +209,7 @@ public:
 
     virtual PassRefPtr<WebCore::FrameNetworkingContext> createNetworkingContext();
     virtual bool willCheckAndDispatchMessageEvent(WebCore::SecurityOrigin* target, WebCore::MessageEvent*) const;
+    virtual void didChangeName(const String&);
 
 #if ENABLE(WEB_INTENTS_TAG)
     virtual void registerIntentService(const String& action,

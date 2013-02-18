@@ -78,7 +78,8 @@ WebInspector.NetworkUISourceCodeProvider.prototype = {
         // - scripts with explicit sourceURL comment;
         // - dynamic scripts (script elements with src attribute) when inspector is opened after the script was loaded.
         if (!script.hasSourceURL && !script.isContentScript) {
-            if (WebInspector.resourceForURL(script.sourceURL) || WebInspector.networkLog.requestForURL(script.sourceURL))
+            var requestURL = script.sourceURL.replace(/#.*/, "");
+            if (WebInspector.resourceForURL(requestURL) || WebInspector.networkLog.requestForURL(requestURL))
                 return;
         }
         // Filter out embedder injected content scripts.
@@ -113,7 +114,7 @@ WebInspector.NetworkUISourceCodeProvider.prototype = {
             return;
         this._processedURLs[url] = true;
         var isEditable = type !== WebInspector.resourceTypes.Document;
-        this._networkWorkspaceProvider.addFile(url, contentProvider, isEditable, isContentScript);
+        this._networkWorkspaceProvider.addNetworkFile(url, contentProvider, isEditable, isContentScript);
     },
 
     _projectWillReset: function()

@@ -366,6 +366,7 @@ webkit2_sources += \
 	Source/WebKit2/Shared/BlockingResponseMap.h \
 	Source/WebKit2/Shared/ShareableBitmap.cpp \
 	Source/WebKit2/Shared/ShareableBitmap.h \
+	Source/WebKit2/Shared/CacheModel.cpp \
 	Source/WebKit2/Shared/CacheModel.h \
 	Source/WebKit2/Shared/ChildProcess.cpp \
 	Source/WebKit2/Shared/ChildProcess.h \
@@ -410,6 +411,7 @@ webkit2_sources += \
 	Source/WebKit2/Shared/NativeWebKeyboardEvent.h \
 	Source/WebKit2/Shared/NativeWebMouseEvent.h \
 	Source/WebKit2/Shared/NativeWebWheelEvent.h \
+	Source/WebKit2/Shared/Network/NetworkProcessSupplement.h \
 	Source/WebKit2/Shared/OriginAndDatabases.cpp \
 	Source/WebKit2/Shared/OriginAndDatabases.h \
 	Source/WebKit2/Shared/PlatformPopupMenuData.cpp \
@@ -762,6 +764,8 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/API/gtk/WebKitWindowProperties.cpp \
 	Source/WebKit2/UIProcess/API/gtk/WebKitWindowProperties.h \
 	Source/WebKit2/UIProcess/API/gtk/WebKitWindowPropertiesPrivate.h \
+	Source/WebKit2/UIProcess/API/gtk/WebViewBaseInputMethodFilter.h \
+	Source/WebKit2/UIProcess/API/gtk/WebViewBaseInputMethodFilter.cpp \
 	Source/WebKit2/UIProcess/API/gtk/webkit2.h \
 	Source/WebKit2/UIProcess/Authentication/AuthenticationChallengeProxy.cpp \
 	Source/WebKit2/UIProcess/Authentication/AuthenticationChallengeProxy.h \
@@ -775,6 +779,8 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/BackingStore.h \
 	Source/WebKit2/UIProcess/Downloads/DownloadProxy.cpp \
 	Source/WebKit2/UIProcess/Downloads/DownloadProxy.h \
+	Source/WebKit2/UIProcess/Downloads/DownloadProxyMap.cpp \
+	Source/WebKit2/UIProcess/Downloads/DownloadProxyMap.h \
 	Source/WebKit2/UIProcess/DrawingAreaProxy.cpp \
 	Source/WebKit2/UIProcess/DrawingAreaProxy.h \
 	Source/WebKit2/UIProcess/DrawingAreaProxyImpl.cpp \
@@ -855,6 +861,8 @@ webkit2_sources += \
 	Source/WebKit2/UIProcess/WebConnectionToWebProcess.h \
 	Source/WebKit2/UIProcess/WebContext.cpp \
 	Source/WebKit2/UIProcess/WebContext.h \
+	Source/WebKit2/UIProcess/WebContextClient.cpp \
+	Source/WebKit2/UIProcess/WebContextClient.h \
 	Source/WebKit2/UIProcess/WebContextConnectionClient.cpp \
 	Source/WebKit2/UIProcess/WebContextConnectionClient.h \
 	Source/WebKit2/UIProcess/WebContextInjectedBundleClient.cpp \
@@ -1202,6 +1210,7 @@ webkit2_sources += \
 	Source/WebKit2/WebProcess/WebPage/WebUndoStep.h \
 	Source/WebKit2/WebProcess/WebConnectionToUIProcess.cpp \
 	Source/WebKit2/WebProcess/WebConnectionToUIProcess.h \
+	Source/WebKit2/WebProcess/WebProcessSupplement.h \
 	Source/WebKit2/WebProcess/WebProcess.cpp \
 	Source/WebKit2/WebProcess/WebProcess.h
 
@@ -1210,8 +1219,6 @@ webkit2_sources += \
    Source/WebKit2/WebProcess/WebPage/gtk/LayerTreeHostGtk.cpp \
    Source/WebKit2/WebProcess/WebPage/gtk/LayerTreeHostGtk.h
 endif # END USE_TEXTURE_MAPPER_GL
-
-if ENABLE_PLUGIN_PROCESS
 
 webkit2_plugin_process_built_sources += \
 	DerivedSources/WebKit2/NPObjectMessageReceiverMessageReceiver.cpp \
@@ -1327,5 +1334,3 @@ webkit2_plugin_process_sources += \
 	Source/WebKit2/WebProcess/Plugins/Netscape/NetscapePluginStream.h \
 	Source/WebKit2/WebProcess/Plugins/Netscape/x11/NetscapePluginX11.cpp \
 	Source/WebKit2/unix/PluginMainUnix.cpp
-
-endif # ENABLE_PLUGIN_PROCESS

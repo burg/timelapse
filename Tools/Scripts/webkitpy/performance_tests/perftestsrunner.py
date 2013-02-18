@@ -98,8 +98,6 @@ class PerfTestsRunner(object):
                 help="Path to the directory under which build files are kept (should not include configuration)"),
             optparse.make_option("--time-out-ms", default=600 * 1000,
                 help="Set the timeout for each test"),
-            optparse.make_option("--pause-before-testing", dest="pause_before_testing", action="store_true", default=False,
-                help="Pause before running the tests to let user attach a performance monitor."),
             optparse.make_option("--no-results", action="store_false", dest="generate_results", default=True,
                 help="Do no generate results JSON and results page."),
             optparse.make_option("--output-json-path", action='callback', callback=_expand_path, type="str",
@@ -118,10 +116,12 @@ class PerfTestsRunner(object):
                 help="Use WebKitTestRunner rather than DumpRenderTree."),
             optparse.make_option("--replay", dest="replay", action="store_true", default=False,
                 help="Run replay tests."),
-            optparse.make_option("--force", dest="skipped", action="store_true", default=False,
+            optparse.make_option("--force", dest="use_skipped_list", action="store_false", default=True,
                 help="Run all tests, including the ones in the Skipped list."),
             optparse.make_option("--profile", action="store_true",
                 help="Output per-test profile information."),
+            optparse.make_option("--profiler", action="store",
+                help="Output per-test profile information, using the specified profiler."),
             ]
         return optparse.OptionParser(option_list=(perf_option_list)).parse_args(args)
 
@@ -139,17 +139,21 @@ class PerfTestsRunner(object):
 
         paths = []
         for arg in self._args:
-            paths.append(arg)
-            relpath = filesystem.relpath(arg, self._base_path)
-            if relpath:
-                paths.append(relpath)
+            if filesystem.exists(filesystem.join(self._base_path, arg)):
+                paths.append(arg)
+            else:
+                relpath = filesystem.relpath(arg, self._base_path)
+                if filesystem.exists(filesystem.join(self._base_path, relpath)):
+                    paths.append(filesystem.normpath(relpath))
+                else:
+                    _log.warn('Path was not found:' + arg)
 
         skipped_directories = set(['.svn', 'resources'])
         test_files = find_files.find(filesystem, self._base_path, paths, skipped_directories, _is_test_file)
         tests = []
         for path in test_files:
-            relative_path = self._port.relative_perf_test_filename(path).replace('\\', '/')
-            if self._port.skips_perf_test(relative_path) and not self._options.skipped:
+            relative_path = filesystem.relpath(path, self._base_path).replace('\\', '/')
+            if self._options.use_skipped_list and self._port.skips_perf_test(relative_path) and filesystem.normpath(relative_path) not in paths:
                 continue
             test = PerfTestFactory.create_perf_test(self._port, relative_path, path)
             tests.append(test)
@@ -314,30 +318,19 @@ class PerfTestsRunner(object):
         driver = None
 
         for test in tests:
-            driver = port.create_driver(worker_number=0, no_timeout=True)
-
-            if self._options.pause_before_testing:
-                driver.start()
-                if not self._host.user.confirm("Ready to run test?"):
-                    driver.stop()
-                    return unexpected
-
             _log.info('Running %s (%d of %d)' % (test.test_name(), expected + unexpected + 1, len(tests)))
-            if self._run_single_test(test, driver):
+            if self._run_single_test(test):
                 expected = expected + 1
             else:
                 unexpected = unexpected + 1
 
             _log.info('')
 
-            driver.stop()
-
         return unexpected
 
-    def _run_single_test(self, test, driver):
+    def _run_single_test(self, test):
         start_time = time.time()
-
-        new_results = test.run(driver, self._options.time_out_ms)
+        new_results = test.run(self._options.time_out_ms)
         if new_results:
             self._results.update(new_results)
         else:

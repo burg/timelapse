@@ -278,6 +278,7 @@ void SVGSMILElement::removedFrom(ContainerNode* rootParent)
         setTargetElement(0);
         setAttributeName(anyQName());
         animationAttributeChanged();
+        m_timeContainer = 0;
     }
 
     SVGElement::removedFrom(rootParent);
@@ -741,7 +742,7 @@ SMILTime SVGSMILElement::findInstanceTime(BeginOrEnd beginOrEnd, SMILTime minimu
     if (!sizeOfList)
         return beginOrEnd == Begin ? SMILTime::unresolved() : SMILTime::indefinite();
 
-    const SMILTimeWithOrigin* result = binarySearch<const SMILTimeWithOrigin, SMILTime, extractTimeFromVector>(list.begin(), sizeOfList, minimumTime, WTF::KeyMustNotBePresentInArray);
+    const SMILTimeWithOrigin* result = approximateBinarySearch<const SMILTimeWithOrigin, SMILTime>(list, sizeOfList, minimumTime, extractTimeFromVector);
     int indexOfResult = result - list.begin();
     ASSERT(indexOfResult < sizeOfList);
     const SMILTime& currentTime = list[indexOfResult].time();

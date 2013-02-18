@@ -41,6 +41,7 @@
 #include "Event.h"
 #include "HTMLDivElement.h"
 #include "HTMLMediaElement.h"
+#include "NodeTraversal.h"
 #include "RenderTextTrackCue.h"
 #include "Text.h"
 #include "TextTrack.h"
@@ -487,6 +488,12 @@ void TextTrackCue::invalidateCueIndex()
     m_cueIndex = invalidCueIndex;
 }
 
+void TextTrackCue::markNodesAsWebVTTNodes(Node* root)
+{
+    for (Element* child = ElementTraversal::firstWithin(root); child; child = ElementTraversal::next(child, root))
+        child->setIsWebVTTNode(true);
+}
+
 PassRefPtr<DocumentFragment> TextTrackCue::getCueAsHTML()
 {
     RefPtr<DocumentFragment> clonedFragment;
@@ -509,6 +516,7 @@ PassRefPtr<DocumentFragment> TextTrackCue::getCueAsHTML()
 
     clonedFragment = DocumentFragment::create(document);
     m_documentFragment->cloneChildNodes(clonedFragment.get());
+    markNodesAsWebVTTNodes(clonedFragment.get());
 
     return clonedFragment.release();
 }
@@ -520,11 +528,6 @@ bool TextTrackCue::dispatchEvent(PassRefPtr<Event> event)
         return false;
 
     return EventTarget::dispatchEvent(event);
-}
-
-bool TextTrackCue::dispatchEvent(PassRefPtr<Event> event, ExceptionCode &ec)
-{
-    return EventTarget::dispatchEvent(event, ec);
 }
 
 bool TextTrackCue::isActive()
@@ -827,6 +830,7 @@ TextTrackCue::CueSetting TextTrackCue::settingName(const String& name)
 
 void TextTrackCue::setCueSettings(const String& input)
 {
+    m_settings = input;
     unsigned position = 0;
 
     while (position < input.length()) {

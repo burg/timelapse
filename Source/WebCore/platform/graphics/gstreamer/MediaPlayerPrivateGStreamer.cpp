@@ -75,10 +75,17 @@ typedef enum {
     GST_PLAY_FLAG_BUFFERING     = 0x000000100
 } GstPlayFlags;
 
+// gPercentMax is used when parsing buffering ranges with
+// gst_query_parse_nth_buffering_range as there was a bug in GStreamer
+// 0.10 that was using 100 instead of GST_FORMAT_PERCENT_MAX. This was
+// corrected in 1.0. gst_query_parse_buffering_range worked as
+// expected with GST_FORMAT_PERCENT_MAX in both cases.
 #ifdef GST_API_VERSION_1
 static const char* gPlaybinName = "playbin";
+static const gint64 gPercentMax = GST_FORMAT_PERCENT_MAX;
 #else
 static const char* gPlaybinName = "playbin2";
+static const gint64 gPercentMax = 100;
 #endif
 
 GST_DEBUG_CATEGORY_STATIC(webkit_media_player_debug);
@@ -245,8 +252,6 @@ MediaPlayerPrivateGStreamer::MediaPlayerPrivateGStreamer(MediaPlayer* player)
     , m_totalBytes(-1)
     , m_originalPreloadWasAutoAndWasOverridden(false)
 {
-    if (initializeGStreamerAndRegisterWebKitElements())
-        createGSTPlayBin();
 }
 
 MediaPlayerPrivateGStreamer::~MediaPlayerPrivateGStreamer()
@@ -293,6 +298,8 @@ MediaPlayerPrivateGStreamer::~MediaPlayerPrivateGStreamer()
 
 void MediaPlayerPrivateGStreamer::load(const String& url)
 {
+    if (!initializeGStreamerAndRegisterWebKitElements())
+        return;
 
     KURL kurl(KURL(), url);
     String cleanUrl(url);
@@ -300,6 +307,13 @@ void MediaPlayerPrivateGStreamer::load(const String& url)
     // Clean out everything after file:// url path.
     if (kurl.isLocalFile())
         cleanUrl = cleanUrl.substring(0, kurl.pathEnd());
+
+    if (!m_playBin) {
+        createGSTPlayBin();
+        setDownloadBuffering();
+    }
+
+    ASSERT(m_playBin);
 
     m_url = KURL(KURL(), cleanUrl);
     g_object_set(m_playBin, "uri", cleanUrl.utf8().data(), NULL);
@@ -751,11 +765,11 @@ PassRefPtr<TimeRanges> MediaPlayerPrivateGStreamer::buffered() const
         return timeRanges.release();
     }
 
-    gint64 rangeStart = 0, rangeStop = 0;
     for (guint index = 0; index < gst_query_get_n_buffering_ranges(query); index++) {
+        gint64 rangeStart = 0, rangeStop = 0;
         if (gst_query_parse_nth_buffering_range(query, index, &rangeStart, &rangeStop))
-            timeRanges->add(static_cast<float>((rangeStart * mediaDuration) / 100),
-                            static_cast<float>((rangeStop * mediaDuration) / 100));
+            timeRanges->add(static_cast<float>((rangeStart * mediaDuration) / gPercentMax),
+                static_cast<float>((rangeStop * mediaDuration) / gPercentMax));
     }
 
     // Fallback to the more general maxTimeLoaded() if no range has
@@ -1744,13 +1758,10 @@ MediaPlayer::MovieLoadType MediaPlayerPrivateGStreamer::movieLoadType() const
     return MediaPlayer::Download;
 }
 
-void MediaPlayerPrivateGStreamer::setPreload(MediaPlayer::Preload preload)
+void MediaPlayerPrivateGStreamer::setDownloadBuffering()
 {
-    m_originalPreloadWasAutoAndWasOverridden = m_preload != preload && m_preload == MediaPlayer::Auto;
-
-    m_preload = preload;
-
-    ASSERT(m_playBin);
+    if (!m_playBin)
+        return;
 
     GstPlayFlags flags;
     g_object_get(m_playBin, "flags", &flags, NULL);
@@ -1761,6 +1772,15 @@ void MediaPlayerPrivateGStreamer::setPreload(MediaPlayer::Preload preload)
         LOG_MEDIA_MESSAGE("Disabling on-disk buffering");
         g_object_set(m_playBin, "flags", flags & ~GST_PLAY_FLAG_DOWNLOAD, NULL);
     }
+}
+
+void MediaPlayerPrivateGStreamer::setPreload(MediaPlayer::Preload preload)
+{
+    m_originalPreloadWasAutoAndWasOverridden = m_preload != preload && m_preload == MediaPlayer::Auto;
+
+    m_preload = preload;
+
+    setDownloadBuffering();
 
     if (m_delayingLoad && m_preload != MediaPlayer::None) {
         m_delayingLoad = false;
@@ -1817,9 +1837,7 @@ void MediaPlayerPrivateGStreamer::createGSTPlayBin()
     gst_bin_add_many(GST_BIN(m_videoSinkBin), videoTee, queue, NULL);
 
     // Link a new src pad from tee to queue1.
-    GRefPtr<GstPad> srcPad = adoptGRef(gst_element_get_request_pad(videoTee, "src%d"));
-    GRefPtr<GstPad> sinkPad = adoptGRef(gst_element_get_static_pad(queue, "sink"));
-    gst_pad_link(srcPad.get(), sinkPad.get());
+    gst_element_link_pads_full(videoTee, 0, queue, "sink", GST_PAD_LINK_CHECK_NOTHING);
 #endif
 
     GstElement* actualVideoSink = 0;

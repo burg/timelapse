@@ -92,7 +92,7 @@ WebInspector.CookieItemsView.prototype = {
         }
 
         if (!this._cookiesTable)
-            this._cookiesTable = isAdvanced ? new WebInspector.CookiesTable(this._cookieDomain, false, this._deleteCookie.bind(this), this._update.bind(this)) : new WebInspector.SimpleCookiesTable();
+            this._cookiesTable = isAdvanced ? new WebInspector.CookiesTable(false, this._deleteCookie.bind(this), this._update.bind(this)) : new WebInspector.SimpleCookiesTable();
 
         this._cookiesTable.setCookies(this._cookies);
         this._emptyView.detach();
@@ -139,18 +139,19 @@ WebInspector.CookieItemsView.prototype = {
     },
 
     /**
-     * @param {WebInspector.Cookie} cookie
+     * @param {!WebInspector.Cookie} cookie
      */
     _deleteCookie: function(cookie)
     {
-        PageAgent.deleteCookie(cookie.name, this._cookieDomain);
+        PageAgent.deleteCookie(cookie.name(), this._cookieDomain);
         this._update();
     },
 
     _deleteButtonClicked: function()
     {
-        if (this._cookiesTable.selectedCookie)
-            this._deleteCookie(this._cookiesTable.selectedCookie);
+        var selectedCookie = this._cookiesTable.selectedCookie();
+        if (selectedCookie)
+            this._deleteCookie(selectedCookie);
     },
 
     _refreshButtonClicked: function(event)
@@ -198,12 +199,12 @@ WebInspector.SimpleCookiesTable.prototype = {
         this._dataGrid.rootNode().removeChildren();
         var addedCookies = {};
         for (var i = 0; i < cookies.length; ++i) {
-            if (addedCookies[cookies[i].name])
+            if (addedCookies[cookies[i].name()])
                 continue;
-            addedCookies[cookies[i].name] = true;
+            addedCookies[cookies[i].name()] = true;
             var data = {};
-            data[0] = cookies[i].name;
-            data[1] = cookies[i].value;
+            data[0] = cookies[i].name();
+            data[1] = cookies[i].value();
 
             var node = new WebInspector.DataGridNode(data, false);
             node.selectable = true;

@@ -127,17 +127,14 @@ void IDBCursorBackendImpl::continueFunction(PassRefPtr<IDBKey> key, PassRefPtr<I
 {
     IDB_TRACE("IDBCursorBackendImpl::continue");
     RefPtr<IDBCallbacks> callbacks = prpCallbacks;
-    if (!m_transaction->scheduleTask(m_taskType, CursorIterationOperation::create(this, key, callbacks)))
-        callbacks->onError(IDBDatabaseError::create(IDBDatabaseException::AbortError));
+    m_transaction->scheduleTask(m_taskType, CursorIterationOperation::create(this, key, callbacks));
 }
 
 void IDBCursorBackendImpl::advance(unsigned long count, PassRefPtr<IDBCallbacks> prpCallbacks, ExceptionCode&)
 {
     IDB_TRACE("IDBCursorBackendImpl::advance");
     RefPtr<IDBCallbacks> callbacks = prpCallbacks;
-
-    if (!m_transaction->scheduleTask(CursorAdvanceOperation::create(this, count, callbacks)))
-        callbacks->onError(IDBDatabaseError::create(IDBDatabaseException::AbortError));
+    m_transaction->scheduleTask(CursorAdvanceOperation::create(this, count, callbacks));
 }
 
 void IDBCursorBackendImpl::CursorAdvanceOperation::perform(IDBTransactionBackendImpl*)
@@ -181,8 +178,7 @@ void IDBCursorBackendImpl::prefetchContinue(int numberToFetch, PassRefPtr<IDBCal
 {
     IDB_TRACE("IDBCursorBackendImpl::prefetchContinue");
     RefPtr<IDBCallbacks> callbacks = prpCallbacks;
-    if (!m_transaction->scheduleTask(m_taskType, CursorPrefetchIterationOperation::create(this, numberToFetch, callbacks)))
-        callbacks->onError(IDBDatabaseError::create(IDBDatabaseException::AbortError));
+    m_transaction->scheduleTask(m_taskType, CursorPrefetchIterationOperation::create(this, numberToFetch, callbacks));
 }
 
 void IDBCursorBackendImpl::CursorPrefetchIterationOperation::perform(IDBTransactionBackendImpl*)
@@ -208,15 +204,19 @@ void IDBCursorBackendImpl::CursorPrefetchIterationOperation::perform(IDBTransact
         foundKeys.append(m_cursor->m_cursor->key());
         foundPrimaryKeys.append(m_cursor->m_cursor->primaryKey());
 
-        if (m_cursor->m_cursorType != IDBCursorBackendInterface::IndexKeyCursor)
-            foundValues.append(SerializedScriptValue::createFromWire(m_cursor->m_cursor->value()));
-        else
+        switch (m_cursor->m_cursorType) {
+        case KeyOnly:
             foundValues.append(SerializedScriptValue::create());
-
+            break;
+        case KeyAndValue:
+            sizeEstimate += m_cursor->m_cursor->value().size();
+            foundValues.append(SerializedScriptValue::createFromWireBytes(m_cursor->m_cursor->value()));
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
         sizeEstimate += m_cursor->m_cursor->key()->sizeEstimate();
         sizeEstimate += m_cursor->m_cursor->primaryKey()->sizeEstimate();
-        if (m_cursor->m_cursorType != IDBCursorBackendInterface::IndexKeyCursor)
-            sizeEstimate += m_cursor->m_cursor->value().length() * sizeof(UChar);
 
         if (sizeEstimate > maxSizeEstimate)
             break;

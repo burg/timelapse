@@ -267,6 +267,7 @@ sub IDLFileForInterface
     unless ($idlFiles) {
         my $sourceRoot = $ENV{SOURCE_ROOT};
         my @directories = map { $_ = "$sourceRoot/$_" if $sourceRoot && -d "$sourceRoot/$_"; $_ } @$useDirectories;
+        push(@directories, ".");
 
         $idlFiles = { };
 
@@ -565,6 +566,16 @@ sub ContentAttributeName
     return "WebCore::${namespace}::${contentAttributeName}Attr";
 }
 
+sub CanUseFastAttribute
+{
+    my ($generator, $attribute) = @_;
+    my $attributeType = $attribute->signature->type;
+    # HTMLNames::styleAttr cannot be used with fast{Get,Has}Attribute but we do not [Reflect] the
+    # style attribute.
+
+    return !$generator->IsSVGAnimatedType($attributeType);
+}
+
 sub GetterExpression
 {
     my ($generator, $implIncludes, $interfaceName, $attribute) = @_;
@@ -579,13 +590,28 @@ sub GetterExpression
     if ($attribute->signature->extendedAttributes->{"URL"}) {
         $functionName = "getURLAttribute";
     } elsif ($attribute->signature->type eq "boolean") {
-        $functionName = "hasAttribute";
+        my $namespace = $generator->NamespaceForAttributeName($interfaceName, $contentAttributeName);
+        if ($generator->CanUseFastAttribute($attribute)) {
+            $functionName = "fastHasAttribute";
+        } else {
+            $functionName = "hasAttribute";
+        }
     } elsif ($attribute->signature->type eq "long") {
         $functionName = "getIntegralAttribute";
     } elsif ($attribute->signature->type eq "unsigned long") {
         $functionName = "getUnsignedIntegralAttribute";
     } else {
-        $functionName = "getAttribute";
+        if ($contentAttributeName eq "WebCore::HTMLNames::idAttr") {
+            $functionName = "getIdAttribute";
+            $contentAttributeName = "";
+        } elsif ($contentAttributeName eq "WebCore::HTMLNames::nameAttr") {
+            $functionName = "getNameAttribute";
+            $contentAttributeName = "";
+        } elsif ($generator->CanUseFastAttribute($attribute)) {
+            $functionName = "fastGetAttribute";
+        } else {
+            $functionName = "getAttribute";
+        }
     }
 
     return ($functionName, $contentAttributeName);

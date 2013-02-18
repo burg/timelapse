@@ -34,8 +34,13 @@
 #include "WebTestDelegate.h"
 #include "WebTouchPoint.h"
 #include "platform/WebGraphicsContext3D.h"
-#include "platform/WebKitPlatformSupport.h"
+#include "public/WebCompositorSupport.h"
+#include "public/WebExternalTextureLayer.h"
+#include "public/WebExternalTextureLayerClient.h"
+#include <public/Platform.h>
 #include <wtf/Assertions.h>
+#include <wtf/OwnPtr.h>
+#include <wtf/PassOwnPtr.h>
 #include <wtf/StringExtras.h>
 #include <wtf/text/CString.h>
 
@@ -143,7 +148,7 @@ WebPluginContainer::TouchEventRequestType parseTouchEventRequestType(const WebSt
     return WebPluginContainer::TouchEventRequestTypeNone;
 }
 
-class WebTestPluginImpl : public WebTestPlugin {
+class WebTestPluginImpl : public WebTestPlugin, public WebExternalTextureLayerClient {
 public:
     WebTestPluginImpl(WebFrame*, const WebPluginParams&, WebTestDelegate*);
     virtual ~WebTestPluginImpl();
@@ -167,6 +172,10 @@ public:
     virtual void didFinishLoadingFrameRequest(const WebURL&, void* notifyData) { }
     virtual void didFailLoadingFrameRequest(const WebURL&, void* notifyData, const WebURLError&) { }
     virtual bool isPlaceholder() { return false; }
+
+    // WebExternalTextureLayerClient methods:
+    virtual unsigned prepareTexture(WebTextureUpdater&) { return m_colorTexture; }
+    virtual WebGraphicsContext3D* context() { return m_context; }
 
 private:
     enum Primitive {
@@ -223,6 +232,7 @@ private:
     unsigned m_colorTexture;
     unsigned m_framebuffer;
     Scene m_scene;
+    OwnPtr<WebExternalTextureLayer> m_layer;
 
     WebPluginContainer::TouchEventRequestType m_touchEventRequest;
     bool m_printEventDetails;
@@ -281,7 +291,7 @@ WebTestPluginImpl::~WebTestPluginImpl()
 bool WebTestPluginImpl::initialize(WebPluginContainer* container)
 {
     WebGraphicsContext3D::Attributes attrs;
-    m_context = webKitPlatformSupport()->createOffscreenGraphicsContext3D(attrs);
+    m_context = Platform::current()->createOffscreenGraphicsContext3D(attrs);
     if (!m_context)
         return false;
 
@@ -291,8 +301,9 @@ bool WebTestPluginImpl::initialize(WebPluginContainer* container)
     if (!initScene())
         return false;
 
+    m_layer = adoptPtr(Platform::current()->compositorSupport()->createExternalTextureLayer(this));
     m_container = container;
-    m_container->setBackingTextureId(m_colorTexture);
+    m_container->setWebLayer(m_layer->layer());
     m_container->requestTouchEventType(m_touchEventRequest);
     m_container->setWantsWheelEvents(true);
     return true;
@@ -300,6 +311,9 @@ bool WebTestPluginImpl::initialize(WebPluginContainer* container)
 
 void WebTestPluginImpl::destroy()
 {
+    if (m_container)
+        m_container->setWebLayer(0);
+    m_layer.clear();
     destroyScene();
 
     delete m_context;
@@ -332,7 +346,7 @@ void WebTestPluginImpl::updateGeometry(const WebRect& frameRect, const WebRect& 
     drawScene();
 
     m_context->flush();
-    m_container->commitBackingTexture();
+    m_layer->layer()->invalidate();
 }
 
 WebTestPluginImpl::Primitive WebTestPluginImpl::parsePrimitive(const WebString& string)

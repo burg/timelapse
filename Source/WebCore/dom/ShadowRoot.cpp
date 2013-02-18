@@ -65,7 +65,7 @@ COMPILE_ASSERT(sizeof(ShadowRoot) == sizeof(SameSizeAsShadowRoot), shadowroot_sh
 
 ShadowRoot::ShadowRoot(Document* document)
     : DocumentFragment(document, CreateShadowRoot)
-    , TreeScope(this)
+    , TreeScope(this, document)
     , m_prev(0)
     , m_next(0)
     , m_numberOfStyles(0)
@@ -75,18 +75,18 @@ ShadowRoot::ShadowRoot(Document* document)
     , m_registeredWithParentShadowRoot(false)
 {
     ASSERT(document);
-    
-    // Assume document as parent scope.
-    setParentTreeScope(document);
-    // Shadow tree scopes have the scope pointer point to themselves.
-    // This way, direct children will receive the correct scope pointer.
-    ensureRareData()->setTreeScope(this);
+    setTreeScope(this);
 }
 
 ShadowRoot::~ShadowRoot()
 {
     ASSERT(!m_prev);
     ASSERT(!m_next);
+
+    // We must remove all of our children first before the TreeScope destructor
+    // runs so we don't go through TreeScopeAdopter for each child with a
+    // destructed tree scope in each descendant.
+    removeAllChildren();
 
     // We must call clearRareData() here since a ShadowRoot class inherits TreeScope
     // as well as Node. See a comment on TreeScope.h for the reason.
@@ -328,9 +328,9 @@ void ShadowRoot::childrenChanged(bool changedByParser, Node* beforeChange, Node*
     owner()->invalidateDistribution();
 }
 
-const Vector<InsertionPoint*>& ShadowRoot::insertionPointList()
+const Vector<RefPtr<InsertionPoint> >& ShadowRoot::insertionPointList()
 {
-    typedef Vector<InsertionPoint*> InsertionPointVector;
+    typedef Vector<RefPtr<InsertionPoint> > InsertionPointVector;
     DEFINE_STATIC_LOCAL(InsertionPointVector, emptyVector, ());
 
     return distributionData() ? distributionData()->ensureInsertionPointList(this) : emptyVector;

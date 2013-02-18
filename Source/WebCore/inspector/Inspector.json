@@ -101,8 +101,12 @@
             },
             {
                 "name": "getProcessMemoryDistribution",
+                "parameters": [
+                    { "name": "reportGraph", "type": "boolean", "optional": true, "description": "Whether native memory graph should be reported in addition to aggregated statistics." }
+                ],
                 "returns": [
-                    { "name": "distribution", "$ref": "MemoryBlock", "description": "An object describing all memory allocated by the process"}
+                    { "name": "distribution", "$ref": "MemoryBlock", "description": "An object describing all memory allocated by the process"},
+                    { "name": "graph", "type": "object", "optional": true, "description": "Native memory graph."}
                 ]
             }
         ]
@@ -450,6 +454,14 @@
                 "description": "Controls the visibility of compositing borders.",
                 "parameters": [
                     { "name": "visible", "type": "boolean", "description": "True for showing compositing borders." }
+                ],
+                "hidden": true
+            },
+            {
+                "name": "captureScreenshot",
+                "description": "Capture page screenshot.",
+                "returns": [
+                    { "name": "data", "type": "string", "description": "Base64-encoded image data (PNG)." }
                 ],
                 "hidden": true
             }
@@ -1638,6 +1650,7 @@
                     { "name": "xmlVersion", "type": "string", "optional": true, "description": "<code>Document</code>'s XML version in case of XML documents." },
                     { "name": "name", "type": "string", "optional": true, "description": "<code>Attr</code>'s name." },
                     { "name": "value", "type": "string", "optional": true, "description": "<code>Attr</code>'s value." },
+                    { "name": "frameId", "$ref": "Network.FrameId", "optional": true, "description": "Frame ID for frame owner elements." },
                     { "name": "contentDocument", "$ref": "Node", "optional": true, "description": "Content document for frame owner elements." },
                     { "name": "shadowRoots", "type": "array", "optional": true, "items": { "$ref": "Node" }, "description": "Shadow root list for given element host." }
                 ],
@@ -3129,7 +3142,8 @@
                 "description": "Profile.",
                 "properties": [
                     { "name": "head", "type": "object", "optional": true },
-                    { "name": "bottomUpHead", "type": "object", "optional": true }
+                    { "name": "bottomUpHead", "type": "object", "optional": true },
+                    { "name": "idleTime", "type": "number", "optional": true }
                 ]
             },
             {
@@ -3328,14 +3342,15 @@
         "hidden": true,
         "types": [
             {
-                "id": "TraceLogId",
+                "id": "ContextId",
                 "type": "string",
-                "description": "Unique object identifier."
+                "description": "Unique context identifier."
             },
             {
                 "id": "Call",
                 "type": "object",
                 "properties": [
+                    { "name": "contextId", "$ref": "ContextId" },
                     { "name": "functionName", "type": "string", "optional": true },
                     { "name": "arguments", "type": "array", "items": { "type": "string" }, "optional": true },
                     { "name": "property", "type": "string", "optional": true },
@@ -3345,6 +3360,11 @@
                     { "name": "lineNumber", "type": "integer", "optional": true },
                     { "name": "columnNumber", "type": "integer", "optional": true }
                 ]
+            },
+            {
+                "id": "TraceLogId",
+                "type": "string",
+                "description": "Unique trace log identifier."
             },
             {
                 "id": "TraceLog",
@@ -3371,6 +3391,13 @@
                 "parameters": [
                     { "name": "traceLogId", "$ref": "TraceLogId" }
                 ]
+            },
+            {
+                "name": "hasUninstrumentedCanvases",
+                "returns": [
+                    { "name": "result", "type": "boolean" }
+                ],
+                "description": "Checks if there is any uninstrumented canvas in the inspected page."
             },
             {
                 "name": "captureFrame",
@@ -3440,12 +3467,12 @@
                 "name": "dispatchMouseEvent",
                 "parameters": [
                     { "name": "type", "type": "string", "enum": ["mousePressed", "mouseReleased", "mouseMoved"], "description": "Type of the mouse event." },
+                    { "name": "x", "type": "integer", "description": "X coordinate of the event relative to the main frame's viewport."},
+                    { "name": "y", "type": "integer", "description": "Y coordinate of the event relative to the main frame's viewport. 0 refers to the top of the viewport and Y increases as it proceeds towards the bottom of the viewport."},
                     { "name": "modifiers", "type": "integer", "optional": true, "description": "Bit field representing pressed modifier keys. Alt=1, Ctrl=2, Meta/Command=4, Shift=8 (default: 0)." },
                     { "name": "timestamp", "type": "number", "optional": true, "description": "Time at which the event occurred. Measured in UTC time in seconds since January 1, 1970 (default: current time)." },
                     { "name": "button", "type": "string", "enum": ["none", "left", "middle", "right"], "optional": true, "description": "Mouse button (default: \"none\")." },
-                    { "name": "clickCount", "type": "integer", "optional": true, "description": "Number of times the mouse button was clicked (default: 0)." },
-                    { "name": "x", "type": "integer", "description": "X coordinate of the event relative to the main frame's viewport."},
-                    { "name": "y", "type": "integer", "description": "Y coordinate of the event relative to the main frame's viewport. 0 refers to the top of the viewport and Y increases as it proceeds towards the bottom of the viewport."}
+                    { "name": "clickCount", "type": "integer", "optional": true, "description": "Number of times the mouse button was clicked (default: 0)." }
                 ],
                 "description": "Dispatches a mouse event to the page."
             }
@@ -3480,6 +3507,7 @@
                     { "name": "layerId", "$ref": "LayerId", "description": "The unique id for this layer." },
                     { "name": "bounds", "$ref": "IntRect", "description": "Bounds of the layer." },
                     { "name": "isComposited", "type": "boolean", "description": "Indicates whether this layer is composited." },
+                    { "name": "paintCount", "type": "integer", "optional": true, "description": "Indicates how many time this layer has painted." },
                     { "name": "memory", "type": "integer", "optional": true, "description": "Estimated memory used by this layer." },
                     { "name": "compositedBounds", "$ref": "IntRect", "optional": true, "description": "The bounds of the composited layer." },
                     { "name": "childLayers", "type": "array", "optional": true, "items": { "$ref": "Layer" }, "description": "Child layers." }

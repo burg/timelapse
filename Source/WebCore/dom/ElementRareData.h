@@ -35,11 +35,12 @@ namespace WebCore {
 
 class ElementRareData : public NodeRareData {
 public:
-    ElementRareData(Document*);
+    ElementRareData();
     virtual ~ElementRareData();
 
     void setPseudoElement(PseudoId, PassRefPtr<PseudoElement>);
     PseudoElement* pseudoElement(PseudoId) const;
+    bool hasPseudoElements() const { return m_generatedBefore || m_generatedAfter; }
 
     void resetComputedStyle();
     void resetDynamicRestyleObservations();
@@ -53,6 +54,10 @@ public:
     bool isInCanvasSubtree() const { return m_isInCanvasSubtree; }
     void setIsInCanvasSubtree(bool value) { m_isInCanvasSubtree = value; }
 
+#if ENABLE(VIDEO_TRACK)
+    using NodeRareData::isWebVTTNode;
+    using NodeRareData::setIsWebVTTNode;
+#endif
 #if ENABLE(FULLSCREEN_API)
     bool containsFullScreenElement() { return m_containsFullScreenElement; }
     void setContainsFullScreenElement(bool value) { m_containsFullScreenElement = value; }
@@ -96,6 +101,12 @@ public:
 
     ClassList* classList() const { return m_classList.get(); }
     void setClassList(PassOwnPtr<ClassList> classList) { m_classList = classList; }
+    void clearClassListValueForQuirksMode()
+    {
+        if (!m_classList)
+            return;
+        m_classList->clearValueForQuirksMode();
+    }
 
     DatasetDOMStringMap* dataset() const { return m_dataset.get(); }
     void setDataset(PassOwnPtr<DatasetDOMStringMap> dataset) { m_dataset = dataset; }
@@ -130,9 +141,8 @@ inline IntSize defaultMinimumSizeForResizing()
     return IntSize(LayoutUnit::max(), LayoutUnit::max());
 }
 
-inline ElementRareData::ElementRareData(Document* document)
-    : NodeRareData(document)
-    , m_minimumSizeForResizing(defaultMinimumSizeForResizing())
+inline ElementRareData::ElementRareData()
+    : m_minimumSizeForResizing(defaultMinimumSizeForResizing())
     , m_generatedBefore(0)
     , m_generatedAfter(0)
 {

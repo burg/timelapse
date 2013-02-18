@@ -265,6 +265,14 @@ inline Node* Node::highestAncestor() const
     return highest;
 }
 
+inline bool Node::needsShadowTreeWalker() const
+{
+    if (getFlag(NeedsShadowTreeWalkerFlag))
+        return true;
+    ContainerNode* parent = parentOrHostNode();
+    return parent && parent->getFlag(NeedsShadowTreeWalkerFlag);
+}
+
 // This constant controls how much buffer is initially allocated
 // for a Node Vector that is used to store child Nodes of a given Node.
 // FIXME: Optimize the value.
@@ -296,18 +304,18 @@ public:
     }
 
     // Returns 0 if there is no next Node.
-    Node* nextNode()
+    PassRefPtr<Node> nextNode()
     {
         if (LIKELY(!hasSnapshot())) {
-            Node* node = m_currentNode;
-            if (m_currentNode)
-                m_currentNode = m_currentNode->nextSibling();
-            return node;
+            RefPtr<Node> node = m_currentNode;
+            if (node)
+                m_currentNode = node->nextSibling();
+            return node.release();
         }
-        Vector<RefPtr<Node> >* nodeVector = m_childNodes.get();
-        if (m_currentIndex >= nodeVector->size())
+        Vector<RefPtr<Node> >& nodeVector = *m_childNodes;
+        if (m_currentIndex >= nodeVector.size())
             return 0;
-        return (*nodeVector)[m_currentIndex++].get();
+        return nodeVector[m_currentIndex++];
     }
 
     void takeSnapshot()
@@ -315,7 +323,7 @@ public:
         if (hasSnapshot())
             return;
         m_childNodes = adoptPtr(new Vector<RefPtr<Node> >());
-        Node* node = m_currentNode;
+        Node* node = m_currentNode.get();
         while (node) {
             m_childNodes->append(node);
             node = node->nextSibling();
@@ -337,7 +345,7 @@ public:
 private:
     static ChildNodesLazySnapshot* latestSnapshot;
 
-    Node* m_currentNode;
+    RefPtr<Node> m_currentNode;
     unsigned m_currentIndex;
     OwnPtr<Vector<RefPtr<Node> > > m_childNodes; // Lazily instantiated.
     ChildNodesLazySnapshot* m_nextSnapshot;

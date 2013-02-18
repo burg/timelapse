@@ -27,6 +27,7 @@
 #include "WebProcessProxy.h"
 
 #include "DataReference.h"
+#include "DownloadProxyMap.h"
 #include "PluginInfoStore.h"
 #include "PluginProcessManager.h"
 #include "TextChecker.h"
@@ -44,10 +45,6 @@
 #include <wtf/MainThread.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
-
-#if ENABLE(NETWORK_PROCESS)
-#include "NetworkProcessManager.h"
-#endif
 
 #if PLATFORM(MAC)
 #include "SimplePDFPlugin.h"
@@ -130,6 +127,9 @@ void WebProcessProxy::disconnect()
     for (size_t i = 0, size = frames.size(); i < size; ++i)
         frames[i]->disconnect();
     m_frameMap.clear();
+
+    if (m_downloadProxyMap)
+        m_downloadProxyMap->processDidClose();
 
     m_context->disconnectProcess(this);
 }
@@ -376,7 +376,7 @@ void WebProcessProxy::getSharedWorkerProcessConnection(const String& /* url */, 
 #if ENABLE(NETWORK_PROCESS)
 void WebProcessProxy::getNetworkProcessConnection(PassRefPtr<Messages::WebProcessProxy::GetNetworkProcessConnection::DelayedReply> reply)
 {
-    NetworkProcessManager::shared().getNetworkProcessConnection(reply);
+    m_context->getNetworkProcessConnection(reply);
 }
 #endif // ENABLE(NETWORK_PROCESS)
 
@@ -395,6 +395,9 @@ void WebProcessProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC
 
 #if ENABLE(CUSTOM_PROTOCOLS)
     if (messageID.is<CoreIPC::MessageClassCustomProtocolManagerProxy>()) {
+#if ENABLE(NETWORK_PROCESS)
+        ASSERT(!context()->usesNetworkProcess());
+#endif
         m_customProtocolManagerProxy.didReceiveMessage(connection, messageID, decoder);
         return;
     }
@@ -557,7 +560,7 @@ size_t WebProcessProxy::frameCountInPage(WebPageProxy* page) const
 
 void WebProcessProxy::shouldTerminate(bool& shouldTerminate)
 {
-    if (!m_pageMap.isEmpty() || !m_context->shouldTerminate(this)) {
+    if (!m_pageMap.isEmpty() || (m_downloadProxyMap && !m_downloadProxyMap->isEmpty()) || !m_context->shouldTerminate(this)) {
         shouldTerminate = false;
         return;
     }
@@ -572,6 +575,19 @@ void WebProcessProxy::updateTextCheckerState()
 {
     if (canSendMessage())
         send(Messages::WebProcess::SetTextCheckerState(TextChecker::state()), 0);
+}
+
+
+DownloadProxy* WebProcessProxy::createDownloadProxy()
+{
+#if ENABLE(NETWORK_PROCESS)
+    ASSERT(!m_context->usesNetworkProcess());
+#endif
+
+    if (!m_downloadProxyMap)
+        m_downloadProxyMap = adoptPtr(new DownloadProxyMap(m_messageReceiverMap));
+
+    return m_downloadProxyMap->createDownloadProxy(m_context.get());
 }
 
 void WebProcessProxy::didNavigateWithNavigationData(uint64_t pageID, const WebNavigationDataStore& store, uint64_t frameID) 

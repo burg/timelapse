@@ -66,7 +66,8 @@ class TestRunner:
         SkippedTest("unittests/testwebresource", "/webkit/webresource/loading", "Test fails", 104689),
         SkippedTest("unittests/testwebresource", "/webkit/webresource/sub_resource_loading", "Test fails in GTK Linux 64-bit Release bot", 82330),
         SkippedTest("unittests/testwebview", "/webkit/webview/icon-uri", "Test times out in GTK Linux 64-bit Release bot", 82328),
-        SkippedTest("WebKit2APITests/TestCookieManager", "/webkit2/WebKitCookieManager/accept-policy", "Test is failing", 104790),
+        SkippedTest("unittests/testatk", "/webkit/atk/getTextInParagraphAndBodyModerate", "Test fails", 105538),
+        SkippedTest("WebKit2APITests/TestInspectorServer", SkippedTest.ENTIRE_SUITE, "Test times out", 105866),
         SkippedTest("WebKit2APITests/TestResources", "/webkit2/WebKitWebView/resources", "Test is flaky in GTK Linux 32-bit Release bot", 82868),
         SkippedTest("WebKit2APITests/TestWebKitAccessibility", "/webkit2/WebKitAccessibility/atspi-basic-hierarchy", "Test fails", 100408),
         SkippedTest("WebKit2APITests/TestWebKitFindController", "/webkit2/WebKitFindController/hide", "Test always fails in Xvfb", 89810),
@@ -80,6 +81,7 @@ class TestRunner:
         SkippedTest("TestWebKitAPI/TestWebKit2", "WebKit2.SpacebarScrolling", "Test fails", 84961),
         SkippedTest("TestWebKitAPI/TestWebKit2", "WebKit2.WKConnection", "Tests fail and time out out", 84959),
         SkippedTest("TestWebKitAPI/TestWebKit2", "WebKit2.WKPageGetScaleFactorNotZero", "Test fails and times out", 88455),
+        SkippedTest("TestWebKitAPI/TestWebKit2", "WebKit2.ForceRepaint", "Test times out", 105532),
     ]
 
     def __init__(self, options, tests=[]):
@@ -336,19 +338,21 @@ class TestRunner:
 
         if failed_tests:
             names = [test.replace(self._programs_path, '', 1) for test in failed_tests]
-            sys.stdout.write("Tests failed: %s\n" % ", ".join(names))
+            sys.stdout.write("Tests failed (%d): %s\n" % (len(names), ", ".join(names)))
             sys.stdout.flush()
 
         if timed_out_tests:
             names = [test.replace(self._programs_path, '', 1) for test in timed_out_tests]
-            sys.stdout.write("Tests that timed out: %s\n" % ", ".join(names))
+            sys.stdout.write("Tests that timed out (%d): %s\n" % (len(names), ", ".join(names)))
             sys.stdout.flush()
 
         if self._skipped_tests and self._options.skipped_action == 'skip':
-            sys.stdout.write("Tests skipped:\n%s\n" % "\n".join([str(skipped) for skipped in self._skipped_tests]))
+            sys.stdout.write("Tests skipped (%d):\n%s\n" %
+                             (len(self._skipped_tests),
+                              "\n".join([str(skipped) for skipped in self._skipped_tests])))
             sys.stdout.flush()
 
-        return len(failed_tests)
+        return len(failed_tests) + len(timed_out_tests)
 
 if __name__ == "__main__":
     if not jhbuildutils.enter_jhbuild_environment_if_available("gtk"):

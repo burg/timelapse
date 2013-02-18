@@ -51,26 +51,32 @@ JITCompiler::JITCompiler(Graph& dfg)
 
 void JITCompiler::linkOSRExits()
 {
+    ASSERT(codeBlock()->numberOfOSRExits() == m_exitCompilationInfo.size());
     if (m_graph.m_compilation) {
         for (unsigned i = 0; i < codeBlock()->numberOfOSRExits(); ++i) {
             OSRExit& exit = codeBlock()->osrExit(i);
-            if (exit.m_watchpointIndex == std::numeric_limits<unsigned>::max())
-                m_exitSiteLabels.append(exit.m_check.initialJump().label());
-            else
-                m_exitSiteLabels.append(codeBlock()->watchpoint(exit.m_watchpointIndex).sourceLabel());
+            Vector<Label> labels;
+            if (exit.m_watchpointIndex == std::numeric_limits<unsigned>::max()) {
+                OSRExitCompilationInfo& info = m_exitCompilationInfo[i];
+                for (unsigned j = 0; j < info.m_failureJumps.jumps().size(); ++j)
+                    labels.append(info.m_failureJumps.jumps()[j].label());
+            } else
+                labels.append(codeBlock()->watchpoint(exit.m_watchpointIndex).sourceLabel());
+            m_exitSiteLabels.append(labels);
         }
     }
     
     for (unsigned i = 0; i < codeBlock()->numberOfOSRExits(); ++i) {
         OSRExit& exit = codeBlock()->osrExit(i);
-        ASSERT(!exit.m_check.isSet() == (exit.m_watchpointIndex != std::numeric_limits<unsigned>::max()));
+        JumpList& failureJumps = m_exitCompilationInfo[i].m_failureJumps;
+        ASSERT(failureJumps.empty() == (exit.m_watchpointIndex != std::numeric_limits<unsigned>::max()));
         if (exit.m_watchpointIndex == std::numeric_limits<unsigned>::max())
-            exit.m_check.initialJump().link(this);
+            failureJumps.link(this);
         else
             codeBlock()->watchpoint(exit.m_watchpointIndex).setDestination(label());
         jitAssertHasValidCallFrame();
         store32(TrustedImm32(i), &globalData()->osrExitIndex);
-        exit.m_check.switchToLateJump(patchableJump());
+        exit.setPatchableCodeOffset(patchableJump());
     }
 }
 
@@ -210,8 +216,8 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
     CodeLocationLabel target = CodeLocationLabel(osrExitThunk.code());
     for (unsigned i = 0; i < codeBlock()->numberOfOSRExits(); ++i) {
         OSRExit& exit = codeBlock()->osrExit(i);
-        linkBuffer.link(exit.m_check.lateJump(), target);
-        exit.m_check.correctLateJump(linkBuffer);
+        linkBuffer.link(exit.getPatchableCodeOffsetAsJump(), target);
+        exit.correctJump(linkBuffer);
         if (exit.m_watchpointIndex != std::numeric_limits<unsigned>::max())
             codeBlock()->watchpoint(exit.m_watchpointIndex).correctLabels(linkBuffer);
     }
@@ -219,8 +225,11 @@ void JITCompiler::link(LinkBuffer& linkBuffer)
     if (m_graph.m_compilation) {
         ASSERT(m_exitSiteLabels.size() == codeBlock()->numberOfOSRExits());
         for (unsigned i = 0; i < m_exitSiteLabels.size(); ++i) {
-            m_graph.m_compilation->addOSRExitSite(
-                linkBuffer.locationOf(m_exitSiteLabels[i]).executableAddress());
+            Vector<Label>& labels = m_exitSiteLabels[i];
+            Vector<const void*> addresses;
+            for (unsigned j = 0; j < labels.size(); ++j)
+                addresses.append(linkBuffer.locationOf(labels[j]).executableAddress());
+            m_graph.m_compilation->addOSRExitSite(addresses);
         }
     } else
         ASSERT(!m_exitSiteLabels.size());

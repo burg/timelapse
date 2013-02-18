@@ -26,6 +26,20 @@
 
 namespace WebCore {
 
+class TextureMapperPaintOptions {
+public:
+    RefPtr<BitmapTexture> surface;
+    RefPtr<BitmapTexture> mask;
+    float opacity;
+    TransformationMatrix transform;
+    IntSize offset;
+    TextureMapper* textureMapper;
+    TextureMapperPaintOptions()
+        : opacity(1)
+        , textureMapper(0)
+    { }
+};
+
 TextureMapperLayer* toTextureMapperLayer(GraphicsLayer* layer)
 {
     return layer ? toGraphicsLayerTextureMapper(layer)->layer() : 0;
@@ -57,7 +71,7 @@ void TextureMapperLayer::clearBackingStoresRecursive()
 
 void TextureMapperLayer::computeTransformsRecursive()
 {
-    if (m_size.isEmpty() && m_state.masksToBounds)
+    if (m_state.size.isEmpty() && m_state.masksToBounds)
         return;
 
     // Compute transforms recursively on the way down to leafs.
@@ -71,7 +85,7 @@ void TextureMapperLayer::computeTransformsRecursive()
     m_state.visible = m_state.backfaceVisibility || !m_transform.combined().isBackFaceVisible();
 
     if (m_parent && m_parent->m_state.preserves3D)
-        m_centerZ = m_transform.combined().mapPoint(FloatPoint3D(m_size.width() / 2, m_size.height() / 2, 0)).z();
+        m_centerZ = m_transform.combined().mapPoint(FloatPoint3D(m_state.size.width() / 2, m_state.size.height() / 2, 0)).z();
 
     if (m_state.maskLayer)
         m_state.maskLayer->computeTransformsRecursive();
@@ -109,16 +123,20 @@ void TextureMapperLayer::paintSelf(const TextureMapperPaintOptions& options)
     float opacity = options.opacity;
     RefPtr<BitmapTexture> mask = options.mask;
 
-    if (m_state.backgroundColor.alpha() && !m_state.contentsRect.isEmpty()) {
-        Color color = m_state.backgroundColor;
+    if (m_state.solidColor.isValid() && !m_state.contentsRect.isEmpty()) {
+        if (!m_state.solidColor.alpha())
+            return;
+
+        Color color = m_state.solidColor;
         float r, g, b, a;
         color.getRGBA(r, g, b, a);
         color = Color(r * opacity, g * opacity, b * opacity, a * opacity);
         options.textureMapper->drawSolidColor(m_state.contentsRect, transform, color);
+        return;
     }
 
     if (m_backingStore) {
-        ASSERT(m_state.drawsContent && m_state.contentsVisible && !m_size.isEmpty());
+        ASSERT(m_state.drawsContent && m_state.contentsVisible && !m_state.size.isEmpty());
         ASSERT(!layerRect().isEmpty());
         m_backingStore->paintToTextureMapper(options.textureMapper, layerRect(), transform, opacity, mask.get());
     }
@@ -243,7 +261,7 @@ bool TextureMapperLayer::shouldPaintToIntermediateSurface() const
 
 bool TextureMapperLayer::isVisible() const
 {
-    if (m_size.isEmpty() && (m_state.masksToBounds || m_state.maskLayer || m_children.isEmpty()))
+    if (m_state.size.isEmpty() && (m_state.masksToBounds || m_state.maskLayer || m_children.isEmpty()))
         return false;
     if (!m_state.visible && m_children.isEmpty())
         return false;
@@ -360,13 +378,9 @@ TextureMapper* TextureMapperLayer::textureMapper() const
     return rootLayer()->m_textureMapper;
 }
 
-void TextureMapperLayer::flushCompositingState(GraphicsLayerTextureMapper* graphicsLayer, int options)
+void TextureMapperLayer::flushCompositingStateForThisLayerOnly(GraphicsLayerTextureMapper* graphicsLayer)
 {
-    flushCompositingState(graphicsLayer, textureMapper(), options);
-}
-
-void TextureMapperLayer::flushCompositingStateSelf(GraphicsLayerTextureMapper* graphicsLayer, TextureMapper*)
-{
+    ASSERT(graphicsLayer);
     int changeMask = graphicsLayer->changeMask();
 
     if (changeMask == NoChanges && graphicsLayer->m_animations.isEmpty())
@@ -374,39 +388,8 @@ void TextureMapperLayer::flushCompositingStateSelf(GraphicsLayerTextureMapper* g
 
     graphicsLayer->updateDebugIndicators();
 
-    if (changeMask & ParentChange) {
-        TextureMapperLayer* newParent = toTextureMapperLayer(graphicsLayer->parent());
-        if (newParent != m_parent) {
-            // Remove layer from current from child list first.
-            if (m_parent) {
-                size_t index = m_parent->m_children.find(this);
-                m_parent->m_children.remove(index);
-                m_parent = 0;
-            }
-            // Set new layer parent and add layer to the parents child list.
-            if (newParent) {
-                m_parent = newParent;
-                m_parent->m_children.append(this);
-            }
-        }
-    }
-
-    if (changeMask & ChildrenChange) {
-        // Clear children parent pointer to avoid unsync and crash on layer delete.
-        for (size_t i = 0; i < m_children.size(); i++)
-            m_children[i]->m_parent = 0;
-
-        m_children.clear();
-        for (size_t i = 0; i < graphicsLayer->children().size(); ++i) {
-            TextureMapperLayer* child = toTextureMapperLayer(graphicsLayer->children()[i]);
-            if (!child)
-                continue;
-            m_children.append(child);
-            child->m_parent = this;
-        }
-    }
-
-    m_size = graphicsLayer->size();
+    if (changeMask & ChildrenChange)
+        setChildren(graphicsLayer->children());
 
     if (changeMask & MaskLayerChange) {
        if (TextureMapperLayer* layer = toTextureMapperLayer(graphicsLayer->maskLayer()))
@@ -436,7 +419,7 @@ void TextureMapperLayer::flushCompositingStateSelf(GraphicsLayerTextureMapper* g
     m_state.backfaceVisibility = graphicsLayer->backfaceVisibility();
     m_state.childrenTransform = graphicsLayer->childrenTransform();
     m_state.opacity = graphicsLayer->opacity();
-    m_state.backgroundColor = graphicsLayer->backgroundColor();
+    m_state.solidColor = graphicsLayer->solidColor();
 #if ENABLE(CSS_FILTERS)
     if (changeMask & FilterChange)
         m_state.filters = graphicsLayer->filters();
@@ -450,7 +433,55 @@ void TextureMapperLayer::flushCompositingStateSelf(GraphicsLayerTextureMapper* g
     m_transform.setSize(m_state.size);
     m_transform.setFlattening(!m_state.preserves3D);
     m_transform.setChildrenTransform(m_state.childrenTransform);
+
+    syncAnimations();
 }
+
+void TextureMapperLayer::setChildren(const Vector<GraphicsLayer*>& newChildren)
+{
+    removeAllChildren();
+    for (size_t i = 0; i < newChildren.size(); ++i) {
+        TextureMapperLayer* child = toTextureMapperLayer(newChildren[i]);
+        ASSERT(child);
+        addChild(child);
+    }
+}
+
+void TextureMapperLayer::addChild(TextureMapperLayer* childLayer)
+{
+    ASSERT(childLayer != this);
+
+    if (childLayer->m_parent)
+        childLayer->removeFromParent();
+
+    childLayer->m_parent = this;
+    m_children.append(childLayer);
+}
+
+void TextureMapperLayer::removeFromParent()
+{
+    if (m_parent) {
+        unsigned i;
+        for (i = 0; i < m_parent->m_children.size(); i++) {
+            if (this == m_parent->m_children[i]) {
+                m_parent->m_children.remove(i);
+                break;
+            }
+        }
+
+        m_parent = 0;
+    }
+}
+
+void TextureMapperLayer::removeAllChildren()
+{
+    while (m_children.size()) {
+        TextureMapperLayer* curLayer = m_children[0];
+        ASSERT(curLayer->m_parent);
+        curLayer->removeFromParent();
+    }
+}
+
 
 bool TextureMapperLayer::descendantsOrSelfHaveRunningAnimations() const
 {
@@ -483,39 +514,6 @@ void TextureMapperLayer::syncAnimations()
     if (!m_animations.hasActiveAnimationsOfType(AnimatedPropertyWebkitFilter))
         setFilters(m_state.filters);
 #endif
-}
-
-void TextureMapperLayer::flushCompositingState(GraphicsLayerTextureMapper* graphicsLayer, TextureMapper* textureMapper, int options)
-{
-    if (!textureMapper)
-        return;
-
-    if (graphicsLayer && !(options & ComputationsOnly))
-        flushCompositingStateSelf(graphicsLayer, textureMapper);
-
-    if (graphicsLayer && m_state.maskLayer)
-        m_state.maskLayer->flushCompositingState(toGraphicsLayerTextureMapper(graphicsLayer->maskLayer()), textureMapper);
-
-    if (m_state.replicaLayer)
-        m_state.replicaLayer->flushCompositingState(toGraphicsLayerTextureMapper(graphicsLayer->replicaLayer()), textureMapper);
-
-    syncAnimations();
-
-    if (!(options & TraverseDescendants))
-        options = ComputationsOnly;
-
-    if (graphicsLayer) {
-        Vector<GraphicsLayer*> children = graphicsLayer->children();
-        for (int i = children.size() - 1; i >= 0; --i) {
-            TextureMapperLayer* layer = toTextureMapperLayer(children[i]);
-            if (!layer)
-                continue;
-            layer->flushCompositingState(toGraphicsLayerTextureMapper(children[i]), textureMapper, options);
-        }
-    } else {
-        for (int i = m_children.size() - 1; i >= 0; --i)
-            m_children[i]->flushCompositingState(0, textureMapper, options);
-    }
 }
 
 bool TextureMapperLayer::isAncestorFixedToViewport() const

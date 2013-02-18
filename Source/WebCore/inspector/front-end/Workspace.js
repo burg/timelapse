@@ -58,15 +58,17 @@ WebInspector.WorkspaceController.prototype = {
 
 /**
  * @constructor
- * @param {string} path
+ * @param {string} uri
+ * @param {string} url
  * @param {WebInspector.ResourceType} contentType
  * @param {boolean} isEditable
  * @param {boolean=} isContentScript
  * @param {boolean=} isSnippet
  */
-WebInspector.FileDescriptor = function(path, contentType, isEditable, isContentScript, isSnippet)
+WebInspector.FileDescriptor = function(uri, url, contentType, isEditable, isContentScript, isSnippet)
 {
-    this.path = path;
+    this.uri = uri;
+    this.url = url;
     this.contentType = contentType;
     this.isEditable = isEditable;
     this.isContentScript = isContentScript || false;
@@ -85,18 +87,26 @@ WebInspector.WorkspaceProvider.Events = {
 
 WebInspector.WorkspaceProvider.prototype = {
     /**
-     * @param {string} path
+     * @param {string} uri
      * @param {function(?string,boolean,string)} callback
      */
-    requestFileContent: function(path, callback) { },
+    requestFileContent: function(uri, callback) { },
 
     /**
+     * @param {string} uri
+     * @param {string} newContent
+     * @param {function(?string)} callback
+     */
+    setFileContent: function(uri, newContent, callback) { },
+
+    /**
+     * @param {string} uri
      * @param {string} query
      * @param {boolean} caseSensitive
      * @param {boolean} isRegex
      * @param {function(Array.<WebInspector.ContentProvider.SearchMatch>)} callback
      */
-    searchInFileContent: function(path, query, caseSensitive, isRegex, callback) { },
+    searchInFileContent: function(uri, query, caseSensitive, isRegex, callback) { },
 
     /**
      * @param {string} eventType
@@ -142,12 +152,12 @@ WebInspector.Project.prototype = {
     _fileAdded: function(event)
     {
         var fileDescriptor = /** @type {WebInspector.FileDescriptor} */ (event.data);
-        var uiSourceCode = this.uiSourceCodeForURL(fileDescriptor.path);
+        var uiSourceCode = this.uiSourceCodeForURI(fileDescriptor.uri);
         if (uiSourceCode) {
             // FIXME: Implement
             return;
         }
-        uiSourceCode = new WebInspector.UISourceCode(this._workspace, fileDescriptor.path, fileDescriptor.contentType, fileDescriptor.isEditable);
+        uiSourceCode = new WebInspector.UISourceCode(this._workspace, fileDescriptor.uri, fileDescriptor.url, fileDescriptor.contentType, fileDescriptor.isEditable);
         uiSourceCode.isContentScript = fileDescriptor.isContentScript;
         uiSourceCode.isSnippet = fileDescriptor.isSnippet;
         this._uiSourceCodes.push(uiSourceCode);
@@ -156,8 +166,8 @@ WebInspector.Project.prototype = {
 
     _fileRemoved: function(event)
     {
-        var path = /** @type {string} */ (event.data);
-        var uiSourceCode = this.uiSourceCodeForURL(path);
+        var uri = /** @type {string} */ (event.data);
+        var uiSourceCode = this.uiSourceCodeForURI(uri);
         if (!uiSourceCode)
             return;
         this._uiSourceCodes.splice(this._uiSourceCodes.indexOf(uiSourceCode), 1);
@@ -178,6 +188,19 @@ WebInspector.Project.prototype = {
     },
 
     /**
+     * @param {string} uri
+     * @return {?WebInspector.UISourceCode}
+     */
+    uiSourceCodeForURI: function(uri)
+    {
+        for (var i = 0; i < this._uiSourceCodes.length; ++i) {
+            if (this._uiSourceCodes[i].uri() === uri)
+                return this._uiSourceCodes[i];
+        }
+        return null;
+    },
+
+    /**
      * @return {Array.<WebInspector.UISourceCode>}
      */
     uiSourceCodes: function()
@@ -186,23 +209,34 @@ WebInspector.Project.prototype = {
     },
 
     /**
-     * @param {string} path
+     * @param {string} uri
      * @param {function(?string,boolean,string)} callback
      */
-    requestFileContent: function(path, callback)
+    requestFileContent: function(uri, callback)
     {
-        this._workspaceProvider.requestFileContent(path, callback);
+        this._workspaceProvider.requestFileContent(uri, callback);
     },
 
     /**
+     * @param {string} uri
+     * @param {string} newContent
+     * @param {function(?string)} callback
+     */
+    setFileContent: function(uri, newContent, callback)
+    {
+        this._workspaceProvider.setFileContent(uri, newContent, callback);
+    },
+
+    /**
+     * @param {string} uri
      * @param {string} query
      * @param {boolean} caseSensitive
      * @param {boolean} isRegex
      * @param {function(Array.<WebInspector.ContentProvider.SearchMatch>)} callback
      */
-    searchInFileContent: function(path, query, caseSensitive, isRegex, callback)
+    searchInFileContent: function(uri, query, caseSensitive, isRegex, callback)
     {
-        this._workspaceProvider.searchInFileContent(path, query, caseSensitive, isRegex, callback);
+        this._workspaceProvider.searchInFileContent(uri, query, caseSensitive, isRegex, callback);
     }
 }
 
@@ -214,7 +248,9 @@ WebInspector.Project.prototype = {
 WebInspector.Workspace = function()
 {
     /** @type {Object.<string, WebInspector.ContentProvider>} */
-    this._temporaryContentProviders = new Map();
+    this._temporaryContentProviders = {};
+    /** @type {Object.<string, WebInspector.UISourceCode>} */
+    this._temporaryUISourceCodes = {};
 }
 
 WebInspector.Workspace.Events = {
@@ -231,6 +267,15 @@ WebInspector.Workspace.prototype = {
     uiSourceCodeForURL: function(url)
     {
         return this._project.uiSourceCodeForURL(url);
+    },
+
+    /**
+     * @param {string} uri
+     * @return {?WebInspector.UISourceCode}
+     */
+    uiSourceCodeForURI: function(uri)
+    {
+        return this._temporaryUISourceCodes[uri] || this._project.uiSourceCodeForURI(uri);
     },
 
     /**
@@ -260,18 +305,18 @@ WebInspector.Workspace.prototype = {
     },
 
     /**
-     * @param {string} path
+     * @param {string} uri
+     * @param {string} url
      * @param {WebInspector.ContentProvider} contentProvider
      * @param {boolean} isEditable
      * @param {boolean=} isContentScript
-     * @param {boolean=} isSnippet
      */
-    addTemporaryUISourceCode: function(path, contentProvider, isEditable, isContentScript, isSnippet)
+    addTemporaryUISourceCode: function(uri, url, contentProvider, isEditable, isContentScript)
     {
-        var uiSourceCode = new WebInspector.UISourceCode(this, path, contentProvider.contentType(), isEditable);
-        this._temporaryContentProviders.put(uiSourceCode, contentProvider);
+        var uiSourceCode = new WebInspector.UISourceCode(this, uri, url, contentProvider.contentType(), isEditable);
+        this._temporaryContentProviders[uri] = contentProvider;
+        this._temporaryUISourceCodes[uri] = uiSourceCode;
         uiSourceCode.isContentScript = isContentScript;
-        uiSourceCode.isSnippet = isSnippet;
         uiSourceCode.isTemporary = true;
         this.dispatchEventToListeners(WebInspector.UISourceCodeProvider.Events.TemporaryUISourceCodeAdded, uiSourceCode);
         return uiSourceCode;
@@ -282,7 +327,8 @@ WebInspector.Workspace.prototype = {
      */
     removeTemporaryUISourceCode: function(uiSourceCode)
     {
-        this._temporaryContentProviders.remove(uiSourceCode.url);
+        delete this._temporaryContentProviders[uiSourceCode.uri()];
+        delete this._temporaryUISourceCodes[uiSourceCode.uri()];
         this.dispatchEventToListeners(WebInspector.UISourceCodeProvider.Events.TemporaryUISourceCodeRemoved, uiSourceCode);
     },
 
@@ -292,11 +338,24 @@ WebInspector.Workspace.prototype = {
      */
     requestFileContent: function(uiSourceCode, callback)
     {
-        if (this._temporaryContentProviders.get(uiSourceCode)) {
-            this._temporaryContentProviders.get(uiSourceCode).requestContent(callback);
+        var temporaryContentProvider = this._temporaryContentProviders[uiSourceCode.uri()];
+        if (temporaryContentProvider) {
+            temporaryContentProvider.requestContent(callback);
             return;
         }
-        this._project.requestFileContent(uiSourceCode.url, callback);
+        this._project.requestFileContent(uiSourceCode.uri(), callback);
+    },
+
+    /**
+     * @param {WebInspector.UISourceCode} uiSourceCode
+     * @param {string} newContent
+     * @param {function(?string)} callback
+     */
+    setFileContent: function(uiSourceCode, newContent, callback)
+    {
+        if (this._temporaryContentProviders[uiSourceCode.uri()])
+            return;
+        this._project.setFileContent(uiSourceCode.url, newContent, callback);
     },
 
     /**
@@ -308,16 +367,18 @@ WebInspector.Workspace.prototype = {
      */
     searchInFileContent: function(uiSourceCode, query, caseSensitive, isRegex, callback)
     {
-        if (this._temporaryContentProviders.get(uiSourceCode)) {
-            this._temporaryContentProviders.get(uiSourceCode).searchInContent(query, caseSensitive, isRegex, callback);
+        var temporaryContentProvider = this._temporaryContentProviders[uiSourceCode.uri()];
+        if (temporaryContentProvider) {
+            temporaryContentProvider.searchInContent(query, caseSensitive, isRegex, callback);
             return;
         }
-        this._project.searchInFileContent(uiSourceCode.url, query, caseSensitive, isRegex, callback);
+        this._project.searchInFileContent(uiSourceCode.uri(), query, caseSensitive, isRegex, callback);
     },
 
     reset: function()
     {
-        this._temporaryContentProviders = new Map();
+        this._temporaryContentProviders = {};
+        this._temporaryUISourceCodes = {};
     },
 
     __proto__: WebInspector.Object.prototype

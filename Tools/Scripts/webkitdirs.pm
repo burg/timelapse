@@ -222,7 +222,7 @@ sub determineBaseProductDir
 
         undef $baseProductDir unless $baseProductDir =~ /^\//;
     } elsif (isChromium()) {
-        if (isLinux() || isChromiumAndroid() || isChromiumMacMake()) {
+        if (isLinux() || isChromiumAndroid() || isChromiumMacMake() || isChromiumNinja()) {
             $baseProductDir = "$sourceDir/out";
         } elsif (isDarwin()) {
             $baseProductDir = "$sourceDir/Source/WebKit/chromium/xcodebuild";
@@ -723,7 +723,11 @@ sub builtDylibPathForName
     }
     if (isQt()) {
         my $isSearchingForWebCore = $libraryName =~ "WebCore";
-        $libraryName = "Qt5WebKitWidgets";
+        if (isDarwin()) {
+            $libraryName = "QtWebKitWidgets";
+        } else {
+            $libraryName = "Qt5WebKitWidgets";
+        }
         my $result;
         if (isDarwin() and -d "$configurationProductDir/lib/$libraryName.framework") {
             $result = "$configurationProductDir/lib/$libraryName.framework/$libraryName";
@@ -1196,7 +1200,11 @@ sub determineIsChromiumNinja()
 {
     return if defined($isChromiumNinja);
 
-    my $config = configuration();
+    # This function can be called from baseProductDir(), which in turn is
+    # called by configuration(). So calling configuration() here leads to
+    # infinite recursion. Gyp writes both Debug and Release at the same time
+    # by default, so just check the timestamp on the Release build.ninja file.
+    my $config = "Release";
 
     my $hasUpToDateNinjabuild = 0;
     if (-e "out/$config/build.ninja") {
@@ -2395,6 +2403,11 @@ sub buildQMakeProjects
     my $maybeNeedsCleanBuild = 0;
     my $needsIncrementalBuild = 0;
 
+    # Full incremental build (run qmake) needed on buildbots and EWS bots always.
+    if (grep(/CONFIG\+=buildbot/,@buildParams)) {
+        $needsIncrementalBuild = 1;
+    }
+
     if ($svnRevision ne $previousSvnRevision) {
         print "Last built revision was " . $previousSvnRevision .
             ", now at revision $svnRevision. Full incremental build needed.\n";
@@ -2586,7 +2599,7 @@ sub buildChromium($@)
     } elsif (isCygwin() || isWindows()) {
         # Windows build - builds the root visual studio solution.
         $result = buildChromiumVisualStudioProject("Source/WebKit/chromium/All.sln", $clean);
-    } elsif (isChromiumNinja() && !isChromiumAndroid()) {
+    } elsif (isChromiumNinja()) {
         $result = buildChromiumNinja("all", $clean, @options);
     } elsif (isLinux() || isChromiumAndroid() || isChromiumMacMake()) {
         # Linux build - build using make.

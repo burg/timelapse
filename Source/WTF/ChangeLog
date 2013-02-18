@@ -1,3 +1,397 @@
+2013-01-03  Filip Pizlo  <fpizlo@apple.com>
+
+        CallLinkStatus should be aware of closure calls, and the DFG bytecode parser should use that as its sole internal notion of how to optimize calls
+        https://bugs.webkit.org/show_bug.cgi?id=106027
+
+        Reviewed by Mark Hahnenberg.
+        
+        I got tired of the various idioms for printing a list of things with comma in between, so I wrote a helper.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/CommaPrinter.h: Added.
+        (WTF):
+        (CommaPrinter):
+        (WTF::CommaPrinter::CommaPrinter):
+        (WTF::CommaPrinter::dump):
+
+2013-01-02  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [MinGW-w64] Centralize workaround for pow() implementation
+        https://bugs.webkit.org/show_bug.cgi?id=105925
+
+        Reviewed by Sam Weinig.
+
+        As suggested by Sam, move the MinGW-w64 workaround into MathExtras.h
+        away from the JSC usage.
+
+        * wtf/MathExtras.h:
+        (wtf_pow):
+
+2013-01-02  Adam Barth  <abarth@webkit.org>
+
+        WTF.gypi lists Platform.h twice
+        https://bugs.webkit.org/show_bug.cgi?id=105731
+
+        Reviewed by Tony Chang.
+
+        Once ought to be enough for everybody.
+
+        * WTF.gypi:
+
+2012-12-31  Gavin Barraclough  <barraclough@apple.com>
+
+        Objective-C API for JavaScriptCore
+        https://bugs.webkit.org/show_bug.cgi?id=105889
+
+        Reviewed by Filip Pizlo.
+
+        * wtf/WTFThreadData.cpp:
+        (WTF::WTFThreadData::WTFThreadData):
+        * wtf/WTFThreadData.h:
+        (WTFThreadData):
+            - Added m_apiData - provide convenient storage for use by the API.
+
+2012-12-28  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Web Inspector: Native Memory Instrumentation: instrument not instrumented members.
+        https://bugs.webkit.org/show_bug.cgi?id=105830
+
+        Reviewed by Vsevolod Vlasov.
+
+        In some cases we don't want to visit some class members.
+        As example we decided to skip pointers to interface classes such as GraphicLayerClient.
+        We could use addWeakPointer for them but it can't be used for nonpointer members.
+        In the offline discussion we came to a conclusion that we need a new instrumentation
+        method ignoreMember, which will be used for all the members which we won't like to visit/instrument.
+
+        DriveBy: Also I instrumented not yet instrumented members.
+
+        * wtf/MemoryInstrumentation.h:
+        (MemoryClassInfo):
+        (WTF::MemoryClassInfo::ignoreMember):
+
+2012-12-26  Gyuyoung Kim  <gyuyoung.kim@samsung.com>
+
+        Fix build warning in OSAllocatorPosix.cpp
+        https://bugs.webkit.org/show_bug.cgi?id=105761
+
+        Reviewed by Kentaro Hara.
+
+        * wtf/OSAllocatorPosix.cpp:
+        (WTF::OSAllocator::reserveUncommitted): Fix unused param warnings.
+
+2012-12-24  Yury Semikhatsky  <yurys@chromium.org>
+
+        Memory instrumentation: provide a way to mark a node as a root
+        https://bugs.webkit.org/show_bug.cgi?id=105737
+
+        Reviewed by Alexander Pavlov.
+
+        Objects added using MemoryInstrumentation::addRootObject will be marked as roots.
+
+        * wtf/MemoryInstrumentation.cpp:
+        (WTF::MemoryInstrumentation::WrapperBase::process):
+        (WTF):
+        (WTF::MemoryInstrumentation::WrapperBase::processPointer):
+        (WTF::MemoryInstrumentation::WrapperBase::processRootObjectRef):
+        * wtf/MemoryInstrumentation.h:
+        (WrapperBase):
+        * wtf/MemoryObjectInfo.h: added root marker which can be used by the heap graph builder.
+        (WTF::MemoryObjectInfo::MemoryObjectInfo):
+        (WTF::MemoryObjectInfo::isRoot):
+        (WTF::MemoryObjectInfo::markAsRoot):
+        (MemoryObjectInfo):
+
+2012-12-24  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Web Inspector: Native Memory Instrumentation: propagate member type as edge type to the serialized heap graph.
+        https://bugs.webkit.org/show_bug.cgi?id=105725
+
+        Reviewed by Yury Semikhatsky.
+
+        MemoryOwningType was renamed to MemberType.
+        Source argument were removed from reportEdge, reportLeaf and other edge related methods because it is not necessary.
+        MemberType argument was propagated from MemoryInstrumentation down to HeapGraphSerializer.
+
+        The changes covered by tests in TestWebKitAPI.
+
+        * wtf/MemoryInstrumentation.cpp:
+        (WTF::MemoryInstrumentation::reportEdge):
+        (WTF::MemoryInstrumentation::reportLinkToBuffer):
+        (WTF::MemoryClassInfo::addPrivateBuffer):
+        * wtf/MemoryInstrumentation.h:
+        (MemoryInstrumentationClient):
+        (MemoryInstrumentation):
+        (WTF::MemoryInstrumentation::addRawBuffer):
+        (WTF::MemoryInstrumentation::MemberTypeTraits::addObject):
+        (WTF::MemoryInstrumentation::addObjectImpl):
+
+2012-12-21  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Unreviewed. Another try to fix Apple Win Release build.
+
+        * wtf/FastMalloc.cpp:
+        (WTF::ClassIndex):
+
+2012-12-21  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Unreviewed compilation fix for Apple Win Release after r138398.
+
+        * wtf/FastMalloc.cpp:
+        (WTF::ClassIndex):
+
+2012-12-21  Oliver Hunt  <oliver@apple.com>
+
+        Further harden FastMalloc
+        https://bugs.webkit.org/show_bug.cgi?id=105656
+
+        Reviewed by Gavin Barraclough.
+
+        This increases the degree to which we harden the FastMalloc
+        linked lists.  We now also mask the previous and next pointers
+        in the doubly linked list implementation.  I've also made
+        the masking itself somewhat more complex without a measurable
+        cost.  We still use ASLR to provide some general entropy, but
+        we blind the pointers against each nodes 'this' pointer.
+
+        * wtf/FastMalloc.cpp:
+        (WTF::ClassIndex):
+        (WTF::SLL_Next):
+        (WTF::SLL_SetNext):
+        (WTF::Span::next):
+        (WTF::Span::prev):
+        (WTF::Span::setNext):
+        (WTF::Span::setPrev):
+        (Span):
+          As Span now has to do masking on the next and previous pointers,
+          I've updated the code to use accessors instead.
+        (WTF::DLL_Init):
+        (WTF::DLL_Remove):
+        (WTF::DLL_IsEmpty):
+        (WTF::DLL_Length):
+        (WTF::DLL_Prepend):
+        (WTF::TCMalloc_Central_FreeList::enumerateFreeObjects):
+        (WTF::TCMalloc_PageHeap::scavenge):
+        (WTF::TCMalloc_PageHeap::New):
+        (WTF::TCMalloc_PageHeap::AllocLarge):
+        (WTF::TCMalloc_PageHeap::ReturnedBytes):
+        (WTF::TCMalloc_PageHeap::Check):
+        (WTF::TCMalloc_PageHeap::CheckList):
+        (WTF::TCMalloc_PageHeap::ReleaseFreeList):
+        (WTF::TCMalloc_Central_FreeList::FetchFromSpans):
+
+2012-12-20  Ryuan Choi  <ryuan.choi@samsung.com>
+
+        [EFL] Build break with latest EFL libraries.
+        https://bugs.webkit.org/show_bug.cgi?id=104827
+
+        Reviewed by Laszlo Gombos.
+
+        The eo EFL package is introduced and evas and ecore use it since 1.8.
+        While introducing Eo, EFL changed several structures of Evas and Ecore
+        from own specific class to Eo.
+
+        So, this patch adds FindEo and changes declaration of Evas, Evas_Object,
+        Ecore_Timer to build with latest EFL libraries.
+
+        * wtf/OwnPtrCommon.h: Modified declaration of Evas_Object and Ecore_Timer.
+        * wtf/PlatformEfl.cmake: Includes eo EFL library.
+        * wtf/efl/RefPtrEfl.h: Modified declaration of Evas_Object.
+
+2012-12-20  Oliver Hunt  <oliver@apple.com>
+
+        Harden pointers in FastMalloc's singly linked list implementation
+        https://bugs.webkit.org/show_bug.cgi?id=105571
+
+        Reviewed by Gavin Barraclough.
+
+        Add simple xor based hardening of the next pointer in the
+        fast malloc singly linked list implementation.  We rely on
+        ASLR to introduce the address randomness we want for the mask.
+        Happily this produces a very low cost random value to use.
+
+        * wtf/FastMalloc.cpp:
+        (WTF):
+        (WTF::SLL_Next):
+        (WTF::SLL_SetNext):
+
+2012-12-19  Oliver Hunt  <oliver@apple.com>
+
+        StringImpl isolatedCopy unnecessarily copies text-segment character data
+        https://bugs.webkit.org/show_bug.cgi?id=105376
+
+        Reviewed by Anders Carlsson.
+
+        This patch adds a new (private) helper to StringImpl that tests whether the StringImpl
+        is backed by an ASCII literal.  This allows isolatedCopy() to safely use the createFromLiteral
+        constructor rather than making an unnecessary copy.
+
+        * wtf/text/StringImpl.h:
+        (StringImpl):
+        (WTF::StringImpl::isASCIILiteral):
+        (WTF::StringImpl::isolatedCopy):
+
+2012-12-19  Oliver Hunt  <oliver@apple.com>
+
+        WTF String from ASCIILiteral fails to correctly handle empty strings.
+        https://bugs.webkit.org/show_bug.cgi?id=105453
+
+        Reviewed by Anders Carlsson.
+
+        When we have an zero length literal we should return the empty StringImpl.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::createFromLiteral):
+
+2012-12-18  Yury Semikhatsky  <yurys@chromium.org>
+
+        Web Inspector: show cached images under MemoryCache -> Images section
+        https://bugs.webkit.org/show_bug.cgi?id=105261
+
+        Reviewed by Pavel Feldman.
+
+        Use first provided name and class name. If one of the ancestors tries to overwrite
+        it just ignore the call.
+
+        * wtf/MemoryObjectInfo.h:
+        (WTF::MemoryObjectInfo::setClassName):
+        (WTF::MemoryObjectInfo::setName):
+
+2012-12-18  Uli Schlachter  <psychon@znc.in>
+
+        Implement uncommitted memory for Linux.
+        https://bugs.webkit.org/show_bug.cgi?id=65766
+
+        Reviewed by Simon Hausmann.
+
+        The old approach used MAP_NORESERVE to allocate address space without
+        committing it. However, that flag gets ignored if
+        /proc/sys/vm/overcommit_memory is set to 2. The new approach uses a
+        mapping with PROT_NONE. This works because mappings which aren't even
+        readable don't get accounted as committed on Linux.
+
+        * wtf/OSAllocatorPosix.cpp:
+        (WTF::OSAllocator::reserveUncommitted):
+        (WTF::OSAllocator::reserveAndCommit):
+        (WTF::OSAllocator::commit):
+        (WTF::OSAllocator::decommit):
+
+2012-12-17  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Web Inspector: Native Memory Instrumentation: MemoryInstrumentation doesn't detect reportMemoryUsage method defined in a base class.
+        https://bugs.webkit.org/show_bug.cgi?id=105026
+
+        Reviewed by Yury Semikhatsky.
+
+        Old SFINAE test was replaced with new one based on this article:
+        http://stackoverflow.com/questions/1966362/sfinae-to-check-for-inherited-member-functions
+
+        * wtf/MemoryInstrumentation.h:
+        (MemoryInstrumentation):
+        (yes):
+        (IsInstrumented):
+        (no):
+        (WTF::MemoryInstrumentation::IsInstrumented::BaseMixin::reportMemoryUsage):
+        (WTF::MemoryInstrumentation::selectInstrumentationMethod):
+        (InstrumentationSelector):
+        (WTF):
+        (WTF::::reportObjectMemoryUsage):
+
+2012-12-17  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Unreviewed, rolling out r137892.
+        http://trac.webkit.org/changeset/137892
+        https://bugs.webkit.org/show_bug.cgi?id=105026
+
+        it broke compilation on windows
+
+        * wtf/MemoryInstrumentation.h:
+        (WTF::MemoryInstrumentation::selectInstrumentationMethod):
+        (MemoryInstrumentation):
+        (WTF::MemoryInstrumentation::reportObjectMemoryUsage):
+        (WTF::reportMemoryUsage):
+
+2012-12-14  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Web Inspector: Native Memory Instrumentation: MemoryInstrumentation doesn't detect reportMemoryUsage method defined in a base class.
+        https://bugs.webkit.org/show_bug.cgi?id=105026
+
+        Reviewed by Yury Semikhatsky.
+
+        Old SFINAE test was replaced with new one based on this article:
+        http://stackoverflow.com/questions/1966362/sfinae-to-check-for-inherited-member-functions
+
+        * wtf/MemoryInstrumentation.h:
+        (MemoryInstrumentation):
+        (yes):
+        (IsInstrumented):
+        (no):
+        (WTF::MemoryInstrumentation::IsInstrumented::BaseMixin::reportMemoryUsage):
+        (WTF::MemoryInstrumentation::selectInstrumentationMethod):
+        (InstrumentationSelector):
+        (WTF):
+        (WTF::::reportObjectMemoryUsage):
+
+2012-12-14  Yury Semikhatsky  <yurys@chromium.org>
+
+        Web Inspector: add data grid for exploring native heap graph
+        https://bugs.webkit.org/show_bug.cgi?id=105012
+
+        Reviewed by Pavel Feldman.
+
+        Do not report edges with null target.
+
+        * wtf/MemoryInstrumentation.h:
+        (WTF::MemoryInstrumentation::addObjectImpl):
+
+2012-12-13  Filip Pizlo  <fpizlo@apple.com>
+
+        Attempt to rationalize and simplify WTF::binarySearch
+        https://bugs.webkit.org/show_bug.cgi?id=104890
+
+        Reviewed by Maciej Stachowiak.
+
+        Binary search now has three modes:
+
+        The default: assert that the key was found, but return an adjacent element if it
+        wasn't found, if asserts are turned off.
+        
+        tryBinarySearch: return 0 if the key wasn't found.
+        
+        approximateBinarySearch: if the key is not found, return an adjacent element (either
+        the left or right; no guarantee which).
+        
+        This also reduces the number of variants of binarySearch. The functor variant is now
+        gone because binarySearch now always uses a functor for the key extractor. The
+        generic variant is now gone because binarySearch always expects an array type that
+        can do operator[].
+
+        * wtf/StdLibExtras.h:
+        (WTF::binarySearchImpl):
+        (WTF::binarySearch):
+        (WTF::tryBinarySearch):
+        (WTF::approximateBinarySearch):
+
+2012-12-13  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Web Inspector: Native Memory Instrumentation: do not validate pointers to objects in RenderArena agains tcmalloc data.
+        https://bugs.webkit.org/show_bug.cgi?id=104903
+
+        Reviewed by Yury Semikhatsky.
+
+        This is a simplest approach to do that with zero performance overhead.
+
+        * wtf/MemoryInstrumentation.cpp:
+        (WTF::MemoryClassInfo::setCustomAllocation):
+        (WTF):
+        * wtf/MemoryInstrumentation.h:
+        (MemoryClassInfo):
+        * wtf/MemoryObjectInfo.h:
+        (WTF::MemoryObjectInfo::MemoryObjectInfo):
+        (WTF::MemoryObjectInfo::customAllocation):
+        (WTF::MemoryObjectInfo::setCustomAllocations):
+        (MemoryObjectInfo):
+
 2012-12-12  Ilya Tikhonovsky  <loislo@chromium.org>
 
         Web Inspector: Native Memory Instrumentation: remove fake root MemoryObjectInfo.

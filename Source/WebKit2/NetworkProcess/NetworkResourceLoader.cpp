@@ -28,12 +28,12 @@
 
 #if ENABLE(NETWORK_PROCESS)
 
-#include "BlockingResponseMap.h"
 #include "DataReference.h"
 #include "Logging.h"
 #include "NetworkConnectionToWebProcess.h"
 #include "NetworkProcess.h"
 #include "NetworkResourceLoadParameters.h"
+#include "PlatformCertificateInfo.h"
 #include "RemoteNetworkingContext.h"
 #include "SharedMemory.h"
 #include "WebCoreArgumentCoders.h"
@@ -144,14 +144,15 @@ void NetworkResourceLoader::stop()
 void NetworkResourceLoader::connectionToWebProcessDidClose(NetworkConnectionToWebProcess* connection)
 {
     ASSERT_ARG(connection, connection == m_connection.get());
-    m_connection->unregisterObserver(this);
-    m_connection = 0;
+    // FIXME (NetworkProcess): Cancel the load. The request may be long-living, so we don't want it to linger around after all clients are gone.
 }
 
 void NetworkResourceLoader::didReceiveResponse(ResourceHandle*, const ResourceResponse& response)
 {
     // FIXME (NetworkProcess): Cache the response.
-    send(Messages::WebResourceLoader::DidReceiveResponse(response));
+    if (FormData* formData = m_requestParameters.request().httpBody())
+        formData->removeGeneratedFilesIfNeeded();
+    send(Messages::WebResourceLoader::DidReceiveResponseWithCertificateInfo(response, PlatformCertificateInfo(response)));
 }
 
 void NetworkResourceLoader::didReceiveData(ResourceHandle*, const char* data, int length, int encodedDataLength)
@@ -175,14 +176,10 @@ void NetworkResourceLoader::didFail(ResourceHandle*, const ResourceError& error)
 {
     // FIXME (NetworkProcess): For the memory cache we'll need to update the finished status of the cached resource here.
     // Such bookkeeping will need to be thread safe, as this callback is happening on a background thread.
+    if (FormData* formData = m_requestParameters.request().httpBody())
+        formData->removeGeneratedFilesIfNeeded();
     send(Messages::WebResourceLoader::DidFailResourceLoad(error));
     scheduleStopOnMainThread();
-}
-
-static BlockingResponseMap<ResourceRequest*>& willSendRequestResponseMap()
-{
-    AtomicallyInitializedStatic(BlockingResponseMap<ResourceRequest*>&, responseMap = *new BlockingResponseMap<ResourceRequest*>);
-    return responseMap;
 }
 
 static uint64_t generateWillSendRequestID()
@@ -193,22 +190,25 @@ static uint64_t generateWillSendRequestID()
 
 void NetworkResourceLoader::willSendRequest(ResourceHandle*, ResourceRequest& request, const ResourceResponse& redirectResponse)
 {
-    // We only expect to get the willSendRequest callback from ResourceHandle as the result of a redirect
+    // We only expect to get the willSendRequest callback from ResourceHandle as the result of a redirect.
     ASSERT(!redirectResponse.isNull());
 
     uint64_t requestID = generateWillSendRequestID();
 
-    send(Messages::WebResourceLoader::WillSendRequest(requestID, request, redirectResponse));
-    
-    OwnPtr<ResourceRequest> newRequest = willSendRequestResponseMap().waitForResponse(requestID);
-    request = *newRequest;
+    if (!send(Messages::WebResourceLoader::WillSendRequest(requestID, request, redirectResponse))) {
+        request = ResourceRequest();
+        return;
+    }
+
+    OwnPtr<ResourceRequest> newRequest = m_connection->willSendRequestResponseMap().waitForResponse(requestID);
+    request = newRequest ? *newRequest : ResourceRequest();
 
     RunLoop::main()->dispatch(WTF::bind(&NetworkResourceLoadScheduler::receivedRedirect, &NetworkProcess::shared().networkResourceLoadScheduler(), m_identifier, request.url()));
 }
 
 void NetworkResourceLoader::willSendRequestHandled(uint64_t requestID, const WebCore::ResourceRequest& newRequest)
 {
-    willSendRequestResponseMap().didReceiveResponse(requestID, adoptPtr(new ResourceRequest(newRequest)));
+    m_connection->willSendRequestResponseMap().didReceiveResponse(requestID, adoptPtr(new ResourceRequest(newRequest)));
 }
 
 // FIXME (NetworkProcess): Many of the following ResourceHandleClient methods definitely need implementations. A few will not.
@@ -302,12 +302,6 @@ void NetworkResourceLoader::receivedAuthenticationCancellation(const Authenticat
 }
 
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)
-static BlockingBoolResponseMap& canAuthenticateAgainstProtectionSpaceResponseMap()
-{
-    AtomicallyInitializedStatic(BlockingBoolResponseMap&, responseMap = *new BlockingBoolResponseMap);
-    return responseMap;
-}
-
 static uint64_t generateCanAuthenticateAgainstProtectionSpaceID()
 {
     static int64_t uniqueCanAuthenticateAgainstProtectionSpaceID;
@@ -318,18 +312,19 @@ bool NetworkResourceLoader::canAuthenticateAgainstProtectionSpace(ResourceHandle
 {
     uint64_t requestID = generateCanAuthenticateAgainstProtectionSpaceID();
 
-    send(Messages::WebResourceLoader::CanAuthenticateAgainstProtectionSpace(requestID, protectionSpace));
+    if (!send(Messages::WebResourceLoader::CanAuthenticateAgainstProtectionSpace(requestID, protectionSpace)))
+        return false;
 
-    return canAuthenticateAgainstProtectionSpaceResponseMap().waitForResponse(requestID);
+    return m_connection->canAuthenticateAgainstProtectionSpaceResponseMap().waitForResponse(requestID);
 }
 
 void NetworkResourceLoader::canAuthenticateAgainstProtectionSpaceHandled(uint64_t requestID, bool canAuthenticate)
 {
-    canAuthenticateAgainstProtectionSpaceResponseMap().didReceiveResponse(requestID, canAuthenticate);
+    m_connection->canAuthenticateAgainstProtectionSpaceResponseMap().didReceiveResponse(requestID, canAuthenticate);
 }
 #endif
 
-#if HAVE(NETWORK_CFDATA_ARRAY_CALLBACK)
+#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
 bool NetworkResourceLoader::supportsDataArray()
 {
     notImplemented();

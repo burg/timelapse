@@ -67,8 +67,7 @@ modules = [
             "ContentProvider.js",
             "ContentProviders.js",
             "CookieParser.js",
-            "CSSCompletions.js",
-            "CSSKeywordCompletions.js",
+            "CSSMetadata.js",
             "CSSStyleModel.js",
             "BreakpointManager.js",
             "Database.js",
@@ -98,10 +97,13 @@ modules = [
             "TimelineManager.js",
             "RemoteObject.js",
             "Resource.js",
+            "DefaultScriptMapping.js",
             "ResourceScriptMapping.js",
+            "LiveEditSupport.js",
             "ResourceTreeModel.js",
             "ResourceType.js",
             "ResourceUtils.js",
+            "SourceMap.js",
             "NetworkManager.js",
             "NetworkRequest.js",
             "UISourceCode.js",
@@ -331,6 +333,8 @@ modules = [
             "HeapSnapshotView.js",
             "HeapSnapshotWorker.js",
             "HeapSnapshotWorkerDispatcher.js",
+            "JSHeapSnapshot.js",
+            "NativeHeapGraph.js",
             "NativeMemorySnapshotView.js",
             "ProfileDataGridTree.js",
             "ProfilesPanel.js",
@@ -431,4 +435,4 @@ if not process_recursively:
     os.system("rm " + inspector_path + "/" + "InjectedScriptCanvasModuleSourceTmp.js")
 
 shutil.rmtree(modules_dir)
-os.system("rm " + protocol_externs_path)
+#os.system("rm " + protocol_externs_path)

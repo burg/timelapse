@@ -153,6 +153,7 @@ private:
 ScriptDebugServer::ScriptDebugServer()
     : m_pauseOnExceptionsState(DontPauseOnExceptions)
     , m_breakpointsActivated(true)
+    , m_runningNestedMessageLoop(false)
 {
 }
 
@@ -313,6 +314,12 @@ bool ScriptDebugServer::canSetScriptSource()
 
 bool ScriptDebugServer::setScriptSource(const String& sourceID, const String& newContent, bool preview, String* error, ScriptValue* newCallFrames, ScriptObject* result)
 {
+    class EnableLiveEditScope {
+    public:
+        EnableLiveEditScope() { v8::Debug::SetLiveEditEnabled(true); }
+        ~EnableLiveEditScope() { v8::Debug::SetLiveEditEnabled(false); }
+    };
+
     ensureDebuggerScriptCompiled();
     v8::HandleScope scope;
 
@@ -322,16 +329,20 @@ bool ScriptDebugServer::setScriptSource(const String& sourceID, const String& ne
 
     v8::Handle<v8::Value> argv[] = { deprecatedV8String(sourceID), deprecatedV8String(newContent), v8Boolean(preview) };
 
-    v8::TryCatch tryCatch;
-    tryCatch.SetVerbose(false);
-    v8::Local<v8::Value> v8result = callDebuggerMethod("liveEditScriptSource", 3, argv);
-    if (tryCatch.HasCaught()) {
-        v8::Local<v8::Message> message = tryCatch.Message();
-        if (!message.IsEmpty())
-            *error = toWebCoreStringWithUndefinedOrNullCheck(message->Get());
-        else
-            *error = "Unknown error.";
-        return false;
+    v8::Local<v8::Value> v8result;
+    {
+        EnableLiveEditScope enableLiveEditScope;
+        v8::TryCatch tryCatch;
+        tryCatch.SetVerbose(false);
+        v8result = callDebuggerMethod("liveEditScriptSource", 3, argv);
+        if (tryCatch.HasCaught()) {
+            v8::Local<v8::Message> message = tryCatch.Message();
+            if (!message.IsEmpty())
+                *error = toWebCoreStringWithUndefinedOrNullCheck(message->Get());
+            else
+                *error = "Unknown error.";
+            return false;
+        }
     }
     ASSERT(!v8result.IsEmpty());
     if (v8result->IsObject())
@@ -413,7 +424,9 @@ void ScriptDebugServer::breakProgram(v8::Handle<v8::Object> executionState, v8::
     ScriptState* currentCallFrameState = ScriptState::forContext(m_pausedContext);
     listener->didPause(currentCallFrameState, currentCallFrame(), ScriptValue(exception));
 
+    m_runningNestedMessageLoop = true;
     runMessageLoopOnPause(m_pausedContext);
+    m_runningNestedMessageLoop = false;
 }
 
 void ScriptDebugServer::v8DebugEventCallback(const v8::Debug::EventDetails& eventDetails)

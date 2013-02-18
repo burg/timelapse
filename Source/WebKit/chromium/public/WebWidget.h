@@ -39,13 +39,13 @@
 #include "platform/WebRect.h"
 #include "platform/WebSize.h"
 
-#define WEBKIT_HAS_NEW_FULLSCREEN_API 1
 #define WEBWIDGET_HAS_SETCOMPOSITORSURFACEREADY 1
 #define WEBWIDGET_HAS_PAINT_OPTIONS 1
 
 namespace WebKit {
 
 class WebInputEvent;
+class WebLayerTreeView;
 class WebMouseEvent;
 class WebString;
 struct WebPoint;
@@ -133,6 +133,10 @@ public:
     // Indicates that the compositing surface associated with this WebWidget is
     // ready to use.
     virtual void setCompositorSurfaceReady() = 0;
+
+    // Returns this widget's WebLayerTreeView if compositing is active, nil
+    // otherwise.
+    virtual WebLayerTreeView* layerTreeView() { return 0; }
 
     // Temporary method for the embedder to notify the WebWidget that the widget
     // has taken damage, e.g. due to a window expose. This method will be

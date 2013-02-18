@@ -150,11 +150,11 @@ def get_test_results(args, host=None):
         oc.restore_output()
 
     all_results = []
-    if run_details.result_summary:
-        all_results.extend(run_details.result_summary.all_results)
+    if run_details.initial_results:
+        all_results.extend(run_details.initial_results.all_results)
 
-    if run_details.retry_summary:
-        all_results.extend(run_details.retry_summary.all_results)
+    if run_details.retry_results:
+        all_results.extend(run_details.retry_results.all_results)
     return all_results
 
 
@@ -169,96 +169,7 @@ class StreamTestingMixin(object):
         self.assertTrue(stream.getvalue())
 
 
-class LintTest(unittest.TestCase, StreamTestingMixin):
-    def test_all_configurations(self):
-
-        class FakePort(object):
-            def __init__(self, host, name, path):
-                self.host = host
-                self.name = name
-                self.path = path
-
-            def test_configuration(self):
-                return None
-
-            def expectations_dict(self):
-                self.host.ports_parsed.append(self.name)
-                return {self.path: ''}
-
-            def skipped_layout_tests(self, tests):
-                return set([])
-
-            def all_test_configurations(self):
-                return []
-
-            def configuration_specifier_macros(self):
-                return []
-
-            def path_from_webkit_base(self):
-                return ''
-
-            def get_option(self, name, val):
-                return val
-
-        class FakeFactory(object):
-            def __init__(self, host, ports):
-                self.host = host
-                self.ports = {}
-                for port in ports:
-                    self.ports[port.name] = port
-
-            def get(self, port_name, *args, **kwargs):
-                return self.ports[port_name]
-
-            def all_port_names(self):
-                return sorted(self.ports.keys())
-
-        host = MockHost()
-        host.ports_parsed = []
-        host.port_factory = FakeFactory(host, (FakePort(host, 'a', 'path-to-a'),
-                                               FakePort(host, 'b', 'path-to-b'),
-                                               FakePort(host, 'b-win', 'path-to-b')))
-
-        logging_stream = StringIO.StringIO()
-        self.assertEqual(run_webkit_tests.lint(host.port_factory.ports['a'], MockOptions(platform=None, debug_rwt_logging=False), logging_stream), 0)
-        self.assertEqual(host.ports_parsed, ['a', 'b', 'b-win'])
-
-        host.ports_parsed = []
-        self.assertEqual(run_webkit_tests.lint(host.port_factory.ports['a'], MockOptions(platform='a', debug_rwt_logging=False), logging_stream), 0)
-        self.assertEqual(host.ports_parsed, ['a'])
-
-    def test_lint_test_files(self):
-        logging_stream = StringIO.StringIO()
-        options, _ = parse_args(['--platform', 'test', '--lint-test-files'])
-        host = MockHost()
-        port_obj = host.port_factory.get(options.platform, options=options)
-        res = run_webkit_tests.lint(port_obj, options, logging_stream)
-        self.assertEqual(res, 0)
-        self.assertTrue('Lint succeeded' in logging_stream.getvalue())
-
-    def test_lint_test_files__errors(self):
-        options, _ = parse_args(['--platform', 'test', '--lint-test-files'])
-        host = MockHost()
-        port_obj = host.port_factory.get(options.platform, options=options)
-        port_obj.expectations_dict = lambda: {'': '-- syntax error'}
-
-        logging_stream = StringIO.StringIO()
-        res = run_webkit_tests.lint(port_obj, options, logging_stream)
-
-        self.assertEqual(res, -1)
-        self.assertTrue('Lint failed' in logging_stream.getvalue())
-
-        # ensure we lint *all* of the files in the cascade.
-        port_obj.expectations_dict = lambda: {'foo': '-- syntax error1', 'bar': '-- syntax error2'}
-        logging_stream = StringIO.StringIO()
-        res = run_webkit_tests.lint(port_obj, options, logging_stream)
-
-        self.assertEqual(res, -1)
-        self.assertTrue('foo:1' in logging_stream.getvalue())
-        self.assertTrue('bar:1' in logging_stream.getvalue())
-
-
-class MainTest(unittest.TestCase, StreamTestingMixin):
+class RunTest(unittest.TestCase, StreamTestingMixin):
     def setUp(self):
         # A real PlatformInfo object is used here instead of a
         # MockPlatformInfo because we need to actually check for
@@ -277,15 +188,15 @@ class MainTest(unittest.TestCase, StreamTestingMixin):
         details = run_webkit_tests.run(port_obj, options, args, logging_stream)
 
         # These numbers will need to be updated whenever we add new tests.
-        self.assertEqual(details.result_summary.total, test.TOTAL_TESTS)
-        self.assertEqual(details.result_summary.expected_skips, test.TOTAL_SKIPS)
-        self.assertEqual(len(details.result_summary.unexpected_results), test.UNEXPECTED_PASSES + test.UNEXPECTED_FAILURES)
+        self.assertEqual(details.initial_results.total, test.TOTAL_TESTS)
+        self.assertEqual(details.initial_results.expected_skips, test.TOTAL_SKIPS)
+        self.assertEqual(len(details.initial_results.unexpected_results_by_name), test.UNEXPECTED_PASSES + test.UNEXPECTED_FAILURES)
         self.assertEqual(details.exit_code, test.UNEXPECTED_FAILURES)
-        self.assertEqual(details.retry_summary.total, test.TOTAL_RETRIES)
+        self.assertEqual(details.retry_results.total, test.TOTAL_RETRIES)
 
         one_line_summary = "%d tests ran as expected, %d didn't:\n" % (
-            details.result_summary.total - details.result_summary.expected_skips - len(details.result_summary.unexpected_results),
-            len(details.result_summary.unexpected_results))
+            details.initial_results.total - details.initial_results.expected_skips - len(details.initial_results.unexpected_results_by_name),
+            len(details.initial_results.unexpected_results_by_name))
         self.assertTrue(one_line_summary in logging_stream.buflist)
 
         # Ensure the results were summarized properly.
@@ -317,7 +228,7 @@ class MainTest(unittest.TestCase, StreamTestingMixin):
             del os.environ["WEBKIT_TEST_MAX_LOCKED_SHARDS"]
         _, regular_output, _ = logging_run(['--debug-rwt-logging', '--child-processes', '2'], shared_port=False)
         try:
-            self.assertTrue(any(['(1 locked)' in line for line in regular_output.buflist]))
+            self.assertTrue(any(['1 locked' in line for line in regular_output.buflist]))
         finally:
             if save_env_webkit_test_max_locked_shards:
                 os.environ["WEBKIT_TEST_MAX_LOCKED_SHARDS"] = save_env_webkit_test_max_locked_shards
@@ -837,16 +748,16 @@ class MainTest(unittest.TestCase, StreamTestingMixin):
 
     def test_no_http_tests(self):
         batch_tests_dryrun = get_tests_run(['LayoutTests/http', 'websocket/'])
-        self.assertTrue(MainTest.has_test_of_type(batch_tests_dryrun, 'http'))
-        self.assertTrue(MainTest.has_test_of_type(batch_tests_dryrun, 'websocket'))
+        self.assertTrue(RunTest.has_test_of_type(batch_tests_dryrun, 'http'))
+        self.assertTrue(RunTest.has_test_of_type(batch_tests_dryrun, 'websocket'))
 
         batch_tests_run_no_http = get_tests_run(['--no-http', 'LayoutTests/http', 'websocket/'])
-        self.assertFalse(MainTest.has_test_of_type(batch_tests_run_no_http, 'http'))
-        self.assertFalse(MainTest.has_test_of_type(batch_tests_run_no_http, 'websocket'))
+        self.assertFalse(RunTest.has_test_of_type(batch_tests_run_no_http, 'http'))
+        self.assertFalse(RunTest.has_test_of_type(batch_tests_run_no_http, 'websocket'))
 
         batch_tests_run_http = get_tests_run(['--http', 'LayoutTests/http', 'websocket/'])
-        self.assertTrue(MainTest.has_test_of_type(batch_tests_run_http, 'http'))
-        self.assertTrue(MainTest.has_test_of_type(batch_tests_run_http, 'websocket'))
+        self.assertTrue(RunTest.has_test_of_type(batch_tests_run_http, 'http'))
+        self.assertTrue(RunTest.has_test_of_type(batch_tests_run_http, 'websocket'))
 
     def test_platform_tests_are_found(self):
         tests_run = get_tests_run(['--platform', 'test-mac-leopard', 'http'])
@@ -1010,3 +921,39 @@ class PortTest(unittest.TestCase):
 
     def disabled_test_mac_lion(self):
         self.assert_mock_port_works('mac-lion')
+
+
+class MainTest(unittest.TestCase):
+    def test_exception_handling(self):
+        orig_run_fn = run_webkit_tests.run
+
+        # unused args pylint: disable=W0613
+        def interrupting_run(port, options, args, stderr):
+            raise KeyboardInterrupt
+
+        def successful_run(port, options, args, stderr):
+
+            class FakeRunDetails(object):
+                exit_code = -1
+
+            return FakeRunDetails()
+
+        def exception_raising_run(port, options, args, stderr):
+            assert False
+
+        stdout = StringIO.StringIO()
+        stderr = StringIO.StringIO()
+        try:
+            run_webkit_tests.run = interrupting_run
+            res = run_webkit_tests.main([], stdout, stderr)
+            self.assertEqual(res, run_webkit_tests.INTERRUPTED_EXIT_STATUS)
+
+            run_webkit_tests.run = successful_run
+            res = run_webkit_tests.main(['--platform', 'test'], stdout, stderr)
+            self.assertEqual(res, -1)
+
+            run_webkit_tests.run = exception_raising_run
+            res = run_webkit_tests.main([], stdout, stderr)
+            self.assertEqual(res, run_webkit_tests.EXCEPTIONAL_EXIT_STATUS)
+        finally:
+            run_webkit_tests.run = orig_run_fn

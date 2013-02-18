@@ -48,7 +48,7 @@ typedef String ErrorString;
 class InspectorInputAgent : public InspectorBaseAgent<InspectorInputAgent>, public InspectorBackendDispatcher::InputCommandHandler {
     WTF_MAKE_NONCOPYABLE(InspectorInputAgent);
 public:
-    static PassOwnPtr<InspectorInputAgent> create(InstrumentingAgents* instrumentingAgents, InspectorState* inspectorState, Page* page)
+    static PassOwnPtr<InspectorInputAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* inspectorState, Page* page)
     {
         return adoptPtr(new InspectorInputAgent(instrumentingAgents, inspectorState, page));
     }
@@ -57,10 +57,10 @@ public:
 
     // Methods called from the frontend for simulating input.
     virtual void dispatchKeyEvent(ErrorString*, const String& type, const int* modifiers, const double* timestamp, const String* text, const String* unmodifiedText, const String* keyIdentifier, const int* windowsVirtualKeyCode, const int* nativeVirtualKeyCode, const int* macCharCode, const bool* autoRepeat, const bool* isKeypad, const bool* isSystemKey);
-    virtual void dispatchMouseEvent(ErrorString*, const String& type, const int* modifiers, const double* timestamp, const String* button, const int* clickCount, int x, int y);
+    virtual void dispatchMouseEvent(ErrorString*, const String& type, int x, int y, const int* modifiers, const double* timestamp, const String* button, const int* clickCount);
 
 private:
-    InspectorInputAgent(InstrumentingAgents*, InspectorState*, Page*);
+    InspectorInputAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
 
     Page* m_page;
 };

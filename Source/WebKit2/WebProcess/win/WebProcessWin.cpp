@@ -39,7 +39,6 @@
 #if USE(CFNETWORK)
 #include <CFNetwork/CFURLCachePriv.h>
 #include <CFNetwork/CFURLProtocolPriv.h>
-#include <WebCore/CookieStorageCFNet.h>
 #include <WebKitSystemInterface/WebKitSystemInterface.h> 
 #include <wtf/RetainPtr.h>
 #endif
@@ -141,7 +140,7 @@ void WebProcess::platformInitializeWebProcess(const WebProcessCreationParameters
     ResourceHandle::setDefaultStorageSession(defaultStorageSession.get());
 #endif
 
-    WebCookieManager::shared().setHTTPCookieAcceptPolicy(parameters.initialHTTPCookieAcceptPolicy);
+    supplement<WebCookieManager>()->setHTTPCookieAcceptPolicy(parameters.initialHTTPCookieAcceptPolicy);
 
     // By using the default storage session that came from the ui process, the web process
     // automatically uses the same the URL Cache as ui process.

@@ -32,6 +32,7 @@
 
 #include "ApplicationCacheHost.h"
 #include "AsyncFileStream.h"
+#include "AuthenticationChallenge.h"
 #include "DocumentLoader.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -205,19 +206,19 @@ FrameLoader* ResourceLoader::frameLoader() const
     return m_frame->loader();
 }
 
-void ResourceLoader::setShouldBufferData(DataBufferingPolicy shouldBufferData)
+void ResourceLoader::setDataBufferingPolicy(DataBufferingPolicy dataBufferingPolicy)
 { 
-    m_options.shouldBufferData = shouldBufferData; 
+    m_options.dataBufferingPolicy = dataBufferingPolicy; 
 
     // Reset any already buffered data
-    if (!shouldBufferData)
+    if (dataBufferingPolicy == DoNotBufferData)
         m_resourceData = 0;
 }
     
 
 void ResourceLoader::addData(const char* data, int length, bool allAtOnce)
 {
-    if (m_options.shouldBufferData == DoNotBufferData)
+    if (m_options.dataBufferingPolicy == DoNotBufferData)
         return;
 
     if (allAtOnce) {
@@ -267,6 +268,9 @@ void ResourceLoader::willSendRequest(ResourceRequest& request, const ResourceRes
 #endif
     }
     m_request = request;
+
+    if (!redirectResponse.isNull() && !m_documentLoader->isCommitted())
+        frameLoader()->client()->dispatchDidReceiveServerRedirectForProvisionalLoad();
 }
 
 void ResourceLoader::didSendData(unsigned long long, unsigned long long)
@@ -312,7 +316,7 @@ void ResourceLoader::didReceiveData(const char* data, int length, long long enco
 
 void ResourceLoader::willStopBufferingData(const char* data, int length)
 {
-    if (m_options.shouldBufferData == DoNotBufferData)
+    if (m_options.dataBufferingPolicy == DoNotBufferData)
         return;
 
     ASSERT(!m_resourceData);
@@ -512,8 +516,8 @@ void ResourceLoader::didReceiveAuthenticationChallenge(const AuthenticationChall
     // Only these platforms provide a way to continue without credentials.
     // If we can't continue with credentials, we need to cancel the load altogether.
 #if PLATFORM(MAC) || USE(CFNETWORK) || USE(CURL) || PLATFORM(GTK) || PLATFORM(EFL)
-    handle()->receivedRequestToContinueWithoutCredential(challenge);
-    ASSERT(!handle()->hasAuthenticationChallenge());
+    challenge.authenticationClient()->receivedRequestToContinueWithoutCredential(challenge);
+    ASSERT(!handle() || !handle()->hasAuthenticationChallenge());
 #else
     didFail(blockedError());
 #endif

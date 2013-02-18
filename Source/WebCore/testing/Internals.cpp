@@ -68,11 +68,13 @@
 #include "NodeRenderingContext.h"
 #include "Page.h"
 #include "PrintContext.h"
+#include "PseudoElement.h"
 #include "Range.h"
 #include "RenderObject.h"
 #include "RenderTreeAsText.h"
 #include "RuntimeEnabledFeatures.h"
 #include "SchemeRegistry.h"
+#include "ScrollingCoordinator.h"
 #include "SelectRuleFeatureSet.h"
 #include "SerializedScriptValue.h"
 #include "Settings.h"
@@ -384,6 +386,48 @@ bool Internals::hasSelectorForPseudoClassInShadow(Element* host, const String& p
 
     ASSERT_NOT_REACHED();
     return false;
+}
+
+bool Internals::pauseAnimationAtTimeOnPseudoElement(const String& animationName, double pauseTime, Element* element, const String& pseudoId, ExceptionCode& ec)
+{
+    if (!element || pauseTime < 0) {
+        ec = INVALID_ACCESS_ERR;
+        return false;
+    }
+
+    if (pseudoId != "before" && pseudoId != "after") {
+        ec = INVALID_ACCESS_ERR;
+        return false;
+    }
+
+    PseudoElement* pseudoElement = element->pseudoElement(pseudoId == "before" ? BEFORE : AFTER);
+    if (!pseudoElement) {
+        ec = INVALID_ACCESS_ERR;
+        return false;
+    }
+
+    return frame()->animation()->pauseAnimationAtTime(pseudoElement->renderer(), animationName, pauseTime);
+}
+
+bool Internals::pauseTransitionAtTimeOnPseudoElement(const String& property, double pauseTime, Element* element, const String& pseudoId, ExceptionCode& ec)
+{
+    if (!element || pauseTime < 0) {
+        ec = INVALID_ACCESS_ERR;
+        return false;
+    }
+
+    if (pseudoId != "before" && pseudoId != "after") {
+        ec = INVALID_ACCESS_ERR;
+        return false;
+    }
+
+    PseudoElement* pseudoElement = element->pseudoElement(pseudoId == "before" ? BEFORE : AFTER);
+    if (!pseudoElement) {
+        ec = INVALID_ACCESS_ERR;
+        return false;
+    }
+
+    return frame()->animation()->pauseTransitionAtTime(pseudoElement->renderer(), property, pauseTime);
 }
 
 bool Internals::hasShadowInsertionPoint(const Node* root, ExceptionCode& ec) const
@@ -1200,8 +1244,38 @@ unsigned Internals::touchEventHandlerCount(Document* document, ExceptionCode& ec
         return 0;
     }
 
-    return document->touchEventHandlerCount();
+    const TouchEventTargetSet* touchHandlers = document->touchEventTargets();
+    if (!touchHandlers)
+        return 0;
+
+    unsigned count = 0;
+    for (TouchEventTargetSet::const_iterator iter = touchHandlers->begin(); iter != touchHandlers->end(); ++iter)
+        count += iter->value;
+    return count;
 }
+
+#if ENABLE(TOUCH_EVENT_TRACKING)
+PassRefPtr<ClientRectList> Internals::touchEventTargetClientRects(Document* document, ExceptionCode& ec)
+{
+    if (!document || !document->view() || !document->page()) {
+        ec = INVALID_ACCESS_ERR;
+        return 0;
+    }
+    if (!document->page()->scrollingCoordinator())
+        return ClientRectList::create();
+
+    document->updateLayoutIgnorePendingStylesheets();
+
+    Vector<IntRect> absoluteRects;
+    document->page()->scrollingCoordinator()->computeAbsoluteTouchEventTargetRects(document, absoluteRects);
+    Vector<FloatQuad> absoluteQuads(absoluteRects.size());
+
+    for (size_t i = 0; i < absoluteRects.size(); ++i)
+        absoluteQuads[i] = FloatQuad(absoluteRects[i]);
+
+    return ClientRectList::create(absoluteQuads);
+}
+#endif
 
 PassRefPtr<NodeList> Internals::nodesFromRect(Document* document, int x, int y, unsigned topPadding, unsigned rightPadding,
     unsigned bottomPadding, unsigned leftPadding, bool ignoreClipping, bool allowShadowContent, ExceptionCode& ec) const

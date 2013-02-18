@@ -35,15 +35,20 @@ function rebaselineWithStatusUpdates(failureInfoList, resultsByTest)
     var statusView = new ui.StatusArea('Rebaseline');
     var id = statusView.newId();
 
-    var testNames = base.uniquifyArray(failureInfoList.map(function(failureInfo) { return failureInfo.testName; }));
-
     var failuresToRebaseline = [];
-    testNames.forEach(function(testName) {
-        if (isAnyReftest(testName, resultsByTest)) 
-            statusView.addMessage(id, testName + ' is a ref test, skipping');
-        else {
-            failuresToRebaseline.push(testName);
-            statusView.addMessage(id, 'Rebaselining ' + testName + '...');
+    var testNamesLogged = [];
+    failureInfoList.forEach(function(failureInfo) {
+        if (isAnyReftest(failureInfo.testName, resultsByTest)) {
+            if (testNamesLogged.indexOf(failureInfo.testName) == -1) {
+                statusView.addMessage(id, failureInfo.testName + ' is a ref test, skipping');
+                testNamesLogged.push(failureInfo.testName);
+            }
+        } else {
+            failuresToRebaseline.push(failureInfo);
+            if (testNamesLogged.indexOf(failureInfo.testName) == -1) {
+                statusView.addMessage(id, 'Rebaselining ' + failureInfo.testName + '...');
+                testNamesLogged.push(failureInfo.testName);
+            }
         }
     });
     
@@ -55,8 +60,9 @@ function rebaselineWithStatusUpdates(failureInfoList, resultsByTest)
         }, function() {
             statusView.addFinalMessage(id, kCheckoutUnavailableMessage);
         });
-    } else
-        statusView.addFinalMessage(id, 'No tests left to rebaseline!')
+    } else {
+        statusView.addFinalMessage(id, 'No non-reftests left to rebaseline!')
+    }
 }
 
 // FIXME: This is duplicated from ui/results.js :(.

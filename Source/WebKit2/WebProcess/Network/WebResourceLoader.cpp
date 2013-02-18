@@ -33,8 +33,11 @@
 #include "NetworkConnectionToWebProcessMessages.h"
 #include "NetworkProcessConnection.h"
 #include "NetworkResourceLoaderMessages.h"
+#include "PlatformCertificateInfo.h"
 #include "WebCoreArgumentCoders.h"
+#include "WebErrors.h"
 #include "WebProcess.h"
+#include <WebCore/AuthenticationChallenge.h>
 #include <WebCore/ResourceLoader.h>
 
 using namespace WebCore;
@@ -75,10 +78,12 @@ void WebResourceLoader::willSendRequest(uint64_t requestID, const ResourceReques
     send(Messages::NetworkResourceLoader::WillSendRequestHandled(requestID, newRequest));
 }
 
-void WebResourceLoader::didReceiveResponse(const WebCore::ResourceResponse& response)
+void WebResourceLoader::didReceiveResponseWithCertificateInfo(const ResourceResponse& response, const PlatformCertificateInfo& certificateInfo)
 {
-    LOG(Network, "(WebProcess) WebResourceLoader::didReceiveResponse for '%s'. Status %d.", m_coreLoader->url().string().utf8().data(), response.httpStatusCode());
-    m_coreLoader->didReceiveResponse(response);
+    LOG(Network, "(WebProcess) WebResourceLoader::didReceiveResponseWithCertificateInfo for '%s'. Status %d.", m_coreLoader->url().string().utf8().data(), response.httpStatusCode());
+    ResourceResponse responseCopy(response);
+    responseCopy.setCertificateChain(certificateInfo.certificateChain());
+    m_coreLoader->didReceiveResponse(responseCopy);
 }
 
 void WebResourceLoader::didReceiveData(const CoreIPC::DataReference& data, int64_t encodedDataLength, bool allAtOnce)
@@ -166,6 +171,12 @@ void WebResourceLoader::receivedCancellation(const AuthenticationChallenge& chal
     send(Messages::NetworkResourceLoader::ReceivedAuthenticationCancellation(challenge));
 
     m_currentAuthenticationChallenge.clear();
+}
+
+void WebResourceLoader::networkProcessCrashed()
+{
+    ASSERT(m_coreLoader);
+    m_coreLoader->didFail(internalError(m_coreLoader->url()));
 }
 
 } // namespace WebKit

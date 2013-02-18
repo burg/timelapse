@@ -32,24 +32,12 @@
 
 namespace WebCore {
 
+class TextureMapperPaintOptions;
 class TextureMapperPlatformLayer;
 class GraphicsLayerTextureMapper;
 
-class TextureMapperPaintOptions {
-public:
-    RefPtr<BitmapTexture> surface;
-    RefPtr<BitmapTexture> mask;
-    float opacity;
-    TransformationMatrix transform;
-    IntSize offset;
-    TextureMapper* textureMapper;
-    TextureMapperPaintOptions()
-        : opacity(1)
-        , textureMapper(0)
-    { }
-};
-
 class TextureMapperLayer : public GraphicsLayerAnimation::Client {
+    WTF_MAKE_NONCOPYABLE(TextureMapperLayer);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     // This set of flags help us defer which properties of the layer have been
@@ -57,7 +45,6 @@ public:
     enum ChangeMask {
         NoChanges =                 0,
 
-        ParentChange =              (1L << 0),
         ChildrenChange =            (1L << 1),
         MaskLayerChange =           (1L << 2),
         PositionChange =            (1L << 3),
@@ -87,11 +74,6 @@ public:
         FilterChange =              (1L << 23)
     };
 
-    enum SyncOptions {
-        TraverseDescendants = 1,
-        ComputationsOnly = 2
-    };
-
     TextureMapperLayer()
         : m_parent(0)
         , m_effectTarget(0)
@@ -104,9 +86,7 @@ public:
     virtual ~TextureMapperLayer();
 
     TextureMapper* textureMapper() const;
-    void flushCompositingState(GraphicsLayerTextureMapper*, int syncOptions = 0);
-    void flushCompositingState(GraphicsLayerTextureMapper*, TextureMapper*, int syncOptions = 0);
-    IntSize size() const { return IntSize(m_size.width(), m_size.height()); }
+    void flushCompositingStateForThisLayerOnly(GraphicsLayerTextureMapper*);
     void setTransform(const TransformationMatrix&);
     void setOpacity(float value) { m_opacity = value; }
 #if ENABLE(CSS_FILTERS)
@@ -128,15 +108,8 @@ public:
 private:
     const TextureMapperLayer* rootLayer() const;
     void computeTransformsRecursive();
-    void computeOverlapsIfNeeded();
-    void computeTiles();
     IntRect intermediateSurfaceRect(const TransformationMatrix&);
     IntRect intermediateSurfaceRect();
-    void swapContentsBuffers();
-    FloatRect targetRectForTileRect(const FloatRect& totalTargetRect, const FloatRect& tileRect) const;
-    void invalidateViewport(const FloatRect&);
-    void notifyChange(ChangeMask);
-    void flushCompositingStateSelf(GraphicsLayerTextureMapper*, TextureMapper*);
 
     static int compareGraphicsLayersZValue(const void* a, const void* b);
     static void sortByZOrder(Vector<TextureMapperLayer* >& array, int first, int last);
@@ -144,6 +117,11 @@ private:
     PassRefPtr<BitmapTexture> texture() { return m_backingStore ? m_backingStore->texture() : 0; }
     FloatPoint adjustedPosition() const { return m_state.pos + m_scrollPositionDelta; }
     bool isAncestorFixedToViewport() const;
+
+    void setChildren(const Vector<GraphicsLayer*>&);
+    void addChild(TextureMapperLayer*);
+    void removeFromParent();
+    void removeAllChildren();
 
     void paintRecursive(const TextureMapperPaintOptions&);
     void paintSelf(const TextureMapperPaintOptions&);
@@ -168,25 +146,23 @@ private:
     ContentsLayerCount countPotentialLayersWithContents() const;
     bool shouldPaintToIntermediateSurface() const;
 
-    GraphicsLayerTransform m_transform;
-
     inline FloatRect layerRect() const
     {
-        return FloatRect(FloatPoint::zero(), m_size);
+        return FloatRect(FloatPoint::zero(), m_state.size);
     }
+
+    GraphicsLayerTransform m_transform;
 
     Vector<TextureMapperLayer*> m_children;
     TextureMapperLayer* m_parent;
     TextureMapperLayer* m_effectTarget;
     RefPtr<TextureMapperBackingStore> m_backingStore;
     TextureMapperPlatformLayer* m_contentsLayer;
-    FloatSize m_size;
     float m_opacity;
 #if ENABLE(CSS_FILTERS)
     FilterOperations m_filters;
 #endif
     float m_centerZ;
-    String m_name;
 
     struct State {
         FloatPoint pos;
@@ -196,12 +172,11 @@ private:
         TransformationMatrix childrenTransform;
         float opacity;
         FloatRect contentsRect;
-        int descendantsWithContent;
         TextureMapperLayer* maskLayer;
         TextureMapperLayer* replicaLayer;
-        Color backgroundColor;
+        Color solidColor;
 #if ENABLE(CSS_FILTERS)
-         FilterOperations filters;
+        FilterOperations filters;
 #endif
 
         bool preserves3D : 1;
@@ -211,8 +186,7 @@ private:
         bool contentsOpaque : 1;
         bool backfaceVisibility : 1;
         bool visible : 1;
-        bool mightHaveOverlaps : 1;
-        bool needsRepaint;
+
         State()
             : opacity(1.f)
             , maskLayer(0)
@@ -224,8 +198,6 @@ private:
             , contentsOpaque(false)
             , backfaceVisibility(false)
             , visible(true)
-            , mightHaveOverlaps(false)
-            , needsRepaint(false)
         {
         }
     };

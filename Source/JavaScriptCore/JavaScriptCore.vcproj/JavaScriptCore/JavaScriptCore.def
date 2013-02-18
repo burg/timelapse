@@ -61,7 +61,6 @@ EXPORTS
     ?absoluteTimeToWaitTimeoutInterval@WTF@@YAKN@Z
     ?activityCallback@Heap@JSC@@QAEPAVGCActivityCallback@2@XZ
     ?add@AtomicString@WTF@@CA?AV?$PassRefPtr@VStringImpl@WTF@@@2@PBD@Z
-    ?addFromLiteralData@AtomicString@WTF@@CA?AV?$PassRefPtr@VStringImpl@WTF@@@2@PBDI@Z
     ?add@Identifier@JSC@@CA?AV?$PassRefPtr@VStringImpl@WTF@@@WTF@@PAVJSGlobalData@2@PAVStringImpl@4@@Z
     ?add@Identifier@JSC@@SA?AV?$PassRefPtr@VStringImpl@WTF@@@WTF@@PAVExecState@2@PBD@Z
     ?add@PropertyNameArray@JSC@@QAEXPAVStringImpl@WTF@@@Z
@@ -306,6 +305,7 @@ EXPORTS
     ?parseDoubleFromLongString@Internal@WTF@@YANPB_WIAAI@Z
     ?positiveInfiniteTime@MediaTime@WTF@@SAABV12@XZ 
     ?process@WrapperBase@MemoryInstrumentation@WTF@@QAEXPAV23@@Z
+    ?processPointer@WrapperBase@MemoryInstrumentation@WTF@@QAEXPAV23@_N@Z
     ?processRootObjectRef@WrapperBase@MemoryInstrumentation@WTF@@QAEXPAV23@@Z
     ?profiler@LegacyProfiler@JSC@@SAPAV12@XZ
     ?protect@Heap@JSC@@QAEXVJSValue@2@@Z
@@ -331,7 +331,7 @@ EXPORTS
     ?removeBlock@MarkedAllocator@JSC@@QAEXPAVMarkedBlock@2@@Z
     ?removeDirect@JSObject@JSC@@QAE_NAAVJSGlobalData@2@VPropertyName@2@@Z
     ?reportAbandonedObjectGraph@Heap@JSC@@QAEXXZ
-    ?reportEdge@MemoryInstrumentation@WTF@@AAEXPAVMemoryObjectInfo@2@PBXPBD@Z
+    ?reportEdge@MemoryInstrumentation@WTF@@AAEXPBXPBDW4MemberType@2@@Z
     ?reportExtraMemoryCostSlowCase@Heap@JSC@@AAEXI@Z
     ?reportSuccess@HeapStatistics@JSC@@SAXXZ
     ?reserveAndCommit@OSAllocator@WTF@@SAPAXIW4Usage@12@_N11@Z
@@ -347,6 +347,7 @@ EXPORTS
     ?retrieveLastCaller@Interpreter@JSC@@QBEXPAVExecState@2@AAH1AAVString@WTF@@AAVJSValue@2@@Z
     ?save@Database@Profiler@JSC@@QBE_NPBD@Z
     ?setConfigurable@PropertyDescriptor@JSC@@QAEX_N@Z
+    ?setCustomAllocation@MemoryClassInfo@WTF@@QAEX_N@Z
     ?setDescriptor@PropertyDescriptor@JSC@@QAEXVJSValue@2@I@Z
     ?setEnumerable@PropertyDescriptor@JSC@@QAEX_N@Z
     ?setGarbageCollectionTimerEnabled@Heap@JSC@@QAEX_N@Z

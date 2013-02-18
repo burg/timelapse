@@ -54,6 +54,8 @@
 #include <WebCore/JSCSSStyleDeclaration.h>
 #include <WebCore/JSElement.h>
 #include <WebCore/JSRange.h>
+#include <WebCore/MainResourceLoader.h>
+#include <WebCore/NetworkingContext.h>
 #include <WebCore/NodeTraversal.h>
 #include <WebCore/Page.h>
 #include <WebCore/PluginDocument.h>
@@ -74,6 +76,12 @@
 
 #if PLATFORM(MAC) || PLATFORM(WIN)
 #include <WebCore/LegacyWebArchive.h>
+#endif
+
+#if ENABLE(NETWORK_PROCESS)
+#include "NetworkConnectionToWebProcessMessages.h"
+#include "NetworkProcessConnection.h"
+#include "WebCoreArgumentCoders.h"
 #endif
 
 #ifndef NDEBUG
@@ -236,17 +244,35 @@ void WebFrame::startDownload(const WebCore::ResourceRequest& request)
 {
     ASSERT(m_policyDownloadID);
 
-    DownloadManager::shared().startDownload(m_policyDownloadID, page(), request);
-
+    uint64_t policyDownloadID = m_policyDownloadID;
     m_policyDownloadID = 0;
+
+#if ENABLE(NETWORK_PROCESS)
+    if (WebProcess::shared().usesNetworkProcess()) {
+        bool privateBrowsingEnabled = m_coreFrame->loader()->networkingContext()->storageSession().isPrivateBrowsingSession();
+        WebProcess::shared().networkConnection()->connection()->send(Messages::NetworkConnectionToWebProcess::StartDownload(privateBrowsingEnabled, policyDownloadID, request), 0);
+        return;
+    }
+#endif
+
+    WebProcess::shared().downloadManager().startDownload(policyDownloadID, request);
 }
 
-void WebFrame::convertHandleToDownload(ResourceHandle* handle, const ResourceRequest& request, const ResourceResponse& response)
+void WebFrame::convertMainResourceLoadToDownload(MainResourceLoader* mainResourceLoader, const ResourceRequest& request, const ResourceResponse& response)
 {
     ASSERT(m_policyDownloadID);
 
-    DownloadManager::shared().convertHandleToDownload(m_policyDownloadID, page(), handle, request, response);
+    uint64_t policyDownloadID = m_policyDownloadID;
     m_policyDownloadID = 0;
+
+#if ENABLE(NETWORK_PROCESS)
+    if (WebProcess::shared().usesNetworkProcess()) {
+        // FIXME: Handle this case.
+        return;
+    }
+#endif
+
+    WebProcess::shared().downloadManager().convertHandleToDownload(policyDownloadID, mainResourceLoader->loader()->handle(), request, response);
 }
 
 #if ENABLE(WEB_INTENTS)

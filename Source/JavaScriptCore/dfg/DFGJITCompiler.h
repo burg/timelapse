@@ -34,6 +34,7 @@
 #include "DFGFPRInfo.h"
 #include "DFGGPRInfo.h"
 #include "DFGGraph.h"
+#include "DFGOSRExitCompilationInfo.h"
 #include "DFGRegisterBank.h"
 #include "DFGRegisterSet.h"
 #include "JITCode.h"
@@ -50,6 +51,7 @@ namespace DFG {
 
 class JITCodeGenerator;
 class NodeToRegisterMap;
+class OSRExitJumpPlaceholder;
 class SlowPathGenerator;
 class SpeculativeJIT;
 class SpeculationRecovery;
@@ -343,6 +345,13 @@ public:
     SpeculatedType getSpeculation(NodeIndex nodeIndex) { return getSpeculation(graph()[nodeIndex]); }
     SpeculatedType getSpeculation(Edge nodeUse) { return getSpeculation(nodeUse.index()); }
 
+    void appendExitInfo(MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList())
+    {
+        OSRExitCompilationInfo info;
+        info.m_failureJumps = jumpsToFail;
+        m_exitCompilationInfo.append(info);
+    }
+
 #if USE(JSVALUE32_64)
     void* addressOfDoubleConstant(NodeIndex nodeIndex)
     {
@@ -420,6 +429,8 @@ public:
     }
 
 private:
+    friend class OSRExitJumpPlaceholder;
+    
     // Internal implementation to compile.
     void compileEntry();
     void compileBody(SpeculativeJIT&);
@@ -460,7 +471,8 @@ private:
     
     Vector<PropertyAccessRecord, 4> m_propertyAccesses;
     Vector<JSCallRecord, 4> m_jsCalls;
-    Vector<Label> m_exitSiteLabels;
+    Vector<OSRExitCompilationInfo> m_exitCompilationInfo;
+    Vector<Vector<Label> > m_exitSiteLabels;
     unsigned m_currentCodeOriginIndex;
 };
 

@@ -50,6 +50,7 @@ void InitWebCoreSystemInterface(void)
 #endif
         INIT(CopyCONNECTProxyResponse);
         INIT(CopyNSURLResponseStatusLine);
+        INIT(CopyNSURLResponseCertificateChain);
         INIT(CreateCTLineWithUniCharProvider);
         INIT(CreateCustomCFReadStream);
         INIT(CreateNSURLConnectionDelegateProxy);
@@ -161,7 +162,6 @@ void InitWebCoreSystemInterface(void)
         INIT(CreateVMPressureDispatchOnMainQueue);
 
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
-        INIT(GetMacOSXVersionString);
         INIT(ExecutableWasLinkedOnOrBeforeLion);
 #endif
 

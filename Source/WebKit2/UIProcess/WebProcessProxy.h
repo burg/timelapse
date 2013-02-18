@@ -56,6 +56,7 @@ class SecItemRequestData;
 class SecItemResponseData;
 #endif
 
+class DownloadProxyMap;
 class WebBackForwardListItem;
 class WebContext;
 class WebPageGroup;
@@ -113,6 +114,8 @@ public:
     bool checkURLReceivedFromWebProcess(const WebCore::KURL&);
 
     static bool fullKeyboardAccessEnabled();
+
+    DownloadProxy* createDownloadProxy();
 
 private:
     explicit WebProcessProxy(PassRefPtr<WebContext>);
@@ -199,7 +202,9 @@ private:
     HashMap<uint64_t, WebPageProxy*> m_pageMap;
     WebFrameProxyMap m_frameMap;
     WebBackForwardListItemMap m_backForwardListItemMap;
-    
+
+    OwnPtr<DownloadProxyMap> m_downloadProxyMap;
+
 #if ENABLE(CUSTOM_PROTOCOLS)
     CustomProtocolManagerProxy m_customProtocolManagerProxy;
 #endif

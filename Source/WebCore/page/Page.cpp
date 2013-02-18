@@ -71,9 +71,9 @@
 #include "SharedBuffer.h"
 #include "StorageArea.h"
 #include "StorageNamespace.h"
-#include "StyleResolver.h"
 #include "TextResourceDecoder.h"
 #include "UserInputProxy.h"
+#include "VisitedLinkState.h"
 #include "VoidCallback.h"
 #include "WebCoreMemoryInstrumentation.h"
 #include "Widget.h"
@@ -953,14 +953,12 @@ void Page::allVisitedStateChanged(PageGroup* group)
         Page* page = *it;
         if (page->m_group != group)
             continue;
-        for (Frame* frame = page->m_mainFrame.get(); frame; frame = frame->tree()->traverseNext()) {
-            if (StyleResolver* styleResolver = frame->document()->styleResolver())
-                styleResolver->allVisitedStateChanged();
-        }
+        for (Frame* frame = page->m_mainFrame.get(); frame; frame = frame->tree()->traverseNext())
+            frame->document()->visitedLinkState()->invalidateStyleForAllLinks();
     }
 }
 
-void Page::visitedStateChanged(PageGroup* group, LinkHash visitedLinkHash)
+void Page::visitedStateChanged(PageGroup* group, LinkHash linkHash)
 {
     ASSERT(group);
     if (!allPages)
@@ -971,10 +969,8 @@ void Page::visitedStateChanged(PageGroup* group, LinkHash visitedLinkHash)
         Page* page = *it;
         if (page->m_group != group)
             continue;
-        for (Frame* frame = page->m_mainFrame.get(); frame; frame = frame->tree()->traverseNext()) {
-            if (StyleResolver* styleResolver = frame->document()->styleResolver())
-                styleResolver->visitedStateChanged(visitedLinkHash);
-        }
+        for (Frame* frame = page->m_mainFrame.get(); frame; frame = frame->tree()->traverseNext())
+            frame->document()->visitedLinkState()->invalidateStyleForLink(linkHash);
     }
 }
 
@@ -1204,6 +1200,23 @@ void Page::resetRelevantPaintedObjectCounter()
     m_relevantUnpaintedRegion = Region();
 }
 
+static LayoutRect relevantViewRect(RenderView* view)
+{
+    // DidHitRelevantRepaintedObjectsAreaThreshold is a LayoutMilestone intended to indicate that
+    // a certain relevant amount of content has been drawn to the screen. This is the rect that
+    // has been determined to be relevant in the context of this goal. We may choose to tweak
+    // the rect over time, much like we may choose to tweak gMinimumPaintedAreaRatio and
+    // gMaximumUnpaintedAreaRatio. But this seems to work well right now.
+    LayoutRect relevantViewRect = LayoutRect(0, 0, 980, 1300);
+
+    LayoutRect viewRect = view->viewRect();
+    // If the viewRect is wider than the relevantViewRect, center the relevantViewRect.
+    if (viewRect.width() > relevantViewRect.width())
+        relevantViewRect.setX((viewRect.width() - relevantViewRect.width()) / 2);
+
+    return relevantViewRect;
+}
+
 void Page::addRelevantRepaintedObject(RenderObject* object, const LayoutRect& objectPaintRect)
 {
     if (!isCountingRelevantRepaintedObjects())
@@ -1217,8 +1230,10 @@ void Page::addRelevantRepaintedObject(RenderObject* object, const LayoutRect& ob
     if (!view)
         return;
 
+    LayoutRect relevantRect = relevantViewRect(view);
+
     // The objects are only relevant if they are being painted within the viewRect().
-    if (!objectPaintRect.intersects(pixelSnappedIntRect(view->viewRect())))
+    if (!objectPaintRect.intersects(pixelSnappedIntRect(relevantRect)))
         return;
 
     IntRect snappedPaintRect = pixelSnappedIntRect(objectPaintRect);
@@ -1233,7 +1248,7 @@ void Page::addRelevantRepaintedObject(RenderObject* object, const LayoutRect& ob
 
     m_relevantPaintedRegion.unite(snappedPaintRect);
     
-    float viewArea = view->viewRect().width() * view->viewRect().height();
+    float viewArea = relevantRect.width() * relevantRect.height();
     float ratioOfViewThatIsPainted = m_relevantPaintedRegion.totalArea() / viewArea;
     float ratioOfViewThatIsUnpainted = m_relevantUnpaintedRegion.totalArea() / viewArea;
 
@@ -1250,9 +1265,9 @@ void Page::addRelevantUnpaintedObject(RenderObject* object, const LayoutRect& ob
     if (!isCountingRelevantRepaintedObjects())
         return;
 
-    // The objects are only relevant if they are being painted within the viewRect().
+    // The objects are only relevant if they are being painted within the relevantViewRect().
     if (RenderView* view = object->view()) {
-        if (!objectPaintRect.intersects(pixelSnappedIntRect(view->viewRect())))
+        if (!objectPaintRect.intersects(pixelSnappedIntRect(relevantViewRect(view))))
             return;
     }
 

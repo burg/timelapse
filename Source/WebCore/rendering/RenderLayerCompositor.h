@@ -28,9 +28,9 @@
 
 #include "ChromeClient.h"
 #include "Frame.h"
+#include "GraphicsLayerClient.h"
 #include "GraphicsLayerUpdater.h"
 #include "RenderLayer.h"
-#include "RenderLayerBacking.h"
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -117,7 +117,7 @@ public:
     bool updateLayerCompositingState(RenderLayer*, CompositingChangeRepaint = CompositingChangeRepaintNow);
 
     // Update the geometry for compositing children of compositingAncestor.
-    void updateCompositingDescendantGeometry(RenderLayer* compositingAncestor, RenderLayer* layer, RenderLayerBacking::UpdateDepth);
+    void updateCompositingDescendantGeometry(RenderLayer* compositingAncestor, RenderLayer*, bool compositedChildrenOnly);
     
     // Whether layer's backing needs a graphics layer to do clipping by an ancestor (non-stacking-context parent with overflow).
     bool clippedByAncestor(RenderLayer*) const;
@@ -220,8 +220,6 @@ public:
     GraphicsLayer* layerForOverhangAreas() const { return m_layerForOverhangAreas.get(); }
 #endif
 
-    void documentBackgroundColorDidChange();
-
     void updateViewportConstraintStatus(RenderLayer*);
     void removeViewportConstrainedLayer(RenderLayer*);
 
@@ -229,6 +227,7 @@ public:
     void setTracksRepaints(bool);
 
     void reportMemoryUsage(MemoryObjectInfo*) const;
+    void setShouldReevaluateCompositingAfterLayout() { m_reevaluateCompositingAfterLayout = true; }
 
     enum FixedPositionLayerNotCompositedReason {
         NoReason,
@@ -327,8 +326,8 @@ private:
     void registerOrUpdateViewportConstrainedLayer(RenderLayer*);
     void unregisterViewportConstrainedLayer(RenderLayer*);
 
-    const FixedPositionViewportConstraints computeFixedViewportConstraints(RenderLayer*);
-    const StickyPositionViewportConstraints computeStickyViewportConstraints(RenderLayer*);
+    FixedPositionViewportConstraints computeFixedViewportConstraints(RenderLayer*) const;
+    StickyPositionViewportConstraints computeStickyViewportConstraints(RenderLayer*) const;
 
     bool requiresScrollLayer(RootLayerAttachment) const;
     bool requiresHorizontalScrollbarLayer() const;

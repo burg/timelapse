@@ -80,7 +80,6 @@ GraphicsLayer::GraphicsLayer(GraphicsLayerClient* client)
     , m_anchorPoint(0.5f, 0.5f, 0)
     , m_opacity(1)
     , m_zPosition(0)
-    , m_backgroundColorSet(false)
     , m_contentsOpaque(false)
     , m_preserves3D(false)
     , m_backfaceVisibility(true)
@@ -313,13 +312,6 @@ void GraphicsLayer::setOffsetFromRenderer(const IntSize& offset, ShouldSetNeedsD
 void GraphicsLayer::setBackgroundColor(const Color& color)
 {
     m_backgroundColor = color;
-    m_backgroundColorSet = true;
-}
-
-void GraphicsLayer::clearBackgroundColor()
-{
-    m_backgroundColor = Color();
-    m_backgroundColorSet = false;
 }
 
 void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const IntRect& clip)
@@ -417,15 +409,6 @@ void GraphicsLayer::distributeOpacity(float accumulatedOpacity)
             children()[i]->distributeOpacity(accumulatedOpacity);
     }
 }
-
-#if PLATFORM(QT) || PLATFORM(GTK) || PLATFORM(EFL)
-GraphicsLayer::GraphicsLayerFactoryCallback* GraphicsLayer::s_graphicsLayerFactory = 0;
-
-void GraphicsLayer::setGraphicsLayerFactory(GraphicsLayer::GraphicsLayerFactoryCallback factory)
-{
-    s_graphicsLayerFactory = factory;
-}
-#endif
 
 #if ENABLE(CSS_FILTERS)
 static inline const FilterOperations* filterOperationsAt(const KeyframeValueList& valueList, size_t index)
@@ -657,7 +640,7 @@ void GraphicsLayer::dumpProperties(TextStream& ts, int indent, LayerTreeAsTextBe
         ts << ")\n";
     }
 
-    if (m_backgroundColorSet) {
+    if (m_backgroundColor.isValid()) {
         writeIndent(ts, indent + 1);
         ts << "(backgroundColor " << m_backgroundColor.nameForRenderTreeAsText() << ")\n";
     }
@@ -747,6 +730,8 @@ void GraphicsLayer::reportMemoryUsage(MemoryObjectInfo* memoryObjectInfo) const
     info.addMember(m_maskLayer);
     info.addMember(m_replicaLayer);
     info.addMember(m_replicatedLayer);
+    info.ignoreMember(m_client);
+    info.addMember(m_name);
 }
 
 } // namespace WebCore

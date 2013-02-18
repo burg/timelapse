@@ -30,36 +30,45 @@
 
 #include "ChildProcessProxy.h"
 #include "Connection.h"
+#include "MessageReceiverMap.h"
 #include "ProcessLauncher.h"
 #include "WebProcessProxyMessages.h"
 #include <wtf/Deque.h>
 
+#if ENABLE(CUSTOM_PROTOCOLS)
+#include "CustomProtocolManagerProxy.h"
+#endif
+
 namespace WebKit {
 
-class NetworkProcessManager;
+class DownloadProxy;
+class DownloadProxyMap;
+class WebContext;
 struct NetworkProcessCreationParameters;
 
 class NetworkProcessProxy : public RefCounted<NetworkProcessProxy>, public ChildProcessProxy {
 public:
-    static PassRefPtr<NetworkProcessProxy> create(NetworkProcessManager*);
+    static PassRefPtr<NetworkProcessProxy> create(WebContext*);
     ~NetworkProcessProxy();
 
     void getNetworkProcessConnection(PassRefPtr<Messages::WebProcessProxy::GetNetworkProcessConnection::DelayedReply>);
+
+    DownloadProxy* createDownloadProxy();
 
 #if PLATFORM(MAC)
     void setApplicationIsOccluded(bool);
 #endif
 
 private:
-    NetworkProcessProxy(NetworkProcessManager*);
+    NetworkProcessProxy(WebContext*);
 
     virtual void getLaunchOptions(ProcessLauncher::LaunchOptions&) OVERRIDE;
-    void platformInitializeNetworkProcess(NetworkProcessCreationParameters&);
 
     void networkProcessCrashedOrFailedToLaunch();
 
     // CoreIPC::Connection::Client
     virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&) OVERRIDE;
+    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&) OVERRIDE;
     virtual void didClose(CoreIPC::Connection*) OVERRIDE;
     virtual void didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference messageReceiverName, CoreIPC::StringReference messageName) OVERRIDE;
 
@@ -70,10 +79,17 @@ private:
     // ProcessLauncher::Client
     virtual void didFinishLaunching(ProcessLauncher*, CoreIPC::Connection::Identifier);
 
-    NetworkProcessManager* m_networkProcessManager;
+    WebContext* m_webContext;
     
     unsigned m_numPendingConnectionRequests;
     Deque<RefPtr<Messages::WebProcessProxy::GetNetworkProcessConnection::DelayedReply> > m_pendingConnectionReplies;
+
+    CoreIPC::MessageReceiverMap m_messageReceiverMap;
+    OwnPtr<DownloadProxyMap> m_downloadProxyMap;
+
+#if ENABLE(CUSTOM_PROTOCOLS)
+    CustomProtocolManagerProxy m_customProtocolManagerProxy;
+#endif
 };
 
 } // namespace WebKit

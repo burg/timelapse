@@ -39,6 +39,8 @@
 #include "WebFindOptions.h"
 #include "WebFrame.h"
 #include "WebInputElement.h"
+#include "WebIntent.h"
+#include "WebIntentRequest.h"
 #include "WebPreferences.h"
 #include "WebScriptSource.h"
 #include "WebSecurityPolicy.h"
@@ -48,6 +50,7 @@
 #include "WebView.h"
 #include "WebWorkerInfo.h"
 #include "platform/WebPoint.h"
+#include "platform/WebSerializedScriptValue.h"
 #include "v8/include/v8.h"
 #include <wtf/text/WTFString.h>
 
@@ -62,32 +65,25 @@ namespace WebTestRunner {
 
 namespace {
 
-// Sets map based on scriptFontPairs, a collapsed vector of pairs of ISO 15924
-// four-letter script code and font such as:
-// { "Arab", "My Arabic Font", "Grek", "My Greek Font" }
-static void setFontMap(WebPreferences::ScriptFontFamilyMap& map, const Vector<WebString>& scriptFontPairs)
-{
-    map.clear();
-    size_t i = 0;
-    while (i + 1 < scriptFontPairs.size()) {
-        const WebString& script = scriptFontPairs[i++];
-        const WebString& font = scriptFontPairs[i++];
+class EmptyWebDeliveredIntentClient : public WebDeliveredIntentClient {
+public:
+    EmptyWebDeliveredIntentClient() { }
+    ~EmptyWebDeliveredIntentClient() { }
 
-        int32_t code = u_getPropertyValueEnum(UCHAR_SCRIPT, script.utf8().data());
-        if (code >= 0 && code < USCRIPT_CODE_LIMIT)
-            map[static_cast<int>(code)] = font;
-    }
-}
+    virtual void postResult(const WebSerializedScriptValue& data) const { }
+    virtual void postFailure(const WebSerializedScriptValue& data) const { }
+    virtual void destroy() { }
+};
 
 }
 
 TestRunner::TestRunner()
     : m_delegate(0)
     , m_webView(0)
+    , m_intentClient(adoptPtr(new EmptyWebDeliveredIntentClient))
 {
     // Methods implemented in terms of chromium's public WebKit API.
     bindMethod("setTabKeyCyclesThroughElements", &TestRunner::setTabKeyCyclesThroughElements);
-    bindMethod("setAsynchronousSpellCheckingEnabled", &TestRunner::setAsynchronousSpellCheckingEnabled);
     bindMethod("execCommand", &TestRunner::execCommand);
     bindMethod("isCommandEnabled", &TestRunner::isCommandEnabled);
     bindMethod("pauseAnimationAtTimeOnElementWithId", &TestRunner::pauseAnimationAtTimeOnElementWithId);
@@ -110,7 +106,6 @@ TestRunner::TestRunner()
     bindMethod("loseCompositorContext", &TestRunner::loseCompositorContext);
     bindMethod("markerTextForListItem", &TestRunner::markerTextForListItem);
     bindMethod("findString", &TestRunner::findString);
-    bindMethod("setMinimumTimerInterval", &TestRunner::setMinimumTimerInterval);
     bindMethod("setAutofilled", &TestRunner::setAutofilled);
     bindMethod("setValueForUser", &TestRunner::setValueForUser);
     bindMethod("enableFixedLayoutMode", &TestRunner::enableFixedLayoutMode);
@@ -121,7 +116,6 @@ TestRunner::TestRunner()
     bindMethod("setPageVisibility", &TestRunner::setPageVisibility);
     bindMethod("setTextDirection", &TestRunner::setTextDirection);
     bindMethod("textSurroundingNode", &TestRunner::textSurroundingNode);
-    bindMethod("setTouchDragDropEnabled", &TestRunner::setTouchDragDropEnabled);
 
     // The following modify WebPreferences.
     bindMethod("setUserStyleSheetEnabled", &TestRunner::setUserStyleSheetEnabled);
@@ -134,6 +128,16 @@ TestRunner::TestRunner()
     bindMethod("setAllowFileAccessFromFileURLs", &TestRunner::setAllowFileAccessFromFileURLs);
     bindMethod("overridePreference", &TestRunner::overridePreference);
     bindMethod("setPluginsEnabled", &TestRunner::setPluginsEnabled);
+    bindMethod("setAsynchronousSpellCheckingEnabled", &TestRunner::setAsynchronousSpellCheckingEnabled);
+    bindMethod("setMinimumTimerInterval", &TestRunner::setMinimumTimerInterval);
+    bindMethod("setTouchDragDropEnabled", &TestRunner::setTouchDragDropEnabled);
+
+    // The following modify the state of the TestRunner.
+    bindMethod("dumpEditingCallbacks", &TestRunner::dumpEditingCallbacks);
+
+    // The following methods interact with the WebTestProxy.
+    bindMethod("sendWebIntentResponse", &TestRunner::sendWebIntentResponse);
+    bindMethod("deliverWebIntent", &TestRunner::deliverWebIntent);
 
     // Properties.
     bindProperty("workerThreadCount", &TestRunner::workerThreadCount);
@@ -172,6 +176,10 @@ TestRunner::TestRunner()
     bindFallbackMethod(&TestRunner::fallbackMethod);
 }
 
+TestRunner::~TestRunner()
+{
+}
+
 void TestRunner::reset()
 {
     if (m_webView) {
@@ -190,23 +198,23 @@ void TestRunner::reset()
     WebFontRendering::setSubpixelPositioning(false);
 #endif
 
+    m_dumpEditingCallbacks = false;
+
     m_globalFlag.set(false);
     m_platformName.set("chromium");
 
     m_userStyleSheetLocation = WebURL();
 }
 
+bool TestRunner::shouldDumpEditingCallbacks() const
+{
+    return m_dumpEditingCallbacks;
+}
+
 void TestRunner::setTabKeyCyclesThroughElements(const CppArgumentList& arguments, CppVariant* result)
 {
     if (arguments.size() > 0 && arguments[0].isBool())
         m_webView->setTabKeyCyclesThroughElements(arguments[0].toBoolean());
-    result->setNull();
-}
-
-void TestRunner::setAsynchronousSpellCheckingEnabled(const CppArgumentList& arguments, CppVariant* result)
-{
-    if (arguments.size() > 0 && arguments[0].isBool())
-        m_webView->settings()->setAsynchronousSpellCheckingEnabled(cppVariantToBool(arguments[0]));
     result->setNull();
 }
 
@@ -560,14 +568,6 @@ void TestRunner::findString(const CppArgumentList& arguments, CppVariant* result
     result->set(findResult);
 }
 
-void TestRunner::setMinimumTimerInterval(const CppArgumentList& arguments, CppVariant* result)
-{
-    result->setNull();
-    if (arguments.size() < 1 || !arguments[0].isNumber())
-        return;
-    m_webView->settings()->setMinimumTimerInterval(arguments[0].toDouble());
-}
-
 void TestRunner::setAutofilled(const CppArgumentList& arguments, CppVariant* result)
 {
     result->setNull();
@@ -702,15 +702,6 @@ void TestRunner::textSurroundingNode(const CppArgumentList& arguments, CppVarian
     result->set(surroundingText.textContent().utf8());
 }
 
-void TestRunner::setTouchDragDropEnabled(const CppArgumentList& arguments, CppVariant* result)
-{
-    result->setNull();
-    if (arguments.size() != 1 || !arguments[0].isBool())
-        return;
-
-    m_webView->settings()->setTouchDragDropEnabled(arguments[0].toBoolean());
-}
-
 void TestRunner::setUserStyleSheetEnabled(const CppArgumentList& arguments, CppVariant* result)
 {
     if (arguments.size() > 0 && arguments[0].isBool()) {
@@ -794,72 +785,26 @@ void TestRunner::overridePreference(const CppArgumentList& arguments, CppVariant
     string key = arguments[0].toString();
     CppVariant value = arguments[1];
     WebPreferences* prefs = m_delegate->preferences();
-    if (key == "WebKitStandardFont")
-        prefs->standardFontFamily = cppVariantToWebString(value);
-    else if (key == "WebKitFixedFont")
-        prefs->fixedFontFamily = cppVariantToWebString(value);
-    else if (key == "WebKitSerifFont")
-        prefs->serifFontFamily = cppVariantToWebString(value);
-    else if (key == "WebKitSansSerifFont")
-        prefs->sansSerifFontFamily = cppVariantToWebString(value);
-    else if (key == "WebKitCursiveFont")
-        prefs->cursiveFontFamily = cppVariantToWebString(value);
-    else if (key == "WebKitFantasyFont")
-        prefs->fantasyFontFamily = cppVariantToWebString(value);
-    else if (key == "WebKitStandardFontMap")
-        setFontMap(prefs->standardFontMap, cppVariantToWebStringArray(value));
-    else if (key == "WebKitFixedFontMap")
-        setFontMap(prefs->fixedFontMap, cppVariantToWebStringArray(value));
-    else if (key == "WebKitSerifFontMap")
-        setFontMap(prefs->serifFontMap, cppVariantToWebStringArray(value));
-    else if (key == "WebKitSansSerifFontMap")
-        setFontMap(prefs->sansSerifFontMap, cppVariantToWebStringArray(value));
-    else if (key == "WebKitCursiveFontMap")
-        setFontMap(prefs->cursiveFontMap, cppVariantToWebStringArray(value));
-    else if (key == "WebKitFantasyFontMap")
-        setFontMap(prefs->fantasyFontMap, cppVariantToWebStringArray(value));
-    else if (key == "WebKitDefaultFontSize")
+    if (key == "WebKitDefaultFontSize")
         prefs->defaultFontSize = cppVariantToInt32(value);
-    else if (key == "WebKitDefaultFixedFontSize")
-        prefs->defaultFixedFontSize = cppVariantToInt32(value);
     else if (key == "WebKitMinimumFontSize")
         prefs->minimumFontSize = cppVariantToInt32(value);
-    else if (key == "WebKitMinimumLogicalFontSize")
-        prefs->minimumLogicalFontSize = cppVariantToInt32(value);
     else if (key == "WebKitDefaultTextEncodingName")
         prefs->defaultTextEncodingName = cppVariantToWebString(value);
     else if (key == "WebKitJavaScriptEnabled")
         prefs->javaScriptEnabled = cppVariantToBool(value);
-    else if (key == "WebKitWebSecurityEnabled")
-        prefs->webSecurityEnabled = cppVariantToBool(value);
-    else if (key == "WebKitJavaScriptCanOpenWindowsAutomatically")
-        prefs->javaScriptCanOpenWindowsAutomatically = cppVariantToBool(value);
     else if (key == "WebKitSupportsMultipleWindows")
         prefs->supportsMultipleWindows = cppVariantToBool(value);
     else if (key == "WebKitDisplayImagesKey")
         prefs->loadsImagesAutomatically = cppVariantToBool(value);
     else if (key == "WebKitPluginsEnabled")
         prefs->pluginsEnabled = cppVariantToBool(value);
-    else if (key == "WebKitDOMPasteAllowedPreferenceKey")
-        prefs->DOMPasteAllowed = cppVariantToBool(value);
-    else if (key == "WebKitDeveloperExtrasEnabledPreferenceKey")
-        prefs->developerExtrasEnabled = cppVariantToBool(value);
-    else if (key == "WebKitShrinksStandaloneImagesToFit")
-        prefs->shrinksStandaloneImagesToFit = cppVariantToBool(value);
-    else if (key == "WebKitTextAreasAreResizable")
-        prefs->textAreasAreResizable = cppVariantToBool(value);
     else if (key == "WebKitJavaEnabled")
         prefs->javaEnabled = cppVariantToBool(value);
     else if (key == "WebKitUsesPageCachePreferenceKey")
         prefs->usesPageCache = cppVariantToBool(value);
     else if (key == "WebKitPageCacheSupportsPluginsPreferenceKey")
         prefs->pageCacheSupportsPlugins = cppVariantToBool(value);
-    else if (key == "WebKitJavaScriptCanAccessClipboard")
-        prefs->javaScriptCanAccessClipboard = cppVariantToBool(value);
-    else if (key == "WebKitXSSAuditorEnabled")
-        prefs->XSSAuditorEnabled = cppVariantToBool(value);
-    else if (key == "WebKitLocalStorageEnabledPreferenceKey")
-        prefs->localStorageEnabled = cppVariantToBool(value);
     else if (key == "WebKitOfflineWebApplicationCacheEnabled")
         prefs->offlineWebApplicationCacheEnabled = cppVariantToBool(value);
     else if (key == "WebKitTabToLinksPreferenceKey")
@@ -898,6 +843,81 @@ void TestRunner::setPluginsEnabled(const CppArgumentList& arguments, CppVariant*
         m_delegate->preferences()->pluginsEnabled = arguments[0].toBoolean();
         m_delegate->applyPreferences();
     }
+    result->setNull();
+}
+
+void TestRunner::setAsynchronousSpellCheckingEnabled(const CppArgumentList& arguments, CppVariant* result)
+{
+    if (arguments.size() > 0 && arguments[0].isBool()) {
+        m_delegate->preferences()->asynchronousSpellCheckingEnabled = cppVariantToBool(arguments[0]);
+        m_delegate->applyPreferences();
+    }
+    result->setNull();
+}
+
+void TestRunner::setMinimumTimerInterval(const CppArgumentList& arguments, CppVariant* result)
+{
+    if (arguments.size() > 0 && arguments[0].isNumber()) {
+        m_delegate->preferences()->minimumTimerInterval = arguments[0].toDouble();
+        m_delegate->applyPreferences();
+    }
+    result->setNull();
+}
+
+void TestRunner::setTouchDragDropEnabled(const CppArgumentList& arguments, CppVariant* result)
+{
+    if (arguments.size() > 0 && arguments[0].isBool()) {
+        m_delegate->preferences()->touchDragDropEnabled = arguments[0].toBoolean();
+        m_delegate->applyPreferences();
+    }
+    result->setNull();
+}
+
+void TestRunner::sendWebIntentResponse(const CppArgumentList& arguments, CppVariant* result)
+{
+    v8::HandleScope scope;
+    v8::Local<v8::Context> ctx = m_webView->mainFrame()->mainWorldScriptContext();
+    result->set(m_webView->mainFrame()->selectionAsMarkup().utf8());
+    v8::Context::Scope cscope(ctx);
+
+    WebIntentRequest* request = m_delegate->currentWebIntentRequest();
+    if (request->isNull())
+        return;
+
+    if (arguments.size() == 1) {
+        WebCString reply = cppVariantToWebString(arguments[0]).utf8();
+        v8::Handle<v8::Value> v8value = v8::String::New(reply.data(), reply.length());
+        request->postResult(WebSerializedScriptValue::serialize(v8value));
+    } else {
+        v8::Handle<v8::Value> v8value = v8::String::New("ERROR");
+        request->postFailure(WebSerializedScriptValue::serialize(v8value));
+    }
+    result->setNull();
+}
+
+void TestRunner::deliverWebIntent(const CppArgumentList& arguments, CppVariant* result)
+{
+    if (arguments.size() <  3)
+        return;
+
+    v8::HandleScope scope;
+    v8::Local<v8::Context> ctx = m_webView->mainFrame()->mainWorldScriptContext();
+    result->set(m_webView->mainFrame()->selectionAsMarkup().utf8());
+    v8::Context::Scope cscope(ctx);
+
+    WebString action = cppVariantToWebString(arguments[0]);
+    WebString type = cppVariantToWebString(arguments[1]);
+    WebCString data = cppVariantToWebString(arguments[2]).utf8();
+    WebSerializedScriptValue serializedData = WebSerializedScriptValue::serialize(v8::String::New(data.data(), data.length()));
+
+    WebIntent intent = WebIntent::create(action, type, serializedData.toString(), WebVector<WebString>(), WebVector<WebString>());
+
+    m_webView->mainFrame()->deliverIntent(intent, 0, m_intentClient.get());
+}
+
+void TestRunner::dumpEditingCallbacks(const CppArgumentList&, CppVariant* result)
+{
+    m_dumpEditingCallbacks = true;
     result->setNull();
 }
 
@@ -948,19 +968,6 @@ WebString TestRunner::cppVariantToWebString(const CppVariant& value)
         return WebString();
     }
     return WebString::fromUTF8(value.toString());
-}
-
-Vector<WebString> TestRunner::cppVariantToWebStringArray(const CppVariant& value)
-{
-    if (!value.isObject()) {
-        printErrorMessage("Invalid value for preference. Expected object value.");
-        return Vector<WebString>();
-    }
-    Vector<WebString> resultVector;
-    Vector<string> stringVector = value.toStringVector();
-    for (size_t i = 0; i < stringVector.size(); ++i)
-        resultVector.append(WebString::fromUTF8(stringVector[i].c_str()));
-    return resultVector;
 }
 
 void TestRunner::printErrorMessage(const string& text)

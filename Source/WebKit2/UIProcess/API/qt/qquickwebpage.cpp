@@ -30,6 +30,7 @@
 #include "qquickwebpage_p_p.h"
 #include "qquickwebview_p.h"
 #include "qwebkittest_p.h"
+#include <QQuickWindow>
 
 using namespace WebKit;
 
@@ -90,11 +91,24 @@ QSGNode* QQuickWebPage::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*)
     LayerTreeRenderer* renderer = d->coordinatedLayerTreeHostProxy()->layerTreeRenderer();
 
     QtWebPageSGNode* node = static_cast<QtWebPageSGNode*>(oldNode);
+
+    const QWindow* window = this->window();
+    ASSERT(window);
+
+    if (window && d->webPageProxy->deviceScaleFactor() != window->devicePixelRatio()) {
+        d->webPageProxy->setIntrinsicDeviceScaleFactor(window->devicePixelRatio());
+        // This signal is queued since if we are running a threaded renderer. This might cause failures
+        // if tests are reading the new value between the property change and the signal emission.
+        emit d->viewportItem->experimental()->test()->devicePixelRatioChanged();
+    }
+
     if (!node)
-        node = new QtWebPageSGNode();
+        node = new QtWebPageSGNode;
+
     node->setRenderer(renderer);
 
     node->setScale(d->contentsScale);
+    node->setDevicePixelRatio(window->devicePixelRatio());
     QColor backgroundColor = d->webPageProxy->drawsTransparentBackground() ? Qt::transparent : Qt::white;
     QRectF backgroundRect(QPointF(0, 0), d->contentsSize);
     node->setBackground(backgroundRect, backgroundColor);

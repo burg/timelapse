@@ -760,3 +760,19 @@ webkit.org/b/103122 fast/events/mouse-cursor.html
 
 # [Qt][WK2] new fast/dom/Geolocation/cached-position-iframe.html fails since it was introduced in r136164
 webkit.org/b/103876 fast/dom/Geolocation/cached-position-iframe.html
+
+# [Qt][WK2] compositing/overflow/automatically-opt-into-composited-scrolling.html makes other tests fail
+webkit.org/b/105173 compositing/overflow/automatically-opt-into-composited-scrolling.html
+
+# [Qt][WK2] The new compositing/repaint/resize-repaint.html fails
+webkit.org/b/105182 compositing/repaint/resize-repaint.html
+
+# [Qt][WK2] svg/text/select-* tests are so flakey
+# https://bugs.webkit.org/show_bug.cgi?id=105417
+svg/text/select-textLength-spacing-stretch-1.svg
+svg/text/select-x-list-with-tspans-1.svg
+svg/text/select-x-list-1.svg
+
+# [Qt][WK2]REGRESSION(r138729): It made plugins/change-widget-and-click-crash.html crash
+# https://bugs.webkit.org/show_bug.cgi?id=106049
+plugins/change-widget-and-click-crash.html

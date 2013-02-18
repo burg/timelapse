@@ -58,17 +58,19 @@ class Frame;
 class InspectorObject;
 class InspectorController;
 class InspectorFrontend;
-class InspectorState;
+class InspectorCompositeState;
 class InstrumentingAgents;
 class Node;
 class Page;
 
 typedef String ErrorString;
 
- class InspectorTimelapseAgent : public InspectorBaseAgent<InspectorTimelapseAgent>, public InspectorBackendDispatcher::TimelapseCommandHandler {
+ class InspectorTimelapseAgent
+    : public InspectorBaseAgent<InspectorTimelapseAgent>
+    , public InspectorBackendDispatcher::TimelapseCommandHandler {
     WTF_MAKE_NONCOPYABLE(InspectorTimelapseAgent);
 public:
-    static PassOwnPtr<InspectorTimelapseAgent> create(InstrumentingAgents* instrumentingAgents, InspectorState* state, Page* page)
+    static PassOwnPtr<InspectorTimelapseAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, Page* page)
     {
         return adoptPtr(new InspectorTimelapseAgent(instrumentingAgents, state, page));
     }
@@ -86,8 +88,8 @@ public:
     void frameNavigated(DocumentLoader*);
     void willFireTimer(int, Frame*);
 
-    bool capturing() const { return m_state.capturing(); }
-    bool replaying() const { return m_state.replaying(); }
+    bool capturing() const { return m_stateMachine.capturing(); }
+    bool replaying() const { return m_stateMachine.replaying(); }
 
     void capturedPageInput(DispatchableAction*);
     void captureStarted();
@@ -116,17 +118,16 @@ public:
     void setPauseOnError(ErrorString*, bool);
 
 private:
-    InspectorTimelapseAgent(InstrumentingAgents*, InspectorState*, Page*);
+    InspectorTimelapseAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
 
     PositionMark createMark();
     PositionMark reuseMark() const;
     void pushRecordToFrontend(PassRefPtr<InspectorObject>, const String& type, const PositionMark&);
     
     InstrumentingAgents *m_instrumentingAgents;
-    InspectorState *m_inspectorState;
     InspectorFrontend::Timelapse* m_frontend;
     Page *m_inspectedPage;
-    TimelapseAgentStateMachine m_state;
+    TimelapseAgentStateMachine m_stateMachine;
     unsigned m_nextMarkIndex;
     unsigned m_lastHitMarkIndex;
     bool m_inputLocked;

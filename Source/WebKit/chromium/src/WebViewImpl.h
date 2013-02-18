@@ -142,6 +142,7 @@ public:
     virtual void willExitFullScreen();
     virtual void didExitFullScreen();
     virtual void setCompositorSurfaceReady();
+    virtual WebLayerTreeView* webLayerTreeView();
     virtual void animate(double);
     virtual void layout(); // Also implements WebLayerTreeViewClient::layout()
     virtual void enterForceCompositingMode(bool enable) OVERRIDE;
@@ -836,7 +837,8 @@ private:
 #if USE(ACCELERATED_COMPOSITING)
     WebCore::IntRect m_rootLayerScrollDamage;
     OwnPtr<NonCompositedContentHost> m_nonCompositedContentHost;
-    OwnPtr<WebLayerTreeView> m_layerTreeView;
+    WebLayerTreeView* m_layerTreeView;
+    bool m_ownsLayerTreeView;
     WebLayer* m_rootLayer;
     WebCore::GraphicsLayer* m_rootGraphicsLayer;
     bool m_isAcceleratedCompositingActive;

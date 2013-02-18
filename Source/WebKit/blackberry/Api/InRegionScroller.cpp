@@ -210,6 +210,8 @@ void InRegionScrollerPrivate::calculateInRegionScrollableAreasForPoint(const Web
         return;
 
     RenderLayer* layer = node->renderer()->enclosingLayer();
+    if (!layer)
+        return;
     do {
         RenderObject* renderer = layer->renderer();
 
@@ -312,7 +314,7 @@ bool InRegionScrollerPrivate::setLayerScrollPosition(RenderLayer* layer, const I
         layer->scrollToOffset(toSize(scrollPosition));
     }
 
-    m_webPage->m_selectionHandler->selectionPositionChanged();
+    layer->renderer()->frame()->selection()->updateAppearance();
     // FIXME: We have code in place to handle scrolling and clipping tap highlight
     // on in-region scrolling. As soon as it is fast enough (i.e. we have it backed by
     // a backing store), we can reliably make use of it in the real world.
@@ -394,8 +396,15 @@ static RenderLayer* parentLayer(RenderLayer* layer)
         return layer->parent();
 
     RenderObject* renderer = layer->renderer();
-    if (renderer->document() && renderer->document()->ownerElement() && renderer->document()->ownerElement()->renderer())
-        return renderer->document()->ownerElement()->renderer()->enclosingLayer();
+    Document* document = renderer->document();
+    if (document) {
+        HTMLFrameOwnerElement* ownerElement = document->ownerElement();
+        if (ownerElement) {
+            RenderObject* subRenderer = ownerElement->renderer();
+            if (subRenderer)
+                return subRenderer->enclosingLayer();
+        }
+    }
 
     return 0;
 }

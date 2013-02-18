@@ -236,7 +236,7 @@ bool InspectorPageAgent::dataContent(const char* data, unsigned size, const Stri
     return decodeBuffer(data, size, textEncodingName, result);
 }
 
-PassOwnPtr<InspectorPageAgent> InspectorPageAgent::create(InstrumentingAgents* instrumentingAgents, Page* page, InspectorAgent* inspectorAgent, InspectorState* state, InjectedScriptManager* injectedScriptManager, InspectorClient* client, InspectorOverlay* overlay)
+PassOwnPtr<InspectorPageAgent> InspectorPageAgent::create(InstrumentingAgents* instrumentingAgents, Page* page, InspectorAgent* inspectorAgent, InspectorCompositeState* state, InjectedScriptManager* injectedScriptManager, InspectorClient* client, InspectorOverlay* overlay)
 {
     return adoptPtr(new InspectorPageAgent(instrumentingAgents, page, inspectorAgent, state, injectedScriptManager, client, overlay));
 }
@@ -323,7 +323,7 @@ TypeBuilder::Page::ResourceType::Enum InspectorPageAgent::cachedResourceTypeJson
     return resourceTypeJson(cachedResourceType(cachedResource));
 }
 
-InspectorPageAgent::InspectorPageAgent(InstrumentingAgents* instrumentingAgents, Page* page, InspectorAgent* inspectorAgent, InspectorState* inspectorState, InjectedScriptManager* injectedScriptManager, InspectorClient* client, InspectorOverlay* overlay)
+InspectorPageAgent::InspectorPageAgent(InstrumentingAgents* instrumentingAgents, Page* page, InspectorAgent* inspectorAgent, InspectorCompositeState* inspectorState, InjectedScriptManager* injectedScriptManager, InspectorClient* client, InspectorOverlay* overlay)
     : InspectorBaseAgent<InspectorPageAgent>("Page", instrumentingAgents, inspectorState)
     , m_page(page)
     , m_inspectorAgent(inspectorAgent)
@@ -407,6 +407,7 @@ void InspectorPageAgent::disable(ErrorString*)
     m_state->setLong(PageAgentState::pageAgentScreenHeightOverride, 0);
     m_state->setDouble(PageAgentState::pageAgentFontScaleFactorOverride, 1);
     m_state->setBoolean(PageAgentState::pageAgentFitWindow, false);
+    m_state->remove(PageAgentState::pageAgentScriptsToEvaluateOnLoad);
     updateViewMetrics(0, 0, 1, false);
 }
 
@@ -1047,7 +1048,7 @@ void InspectorPageAgent::setGeolocationOverride(ErrorString* error, const double
     GeolocationController* controller = GeolocationController::from(m_page);
     GeolocationPosition* position = 0;
     if (!controller) {
-        *error = "Internal error: unable to override geolocation.";
+        *error = "Internal error: unable to override geolocation";
         return;
     }
     position = controller->lastPosition();
@@ -1062,7 +1063,7 @@ void InspectorPageAgent::setGeolocationOverride(ErrorString* error, const double
 
     controller->positionChanged(0); // Kick location update.
 #else
-    *error = "Geolocation is not available.";
+    *error = "Geolocation is not available";
     UNUSED_PARAM(latitude);
     UNUSED_PARAM(longitude);
     UNUSED_PARAM(accuracy);
@@ -1082,7 +1083,7 @@ void InspectorPageAgent::clearGeolocationOverride(ErrorString* error)
     if (controller && m_platformGeolocationPosition.get())
         controller->positionChanged(m_platformGeolocationPosition.get());
 #else
-    *error = "Geolocation is not available.";
+    *error = "Geolocation is not available";
 #endif
 }
 
@@ -1109,7 +1110,7 @@ void InspectorPageAgent::setDeviceOrientationOverride(ErrorString* error, double
 {
     DeviceOrientationController* controller = DeviceOrientationController::from(m_page);
     if (!controller) {
-        *error = "Internal error: unable to override device orientation.";
+        *error = "Internal error: unable to override device orientation";
         return;
     }
 
@@ -1181,7 +1182,7 @@ void InspectorPageAgent::getCompositingBordersVisible(ErrorString* error, bool* 
 {
     Settings* settings = m_page->settings();
     if (!settings) {
-        *error = "Internal error: unable to read settings.";
+        *error = "Internal error: unable to read settings";
         return;
     }
 
@@ -1196,6 +1197,12 @@ void InspectorPageAgent::setCompositingBordersVisible(ErrorString*, bool visible
 
     settings->setShowDebugBorders(visible);
     settings->setShowRepaintCounter(visible);
+}
+
+void InspectorPageAgent::captureScreenshot(ErrorString* errorString, String* data)
+{
+    if (!m_client->captureScreenshot(data))
+        *errorString = "Could not capture screenshot";
 }
 
 } // namespace WebCore

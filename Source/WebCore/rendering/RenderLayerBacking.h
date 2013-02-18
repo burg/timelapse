@@ -62,8 +62,13 @@ public:
 
     RenderLayer* owningLayer() const { return m_owningLayer; }
 
-    enum UpdateDepth { CompositingChildren, AllDescendants };
-    void updateAfterLayout(UpdateDepth, bool isUpdateRoot);
+    enum UpdateAfterLayoutFlag {
+        CompositingChildrenOnly = 1 << 0,
+        NeedsFullRepaint = 1 << 1,
+        IsUpdateRoot = 1 << 2
+    };
+    typedef unsigned UpdateAfterLayoutFlags;
+    void updateAfterLayout(UpdateAfterLayoutFlags);
     
     // Returns true if layer configuration changed.
     bool updateGraphicsLayerConfiguration();
@@ -89,7 +94,7 @@ public:
     GraphicsLayer* scrollingLayer() const { return m_scrollingLayer.get(); }
     GraphicsLayer* scrollingContentsLayer() const { return m_scrollingContentsLayer.get(); }
 
-    void attachToScrollingCoordinator(RenderLayerBacking* parent);
+    void attachToScrollingCoordinatorWithParent(RenderLayerBacking* parent);
     void detachFromScrollingCoordinator();
     uint64_t scrollLayerID() const { return m_scrollLayerID; }
     
@@ -137,6 +142,7 @@ public:
     
     void updateAfterWidgetResize();
     void positionOverflowControlsLayers(const IntSize& offsetFromRoot);
+    bool hasUnpositionedOverflowControlsLayers() const;
 
     bool usingTileCache() const { return m_usingTiledCacheLayer; }
     TiledBacking* tiledBacking() const;

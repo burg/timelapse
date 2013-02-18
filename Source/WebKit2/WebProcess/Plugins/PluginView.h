@@ -30,6 +30,7 @@
 #include "Plugin.h"
 #include "PluginController.h"
 #include "WebFrame.h"
+#include <WebCore/FindOptions.h>
 #include <WebCore/Image.h>
 #include <WebCore/MediaCanStartListener.h>
 #include <WebCore/PluginViewBase.h>
@@ -90,8 +91,11 @@ public:
     void pageScaleFactorDidChange();
     void webPageDestroyed();
 
-    virtual bool handleEditingCommand(const String& commandName, const String& argument);
-    virtual bool isEditingCommandEnabled(const String& commandName);
+    bool handleEditingCommand(const String& commandName, const String& argument);
+    bool isEditingCommandEnabled(const String& commandName);
+    
+    unsigned countFindMatches(const String& target, WebCore::FindOptions, unsigned maxMatchCount);
+    bool findString(const String& target, WebCore::FindOptions, unsigned maxMatchCount);
 
     bool shouldAllowScripting();
 
@@ -124,6 +128,7 @@ private:
     void redeliverManualStream();
 
     void pluginSnapshotTimerFired(WebCore::DeferrableOneShotTimer<PluginView>*);
+    void pluginDidReceiveUserInteraction();
 
     // WebCore::PluginViewBase
 #if PLATFORM(MAC)
@@ -137,6 +142,8 @@ private:
     virtual WebCore::Scrollbar* horizontalScrollbar();
     virtual WebCore::Scrollbar* verticalScrollbar();
     virtual bool wantsWheelEvents();
+    virtual bool shouldAlwaysAutoStart() const OVERRIDE;
+    virtual bool shouldAllowNavigationFromDrags() const OVERRIDE;
 
     // WebCore::Widget
     virtual void setFrameRect(const WebCore::IntRect&);
@@ -251,6 +258,7 @@ private:
     // This timer is used when plugin snapshotting is enabled, to capture a plugin placeholder.
     WebCore::DeferrableOneShotTimer<PluginView> m_pluginSnapshotTimer;
     unsigned m_countSnapshotRetries;
+    bool m_didReceiveUserInteraction;
 
     double m_pageScaleFactor;
 };

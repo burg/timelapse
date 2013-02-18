@@ -259,6 +259,7 @@ webkit.org/b/50485 inspector-protocol/take-heap-snapshot.html [ Skip ]
 
 # New inspector/profiler/memory-instrumentation-canvas.html fails on JSC platforms
 webkit.org/b/99001 inspector/profiler/memory-instrumentation-canvas.html
+webkit.org/b/73936 inspector/profiler/canvas2d/canvas-has-uninstrumented-canvases.html
 
 # Skipping newly added tests while I'm finding out what is wrong.
 # https://bugs.webkit.org/show_bug.cgi?id=59706
@@ -307,7 +308,7 @@ http/tests/security/filesystem-iframe-from-remote.html
 http/tests/security/mixedContent/filesystem-url-in-iframe.html
 http/tests/websocket/tests/hybi/send-file-blob.html
 http/tests/websocket/tests/hybi/send-file-blob-fail.html
-fast/mutation/filesystem-callback-delivery.html
+fast/dom/MutationObserver/filesystem-callback-delivery.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=46223
 # The WebKit plugin implementation does not support iframe shims.
@@ -471,7 +472,6 @@ media/track/track-cue-rendering-vertical.html
 media/track/track-webvtt-tc028-unsupported-markup.html
 
 # Opera-submitted tests to W3C for <track>, a lot of failures still.
-# Opera-submitted tests to W3C for <track>, a lot of failures still.
 webkit.org/b/103926 media/track/opera/idl/media-idl-tests.html [ Skip ]
 webkit.org/b/103926 media/track/opera/interfaces/HTMLElement/HTMLMediaElement/crossOrigin.html [ Skip ]
 webkit.org/b/103926 media/track/opera/interfaces/HTMLElement/HTMLTrackElement/kind.html [ Skip ]
@@ -504,6 +504,12 @@ webkit.org/b/103926 media/track/opera/track/webvtt/parsing-cue-data/tests/timest
 webkit.org/b/103926 media/track/opera/track/webvtt/parsing-cue-data/tests/tree-building.html [ Skip ]
 webkit.org/b/103926 media/track/opera/track/webvtt/rendering/adhoc/cue_font_size_transition.html [ Skip ]
 webkit.org/b/103926 media/track/opera/track/webvtt/rendering/adhoc/voice_with_evil_timestamp.html [ Skip ]
+
+# After fixing webkit.org/b/103258, these tests fail when they used to simply timeout.
+# At any rate, there is no regression, just a different type of failure.
+webkit.org/b/105536 media/track/opera/interfaces/TextTrack/addCue.html [ Failure ]
+webkit.org/b/105536 media/track/opera/interfaces/TextTrackCue/endTime.html [ Failure ]
+webkit.org/b/105536 media/track/opera/interfaces/TextTrackCue/startTime.html [ Failure ]
 
 # Tests for MediaSource API. Feature is not yet functional.
 # https://bugs.webkit.org/show_bug.cgi?id=64731
@@ -587,7 +593,7 @@ media/W3C/video/canPlayType/canPlayType_two_implies_one_6.html
 
 # Fails because MutationObservers are not notified at end-of-task
 # https://bugs.webkit.org/show_bug.cgi?id=78290
-fast/mutation/end-of-task-delivery.html
+fast/dom/MutationObserver/end-of-task-delivery.html
 
 # https://bugs.webkit.org/show_bug.cgi?id=72010
 # Needs PageClients::vibrationClient() implementation.
@@ -733,9 +739,14 @@ fast/profiler/dead-time.html
 # https://bugs.webkit.org/show_bug.cgi?id=85319
 inspector/debugger/linkifier.html
 
-# Fail until SUBPIXEL_LAYOUT is enabled
+# Failing subpixel reference tests
 # https://bugs.webkit.org/show_bug.cgi?id=85532
-fast/sub-pixel
+fast/sub-pixel/file-upload-control-at-fractional-offset.html [ ImageOnlyFailure ]
+fast/sub-pixel/float-wrap-zoom.html [ ImageOnlyFailure ]
+fast/sub-pixel/zoomed-image-tiles.html [ ImageOnlyFailure ]
+
+# Needs rebaseline
+fast/sub-pixel/inline-block-with-padding.html [ Failure ]
 
 # No CORS support for media elements is implemented yet.
 http/tests/security/video-cross-origin-readback.html
@@ -1076,11 +1087,6 @@ webkit.org/b/73766 css3/unicode-bidi-isolate-aharon-failing.html [ ImageOnlyFail
 webkit.org/b/34331 http/tests/media/video-referer.html [ Failure Pass ]
 webkit.org/b/97259 media/track/track-cue-rendering-inner-timestamps.html [ Skip ]
 
-# https://bugs.webkit.org/show_bug.cgi?id=81276
-# Allowed to regress to fix a crash.
-webkit.org/b/69210 fast/inline/continuation-outlines-with-layers.html [ Skip ]
-webkit.org/b/69210 fast/repaint/transform-absolute-in-positioned-container.html [ Failure ]
-
 # Failing ref tests
 webkit.org/b/84759 ietestcenter/css3/multicolumn/column-containing-block-001.htm [ ImageOnlyFailure ]
 webkit.org/b/84760 ietestcenter/css3/multicolumn/column-containing-block-002.htm [ ImageOnlyFailure ]
@@ -1090,7 +1096,6 @@ webkit.org/b/84771 ietestcenter/css3/multicolumn/column-width-applies-to-009.htm
 webkit.org/b/84772 ietestcenter/css3/multicolumn/column-width-applies-to-010.htm [ ImageOnlyFailure ]
 webkit.org/b/84773 ietestcenter/css3/multicolumn/column-width-applies-to-012.htm [ ImageOnlyFailure ]
 webkit.org/b/84777 ietestcenter/css3/multicolumn/column-width-applies-to-015.htm [ ImageOnlyFailure ]
-webkit.org/b/84778 ietestcenter/css3/multicolumn/column-width-negative-001.htm [ ImageOnlyFailure ]
 
 webkit.org/b/60731 ietestcenter/css3/grid/grid-column-001.htm [ ImageOnlyFailure ]
 webkit.org/b/60731 ietestcenter/css3/grid/grid-column-002.htm [ ImageOnlyFailure ]
@@ -1125,15 +1130,8 @@ webkit.org/b/85918 compositing/backface-visibility/backface-visibility-3d.html [
 webkit.org/b/85918 compositing/backface-visibility/backface-visibility-hierarchical-transform.html [ ImageOnlyFailure ]
 webkit.org/b/85918 compositing/backface-visibility/backface-visibility-non3d.html [ ImageOnlyFailure ]
 
-# Accelerated compositing is disabled for elements in a RenderFlowThread
-webkit.org/b/84900 compositing/regions/webkit-flow-renderer-layer-compositing.html [ ImageOnlyFailure ]
-
-webkit.org/b/101897 fast/regions/region-style-inline-background-color.html [ ImageOnlyFailure ]
-
 # Disable webaudio codec tests, including proprietary codecs.
 webkit.org/b/88794 webaudio/codec-tests
-
-webkit.org/b/90007 http/tests/security/mixedContent/insecure-audio-video-in-main-frame.html [ Failure ]
 
 # Text Autosizing is not enabled.
 webkit.org/b/84186 fast/text-autosizing
@@ -1156,9 +1154,6 @@ webkit.org/b/98687 fast/css-generated-content/table-row-group-to-inline.html [ F
 webkit.org/b/104595 fast/css/empty-generated-content.html [ Failure ]
 
 webkit.org/b/93247 [ Debug ] fast/lists/list-marker-remove-crash.html [ Crash ]
-
-# (r124484) inspector/device-orientation-success.html failing on Mac ports
-webkit.org/b/93552 inspector/device-orientation-success.html [ Failure ]
 
 # (r125790): Newly added test inspector/timeline/timeline-decode-resize.html is failing on mac
 webkit.org/b/94374 inspector/timeline/timeline-decode-resize.html [ Failure ]
@@ -1216,11 +1211,13 @@ webkit.org/b/61138 http/tests/w3c/webperf/submission/Intel/resource-timing [ Ski
 # TileCache tests that don't apply to WK1 (they are re-enabled via the WK2 TestExpectations file)
 platform/mac/tiled-drawing/ [ Skip ]
 
+# Can't hide scrollbars in WK1
+fast/css/sticky/sticky-top-zoomed.html [ ImageOnlyFailure ]
+
 webkit.org/b/100846 inspector-protocol/debugger-pause-dedicated-worker.html [ Skip ]
 webkit.org/b/100846 inspector-protocol/debugger-terminate-dedicated-worker-while-paused.html [ Skip ]
 
 webkit.org/b/100142 css3/filters/effect-reference-hw.html [ Failure ]
-webkit.org/b/100142 css3/filters/effect-reference-ordering-hw.html [ Failure ]
 webkit.org/b/100142 css3/filters/effect-reference.html [ Failure ]
 
 # Mac doesn't have a toggle for CC any more, it's based on a menu of choices.
@@ -1235,11 +1232,52 @@ webkit.org/b/67434 [ Debug ] fast/block/float/overhanging-tall-block.html [ Skip
 # Mountain Lion and prior do not support custom media data loading
 Bug(jernoble) [ MountainLion Lion SnowLeopard ] media/video-src-blob.html
 
-# Needs ENABLE(MOUSE_CURSOR_SCALE)
-webkit.org/b/102579 fast/css/cursor-parsing-image-set.html [ Failure ]
-webkit.org/b/102579 fast/events/mouse-cursor-image-set.html [ Failure ]
-
 # Mountain Lion and prior do not allow access to in-band text tracks
 webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band.html
+webkit.org/b/103663 [ MountainLion Lion SnowLeopard ] media/track/track-in-band-cues-added-once.html
 
 webkit.org/b/104104 fast/overflow/scrollbar-click-retains-focus.html [ Failure ]
+
+webkit.org/b/104949 fast/spatial-navigation/snav-unit-overflow-and-scroll-in-direction.html [ Failure ]
+
+webkit.org/b/104954 http/tests/canvas/canvas-slow-font-loading.html [ ImageOnlyFailure ]
+
+webkit.org/b/104962 platform/mac/fast/loader/file-url-mimetypes-2.html [ Failure ]
+
+webkit.org/b/105049 compositing/layer-creation/fixed-position-out-of-view-scaled-iframe-scroll.html [ Failure ]
+webkit.org/b/105049 compositing/layer-creation/fixed-position-out-of-view-scaled-iframe.html [ Failure ]
+
+webkit.org/b/105566 media/track/track-webvtt-tc006-cue-identifiers.html [ Crash Pass ]
+webkit.org/b/105580 media/track/track-prefer-captions.html [ Crash Pass ]
+
+webkit.org/b/105606 media/track [ Crash Pass ]
+
+webkit.org/b/105567 http/tests/security/data-url-inline.css.html [ Crash Pass ]
+
+webkit.org/b/104848 fast/frames/sandboxed-iframe-parsing-space-characters.html [ Failure Pass ]
+
+# ap is looking into this crash.
+Bug(rniwa) http/tests/appcache/main-resource-redirect.html [ Crash ]
+
+webkit.org/b/105601 svg/zoom/page/zoom-replaced-intrinsic-ratio-001.htm [ Crash Pass ]
+
+webkit.org/b/105603 http/tests/cookies/single-quoted-value.html [ Failure Pass ]
+
+webkit.org/b/105777 platform/mac/editing/spelling/autocorrection-in-textarea.html [ Failure Pass ]
+
+webkit.org/b/105778 platform/mac/accessibility/file-upload-button-subrole.html [ Failure ]
+
+webkit.org/b/105932 [ MountainLion Debug ] http/tests/inspector/resource-har-pages.html [ Crash ]
+
+webkit.org/b/105986 [ Debug ] transitions/hang-with-bad-transition-list.html [ Pass Crash ]
+webkit.org/b/105986 [ Debug ] svg/dynamic-updates/SVGFEMorphologyElement-dom-in-attr.html [ Pass Crash ]
+webkit.org/b/105986 [ Debug ] svg/dynamic-updates/SVGFEMorphologyElement-dom-radius-attr.html [ Pass Crash ]
+webkit.org/b/105986 [ Debug ] svg/dynamic-updates/SVGFEMorphologyElement-dom-operator-attr.html [ Pass Crash ]
+webkit.org/b/105986 [ Debug ] transitions/interrupt-transform-transition.html [ Pass Crash ]
+
+webkit.org/b/105999 [ Lion ] fast/canvas/canvas-composite-canvas.html [ Failure ]
+webkit.org/b/105999 [ Lion ] fast/canvas/canvas-composite-image.html [ Failure ]
+
+webkit.org/b/106064 fast/inline/continuation-outlines-with-layers.html [ Failure ]
+
+webkit.org/b/106075 [ Debug ] fast/regions/full-screen-video-from-region.html [ Crash ]

@@ -21,10 +21,6 @@ set(DumpRenderTree_SOURCES
     ${TOOLS_DIR}/DumpRenderTree/efl/WorkQueueItemEfl.cpp
 )
 
-set(ImageDiff_SOURCES
-    ${TOOLS_DIR}/DumpRenderTree/efl/ImageDiff.cpp
-)
-
 set(DumpRenderTree_LIBRARIES
     ${JavaScriptCore_LIBRARY_NAME}
     ${WebCoreTestSupport_LIBRARY_NAME}
@@ -38,6 +34,7 @@ set(DumpRenderTree_LIBRARIES
     ${ECORE_INPUT_LIBRARIES}
     ${EDJE_LIBRARIES}
     ${EINA_LIBRARIES}
+    ${EO_LIBRARIES}
     ${EVAS_LIBRARIES}
     ${FONTCONFIG_LIBRARIES}
     ${LIBXML2_LIBRARIES}
@@ -107,6 +104,7 @@ set(DumpRenderTree_INCLUDE_DIRECTORIES
     ${ECORE_INPUT_INCLUDE_DIRS}
     ${EDJE_INCLUDE_DIRS}
     ${EINA_INCLUDE_DIRS}
+    ${EO_INCLUDE_DIRS}
     ${EVAS_INCLUDE_DIRS}
     ${FONTCONFIG_INCLUDE_DIR}
     ${GLIB_INCLUDE_DIRS}
@@ -124,7 +122,3 @@ include_directories(${DumpRenderTree_INCLUDE_DIRECTORIES})
 add_executable(DumpRenderTree ${DumpRenderTree_SOURCES})
 target_link_libraries(DumpRenderTree ${DumpRenderTree_LIBRARIES})
 set_target_properties(DumpRenderTree PROPERTIES FOLDER "Tools")
-
-add_executable(ImageDiff ${ImageDiff_SOURCES})
-target_link_libraries(ImageDiff ${DumpRenderTree_LIBRARIES})
-set_target_properties(ImageDiff PROPERTIES FOLDER "Tools")

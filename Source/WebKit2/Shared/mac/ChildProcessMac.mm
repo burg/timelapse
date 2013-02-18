@@ -26,41 +26,21 @@
 #import "config.h"
 #import "ChildProcess.h"
 
+#import "WebKitSystemInterface.h"
 #import <mach/task.h>
 
 namespace WebKit {
 
-NSString * const ChildProcess::processSuppressionVisibleApplicationReason = @"Application is Visible";
-
 void ChildProcess::setApplicationIsOccluded(bool applicationIsOccluded)
 {
-    if (m_applicationIsOccluded == applicationIsOccluded)
+    if (this->applicationIsOccluded() == applicationIsOccluded)
         return;
 
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    m_applicationIsOccluded = applicationIsOccluded;
-    if (m_applicationIsOccluded)
-        enableProcessSuppression(processSuppressionVisibleApplicationReason);
+    if (applicationIsOccluded)
+        m_processVisibleAssertion.clear();
     else
-        disableProcessSuppression(processSuppressionVisibleApplicationReason);
-#endif
-}
-
-void ChildProcess::disableProcessSuppression(NSString *reason)
-{
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    // The following assumes that a process enabling AutomaticTerminationSupport also
-    // takes a AutomaticTermination assertion for the lifetime of the process.
-    [[NSProcessInfo processInfo] disableAutomaticTermination:reason];
-#endif
-}
-
-void ChildProcess::enableProcessSuppression(NSString *reason)
-{
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1090
-    // The following assumes that a process enabling AutomaticTerminationSupport also
-    // takes a AutomaticTermination assertion for the lifetime of the process.
-    [[NSProcessInfo processInfo] enableAutomaticTermination:reason];
+        m_processVisibleAssertion = WKNSProcessInfoProcessAssertionWithTypes(WKProcessAssertionTypeVisible);
 #endif
 }
 
@@ -80,7 +60,7 @@ void ChildProcess::platformInitialize()
     setpriority(PRIO_DARWIN_PROCESS, 0, 0);
     initializeTimerCoalescingPolicy();
 #endif
-    disableProcessSuppression(processSuppressionVisibleApplicationReason);
+    setApplicationIsOccluded(false);
 }
 
 }

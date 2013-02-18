@@ -44,7 +44,6 @@ namespace WebKit {
 
 class CoordinatedLayerInfo;
 class LayerTreeRenderer;
-class CoordinatedLayerUpdateInfo;
 
 class CoordinatedLayerTreeHostProxy {
     WTF_MAKE_NONCOPYABLE(CoordinatedLayerTreeHostProxy);
@@ -61,10 +60,11 @@ public:
     void createCustomFilterProgram(int id, const WebCore::CustomFilterProgramInfo&);
     void removeCustomFilterProgram(int id);
 #endif
+    void createCompositingLayer(CoordinatedLayerID);
     void deleteCompositingLayer(CoordinatedLayerID);
     void setRootCompositingLayer(CoordinatedLayerID);
     void setContentsSize(const WebCore::FloatSize&);
-    void setVisibleContentsRect(const WebCore::FloatRect&, float scale, const WebCore::FloatPoint& trajectoryVector);
+    void setVisibleContentsRect(const WebCore::FloatRect&, float pageScaleFactor, const WebCore::FloatPoint& trajectoryVector);
     void didRenderFrame(const WebCore::IntSize& contentsSize, const WebCore::IntRect& coveredRect);
     void createTileForLayer(CoordinatedLayerID, uint32_t tileID, const WebCore::IntRect&, const SurfaceUpdateInfo&);
     void updateTileForLayer(CoordinatedLayerID, uint32_t tileID, const WebCore::IntRect&, const SurfaceUpdateInfo&);
@@ -93,6 +93,8 @@ public:
     void animationFrameReady();
 #endif
     void setBackgroundColor(const WebCore::Color&);
+
+    float deviceScaleFactor() const;
 
 protected:
     void dispatchUpdate(const Function<void()>&);

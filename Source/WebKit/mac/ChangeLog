@@ -1,3 +1,265 @@
+2013-01-01  Dan Bernstein  <mitz@apple.com>
+
+        <rdar://problem/12942239> Update copyright strings
+
+        Reviewed by Sam Weinig.
+
+        * Info.plist:
+
+2012-12-29  Adam Roben  <aroben@webkit.org>
+
+        Web Inspector: Mac WK1 Inspector can't save/load timeline data
+        https://bugs.webkit.org/show_bug.cgi?id=105547
+
+        Reviewed by Pavel Feldman.
+
+        * WebCoreSupport/WebInspectorClient.h: Declared new overrides and
+        member variables necessary for save support.
+
+        * WebCoreSupport/WebInspectorClient.mm:
+        (WebInspectorFrontendClient::save):
+        (WebInspectorFrontendClient::append):
+        Implemented these to make saving timeline data work. (It seems to me
+        the InspectorFrontendClient API could be cleaned up a bit. I had to
+        look at Chromium source code to determine that I needed to call back
+        into the InspectorFrontendAPI JS object after saving/appending, and
+        that I needed to keep a map of passed URLs -> chosen URLs.)
+
+        (-[WebInspectorWindowController window:willPositionSheet:usingRect:]):
+        Tweaked the position of the sheet so that open/save sheets look a
+        little bette.r
+
+        (-[WebInspectorWindowController webView:runOpenPanelForFileButtonWithResultListener:allowMultipleFiles:]):
+        Implemented to make loading timeline data work.
+
+2012-12-28  Mark Rowe  <mrowe@apple.com>
+
+        Move logic for extracting the OS X marketing version in to WebCore
+        <http://webkit.org/b/105841> / <rdar://problem/10736041>
+
+        Reviewed by Dan Bernstein.
+
+        * WebCoreSupport/WebSystemInterface.mm:
+        (InitWebCoreSystemInterface): Remove the code related to the WKSI symbol.
+        * WebView/WebView.mm:
+        (systemMarketingVersionForUserAgentString): Call the WebCore function instead of the WKSI function.
+        (+[WebView _standardUserAgentWithApplicationName:]): Retain the result now that our helper doesn't
+        do that for us.
+
+2012-12-27  Sam Weinig  <sam@webkit.org>
+
+        Attempt to fix the tests.
+
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences initialize]):
+
+2012-12-23  Alexey Proskuryakov  <ap@apple.com>
+
+        <rdar://problem/12808377> Network process should respect cookie accept policy
+        https://bugs.webkit.org/show_bug.cgi?id=105684
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        * WebCoreSupport/WebPlatformStrategies.mm:
+        CookiesStrategy no longer has notifyCookiesChanged().
+
+2012-12-22  Alexey Proskuryakov  <ap@apple.com>
+
+        Add a separate class for networking related storage
+        https://bugs.webkit.org/show_bug.cgi?id=105676
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        Updated for ResourceHandle include changes.
+
+        * WebCoreSupport/WebFrameNetworkingContext.h:
+        * WebCoreSupport/WebFrameNetworkingContext.mm:
+        This class is now simpler, with more session tracking being in WebCore now.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        * WebCoreSupport/WebPlatformStrategies.mm:
+        (WebPlatformStrategies::cookiesForDOM):
+        (WebPlatformStrategies::setCookiesFromDOM):
+        (WebPlatformStrategies::cookiesEnabled):
+        (WebPlatformStrategies::cookieRequestHeaderFieldValue):
+        (WebPlatformStrategies::getRawCookies):
+        (WebPlatformStrategies::deleteCookie):
+        We no longer need a function for default cookie storage! Other cookie functions
+        now take a session.
+
+        * WebView/WebPreferences.mm:
+        (+[WebPreferences _switchNetworkLoaderToNewTestingSession]): Initialize WCSI before
+        calling a WebCore that uses it.
+        (+[WebPreferences _setCurrentNetworkLoaderSessionCookieAcceptPolicy:]): Use
+        NetworkStorageSession for session tracking.
+
+        * WebView/WebView.mm: (-[WebView _cachedResponseForURL:]): Updated for networking
+        context now returning a class for session.
+
+2012-12-20  Ilya Tikhonovsky  <loislo@chromium.org>
+
+        Unreviewed build fix for chromium mac after r138206.
+
+        * WebCoreSupport/WebSystemInterface.mm:
+        (InitWebCoreSystemInterface):
+
+2012-12-19  Alexey Proskuryakov  <ap@apple.com>
+
+        <rdar://problem/12890242> [WK2 NetworkProcess] Client doesn't receive SSL certificates
+        https://bugs.webkit.org/show_bug.cgi?id=105467
+
+        Reviewed by Brady Eidson.
+
+        * WebCoreSupport/WebSystemInterface.mm: (InitWebCoreSystemInterface): Initialize
+        a WKSI function we've been missing.
+
+2012-12-19  Alexis Menard  <alexis@webkit.org>
+
+        Implement CSS parsing for CSS transitions unprefixed.
+        https://bugs.webkit.org/show_bug.cgi?id=104804
+
+        Reviewed by Dean Jackson.
+
+        Add a new flag ENABLE_CSS_TRANSFORMS_ANIMATIONS_TRANSITIONS_UNPREFIXED
+        to cover the work of unprefixing Transforms, Animations and 
+        Transitions. It will let the possibility of each ports to turn it off 
+        in their release branches until we're confident that these CSS 
+        properties are ready to be unprefixed.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-12-18  Alexey Proskuryakov  <ap@apple.com>
+
+        Remove unnecessary functions from CookiesStrategy
+        https://bugs.webkit.org/show_bug.cgi?id=105369
+
+        Reviewed by Brady Eidson.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        * WebCoreSupport/WebPlatformStrategies.mm:
+
+2012-12-18  Alice Liu  <alice.liu@apple.com>
+
+        Add SPI to WebKit1 WebFrame for hit testing
+        https://bugs.webkit.org/show_bug.cgi?id=105106
+
+        Reviewed by Dan Bernstein.
+
+        * WebView/WebFrame.mm:
+        (-[WebFrame elementAtPoint:]): Added. Takes an NSPoint to feed to the WebCore::Frame for hit-testing.
+        Creates a WebElementDictionary from that WebCore::HitTestResult, and returns the element dictionary. 
+        * WebView/WebFramePrivate.h:
+
+2012-12-18  Alice Liu  <alice.liu@apple.com>
+
+        Add SPI to WebKit1 WebFrame for node conversion to JSValueRef
+        https://bugs.webkit.org/show_bug.cgi?id=105262
+
+        Reviewed by Anders Carlsson.
+
+        * WebView/WebFrame.mm:
+        (-[WebFrame jsWrapper:forWorld:]): Added. Takes a DOMNode and WebScriptWorld and provides a JSValueRef
+        for the WebCore::Node in that particular WebScriptWorld.
+        * WebView/WebFramePrivate.h:
+
+2012-12-18  Beth Dakin  <bdakin@apple.com>
+
+        https://bugs.webkit.org/show_bug.cgi?id=102579
+        [mac] Enable scaled cursors
+
+        Reviewed by Dean Jackson.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-12-16  Levi Weintraub  <leviw@chromium.org>
+
+        Push pixel snapping logic into TransformState
+        https://bugs.webkit.org/show_bug.cgi?id=101779
+
+        Reviewed by Simon Fraser.
+
+        * WebView/WebFullScreenController.mm:
+        (screenRectOfContents): Removed SnapOffsetForTransforms as it's no longer needed.
+
+2012-12-15  Anders Carlsson  <andersca@apple.com>
+
+        Rename FrameLoaderClient::download to convertMainResourceLoadToDownload
+        https://bugs.webkit.org/show_bug.cgi?id=105122
+
+        Reviewed by Andreas Kling.
+
+        Update for WebCore changes.
+
+        * WebCoreSupport/WebFrameLoaderClient.h:
+        (WebFrameLoaderClient):
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (WebFrameLoaderClient::convertMainResourceLoadToDownload):
+
+2012-12-15  Mark Lam  <mark.lam@apple.com>
+
+        Re-landing patch for "Introducing the DatabaseStrategy and database servers".
+        https://bugs.webkit.org/show_bug.cgi?id=104934.
+
+        Not reviewed.
+
+        Merged from r137767. Previously reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        (WebPlatformStrategies):
+        * WebCoreSupport/WebPlatformStrategies.mm:
+        (WebPlatformStrategies::createDatabaseStrategy):
+
+2012-12-14  Mark Lam  <mark.lam@apple.com>
+
+        The WebView should initialize the platform strategies before initializing other sub-systems.
+        https://bugs.webkit.org/show_bug.cgi?id=105083.
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebView/WebView.mm:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+
+2012-12-14  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r137767.
+        http://trac.webkit.org/changeset/137767
+        https://bugs.webkit.org/show_bug.cgi?id=105062
+
+        Broke Mac builds. (Requested by mlam on #webkit).
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        (WebPlatformStrategies):
+        * WebCoreSupport/WebPlatformStrategies.mm:
+
+2012-12-14  Mark Lam  <mark.lam@apple.com>
+
+        Introducing the DatabaseStrategy and database servers.
+        https://bugs.webkit.org/show_bug.cgi?id=104934.
+
+        Reviewed by Sam Weinig.
+
+        The database server is currently a placeholder that does nothing.
+
+        * WebCoreSupport/WebPlatformStrategies.h:
+        (WebPlatformStrategies):
+        * WebCoreSupport/WebPlatformStrategies.mm:
+        (WebPlatformStrategies::createDatabaseStrategy):
+
+2012-12-13  Alexey Proskuryakov  <ap@apple.com>
+
+        <rdar://problem/12838354> Per-Tab WebProcess: DOM cookie access functions should respect private browsing
+        https://bugs.webkit.org/show_bug.cgi?id=104691
+
+        Reviewed by Sam Weinig.
+
+        * WebCoreSupport/WebFrameNetworkingContext.h:
+        * WebCoreSupport/WebFrameNetworkingContext.mm:
+        (WebFrameNetworkingContext::inPrivateBrowsingMode):
+        (WebFrameNetworkingContext::storageSession):
+        Implemented inPrivateBrowsingMode().
+
 2012-12-12  Mark Lam  <mark.lam@apple.com>
 
         Encapsulate externally used webdatabase APIs in DatabaseManager.

@@ -35,6 +35,7 @@
 #include "Heap.h"
 #include "Intrinsic.h"
 #include "JITStubs.h"
+#include "JITThunks.h"
 #include "JSLock.h"
 #include "JSValue.h"
 #include "LLIntData.h"
@@ -451,6 +452,8 @@ namespace JSC {
         CodeCache* codeCache() { return m_codeCache.get(); }
 
         JS_EXPORT_PRIVATE void discardAllCode();
+
+        void *m_apiData;
 
     private:
         friend class LLIntOffsetsExtractor;
