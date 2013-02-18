@@ -53,6 +53,9 @@ InstrumentingAgents::InstrumentingAgents()
     , m_inspectorDOMAgent(0)
     , m_inspectorResourceAgent(0)
     , m_pageRuntimeAgent(0)
+#if ENABLE(TIMELAPSE)
+    , m_inspectorTimelapseAgent(0)
+#endif
     , m_workerRuntimeAgent(0)
     , m_inspectorTimelineAgent(0)
     , m_inspectorDOMStorageAgent(0)
@@ -88,6 +91,9 @@ void InstrumentingAgents::reset()
     m_inspectorDOMAgent = 0;
     m_inspectorResourceAgent = 0;
     m_pageRuntimeAgent = 0;
+#if ENABLE(TIMELAPSE)
+    m_inspectorTimelapseAgent = 0;
+#endif
     m_workerRuntimeAgent = 0;
     m_inspectorTimelineAgent = 0;
     m_inspectorDOMStorageAgent = 0;
