@@ -6,8 +6,10 @@ set(WebKit2_INCLUDE_DIRECTORIES
     "${WEBKIT2_DIR}/Shared"
     "${WEBKIT2_DIR}/Shared/API"
     "${WEBKIT2_DIR}/Shared/API/c"
+    "${WEBKIT2_DIR}/Shared/Authentication"
     "${WEBKIT2_DIR}/Shared/CoordinatedGraphics"
     "${WEBKIT2_DIR}/Shared/CoreIPCSupport"
+    "${WEBKIT2_DIR}/Shared/Downloads"
     "${WEBKIT2_DIR}/Shared/Network"
     "${WEBKIT2_DIR}/Shared/Plugins"
     "${WEBKIT2_DIR}/Shared/Plugins/Netscape"
@@ -23,12 +25,11 @@ set(WebKit2_INCLUDE_DIRECTORIES
     "${WEBKIT2_DIR}/UIProcess/Launcher"
     "${WEBKIT2_DIR}/UIProcess/Notifications"
     "${WEBKIT2_DIR}/UIProcess/Plugins"
+    "${WEBKIT2_DIR}/UIProcess/Storage"
     "${WEBKIT2_DIR}/WebProcess"
     "${WEBKIT2_DIR}/WebProcess/ApplicationCache"
-    "${WEBKIT2_DIR}/WebProcess/Authentication"
     "${WEBKIT2_DIR}/WebProcess/Battery"
     "${WEBKIT2_DIR}/WebProcess/Cookies"
-    "${WEBKIT2_DIR}/WebProcess/Downloads"
     "${WEBKIT2_DIR}/WebProcess/FullScreen"
     "${WEBKIT2_DIR}/WebProcess/Geolocation"
     "${WEBKIT2_DIR}/WebProcess/NetworkInfo"
@@ -37,13 +38,13 @@ set(WebKit2_INCLUDE_DIRECTORIES
     "${WEBKIT2_DIR}/WebProcess/InjectedBundle/API"
     "${WEBKIT2_DIR}/WebProcess/InjectedBundle/API/c"
     "${WEBKIT2_DIR}/WebProcess/InjectedBundle/DOM"
-    "${WEBKIT2_DIR}/WebProcess/KeyValueStorage"
     "${WEBKIT2_DIR}/WebProcess/Launching"
     "${WEBKIT2_DIR}/WebProcess/MediaCache"
     "${WEBKIT2_DIR}/WebProcess/Notifications"
-    "${WEBKIT2_DIR}/WebProcess/ResourceCache"
     "${WEBKIT2_DIR}/WebProcess/Plugins"
     "${WEBKIT2_DIR}/WebProcess/Plugins/Netscape"
+    "${WEBKIT2_DIR}/WebProcess/ResourceCache"
+    "${WEBKIT2_DIR}/WebProcess/Storage"
     "${WEBKIT2_DIR}/WebProcess/WebCoreSupport"
     "${WEBKIT2_DIR}/WebProcess/WebPage"
     "${WEBKIT2_DIR}/WebProcess/WebPage/CoordinatedGraphics"
@@ -161,7 +162,6 @@ set(WebKit2_SOURCES
     Shared/SessionState.cpp
     Shared/ShareableBitmap.cpp
     Shared/StatisticsData.cpp
-    Shared/SurfaceUpdateInfo.cpp
     Shared/UpdateInfo.cpp
     Shared/VisitedLinkTable.cpp
     Shared/WebBackForwardListItem.cpp
@@ -224,6 +224,7 @@ set(WebKit2_SOURCES
     Shared/API/c/WKUserContentURLPattern.cpp
 
     Shared/CoordinatedGraphics/CoordinatedGraphicsArgumentCoders.cpp
+    Shared/CoordinatedGraphics/CoordinatedSurface.cpp
     Shared/CoordinatedGraphics/WebCoordinatedSurface.cpp
     Shared/CoordinatedGraphics/WebCustomFilterProgramProxy.cpp
 
@@ -381,15 +382,15 @@ set(WebKit2_SOURCES
 
     WebProcess/ApplicationCache/WebApplicationCacheManager.cpp
 
-    WebProcess/Authentication/AuthenticationManager.cpp
+    Shared/Authentication/AuthenticationManager.cpp
 
     WebProcess/Battery/WebBatteryManager.cpp
 
     WebProcess/Cookies/WebCookieManager.cpp
 
-    WebProcess/Downloads/Download.cpp
-    WebProcess/Downloads/DownloadAuthenticationClient.cpp
-    WebProcess/Downloads/DownloadManager.cpp
+    Shared/Downloads/Download.cpp
+    Shared/Downloads/DownloadAuthenticationClient.cpp
+    Shared/Downloads/DownloadManager.cpp
 
     WebProcess/FullScreen/WebFullScreenManager.cpp
 
@@ -438,8 +439,6 @@ set(WebKit2_SOURCES
     WebProcess/InjectedBundle/DOM/InjectedBundleNodeHandle.cpp
     WebProcess/InjectedBundle/DOM/InjectedBundleRangeHandle.cpp
 
-    WebProcess/KeyValueStorage/WebKeyValueStorageManager.cpp
-
     WebProcess/MediaCache/WebMediaCacheManager.cpp
 
     WebProcess/NetworkInfo/WebNetworkInfoManager.cpp
@@ -464,6 +463,8 @@ set(WebKit2_SOURCES
     WebProcess/Plugins/Netscape/NetscapePluginStream.cpp
 
     WebProcess/ResourceCache/WebResourceCacheManager.cpp
+
+    WebProcess/Storage/WebKeyValueStorageManager.cpp
 
     WebProcess/WebCoreSupport/WebBatteryClient.cpp
     WebProcess/WebCoreSupport/WebChromeClient.cpp
@@ -552,7 +553,7 @@ set(WebKit2_MESSAGES_IN_FILES
 
     WebProcess/ApplicationCache/WebApplicationCacheManager.messages.in
 
-    WebProcess/Authentication/AuthenticationManager.messages.in
+    Shared/Authentication/AuthenticationManager.messages.in
 
     WebProcess/Battery/WebBatteryManager.messages.in
 
@@ -564,8 +565,6 @@ set(WebKit2_MESSAGES_IN_FILES
 
     WebProcess/IconDatabase/WebIconDatabaseProxy.messages.in
 
-    WebProcess/KeyValueStorage/WebKeyValueStorageManager.messages.in
-
     WebProcess/MediaCache/WebMediaCacheManager.messages.in
 
     WebProcess/NetworkInfo/WebNetworkInfoManager.messages.in
@@ -576,6 +575,8 @@ set(WebKit2_MESSAGES_IN_FILES
     WebProcess/Plugins/PluginProxy.messages.in
 
     WebProcess/ResourceCache/WebResourceCacheManager.messages.in
+
+    WebProcess/Storage/WebKeyValueStorageManager.messages.in
 
     WebProcess/WebCoreSupport/WebDatabaseManager.messages.in
 

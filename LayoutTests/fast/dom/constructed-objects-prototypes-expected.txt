@@ -11,6 +11,8 @@ PASS (new inner.Blob()).isInner is true
 PASS (new inner.Blob()).constructor.isInner is true
 PASS (new inner.CloseEvent()).isInner is true
 PASS (new inner.CloseEvent()).constructor.isInner is true
+PASS (new inner.CompositionEvent()).isInner is true
+PASS (new inner.CompositionEvent()).constructor.isInner is true
 PASS (new inner.CustomEvent()).isInner is true
 PASS (new inner.CustomEvent()).constructor.isInner is true
 PASS (new inner.DOMParser()).isInner is true
@@ -25,6 +27,8 @@ PASS (new inner.HashChangeEvent()).isInner is true
 PASS (new inner.HashChangeEvent()).constructor.isInner is true
 PASS (new inner.Image()).isInner is true
 PASS (new inner.Image()).constructor.isInner is true
+PASS (new inner.KeyboardEvent()).isInner is true
+PASS (new inner.KeyboardEvent()).constructor.isInner is true
 PASS (new inner.MediaController()).isInner is true
 PASS (new inner.MediaController()).constructor.isInner is true
 PASS (new inner.MessageChannel()).isInner is true
@@ -63,6 +67,8 @@ PASS (new inner.WebKitPoint()).isInner is true
 PASS (new inner.WebKitPoint()).constructor.isInner is true
 PASS (new inner.WebKitTransitionEvent()).isInner is true
 PASS (new inner.WebKitTransitionEvent()).constructor.isInner is true
+PASS (new inner.WheelEvent()).isInner is true
+PASS (new inner.WheelEvent()).constructor.isInner is true
 PASS (new inner.Worker('foo')).isInner is true
 PASS (new inner.Worker('foo')).constructor.isInner is true
 PASS (new inner.XMLHttpRequest()).isInner is true

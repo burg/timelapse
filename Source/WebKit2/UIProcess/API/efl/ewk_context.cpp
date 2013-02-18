@@ -26,6 +26,7 @@
 #include "NetworkInfoProvider.h"
 #include "RequestManagerClientEfl.h"
 #include "WKAPICast.h"
+#include "WKContext.h"
 #include "WKContextSoup.h"
 #include "WKNumber.h"
 #include "WKRetainPtr.h"
@@ -65,17 +66,17 @@ static inline ContextMap& contextMap()
 
 EwkContext::EwkContext(PassRefPtr<WebContext> context)
     : m_context(context)
-    , m_databaseManager(EwkDatabaseManager::create(m_context))
-    , m_storageManager(EwkStorageManager::create(m_context))
+    , m_databaseManager(EwkDatabaseManager::create(WKContextGetDatabaseManager(toAPI(m_context.get()))))
+    , m_storageManager(EwkStorageManager::create(WKContextGetKeyValueStorageManager(toAPI(m_context.get()))))
 #if ENABLE(BATTERY_STATUS)
     , m_batteryProvider(BatteryProvider::create(m_context))
 #endif
 #if ENABLE(NETWORK_INFO)
     , m_networkInfoProvider(NetworkInfoProvider::create(m_context))
 #endif
-    , m_downloadManager(DownloadManagerEfl::create(this))
-    , m_requestManagerClient(RequestManagerClientEfl::create(this))
-    , m_historyClient(ContextHistoryClientEfl::create(m_context))
+    , m_downloadManager(DownloadManagerEfl::create(toAPI(m_context.get())))
+    , m_requestManagerClient(RequestManagerClientEfl::create(toAPI(m_context.get())))
+    , m_historyClient(ContextHistoryClientEfl::create(toAPI(m_context.get())))
 {
     ContextMap::AddResult result = contextMap().add(m_context.get(), this);
     ASSERT_UNUSED(result, result.isNewEntry);

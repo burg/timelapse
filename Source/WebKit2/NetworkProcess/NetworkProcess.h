@@ -68,6 +68,7 @@ public:
 
     NetworkResourceLoadScheduler& networkResourceLoadScheduler() { return m_networkResourceLoadScheduler; }
 
+    AuthenticationManager& authenticationManager();
     DownloadManager& downloadManager();
 
 private:
@@ -78,13 +79,13 @@ private:
 
     // ChildProcess
     virtual void initializeProcessName(const ChildProcessInitializationParameters&) OVERRIDE;
+    virtual void initializeSandbox(const ChildProcessInitializationParameters&, SandboxInitializationParameters&) OVERRIDE;
     virtual void initializeConnection(CoreIPC::Connection*) OVERRIDE;
     virtual bool shouldTerminate() OVERRIDE;
-    virtual void processUpdateSandboxInitializationParameters(const ChildProcessInitializationParameters&, SandboxInitializationParameters&) OVERRIDE;
 
     // CoreIPC::Connection::Client
-    virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&) OVERRIDE;
-    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
+    virtual void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
+    virtual void didReceiveSyncMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&, OwnPtr<CoreIPC::MessageEncoder>&);
     virtual void didClose(CoreIPC::Connection*) OVERRIDE;
     virtual void didReceiveInvalidMessage(CoreIPC::Connection*, CoreIPC::StringReference messageReceiverName, CoreIPC::StringReference messageName) OVERRIDE;
 
@@ -95,7 +96,7 @@ private:
     virtual AuthenticationManager& downloadsAuthenticationManager() OVERRIDE;
 
     // Message Handlers
-    void didReceiveNetworkProcessMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
+    void didReceiveNetworkProcessMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
     void initializeNetworkProcess(const NetworkProcessCreationParameters&);
     void createNetworkConnectionToWebProcess();
     void ensurePrivateBrowsingSession();

@@ -160,7 +160,7 @@ void RenderBox::willBeDestroyed()
     RenderBlock::removePercentHeightDescendantIfNeeded(this);
 
 #if ENABLE(CSS_EXCLUSIONS)
-    ExclusionShapeOutsideInfo::removeInfoForRenderBox(this);
+    ExclusionShapeOutsideInfo::removeInfo(this);
 #endif
 
     RenderBoxModelObject::willBeDestroyed();
@@ -230,6 +230,14 @@ void RenderBox::styleWillChange(StyleDifference diff, const RenderStyle* newStyl
         view()->repaint();
 
     RenderBoxModelObject::styleWillChange(diff, newStyle);
+}
+
+static bool borderWidthChanged(const RenderStyle* oldStyle, const RenderStyle* newStyle)
+{
+    return oldStyle->borderLeftWidth() != newStyle->borderLeftWidth()
+        || oldStyle->borderTopWidth() != newStyle->borderTopWidth()
+        || oldStyle->borderRightWidth() != newStyle->borderRightWidth()
+        || oldStyle->borderBottomWidth() != newStyle->borderBottomWidth();
 }
 
 void RenderBox::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle)
@@ -306,8 +314,9 @@ void RenderBox::styleDidChange(StyleDifference diff, const RenderStyle* oldStyle
     updateExclusionShapeOutsideInfoAfterStyleChange(style()->shapeOutside(), oldStyle ? oldStyle->shapeOutside() : 0);
 #endif
 
-    if (oldStyle && (newStyle->boxSizing() == BORDER_BOX || oldStyle->boxSizing() == BORDER_BOX)
-        && (newStyle->paddingBox() != oldStyle->paddingBox() || newStyle->border() != oldStyle->border())) {
+    if (oldStyle && (newStyle->boxSizing() == BORDER_BOX || oldStyle->boxSizing() == BORDER_BOX) && diff == StyleDifferenceLayout
+        && (newStyle->paddingBox() != oldStyle->paddingBox() || borderWidthChanged(oldStyle, newStyle))) {
+        ASSERT(needsLayout());
         for (RenderObject* child = firstChild(); child; child = child->nextSibling())
             child->setChildNeedsLayout(true, MarkOnlyThis);
     }
@@ -321,10 +330,10 @@ void RenderBox::updateExclusionShapeOutsideInfoAfterStyleChange(const ExclusionS
         return;
 
     if (shapeOutside) {
-        ExclusionShapeOutsideInfo* exclusionShapeOutsideInfo = ExclusionShapeOutsideInfo::ensureInfoForRenderBox(this);
+        ExclusionShapeOutsideInfo* exclusionShapeOutsideInfo = ExclusionShapeOutsideInfo::ensureInfo(this);
         exclusionShapeOutsideInfo->dirtyShapeSize();
     } else
-        ExclusionShapeOutsideInfo::removeInfoForRenderBox(this);
+        ExclusionShapeOutsideInfo::removeInfo(this);
 }
 #endif
 
@@ -849,24 +858,16 @@ void RenderBox::computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, Layou
 
 LayoutUnit RenderBox::minPreferredLogicalWidth() const
 {
-    if (preferredLogicalWidthsDirty()) {
-#ifndef NDEBUG
-        SetLayoutNeededForbiddenScope layoutForbiddenScope(const_cast<RenderBox*>(this));
-#endif
+    if (preferredLogicalWidthsDirty())
         const_cast<RenderBox*>(this)->computePreferredLogicalWidths();
-    }
         
     return m_minPreferredLogicalWidth;
 }
 
 LayoutUnit RenderBox::maxPreferredLogicalWidth() const
 {
-    if (preferredLogicalWidthsDirty()) {
-#ifndef NDEBUG
-        SetLayoutNeededForbiddenScope layoutForbiddenScope(const_cast<RenderBox*>(this));
-#endif
+    if (preferredLogicalWidthsDirty())
         const_cast<RenderBox*>(this)->computePreferredLogicalWidths();
-    }
         
     return m_maxPreferredLogicalWidth;
 }

@@ -375,6 +375,7 @@ public:
     bool scroll(ScrollDirection, ScrollGranularity, float multiplier = 1);
     void autoscroll(const IntPoint&);
 
+    bool canResize() const;
     void resize(const PlatformMouseEvent&, const LayoutSize&);
     bool inResizeMode() const { return m_inResizeMode; }
     void setInResizeMode(bool b) { m_inResizeMode = b; }
@@ -431,11 +432,18 @@ public:
     bool isStackingContext() const { return isStackingContext(renderer()->style()); }
 
     // A stacking container can have z-order lists. All stacking contexts are
-    // stacking containers, but the converse is not true.
-    bool isStackingContainer() const { return isStackingContext(); }
+    // stacking containers, but the converse is not true. Layers that use
+    // composited scrolling are stacking containers, but they may not
+    // necessarily be stacking contexts.
+    bool isStackingContainer() const { return isStackingContext() || needsCompositedScrolling(); }
 
-    // Gets the enclosing stacking container for this layer.
+    // Gets the enclosing stacking container for this layer, excluding this
+    // layer itself.
     RenderLayer* stackingContainer() const;
+
+    // Gets the enclosing stacking container for this layer, possibly the layer
+    // itself, if it is a stacking container.
+    RenderLayer* enclosingStackingContainer() { return isStackingContainer() ? this : stackingContainer(); }
 
     void dirtyZOrderLists();
     void dirtyStackingContainerZOrderLists();
@@ -469,6 +477,13 @@ public:
 
     void setHasVisibleContent();
     void dirtyVisibleContentStatus();
+
+    bool hasBoxDecorationsOrBackground() const;
+    bool hasVisibleBoxDecorations() const;
+    // Returns true if this layer has visible content (ignoring any child layers).
+    bool isVisuallyNonEmpty() const;
+    // True if this layer container renderers that paint.
+    bool hasNonEmptyChildRenderers() const;
 
     // FIXME: We should ASSERT(!m_hasSelfPaintingLayerDescendantDirty); here but we hit the same bugs as visible content above.
     // Part of the issue is with subtree relayout: we don't check if our ancestors have some descendant flags dirty, missing some updates.
@@ -758,8 +773,11 @@ public:
 #endif
 
 private:
+    enum CollectLayersBehavior { StopAtStackingContexts, StopAtStackingContainers };
+
     void updateZOrderLists();
     void rebuildZOrderLists();
+    void rebuildZOrderLists(CollectLayersBehavior, OwnPtr<Vector<RenderLayer*> >&, OwnPtr<Vector<RenderLayer*> >&);
     void clearZOrderLists();
 
     void updateNormalFlowList();
@@ -830,7 +848,7 @@ private:
     LayoutUnit renderBoxX() const { return renderBoxLocation().x(); }
     LayoutUnit renderBoxY() const { return renderBoxLocation().y(); }
 
-    void collectLayers(bool includeHiddenLayers, OwnPtr<Vector<RenderLayer*> >&, OwnPtr<Vector<RenderLayer*> >&);
+    void collectLayers(bool includeHiddenLayers, CollectLayersBehavior, OwnPtr<Vector<RenderLayer*> >&, OwnPtr<Vector<RenderLayer*> >&);
 
     void updateCompositingAndLayerListsIfNeeded();
 

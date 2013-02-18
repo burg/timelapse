@@ -617,7 +617,7 @@
 		9391F273121B38BD00EBF7E8 /* WebFrameNetworkingContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WebFrameNetworkingContext.h; sourceTree = "<group>"; };
 		9391F274121B38BD00EBF7E8 /* WebFrameNetworkingContext.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = WebFrameNetworkingContext.mm; sourceTree = "<group>"; };
 		939811320824BF01008DF038 /* Info.plist */ = {isa = PBXFileReference; indentWidth = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = mac/Info.plist; sourceTree = SOURCE_ROOT; tabWidth = 8; usesTabs = 1; };
-		939811330824BF01008DF038 /* .framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = .framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		939811330824BF01008DF038 /* WebKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = WebKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		93AEB17D032C1735008635CE /* WebKitLogging.h */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.c.h; path = WebKitLogging.h; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
 		93AEB17E032C1735008635CE /* WebKitLogging.m */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.c.objc; path = WebKitLogging.m; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
 		93C6F14507920B93002449CD /* WebFrameViewPrivate.h */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.c.h; path = WebFrameViewPrivate.h; sourceTree = "<group>"; tabWidth = 8; usesTabs = 0; };
@@ -778,7 +778,7 @@
 		034768DFFF38A50411DB9C8B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				939811330824BF01008DF038 /* .framework */,
+				939811330824BF01008DF038 /* WebKit.framework */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -1660,7 +1660,7 @@
 			name = WebKit;
 			productInstallPath = /System/Library/Frameworks;
 			productName = WebKit;
-			productReference = 939811330824BF01008DF038 /* .framework */;
+			productReference = 939811330824BF01008DF038 /* WebKit.framework */;
 			productType = "com.apple.product-type.framework";
 		};
 /* End PBXNativeTarget section */

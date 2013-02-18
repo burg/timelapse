@@ -35,6 +35,7 @@
 #include "WebCertificateInfo.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebData.h"
+#include "WebError.h"
 #include "WebGeometry.h"
 #include "WebImage.h"
 #include "WebNumber.h"
@@ -44,6 +45,7 @@
 #include "WebString.h"
 #include "WebURL.h"
 #include "WebURLRequest.h"
+#include "WebURLResponse.h"
 #include "WebUserContentURLPattern.h"
 
 namespace WebKit {
@@ -63,6 +65,8 @@ namespace WebKit {
 //   - WebUInt64 -> WebUInt64
 //   - WebURL -> WebURL
 //   - WebURLRequest -> WebURLRequest
+//   - WebURLResponse -> WebURLResponse
+//   - WebError -> WebError
 
 template<typename Owner>
 class UserMessageEncoder {
@@ -177,6 +181,11 @@ public:
             encoder << urlRequestObject->resourceRequest();
             return true;
         }
+        case APIObject::TypeURLResponse: {
+            WebURLResponse* urlResponseObject = static_cast<WebURLResponse*>(m_root);
+            encoder << urlResponseObject->resourceResponse();
+            return true;
+        }
         case APIObject::TypeUserContentURLPattern: {
             WebUserContentURLPattern* urlPattern = static_cast<WebUserContentURLPattern*>(m_root);
             encoder << urlPattern->patternString();
@@ -207,6 +216,11 @@ public:
         case APIObject::TypeCertificateInfo: {
             WebCertificateInfo* certificateInfo = static_cast<WebCertificateInfo*>(m_root);
             encoder << certificateInfo->platformCertificateInfo();
+            return true;
+        }
+        case APIObject::TypeError: {
+            WebError* errorObject = static_cast<WebError*>(m_root);
+            encoder << errorObject->platformError();
             return true;
         }
         default:
@@ -240,6 +254,8 @@ protected:
 //   - WebUInt64 -> WebUInt64
 //   - WebURL -> WebURL
 //   - WebURLRequest -> WebURLRequest
+//   - WebURLResponse -> WebURLResponse
+//   - WebError -> WebError
 
 template<typename Owner>
 class UserMessageDecoder {
@@ -383,13 +399,13 @@ public:
                 return false;
             if (renderer->type() != APIObject::TypeRenderObject)
                 return false;
-            if (!decoder->decodeBool(isReflection))
+            if (!decoder->decode(isReflection))
                 return false;
-            if (!decoder->decodeBool(isClipping))
+            if (!decoder->decode(isClipping))
                 return false;
-            if (!decoder->decodeBool(isClipped))
+            if (!decoder->decode(isClipped))
                 return false;
-            if (!decoder->decodeUInt32(compositingLayerTypeAsUInt32))
+            if (!decoder->decode(compositingLayerTypeAsUInt32))
                 return false;
             if (!decoder->decode(absoluteBoundingBox))
                 return false;
@@ -451,6 +467,13 @@ public:
             coder.m_root = WebURLRequest::create(request);
             break;
         }
+        case APIObject::TypeURLResponse: {
+            WebCore::ResourceResponse response;
+            if (!decoder->decode(response))
+                return false;
+            coder.m_root = WebURLResponse::create(response);
+            break;
+        }
         case APIObject::TypeUserContentURLPattern: {
             String string;
             if (!decoder->decode(string))
@@ -485,6 +508,13 @@ public:
             if (!decoder->decode(platformCertificateInfo))
                 return false;
             coder.m_root = WebCertificateInfo::create(platformCertificateInfo);
+            break;
+        }
+        case APIObject::TypeError: {
+            WebCore::ResourceError resourceError;
+            if (!decoder->decode(resourceError))
+                return false;
+            coder.m_root = WebError::create(resourceError);
             break;
         }
         default:

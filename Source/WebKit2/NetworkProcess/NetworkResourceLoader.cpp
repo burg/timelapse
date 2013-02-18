@@ -28,6 +28,7 @@
 
 #if ENABLE(NETWORK_PROCESS)
 
+#include "AuthenticationManager.h"
 #include "DataReference.h"
 #include "Logging.h"
 #include "NetworkConnectionToWebProcess.h"
@@ -66,7 +67,7 @@ CoreIPC::Connection* NetworkResourceLoader::connection() const
 
 uint64_t NetworkResourceLoader::destinationID() const
 {
-    return loadParameters().identifier();
+    return identifier();
 }
 
 void NetworkResourceLoader::start()
@@ -77,10 +78,12 @@ void NetworkResourceLoader::start()
     ref();
     
     // FIXME (NetworkProcess): Create RemoteNetworkingContext with actual settings.
-    m_networkingContext = RemoteNetworkingContext::create(false, false, loadParameters().inPrivateBrowsingMode());
+    m_networkingContext = RemoteNetworkingContext::create(false, false, inPrivateBrowsingMode());
+
+    consumeSandboxExtensions();
 
     // FIXME (NetworkProcess): Pass an actual value for defersLoading
-    m_handle = ResourceHandle::create(m_networkingContext.get(), loadParameters().request(), this, false /* defersLoading */, loadParameters().contentSniffingPolicy() == SniffContent);
+    m_handle = ResourceHandle::create(m_networkingContext.get(), request(), this, false /* defersLoading */, contentSniffingPolicy() == SniffContent);
 }
 
 static bool stopRequestsCalled = false;
@@ -128,7 +131,7 @@ void NetworkResourceLoader::resourceHandleStopped()
 {
     ASSERT(isMainThread());
 
-    if (FormData* formData = loadParameters().request().httpBody())
+    if (FormData* formData = request().httpBody())
         formData->removeGeneratedFilesIfNeeded();
 
     m_handle = 0;
@@ -144,7 +147,7 @@ void NetworkResourceLoader::resourceHandleStopped()
 void NetworkResourceLoader::didReceiveResponse(ResourceHandle*, const ResourceResponse& response)
 {
     // FIXME (NetworkProcess): Cache the response.
-    if (FormData* formData = loadParameters().request().httpBody())
+    if (FormData* formData = request().httpBody())
         formData->removeGeneratedFilesIfNeeded();
     send(Messages::WebResourceLoader::DidReceiveResponseWithCertificateInfo(response, PlatformCertificateInfo(response)));
 }
@@ -162,6 +165,7 @@ void NetworkResourceLoader::didFinishLoading(ResourceHandle*, double finishTime)
 {
     // FIXME (NetworkProcess): For the memory cache we'll need to update the finished status of the cached resource here.
     // Such bookkeeping will need to be thread safe, as this callback is happening on a background thread.
+    invalidateSandboxExtensions();
     send(Messages::WebResourceLoader::DidFinishResourceLoad(finishTime));
     scheduleStopOnMainThread();
 }
@@ -170,6 +174,7 @@ void NetworkResourceLoader::didFail(ResourceHandle*, const ResourceError& error)
 {
     // FIXME (NetworkProcess): For the memory cache we'll need to update the finished status of the cached resource here.
     // Such bookkeeping will need to be thread safe, as this callback is happening on a background thread.
+    invalidateSandboxExtensions();
     send(Messages::WebResourceLoader::DidFailResourceLoad(error));
     scheduleStopOnMainThread();
 }
@@ -218,69 +223,17 @@ bool NetworkResourceLoader::shouldUseCredentialStorage(ResourceHandle*)
     // When the WebProcess is handling loading a client is consulted each time this shouldUseCredentialStorage question is asked.
     // In NetworkProcess mode we ask the WebProcess client up front once and then reuse the cached answer.
 
-    return loadParameters().allowStoredCredentials() == AllowStoredCredentials;
+    return allowStoredCredentials() == AllowStoredCredentials;
 }
 
 void NetworkResourceLoader::didReceiveAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge& challenge)
 {
-    ASSERT(!m_currentAuthenticationChallenge);
-    m_currentAuthenticationChallenge = adoptPtr(new AuthenticationChallenge(challenge));
-
-    send(Messages::WebResourceLoader::DidReceiveAuthenticationChallenge(*m_currentAuthenticationChallenge));
+    NetworkProcess::shared().authenticationManager().didReceiveAuthenticationChallenge(webPageID(), webFrameID(), challenge);
 }
 
 void NetworkResourceLoader::didCancelAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge& challenge)
 {
-    ASSERT(m_currentAuthenticationChallenge);
-    ASSERT(m_currentAuthenticationChallenge->identifier() == challenge.identifier());
-
-    send(Messages::WebResourceLoader::DidCancelAuthenticationChallenge(*m_currentAuthenticationChallenge));
-
-    m_currentAuthenticationChallenge.clear();
-}
-
-void NetworkResourceLoader::receivedCancellation(ResourceHandle*, const AuthenticationChallenge& challenge)
-{
-    receivedAuthenticationCancellation(challenge);
-}
-
-void NetworkResourceLoader::receivedAuthenticationCredential(const AuthenticationChallenge& challenge, const Credential& credential)
-{
-    ASSERT(m_currentAuthenticationChallenge);
-    ASSERT(m_currentAuthenticationChallenge->authenticationClient());
-
-    if (m_currentAuthenticationChallenge->identifier() != challenge.identifier())
-        return;
-    
-    m_currentAuthenticationChallenge->authenticationClient()->receivedCredential(*m_currentAuthenticationChallenge, credential);
-    m_currentAuthenticationChallenge.clear();
-}
-
-void NetworkResourceLoader::receivedRequestToContinueWithoutAuthenticationCredential(const AuthenticationChallenge& challenge)
-{
-    ASSERT(m_currentAuthenticationChallenge);
-    ASSERT(m_currentAuthenticationChallenge->authenticationClient());
-
-    if (m_currentAuthenticationChallenge->identifier() != challenge.identifier())
-        return;
-
-    m_currentAuthenticationChallenge->authenticationClient()->receivedRequestToContinueWithoutCredential(*m_currentAuthenticationChallenge);
-    m_currentAuthenticationChallenge.clear();
-}
-
-void NetworkResourceLoader::receivedAuthenticationCancellation(const AuthenticationChallenge& challenge)
-{
-    ASSERT(m_currentAuthenticationChallenge);
-    ASSERT(m_currentAuthenticationChallenge->authenticationClient());
-
-    if (m_currentAuthenticationChallenge->identifier() != challenge.identifier())
-        return;
-
-    m_handle->cancel();
-    m_currentAuthenticationChallenge.clear();
-
-    send(Messages::WebResourceLoader::CancelResourceLoader());
-    scheduleStopOnMainThread();
+    // FIXME (NetworkProcess): Tell AuthenticationManager.
 }
 
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)

@@ -80,6 +80,15 @@ public:
     virtual const std::set<std::string>* httpHeadersToClear() const { return 0; }
     virtual bool shouldBlockRedirects() const { return false; }
     virtual bool willSendRequestShouldReturnNull() const { return false; }
+    virtual void setTopLoadingFrame(WebKit::WebFrame*, bool) { }
+    virtual WebKit::WebFrame* topLoadingFrame() const { return 0; }
+    virtual void policyDelegateDone() { }
+    virtual bool policyDelegateEnabled() const { return false; }
+    virtual bool policyDelegateIsPermissive() const { return false; }
+    virtual bool policyDelegateShouldNotifyDone() const { return false; }
+    virtual bool shouldInterceptPostMessage() const { return false; }
+    virtual bool isSmartInsertDeleteEnabled() const { return true; }
+    virtual bool isSelectTrailingWhitespaceEnabled() const { return false; }
 };
 
 }

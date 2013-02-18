@@ -28,9 +28,9 @@
 
 #include "ClassInfo.h"
 #include "IndexingType.h"
+#include "JSCJSValue.h"
 #include "JSCell.h"
 #include "JSType.h"
-#include "JSValue.h"
 #include "PropertyMapHashTable.h"
 #include "PropertyName.h"
 #include "PropertyNameArray.h"
@@ -69,7 +69,7 @@ namespace JSC {
 
         typedef JSCell Base;
 
-        static Structure* create(JSGlobalData&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType = NonArray, PropertyOffset inlineCapacity = 0);
+        static Structure* create(JSGlobalData&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType = NonArray, unsigned inlineCapacity = 0);
 
     protected:
         void finishCreation(JSGlobalData& globalData)
@@ -182,11 +182,18 @@ namespace JSC {
         }
         bool transitivelyTransitionedFrom(Structure* structureToFind);
 
-        void growOutOfLineCapacity();
         unsigned outOfLineCapacity() const
         {
-            ASSERT(structure()->classInfo() == &s_info);
-            return m_outOfLineCapacity;
+            unsigned outOfLineSize = this->outOfLineSize();
+
+            if (!outOfLineSize)
+                return 0;
+
+            if (outOfLineSize <= initialOutOfLineCapacity)
+                return initialOutOfLineCapacity;
+
+            ASSERT(outOfLineSize > initialOutOfLineCapacity);
+            return WTF::roundUpToPowerOf<outOfLineGrowthFactor>(outOfLineSize);
         }
         unsigned outOfLineSize() const
         {
@@ -221,12 +228,12 @@ namespace JSC {
         {
             if (m_propertyTable)
                 return m_propertyTable->propertyStorageSize();
-            return numberOfSlotsForLastOffset(m_offset, m_typeInfo.type());
+            return numberOfSlotsForLastOffset(m_offset, m_inlineCapacity);
         }
         unsigned totalStorageCapacity() const
         {
             ASSERT(structure()->classInfo() == &s_info);
-            return m_outOfLineCapacity + inlineCapacity();
+            return outOfLineCapacity() + inlineCapacity();
         }
 
         PropertyOffset firstValidOffset() const
@@ -359,7 +366,7 @@ namespace JSC {
     private:
         friend class LLIntOffsetsExtractor;
 
-        JS_EXPORT_PRIVATE Structure(JSGlobalData&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType, PropertyOffset inlineCapacity);
+        JS_EXPORT_PRIVATE Structure(JSGlobalData&, JSGlobalObject*, JSValue prototype, const TypeInfo&, const ClassInfo*, IndexingType, unsigned inlineCapacity);
         Structure(JSGlobalData&);
         Structure(JSGlobalData&, const Structure*);
 
@@ -400,7 +407,7 @@ namespace JSC {
         int transitionCount() const
         {
             // Since the number of transitions is always the same as m_offset, we keep the size of Structure down by not storing both.
-            return numberOfSlotsForLastOffset(m_offset, m_typeInfo.type());
+            return numberOfSlotsForLastOffset(m_offset, m_inlineCapacity);
         }
 
         bool isValid(JSGlobalObject*, StructureChain* cachedPrototypeChain) const;
@@ -435,7 +442,6 @@ namespace JSC {
         
         mutable InlineWatchpointSet m_transitionWatchpointSet;
 
-        uint32_t m_outOfLineCapacity;
         uint8_t m_inlineCapacity;
         COMPILE_ASSERT(firstOutOfLineOffset < 256, firstOutOfLineOffset_fits);
 
@@ -454,7 +460,7 @@ namespace JSC {
         unsigned m_staticFunctionReified;
     };
 
-    inline Structure* Structure::create(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype, const TypeInfo& typeInfo, const ClassInfo* classInfo, IndexingType indexingType, PropertyOffset inlineCapacity)
+    inline Structure* Structure::create(JSGlobalData& globalData, JSGlobalObject* globalObject, JSValue prototype, const TypeInfo& typeInfo, const ClassInfo* classInfo, IndexingType indexingType, unsigned inlineCapacity)
     {
         ASSERT(globalData.structureStructure);
         ASSERT(classInfo);

@@ -1,3 +1,125 @@
+2013-01-29  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r140983.
+        http://trac.webkit.org/changeset/140983
+        https://bugs.webkit.org/show_bug.cgi?id=108277
+
+        Unfortunately, this API has one last client (Requested by
+        abarth on #webkit).
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2012-11-28  Jer Noble  <jer.noble@apple.com>
+
+        Allow clients to ask for the WebView/WKView placeholder view when in full screen mode.
+        https://bugs.webkit.org/show_bug.cgi?id=103558
+        <rdar://problem/12763112>
+
+        Reviewed by Benjamin Poulain.
+
+        Clients may want to behave differently when their WebView/WKView has been swapped out by a placeholder
+        view when in full screen mode.  Add a simple accessor for the existing placeholder view to
+        WebFullScreenController and WebView.
+
+        * WebView/WebFullScreenController.h:
+        * WebView/WebFullScreenController.mm:
+        (-[WebFullScreenController webViewPlaceholder]): Added simple accessor.
+        * WebView/WebView.mm:
+        (-[WebView fullScreenPlaceholderView]): Added simple accessor.
+
+2013-01-28  Pratik Solanki  <psolanki@apple.com>
+
+        PLATFORM(IOS) should come before __MAC_OS_X_VERSION_MIN_REQUIRED
+        https://bugs.webkit.org/show_bug.cgi?id=108101
+
+        Reviewed by Benjamin Poulain.
+
+        Since iOS does not define __MAC_OS_X_VERSION_MIN_REQUIRED, any usage of
+        __MAC_OS_X_VERSION_MIN_REQUIRED should be after a PLATFORM(IOS) check.
+
+        * WebCoreSupport/WebSystemInterface.mm:
+        (InitWebCoreSystemInterface):
+
+2013-01-28  Joseph Pecoraro  <pecoraro@apple.com>
+
+        [Mac] Update PageVisibilityState when WebView is hidden / visible
+        https://bugs.webkit.org/show_bug.cgi?id=107509
+
+        Reviewed by Sam Weinig.
+
+        * WebView/WebView.mm:
+        * WebView/WebViewPrivate.h:
+        (-[WebView _commonInitializationWithFrameName:groupName:]):
+        Set the initial visibility of the page.
+
+        (-[WebView addWindowObserversForWindow:]):
+        (-[WebView removeWindowObservers]):
+        (-[WebView _isViewVisible]):
+        (-[WebView _updateVisibilityState]):
+        (-[WebView viewDidMoveToWindow]):
+        (-[WebView _windowVisibilityChanged:]):
+        Update visibility state in the same ways WK2 does. This involves
+        listening for some new NSWindow delegates.
+
+2013-01-28  Joseph Pecoraro  <pecoraro@apple.com>
+
+        Improve PageVisibility API with enums
+        https://bugs.webkit.org/show_bug.cgi?id=107364
+
+        Reviewed by Sam Weinig.
+
+        * WebView/WebView.mm:
+        * WebView/WebViewPrivate.h:
+        (core):
+        (-[WebView _setVisibilityState:isInitialState:]):
+        Switch the private API form int to a WebPageVisibilityState enum.
+
+2013-01-28  Adam Barth  <abarth@webkit.org>
+
+        Remove webkitNotifications.createHTMLNotification
+        https://bugs.webkit.org/show_bug.cgi?id=107598
+
+        Reviewed by Benjamin Poulain.
+
+        * Configurations/FeatureDefines.xcconfig:
+
+2013-01-25  Andy Estes  <aestes@apple.com>
+
+        Wrap content filtering code in an object
+        https://bugs.webkit.org/show_bug.cgi?id=107914
+
+        Reviewed by Alexey Proskuryakov.
+
+        * WebCoreSupport/WebSystemInterface.mm:
+        (InitWebCoreSystemInterface): Updated to reflect changes in WKSI.
+
+2013-01-24  Dan Bernstein  <mitz@apple.com>
+
+        WebNavigationData does not distinguish between an empty title and a missing title
+        https://bugs.webkit.org/show_bug.cgi?id=107917
+
+        Reviewed by Andy Estes.
+
+        * WebCoreSupport/WebFrameLoaderClient.mm:
+        (nilOrNSString): Added this helper function.
+        (WebFrameLoaderClient::updateGlobalHistory): Initialize the WebNavigationData with a nil
+        title, rather than the empty string, if the document does not have a title.
+
+2013-01-24  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Objective-C API: Rename JSValue.h/APIJSValue.h to JSCJSValue.h/JSValue.h
+        https://bugs.webkit.org/show_bug.cgi?id=107327
+
+        Reviewed by Filip Pizlo.
+
+        We're renaming these two files, so we have to replace the names everywhere.
+
+        * DOM/WebDOMOperations.mm:
+        * ForwardingHeaders/runtime/JSCJSValue.h: Copied from Source/WebKit/mac/ForwardingHeaders/runtime/JSValue.h.
+        * ForwardingHeaders/runtime/JSValue.h: Removed.
+        * WebView/WebFrame.mm:
+        * WebView/WebView.mm:
+
 2013-01-22  Anders Carlsson  <andersca@apple.com>
 
         Use a platforom strategy for local storage

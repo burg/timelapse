@@ -135,8 +135,7 @@ Connection::SyncMessageState::~SyncMessageState()
 
 bool Connection::SyncMessageState::processIncomingMessage(Connection* connection, IncomingMessage& incomingMessage)
 {
-    MessageID messageID = incomingMessage.messageID();
-    if (!messageID.shouldDispatchMessageWhenWaitingForSyncReply())
+    if (!incomingMessage.arguments()->shouldDispatchMessageWhenWaitingForSyncReply())
         return false;
 
     ConnectionAndIncomingMessage connectionAndIncomingMessage;
@@ -306,6 +305,7 @@ void Connection::markCurrentlyDispatchedMessageAsInvalid()
 PassOwnPtr<MessageEncoder> Connection::createSyncMessageEncoder(StringReference messageReceiverName, StringReference messageName, uint64_t destinationID, uint64_t& syncRequestID)
 {
     OwnPtr<MessageEncoder> encoder = MessageEncoder::create(messageReceiverName, messageName, destinationID);
+    encoder->setIsSyncMessage(true);
 
     // Encode the sync request ID.
     COMPILE_ASSERT(sizeof(m_syncRequestID) == sizeof(int64_t), CanUseAtomicIncrement);
@@ -315,7 +315,7 @@ PassOwnPtr<MessageEncoder> Connection::createSyncMessageEncoder(StringReference 
     return encoder.release();
 }
 
-bool Connection::sendMessage(MessageID messageID, PassOwnPtr<MessageEncoder> encoder, unsigned messageSendFlags)
+bool Connection::sendMessage(PassOwnPtr<MessageEncoder> encoder, unsigned messageSendFlags)
 {
     if (!isValid())
         return false;
@@ -323,11 +323,11 @@ bool Connection::sendMessage(MessageID messageID, PassOwnPtr<MessageEncoder> enc
     if (messageSendFlags & DispatchMessageEvenWhenWaitingForSyncReply
         && (!m_onlySendMessagesAsDispatchWhenWaitingForSyncReplyWhenProcessingSuchAMessage
             || m_inDispatchMessageMarkedDispatchWhenWaitingForSyncReplyCount))
-        messageID = messageID.messageIDWithAddedFlags(MessageID::DispatchMessageWhenWaitingForSyncReply);
+        encoder->setShouldDispatchMessageWhenWaitingForSyncReply(true);
 
     {
         MutexLocker locker(m_outgoingMessagesLock);
-        m_outgoingMessages.append(OutgoingMessage(messageID, encoder));
+        m_outgoingMessages.append(OutgoingMessage(MessageID(), encoder));
     }
     
     // FIXME: We should add a boolean flag so we don't call this when work has already been scheduled.
@@ -337,7 +337,7 @@ bool Connection::sendMessage(MessageID messageID, PassOwnPtr<MessageEncoder> enc
 
 bool Connection::sendSyncReply(PassOwnPtr<MessageEncoder> encoder)
 {
-    return sendMessage(MessageID(), encoder);
+    return sendMessage(encoder);
 }
 
 PassOwnPtr<MessageDecoder> Connection::waitForMessage(StringReference messageReceiverName, StringReference messageName, uint64_t destinationID, double timeout)
@@ -396,12 +396,12 @@ PassOwnPtr<MessageDecoder> Connection::waitForMessage(StringReference messageRec
     return nullptr;
 }
 
-PassOwnPtr<MessageDecoder> Connection::sendSyncMessage(MessageID messageID, uint64_t syncRequestID, PassOwnPtr<MessageEncoder> encoder, double timeout, unsigned syncSendFlags)
+PassOwnPtr<MessageDecoder> Connection::sendSyncMessage(uint64_t syncRequestID, PassOwnPtr<MessageEncoder> encoder, double timeout, unsigned syncSendFlags)
 {
     if (RunLoop::current() != m_clientRunLoop) {
         // No flags are supported for synchronous messages sent from secondary threads.
         ASSERT(!syncSendFlags);
-        return sendSyncMessageFromSecondaryThread(messageID, syncRequestID, encoder, timeout);
+        return sendSyncMessageFromSecondaryThread(syncRequestID, encoder, timeout);
     }
 
     if (!isValid()) {
@@ -421,7 +421,7 @@ PassOwnPtr<MessageDecoder> Connection::sendSyncMessage(MessageID messageID, uint
     }
 
     // First send the message.
-    sendMessage(messageID.messageIDWithAddedFlags(MessageID::SyncMessage), encoder, DispatchMessageEvenWhenWaitingForSyncReply);
+    sendMessage(encoder, DispatchMessageEvenWhenWaitingForSyncReply);
 
     // Then wait for a reply. Waiting for a reply could involve dispatching incoming sync messages, so
     // keep an extra reference to the connection here in case it's invalidated.
@@ -441,7 +441,7 @@ PassOwnPtr<MessageDecoder> Connection::sendSyncMessage(MessageID messageID, uint
     return reply.release();
 }
 
-PassOwnPtr<MessageDecoder> Connection::sendSyncMessageFromSecondaryThread(MessageID messageID, uint64_t syncRequestID, PassOwnPtr<MessageEncoder> encoder, double timeout)
+PassOwnPtr<MessageDecoder> Connection::sendSyncMessageFromSecondaryThread(uint64_t syncRequestID, PassOwnPtr<MessageEncoder> encoder, double timeout)
 {
     ASSERT(RunLoop::current() != m_clientRunLoop);
 
@@ -460,7 +460,7 @@ PassOwnPtr<MessageDecoder> Connection::sendSyncMessageFromSecondaryThread(Messag
         m_secondaryThreadPendingSyncReplyMap.add(syncRequestID, &pendingReply);
     }
 
-    sendMessage(messageID.messageIDWithAddedFlags(MessageID::SyncMessage), encoder, 0);
+    sendMessage(encoder, 0);
 
     // Use a really long timeout.
     if (timeout == NoTimeout)
@@ -601,7 +601,7 @@ void Connection::processIncomingMessage(MessageID messageID, PassOwnPtr<MessageD
         bool didHandleMessage = false;
 
         MessageDecoder* decoder = incomingMessage.arguments();
-        m_connectionQueueClients[i]->didReceiveMessageOnConnectionWorkQueue(this, incomingMessage.messageID(), *decoder, didHandleMessage);
+        m_connectionQueueClients[i]->didReceiveMessageOnConnectionWorkQueue(this, *decoder, didHandleMessage);
         if (didHandleMessage) {
             // A connection queue client handled the message, our work here is done.
             incomingMessage.releaseArguments();
@@ -684,10 +684,10 @@ void Connection::sendOutgoingMessages()
 
 void Connection::dispatchSyncMessage(MessageID messageID, MessageDecoder& decoder)
 {
-    ASSERT(messageID.isSync());
+    ASSERT(decoder.isSyncMessage());
 
     uint64_t syncRequestID = 0;
-    if (!decoder.decodeUInt64(syncRequestID) || !syncRequestID) {
+    if (!decoder.decode(syncRequestID) || !syncRequestID) {
         // We received an invalid sync message.
         decoder.markInvalid();
         return;
@@ -696,7 +696,7 @@ void Connection::dispatchSyncMessage(MessageID messageID, MessageDecoder& decode
     OwnPtr<MessageEncoder> replyEncoder = MessageEncoder::create("IPC", "SyncMessageReply", syncRequestID);
 
     // Hand off both the decoder and encoder to the client.
-    m_client->didReceiveSyncMessage(this, messageID, decoder, replyEncoder);
+    m_client->didReceiveSyncMessage(this, decoder, replyEncoder);
 
     // FIXME: If the message was invalid, we should send back a SyncMessageError.
     ASSERT(!decoder.isInvalid());
@@ -725,7 +725,7 @@ void Connection::enqueueIncomingMessage(IncomingMessage& incomingMessage)
 
 void Connection::dispatchMessage(MessageID messageID, MessageDecoder& decoder)
 {
-    m_client->didReceiveMessage(this, messageID, decoder);
+    m_client->didReceiveMessage(this, decoder);
 }
 
 void Connection::dispatchMessage(IncomingMessage& message)
@@ -739,13 +739,13 @@ void Connection::dispatchMessage(IncomingMessage& message)
 
     m_inDispatchMessageCount++;
 
-    if (message.messageID().shouldDispatchMessageWhenWaitingForSyncReply())
+    if (arguments->shouldDispatchMessageWhenWaitingForSyncReply())
         m_inDispatchMessageMarkedDispatchWhenWaitingForSyncReplyCount++;
 
     bool oldDidReceiveInvalidMessage = m_didReceiveInvalidMessage;
     m_didReceiveInvalidMessage = false;
 
-    if (message.messageID().isSync())
+    if (arguments->isSyncMessage())
         dispatchSyncMessage(message.messageID(), *arguments);
     else
         dispatchMessage(message.messageID(), *arguments);
@@ -753,7 +753,7 @@ void Connection::dispatchMessage(IncomingMessage& message)
     m_didReceiveInvalidMessage |= arguments->isInvalid();
     m_inDispatchMessageCount--;
 
-    if (message.messageID().shouldDispatchMessageWhenWaitingForSyncReply())
+    if (arguments->shouldDispatchMessageWhenWaitingForSyncReply())
         m_inDispatchMessageMarkedDispatchWhenWaitingForSyncReplyCount--;
 
     if (m_didReceiveInvalidMessage && m_client)

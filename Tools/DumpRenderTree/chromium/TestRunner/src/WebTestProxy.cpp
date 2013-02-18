@@ -37,6 +37,7 @@
 #include "WebAccessibilityObject.h"
 #include "WebCachedURLRequest.h"
 #include "WebConsoleMessage.h"
+#include "WebDataSource.h"
 #include "WebElement.h"
 #include "WebEventSender.h"
 #include "WebFrame.h"
@@ -188,6 +189,16 @@ void blockRequest(WebURLRequest& request)
     request.setURL(WebURL());
 }
 
+bool isLocalhost(const string& host)
+{
+    return host == "127.0.0.1" || host == "localhost";
+}
+
+bool hostIsUsedBySomeTestsToGenerateError(const string& host)
+{
+    return host == "255.255.255.255";
+}
+
 // Used to write a platform neutral file:/// URL by only taking the filename
 // (e.g., converts "file:///tmp/foo.txt" to just "foo.txt").
 string urlSuitableForTestResult(const string& url)
@@ -209,6 +220,35 @@ string urlSuitableForTestResult(const string& url)
     if (filename.empty())
         return "file:"; // A WebKit test has this in its expected output.
     return filename;
+}
+
+// WebNavigationType debugging strings taken from PolicyDelegate.mm.
+const char* linkClickedString = "link clicked";
+const char* formSubmittedString = "form submitted";
+const char* backForwardString = "back/forward";
+const char* reloadString = "reload";
+const char* formResubmittedString = "form resubmitted";
+const char* otherString = "other";
+const char* illegalString = "illegal value";
+
+// Get a debugging string from a WebNavigationType.
+const char* webNavigationTypeToString(WebNavigationType type)
+{
+    switch (type) {
+    case WebKit::WebNavigationTypeLinkClicked:
+        return linkClickedString;
+    case WebKit::WebNavigationTypeFormSubmitted:
+        return formSubmittedString;
+    case WebKit::WebNavigationTypeBackForward:
+        return backForwardString;
+    case WebKit::WebNavigationTypeReload:
+        return reloadString;
+    case WebKit::WebNavigationTypeFormResubmitted:
+        return formResubmittedString;
+    case WebKit::WebNavigationTypeOther:
+        return otherString;
+    }
+    return illegalString;
 }
 
 }
@@ -544,13 +584,13 @@ void WebTestProxyBase::dispatchIntent(WebFrame* source, const WebIntentRequest& 
         m_delegate->printMessage(string("Have suggestion ") + suggestions[i].spec().data() + "\n");
 }
 
-WebView* WebTestProxyBase::createView(WebFrame*, const WebURLRequest& request, const WebWindowFeatures&, const WebString&, WebNavigationPolicy)
+bool WebTestProxyBase::createView(WebFrame*, const WebURLRequest& request, const WebWindowFeatures&, const WebString&, WebNavigationPolicy)
 {
     if (!m_testInterfaces->testRunner() || !m_testInterfaces->testRunner()->canOpenWindows())
-        return 0;
+        return false;
     if (m_testInterfaces->testRunner()->shouldDumpCreateView())
         m_delegate->printMessage(string("createView(") + URLDescription(request.url()) + ")\n");
-    return 0;
+    return true;
 }
 
 void WebTestProxyBase::setStatusText(const WebString& text)
@@ -564,6 +604,20 @@ void WebTestProxyBase::didStopLoading()
 {
     if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpProgressFinishedCallback())
         m_delegate->printMessage("postProgressFinishedNotification\n");
+}
+
+bool WebTestProxyBase::isSmartInsertDeleteEnabled()
+{
+    if (m_testInterfaces->testRunner())
+        return m_testInterfaces->testRunner()->isSmartInsertDeleteEnabled();
+    return true;
+}
+
+bool WebTestProxyBase::isSelectTrailingWhitespaceEnabled()
+{
+    if (m_testInterfaces->testRunner())
+        return m_testInterfaces->testRunner()->isSelectTrailingWhitespaceEnabled();
+    return false;
 }
 
 void WebTestProxyBase::willPerformClientRedirect(WebFrame* frame, const WebURL&, const WebURL& to, double, double)
@@ -587,6 +641,9 @@ void WebTestProxyBase::didCancelClientRedirect(WebFrame* frame)
 
 void WebTestProxyBase::didStartProvisionalLoad(WebFrame* frame)
 {
+    if (m_testInterfaces->testRunner() && !m_testInterfaces->testRunner()->topLoadingFrame())
+        m_testInterfaces->testRunner()->setTopLoadingFrame(frame, false);
+
     if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldDumpFrameLoadCallbacks()) {
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didStartProvisionalLoadForFrame\n");
@@ -616,6 +673,7 @@ void WebTestProxyBase::didFailProvisionalLoad(WebFrame* frame, const WebURLError
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didFailProvisionalLoadWithError\n");
     }
+    locationChangeDone(frame);
 }
 
 void WebTestProxyBase::didCommitProvisionalLoad(WebFrame* frame, bool)
@@ -672,6 +730,7 @@ void WebTestProxyBase::didFailLoad(WebFrame* frame, const WebURLError&)
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didFailLoadWithError\n");
     }
+    locationChangeDone(frame);
 }
 
 void WebTestProxyBase::didFinishLoad(WebFrame* frame)
@@ -680,6 +739,7 @@ void WebTestProxyBase::didFinishLoad(WebFrame* frame)
         printFrameDescription(m_delegate, frame);
         m_delegate->printMessage(" - didFinishLoadForFrame\n");
     }
+    locationChangeDone(frame);
 }
 
 void WebTestProxyBase::didChangeLocationWithinPage(WebFrame* frame)
@@ -733,6 +793,31 @@ void WebTestProxyBase::willRequestResource(WebFrame* frame, const WebKit::WebCac
     }
 }
 
+bool WebTestProxyBase::canHandleRequest(WebFrame*, const WebURLRequest& request)
+{
+    GURL url = request.url();
+    // Just reject the scheme used in
+    // LayoutTests/http/tests/misc/redirect-to-external-url.html
+    return !url.SchemeIs("spaceballs");
+}
+
+WebURLError WebTestProxyBase::cannotHandleRequestError(WebFrame*, const WebURLRequest& request)
+{
+    WebURLError error;
+    // A WebKit layout test expects the following values.
+    // unableToImplementPolicyWithError() below prints them.
+    error.domain = WebString::fromUTF8("WebKitErrorDomain");
+    error.reason = 101;
+    error.unreachableURL = request.url();
+    return error;
+}
+
+void WebTestProxyBase::didCreateDataSource(WebFrame*, WebDataSource* ds)
+{
+    if (m_testInterfaces->testRunner() && !m_testInterfaces->testRunner()->deferMainResourceDataLoad())
+        ds->setDeferMainResourceDataLoad(false);
+}
+
 void WebTestProxyBase::willSendRequest(WebFrame*, unsigned identifier, WebKit::WebURLRequest& request, const WebKit::WebURLResponse& redirectResponse)
 {
     // Need to use GURL for host() and SchemeIs()
@@ -773,6 +858,20 @@ void WebTestProxyBase::willSendRequest(WebFrame*, unsigned identifier, WebKit::W
         for (set<string>::const_iterator header = clearHeaders->begin(); header != clearHeaders->end(); ++header)
             request.clearHTTPHeaderField(WebString::fromUTF8(*header));
     }
+
+    string host = url.host();
+    if (!host.empty() && (url.SchemeIs("http") || url.SchemeIs("https"))) {
+        if (!isLocalhost(host) && !hostIsUsedBySomeTestsToGenerateError(host)
+            && ((!mainDocumentURL.SchemeIs("http") && !mainDocumentURL.SchemeIs("https")) || isLocalhost(mainDocumentURL.host()))
+            && !m_delegate->allowExternalPages()) {
+            m_delegate->printMessage(string("Blocked access to external URL ") + requestURL + "\n");
+            blockRequest(request);
+            return;
+        }
+    }
+
+    // Set the new substituted URL.
+    request.setURL(m_delegate->rewriteLayoutTestsURL(request.url().spec()));
 }
 
 void WebTestProxyBase::didReceiveResponse(WebFrame*, unsigned identifier, const WebKit::WebURLResponse& response)
@@ -876,7 +975,50 @@ bool WebTestProxyBase::runModalPromptDialog(WebFrame* frame, const WebString& me
 bool WebTestProxyBase::runModalBeforeUnloadDialog(WebFrame*, const WebString& message)
 {
     m_delegate->printMessage(string("CONFIRM NAVIGATION: ") + message.utf8().data() + "\n");
-    return true;
+    if (!m_testInterfaces->testRunner())
+        return true;
+    return !m_testInterfaces->testRunner()->shouldStayOnPageAfterHandlingBeforeUnload();
+}
+
+void WebTestProxyBase::locationChangeDone(WebFrame* frame)
+{
+    if (!m_testInterfaces->testRunner())
+        return;
+    if (frame != m_testInterfaces->testRunner()->topLoadingFrame())
+        return;
+    m_testInterfaces->testRunner()->setTopLoadingFrame(frame, true);
+}
+
+WebNavigationPolicy WebTestProxyBase::decidePolicyForNavigation(WebFrame*, const WebURLRequest& request, WebNavigationType type, const WebNode& originatingNode, WebNavigationPolicy defaultPolicy, bool isRedirect)
+{
+    WebNavigationPolicy result;
+    if (!(m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->policyDelegateEnabled()))
+        return defaultPolicy;
+
+    m_delegate->printMessage(string("Policy delegate: attempt to load ") + URLDescription(request.url()) + " with navigation type '" + webNavigationTypeToString(type) + "'");
+    if (!originatingNode.isNull()) {
+        m_delegate->printMessage(" originating from ");
+        printNodeDescription(m_delegate, originatingNode, 0);
+    }
+    m_delegate->printMessage("\n");
+    if (m_testInterfaces->testRunner()->policyDelegateIsPermissive())
+        result = WebKit::WebNavigationPolicyCurrentTab;
+    else
+        result = WebKit::WebNavigationPolicyIgnore;
+
+    if (m_testInterfaces->testRunner()->policyDelegateShouldNotifyDone())
+        m_testInterfaces->testRunner()->policyDelegateDone();
+    return result;
+}
+
+bool WebTestProxyBase::willCheckAndDispatchMessageEvent(WebFrame*, WebFrame*, WebSecurityOrigin, WebDOMMessageEvent)
+{
+    if (m_testInterfaces->testRunner() && m_testInterfaces->testRunner()->shouldInterceptPostMessage()) {
+        m_delegate->printMessage("intercepted postMessage\n");
+        return true;
+    }
+
+    return false;
 }
 
 }

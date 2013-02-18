@@ -32,10 +32,12 @@
 #include "DataReference.h"
 #include "NetworkResourceLoadParameters.h"
 #include "PluginInfoStore.h"
+#include "StorageNamespaceProxy.h"
 #include "WebContextMessages.h"
 #include "WebCookieManager.h"
 #include "WebCoreArgumentCoders.h"
 #include "WebErrors.h"
+#include "WebPage.h"
 #include "WebProcess.h"
 #include "WebProcessProxyMessages.h"
 #include <WebCore/Color.h>
@@ -47,6 +49,7 @@
 #include <WebCore/PlatformCookieJar.h>
 #include <WebCore/PlatformPasteboard.h>
 #include <WebCore/ResourceError.h>
+#include <WebCore/StorageNamespace.h>
 #include <wtf/Atomics.h>
 
 #if ENABLE(NETWORK_PROCESS)
@@ -54,6 +57,9 @@
 #include "NetworkProcessConnection.h"
 #include "WebResourceLoadScheduler.h"
 #endif
+
+// FIXME: Remove this once it works well enough to be the default.
+#define ENABLE_UI_PROCESS_STORAGE 0
 
 using namespace WebCore;
 
@@ -228,7 +234,7 @@ void WebPlatformStrategies::loadResourceSynchronously(NetworkingContext* context
 
     CoreIPC::DataReference dataReference;
 
-    NetworkResourceLoadParameters loadParameters(resourceLoadIdentifier, request, ResourceLoadPriorityHighest, SniffContent, storedCredentials, context->storageSession().isPrivateBrowsingSession());
+    NetworkResourceLoadParameters loadParameters(resourceLoadIdentifier, 0, 0, request, ResourceLoadPriorityHighest, SniffContent, storedCredentials, context->storageSession().isPrivateBrowsingSession());
     if (!WebProcess::shared().networkConnection()->connection()->sendSync(Messages::NetworkConnectionToWebProcess::PerformSynchronousLoad(loadParameters), Messages::NetworkConnectionToWebProcess::PerformSynchronousLoad::Reply(error, response, dataReference), 0)) {
         response = ResourceResponse();
         error = internalError(request.url());
@@ -299,6 +305,22 @@ void WebPlatformStrategies::populatePluginCache()
     m_pluginCacheIsPopulated = true;
 }
 #endif // ENABLE(NETSCAPE_PLUGIN_API)
+
+// StorageStrategy
+
+PassRefPtr<StorageNamespace> WebPlatformStrategies::localStorageNamespace(const String& path, unsigned quota)
+{
+    return StorageStrategy::localStorageNamespace(path, quota);
+}
+
+PassRefPtr<StorageNamespace> WebPlatformStrategies::sessionStorageNamespace(Page* page, unsigned quota)
+{
+#if ENABLE(UI_PROCESS_STORAGE)
+    return StorageNamespaceProxy::createSessionStorageNamespace(WebPage::fromCorePage(page));
+#else
+    return StorageStrategy::sessionStorageNamespace(page, quota);
+#endif
+}
 
 // VisitedLinkStrategy
 

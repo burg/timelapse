@@ -36,10 +36,6 @@
 #include "SubstituteData.h"
 #include <wtf/Forward.h>
 
-#if USE(CONTENT_FILTERING)
-OBJC_CLASS WebFilterEvaluator;
-#endif
-
 #if HAVE(RUNLOOP_TIMER)
 #include "RunLoopTimer.h"
 #else
@@ -50,6 +46,10 @@ namespace WebCore {
 
 class FormState;
 class ResourceRequest;
+    
+#if USE(CONTENT_FILTERING)
+class ContentFilter;
+#endif
 
 class MainResourceLoader : public RefCounted<MainResourceLoader>, public CachedRawResourceClient {
     WTF_MAKE_FAST_ALLOCATED;
@@ -128,11 +128,11 @@ private:
     bool m_loadingMultipartContent;
     bool m_waitingForContentPolicy;
     double m_timeOfLastDataReceived;
-    unsigned long m_substituteDataLoadIdentifier;
     int m_loaderId; // used by Timelapse to name resource loaders
+    unsigned long m_identifierForLoadWithoutResourceLoader;
 
 #if USE(CONTENT_FILTERING)
-    WebFilterEvaluator *m_filter;
+    RefPtr<ContentFilter> m_contentFilter;
 #endif
 };
 

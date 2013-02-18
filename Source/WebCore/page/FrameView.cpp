@@ -2843,6 +2843,17 @@ IntRect FrameView::windowResizerRect() const
     return page->chrome()->windowResizerRect();
 }
 
+float FrameView::visibleContentScaleFactor() const
+{
+    if (!m_frame || !m_frame->page())
+        return 1;
+
+    if (!m_frame->settings()->applyPageScaleFactorInCompositor() || m_frame != m_frame->page()->mainFrame())
+        return 1;
+
+    return m_frame->page()->pageScaleFactor();
+}
+
 void FrameView::setVisibleScrollerThumbRect(const IntRect& scrollerThumb)
 {
     Page* page = m_frame->page();

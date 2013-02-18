@@ -27,6 +27,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest2 as unittest
+import subprocess
 
 from webkitpy.tool.steps.haslanded import HasLanded
 
@@ -34,6 +35,7 @@ from webkitpy.tool.steps.haslanded import HasLanded
 class HasLandedTest(unittest.TestCase):
     maxDiff = None
 
+    @unittest.skipUnless(subprocess.call('which interdiff', shell=True) == 0, "requires interdiff")
     def test_run(self):
         # These patches require trailing whitespace to remain valid patches.
         diff1 = """\

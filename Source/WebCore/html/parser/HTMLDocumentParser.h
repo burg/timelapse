@@ -26,6 +26,7 @@
 #ifndef HTMLDocumentParser_h
 #define HTMLDocumentParser_h
 
+#include "BackgroundHTMLInputStream.h"
 #include "CachedResourceClient.h"
 #include "FragmentScriptingPermission.h"
 #include "HTMLInputStream.h"
@@ -82,7 +83,11 @@ public:
     virtual void resumeScheduledTasks();
 
 #if ENABLE(THREADED_HTML_PARSER)
-    void didReceiveTokensFromBackgroundParser(PassOwnPtr<CompactHTMLTokenStream>);
+    struct ParsedChunk {
+        OwnPtr<CompactHTMLTokenStream> tokens;
+        HTMLInputCheckpoint checkpoint;
+    };
+    void didReceiveParsedChunkFromBackgroundParser(PassOwnPtr<ParsedChunk>);
 #endif
 
 protected:
@@ -124,7 +129,8 @@ private:
 #if ENABLE(THREADED_HTML_PARSER)
     void startBackgroundParser();
     void stopBackgroundParser();
-    void processTokensFromBackgroundParser(PassOwnPtr<CompactHTMLTokenStream>);
+    void didFailSpeculation(PassOwnPtr<HTMLToken>, PassOwnPtr<HTMLTokenizer>);
+    void processParsedChunkFromBackgroundParser(PassOwnPtr<ParsedChunk>);
 #endif
 
     enum SynchronousMode {
@@ -154,12 +160,12 @@ private:
     bool inPumpSession() const { return m_pumpSessionNestingLevel > 0; }
     bool shouldDelayEnd() const { return inPumpSession() || isWaitingForScripts() || isScheduledForResume() || isExecutingScript(); }
 
+    HTMLToken& token() { return *m_token.get(); }
+
     HTMLParserOptions m_options;
     HTMLInputStream m_input;
 
-    // We hold m_token here because it might be partially complete.
-    HTMLToken m_token;
-
+    OwnPtr<HTMLToken> m_token;
     OwnPtr<HTMLTokenizer> m_tokenizer;
     OwnPtr<HTMLScriptRunner> m_scriptRunner;
     OwnPtr<HTMLTreeBuilder> m_treeBuilder;
@@ -171,7 +177,8 @@ private:
     XSSAuditor m_xssAuditor;
 
 #if ENABLE(THREADED_HTML_PARSER)
-    Deque<OwnPtr<CompactHTMLTokenStream> > m_pendingTokens;
+    OwnPtr<ParsedChunk> m_currentChunk;
+    Deque<OwnPtr<ParsedChunk> > m_speculations;
     WeakPtrFactory<HTMLDocumentParser> m_weakFactory;
 #endif
 

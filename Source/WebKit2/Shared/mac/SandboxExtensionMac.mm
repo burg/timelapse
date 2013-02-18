@@ -137,7 +137,7 @@ void SandboxExtension::HandleArray::encode(CoreIPC::ArgumentEncoder& encoder) co
 bool SandboxExtension::HandleArray::decode(CoreIPC::ArgumentDecoder* decoder, SandboxExtension::HandleArray& handles)
 {
     uint64_t size;
-    if (!decoder->decodeUInt64(size))
+    if (!decoder->decode(size))
         return false;
     handles.allocate(size);
     for (size_t i = 0; i < size; i++) {
@@ -160,14 +160,11 @@ static WKSandboxExtensionType wkSandboxExtensionType(SandboxExtension::Type type
     switch (type) {
     case SandboxExtension::ReadOnly:
         return WKSandboxExtensionTypeReadOnly;
-    case SandboxExtension::WriteOnly:
-        return WKSandboxExtensionTypeWriteOnly;
     case SandboxExtension::ReadWrite:
         return WKSandboxExtensionTypeReadWrite;
     }
 
-    ASSERT_NOT_REACHED();
-    return WKSandboxExtensionTypeReadOnly;
+    CRASH();
 }
 
 static CString resolveSymlinksInPath(const CString& path)

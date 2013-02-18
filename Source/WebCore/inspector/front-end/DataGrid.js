@@ -1272,7 +1272,11 @@ WebInspector.DataGridNode.prototype = {
         this.createCells();
     },
 
-    createCell: function(columnIdentifier)
+    /**
+     * @param {string} columnIdentifier
+     * @return {!Element}
+     */
+    createTD: function(columnIdentifier)
     {
         var cell = document.createElement("td");
         cell.className = columnIdentifier + "-column";
@@ -1281,6 +1285,13 @@ WebInspector.DataGridNode.prototype = {
         var alignment = this.dataGrid.aligned[columnIdentifier];
         if (alignment)
             cell.addStyleClass(alignment);
+
+        return cell;
+    },
+
+    createCell: function(columnIdentifier)
+    {
+        var cell = this.createTD(columnIdentifier);
 
         var data = this.data[columnIdentifier];
         var div = document.createElement("div");

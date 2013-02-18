@@ -1039,8 +1039,8 @@ sub GenerateHeader
         GetGenerateIsReachable($interface) ||
         GetCustomIsReachable($interface) ||
         $interface->extendedAttributes->{"JSCustomFinalize"} ||
-        $interface->extendedAttributes->{"ActiveDOMObject"}) {
-        if ($interfaceName ne "Node" && $codeGenerator->IsSubType($interface, "Node")) {
+        $codeGenerator->InheritsExtendedAttribute($interface, "ActiveDOMObject")) {
+        if ($interfaceName ne "Node" && $codeGenerator->InheritsInterface($interface, "Node")) {
             $headerIncludes{"JSNode.h"} = 1;
             push(@headerContent, "class JS${interfaceName}Owner : public JSNodeOwner {\n");
         } else {
@@ -1413,7 +1413,7 @@ sub GenerateImplementation
     my $hasParent = $hasLegacyParent || $hasRealParent;
     my $parentClassName = GetParentClassName($interface);
     my $visibleInterfaceName = $codeGenerator->GetVisibleInterfaceName($interface);
-    my $eventTarget = $interface->extendedAttributes->{"EventTarget"} || ($codeGenerator->IsSubType($interface, "EventTarget") && $interface->name ne "EventTarget");
+    my $eventTarget = $interface->extendedAttributes->{"EventTarget"} || ($codeGenerator->InheritsInterface($interface, "EventTarget") && $interface->name ne "EventTarget");
     my $needsMarkChildren = $interface->extendedAttributes->{"JSCustomMarkFunction"} || $interface->extendedAttributes->{"EventTarget"} || $interface->name eq "EventTarget";
 
     # - Add default header template
@@ -2532,7 +2532,7 @@ sub GenerateImplementation
         }
     }
 
-    if ((!$hasParent && !GetCustomIsReachable($interface))|| GetGenerateIsReachable($interface) || $interface->extendedAttributes->{"ActiveDOMObject"}) {
+    if ((!$hasParent && !GetCustomIsReachable($interface))|| GetGenerateIsReachable($interface) || $codeGenerator->InheritsExtendedAttribute($interface, "ActiveDOMObject")) {
         push(@implContent, "static inline bool isObservable(JS${interfaceName}* js${interfaceName})\n");
         push(@implContent, "{\n");
         push(@implContent, "    if (js${interfaceName}->hasCustomProperties())\n");
@@ -2554,11 +2554,11 @@ sub GenerateImplementation
         # wrappers unconditionally keep ActiveDOMObjects with pending activity alive.
         # FIXME: Fix this lifetime issue in the DOM, and move this hasPendingActivity
         # check below the isObservable check.
-        if ($interface->extendedAttributes->{"ActiveDOMObject"}) {
+        if ($codeGenerator->InheritsExtendedAttribute($interface, "ActiveDOMObject")) {
             push(@implContent, "    if (js${interfaceName}->impl()->hasPendingActivity())\n");
             push(@implContent, "        return true;\n");
         }
-        if ($codeGenerator->IsSubType($interface, "Node")) {
+        if ($codeGenerator->InheritsInterface($interface, "Node")) {
             push(@implContent, "    if (JSNodeOwner::isReachableFromOpaqueRoots(handle, 0, visitor))\n");
             push(@implContent, "        return true;\n");
         }
@@ -2604,7 +2604,7 @@ sub GenerateImplementation
         (!$hasParent ||
          GetGenerateIsReachable($interface) ||
          GetCustomIsReachable($interface) ||
-         $interface->extendedAttributes->{"ActiveDOMObject"})) {
+         $codeGenerator->InheritsExtendedAttribute($interface, "ActiveDOMObject"))) {
         push(@implContent, "void JS${interfaceName}Owner::finalize(JSC::Handle<JSC::Unknown> handle, void* context)\n");
         push(@implContent, "{\n");
         push(@implContent, "    JS${interfaceName}* js${interfaceName} = jsCast<JS${interfaceName}*>(handle.get().asCell());\n");
@@ -3207,7 +3207,7 @@ sub GetNativeVectorInnerType
 sub GetNativeTypeForCallbacks
 {
     my $type = shift;
-    return "SerializedScriptValue*" if $type eq "SerializedScriptValue";
+    return "PassRefPtr<SerializedScriptValue>" if $type eq "SerializedScriptValue";
     return "PassRefPtr<DOMStringList>" if $type eq "DOMStringList";
 
     return GetNativeType($type);

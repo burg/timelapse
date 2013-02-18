@@ -25,7 +25,6 @@
 #include "LayerTreeRenderer.h"
 
 #include "CoordinatedBackingStore.h"
-#include "CoordinatedLayerTreeHostProxy.h"
 #include "GraphicsLayerTextureMapper.h"
 #include "MessageID.h"
 #include "TextureMapper.h"
@@ -71,8 +70,8 @@ static bool layerShouldHaveBackingStore(GraphicsLayer* layer)
     return layer->drawsContent() && layer->contentsAreVisible() && !layer->size().isEmpty();
 }
 
-LayerTreeRenderer::LayerTreeRenderer(CoordinatedLayerTreeHostProxy* coordinatedLayerTreeHostProxy)
-    : m_coordinatedLayerTreeHostProxy(coordinatedLayerTreeHostProxy)
+LayerTreeRenderer::LayerTreeRenderer(LayerTreeRendererClient* client)
+    : m_client(client)
     , m_isActive(false)
     , m_rootLayerID(InvalidCoordinatedLayerID)
     , m_animationsLocked(false)
@@ -147,8 +146,8 @@ void LayerTreeRenderer::paintToCurrentGLContext(const TransformationMatrix& matr
 void LayerTreeRenderer::animationFrameReady()
 {
     ASSERT(isMainThread());
-    if (m_coordinatedLayerTreeHostProxy)
-        m_coordinatedLayerTreeHostProxy->animationFrameReady();
+    if (m_client)
+        m_client->animationFrameReady();
 }
 
 void LayerTreeRenderer::requestAnimationFrame()
@@ -193,8 +192,8 @@ void LayerTreeRenderer::setVisibleContentsRect(const FloatRect& rect)
 void LayerTreeRenderer::updateViewport()
 {
     ASSERT(isMainThread());
-    if (m_coordinatedLayerTreeHostProxy)
-        m_coordinatedLayerTreeHostProxy->updateViewport();
+    if (m_client)
+        m_client->updateViewport();
 }
 
 void LayerTreeRenderer::adjustPositionForFixedLayers()
@@ -254,6 +253,12 @@ void LayerTreeRenderer::destroyCanvas(CoordinatedLayerID id)
     layer->setContentsToMedia(0);
 }
 #endif
+
+void LayerTreeRenderer::setLayerRepaintCount(CoordinatedLayerID id, int value)
+{
+    GraphicsLayer* layer = layerByID(id);
+    toGraphicsLayerTextureMapper(layer)->setRepaintCount(value);
+}
 
 void LayerTreeRenderer::setLayerChildren(CoordinatedLayerID id, const Vector<CoordinatedLayerID>& childIDs)
 {
@@ -333,6 +338,9 @@ void LayerTreeRenderer::setLayerState(CoordinatedLayerID id, const CoordinatedLa
     layer->setDrawsContent(layerInfo.drawsContent);
     layer->setContentsVisible(layerInfo.contentsVisible);
     toGraphicsLayerTextureMapper(layer)->setFixedToViewport(layerInfo.fixedToViewport);
+    layer->setShowDebugBorder(layerInfo.showDebugBorders);
+    layer->setDebugBorder(layerInfo.debugBorderColor, layerInfo.debugBorderWidth);
+    layer->setShowRepaintCounter(layerInfo.showRepaintCounter);
 
     if (layerInfo.fixedToViewport)
         m_fixedLayers.add(id, layer);
@@ -377,7 +385,7 @@ void LayerTreeRenderer::deleteLayer(CoordinatedLayerID layerID)
     OwnPtr<GraphicsLayer> layer = m_layers.take(layerID);
     ASSERT(layer);
 
-    m_pendingSyncBackingStores.remove(toTextureMapperLayer(layer.get()));
+    m_backingStores.remove(layer.get());
     m_fixedLayers.remove(layerID);
 #if USE(GRAPHICS_SURFACE)
     m_surfaceBackingStores.remove(layerID);
@@ -396,18 +404,6 @@ void LayerTreeRenderer::setRootLayerID(CoordinatedLayerID layerID)
     m_rootLayer->addChild(layer);
 }
 
-CoordinatedBackingStore* LayerTreeRenderer::getBackingStore(GraphicsLayer* graphicsLayer)
-{
-    TextureMapperLayer* layer = toTextureMapperLayer(graphicsLayer);
-    ASSERT(layer);
-    CoordinatedBackingStore* backingStore = static_cast<CoordinatedBackingStore*>(layer->backingStore().get());
-
-    BackingStoreMap::iterator it = m_pendingSyncBackingStores.find(layer);
-    if (it != m_pendingSyncBackingStores.end())
-        backingStore = it->value.get();
-    return backingStore;
-}
-
 void LayerTreeRenderer::prepareContentBackingStore(GraphicsLayer* graphicsLayer)
 {
     if (!layerShouldHaveBackingStore(graphicsLayer)) {
@@ -420,55 +416,27 @@ void LayerTreeRenderer::prepareContentBackingStore(GraphicsLayer* graphicsLayer)
 
 void LayerTreeRenderer::createBackingStoreIfNeeded(GraphicsLayer* graphicsLayer)
 {
-    TextureMapperLayer* layer = toTextureMapperLayer(graphicsLayer);
-    ASSERT(layer);
-
-    // Make sure the layer does not already have a backing store (committed or pending).
-    BackingStoreMap::iterator it = m_pendingSyncBackingStores.find(layer);
-    if (it != m_pendingSyncBackingStores.end()) {
-        if (!it->value) {
-            // There is a pending removal, cancel it.
-            m_pendingSyncBackingStores.remove(it);
-        }
-        // There is already a pending addition.
+    if (m_backingStores.contains(graphicsLayer))
         return;
-    }
-    if (layer->backingStore())
-        return; // The layer already has a backing store (and no pending removal).
 
     RefPtr<CoordinatedBackingStore> backingStore(CoordinatedBackingStore::create());
-
     backingStore->setSize(graphicsLayer->size());
-    ASSERT(!m_pendingSyncBackingStores.contains(layer));
-    m_pendingSyncBackingStores.add(layer, backingStore);
+    m_backingStores.add(graphicsLayer, backingStore);
+    toGraphicsLayerTextureMapper(graphicsLayer)->setBackingStore(backingStore);
 }
 
 void LayerTreeRenderer::removeBackingStoreIfNeeded(GraphicsLayer* graphicsLayer)
 {
-    TextureMapperLayer* layer = toTextureMapperLayer(graphicsLayer);
-    ASSERT(layer);
-
-    // Check if the layout already has a backing store (committed or pending).
-    BackingStoreMap::iterator it = m_pendingSyncBackingStores.find(layer);
-    if (it != m_pendingSyncBackingStores.end()) {
-        if (it->value) {
-            // There is a pending addition, cancel it.
-            m_pendingSyncBackingStores.remove(it);
-        }
-        // There is already a pending removal.
+    RefPtr<CoordinatedBackingStore> backingStore = m_backingStores.take(graphicsLayer);
+    if (!backingStore)
         return;
-    }
 
-    if (!layer->backingStore())
-        return; // The layer has no backing store (and no pending addition).
-
-    ASSERT(!m_pendingSyncBackingStores.contains(layer));
-    m_pendingSyncBackingStores.add(layer, 0);
+    toGraphicsLayerTextureMapper(graphicsLayer)->setBackingStore(0);
 }
 
 void LayerTreeRenderer::resetBackingStoreSizeToLayerSize(GraphicsLayer* graphicsLayer)
 {
-    CoordinatedBackingStore* backingStore = getBackingStore(graphicsLayer);
+    RefPtr<CoordinatedBackingStore> backingStore = m_backingStores.get(graphicsLayer);
     ASSERT(backingStore);
     backingStore->setSize(graphicsLayer->size());
 }
@@ -476,7 +444,7 @@ void LayerTreeRenderer::resetBackingStoreSizeToLayerSize(GraphicsLayer* graphics
 void LayerTreeRenderer::createTile(CoordinatedLayerID layerID, uint32_t tileID, float scale)
 {
     GraphicsLayer* layer = layerByID(layerID);
-    CoordinatedBackingStore* backingStore = getBackingStore(layer);
+    RefPtr<CoordinatedBackingStore> backingStore = m_backingStores.get(layer);
     ASSERT(backingStore);
     backingStore->createTile(tileID, scale);
     resetBackingStoreSizeToLayerSize(layer);
@@ -485,7 +453,7 @@ void LayerTreeRenderer::createTile(CoordinatedLayerID layerID, uint32_t tileID, 
 void LayerTreeRenderer::removeTile(CoordinatedLayerID layerID, uint32_t tileID)
 {
     GraphicsLayer* layer = layerByID(layerID);
-    CoordinatedBackingStore* backingStore = getBackingStore(layer);
+    RefPtr<CoordinatedBackingStore> backingStore = m_backingStores.get(layer);
     if (!backingStore)
         return;
 
@@ -497,11 +465,27 @@ void LayerTreeRenderer::removeTile(CoordinatedLayerID layerID, uint32_t tileID)
 void LayerTreeRenderer::updateTile(CoordinatedLayerID layerID, uint32_t tileID, const TileUpdate& update)
 {
     GraphicsLayer* layer = layerByID(layerID);
-    RefPtr<CoordinatedBackingStore> backingStore = getBackingStore(layer);
+    RefPtr<CoordinatedBackingStore> backingStore = m_backingStores.get(layer);
     ASSERT(backingStore);
-    backingStore->updateTile(tileID, update.sourceRect, update.tileRect, update.surface, update.offset);
+
+    SurfaceMap::iterator it = m_surfaces.find(update.atlasID);
+    ASSERT(it != m_surfaces.end());
+
+    backingStore->updateTile(tileID, update.sourceRect, update.tileRect, it->value, update.offset);
     resetBackingStoreSizeToLayerSize(layer);
     m_backingStoresWithPendingBuffers.add(backingStore);
+}
+
+void LayerTreeRenderer::createUpdateAtlas(uint32_t atlasID, PassRefPtr<CoordinatedSurface> surface)
+{
+    ASSERT(!m_surfaces.contains(atlasID));
+    m_surfaces.add(atlasID, surface);
+}
+
+void LayerTreeRenderer::removeUpdateAtlas(uint32_t atlasID)
+{
+    ASSERT(m_surfaces.contains(atlasID));
+    m_surfaces.remove(atlasID);
 }
 
 void LayerTreeRenderer::createImageBacking(CoordinatedImageBackingID imageID)
@@ -568,15 +552,6 @@ void LayerTreeRenderer::commitPendingBackingStoreOperations()
         (*it)->commitTileOperations(m_textureMapper.get());
 
     m_backingStoresWithPendingBuffers.clear();
-
-    {
-        BackingStoreMap::iterator end = m_pendingSyncBackingStores.end();
-        BackingStoreMap::iterator it = m_pendingSyncBackingStores.begin();
-        for (;it != end; ++it)
-            it->key->setBackingStore(it->value);
-
-        m_pendingSyncBackingStores.clear();
-    }
 }
 
 void LayerTreeRenderer::flushLayerChanges()
@@ -596,8 +571,8 @@ void LayerTreeRenderer::flushLayerChanges()
 
 void LayerTreeRenderer::renderNextFrame()
 {
-    if (m_coordinatedLayerTreeHostProxy)
-        m_coordinatedLayerTreeHostProxy->renderNextFrame();
+    if (m_client)
+        m_client->renderNextFrame();
 }
 
 void LayerTreeRenderer::ensureRootLayer()
@@ -636,22 +611,19 @@ void LayerTreeRenderer::syncRemoteContent()
 
 void LayerTreeRenderer::purgeGLResources()
 {
-    TextureMapperLayer* layer = toTextureMapperLayer(rootLayer());
-
-    if (layer)
-        layer->clearBackingStoresRecursive();
-
     m_imageBackings.clear();
+    m_releasedImageBackings.clear();
 #if USE(GRAPHICS_SURFACE)
     m_surfaceBackingStores.clear();
 #endif
+    m_surfaces.clear();
 
     m_rootLayer.clear();
     m_rootLayerID = InvalidCoordinatedLayerID;
     m_layers.clear();
     m_fixedLayers.clear();
     m_textureMapper.clear();
-    m_pendingSyncBackingStores.clear();
+    m_backingStores.clear();
     m_backingStoresWithPendingBuffers.clear();
 
     setActive(false);
@@ -660,8 +632,8 @@ void LayerTreeRenderer::purgeGLResources()
 
 void LayerTreeRenderer::purgeBackingStores()
 {
-    if (m_coordinatedLayerTreeHostProxy)
-        m_coordinatedLayerTreeHostProxy->purgeBackingStores();
+    if (m_client)
+        m_client->purgeBackingStores();
 }
 
 void LayerTreeRenderer::setLayerAnimations(CoordinatedLayerID id, const GraphicsLayerAnimations& animations)
@@ -689,7 +661,7 @@ void LayerTreeRenderer::setAnimationsLocked(bool locked)
 void LayerTreeRenderer::detach()
 {
     ASSERT(isMainThread());
-    m_coordinatedLayerTreeHostProxy = 0;
+    m_client = 0;
 }
 
 void LayerTreeRenderer::appendUpdate(const Function<void()>& function)

@@ -84,6 +84,11 @@
     return [JSValue valueWithValue:result inContext:self];
 }
 
+- (JSWrapperMap *)wrapperMap
+{
+    return m_wrapperMap;
+}
+
 - (JSValue *)globalObject
 {
     return [JSValue valueWithValue:JSContextGetGlobalObject(m_context) inContext:self];
@@ -158,6 +163,7 @@ JSGlobalContextRef contextInternalContext(JSContext *context)
     [m_wrapperMap release];
     JSGlobalContextRelease(m_context);
     [m_virtualMachine release];
+    [self.exceptionHandler release];
     [super dealloc];
 }
 

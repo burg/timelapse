@@ -161,78 +161,14 @@ template<typename> struct MessageKindTraits { };
 
 class MessageID {
 public:
-    enum Flags {
-        SyncMessage = 1 << 0,
-        DispatchMessageWhenWaitingForSyncReply = 1 << 1,
-    };
-
     MessageID()
-        : m_messageID(0)
     {
     }
 
     template <typename EnumType>
-    explicit MessageID(EnumType messageKind, unsigned char flags = 0)
-        : m_messageID(stripMostSignificantBit(flags << 24 | (MessageKindTraits<EnumType>::messageClass) << 16 | messageKind))
+    explicit MessageID(EnumType, unsigned char = 0)
     {
     }
-
-    MessageID messageIDWithAddedFlags(unsigned char flags)
-    {
-        MessageID messageID;
-
-        messageID.m_messageID = stripMostSignificantBit(m_messageID | (flags << 24));
-        return messageID;
-    }
-
-    template <typename EnumType>
-    EnumType get() const
-    {
-        ASSERT(getClass() == MessageKindTraits<EnumType>::messageClass);
-        return static_cast<EnumType>(m_messageID & 0xffff);
-    }
-
-    template <MessageClass K>
-    bool is() const
-    {
-        return getClass() == K;
-    }
-    
-
-    static MessageID fromInt(unsigned i)
-    {
-        MessageID messageID;
-        messageID.m_messageID = stripMostSignificantBit(i);
-        
-        return messageID;
-    }
-    
-    unsigned toInt() const { return m_messageID; }
-
-    bool shouldDispatchMessageWhenWaitingForSyncReply() const { return getFlags() & DispatchMessageWhenWaitingForSyncReply; }
-    bool isSync() const { return getFlags() & SyncMessage; }
-
-private:
-    static inline unsigned stripMostSignificantBit(unsigned value)
-    {
-        return value & 0x7fffffff;
-    }
-
-    MessageClass messageClass() const
-    {
-        return static_cast<MessageClass>(getClass());
-    }
-
-    template <typename EnumType>
-    bool operator==(EnumType messageKind) const
-    {
-        return m_messageID == MessageID(messageKind).m_messageID;
-    }
-
-    unsigned char getFlags() const { return (m_messageID & 0xff000000) >> 24; }
-    unsigned char getClass() const { return (m_messageID & 0x00ff0000) >> 16; }
-
-    unsigned m_messageID;
 };
 
 } // namespace CoreIPC

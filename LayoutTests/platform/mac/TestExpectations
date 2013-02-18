@@ -240,6 +240,7 @@ animations/play-state.html
 # window.eventSender doesn't exist in devtools front-end on mac.
 # https://bugs.webkit.org/show_bug.cgi?id=106793
 inspector/editor/text-editor-formatter.html [ Skip ]
+inspector/editor/text-editor-ctrl-movements.html [ Skip ]
 
 # https://bugs.webkit.org/show_bug.cgi?id=71120
 inspector/debugger/selected-call-frame-after-formatting-source.html
@@ -263,7 +264,7 @@ inspector/profiler/heap-snapshot-summary-show-ranges.html
 inspector/profiler/heap-snapshot-summary-sorting-fields.html
 inspector/profiler/heap-snapshot-summary-sorting.html
 inspector/profiler/heap-snapshot-summary-sorting-instances.html
-webkit.org/b/50485 inspector-protocol/take-heap-snapshot.html [ Skip ]
+webkit.org/b/50485 inspector-protocol/heap-profiler [ Skip ]
 
 # New inspector/profiler/memory-instrumentation-canvas.html fails on JSC platforms
 webkit.org/b/99001 inspector/profiler/memory-instrumentation-canvas.html
@@ -1193,9 +1194,6 @@ webkit.org/b/98257 fast/canvas/webgl/oes-element-index-uint.html [ Failure Pass 
 # Resource Timing is not enable yet, skip it.
 webkit.org/b/61138 http/tests/w3c/webperf/submission/Intel/resource-timing [ Skip ]
 
-# TileCache tests that don't apply to WK1 (they are re-enabled via the WK2 TestExpectations file)
-platform/mac/tiled-drawing/ [ Skip ]
-
 # Can't hide scrollbars in WK1
 fast/css/sticky/sticky-top-zoomed.html [ ImageOnlyFailure ]
 
@@ -1263,18 +1261,12 @@ webkit.org/b/106412 [ Debug ] editing/execCommand/insert-list-xml.xhtml [ Crash 
 webkit.org/b/106412 [ Debug ] editing/pasteboard/paste-noscript-xhtml.xhtml [ Crash ]
 webkit.org/b/106412 [ Debug ] editing/pasteboard/paste-xml.xhtml [ Crash ]
 
-webkit.org/b/106415 fast/workers/worker-close-more.html [ Pass Failure ]
-webkit.org/b/106415 fast/workers/worker-document-leak.html [ Pass Failure ]
-webkit.org/b/106415 fast/workers/worker-lifecycle.html [ Pass Failure ]
+webkit.org/b/106957 svg/dom/SVGViewSpec-invalid-ref-crash.html [ Failure ]
 
 # Enable when support drag-and-drop autoscrolling
 webkit.org/b/39725 fast/events/drag-and-drop-autoscroll.html [ Skip ]
 
 # Transient. Needs rebaseline.
-webkit.org/b/103955 fast/repaint/4774354.html [ ImageOnlyFailure ]
-webkit.org/b/103955 fast/repaint/4776765.html [ ImageOnlyFailure ]
-webkit.org/b/103955 fast/repaint/caret-outside-block.html [ ImageOnlyFailure ]
-webkit.org/b/103955 fast/repaint/selection-rl.html [ ImageOnlyFailure ]
 webkit.org/b/103955 fast/repaint/caret-with-transformation.html [ Missing ]
 
 # Needs rebaseline.
@@ -1282,11 +1274,6 @@ webkit.org/b/105574 editing/input/caret-at-the-edge-of-contenteditable.html [ Fa
 webkit.org/b/105574 editing/input/reveal-caret-of-multiline-contenteditable.html [ Failure ]
 webkit.org/b/105574 editing/input/reveal-caret-of-multiline-input.html [ Failure ]
 webkit.org/b/105574 fast/spatial-navigation/snav-div-overflow-scrol-hidden.html [ Failure ]
-
-# Rebaseline required after https://webkit.org/b/107208
-webkit.org/b/107208 fast/regions/overflow-moving-below-floats-in-variable-width-regions.html [ Pass Failure ImageOnlyFailure ]
-webkit.org/b/107208 fast/regions/overflow-size-change-in-variable-width-regions.html [ Pass Failure ImageOnlyFailure ]
-webkit.org/b/107208 fast/regions/overflow-size-change-with-stacking-context.html [ Pass Failure ImageOnlyFailure ]
 
 # Rebaseline required after https://webkit.org/b/31397
 webkit.org/b/107567 svg/batik/text/xmlSpace.svg [ Failure ] 
@@ -1301,3 +1288,22 @@ webkit.org/b/107567 css2.1/t0505-c16-descendant-01-e.html [ Failure ]
 webkit.org/b/107567 tables/mozilla/bugs/bug1188.html [ Failure ] 
 webkit.org/b/107567 editing/selection/extend-by-sentence-001.html [ Failure ] 
 webkit.org/b/107567 svg/carto.net/combobox.svg [ Failure ] 
+
+webkit.org/b/106415 fast/workers/worker-close-more.html [ Pass Failure ] 
+webkit.org/b/106415 fast/workers/worker-document-leak.html [ Pass Failure ] 
+webkit.org/b/106415 fast/workers/worker-lifecycle.html [ Pass Failure ]
+
+webkit.org/b/108291 [ Lion ] accessibility/lists.html [ Failure ]
+
+# Spellchecker behavior tests.
+webkit.org/b/108370 editing/spelling/spelling-double-clicked-word.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-double-clicked-word-with-underscores.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-exactly-selected-multiple-words.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-exactly-selected-word.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-multiword-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-should-select-multiple-words.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-should-select-single-word.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-subword-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-with-punctuation-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-with-underscore-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-with-whitespace-selection.html [ Skip ]

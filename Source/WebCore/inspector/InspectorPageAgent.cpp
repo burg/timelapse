@@ -93,6 +93,7 @@ static const char pageAgentScreenHeightOverride[] = "pageAgentScreenHeightOverri
 static const char pageAgentFontScaleFactorOverride[] = "pageAgentFontScaleFactorOverride";
 static const char pageAgentFitWindow[] = "pageAgentFitWindow";
 static const char pageAgentShowFPSCounter[] = "pageAgentShowFPSCounter";
+static const char pageAgentContinuousPaintingEnabled[] = "pageAgentContinuousPaintingEnabled";
 static const char pageAgentShowPaintRects[] = "pageAgentShowPaintRects";
 #if ENABLE(TOUCH_EVENTS)
 static const char touchEventEmulationEnabled[] = "touchEventEmulationEnabled";
@@ -366,6 +367,8 @@ void InspectorPageAgent::restore()
         setShowFPSCounter(0, showFPSCounter);
         String emulatedMedia = m_state->getString(PageAgentState::pageAgentEmulatedMedia);
         setEmulatedMedia(0, emulatedMedia);
+        bool continuousPaintingEnabled = m_state->getBoolean(PageAgentState::pageAgentContinuousPaintingEnabled);
+        setContinuousPaintingEnabled(0, continuousPaintingEnabled);
 
         int currentWidth = static_cast<int>(m_state->getLong(PageAgentState::pageAgentScreenWidthOverride));
         int currentHeight = static_cast<int>(m_state->getLong(PageAgentState::pageAgentScreenHeightOverride));
@@ -401,6 +404,7 @@ void InspectorPageAgent::disable(ErrorString*)
     setShowPaintRects(0, false);
     setShowFPSCounter(0, false);
     setEmulatedMedia(0, "");
+    setContinuousPaintingEnabled(0, false);
 
     // When disabling the agent, reset the override values.
     m_state->setLong(PageAgentState::pageAgentScreenWidthOverride, 0);
@@ -749,6 +753,20 @@ void InspectorPageAgent::setShowFPSCounter(ErrorString*, bool show)
         mainFrame()->view()->invalidate();
 }
 
+void InspectorPageAgent::canContinuouslyPaint(ErrorString*, bool* outParam)
+{
+    *outParam = m_client->canContinuouslyPaint();
+}
+
+void InspectorPageAgent::setContinuousPaintingEnabled(ErrorString*, bool enabled)
+{
+    m_state->setBoolean(PageAgentState::pageAgentContinuousPaintingEnabled, enabled);
+    m_client->setContinuousPaintingEnabled(enabled);
+
+    if (!enabled && mainFrame() && mainFrame()->view())
+        mainFrame()->view()->invalidate();
+}
+
 void InspectorPageAgent::getScriptExecutionStatus(ErrorString*, PageCommandHandler::Result::Enum* status)
 {
     bool disabledByScriptController = false;
@@ -861,6 +879,11 @@ String InspectorPageAgent::frameId(Frame* frame)
     return identifier;
 }
 
+bool InspectorPageAgent::hasIdForFrame(Frame* frame) const
+{
+    return frame && m_frameToIdentifier.contains(frame);
+}
+
 String InspectorPageAgent::loaderId(DocumentLoader* loader)
 {
     if (!loader)
@@ -873,12 +896,11 @@ String InspectorPageAgent::loaderId(DocumentLoader* loader)
     return identifier;
 }
 
-Frame* InspectorPageAgent::assertFrame(ErrorString* errorString, String frameId)
+Frame* InspectorPageAgent::assertFrame(ErrorString* errorString, const String& frameId)
 {
     Frame* frame = frameForId(frameId);
     if (!frame)
         *errorString = "No frame for given id found";
-
     return frame;
 }
 
@@ -889,7 +911,6 @@ DocumentLoader* InspectorPageAgent::assertDocumentLoader(ErrorString* errorStrin
     DocumentLoader* documentLoader = frameLoader ? frameLoader->documentLoader() : 0;
     if (!documentLoader)
         *errorString = "No documentLoader for given frame found";
-
     return documentLoader;
 }
 

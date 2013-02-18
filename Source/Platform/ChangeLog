@@ -1,3 +1,94 @@
+2013-01-30  Yusuf Ozuysal  <yusufo@google.com>
+
+        Start sending scrollType as NonBubblingGesture for flings
+        https://bugs.webkit.org/show_bug.cgi?id=108372
+
+        Reviewed by James Robinson.
+
+        Using the newly defined scrollType layerTreeHostImpl will stop bubbling flings to
+        parent layers. It will only bubble if the child layer is at the end of its scroll
+        range
+
+        * chromium/public/WebInputHandlerClient.h:
+
+2013-01-30  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Add recordRenderingStats to WebSettings
+        https://bugs.webkit.org/show_bug.cgi?id=108358
+
+        Reviewed by James Robinson.
+
+        * chromium/public/WebLayerTreeView.h:
+        (WebKit::WebLayerTreeView::Settings::Settings):
+        (Settings):
+
+2013-01-29  Tommy Widenflycht  <tommyw@google.com>
+
+        MediaStream API: A MediaStreamComponent should be able to return the MediaStreamDescriptor it belongs to
+        https://bugs.webkit.org/show_bug.cgi?id=108173
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/WebMediaStreamComponent.h:
+        (WebKit):
+        (WebMediaStreamComponent):
+
+2013-01-28  Alexandre Elias  <aelias@chromium.org>
+
+        Make page scale shrink FrameView in applyPageScaleInCompositor mode
+        https://bugs.webkit.org/show_bug.cgi?id=107424
+
+        Reviewed by Levi Weintraub.
+
+        If applyPageScaleFactorInCompositor is enabled (Chromium-only setting),
+        instead of the entire document expanding as the user pinch zooms, the
+        viewport shrinks instead. This patch applies the pageScaleFactor to
+        visibleContentRect to get this behavior, and simplifies Chromium's
+        resize logic to stop hiding the true viewport size from WebCore.
+
+        I verified that the scaling makes sense for all the callers of
+        visibleContentRect. The exceptions are clip-layer size,
+        layout size in non-fixed-layout mode, and text autosizing, which need
+        the original unscaled size. Therefore I added a new method
+        unscaledVisibleContentSize() to ScrollView/FrameView.
+
+        This patch also modifies Page::setPageScaleFactor to perform no
+        invalidates or layout when applyPageScaleFactorInCompositor is true,
+        and also writes pageScaleFactor into HistoryItems instead of using
+        frameScaleFactor.
+
+        Since all behavior changes are tied to applyPageScaleFactorInCompositor,
+        this patch should be a no-op for non-Chromium ports.
+
+        * chromium/public/WebLayerTreeView.h:
+        (WebLayerTreeView):
+        (WebKit::WebLayerTreeView::adjustEventPointForPinchZoom):
+
+2013-01-26  James Simonsen  <simonjam@chromium.org>
+
+        [chromium] Export ResourceRequest's priority through WebURLRequest
+        https://bugs.webkit.org/show_bug.cgi?id=107985
+
+        Reviewed by Adam Barth.
+
+        * chromium/public/WebURLRequest.h:
+        (WebURLRequest):
+
+2013-01-25  Eberhard Graether  <egraether@google.com>
+
+        Web Inspector: add checkbox for continuous painting to the inspector's settings
+        https://bugs.webkit.org/show_bug.cgi?id=107352
+
+        Reviewed by Pavel Feldman.
+
+        This change adds a checkbox to activate continuous painting to the WebInspector's
+        rendering settings and plumbs the setting to Chromium's WebLayerTreeView. The
+        setting is visible if InspectorClient::canContinuouslyPaint() returns true.
+
+        * chromium/public/WebLayerTreeView.h:
+        (WebLayerTreeView):
+        (WebKit::WebLayerTreeView::setContinuousPaintingEnabled):
+
 2013-01-22  Nat Duca  <nduca@chromium.org>
 
         [chromium] Add WebDiscardableMemory to platform

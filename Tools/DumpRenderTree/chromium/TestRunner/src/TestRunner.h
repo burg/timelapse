@@ -39,6 +39,7 @@
 #include "WebTask.h"
 #include "WebTestRunner.h"
 #include <public/WebURL.h>
+#include <wtf/Deque.h>
 
 namespace WebKit {
 class WebView;
@@ -54,8 +55,7 @@ public:
     TestRunner();
     virtual ~TestRunner();
 
-    // FIXME: once DRTTestRunner is moved entirely to this class, change this
-    // method to take a TestDelegate* instead.
+    // FIXME: change this method to take a TestDelegate* instead.
     void setDelegate(WebTestDelegate*);
     void setWebView(WebKit::WebView* webView) { m_webView = webView; }
 
@@ -98,17 +98,89 @@ public:
     virtual const std::set<std::string>* httpHeadersToClear() const OVERRIDE;
     virtual bool shouldBlockRedirects() const OVERRIDE;
     virtual bool willSendRequestShouldReturnNull() const OVERRIDE;
+    virtual void setTopLoadingFrame(WebKit::WebFrame*, bool) OVERRIDE;
+    virtual WebKit::WebFrame* topLoadingFrame() const OVERRIDE;
+    virtual void policyDelegateDone() OVERRIDE;
+    virtual bool policyDelegateEnabled() const OVERRIDE;
+    virtual bool policyDelegateIsPermissive() const OVERRIDE;
+    virtual bool policyDelegateShouldNotifyDone() const OVERRIDE;
+    virtual bool shouldInterceptPostMessage() const OVERRIDE;
+    virtual bool isSmartInsertDeleteEnabled() const OVERRIDE;
+    virtual bool isSelectTrailingWhitespaceEnabled() const OVERRIDE;
 
-protected:
-    // FIXME: make these private once the move from DRTTestRunner to TestRunner
-    // is complete.
-    bool cppVariantToBool(const CppVariant&);
-    int32_t cppVariantToInt32(const CppVariant&);
-    WebKit::WebString cppVariantToWebString(const CppVariant&);
+    // A single item in the work queue.
+    class WorkItem {
+    public:
+        virtual ~WorkItem() { }
 
-    void printErrorMessage(const std::string&);
+        // Returns true if this started a load.
+        virtual bool run(WebTestDelegate*, WebKit::WebView*) = 0;
+    };
 
 private:
+    friend class WorkQueue;
+
+    // Helper class for managing events queued by methods like queueLoad or
+    // queueScript.
+    class WorkQueue {
+    public:
+        WorkQueue(TestRunner* controller) : m_frozen(false), m_controller(controller) { }
+        virtual ~WorkQueue();
+        void processWorkSoon();
+
+        // Reset the state of the class between tests.
+        void reset();
+
+        void addWork(WorkItem*);
+
+        void setFrozen(bool frozen) { m_frozen = frozen; }
+        bool isEmpty() { return m_queue.isEmpty(); }
+        WebTaskList* taskList() { return &m_taskList; }
+
+    private:
+        void processWork();
+        class WorkQueueTask: public WebMethodTask<WorkQueue> {
+        public:
+            WorkQueueTask(WorkQueue* object): WebMethodTask<WorkQueue>(object) { }
+            virtual void runIfValid() { m_object->processWork(); }
+        };
+
+        WebTaskList m_taskList;
+        Deque<WorkItem*> m_queue;
+        bool m_frozen;
+        TestRunner* m_controller;
+    };
+    ///////////////////////////////////////////////////////////////////////////
+    // Methods dealing with the test logic
+
+    // By default, tests end when page load is complete. These methods are used
+    // to delay the completion of the test until notifyDone is called.
+    void waitUntilDone(const CppArgumentList&, CppVariant*);
+    void notifyDone(const CppArgumentList&, CppVariant*);
+
+    // Methods for adding actions to the work queue. Used in conjunction with
+    // waitUntilDone/notifyDone above.
+    void queueBackNavigation(const CppArgumentList&, CppVariant*);
+    void queueForwardNavigation(const CppArgumentList&, CppVariant*);
+    void queueReload(const CppArgumentList&, CppVariant*);
+    void queueLoadingScript(const CppArgumentList&, CppVariant*);
+    void queueNonLoadingScript(const CppArgumentList&, CppVariant*);
+    void queueLoad(const CppArgumentList&, CppVariant*);
+    void queueLoadHTMLString(const CppArgumentList&, CppVariant*);
+
+
+    // Causes navigation actions just printout the intended navigation instead
+    // of taking you to the page. This is used for cases like mailto, where you
+    // don't actually want to open the mail program.
+    void setCustomPolicyDelegate(const CppArgumentList&, CppVariant*);
+
+    // Delays completion of the test until the policy delegate runs.
+    void waitForPolicyDelegate(const CppArgumentList&, CppVariant*);
+
+    // Functions for dealing with windows. By default we block all new windows.
+    void windowCount(const CppArgumentList&, CppVariant*);
+    void setCloseRemainingWindowsWhenComplete(const CppArgumentList&, CppVariant*);
+
     ///////////////////////////////////////////////////////////////////////////
     // Methods implemented entirely in terms of chromium's public WebKit API
 
@@ -428,12 +500,51 @@ private:
 
     ///////////////////////////////////////////////////////////////////////////
     // Internal helpers
+    void completeNotifyDone(bool isTimeout);
+    class NotifyDoneTimedOutTask: public WebMethodTask<TestRunner> {
+    public:
+        NotifyDoneTimedOutTask(TestRunner* object): WebMethodTask<TestRunner>(object) { }
+        virtual void runIfValid() { m_object->completeNotifyDone(true); }
+    };
+
     bool pauseAnimationAtTimeOnElementWithId(const WebKit::WebString& animationName, double time, const WebKit::WebString& elementId);
     bool pauseTransitionAtTimeOnElementWithId(const WebKit::WebString& propertyName, double time, const WebKit::WebString& elementId);
     bool elementDoesAutoCompleteForElementWithId(const WebKit::WebString&);
     int numberOfActiveAnimations();
+    bool cppVariantToBool(const CppVariant&);
+    int32_t cppVariantToInt32(const CppVariant&);
+    WebKit::WebString cppVariantToWebString(const CppVariant&);
+
+    void printErrorMessage(const std::string&);
+
+    // In the Mac code, this is called to trigger the end of a test after the
+    // page has finished loading. From here, we can generate the dump for the
+    // test.
+    void locationChangeDone();
 
     bool m_testIsRunning;
+
+    // When reset is called, go through and close all but the main test shell
+    // window. By default, set to true but toggled to false using
+    // setCloseRemainingWindowsWhenComplete().
+    bool m_closeRemainingWindows;
+
+    // If true, don't dump output until notifyDone is called.
+    bool m_waitUntilDone;
+
+    // Causes navigation actions just printout the intended navigation instead
+    // of taking you to the page. This is used for cases like mailto, where you
+    // don't actually want to open the mail program.
+    bool m_policyDelegateEnabled;
+
+    // Toggles the behavior of the policy delegate. If true, then navigations
+    // will be allowed. Otherwise, they will be ignored (dropped).
+    bool m_policyDelegateIsPermissive;
+
+    // If true, the policy delegate will signal layout test completion.
+    bool m_policyDelegateShouldNotifyDone;
+
+    WorkQueue m_workQueue;
 
     WebKit::WebURL m_userStyleSheetLocation;
 
@@ -445,6 +556,12 @@ private:
 
     // Bound variable tracking the directionality of the <title> tag.
     CppVariant m_titleTextDirection;
+
+    // Bound variable counting the number of top URLs visited.
+    CppVariant m_webHistoryItemCount;
+
+    // Bound variable to set whether postMessages should be intercepted or not
+    CppVariant m_interceptPostMessage;
 
     // If true, the test_shell will write a descriptive line for each editing
     // command.
@@ -539,6 +656,10 @@ private:
 
     bool m_willSendRequestShouldReturnNull;
 
+    bool m_smartInsertDeleteEnabled;
+
+    bool m_selectTrailingWhitespaceEnabled;
+
     std::set<std::string> m_httpHeadersToClear;
 
     // WAV audio data is stored here.
@@ -549,6 +670,9 @@ private:
 
     WebTestDelegate* m_delegate;
     WebKit::WebView* m_webView;
+
+    // This is non-0 IFF a load is in progress.
+    WebKit::WebFrame* m_topLoadingFrame;
 
     // Mock object for testing delivering web intents.
     OwnPtr<WebKit::WebDeliveredIntentClient> m_intentClient;

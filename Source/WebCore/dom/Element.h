@@ -293,10 +293,11 @@ public:
     PassRefPtr<ShadowRoot> createShadowRoot(ExceptionCode&);
     ShadowRoot* shadowRoot() const;
 
+    bool hasAuthorShadowRoot() const { return shadowRoot(); }
     virtual void willAddAuthorShadowRoot() { }
-    virtual bool areAuthorShadowsAllowed() const { return true; }
 
     ShadowRoot* userAgentShadowRoot() const;
+    ShadowRoot* ensureUserAgentShadowRoot();
 
     virtual const AtomicString& shadowPseudoId() const;
 
@@ -314,6 +315,8 @@ public:
     bool childrenAffectedByForwardPositionalRules() const { return hasRareData() && rareDataChildrenAffectedByForwardPositionalRules(); }
     bool childrenAffectedByBackwardPositionalRules() const { return hasRareData() && rareDataChildrenAffectedByBackwardPositionalRules(); }
     unsigned childIndex() const { return hasRareData() ? rareDataChildIndex() : 0; }
+
+    bool hasFlagsSetDuringStylingOfChildren() const;
 
     void setStyleAffectedByEmpty();
     void setChildrenAffectedByHover(bool);
@@ -527,6 +530,10 @@ private:
     void updatePseudoElement(PseudoId, StyleChange = NoChange);
     PassRefPtr<PseudoElement> createPseudoElementIfNeeded(PseudoId);
     void setPseudoElement(PseudoId, PassRefPtr<PseudoElement>);
+
+    virtual bool areAuthorShadowsAllowed() const { return true; }
+    virtual void didAddUserAgentShadowRoot(ShadowRoot*) { }
+    virtual bool alwaysCreateUserAgentShadowRoot() const { return false; }
 
     // FIXME: Remove the need for Attr to call willModifyAttribute/didModifyAttribute.
     friend class Attr;

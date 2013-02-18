@@ -123,7 +123,9 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
 #if ENABLE(TIMELAPSE)
     m_agents.append(InspectorTimelapseAgent::create(m_instrumentingAgents.get(), m_state.get(), page));
 #endif    
-    m_agents.append(InspectorMemoryAgent::create(m_instrumentingAgents.get(), inspectorClient, m_state.get(), m_page));
+    OwnPtr<InspectorMemoryAgent> memoryAgentPtr(InspectorMemoryAgent::create(m_instrumentingAgents.get(), inspectorClient, m_state.get(), m_page));
+    m_memoryAgent = memoryAgentPtr.get();
+    m_agents.append(memoryAgentPtr.release());
     m_agents.append(InspectorTimelineAgent::create(m_instrumentingAgents.get(), pageAgent, m_state.get(), InspectorTimelineAgent::PageInspector,
        inspectorClient));
     m_agents.append(InspectorApplicationCacheAgent::create(m_instrumentingAgents.get(), m_state.get(), pageAgent));
@@ -158,7 +160,7 @@ InspectorController::InspectorController(Page* page, InspectorClient* inspectorC
     m_agents.append(InspectorWorkerAgent::create(m_instrumentingAgents.get(), m_state.get()));
 #endif
 
-    m_agents.append(InspectorCanvasAgent::create(m_instrumentingAgents.get(), m_state.get(), page, m_injectedScriptManager.get()));
+    m_agents.append(InspectorCanvasAgent::create(m_instrumentingAgents.get(), m_state.get(), pageAgent, m_injectedScriptManager.get()));
 
     m_agents.append(InspectorInputAgent::create(m_instrumentingAgents.get(), m_state.get(), page));
 
@@ -440,6 +442,14 @@ void InspectorController::didProcessTask()
     m_profilerAgent->didProcessTask();
     m_domDebuggerAgent->didProcessTask();
 #endif
+}
+
+HashMap<String, size_t> InspectorController::processMemoryDistribution() const
+{
+    HashMap<String, size_t> memoryInfo;
+    RefPtr<InspectorObject> graph;
+    m_memoryAgent->getProcessMemoryDistributionAsMap(false, graph, &memoryInfo);
+    return memoryInfo;
 }
 
 } // namespace WebCore

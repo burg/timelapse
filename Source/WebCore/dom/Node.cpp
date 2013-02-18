@@ -2528,32 +2528,32 @@ bool Node::willRespondToTouchEvents()
 #if ENABLE(MICRODATA)
 DOMSettableTokenList* Node::itemProp()
 {
-    return ensureRareData()->ensureMicroDataTokenLists()->itemProp();
+    return ensureRareData()->ensureMicroDataTokenLists()->itemProp(this);
 }
 
 void Node::setItemProp(const String& value)
 {
-    ensureRareData()->ensureMicroDataTokenLists()->itemProp()->setValue(value);
+    ensureRareData()->ensureMicroDataTokenLists()->itemProp(this)->setValueInternal(value);
 }
 
 DOMSettableTokenList* Node::itemRef()
 {
-    return ensureRareData()->ensureMicroDataTokenLists()->itemRef();
+    return ensureRareData()->ensureMicroDataTokenLists()->itemRef(this);
 }
 
 void Node::setItemRef(const String& value)
 {
-    ensureRareData()->ensureMicroDataTokenLists()->itemRef()->setValue(value);
+    ensureRareData()->ensureMicroDataTokenLists()->itemRef(this)->setValueInternal(value);
 }
 
 DOMSettableTokenList* Node::itemType()
 {
-    return ensureRareData()->ensureMicroDataTokenLists()->itemType();
+    return ensureRareData()->ensureMicroDataTokenLists()->itemType(this);
 }
 
 void Node::setItemType(const String& value)
 {
-    ensureRareData()->ensureMicroDataTokenLists()->itemType()->setValue(value);
+    ensureRareData()->ensureMicroDataTokenLists()->itemType(this)->setValueInternal(value);
 }
 
 PassRefPtr<PropertyNodeList> Node::propertyNodeList(const String& name)
@@ -2618,6 +2618,28 @@ void Node::incrementConnectedSubframeCount(unsigned amount)
 void Node::decrementConnectedSubframeCount(unsigned amount)
 {
     rareData()->decrementConnectedSubframeCount(amount);
+}
+
+void Node::updateAncestorConnectedSubframeCountForRemoval() const
+{
+    unsigned count = connectedSubframeCount();
+
+    if (!count)
+        return;
+
+    for (Node* node = parentOrHostNode(); node; node = node->parentOrHostNode())
+        node->decrementConnectedSubframeCount(count);
+}
+
+void Node::updateAncestorConnectedSubframeCountForInsertion() const
+{
+    unsigned count = connectedSubframeCount();
+
+    if (!count)
+        return;
+
+    for (Node* node = parentOrHostNode(); node; node = node->parentOrHostNode())
+        node->incrementConnectedSubframeCount(count);
 }
 
 void Node::registerScopedHTMLStyleChild()

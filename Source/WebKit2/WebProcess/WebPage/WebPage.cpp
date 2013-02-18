@@ -128,8 +128,8 @@
 #include <WebCore/UserInputProxy.h>
 #include <WebCore/VisiblePosition.h>
 #include <WebCore/markup.h>
+#include <runtime/JSCJSValue.h>
 #include <runtime/JSLock.h>
-#include <runtime/JSValue.h>
 #include <runtime/Operations.h>
 
 #if ENABLE(MHTML)
@@ -977,6 +977,11 @@ void WebPage::layoutIfNeeded()
     }
 }
 
+WebPage* WebPage::fromCorePage(Page* page)
+{
+    return static_cast<WebChromeClient*>(page->chrome()->client())->page();
+}
+
 void WebPage::setSize(const WebCore::IntSize& viewSize)
 {
     FrameView* view = m_page->mainFrame()->view();
@@ -1213,6 +1218,9 @@ void WebPage::scalePage(double scale, const IntPoint& origin)
     for (HashSet<PluginView*>::const_iterator it = m_pluginViews.begin(), end = m_pluginViews.end(); it != end; ++it)
         (*it)->pageScaleFactorDidChange();
 
+    if (m_drawingArea->layerTreeHost())
+        m_drawingArea->layerTreeHost()->deviceOrPageScaleFactorChanged();
+
     send(Messages::WebPageProxy::PageScaleFactorDidChange(scale));
 }
 
@@ -1243,6 +1251,9 @@ void WebPage::setDeviceScaleFactor(float scaleFactor)
         layoutIfNeeded();
         m_findController.deviceScaleFactorDidChange();
     }
+
+    if (m_drawingArea->layerTreeHost())
+        m_drawingArea->layerTreeHost()->deviceOrPageScaleFactorChanged();
 }
 
 float WebPage::deviceScaleFactor() const
@@ -1261,6 +1272,8 @@ void WebPage::setUseFixedLayout(bool fixed)
 #if USE(COORDINATED_GRAPHICS)
     m_page->settings()->setAcceleratedCompositingForFixedPositionEnabled(fixed);
     m_page->settings()->setFixedPositionCreatesStackingContext(fixed);
+    m_page->settings()->setApplyDeviceScaleFactorInCompositor(fixed);
+    m_page->settings()->setApplyPageScaleFactorInCompositor(fixed);
 #endif
 
 #if USE(TILED_BACKING_STORE) && ENABLE(SMOOTH_SCROLLING)
@@ -1348,10 +1361,8 @@ void WebPage::postInjectedBundleMessage(const String& messageName, CoreIPC::Mess
     injectedBundle->didReceiveMessageToPage(this, messageName, messageBody.get());
 }
 
-void WebPage::installPageOverlay(PassRefPtr<PageOverlay> pageOverlay)
+void WebPage::installPageOverlay(PassRefPtr<PageOverlay> pageOverlay, bool shouldFadeIn)
 {
-    bool shouldFadeIn = true;
-    
     if (m_pageOverlay) {
         m_pageOverlay->setPage(0);
 
@@ -1372,12 +1383,12 @@ void WebPage::installPageOverlay(PassRefPtr<PageOverlay> pageOverlay)
     m_pageOverlay->setNeedsDisplay();
 }
 
-void WebPage::uninstallPageOverlay(PageOverlay* pageOverlay, bool fadeOut)
+void WebPage::uninstallPageOverlay(PageOverlay* pageOverlay, bool shouldFadeOut)
 {
     if (pageOverlay != m_pageOverlay)
         return;
 
-    if (fadeOut) {
+    if (shouldFadeOut) {
         m_pageOverlay->startFadeOutAnimation();
         return;
     }
@@ -2160,9 +2171,19 @@ void WebPage::getMainResourceDataOfFrame(uint64_t frameID, uint64_t callbackID)
 
     RefPtr<ResourceBuffer> buffer;
     if (WebFrame* frame = WebProcess::shared().webFrame(frameID)) {
-        if (DocumentLoader* loader = frame->coreFrame()->loader()->documentLoader()) {
-            if ((buffer = loader->mainResourceData()))
-                dataReference = CoreIPC::DataReference(reinterpret_cast<const uint8_t*>(buffer->data()), buffer->size());
+        if (PluginView* pluginView = pluginViewForFrame(frame->coreFrame())) {
+            const unsigned char* bytes;
+            unsigned length;
+
+            if (pluginView->getResourceData(bytes, length))
+                dataReference = CoreIPC::DataReference(bytes, length);
+        }
+
+        if (dataReference.isEmpty()) {
+            if (DocumentLoader* loader = frame->coreFrame()->loader()->documentLoader()) {
+                if ((buffer = loader->mainResourceData()))
+                    dataReference = CoreIPC::DataReference(reinterpret_cast<const uint8_t*>(buffer->data()), buffer->size());
+            }
         }
     }
 
@@ -2964,43 +2985,43 @@ bool WebPage::windowAndWebPageAreFocused() const
     return m_page->focusController()->isFocused() && m_page->focusController()->isActive();
 }
 
-void WebPage::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
+void WebPage::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
 {
-    if (messageID.is<CoreIPC::MessageClassDrawingArea>()) {
+    if (decoder.messageReceiverName() == Messages::DrawingArea::messageReceiverName()) {
         if (m_drawingArea)
-            m_drawingArea->didReceiveDrawingAreaMessage(connection, messageID, decoder);
+            m_drawingArea->didReceiveDrawingAreaMessage(connection, decoder);
         return;
     }
 
 #if USE(TILED_BACKING_STORE) && USE(ACCELERATED_COMPOSITING)
-    if (messageID.is<CoreIPC::MessageClassCoordinatedLayerTreeHost>()) {
+    if (decoder.messageReceiverName() == Messages::CoordinatedLayerTreeHost::messageReceiverName()) {
         if (m_drawingArea)
-            m_drawingArea->didReceiveCoordinatedLayerTreeHostMessage(connection, messageID, decoder);
+            m_drawingArea->didReceiveCoordinatedLayerTreeHostMessage(connection, decoder);
         return;
     }
 #endif
     
 #if ENABLE(INSPECTOR)
-    if (messageID.is<CoreIPC::MessageClassWebInspector>()) {
+    if (decoder.messageReceiverName() == Messages::WebInspector::messageReceiverName()) {
         if (WebInspector* inspector = this->inspector())
-            inspector->didReceiveWebInspectorMessage(connection, messageID, decoder);
+            inspector->didReceiveWebInspectorMessage(connection, decoder);
         return;
     }
 #endif
 
 #if ENABLE(FULLSCREEN_API)
-    if (messageID.is<CoreIPC::MessageClassWebFullScreenManager>()) {
-        fullScreenManager()->didReceiveMessage(connection, messageID, decoder);
+    if (decoder.messageReceiverName() == Messages::WebFullScreenManager::messageReceiverName()) {
+        fullScreenManager()->didReceiveMessage(connection, decoder);
         return;
     }
 #endif
 
-    didReceiveWebPageMessage(connection, messageID, decoder);
+    didReceiveWebPageMessage(connection, decoder);
 }
 
-void WebPage::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
+void WebPage::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
 {   
-    didReceiveSyncWebPageMessage(connection, messageID, decoder, replyEncoder);
+    didReceiveSyncWebPageMessage(connection, decoder, replyEncoder);
 }
     
 InjectedBundleBackForwardList* WebPage::backForwardList()
@@ -3622,7 +3643,7 @@ FrameView* WebPage::mainFrameView() const
 }
 
 #if ENABLE(PAGE_VISIBILITY_API) || ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
-void WebPage::setVisibilityState(int visibilityState, bool isInitialState)
+void WebPage::setVisibilityState(uint32_t visibilityState, bool isInitialState)
 {
     if (!m_page)
         return;

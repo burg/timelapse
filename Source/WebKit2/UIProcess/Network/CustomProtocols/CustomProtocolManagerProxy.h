@@ -53,12 +53,12 @@ class CustomProtocolManagerProxy {
 public:
     explicit CustomProtocolManagerProxy(ChildProcessProxy*);
 
-    void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
+    void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
     void startLoading(uint64_t customProtocolID, const WebCore::ResourceRequest&);
     void stopLoading(uint64_t customProtocolID);
 
 private:
-    void didReceiveCustomProtocolManagerProxyMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
+    void didReceiveCustomProtocolManagerProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
 
     ChildProcessProxy* m_childProcessProxy;
 

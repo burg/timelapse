@@ -819,6 +819,7 @@ webkit.org/b/105296 webaudio/delaynode-maxdelay.html [ Failure Pass ]
 webkit.org/b/106551 media/video-src-source.html [ Crash Pass ]
 webkit.org/b/106551 media/video-source-moved.html [ Crash Pass ]
 webkit.org/b/106551 media/video-source.html [ Crash Pass ]
+webkit.org/b/106551 media/video-source-type.html [ Crash Pass ]
 webkit.org/b/106551 fast/dom/beforeload/remove-video-poster-in-beforeload-listener.html [ Crash Pass ]
 
 webkit.org/b/107024 compositing/self-painting-layers2.html [ Pass Failure ]
@@ -1230,6 +1231,9 @@ webkit.org/b/95302 fast/events/constructors/speech-recognition-event-constructor
 # DOM4_EVENTS_CONSTRUCTOR is not yet enabled.
 webkit.org/b/107428 fast/events/constructors/ui-event-constructor.html [ Skip ]
 webkit.org/b/107428 fast/events/constructors/mouse-event-constructor.html [ Skip ]
+webkit.org/b/107428 fast/events/constructors/wheel-event-constructor.html [ Skip ]
+webkit.org/b/107428 fast/events/constructors/keyboard-event-constructor.html [ Skip ]
+webkit.org/b/107428 fast/events/constructors/composition-event-constructor.html [ Skip ]
 
 # Requires support for Web notifications
 webkit.org/b/73544 fast/notifications [ Skip ]
@@ -1258,6 +1262,7 @@ webkit.org/b/49142 fast/css/style-scoped [ Skip ]
 webkit.org/b/78801 touchadjustment
 
 # Tracking corner not being painted for TextArea.
+webkit.org/b/9221 fast/css/resize-corner-tracking-transformed-iframe.html [ Missing ]
 webkit.org/b/85484 fast/css/resize-corner-tracking-transformed.html [ Failure ]
 webkit.org/b/85484 fast/css/resize-corner-tracking.html [ Failure ]
 
@@ -1466,7 +1471,7 @@ webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-show-ranges.html [ S
 webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-sorting-fields.html [ Skip ]
 webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-sorting.html [ Skip ]
 webkit.org/b/50485 inspector/profiler/heap-snapshot-summary-sorting-instances.html [ Skip ]
-webkit.org/b/50485 inspector-protocol/take-heap-snapshot.html [ Skip ]
+webkit.org/b/50485 inspector-protocol/heap-profiler [ Skip ]
 
 # ENABLE(INPUT_MULTIPLE_FIELDS_UI) is disabled
 fast/forms/date-multiple-fields
@@ -1775,9 +1780,6 @@ webkit.org/b/85522 http/tests/security/sandboxed-iframe-form-top.html [ Skip ]
 webkit.org/b/106015 fast/css-generated-content/pseudo-animation.html [ Failure ]
 webkit.org/b/106015 fast/css-generated-content/pseudo-transition.html [ Failure ]
 
-# New test introduced in r138756 is failing.
-webkit.org/b/106086 fast/dom/HTMLTemplateElement/ownerDocument-adoptNode.html [ Failure ]
-
 # Fail after r139145 on MAC, EFL, QT, GTK.
 webkit.org/b/106415 fast/workers/worker-close-more.html [ Pass Failure ]
 
@@ -1799,6 +1801,10 @@ webkit.org/b/106743 media/video-controls-captions.html [ Failure ]
 # New inspector/editor/text-editor-formatter.html introduced in r139617 fails on EFL, Mac, QT
 # https://bugs.webkit.org/show_bug.cgi?id=106883
 inspector/editor/text-editor-formatter.html
+inspector/editor/text-editor-ctrl-movements.html
+
+# Test fails on JSC platforms due to GC timing problems
+webkit.org/b/106957 svg/dom/SVGViewSpec-invalid-ref-crash.html [ Failure ]
 
 # Fail to generate proper pixel results - let's wait with rebaselining.
 webkit.org/b/106992 scrollingcoordinator/non-fast-scrollable-region-scaled-iframe.html [ Failure ]
@@ -1816,16 +1822,21 @@ webkit.org/b/107375 fast/css/sticky/sticky-top-zoomed.html [ ImageOnlyFailure ]
 webkit.org/b/107476 fast/block/float/024.html [ Failure ]
 webkit.org/b/107476 fast/block/margin-collapse/empty-clear-blocks.html [ Failure ]
 
-# Rebaseline required after https://webkit.org/b/31397
-webkit.org/b/107567 svg/batik/text/xmlSpace.svg [ Failure ] 
-webkit.org/b/107567 fast/text/capitalize-empty-generated-string.html [ Failure ] 
-webkit.org/b/107567 fast/text/whitespace/007.html [ Failure ] 
-webkit.org/b/107567 fast/text/whitespace/006.html [ Failure ] 
-webkit.org/b/107567 fast/inline/drawStyledEmptyInlinesWithWS.html [ Failure ] 
-webkit.org/b/107567 tables/mozilla/bugs/bug1318.html [ Failure ] 
-webkit.org/b/107567 fast/inline/drawStyledEmptyInlines.html [ Failure ] 
-webkit.org/b/107567 tables/mozilla/bugs/bug113235-3.html [ Failure ] 
-webkit.org/b/107567 css2.1/t0505-c16-descendant-01-e.html [ Failure ] 
-webkit.org/b/107567 tables/mozilla/bugs/bug1188.html [ Failure ] 
-webkit.org/b/107567 editing/selection/extend-by-sentence-001.html [ Failure ] 
-webkit.org/b/107567 svg/carto.net/combobox.svg [ Failure ] 
+# New ruby selection test (in r140613) fails to render correctly, not generating an expected result
+webkit.org/b/108315 fast/ruby/select-ruby.html [ Missing ]
+
+# empty position:fixed element gets a layer. Should not happen after r141039
+webkit.org/b/108339 compositing/layer-creation/fixed-position-no-content.html [ Failure ]
+
+# Spellchecker behavior tests.
+webkit.org/b/108370 editing/spelling/spelling-double-clicked-word.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-double-clicked-word-with-underscores.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-exactly-selected-multiple-words.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-exactly-selected-word.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-multiword-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-should-select-multiple-words.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-should-select-single-word.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-subword-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-with-punctuation-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-with-underscore-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-with-whitespace-selection.html [ Skip ]

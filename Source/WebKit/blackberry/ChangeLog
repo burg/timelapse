@@ -1,3 +1,226 @@
+2013-01-30  Ed Baker  <edbaker@rim.com>
+
+        [BlackBerry] Screenshot is clipped when content is smaller than the desintation size
+        https://bugs.webkit.org/show_bug.cgi?id=107735
+
+        Reviewed by Rob Buis.
+
+        Internal PR #284662
+        Don't scale the transformed content rect when the content is smaller than the destination
+        size. Scale the graphics context when it has a scale factor that isn't 1.0.
+
+        Internally reviewed by Andrew Lo
+
+        * Api/BackingStore.cpp:
+        (BlackBerry::WebKit::BackingStorePrivate::renderContents):
+
+2013-01-30  Xiaobo Wang  <xbwang@torchmobile.com.cn>
+
+        [BlackBerry] Webpage was cut off after rotating to landscape and then rotating back to portrait on specific website
+        https://bugs.webkit.org/show_bug.cgi?id=108281
+        PR 284985
+
+        Reviewed by Rob Buis.
+        Internally reviewed by Jacky Jiang.
+
+        Return correct fixedLayoutSize when overflow exceeds contents size.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::fixedLayoutSize):
+
+2013-01-30  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Remove QT4_UNICODE related code paths
+        https://bugs.webkit.org/show_bug.cgi?id=108316
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        * WebCoreSupport/AboutDataUseFeatures.in: The feature macro has been removed.
+
+2013-01-29  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r140983.
+        http://trac.webkit.org/changeset/140983
+        https://bugs.webkit.org/show_bug.cgi?id=108277
+
+        Unfortunately, this API has one last client (Requested by
+        abarth on #webkit).
+
+        * WebCoreSupport/AboutDataEnableFeatures.in:
+
+2013-01-28  Andrew Lo  <anlo@rim.com>
+
+        [BlackBerry] Small animated zoom level adjustments are unnecessary
+        https://bugs.webkit.org/show_bug.cgi?id=108104
+
+        Reviewed by Rob Buis.
+        Internally reviewed by Mike Fenton.
+
+        Internal PR 285861.
+        If the difference between the target scale and current scale is
+        less than a given threshold, don't perform a zoom animation.
+
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::ensureFocusTextElementVisible):
+
+2013-01-28  Nima Ghanavatian  <nghanavatian@rim.com>
+
+        [BlackBerry] Reduce the region that is spellchecked on keystroke
+        https://bugs.webkit.org/show_bug.cgi?id=108115
+
+        Reviewed by Rob Buis.
+
+        PR288217
+        Instead of blindly checking text until endOfDocument, we should be honoring the boundaries of
+        the VisibleSelection that is passed into SpellingHandler. Though this results in the same behavior
+        on focus, this dramatically reduces the region that is rechecked when a key is hit.
+
+        Internally reviewed by Mike Fenton.
+
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::requestCheckingOfString):
+        * WebKitSupport/SpellingHandler.cpp:
+        (BlackBerry::WebKit::SpellingHandler::spellCheckTextBlock):
+        (BlackBerry::WebKit::SpellingHandler::parseBlockForSpellChecking):
+        * WebKitSupport/SpellingHandler.h:
+        (SpellingHandler):
+
+2013-01-28  Adam Barth  <abarth@webkit.org>
+
+        Remove webkitNotifications.createHTMLNotification
+        https://bugs.webkit.org/show_bug.cgi?id=107598
+
+        Reviewed by Benjamin Poulain.
+
+        * WebCoreSupport/AboutDataEnableFeatures.in:
+
+2013-01-28  Otto Derek Cheung  <otcheung@rim.com>
+
+        [BlackBerry] SpellingHandler parses and creates spellcheck requests regardless of the system spell check status
+        https://bugs.webkit.org/show_bug.cgi?id=108085
+
+        Reviewed by Rob Buis.
+
+        Fix a merge error that duplicated a function declaration in InputHandler.h.
+
+        * WebKitSupport/InputHandler.h:
+
+2013-01-28  Otto Derek Cheung  <otcheung@rim.com>
+
+        [BlackBerry] SpellingHandler parses and creates spellcheck requests regardless of the system spell check status
+        https://bugs.webkit.org/show_bug.cgi?id=108085
+        PR 286165
+
+        Reviewed by Rob Buis.
+        Internally reviewed by Nima Ghanavatian.
+
+        Adding a check for the system spell check status in InputHandler::shouldSpellCheckElement so
+        we won't bother sending a spellcheck request if system spell check is turned off.
+
+        However, on a fresh browser start up and on the first setElementFocus, the spellcheck value isn't defined yet.
+        The first spell check request is therefore necessary to connect to imf to determine whether spell check is turned on.
+        If spell check is turned off, we will turn spellinghandler off.
+
+        Tested the patch using a test site that contains editable text in text-areas and content-editable divs. Also tested on
+        an extreme test case where we try to edit a content-editable div with 30000 characters. Confirmed spell-check requests are
+        being canceled if system spell check is off.
+
+        In theory, this patch should also fix PR 284229 . However, because of issues with getting the system spell check values from IMF,
+        additional work needs to be done for that PR. 
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPage::setSpellCheckingEnabled):
+        * WebKitSupport/InputHandler.cpp:
+        (BlackBerry::WebKit::InputHandler::InputHandler):
+        (BlackBerry::WebKit::InputHandler::shouldSpellCheckElement):
+        (WebKit):
+        (BlackBerry::WebKit::InputHandler::stopPendingSpellCheckRequests):
+        * WebKitSupport/InputHandler.h:
+        (InputHandler):
+        (BlackBerry::WebKit::InputHandler::setSystemSpellCheckStatus):
+
+2013-01-25  Andrew Lo  <anlo@rim.com>
+
+        [BlackBerry] Pop-up WebViews should not take ownership of the backing store.
+        https://bugs.webkit.org/show_bug.cgi?id=107957
+
+        Reviewed by Rob Buis.
+        Internally reviewed by Jakob Petsovits.
+
+        Internal PR 274581.
+        Add web setting for whether a WebPage should take the backing store.
+        Prevent pop-up WebView from taking ownership of the backing
+        store when it becomes visible.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPage::setVisible):
+        * Api/WebSettings.cpp:
+        (WebKit):
+        (BlackBerry::WebKit::WebSettings::standardSettings):
+        (BlackBerry::WebKit::WebSettings::isBackingStoreEnabled):
+        (BlackBerry::WebKit::WebSettings::setBackingStoreEnabled):
+        * Api/WebSettings.h:
+        * WebCoreSupport/PagePopupBlackBerry.cpp:
+        (WebCore::PagePopupBlackBerry::PagePopupBlackBerry):
+        (WebCore::PagePopupBlackBerry::init):
+
+2013-01-25  Arvid Nilsson  <anilsson@rim.com>
+
+        [BlackBerry] AC layers appear in the wrong place on RTL page
+        https://bugs.webkit.org/show_bug.cgi?id=107930
+
+        Reviewed by George Staikos.
+
+        The public API of the BlackBerry port always reports a minimum scroll
+        position of (0, 0), even on RTL pages with left overflow. We
+        accomplish this by translating the WebCore scroll position by an
+        amount equal in size to the minimum scroll position, to obtain the API
+        scroll position reported to the API client.
+
+        This means the API client will ask us to render a rect that needs to
+        be corrected for the minimum scroll position, or we'll render the wrong
+        part. This is done for BackingStore, but not for WebPageCompositor.
+
+        WebPageCompositor was rendering the wrong part of the web page when
+        the minimum scroll position was non-zero. Fixed by communicating the
+        minimum scroll position to the WebPageCompositor, and accounting for it
+        when interpreting the requested content rectangle to render.
+
+        PR 280229.
+
+        * Api/WebPage.cpp:
+        (BlackBerry::WebKit::WebPagePrivate::commitRootLayer):
+        (BlackBerry::WebKit::WebPagePrivate::commitRootLayerIfNeeded):
+        * Api/WebPageCompositor.cpp:
+        (BlackBerry::WebKit::WebPageCompositorPrivate::render):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::drawLayers):
+        * Api/WebPageCompositor_p.h:
+        (BlackBerry::WebKit::WebPageCompositorPrivate::layoutRect):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::setLayoutRect):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::documentRect):
+        (BlackBerry::WebKit::WebPageCompositorPrivate::setDocumentRect):
+        (WebPageCompositorPrivate):
+        * Api/WebPage_p.h:
+        (WebPagePrivate):
+
+2013-01-24  Nima Ghanavatian  <nghanavatian@rim.com>
+
+        [BlackBerry] Fix crash in SpellingHandler
+        https://bugs.webkit.org/show_bug.cgi?id=107842
+
+        Reviewed by Rob Buis.
+
+        If we have an empty range or one with all spaces, we can simply return 0 instead of
+        still creating a range. Putting in a null check after trimming to catch this case
+        which was causing the crash in some DRT tests.
+
+        Internally reviewed by Mike Fenton.
+
+        * WebKitSupport/DOMSupport.cpp:
+        (BlackBerry::WebKit::DOMSupport::trimWhitespaceFromRange):
+        * WebKitSupport/SpellingHandler.cpp:
+        (BlackBerry::WebKit::SpellingHandler::createSpellCheckRequest):
+
 2013-01-24  Sean Wang  <Xuewen.Wang@torchmobile.com.cn>
 
         [BlackBerry] It can't Select texts in main frame when the current focus is in a IFrame

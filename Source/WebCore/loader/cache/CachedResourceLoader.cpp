@@ -477,6 +477,19 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::requestResource(Cache
         }
     }
 
+#if PLATFORM(CHROMIUM) || PLATFORM(MAC)
+    // FIXME: Temporarily leave main resource caching disabled for chromium, see https://bugs.webkit.org/show_bug.cgi?id=107962
+    // Ensure main resources aren't preloaded, and other main resource loads are removed from cache to prevent reuse.
+    // FIXME: Temporarily leave main resource caching disabled on Mac port per webkit.org/b/108380 until we track down the root cause.
+    if (type == CachedResource::MainResource) {
+        ASSERT(policy != Use);
+        ASSERT(policy != Revalidate);
+        memoryCache()->remove(resource.get());
+        if (request.forPreload())
+            return 0;
+    }
+#endif
+
     if (!request.resourceRequest().url().protocolIsData())
         m_validatedURLs.add(request.resourceRequest().url());
 
@@ -503,8 +516,10 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::revalidateResource(co
     memoryCache()->remove(resource);
     memoryCache()->add(newResource.get());
 #if ENABLE(RESOURCE_TIMING)
-    InitiatorInfo info = { request.initiatorName(), monotonicallyIncreasingTime() };
-    m_initiatorMap.add(newResource.get(), info);
+    if (resource->type() != CachedResource::MainResource) {
+        InitiatorInfo info = { request.initiatorName(), monotonicallyIncreasingTime() };
+        m_initiatorMap.add(newResource.get(), info);
+    }
 #else
     UNUSED_PARAM(request);
 #endif
@@ -522,8 +537,10 @@ CachedResourceHandle<CachedResource> CachedResourceLoader::loadResource(CachedRe
     if (!memoryCache()->add(resource.get()))
         resource->setOwningCachedResourceLoader(this);
 #if ENABLE(RESOURCE_TIMING)
-    InitiatorInfo info = { request.initiatorName(), monotonicallyIncreasingTime() };
-    m_initiatorMap.add(resource.get(), info);
+    if (type != CachedResource::MainResource) {
+        InitiatorInfo info = { request.initiatorName(), monotonicallyIncreasingTime() };
+        m_initiatorMap.add(resource.get(), info);
+    }
 #endif
     return resource;
 }
@@ -543,10 +560,7 @@ CachedResourceLoader::RevalidationPolicy CachedResourceLoader::determineRevalida
         return Reload;
     }
 
-    if (existingResource->type() == CachedResource::MainResource)
-        return Reload;
-
-    if (existingResource->type() == CachedResource::RawResource && !static_cast<CachedRawResource*>(existingResource)->canReuse(request))
+    if (!existingResource->canReuse(request))
         return Reload;
 
     // Certain requests (e.g., XHRs) might have manually set headers that require revalidation.

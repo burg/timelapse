@@ -32,6 +32,7 @@
 #include "FloatRect.h"
 #include "Frame.h"
 #include "FrameView.h"
+#include "HTMLNames.h"
 #include "InlineTextBox.h"
 #include "InsertionPoint.h"
 #include "InspectorInstrumentation.h"
@@ -90,16 +91,21 @@ static void collectChildrenAndRemoveFromOldParent(Node* node, NodeVector& nodes,
     toContainerNode(node)->removeChildren();
 }
 
-void ContainerNode::removeAllChildren()
+void ContainerNode::removeDetachedChildren()
 {
-    removeAllChildrenInContainer<Node, ContainerNode>(this);
+    if (connectedSubframeCount()) {
+        for (Node* child = firstChild(); child; child = child->nextSibling())
+            child->updateAncestorConnectedSubframeCountForRemoval();
+    }
+    // FIXME: We should be able to ASSERT(!attached()) here: https://bugs.webkit.org/show_bug.cgi?id=107801
+    removeDetachedChildrenInContainer<Node, ContainerNode>(this);
 }
 
 void ContainerNode::takeAllChildrenFrom(ContainerNode* oldParent)
 {
     NodeVector children;
     getChildNodes(oldParent, children);
-    oldParent->removeAllChildren();
+    oldParent->removeDetachedChildren();
 
     for (unsigned i = 0; i < children.size(); ++i) {
         ExceptionCode ec = 0;
@@ -123,7 +129,7 @@ ContainerNode::~ContainerNode()
     if (AXObjectCache::accessibilityEnabled() && documentInternal() && documentInternal()->axObjectCacheExists())
         documentInternal()->axObjectCache()->remove(this);
 
-    removeAllChildren();
+    removeDetachedChildren();
 }
 
 static inline bool isChildTypeAllowed(ContainerNode* newParent, Node* child)
@@ -324,17 +330,19 @@ void ContainerNode::parserInsertBefore(PassRefPtr<Node> newChild, Node* nextChil
     ASSERT(nextChild);
     ASSERT(nextChild->parentNode() == this);
     ASSERT(!newChild->isDocumentFragment());
-    ASSERT_WITH_SECURITY_IMPLICATION(document() == newChild->document());
+#if ENABLE(TEMPLATE_ELEMENT)
+    ASSERT(!hasTagName(HTMLNames::templateTag));
+#endif
 
     if (nextChild->previousSibling() == newChild || nextChild == newChild) // nothing to do
         return;
 
+    if (document() != newChild->document())
+        document()->adoptNode(newChild.get(), ASSERT_NO_EXCEPTION);
+
     insertBeforeCommon(nextChild, newChild.get());
 
-    if (unsigned count = newChild->connectedSubframeCount()) {
-        for (Node* node = newChild->parentOrHostNode(); node; node = node->parentOrHostNode())
-            node->incrementConnectedSubframeCount(count);
-    }
+    newChild->updateAncestorConnectedSubframeCountForInsertion();
 
     childrenChanged(true, newChild->previousSibling(), nextChild, 1);
     ChildNodeInsertionNotifier(this).notify(newChild.get());
@@ -557,10 +565,7 @@ void ContainerNode::parserRemoveChild(Node* oldChild)
     Node* prev = oldChild->previousSibling();
     Node* next = oldChild->nextSibling();
 
-    if (unsigned count = oldChild->connectedSubframeCount()) {
-        for (Node* node = oldChild->parentOrHostNode(); node; node = node->parentOrHostNode())
-            node->decrementConnectedSubframeCount(count);
-    }
+    oldChild->updateAncestorConnectedSubframeCountForRemoval();
 
     removeBetween(prev, next, oldChild);
 
@@ -696,7 +701,12 @@ void ContainerNode::parserAppendChild(PassRefPtr<Node> newChild)
     ASSERT(newChild);
     ASSERT(!newChild->parentNode()); // Use appendChild if you need to handle reparenting (and want DOM mutation events).
     ASSERT(!newChild->isDocumentFragment());
-    ASSERT_WITH_SECURITY_IMPLICATION(document() == newChild->document());
+#if ENABLE(TEMPLATE_ELEMENT)
+    ASSERT(!hasTagName(HTMLNames::templateTag));
+#endif
+
+    if (document() != newChild->document())
+        document()->adoptNode(newChild.get(), ASSERT_NO_EXCEPTION);
 
     Node* last = m_lastChild;
     {
@@ -706,10 +716,7 @@ void ContainerNode::parserAppendChild(PassRefPtr<Node> newChild)
         treeScope()->adoptIfNeeded(newChild.get());
     }
 
-    if (unsigned count = newChild->connectedSubframeCount()) {
-        for (Node* node = newChild->parentOrHostNode(); node; node = node->parentOrHostNode())
-            node->incrementConnectedSubframeCount(count);
-    }
+    newChild->updateAncestorConnectedSubframeCountForInsertion();
 
     childrenChanged(true, last, 0, 1);
     ChildNodeInsertionNotifier(this).notify(newChild.get());

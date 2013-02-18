@@ -32,6 +32,7 @@
 #include "DataReference.h"
 #include "DownloadProxy.h"
 #include "DrawingAreaProxy.h"
+#include "DrawingAreaProxyMessages.h"
 #include "EventDispatcherMessages.h"
 #include "FindIndicator.h"
 #include "ImmutableArray.h"
@@ -63,7 +64,9 @@
 #include "WebFormSubmissionListenerProxy.h"
 #include "WebFramePolicyListenerProxy.h"
 #include "WebFullScreenManagerProxy.h"
+#include "WebFullScreenManagerProxyMessages.h"
 #include "WebInspectorProxy.h"
+#include "WebInspectorProxyMessages.h"
 #include "WebNotificationManagerProxy.h"
 #include "WebOpenPanelResultListenerProxy.h"
 #include "WebPageCreationParameters.h"
@@ -880,6 +883,7 @@ void WebPageProxy::viewStateDidChange(ViewStateFlags flags)
         bool isVisible = m_pageClient->isViewVisible();
         if (isVisible != m_isVisible) {
             m_isVisible = isVisible;
+            m_process->pageVisibilityChanged(this);
             m_drawingArea->visibilityDidChange();
 
             if (!m_isVisible) {
@@ -1602,6 +1606,19 @@ void WebPageProxy::listenForLayoutMilestones(WebCore::LayoutMilestones milestone
     m_process->send(Messages::WebPage::ListenForLayoutMilestones(milestones), m_pageID);
 }
 
+void WebPageProxy::setVisibilityState(WebCore::PageVisibilityState visibilityState, bool isInitialState)
+{
+    if (!isValid())
+        return;
+
+#if ENABLE(PAGE_VISIBILITY_API)
+    if (visibilityState != m_visibilityState || isInitialState) {
+        m_visibilityState = visibilityState;
+        m_process->send(Messages::WebPage::SetVisibilityState(visibilityState, isInitialState), m_pageID);
+    }
+#endif
+}
+
 void WebPageProxy::setSuppressScrollbarAnimations(bool suppressAnimations)
 {
     if (!isValid())
@@ -1898,6 +1915,8 @@ void WebPageProxy::preferencesDidChange()
         inspector()->enableRemoteInspection();
 #endif
 
+    m_process->pagePreferencesChanged(this);
+
     // FIXME: It probably makes more sense to send individual preference changes.
     // However, WebKitTestRunner depends on getting a preference change notification
     // even if nothing changed in UI process, so that overrides get removed.
@@ -1906,57 +1925,57 @@ void WebPageProxy::preferencesDidChange()
     m_process->send(Messages::WebPage::PreferencesDidChange(pageGroup()->preferences()->store()), m_pageID, m_isPerformingDOMPrintOperation ? CoreIPC::DispatchMessageEvenWhenWaitingForSyncReply : 0);
 }
 
-void WebPageProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
+void WebPageProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
 {
-    if (messageID.is<CoreIPC::MessageClassDrawingAreaProxy>()) {
-        m_drawingArea->didReceiveDrawingAreaProxyMessage(connection, messageID, decoder);
+    if (decoder.messageReceiverName() == Messages::DrawingAreaProxy::messageReceiverName()) {
+        m_drawingArea->didReceiveDrawingAreaProxyMessage(connection, decoder);
         return;
     }
 
 #if USE(COORDINATED_GRAPHICS)
-    if (messageID.is<CoreIPC::MessageClassCoordinatedLayerTreeHostProxy>()) {
-        m_drawingArea->didReceiveCoordinatedLayerTreeHostProxyMessage(connection, messageID, decoder);
+    if (decoder.messageReceiverName() == Messages::CoordinatedLayerTreeHostProxy::messageReceiverName()) {
+        m_drawingArea->didReceiveCoordinatedLayerTreeHostProxyMessage(connection, decoder);
         return;
     }
 #endif
 
 #if ENABLE(INSPECTOR)
-    if (messageID.is<CoreIPC::MessageClassWebInspectorProxy>()) {
+    if (decoder.messageReceiverName() == Messages::WebInspectorProxy::messageReceiverName()) {
         if (WebInspectorProxy* inspector = this->inspector())
-            inspector->didReceiveWebInspectorProxyMessage(connection, messageID, decoder);
+            inspector->didReceiveWebInspectorProxyMessage(connection, decoder);
         return;
     }
 #endif
 
 #if ENABLE(FULLSCREEN_API)
-    if (messageID.is<CoreIPC::MessageClassWebFullScreenManagerProxy>()) {
-        fullScreenManager()->didReceiveMessage(connection, messageID, decoder);
+    if (decoder.messageReceiverName() == Messages::WebFullScreenManagerProxy::messageReceiverName()) {
+        fullScreenManager()->didReceiveMessage(connection, decoder);
         return;
     }
 #endif
 
-    didReceiveWebPageProxyMessage(connection, messageID, decoder);
+    didReceiveWebPageProxyMessage(connection, decoder);
 }
 
-void WebPageProxy::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
+void WebPageProxy::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
 {
 #if ENABLE(INSPECTOR)
-    if (messageID.is<CoreIPC::MessageClassWebInspectorProxy>()) {
+    if (decoder.messageReceiverName() == Messages::WebInspectorProxy::messageReceiverName()) {
         if (WebInspectorProxy* inspector = this->inspector())
-            inspector->didReceiveSyncWebInspectorProxyMessage(connection, messageID, decoder, replyEncoder);
+            inspector->didReceiveSyncWebInspectorProxyMessage(connection, decoder, replyEncoder);
         return;
     }
 #endif
 
 #if ENABLE(FULLSCREEN_API)
-    if (messageID.is<CoreIPC::MessageClassWebFullScreenManagerProxy>()) {
-        fullScreenManager()->didReceiveSyncMessage(connection, messageID, decoder, replyEncoder);
+    if (decoder.messageReceiverName() == Messages::WebFullScreenManagerProxy::messageReceiverName()) {
+        fullScreenManager()->didReceiveSyncMessage(connection, decoder, replyEncoder);
         return;
     }
 #endif
 
     // FIXME: Do something with reply.
-    didReceiveSyncWebPageProxyMessage(connection, messageID, decoder, replyEncoder);
+    didReceiveSyncWebPageProxyMessage(connection, decoder, replyEncoder);
 }
 
 void WebPageProxy::didCreateMainFrame(uint64_t frameID)
@@ -3848,11 +3867,17 @@ void WebPageProxy::canAuthenticateAgainstProtectionSpaceInFrame(uint64_t frameID
 
 void WebPageProxy::didReceiveAuthenticationChallenge(uint64_t frameID, const AuthenticationChallenge& coreChallenge, uint64_t challengeID)
 {
+    didReceiveAuthenticationChallengeProxy(frameID, AuthenticationChallengeProxy::create(coreChallenge, challengeID, m_process->connection()));
+}
+
+void WebPageProxy::didReceiveAuthenticationChallengeProxy(uint64_t frameID, PassRefPtr<AuthenticationChallengeProxy> prpAuthenticationChallenge)
+{
+    ASSERT(prpAuthenticationChallenge);
+
     WebFrameProxy* frame = m_process->webFrame(frameID);
     MESSAGE_CHECK(frame);
 
-    RefPtr<AuthenticationChallengeProxy> authenticationChallenge = AuthenticationChallengeProxy::create(coreChallenge, challengeID, m_process->connection());
-    
+    RefPtr<AuthenticationChallengeProxy> authenticationChallenge = prpAuthenticationChallenge;
     m_loaderClient.didReceiveAuthenticationChallengeInFrame(this, frame, authenticationChallenge.get());
 }
 

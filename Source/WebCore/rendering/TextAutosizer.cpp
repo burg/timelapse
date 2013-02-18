@@ -84,7 +84,7 @@ bool TextAutosizer::processSubtree(RenderObject* layoutRoot)
     windowInfo.windowSize = m_document->settings()->textAutosizingWindowSizeOverride();
     if (windowInfo.windowSize.isEmpty()) {
         bool includeScrollbars = !InspectorInstrumentation::shouldApplyScreenWidthOverride(mainFrame);
-        windowInfo.windowSize = mainFrame->view()->visibleContentRect(includeScrollbars).size();
+        windowInfo.windowSize = mainFrame->view()->unscaledVisibleContentSize(includeScrollbars);
         if (!m_document->settings()->applyDeviceScaleFactorInCompositor())
             windowInfo.windowSize.scale(1 / m_document->page()->deviceScaleFactor());
     }
@@ -407,17 +407,8 @@ void TextAutosizer::measureDescendantTextWidth(const RenderBlock* container, con
 RenderObject* TextAutosizer::nextInPreOrderSkippingDescendantsOfContainers(const RenderObject* current, const RenderObject* stayWithin)
 {
     if (current == stayWithin || !isAutosizingContainer(current))
-        for (RenderObject* child = current->firstChild(); child; child = child->nextSibling())
-            return child;
-
-    for (const RenderObject* ancestor = current; ancestor; ancestor = ancestor->parent()) {
-        if (ancestor == stayWithin)
-            return 0;
-        for (RenderObject* sibling = ancestor->nextSibling(); sibling; sibling = sibling->nextSibling())
-            return sibling;
-    }
-
-    return 0;
+        return current->nextInPreOrder(stayWithin);
+    return current->nextInPreOrderAfterChildren(stayWithin);
 }
 
 const RenderBlock* TextAutosizer::findDeepestBlockContainingAllText(const RenderBlock* cluster)

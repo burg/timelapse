@@ -1,3 +1,223 @@
+2013-01-30  Christophe Dumez  <christophe.dumez@intel.com>
+
+        Add a StringTypeAdapter for ASCIILiteral
+        https://bugs.webkit.org/show_bug.cgi?id=108338
+
+        Reviewed by Benjamin Poulain.
+
+        Add StringTypeAdapter for ASCIILiteral type so that concatenation of an
+        ASCIILiteral and a String using + operator is efficiently handled.
+
+        * wtf/text/StringConcatenate.h:
+        * wtf/text/StringOperators.h:
+        (WTF::operator+): Inline some of the operator+ functions that were not
+        yet.
+        (WTF):
+
+2013-01-30  David Kilzer  <ddkilzer@apple.com>
+
+        Upstream iOS build file changes for WTF
+        <http://webkit.org/b/108221>
+
+        Reviewed by Mark Rowe.
+
+        * Configurations/Base.xcconfig:
+        - Import iOS.xcconfig.
+        - Remove VALID_ARCHS.  Modern Xcodes define these correctly.
+        - Make HEADER_SEARCH_PATHS work with iOS Simulator builds.
+        - Add SUPPORTED_PLATFORMS so both Mac and iOS SDKs appear in
+          schemes.
+        - Define INSTALL_PATH when building for macosx SDK.
+        * Configurations/CopyWTFHeaders.xcconfig:
+        - Make PRIVATE_HEADERS_FOLDER_PATH work with iOS Simulator
+          builds.
+        * Configurations/DebugRelease.xcconfig:
+        - Simplify ARCHS.  This works correctly on 32-bit-only SDKs.
+        * Configurations/WTF.xcconfig:
+        - Fix installation directory for iOS Simulator builds by
+          defining INSTALL_PATH_ACTUAL.
+        * Configurations/iOS.xcconfig: Add.
+        * WTF.xcodeproj/project.pbxproj:
+        - Add iOS.xcconfig to the project.
+
+2013-01-29  Mark Hahnenberg  <mhahnenberg@apple.com>
+
+        Structure::m_outOfLineCapacity is unnecessary
+        https://bugs.webkit.org/show_bug.cgi?id=108206
+
+        Reviewed by Geoffrey Garen.
+
+        We're adding a new function that gives us the ability to round a value up to the next power of a certain base.
+
+        * wtf/MathExtras.h:
+        (WTF::roundUpToPowerOf):
+
+2013-01-30  Zeno Albisser  <zeno@webkit.org>
+
+        [Qt] Fix Qt/Mac build after r141024 and r141037
+        https://bugs.webkit.org/show_bug.cgi?id=108318
+
+        Reviewed by Kentaro Hara.
+
+        * wtf/Functional.h:
+            Make sure Block.h is included and its functionality
+            is enabled for Qt on Mac.
+
+2013-01-30  Simon Hausmann  <simon.hausmann@digia.com>
+
+        [Qt] Remove QT4_UNICODE related code paths
+        https://bugs.webkit.org/show_bug.cgi?id=108316
+
+        Reviewed by Kenneth Rohde Christiansen.
+
+        Get rid of QT4_UNICODE and any related code paths. The Qt port
+        requires Qt5 and ICU these days.
+
+        * WTF.gypi:
+        * WTF.pro:
+        * wtf/unicode/Unicode.h:
+        * wtf/unicode/qt4/UnicodeQt4.h: Removed.
+
+2013-01-29  Mark Lam  <mark.lam@apple.com>
+
+        Introducing WTF::TypeSafeEnum and DatabaseError.
+        https://bugs.webkit.org/show_bug.cgi?id=108279.
+
+        Reviewed by Geoffrey Garen.
+
+        * WTF.xcodeproj/project.pbxproj:
+        * wtf/TypeSafeEnum.h: Added.
+        (WTF):
+        (TypeSafeEnum):
+        (WTF::TypeSafeEnum::TypeSafeEnum):
+        (WTF::TypeSafeEnum::value):
+        (WTF::TypeSafeEnum::operator==):
+        (WTF::TypeSafeEnum::operator!=):
+        (WTF::TypeSafeEnum::operator<):
+        (WTF::TypeSafeEnum::operator<=):
+        (WTF::TypeSafeEnum::operator>):
+        (WTF::TypeSafeEnum::operator>=):
+
+2013-01-29  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r140983.
+        http://trac.webkit.org/changeset/140983
+        https://bugs.webkit.org/show_bug.cgi?id=108277
+
+        Unfortunately, this API has one last client (Requested by
+        abarth on #webkit).
+
+        * wtf/Platform.h:
+
+2013-01-28  Benjamin Poulain  <benjamin@webkit.org>
+
+        String constructed from Literals should be non-empty
+        https://bugs.webkit.org/show_bug.cgi?id=108103
+
+        Reviewed by Eric Carlson.
+
+        For efficiency, the construction from literal only works with valid non-empty strings.
+        One of the constructor was changed to fix an error from HTMLMediaElement.
+
+        This patch replaces the branch with an assertions.
+
+        * wtf/text/StringImpl.cpp:
+        (WTF::StringImpl::createFromLiteral):
+
+2013-01-28  David Kilzer  <ddkilzer@apple.com>
+
+        BUILD FIX: Platform.h:1212:22: error: '__MAC_OS_X_VERSION_MIN_REQUIRED' is not defined, evaluates to 0 [-Werror,-Wundef]
+
+        This fixes the following build error introduced in r140366 for
+        Bug 107098:
+
+            Platform.h:1212:22: error: '__MAC_OS_X_VERSION_MIN_REQUIRED' is not defined, evaluates to 0 [-Werror,-Wundef]
+            #if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080 && !PLATFORM(IOS)
+                                 ^
+            1 error generated.
+
+        * wtf/Platform.h: Check !PLATFORM(IOS) first so that iOS builds
+        do not try to evaluate __MAC_OS_X_VERSION_MIN_REQUIRED.
+
+2013-01-28  Adam Barth  <abarth@webkit.org>
+
+        Remove webkitNotifications.createHTMLNotification
+        https://bugs.webkit.org/show_bug.cgi?id=107598
+
+        Reviewed by Benjamin Poulain.
+
+        * wtf/Platform.h:
+
+2013-01-27  Laszlo Gombos  <l.gombos@samsung.com>
+
+        [ANDROID] Fix a typo
+        https://bugs.webkit.org/show_bug.cgi?id=108046
+
+        Reviewed by Adam Barth.
+
+        HAVE_NMAP -> HAVE_MMAP.
+
+        * wtf/Platform.h:
+
+2013-01-27  Zoltan Arvai  <zarvai@inf.u-szeged.hu>
+
+        Fixing atomicIncrement implementation for Windows by dropping support before XP SP2.
+        https://bugs.webkit.org/show_bug.cgi?id=106740
+
+        Reviewed by Benjamin Poulain.
+
+        Adding int64_t type atomicIncrement and atomicDecrement implementations for Windows
+        into Atomics.h required by WebKit2 after r139514. Separating WinCE implementation
+        that does not support WebKit2 and has no support for 64 bit interlocked methods.
+
+        Increasing WINVER and _WIN32_WINNT to XP SP2, because the 64 bit type interlocked methods
+        are not supported on previous versions on 32 bit target.
+
+        * config.h:
+        * wtf/Atomics.h:
+        (WTF):
+        (WTF::atomicIncrement):
+        (WTF::atomicDecrement):
+
+2013-01-26  Andras Becsi  <andras.becsi@digia.com>
+
+        Unreviewed fix after r140451 to make GIT-SVN repositories happy.
+
+        * WTF.vcproj/WTF.sln:
+
+2013-01-26  Justin Schuh  <jschuh@chromium.org>
+
+        [CHROMIUM] Suppress more c4267 build warnings for Win64 targets
+        https://bugs.webkit.org/show_bug.cgi?id=107993
+
+        Reviewed by Abhishek Arya.
+
+        * WTF.gyp/WTF.gyp:
+
+2013-01-25  Eric Seidel  <eric@webkit.org>
+
+        Support 4 and 5 argument bound static functions
+        https://bugs.webkit.org/show_bug.cgi?id=107973
+
+        Reviewed by Anders Carlsson.
+
+        Yummy copy/paste template code!
+        I'm about to use this in a BackgroundHTMLParser patch, but figured this should be landed separately.
+
+        * wtf/Functional.h:
+        (WTF):
+        (WTF::R):
+
+2013-01-24  Martin Robinson  <mrobinson@igalia.com>
+
+        Abstract the logic for appending a UChar32 onto StringBuilder
+        https://bugs.webkit.org/show_bug.cgi?id=107505
+
+        Reviewed by Darin Adler.
+
+        * wtf/text/StringBuilder.h:
+        (WTF::StringBuilder::append): Added a method for appending a UChar32 to a StringBuilder.
+
 2013-01-24  Brent Fulgham  <bfulgham@webkit.org>
 
         Stipulate build order between WTFGenerated and WTF

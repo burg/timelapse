@@ -272,10 +272,9 @@ sub GenerateHeader
     $codeGenerator->LinkOverloadedFunctions($interface);
 
     # Ensure the IsDOMNodeType function is in sync.
-    die("IsDOMNodeType is out of date with respect to $interfaceName") if IsDOMNodeType($interfaceName) != $codeGenerator->IsSubType($interface, "Node");
+    die("IsDOMNodeType is out of date with respect to $interfaceName") if IsDOMNodeType($interfaceName) != $codeGenerator->InheritsInterface($interface, "Node");
 
-    my $hasDependentLifetime = $interface->extendedAttributes->{"V8DependentLifetime"} || $interface->extendedAttributes->{"ActiveDOMObject"}
-         || GetGenerateIsReachable($interface) || $v8InterfaceName =~ /SVG/;
+    my $hasDependentLifetime = $interface->extendedAttributes->{"V8DependentLifetime"} || $codeGenerator->InheritsExtendedAttribute($interface, "ActiveDOMObject") || GetGenerateIsReachable($interface) || $v8InterfaceName =~ /SVG/;
     if (!$hasDependentLifetime) {
         foreach (@{$interface->parents}) {
             my $parent = $_;
@@ -369,7 +368,7 @@ END
         push(@headerContent, "    static void* opaqueRootForGC(void*, v8::Persistent<v8::Object>);\n");
     }
 
-    if ($interface->extendedAttributes->{"ActiveDOMObject"}) {
+    if ($codeGenerator->InheritsExtendedAttribute($interface, "ActiveDOMObject")) {
         push(@headerContent, "    static ActiveDOMObject* toActiveDOMObject(v8::Handle<v8::Object>);\n");
     }
 
@@ -379,7 +378,7 @@ END
 
     if ($interfaceName eq "DOMWindow") {
         push(@headerContent, <<END);
-    static v8::Persistent<v8::ObjectTemplate> GetShadowObjectTemplate();
+    static v8::Persistent<v8::ObjectTemplate> GetShadowObjectTemplate(v8::Isolate*);
 END
     }
 
@@ -621,11 +620,11 @@ sub GetInternalFields
     # so special-case AbstractWorker and WorkerContext to include all sub-types.
     # Event listeners on DOM nodes are explicitly supported in the GC controller.
     # FIXME: Simplify this when all EventTargets are subtypes of EventTarget.
-    if (!$codeGenerator->IsSubType($interface, "Node")
+    if (!$codeGenerator->InheritsInterface($interface, "Node")
         && ($interface->extendedAttributes->{"EventTarget"}
             || $interface->extendedAttributes->{"IsWorkerContext"}
-            || $codeGenerator->IsSubType($interface, "AbstractWorker")
-            || $codeGenerator->IsSubType($interface, "EventTarget"))) {
+            || $codeGenerator->InheritsInterface($interface, "AbstractWorker")
+            || $codeGenerator->InheritsInterface($interface, "EventTarget"))) {
         push(@customInternalFields, "eventListenerCacheIndex");
     }
 
@@ -780,7 +779,7 @@ sub GenerateDomainSafeFunctionGetter
     my $v8InterfaceName = "V8" . $interfaceName;
     my $funcName = $function->signature->name;
 
-    my $signature = "v8::Signature::New(" . $v8InterfaceName . "::GetRawTemplate())";
+    my $signature = "v8::Signature::New(" . $v8InterfaceName . "::GetRawTemplate(info.GetIsolate()))";
     if ($function->signature->extendedAttributes->{"V8DoNotCheckSignature"}) {
         $signature = "v8::Local<v8::Signature>()";
     }
@@ -928,7 +927,7 @@ END
     } else {
         my $reflect = $attribute->signature->extendedAttributes->{"Reflect"};
         my $url = $attribute->signature->extendedAttributes->{"URL"};
-        if ($getterStringUsesImp && $reflect && !$url && $codeGenerator->IsSubType($interface, "Node") && $codeGenerator->IsStringType($attrType)) {
+        if ($getterStringUsesImp && $reflect && !$url && $codeGenerator->InheritsInterface($interface, "Node") && $codeGenerator->IsStringType($attrType)) {
             # Generate super-compact call for regular attribute getter:
             my ($functionName, @arguments) = $codeGenerator->GetterExpression(\%implIncludes, $interfaceName, $attribute);
             push(@implContentDecls, "    Element* imp = V8Element::toNative(info.Holder());\n");
@@ -1018,7 +1017,7 @@ END
     # Special case for readonly or Replaceable attributes (with a few exceptions). This attempts to ensure that JS wrappers don't get
     # garbage-collected prematurely when their lifetime is strongly tied to their owner. We accomplish this by inserting a reference to
     # the newly created wrapper into an internal field of the holder object.
-    if ((!$codeGenerator->IsSubType($interface, "Node") && $attrName ne "self" && IsWrapperType($returnType) && (IsReadonly($attribute) || $attribute->signature->extendedAttributes->{"Replaceable"} || $attrName eq "location")
+    if ((!$codeGenerator->InheritsInterface($interface, "Node") && $attrName ne "self" && IsWrapperType($returnType) && (IsReadonly($attribute) || $attribute->signature->extendedAttributes->{"Replaceable"} || $attrName eq "location")
          && $returnType ne "EventTarget" && $returnType ne "SerializedScriptValue" && $returnType ne "DOMWindow"
          && $returnType ne "MessagePortArray"
          && $returnType !~ /SVG/ && $returnType !~ /HTML/ && !IsDOMNodeType($returnType))
@@ -1111,7 +1110,7 @@ END
     } elsif ($attribute->signature->type eq "SerializedScriptValue" && $attrExt->{"CachedAttribute"}) {
         my $getterFunc = $codeGenerator->WK_lcfirst($attribute->signature->name);
         push(@implContentDecls, <<END);
-    SerializedScriptValue* serialized = imp->${getterFunc}();
+    RefPtr<SerializedScriptValue> serialized = imp->${getterFunc}();
     value = serialized ? serialized->deserialize() : v8::Handle<v8::Value>(v8Null(info.GetIsolate()));
     info.Holder()->SetHiddenValue(propertyName, value);
     return value;
@@ -1160,6 +1159,7 @@ sub GenerateNormalAttrSetter
     my $v8InterfaceName = "V8$interfaceName";
     my $attrName = $attribute->signature->name;
     my $attrExt = $attribute->signature->extendedAttributes;
+    my $attrType = $attribute->signature->type;
 
     my $conditionalString = $codeGenerator->GenerateConditionalString($attribute->signature);
     push(@implContentDecls, "#if ${conditionalString}\n\n") if $conditionalString;
@@ -1204,9 +1204,8 @@ END
     ${interfaceName}* imp = ${v8InterfaceName}::toNative(info.Holder());
 END
     } else {
-        my $attrType = $attribute->signature->type;
         my $reflect = $attribute->signature->extendedAttributes->{"Reflect"};
-        if ($reflect && $codeGenerator->IsSubType($interface, "Node") && $codeGenerator->IsStringType($attrType)) {
+        if ($reflect && $codeGenerator->InheritsInterface($interface, "Node") && $codeGenerator->IsStringType($attrType)) {
             # Generate super-compact call for regular attribute setter:
             my $contentAttributeName = $reflect eq "VALUE_IS_MISSING" ? lc $attrName : $reflect;
             my $namespace = $codeGenerator->NamespaceForAttributeName($interfaceName, $contentAttributeName);
@@ -1246,6 +1245,21 @@ END
         }
     }
 
+    if ($codeGenerator->IsEnumType($attrType)) {
+        # setter ignores invalid enumeration values
+        my @enumValues = $codeGenerator->ValidEnumValues($attrType);
+        my @validEqualities = ();
+        foreach my $enumValue (@enumValues) {
+            push(@validEqualities, "string == \"$enumValue\"");
+        }
+        my $enumValidationExpression = join(" || ", @validEqualities);
+        push(@implContentDecls, <<END);
+    String string = v;
+    if (!($enumValidationExpression))
+        return;
+END
+    }
+
     my $result = "v";
     my $returnType = $attribute->signature->type;
     if ($codeGenerator->IsRefPtrType($returnType) && !$codeGenerator->GetArrayType($returnType)) {
@@ -1265,7 +1279,7 @@ END
         if ($attribute->signature->type eq "EventListener") {
             my $implSetterFunctionName = $codeGenerator->WK_ucfirst($attrName);
             AddToImplIncludes("V8AbstractEventListener.h");
-            if (!$codeGenerator->IsSubType($interface, "Node")) {
+            if (!$codeGenerator->InheritsInterface($interface, "Node")) {
                 push(@implContentDecls, "    transferHiddenDependency(info.Holder(), imp->$attrName(), value, ${v8InterfaceName}::eventListenerCacheIndex);\n");
             }
             AddToImplIncludes("V8EventListenerList.h");
@@ -1507,10 +1521,10 @@ sub GenerateFunctionCallback
     # but they are extremely consistent across the various interfaces that take event listeners,
     # so we can generate them as a "special case".
     if ($name eq "addEventListener") {
-        GenerateEventListenerCallback($interfaceName, !$codeGenerator->IsSubType($interface, "Node"), "add");
+        GenerateEventListenerCallback($interfaceName, !$codeGenerator->InheritsInterface($interface, "Node"), "add");
         return;
     } elsif ($name eq "removeEventListener") {
-        GenerateEventListenerCallback($interfaceName, !$codeGenerator->IsSubType($interface, "Node"), "remove");
+        GenerateEventListenerCallback($interfaceName, !$codeGenerator->InheritsInterface($interface, "Node"), "remove");
         return;
     }
 
@@ -2096,7 +2110,7 @@ sub GenerateNamedConstructorCallback
     my @afterArgumentList;
 
     my $toActiveDOMObject = "0";
-    if ($interface->extendedAttributes->{"ActiveDOMObject"}) {
+    if ($codeGenerator->InheritsExtendedAttribute($interface, "ActiveDOMObject")) {
         $toActiveDOMObject = "${v8InterfaceName}::toActiveDOMObject";
     }
 
@@ -2458,7 +2472,7 @@ sub GenerateImplementationIndexer
         }
     }
 
-    my $hasEnumerator = !$isSpecialCase && $codeGenerator->IsSubType($interface, "Node");
+    my $hasEnumerator = !$isSpecialCase && $codeGenerator->InheritsInterface($interface, "Node");
 
     # FIXME: Find a way to not have to special-case HTMLOptionsCollection.
     if ($interfaceName eq "HTMLOptionsCollection") {
@@ -2615,6 +2629,9 @@ sub GenerateImplementation
     my $visibleInterfaceName = $codeGenerator->GetVisibleInterfaceName($interface);
     my $v8InterfaceName = "V8$interfaceName";
     my $nativeType = GetNativeTypeForConversions($interface);
+    my $vtableNameGnu = GetGnuVTableNameForInterface($interface);
+    my $vtableRefGnu = GetGnuVTableRefForInterface($interface);
+    my $vtableRefWin = GetWinVTableRefForInterface($interface);
 
     # - Add default header template
     push(@implContentHeader, GenerateImplementationContentHeader($interface));
@@ -2627,7 +2644,7 @@ sub GenerateImplementation
 
     AddIncludesForType($interfaceName);
 
-    my $toActiveDOMObject = $interface->extendedAttributes->{"ActiveDOMObject"} ? "${v8InterfaceName}::toActiveDOMObject" : "0";
+    my $toActiveDOMObject = $codeGenerator->InheritsExtendedAttribute($interface, "ActiveDOMObject") ? "${v8InterfaceName}::toActiveDOMObject" : "0";
     my $toEventTarget = $codeGenerator->InheritsExtendedAttribute($interface, "EventTarget") ? "${v8InterfaceName}::toEventTarget" : "0";
     my $rootForGC = NeedsCustomOpaqueRootForGC($interface) ? "${v8InterfaceName}::opaqueRootForGC" : "0";
 
@@ -2641,7 +2658,39 @@ sub GenerateImplementation
         $parentClassTemplate = $parentClass . "::GetTemplate()";
         last;
     }
+
+    push(@implContentDecls, <<END) if $vtableNameGnu;
+#if ENABLE(BINDING_INTEGRITY)
+#if defined(OS_WIN)
+#pragma warning(disable: 4483)
+extern "C" { extern void (*const ${vtableRefWin}[])(); }
+#else
+extern "C" { extern void* ${vtableNameGnu}[]; }
+#endif
+#endif // ENABLE(BINDING_INTEGRITY)
+
+END
+
     push(@implContentDecls, "namespace WebCore {\n\n");
+
+    push(@implContentDecls, <<END) if $vtableNameGnu;
+#if ENABLE(BINDING_INTEGRITY)
+inline void checkTypeOrDieTrying(${nativeType}* object)
+{
+    void* actualVTablePointer = *(reinterpret_cast<void**>(object));
+#if defined(OS_WIN)
+    void* expectedVTablePointer = reinterpret_cast<void*>(${vtableRefWin});
+#else
+    void* expectedVTablePointer = ${vtableRefGnu};
+#endif
+    if (actualVTablePointer != expectedVTablePointer)
+        CRASH();
+}
+#endif // ENABLE(BINDING_INTEGRITY)
+
+END
+
+
     my $parentClassInfo = $parentClass ? "&${parentClass}::info" : "0";
 
     my $WrapperTypePrototype = $interface->isException ? "WrapperTypeErrorPrototype" : "WrapperTypeObjectPrototype";
@@ -2897,7 +2946,7 @@ END
     # configuration method.
     if ($interfaceName eq "DOMWindow") {
         push(@implContent, <<END);
-static v8::Persistent<v8::ObjectTemplate> ConfigureShadowObjectTemplate(v8::Persistent<v8::ObjectTemplate> templ)
+static v8::Persistent<v8::ObjectTemplate> ConfigureShadowObjectTemplate(v8::Persistent<v8::ObjectTemplate> templ, v8::Isolate* isolate)
 {
     V8DOMConfiguration::batchConfigureAttributes(templ, v8::Handle<v8::ObjectTemplate>(), shadowAttrs, WTF_ARRAY_LENGTH(shadowAttrs));
 
@@ -2915,7 +2964,7 @@ END
 
     # Generate the template configuration method
     push(@implContent,  <<END);
-static v8::Persistent<v8::FunctionTemplate> Configure${v8InterfaceName}Template(v8::Persistent<v8::FunctionTemplate> desc)
+static v8::Persistent<v8::FunctionTemplate> Configure${v8InterfaceName}Template(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate)
 {
     desc->ReadOnlyPrototype();
 
@@ -3094,7 +3143,7 @@ v8::Persistent<v8::FunctionTemplate> ${v8InterfaceName}::GetTemplate(v8::Isolate
 
     v8::HandleScope handleScope;
     v8::Persistent<v8::FunctionTemplate> templ =
-        Configure${v8InterfaceName}Template(GetRawTemplate());
+        Configure${v8InterfaceName}Template(GetRawTemplate(isolate), isolate);
     data->templateMap().add(&info, templ);
     return templ;
 }
@@ -3169,7 +3218,7 @@ END
 END
     }
 
-    if ($interface->extendedAttributes->{"ActiveDOMObject"}) {
+    if ($codeGenerator->InheritsExtendedAttribute($interface, "ActiveDOMObject")) {
         # MessagePort is handled like an active dom object even though it doesn't inherit
         # from ActiveDOMObject, so don't try to cast it to ActiveDOMObject.
         my $returnValue = $interfaceName eq "MessagePort" ? "0" : "toNative(object)";
@@ -3194,12 +3243,12 @@ END
 
     if ($interfaceName eq "DOMWindow") {
         push(@implContent, <<END);
-v8::Persistent<v8::ObjectTemplate> V8DOMWindow::GetShadowObjectTemplate()
+v8::Persistent<v8::ObjectTemplate> V8DOMWindow::GetShadowObjectTemplate(v8::Isolate* isolate)
 {
     static v8::Persistent<v8::ObjectTemplate> V8DOMWindowShadowObjectCache;
     if (V8DOMWindowShadowObjectCache.IsEmpty()) {
         V8DOMWindowShadowObjectCache = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-        ConfigureShadowObjectTemplate(V8DOMWindowShadowObjectCache);
+        ConfigureShadowObjectTemplate(V8DOMWindowShadowObjectCache, isolate);
     }
     return V8DOMWindowShadowObjectCache;
 }
@@ -3467,6 +3516,8 @@ sub GenerateToV8Converters
         return;
     }
 
+    AddToImplIncludes("Frame.h");
+
     my $createWrapperArgumentType = GetPassRefPtrType($nativeType);
     my $baseType = BaseInterfaceName($interface);
 
@@ -3477,15 +3528,20 @@ v8::Handle<v8::Object> ${v8InterfaceName}::createWrapper(${createWrapperArgument
     ASSERT(impl.get());
     ASSERT(DOMDataStore::getWrapper(impl.get(), isolate).IsEmpty());
 END
-    if ($baseType ne $interfaceName) {
-        push(@implContent, <<END);
+
+    my $vtableNameGnu = GetGnuVTableNameForInterface($interface);
+    push(@implContent, <<END) if $vtableNameGnu;
+
+#if ENABLE(BINDING_INTEGRITY)
+    checkTypeOrDieTrying(impl.get());
+#endif
+END
+
+    push(@implContent, <<END) if ($baseType ne $interfaceName);
     ASSERT(static_cast<void*>(static_cast<${baseType}*>(impl.get())) == static_cast<void*>(impl.get()));
 END
-    }
 
-    AddToImplIncludes("Frame.h");
-
-    if ($codeGenerator->IsSubType($interface, "Document")) {
+    if ($codeGenerator->InheritsInterface($interface, "Document")) {
         push(@implContent, <<END);
     if (Frame* frame = impl->frame()) {
         if (frame->script()->initializeMainWorld()) {
@@ -3517,9 +3573,121 @@ sub GetNativeTypeForConversions
 {
     my $interface = shift;
     my $interfaceName = $interface->name;
-
     $interfaceName = $codeGenerator->GetSVGTypeNeedingTearOff($interfaceName) if $codeGenerator->IsSVGTypeNeedingTearOff($interfaceName);
-    return $interfaceName;;
+    return $interfaceName;
+}
+
+# See http://refspecs.linux-foundation.org/cxxabi-1.83.html.
+sub GetGnuVTableRefForInterface
+{
+    my $interface = shift;
+    my $vtableName = GetGnuVTableNameForInterface($interface);
+    if (!$vtableName) {
+        return "0";
+    }
+    my $typename = GetNativeTypeForConversions($interface);
+    my $offset = GetGnuVTableOffsetForType($typename);
+    return "&" . $vtableName . "[" . $offset . "]";
+}
+
+sub GetGnuVTableNameForInterface
+{
+    my $interface = shift;
+    my $typename = GetNativeTypeForConversions($interface);
+    my $templatePosition = index($typename, "<");
+    return "" if $templatePosition != -1;
+    return "" if GetImplementationLacksVTableForInterface($interface);
+    return "" if GetV8SkipVTableValidationForInterface($interface);
+    return "_ZTV" . GetGnuMangledNameForInterface($interface);
+}
+
+sub GetGnuMangledNameForInterface
+{
+    my $interface = shift;
+    my $typename = GetNativeTypeForConversions($interface);
+    my $templatePosition = index($typename, "<");
+    if ($templatePosition != -1) {
+        return "";
+    }
+    my $mangledType = length($typename) . $typename;
+    my $namespace = GetNamespaceForInterface($interface);
+    my $mangledNamespace =  "N" . length($namespace) . $namespace;
+    return $mangledNamespace . $mangledType . "E";
+}
+
+sub GetGnuVTableOffsetForType
+{
+    my $typename = shift;
+    if ($typename eq "SVGAElement"
+        || $typename eq "SVGCircleElement"
+        || $typename eq "SVGClipPathElement"
+        || $typename eq "SVGDefsElement"
+        || $typename eq "SVGEllipseElement"
+        || $typename eq "SVGForeignObjectElement"
+        || $typename eq "SVGGElement"
+        || $typename eq "SVGImageElement"
+        || $typename eq "SVGLineElement"
+        || $typename eq "SVGPathElement"
+        || $typename eq "SVGPolyElement"
+        || $typename eq "SVGPolygonElement"
+        || $typename eq "SVGPolylineElement"
+        || $typename eq "SVGRectElement"
+        || $typename eq "SVGSVGElement"
+        || $typename eq "SVGStyledLocatableElement"
+        || $typename eq "SVGStyledTransformableElement"
+        || $typename eq "SVGSwitchElement"
+        || $typename eq "SVGTextElement"
+        || $typename eq "SVGTransformable"
+        || $typename eq "SVGUseElement") {
+        return "3";
+    }
+    return "2";
+}
+
+# See http://en.wikipedia.org/wiki/Microsoft_Visual_C%2B%2B_Name_Mangling.
+sub GetWinVTableRefForInterface
+{
+    my $interface = shift;
+    my $vtableName = GetWinVTableNameForInterface($interface);
+    return 0 if !$vtableName;
+    return "__identifier(\"" . $vtableName . "\")";
+}
+
+sub GetWinVTableNameForInterface
+{
+    my $interface = shift;
+    my $typename = GetNativeTypeForConversions($interface);
+    my $templatePosition = index($typename, "<");
+    return "" if $templatePosition != -1;
+    return "" if GetImplementationLacksVTableForInterface($interface);
+    return "" if GetV8SkipVTableValidationForInterface($interface);
+    return "??_7" . GetWinMangledNameForInterface($interface) . "6B@";
+}
+
+sub GetWinMangledNameForInterface
+{
+    my $interface = shift;
+    my $typename = GetNativeTypeForConversions($interface);
+    my $namespace = GetNamespaceForInterface($interface);
+    return $typename . "@" . $namespace . "@@";
+}
+
+sub GetNamespaceForInterface
+{
+    my $interface = shift;
+    return $interface->extendedAttributes->{"ImplementationNamespace"} || "WebCore";
+}
+
+sub GetImplementationLacksVTableForInterface
+{
+    my $interface = shift;
+    return $interface->extendedAttributes->{"ImplementationLacksVTable"};
+}
+
+sub GetV8SkipVTableValidationForInterface
+{
+    my $interface = shift;
+    return $interface->extendedAttributes->{"V8SkipVTableValidation"};
 }
 
 sub GenerateFunctionCallString()
@@ -3709,8 +3877,8 @@ sub GetNativeType
     return "unsigned long long" if $type eq "unsigned long long";
     return "bool" if $type eq "boolean";
 
-    return "V8StringResource" if $type eq "DOMString" and $isParameter;
-    return "String" if $type eq "DOMString";
+    return "V8StringResource" if ($type eq "DOMString" or $codeGenerator->IsEnumType($type)) and $isParameter;
+    return "String" if $type eq "DOMString" or $codeGenerator->IsEnumType($type);
 
     return "Range::CompareHow" if $type eq "CompareHow";
     return "DOMTimeStamp" if $type eq "DOMTimeStamp";
@@ -3748,7 +3916,7 @@ sub GetNativeTypeForCallbacks
 {
     my $type = shift;
     return "const String&" if $type eq "DOMString";
-    return "SerializedScriptValue*" if $type eq "SerializedScriptValue";
+    return "PassRefPtr<SerializedScriptValue>" if $type eq "SerializedScriptValue";
 
     # Callbacks use raw pointers, so pass isParameter = 1
     return GetNativeType($type, 1);
@@ -3794,6 +3962,10 @@ sub JSValueToNative
     return "toDOMStringList($value, $getIsolate)" if $type eq "DOMStringList";
 
     if ($type eq "DOMString") {
+        return $value;
+    }
+
+    if ($codeGenerator->IsEnumType($type)) {
         return $value;
     }
 
@@ -3901,7 +4073,7 @@ sub CreateCustomSignature
                 } else {
                     AddToImplIncludes(GetV8HeaderName($type));
                 }
-                $result .= "V8${type}::GetRawTemplate()";
+                $result .= "V8${type}::GetRawTemplate(isolate)";
             }
         } else {
             $result .= "v8::Handle<v8::FunctionTemplate>()";
@@ -4073,7 +4245,7 @@ sub NativeToJSValue
     return "v8::Number::New($value)" if $codeGenerator->IsPrimitiveType($type);
     return "$value.v8Value()" if $nativeType eq "ScriptValue";
 
-    if ($codeGenerator->IsStringType($type)) {
+    if ($codeGenerator->IsStringType($type) or $codeGenerator->IsEnumType($type)) {
         my $conv = $signature->extendedAttributes->{"TreatReturnedNullStringAs"};
         if (defined $conv) {
             return "v8StringOrNull($value, $getIsolate$returnHandleTypeArg)" if $conv eq "Null";
@@ -4200,7 +4372,7 @@ sub ConvertToV8StringResource
     my $suffix = shift;
 
     die "Wrong native type passed: $nativeType" unless $nativeType =~ /^V8StringResource/;
-    if ($signature->type eq "DOMString") {
+    if ($signature->type eq "DOMString" or $codeGenerator->IsEnumType($signature->type)) {
         my $macro = "V8TRYCATCH_FOR_V8STRINGRESOURCE";
         $macro .= "_$suffix" if $suffix;
         return "$macro($nativeType, $variableName, $value);"

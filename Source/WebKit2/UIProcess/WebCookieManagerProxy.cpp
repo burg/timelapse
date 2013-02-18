@@ -101,9 +101,9 @@ void WebCookieManagerProxy::derefWebContextSupplement()
 
 // CoreIPC::MessageReceiver
 
-void WebCookieManagerProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
+void WebCookieManagerProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
 {
-    didReceiveWebCookieManagerProxyMessage(connection, messageID, decoder);
+    didReceiveWebCookieManagerProxyMessage(connection, decoder);
 }
 
 void WebCookieManagerProxy::getHostnamesWithCookies(PassRefPtr<ArrayCallback> prpCallback)

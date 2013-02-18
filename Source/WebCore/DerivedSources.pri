@@ -82,6 +82,7 @@ STYLESHEETS_EMBED = \
     $$PWD/css/mediaControls.css \
     $$PWD/css/mediaControlsQt.css \
     $$PWD/css/mediaControlsQtFullscreen.css \
+    $$PWD/css/plugIns.css \
     $$PWD/css/themeQtNoListboxes.css \
     $$PWD/css/mobileThemeQt.css
 
@@ -208,6 +209,7 @@ IDL_BINDINGS += \
     $$PWD/css/StyleMedia.idl \
     $$PWD/css/StyleSheet.idl \
     $$PWD/css/StyleSheetList.idl \
+    $$PWD/css/WebKitCSSFilterRule.idl \
     $$PWD/css/WebKitCSSFilterValue.idl \
     $$PWD/css/WebKitCSSKeyframeRule.idl \
     $$PWD/css/WebKitCSSKeyframesRule.idl \
@@ -252,7 +254,6 @@ IDL_BINDINGS += \
     $$PWD/dom/MessageChannel.idl \
     $$PWD/dom/MessageEvent.idl \
     $$PWD/dom/MessagePort.idl \
-    $$PWD/dom/MutationCallback.idl \
     $$PWD/dom/MutationEvent.idl \
     $$PWD/dom/MutationObserver.idl \
     $$PWD/dom/MutationRecord.idl \

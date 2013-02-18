@@ -84,6 +84,7 @@ ParserMap::BackgroundParserMap& ParserMap::backgroundParsers()
 
 BackgroundHTMLParser::BackgroundHTMLParser(const HTMLParserOptions& options, const WeakPtr<HTMLDocumentParser>& parser)
     : m_inForeignContent(false)
+    , m_token(adoptPtr(new HTMLToken))
     , m_tokenizer(HTMLTokenizer::create(options))
     , m_options(options)
     , m_parser(parser)
@@ -93,7 +94,16 @@ BackgroundHTMLParser::BackgroundHTMLParser(const HTMLParserOptions& options, con
 
 void BackgroundHTMLParser::append(const String& input)
 {
-    m_input.append(SegmentedString(input));
+    m_input.append(input);
+    pumpTokenizer();
+}
+
+void BackgroundHTMLParser::resumeFrom(const WeakPtr<HTMLDocumentParser>& parser, PassOwnPtr<HTMLToken> token, PassOwnPtr<HTMLTokenizer> tokenizer, HTMLInputCheckpoint checkpoint)
+{
+    m_parser = parser;
+    m_token = token;
+    m_tokenizer = tokenizer;
+    m_input.rewindTo(checkpoint);
     pumpTokenizer();
 }
 
@@ -109,8 +119,8 @@ void BackgroundHTMLParser::markEndOfFile()
     // once InputStreamPreprocessor is split off into its own header.
     const LChar endOfFileMarker = 0;
 
-    ASSERT(!m_input.isClosed());
-    m_input.append(SegmentedString(String(&endOfFileMarker, 1)));
+    ASSERT(!m_input.current().isClosed());
+    m_input.append(String(&endOfFileMarker, 1));
     m_input.close();
 }
 
@@ -153,9 +163,9 @@ bool BackgroundHTMLParser::simulateTreeBuilder(const CompactHTMLToken& token)
 
 void BackgroundHTMLParser::pumpTokenizer()
 {
-    while (m_tokenizer->nextToken(m_input, m_token)) {
-        m_pendingTokens->append(CompactHTMLToken(m_token, TextPosition(m_input.currentLine(), m_input.currentColumn())));
-        m_token.clear();
+    while (m_tokenizer->nextToken(m_input.current(), *m_token.get())) {
+        m_pendingTokens->append(CompactHTMLToken(m_token.get(), TextPosition(m_input.current().currentLine(), m_input.current().currentColumn())));
+        m_token->clear();
 
         if (!simulateTreeBuilder(m_pendingTokens->last()) || m_pendingTokens->size() >= pendingTokenLimit)
             sendTokensToMainThread();
@@ -173,7 +183,10 @@ void BackgroundHTMLParser::sendTokensToMainThread()
     checkThatTokensAreSafeToSendToAnotherThread(m_pendingTokens.get());
 #endif
 
-    callOnMainThread(bind(&HTMLDocumentParser::didReceiveTokensFromBackgroundParser, m_parser, m_pendingTokens.release()));
+    OwnPtr<HTMLDocumentParser::ParsedChunk> chunk = adoptPtr(new HTMLDocumentParser::ParsedChunk);
+    chunk->tokens = m_pendingTokens.release();
+    chunk->checkpoint = m_input.createCheckpoint();
+    callOnMainThread(bind(&HTMLDocumentParser::didReceiveParsedChunkFromBackgroundParser, m_parser, chunk.release()));
 
     m_pendingTokens = adoptPtr(new CompactHTMLTokenStream);
 }
@@ -194,6 +207,12 @@ void BackgroundHTMLParser::appendPartial(ParserIdentifier identifier, const Stri
     ASSERT(!input.impl() || input.impl()->hasOneRef() || input.isEmpty());
     if (BackgroundHTMLParser* parser = parserMap().backgroundParsers().get(identifier))
         parser->append(input);
+}
+
+void BackgroundHTMLParser::resumeFromPartial(ParserIdentifier identifier, const WeakPtr<HTMLDocumentParser>& parser, PassOwnPtr<HTMLToken> token, PassOwnPtr<HTMLTokenizer> tokenizer, HTMLInputCheckpoint checkpoint)
+{
+    if (BackgroundHTMLParser* backgroundParser = parserMap().backgroundParsers().get(identifier))
+        backgroundParser->resumeFrom(parser, token, tokenizer, checkpoint);
 }
 
 void BackgroundHTMLParser::finishPartial(ParserIdentifier identifier)

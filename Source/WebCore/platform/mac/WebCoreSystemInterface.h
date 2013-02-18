@@ -339,13 +339,13 @@ extern void (*wkCFURLRequestAllowAllPostCaching)(CFURLRequestRef);
 #if USE(CONTENT_FILTERING)
 extern BOOL (*wkFilterIsManagedSession)(void);
 extern WebFilterEvaluator *(*wkFilterCreateInstance)(NSURLResponse *);
-extern void (*wkFilterRelease)(WebFilterEvaluator *);
 extern BOOL (*wkFilterWasBlocked)(WebFilterEvaluator *);
-extern const char* (*wkFilterAddData)(WebFilterEvaluator *, const char* data, int* length);
-extern const char* (*wkFilterDataComplete)(WebFilterEvaluator *, int* length);
+extern BOOL (*wkFilterIsBuffering)(WebFilterEvaluator *);
+extern NSData *(*wkFilterAddData)(WebFilterEvaluator *, NSData *);
+extern NSData *(*wkFilterDataComplete)(WebFilterEvaluator *);
 #endif
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080 && !PLATFORM(IOS)
+#if !PLATFORM(IOS) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 1080
 extern CGFloat (*wkNSElasticDeltaForTimeDelta)(CGFloat initialPosition, CGFloat initialVelocity, CGFloat elapsedTime);
 extern CGFloat (*wkNSElasticDeltaForReboundDelta)(CGFloat delta);
 extern CGFloat (*wkNSReboundDeltaForElasticDelta)(CGFloat delta);

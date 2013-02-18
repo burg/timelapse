@@ -56,6 +56,7 @@ HEADERS += \
     Shared/API/c/WKMutableDictionary.h \
     Shared/API/c/WKNumber.h \
     Shared/API/c/WKPageLoadTypes.h \
+    Shared/API/c/WKPageVisibilityTypes.h \
     Shared/API/c/WKRenderLayer.h \
     Shared/API/c/WKRenderObject.h \
     Shared/API/c/WKSecurityOrigin.h \
@@ -70,12 +71,16 @@ HEADERS += \
     Shared/API/c/WKUserContentURLPattern.h \
     Shared/API/c/qt/WKImageQt.h \
     Shared/APIClientTraits.h \
+    Shared/Authentication/AuthenticationManager.h \
     Shared/ShareableBitmap.h \
     Shared/CacheModel.h \
     Shared/ChildProcess.h \
     Shared/ChildProcessProxy.h \
     Shared/ConnectionStack.h \
     Shared/DictionaryPopupInfo.h \
+    Shared/Downloads/Download.h \
+    Shared/Downloads/DownloadManager.h \
+    Shared/Downloads/qt/QtFileDownloader.h \
     Shared/EditorState.h \
     Shared/FontInfo.h \
     Shared/ImageOptions.h \
@@ -99,7 +104,6 @@ HEADERS += \
     Shared/SessionState.h \
     Shared/StatisticsData.h \
     Shared/StringPairVector.h \
-    Shared/SurfaceUpdateInfo.h \
     Shared/UpdateInfo.h \
     Shared/UserMessageCoders.h \
     Shared/VisitedLinkTable.h \
@@ -137,6 +141,7 @@ HEADERS += \
     Shared/CoordinatedGraphics/CoordinatedGraphicsArgumentCoders.h \
     Shared/CoordinatedGraphics/CoordinatedLayerInfo.h \
     Shared/CoordinatedGraphics/CoordinatedSurface.h \
+    Shared/CoordinatedGraphics/SurfaceUpdateInfo.h \
     Shared/CoordinatedGraphics/WebCoordinatedSurface.h \
     Shared/CoordinatedGraphics/WebCustomFilterProgram.h \
     Shared/Plugins/Netscape/NetscapePluginModule.h \
@@ -236,6 +241,7 @@ HEADERS += \
     UIProcess/Plugins/PluginProcessManager.h \
     UIProcess/ProcessModel.h \
     UIProcess/ResponsivenessTimer.h \
+    UIProcess/Storage/StorageManager.h \
     UIProcess/TextChecker.h \
     UIProcess/VisitedLinkProvider.h \
     UIProcess/WebApplicationCacheManagerProxy.h \
@@ -290,12 +296,8 @@ HEADERS += \
     UIProcess/WebVibrationProvider.h \
     UIProcess/WebVibrationProxy.h \
     WebProcess/ApplicationCache/WebApplicationCacheManager.h \
-    WebProcess/Authentication/AuthenticationManager.h \
     WebProcess/Battery/WebBatteryManager.h \
     WebProcess/Cookies/WebCookieManager.h \
-    WebProcess/Downloads/Download.h \
-    WebProcess/Downloads/DownloadManager.h \
-    WebProcess/Downloads/qt/QtFileDownloader.h \
     WebProcess/FullScreen/WebFullScreenManager.h \
     WebProcess/Geolocation/GeolocationPermissionRequestManager.h \
     WebProcess/Geolocation/WebGeolocationManager.h \
@@ -328,7 +330,6 @@ HEADERS += \
     WebProcess/InjectedBundle/InjectedBundlePageUIClient.h \
     WebProcess/InjectedBundle/InjectedBundleScriptWorld.h \
     WebProcess/InjectedBundle/InjectedBundleUserMessageCoders.h \
-    WebProcess/KeyValueStorage/WebKeyValueStorageManager.h \
     WebProcess/MediaCache/WebMediaCacheManager.h \
     WebProcess/NetworkInfo/WebNetworkInfoManager.h \
     WebProcess/Notifications/NotificationPermissionRequestManager.h \
@@ -348,6 +349,7 @@ HEADERS += \
     WebProcess/Plugins/PluginProxy.h \
     WebProcess/Plugins/PluginProcessConnection.h \
     WebProcess/Plugins/PluginProcessConnectionManager.h \
+    WebProcess/Storage/WebKeyValueStorageManager.h \
     WebProcess/WebCoreSupport/WebBatteryClient.h \
     WebProcess/WebCoreSupport/WebChromeClient.h \
     WebProcess/WebCoreSupport/WebColorChooser.h \
@@ -444,6 +446,7 @@ SOURCES += \
     Shared/API/c/qt/WKImageQt.cpp \
     Shared/APIClientTraits.cpp \
     Shared/APIObject.cpp \
+    Shared/Authentication/AuthenticationManager.cpp \
     Shared/Plugins/Netscape/NetscapePluginModule.cpp \
     Shared/Plugins/Netscape/NetscapePluginModuleNone.cpp \
     Shared/Plugins/Netscape/x11/NetscapePluginModuleX11.cpp \
@@ -460,6 +463,10 @@ SOURCES += \
     Shared/ChildProcessProxy.cpp \
     Shared/ConnectionStack.cpp \
     Shared/DictionaryPopupInfo.cpp \
+    Shared/Downloads/Download.cpp \
+    Shared/Downloads/DownloadManager.cpp \
+    Shared/Downloads/qt/DownloadQt.cpp \
+    Shared/Downloads/qt/QtFileDownloader.cpp \
     Shared/EditorState.cpp \
     Shared/FontInfo.cpp \
     Shared/ImmutableArray.cpp \
@@ -474,7 +481,6 @@ SOURCES += \
     Shared/SecurityOriginData.cpp \
     Shared/SessionState.cpp \
     Shared/StatisticsData.cpp \
-    Shared/SurfaceUpdateInfo.cpp \
     Shared/UpdateInfo.cpp \
     Shared/VisitedLinkTable.cpp \
     Shared/WebBackForwardListItem.cpp \
@@ -511,6 +517,7 @@ SOURCES += \
     Shared/WebURLResponse.cpp \
     Shared/WebWheelEvent.cpp \
     Shared/CoordinatedGraphics/CoordinatedGraphicsArgumentCoders.cpp \
+    Shared/CoordinatedGraphics/CoordinatedSurface.cpp \
     Shared/CoordinatedGraphics/WebCoordinatedSurface.cpp \
     Shared/CoordinatedGraphics/WebCustomFilterProgramProxy.cpp \
     Shared/qt/ArgumentCodersQt.cpp \
@@ -601,6 +608,7 @@ SOURCES += \
     UIProcess/Plugins/qt/PluginProcessProxyQt.cpp \
     UIProcess/Plugins/unix/PluginInfoStoreUnix.cpp \
     UIProcess/ResponsivenessTimer.cpp \
+    UIProcess/Storage/StorageManager.cpp \
     UIProcess/VisitedLinkProvider.cpp \
     UIProcess/WebApplicationCacheManagerProxy.cpp \
     UIProcess/WebBackForwardList.cpp \
@@ -662,14 +670,9 @@ SOURCES += \
     UIProcess/qt/WebPreferencesQt.cpp \
     UIProcess/qt/WebProcessProxyQt.cpp \
     WebProcess/ApplicationCache/WebApplicationCacheManager.cpp \
-    WebProcess/Authentication/AuthenticationManager.cpp \
     WebProcess/Battery/WebBatteryManager.cpp \
     WebProcess/Cookies/WebCookieManager.cpp \
     WebProcess/Cookies/qt/WebCookieManagerQt.cpp \
-    WebProcess/Downloads/Download.cpp \
-    WebProcess/Downloads/DownloadManager.cpp \
-    WebProcess/Downloads/qt/DownloadQt.cpp \
-    WebProcess/Downloads/qt/QtFileDownloader.cpp \
     WebProcess/FullScreen/WebFullScreenManager.cpp \
     WebProcess/Geolocation/GeolocationPermissionRequestManager.cpp \
     WebProcess/Geolocation/WebGeolocationManager.cpp \
@@ -711,7 +714,6 @@ SOURCES += \
     WebProcess/InjectedBundle/InjectedBundlePageUIClient.cpp \
     WebProcess/InjectedBundle/InjectedBundleScriptWorld.cpp \
     WebProcess/InjectedBundle/qt/InjectedBundleQt.cpp \
-    WebProcess/KeyValueStorage/WebKeyValueStorageManager.cpp \
     WebProcess/MediaCache/WebMediaCacheManager.cpp \
     WebProcess/NetworkInfo/WebNetworkInfoManager.cpp \
     WebProcess/Notifications/NotificationPermissionRequestManager.cpp \
@@ -733,6 +735,7 @@ SOURCES += \
     WebProcess/Plugins/PluginProxy.cpp \
     WebProcess/Plugins/PluginProcessConnection.cpp \
     WebProcess/Plugins/PluginProcessConnectionManager.cpp \
+    WebProcess/Storage/WebKeyValueStorageManager.cpp \
     WebProcess/WebCoreSupport/WebBatteryClient.cpp \
     WebProcess/WebCoreSupport/WebChromeClient.cpp \
     WebProcess/WebCoreSupport/WebColorChooser.cpp \

@@ -2453,7 +2453,7 @@ IntSize WebPagePrivate::fixedLayoutSize(bool snapToIncrement) const
         // If we detect an overflow larger than the contents size then use that instead since
         // it'll still be clamped by the maxWidth below...
         int width = std::max(absoluteVisibleOverflowSize().width(), contentsSize().width());
-        if (m_pendingOrientation != -1 && !m_nestedLayoutFinishedCount)
+        if (m_pendingOrientation != -1 && !m_nestedLayoutFinishedCount && !m_overflowExceedsContentsSize)
             width = 0;
 
         if (snapToIncrement) {
@@ -3259,6 +3259,16 @@ void WebPage::setVisible(bool visible)
 #if USE(ACCELERATED_COMPOSITING)
     d->resumeRootLayerCommit();
 #endif
+
+    // We want to become visible but not get backing store ownership.
+    if (d->m_backingStore->d->isOpenGLCompositing() && !d->m_webSettings->isBackingStoreEnabled()) {
+        d->setCompositorDrawsRootLayer(true);
+#if USE(ACCELERATED_COMPOSITING)
+        d->setNeedsOneShotDrawingSynchronization();
+#endif
+        d->setShouldResetTilesWhenShown(true);
+        return;
+    }
 
     // Push this WebPage to the top of the visible pages list.
     if (!visibleWebPages()->isEmpty() && visibleWebPages()->last() != this) {
@@ -4382,6 +4392,11 @@ int32_t WebPage::commitText(spannable_string_t* spannableString, int32_t relativ
 void WebPage::setSpellCheckingEnabled(bool enabled)
 {
     static_cast<EditorClientBlackBerry*>(d->m_page->editorClient())->enableSpellChecking(enabled);
+
+    d->m_inputHandler->setSystemSpellCheckStatus(enabled);
+
+    if (!enabled)
+        d->m_inputHandler->stopPendingSpellCheckRequests();
 }
 
 void WebPage::spellCheckingRequestCancelled(int32_t transactionId)
@@ -5427,9 +5442,7 @@ void WebPagePrivate::setCompositorBackgroundColor(const Color& backgroundColor)
         m_compositor->setBackgroundColor(backgroundColor);
 }
 
-void WebPagePrivate::commitRootLayer(const IntRect& layoutRectForCompositing,
-                                     const IntSize& contentsSizeForCompositing,
-                                     bool drawsRootLayer)
+void WebPagePrivate::commitRootLayer(const IntRect& layoutRect, const IntRect& documentRect, bool drawsRootLayer)
 {
 #if DEBUG_AC_COMMIT
     Platform::logAlways(Platform::LogLevelCritical,
@@ -5456,8 +5469,8 @@ void WebPagePrivate::commitRootLayer(const IntRect& layoutRectForCompositing,
     if (overlayLayer && overlayLayer->layerCompositingThread() != m_compositor->overlayLayer())
         m_compositor->setOverlayLayer(overlayLayer->layerCompositingThread());
 
-    m_compositor->setLayoutRectForCompositing(layoutRectForCompositing);
-    m_compositor->setContentsSizeForCompositing(contentsSizeForCompositing);
+    m_compositor->setLayoutRect(layoutRect);
+    m_compositor->setDocumentRect(documentRect);
     m_compositor->setDrawsRootLayer(drawsRootLayer);
 
     if (rootLayer)
@@ -5530,8 +5543,8 @@ bool WebPagePrivate::commitRootLayerIfNeeded()
     // Stash the visible content rect according to webkit thread
     // This is the rectangle used to layout fixed positioned elements,
     // and that's what the layer renderer wants.
-    IntRect layoutRectForCompositing(scrollPosition(), actualVisibleSize());
-    IntSize contentsSizeForCompositing = contentsSize();
+    IntRect layoutRect(scrollPosition(), actualVisibleSize());
+    IntRect documentRect(view->minimumScrollPosition(), view->contentsSize());
     bool drawsRootLayer = compositorDrawsRootLayer();
 
     // Commit changes made to the layers synchronously with the compositing thread.
@@ -5539,8 +5552,8 @@ bool WebPagePrivate::commitRootLayerIfNeeded()
         Platform::createMethodCallMessage(
             &WebPagePrivate::commitRootLayer,
             this,
-            layoutRectForCompositing,
-            contentsSizeForCompositing,
+            layoutRect,
+            documentRect,
             drawsRootLayer));
 
     didComposite();

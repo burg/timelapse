@@ -366,6 +366,22 @@
                 "hidden": true
             },
             {
+                "name": "canContinuouslyPaint",
+                "description": "Tells if backend supports continuous painting",
+                "returns": [
+                    { "name": "value", "type": "boolean", "description": "True if continuous painting is available" }
+                ],
+                "hidden": true
+            },
+            {
+                "name": "setContinuousPaintingEnabled",
+                "description": "Requests that backend enables continuous painting",
+                "parameters": [
+                    { "name": "enabled", "type": "boolean", "description": "True for enabling cointinuous painting" }
+                ],
+                "hidden": true
+            },
+            {
                 "name": "getScriptExecutionStatus",
                 "description": "Determines if scripts can be executed in the page.",
                 "returns": [
@@ -3170,12 +3186,28 @@
                 ]
             },
             {
+                "id": "CPUProfileNode",
+                "type": "object",
+                "description": "CPU Profile node. Holds callsite information, execution statistics and child nodes.",
+                "properties": [
+                    { "name": "functionName", "type": "string", "description": "Function name." },
+                    { "name": "url", "type": "string", "description": "URL." },
+                    { "name": "lineNumber", "type": "integer", "description": "Line number." },
+                    { "name": "totalTime", "type": "number", "description": "Total execution time." },
+                    { "name": "selfTime", "type": "number", "description": "Self time." },
+                    { "name": "numberOfCalls", "type": "integer", "description": "Number of calls." },
+                    { "name": "visible", "type": "boolean", "description": "Visibility." },
+                    { "name": "callUID", "type": "number", "description": "Call UID." },
+                    { "name": "children", "type": "array", "items": { "$ref": "CPUProfileNode" }, "description": "Child nodes." }
+                ]
+            },
+            {
                 "id": "CPUProfile",
                 "type": "object",
                 "description": "Profile.",
                 "properties": [
-                    { "name": "head", "type": "object", "optional": true },
-                    { "name": "bottomUpHead", "type": "object", "optional": true },
+                    { "name": "head", "$ref": "CPUProfileNode", "optional": true },
+                    { "name": "bottomUpHead", "$ref": "CPUProfileNode", "optional": true },
                     { "name": "idleTime", "type": "number", "optional": true }
                 ]
             },
@@ -3248,7 +3280,10 @@
                 "name": "clearProfiles"
             },
             {
-                "name": "takeHeapSnapshot"
+                "name": "takeHeapSnapshot",
+                "parameters": [
+                    { "name": "reportProgress", "type": "boolean", "optional": true, "description": "If true 'reportHeapSnapshotProgress' events will be generated while snapshot is being taken." }
+                ]
             },
             {
                 "name": "collectGarbage"
@@ -3465,15 +3500,23 @@
             },
             {
                 "name": "captureFrame",
+                "parameters": [
+                    { "name": "frameId", "$ref": "Network.FrameId", "optional": true, "description": "Identifier of the frame containing document whose canvases are to be captured. If omitted, main frame is assumed." }
+                ],
                 "returns": [
-                    { "name": "traceLogId", "$ref": "TraceLogId" }
-                ]
+                    { "name": "traceLogId", "$ref": "TraceLogId", "description": "Identifier of the trace log containing captured canvas calls." }
+                ],
+                "description": "Starts (or continues) a canvas frame capturing which will be stopped automatically after the next frame is prepared."
             },
             {
                 "name": "startCapturing",
+                "parameters": [
+                    { "name": "frameId", "$ref": "Network.FrameId", "optional": true, "description": "Identifier of the frame containing document whose canvases are to be captured. If omitted, main frame is assumed." }
+                ],
                 "returns": [
-                    { "name": "traceLogId", "$ref": "TraceLogId" }
-                ]
+                    { "name": "traceLogId", "$ref": "TraceLogId", "description": "Identifier of the trace log containing captured canvas calls." }
+                ],
+                "description": "Starts (or continues) consecutive canvas frames capturing. The capturing is stopped by the corresponding stopCapturing command."
             },
             {
                 "name": "stopCapturing",
@@ -3522,7 +3565,23 @@
                 ]
             }
         ],
-        "events": []
+        "events": [
+            {
+                "name": "contextCreated",
+                "parameters": [
+                    { "name": "frameId", "$ref": "Network.FrameId", "description": "Identifier of the frame containing a canvas with a context." }
+                ],
+                "description": "Fired when a canvas context has been created in the given frame. The context may not be instrumented (see hasUninstrumentedCanvases command)."
+            },
+            {
+                "name": "traceLogsRemoved",
+                "parameters": [
+                    { "name": "frameId", "$ref": "Network.FrameId", "optional": true, "description": "If given, trace logs from the given frame were removed." },
+                    { "name": "traceLogId", "$ref": "TraceLogId", "optional": true, "description": "If given, trace log with the given ID was removed." }
+                ],
+                "description": "Fired when a set of trace logs were removed from the backend. If no parameters are given, all trace logs were removed."
+            }
+        ]
     },
     {
         "domain": "Input",
@@ -3551,10 +3610,10 @@
                 "name": "dispatchMouseEvent",
                 "parameters": [
                     { "name": "type", "type": "string", "enum": ["mousePressed", "mouseReleased", "mouseMoved"], "description": "Type of the mouse event." },
-                    { "name": "modifiers", "type": "integer", "optional": true, "description": "Bit field representing pressed modifier keys. Alt=1, Ctrl=2, Meta/Command=4, Shift=8 (default: 0)." },
-                    { "name": "timestamp", "type": "number", "optional": true, "description": "Time at which the event occurred. Measured in UTC time in seconds since January 1, 1970 (default: current time)." },
                     { "name": "x", "type": "integer", "description": "X coordinate of the event relative to the main frame's viewport."},
                     { "name": "y", "type": "integer", "description": "Y coordinate of the event relative to the main frame's viewport. 0 refers to the top of the viewport and Y increases as it proceeds towards the bottom of the viewport."},
+                    { "name": "modifiers", "type": "integer", "optional": true, "description": "Bit field representing pressed modifier keys. Alt=1, Ctrl=2, Meta/Command=4, Shift=8 (default: 0)." },
+                    { "name": "timestamp", "type": "number", "optional": true, "description": "Time at which the event occurred. Measured in UTC time in seconds since January 1, 1970 (default: current time)." },
                     { "name": "button", "type": "string", "enum": ["none", "left", "middle", "right"], "optional": true, "description": "Mouse button (default: \"none\")." },
                     { "name": "clickCount", "type": "integer", "optional": true, "description": "Number of times the mouse button was clicked (default: 0)." }
                 ],

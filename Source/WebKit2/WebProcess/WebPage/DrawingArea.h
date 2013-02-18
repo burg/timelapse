@@ -59,7 +59,7 @@ public:
     static PassOwnPtr<DrawingArea> create(WebPage*, const WebPageCreationParameters&);
     virtual ~DrawingArea();
     
-    void didReceiveDrawingAreaMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
+    void didReceiveDrawingAreaMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
 
     virtual void setNeedsDisplay(const WebCore::IntRect&) = 0;
     virtual void scroll(const WebCore::IntRect& scrollRect, const WebCore::IntSize& scrollOffset) = 0;
@@ -94,7 +94,7 @@ public:
 #endif
 
 #if USE(COORDINATED_GRAPHICS)
-    virtual void didReceiveCoordinatedLayerTreeHostMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&) = 0;
+    virtual void didReceiveCoordinatedLayerTreeHostMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) = 0;
 #endif
 
     virtual void dispatchAfterEnsuringUpdatedScrollPosition(const Function<void ()>&);

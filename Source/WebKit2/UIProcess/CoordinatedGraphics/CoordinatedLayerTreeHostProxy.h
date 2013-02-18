@@ -26,6 +26,7 @@
 #include "CoordinatedGraphicsArgumentCoders.h"
 #include "CoordinatedLayerInfo.h"
 #include "DrawingAreaProxy.h"
+#include "LayerTreeRenderer.h"
 #include "Region.h"
 #include "SurfaceUpdateInfo.h"
 #include "WebCoordinatedSurface.h"
@@ -46,7 +47,7 @@ namespace WebKit {
 class CoordinatedLayerInfo;
 class LayerTreeRenderer;
 
-class CoordinatedLayerTreeHostProxy {
+class CoordinatedLayerTreeHostProxy : public LayerTreeRendererClient {
     WTF_MAKE_NONCOPYABLE(CoordinatedLayerTreeHostProxy);
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -65,7 +66,7 @@ public:
     void deleteCompositingLayers(const Vector<CoordinatedLayerID>&);
     void setRootCompositingLayer(CoordinatedLayerID);
     void setContentsSize(const WebCore::FloatSize&);
-    void setVisibleContentsRect(const WebCore::FloatRect&, float pageScaleFactor, const WebCore::FloatPoint& trajectoryVector);
+    void setVisibleContentsRect(const WebCore::FloatRect&, const WebCore::FloatPoint& trajectoryVector);
     void didRenderFrame(const WebCore::IntSize& contentsSize, const WebCore::IntRect& coveredRect);
     void createTileForLayer(CoordinatedLayerID, uint32_t tileID, const WebCore::IntRect&, const SurfaceUpdateInfo&);
     void updateTileForLayer(CoordinatedLayerID, uint32_t tileID, const WebCore::IntRect&, const SurfaceUpdateInfo&);
@@ -76,26 +77,29 @@ public:
     void updateImageBacking(CoordinatedImageBackingID, const WebCoordinatedSurface::Handle&);
     void clearImageBackingContents(CoordinatedImageBackingID);
     void removeImageBacking(CoordinatedImageBackingID);
-    void didReceiveCoordinatedLayerTreeHostProxyMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
-    void updateViewport();
-    void renderNextFrame();
+    void didReceiveCoordinatedLayerTreeHostProxyMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
     void didChangeScrollPosition(const WebCore::FloatPoint& position);
 #if USE(GRAPHICS_SURFACE)
     void createCanvas(CoordinatedLayerID, const WebCore::IntSize&, const WebCore::GraphicsSurfaceToken&);
     void syncCanvas(CoordinatedLayerID, uint32_t frontBuffer);
     void destroyCanvas(CoordinatedLayerID);
 #endif
-    void purgeBackingStores();
+    void setLayerRepaintCount(CoordinatedLayerID, int value);
     LayerTreeRenderer* layerTreeRenderer() const { return m_renderer.get(); }
     void setLayerAnimations(CoordinatedLayerID, const WebCore::GraphicsLayerAnimations&);
     void setAnimationsLocked(bool);
 #if ENABLE(REQUEST_ANIMATION_FRAME)
     void requestAnimationFrame();
-    void animationFrameReady();
 #endif
     void setBackgroundColor(const WebCore::Color&);
 
-    float deviceScaleFactor() const;
+    // LayerTreeRendererClient Methods.
+#if ENABLE(REQUEST_ANIMATION_FRAME)
+    virtual void animationFrameReady() OVERRIDE;
+#endif
+    virtual void updateViewport() OVERRIDE;
+    virtual void renderNextFrame() OVERRIDE;
+    virtual void purgeBackingStores() OVERRIDE;
 
 protected:
     void dispatchUpdate(const Function<void()>&);
@@ -103,10 +107,7 @@ protected:
     DrawingAreaProxy* m_drawingAreaProxy;
     RefPtr<LayerTreeRenderer> m_renderer;
     WebCore::FloatRect m_lastSentVisibleRect;
-    float m_lastSentScale;
     WebCore::FloatPoint m_lastSentTrajectoryVector;
-    typedef HashMap<uint32_t /* atlasID */, RefPtr<CoordinatedSurface> > SurfaceMap;
-    SurfaceMap m_surfaces;
 };
 
 }

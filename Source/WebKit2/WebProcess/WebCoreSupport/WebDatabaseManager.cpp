@@ -60,9 +60,9 @@ void WebDatabaseManager::initialize(const WebProcessCreationParameters& paramete
     DatabaseManager::manager().setClient(this);
 }
 
-void WebDatabaseManager::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
+void WebDatabaseManager::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
 {
-    didReceiveWebDatabaseManagerMessage(connection, messageID, decoder);
+    didReceiveWebDatabaseManagerMessage(connection, decoder);
 }
 
 void WebDatabaseManager::getDatabasesByOrigin(uint64_t callbackID) const

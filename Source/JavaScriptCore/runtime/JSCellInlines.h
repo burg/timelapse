@@ -83,7 +83,7 @@ void* allocateCell(Heap& heap, size_t size)
     JSCell* result = 0;
     if (T::needsDestruction && T::hasImmortalStructure)
         result = static_cast<JSCell*>(heap.allocateWithImmortalStructureDestructor(size));
-    else if (T::needsDestruction && !T::hasImmortalStructure)
+    else if (T::needsDestruction)
         result = static_cast<JSCell*>(heap.allocateWithNormalDestructor(size));
     else 
         result = static_cast<JSCell*>(heap.allocateWithoutDestructor(size));
@@ -137,8 +137,16 @@ inline void JSCell::setStructure(JSGlobalData& globalData, Structure* structure)
     m_structure.set(globalData, this, structure);
 }
 
+inline const MethodTable* JSCell::methodTableForDestruction() const
+{
+    return &classInfo()->methodTable;
+}
+
 inline const MethodTable* JSCell::methodTable() const
 {
+    if (Structure* rootStructure = m_structure->structure())
+        RELEASE_ASSERT(rootStructure == rootStructure->structure());
+
     return &classInfo()->methodTable;
 }
 

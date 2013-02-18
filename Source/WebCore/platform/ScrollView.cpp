@@ -225,14 +225,13 @@ void ScrollView::setDelegatesScrolling(bool delegatesScrolling)
     delegatesScrollingDidChange();
 }
 
-#if !PLATFORM(GTK)
-IntRect ScrollView::visibleContentRect(bool includeScrollbars) const
+IntSize ScrollView::unscaledVisibleContentSize(bool includeScrollbars) const
 {
     if (platformWidget())
-        return platformVisibleContentRect(includeScrollbars);
+        return platformVisibleContentRect(includeScrollbars).size();
 
     if (!m_fixedVisibleContentRect.isEmpty())
-        return m_fixedVisibleContentRect;
+        return m_fixedVisibleContentRect.size();
 
     int verticalScrollbarWidth = 0;
     int horizontalScrollbarHeight = 0;
@@ -244,26 +243,28 @@ IntRect ScrollView::visibleContentRect(bool includeScrollbars) const
             horizontalScrollbarHeight = !horizontalBar->isOverlayScrollbar() ? horizontalBar->height() : 0;
     }
 
-    return IntRect(m_scrollOffset.width(),
-                   m_scrollOffset.height(),
-                   max(0, width() - verticalScrollbarWidth), 
+    return IntSize(max(0, width() - verticalScrollbarWidth),
                    max(0, height() - horizontalScrollbarHeight));
+}
+
+#if !PLATFORM(GTK)
+IntRect ScrollView::visibleContentRect(bool includeScrollbars) const
+{
+    if (platformWidget())
+        return platformVisibleContentRect(includeScrollbars);
+
+    if (!m_fixedVisibleContentRect.isEmpty())
+        return m_fixedVisibleContentRect;
+
+    FloatSize visibleContentSize = unscaledVisibleContentSize(includeScrollbars);
+    visibleContentSize.scale(1 / visibleContentScaleFactor());
+    return IntRect(IntPoint(m_scrollOffset), expandedIntSize(visibleContentSize));
 }
 #endif
 
 IntSize ScrollView::layoutSize() const
 {
-    return m_fixedLayoutSize.isEmpty() || !m_useFixedLayout ? visibleSize() : m_fixedLayoutSize;
-}
-
-int ScrollView::layoutWidth() const
-{
-    return m_fixedLayoutSize.isEmpty() || !m_useFixedLayout ? visibleWidth() : m_fixedLayoutSize.width();
-}
-
-int ScrollView::layoutHeight() const
-{
-    return m_fixedLayoutSize.isEmpty() || !m_useFixedLayout ? visibleHeight() : m_fixedLayoutSize.height();
+    return m_fixedLayoutSize.isEmpty() || !m_useFixedLayout ? unscaledVisibleContentSize(false) : m_fixedLayoutSize;
 }
 
 IntSize ScrollView::fixedLayoutSize() const
@@ -602,7 +603,7 @@ void ScrollView::updateScrollbars(const IntSize& desiredOffset)
             m_verticalScrollbar->setSuppressInvalidation(false);
     }
 
-    if (hasHorizontalScrollbar != (m_horizontalScrollbar != 0) || hasVerticalScrollbar != (m_verticalScrollbar != 0)) {
+    if (hasHorizontalScrollbar != newHasHorizontalScrollbar || hasVerticalScrollbar != newHasVerticalScrollbar) {
         // FIXME: Is frameRectsChanged really necessary here? Have any frame rects changed?
         frameRectsChanged();
         positionScrollbarLayers();

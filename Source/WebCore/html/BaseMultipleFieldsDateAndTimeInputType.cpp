@@ -190,14 +190,10 @@ void BaseMultipleFieldsDateAndTimeInputType::blur()
 
 void BaseMultipleFieldsDateAndTimeInputType::createShadowSubtree()
 {
-    DEFINE_STATIC_LOCAL(AtomicString, dateAndTimeInputContainerPseudoId, ("-webkit-date-and-time-container", AtomicString::ConstructFromLiteral));
-
     ASSERT(element()->shadow());
 
     Document* document = element()->document();
-    RefPtr<HTMLDivElement> container = HTMLDivElement::create(document);
-    element()->userAgentShadowRoot()->appendChild(container);
-    container->setPseudo(dateAndTimeInputContainerPseudoId);
+    ContainerNode* container = element()->userAgentShadowRoot();
 
     RefPtr<DateTimeEditElement> dateTimeEditElement(DateTimeEditElement::create(document, *this));
     m_dateTimeEditElement = dateTimeEditElement.get();
@@ -287,6 +283,11 @@ bool BaseMultipleFieldsDateAndTimeInputType::hasBadInput() const
     return element()->value().isEmpty() && m_dateTimeEditElement && m_dateTimeEditElement->anyEditableFieldsHaveValues();
 }
 
+bool BaseMultipleFieldsDateAndTimeInputType::isFocusableByClickOnLabel() const
+{
+    return element()->isTextFormControlFocusable();
+}
+
 bool BaseMultipleFieldsDateAndTimeInputType::isKeyboardFocusable(KeyboardEvent*) const
 {
     return false;
@@ -340,6 +341,11 @@ void BaseMultipleFieldsDateAndTimeInputType::setValue(const String& sanitizedVal
     }
 }
 
+bool BaseMultipleFieldsDateAndTimeInputType::shouldApplyLocaleDirection() const
+{
+    return true;
+}
+
 bool BaseMultipleFieldsDateAndTimeInputType::shouldUseInputMethod() const
 {
     return false;
@@ -354,10 +360,6 @@ void BaseMultipleFieldsDateAndTimeInputType::updateInnerTextValue()
 {
     if (!m_dateTimeEditElement)
         return;
-
-    AtomicString direction = element()->locale().isRTL() ? AtomicString("rtl", AtomicString::ConstructFromLiteral) : AtomicString("ltr", AtomicString::ConstructFromLiteral);
-    if (Element* container = ElementTraversal::firstWithin(element()->userAgentShadowRoot()))
-        container->setAttribute(HTMLNames::dirAttr, direction);
 
     DateTimeEditElement::LayoutParameters layoutParameters(element()->locale(), createStepRange(AnyIsDefaultStep));
 

@@ -153,7 +153,7 @@ void V8DOMWindowShell::clearForNavigation()
     // will be protected by the security checks on the DOMWindow wrapper.
     clearDocumentProperty();
 
-    v8::Handle<v8::Object> windowWrapper = m_global->FindInstanceInPrototypeChain(V8DOMWindow::GetTemplate());
+    v8::Handle<v8::Object> windowWrapper = m_global->FindInstanceInPrototypeChain(V8DOMWindow::GetTemplate(m_isolate));
     ASSERT(!windowWrapper.IsEmpty());
     windowWrapper->TurnOnAccessCheck();
     m_context->DetachGlobal();
@@ -276,7 +276,7 @@ void V8DOMWindowShell::createContext()
 
     // Create a new environment using an empty template for the shadow
     // object. Reuse the global object if one has been created earlier.
-    v8::Persistent<v8::ObjectTemplate> globalTemplate = V8DOMWindow::GetShadowObjectTemplate();
+    v8::Persistent<v8::ObjectTemplate> globalTemplate = V8DOMWindow::GetShadowObjectTemplate(m_isolate);
     if (globalTemplate.IsEmpty())
         return;
 

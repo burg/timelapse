@@ -42,9 +42,13 @@ public:
     StringReference messageReceiverName() const { return m_messageReceiverName; }
     StringReference messageName() const { return m_messageName; }
 
+    bool isSyncMessage() const;
+    bool shouldDispatchMessageWhenWaitingForSyncReply() const;
+
 private:
     MessageDecoder(const DataReference& buffer, Deque<Attachment>&);
 
+    uint8_t m_messageFlags;
     StringReference m_messageReceiverName;
     StringReference m_messageName;
 };

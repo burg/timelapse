@@ -70,7 +70,7 @@ public:
     virtual void forceRepaint() = 0;
     virtual bool forceRepaintAsync(uint64_t /*callbackID*/) { return false; }
     virtual void sizeDidChange(const WebCore::IntSize& newSize) = 0;
-    virtual void deviceScaleFactorDidChange() = 0;
+    virtual void deviceOrPageScaleFactorChanged() = 0;
 
     virtual void didInstallPageOverlay() = 0;
     virtual void didUninstallPageOverlay() = 0;
@@ -88,7 +88,7 @@ public:
     virtual void setVisibleContentsRect(const WebCore::FloatRect&, float /* scale */, const WebCore::FloatPoint&) { }
     virtual void renderNextFrame() { }
     virtual void purgeBackingStores() { }
-    virtual void didReceiveCoordinatedLayerTreeHostMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&) = 0;
+    virtual void didReceiveCoordinatedLayerTreeHostMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) = 0;
 #endif
 
 #if PLATFORM(MAC)

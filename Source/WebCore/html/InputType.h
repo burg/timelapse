@@ -33,6 +33,7 @@
 #ifndef InputType_h
 #define InputType_h
 
+#include "FeatureObserver.h"
 #include "HTMLTextFormControlElement.h"
 #include "StepRange.h"
 #include <wtf/Forward.h>
@@ -200,6 +201,7 @@ public:
     virtual bool shouldSubmitImplicitly(Event*);
     virtual PassRefPtr<HTMLFormElement> formForSubmission() const;
     virtual bool hasCustomFocusLogic() const;
+    virtual bool isFocusableByClickOnLabel() const;
     virtual bool isKeyboardFocusable(KeyboardEvent*) const;
     virtual bool isMouseFocusable() const;
     virtual bool shouldUseInputMethod() const;
@@ -260,6 +262,7 @@ public:
     virtual bool canSetValue(const String&);
     virtual bool storesValueSeparateFromAttribute();
     virtual void setValue(const String&, bool valueChanged, TextFieldEventBehavior);
+    virtual bool shouldApplyLocaleDirection() const;
     virtual bool shouldResetOnDocumentActivation();
     virtual bool shouldRespectListAttribute();
     virtual bool shouldRespectSpeechAttribute();
@@ -313,6 +316,7 @@ protected:
     HTMLInputElement* element() const { return m_element; }
     Chrome* chrome() const;
     Decimal parseToNumberOrNaN(const String&) const;
+    void observeFeatureIfVisible(FeatureObserver::Feature) const;
 
 private:
     // Helper for stepUp()/stepDown(). Adds step value * count to the current value.

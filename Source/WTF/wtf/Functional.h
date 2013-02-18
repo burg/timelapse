@@ -32,7 +32,7 @@
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakPtr.h>
 
-#if PLATFORM(MAC) && COMPILER_SUPPORTS(BLOCKS)
+#if OS(DARWIN) && COMPILER_SUPPORTS(BLOCKS)
 #include <Block.h>
 #include <wtf/ObjcRuntimeExtras.h>
 #endif
@@ -77,6 +77,8 @@ public:
 // provide a unified interface for calling that function.
 template<typename>
 class FunctionWrapper;
+
+// Bound static functions:
 
 template<typename R>
 class FunctionWrapper<R (*)()> {
@@ -157,6 +159,48 @@ public:
 private:
     R (*m_function)(P1, P2, P3);
 };
+
+template<typename R, typename P1, typename P2, typename P3, typename P4>
+class FunctionWrapper<R (*)(P1, P2, P3, P4)> {
+public:
+    typedef R ResultType;
+    static const bool shouldRefFirstParameter = false;
+
+    explicit FunctionWrapper(R (*function)(P1, P2, P3, P4))
+        : m_function(function)
+    {
+    }
+
+    R operator()(P1 p1, P2 p2, P3 p3, P4 p4)
+    {
+        return m_function(p1, p2, p3, p4);
+    }
+
+private:
+    R (*m_function)(P1, P2, P3, P4);
+};
+
+template<typename R, typename P1, typename P2, typename P3, typename P4, typename P5>
+class FunctionWrapper<R (*)(P1, P2, P3, P4, P5)> {
+public:
+    typedef R ResultType;
+    static const bool shouldRefFirstParameter = false;
+
+    explicit FunctionWrapper(R (*function)(P1, P2, P3, P4, P5))
+        : m_function(function)
+    {
+    }
+
+    R operator()(P1 p1, P2 p2, P3 p3, P4 p4, P5 p5)
+    {
+        return m_function(p1, p2, p3, p4, p5);
+    }
+
+private:
+    R (*m_function)(P1, P2, P3, P4, P5);
+};
+
+// Bound member functions:
 
 template<typename R, typename C>
 class FunctionWrapper<R (C::*)()> {
@@ -326,7 +370,7 @@ private:
     R (C::*m_function)(P1, P2, P3, P4, P5);
 };
 
-#if PLATFORM(MAC) && COMPILER_SUPPORTS(BLOCKS)
+#if OS(DARWIN) && COMPILER_SUPPORTS(BLOCKS)
 template<typename R>
 class FunctionWrapper<R (^)()> {
 public:
@@ -660,7 +704,7 @@ public:
         return impl<R ()>()->operator()();
     }
 
-#if PLATFORM(MAC) && COMPILER_SUPPORTS(BLOCKS)
+#if OS(DARWIN) && COMPILER_SUPPORTS(BLOCKS)
     typedef void (^BlockType)();
     operator BlockType() const
     {

@@ -40,7 +40,14 @@ class SchedulableLoader : public RefCounted<SchedulableLoader> {
 public:
     virtual ~SchedulableLoader();
 
-    const NetworkResourceLoadParameters& loadParameters() const { return m_networkResourceLoadParameters; }
+    ResourceLoadIdentifier identifier() const { return m_identifier; }
+    uint64_t webPageID() const { return m_webPageID; }
+    uint64_t webFrameID() const { return m_webFrameID; }
+    const WebCore::ResourceRequest& request() const { return m_request; }
+    WebCore::ResourceLoadPriority priority() const { return m_priority; }
+    WebCore::ContentSniffingPolicy contentSniffingPolicy() const { return m_contentSniffingPolicy; }
+    WebCore::StoredCredentials allowStoredCredentials() const { return m_allowStoredCredentials; }
+    bool inPrivateBrowsingMode() const { return m_inPrivateBrowsingMode; }
 
     NetworkConnectionToWebProcess* connectionToWebProcess() const { return m_connection.get(); }
     void connectionToWebProcessDidClose();
@@ -55,8 +62,22 @@ public:
 protected:
     SchedulableLoader(const NetworkResourceLoadParameters&, NetworkConnectionToWebProcess*);
 
+    void consumeSandboxExtensions();
+    void invalidateSandboxExtensions();
+
 private:
-    NetworkResourceLoadParameters m_networkResourceLoadParameters;
+    ResourceLoadIdentifier m_identifier;
+    uint64_t m_webPageID;
+    uint64_t m_webFrameID;
+    WebCore::ResourceRequest m_request;
+    WebCore::ResourceLoadPriority m_priority;
+    WebCore::ContentSniffingPolicy m_contentSniffingPolicy;
+    WebCore::StoredCredentials m_allowStoredCredentials;
+    bool m_inPrivateBrowsingMode;
+
+    Vector<RefPtr<SandboxExtension> > m_requestBodySandboxExtensions;
+    RefPtr<SandboxExtension> m_resourceSandboxExtension;
+
     RefPtr<NetworkConnectionToWebProcess> m_connection;
     
     RefPtr<HostRecord> m_hostRecord;

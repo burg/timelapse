@@ -46,7 +46,6 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
-class DRTTestRunner;
 class MockWebSpeechInputController;
 class MockWebSpeechRecognizer;
 class SkCanvas;
@@ -75,6 +74,10 @@ class MediaStreamUtil;
 class TestMediaStreamClient;
 }
 
+namespace WebTestRunner {
+class WebTestRunner;
+}
+
 class WebViewHost : public WebKit::WebViewClient, public WebKit::WebFrameClient, public NavigationHost, public WebKit::WebPrerendererClient, public WebTestRunner::WebTestDelegate {
  public:
     WebViewHost(TestShell*);
@@ -86,9 +89,6 @@ class WebViewHost : public WebKit::WebViewClient, public WebKit::WebFrameClient,
     WebTestRunner::WebTestProxyBase* proxy() const;
     void setProxy(WebTestRunner::WebTestProxyBase*);
     void reset();
-    void waitForPolicyDelegate();
-    void setCustomPolicyDelegate(bool, bool);
-    WebKit::WebFrame* topLoadingFrame() { return m_topLoadingFrame; }
     void setPendingExtraData(PassOwnPtr<TestShellExtraData>);
 
     void paintRect(const WebKit::WebRect&);
@@ -97,7 +97,6 @@ class WebViewHost : public WebKit::WebViewClient, public WebKit::WebFrameClient,
     SkCanvas* canvas();
     void displayRepaintMask();
 
-    void loadURLForFrame(const WebKit::WebURL&, const WebKit::WebString& frameName);
     TestNavigationController* navigationController() { return m_navigationController.get(); }
 
     void closeWidget();
@@ -130,8 +129,6 @@ class WebViewHost : public WebKit::WebViewClient, public WebKit::WebFrameClient,
     virtual WebKit::WebIntentRequest* currentWebIntentRequest() OVERRIDE;
     virtual std::string makeURLErrorDescription(const WebKit::WebURLError&) OVERRIDE;
     virtual std::string normalizeLayoutTestURL(const std::string&) OVERRIDE;
-    virtual void setSelectTrailingWhitespaceEnabled(bool) OVERRIDE;
-    virtual void setSmartInsertDeleteEnabled(bool) OVERRIDE;
     virtual void setClientWindowRect(const WebKit::WebRect&) OVERRIDE;
     virtual void showDevTools() OVERRIDE;
     virtual void closeDevTools() OVERRIDE;
@@ -170,6 +167,17 @@ class WebViewHost : public WebKit::WebViewClient, public WebKit::WebFrameClient,
 #endif
     virtual void display() OVERRIDE;
     virtual void displayInvalidatedRegion() OVERRIDE;
+    virtual void testFinished() OVERRIDE;
+    virtual void testTimedOut() OVERRIDE;
+    virtual bool isBeingDebugged() OVERRIDE;
+    virtual int layoutTestTimeout() OVERRIDE;
+    virtual void closeRemainingWindows() OVERRIDE;
+    virtual int navigationEntryCount() OVERRIDE;
+    virtual int windowCount() OVERRIDE;
+    virtual void goToOffset(int) OVERRIDE;
+    virtual void reload() OVERRIDE;
+    virtual void loadURLForFrame(const WebKit::WebURL&, const std::string& frameName) OVERRIDE;
+    virtual bool allowExternalPages() OVERRIDE;
 
     // NavigationHost
     virtual bool navigate(const TestNavigationEntry&, bool reload);
@@ -199,7 +207,6 @@ class WebViewHost : public WebKit::WebViewClient, public WebKit::WebFrameClient,
     virtual void runModalAlertDialog(WebKit::WebFrame*, const WebKit::WebString&);
     virtual bool runModalConfirmDialog(WebKit::WebFrame*, const WebKit::WebString&);
     virtual bool runModalPromptDialog(WebKit::WebFrame*, const WebKit::WebString& message, const WebKit::WebString& defaultValue, WebKit::WebString* actualValue);
-    virtual bool runModalBeforeUnloadDialog(WebKit::WebFrame*, const WebKit::WebString&);
     virtual void showContextMenu(WebKit::WebFrame*, const WebKit::WebContextMenuData&);
     virtual void didUpdateLayout();
     virtual void navigateBackForwardSoon(int offset);
@@ -256,18 +263,12 @@ class WebViewHost : public WebKit::WebViewClient, public WebKit::WebFrameClient,
         WebKit::WebNavigationType, const WebKit::WebNode&,
         WebKit::WebNavigationPolicy, bool isRedirect);
     virtual bool canHandleRequest(WebKit::WebFrame*, const WebKit::WebURLRequest&);
-    virtual WebKit::WebURLError cannotHandleRequestError(WebKit::WebFrame*, const WebKit::WebURLRequest&);
     virtual WebKit::WebURLError cancelledError(WebKit::WebFrame*, const WebKit::WebURLRequest&);
     virtual void unableToImplementPolicyWithError(WebKit::WebFrame*, const WebKit::WebURLError&);
     virtual void didCreateDataSource(WebKit::WebFrame*, WebKit::WebDataSource*);
-    virtual void didStartProvisionalLoad(WebKit::WebFrame*);
-    virtual void didReceiveServerRedirectForProvisionalLoad(WebKit::WebFrame*);
-    virtual void didFailProvisionalLoad(WebKit::WebFrame*, const WebKit::WebURLError&);
     virtual void didCommitProvisionalLoad(WebKit::WebFrame*, bool isNewNavigation);
     virtual void didClearWindowObject(WebKit::WebFrame*);
     virtual void didReceiveTitle(WebKit::WebFrame*, const WebKit::WebString&, WebKit::WebTextDirection);
-    virtual void didFailLoad(WebKit::WebFrame*, const WebKit::WebURLError&);
-    virtual void didFinishLoad(WebKit::WebFrame*);
     virtual void didNavigateWithinPage(WebKit::WebFrame*, bool isNewNavigation);
     virtual void willSendRequest(WebKit::WebFrame*, unsigned identifier, WebKit::WebURLRequest&, const WebKit::WebURLResponse&);
     virtual void openFileSystem(WebKit::WebFrame*, WebKit::WebFileSystem::Type, long long size, bool create, WebKit::WebFileSystemCallbacks*);
@@ -300,27 +301,12 @@ private:
         CallbackMethodType m_callback;
     };
 
-    DRTTestRunner* testRunner() const;
-
     // Called the title of the page changes.
     // Can be used to update the title of the window.
     void setPageTitle(const WebKit::WebString&);
 
-    // Called when the URL of the page changes.
-    // Extracts the URL and forwards on to SetAddressBarURL().
-    void updateAddressBar(WebKit::WebView*);
-
-    // Called when the URL of the page changes.
-    // Should be used to update the text of the URL bar.
-    void setAddressBarURL(const WebKit::WebURL&);
-
     void enterFullScreenNow();
     void exitFullScreenNow();
-
-    // In the Mac code, this is called to trigger the end of a test after the
-    // page has finished loading. From here, we can generate the dump for the
-    // test.
-    void locationChangeDone(WebKit::WebFrame*);
 
     void updateForCommittedLoad(WebKit::WebFrame*, bool isNewNavigation);
     void updateURL(WebKit::WebFrame*);
@@ -338,18 +324,6 @@ private:
     webkit_support::TestMediaStreamClient* testMediaStreamClient();
 #endif
 
-    // Causes navigation actions just printout the intended navigation instead
-    // of taking you to the page. This is used for cases like mailto, where you
-    // don't actually want to open the mail program.
-    bool m_policyDelegateEnabled;
-
-    // Toggles the behavior of the policy delegate. If true, then navigations
-    // will be allowed. Otherwise, they will be ignored (dropped).
-    bool m_policyDelegateIsPermissive;
-
-    // If true, the policy delegate will signal layout test completion.
-    bool m_policyDelegateShouldNotifyDone;
-
     // Non-owning pointer. The WebViewHost instance is owned by this TestShell instance.
     TestShell* m_shell;
 
@@ -358,9 +332,6 @@ private:
 
     // This delegate works for the following widget.
     WebKit::WebWidget* m_webWidget;
-
-    // This is non-0 IFF a load is in progress.
-    WebKit::WebFrame* m_topLoadingFrame;
 
     // For tracking session history. See RenderView.
     int m_pageId;
@@ -376,12 +347,6 @@ private:
     bool m_shutdownWasInvoked;
 
     WebKit::WebRect m_windowRect;
-
-    // true if we want to enable smart insert/delete.
-    bool m_smartInsertDeleteEnabled;
-
-    // true if we want to enable selection of trailing whitespaces
-    bool m_selectTrailingWhitespaceEnabled;
 
     // Edit command associated to the current keyboard event.
     std::string m_editCommandName;

@@ -314,6 +314,7 @@ public:
     virtual WebViewBenchmarkSupport* benchmarkSupport();
     virtual void setShowPaintRects(bool);
     virtual void setShowFPSCounter(bool);
+    virtual void setContinuousPaintingEnabled(bool);
 
     // WebLayerTreeViewClient
     virtual void willBeginFrame();
@@ -460,6 +461,7 @@ public:
 
     WebCore::IntSize dipSize() const;
     WebCore::IntSize layoutSize() const;
+    WebCore::IntSize scaledSize(float) const;
 
     // Set the disposition for how this webview is to be initially shown.
     void setInitialNavigationPolicy(WebNavigationPolicy policy)
@@ -577,6 +579,7 @@ public:
     void computeScaleAndScrollForHitRect(const WebRect& hitRect, AutoZoomType, float& scale, WebPoint& scroll, bool& isAnchor);
     WebCore::Node* bestTouchLinkNode(const WebGestureEvent& touchEvent);
     void enableTouchHighlight(const WebGestureEvent& touchEvent);
+    void computeScaleAndScrollForFocusedNode(WebCore::Node* focusedNode, float& scale, WebCore::IntPoint& scroll, bool& needAnimation);
 #endif
     void animateZoomAroundPoint(const WebCore::IntPoint&, AutoZoomType);
 
@@ -600,6 +603,10 @@ public:
     virtual bool isPointerLocked();
 #endif
 
+    // Heuristic-based function for determining if we should disable workarounds
+    // for viewing websites that are not optimized for mobile devices.
+    bool shouldDisableDesktopWorkarounds();
+
 #if ENABLE(GESTURE_EVENTS)
     // Exposed for tests.
     LinkHighlight* linkHighlight() { return m_linkHighlight.get(); }
@@ -610,7 +617,8 @@ public:
 private:
     bool computePageScaleFactorLimits();
     float clampPageScaleFactorToLimits(float scale);
-    WebPoint clampOffsetAtScale(const WebPoint& offset, float scale);
+    WebCore::IntPoint clampOffsetAtScale(const WebCore::IntPoint& offset, float scale) const;
+    WebCore::IntSize contentsSize() const;
 
     void resetSavedScrollAndScaleState();
 

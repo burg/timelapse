@@ -103,6 +103,8 @@ using namespace WebCore;
 namespace BlackBerry {
 namespace WebKit {
 
+static const float zoomAnimationThreshold = 0.5;
+
 class ProcessingChangeGuard {
 public:
     ProcessingChangeGuard(InputHandler* inputHandler)
@@ -143,6 +145,8 @@ InputHandler::InputHandler(WebPagePrivate* page)
     , m_expectedKeyUpChar(0)
     , m_didSpellCheckWord(false)
     , m_spellingHandler(new SpellingHandler(this))
+    , m_spellCheckStatusConfirmed(false)
+    , m_globalSpellCheckStatus(false)
 {
 }
 
@@ -605,6 +609,9 @@ void InputHandler::requestCheckingOfString(PassRefPtr<WebCore::TextCheckingReque
     }
 
     if (requestLength > MaxSpellCheckingStringLength) {
+        // Batch requests which are generally created by us on focus, should not exceed this limit. Check that this is in fact of Incremental type.
+        ASSERT(textCheckingRequest->processType() == TextCheckingProcessIncremental);
+
         // Cancel this request and send it off in newly created chunks.
         m_request->didCancel();
         if (m_currentFocusElement->document() && m_currentFocusElement->document()->frame() && m_currentFocusElement->document()->frame()->selection()) {
@@ -981,7 +988,13 @@ bool InputHandler::shouldSpellCheckElement(const Element* element) const
     if (spellCheckAttr == DOMSupport::Default && (m_currentFocusElementTextEditMask & NO_AUTO_TEXT))
         return false;
 
-    return true;
+    // Check if the system spell check setting is off
+    return m_spellCheckStatusConfirmed ? m_globalSpellCheckStatus : true;
+}
+
+void InputHandler::stopPendingSpellCheckRequests()
+{
+    m_spellingHandler->setSpellCheckActive(false);
 }
 
 void InputHandler::redrawSpellCheckDialogIfRequired(const bool shouldMoveDialog)
@@ -1140,6 +1153,10 @@ void InputHandler::ensureFocusTextElementVisible(CaretScrollType scrollType)
     else
         zoomScaleRequired = m_webPage->currentScale(); // Don't scale.
 
+    // Zoom level difference must exceed the given threshold before we perform a zoom animation.
+    if (abs(zoomScaleRequired - m_webPage->currentScale()) < zoomAnimationThreshold)
+        zoomScaleRequired = m_webPage->currentScale(); // Don't scale.
+
     // The scroll location we should go to given the zoom required, could be adjusted later.
     WebCore::FloatPoint offset(selectionFocusRect.location().x() - m_webPage->scrollPosition().x(), selectionFocusRect.location().y() - m_webPage->scrollPosition().y());
     double inverseScale = zoomScaleRequired / m_webPage->currentScale();
@@ -1221,9 +1238,10 @@ void InputHandler::ensureFocusTextElementVisible(CaretScrollType scrollType)
 
     if (destinationScrollLocation != mainFrameView->scrollPosition() || zoomScaleRequired != m_webPage->currentScale()) {
         InputLog(Platform::LogLevelInfo,
-            "InputHandler::ensureFocusTextElementVisible zooming in to %f and scrolling to point %s",
-            zoomScaleRequired,
-            Platform::IntPoint(destinationScrollLocation).toString().c_str());
+            "InputHandler::ensureFocusTextElementVisible zooming in to %f from %f and scrolling to point %s from %s",
+            zoomScaleRequired, m_webPage->currentScale(),
+            Platform::IntPoint(destinationScrollLocation).toString().c_str(),
+            Platform::IntPoint(mainFrameView->scrollPosition()).toString().c_str());
 
         // Animate to given scroll position & zoom level
         m_webPage->m_finalBlockPoint = WebCore::FloatPoint(destinationScrollLocation);

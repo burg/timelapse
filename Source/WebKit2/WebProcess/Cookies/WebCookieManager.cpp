@@ -58,9 +58,9 @@ WebCookieManager::WebCookieManager(ChildProcess* process)
     sharedCookieManager = this;
 }
 
-void WebCookieManager::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
+void WebCookieManager::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
 {
-    didReceiveWebCookieManagerMessage(connection, messageID, decoder);
+    didReceiveWebCookieManagerMessage(connection, decoder);
 }
 
 void WebCookieManager::getHostnamesWithCookies(uint64_t callbackID)

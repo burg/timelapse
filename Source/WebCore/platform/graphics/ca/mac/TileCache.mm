@@ -339,8 +339,12 @@ void TileCache::setIsInWindow(bool isInWindow)
 
     m_isInWindow = isInWindow;
 
-    const double tileRevalidationTimeout = 4;
-    scheduleTileRevalidation(m_isInWindow ? 0 : tileRevalidationTimeout);
+    if (m_isInWindow)
+        revalidateTiles();
+    else {
+        const double tileRevalidationTimeout = 4;
+        scheduleTileRevalidation(tileRevalidationTimeout);
+    }
 }
 
 void TileCache::setTileCoverage(TileCoverage coverage)
@@ -892,7 +896,9 @@ void TileCache::setScrollingModeIndication(ScrollingModeIndication scrollingMode
         return;
 
     m_indicatorMode = scrollingMode;
-    updateTileCoverageMap();
+
+    if (m_tiledScrollingIndicatorLayer)
+        updateTileCoverageMap();
 }
 
 WebTileLayer* TileCache::tileLayerAtIndex(const TileIndex& index) const

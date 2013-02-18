@@ -27,6 +27,7 @@ const UserInitiatedProfileName = "org.webkit.profiles.user-initiated";
 
 /**
  * @constructor
+ * @extends {WebInspector.Object}
  * @param {string} id
  * @param {string} name
  */
@@ -38,6 +39,10 @@ WebInspector.ProfileType = function(id, name)
      * @type {WebInspector.SidebarSectionTreeElement}
      */
     this.treeElement = null;
+}
+
+WebInspector.ProfileType.Events = {
+  ViewUpdated: "view-updated",
 }
 
 WebInspector.ProfileType.prototype = {
@@ -109,7 +114,9 @@ WebInspector.ProfileType.prototype = {
     createProfile: function(profile)
     {
         throw new Error("Not supported for " + this._name + " profiles.");
-    }
+    },
+
+    __proto__: WebInspector.Object.prototype
 }
 
 /**
@@ -366,6 +373,11 @@ WebInspector.ProfilesPanel.prototype = {
     _onProfileTypeSelected: function(event)
     {
         this._selectedProfileType = /** @type {!WebInspector.ProfileType} */ (event.data);
+        this._updateProfileTypeSpecificUI();
+    },
+
+    _updateProfileTypeSpecificUI: function()
+    {
         this.recordButton.title = this._selectedProfileType.buttonTooltip;
 
         this._profileTypeStatusBarItemsContainer.removeChildren();
@@ -454,6 +466,7 @@ WebInspector.ProfilesPanel.prototype = {
         profileType.treeElement.hidden = true;
         this.sidebarTree.appendChild(profileType.treeElement);
         profileType.treeElement.childrenListElement.addEventListener("contextmenu", this._handleContextMenuEvent.bind(this), true);
+        profileType.addEventListener(WebInspector.ProfileType.Events.ViewUpdated, this._updateProfileTypeSpecificUI, this);
     },
 
     /**
@@ -1132,7 +1145,7 @@ WebInspector.ProfilesPanel.prototype = {
         function done() {
             this._launcherView.profileFinished();
         }
-        ProfilerAgent.takeHeapSnapshot(done.bind(this));
+        ProfilerAgent.takeHeapSnapshot(true, done.bind(this));
         WebInspector.userMetrics.ProfilesHeapProfileTaken.record();
     },
 
@@ -1401,7 +1414,6 @@ importScript("HeapSnapshotProxy.js");
 importScript("HeapSnapshotView.js");
 importScript("HeapSnapshotWorkerDispatcher.js");
 importScript("JSHeapSnapshot.js");
-importScript("NativeHeapGraph.js");
 importScript("NativeHeapSnapshot.js");
 importScript("NativeMemorySnapshotView.js");
 importScript("ProfileLauncherView.js");

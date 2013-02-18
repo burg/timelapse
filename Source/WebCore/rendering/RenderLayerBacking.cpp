@@ -76,8 +76,6 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-static bool hasBoxDecorations(const RenderStyle*);
-static bool hasBoxDecorationsOrBackground(const RenderObject*);
 static bool hasBoxDecorationsOrBackgroundImage(const RenderStyle*);
 static IntRect clipBox(RenderBox* renderer);
 
@@ -474,6 +472,7 @@ bool RenderLayerBacking::updateGraphicsLayerConfiguration()
     RenderLayerCompositor* compositor = this->compositor();
     RenderObject* renderer = this->renderer();
 
+    m_owningLayer->updateDescendantDependentFlags();
     m_owningLayer->updateZOrderLists();
 
     bool layerConfigChanged = false;
@@ -824,6 +823,8 @@ void RenderLayerBacking::registerScrollingLayers()
     if (!scrollingCoordinator)
         return;
 
+    compositor()->updateViewportConstraintStatus(m_owningLayer);
+
     // FIXME: it would be nice to avoid all this work if the platform doesn't implement setLayerIsFixedToContainerLayer().
     if (renderer()->style()->position() == FixedPosition || compositor()->fixedPositionedByAncestor(m_owningLayer))
         scrollingCoordinator->setLayerIsFixedToContainerLayer(childForSuperlayers(), true);
@@ -912,7 +913,7 @@ void RenderLayerBacking::updateDrawsContent(bool isSimpleContainer)
         // m_graphicsLayer only needs backing store if the non-scrolling parts (background, outlines, borders, shadows etc) need to paint.
         // m_scrollingLayer never has backing store.
         // m_scrollingContentsLayer only needs backing store if the scrolled contents need to paint.
-        bool hasNonScrollingPaintedContent = m_owningLayer->hasVisibleContent() && hasBoxDecorationsOrBackground(renderer());
+        bool hasNonScrollingPaintedContent = m_owningLayer->hasVisibleContent() && m_owningLayer->hasBoxDecorationsOrBackground();
         m_graphicsLayer->setDrawsContent(hasNonScrollingPaintedContent);
 
         bool hasScrollingPaintedContent = m_owningLayer->hasVisibleContent() && (renderer()->hasBackground() || paintsChildren());
@@ -1284,11 +1285,6 @@ static bool hasBoxDecorations(const RenderStyle* style)
     return style->hasBorder() || style->hasBorderRadius() || style->hasOutline() || style->hasAppearance() || style->boxShadow() || style->hasFilter();
 }
 
-static bool hasBoxDecorationsOrBackground(const RenderObject* renderer)
-{
-    return hasBoxDecorations(renderer->style()) || renderer->hasBackground();
-}
-
 static bool hasBoxDecorationsOrBackgroundImage(const RenderStyle* style)
 {
     return hasBoxDecorations(style) || style->hasBackgroundImage();
@@ -1324,8 +1320,10 @@ void RenderLayerBacking::updateRootLayerConfiguration()
 
     if (!viewIsTransparent) {
         backgroundColor = frameView->documentBackgroundColor();
-        if (!backgroundColor.isValid() || backgroundColor.hasAlpha())
+        if (!backgroundColor.isValid())
             backgroundColor = Color::white;
+
+        viewIsTransparent = backgroundColor.hasAlpha();
     }
 
     if (m_backgroundLayerPaintsFixedRootBackground && m_backgroundLayer) {
@@ -1363,16 +1361,10 @@ static bool supportsDirectBoxDecorationsComposition(const RenderObject* renderer
 
 bool RenderLayerBacking::paintsBoxDecorations() const
 {
-    if (!m_owningLayer->hasVisibleContent())
-        return false;
-
-    if (!hasBoxDecorationsOrBackground(renderer()))
+    if (!m_owningLayer->hasVisibleBoxDecorations())
         return false;
 
     if (!supportsDirectBoxDecorationsComposition(renderer()))
-        return true;
-
-    if (m_owningLayer->hasOverflowControls())
         return true;
 
     return false;
@@ -1380,7 +1372,7 @@ bool RenderLayerBacking::paintsBoxDecorations() const
 
 bool RenderLayerBacking::paintsChildren() const
 {
-    if (m_owningLayer->hasVisibleContent() && containsNonEmptyRenderers())
+    if (m_owningLayer->hasVisibleContent() && m_owningLayer->hasNonEmptyChildRenderers())
         return true;
         
     if (hasVisibleNonCompositingDescendantLayers())
@@ -1404,7 +1396,7 @@ bool RenderLayerBacking::isSimpleContainerCompositingLayer() const
         return false;
 
     if (renderObject->isReplaced() && !isCompositedPlugin(renderObject))
-            return false;
+        return false;
     
     if (paintsBoxDecorations() || paintsChildren())
         return false;
@@ -1435,25 +1427,6 @@ bool RenderLayerBacking::isSimpleContainerCompositingLayer() const
     }
 
     return true;
-}
-
-bool RenderLayerBacking::containsNonEmptyRenderers() const
-{
-    // Some HTML can cause whitespace text nodes to have renderers, like:
-    // <div>
-    // <img src=...>
-    // </div>
-    // so test for 0x0 RenderTexts here
-    for (RenderObject* child = renderer()->firstChild(); child; child = child->nextSibling()) {
-        if (!child->hasLayer()) {
-            if (child->isRenderInline() || !child->isBox())
-                return true;
-            
-            if (toRenderBox(child)->width() > 0 || toRenderBox(child)->height() > 0)
-                return true;
-        }
-    }
-    return false;
 }
 
 // Conservative test for having no rendered children.
@@ -1514,12 +1487,12 @@ bool RenderLayerBacking::containsPaintedContent() const
     // and set background color on the layer in that case, instead of allocating backing store and painting.
 #if ENABLE(VIDEO)
     if (renderer()->isVideo() && toRenderVideo(renderer())->shouldDisplayVideo())
-        return hasBoxDecorationsOrBackground(renderer());
+        return m_owningLayer->hasBoxDecorationsOrBackground();
 #endif
 #if PLATFORM(MAC) && USE(CA) && (PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 1070)
 #elif ENABLE(WEBGL) || ENABLE(ACCELERATED_2D_CANVAS)
     if (isAcceleratedCanvas(renderer()))
-        return hasBoxDecorationsOrBackground(renderer());
+        return m_owningLayer->hasBoxDecorationsOrBackground();
 #endif
 
     return true;
@@ -1531,7 +1504,7 @@ bool RenderLayerBacking::isDirectlyCompositedImage() const
 {
     RenderObject* renderObject = renderer();
     
-    if (!renderObject->isImage() || hasBoxDecorationsOrBackground(renderObject) || renderObject->hasClip())
+    if (!renderObject->isImage() || m_owningLayer->hasBoxDecorationsOrBackground() || renderObject->hasClip())
         return false;
 
     RenderImage* imageRenderer = toRenderImage(renderObject);

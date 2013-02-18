@@ -101,7 +101,7 @@ public:
 
     void cancel(NotificationWrapper*);
 
-    void allowNotificationForFrame(Frame*);
+    void setNotificationsAllowedForFrame(Frame*, bool allowed);
 
     static bool dumpNotification;
 
@@ -117,6 +117,8 @@ public:
     void notificationClicked(NotificationWrapper*);
     void notificationClicked(const QString& title);
     void sendDisplayEvent(NotificationWrapper*);
+
+    void clearCachedPermissions();
 
 private:
     void sendEvent(Notification*, const AtomicString& eventName);

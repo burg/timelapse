@@ -41,7 +41,6 @@ using namespace WebCore;
 CoordinatedLayerTreeHostProxy::CoordinatedLayerTreeHostProxy(DrawingAreaProxy* drawingAreaProxy)
     : m_drawingAreaProxy(drawingAreaProxy)
     , m_renderer(adoptRef(new LayerTreeRenderer(this)))
-    , m_lastSentScale(0)
 {
 }
 
@@ -53,11 +52,6 @@ CoordinatedLayerTreeHostProxy::~CoordinatedLayerTreeHostProxy()
 void CoordinatedLayerTreeHostProxy::updateViewport()
 {
     m_drawingAreaProxy->updateViewport();
-}
-
-float CoordinatedLayerTreeHostProxy::deviceScaleFactor() const
-{
-    return m_drawingAreaProxy->page()->deviceScaleFactor();
 }
 
 void CoordinatedLayerTreeHostProxy::dispatchUpdate(const Function<void()>& function)
@@ -73,9 +67,7 @@ void CoordinatedLayerTreeHostProxy::createTileForLayer(CoordinatedLayerID layerI
 
 void CoordinatedLayerTreeHostProxy::updateTileForLayer(CoordinatedLayerID layerID, uint32_t tileID, const IntRect& tileRect, const WebKit::SurfaceUpdateInfo& updateInfo)
 {
-    SurfaceMap::iterator it = m_surfaces.find(updateInfo.atlasID);
-    ASSERT(it != m_surfaces.end());
-    dispatchUpdate(bind(&LayerTreeRenderer::updateTile, m_renderer.get(), layerID, tileID, LayerTreeRenderer::TileUpdate(updateInfo.updateRect, tileRect, it->value, updateInfo.surfaceOffset)));
+    dispatchUpdate(bind(&LayerTreeRenderer::updateTile, m_renderer.get(), layerID, tileID, LayerTreeRenderer::TileUpdate(updateInfo.updateRect, tileRect, updateInfo.atlasID, updateInfo.surfaceOffset)));
 }
 
 void CoordinatedLayerTreeHostProxy::removeTileForLayer(CoordinatedLayerID layerID, uint32_t tileID)
@@ -85,14 +77,12 @@ void CoordinatedLayerTreeHostProxy::removeTileForLayer(CoordinatedLayerID layerI
 
 void CoordinatedLayerTreeHostProxy::createUpdateAtlas(uint32_t atlasID, const WebCoordinatedSurface::Handle& handle)
 {
-    ASSERT(!m_surfaces.contains(atlasID));
-    m_surfaces.add(atlasID, WebCoordinatedSurface::create(handle));
+    dispatchUpdate(bind(&LayerTreeRenderer::createUpdateAtlas, m_renderer.get(), atlasID, WebCoordinatedSurface::create(handle)));
 }
 
 void CoordinatedLayerTreeHostProxy::removeUpdateAtlas(uint32_t atlasID)
 {
-    ASSERT(m_surfaces.contains(atlasID));
-    m_surfaces.remove(atlasID);
+    dispatchUpdate(bind(&LayerTreeRenderer::removeUpdateAtlas, m_renderer.get(), atlasID));
 }
 
 void CoordinatedLayerTreeHostProxy::createCompositingLayers(const Vector<CoordinatedLayerID>& ids)
@@ -185,19 +175,16 @@ void CoordinatedLayerTreeHostProxy::setAnimationsLocked(bool locked)
     dispatchUpdate(bind(&LayerTreeRenderer::setAnimationsLocked, m_renderer.get(), locked));
 }
 
-void CoordinatedLayerTreeHostProxy::setVisibleContentsRect(const FloatRect& rect, float pageScaleFactor, const FloatPoint& trajectoryVector)
+void CoordinatedLayerTreeHostProxy::setVisibleContentsRect(const FloatRect& rect, const FloatPoint& trajectoryVector)
 {
     // Inform the renderer to adjust viewport-fixed layers.
     dispatchUpdate(bind(&LayerTreeRenderer::setVisibleContentsRect, m_renderer.get(), rect));
 
-    const float effectiveScale = deviceScaleFactor() * pageScaleFactor;
-
-    if (rect == m_lastSentVisibleRect && effectiveScale == m_lastSentScale && trajectoryVector == m_lastSentTrajectoryVector)
+    if (rect == m_lastSentVisibleRect && trajectoryVector == m_lastSentTrajectoryVector)
         return;
 
-    m_drawingAreaProxy->page()->process()->send(Messages::CoordinatedLayerTreeHost::SetVisibleContentsRect(rect, effectiveScale, trajectoryVector), m_drawingAreaProxy->page()->pageID());
+    m_drawingAreaProxy->page()->process()->send(Messages::CoordinatedLayerTreeHost::SetVisibleContentsRect(rect, trajectoryVector), m_drawingAreaProxy->page()->pageID());
     m_lastSentVisibleRect = rect;
-    m_lastSentScale = effectiveScale;
     m_lastSentTrajectoryVector = trajectoryVector;
 }
 
@@ -242,9 +229,13 @@ void CoordinatedLayerTreeHostProxy::destroyCanvas(CoordinatedLayerID id)
 }
 #endif
 
+void CoordinatedLayerTreeHostProxy::setLayerRepaintCount(CoordinatedLayerID id, int value)
+{
+    dispatchUpdate(bind(&LayerTreeRenderer::setLayerRepaintCount, m_renderer.get(), id, value));
+}
+
 void CoordinatedLayerTreeHostProxy::purgeBackingStores()
 {
-    m_surfaces.clear();
     m_drawingAreaProxy->page()->process()->send(Messages::CoordinatedLayerTreeHost::PurgeBackingStores(), m_drawingAreaProxy->page()->pageID());
 }
 

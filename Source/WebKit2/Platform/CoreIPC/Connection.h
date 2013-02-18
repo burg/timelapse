@@ -31,6 +31,7 @@
 #include "Arguments.h"
 #include "MessageDecoder.h"
 #include "MessageEncoder.h"
+#include "MessageID.h"
 #include "MessageReceiver.h"
 #include "WorkQueue.h"
 #include <wtf/PassRefPtr.h>
@@ -69,7 +70,7 @@ enum MessageSendFlags {
 };
 
 enum SyncMessageSendFlags {
-    // Will allow events to continue being handled while waiting for the synch reply.
+    // Will allow events to continue being handled while waiting for the sync reply.
     SpinRunLoopWhileWaitingForReply = 1 << 0,
 };
     
@@ -94,7 +95,7 @@ public:
 
     class QueueClient {
     public:
-        virtual void didReceiveMessageOnConnectionWorkQueue(Connection*, MessageID, MessageDecoder&, bool& didHandleMessage) = 0;
+        virtual void didReceiveMessageOnConnectionWorkQueue(Connection*, MessageDecoder&, bool& didHandleMessage) = 0;
 
     protected:
         virtual ~QueueClient() { }
@@ -180,9 +181,9 @@ public:
     template<typename T> bool waitForAndDispatchImmediately(uint64_t destinationID, double timeout);
 
     PassOwnPtr<MessageEncoder> createSyncMessageEncoder(StringReference messageReceiverName, StringReference messageName, uint64_t destinationID, uint64_t& syncRequestID);
-    bool sendMessage(MessageID, PassOwnPtr<MessageEncoder>, unsigned messageSendFlags = 0);
-    PassOwnPtr<MessageDecoder> sendSyncMessage(MessageID, uint64_t syncRequestID, PassOwnPtr<MessageEncoder>, double timeout, unsigned syncSendFlags = 0);
-    PassOwnPtr<MessageDecoder> sendSyncMessageFromSecondaryThread(MessageID, uint64_t syncRequestID, PassOwnPtr<MessageEncoder>, double timeout);
+    bool sendMessage(PassOwnPtr<MessageEncoder>, unsigned messageSendFlags = 0);
+    PassOwnPtr<MessageDecoder> sendSyncMessage(uint64_t syncRequestID, PassOwnPtr<MessageEncoder>, double timeout, unsigned syncSendFlags = 0);
+    PassOwnPtr<MessageDecoder> sendSyncMessageFromSecondaryThread(uint64_t syncRequestID, PassOwnPtr<MessageEncoder>, double timeout);
     bool sendSyncReply(PassOwnPtr<MessageEncoder>);
 
     void wakeUpRunLoop();
@@ -351,11 +352,15 @@ private:
     void exceptionSourceEventHandler();
 
     mach_port_t m_sendPort;
+    dispatch_source_t m_deadNameSource;
+
     mach_port_t m_receivePort;
+    dispatch_source_t m_receivePortDataAvailableSource;
 
     // If setShouldCloseConnectionOnMachExceptions has been called, this has
     // the exception port that exceptions from the other end will be sent on.
     mach_port_t m_exceptionPort;
+    dispatch_source_t m_exceptionPortDataAvailableSource;
 
 #if HAVE(XPC)
     xpc_connection_t m_xpcConnection;
@@ -401,7 +406,7 @@ template<typename T> bool Connection::send(const T& message, uint64_t destinatio
     OwnPtr<MessageEncoder> encoder = MessageEncoder::create(T::receiverName(), T::name(), destinationID);
     encoder->encode(message);
     
-    return sendMessage(MessageID(T::messageID), encoder.release(), messageSendFlags);
+    return sendMessage(encoder.release(), messageSendFlags);
 }
 
 template<typename T> bool Connection::sendSync(const T& message, const typename T::Reply& reply, uint64_t destinationID, double timeout, unsigned syncSendFlags)
@@ -415,7 +420,7 @@ template<typename T> bool Connection::sendSync(const T& message, const typename 
     encoder->encode(message);
 
     // Now send the message and wait for a reply.
-    OwnPtr<MessageDecoder> replyDecoder = sendSyncMessage(MessageID(T::messageID), syncRequestID, encoder.release(), timeout, syncSendFlags);
+    OwnPtr<MessageDecoder> replyDecoder = sendSyncMessage(syncRequestID, encoder.release(), timeout, syncSendFlags);
     if (!replyDecoder)
         return false;
 
@@ -430,7 +435,7 @@ template<typename T> bool Connection::waitForAndDispatchImmediately(uint64_t des
         return false;
 
     ASSERT(decoder->destinationID() == destinationID);
-    m_client->didReceiveMessage(this, MessageID(T::messageID), *decoder);
+    m_client->didReceiveMessage(this, *decoder);
     return true;
 }
 

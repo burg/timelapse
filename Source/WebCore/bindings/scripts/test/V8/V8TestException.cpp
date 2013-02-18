@@ -29,7 +29,30 @@
 #include "V8DOMWrapper.h"
 #include <wtf/UnusedParam.h>
 
+#if ENABLE(BINDING_INTEGRITY)
+#if defined(OS_WIN)
+#pragma warning(disable: 4483)
+extern "C" { extern void (*const __identifier("??_7TestException@WebCore@@6B@")[])(); }
+#else
+extern "C" { extern void* _ZTVN7WebCore13TestExceptionE[]; }
+#endif
+#endif // ENABLE(BINDING_INTEGRITY)
+
 namespace WebCore {
+
+#if ENABLE(BINDING_INTEGRITY)
+inline void checkTypeOrDieTrying(TestException* object)
+{
+    void* actualVTablePointer = *(reinterpret_cast<void**>(object));
+#if defined(OS_WIN)
+    void* expectedVTablePointer = reinterpret_cast<void*>(__identifier("??_7TestException@WebCore@@6B@"));
+#else
+    void* expectedVTablePointer = &_ZTVN7WebCore13TestExceptionE[2];
+#endif
+    if (actualVTablePointer != expectedVTablePointer)
+        CRASH();
+}
+#endif // ENABLE(BINDING_INTEGRITY)
 
 WrapperTypeInfo V8TestException::info = { V8TestException::GetTemplate, V8TestException::derefObject, 0, 0, 0, V8TestException::installPerContextPrototypeProperties, 0, WrapperTypeErrorPrototype };
 
@@ -50,7 +73,7 @@ static const V8DOMConfiguration::BatchedAttribute V8TestExceptionAttrs[] = {
     {"name", TestExceptionV8Internal::nameAttrGetter, 0, 0 /* no data */, static_cast<v8::AccessControl>(v8::DEFAULT), static_cast<v8::PropertyAttribute>(v8::None), 0 /* on instance */},
 };
 
-static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestExceptionTemplate(v8::Persistent<v8::FunctionTemplate> desc)
+static v8::Persistent<v8::FunctionTemplate> ConfigureV8TestExceptionTemplate(v8::Persistent<v8::FunctionTemplate> desc, v8::Isolate* isolate)
 {
     desc->ReadOnlyPrototype();
 
@@ -92,7 +115,7 @@ v8::Persistent<v8::FunctionTemplate> V8TestException::GetTemplate(v8::Isolate* i
 
     v8::HandleScope handleScope;
     v8::Persistent<v8::FunctionTemplate> templ =
-        ConfigureV8TestExceptionTemplate(GetRawTemplate());
+        ConfigureV8TestExceptionTemplate(GetRawTemplate(isolate), isolate);
     data->templateMap().add(&info, templ);
     return templ;
 }
@@ -107,6 +130,10 @@ v8::Handle<v8::Object> V8TestException::createWrapper(PassRefPtr<TestException> 
 {
     ASSERT(impl.get());
     ASSERT(DOMDataStore::getWrapper(impl.get(), isolate).IsEmpty());
+
+#if ENABLE(BINDING_INTEGRITY)
+    checkTypeOrDieTrying(impl.get());
+#endif
 
     v8::Handle<v8::Object> wrapper = V8DOMWrapper::createWrapper(creationContext, &info, impl.get());
     if (UNLIKELY(wrapper.IsEmpty()))

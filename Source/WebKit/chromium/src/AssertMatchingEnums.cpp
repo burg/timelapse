@@ -68,6 +68,7 @@
 #include "RTCDataChannelHandlerClient.h"
 #include "RTCPeerConnectionHandlerClient.h"
 #include "ReferrerPolicy.h"
+#include "ResourceLoadPriority.h"
 #include "ResourceResponse.h"
 #include "Settings.h"
 #include "SpeechRecognitionError.h"
@@ -81,6 +82,7 @@
 #include "WebAccessibilityNotification.h"
 #include "WebAccessibilityObject.h"
 #include "WebApplicationCacheHost.h"
+#include "WebConsoleMessage.h"
 #include "WebContentSecurityPolicy.h"
 #include "WebCursorInfo.h"
 #include "WebEditingAction.h"
@@ -122,6 +124,7 @@
 #include <public/WebRTCPeerConnectionHandlerClient.h>
 #include <public/WebReferrerPolicy.h>
 #include <public/WebScrollbar.h>
+#include <public/WebURLRequest.h>
 #include <public/WebURLResponse.h>
 #include <wtf/Assertions.h>
 #include <wtf/text/StringImpl.h>
@@ -219,8 +222,9 @@ COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleListBoxOption, ListBoxOptionRol
 COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleMenuListOption, MenuListOptionRole);
 COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleMenuListPopup, MenuListPopupRole);
 COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleTableHeaderContainer, TableHeaderContainerRole);
-COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleDefinitionListTerm, DefinitionListTermRole);
-COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleDefinitionListDefinition, DefinitionListDefinitionRole);
+COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleDefinition, DefinitionRole);
+COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleDescriptionListTerm, DescriptionListTermRole);
+COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleDescriptionListDetail, DescriptionListDetailRole);
 COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleAnnotation, AnnotationRole);
 COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleSliderThumb, SliderThumbRole);
 COMPILE_ASSERT_MATCHING_ENUM(WebAccessibilityRoleSpinButton, SpinButtonRole);
@@ -501,8 +505,8 @@ COMPILE_ASSERT_MATCHING_ENUM(WebIDBCursor::NextNoDuplicate, IDBCursor::NEXT_NO_D
 COMPILE_ASSERT_MATCHING_ENUM(WebIDBCursor::Prev, IDBCursor::PREV);
 COMPILE_ASSERT_MATCHING_ENUM(WebIDBCursor::PrevNoDuplicate, IDBCursor::PREV_NO_DUPLICATE);
 
-COMPILE_ASSERT_MATCHING_ENUM(WebIDBTransaction::PreemptiveTask, IDBTransactionBackendInterface::PreemptiveTask);
-COMPILE_ASSERT_MATCHING_ENUM(WebIDBTransaction::NormalTask, IDBTransactionBackendInterface::NormalTask);
+COMPILE_ASSERT_MATCHING_ENUM(WebIDBTransaction::PreemptiveTask, IDBDatabaseBackendInterface::PreemptiveTask);
+COMPILE_ASSERT_MATCHING_ENUM(WebIDBTransaction::NormalTask, IDBDatabaseBackendInterface::NormalTask);
 #endif
 
 #if ENABLE(FILE_SYSTEM)
@@ -624,3 +628,16 @@ COMPILE_ASSERT_MATCHING_ENUM(WebFormElement::AutocompleteResultErrorDisabled, HT
 COMPILE_ASSERT_MATCHING_ENUM(WebFormElement::AutocompleteResultErrorCancel, HTMLFormElement::AutocompleteResultErrorCancel);
 COMPILE_ASSERT_MATCHING_ENUM(WebFormElement::AutocompleteResultErrorInvalid, HTMLFormElement::AutocompleteResultErrorInvalid);
 #endif
+
+COMPILE_ASSERT_MATCHING_ENUM(WebURLRequest::PriorityUnresolved, ResourceLoadPriorityUnresolved);
+COMPILE_ASSERT_MATCHING_ENUM(WebURLRequest::PriorityVeryLow, ResourceLoadPriorityVeryLow);
+COMPILE_ASSERT_MATCHING_ENUM(WebURLRequest::PriorityLow, ResourceLoadPriorityLow);
+COMPILE_ASSERT_MATCHING_ENUM(WebURLRequest::PriorityMedium, ResourceLoadPriorityMedium);
+COMPILE_ASSERT_MATCHING_ENUM(WebURLRequest::PriorityHigh, ResourceLoadPriorityHigh);
+COMPILE_ASSERT_MATCHING_ENUM(WebURLRequest::PriorityVeryHigh, ResourceLoadPriorityVeryHigh);
+
+COMPILE_ASSERT_MATCHING_ENUM(WebConsoleMessage::LevelTip, TipMessageLevel);
+COMPILE_ASSERT_MATCHING_ENUM(WebConsoleMessage::LevelLog, LogMessageLevel);
+COMPILE_ASSERT_MATCHING_ENUM(WebConsoleMessage::LevelWarning, WarningMessageLevel);
+COMPILE_ASSERT_MATCHING_ENUM(WebConsoleMessage::LevelError, ErrorMessageLevel);
+COMPILE_ASSERT_MATCHING_ENUM(WebConsoleMessage::LevelDebug, DebugMessageLevel);

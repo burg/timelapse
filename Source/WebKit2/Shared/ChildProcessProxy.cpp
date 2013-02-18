@@ -75,12 +75,12 @@ void ChildProcessProxy::terminate()
         m_processLauncher->terminateProcess();
 }
 
-bool ChildProcessProxy::sendMessage(CoreIPC::MessageID messageID, PassOwnPtr<CoreIPC::MessageEncoder> encoder, unsigned messageSendFlags)
+bool ChildProcessProxy::sendMessage(PassOwnPtr<CoreIPC::MessageEncoder> encoder, unsigned messageSendFlags)
 {
     // If we're waiting for the web process to launch, we need to stash away the messages so we can send them once we have
     // a CoreIPC connection.
     if (isLaunching()) {
-        m_pendingMessages.append(std::make_pair(CoreIPC::Connection::OutgoingMessage(messageID, encoder), messageSendFlags));
+        m_pendingMessages.append(std::make_pair(CoreIPC::Connection::OutgoingMessage(CoreIPC::MessageID(), encoder), messageSendFlags));
         return true;
     }
 
@@ -88,7 +88,7 @@ bool ChildProcessProxy::sendMessage(CoreIPC::MessageID messageID, PassOwnPtr<Cor
     if (!m_connection)
         return false;
 
-    return connection()->sendMessage(messageID, encoder, messageSendFlags);
+    return connection()->sendMessage(encoder, messageSendFlags);
 }
 
 bool ChildProcessProxy::isLaunching() const
@@ -117,7 +117,7 @@ void ChildProcessProxy::didFinishLaunching(ProcessLauncher*, CoreIPC::Connection
     for (size_t i = 0; i < m_pendingMessages.size(); ++i) {
         CoreIPC::Connection::OutgoingMessage& outgoingMessage = m_pendingMessages[i].first;
         unsigned messageSendFlags = m_pendingMessages[i].second;
-        m_connection->sendMessage(outgoingMessage.messageID(), adoptPtr(outgoingMessage.arguments()), messageSendFlags);
+        m_connection->sendMessage(adoptPtr(outgoingMessage.arguments()), messageSendFlags);
     }
 
     m_pendingMessages.clear();

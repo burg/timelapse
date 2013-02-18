@@ -48,8 +48,8 @@ editing/spelling/spelling-linebreak.html [ Pass ]
 webkit.org/b/92726 fast/dom/register-protocol-handler.html [ Crash ]
 webkit.org/b/92726 fast/dom/unregister-protocol-handler.html [ Crash ]
 
-# Crashes on plugin test.
-webkit.org/b/98747 plugins/document-open.html [ Crash ]
+# Crashes on plugin test, also blocked by 108077
+webkit.org/b/98747 plugins/document-open.html [ Crash Failure ]
 
 webkit.org/b/102200 fast/dom/HTMLAnchorElement/anchor-download.html [ Crash Failure ]
 webkit.org/b/102200 fast/dom/HTMLAnchorElement/anchor-nodownload-set.html [ Crash Failure ]
@@ -204,6 +204,30 @@ webkit.org/b/103400 [ Debug ] compositing/overflow/content-loses-scrollbars.html
 webkit.org/b/103883 css3/selectors3/html/css3-modsel-1.html [ Failure Pass ]
 webkit.org/b/103883 css3/selectors3/xml/css3-modsel-1.xml [ Failure Pass ]
 webkit.org/b/103883 css3/selectors3/xhtml/css3-modsel-1.xml [ Failure Pass ]
+
+# Assertion failure and incorrect results on our port after r140999 (webkit.org/b/106142)
+webkit.org/b/108257 compositing/overflow/automatically-opt-into-composited-scrolling.html [ Crash Failure ]
+webkit.org/b/108257 compositing/overflow/composited-scrolling-creates-a-stacking-container.html [ Crash Failure ]
+webkit.org/b/108257 compositing/overflow/clip-content-under-overflow-controls.html [ Crash Pass ]
+
+# Asserts when destroying WebCore::Database (possibly because r141207)
+webkit.org/b/108355 fast/js/caller-property.html [ Crash Pass ]
+webkit.org/b/108355 storage/websql/close-during-stress-test.html [ Crash Pass ]
+webkit.org/b/108355 storage/websql/sql-error-codes.html [ Crash Pass ]
+
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests.html [ Crash Pass ]
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-10.html [ Crash Pass ]
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-20.html [ Crash Pass ]
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-30.html [ Crash Pass ]
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-40.html [ Crash Pass ]
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-50.html [ Crash Pass ]
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-60.html [ Crash Pass ]
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-70.html [ Crash Pass ]
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-80.html [ Crash Pass ]
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-90.html [ Crash Pass ]
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-100.html [ Crash Pass ]
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-110.html [ Crash Pass ]
+webkit.org/b/108058 [ Debug ] fast/encoding/parser-tests-120.html [ Crash Pass ]
 
 #////////////////////////////////////////////////////////////////////////////////////////
 # FAILING TESTS
@@ -417,3 +441,6 @@ webkit.org/b/107286 fast/css/sticky/sticky-writing-mode-horizontal-bt.html [ Ima
 webkit.org/b/107286 fast/css/sticky/sticky-top.html [ ImageOnlyFailure ]
 webkit.org/b/107286 fast/css/sticky/sticky-side-margins.html [ ImageOnlyFailure ]
 webkit.org/b/107286 fast/css/sticky/replaced-sticky.html [ ImageOnlyFailure ]
+
+# New ruby selection test (in r140613) fails to render correctly, not generating an expected result
+webkit.org/b/108315 fast/ruby/select-ruby.html [ Missing ]

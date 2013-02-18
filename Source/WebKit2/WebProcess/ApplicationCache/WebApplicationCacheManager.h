@@ -50,8 +50,8 @@ private:
     void getApplicationCacheOrigins(uint64_t callbackID);
     void deleteEntriesForOrigin(const SecurityOriginData&);
 
-    void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&) OVERRIDE;
-    void didReceiveWebApplicationCacheManagerMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
+    void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
+    void didReceiveWebApplicationCacheManagerMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
 
     ChildProcess* m_childProcess;
 };

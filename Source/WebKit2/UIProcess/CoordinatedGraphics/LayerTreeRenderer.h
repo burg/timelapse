@@ -48,25 +48,34 @@ class TextureMapperLayer;
 namespace WebKit {
 
 class CoordinatedBackingStore;
-class CoordinatedLayerTreeHostProxy;
 class CoordinatedLayerInfo;
+
+class LayerTreeRendererClient {
+public:
+#if ENABLE(REQUEST_ANIMATION_FRAME)
+    virtual void animationFrameReady() = 0;
+#endif
+    virtual void updateViewport() = 0;
+    virtual void renderNextFrame() = 0;
+    virtual void purgeBackingStores() = 0;
+};
 
 class LayerTreeRenderer : public ThreadSafeRefCounted<LayerTreeRenderer>, public WebCore::GraphicsLayerClient {
 public:
     struct TileUpdate {
         WebCore::IntRect sourceRect;
         WebCore::IntRect tileRect;
-        RefPtr<CoordinatedSurface> surface;
+        uint32_t atlasID;
         WebCore::IntPoint offset;
-        TileUpdate(const WebCore::IntRect& source, const WebCore::IntRect& tile, PassRefPtr<CoordinatedSurface> newSurface, const WebCore::IntPoint& newOffset)
+        TileUpdate(const WebCore::IntRect& source, const WebCore::IntRect& tile, uint32_t atlas, const WebCore::IntPoint& newOffset)
             : sourceRect(source)
             , tileRect(tile)
-            , surface(newSurface)
+            , atlasID(atlas)
             , offset(newOffset)
         {
         }
     };
-    explicit LayerTreeRenderer(CoordinatedLayerTreeHostProxy*);
+    explicit LayerTreeRenderer(LayerTreeRendererClient*);
     virtual ~LayerTreeRenderer();
     void paintToCurrentGLContext(const WebCore::TransformationMatrix&, float, const WebCore::FloatRect&, WebCore::TextureMapper::PaintFlags = 0);
     void paintToGraphicsContext(BackingStore::PlatformGraphicsContext);
@@ -78,11 +87,12 @@ public:
     void syncCanvas(CoordinatedLayerID, uint32_t frontBuffer);
     void destroyCanvas(CoordinatedLayerID);
 #endif
+    void setLayerRepaintCount(CoordinatedLayerID, int value);
 
     void detach();
     void appendUpdate(const Function<void()>&);
 
-    // The painting thread must lock the main thread to use below two methods, because two methods access members that the main thread manages. See m_coordinatedLayerTreeHostProxy.
+    // The painting thread must lock the main thread to use below two methods, because two methods access members that the main thread manages. See m_client.
     // Currently, QQuickWebPage::updatePaintNode() locks the main thread before calling both methods.
     void purgeGLResources();
     void setActive(bool);
@@ -104,6 +114,8 @@ public:
     void createTile(CoordinatedLayerID, uint32_t tileID, float scale);
     void removeTile(CoordinatedLayerID, uint32_t tileID);
     void updateTile(CoordinatedLayerID, uint32_t tileID, const TileUpdate&);
+    void createUpdateAtlas(uint32_t atlasID, PassRefPtr<CoordinatedSurface>);
+    void removeUpdateAtlas(uint32_t atlasID);
     void flushLayerChanges();
     void createImageBacking(CoordinatedImageBackingID);
     void updateImageBacking(CoordinatedImageBackingID, PassRefPtr<CoordinatedSurface>);
@@ -152,7 +164,6 @@ private:
     void ensureRootLayer();
     void commitPendingBackingStoreOperations();
 
-    CoordinatedBackingStore* getBackingStore(WebCore::GraphicsLayer*);
     void prepareContentBackingStore(WebCore::GraphicsLayer*);
     void createBackingStoreIfNeeded(WebCore::GraphicsLayer*);
     void removeBackingStoreIfNeeded(WebCore::GraphicsLayer*);
@@ -171,8 +182,8 @@ private:
     ImageBackingMap m_imageBackings;
     Vector<RefPtr<CoordinatedBackingStore> > m_releasedImageBackings;
 
-    typedef HashMap<WebCore::TextureMapperLayer*, RefPtr<CoordinatedBackingStore> > BackingStoreMap;
-    BackingStoreMap m_pendingSyncBackingStores;
+    typedef HashMap<WebCore::GraphicsLayer*, RefPtr<CoordinatedBackingStore> > BackingStoreMap;
+    BackingStoreMap m_backingStores;
 
     HashSet<RefPtr<CoordinatedBackingStore> > m_backingStoresWithPendingBuffers;
 
@@ -181,8 +192,11 @@ private:
     SurfaceBackingStoreMap m_surfaceBackingStores;
 #endif
 
+    typedef HashMap<uint32_t /* atlasID */, RefPtr<CoordinatedSurface> > SurfaceMap;
+    SurfaceMap m_surfaces;
+
     // Below two members are accessed by only the main thread. The painting thread must lock the main thread to access both members.
-    CoordinatedLayerTreeHostProxy* m_coordinatedLayerTreeHostProxy;
+    LayerTreeRendererClient* m_client;
     bool m_isActive;
 
     OwnPtr<WebCore::GraphicsLayer> m_rootLayer;

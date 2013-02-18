@@ -53,6 +53,10 @@
 #endif
 #endif
 
+#if ENABLE(CUSTOM_PROTOCOLS)
+#include "CustomProtocolManagerProxyMessages.h"
+#endif
+
 #if USE(SECURITY_FRAMEWORK)
 #include "SecItemShimProxy.h"
 #endif
@@ -77,6 +81,13 @@ static uint64_t generatePageID()
     return uniquePageID++;
 }
 
+static WebProcessProxy::WebPageProxyMap& globalPageMap()
+{
+    ASSERT(isMainThread());
+    DEFINE_STATIC_LOCAL(WebProcessProxy::WebPageProxyMap, pageMap, ());
+    return pageMap;
+}
+
 #if ENABLE(NETSCAPE_PLUGIN_API)
 static WorkQueue& pluginWorkQueue()
 {
@@ -97,6 +108,9 @@ WebProcessProxy::WebProcessProxy(PassRefPtr<WebContext> context)
     , m_mayHaveUniversalFileReadSandboxExtension(false)
 #if ENABLE(CUSTOM_PROTOCOLS)
     , m_customProtocolManagerProxy(this)
+#endif
+#if PLATFORM(MAC)
+    , m_processSuppressionEnabled(false)
 #endif
 {
     connect();
@@ -153,9 +167,9 @@ void WebProcessProxy::removeMessageReceiver(CoreIPC::StringReference messageRece
     m_messageReceiverMap.removeMessageReceiver(messageReceiverName, destinationID);
 }
 
-WebPageProxy* WebProcessProxy::webPage(uint64_t pageID) const
+WebPageProxy* WebProcessProxy::webPage(uint64_t pageID)
 {
-    return m_pageMap.get(pageID);
+    return globalPageMap().get(pageID);
 }
 
 PassRefPtr<WebPageProxy> WebProcessProxy::createWebPage(PageClient* pageClient, WebContext*, WebPageGroup* pageGroup)
@@ -163,17 +177,34 @@ PassRefPtr<WebPageProxy> WebProcessProxy::createWebPage(PageClient* pageClient, 
     uint64_t pageID = generatePageID();
     RefPtr<WebPageProxy> webPage = WebPageProxy::create(pageClient, this, pageGroup, pageID);
     m_pageMap.set(pageID, webPage.get());
+    globalPageMap().set(pageID, webPage.get());
+#if PLATFORM(MAC)
+    if (pageIsProcessSuppressible(webPage.get()))
+        m_processSuppressiblePages.add(pageID);
+    updateProcessSuppressionState();
+#endif
     return webPage.release();
 }
 
 void WebProcessProxy::addExistingWebPage(WebPageProxy* webPage, uint64_t pageID)
 {
     m_pageMap.set(pageID, webPage);
+    globalPageMap().set(pageID, webPage);
+#if PLATFORM(MAC)
+    if (pageIsProcessSuppressible(webPage))
+        m_processSuppressiblePages.add(pageID);
+    updateProcessSuppressionState();
+#endif
 }
 
 void WebProcessProxy::removeWebPage(uint64_t pageID)
 {
     m_pageMap.remove(pageID);
+    globalPageMap().remove(pageID);
+#if PLATFORM(MAC)
+    m_processSuppressiblePages.remove(pageID);
+    updateProcessSuppressionState();
+#endif
 }
 
 Vector<WebPageProxy*> WebProcessProxy::pages() const
@@ -384,25 +415,25 @@ void WebProcessProxy::getNetworkProcessConnection(PassRefPtr<Messages::WebProces
 }
 #endif // ENABLE(NETWORK_PROCESS)
 
-void WebProcessProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
+void WebProcessProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
 {
-    if (m_messageReceiverMap.dispatchMessage(connection, messageID, decoder))
+    if (m_messageReceiverMap.dispatchMessage(connection, decoder))
         return;
 
-    if (m_context->dispatchMessage(connection, messageID, decoder))
+    if (m_context->dispatchMessage(connection, decoder))
         return;
 
-    if (messageID.is<CoreIPC::MessageClassWebProcessProxy>()) {
-        didReceiveWebProcessProxyMessage(connection, messageID, decoder);
+    if (decoder.messageReceiverName() == Messages::WebProcessProxy::messageReceiverName()) {
+        didReceiveWebProcessProxyMessage(connection, decoder);
         return;
     }
 
 #if ENABLE(CUSTOM_PROTOCOLS)
-    if (messageID.is<CoreIPC::MessageClassCustomProtocolManagerProxy>()) {
+    if (decoder.messageReceiverName() == Messages::CustomProtocolManagerProxy::messageReceiverName()) {
 #if ENABLE(NETWORK_PROCESS)
         ASSERT(!context()->usesNetworkProcess());
 #endif
-        m_customProtocolManagerProxy.didReceiveMessage(connection, messageID, decoder);
+        m_customProtocolManagerProxy.didReceiveMessage(connection, decoder);
         return;
     }
 #endif
@@ -415,19 +446,19 @@ void WebProcessProxy::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC
     if (!pageProxy)
         return;
     
-    pageProxy->didReceiveMessage(connection, messageID, decoder);
+    pageProxy->didReceiveMessage(connection, decoder);
 }
 
-void WebProcessProxy::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
+void WebProcessProxy::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& replyEncoder)
 {
-    if (m_messageReceiverMap.dispatchSyncMessage(connection, messageID, decoder, replyEncoder))
+    if (m_messageReceiverMap.dispatchSyncMessage(connection, decoder, replyEncoder))
         return;
 
-    if (m_context->dispatchSyncMessage(connection, messageID, decoder, replyEncoder))
+    if (m_context->dispatchSyncMessage(connection, decoder, replyEncoder))
         return;
 
-    if (messageID.is<CoreIPC::MessageClassWebProcessProxy>()) {
-        didReceiveSyncWebProcessProxyMessage(connection, messageID, decoder, replyEncoder);
+    if (decoder.messageReceiverName() == Messages::WebProcessProxy::messageReceiverName()) {
+        didReceiveSyncWebProcessProxyMessage(connection, decoder, replyEncoder);
         return;
     }
 
@@ -439,13 +470,13 @@ void WebProcessProxy::didReceiveSyncMessage(CoreIPC::Connection* connection, Cor
     if (!pageProxy)
         return;
     
-    pageProxy->didReceiveSyncMessage(connection, messageID, decoder, replyEncoder);
+    pageProxy->didReceiveSyncMessage(connection, decoder, replyEncoder);
 }
 
-void WebProcessProxy::didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder, bool& didHandleMessage)
+void WebProcessProxy::didReceiveMessageOnConnectionWorkQueue(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, bool& didHandleMessage)
 {
-    if (messageID.is<CoreIPC::MessageClassWebProcessProxy>())
-        didReceiveWebProcessProxyMessageOnConnectionWorkQueue(connection, messageID, decoder, didHandleMessage);
+    if (decoder.messageReceiverName() == Messages::WebProcessProxy::messageReceiverName())
+        didReceiveWebProcessProxyMessageOnConnectionWorkQueue(connection, decoder, didHandleMessage);
 }
 
 void WebProcessProxy::didClose(CoreIPC::Connection*)
@@ -516,8 +547,7 @@ void WebProcessProxy::didFinishLaunching(ProcessLauncher* launcher, CoreIPC::Con
     m_context->processDidFinishLaunching(this);
 
 #if PLATFORM(MAC)
-    if (WebContext::applicationIsOccluded() && m_context->processSuppressionEnabled())
-        connection()->send(Messages::WebProcess::SetApplicationIsOccluded(true), 0);
+    updateProcessSuppressionState();
 #endif
 }
 
@@ -659,6 +689,32 @@ void WebProcessProxy::didUpdateHistoryTitle(uint64_t pageID, const String& title
     MESSAGE_CHECK_URL(url);
 
     m_context->historyClient().didUpdateHistoryTitle(m_context.get(), page, title, url, frame);
+}
+
+void WebProcessProxy::pageVisibilityChanged(WebKit::WebPageProxy *page)
+{
+#if PLATFORM(MAC)
+    if (pageIsProcessSuppressible(page))
+        m_processSuppressiblePages.add(page->pageID());
+    else
+        m_processSuppressiblePages.remove(page->pageID());
+    updateProcessSuppressionState();
+#else
+    UNUSED_PARAM(page);
+#endif
+}
+
+void WebProcessProxy::pagePreferencesChanged(WebKit::WebPageProxy *page)
+{
+#if PLATFORM(MAC)
+    if (pageIsProcessSuppressible(page))
+        m_processSuppressiblePages.add(page->pageID());
+    else
+        m_processSuppressiblePages.remove(page->pageID());
+    updateProcessSuppressionState();
+#else
+    UNUSED_PARAM(page);
+#endif
 }
 
 } // namespace WebKit

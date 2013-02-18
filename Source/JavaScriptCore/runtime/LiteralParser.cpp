@@ -32,6 +32,7 @@
 #include "JSArray.h"
 #include "JSString.h"
 #include "Lexer.h"
+#include "ObjectConstructor.h"
 #include "Operations.h"
 #include "StrongInlines.h"
 #include <wtf/ASCIICType.h>
@@ -72,6 +73,8 @@ bool LiteralParser<CharType>::tryJSONPParse(Vector<JSONPData>& results, bool nee
         if (m_exec->globalData().keywords->isKeyword(entry.m_pathEntryName))
             return false;
         TokenType tokenType = m_lexer.next();
+        if (entry.m_type == JSONPPathEntryTypeDeclare && tokenType != TokAssign)
+            return false;
         while (tokenType != TokAssign) {
             switch (tokenType) {
             case TokLBracket: {

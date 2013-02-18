@@ -38,15 +38,16 @@
 #include "JIT.h"
 #include "JITDriver.h"
 #include "JSActivation.h"
+#include "JSCJSValue.h"
 #include "JSGlobalObjectFunctions.h"
 #include "JSNameScope.h"
 #include "JSPropertyNameIterator.h"
 #include "JSString.h"
-#include "JSValue.h"
 #include "JSWithScope.h"
 #include "LLIntCommon.h"
 #include "LLIntExceptions.h"
 #include "LowLevelInterpreter.h"
+#include "ObjectConstructor.h"
 #include "Operations.h"
 #include <wtf/StringPrintStream.h>
 
@@ -483,8 +484,9 @@ LLINT_SLOW_PATH_DECL(slow_path_create_this)
     ConstructData constructData;
     ASSERT(constructor->methodTable()->getConstructData(constructor, constructData) == ConstructTypeJS);
 #endif
-    
-    Structure* structure = constructor->cachedInheritorID(exec);
+
+    size_t inlineCapacity = pc[3].u.operand;
+    Structure* structure = constructor->allocationProfile(exec, inlineCapacity)->structure();
     LLINT_RETURN(constructEmptyObject(exec, structure));
 }
 
@@ -503,7 +505,7 @@ LLINT_SLOW_PATH_DECL(slow_path_convert_this)
 LLINT_SLOW_PATH_DECL(slow_path_new_object)
 {
     LLINT_BEGIN();
-    LLINT_RETURN(constructEmptyObject(exec));
+    LLINT_RETURN(constructEmptyObject(exec, pc[3].u.objectAllocationProfile->structure()));
 }
 
 LLINT_SLOW_PATH_DECL(slow_path_new_array)

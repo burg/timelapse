@@ -239,8 +239,10 @@
         'perl_exe': 'perl',
         'gperf_exe': 'gperf',
         'bison_exe': 'bison',
-        # Without one specified, the scripts default to 'gcc'.
-        'preprocessor': '',
+
+        # We specify a preprocess so it happens locally and won't get distributed to goma.
+        # FIXME: /usr/bin/gcc won't exist on OSX forever. We want to use /usr/bin/clang once we require Xcode 4.x.
+        'preprocessor': '--preprocessor "/usr/bin/gcc -E -P -x c++"'
       }],
       ['use_x11==1 or OS=="android"', {
         'webcore_include_dirs': [
@@ -924,6 +926,7 @@
               '../css/mediaControlsChromium.css',
               '../css/mediaControlsChromiumAndroid.css',
               '../css/fullscreen.css',
+              '../css/plugIns.css',
               # Skip fullscreenQuickTime.
             ],
           },
@@ -971,6 +974,8 @@
           'inputs': [
             '../Resources/pagepopups/calendarPicker.css',
             '../Resources/pagepopups/calendarPicker.js',
+            '../Resources/pagepopups/chromium/calendarPickerChromium.css',
+            '../Resources/pagepopups/chromium/pickerCommonChromium.css',
             '../Resources/pagepopups/suggestionPicker.css',
             '../Resources/pagepopups/suggestionPicker.js',
           ],
@@ -984,24 +989,6 @@
             '--condition=ENABLE(CALENDAR_PICKER)',
             '--out-h=<(SHARED_INTERMEDIATE_DIR)/webkit/CalendarPicker.h',
             '--out-cpp=<(SHARED_INTERMEDIATE_DIR)/webkit/CalendarPicker.cpp',
-            '<@(_inputs)',
-          ],
-        },
-        {
-          'action_name': 'CalendarPickerMac',
-          'inputs': [
-            '../Resources/pagepopups/calendarPickerMac.css',
-          ],
-          'outputs': [
-            '<(SHARED_INTERMEDIATE_DIR)/webkit/CalendarPickerMac.h',
-            '<(SHARED_INTERMEDIATE_DIR)/webkit/CalendarPickerMac.cpp',
-          ],
-          'action': [
-            'python',
-            '../make-file-arrays.py',
-            '--condition=ENABLE(CALENDAR_PICKER)',
-            '--out-h=<(SHARED_INTERMEDIATE_DIR)/webkit/CalendarPickerMac.h',
-            '--out-cpp=<(SHARED_INTERMEDIATE_DIR)/webkit/CalendarPickerMac.cpp',
             '<@(_inputs)',
           ],
         },
@@ -1348,9 +1335,6 @@
           'include_dirs': [
             '<(chromium_src_dir)/third_party/apple_webkit',
           ],
-          'sources': [
-            '<(SHARED_INTERMEDIATE_DIR)/webkit/CalendarPickerMac.cpp',
-          ],
         }],
         ['OS=="win"', {
           'defines': [
@@ -1627,6 +1611,8 @@
 
         ['exclude', 'AllInOne\\.cpp$'],
       ],
+      # Disable c4267 warnings until we fix size_t to int truncations.
+      'msvs_disabled_warnings': [ 4267, ],
     },
     {
       'target_name': 'webcore_html',
@@ -1667,6 +1653,8 @@
       'dependencies': [
         'webcore_prerequisites',
       ],
+      # Disable c4267 warnings until we fix size_t to int truncations.
+      'msvs_disabled_warnings': [ 4267, 4334 ],
       # This is needed for mac because of webkit_system_interface. It'd be nice
       # if this hard dependency could be split off the rest.
       'hard_dependency': 1,
@@ -1727,10 +1715,10 @@
             # Cherry-pick files excluded by the broader regular expressions above.
             ['include', 'platform/graphics/harfbuzz/FontHarfBuzz\\.cpp$'],
             ['include', 'platform/graphics/harfbuzz/FontPlatformDataHarfBuzz\\.cpp$'],
+            ['include', 'platform/graphics/harfbuzz/HarfBuzzFace\\.(cpp|h)$'],
+            ['include', 'platform/graphics/harfbuzz/HarfBuzzFaceSkia\\.cpp$'],
+            ['include', 'platform/graphics/harfbuzz/HarfBuzzShaper\\.(cpp|h)$'],
             ['include', 'platform/graphics/harfbuzz/HarfBuzzShaperBase\\.(cpp|h)$'],
-            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzNGFace\\.(cpp|h)$'],
-            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzNGFaceSkia\\.cpp$'],
-            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzShaper\\.(cpp|h)$'],
             ['include', 'platform/graphics/opentype/OpenTypeTypes\\.h$'],
             ['include', 'platform/graphics/opentype/OpenTypeVerticalData\\.(cpp|h)$'],
             ['include', 'platform/graphics/skia/SimpleFontDataSkia\\.cpp$'],
@@ -1868,11 +1856,11 @@
             ['exclude', 'platform/graphics/skia/GlyphPageTreeNodeSkia\\.cpp$'],
             ['exclude', 'platform/graphics/skia/SimpleFontDataSkia\\.cpp$'],
 
-            # Mac uses Harfbuzz-ng.
+            # Mac uses Harfbuzz.
+            ['include', 'platform/graphics/harfbuzz/HarfBuzzFaceCoreText\\.cpp$'],
+            ['include', 'platform/graphics/harfbuzz/HarfBuzzFace\\.(cpp|h)$'],
+            ['include', 'platform/graphics/harfbuzz/HarfBuzzShaper\\.(cpp|h)$'],
             ['include', 'platform/graphics/harfbuzz/HarfBuzzShaperBase\\.(cpp|h)$'],
-            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzNGFaceCoreText\\.cpp$'],
-            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzNGFace\\.(cpp|h)$'],
-            ['include', 'platform/graphics/harfbuzz/ng/HarfBuzzShaper\\.(cpp|h)$'],
           ],
         },{ # OS!="mac"
           'sources/': [
@@ -2176,7 +2164,20 @@
         ['OS!="mac"', {
           'sources/': [['exclude', 'Mac\\.(cpp|mm?)$']]
         }],
+        ['clang==1', {
+          # FIXME: Remove once this warning has been tweaked in Clang.
+          'cflags': [
+            '-Wno-return-type-c-linkage',
+          ],
+          'xcode_settings': {
+            'WARNING_CFLAGS': [
+              '-Wno-return-type-c-linkage',
+            ],
+          }
+        }],
       ],
+      # Disable c4267 warnings until we fix size_t to int truncations.
+      'msvs_disabled_warnings': [ 4267, 4334, ],
     },
     {
       'target_name': 'webcore',

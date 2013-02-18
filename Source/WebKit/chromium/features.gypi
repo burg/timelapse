@@ -87,7 +87,7 @@
       'ENABLE_LEGACY_WEB_AUDIO=1',
       'ENABLE_LINK_PREFETCH=1',
       'ENABLE_LINK_PRERENDER=1',
-      'ENABLE_MATHML=1',
+      'ENABLE_MATHML=0',
       'ENABLE_MEDIA_SOURCE=1',
       'ENABLE_MEDIA_STATISTICS=1',
       'ENABLE_MEDIA_STREAM=<(enable_webrtc)',
@@ -204,6 +204,15 @@
           'ENABLE_WEB_AUDIO=1',
         ],
       }],
+      ['OS=="linux"', {
+        'feature_defines': [
+          'ENABLE_BINDING_INTEGRITY=1',
+        ],
+      }, { # OS!="linux"
+        'feature_defines': [
+          'ENABLE_BINDING_INTEGRITY=0',
+        ],
+      }],
       ['use_accelerated_compositing==1', {
         'feature_defines': [
           'ENABLE_3D_RENDERING=1',
@@ -240,7 +249,7 @@
       }],
       ['use_x11==1 or OS=="android"', {
         'feature_defines': [
-          'WTF_USE_HARFBUZZ_NG=1',
+          'WTF_USE_HARFBUZZ=1',
         ],
       }],
       ['chromeos==1', {

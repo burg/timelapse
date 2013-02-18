@@ -879,6 +879,22 @@ bool PluginView::shouldAllowNavigationFromDrags() const
     return m_plugin->shouldAllowNavigationFromDrags();
 }
 
+bool PluginView::getResourceData(const unsigned char*& bytes, unsigned& length) const
+{
+    if (!m_isInitialized || !m_plugin)
+        return false;
+
+    return m_plugin->getResourceData(bytes, length);
+}
+
+bool PluginView::performDictionaryLookupAtLocation(const WebCore::FloatPoint& point)
+{
+    if (!m_isInitialized || !m_plugin)
+        return false;
+
+    return m_plugin->performDictionaryLookupAtLocation(point);
+}
+
 void PluginView::notifyWidget(WidgetNotification notification)
 {
     switch (notification) {

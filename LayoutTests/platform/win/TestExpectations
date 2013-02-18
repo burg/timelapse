@@ -1213,6 +1213,9 @@ fast/images/large-size-image-crash.html
 # DOM4_EVENTS_CONSTRUCTOR is not yet enabled.
 fast/events/constructors/ui-event-constructor.html
 fast/events/constructors/mouse-event-constructor.html
+fast/events/constructors/composition-event-constructor.html
+fast/events/constructors/wheel-event-constructor.html
+fast/events/constructors/keyboard-event-constructor.html
 
 # Disable until the windows WebKit API supports injecting in the top frame only.
 # https://bugs.webkit.org/show_bug.cgi?id=41800
@@ -1292,7 +1295,7 @@ inspector/profiler/heap-snapshot-summary-retainers.html
 inspector/profiler/heap-snapshot-summary-sorting-fields.html
 inspector/profiler/heap-snapshot-summary-sorting.html
 inspector/profiler/heap-snapshot-summary-sorting-instances.html
-webkit.org/b/50485 inspector-protocol/take-heap-snapshot.html [ Skip ]
+webkit.org/b/50485 inspector-protocol/heap-profiler [ Skip ]
 
 # New inspector/profiler/memory-instrumentation-canvas.html fails on JSC platforms
 webkit.org/b/99001 inspector/profiler/memory-instrumentation-canvas.html
@@ -2515,6 +2518,10 @@ media/video-controls-captions-trackmenu-sorted.html
 media/video-controls-captions-trackmenu.html
 media/video-controls-visible-exiting-fullscreen.html
 
+# Fails on JSC platforms due to gc timing issues
+# https://bugs.webkit.org/show_bug.cgi?id=106957
+svg/dom/SVGViewSpec-invalid-ref-crash.html
+
 # Enable when support drag-and-drop autoscrolling
 webkit.org/b/39725 fast/events/drag-and-drop-autoscroll.html [ Skip ]
 
@@ -2528,3 +2535,70 @@ proximity/no-page-cache.html
 proximity/optional-event-properties.html
 proximity/updates.html
 proximity/window-property.html
+
+# Needs rebaseline after https://bugs.webkit.org/show_bug.cgi?id=9221
+webkit.org/b/9221 fast/css/resize-corner-tracking.html [ Failure ]
+webkit.org/b/9221 fast/css/resize-corner-tracking-transformed-iframe.html [ Missing ]
+
+# Temporarily skip inspector tests which are now failing on the bots due to some configuration problem
+inspector
+http/tests/inspector
+
+# Temporarily skip a bunch of failing tests on Windows bots until
+# https://bugs.webkit.org/show_bug.cgi?id=108249
+accessibility/color-well.html
+accessibility/corresponding-control-deleted-crash.html
+css2.1/t0505-c16-descendant-01-e.html
+editing/input/caret-at-the-edge-of-contenteditable.html
+editing/input/reveal-caret-of-multiline-contenteditable.html
+editing/input/reveal-caret-of-multiline-input.html
+editing/selection/extend-by-sentence-001.html
+fast/inline/drawStyledEmptyInlines.html
+fast/inline/drawStyledEmptyInlinesWithWS.html
+fast/text/capitalize-empty-generated-string.html
+fast/text/international/float-as-only-child-of-isolate-crash.html
+fast/text/whitespace/006.html
+fast/text/whitespace/007.html
+inspector-protocol/layer-tree.html
+svg/W3C-SVG-1.1-SE/painting-control-04-f.svg
+svg/W3C-SVG-1.1-SE/text-intro-02-b.svg
+svg/W3C-SVG-1.1-SE/text-intro-09-b.svg
+svg/W3C-SVG-1.1/extend-namespace-01-f.svg
+svg/batik/text/longTextOnPath.svg
+svg/batik/text/xmlSpace.svg
+svg/css/shadow-changes.svg
+svg/text/bidi-text-anchor-direction.svg
+svg/text/font-size-below-point-five.svg
+tables/mozilla/bugs/bug1188.html
+tables/mozilla/bugs/bug1318.html
+tables/mozilla/bugs/bug113235-3.html
+http/tests/inspector-enabled/console-log-before-frame-navigation.html
+http/tests/inspector-enabled/database-open.html
+http/tests/inspector-enabled/dedicated-workers-list.html
+http/tests/inspector-enabled/dom-storage-open.html
+http/tests/inspector-enabled/dynamic-scripts.html
+http/tests/inspector-enabled/injected-script-discard.html
+http/tests/misc/favicon-loads-with-icon-loading-override.html
+http/tests/security/cookies/first-party-cookie-allow-xslt.xml
+http/tests/security/cookies/third-party-cookie-blocking-main-frame.html
+media/video-transformed.html
+accessibility/heading-level.html
+accessibility/render-counter-text.html
+fast/images/style-access-during-imageChanged-crash.html
+fast/js/reentrant-caching.html
+fast/repaint/caret-with-transformation.html
+http/tests/incremental/pause-in-script-element.pl
+fast/text/international/harfbuzz-buffer-overrun.html
+
+# Spellchecker behavior tests.
+webkit.org/b/108370 editing/spelling/spelling-double-clicked-word.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-double-clicked-word-with-underscores.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-exactly-selected-multiple-words.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-exactly-selected-word.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-multiword-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-should-select-multiple-words.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-should-select-single-word.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-subword-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-with-punctuation-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-with-underscore-selection.html [ Skip ]
+webkit.org/b/108370 editing/spelling/spelling-with-whitespace-selection.html [ Skip ]

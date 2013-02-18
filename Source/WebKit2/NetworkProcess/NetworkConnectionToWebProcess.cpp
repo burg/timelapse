@@ -27,6 +27,7 @@
 #include "NetworkConnectionToWebProcess.h"
 
 #include "ConnectionStack.h"
+#include "NetworkConnectionToWebProcessMessages.h"
 #include "NetworkProcess.h"
 #include "NetworkResourceLoader.h"
 #include "RemoteNetworkingContext.h"
@@ -59,26 +60,20 @@ NetworkConnectionToWebProcess::~NetworkConnectionToWebProcess()
 {
 }
     
-void NetworkConnectionToWebProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder)
+void NetworkConnectionToWebProcess::didReceiveMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder)
 {
-    if (messageID.is<CoreIPC::MessageClassNetworkConnectionToWebProcess>()) {
-        didReceiveNetworkConnectionToWebProcessMessage(connection, messageID, decoder);
+    if (decoder.messageReceiverName() == Messages::NetworkConnectionToWebProcess::messageReceiverName()) {
+        didReceiveNetworkConnectionToWebProcessMessage(connection, decoder);
         return;
     }
     
-    if (messageID.is<CoreIPC::MessageClassNetworkResourceLoader>()) {
-        NetworkResourceLoader* loader = m_networkResourceLoaders.get(decoder.destinationID()).get();
-        if (loader)
-            loader->didReceiveNetworkResourceLoaderMessage(connection, messageID, decoder);
-        return;
-    }
     ASSERT_NOT_REACHED();
 }
 
-void NetworkConnectionToWebProcess::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageID messageID, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& reply)
+void NetworkConnectionToWebProcess::didReceiveSyncMessage(CoreIPC::Connection* connection, CoreIPC::MessageDecoder& decoder, OwnPtr<CoreIPC::MessageEncoder>& reply)
 {
-    if (messageID.is<CoreIPC::MessageClassNetworkConnectionToWebProcess>()) {
-        didReceiveSyncNetworkConnectionToWebProcessMessage(connection, messageID, decoder, reply);
+    if (decoder.messageReceiverName() == Messages::NetworkConnectionToWebProcess::messageReceiverName()) {
+        didReceiveSyncNetworkConnectionToWebProcessMessage(connection, decoder, reply);
         return;
     }
     ASSERT_NOT_REACHED();
@@ -123,6 +118,10 @@ void NetworkConnectionToWebProcess::removeLoadIdentifier(ResourceLoadIdentifier 
     RefPtr<SchedulableLoader> loader = m_networkResourceLoaders.take(identifier);
     if (!loader)
         loader = m_syncNetworkResourceLoaders.take(identifier);
+
+    // It's possible we have no loader for this identifier if the NetworkProcess crashed and this was a respawned NetworkProcess.
+    if (!loader)
+        return;
 
     NetworkProcess::shared().networkResourceLoadScheduler().removeLoader(loader.get());
 }

@@ -1,3 +1,1066 @@
+2013-01-31  Kentaro Hara  <haraken@chromium.org>
+
+        Rename WheelEvent::Granularity to WheelEvent::DeltaMode
+        https://bugs.webkit.org/show_bug.cgi?id=108434
+
+        Reviewed by Ryosuke Niwa.
+
+        Per the spec, WheelEvent::Granularity should be renamed to WheelEvent::DeltaMode.
+
+        Spec: http://www.w3.org/TR/DOM-Level-3-Events/#events-WheelEvent
+        https://dvcs.w3.org/hg/d4e/raw-file/tip/source_respec.htm#constructor-wheelevent
+
+        No tests. No change in behavior.
+
+        * src/WebInputEventConversion.cpp:
+        (WebKit::PlatformWheelEventBuilder::PlatformWheelEventBuilder):
+        (WebKit::WebMouseWheelEventBuilder::WebMouseWheelEventBuilder):
+
+2013-01-31  Yury Semikhatsky  <yurys@chromium.org>
+
+        Unreviewed. Bump Chromium dependency to 179332
+
+        * DEPS:
+
+2013-01-31  Mark Pilgrim  <pilgrim@chromium.org>
+
+        [Chromium] Move MediaPlayerPrivateChromium to WebCore
+        https://bugs.webkit.org/show_bug.cgi?id=108415
+
+        Reviewed by Adam Barth.
+
+        Part of a larger refactoring series; see tracking bug 106829.
+
+        * WebKit.gyp:
+        * src/MediaPlayerPrivateChromium.cpp: Removed.
+        * src/WebKit.cpp:
+        (WebKit::initializeWithoutV8): call new setter function in
+        WebCore::MediaPlayerPrivate
+
+2013-01-30  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r141358.
+        http://trac.webkit.org/changeset/141358
+        https://bugs.webkit.org/show_bug.cgi?id=108421
+
+        breaks android builder (Requested by morrita on #webkit).
+
+        * WebKit.gyp:
+        * features.gypi:
+        * src/WebFrameImpl.cpp:
+
+2013-01-30  Nico Weber  <thakis@chromium.org>
+
+        [chromium] Build webkit with enable_web_intents set to 0.
+        https://bugs.webkit.org/show_bug.cgi?id=108408
+
+        Reviewed by Kentaro Hara.
+
+        I'll then make chromium build fine with that, then switch
+        enable_web_intents to 0, roll that into webkit, and then
+        actually remove the code hidden behind this flag.
+
+        * WebKit.gyp:
+        * features.gypi:
+        * src/WebFrameImpl.cpp:
+
+2013-01-30  Levi Weintraub  <leviw@chromium.org>
+
+        [Chromium] WebPluginContainerImpl adding imbalanced touch handler refs
+        https://bugs.webkit.org/show_bug.cgi?id=108381
+
+        Reviewed by James Robinson.
+
+        WebPluginContainerImpl would call Document::didAddTouchEventHandler every time the plugin requested
+        touch events. Some plugins make this request more than once, leading to an imbalance in Document's
+        touch event handler map, and a stale node pointer when the plugin is destroyed. This change
+        has WebPluginContainerImpl only add one ref for the plugin at a time.
+
+        * src/WebPluginContainerImpl.cpp:
+        (WebKit::WebPluginContainerImpl::requestTouchEventType):
+
+2013-01-30  Yusuf Ozuysal  <yusufo@google.com>
+
+        Start sending scrollType as NonBubblingGesture for flings
+        https://bugs.webkit.org/show_bug.cgi?id=108372
+
+        Reviewed by James Robinson.
+
+        * src/WebCompositorInputHandlerImpl.cpp:
+        (WebKit::WebCompositorInputHandlerImpl::handleGestureFling):
+
+2013-01-30  Tien-Ren Chen  <trchen@chromium.org>
+
+        [chromium] Add WebFrame::visibleContentRect()
+        https://bugs.webkit.org/show_bug.cgi?id=108311
+
+        Reviewed by James Robinson.
+
+        * public/WebFrame.h:
+        * src/WebFrameImpl.cpp:
+        (WebKit::WebFrameImpl::visibleContentRect):
+        (WebKit):
+        * src/WebFrameImpl.h:
+        (WebFrameImpl):
+
+2013-01-30  Kentaro Hara  <haraken@chromium.org>
+
+        Implement KeyboardEvent constructor
+        https://bugs.webkit.org/show_bug.cgi?id=108320
+
+        Reviewed by Adam Barth.
+
+        Renamed keyboard event constant variables to avoid style errors.
+
+        * src/WebInputEventConversion.cpp:
+        (WebKit::WebKeyboardEventBuilder::WebKeyboardEventBuilder):
+        * tests/WebInputEventConversionTest.cpp:
+        * tests/WebInputEventFactoryTestGtk.cpp:
+
+2013-01-30  Kentaro Hara  <haraken@chromium.org>
+
+        Implement WheelEvent constructor
+        https://bugs.webkit.org/show_bug.cgi?id=108303
+
+        Reviewed by Adam Barth.
+
+        This patch just renames an enum value to avoid style check error.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::scrollBy):
+
+2013-01-30  Dana Jansens  <danakj@chromium.org>
+
+        [chromium] Add recordRenderingStats to WebSettings
+        https://bugs.webkit.org/show_bug.cgi?id=108358
+
+        Reviewed by James Robinson.
+
+        * public/WebSettings.h:
+        * src/WebSettingsImpl.cpp:
+        (WebKit::WebSettingsImpl::setRecordRenderingStats):
+        (WebKit):
+        * src/WebSettingsImpl.h:
+        (WebSettingsImpl):
+        (WebKit::WebSettingsImpl::recordRenderingStats):
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::setIsAcceleratedCompositingActive):
+
+2013-01-30  Tony Gentilcore  <tonyg@chromium.org>
+
+        Fix compile error in WebFrameTest
+        https://bugs.webkit.org/show_bug.cgi?id=108360
+
+        Unreviewed build fix.
+
+        Fixes compile error:
+        ../../Source/WebKit/chromium/tests/WebFrameTest.cpp:330:5: error: converting false to pointer type for argument 1 of char testing::internal::IsNullLiteralHelper(testing::internal::Secret*) [-Werror=conversion-null]
+
+        * tests/WebFrameTest.cpp:
+
+2013-01-30  John Knottenbelt  <jknotten@chromium.org>
+
+        [Chromium] Fix find in page rects for overflowing content.
+        https://bugs.webkit.org/show_bug.cgi?id=104924
+
+        Reviewed by Julien Chaffraix.
+
+        If a div has overflowing content, we should only normalise its
+        coordinates against the renderview or the containing scrollable block.
+
+        TEST=WebFrameTest.FindInPageMatchRects
+
+        * src/FindInPageCoordinates.cpp:
+        (WebKit::enclosingScrollableAncestor):
+            Helper function to find the enclosing containing block with an overflow clip.
+        (WebKit::toNormalizedRect):
+            Pass in the container as an argument.
+        (WebKit::findInPageRectFromAbsoluteRect):
+            Compute the container for toNormalizedRect using enclosingScrollableAncestor.
+        * tests/WebFrameTest.cpp:
+            Add expectations for new tests in WebFrameTest::FindInPageMatchRects and WebFrameTest::FindInPage.
+        * tests/data/find.html:
+            Add test case for <select> element.
+        * tests/data/find_in_page_frame.html:
+            Add test cases:
+              - Result 15, 16 tests that containing <div> with style float:left and
+                height:0px does not impact coordinate normalization.
+              - Result 17, 18 tests that matches with absolute positioning are normalized containing
+                relative positioned block, even if there is a closer parent block with overflow clip.
+              - Result 19 adds a test case for <select> element.
+
+2013-01-30  Dominik Röttsches  <dominik.rottsches@intel.com>
+
+        [HarfBuzz] Remove the HarfBuzz-old code
+        https://bugs.webkit.org/show_bug.cgi?id=108077
+
+        Reviewed by Benjamin Poulain.
+
+        Rename WTF_USE_HARFBUZZ_NG to WTF_USE_HARFBUZZ since there
+        won't be a distinction between ng and non-ng HarfBuzz after
+        removing the old code.
+
+        * features.gypi:
+
+2013-01-30  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] WebConsoleMessage is missing LevelDebug (chromium bug 172416)
+        https://bugs.webkit.org/show_bug.cgi?id=108004
+        http://code.google.com/p/chromium/issues/detail?id=172416
+
+        console.debug triggers a NOTREACHED() assertation in Chromium. This
+        is because WebCore::MessageLevel contains 5 levels, including debug,
+        where WebConsoleMessage::Level is missing a "debug" level. Add a
+        WebConsoleMessage::LevelDebug so that it can get passed up to the
+        renderer even if it doesn't make use of that now.
+
+        Requires another patch to chromium itself to fix chromium bug 172416
+        but this is a prerequisite.
+
+        Also add an enum compile time check to AssertMatchingEnums.cpp,
+
+        Patch by Kevin Day <kevinday@gmail.com> on 2013-01-28
+        Reviewed by Jochen Eisinger.
+
+        * public/WebConsoleMessage.h:
+        * src/AssertMatchingEnums.cpp:
+        * src/WebFrameImpl.cpp:
+        (WebKit::WebFrameImpl::addMessageToConsole):
+
+2013-01-30  Xianzhu Wang  <wangxianzhu@chromium.org>
+
+        [Chromium] Correct zoom for focused node when using compositor scaling
+        https://bugs.webkit.org/show_bug.cgi?id=107599
+
+        Reviewed by Adam Barth.
+
+        When applyDeviceScaleFactorInCompositor, targetScale should exclude device scale factor.
+        When applyPageScaleFactorInCompositor, caret size and content sizes are in css pixels and they should be in the viewport of the new scale.
+
+        Reapply r141153. Added font-size in html to ensure same caret size across platforms.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::scrollFocusedNodeIntoRect):
+        (WebKit):
+        (WebKit::WebViewImpl::computeScaleAndScrollForFocusedNode): Extracted from scrollFocusedNodeIntoRect() to ease testing.
+        * src/WebViewImpl.h:
+        (WebViewImpl):
+        * tests/WebFrameTest.cpp: Updated test DivScrollEditableTest
+        * tests/data/get_scale_for_zoom_into_editable_test.html: Moved the logic of onload script (which seems not to work) into WebFrameTest.cpp.
+
+2013-01-29  Mark Lam  <mark.lam@apple.com>
+
+        Rename AbstractDatabase to DatabaseBackend.
+        https://bugs.webkit.org/show_bug.cgi?id=108275.
+
+        Reviewed by Sam Weinig.
+
+        This is a pure rename operation as part of the webdatabase refactoring
+        effort. There is no semantic change in this patch.
+
+        * public/WebDatabase.h:
+        (WebDatabase):
+        * src/DatabaseObserver.cpp:
+        (WebCore::DatabaseObserver::databaseOpened):
+        (WebCore::DatabaseObserver::databaseModified):
+        (WebCore::DatabaseObserver::databaseClosed):
+        (WebCore::DatabaseObserver::reportOpenDatabaseResult):
+        (WebCore::DatabaseObserver::reportChangeVersionResult):
+        (WebCore::DatabaseObserver::reportStartTransactionResult):
+        (WebCore::DatabaseObserver::reportCommitTransactionResult):
+        (WebCore::DatabaseObserver::reportExecuteStatementResult):
+        (WebCore::DatabaseObserver::reportVacuumDatabaseResult):
+        * src/WebDatabase.cpp:
+        (WebKit::WebDatabase::WebDatabase):
+
+2013-01-29  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r141153.
+        http://trac.webkit.org/changeset/141153
+        https://bugs.webkit.org/show_bug.cgi?id=108280
+
+        Caused WebFrameTest.DivScrollIntoEditableTest to fail on Mac.
+        (Requested by keishi on #webkit).
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::scrollFocusedNodeIntoRect):
+        * src/WebViewImpl.h:
+        (WebViewImpl):
+        * tests/WebFrameTest.cpp:
+        * tests/data/get_scale_for_zoom_into_editable_test.html:
+
+2013-01-29  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r140983.
+        http://trac.webkit.org/changeset/140983
+        https://bugs.webkit.org/show_bug.cgi?id=108277
+
+        Unfortunately, this API has one last client (Requested by
+        abarth on #webkit).
+
+        * src/WebNotification.cpp:
+        (WebKit::WebNotification::isHTML):
+        (WebKit::WebNotification::url):
+        (WebKit::WebNotification::iconURL):
+        (WebKit::WebNotification::title):
+        (WebKit::WebNotification::body):
+
+2013-01-29  Shinya Kawanaka  <shinyak@chromium.org>
+
+        [Chromium] Cannot copy text when selecting readonly (or disabled) input elements
+        https://bugs.webkit.org/show_bug.cgi?id=106287
+
+        Reviewed by Hajime Morita.
+
+        When an input element is disabled or readonly, its inner element is not editable. So its rootEditableElement
+        does not exist. In WebViewImpl::caretOrSelectionRange, if rootEditableElement does not exist, it uses
+        a document element. However, the inner element and document element have a different tree scope, selection range
+        cannot be gotten correctly.
+
+        We should use ShadowRoot instead of document so that we can stay in the same tree scope.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::caretOrSelectionRange):
+        * tests/WebViewTest.cpp:
+        * tests/data/selection_disabled.html: Added.
+        * tests/data/selection_readonly.html: Added.
+
+2013-01-29  Tom Sepez  <tsepez@chromium.org>
+
+        [v8] Enable binding integrity on linux
+        https://bugs.webkit.org/show_bug.cgi?id=108242
+
+        Reviewed by Adam Barth.
+
+        * features.gypi:
+
+2013-01-29  Xianzhu Wang  <wangxianzhu@chromium.org>
+
+        [Chromium] Correct zoom for focused node when using compositor scaling
+        https://bugs.webkit.org/show_bug.cgi?id=107599
+
+        Reviewed by Adam Barth.
+
+        When applyDeviceScaleFactorInCompositor, targetScale should exclude device scale factor.
+        When applyPageScaleFactorInCompositor, caret size and content sizes are in css pixels and they should be in the viewport of the new scale.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::scrollFocusedNodeIntoRect):
+        (WebKit):
+        (WebKit::WebViewImpl::computeScaleAndScrollForFocusedNode): Extracted from scrollFocusedNodeIntoRect() to ease testing.
+        * src/WebViewImpl.h:
+        (WebViewImpl):
+        * tests/WebFrameTest.cpp: Updated test DivScrollEditableTest
+        * tests/data/get_scale_for_zoom_into_editable_test.html: Moved the logic of onload script (which seems not to work) into WebFrameTest.cpp.
+
+2013-01-29  Alec Flett  <alecflett@chromium.org>
+
+        IndexedDB: Pass metadata in to IDBOpenDBRequest.onUpgradeNeeded/onSuccess
+        https://bugs.webkit.org/show_bug.cgi?id=103920
+
+        Reviewed by Dimitri Glazkov.
+
+        Support the new IDBCallbacks::onSuccess and IDBCallbacks::onUpgradeNeeded
+        while maintaining chromium compatibility by shimming in the old API
+        in the WebKit side. Future code will clean this up so that it is just a
+        pass-through as it was before.
+
+        * public/WebIDBCallbacks.h:
+        (WebKit):
+        (WebKit::WebIDBCallbacks::onSuccess): new method signature.
+        (WebKit::WebIDBCallbacks::onUpgradeNeeded): new method signature.
+        * src/IDBCallbacksProxy.cpp:
+        (WebKit::IDBCallbacksProxy::onSuccess): call on new method signature proxies through old API.
+        (WebKit):
+        (WebKit::IDBCallbacksProxy::onUpgradeNeeded): call on new method signature proxies through old API.
+        * src/IDBCallbacksProxy.h:
+        (IDBCallbacksProxy):
+        * src/WebIDBCallbacksImpl.cpp:
+        (WebKit::WebIDBCallbacksImpl::onSuccess): call on old WebKit proxy signature calls new API.
+        (WebKit):
+        (WebKit::WebIDBCallbacksImpl::onUpgradeNeeded): call on old WebKit proxy signature calls new API.
+        * src/WebIDBCallbacksImpl.h:
+        (WebIDBCallbacksImpl):
+        * tests/IDBAbortOnCorruptTest.cpp: new method signature.
+        (WebCore::MockIDBCallbacks::onSuccess):
+        * tests/IDBDatabaseBackendTest.cpp: new method signature.
+
+2013-01-29  Alexandre Elias  <aelias@chromium.org>
+
+        [chromium] Fix contents size calculation for page scale initialization
+        https://bugs.webkit.org/show_bug.cgi?id=108204
+
+        Reviewed by enne.
+
+        My previous patch http://webk.it/107424 had a few issues that are
+        blocking WebKit roll.
+
+        - We still need the layout in resize() given that
+        http://webk.it/107922 was reverted.
+
+        - I deleted code used only for the old page-scale mode in
+        contentsSize(), but this needs to wait until WebKit roll since it's
+        making bots fail in this short term.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::resize):
+        (WebKit::WebViewImpl::contentsSize):
+
+2013-01-29  Alpha Lam  <hclam@chromium.org>
+
+        [chromium] Unreviewed DEPS roll.
+
+        Roll Chromium DEPS to 179332.
+
+        * DEPS:
+
+2013-01-29  Joshua Bell  <jsbell@chromium.org>
+
+        [Chromium] IndexedDB: Let callers specify reason (error) for aborting transaction
+        https://bugs.webkit.org/show_bug.cgi?id=107851
+
+        Reviewed by Tony Chang.
+
+        Let Chromium call abort() on a transaction and specify a reason, specifically for
+        QuotaExceededError.
+
+        * public/WebIDBDatabase.h:
+        (WebKit::WebIDBDatabase::abort): New overload for abort() that takes an error.
+        * public/WebIDBDatabaseError.h:
+        (WebKit::WebIDBDatabaseError::WebIDBDatabaseError): Overloaded constructor/assign that takes error.
+        * src/IDBDatabaseBackendProxy.cpp:
+        (WebKit::IDBDatabaseBackendProxy::abort): New overload for abort() that takes an error.
+        * src/IDBDatabaseBackendProxy.h:
+        (IDBDatabaseBackendProxy): Ditto.
+        * src/WebIDBDatabaseError.cpp: Implementation of overload ctor/assign.
+        * src/WebIDBDatabaseImpl.cpp:
+        (WebKit::WebIDBDatabaseImpl::abort): New overload for abort() that takes an error.
+        * src/WebIDBDatabaseImpl.h: Ditto.
+        * tests/IDBDatabaseBackendTest.cpp: Overload stubs for Mock class.
+
+2013-01-29  Florin Malita  <fmalita@chromium.org>
+
+        [Chromium] Unreviewed gardening.
+
+        Disable WebFrameTest.pageScaleFactorShrinksViewport (pending investigation after r141053).
+
+        * tests/WebFrameTest.cpp:
+
+2013-01-29  Keishi Hattori  <keishi@webkit.org>
+
+        [Chromium] Disabling WebFrameTest.DisambiguationPopupMobileSite because WebFrameTest is still failing after r141073.
+
+        Unreviewed. Gardening.
+
+        * tests/WebFrameTest.cpp:
+
+2013-01-29  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r141064.
+        http://trac.webkit.org/changeset/141064
+        https://bugs.webkit.org/show_bug.cgi?id=108166
+
+        [Chromium] WebFrameTest.DivScrollIntoEditableTest is failing
+        on WinXP. (Requested by keishi on #webkit).
+
+        * tests/WebFrameTest.cpp:
+        * tests/data/get_scale_for_zoom_into_editable_test.html:
+
+2013-01-29  Keishi Hattori  <keishi@webkit.org>
+
+        [Chromium] Disabling WebFrameTest.DisambiguationPopup because it is failing.
+
+        Unreviewed. Gardening.
+
+        * tests/WebFrameTest.cpp:
+
+2013-01-28  Xianzhu Wang  <wangxianzhu@chromium.org>
+
+        Re-enable WebFrameTest.DivScrollIntoEditableTest
+        https://bugs.webkit.org/show_bug.cgi?id=98558
+
+        Reviewed by Adam Barth.
+
+        * tests/WebFrameTest.cpp: Fixed several issues (onload script, the maximum scale factor, etc.) of WebFrameTest.DivScrollIntoEditableTest and enable it.
+        * tests/data/get_scale_for_zoom_into_editable_test.html: Moved the logic of onload script (which seems not to work) into WebFrameTest.cpp.
+
+2013-01-28  Tien-Ren Chen  <trchen@chromium.org>
+
+        Fix disambiguation popup for new-style page scale
+        https://bugs.webkit.org/show_bug.cgi?id=107391
+
+        Reviewed by Adam Barth.
+
+        This patch corrects various coordinate conversion for disambiguation
+        popup for the new-style page scale mode.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::handleGestureEvent):
+        (WebKit::WebViewImpl::handleInputEvent):
+        * tests/WebFrameTest.cpp:
+        * tests/data/disambiguation_popup_page_scale.html: Added.
+
+2013-01-28  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r141049.
+        http://trac.webkit.org/changeset/141049
+        https://bugs.webkit.org/show_bug.cgi?id=108151
+
+        Caused some indexed tests to crash. (Requested by keishi on
+        #webkit).
+
+        * public/WebIDBCallbacks.h:
+        (WebKit):
+        * src/IDBCallbacksProxy.cpp:
+        (WebKit::IDBCallbacksProxy::onUpgradeNeeded):
+        * src/IDBCallbacksProxy.h:
+        (IDBCallbacksProxy):
+        * src/WebIDBCallbacksImpl.cpp:
+        (WebKit::WebIDBCallbacksImpl::onSuccess):
+        (WebKit::WebIDBCallbacksImpl::onUpgradeNeeded):
+        * src/WebIDBCallbacksImpl.h:
+        (WebIDBCallbacksImpl):
+        * tests/IDBAbortOnCorruptTest.cpp:
+        (WebCore::MockIDBCallbacks::onSuccess):
+        * tests/IDBDatabaseBackendTest.cpp:
+
+2013-01-28  Raman Kumar  <ramankk@chromium.org>
+
+        Expose isRadioButton and isCheckbox API in chromium-webkit glue layer.
+        https://bugs.webkit.org/show_bug.cgi?id=108031
+
+        Reviewed by Adam Barth.
+
+        In chromium, to know if an InputElement is radiobutton or a checkbox,
+        we are checking for formControlType (a string comparision), which is
+        very slow. Exposing these API to chromium will make them faster.
+
+        * public/WebInputElement.h:
+        (WebInputElement):
+        * src/WebInputElement.cpp:
+        (WebKit::WebInputElement::isRadioButton):
+        (WebKit):
+        (WebKit::WebInputElement::isCheckbox):
+
+2013-01-28  Alexandre Elias  <aelias@chromium.org>
+
+        Make page scale shrink FrameView in applyPageScaleInCompositor mode
+        https://bugs.webkit.org/show_bug.cgi?id=107424
+
+        Reviewed by Levi Weintraub.
+
+        If applyPageScaleFactorInCompositor is enabled (Chromium-only setting),
+        instead of the entire document expanding as the user pinch zooms, the
+        viewport shrinks instead. This patch applies the pageScaleFactor to
+        visibleContentRect to get this behavior, and simplifies Chromium's
+        resize logic to stop hiding the true viewport size from WebCore.
+
+        I verified that the scaling makes sense for all the callers of
+        visibleContentRect. The exceptions are clip-layer size,
+        layout size in non-fixed-layout mode, and text autosizing, which need
+        the original unscaled size. Therefore I added a new method
+        unscaledVisibleContentSize() to ScrollView/FrameView.
+
+        This patch also modifies Page::setPageScaleFactor to perform no
+        invalidates or layout when applyPageScaleFactorInCompositor is true,
+        and also writes pageScaleFactor into HistoryItems instead of using
+        frameScaleFactor.
+
+        Since all behavior changes are tied to applyPageScaleFactorInCompositor,
+        this patch should be a no-op for non-Chromium ports.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::scaledSize): Returns the post page-scale size
+        similar to what visibleContentRect() now returns, except that it may
+        be at a different scale than the current one.
+        (WebKit::WebViewImpl::size): Back to returning density-independent
+        size without any tricks, not the "layoutSize()" fake viewport.
+        (WebKit::WebViewImpl::resize):
+        (WebKit::WebViewImpl::handleInputEvent): No need to apply
+        implTransform anymore as WebKit knows the true scroll offset; just
+        divide event coords by pageScaleFactor.
+        (WebKit::WebViewImpl::clampOffsetAtScale): Make this method support
+        applyPageScaleFactorInCompositor.  This is used to pre-clamp scroll
+        offsets at a given viewport size.
+        (WebKit::WebViewImpl::setPageScaleFactorPreservingScrollOffset): Make
+        this method support applyPageScaleFactorInCompositor (don't scale
+        scroll offsets as they are now scale-independent).
+        (WebKit::WebViewImpl::setPageScaleFactor): Make this method always use
+        clampOffsetAtScale instead of bypassing it, since it's now supported.
+        Also notify the compositor to update its state.
+        (WebKit::WebViewImpl::contentsSize): Convenience method, removed
+        difference between scaled and unscaled.
+        (WebKit::WebViewImpl::layoutSize): This method returned the "fake"
+        size we used to give FrameView.  Now no longer used for much.
+        (WebKit::WebViewImpl::computePageScaleFactorLimits):
+        (WebKit::WebViewImpl::didChangeContentsSize): Remove unnecessary
+        resize() now that we can give the true size to FrameView.
+        (WebKit::WebViewImpl::updateLayerTreeViewport): Use layoutSize()
+        directly now that FrameView no longer uses it.
+        * src/WebViewImpl.h:
+        (WebViewImpl):
+        * tests/WebFrameTest.cpp:
+
+2013-01-28  Alec Flett  <alecflett@chromium.org>
+
+        IndexedDB: Pass metadata in to IDBOpenDBRequest.onUpgradeNeeded/onSuccess
+        https://bugs.webkit.org/show_bug.cgi?id=103920
+
+        Reviewed by Dimitri Glazkov.
+
+        Support the new IDBCallbacks::onSuccess and IDBCallbacks::onUpgradeNeeded
+        while maintaining chromium compatibility by shimming in the old API
+        in the WebKit side. Future code will clean this up so that it is just a
+        pass-through as it was before.
+
+        * public/WebIDBCallbacks.h:
+        (WebKit):
+        (WebKit::WebIDBCallbacks::onSuccess): new method signature.
+        (WebKit::WebIDBCallbacks::onUpgradeNeeded): new method signature.
+        * src/IDBCallbacksProxy.cpp:
+        (WebKit::IDBCallbacksProxy::onSuccess): call on new method signature proxies through old API.
+        (WebKit):
+        (WebKit::IDBCallbacksProxy::onUpgradeNeeded): call on new method signature proxies through old API.
+        * src/IDBCallbacksProxy.h:
+        (IDBCallbacksProxy):
+        * src/WebIDBCallbacksImpl.cpp:
+        (WebKit::WebIDBCallbacksImpl::onSuccess): call on old WebKit proxy signature calls new API.
+        (WebKit):
+        (WebKit::WebIDBCallbacksImpl::onUpgradeNeeded): call on old WebKit proxy signature calls new API.
+        * src/WebIDBCallbacksImpl.h:
+        (WebIDBCallbacksImpl):
+        * tests/IDBAbortOnCorruptTest.cpp: new method signature.
+        (WebCore::MockIDBCallbacks::onSuccess):
+        * tests/IDBDatabaseBackendTest.cpp: new method signature.
+
+2013-01-28  Tom Sepez  <tsepez@chromium.org>
+
+        [v8] Security feature: JavaScript Bindings hardening
+        https://bugs.webkit.org/show_bug.cgi?id=106608
+
+        Reviewed by Adam Barth.
+
+        * features.gypi:
+        Added ENABLE_BINDING_INTEGRITY option.
+
+2013-01-28  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r141006.
+        http://trac.webkit.org/changeset/141006
+        https://bugs.webkit.org/show_bug.cgi?id=108123
+
+        Broke chromium build (Requested by arv on #webkit).
+
+        * public/WebConsoleMessage.h:
+        * src/AssertMatchingEnums.cpp:
+        * src/WebFrameImpl.cpp:
+        (WebKit::WebFrameImpl::addMessageToConsole):
+
+2013-01-28  Min Qin  <qinmin@chromium.org>
+
+        adding support for DiscardablePixelRef for caching lazily decoded images
+        https://bugs.webkit.org/show_bug.cgi?id=106842
+
+        Reviewed by Stephen White.
+
+        Adding new tests for ImageDecodingStore
+
+        * WebKit.gypi:
+        * tests/ImageDecodingStoreTest.cpp:
+        (WebCore::ImageDecodingStoreTest::createCompleteImage):
+        (WebCore::ImageDecodingStoreTest::createIncompleteImage):
+        (WebCore::TEST_F):
+        (WebCore):
+        * tests/MockDiscardablePixelRef.h: Added.
+        (WebCore):
+        (MockDiscardablePixelRef):
+        (WebCore::MockDiscardablePixelRef::MockDiscardablePixelRef):
+        (WebCore::MockDiscardablePixelRef::~MockDiscardablePixelRef):
+        (WebCore::MockDiscardablePixelRef::discard):
+        (WebCore::MockDiscardablePixelRef::onLockPixels):
+        (WebCore::MockDiscardablePixelRef::onUnlockPixels):
+
+2013-01-28  Stephen Chenney  <schenney@chromium.org>
+
+        [Chromium] Fix the build.
+
+        Unreviewed build fix.
+
+        * src/AssertMatchingEnums.cpp: Move the include to the right place and remove the bad directory prefix.
+
+2013-01-28  Dan Alcantara  <dfalcantara@chromium.org>
+
+        [Chromium, Mobile] Do not show disambiguation pop up in mobile sites
+        https://bugs.webkit.org/show_bug.cgi?id=107607
+
+        Reviewed by Adam Barth.
+
+        Add a check before showing the disambiguation popup to prevent it from appearing
+        on mobile sites.  Makes a similar test to the current disambiguation popup test
+        that expects the popup to never appear.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::handleGestureEvent):
+        (WebKit):
+        (WebKit::WebViewImpl::isLikelyMobileSite):
+        * src/WebViewImpl.h:
+        (WebViewImpl):
+        * tests/WebFrameTest.cpp:
+        * tests/data/disambiguation_popup_mobile_site.html: Added.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::handleGestureEvent):
+        (WebKit):
+        (WebKit::WebViewImpl::shouldDisableDesktopWorkarounds):
+        * src/WebViewImpl.h:
+        (WebViewImpl):
+        * tests/WebFrameTest.cpp:
+        * tests/data/disambiguation_popup_mobile_site.html: Added.
+
+2013-01-28  Stephen Chenney  <schenney@chromium.org>
+
+        [Chromium] Fix the build.
+
+        Unreviewed build fix.
+
+        * src/AssertMatchingEnums.cpp: Move the include to the right place and remove the bad directory prefix.
+
+2013-01-28  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r140869.
+        http://trac.webkit.org/changeset/140869
+        https://bugs.webkit.org/show_bug.cgi?id=108120
+
+        "Crashes on http://en.wikipedia.org/wiki/Wikipedia" (Requested
+        by tonyg-cr on #webkit).
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::resize):
+        (WebKit::WebViewImpl::computePageScaleFactorLimits):
+        * tests/WebFrameTest.cpp:
+
+2013-01-28  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r140934, r140935, and r140937.
+        http://trac.webkit.org/changeset/140934
+        http://trac.webkit.org/changeset/140935
+        http://trac.webkit.org/changeset/140937
+        https://bugs.webkit.org/show_bug.cgi?id=108117
+
+        Re-land some speculative rollouts - see wkbug.com/108048 for
+        context (Requested by jsbell on #webkit).
+
+        * public/WebIDBCallbacks.h:
+        (WebIDBCallbacks):
+        * src/AssertMatchingEnums.cpp:
+        * src/IDBCallbacksProxy.cpp:
+        * src/IDBCallbacksProxy.h:
+        (IDBCallbacksProxy):
+        * src/WebIDBCallbacksImpl.cpp:
+        * src/WebIDBCallbacksImpl.h:
+        (WebIDBCallbacksImpl):
+        * tests/IDBAbortOnCorruptTest.cpp:
+        * tests/IDBDatabaseBackendTest.cpp:
+
+2013-01-28  Kevin Day  <kevinday@gmail.com>
+
+        [chromium] WebConsoleMessage is missing LevelDebug (chromium bug 172416)
+        https://bugs.webkit.org/show_bug.cgi?id=108004
+        http://code.google.com/p/chromium/issues/detail?id=172416
+
+        console.debug triggers a NOTREACHED() assertation in Chromium. This
+        is because WebCore::MessageLevel contains 5 levels, including debug,
+        where WebConsoleMessage::Level is missing a "debug" level. Add a
+        WebConsoleMessage::LevelDebug so that it can get passed up to the
+        renderer even if it doesn't make use of that now.
+
+        Requires another patch to chromium itself to fix chromium bug 172416
+        but this is a prerequisite.
+
+        Also add an enum compile time check to AssertMatchingEnums.cpp,
+
+        Reviewed by Jochen Eisinger.
+
+        * public/WebConsoleMessage.h:
+        * src/AssertMatchingEnums.cpp:
+        * src/WebFrameImpl.cpp:
+        (WebKit::WebFrameImpl::addMessageToConsole):
+
+2013-01-28  Xianzhu Wang  <wangxianzhu@chromium.org>
+
+        [Chromium] Correct auto-zoom when using compositor scaling
+        https://bugs.webkit.org/show_bug.cgi?id=107592
+
+        Reviewed by Adam Barth.
+
+        1. The scale of auto-zoom should exclude deviceScaleFactor because the compositor will handle the scaling;
+        2. Scroll location needs to be calculated differently when pageScaleFactor is handled by the compositor.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::computeScaleAndScrollForHitRect):
+        * tests/WebFrameTest.cpp: Updated tests DivAutoZoomParamsTest, DivAutoZoomMultipleDivsTest, DivAutoZoomScaleBoundsTest and DivAutoZoomScaleFontScaleFactorTest, to make two versions of them (WebKitScaling and CompositorScaling).
+
+2013-01-28  Laszlo Gombos  <l.gombos@samsung.com>
+
+        Collapse OS(UNIX)||OS(ANDROID) to OS(UNIX)
+        https://bugs.webkit.org/show_bug.cgi?id=108091
+
+        Reviewed by Adam Barth.
+
+        OS(UNIX) is defined when OS(ANDROID) is defined.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::handleMouseDown):
+
+2013-01-28  Adam Barth  <abarth@webkit.org>
+
+        Remove webkitNotifications.createHTMLNotification
+        https://bugs.webkit.org/show_bug.cgi?id=107598
+
+        Reviewed by Benjamin Poulain.
+
+        We can remove these stubs once we've removed the Chromium-side code
+        that depends on them.
+
+        * src/WebNotification.cpp:
+        (WebKit::WebNotification::isHTML):
+        (WebKit::WebNotification::url):
+        (WebKit::WebNotification::iconURL):
+        (WebKit::WebNotification::title):
+        (WebKit::WebNotification::body):
+
+2013-01-28  James Craig  <james@cookiecrook.com>
+
+        HTML5 promotes DL from specific 'definition list' to superset 'description list'; accessibility strings and accessors should be updated to match.
+        https://bugs.webkit.org/show_bug.cgi?id=107650
+
+        Reviewed by Chris Fleizach.
+
+        Updating accessibility strings and accessors for DL/DT/DD; new one for [role="definition"] (previously it reused the role/desc for DD).
+
+        * public/WebAccessibilityRole.h:
+        * src/AssertMatchingEnums.cpp:
+        * src/LocalizedStrings.cpp:
+        (WebCore::AXDefinitionText):
+        (WebCore):
+        (WebCore::AXDescriptionListTermText):
+        (WebCore::AXDescriptionListDetailText):
+
+2013-01-28  Mike West  <mkwst@chromium.org>
+
+        [chromium] Unreviewed build fix, missing include in AssertMatchingEnums.cpp
+        https://bugs.webkit.org/show_bug.cgi?id=108086
+
+        Disabling SVG exposed a missing include in AssertMatchingEnums. This
+        patch adds it in.
+
+        * src/AssertMatchingEnums.cpp:
+            Include 'ResourceLoadPriority.h'.
+
+2013-01-28  Marja Hölttä  <marja@chromium.org>
+
+        Add an API for retrieving native memory information without going through the remote inspecting protocol
+        https://bugs.webkit.org/show_bug.cgi?id=107651
+
+        Reviewed by Adam Barth.
+
+        * WebKit.gyp:
+        * public/WebDevToolsAgent.h:
+        (WebKit):
+        (WebDevToolsAgent):
+        * public/WebMemoryUsageInfo.h: Added.
+        (WebKit):
+        (WebKit::WebMemoryUsageInfo::WebMemoryUsageInfo):
+        (WebMemoryUsageInfo):
+        * src/WebDevToolsAgentImpl.cpp:
+        (WebKit::WebDevToolsAgentImpl::processMemoryDistribution):
+        (WebKit):
+        * src/WebDevToolsAgentImpl.h:
+        (WebKit):
+        (WebDevToolsAgentImpl):
+
+2013-01-27  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r140602.
+        http://trac.webkit.org/changeset/140602
+        https://bugs.webkit.org/show_bug.cgi?id=108045
+
+        Caused 8 indexed tests to crash. (Requested by keishi on
+        #webkit).
+
+        * public/WebIDBCallbacks.h:
+        * src/IDBCallbacksProxy.cpp:
+        (WebKit::IDBCallbacksProxy::onBlocked):
+        (WebKit):
+        * src/IDBCallbacksProxy.h:
+        (IDBCallbacksProxy):
+        * src/WebIDBCallbacksImpl.cpp:
+        (WebKit::WebIDBCallbacksImpl::onBlocked):
+        (WebKit):
+        * src/WebIDBCallbacksImpl.h:
+        (WebIDBCallbacksImpl):
+        * tests/IDBAbortOnCorruptTest.cpp:
+        (WebCore::MockIDBCallbacks::onBlocked):
+        * tests/IDBDatabaseBackendTest.cpp:
+
+2013-01-27  Keishi Hattori  <keishi@webkit.org>
+
+        Unreviewed, rolling out r140850.
+        http://trac.webkit.org/changeset/140850
+        https://bugs.webkit.org/show_bug.cgi?id=107960
+
+        r14602 caused 8 indexed tests to crash.
+
+        * src/AssertMatchingEnums.cpp:
+
+2013-01-27  Jochen Eisinger  <jochen@chromium.org>
+
+        [chromium] add missing plumbing for Notification.requestPermission
+        https://bugs.webkit.org/show_bug.cgi?id=108012
+
+        Reviewed by Adam Barth.
+
+        * src/NotificationPresenterImpl.cpp:
+        (WebKit):
+        (WebKit::VoidCallbackClient::VoidCallbackClient):
+        (NotificationPermissionCallbackClient):
+        (WebKit::NotificationPermissionCallbackClient::NotificationPermissionCallbackClient):
+        (WebKit::NotificationPermissionCallbackClient::permissionRequestComplete):
+        (WebKit::NotificationPermissionCallbackClient::~NotificationPermissionCallbackClient):
+        (WebKit::NotificationPresenterImpl::requestPermission):
+        * src/NotificationPresenterImpl.h:
+        (NotificationPresenterImpl):
+
+2013-01-26  James Simonsen  <simonjam@chromium.org>
+
+        [chromium] Export ResourceRequest's priority through WebURLRequest
+        https://bugs.webkit.org/show_bug.cgi?id=107985
+
+        Reviewed by Adam Barth.
+
+        * src/AssertMatchingEnums.cpp:
+
+2013-01-25  Alexandre Elias  <aelias@chromium.org>
+
+        Call FrameView::contentsResized() when setting fixed layout size
+        https://bugs.webkit.org/show_bug.cgi?id=107922
+
+        Reviewed by James Robinson.
+
+        In fixed layout mode, we should be calling contentsResized() when the
+        fixed layout size is changed; on the other hand, we don't need to layout
+        when the visible contents size changes.
+
+        This fixes test WebFrameTest::FixedLayoutInitializeAtMinimumPageScale.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::resize):
+        (WebKit::WebViewImpl::computePageScaleFactorLimits):
+        * tests/WebFrameTest.cpp:
+
+2013-01-25  Alec Flett  <alecflett@chromium.org>
+
+        IndexedDB: Move TaskType enum to IDBDatabaseBackendInterface
+        https://bugs.webkit.org/show_bug.cgi?id=107960
+
+        Reviewed by Tony Chang.
+
+        Update asserts to reflect new enum location.
+
+        * src/AssertMatchingEnums.cpp:
+
+2013-01-25  Sheriff Bot  <webkit.review.bot@gmail.com>
+
+        Unreviewed, rolling out r140774.
+        http://trac.webkit.org/changeset/140774
+        https://bugs.webkit.org/show_bug.cgi?id=107932
+
+         Tests ScrollingCoordinatorChromiumTest.fastScrollingByDefault
+        and fastScrollingForFixedPosition are failing (Requested by
+        keishi on #webkit).
+
+        * public/WebWidget.h:
+        (WebWidget):
+        (WebKit::WebWidget::isInputThrottled):
+        (WebKit::WebWidget::renderingStats):
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::WebViewImpl):
+        (WebKit::WebViewImpl::~WebViewImpl):
+        (WebKit::WebViewImpl::renderingStats):
+        (WebKit):
+        (WebKit::WebViewImpl::setCompositorSurfaceReady):
+        (WebKit::WebViewImpl::isInputThrottled):
+        (WebKit::WebViewImpl::setIsTransparent):
+        (WebKit::WebViewImpl::setIsAcceleratedCompositingActive):
+        * src/WebViewImpl.h:
+
+2013-01-25  Eberhard Graether  <egraether@google.com>
+
+        Web Inspector: add checkbox for continuous painting to the inspector's settings
+        https://bugs.webkit.org/show_bug.cgi?id=107352
+
+        Reviewed by Pavel Feldman.
+
+        This change adds a checkbox to activate continuous painting to the WebInspector's
+        rendering settings and plumbs the setting to Chromium's WebLayerTreeView. The
+        setting is visible if InspectorClient::canContinuouslyPaint() returns true.
+
+        * public/WebView.h:
+        (WebView):
+        * src/InspectorClientImpl.cpp:
+        (WebKit::InspectorClientImpl::canContinuouslyPaint):
+        (WebKit):
+        (WebKit::InspectorClientImpl::setContinuousPaintingEnabled):
+        * src/InspectorClientImpl.h:
+        (InspectorClientImpl):
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::setContinuousPaintingEnabled):
+        (WebKit):
+        (WebKit::WebViewImpl::setIsAcceleratedCompositingActive):
+        * src/WebViewImpl.h:
+
+2013-01-24  Keishi Hattori  <keishi@webkit.org>
+
+        Adjust design of the Calendar Picker
+        https://bugs.webkit.org/show_bug.cgi?id=107507
+
+        Reviewed by Kent Tamura.
+
+        * src/DateTimeChooserImpl.cpp:
+        (WebKit::DateTimeChooserImpl::writeDocument):  Include pickerCommonChromium.css and calendarPickerChromium.css.
+
+2013-01-24  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Remove dead transitional code from WebViewImpl
+        https://bugs.webkit.org/show_bug.cgi?id=107889
+
+        Reviewed by Adrienne Walker.
+
+        The chromium side of this landed at r178256 and seems stable.
+
+        * public/WebWidget.h:
+        (WebKit::WebWidget::setCompositorSurfaceReady):
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::WebViewImpl):
+        (WebKit::WebViewImpl::~WebViewImpl):
+        (WebKit):
+        (WebKit::WebViewImpl::setIsTransparent):
+        (WebKit::WebViewImpl::setIsAcceleratedCompositingActive):
+        * src/WebViewImpl.h:
+
+2013-01-24  James Robinson  <jamesr@chromium.org>
+
+        [chromium] Null check WebLayerTreeView before dereffing in WebViewImpl::invalidateRect
+        https://bugs.webkit.org/show_bug.cgi?id=107855
+
+        Reviewed by Adrienne Walker.
+
+        During frame shutdown, WebViewImpl::m_layerTreeView may become 0 while commits are deferred but we still
+        may get invalidateRect() calls before shutdown completes.
+
+        * src/WebViewImpl.cpp:
+        (WebKit::WebViewImpl::invalidateRect):
+
 2013-01-24  Mihai Maerean  <mmaerean@adobe.com>
 
         [CSSRegions] remove setExperimentalCSSRegionsEnabled deprecated API in Source/WebKit/chromium/public/WebSettings.h

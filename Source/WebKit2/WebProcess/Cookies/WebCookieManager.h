@@ -69,8 +69,8 @@ private:
     static void cookiesDidChange();
     void dispatchCookiesDidChange();
 
-    void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&) OVERRIDE;
-    void didReceiveWebCookieManagerMessage(CoreIPC::Connection*, CoreIPC::MessageID, CoreIPC::MessageDecoder&);
+    void didReceiveMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&) OVERRIDE;
+    void didReceiveWebCookieManagerMessage(CoreIPC::Connection*, CoreIPC::MessageDecoder&);
 
     ChildProcess* m_process;
 };

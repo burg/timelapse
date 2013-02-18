@@ -160,6 +160,7 @@ modules = [
             "Toolbar.js",
             "UIUtils.js",
             "View.js",
+            "ViewportControl.js",
             "treeoutline.js",
         ]
     },
@@ -338,7 +339,6 @@ modules = [
             "HeapSnapshotWorker.js",
             "HeapSnapshotWorkerDispatcher.js",
             "JSHeapSnapshot.js",
-            "NativeHeapGraph.js",
             "NativeHeapSnapshot.js",
             "NativeMemorySnapshotView.js",
             "ProfileDataGridTree.js",
