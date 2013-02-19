@@ -366,13 +366,13 @@ WebInspector.TimelapseReplayView = function(model, recording)
     this._splitView.show(this.element);
 
     this._overviewWindow = new WebInspector.TimelapseOverview(model, recording);
-    this._overviewWindow.show(this._splitView.mainElement);
+    this._overviewWindow.show(this._splitView.firstElement());
 
     this._miniview = new WebInspector.TimelapseMiniview(model, recording);
-    this._miniview.show(this._splitView.mainElement);
+    this._miniview.show(this._splitView.firstElement());
 
     this._overviewPreview = new WebInspector.TimelapseOverviewPreview(model, recording);
-    this._overviewPreview.show(this._splitView.sidebarElement);
+    this._overviewPreview.show(this._splitView.secondElement());
 
     this._registerShortcuts();
     this._modifyListeners("addEventListener");

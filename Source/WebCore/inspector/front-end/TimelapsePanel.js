@@ -7,8 +7,7 @@ WebInspector.TimelapsePanel = function()
     WebInspector.Panel.call(this, "timelapse");
     this.registerRequiredCSS("timelapsePanel.css");
 
-    this.createSplitView();
-    this.splitView.hideMainElement();
+    this.createSidebarViewWithTree();
 
     this._model = WebInspector.timelapseModel;
     this._model.addEventListener(WebInspector.TimelapseModel.Events.CaptureDidStart, this._captureDidStart, this);
