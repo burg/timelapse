@@ -526,34 +526,15 @@ WebInspector.TimelapseReplayView.prototype = {
 
     _registerShortcuts: function()
     {
+    var shortcut = WebInspector.KeyboardShortcut;
+    var keys = shortcut.Keys;
+    var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Replay Controls"));
     this._shortcuts = {};
-
-    function registerAndDocument(shortcuts, handlers, descriptor, related)
-    {
-        var shortcutNames = [];
-        for (var i = 0; i < shortcuts.length; ++i) {
-            this._shortcuts[shortcuts[i].key] = handlers[i];
-            shortcutNames.push(shortcuts[i].name);
-        }
-
-        var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Replay"));
-        if (related)
-            section.addRelatedKeys(shortcutNames, descriptor);
-        else
-            section.addAlternateKeys(shortcutNames, descriptor);
-    }
-
-    var handlers, shortcuts, descriptor;
-    var platformSpecificModifier = WebInspector.KeyboardShortcut.Modifiers.CtrlOrMeta;
-
+    
     // Play/pause.
-    shortcuts = [];
-    handlers = [];
-    var spacebar = WebInspector.KeyboardShortcut.Keys.Space;
-    shortcuts.push(WebInspector.KeyboardShortcut.makeDescriptor(spacebar));
-    handlers.push(this._togglePlaybackButtonClicked.bind(this));
-    descriptor = WebInspector.UIString("Play/pause");
-    registerAndDocument.call(this, shortcuts, handlers, descriptor);
+    var playPauseShortcut = WebInspector.KeyboardShortcut.makeDescriptor(keys.Space);
+    this._shortcuts[playPauseShortcut] = this._togglePlaybackButtonClicked.bind(this);
+    section.addKey(playPauseShortcut, WebInspector.UIString("Play/pause recording"));
     },
 
     /* event handlers */

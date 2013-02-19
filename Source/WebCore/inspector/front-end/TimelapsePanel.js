@@ -44,43 +44,27 @@ WebInspector.TimelapsePanel.prototype = {
 
     _registerShortcuts: function()
     {
-	function registerAndDocument(shortcuts, handlers, descriptor, related)
-	{
-        var shortcutNames = [];
-        for (var i = 0; i < shortcuts.length; ++i) {
-        this.registerShortcut(shortcuts[i].key, handlers[i]);
-        shortcutNames.push(shortcuts[i].name);
-        }
-
-        var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Timelapse Panel"));
-	    if (related)
-		section.addRelatedKeys(shortcutNames, descriptor);
-	    else
-		section.addAlternateKeys(shortcutNames, descriptor);
-	}
-
-	var panel = this;
-	var backend = this._model;
-	var handlers, shortcuts, descriptor;
-	var platformSpecificModifier = WebInspector.KeyboardShortcut.Modifiers.CtrlOrMeta;
-
 	// Next/previous input.
-	shortcuts = [];
-	handlers = [];
-        shortcuts.push(WebInspector.KeyboardShortcut.makeDescriptor("n"));
-	handlers.push(function() {
-	    if (!backend.inputPaused) return;
-	    var grid = panel._dataGrid;
-	    grid.replayToNextNode.call(grid);
-	});
-	shortcuts.push(WebInspector.KeyboardShortcut.makeDescriptor("p"));
-	handlers.push(function() {
-	    if (!backend.inputPaused) return;
-	    var grid = panel._dataGrid;
+    var handlerPrev = function() {
+	    if (!this._model.inputPaused) return;
+	    var grid = this._dataGrid;
 	    grid.replayToPreviousNode.call(grid);
-	});
-	descriptor = WebInspector.UIString("Replay to next/previous input");
-	registerAndDocument.call(panel, shortcuts, handlers, descriptor, true);
+	};
+    var handlerNext = function() {
+	    if (!this._model.inputPaused) return;
+	    var grid = this._dataGrid;
+	    grid.replayToNextNode.call(grid);
+	};
+
+    var shortcut = WebInspector.KeyboardShortcut;
+    var shortcutPrev = shortcut.makeDescriptor("P", shortcut.Modifiers.Alt);
+    var shortcutNext = shortcut.makeDescriptor("N", shortcut.Modifiers.Alt);
+    this.registerShortcuts(shortcutPrev, handlerPrev.bind(this));
+    this.registerShortcuts(shortcutNext, handlerNext.bind(this));
+
+    var keys = [shortcutPrev, shortcutNext];
+    var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Timelapse Panel"));
+    section.addRelatedKeys(keys, WebInspector.UIString("Replay to previous/next input"));
     },
 };
 
