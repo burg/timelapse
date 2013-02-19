@@ -87,7 +87,7 @@ Document* SerializedEventTarget::documentFromFrameIndex(Page* page, int frameInd
 SerializedEventTarget SerializedEventTarget::serialize(EventTarget* target)
 {
     TargetType targetType;
-    int nodeIndex;
+    int nodeIndex = -1;
     int frameIndex;
 
     if (!target || target->toDOMWindow()) {

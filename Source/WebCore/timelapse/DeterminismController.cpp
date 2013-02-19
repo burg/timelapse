@@ -712,7 +712,7 @@ void DeterminismController::serialize()
     LOG(Timelapse, "%-30sMETRIC: memory overhead: %zu bytes\n", "[DeterminismController]", m_determinismLog->memorySize());
 
     JSONActionSerializer* serializer = new JSONActionSerializer(m_determinismLog);
-    FILE* file;
+    FILE* file = NULL;
     const char* filename = getenv("TIMELAPSE_SERIALIZED_RECORDING_FILENAME");
     if (filename) {
         file = fopen(filename, "w");
