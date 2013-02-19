@@ -1,0 +1,66 @@
+#!/bin/bash
+
+NIGHTLY_SVN_REVISION=142707
+NIGHTLY_DMG_URL="http://builds.nightly.webkit.org/files/trunk/mac/WebKit-SVN-r${NIGHTLY_SVN_REVISION}.dmg"
+
+# resolve links - $0 may be a link to this script
+PRG="$0"
+
+# need this for relative symlinks
+while [ -h "$PRG" ] ; do
+    ls=`ls -ld "$PRG"`
+    link=`expr "$ls" : '.*-> \(.*\)$'`
+    if expr "$link" : '/.*' > /dev/null; then
+    PRG="$link"
+    else
+    PRG="`dirname "$PRG"`/$link"
+    fi
+done
+
+saveddir=`pwd`
+REAL_HOME=`dirname "$PRG"`
+
+# make it fully qualified
+REAL_HOME=`cd "$REAL_HOME" && pwd`
+
+E_NOARGS=85
+
+if [ -z "$1" ]
+then
+    DMG_FILE=/tmp/webkit-nightly-dmg
+    echo "No nightly disk image specified, will fetch one from the internet."
+    wget $NIGHTLY_DMG_URL -O $DMG_FILE
+#	echo "Usage: `basename $0` nightly.dmg" >&2
+#	exit $E_NOARGS
+else
+    DMG_FILE=$1
+fi
+
+MOUNT_POINT=/tmp/webkit-nightly
+FRAMEWORK_PATH=$MOUNT_POINT/WebKit.app/Contents/Frameworks/10.7/WebInspector.framework
+BUILD_ROOT=$REAL_HOME/../WebKitBuild
+
+if [ ! -d "$BUILD_ROOT" ]
+then
+	echo "Couldn't find a build directory (went looking at $BUILD_ROOT)"
+	exit
+fi
+
+hdiutil attach -readonly -mountpoint $MOUNT_POINT $DMG_FILE
+
+if [ ! -d "$FRAMEWORK_PATH" ]
+then
+	echo "Couldn't find framework to sync (went looking at $FRAMEWORK_PATH)"
+	exit
+fi
+
+for MODE in Debug Release
+do
+	if [ -d "$BUILD_ROOT/$MODE/" ]; then
+		rsync -av $FRAMEWORK_PATH $BUILD_ROOT/$MODE/
+	else
+	        echo "$BUILD_ROOT/$MODE/ didn't exist, not syncing for mode $MODE";
+	fi
+done
+
+hdiutil detach $MOUNT_POINT
