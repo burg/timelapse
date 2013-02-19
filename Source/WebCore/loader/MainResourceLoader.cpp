@@ -674,8 +674,10 @@ void MainResourceLoader::load(const ResourceRequest& initialRequest, const Subst
 
     if (rootDoc && controller && (controller->isCapturingDocument(rootDoc) ||
                                   controller->isReplayingDocument(rootDoc) ||
-                                  controller->expectsPageLoad())) {
+                                  frame->page()->networkProxy()->expectsPageLoad())) {
         
+        frame->page()->networkProxy()->setExpectsPageLoad(false);
+        frame->page()->networkProxy()->setInitiatingPageLoad(true);
         m_loaderId = frame->page()->networkProxy()->nextLoaderId(request);
     }
 #endif // ENABLE(TIMELAPSE)

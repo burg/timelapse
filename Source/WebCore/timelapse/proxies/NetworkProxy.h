@@ -58,6 +58,13 @@ public:
     void removeHandleById(int);
     DeterminismController* controller() const;
     int nextLoaderId(const ResourceRequest&);
+    
+    // These flags manage the initial sequence leading up to controller->capturing()
+    // or controller->replaying() becoming true.
+    bool expectsPageLoad() const { return m_expectsPageLoad; }
+    void setExpectsPageLoad(bool value) { m_expectsPageLoad = value; }
+    bool initiatingPageLoad() const { return m_initiatingPageLoad; }
+    void setInitiatingPageLoad(bool value) { m_initiatingPageLoad = value; }
 #endif // ENABLE(TIMELAPSE)
 
     PassRefPtr<ResourceHandle> createResourceHandle(NetworkingContext*, const ResourceRequest&, ResourceHandleClient*, int loaderId, bool, bool);
@@ -66,6 +73,8 @@ private:
     NetworkProxy(Page*);
 
     int m_nextId;
+    bool m_expectsPageLoad;
+    bool m_initiatingPageLoad;
     HashMap<int, HandleContext> m_replayHandleMap;
 };
     

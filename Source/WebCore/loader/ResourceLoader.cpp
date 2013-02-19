@@ -128,8 +128,10 @@ bool ResourceLoader::init(const ResourceRequest& r)
 #if ENABLE(TIMELAPSE)
     Document* rootDoc = m_frame->tree()->top()->document();
     DeterminismController* controller = m_frame->page()->determinismController();
+    
     if (rootDoc && controller && (controller->isCapturingDocument(rootDoc) ||
-                                  controller->isReplayingDocument(rootDoc))) {
+                                  controller->isReplayingDocument(rootDoc) ||
+                                  m_frame->page()->networkProxy()->initiatingPageLoad())) {
         m_loaderId = m_frame->page()->networkProxy()->nextLoaderId(r);
     }
 #endif // ENABLE(TIMELAPSE)

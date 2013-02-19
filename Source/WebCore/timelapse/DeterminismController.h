@@ -120,9 +120,6 @@ namespace WebCore {
         ErrorMode errorStrategy() const { return m_errorStrategy; }
         void setErrorStrategy(ErrorMode mode) { m_errorStrategy = mode; }
 
-        bool expectsPageLoad() const { return m_expectsPageLoad; }
-        void setExpectsPageLoad(bool value) { m_expectsPageLoad = value; }
-
         Page* page() const { return m_page; }
         PassRefPtr<CacheController> cacheController() const;
         PassRefPtr<WTF::DeterminismLog> determinismLog() const;
@@ -149,9 +146,6 @@ namespace WebCore {
         bool replaying() const;
 
         Page* m_page;
-        //used to keep track of whether we have just dispatched a frame navigation
-        //to the root frame, but the new root document hasn't been created yet.
-        bool m_expectsPageLoad;
 
         //used to implement "async" action dispatch
         Timer<DeterminismController> m_timer;
