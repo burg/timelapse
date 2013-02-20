@@ -2,10 +2,10 @@
  * @constructor
  * @extends {WebInspector.Panel}
  */
-WebInspector.TimelapsePanel = function()
+WebInspector.RecordingsPanel = function()
 {
-    WebInspector.Panel.call(this, "timelapse");
-    this.registerRequiredCSS("timelapsePanel.css");
+    WebInspector.Panel.call(this, "recordings");
+    this.registerRequiredCSS("recordingsPanel.css");
 
     this.createSidebarViewWithTree();
 
@@ -16,10 +16,10 @@ WebInspector.TimelapsePanel = function()
     this._registerShortcuts();
 };
 
-WebInspector.TimelapsePanel.prototype = {
+WebInspector.RecordingsPanel.prototype = {
     get toolbarItemLabel()
     {
-        return WebInspector.UIString("Timelapse");
+        return WebInspector.UIString("Recordings");
     },
 
     _recordingUnloaded: function()
@@ -63,9 +63,9 @@ WebInspector.TimelapsePanel.prototype = {
     this.registerShortcuts(shortcutNext, handlerNext.bind(this));
 
     var keys = [shortcutPrev, shortcutNext];
-    var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Timelapse Panel"));
+    var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Recordings Panel"));
     section.addRelatedKeys(keys, WebInspector.UIString("Replay to previous/next input"));
     },
 };
 
-WebInspector.TimelapsePanel.prototype.__proto__ = WebInspector.Panel.prototype;
+WebInspector.RecordingsPanel.prototype.__proto__ = WebInspector.Panel.prototype;

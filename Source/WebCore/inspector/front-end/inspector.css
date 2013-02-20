@@ -3642,7 +3642,7 @@ div.timelapse-overview-timeline {
     z-index: 750;
 }
 
-/* the keyframes are defined in timelapsePanel.css */
+/* the keyframes are defined in recordingsPanel.css */
 .timelapse-overview-slider.playback-pulse div {
     -webkit-animation: playback-pulse 1s infinite;
 }
@@ -3712,7 +3712,7 @@ div.timelapse-overview-timeline {
     background-color: rgba(255, 0, 0, 1);
 }
 
-/* this matches the color defined in timelapsePanel.css */
+/* this matches the color defined in recordingsPanel.css */
 .timelapse-overview-slider.breakpoint-slider .timelapse-slider-band,
 .timelapse-overview-slider.breakpoint-slider .timelapse-slider-wedge {
     -webkit-animation-name: breakpoint-blink;
@@ -3804,12 +3804,12 @@ div.timelapse-miniview {
 .timelapse-miniview-slider.adjustable {
 }
 
-/* the keyframes are defined in timelapsePanel.css */
+/* the keyframes are defined in recordingsPanel.css */
 .timelapse-miniview-slider.playback-pulse div {
     -webkit-animation: playback-pulse 1s infinite;
 }
 
-/* this definition matches the one in timelapsePanel.css */
+/* this definition matches the one in recordingsPanel.css */
 .timelapse-miniview-slider.breakpoint-blink div {
     -webkit-animation-name: breakpoint-blink;
     -webkit-animation-duration: 1s;
@@ -3855,7 +3855,7 @@ div.timelapse-miniview {
     background-color: rgba(0,0,0,0,3);
 }
 
-/* this matches the color defined in timelapsePanel.css */
+/* this matches the color defined in recordingsPanel.css */
 .timelapse-miniview-slider.breakpoint-slider .timelapse-slider-band {
     background-color: rgba(10, 55, 230, 1);
 }

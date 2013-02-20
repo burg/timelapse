@@ -42,11 +42,11 @@ var WebInspector = {
         var network = new WebInspector.NetworkPanelDescriptor();
         var scripts = new WebInspector.ScriptsPanelDescriptor();
         var timeline = new WebInspector.TimelinePanelDescriptor();
-        var timelapse = new WebInspector.PanelDescriptor("timelapse", WebInspector.UIString("Timelapse"), "TimelapsePanel", "TimelapsePanel.js");
+        var recordings = new WebInspector.PanelDescriptor("recordings", WebInspector.UIString("Recordings"), "RecordingsPanel", "RecordingsPanel.js");
         var profiles = new WebInspector.PanelDescriptor("profiles", WebInspector.UIString("Profiles"), "ProfilesPanel", "ProfilesPanel.js");
         var audits = new WebInspector.PanelDescriptor("audits", WebInspector.UIString("Audits"), "AuditsPanel", "AuditsPanel.js");
         var console = new WebInspector.PanelDescriptor("console", WebInspector.UIString("Console"), "ConsolePanel");
-        var allDescriptors = [elements, resources, network, scripts, timeline, timelapse, profiles, audits, console];
+        var allDescriptors = [elements, resources, network, scripts, timeline, recordings, profiles, audits, console];
 
         var panelDescriptors = [];
         if (WebInspector.WorkerManager.isWorkerFrontend()) {
@@ -85,7 +85,7 @@ var WebInspector = {
 	this._toggleTimelapseControllerButton.addEventListener("click", this._toggleTimelapseControllerButtonClicked.bind(this), false);
         mainStatusBar.insertBefore(this._toggleTimelapseControllerButton.element, bottomStatusBarContainer);
 
-	if (WebInspector.TimelapsePanel) {
+	if (WebInspector.RecordingsPanel) {
 	    // create status message widget
 	    var model = WebInspector.timelapseModel;
 	    var eventNames = WebInspector.TimelapseModel.Events;
