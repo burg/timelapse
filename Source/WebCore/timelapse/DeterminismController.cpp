@@ -711,21 +711,19 @@ void DeterminismController::serialize()
 {
     LOG(Timelapse, "%-30sMETRIC: memory overhead: %zu bytes\n", "[DeterminismController]", m_determinismLog->memorySize());
 
-    JSONActionSerializer* serializer = new JSONActionSerializer(m_determinismLog);
-    FILE* file = NULL;
+    JSONActionSerializer serializer(m_determinismLog);
+    FILE* file;
     const char* filename = getenv("TIMELAPSE_SERIALIZED_RECORDING_FILENAME");
     if (filename) {
         file = fopen(filename, "w");
         if (!file)
             fprintf(stderr, "Warning: Could not open log file %s for writing.\n", filename);
     }
-    if (!file)
-        file = stderr;
-
-    LOG(Timelapse, "%-30sMETRIC: dumping serialized recording to %s\n", "[DeterminismController]", filename);
-
-    serializer->serializeToFile(file);
-    fclose(file);
+    if (file) {
+        LOG(Timelapse, "%-30sMETRIC: dumping serialized recording to %s\n", "[DeterminismController]", filename);
+        serializer.serializeToFile(file);
+        fclose(file);
+    }
 }
 
 void DeterminismController::changeProxyMode(TimelapseProxy::ProxyMode mode)
