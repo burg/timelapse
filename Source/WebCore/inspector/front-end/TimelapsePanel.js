@@ -10,8 +10,8 @@ WebInspector.TimelapsePanel = function()
     this.createSidebarViewWithTree();
 
     this._model = WebInspector.timelapseModel;
-    this._model.addEventListener(WebInspector.TimelapseModel.Events.CaptureDidStart, this._captureDidStart, this);
-    this._model.addEventListener(WebInspector.TimelapseModel.Events.CaptureDidStop, this._captureDidStop, this);
+    this._model.addEventListener(WebInspector.TimelapseModel.Events.RecordingUnloaded, this._recordingUnloaded, this);
+    this._model.addEventListener(WebInspector.TimelapseModel.Events.RecordingLoaded, this._recordingLoaded, this);
 
     this._registerShortcuts();
 };
@@ -22,7 +22,7 @@ WebInspector.TimelapsePanel.prototype = {
         return WebInspector.UIString("Timelapse");
     },
 
-    _captureDidStart: function()
+    _recordingUnloaded: function()
     {
         WebInspector.Panel.prototype.reset.call(this);
         this.searchCanceled();
@@ -34,12 +34,12 @@ WebInspector.TimelapsePanel.prototype = {
         }
     },
 
-    _captureDidStop: function()
+    _recordingLoaded: function()
     {
         this.searchCanceled();
       
-        this._dataGrid = new WebInspector.TimelapseGrid(this._model, this._model.activeRecording);
-        this._dataGrid.show(this.splitView.sidebarElement);
+        this._dataGrid = new WebInspector.TimelapseGrid(this._model, this._model.loadedRecording);
+        this._dataGrid.show(this.splitView.mainElement);
     },
 
     _registerShortcuts: function()

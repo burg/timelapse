@@ -39,11 +39,9 @@ WebInspector.TimelapseRecording = function(model)
     this._model = model;
     this.calculator = new WebInspector.TimelapseCalculator(this);
     this._providers = [];
-    //this._records = [];
+    this._records = [];
 
-    var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.BreakpointScanStarted, this._breakpointScanStarted, this);
-    this.reset();
+    this._modifyListeners("addEventListener");
 };
 
 WebInspector.TimelapseRecording.Events = {
@@ -58,17 +56,24 @@ WebInspector.TimelapseRecording.Events = {
 };
 
 WebInspector.TimelapseRecording.prototype = {
-    get savepointProvider() {
-	var providers = this.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);
-	console.assert(providers.length == 1, "Expected one savepoint provider, but found "+providers.length);
-	return (providers.length) ? providers.pop() : false;
+    // Private API (helpers)
+    _modifyListeners: function(op) {
+    console.assert(op === "addEventListener" || op === "removeEventListener",
+                   "Tried to do something unsupported to listeners: " + op);
+       
+    var eventNames = WebInspector.TimelapseModel.Events;
+    this._model[op](eventNames.BreakpointScanStarted, this._breakpointScanStarted, this);
+    this._model[op](eventNames.RecordingUnloaded,     this._recordingUnloaded,     this);
     },
 
-    // TODO: remove; recording should not be reused across captures
-    reset: function() 
+    // Private API (callbacks)
+    _recordingUnloaded: function(event)
     {
-    this._records = [];
-	this.calculator.reset();
+    var recording = event.data;
+    if (recording !== this)
+        return;
+        
+    this._modifyListeners("removeEventListener");
 
 	var inputProviders = this.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
 	for (var i = 0; i < inputProviders.length; i++)
@@ -87,7 +92,6 @@ WebInspector.TimelapseRecording.prototype = {
 	    this.removeProvider(overviewPreviewProviders[i]);
     },
 
-    // Private API (callbacks)
     _breakpointScanStarted: function()
     {
 	// TODO: manage multiple breakpoint providers
@@ -108,6 +112,12 @@ WebInspector.TimelapseRecording.prototype = {
     },
 
     // Public API
+    get savepointProvider() {
+	var providers = this.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);
+	console.assert(providers.length == 1, "Expected one savepoint provider, but found "+providers.length);
+	return (providers.length) ? providers.pop() : false;
+    },
+    
     addProvider: function(provider) {
 	if (this._providers.indexOf(provider) != -1)
 	    return;
@@ -298,12 +308,7 @@ WebInspector.TimelapseSerializedRecording.prototype.__proto__ = WebInspector.Tim
 WebInspector.TimelapseLiveRecording = function(model)
 {
     WebInspector.TimelapseRecording.call(this, model);
-    
     this._isCapturing = false;
-
-    var eventNames = WebInspector.TimelapseModel.Events;
-    model.addEventListener(eventNames.CaptureWillStart, this._captureWillStart, this);
-    model.addEventListener(eventNames.CaptureWillStop,  this._captureWillStop,  this);
 };
 
 WebInspector.TimelapseLiveRecording.prototype = {
@@ -313,16 +318,24 @@ WebInspector.TimelapseLiveRecording.prototype = {
         return this._isCapturing;
     },
     
-    _captureWillStart: function()
-    {
-        // TODO: remove
-        this.reset();
+    _modifyListeners: function(op) {
+    console.assert(op === "addEventListener" || op === "removeEventListener",
+                   "Tried to do something unsupported to listeners: " + op);
+       
+    var eventNames = WebInspector.TimelapseModel.Events;
+    this._model[op](eventNames.CaptureDidStart, this._captureDidStart, this);
+    this._model[op](eventNames.CaptureDidStop,  this._captureDidStop,  this);
+
+    WebInspector.TimelapseRecording.prototype._modifyListeners.call(this, op);
+    },
     
+    _captureDidStart: function()
+    {
         this._isCapturing = true;
         this._initializeInputs();
     },
 
-    _captureWillStop: function()
+    _captureDidStop: function()
     {
         this._isCapturing = false;
         this._initializeSavepoints();

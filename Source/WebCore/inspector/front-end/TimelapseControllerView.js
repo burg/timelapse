@@ -45,8 +45,9 @@ WebInspector.TimelapseControllerView = function(model)
     var events = WebInspector.TimelapseModel.Events;
     this._model.addEventListener(events.Enabled, this._timelapseEnabled, this);
     this._model.addEventListener(events.Disabled, this._timelapseDisabled, this);
-    this._model.addEventListener(events.CaptureDidStart, this._captureDidStart, this);
-    this._model.addEventListener(events.CaptureDidStop, this._captureDidStop, this);
+    this._model.addEventListener(events.RecordingCreated, this._recordingCreated, this);
+    this._model.addEventListener(events.RecordingLoaded, this._recordingLoaded, this);
+    this._model.addEventListener(events.RecordingUnloaded, this._recordingUnloaded, this);
 
     this.element.addEventListener("focus", this.focus.bind(this), true);
     this.element.addEventListener("blur", this.blur.bind(this), true);
@@ -160,6 +161,7 @@ WebInspector.TimelapseControllerView.prototype = {
         this._enabled = false;
         this.currentView = new WebInspector.TimelapseDefaultView(this._model);
 
+        // TODO(Issue #79): don't automatically manage the timeline.
         // restore any disablements we did to the timeline.
         if (WebInspector.panels.timeline) {
             WebInspector.panels.timeline.toggleTimelineButton.disabled = false;
@@ -167,10 +169,12 @@ WebInspector.TimelapseControllerView.prototype = {
         }
     },
 
-    _captureDidStart: function()
+    _recordingCreated: function(event)
     {
-        this.currentView = new WebInspector.TimelapseCaptureView(this._model, this._model.activeRecording);
+        var recording = event.data;
+        this.currentView = new WebInspector.TimelapseCaptureView(this._model, recording);
 
+        // TODO(Issue #79): don't automatically manage the timeline.
         var timelinePanel = WebInspector.panels.timeline;
         // automatically turn on Timeline capture, and prevent its clearing or stopping.
         if (timelinePanel) {
@@ -181,17 +185,20 @@ WebInspector.TimelapseControllerView.prototype = {
         }
     },
 
-    _captureDidStop: function()
+    _recordingLoaded: function(event)
     {
         // XXX: parameterize the default view's message
     
         // if nothing was recorded, don't even show the replay view.
         // the capture view knows to change its message in this situation.
-        if (this._model.activeRecording.allRecords.length == 0)
+
+        var recording = event.data;
+        if (recording.allRecords.length == 0)
             return;
 
-        this.currentView = new WebInspector.TimelapseReplayView(this._model, this._model.activeRecording);
+        this.currentView = new WebInspector.TimelapseReplayView(this._model, recording);
 
+        // TODO(Issue #79): don't automatically manage the timeline.
         var timelinePanel = WebInspector.panels.timeline;
         // automatically turn off Timeline capture.
         if (timelinePanel) {
@@ -200,6 +207,11 @@ WebInspector.TimelapseControllerView.prototype = {
             timelinePanel.toggleTimelineButton.disabled = true;
         }
     },
+    
+    _recordingUnloaded: function()
+    {
+        this.currentView = new WebInspector.TimelapseDefaultView(this._model);
+    }
 }
 
 WebInspector.TimelapseControllerView.prototype.__proto__ = WebInspector.View.prototype;
@@ -219,11 +231,9 @@ WebInspector.TimelapseDefaultView = function(model)
     this._messagePanel = document.createElement("div");
     this._messagePanel.className = "timelapse-capture-message";
     this._messagePanel.textContent = "Nothing loaded. Click to start recording.";
-    this._clickListener = this._onMessagePanelClicked.bind(this);
-    this._messagePanel.addEventListener("click", this._clickListener, true);
+
+    this._modifyListeners("addEventListener");
     
-    var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.CaptureWillStart, this._onCaptureWillStart, this);
     this.element.appendChild(this._messagePanel);
 };
 

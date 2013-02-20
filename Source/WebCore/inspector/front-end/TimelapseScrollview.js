@@ -54,6 +54,9 @@ WebInspector.TimelapseScrollview = function(model, recording)
     this._autosizeCanvas();
     this._clearGraph();
     
+    this._modifyListeners("addEventListener");
+    
+    // if providers already exist, add them.
     var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
@@ -83,6 +86,8 @@ WebInspector.TimelapseScrollview.prototype = {
         for (var i = 0; i < this._providers.length; i++) {
             this._modifyListenersForProvider(this._providers[i], "removeEventListener");
         }
+        
+        this._modifyListeners("removeEventListener");
     },
     
     onResize: function()
@@ -125,6 +130,24 @@ WebInspector.TimelapseScrollview.prototype = {
 	}
 	
 	return found;
+    },
+
+    _onProviderAdded: function(event)
+    {
+        var provider = event.data;
+
+        if (!this._canUseProvider(provider))
+            return;
+
+        this._addProvider(provider);
+    },
+
+    _modifyListeners: function(op) {
+        console.assert(op === "addEventListener" || op === "removeEventListener",
+                       "Tried to do something unsupported to listeners: " + op);
+
+        var recordingEventNames = WebInspector.TimelapseRecording.Events;
+        this._recording[op](recordingEventNames.ProviderAdded, this._onProviderAdded, this);
     },
 
     _modifyListenersForProvider: function(provider, op)
