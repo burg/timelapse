@@ -38,7 +38,7 @@ WebInspector.RecordingsPanel.prototype = {
     {
         this.searchCanceled();
       
-        this._dataGrid = new WebInspector.TimelapseGrid(this._model, this._model.loadedRecording);
+        this._dataGrid = new WebInspector.RecordingInputsGrid(this._model, this._model.loadedRecording);
         this._dataGrid.show(this.splitView.mainElement);
     },
 

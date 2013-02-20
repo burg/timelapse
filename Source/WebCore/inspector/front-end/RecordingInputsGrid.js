@@ -28,7 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-WebInspector.TimelapseGrid = function(model, recording) {
+WebInspector.RecordingInputsGrid = function(model, recording) {
     /* column definitions */
     var columns = {
 	gutter: {},
@@ -77,10 +77,10 @@ WebInspector.TimelapseGrid = function(model, recording) {
     this._recording = recording;
     
     this._sortingFunctions = {
-	index: WebInspector.TimelapseGridNode.IndexComparator,
-	group: WebInspector.TimelapseGridNode.GroupComparator,
-	type: WebInspector.TimelapseGridNode.TypeComparator,
-	timestamp: WebInspector.TimelapseGridNode.TimestampComparator,
+	index: WebInspector.RecordingInputsGridNode.IndexComparator,
+	group: WebInspector.RecordingInputsGridNode.GroupComparator,
+	type: WebInspector.RecordingInputsGridNode.TypeComparator,
+	timestamp: WebInspector.RecordingInputsGridNode.TimestampComparator,
     };
     this.resizeMethod = WebInspector.DataGrid.ResizeMethod.Last;
 
@@ -91,17 +91,17 @@ WebInspector.TimelapseGrid = function(model, recording) {
     this.addEventListener("sorting changed", this._onSortingChanged, this);
     this.scrollContainer.addEventListener("scroll", this._updateOffscreenRows.bind(this));
 
-    var sliderEventNames = WebInspector.TimelapseGridSlider.Events;
-    var playbackSlider = new WebInspector.TimelapseGridSlider(this, "playback", true);
+    var sliderEventNames = WebInspector.RecordingInputsGridSlider.Events;
+    var playbackSlider = new WebInspector.RecordingInputsGridSlider(this, "playback", true);
     playbackSlider.addEventListener(sliderEventNames.DragStart, this._onGridDragStart, this);
     playbackSlider.addEventListener(sliderEventNames.DragEnd, this._onGridDragEnd, this);
     playbackSlider.element.addEventListener("contextmenu", this._onPlaybackSliderContextMenu.bind(this));
     this._addSlider(playbackSlider);
-    this._addSlider(new WebInspector.TimelapseGridSlider(this, "previous", false));
-    this._addSlider(new WebInspector.TimelapseGridSlider(this, "tentative", false));
+    this._addSlider(new WebInspector.RecordingInputsGridSlider(this, "previous", false));
+    this._addSlider(new WebInspector.RecordingInputsGridSlider(this, "tentative", false));
 
     this._providers = {};
-    this._refreshDelay = WebInspector.TimelapseGrid.DefaultRefreshDelay;
+    this._refreshDelay = WebInspector.RecordingInputsGrid.DefaultRefreshDelay;
     this._maxMarkIndex = 0;
     this._recordGridNodes = {};
     
@@ -134,9 +134,9 @@ WebInspector.TimelapseGrid = function(model, recording) {
 	node.reveal();
 };
 
-WebInspector.TimelapseGrid.DefaultRefreshDelay = 150;
+WebInspector.RecordingInputsGrid.DefaultRefreshDelay = 150;
 
-WebInspector.TimelapseGrid.prototype = {
+WebInspector.RecordingInputsGrid.prototype = {
 
     _adjustListeners: function(op)
     {
@@ -403,7 +403,7 @@ WebInspector.TimelapseGrid.prototype = {
 
     _createRecordGridNode: function(record)
     {
-	var node = new WebInspector.TimelapseGridNode(this, record);
+	var node = new WebInspector.RecordingInputsGridNode(this, record);
 	this._recordGridNodes[record.mark.index] = node;
 	return node;
     },
@@ -570,7 +570,7 @@ WebInspector.TimelapseGrid.prototype = {
     _onGridDragStart: function(event)
     {
 	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
-	this.sliders.playback.addEventListener(WebInspector.TimelapseGridSlider.Events.Dragging,
+	this.sliders.playback.addEventListener(WebInspector.RecordingInputsGridSlider.Events.Dragging,
 							 this._onGridDragging, this);
 
 	this._dragStartOffset = event.data;
@@ -587,7 +587,7 @@ WebInspector.TimelapseGrid.prototype = {
 
     _onGridDragEnd: function()
     {
-	this.sliders.playback.removeEventListener(WebInspector.TimelapseGridSlider.Events.Dragging,
+	this.sliders.playback.removeEventListener(WebInspector.RecordingInputsGridSlider.Events.Dragging,
 							 this._onGridDragging);
 
 	delete this._dragStartOffset;
@@ -740,13 +740,13 @@ WebInspector.TimelapseGrid.prototype = {
     },
 };
 
-WebInspector.TimelapseGrid.prototype.__proto__ = WebInspector.DataGrid.prototype;
+WebInspector.RecordingInputsGrid.prototype.__proto__ = WebInspector.DataGrid.prototype;
 
 /**
  * @constructor
  * @extends {WebInspector.Object}
  */
-WebInspector.TimelapseGridSlider = function(grid, name, adjustable)
+WebInspector.RecordingInputsGridSlider = function(grid, name, adjustable)
 {
     WebInspector.Object.call(this);
     this._adjustable = adjustable;
@@ -782,13 +782,13 @@ WebInspector.TimelapseGridSlider = function(grid, name, adjustable)
     this.enable();
 };
 
-WebInspector.TimelapseGridSlider.Events = {
+WebInspector.RecordingInputsGridSlider.Events = {
     Dragging: "TimelapseSliderDragging",
     DragStart: "TimelapseSliderDragStart",
     DragEnd: "TimelapseSliderDragEnd"
 };
 
-WebInspector.TimelapseGridSlider.prototype =  {
+WebInspector.RecordingInputsGridSlider.prototype =  {
     clear: function()
     {
 	this.element.classList.add("hidden");
@@ -911,7 +911,7 @@ WebInspector.TimelapseGridSlider.prototype =  {
 	this.element.classList.add("slider-dragging");
 	var offsetTop = this._computeAbsOffsetTop(event);
 
-	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.Events.DragStart, offsetTop);
+	this.dispatchEventToListeners(WebInspector.RecordingInputsGridSlider.Events.DragStart, offsetTop);
 	return true;
     },
 
@@ -922,7 +922,7 @@ WebInspector.TimelapseGridSlider.prototype =  {
 	
 	var offsetTop = this._computeAbsOffsetTop(event);
 	this.element.style.top = offsetTop + "px";
-	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.Events.Dragging, offsetTop);
+	this.dispatchEventToListeners(WebInspector.RecordingInputsGridSlider.Events.Dragging, offsetTop);
 	event.preventDefault();
     },
 
@@ -934,24 +934,24 @@ WebInspector.TimelapseGridSlider.prototype =  {
 	delete this._visibleRows;
 
 	this.element.classList.remove("slider-dragging");
-	this.dispatchEventToListeners(WebInspector.TimelapseGridSlider.Events.DragEnd);
+	this.dispatchEventToListeners(WebInspector.RecordingInputsGridSlider.Events.DragEnd);
     }
 };
 
-WebInspector.TimelapseGridSlider.prototype.__proto__ = WebInspector.Object.prototype;
+WebInspector.RecordingInputsGridSlider.prototype.__proto__ = WebInspector.Object.prototype;
 
 /**
  * @constructor
  * @extends {WebInspector.DataGridNode}
  */
-WebInspector.TimelapseGridNode = function(parentView, record)
+WebInspector.RecordingInputsGridNode = function(parentView, record)
 {
     WebInspector.DataGridNode.call(this, {});
     this._parentView = parentView;
     this._record = record;
 };
 
-WebInspector.TimelapseGridNode.prototype = {
+WebInspector.RecordingInputsGridNode.prototype = {
     get record()
     {
 	return this._record;
@@ -1097,10 +1097,10 @@ WebInspector.TimelapseGridNode.prototype = {
     }
 };
 
-WebInspector.TimelapseGridNode.prototype.__proto__ = WebInspector.DataGridNode.prototype;
+WebInspector.RecordingInputsGridNode.prototype.__proto__ = WebInspector.DataGridNode.prototype;
 
 
-WebInspector.TimelapseGridNode.GroupComparator = function(a,b)
+WebInspector.RecordingInputsGridNode.GroupComparator = function(a,b)
 {
     var aGroup = WebInspector.TimelapseInputDataProvider.InputStyles[a._record.type].group;
     var bGroup = WebInspector.TimelapseInputDataProvider.InputStyles[b._record.type].group;
@@ -1111,7 +1111,7 @@ WebInspector.TimelapseGridNode.GroupComparator = function(a,b)
     return 0;
 };
 
-WebInspector.TimelapseGridNode.TypeComparator = function(a,b)
+WebInspector.RecordingInputsGridNode.TypeComparator = function(a,b)
 {
     var aType = a._record.type;
     var bType = b._record.type;
@@ -1122,7 +1122,7 @@ WebInspector.TimelapseGridNode.TypeComparator = function(a,b)
     return 0;
 };
 
-WebInspector.TimelapseGridNode.IndexComparator = function(a,b)
+WebInspector.RecordingInputsGridNode.IndexComparator = function(a,b)
 {
     var aIndex = a._record.mark.index;
     var bIndex = b._record.mark.index;
@@ -1133,7 +1133,7 @@ WebInspector.TimelapseGridNode.IndexComparator = function(a,b)
     return 0;
 };
 
-WebInspector.TimelapseGridNode.TimestampComparator = function(a,b)
+WebInspector.RecordingInputsGridNode.TimestampComparator = function(a,b)
 {
     var aTimestamp = a._record.mark.timestamp;
     var bTimestamp = b._record.mark.timestamp;
