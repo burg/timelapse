@@ -43,6 +43,7 @@ WebInspector.ReplayTask = function()
 
 WebInspector.ReplayTask.prototype = {
     // Public API
+    // All non-getter methods are designed for this-chaining.
     run: function(cb)
     {
         this._finishCallback = cb;
@@ -50,6 +51,7 @@ WebInspector.ReplayTask.prototype = {
         this._stepIndex = 0;
         this._runToken++;
         this._step(this._runToken);
+        return this;
     },
     
     chain: function(stepFn)
@@ -74,6 +76,8 @@ WebInspector.ReplayTask.prototype = {
             this._cancelFn(this._finish.bind(this, this._runToken));
         else
             this._finish(this._runToken);
+        
+        return this;
     },
     
     // Private API

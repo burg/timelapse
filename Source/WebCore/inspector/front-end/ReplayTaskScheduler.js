@@ -37,6 +37,7 @@ WebInspector.ReplayTaskScheduler = function()
 
 WebInspector.ReplayTaskScheduler.prototype = {
     // Public API
+    // All non-getter methods are designed for this-chaining.
     enqueue: function(task)
     {
         console.assert(task instanceof WebInspector.ReplayTask,
@@ -44,12 +45,14 @@ WebInspector.ReplayTaskScheduler.prototype = {
         
         this._tasks.push(task);
         this._maybeDequeue();
+        return this;
     },
     
     run: function()
     {
         this._isRunning = true;
         this._maybeDequeue();
+        return this;
     },
 
     get isRunning()
@@ -73,6 +76,7 @@ WebInspector.ReplayTaskScheduler.prototype = {
             return;
         
         this._executingTask.cancel();
+        return this;
     },
     
     cancelAllTasks: function()
@@ -81,6 +85,8 @@ WebInspector.ReplayTaskScheduler.prototype = {
     
         if (this._executingTask)
             this._executingTask.cancel();
+        
+        return this;
     },
 
     // Private API
