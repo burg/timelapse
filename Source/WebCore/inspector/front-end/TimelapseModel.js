@@ -334,11 +334,11 @@ WebInspector.TimelapseModel.prototype = {
     // pauses playback immediately, cancelling any in-progress tasks.
     pausePlayback: function()
     {
-        var pauseTask = new WebInspector.ReplayTask();
         var model = this;
+        var pauseTask = new WebInspector.ReplayTask()
 
         // suppress breakpoints
-        pauseTask.chain(function(cb) {
+        .chain(function(cb) {
             //TODO: remove when scanning is task-ified.
             delete model._targetBreakpointIndex;
             model._stopBreakpointScan();
@@ -346,27 +346,13 @@ WebInspector.TimelapseModel.prototype = {
             model._changeStatus("Pausing...");
             model._suppressBreakpoints();
             cb();
-        });
+        })
         
         // escape breakpoint pause if needed
-        pauseTask.chain(function(cb) {
-            var debuggerModel = WebInspector.debuggerModel;
-            var events = WebInspector.DebuggerModel.Events;
-
-            if (!debuggerModel.isPaused())
-                return cb();
-
-            var resumeCallback = function(cb) {
-                debuggerModel.removeEventListener(events.DebuggerResumed, resumeCallback, this);
-                cb();
-            }.bind(this, cb);
-            
-            debuggerModel.addEventListener(events.DebuggerResumed, resumeCallback, this);
-            DebuggerAgent.resume();
-        });
-
+        .chain(WebInspector.TimelapseModel.CommonSteps.ResumeDebuggerIfPaused)
+        
         // request pause; signal completion when we hear execution paused
-        pauseTask.chain(function(cb) {
+        .chain(function(cb) {
             var events = WebInspector.TimelapseModel.Events;
             var pausedCallback = function(cb) {
                 model.removeEventListener(events.PlaybackWasPaused, pausedCallback, this);
@@ -377,17 +363,17 @@ WebInspector.TimelapseModel.prototype = {
             TimelapseAgent.pausePlayback();
         });
        
-        this._scheduler.cancelAllTasks();
-        this._scheduler.enqueue(pauseTask);
+        this._scheduler.cancelAllTasks()
+                       .enqueue(pauseTask);
     },
 
     stopPlayback: function(shouldUnlock)
     {
-        var stopTask = new WebInspector.ReplayTask();
         var model = this;
+        var stopTask = new WebInspector.ReplayTask()
 
         // suppress breakpoints
-        stopTask.chain(function(cb) {
+        .chain(function(cb) {
             //TODO: remove when scanning is task-ified.
             delete model._targetBreakpointIndex;
             model._stopBreakpointScan();
@@ -395,28 +381,20 @@ WebInspector.TimelapseModel.prototype = {
             model._changeStatus("Stopping playback...");
             model._suppressBreakpoints();
             cb();
-        });
+        })
         
         // escape breakpoint pause if needed
-        stopTask.chain(function(cb) {
-            var debuggerModel = WebInspector.debuggerModel;
-            if (!debuggerModel.isPaused())
-                return cb();
-
-            var events = WebInspector.DebuggerModel.Events;          
-            debuggerModel.onceEventListener(events.DebuggerResumed, cb, this);
-            DebuggerAgent.resume();
-        });
+        .chain(WebInspector.TimelapseModel.CommonSteps.ResumeDebuggerIfPaused)
 
         // request pause; signal completion when we hear execution paused
-        stopTask.chain(function(cb) {
+        .chain(function(cb) {
             var events = WebInspector.TimelapseModel.Events;
             model.onceEventListener(events.PlaybackStopped, cb, this);
             TimelapseAgent.stopPlayback(!!shouldUnlock);
         });
 
-        this._scheduler.cancelAllTasks();
-        this._scheduler.enqueue(stopTask);
+        this._scheduler.cancelAllTasks()
+                       .enqueue(stopTask);
     },
 
     // Public query API
@@ -821,5 +799,18 @@ WebInspector.TimelapseDispatcher.prototype = {
 	this._model._playbackHitInput(markIndex);
     }
 };
+
+WebInspector.TimelapseModel.CommonSteps = {
+    ResumeDebuggerIfPaused: function(cb)
+    {
+        var debuggerModel = WebInspector.debuggerModel;
+        if (!debuggerModel.isPaused())
+            return cb();
+
+        var events = WebInspector.DebuggerModel.Events;
+        debuggerModel.onceEventListener(events.DebuggerResumed, cb, this);
+        DebuggerAgent.resume();
+    },
+}
 
 WebInspector.timelapseModel;
