@@ -69,6 +69,16 @@ WebInspector.Object.prototype = {
             delete this._listeners[eventType];
     },
 
+    onceEventListener: function(eventType, listener, thisObject)
+    {
+        var wrappedCallback = function(event) {
+            this.removeEventListener(eventType, wrappedCallback, thisObject);
+            listener.call(thisObject, event);
+        }.bind(this);
+    
+        this.addEventListener(eventType, wrappedCallback, thisObject);
+    },
+
     removeAllListeners: function()
     {
         delete this._listeners;
