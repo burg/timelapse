@@ -918,11 +918,10 @@ WebInspector.TimelapseMiniview.prototype = {
         }
 
 	this._recording.calculator.setZoomInterval(zoomLeft, zoomRight);
-    }
-
+    },
+    
+    __proto__: WebInspector.View.prototype
 };
-
-WebInspector.TimelapseMiniview.prototype.__proto__ = WebInspector.View.prototype;
 
 /**
  * @constructor
@@ -1110,11 +1109,10 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 
 	this.element.classList.remove("slider-dragging");
 	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.Events.DragEnd);
-    }
+    },
+    
+    __proto__: WebInspector.Object.prototype
 };
-
-WebInspector.TimelapseMiniviewSlider.prototype.__proto__ = WebInspector.Object.prototype;
-
 
 /**
  * @constructor

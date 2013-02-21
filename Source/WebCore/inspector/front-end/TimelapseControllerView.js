@@ -211,10 +211,10 @@ WebInspector.TimelapseControllerView.prototype = {
     _recordingUnloaded: function()
     {
         this.currentView = new WebInspector.TimelapseDefaultView(this._model);
-    }
+    },
+    
+    __proto__: WebInspector.View.prototype
 }
-
-WebInspector.TimelapseControllerView.prototype.__proto__ = WebInspector.View.prototype;
 
 /**
  * @constructor
@@ -271,10 +271,9 @@ WebInspector.TimelapseDefaultView.prototype = {
         this._messagePanel.textContent = "Initializing...";
         this._messagePanel.classList.add("message-pulse");
     },
+    
+    __proto__: WebInspector.View.prototype
 };
-
-WebInspector.TimelapseDefaultView.prototype.__proto__ = WebInspector.View.prototype;
-
 
 /**
  * @constructor
@@ -352,11 +351,10 @@ WebInspector.TimelapseCaptureView.prototype = {
     {
     if (this._model.isCapturing)
         this._model.stopCapture();
-    }
+    },
+    
+    __proto__: WebInspector.View.prototype
 };
-
-WebInspector.TimelapseCaptureView.prototype.__proto__ = WebInspector.View.prototype;
-
 
 /**
  * @constructor
@@ -594,7 +592,7 @@ WebInspector.TimelapseReplayView.prototype = {
     _replayToSavepointButtonClicked: function()
     {
         this._recording.savepointProvider.replayToSavepoint();
-    }
+    },
+    
+    __proto__: WebInspector.View.prototype
 };
-
-WebInspector.TimelapseReplayView.prototype.__proto__ = WebInspector.View.prototype;

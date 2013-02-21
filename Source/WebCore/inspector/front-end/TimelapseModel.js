@@ -687,10 +687,10 @@ WebInspector.TimelapseModel.prototype = {
 
 	WebInspector.debuggerModel.setBreakpointsActive(this._breakpointsWereEnabled);
 	this._suppressingBreakpoints = false;
-    }
+    },
+    
+    __proto__: WebInspector.Object.prototype
 };
-
-WebInspector.TimelapseModel.prototype.__proto__ = WebInspector.Object.prototype;
 
 WebInspector.TimelapseDispatcher = function(model)
 {

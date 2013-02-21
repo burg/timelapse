@@ -286,9 +286,9 @@ WebInspector.TimelapseRecording.prototype = {
   	this.calculator.updateBoundaries(record);
 	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.RecordAdded, record);
     },
+    
+    __proto__: WebInspector.Object.prototype
 };
-
-WebInspector.TimelapseRecording.prototype.__proto__ = WebInspector.Object.prototype;
 
 WebInspector.TimelapseSerializedRecording = function(model)
 {
@@ -299,11 +299,8 @@ WebInspector.TimelapseSerializedRecording = function(model)
 }
 
 WebInspector.TimelapseSerializedRecording.prototype = {
-
+    __proto__: WebInspector.TimelapseRecording.prototype
 };
-
-WebInspector.TimelapseSerializedRecording.prototype.__proto__ = WebInspector.TimelapseRecording.prototype;
-
 
 WebInspector.TimelapseLiveRecording = function(model)
 {
@@ -341,10 +338,10 @@ WebInspector.TimelapseLiveRecording.prototype = {
         this._initializeSavepoints();
 
         this.calculator.setZoomInterval(0.0, 1.0);
-    }
+    },
+    
+    __proto__: WebInspector.TimelapseRecording.prototype
 };
-
-WebInspector.TimelapseLiveRecording.prototype.__proto__ = WebInspector.TimelapseRecording.prototype;
 
 /**
  * @constructor
@@ -512,10 +509,10 @@ WebInspector.ReplaySavepointProvider.prototype = {
 
 	var stepOut = WebInspector.debuggerModel.stepOut.bind(WebInspector.debuggerModel);
 	this._debuggerWalkRecord.push(stepOut);
-    }
+    },
+    
+    __proto__: WebInspector.DataProvider.prototype
 };
-
-WebInspector.ReplaySavepointProvider.prototype.__proto__ = WebInspector.DataProvider.prototype;
 
 /**
  * @constructor
@@ -694,9 +691,9 @@ WebInspector.TimelapseCalculator.prototype = {
     {
 	value = value || 0;
 	return this.formatValue(value - this.minimumBoundary);
-    }
+    },
+    
+    __proto__: WebInspector.Object.prototype
 };
-
-WebInspector.TimelapseCalculator.prototype.__proto__ = WebInspector.Object.prototype;
 
 WebInspector.TimelapseRecording;

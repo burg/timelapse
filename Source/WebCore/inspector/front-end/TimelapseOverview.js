@@ -1012,10 +1012,10 @@ WebInspector.TimelapseOverview.prototype = {
 	    return new WebInspector.OverviewPreviewViews.BreakpointHitView(this._recording, provider);
 	else
 	    return new WebInspector.OverviewPreviewViews.InputView(provider);
-    }
+    },
+    
+    __proto__: WebInspector.View.prototype
 };
-
-WebInspector.TimelapseOverview.prototype.__proto__ = WebInspector.View.prototype;
 
 /**
  * @constructor
@@ -1622,11 +1622,10 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     {
 	if (this.isShowing())
 	    this.refresh();
-    }
+    },
+    
+    __proto__: WebInspector.View.prototype
 };
-
-WebInspector.TimelapseCircleTimeline.prototype.__proto__ = WebInspector.View.prototype;
-
 
 WebInspector.TimelapseCircleTimeline.Events = {
     CircleMouseOver: "CircleMouseOver",
@@ -1657,9 +1656,9 @@ WebInspector.TimelapseOverviewMessagePanel.prototype = {
 	this.element.appendChild(val);
 	this._content = val;
     },
+    
+    __proto__: WebInspector.View.prototype
 };
-
-WebInspector.TimelapseOverviewMessagePanel.prototype.__proto__ = WebInspector.View.prototype;
 
 /**
  * @Constructor
@@ -1859,10 +1858,10 @@ WebInspector.TimelapseOverviewSlider.prototype = {
 
 	this.element.classList.remove("slider-dragging");
 	this.dispatchEventToListeners(WebInspector.TimelapseOverviewSlider.Events.DragEnd);
-    }
+    },
+    
+    __proto__: WebInspector.Object.prototype
 };
-
-WebInspector.TimelapseOverviewSlider.prototype.__proto__ = WebInspector.Object.prototype;
 
 /**
  * @constructor
@@ -1924,6 +1923,6 @@ WebInspector.TimelapseTimelineLabel.prototype = {
 	this._teardownListeners();
 	delete this._provider;
     },
+    
+    __proto__: WebInspector.View.prototype
 };
-
-WebInspector.TimelapseTimelineLabel.prototype.__proto__ = WebInspector.View.prototype;

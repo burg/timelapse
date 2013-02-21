@@ -108,9 +108,9 @@ WebInspector.DataProvider.prototype = {
 	    console.error(this._listeners);
 	}
     },
+    
+    __proto__: WebInspector.Object.prototype
 };
-
-WebInspector.DataProvider.prototype.__proto__ = WebInspector.Object.prototype;
 
 WebInspector.DataProvider.Types = {
     TimelapseInput: "TimelapseInput",
@@ -238,12 +238,12 @@ WebInspector.TimelapseInputDataProvider.prototype = {
     resourceUrlForId: function(id)
     {
 	return this._resourceUrlById[id];
-    }    
+    },
+    
+    __proto__: WebInspector.DataProvider.prototype
 };
 
-WebInspector.TimelapseInputDataProvider.prototype.__proto__ = WebInspector.DataProvider.prototype;
-
-WebInspector.TimelapseInputDataProvider.InputStyles = (function() 
+WebInspector.TimelapseInputDataProvider.InputStyles = (function()
 {
     var types = WebInspector.TimelapseAgent.RecordType;
     var styles = {};
@@ -437,8 +437,6 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 	tracker.removeEventListener(events.BreakpointAdded, this._removeEventListeners, this);
 	tracker.removeEventListener(events.BreakpointRemoved, this._removeEventListeners, this);
     },
+    
+    __proto__: WebInspector.TimelapseInputDataProvider.prototype
 };
-
-WebInspector.TimelapseBreakpointDataProvider.prototype.__proto__ = WebInspector.TimelapseInputDataProvider.prototype;
-
-// TODO: TimelapseAnchorDataProvider

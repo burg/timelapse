@@ -61,10 +61,10 @@ WebInspector.OverviewPreviewProvider.prototype = {
     {
 	console.assert(this._views.length > 0, "Tried to hand out empty views array!");
 	return this._views;
-    }
+    },
+    
+    __proto__: WebInspector.DataProvider.prototype
 };
-
-WebInspector.OverviewPreviewProvider.prototype.__proto__ = WebInspector.DataProvider.prototype;
 
 WebInspector.OverviewPreviewViews = {};
 
@@ -100,10 +100,10 @@ WebInspector.OverviewPreviewViews.BaseView.prototype = {
     // Override me
     refresh: function()
     {
-    }
+    },
+    
+    __proto__: WebInspector.View.prototype
 };
-
-WebInspector.OverviewPreviewViews.BaseView.prototype.__proto__ = WebInspector.View.prototype;
 
 /**
  * @constructor
@@ -129,10 +129,10 @@ WebInspector.OverviewPreviewViews.DefaultView.prototype = {
 	    body.appendChild(para);
 	}
 	this.body = body;
-    }
+    },
+    
+    __proto__: WebInspector.OverviewPreviewViews.BaseView.prototype
 };
-
-WebInspector.OverviewPreviewViews.DefaultView.prototype.__proto__ = WebInspector.OverviewPreviewViews.BaseView.prototype;
 
 /**
  * @constructor
@@ -155,10 +155,10 @@ WebInspector.OverviewPreviewViews.ErrorView.prototype = {
 	para.textContent = this._errorMessage;
 	body.appendChild(para);
 	this.body = body;
-    }
+    },
+    
+    __proto__: WebInspector.OverviewPreviewViews.BaseView.prototype
 };
-
-WebInspector.OverviewPreviewViews.ErrorView.prototype.__proto__ = WebInspector.OverviewPreviewViews.BaseView.prototype;
 
 /**
  * @constructor
@@ -231,11 +231,10 @@ WebInspector.OverviewPreviewViews.InputView.prototype = {
 
 	wrapper.appendChild(table);
 	this.body = wrapper;
-    }
-
+    },
+    
+    __proto__: WebInspector.OverviewPreviewViews.BaseView.prototype
 };
-
-WebInspector.OverviewPreviewViews.InputView.prototype.__proto__ = WebInspector.OverviewPreviewViews.BaseView.prototype;
 
 /**
  * @constructor
@@ -364,11 +363,10 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 
 	wrapper.appendChild(table);
 	this.body = wrapper;
-    }
+    },
+    
+    __proto__: WebInspector.OverviewPreviewViews.BaseView.prototype
 };
-
-WebInspector.OverviewPreviewViews.BreakpointHitView.prototype.__proto__ = WebInspector.OverviewPreviewViews.BaseView.prototype;
-
 
 /**
  * @constructor
@@ -465,7 +463,7 @@ WebInspector.TimelapseOverviewPreview.prototype = {
 	this._provider.removeEventListener(WebInspector.DataProvider.Events.WillRemove, this._onProviderWillRemove, this);
 	this._provider.removeEventListener(WebInspector.DataProvider.Events.DataChanged, this.refresh, this);
 	delete this._provider;
-    }
+    },
+    
+    __proto__: WebInspector.View.prototype
 };
-
-WebInspector.TimelapseOverviewPreview.prototype.__proto__ = WebInspector.View.prototype;

@@ -162,10 +162,10 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 
 	this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Events.BreakpointRemoved, this._breakpoints[debuggerId]);
 	delete this._breakpoints[debuggerId];
-    }
+    },
+    
+    __proto__: WebInspector.Object.prototype
 };
-
-WebInspector.TimelapseBreakpointTracker.prototype.__proto__ = WebInspector.Object.prototype;
 
 /**
  * @constructor
@@ -242,10 +242,10 @@ WebInspector.TimelapseBreakpoint.prototype = {
     _linkifyLocation: function(linkifier)
     {
         return linkifier.linkifyLocation(this._sourceURL, this._lineNumber, 0, "timelapse-breakpoint-link source-code");
-    }
+    },
+    
+    __proto__: WebInspector.Object.prototype
 };
-
-WebInspector.TimelapseBreakpoint.prototype.__proto__ = WebInspector.Object.prototype;
 
 /**
  * @constructor
@@ -365,6 +365,5 @@ WebInspector.TimelapseIntervalManager.prototype = {
 	this.intervals = [];
     }
 };
-
 
 WebInspector.timelapseBreakpointTracker;

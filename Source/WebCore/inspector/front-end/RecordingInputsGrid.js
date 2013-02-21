@@ -738,9 +738,9 @@ WebInspector.RecordingInputsGrid.prototype = {
     {
 	this.refreshRecordGridNode(event.data.markIndex);
     },
+    
+    __proto__: WebInspector.DataGrid.prototype
 };
-
-WebInspector.RecordingInputsGrid.prototype.__proto__ = WebInspector.DataGrid.prototype;
 
 /**
  * @constructor
@@ -935,10 +935,10 @@ WebInspector.RecordingInputsGridSlider.prototype =  {
 
 	this.element.classList.remove("slider-dragging");
 	this.dispatchEventToListeners(WebInspector.RecordingInputsGridSlider.Events.DragEnd);
-    }
+    },
+    
+    __proto__: WebInspector.Object.prototype
 };
-
-WebInspector.RecordingInputsGridSlider.prototype.__proto__ = WebInspector.Object.prototype;
 
 /**
  * @constructor
@@ -1094,11 +1094,10 @@ WebInspector.RecordingInputsGridNode.prototype = {
 	}
 	else
 	    this._previewCell.setTextAndTitle(preview);
-    }
+    },
+    
+    __proto__: WebInspector.DataGridNode.prototype
 };
-
-WebInspector.RecordingInputsGridNode.prototype.__proto__ = WebInspector.DataGridNode.prototype;
-
 
 WebInspector.RecordingInputsGridNode.GroupComparator = function(a,b)
 {

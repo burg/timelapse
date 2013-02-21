@@ -97,6 +97,6 @@ WebInspector.RecordingsPanel.prototype = {
     var section = WebInspector.shortcutsScreen.section(WebInspector.UIString("Recordings Panel"));
     section.addRelatedKeys(keys, WebInspector.UIString("Replay to previous/next input"));
     },
+    
+    __proto__: WebInspector.Panel.prototype
 };
-
-WebInspector.RecordingsPanel.prototype.__proto__ = WebInspector.Panel.prototype;

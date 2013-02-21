@@ -429,6 +429,6 @@ WebInspector.TimelapseScrollview.prototype = {
 	    delete this._timelines[removedProvider.name];
 	}
     },
+    
+    __proto__: WebInspector.View.prototype
 };
-
-WebInspector.TimelapseScrollview.prototype.__proto__ = WebInspector.View.prototype;
