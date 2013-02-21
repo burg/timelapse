@@ -67,12 +67,28 @@ WebInspector.ReplayTaskScheduler.prototype = {
         return this._tasks.length > 0 || this.isTaskExecuting;
     },
 
+    cancelExecutingTask: function()
+    {
+        if (!this.isTaskExecuting)
+            return;
+        
+        this._executingTask.cancel();
+    },
+    
+    cancelAllTasks: function()
+    {
+        this._tasks = [];
+    
+        if (this._executingTask)
+            this._executingTask.cancel();
+    },
+
     // Private API
     _taskDidRun: function(task) {
-        console.assert(this._executingTask,
-                       "Task finished running but we didn't know it was executing.");
-        console.assert(task === this._executingTask,
-                       "Task that finished running wasn't the task we expected to finish.");
+        // unlike ReplayTask, we don't worry about the same task being cancelled
+        // and run at the same time. cancellation does not immediately run next task.
+        if (!this._executingTask || task !== this._executingTask)
+            return;
         
         delete this._executingTask;
         this._maybeDequeue();
@@ -80,7 +96,7 @@ WebInspector.ReplayTaskScheduler.prototype = {
   
     _maybeDequeue: function()
     {
-        if (this.isTaskExecuting | !this.hasPendingTasks)
+        if (this.isTaskExecuting || !this.hasPendingTasks)
             return;
         
         var task = this._executingTask = this._tasks.shift();

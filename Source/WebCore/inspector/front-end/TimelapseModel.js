@@ -53,6 +53,7 @@ WebInspector.TimelapseModel = function()
     this._breakpointsWereEnabled = WebInspector.debuggerModel.breakpointsActive();
     this._suppressingBreakpoints = false;
     this._replayActionQueue = [];
+    this._scheduler = new WebInspector.ReplayTaskScheduler().run();
     this._debuggerWalk = [];
 
     WebInspector.debuggerModel.addEventListener(WebInspector.DebuggerModel.Events.DebuggerPaused, this._debuggerPaused, this);

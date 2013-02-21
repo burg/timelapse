@@ -34,7 +34,11 @@ WebInspector.ReplayTask = function()
 {
     this._steps = [];
     this._isRunning = false;
-    this._stepIndex = 0;
+    // Run token exists to guard against the case when the same task is
+    // enqueued several times, and the first one is cancelled but has a pending
+    // callback. If we couldn't distinguish the two runs, then the cancelled
+    // task's callback may mistakenly signal that the second task's step finished.
+    this._runToken = 0;
 }
 
 WebInspector.ReplayTask.prototype = {
@@ -42,7 +46,10 @@ WebInspector.ReplayTask.prototype = {
     run: function(cb)
     {
         this._finishCallback = cb;
-        this._step();
+        this._isRunning = true;
+        this._stepIndex = 0;
+        this._runToken++;
+        this._step(this._runToken);
     },
     
     chain: function(stepFn)
@@ -53,23 +60,46 @@ WebInspector.ReplayTask.prototype = {
         return this;
     },
     
-    // Private API
-
-    _step: function(shouldCancel)
+    orCancel: function(cancelFn)
     {
-        // stop running
-        if (this._stepIndex == this._steps.length || shouldCancel)
-            return this._finish();
+        console.assert(!this._isRunning, "Tried to chain new steps after a task has started running.");
+
+        this._cancelFn = cancelFn;
+        return this;
+    },
+    
+    cancel: function()
+    {
+        if (typeof this._cancelFn === "function")
+            this._cancelFn(this._finish.bind(this, this._runToken));
+        else
+            this._finish(this._runToken);
+    },
+    
+    // Private API
+    _step: function(runToken)
+    {
+        // if not running, or if a callback comes back during a different run.
+        if (!this._isRunning || this._runToken !== runToken)
+            return;
+        
+        // stop running.
+        if (this._stepIndex == this._steps.length)
+            return this._finish(runToken);
 
         console.assert(this._stepIndex < this._steps.length && this._stepIndex >= 0,
                        "Task step index out of bounds: " + this._stepIndex);
 
         var step = this._steps[this._stepIndex++];
-        step.call(this, this._step.bind(this));
+        step.call(this, this._step.bind(this, runToken));
     },
     
-    _finish: function()
+    _finish: function(runToken)
     {
+        // if not running, or if a callback comes back during a different run.
+        if (!this._isRunning || this._runToken != runToken)
+            return;
+    
         this._stepIndex = 0;
         this._isRunning = false;
         
