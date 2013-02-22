@@ -1884,7 +1884,7 @@ PassRefPtr<SerializedScriptValue> SerializedScriptValue::create(JSContextRef ori
     return create(originContext, apiValue, 0, 0, exception);
 }
 
-String SerializedScriptValue::toString()
+String SerializedScriptValue::toString() const
 {
     return CloneDeserializer::deserializeString(m_data);
 }

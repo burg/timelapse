@@ -35,7 +35,7 @@
     OmitConstructor
 ] interface History {
     [Nondeterministic] readonly attribute unsigned long length;
-    [CachedAttribute, Custom, ReplayNotImplemented] readonly attribute SerializedScriptValue state;
+    [CachedAttribute, Custom, Nondeterministic] readonly attribute SerializedScriptValue state;
 
     [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void back();
     [DoNotCheckSecurity, CallWith=ScriptExecutionContext, ReplayNotImplemented] void forward();

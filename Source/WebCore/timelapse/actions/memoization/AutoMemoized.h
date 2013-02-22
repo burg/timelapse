@@ -35,6 +35,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "ReplayableTypes.h"
+#include "SerializedScriptValue.h"
 #include <runtime/JSObject.h>
 #include <wtf/text/StringConcatenate.h>
 #include <wtf/timelapse/ActionSerializer.h>
@@ -130,6 +131,13 @@ template<> inline void AutoMemoized<String>::serialize(ActionSerializer* seriali
     serializer->putString("result", m_result);
 }
 
+template<> inline void AutoMemoized<WebCore::SerializedScriptValue>::serialize(ActionSerializer* serializer) const
+{
+    const String res = m_result.toString();
+    serializer->putString("attribute", attributeName());
+    serializer->putString("result", res);
+}
+
 template<typename T> inline String AutoMemoized<T>::resultString() const
 {
     return m_attribute + ": AutoMemoized not implemented";
@@ -158,6 +166,11 @@ template<> inline String AutoMemoized<bool>::resultString() const
 template<> inline String AutoMemoized<String>::resultString() const
 {
     return String::String(m_result);
+}
+
+template<> inline String AutoMemoized<WebCore::SerializedScriptValue>::resultString() const
+{
+    return String::String(m_result.toString());
 }
 
 } //namespace JSC

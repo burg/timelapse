@@ -85,7 +85,7 @@ public:
 
     static uint32_t wireFormatVersion();
 
-    String toString();
+    String toString() const;
     
     JSC::JSValue deserialize(JSC::ExecState*, JSC::JSGlobalObject*, MessagePortArray*, SerializationErrorMode = Throwing);
     JSValueRef deserialize(JSContextRef, JSValueRef* exception, MessagePortArray*);
