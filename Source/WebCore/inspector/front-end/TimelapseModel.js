@@ -175,23 +175,29 @@ WebInspector.TimelapseModel.prototype = {
             TimelapseAgent.startCapture();
         });
         
-        this._scheduler.cancelAllTasks()
-                       .enqueue(task);
+        this._scheduler.cancelAllTasks().enqueue(task);
     },
 
     stopCapture: function()
     {
-        console.assert(this.isCapturing, "Cannot stop capturing because nothing is being captured.");
-    
-        // TODO: kill all tasks
-        // TODO: enqueue a capture stop task
-        var callback = function(wasAllowed) {
-            if (wasAllowed) {
-                this._changeStatus("Stopping capture...");
-            }
-        }
-        this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.CaptureWillStop);
-        TimelapseAgent.stopCapture(callback.bind(this));
+        if (!this.isCapturing)
+            return;
+
+        var model = this;
+        var events = WebInspector.TimelapseModel.Events;
+        var task = new WebInspector.ReplayTask()
+
+        .chain(function(cb) {
+            model._changeStatus("Stopping capture...");
+            model.dispatchEventToListeners(events.CaptureWillStop);
+            cb();
+        })
+        .chain(function(cb) {
+            model.onceEventListener(events.CaptureDidStop, cb, this);
+            TimelapseAgent.stopCapture(cb);
+        });
+        
+        this._scheduler.cancelAllTasks().enqueue(task);
     },
 
     replayUpToMarkIndex: function(markIndex, allowBreakpoints, fastReplay)
