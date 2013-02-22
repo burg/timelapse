@@ -171,10 +171,20 @@ WebInspector.TimelapseModel.prototype = {
         .chain(WebInspector.TimelapseModel.Steps.ResumeDebuggerIfPaused)
         // actually request start of capture now
         .chain(function(cb) {
-            this.onceEventListener(events.CaptureDidStart, cb, this);
+            model.onceEventListener(events.CaptureDidStart, cb, this);
+
+            // we must create recording before receiving CaptureDidStart, because
+            // the recording needs to listen for that event as well.
+            var recording = model._activeRecording = new WebInspector.TimelapseLiveRecording(model);
+            model.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingCreated, recording);
             TimelapseAgent.startCapture();
+        })
+        // capture started; let some other people know.
+        .chain(function(cb) {
+            model._capturing = true;
+            model._changeStatus("Capturing...");
+            cb();
         });
-        
         this._scheduler.cancelAllTasks().enqueue(task);
     },
 
@@ -552,17 +562,6 @@ WebInspector.TimelapseModel.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.Disabled);
     },
     
-    _captureDidStart: function()
-    {
-    this._capturing = true;
-	this._changeStatus("Capturing...");
-	this._suppressBreakpoints();
-    
-    var recording = this._activeRecording = new WebInspector.TimelapseLiveRecording(this);
-  	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingCreated, recording);
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.CaptureDidStart);
-    },
-
     _captureDidStop: function()
     {
     var recording = this.createdRecording;
@@ -769,7 +768,7 @@ WebInspector.TimelapseDispatcher.prototype = {
 
     captureWasStarted: function()
     {
-	this._model._captureDidStart();
+        this._model.dispatchEventToListeners(WebInspector.TimelapseModel.Events.CaptureDidStart);
     },
 
     captureWasStopped: function()

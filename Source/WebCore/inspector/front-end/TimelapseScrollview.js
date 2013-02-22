@@ -61,7 +61,6 @@ WebInspector.TimelapseScrollview = function(model, recording)
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
     
-	window.webkitRequestAnimationFrame(this.animateFrame.bind(this));
 };
 
 WebInspector.TimelapseScrollview.MaxRecordLifetime = 10.0; /* seconds */
@@ -112,7 +111,11 @@ WebInspector.TimelapseScrollview.prototype = {
     },
 
     // Private API helpers
-
+    _captureDidStart: function()
+    {
+    	window.webkitRequestAnimationFrame(this.animateFrame.bind(this));
+    },
+    
     _canUseProvider: function(provider)
     {
 	var types = WebInspector.DataProvider.Types;
@@ -147,7 +150,9 @@ WebInspector.TimelapseScrollview.prototype = {
                        "Tried to do something unsupported to listeners: " + op);
 
         var recordingEventNames = WebInspector.TimelapseRecording.Events;
+        var modelEventNames = WebInspector.TimelapseModel.Events;
         this._recording[op](recordingEventNames.ProviderAdded, this._onProviderAdded, this);
+        this._model[op](modelEventNames.CaptureDidStart, this._captureDidStart, this);
     },
 
     _modifyListenersForProvider: function(provider, op)
