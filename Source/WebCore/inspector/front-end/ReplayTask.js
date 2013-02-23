@@ -30,9 +30,13 @@
  */
 
 
-WebInspector.ReplayTask = function()
+WebInspector.ReplayTask = function(taskName)
 {
+    this._taskName = taskName;
+    // these two arrays use the same indices.
     this._steps = [];
+    this._stepNames = [];
+    
     this._isRunning = false;
     // Run token exists to guard against the case when the same task is
     // enqueued several times, and the first one is cancelled but has a pending
@@ -40,6 +44,9 @@ WebInspector.ReplayTask = function()
     // task's callback may mistakenly signal that the second task's step finished.
     this._runToken = 0;
 }
+
+// adjust this to debug task actions
+WebInspector.ReplayTask.DebugLogging = false;
 
 WebInspector.ReplayTask.prototype = {
     // Public API
@@ -50,14 +57,20 @@ WebInspector.ReplayTask.prototype = {
         this._isRunning = true;
         this._stepIndex = 0;
         this._runToken++;
+        this._log("Running task.");
         this._step(this._runToken);
         return this;
     },
     
-    chain: function(stepFn)
+    chain: function(stepName, stepFn)
     {
         console.assert(!this._isRunning, "Tried to chain new steps after a task has started running.");
         
+        console.assert(typeof stepName === "string", "Invalid step name not a string: " +stepName);
+        console.assert(typeof stepFn === "function", "Invalid step not a function: "+stepFn);
+
+        this._log("Appending step " + this._steps.length + ": " + stepName);
+        this._stepNames.push(stepName);
         this._steps.push(stepFn);
         return this;
     },
@@ -65,13 +78,17 @@ WebInspector.ReplayTask.prototype = {
     orCancel: function(cancelFn)
     {
         console.assert(!this._isRunning, "Tried to chain new steps after a task has started running.");
+        console.assert(typeof cancelFn === "function", "Invalid cancel not a function: "+cancelFn);
 
+        this._log("Setting cancellation action.");
         this._cancelFn = cancelFn;
         return this;
     },
     
     cancel: function()
     {
+        this._log("Cancelling task.");
+    
         if (typeof this._cancelFn === "function")
             this._cancelFn(this._finish.bind(this, this._runToken));
         else
@@ -81,6 +98,15 @@ WebInspector.ReplayTask.prototype = {
     },
     
     // Private API
+    _log: function(message)
+    {
+        if (!WebInspector.ReplayTask.DebugLogging)
+            return;
+        
+        console.assert(!!message, "Must specify a message to log in ReplayTask.");
+        console.log(this._taskName + "/" + this._runToken + ": " + message);
+    },
+    
     _step: function(runToken)
     {
         // if not running, or if a callback comes back during a different run.
@@ -94,7 +120,9 @@ WebInspector.ReplayTask.prototype = {
         console.assert(this._stepIndex < this._steps.length && this._stepIndex >= 0,
                        "Task step index out of bounds: " + this._stepIndex);
 
-        var step = this._steps[this._stepIndex++];
+        var index = this._stepIndex++;
+        var step = this._steps[index];
+        this._log("Running step " + index + ": " + this._stepNames[index]);
         step.call(this, this._step.bind(this, runToken));
     },
     
@@ -106,6 +134,7 @@ WebInspector.ReplayTask.prototype = {
     
         this._stepIndex = 0;
         this._isRunning = false;
+        this._log("Finishing task.");
         
         var cb = this._finishCallback;
         if (typeof cb === "function")
