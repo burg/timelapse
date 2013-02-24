@@ -801,22 +801,26 @@ WebInspector.TimelapseOverview.prototype = {
 		"Ignore warnings",
 		"Abort"
 	    ];
+
+        var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
 	    var optionCallbacks = [
                 // case: moral equivalent of pressing play button
 		function(event) {
-		    model.replayUpToMarkIndex(model.replayFinishMarkIndex, 
-					      model.fastReplaying, 
-					      !model.fastReplaying || model.scanningBreakpoints);
+            var allowBreakpoints = model.scanningBreakpoints ||
+                                   model.replaySpeed === replaySpeeds.Normal;
+		    model.replayUpToMarkIndex(model.replayFinishMarkIndex,
+                                      model.replaySpeed, allowBreakpoints);
 		    preview.popView();
 		    message.detach();
 		},
 
 		// case: disable pauses, then press play
 		function(event) {
+            var allowBreakpoints = model.scanningBreakpoints ||
+                                   model.replaySpeed === replaySpeeds.Normal;
 		    TimelapseAgent.setPauseOnError(false);
 		    model.replayUpToMarkIndex(model.replayFinishMarkIndex, 
-					      model.fastReplaying, 
-					      !model.fastReplaying || model.scanningBreakpoints);
+                                      model.replaySpeed, allowBreakpoints);
 		    preview.popView();
 		    message.detach();
 		},
@@ -862,7 +866,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	if (this._model.scanningBreakpoints)
 	    this._messagePanel.content = document.createTextNode("Scanning breakpoints...");
-	else if (this._model.fastReplaying)
+	else if (this._model.replaySpeed === WebInspector.TimelapseModel.ReplaySpeed.Seeking)
 	    this._messagePanel.content = document.createTextNode("Seeking...");
 	else
 	    this._messagePanel.content = document.createTextNode("Replaying... click to cancel.");
@@ -888,7 +892,8 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.playback.disable();
 	this.sliders.playback.setPosition(this.calculator.computeOverviewPercentage(currentRecord.mark.timestamp), true);	
 	this.sliders.playback.element.addStyleClass("playback-pulse");
-	this.sliders.playback.minimumResolution = (this._model.fastReplaying) ? 10.0 : 1.0;
+    var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
+	this.sliders.playback.minimumResolution = (this._model.replaySpeed === replaySpeeds.Seeking) ? 10.0 : 1.0;
     },
 
     _onPlaybackStopped: function()

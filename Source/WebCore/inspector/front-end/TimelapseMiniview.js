@@ -601,7 +601,9 @@ WebInspector.TimelapseMiniview.prototype = {
 	this.sliders.tentative.show();
 	this.sliders.playback.disable();
 	this.sliders.playback.element.addStyleClass("playback-pulse");
-	this.sliders.playback.minimumResolution = (this._model.fastReplaying) ? 10.0 : 1.0;
+
+    var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
+	this.sliders.playback.minimumResolution = (this._model.replaySpeed === replaySpeeds.Seeking) ? 10.0 : 1.0;
 
 	if (currentRecordIndex != -1) {
     	    var currentRecord = allRecords[currentRecordIndex];
