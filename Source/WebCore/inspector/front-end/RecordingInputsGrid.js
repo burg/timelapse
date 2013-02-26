@@ -105,12 +105,17 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
     this._maxMarkIndex = 0;
     this._recordGridNodes = {};
     
-    this._adjustListeners("addEventListener");
+    this._modifyListeners("addEventListener");
     
     // add input providers that have already been created
     var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
+    
+    // add savepoint provider if already created
+    var savepointProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);
+    for (var i = 0; i < savepointProviders.length; i++)
+        this._addProvider(savepointProviders[i]);
     
 	// create new rows for all records, update table.
     var newNode;
@@ -138,7 +143,7 @@ WebInspector.RecordingInputsGrid.DefaultRefreshDelay = 150;
 
 WebInspector.RecordingInputsGrid.prototype = {
 
-    _adjustListeners: function(op)
+    _modifyListeners: function(op)
     {
         console.assert(op === "addEventListener" || op === "removeEventListener",
                        "Tried to do something unsupported to listeners: " + op);
@@ -177,7 +182,7 @@ WebInspector.RecordingInputsGrid.prototype = {
 
     willDispose: function()
     {
-        this._adjustListeners("removeEventListener");
+        this._modifyListeners("removeEventListener");
     },
 
     wasShown: function()
@@ -293,7 +298,7 @@ WebInspector.RecordingInputsGrid.prototype = {
 		       "Provider already added to timeline grid.");
 
 	this._providers[provider.name] = provider;
-	this._adjustListenersForProvider(provider, "addEventListener");
+	this._modifyListenersForProvider(provider, "addEventListener");
 
 	// set up provider's record filter if it's active.
 	if (provider.isEnabled())
@@ -310,10 +315,10 @@ WebInspector.RecordingInputsGrid.prototype = {
 		       "Can't remove provider not in timeline grid.");
 
 	delete this._providers[provider.name];
-	this._adjustListenersForProvider(provider, "removeEventListener");
+	this._modifyListenersForProvider(provider, "removeEventListener");
     },
 
-    _adjustListenersForProvider: function(provider, op)
+    _modifyListenersForProvider: function(provider, op)
     {
         console.assert(op === "addEventListener" || op === "removeEventListener",
                        "Tried to do something unsupported to listeners: " + op);

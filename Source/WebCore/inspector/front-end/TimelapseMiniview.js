@@ -116,6 +116,11 @@ WebInspector.TimelapseMiniview = function(model, recording)
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
     
+    // add savepoint provider if already created
+    var savepointProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);
+    for (var i = 0; i < savepointProviders.length; i++)
+        this._addProvider(savepointProviders[i]);
+    
     // initialize slider position
     this.sliders.playback.enable();
     this.sliders.playback.setPosition(1.0, true);
@@ -240,24 +245,6 @@ WebInspector.TimelapseMiniview.prototype = {
 	}
     },
 
-    _teardownListenersForProvider: function(provider)
-    {
-	var events = WebInspector.DataProvider.Events;
-	var types = WebInspector.DataProvider.Types;
-
-	provider.removeEventListener(events.WillRemove, this._onProviderWillRemove, this);
-
-	if (provider.type == types.ReplaySavepoint) {
-	    var savepointEvents = WebInspector.ReplaySavepointProvider.Events;
-	    provider.removeEventListener(savepointEvents.SavepointSet, this._onSavepointSet, this);
-	    provider.removeEventListener(savepointEvents.SavepointRemoved, this._onSavepointRemoved, this);
-	} else {
-	    provider.removeEventListener(events.AddedInput, this._onAddedInput, this);
-	    provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
-	    provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
-	}
-    },
-
     _autosizeCanvas: function()
     {
 	this._canvas.width = this.element.clientWidth;
@@ -277,7 +264,6 @@ WebInspector.TimelapseMiniview.prototype = {
     {
 	this._scheduleRefresh();
     },
-
 
     // clear the data of the timelines, but not the entries themselves.
     // those are managed by the constructor and provider added/removed handlers.

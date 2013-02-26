@@ -118,6 +118,11 @@ WebInspector.TimelapseOverview = function(model, recording)
     var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
+    
+    // add savepoint provider if already created
+    var savepointProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);
+    for (var i = 0; i < savepointProviders.length; i++)
+        this._addProvider(savepointProviders[i]);
 };
 
 WebInspector.TimelapseOverview.ResizerOffset = 3.5;
@@ -396,8 +401,8 @@ WebInspector.TimelapseOverview.prototype = {
                        "Tried to do something unsupported to listeners: " + op);
 
         var events = WebInspector.ReplaySavepointProvider.Events;
-        provider.addEventListener(events.SavepointSet,     this._onSavepointSet, this);
-        provider.addEventListener(events.SavepointRemoved, this._onSavepointRemoved, this);
+        provider[op](events.SavepointSet,     this._onSavepointSet, this);
+        provider[op](events.SavepointRemoved, this._onSavepointRemoved, this);
     },
 
     _onProviderAdded: function(event)
@@ -414,7 +419,7 @@ WebInspector.TimelapseOverview.prototype = {
     {
 	provider.addEventListener(WebInspector.DataProvider.Events.WillRemove, this._removeProvider, this);
 
-	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint) {
+	if (provider.type === WebInspector.DataProvider.Types.ReplaySavepoint) {
 	    this._modifySavepointListeners(provider, "addEventListener");
 	    return;
 	}
