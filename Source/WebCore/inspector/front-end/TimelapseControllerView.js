@@ -507,18 +507,19 @@ WebInspector.TimelapseReplayView.prototype = {
         //the breakpoint radar button
         var model = this._model;
         var radarButton = this.radarButton = new WebInspector.StatusBarButton("", "breakpoint-radar-status-bar-item");
+        radarButton.enabled = false;
         radarButton.addEventListener("click", this._radarButtonClicked, replayView);
-        this._model.addEventListener(eventNames.PlaybackDidStart, function() {
-            this.toggled = model.scanningBreakpoints;
+        this._model.addEventListener(eventNames.BreakpointScanStarted, function() {
+            this.toggled = true;
         }, radarButton);
-        this._recording.addEventListener(WebInspector.TimelapseRecording.Events.DebuggerPaused, function() {
-            this.toggled = model.scanningBreakpoints;
-        }, radarButton);
-        this._model.addEventListener(eventNames.InputPaused, function() {
-            this.toggled = model.scanningBreakpoints;
-        }, radarButton);
-        this._model.addEventListener(eventNames.PlaybackStopped, function() {
+        this._model.addEventListener(eventNames.BreakpointScanStopped, function() {
             this.toggled = false;
+        }, radarButton);
+        this._model.addEventListener(eventNames.RecordingLoaded, function() {
+            this.enabled = true;
+        }, radarButton);
+        this._model.addEventListener(eventNames.RecordingUnloaded, function() {
+            this.enabled = false;
         }, radarButton);
         this._statusBarButtons.push(radarButton);
     },
