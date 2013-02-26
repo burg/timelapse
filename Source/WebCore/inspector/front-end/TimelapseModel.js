@@ -230,11 +230,11 @@ WebInspector.TimelapseModel.prototype = {
     {
         this._changeStatus("Starting replay...");
 
-        var task = this._replayUpToMarkIndexTask(markIndex, allowBreakpoints, replaySpeed);
+        var task = this.startReplayUpToMarkIndexTask(markIndex, allowBreakpoints, replaySpeed);
         this._scheduler.cancelAllTasks().enqueue(task);
     },
 
-    _replayUpToMarkIndexTask: function(markIndex, allowBreakpoints, replaySpeed)
+    startReplayUpToMarkIndexTask: function(markIndex, allowBreakpoints, replaySpeed)
     {
         var model = this;
         var task = new WebInspector.ReplayTask("ReplayUpToMarkIndex");
@@ -356,12 +356,12 @@ WebInspector.TimelapseModel.prototype = {
                 var recordIndex = model.loadedRecording.recordIndexFromMarkIndex(markIndex);
                 var prevIndex = model.loadedRecording.allRecords[recordIndex - 1].mark.index;
                 model.onceEventListener(timelapseEvents.InputPaused, cb, task);
-                model._replayUpToMarkIndexTask(prevIndex, allowBreakpoints, replaySpeed).run();
+                model.startReplayUpToMarkIndexTask(prevIndex, allowBreakpoints, replaySpeed).run();
             });
         }
         task.chain("ReplayOneMark", function(cb) {
             model.onceEventListener(timelapseEvents.InputPaused, cb, task);
-            model._replayUpToMarkIndexTask(markIndex, allowBreakpoints, replaySpeed).run();
+            model.startReplayUpToMarkIndexTask(markIndex, allowBreakpoints, replaySpeed).run();
         });
         task.chain("RequestReplayWithBreakpoints", function(cb) {
             var subtask = model._replayToCompletionTask(true, replaySpeed);
@@ -449,12 +449,12 @@ WebInspector.TimelapseModel.prototype = {
         if (startIndex <= currentIndex && endIndex > currentIndex) {
             task.chain("ScanFromCursorToRegionEnd("+endIndex+")", function(cb) {
                 model.onceEventListener(timelapseEvents.InputPaused, cb, task);
-                model._replayUpToMarkIndexTask(endIndex, true).run();
+                model.startReplayUpToMarkIndexTask(endIndex, true).run();
             });
             if (startIndex > allRecords[0].mark.index) {
                 task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
                     model.onceEventListener(timelapseEvents.InputPaused, cb, task);
-                    model._replayUpToMarkIndexTask(startIndex, false).run();
+                    model.startReplayUpToMarkIndexTask(startIndex, false).run();
                 });
             }
 
@@ -465,7 +465,7 @@ WebInspector.TimelapseModel.prototype = {
             } else {
                 task.chain("ScanFromRegionBeginToCursor("+currentIndex+")", function(cb) {
                     model.onceEventListener(timelapseEvents.InputPaused, cb, task);
-                    model._replayUpToMarkIndexTask(currentIndex, true).run();
+                    model.startReplayUpToMarkIndexTask(currentIndex, true).run();
                 });
             }
         }
@@ -474,7 +474,7 @@ WebInspector.TimelapseModel.prototype = {
             if (startIndex > allRecords[0].mark.index) {
                 task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
                     model.onceEventListener(timelapseEvents.InputPaused, cb, task);
-                    model._replayUpToMarkIndexTask(startIndex, false).run();
+                    model.startReplayUpToMarkIndexTask(startIndex, false).run();
                 });
             }
 
@@ -484,13 +484,13 @@ WebInspector.TimelapseModel.prototype = {
                 var prevIndex = allRecords[endRecordIndex - 1].mark.index;
                 task.chain("ScanToMarkPrecedingRegionEnd("+prevIndex+")", function(cb) {
                     model.onceEventListener(timelapseEvents.InputPaused, cb, task);
-                    model._replayUpToMarkIndexTask(prevIndex, true).run();
+                    model.startReplayUpToMarkIndexTask(prevIndex, true).run();
                 });
             }
 
             task.chain("ScanToRegionEnd("+endIndex+")", function(cb){
                 model.onceEventListener(timelapseEvents.InputPaused, cb, task);
-                model._replayUpToMarkIndexTask(endIndex, true).run();
+                model.startReplayUpToMarkIndexTask(endIndex, true).run();
             });
 
             if (this.breakpointPaused) {
@@ -500,7 +500,7 @@ WebInspector.TimelapseModel.prototype = {
             } else if (currentIndex != endIndex) {
                 task.chain("SeekToCursor("+currentIndex+")", function(cb){
                     model.onceEventListener(timelapseEvents.InputPaused, cb, task);
-                    model._replayUpToMarkIndexTask(currentIndex, false).run();
+                    model.startReplayUpToMarkIndexTask(currentIndex, false).run();
                 });
             }
         }
