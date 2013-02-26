@@ -88,6 +88,7 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 	var lineNumber = rawLocation.lineNumber;
 	var debuggerId = sourceURL + ":" + lineNumber;
 
+    // lazily add unknown breakpoints as we hit them
 	if (!this._breakpoints[debuggerId])
 	    this._breakpoints[debuggerId] = new WebInspector.TimelapseBreakpoint(rawLocation);
 
@@ -122,13 +123,15 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
     // Callbacks from BreakpointManager
     _breakpointUpdated: function(event)
     {
-	var debuggerId = event.data.breakpoint._breakpointStorageId();
+    var breakpoint = event.data.breakpoint;
+    var uiLocation = event.data.uiLocation;
+	var debuggerId = breakpoint._breakpointStorageId();
 
 	if (this._breakpoints[debuggerId]) {
-	    var breakpoint = this._breakpoints[debuggerId];
-	    var oldCondition = breakpoint.condition();
+	    var oldBreakpoint = this._breakpoints[debuggerId];
+	    var oldCondition = oldBreakpoint.condition();
 
-	    breakpoint.recomputeLink();
+        oldBreakpoint.updateLink(breakpoint, uiLocation);
 
 	    if (oldCondition != breakpoint.condition()) {
 		if (breakpoint.condition() != "")
@@ -191,15 +194,23 @@ WebInspector.TimelapseBreakpoint.prototype = {
 	return this._sourceURL + ":" + this._lineNumber;
     },
 
-    recomputeLink: function() {
-	var rawLocation = WebInspector.debuggerModel.createRawLocationByURL(this._sourceURL, this._lineNumber, 0);
-	var uiLocation = WebInspector.debuggerModel.rawLocationToUILocation(rawLocation);
-	var breakpoint = WebInspector.breakpointManager.findBreakpoint(uiLocation.uiSourceCode, this._lineNumber);
+    updateLink: function(breakpoint, uiLocation)
+    {
+    	console.assert(breakpoint, "Tried to update breakpoint for "+this.debuggerId+", but none provided.");
 
-	console.assert(breakpoint, "Breakpoint for "+this.debuggerId+" not found.");
+        this._breakpoint = breakpoint;
+        this._condition = this._breakpoint.condition();
+    },
 
-	this._breakpoint = breakpoint;
-	this._condition = this._breakpoint.condition();
+    // Don't use this if we received a reference to the actual breakpoint.
+    // Looking up breakpoints in this way is known to be flaky at times.
+    recomputeLink: function()
+    {
+        var rawLocation = WebInspector.debuggerModel.createRawLocationByURL(this._sourceURL, this._lineNumber, 0);
+        var uiLocation = WebInspector.debuggerModel.rawLocationToUILocation(rawLocation);
+        var breakpoint = WebInspector.breakpointManager.findBreakpoint(uiLocation.uiSourceCode, this._lineNumber);
+
+        this.updateLink(breakpoint, uiLocation);
     },
 
     contextMenu: function(event) {
