@@ -43,7 +43,7 @@ WebInspector.ReplayTaskScheduler.prototype = {
         console.assert(task instanceof WebInspector.ReplayTask,
                        "Tried to schedule object which is not a task.");
         
-        console.log("Enqueued task.");
+        this._log("Enqueued task.");
         this._tasks.push(task);
         this._maybeDequeue();
         return this;
@@ -51,7 +51,7 @@ WebInspector.ReplayTaskScheduler.prototype = {
     
     run: function()
     {
-        console.log("Started scheduler.");
+        this._log("Started scheduler.");
         this._isRunning = true;
         this._maybeDequeue();
         return this;
@@ -104,16 +104,16 @@ WebInspector.ReplayTaskScheduler.prototype = {
         // unlike ReplayTask, we don't worry about the same task being cancelled
         // and run at the same time. cancellation does not immediately run next task.
         if (!this._executingTask) {
-            console.log("Ignoring task finished callback because no task is executing.");
+            this._log("Ignoring task finished callback because no task is executing.");
             return;
         
         }
         if (task !== this._executingTask) {
-            console.log("Ignoring task finished callback because a different task is executing.");
+            this._log("Ignoring task finished callback because a different task is executing.");
             return;
         }
 
-        console.log("Heard that executing task finished.");
+        this._log("Heard that executing task finished.");
         delete this._executingTask;
         this._maybeDequeue();
     },
@@ -121,12 +121,12 @@ WebInspector.ReplayTaskScheduler.prototype = {
     _maybeDequeue: function()
     {
         if (this.isTaskExecuting || !this.hasPendingTasks) {
-            console.log("Task executing or nothing to execute; scheduler going to sleep.");
+            this._log("Task executing or nothing to execute; scheduler going to sleep.");
             return;
         }
         
         var task = this._executingTask = this._tasks.shift();
-        console.log("Running task.");
+        this._log("Running task.");
         task.run(this._taskDidRun.bind(this, task));
     },
 
