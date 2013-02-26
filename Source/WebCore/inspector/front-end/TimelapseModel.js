@@ -56,9 +56,10 @@ WebInspector.TimelapseModel = function()
     this._breakpointsWereEnabled = WebInspector.debuggerModel.breakpointsActive();
     this._suppressingBreakpoints = false;
     // TODO: delete
-    
     this._replayActionQueue = [];
+
     this._scheduler = new WebInspector.ReplayTaskScheduler().run();
+    // TODO: delete
     this._debuggerWalk = [];
 
     // TODO: delete
@@ -111,6 +112,8 @@ WebInspector.TimelapseModel.Events = {
 
     BreakpointPaused: "TimelapseBreakpointPaused",
     BreakpointHit: "TimelapseBreakpointHit",
+    // fires after hit; default action is to show breakpoint cursor.
+    DebuggerWaiting: "TimelapseDebuggerWaiting",
 
     InputPaused: "TimelapseInputPaused",
     InputHit: "TimelapseInputHit",
@@ -168,7 +171,6 @@ WebInspector.TimelapseModel.prototype = {
             console.assert(!model.isCapturing && !model.isReplaying,
                            "Cannot start capture whilst capturing or replaying alreday.");
             // TODO: remove this eventually
-            delete model._targetBreakpointIndex;
             model._stopBreakpointScan();
 
             model._changeStatus("Starting capture...");
@@ -236,9 +238,15 @@ WebInspector.TimelapseModel.prototype = {
 
     replayUpToMarkIndex: function(markIndex, allowBreakpoints, replaySpeed)
     {
+        var task = this._replayUpToMarkIndexTask(markIndex, allowBreakpoints, replaySpeed);
+        this._scheduler.cancelAllTasks().enqueue(task);
+    },
+
+    _replayUpToMarkIndexTask: function(markIndex, allowBreakpoints, replaySpeed)
+    {
         var model = this;
-        var task = new WebInspector.ReplayTask("ReplayUpToMarkIndex")
-        .chain("setDefaults", function(cb) {
+        var task = new WebInspector.ReplayTask("ReplayUpToMarkIndex");
+        task.chain("setDefaults", function(cb) {
             model._changeStatus("Starting replay...");
             /* ensure defaults if no arguments */
             allowBreakpoints = (typeof allowBreakpoints === "undefined") ? false : allowBreakpoints;
@@ -256,8 +264,8 @@ WebInspector.TimelapseModel.prototype = {
         }
 
         task.chain("resumeDebuggerIfPaused",
-               WebInspector.TimelapseModel.Steps.ResumeDebuggerIfPaused)
-        .chain("notifyAndRequestReplay", function(cb) {
+               WebInspector.TimelapseModel.Steps.ResumeDebuggerIfPaused);
+        task.chain("notifyAndRequestReplay", function(cb) {
             // decide replay starting and ending mark indices
             var allRecords = model.loadedRecording.allRecords;
             var canReplayWithoutRestart = model.isReplaying &&
@@ -273,15 +281,15 @@ WebInspector.TimelapseModel.prototype = {
                                                model.replaySpeed == seeking);
             cb();
         });
-
-        this._scheduler.cancelAllTasks().enqueue(task);
+        
+        return task;
     },
 
-    replayToCompletion: function(allowBreakpoints, replaySpeed)
+    _replayToCompletionTask: function(allowBreakpoints, replaySpeed)
     {
         var model = this;
-        var task = new WebInspector.ReplayTask("ReplayToCompletion")
-        .chain("setDefaults", function(cb) {
+        var task = new WebInspector.ReplayTask("ReplayToCompletion");
+        task.chain("setDefaults", function(cb) {
             model._changeStatus("Starting replay...");
             /* ensure defaults if no arguments */
             allowBreakpoints = (typeof allowBreakpoints === "undefined") ? false : allowBreakpoints;
@@ -299,8 +307,8 @@ WebInspector.TimelapseModel.prototype = {
         }
 
         task.chain("resumeDebuggerIfPaused",
-               WebInspector.TimelapseModel.Steps.ResumeDebuggerIfPaused)
-        .chain("notifyAndRequestReplay", function(cb) {
+               WebInspector.TimelapseModel.Steps.ResumeDebuggerIfPaused);
+        task.chain("notifyAndRequestReplay", function(cb) {
             // decide replay starting and ending mark indices
             var allRecords = model.loadedRecording.allRecords;
             var lastMarkIndex = allRecords[allRecords.length-1].mark.index;
@@ -315,48 +323,99 @@ WebInspector.TimelapseModel.prototype = {
             TimelapseAgent.replayToCompletion(model.replaySpeed == seeking);
             cb();
         });
-        
+        return task;
+    },
+    
+    replayToCompletion: function(allowBreakpoints, replaySpeed)
+    {
+        var task = this._replayToCompletionTask(allowBreakpoints, replaySpeed);
         this._scheduler.cancelAllTasks().enqueue(task);
     },
 
-    replayToBreakpointHit: function(markIndex, hitIndex, allowBreakpoints, fastReplay)
+    replayToBreakpointHit: function(markIndex, hitIndex, allowBreakpoints, replaySpeed)
     {
-	if (this._replaying && this._currentMarkIndex == markIndex) {
-	    // Workaround: currently there is no way to force replay up to the current mark index.
-	    if (hitIndex < this._breakpointHitIndex) {
-		var recordIndex = this.loadedRecording.recordIndexFromMarkIndex(markIndex);
-		var prevIndex = this.loadedRecording.allRecords[recordIndex - 1].mark.index;
-		this._enqueueAction(this.replayUpToMarkIndex.bind(this, markIndex, allowBreakpoints, fastReplay))
-		this._enqueueAction(this.replayToBreakpointHit.bind(this, markIndex, hitIndex, allowBreakpoints, fastReplay));
-		this.replayUpToMarkIndex(prevIndex, allowBreakpoints, fastReplay);
-	    }
-	    else if (hitIndex > this._breakpointHitIndex) {
-		this._targetBreakpointIndex = hitIndex;
-		if (WebInspector.debuggerModel.isPaused())
-		    DebuggerAgent.resume();
-		else
-		    this.replayToCompletion();
-	    }
-	}
-	else {
-	    this._enqueueAction(this.replayToBreakpointHit.bind(this, markIndex, hitIndex, allowBreakpoints, fastReplay));
-	    this.replayUpToMarkIndex(markIndex, allowBreakpoints, fastReplay);
-	}
+        var task = this._replayToBreakpointHitTask(markIndex, hitIndex, allowBreakpoints, replaySpeed);
+        this._scheduler.cancelAllTasks().enqueue(task);
+    },
+    
+    _replayToBreakpointHitTask: function(markIndex, hitIndex, allowBreakpoints, replaySpeed)
+    {
+        var model = this;
+        var timelapseEvents = WebInspector.TimelapseModel.Events;
+        var task = new WebInspector.ReplayTask("ReplayToBreakpointHit");
+
+        // Always hit a breakpoint by seeking to preceding mark (if not there),
+        // play one mark, and then start playback and resume |hitIndex-1| times.
+        if (this._currentMarkIndex != markIndex-1) {
+            task.chain("ReplayToPrecedingMark", function(cb) {
+                var recordIndex = model.loadedRecording.recordIndexFromMarkIndex(markIndex);
+                var prevIndex = model.loadedRecording.allRecords[recordIndex - 1].mark.index;
+                var subtask = model._replayUpToMarkIndexTask(prevIndex, allowBreakpoints, replaySpeed);
+                subtask.run(cb);
+            });
+        }
+        task.chain("ReplayOneMark", function(cb) {
+            var subtask = model._replayUpToMarkIndexTask(markIndex, allowBreakpoints, replaySpeed);
+            subtask.run(cb);
+        });
+        task.chain("RequestReplayWithBreakpoints", function(cb) {
+            var subtask = model._replayToCompletionTask(true, replaySpeed);
+            subtask.run(cb);
+        });
+        task.chain("CountDebuggerWait" + hitIndex + "Times", function(cb) {
+
+
+            this._waitCount = 0;
+            var debuggerWaitingCallback = function(event) {
+                // we arrived at the wait we were looking for.
+                if (this._waitCount++ == hitIndex) {
+                    model.removeEventListener(timelapseEvents.DebuggerWaiting,
+                                              debuggerWaitingCallback,
+                                              task);
+                    return cb();
+                }
+                // otherwise, prevent debugger wait from propagating; resume.
+                event.preventDefault();
+                if (WebInspector.debuggerModel.isPaused())
+                    DebuggerAgent.resume();
+            };
+           
+            model.addEventListener(timelapseEvents.DebuggerWaiting,
+                                      debuggerWaitingCallback, task);
+        });
+        
+        return task;
     },
 
     replayDebuggerWalk: function(markIndex, hitIndex, debuggerWalk)
     {
-	this._debuggerWalk = debuggerWalk.slice();
+        var model = this;
+        var debuggerEvents = WebInspector.DebuggerModel.Events;
+        var speeds = WebInspector.TimelapseModel.ReplaySpeed;
 
-	if (this._replaying && this._currentMarkIndex == markIndex) {
-	    // Workaround: currently there is no way to force replay up to the current mark index.
-	    var recordIndex = this.loadedRecording.recordIndexFromMarkIndex(markIndex);
-	    var prevIndex = this.loadedRecording.allRecords[recordIndex - 1].mark.index;
-	    this._enqueueAction(this.replayToBreakpointHit.bind(this, markIndex, hitIndex, false, true));
-	    this.replayUpToMarkIndex(prevIndex, false, true);
-	}
-	else
-	    this.replayToBreakpointHit(markIndex, hitIndex, false, true);
+        var task = new WebInspector.ReplayTask("ReplayDebuggerWalk");
+        task.chain("ReplayToWalkStartingBreakpoint", function(cb) {
+            var task = model._replayToBreakpointHitTask(markIndex, hitIndex, true, speeds.Seeking);
+            task.run(cb);
+        });
+        
+        for (var i = 0; i < debuggerWalk.length; i++) {
+            task.chain("TakeDebuggerWalkStep", function(cb, event) {
+                // the first callback will come from previous step, not DebuggerPaused
+                if (typeof event !== "undefined")
+                    event.preventDefault(); // stop 
+
+                WebInspector.debuggerModel.onceEventListener(debuggerEvents.DebuggerPaused, cb, task);
+                debuggerWalk.shift()();
+            });
+        }
+        task.chain("UpdateStatus", function(cb) {
+            model._changeStatus("At savepoint.");
+            cb();
+        });
+        
+        
+        this._scheduler.cancelAllTasks().enqueue(task);
     },
 
     /* Scans breakpoints from startIndex (inclusive) to endIndex (exclusive). */
@@ -409,7 +468,6 @@ WebInspector.TimelapseModel.prototype = {
         var pauseTask = new WebInspector.ReplayTask("PausePlayback")
         .chain("suppressBreakpoints", function(cb) {
             //TODO: remove when scanning is task-ified.
-            delete model._targetBreakpointIndex;
             model._stopBreakpointScan();
             
             model._changeStatus("Pausing...");
@@ -443,7 +501,6 @@ WebInspector.TimelapseModel.prototype = {
         return new WebInspector.ReplayTask("StopPlayback")
         .chain("suppressBreakpoints", function(cb) {
             //TODO: remove when scanning is task-ified.
-            delete model._targetBreakpointIndex;
             model._stopBreakpointScan();
             
             model._changeStatus("Stopping playback...");
@@ -571,11 +628,13 @@ WebInspector.TimelapseModel.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.StatusChanged, this._status);
     },
 
+    // TODO: delete
     _enqueueAction: function(action)
     {
 	this._replayActionQueue.push(action);
     },
 
+    // TODO: delete
     _stopBreakpointScan: function() {
 	if (!this._scanningBreakpoints)
 	    return;
@@ -613,10 +672,13 @@ WebInspector.TimelapseModel.prototype = {
 	this._inputPaused = true;
 	this._unsuppressBreakpoints();
 
+    // TODO: remove
 	if (this._replayActionQueue.length)
 	    return this._replayActionQueue.shift()();
 
+    // TODO: remove
 	this._stopBreakpointScan();
+
 	this._changeStatus("Paused");
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.InputPaused);
     },
@@ -624,13 +686,15 @@ WebInspector.TimelapseModel.prototype = {
     _playbackStopped: function()
     {
 	this._replaying = false;
-	delete this._targetBreakpointIndex;
 	this._unsuppressBreakpoints();
 
+    // TODO: remove
 	if (this._replayActionQueue.length)
 	    return this._replayActionQueue.shift()();
 
+    // TODO: remove
 	this._stopBreakpointScan();
+    
 	this._changeStatus("Ready");
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.PlaybackStopped);
     },
@@ -671,7 +735,7 @@ WebInspector.TimelapseModel.prototype = {
 
     _debuggerPaused: function(event)
     {
-	if (!this._replaying)
+	if (!this.isReplaying)
 	    return;
 
 	var rawLocation = event.data.callFrames[0].location;
@@ -679,57 +743,53 @@ WebInspector.TimelapseModel.prototype = {
 	var lineNumber = rawLocation.lineNumber;
 	var breakpoint = WebInspector.breakpointManager.findBreakpoint(uiLocation.uiSourceCode, lineNumber);
 
-	// Record breakpoint hit
+    var timelapseEvents = WebInspector.TimelapseModel.Events;
+    var debuggerEvents = WebInspector.DebuggerModel.Events;
+
+	// Record breakpoint hit. We keep track for TimelapseModel.replayToBreakpointHit
+    // TODO: this could be made dynamic with listeners
 	if (breakpoint) {
 	    this._breakpointHitIndex++;
-	    this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.BreakpointHit, event.data);
+	    this.dispatchEventToListeners(timelapseEvents.BreakpointHit, event.data);
 	}
 
-	var scanningBreakpoints = this._scanningBreakpoints;
-	var replayingToBreakpoint = typeof this._targetBreakpointIndex === "number" &&
-	    this._targetBreakpointIndex != this._breakpointHitIndex;
-
+    // TODO: move to task, prevent default for DebuggerPaused
 	// Continue scanning breakpoints/replaying to target breakpoint
-	if (scanningBreakpoints || replayingToBreakpoint)
+	if (this._scanningBreakpoints)
 	    return DebuggerAgent.resume();
 
-	// We've reached the target breakpoint (or we weren't replaying to a breakpoint)
-	if (this._targetBreakpointIndex)
-	    delete this._targetBreakpointIndex;
+    // This event is used to allow default action prevention when doing debugger walks
+    // or during breakpoint scanning.
+    var defaultPrevented = this.dispatchEventToListeners(timelapseEvents.DebuggerWaiting, event);
+    if (defaultPrevented)
+        return;
 
-	// Start/continue replaying to debugger anchor
-	if (this._debuggerWalk.length)
-	    return this._debuggerWalk.shift()();
-
-	// At this point we don't need to resume playback/debugging, so set status and alert listeners
+    // This is the default action for when the debugger is waiting on the user.
 	if (breakpoint) {
-	    this._statusBeforeBreakpointPause = this._status;
+        var oldStatus = this._status;
+        var restoreStatusCallback = function() {
+            this._changeStatus(oldStatus);
+        };
 	    this._changeStatus("Hit breakpoint");
+        
+        WebInspector.debuggerModel.onceEventListener(debuggerEvents.DebuggerResumed,
+                                                    restoreStatusCallback, this);
 	}
+
 	// FIXME: We reach this point when the pause/step over/step in commands are used in
 	// the debugger, so "breakpointPaused" isn't a great way to describe the current state.
+    // TODO: unify this with DebuggerWaiting above, so that the status change is the default
 	this._breakpointPaused = true;
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.BreakpointPaused);
+	this.dispatchEventToListeners(timelapseEvents.BreakpointPaused);
     },
 
     _debuggerResumed: function()
     {
-	if (this._resumeCallback) {
-	    this._resumeCallback();
-	    delete this._resumeCallback;
-	}
-
-	if (!this._replaying || !this._breakpointPaused)
+	if (!this.isReplaying || !this._breakpointPaused)
 	    return;
 
 	this._breakpointPaused = false;
 	this._replayStartIndex = this._currentMarkIndex;
-
-	if (this._statusBeforeBreakpointPause) {
-	    var oldStatus = this._statusBeforeBreakpointPause;
-	    delete this._statusBeforeBreakpointPause;
-	    this._changeStatus(oldStatus);
-	}
 
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.PlaybackWillStart);
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.PlaybackDidStart);
