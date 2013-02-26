@@ -563,10 +563,10 @@ WebInspector.TimelapseReplayView.prototype = {
         return;
 
     if (!this._model.isReplaying)
-        this._model.replayToCompletion(true, false);
+        this._model.replayToCompletion(true, WebInspector.TimelapseModel.ReplaySpeed.Normal);
 
     else if (this._model.isReplaying && this._model.inputPaused)
-        this._model.replayToCompletion(true, false);
+        this._model.replayToCompletion(true, WebInspector.TimelapseModel.ReplaySpeed.Normal);
 
     else if (this._model.isReplaying && this._model.breakpointPaused)
         DebuggerAgent.resume();

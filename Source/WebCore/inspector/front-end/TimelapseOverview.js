@@ -809,12 +809,12 @@ WebInspector.TimelapseOverview.prototype = {
 
         var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
 	    var optionCallbacks = [
-                // case: moral equivalent of pressing play button
+        // case: moral equivalent of pressing play button
 		function(event) {
             var allowBreakpoints = model.scanningBreakpoints ||
                                    model.replaySpeed === replaySpeeds.Normal;
 		    model.replayUpToMarkIndex(model.replayFinishMarkIndex,
-                                      model.replaySpeed, allowBreakpoints);
+                                      allowBreakpoints, model.replaySpeed);
 		    preview.popView();
 		    message.detach();
 		},
@@ -825,7 +825,7 @@ WebInspector.TimelapseOverview.prototype = {
                                    model.replaySpeed === replaySpeeds.Normal;
 		    TimelapseAgent.setPauseOnError(false);
 		    model.replayUpToMarkIndex(model.replayFinishMarkIndex, 
-                                      model.replaySpeed, allowBreakpoints);
+                                      allowBreakpoints, model.replaySpeed);
 		    preview.popView();
 		    message.detach();
 		},

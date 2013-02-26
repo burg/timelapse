@@ -71,7 +71,7 @@ WebInspector.TimelapseModel.ReplaySpeed = {
     Normal: "Normal",
     Seeking: "Seeking",
     //-
-    Default: "Normal"
+    Default: "Seeking"
 };
 
 WebInspector.TimelapseModel.Events = {
