@@ -443,8 +443,8 @@ WebInspector.TimelapseReplayView.prototype = {
                 this.element.addStyleClass("play-playback-status-bar-item");
         };
         var togglePauseGlyph = function() {
-                this.element.removeStyleClass("pause-playback-status-bar-item");
-                this.element.addStyleClass("play-playback-status-bar-item");
+                this.element.addStyleClass("pause-playback-status-bar-item");
+                this.element.removeStyleClass("play-playback-status-bar-item");
         };
 
         this._model.addEventListener(eventNames.PlaybackDidStart, togglePauseGlyph, playbackButton);
