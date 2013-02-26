@@ -123,7 +123,12 @@ WebInspector.ReplayTask.prototype = {
         var index = this._stepIndex++;
         var step = this._steps[index];
         this._log("Running step " + index + ": " + this._stepNames[index]);
-        step.call(this, this._step.bind(this, runToken));
+        var args = Array.prototype.slice.call(arguments);
+        // replace callback arg token with next callback function, and pass
+        // all other arguments (typically, WebInspector.Event)
+        args.splice(0, 1, this._step.bind(this, runToken));
+
+        step.apply(this, args);
     },
     
     _finish: function(runToken)
