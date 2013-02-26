@@ -138,7 +138,9 @@ WebInspector.TimelapseOverview.prototype = {
                        "Tried to do something unsupported to listeners: " + op);
 
         var modelEventNames = WebInspector.TimelapseModel.Events;
-        this._model[op](modelEventNames.PlaybackWillStart, this._onPlaybackWillStart, this);
+        this._model[op](modelEventNames.BreakpointScanStarted, this._showMessagePanel, this);
+        this._model[op](modelEventNames.BreakpointScanStopped, this._hideMessagePanel, this);
+        this._model[op](modelEventNames.PlaybackWillStart, this._showMessagePanel, this);
         this._model[op](modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
         this._model[op](modelEventNames.PlaybackStopped, this._onPlaybackStopped, this);
         this._model[op](modelEventNames.PlaybackError, this._onPlaybackError, this);
@@ -858,28 +860,41 @@ WebInspector.TimelapseOverview.prototype = {
 	this._messagePanel.show(this.element);
     },
 
-    _onPlaybackWillStart: function()
+    _showMessagePanel: function(event)
     {
-	var clickCallback = function(event) {
-	    if (this._model.isReplaying)
-		this._model.pausePlayback();
+        // If the message panel is already showing, this means some higher-level
+        // event has displayed a message.
+        // For example, BreakpointScan{Started,Stopped} sets its own messages.
+        if (this._messagePanel.isShowing())
+            return;
 
-	    this._messagePanel.element.removeEventListener("click", clickCallback, false);
-	    this._messagePanel.detach();
-	}.bind(this);
-	this._messagePanel.addEventListener("click", clickCallback, false);
+        var clickCallback = function(clickEvent) {
+            if (this._model.isReplaying)
+                this._model.pausePlayback();
 
-	if (this._model.scanningBreakpoints)
-	    this._messagePanel.content = document.createTextNode("Scanning breakpoints...");
-	else if (this._model.replaySpeed === WebInspector.TimelapseModel.ReplaySpeed.Seeking)
-	    this._messagePanel.content = document.createTextNode("Seeking...");
-	else
-	    this._messagePanel.content = document.createTextNode("Replaying... click to cancel.");
+            this._messagePanel.element.removeEventListener("click", clickCallback, false);
+            this._messagePanel.detach();
+        }.bind(this);
+        this._messagePanel.addEventListener("click", clickCallback, false);
 
-	this._messagePanel.show(this.element);
+        if (event.type == WebInspector.TimelapseModel.Events.BreakpointScanStarted) {
+            this._messagePanel.content = document.createTextNode("Scanning breakpoints...");
+        } else if (this._model.replaySpeed === WebInspector.TimelapseModel.ReplaySpeed.Seeking) {
+            this._messagePanel.content = document.createTextNode("Seeking...");
+        } else {
+            this._messagePanel.content = document.createTextNode("Replaying... click to cancel.");
+        }
+
+        this._messagePanel.show(this.element);
+    },
+    
+    _hideMessagePanel: function(event)
+    {
+    	this._messagePanel.detach();
+        this._scheduleRefresh();
     },
 
-    _onPlaybackDidStart: function()
+    _onPlaybackDidStart: function(event)
     {
 	var allRecords = this._recording.allRecords;
 	var startRecord = allRecords[this._recording.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
@@ -899,9 +914,11 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.playback.element.addStyleClass("playback-pulse");
     var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
 	this.sliders.playback.minimumResolution = (this._model.replaySpeed === replaySpeeds.Seeking) ? 10.0 : 1.0;
+    
+    this._showMessagePanel(event);
     },
 
-    _onPlaybackStopped: function()
+    _onPlaybackStopped: function(event)
     {
 	this.sliders.previous.hide();
 	this.sliders.tentative.hide();
@@ -909,12 +926,11 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.playback.resetResolution();
 	this.sliders.playback.element.removeStyleClass("playback-pulse");
 	this.sliders.playback.enable();
-
-	this._messagePanel.detach();
-	this._scheduleRefresh();
+    
+    this._hideMessagePanel(event);
     },
 
-    _onInputPaused: function()
+    _onInputPaused: function(event)
     {
 	var allRecords = this._recording.allRecords;
 	var recordIndex = this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex);
@@ -935,8 +951,7 @@ WebInspector.TimelapseOverview.prototype = {
 	this.sliders.playback.element.removeStyleClass("playback-pulse");
 	this.sliders.playback.enable();
 
-	if (!this._model.scanningBreakpoints)
-	    this._messagePanel.detach();
+    this._hideMessagePanel(event);
 
 	this._scheduleRefresh();
     },
