@@ -47,6 +47,7 @@ WebInspector.TimelapseModel = function()
     this._inputLocked = false;
 
     this._breakpointTracker = new WebInspector.TimelapseBreakpointTracker(this);
+    this._breakpointScanner = new WebInspector.TimelapseBreakpointScanner(this);
     this._breakpointsWereEnabled = WebInspector.debuggerModel.breakpointsActive();
     this._suppressingBreakpoints = false;
 
@@ -117,9 +118,6 @@ WebInspector.TimelapseModel.Events = {
 
     InputLocked: "TimelapseInputLocked",
     InputUnlocked: "TimelapseInputUnlocked",
-
-    BreakpointScanStarted: "TimelapseBreakpointScanStarted",
-    BreakpointScanStopped: "TimelapseBreakpointScanStopped"
 };
 
 WebInspector.TimelapseModel.prototype = {
@@ -344,11 +342,11 @@ WebInspector.TimelapseModel.prototype = {
 
     replayToBreakpointHit: function(markIndex, hitIndex, allowBreakpoints, replaySpeed)
     {
-        var task = this._replayToBreakpointHitTask(markIndex, hitIndex, allowBreakpoints, replaySpeed);
+        var task = this.replayToBreakpointHitTask(markIndex, hitIndex, allowBreakpoints, replaySpeed);
         this._scheduler.cancelAllTasks().enqueue(task);
     },
     
-    _replayToBreakpointHitTask: function(markIndex, hitIndex, allowBreakpoints, replaySpeed)
+    replayToBreakpointHitTask: function(markIndex, hitIndex, allowBreakpoints, replaySpeed)
     {
         var model = this;
         var timelapseEvents = WebInspector.TimelapseModel.Events;
@@ -402,7 +400,7 @@ WebInspector.TimelapseModel.prototype = {
 
         var task = new WebInspector.ReplayTask("ReplayDebuggerWalk");
         task.chain("ReplayToWalkStartingBreakpoint", function(cb) {
-            var task = model._replayToBreakpointHitTask(markIndex, hitIndex, false, speeds.Seeking);
+            var task = model.replayToBreakpointHitTask(markIndex, hitIndex, false, speeds.Seeking);
             task.run(cb);
         });
         
@@ -422,116 +420,6 @@ WebInspector.TimelapseModel.prototype = {
         });
         
         this._scheduler.cancelAllTasks().enqueue(task);
-    },
-
-    // TODO: (Issue #153): extract breakpoint scan functionality from TimelapseModel
-    /* Scans breakpoints from startIndex (inclusive) to endIndex (exclusive). */
-    scanBreakpointsInRegion: function(startIndex, endIndex)
-    {
-        var model = this;
-        var timelapseEvents = WebInspector.TimelapseModel.Events;
-
-        var currentIndex = this._currentMarkIndex;
-        var breakpointHitIndex = this.breakpointTracker.breakpointHitIndex;
-        var allRecords = this.loadedRecording.allRecords;
-        var task = new WebInspector.ReplayTask("ScanBreakpointsInRegion("+startIndex+","+endIndex+")");
-
-        var breakpointAutoResumeCallback = function(event) {
-            // prevent debugger wait from propagating; resume.
-            event.preventDefault();
-            if (WebInspector.debuggerModel.isPaused())
-                DebuggerAgent.resume();
-        };
-        
-        var createPreventDefaultCallback = function(callback) {
-            return function(innerCb, event) {
-                event.preventDefault(); innerCb();
-            // provide dummy thisObj argument, since it will be
-            // adjusted by dispatchEventToListeners() anyway.
-            }.bind(null, callback);
-        };
-        
-        task.chain("notifyScanningStarted", function(cb) {
-            model.addEventListener(timelapseEvents.DebuggerWaiting, breakpointAutoResumeCallback, model);
-            model.dispatchEventToListeners(timelapseEvents.BreakpointScanStarted);
-            cb();
-        });
-        
-        /* Case: playback is paused inside the region to be scanned. */
-        if (startIndex <= currentIndex && endIndex > currentIndex) {
-            task.chain("ScanFromCursorToRegionEnd("+endIndex+")", function(cb) {
-                model.onceEventListener(timelapseEvents.InputWaiting,
-                                        createPreventDefaultCallback(cb), task);
-                model.startReplayUpToMarkIndexTask(endIndex, true).run();
-            });
-            if (startIndex > allRecords[0].mark.index) {
-                task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
-                    model.onceEventListener(timelapseEvents.InputWaiting,
-                                            createPreventDefaultCallback(cb), task);
-                    model.startReplayUpToMarkIndexTask(startIndex, false).run();
-                });
-            }
-
-            if (this.debuggerPaused) {
-                task.chain("ScanFromRegionBeginToCursorBreakpoint("+currentIndex+"."+breakpointHitIndex+")", function(cb) {
-                    model._replayToBreakpointHitTask(currentIndex, breakpointHitIndex, true).run(cb);
-                });
-            } else {
-                task.chain("ScanFromRegionBeginToCursor("+currentIndex+")", function(cb) {
-                    model.onceEventListener(timelapseEvents.InputWaiting, cb, task);
-                    model.startReplayUpToMarkIndexTask(currentIndex, true).run();
-                });
-            }
-        }
-        /* Case: playback is paused outside of the region to be scanned, or stopped. */
-        else {
-            if (startIndex > allRecords[0].mark.index) {
-                task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
-                    model.onceEventListener(timelapseEvents.InputWaiting,
-                                            createPreventDefaultCallback(cb), task);
-                    model.startReplayUpToMarkIndexTask(startIndex, false).run();
-                });
-            }
-
-            // Workaround: currently there is no way to force replay up to the current mark index.
-            if (currentIndex == endIndex) {
-                var endRecordIndex = this.loadedRecording.recordIndexFromMarkIndex(endIndex);
-                var prevIndex = allRecords[endRecordIndex - 1].mark.index;
-                task.chain("ScanToMarkPrecedingRegionEnd("+prevIndex+")", function(cb) {
-                    model.onceEventListener(timelapseEvents.InputWaiting,
-                                            createPreventDefaultCallback(cb), task);
-                    model.startReplayUpToMarkIndexTask(prevIndex, true).run();
-                });
-            }
-
-            task.chain("ScanToRegionEnd("+endIndex+")", function(cb) {
-                model.onceEventListener(timelapseEvents.InputWaiting,
-                                        createPreventDefaultCallback(cb), task);
-                model.startReplayUpToMarkIndexTask(endIndex, true).run();
-            });
-
-            if (this.debuggerPaused) {
-                task.chain("SeekToCursorBreakpoint("+currentIndex+"."+breakpointHitIndex+")", function(cb) {
-                    model._replayToBreakpointHitTask(currentIndex, breakpointHitIndex, false).run(cb);
-                });
-            } else if (currentIndex != endIndex) {
-                task.chain("SeekToCursor("+currentIndex+")", function(cb) {
-                    model.onceEventListener(timelapseEvents.InputWaiting, cb, task);
-                    model.startReplayUpToMarkIndexTask(currentIndex, false).run();
-                });
-            }
-        }
-
-        var notifyScanningDoneStep = function(cb) {
-            model.removeEventListener(timelapseEvents.DebuggerWaiting, breakpointAutoResumeCallback, model);
-            model.dispatchEventToListeners(timelapseEvents.BreakpointScanStopped);
-            cb();
-        };
-        
-        task.chain("NotifyScanningDone", notifyScanningDoneStep)
-            .orCancel(notifyScanningDoneStep);
-        
-        this._scheduler.enqueue(task);
     },
 
     // pauses playback immediately, cancelling any in-progress tasks.
@@ -654,6 +542,11 @@ WebInspector.TimelapseModel.prototype = {
     get breakpointTracker()
     {
         return this._breakpointTracker;
+    },
+    
+    get breakpointScanner()
+    {
+        return this._breakpointScanner;
     },
 
     // Internal helpers

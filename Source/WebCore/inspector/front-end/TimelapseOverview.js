@@ -137,10 +137,12 @@ WebInspector.TimelapseOverview.prototype = {
         console.assert(op === "addEventListener" || op === "removeEventListener",
                        "Tried to do something unsupported to listeners: " + op);
 
+        var scanner = this._model.breakpointScanner;
+        var scannerEvents = WebInspector.TimelapseBreakpointScanner.Events;
+        scanner[op](scannerEvents.BreakpointScanStarted, this._showMessagePanel, this);
+        scanner[op](scannerEvents.BreakpointScanStopped, this._hideMessagePanel, this);
+
         var modelEventNames = WebInspector.TimelapseModel.Events;
-        this._model[op](modelEventNames.BreakpointScanStarted, this._showMessagePanel, this);
-        this._model[op](modelEventNames.BreakpointScanStopped, this._hideMessagePanel, this);
-        
         this._model[op](modelEventNames.PlaybackWillStart,  this._showMessagePanel,   this);
         this._model[op](modelEventNames.PlaybackDidStart,   this._onPlaybackDidStart, this);
         this._model[op](modelEventNames.PlaybackStopped,    this._onPlaybackStopped,  this);
@@ -881,7 +883,7 @@ WebInspector.TimelapseOverview.prototype = {
         }.bind(this);
         this._messagePanel.addEventListener("click", clickCallback, false);
 
-        if (event.type == WebInspector.TimelapseModel.Events.BreakpointScanStarted) {
+        if (event.type == WebInspector.TimelapseBreakpointScanner.Events.BreakpointScanStarted) {
             this._messagePanel.content = document.createTextNode("Scanning breakpoints...");
         } else if (this._model.replaySpeed === WebInspector.TimelapseModel.ReplaySpeed.Seeking) {
             this._messagePanel.content = document.createTextNode("Seeking...");
