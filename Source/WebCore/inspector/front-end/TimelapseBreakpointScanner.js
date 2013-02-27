@@ -127,13 +127,18 @@ WebInspector.TimelapseBreakpointScanner.prototype = {
                                             createPreventDefaultCallback(cb), task);
                     model.startReplayUpToMarkIndexTask(prevIndex, true).run();
                 });
+                // if this is the last step, then don't prevent default action of InputWaiting
+                task.chain("ScanToRegionEnd("+endIndex+")", function(cb) {
+                    model.onceEventListener(timelapseEvents.InputWaiting, cb, task);
+                    model.startReplayUpToMarkIndexTask(endIndex, true).run();
+                });
+            } else {
+                task.chain("ScanToRegionEnd("+endIndex+")", function(cb) {
+                    model.onceEventListener(timelapseEvents.InputWaiting,
+                                            createPreventDefaultCallback(cb), task);
+                    model.startReplayUpToMarkIndexTask(endIndex, true).run();
+                });
             }
-
-            task.chain("ScanToRegionEnd("+endIndex+")", function(cb) {
-                model.onceEventListener(timelapseEvents.InputWaiting,
-                                        createPreventDefaultCallback(cb), task);
-                model.startReplayUpToMarkIndexTask(endIndex, true).run();
-            });
 
             if (model.debuggerPaused) {
                 task.chain("SeekToCursorBreakpoint("+currentIndex+"."+breakpointHitIndex+")", function(cb) {
