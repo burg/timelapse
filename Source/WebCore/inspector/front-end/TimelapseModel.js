@@ -147,7 +147,59 @@ WebInspector.TimelapseModel.prototype = {
 	return TimelapseAgent.enable(cb);
     },
 
+    changeStatus: function(newStatus)
+    {
+        this._status = newStatus || "(no status)";
+        this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.StatusChanged, this._status);
+    },
+
+    // the following commands cancel any pending or queued tasks, and act immediately.
     startCapture: function()
+    {
+        var task = this.startCaptureTask();
+        this._scheduler.cancelAllTasks().enqueue(task);
+    },
+
+    stopCapture: function()
+    {
+        var task = this.stopCaptureTask();
+        this._scheduler.cancelAllTasks().enqueue(task);
+    },
+
+    replayUpToMarkIndex: function(markIndex, allowBreakpoints, replaySpeed)
+    {
+        this.changeStatus("Starting replay...");
+
+        var task = this.startReplayUpToMarkIndexTask(markIndex, allowBreakpoints, replaySpeed);
+        this._scheduler.cancelAllTasks().enqueue(task);
+    },
+    
+    replayToCompletion: function(allowBreakpoints, replaySpeed)
+    {
+        var task = this.replayToCompletionTask(allowBreakpoints, replaySpeed);
+        this._scheduler.cancelAllTasks().enqueue(task);
+    },
+
+    replayToBreakpointHit: function(markIndex, hitIndex, allowBreakpoints, replaySpeed)
+    {
+        var task = this.replayToBreakpointHitTask(markIndex, hitIndex, allowBreakpoints, replaySpeed);
+        this._scheduler.cancelAllTasks().enqueue(task);
+    },
+    
+    pausePlayback: function()
+    {
+        var task = this.pausePlaybackTask();
+        this._scheduler.cancelAllTasks().enqueue(task);
+    },
+    
+    stopPlayback: function(shouldUnlock)
+    {
+        this.changeStatus("Stopping playback...");
+        this._scheduler.cancelAllTasks().enqueue(this.stopPlaybackTask(shouldUnlock));
+    },
+    
+    // Public task creation API
+    startCaptureTask: function()
     {
         var model = this;
         var events = WebInspector.TimelapseModel.Events;
@@ -188,10 +240,11 @@ WebInspector.TimelapseModel.prototype = {
             model.changeStatus("Capturing...");
             cb();
         });
-        this._scheduler.cancelAllTasks().enqueue(task);
+        
+        return task;
     },
 
-    stopCapture: function()
+    stopCaptureTask: function()
     {
         if (!this.isCapturing)
             return;
@@ -227,15 +280,7 @@ WebInspector.TimelapseModel.prototype = {
             cb();
         });
         
-        this._scheduler.cancelAllTasks().enqueue(task);
-    },
-
-    replayUpToMarkIndex: function(markIndex, allowBreakpoints, replaySpeed)
-    {
-        this.changeStatus("Starting replay...");
-
-        var task = this.startReplayUpToMarkIndexTask(markIndex, allowBreakpoints, replaySpeed);
-        this._scheduler.cancelAllTasks().enqueue(task);
+        return task;
     },
 
     startReplayUpToMarkIndexTask: function(markIndex, allowBreakpoints, replaySpeed)
@@ -286,7 +331,7 @@ WebInspector.TimelapseModel.prototype = {
         return task;
     },
 
-    _replayToCompletionTask: function(allowBreakpoints, replaySpeed)
+    replayToCompletionTask: function(allowBreakpoints, replaySpeed)
     {
         var model = this;
         var task = new WebInspector.ReplayTask("ReplayToCompletion");
@@ -335,18 +380,6 @@ WebInspector.TimelapseModel.prototype = {
         return task;
     },
     
-    replayToCompletion: function(allowBreakpoints, replaySpeed)
-    {
-        var task = this._replayToCompletionTask(allowBreakpoints, replaySpeed);
-        this._scheduler.cancelAllTasks().enqueue(task);
-    },
-
-    replayToBreakpointHit: function(markIndex, hitIndex, allowBreakpoints, replaySpeed)
-    {
-        var task = this.replayToBreakpointHitTask(markIndex, hitIndex, allowBreakpoints, replaySpeed);
-        this._scheduler.cancelAllTasks().enqueue(task);
-    },
-    
     replayToBreakpointHitTask: function(markIndex, hitIndex, allowBreakpoints, replaySpeed)
     {
         var model = this;
@@ -368,7 +401,7 @@ WebInspector.TimelapseModel.prototype = {
             model.startReplayUpToMarkIndexTask(markIndex, allowBreakpoints, replaySpeed).run();
         });
         task.chain("RequestReplayWithBreakpoints", function(cb) {
-            var subtask = model._replayToCompletionTask(true, replaySpeed);
+            var subtask = model.replayToCompletionTask(true, replaySpeed);
             subtask.run(cb);
         });
         task.chain("CountDebuggerWait" + hitIndex + "Times", function(cb) {
@@ -393,9 +426,8 @@ WebInspector.TimelapseModel.prototype = {
         
         return task;
     },
-    
-    // pauses playback immediately, cancelling any in-progress tasks.
-    pausePlayback: function()
+       
+    pausePlaybackTask: function()
     {
         var model = this;
         var task = new WebInspector.ReplayTask("PausePlayback");
@@ -411,14 +443,8 @@ WebInspector.TimelapseModel.prototype = {
             model.onceEventListener(events.InputPaused, cb, this);
             TimelapseAgent.pausePlayback();
         });
-       
-        this._scheduler.cancelAllTasks().enqueue(task);
-    },
-
-    stopPlayback: function(shouldUnlock)
-    {
-        this.changeStatus("Stopping playback...");
-        this._scheduler.cancelAllTasks().enqueue(this.stopPlaybackTask(shouldUnlock));
+        
+        return task;
     },
 
     stopPlaybackTask: function(shouldUnlock)
@@ -436,6 +462,8 @@ WebInspector.TimelapseModel.prototype = {
             model.onceEventListener(events.PlaybackStopped, cb, this);
             TimelapseAgent.stopPlayback(!!shouldUnlock);
         });
+        
+        return task;
     },
 
     // Public query API
@@ -549,12 +577,6 @@ WebInspector.TimelapseModel.prototype = {
     this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingAdded, recording);
     },
     
-    changeStatus: function(newStatus)
-    {
-	this._status = newStatus || "(no status)";
-	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.StatusChanged, this._status);
-    },
-
     // Callbacks from the backend message dispatcher (TimelapseDispatcher below)
     _timelapseEnabled: function()
     {
