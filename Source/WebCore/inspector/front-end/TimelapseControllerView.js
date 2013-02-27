@@ -510,11 +510,11 @@ WebInspector.TimelapseReplayView.prototype = {
         radarButton.enabled = false;
         radarButton.addEventListener("click", this._radarButtonClicked, replayView);
         var scanner = this._model.breakpointScanner;
-        var scannerEvents = WebInspector.TimelapseBreakpointScanner.Events;
-        scanner.addEventListener(scannerEvents.BreakpointScanStarted, function() {
+        var scannerEvents = WebInspector.TimelapseScanner.Events;
+        scanner.addEventListener(scannerEvents.ScanStarted, function() {
             this.toggled = true;
         }, radarButton);
-        scanner.addEventListener(scannerEvents.BreakpointScanStopped, function() {
+        scanner.addEventListener(scannerEvents.ScanStopped, function() {
             this.toggled = false;
         }, radarButton);
         model.addEventListener(eventNames.RecordingLoaded, function() {

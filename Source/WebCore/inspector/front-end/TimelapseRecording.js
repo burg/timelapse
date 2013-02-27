@@ -62,8 +62,8 @@ WebInspector.TimelapseRecording.prototype = {
                    "Tried to do something unsupported to listeners: " + op);
        
 
-    var scannerEvents = WebInspector.TimelapseBreakpointScanner.Events;
-    this._model.breakpointScanner[op](scannerEvents.BreakpointScanStarted, this._breakpointScanStarted, this);
+    var scannerEvents = WebInspector.TimelapseScanner.Events;
+    this._model.breakpointScanner[op](scannerEvents.ScanStarted, this._breakpointScanStarted, this);
 
     var eventNames = WebInspector.TimelapseModel.Events;
     this._model[op](eventNames.RecordingUnloaded,     this._recordingUnloaded,     this);
@@ -279,7 +279,7 @@ WebInspector.TimelapseRecording.prototype = {
 	var startIndex = this.calculator.computeMarkIndexFromPercentage(this.calculator.zoomLeft);
 	var endIndex = this.calculator.computeMarkIndexFromPercentage(this.calculator.zoomRight);
 
-	this._model.breakpointScanner.scanBreakpointsInRegion(startIndex, endIndex);
+	this._model.breakpointScanner.scanRegion(startIndex, endIndex);
     },
     
     // Called by WebInspector.TimelapseDispatcher

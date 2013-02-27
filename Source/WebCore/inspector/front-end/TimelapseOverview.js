@@ -138,9 +138,9 @@ WebInspector.TimelapseOverview.prototype = {
                        "Tried to do something unsupported to listeners: " + op);
 
         var scanner = this._model.breakpointScanner;
-        var scannerEvents = WebInspector.TimelapseBreakpointScanner.Events;
-        scanner[op](scannerEvents.BreakpointScanStarted, this._showMessagePanel, this);
-        scanner[op](scannerEvents.BreakpointScanStopped, this._hideMessagePanel, this);
+        var scannerEvents = WebInspector.TimelapseScanner.Events;
+        scanner[op](scannerEvents.ScanStarted, this._showMessagePanel, this);
+        scanner[op](scannerEvents.ScanStopped, this._hideMessagePanel, this);
 
         var modelEventNames = WebInspector.TimelapseModel.Events;
         this._model[op](modelEventNames.PlaybackWillStart,  this._showMessagePanel,   this);
@@ -866,6 +866,7 @@ WebInspector.TimelapseOverview.prototype = {
 	this._messagePanel.show(this.element);
     },
 
+    // TODO: (Issue #158): extract a 'message' parameter rather than decoding by event.
     _showMessagePanel: function(event)
     {
         // If the message panel is already showing, this means some higher-level
@@ -883,7 +884,7 @@ WebInspector.TimelapseOverview.prototype = {
         }.bind(this);
         this._messagePanel.addEventListener("click", clickCallback, false);
 
-        if (event.type == WebInspector.TimelapseBreakpointScanner.Events.BreakpointScanStarted) {
+        if (event.type == WebInspector.TimelapseScanner.Events.ScanStarted) {
             this._messagePanel.content = document.createTextNode("Scanning breakpoints...");
         } else if (this._model.replaySpeed === WebInspector.TimelapseModel.ReplaySpeed.Seeking) {
             this._messagePanel.content = document.createTextNode("Seeking...");

@@ -31,29 +31,16 @@
 
 
 WebInspector.TimelapseBreakpointScanner = function(model) {
-    WebInspector.Object.call(this);
-
-    this._model = model;
-    this._scanning = false;
-};
-
-WebInspector.TimelapseBreakpointScanner.Events = {
-    BreakpointScanStarted: "TimelapseBreakpointScanStarted",
-    BreakpointScanStopped: "TimelapseBreakpointScanStopped"
+    WebInspector.TimelapseScanner.call(this, model);
 };
 
 WebInspector.TimelapseBreakpointScanner.prototype = {
-    get isScanning()
-    {
-        return this._scanning;
-    },
-
-    scanBreakpointsInRegion: function(startIndex, endIndex)
+    scanRegion: function(startIndex, endIndex)
     {
         var model = this._model;
         var timelapseEvents = WebInspector.TimelapseModel.Events;
         var scanner = this;
-        var scannerEvents = WebInspector.TimelapseBreakpointScanner.Events;
+        var scannerEvents = WebInspector.TimelapseScanner.Events;
 
         var currentIndex = model.currentMarkIndex;
         var breakpointHitIndex = model.breakpointTracker.breakpointHitIndex;
@@ -78,7 +65,7 @@ WebInspector.TimelapseBreakpointScanner.prototype = {
         task.chain("notifyScanningStarted", function(cb) {
             scanner._scanning = true;
             model.addEventListener(timelapseEvents.DebuggerWaiting, breakpointAutoResumeCallback, model);
-            scanner.dispatchEventToListeners(scannerEvents.BreakpointScanStarted);
+            scanner.dispatchEventToListeners(scannerEvents.ScanStarted);
             cb();
         });
         
@@ -155,7 +142,7 @@ WebInspector.TimelapseBreakpointScanner.prototype = {
         var notifyScanningDoneStep = function(cb) {
             model.removeEventListener(timelapseEvents.DebuggerWaiting, breakpointAutoResumeCallback, model);
             scanner._scanning = false;
-            scanner.dispatchEventToListeners(scannerEvents.BreakpointScanStopped);
+            scanner.dispatchEventToListeners(scannerEvents.ScanStopped);
             cb();
         };
         
@@ -165,7 +152,7 @@ WebInspector.TimelapseBreakpointScanner.prototype = {
         model.scheduler.enqueue(task);
     },
     
-    __proto__: WebInspector.Object.prototype
+    __proto__: WebInspector.TimelapseScanner.prototype
 };
 
 WebInspector.TimelapseBreakpointDataProvider = function(recording, displayName, color)
