@@ -63,6 +63,7 @@ WebInspector.TimelapseBreakpointScanner.prototype = {
         };
         
         task.chain("notifyScanningStarted", function(cb) {
+            WebInspector.debuggerModel.enableDebugger();
             scanner._scanning = true;
             model.addEventListener(timelapseEvents.DebuggerWaiting, breakpointAutoResumeCallback, model);
             scanner.dispatchEventToListeners(scannerEvents.ScanStarted);

@@ -63,7 +63,7 @@ WebInspector.TimelapseRecording.prototype = {
        
 
     var scannerEvents = WebInspector.TimelapseScanner.Events;
-    this._model.breakpointScanner[op](scannerEvents.ScanStarted, this._breakpointScanStarted, this);
+    this._model.scanners.breakpoint[op](scannerEvents.ScanStarted, this._breakpointScanStarted, this);
 
     var eventNames = WebInspector.TimelapseModel.Events;
     this._model[op](eventNames.RecordingUnloaded,     this._recordingUnloaded,     this);
@@ -272,14 +272,15 @@ WebInspector.TimelapseRecording.prototype = {
 	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.InputSelected, markIndex);
     },
 
-    scanBreakpointsInZoomRegion: function()
+    scanInZoomRegion: function(scanner)
     {
-    	WebInspector.debuggerModel.enableDebugger();
+        console.assert(scanner instanceof WebInspector.TimelapseScanner,
+                       "Tried to scan zoom region with object that wasn't a TimelapseScanner.");
+        
+        var startIndex = this.calculator.computeMarkIndexFromPercentage(this.calculator.zoomLeft);
+        var endIndex = this.calculator.computeMarkIndexFromPercentage(this.calculator.zoomRight);
 
-	var startIndex = this.calculator.computeMarkIndexFromPercentage(this.calculator.zoomLeft);
-	var endIndex = this.calculator.computeMarkIndexFromPercentage(this.calculator.zoomRight);
-
-	this._model.breakpointScanner.scanRegion(startIndex, endIndex);
+        scanner.scanRegion(startIndex, endIndex);
     },
     
     // Called by WebInspector.TimelapseDispatcher

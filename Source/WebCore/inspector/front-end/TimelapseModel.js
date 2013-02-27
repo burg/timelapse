@@ -38,6 +38,7 @@ WebInspector.TimelapseModel = function()
     WebInspector.Object.call(this);
     this._dispatcher = new WebInspector.TimelapseDispatcher(this);
 
+    this._scanners = {};
     this._recordings = [];
     this._capturing = false;
     this._replaying = false;
@@ -47,7 +48,7 @@ WebInspector.TimelapseModel = function()
     this._inputLocked = false;
 
     this._breakpointTracker = new WebInspector.TimelapseBreakpointTracker(this);
-    this._breakpointScanner = new WebInspector.TimelapseBreakpointScanner(this);
+    this._scanners["breakpoint"] = new WebInspector.TimelapseBreakpointScanner(this);
     this._breakpointsWereEnabled = WebInspector.debuggerModel.breakpointsActive();
     this._suppressingBreakpoints = false;
 
@@ -515,9 +516,9 @@ WebInspector.TimelapseModel.prototype = {
         return this._breakpointTracker;
     },
     
-    get breakpointScanner()
+    get scanners()
     {
-        return this._breakpointScanner;
+        return this._scanners;
     },
 
     // Internal helpers

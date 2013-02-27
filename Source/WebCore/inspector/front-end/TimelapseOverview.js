@@ -137,7 +137,7 @@ WebInspector.TimelapseOverview.prototype = {
         console.assert(op === "addEventListener" || op === "removeEventListener",
                        "Tried to do something unsupported to listeners: " + op);
 
-        var scanner = this._model.breakpointScanner;
+        var scanner = this._model.scanners.breakpoint;
         var scannerEvents = WebInspector.TimelapseScanner.Events;
         scanner[op](scannerEvents.ScanStarted, this._showMessagePanel.bind(this, "Scanning breakpoints..."), this);
         scanner[op](scannerEvents.ScanStopped, this._hideMessagePanel, this);
