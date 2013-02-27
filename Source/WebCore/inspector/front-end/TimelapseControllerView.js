@@ -449,7 +449,7 @@ WebInspector.TimelapseReplayView.prototype = {
 
         this._model.addEventListener(eventNames.PlaybackDidStart, togglePauseGlyph, playbackButton);
         this._model.addEventListener(eventNames.InputPaused,      togglePlayGlyph,  playbackButton);
-        this._model.addEventListener(eventNames.BreakpointPaused, togglePlayGlyph,  playbackButton);
+        this._model.addEventListener(eventNames.DebuggerPaused,   togglePlayGlyph,  playbackButton);
         this._model.addEventListener(eventNames.PlaybackStopped,  togglePlayGlyph,  playbackButton);
         this._statusBarButtons.push(playbackButton);
         togglePlayGlyph.call(playbackButton);
@@ -465,7 +465,7 @@ WebInspector.TimelapseReplayView.prototype = {
 
         this._model.addEventListener(eventNames.PlaybackDidStart, disableButtonCallback, setSavepointButton);
         this._model.addEventListener(eventNames.PlaybackStopped,  disableButtonCallback, setSavepointButton);
-        this._model.addEventListener(eventNames.BreakpointPaused, enableButtonCallback,  setSavepointButton);
+        this._model.addEventListener(eventNames.DebuggerPaused,   enableButtonCallback,  setSavepointButton);
         this._statusBarButtons.push(setSavepointButton);
 
         //the replay-to-savepoint button
@@ -486,17 +486,17 @@ WebInspector.TimelapseReplayView.prototype = {
             this.toggled = false;
             this.disabled = !provider.hasSavepoint();
         }, savepointButton);
-        this._model.addEventListener(eventNames.BreakpointPaused, function() {
+        this._model.addEventListener(eventNames.DebuggerPaused, function() {
             this.toggled = false;
             this.disabled = !provider.hasSavepoint();
+            
+            enableButtonCallback.call(this);
         }, savepointButton);
-        this._recording.addEventListener(WebInspector.TimelapseRecording.Events.DebuggerPaused,
-                                         enableButtonCallback, savepointButton);
         this._statusBarButtons.push(savepointButton);
 
         var events = WebInspector.ReplaySavepointProvider.Events;
-        provider.addEventListener(events.SavepointSet, enableButtonCallback, savepointButton);
-        provider.addEventListener(events.SavepointRemoved, syncSavepointStatus, savepointButton);
+        provider.addEventListener(events.SavepointSet,     enableButtonCallback, savepointButton);
+        provider.addEventListener(events.SavepointRemoved, syncSavepointStatus,  savepointButton);
         var willRemoveCallback = function() {
             provider.removeEventListener(events.SavepointSet,     enableButtonCallback, savepointButton);
             provider.removeEventListener(events.SavepointRemoved, syncSavepointStatus,  savepointButton);
@@ -569,7 +569,7 @@ WebInspector.TimelapseReplayView.prototype = {
     else if (this._model.isReplaying && this._model.inputPaused)
         this._model.replayToCompletion(true, WebInspector.TimelapseModel.ReplaySpeed.Normal);
 
-    else if (this._model.isReplaying && this._model.breakpointPaused)
+    else if (this._model.isReplaying && this._model.debuggerPaused)
         DebuggerAgent.resume();
 
     else if (this._model.isReplaying && !this._model.inputPaused)
@@ -586,7 +586,7 @@ WebInspector.TimelapseReplayView.prototype = {
 
     _setSavepointButtonClicked: function()
     {
-        if (this._model.breakpointPaused)
+        if (this._model.debuggerPaused)
             this._recording.savepointProvider.setSavepoint();
     },
 

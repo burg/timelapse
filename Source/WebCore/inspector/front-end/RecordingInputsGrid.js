@@ -152,7 +152,7 @@ WebInspector.RecordingInputsGrid.prototype = {
         this._model[op](modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
         this._model[op](modelEventNames.PlaybackStopped,  this._onPlaybackStopped, this);
         this._model[op](modelEventNames.InputPaused,      this._onInputPaused, this);
-        this._model[op](modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
+        this._model[op](modelEventNames.DebuggerPaused,   this._onDebuggerPaused, this);
 
         var recordingEventNames = WebInspector.TimelapseRecording.Events;
         this._recording[op](recordingEventNames.ProviderAdded,  this._onProviderAdded, this);
@@ -501,7 +501,7 @@ WebInspector.RecordingInputsGrid.prototype = {
 	    this.sliders.playback.show();
     },
 
-    _onBreakpointPaused: function(eventData)
+    _onDebuggerPaused: function(eventData)
     {
 	var position = this._recordGridNodes[this._model.currentMarkIndex];
 
@@ -679,8 +679,9 @@ WebInspector.RecordingInputsGrid.prototype = {
 
     _onPlaybackSliderContextMenu: function(event)
     {
-	if (WebInspector.timelapseModel.breakpointPaused)
-	    WebInspector.timelapseBreakpointTracker.currentBreakpoint.contextMenu(event);	
+        var currentBreakpoint = WebInspector.timelapseBreakpointTracker.currentBreakpoint;
+        if (currentBreakpoint)
+            currentBreakpoint.contextMenu(event);
     },
 
     _autoScrollDelay: 100, /* milliseconds between autoscrolls */

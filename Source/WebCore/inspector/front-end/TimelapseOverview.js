@@ -140,26 +140,29 @@ WebInspector.TimelapseOverview.prototype = {
         var modelEventNames = WebInspector.TimelapseModel.Events;
         this._model[op](modelEventNames.BreakpointScanStarted, this._showMessagePanel, this);
         this._model[op](modelEventNames.BreakpointScanStopped, this._hideMessagePanel, this);
-        this._model[op](modelEventNames.PlaybackWillStart, this._showMessagePanel, this);
-        this._model[op](modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
-        this._model[op](modelEventNames.PlaybackStopped, this._onPlaybackStopped, this);
-        this._model[op](modelEventNames.PlaybackError, this._onPlaybackError, this);
-        this._model[op](modelEventNames.InputPaused, this._onInputPaused, this);
-        this._model[op](modelEventNames.InputHit, this._onInputHit, this);
-        this._model[op](modelEventNames.BreakpointPaused, this._onBreakpointPaused, this);
+        
+        this._model[op](modelEventNames.PlaybackWillStart,  this._showMessagePanel,   this);
+        this._model[op](modelEventNames.PlaybackDidStart,   this._onPlaybackDidStart, this);
+        this._model[op](modelEventNames.PlaybackStopped,    this._onPlaybackStopped,  this);
+        this._model[op](modelEventNames.PlaybackError,      this._onPlaybackError,    this);
+        this._model[op](modelEventNames.InputPaused,        this._onInputPaused,      this);
+        this._model[op](modelEventNames.InputHit,           this._onInputHit,         this);
+        this._model[op](modelEventNames.DebuggerPaused,     this._onDebuggerPaused,   this);
 
         // TODO: these should instead listen to specific data provider events.
         var recordingEventNames = WebInspector.TimelapseRecording.Events;
-        this._recording[op](recordingEventNames.ProviderAdded, this._onProviderAdded, this);
+        this._recording[op](recordingEventNames.ProviderAdded,  this._onProviderAdded,  this);
         this._recording[op](recordingEventNames.PreviewStarted, this._onPreviewStarted, this);
         this._recording[op](recordingEventNames.PreviewStopped, this._onPreviewStopped, this);
         this._recording[op](recordingEventNames.PreviewChanged, this._onPreviewChanged, this);
 
         this._recording.calculator[op](WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
 
-        WebInspector.breakpointManager[op](WebInspector.BreakpointManager.Events.BreakpointAdded, this._onBreakpointRecordsChanged, this);
-        WebInspector.breakpointManager[op](WebInspector.BreakpointManager.Events.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
-        WebInspector.breakpointManager[op](WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
+        var manager = WebInspector.breakpointManager;
+        var managerEvents = WebInspector.BreakpointManager.Events;
+        manager[op](managerEvents.BreakpointAdded,              this._onBreakpointRecordsChanged, this);
+        manager[op](managerEvents.BreakpointRemoved,            this._onBreakpointRecordsChanged, this);
+        manager[op](managerEvents.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
 
     },
 
@@ -752,8 +755,9 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPlaybackSliderContextMenu: function(event)
     {
-	if (WebInspector.timelapseModel.breakpointPaused)
-	    WebInspector.timelapseBreakpointTracker.currentBreakpoint.contextMenu(event);	
+    var currentBreakpoint = WebInspector.timelapseBreakpointTracker.currentBreakpoint;
+	if (currentBreakpoint)
+        currentBreakpoint.contextMenu(event);
     },
     
     _onZoomChanged: function()
@@ -987,7 +991,7 @@ WebInspector.TimelapseOverview.prototype = {
 	}
     },
 
-    _onBreakpointPaused: function()
+    _onDebuggerPaused: function()
     {
 	this.sliders.playback.element.addStyleClass("breakpoint-slider");
 	this.sliders.playback.element.removeStyleClass("playback-pulse");

@@ -404,7 +404,7 @@ WebInspector.TimelapseOverviewPreview.prototype = {
         var events = WebInspector.TimelapseModel.Events;
         this._model[op](events.PlaybackDidStart, this.refresh, this);
         this._model[op](events.PlaybackStopped,  this.refresh, this);
-        this._model[op](events.BreakpointPaused, this.refresh, this);
+        this._model[op](events.DebuggerPaused,   this.refresh, this);
         this._model[op](events.InputPaused,      this.refresh, this);
     },
 

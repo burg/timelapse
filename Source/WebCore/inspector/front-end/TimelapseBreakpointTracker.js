@@ -8,18 +8,20 @@ WebInspector.TimelapseBreakpointTracker = function()
     this._exploredIntervals = new WebInspector.TimelapseIntervalManager();
 
     var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.CaptureWillStart, this._reset, this);
-    this._model.addEventListener(eventNames.PlaybackWillStart, this._playbackWillStart, this);
-    this._model.addEventListener(eventNames.InputPaused, this._endPendingInterval, this);
-    this._model.addEventListener(eventNames.PlaybackStopped, this._endPendingInterval, this);
-    this._model.addEventListener(eventNames.BreakpointHit, this._breakpointHit, this);
-    this._model.addEventListener(eventNames.BreakpointPaused, this._endPendingInterval, this);
+    this._model.addEventListener(eventNames.RecordingLoaded,   this._reset,              this);
+    this._model.addEventListener(eventNames.PlaybackWillStart, this._playbackWillStart,  this);
+    this._model.addEventListener(eventNames.PlaybackStopped,   this._endPendingInterval, this);
+    this._model.addEventListener(eventNames.InputHit,          this._inputHit,           this);
+    this._model.addEventListener(eventNames.InputPaused,       this._endPendingInterval, this);
 
-    WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAdded, this._breakpointUpdated, this);
-    WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointAddedToStorage, this._breakpointAddedToStorage, this);
-    WebInspector.breakpointManager.addEventListener(WebInspector.BreakpointManager.Events.BreakpointRemovedFromStorage, this._breakpointRemovedFromStorage, this);
+    var debugEvents = WebInspector.DebuggerModel.Events;
+    WebInspector.debuggerModel.addEventListener(debugEvents.DebuggerPaused, this._debuggerPaused,    this);
 
-    this._reset();
+    var manager = WebInspector.breakpointManager;
+    var managerEvents = WebInspector.BreakpointManager.Events;
+    manager.addEventListener(managerEvents.BreakpointAdded,              this._breakpointUpdated, this);
+    manager.addEventListener(managerEvents.BreakpointAddedToStorage,     this._breakpointAddedToStorage, this);
+    manager.addEventListener(managerEvents.BreakpointRemovedFromStorage, this._breakpointRemovedFromStorage, this);
 };
 
 WebInspector.TimelapseBreakpointTracker.Events = {
@@ -38,7 +40,18 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 
     get currentBreakpoint()
     {
+    return (this._currentBreakpoint && this._debuggerWaitIndex == 1) ? this.precedingBreakpoint
+                                                                     : false;
+    },
+
+    get precedingBreakpoint()
+    {
 	return this._currentBreakpoint;
+    },
+
+    get breakpointHitIndex()
+    {
+    return this._breakpointHitIndex;
     },
 
     get exploredIntervals()
@@ -57,6 +70,8 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 	this._records = [];
 	// breakpoints are stored using the debuggerID (sourceURL + ":" + lineNumber) as the key
 	this._breakpoints = {};
+    this._breakpointHitIndex = -1;
+    this._debuggerWaitIndex = -1;
 	this._exploredIntervals.clear();
 
 	this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Reset);
@@ -79,46 +94,64 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 	    this._exploredIntervals.startInterval(markIndex);
     },
 
-    _breakpointHit: function(event)
+    _inputHit: function(event)
     {
-	var markIndex = this._model.currentMarkIndex;
-	var hitIndex = this._model.currentHitIndex;
-	var rawLocation = event.data.callFrames[0].location;
-	var sourceURL = WebInspector.debuggerModel.scriptForId(rawLocation.scriptId).sourceURL;
-	var lineNumber = rawLocation.lineNumber;
-	var debuggerId = sourceURL + ":" + lineNumber;
-
-    // lazily add unknown breakpoints as we hit them
-	if (!this._breakpoints[debuggerId])
-	    this._breakpoints[debuggerId] = new WebInspector.TimelapseBreakpoint(rawLocation);
-
-	this._currentBreakpoint = this._breakpoints[debuggerId];
-	var hitRecords = this._records;
-	var idx = binarySearch(markIndex, hitRecords, function (index, record) {
-	    return index - record.mark.index;
-	});
-
-	if (idx < 0) {
-	    idx = -(idx + 1);
-	    var recordIndex = this._model.loadedRecording.recordIndexFromMarkIndex(markIndex);
-	    hitRecords.splice(idx, 0, {
-		type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
-		mark: this._model.loadedRecording.allRecords[recordIndex].mark,
-		hits: []
-	    });
-	}
-
-	hitRecords[idx].hits[hitIndex] = this._breakpoints[debuggerId];
-
-	if (this._model.scanningBreakpoints) {
-	    this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Events.BreakpointHit, {
-		breakpoint: this._breakpoints[debuggerId],
-		mark: hitRecords[idx].mark,
-		type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
-		hitIndex: this._model.currentHitIndex
-	    });
-	}
+        this._breakpointHitIndex = -1;
+        this._debuggerWaitIndex = -1;
     },
+
+    // Callbacks from DebuggerModel
+    _debuggerPaused: function(event)
+    {
+        // ???: is this actually needed?
+        this._endPendingInterval();
+    
+      	var rawLocation = event.data.callFrames[0].location;
+        var uiLocation = WebInspector.debuggerModel.rawLocationToUILocation(rawLocation);
+        var lineNumber = rawLocation.lineNumber;
+        var breakpoint = WebInspector.breakpointManager.findBreakpoint(uiLocation.uiSourceCode, lineNumber);
+        
+        if (!breakpoint) {
+            this._debuggerWaitIndex++;
+            return;
+        }
+
+        this._debuggerWaitIndex = -1;
+        var markIndex = this._model.currentMarkIndex;
+        var hitIndex = ++this._breakpointHitIndex;
+        var sourceURL = WebInspector.debuggerModel.scriptForId(rawLocation.scriptId).sourceURL;
+        var debuggerId = sourceURL + ":" + lineNumber;
+    
+        // lazily add unknown breakpoints as we hit them
+        if (!this._breakpoints[debuggerId])
+            this._breakpoints[debuggerId] = new WebInspector.TimelapseBreakpoint(rawLocation);
+
+        this._currentBreakpoint = this._breakpoints[debuggerId];
+        var hitRecords = this._records;
+        var idx = binarySearch(markIndex, hitRecords, function (index, record) {
+            return index - record.mark.index;
+        });
+
+        if (idx < 0) {
+            idx = -(idx + 1);
+            var recordIndex = this._model.loadedRecording.recordIndexFromMarkIndex(markIndex);
+            hitRecords.splice(idx, 0, {
+            type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
+            mark: this._model.loadedRecording.allRecords[recordIndex].mark,
+            hits: []
+            });
+        }
+
+        hitRecords[idx].hits[hitIndex] = this._breakpoints[debuggerId];
+
+        this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Events.BreakpointHit, {
+            breakpoint: this._breakpoints[debuggerId],
+            mark:       hitRecords[idx].mark,
+            type:       WebInspector.TimelapseAgent.RecordType.BreakpointHit,
+            hitIndex:   this.breakpointHitIndex
+        });
+    },
+
 
     // Callbacks from BreakpointManager
     _breakpointUpdated: function(event)

@@ -143,8 +143,7 @@ WebInspector.TimelapseMiniview.prototype = {
         this._model[op](eventNames.PlaybackStopped,  this._onPlaybackStopped, this);
         this._model[op](eventNames.InputPaused,      this._onInputPaused, this);
         this._model[op](eventNames.InputHit,         this._onInputHit, this);
-        this._model[op](eventNames.BreakpointPaused, this._onBreakpointPaused, this);
-        this._model[op](eventNames.BreakpointHit,    this._onBreakpointRecordsChanged, this);
+        this._model[op](eventNames.DebuggerPaused,   this._onDebuggerPaused, this);
 
         var recordingEventNames = WebInspector.TimelapseRecording.Events;
         this._recording[op](recordingEventNames.ProviderAdded,  this._onProviderAdded, this);
@@ -155,6 +154,7 @@ WebInspector.TimelapseMiniview.prototype = {
         this._recording.calculator[op](WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
 
         var bpEventNames = WebInspector.BreakpointManager.Events;
+        WebInspector.breakpointManager[op](bpEventNames.BreakpointHit,     this._onBreakpointRecordsChanged, this);
         WebInspector.breakpointManager[op](bpEventNames.BreakpointAdded,   this._onBreakpointRecordsChanged, this);
         WebInspector.breakpointManager[op](bpEventNames.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
         WebInspector.breakpointManager[op](bpEventNames.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
@@ -658,7 +658,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	}
     },
 
-    _onBreakpointPaused: function(eventData)
+    _onDebuggerPaused: function(eventData)
         {
         this.sliders.playback.element.addStyleClass("breakpoint-slider");
         this.sliders.playback.element.removeStyleClass("playback-pulse");
