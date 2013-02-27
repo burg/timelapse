@@ -233,7 +233,7 @@ WebInspector.ReplaySavepoint.prototype = {
 	return this._debuggerWalk;
     },
 
-    _replayDebuggerWalk: function(markIndex, hitIndex, debuggerWalk)
+    _replayDebuggerWalk: function(markIndex, hitIndex, debuggerWalk, allowBreakpoints)
     {
         var model = WebInspector.timelapseModel;
         if (!model.canReplay)
@@ -243,7 +243,7 @@ WebInspector.ReplaySavepoint.prototype = {
 
         var task = new WebInspector.ReplayTask("ReplayDebuggerWalk");
         task.chain("ReplayToWalkStartingBreakpoint", function(cb) {
-            var task = model.replayToBreakpointHitTask(markIndex, hitIndex, false, speeds.Seeking);
+            var task = model.replayToBreakpointHitTask(markIndex, hitIndex, allowBreakpoints, speeds.Seeking);
             task.run(cb);
         });
         
@@ -265,8 +265,11 @@ WebInspector.ReplaySavepoint.prototype = {
         model.scheduler.cancelAllTasks().enqueue(task);
     },
 
-    replayToSavepoint: function()
+    replayToSavepoint: function(allowBreakpoints)
     {
-        this._replayDebuggerWalk(this._markIndex, this._hitIndex, this._debuggerWalk);
+        if (typeof allowBreakpoints === "undefined")
+            allowBreakpoints = false;
+        
+        this._replayDebuggerWalk(this._markIndex, this._hitIndex, this._debuggerWalk, allowBreakpoints);
     }
 };
