@@ -131,13 +131,13 @@ WebInspector.TimelapseModel.prototype = {
     // Public command API
     enable: function()
     {
-	this._changeStatus("Enabling...");
+	this.changeStatus("Enabling...");
 	return TimelapseAgent.enable();
     },
 
     disable: function()
     {
-	this._changeStatus("Disabling...");
+	this.changeStatus("Disabling...");
 	return TimelapseAgent.disable();
     },
 
@@ -166,7 +166,7 @@ WebInspector.TimelapseModel.prototype = {
         .chain("suppressBreakpointsAndNotifyWillStart", function(cb) {
             console.assert(!model.isCapturing && !model.isReplaying,
                            "Cannot start capture whilst capturing or replaying alreday.");
-            model._changeStatus("Starting capture...");
+            model.changeStatus("Starting capture...");
             model.dispatchEventToListeners(events.CaptureWillStart);
             model._suppressBreakpoints();
             cb();
@@ -184,7 +184,7 @@ WebInspector.TimelapseModel.prototype = {
         })
         .chain("notifyDidStart", function(cb) {
             model._capturing = true;
-            model._changeStatus("Capturing...");
+            model.changeStatus("Capturing...");
             cb();
         });
         this._scheduler.cancelAllTasks().enqueue(task);
@@ -199,7 +199,7 @@ WebInspector.TimelapseModel.prototype = {
         var events = WebInspector.TimelapseModel.Events;
         var task = new WebInspector.ReplayTask("StopCapture")
         .chain("notifyWillStop", function(cb) {
-            model._changeStatus("Stopping capture...");
+            model.changeStatus("Stopping capture...");
             model.dispatchEventToListeners(events.CaptureWillStop);
             cb();
         })
@@ -211,7 +211,7 @@ WebInspector.TimelapseModel.prototype = {
             var recording = model.createdRecording;
             delete model._activeRecording;
             model._capturing = false;
-            model._changeStatus("Ready");
+            model.changeStatus("Ready");
             model._unsuppressBreakpoints();
             var numRecords = recording.allRecords.length;
             if (numRecords == 0) {
@@ -231,7 +231,7 @@ WebInspector.TimelapseModel.prototype = {
 
     replayUpToMarkIndex: function(markIndex, allowBreakpoints, replaySpeed)
     {
-        this._changeStatus("Starting replay...");
+        this.changeStatus("Starting replay...");
 
         var task = this.startReplayUpToMarkIndexTask(markIndex, allowBreakpoints, replaySpeed);
         this._scheduler.cancelAllTasks().enqueue(task);
@@ -278,7 +278,7 @@ WebInspector.TimelapseModel.prototype = {
         task.chain("notifyReplayStarted", function(cb){
             model._replaying = true;
             model._inputPaused = false;
-            model._changeStatus("Replaying...");
+            model.changeStatus("Replaying...");
             cb();
         });
         
@@ -290,7 +290,7 @@ WebInspector.TimelapseModel.prototype = {
         var model = this;
         var task = new WebInspector.ReplayTask("ReplayToCompletion");
         task.chain("setDefaults", function(cb) {
-            model._changeStatus("Starting replay...");
+            model.changeStatus("Starting replay...");
             /* ensure defaults if no arguments */
             allowBreakpoints = (typeof allowBreakpoints === "undefined") ? false : allowBreakpoints;
             var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
@@ -327,7 +327,7 @@ WebInspector.TimelapseModel.prototype = {
         task.chain("notifyReplayStarted", function(cb){
             model._replaying = true;
             model._inputPaused = false;
-            model._changeStatus("Replaying...");
+            model.changeStatus("Replaying...");
             cb();
         });
         
@@ -392,43 +392,14 @@ WebInspector.TimelapseModel.prototype = {
         
         return task;
     },
-
-    replayDebuggerWalk: function(markIndex, hitIndex, debuggerWalk)
-    {
-        var model = this;
-        var speeds = WebInspector.TimelapseModel.ReplaySpeed;
-
-        var task = new WebInspector.ReplayTask("ReplayDebuggerWalk");
-        task.chain("ReplayToWalkStartingBreakpoint", function(cb) {
-            var task = model.replayToBreakpointHitTask(markIndex, hitIndex, false, speeds.Seeking);
-            task.run(cb);
-        });
-        
-        for (var i = 0; i < debuggerWalk.length; i++) {
-            task.chain("TakeDebuggerWalkStep", function(cb, event) {
-                // the first callback will come from previous step, not DebuggerWaiting
-                if (typeof event !== "undefined")
-                    event.preventDefault(); // stop 
-
-                model.onceEventListener(WebInspector.TimelapseModel.Events.DebuggerWaiting, cb, task);
-                debuggerWalk.shift()();
-            });
-        }
-        task.chain("UpdateStatus", function(cb) {
-            model._changeStatus("At savepoint.");
-            cb();
-        });
-        
-        this._scheduler.cancelAllTasks().enqueue(task);
-    },
-
+    
     // pauses playback immediately, cancelling any in-progress tasks.
     pausePlayback: function()
     {
         var model = this;
         var task = new WebInspector.ReplayTask("PausePlayback");
         task.chain("suppressBreakpoints", function(cb) {
-            model._changeStatus("Pausing...");
+            model.changeStatus("Pausing...");
             model._suppressBreakpoints();
             cb();
         });
@@ -445,7 +416,7 @@ WebInspector.TimelapseModel.prototype = {
 
     stopPlayback: function(shouldUnlock)
     {
-        this._changeStatus("Stopping playback...");
+        this.changeStatus("Stopping playback...");
         this._scheduler.cancelAllTasks().enqueue(this._stopPlaybackTask(shouldUnlock));
     },
 
@@ -577,7 +548,7 @@ WebInspector.TimelapseModel.prototype = {
     this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingAdded, recording);
     },
     
-    _changeStatus: function(newStatus)
+    changeStatus: function(newStatus)
     {
 	this._status = newStatus || "(no status)";
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.StatusChanged, this._status);
@@ -587,14 +558,14 @@ WebInspector.TimelapseModel.prototype = {
     _timelapseEnabled: function()
     {
     this._canReplay = false;
-	this._changeStatus("Ready");
+	this.changeStatus("Ready");
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.Enabled);
     },
 
     _timelapseDisabled: function()
     {
 	this._canReplay = false;
-	this._changeStatus("Disabled");
+	this.changeStatus("Disabled");
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.Disabled);
     },
     
@@ -611,7 +582,7 @@ WebInspector.TimelapseModel.prototype = {
 	this._inputPaused = true;
 	this._unsuppressBreakpoints();
 
-	this._changeStatus("Paused");
+	this.changeStatus("Paused");
 	this.dispatchEventToListeners(timelapseEvents.InputPaused, markIndex);
     },
 
@@ -622,7 +593,7 @@ WebInspector.TimelapseModel.prototype = {
 
     // TODO: breakpoint scanner may want to prevent default here.
     // default action:
-	this._changeStatus("Ready");
+	this.changeStatus("Ready");
 	this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.PlaybackStopped);
     },
 
@@ -647,7 +618,7 @@ WebInspector.TimelapseModel.prototype = {
     	this._inputLocked = false;
 
         if (!this.capture)
-            this._changeStatus("Ready");
+            this.changeStatus("Ready");
 
         this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.InputUnlocked);
     },
@@ -680,13 +651,13 @@ WebInspector.TimelapseModel.prototype = {
     // This is the default action for when the debugger is waiting on the user.
     var oldStatus = this._status;
     var restoreStatusCallback = function() {
-        this._changeStatus(oldStatus);
+        this.changeStatus(oldStatus);
     };
     
     if (this._breakpointTracker.currentBreakpoint)
-        this._changeStatus("Hit breakpoint");
+        this.changeStatus("Hit breakpoint");
     else
-        this._changeStatus("Debugger paused");
+        this.changeStatus("Debugger paused");
     
     WebInspector.debuggerModel.onceEventListener(debuggerEvents.DebuggerResumed,
                                                 restoreStatusCallback, this);
