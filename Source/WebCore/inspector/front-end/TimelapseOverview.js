@@ -139,7 +139,7 @@ WebInspector.TimelapseOverview.prototype = {
 
         var scanner = this._model.breakpointScanner;
         var scannerEvents = WebInspector.TimelapseScanner.Events;
-        scanner[op](scannerEvents.ScanStarted, this._showMessagePanel, this);
+        scanner[op](scannerEvents.ScanStarted, this._showMessagePanel.bind(this, "Scanning breakpoints..."), this);
         scanner[op](scannerEvents.ScanStopped, this._hideMessagePanel, this);
 
         var modelEventNames = WebInspector.TimelapseModel.Events;
@@ -866,14 +866,22 @@ WebInspector.TimelapseOverview.prototype = {
 	this._messagePanel.show(this.element);
     },
 
-    // TODO: (Issue #158): extract a 'message' parameter rather than decoding by event.
-    _showMessagePanel: function(event)
+    _showMessagePanel: function(message)
     {
         // If the message panel is already showing, this means some higher-level
         // event has displayed a message.
         // For example, BreakpointScan{Started,Stopped} sets its own messages.
         if (this._messagePanel.isShowing())
             return;
+
+        // figure out an appropriate message if none provided.
+        if (typeof message !== "string") {
+            if (this._model.replaySpeed === WebInspector.TimelapseModel.ReplaySpeed.Seeking) {
+                message = "Seeking...";
+            } else {
+                message = "Replaying... click to cancel.";
+            }
+        }
 
         var clickCallback = function(clickEvent) {
             if (this._model.isReplaying)
@@ -883,15 +891,7 @@ WebInspector.TimelapseOverview.prototype = {
             this._messagePanel.detach();
         }.bind(this);
         this._messagePanel.addEventListener("click", clickCallback, false);
-
-        if (event.type == WebInspector.TimelapseScanner.Events.ScanStarted) {
-            this._messagePanel.content = document.createTextNode("Scanning breakpoints...");
-        } else if (this._model.replaySpeed === WebInspector.TimelapseModel.ReplaySpeed.Seeking) {
-            this._messagePanel.content = document.createTextNode("Seeking...");
-        } else {
-            this._messagePanel.content = document.createTextNode("Replaying... click to cancel.");
-        }
-
+        this._messagePanel.content = document.createTextNode(message);
         this._messagePanel.show(this.element);
     },
     
@@ -922,7 +922,7 @@ WebInspector.TimelapseOverview.prototype = {
     var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
 	this.sliders.playback.minimumResolution = (this._model.replaySpeed === replaySpeeds.Seeking) ? 10.0 : 1.0;
     
-    this._showMessagePanel(event);
+    this._showMessagePanel();
     },
 
     _onPlaybackStopped: function(event)
