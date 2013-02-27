@@ -418,10 +418,10 @@ WebInspector.TimelapseModel.prototype = {
     stopPlayback: function(shouldUnlock)
     {
         this.changeStatus("Stopping playback...");
-        this._scheduler.cancelAllTasks().enqueue(this._stopPlaybackTask(shouldUnlock));
+        this._scheduler.cancelAllTasks().enqueue(this.stopPlaybackTask(shouldUnlock));
     },
 
-    _stopPlaybackTask: function(shouldUnlock)
+    stopPlaybackTask: function(shouldUnlock)
     {
         var model = this;
         return new WebInspector.ReplayTask("StopPlayback")
