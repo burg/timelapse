@@ -1,10 +1,9 @@
 /**
  * @constructor
  */
-WebInspector.TimelapseBreakpointTracker = function()
+WebInspector.TimelapseBreakpointTracker = function(model)
 {
-    this._model = WebInspector.timelapseModel;
-
+    this._model = model;
     this._exploredIntervals = new WebInspector.TimelapseIntervalManager();
 
     var eventNames = WebInspector.TimelapseModel.Events;
@@ -409,5 +408,3 @@ WebInspector.TimelapseIntervalManager.prototype = {
 	this.intervals = [];
     }
 };
-
-WebInspector.timelapseBreakpointTracker;

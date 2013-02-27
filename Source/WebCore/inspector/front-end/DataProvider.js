@@ -345,17 +345,18 @@ WebInspector.TimelapseInputDataProvider.InputPreview = (function(){
 WebInspector.TimelapseBreakpointDataProvider = function(recording, displayName, color)
 {
     WebInspector.DataProvider.call(this, recording, "breakpoint",
-				   WebInspector.DataProvider.Types.BreakpointHits);
+                                   WebInspector.DataProvider.Types.BreakpointHits);
+
+    var tracker = WebInspector.timelapseModel.breakpointTracker;
 
     this._displayName = displayName;
     this._color = color;
-    this._intervals = WebInspector.timelapseBreakpointTracker.exploredIntervals;
+    this._intervals = tracker.exploredIntervals;
     this._initializeRecords();
 
-    var tracker = WebInspector.timelapseBreakpointTracker;
     var events = WebInspector.TimelapseBreakpointTracker.Events;
-    tracker.addEventListener(events.BreakpointHit, this._onBreakpointHit, this);
-    tracker.addEventListener(events.BreakpointAdded, this._onBreakpointsInvalidated, this);
+    tracker.addEventListener(events.BreakpointHit,     this._onBreakpointHit, this);
+    tracker.addEventListener(events.BreakpointAdded,   this._onBreakpointsInvalidated, this);
     tracker.addEventListener(events.BreakpointRemoved, this._onBreakpointsInvalidated, this);
 }
 
@@ -384,7 +385,7 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 
     _initializeRecords: function()
     {
-	var records = WebInspector.timelapseBreakpointTracker.records;
+	var records = WebInspector.timelapseModel.breakpointTracker.records;
 	this._records = [];
 
 	// flatten existing records from BreakpointTracker
@@ -431,7 +432,7 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 
     _removeEventListeners: function(event)
     {
-	var tracker = WebInspector.timelapseBreakpointTracker;
+	var tracker = WebInspector.timelapseModel.breakpointTracker;
 	var events = WebInspector.TimelapseBreakpointTracker.Events;
 	tracker.removeEventListener(events.BreakpointHit, this._onBreakpointHit, this);
 	tracker.removeEventListener(events.BreakpointAdded, this._removeEventListeners, this);

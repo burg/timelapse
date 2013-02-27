@@ -755,7 +755,7 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPlaybackSliderContextMenu: function(event)
     {
-    var currentBreakpoint = WebInspector.timelapseBreakpointTracker.currentBreakpoint;
+    var currentBreakpoint = this._model.breakpointTracker.currentBreakpoint;
 	if (currentBreakpoint)
         currentBreakpoint.contextMenu(event);
     },

@@ -354,7 +354,7 @@ WebInspector.ReplaySavepointProvider = function(recording)
     this._model = WebInspector.timelapseModel;
     this._savepoints = [];
 
-	var tracker = WebInspector.timelapseBreakpointTracker;
+	var tracker = this._model.breakpointTracker;
 	var trackerEvents = WebInspector.TimelapseBreakpointTracker.Events;
     tracker.addEventListener(trackerEvents.BreakpointHit, this._breakpointHit, this);
 
@@ -408,7 +408,7 @@ WebInspector.ReplaySavepointProvider.prototype = {
     setSavepoint: function()
     {
 	var markIndex = this._model.currentMarkIndex;
-	var hitIndex = WebInspector.timelapseBreakpointTracker.breakpointHitIndex;
+	var hitIndex = this._model.breakpointTracker.breakpointHitIndex;
 	var debuggerWalk = this._debuggerWalkRecord.slice();
 
 	var savepoint = new WebInspector.ReplaySavepoint(markIndex, hitIndex, debuggerWalk);
@@ -430,7 +430,7 @@ WebInspector.ReplaySavepointProvider.prototype = {
 	// current playback point
 	var location = {
 	    markIndex: this._model.currentMarkIndex,
-	    hitIndex: WebInspector.timelapseBreakpointTracker.breakpointHitIndex
+	    hitIndex: this._model.breakpointTracker.breakpointHitIndex
 	}
 
 	var index = binarySearch(location, this._savepoints, this._locationComparator);
@@ -458,7 +458,7 @@ WebInspector.ReplaySavepointProvider.prototype = {
     {
 	var location = {
 	    markIndex: markIndex || this._model.currentMarkIndex,
-	    hitIndex: hitIndex || WebInspector.timelapseBreakpointTracker.breakpointHitIndex
+	    hitIndex: hitIndex || this._model.breakpointTracker.breakpointHitIndex
 	}
 
 	var index = binarySearch(location, this._savepoints, this._locationComparator);

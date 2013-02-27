@@ -46,6 +46,7 @@ WebInspector.TimelapseModel = function()
     this._replaySpeed = WebInspector.TimelapseModel.ReplaySpeed.Default;
     this._inputLocked = false;
 
+    this._breakpointTracker = new WebInspector.TimelapseBreakpointTracker(this);
     this._breakpointsWereEnabled = WebInspector.debuggerModel.breakpointsActive();
     this._suppressingBreakpoints = false;
 
@@ -431,7 +432,7 @@ WebInspector.TimelapseModel.prototype = {
         var timelapseEvents = WebInspector.TimelapseModel.Events;
 
         var currentIndex = this._currentMarkIndex;
-        var breakpointHitIndex = WebInspector.timelapseBreakpointTracker.breakpointHitIndex;
+        var breakpointHitIndex = this.breakpointTracker.breakpointHitIndex;
         var allRecords = this.loadedRecording.allRecords;
         var task = new WebInspector.ReplayTask("ScanBreakpointsInRegion("+startIndex+","+endIndex+")");
 
@@ -645,6 +646,16 @@ WebInspector.TimelapseModel.prototype = {
 	return this._replayFinishIndex;
     },
 
+    get scheduler()
+    {
+        return this._scheduler;
+    },
+    
+    get breakpointTracker()
+    {
+        return this._breakpointTracker;
+    },
+
     // Internal helpers
     _unloadRecording: function()
     {
@@ -779,7 +790,7 @@ WebInspector.TimelapseModel.prototype = {
         this._changeStatus(oldStatus);
     };
     
-    if (WebInspector.timelapseBreakpointTracker.currentBreakpoint)
+    if (this._breakpointTracker.currentBreakpoint)
         this._changeStatus("Hit breakpoint");
     else
         this._changeStatus("Debugger paused");

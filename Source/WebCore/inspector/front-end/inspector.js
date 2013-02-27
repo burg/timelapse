@@ -513,8 +513,6 @@ WebInspector._doLoadedDoneWithCapabilities = function()
     this.breakpointManager = new WebInspector.BreakpointManager(WebInspector.settings.breakpoints, this.debuggerModel, this.workspace);
 
     this.timelapseModel = new WebInspector.TimelapseModel();
-    // TODO: move breakpoint tracker instance to TimelapseModel
-    this.timelapseBreakpointTracker = new WebInspector.TimelapseBreakpointTracker();
     this.timelapseControllerView = new WebInspector.TimelapseControllerView(this.timelapseModel);
 
     this.scriptSnippetModel = new WebInspector.ScriptSnippetModel(this.workspace);

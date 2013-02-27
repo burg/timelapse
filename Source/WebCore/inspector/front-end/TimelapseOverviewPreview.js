@@ -295,7 +295,7 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	    }
 	    row.appendChild(countCell);
 
-	    var indexExplored = WebInspector.timelapseBreakpointTracker.exploredIndex(record.mark.index, record.hitIndex);
+	    var indexExplored = WebInspector.timelapseModel.breakpointTracker.exploredIndex(record.mark.index, record.hitIndex);
 	    var isSavedLocation = savepointProvider.savepointAtLocation(record.mark.index, record.hitIndex);
 	    var isCurrentBreakpoint = record.mark.index == WebInspector.timelapseModel.currentMarkIndex
 		&& record.hitIndex == WebInspector.timelapseModel.currentHitIndex;
