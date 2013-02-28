@@ -49,6 +49,7 @@ WebInspector.TimelapseModel = function()
 
     this._breakpointTracker = new WebInspector.TimelapseBreakpointTracker(this);
     this._scanners["breakpoint"] = new WebInspector.TimelapseBreakpointScanner(this);
+    this._scanners["timeline"] = new WebInspector.TimelineScanner(this);
     this._breakpointsWereEnabled = WebInspector.debuggerModel.breakpointsActive();
     this._suppressingBreakpoints = false;
 

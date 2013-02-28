@@ -160,29 +160,12 @@ WebInspector.TimelapseControllerView.prototype = {
     {
         this._enabled = false;
         this.currentView = new WebInspector.TimelapseDefaultView(this._model);
-
-        // TODO(Issue #79): don't automatically manage the timeline.
-        // restore any disablements we did to the timeline.
-        if (WebInspector.panels.timeline) {
-            WebInspector.panels.timeline.toggleTimelineButton.disabled = false;
-            WebInspector.panels.timeline.clearButton.disabled = false;
-        }
     },
 
     _recordingCreated: function(event)
     {
         var recording = event.data;
         this.currentView = new WebInspector.TimelapseCaptureView(this._model, recording);
-
-        // TODO(Issue #79): don't automatically manage the timeline.
-        var timelinePanel = WebInspector.panels.timeline;
-        // automatically turn on Timeline capture, and prevent its clearing or stopping.
-        if (timelinePanel) {
-            timelinePanel.toggleTimelineButton.disabled = false;
-            timelinePanel.toggleTimelineButton.element.click();
-            timelinePanel.toggleTimelineButton.disabled = true;
-            timelinePanel.clearButton.disabled = true;
-        }
     },
 
     _recordingLoaded: function(event)
@@ -199,13 +182,7 @@ WebInspector.TimelapseControllerView.prototype = {
         this.currentView = new WebInspector.TimelapseReplayView(this._model, recording);
 
         // TODO(Issue #79): don't automatically manage the timeline.
-        var timelinePanel = WebInspector.panels.timeline;
-        // automatically turn off Timeline capture.
-        if (timelinePanel) {
-            timelinePanel.toggleTimelineButton.disabled = false;
-            timelinePanel.toggleTimelineButton.element.click();
-            timelinePanel.toggleTimelineButton.disabled = true;
-        }
+
     },
     
     _recordingUnloaded: function()
@@ -513,7 +490,7 @@ WebInspector.TimelapseReplayView.prototype = {
             if (scanner.isDisplayable)
                 displayedScanners.push(scanner);
         }
-        displayedScanners.sort(function(a, b) { return a.localeCompare(b); });
+        displayedScanners.sort(function(a, b) { return a.label.localeCompare(b.label); });
         
         for (var i = 0; i < displayedScanners.length; i++) {
             var scanner = displayedScanners[i];
