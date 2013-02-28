@@ -30,9 +30,12 @@
  */
 
 
-WebInspector.TimelapseScanner = function(model) {
+WebInspector.TimelapseScanner = function(model, name, label, shouldDisplay) {
     this._model = model;
     this._scanning = false;
+    this._scannerName = name || "(unnamed scanner)";
+    this._scannerLabel = label || "(unnamed scanner)";
+    this._displayable = (typeof shouldDisplay === "undefined") ? true : shouldDisplay;
 };
 
 WebInspector.TimelapseScanner.Events = {
@@ -51,6 +54,21 @@ WebInspector.TimelapseScanner.prototype = {
     get isScanning()
     {
         return this._scanning;
+    },
+    
+    get isDisplayable()
+    {
+        return this._displayable;
+    },
+    
+    get name()
+    {
+        return this._scannerName;
+    },
+    
+    get label()
+    {
+        return this._scannerLabel;
     },
     
     scanRegion: function()

@@ -31,7 +31,7 @@
 
 
 WebInspector.TimelapseBreakpointScanner = function(model) {
-    WebInspector.TimelapseScanner.call(this, model);
+    WebInspector.TimelapseScanner.call(this, model, "breakpoint", "Active Breakpoints");
 };
 
 WebInspector.TimelapseBreakpointScanner.prototype = {

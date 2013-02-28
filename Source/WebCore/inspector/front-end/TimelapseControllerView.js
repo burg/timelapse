@@ -524,6 +524,44 @@ WebInspector.TimelapseReplayView.prototype = {
             this.enabled = false;
         }, radarButton);
         this._statusBarButtons.push(radarButton);
+        
+        //the scans drop-down menu
+        this._scanSelector = new WebInspector.StatusBarComboBox(this._scanSelectorChanged.bind(this));
+        var displayedScanners = [];
+        for (var key in this._model.scanners) {
+            var scanner = this._model.scanners[key];
+            if (scanner.isDisplayable)
+                displayedScanners.push(scanner);
+        }
+        displayedScanners.sort(function(a, b) { return a.localeCompare(b); });
+        
+        for (var i = 0; i < displayedScanners.length; i++) {
+            var scanner = displayedScanners[i];
+            var option = document.createElement("option");
+            option.text = scanner.label;
+            option.title = scanner.label;
+            option._scanner = scanner;
+            this._scanSelector.addOption(option);
+        }
+        var dummyOption = this._scanSelectorDefaultOption = document.createElement("option");
+        dummyOption.text =  WebInspector.UIString("Scan...");
+        dummyOption.title = WebInspector.UIString("Click to select a scan action.");
+        this._scanSelector.addOption(dummyOption);
+        this._scanSelector.select(dummyOption);
+        this._scanSelector.element.title = this._scanSelector.selectedOption().title;
+        
+        this._statusBarButtons.push(this._scanSelector);
+    },
+
+    _scanSelectorChanged: function()
+    {
+        var option = this._scanSelector.selectedOption();
+        var scanner = option._scanner;
+        if (!scanner)
+            return; // case for dummy option.
+            
+        this._model.loadedRecording.scanInZoomRegion(scanner);
+        this._scanSelector.select(this._scanSelectorDefaultOption);
     },
 
     _lockButtonClicked: function()
