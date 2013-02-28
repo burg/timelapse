@@ -503,30 +503,10 @@ WebInspector.TimelapseReplayView.prototype = {
             provider.removeEventListener(WebInspector.DataProvider.Events.WillRemove, willRemoveCallback, savepointButton);
         };
         provider.addEventListener(WebInspector.DataProvider.Events.WillRemove, willRemoveCallback, savepointButton);
-
-        //the breakpoint radar button
-        var model = this._model;
-        var radarButton = this.radarButton = new WebInspector.StatusBarButton("", "breakpoint-radar-status-bar-item");
-        radarButton.enabled = false;
-        radarButton.addEventListener("click", this._radarButtonClicked, replayView);
-        var scanner = this._model.scanners.breakpoint;
-        var scannerEvents = WebInspector.TimelapseScanner.Events;
-        scanner.addEventListener(scannerEvents.ScanStarted, function() {
-            this.toggled = true;
-        }, radarButton);
-        scanner.addEventListener(scannerEvents.ScanStopped, function() {
-            this.toggled = false;
-        }, radarButton);
-        model.addEventListener(eventNames.RecordingLoaded, function() {
-            this.enabled = true;
-        }, radarButton);
-        model.addEventListener(eventNames.RecordingUnloaded, function() {
-            this.enabled = false;
-        }, radarButton);
-        this._statusBarButtons.push(radarButton);
         
         //the scans drop-down menu
         this._scanSelector = new WebInspector.StatusBarComboBox(this._scanSelectorChanged.bind(this));
+        this._scanSelector.element.addStyleClass("timelapse-scan-menu");
         var displayedScanners = [];
         for (var key in this._model.scanners) {
             var scanner = this._model.scanners[key];
@@ -550,6 +530,14 @@ WebInspector.TimelapseReplayView.prototype = {
         this._scanSelector.select(dummyOption);
         this._scanSelector.element.title = this._scanSelector.selectedOption().title;
         
+        var scannerEvents = WebInspector.TimelapseScanner.Events;
+        this._model.addEventListener(eventNames.RecordingLoaded, function() {
+            this.enabled = true;
+        }, this._scanSelector);
+        this._model.addEventListener(eventNames.RecordingUnloaded, function() {
+            this.enabled = false;
+        }, this._scanSelector);
+        
         this._statusBarButtons.push(this._scanSelector);
     },
 
@@ -560,6 +548,14 @@ WebInspector.TimelapseReplayView.prototype = {
         if (!scanner)
             return; // case for dummy option.
             
+        var scannerEvents = WebInspector.TimelapseScanner.Events;
+        scanner.onceEventListener(scannerEvents.ScanStarted, function() {
+            this.toggled = true;
+        }, this._scanSelector);
+        scanner.onceEventListener(scannerEvents.ScanStopped, function() {
+            this.toggled = false;
+        }, this._scanSelector);
+
         this._model.loadedRecording.scanInZoomRegion(scanner);
         this._scanSelector.select(this._scanSelectorDefaultOption);
     },
