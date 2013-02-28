@@ -172,6 +172,7 @@ WebInspector.TimelapseScrollview.prototype = {
     	this._canvas.style.width = this.element.clientWidth + 'px';
 	this._canvas.height = this.element.clientHeight;
 	this._canvas.style.height = this.element.clientHeight + 'px';
+    this._cachedOffsetWidth = this.element.offsetWidth;
     },
 
     _binsPerTimeline: 200,
@@ -193,7 +194,7 @@ WebInspector.TimelapseScrollview.prototype = {
 	if (!this.calculator.minimumBoundary)
 	    return;
 
-	this._binsPerTimeline = Math.min(this.element.offsetWidth/2, WebInspector.TimelapseScrollview.MaxBinsPerTimeline);
+	this._binsPerTimeline = Math.min(this._cachedOffsetWidth/2, WebInspector.TimelapseScrollview.MaxBinsPerTimeline);
 
 	var interval = WebInspector.TimelapseScrollview.MaxRecordLifetime;
 	var now = Date.now();
