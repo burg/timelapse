@@ -88,7 +88,7 @@ SerializedEventTarget SerializedEventTarget::serialize(EventTarget* target)
 {
     TargetType targetType;
     int nodeIndex = -1;
-    int frameIndex;
+    int frameIndex = -1;
 
     if (!target || target->toDOMWindow()) {
         //case: target is a DOMWindow (implicit if null)
