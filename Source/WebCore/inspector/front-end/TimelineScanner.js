@@ -43,22 +43,19 @@ WebInspector.TimelineScanner.prototype = {
                
         var callbacks = {
             "EnterRegion": function(cb) {
+                if (!WebInspector.panels.timeline)
+                    WebInspector.inspectorView.panel("timeline");
+
                 var timelinePanel = WebInspector.panels.timeline;
-                if (timelinePanel) {
-                    timelinePanel.toggleTimelineButton.disabled = false;
-                    timelinePanel.toggleTimelineButton.element.click();
-                    timelinePanel.toggleTimelineButton.disabled = true;
-                    timelinePanel.clearButton.disabled = true;
-                }
+                timelinePanel._model.startRecord();
+
                 cb();
             },
             "ExitRegion": function(cb) {
                 var timelinePanel = WebInspector.panels.timeline;
-                if (timelinePanel) {
-                    timelinePanel.toggleTimelineButton.disabled = false;
-                    timelinePanel.toggleTimelineButton.element.click();
-                    timelinePanel.toggleTimelineButton.disabled = true;
-                }
+                console.assert(timelinePanel, "WAT: Couldn't find Timeline panel!");
+                
+                timelinePanel._model.stopRecord();
                 cb();
             }
             // TODO: (Issue #166): add StopScan callback that
