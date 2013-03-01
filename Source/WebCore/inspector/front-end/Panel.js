@@ -47,6 +47,11 @@ WebInspector.Panel = function(name)
 // Should by in sync with style declarations.
 WebInspector.Panel.counterRightMargin = 25;
 
+WebInspector.Panel.Events = {
+    PanelShown:  "PanelShown",
+    PanelHidden: "PanelHidden",
+};
+
 WebInspector.Panel.prototype = {
     get name()
     {
@@ -69,6 +74,8 @@ WebInspector.Panel.prototype = {
         }
 
         this.focus();
+        
+        this.dispatchEventToListeners(WebInspector.Panel.Events.PanelShown, this);
     },
 
     willHide: function()
@@ -76,6 +83,8 @@ WebInspector.Panel.prototype = {
         if (this._statusBarItemContainer && this._statusBarItemContainer.parentNode)
             this._statusBarItemContainer.parentNode.removeChild(this._statusBarItemContainer);
         delete this._statusBarItemContainer;
+        
+        this.dispatchEventToListeners(WebInspector.Panel.Events.PanelHidden, this);
     },
 
     reset: function()
