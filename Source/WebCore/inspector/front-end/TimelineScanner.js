@@ -56,11 +56,28 @@ WebInspector.TimelineScanner.prototype = {
                 console.assert(timelinePanel, "WAT: Couldn't find Timeline panel!");
                 
                 timelinePanel._model.stopRecord();
+                
+                if (WebInspector.inspectorView.currentPanel() !== timelinePanel) {
+                    var toolbarButtons = WebInspector.toolbar.element.children;
+                    for (var i = 0; i < toolbarButtons.length; i++) {
+                        var button = toolbarButtons[i];
+                        
+                        if (!button.classList.contains("toggleable"))
+                            continue; // search for toggleable buttons only
+                        if (button.panelDescriptor.panel() !== timelinePanel)
+                            continue; // only deal with timeline panel button
+                        
+                        button.classList.add("pulsing-result");
+                        timelinePanel.onceEventListener(WebInspector.Panel.Events.PanelShown,
+                            function() {
+                                button.classList.remove("pulsing-result");
+                            }, button);
+                        
+                        break;
+                    }
+                }
                 cb();
             }
-            // TODO: (Issue #166): add StopScan callback that
-            // makes the Timeline panel light up/blink, if
-            // it (and new results) are not already visible.
         };
         
         this.linearScanForRegion(startIndex, endIndex, callbacks);

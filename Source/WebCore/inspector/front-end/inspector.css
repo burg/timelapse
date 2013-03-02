@@ -545,6 +545,18 @@ body:not(.platform-mac) .toolbar-item.close-left {
   cursor: default;
 }
 
+.toolbar-item.pulsing-result {
+    font-weight: bold;
+    border-bottom: 2px solid #f00;
+    -webkit-animation: pulsing-result 2s infinite;
+}
+
+@-webkit-keyframes pulsing-result {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
 #main {
     position: absolute;
     z-index: 1;
