@@ -43,13 +43,6 @@ WebInspector.TimelapseScanner.Events = {
     ScanStopped: "ScanStopped"
 };
 
-WebInspector.TimelapseScanner.CallbackNames = {
-    PreScan:     "PreScan",
-    PostScan:    "PostScan",
-    EnterRegion: "EnterRegion",
-    ExitRegion:  "ExitRegion"
-};
-
 WebInspector.TimelapseScanner.prototype = {
     get isScanning()
     {
@@ -71,45 +64,66 @@ WebInspector.TimelapseScanner.prototype = {
         return this._scannerLabel;
     },
     
-    scanRegion: function()
+    // Subclasses override these to implement different scans.
+    willEnterRegion: function(cb)
     {
-        console.error("scanRegion() not implemented for this scanner!");
+        cb();
+    },
+
+    willExitRegion: function(cb)
+    {
+        cb();
+    },
+
+    scanDidStart: function(cb)
+    {
+        cb();
+    },
+
+    scanWillStop: function(cb)
+    {
+        cb();
     },
     
-    linearScanForRegion: function(startIndex, endIndex, callbacks)
+    // Public API
+    scanRegion: function()
+    {
+        throw new Error("Not implemented.");
+    },
+    
+    // helpers that implement the scanner's particular scan
+    linearScanForRegion: function(startIndex, endIndex)
     {
         var model = this._model;
         var timelapseEvents = WebInspector.TimelapseModel.Events;
         var scanner = this;
-        var scannerEvents = WebInspector.TimelapseScanner.Events;
-
-        this._checkScannerCallbacks(callbacks);
 
         var currentIndex = model.currentMarkIndex;
         var breakpointHitIndex = model.breakpointTracker.breakpointHitIndex;
         var allRecords = model.loadedRecording.allRecords;
         var task = new WebInspector.ReplayTask("LinearScanForRegion("+startIndex+","+endIndex+")");
         
-        task.chain("notifyScanStarted", this._createNotifyScanStartedCallback());
-        task.chain("PreScan", callbacks.PreScan);
+        task.chain("notifyScanStarted", this._notifyScanStarted, this);
+        task.chain("scanDidStart", this.scanDidStart, this);
         if (startIndex > allRecords[0].mark.index) {
             task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
+            console.log(this);
                 model.onceEventListener(timelapseEvents.InputWaiting,
-                                        scanner._createPreventDefaultCallback(cb), task);
+                                        this._createPreventDefaultCallback(cb), this);
                 model.startReplayUpToMarkIndexTask(startIndex, true).run();
-            });
+            }, this);
         }
 
-        task.chain("EnterRegion", callbacks.EnterRegion);
+        task.chain("willEnterRegion", this.willEnterRegion, this);
         // Workaround: currently there is no way to force replay up to the current mark index.
         if (currentIndex == endIndex) {
             var endRecordIndex = model.loadedRecording.recordIndexFromMarkIndex(endIndex);
             var prevIndex = allRecords[endRecordIndex - 1].mark.index;
             task.chain("ScanToMarkPrecedingRegionEnd("+prevIndex+")", function(cb) {
                 model.onceEventListener(timelapseEvents.InputWaiting,
-                                        scanner._createPreventDefaultCallback(cb), task);
+                                        this._createPreventDefaultCallback(cb), this);
                 model.startReplayUpToMarkIndexTask(prevIndex, true).run();
-            });
+            }, this);
             // if this is the last step, then don't prevent default action of InputWaiting
             task.chain("ScanToRegionEnd("+endIndex+")", function(cb) {
                 model.onceEventListener(timelapseEvents.InputWaiting, cb, task);
@@ -118,11 +132,11 @@ WebInspector.TimelapseScanner.prototype = {
         } else {
             task.chain("ScanToRegionEnd("+endIndex+")", function(cb) {
                 model.onceEventListener(timelapseEvents.InputWaiting,
-                                        scanner._createPreventDefaultCallback(cb), task);
+                                        this._createPreventDefaultCallback(cb), this);
                 model.startReplayUpToMarkIndexTask(endIndex, true).run();
-            });
+            }, this);
         }
-        task.chain("ExitRegion", callbacks.ExitRegion);
+        task.chain("willExitRegion", this.willExitRegion, this);
 
         // TODO: (Issue #165): use savepoints to restore back to cursor.
         if (model.debuggerPaused) {
@@ -136,19 +150,18 @@ WebInspector.TimelapseScanner.prototype = {
             });
         }
         
-        task.chain("PostScan", callbacks.PostScan);
-        var stoppedCallback = this._createNotifyScanStoppedCallback();
-        task.chain("NotifyScanStopped", stoppedCallback)
-            .orCancel(stoppedCallback);
+        task.chain("scanWillStop", this.scanWillStop, this);
+        task.chain("notifyScanStopped", this._notifyScanStopped, this);
+        task.orCancel(this._notifyScanStopped, this);
 
         model.scheduler.enqueue(task);
     },
 
-    segmentedScanForRegion: function(startIndex, endIndex, callbacks)
+    segmentedScanForRegion: function(startIndex, endIndex)
     {
         /* Case: playback is paused outside of the region to be scanned, or stopped. */
         if (startIndex > currentIndex || endIndex <= currentIndex)
-            return this.linearScanForRegion(startIndex, endIndex, callbacks);
+            return this.linearScanForRegion(startIndex, endIndex);
 
         /* Case: playback is paused inside the region to be scanned. */
         var model = this._model;
@@ -159,31 +172,27 @@ WebInspector.TimelapseScanner.prototype = {
         var breakpointHitIndex = model.breakpointTracker.breakpointHitIndex;
         var allRecords = model.loadedRecording.allRecords;
 
-        // TODO: should this be implemented with shadowed object methods instead?
-        this._checkScannerCallbacks(callbacks);
-
         var task = new WebInspector.ReplayTask("SegmentedScanForRegion("+startIndex+","+endIndex+")");
 
-        task.chain("NotifyScanStarted", scanner._createNotifyScanStartedCallback());
-        task.chain("PreScan", callbacks.PreScan);
-        
-        task.chain("EnterRegion", callbacks.EnterRegion);
+        task.chain("notifyScanStarted", this._notifyScanStarted, this);
+        task.chain("scanDidStart", this.scanDidStart, this);
+        task.chain("willEnterRegion", this.willEnterRegion, this);
         task.chain("ScanFromCursorToRegionEnd("+endIndex+")", function(cb) {
             model.onceEventListener(timelapseEvents.InputWaiting,
-                                    scanner._createPreventDefaultCallback(cb), task);
+                                    this._createPreventDefaultCallback(cb), this);
             model.startReplayUpToMarkIndexTask(endIndex, true).run();
-        });
-        task.chain("ExitRegion", callbacks.ExitRegion);
+        }, this);
+        task.chain("willExitRegion", this.willExitRegion, this);
 
         if (startIndex > allRecords[0].mark.index) {
             task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
                 model.onceEventListener(timelapseEvents.InputWaiting,
-                                        scanner._createPreventDefaultCallback(cb), task);
+                                        this._createPreventDefaultCallback(cb), this);
                 model.startReplayUpToMarkIndexTask(startIndex, true).run();
-            });
+            }, this);
         }
 
-        task.chain("EnterRegion", callbacks.EnterRegion);
+        task.chain("willEnterRegion", this.willEnterRegion, this);
         // TODO: (Issue #165): use savepoints to restore back to cursor.
         if (model.debuggerPaused) {
             task.chain("ScanFromRegionBeginToCursorBreakpoint("+currentIndex+"."+breakpointHitIndex+")", function(cb) {
@@ -195,53 +204,33 @@ WebInspector.TimelapseScanner.prototype = {
                 model.startReplayUpToMarkIndexTask(currentIndex, true).run();
             });
         }
-        task.chain("ExitRegion", callbacks.ExitRegion);
-        
-        task.chain("PostScan", callbacks.PostScan);
-        var stoppedCallback = scanner._createNotifyScanStoppedCallback();
-        task.chain("NotifyScanStopped", stoppedCallback)
-            .orCancel(stoppedCallback);
+        task.chain("willExitRegion", this.willExitRegion, this);
+        task.chain("scanWillStop", this.scanWillStop, this);
+        task.chain("notifyScanStopped", this._notifyScanStopped, this);
+        task.orCancel(this._notifyScanStopped, this);
 
         model.scheduler.enqueue(task);
     },
 
-    // these are necessary because ReplayTask fiddles with the binding of `this`
-    _createNotifyScanStartedCallback: function(cb)
+    _notifyScanStarted: function(cb)
     {
-        var scanner = this;
-        return function(cb) {
-            scanner._scanning = true;
-            scanner.dispatchEventToListeners(WebInspector.TimelapseScanner.Events.ScanStarted);
-            cb();
-        };
+        this._scanning = true;
+        this.dispatchEventToListeners(WebInspector.TimelapseScanner.Events.ScanStarted);
+        cb();
     },
 
-    _createNotifyScanStoppedCallback: function()
+    _notifyScanStopped: function(cb)
     {
-        var scanner = this;
-        return function(cb) {
-            scanner._scanning = false;
-            scanner.dispatchEventToListeners(WebInspector.TimelapseScanner.Events.ScanStopped);
-            cb();
-        };
+        this._scanning = false;
+        this.dispatchEventToListeners(WebInspector.TimelapseScanner.Events.ScanStopped);
+        cb();
     },
 
-    _createPreventDefaultCallback: function(callback)
+    _createPreventDefaultCallback: function(cb)
     {
         return function(innerCb, event) {
             event.preventDefault(); innerCb();
-        // provide dummy thisObj argument, since it will be
-        // adjusted by dispatchEventToListeners() anyway.
-        }.bind(null, callback);
-    },
-
-    _checkScannerCallbacks: function(callbacks)
-    {
-        var dummyFn = function(cb) { cb(); };
-        for (var f in WebInspector.TimelapseScanner.CallbackNames) {
-            if (!(f in callbacks) || typeof callbacks[f] !== "function")
-                callbacks[f] = dummyFn;
-        }
+        }.bind(undefined, cb);
     },
     
     __proto__: WebInspector.Object.prototype

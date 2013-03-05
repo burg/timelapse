@@ -35,52 +35,49 @@ WebInspector.TimelineScanner = function(model) {
 };
 
 WebInspector.TimelineScanner.prototype = {
+    willEnterRegion: function(cb)
+    {
+        if (!WebInspector.panels.timeline)
+            WebInspector.inspectorView.panel("timeline");
+        
+        var timelinePanel = WebInspector.panels.timeline;
+        timelinePanel._model.startRecord();
+        
+        cb();
+    },
+    
+    willExitRegion: function(cb)
+    {
+        var timelinePanel = WebInspector.panels.timeline;
+        console.assert(timelinePanel, "WAT: Couldn't find Timeline panel!");
+        
+        timelinePanel._model.stopRecord();
+        
+        if (WebInspector.inspectorView.currentPanel() !== timelinePanel) {
+            var toolbarButtons = WebInspector.toolbar.element.children;
+            for (var i = 0; i < toolbarButtons.length; i++) {
+                var button = toolbarButtons[i];
+                
+                if (!button.classList.contains("toggleable"))
+                    continue; // search for toggleable buttons only
+                if (button.panelDescriptor.panel() !== timelinePanel)
+                    continue; // only deal with timeline panel button
+                
+                button.classList.add("pulsing-result");
+                timelinePanel.onceEventListener(WebInspector.Panel.Events.PanelShown,
+                                                function() {
+                                                button.classList.remove("pulsing-result");
+                                                }, button);
+                
+                break;
+            }
+        }
+        cb();
+    },
+    
     scanRegion: function(startIndex, endIndex)
     {
-        var model = this._model;
-        var timelapseEvents = WebInspector.TimelapseModel.Events;
-        var scanner = this;
-               
-        var callbacks = {
-            "EnterRegion": function(cb) {
-                if (!WebInspector.panels.timeline)
-                    WebInspector.inspectorView.panel("timeline");
-
-                var timelinePanel = WebInspector.panels.timeline;
-                timelinePanel._model.startRecord();
-
-                cb();
-            },
-            "ExitRegion": function(cb) {
-                var timelinePanel = WebInspector.panels.timeline;
-                console.assert(timelinePanel, "WAT: Couldn't find Timeline panel!");
-                
-                timelinePanel._model.stopRecord();
-                
-                if (WebInspector.inspectorView.currentPanel() !== timelinePanel) {
-                    var toolbarButtons = WebInspector.toolbar.element.children;
-                    for (var i = 0; i < toolbarButtons.length; i++) {
-                        var button = toolbarButtons[i];
-                        
-                        if (!button.classList.contains("toggleable"))
-                            continue; // search for toggleable buttons only
-                        if (button.panelDescriptor.panel() !== timelinePanel)
-                            continue; // only deal with timeline panel button
-                        
-                        button.classList.add("pulsing-result");
-                        timelinePanel.onceEventListener(WebInspector.Panel.Events.PanelShown,
-                            function() {
-                                button.classList.remove("pulsing-result");
-                            }, button);
-                        
-                        break;
-                    }
-                }
-                cb();
-            }
-        };
-        
-        this.linearScanForRegion(startIndex, endIndex, callbacks);
+        this.linearScanForRegion(startIndex, endIndex);
     },
 
     __proto__: WebInspector.TimelapseScanner.prototype

@@ -35,52 +35,54 @@ WebInspector.TimelapseBreakpointScanner = function(model) {
 };
 
 WebInspector.TimelapseBreakpointScanner.prototype = {
+    _resumeFromBreakpointPause: function(event)
+    {
+        // prevent debugger wait from propagating; resume.
+        event.preventDefault();
+        if (this._model.debuggerPaused)
+            DebuggerAgent.resume();
+    },
+
+    scanDidStart: function(cb)
+    {
+        this._savedDebuggerState = WebInspector.debuggerModel.debuggerEnabled();
+        
+        if (!WebInspector.debuggerModel.debuggerEnabled())
+            WebInspector.debuggerModel.enableDebugger();
+        
+        this._model.addEventListener(WebInspector.TimelapseModel.Events.DebuggerWaiting,
+                                     this._resumeFromBreakpointPause, this);
+        cb();
+    },
+    
+    scanWillStop: function(cb)
+    {
+        var savedState = this._savedDebuggerState;
+        delete this._savedDebuggerState;
+        
+        if (!savedState)
+            WebInspector.debuggerModel.disableDebugger();
+        
+        this._model.addEventListener(WebInspector.TimelapseModel.Events.DebuggerWaiting,
+                                     this._resumeFromBreakpointPause, this);
+        cb();
+    },
+
+    willEnterRegion: function(cb)
+    {
+        WebInspector.debuggerModel.setBreakpointsActive(true);
+        cb();
+    },
+
+    willExitRegion: function(cb)
+    {
+        WebInspector.debuggerModel.setBreakpointsActive(false);
+        cb();
+    },
+
     scanRegion: function(startIndex, endIndex)
     {
-        var model = this._model;
-        var timelapseEvents = WebInspector.TimelapseModel.Events;
-        var scanner = this;
-        
-        var breakpointAutoResumeCallback = function(event) {
-            // prevent debugger wait from propagating; resume.
-            event.preventDefault();
-            if (model.debuggerPaused)
-                DebuggerAgent.resume();
-        };
-        
-        var callbacks = {
-            "PreScan": function(cb) {
-                scanner._savedDebuggerState = WebInspector.debuggerModel.debuggerEnabled();
-                
-                if (!WebInspector.debuggerModel.debuggerEnabled())
-                    WebInspector.debuggerModel.enableDebugger();
-                
-                model.addEventListener(timelapseEvents.DebuggerWaiting,
-                                       breakpointAutoResumeCallback, model);
-                cb();
-            },
-            "PostScan": function(cb) {
-                var savedState = scanner._savedDebuggerState;
-                delete scanner._savedDebuggerState;
-                
-                if (!savedState)
-                    WebInspector.debuggerModel.disableDebugger();
-                
-                model.removeEventListener(timelapseEvents.DebuggerWaiting,
-                                          breakpointAutoResumeCallback, model);
-                cb();
-            },
-            "EnterRegion": function(cb) {
-                WebInspector.debuggerModel.setBreakpointsActive(true);
-                cb();
-            },
-            "ExitRegion": function(cb) {
-                WebInspector.debuggerModel.setBreakpointsActive(false);
-                cb();
-            }
-        };
-        
-        this.segmentedScanForRegion(startIndex, endIndex, callbacks);
+        this.segmentedScanForRegion(startIndex, endIndex);
     },
 
     __proto__: WebInspector.TimelapseScanner.prototype
