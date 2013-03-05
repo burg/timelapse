@@ -29,13 +29,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+WebInspector.ReplayTaskStep = function(name, callback, thisObj)
+{
+    this.name = name;
+    this.callback = callback;
+    this.thisObj = thisObj;
+}
 
 WebInspector.ReplayTask = function(taskName)
 {
     this._taskName = taskName;
-    // these two arrays use the same indices.
     this._steps = [];
-    this._stepNames = [];
     
     this._isRunning = false;
     // Run token exists to guard against the case when the same task is
@@ -62,26 +66,25 @@ WebInspector.ReplayTask.prototype = {
         return this;
     },
     
-    chain: function(stepName, stepFn)
+    chain: function(name, callback, thisObj)
     {
         console.assert(!this._isRunning, "Tried to chain new steps after a task has started running.");
         
-        console.assert(typeof stepName === "string", "Invalid step name not a string: " +stepName);
-        console.assert(typeof stepFn === "function", "Invalid step not a function: "+stepFn);
-
-        this._log("Appending step " + this._steps.length + ": " + stepName);
-        this._stepNames.push(stepName);
-        this._steps.push(stepFn);
+        console.assert(typeof name === "string", "Invalid step name not a string: " +name);
+        console.assert(typeof callback === "function", "Invalid step not a function: "+callback);
+    
+        this._log("Appending step " + this._steps.length + ": " + name);
+        this._steps.push(new WebInspector.ReplayTaskStep(name, callback, thisObj));
         return this;
     },
     
-    orCancel: function(cancelFn)
+    orCancel: function(callback, thisObj)
     {
         console.assert(!this._isRunning, "Tried to chain new steps after a task has started running.");
-        console.assert(typeof cancelFn === "function", "Invalid cancel not a function: "+cancelFn);
+        console.assert(typeof callback === "function", "Invalid cancel not a function: "+callback);
 
         this._log("Setting cancellation action.");
-        this._cancelFn = cancelFn;
+        this._cancelStep = new WebInspector.ReplayTaskStep("cancel", callback, thisObj);
         return this;
     },
     
@@ -89,8 +92,8 @@ WebInspector.ReplayTask.prototype = {
     {
         this._log("Cancelling task.");
     
-        if (typeof this._cancelFn === "function")
-            this._cancelFn(this._finish.bind(this, this._runToken));
+        if (this._cancelStep)
+            this._cancelStep.callback.call(this._cancelStep.thisObj, this._finish.bind(this, this._runToken));
         else
             this._finish(this._runToken);
         
@@ -122,13 +125,13 @@ WebInspector.ReplayTask.prototype = {
 
         var index = this._stepIndex++;
         var step = this._steps[index];
-        this._log("Running step " + index + ": " + this._stepNames[index]);
+        this._log("Running step " + index + ": " + step.name);
         var args = Array.prototype.slice.call(arguments);
         // replace callback arg token with next callback function, and pass
         // all other arguments (typically, WebInspector.Event)
         args.splice(0, 1, this._step.bind(this, runToken));
 
-        step.apply(this, args);
+        step.callback.apply(step.thisObj, args);
     },
     
     _finish: function(runToken)
