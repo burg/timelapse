@@ -21,6 +21,9 @@ WebInspector.TimelapseBreakpointTracker = function(model)
     manager.addEventListener(managerEvents.BreakpointAdded,              this._breakpointUpdated, this);
     manager.addEventListener(managerEvents.BreakpointAddedToStorage,     this._breakpointAddedToStorage, this);
     manager.addEventListener(managerEvents.BreakpointRemovedFromStorage, this._breakpointRemovedFromStorage, this);
+    
+    // always reset/init data structures, since we track breakpoints even outside of capturing or replaying.
+    this._reset();
 };
 
 WebInspector.TimelapseBreakpointTracker.Events = {
