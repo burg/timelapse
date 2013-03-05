@@ -54,22 +54,13 @@ WebInspector.TimelineScanner.prototype = {
         timelinePanel._model.stopRecord();
         
         if (WebInspector.inspectorView.currentPanel() !== timelinePanel) {
-            var toolbarButtons = WebInspector.toolbar.element.children;
-            for (var i = 0; i < toolbarButtons.length; i++) {
-                var button = toolbarButtons[i];
-                
-                if (!button.classList.contains("toggleable"))
-                    continue; // search for toggleable buttons only
-                if (button.panelDescriptor.panel() !== timelinePanel)
-                    continue; // only deal with timeline panel button
-                
-                button.classList.add("pulsing-result");
+            var toolbarItem = WebInspector.toolbar.getItemForPanelName(timelinePanel.name);
+            if (toolbarItem) {
+                toolbarItem.classList.add("pulsing-result");
                 timelinePanel.onceEventListener(WebInspector.Panel.Events.PanelShown,
                                                 function() {
-                                                button.classList.remove("pulsing-result");
-                                                }, button);
-                
-                break;
+                                                this.classList.remove("pulsing-result");
+                                                }, toolbarItem);
             }
         }
         cb();

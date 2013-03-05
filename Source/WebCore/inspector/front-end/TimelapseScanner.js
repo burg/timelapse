@@ -107,7 +107,6 @@ WebInspector.TimelapseScanner.prototype = {
         task.chain("scanDidStart", this.scanDidStart, this);
         if (startIndex > allRecords[0].mark.index) {
             task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
-            console.log(this);
                 model.onceEventListener(timelapseEvents.InputWaiting,
                                         this._createPreventDefaultCallback(cb), this);
                 model.startReplayUpToMarkIndexTask(startIndex, true).run();

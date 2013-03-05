@@ -43,6 +43,8 @@ WebInspector.Toolbar = function()
     document.getElementById("close-button-left").addEventListener("click", this._onClose, true);
     document.getElementById("close-button-right").addEventListener("click", this._onClose, true);
 
+    this._itemsByPanelName = {};
+
     this._isWindowMoveSupported = WebInspector.isMac() && !Preferences.showDockToRight;
 }
 
@@ -57,8 +59,22 @@ WebInspector.Toolbar.prototype = {
      */
     addPanel: function(panelDescriptor)
     {
-        this.element.appendChild(this._createPanelToolbarItem(panelDescriptor));
+        var item = this._createPanelToolbarItem(panelDescriptor);
+        this._itemsByPanelName[panelDescriptor.name()] = item;
+        this.element.appendChild(item);
         this.resize();
+    },
+
+    /**
+     * @param {string} panelName
+     * @return {Element|null}
+     */
+    getItemForPanelName: function(panelName)
+    {
+        if (panelName in this._itemsByPanelName)
+            return this._itemsByPanelName[panelName];
+        
+        return null;
     },
 
     /**
