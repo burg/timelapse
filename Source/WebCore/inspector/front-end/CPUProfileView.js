@@ -689,5 +689,13 @@ WebInspector.CPUProfileHeader.prototype = {
         return new WebInspector.CPUProfileView(this);
     },
 
+    /**
+     * @override
+     */
+    canPinAcrossLoads: function()
+    {
+        return true;
+    },
+
     __proto__: WebInspector.ProfileHeader.prototype
 }

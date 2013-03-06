@@ -43,6 +43,12 @@ WebInspector.ProfileType = function(id, name)
 
 WebInspector.ProfileType.Events = {
   ViewUpdated: "view-updated",
+
+  ProfilerEnabled: "profiler-enabled",
+  ProfilerDisabled: "profiler-disabled",
+
+  ProfileAdded: "profile-added",
+  ProfileRemoved: "profile-removed",
 }
 
 WebInspector.ProfileType.prototype = {
@@ -137,6 +143,7 @@ WebInspector.ProfileHeader = function(profileType, title, uid)
         this.isTemporary = false;
     }
     this._fromFile = false;
+    this._isPinned = false;
 }
 
 WebInspector.ProfileHeader.prototype = {
@@ -225,6 +232,33 @@ WebInspector.ProfileHeader.prototype = {
     fromFile: function()
     {
         return this._fromFile;
+    },
+
+    /**
+     * @return {boolean}
+     */
+    canPinAcrossLoads: function()
+    {
+        return false;
+    },
+    
+    /**
+     * @return {boolean}
+     */
+    isPinned: function()
+    {
+        return this.canPinAcrossLoads() && this._isPinned;
+    },
+
+    /**
+     * @return {boolean}
+     */    
+    setIsPinned: function(shouldPin)
+    {
+        if (this.canPinAcrossLoads())
+            this._isPinned = shouldPin;
+        
+        return this._isPinned;
     }
 }
 
@@ -268,7 +302,7 @@ WebInspector.ProfilesPanel = function()
     this._statusBarButtons.push(this.recordButton);
 
     this.clearResultsButton = new WebInspector.StatusBarButton(WebInspector.UIString("Clear all profiles."), "clear-status-bar-item");
-    this.clearResultsButton.addEventListener("click", this._clearProfiles.bind(this, true));
+    this.clearResultsButton.addEventListener("click", this.clearProfiles.bind(this, true));
     this._statusBarButtons.push(this.clearResultsButton);
 
     if (WebInspector.experimentsSettings.liveNativeMemoryChart.isEnabled()) {
@@ -319,6 +353,9 @@ WebInspector.ProfilesPanel = function()
     WebInspector.ContextMenu.registerProvider(this);
     
     this._updateEnablementStatus();
+    
+    if (this.profilerEnabled)
+        this._populateProfiles();
 }
 
 WebInspector.ProfilesPanel.prototype = {
@@ -369,7 +406,6 @@ WebInspector.ProfilesPanel.prototype = {
     wasShown: function()
     {
         WebInspector.Panel.prototype.wasShown.call(this);
-        this._populateProfiles();
     },
 
     _profilerWasEnabled: function()
@@ -380,6 +416,9 @@ WebInspector.ProfilesPanel.prototype = {
         this._profilerEnabled = true;
         this._updateEnablementStatus();
         this._showLauncherView();
+        this._populateProfiles();
+        
+        this.dispatchEventToListeners(WebInspector.ProfileType.Events.ProfilerEnabled);
     },
 
     _profilerWasDisabled: function()
@@ -389,6 +428,8 @@ WebInspector.ProfilesPanel.prototype = {
 
         this._profilerEnabled = false;
         this._updateEnablementStatus();
+        
+        this.dispatchEventToListeners(WebInspector.ProfileType.Events.ProfilerDisabled);
     },
 
     /**
@@ -413,34 +454,30 @@ WebInspector.ProfilesPanel.prototype = {
         this._resize(this.splitView.sidebarWidth());
     },
 
-    _clearProfiles: function(overridePinnedProfiles)
+    clearProfiles: function(overridePinnedSetting)
     {
         // TODO: re-perform the search once profiles are pruned.
         delete this.currentQuery;
         this.searchCanceled();
 
-        for (var i = 0; i < this._profiles.length; ++i) {
-            var view = this._profiles[i].existingView();
+        var pinnedProfiles = [];
+        while (this._profiles.length) {
+            var profile = this._profiles.pop();
+            if (!overridePinnedSetting && profile.isPinned()) {
+                pinnedProfiles.push(profile);
+                continue;
+            }
+            
+            var view = profile.existingView();
             if (view) {
                 view.detach();
                 if ("dispose" in view)
                     view.dispose();
             }
-            this._profiles[i].dispose(this);
+            profile.dispose(this);
+            this._removeProfileHeader(profile);
         }
-        
-        while (this._profiles.length) {
-            // TODO: respect overridePinnedProfiles and a profile-pinned flag
-            this._removeProfileHeader(this._profiles[0]);
-        }
-
-        for (var id in this._profileTypesByIdMap) {
-            var profileType = this._profileTypesByIdMap[id];
-            var treeElement = profileType.treeElement;
-            treeElement.removeChildren();
-            treeElement.hidden = true;
-            profileType.reset();
-        }
+        this._profiles = pinnedProfiles;
 
         // return to non-recording state.
         this._profilesWereRequested = false;
@@ -595,6 +632,8 @@ WebInspector.ProfilesPanel.prototype = {
                 type: typeId
             });
         }
+        
+        this.dispatchEventToListeners(WebInspector.ProfileType.Events.ProfileAdded, profile);
     },
 
     /**
@@ -633,6 +672,8 @@ WebInspector.ProfilesPanel.prototype = {
             this._showLauncherView();
             sidebarParent.hidden = true;
         }
+        
+        this.dispatchEventToListeners(WebInspector.ProfileType.Events.ProfileRemoved, profile);
     },
 
     /**
@@ -1302,7 +1343,7 @@ WebInspector.ProfilerDispatcher.prototype = {
      */
     resetProfiles: function()
     {
-        this._profilesPanel._clearProfiles();
+        this._profilesPanel.clearProfiles();
     },
 
     /**
@@ -1360,7 +1401,7 @@ WebInspector.HeapProfilerDispatcher.prototype = {
      */
     resetProfiles: function()
     {
-        this._profilesPanel._clearProfiles();
+        this._profilesPanel.clearProfiles();
     },
 
     /**
