@@ -244,6 +244,7 @@ void InspectorProfilerAgent::enable(bool skipRecompile)
     if (m_enabled)
         return;
     m_enabled = true;
+    m_headersRequested = true;
     if (!skipRecompile)
         recompileScript();
 }
