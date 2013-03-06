@@ -105,13 +105,11 @@ WebInspector.TimelapseScanner.prototype = {
         
         task.chain("notifyScanStarted", this._notifyScanStarted, this);
         task.chain("scanDidStart", this.scanDidStart, this);
-        if (startIndex > allRecords[0].mark.index) {
-            task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
-                model.onceEventListener(timelapseEvents.InputWaiting,
-                                        this._createPreventDefaultCallback(cb), this);
-                model.startReplayUpToMarkIndexTask(startIndex, true).run();
-            }, this);
-        }
+        task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
+            model.onceEventListener(timelapseEvents.InputWaiting,
+                                    this._createPreventDefaultCallback(cb), this);
+            model.startReplayUpToMarkIndexTask(startIndex, true).run();
+        }, this);
 
         task.chain("willEnterRegion", this.willEnterRegion, this);
         // Workaround: currently there is no way to force replay up to the current mark index.
