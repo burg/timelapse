@@ -84,7 +84,15 @@ WebInspector.TimelapseScanner.prototype = {
     {
         cb();
     },
-    
+
+    // some scanners (such as the profiler) cannot continue across the initial frame load.
+    // if this is overridden to "false", then linear scans will be bounded by
+    // initial frame loads.
+    shouldScanInitialLoad: function()
+    {
+        return true;
+    },
+
     // Public API
     scanRegion: function()
     {
@@ -102,7 +110,13 @@ WebInspector.TimelapseScanner.prototype = {
         var breakpointHitIndex = model.breakpointTracker.breakpointHitIndex;
         var allRecords = model.loadedRecording.allRecords;
         var task = new WebInspector.ReplayTask("LinearScanForRegion("+startIndex+","+endIndex+")");
-        
+
+        if (startIndex == allRecords[0].mark.index && !this.shouldScanInitialLoad()) {
+            console.assert(allRecords.length > 1,
+                           "Cannot exclude initial load from scan for recording with fewer than 2 inputs.");
+            startIndex = allRecords[1].mark.index;
+        }
+
         task.chain("notifyScanStarted", this._notifyScanStarted, this);
         task.chain("scanDidStart", this.scanDidStart, this);
         task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
@@ -113,7 +127,7 @@ WebInspector.TimelapseScanner.prototype = {
 
         task.chain("willEnterRegion", this.willEnterRegion, this);
         // Workaround: currently there is no way to force replay up to the current mark index.
-        if (currentIndex == endIndex) {
+        if (currentIndex == endIndex && currentIndex != startIndex) {
             var endRecordIndex = model.loadedRecording.recordIndexFromMarkIndex(endIndex);
             var prevIndex = allRecords[endRecordIndex - 1].mark.index;
             task.chain("ScanToMarkPrecedingRegionEnd("+prevIndex+")", function(cb) {

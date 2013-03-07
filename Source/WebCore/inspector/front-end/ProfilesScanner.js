@@ -64,8 +64,6 @@ WebInspector.ProfilesScanner.prototype = {
         var panel = WebInspector.panels.profiles;
         
         var startProfilingAndContinue = function() {
-            console.log("starting profiling and continuing");
-            // different profile types do not share a common "start/stop" API.
             var profileType = panel.getProfileType(WebInspector.CPUProfileType.TypeId);
             profileType.startRecordingProfile();
             
@@ -73,7 +71,6 @@ WebInspector.ProfilesScanner.prototype = {
         };
 
         if (!panel.profilerEnabled) {
-            console.log("request enable profiling");
             panel.onceEventListener(WebInspector.ProfileType.Events.ProfilerEnabled,
                                     startProfilingAndContinue, this);
             panel.enableProfiler();
@@ -90,7 +87,6 @@ WebInspector.ProfilesScanner.prototype = {
         var profileType = panel.getProfileType(cpuProfileId);
 
         panel.onceEventListener(WebInspector.ProfileType.Events.ProfileAdded, function(event) {
-            console.log("profile was added");
             var profile = event.data;
             profile.setIsPinned(true);
             // this will force profile data to be serialised to the frontend immediately, and show the scanned profile.
@@ -117,6 +113,11 @@ WebInspector.ProfilesScanner.prototype = {
 
         // actually stop the profiler.
         profileType.stopRecordingProfile();
+    },
+    
+    shouldScanInitialLoad: function()
+    {
+        return false;
     },
     
     scanRegion: function(startIndex, endIndex)
