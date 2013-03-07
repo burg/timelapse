@@ -45,11 +45,10 @@
 
 namespace WebCore {
 
-TimerFired::TimerFired(int timerId, Document* document, unsigned dispatchCount, const PositionMark& mark)
-: DispatchableAction(ReplayableTypes::TimerFired, dispatchCount, mark)
+TimerFired::TimerFired(int timerId, Document* document)
+: DispatchableAction(ReplayableTypes::TimerFired)
 , m_timerId(timerId)
 , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(document)) {}
-
 
 String TimerFired::toString() const
 {

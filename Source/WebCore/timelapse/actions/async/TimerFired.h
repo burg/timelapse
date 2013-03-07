@@ -47,7 +47,7 @@ namespace WebCore {
 class TimerFired : public DispatchableAction {
 
 public:
-    TimerFired(int, Document*, unsigned, const PositionMark&);
+    TimerFired(int, Document*);
     virtual ~TimerFired() {}
 
     // DispatchableAction API

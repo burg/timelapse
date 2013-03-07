@@ -400,7 +400,7 @@ void DeterminismController::didDispatchEvent()
         maybeDispatchAction();
 }
 
-void DeterminismController::frameNavigated(DocumentLoader* loader, const PositionMark&)
+void DeterminismController::frameNavigated(DocumentLoader* loader)
 {
     if (!capturing() && !replaying())
         return;
@@ -410,10 +410,10 @@ void DeterminismController::frameNavigated(DocumentLoader* loader, const Positio
     loader->frame()->script()->globalObject(mainThreadNormalWorld())->configureDeterminism(m_determinismLog);
 }
 
-void DeterminismController::willFireTimer(int timerId, Frame* frame, const PositionMark& mark)
+void DeterminismController::willFireTimer(int timerId, Document* document)
 {
-    if (isCapturingDocument(frame->document()))
-        captureAction(new TimerFired(timerId, frame->document(), m_domEventDispatchCount, mark));
+    if (isCapturingDocument(document))
+        capturePageInput(new TimerFired(timerId, document)); // send to frontend, too.
 }
 
 void DeterminismController::willRunPendingScriptsForDocument(Document* document) {

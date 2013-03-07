@@ -176,23 +176,14 @@ void InspectorTimelapseAgent::didDispatchEventOnWindow()
 
 void InspectorTimelapseAgent::frameNavigated(DocumentLoader* loader)
 {
-    if (!capturing() && !replaying())
-        return;
-
-    PositionMark mark = createMark();
-    m_inspectedPage->determinismController()->frameNavigated(loader, mark);
+    if (capturing() || replaying())
+        m_inspectedPage->determinismController()->frameNavigated(loader);
 }
 
 void InspectorTimelapseAgent::willFireTimer(int timerId, Frame* frame)
 {
-    if (!capturing() && !replaying())
-        return;
-
-    PositionMark mark = createMark();
-    m_inspectedPage->determinismController()->willFireTimer(timerId, frame, mark);
-
-    if (capturing())
-        pushRecordToFrontend(TimelapseRecordFactory::createEmptyData(), TimelapseRecordType::TimerFire, mark);
+    if (capturing() || replaying())
+        m_inspectedPage->determinismController()->willFireTimer(timerId, frame->document());
 }
 
 void InspectorTimelapseAgent::capturedPageInput(DispatchableAction* action)
@@ -206,7 +197,9 @@ void InspectorTimelapseAgent::capturedPageInput(DispatchableAction* action)
 
     // TODO: it would be nice to encapsulate knowledge about platform events, etc. so that TimelapseAgent doesn't need to know.
     //       the createXXXdata events should probably hidden inside TimelapseRecordFactory.
-    if (action->type() == ReplayableTypes::HandleMouseMove) {
+    if (action->type() == ReplayableTypes::TimerFired) {
+        pushRecordToFrontend(TimelapseRecordFactory::createEmptyData(), TimelapseRecordType::TimerFire, newMark);
+    } else if (action->type() == ReplayableTypes::HandleMouseMove) {
         PlatformMouseEvent mouseEvent = static_cast<HandleMouseMove*>(action)->platformEvent();
         pushRecordToFrontend(TimelapseRecordFactory::createMouseData(mouseEvent), TimelapseRecordType::MouseMove, newMark);
     } else if (action->type() == ReplayableTypes::HandleMousePress) {

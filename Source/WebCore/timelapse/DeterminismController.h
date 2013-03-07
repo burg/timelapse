@@ -52,7 +52,6 @@ namespace WebCore {
     class DOMWindow;
     class Element;
     class Event;
-    class Frame;
     class Node;
     class Page;
     class PlatformKeyboardEvent;
@@ -97,8 +96,8 @@ namespace WebCore {
         // External callbacks
         void willDispatchEvent(const Event&, DOMWindow*, Node*, const PositionMark&);
         void didDispatchEvent();
-        void frameNavigated(DocumentLoader*, const PositionMark&);
-        void willFireTimer(int, Frame*, const PositionMark&);
+        void frameNavigated(DocumentLoader*);
+        void willFireTimer(int, Document*);
         void willRunPendingScriptsForDocument(Document*);
         void capturePageInput(DispatchableAction* action);
         // callsites of this method are locations where replay errors are detected.
