@@ -45,6 +45,9 @@ WebInspector.RecordingsPanel = function()
     this._model.addEventListener(WebInspector.TimelapseModel.Events.RecordingLoaded, this._recordingLoaded, this);
 
     this._registerShortcuts();
+    
+    if (this._model.canReplay)
+        this._recordingLoaded();
 };
 
 WebInspector.RecordingsPanel.prototype = {
