@@ -47,12 +47,14 @@
     white-space: nowrap;
 }
 
-.data-grid th.corner,
-.data-grid td.corner {
-    width: 14px;
+.data-grid th.corner {
     padding-right: 0px;
     padding-left: 0px;
     border-right: 0 none transparent !important;
+}
+
+.data-grid th.corner {
+    width: 14px;
 }
 
 .data-grid tr.filler {

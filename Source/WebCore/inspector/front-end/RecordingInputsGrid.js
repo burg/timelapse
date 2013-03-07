@@ -46,7 +46,7 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
 
     columns.index.title = " ";
     columns.index.sortable = true;
-    columns.index.width = "5%";
+    columns.index.width = "10%";
     columns.index.aligned = "right";
     columns.index.sort = "ascending";
 
@@ -56,16 +56,16 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
 
     columns.type.title = "What Happened?";
     columns.type.sortable = true;
-    columns.type.width = "20%";
+    columns.type.width = "30%";
     columns.type.aligned = "right";
 
     columns.timestamp.title = "When?";
     columns.timestamp.sortable = true;
-    columns.timestamp.width = "10%";
+    columns.timestamp.width = "15%";
     
     columns.preview.title = "Input Preview";
     columns.preview.sortable = false;
-    columns.preview.width = "auto";
+    columns.preview.width = "45%";
 
     /* call to super with the constructed columns. */
     WebInspector.DataGrid.call(this, columns);
