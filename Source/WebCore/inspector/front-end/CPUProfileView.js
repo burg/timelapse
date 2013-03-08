@@ -81,30 +81,29 @@ WebInspector.CPUProfileView = function(profile)
 
     this._linkifier = new WebInspector.Linkifier(new WebInspector.Linkifier.DefaultFormatter(30));
 
-    ProfilerAgent.getCPUProfile(this.profile.uid, this._getCPUProfileCallback.bind(this));
+    this.profile.loadData(this._profileDataLoaded.bind(this));
 }
 
 WebInspector.CPUProfileView._TypeTree = "Tree";
 WebInspector.CPUProfileView._TypeHeavy = "Heavy";
 
 WebInspector.CPUProfileView.prototype = {
-    /**
-     * @param {?Protocol.Error} error
-     * @param {ProfilerAgent.CPUProfile} profile
-     */
-    _getCPUProfileCallback: function(error, profile)
+
+    _profileDataLoaded: function()
     {
-        if (error)
+        var profileData = this.profile.data;
+    
+        if (!profileData)
             return;
 
-        if (!profile.head) {
+        if (!profileData.head) {
             // Profiling was tentatively terminated with the "Clear all profiles." button.
             return;
         }
-        this.profileHead = profile.head;
+        this.profileHead = profileData.head;
 
-        if (profile.idleTime)
-            this._injectIdleTimeNode(profile);
+        if (profileData.idleTime)
+            this._injectIdleTimeNode(profileData);
 
         this._assignParentsInProfile();
         this._changeView();
@@ -669,6 +668,7 @@ WebInspector.CPUProfileType.prototype = {
 WebInspector.CPUProfileHeader = function(type, title, uid)
 {
     WebInspector.ProfileHeader.call(this, type, title, uid);
+    this._profileData = null;
 }
 
 WebInspector.CPUProfileHeader.prototype = {
@@ -695,6 +695,33 @@ WebInspector.CPUProfileHeader.prototype = {
     canPinAcrossLoads: function()
     {
         return true;
+    },
+    
+    loadData: function(cb)
+    {
+        if (this._profileData)
+            return cb();
+        
+        ProfilerAgent.getCPUProfile(this.uid, this._profileDataLoaded.bind(this, cb));
+    },
+    
+    /**
+     * @param {?function} callback
+     * @param {?Protocol.Error} error
+     * @param {ProfilerAgent.CPUProfile} profile
+     */
+    _profileDataLoaded: function(cb, error, profile)
+    {
+        if (error || !profile.head)
+            return cb();
+        
+        this._profileData = profile;
+        cb();
+    },
+    
+    get data()
+    {
+        return this._profileData || false;
     },
 
     __proto__: WebInspector.ProfileHeader.prototype
