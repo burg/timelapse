@@ -160,6 +160,28 @@ WebInspector.ScriptsPanel = function(workspaceForTest)
     this._toggleFormatSourceButton.toggled = false;
     this._toggleFormatSourceButton.addEventListener("click", this._toggleFormatSource, this);
 
+    this._profileHeatmapSelector = new WebInspector.StatusBarComboBox(this._profileHeatmapSelectorChanged.bind(this));
+    for (var key in WebInspector.ProfileHeatmapProvider.Modes) {
+        var modeName = WebInspector.ProfileHeatmapProvider.Modes[key];
+        var option = document.createElement("option");
+        option.text = WebInspector.UIString(modeName);
+        option.title = WebInspector.UIString("Click to visualize using mode: "+modeName);
+        option._mode = key;
+        this._profileHeatmapSelector.addOption(option);
+        
+        if (modeName === WebInspector.ProfileHeatmapProvider.DefaultMode) {
+            this._profileHeatmapSelector.select(option);
+            this._profileHeatmapSelector._defaultOption = option;
+        }
+    }
+    this._profileHeatmapSelector.element.addStyleClass("hidden");
+
+    // FIXME: should listen to something else.
+    WebInspector.timelapseModel.onceEventListener(WebInspector.TimelapseModel.Events.ProfilerHeatmapProviderAdded,
+        this._heatmapProviderAdded, this);
+    
+    // FIXME: check to see if provider already exists
+
     this._scriptViewStatusBarItemsContainer = document.createElement("div");
     this._scriptViewStatusBarItemsContainer.style.display = "inline-block";
 
@@ -198,7 +220,13 @@ WebInspector.ScriptsPanel = function(workspaceForTest)
 WebInspector.ScriptsPanel.prototype = {
     get statusBarItems()
     {
-        return [this.enableToggleButton.element, this._pauseOnExceptionButton.element, this._toggleFormatSourceButton.element, this._scriptViewStatusBarItemsContainer];
+        return [
+                this.enableToggleButton.element,
+                this._pauseOnExceptionButton.element,
+                this._toggleFormatSourceButton.element,
+                this._profileHeatmapSelector.element,
+                this._scriptViewStatusBarItemsContainer
+        ];
     },
 
     defaultFocusedElement: function()
@@ -472,6 +500,10 @@ WebInspector.ScriptsPanel.prototype = {
         break;
         }
         this._sourceFramesByUISourceCode.put(uiSourceCode, sourceFrame);
+        
+        if (this._heatmapProvider)
+            this._heatmapProvider.addHighlightsForEditor(sourceFrame.textEditor);
+        
         return sourceFrame;
     },
 
@@ -502,6 +534,10 @@ WebInspector.ScriptsPanel.prototype = {
         if (!sourceFrame)
             return;
         this._sourceFramesByUISourceCode.remove(uiSourceCode);
+        
+        if (this._heatmapProvider)
+            this._heatmapProvider.removeHighlightsForEditor(sourceFrame.textEditor);
+
         sourceFrame.detach();
     },
 
@@ -957,6 +993,65 @@ WebInspector.ScriptsPanel.prototype = {
             enabled: this._toggleFormatSourceButton.toggled,
             url: this._editorContainer.currentFile().originURL()
         });
+    },
+
+    _profileHeatmapSelectorChanged: function()
+    {
+        console.assert(this._heatmapProvider, "WAT: profile mode changed but we don't have a heatmap provider.");
+    
+        var option = this._profileHeatmapSelector.selectedOption();
+        this._heatmapProvider.setHeatmapMode(option._mode);
+    },
+
+    _heatmapDataChanged: function()
+    {
+        console.assert(this._heatmapProvider, "WAT: data changed but we don't have a heatmap provider.");
+
+        var keys = this._sourceFramesByUISourceCode.keys();
+        for (var i = 0; i < keys.length; i++) {
+            var sourceFrame = this._sourceFramesByUISourceCode.get(keys[i]);
+            this._heatmapProvider.removeHighlightsForEditor(sourceFrame.textEditor);
+            this._heatmapProvider.addHighlightsForEditor(sourceFrame.textEditor);
+        }
+    },
+
+    _heatmapProviderAdded: function(event)
+    {
+        console.assert(!this._heatmapProvider, "WAT: already have a heatmap provider.");
+        var provider = event.data;
+
+        this._heatmapProvider = provider;
+        provider.onceEventListener(WebInspector.DataProvider.Events.WillRemove, this._heatmapProviderRemoved, this);
+        provider.addEventListener(WebInspector.DataProvider.Events.DataChanged, this._heatmapDataChanged, this);
+        
+        var keys = this._sourceFramesByUISourceCode.keys();
+        for (var i = 0; i < keys.length; i++) {
+            var sourceFrame = this._sourceFramesByUISourceCode.get(keys[i]);
+            this._heatmapProvider.addHighlightsForEditor(sourceFrame.textEditor);
+        }
+        
+        this._profileHeatmapSelector.element.removeStyleClass("hidden");
+        // the selectionChanged event will trigger the adding of highlights
+        this._profileHeatmapSelector.select(this._profileHeatmapSelector._defaultOption);
+    },
+    
+    _heatmapProviderRemoved: function()
+    {
+        console.assert(this._heatmapProvider, "WAT: Lost reference to heatmap provider?");
+        
+        // FIXME: should listen to something else.
+        WebInspector.timelapseModel.onceEventListener(WebInspector.TimelapseModel.Events.ProfileHeatmapProviderAdded, this._heatmapProviderAdded, this);
+
+        this._profileHeatmapSelector.removeEventListener(WebInspector.DataProvider.Events.DataChanged, this._heatmapDataChanged, this);
+
+        var keys = this._sourceFramesByUISourceCode.keys();
+        for (var i = 0; i < keys.length; i++) {
+            var sourceFrame = this._sourceFramesByUISourceCode.get(keys[i]);
+            this._heatmapProvider.removeHighlightsForEditor(sourceFrame.textEditor);
+        }
+
+        this._profileHeatmapSelector.element.addStyleClass("hidden");
+        delete this._heatmapProvider;
     },
 
     addToWatch: function(expression)

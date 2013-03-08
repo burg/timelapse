@@ -117,6 +117,7 @@ WebInspector.DataProvider.Types = {
     BreakpointHits: "BreakpointHits",
     ReplaySavepoint: "ReplaySavepoint",
     OverviewPreview: "OverviewPreview",
+    ProfileHeatmap: "ProfileHeatmap",
 };
 
 WebInspector.DataProvider.Events = {

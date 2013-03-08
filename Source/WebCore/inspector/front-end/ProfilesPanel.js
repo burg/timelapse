@@ -631,9 +631,15 @@ WebInspector.ProfilesPanel.prototype = {
             this.dispatchEventToListeners("profile added", {
                 type: typeId
             });
-        }
-        
+            
         this.dispatchEventToListeners(WebInspector.ProfileType.Events.ProfileAdded, profile);
+        
+        // FIXME: this is not ideal
+        var timelapseModel = WebInspector.timelapseModel;
+        timelapseModel.dispatchEventToListeners(WebInspector.TimelapseModel.Events.ProfilerHeatmapProviderAdded,
+            new WebInspector.ProfileHeatmapProvider(profile));
+
+        }
     },
 
     /**

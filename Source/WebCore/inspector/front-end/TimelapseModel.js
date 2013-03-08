@@ -121,6 +121,8 @@ WebInspector.TimelapseModel.Events = {
 
     InputLocked: "TimelapseInputLocked",
     InputUnlocked: "TimelapseInputUnlocked",
+    // FIXME: This is a stub event. It should come from ProfilesScanner or the ProfilesPanel
+    ProfileHeatmapProviderAdded: "TimelapseProfileHeatmapProviderAdded",
 };
 
 WebInspector.TimelapseModel.prototype = {
