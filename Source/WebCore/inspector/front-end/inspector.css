@@ -779,6 +779,7 @@ button.status-bar-item.extension {
     background-position-y: 5px;
     padding-right: 10px;
     border-right: 5px solid transparent;
+    vertical-align: top;
 }
 
 select.status-bar-item {
@@ -792,8 +793,8 @@ select.status-bar-item {
     padding: 0 15px 0 5px;
     margin-right: -15px;
     position: relative;
-    top: -1px;
-    height: 23px;
+    top: -2px;
+    height: 24px;
 }
 
 select.status-bar-item, select.status-bar-item:hover {
