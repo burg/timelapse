@@ -48,6 +48,11 @@ WebInspector.ProfileHeatmapProvider.Modes = {
 WebInspector.ProfileHeatmapProvider.DefaultMode = WebInspector.ProfileHeatmapProvider.Modes.None;
 
 WebInspector.ProfileHeatmapProvider.prototype = {
+    _canHighlightSourceFrame: function(sourceFrame)
+    {
+        return sourceFrame && sourceFrame instanceof WebInspector.JavaScriptSourceFrame;
+    },
+
     setHeatmapMode: function(mode)
     {
         if (!WebInspector.ProfileHeatmapProvider.Modes[mode])
@@ -65,13 +70,19 @@ WebInspector.ProfileHeatmapProvider.prototype = {
         return this._activeMode;
     },
 
-    addHighlightsForEditor: function(textEditor)
+    addhighlightsForSourceFrame: function(sourceFrame)
     {
+        if (!this._canHighlightSourceFrame(sourceFrame))
+            return;
+    
         console.log("adding highlights");
     },
 
-    removeHighlightsForEditor: function(textEditor)
+    removehighlightsForSourceFrame: function(sourceFrame)
     {
+        if (!this._canHighlightSourceFrame(sourceFrame))
+            return;
+
         console.log("removing highlights");
     },
 

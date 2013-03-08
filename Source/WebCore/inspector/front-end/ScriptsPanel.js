@@ -502,7 +502,7 @@ WebInspector.ScriptsPanel.prototype = {
         this._sourceFramesByUISourceCode.put(uiSourceCode, sourceFrame);
         
         if (this._heatmapProvider)
-            this._heatmapProvider.addHighlightsForEditor(sourceFrame.textEditor);
+            this._heatmapProvider.addhighlightsForSourceFrame(sourceFrame);
         
         return sourceFrame;
     },
@@ -536,7 +536,7 @@ WebInspector.ScriptsPanel.prototype = {
         this._sourceFramesByUISourceCode.remove(uiSourceCode);
         
         if (this._heatmapProvider)
-            this._heatmapProvider.removeHighlightsForEditor(sourceFrame.textEditor);
+            this._heatmapProvider.removehighlightsForSourceFrame(sourceFrame);
 
         sourceFrame.detach();
     },
@@ -1010,8 +1010,8 @@ WebInspector.ScriptsPanel.prototype = {
         var keys = this._sourceFramesByUISourceCode.keys();
         for (var i = 0; i < keys.length; i++) {
             var sourceFrame = this._sourceFramesByUISourceCode.get(keys[i]);
-            this._heatmapProvider.removeHighlightsForEditor(sourceFrame.textEditor);
-            this._heatmapProvider.addHighlightsForEditor(sourceFrame.textEditor);
+            this._heatmapProvider.removehighlightsForSourceFrame(sourceFrame);
+            this._heatmapProvider.addhighlightsForSourceFrame(sourceFrame);
         }
     },
 
@@ -1027,7 +1027,7 @@ WebInspector.ScriptsPanel.prototype = {
         var keys = this._sourceFramesByUISourceCode.keys();
         for (var i = 0; i < keys.length; i++) {
             var sourceFrame = this._sourceFramesByUISourceCode.get(keys[i]);
-            this._heatmapProvider.addHighlightsForEditor(sourceFrame.textEditor);
+            this._heatmapProvider.addhighlightsForSourceFrame(sourceFrame);
         }
         
         this._profileHeatmapSelector.element.removeStyleClass("hidden");
@@ -1047,7 +1047,7 @@ WebInspector.ScriptsPanel.prototype = {
         var keys = this._sourceFramesByUISourceCode.keys();
         for (var i = 0; i < keys.length; i++) {
             var sourceFrame = this._sourceFramesByUISourceCode.get(keys[i]);
-            this._heatmapProvider.removeHighlightsForEditor(sourceFrame.textEditor);
+            this._heatmapProvider.removehighlightsForSourceFrame(sourceFrame);
         }
 
         this._profileHeatmapSelector.element.addStyleClass("hidden");
