@@ -81,6 +81,25 @@ WebInspector.JavaScriptSourceFrame.prototype = {
     },
 
     /**
+     * @param {number} lineNumber
+     * @param {string} cssClass
+     * @return {?WebInspector.TextEditorMainPanel.HighlightDescriptor}
+     */
+    highlightFunctionAtLine: function(lineNumber, cssClass)
+    {
+        var textModel = this.textEditor.textModel;
+        if (lineNumber < 0 || lineNumber > textModel.linesCount) {
+            console.error("Tried to highlight function at invalid line: "+this._contentProvider.contentUrl()+":"+lineNumber);
+            return;
+        }
+        
+        // TODO: actually find a good range for the first function found on the line.
+        var range = new WebInspector.TextRange(lineNumber, 0,
+                                               lineNumber, textModel.lineLength(lineNumber));
+        return this.textEditor.highlightRange(range, cssClass);
+    },
+
+    /**
      * @return {boolean}
      */
     canEditSource: function()

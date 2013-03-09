@@ -186,6 +186,11 @@ WebInspector.TextEditor.prototype = {
     text: function() { },
 
     /**
+     * @return {WebInspector.TextModel}
+     */
+    textModel: function() { },
+
+    /**
      * @return {WebInspector.TextRange}
      */
     range: function() { },

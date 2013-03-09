@@ -513,6 +513,14 @@ WebInspector.DefaultTextEditor.prototype = {
     },
 
     /**
+     * @return {WebInspector.TextModel}
+     */
+    textModel: function()
+    {
+        return this._textModel;
+    },
+
+    /**
      * @return {WebInspector.TextRange}
      */
     range: function()

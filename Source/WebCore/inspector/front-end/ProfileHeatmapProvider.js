@@ -76,6 +76,7 @@ WebInspector.ProfileHeatmapProvider.prototype = {
             return;
     
         console.log("adding highlights");
+        
     },
 
     removehighlightsForSourceFrame: function(sourceFrame)
