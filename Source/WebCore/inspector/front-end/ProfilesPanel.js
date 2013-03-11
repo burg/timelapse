@@ -388,20 +388,25 @@ WebInspector.ProfilesPanel.prototype = {
         profile._profilesTreeElement = profileTreeElement;
 
         sidebarParent.appendChild(profileTreeElement);
-        if (!profile.isTemporary) {
-            if (!this.visibleView)
-                this.showProfile(profile);
-            this.dispatchEventToListeners("profile added", {
-                type: typeId
-            });
-            
+
+        if (profile.isTemporary)
+            return;
+
+        if (!this.visibleView)
+            this.showProfile(profile);
+        this.dispatchEventToListeners("profile added", {
+            type: typeId
+        });
+
+        // FIXME: (Issue #192): unify "ProfileAdded" and "profile added" events
         this.dispatchEventToListeners(WebInspector.ProfileType.Events.ProfileAdded, profile);
         
-        // FIXME: this is not ideal
+        // FIXME: (Issue #197, #193): store heatmap providers on TimelapseRecording or ScriptsPanel
         var timelapseModel = WebInspector.timelapseModel;
-        timelapseModel.dispatchEventToListeners(WebInspector.TimelapseModel.Events.ProfilerHeatmapProviderAdded,
-            new WebInspector.ProfileHeatmapProvider(profile));
-
+        var timelapseEvents = WebInspector.TimelapseModel.Events;
+        if (typeId === WebInspector.CPUProfileType.TypeId) {
+            timelapseModel.dispatchEventToListeners(timelapseEvents.ProfilerHeatmapProviderAdded,
+                                                    new WebInspector.ProfileHeatmapProvider(profile));
         }
     },
 

@@ -37,6 +37,9 @@ WebInspector.ProfileHeatmapProvider = function(profile) {
     this._profile = profile;
     this._profile.loadData(this._dataLoaded.bind(this));
     this._highlightsByURL = {};
+    
+    this._resetAggregations();
+    
     this.setHeatmapMode(WebInspector.ProfileHeatmapProvider.DefaultMode);
 };
 
@@ -51,16 +54,21 @@ WebInspector.ProfileHeatmapProvider.DefaultMode = WebInspector.ProfileHeatmapPro
 
 WebInspector.ProfileHeatmapProvider.prototype = {
     
+    _resetAggregations: function()
+    {
+                
+        this._urlToCallUIDMap = {};
+        this._callUIDToStatsMap = {};
+        this._totalCalls = 0;
+    },
+    
     _dataLoaded: function()
     {
         if (!this._profile.data)
             return;
         
         console.log("re-aggregating data...");
-        
-        this._urlToCallUIDMap = {};
-        this._callUIDToStatsMap = {};
-        this._totalCalls = 0;
+        this._resetAggregations();
         
         var head = this._profile.data.head;
         this._processNode(head);
