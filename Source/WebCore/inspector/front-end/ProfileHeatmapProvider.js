@@ -66,6 +66,34 @@ WebInspector.ProfileHeatmapProvider.prototype = {
         this._processNode(head);
     },
     
+    _exportCSVData: function()
+    {
+        var columns = [
+            "callUID",
+            "functionName",
+            "selfTime",
+            "totalTime",
+            "callCount",
+            "nodeCount"
+        ];
+        var output = [columns.join(",")];
+
+        for (uid in this._callUIDToStatsMap) {
+            var stats = this._callUIDToStatsMap[uid];
+            var row = [
+                uid,
+                stats.functionName,
+                stats.selfTime,
+                stats.totalTime,
+                stats.numberOfCalls,
+                stats.nodeCount,
+            ];
+            output.push(row.join(","));
+        }
+        
+        return output.join("\n");
+    },
+    
     _processNode: function(node)
     {
         if (!node)
