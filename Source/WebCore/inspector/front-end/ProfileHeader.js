@@ -32,7 +32,7 @@
 WebInspector.ProfileHeader = function(profileType, title, uid)
 {
     this._profileType = profileType;
-    this.title = title;
+    this.title = this._displayName = title;
     if (uid === undefined) {
         this.uid = -1;
         this.isTemporary = true;
@@ -42,6 +42,7 @@ WebInspector.ProfileHeader = function(profileType, title, uid)
     }
     this._fromFile = false;
     this._isPinned = false;
+    this._titleFormat = "Profile %d";
 }
 
 WebInspector.ProfileHeader.prototype = {
@@ -157,5 +158,33 @@ WebInspector.ProfileHeader.prototype = {
             this._isPinned = shouldPin;
         
         return this._isPinned;
-    }
+    },
+    
+    /**
+     * @return {string} format
+     */
+    defaultNameFormat: function()
+    {
+        return WebInspector.UIString("Profile %d");
+    },
+    
+    /**
+     * @return {string} displayName
+     */
+    displayName: function()
+    {
+        // prettify the display name if it has not been prettified already.
+        if (this._displayName.startsWith(UserInitiatedProfileName))
+            return WebInspector.UIString(this.defaultNameFormat(),
+                                         this._displayName.substring(UserInitiatedProfileName.length+1));
+        return this._displayName;
+    },
+
+    /**
+     * @param {string} name
+     */
+    setDisplayName: function(name)
+    {
+        this._displayName = name || this._displayName;
+    },
 }

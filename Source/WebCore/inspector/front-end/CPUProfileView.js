@@ -669,6 +669,7 @@ WebInspector.CPUProfileHeader = function(type, title, uid)
 {
     WebInspector.ProfileHeader.call(this, type, title, uid);
     this._profileData = null;
+    this._displayName = title;
 }
 
 WebInspector.CPUProfileHeader.prototype = {
@@ -677,7 +678,19 @@ WebInspector.CPUProfileHeader.prototype = {
      */
     createSidebarTreeElement: function()
     {
-        return new WebInspector.ProfileSidebarTreeElement(this, WebInspector.UIString("Profile %d"), "profile-sidebar-tree-item");
+        this._sidebarTreeElement = new WebInspector.ProfileSidebarTreeElement(this, "profile-sidebar-tree-item");
+        return this._sidebarTreeElement;
+    },
+
+    /**
+     * @override
+     * @param {string} name
+     */
+    setDisplayName: function(name)
+    {
+        this._displayName = name;
+        if (this._sidebarTreeElement)
+            this._sidebarTreeElement.mainTitle = name;
     },
 
     /**

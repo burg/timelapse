@@ -338,55 +338,13 @@ WebInspector.ProfilesPanel.prototype = {
         var typeId = profileType.id;
         var sidebarParent = profileType.treeElement;
         sidebarParent.hidden = false;
-        var small = false;
-        var alternateTitle;
 
         this._profiles.push(profile);
         this._profilesIdMap[this._makeKey(profile.uid, typeId)] = profile;
 
-        if (!profile.title.startsWith(UserInitiatedProfileName)) {
-            var profileTitleKey = this._makeTitleKey(profile.title, typeId);
-            if (!(profileTitleKey in this._profileGroups))
-                this._profileGroups[profileTitleKey] = [];
-
-            var group = this._profileGroups[profileTitleKey];
-            group.push(profile);
-
-            if (group.length === 2) {
-                // Make a group TreeElement now that there are 2 profiles.
-                group._profilesTreeElement = new WebInspector.ProfileGroupSidebarTreeElement(profile.title);
-
-                // Insert at the same index for the first profile of the group.
-                var index = sidebarParent.children.indexOf(group[0]._profilesTreeElement);
-                sidebarParent.insertChild(group._profilesTreeElement, index);
-
-                // Move the first profile to the group.
-                var selected = group[0]._profilesTreeElement.selected;
-                sidebarParent.removeChild(group[0]._profilesTreeElement);
-                group._profilesTreeElement.appendChild(group[0]._profilesTreeElement);
-                if (selected)
-                    group[0]._profilesTreeElement.revealAndSelect();
-
-                group[0]._profilesTreeElement.small = true;
-                group[0]._profilesTreeElement.mainTitle = WebInspector.UIString("Run %d", 1);
-
-                this.sidebarTreeElement.addStyleClass("some-expandable");
-            }
-
-            if (group.length >= 2) {
-                sidebarParent = group._profilesTreeElement;
-                alternateTitle = WebInspector.UIString("Run %d", group.length);
-                small = true;
-            }
-        }
-
         var profileTreeElement = profile.createSidebarTreeElement();
         profile.sidebarElement = profileTreeElement;
-        profileTreeElement.small = small;
-        if (alternateTitle)
-            profileTreeElement.mainTitle = alternateTitle;
         profile._profilesTreeElement = profileTreeElement;
-
         sidebarParent.appendChild(profileTreeElement);
 
         if (profile.isTemporary)
@@ -1196,13 +1154,9 @@ WebInspector.HeapProfilerDispatcher.prototype = {
  * @param {string} titleFormat
  * @param {string} className
  */
-WebInspector.ProfileSidebarTreeElement = function(profile, titleFormat, className)
+WebInspector.ProfileSidebarTreeElement = function(profile, className)
 {
     this.profile = profile;
-    this._titleFormat = titleFormat;
-
-    if (this.profile.title.startsWith(UserInitiatedProfileName))
-        this._profileNumber = this.profile.title.substring(UserInitiatedProfileName.length + 1);
 
     WebInspector.SidebarTreeElement.call(this, className, "", "", profile, false);
 
@@ -1224,11 +1178,7 @@ WebInspector.ProfileSidebarTreeElement.prototype = {
 
     get mainTitle()
     {
-        if (this._mainTitle)
-            return this._mainTitle;
-        if (this.profile.title.startsWith(UserInitiatedProfileName))
-            return WebInspector.UIString(this._titleFormat, this._profileNumber);
-        return this.profile.title;
+        return this.profile.displayName();
     },
 
     set mainTitle(x)

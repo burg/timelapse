@@ -32,6 +32,8 @@
 
 WebInspector.ProfilesScanner = function(model) {
     WebInspector.TimelapseScanner.call(this, model, "profile-cpu", "CPU Profile");
+
+    this._scannedProfilesCount = 0;
 };
 
 WebInspector.ProfilesScanner.prototype = {
@@ -45,6 +47,7 @@ WebInspector.ProfilesScanner.prototype = {
         this._model.onceEventListener(WebInspector.TimelapseModel.Events.RecordingUnloaded, function() {
             WebInspector.panels.profiles.clearProfiles(true);
             this._didSetupModelListeners = false;
+            this._scannedProfilesCount = 0;
         }, this);
         
         this._didSetupPanelListeners = true;
@@ -89,6 +92,8 @@ WebInspector.ProfilesScanner.prototype = {
         panel.onceEventListener(WebInspector.ProfileType.Events.ProfileAdded, function(event) {
             var profile = event.data;
             profile.setIsPinned(true);
+            var profileCount = ++this._scannedProfilesCount;
+            profile.setDisplayName(WebInspector.UIString("Scanned Profile %d", profileCount));
             // this will force profile data to be serialised to the frontend immediately, and show the scanned profile.
             panel.showProfile(profile); // profile.view() will also force serialization, but not change view.
             

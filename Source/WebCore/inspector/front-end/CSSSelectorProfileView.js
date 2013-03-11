@@ -390,7 +390,7 @@ WebInspector.CSSProfileHeader.prototype = {
      */
     createSidebarTreeElement: function()
     {
-        return new WebInspector.ProfileSidebarTreeElement(this, this.title, "profile-sidebar-tree-item");
+        return new WebInspector.ProfileSidebarTreeElement(this, "profile-sidebar-tree-item");
     },
 
     /**

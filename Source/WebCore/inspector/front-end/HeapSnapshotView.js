@@ -841,7 +841,15 @@ WebInspector.HeapProfileHeader.prototype = {
      */
     createSidebarTreeElement: function()
     {
-        return new WebInspector.ProfileSidebarTreeElement(this, WebInspector.UIString("Snapshot %d"), "heap-snapshot-sidebar-tree-item");
+        return new WebInspector.ProfileSidebarTreeElement(this, "heap-snapshot-sidebar-tree-item");
+    },
+
+    /**
+     * @return {string} format
+     */
+    defaultNameFormat: function()
+    {
+        return WebInspector.UIString("Snapshot %d");
     },
 
     /**
