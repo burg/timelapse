@@ -307,3 +307,7 @@ button.status-bar-item.scripts-debugger-show-hide-button.toggled-hidden:active {
 .status-bar-item.scripts-debugger-show-hide-button.toggled-hidden > .glyph {
     -webkit-mask-position: -16px -16px;
 }
+
+.profiles-heatmap-value-1 {
+    background-color: rgba(255, 100, 100, 0.3);
+}

@@ -134,6 +134,11 @@ WebInspector.SourceFrame.prototype = {
         return true;
     },
 
+    get url()
+    {
+        return this._url;
+    },
+
     get textEditor()
     {
         return this._textEditor;

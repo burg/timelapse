@@ -186,7 +186,7 @@ WebInspector.TextEditor.prototype = {
     text: function() { },
 
     /**
-     * @return {WebInspector.TextModel}
+     * @return {WebInspector.TextEditorModel}
      */
     textModel: function() { },
 

@@ -212,3 +212,13 @@
         border-color: white
     }
 }
+
+.heatmap-theme-YlOrRd.webkit-heatmap-value-1 { background-color: rgba(255, 255, 204, 0.3); }
+.heatmap-theme-YlOrRd.webkit-heatmap-value-2 { background-color: rgba(255, 237, 160, 0.3); }
+.heatmap-theme-YlOrRd.webkit-heatmap-value-3 { background-color: rgba(254, 217, 118, 0.3); }
+.heatmap-theme-YlOrRd.webkit-heatmap-value-4 { background-color: rgba(254, 178,  76, 0.3); }
+.heatmap-theme-YlOrRd.webkit-heatmap-value-5 { background-color: rgba(253, 141,  60, 0.3); }
+.heatmap-theme-YlOrRd.webkit-heatmap-value-6 { background-color: rgba(252,  78,  42, 0.3); }
+.heatmap-theme-YlOrRd.webkit-heatmap-value-7 { background-color: rgba(227,  26,  28, 0.3); }
+.heatmap-theme-YlOrRd.webkit-heatmap-value-8 { background-color: rgba(189,   0,  38, 0.3); }
+.heatmap-theme-YlOrRd.webkit-heatmap-value-9 { background-color: rgba(128,   0,  38, 0.3); }

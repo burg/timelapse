@@ -474,6 +474,9 @@ WebInspector.ScriptsPanel.prototype = {
         this._editorContainer.showFile(uiSourceCode);
         this._updateScriptViewStatusBarItems();
 
+        if (this._heatmapProvider)
+            this._heatmapProvider.addhighlightsForSourceFrame(sourceFrame);
+
         return sourceFrame;
     },
 
@@ -500,10 +503,6 @@ WebInspector.ScriptsPanel.prototype = {
         break;
         }
         this._sourceFramesByUISourceCode.put(uiSourceCode, sourceFrame);
-        
-        if (this._heatmapProvider)
-            this._heatmapProvider.addhighlightsForSourceFrame(sourceFrame);
-        
         return sourceFrame;
     },
 

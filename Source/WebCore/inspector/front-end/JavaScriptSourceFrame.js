@@ -85,17 +85,45 @@ WebInspector.JavaScriptSourceFrame.prototype = {
      * @param {string} cssClass
      * @return {?WebInspector.TextEditorMainPanel.HighlightDescriptor}
      */
-    highlightFunctionAtLine: function(lineNumber, cssClass)
+    highlightFunctionAtLine: function(lineNumber, functionName, cssClass)
     {
         var textModel = this.textEditor.textModel;
         if (lineNumber < 0 || lineNumber > textModel.linesCount) {
-            console.error("Tried to highlight function at invalid line: "+this._contentProvider.contentUrl()+":"+lineNumber);
+            console.error("Tried to highlight function at invalid line: "+this.url+":"+lineNumber);
             return;
         }
+
+        var startRow = endRow = lineNumber;
+        var startColumn = 0;
+        var endColumn = textModel.lineLength(lineNumber);
         
-        // TODO: actually find a good range for the first function found on the line.
-        var range = new WebInspector.TextRange(lineNumber, 0,
-                                               lineNumber, textModel.lineLength(lineNumber));
+        console.log("highlighting function "+functionName+": "+this.url+":"+lineNumber);
+        if (functionName === "(anonymous function)") {
+            var re = /function\s*\([^()]*\)/;
+            var result = re.exec(textModel.line(lineNumber));
+            if (result && result.index !== -1) {
+                startColumn = result.index;
+            }
+        } else if (functionName === "(program)") {
+            console.log("Ignoring highlight for top-level code in "+this.url);
+        } else {
+            var re = /function(\s+\w+)?\s*\([^()]*\)/;
+            var result = re.exec(textModel.line(lineNumber));
+            if (result && result.index !== -1) {
+                startColumn = result.index;
+            }
+        }
+
+        var openingBraceColumn = textModel.line(startRow).indexOf('{', startColumn)
+                                 || startColumn;
+        var braceMatcher = new WebInspector.TextEditorModel.BraceMatcher(textModel);
+        var enclosingBraces = braceMatcher.enclosingBraces(startRow, openingBraceColumn);
+        if (enclosingBraces) {
+            endRow = enclosingBraces.rightBrace.lineNumber;
+            endColumn = enclosingBraces.rightBrace.column;
+        }
+
+        var range = new WebInspector.TextRange(startRow, startColumn, endRow, endColumn);
         return this.textEditor.highlightRange(range, cssClass);
     },
 

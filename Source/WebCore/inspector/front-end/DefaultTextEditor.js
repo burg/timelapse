@@ -513,9 +513,9 @@ WebInspector.DefaultTextEditor.prototype = {
     },
 
     /**
-     * @return {WebInspector.TextModel}
+     * @return {WebInspector.TextEditorModel}
      */
-    textModel: function()
+    get textModel()
     {
         return this._textModel;
     },

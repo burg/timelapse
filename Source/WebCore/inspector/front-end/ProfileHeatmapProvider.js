@@ -35,6 +35,8 @@ WebInspector.ProfileHeatmapProvider = function(profile) {
                                    WebInspector.DataProvider.Types.ProfileHeatmap);
     
     this._profile = profile;
+    this._profile.loadData(this._dataLoaded.bind(this));
+    this._highlightsByURL = {};
     this.setHeatmapMode(WebInspector.ProfileHeatmapProvider.DefaultMode);
 };
 
@@ -48,9 +50,65 @@ WebInspector.ProfileHeatmapProvider.Modes = {
 WebInspector.ProfileHeatmapProvider.DefaultMode = WebInspector.ProfileHeatmapProvider.Modes.None;
 
 WebInspector.ProfileHeatmapProvider.prototype = {
+    
+    _dataLoaded: function()
+    {
+        if (!this._profile.data)
+            return;
+        
+        console.log("re-aggregating data...");
+        
+        this._urlToCallUIDMap = {};
+        this._callUIDToStatsMap = {};
+        this._totalCalls = 0;
+        
+        var head = this._profile.data.head;
+        this._processNode(head);
+    },
+    
+    _processNode: function(node)
+    {
+        if (!node)
+            return;
+        
+        if (!this._urlToCallUIDMap[node.url])
+            this._urlToCallUIDMap[node.url] = {};
+        this._urlToCallUIDMap[node.url][node.callUID] = node.lineNumber;
+        
+        if (!this._callUIDToStatsMap[node.callUID]) {
+            this._callUIDToStatsMap[node.callUID] = {
+                selfTime: 0.0,
+                totalTime: 0.0,
+                numberOfCalls: 0,
+                nodeCount: 0,
+                functionName: null,
+            };
+        }
+    
+        var bin = this._callUIDToStatsMap[node.callUID];
+        bin.selfTime  += node.selfTime;
+        bin.totalTime += node.totalTime;
+        bin.numberOfCalls += node.numberOfCalls;
+        bin.nodeCount += 1;
+        bin.functionName = node.functionName;
+
+        this._totalCalls += node.numberOfCalls;
+    
+        for (var i = 0; i < node.children.length; ++i) {
+            this._processNode(node.children[i]);
+        }
+    },
+
     _canHighlightSourceFrame: function(sourceFrame)
     {
-        return sourceFrame && sourceFrame instanceof WebInspector.JavaScriptSourceFrame;
+        return sourceFrame &&
+               sourceFrame instanceof WebInspector.JavaScriptSourceFrame;
+    },
+
+    _decideStyleForUID: function(callUID)
+    {
+        //var fnData = this._callUIDToStatsMap[uid];
+        return "profiles-heatmap-value-1";
     },
 
     setHeatmapMode: function(mode)
@@ -62,6 +120,7 @@ WebInspector.ProfileHeatmapProvider.prototype = {
             return;
         
         this._activeMode = mode;
+        this._dataLoaded();
         this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged);
     },
 
@@ -74,9 +133,25 @@ WebInspector.ProfileHeatmapProvider.prototype = {
     {
         if (!this._canHighlightSourceFrame(sourceFrame))
             return;
-    
-        console.log("adding highlights");
-        
+
+        var url = sourceFrame.url;
+        console.log("adding highlights for resource: "+url);
+
+        var oldHighlights = this._highlightsByURL[url] || [];
+        this._highlightsByURL[url] = [];
+        for (var i = 0; i < oldHighlights.length; ++i) {
+            sourceFrame.textEditor.removeHighlight(oldHighlights[i]);
+        }
+
+        var fnToLineMap = this._urlToCallUIDMap[url] || {};
+        for (uid in fnToLineMap) {
+            var lineNumber = Math.max(0, fnToLineMap[uid]-1 || 0);
+            var styleClass = this._decideStyleForUID(uid);
+            var functionName = this._callUIDToStatsMap[uid].functionName || "(anonymous function)";
+            var highlight = sourceFrame.highlightFunctionAtLine(lineNumber, functionName, styleClass);
+            if (highlight)
+                this._highlightsByURL[url].push(highlight);
+        }
     },
 
     removehighlightsForSourceFrame: function(sourceFrame)
@@ -84,7 +159,14 @@ WebInspector.ProfileHeatmapProvider.prototype = {
         if (!this._canHighlightSourceFrame(sourceFrame))
             return;
 
-        console.log("removing highlights");
+        var url = sourceFrame.url;
+        console.log("removing highlights for resource: "+url);
+        
+        var oldHighlights = this._highlightsByURL[url] || [];
+        this._highlightsByURL[url] = [];
+        for (var i = 0; i < oldHighlights.length; ++i) {
+            sourceFrame.textEditor.removeHighlight(oldHighlights[i]);
+        }
     },
 
     __proto__: WebInspector.DataProvider.prototype, 
