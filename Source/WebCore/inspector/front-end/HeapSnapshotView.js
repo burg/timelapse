@@ -31,17 +31,17 @@
 /**
  * @constructor
  * @extends {WebInspector.View}
- * @param {WebInspector.ProfilesPanel} parent
+ * @param {WebInspector.ProfilesModel} model
  * @param {WebInspector.HeapProfileHeader} profile
  */
-WebInspector.HeapSnapshotView = function(parent, profile)
+WebInspector.HeapSnapshotView = function(model, profile)
 {
     WebInspector.View.call(this);
 
     this.element.addStyleClass("heap-snapshot-view");
 
-    this.parent = parent;
-    this.parent.addEventListener(WebInspector.ProfileType.Events.ProfileAdded, this._onProfileHeaderAdded, this);
+    this._model = model;
+    this._model.addEventListener(WebInspector.ProfileType.Events.ProfileAdded, this._onProfileHeaderAdded, this);
 
     this.viewsContainer = document.createElement("div");
     this.viewsContainer.addStyleClass("views-container");
@@ -188,12 +188,12 @@ WebInspector.HeapSnapshotView.prototype = {
 
     get profile()
     {
-        return this.parent.getProfile(WebInspector.HeapSnapshotProfileType.TypeId, this._profileUid);
+        return this._model.getProfile(WebInspector.HeapSnapshotProfileType.TypeId, this._profileUid);
     },
 
     get baseProfile()
     {
-        return this.parent.getProfile(WebInspector.HeapSnapshotProfileType.TypeId, this._baseProfileUid);
+        return this._model.getProfile(WebInspector.HeapSnapshotProfileType.TypeId, this._baseProfileUid);
     },
 
     wasShown: function()
@@ -427,7 +427,7 @@ WebInspector.HeapSnapshotView.prototype = {
      */
     _profiles: function()
     {
-        return this.parent.getProfiles(WebInspector.HeapSnapshotProfileType.TypeId);
+        return this._model.getProfiles(WebInspector.HeapSnapshotProfileType.TypeId);
     },
 
     /**
@@ -769,12 +769,12 @@ WebInspector.HeapSnapshotProfileType.prototype = {
 
     /**
      * @override
-     * @param {WebInspector.ProfilesPanel} profilesPanel
+     * @param {WebInspector.ProfilesModel} model
      * @return {boolean}
      */
-    buttonClicked: function(profilesPanel)
+    buttonClicked: function(model)
     {
-        profilesPanel.takeHeapSnapshot();
+        model.takeHeapSnapshot();
         return true;
     },
 

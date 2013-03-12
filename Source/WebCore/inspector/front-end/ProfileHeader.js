@@ -91,9 +91,9 @@ WebInspector.ProfileHeader.prototype = {
     },
 
     /**
-     * @param {!WebInspector.ProfilesPanel} profilesPanel
+     * @param {!WebInspector.ProfilesModel} model
      */
-    dispose: function(profilesPanel)
+    dispose: function(model)
     {
     },
 

@@ -45,7 +45,7 @@ WebInspector.ProfilesScanner.prototype = {
             return;
         
         this._model.onceEventListener(WebInspector.TimelapseModel.Events.RecordingUnloaded, function() {
-            WebInspector.panels.profiles.clearProfiles(true);
+            WebInspector.profilesModel.clearProfiles(true);
             this._didSetupModelListeners = false;
             this._scannedProfilesCount = 0;
         }, this);
@@ -55,28 +55,25 @@ WebInspector.ProfilesScanner.prototype = {
 
     scanDidStart: function(cb)
     {
-        if (!WebInspector.panels.profiles)
-            WebInspector.inspectorView.panel("profiles");
-
         this._initializeModelListeners();
         cb();
     },
 
     willEnterRegion: function(cb)
     {
-        var panel = WebInspector.panels.profiles;
+        var model = WebInspector.profilesModel;
         
         var startProfilingAndContinue = function() {
-            var profileType = panel.getProfileType(WebInspector.CPUProfileType.TypeId);
+            var profileType = model.getProfileType(WebInspector.CPUProfileType.TypeId);
             profileType.startRecordingProfile();
             
             cb();
         };
 
-        if (!panel.profilerEnabled) {
-            panel.onceEventListener(WebInspector.ProfileType.Events.ProfilerEnabled,
+        if (!model.profilerEnabled) {
+            model.onceEventListener(WebInspector.ProfilesModel.Events.ProfilerEnabled,
                                     startProfilingAndContinue, this);
-            panel.enableProfiler();
+            model.enableProfiler();
             return;
         }
 
@@ -85,16 +82,19 @@ WebInspector.ProfilesScanner.prototype = {
     
     willExitRegion: function(cb)
     {
-        var panel = WebInspector.panels.profiles;
+        var model = WebInspector.profilesModel;
         var cpuProfileId = WebInspector.CPUProfileType.TypeId;
-        var profileType = panel.getProfileType(cpuProfileId);
+        var profileType = model.getProfileType(cpuProfileId);
 
-        panel.onceEventListener(WebInspector.ProfileType.Events.ProfileAdded, function(event) {
+        model.onceEventListener(WebInspector.ProfilesModel.Events.ProfileAdded, function(event) {
             var profile = event.data;
             profile.setIsPinned(true);
             var profileCount = ++this._scannedProfilesCount;
             profile.setDisplayName(WebInspector.UIString("Scanned Profile %d", profileCount));
             // this will force profile data to be serialised to the frontend immediately, and show the scanned profile.
+            if (!WebInspector.panels.profiles)
+                WebInspector.inspectorView.panel("profiles");
+
             panel.showProfile(profile); // profile.view() will also force serialization, but not change view.
             
             if (WebInspector.inspectorView.currentPanel() !== panel) {

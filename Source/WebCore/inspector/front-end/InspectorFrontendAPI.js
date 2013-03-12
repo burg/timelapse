@@ -62,14 +62,13 @@ var InspectorFrontendAPI = {
 
     startProfilingJavaScript: function()
     {
-        WebInspector.showPanel("profiles").enableProfiler();
+        WebInspector.profilesModel.enableProfiler();
         if (WebInspector.CPUProfileType.instance)
             WebInspector.CPUProfileType.instance.startRecordingProfile();
     },
 
     stopProfilingJavaScript: function()
     {
-        WebInspector.showPanel("profiles");
         if (WebInspector.CPUProfileType.instance)
             WebInspector.CPUProfileType.instance.stopRecordingProfile();
     },

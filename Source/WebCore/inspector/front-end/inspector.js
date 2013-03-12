@@ -337,14 +337,12 @@ var WebInspector = {
         WebInspector.domAgent.setInspectModeEnabled(enabled, callback.bind(this));
     },
 
-    _profilesLinkifier: function(title)
+    _profilesLinkifier: function(url)
     {
-        var profileStringMatches = WebInspector.ProfileURLRegExp.exec(title);
-        if (profileStringMatches) {
-            var profilesPanel = /** @ type {WebInspector.ProfilesPanel} */ WebInspector.panel("profiles");
-            title = WebInspector.ProfilesPanel._instance.displayTitleForProfileLink(profileStringMatches[2], profileStringMatches[1]);
-        }
-        return title;
+        // FIXME: (Issue #199): if the profile instance isn't created yet,
+        // fall back to using a default formatted name from the ProfileType.
+        var profile = WebInspector.profilesModel.getProfileForURL(url);
+        return (profile) ? profile.displayName() : url;
     },
 
     _debuggerPaused: function()
@@ -475,6 +473,7 @@ WebInspector._doLoadedDoneWithCapabilities = function()
     this.networkLog = new WebInspector.NetworkLog();
     this.domAgent = new WebInspector.DOMAgent();
     this.runtimeModel = new WebInspector.RuntimeModel(this.resourceTreeModel);
+    this.profilesModel = new WebInspector.ProfilesModel();
 
     this.consoleView = new WebInspector.ConsoleView(WebInspector.WorkerManager.isWorkerFrontend());
 

@@ -41,12 +41,6 @@ WebInspector.ProfileType = function(id, name)
 
 WebInspector.ProfileType.Events = {
   ViewUpdated: "view-updated",
-
-  ProfilerEnabled: "profiler-enabled",
-  ProfilerDisabled: "profiler-disabled",
-
-  ProfileAdded: "profile-added",
-  ProfileRemoved: "profile-removed",
 }
 
 WebInspector.ProfileType.prototype = {
@@ -76,10 +70,10 @@ WebInspector.ProfileType.prototype = {
     },
 
     /**
-     * @param {WebInspector.ProfilesPanel} profilesPanel
+     * @param {WebInspector.ProfilesModel} model
      * @return {boolean}
      */
-    buttonClicked: function(profilesPanel)
+    buttonClicked: function(model)
     {
         return false;
     },

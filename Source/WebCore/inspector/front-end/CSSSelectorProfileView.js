@@ -286,16 +286,16 @@ WebInspector.CSSSelectorProfileType.prototype = {
 
     /**
      * @override
-     * @param {WebInspector.ProfilesPanel} profilesPanel
+     * @param {WebInspector.ProfilesModel} model
      * @return {boolean}
      */
-    buttonClicked: function(profilesPanel)
+    buttonClicked: function(model)
     {
         if (this._recording) {
-            this._stopRecordingProfile(profilesPanel);
+            this._stopRecordingProfile(model);
             return false;
         } else {
-            this._startRecordingProfile(profilesPanel);
+            this._startRecordingProfile(model);
             return true;
         }
     },
@@ -321,19 +321,19 @@ WebInspector.CSSSelectorProfileType.prototype = {
     },
 
     /**
-     * @param {WebInspector.ProfilesPanel} profilesPanel
+     * @param {WebInspector.ProfilesModel} model
      */
-    _startRecordingProfile: function(profilesPanel)
+    _startRecordingProfile: function(model)
     {
         this._recording = true;
         CSSAgent.startSelectorProfiler();
-        profilesPanel.setRecordingProfile(WebInspector.CSSSelectorProfileType.TypeId, true);
+        model.setRecordingProfile(WebInspector.CSSSelectorProfileType.TypeId, true);
     },
 
     /**
-     * @param {WebInspector.ProfilesPanel} profilesPanel
+     * @param {WebInspector.ProfilesModel} model
      */
-    _stopRecordingProfile: function(profilesPanel)
+    _stopRecordingProfile: function(model)
     {
         /**
          * @param {?Protocol.Error} error
@@ -347,8 +347,8 @@ WebInspector.CSSSelectorProfileType.prototype = {
             var uid = this._profileUid++;
             var title = WebInspector.UIString("Profile %d", uid) + String.sprintf(" (%s)", Number.secondsToString(profile.totalTime / 1000));
             var profileHeader = new WebInspector.CSSProfileHeader(this, title, uid, profile);
-            profilesPanel.addProfileHeader(profileHeader);
-            profilesPanel.setRecordingProfile(WebInspector.CSSSelectorProfileType.TypeId, false);
+            model.addProfileHeader(profileHeader);
+            model.setRecordingProfile(WebInspector.CSSSelectorProfileType.TypeId, false);
         }
 
         this._recording = false;

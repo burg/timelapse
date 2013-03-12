@@ -431,41 +431,41 @@ WebInspector.CanvasProfileType.prototype = {
 
     /**
      * @override
-     * @param {WebInspector.ProfilesPanel} profilesPanel
+     * @param {WebInspector.ProfilesModel} model
      * @return {boolean}
      */
-    buttonClicked: function(profilesPanel)
+    buttonClicked: function(model)
     {
         if (this._recording) {
             this._recording = false;
             this._stopFrameCapturing();
         } else if (this._isSingleFrameMode()) {
             this._recording = false;
-            this._runSingleFrameCapturing(profilesPanel);
+            this._runSingleFrameCapturing(model);
         } else {
             this._recording = true;
-            this._startFrameCapturing(profilesPanel);
+            this._startFrameCapturing(model);
         }
-        profilesPanel.setRecordingProfile(WebInspector.CanvasProfileType.TypeId, this._recording);
+        model.setRecordingProfile(WebInspector.CanvasProfileType.TypeId, this._recording);
         return this._recording;
     },
 
     /**
-     * @param {WebInspector.ProfilesPanel} profilesPanel
+     * @param {WebInspector.ProfilesModel} model
      */
-    _runSingleFrameCapturing: function(profilesPanel)
+    _runSingleFrameCapturing: function(model)
     {
         var frameId = this._selectedFrameId();
-        CanvasAgent.captureFrame(frameId, this._didStartCapturingFrame.bind(this, profilesPanel, frameId));
+        CanvasAgent.captureFrame(frameId, this._didStartCapturingFrame.bind(this, model, frameId));
     },
 
     /**
-     * @param {WebInspector.ProfilesPanel} profilesPanel
+     * @param {WebInspector.ProfilesModel} model
      */
-    _startFrameCapturing: function(profilesPanel)
+    _startFrameCapturing: function(model)
     {
         var frameId = this._selectedFrameId();
-        CanvasAgent.startCapturing(frameId, this._didStartCapturingFrame.bind(this, profilesPanel, frameId));
+        CanvasAgent.startCapturing(frameId, this._didStartCapturingFrame.bind(this, model, frameId));
     },
 
     _stopFrameCapturing: function()
@@ -483,19 +483,19 @@ WebInspector.CanvasProfileType.prototype = {
     },
 
     /**
-     * @param {WebInspector.ProfilesPanel} profilesPanel
+     * @param {WebInspector.ProfilesModel} model
      * @param {string|undefined} frameId
      * @param {?Protocol.Error} error
      * @param {CanvasAgent.TraceLogId} traceLogId
      */
-    _didStartCapturingFrame: function(profilesPanel, frameId, error, traceLogId)
+    _didStartCapturingFrame: function(model, frameId, error, traceLogId)
     {
         if (error || this._lastProfileHeader && this._lastProfileHeader.traceLogId() === traceLogId)
             return;
         var profileHeader = new WebInspector.CanvasProfileHeader(this, WebInspector.UIString("Trace Log %d", this._nextProfileUid), this._nextProfileUid, traceLogId, frameId);
         ++this._nextProfileUid;
         this._lastProfileHeader = profileHeader;
-        profilesPanel.addProfileHeader(profileHeader);
+        model.addProfileHeader(profileHeader);
         profileHeader._updateCapturingStatus();
     },
 
@@ -767,15 +767,15 @@ WebInspector.CanvasProfileHeader.prototype = {
 
     /**
      * @override
-     * @param {!WebInspector.ProfilesPanel} profilesPanel
+     * @param {WebInspector.ProfilesModel} model
      */
-    dispose: function(profilesPanel)
+    dispose: function(model)
     {
         if (this._traceLogId) {
             CanvasAgent.dropTraceLog(this._traceLogId);
             clearTimeout(this._requestStatusTimer);
             if (this._alive)
-                profilesPanel.setRecordingProfile(WebInspector.CanvasProfileType.TypeId, false);
+                model.setRecordingProfile(WebInspector.CanvasProfileType.TypeId, false);
             this._alive = false;
         }
     },
