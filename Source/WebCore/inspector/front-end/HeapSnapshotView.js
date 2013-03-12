@@ -41,7 +41,7 @@ WebInspector.HeapSnapshotView = function(parent, profile)
     this.element.addStyleClass("heap-snapshot-view");
 
     this.parent = parent;
-    this.parent.addEventListener("profile added", this._onProfileHeaderAdded, this);
+    this.parent.addEventListener(WebInspector.ProfileType.Events.ProfileAdded, this._onProfileHeaderAdded, this);
 
     this.viewsContainer = document.createElement("div");
     this.viewsContainer.addStyleClass("views-container");
@@ -740,7 +740,7 @@ WebInspector.HeapSnapshotView.prototype = {
      */
     _onProfileHeaderAdded: function(event)
     {
-        if (!event.data || event.data.type !== this._profileTypeId)
+        if (!event.data || event.data.profileType.typeId !== this._profileTypeId)
             return;
         this._updateBaseOptions();
         this._updateFilterOptions();

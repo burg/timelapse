@@ -352,11 +352,6 @@ WebInspector.ProfilesPanel.prototype = {
 
         if (!this.visibleView)
             this.showProfile(profile);
-        this.dispatchEventToListeners("profile added", {
-            type: typeId
-        });
-
-        // FIXME: (Issue #192): unify "ProfileAdded" and "profile added" events
         this.dispatchEventToListeners(WebInspector.ProfileType.Events.ProfileAdded, profile);
         
         // FIXME: (Issue #197, #193): store heatmap providers on TimelapseRecording or ScriptsPanel
