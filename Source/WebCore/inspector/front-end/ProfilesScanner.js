@@ -50,7 +50,7 @@ WebInspector.ProfilesScanner.prototype = {
             this._scannedProfilesCount = 0;
         }, this);
         
-        this._didSetupPanelListeners = true;
+        this._didSetupModelListeners = true;
     },
 
     scanDidStart: function(cb)

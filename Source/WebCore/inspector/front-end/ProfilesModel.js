@@ -125,14 +125,14 @@ WebInspector.ProfilesModel.prototype = {
     {
         if (this._profilerEnabled)
             return;
-        this._toggleProfiling(false);
+        this.toggleProfiling(false);
     },
 
     disableProfiler: function()
     {
         if (!this._profilerEnabled)
             return;
-        this._toggleProfiling(false);
+        this.toggleProfiling(false);
     },
     
     /**
