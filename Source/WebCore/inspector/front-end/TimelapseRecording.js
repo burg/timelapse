@@ -60,13 +60,16 @@ WebInspector.TimelapseRecording.prototype = {
     _modifyListeners: function(op) {
     console.assert(op === "addEventListener" || op === "removeEventListener",
                    "Tried to do something unsupported to listeners: " + op);
-       
-
+    
     var scannerEvents = WebInspector.TimelapseScanner.Events;
+    // FIXME: (Issue #201): The BreakpointScanner should add the breakpoint provider, not the recording itself.
     this._model.scanners.breakpoint[op](scannerEvents.ScanStarted, this._breakpointScanStarted, this);
 
     var eventNames = WebInspector.TimelapseModel.Events;
-    this._model[op](eventNames.RecordingUnloaded,     this._recordingUnloaded,     this);
+    this._model[op](eventNames.RecordingUnloaded, this._recordingUnloaded, this);
+    
+    WebInspector.profilesModel[op](WebInspector.ProfilesModel.Events.ProfileAdded, this._profileAdded, this);
+    WebInspector.profilesModel[op](WebInspector.ProfilesModel.Events.ProfileRemoved, this._profileRemoved, this);
     },
 
     // Private API (callbacks)
@@ -78,21 +81,12 @@ WebInspector.TimelapseRecording.prototype = {
         
     this._modifyListeners("removeEventListener");
 
-	var inputProviders = this.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
-	for (var i = 0; i < inputProviders.length; i++)
-	    this.removeProvider(inputProviders[i]);
-
-	var breakpointProviders = this.providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
-	for (var i = 0; i < breakpointProviders.length; i++)
-	    this.removeProvider(breakpointProviders[i]);
-
-	var savepointProviders = this.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);
-	for (var i = 0; i < savepointProviders.length; i++)
-	    this.removeProvider(savepointProviders[i]);
-
-	var overviewPreviewProviders = this.providersWithType(WebInspector.DataProvider.Types.OverviewPreview);
-	for (var i = 0; i < overviewPreviewProviders.length; i++)
-	    this.removeProvider(overviewPreviewProviders[i]);
+    var providerTypes = WebInspector.DataProvider.Types;
+    for (var key in providerTypes) {
+        var providers = this.providersWithType(providerTypes[key]);
+        for (var i = 0; i < providers.length; i++)
+            this.removeProvider(providers[i]);
+    }
     },
 
     _breakpointScanStarted: function()
@@ -113,7 +107,36 @@ WebInspector.TimelapseRecording.prototype = {
 
 	this.addProvider(breakpointProvider);
     },
+    
+    _profileAdded: function(event)
+    {
+        if (event.defaultPrevented)
+            return;
+        
+        var profile = event.data;
+        if (profile.isTemporary)
+            return;
+        
+        if (profile.profileType.id !== WebInspector.CPUProfileType.TypeId)
+            return;
+        
+        event.preventDefault();
+        this.addProvider(new WebInspector.ProfileHeatmapProvider(profile));
+    },
 
+    _profileRemoved: function(event)
+    {
+        var profile = event.data;
+        var heatmapProviders = this.providersWithType(WebInspector.DataProvider.Types.ProfileHeatmap);
+        for (var i = 0; i < heatmapProviders.length; ++i) {
+            var provider = heatmapProviders[i];
+            if (provider.profile === profile) {
+                this.removeProvider(provider);
+                return;
+            }
+        }
+    },
+    
     // Public API
     get savepointProvider() {
 	var providers = this.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);

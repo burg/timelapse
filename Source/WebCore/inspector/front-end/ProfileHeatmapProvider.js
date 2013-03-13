@@ -165,6 +165,11 @@ WebInspector.ProfileHeatmapProvider.prototype = {
         return this._activeMode;
     },
 
+    get profile()
+    {
+        return this._profile;
+    },
+
     addhighlightsForSourceFrame: function(sourceFrame)
     {
         if (!this._canHighlightSourceFrame(sourceFrame))

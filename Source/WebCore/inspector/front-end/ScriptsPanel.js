@@ -160,28 +160,6 @@ WebInspector.ScriptsPanel = function(workspaceForTest)
     this._toggleFormatSourceButton.toggled = false;
     this._toggleFormatSourceButton.addEventListener("click", this._toggleFormatSource, this);
 
-    this._profileHeatmapSelector = new WebInspector.StatusBarComboBox(this._profileHeatmapSelectorChanged.bind(this));
-    for (var key in WebInspector.ProfileHeatmapProvider.Modes) {
-        var modeName = WebInspector.ProfileHeatmapProvider.Modes[key];
-        var option = document.createElement("option");
-        option.text = WebInspector.UIString(modeName);
-        option.title = WebInspector.UIString("Click to visualize using mode: "+modeName);
-        option._mode = key;
-        this._profileHeatmapSelector.addOption(option);
-        
-        if (modeName === WebInspector.ProfileHeatmapProvider.DefaultMode) {
-            this._profileHeatmapSelector.select(option);
-            this._profileHeatmapSelector._defaultOption = option;
-        }
-    }
-    this._profileHeatmapSelector.element.addStyleClass("hidden");
-
-    // FIXME: should listen to something else.
-    WebInspector.timelapseModel.onceEventListener(WebInspector.TimelapseModel.Events.ProfilerHeatmapProviderAdded,
-        this._heatmapProviderAdded, this);
-    
-    // FIXME: check to see if provider already exists
-
     this._scriptViewStatusBarItemsContainer = document.createElement("div");
     this._scriptViewStatusBarItemsContainer.style.display = "inline-block";
 
@@ -192,6 +170,34 @@ WebInspector.ScriptsPanel = function(workspaceForTest)
     this._pauseOnExceptionStateChanged();
     if (WebInspector.debuggerModel.isPaused())
         this._debuggerPaused();
+
+    this._heatmapModeSelector = new WebInspector.StatusBarComboBox(this._heatmapModeSelectorChanged.bind(this));
+    for (var key in WebInspector.ProfileHeatmapProvider.Modes) {
+        var modeName = WebInspector.ProfileHeatmapProvider.Modes[key];
+        var option = document.createElement("option");
+        option.text = WebInspector.UIString(modeName);
+        option.title = WebInspector.UIString("Click to visualize using mode: "+modeName);
+        option._mode = key;
+        this._heatmapModeSelector.addOption(option);
+        
+        if (modeName === WebInspector.ProfileHeatmapProvider.DefaultMode) {
+            this._heatmapModeSelector.select(option);
+            this._heatmapModeSelector._defaultOption = option;
+        }
+    }
+    this._heatmapModeSelector.element.addStyleClass("hidden");
+
+    WebInspector.profilesModel.addEventListener(WebInspector.ProfilesModel.Events.ProfileAdded, this._profileAdded, this);
+    WebInspector.profilesModel.addEventListener(WebInspector.ProfilesModel.Events.ProfileRemoved, this._profileRemoved, this);
+    
+    this._heatmapProviders = [];
+    this._heatmapProvidersByProfile = {};
+
+    // Initialize by pretending that the current recording state has just occurred
+    if (WebInspector.timelapseModel.canReplay)
+        this._recordingLoaded();
+    else
+        this._recordingUnloaded();
 
     WebInspector.settings.pauseOnExceptionStateString.addChangeListener(this._pauseOnExceptionStateChanged, this);
     WebInspector.debuggerModel.addEventListener(WebInspector.DebuggerModel.Events.DebuggerWasEnabled, this._debuggerWasEnabled, this);
@@ -224,7 +230,7 @@ WebInspector.ScriptsPanel.prototype = {
                 this.enableToggleButton.element,
                 this._pauseOnExceptionButton.element,
                 this._toggleFormatSourceButton.element,
-                this._profileHeatmapSelector.element,
+                this._heatmapModeSelector.element,
                 this._scriptViewStatusBarItemsContainer
         ];
     },
@@ -474,8 +480,8 @@ WebInspector.ScriptsPanel.prototype = {
         this._editorContainer.showFile(uiSourceCode);
         this._updateScriptViewStatusBarItems();
 
-        if (this._heatmapProvider)
-            this._heatmapProvider.addhighlightsForSourceFrame(sourceFrame);
+        if (this._activeHeatmapProvider)
+            this._activeHeatmapProvider.addhighlightsForSourceFrame(sourceFrame);
 
         return sourceFrame;
     },
@@ -534,8 +540,8 @@ WebInspector.ScriptsPanel.prototype = {
             return;
         this._sourceFramesByUISourceCode.remove(uiSourceCode);
         
-        if (this._heatmapProvider)
-            this._heatmapProvider.removehighlightsForSourceFrame(sourceFrame);
+        if (this._activeHeatmapProvider)
+            this._activeHeatmapProvider.removehighlightsForSourceFrame(sourceFrame);
 
         sourceFrame.detach();
     },
@@ -994,63 +1000,170 @@ WebInspector.ScriptsPanel.prototype = {
         });
     },
 
-    _profileHeatmapSelectorChanged: function()
+    _heatmapModeSelectorChanged: function()
     {
-        console.assert(this._heatmapProvider, "WAT: profile mode changed but we don't have a heatmap provider.");
+        console.assert(this._activeHeatmapProvider, "WAT: profile mode changed but we don't have a heatmap provider.");
     
-        var option = this._profileHeatmapSelector.selectedOption();
-        this._heatmapProvider.setHeatmapMode(option._mode);
+        var option = this._heatmapModeSelector.selectedOption();
+        this._activeHeatmapProvider.setHeatmapMode(option._mode);
     },
 
-    _heatmapDataChanged: function()
+    _recordingLoaded: function()
     {
-        console.assert(this._heatmapProvider, "WAT: data changed but we don't have a heatmap provider.");
+        var recording = WebInspector.timelapseModel.loadedRecording;
+        var existingProviders = recording.providersWithType(WebInspector.DataProvider.Types.ProfileHeatmap);
+        for (var i = 0; i < existingProviders.length; ++i) {
+            this._providerAdded({ "data": existingProviders[i]});
+        }
+
+        recording.addEventListener(WebInspector.TimelapseRecording.Events.ProviderAdded, this._providerAdded, this);
+        WebInspector.timelapseModel.onceEventListener(WebInspector.TimelapseModel.Events.RecordingUnloaded, this._recordingUnloaded, this);
+    },
+    
+    _recordingUnloaded: function(event)
+    {
+        if (event && event.data) {
+            var recording = event.data;
+            recording.removeEventListener(WebInspector.TimelapseRecording.Events.ProviderAdded, this._providerAdded, this);
+        }
+
+        WebInspector.timelapseModel.onceEventListener(WebInspector.TimelapseModel.Events.RecordingLoaded, this._recordingLoaded, this);
+    },
+
+    _profileAdded: function(event)
+    {
+        if (event.defaultPrevented)
+            return;
+    
+        var profile = event.data;
+        if (profile.isTemporary)
+            return;
+        
+        if (profile.profileType().id !== WebInspector.CPUProfileType.TypeId)
+            return;
+
+        var provider = new WebInspector.ProfileHeatmapProvider(profile);
+        this._addHeatmapProvider(provider);
+    },
+
+    _profileRemoved: function(event)
+    {
+        var profile = event.data;
+        var provider = this._heatmapProvidersByProfile[profile];
+    
+        if (!provider)
+            return;
+
+        console.log("ScriptsPanel: profileRemoved");
+        
+        provider.willRemove();
+    },
+
+    _updateHeatmapProvidersList: function()
+    {
+        // FIXME: (Issue #198): implement selector with all available heatmap providers
+    },
+
+    _heatmapProviderDataChanged: function()
+    {
+        if (!this._activeHeatmapProvider)
+            return;
 
         var keys = this._sourceFramesByUISourceCode.keys();
         for (var i = 0; i < keys.length; i++) {
             var sourceFrame = this._sourceFramesByUISourceCode.get(keys[i]);
-            this._heatmapProvider.removehighlightsForSourceFrame(sourceFrame);
-            this._heatmapProvider.addhighlightsForSourceFrame(sourceFrame);
+            this._activeHeatmapProvider.removehighlightsForSourceFrame(sourceFrame);
+            this._activeHeatmapProvider.addhighlightsForSourceFrame(sourceFrame);
         }
     },
 
-    _heatmapProviderAdded: function(event)
+    _addHeatmapProvider: function(provider)
     {
-        console.assert(!this._heatmapProvider, "WAT: already have a heatmap provider.");
+        this._heatmapProviders.push(provider);
+        this._heatmapProvidersByProfile[provider.profile] = provider;
+
+        provider.onceEventListener(WebInspector.DataProvider.Events.WillRemove, this._heatmapProviderWillRemove, this);
+
+        this._updateHeatmapProvidersList();
+        
+        if (this._heatmapProviders.length === 1) {
+            this._heatmapModeSelector.element.removeStyleClass("hidden");
+            // the selectionChanged event will trigger the adding of highlights
+            this._heatmapModeSelector.select(this._heatmapModeSelector._defaultOption);
+        }
+        
+        // FIXME: (Issue #198): select active profile using selector
+        this._selectHeatmapProvider(provider);
+    },
+
+    _canUseProvider: function(provider)
+    {
+        var types = WebInspector.DataProvider.Types;
+        return provider.type === types.ProfileHeatmap;
+    },
+
+    _providerAdded: function(event)
+    {
+        var provider = event.data;
+        if (!this._canUseProvider(provider))
+            return;
+        this._addHeatmapProvider(event.data);
+    },
+    
+    _heatmapProviderWillRemove: function(event)
+    {
         var provider = event.data;
 
-        this._heatmapProvider = provider;
-        provider.onceEventListener(WebInspector.DataProvider.Events.WillRemove, this._heatmapProviderRemoved, this);
-        provider.addEventListener(WebInspector.DataProvider.Events.DataChanged, this._heatmapDataChanged, this);
-        
-        var keys = this._sourceFramesByUISourceCode.keys();
-        for (var i = 0; i < keys.length; i++) {
-            var sourceFrame = this._sourceFramesByUISourceCode.get(keys[i]);
-            this._heatmapProvider.addhighlightsForSourceFrame(sourceFrame);
+        console.log("ScriptsPanel: providerWillRemove");
+
+        delete this._heatmapProvidersByProfile[provider.profile];
+        var index = this._heatmapProviders.indexOf(provider);
+        if (index != -1)
+            this._heatmapProviders.splice(index, 1);
+
+        if (this._activeHeatmapProvider === provider) {
+            console.log("ScriptsPanel: will select null");
+            this._selectHeatmapProvider(null); // unselect
         }
-        
-        this._profileHeatmapSelector.element.removeStyleClass("hidden");
-        // the selectionChanged event will trigger the adding of highlights
-        this._profileHeatmapSelector.select(this._profileHeatmapSelector._defaultOption);
+
+        this._updateHeatmapProvidersList();
     },
-    
-    _heatmapProviderRemoved: function()
+
+    _selectHeatmapProvider: function(provider)
     {
-        console.assert(this._heatmapProvider, "WAT: Lost reference to heatmap provider?");
+        if (provider === this._activeHeatmapProvider)
+            return;
+    
+        if (this._activeHeatmapProvider) {
+            console.log("ScriptsPanel: deselecting heatmap provider");
+            this._activeHeatmapProvider.removeEventListener(WebInspector.DataProvider.Events.DataChanged, this._heatmapProviderDataChanged, this);
+            
+            var keys = this._sourceFramesByUISourceCode.keys();
+            for (var i = 0; i < keys.length; i++) {
+                var sourceFrame = this._sourceFramesByUISourceCode.get(keys[i]);
+                this._activeHeatmapProvider.removehighlightsForSourceFrame(sourceFrame);
+            }
+        }
         
-        // FIXME: should listen to something else.
-        WebInspector.timelapseModel.onceEventListener(WebInspector.TimelapseModel.Events.ProfileHeatmapProviderAdded, this._heatmapProviderAdded, this);
-
-        this._profileHeatmapSelector.removeEventListener(WebInspector.DataProvider.Events.DataChanged, this._heatmapDataChanged, this);
-
+        this._activeHeatmapProvider = provider;
+        if (!provider) {
+            this._heatmapModeSelector.element.addStyleClass("hidden");
+            return;
+        }
+        
+        console.log("ScriptsPanel: selecting heatmap provider");
+        
+        this._activeHeatmapProvider.addEventListener(WebInspector.DataProvider.Events.DataChanged, this._heatmapProviderDataChanged, this);
+        
         var keys = this._sourceFramesByUISourceCode.keys();
         for (var i = 0; i < keys.length; i++) {
             var sourceFrame = this._sourceFramesByUISourceCode.get(keys[i]);
-            this._heatmapProvider.removehighlightsForSourceFrame(sourceFrame);
+            this._activeHeatmapProvider.addhighlightsForSourceFrame(sourceFrame);
         }
-
-        this._profileHeatmapSelector.element.addStyleClass("hidden");
-        delete this._heatmapProvider;
+        
+        this._heatmapModeSelector.element.removeStyleClass("hidden");
+        // the selectionChanged event will trigger the adding of highlights
+        this._heatmapModeSelector.select(this._heatmapModeSelector._defaultOption);
     },
 
     addToWatch: function(expression)

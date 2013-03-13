@@ -208,18 +208,7 @@ WebInspector.ProfilesModel.prototype = {
         this._profiles.push(profile);
         this._profilesIdMap[this._makeKey(profile.uid, typeId)] = profile;
 
-//        if (profile.isTemporary)
-//            return;
-
         this.dispatchEventToListeners(WebInspector.ProfilesModel.Events.ProfileAdded, profile);
-        
-        // FIXME: (Issue #197, #193): store heatmap providers on TimelapseRecording or ScriptsPanel
-        var timelapseModel = WebInspector.timelapseModel;
-        var timelapseEvents = WebInspector.TimelapseModel.Events;
-        if (typeId === WebInspector.CPUProfileType.TypeId) {
-            timelapseModel.dispatchEventToListeners(timelapseEvents.ProfilerHeatmapProviderAdded,
-                                                    new WebInspector.ProfileHeatmapProvider(profile));
-        }
     },
 
     /**

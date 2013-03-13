@@ -104,8 +104,14 @@ WebInspector.ProfilesPanel = function()
     
     // add already-existing profile types.
     var profileTypes = this._model.getProfileTypes();
-    for (var i = 0; i < profileTypes.length; ++i)
+    for (var i = 0; i < profileTypes.length; ++i) {
         this._profileTypeAdded({ data: profileTypes[i] });
+    
+        // add already-existing profiles.
+        var profiles = this._model.getProfiles(profileTypes[i].id);
+        for (var j = 0; j < profiles.length; ++j)
+            this._profileAdded({ data: profiles[j] });
+    }
 }
 
 WebInspector.ProfilesPanel.prototype = {

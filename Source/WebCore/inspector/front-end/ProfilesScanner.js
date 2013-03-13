@@ -87,14 +87,20 @@ WebInspector.ProfilesScanner.prototype = {
         var profileType = model.getProfileType(cpuProfileId);
 
         model.onceEventListener(WebInspector.ProfilesModel.Events.ProfileAdded, function(event) {
+            // stop TimelapseRecording or ScriptsPanel from making a provider.
+            event.preventDefault();
+                        
             var profile = event.data;
             profile.setIsPinned(true);
             var profileCount = ++this._scannedProfilesCount;
             profile.setDisplayName(WebInspector.UIString("Scanned Profile %d", profileCount));
-            // this will force profile data to be serialised to the frontend immediately, and show the scanned profile.
+
+            WebInspector.timelapseModel.loadedRecording.addProvider(new WebInspector.ProfileHeatmapProvider(profile));
+
             if (!WebInspector.panels.profiles)
                 WebInspector.inspectorView.panel("profiles");
 
+            var panel = WebInspector.panels.profiles;
             panel.showProfile(profile); // profile.view() will also force serialization, but not change view.
             
             if (WebInspector.inspectorView.currentPanel() !== panel) {
