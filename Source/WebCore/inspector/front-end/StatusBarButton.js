@@ -304,6 +304,11 @@ WebInspector.StatusBarComboBox.prototype = {
         this._selectElement.appendChild(option);
     },
 
+    get options()
+    {
+        return this._selectElement.children;
+    },
+
     /**
      * @param {string} label
      * @param {string=} title

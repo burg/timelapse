@@ -175,15 +175,15 @@ WebInspector.ScriptsPanel = function(workspaceForTest)
     this._heatmapProvidersByProfileUID = {};
 
     this._heatmapModeSelector = new WebInspector.StatusBarComboBox(this._heatmapModeSelectorChanged.bind(this));
-    for (var key in WebInspector.ProfileHeatmapProvider.Modes) {
-        var modeName = WebInspector.ProfileHeatmapProvider.Modes[key];
+    for (var i = 0; i < WebInspector.ProfileHeatmapProvider.Modes.length; ++i) {
+        var mode = WebInspector.ProfileHeatmapProvider.Modes[i];
         var option = document.createElement("option");
-        option.text = WebInspector.UIString(modeName);
-        option.title = WebInspector.UIString("Click to visualize using mode: "+modeName);
-        option._mode = key;
+        option.text = option._originalText = WebInspector.UIString(mode.displayName);
+        option.title = WebInspector.UIString("Click to visualize using mode: "+mode.displayName);
+        option._mode = mode;
         this._heatmapModeSelector.addOption(option);
         
-        if (modeName === WebInspector.ProfileHeatmapProvider.DefaultMode) {
+        if (mode === WebInspector.ProfileHeatmapProvider.DefaultMode) {
             this._heatmapModeSelector.select(option);
             this._heatmapModeSelector._defaultOption = option;
         }
@@ -1007,8 +1007,16 @@ WebInspector.ScriptsPanel.prototype = {
     {
         console.assert(this._activeHeatmapProvider, "WAT: profile mode changed but we don't have a heatmap provider.");
     
-        var option = this._heatmapModeSelector.selectedOption();
-        this._activeHeatmapProvider.setHeatmapMode(option._mode);
+        for (var i = 0; i < this._heatmapModeSelector.options.length; ++i) {
+            var option = this._heatmapModeSelector.options[i];
+            if (option.text != option._originalText)
+                option.text = option._originalText;
+        }
+
+        var selectedOption = this._heatmapModeSelector.selectedOption();
+        selectedOption.text = "Showing: "+selectedOption._originalText;
+       
+        this._activeHeatmapProvider.setHeatmapMode(selectedOption._mode);
     },
 
     _heatmapProfileSelectorChanged: function()
@@ -1047,6 +1055,8 @@ WebInspector.ScriptsPanel.prototype = {
             
             this._profileAdded({ "data": profiles[i] });
         }
+        
+        this._updateHeatmapSelectors(); // in case nobody else triggers an update
     },
 
     _profileAdded: function(event)
@@ -1081,7 +1091,7 @@ WebInspector.ScriptsPanel.prototype = {
         var selectedOption = this._heatmapProfileSelector.selectedOption();
         var selectedProvider = (selectedOption) ? selectedOption._provider : null;
     
-        this._heatmapProfileSelector.disabled = !this._heatmapProviders.length;
+        this._heatmapProfileSelector.setEnabled(!!this._heatmapProviders.length);
         this._heatmapProfileSelector.removeOptions();
         
         var option = document.createElement("option");
@@ -1188,8 +1198,7 @@ WebInspector.ScriptsPanel.prototype = {
         }
         
         this._heatmapModeSelector.element.removeStyleClass("hidden");
-        // the selectionChanged event will trigger the adding of highlights
-        this._heatmapModeSelector.select(this._heatmapModeSelector._defaultOption);
+        this._heatmapModeSelectorChanged(); // re-use whatever was selected before.
     },
 
     addToWatch: function(expression)
