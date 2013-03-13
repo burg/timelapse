@@ -169,39 +169,96 @@ WebInspector.ProfileHeatmapProvider.HeatmapMode = function(descriptor, profile)
 {
     this.descriptor = descriptor;
     this.profile = profile;
+    this.callUIDToStatsMap = {};
 };
 
 WebInspector.ProfileHeatmapProvider.HeatmapMode.prototype = {
+    // To be overridden by subclasses
     aggregateData: function()
     {
     },
     
+    // To be overridden by subclasses
     getWeightForUID: function(callUID)
     {
         return 0;
-    }
+    },
+    
+    // To be overridden by subclasses
+    aggregateData: function()
+    {
+    },
+    
+    // To be overridden by subclasses
+    processNode: function(node, stats)
+    {
+    },
+
+    // To be overridden by subclasses
+    initializeForCallUID: function(stats)
+    {
+    },
+    
+    traverseNode: function(node)
+    {
+        if (!node)
+            return;
+                
+        if (!this.callUIDToStatsMap[node.callUID]) {
+            var stats = this.initializeForCallUID();
+            if (stats)
+                this.callUIDToStatsMap[node.callUID] = stats;
+        }
+    
+        var stats = this.callUIDToStatsMap[node.callUID];
+        this.processNode(node, stats);
+    
+        for (var i = 0; i < node.children.length; ++i) {
+            this.traverseNode(node.children[i]);
+        }
+    },
 };
 
-WebInspector.ProfileHeatmapProvider.UnicolorHeatmapMode = function(descriptor, profile)
+WebInspector.ProfileHeatmapProvider.CSVExportHeatmapMode = function(descriptor, profile)
 {
     WebInspector.ProfileHeatmapProvider.HeatmapMode.call(this, descriptor, profile);
 
-    this._urlToCallUIDMap = {};
-    this._callUIDToStatsMap = {};
 };
 
-WebInspector.ProfileHeatmapProvider.UnicolorHeatmapMode.prototype = {
+WebInspector.ProfileHeatmapProvider.CSVExportHeatmapMode.prototype = {
+
     aggregateData: function()
     {
-        this._processNode(this.profile.data.head);
+        this.traverseNode(this.profile.data.head);
+        console.log(this._exportCSVData());
     },
     
     getWeightForUID: function(callUID)
     {
-        if (callUID in this._callUIDToStatsMap)
+        if (callUID in this.callUIDToStatsMap)
             return 1;
 
         return 0;
+    },
+        
+    processNode: function(node, stats)
+    {
+        stats.selfTime  += node.selfTime;
+        stats.totalTime += node.totalTime;
+        stats.numberOfCalls += node.numberOfCalls;
+        stats.nodeCount += 1;
+        stats.functionName = node.functionName;
+    },
+
+    initializeForCallUID: function()
+    {
+        return {
+            selfTime: 0.0,
+            totalTime: 0.0,
+            numberOfCalls: 0,
+            nodeCount: 0,
+            functionName: null
+        };
     },
     
     _exportCSVData: function()
@@ -216,8 +273,8 @@ WebInspector.ProfileHeatmapProvider.UnicolorHeatmapMode.prototype = {
         ];
         var output = [columns.join(",")];
 
-        for (uid in this._callUIDToStatsMap) {
-            var stats = this._callUIDToStatsMap[uid];
+        for (uid in this.callUIDToStatsMap) {
+            var stats = this.callUIDToStatsMap[uid];
             var row = [
                 uid,
                 stats.functionName,
@@ -232,36 +289,15 @@ WebInspector.ProfileHeatmapProvider.UnicolorHeatmapMode.prototype = {
         return output.join("\n");
     },
     
-    _processNode: function(node)
-    {
-        if (!node)
-            return;
-                
-        if (!this._callUIDToStatsMap[node.callUID]) {
-            this._callUIDToStatsMap[node.callUID] = {
-                selfTime: 0.0,
-                totalTime: 0.0,
-                numberOfCalls: 0,
-                nodeCount: 0,
-                functionName: null,
-            };
-        }
-    
-        var stats = this._callUIDToStatsMap[node.callUID];
-        stats.selfTime  += node.selfTime;
-        stats.totalTime += node.totalTime;
-        stats.numberOfCalls += node.numberOfCalls;
-        stats.nodeCount += 1;
-        stats.functionName = node.functionName;
-    
-        for (var i = 0; i < node.children.length; ++i) {
-            this._processNode(node.children[i]);
-        }
-    },
+    __proto__: WebInspector.ProfileHeatmapProvider.HeatmapMode.prototype
 };
 
 WebInspector.ProfileHeatmapProvider.Modes = [
     new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("none", "None", WebInspector.ProfileHeatmapProvider.HeatmapMode),
-    new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("unicolor", "Unicolor", WebInspector.ProfileHeatmapProvider.UnicolorHeatmapMode),
+    new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("csv-export", "CSV Export", WebInspector.ProfileHeatmapProvider.CSVExportHeatmapMode),
+
+//    new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("call-count", "Call Counts", WebInspector.ProfileHeatmapProvider.CallCountsHeatmapMode),
+//    new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("self-time", "Self Time", WebInspector.ProfileHeatmapProvider.SelfTimeHeatmapMode),
+//    new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("total-time", "Total Time", WebInspector.ProfileHeatmapProvider.TotalTimeHeatmapMode),
 ];
 WebInspector.ProfileHeatmapProvider.DefaultMode = WebInspector.ProfileHeatmapProvider.Modes[0];
