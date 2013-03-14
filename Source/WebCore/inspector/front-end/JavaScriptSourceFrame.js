@@ -49,6 +49,7 @@ WebInspector.JavaScriptSourceFrame = function(scriptsPanel, uiSourceCode)
     this._popoverHelper = new WebInspector.ObjectPopoverHelper(this.textEditor.element,
             this._getPopoverAnchor.bind(this), this._resolveObjectForPopover.bind(this), this._onHidePopover.bind(this), true);
 
+    this.textEditor.element.addStyleClass("heatmap-theme-YlOrRd");
     this.textEditor.element.addEventListener("keydown", this._onKeyDown.bind(this), true);
 
     this.textEditor.addEventListener(WebInspector.TextEditor.Events.GutterClick, this._handleGutterClick.bind(this), this);

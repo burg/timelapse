@@ -66,8 +66,9 @@ WebInspector.ProfileHeatmapProvider.prototype = {
 
     _decideStyleForUID: function(callUID)
     {
-        var bin = this.activeMode.getWeightForUID(callUID);
-        return "profiles-heatmap-value-" + Math.floor(bin);
+        var weight = this.activeMode.getWeightForUID(callUID);
+        var bin = Math.ceil(weight * 9.0);
+        return "webkit-heatmap-value-" + bin;
     },
 
     _aggregateSourceLocations: function(node)
@@ -112,8 +113,6 @@ WebInspector.ProfileHeatmapProvider.prototype = {
             return;
 
         var url = sourceFrame.url;
-        console.log("adding highlights for resource: "+url);
-
         var oldHighlights = this._highlightsByURL[url] || [];
         this._highlightsByURL[url] = [];
         for (var i = 0; i < oldHighlights.length; ++i) {
@@ -138,8 +137,6 @@ WebInspector.ProfileHeatmapProvider.prototype = {
             return;
 
         var url = sourceFrame.url;
-        console.log("removing highlights for resource: "+url);
-        
         var oldHighlights = this._highlightsByURL[url] || [];
         this._highlightsByURL[url] = [];
         for (var i = 0; i < oldHighlights.length; ++i) {
@@ -292,12 +289,123 @@ WebInspector.ProfileHeatmapProvider.CSVExportHeatmapMode.prototype = {
     __proto__: WebInspector.ProfileHeatmapProvider.HeatmapMode.prototype
 };
 
+WebInspector.ProfileHeatmapProvider.CallCountHeatmapMode = function(descriptor, profile)
+{
+    WebInspector.ProfileHeatmapProvider.HeatmapMode.call(this, descriptor, profile);
+};
+
+WebInspector.ProfileHeatmapProvider.CallCountHeatmapMode.prototype = {
+
+    aggregateData: function()
+    {
+        this.traverseNode(this.profile.data.head);
+        this._maxCallCount = 0;
+        for (var uid in this.callUIDToStatsMap) {
+            this._maxCallCount = Math.max(this._maxCallCount, this.callUIDToStatsMap[uid].callCount);
+        }
+    },
+    
+    getWeightForUID: function(callUID)
+    {
+        if (callUID in this.callUIDToStatsMap)
+            return Math.log(this.callUIDToStatsMap[uid].callCount, Math.LOG2E) / Math.log(this._maxCallCount, Math.LOG2E);
+
+        return 0;
+    },
+        
+    processNode: function(node, stats)
+    {
+        stats.callCount += node.numberOfCalls;
+    },
+
+    initializeForCallUID: function()
+    {
+        return { callCount: 0 };
+    },
+    
+    __proto__: WebInspector.ProfileHeatmapProvider.HeatmapMode.prototype
+};
+
+WebInspector.ProfileHeatmapProvider.SelfTimeHeatmapMode = function(descriptor, profile)
+{
+    WebInspector.ProfileHeatmapProvider.HeatmapMode.call(this, descriptor, profile);
+};
+
+WebInspector.ProfileHeatmapProvider.SelfTimeHeatmapMode.prototype = {
+
+    aggregateData: function()
+    {
+        this.traverseNode(this.profile.data.head);
+        this._maxSelfTime = 0;
+        for (var uid in this.callUIDToStatsMap) {
+            this._maxSelfTime = Math.max(this._maxSelfTime, this.callUIDToStatsMap[uid].selfTime);
+        }
+    },
+    
+    getWeightForUID: function(callUID)
+    {
+        if (callUID in this.callUIDToStatsMap)
+            return Math.log(1.0 + this.callUIDToStatsMap[uid].selfTime, Math.LOG2E) / Math.log(1.0 + this._maxSelfTime, Math.LOG2E);
+
+        return 0;
+    },
+        
+    processNode: function(node, stats)
+    {
+        stats.selfTime += node.selfTime;
+    },
+
+    initializeForCallUID: function()
+    {
+        return { selfTime: 0 };
+    },
+    
+    __proto__: WebInspector.ProfileHeatmapProvider.HeatmapMode.prototype
+};
+
+
+WebInspector.ProfileHeatmapProvider.TotalTimeHeatmapMode = function(descriptor, profile)
+{
+    WebInspector.ProfileHeatmapProvider.HeatmapMode.call(this, descriptor, profile);
+};
+
+WebInspector.ProfileHeatmapProvider.TotalTimeHeatmapMode.prototype = {
+
+    aggregateData: function()
+    {
+        this.traverseNode(this.profile.data.head);
+        this._maxTotalTime = 0.0;
+        for (var uid in this.callUIDToStatsMap) {
+            this._maxTotalTime = Math.max(this._maxTotalTime, this.callUIDToStatsMap[uid].totalTime);
+        }
+    },
+    
+    getWeightForUID: function(callUID)
+    {
+        if (callUID in this.callUIDToStatsMap)
+            return Math.log(1.0 + this.callUIDToStatsMap[uid].totalTime) / Math.log(1.0 + this._maxTotalTime);
+
+        return 0;
+    },
+        
+    processNode: function(node, stats)
+    {
+        stats.totalTime += node.totalTime;
+    },
+
+    initializeForCallUID: function()
+    {
+        return { totalTime: 0.0 };
+    },
+    
+    __proto__: WebInspector.ProfileHeatmapProvider.HeatmapMode.prototype
+};
+
 WebInspector.ProfileHeatmapProvider.Modes = [
     new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("none", "None", WebInspector.ProfileHeatmapProvider.HeatmapMode),
-    new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("csv-export", "CSV Export", WebInspector.ProfileHeatmapProvider.CSVExportHeatmapMode),
-
-//    new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("call-count", "Call Counts", WebInspector.ProfileHeatmapProvider.CallCountsHeatmapMode),
-//    new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("self-time", "Self Time", WebInspector.ProfileHeatmapProvider.SelfTimeHeatmapMode),
-//    new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("total-time", "Total Time", WebInspector.ProfileHeatmapProvider.TotalTimeHeatmapMode),
+//  new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("csv-export", "CSV Export", WebInspector.ProfileHeatmapProvider.CSVExportHeatmapMode),
+    new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("call-count", "Call Counts", WebInspector.ProfileHeatmapProvider.CallCountHeatmapMode),
+    new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("self-time", "Self Time", WebInspector.ProfileHeatmapProvider.SelfTimeHeatmapMode),
+    new WebInspector.ProfileHeatmapProvider.HeatmapModeDescriptor("total-time", "Total Time", WebInspector.ProfileHeatmapProvider.TotalTimeHeatmapMode),
 ];
 WebInspector.ProfileHeatmapProvider.DefaultMode = WebInspector.ProfileHeatmapProvider.Modes[0];
