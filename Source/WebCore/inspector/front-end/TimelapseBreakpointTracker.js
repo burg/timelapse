@@ -6,16 +6,6 @@ WebInspector.TimelapseBreakpointTracker = function(model)
     this._model = model;
     this._exploredIntervals = new WebInspector.TimelapseIntervalManager();
 
-    var eventNames = WebInspector.TimelapseModel.Events;
-    this._model.addEventListener(eventNames.RecordingLoaded,   this._reset,              this);
-    this._model.addEventListener(eventNames.PlaybackWillStart, this._playbackWillStart,  this);
-    this._model.addEventListener(eventNames.PlaybackStopped,   this._endPendingInterval, this);
-    this._model.addEventListener(eventNames.InputHit,          this._inputHit,           this);
-    this._model.addEventListener(eventNames.InputPaused,       this._endPendingInterval, this);
-
-    var debugEvents = WebInspector.DebuggerModel.Events;
-    WebInspector.debuggerModel.addEventListener(debugEvents.DebuggerPaused, this._debuggerPaused,    this);
-
     var manager = WebInspector.breakpointManager;
     var managerEvents = WebInspector.BreakpointManager.Events;
     manager.addEventListener(managerEvents.BreakpointAdded,              this._breakpointUpdated, this);
@@ -23,7 +13,7 @@ WebInspector.TimelapseBreakpointTracker = function(model)
     manager.addEventListener(managerEvents.BreakpointRemovedFromStorage, this._breakpointRemovedFromStorage, this);
     
     // always reset/init data structures, since we track breakpoints even outside of capturing or replaying.
-    this._reset();
+    this._recordingUnloaded();
 };
 
 WebInspector.TimelapseBreakpointTracker.Events = {
@@ -67,16 +57,44 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
     },
 
     // Internal helpers
-    _reset: function()
-    {
-	this._records = [];
-	// breakpoints are stored using the debuggerID (sourceURL + ":" + lineNumber) as the key
-	this._breakpoints = {};
-    this._breakpointHitIndex = -1;
-    this._debuggerWaitIndex = -1;
-	this._exploredIntervals.clear();
+    _modifyListeners: function(op) {
+        console.assert(op === "addEventListener" || op === "removeEventListener",
+                       "Tried to do something unsupported to listeners: " + op);
+        
+        var eventNames = WebInspector.TimelapseModel.Events;
+        this._model[op](eventNames.PlaybackWillStart, this._playbackWillStart,  this);
+        this._model[op](eventNames.PlaybackStopped,   this._endPendingInterval, this);
+        this._model[op](eventNames.InputHit,          this._inputHit,           this);
+        this._model[op](eventNames.InputPaused,       this._endPendingInterval, this);
 
-	this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Reset);
+        var debugEvents = WebInspector.DebuggerModel.Events;
+        WebInspector.debuggerModel[op](debugEvents.DebuggerPaused, this._debuggerPaused,    this);
+    },
+    
+    _recordingLoaded: function()
+    {
+        this._model.onceEventListener(WebInspector.TimelapseModel.Events.RecordingUnloaded, this._recordingUnloaded, this);
+        this._modifyListeners("addEventListener");
+        this._resetState();
+    },
+
+    _recordingUnloaded: function()
+    {
+        this._model.onceEventListener(WebInspector.TimelapseModel.Events.RecordingLoaded, this._recordingLoaded, this);
+        this._modifyListeners("removeEventListener");
+        this._resetState();
+    },
+
+    _resetState: function()
+    {
+        this._records = [];
+        // breakpoints are stored using the debuggerID (sourceURL + ":" + lineNumber) as the key
+        this._breakpoints = {};
+        this._breakpointHitIndex = -1;
+        this._debuggerWaitIndex = -1;
+        this._exploredIntervals.clear();
+
+        this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Reset);
     },
 
     _endPendingInterval: function()
