@@ -339,10 +339,8 @@ var WebInspector = {
 
     _profilesLinkifier: function(url)
     {
-        // FIXME: (Issue #199): if the profile instance isn't created yet,
-        // fall back to using a default formatted name from the ProfileType.
-        var profile = WebInspector.profilesModel.getProfileForURL(url);
-        return (profile) ? profile.displayName() : url;
+        var name = WebInspector.profilesModel.getProfileNameFromURL(url);
+        return (name) ? name : url;
     },
 
     _debuggerPaused: function()
@@ -1085,7 +1083,8 @@ WebInspector.addMainEventListeners = function(doc)
     doc.addEventListener("click", this.documentClick.bind(this), true);
 }
 
-WebInspector.ProfileURLRegExp = /webkit-profile:\/\/(.+)\/(.+)#([0-9]+)/;
+const UserInitiatedProfileName = "org.webkit.profiles.user-initiated";
+WebInspector.ProfileURLRegExp = new RegExp("webkit-profile:\\/\\/(\\w+)\\/"+UserInitiatedProfileName+".(\\d+)#(\\d+)");
 
 WebInspector.Zoom = {
     Table: [0.25, 0.33, 0.5, 0.66, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5],

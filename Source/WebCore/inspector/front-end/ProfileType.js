@@ -64,6 +64,14 @@ WebInspector.ProfileType.prototype = {
         return this._name;
     },
 
+    /**
+     * @return {string} format
+     */
+    defaultNameFormat: function()
+    {
+        return WebInspector.UIString("Profile %d");
+    },
+
     get name()
     {
         return this._name;

@@ -161,21 +161,13 @@ WebInspector.ProfileHeader.prototype = {
     },
     
     /**
-     * @return {string} format
-     */
-    defaultNameFormat: function()
-    {
-        return WebInspector.UIString("Profile %d");
-    },
-    
-    /**
      * @return {string} displayName
      */
     displayName: function()
     {
         // prettify the display name if it has not been prettified already.
         if (this._displayName.startsWith(UserInitiatedProfileName))
-            return WebInspector.UIString(this.defaultNameFormat(),
+            return WebInspector.UIString(this.profileType().defaultNameFormat(),
                                          this._displayName.substring(UserInitiatedProfileName.length+1));
         return this._displayName;
     },

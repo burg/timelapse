@@ -527,6 +527,14 @@ WebInspector.NativeMemoryProfileType.prototype = {
         return WebInspector.UIString("MEMORY DISTRIBUTION");
     },
 
+    /**
+     * @return {string} format
+     */
+    defaultNameFormat: function()
+    {
+        return WebInspector.UIString("Snapshot %d");
+    },
+
     get description()
     {
         return WebInspector.UIString("Native memory snapshot profiles show memory distribution among browser subsystems");
@@ -580,14 +588,6 @@ WebInspector.NativeMemoryProfileHeader.prototype = {
     createSidebarTreeElement: function()
     {
         return new WebInspector.ProfileSidebarTreeElement(this, "heap-snapshot-sidebar-tree-item");
-    },
-    
-    /**
-     * @return {string} format
-     */
-    defaultNameFormat: function()
-    {
-        return WebInspector.UIString("Snapshot %d");
     },
 
     /**

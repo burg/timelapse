@@ -29,8 +29,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-const UserInitiatedProfileName = "org.webkit.profiles.user-initiated";
-
 /**
  * @constructor
  * @extends {WebInspector.Object}
@@ -91,12 +89,24 @@ WebInspector.ProfilesModel.prototype = {
         return result;
     },
     
+    getProfileNameFromURL: function(url)
+    {
+        var match = url.match(WebInspector.ProfileURLRegExp);
+        if (!match)
+            return false;
+        var profileType = this.getProfileType(match[1]);
+        if (!profileType)
+            return false;
+        
+        return WebInspector.UIString(profileType.defaultNameFormat(), Number(match[2]));
+    },
+    
     getProfileForURL: function(url)
     {
         var match = url.match(WebInspector.ProfileURLRegExp);
         if (!match)
             return false;
-        return this._profilesIdMap[this._makeKey(Number(match[3]), match[1])] || false;
+        return this._profilesIdMap[this._makeKey(Number(match[2]), match[1])] || false;
     },
     
     /**
