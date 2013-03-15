@@ -621,9 +621,6 @@ body.drawer-visible #main-panels {
  
 #timelapse-status {
     display: inline-block;
-    border-image-source: url(Images/statusbarButtons.png);
-    border-image-slice: 0 0 0 5;
-    border-width: 0px 1px;
     padding: 0px 4px 0px 6px;
     line-height: 2em;
 }
@@ -753,17 +750,21 @@ button.status-bar-item {
     border-right: 1px solid rgb(120, 120, 120);
 }
 
-button.status-bar-item .glyph.shadow {
+.status-bar-item .glyph.shadow {
     background-color: rgba(255, 255, 255, 0.33) !important;
 }
 
-button.status-bar-item.toggled-on .glyph {
+.status-bar-item.toggled-on .glyph {
     background-color: rgb(66, 129, 235);
 }
 
-button.status-bar-item:disabled {
-    opacity: 0.5;
+.status-bar-item:disabled {
     background-position: 0 0 !important;
+}
+
+.status-bar-item:disabled :not(select),
+.status-bar-item.disabled {
+    opacity: 0.5;
 }
 
 button.status-bar-item.extension {
@@ -773,6 +774,7 @@ button.status-bar-item.extension {
 
 .status-bar-select-container {
     display: inline-block;
+    position: relative;
     background-image: url(Images/disclosureTriangleSmallDown.png);
     background-repeat: no-repeat;
     background-position-x: right;
@@ -782,6 +784,17 @@ button.status-bar-item.extension {
     vertical-align: top;
 }
 
+.status-bar-select-container.contains-glyph .glyph {
+    right: auto;
+    width: 20px;
+    -webkit-mask-size: 240px 56px;
+    opacity: 0.8;
+}
+
+.status-bar-select-container.contains-glyph {
+    padding-left: 20px;
+}
+
 select.status-bar-item {
     min-width: 48px;
     font-weight: bold;
@@ -789,7 +802,7 @@ select.status-bar-item {
     -webkit-appearance: none;
     border: 0;
     border-radius: 0;
-    padding: 0 15px 0 5px;
+    padding: 0 17px 0 5px;
     margin-right: -15px;
     position: relative;
     top: -2px;
@@ -797,11 +810,18 @@ select.status-bar-item {
 }
 
 select.status-bar-item, select.status-bar-item:hover {
-    border-left: 1px solid rgb(202, 202, 202);
     border-right: 1px solid rgb(202, 202, 202);
 }
 
-.status-bar-item > .glyph {
+.status-bar-select-container.heatmap-profile-selector .glyph {
+    -webkit-mask-position: -168px -54px;
+}
+
+.status-bar-select-container.heatmap-mode-selector .glyph {
+    -webkit-mask-position: -72px -54px;
+}
+
+.status-bar-item .glyph {
     -webkit-mask-image: url(Images/statusbarButtonGlyphs.png);
     -webkit-mask-size: 320px 72px;
 }
@@ -3089,7 +3109,7 @@ body.platform-mac .search-drawer-header input[type="checkbox"].search-config-che
     border-width: 0 0 11px 0;
 }
 
-.console-context {
+.console-context select {
     max-width: 200px;
 }
 

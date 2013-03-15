@@ -275,16 +275,37 @@ WebInspector.StatusBarButton.prototype = {
  * @param {?function(Event)} changeHandler
  * @param {string=} className
  */
-WebInspector.StatusBarComboBox = function(changeHandler, className)
+WebInspector.StatusBarComboBox = function(changeHandler, className, hasGlyph)
 {
     WebInspector.StatusBarItem.call(this, document.createElement("span"));
-    this.element.className = "status-bar-select-container";
+    this.element.className = "status-bar-select-container status-bar-item";
+
+    if (hasGlyph) {
+        this.element.addStyleClass("contains-glyph"); // can this be done with CSS?
+        this.glyph = document.createElement("div");
+        this.glyph.className = "glyph";
+        this.element.appendChild(this.glyph);
+
+        this.glyphShadow = document.createElement("div");
+        this.glyphShadow.className = "glyph shadow";
+        this.element.appendChild(this.glyphShadow);
+        
+        // forward event to the select element, so the glyph isn't dead space.
+        this.glyph.addEventListener("mousedown", function(event) {
+            event.stopPropagation();
+            event.preventDefault();
+            var dummyEvent = document.createEvent("MouseEvents");
+            dummyEvent.initMouseEvent("mousedown", true, true, window,
+                                      0, 0, 0, 0, 0, false, false, false, false, 0, null);
+            this._selectElement.dispatchEvent(dummyEvent);
+        }.bind(this));
+    }
 
     this._selectElement = this.element.createChild("select", "status-bar-item");
     if (changeHandler)
         this._selectElement.addEventListener("change", changeHandler, false);
     if (className)
-        this._selectElement.addStyleClass(className);
+        this.element.addStyleClass(className);
 }
 
 WebInspector.StatusBarComboBox.prototype = {
@@ -332,6 +353,7 @@ WebInspector.StatusBarComboBox.prototype = {
     _applyEnabledState: function()
     {
         this._selectElement.disabled = !this._enabled;
+        this.element.classList[(this._enabled) ? "remove" : "add"]("disabled");
     },
 
     /**

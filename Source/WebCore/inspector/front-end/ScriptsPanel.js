@@ -174,7 +174,7 @@ WebInspector.ScriptsPanel = function(workspaceForTest)
     this._heatmapProviders = [];
     this._heatmapProvidersByProfileUID = {};
 
-    this._heatmapModeSelector = new WebInspector.StatusBarComboBox(this._heatmapModeSelectorChanged.bind(this));
+    this._heatmapModeSelector = new WebInspector.StatusBarComboBox(this._heatmapModeSelectorChanged.bind(this), "heatmap-mode-selector", true);
     for (var i = 0; i < WebInspector.ProfileHeatmapProvider.Modes.length; ++i) {
         var mode = WebInspector.ProfileHeatmapProvider.Modes[i];
         var option = document.createElement("option");
@@ -190,7 +190,7 @@ WebInspector.ScriptsPanel = function(workspaceForTest)
     }
     this._heatmapModeSelector.element.addStyleClass("hidden");
 
-    this._heatmapProfileSelector = new WebInspector.StatusBarComboBox(this._heatmapProfileSelectorChanged.bind(this));
+    this._heatmapProfileSelector = new WebInspector.StatusBarComboBox(this._heatmapProfileSelectorChanged.bind(this), "heatmap-profile-selector", true);
 
     WebInspector.profilesModel.addEventListener(WebInspector.ProfilesModel.Events.ProfileAdded, this._profileAdded, this);
     WebInspector.profilesModel.addEventListener(WebInspector.ProfilesModel.Events.ProfileRemoved, this._profileRemoved, this);
@@ -1006,16 +1006,8 @@ WebInspector.ScriptsPanel.prototype = {
     _heatmapModeSelectorChanged: function()
     {
         console.assert(this._activeHeatmapProvider, "WAT: profile mode changed but we don't have a heatmap provider.");
-    
-        for (var i = 0; i < this._heatmapModeSelector.options.length; ++i) {
-            var option = this._heatmapModeSelector.options[i];
-            if (option.text != option._originalText)
-                option.text = option._originalText;
-        }
 
         var selectedOption = this._heatmapModeSelector.selectedOption();
-        selectedOption.text = "Showing: "+selectedOption._originalText;
-       
         this._activeHeatmapProvider.setHeatmapMode(selectedOption._mode);
     },
 
