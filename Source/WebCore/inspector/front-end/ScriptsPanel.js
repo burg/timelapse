@@ -1053,7 +1053,7 @@ WebInspector.ScriptsPanel.prototype = {
             if (profiles[i].uid in this._heatmapProvidersByProfileUID)
                 continue;
             
-            this._profileAdded({ "data": profiles[i] });
+            this._innerProfileAdded(profiles[i]);
         }
         
         this._updateHeatmapSelectors(); // in case nobody else triggers an update
@@ -1071,8 +1071,18 @@ WebInspector.ScriptsPanel.prototype = {
         if (profile.profileType().id !== WebInspector.CPUProfileType.TypeId)
             return;
 
+        if (WebInspector.timelapseModel.canReplay)
+            return;
+
+        event.preventDefault();
+
+        this._innerProfileAdded(profile);
+    },
+    
+    _innerProfileAdded: function(profile)
+    {
         var provider = new WebInspector.ProfileHeatmapProvider(profile);
-        this._addHeatmapProvider(provider);
+        this._addHeatmapProvider(provider);  
     },
 
     _profileRemoved: function(event)
