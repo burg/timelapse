@@ -37,7 +37,7 @@ WebInspector.Object.prototype = {
      */
     addEventListener: function(eventType, listener, thisObject)
     {
-        console.assert(listener);
+        console.assert(listener, "Missing listener for eventType: "+eventType);
 
         if (!this._listeners)
             this._listeners = {};
@@ -53,7 +53,7 @@ WebInspector.Object.prototype = {
      */
     removeEventListener: function(eventType, listener, thisObject)
     {
-        console.assert(listener);
+        console.assert(listener, "Missing listener for eventType: "+eventType);
 
         if (!this._listeners || !this._listeners[eventType])
             return;
