@@ -480,8 +480,7 @@ WebInspector.TimelapseReplayView.prototype = {
         savepointList.addEventListener(WebInspector.DataProvider.Events.WillRemove, willRemoveCallback, savepointButton);
         
         //the scans drop-down menu
-        this._scanSelector = new WebInspector.StatusBarComboBox(this._scanSelectorChanged.bind(this));
-        this._scanSelector.element.addStyleClass("timelapse-scan-menu");
+        this._scanSelector = new WebInspector.StatusBarComboBox(this._scanSelectorChanged.bind(this), "timelapse-scan-selector", true);
         var displayedScanners = [];
         for (var key in this._model.scanners) {
             var scanner = this._model.scanners[key];

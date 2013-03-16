@@ -821,6 +821,11 @@ select.status-bar-item, select.status-bar-item:hover {
     -webkit-mask-position: -72px -54px;
 }
 
+.status-bar-select-container.timelapse-scan-selector .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png) !important;
+    -webkit-mask-position: -24px -72px;
+}
+
 .status-bar-item .glyph {
     -webkit-mask-image: url(Images/statusbarButtonGlyphs.png);
     -webkit-mask-size: 320px 72px;
