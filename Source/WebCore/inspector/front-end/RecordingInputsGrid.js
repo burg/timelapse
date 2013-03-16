@@ -112,10 +112,10 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
     
-    // add savepoint provider if already created
-    var savepointProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);
-    for (var i = 0; i < savepointProviders.length; i++)
-        this._addProvider(savepointProviders[i]);
+    // add savepoint list if already created
+    var providers = this._recording.providersWithType(WebInspector.DataProvider.Types.SavepointList);
+    for (var i = 0; i < providers.length; i++)
+        this._addProvider(providers[i]);
     
 	// create new rows for all records, update table.
     var newNode;
@@ -278,7 +278,7 @@ WebInspector.RecordingInputsGrid.prototype = {
     {
 	var types = WebInspector.DataProvider.Types;
 	return provider.type == types.TimelapseInput ||
-               provider.type == types.ReplaySavepoint;
+           provider.type == types.SavepointList;
     },
 
     _onProviderAdded: function(event)
@@ -332,10 +332,10 @@ WebInspector.RecordingInputsGrid.prototype = {
             provider[op](events.Disabled, this._onProviderDisabled, this);
         }
 
-        if (provider.type == types.ReplaySavepoint) {
-            var savepointEvents = WebInspector.ReplaySavepointProvider.Events;
-            provider[op](savepointEvents.SavepointSet,     this._onSavepointChanged, this);
-            provider[op](savepointEvents.SavepointRemoved, this._onSavepointChanged, this);
+        if (provider.type == types.SavepointList) {
+            var savepointEvents = WebInspector.SavepointListProvider.Events;
+            provider[op](savepointEvents.SavepointAdded,   this._savepointsChanged, this);
+            provider[op](savepointEvents.SavepointRemoved, this._savepointsChanged, this);
         }
     },
 
@@ -740,9 +740,12 @@ WebInspector.RecordingInputsGrid.prototype = {
         }
     },
 
-    _onSavepointChanged: function(event)
+    _savepointsChanged: function()
     {
-	this.refreshRecordGridNode(event.data.markIndex);
+        var savepoints = this._recording.savepointList.savepoints;
+        for (var i = 0; i < savepoints.length; ++i) {
+            this.refreshRecordGridNode(savepoints[i].markIndex);
+        }
     },
     
     __proto__: WebInspector.DataGrid.prototype
@@ -1044,8 +1047,8 @@ WebInspector.RecordingInputsGridNode.prototype = {
     {
 	this._gutterCell.removeChildren();
 
-	var savepointProvider = this._parentView.recording.savepointProvider;
-	var savepoint = savepointProvider.savepointAtMarkIndex(this._record.mark.index);
+	var savepointList = this._parentView.recording.savepointList;
+	var savepoint = savepointList.findForMarkIndex(this._record.mark.index);
 	if (!savepoint)
 	    return;
 

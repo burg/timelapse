@@ -281,7 +281,7 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	wrapper.classList.add("table-wrapper");
 	var table = document.createElement("table");
 
-	var savepointProvider = this._recording.savepointProvider;
+	var savepointList = this._recording.savepointList;
 
 	var lastMarkIndex;
 	for (var i = 0; i < records.length; i++) {
@@ -296,14 +296,14 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	    row.appendChild(countCell);
 
 	    var indexExplored = WebInspector.timelapseModel.breakpointTracker.exploredIndex(record.mark.index, record.hitIndex);
-	    var isSavedLocation = savepointProvider.savepointAtLocation(record.mark.index, record.hitIndex);
+	    var savepoint = savepointList.findForBreakpointHit(record.mark.index, record.hitIndex);
 	    var isCurrentBreakpoint = record.mark.index == WebInspector.timelapseModel.currentMarkIndex
 		&& record.hitIndex == WebInspector.timelapseModel.currentHitIndex;
 
-	    if (isSavedLocation) {
-		var savepointButton = createButtonInTD("timelapse-savepoint-button toggled", function(markIndex, hitIndex) {
-			savepointProvider.removeSavepoint(markIndex, hitIndex);
-		    }.bind(savepointButton, record.mark.index, record.hitIndex));
+	    if (savepoint) {
+            var savepointButton = createButtonInTD("timelapse-savepoint-button toggled", function(savepoint) {
+                savepointList.removeSavepoint(savepoint);
+		    }.bind(savepointButton, savepoint));
 		    row.appendChild(savepointButton);
 		}
 	    else

@@ -451,35 +451,33 @@ WebInspector.TimelapseReplayView.prototype = {
         savepointButton.toggled = false;
 
         savepointButton.addEventListener("click", this._replayToSavepointButtonClicked, replayView);
-        var recording = this._recording;
-        var provider = recording.savepointProvider;
+        var savepointList = this._recording.savepointList;
         var syncSavepointStatus = function() {
-            this.disabled = !provider.hasSavepoint();
+            this.disabled = !savepointList.length;
         };
 
         this._model.addEventListener(eventNames.PlaybackDidStart, disableButtonCallback, savepointButton);
         this._model.addEventListener(eventNames.InputPaused,      syncSavepointStatus,   savepointButton);
         this._model.addEventListener(eventNames.PlaybackStopped,  function() {
             this.toggled = false;
-            this.disabled = !provider.hasSavepoint();
+            this.disabled = !savepointList.length;
         }, savepointButton);
         this._model.addEventListener(eventNames.DebuggerPaused, function() {
             this.toggled = false;
-            this.disabled = !provider.hasSavepoint();
-            
+            this.disabled = !savepointList.length;
             enableButtonCallback.call(this);
         }, savepointButton);
         this._statusBarButtons.push(savepointButton);
 
-        var events = WebInspector.ReplaySavepointProvider.Events;
-        provider.addEventListener(events.SavepointSet,     enableButtonCallback, savepointButton);
-        provider.addEventListener(events.SavepointRemoved, syncSavepointStatus,  savepointButton);
+        var events = WebInspector.SavepointListProvider.Events;
+        savepointList.addEventListener(events.SavepointAdded, enableButtonCallback, savepointButton);
+        savepointList.addEventListener(events.SavepointRemoved, syncSavepointStatus,  savepointButton);
         var willRemoveCallback = function() {
-            provider.removeEventListener(events.SavepointSet,     enableButtonCallback, savepointButton);
-            provider.removeEventListener(events.SavepointRemoved, syncSavepointStatus,  savepointButton);
-            provider.removeEventListener(WebInspector.DataProvider.Events.WillRemove, willRemoveCallback, savepointButton);
+            savepointList.removeEventListener(events.SavepointAdded, enableButtonCallback, savepointButton);
+            savepointList.removeEventListener(events.SavepointRemoved, syncSavepointStatus,  savepointButton);
+            savepointList.removeEventListener(WebInspector.DataProvider.Events.WillRemove, willRemoveCallback, savepointButton);
         };
-        provider.addEventListener(WebInspector.DataProvider.Events.WillRemove, willRemoveCallback, savepointButton);
+        savepointList.addEventListener(WebInspector.DataProvider.Events.WillRemove, willRemoveCallback, savepointButton);
         
         //the scans drop-down menu
         this._scanSelector = new WebInspector.StatusBarComboBox(this._scanSelectorChanged.bind(this));
@@ -599,13 +597,17 @@ WebInspector.TimelapseReplayView.prototype = {
 
     _setSavepointButtonClicked: function()
     {
-        if (this._model.debuggerPaused)
-            this._recording.savepointProvider.setSavepoint();
+        var savepoint = this._model.savepointTracker.createSavepoint();
+        this._mostRecentSavepoint = savepoint;
+        this._recording.savepointList.addSavepoint(savepoint);
     },
 
     _replayToSavepointButtonClicked: function()
     {
-        this._recording.savepointProvider.replayToSavepoint();
+        console.assert(this._mostRecentSavepoint, "Tried to restore to savepoint, but none remembered.");
+    
+        var restoreTask = this._mostRecentSavepoint.createRestoreTask(false);
+        this._model.scheduler.cancelAllTasks().enqueue(restoreTask);
     },
     
     __proto__: WebInspector.View.prototype

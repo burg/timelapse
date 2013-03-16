@@ -119,10 +119,10 @@ WebInspector.TimelapseOverview = function(model, recording)
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
     
-    // add savepoint provider if already created
-    var savepointProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);
-    for (var i = 0; i < savepointProviders.length; i++)
-        this._addProvider(savepointProviders[i]);
+    // add savepoint list if already created
+    var providers = this._recording.providersWithType(WebInspector.DataProvider.Types.SavepointList);
+    for (var i = 0; i < providers.length; i++)
+        this._addProvider(providers[i]);
 };
 
 WebInspector.TimelapseOverview.ResizerOffset = 3.5;
@@ -331,25 +331,25 @@ WebInspector.TimelapseOverview.prototype = {
 
     refresh: function()
     {
-	console.assert(this.isShowing(), "refreshing overview which is not visible.");
+        console.assert(this.isShowing(), "refreshing overview which is not visible.");
 
-	/* timer management */
-	this._needsRefresh = false;
-	if (this._refreshTimeout) {
-	    clearTimeout(this._refreshTimeout);
-	    delete this._refreshTimeout;
-	}
+        /* timer management */
+        this._needsRefresh = false;
+        if (this._refreshTimeout) {
+            clearTimeout(this._refreshTimeout);
+            delete this._refreshTimeout;
+        }
 
-    	/* fix the cursor */
-	if (!this._lastPanPosition) {
-	    if (this.calculator.zoomInterval == 1.0)
-		this._timelineContainer.style.cursor = "default";
-	    else
-		this._timelineContainer.style.cursor = "-webkit-grab";
-	}
+        /* fix the cursor */
+        if (!this._lastPanPosition) {
+            if (this.calculator.zoomInterval == 1.0)
+            this._timelineContainer.style.cursor = "default";
+            else
+            this._timelineContainer.style.cursor = "-webkit-grab";
+        }
 
-	this._updateSliderPositions();
-	this.updateDividers(false);
+        this._updateSliderPositions();
+        this.updateDividers(false);
     },
 
     _updateSliderPositions: function()
@@ -360,26 +360,25 @@ WebInspector.TimelapseOverview.prototype = {
 	/* playback cursor */
 	var markIdx = this._model.currentMarkIndex;
 	var recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
-	var percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
+	var percent = 0.0;
+    if (recordIdx != -1)
+        percent = this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp);
 
 	this.sliders.playback.setPosition(percent, true);
 
-	/* savepoint slider */
-	if (this._recording.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint).length > 0) {
-	    var provider = this._recording.savepointProvider;
-	    var savepoints = provider.savepoints;
-
-	    for (var i = 0; i < savepoints.length; i++) {
-		var savepoint = provider.savepoints[i];
-		markIdx = savepoint.markIndex;
+	/* savepoint sliders */
+    var sliders = this.sliders.savepoint;
+    for (var i = 0; i < sliders.length; ++i) {
+        var slider = sliders[i];
+        var savepoint = slider._savepoint;
+        markIdx = savepoint.markIndex;
 		recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
-		percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
-		this.sliders.savepoint[i].setPosition(percent, true);
-		this.sliders.savepoint[i].show();
-	    }
+		percent = 0.0;
+        if (recordIdx != -1)
+            percent = this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp);
+		slider.setPosition(percent, true);
+		slider.show();
 	}
-
-	/* always update the position, but don't necessarily make them visible. */
 
 	/* previous/replay start slider */
 	markIdx = this._model.replayStartMarkIndex;
@@ -399,7 +398,7 @@ WebInspector.TimelapseOverview.prototype = {
         var types = WebInspector.DataProvider.Types;
         return provider.type == types.TimelapseInput ||
                provider.type == types.BreakpointHits ||
-               provider.type == types.ReplaySavepoint;
+               provider.type == types.SavepointList;
     },
 
     _modifySavepointListeners: function(provider, op)
@@ -407,8 +406,8 @@ WebInspector.TimelapseOverview.prototype = {
         console.assert(op === "addEventListener" || op === "removeEventListener",
                        "Tried to do something unsupported to listeners: " + op);
 
-        var events = WebInspector.ReplaySavepointProvider.Events;
-        provider[op](events.SavepointSet,     this._onSavepointSet, this);
+        var events = WebInspector.SavepointListProvider.Events;
+        provider[op](events.SavepointAdded,   this._onSavepointAdded, this);
         provider[op](events.SavepointRemoved, this._onSavepointRemoved, this);
     },
 
@@ -426,7 +425,7 @@ WebInspector.TimelapseOverview.prototype = {
     {
 	provider.addEventListener(WebInspector.DataProvider.Events.WillRemove, this._removeProvider, this);
 
-	if (provider.type === WebInspector.DataProvider.Types.ReplaySavepoint) {
+	if (provider.type === WebInspector.DataProvider.Types.SavepointList) {
 	    this._modifySavepointListeners(provider, "addEventListener");
 	    return;
 	}
@@ -464,7 +463,7 @@ WebInspector.TimelapseOverview.prototype = {
 	var provider = event.data;
 	provider.removeEventListener(WebInspector.DataProvider.Events.WillRemove, this._removeProvider, this);
 
-	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint) {
+	if (provider.type == WebInspector.DataProvider.Types.SavepointList) {
 	    this._modifySavepointListeners(provider, "removeEventListener");
 	    return;
 	}
@@ -1019,31 +1018,40 @@ WebInspector.TimelapseOverview.prototype = {
 	this._scheduleRefresh();
     },
 
-    _onSavepointSet: function(event)
+    _onSavepointAdded: function(event)
     {
-	var savepointSlider = new WebInspector.TimelapseOverviewSlider(this, "savepoint", false);
-	this._timelineContainer.appendChild(savepointSlider.element);
-	this.sliders.savepoint.push(savepointSlider);
-	this._updateSliderPositions();
+        var savepoint = event.data;
+        var slider = new WebInspector.TimelapseOverviewSlider(this, "savepoint", false);
+        slider._savepoint = savepoint;
+        this._timelineContainer.appendChild(slider.element);
+        this.sliders.savepoint.push(slider);
 
-	// TODO: previews may need to be refreshed when savepoints modified.
+        this._updateSliderPositions();
+        // TODO: previews may need to be refreshed when savepoints modified.
     },
 
-    _onSavepointRemoved: function()
+    _onSavepointRemoved: function(event)
     {
-	var savepointSlider = this.sliders.savepoint.pop();
-	savepointSlider.dispose();
-	this._updateSliderPositions();
+        var savepoint = event.data;
+        for (var i = 0; i < this.sliders.savepoint.length; ++i) {
+            if (this.sliders.savepoint[i]._savepoint !== savepoint)
+                continue;
+            
+            var slider = this.sliders.savepoint.splice(i, 1)[0];
+            slider.dispose();
+            return;
+        }
 
-	// TODO: previews may need to be refreshed when savepoints modified.
+        this._updateSliderPositions();
+        // TODO: previews may need to be refreshed when savepoints modified.
     },
 
     _makePreviewForProvider: function(provider)
     {
-	if (provider.type === WebInspector.DataProvider.Types.BreakpointHits)
-	    return new WebInspector.OverviewPreviewViews.BreakpointHitView(this._recording, provider);
-	else
-	    return new WebInspector.OverviewPreviewViews.InputView(provider);
+        if (provider.type === WebInspector.DataProvider.Types.BreakpointHits)
+            return new WebInspector.OverviewPreviewViews.BreakpointHitView(this._recording, provider);
+        else
+            return new WebInspector.OverviewPreviewViews.InputView(provider);
     },
     
     __proto__: WebInspector.View.prototype

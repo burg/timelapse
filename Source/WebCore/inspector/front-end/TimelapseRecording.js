@@ -138,9 +138,9 @@ WebInspector.TimelapseRecording.prototype = {
     },
     
     // Public API
-    get savepointProvider() {
-	var providers = this.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);
-	console.assert(providers.length == 1, "Expected one savepoint provider, but found "+providers.length);
+    get savepointList() {
+	var providers = this.providersWithType(WebInspector.DataProvider.Types.SavepointList);
+	console.assert(providers.length == 1, "Expected one savepoint list provider, but found "+providers.length);
 	return (providers.length) ? providers.pop() : false;
     },
     
@@ -198,9 +198,9 @@ WebInspector.TimelapseRecording.prototype = {
 	}
     },
 
-    _initializeSavepoints: function()
+    _initializeSavepointList: function()
     {
-	this.addProvider(new WebInspector.ReplaySavepointProvider(this));
+        this.addProvider(new WebInspector.SavepointListProvider(this));
     },
     
     _initializeInputs: function()
@@ -322,7 +322,7 @@ WebInspector.TimelapseSerializedRecording = function(model)
     WebInspector.TimelapseRecording.call(this, model);
     
     this._initializeInputs();
-    this._initializeSavepoints();
+    this._initializeSavepointList();
 }
 
 WebInspector.TimelapseSerializedRecording.prototype = {
@@ -362,7 +362,7 @@ WebInspector.TimelapseLiveRecording.prototype = {
     _captureDidStop: function()
     {
         this._isCapturing = false;
-        this._initializeSavepoints();
+        this._initializeSavepointList();
 
         this.calculator.setZoomInterval(0.0, 1.0);
     },

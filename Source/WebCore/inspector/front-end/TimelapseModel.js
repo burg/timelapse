@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2011-2013, Brian Burg.
+ *  Copyright (C) 2011-2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,6 +48,7 @@ WebInspector.TimelapseModel = function()
     this._inputLocked = false;
 
     this._breakpointTracker = new WebInspector.TimelapseBreakpointTracker(this);
+    this._savepointTracker = new WebInspector.ReplaySavepointTracker(this);
     this._scanners["breakpoint"] = new WebInspector.TimelapseBreakpointScanner(this);
     this._scanners["timeline"] = new WebInspector.TimelineScanner(this);
     this._scanners["profile-cpu"] = new WebInspector.ProfilesScanner(this);
@@ -544,6 +545,11 @@ WebInspector.TimelapseModel.prototype = {
     get breakpointTracker()
     {
         return this._breakpointTracker;
+    },
+    
+    get savepointTracker()
+    {
+        return this._savepointTracker;
     },
     
     get scanners()

@@ -115,7 +115,7 @@ WebInspector.DataProvider.prototype = {
 WebInspector.DataProvider.Types = {
     TimelapseInput: "TimelapseInput",
     BreakpointHits: "BreakpointHits",
-    ReplaySavepoint: "ReplaySavepoint",
+    SavepointList: "SavepointList",
     OverviewPreview: "OverviewPreview",
     ProfileHeatmap: "ProfileHeatmap",
 };

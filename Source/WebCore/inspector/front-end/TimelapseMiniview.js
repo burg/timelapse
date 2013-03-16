@@ -116,10 +116,10 @@ WebInspector.TimelapseMiniview = function(model, recording)
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
     
-    // add savepoint provider if already created
-    var savepointProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplaySavepoint);
-    for (var i = 0; i < savepointProviders.length; i++)
-        this._addProvider(savepointProviders[i]);
+    // add savepoint list if already created
+    var providers = this._recording.providersWithType(WebInspector.DataProvider.Types.SavepointList);
+    for (var i = 0; i < providers.length; i++)
+        this._addProvider(providers[i]);
     
     // initialize slider position
     this.sliders.playback.enable();
@@ -206,8 +206,8 @@ WebInspector.TimelapseMiniview.prototype = {
     {
 	var types = WebInspector.DataProvider.Types;
 	return provider.type == types.TimelapseInput ||
-               provider.type == types.BreakpointHits ||
-               provider.type == types.ReplaySavepoint;
+           provider.type == types.BreakpointHits ||
+           provider.type == types.SavepointList;
     },
 
     _providersWithType: function(ty)
@@ -234,9 +234,9 @@ WebInspector.TimelapseMiniview.prototype = {
 
 	provider[op](events.WillRemove, this._onProviderWillRemove, this);
 
-	if (provider.type == types.ReplaySavepoint) {
-	    var savepointEvents = WebInspector.ReplaySavepointProvider.Events;
-	    provider[op](savepointEvents.SavepointSet, this._onSavepointSet, this);
+	if (provider.type == types.SavepointList) {
+	    var savepointEvents = WebInspector.SavepointListProvider.Events;
+	    provider[op](savepointEvents.SavepointAdded, this._onSavepointAdded, this);
 	    provider[op](savepointEvents.SavepointRemoved, this._onSavepointRemoved, this);
 	} else {
 	    provider[op](events.AddedInput, this._onAddedInput, this);
@@ -508,7 +508,7 @@ WebInspector.TimelapseMiniview.prototype = {
     {
 	this._modifyListenersForProvider(provider, "addEventListener");
 
-	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint)
+	if (provider.type == WebInspector.DataProvider.Types.SavepointList)
 	    return;
 
 	// add provider to internal list
@@ -533,7 +533,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	var provider = event.data;
 	this._modifyListenersForProvider(provider, "removeEventListener");
 
-	if (provider.type == WebInspector.DataProvider.Types.ReplaySavepoint)
+	if (provider.type == WebInspector.DataProvider.Types.SavepointList)
 	    return;
 
 	var i = this._providers.indexOf(provider);
@@ -670,36 +670,46 @@ WebInspector.TimelapseMiniview.prototype = {
         this._scheduleRefresh();
     },
 
+    // TODO: why do all sliders need to be repositioned?
     _updateSavepointSliders: function()
     {
-        var provider = this._recording.savepointProvider;
-        var savepoints = provider.savepoints;
-        for (var i = 0; i < savepoints.length; i++) {
-            var savepoint = savepoints[i];
+        var sliders = this.sliders.savepoint;
+        for (var i = 0; i < sliders.length; i++) {
+            var slider = sliders[i];
+            var savepoint = slider._savepoint;
             var markIndex = savepoint.markIndex;
             var timestamp = this._recording.timestampFromMarkIndex(markIndex);
             var percent = 0.0;
             if (markIndex > 0)
-            percent = this.calculator.computeMiniviewPercentage(timestamp);
+                percent = this.calculator.computeMiniviewPercentage(timestamp);
 
-            this.sliders.savepoint[i].setPosition(percent, true);
+            slider.setPosition(percent, true);
         }
     },
 
-    _onSavepointSet: function(event)
+    _onSavepointAdded: function(event)
     {
-        var savepointSlider = new WebInspector.TimelapseMiniviewSlider(this, "savepoint", false);
-        this.element.appendChild(savepointSlider.element);
-        this.sliders.savepoint.push(savepointSlider);
+        var savepoint = event.data;
+        var slider = new WebInspector.TimelapseMiniviewSlider(this, "savepoint", false);
+        slider._savepoint = savepoint;
+        this.element.appendChild(slider.element);
+        this.sliders.savepoint.push(slider);
 
         this._updateSavepointSliders();
     },
 
-    _onSavepointRemoved: function()
+    _onSavepointRemoved: function(event)
     {
-        var savepointSlider = this.sliders.savepoint.pop();
-        savepointSlider.dispose();
-
+        var savepoint = event.data;
+        for (var i = 0; i < this.sliders.savepoint.length; ++i) {
+            if (this.sliders.savepoint[i]._savepoint !== savepoint)
+                continue;
+            
+            var slider = this.sliders.savepoint.splice(i, 1)[0];
+            slider.dispose();
+            return;
+        }
+    
         this._updateSavepointSliders();
     },
 
