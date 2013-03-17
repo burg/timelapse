@@ -1108,20 +1108,13 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     console.assert(op === "addEventListener" || op === "removeEventListener",
                    "Tried to do something unsupported to listeners: " + op);
 
-    if (!this._boundListeners) {
-        this._boundListeners = {
-            "click": this._onTimelineClicked.bind(this),  
-            "mousemove": this._onTimelineMousemove.bind(this),
-            "mouseout": this._onTimelineMouseout.bind(this),
-            "dblclick": this._onTimelineDoubleClicked.bind(this),
-        };
-    }
-
 	// add all DOM event listeners bound to `this`, with capturing enabled.
-	for (var key in this._boundListeners)
-	    this.element[op](key, this._boundListeners[key], false);
+    this.element[op]("click",     this.getBoundListener(this._onTimelineClicked), false);
+    this.element[op]("mousemove", this.getBoundListener(this._onTimelineMousemove), false);
+    this.element[op]("mouseout",  this.getBoundListener(this._onTimelineMouseout), false);
+    this.element[op]("dblclick",  this.getBoundListener(this._onTimelineDoubleClicked), false);
     },
-
+    
     get data()
     {
 	return this._data;

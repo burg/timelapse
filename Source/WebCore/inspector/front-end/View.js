@@ -39,6 +39,7 @@ WebInspector.View = function()
     this._hideOnDetach = false;
     this._cssFiles = [];
     this._notificationDepth = 0;
+    this._boundListeners = {};
 }
 
 WebInspector.View._cssFileToVisibleViewCount = {};
@@ -66,6 +67,17 @@ WebInspector.View.prototype = {
     _inNotification: function()
     {
         return !!this._notificationDepth || (this._parentView && this._parentView._inNotification());
+    },
+
+    getBoundListener: function(fn)
+    {
+        console.assert(fn && typeof fn === "function",
+                       "Passed non-function argument to View.getBoundListener(): "+fn);
+    
+        if (!this._boundListeners[fn])
+            this._boundListeners[fn] = fn.bind(this);
+        
+        return this._boundListeners[fn];
     },
 
     _parentIsShowing: function()
