@@ -44,7 +44,24 @@ WebInspector.TimelapseControllerView = function(model)
 
     this._createSharedStatusBarButtons();
     this.currentView = new WebInspector.TimelapseDefaultView(model);
-    this._modifyListeners("addEventListener");
+
+    var replayEvents = WebInspector.TimelapseModel.Events;
+    this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseControllerView listeners");
+    this._callbacks.register(this._model, replayEvents.Enabled,  this._timelapseEnabled);
+    this._callbacks.register(this._model, replayEvents.Disabled, this._timelapseDisabled);
+    this._callbacks.register(this._model, replayEvents.RecordingCreated,  this._recordingCreated);
+    this._callbacks.register(this._model, replayEvents.RecordingLoaded,   this._recordingLoaded);
+    this._callbacks.register(this._model, replayEvents.RecordingUnloaded, this._recordingUnloaded);
+
+    this._callbacks.register(this.element,      "focus", this.getBoundListener(this.focus));
+    this._callbacks.register(this.element,       "blur", this.getBoundListener(this.blur));
+    this._callbacks.register(this.recordButton, "click", this.getBoundListener(this._recordButtonClicked));
+
+    this._callbacks.register(this._model, replayEvents.CaptureWillStart, this._disableRecordButton);
+    this._callbacks.register(this._model, replayEvents.CaptureDidStart,  this._captureDidStart);
+    this._callbacks.register(this._model, replayEvents.CaptureWillStop,  this._disableRecordButton);
+    this._callbacks.register(this._model, replayEvents.CaptureDidStop,   this._captureDidStop);
+    this._callbacks.install();
 
     // Tell backend to enable itself.
     this._model.enable();
@@ -61,7 +78,7 @@ WebInspector.TimelapseControllerView.prototype = {
 
     willDispose: function()
     {
-        this._modifyListeners("removeEventListener");
+        this._callbacks.uninstall(true);
     },
 
     get currentView()
@@ -101,28 +118,6 @@ WebInspector.TimelapseControllerView.prototype = {
     blur: function()
     {
         this.element.style.opacity = 0.7;
-    },
-
-    _modifyListeners: function(op) {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
-
-        var replayEvents = WebInspector.TimelapseModel.Events;
-        this._model[op](replayEvents.Enabled,  this._timelapseEnabled, this);
-        this._model[op](replayEvents.Disabled, this._timelapseDisabled, this);
-        this._model[op](replayEvents.RecordingCreated,  this._recordingCreated, this);
-        this._model[op](replayEvents.RecordingLoaded,   this._recordingLoaded, this);
-        this._model[op](replayEvents.RecordingUnloaded, this._recordingUnloaded, this);
-
-        this.element[op]("focus", this.getBoundListener(this.focus), true);
-        this.element[op]("blur",  this.getBoundListener(this.blur), true);
-        
-        this.recordButton[op]("click", this.getBoundListener(this._recordButtonClicked), false);
-
-        this._model[op](replayEvents.CaptureWillStart, this._disableRecordButton, this);
-        this._model[op](replayEvents.CaptureDidStart,  this._captureDidStart, this);
-        this._model[op](replayEvents.CaptureWillStop,  this._disableRecordButton, this);
-        this._model[op](replayEvents.CaptureDidStop,   this._captureDidStop, this);
     },
 
     _createSharedStatusBarButtons: function()
@@ -221,25 +216,19 @@ WebInspector.TimelapseDefaultView = function(model)
     this._messagePanel.className = "timelapse-capture-message";
     this._messagePanel.textContent = "Nothing loaded. Click to start recording.";
 
-    this._modifyListeners("addEventListener");
+    var replayEvents = WebInspector.TimelapseModel.Events;
+    this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseDefaultView listeners");
+    this._callbacks.register(this._messagePanel, "click", this.getBoundListener(this._messagePanelClicked));
+    this._callbacks.register(this._model, replayEvents.CaptureWillStart, this._captureWillStart);
+    this._callbacks.install();
     
     this.element.appendChild(this._messagePanel);
 };
 
 WebInspector.TimelapseDefaultView.prototype = {
-    _modifyListeners: function(op) {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
-        
-        this._messagePanel[op]("click", this.getBoundListener(this._messagePanelClicked), false);
-
-        var replayEvents = WebInspector.TimelapseModel.Events;
-        this._model[op](replayEvents.CaptureWillStart, this._captureWillStart, this);
-    },
-    
     willDispose: function()
     {
-        this._modifyListeners("removeEventListener");
+        this._callbacks.uninstall(true);
     },
 
     get statusBarItems()
@@ -280,29 +269,23 @@ WebInspector.TimelapseCaptureView = function(model, recording)
     this._messagePanel.textContent = "Reloading page...";
     this.element.appendChild(this._messagePanel);
 
-    this._modifyListeners("addEventListener");
+    var replayEvents = WebInspector.TimelapseModel.Events;
+    this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseCaptureView listeners");
+    this._callbacks.register(this._messagePanel, "click", this.getBoundListener(this._messagePanelClicked));
+    this._callbacks.register(this._model, replayEvents.CaptureWillStop, this._captureWillStop);
+    this._callbacks.register(this._model, replayEvents.CaptureDidStop,  this._captureDidStop);
+    this._callbacks.register(WebInspector.resourceTreeModel, 
+                             WebInspector.ResourceTreeModel.EventTypes.MainFrameNavigated, this._onMainFrameNavigated);
+    this._callbacks.install();
 
     this._scrollview = new WebInspector.TimelapseScrollview(model, recording);
     this._scrollview.show(this.element);
 };
 
 WebInspector.TimelapseCaptureView.prototype = {
-    _modifyListeners: function(op) {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
-        
-        this._messagePanel[op]("click", this.getBoundListener(this._messagePanelClicked), false);
-
-        var replayEvents = WebInspector.TimelapseModel.Events;
-        this._model[op](replayEvents.CaptureWillStop, this._captureWillStop, this);
-        this._model[op](replayEvents.CaptureDidStop,  this._captureDidStop, this);
-        
-         WebInspector.resourceTreeModel[op](WebInspector.ResourceTreeModel.EventTypes.MainFrameNavigated, this._onMainFrameNavigated, this);
-    },
-
     willDispose: function()
     {
-        this._modifyListeners("removeEventListener");
+        this._callbacks.uninstall(true);
     },
 
     get statusBarItems()
@@ -353,7 +336,28 @@ WebInspector.TimelapseReplayView = function(model, recording)
     this._recording = recording;
 
     this._createReplayStatusBarButtons();
-    this._modifyListeners("addEventListener");
+
+    var replayEvents = WebInspector.TimelapseModel.Events;
+    this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseReplayView listeners");
+    this._callbacks.register(this.element, "keydown", this.getBoundListener(this._keyDown));
+        
+    this._callbacks.register(this.lockButton, "click", this.getBoundListener(this._lockButtonClicked));
+    this._callbacks.register(this._model, replayEvents.InputLocked,   this._inputLocked);
+    this._callbacks.register(this._model, replayEvents.InputUnlocked, this._inputUnlocked);
+
+    this._callbacks.register(this.playbackButton, "click", this.getBoundListener(this._playbackButtonClicked));
+    this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this._showPauseGlyph);
+    this._callbacks.register(this._model, replayEvents.InputPaused,      this._showPlaybackGlyph);
+    this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._showPlaybackGlyph);
+    this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this._showPlaybackGlyph);
+
+    this._callbacks.register(this.setSavepointButton, "click", this.getBoundListener(this._setSavepointButtonClicked));
+    this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this._disableSavepoints);
+    this._callbacks.register(this._model, replayEvents.InputPaused,      this._enableSavepoints);
+    this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._enableSavepoints);
+    this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this._enableSavepoints);
+    this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._enableSavepoints);
+    this._callbacks.install();
 
     this._splitView = new WebInspector.SplitView(true,
                         "timelapseControllerSplitView", 200);
@@ -372,35 +376,9 @@ WebInspector.TimelapseReplayView = function(model, recording)
 };
 
 WebInspector.TimelapseReplayView.prototype = {
-    _modifyListeners: function(op) {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
-
-        var replayEvents = WebInspector.TimelapseModel.Events;
-
-        this.element[op]("keydown", this.getBoundListener(this._keyDown), false);
-        
-        this.lockButton[op]("click", this.getBoundListener(this._lockButtonClicked), false);
-        this._model[op](replayEvents.InputLocked,   this._inputLocked, this);
-        this._model[op](replayEvents.InputUnlocked, this._inputUnlocked, this);
-
-        this.playbackButton[op]("click", this.getBoundListener(this._playbackButtonClicked), false);
-        this._model[op](replayEvents.PlaybackDidStart, this._showPauseGlyph, this);
-        this._model[op](replayEvents.InputPaused,      this._showPlaybackGlyph, this);
-        this._model[op](replayEvents.DebuggerPaused,   this._showPlaybackGlyph, this);
-        this._model[op](replayEvents.PlaybackStopped,  this._showPlaybackGlyph, this);
-
-        this.setSavepointButton[op]("click", this.getBoundListener(this._setSavepointButtonClicked), false);
-        this._model[op](replayEvents.PlaybackDidStart, this._disableSavepoints, this);
-        this._model[op](replayEvents.InputPaused,      this._enableSavepoints, this);
-        this._model[op](replayEvents.DebuggerPaused,   this._enableSavepoints, this);
-        this._model[op](replayEvents.PlaybackStopped,  this._enableSavepoints, this);
-        this._model[op](replayEvents.DebuggerPaused,   this._enableSavepoints, this);
-    },
-    
     willDispose: function()
     {
-        this._modifyListeners("removeEventListener");
+        this._callbacks.uninstall(true);
     },
 
     get statusBarItems()

@@ -47,6 +47,7 @@ WebInspector.TimelapseScrollview = function(model, recording)
     this.element.appendChild(this._canvas);
 
     this._providers = [];
+    this._providerListeners = {};
     this._timelines = {};
     this._timelines.all = { providers: [], maxIndex: -1, data: [] };
   	this._captureStartTime = Date.now();
@@ -54,13 +55,17 @@ WebInspector.TimelapseScrollview = function(model, recording)
     this._autosizeCanvas();
     this._clearGraph();
     
-    this._modifyListeners("addEventListener");
+    this._callbacks = new WebInspector.EventListenerGroup(this, "TimelapseScrollview static callbacks");
+    var recordingEvents = WebInspector.TimelapseRecording.Events;
+    var replayEvents = WebInspector.TimelapseModel.Events;
+    this._callbacks.register(this._recording, recordingEvents.ProviderAdded, this._onProviderAdded);
+    this._callbacks.register(this._model, replayEvents.CaptureDidStart, this._captureDidStart);
+    this._callbacks.install();
     
     // if providers already exist, add them.
     var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
-    
 };
 
 WebInspector.TimelapseScrollview.MaxRecordLifetime = 10.0; /* seconds */
@@ -83,10 +88,11 @@ WebInspector.TimelapseScrollview.prototype = {
     willDispose: function()
     {
         for (var i = 0; i < this._providers.length; i++) {
-            this._modifyListenersForProvider(this._providers[i], "removeEventListener");
+	    var callbacks = this._providerListeners[this._providers[i].name];
+	    callbacks.uninstall(true);
         }
         
-        this._modifyListeners("removeEventListener");
+	this._callbacks.uninstall(true);
     },
     
     onResize: function()
@@ -143,25 +149,6 @@ WebInspector.TimelapseScrollview.prototype = {
             return;
 
         this._addProvider(provider);
-    },
-
-    _modifyListeners: function(op) {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
-
-        var recordingEventNames = WebInspector.TimelapseRecording.Events;
-        var modelEventNames = WebInspector.TimelapseModel.Events;
-        this._recording[op](recordingEventNames.ProviderAdded, this._onProviderAdded, this);
-        this._model[op](modelEventNames.CaptureDidStart, this._captureDidStart, this);
-    },
-
-    _modifyListenersForProvider: function(provider, op)
-    {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
-        
-        var events = WebInspector.DataProvider.Events;
-        provider[op](events.WillRemove, this._onProviderWillRemove, this);
     },
 
     _graphBorderWidth: 1,
@@ -404,7 +391,11 @@ WebInspector.TimelapseScrollview.prototype = {
 		       "Specific provider already added to scrollview provider list.");
 
 	this._providers.push(provider);
-	this._modifyListenersForProvider(provider, "addEventListener");
+
+	var callbacks = new WebInspector.EventListenerGroup(this, "Provider listeners");
+        this._providerListeners[provider.name] = callbacks;
+        callbacks.register(provider, WebInspector.DataProvider.Events.WillRemove, this._onProviderWillRemove);
+	callbacks.install();
 
 	// add timeline for this named provider, if it doesn't exist.
 	if (!this._timelines.hasOwnProperty(provider.name))
@@ -425,7 +416,9 @@ WebInspector.TimelapseScrollview.prototype = {
 	console.assert(i != -1, "Can't remove provider not in scrollview list.");
 
 	var removedProvider = this._providers.splice(i, 1)[0];
-	this._modifyListenersForProvider(provider, "removeEventListener");
+        var callbacks = this._providerListeners[removedProvider.name];
+        delete this._providerListeners[removedProvider.name];
+        callbacks.uninstall(true);
 
 	// splice out the provider from related timeline, and remove
 	// the timeline entirely if no more providers are attached to it.

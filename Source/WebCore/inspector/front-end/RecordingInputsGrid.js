@@ -101,12 +101,31 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
     this._addSlider(new WebInspector.RecordingInputsGridSlider(this, "tentative", false));
 
     this._providers = {};
+    this._providerListeners = {};
     this._refreshDelay = WebInspector.RecordingInputsGrid.DefaultRefreshDelay;
     this._maxMarkIndex = 0;
     this._recordGridNodes = {};
     
-    this._modifyListeners("addEventListener");
+    this._callbacks = new WebInspector.EventListenerGroup(this, "TimelapseInputGrid static callbacks");
     
+    var replayEvents = WebInspector.TimelapseModel.Events;
+    this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this._onPlaybackDidStart);
+    this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this._onPlaybackStopped);
+    this._callbacks.register(this._model, replayEvents.InputPaused,      this._onInputPaused);
+    this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._onDebuggerPaused);
+
+    var recordingEvents = WebInspector.TimelapseRecording.Events;
+    this._callbacks.register(this._recording, recordingEvents.ProviderAdded,  this._onProviderAdded);
+    this._callbacks.register(this._recording, recordingEvents.PreviewStarted, this._onPreviewStarted);
+    this._callbacks.register(this._recording, recordingEvents.PreviewStopped, this._onPreviewStopped);
+    this._callbacks.register(this._recording, recordingEvents.PreviewChanged, this._onPreviewChanged);
+    this._callbacks.register(this._recording, recordingEvents.CircleSelected, this._onCircleSelected);
+
+    this._callbacks.register(this._recording.calculator,
+                             WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged);
+    
+    this._callbacks.install();
+
     // add input providers that have already been created
     var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
     for (var i = 0; i < inputProviders.length; i++)
@@ -117,7 +136,7 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
     for (var i = 0; i < providers.length; i++)
         this._addProvider(providers[i]);
     
-	// create new rows for all records, update table.
+    // create new rows for all records, update table.
     var newNode;
     var allRecords = this._recording.allRecords;
 	for (var i = 0; i < allRecords.length; i++) {
@@ -143,27 +162,6 @@ WebInspector.RecordingInputsGrid.DefaultRefreshDelay = 150;
 
 WebInspector.RecordingInputsGrid.prototype = {
 
-    _modifyListeners: function(op)
-    {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
-    
-        var modelEventNames = WebInspector.TimelapseModel.Events;
-        this._model[op](modelEventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
-        this._model[op](modelEventNames.PlaybackStopped,  this._onPlaybackStopped, this);
-        this._model[op](modelEventNames.InputPaused,      this._onInputPaused, this);
-        this._model[op](modelEventNames.DebuggerPaused,   this._onDebuggerPaused, this);
-
-        var recordingEventNames = WebInspector.TimelapseRecording.Events;
-        this._recording[op](recordingEventNames.ProviderAdded,  this._onProviderAdded, this);
-        this._recording[op](recordingEventNames.PreviewStarted, this._onPreviewStarted, this);
-        this._recording[op](recordingEventNames.PreviewStopped, this._onPreviewStopped, this);
-        this._recording[op](recordingEventNames.PreviewChanged, this._onPreviewChanged, this);
-        this._recording[op](recordingEventNames.CircleSelected, this._onCircleSelected, this);
-
-        this._recording.calculator[op](WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
-    },
-
     // Public API
     get sliders()
     {
@@ -182,7 +180,7 @@ WebInspector.RecordingInputsGrid.prototype = {
 
     willDispose: function()
     {
-        this._modifyListeners("removeEventListener");
+        this._callbacks.uninstall(true);
     },
 
     wasShown: function()
@@ -276,67 +274,64 @@ WebInspector.RecordingInputsGrid.prototype = {
     // Private API (helpers)
     _canUseProvider: function(provider)
     {
-	var types = WebInspector.DataProvider.Types;
-	return provider.type == types.TimelapseInput ||
-           provider.type == types.SavepointList;
+        var types = WebInspector.DataProvider.Types;
+        return provider.type == types.TimelapseInput ||
+               provider.type == types.SavepointList;
     },
 
     _onProviderAdded: function(event)
     {
-	var provider = event.data;
-    
-    this._addProvider(provider);
+        var provider = event.data;
+        this._addProvider(provider);
     },
     
     _addProvider: function(provider)
     {
+        if (!this._canUseProvider(provider))
+            return;
 
-	if (!this._canUseProvider(provider))
-	    return;
+        console.assert(!this._providers.hasOwnProperty(provider.name),
+                       "Provider already added to timeline grid.");
 
-	console.assert(!this._providers.hasOwnProperty(provider.name),
-		       "Provider already added to timeline grid.");
+        this._providers[provider.name] = provider;
+        var callbacks = new WebInspector.EventListenerGroup(this, "Provider listeners");
+        this._providerListeners[provider.name] = callbacks;
 
-	this._providers[provider.name] = provider;
-	this._modifyListenersForProvider(provider, "addEventListener");
-
-	// set up provider's record filter if it's active.
-	if (provider.isEnabled())
-	    this.element.classList.add("filter-" + provider.name);
-    },
-
-    _onProviderWillRemove: function(event)
-    {
-	var provider = event.data;
-	if (!this._canUseProvider(provider))
-	    return;
-
-	console.assert(this._providers.hasOwnProperty(provider.name),
-		       "Can't remove provider not in timeline grid.");
-
-	delete this._providers[provider.name];
-	this._modifyListenersForProvider(provider, "removeEventListener");
-    },
-
-    _modifyListenersForProvider: function(provider, op)
-    {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
-    
         var events = WebInspector.DataProvider.Events;
         var types = WebInspector.DataProvider.Types;
-        provider[op](events.WillRemove, this._onProviderWillRemove, this);
+        callbacks.register(provider, events.WillRemove, this._onProviderWillRemove);
 
         if (provider.type == types.TimelapseInput) {
-            provider[op](events.Enabled,  this._onProviderEnabled, this);
-            provider[op](events.Disabled, this._onProviderDisabled, this);
+            callbacks.register(provider, events.Enabled,  this._onProviderEnabled);
+            callbacks.register(provider, events.Disabled, this._onProviderDisabled);
         }
 
         if (provider.type == types.SavepointList) {
             var savepointEvents = WebInspector.SavepointListProvider.Events;
-            provider[op](savepointEvents.SavepointAdded,   this._savepointsChanged, this);
-            provider[op](savepointEvents.SavepointRemoved, this._savepointsChanged, this);
+            callbacks.register(provider, savepointEvents.SavepointAdded,   this._savepointsChanged);
+            callbacks.register(provider, savepointEvents.SavepointRemoved, this._savepointsChanged);
         }
+
+        callbacks.install();
+
+        // set up provider's record filter if it's active.
+        if (provider.isEnabled())
+            this.element.classList.add("filter-" + provider.name);
+    },
+
+    _onProviderWillRemove: function(event)
+    {
+        var provider = event.data;
+        if (!this._canUseProvider(provider))
+            return;
+
+        console.assert(this._providers.hasOwnProperty(provider.name),
+                       "Can't remove provider not in timeline grid.");
+
+        delete this._providers[provider.name];
+        var callbacks = this._providerListeners[provider.name];
+        delete this._providerListeners[provider.name];
+        callbacks.uninstall(true);
     },
 
     _onProviderEnabled: function(event)

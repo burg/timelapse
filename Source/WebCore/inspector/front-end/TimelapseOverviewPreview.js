@@ -380,7 +380,17 @@ WebInspector.TimelapseOverviewPreview = function(model, recording)
     this._model = model;
     this._recording = recording;
 
-    this._modifyListeners("addEventListener");
+    this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseOverviewPreview listeners");
+    var recordingEvents = WebInspector.TimelapseRecording.Events;
+    this._callbacks.register(this._recording, recordingEvents.ProviderAdded, this._onProviderAdded);
+
+    // if something changed about state of playback, then refresh (the visible view)
+    var replayEvents = WebInspector.TimelapseModel.Events;
+    this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this.refresh);
+    this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this.refresh);
+    this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this.refresh);
+    this._callbacks.register(this._model, replayEvents.InputPaused,      this.refresh);
+    this._callbacks.install();
 
     // scan for existing useful provider
     var providers = this._recording.providersWithType(WebInspector.DataProvider.Types.OverviewPreview);
@@ -391,26 +401,9 @@ WebInspector.TimelapseOverviewPreview = function(model, recording)
 };
 
 WebInspector.TimelapseOverviewPreview.prototype = {
-
-    _modifyListeners: function(op)
-    {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
-
-        var recordingEvents = WebInspector.TimelapseRecording.Events;
-        this._recording[op](recordingEvents.ProviderAdded, this._onProviderAdded, this);
-
-        // if something changed about state of playback, then refresh (the visible view)
-        var events = WebInspector.TimelapseModel.Events;
-        this._model[op](events.PlaybackDidStart, this.refresh, this);
-        this._model[op](events.PlaybackStopped,  this.refresh, this);
-        this._model[op](events.DebuggerPaused,   this.refresh, this);
-        this._model[op](events.InputPaused,      this.refresh, this);
-    },
-
     willDispose: function()
     {
-        this._modifyListeners("removeEventListener");
+	this._callbacks.uninstall(true);
     },
 
     refresh: function()
@@ -448,8 +441,10 @@ WebInspector.TimelapseOverviewPreview.prototype = {
 	console.assert(!this._provider, "Tried to set more than one overview preview provider.");
 
 	this._provider = provider;
-	this._provider.addEventListener(WebInspector.DataProvider.Events.WillRemove, this._onProviderWillRemove, this);
-	this._provider.addEventListener(WebInspector.DataProvider.Events.DataChanged, this.refresh, this);
+	this._providerCallbacks = new WebInspector.EventListenerGroup(this, "TimelapseOverviewPreview provider listeners");
+	this._providerCallbacks.register(provider, WebInspector.DataProvider.Events.WillRemove,  this._onProviderWillRemove);
+	this._providerCallbacks.register(provider, WebInspector.DataProvider.Events.DataChanged, this.refresh);
+	this._providerCallbacks.install();
 
 	this.refresh();
     },
@@ -460,8 +455,8 @@ WebInspector.TimelapseOverviewPreview.prototype = {
 	console.assert(this._canUseProvider(provider) && this._provider === provider,
 		       "Got WillRemove for unrelated provider!");
 
-	this._provider.removeEventListener(WebInspector.DataProvider.Events.WillRemove, this._onProviderWillRemove, this);
-	this._provider.removeEventListener(WebInspector.DataProvider.Events.DataChanged, this.refresh, this);
+	this._providerCallbacks.uninstall(true);
+	delete this._providerCallbacks;
 	delete this._provider;
     },
     

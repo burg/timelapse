@@ -43,74 +43,69 @@ WebInspector.TimelapseOverview = function(model, recording)
     this._previewProvider = new WebInspector.OverviewPreviewProvider(this._recording);
     this._recording.addProvider(this._previewProvider);
 
-    this._modifyListeners("addEventListener");
+    this.element.className = "timelapse-overview";
+    this.element.tabIndex = 0;
+        
+    this._messagePanel = new WebInspector.TimelapseOverviewMessagePanel(this);
 
-	this.element.className = "timelapse-overview";
-	this.element.tabIndex = 0;
-	
-	this._messagePanel = new WebInspector.TimelapseOverviewMessagePanel(this);
-
-	this._labelContainer = document.createElement("div");
-	this._labelContainer.classList.add("timelapse-timeline-labels");
+    this._labelContainer = document.createElement("div");
+    this._labelContainer.classList.add("timelapse-timeline-labels");
     this._labelContainer.classList.add("timelapse-overview-column-label");
     this._labelContainer.classList.add("timelapse-overview-row-main");
-	this.element.appendChild(this._labelContainer);
+    this.element.appendChild(this._labelContainer);
 
-	this._timelineContainer = document.createElement("div");
-	this._timelineContainer.classList.add("timelapse-overview-timelines");
+    this._timelineContainer = document.createElement("div");
+    this._timelineContainer.classList.add("timelapse-overview-timelines");
     this._timelineContainer.classList.add("timelapse-overview-column-main");
     this._timelineContainer.classList.add("timelapse-overview-row-main");
-	this._timelineContainer.addEventListener("mousedown", this._onOverviewMousedown.bind(this), false);
-	this._timelineContainer.addEventListener("click", this._onOverviewClick.bind(this), false);
-	this._timelineContainer.addEventListener("mousewheel", this._onOverviewMousewheel.bind(this), false);
 
-	var playbackSlider = new WebInspector.TimelapseOverviewSlider(this, "playback", true);
-	playbackSlider.addEventListener(WebInspector.TimelapseOverviewSlider.Events.DragStart,
-					     this._onPlaybackSliderDragStart, this);
-	playbackSlider.addEventListener(WebInspector.TimelapseOverviewSlider.Events.DragEnd,
-					     this._onPlaybackSliderDragEnd, this);
-	playbackSlider.element.addEventListener("contextmenu", this._onPlaybackSliderContextMenu, this);
-	this._timelineContainer.appendChild(playbackSlider.element);
-	var previousSlider = new WebInspector.TimelapseOverviewSlider(this, "previous", false);
-	this._timelineContainer.appendChild(previousSlider.element);
-	var tentativeSlider = new WebInspector.TimelapseOverviewSlider(this, "tentative", false);
-	this._timelineContainer.appendChild(tentativeSlider.element);
+    var playbackSlider = new WebInspector.TimelapseOverviewSlider(this, "playback", true);
+    this._timelineContainer.appendChild(playbackSlider.element);
+    var previousSlider = new WebInspector.TimelapseOverviewSlider(this, "previous", false);
+    this._timelineContainer.appendChild(previousSlider.element);
+    var tentativeSlider = new WebInspector.TimelapseOverviewSlider(this, "tentative", false);
+    this._timelineContainer.appendChild(tentativeSlider.element);
 
-	this.sliders = {
-	    playback: playbackSlider,
-	    previous: previousSlider,
-	    tentative: tentativeSlider,
-	    savepoint: []
-	};
+    this.sliders = {
+        playback: playbackSlider,
+        previous: previousSlider,
+        tentative: tentativeSlider,
+        savepoint: []
+    };
 
-	this._timelines = [];
-	this._labels = [];
-	this._circleContexts = [];
+    this._timelines = [];
+    this._labels = [];
+    this._circleContexts = [];
+    this._providerListeners = {};
 
-	this.element.appendChild(this._timelineContainer);
+    this.element.appendChild(this._timelineContainer);
 
-	this._dividersElement = document.createElement("div");
-	this._dividersElement.className = "resources-dividers";
-	this._timelineContainer.appendChild(this._dividersElement);
+    this._dividersElement = document.createElement("div");
+    this._dividersElement.className = "resources-dividers";
+    this._timelineContainer.appendChild(this._dividersElement);
 
-	this._dividersLabelBarElement = document.createElement("div");
-	this._dividersLabelBarElement.className = "resources-dividers-label-bar";
-	this._timelineContainer.appendChild(this._dividersLabelBarElement);
+    this._dividersLabelBarElement = document.createElement("div");
+    this._dividersLabelBarElement.className = "resources-dividers-label-bar";
+    this._timelineContainer.appendChild(this._dividersLabelBarElement);
 
-	this._refreshDelay = WebInspector.TimelapseOverview.DefaultRefreshDelay;
+    this._refreshDelay = WebInspector.TimelapseOverview.DefaultRefreshDelay;
 
-	/* update dividers */
-	this.updateDividers(true);
+    this._callbacks = new WebInspector.EventListenerGroup(this, "TimelapseOverview static callbacks");
+    this._registerListeners();
+    this._callbacks.install();
 
-	if (this._hoveredCircleIndex)
-	    delete this._hoveredCircleIndex;
-	if (this._selectedCircleIndex)
-	    delete this._selectedCircleIndex;
+    /* update dividers */
+    this.updateDividers(true);
+
+    if (this._hoveredCircleIndex)
+        delete this._hoveredCircleIndex;
+    if (this._selectedCircleIndex)
+        delete this._selectedCircleIndex;
 
     // initialize slider position
     this.sliders.playback.setPosition(1.0, true);
     this.sliders.playback.enable();
-  	this.sliders.playback.show();
+    this.sliders.playback.show();
 
     this._updateSliderPositions();
 
@@ -133,39 +128,45 @@ WebInspector.TimelapseOverview.DefaultRefreshDelay = 30;
 WebInspector.TimelapseOverview.TimelineHeight = 30;
 
 WebInspector.TimelapseOverview.prototype = {
-    _modifyListeners: function(op) {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
+    _registerListeners: function()
+    {
+	var sliderEvents = WebInspector.TimelapseOverviewSlider.Events;
+	this._callbacks.register(this.sliders.playback, sliderEvents.DragStart, this._onPlaybackSliderDragStart);
+	this._callbacks.register(this.sliders.playback, sliderEvents.DragEnd,   this._onPlaybackSliderDragEnd);
+	this._callbacks.register(this.sliders.playback.element, "contextmenu", this.getBoundListener(this._onPlaybackSliderContextMenu));
 
-        var scanner = this._model.scanners.breakpoint;
-        var scannerEvents = WebInspector.TimelapseScanner.Events;
-        scanner[op](scannerEvents.ScanStarted, this._showMessagePanel.bind(this, "Scanning breakpoints..."), this);
-        scanner[op](scannerEvents.ScanStopped, this._hideMessagePanel, this);
+	this._callbacks.register(this._timelineContainer, "mousedown",  this.getBoundListener(this._onOverviewMousedown));
+	this._callbacks.register(this._timelineContainer, "click",      this.getBoundListener(this._onOverviewClick));
+	this._callbacks.register(this._timelineContainer, "mousewheel", this.getBoundListener(this._onOverviewMousewheel));
 
-        var modelEventNames = WebInspector.TimelapseModel.Events;
-        this._model[op](modelEventNames.PlaybackWillStart,  this._showMessagePanel,   this);
-        this._model[op](modelEventNames.PlaybackDidStart,   this._onPlaybackDidStart, this);
-        this._model[op](modelEventNames.PlaybackStopped,    this._onPlaybackStopped,  this);
-        this._model[op](modelEventNames.PlaybackError,      this._onPlaybackError,    this);
-        this._model[op](modelEventNames.InputPaused,        this._onInputPaused,      this);
-        this._model[op](modelEventNames.InputHit,           this._onInputHit,         this);
-        this._model[op](modelEventNames.DebuggerPaused,     this._onDebuggerPaused,   this);
+	var scanner = this._model.scanners.breakpoint;
+	var scannerEvents = WebInspector.TimelapseScanner.Events;
+	this._callbacks.register(scanner, scannerEvents.ScanStarted, this._showMessagePanel.bind(this, "Scanning breakpoints..."));
+	this._callbacks.register(scanner, scannerEvents.ScanStopped, this._hideMessagePanel);
 
-        // TODO: these should instead listen to specific data provider events.
-        var recordingEventNames = WebInspector.TimelapseRecording.Events;
-        this._recording[op](recordingEventNames.ProviderAdded,  this._onProviderAdded,  this);
-        this._recording[op](recordingEventNames.PreviewStarted, this._onPreviewStarted, this);
-        this._recording[op](recordingEventNames.PreviewStopped, this._onPreviewStopped, this);
-        this._recording[op](recordingEventNames.PreviewChanged, this._onPreviewChanged, this);
+	var replayEvents = WebInspector.TimelapseModel.Events;
+	this._callbacks.register(this._model, replayEvents.PlaybackWillStart,  this._showMessagePanel);
+	this._callbacks.register(this._model, replayEvents.PlaybackDidStart,   this._onPlaybackDidStart);
+	this._callbacks.register(this._model, replayEvents.PlaybackStopped,    this._onPlaybackStopped);
+	this._callbacks.register(this._model, replayEvents.PlaybackError,      this._onPlaybackError);
+	this._callbacks.register(this._model, replayEvents.InputPaused,        this._onInputPaused);
+	this._callbacks.register(this._model, replayEvents.InputHit,           this._onInputHit);
+	this._callbacks.register(this._model, replayEvents.DebuggerPaused,     this._onDebuggerPaused);
 
-        this._recording.calculator[op](WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
+	// TODO: these should instead listen to specific data provider events.
+	var recordingEvents = WebInspector.TimelapseRecording.Events;
+	this._callbacks.register(this._recording, recordingEvents.ProviderAdded,  this._onProviderAdded);
+	this._callbacks.register(this._recording, recordingEvents.PreviewStarted, this._onPreviewStarted);
+	this._callbacks.register(this._recording, recordingEvents.PreviewStopped, this._onPreviewStopped);
+	this._callbacks.register(this._recording, recordingEvents.PreviewChanged, this._onPreviewChanged);
 
-        var manager = WebInspector.breakpointManager;
-        var managerEvents = WebInspector.BreakpointManager.Events;
-        manager[op](managerEvents.BreakpointAdded,              this._onBreakpointRecordsChanged, this);
-        manager[op](managerEvents.BreakpointRemoved,            this._onBreakpointRecordsChanged, this);
-        manager[op](managerEvents.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
+	this._callbacks.register(this._recording.calculator, WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged);
 
+	var manager = WebInspector.breakpointManager;
+	var managerEvents = WebInspector.BreakpointManager.Events;
+	this._callbacks.register(manager, managerEvents.BreakpointAdded,              this._onBreakpointRecordsChanged);
+	this._callbacks.register(manager, managerEvents.BreakpointRemoved,            this._onBreakpointRecordsChanged);
+	this._callbacks.register(manager, managerEvents.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged);
     },
 
     _timelineForProvider: function(provider)
@@ -190,7 +191,7 @@ WebInspector.TimelapseOverview.prototype = {
 
     willDispose: function()
     {
-        this._modifyListeners("removeEventListener");
+        this._callbacks.uninstall(true);
     },
 
     /* mostly copied from TimelineGrid.js */
@@ -401,16 +402,6 @@ WebInspector.TimelapseOverview.prototype = {
                provider.type == types.SavepointList;
     },
 
-    _modifySavepointListeners: function(provider, op)
-    {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
-
-        var events = WebInspector.SavepointListProvider.Events;
-        provider[op](events.SavepointAdded,   this._onSavepointAdded, this);
-        provider[op](events.SavepointRemoved, this._onSavepointRemoved, this);
-    },
-
     _onProviderAdded: function(event)
     {
 	var provider = event.data;
@@ -423,10 +414,16 @@ WebInspector.TimelapseOverview.prototype = {
     
     _addProvider: function(provider)
     {
-	provider.addEventListener(WebInspector.DataProvider.Events.WillRemove, this._removeProvider, this);
+        var callbacks = new WebInspector.EventListenerGroup(this, "Provider listeners");
+        this._providerListeners[provider.name] = callbacks;
+
+	callbacks.register(provider, WebInspector.DataProvider.Events.WillRemove, this._removeProvider);
 
 	if (provider.type === WebInspector.DataProvider.Types.SavepointList) {
-	    this._modifySavepointListeners(provider, "addEventListener");
+            var savepointEvents = WebInspector.SavepointListProvider.Events;
+            callbacks.register(provider, savepointEvents.SavepointAdded,   this._onSavepointAdded);
+            callbacks.register(provider, savepointEvents.SavepointRemoved, this._onSavepointRemoved);
+	    callbacks.install();
 	    return;
 	}
 
@@ -446,10 +443,11 @@ WebInspector.TimelapseOverview.prototype = {
 
 	// set up circle event listeners
 	var timelineEvents = WebInspector.TimelapseCircleTimeline.Events;
-	timeline.addEventListener(timelineEvents.CircleMouseOver, this._onCircleMouseOver, this);
-	timeline.addEventListener(timelineEvents.CircleMouseOut, this._onCircleMouseOut, this);
-	timeline.addEventListener(timelineEvents.CircleSelected, this._onCircleSelected, this);
-	timeline.addEventListener(timelineEvents.CircleDeselected, this._onCircleDeselected, this);
+	callbacks.register(timeline, timelineEvents.CircleMouseOver,  this._onCircleMouseOver);
+	callbacks.register(timeline, timelineEvents.CircleMouseOut,   this._onCircleMouseOut);
+	callbacks.register(timeline, timelineEvents.CircleSelected,   this._onCircleSelected);
+	callbacks.register(timeline, timelineEvents.CircleDeselected, this._onCircleDeselected);
+	callbacks.install();
 
 	this._timelines.push(timeline);
 
@@ -461,12 +459,13 @@ WebInspector.TimelapseOverview.prototype = {
     _removeProvider: function(event)
     {
 	var provider = event.data;
-	provider.removeEventListener(WebInspector.DataProvider.Events.WillRemove, this._removeProvider, this);
 
-	if (provider.type == WebInspector.DataProvider.Types.SavepointList) {
-	    this._modifySavepointListeners(provider, "removeEventListener");
+        var callbacks = this._providerListeners[provider.name];
+        delete this._providerListeners[provider.name];
+        callbacks.uninstall(true);
+
+	if (provider.type == WebInspector.DataProvider.Types.SavepointList)
 	    return;
-	}
 
 	var existingTimeline = this._timelineForProvider(provider);
 	if (!existingTimeline)
@@ -480,13 +479,6 @@ WebInspector.TimelapseOverview.prototype = {
 	// detach from DOM
 	removedTimeline.detach();
 	removedLabel.detach();
-
-	// tear down circle event listeners
-	var timelineEvents = WebInspector.TimelapseCircleTimeline.Events;
-	removedTimeline.removeEventListener(timelineEvents.CircleMouseOver, this._onCircleMouseOver, this);
-	removedTimeline.removeEventListener(timelineEvents.CircleMouseOut, this._onCircleMouseOut, this);
-	removedTimeline.removeEventListener(timelineEvents.CircleSelected, this._onCircleSelected, this);
-	removedTimeline.removeEventListener(timelineEvents.CircleDeselected, this._onCircleDeselected, this);
 
 	// force dimensions of containers to be recalculated
 	this.onResize();
@@ -1070,16 +1062,30 @@ WebInspector.TimelapseCircleTimeline = function(recording, provider)
     this._provider = provider;
 
     console.assert(!!provider, "Tried to instantiate circle timeline without provider :-(");
-	
+        
     this.element = document.createElement("div");
     this.element.className = "timelapse-overview-timeline timelapse-category-" + this.provider.name;
     this.element.timeline = this;
     this._canvas = document.createElement("canvas");
     this.element.appendChild(this._canvas);
 
-    // must happen after this.element created.
-    this._modifyProviderListeners("addEventListener");
-    this._modifyDomListeners("addEventListener");
+    var events = WebInspector.DataProvider.Events;
+    this._providerCallbacks = new WebInspector.EventListenerGroup(this, "TimelapseCircleTimeline provider listeners");
+    this._providerCallbacks.register(this.provider, events.DataChanged, this._onDataChanged);
+    this._providerCallbacks.register(this.provider, events.Enabled,     this._onProviderEnabled);
+    this._providerCallbacks.register(this.provider, events.Disabled,    this._onProviderDisabled);
+    this._providerCallbacks.register(this.provider, events.WillRemove,  this._onProviderRemoved);
+    this._providerCallbacks.register(this.calculator, WebInspector.TimelapseCalculator.Events.ZoomChanged,
+                             this._onZoomChanged);
+    this._providerCallbacks.install();
+
+    this._interactionCallbacks = new WebInspector.EventListenerGroup(this, "TimelapseCircleTimeline mouse listeners");
+    this._interactionCallbacks.register(this.element, "click",     this.getBoundListener(this._onTimelineClicked));
+    this._interactionCallbacks.register(this.element, "mousemove", this.getBoundListener(this._onTimelineMousemove));
+    this._interactionCallbacks.register(this.element, "mouseout",  this.getBoundListener(this._onTimelineMouseout));
+    this._interactionCallbacks.register(this.element, "dblclick",  this.getBoundListener(this._onTimelineDoubleClicked));
+    if (this.provider.isEnabled())
+	this._interactionCallbacks.install();
 
     this._recomputeParameters();
     this._clearTimeline();
@@ -1088,33 +1094,6 @@ WebInspector.TimelapseCircleTimeline = function(recording, provider)
 };
 
 WebInspector.TimelapseCircleTimeline.prototype = {
-    _modifyProviderListeners: function(op)
-    {
-    console.assert(op === "addEventListener" || op === "removeEventListener",
-                   "Tried to do something unsupported to listeners: " + op);
-
-	var events = WebInspector.DataProvider.Events;
-	this.provider[op](events.DataChanged, this._onDataChanged, this);
-	this.provider[op](events.Enabled, this._onProviderEnabled, this);
-	this.provider[op](events.Disabled, this._onProviderDisabled, this);
-	this.provider[op](events.WillRemove, this._onProviderRemoved, this);
-
-	this.calculator[op](WebInspector.TimelapseCalculator.Events.ZoomChanged,
-					 this._onZoomChanged, this);
-    },
-    
-    _modifyDomListeners: function(op)
-    {
-    console.assert(op === "addEventListener" || op === "removeEventListener",
-                   "Tried to do something unsupported to listeners: " + op);
-
-	// add all DOM event listeners bound to `this`, with capturing enabled.
-    this.element[op]("click",     this.getBoundListener(this._onTimelineClicked), false);
-    this.element[op]("mousemove", this.getBoundListener(this._onTimelineMousemove), false);
-    this.element[op]("mouseout",  this.getBoundListener(this._onTimelineMouseout), false);
-    this.element[op]("dblclick",  this.getBoundListener(this._onTimelineDoubleClicked), false);
-    },
-    
     get data()
     {
 	return this._data;
@@ -1166,7 +1145,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
     _onProviderRemoved: function()
     {
-	this._modifyProviderListeners("removeEventListener");
+	this._providerCallbacks.uninstall(true);
 	// TODO: we can't quite delete the provider right now, because
 	// we are somewhere calling this.refresh() after the provider
 	// has been deleted but before the Timeline view has been detached.
@@ -1187,7 +1166,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     {
 	this.element.classList.remove("disabled");
 	this._recomputeParameters();
-	this._modifyDomListeners("addEventListener");
+	this._interactionCallbacks.install();
 	this.refresh();
     },
 
@@ -1195,7 +1174,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     {
 	this.element.classList.add("disabled");
 	this._recomputeParameters();
-	this._modifyDomListeners("removeEventListener");
+	this._interactionCallbacks.uninstall();
 	if (this._selectedCircleIndex)
 	    this._deselectCircle();
 	this.refresh();
@@ -1905,7 +1884,6 @@ WebInspector.TimelapseTimelineLabel = function(provider)
     WebInspector.View.call(this);
 
     this._provider = provider;
-    this._setupListeners();
 
     this.element = document.createElement("div");
     this.element.className = "timelapse-timeline-label-wrapper timelapse-category-" + provider.name;
@@ -1915,27 +1893,18 @@ WebInspector.TimelapseTimelineLabel = function(provider)
     label.className = "timelapse-timeline-label timelapse-category-" + provider.name;
     label.textContent = provider.displayName;
     label.title = provider.displayName;
-    label.addEventListener("click", this._onLabelClicked.bind(this), false);
     this.element.appendChild(label);
+
+    this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseTimelineLabel listeners");
+    this._callbacks.register(label, "click", this.getBoundListener(this._onLabelClicked));
+    var events = WebInspector.DataProvider.Events;
+    this._callbacks.register(this._provider, events.Enabled,    this._onProviderEnabled);
+    this._callbacks.register(this._provider, events.Disabled,   this._onProviderDisabled);
+    this._callbacks.register(this._provider, events.WillRemove, this._onProviderRemoved);
+    this._callbacks.install();
 };
 
 WebInspector.TimelapseTimelineLabel.prototype = {
-    _setupListeners: function()
-    {
-	var events = WebInspector.DataProvider.Events;
-	this._provider.addEventListener(events.Enabled, this._onProviderEnabled, this);
-	this._provider.addEventListener(events.Disabled, this._onProviderDisabled, this);
-	this._provider.addEventListener(events.WillRemove, this._onProviderRemoved, this);
-    },
-
-    _teardownListeners: function()
-    {
-	var events = WebInspector.DataProvider.Events;
-	this._provider.removeEventListener(events.Enabled, this._onProviderEnabled, this);
-	this._provider.removeEventListener(events.Disabled, this._onProviderDisabled, this);
-	this._provider.removeEventListener(events.WillRemove, this._onProviderRemoved, this);
-    },
-
     _onLabelClicked: function()
     {
 	this._provider.toggleEnablement();
@@ -1953,7 +1922,7 @@ WebInspector.TimelapseTimelineLabel.prototype = {
 
     _onProviderRemoved: function()
     {
-	this._teardownListeners();
+	this._callbacks.uninstall(true);
 	delete this._provider;
     },
     

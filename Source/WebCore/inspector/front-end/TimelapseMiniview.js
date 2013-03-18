@@ -44,8 +44,6 @@ WebInspector.TimelapseMiniview = function(model, recording)
     this._model = model;
     this._recording = recording;
 
-    this._modifyListeners("addEventListener");
-
     this.element.classList.add("timelapse-miniview");
     this.element.classList.add("timelapse-overview-column-main");
     this.element.classList.add("timelapse-overview-row-label");
@@ -105,8 +103,34 @@ WebInspector.TimelapseMiniview = function(model, recording)
     };
 
     this._providers = [];
+    this._providerListeners = {};
     this._timelines = {};
     this._timelines.all = { providers: [], maxIndex: -1, data: [] };
+
+
+    var replayEvents = WebInspector.TimelapseModel.Events;
+    var recordingEvents = WebInspector.TimelapseRecording.Events;
+    this._callbacks = new WebInspector.EventListenerGroup(this, "TimelapseMiniView static callbacks");
+    this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this._onPlaybackDidStart);
+    this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this._onPlaybackStopped);
+    this._callbacks.register(this._model, replayEvents.InputPaused,      this._onInputPaused);
+    this._callbacks.register(this._model, replayEvents.InputHit,         this._onInputHit);
+    this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._onDebuggerPaused);
+
+    this._callbacks.register(this._recording, recordingEvents.ProviderAdded,  this._onProviderAdded);
+    this._callbacks.register(this._recording, recordingEvents.PreviewStarted, this._onPreviewStarted);
+    this._callbacks.register(this._recording, recordingEvents.PreviewStopped, this._onPreviewStopped);
+    this._callbacks.register(this._recording, recordingEvents.PreviewChanged, this._onPreviewChanged);
+
+    this._callbacks.register(this._recording.calculator, WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged);
+
+    var bpEvents = WebInspector.BreakpointManager.Events;
+    var bpManager = WebInspector.breakpointManager;
+    this._callbacks.register(bpManager, bpEvents.BreakpointHit,     this._onBreakpointRecordsChanged);
+    this._callbacks.register(bpManager, bpEvents.BreakpointAdded,   this._onBreakpointRecordsChanged);
+    this._callbacks.register(bpManager, bpEvents.BreakpointRemoved, this._onBreakpointRecordsChanged);
+    this._callbacks.register(bpManager, bpEvents.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged);
+    this._callbacks.install();
 
     this._previousMaxValue = 0;
     this._clearGraph();
@@ -134,36 +158,10 @@ WebInspector.TimelapseMiniview.WindowScrollSpeedFactor = 0.001;
 WebInspector.TimelapseMiniview.WindowZoomSpeedFactor = 0.001;
 
 WebInspector.TimelapseMiniview.prototype = {
-    _modifyListeners: function(op) {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
-        
-        var eventNames = WebInspector.TimelapseModel.Events;
-        this._model[op](eventNames.PlaybackDidStart, this._onPlaybackDidStart, this);
-        this._model[op](eventNames.PlaybackStopped,  this._onPlaybackStopped, this);
-        this._model[op](eventNames.InputPaused,      this._onInputPaused, this);
-        this._model[op](eventNames.InputHit,         this._onInputHit, this);
-        this._model[op](eventNames.DebuggerPaused,   this._onDebuggerPaused, this);
-
-        var recordingEventNames = WebInspector.TimelapseRecording.Events;
-        this._recording[op](recordingEventNames.ProviderAdded,  this._onProviderAdded, this);
-        this._recording[op](recordingEventNames.PreviewStarted, this._onPreviewStarted, this);
-        this._recording[op](recordingEventNames.PreviewStopped, this._onPreviewStopped, this);
-        this._recording[op](recordingEventNames.PreviewChanged, this._onPreviewChanged, this);
-
-        this._recording.calculator[op](WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged, this);
-
-        var bpEventNames = WebInspector.BreakpointManager.Events;
-        WebInspector.breakpointManager[op](bpEventNames.BreakpointHit,     this._onBreakpointRecordsChanged, this);
-        WebInspector.breakpointManager[op](bpEventNames.BreakpointAdded,   this._onBreakpointRecordsChanged, this);
-        WebInspector.breakpointManager[op](bpEventNames.BreakpointRemoved, this._onBreakpointRecordsChanged, this);
-        WebInspector.breakpointManager[op](bpEventNames.BreakpointRemovedFromStorage, this._onBreakpointRecordsChanged, this);
-    },
-
     // Public API
     willDispose: function()
     {
-        this._modifyListeners("removeEventListener");
+        this._callbacks.uninstall(true);
     },
     
     wasShown: function()
@@ -221,28 +219,6 @@ WebInspector.TimelapseMiniview.prototype = {
 	}
 	
 	return found;
-    },
-
-    _modifyListenersForProvider: function(provider, op)
-    {
-    
-    console.assert(op === "addEventListener" || op === "removeEventListener",
-                   "Tried to do something unsupported to listeners: " + op);
-        
-	var events = WebInspector.DataProvider.Events;
-	var types = WebInspector.DataProvider.Types;
-
-	provider[op](events.WillRemove, this._onProviderWillRemove, this);
-
-	if (provider.type == types.SavepointList) {
-	    var savepointEvents = WebInspector.SavepointListProvider.Events;
-	    provider[op](savepointEvents.SavepointAdded, this._onSavepointAdded, this);
-	    provider[op](savepointEvents.SavepointRemoved, this._onSavepointRemoved, this);
-	} else {
-	    provider[op](events.AddedInput, this._onAddedInput, this);
-	    provider[op](events.Enabled, this._onProviderEnabled, this);
-	    provider[op](events.Disabled, this._onProviderDisabled, this);
-	}
     },
 
     _autosizeCanvas: function()
@@ -497,41 +473,60 @@ WebInspector.TimelapseMiniview.prototype = {
     // Private API (callbacks)
     _onProviderAdded: function(event)
     {
-	var provider = event.data;
-	if (!this._canUseProvider(provider))
-	    return;
+        var provider = event.data;
+        if (!this._canUseProvider(provider))
+            return;
 
     this._addProvider(provider);
     },
     
     _addProvider: function(provider)
     {
-	this._modifyListenersForProvider(provider, "addEventListener");
+        var callbacks = new WebInspector.EventListenerGroup(this, "Provider listeners");
+        this._providerListeners[provider.name] = callbacks;
 
-	if (provider.type == WebInspector.DataProvider.Types.SavepointList)
-	    return;
+        var events = WebInspector.DataProvider.Events;
+        var types = WebInspector.DataProvider.Types;
+        callbacks.register(provider, events.WillRemove, this._onProviderWillRemove);
 
-	// add provider to internal list
-	console.assert(this._providers.indexOf(provider) == -1,
-		       "Specific provider already added to miniview provider list.");
-	this._providers.push(provider);
+        if (provider.type == types.SavepointList) {
+            var savepointEvents = WebInspector.SavepointListProvider.Events;
+            callbacks.register(provider, savepointEvents.SavepointAdded, this._onSavepointAdded);
+            callbacks.register(provider, savepointEvents.SavepointRemoved, this._onSavepointRemoved);
+        } else {
+            callbacks.register(provider, events.AddedInput, this._onAddedInput);
+            callbacks.register(provider, events.Enabled, this._onProviderEnabled);
+            callbacks.register(provider, events.Disabled, this._onProviderDisabled);
+        }
 
-	// add timeline for this named provider, if it doesn't exist.
-	if (!this._timelines.hasOwnProperty(provider.name))
-	    this._timelines[provider.name] = { providers: [], maxIndex: -1, data: [] };
+        callbacks.install();
 
-	console.assert(this._timelines[provider.name].providers.indexOf(provider) == -1,
-		       "Tried to double-add a provider to a miniview timeline.");
-	this._timelines[provider.name].providers.push(provider);
+        if (provider.type == WebInspector.DataProvider.Types.SavepointList)
+            return;
 
-	// force dimensions to be recalculated
-	this.onResize();
+        // add provider to internal list
+        console.assert(this._providers.indexOf(provider) == -1,
+                       "Specific provider already added to miniview provider list.");
+        this._providers.push(provider);
+
+        // add timeline for this named provider, if it doesn't exist.
+        if (!this._timelines.hasOwnProperty(provider.name))
+            this._timelines[provider.name] = { providers: [], maxIndex: -1, data: [] };
+
+        console.assert(this._timelines[provider.name].providers.indexOf(provider) == -1,
+                       "Tried to double-add a provider to a miniview timeline.");
+        this._timelines[provider.name].providers.push(provider);
+
+        // force dimensions to be recalculated
+        this.onResize();
     },
 
     _onProviderWillRemove: function(event)
     {
 	var provider = event.data;
-	this._modifyListenersForProvider(provider, "removeEventListener");
+        var callbacks = this._providerListeners[provider.name];
+        delete this._providerListeners[provider.name];
+        callbacks.uninstall(true);
 
 	if (provider.type == WebInspector.DataProvider.Types.SavepointList)
 	    return;

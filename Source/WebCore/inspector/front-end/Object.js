@@ -184,8 +184,9 @@ WebInspector.EventListenerGroup.prototype = {
     {
         console.assert(listener, "Missing listener for eventType: "+eventType);
         console.assert(emitter, "Missing event emitter for eventType: "+eventType);
-        console.assert(emitter instanceof WebInspector.Object,
-                       "Event emitter (eventType:"+eventType+" does not implement WebInspector.Object!");
+        console.assert(emitter instanceof WebInspector.Object ||
+                       emitter instanceof Node,
+                       "Event emitter (eventType:"+eventType+" does not implement Node or WebInspector.Object!");
         
         if (!this._listeners)
             this._listeners = [];

@@ -41,7 +41,9 @@ WebInspector.TimelapseRecording = function(model)
     this._providers = [];
     this._records = [];
 
-    this._modifyListeners("addEventListener");
+    this._callbacks = new WebInspector.EventListenerGroup(this, "TimelapseRecording listeners");
+    this.registerListeners(this._callbacks);
+    this._callbacks.install();
 };
 
 WebInspector.TimelapseRecording.Events = {
@@ -57,36 +59,33 @@ WebInspector.TimelapseRecording.Events = {
 
 WebInspector.TimelapseRecording.prototype = {
     // Private API (helpers)
-    _modifyListeners: function(op) {
-    console.assert(op === "addEventListener" || op === "removeEventListener",
-                   "Tried to do something unsupported to listeners: " + op);
-    
-    var scannerEvents = WebInspector.TimelapseScanner.Events;
-    // FIXME: (Issue #201): The BreakpointScanner should add the breakpoint provider, not the recording itself.
-    this._model.scanners.breakpoint[op](scannerEvents.ScanStarted, this._breakpointScanStarted, this);
-
-    var eventNames = WebInspector.TimelapseModel.Events;
-    this._model[op](eventNames.RecordingUnloaded, this._recordingUnloaded, this);
-    
-    WebInspector.profilesModel[op](WebInspector.ProfilesModel.Events.ProfileAdded, this._profileAdded, this);
-    WebInspector.profilesModel[op](WebInspector.ProfilesModel.Events.ProfileRemoved, this._profileRemoved, this);
+    registerListeners: function(group) {
+	// FIXME: (Issue #201): The BreakpointScanner should add the breakpoint provider, not the recording itself.
+	var scannerEvents = WebInspector.TimelapseScanner.Events;
+	group.register(this._model.scanners.breakpoint, scannerEvents.ScanStarted, this._breakpointScanStarted);
+	var replayEvents = WebInspector.TimelapseModel.Events;
+	// TODO: support re-loading the same recording instance. Need to set back up in RecordingLoaded callback.
+	group.register(this._model, replayEvents.RecordingUnloaded, this._recordingUnloaded);
+	var profileEvents = WebInspector.ProfilesModel.Events;
+	group.register(WebInspector.profilesModel, profileEvents.ProfileAdded,   this._profileAdded);
+	group.register(WebInspector.profilesModel, profileEvents.ProfileRemoved, this._profileRemoved);
     },
 
     // Private API (callbacks)
     _recordingUnloaded: function(event)
     {
-    var recording = event.data;
-    if (recording !== this)
-        return;
+	var recording = event.data;
+	if (recording !== this)
+            return;
         
-    this._modifyListeners("removeEventListener");
+        this._callbacks.uninstall();
 
-    var providerTypes = WebInspector.DataProvider.Types;
-    for (var key in providerTypes) {
-        var providers = this.providersWithType(providerTypes[key]);
-        for (var i = 0; i < providers.length; i++)
-            this.removeProvider(providers[i]);
-    }
+	var providerTypes = WebInspector.DataProvider.Types;
+	for (var key in providerTypes) {
+            var providers = this.providersWithType(providerTypes[key]);
+            for (var i = 0; i < providers.length; i++)
+		this.removeProvider(providers[i]);
+	}
     },
 
     _breakpointScanStarted: function()
@@ -342,15 +341,12 @@ WebInspector.TimelapseLiveRecording.prototype = {
         return this._isCapturing;
     },
     
-    _modifyListeners: function(op) {
-    console.assert(op === "addEventListener" || op === "removeEventListener",
-                   "Tried to do something unsupported to listeners: " + op);
-       
-    var eventNames = WebInspector.TimelapseModel.Events;
-    this._model[op](eventNames.CaptureDidStart, this._captureDidStart, this);
-    this._model[op](eventNames.CaptureDidStop,  this._captureDidStop,  this);
+    registerListeners: function(group) {
+        var replayEvents = WebInspector.TimelapseModel.Events;
+        group.register(this._model, replayEvents.CaptureDidStart, this._captureDidStart);
+        group.register(this._model, replayEvents.CaptureDidStop,  this._captureDidStop);
 
-    WebInspector.TimelapseRecording.prototype._modifyListeners.call(this, op);
+        WebInspector.TimelapseRecording.prototype.registerListeners.call(this, group);
     },
     
     _captureDidStart: function()

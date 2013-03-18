@@ -3,14 +3,29 @@
  */
 WebInspector.TimelapseBreakpointTracker = function(model)
 {
+    WebInspector.Object.call(this);
+    
     this._model = model;
     this._exploredIntervals = new WebInspector.TimelapseIntervalManager();
 
     var manager = WebInspector.breakpointManager;
     var managerEvents = WebInspector.BreakpointManager.Events;
-    manager.addEventListener(managerEvents.BreakpointAdded,              this._breakpointUpdated, this);
-    manager.addEventListener(managerEvents.BreakpointAddedToStorage,     this._breakpointAddedToStorage, this);
-    manager.addEventListener(managerEvents.BreakpointRemovedFromStorage, this._breakpointRemovedFromStorage, this);
+    this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseBreakpointTracker listeners");
+    this._callbacks.register(manager, managerEvents.BreakpointAdded, this._breakpointUpdated);
+    this._callbacks.register(manager, managerEvents.BreakpointAddedToStorage,     this._breakpointAddedToStorage);
+    this._callbacks.register(manager, managerEvents.BreakpointRemovedFromStorage, this._breakpointRemovedFromStorage);
+    this._callbacks.install();
+
+    var replayCallbacks = this._replayCallbacks
+                        = new WebInspector.EventListenerGroup(this, "TimelapseBreakpointTracker listeners per TimelapseRecording");
+    var replayEvents = WebInspector.TimelapseModel.Events;
+    replayCallbacks.register(this._model, replayEvents.PlaybackWillStart, this._playbackWillStart);
+    replayCallbacks.register(this._model, replayEvents.PlaybackStopped,   this._endPendingInterval);
+    replayCallbacks.register(this._model, replayEvents.InputHit,          this._inputHit);
+    replayCallbacks.register(this._model, replayEvents.InputPaused,       this._endPendingInterval);
+
+    var debugEvents = WebInspector.DebuggerModel.Events;
+    replayCallbacks.register(WebInspector.debuggerModel, debugEvents.DebuggerPaused, this._debuggerPaused);
     
     // always reset/init data structures, since we track breakpoints even outside of capturing or replaying.
     this._recordingUnloaded();
@@ -55,33 +70,20 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
     {
 	return this._exploredIntervals.hasIntervalContaining(markIndex);
     },
-
-    // Internal helpers
-    _modifyListeners: function(op) {
-        console.assert(op === "addEventListener" || op === "removeEventListener",
-                       "Tried to do something unsupported to listeners: " + op);
-        
-        var eventNames = WebInspector.TimelapseModel.Events;
-        this._model[op](eventNames.PlaybackWillStart, this._playbackWillStart,  this);
-        this._model[op](eventNames.PlaybackStopped,   this._endPendingInterval, this);
-        this._model[op](eventNames.InputHit,          this._inputHit,           this);
-        this._model[op](eventNames.InputPaused,       this._endPendingInterval, this);
-
-        var debugEvents = WebInspector.DebuggerModel.Events;
-        WebInspector.debuggerModel[op](debugEvents.DebuggerPaused, this._debuggerPaused,    this);
-    },
     
     _recordingLoaded: function()
     {
         this._model.onceEventListener(WebInspector.TimelapseModel.Events.RecordingUnloaded, this._recordingUnloaded, this);
-        this._modifyListeners("addEventListener");
+        this._replayCallbacks.install();
         this._resetState();
     },
 
-    _recordingUnloaded: function()
+    _recordingUnloaded: function(event)
     {
         this._model.onceEventListener(WebInspector.TimelapseModel.Events.RecordingLoaded, this._recordingLoaded, this);
-        this._modifyListeners("removeEventListener");
+        // if this is a synthetic callback from the constructor, don't try to uninstall callbacks.
+        if (typeof event !== "undefined")
+            this._replayCallbacks.uninstall();
         this._resetState();
     },
 
