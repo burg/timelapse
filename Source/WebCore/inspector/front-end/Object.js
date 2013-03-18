@@ -29,7 +29,7 @@
 WebInspector.Object = function() {
 }
 
-WebInspector.Object.prototype = {
+WebInspector.Object.prototype = {   
     /**
      * @param {string} eventType
      * @param {function(WebInspector.Event)} listener
@@ -165,6 +165,65 @@ WebInspector.Event.prototype = {
         if (preventDefault)
             this.preventDefault();
     }
+}
+
+WebInspector.EventListenerGroup = function(ctx, name)
+{
+    this.name = name;
+    this._defaultCtx = ctx;
+    this._listeners = [];
+}
+
+WebInspector.EventListenerGroup.prototype = {
+    /**
+     * @param {string} eventType
+     * @param {function(WebInspector.Event)} listener
+     * @param {Object=} thisObject
+     */
+    register: function(emitter, eventType, listener, thisObject)
+    {
+        console.assert(listener, "Missing listener for eventType: "+eventType);
+        console.assert(emitter, "Missing event emitter for eventType: "+eventType);
+        console.assert(emitter instanceof WebInspector.Object,
+                       "Event emitter (eventType:"+eventType+" does not implement WebInspector.Object!");
+        
+        if (!this._listeners)
+            this._listeners = [];
+
+        this._listeners.push({ emitter: emitter,
+                               eventType: eventType,
+                               listener: listener,
+                               thisObject: thisObject
+                            });
+    },
+
+    install: function()
+    {
+        console.assert(!this._listenersAreInstalled, "Already installed listener group"+this.name+".");
+
+        this._listenersAreInstalled = true;
+        
+        for (var i = 0; i < this._listeners.length; ++i) {
+            var data = this._listeners[i];
+            data.emitter.addEventListener(data.eventType, data.listener, data.thisObject || this._defaultCtx);
+        }
+    },
+
+    uninstall: function(unregisterListeners)
+    {
+        console.assert(this._listenersAreInstalled,
+                       "Trying to uninstall listener group "+this.name+", but it isn't installed.");
+
+        delete this._listenersAreInstalled;
+
+        for (var i = 0; i < this._listeners.length; ++i) {
+            var data = this._listeners[i];
+            data.emitter.removeEventListener(data.eventType, data.listener, data.thisObject || this._defaultCtx);
+        }
+        
+        if (unregisterListeners)
+            this._listeners = [];
+    },
 }
 
 WebInspector.notifications = new WebInspector.Object();
