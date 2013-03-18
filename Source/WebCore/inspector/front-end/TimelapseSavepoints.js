@@ -73,11 +73,11 @@ WebInspector.SavepointListProvider.prototype = {
     },
 
     findForBreakpointHit: function(markIndex, hitIndex) {
-        var location = {
+        var desiredPosition = {
             markIndex: markIndex,
             hitIndex: hitIndex
         };
-        var index = binarySearch(location, this._savepoints, this._locationComparator);
+        var index = binarySearch(desiredPosition, this._savepoints, this._positionComparator);
         return (index >= 0) ? this._savepoints[index] : false;
     },
 
@@ -87,7 +87,7 @@ WebInspector.SavepointListProvider.prototype = {
                        "Tried to add non-savepoint to SavepointList.");
         
         // nearest lesser index; we insert at this index.
-        var index = binarySearch(savepoint.location, this._savepoints, this._locationComparator);
+        var index = binarySearch(savepoint.getPosition(), this._savepoints, this._positionComparator);
 
         if (index < 0)
             index = -(index + 1);
@@ -103,7 +103,7 @@ WebInspector.SavepointListProvider.prototype = {
         console.assert(savepoint && savepoint instanceof WebInspector.ReplaySavepoint,
                        "Tried to remove non-savepoint to SavepointList.");
 
-        var index = binarySearch(savepoint.location, this._savepoints, this._locationComparator);
+        var index = binarySearch(savepoint.getPosition(), this._savepoints, this._positionComparator);
         if (index < 0)
             return;
         this._savepoints.splice(index, 1);
@@ -111,7 +111,7 @@ WebInspector.SavepointListProvider.prototype = {
         this.dispatchEventToListeners(WebInspector.SavepointListProvider.Events.SavepointRemoved, savepoint);
     },
 
-    _locationComparator: function(a, b)
+    _positionComparator: function(a, b)
     {
 	if (a.markIndex == b.markIndex)
 	    return a.hitIndex - b.hitIndex;
@@ -142,10 +142,32 @@ WebInspector.ReplaySavepointTracker = function(model)
 WebInspector.ReplaySavepointTracker.prototype = {
     createSavepoint: function()
     {
+        /*
+        if (debugModel.isPaused()) {
+            var rawLocation = WebInspector.debuggerModel.callFrames[0].location;
+            var abstractLocation = {
+                sourceURL: debugModel.scriptForId(rawLocation.scriptId),
+                lineNumber: rawLocation.lineNumber,
+                columnNumber: rawLocation.lineNumber,
+            };
+            var url = uiLocation.url();
+            var uiLineNumber = uiLocation.lineNumber;
+            var name = url + ":" + uiLineNumber;
+        }
+        */
         var markIndex = this._model.currentMarkIndex;
+        if (this._model.inputPaused)
+            return new WebInspector.InputSavepoint(markIndex);
+
         var hitIndex = this._model.breakpointTracker.breakpointHitIndex;
+        if (!this._model.debuggerPaused || hitIndex === -1)
+            return;
+
         var debuggerWalk = this._debuggerWalkRecord.slice();
-        return new WebInspector.ReplaySavepoint(markIndex, hitIndex, debuggerWalk);
+        if (debuggerWalk.length === 0)
+            return new WebInspector.BreakpointSavepoint(markIndex, hitIndex);
+        
+        return new WebInspector.DebuggerWalkSavepoint(markIndex, hitIndex, debuggerWalk);
     },
     
     _breakpointHit: function()
@@ -183,39 +205,104 @@ WebInspector.ReplaySavepointTracker.prototype = {
     __proto__: WebInspector.Object.prototype
 };
 
+WebInspector.ReplaySavepoint = function(type) {
+    this._type = type;
+};
+
+WebInspector.ReplaySavepoint.SavepointTypes = {
+    InputPaused: "InputPaused",
+    Breakpoint: "Breakpoint",
+    DebuggerWalk: "DebuggerWalk"
+};
+
+
+WebInspector.ReplaySavepoint.prototype = {
+    get type()
+    {
+        return this._type;
+    },
+
+    getPosition: function()
+    {
+        return { markIndex: -1, hitIndex: -1 };
+    },
+
+    displayName: function()
+    {
+    },
+    
+    createRestoreTask: function(allowBreakpoints)
+    {
+    },
+};
+
+WebInspector.InputSavepoint = function(markIndex)
+{
+    WebInspector.ReplaySavepoint.call(this, WebInspector.ReplaySavepoint.SavepointTypes.InputPaused);
+    this._markIndex = markIndex;
+};
+
+WebInspector.InputSavepoint.prototype = {
+
+    displayName: function()
+    {
+        return "Input #" + this._markIndex;
+    },
+    
+    getPosition: function()
+    {
+        return { markIndex: this._markIndex, hitIndex: -1 };
+    },
+    
+    createRestoreTask: function(allowBreakpoints)
+    {
+        // FIXME: signals completion on replay start, not finish.
+        return WebInspector.timelapseModel.startReplayUpToMarkIndexTask(this._markIndex, !!allowBreakpoints);
+    },
+    
+    __proto__: WebInspector.ReplaySavepoint.prototype,
+};
+
+WebInspector.BreakpointSavepoint = function(markIndex, hitIndex)
+{
+    WebInspector.ReplaySavepoint.call(this, WebInspector.ReplaySavepoint.SavepointTypes.Breakpoint);
+    this._markIndex = markIndex;
+    this._hitIndex = hitIndex;
+};
+
+WebInspector.BreakpointSavepoint.prototype = {
+
+    displayName: function()
+    {
+        return "BreakpointSavepoint.displayName()"
+    },
+
+    getPosition: function()
+    {
+        return { markIndex: this._markIndex, hitIndex: this._hitIndex };
+    },
+    
+    createRestoreTask: function(allowBreakpoints)
+    {
+        // FIXME: signals completion on replay start, not finish.
+        return WebInspector.timelapseModel.replayToBreakpointHitTask(this._markIndex, this._hitIndex, !!allowBreakpoints);
+    },
+    
+    __proto__: WebInspector.ReplaySavepoint.prototype,
+};
+
 /**
  * @constructor
  */
-WebInspector.ReplaySavepoint = function(markIndex, hitIndex, debuggerWalk)
+WebInspector.DebuggerWalkSavepoint = function(markIndex, hitIndex, debuggerWalk)
 {
+    WebInspector.ReplaySavepoint.call(this, WebInspector.ReplaySavepoint.SavepointTypes.DebuggerWalk);
     this._markIndex = markIndex;
     this._hitIndex = hitIndex;
     this._debuggerWalk = debuggerWalk;
 };
 
-WebInspector.ReplaySavepoint.prototype = {
-    get location()
-    {
-        return {
-            markIndex: this._markIndex,
-            hitIndex: this._hitIndex
-        };
-    },
-
-    get markIndex()
-    {
-        return this._markIndex;
-    },
-
-    get hitIndex()
-    {
-        return this._hitIndex;
-    },
-
-    get debuggerWalk()
-    {
-        return this._debuggerWalk;
-    },
+WebInspector.DebuggerWalkSavepoint.prototype = {
 
     _replayDebuggerWalkTask: function(markIndex, hitIndex, debuggerWalk, allowBreakpoints)
     {
@@ -249,11 +336,23 @@ WebInspector.ReplaySavepoint.prototype = {
         return task;
     },
 
+    displayName: function()
+    {
+        return "DebuggerWalkSavepoint.displayName()"
+    },
+
+    getPosition: function()
+    {
+        return { markIndex: this._markIndex, hitIndex: this._hitIndex };
+    },
+
     createRestoreTask: function(allowBreakpoints)
     {
-        if (typeof allowBreakpoints === "undefined")
-            allowBreakpoints = false;
-        
-        return this._replayDebuggerWalkTask(this._markIndex, this._hitIndex, this._debuggerWalk, allowBreakpoints);
-    }
+        return this._replayDebuggerWalkTask(this._markIndex,
+                                            this._hitIndex,
+                                            this._debuggerWalk,
+                                            !!allowBreakpoints);
+    },
+    
+    __proto__: WebInspector.ReplaySavepoint.prototype,
 };
