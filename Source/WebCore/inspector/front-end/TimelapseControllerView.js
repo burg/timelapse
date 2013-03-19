@@ -53,9 +53,9 @@ WebInspector.TimelapseControllerView = function(model)
     this._callbacks.register(this._model, replayEvents.RecordingLoaded,   this._recordingLoaded);
     this._callbacks.register(this._model, replayEvents.RecordingUnloaded, this._recordingUnloaded);
 
-    this._callbacks.register(this.element,      "focus", this.getBoundListener(this.focus));
-    this._callbacks.register(this.element,       "blur", this.getBoundListener(this.blur));
-    this._callbacks.register(this.recordButton, "click", this.getBoundListener(this._recordButtonClicked));
+    this._callbacks.register(this.element,      "focus", this.focus);
+    this._callbacks.register(this.element,       "blur", this.blur);
+    this._callbacks.register(this.recordButton, "click", this._recordButtonClicked);
 
     this._callbacks.register(this._model, replayEvents.CaptureWillStart, this._disableRecordButton);
     this._callbacks.register(this._model, replayEvents.CaptureDidStart,  this._captureDidStart);
@@ -218,7 +218,7 @@ WebInspector.TimelapseDefaultView = function(model)
 
     var replayEvents = WebInspector.TimelapseModel.Events;
     this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseDefaultView listeners");
-    this._callbacks.register(this._messagePanel, "click", this.getBoundListener(this._messagePanelClicked));
+    this._callbacks.register(this._messagePanel, "click", this._messagePanelClicked);
     this._callbacks.register(this._model, replayEvents.CaptureWillStart, this._captureWillStart);
     this._callbacks.install();
     
@@ -271,7 +271,7 @@ WebInspector.TimelapseCaptureView = function(model, recording)
 
     var replayEvents = WebInspector.TimelapseModel.Events;
     this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseCaptureView listeners");
-    this._callbacks.register(this._messagePanel, "click", this.getBoundListener(this._messagePanelClicked));
+    this._callbacks.register(this._messagePanel, "click", this._messagePanelClicked);
     this._callbacks.register(this._model, replayEvents.CaptureWillStop, this._captureWillStop);
     this._callbacks.register(this._model, replayEvents.CaptureDidStop,  this._captureDidStop);
     this._callbacks.register(WebInspector.resourceTreeModel, 
@@ -339,19 +339,19 @@ WebInspector.TimelapseReplayView = function(model, recording)
 
     var replayEvents = WebInspector.TimelapseModel.Events;
     this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseReplayView listeners");
-    this._callbacks.register(this.element, "keydown", this.getBoundListener(this._keyDown));
+    this._callbacks.register(this.element, "keydown", this._keyDown);
         
-    this._callbacks.register(this.lockButton, "click", this.getBoundListener(this._lockButtonClicked));
+    this._callbacks.register(this.lockButton, "click", this._lockButtonClicked);
     this._callbacks.register(this._model, replayEvents.InputLocked,   this._inputLocked);
     this._callbacks.register(this._model, replayEvents.InputUnlocked, this._inputUnlocked);
 
-    this._callbacks.register(this.playbackButton, "click", this.getBoundListener(this._playbackButtonClicked));
+    this._callbacks.register(this.playbackButton, "click", this._playbackButtonClicked);
     this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this._showPauseGlyph);
     this._callbacks.register(this._model, replayEvents.InputPaused,      this._showPlaybackGlyph);
     this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._showPlaybackGlyph);
     this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this._showPlaybackGlyph);
 
-    this._callbacks.register(this.setSavepointButton, "click", this.getBoundListener(this._setSavepointButtonClicked));
+    this._callbacks.register(this.setSavepointButton, "click", this._setSavepointButtonClicked);
     this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this._disableSavepoints);
     this._callbacks.register(this._model, replayEvents.InputPaused,      this._enableSavepoints);
     this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._enableSavepoints);

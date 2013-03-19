@@ -133,11 +133,11 @@ WebInspector.TimelapseOverview.prototype = {
 	var sliderEvents = WebInspector.TimelapseOverviewSlider.Events;
 	this._callbacks.register(this.sliders.playback, sliderEvents.DragStart, this._onPlaybackSliderDragStart);
 	this._callbacks.register(this.sliders.playback, sliderEvents.DragEnd,   this._onPlaybackSliderDragEnd);
-	this._callbacks.register(this.sliders.playback.element, "contextmenu", this.getBoundListener(this._onPlaybackSliderContextMenu));
+	this._callbacks.register(this.sliders.playback.element, "contextmenu", this._onPlaybackSliderContextMenu);
 
-	this._callbacks.register(this._timelineContainer, "mousedown",  this.getBoundListener(this._onOverviewMousedown));
-	this._callbacks.register(this._timelineContainer, "click",      this.getBoundListener(this._onOverviewClick));
-	this._callbacks.register(this._timelineContainer, "mousewheel", this.getBoundListener(this._onOverviewMousewheel));
+	this._callbacks.register(this._timelineContainer, "mousedown",  this._onOverviewMousedown);
+	this._callbacks.register(this._timelineContainer, "click",      this._onOverviewClick);
+	this._callbacks.register(this._timelineContainer, "mousewheel", this._onOverviewMousewheel);
 
 	var scanner = this._model.scanners.breakpoint;
 	var scannerEvents = WebInspector.TimelapseScanner.Events;
@@ -1080,12 +1080,12 @@ WebInspector.TimelapseCircleTimeline = function(recording, provider)
     this._providerCallbacks.install();
 
     this._interactionCallbacks = new WebInspector.EventListenerGroup(this, "TimelapseCircleTimeline mouse listeners");
-    this._interactionCallbacks.register(this.element, "click",     this.getBoundListener(this._onTimelineClicked));
-    this._interactionCallbacks.register(this.element, "mousemove", this.getBoundListener(this._onTimelineMousemove));
-    this._interactionCallbacks.register(this.element, "mouseout",  this.getBoundListener(this._onTimelineMouseout));
-    this._interactionCallbacks.register(this.element, "dblclick",  this.getBoundListener(this._onTimelineDoubleClicked));
+    this._interactionCallbacks.register(this.element, "click",     this._onTimelineClicked);
+    this._interactionCallbacks.register(this.element, "mousemove", this._onTimelineMousemove);
+    this._interactionCallbacks.register(this.element, "mouseout",  this._onTimelineMouseout);
+    this._interactionCallbacks.register(this.element, "dblclick",  this._onTimelineDoubleClicked);
     if (this.provider.isEnabled())
-	this._interactionCallbacks.install();
+        this._interactionCallbacks.install();
 
     this._recomputeParameters();
     this._clearTimeline();
@@ -1896,7 +1896,7 @@ WebInspector.TimelapseTimelineLabel = function(provider)
     this.element.appendChild(label);
 
     this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseTimelineLabel listeners");
-    this._callbacks.register(label, "click", this.getBoundListener(this._onLabelClicked));
+    this._callbacks.register(label, "click", this._onLabelClicked);
     var events = WebInspector.DataProvider.Events;
     this._callbacks.register(this._provider, events.Enabled,    this._onProviderEnabled);
     this._callbacks.register(this._provider, events.Disabled,   this._onProviderDisabled);

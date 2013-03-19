@@ -191,6 +191,10 @@ WebInspector.EventListenerGroup.prototype = {
         if (!this._listeners)
             this._listeners = [];
 
+        // if adding DOM event listener, adjust the `this` binding automatically.
+        if (emitter instanceof Node) 
+            listener = listener.bind(thisObject || this._defaultCtx);
+
         this._listeners.push({ emitter: emitter,
                                eventType: eventType,
                                listener: listener,
@@ -206,7 +210,10 @@ WebInspector.EventListenerGroup.prototype = {
         
         for (var i = 0; i < this._listeners.length; ++i) {
             var data = this._listeners[i];
-            data.emitter.addEventListener(data.eventType, data.listener, data.thisObject || this._defaultCtx);
+            if (data.emitter instanceof Node)
+                data.emitter.addEventListener(data.eventType, data.listener);
+            else
+                data.emitter.addEventListener(data.eventType, data.listener, data.thisObject || this._defaultCtx);
         }
     },
 
@@ -219,7 +226,10 @@ WebInspector.EventListenerGroup.prototype = {
 
         for (var i = 0; i < this._listeners.length; ++i) {
             var data = this._listeners[i];
-            data.emitter.removeEventListener(data.eventType, data.listener, data.thisObject || this._defaultCtx);
+         if (data.emitter instanceof Node)
+                data.emitter.removeEventListener(data.eventType, data.listener);
+            else            
+                data.emitter.removeEventListener(data.eventType, data.listener, data.thisObject || this._defaultCtx);
         }
         
         if (unregisterListeners)
