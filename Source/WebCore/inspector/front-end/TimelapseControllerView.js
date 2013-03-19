@@ -357,6 +357,10 @@ WebInspector.TimelapseReplayView = function(model, recording)
     this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._enableSavepoints);
     this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this._enableSavepoints);
     this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._enableSavepoints);
+    
+    var savepointEvents = WebInspector.SavepointListProvider.Events;
+    this._callbacks.register(this._recording.savepointList, savepointEvents.SavepointAdded,   this._savepointsChanged);
+    this._callbacks.register(this._recording.savepointList, savepointEvents.SavepointRemoved, this._savepointsChanged);
     this._callbacks.install();
 
     this._splitView = new WebInspector.SplitView(true,
@@ -387,6 +391,7 @@ WebInspector.TimelapseReplayView.prototype = {
             this.lockButton,
             this.playbackButton,
             this.setSavepointButton,
+            this.savepointSelector,
             this.scanSelector,
         ];
     },
@@ -427,6 +432,11 @@ WebInspector.TimelapseReplayView.prototype = {
         this.scanSelector.addOption(dummyOption);
         this.scanSelector.select(dummyOption);
         this.scanSelector.element.title = this.scanSelector.selectedOption().title;
+        
+        this.savepointSelector = new WebInspector.StatusBarComboBox(this._savepointSelectorChanged.bind(this),
+                                                                    "timelapse-savepoint-selector", true);
+        this._savepointsChanged();
+        
     },
 
     _scanSelectorChanged: function()
@@ -446,6 +456,51 @@ WebInspector.TimelapseReplayView.prototype = {
 
         this._model.loadedRecording.scanInZoomRegion(scanner);
         this.scanSelector.select(this.scanSelectorDefaultOption);
+    },
+
+    _savepointSelectorChanged: function()
+    {
+        var option = this.savepointSelector.selectedOption();
+        var savepoint = option._savepoint;
+        if (!savepoint)
+            return;
+        
+        console.log(savepoint);
+        var task = savepoint.createRestoreTask(false);
+        this._model.scheduler.enqueue(task);
+    },
+
+    _savepointsChanged: function()
+    {
+        var selectedOption = this.savepointSelector.selectedOption();
+        var selectedSavepoint = (selectedOption) ? selectedOption._savepoint : null;
+        
+        var savepoints = this._recording.savepointList.savepoints;
+        
+        this.savepointSelector.setEnabled(!!savepoints.length);
+        this.savepointSelector.removeOptions();
+        this.savepointSelector.element.enableStyleClass("hidden", !savepoints.length);
+    
+        var option = document.createElement("option");
+        if (!!savepoints.length) {
+            option.text = WebInspector.UIString("Jump to bookmark...");
+            option.title = WebInspector.UIString("Select a bookmark to jump to.");
+        } else {
+            option.text = WebInspector.UIString("(No Bookmarks)");
+            option.title = WebInspector.UIString("No bookmarks have been created.");
+        }
+        option._provider = null;
+        this.savepointSelector.addOption(option);
+        
+        for (var i = 0; i < savepoints.length; ++i) {
+            var savepoint = savepoints[i];
+            var name = savepoint.displayName();
+            var option = document.createElement("option");
+            option.text = name;
+            option.title = WebInspector.UIString("Jump to bookmark: %s", name);
+            option._savepoint = savepoint;
+            this.savepointSelector.addOption(option);
+        }
     },
 
     _lockButtonClicked: function()
@@ -545,7 +600,6 @@ WebInspector.TimelapseReplayView.prototype = {
     _setSavepointButtonClicked: function()
     {
         var savepoint = this._model.savepointTracker.createSavepoint();
-        this._mostRecentSavepoint = savepoint;
         this._recording.savepointList.addSavepoint(savepoint);
     },
     

@@ -88,7 +88,6 @@ WebInspector.SavepointListProvider.prototype = {
         
         // nearest lesser index; we insert at this index.
         var index = binarySearch(savepoint.getPosition(), this._savepoints, this._positionComparator);
-
         if (index < 0)
             index = -(index + 1);
         else
@@ -111,12 +110,13 @@ WebInspector.SavepointListProvider.prototype = {
         this.dispatchEventToListeners(WebInspector.SavepointListProvider.Events.SavepointRemoved, savepoint);
     },
 
-    _positionComparator: function(a, b)
+    _positionComparator: function(key, savepoint)
     {
-	if (a.markIndex == b.markIndex)
-	    return a.hitIndex - b.hitIndex;
+    var pos = savepoint.getPosition();
+	if (key.markIndex == pos.markIndex)
+	    return key.hitIndex - pos.hitIndex;
 	else
-	    return a.markIndex - b.markIndex;
+	    return key.markIndex - pos.markIndex;
     },
     
     __proto__: WebInspector.DataProvider.prototype
