@@ -826,6 +826,11 @@ select.status-bar-item, select.status-bar-item:hover {
     -webkit-mask-position: -24px -72px;
 }
 
+.status-bar-select-container.timelapse-savepoint-selector .glyph {
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png) !important;
+    -webkit-mask-position: -216px -16px;
+}
+
 .status-bar-item .glyph {
     -webkit-mask-image: url(Images/statusbarButtonGlyphs.png);
     -webkit-mask-size: 320px 72px;
@@ -3189,13 +3194,9 @@ button.play-playback-status-bar-item > .glyph {
     -webkit-mask-position: -114px -41px;
 }
 
-button.replay-to-savepoint-status-bar-item > .glyph {
-    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
-}
-
 button.set-savepoint-status-bar-item > .glyph {
     -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
-    -webkit-mask-position: 0 -24px;
+    -webkit-mask-position: -224px -48px;
 }
 
 .reset-playback-status-bar-item .glyph {
@@ -3231,18 +3232,6 @@ button.breakpoint-radar-status-bar-item > .glyph {
 .toggled .timelapse-button-icon,
 .toggled.timelapse-button-icon {
     background-color: rgb(66, 129, 235) !important;
-}
-
-.timelapse-savepoint-button {
-    -webkit-mask-image: url(Images/timelapseAnchor.png);    
-}
-
-.timelapse-jump-button {
-    -webkit-mask-image: url(Images/timelapseJumpButton.png);
-}
-
-.timelapse-inputs-grid .timelapse-savepoint-button {
-    margin-right: 6px;
 }
 
 #timelapse-controller-view {
@@ -3795,19 +3784,21 @@ div.timelapse-overview-timeline {
     pointer-events: none;
 }
 
-.savepoint-slider .timelapse-slider-band {
+.savepoint-slider > .timelapse-slider-band {
     background-color: rgba(0, 0, 0, 0.3);
     border: 0;
 }
 
-.savepoint-slider .timelapse-slider-icon {
+.savepoint-slider > div.timelapse-slider-icon {
     position: absolute;
     bottom: -20px;
     left: -7px;
     width: 16px;
     height: 16px;
     background-color: rgba(0, 0, 0, 0.5);
-    -webkit-mask-image: url(Images/timelapseAnchor.png);
+    -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
+    -webkit-mask-position: -248px -22px;
+    -webkit-mask-size: 270px 64px;
 }
 
 .timelapse-overview-slider.slider-dragging {
