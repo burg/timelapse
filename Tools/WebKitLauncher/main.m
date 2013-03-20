@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
 
     if (!frameworkPathIsUsable)
         displayErrorAndQuit([NSString stringWithFormat:@"OS X %@ is not supported", systemVersion],
-                            [NSString stringWithFormat:@"Nightly builds of WebKit are not supported on OS X %@ at this time.", systemVersion]);
+                            [NSString stringWithFormat:@"Nightly builds of WebKit are not supported on OS X %@ at this time. (Expected framework path: %@)", systemVersion, frameworkPath]);
 
     NSString *pathToEnablerLib = [[NSBundle mainBundle] pathForResource:@"WebKitNightlyEnabler" ofType:@"dylib"];
 

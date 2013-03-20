@@ -21,5 +21,6 @@ REAL_HOME=`dirname "$PRG"`
 REAL_HOME=`cd "$REAL_HOME" && pwd`
 
 WEBKIT_LION_PRODUCT_PATH=$REAL_HOME/../WebKitBuild
+WEBKIT_MOUNTAIN_LION_PRODUCT_PATH=$REAL_HOME/../WebKitBuild
 
-$REAL_HOME/../Tools/BuildSlaveSupport/build-launcher-app --no-sign --build-dir-10-7 $WEBKIT_LION_PRODUCT_PATH
+$REAL_HOME/../Tools/BuildSlaveSupport/build-launcher-app --no-sign --build-dir-10-7 $WEBKIT_LION_PRODUCT_PATH --build-dir-10-8 $WEBKIT_MOUNTAIN_LION_PRODUCT_PATH

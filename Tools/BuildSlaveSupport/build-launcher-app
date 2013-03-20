@@ -46,6 +46,7 @@ my $revision;
 my $tigerProductDir;
 my $snowLeopardProductDir;
 my $lionProductDir;
+my $mountainLionProductDir;
 
 GetOptions('no-sign' => \$nosign,
            'branch=s' => \$branch,
@@ -55,6 +56,7 @@ GetOptions('no-sign' => \$nosign,
            'build-dir-10-5=s' => \$leopardProductDir,
            'build-dir-10-6=s', => \$snowLeopardProductDir,
            'build-dir-10-7=s', => \$lionProductDir,
+           'build-dir-10-8=s', => \$mountainLionProductDir,
     );
 
 $branch = currentBranch() unless defined($branch);
@@ -149,6 +151,7 @@ sub copyNightlyLauncher
     push @systemVersions, "10.5" if defined $leopardProductDir;
     push @systemVersions, "10.6" if defined $snowLeopardProductDir;
     push @systemVersions, "10.7" if defined $lionProductDir;
+    push @systemVersions, "10.8" if defined $mountainLionProductDir;
 
     for my $systemVersion (@systemVersions) {
         my $frameworksPath = "$nightlyLauncherStagingPath/Contents/Frameworks/$systemVersion";
@@ -156,7 +159,7 @@ sub copyNightlyLauncher
         symlink("../Sparkle.framework", "$frameworksPath/Sparkle.framework");
     }
 
-    my @frameworks = ("JavaScriptCore", "WebCore", "WebKit", "WebKit2");
+    my @frameworks = ("JavaScriptCore", "WebCore", "WebKit", "WebKit2", "WebInspector");
     for my $framework (@frameworks) {
         for my $systemVersion (@systemVersions) { 
             if ($systemVersion eq "10.5") {
@@ -170,6 +173,9 @@ sub copyNightlyLauncher
             } elsif ($systemVersion eq "10.7") {
                 my $lionFramework = "$lionProductDir/$configuration/$framework.framework";
                 system("ditto", $lionFramework, "$nightlyLauncherStagingPath/Contents/Frameworks/10.7/$framework.framework") == 0 or die "Failed copying $lionFramework into $nightlyLauncherStagingPath";
+            } elsif ($systemVersion eq "10.8") {
+                my $mountainLionFramework = "$mountainLionProductDir/$configuration/$framework.framework";
+                system("ditto", $mountainLionFramework, "$nightlyLauncherStagingPath/Contents/Frameworks/10.8/$framework.framework") == 0 or die "Failed copying $mountainLionFramework into $nightlyLauncherStagingPath";
             }
         }
     }
