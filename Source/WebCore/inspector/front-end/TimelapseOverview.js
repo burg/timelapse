@@ -712,7 +712,7 @@ WebInspector.TimelapseOverview.prototype = {
 	var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
 	for (var i = 0; i < inputProviders.length; i++) {
 	    var provider = inputProviders[i];
-	    if (!provider.isEnabled())
+	    if (!provider.isEnabled() || !provider.records.length)
 		continue;
 
 	    var minIdx = provider.records.nearestBinaryIndexOf(minTs, timestampAndRecordComparator, timeDistanceFunction);
