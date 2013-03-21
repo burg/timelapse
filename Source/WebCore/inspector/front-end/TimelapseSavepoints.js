@@ -156,8 +156,24 @@ WebInspector.ReplaySavepointTracker.prototype = {
         }
         */
         var markIndex = this._model.currentMarkIndex;
-        if (this._model.inputPaused)
-            return new WebInspector.InputSavepoint(markIndex);
+        if (this._model.inputPaused) {
+            function markIndexAndRecordComparator(idx, record) {
+                var record_idx = record.mark.index;
+                if (record_idx > idx) return -1;
+                if (record_idx < idx) return 1;
+                return 0;
+            }
+
+            var providers = this._model.loadedRecording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+            for (var i = 0; i < providers.length; ++i)
+            {
+                var provider = providers[i];
+                var idx = provider.records.binaryIndexOf(markIndex, markIndexAndRecordComparator);
+                if (idx !== -1)
+                    return new WebInspector.InputSavepoint(provider.records[idx]);
+            }
+            console.error("Tried to locate mark index within an input provider, but couldn't find it?");
+        }
 
         var hitIndex = this._model.breakpointTracker.breakpointHitIndex;
         if (!this._model.debuggerPaused || hitIndex === -1)
@@ -236,17 +252,23 @@ WebInspector.ReplaySavepoint.prototype = {
     },
 };
 
-WebInspector.InputSavepoint = function(markIndex)
+WebInspector.InputSavepoint = function(record)
 {
     WebInspector.ReplaySavepoint.call(this, WebInspector.ReplaySavepoint.SavepointTypes.InputPaused);
-    this.markIndex = markIndex;
+    this._record = record;
+    this.markIndex = record.mark.index;
 };
 
 WebInspector.InputSavepoint.prototype = {
 
     displayName: function()
     {
-        return "Input #" + this.markIndex;
+        var recording = WebInspector.timelapseModel.loadedRecording;
+        var timestamp = recording.timestampFromMarkIndex(this.markIndex);
+        return WebInspector.UIString("(%s) %s [#%d]",
+                                    recording.calculator.formatElapsedValue(timestamp),
+                                    WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].title,
+                                    this.markIndex);
     },
     
     getPosition: function()
