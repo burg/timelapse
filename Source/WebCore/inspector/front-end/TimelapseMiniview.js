@@ -792,7 +792,8 @@ WebInspector.TimelapseMiniview.prototype = {
 
 	var targetRecord = this._recording.previewedRecord;
 	this._recording.stopPreviewing();
-	this._model.replayUpToMarkIndex(targetRecord.mark.index);
+    if (targetRecord) // not true if dragged and dropped in place
+        this._model.replayUpToMarkIndex(targetRecord.mark.index);
     },
 
     _onZoomSliderDragStart: function(zoomSide, event)

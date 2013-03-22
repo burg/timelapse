@@ -595,7 +595,9 @@ WebInspector.RecordingInputsGrid.prototype = {
 	this._cancelAutoScroll();
 	var targetRecord = this._recording.previewedRecord;
 	this._recording.stopPreviewing();
-
+    if (!targetRecord) // if dragged and dropped in place
+        return;
+        
 	var position = this.sliders.playback.position;
 	if (position.before)
 	    this._replayToIndex(targetRecord.mark.index);
