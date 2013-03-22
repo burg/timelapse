@@ -57,6 +57,11 @@ WebInspector.ReplayTaskScheduler.prototype = {
         return this;
     },
 
+    executeImmediately: function(task)
+    {
+        this.cancelAllTasks().enqueue(task);
+    },
+
     get isRunning()
     {
         return this._isRunning;

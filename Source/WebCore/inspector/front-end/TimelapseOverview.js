@@ -1015,11 +1015,15 @@ WebInspector.TimelapseOverview.prototype = {
         var savepoint = event.data;
         var slider = new WebInspector.TimelapseOverviewSlider(this, "savepoint", false);
         slider._savepoint = savepoint;
+        slider._listenerGroup = new WebInspector.EventListenerGroup(this, "TimelapseOverviewSlider listeners");
+        slider._listenerGroup.register(slider.iconElement, "click", function() {
+            this._model.scheduler.executeImmediately(savepoint.createRestoreTask());
+        }, this);
+        slider._listenerGroup.install();
         this._timelineContainer.appendChild(slider.element);
         this.sliders.savepoint.push(slider);
 
         this._updateSliderPositions();
-        // TODO: previews may need to be refreshed when savepoints modified.
     },
 
     _onSavepointRemoved: function(event)
@@ -1030,12 +1034,12 @@ WebInspector.TimelapseOverview.prototype = {
                 continue;
             
             var slider = this.sliders.savepoint.splice(i, 1)[0];
+            slider._listenerGroup.uninstall();
             slider.dispose();
             return;
         }
 
         this._updateSliderPositions();
-        // TODO: previews may need to be refreshed when savepoints modified.
     },
 
     _makePreviewForProvider: function(provider)
@@ -1704,7 +1708,7 @@ WebInspector.TimelapseOverviewSlider = function(overview, name, adjustable)
     this.element.appendChild(wrapper);
 
     if (name == "savepoint") {
-	var icon = document.createElement("div");
+	var icon = this.iconElement = document.createElement("div");
 	icon.className = "timelapse-slider-icon";
 	this.element.appendChild(icon);
     }

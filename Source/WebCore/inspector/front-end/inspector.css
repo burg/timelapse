@@ -3780,10 +3780,6 @@ div.timelapse-overview-timeline {
     background-color: rgba(255,0,0,0.1);
 }
 
-.savepoint-slider {
-    pointer-events: none;
-}
-
 .savepoint-slider > .timelapse-slider-band {
     background-color: rgba(0, 0, 0, 0.3);
     border: 0;
@@ -3799,6 +3795,7 @@ div.timelapse-overview-timeline {
     -webkit-mask-image: url(Images/timelapseButtonGlyphs.png);
     -webkit-mask-position: -248px -22px;
     -webkit-mask-size: 270px 64px;
+    cursor: pointer;
 }
 
 .timelapse-overview-slider.slider-dragging {
