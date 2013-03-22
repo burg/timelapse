@@ -304,6 +304,11 @@ WebInspector.TimelapseModel.prototype = {
                     model._suppressBreakpoints();
                 cb();
             });
+        } else {
+            task.chain("unsuppressBreakpointsIfNeeded", function(cb) {
+                    model._unsuppressBreakpoints();
+                cb();
+            });      
         }
 
         task.chain("resumeDebuggerIfPaused",
@@ -353,6 +358,11 @@ WebInspector.TimelapseModel.prototype = {
                     model._suppressBreakpoints();
                 cb();
             });
+        } else {
+            task.chain("unsuppressBreakpointsIfNeeded", function(cb) {
+                    model._unsuppressBreakpoints();
+                cb();
+            });      
         }
 
         task.chain("resumeDebuggerIfPaused",
@@ -408,10 +418,10 @@ WebInspector.TimelapseModel.prototype = {
             subtask.run(cb);
         });
         task.chain("CountDebuggerWait" + hitIndex + "Times", function(cb) {
-            this._waitCount = 0;
+            task._waitCount = 0;
             var debuggerWaitingCallback = function(event) {
                 // we arrived at the wait we were looking for.
-                if (this._waitCount++ == hitIndex) {
+                if (task._waitCount++ == hitIndex) {
                     model.removeEventListener(timelapseEvents.DebuggerWaiting,
                                               debuggerWaitingCallback,
                                               task);
