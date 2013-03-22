@@ -361,6 +361,7 @@ WebInspector.TimelapseReplayView = function(model, recording)
     var savepointEvents = WebInspector.SavepointListProvider.Events;
     this._callbacks.register(this._recording.savepointList, savepointEvents.SavepointAdded,   this._savepointsChanged);
     this._callbacks.register(this._recording.savepointList, savepointEvents.SavepointRemoved, this._savepointsChanged);
+    this._callbacks.register(this._recording.savepointList, savepointEvents.SavepointLabelChanged, this._savepointsChanged);
     this._callbacks.install();
 
     this._splitView = new WebInspector.SplitView(true,
@@ -494,10 +495,12 @@ WebInspector.TimelapseReplayView.prototype = {
         
         for (var i = 0; i < savepoints.length; ++i) {
             var savepoint = savepoints[i];
-            var name = savepoint.displayName();
+            var ts = this._model.loadedRecording.timestampFromMarkIndex(savepoint.markIndex);
+            var elapsed = this._model.loadedRecording.calculator.formatElapsedValue(ts);
+            var label = savepoint.displayName();
             var option = document.createElement("option");
-            option.text = name;
-            option.title = WebInspector.UIString("Jump to bookmark: %s", name);
+            option.text = WebInspector.UIString("(%s) %s", elapsed, label);
+            option.title = WebInspector.UIString("Jump to bookmark: %s", label);
             option._savepoint = savepoint;
             this.savepointSelector.addOption(option);
         }
