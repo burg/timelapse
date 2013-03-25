@@ -820,6 +820,7 @@ WebInspector.ProfilesSidebarTreeElement.prototype = {
     __proto__: WebInspector.SidebarTreeElement.prototype
 }
 
+importScript("CPUProfileView.js");
 importScript("ProfileDataGridTree.js");
 importScript("BottomUpProfileDataGridTree.js");
 importScript("ProfileLauncherView.js");

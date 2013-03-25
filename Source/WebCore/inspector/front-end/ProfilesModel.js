@@ -547,7 +547,9 @@ WebInspector.HeapProfilerDispatcher.prototype = {
 
 importScript("ProfileHeader.js");
 importScript("ProfileType.js");
-importScript("CPUProfileView.js");
+importScript("CPUProfile.js");
+
+// TODO: (Issue #222): don't load any views in the profile model
 importScript("CSSSelectorProfileView.js");
 importScript("HeapSnapshot.js");
 importScript("HeapSnapshotDataGrids.js");
