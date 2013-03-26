@@ -1094,7 +1094,6 @@ WebInspector.TimelapseCircleTimeline = function(recording, provider)
 
     this._recomputeParameters();
     this._clearTimeline();
-    this._dirty = false;
     this._highlights = [];
 };
 
@@ -1131,7 +1130,6 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	this._canvas.height = this.element.clientHeight;
 	this._canvas.style.height = this.element.clientHeight + 'px';
 
-	this._dirty = true;
 	var fillAlpha = 0.3;
 	var fillColor = WebInspector.Color.fromRGBA(this.provider.color.rgb[0],
 						    this.provider.color.rgb[1],
@@ -1164,7 +1162,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	    this._recomputeTimeline();
 
 	this.clearHighlights();
-	this._dirty = true;
+	this.refresh();
     },
 
     _onProviderEnabled: function()
@@ -1428,7 +1426,6 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     {
 	/* Note: it's possible to have several highlights per circle. This is how clicking a hovered circle is possible. */
 	this._highlights.push(idx);
-	this._dirty = true;
     },
 
     removeHighlight: function(circleIdx)
@@ -1438,13 +1435,11 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	    return;
 
 	this._highlights.splice(i, 1);
-	this._dirty = true;
     },
 
     clearHighlights: function()
     {
 	this._highlights = [];
-	this._dirty = true;
     },
 
     clearSelection: function()
@@ -1505,7 +1500,6 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 	}
 
 	this._drawHighlights();
-	this._dirty = false;
 
 	// Shade unexplored intervals
 	if (this.provider.name == "breakpoint") {
