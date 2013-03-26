@@ -308,7 +308,7 @@ WebInspector.TimelapseScrollview.prototype = {
 	var offsetPerPoint = availWidth / pointCount;
 	var maxValue = this._timelines.all.data[this._timelines.all.maxIndex];
 
-	/* draw allRecords bars */
+	/* draw bars for all actions */
 	function drawLineGraph(data, name) {
 	    ctx.lineJoin = "round";
 	    ctx.beginPath();

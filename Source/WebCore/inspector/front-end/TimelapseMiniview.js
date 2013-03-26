@@ -385,7 +385,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	var offsetPerPoint = availWidth / pointCount;
 	var maxValue = this._previousMaxValue || this._timelines.all.data[this._timelines.all.maxIndex];
 
-	/* draw allRecords bars */
+	/* draw bars for all actions */
 	function drawLineGraph(data, name) {
 	    ctx.lineJoin = "round";
 	    ctx.beginPath();
@@ -566,9 +566,9 @@ WebInspector.TimelapseMiniview.prototype = {
     _onPlaybackDidStart: function()
     {
 	// timestamp of start/finish/now to position the sliders.
-	var allRecords = this._recording.allRecords;
-	var startRecord = allRecords[this._recording.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
-	var finishRecord = allRecords[this._recording.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
+	var actions = this._recording.actions;
+	var startRecord = actions[this._recording.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
+	var finishRecord = actions[this._recording.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
 	var currentRecordIndex = this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex);
 
 	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
@@ -587,7 +587,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	this.sliders.playback.minimumResolution = (this._model.replaySpeed === replaySpeeds.Seeking) ? 10.0 : 1.0;
 
 	if (currentRecordIndex != -1) {
-    	    var currentRecord = allRecords[currentRecordIndex];
+    	    var currentRecord = actions[currentRecordIndex];
 	    this.sliders.playback.setPosition(this.calculator.computeMiniviewPercentage(currentRecord.mark.timestamp), true);	
 	} else {
 	    this.sliders.playback.setPosition(0.0, true);
@@ -605,11 +605,11 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onInputPaused: function()
     {
-	var allRecords = this._recording.allRecords;
+	var actions = this._recording.actions;
 	var recordIndex = this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex);
 	
 	if (recordIndex != -1) {
-	    var percent = this.calculator.computeMiniviewPercentage(allRecords[recordIndex].mark.timestamp);
+	    var percent = this.calculator.computeMiniviewPercentage(actions[recordIndex].mark.timestamp);
 	    this.sliders.playback.setPosition(percent, true);
 	}
 
@@ -631,19 +631,19 @@ WebInspector.TimelapseMiniview.prototype = {
 	if (recordIndex == -1)
 	    return;
 
-	var allRecords = this._recording.allRecords;
+	var actions = this._recording.actions;
 	var percent = 0.0;
 	if (markIndex > 0)
-            percent = this.calculator.computeMiniviewPercentage(allRecords[recordIndex].mark.timestamp);
+            percent = this.calculator.computeMiniviewPercentage(actions[recordIndex].mark.timestamp);
 
 	this.sliders.playback.setPosition(percent, true);
 
 	// don't animate if this is close to or at the end.
-	if (percent > 0.99 || recordIndex == allRecords.length-1)
+	if (percent > 0.99 || recordIndex == actions.length-1)
 	    return;
 
-	var nextRecord = allRecords[recordIndex+1];
-	var curRecordTime = (recordIndex > 0) ? allRecords[recordIndex].mark.timestamp 
+	var nextRecord = actions[recordIndex+1];
+	var curRecordTime = (recordIndex > 0) ? actions[recordIndex].mark.timestamp 
 	                                      : this.calculator.minimumBoundary;
 
 	var timeDelta = nextRecord.mark.timestamp - curRecordTime;
@@ -765,7 +765,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	    return Math.abs(ts - record.mark.timestamp);
 	}
 
-	var records = this._recording.allRecords;
+	var records = this._recording.actions;
 	var idx = records.nearestBinaryIndexOf(timestamp, timestampAndRecordComparator, timeDistanceFunction);
 	var recordPosition = Math.floor(calculator.computeMiniviewPercentage(records[idx].mark.timestamp));
 	var prevRecordPosition = (idx == 0) ? 0.0

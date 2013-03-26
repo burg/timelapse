@@ -108,13 +108,13 @@ WebInspector.TimelapseScanner.prototype = {
 
         var currentIndex = model.currentMarkIndex;
         var breakpointHitIndex = model.breakpointTracker.breakpointHitIndex;
-        var allRecords = model.loadedRecording.allRecords;
+        var actions = model.loadedRecording.actions;
         var task = new WebInspector.ReplayTask("LinearScanForRegion("+startIndex+","+endIndex+")");
 
-        if (startIndex == allRecords[0].mark.index && !this.shouldScanInitialLoad()) {
-            console.assert(allRecords.length > 1,
+        if (startIndex == actions[0].mark.index && !this.shouldScanInitialLoad()) {
+            console.assert(actions.length > 1,
                            "Cannot exclude initial load from scan for recording with fewer than 2 inputs.");
-            startIndex = allRecords[1].mark.index;
+            startIndex = actions[1].mark.index;
         }
 
         task.chain("notifyScanStarted", this._notifyScanStarted, this);
@@ -129,7 +129,7 @@ WebInspector.TimelapseScanner.prototype = {
         // Workaround: currently there is no way to force replay up to the current mark index.
         if (currentIndex == endIndex && currentIndex != startIndex) {
             var endRecordIndex = model.loadedRecording.recordIndexFromMarkIndex(endIndex);
-            var prevIndex = allRecords[endRecordIndex - 1].mark.index;
+            var prevIndex = actions[endRecordIndex - 1].mark.index;
             task.chain("ScanToMarkPrecedingRegionEnd("+prevIndex+")", function(cb) {
                 model.onceEventListener(timelapseEvents.InputWaiting,
                                         this._createPreventDefaultCallback(cb), this);
@@ -181,7 +181,7 @@ WebInspector.TimelapseScanner.prototype = {
         
         var currentIndex = model.currentMarkIndex;
         var breakpointHitIndex = model.breakpointTracker.breakpointHitIndex;
-        var allRecords = model.loadedRecording.allRecords;
+        var actions = model.loadedRecording.actions;
 
         var task = new WebInspector.ReplayTask("SegmentedScanForRegion("+startIndex+","+endIndex+")");
 
@@ -195,7 +195,7 @@ WebInspector.TimelapseScanner.prototype = {
         }, this);
         task.chain("willExitRegion", this.willExitRegion, this);
 
-        if (startIndex > allRecords[0].mark.index) {
+        if (startIndex > actions[0].mark.index) {
             task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
                 model.onceEventListener(timelapseEvents.InputWaiting,
                                         this._createPreventDefaultCallback(cb), this);

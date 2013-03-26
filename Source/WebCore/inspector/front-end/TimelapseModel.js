@@ -270,12 +270,12 @@ WebInspector.TimelapseModel.prototype = {
             model._capturing = false;
             model.changeStatus("Ready");
             model._unsuppressBreakpoints();
-            var numRecords = recording.allRecords.length;
-            if (numRecords == 0) {
+            var numActions = recording.actions.length;
+            if (numActions == 0) {
                 model._currentMarkIndex = 0;
                 return cb(true);
             }
-            model._currentMarkIndex = recording.allRecords[numRecords-1].mark.index;
+            model._currentMarkIndex = recording.actions[numActions-1].mark.index;
 
             // actually add and load the just-captured recording.
             model._addRecording(recording);
@@ -315,12 +315,12 @@ WebInspector.TimelapseModel.prototype = {
                WebInspector.TimelapseModel.Steps.ResumeDebuggerIfPaused);
         task.chain("notifyAndRequestReplay", function(cb) {
             // decide replay starting and ending mark indices
-            var allRecords = model.loadedRecording.allRecords;
+            var actions = model.loadedRecording.actions;
             var canReplayWithoutRestart = model.isReplaying &&
                 model._currentMarkIndex && model._currentMarkIndex <= markIndex;
 
             model._replayStartIndex = (canReplayWithoutRestart) ? model._currentMarkIndex
-                                         : model.loadedRecording.allRecords[0].mark.index;
+                                         : model.loadedRecording.actions[0].mark.index;
             model._replayFinishIndex = markIndex;
 
             var seeking = WebInspector.TimelapseModel.ReplaySpeed.Seeking;
@@ -369,12 +369,12 @@ WebInspector.TimelapseModel.prototype = {
                WebInspector.TimelapseModel.Steps.ResumeDebuggerIfPaused);
         task.chain("notifyAndRequestReplay", function(cb) {
             // decide replay starting and ending mark indices
-            var allRecords = model.loadedRecording.allRecords;
-            var lastMarkIndex = allRecords[allRecords.length-1].mark.index;
+            var actions = model.loadedRecording.actions;
+            var lastMarkIndex = actions[actions.length-1].mark.index;
             // TODO: revisit this?
             // replayToCompletion() from the last mark causes last mark to play,
             // unless a recording was just made and there is no replay state.
-            model._replayStartIndex = (!this._replaying && this._currentMarkIndex == lastMarkIndex) ? allRecords[0].mark.index : this._currentMarkIndex;
+            model._replayStartIndex = (!this._replaying && this._currentMarkIndex == lastMarkIndex) ? actions[0].mark.index : this._currentMarkIndex;
             model._replayFinishIndex = lastMarkIndex;
 
             var seeking = WebInspector.TimelapseModel.ReplaySpeed.Seeking;
@@ -404,7 +404,7 @@ WebInspector.TimelapseModel.prototype = {
         if (this._currentMarkIndex != markIndex-1) {
             task.chain("ReplayToPrecedingMark", function(cb) {
                 var recordIndex = model.loadedRecording.recordIndexFromMarkIndex(markIndex);
-                var prevIndex = model.loadedRecording.allRecords[recordIndex - 1].mark.index;
+                var prevIndex = model.loadedRecording.actions[recordIndex - 1].mark.index;
                 model.onceEventListener(timelapseEvents.InputPaused, cb, task);
                 model.startReplayUpToMarkIndexTask(prevIndex, allowBreakpoints, replaySpeed).run();
             });

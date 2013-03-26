@@ -356,14 +356,14 @@ WebInspector.TimelapseOverview.prototype = {
     _updateSliderPositions: function()
     {
         /* reposition the sliders within the overview. */
-        var allRecords = this._recording.allRecords;
+        var actions = this._recording.actions;
 
         /* playback cursor */
         var markIdx = this._model.currentMarkIndex;
         var recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
         var percent = 0.0;
         if (recordIdx != -1)
-            percent = this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp);
+            percent = this.calculator.computeOverviewPercentage(actions[recordIdx].mark.timestamp);
 
         this.sliders.playback.setPosition(percent, true);
 
@@ -376,7 +376,7 @@ WebInspector.TimelapseOverview.prototype = {
             recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
             percent = 0.0;
             if (recordIdx != -1)
-                percent = this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp);
+                percent = this.calculator.computeOverviewPercentage(actions[recordIdx].mark.timestamp);
             slider.setPosition(percent, true);
             slider.show();
         }
@@ -384,13 +384,13 @@ WebInspector.TimelapseOverview.prototype = {
         /* previous/replay start slider */
         markIdx = this._model.replayStartMarkIndex;
         recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
-        percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
+        percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(actions[recordIdx].mark.timestamp) : 0.0;
         this.sliders.previous.setPosition(percent, true);
 
         /* tentative/replay finish slider */
         markIdx = this._model.replayFinishMarkIndex;
         recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
-        percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(allRecords[recordIdx].mark.timestamp) : 0.0;
+        percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(actions[recordIdx].mark.timestamp) : 0.0;
         this.sliders.tentative.setPosition(percent, true);
     },
 
@@ -895,10 +895,10 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPlaybackDidStart: function(event)
     {
-        var allRecords = this._recording.allRecords;
-        var startRecord = allRecords[this._recording.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
-        var finishRecord = allRecords[this._recording.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
-        var currentRecord = allRecords[this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex)];
+        var actions = this._recording.actions;
+        var startRecord = actions[this._recording.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
+        var finishRecord = actions[this._recording.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
+        var currentRecord = actions[this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex)];
 
         this.sliders.playback.element.addStyleClass("playback-slider");
         this.sliders.playback.element.removeStyleClass("breakpoint-slider");
@@ -931,11 +931,11 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onInputPaused: function(event)
     {
-        var allRecords = this._recording.allRecords;
+        var actions = this._recording.actions;
         var recordIndex = this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex);
-
+        
         if (recordIndex != -1) {
-            var percent = this.calculator.computeOverviewPercentage(allRecords[recordIndex].mark.timestamp);
+            var percent = this.calculator.computeOverviewPercentage(actions[recordIndex].mark.timestamp);
             this.sliders.playback.setPosition(percent, true);
         }
 
@@ -964,10 +964,10 @@ WebInspector.TimelapseOverview.prototype = {
         if (recordIndex == -1)
             return;
 
-        var allRecords = this._recording.allRecords;
+        var actions = this._recording.actions;
         var percent = 0.0;
         if (markIndex > 0)
-            percent = this.calculator.computeOverviewPercentage(allRecords[recordIndex].mark.timestamp);
+            percent = this.calculator.computeOverviewPercentage(actions[recordIndex].mark.timestamp);
 
         this.sliders.playback.setPosition(percent, true);
 
@@ -975,9 +975,9 @@ WebInspector.TimelapseOverview.prototype = {
         if (percent < 0.0 || percent > 0.99)
             return;
 
-        var nextRecord = allRecords[recordIndex+1];
-        var curRecordTime = (recordIndex > 0) ? allRecords[recordIndex].mark.timestamp 
-            : this.calculator.minimumBoundary;
+        var nextRecord = actions[recordIndex+1];
+        var curRecordTime = (recordIndex > 0) ? actions[recordIndex].mark.timestamp 
+                                              : this.calculator.minimumBoundary;
 
         var timeDelta = nextRecord.mark.timestamp - curRecordTime;
         if (timeDelta > WebInspector.TimelapseOverview.MinAnimationDelta) {

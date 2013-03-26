@@ -193,7 +193,7 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
             var recordIndex = this._model.loadedRecording.recordIndexFromMarkIndex(markIndex);
             hitRecords.splice(idx, 0, {
             type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
-            mark: this._model.loadedRecording.allRecords[recordIndex].mark,
+            mark: this._model.loadedRecording.actions[recordIndex].mark,
             hits: []
             });
         }

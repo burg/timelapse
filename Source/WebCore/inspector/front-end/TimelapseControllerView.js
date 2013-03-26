@@ -186,7 +186,7 @@ WebInspector.TimelapseControllerView.prototype = {
         // the capture view knows to change its message in this situation.
 
         var recording = event.data;
-        if (recording.allRecords.length == 0)
+        if (recording.actions.length == 0)
             return;
 
         this.currentView = new WebInspector.TimelapseReplayView(this._model, recording);
@@ -309,7 +309,7 @@ WebInspector.TimelapseCaptureView.prototype = {
     this._messagePanel.classList.remove("message-pulse");
 
     // TODO: move to ReplayingView
-    if (this._recording.allRecords.length == 0)
+    if (this._recording.actions.length == 0)
         this._messagePanel.textContent = "Nothing was captured. Please try again.";
     },
 

@@ -227,7 +227,7 @@ WebInspector.TimelapseRecording.prototype = {
 
     get isCapturing() { return false; },
 
-    get allRecords()
+    get actions()
     {
     return this._records;
     },
@@ -241,13 +241,13 @@ WebInspector.TimelapseRecording.prototype = {
             return 0;
         }
 
-        return this.allRecords.binaryIndexOf(markIndex, markIndexAndRecordComparator);
+        return this.actions.binaryIndexOf(markIndex, markIndexAndRecordComparator);
     },
 
     timestampFromMarkIndex: function(markIndex)
     {
         var recordIndex = this.recordIndexFromMarkIndex(markIndex);
-        var record = this.allRecords[recordIndex];
+        var record = this.actions[recordIndex];
         return record.mark.timestamp;
     },
 
@@ -488,7 +488,7 @@ WebInspector.TimelapseCalculator.prototype = {
 	    return Math.abs(ts - record.mark.timestamp);
 	}
 
-	var records = this._recording.allRecords;
+	var records = this._recording.actions;
 	var idx = records.nearestBinaryIndexOf(timestamp, timestampAndRecordComparator, timeDistanceFunction);
 	return records[idx].mark.index;
     },

@@ -138,12 +138,12 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
     
     // create new rows for all records, update table.
     var newNode;
-    var allRecords = this._recording.allRecords;
-	for (var i = 0; i < allRecords.length; i++) {
-	    if (allRecords[i].mark.index > this._maxMarkIndex)
-		this._maxMarkIndex = allRecords[i].mark.index;
+    var actions = this._recording.actions;
+	for (var i = 0; i < actions.length; i++) {
+	    if (actions[i].mark.index > this._maxMarkIndex)
+		this._maxMarkIndex = actions[i].mark.index;
 	    
-	    newNode = this._createRecordGridNode(allRecords[i]);
+	    newNode = this._createRecordGridNode(actions[i]);
 	    this.rootNode().appendChild(newNode);
 	    newNode.refreshRecord();
 	}
