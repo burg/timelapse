@@ -147,7 +147,7 @@ WebInspector.TimelapseInputDataProvider = function(recording, name, displayName,
     this._selectedIndices = [];
 
     var eventNames = WebInspector.TimelapseRecording.Events;
-    recording.addEventListener(eventNames.RecordAdded, this._recordAdded, this);
+    recording.addEventListener(eventNames.ActionAdded, this._actionAdded, this);
 };
 
 WebInspector.TimelapseInputDataProvider.prototype = {
@@ -211,7 +211,7 @@ WebInspector.TimelapseInputDataProvider.prototype = {
 	this.selectedIndices = [];
     },
 
-    _recordAdded: function(event)
+    _actionAdded: function(event)
     {
 	var record = event.data;
 	var styles = WebInspector.TimelapseInputDataProvider.InputStyles;

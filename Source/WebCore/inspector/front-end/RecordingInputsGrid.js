@@ -104,7 +104,7 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
     this._providerListeners = {};
     this._refreshDelay = WebInspector.RecordingInputsGrid.DefaultRefreshDelay;
     this._maxMarkIndex = 0;
-    this._recordGridNodes = {};
+    this._gridNodes = {};
     
     this._callbacks = new WebInspector.EventListenerGroup(this, "TimelapseInputGrid static callbacks");
     
@@ -136,7 +136,7 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
     for (var i = 0; i < providers.length; i++)
         this._addProvider(providers[i]);
     
-    // create new rows for all records, update table.
+    // create new rows for all actions, update table.
     var newNode;
     var actions = this._recording.actions;
 	for (var i = 0; i < actions.length; i++) {
@@ -151,7 +151,7 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
     // initialize slider position
     // XXX test me
     this._refreshIfNeeded();
-	var node = this._recordGridNodes[this._model.currentMarkIndex];
+	var node = this._gridNodes[this._model.currentMarkIndex];
 	this.sliders.playback.placeAfter(node);
 	this.sliders.playback.enable();
 	this.sliders.playback.show();
@@ -215,10 +215,10 @@ WebInspector.RecordingInputsGrid.prototype = {
 	    this.scrollToLastRow();
     },
 
-    refreshRecordGridNode: function(markIndex)
+    refreshGridNode: function(markIndex)
     {
-	var node = this._recordGridNodes[markIndex];
-	node.refreshRecord.call(node);
+	var node = this._gridNodes[markIndex];
+	node.refreshAction.call(node);
     },
 
     // These are used by shortcut handlers
@@ -246,7 +246,7 @@ WebInspector.RecordingInputsGrid.prototype = {
 	var lastIndex = this._maxMarkIndex;
 
 	while (nextIndex <= lastIndex) {
-	    var node = this._recordGridNodes[nextIndex];
+	    var node = this._gridNodes[nextIndex];
 
 	    if (!node || node.isFilteredOut())
 		nextIndex++;
@@ -261,7 +261,7 @@ WebInspector.RecordingInputsGrid.prototype = {
 	var previousIndex = markIndex - 1;
 
 	while (previousIndex > 0) {
-	    var node = this._recordGridNodes[previousIndex];
+	    var node = this._gridNodes[previousIndex];
 
 	    if (!node || node.isFilteredOut())
 		previousIndex--;
@@ -314,7 +314,7 @@ WebInspector.RecordingInputsGrid.prototype = {
 
         callbacks.install();
 
-        // set up provider's record filter if it's active.
+        // set up provider's action filter if it's active.
         if (provider.isEnabled())
             this.element.classList.add("filter-" + provider.name);
     },
@@ -353,7 +353,7 @@ WebInspector.RecordingInputsGrid.prototype = {
 	// if the selected row matches the disabled provider, then deselect it.
 	if (this.selected) {
 	    var selectedNode = this.selectedNode;
-	    var style = WebInspector.TimelapseInputDataProvider.InputStyles[selectedNode.record.type];
+	    var style = WebInspector.TimelapseInputDataProvider.InputStyles[selectedNode.action.type];
 	    if (style.group == provider.name)
 		selectedNode.deselect();
 	}
@@ -401,10 +401,10 @@ WebInspector.RecordingInputsGrid.prototype = {
 	this._updateOffscreenRows();
     },
 
-    _createRecordGridNode: function(record)
+    _createGridNode: function(action)
     {
-	var node = new WebInspector.RecordingInputsGridNode(this, record);
-	this._recordGridNodes[record.mark.index] = node;
+	var node = new WebInspector.RecordingInputsGridNode(this, action);
+	this._gridNodes[action.mark.index] = node;
 	return node;
     },
 
@@ -436,9 +436,9 @@ WebInspector.RecordingInputsGrid.prototype = {
 	var startTs = calculator.computeMiniviewTimestamp(calculator.zoomLeft);
 	var endTs = calculator.computeMiniviewTimestamp(calculator.zoomRight);
 
-	for (var markIndex in this._recordGridNodes) {
-	    var node = this._recordGridNodes[markIndex];
-	    var ts = node.record.mark.timestamp;
+	for (var markIndex in this._gridNodes) {
+	    var node = this._gridNodes[markIndex];
+	    var ts = node.action.mark.timestamp;
 	    if (ts < startTs || ts > endTs)
 		node.element.classList.add("hidden");
 	    else
@@ -459,11 +459,11 @@ WebInspector.RecordingInputsGrid.prototype = {
 	this.sliders.playback.hide();
 	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
 
-	var startNode = this._recordGridNodes[this._model.replayStartMarkIndex];
+	var startNode = this._gridNodes[this._model.replayStartMarkIndex];
 	this.sliders.previous.placeBefore(startNode);
 	this.sliders.previous.show();
 
-	var finishNode = this._recordGridNodes[this._model.replayFinishMarkIndex];
+	var finishNode = this._gridNodes[this._model.replayFinishMarkIndex];
 	this.sliders.tentative.placeBefore(finishNode);
 	this.sliders.tentative.show();
     },
@@ -473,7 +473,7 @@ WebInspector.RecordingInputsGrid.prototype = {
 	this.sliders.previous.hide();
 	this.sliders.tentative.hide();
 
-	var node = this._recordGridNodes[this._model.currentMarkIndex];
+	var node = this._gridNodes[this._model.currentMarkIndex];
 	this.sliders.playback.placeBefore(node, true);
 	this.sliders.playback.element.removeStyleClass("playback-pulse");
 	this.sliders.playback.enable();
@@ -487,7 +487,7 @@ WebInspector.RecordingInputsGrid.prototype = {
 	this.sliders.previous.hide();
 	this.sliders.tentative.hide();
 
-	var node = this._recordGridNodes[this._model.currentMarkIndex];
+	var node = this._gridNodes[this._model.currentMarkIndex];
 	this.sliders.playback.placeBefore(node, true);
 	this.sliders.playback.element.removeStyleClass("playback-pulse");
 	this.sliders.playback.enable();
@@ -498,7 +498,7 @@ WebInspector.RecordingInputsGrid.prototype = {
 
     _onDebuggerPaused: function(eventData)
     {
-	var position = this._recordGridNodes[this._model.currentMarkIndex];
+	var position = this._gridNodes[this._model.currentMarkIndex];
 
 	this.sliders.playback.placeBefore(position);
 	this.sliders.playback.element.addStyleClass("breakpoint-slider");
@@ -514,17 +514,17 @@ WebInspector.RecordingInputsGrid.prototype = {
     {
 	var provider = event.data.provider;
 	var recordIndices = event.data.recordIndices;
-	var firstRecord = provider.records[recordIndices[0]];
-	var lastRecord = provider.records[recordIndices[recordIndices.length-1]];
+	var firstAction = provider.records[recordIndices[0]];
+	var lastAction = provider.records[recordIndices[recordIndices.length-1]];
 
 	// attempt to reveal first and last rows, so it matches the popup
-	this._recordGridNodes[firstRecord.mark.index].reveal();
-	this._recordGridNodes[lastRecord.mark.index].reveal();
+	this._gridNodes[firstRecord.mark.index].reveal();
+	this._gridNodes[lastRecord.mark.index].reveal();
     },
 
     _onPreviewStarted: function()
     {
-	var position = this._recordGridNodes[this._model.currentMarkIndex];
+	var position = this._gridNodes[this._model.currentMarkIndex];
 
 	this.sliders.previous.placeBefore(position);
 	this.sliders.previous.show();
@@ -541,8 +541,8 @@ WebInspector.RecordingInputsGrid.prototype = {
 
     _onPreviewChanged: function(event)
     {
-	var record = event.data;
-	var node = this._recordGridNodes[record.mark.index];
+	var action = event.data;
+	var node = this._gridNodes[action.mark.index];
 
 	if (!node.isFilteredOut()) {
 	    this._sliders.tentative.placeBefore(node);
@@ -581,8 +581,8 @@ WebInspector.RecordingInputsGrid.prototype = {
 	this.sliders.playback.placeBefore(position.node);
 
 	this._recording.startPreviewing();
-    // fake a movement so that we immediately preview the record underneath drag start.
-    this._recording.previewRecord(position.node.record);
+    // fake a movement so that we immediately preview the action underneath drag start.
+    this._recording.previewAction(position.node.action);
     },
 
     _onGridDragEnd: function()
@@ -593,16 +593,16 @@ WebInspector.RecordingInputsGrid.prototype = {
 	delete this._dragStartOffset;
 
 	this._cancelAutoScroll();
-	var targetRecord = this._recording.previewedRecord;
+	var targetAction = this._recording.previewedAction;
 	this._recording.stopPreviewing();
-    if (!targetRecord) // if dragged and dropped in place
+    if (!targetAction) // if dragged and dropped in place
         return;
         
 	var position = this.sliders.playback.position;
 	if (position.before)
-	    this._replayToIndex(targetRecord.mark.index);
+	    this._replayToIndex(targetAction.mark.index);
 	else
-	    this._replayToNextNode(targetRecord.mark.index);
+	    this._replayToNextNode(targetAction.mark.index);
     },
 
     _onGridDragging: function(eventData)
@@ -635,14 +635,14 @@ WebInspector.RecordingInputsGrid.prototype = {
 		currentPosition.before != newPosition.before) {		
 
 		if (isAboveRowMidpoint)
-		    this._recording.previewRecord(node.record);
+		    this._recording.previewAction(node.action);
 		else {
-		    var nextMarkIndex = this.nextVisibleIndex(node.record.mark.index);
+		    var nextMarkIndex = this.nextVisibleIndex(node.action.mark.index);
 		    if (!nextMarkIndex)
 			return;
 
-		    var nextRecordIndex = this._recording.recordIndexFromMarkIndex(nextMarkIndex);
-		    this._recording.previewRecord(this._recordGridNodes[nextMarkIndex].record);
+		    var nextActionIndex = this._recording.actionIndexFromMarkIndex(nextMarkIndex);
+		    this._recording.previewAction(this._gridNodes[nextMarkIndex].action);
 		}
 	    }
 
@@ -702,8 +702,8 @@ WebInspector.RecordingInputsGrid.prototype = {
     {
         var dataTableBody = this.dataTableBody;
         var rows = dataTableBody.children;
-        var recordsCount = rows.length;
-        if (recordsCount < 2)
+        var actionsCount = rows.length;
+        if (actionsCount < 2)
             return;  // Filler row only.
 
         var visibleTop = this.scrollContainer.scrollTop;
@@ -711,9 +711,9 @@ WebInspector.RecordingInputsGrid.prototype = {
 
         var rowHeight = 0;
 
-        // Filler is at recordsCount - 1.
+        // Filler is at actionsCount - 1.
         var unfilteredRowIndex = 0;
-        for (var i = 0; i < recordsCount - 1; ++i) {
+        for (var i = 0; i < actionsCount - 1; ++i) {
             var row = rows[i];
 
             var dataGridNode = this.dataGridNodeFromNode(row);
@@ -741,7 +741,7 @@ WebInspector.RecordingInputsGrid.prototype = {
     {
         var savepoints = this._recording.savepointList.savepoints;
         for (var i = 0; i < savepoints.length; ++i) {
-            this.refreshRecordGridNode(savepoints[i].markIndex);
+            this.refreshGridNode(savepoints[i].markIndex);
         }
     },
     
@@ -883,18 +883,18 @@ WebInspector.RecordingInputsGridSlider.prototype =  {
 	/* if the actual row is filtered out, try to set at next/prev visible. 
 	 * If that fails, just set at top of table */
 	if (node.isFilteredOut()) {
-	    var prevMarkIndex = this._grid.previousVisibleIndex(node.record.mark.index);
-	    var nextMarkIndex = this._grid.nextVisibleIndex(node.record.mark.index);
+	    var prevMarkIndex = this._grid.previousVisibleIndex(node.action.mark.index);
+	    var nextMarkIndex = this._grid.nextVisibleIndex(node.action.mark.index);
 	    if (!prevMarkIndex) {
 		this.element.style.top = "0px";
 		return;
 	    } else if (!nextMarkIndex) {
-		var prevNode = this._grid._recordGridNodes[prevMarkIndex];
+		var prevNode = this._grid._gridNodes[prevMarkIndex];
 		this.element.style.top = prevNode.element.offsetTop + prevNode.element.offsetHeight + "px";
 		return;
 	    }
 
-	    node = this._grid._recordGridNodes[prevMarkIndex];
+	    node = this._grid._gridNodes[prevMarkIndex];
 	}
 
 	this.element.style.top = node.element.offsetTop + "px";
@@ -950,22 +950,22 @@ WebInspector.RecordingInputsGridSlider.prototype =  {
  * @constructor
  * @extends {WebInspector.DataGridNode}
  */
-WebInspector.RecordingInputsGridNode = function(parentView, record)
+WebInspector.RecordingInputsGridNode = function(parentView, action)
 {
     WebInspector.DataGridNode.call(this, {});
     this._parentView = parentView;
-    this._record = record;
+    this._action = action;
 };
 
 WebInspector.RecordingInputsGridNode.prototype = {
-    get record()
+    get action()
     {
-	return this._record;
+	return this._action;
     },
 
     createCells: function()
     {
-	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].group;
+	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._action.type].group;
 
         // Out of sight, out of mind: create nodes offscreen to save on render tree update times when running updateOffscreenRows()
         this._element.addStyleClass("offscreen");
@@ -981,7 +981,7 @@ WebInspector.RecordingInputsGridNode.prototype = {
 
     isFilteredOut: function()
     {
-        return !this._parentView.providers[WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].group].isEnabled() || this.element.classList.contains("hidden");
+        return !this._parentView.providers[WebInspector.TimelapseInputDataProvider.InputStyles[this._action.type].group].isEnabled() || this.element.classList.contains("hidden");
     },
 
     highlight: function(classSuffix)
@@ -1000,7 +1000,7 @@ WebInspector.RecordingInputsGridNode.prototype = {
 	    return;
 	
 	// let the model know that the row is selected, but paint the change immediately.
-	this._parentView.recording.selectInput(this._record.mark.index);
+	this._parentView.recording.selectAction(this._action.mark.index);
         WebInspector.DataGridNode.prototype.select.apply(this, arguments);
     },
 
@@ -1010,7 +1010,7 @@ WebInspector.RecordingInputsGridNode.prototype = {
     },
 
     _replayToThisNode: function() {
-	WebInspector.timelapseModel.replayUpToMarkIndex(this._record.mark.index);
+	WebInspector.timelapseModel.replayUpToMarkIndex(this._action.mark.index);
     },
 
     _createDivInTD: function(columnIdentifier)
@@ -1023,7 +1023,7 @@ WebInspector.RecordingInputsGridNode.prototype = {
         return div;
     },
 
-    refreshRecord: function()
+    refreshAction: function()
     {
 	this._refreshGutterCell();
 	this._refreshIndexCell();
@@ -1033,7 +1033,7 @@ WebInspector.RecordingInputsGridNode.prototype = {
 	this._refreshPreviewCell();
 	
 	this._element.addStyleClass("timelapse-table-item");
-	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].group;
+	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._action.type].group;
 	if (!this._element.hasStyleClass("timelapse-category-" + group)) {
             this._element.removeMatchingStyleClasses("timelapse-category-\\w+");
             this._element.addStyleClass("timelapse-category-" + group);
@@ -1045,7 +1045,7 @@ WebInspector.RecordingInputsGridNode.prototype = {
 	this._gutterCell.removeChildren();
 
 	var savepointList = this._parentView.recording.savepointList;
-	var savepoint = savepointList.findForMarkIndex(this._record.mark.index);
+	var savepoint = savepointList.findForMarkIndex(this._action.mark.index);
 	if (!savepoint)
 	    return;
 
@@ -1058,15 +1058,15 @@ WebInspector.RecordingInputsGridNode.prototype = {
     _refreshIndexCell: function()
     {
 	this._indexCell.removeChildren();
-	this._indexCell.appendChild(document.createTextNode(this._record.mark.index));
-	this._indexCell.title = "Input Action #" + this._record.mark.index;
+	this._indexCell.appendChild(document.createTextNode(this._action.mark.index));
+	this._indexCell.title = "Input Action #" + this._action.mark.index;
     },
 
     _refreshGroupCell: function()
     {
 	this._groupCell.removeChildren();
 	this._groupCell.appendChild(document.createTextNode(" "));
-	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].group;
+	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._action.type].group;
 	var provider = this._parentView.providers[group];
 	this._groupCell.title = "Category: " + provider.displayName;
     },
@@ -1074,21 +1074,21 @@ WebInspector.RecordingInputsGridNode.prototype = {
     _refreshTypeCell: function()
     {
     	this._typeCell.removeChildren();
-	this._typeCell.setTextAndTitle(WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].title);
+	this._typeCell.setTextAndTitle(WebInspector.TimelapseInputDataProvider.InputStyles[this._action.type].title);
     },
 
     _refreshTimestampCell: function()
     {
     	this._timestampCell.removeChildren();
-	this._timestampCell.setTextAndTitle(this._parentView.recording.calculator.formatElapsedValue(this._record.mark.timestamp));
+	this._timestampCell.setTextAndTitle(this._parentView.recording.calculator.formatElapsedValue(this._action.mark.timestamp));
     },
 
     _refreshPreviewCell: function()
     {
     	this._previewCell.removeChildren();
-	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].group;
+	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._action.type].group;
 	var provider = this._parentView._providers[group];
-	var preview = WebInspector.TimelapseInputDataProvider.InputPreview[this._record.type](this._record.data, provider);
+	var preview = WebInspector.TimelapseInputDataProvider.InputPreview[this._action.type](this._action.data, provider);
 	if (group == "network") {
 	    var url = preview;
 	    var isExternal = !WebInspector.resourceForURL(url);
@@ -1107,8 +1107,8 @@ WebInspector.RecordingInputsGridNode.prototype = {
 
 WebInspector.RecordingInputsGridNode.GroupComparator = function(a,b)
 {
-    var aGroup = WebInspector.TimelapseInputDataProvider.InputStyles[a._record.type].group;
-    var bGroup = WebInspector.TimelapseInputDataProvider.InputStyles[b._record.type].group;
+    var aGroup = WebInspector.TimelapseInputDataProvider.InputStyles[a._action.type].group;
+    var bGroup = WebInspector.TimelapseInputDataProvider.InputStyles[b._action.type].group;
     if (aGroup > bGroup)
 	return 1;
     if (bGroup > aGroup)
@@ -1118,8 +1118,8 @@ WebInspector.RecordingInputsGridNode.GroupComparator = function(a,b)
 
 WebInspector.RecordingInputsGridNode.TypeComparator = function(a,b)
 {
-    var aType = a._record.type;
-    var bType = b._record.type;
+    var aType = a._action.type;
+    var bType = b._action.type;
     if (aType > bType)
 	return 1;
     if (bType > aType)
@@ -1129,8 +1129,8 @@ WebInspector.RecordingInputsGridNode.TypeComparator = function(a,b)
 
 WebInspector.RecordingInputsGridNode.IndexComparator = function(a,b)
 {
-    var aIndex = a._record.mark.index;
-    var bIndex = b._record.mark.index;
+    var aIndex = a._action.mark.index;
+    var bIndex = b._action.mark.index;
     if (aIndex > bIndex)
 	return 1;
     if (bIndex > aIndex)
@@ -1140,8 +1140,8 @@ WebInspector.RecordingInputsGridNode.IndexComparator = function(a,b)
 
 WebInspector.RecordingInputsGridNode.TimestampComparator = function(a,b)
 {
-    var aTimestamp = a._record.mark.timestamp;
-    var bTimestamp = b._record.mark.timestamp;
+    var aTimestamp = a._action.mark.timestamp;
+    var bTimestamp = b._action.mark.timestamp;
     if (aTimestamp > bTimestamp)
 	return 1;
     if (bTimestamp > aTimestamp)

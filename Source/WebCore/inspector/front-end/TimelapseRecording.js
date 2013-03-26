@@ -39,7 +39,7 @@ WebInspector.TimelapseRecording = function(model)
     this._model = model;
     this.calculator = new WebInspector.TimelapseCalculator(this);
     this._providers = [];
-    this._records = [];
+    this._actions = [];
 
     this._callbacks = new WebInspector.EventListenerGroup(this, "TimelapseRecording listeners");
     this.registerListeners(this._callbacks);
@@ -48,8 +48,8 @@ WebInspector.TimelapseRecording = function(model)
 
 WebInspector.TimelapseRecording.Events = {
     ProviderAdded:  "TimelapseProviderAdded",
-    // fired when a record is added to the recording, either from capture or disk.
-    RecordAdded:    "TimelapseRecordAdded",
+    // fired when an action is added to the recording, either from capture or disk.
+    ActionAdded:    "TimelapseActionAdded",
     // TODO: the following events are details of specific data providers.
     InputSelected:  "TimelapseInputSelected",
     PreviewStarted: "TimelapsePreviewStarted",
@@ -229,26 +229,26 @@ WebInspector.TimelapseRecording.prototype = {
 
     get actions()
     {
-    return this._records;
+    return this._actions;
     },
 
-    recordIndexFromMarkIndex: function(markIndex)
+    actionIndexFromMarkIndex: function(markIndex)
     {
-        function markIndexAndRecordComparator(idx, record) {
-            var record_idx = record.mark.index;
-            if (record_idx > idx) return -1;
-            if (record_idx < idx) return 1;
+        function markIndexAndActionComparator(idx, action) {
+            var action_idx = action.mark.index;
+            if (action_idx > idx) return -1;
+            if (action_idx < idx) return 1;
             return 0;
         }
 
-        return this.actions.binaryIndexOf(markIndex, markIndexAndRecordComparator);
+        return this.actions.binaryIndexOf(markIndex, markIndexAndActionComparator);
     },
 
     timestampFromMarkIndex: function(markIndex)
     {
-        var recordIndex = this.recordIndexFromMarkIndex(markIndex);
-        var record = this.actions[recordIndex];
-        return record.mark.timestamp;
+        var actionIndex = this.actionIndexFromMarkIndex(markIndex);
+        var action = this.actions[actionIndex];
+        return action.mark.timestamp;
     },
 
     // TODO: Preview state should live on the specific DataProvider which is being previewed.
@@ -258,9 +258,9 @@ WebInspector.TimelapseRecording.prototype = {
     },
 
     // TODO: Preview state should live on the specific DataProvider which is being previewed.
-    get previewedRecord()
+    get previewedAction()
     {
-	return this._previewedRecord;
+	return this._previewedAction;
     },
 
     // TODO: Preview state should live on the specific DataProvider which is being previewed.
@@ -274,24 +274,24 @@ WebInspector.TimelapseRecording.prototype = {
     stopPreviewing: function()
     {
 	delete this._previewModeActive;
-	delete this._previewedRecord;
+	delete this._previewedAction;
     	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.PreviewStopped);
     },
 
     // TODO: Preview state should live on the specific DataProvider which is being previewed.
-    previewRecord: function(record)
+    previewAction: function(action)
     {
-	console.assert(!!record, "Cannot preview undefined record");
+	console.assert(!!action, "Cannot preview undefined action");
 
-	this._previewedRecord = record;
-	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.PreviewChanged, record);
+	this._previewedAction = action;
+	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.PreviewChanged, action);
     },
 
     // TODO: Selection state should live on the specific DataProvider which is being selected.
-    selectInput: function(markIndex)
+    selectAction: function(markIndex)
     {
 	this._selectedInputIndex = markIndex;
-	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.InputSelected, markIndex);
+	this.dispatchEventToListeners(WebInspector.Timelapseactioning.Events.InputSelected, markIndex);
     },
 
     scanInZoomRegion: function(scanner)
@@ -306,11 +306,11 @@ WebInspector.TimelapseRecording.prototype = {
     },
     
     // Called by WebInspector.TimelapseDispatcher
-    _capturedAction: function(record)
+    _capturedAction: function(action)
     {
-	this._records.push(record);
-  	this.calculator.updateBoundaries(record);
-	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.RecordAdded, record);
+	this._actions.push(action);
+  	this.calculator.updateBoundaries(action);
+	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.ActionAdded, action);
     },
     
     __proto__: WebInspector.Object.prototype
@@ -431,9 +431,9 @@ WebInspector.TimelapseCalculator.prototype = {
         return (this.maximumBoundary - this.minimumBoundary);
     },
 
-    updateBoundaries: function(record)
+    updateBoundaries: function(action)
     {
-	var ts = record.mark.timestamp;
+	var ts = action.mark.timestamp;
         if (typeof this.minimumBoundary === "undefined" || ts < this.minimumBoundary) {
             this.minimumBoundary = ts;
             return true;
@@ -474,23 +474,23 @@ WebInspector.TimelapseCalculator.prototype = {
     {
     	var timestamp = this.minimumBoundary + this.boundarySpan * percent;
 
-	function timestampAndRecordComparator(ts, record) {
-	    var record_ts = record.mark.timestamp;
-	    if (record_ts > ts) return -1;
-	    if (record_ts < ts) return 1;
+	function timestampAndActionComparator(ts, action) {
+	    var action_ts = action.mark.timestamp;
+	    if (action_ts > ts) return -1;
+	    if (action_ts < ts) return 1;
 	    return 0;
 	}
 
-	function timeDistanceFunction(ts, record) {
-	    if (!record)
+	function timeDistanceFunction(ts, action) {
+	    if (!action)
 		return Number.POSITIVE_INFINITY;
 
-	    return Math.abs(ts - record.mark.timestamp);
+	    return Math.abs(ts - action.mark.timestamp);
 	}
 
-	var records = this._recording.actions;
-	var idx = records.nearestBinaryIndexOf(timestamp, timestampAndRecordComparator, timeDistanceFunction);
-	return records[idx].mark.index;
+	var actions = this._recording.actions;
+	var idx = actions.nearestBinaryIndexOf(timestamp, timestampAndActionComparator, timeDistanceFunction);
+	return actions[idx].mark.index;
     },
 
     formatValue: function(value)

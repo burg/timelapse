@@ -255,10 +255,10 @@ WebInspector.TimelapseMiniview.prototype = {
     _recomputeTimelines: function()
     {
 	// Create sparse arrays with 101 cells each to fill with counts for a given group.
-	function markPercentagesForRecord(record)
+	function markPercentagesForAction(action)
 	{
-	    var group = WebInspector.TimelapseInputDataProvider.InputStyles[record.type].group;
-	    var percent = Math.floor(100.0 * this.calculator.computeMiniviewPercentage(record.mark.timestamp));
+	    var group = WebInspector.TimelapseInputDataProvider.InputStyles[action.type].group;
+	    var percent = Math.floor(100.0 * this.calculator.computeMiniviewPercentage(action.mark.timestamp));
 	    var percentile = Number.constrain(percent, 0, 99);
 
 	    if (!this._timelines[group].data[percentile])
@@ -299,7 +299,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	    if (provider.type == WebInspector.DataProvider.Types.BreakpointHits)
 		provider.records.map(markPercentagesForBreakpointRecord.bind(this));
 	    else
-		provider.records.map(markPercentagesForRecord.bind(this));
+		provider.records.map(markPercentagesForAction.bind(this));
 	}
 	
 	for (var key in this._timelines) {
@@ -567,17 +567,17 @@ WebInspector.TimelapseMiniview.prototype = {
     {
 	// timestamp of start/finish/now to position the sliders.
 	var actions = this._recording.actions;
-	var startRecord = actions[this._recording.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
-	var finishRecord = actions[this._recording.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
-	var currentRecordIndex = this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex);
+	var startAction = actions[this._recording.actionIndexFromMarkIndex(this._model.replayStartMarkIndex)];
+	var finishAction = actions[this._recording.actionIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
+	var currentActionIndex = this._recording.actionIndexFromMarkIndex(this._model.currentMarkIndex);
 
 	this.sliders.playback.element.removeStyleClass("breakpoint-slider");
 	this.sliders.playback.show();
 
-	this.sliders.previous.setPosition(this.calculator.computeMiniviewPercentage(startRecord.mark.timestamp),
+	this.sliders.previous.setPosition(this.calculator.computeMiniviewPercentage(startAction.mark.timestamp),
 					  true);
 	this.sliders.previous.show();
-	this.sliders.tentative.setPosition(this.calculator.computeMiniviewPercentage(finishRecord.mark.timestamp),
+	this.sliders.tentative.setPosition(this.calculator.computeMiniviewPercentage(finishAction.mark.timestamp),
 					  true);
 	this.sliders.tentative.show();
 	this.sliders.playback.disable();
@@ -586,9 +586,9 @@ WebInspector.TimelapseMiniview.prototype = {
     var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
 	this.sliders.playback.minimumResolution = (this._model.replaySpeed === replaySpeeds.Seeking) ? 10.0 : 1.0;
 
-	if (currentRecordIndex != -1) {
-    	    var currentRecord = actions[currentRecordIndex];
-	    this.sliders.playback.setPosition(this.calculator.computeMiniviewPercentage(currentRecord.mark.timestamp), true);	
+	if (currentActionIndex != -1) {
+    	    var currentAction = actions[currentActionIndex];
+	    this.sliders.playback.setPosition(this.calculator.computeMiniviewPercentage(currentAction.mark.timestamp), true);
 	} else {
 	    this.sliders.playback.setPosition(0.0, true);
 	}
@@ -606,10 +606,10 @@ WebInspector.TimelapseMiniview.prototype = {
     _onInputPaused: function()
     {
 	var actions = this._recording.actions;
-	var recordIndex = this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex);
+	var actionIndex = this._recording.actionIndexFromMarkIndex(this._model.currentMarkIndex);
 	
-	if (recordIndex != -1) {
-	    var percent = this.calculator.computeMiniviewPercentage(actions[recordIndex].mark.timestamp);
+	if (actionIndex != -1) {
+	    var percent = this.calculator.computeMiniviewPercentage(actions[actionIndex].mark.timestamp);
 	    this.sliders.playback.setPosition(percent, true);
 	}
 
@@ -625,31 +625,31 @@ WebInspector.TimelapseMiniview.prototype = {
     _onInputHit: function(event)
     {
 	var markIndex = event.data;
-	var recordIndex = this._recording.recordIndexFromMarkIndex(markIndex);
+	var actionIndex = this._recording.actionIndexFromMarkIndex(markIndex);
 
-	// don't animate if this mark has no corresponding record (aka, not a user-visible mark)
-	if (recordIndex == -1)
+	// don't animate if this mark has no corresponding action (aka, not a user-visible mark)
+	if (actionIndex == -1)
 	    return;
 
 	var actions = this._recording.actions;
 	var percent = 0.0;
 	if (markIndex > 0)
-            percent = this.calculator.computeMiniviewPercentage(actions[recordIndex].mark.timestamp);
+            percent = this.calculator.computeMiniviewPercentage(actions[actionIndex].mark.timestamp);
 
 	this.sliders.playback.setPosition(percent, true);
 
 	// don't animate if this is close to or at the end.
-	if (percent > 0.99 || recordIndex == actions.length-1)
+	if (percent > 0.99 || actionIndex == actions.length-1)
 	    return;
 
-	var nextRecord = actions[recordIndex+1];
-	var curRecordTime = (recordIndex > 0) ? actions[recordIndex].mark.timestamp 
+	var nextAction = actions[actionIndex+1];
+	var curActionTime = (actionIndex > 0) ? actions[actionIndex].mark.timestamp
 	                                      : this.calculator.minimumBoundary;
 
-	var timeDelta = nextRecord.mark.timestamp - curRecordTime;
+	var timeDelta = nextAction.mark.timestamp - curActionTime;
 	if (timeDelta > WebInspector.TimelapseMiniview.MinAnimationDelta) {
-	    var nextRecordPosition = this.calculator.computeMiniviewPercentage(nextRecord.mark.timestamp);
-	    this.sliders.playback.animateTo(nextRecordPosition, timeDelta);
+	    var nextActionPosition = this.calculator.computeMiniviewPercentage(nextAction.mark.timestamp);
+	    this.sliders.playback.animateTo(nextActionPosition, timeDelta);
 	}
     },
 
@@ -731,8 +731,8 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onPreviewChanged: function(event)
     {
-	var record = event.data;
-	var percent = this._recording.calculator.computeMiniviewPercentage(record.mark.timestamp);
+	var action = event.data;
+	var percent = this._recording.calculator.computeMiniviewPercentage(action.mark.timestamp);
 	this.sliders.tentative.setPosition(percent, true);
     },
 
@@ -751,37 +751,37 @@ WebInspector.TimelapseMiniview.prototype = {
 	var position = this.sliders.playback.position;
     	var timestamp = calculator.computeMiniviewTimestamp(position);
 
-	function timestampAndRecordComparator(ts, record) {
-	    var record_ts = record.mark.timestamp;
-	    if (record_ts > ts) return -1;
-	    if (record_ts < ts) return 1;
+	function timestampAndActionComparator(ts, action) {
+	    var action_ts = action.mark.timestamp;
+	    if (action_ts > ts) return -1;
+	    if (action_ts < ts) return 1;
 	    return 0;
 	}
 
-	function timeDistanceFunction(ts, record) {
-	    if (!record)
+	function timeDistanceFunction(ts, action) {
+	    if (!action)
 		return Number.POSITIVE_INFINITY;
 
-	    return Math.abs(ts - record.mark.timestamp);
+	    return Math.abs(ts - action.mark.timestamp);
 	}
 
-	var records = this._recording.actions;
-	var idx = records.nearestBinaryIndexOf(timestamp, timestampAndRecordComparator, timeDistanceFunction);
-	var recordPosition = Math.floor(calculator.computeMiniviewPercentage(records[idx].mark.timestamp));
-	var prevRecordPosition = (idx == 0) ? 0.0
-                                            : calculator.computeMiniviewPercentage(records[idx-1].mark.timestamp);
-	var nextRecordPosition = (idx == records.length-1) ? 1.0
-                                                           : calculator.computeMiniviewPercentage(records[idx+1].mark.timestamp);
-	var minBounds = recordPosition - (recordPosition - prevRecordPosition)/2.0;
-	var maxBounds = recordPosition - (recordPosition - nextRecordPosition)/2.0;
+	var actions = this._recording.actions;
+	var idx = action.nearestBinaryIndexOf(timestamp, timestampAndActionComparator, timeDistanceFunction);
+	var actionPosition = Math.floor(calculator.computeMiniviewPercentage(actions[idx].mark.timestamp));
+	var prevactionPosition = (idx == 0) ? 0.0
+                                            : calculator.computeMiniviewPercentage(actions[idx-1].mark.timestamp);
+	var nextactionPosition = (idx == actions.length-1) ? 1.0
+                                                           : calculator.computeMiniviewPercentage(actions[idx+1].mark.timestamp);
+	var minBounds = actionPosition - (actionPosition - prevactionPosition)/2.0;
+	var maxBounds = actionPosition - (actionPosition - nextactionPosition)/2.0;
 
-	// this is used to short-circuit searching for the nearest record if it's
-	// within the space "owned" by current nearest record. So, the nearest record
+	// this is used to short-circuit searching for the nearest action if it's
+	// within the space "owned" by current nearest action. So, the nearest action
 	// is only recomputed when moving more than halfway away from
-	// this record to the next one
+	// this action to the next one
 	this._potentialMarkBounds = {min: minBounds, max: maxBounds};
 
-	this._recording.previewRecord(records[idx]);
+	this._recording.previewAction(actions[idx]);
     },
 
     _onPlaybackSliderDragEnd: function(event)
@@ -790,10 +790,10 @@ WebInspector.TimelapseMiniview.prototype = {
 						 this._onPlaybackSliderDragged,
 						 this);
 
-	var targetRecord = this._recording.previewedRecord;
+	var targetAction = this._recording.previewedAction;
 	this._recording.stopPreviewing();
-    if (targetRecord) // not true if dragged and dropped in place
-        this._model.replayUpToMarkIndex(targetRecord.mark.index);
+    if (targetAction) // not true if dragged and dropped in place
+        this._model.replayUpToMarkIndex(targetAction.mark.index);
     },
 
     _onZoomSliderDragStart: function(zoomSide, event)

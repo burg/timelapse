@@ -78,7 +78,7 @@ WebInspector.TimelapseModel.Events = {
     // updating capture-specific widget progress but not for creating them.
     
     // The ordering of these events during capture lifecycle is as follows:
-    // RecordingUnloaded (can only record from here)
+    // RecordingUnloaded (can only capture from here)
     // -> CaptureWillStart -> RecordingCreated -> CaptureDidStart
     // -> CaptureWillStop  -> RecordingAdded   -> CaptureDidStop -> RecordingLoaded
     //
@@ -127,7 +127,7 @@ WebInspector.TimelapseModel.Events = {
 WebInspector.TimelapseModel.prototype = {
     /* TimelapseModel represents the state of execution and capture
      * or replay. Clients call methods of TimelapseModel to issue
-     * commands that affect record or replay, or to query its state.
+     * commands that affect capture or replay, or to query its state.
      * 
      * This model also translates backend->frontend calls into events.
      */
@@ -403,8 +403,8 @@ WebInspector.TimelapseModel.prototype = {
         // play one mark, and then start playback and resume |hitIndex-1| times.
         if (this._currentMarkIndex != markIndex-1) {
             task.chain("ReplayToPrecedingMark", function(cb) {
-                var recordIndex = model.loadedRecording.recordIndexFromMarkIndex(markIndex);
-                var prevIndex = model.loadedRecording.actions[recordIndex - 1].mark.index;
+                var actionIndex = model.loadedRecording.actionIndexFromMarkIndex(markIndex);
+                var prevIndex = model.loadedRecording.actions[actionIndex - 1].mark.index;
                 model.onceEventListener(timelapseEvents.InputPaused, cb, task);
                 model.startReplayUpToMarkIndexTask(prevIndex, allowBreakpoints, replaySpeed).run();
             });
@@ -666,7 +666,7 @@ WebInspector.TimelapseModel.prototype = {
 
     _playbackHitInput: function(markIndex)
     {
-        if (this.loadedRecording.recordIndexFromMarkIndex(markIndex) > -1)
+        if (this.loadedRecording.actionIndexFromMarkIndex(markIndex) > -1)
             this._currentMarkIndex = markIndex;
 
         this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.InputHit, markIndex);
@@ -771,9 +771,9 @@ WebInspector.TimelapseDispatcher.prototype = {
         this._model.dispatchEventToListeners(WebInspector.TimelapseModel.Events.CaptureDidStop);
     },
 
-    capturedAction: function(record)
+    capturedAction: function(action)
     {
-	this._model.createdRecording._capturedAction(record);
+	this._model.createdRecording._capturedAction(action);
     },
 
     playbackWasStarted: function()

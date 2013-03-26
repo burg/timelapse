@@ -190,10 +190,10 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 
         if (idx < 0) {
             idx = -(idx + 1);
-            var recordIndex = this._model.loadedRecording.recordIndexFromMarkIndex(markIndex);
+            var actionIndex = this._model.loadedRecording.actionIndexFromMarkIndex(markIndex);
             hitRecords.splice(idx, 0, {
             type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
-            mark: this._model.loadedRecording.actions[recordIndex].mark,
+            mark: this._model.loadedRecording.actions[actionIndex].mark,
             hits: []
             });
         }

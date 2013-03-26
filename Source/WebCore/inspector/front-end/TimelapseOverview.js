@@ -360,37 +360,37 @@ WebInspector.TimelapseOverview.prototype = {
 
         /* playback cursor */
         var markIdx = this._model.currentMarkIndex;
-        var recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
+        var actionIndex = this._recording.actionIndexFromMarkIndex(markIdx);
         var percent = 0.0;
-        if (recordIdx != -1)
-            percent = this.calculator.computeOverviewPercentage(actions[recordIdx].mark.timestamp);
+    if (actionIndex != -1)
+        percent = this.calculator.computeOverviewPercentage(actions[actionIndex].mark.timestamp);
 
         this.sliders.playback.setPosition(percent, true);
 
         /* savepoint sliders */
-        var sliders = this.sliders.savepoint;
-        for (var i = 0; i < sliders.length; ++i) {
-            var slider = sliders[i];
-            var savepoint = slider._savepoint;
-            markIdx = savepoint.markIndex;
-            recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
-            percent = 0.0;
-            if (recordIdx != -1)
-                percent = this.calculator.computeOverviewPercentage(actions[recordIdx].mark.timestamp);
-            slider.setPosition(percent, true);
-            slider.show();
+    var sliders = this.sliders.savepoint;
+    for (var i = 0; i < sliders.length; ++i) {
+        var slider = sliders[i];
+        var savepoint = slider._savepoint;
+        markIdx = savepoint.markIndex;
+                actionIndex = this._recording.actionIndexFromMarkIndex(markIdx);
+                percent = 0.0;
+        if (actionIndex != -1)
+            percent = this.calculator.computeOverviewPercentage(actions[actionIndex].mark.timestamp);
+                slider.setPosition(percent, true);
+                slider.show();
         }
 
         /* previous/replay start slider */
         markIdx = this._model.replayStartMarkIndex;
-        recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
-        percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(actions[recordIdx].mark.timestamp) : 0.0;
+        actionIndex = this._recording.actionIndexFromMarkIndex(markIdx);
+        percent = (actionIndex != -1) ? this.calculator.computeOverviewPercentage(actions[actionIndex].mark.timestamp) : 0.0;
         this.sliders.previous.setPosition(percent, true);
 
         /* tentative/replay finish slider */
         markIdx = this._model.replayFinishMarkIndex;
-        recordIdx = this._recording.recordIndexFromMarkIndex(markIdx);
-        percent = (recordIdx != -1) ? this.calculator.computeOverviewPercentage(actions[recordIdx].mark.timestamp) : 0.0;
+        actionIndex = this._recording.actionIndexFromMarkIndex(markIdx);
+        percent = (actionIndex != -1) ? this.calculator.computeOverviewPercentage(actions[actionIndex].mark.timestamp) : 0.0;
         this.sliders.tentative.setPosition(percent, true);
     },
 
@@ -688,18 +688,18 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPlaybackSliderDragged: function(event)
     {
-        function timestampAndRecordComparator(ts, record) {
-            var record_ts = record.mark.timestamp;
-            if (record_ts > ts) return -1;
-            if (record_ts < ts) return 1;
+        function timestampAndActionComparator(ts, action) {
+            var action_ts = action.mark.timestamp;
+            if (action_ts > ts) return -1;
+            if (action_ts < ts) return 1;
             return 0;
         }
 
-        function timeDistanceFunction(ts, record) {
-            if (!record)
+        function timeDistanceFunction(ts, action) {
+            if (!action)
                 return Number.POSITIVE_INFINITY;
 
-            return Math.abs(ts - record.mark.timestamp);
+            return Math.abs(ts - action.mark.timestamp);
         }
 
         var position = this.sliders.playback.position;
@@ -709,15 +709,15 @@ WebInspector.TimelapseOverview.prototype = {
 
         // for each active input provider, find the nearest mark within the calculator zoom interval
         var closestPerProvider = [];
-        var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+        var inputProviders = this._actioning.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
         for (var i = 0; i < inputProviders.length; i++) {
             var provider = inputProviders[i];
-            if (!provider.isEnabled() || !provider.records.length)
+            if (!provider.isEnabled() || !provider.actions.length)
                 continue;
 
-            var minIdx = provider.records.nearestBinaryIndexOf(minTs, timestampAndRecordComparator, timeDistanceFunction);
-            var maxIdx = provider.records.nearestBinaryIndexOf(maxTs, timestampAndRecordComparator, timeDistanceFunction);
-            var idx = provider.records.nearestBinaryIndexWithin(wantedTs, minIdx, maxIdx, timestampAndRecordComparator, timeDistanceFunction);
+            var minIdx = provider.actions.nearestBinaryIndexOf(minTs, timestampAndActionComparator, timeDistanceFunction);
+            var maxIdx = provider.records.nearestBinaryIndexOf(maxTs, timestampAndActionComparator, timeDistanceFunction);
+            var idx = provider.records.nearestBinaryIndexWithin(wantedTs, minIdx, maxIdx, timestampAndActionComparator, timeDistanceFunction);
             closestPerProvider.push(provider.records[idx]);
         }
 
@@ -732,19 +732,19 @@ WebInspector.TimelapseOverview.prototype = {
                 bestMatch = closestPerProvider[i];
         }
 
-        this._recording.previewRecord(bestMatch);
+        this._recording.previewAction(bestMatch);
     },
 
     _onPlaybackSliderDragEnd: function(event)
     {
         this.sliders.playback.removeEventListener(WebInspector.TimelapseOverviewSlider.Events.Moved,
-                                                  this._onPlaybackSliderDragged,
-                                                  this);
+                                                 this._onPlaybackSliderDragged,
+                                                 this);
 
-        var targetRecord = this._recording.previewedRecord;
+        var targetAction = this._recording.previewedAction;
         this._recording.stopPreviewing();
-        if (targetRecord) // not true if dragged and dropped in place
-            this._model.replayUpToMarkIndex(targetRecord.mark.index);
+    if (targetAction) // not true if dragged and dropped in place
+        this._model.replayUpToMarkIndex(targetAction.mark.index);
     },
 
     _onPlaybackSliderContextMenu: function(event)
@@ -778,8 +778,8 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPreviewChanged: function(event)
     {
-        var record = event.data;
-        var percent = this.calculator.computeOverviewPercentage(record.mark.timestamp);
+        var action = event.data;
+        var percent = this.calculator.computeOverviewPercentage(action.mark.timestamp);
         this.sliders.tentative.setPosition(percent, true);
     },
 
@@ -896,25 +896,25 @@ WebInspector.TimelapseOverview.prototype = {
     _onPlaybackDidStart: function(event)
     {
         var actions = this._recording.actions;
-        var startRecord = actions[this._recording.recordIndexFromMarkIndex(this._model.replayStartMarkIndex)];
-        var finishRecord = actions[this._recording.recordIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
-        var currentRecord = actions[this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex)];
+        var startAction = actions[this._recording.actionIndexFromMarkIndex(this._model.replayStartMarkIndex)];
+        var finishAction = actions[this._recording.actionIndexFromMarkIndex(this._model.replayFinishMarkIndex)];
+        var currentAction = actions[this._recording.actionIndexFromMarkIndex(this._model.currentMarkIndex)];
 
         this.sliders.playback.element.addStyleClass("playback-slider");
         this.sliders.playback.element.removeStyleClass("breakpoint-slider");
 
-        this.sliders.previous.setPosition(this.calculator.computeOverviewPercentage(startRecord.mark.timestamp), true);
+        this.sliders.previous.setPosition(this.calculator.computeOverviewPercentage(startAction.mark.timestamp), true);
         this.sliders.previous.show();
-        this.sliders.tentative.setPosition(this.calculator.computeOverviewPercentage(finishRecord.mark.timestamp), true);
+        this.sliders.tentative.setPosition(this.calculator.computeOverviewPercentage(finishAction.mark.timestamp), true);
         this.sliders.tentative.show();
 
         this.sliders.playback.disable();
-        this.sliders.playback.setPosition(this.calculator.computeOverviewPercentage(currentRecord.mark.timestamp), true);
+        this.sliders.playback.setPosition(this.calculator.computeOverviewPercentage(currentAction.mark.timestamp), true);
         this.sliders.playback.element.addStyleClass("playback-pulse");
-        var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
+    var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
         this.sliders.playback.minimumResolution = (this._model.replaySpeed === replaySpeeds.Seeking) ? 10.0 : 1.0;
-
-        this._showMessagePanel();
+    
+    this._showMessagePanel();
     },
 
     _onPlaybackStopped: function(event)
@@ -932,16 +932,16 @@ WebInspector.TimelapseOverview.prototype = {
     _onInputPaused: function(event)
     {
         var actions = this._recording.actions;
-        var recordIndex = this._recording.recordIndexFromMarkIndex(this._model.currentMarkIndex);
+        var actionIndex = this._recording.actionIndexFromMarkIndex(this._model.currentMarkIndex);
         
-        if (recordIndex != -1) {
-            var percent = this.calculator.computeOverviewPercentage(actions[recordIndex].mark.timestamp);
+        if (actionIndex != -1) {
+            var percent = this.calculator.computeOverviewPercentage(actions[actionIndex].mark.timestamp);
             this.sliders.playback.setPosition(percent, true);
         }
 
         // required because setPosition implicitly calls show()
         if (WebInspector.debuggerModel.isPaused())
-            this.sliders.playback.hide();
+            this.sliders.playback.hide(); 
 
         this.sliders.previous.hide();
         this.sliders.tentative.hide();
@@ -958,16 +958,16 @@ WebInspector.TimelapseOverview.prototype = {
     _onInputHit: function(eventData)
     {
         var markIndex = eventData.data;
-        var recordIndex = this._recording.recordIndexFromMarkIndex(markIndex);
+        var actionIndex = this._recording.actionIndexFromMarkIndex(markIndex);
 
-        // don't animate if this mark has no corresponding record (aka, not a user-visible mark)
-        if (recordIndex == -1)
+        // don't animate if this mark has no corresponding action (aka, not a user-visible mark)
+        if (actionIndex == -1)
             return;
 
         var actions = this._recording.actions;
         var percent = 0.0;
         if (markIndex > 0)
-            percent = this.calculator.computeOverviewPercentage(actions[recordIndex].mark.timestamp);
+            percent = this.calculator.computeOverviewPercentage(actions[actionIndex].mark.timestamp);
 
         this.sliders.playback.setPosition(percent, true);
 
@@ -975,14 +975,14 @@ WebInspector.TimelapseOverview.prototype = {
         if (percent < 0.0 || percent > 0.99)
             return;
 
-        var nextRecord = actions[recordIndex+1];
-        var curRecordTime = (recordIndex > 0) ? actions[recordIndex].mark.timestamp 
+        var nextAction = actions[actionIndex+1];
+        var curActionTime = (actionIndex > 0) ? actions[actionIndex].mark.timestamp
                                               : this.calculator.minimumBoundary;
 
-        var timeDelta = nextRecord.mark.timestamp - curRecordTime;
+        var timeDelta = nextAction.mark.timestamp - curActionTime;
         if (timeDelta > WebInspector.TimelapseOverview.MinAnimationDelta) {
-            var nextRecordPosition = this.calculator.computeOverviewPercentage(nextRecord.mark.timestamp);
-            this.sliders.playback.animateTo(nextRecordPosition, timeDelta);
+            var nextActionPosition = this.calculator.computeOverviewPercentage(nextAction.mark.timestamp);
+            this.sliders.playback.animateTo(nextActionPosition, timeDelta);
         }
     },
 
@@ -1345,8 +1345,8 @@ WebInspector.TimelapseCircleTimeline.prototype = {
         if (clickedCircleIdx == -1)
             return;
 
-        var recordIdx = this.data.recordIndices[clickedCircleIdx][0];
-        WebInspector.timelapseModel.replayUpToMarkIndex(this.provider.records[recordIdx].mark.index);
+        var actionIndex = this.data.recordIndices[clickedCircleIdx][0];
+        WebInspector.timelapseModel.replayUpToMarkIndex(this.provider.records[actionIndex].mark.index);
     },
 
     _circleIndexFromMarkIndex: function(markIndex)
