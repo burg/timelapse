@@ -70,7 +70,7 @@
 #include "ScrollPage.h"
 #include "SendResizeEvent.h"
 #include "TimelapseAgentStateMachine.h"
-#include "TimelapseRecordFactory.h"
+#include "ReplayActionFactory.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/UnusedParam.h>
@@ -91,7 +91,7 @@ static const char timelapseEnabled[] = "timelapseEnabled";
 }
 
 // This must be kept in sync with TimelapseAgent.js so that record types and data are decoded properly.
-namespace TimelapseRecordType {
+namespace ReplayActionType {
 static const char MousePress[] = "MousePress";
 static const char MouseRelease[] = "MouseRelease";
 static const char MouseMove[] = "MouseMove";
@@ -196,46 +196,46 @@ void InspectorTimelapseAgent::capturedPageInput(DispatchableAction* action)
     action->setMark(newMark);
 
     // TODO: it would be nice to encapsulate knowledge about platform events, etc. so that TimelapseAgent doesn't need to know.
-    //       the createXXXdata events should probably hidden inside TimelapseRecordFactory.
+    //       the createXXXdata events should probably hidden inside ReplayActionFactory.
     if (action->type() == ReplayableTypes::TimerFired) {
-        pushRecordToFrontend(TimelapseRecordFactory::createEmptyData(), TimelapseRecordType::TimerFire, newMark);
+        pushRecordToFrontend(ReplayActionFactory::createEmptyData(), ReplayActionType::TimerFire, newMark);
     } else if (action->type() == ReplayableTypes::HandleMouseMove) {
         PlatformMouseEvent mouseEvent = static_cast<HandleMouseMove*>(action)->platformEvent();
-        pushRecordToFrontend(TimelapseRecordFactory::createMouseData(mouseEvent), TimelapseRecordType::MouseMove, newMark);
+        pushRecordToFrontend(ReplayActionFactory::createMouseData(mouseEvent), ReplayActionType::MouseMove, newMark);
     } else if (action->type() == ReplayableTypes::HandleMousePress) {
         PlatformMouseEvent mouseEvent = static_cast<HandleMousePress*>(action)->platformEvent();
-        pushRecordToFrontend(TimelapseRecordFactory::createMouseData(mouseEvent), TimelapseRecordType::MousePress, newMark);
+        pushRecordToFrontend(ReplayActionFactory::createMouseData(mouseEvent), ReplayActionType::MousePress, newMark);
     } else if (action->type() == ReplayableTypes::HandleMouseRelease) {
         PlatformMouseEvent mouseEvent = static_cast<HandleMouseRelease*>(action)->platformEvent();
-        pushRecordToFrontend(TimelapseRecordFactory::createMouseData(mouseEvent), TimelapseRecordType::MouseRelease, newMark);
+        pushRecordToFrontend(ReplayActionFactory::createMouseData(mouseEvent), ReplayActionType::MouseRelease, newMark);
     } else if (action->type() == ReplayableTypes::HandleWheelEvent) {
         PlatformWheelEvent wheelEvent = static_cast<HandleWheelEvent*>(action)->platformEvent();
-        pushRecordToFrontend(TimelapseRecordFactory::createWheelData(wheelEvent), TimelapseRecordType::MouseWheel, newMark);
+        pushRecordToFrontend(ReplayActionFactory::createWheelData(wheelEvent), ReplayActionType::MouseWheel, newMark);
     } else if (action->type() == ReplayableTypes::HandleKeyPress) {
         PlatformKeyboardEvent keyEvent = static_cast<HandleKeyPress*>(action)->platformEvent();
-        pushRecordToFrontend(TimelapseRecordFactory::createKeyPressData(keyEvent), TimelapseRecordType::KeyPress, newMark);
+        pushRecordToFrontend(ReplayActionFactory::createKeyPressData(keyEvent), ReplayActionType::KeyPress, newMark);
     } else if (action->type() == ReplayableTypes::FocusSetActive) {
         bool toState = static_cast<FocusSetActive*>(action)->toState();
-        pushRecordToFrontend(TimelapseRecordFactory::createEmptyData(), 
-                             (toState) ? TimelapseRecordType::WindowActive : TimelapseRecordType::WindowInactive,
+        pushRecordToFrontend(ReplayActionFactory::createEmptyData(), 
+                             (toState) ? ReplayActionType::WindowActive : ReplayActionType::WindowInactive,
                              newMark);
     } else if (action->type() == ReplayableTypes::FocusSetFocused) {
         bool toState = static_cast<FocusSetFocused*>(action)->toState();
-        pushRecordToFrontend(TimelapseRecordFactory::createEmptyData(), 
-                             (toState) ? TimelapseRecordType::WindowFocused : TimelapseRecordType::WindowUnfocused,
+        pushRecordToFrontend(ReplayActionFactory::createEmptyData(), 
+                             (toState) ? ReplayActionType::WindowFocused : ReplayActionType::WindowUnfocused,
                              newMark);
     } else if (action->type() == ReplayableTypes::ScrollPage) {
-        pushRecordToFrontend(TimelapseRecordFactory::createScrollData(static_cast<ScrollPage*>(action)), TimelapseRecordType::Scroll, newMark);
+        pushRecordToFrontend(ReplayActionFactory::createScrollData(static_cast<ScrollPage*>(action)), ReplayActionType::Scroll, newMark);
     } else if (action->type() == ReplayableTypes::SendResizeEvent) {
-        pushRecordToFrontend(TimelapseRecordFactory::createResizeData(static_cast<SendResizeEvent*>(action)), TimelapseRecordType::Resize, newMark);
+        pushRecordToFrontend(ReplayActionFactory::createResizeData(static_cast<SendResizeEvent*>(action)), ReplayActionType::Resize, newMark);
     } else if (action->type() == ReplayableTypes::ResourceWillSendRequest) {
-        pushRecordToFrontend(TimelapseRecordFactory::createRequestResourceData(static_cast<ResourceWillSendRequest*>(action)), TimelapseRecordType::RequestResource, newMark);
+        pushRecordToFrontend(ReplayActionFactory::createRequestResourceData(static_cast<ResourceWillSendRequest*>(action)), ReplayActionType::RequestResource, newMark);
     } else if (action->type() == ReplayableTypes::ResourceDidReceiveResponse) {
-        pushRecordToFrontend(TimelapseRecordFactory::createReceiveResponseData(static_cast<ResourceDidReceiveResponse*>(action)), TimelapseRecordType::ReceiveResponse, newMark);
+        pushRecordToFrontend(ReplayActionFactory::createReceiveResponseData(static_cast<ResourceDidReceiveResponse*>(action)), ReplayActionType::ReceiveResponse, newMark);
     } else if (action->type() == ReplayableTypes::ResourceDidReceiveData) {
-        pushRecordToFrontend(TimelapseRecordFactory::createReceiveDataData(static_cast<ResourceDidReceiveData*>(action)), TimelapseRecordType::ReceiveData, newMark);
+        pushRecordToFrontend(ReplayActionFactory::createReceiveDataData(static_cast<ResourceDidReceiveData*>(action)), ReplayActionType::ReceiveData, newMark);
     } else if (action->type() == ReplayableTypes::ResourceDidFinishLoading) {
-        pushRecordToFrontend(TimelapseRecordFactory::createResourceLoadedData(static_cast<ResourceDidFinishLoading*>(action)), TimelapseRecordType::ResourceLoaded, newMark);
+        pushRecordToFrontend(ReplayActionFactory::createResourceLoadedData(static_cast<ResourceDidFinishLoading*>(action)), ReplayActionType::ResourceLoaded, newMark);
     }
 }
     
@@ -339,7 +339,7 @@ void InspectorTimelapseAgent::pushRecordToFrontend(PassRefPtr<InspectorObject> d
         .setTimestamp(mark.time())
         .setIndex(mark.index());
 
-    RefPtr<TypeBuilder::Timelapse::TimelapseRecord> checkedRecord = TypeBuilder::Timelapse::TimelapseRecord::create()
+    RefPtr<TypeBuilder::Timelapse::ReplayAction> checkedRecord = TypeBuilder::Timelapse::ReplayAction::create()
         .setType(type)
         .setMark(checkedMark.release())
         .setData(data);

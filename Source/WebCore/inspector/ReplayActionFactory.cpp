@@ -30,7 +30,7 @@
  */
 
 #include "config.h"
-#include "TimelapseRecordFactory.h"
+#include "ReplayActionFactory.h"
 
 #if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
 
@@ -50,7 +50,7 @@
 
 namespace WebCore {
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createMouseData(const PlatformMouseEvent& event)
+PassRefPtr<InspectorObject> ReplayActionFactory::createMouseData(const PlatformMouseEvent& event)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setNumber("x", event.position().x());
@@ -63,7 +63,7 @@ PassRefPtr<InspectorObject> TimelapseRecordFactory::createMouseData(const Platfo
     return data.release();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createWheelData(const PlatformWheelEvent& event)
+PassRefPtr<InspectorObject> ReplayActionFactory::createWheelData(const PlatformWheelEvent& event)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setNumber("x", event.position().x());
@@ -79,7 +79,7 @@ PassRefPtr<InspectorObject> TimelapseRecordFactory::createWheelData(const Platfo
     return data.release();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createKeyPressData(const PlatformKeyboardEvent& event)
+PassRefPtr<InspectorObject> ReplayActionFactory::createKeyPressData(const PlatformKeyboardEvent& event)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setString("text", event.text());
@@ -90,7 +90,7 @@ PassRefPtr<InspectorObject> TimelapseRecordFactory::createKeyPressData(const Pla
     return data.release();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createScrollData(ScrollPage* action)
+PassRefPtr<InspectorObject> ReplayActionFactory::createScrollData(ScrollPage* action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setBoolean("logical", action->isLogicalScroll());
@@ -102,7 +102,7 @@ PassRefPtr<InspectorObject> TimelapseRecordFactory::createScrollData(ScrollPage*
     return data.release();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createResizeData(SendResizeEvent* action)
+PassRefPtr<InspectorObject> ReplayActionFactory::createResizeData(SendResizeEvent* action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setNumber("width", action->width());
@@ -110,12 +110,12 @@ PassRefPtr<InspectorObject> TimelapseRecordFactory::createResizeData(SendResizeE
     return data.release();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createEmptyData()
+PassRefPtr<InspectorObject> ReplayActionFactory::createEmptyData()
 {
     return InspectorObject::create();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createRequestResourceData(ResourceWillSendRequest* action)
+PassRefPtr<InspectorObject> ReplayActionFactory::createRequestResourceData(ResourceWillSendRequest* action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setNumber("id", action->id());
@@ -123,7 +123,7 @@ PassRefPtr<InspectorObject> TimelapseRecordFactory::createRequestResourceData(Re
     return data.release();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createReceiveResponseData(ResourceDidReceiveResponse* action)
+PassRefPtr<InspectorObject> ReplayActionFactory::createReceiveResponseData(ResourceDidReceiveResponse* action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setNumber("id", action->id());
@@ -131,21 +131,21 @@ PassRefPtr<InspectorObject> TimelapseRecordFactory::createReceiveResponseData(Re
     return data.release();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createReceiveDataData(ResourceDidReceiveData* action)
+PassRefPtr<InspectorObject> ReplayActionFactory::createReceiveDataData(ResourceDidReceiveData* action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setNumber("id", action->id());
     return data.release();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createResourceLoadedData(ResourceDidFinishLoading* action)
+PassRefPtr<InspectorObject> ReplayActionFactory::createResourceLoadedData(ResourceDidFinishLoading* action)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setNumber("id", action->id());
     return data.release();
 }
 
-PassRefPtr<InspectorObject> TimelapseRecordFactory::createFrameNavigatedData(DocumentLoader* loader)
+PassRefPtr<InspectorObject> ReplayActionFactory::createFrameNavigatedData(DocumentLoader* loader)
 {
     RefPtr<InspectorObject> data = InspectorObject::create();
     data->setString("url", loader->url().string());

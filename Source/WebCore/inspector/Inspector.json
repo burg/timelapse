@@ -2613,14 +2613,14 @@
 		"description": "The index and timestamp of an input action."
 	    },
             {
-                "id": "TimelapseRecord",
+                "id": "ReplayAction",
                 "type": "object",
                 "properties": [
-                    { "name": "type", "type": "string", "description": "Record type." },
-		    { "name": "mark", "$ref": "Mark", "description": "The time and index of the record's underlying action." },
-                    { "name": "data", "type": "object", "description": "Record data." }
+                    { "name": "type", "type": "string", "description": "Action type." },
+		    { "name": "mark", "$ref": "Mark", "description": "The time and index of the action." },
+                    { "name": "data", "type": "object", "description": "Action details." }
                 ],
-                "description": "Timelapse record contains information about the recorded input action."
+                "description": "A replay action contains information about a captured event loop input."
             }
         ],
 
@@ -2702,7 +2702,7 @@
 	        "name": "capturedAction",
 	        "description": "A new action was captured.",
 		"parameters": [
-		    { "name": "record", "$ref": "TimelapseRecord", "description": "The record describing the captured action." }
+		    { "name": "record", "$ref": "ReplayAction", "description": "An action representing a captured event loop input." }
 		]
 	    },	     
 	    {

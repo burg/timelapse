@@ -29,8 +29,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TimelapseRecordFactory_h
-#define TimelapseRecordFactory_h
+#ifndef ReplayActionFactory_h
+#define ReplayActionFactory_h
 
 #if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
 
@@ -50,7 +50,7 @@ class ResourceWillSendRequest;
 class ScrollPage;
 class SendResizeEvent;
 
-class TimelapseRecordFactory {
+class ReplayActionFactory {
 public:
     static PassRefPtr<InspectorObject> createMouseData(const PlatformMouseEvent&);
     static PassRefPtr<InspectorObject> createWheelData(const PlatformWheelEvent&);
@@ -69,11 +69,11 @@ public:
 
 
 private:
-    TimelapseRecordFactory() { }
+    ReplayActionFactory() { }
 };
 
 } // namespace WebCore
 
 #endif // ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
 
-#endif // TimelapseRecordFactory_h
+#endif // ReplayActionFactory_h
