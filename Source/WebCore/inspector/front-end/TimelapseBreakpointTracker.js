@@ -35,6 +35,7 @@ WebInspector.TimelapseBreakpointTracker.Events = {
     BreakpointHit: "BreakpointHit",
     BreakpointAdded: "BreakpointAdded",
     BreakpointRemoved: "BreakpointRemoved",
+    IntervalExplored: "IntervalExplored"
 };
 
 WebInspector.TimelapseBreakpointTracker.prototype = {
@@ -101,8 +102,10 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 
     _endPendingInterval: function()
     {
-	if (this._exploredIntervals.intervalPending)
+	if (this._exploredIntervals.intervalPending) {
 	    this._exploredIntervals.endInterval(this._model.currentMarkIndex);
+	    this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Events.IntervalExplored);
+	}
     },
 
     // Callbacks from TimelapseModel

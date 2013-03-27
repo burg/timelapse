@@ -104,6 +104,7 @@ WebInspector.TimelapseBreakpointDataProvider = function(recording, displayName, 
     tracker.addEventListener(events.BreakpointHit,     this._onBreakpointHit, this);
     tracker.addEventListener(events.BreakpointAdded,   this._onBreakpointsInvalidated, this);
     tracker.addEventListener(events.BreakpointRemoved, this._onBreakpointsInvalidated, this);
+    tracker.addEventListener(events.IntervalExplored,  this._onIntervalExplored, this);
 }
 
 WebInspector.TimelapseBreakpointDataProvider.prototype = {
@@ -176,6 +177,11 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 	this.dispatchEventToListeners(WebInspector.DataProvider.Events.Invalidated, this);
     },
 
+    _onIntervalExplored: function(event)
+    {
+	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged, this);
+    },
+
     _removeEventListeners: function(event)
     {
 	var tracker = WebInspector.timelapseModel.breakpointTracker;
@@ -183,6 +189,7 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 	tracker.removeEventListener(events.BreakpointHit, this._onBreakpointHit, this);
 	tracker.removeEventListener(events.BreakpointAdded, this._removeEventListeners, this);
 	tracker.removeEventListener(events.BreakpointRemoved, this._removeEventListeners, this);
+	tracker.removeEventListener(events.IntervalExplored, this._onIntervalExplored, this);
     },
     
     __proto__: WebInspector.TimelapseInputDataProvider.prototype
