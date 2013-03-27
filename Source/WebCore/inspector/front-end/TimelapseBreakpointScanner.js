@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2013, Brian Burg.
+ *  Copyright (C) 2013, Brian Burg, Jake Bailey.
  *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
@@ -104,85 +104,92 @@ WebInspector.TimelapseBreakpointDataProvider = function(recording, displayName, 
     tracker.addEventListener(events.BreakpointHit,     this._onBreakpointHit, this);
     tracker.addEventListener(events.BreakpointAdded,   this._onBreakpointsInvalidated, this);
     tracker.addEventListener(events.BreakpointRemoved, this._onBreakpointsInvalidated, this);
+    tracker.addEventListener(events.IntervalExplored,  this._onIntervalExplored, this);
 }
 
 WebInspector.TimelapseBreakpointDataProvider.prototype = {
     get counterNoun()
     {
-	return "Hits";
+        return "Hits";
     },
 
     enable: function()
     {
-	WebInspector.debuggerModel.setBreakpointsActive(true);
-	WebInspector.DataProvider.prototype.enable.call(this);
+        WebInspector.debuggerModel.setBreakpointsActive(true);
+        WebInspector.DataProvider.prototype.enable.call(this);
     },
 
     disable: function()
     {
-	WebInspector.debuggerModel.setBreakpointsActive(false);
-	WebInspector.DataProvider.prototype.disable.call(this);
+        WebInspector.debuggerModel.setBreakpointsActive(false);
+        WebInspector.DataProvider.prototype.disable.call(this);
     },
 
     get exploredIntervals()
     {
-	return this._intervals;
+        return this._intervals;
     },
 
     _initializeRecords: function()
     {
-	var records = WebInspector.timelapseModel.breakpointTracker.records;
-	this._records = [];
+        var records = WebInspector.timelapseModel.breakpointTracker.records;
+        this._records = [];
 
-	// flatten existing records from BreakpointTracker
-	for (var i = 0; i < records.length; i++) {
-	    var hits = records[i].hits;
-	    for (var j = 0; j < hits.length; j++) {
-		if (typeof hits[j] === "undefined")
-		    continue;
-		this._records.push({
-		    breakpoint: hits[j],
-		    mark: records[i].mark,
-		    type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
-		    hitIndex: j
-		});
-	    }
-	}
+        // flatten existing records from BreakpointTracker
+        for (var i = 0; i < records.length; i++) {
+            var hits = records[i].hits;
+            for (var j = 0; j < hits.length; j++) {
+                if (typeof hits[j] === "undefined")
+                    continue;
+                this._records.push({
+                    breakpoint: hits[j],
+                    mark: records[i].mark,
+                    type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
+                    hitIndex: j
+                });
+            }
+        }
     },
 
     _onBreakpointHit: function(event)
     {
-	// Breakpoints can be detected in any order, so keep records sorted
-	var record = event.data;
+        // Breakpoints can be detected in any order, so keep records sorted
+        var record = event.data;
 
-	function breakpointRecordComparator(a, b) {
-	    if (a.mark.index > b.mark.index) return 1;
-	    if (a.mark.index < b.mark.index) return -1;
-	    return a.hitIndex - b.hitIndex;
-	}
+        function breakpointRecordComparator(a, b) {
+            if (a.mark.index > b.mark.index) return 1;
+            if (a.mark.index < b.mark.index) return -1;
+            return a.hitIndex - b.hitIndex;
+        }
 
-	var idx = binarySearch(record, this._records, breakpointRecordComparator);
-	if (idx >= 0)
-	    return;
-	this._records.splice(-(idx + 1), 0, record);
+        var idx = binarySearch(record, this._records, breakpointRecordComparator);
+        if (idx >= 0)
+            return;
+        this._records.splice(-(idx + 1), 0, record);
 
-	this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged, this);
+        this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged, this);
     },
 
     _onBreakpointsInvalidated: function(event)
     {
-	// neutralize ourselves, and notify clients that we became worthless.
-	this._removeEventListeners(event);
-	this.dispatchEventToListeners(WebInspector.DataProvider.Events.Invalidated, this);
+        // neutralize ourselves, and notify clients that we became worthless.
+        this._removeEventListeners(event);
+        this.dispatchEventToListeners(WebInspector.DataProvider.Events.Invalidated, this);
+    },
+
+    _onIntervalExplored: function(event)
+    {
+        this.dispatchEventToListeners(WebInspector.DataProvider.Events.DataChanged, this);
     },
 
     _removeEventListeners: function(event)
     {
-	var tracker = WebInspector.timelapseModel.breakpointTracker;
-	var events = WebInspector.TimelapseBreakpointTracker.Events;
-	tracker.removeEventListener(events.BreakpointHit, this._onBreakpointHit, this);
-	tracker.removeEventListener(events.BreakpointAdded, this._removeEventListeners, this);
-	tracker.removeEventListener(events.BreakpointRemoved, this._removeEventListeners, this);
+        var tracker = WebInspector.timelapseModel.breakpointTracker;
+        var events = WebInspector.TimelapseBreakpointTracker.Events;
+        tracker.removeEventListener(events.BreakpointHit, this._onBreakpointHit, this);
+        tracker.removeEventListener(events.BreakpointAdded, this._removeEventListeners, this);
+        tracker.removeEventListener(events.BreakpointRemoved, this._removeEventListeners, this);
+        tracker.removeEventListener(events.IntervalExplored, this._onIntervalExplored, this);
     },
     
     __proto__: WebInspector.TimelapseInputDataProvider.prototype
