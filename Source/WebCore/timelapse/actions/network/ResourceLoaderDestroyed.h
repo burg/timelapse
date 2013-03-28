@@ -54,6 +54,7 @@ namespace WebCore {
         
         // DispatchableAction API
         virtual void dispatch(DeterminismController*) OVERRIDE;
+        virtual bool isUserVisible() const OVERRIDE { return false; }
         
         // ReplayableAction API
         virtual DeterminismQueueType queue() const OVERRIDE { return WTF::LoaderMemoizedDataQueue; }

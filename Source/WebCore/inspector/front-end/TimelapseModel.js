@@ -40,6 +40,7 @@ WebInspector.TimelapseModel = function()
 
     this._scanners = {};
     this._recordings = [];
+    this._recordingsByUID = {};
     this._capturing = false;
     this._replaying = false;
     this._inputPaused = false;
@@ -85,10 +86,12 @@ WebInspector.TimelapseModel.Events = {
     // Recordings can be added independently or capture, replay, or load status.
     // A recording can only be loaded or unloaded from the opposite state.
 
-    // fires when a new recording is initialized for capturing (but is unloaded).
+    // fires when a new recording is initialized for capturing.
+    // this recording object does not exist in the backend.
     RecordingCreated: "TimelapseRecordingCreated",
     // fires when recording loaded from disk, or finished capturing it.
     RecordingAdded: "TimelapseRecordingAdded",
+    RecordingRemoved: "TimelapseRecordingRemoved",
     // fired when activeRecording changes.
     RecordingLoaded: "TimelapseRecordingLoaded",
     RecordingUnloaded: "TimelapseRecordingUnloaded",
@@ -215,15 +218,18 @@ WebInspector.TimelapseModel.prototype = {
                 cb();
         })
         .chain("unloadRecordingIfNeeded", function(cb) {
-            if (model.canReplay)
-                model._unloadRecording();
-            cb();
+            if (!model.canReplay)
+                return cb();
+               
+            model.onceEventListener(WebInspector.TimelapseModel.Events.RecordingUnloaded, cb);
+            model._unloadRecording();
         })
         .chain("suppressBreakpointsAndNotifyWillStart", function(cb) {
             console.assert(!model.isCapturing && !model.isReplaying,
                            "Cannot start capture whilst capturing or replaying alreday.");
             model.changeStatus("Starting capture...");
             model.dispatchEventToListeners(events.CaptureWillStart);
+            // technically asynchronous, but is ordered before debugger resume command.
             model._suppressBreakpoints();
             cb();
         })
@@ -234,8 +240,8 @@ WebInspector.TimelapseModel.prototype = {
 
             // we must create recording before receiving CaptureDidStart, because
             // the recording needs to listen for that event as well.
-            var recording = model._activeRecording = new WebInspector.TimelapseLiveRecording(model);
-            model.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingCreated, recording);
+            model._activeRecording = new WebInspector.TimelapseLiveRecording(model);
+            model.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingCreated, model._activeRecording);
             TimelapseAgent.startCapture();
         })
         .chain("notifyDidStart", function(cb) {
@@ -270,16 +276,7 @@ WebInspector.TimelapseModel.prototype = {
             model._capturing = false;
             model.changeStatus("Ready");
             model._unsuppressBreakpoints();
-            var numActions = recording.actions.length;
-            if (numActions == 0) {
-                model._currentMarkIndex = 0;
-                return cb(true);
-            }
-            model._currentMarkIndex = recording.actions[numActions-1].mark.index;
-
-            // actually add and load the just-captured recording.
-            model._addRecording(recording);
-            model._loadRecording(recording);
+            model._currentMarkIndex = -1;
             cb();
         });
         
@@ -570,29 +567,18 @@ WebInspector.TimelapseModel.prototype = {
     // Internal helpers
     _unloadRecording: function()
     {
-    console.assert(this.loadedRecording, "Can't unload recording because none is loaded");
-
-    this._canReplay = false;
-
-    var recording = this.loadedRecording;
-    delete this._activeRecording;
-    this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingUnloaded, recording);
+        console.assert(this.loadedRecording, "Can't unload recording because none is loaded");
+        TimelapseAgent.unloadRecording(function(error, wasAllowed) {
+            this._canReplay = !wasAllowed;
+        });
     },
     
     _loadRecording: function(recording)
     {
-    console.assert(!this._activeRecording, "Can't load recording because one is already loaded");
-    
-    this._canReplay = true;
-    
-    this._activeRecording = recording;
-    this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingLoaded, recording);
-    },
-    
-    _addRecording: function(recording)
-    {
-    this._recordings.push(recording);
-    this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingAdded, recording);
+        console.assert(!this._activeRecording, "Can't load recording because one is already loaded");
+        TimelapseAgent.loadRecording(recording.uid, function(error, wasAllowed) {
+            this._canReplay = !!wasAllowed;
+        });
     },
     
     // Callbacks from the backend message dispatcher (TimelapseDispatcher below)
@@ -670,6 +656,68 @@ WebInspector.TimelapseModel.prototype = {
             this._currentMarkIndex = markIndex;
 
         this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.InputHit, markIndex);
+    },
+
+    _recordingUnloaded: function()
+    {
+        this._canReplay = false;
+        var recording = this._activeRecording;
+        delete this._activeRecording;
+        this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingUnloaded, recording);
+    },
+
+    _recordingLoaded: function(uid)
+    {
+        var recording = this._recordingsByUID[uid];
+        console.assert(recording, "Unknown recording loaded!");
+
+        var setActiveRecording = function(error, uid) {
+            this._canReplay = true;
+            this._activeRecording = recording;
+            this._currentMarkIndex = recording.actions[0].mark.index || 0;
+            this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingLoaded, recording);
+        };
+        
+        if (recording.dataLoaded())
+            setActiveRecording.call(this);
+        else
+            this.onceEventListener(WebInspector.TimelapseModel.Events.RecordingAdded, setActiveRecording.bind(this));
+    },
+
+    _recordingAdded: function(uid)
+    {
+        var recording = new WebInspector.SerializedRecording(this, uid);
+        this._recordingsByUID[uid] = recording;
+        this._recordings.push(recording);
+
+        var loadDataForRecording = function(error, data) {
+            if (error) {
+                console.error("Couldn't load data for recording "+recording.uid+":"+error);
+                return;
+            }
+                
+            recording.loadData(data);
+            this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingAdded, recording);
+        };
+
+        // for now, just asynchronously load all data for each new recording as
+        // it's added, and defer any events that cause the data to be accessed.
+        // In the future, we could change the protocol so that the actual action data is
+        // loaded lazily (in the case that it's too big for the inspector protocol)
+        TimelapseAgent.getRecording(uid, loadDataForRecording.bind(this));
+    },
+
+    _recordingRemoved: function(uid)
+    {
+        var recording = this._recordingsByUID[uid];
+        if (!recording)
+            return;
+        
+        console.assert(this._recordings.indexOf(recording) !== -1, "Can't remove recording that doesn't exist");
+
+        delete this._recordingsByUID[uid];
+        this._recordings.splice(this._recordings.indexOf(recording), 1);
+        this.dispatchEventToListeners(WebInspector.TimelapseModel.Events.RecordingRemoved, recording);
     },
 
     // this is the raw DebuggerModel event. We translate into our own
@@ -773,7 +821,10 @@ WebInspector.TimelapseDispatcher.prototype = {
 
     capturedAction: function(action)
     {
-	this._model.createdRecording._capturedAction(action);
+        if (!this._model.createdRecording)
+            console.log(this._model)
+            
+        this._model.createdRecording.addAction(action);
     },
 
     playbackWasStarted: function()
@@ -809,7 +860,27 @@ WebInspector.TimelapseDispatcher.prototype = {
     playbackHitMark: function(markIndex)
     {
 	this._model._playbackHitInput(markIndex);
-    }
+    },
+    
+    recordingUnloaded: function()
+    {
+        this._model._recordingUnloaded();
+    },
+
+    recordingLoaded: function(uid)
+    {
+        this._model._recordingLoaded(uid);
+    },
+    
+    recordingAdded: function(uid)
+    {
+        this._model._recordingAdded(uid);
+    },
+    
+    recordingRemoved: function(uid)
+    {
+        this._model._recordingRemoved(uid);
+    },
 };
 
 WebInspector.TimelapseModel.Steps = {

@@ -89,6 +89,7 @@ class XMLHttpRequest;
 
 #if ENABLE(TIMELAPSE)
 class DispatchableAction;
+class ReplayRecording;
 #endif
 
 #define FAST_RETURN_IF_NO_FRONTENDS(value) if (!hasFrontends()) return value;
@@ -269,6 +270,10 @@ public:
 #endif
 
 #if ENABLE(TIMELAPSE)
+    static void recordingLoaded(Page*, ReplayRecording*);
+    static void recordingUnloaded(Page*);
+    static void recordingAdded(Page*, ReplayRecording*);
+    static void recordingRemoved(Page*, ReplayRecording*);
     static void capturedPageInput(Page*, DispatchableAction*);
     static void captureStarted(Page*);
     static void captureFinished(Page*);
@@ -494,6 +499,10 @@ private:
 #endif
 
 #if ENABLE(TIMELAPSE)
+    static void recordingLoadedImpl(InstrumentingAgents*, ReplayRecording*);
+    static void recordingUnloadedImpl(InstrumentingAgents*);
+    static void recordingAddedImpl(InstrumentingAgents*, ReplayRecording*);
+    static void recordingRemovedImpl(InstrumentingAgents*, ReplayRecording*);
     static void capturedPageInputImpl(InstrumentingAgents*, DispatchableAction*);
     static void captureStartedImpl(InstrumentingAgents*);
     static void captureFinishedImpl(InstrumentingAgents*);
@@ -1972,6 +1981,38 @@ inline void InspectorInstrumentation::didSendWebSocketFrame(Document* document, 
 #endif
     
 #if ENABLE(TIMELAPSE)
+inline void InspectorInstrumentation::recordingUnloaded(Page* page)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        recordingUnloadedImpl(instrumentingAgents);
+#endif
+}
+
+inline void InspectorInstrumentation::recordingLoaded(Page* page, ReplayRecording* recording)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        recordingLoadedImpl(instrumentingAgents, recording);
+#endif
+}
+
+inline void InspectorInstrumentation::recordingAdded(Page* page, ReplayRecording* recording)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        recordingAddedImpl(instrumentingAgents, recording);
+#endif
+}
+
+inline void InspectorInstrumentation::recordingRemoved(Page* page, ReplayRecording* recording)
+{
+#if ENABLE(INSPECTOR)
+    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
+        recordingRemovedImpl(instrumentingAgents, recording);
+#endif
+}
+
 inline void InspectorInstrumentation::capturedPageInput(Page* page, DispatchableAction* action)
 {
 #if ENABLE(INSPECTOR)

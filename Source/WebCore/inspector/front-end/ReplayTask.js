@@ -50,7 +50,7 @@ WebInspector.ReplayTask = function(taskName)
 }
 
 // adjust this to debug task actions
-WebInspector.ReplayTask.DebugLogging = false;
+WebInspector.ReplayTask.DebugLogging = true;
 
 WebInspector.ReplayTask.prototype = {
     // Public API

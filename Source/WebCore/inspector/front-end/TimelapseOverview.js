@@ -102,13 +102,6 @@ WebInspector.TimelapseOverview = function(model, recording)
     if (this._selectedCircleIndex)
         delete this._selectedCircleIndex;
 
-    // initialize slider position
-    this.sliders.playback.setPosition(1.0, true);
-    this.sliders.playback.enable();
-    this.sliders.playback.show();
-
-    this._updateSliderPositions();
-
     // add input providers that have already been created
     var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
     for (var i = 0; i < inputProviders.length; i++)
@@ -118,6 +111,15 @@ WebInspector.TimelapseOverview = function(model, recording)
     var providers = this._recording.providersWithType(WebInspector.DataProvider.Types.SavepointList);
     for (var i = 0; i < providers.length; i++)
         this._addProvider(providers[i]);
+
+    this._updateSliderPositions();
+
+    // initialize slider position
+    this.sliders.playback.enable();
+    this.sliders.playback.setPosition(1.0, true);
+    this.sliders.playback.show();
+    
+    this._scheduleRefresh();
 };
 
 WebInspector.TimelapseOverview.ResizerOffset = 3.5;
@@ -688,12 +690,49 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPlaybackSliderDragged: function(event)
     {
-        function timestampAndActionComparator(ts, action) {
-            var action_ts = action.mark.timestamp;
-            if (action_ts > ts) return -1;
-            if (action_ts < ts) return 1;
-            return 0;
-        }
+	function timestampAndActionComparator(ts, action) {
+	    var action_ts = action.mark.timestamp;
+	    if (action_ts > ts) return -1;
+	    if (action_ts < ts) return 1;
+	    return 0;
+	}
+
+	function timeDistanceFunction(ts, action) {
+	    if (!action)
+		return Number.POSITIVE_INFINITY;
+
+	    return Math.abs(ts - action.mark.timestamp);
+	}
+
+	var position = this.sliders.playback.position;
+    	var wantedTs = this.calculator.computeOverviewTimestamp(position);
+	var minTs = this.calculator.minimumBoundary;
+	var maxTs = this.calculator.maximumBoundary;
+
+	// for each active input provider, find the nearest mark within the calculator zoom interval
+	var closestPerProvider = [];
+	var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+	for (var i = 0; i < inputProviders.length; i++) {
+	    var provider = inputProviders[i];
+	    if (!provider.isEnabled() || !provider.actions.length)
+		continue;
+
+	    var minIdx = provider.actions.nearestBinaryIndexOf(minTs, timestampAndActionComparator, timeDistanceFunction);
+	    var maxIdx = provider.records.nearestBinaryIndexOf(maxTs, timestampAndActionComparator, timeDistanceFunction);
+	    var idx = provider.records.nearestBinaryIndexWithin(wantedTs, minIdx, maxIdx, timestampAndActionComparator, timeDistanceFunction);
+	    closestPerProvider.push(provider.records[idx]);
+	}
+
+	// if nothing matched at all, then there are no active providers. Just stop.
+	if (closestPerProvider.length === 0)
+	    return;
+
+	// now find the best out of the nearest candidates
+	var bestMatch = closestPerProvider[0];
+	for (var i = 1; i < closestPerProvider.length; i++) {
+	    if (Math.abs(wantedTs - closestPerProvider[i]) < Math.abs(wantedTs - bestMatch))
+		bestMatch = closestPerProvider[i];
+	}
 
         function timeDistanceFunction(ts, action) {
             if (!action)

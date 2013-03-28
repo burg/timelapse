@@ -149,6 +149,8 @@ WebInspector.TimelapseMiniview = function(model, recording)
     this.sliders.playback.enable();
     this.sliders.playback.setPosition(1.0, true);
   	this.sliders.playback.show();
+    
+    this._scheduleRefresh();
 };
 
 WebInspector.TimelapseMiniview.EdgeSnapDistance = 0.02; /* percent */

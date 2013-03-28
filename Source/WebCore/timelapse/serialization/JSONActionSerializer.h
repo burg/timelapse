@@ -44,7 +44,7 @@ namespace WebCore {
 
     class JSONActionSerializer : public ActionSerializer {
         WTF_MAKE_NONCOPYABLE(JSONActionSerializer);
-    public:
+    public:       
         JSONActionSerializer(PassRefPtr<DeterminismLog>);
         virtual ~JSONActionSerializer() {};
 
@@ -73,6 +73,7 @@ namespace WebCore {
         virtual void popObjectAsElement() OVERRIDE;
         virtual void storeResourceBytes(int, const char* data, int length) OVERRIDE;
 
+        size_t memorySize();
         bool serializeToFile(FILE*);
     private:
         RefPtr<DeterminismLog> m_recording;

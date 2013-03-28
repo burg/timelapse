@@ -58,6 +58,7 @@
 #include "NetworkProxy.h"
 #include "Node.h"
 #include "Page.h"
+#include "ReplayRecording.h"
 #include "ResourceResponse.h"
 #include "RanPendingScripts.h"
 #include "SecurityOrigin.h"
@@ -183,7 +184,9 @@ DeterminismController::DeterminismController(Page* page)
     , m_currentMark(0)
     , m_stopBeforeMarkIndex(0)
     , m_previousActionDispatchStartTime(0.0)
-    , m_previousMarkTime(0.0) { }
+    , m_previousMarkTime(0.0)
+    , m_nextRecordingId(1)
+    , m_loadedRecording(0) { }
 
 DeterminismController::~DeterminismController()
 {
@@ -261,6 +264,17 @@ bool DeterminismController::endCapturing(const PositionMark& mark)
     //now replay is possible, but requires a reset.
     m_status = PlaybackUninitialized;
     InspectorInstrumentation::captureFinished(m_page);
+
+    if (m_loadedRecording) {
+        InspectorInstrumentation::recordingUnloaded(m_page);
+        InspectorInstrumentation::recordingRemoved(m_page, m_loadedRecording);
+        delete m_loadedRecording;
+    }
+
+    m_loadedRecording = new ReplayRecording(m_determinismLog, m_nextRecordingId++);
+    // TODO: actually load the new recording
+    InspectorInstrumentation::recordingAdded(m_page, m_loadedRecording);
+    InspectorInstrumentation::recordingLoaded(m_page, m_loadedRecording);
     return true;
 }
 
@@ -709,9 +723,10 @@ void DeterminismController::finishReplay()
 
 void DeterminismController::serialize()
 {
-    LOG(Timelapse, "%-30sMETRIC: memory overhead: %zu bytes\n", "[DeterminismController]", m_determinismLog->memorySize());
-
     JSONActionSerializer serializer(m_determinismLog);
+
+    LOG(Timelapse, "%-30sMETRIC: memory overhead: %zu bytes\n", "[DeterminismController]", serializer.memorySize());
+
     FILE* file = 0;
     const char* filename = getenv("TIMELAPSE_SERIALIZED_RECORDING_FILENAME");
     if (filename) {

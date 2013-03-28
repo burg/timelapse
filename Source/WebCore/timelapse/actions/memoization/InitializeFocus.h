@@ -58,7 +58,8 @@ public:
 
     // DispatchableAction API
     virtual void dispatch(DeterminismController*) OVERRIDE;
-
+    virtual bool isUserVisible() const OVERRIDE { return false; }
+    
     // ReplayableAction API
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE { return sizeof(InitializeFocus); }

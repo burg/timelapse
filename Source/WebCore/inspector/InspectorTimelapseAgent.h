@@ -62,6 +62,7 @@ class InspectorCompositeState;
 class InstrumentingAgents;
 class Node;
 class Page;
+class ReplayRecording;
 
 typedef String ErrorString;
 
@@ -91,6 +92,10 @@ public:
     bool capturing() const { return m_stateMachine.capturing(); }
     bool replaying() const { return m_stateMachine.replaying(); }
 
+    void recordingUnloaded();
+    void recordingLoaded(ReplayRecording*);
+    void recordingAdded(ReplayRecording*);
+    void recordingRemoved(ReplayRecording*);
     void capturedPageInput(DispatchableAction*);
     void captureStarted();
     void captureFinished();
@@ -116,6 +121,10 @@ public:
     void pausePlayback(ErrorString*);
     void stopPlayback(ErrorString*, bool);
     void setPauseOnError(ErrorString*, bool);
+    void loadRecording(ErrorString*, int, bool*);
+    void unloadRecording(ErrorString*, bool*);
+    void getRecording(ErrorString*, int, RefPtr<TypeBuilder::Timelapse::ReplayRecording>&);
+    void getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >&);
 
 private:
     InspectorTimelapseAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);

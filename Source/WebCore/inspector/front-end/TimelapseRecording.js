@@ -137,6 +137,9 @@ WebInspector.TimelapseRecording.prototype = {
     },
     
     // Public API
+    displayName: function() {},
+    dataLoaded: function() {},
+    
     get savepointList() {
 	var providers = this.providersWithType(WebInspector.DataProvider.Types.SavepointList);
 	console.assert(providers.length == 1, "Expected one savepoint list provider, but found "+providers.length);
@@ -305,40 +308,79 @@ WebInspector.TimelapseRecording.prototype = {
         scanner.scanRegion(startIndex, endIndex);
     },
     
-    // Called by WebInspector.TimelapseDispatcher
-    _capturedAction: function(action)
+    // Called by WebInspector.TimelapseDispatcher and when bulk-loading a recording
+    addAction: function(action)
     {
-	this._actions.push(action);
-  	this.calculator.updateBoundaries(action);
-	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.ActionAdded, action);
+        this.calculator.updateBoundaries(action);
+        this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.ActionAdded, action);
     },
     
     __proto__: WebInspector.Object.prototype
 };
 
-WebInspector.TimelapseSerializedRecording = function(model)
+WebInspector.SerializedRecording = function(model, uid)
 {
     WebInspector.TimelapseRecording.call(this, model);
-    
-    this._initializeInputs();
-    this._initializeSavepointList();
+    this.uid = uid;
+    this._dataLoaded = false;
 }
 
-WebInspector.TimelapseSerializedRecording.prototype = {
+WebInspector.SerializedRecording.prototype = {
+    loadData: function(data)
+    {
+        this._dateCreated = data.dateCreated;
+        this._displayName = data.name;
+
+        this._initializeInputs();
+        this._initializeSavepointList();
+
+        this._actions = data.actions;
+        this._dataLoaded = true;
+        
+        for (var i = 0; i < data.actions.length; ++i)
+            this.addAction(data.actions[i]);
+    },
+
+    dataLoaded: function()
+    {
+        return this._dataLoaded;
+    },
+
+    displayName: function()
+    {
+        return this._displayName || "(uninitialized)";
+    },
+
     __proto__: WebInspector.TimelapseRecording.prototype
 };
 
 WebInspector.TimelapseLiveRecording = function(model)
 {
     WebInspector.TimelapseRecording.call(this, model);
+    this.uid = -1;
     this._isCapturing = false;
 };
 
 WebInspector.TimelapseLiveRecording.prototype = {
+    displayName: function()
+    {
+        return WebInspector.UIString("(Live Recording)");
+    },
+
+    dataLoaded: function()
+    {
+        return true;
+    },
     
     get isCapturing()
     {
         return this._isCapturing;
+    },
+    
+    addAction: function(action)
+    {
+        this._actions.push(action);
+        WebInspector.TimelapseRecording.prototype.addAction.call(this, action);
     },
     
     registerListeners: function(group) {
@@ -384,8 +426,8 @@ WebInspector.TimelapseCalculator.prototype = {
 
     reset: function()
     {
-	this._zoomLeft = 0.0;
-	this._zoomRight = 0.0;
+        this._zoomLeft = 0.0;
+        this._zoomRight = 0.0;
         delete this.minimumBoundary;
         delete this.maximumBoundary;
     },
@@ -431,15 +473,20 @@ WebInspector.TimelapseCalculator.prototype = {
         return (this.maximumBoundary - this.minimumBoundary);
     },
 
-    updateBoundaries: function(action)
+    updateBoundaries: function(action, suppressAdjustZoom)
     {
-	var ts = action.mark.timestamp;
+        var ts = action.mark.timestamp;
         if (typeof this.minimumBoundary === "undefined" || ts < this.minimumBoundary) {
             this.minimumBoundary = ts;
+            if (!suppressAdjustZoom)
+                this.zoomLeft = 0.0;
             return true;
         }
         if (typeof this.maximumBoundary === "undefined" || ts > this.maximumBoundary) {
             this.maximumBoundary = ts;
+            this.dispatchEventToListeners(WebInspector.TimelapseCalculator.Events.ZoomChanged);
+            if (!suppressAdjustZoom)
+                this.zoomRight = 0.0;
             return true;
         }
         return false;

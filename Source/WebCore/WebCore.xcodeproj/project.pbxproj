@@ -5912,6 +5912,8 @@
 		C3CF17A715B0063F00276D39 /* IdTargetObserverRegistry.h in Headers */ = {isa = PBXBuildFile; fileRef = C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C42E409A1702201F00FB0F77 /* ReplayActionFactory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42E40981702201F00FB0F77 /* ReplayActionFactory.cpp */; };
 		C42E409B1702201F00FB0F77 /* ReplayActionFactory.h in Headers */ = {isa = PBXBuildFile; fileRef = C42E40991702201F00FB0F77 /* ReplayActionFactory.h */; };
+		C42E409D17025A5D00FB0F77 /* ReplayRecording.h in Headers */ = {isa = PBXBuildFile; fileRef = C42E409C17025A5D00FB0F77 /* ReplayRecording.h */; };
+		C42E409F17025B6600FB0F77 /* ReplayRecording.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42E409E17025B6500FB0F77 /* ReplayRecording.cpp */; };
 		C4531CC916CF64260060AE29 /* AsyncEventProxy.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4531CC016CF64260060AE29 /* AsyncEventProxy.cpp */; };
 		C4531CCA16CF64260060AE29 /* AsyncEventProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = C4531CC116CF64260060AE29 /* AsyncEventProxy.h */; };
 		C4531CCB16CF64260060AE29 /* CapturingResourceHandleClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4531CC216CF64260060AE29 /* CapturingResourceHandleClient.cpp */; };
@@ -13582,6 +13584,8 @@
 		C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IdTargetObserverRegistry.h; sourceTree = "<group>"; };
 		C42E40981702201F00FB0F77 /* ReplayActionFactory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReplayActionFactory.cpp; sourceTree = "<group>"; };
 		C42E40991702201F00FB0F77 /* ReplayActionFactory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReplayActionFactory.h; sourceTree = "<group>"; };
+		C42E409C17025A5D00FB0F77 /* ReplayRecording.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayRecording.h; path = timelapse/ReplayRecording.h; sourceTree = "<group>"; };
+		C42E409E17025B6500FB0F77 /* ReplayRecording.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReplayRecording.cpp; path = timelapse/ReplayRecording.cpp; sourceTree = "<group>"; };
 		C4531CC016CF64260060AE29 /* AsyncEventProxy.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = AsyncEventProxy.cpp; path = timelapse/proxies/AsyncEventProxy.cpp; sourceTree = "<group>"; };
 		C4531CC116CF64260060AE29 /* AsyncEventProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AsyncEventProxy.h; path = timelapse/proxies/AsyncEventProxy.h; sourceTree = "<group>"; };
 		C4531CC216CF64260060AE29 /* CapturingResourceHandleClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CapturingResourceHandleClient.cpp; path = timelapse/proxies/CapturingResourceHandleClient.cpp; sourceTree = "<group>"; };
@@ -21966,6 +21970,8 @@
 				C4531D6E16CF65C30060AE29 /* DispatchableAction.h */,
 				C4531D6F16CF65C30060AE29 /* ReplayableTypes.cpp */,
 				C4531D7016CF65C30060AE29 /* ReplayableTypes.h */,
+				C42E409E17025B6500FB0F77 /* ReplayRecording.cpp */,
+				C42E409C17025A5D00FB0F77 /* ReplayRecording.h */,
 				C4531D7116CF65C30060AE29 /* TimelapseAgentStateMachine.cpp */,
 				C4531D7216CF65C30060AE29 /* TimelapseAgentStateMachine.h */,
 			);
@@ -26898,6 +26904,7 @@
 				977E2E0F12F0FC9C00C13380 /* XSSAuditorDelegate.h in Headers */,
 				FD537353137B651800008DCE /* ZeroPole.h in Headers */,
 				C42E409B1702201F00FB0F77 /* ReplayActionFactory.h in Headers */,
+				C42E409D17025A5D00FB0F77 /* ReplayRecording.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -30123,6 +30130,7 @@
 				977E2E0E12F0FC9C00C13380 /* XSSAuditorDelegate.cpp in Sources */,
 				FD537352137B651800008DCE /* ZeroPole.cpp in Sources */,
 				C42E409A1702201F00FB0F77 /* ReplayActionFactory.cpp in Sources */,
+				C42E409F17025B6600FB0F77 /* ReplayRecording.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

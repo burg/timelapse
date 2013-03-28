@@ -45,11 +45,11 @@ public:
 
     enum State {
         Disabled,
-        EnabledCanCapture,
-        EnabledCanReplayOrCapture,
+        RecordingUnloaded,
+        RecordingLoaded,
         WaitingForCapture,
-        WaitingForReplay,
         Capturing,
+        WaitingForReplay,
         Replaying,
         ReplayPaused
     };

@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Jake Bailey.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2013 Brian Burg.
+ *  Copyright (C) 2013 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,46 +29,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef InitializeWindow_h
-#define InitializeWindow_h
+#include "config.h"
 
 #if ENABLE(TIMELAPSE)
 
-#include "DispatchableAction.h"
-#include "Frame.h"
-#include "Page.h"
-#include "ReplayableTypes.h"
+#include "ReplayRecording.h"
+
+#include <wtf/timelapse/DeterminismLog.h>
 
 namespace WebCore {
 
-    class DeterminismController;
-
-class InitializeWindow : public DispatchableAction { 
-
-public:
-    InitializeWindow(Page* page, unsigned dispatchCount, const PositionMark& mark)
-    : DispatchableAction(ReplayableTypes::InitializeWindow, dispatchCount, mark)
-    , m_width(page->mainFrame()->document()->domWindow()->outerWidth())
-    , m_height(page->mainFrame()->document()->domWindow()->outerHeight()) {}
-
-    virtual ~InitializeWindow() {};
-
-    // DispatchableAction API
-    virtual void dispatch(DeterminismController*) OVERRIDE;
-    virtual bool isUserVisible() const OVERRIDE { return false; }
-    
-    // ReplayableAction API
-    virtual String toString() const OVERRIDE;
-    size_t memorySize() const OVERRIDE { return sizeof(InitializeWindow); }
-    void serialize(WTF::ActionSerializer*) const OVERRIDE;
-  
-private:
-    int m_width;
-    int m_height;
-};
-
-} //namespace WebCore
+ReplayRecording::ReplayRecording(PassRefPtr<WTF::DeterminismLog> inputLog, int uid)
+: m_inputLog(inputLog)
+, m_uid(uid) { }
+        
+}; // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
-
-#endif // InitializeWindow_h

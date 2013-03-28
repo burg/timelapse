@@ -57,6 +57,7 @@ namespace WebCore {
     class PlatformKeyboardEvent;
     class PlatformMouseEvent;
     class PlatformWheelEvent;
+    class ReplayRecording;
     
     enum ReplayStatus {
         CannotReplay,
@@ -122,6 +123,8 @@ namespace WebCore {
         Page* page() const { return m_page; }
         PassRefPtr<CacheController> cacheController() const;
         PassRefPtr<WTF::DeterminismLog> determinismLog() const;
+        // FIXME: temporary hack until some other object manages recordings
+        ReplayRecording* loadedRecording() const { return m_loadedRecording; }
 
     private:
         void captureAction(DispatchableAction* newAction);
@@ -185,6 +188,9 @@ namespace WebCore {
         double m_previousActionDispatchStartTime;
         // the time specified by the last dispatched action's mark.
         double m_previousMarkTime;
+        
+        int m_nextRecordingId;
+        ReplayRecording* m_loadedRecording;
     };
 
 } // namespace WebCore

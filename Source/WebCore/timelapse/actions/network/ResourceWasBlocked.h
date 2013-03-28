@@ -52,6 +52,7 @@ namespace WebCore {
         
         // DispatchableAction API
         virtual void dispatch(DeterminismController*) OVERRIDE;
+        virtual bool isUserVisible() const OVERRIDE { return false; }
         
         // ReplayableAction API
         virtual String toString() const OVERRIDE;

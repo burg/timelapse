@@ -52,7 +52,8 @@ public:
 
     // DispatchableAction API
     virtual void dispatch(DeterminismController*);
-
+    virtual bool isUserVisible() const OVERRIDE { return false; }
+    
     // ReplayableAction API
     virtual String toString() const;
     size_t memorySize() const OVERRIDE { return sizeof(RanPendingScripts); }

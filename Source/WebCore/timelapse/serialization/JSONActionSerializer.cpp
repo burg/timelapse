@@ -41,13 +41,73 @@
 #include <wtf/text/WTFString.h>
 #include <wtf/timelapse/DeterminismLog.h>
 
+namespace WTF {
+static const char* queueTypeToString(DeterminismQueueType queue) {
+    switch (queue) {
+        case DispatchableActionQueue:    return "DispatchableActionQueue";
+        case LoaderMemoizedDataQueue:    return "LoaderMemoizedDataQueue";
+        case ScriptMemoizedDataQueue:    return "ScriptMemoizedDataQueue";
+        case DeterminismQueueTypeLength: return "QueueTypeLength (error)";
+    }
+}
+} // namespace WTF
+
 namespace WebCore {
+
+class CountFunctor {
+public:
+    typedef size_t ReturnType;
+
+    CountFunctor() : m_count(0) { }
+    void count(size_t count) { m_count += count; }
+    ReturnType returnValue() { return m_count; }
+
+private:
+    ReturnType m_count;
+};
+
+struct CountMemorySize : CountFunctor {
+    void operator()(size_t, const ReplayableAction* action) {
+        count(action->memorySize());
+    }
+};
+
+class SerializeActionFunctor {
+public:
+    typedef void ReturnType;
+
+    SerializeActionFunctor(ActionSerializer* serializer)
+    : m_serializer(serializer) {}
+    ~SerializeActionFunctor() {}
+
+    void operator()(size_t index, const ReplayableAction* action)
+    {
+        LOG(Timelapse, "%-25s Writing %5zu: %s\n", "[SerializeAction]",
+                                index, action->type());
+        m_serializer->pushObject(); // a single action object
+        m_serializer->pushObject(); // action object's metadata
+        m_serializer->putString("type", action->type());
+        m_serializer->putInt("number", index);
+        if (action->queue() == WTF::DispatchableActionQueue)
+            action->serializeDispatchInfo(m_serializer);
+        m_serializer->popObjectAsProperty("metadata");
+
+        m_serializer->pushObject(); // action object's main data
+        action->serialize(m_serializer);
+        m_serializer->popObjectAsProperty("action");
+
+        m_serializer->popObjectAsElement(); // a single action object    
+    }
+    ReturnType returnValue() { return void(); }
+
+private:
+    ActionSerializer* m_serializer;
+};
 
 JSONActionSerializer::JSONActionSerializer(PassRefPtr<DeterminismLog> log)
     : m_recording(log)
     , m_currentObject(0)
     , m_currentArray(0) {}
-
 
 // insert key-value pair into current object
 void JSONActionSerializer::putString(const String& key, const String& value)
@@ -239,10 +299,66 @@ void JSONActionSerializer::storeResourceBytes(int /*id*/, const char* /*data*/, 
     // TODO
 }
 
+size_t JSONActionSerializer::memorySize()
+{
+    CountMemorySize counter;
+    
+    for (int i = 0; i < WTF::DeterminismQueueTypeLength; i++) {
+        DeterminismQueueType queueType = static_cast<DeterminismQueueType>(i);
+        m_recording->forEachInputInQueue(queueType, counter);
+    }
+
+    return counter.returnValue();
+}
+
 bool JSONActionSerializer::serializeToFile(FILE* fh)
 {
     pushObject();
-    m_recording->serialize(this);
+    
+    /* the overall recording has the form:
+    {
+      metadata: {
+                  memorySize: ...,
+                  ...
+      },
+      queues: [ { 'name': 'foo', actions: [ { ... }, { ... }, ... ] } ]
+    }*/
+    
+    pushObject(); // the entire recording object
+    // TODO: add other recording metadata?
+    putInt("memorySize", memorySize());
+    popObjectAsProperty("metadata");
+    
+    pushArray(); // array of queues
+    
+    /* each action has the form:
+    {
+      metadata: { 
+                 "type":   ...,
+                 "number": ...,
+                ...
+      },
+      action: { 
+                "foo": ...,
+                ...
+      }
+    }*/
+
+    SerializeActionFunctor collector(this);
+    
+    for (int i = 0; i < WTF::DeterminismQueueTypeLength; i++) {
+        DeterminismQueueType queueType = static_cast<DeterminismQueueType>(i);
+        pushObject(); // a single queue object
+    
+        putString("name", WTF::queueTypeToString(queueType));
+        pushArray(); // array of action objects
+
+        m_recording->forEachInputInQueue(queueType, collector);
+        
+        popArrayAsProperty("actions");
+        popObjectAsElement();
+    }
+    popArrayAsProperty("queues");
 
     ASSERT(m_currentObject);
     // hella expensive. woops.

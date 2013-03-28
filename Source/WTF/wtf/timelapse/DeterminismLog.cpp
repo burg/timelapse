@@ -33,7 +33,6 @@
 
 #include "DeterminismLog.h"
 
-#include "ActionSerializer.h"
 #include "CString.h"
 #include "ReplayableAction.h"
 #include "Vector.h"
@@ -243,81 +242,6 @@ void DeterminismLog::setIsActive(bool state)
 {
     ASSERT(m_active != state);
     m_active = state;
-}
-
-size_t DeterminismLog::memorySize() const
-{
-    size_t count = 0;
-    for (size_t i = 0; i < DeterminismQueueTypeLength; i++) {
-        for (size_t j = 0; j < m_queues[i].size(); j++)
-            count += m_queues[i].at(j).action->memorySize();
-    }
-
-    return count;
-}
-    
-void DeterminismLog::serialize(ActionSerializer* serializer) const
-{
-
-    /* the overall recording has the form:
-    {
-      metadata: {
-                  memorySize: ...,
-                  ...
-      },
-      queues: [ { 'name': 'foo', actions: [ { ... }, { ... }, ... ] } ]
-    }*/
-    
-    serializer->pushObject(); // the entire recording object
-    // TODO: add other recording metadata?
-    serializer->putInt("memorySize", memorySize());
-    serializer->popObjectAsProperty("metadata");
-    
-    serializer->pushArray(); // array of queues
-    
-    /* each action has the form:
-    {
-      metadata: { 
-                 "type":   ...,
-                 "number": ...,
-                ...
-      },
-      action: { 
-                "foo": ...,
-                ...
-      }
-    }*/
-    
-    for (size_t queue = 0; queue < m_queues.size(); queue++) {
-        serializer->pushObject(); // a single queue object
-    
-        serializer->putString("name", queueTypeToString((DeterminismQueueType)queue));
-        serializer->pushArray(); // array of action objects
-        
-        for (size_t i = 0; i < m_queues[queue].size(); i++) {
-            const ActionEntry& entry = m_queues[queue].at(i);
-            LOG(TimelapseCapturing, "%-25s Writing %5zu: %s\n", "[DeterminismLog]",
-                                    entry.count, entry.action->type());
-            serializer->pushObject(); // a single action object
-
-            serializer->pushObject(); // action object's metadata
-            serializer->putString("type", entry.action->type());
-            serializer->putInt("number", entry.count);
-            if (entry.action->queue() == DispatchableActionQueue)
-                entry.action->serializeDispatchInfo(serializer);
-            serializer->popObjectAsProperty("metadata");
-        
-            serializer->pushObject(); // action object's main data
-            entry.action->serialize(serializer);
-            serializer->popObjectAsProperty("action");
-        
-            serializer->popObjectAsElement(); // a single action object
-        }
-        
-        serializer->popArrayAsProperty("actions");
-        serializer->popObjectAsElement();
-    }
-    serializer->popArrayAsProperty("queues");
 }
     
 }; // namespace WTF

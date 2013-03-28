@@ -55,6 +55,7 @@ public:
         controller->cacheController()->disableCache();
         controller->didDispatch(this);
     }
+    virtual bool isUserVisible() const OVERRIDE { return false; }
 
     // ReplayableAction API
     virtual String toString() const OVERRIDE { return String("DisableCache"); }

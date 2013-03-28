@@ -65,8 +65,6 @@ struct ReplayErrorData {
     DeterminismQueueType queue;
 };
 
-class ActionSerializer;
-    
 class DeterminismLog : public RefCounted<DeterminismLog> {
 
 public:
@@ -96,8 +94,8 @@ public:
     
     //used for temporary deactivation; e.g. when injected scripts are evaluated.
     WTF_EXPORT_PRIVATE void setIsActive(bool);
-    WTF_EXPORT_PRIVATE size_t memorySize() const;
-    WTF_EXPORT_PRIVATE void serialize(ActionSerializer*) const;
+
+    template<typename Functor> WTF_EXPORT_PRIVATE typename Functor::ReturnType forEachInputInQueue(DeterminismQueueType, Functor&);
 
 private:
     typedef Vector<ActionEntry> DeterminismQueue;
@@ -113,6 +111,18 @@ private:
     Vector<size_t> m_positions;
     size_t m_captureCount;
 };
+
+
+template<typename Functor> inline typename Functor::ReturnType DeterminismLog::forEachInputInQueue(DeterminismQueueType queue, Functor& functor)
+{
+    ASSERT(queue < DeterminismQueueTypeLength);
+    
+    for (size_t i = 0; i < m_queues[queue].size(); i++) {
+        functor(i, m_queues[queue].at(i).action);
+    }
+    
+    return functor.returnValue();
+}
 
 } // namespace WTF
 

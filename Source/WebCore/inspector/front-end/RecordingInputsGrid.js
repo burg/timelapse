@@ -143,19 +143,18 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
 	    if (actions[i].mark.index > this._maxMarkIndex)
 		this._maxMarkIndex = actions[i].mark.index;
 	    
-	    newNode = this._createRecordGridNode(actions[i]);
+	    newNode = this._createGridNode(actions[i]);
 	    this.rootNode().appendChild(newNode);
-	    newNode.refreshRecord();
+	    newNode.refreshAction();
 	}
     
     // initialize slider position
-    // XXX test me
     this._refreshIfNeeded();
 	var node = this._gridNodes[this._model.currentMarkIndex];
 	this.sliders.playback.placeAfter(node);
 	this.sliders.playback.enable();
 	this.sliders.playback.show();
-	node.reveal();
+	//node.reveal();
 };
 
 WebInspector.RecordingInputsGrid.DefaultRefreshDelay = 150;

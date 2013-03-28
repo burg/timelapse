@@ -42,11 +42,11 @@ namespace WebCore {
 
 namespace TimelapseAgentStateNames {
 static const char* Disabled = "Disabled";
-static const char* EnabledCanCapture = "EnabledCanCapture";
-static const char* EnabledCanReplayOrCapture =  "EnabledCanReplayOrCapture";
+static const char* RecordingUnloaded = "RecordingUnloaded";
+static const char* RecordingLoaded =  "RecordingLoaded";
 static const char* WaitingForCapture = "WaitingForCapture";
-static const char* WaitingForReplay = "WaitingForReplay";
 static const char* Capturing = "Capturing";
+static const char* WaitingForReplay = "WaitingForReplay";
 static const char* Replaying = "Replaying";
 static const char* ReplayPaused = "ReplayPaused";
 }
@@ -57,11 +57,11 @@ const char* TimelapseAgentStateMachine::stateNameFor(TimelapseAgentStateMachine:
     case TimelapseAgentStateMachine::Disabled:
         return TimelapseAgentStateNames::Disabled;
 
-    case TimelapseAgentStateMachine::EnabledCanCapture:
-        return TimelapseAgentStateNames::EnabledCanCapture;
+    case TimelapseAgentStateMachine::RecordingUnloaded:
+        return TimelapseAgentStateNames::RecordingUnloaded;
 
-    case TimelapseAgentStateMachine::EnabledCanReplayOrCapture:
-        return TimelapseAgentStateNames::EnabledCanReplayOrCapture;
+    case TimelapseAgentStateMachine::RecordingLoaded:
+        return TimelapseAgentStateNames::RecordingLoaded;
 
     case TimelapseAgentStateMachine::WaitingForCapture:
         return TimelapseAgentStateNames::WaitingForCapture;
@@ -97,12 +97,12 @@ bool TimelapseAgentStateMachine::enabled() const
 
 bool TimelapseAgentStateMachine::canCapture() const
 {
-    return inState(EnabledCanCapture) || inState(EnabledCanReplayOrCapture);
+    return inState(RecordingUnloaded);
 }
 
 bool TimelapseAgentStateMachine::canReplay() const
 {
-    return inState(EnabledCanReplayOrCapture);
+    return inState(RecordingLoaded);
 }
 
 bool TimelapseAgentStateMachine::replayPaused() const
@@ -124,31 +124,31 @@ void TimelapseAgentStateMachine::advanceTo(State newState)
 {
     switch (newState) {
     case Disabled:
-        if (inState(EnabledCanCapture) || inState(EnabledCanReplayOrCapture))
+        if (inState(RecordingLoaded) || inState(RecordingUnloaded))
             goto commit_transition;
 
         break;
 
-    case EnabledCanCapture:
-        if (inState(Disabled))
+    case RecordingUnloaded:
+        if (inState(Disabled) || inState(RecordingLoaded))
             goto commit_transition;
 
         break;
 
-    case EnabledCanReplayOrCapture:
-        if (inState(Capturing) || inState(Replaying) || inState(ReplayPaused) || inState(EnabledCanReplayOrCapture))
+    case RecordingLoaded:
+        if (inState(Capturing) || inState(Replaying) || inState(ReplayPaused) || inState(RecordingUnloaded))
             goto commit_transition;
 
         break;
 
     case WaitingForCapture:
-        if (inState(EnabledCanCapture) || inState(EnabledCanReplayOrCapture))
+        if (inState(RecordingUnloaded))
             goto commit_transition;
         
         break;
     
     case WaitingForReplay:
-        if (inState(EnabledCanReplayOrCapture) || inState(ReplayPaused))
+        if (inState(RecordingLoaded) || inState(ReplayPaused))
             goto commit_transition;
         
         break;

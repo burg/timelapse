@@ -1245,6 +1245,30 @@ void InspectorInstrumentation::didSendWebSocketFrameImpl(InstrumentingAgents* in
 #endif
 
 #if ENABLE(TIMELAPSE)
+void InspectorInstrumentation::recordingUnloadedImpl(InstrumentingAgents* instrumentingAgents)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->recordingUnloaded();
+}
+
+void InspectorInstrumentation::recordingLoadedImpl(InstrumentingAgents* instrumentingAgents, ReplayRecording* recording)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->recordingLoaded(recording);
+}
+
+void InspectorInstrumentation::recordingAddedImpl(InstrumentingAgents* instrumentingAgents, ReplayRecording* recording)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->recordingAdded(recording);
+}
+
+void InspectorInstrumentation::recordingRemovedImpl(InstrumentingAgents* instrumentingAgents, ReplayRecording* recording)
+{
+    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
+        timelapseAgent->recordingRemoved(recording);
+}
+
 void InspectorInstrumentation::capturedPageInputImpl(InstrumentingAgents* instrumentingAgents, DispatchableAction* action)
 {
     if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())

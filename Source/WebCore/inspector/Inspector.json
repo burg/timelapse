@@ -2621,6 +2621,22 @@
                     { "name": "data", "type": "object", "description": "Action details." }
                 ],
                 "description": "A replay action contains information about a captured event loop input."
+            },
+            {
+                "id": "RecordingId",
+                "type": "integer",
+                "description": "Unique replay recording identifier."
+            },
+            {
+               "id": "ReplayRecording",
+                "type": "object",
+                "properties": [
+                    { "name": "uid", "$ref": "RecordingId", "description": "Unique recording id." },
+                    { "name": "dateCreated", "type": "string", "description": "Creation time of recording." },
+                    { "name": "name", "type": "string", "description": "Name for the recording" },
+                    { "name": "actions", "type": "array", "items": { "$ref": "ReplayAction" }, "description": "User-visible actions for this recording." }
+                ],
+                "description": "A replay recording that consists of metadata and a list of actions."
             }
         ],
 
@@ -2679,6 +2695,40 @@
                 "description": "Changes the actions taken by the replay backend when a playback error is encountered.",
                 "parameters": [
                     { "name": "shouldPause", "type": "boolean" }
+                ]
+            },
+            {
+                "name": "loadRecording",
+                "description": "Loads the specified recording",
+                "parameters": [
+                    { "name": "uid", "$ref": "RecordingId" }
+                ],
+                "returns": [
+                    { "name": "wasAllowed", "type": "boolean" }
+                ]
+            },
+            {
+                "name": "unloadRecording",
+                "description": "Unloads the currently loaded recording, if any is loaded.",
+                "returns": [
+                    { "name": "wasAllowed", "type": "boolean" }
+                ]
+            },
+            {
+                "name": "getRecording",
+                "description": "Returns recording with the specified id if one exists.",
+                "parameters": [
+                    { "name": "uid", "$ref": "RecordingId" }
+                ],
+                "returns": [
+                    { "name": "recording", "$ref": "ReplayRecording", "description": "the requested recording", "optional": true }
+                ]
+            },
+            {
+                "name": "getAvailableRecordings",
+                "description": "Returns uids for all available recordings.",
+                "returns": [
+                    { "name": "recordingUids", "type": "array", "items": { "$ref": "RecordingId" } }
                 ]
             }
         ],
@@ -2742,6 +2792,31 @@
             {
                 "name": "inputUnlocked",
                 "description": "Fired when user input has been unlocked (will no longer be ignored)."
+            },
+            {
+                "name": "recordingAdded",
+                "description": "Fired when a new recording is created or found on the filesystem.",
+                "parameters": [
+                    { "name": "uid", "$ref": "RecordingId", "description": "Id for the added recording." }
+                ]
+            },
+            {
+                "name": "recordingRemoved",
+                "description": "Fired when a recording is removed and can no longer be loaded.",
+                "parameters": [
+                    { "name": "uid", "$ref": "RecordingId", "description": "Id for the removed recording." }
+                ]
+            },
+            {
+                "name": "recordingLoaded",
+                "description": "Fired when a recording is loaded.",
+                "parameters": [
+                    { "name": "uid", "$ref": "RecordingId", "description": "Id for the loaded recording." }
+                ]
+            },
+            {
+                "name": "recordingUnloaded",
+                "description": "Fired when a recording is unloaded."
             }
        ]
     },

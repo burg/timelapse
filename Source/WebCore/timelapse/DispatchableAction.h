@@ -106,7 +106,7 @@ public:
     virtual void dispatch(DeterminismController*) =0;
     
     virtual DeterminismQueueType queue() const { return WTF::DispatchableActionQueue; }
-    
+    virtual bool isUserVisible() const { return true; }
     virtual void serializeDispatchInfo(ActionSerializer*) const OVERRIDE;
     
     // mark, dispatch count, and quota are not always known at construction time. They can
