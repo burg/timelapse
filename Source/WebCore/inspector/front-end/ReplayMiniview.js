@@ -768,7 +768,7 @@ WebInspector.ReplayMiniview.prototype = {
 	}
 
 	var actions = this._recording.actions;
-	var idx = action.nearestBinaryIndexOf(timestamp, timestampAndActionComparator, timeDistanceFunction);
+	var idx = actions.nearestBinaryIndexOf(timestamp, timestampAndActionComparator, timeDistanceFunction);
 	var actionPosition = Math.floor(calculator.computeMiniviewPercentage(actions[idx].mark.timestamp));
 	var prevactionPosition = (idx == 0) ? 0.0
                                             : calculator.computeMiniviewPercentage(actions[idx-1].mark.timestamp);

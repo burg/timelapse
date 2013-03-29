@@ -713,10 +713,10 @@ WebInspector.ReplayOverview.prototype = {
 	var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
 	for (var i = 0; i < inputProviders.length; i++) {
 	    var provider = inputProviders[i];
-	    if (!provider.isEnabled() || !provider.actions.length)
+	    if (!provider.isEnabled() || !provider.records.length)
 		continue;
 
-	    var minIdx = provider.actions.nearestBinaryIndexOf(minTs, timestampAndActionComparator, timeDistanceFunction);
+	    var minIdx = provider.records.nearestBinaryIndexOf(minTs, timestampAndActionComparator, timeDistanceFunction);
 	    var maxIdx = provider.records.nearestBinaryIndexOf(maxTs, timestampAndActionComparator, timeDistanceFunction);
 	    var idx = provider.records.nearestBinaryIndexWithin(wantedTs, minIdx, maxIdx, timestampAndActionComparator, timeDistanceFunction);
 	    closestPerProvider.push(provider.records[idx]);
@@ -747,13 +747,13 @@ WebInspector.ReplayOverview.prototype = {
 
         // for each active input provider, find the nearest mark within the calculator zoom interval
         var closestPerProvider = [];
-        var inputProviders = this._actioning.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
+        var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
         for (var i = 0; i < inputProviders.length; i++) {
             var provider = inputProviders[i];
-            if (!provider.isEnabled() || !provider.actions.length)
+            if (!provider.isEnabled() || !provider.records.length)
                 continue;
 
-            var minIdx = provider.actions.nearestBinaryIndexOf(minTs, timestampAndActionComparator, timeDistanceFunction);
+            var minIdx = provider.records.nearestBinaryIndexOf(minTs, timestampAndActionComparator, timeDistanceFunction);
             var maxIdx = provider.records.nearestBinaryIndexOf(maxTs, timestampAndActionComparator, timeDistanceFunction);
             var idx = provider.records.nearestBinaryIndexWithin(wantedTs, minIdx, maxIdx, timestampAndActionComparator, timeDistanceFunction);
             closestPerProvider.push(provider.records[idx]);
