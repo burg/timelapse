@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2011-2013, Brian Burg.
+ *  Copyright (C) 2011-2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,15 +29,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef InspectorTimelapseAgent_h
-#define InspectorTimelapseAgent_h
+#ifndef InspectorReplayAgent_h
+#define InspectorReplayAgent_h
 
 #if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
-#include "TimelapseAgentStateMachine.h"
+#include "ReplayAgentStateMachine.h"
 
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
@@ -66,17 +66,17 @@ class ReplayRecording;
 
 typedef String ErrorString;
 
- class InspectorTimelapseAgent
-    : public InspectorBaseAgent<InspectorTimelapseAgent>
-    , public InspectorBackendDispatcher::TimelapseCommandHandler {
-    WTF_MAKE_NONCOPYABLE(InspectorTimelapseAgent);
+ class InspectorReplayAgent
+    : public InspectorBaseAgent<InspectorReplayAgent>
+    , public InspectorBackendDispatcher::ReplayCommandHandler {
+    WTF_MAKE_NONCOPYABLE(InspectorReplayAgent);
 public:
-    static PassOwnPtr<InspectorTimelapseAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, Page* page)
+    static PassOwnPtr<InspectorReplayAgent> create(InstrumentingAgents* instrumentingAgents, InspectorCompositeState* state, Page* page)
     {
-        return adoptPtr(new InspectorTimelapseAgent(instrumentingAgents, state, page));
+        return adoptPtr(new InspectorReplayAgent(instrumentingAgents, state, page));
     }
     
-    ~InspectorTimelapseAgent();
+    ~InspectorReplayAgent();
 
     void setFrontend(InspectorFrontend*);
     void clearFrontend();
@@ -123,20 +123,20 @@ public:
     void setPauseOnError(ErrorString*, bool);
     void loadRecording(ErrorString*, int, bool*);
     void unloadRecording(ErrorString*, bool*);
-    void getRecording(ErrorString*, int, RefPtr<TypeBuilder::Timelapse::ReplayRecording>&);
+    void getRecording(ErrorString*, int, RefPtr<TypeBuilder::Replay::ReplayRecording>&);
     void getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >&);
 
 private:
-    InspectorTimelapseAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
+    InspectorReplayAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
 
     PositionMark createMark();
     PositionMark reuseMark() const;
     void pushRecordToFrontend(PassRefPtr<InspectorObject>, const String& type, const PositionMark&);
     
     InstrumentingAgents *m_instrumentingAgents;
-    InspectorFrontend::Timelapse* m_frontend;
+    InspectorFrontend::Replay* m_frontend;
     Page *m_inspectedPage;
-    TimelapseAgentStateMachine m_stateMachine;
+    ReplayAgentStateMachine m_stateMachine;
     unsigned m_nextMarkIndex;
     unsigned m_lastHitMarkIndex;
     bool m_inputLocked;
@@ -145,4 +145,4 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
-#endif // InspectorTimelapseAgent_h
+#endif // InspectorReplayAgent_h

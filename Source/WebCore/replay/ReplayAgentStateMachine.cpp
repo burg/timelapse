@@ -33,14 +33,14 @@
 
 #if ENABLE(TIMELAPSE)
 
-#include "TimelapseAgentStateMachine.h"
+#include "ReplayAgentStateMachine.h"
 
 #include "Logging.h"
 #include <wtf/Assertions.h>
 
 namespace WebCore {
 
-namespace TimelapseAgentStateNames {
+namespace ReplayAgentStateNames {
 static const char* Disabled = "Disabled";
 static const char* RecordingUnloaded = "RecordingUnloaded";
 static const char* RecordingLoaded =  "RecordingLoaded";
@@ -51,76 +51,76 @@ static const char* Replaying = "Replaying";
 static const char* ReplayPaused = "ReplayPaused";
 }
 
-const char* TimelapseAgentStateMachine::stateNameFor(TimelapseAgentStateMachine::State state)
+const char* ReplayAgentStateMachine::stateNameFor(ReplayAgentStateMachine::State state)
 {
     switch (state) {
-    case TimelapseAgentStateMachine::Disabled:
-        return TimelapseAgentStateNames::Disabled;
+    case ReplayAgentStateMachine::Disabled:
+        return ReplayAgentStateNames::Disabled;
 
-    case TimelapseAgentStateMachine::RecordingUnloaded:
-        return TimelapseAgentStateNames::RecordingUnloaded;
+    case ReplayAgentStateMachine::RecordingUnloaded:
+        return ReplayAgentStateNames::RecordingUnloaded;
 
-    case TimelapseAgentStateMachine::RecordingLoaded:
-        return TimelapseAgentStateNames::RecordingLoaded;
+    case ReplayAgentStateMachine::RecordingLoaded:
+        return ReplayAgentStateNames::RecordingLoaded;
 
-    case TimelapseAgentStateMachine::WaitingForCapture:
-        return TimelapseAgentStateNames::WaitingForCapture;
+    case ReplayAgentStateMachine::WaitingForCapture:
+        return ReplayAgentStateNames::WaitingForCapture;
 
-    case TimelapseAgentStateMachine::WaitingForReplay:
-        return TimelapseAgentStateNames::WaitingForReplay;
+    case ReplayAgentStateMachine::WaitingForReplay:
+        return ReplayAgentStateNames::WaitingForReplay;
 
-    case TimelapseAgentStateMachine::Capturing:
-        return TimelapseAgentStateNames::Capturing;
+    case ReplayAgentStateMachine::Capturing:
+        return ReplayAgentStateNames::Capturing;
 
-    case TimelapseAgentStateMachine::Replaying:
-        return TimelapseAgentStateNames::Replaying;
+    case ReplayAgentStateMachine::Replaying:
+        return ReplayAgentStateNames::Replaying;
 
-    case TimelapseAgentStateMachine::ReplayPaused:
-        return TimelapseAgentStateNames::ReplayPaused;
+    case ReplayAgentStateMachine::ReplayPaused:
+        return ReplayAgentStateNames::ReplayPaused;
     }
     ASSERT_NOT_REACHED();
     return NULL;
 }
 
-TimelapseAgentStateMachine::TimelapseAgentStateMachine() 
+ReplayAgentStateMachine::ReplayAgentStateMachine() 
     : m_state(Disabled) { }
 
-bool TimelapseAgentStateMachine::disabled() const
+bool ReplayAgentStateMachine::disabled() const
 {
     return inState(Disabled);
 }
 
-bool TimelapseAgentStateMachine::enabled() const
+bool ReplayAgentStateMachine::enabled() const
 {
     return !inState(Disabled);
 }
 
-bool TimelapseAgentStateMachine::canCapture() const
+bool ReplayAgentStateMachine::canCapture() const
 {
     return inState(RecordingUnloaded);
 }
 
-bool TimelapseAgentStateMachine::canReplay() const
+bool ReplayAgentStateMachine::canReplay() const
 {
     return inState(RecordingLoaded);
 }
 
-bool TimelapseAgentStateMachine::replayPaused() const
+bool ReplayAgentStateMachine::replayPaused() const
 {
     return inState(ReplayPaused);
 }
 
-bool TimelapseAgentStateMachine::capturing() const
+bool ReplayAgentStateMachine::capturing() const
 {
     return inState(Capturing);
 }
 
-bool TimelapseAgentStateMachine::replaying() const
+bool ReplayAgentStateMachine::replaying() const
 {
     return inState(Replaying);
 }
 
-void TimelapseAgentStateMachine::advanceTo(State newState)
+void ReplayAgentStateMachine::advanceTo(State newState)
 {
     switch (newState) {
     case Disabled:

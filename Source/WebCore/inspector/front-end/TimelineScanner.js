@@ -31,7 +31,7 @@
 
 
 WebInspector.TimelineScanner = function(model) {
-    WebInspector.TimelapseScanner.call(this, model, "timeline", "Timeline Data");
+    WebInspector.ReplayScanner.call(this, model, "timeline", "Timeline Data");
 };
 
 WebInspector.TimelineScanner.prototype = {
@@ -71,5 +71,5 @@ WebInspector.TimelineScanner.prototype = {
         this.linearScanForRegion(startIndex, endIndex);
     },
 
-    __proto__: WebInspector.TimelapseScanner.prototype
+    __proto__: WebInspector.ReplayScanner.prototype
 };

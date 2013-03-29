@@ -2594,9 +2594,9 @@
         ]
     },
     {
-        "domain": "Timelapse",
+        "domain": "Replay",
 	"hidden": true,
-        "description": "Timelapse is the frontend for deterministic record/replay. In capture mode, Timelapse captures nondeterminism into a log (aka recording). In replaying mode, Timelapse replicates/replays the recorded execution in various possible modes.",
+        "description": "Controls per-page deterministic record/replay. In capture mode,  nondeterministic inputs are captured into a log (aka recording). In replaying mode, the captured execution is replicated by reusing nondeterministic inputs.",
         "types": [
 	    {
 	        "id": "MarkIndex",
@@ -2735,17 +2735,17 @@
 
         "events": [
             {
-                "name": "timelapseWasEnabled"
+                "name": "replayEnabled"
             },
             {
-                "name": "timelapseWasDisabled"
+                "name": "replayDisabled"
             },
             {
-                "name": "captureWasStarted",
+                "name": "captureStarted",
                 "description": "Fired when capture has started."
             },
             {
-                "name": "captureWasStopped",
+                "name": "captureStopped",
                 "description": "Fired when capture has stopped."
             },
 	    {
@@ -2763,11 +2763,11 @@
 		]
 	    },	    
             {
-                "name": "playbackWasStarted",
+                "name": "playbackStarted",
                 "description": "Fired when replaying has started."
             },
             {
-                "name": "playbackWasPaused",
+                "name": "playbackPaused",
                 "description": "Fired when replaying has paused, but not finished.",
 		"parameters": [
 		    { "name": "mark", "$ref": "MarkIndex", "description": "The mark of the input at which we paused, but has not yet been executed." }

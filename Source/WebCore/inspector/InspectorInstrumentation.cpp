@@ -61,7 +61,7 @@
 #include "InspectorPageAgent.h"
 #include "InspectorProfilerAgent.h"
 #include "InspectorResourceAgent.h"
-#include "InspectorTimelapseAgent.h"
+#include "InspectorReplayAgent.h"
 #include "InspectorTimelineAgent.h"
 #include "InspectorWorkerAgent.h"
 #include "InstrumentingAgents.h"
@@ -396,8 +396,8 @@ InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventImpl(I
         timelineAgentId = timelineAgent->id();
     }
 #if ENABLE(TIMELAPSE)
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->willDispatchEvent(event, window, node);
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->willDispatchEvent(event, window, node);
 #endif // ENABLE(TIMELAPSE)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
@@ -418,8 +418,8 @@ void InspectorInstrumentation::didDispatchEventImpl(const InspectorInstrumentati
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didDispatchEvent();
 #if ENABLE(TIMELAPSE)
-    if (InspectorTimelapseAgent* timelapseAgent = cookie.instrumentingAgents()->inspectorTimelapseAgent())
-        timelapseAgent->didDispatchEvent();
+    if (InspectorReplayAgent* replayAgent = cookie.instrumentingAgents()->inspectorReplayAgent())
+        replayAgent->didDispatchEvent();
 #endif // ENABLE(TIMELAPSE)
 }
 
@@ -432,8 +432,8 @@ InspectorInstrumentationCookie InspectorInstrumentation::willDispatchEventOnWind
         timelineAgentId = timelineAgent->id();
     }
 #if ENABLE(TIMELAPSE)
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->willDispatchEventOnWindow(event, window);
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->willDispatchEventOnWindow(event, window);
 #endif // ENABLE(TIMELAPSE)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
@@ -443,8 +443,8 @@ void InspectorInstrumentation::didDispatchEventOnWindowImpl(const InspectorInstr
     if (InspectorTimelineAgent* timelineAgent = retrieveTimelineAgent(cookie))
         timelineAgent->didDispatchEvent();
 #if ENABLE(TIMELAPSE)
-    if (InspectorTimelapseAgent* timelapseAgent = cookie.instrumentingAgents()->inspectorTimelapseAgent())
-        timelapseAgent->didDispatchEventOnWindow();
+    if (InspectorReplayAgent* replayAgent = cookie.instrumentingAgents()->inspectorReplayAgent())
+        replayAgent->didDispatchEventOnWindow();
 #endif // ENABLE(TIMELAPSE)
 }
 
@@ -486,8 +486,8 @@ InspectorInstrumentationCookie InspectorInstrumentation::willFireTimerImpl(Instr
         timelineAgentId = timelineAgent->id();
     }
 #if ENABLE(TIMELAPSE)
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->willFireTimer(timerId, frameForScriptExecutionContext(context));
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->willFireTimer(timerId, frameForScriptExecutionContext(context));
 #endif // ENABLE(TIMELAPSE)
     return InspectorInstrumentationCookie(instrumentingAgents, timelineAgentId);
 }
@@ -975,8 +975,8 @@ void InspectorInstrumentation::didCommitLoadImpl(InstrumentingAgents* instrument
     if (InspectorPageAgent* pageAgent = instrumentingAgents->inspectorPageAgent())
         pageAgent->frameNavigated(loader);
 #if ENABLE(TIMELAPSE)
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->frameNavigated(loader);
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->frameNavigated(loader);
 #endif
 
 }
@@ -1247,80 +1247,80 @@ void InspectorInstrumentation::didSendWebSocketFrameImpl(InstrumentingAgents* in
 #if ENABLE(TIMELAPSE)
 void InspectorInstrumentation::recordingUnloadedImpl(InstrumentingAgents* instrumentingAgents)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->recordingUnloaded();
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->recordingUnloaded();
 }
 
 void InspectorInstrumentation::recordingLoadedImpl(InstrumentingAgents* instrumentingAgents, ReplayRecording* recording)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->recordingLoaded(recording);
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->recordingLoaded(recording);
 }
 
 void InspectorInstrumentation::recordingAddedImpl(InstrumentingAgents* instrumentingAgents, ReplayRecording* recording)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->recordingAdded(recording);
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->recordingAdded(recording);
 }
 
 void InspectorInstrumentation::recordingRemovedImpl(InstrumentingAgents* instrumentingAgents, ReplayRecording* recording)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->recordingRemoved(recording);
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->recordingRemoved(recording);
 }
 
 void InspectorInstrumentation::capturedPageInputImpl(InstrumentingAgents* instrumentingAgents, EventLoopInput* action)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->capturedPageInput(action);
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->capturedPageInput(action);
 }
     
 void InspectorInstrumentation::captureStartedImpl(InstrumentingAgents* instrumentingAgents)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->captureStarted();
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->captureStarted();
 }
 
 void InspectorInstrumentation::captureFinishedImpl(InstrumentingAgents* instrumentingAgents)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->captureFinished();
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->captureFinished();
 }
 
 void InspectorInstrumentation::playbackStartedImpl(InstrumentingAgents* instrumentingAgents)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->playbackStarted();
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->playbackStarted();
 }
 
 void InspectorInstrumentation::playbackPausedImpl(InstrumentingAgents* instrumentingAgents, PositionMarkIndex mark)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->playbackPaused(mark);
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->playbackPaused(mark);
 }
 
 void InspectorInstrumentation::playbackHitMarkImpl(InstrumentingAgents* instrumentingAgents, PositionMarkIndex mark)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->playbackHitMark(mark);
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->playbackHitMark(mark);
 }
 
 void InspectorInstrumentation::playbackFinishedImpl(InstrumentingAgents* instrumentingAgents)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->playbackFinished();
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->playbackFinished();
 }
 
 void InspectorInstrumentation::playbackCancelledImpl(InstrumentingAgents* instrumentingAgents)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->playbackCancelled();
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->playbackCancelled();
 }
 
 void InspectorInstrumentation::playbackErrorImpl(InstrumentingAgents* instrumentingAgents, bool isFatal, const String& errorMessage)
 {
-    if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
-        timelapseAgent->playbackError(isFatal, errorMessage);
+    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
+        replayAgent->playbackError(isFatal, errorMessage);
 }
 #endif
 

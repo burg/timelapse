@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2011, Brian Burg.
+ *  Copyright (C) 2011, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,37 +29,49 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @constructor
- */
-WebInspector.TimelapseAgent = function() {
-    // Not implemented.
+#ifndef ReplayAgentStateMachine_h
+#define ReplayAgentStateMachine_h
+
+#if ENABLE(TIMELAPSE)
+
+#include <wtf/Noncopyable.h>
+
+namespace WebCore {
+
+class ReplayAgentStateMachine {
+    WTF_MAKE_NONCOPYABLE(ReplayAgentStateMachine);
+public:
+    ReplayAgentStateMachine();
+
+    enum State {
+        Disabled,
+        RecordingUnloaded,
+        RecordingLoaded,
+        WaitingForCapture,
+        Capturing,
+        WaitingForReplay,
+        Replaying,
+        ReplayPaused
+    };
+
+    bool disabled() const;
+    bool enabled() const;
+    bool canCapture() const;
+    bool canReplay() const;
+    bool replayPaused() const;
+    bool capturing() const;
+    bool replaying() const;
+
+    bool inState(State state) const { return m_state == state; }
+    void advanceTo(State);
+
+private:
+    const char* stateNameFor(State);
+    State m_state;
 };
 
-// Must be kept in sync with InspectorTimelapseAgent.h
-WebInspector.TimelapseAgent.RecordType = {
-    MousePress: "MousePress",
-    MouseRelease: "MouseRelease",
-    MouseMove: "MouseMove",
-    MouseWheel: "MouseWheel",
-    KeyPress: "KeyPress",
-    Scroll: "Scroll",
-    Resize: "Resize",
+} // namespace WebCore
 
-    WindowActive: "WindowActive",
-    WindowInactive: "WindowInactive",
-    WindowFocused: "WindowFocused",
-    WindowUnfocused: "WindowUnfocused",
+#endif // ENABLE(TIMELAPSE)
 
-    RequestResource: "RequestResource",
-    ReceiveResponse: "ReceiveResponse",
-    ReceiveData: "ReceiveData",
-    ResourceLoaded: "ResourceLoaded",
-    
-    TimerFire: "TimerFire",
-    
-    FrameNavigated: "FrameNavigated",
-    CaptureBegin: "CaptureBegin",
-    CaptureEnd: "CaptureEnd",
-    BreakpointHit: "BreakpointHit"
-};
+#endif // ReplayAgentStateMachine_h

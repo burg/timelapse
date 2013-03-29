@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2011-2013, Brian Burg.
+ *  Copyright (C) 2011-2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,7 @@
  */
 
 #include "config.h"
-#include "InspectorTimelapseAgent.h"
+#include "InspectorReplayAgent.h"
 
 #if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
 
@@ -52,7 +52,7 @@
 #include "InspectorDebuggerAgent.h"
 #include "InspectorFrontend.h"
 #include "InspectorState.h"
-#include "InspectorTimelapseAgent.h"
+#include "InspectorReplayAgent.h"
 #include "InspectorValues.h"
 #include "InstrumentingAgents.h"
 #include "JSDOMGlobalObject.h"
@@ -70,7 +70,7 @@
 #include "ResourceWillSendRequest.h"
 #include "ScrollPage.h"
 #include "SendResizeEvent.h"
-#include "TimelapseAgentStateMachine.h"
+#include "ReplayAgentStateMachine.h"
 #include "ReplayActionFactory.h"
 #include <wtf/OwnPtr.h>
 #include <wtf/RefCounted.h>
@@ -87,11 +87,11 @@
 using namespace std;
 using namespace WTF;
 
-namespace TimelapsePersistentAgentState {
-static const char timelapseEnabled[] = "timelapseEnabled";
+namespace ReplayPersistentAgentState {
+static const char replayEnabled[] = "replayEnabled";
 }
 
-// This must be kept in sync with TimelapseAgent.js so that record types and data are decoded properly.
+// This must be kept in sync with ReplayAgent.js so that record types and data are decoded properly.
 namespace ReplayActionType {
 static const char MousePress[] = "MousePress";
 static const char MouseRelease[] = "MouseRelease";
@@ -199,13 +199,13 @@ static PassRefPtr<InspectorObject> createFrontendDataForAction(EventLoopInput* a
     return 0;
 }
 
-static PassRefPtr<TypeBuilder::Timelapse::ReplayAction> createInspectorObjectForAction(EventLoopInput* action)
+static PassRefPtr<TypeBuilder::Replay::ReplayAction> createInspectorObjectForAction(EventLoopInput* action)
 {       
-    RefPtr<TypeBuilder::Timelapse::Mark> markObject = TypeBuilder::Timelapse::Mark::create()
+    RefPtr<TypeBuilder::Replay::Mark> markObject = TypeBuilder::Replay::Mark::create()
         .setTimestamp(action->mark().time())
         .setIndex(action->mark().index());
 
-    return TypeBuilder::Timelapse::ReplayAction::create()
+    return TypeBuilder::Replay::ReplayAction::create()
             .setMark(markObject.release())
             .setType(getFrontendTypeForAction(action))
             .setData(createFrontendDataForAction(action))
@@ -214,10 +214,10 @@ static PassRefPtr<TypeBuilder::Timelapse::ReplayAction> createInspectorObjectFor
 
 class ActionCollector {
 public:
-    typedef PassRefPtr<TypeBuilder::Array<TypeBuilder::Timelapse::ReplayAction> > ReturnType;
+    typedef PassRefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > ReturnType;
 
     ActionCollector()
-    : m_actions(TypeBuilder::Array<TypeBuilder::Timelapse::ReplayAction>::create()) {}
+    : m_actions(TypeBuilder::Array<TypeBuilder::Replay::ReplayAction>::create()) {}
     ~ActionCollector() {}
     void operator()(size_t, NondeterministicInput* replayAction)
     {
@@ -232,101 +232,101 @@ public:
     ReturnType returnValue() { return m_actions.release(); }
     
 private:
-    RefPtr<TypeBuilder::Array<TypeBuilder::Timelapse::ReplayAction> > m_actions;
+    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > m_actions;
 };
 
-InspectorTimelapseAgent::InspectorTimelapseAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState *state, Page* inspectedPage)
-: InspectorBaseAgent<InspectorTimelapseAgent>("Timelapse", instrumentingAgents, state)
+InspectorReplayAgent::InspectorReplayAgent(InstrumentingAgents* instrumentingAgents, InspectorCompositeState *state, Page* inspectedPage)
+: InspectorBaseAgent<InspectorReplayAgent>("Replay", instrumentingAgents, state)
 , m_instrumentingAgents(instrumentingAgents)
 , m_inspectedPage(inspectedPage)
 , m_nextMarkIndex(0)
 , m_lastHitMarkIndex(numeric_limits<unsigned>::max())
 , m_inputLocked(false) {}
 
-InspectorTimelapseAgent::~InspectorTimelapseAgent()
+InspectorReplayAgent::~InspectorReplayAgent()
 {
-    // if destroying timelapseAgent, then stop instrumenting for marks (if we are)
-    m_instrumentingAgents->setInspectorTimelapseAgent(0);
+    // if destroying replayAgent, then stop instrumenting for marks (if we are)
+    m_instrumentingAgents->setInspectorReplayAgent(0);
     m_instrumentingAgents = 0;
     m_state = 0;
     m_inspectedPage = 0;
 }
 
-void InspectorTimelapseAgent::setFrontend(InspectorFrontend* frontend)
+void InspectorReplayAgent::setFrontend(InspectorFrontend* frontend)
 {
-    m_frontend = frontend->timelapse();
-    if (m_state->getBoolean(TimelapsePersistentAgentState::timelapseEnabled)) {
+    m_frontend = frontend->replay();
+    if (m_state->getBoolean(ReplayPersistentAgentState::replayEnabled)) {
         ErrorString error;
         enable(&error);
     }
 }
 
-void InspectorTimelapseAgent::clearFrontend()
+void InspectorReplayAgent::clearFrontend()
 {
     //TODO: stop instrumenting, stop capturing, etc. see InspectorTimelineAgent::clearFrontend
     m_frontend = 0;
 }
 
-void InspectorTimelapseAgent::willDispatchEvent(const Event& event, DOMWindow* window, Node* node)
+void InspectorReplayAgent::willDispatchEvent(const Event& event, DOMWindow* window, Node* node)
 {
     if (capturing() || replaying())
         m_inspectedPage->replayController()->willDispatchEvent(event, window, node, reuseMark());
 }
 
-void InspectorTimelapseAgent::didDispatchEvent()
+void InspectorReplayAgent::didDispatchEvent()
 {
     if (capturing() || replaying())
         m_inspectedPage->replayController()->didDispatchEvent();
 }
 
-void InspectorTimelapseAgent::willDispatchEventOnWindow(const Event& event, DOMWindow* window)
+void InspectorReplayAgent::willDispatchEventOnWindow(const Event& event, DOMWindow* window)
 {
     if (capturing() || replaying())
         m_inspectedPage->replayController()->willDispatchEvent(event, window, 0, reuseMark());
 }
 
-void InspectorTimelapseAgent::didDispatchEventOnWindow()
+void InspectorReplayAgent::didDispatchEventOnWindow()
 {
     didDispatchEvent();
 }
 
-void InspectorTimelapseAgent::frameNavigated(DocumentLoader* loader)
+void InspectorReplayAgent::frameNavigated(DocumentLoader* loader)
 {
     if (capturing() || replaying())
         m_inspectedPage->replayController()->frameNavigated(loader);
 }
 
-void InspectorTimelapseAgent::willFireTimer(int timerId, Frame* frame)
+void InspectorReplayAgent::willFireTimer(int timerId, Frame* frame)
 {
     if (capturing() || replaying())
         m_inspectedPage->replayController()->willFireTimer(timerId, frame->document());
 }
 
-void InspectorTimelapseAgent::recordingUnloaded()
+void InspectorReplayAgent::recordingUnloaded()
 {
     if (m_frontend)
         m_frontend->recordingUnloaded();
 }
 
-void InspectorTimelapseAgent::recordingLoaded(ReplayRecording* recording)
+void InspectorReplayAgent::recordingLoaded(ReplayRecording* recording)
 {
     if (m_frontend)
         m_frontend->recordingLoaded(recording->uid());
 }
 
-void InspectorTimelapseAgent::recordingAdded(ReplayRecording* recording)
+void InspectorReplayAgent::recordingAdded(ReplayRecording* recording)
 {
     if (m_frontend)
         m_frontend->recordingAdded(recording->uid());
 }
 
-void InspectorTimelapseAgent::recordingRemoved(ReplayRecording* recording)
+void InspectorReplayAgent::recordingRemoved(ReplayRecording* recording)
 {
     if (m_frontend)
         m_frontend->recordingRemoved(recording->uid());
 }
 
-void InspectorTimelapseAgent::capturedPageInput(EventLoopInput* action)
+void InspectorReplayAgent::capturedPageInput(EventLoopInput* action)
 {
     // this instrumentation should only fire when we are actually capturing.
     // if it's some transient state, the caller should know not to call.
@@ -341,51 +341,51 @@ void InspectorTimelapseAgent::capturedPageInput(EventLoopInput* action)
     m_frontend->capturedAction(createInspectorObjectForAction(action));
 }
     
-void InspectorTimelapseAgent::captureStarted()
+void InspectorReplayAgent::captureStarted()
 {
-    LOG(Timelapse, "-----CAPTURE START-----");
+    LOG(DeterministicReplay, "-----CAPTURE START-----");
     
-    m_stateMachine.advanceTo(TimelapseAgentStateMachine::Capturing);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::Capturing);
     m_inputLocked = false;
     if (m_frontend) {
-        m_frontend->captureWasStarted();
+        m_frontend->captureStarted();
         m_frontend->inputUnlocked();
     }
 
 }
 
-void InspectorTimelapseAgent::captureFinished()
+void InspectorReplayAgent::captureFinished()
 {
-    LOG(Timelapse, "-----CAPTURE STOP-----");
+    LOG(DeterministicReplay, "-----CAPTURE STOP-----");
     
-    m_stateMachine.advanceTo(TimelapseAgentStateMachine::RecordingLoaded);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingLoaded);
     
     if (m_frontend)
-        m_frontend->captureWasStopped();
+        m_frontend->captureStopped();
 }
 
-void InspectorTimelapseAgent::playbackStarted()
+void InspectorReplayAgent::playbackStarted()
 {
-    LOG(Timelapse, "-----REPLAY START-----");
+    LOG(DeterministicReplay, "-----REPLAY START-----");
     
-    m_stateMachine.advanceTo(TimelapseAgentStateMachine::Replaying);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::Replaying);
     m_inputLocked = true;
     if (m_frontend) {
-        m_frontend->playbackWasStarted();
+        m_frontend->playbackStarted();
         m_frontend->inputLocked();
     }
 }
 
-void InspectorTimelapseAgent::playbackPaused(PositionMarkIndex index)
+void InspectorReplayAgent::playbackPaused(PositionMarkIndex index)
 {
-    LOG(Timelapse, "-----REPLAY PAUSED-----");
+    LOG(DeterministicReplay, "-----REPLAY PAUSED-----");
 
-    m_stateMachine.advanceTo(TimelapseAgentStateMachine::ReplayPaused);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::ReplayPaused);
     if (m_frontend)
-        m_frontend->playbackWasPaused(index);
+        m_frontend->playbackPaused(index);
 }
 
-void InspectorTimelapseAgent::playbackHitMark(PositionMarkIndex index)
+void InspectorReplayAgent::playbackHitMark(PositionMarkIndex index)
 {
     if (m_lastHitMarkIndex == index)
         return;
@@ -395,16 +395,16 @@ void InspectorTimelapseAgent::playbackHitMark(PositionMarkIndex index)
         m_frontend->playbackHitMark(index);
 }
 
-void InspectorTimelapseAgent::playbackFinished()
+void InspectorReplayAgent::playbackFinished()
 {
-    LOG(Timelapse, "-----REPLAY STOP-----");
+    LOG(DeterministicReplay, "-----REPLAY STOP-----");
     
-    m_stateMachine.advanceTo(TimelapseAgentStateMachine::RecordingLoaded);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingLoaded);
     if (m_frontend)
         m_frontend->playbackFinished();
 }
 
-void InspectorTimelapseAgent::playbackCancelled()
+void InspectorReplayAgent::playbackCancelled()
 {
     m_inputLocked = false;
 
@@ -412,7 +412,7 @@ void InspectorTimelapseAgent::playbackCancelled()
         m_frontend->inputUnlocked();
 }
 
-void InspectorTimelapseAgent::playbackError(bool isFatal, const String& errorMessage)
+void InspectorReplayAgent::playbackError(bool isFatal, const String& errorMessage)
 {
     // NB. if instead you would like to debug the failure,
     // this is a decent breakpoint location.
@@ -420,17 +420,17 @@ void InspectorTimelapseAgent::playbackError(bool isFatal, const String& errorMes
         m_frontend->playbackError(isFatal, errorMessage);
 }
 
-PositionMark InspectorTimelapseAgent::createMark()
+PositionMark InspectorReplayAgent::createMark()
 {
     return  PositionMark(m_nextMarkIndex++);
 }
 
-PositionMark InspectorTimelapseAgent::reuseMark() const
+PositionMark InspectorReplayAgent::reuseMark() const
 {
     return PositionMark(m_nextMarkIndex);
 }
 
-void InspectorTimelapseAgent::stop()
+void InspectorReplayAgent::stop()
 {
   ErrorString dummy;
   bool dummy2;
@@ -441,93 +441,93 @@ void InspectorTimelapseAgent::stop()
       stopPlayback(&dummy, true);
 }
 
-void InspectorTimelapseAgent::isEnabled(ErrorString*, bool* result)
+void InspectorReplayAgent::isEnabled(ErrorString*, bool* result)
 {
     *result = m_stateMachine.enabled();
 }
 
-void InspectorTimelapseAgent::enable(ErrorString*)
+void InspectorReplayAgent::enable(ErrorString*)
 {
     if (m_stateMachine.enabled())
         return;
     
-    m_stateMachine.advanceTo(TimelapseAgentStateMachine::RecordingUnloaded);
-    m_state->setBoolean(TimelapsePersistentAgentState::timelapseEnabled, true);
-    m_instrumentingAgents->setInspectorTimelapseAgent(this);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
+    m_state->setBoolean(ReplayPersistentAgentState::replayEnabled, true);
+    m_instrumentingAgents->setInspectorReplayAgent(this);
     
     if (m_frontend)
-        m_frontend->timelapseWasEnabled();
+        m_frontend->replayEnabled();
 }
 
-void InspectorTimelapseAgent::disable(ErrorString*)
+void InspectorReplayAgent::disable(ErrorString*)
 {
     if (m_stateMachine.disabled())
         return;
 
-    m_stateMachine.advanceTo(TimelapseAgentStateMachine::Disabled);
-    m_state->setBoolean(TimelapsePersistentAgentState::timelapseEnabled, false);
-    m_instrumentingAgents->setInspectorTimelapseAgent(0);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::Disabled);
+    m_state->setBoolean(ReplayPersistentAgentState::replayEnabled, false);
+    m_instrumentingAgents->setInspectorReplayAgent(0);
 
     if (m_frontend)
-        m_frontend->timelapseWasDisabled();
+        m_frontend->replayDisabled();
 }
 
-void InspectorTimelapseAgent::startCapture(ErrorString*)
+void InspectorReplayAgent::startCapture(ErrorString*)
 {   
-    m_stateMachine.advanceTo(TimelapseAgentStateMachine::WaitingForCapture);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::WaitingForCapture);
     m_nextMarkIndex = 0;
 
     PositionMark mark = createMark();
     m_inspectedPage->replayController()->beginCapturing(mark);
 }
 
-void InspectorTimelapseAgent::stopCapture(ErrorString*, bool* wasAllowed)
+void InspectorReplayAgent::stopCapture(ErrorString*, bool* wasAllowed)
 {
     PositionMark mark = createMark();
     *wasAllowed = m_inspectedPage->replayController()->endCapturing(mark);
 }
 
-void InspectorTimelapseAgent::replayUpToMarkIndex(ErrorString*, int markIndex, bool fastReplay)
+void InspectorReplayAgent::replayUpToMarkIndex(ErrorString*, int markIndex, bool fastReplay)
 {
 #if ENABLE(JAVASCRIPT_DEBUGGER) && !defined(NDEBUG)
     // cannot start replay from within debugger event loop.
     InspectorDebuggerAgent* debuggerAgent = m_instrumentingAgents->inspectorDebuggerAgent();
     ASSERT(!debuggerAgent || !debuggerAgent->isPaused());
 #endif
-    m_stateMachine.advanceTo(TimelapseAgentStateMachine::WaitingForReplay);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::WaitingForReplay);
     m_inspectedPage->replayController()->replayUpToMarkIndex((unsigned)markIndex, (fastReplay) ? FullSpeed : Realtime);
 }
 
-void InspectorTimelapseAgent::replayToCompletion(ErrorString*, bool fastReplay)
+void InspectorReplayAgent::replayToCompletion(ErrorString*, bool fastReplay)
 {
 #if ENABLE(JAVASCRIPT_DEBUGGER) && !defined(NDEBUG)
     // cannot start replay from within debugger event loop.
     InspectorDebuggerAgent* debuggerAgent = m_instrumentingAgents->inspectorDebuggerAgent();
     ASSERT(!debuggerAgent || !debuggerAgent->isPaused());
 #endif
-    m_stateMachine.advanceTo(TimelapseAgentStateMachine::WaitingForReplay);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::WaitingForReplay);
     m_inspectedPage->replayController()->replayToCompletion((fastReplay) ? FullSpeed : Realtime);
 }
 
-void InspectorTimelapseAgent::pausePlayback(ErrorString*)
+void InspectorReplayAgent::pausePlayback(ErrorString*)
 {
     // this will fire InspectorInstrumentation::playbackPaused, and our
     // listener for that will change state machine and tell frontend.
     m_inspectedPage->replayController()->pauseAtNextMark();
 }
     
-void InspectorTimelapseAgent::stopPlayback(ErrorString*, bool shouldUnlock)
+void InspectorReplayAgent::stopPlayback(ErrorString*, bool shouldUnlock)
 {
     m_inputLocked = !shouldUnlock;   
     m_inspectedPage->replayController()->cancelPlayback();
 }
 
-void InspectorTimelapseAgent::setPauseOnError(ErrorString*, bool shouldPause)
+void InspectorReplayAgent::setPauseOnError(ErrorString*, bool shouldPause)
 {
     m_inspectedPage->replayController()->setErrorStrategy(shouldPause ? PauseOnError : ContinueOnError);
 }
 
-void InspectorTimelapseAgent::loadRecording(ErrorString*, int uid, bool* wasAllowed)
+void InspectorReplayAgent::loadRecording(ErrorString*, int uid, bool* wasAllowed)
 {
     *wasAllowed = true;
     // TODO: implement, add sanity checks
@@ -535,7 +535,7 @@ void InspectorTimelapseAgent::loadRecording(ErrorString*, int uid, bool* wasAllo
         m_frontend->recordingLoaded(uid);
 }
 
-void InspectorTimelapseAgent::unloadRecording(ErrorString*, bool* wasAllowed)
+void InspectorReplayAgent::unloadRecording(ErrorString*, bool* wasAllowed)
 {
     // TODO: implement
     *wasAllowed = true;
@@ -544,7 +544,7 @@ void InspectorTimelapseAgent::unloadRecording(ErrorString*, bool* wasAllowed)
     
 }
 
-void InspectorTimelapseAgent::getRecording(ErrorString*, int uid, RefPtr<TypeBuilder::Timelapse::ReplayRecording>& recordingObject)
+void InspectorReplayAgent::getRecording(ErrorString*, int uid, RefPtr<TypeBuilder::Replay::ReplayRecording>& recordingObject)
 {
     ReplayRecording* recording = m_inspectedPage->replayController()->loadedRecording();
     ASSERT(uid == recording->uid());
@@ -553,16 +553,16 @@ void InspectorTimelapseAgent::getRecording(ErrorString*, int uid, RefPtr<TypeBui
 #endif
 
     ActionCollector collector;
-    RefPtr<TypeBuilder::Array<TypeBuilder::Timelapse::ReplayAction> > actions = recording->inputLog()->forEachInputInQueue(EventLoopInputQueue, collector);
+    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > actions = recording->inputLog()->forEachInputInQueue(EventLoopInputQueue, collector);
 
-    recordingObject = TypeBuilder::Timelapse::ReplayRecording::create()
+    recordingObject = TypeBuilder::Replay::ReplayRecording::create()
                         .setUid(recording->uid())
                         .setDateCreated("unknown")
                         .setName("Dummy replay name")
                         .setActions(actions);
 }
 
-void InspectorTimelapseAgent::getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >& recordingsList)
+void InspectorReplayAgent::getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >& recordingsList)
 {
     recordingsList = TypeBuilder::Array<int>::create();
     ReplayRecording* recording = m_inspectedPage->replayController()->loadedRecording();

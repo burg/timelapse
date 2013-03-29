@@ -83,7 +83,7 @@ static EventLoopInput* popDispatchInput(PassRefPtr<ReplayInputLog> log)
 static void dumpEventDispatchInfo(const Event& event, DOMWindow* window, Node* node, int eventCount, bool wasIgnored)
 {
     if (node)
-        LOG(Timelapse, "%-30s %s DOM event %4d@: type=%s, target=%d/node[%p] %s\n", "[ReplayController]",
+        LOG(DeterministicReplay, "%-30s %s DOM event %4d@: type=%s, target=%d/node[%p] %s\n", "[ReplayController]",
             (wasIgnored) ? "Unrelated" : "Dispatching",
             eventCount,
             event.type().string().utf8().data(),
@@ -92,7 +92,7 @@ static void dumpEventDispatchInfo(const Event& event, DOMWindow* window, Node* n
             node->nodeName().utf8().data());
 
     else if (window)
-        LOG(Timelapse, "%-30s %s event %4d@: type=%s, target=%d/window[%p] %s\n", "[ReplayController]",
+        LOG(DeterministicReplay, "%-30s %s event %4d@: type=%s, target=%d/window[%p] %s\n", "[ReplayController]",
             (wasIgnored) ? "Unrelated" : "Dispatching",
             eventCount,
             event.type().string().utf8().data(),
@@ -205,7 +205,7 @@ void ReplayController::beginCapturing(const PositionMark& mark)
     m_domEventDispatchCount = 0;
     m_previousInput = 0;
     m_replayInputLog = ReplayInputLog::createLogForCapture();
-    changeProxyMode(TimelapseProxy::Capturing);
+    changeProxyMode(ReplayProxy::Capturing);
 
     InspectorInstrumentation::captureStarted(m_page);
     
@@ -240,11 +240,11 @@ bool ReplayController::endCapturing(const PositionMark& mark)
     // this protects against receiving stopRecording commands twice before
     // the UI is notified that recording is stopped (which disables that command).
     if (!capturing()) {
-        LOG(Timelapse, "%-30sIgnored request to stop recording; not in a valid state to do so.\n", "[ReplayController]");
+        LOG(DeterministicReplay, "%-30sIgnored request to stop recording; not in a valid state to do so.\n", "[ReplayController]");
         return false;
     }
 
-    LOG(Timelapse, "%-30sEnding capture.\n", "[ReplayController]");
+    LOG(DeterministicReplay, "%-30sEnding capture.\n", "[ReplayController]");
 
     captureEventLoopInput(new EnableCache(m_domEventDispatchCount, mark));
     captureEventLoopInput(new EndSentinel(m_domEventDispatchCount, mark));
@@ -259,7 +259,7 @@ bool ReplayController::endCapturing(const PositionMark& mark)
     resetPlayback();
 
     m_cacheController->enableCache();
-    changeProxyMode(TimelapseProxy::Open);
+    changeProxyMode(ReplayProxy::Open);
     
     //now replay is possible, but requires a reset.
     m_status = PlaybackUninitialized;
@@ -298,10 +298,10 @@ void ReplayController::replayUpToMarkIndex(PositionMarkIndex index, ReplayMode m
 {
     ASSERT(m_status != CannotReplay);
 
-    LOG(Timelapse, "%-30s About to begin replay to mark %d.\n", "[ReplayController]", index);
+    LOG(DeterministicReplay, "%-30s About to begin replay to mark %d.\n", "[ReplayController]", index);
 
     // only undone by recording, or cancelling playback.
-    changeProxyMode(TimelapseProxy::Replaying);
+    changeProxyMode(ReplayProxy::Replaying);
 
     if (m_status == PlaybackUninitialized || m_status == PlaybackFinished || index < m_currentMark.index())
         resetPlayback();
@@ -318,10 +318,10 @@ void ReplayController::replayToCompletion(ReplayMode mode)
 {
     ASSERT(m_status != CannotReplay);
 
-    LOG(Timelapse, "%-30s About to begin replay to completion.\n", "[ReplayController]");
+    LOG(DeterministicReplay, "%-30s About to begin replay to completion.\n", "[ReplayController]");
 
     // only undone by recording, or cancelling playback.
-    changeProxyMode(TimelapseProxy::Replaying);
+    changeProxyMode(ReplayProxy::Replaying);
 
     if (m_status == PlaybackUninitialized || m_status == PlaybackFinished)
         resetPlayback();
@@ -358,7 +358,7 @@ void ReplayController::cancelPlayback()
             finishReplay();
                 
         case PlaybackFinished:
-            changeProxyMode(TimelapseProxy::Open);
+            changeProxyMode(ReplayProxy::Open);
             InspectorInstrumentation::playbackCancelled(m_page);
     }
 
@@ -482,21 +482,21 @@ bool ReplayController::playbackError(bool isFatal, const String& errorMessage)
 {
     ASSERT(replaying());
 
-    LOG(Timelapse, "%-30s %sPlayback error: %s", "[ReplayController]",
+    LOG(DeterministicReplay, "%-30s %sPlayback error: %s", "[ReplayController]",
         isFatal ? "FATAL " : "",
         errorMessage.utf8().data());
     
     if (isFatal) {
-        LOG(Timelapse, "%-30s Terminating playback due to fatal error.", "[ReplayController]");
+        LOG(DeterministicReplay, "%-30s Terminating playback due to fatal error.", "[ReplayController]");
         cancelPlayback();
         InspectorInstrumentation::playbackError(m_page, true, errorMessage);
         return true;
     }
     
     if (m_errorStrategy == ContinueOnError) {
-        LOG(Timelapse, "%-30s Continuing past non-fatal error.", "[ReplayController]");
+        LOG(DeterministicReplay, "%-30s Continuing past non-fatal error.", "[ReplayController]");
     } else {
-        LOG(Timelapse, "%-30s Reporting and pausing because of non-fatal error.", "[ReplayController]");
+        LOG(DeterministicReplay, "%-30s Reporting and pausing because of non-fatal error.", "[ReplayController]");
         pauseReplay(m_currentMark.index());
         InspectorInstrumentation::playbackError(m_page, isFatal, errorMessage);
     }
@@ -532,7 +532,7 @@ void ReplayController::didDispatch(EventLoopInput* input)
 {
     ASSERT(replaying());
     if (!m_runningInput) {
-        LOG(Timelapse, "%-30s Clearing pending didDispatch flag, since it appears replay stopped while processing this event (i.e., inside a debugger's inner event loop, or because of a fatal replay error)\n", "ReplayController");
+        LOG(DeterministicReplay, "%-30s Clearing pending didDispatch flag, since it appears replay stopped while processing this event (i.e., inside a debugger's inner event loop, or because of a fatal replay error)\n", "ReplayController");
         return;
     }
     ASSERT(m_dispatching);
@@ -606,7 +606,7 @@ void ReplayController::maybeDispatchInput()
 
     //otherwise, it will be considered for dispatch after every future event.
     else
-        LOG(Timelapse, "%-30s Waiting to dispatch next input (current: %d@; target: %d@).\n",
+        LOG(DeterministicReplay, "%-30s Waiting to dispatch next input (current: %d@; target: %d@).\n",
             "[ReplayController]", m_domEventDispatchCount, m_waitingInput->dispatchCount());
 }
 
@@ -650,7 +650,7 @@ void ReplayController::asyncDispatchInput()
         if (waitInterval < 0.0)
             waitInterval = (1.0 * 0.001);
 
-        LOG(Timelapse, "%-30s WAIT: %.3f ms", "[ReplayController]", waitInterval*1000.0);
+        LOG(DeterministicReplay, "%-30s WAIT: %.3f ms", "[ReplayController]", waitInterval*1000.0);
         
         if (waitInterval > 1000.0) {
             LOG_ERROR("%-30s ERROR: tried to wait for over 1000 seconds; this is probably a bug.",
@@ -676,9 +676,9 @@ void ReplayController::syncDispatchInput()
         m_previousMarkTime = m_runningInput->mark().time();
     }
     m_domEventRemainingQuota = m_runningInput->DOMEventQuota();
-    LOG(Timelapse, "%-30s ----------------------------------------------",
+    LOG(DeterministicReplay, "%-30s ----------------------------------------------",
                    "[ReplayController");
-    LOG(Timelapse, "%-30s DISPATCH: %s\n", "[ReplayController]",
+    LOG(DeterministicReplay, "%-30s DISPATCH: %s\n", "[ReplayController]",
                    m_runningInput->toString().utf8().data());
     m_dispatching = true;
     m_runningInput->dispatch(this);
@@ -687,7 +687,7 @@ void ReplayController::syncDispatchInput()
 
 void ReplayController::resetPlayback()
 {
-    LOG(Timelapse, "%-30s Resetting the replay log...\n", "[ReplayController]");
+    LOG(DeterministicReplay, "%-30s Resetting the replay log...\n", "[ReplayController]");
 
     //unplug determinism log from all global objects in this Page.
     for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree()->traverseNext())
@@ -725,7 +725,7 @@ void ReplayController::serialize()
 {
     JSONReplayInputSerializer serializer(m_replayInputLog);
 
-    LOG(Timelapse, "%-30sMETRIC: memory overhead: %zu bytes\n", "[ReplayController]", serializer.memorySize());
+    LOG(DeterministicReplay, "%-30sMETRIC: memory overhead: %zu bytes\n", "[ReplayController]", serializer.memorySize());
 
     FILE* file = 0;
     const char* filename = getenv("TIMELAPSE_SERIALIZED_RECORDING_FILENAME");
@@ -735,13 +735,13 @@ void ReplayController::serialize()
             fprintf(stderr, "Warning: Could not open log file %s for writing.\n", filename);
     }
     if (file) {
-        LOG(Timelapse, "%-30sMETRIC: dumping serialized recording to %s\n", "[ReplayController]", filename);
+        LOG(DeterministicReplay, "%-30sMETRIC: dumping serialized recording to %s\n", "[ReplayController]", filename);
         serializer.serializeToFile(file);
         fclose(file);
     }
 }
 
-void ReplayController::changeProxyMode(TimelapseProxy::ProxyMode mode)
+void ReplayController::changeProxyMode(ReplayProxy::ProxyMode mode)
 {
     m_page->userInputProxy()->setProxyMode(mode);
     m_page->asyncEventProxy()->setProxyMode(mode);

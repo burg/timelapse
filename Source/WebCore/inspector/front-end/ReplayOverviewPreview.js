@@ -77,8 +77,8 @@ WebInspector.OverviewPreviewViews.BaseView = function(name)
 {
     WebInspector.View.call(this);
 
-    this.element.classList.add("timelapse-overview-preview");
-    this.element.classList.add("timelapse-preview-" + name);
+    this.element.classList.add("replay-overview-preview");
+    this.element.classList.add("replay-preview-" + name);
     this._header = document.createElement("header");
     this.element.appendChild(this._header);
     this._content = document.createElement("div"); // dummy
@@ -166,7 +166,7 @@ WebInspector.OverviewPreviewViews.ErrorView.prototype = {
  */
 WebInspector.OverviewPreviewViews.InputView = function(provider)
 {
-    console.assert(provider.type === WebInspector.DataProvider.Types.TimelapseInput,
+    console.assert(provider.type === WebInspector.DataProvider.Types.ReplayInput,
 		  "Instantiated InputView preview with bad provider type.");
 
     WebInspector.OverviewPreviewViews.BaseView.call(this, "input");
@@ -193,7 +193,7 @@ WebInspector.OverviewPreviewViews.InputView.prototype = {
 	    var cell = document.createElement("td");
 	    cell.setAttribute("width", "20px");
 	    var button = document.createElement("div");
-	    button.className = "timelapse-button-icon " + styleClass;
+	    button.className = "replay-button-icon " + styleClass;
 	    cell.appendChild(button);
 	    button.addEventListener("click", callback);
 	    return cell;
@@ -212,19 +212,19 @@ WebInspector.OverviewPreviewViews.InputView.prototype = {
 	    row.appendChild(countCell);
 
 	    var cell = document.createElement("td");
-	    var name = WebInspector.TimelapseInputDataProvider.InputStyles[record.type].title;
+	    var name = WebInspector.ReplayInputDataProvider.InputStyles[record.type].title;
 	    cell.setTextAndTitle(name);
 	    cell.addStyleClass("text-cell");
 	    row.appendChild(cell);
 
-	    if (record.mark.index == WebInspector.timelapseModel.currentMarkIndex)
+	    if (record.mark.index == WebInspector.replayModel.currentMarkIndex)
 		row.addStyleClass("selected");
 
 	    var view = this;
 
 	    row.addEventListener("dblclick", function(markIndex) {
 				     this.replayUpToMarkIndex(markIndex);
-				 }.bind(WebInspector.timelapseModel, record.mark.index));
+				 }.bind(WebInspector.replayModel, record.mark.index));
 
 	    table.appendChild(row);
 	}
@@ -271,7 +271,7 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	    var cell = document.createElement("td");
 	    cell.setAttribute("width", "20px");
 	    var button = document.createElement("div");
-	    button.className = "timelapse-button-icon " + styleClass;
+	    button.className = "replay-button-icon " + styleClass;
 	    cell.appendChild(button);
 	    button.addEventListener("click", callback);
 	    return cell;
@@ -295,13 +295,13 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	    }
 	    row.appendChild(countCell);
 
-	    var indexExplored = WebInspector.timelapseModel.breakpointTracker.exploredIndex(record.mark.index, record.hitIndex);
+	    var indexExplored = WebInspector.replayModel.breakpointTracker.exploredIndex(record.mark.index, record.hitIndex);
 	    var savepoint = savepointList.findForBreakpointHit(record.mark.index, record.hitIndex);
-	    var isCurrentBreakpoint = record.mark.index == WebInspector.timelapseModel.currentMarkIndex
-		&& record.hitIndex == WebInspector.timelapseModel.currentHitIndex;
+	    var isCurrentBreakpoint = record.mark.index == WebInspector.replayModel.currentMarkIndex
+		&& record.hitIndex == WebInspector.replayModel.currentHitIndex;
 
 	    if (savepoint) {
-            var savepointButton = createButtonInTD("timelapse-savepoint-button toggled", function(savepoint) {
+            var savepointButton = createButtonInTD("replay-savepoint-button toggled", function(savepoint) {
                 savepointList.removeSavepoint(savepoint);
 		    }.bind(savepointButton, savepoint));
 		    row.appendChild(savepointButton);
@@ -310,8 +310,8 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 		row.appendChild(document.createElement("td"));
 
 	    if (indexExplored && !isCurrentBreakpoint) {
-		var jumpButton = createButtonInTD("timelapse-jump-button", function(markIndex, hitIndex) {
-			WebInspector.timelapseModel.replayToBreakpointHit(markIndex, hitIndex);
+		var jumpButton = createButtonInTD("replay-jump-button", function(markIndex, hitIndex) {
+			WebInspector.replayModel.replayToBreakpointHit(markIndex, hitIndex);
 		    }.bind(jumpButton, record.mark.index, record.hitIndex));
 		row.appendChild(jumpButton);
 		}
@@ -330,14 +330,14 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
 	    if (isCurrentBreakpoint)
 		row.addStyleClass("selected");
 	    
-	    if (record.mark.index == WebInspector.timelapseModel.currentMarkIndex
-	       && record.hitIndex == WebInspector.timelapseModel.currentHitIndex)
+	    if (record.mark.index == WebInspector.replayModel.currentMarkIndex
+	       && record.hitIndex == WebInspector.replayModel.currentHitIndex)
 		row.addStyleClass("selected");
 
 	    // TODO: could be shorter
 	    row.addEventListener("dblclick", function(markIndex) {
 				     this.replayUpToMarkIndex(markIndex);
-				 }.bind(WebInspector.timelapseModel, record.mark.index));
+				 }.bind(WebInspector.replayModel, record.mark.index));
 
 	    table.appendChild(row);
 
@@ -372,20 +372,20 @@ WebInspector.OverviewPreviewViews.BreakpointHitView.prototype = {
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseOverviewPreview = function(model, recording)
+WebInspector.ReplayOverviewPreview = function(model, recording)
 {
     WebInspector.View.call(this);
 
-    this.element.classList.add("timelapse-preview-container");
+    this.element.classList.add("replay-preview-container");
     this._model = model;
     this._recording = recording;
 
-    this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseOverviewPreview listeners");
-    var recordingEvents = WebInspector.TimelapseRecording.Events;
+    this._callbacks = new WebInspector.EventListenerGroup(this, "Static ReplayOverviewPreview listeners");
+    var recordingEvents = WebInspector.ReplayRecording.Events;
     this._callbacks.register(this._recording, recordingEvents.ProviderAdded, this._onProviderAdded);
 
     // if something changed about state of playback, then refresh (the visible view)
-    var replayEvents = WebInspector.TimelapseModel.Events;
+    var replayEvents = WebInspector.ReplayModel.Events;
     this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this.refresh);
     this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this.refresh);
     this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this.refresh);
@@ -400,7 +400,7 @@ WebInspector.TimelapseOverviewPreview = function(model, recording)
     this.refresh();
 };
 
-WebInspector.TimelapseOverviewPreview.prototype = {
+WebInspector.ReplayOverviewPreview.prototype = {
     willDispose: function()
     {
 	this._callbacks.uninstall(true);
@@ -441,7 +441,7 @@ WebInspector.TimelapseOverviewPreview.prototype = {
 	console.assert(!this._provider, "Tried to set more than one overview preview provider.");
 
 	this._provider = provider;
-	this._providerCallbacks = new WebInspector.EventListenerGroup(this, "TimelapseOverviewPreview provider listeners");
+	this._providerCallbacks = new WebInspector.EventListenerGroup(this, "ReplayOverviewPreview provider listeners");
 	this._providerCallbacks.register(provider, WebInspector.DataProvider.Events.WillRemove,  this._onProviderWillRemove);
 	this._providerCallbacks.register(provider, WebInspector.DataProvider.Events.DataChanged, this.refresh);
 	this._providerCallbacks.install();

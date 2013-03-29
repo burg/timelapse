@@ -31,7 +31,7 @@
 
 
 WebInspector.ProfilesScanner = function(model) {
-    WebInspector.TimelapseScanner.call(this, model, "profile-cpu", "CPU Profile");
+    WebInspector.ReplayScanner.call(this, model, "profile-cpu", "CPU Profile");
 
     this._scannedProfilesCount = 0;
 };
@@ -44,7 +44,7 @@ WebInspector.ProfilesScanner.prototype = {
         if (this._didInitializeModelListeners)
             return;
         
-        this._model.onceEventListener(WebInspector.TimelapseModel.Events.RecordingUnloaded, function() {
+        this._model.onceEventListener(WebInspector.ReplayModel.Events.RecordingUnloaded, function() {
             WebInspector.profilesModel.clearProfiles(true);
             this._didSetupModelListeners = false;
             this._scannedProfilesCount = 0;
@@ -87,7 +87,7 @@ WebInspector.ProfilesScanner.prototype = {
         var profileType = model.getProfileType(cpuProfileId);
 
         model.onceEventListener(WebInspector.ProfilesModel.Events.ProfileAdded, function(event) {
-            // stop TimelapseRecording or ScriptsPanel from making a provider.
+            // stop ReplayRecording or ScriptsPanel from making a provider.
             event.preventDefault();
                         
             var profile = event.data;
@@ -95,7 +95,7 @@ WebInspector.ProfilesScanner.prototype = {
             var profileCount = ++this._scannedProfilesCount;
             profile.setDisplayName(WebInspector.UIString("Scanned Profile %d", profileCount));
 
-            WebInspector.timelapseModel.loadedRecording.addProvider(new WebInspector.ProfileHeatmapProvider(profile));
+            WebInspector.replayModel.loadedRecording.addProvider(new WebInspector.ProfileHeatmapProvider(profile));
 
             if (!WebInspector.panels.profiles)
                 WebInspector.inspectorView.panel("profiles");
@@ -136,5 +136,5 @@ WebInspector.ProfilesScanner.prototype = {
         this.linearScanForRegion(startIndex, endIndex);
     },
 
-    __proto__: WebInspector.TimelapseScanner.prototype
+    __proto__: WebInspector.ReplayScanner.prototype
 };

@@ -34,7 +34,7 @@
 
 #include "DispatchAsyncEvent.h"
 #include "PlatformMouseEvent.h"
-#include "TimelapseProxy.h"
+#include "ReplayProxy.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
@@ -47,7 +47,7 @@ class EventTarget;
 class Frame;
 class Page;
 
-class AsyncEventProxy : public TimelapseProxy {
+class AsyncEventProxy : public ReplayProxy {
     WTF_MAKE_NONCOPYABLE(AsyncEventProxy);
     WTF_MAKE_FAST_ALLOCATED;
 

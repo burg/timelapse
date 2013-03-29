@@ -84,7 +84,7 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
     };
     this.resizeMethod = WebInspector.DataGrid.ResizeMethod.Last;
 
-    this.element.classList.add("timelapse-inputs-grid");
+    this.element.classList.add("replay-inputs-grid");
 
     // TODO: does this comment even make sense? It's copied from DataGrid
     // Event listeners need to be added _after_ we attach to the document, so that owner document is properly update.
@@ -106,15 +106,15 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
     this._maxMarkIndex = 0;
     this._gridNodes = {};
     
-    this._callbacks = new WebInspector.EventListenerGroup(this, "TimelapseInputGrid static callbacks");
+    this._callbacks = new WebInspector.EventListenerGroup(this, "ReplayInputGrid static callbacks");
     
-    var replayEvents = WebInspector.TimelapseModel.Events;
+    var replayEvents = WebInspector.ReplayModel.Events;
     this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this._onPlaybackDidStart);
     this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this._onPlaybackStopped);
     this._callbacks.register(this._model, replayEvents.InputPaused,      this._onInputPaused);
     this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._onDebuggerPaused);
 
-    var recordingEvents = WebInspector.TimelapseRecording.Events;
+    var recordingEvents = WebInspector.ReplayRecording.Events;
     this._callbacks.register(this._recording, recordingEvents.ProviderAdded,  this._onProviderAdded);
     this._callbacks.register(this._recording, recordingEvents.PreviewStarted, this._onPreviewStarted);
     this._callbacks.register(this._recording, recordingEvents.PreviewStopped, this._onPreviewStopped);
@@ -122,12 +122,12 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
     this._callbacks.register(this._recording, recordingEvents.CircleSelected, this._onCircleSelected);
 
     this._callbacks.register(this._recording.calculator,
-                             WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged);
+                             WebInspector.RecordingCalculator.Events.ZoomChanged, this._onZoomChanged);
     
     this._callbacks.install();
 
     // add input providers that have already been created
-    var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+    var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
     
@@ -274,7 +274,7 @@ WebInspector.RecordingInputsGrid.prototype = {
     _canUseProvider: function(provider)
     {
         var types = WebInspector.DataProvider.Types;
-        return provider.type == types.TimelapseInput ||
+        return provider.type == types.ReplayInput ||
                provider.type == types.SavepointList;
     },
 
@@ -300,7 +300,7 @@ WebInspector.RecordingInputsGrid.prototype = {
         var types = WebInspector.DataProvider.Types;
         callbacks.register(provider, events.WillRemove, this._onProviderWillRemove);
 
-        if (provider.type == types.TimelapseInput) {
+        if (provider.type == types.ReplayInput) {
             callbacks.register(provider, events.Enabled,  this._onProviderEnabled);
             callbacks.register(provider, events.Disabled, this._onProviderDisabled);
         }
@@ -352,7 +352,7 @@ WebInspector.RecordingInputsGrid.prototype = {
 	// if the selected row matches the disabled provider, then deselect it.
 	if (this.selected) {
 	    var selectedNode = this.selectedNode;
-	    var style = WebInspector.TimelapseInputDataProvider.InputStyles[selectedNode.action.type];
+	    var style = WebInspector.ReplayInputDataProvider.InputStyles[selectedNode.action.type];
 	    if (style.group == provider.name)
 		selectedNode.deselect();
 	}
@@ -759,10 +759,10 @@ WebInspector.RecordingInputsGridSlider = function(grid, name, adjustable)
     this._position = { node: null, before: true };
 
     this.element = document.createElement("div");
-    this.element.className = "timelapse-grid-slider " + name + "-slider";
+    this.element.className = "replay-grid-slider " + name + "-slider";
 
     this._horizontalBarElement = document.createElement("div");
-    this._horizontalBarElement.className = "timelapse-slider-band";
+    this._horizontalBarElement.className = "replay-slider-band";
     this.element.appendChild(this._horizontalBarElement);
 
     if (this._adjustable) {
@@ -771,12 +771,12 @@ WebInspector.RecordingInputsGridSlider = function(grid, name, adjustable)
     }
 
     var wrapper = this._wedgeWrapperElement = document.createElement("div");
-    wrapper.className = "timelapse-slider-wedge-wrapper";
+    wrapper.className = "replay-slider-wedge-wrapper";
     var wedgeBorder = document.createElement("div");
-    wedgeBorder.className = "timelapse-slider-wedge-border";
+    wedgeBorder.className = "replay-slider-wedge-border";
     wrapper.appendChild(wedgeBorder);
     var wedge = document.createElement("div");
-    wedge.className = "timelapse-slider-wedge";
+    wedge.className = "replay-slider-wedge";
     wrapper.appendChild(wedge);
     this.element.appendChild(wrapper);
 
@@ -788,9 +788,9 @@ WebInspector.RecordingInputsGridSlider = function(grid, name, adjustable)
 };
 
 WebInspector.RecordingInputsGridSlider.Events = {
-    Dragging: "TimelapseSliderDragging",
-    DragStart: "TimelapseSliderDragStart",
-    DragEnd: "TimelapseSliderDragEnd"
+    Dragging: "SliderDragging",
+    DragStart: "SliderDragStart",
+    DragEnd: "SliderDragEnd"
 };
 
 WebInspector.RecordingInputsGridSlider.prototype =  {
@@ -964,11 +964,11 @@ WebInspector.RecordingInputsGridNode.prototype = {
 
     createCells: function()
     {
-	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._action.type].group;
+	var group = WebInspector.ReplayInputDataProvider.InputStyles[this._action.type].group;
 
         // Out of sight, out of mind: create nodes offscreen to save on render tree update times when running updateOffscreenRows()
         this._element.addStyleClass("offscreen");
-	this._element.addStyleClass("timelapse-category-" + group);
+	this._element.addStyleClass("replay-category-" + group);
 	this._gutterCell = this._createDivInTD("gutter");
         this._indexCell = this._createDivInTD("index");
 	this._groupCell = this._createDivInTD("category");
@@ -980,7 +980,7 @@ WebInspector.RecordingInputsGridNode.prototype = {
 
     isFilteredOut: function()
     {
-        return !this._parentView.providers[WebInspector.TimelapseInputDataProvider.InputStyles[this._action.type].group].isEnabled() || this.element.classList.contains("hidden");
+        return !this._parentView.providers[WebInspector.ReplayInputDataProvider.InputStyles[this._action.type].group].isEnabled() || this.element.classList.contains("hidden");
     },
 
     highlight: function(classSuffix)
@@ -1009,13 +1009,13 @@ WebInspector.RecordingInputsGridNode.prototype = {
     },
 
     _replayToThisNode: function() {
-	WebInspector.timelapseModel.replayUpToMarkIndex(this._action.mark.index);
+	WebInspector.replayModel.replayUpToMarkIndex(this._action.mark.index);
     },
 
     _createDivInTD: function(columnIdentifier)
     {
         var td = document.createElement("td");
-        td.className = "timelapse-column-" + columnIdentifier;
+        td.className = "replay-column-" + columnIdentifier;
         var div = document.createElement("div");
         td.appendChild(div);
         this._element.appendChild(td);
@@ -1031,11 +1031,11 @@ WebInspector.RecordingInputsGridNode.prototype = {
 	this._refreshTimestampCell();
 	this._refreshPreviewCell();
 	
-	this._element.addStyleClass("timelapse-table-item");
-	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._action.type].group;
-	if (!this._element.hasStyleClass("timelapse-category-" + group)) {
-            this._element.removeMatchingStyleClasses("timelapse-category-\\w+");
-            this._element.addStyleClass("timelapse-category-" + group);
+	this._element.addStyleClass("replay-table-item");
+	var group = WebInspector.ReplayInputDataProvider.InputStyles[this._action.type].group;
+	if (!this._element.hasStyleClass("replay-category-" + group)) {
+            this._element.removeMatchingStyleClasses("replay-category-\\w+");
+            this._element.addStyleClass("replay-category-" + group);
         }
     },
 
@@ -1049,7 +1049,7 @@ WebInspector.RecordingInputsGridNode.prototype = {
 	    return;
 
 	var savepointButton = document.createElement("div");
-	savepointButton.className = "timelapse-button-icon timelapse-savepoint-button toggled";
+	savepointButton.className = "replay-button-icon replay-savepoint-button toggled";
 
 	this._gutterCell.appendChild(savepointButton);
     },
@@ -1065,7 +1065,7 @@ WebInspector.RecordingInputsGridNode.prototype = {
     {
 	this._groupCell.removeChildren();
 	this._groupCell.appendChild(document.createTextNode(" "));
-	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._action.type].group;
+	var group = WebInspector.ReplayInputDataProvider.InputStyles[this._action.type].group;
 	var provider = this._parentView.providers[group];
 	this._groupCell.title = "Category: " + provider.displayName;
     },
@@ -1073,7 +1073,7 @@ WebInspector.RecordingInputsGridNode.prototype = {
     _refreshTypeCell: function()
     {
     	this._typeCell.removeChildren();
-	this._typeCell.setTextAndTitle(WebInspector.TimelapseInputDataProvider.InputStyles[this._action.type].title);
+	this._typeCell.setTextAndTitle(WebInspector.ReplayInputDataProvider.InputStyles[this._action.type].title);
     },
 
     _refreshTimestampCell: function()
@@ -1085,15 +1085,15 @@ WebInspector.RecordingInputsGridNode.prototype = {
     _refreshPreviewCell: function()
     {
     	this._previewCell.removeChildren();
-	var group = WebInspector.TimelapseInputDataProvider.InputStyles[this._action.type].group;
+	var group = WebInspector.ReplayInputDataProvider.InputStyles[this._action.type].group;
 	var provider = this._parentView._providers[group];
-	var preview = WebInspector.TimelapseInputDataProvider.InputPreview[this._action.type](this._action.data, provider);
+	var preview = WebInspector.ReplayInputDataProvider.InputPreview[this._action.type](this._action.data, provider);
 	if (group == "network") {
 	    var url = preview;
 	    var isExternal = !WebInspector.resourceForURL(url);
 	    var link = WebInspector.linkifyURLAsNode(url,
 						     WebInspector.displayNameForURL(url),
-						     "timelapse-html-resource-link",
+						     "replay-html-resource-link",
 						     isExternal);
 	    this._previewCell.appendChild(link);
 	}
@@ -1106,8 +1106,8 @@ WebInspector.RecordingInputsGridNode.prototype = {
 
 WebInspector.RecordingInputsGridNode.GroupComparator = function(a,b)
 {
-    var aGroup = WebInspector.TimelapseInputDataProvider.InputStyles[a._action.type].group;
-    var bGroup = WebInspector.TimelapseInputDataProvider.InputStyles[b._action.type].group;
+    var aGroup = WebInspector.ReplayInputDataProvider.InputStyles[a._action.type].group;
+    var bGroup = WebInspector.ReplayInputDataProvider.InputStyles[b._action.type].group;
     if (aGroup > bGroup)
 	return 1;
     if (bGroup > aGroup)

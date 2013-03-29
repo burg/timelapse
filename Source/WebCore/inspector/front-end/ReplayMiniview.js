@@ -33,7 +33,7 @@
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseMiniview = function(model, recording)
+WebInspector.ReplayMiniview = function(model, recording)
 {
     WebInspector.View.call(this);
 
@@ -44,52 +44,52 @@ WebInspector.TimelapseMiniview = function(model, recording)
     this._model = model;
     this._recording = recording;
 
-    this.element.classList.add("timelapse-miniview");
-    this.element.classList.add("timelapse-overview-column-main");
-    this.element.classList.add("timelapse-overview-row-label");
+    this.element.classList.add("replay-miniview");
+    this.element.classList.add("replay-overview-column-main");
+    this.element.classList.add("replay-overview-row-label");
     this.element.tabIndex = 1;
     this.element.addEventListener("dblclick", this._onMiniviewDoubleClicked.bind(this), true);
     this.element.addEventListener("mousewheel", this._onMiniviewMousewheel.bind(this), true);
     WebInspector.installDragHandle(this.element, this._startZoomSelectorDragging.bind(this), this._zoomSelectorDragging.bind(this), this._endZoomSelectorDragging.bind(this), "ew-resize");
     
     this._canvas = document.createElement("canvas");
-    this._canvas.className = "timelapse-miniview-canvas";
+    this._canvas.className = "replay-miniview-canvas";
     this.element.appendChild(this._canvas);
 
-    var playbackSlider = new WebInspector.TimelapseMiniviewSlider(this, "playback", true);
-    playbackSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.DragStart,
+    var playbackSlider = new WebInspector.ReplayMiniviewSlider(this, "playback", true);
+    playbackSlider.addEventListener(WebInspector.ReplayMiniviewSlider.Events.DragStart,
 				    this._onPlaybackSliderDragStart, this);
-    playbackSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.DragEnd,
+    playbackSlider.addEventListener(WebInspector.ReplayMiniviewSlider.Events.DragEnd,
 				    this._onPlaybackSliderDragEnd, this);
     this.element.appendChild(playbackSlider.element);
 
-    var previousSlider = new WebInspector.TimelapseMiniviewSlider(this, "previous", false);
+    var previousSlider = new WebInspector.ReplayMiniviewSlider(this, "previous", false);
     this.element.appendChild(previousSlider.element);
 
-    var tentativeSlider = new WebInspector.TimelapseMiniviewSlider(this, "tentative", false);
+    var tentativeSlider = new WebInspector.ReplayMiniviewSlider(this, "tentative", false);
     this.element.appendChild(tentativeSlider.element);
 
     this._leftZoomGlassPane = document.createElement("div");
-    this._leftZoomGlassPane.className = "timelapse-miniview-glasspane";
+    this._leftZoomGlassPane.className = "replay-miniview-glasspane";
     this.element.appendChild(this._leftZoomGlassPane);
 
     this._rightZoomGlassPane = document.createElement("div");
-    this._rightZoomGlassPane.className = "timelapse-miniview-glasspane";
+    this._rightZoomGlassPane.className = "replay-miniview-glasspane";
     this.element.appendChild(this._rightZoomGlassPane);
 
-    var leftZoomSlider = new WebInspector.TimelapseMiniviewSlider(this, "zoom", true, true);
+    var leftZoomSlider = new WebInspector.ReplayMiniviewSlider(this, "zoom", true, true);
     leftZoomSlider.element.classList.add("left");
-    leftZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.DragStart,
+    leftZoomSlider.addEventListener(WebInspector.ReplayMiniviewSlider.Events.DragStart,
 				    this._onZoomSliderDragStart.bind(this, "leftZoom"));
-    leftZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.DragEnd,
+    leftZoomSlider.addEventListener(WebInspector.ReplayMiniviewSlider.Events.DragEnd,
 				    this._onZoomSliderDragEnd.bind(this, "leftZoom"));
     this.element.appendChild(leftZoomSlider.element);
 
-    var rightZoomSlider = new WebInspector.TimelapseMiniviewSlider(this, "zoom", true, true);
+    var rightZoomSlider = new WebInspector.ReplayMiniviewSlider(this, "zoom", true, true);
     rightZoomSlider.element.classList.add("right");
-    rightZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.DragStart,
+    rightZoomSlider.addEventListener(WebInspector.ReplayMiniviewSlider.Events.DragStart,
 				     this._onZoomSliderDragStart.bind(this, "rightZoom"));
-    rightZoomSlider.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.DragEnd,
+    rightZoomSlider.addEventListener(WebInspector.ReplayMiniviewSlider.Events.DragEnd,
 				     this._onZoomSliderDragEnd.bind(this, "rightZoom"));
     this.element.appendChild(rightZoomSlider.element);
 
@@ -108,9 +108,9 @@ WebInspector.TimelapseMiniview = function(model, recording)
     this._timelines.all = { providers: [], maxIndex: -1, data: [] };
 
 
-    var replayEvents = WebInspector.TimelapseModel.Events;
-    var recordingEvents = WebInspector.TimelapseRecording.Events;
-    this._callbacks = new WebInspector.EventListenerGroup(this, "TimelapseMiniView static callbacks");
+    var replayEvents = WebInspector.ReplayModel.Events;
+    var recordingEvents = WebInspector.ReplayRecording.Events;
+    this._callbacks = new WebInspector.EventListenerGroup(this, "ReplayMiniView static callbacks");
     this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this._onPlaybackDidStart);
     this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this._onPlaybackStopped);
     this._callbacks.register(this._model, replayEvents.InputPaused,      this._onInputPaused);
@@ -122,7 +122,7 @@ WebInspector.TimelapseMiniview = function(model, recording)
     this._callbacks.register(this._recording, recordingEvents.PreviewStopped, this._onPreviewStopped);
     this._callbacks.register(this._recording, recordingEvents.PreviewChanged, this._onPreviewChanged);
 
-    this._callbacks.register(this._recording.calculator, WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged);
+    this._callbacks.register(this._recording.calculator, WebInspector.RecordingCalculator.Events.ZoomChanged, this._onZoomChanged);
 
     var bpEvents = WebInspector.BreakpointManager.Events;
     var bpManager = WebInspector.breakpointManager;
@@ -136,7 +136,7 @@ WebInspector.TimelapseMiniview = function(model, recording)
     this._clearGraph();
     
     // add input providers that have already been created
-    var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+    var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
     
@@ -153,13 +153,13 @@ WebInspector.TimelapseMiniview = function(model, recording)
     this._scheduleRefresh();
 };
 
-WebInspector.TimelapseMiniview.EdgeSnapDistance = 0.02; /* percent */
-WebInspector.TimelapseMiniview.MinSelectableSize = 0.005; /* percent */
-WebInspector.TimelapseMiniview.MinAnimationDelta = 0.5; /* seconds? */
-WebInspector.TimelapseMiniview.WindowScrollSpeedFactor = 0.001;
-WebInspector.TimelapseMiniview.WindowZoomSpeedFactor = 0.001;
+WebInspector.ReplayMiniview.EdgeSnapDistance = 0.02; /* percent */
+WebInspector.ReplayMiniview.MinSelectableSize = 0.005; /* percent */
+WebInspector.ReplayMiniview.MinAnimationDelta = 0.5; /* seconds? */
+WebInspector.ReplayMiniview.WindowScrollSpeedFactor = 0.001;
+WebInspector.ReplayMiniview.WindowZoomSpeedFactor = 0.001;
 
-WebInspector.TimelapseMiniview.prototype = {
+WebInspector.ReplayMiniview.prototype = {
     // Public API
     willDispose: function()
     {
@@ -205,7 +205,7 @@ WebInspector.TimelapseMiniview.prototype = {
     _canUseProvider: function(provider)
     {
 	var types = WebInspector.DataProvider.Types;
-	return provider.type == types.TimelapseInput ||
+	return provider.type == types.ReplayInput ||
            provider.type == types.BreakpointHits ||
            provider.type == types.SavepointList;
     },
@@ -259,7 +259,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	// Create sparse arrays with 101 cells each to fill with counts for a given group.
 	function markPercentagesForAction(action)
 	{
-	    var group = WebInspector.TimelapseInputDataProvider.InputStyles[action.type].group;
+	    var group = WebInspector.ReplayInputDataProvider.InputStyles[action.type].group;
 	    var percent = Math.floor(100.0 * this.calculator.computeMiniviewPercentage(action.mark.timestamp));
 	    var percentile = Number.constrain(percent, 0, 99);
 
@@ -585,7 +585,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	this.sliders.playback.disable();
 	this.sliders.playback.element.addStyleClass("playback-pulse");
 
-    var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
+    var replaySpeeds = WebInspector.ReplayModel.ReplaySpeed;
 	this.sliders.playback.minimumResolution = (this._model.replaySpeed === replaySpeeds.Seeking) ? 10.0 : 1.0;
 
 	if (currentActionIndex != -1) {
@@ -649,7 +649,7 @@ WebInspector.TimelapseMiniview.prototype = {
 	                                      : this.calculator.minimumBoundary;
 
 	var timeDelta = nextAction.mark.timestamp - curActionTime;
-	if (timeDelta > WebInspector.TimelapseMiniview.MinAnimationDelta) {
+	if (timeDelta > WebInspector.ReplayMiniview.MinAnimationDelta) {
 	    var nextActionPosition = this.calculator.computeMiniviewPercentage(nextAction.mark.timestamp);
 	    this.sliders.playback.animateTo(nextActionPosition, timeDelta);
 	}
@@ -687,7 +687,7 @@ WebInspector.TimelapseMiniview.prototype = {
     _onSavepointAdded: function(event)
     {
         var savepoint = event.data;
-        var slider = new WebInspector.TimelapseMiniviewSlider(this, "savepoint", false);
+        var slider = new WebInspector.ReplayMiniviewSlider(this, "savepoint", false);
         slider._savepoint = savepoint;
         this.element.appendChild(slider.element);
         this.sliders.savepoint.push(slider);
@@ -740,7 +740,7 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onPlaybackSliderDragStart: function(event)
     {
-	this.sliders.playback.addEventListener(WebInspector.TimelapseMiniviewSlider.Events.Moved,
+	this.sliders.playback.addEventListener(WebInspector.ReplayMiniviewSlider.Events.Moved,
 					      this._onPlaybackSliderDragged,
 					      this);
 
@@ -788,7 +788,7 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onPlaybackSliderDragEnd: function(event)
     {
-	this.sliders.playback.removeEventListener(WebInspector.TimelapseMiniviewSlider.Events.Moved,
+	this.sliders.playback.removeEventListener(WebInspector.ReplayMiniviewSlider.Events.Moved,
 						 this._onPlaybackSliderDragged,
 						 this);
 
@@ -800,14 +800,14 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onZoomSliderDragStart: function(zoomSide, event)
     {
-	this.sliders[zoomSide].addEventListener(WebInspector.TimelapseMiniviewSlider.Events.Moved,
+	this.sliders[zoomSide].addEventListener(WebInspector.ReplayMiniviewSlider.Events.Moved,
 						this._onZoomSliderDragged.bind(this, zoomSide), this);
     },
 
     _onZoomSliderDragged: function(zoomSide, event)
     {
-	var snapDistance = WebInspector.TimelapseMiniview.EdgeSnapDistance;
-	var minSelectableSize = WebInspector.TimelapseMiniview.MinSelectableSize;
+	var snapDistance = WebInspector.ReplayMiniview.EdgeSnapDistance;
+	var minSelectableSize = WebInspector.ReplayMiniview.MinSelectableSize;
 	if (zoomSide === "leftZoom") {
 	    var start = this.sliders.leftZoom.position;
 	    // Glue to edge
@@ -833,7 +833,7 @@ WebInspector.TimelapseMiniview.prototype = {
 
     _onZoomSliderDragEnd: function(zoomSide, event)
     {
-	this.sliders[zoomSide].addEventListener(WebInspector.TimelapseMiniviewSlider.Events.Moved,
+	this.sliders[zoomSide].addEventListener(WebInspector.ReplayMiniviewSlider.Events.Moved,
 						  this._onZoomSliderDragged.bind(this, zoomSide), this);
     },
 
@@ -859,10 +859,10 @@ WebInspector.TimelapseMiniview.prototype = {
     _startZoomSelectorDragging: function(event)
     {
         var position = (event.pageX - this.element.offsetLeft) / this.element.clientWidth;
-        this._zoomSelector = new WebInspector.TimelapseMiniview.ZoomSelector(this.element, position, event);
+        this._zoomSelector = new WebInspector.ReplayMiniview.ZoomSelector(this.element, position, event);
 
 	// The drag handle prevents the controller from being focused, so do it explicitly
-	WebInspector.timelapseControllerView.focus();
+	WebInspector.replayControllerView.focus();
 
 	return true;
     },
@@ -875,7 +875,7 @@ WebInspector.TimelapseMiniview.prototype = {
     _endZoomSelectorDragging: function(event)
     {
         var zoom = this._zoomSelector._close((event.pageX - this.element.offsetLeft) / this.element.clientWidth);
-	var minSize = WebInspector.TimelapseMiniview.MinSelectableSize;
+	var minSize = WebInspector.ReplayMiniview.MinSelectableSize;
         delete this._zoomSelector;
         if (zoom.end - zoom.start < minSize)
             if (1.0 - zoom.end > minSize)
@@ -899,13 +899,13 @@ WebInspector.TimelapseMiniview.prototype = {
 
         if (typeof event.wheelDeltaX === "number" && 
 	    event.wheelDeltaX && zoomInterval != 1.0) {
-	    var delta = event.wheelDeltaX * WebInspector.TimelapseMiniview.WindowScrollSpeedFactor;
+	    var delta = event.wheelDeltaX * WebInspector.ReplayMiniview.WindowScrollSpeedFactor;
 	    zoomLeft = Number.constrain(zoomLeft - delta, 0.0, 1.0 - zoomInterval);
 	    zoomRight = Number.constrain(zoomRight - delta, zoomInterval, 1.0);
         }
 
         if (typeof event.wheelDeltaY === "number" && event.wheelDeltaY) {
-	    var delta = event.wheelDeltaY * WebInspector.TimelapseMiniview.WindowZoomSpeedFactor;
+	    var delta = event.wheelDeltaY * WebInspector.ReplayMiniview.WindowZoomSpeedFactor;
 	    /* calculate zoom adjustment from right side, and paste to left.
 	     can't do naive scaling on LHS if it is near zero.  */
 	    var zoomDelta = zoomRight - zoomRight * (1.0 + delta);
@@ -923,24 +923,24 @@ WebInspector.TimelapseMiniview.prototype = {
  * @constructor
  * @extends {WebInspector.Object}
  */
-WebInspector.TimelapseMiniviewSlider = function(miniview, name, adjustable, handlebars)
+WebInspector.ReplayMiniviewSlider = function(miniview, name, adjustable, handlebars)
 {
     WebInspector.Object.call(this);
     this._adjustable = adjustable;
 
     this.element = document.createElement("div");
-    this.element.className = "timelapse-miniview-slider " + name + "-slider";
+    this.element.className = "replay-miniview-slider " + name + "-slider";
 
     this._verticalBarElement = document.createElement("div");
-    this._verticalBarElement.className = "timelapse-slider-band";
+    this._verticalBarElement.className = "replay-slider-band";
     this.element.appendChild(this._verticalBarElement);
 
     if (!!handlebars) {
 	var handlebarBottom = document.createElement("div");
-	handlebarBottom.className = "timelapse-slider-handlebar-bottom";
+	handlebarBottom.className = "replay-slider-handlebar-bottom";
 	this.element.appendChild(handlebarBottom);
 	var handlebarTop = document.createElement("div");
-	handlebarTop.className = "timelapse-slider-handlebar-top";
+	handlebarTop.className = "replay-slider-handlebar-top";
 	this.element.appendChild(handlebarTop);
     }
 
@@ -954,13 +954,13 @@ WebInspector.TimelapseMiniviewSlider = function(miniview, name, adjustable, hand
     this.enable();
 };
 
-WebInspector.TimelapseMiniviewSlider.Events = {
-    Moved: "TimelapseSliderMoved",
-    DragStart: "TimelapseSliderDragStart",
-    DragEnd: "TimelapseSliderDragEnd"
+WebInspector.ReplayMiniviewSlider.Events = {
+    Moved: "SliderMoved",
+    DragStart: "SliderDragStart",
+    DragEnd: "SliderDragEnd"
 };
 
-WebInspector.TimelapseMiniviewSlider.prototype = {
+WebInspector.ReplayMiniviewSlider.prototype = {
     clear: function()
     {
 	this._lastRefreshedPosition = 0.0;
@@ -981,7 +981,7 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 	this.refresh();
 	
 	if (!suppressEvents) {
-	    this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.Events.Moved);
+	    this.dispatchEventToListeners(WebInspector.ReplayMiniviewSlider.Events.Moved);
 	}
     },
 
@@ -1080,7 +1080,7 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 
 	this.element.classList.add("slider-dragging");
 
-	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.Events.DragStart);
+	this.dispatchEventToListeners(WebInspector.ReplayMiniviewSlider.Events.DragStart);
 	return true;
     },
 
@@ -1104,7 +1104,7 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 	    return;
 
 	this.element.classList.remove("slider-dragging");
-	this.dispatchEventToListeners(WebInspector.TimelapseMiniviewSlider.Events.DragEnd);
+	this.dispatchEventToListeners(WebInspector.ReplayMiniviewSlider.Events.DragEnd);
     },
     
     __proto__: WebInspector.Object.prototype
@@ -1113,18 +1113,18 @@ WebInspector.TimelapseMiniviewSlider.prototype = {
 /**
  * @constructor
  */
-WebInspector.TimelapseMiniview.ZoomSelector = function(parent, position, event)
+WebInspector.ReplayMiniview.ZoomSelector = function(parent, position, event)
 {
     this._startPosition = position;
     this._width = parent.offsetWidth;
     this.element = document.createElement("div");
-    this.element.className = "timelapse-zoom-selector";
+    this.element.className = "replay-zoom-selector";
     this.element.style.left = this._startPosition * 100.0 + "%";
     this.element.style.right = (1.0 - this._startPosition) * 100.0 + "%";
     parent.appendChild(this.element);
 };
 
-WebInspector.TimelapseMiniview.ZoomSelector.prototype = {
+WebInspector.ReplayMiniview.ZoomSelector.prototype = {
     _close: function(position)
     {
         this.element.parentNode.removeChild(this.element);

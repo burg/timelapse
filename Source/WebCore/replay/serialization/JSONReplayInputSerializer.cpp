@@ -82,7 +82,7 @@ public:
 
     void operator()(size_t index, const NondeterministicInput* action)
     {
-        LOG(Timelapse, "%-25s Writing %5zu: %s\n", "[SerializeAction]",
+        LOG(DeterministicReplay, "%-25s Writing %5zu: %s\n", "[SerializeAction]",
                                 index, action->type());
         m_serializer->pushObject(); // a single action object
         m_serializer->pushObject(); // action object's metadata

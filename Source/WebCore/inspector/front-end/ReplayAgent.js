@@ -29,38 +29,37 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TimelapseProxy_h
-#define TimelapseProxy_h
-
-#include "Page.h"
-#include <wtf/Noncopyable.h>
-
-namespace WebCore {
-
-class TimelapseProxy {
-    WTF_MAKE_NONCOPYABLE(TimelapseProxy);
-
-public:
-    enum ProxyMode {
-        Capturing,
-        Open,
-        Replaying,
-    };
-
-    virtual ~TimelapseProxy() {}
-
-    void setProxyMode(ProxyMode mode) { m_mode = mode; }
-    ProxyMode mode() const { return m_mode; }
-
-protected:
-    TimelapseProxy(Page* page)
-    : m_page(page)
-    , m_mode(Open) {}
-
-    Page* m_page;
-    ProxyMode m_mode;
+/**
+ * @constructor
+ */
+WebInspector.ReplayAgent = function() {
+    // Not implemented.
 };
-    
-} // namespace WebCore
 
-#endif // TimelapseProxy_h
+// Must be kept in sync with InspectorReplayAgent.h
+WebInspector.ReplayAgent.RecordType = {
+    MousePress: "MousePress",
+    MouseRelease: "MouseRelease",
+    MouseMove: "MouseMove",
+    MouseWheel: "MouseWheel",
+    KeyPress: "KeyPress",
+    Scroll: "Scroll",
+    Resize: "Resize",
+
+    WindowActive: "WindowActive",
+    WindowInactive: "WindowInactive",
+    WindowFocused: "WindowFocused",
+    WindowUnfocused: "WindowUnfocused",
+
+    RequestResource: "RequestResource",
+    ReceiveResponse: "ReceiveResponse",
+    ReceiveData: "ReceiveData",
+    ResourceLoaded: "ResourceLoaded",
+    
+    TimerFire: "TimerFire",
+    
+    FrameNavigated: "FrameNavigated",
+    CaptureBegin: "CaptureBegin",
+    CaptureEnd: "CaptureEnd",
+    BreakpointHit: "BreakpointHit"
+};

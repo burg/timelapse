@@ -81,32 +81,32 @@ var WebInspector = {
         this._toggleConsoleButton.addEventListener("click", this._toggleConsoleButtonClicked.bind(this), false);
         mainStatusBar.insertBefore(this._toggleConsoleButton.element, bottomStatusBarContainer);
 
-	this._toggleTimelapseControllerButton = new WebInspector.StatusBarButton(WebInspector.UIString("Show Timelapse controller."), "timelapse-controller-status-bar-item");
-	this._toggleTimelapseControllerButton.addEventListener("click", this._toggleTimelapseControllerButtonClicked.bind(this), false);
-        mainStatusBar.insertBefore(this._toggleTimelapseControllerButton.element, bottomStatusBarContainer);
+	this._toggleReplayControllerButton = new WebInspector.StatusBarButton(WebInspector.UIString("Show Replay controller."), "replay-controller-status-bar-item");
+	this._toggleReplayControllerButton.addEventListener("click", this._toggleReplayControllerButtonClicked.bind(this), false);
+        mainStatusBar.insertBefore(this._toggleReplayControllerButton.element, bottomStatusBarContainer);
 
 	if (WebInspector.RecordingsPanel) {
 	    // create status message widget
-	    var model = WebInspector.timelapseModel;
-	    var eventNames = WebInspector.TimelapseModel.Events;
+	    var model = WebInspector.replayModel;
+	    var eventNames = WebInspector.ReplayModel.Events;
 
-            this._timelapseStatusMessage = document.createElement("div");
-            this._timelapseStatusMessage.id = "timelapse-status";
+            this._replayStatusMessage = document.createElement("div");
+            this._replayStatusMessage.id = "replay-status";
             model.addEventListener(eventNames.Enabled, function() {
 		this.classList.remove("hidden");
-            }, this._timelapseStatusMessage);
+            }, this._replayStatusMessage);
             model.addEventListener(eventNames.Disabled, function() {
 		this.classList.add("hidden");
-            }, this._timelapseStatusMessage);
+            }, this._replayStatusMessage);
 	    model.addEventListener(eventNames.StatusChanged, function(event) {
 		var message = event.data;
 		this.removeChildren();
 		var messageSpan = document.createElement("span");
 		messageSpan.textContent = WebInspector.UIString(message);
 		this.appendChild(messageSpan);
-            }, this._timelapseStatusMessage);
+            }, this._replayStatusMessage);
 
-	    mainStatusBar.appendChild(this._timelapseStatusMessage);
+	    mainStatusBar.appendChild(this._replayStatusMessage);
 	}
 
         if (!WebInspector.WorkerManager.isWorkerFrontend()) {
@@ -123,9 +123,9 @@ var WebInspector = {
         if (!this._toggleConsoleButton.enabled())
             return;
 
-	if (this._timelapseWasShown) {
-	    delete this._timelapseWasShown;
-	    this._toggleTimelapseControllerButton.toggled = false;
+	if (this._replayWasShown) {
+	    delete this._replayWasShown;
+	    this._toggleReplayControllerButton.toggled = false;
 	}
 
         this._toggleConsoleButton.toggled = !this._toggleConsoleButton.toggled;
@@ -142,9 +142,9 @@ var WebInspector = {
         }
     },
 
-    _toggleTimelapseControllerButtonClicked: function()
+    _toggleReplayControllerButtonClicked: function()
     {
-	var button = this._toggleTimelapseControllerButton;
+	var button = this._toggleReplayControllerButton;
 	if (button.disabled)
 	    return;
 
@@ -157,13 +157,13 @@ var WebInspector = {
 
 	var animationType = window.event && window.event.shiftKey ? WebInspector.Drawer.AnimationType.Slow : WebInspector.Drawer.AnimationType.Normal;
         if (button.toggled) {
-            button.title = WebInspector.UIString("Hide Timelapse controller.");
-            this.drawer.show(this.timelapseControllerView, animationType);
-            this._timelapseWasShown = true;
+            button.title = WebInspector.UIString("Hide Replay controller.");
+            this.drawer.show(this.replayControllerView, animationType);
+            this._replayWasShown = true;
         } else {
-            button.title = WebInspector.UIString("Show Timelapse controller.");
+            button.title = WebInspector.UIString("Show Replay controller.");
             this.drawer.hide(animationType);
-            delete this._timelapseWasShown;
+            delete this._replayWasShown;
         }
     },
 
@@ -177,8 +177,8 @@ var WebInspector = {
         this._toggleConsoleButton.title = WebInspector.UIString("Hide console.");
         this._toggleConsoleButton.toggled = false;
 
-        this._toggleTimelapseControllerButton.title = WebInspector.UIString("Hide Timelapse controller.");
-        this._toggleTimelapseControllerButton.toggled = false;
+        this._toggleReplayControllerButton.title = WebInspector.UIString("Hide Replay controller.");
+        this._toggleReplayControllerButton.toggled = false;
 
         this._closePreviousDrawerView();
 
@@ -202,11 +202,12 @@ var WebInspector = {
         if (this._drawerStatusBarHeader) {
             this._closePreviousDrawerView();
 
-            // Once drawer is closed console/timelapse should be shown if it was shown before current view replaced it in drawer.
-            if (!this._consoleWasShown && !this._timelapseWasShown)
+            // Once drawer is closed console/replay controller should be shown
+            // if it was shown before current view replaced it in drawer.
+            if (!this._consoleWasShown && !this._replayWasShown)
                 this.drawer.hide(WebInspector.Drawer.AnimationType.Immediately);
-            else if (this._timelapseWasShown)
-                this._toggleTimelapseControllerButtonClicked();
+            else if (this._replayWasShown)
+                this._toggleReplayControllerButtonClicked();
             else
                 this._toggleConsoleButtonClicked();
         }
@@ -509,8 +510,8 @@ WebInspector._doLoadedDoneWithCapabilities = function()
 
     this.breakpointManager = new WebInspector.BreakpointManager(WebInspector.settings.breakpoints, this.debuggerModel, this.workspace);
 
-    this.timelapseModel = new WebInspector.TimelapseModel();
-    this.timelapseControllerView = new WebInspector.TimelapseControllerView(this.timelapseModel);
+    this.replayModel = new WebInspector.ReplayModel();
+    this.replayControllerView = new WebInspector.ReplayControllerView(this.replayModel);
 
     this.scriptSnippetModel = new WebInspector.ScriptSnippetModel(this.workspace);
 
@@ -717,7 +718,7 @@ WebInspector._registerShortcuts = function()
     section.addRelatedKeys(keys, WebInspector.UIString("Go back/forward in panel history"));
 
     section.addKey(shortcut.makeDescriptor(shortcut.Keys.Esc), WebInspector.UIString("Toggle console"));
-    section.addKey(shortcut.makeDescriptor(shortcut.Keys.F6), WebInspector.UIString("Toggle Timelapse controller"));
+    section.addKey(shortcut.makeDescriptor(shortcut.Keys.F6), WebInspector.UIString("Toggle Replay controller"));
     section.addKey(shortcut.makeDescriptor("f", shortcut.Modifiers.CtrlOrMeta), WebInspector.UIString("Search"));
 
     var advancedSearchShortcut = WebInspector.AdvancedSearchController.createShortcut();
@@ -846,22 +847,22 @@ WebInspector.postDocumentKeyDown = function(event)
     if (WebInspector.drawer.animating)
 	return;
 
-    var consoleAndTimelapseHidden = !this._toggleConsoleButton.toggled && !this._toggleTimelapseControllerButton.toggled;
+    var consoleAndReplayHidden = !this._toggleConsoleButton.toggled && !this._toggleReplayControllerButton.toggled;
 
     if (event.keyCode === WebInspector.KeyboardShortcut.Keys.Esc.code) {
         // If drawer is open with some view other than console then close it.
-        if (consoleAndTimelapseHidden && WebInspector.drawer.visible)
+        if (consoleAndReplayHidden && WebInspector.drawer.visible)
             this.closeViewInDrawer();
         else
             this._toggleConsoleButtonClicked();
     }
 
     if (event.keyIdentifier === "F6") {
-        // If drawer is open with some view other than timelapse then close it.
-        if (consoleAndTimelapseHidden && WebInspector.drawer.visible)
+        // If drawer is open with some view other than replay controller then close it.
+        if (consoleAndReplayHidden && WebInspector.drawer.visible)
             this.closeViewInDrawer();
         else
-            this._toggleTimelapseControllerButtonClicked();
+            this._toggleReplayControllerButtonClicked();
     }
 }
 

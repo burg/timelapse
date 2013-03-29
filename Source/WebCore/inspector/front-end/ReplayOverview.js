@@ -33,7 +33,7 @@
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseOverview = function(model, recording)
+WebInspector.ReplayOverview = function(model, recording)
 {
     WebInspector.View.call(this);
 
@@ -43,27 +43,27 @@ WebInspector.TimelapseOverview = function(model, recording)
     this._previewProvider = new WebInspector.OverviewPreviewProvider(this._recording);
     this._recording.addProvider(this._previewProvider);
 
-    this.element.className = "timelapse-overview";
+    this.element.className = "replay-overview";
     this.element.tabIndex = 0;
 
-    this._messagePanel = new WebInspector.TimelapseOverviewMessagePanel(this);
+    this._messagePanel = new WebInspector.ReplayOverviewMessagePanel(this);
 
     this._labelContainer = document.createElement("div");
-    this._labelContainer.classList.add("timelapse-timeline-labels");
-    this._labelContainer.classList.add("timelapse-overview-column-label");
-    this._labelContainer.classList.add("timelapse-overview-row-main");
+    this._labelContainer.classList.add("replay-timeline-labels");
+    this._labelContainer.classList.add("replay-overview-column-label");
+    this._labelContainer.classList.add("replay-overview-row-main");
     this.element.appendChild(this._labelContainer);
 
     this._timelineContainer = document.createElement("div");
-    this._timelineContainer.classList.add("timelapse-overview-timelines");
-    this._timelineContainer.classList.add("timelapse-overview-column-main");
-    this._timelineContainer.classList.add("timelapse-overview-row-main");
+    this._timelineContainer.classList.add("replay-overview-timelines");
+    this._timelineContainer.classList.add("replay-overview-column-main");
+    this._timelineContainer.classList.add("replay-overview-row-main");
 
-    var playbackSlider = new WebInspector.TimelapseOverviewSlider(this, "playback", true);
+    var playbackSlider = new WebInspector.ReplayOverviewSlider(this, "playback", true);
     this._timelineContainer.appendChild(playbackSlider.element);
-    var previousSlider = new WebInspector.TimelapseOverviewSlider(this, "previous", false);
+    var previousSlider = new WebInspector.ReplayOverviewSlider(this, "previous", false);
     this._timelineContainer.appendChild(previousSlider.element);
-    var tentativeSlider = new WebInspector.TimelapseOverviewSlider(this, "tentative", false);
+    var tentativeSlider = new WebInspector.ReplayOverviewSlider(this, "tentative", false);
     this._timelineContainer.appendChild(tentativeSlider.element);
 
     this.sliders = {
@@ -88,9 +88,9 @@ WebInspector.TimelapseOverview = function(model, recording)
     this._dividersLabelBarElement.className = "resources-dividers-label-bar";
     this._timelineContainer.appendChild(this._dividersLabelBarElement);
 
-    this._refreshDelay = WebInspector.TimelapseOverview.DefaultRefreshDelay;
+    this._refreshDelay = WebInspector.ReplayOverview.DefaultRefreshDelay;
 
-    this._callbacks = new WebInspector.EventListenerGroup(this, "TimelapseOverview static callbacks");
+    this._callbacks = new WebInspector.EventListenerGroup(this, "ReplayOverview static callbacks");
     this._registerListeners();
     this._callbacks.install();
 
@@ -103,7 +103,7 @@ WebInspector.TimelapseOverview = function(model, recording)
         delete this._selectedCircleIndex;
 
     // add input providers that have already been created
-    var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+    var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
     
@@ -122,17 +122,17 @@ WebInspector.TimelapseOverview = function(model, recording)
     this._scheduleRefresh();
 };
 
-WebInspector.TimelapseOverview.ResizerOffset = 3.5;
-WebInspector.TimelapseOverview.MinAnimationDelta = 0.5;
-WebInspector.TimelapseOverview.WindowScrollSpeedFactor = 0.001;
-WebInspector.TimelapseOverview.WindowZoomSpeedFactor = 0.001;
-WebInspector.TimelapseOverview.DefaultRefreshDelay = 30;
-WebInspector.TimelapseOverview.TimelineHeight = 30;
+WebInspector.ReplayOverview.ResizerOffset = 3.5;
+WebInspector.ReplayOverview.MinAnimationDelta = 0.5;
+WebInspector.ReplayOverview.WindowScrollSpeedFactor = 0.001;
+WebInspector.ReplayOverview.WindowZoomSpeedFactor = 0.001;
+WebInspector.ReplayOverview.DefaultRefreshDelay = 30;
+WebInspector.ReplayOverview.TimelineHeight = 30;
 
-WebInspector.TimelapseOverview.prototype = {
+WebInspector.ReplayOverview.prototype = {
     _registerListeners: function()
     {
-        var sliderEvents = WebInspector.TimelapseOverviewSlider.Events;
+        var sliderEvents = WebInspector.ReplayOverviewSlider.Events;
         this._callbacks.register(this.sliders.playback, sliderEvents.DragStart, this._onPlaybackSliderDragStart);
         this._callbacks.register(this.sliders.playback, sliderEvents.DragEnd,   this._onPlaybackSliderDragEnd);
         this._callbacks.register(this.sliders.playback.element, "contextmenu", this._onPlaybackSliderContextMenu);
@@ -142,11 +142,11 @@ WebInspector.TimelapseOverview.prototype = {
         this._callbacks.register(this._timelineContainer, "mousewheel", this._onOverviewMousewheel);
 
         var scanner = this._model.scanners.breakpoint;
-        var scannerEvents = WebInspector.TimelapseScanner.Events;
+        var scannerEvents = WebInspector.ReplayScanner.Events;
         this._callbacks.register(scanner, scannerEvents.ScanStarted, this._showMessagePanel.bind(this, "Scanning breakpoints..."));
         this._callbacks.register(scanner, scannerEvents.ScanStopped, this._hideMessagePanel);
 
-        var replayEvents = WebInspector.TimelapseModel.Events;
+        var replayEvents = WebInspector.ReplayModel.Events;
         this._callbacks.register(this._model, replayEvents.PlaybackWillStart,  this._showMessagePanel);
         this._callbacks.register(this._model, replayEvents.PlaybackDidStart,   this._onPlaybackDidStart);
         this._callbacks.register(this._model, replayEvents.PlaybackStopped,    this._onPlaybackStopped);
@@ -156,13 +156,13 @@ WebInspector.TimelapseOverview.prototype = {
         this._callbacks.register(this._model, replayEvents.DebuggerPaused,     this._onDebuggerPaused);
 
         // TODO: these should instead listen to specific data provider events.
-        var recordingEvents = WebInspector.TimelapseRecording.Events;
+        var recordingEvents = WebInspector.ReplayRecording.Events;
         this._callbacks.register(this._recording, recordingEvents.ProviderAdded,  this._onProviderAdded);
         this._callbacks.register(this._recording, recordingEvents.PreviewStarted, this._onPreviewStarted);
         this._callbacks.register(this._recording, recordingEvents.PreviewStopped, this._onPreviewStopped);
         this._callbacks.register(this._recording, recordingEvents.PreviewChanged, this._onPreviewChanged);
 
-        this._callbacks.register(this._recording.calculator, WebInspector.TimelapseCalculator.Events.ZoomChanged, this._onZoomChanged);
+        this._callbacks.register(this._recording.calculator, WebInspector.RecordingCalculator.Events.ZoomChanged, this._onZoomChanged);
 
         var manager = WebInspector.breakpointManager;
         var managerEvents = WebInspector.BreakpointManager.Events;
@@ -294,7 +294,7 @@ WebInspector.TimelapseOverview.prototype = {
         this._refreshIfNeeded();
 
         var ordinal = this._timelines.length;
-        var height = WebInspector.TimelapseOverview.TimelineHeight;
+        var height = WebInspector.ReplayOverview.TimelineHeight;
         var fudge = 2;
 
         this._labelContainer.style.setProperty("height", ordinal*height+fudge + "px");
@@ -399,7 +399,7 @@ WebInspector.TimelapseOverview.prototype = {
     _canUseProvider: function(provider)
     {
         var types = WebInspector.DataProvider.Types;
-        return provider.type == types.TimelapseInput ||
+        return provider.type == types.ReplayInput ||
             provider.type == types.BreakpointHits ||
             provider.type == types.SavepointList;
     },
@@ -432,19 +432,19 @@ WebInspector.TimelapseOverview.prototype = {
         console.assert(!this._timelineForProvider(provider), "Timeline for provider already exists!");
 
         var ordinal = this._timelines.length;
-        var height = WebInspector.TimelapseOverview.TimelineHeight;
+        var height = WebInspector.ReplayOverview.TimelineHeight;
 
-        var label = new WebInspector.TimelapseTimelineLabel(provider);
+        var label = new WebInspector.ReplayTimelineLabel(provider);
         label.element.style.setProperty("top", ordinal*height + "px");
         label.show(this._labelContainer);
         this._labels.push(label);
 
-        var timeline = new WebInspector.TimelapseCircleTimeline(this._recording, provider);
+        var timeline = new WebInspector.ReplayCircleTimeline(this._recording, provider);
         timeline.element.style.setProperty("top", ordinal*height + "px");
         timeline.show(this._timelineContainer);
 
         // set up circle event listeners
-        var timelineEvents = WebInspector.TimelapseCircleTimeline.Events;
+        var timelineEvents = WebInspector.ReplayCircleTimeline.Events;
         callbacks.register(timeline, timelineEvents.CircleMouseOver,  this._onCircleMouseOver);
         callbacks.register(timeline, timelineEvents.CircleMouseOut,   this._onCircleMouseOut);
         callbacks.register(timeline, timelineEvents.CircleSelected,   this._onCircleSelected);
@@ -598,7 +598,7 @@ WebInspector.TimelapseOverview.prototype = {
             return;
 
         // The drag handle prevents the controller from being focused, so do it explicitly
-        WebInspector.timelapseControllerView.focus();
+        WebInspector.replayControllerView.focus();
 
         var node = event.target;
 
@@ -664,14 +664,14 @@ WebInspector.TimelapseOverview.prototype = {
 
         /* case: scrolling horizontally = panning */
         if (event.wheelDeltaX && zoomInterval != 1.0) {
-            var delta = event.wheelDeltaX * WebInspector.TimelapseOverview.WindowScrollSpeedFactor;
+            var delta = event.wheelDeltaX * WebInspector.ReplayOverview.WindowScrollSpeedFactor;
             zoomLeft = Number.constrain(zoomLeft - delta, 0.0, 1.0 - zoomInterval);
             zoomRight = Number.constrain(zoomRight - delta, zoomInterval, 1.0);
         }
 
         /* case: scrolling vertically = panning */
         else if (event.wheelDeltaY) {
-            var delta = event.wheelDeltaY * WebInspector.TimelapseOverview.WindowScrollSpeedFactor;
+            var delta = event.wheelDeltaY * WebInspector.ReplayOverview.WindowScrollSpeedFactor;
             zoomLeft = Number.constrain(zoomLeft - delta, 0.0, 1.0 - zoomInterval);
             zoomRight = Number.constrain(zoomRight - delta, zoomInterval, 1.0);
         }
@@ -681,7 +681,7 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPlaybackSliderDragStart: function(event)
     {
-        this.sliders.playback.addEventListener(WebInspector.TimelapseOverviewSlider.Events.Moved,
+        this.sliders.playback.addEventListener(WebInspector.ReplayOverviewSlider.Events.Moved,
                                                this._onPlaybackSliderDragged,
                                                this);
 
@@ -711,7 +711,7 @@ WebInspector.TimelapseOverview.prototype = {
 
 	// for each active input provider, find the nearest mark within the calculator zoom interval
 	var closestPerProvider = [];
-	var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+	var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
 	for (var i = 0; i < inputProviders.length; i++) {
 	    var provider = inputProviders[i];
 	    if (!provider.isEnabled() || !provider.actions.length)
@@ -748,7 +748,7 @@ WebInspector.TimelapseOverview.prototype = {
 
         // for each active input provider, find the nearest mark within the calculator zoom interval
         var closestPerProvider = [];
-        var inputProviders = this._actioning.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+        var inputProviders = this._actioning.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
         for (var i = 0; i < inputProviders.length; i++) {
             var provider = inputProviders[i];
             if (!provider.isEnabled() || !provider.actions.length)
@@ -776,7 +776,7 @@ WebInspector.TimelapseOverview.prototype = {
 
     _onPlaybackSliderDragEnd: function(event)
     {
-        this.sliders.playback.removeEventListener(WebInspector.TimelapseOverviewSlider.Events.Moved,
+        this.sliders.playback.removeEventListener(WebInspector.ReplayOverviewSlider.Events.Moved,
                                                  this._onPlaybackSliderDragged,
                                                  this);
 
@@ -846,7 +846,7 @@ WebInspector.TimelapseOverview.prototype = {
                 "Abort"
             ];
 
-            var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
+            var replaySpeeds = WebInspector.ReplayModel.ReplaySpeed;
             var optionCallbacks = [
                 // case: moral equivalent of pressing play button
                 function(event) {
@@ -862,7 +862,7 @@ WebInspector.TimelapseOverview.prototype = {
                 function(event) {
                     var allowBreakpoints = model.scanningBreakpoints ||
                         model.replaySpeed === replaySpeeds.Normal;
-                    TimelapseAgent.setPauseOnError(false);
+                    ReplayAgent.setPauseOnError(false);
                     model.replayUpToMarkIndex(model.replayFinishMarkIndex,
                                               allowBreakpoints, model.replaySpeed);
                     preview.popView();
@@ -907,7 +907,7 @@ WebInspector.TimelapseOverview.prototype = {
 
         // figure out an appropriate message if none provided.
         if (typeof message !== "string") {
-            if (this._model.replaySpeed === WebInspector.TimelapseModel.ReplaySpeed.Seeking) {
+            if (this._model.replaySpeed === WebInspector.ReplayModel.ReplaySpeed.Seeking) {
                 message = "Seeking...";
             } else {
                 message = "Replaying... click to cancel.";
@@ -950,7 +950,7 @@ WebInspector.TimelapseOverview.prototype = {
         this.sliders.playback.disable();
         this.sliders.playback.setPosition(this.calculator.computeOverviewPercentage(currentAction.mark.timestamp), true);
         this.sliders.playback.element.addStyleClass("playback-pulse");
-    var replaySpeeds = WebInspector.TimelapseModel.ReplaySpeed;
+    var replaySpeeds = WebInspector.ReplayModel.ReplaySpeed;
         this.sliders.playback.minimumResolution = (this._model.replaySpeed === replaySpeeds.Seeking) ? 10.0 : 1.0;
     
     this._showMessagePanel();
@@ -1019,7 +1019,7 @@ WebInspector.TimelapseOverview.prototype = {
                                               : this.calculator.minimumBoundary;
 
         var timeDelta = nextAction.mark.timestamp - curActionTime;
-        if (timeDelta > WebInspector.TimelapseOverview.MinAnimationDelta) {
+        if (timeDelta > WebInspector.ReplayOverview.MinAnimationDelta) {
             var nextActionPosition = this.calculator.computeOverviewPercentage(nextAction.mark.timestamp);
             this.sliders.playback.animateTo(nextActionPosition, timeDelta);
         }
@@ -1034,7 +1034,7 @@ WebInspector.TimelapseOverview.prototype = {
 
         this._messagePanel.detach();
 
-        var currentMarkIndex = WebInspector.timelapseModel.currentMarkIndex;
+        var currentMarkIndex = WebInspector.replayModel.currentMarkIndex;
         var timeline = this._timelineForProviderType(WebInspector.DataProvider.Types.BreakpointHits);
         if (!timeline)
             return;
@@ -1053,9 +1053,9 @@ WebInspector.TimelapseOverview.prototype = {
     _onSavepointAdded: function(event)
     {
         var savepoint = event.data;
-        var slider = new WebInspector.TimelapseOverviewSlider(this, "savepoint", false);
+        var slider = new WebInspector.ReplayOverviewSlider(this, "savepoint", false);
         slider._savepoint = savepoint;
-        slider._listenerGroup = new WebInspector.EventListenerGroup(this, "TimelapseOverviewSlider listeners");
+        slider._listenerGroup = new WebInspector.EventListenerGroup(this, "ReplayOverviewSlider listeners");
         slider._listenerGroup.register(slider.iconElement, "click", function() {
             this._model.scheduler.executeImmediately(savepoint.createRestoreTask());
         }, this);
@@ -1097,7 +1097,7 @@ WebInspector.TimelapseOverview.prototype = {
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseCircleTimeline = function(recording, provider)
+WebInspector.ReplayCircleTimeline = function(recording, provider)
 {
     WebInspector.View.call(this);
 
@@ -1108,22 +1108,22 @@ WebInspector.TimelapseCircleTimeline = function(recording, provider)
     console.assert(!!provider, "Tried to instantiate circle timeline without provider :-(");
 
     this.element = document.createElement("div");
-    this.element.className = "timelapse-overview-timeline timelapse-category-" + this.provider.name;
+    this.element.className = "replay-overview-timeline replay-category-" + this.provider.name;
     this.element.timeline = this;
     this._canvas = document.createElement("canvas");
     this.element.appendChild(this._canvas);
 
     var events = WebInspector.DataProvider.Events;
-    this._providerCallbacks = new WebInspector.EventListenerGroup(this, "TimelapseCircleTimeline provider listeners");
+    this._providerCallbacks = new WebInspector.EventListenerGroup(this, "ReplayCircleTimeline provider listeners");
     this._providerCallbacks.register(this.provider, events.DataChanged, this._onDataChanged);
     this._providerCallbacks.register(this.provider, events.Enabled,     this._onProviderEnabled);
     this._providerCallbacks.register(this.provider, events.Disabled,    this._onProviderDisabled);
     this._providerCallbacks.register(this.provider, events.WillRemove,  this._onProviderRemoved);
-    this._providerCallbacks.register(this.calculator, WebInspector.TimelapseCalculator.Events.ZoomChanged,
+    this._providerCallbacks.register(this.calculator, WebInspector.RecordingCalculator.Events.ZoomChanged,
                                      this._onZoomChanged);
     this._providerCallbacks.install();
 
-    this._interactionCallbacks = new WebInspector.EventListenerGroup(this, "TimelapseCircleTimeline mouse listeners");
+    this._interactionCallbacks = new WebInspector.EventListenerGroup(this, "ReplayCircleTimeline mouse listeners");
     this._interactionCallbacks.register(this.element, "click",     this._onTimelineClicked);
     this._interactionCallbacks.register(this.element, "mousemove", this._onTimelineMousemove);
     this._interactionCallbacks.register(this.element, "mouseout",  this._onTimelineMouseout);
@@ -1136,7 +1136,7 @@ WebInspector.TimelapseCircleTimeline = function(recording, provider)
     this._highlights = [];
 };
 
-WebInspector.TimelapseCircleTimeline.prototype = {
+WebInspector.ReplayCircleTimeline.prototype = {
     get data()
     {
         return this._data;
@@ -1239,7 +1239,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
             "circleIndex": circleIndex,
         };
 
-        this.dispatchEventToListeners(WebInspector.TimelapseCircleTimeline.Events.CircleSelected, eventData);
+        this.dispatchEventToListeners(WebInspector.ReplayCircleTimeline.Events.CircleSelected, eventData);
     },
 
     _deselectCircle: function(circleIndex)
@@ -1256,7 +1256,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
             "circleIndex": circleIndex,
         };
 
-        this.dispatchEventToListeners(WebInspector.TimelapseCircleTimeline.Events.CircleDeselected, eventData);
+        this.dispatchEventToListeners(WebInspector.ReplayCircleTimeline.Events.CircleDeselected, eventData);
     },
 
     _circleMouseOut: function(circleIndex)
@@ -1274,7 +1274,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
             "circleIndex": circleIndex,
         };
 
-        this.dispatchEventToListeners(WebInspector.TimelapseCircleTimeline.Events.CircleMouseOut, eventData);
+        this.dispatchEventToListeners(WebInspector.ReplayCircleTimeline.Events.CircleMouseOut, eventData);
     },
 
     _circleMouseOver: function(circleIndex)
@@ -1289,7 +1289,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
             "circleIndex": circleIndex,
         };
 
-        this.dispatchEventToListeners(WebInspector.TimelapseCircleTimeline.Events.CircleMouseOver, eventData);
+        this.dispatchEventToListeners(WebInspector.ReplayCircleTimeline.Events.CircleMouseOver, eventData);
     },
 
     _onTimelineClicked: function(event)
@@ -1385,7 +1385,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
             return;
 
         var actionIndex = this.data.recordIndices[clickedCircleIdx][0];
-        WebInspector.timelapseModel.replayUpToMarkIndex(this.provider.records[actionIndex].mark.index);
+        WebInspector.replayModel.replayUpToMarkIndex(this.provider.records[actionIndex].mark.index);
     },
 
     _circleIndexFromMarkIndex: function(markIndex)
@@ -1542,7 +1542,7 @@ WebInspector.TimelapseCircleTimeline.prototype = {
 
         // Shade unexplored intervals
         if (this.provider.name == "breakpoint") {
-            var model = WebInspector.timelapseModel;
+            var model = WebInspector.replayModel;
             var intervals = this.provider.exploredIntervals;
             var ctx = this._ctx;
             var startPercent = 0, endPercent, widthPercent;
@@ -1677,22 +1677,22 @@ WebInspector.TimelapseCircleTimeline.prototype = {
     __proto__: WebInspector.View.prototype
 };
 
-WebInspector.TimelapseCircleTimeline.Events = {
+WebInspector.ReplayCircleTimeline.Events = {
     CircleMouseOver: "CircleMouseOver",
     CircleMouseOut: "CircleMouseOut",
     CircleSelected: "CircleSelected",
     CircleDeselected: "CircleDeselected",
 }
 
-WebInspector.TimelapseOverviewMessagePanel = function(overview)
+WebInspector.ReplayOverviewMessagePanel = function(overview)
 {
     WebInspector.View.call(this);
 
     this.element = document.createElement("div");
-    this.element.className = "timelapse-overview-message message-pulse";
+    this.element.className = "replay-overview-message message-pulse";
 }
 
-WebInspector.TimelapseOverviewMessagePanel.prototype = {
+WebInspector.ReplayOverviewMessagePanel.prototype = {
     get content()
     {
         return this._content;
@@ -1714,13 +1714,13 @@ WebInspector.TimelapseOverviewMessagePanel.prototype = {
  * @Constructor
  * @extends {WebInspector.Object}
  */
-WebInspector.TimelapseOverviewSlider = function(overview, name, adjustable)
+WebInspector.ReplayOverviewSlider = function(overview, name, adjustable)
 {
     WebInspector.Object.call(this);
     this._adjustable = adjustable;
 
     this.element = document.createElement("div");
-    this.element.className = "timelapse-overview-slider " + name + "-slider";
+    this.element.className = "replay-overview-slider " + name + "-slider";
 
     if (this._adjustable) {
         this.element.classList.add("adjustable");
@@ -1728,22 +1728,22 @@ WebInspector.TimelapseOverviewSlider = function(overview, name, adjustable)
     }
 
     this._verticalBarElement = document.createElement("div");
-    this._verticalBarElement.className = "timelapse-slider-band";
+    this._verticalBarElement.className = "replay-slider-band";
     this.element.appendChild(this._verticalBarElement);
 
     var wrapper = document.createElement("div");
-    wrapper.className = "timelapse-slider-wedge-wrapper";
+    wrapper.className = "replay-slider-wedge-wrapper";
     var wedgeBorder = document.createElement("div");
-    wedgeBorder.className = "timelapse-slider-wedge-border";
+    wedgeBorder.className = "replay-slider-wedge-border";
     wrapper.appendChild(wedgeBorder);
     var wedge = document.createElement("div");
-    wedge.className = "timelapse-slider-wedge";
+    wedge.className = "replay-slider-wedge";
     wrapper.appendChild(wedge);
     this.element.appendChild(wrapper);
 
     if (name == "savepoint") {
         var icon = this.iconElement = document.createElement("div");
-        icon.className = "timelapse-slider-icon";
+        icon.className = "replay-slider-icon";
         this.element.appendChild(icon);
     }
 
@@ -1752,13 +1752,13 @@ WebInspector.TimelapseOverviewSlider = function(overview, name, adjustable)
     this.enable();
 };
 
-WebInspector.TimelapseOverviewSlider.Events = {
-    Moved: "TimelapseSliderMoved",
-    DragStart: "TimelapseSliderDragStart",
-    DragEnd: "TimelapseSliderDragEnd"
+WebInspector.ReplayOverviewSlider.Events = {
+    Moved: "SliderMoved",
+    DragStart: "SliderDragStart",
+    DragEnd: "SliderDragEnd"
 };
 
-WebInspector.TimelapseOverviewSlider.prototype = {
+WebInspector.ReplayOverviewSlider.prototype = {
     clear: function()
     {
         this._lastRefreshedPosition = 0.0;
@@ -1778,7 +1778,7 @@ WebInspector.TimelapseOverviewSlider.prototype = {
         this.refresh();
 
         if (!suppressEvents) {
-            this.dispatchEventToListeners(WebInspector.TimelapseOverviewSlider.Events.Moved);
+            this.dispatchEventToListeners(WebInspector.ReplayOverviewSlider.Events.Moved);
         }
     },
 
@@ -1885,7 +1885,7 @@ WebInspector.TimelapseOverviewSlider.prototype = {
 
         this.element.classList.add("slider-dragging");
 
-        this.dispatchEventToListeners(WebInspector.TimelapseOverviewSlider.Events.DragStart);
+        this.dispatchEventToListeners(WebInspector.ReplayOverviewSlider.Events.DragStart);
         return true;
     },
 
@@ -1914,7 +1914,7 @@ WebInspector.TimelapseOverviewSlider.prototype = {
         }
 
         this.element.classList.remove("slider-dragging");
-        this.dispatchEventToListeners(WebInspector.TimelapseOverviewSlider.Events.DragEnd);
+        this.dispatchEventToListeners(WebInspector.ReplayOverviewSlider.Events.DragEnd);
     },
     
     __proto__: WebInspector.Object.prototype
@@ -1924,23 +1924,23 @@ WebInspector.TimelapseOverviewSlider.prototype = {
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseTimelineLabel = function(provider)
+WebInspector.ReplayTimelineLabel = function(provider)
 {
     WebInspector.View.call(this);
 
     this._provider = provider;
 
     this.element = document.createElement("div");
-    this.element.className = "timelapse-timeline-label-wrapper timelapse-category-" + provider.name;
+    this.element.className = "replay-timeline-label-wrapper replay-category-" + provider.name;
     this.element.style.setProperty("background-color", provider.color.toString());
 
     var label = document.createElement("div");
-    label.className = "timelapse-timeline-label timelapse-category-" + provider.name;
+    label.className = "replay-timeline-label replay-category-" + provider.name;
     label.textContent = provider.displayName;
     label.title = provider.displayName;
     this.element.appendChild(label);
 
-    this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseTimelineLabel listeners");
+    this._callbacks = new WebInspector.EventListenerGroup(this, "Static ReplayTimelineLabel listeners");
     this._callbacks.register(label, "click", this._onLabelClicked);
     var events = WebInspector.DataProvider.Events;
     this._callbacks.register(this._provider, events.Enabled,    this._onProviderEnabled);
@@ -1949,7 +1949,7 @@ WebInspector.TimelapseTimelineLabel = function(provider)
     this._callbacks.install();
 };
 
-WebInspector.TimelapseTimelineLabel.prototype = {
+WebInspector.ReplayTimelineLabel.prototype = {
     _onLabelClicked: function()
     {
         this._provider.toggleEnablement();

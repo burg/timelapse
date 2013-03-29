@@ -40,9 +40,9 @@ WebInspector.RecordingsPanel = function()
 
     this.createSidebarViewWithTree();
 
-    this._model = WebInspector.timelapseModel;
-    this._model.addEventListener(WebInspector.TimelapseModel.Events.RecordingUnloaded, this._recordingUnloaded, this);
-    this._model.addEventListener(WebInspector.TimelapseModel.Events.RecordingLoaded, this._recordingLoaded, this);
+    this._model = WebInspector.replayModel;
+    this._model.addEventListener(WebInspector.ReplayModel.Events.RecordingUnloaded, this._recordingUnloaded, this);
+    this._model.addEventListener(WebInspector.ReplayModel.Events.RecordingLoaded, this._recordingLoaded, this);
 
     this._registerShortcuts();
     

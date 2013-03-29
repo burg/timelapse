@@ -49,7 +49,7 @@ void CacheController::enableCache()
 
     m_haveSavedSettings = false;
     [NSURLCache setSharedURLCache:m_savedCache.get()];
-    LOG(Timelapse, "%-30s Reverted to using the shared NSURLCache.\n", "[CacheController]");
+    LOG(DeterministicReplay, "%-30s Reverted to using the shared NSURLCache.\n", "[CacheController]");
     // empty dummy cache so next use of it starts fresh.
     [m_dummyCache.get() removeAllCachedResponses];
     m_savedCache.clear();
@@ -63,9 +63,9 @@ void CacheController::disableCache(bool saveSettings)
     }
 
     if (!m_dummyCache) {
-        LOG(Timelapse, "%-30s Creating an NSURLCache for use when capturing and replaying.\n", "[CacheController]");
+        LOG(DeterministicReplay, "%-30s Creating an NSURLCache for use when capturing and replaying.\n", "[CacheController]");
         NSString* cacheName = [NSString stringWithFormat: @"%@-%@",
-                               @"TimelapseCache",
+                               @"ReplayCache",
                                [[NSProcessInfo processInfo] globallyUniqueString]];
         NSString* diskPath = [NSTemporaryDirectory() stringByAppendingPathComponent: cacheName];
 
@@ -79,10 +79,10 @@ void CacheController::disableCache(bool saveSettings)
     ASSERT([m_dummyCache.get() diskCapacity] > 0);
 
     [NSURLCache setSharedURLCache:m_dummyCache.get()];
-    LOG(Timelapse, "%-30s Now using a Timelapse-only NSURLCache.\n", "[CacheController]");
+    LOG(DeterministicReplay, "%-30s Now using a Timelapse-only NSURLCache.\n", "[CacheController]");
     // again, we can't completely disable the memory cache, because it causes double loads.
     memoryCache()->evictResources();
-    LOG(Timelapse, "%-30s Evicted all contents of the MemoryCache.\n", "[CacheController]");
+    LOG(DeterministicReplay, "%-30s Evicted all contents of the MemoryCache.\n", "[CacheController]");
 }
 
 bool CacheController::cacheState() const

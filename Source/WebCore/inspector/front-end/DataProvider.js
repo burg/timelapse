@@ -113,7 +113,7 @@ WebInspector.DataProvider.prototype = {
 };
 
 WebInspector.DataProvider.Types = {
-    TimelapseInput: "TimelapseInput",
+    ReplayInput: "ReplayInput",
     BreakpointHits: "BreakpointHits",
     SavepointList: "SavepointList",
     OverviewPreview: "OverviewPreview",
@@ -135,10 +135,10 @@ WebInspector.DataProvider.Events = {
     AddedInput: "AddedInput",
 };
 
-WebInspector.TimelapseInputDataProvider = function(recording, name, displayName, color)
+WebInspector.ReplayInputDataProvider = function(recording, name, displayName, color)
 {
     WebInspector.DataProvider.call(this, recording, name,
-				   WebInspector.DataProvider.Types.TimelapseInput);
+				   WebInspector.DataProvider.Types.ReplayInput);
 
     this._displayName = displayName;
     this._color = color;
@@ -146,11 +146,11 @@ WebInspector.TimelapseInputDataProvider = function(recording, name, displayName,
     this._resourceUrlById = {};
     this._selectedIndices = [];
 
-    var eventNames = WebInspector.TimelapseRecording.Events;
+    var eventNames = WebInspector.ReplayRecording.Events;
     recording.addEventListener(eventNames.ActionAdded, this._actionAdded, this);
 };
 
-WebInspector.TimelapseInputDataProvider.prototype = {
+WebInspector.ReplayInputDataProvider.prototype = {
     get displayName()
     {
 	return this._displayName;
@@ -214,12 +214,12 @@ WebInspector.TimelapseInputDataProvider.prototype = {
     _actionAdded: function(event)
     {
 	var record = event.data;
-	var styles = WebInspector.TimelapseInputDataProvider.InputStyles;
+	var styles = WebInspector.ReplayInputDataProvider.InputStyles;
 
 	if (styles[record.type].group != this.name)
 	    return;
 
-	var recordTypes = WebInspector.TimelapseAgent.RecordType;
+	var recordTypes = WebInspector.ReplayAgent.RecordType;
 	if (record.type == recordTypes.RequestResource
 	    || record.type == recordTypes.ReceiveResponse) {
 	    this._resourceUrlById[record.data.id] = record.data.url;
@@ -244,9 +244,9 @@ WebInspector.TimelapseInputDataProvider.prototype = {
     __proto__: WebInspector.DataProvider.prototype
 };
 
-WebInspector.TimelapseInputDataProvider.InputStyles = (function()
+WebInspector.ReplayInputDataProvider.InputStyles = (function()
 {
-    var types = WebInspector.TimelapseAgent.RecordType;
+    var types = WebInspector.ReplayAgent.RecordType;
     var styles = {};
     styles[types.MousePress] = { title: WebInspector.UIString("Mouse Press"), group: "userinput" };
     styles[types.MouseRelease] = { title: WebInspector.UIString("Mouse Release"), group: "userinput" };
@@ -277,7 +277,7 @@ WebInspector.TimelapseInputDataProvider.InputStyles = (function()
 })();
 
 // NB. the closure keeps the helper functions from polluting global scope.
-WebInspector.TimelapseInputDataProvider.InputPreview = (function(){
+WebInspector.ReplayInputDataProvider.InputPreview = (function(){
     var makeCoords = function(data) {
         return "(" + (data.x || 0) + "," + (data.y || 0) + ")";
     };

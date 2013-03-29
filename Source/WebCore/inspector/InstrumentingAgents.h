@@ -54,7 +54,7 @@ class InspectorLayerTreeAgent;
 class InspectorPageAgent;
 class InspectorProfilerAgent;
 class InspectorResourceAgent;
-class InspectorTimelapseAgent;
+class InspectorReplayAgent;
 class InspectorTimelineAgent;
 class InspectorWorkerAgent;
 class Page;
@@ -96,8 +96,8 @@ public:
     void setPageRuntimeAgent(PageRuntimeAgent* agent) { m_pageRuntimeAgent = agent; }
 
 #if ENABLE(TIMELAPSE)
-    InspectorTimelapseAgent* inspectorTimelapseAgent() const { return m_inspectorTimelapseAgent; }
-    void setInspectorTimelapseAgent(InspectorTimelapseAgent* agent) { m_inspectorTimelapseAgent = agent; }
+    InspectorReplayAgent* inspectorReplayAgent() const { return m_inspectorReplayAgent; }
+    void setInspectorReplayAgent(InspectorReplayAgent* agent) { m_inspectorReplayAgent = agent; }
 #endif
 
     WorkerRuntimeAgent* workerRuntimeAgent() const { return m_workerRuntimeAgent; }
@@ -166,7 +166,7 @@ private:
     InspectorResourceAgent* m_inspectorResourceAgent;
     PageRuntimeAgent* m_pageRuntimeAgent;
 #if ENABLE(TIMELAPSE)
-    InspectorTimelapseAgent* m_inspectorTimelapseAgent;
+    InspectorReplayAgent* m_inspectorReplayAgent;
 #endif
     WorkerRuntimeAgent* m_workerRuntimeAgent;
     InspectorTimelineAgent* m_inspectorTimelineAgent;

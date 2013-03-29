@@ -33,7 +33,7 @@
 #define UserInputProxy_h
 
 #include "ScrollTypes.h"
-#include "TimelapseProxy.h"
+#include "ReplayProxy.h"
 #include <wtf/RefPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
@@ -45,7 +45,7 @@ class PlatformKeyboardEvent;
 class PlatformMouseEvent;
 class PlatformWheelEvent;
 
-class UserInputProxy : public TimelapseProxy {
+class UserInputProxy : public ReplayProxy {
     WTF_MAKE_NONCOPYABLE(UserInputProxy);
     WTF_MAKE_FAST_ALLOCATED;
 

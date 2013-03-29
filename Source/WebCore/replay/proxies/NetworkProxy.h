@@ -33,7 +33,7 @@
 #define NetworkProxy_h
 
 #include "ResourceHandle.h"
-#include "TimelapseProxy.h"
+#include "ReplayProxy.h"
 #include <wtf/PassOwnPtr.h>
 #include <wtf/Noncopyable.h>
 
@@ -46,7 +46,7 @@ class ResourceRequest;
 
 typedef std::pair<RefPtr<ResourceHandle>, ResourceHandleClient*> HandleContext;
 
-class NetworkProxy : public TimelapseProxy {
+class NetworkProxy : public ReplayProxy {
     WTF_MAKE_NONCOPYABLE(NetworkProxy);
 
 public:

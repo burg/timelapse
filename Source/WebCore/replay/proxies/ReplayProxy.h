@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2011, Brian Burg.
- *  Copyright (C) 2011, University of Washington. All rights reserved.
+ *  Copyright (C) 2012, Brian Burg.
+ *  Copyright (C) 2012, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,49 +29,38 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TimelapseAgentStateMachine_h
-#define TimelapseAgentStateMachine_h
+#ifndef ReplayProxy_h
+#define ReplayProxy_h
 
-#if ENABLE(TIMELAPSE)
-
+#include "Page.h"
 #include <wtf/Noncopyable.h>
 
 namespace WebCore {
 
-class TimelapseAgentStateMachine {
-    WTF_MAKE_NONCOPYABLE(TimelapseAgentStateMachine);
-public:
-    TimelapseAgentStateMachine();
+class ReplayProxy {
+    WTF_MAKE_NONCOPYABLE(ReplayProxy);
 
-    enum State {
-        Disabled,
-        RecordingUnloaded,
-        RecordingLoaded,
-        WaitingForCapture,
+public:
+    enum ProxyMode {
         Capturing,
-        WaitingForReplay,
+        Open,
         Replaying,
-        ReplayPaused
     };
 
-    bool disabled() const;
-    bool enabled() const;
-    bool canCapture() const;
-    bool canReplay() const;
-    bool replayPaused() const;
-    bool capturing() const;
-    bool replaying() const;
+    virtual ~ReplayProxy() {}
 
-    bool inState(State state) const { return m_state == state; }
-    void advanceTo(State);
+    void setProxyMode(ProxyMode mode) { m_mode = mode; }
+    ProxyMode mode() const { return m_mode; }
 
-private:
-    const char* stateNameFor(State);
-    State m_state;
+protected:
+    ReplayProxy(Page* page)
+    : m_page(page)
+    , m_mode(Open) {}
+
+    Page* m_page;
+    ProxyMode m_mode;
 };
-
+    
 } // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
-
-#endif // TimelapseAgentStateMachine_h
+#endif // ReplayProxy_h

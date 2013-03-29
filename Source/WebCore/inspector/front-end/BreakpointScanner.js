@@ -30,11 +30,11 @@
  */
 
 
-WebInspector.TimelapseBreakpointScanner = function(model) {
-    WebInspector.TimelapseScanner.call(this, model, "breakpoint", "Active Breakpoints");
+WebInspector.BreakpointScanner = function(model) {
+    WebInspector.ReplayScanner.call(this, model, "breakpoint", "Active Breakpoints");
 };
 
-WebInspector.TimelapseBreakpointScanner.prototype = {
+WebInspector.BreakpointScanner.prototype = {
     _resumeFromBreakpointPause: function(event)
     {
         // prevent debugger wait from propagating; resume.
@@ -50,7 +50,7 @@ WebInspector.TimelapseBreakpointScanner.prototype = {
         if (!WebInspector.debuggerModel.debuggerEnabled())
             WebInspector.debuggerModel.enableDebugger();
         
-        this._model.addEventListener(WebInspector.TimelapseModel.Events.DebuggerWaiting,
+        this._model.addEventListener(WebInspector.ReplayModel.Events.DebuggerWaiting,
                                      this._resumeFromBreakpointPause, this);
         cb();
     },
@@ -63,7 +63,7 @@ WebInspector.TimelapseBreakpointScanner.prototype = {
         if (!savedState)
             WebInspector.debuggerModel.disableDebugger();
         
-        this._model.addEventListener(WebInspector.TimelapseModel.Events.DebuggerWaiting,
+        this._model.addEventListener(WebInspector.ReplayModel.Events.DebuggerWaiting,
                                      this._resumeFromBreakpointPause, this);
         cb();
     },
@@ -85,29 +85,29 @@ WebInspector.TimelapseBreakpointScanner.prototype = {
         this.segmentedScanForRegion(startIndex, endIndex);
     },
 
-    __proto__: WebInspector.TimelapseScanner.prototype
+    __proto__: WebInspector.ReplayScanner.prototype
 };
 
-WebInspector.TimelapseBreakpointDataProvider = function(recording, displayName, color)
+WebInspector.ReplayBreakpointDataProvider = function(recording, displayName, color)
 {
     WebInspector.DataProvider.call(this, recording, "breakpoint",
                                    WebInspector.DataProvider.Types.BreakpointHits);
 
-    var tracker = WebInspector.timelapseModel.breakpointTracker;
+    var tracker = WebInspector.replayModel.breakpointTracker;
 
     this._displayName = displayName;
     this._color = color;
     this._intervals = tracker.exploredIntervals;
     this._initializeRecords();
 
-    var events = WebInspector.TimelapseBreakpointTracker.Events;
+    var events = WebInspector.ReplayBreakpointTracker.Events;
     tracker.addEventListener(events.BreakpointHit,     this._onBreakpointHit, this);
     tracker.addEventListener(events.BreakpointAdded,   this._onBreakpointsInvalidated, this);
     tracker.addEventListener(events.BreakpointRemoved, this._onBreakpointsInvalidated, this);
     tracker.addEventListener(events.IntervalExplored,  this._onIntervalExplored, this);
 }
 
-WebInspector.TimelapseBreakpointDataProvider.prototype = {
+WebInspector.ReplayBreakpointDataProvider.prototype = {
     get counterNoun()
     {
         return "Hits";
@@ -132,7 +132,7 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 
     _initializeRecords: function()
     {
-        var records = WebInspector.timelapseModel.breakpointTracker.records;
+        var records = WebInspector.replayModel.breakpointTracker.records;
         this._records = [];
 
         // flatten existing records from BreakpointTracker
@@ -144,7 +144,7 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
                 this._records.push({
                     breakpoint: hits[j],
                     mark: records[i].mark,
-                    type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
+                    type: WebInspector.ReplayAgent.RecordType.BreakpointHit,
                     hitIndex: j
                 });
             }
@@ -184,13 +184,13 @@ WebInspector.TimelapseBreakpointDataProvider.prototype = {
 
     _removeEventListeners: function(event)
     {
-        var tracker = WebInspector.timelapseModel.breakpointTracker;
-        var events = WebInspector.TimelapseBreakpointTracker.Events;
+        var tracker = WebInspector.replayModel.breakpointTracker;
+        var events = WebInspector.ReplayBreakpointTracker.Events;
         tracker.removeEventListener(events.BreakpointHit, this._onBreakpointHit, this);
         tracker.removeEventListener(events.BreakpointAdded, this._removeEventListeners, this);
         tracker.removeEventListener(events.BreakpointRemoved, this._removeEventListeners, this);
         tracker.removeEventListener(events.IntervalExplored, this._onIntervalExplored, this);
     },
     
-    __proto__: WebInspector.TimelapseInputDataProvider.prototype
+    __proto__: WebInspector.ReplayInputDataProvider.prototype
 };

@@ -60,7 +60,7 @@
 namespace WebCore {
 
 UserInputProxy::UserInputProxy(Page* page)
-: TimelapseProxy(page) {}
+: ReplayProxy(page) {}
 
 PassOwnPtr<UserInputProxy> UserInputProxy::create(Page* page)
 {

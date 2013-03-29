@@ -56,7 +56,7 @@ static void dumpEventDispatchInfo(RefPtr<Event> event, RefPtr<EventTarget> event
         return;
         
     if (Node* node = eventTarget->toNode())
-        LOG(Timelapse, "%-30s %s event: type=%s, target=%d/node[%p] %s\n", "[AsyncEventProxy]",
+        LOG(DeterministicReplay, "%-30s %s event: type=%s, target=%d/node[%p] %s\n", "[AsyncEventProxy]",
             (wasIgnored) ? "IGNORED" : "Received",
             event->type().string().utf8().data(),
             SerializedEventTarget::frameIndexFromDocument((node->inDocument()) ? node->document() : node->ownerDocument()),
@@ -64,7 +64,7 @@ static void dumpEventDispatchInfo(RefPtr<Event> event, RefPtr<EventTarget> event
             node->nodeName().utf8().data());
 
     if (DOMWindow* window = eventTarget->toDOMWindow())
-        LOG(Timelapse, "%-30s %s event: type=%s, target=%d/window[%p] %s\n", "[AsyncEventProxy]",
+        LOG(DeterministicReplay, "%-30s %s event: type=%s, target=%d/window[%p] %s\n", "[AsyncEventProxy]",
             (wasIgnored) ? "IGNORED" : "Received",
             event->type().string().utf8().data(),
             SerializedEventTarget::frameIndexFromDocument(window->document()),
@@ -87,7 +87,7 @@ static bool isCapturableEventType(const AtomicString&)
 #endif // ENABLE(TIMELAPSE)
 
 AsyncEventProxy::AsyncEventProxy(Page* page)
-: TimelapseProxy(page) {}
+: ReplayProxy(page) {}
 
 PassOwnPtr<AsyncEventProxy> AsyncEventProxy::create(Page* page)
 {
@@ -98,10 +98,10 @@ void AsyncEventProxy::dispatchFakeMouseMove(Frame* frame, const PlatformMouseEve
 {
     ASSERT(frame);
 #if ENABLE(TIMELAPSE)
-    if (mode() == TimelapseProxy::Replaying && !fromReplay)
+    if (mode() == ReplayProxy::Replaying && !fromReplay)
         return;
     
-    if (mode() == TimelapseProxy::Capturing)
+    if (mode() == ReplayProxy::Capturing)
         m_page->replayController()->capturePageInput(new DispatchFakeMouseMove(frame, fakeMouseMove));
 #else
     UNUSED_PARAM(fromReplay);
@@ -116,17 +116,17 @@ bool AsyncEventProxy::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<
     RefPtr<EventTarget> eventTarget(prpEventTarget);
 
 #if ENABLE(TIMELAPSE)
-    bool shouldIgnoreDispatchRequest = (mode() == TimelapseProxy::Replaying && !fromReplay && isCapturableEventType(event->type()));
+    bool shouldIgnoreDispatchRequest = (mode() == ReplayProxy::Replaying && !fromReplay && isCapturableEventType(event->type()));
 
 #if !LOG_DISABLED
-    if (mode() != TimelapseProxy::Open)
+    if (mode() != ReplayProxy::Open)
         dumpEventDispatchInfo(event, eventTarget, shouldIgnoreDispatchRequest);
 #endif // !LOG_DISABLED
 
     if (shouldIgnoreDispatchRequest)
         return false;
         
-    if (mode() == TimelapseProxy::Capturing && isCapturableEventType(event->type()))
+    if (mode() == ReplayProxy::Capturing && isCapturableEventType(event->type()))
         m_page->replayController()->capturePageInput(new DispatchAsyncEvent(event, eventTarget));
 #else
     UNUSED_PARAM(fromReplay);

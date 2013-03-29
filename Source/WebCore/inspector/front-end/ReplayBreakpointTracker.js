@@ -32,24 +32,24 @@
 /**
  * @constructor
  */
-WebInspector.TimelapseBreakpointTracker = function(model)
+WebInspector.ReplayBreakpointTracker = function(model)
 {
     WebInspector.Object.call(this);
     
     this._model = model;
-    this._exploredIntervals = new WebInspector.TimelapseIntervalManager();
+    this._exploredIntervals = new WebInspector.IntervalTracker();
 
     var manager = WebInspector.breakpointManager;
     var managerEvents = WebInspector.BreakpointManager.Events;
-    this._callbacks = new WebInspector.EventListenerGroup(this, "Static TimelapseBreakpointTracker listeners");
+    this._callbacks = new WebInspector.EventListenerGroup(this, "Static ReplayBreakpointTracker listeners");
     this._callbacks.register(manager, managerEvents.BreakpointAdded, this._breakpointUpdated);
     this._callbacks.register(manager, managerEvents.BreakpointAddedToStorage,     this._breakpointAddedToStorage);
     this._callbacks.register(manager, managerEvents.BreakpointRemovedFromStorage, this._breakpointRemovedFromStorage);
     this._callbacks.install();
 
     var replayCallbacks = this._replayCallbacks
-                        = new WebInspector.EventListenerGroup(this, "TimelapseBreakpointTracker listeners per TimelapseRecording");
-    var replayEvents = WebInspector.TimelapseModel.Events;
+                        = new WebInspector.EventListenerGroup(this, "ReplayBreakpointTracker listeners per ReplayRecording");
+    var replayEvents = WebInspector.ReplayModel.Events;
     replayCallbacks.register(this._model, replayEvents.PlaybackWillStart, this._playbackWillStart);
     replayCallbacks.register(this._model, replayEvents.PlaybackStopped,   this._endPendingInterval);
     replayCallbacks.register(this._model, replayEvents.InputHit,          this._inputHit);
@@ -62,14 +62,14 @@ WebInspector.TimelapseBreakpointTracker = function(model)
     this._recordingUnloaded();
 };
 
-WebInspector.TimelapseBreakpointTracker.Events = {
+WebInspector.ReplayBreakpointTracker.Events = {
     BreakpointHit: "BreakpointHit",
     BreakpointAdded: "BreakpointAdded",
     BreakpointRemoved: "BreakpointRemoved",
     IntervalExplored: "IntervalExplored"
 };
 
-WebInspector.TimelapseBreakpointTracker.prototype = {
+WebInspector.ReplayBreakpointTracker.prototype = {
 
     // Public query API
     get records()
@@ -105,14 +105,14 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
     
     _recordingLoaded: function()
     {
-        this._model.onceEventListener(WebInspector.TimelapseModel.Events.RecordingUnloaded, this._recordingUnloaded, this);
+        this._model.onceEventListener(WebInspector.ReplayModel.Events.RecordingUnloaded, this._recordingUnloaded, this);
         this._replayCallbacks.install();
         this._resetState();
     },
 
     _recordingUnloaded: function(event)
     {
-        this._model.onceEventListener(WebInspector.TimelapseModel.Events.RecordingLoaded, this._recordingLoaded, this);
+        this._model.onceEventListener(WebInspector.ReplayModel.Events.RecordingLoaded, this._recordingLoaded, this);
         // if this is a synthetic callback from the constructor, don't try to uninstall callbacks.
         if (typeof event !== "undefined")
             this._replayCallbacks.uninstall();
@@ -128,18 +128,18 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
         this._debuggerWaitIndex = -1;
         this._exploredIntervals.clear();
 
-        this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Reset);
+        this.dispatchEventToListeners(WebInspector.ReplayBreakpointTracker.Reset);
     },
 
     _endPendingInterval: function()
     {
 	if (this._exploredIntervals.intervalPending) {
 	    this._exploredIntervals.endInterval(this._model.currentMarkIndex);
-	    this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Events.IntervalExplored);
+	    this.dispatchEventToListeners(WebInspector.ReplayBreakpointTracker.Events.IntervalExplored);
 	}
     },
 
-    // Callbacks from TimelapseModel
+    // Callbacks from ReplayModel
     _playbackWillStart: function()
     {
         this._endPendingInterval();
@@ -180,7 +180,7 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
     
         // lazily add unknown breakpoints as we hit them
         if (!this._breakpoints[debuggerId])
-            this._breakpoints[debuggerId] = new WebInspector.TimelapseBreakpoint(rawLocation);
+            this._breakpoints[debuggerId] = new WebInspector.ReplayBreakpoint(rawLocation);
 
         this._currentBreakpoint = this._breakpoints[debuggerId];
         var hitRecords = this._records;
@@ -192,7 +192,7 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
             idx = -(idx + 1);
             var actionIndex = this._model.loadedRecording.actionIndexFromMarkIndex(markIndex);
             hitRecords.splice(idx, 0, {
-            type: WebInspector.TimelapseAgent.RecordType.BreakpointHit,
+            type: WebInspector.ReplayAgent.RecordType.BreakpointHit,
             mark: this._model.loadedRecording.actions[actionIndex].mark,
             hits: []
             });
@@ -200,10 +200,10 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 
         hitRecords[idx].hits[hitIndex] = this._breakpoints[debuggerId];
 
-        this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Events.BreakpointHit, {
+        this.dispatchEventToListeners(WebInspector.ReplayBreakpointTracker.Events.BreakpointHit, {
             breakpoint: this._breakpoints[debuggerId],
             mark:       hitRecords[idx].mark,
-            type:       WebInspector.TimelapseAgent.RecordType.BreakpointHit,
+            type:       WebInspector.ReplayAgent.RecordType.BreakpointHit,
             hitIndex:   this.breakpointHitIndex
         });
     },
@@ -233,7 +233,7 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
     _breakpointAddedToStorage: function()
     {
 	this._exploredIntervals.clear();
-	this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Events.BreakpointAdded);
+	this.dispatchEventToListeners(WebInspector.ReplayBreakpointTracker.Events.BreakpointAdded);
     },
 
     _breakpointRemovedFromStorage: function(event)
@@ -252,7 +252,7 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 		records.splice(i--, 1);
 	}
 
-	this.dispatchEventToListeners(WebInspector.TimelapseBreakpointTracker.Events.BreakpointRemoved, this._breakpoints[debuggerId]);
+	this.dispatchEventToListeners(WebInspector.ReplayBreakpointTracker.Events.BreakpointRemoved, this._breakpoints[debuggerId]);
 	delete this._breakpoints[debuggerId];
     },
     
@@ -262,7 +262,7 @@ WebInspector.TimelapseBreakpointTracker.prototype = {
 /**
  * @constructor
  */
-WebInspector.TimelapseBreakpoint = function(rawLocation)
+WebInspector.ReplayBreakpoint = function(rawLocation)
 {
     WebInspector.Object.call(this);
 
@@ -272,7 +272,7 @@ WebInspector.TimelapseBreakpoint = function(rawLocation)
     this.recomputeLink();
 };
 
-WebInspector.TimelapseBreakpoint.prototype = {
+WebInspector.ReplayBreakpoint.prototype = {
     get breakpoint()
     {
 	return this._breakpoint;
@@ -341,7 +341,7 @@ WebInspector.TimelapseBreakpoint.prototype = {
 
     _linkifyLocation: function(linkifier)
     {
-        return linkifier.linkifyLocation(this._sourceURL, this._lineNumber, 0, "timelapse-breakpoint-link source-code");
+        return linkifier.linkifyLocation(this._sourceURL, this._lineNumber, 0, "replay-breakpoint-link source-code");
     },
     
     __proto__: WebInspector.Object.prototype
@@ -350,12 +350,12 @@ WebInspector.TimelapseBreakpoint.prototype = {
 /**
  * @constructor
  */
-WebInspector.TimelapseIntervalManager = function()
+WebInspector.IntervalTracker = function()
 {
     this.clear();
 };
 
-WebInspector.TimelapseIntervalManager.prototype = {
+WebInspector.IntervalTracker.prototype = {
     get intervalPending()
     {
 	return !(typeof this._pendingIntervalStart === "undefined");

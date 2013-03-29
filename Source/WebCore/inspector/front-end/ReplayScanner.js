@@ -30,7 +30,7 @@
  */
 
 
-WebInspector.TimelapseScanner = function(model, name, label, shouldDisplay) {
+WebInspector.ReplayScanner = function(model, name, label, shouldDisplay) {
     this._model = model;
     this._scanning = false;
     this._scannerName = name || "(unnamed scanner)";
@@ -38,12 +38,12 @@ WebInspector.TimelapseScanner = function(model, name, label, shouldDisplay) {
     this._displayable = (typeof shouldDisplay === "undefined") ? true : shouldDisplay;
 };
 
-WebInspector.TimelapseScanner.Events = {
+WebInspector.ReplayScanner.Events = {
     ScanStarted: "ScanStarted",
     ScanStopped: "ScanStopped"
 };
 
-WebInspector.TimelapseScanner.prototype = {
+WebInspector.ReplayScanner.prototype = {
     get isScanning()
     {
         return this._scanning;
@@ -103,7 +103,7 @@ WebInspector.TimelapseScanner.prototype = {
     linearScanForRegion: function(startIndex, endIndex)
     {
         var model = this._model;
-        var timelapseEvents = WebInspector.TimelapseModel.Events;
+        var replayEvents = WebInspector.ReplayModel.Events;
         var scanner = this;
 
         var currentIndex = model.currentMarkIndex;
@@ -120,7 +120,7 @@ WebInspector.TimelapseScanner.prototype = {
         task.chain("notifyScanStarted", this._notifyScanStarted, this);
         task.chain("scanDidStart", this.scanDidStart, this);
         task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
-            model.onceEventListener(timelapseEvents.InputWaiting,
+            model.onceEventListener(replayEvents.InputWaiting,
                                     this._createPreventDefaultCallback(cb), this);
             model.startReplayUpToMarkIndexTask(startIndex, true).run();
         }, this);
@@ -131,18 +131,18 @@ WebInspector.TimelapseScanner.prototype = {
             var endActionIndex = model.loadedRecording.actionIndexFromMarkIndex(endIndex);
             var prevIndex = actions[endActionIndex - 1].mark.index;
             task.chain("ScanToMarkPrecedingRegionEnd("+prevIndex+")", function(cb) {
-                model.onceEventListener(timelapseEvents.InputWaiting,
+                model.onceEventListener(replayEvents.InputWaiting,
                                         this._createPreventDefaultCallback(cb), this);
                 model.startReplayUpToMarkIndexTask(prevIndex, true).run();
             }, this);
             // if this is the last step, then don't prevent default action of InputWaiting
             task.chain("ScanToRegionEnd("+endIndex+")", function(cb) {
-                model.onceEventListener(timelapseEvents.InputWaiting, cb, task);
+                model.onceEventListener(replayEvents.InputWaiting, cb, task);
                 model.startReplayUpToMarkIndexTask(endIndex, true).run();
             });
         } else {
             task.chain("ScanToRegionEnd("+endIndex+")", function(cb) {
-                model.onceEventListener(timelapseEvents.InputWaiting,
+                model.onceEventListener(replayEvents.InputWaiting,
                                         this._createPreventDefaultCallback(cb), this);
                 model.startReplayUpToMarkIndexTask(endIndex, true).run();
             }, this);
@@ -156,7 +156,7 @@ WebInspector.TimelapseScanner.prototype = {
             });
         } else if (currentIndex != endIndex) {
             task.chain("SeekToCursor("+currentIndex+")", function(cb) {
-                model.onceEventListener(timelapseEvents.InputWaiting, cb, task);
+                model.onceEventListener(replayEvents.InputWaiting, cb, task);
                 model.startReplayUpToMarkIndexTask(currentIndex, false).run();
             });
         }
@@ -176,7 +176,7 @@ WebInspector.TimelapseScanner.prototype = {
 
         /* Case: playback is paused inside the region to be scanned. */
         var model = this._model;
-        var timelapseEvents = WebInspector.TimelapseModel.Events;
+        var replayEvents = WebInspector.ReplayModel.Events;
         var scanner = this;
         
         var currentIndex = model.currentMarkIndex;
@@ -189,7 +189,7 @@ WebInspector.TimelapseScanner.prototype = {
         task.chain("scanDidStart", this.scanDidStart, this);
         task.chain("willEnterRegion", this.willEnterRegion, this);
         task.chain("ScanFromCursorToRegionEnd("+endIndex+")", function(cb) {
-            model.onceEventListener(timelapseEvents.InputWaiting,
+            model.onceEventListener(replayEvents.InputWaiting,
                                     this._createPreventDefaultCallback(cb), this);
             model.startReplayUpToMarkIndexTask(endIndex, true).run();
         }, this);
@@ -197,7 +197,7 @@ WebInspector.TimelapseScanner.prototype = {
 
         if (startIndex > actions[0].mark.index) {
             task.chain("SeekToRegionBegin("+startIndex+")", function(cb) {
-                model.onceEventListener(timelapseEvents.InputWaiting,
+                model.onceEventListener(replayEvents.InputWaiting,
                                         this._createPreventDefaultCallback(cb), this);
                 model.startReplayUpToMarkIndexTask(startIndex, true).run();
             }, this);
@@ -211,7 +211,7 @@ WebInspector.TimelapseScanner.prototype = {
             });
         } else {
             task.chain("ScanFromRegionBeginToCursor("+currentIndex+")", function(cb) {
-                model.onceEventListener(timelapseEvents.InputWaiting, cb, task);
+                model.onceEventListener(replayEvents.InputWaiting, cb, task);
                 model.startReplayUpToMarkIndexTask(currentIndex, true).run();
             });
         }
@@ -226,14 +226,14 @@ WebInspector.TimelapseScanner.prototype = {
     _notifyScanStarted: function(cb)
     {
         this._scanning = true;
-        this.dispatchEventToListeners(WebInspector.TimelapseScanner.Events.ScanStarted);
+        this.dispatchEventToListeners(WebInspector.ReplayScanner.Events.ScanStarted);
         cb();
     },
 
     _notifyScanStopped: function(cb)
     {
         this._scanning = false;
-        this.dispatchEventToListeners(WebInspector.TimelapseScanner.Events.ScanStopped);
+        this.dispatchEventToListeners(WebInspector.ReplayScanner.Events.ScanStopped);
         cb();
     },
 

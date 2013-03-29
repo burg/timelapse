@@ -33,15 +33,14 @@
  * @constructor
  * @extends {WebInspector.View}
  */
-WebInspector.TimelapseScrollview = function(model, recording)
+WebInspector.ReplayScrollview = function(model, recording)
 {
     WebInspector.View.call(this);
-    this.registerRequiredCSS("timelapseMiniview.css");
 
     this._model = model;
     this._recording = recording;
    
-    this.element.className = "timelapse-scrollview";
+    this.element.className = "replay-scrollview";
 
     this._canvas = document.createElement("canvas");
     this.element.appendChild(this._canvas);
@@ -55,23 +54,23 @@ WebInspector.TimelapseScrollview = function(model, recording)
     this._autosizeCanvas();
     this._clearGraph();
     
-    this._callbacks = new WebInspector.EventListenerGroup(this, "TimelapseScrollview static callbacks");
-    var recordingEvents = WebInspector.TimelapseRecording.Events;
-    var replayEvents = WebInspector.TimelapseModel.Events;
+    this._callbacks = new WebInspector.EventListenerGroup(this, "ReplayScrollview static callbacks");
+    var recordingEvents = WebInspector.ReplayRecording.Events;
+    var replayEvents = WebInspector.ReplayModel.Events;
     this._callbacks.register(this._recording, recordingEvents.ProviderAdded, this._onProviderAdded);
     this._callbacks.register(this._model, replayEvents.CaptureDidStart, this._captureDidStart);
     this._callbacks.install();
     
     // if providers already exist, add them.
-    var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+    var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
     for (var i = 0; i < inputProviders.length; i++)
         this._addProvider(inputProviders[i]);
 };
 
-WebInspector.TimelapseScrollview.MaxRecordLifetime = 10.0; /* seconds */
-WebInspector.TimelapseScrollview.MaxBinsPerTimeline = 600;
+WebInspector.ReplayScrollview.MaxRecordLifetime = 10.0; /* seconds */
+WebInspector.ReplayScrollview.MaxBinsPerTimeline = 600;
 
-WebInspector.TimelapseScrollview.prototype = {
+WebInspector.ReplayScrollview.prototype = {
     // Public API
     refresh: function()
     {
@@ -125,7 +124,7 @@ WebInspector.TimelapseScrollview.prototype = {
     _canUseProvider: function(provider)
     {
 	var types = WebInspector.DataProvider.Types;
-	return provider.type == types.TimelapseInput;
+	return provider.type == types.ReplayInput;
     },
 
     _providersWithType: function(ty)
@@ -181,9 +180,9 @@ WebInspector.TimelapseScrollview.prototype = {
 	if (!this.calculator.minimumBoundary)
 	    return;
 
-	this._binsPerTimeline = Math.min(this._cachedOffsetWidth/2, WebInspector.TimelapseScrollview.MaxBinsPerTimeline);
+	this._binsPerTimeline = Math.min(this._cachedOffsetWidth/2, WebInspector.ReplayScrollview.MaxBinsPerTimeline);
 
-	var interval = WebInspector.TimelapseScrollview.MaxRecordLifetime;
+	var interval = WebInspector.ReplayScrollview.MaxRecordLifetime;
 	var now = Date.now();
 	if (!this._previousAnimationTime)
 	    this._minTimestamp = this.calculator.minimumBoundary - interval;
@@ -200,7 +199,7 @@ WebInspector.TimelapseScrollview.prototype = {
 	    if (record.mark.timestamp < this._minTimestamp)
 		return false;
 
-	    var group = WebInspector.TimelapseInputDataProvider.InputStyles[record.type].group;
+	    var group = WebInspector.ReplayInputDataProvider.InputStyles[record.type].group;
 	    var snappedTimestamp = record.mark.timestamp - (record.mark.timestamp % timestampGranularity);
 	    var percent = Math.round(this._binsPerTimeline * (snappedTimestamp - this._minTimestamp) / interval);
 	    var percentile = Number.constrain(percent, 0, this._binsPerTimeline-1);

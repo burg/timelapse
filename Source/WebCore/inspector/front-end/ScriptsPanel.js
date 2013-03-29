@@ -196,7 +196,7 @@ WebInspector.ScriptsPanel = function(workspaceForTest)
     WebInspector.profilesModel.addEventListener(WebInspector.ProfilesModel.Events.ProfileRemoved, this._profileRemoved, this);
     
     // Initialize by pretending that the current recording state has just occurred
-    if (WebInspector.timelapseModel.canReplay)
+    if (WebInspector.replayModel.canReplay)
         this._recordingLoaded();
     else
         this._recordingUnloaded();
@@ -321,7 +321,7 @@ WebInspector.ScriptsPanel.prototype = {
 
         this._updateDebuggerButtons();
 
-	if (WebInspector.inspectorView.currentPanel().name != "timelapse" || !WebInspector.timelapseModel.inputLocked)
+	if (WebInspector.inspectorView.currentPanel().name != "recordings" || !WebInspector.replayModel.inputLocked)
             WebInspector.inspectorView.setCurrentPanel(this);
 
         this.sidebarPanes.callstack.update(details.callFrames);
@@ -456,7 +456,7 @@ WebInspector.ScriptsPanel.prototype = {
         var sourceFrame = this._showFile(uiSourceCode);
         if (typeof lineNumber === "number")
             sourceFrame.highlightLine(lineNumber);
-	if (!WebInspector.timelapseModel.isReplaying)
+	if (!WebInspector.replayModel.isReplaying)
             sourceFrame.focus();
 
         sourceFrame.focus();
@@ -578,7 +578,7 @@ WebInspector.ScriptsPanel.prototype = {
             uiSourceCode.setFormatted(true);
         var sourceFrame = this._showFile(uiSourceCode);
         sourceFrame.revealLine(uiLocation.lineNumber);
-	if (!WebInspector.timelapseModel.isReplaying)
+	if (!WebInspector.replayModel.isReplaying)
             sourceFrame.focus();
     },
 
@@ -613,7 +613,7 @@ WebInspector.ScriptsPanel.prototype = {
         var uiSourceCode = /** @type {WebInspector.UISourceCode} */ (event.data);
         var sourceFrame = this._showFile(uiSourceCode);
         this._navigatorController.hideNavigatorOverlay();
-	if (!WebInspector.timelapseModel.isReplaying)
+	if (!WebInspector.replayModel.isReplaying)
             sourceFrame.focus();
         WebInspector.searchController.resetSearch();
     },
@@ -623,7 +623,7 @@ WebInspector.ScriptsPanel.prototype = {
         var uiSourceCode = /** @type {WebInspector.UISourceCode} */ (event.data.uiSourceCode);
         var sourceFrame = this._showFile(uiSourceCode);
         this._navigatorController.hideNavigatorOverlay();
-        if (sourceFrame && event.data.focusSource && !WebInspector.timelapseModel.isReplaying)
+        if (sourceFrame && event.data.focusSource && !WebInspector.replayModel.isReplaying)
             sourceFrame.focus();
     },
 
@@ -1019,24 +1019,24 @@ WebInspector.ScriptsPanel.prototype = {
 
     _recordingLoaded: function()
     {
-        var recording = WebInspector.timelapseModel.loadedRecording;
+        var recording = WebInspector.replayModel.loadedRecording;
         var existingProviders = recording.providersWithType(WebInspector.DataProvider.Types.ProfileHeatmap);
         for (var i = 0; i < existingProviders.length; ++i) {
             this._providerAdded({ "data": existingProviders[i]});
         }
 
-        recording.addEventListener(WebInspector.TimelapseRecording.Events.ProviderAdded, this._providerAdded, this);
-        WebInspector.timelapseModel.onceEventListener(WebInspector.TimelapseModel.Events.RecordingUnloaded, this._recordingUnloaded, this);
+        recording.addEventListener(WebInspector.ReplayRecording.Events.ProviderAdded, this._providerAdded, this);
+        WebInspector.replayModel.onceEventListener(WebInspector.ReplayModel.Events.RecordingUnloaded, this._recordingUnloaded, this);
     },
     
     _recordingUnloaded: function(event)
     {
         if (event && event.data) {
             var recording = event.data;
-            recording.removeEventListener(WebInspector.TimelapseRecording.Events.ProviderAdded, this._providerAdded, this);
+            recording.removeEventListener(WebInspector.ReplayRecording.Events.ProviderAdded, this._providerAdded, this);
         }
 
-        WebInspector.timelapseModel.onceEventListener(WebInspector.TimelapseModel.Events.RecordingLoaded, this._recordingLoaded, this);
+        WebInspector.replayModel.onceEventListener(WebInspector.ReplayModel.Events.RecordingLoaded, this._recordingLoaded, this);
         
         // add profiles that were created before scripts panel was initialized
         // and not in the context of a recording.
@@ -1063,7 +1063,7 @@ WebInspector.ScriptsPanel.prototype = {
         if (profile.profileType().id !== WebInspector.CPUProfileType.TypeId)
             return;
 
-        if (WebInspector.timelapseModel.canReplay)
+        if (WebInspector.replayModel.canReplay)
             return;
 
         event.preventDefault();

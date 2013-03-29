@@ -264,7 +264,6 @@
     <file>textPrompt.css</file>
     <file>timelinePanel.css</file>
     <file>recordingsPanel.css</file>
-    <file>timelapseOverview.css</file>
     <file>Images/applicationCache.png</file>
     <file>Images/back.png</file>
     <file>Images/breakpointBorder.png</file>
@@ -371,7 +370,7 @@
     <file>Images/thumbHoverHoriz.png</file>
     <file>Images/thumbHoverVert.png</file>
     <file>Images/tickMark.png</file>
-    <file>Images/timelapseButtonGlyphs.png</file>
+    <file>Images/replayButtonGlyphs.png</file>
     <file>Images/timelineHollowPillBlue.png</file>
     <file>Images/timelineHollowPillGray.png</file>
     <file>Images/timelineHollowPillGreen.png</file>

@@ -35,7 +35,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "EventLoopInput.h"
-#include "TimelapseProxy.h"
+#include "ReplayProxy.h"
 #include "Timer.h"
 #include <wtf/Vector.h>
 #include <wtf/Noncopyable.h>
@@ -141,7 +141,7 @@ namespace WebCore {
 
         void serialize();
 
-        void changeProxyMode(TimelapseProxy::ProxyMode);
+        void changeProxyMode(ReplayProxy::ProxyMode);
         
         // private accessor-- only cares if *some* JSDOMWindow in this Page is capturing/replaying
         bool capturing() const;

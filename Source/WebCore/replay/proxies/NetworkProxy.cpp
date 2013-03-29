@@ -51,7 +51,7 @@
 namespace WebCore {
 
 NetworkProxy::NetworkProxy(Page* page)
-: TimelapseProxy(page)
+: ReplayProxy(page)
 // start at 1, since WTF::DefaultHash<unsigned> disallows UINT_MIN and UINT_MAX
 , m_nextId(1)
 , m_expectsPageLoad(false)
@@ -81,14 +81,14 @@ ReplayController* NetworkProxy::controller() const
 
 int NetworkProxy::nextLoaderId(const ResourceRequest& request)
 {
-    if (mode() == TimelapseProxy::Capturing) {
+    if (mode() == ReplayProxy::Capturing) {
         int freshId = m_nextId++;
         controller()->replayInputLog()->append(new ResourceLoaderCreated(freshId, request));
 
         return freshId;
     }
 
-    if (mode() == TimelapseProxy::Replaying) {
+    if (mode() == ReplayProxy::Replaying) {
         RefPtr<ReplayInputLog> detLog = controller()->replayInputLog();
 
         int loaderId;
@@ -124,13 +124,13 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
 PassRefPtr<ResourceHandle> NetworkProxy::createResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, int loaderId, bool defersLoading, bool shouldContentSniff)
 {
 #if ENABLE(TIMELAPSE)
-    if (mode() == TimelapseProxy::Capturing) {
+    if (mode() == ReplayProxy::Capturing) {
         ASSERT(loaderId > 0);
         CapturingResourceHandleClient* captureShim = new CapturingResourceHandleClient(this, client, loaderId);
         return ResourceHandle::create(context, request, captureShim, defersLoading, shouldContentSniff);
     }
 
-    if (mode() == TimelapseProxy::Replaying) {
+    if (mode() == ReplayProxy::Replaying) {
         ResourceHandleClient* emptyClient = new EmptyResourceHandleClient();
         // TODO: maybe make a dummy ResourceHandle class that doesn't actually fetch resources.
         RefPtr<ResourceHandle> newHandle = ResourceHandle::create(context, request, emptyClient, defersLoading, shouldContentSniff);

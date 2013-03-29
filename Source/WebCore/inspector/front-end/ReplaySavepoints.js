@@ -37,7 +37,7 @@ WebInspector.SavepointListProvider = function(recording)
     WebInspector.DataProvider.call(this, recording, "savepoints",
 				                   WebInspector.DataProvider.Types.SavepointList);
 
-    this._model = WebInspector.timelapseModel;
+    this._model = WebInspector.replayModel;
     this._savepoints = [];
 };
 
@@ -142,7 +142,7 @@ WebInspector.ReplaySavepointTracker = function(model)
     this._model = model;
     this._debuggerWalkRecord = [];
     
-	var bpTrackerEvents = WebInspector.TimelapseBreakpointTracker.Events;
+	var bpTrackerEvents = WebInspector.ReplayBreakpointTracker.Events;
     this._model.breakpointTracker.addEventListener(bpTrackerEvents.BreakpointHit, this._breakpointHit, this);
 
     var debuggerModel = WebInspector.debuggerModel;
@@ -165,7 +165,7 @@ WebInspector.ReplaySavepointTracker.prototype = {
                 return 0;
             }
 
-            var providers = this._model.loadedRecording.providersWithType(WebInspector.DataProvider.Types.TimelapseInput);
+            var providers = this._model.loadedRecording.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
             for (var i = 0; i < providers.length; ++i)
             {
                 var provider = providers[i];
@@ -279,7 +279,7 @@ WebInspector.InputSavepoint.prototype = {
     displayName: function()
     {
         return WebInspector.UIString("%s [#%d]",
-                                    WebInspector.TimelapseInputDataProvider.InputStyles[this._record.type].title,
+                                    WebInspector.ReplayInputDataProvider.InputStyles[this._record.type].title,
                                     this.markIndex);
     },
     
@@ -291,7 +291,7 @@ WebInspector.InputSavepoint.prototype = {
     createRestoreTask: function(allowBreakpoints)
     {
         // FIXME: signals completion on replay start, not finish.
-        return WebInspector.timelapseModel.startReplayUpToMarkIndexTask(this.markIndex, !!allowBreakpoints);
+        return WebInspector.replayModel.startReplayUpToMarkIndexTask(this.markIndex, !!allowBreakpoints);
     },
     
     __proto__: WebInspector.ReplaySavepoint.prototype,
@@ -331,7 +331,7 @@ WebInspector.BreakpointSavepoint.prototype = {
     createRestoreTask: function(allowBreakpoints)
     {
         // FIXME: signals completion on replay start, not finish.
-        return WebInspector.timelapseModel.replayToBreakpointHitTask(this.markIndex, this._hitIndex, !!allowBreakpoints);
+        return WebInspector.replayModel.replayToBreakpointHitTask(this.markIndex, this._hitIndex, !!allowBreakpoints);
     },
     
     __proto__: WebInspector.ReplaySavepoint.prototype,
@@ -353,11 +353,11 @@ WebInspector.DebuggerWalkSavepoint.prototype = {
 
     _replayDebuggerWalkTask: function(markIndex, hitIndex, debuggerWalk, allowBreakpoints)
     {
-        var model = WebInspector.timelapseModel;
+        var model = WebInspector.replayModel;
         if (!model.canReplay)
             return;
         
-        var speeds = WebInspector.TimelapseModel.ReplaySpeed;
+        var speeds = WebInspector.ReplayModel.ReplaySpeed;
 
         var task = new WebInspector.ReplayTask("ReplayDebuggerWalk");
         task.chain("ReplayToWalkStartingBreakpoint", function(cb) {
@@ -371,7 +371,7 @@ WebInspector.DebuggerWalkSavepoint.prototype = {
                 if (typeof event !== "undefined")
                     event.preventDefault(); // stop 
 
-                model.onceEventListener(WebInspector.TimelapseModel.Events.DebuggerWaiting, cb, task);
+                model.onceEventListener(WebInspector.ReplayModel.Events.DebuggerWaiting, cb, task);
                 debuggerWalk.shift()();
             });
         }

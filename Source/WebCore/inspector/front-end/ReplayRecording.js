@@ -33,37 +33,37 @@
  * @constructor
  * @extends {WebInspector.Object}
  */
-WebInspector.TimelapseRecording = function(model)
+WebInspector.ReplayRecording = function(model)
 {
     WebInspector.Object.call(this);
     this._model = model;
-    this.calculator = new WebInspector.TimelapseCalculator(this);
+    this.calculator = new WebInspector.RecordingCalculator(this);
     this._providers = [];
     this._actions = [];
 
-    this._callbacks = new WebInspector.EventListenerGroup(this, "TimelapseRecording listeners");
+    this._callbacks = new WebInspector.EventListenerGroup(this, "ReplayRecording listeners");
     this.registerListeners(this._callbacks);
     this._callbacks.install();
 };
 
-WebInspector.TimelapseRecording.Events = {
-    ProviderAdded:  "TimelapseProviderAdded",
+WebInspector.ReplayRecording.Events = {
+    ProviderAdded:  "ProviderAdded",
     // fired when an action is added to the recording, either from capture or disk.
-    ActionAdded:    "TimelapseActionAdded",
+    ActionAdded:    "ActionAdded",
     // TODO: the following events are details of specific data providers.
-    InputSelected:  "TimelapseInputSelected",
-    PreviewStarted: "TimelapsePreviewStarted",
-    PreviewStopped: "TimelapsePreviewStopped",
-    PreviewChanged: "TimelapsePreviewChanged",
+    InputSelected:  "InputSelected",
+    PreviewStarted: "PreviewStarted",
+    PreviewStopped: "PreviewStopped",
+    PreviewChanged: "PreviewChanged",
 };
 
-WebInspector.TimelapseRecording.prototype = {
+WebInspector.ReplayRecording.prototype = {
     // Private API (helpers)
     registerListeners: function(group) {
 	// FIXME: (Issue #201): The BreakpointScanner should add the breakpoint provider, not the recording itself.
-	var scannerEvents = WebInspector.TimelapseScanner.Events;
+	var scannerEvents = WebInspector.ReplayScanner.Events;
 	group.register(this._model.scanners.breakpoint, scannerEvents.ScanStarted, this._breakpointScanStarted);
-	var replayEvents = WebInspector.TimelapseModel.Events;
+	var replayEvents = WebInspector.ReplayModel.Events;
 	// TODO: support re-loading the same recording instance. Need to set back up in RecordingLoaded callback.
 	group.register(this._model, replayEvents.RecordingUnloaded, this._recordingUnloaded);
 	var profileEvents = WebInspector.ProfilesModel.Events;
@@ -95,7 +95,7 @@ WebInspector.TimelapseRecording.prototype = {
 	if (breakpointProviders.length > 0)
 	    return;
 
-	var breakpointProvider = new WebInspector.TimelapseBreakpointDataProvider(
+	var breakpointProvider = new WebInspector.ReplayBreakpointDataProvider(
         this,
 	    WebInspector.UIString("Breakpoint"),
 	    WebInspector.Color.fromRGB(10,55,230)
@@ -151,7 +151,7 @@ WebInspector.TimelapseRecording.prototype = {
 	    return;
 
 	this._providers.push(provider);
-    	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.ProviderAdded, provider);
+    	this.dispatchEventToListeners(WebInspector.ReplayRecording.Events.ProviderAdded, provider);
     },
 
     removeProvider: function(provider) {
@@ -208,19 +208,19 @@ WebInspector.TimelapseRecording.prototype = {
     _initializeInputs: function()
     {
         var providerTypes = WebInspector.DataProvider.Types;
-        this.addProvider(new WebInspector.TimelapseInputDataProvider(
+        this.addProvider(new WebInspector.ReplayInputDataProvider(
              this,
 		     "userinput",
 		     WebInspector.UIString("User"),
 		     WebInspector.Color.fromRGB(20,170,70)
 		));
-        this.addProvider(new WebInspector.TimelapseInputDataProvider(
+        this.addProvider(new WebInspector.ReplayInputDataProvider(
              this,
              "network",
 			 WebInspector.UIString("Network"),
 			 WebInspector.Color.fromRGB(200,150,0)
         ));
-        this.addProvider(new WebInspector.TimelapseInputDataProvider(
+        this.addProvider(new WebInspector.ReplayInputDataProvider(
              this,
 		     "timer",
 		     WebInspector.UIString("Timer"),
@@ -270,7 +270,7 @@ WebInspector.TimelapseRecording.prototype = {
     startPreviewing: function()
     {
 	this._previewModeActive = true;
-    	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.PreviewStarted);
+    	this.dispatchEventToListeners(WebInspector.ReplayRecording.Events.PreviewStarted);
     },
 
     // TODO: Preview state should live on the specific DataProvider which is being previewed.
@@ -278,7 +278,7 @@ WebInspector.TimelapseRecording.prototype = {
     {
 	delete this._previewModeActive;
 	delete this._previewedAction;
-    	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.PreviewStopped);
+    	this.dispatchEventToListeners(WebInspector.ReplayRecording.Events.PreviewStopped);
     },
 
     // TODO: Preview state should live on the specific DataProvider which is being previewed.
@@ -287,20 +287,20 @@ WebInspector.TimelapseRecording.prototype = {
 	console.assert(!!action, "Cannot preview undefined action");
 
 	this._previewedAction = action;
-	this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.PreviewChanged, action);
+	this.dispatchEventToListeners(WebInspector.ReplayRecording.Events.PreviewChanged, action);
     },
 
     // TODO: Selection state should live on the specific DataProvider which is being selected.
     selectAction: function(markIndex)
     {
 	this._selectedInputIndex = markIndex;
-	this.dispatchEventToListeners(WebInspector.Timelapseactioning.Events.InputSelected, markIndex);
+	this.dispatchEventToListeners(WebInspector.ReplayRecording.Events.InputSelected, markIndex);
     },
 
     scanInZoomRegion: function(scanner)
     {
-        console.assert(scanner instanceof WebInspector.TimelapseScanner,
-                       "Tried to scan zoom region with object that wasn't a TimelapseScanner.");
+        console.assert(scanner instanceof WebInspector.ReplayScanner,
+                       "Tried to scan zoom region with object that wasn't a ReplayScanner.");
         
         var startIndex = this.calculator.computeMarkIndexFromPercentage(this.calculator.zoomLeft);
         var endIndex = this.calculator.computeMarkIndexFromPercentage(this.calculator.zoomRight);
@@ -308,11 +308,11 @@ WebInspector.TimelapseRecording.prototype = {
         scanner.scanRegion(startIndex, endIndex);
     },
     
-    // Called by WebInspector.TimelapseDispatcher and when bulk-loading a recording
+    // Called by WebInspector.ReplayDispatcher and when bulk-loading a recording
     addAction: function(action)
     {
         this.calculator.updateBoundaries(action);
-        this.dispatchEventToListeners(WebInspector.TimelapseRecording.Events.ActionAdded, action);
+        this.dispatchEventToListeners(WebInspector.ReplayRecording.Events.ActionAdded, action);
     },
     
     __proto__: WebInspector.Object.prototype
@@ -320,7 +320,7 @@ WebInspector.TimelapseRecording.prototype = {
 
 WebInspector.SerializedRecording = function(model, uid)
 {
-    WebInspector.TimelapseRecording.call(this, model);
+    WebInspector.ReplayRecording.call(this, model);
     this.uid = uid;
     this._dataLoaded = false;
 }
@@ -351,17 +351,17 @@ WebInspector.SerializedRecording.prototype = {
         return this._displayName || "(uninitialized)";
     },
 
-    __proto__: WebInspector.TimelapseRecording.prototype
+    __proto__: WebInspector.ReplayRecording.prototype
 };
 
-WebInspector.TimelapseLiveRecording = function(model)
+WebInspector.ReplayLiveRecording = function(model)
 {
-    WebInspector.TimelapseRecording.call(this, model);
+    WebInspector.ReplayRecording.call(this, model);
     this.uid = -1;
     this._isCapturing = false;
 };
 
-WebInspector.TimelapseLiveRecording.prototype = {
+WebInspector.ReplayLiveRecording.prototype = {
     displayName: function()
     {
         return WebInspector.UIString("(Live Recording)");
@@ -380,15 +380,15 @@ WebInspector.TimelapseLiveRecording.prototype = {
     addAction: function(action)
     {
         this._actions.push(action);
-        WebInspector.TimelapseRecording.prototype.addAction.call(this, action);
+        WebInspector.ReplayRecording.prototype.addAction.call(this, action);
     },
     
     registerListeners: function(group) {
-        var replayEvents = WebInspector.TimelapseModel.Events;
+        var replayEvents = WebInspector.ReplayModel.Events;
         group.register(this._model, replayEvents.CaptureDidStart, this._captureDidStart);
         group.register(this._model, replayEvents.CaptureDidStop,  this._captureDidStop);
 
-        WebInspector.TimelapseRecording.prototype.registerListeners.call(this, group);
+        WebInspector.ReplayRecording.prototype.registerListeners.call(this, group);
     },
     
     _captureDidStart: function()
@@ -405,23 +405,23 @@ WebInspector.TimelapseLiveRecording.prototype = {
         this.calculator.setZoomInterval(0.0, 1.0);
     },
     
-    __proto__: WebInspector.TimelapseRecording.prototype
+    __proto__: WebInspector.ReplayRecording.prototype
 };
 
 /**
  * @constructor
  */
-WebInspector.TimelapseCalculator = function(recording)
+WebInspector.RecordingCalculator = function(recording)
 {
     this._recording = recording;
     WebInspector.Object.call(this);
 };
 
-WebInspector.TimelapseCalculator.Events = {
-  ZoomChanged: "TimelapseZoomChanged"  
+WebInspector.RecordingCalculator.Events = {
+  ZoomChanged: "ZoomChanged"
 };
 
-WebInspector.TimelapseCalculator.prototype = {
+WebInspector.RecordingCalculator.prototype = {
     _minimumBoundarySpan: 0.0,
 
     reset: function()
@@ -437,7 +437,7 @@ WebInspector.TimelapseCalculator.prototype = {
     {
 	this._zoomLeft = Number.constrain(left || 0, 0.0, 1.0);
 	this._zoomRight = Number.constrain(right || 1, 0.0, 1.0);
-	this.dispatchEventToListeners(WebInspector.TimelapseCalculator.Events.ZoomChanged);
+	this.dispatchEventToListeners(WebInspector.RecordingCalculator.Events.ZoomChanged);
     },
 
     get zoomLeft()
@@ -484,7 +484,7 @@ WebInspector.TimelapseCalculator.prototype = {
         }
         if (typeof this.maximumBoundary === "undefined" || ts > this.maximumBoundary) {
             this.maximumBoundary = ts;
-            this.dispatchEventToListeners(WebInspector.TimelapseCalculator.Events.ZoomChanged);
+            this.dispatchEventToListeners(WebInspector.RecordingCalculator.Events.ZoomChanged);
             if (!suppressAdjustZoom)
                 this.zoomRight = 0.0;
             return true;
@@ -555,4 +555,4 @@ WebInspector.TimelapseCalculator.prototype = {
     __proto__: WebInspector.Object.prototype
 };
 
-WebInspector.TimelapseRecording;
+WebInspector.ReplayRecording;
