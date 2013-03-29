@@ -34,7 +34,7 @@
 
 #if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
 
-#include "DispatchableAction.h"
+#include "EventLoopInput.h"
 #include "InspectorBaseAgent.h"
 #include "InspectorFrontend.h"
 #include "TimelapseAgentStateMachine.h"
@@ -96,7 +96,7 @@ public:
     void recordingLoaded(ReplayRecording*);
     void recordingAdded(ReplayRecording*);
     void recordingRemoved(ReplayRecording*);
-    void capturedPageInput(DispatchableAction*);
+    void capturedPageInput(EventLoopInput*);
     void captureStarted();
     void captureFinished();
     void playbackStarted();

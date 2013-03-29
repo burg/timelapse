@@ -544,15 +544,15 @@ ExecState* JSGlobalObject::globalExec()
 }
 
 #if ENABLE(TIMELAPSE)
-void JSGlobalObject::configureDeterminism(PassRefPtr<DeterminismLog> prpDeterminismLog)
+void JSGlobalObject::setReplayInputLog(PassRefPtr<ReplayInputLog> prpReplayInputLog)
 {
-    m_determinismLog = prpDeterminismLog;
+    m_replayInputLog = prpReplayInputLog;
     
-    LOG(TimelapseJSCActions, "%-30s Configuring global object with determinism log: %p\n",
-        "[DeterminismLog]", (void*)m_determinismLog.get());
+    LOG(JSCDeterministicReplay, "%-30s Setting replay input log=%p for global object=%p\n",
+        "[ReplayInputLog]", (void*)m_replayInputLog.get(), (void*)this);
 
     //set up determinism elsewhere in JSC
-    m_weakRandom.configureDeterminism(m_determinismLog);
+    m_weakRandom.setReplayInputLog(m_replayInputLog);
 }
 #endif
 

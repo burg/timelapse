@@ -53,7 +53,7 @@
 
 #if ENABLE(TIMELAPSE)
 #include "Logging.h" // XXX remove me
-#include "DeterminismController.h"
+#include "ReplayController.h"
 #endif // ENABLE(TIMELAPSE)
 
 namespace WebCore {
@@ -127,7 +127,7 @@ bool ResourceLoader::init(const ResourceRequest& r)
         
 #if ENABLE(TIMELAPSE)
     Document* rootDoc = m_frame->tree()->top()->document();
-    DeterminismController* controller = m_frame->page()->determinismController();
+    ReplayController* controller = m_frame->page()->replayController();
     
     if (rootDoc && controller && (controller->isCapturingDocument(rootDoc) ||
                                   controller->isReplayingDocument(rootDoc) ||

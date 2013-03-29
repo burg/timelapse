@@ -86,7 +86,7 @@
 #include <wtf/text/StringHash.h>
 
 #if ENABLE(TIMELAPSE)
-#include "DeterminismController.h"
+#include "ReplayController.h"
 #endif
 
 namespace WebCore {
@@ -136,7 +136,7 @@ Page::Page(PageClients& pageClients)
     , m_asyncEventProxy(AsyncEventProxy::create(this))
     , m_userInputProxy(UserInputProxy::create(this))
 #if ENABLE(TIMELAPSE)
-    , m_determinismController(adoptPtr(new DeterminismController(this)))
+    , m_replayController(adoptPtr(new ReplayController(this)))
 #endif
 #if ENABLE(INSPECTOR)
     , m_inspectorController(InspectorController::create(this, pageClients.inspectorClient))

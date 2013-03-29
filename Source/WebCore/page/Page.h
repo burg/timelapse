@@ -61,7 +61,7 @@ class ChromeClient;
 class ClientRectList;
 class ContextMenuClient;
 class ContextMenuController;
-class DeterminismController;
+class ReplayController;
 class Document;
 class DragCaretController;
 class DragClient;
@@ -195,7 +195,7 @@ public:
         AsyncEventProxy* asyncEventProxy() const { return m_asyncEventProxy.get(); }
         UserInputProxy* userInputProxy() const { return m_userInputProxy.get(); }
 #if ENABLE(TIMELAPSE)
-        DeterminismController* determinismController() const { return m_determinismController.get(); }
+        ReplayController* replayController() const { return m_replayController.get(); }
 #endif
 #if ENABLE(INSPECTOR)
     InspectorController* inspectorController() const { return m_inspectorController.get(); }
@@ -412,7 +412,7 @@ private:
         OwnPtr<AsyncEventProxy> m_asyncEventProxy;
         OwnPtr<UserInputProxy> m_userInputProxy;
 #if ENABLE(TIMELAPSE)
-        OwnPtr<DeterminismController> m_determinismController;
+        OwnPtr<ReplayController> m_replayController;
 #endif
 #if ENABLE(INSPECTOR)
     OwnPtr<InspectorController> m_inspectorController;

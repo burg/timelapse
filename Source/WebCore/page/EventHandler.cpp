@@ -114,7 +114,7 @@
 #endif
 
 #if ENABLE(TIMELAPSE)
-#include "DeterminismController.h"
+#include "ReplayController.h"
 #endif
 
 #if ENABLE(CSS_IMAGE_SET)

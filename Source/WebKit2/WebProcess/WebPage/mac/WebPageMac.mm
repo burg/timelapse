@@ -65,10 +65,10 @@
 #import <WebKitSystemInterface.h>
 
 #if ENABLE(TIMELAPSE)
-#import "InterpretedKeyCommands.h"
-#import <WebCore/DeterminismController.h>
-#import <wtf/timelapse/DeterminismLog.h>
-#import <wtf/timelapse/ReplayableAction.h>
+#import <WebCore/InterpretedKeyCommands.h>
+#import <WebCore/ReplayController.h>
+#import <wtf/replay/ReplayInputLog.h>
+#import <wtf/replay/NondeterministicInput.h>
 #endif
 
 using namespace WebCore;
@@ -210,7 +210,7 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
 
     bool eventWasHandled = false;
 #if ENABLE(TIMELAPSE)
-    WebCore::DeterminismController* controller = corePage()->determinismController();
+    WebCore::ReplayController* controller = corePage()->replayController();
     bool isCapturing = controller && controller->isCapturingDocument(corePage()->mainFrame()->document());
     bool isReplaying = controller && controller->isReplayingDocument(corePage()->mainFrame()->document());
     ASSERT(!(isCapturing && isReplaying));
@@ -220,8 +220,8 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
 #if ENABLE(TIMELAPSE)
         // if replaying, simply populate the commands from memoized state, and return.
         if (isReplaying) {
-            RefPtr<DeterminismLog> detLog = controller->determinismLog();
-            InterpretedKeyCommands* memoizedCommands = static_cast<InterpretedKeyCommands*>(detLog->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::InterpretedKeyCommands));
+            RefPtr<ReplayInputLog> detLog = controller->replayInputLog();
+            InterpretedKeyCommands* memoizedCommands = static_cast<InterpretedKeyCommands*>(detLog->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::InterpretedKeyCommands));
             if (memoizedCommands) {
                 commands = memoizedCommands->commands();
                 return eventWasHandled;
@@ -240,7 +240,7 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
 #if ENABLE(TIMELAPSE)
         // if capturing, save away the key commands as memoized state.
         if (isCapturing) {
-            RefPtr<DeterminismLog> detLog = controller->determinismLog();
+            RefPtr<ReplayInputLog> detLog = controller->replayInputLog();
             detLog->append(new InterpretedKeyCommands(commands));
         }
 #endif

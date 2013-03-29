@@ -1856,10 +1856,10 @@ sub GenerateImplementation
                 }
 
                 if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"} || $attribute->signature->extendedAttributes->{"Nondeterministic"}) {
-                    $implIncludes{"<wtf/timelapse/DeterminismLog.h>"} = 1;
+                    $implIncludes{"<wtf/replay/ReplayInputLog.h>"} = 1;
                     push(@implContent, "#if ENABLE(TIMELAPSE)\n");
                     push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
-                    push(@implContent, "    RefPtr<DeterminismLog> log = globalObject->determinismLog();\n");
+                    push(@implContent, "    RefPtr<ReplayInputLog> log = globalObject->replayInputLog();\n");
 
                     if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"}) {
                         $implIncludes{"PlaybackError.h"} = 1;
@@ -1892,9 +1892,9 @@ sub GenerateImplementation
                         push(@implContent, "        } else {\n");
                         push(@implContent, "            ASSERT(log->replaying());\n");
                         if (@{$attribute->getterExceptions}) {
-                            push(@implContent, "            AutoMemoizedWithExceptionCode<$memoizedType>* action = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+                            push(@implContent, "            AutoMemoizedWithExceptionCode<$memoizedType>* action = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(log->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
                         } else {
-                            push(@implContent, "            AutoMemoized<$memoizedType>* action = static_cast<AutoMemoized<$memoizedType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+                            push(@implContent, "            AutoMemoized<$memoizedType>* action = static_cast<AutoMemoized<$memoizedType>*>(log->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
                         }
                         push(@implContent, "            if (action) {\n");
                         push(@implContent, "                ASSERT(action->attributeName() == \"$interfaceName.$name\");\n");
@@ -2320,10 +2320,10 @@ sub GenerateImplementation
 
             if ($function->signature->extendedAttributes->{"ReplayNotImplemented"}) {
                 $implIncludes{"PlaybackError.h"} = 1;
-                $implIncludes{"<wtf/timelapse/DeterminismLog.h>"} = 1;
+                $implIncludes{"<wtf/replay/ReplayInputLog.h>"} = 1;
                 push(@implContent, "#if ENABLE(TIMELAPSE)\n");
                 push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
-                push(@implContent, "    RefPtr<DeterminismLog> log = globalObject->determinismLog();\n");
+                push(@implContent, "    RefPtr<ReplayInputLog> log = globalObject->replayInputLog();\n");
                 push(@implContent, "    if (log && log->isActive() && log->capturing()) {\n");
                 push(@implContent, "        log->append(new PlaybackError(\"Replay is not implemented for $interfaceName." . $function->signature->name . "\"));\n");
                 push(@implContent, "    }\n");
@@ -3068,9 +3068,9 @@ sub GenerateImplementationFunctionCall()
 
     if ($function->signature->type eq "void") {
         if ($nondeterministic) {
-            $implIncludes{"<wtf/timelapse/DeterminismLog.h>"} = 1;
+            $implIncludes{"<wtf/replay/ReplayInputLog.h>"} = 1;
             push(@implContent, "#if ENABLE(TIMELAPSE)\n");
-            push(@implContent, $indent . "RefPtr<DeterminismLog> log = exec->lexicalGlobalObject()->determinismLog();\n");
+            push(@implContent, $indent . "RefPtr<ReplayInputLog> log = exec->lexicalGlobalObject()->replayInputLog();\n");
             push(@implContent, $indent . "if (!log || !log->isActive() || log->capturing()) {\n");
             push(@implContent, $indent . "    $functionString;\n");
             push(@implContent, $indent . "}\n");
@@ -3094,12 +3094,12 @@ sub GenerateImplementationFunctionCall()
         my $thisObject = $function->isStatic ? 0 : "castedThis";
         if ($nondeterministic) {
             $implIncludes{"AutoMemoized.h"} = 1;
-            $implIncludes{"<wtf/timelapse/DeterminismLog.h>"} = 1;
+            $implIncludes{"<wtf/replay/ReplayInputLog.h>"} = 1;
             my $nativeType = GetNativeTypeFromSignature($function->signature);
             my $memoizedType = GetNativeTypeForMemoization($function->signature->type);
             my $bindingName = $interfaceName . "." . $function->signature->name;
             push(@implContent, "#if ENABLE(TIMELAPSE)\n");
-            push(@implContent, $indent . "RefPtr<DeterminismLog> log = exec->lexicalGlobalObject()->determinismLog();\n");
+            push(@implContent, $indent . "RefPtr<ReplayInputLog> log = exec->lexicalGlobalObject()->replayInputLog();\n");
             push(@implContent, $indent . "JSC::JSValue result;\n");
             push(@implContent, $indent . "if (!log || !log->isActive()) {\n");
             push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $interfaceName, $functionString, $thisObject) . ";\n");
@@ -3114,10 +3114,10 @@ sub GenerateImplementationFunctionCall()
             push(@implContent, $indent . "} else {\n");
             push(@implContent, $indent . "    ASSERT(log->replaying());\n");
             if (@{$function->raisesExceptions}) {
-                push(@implContent, $indent . "    AutoMemoizedWithExceptionCode<$memoizedType>* action = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+                push(@implContent, $indent . "    AutoMemoizedWithExceptionCode<$memoizedType>* action = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(log->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
 		push(@implContent, $indent . "    ec = action->exceptionCode();\n")
 	    } else {
-                push(@implContent, $indent . "    AutoMemoized<$memoizedType>* action = static_cast<AutoMemoized<$memoizedType>*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::AutoMemoized));\n");
+                push(@implContent, $indent . "    AutoMemoized<$memoizedType>* action = static_cast<AutoMemoized<$memoizedType>*>(log->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
 	    }
             push(@implContent, $indent . "    if (action) {\n");
             push(@implContent, $indent . "        ASSERT(action->attributeName() == \"$bindingName\");\n");

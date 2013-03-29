@@ -40,7 +40,7 @@
 #include <wtf/RandomNumber.h>
 
 #if ENABLE(TIMELAPSE)
-#include <wtf/timelapse/DeterminismLog.h>
+#include <wtf/replay/ReplayInputLog.h>
 #include "RiggedWeakRandom.h"
 #endif
 
@@ -166,7 +166,7 @@ namespace JSC {
 
         Debugger* m_debugger;
 #if ENABLE(TIMELAPSE)
-        RefPtr<DeterminismLog> m_determinismLog;
+        RefPtr<ReplayInputLog> m_replayInputLog;
 #endif
         RefPtr<WatchpointSet> m_masqueradesAsUndefinedWatchpoint;
         RefPtr<WatchpointSet> m_havingABadTimeWatchpoint;
@@ -359,8 +359,8 @@ namespace JSC {
         void setDebugger(Debugger* debugger) { m_debugger = debugger; }
 
 #if ENABLE(TIMELAPSE)
-        PassRefPtr<DeterminismLog> determinismLog() const { return m_determinismLog; }
-        JS_EXPORT_PRIVATE void configureDeterminism(PassRefPtr<DeterminismLog>);
+        PassRefPtr<ReplayInputLog> replayInputLog() const { return m_replayInputLog; }
+        JS_EXPORT_PRIVATE void setReplayInputLog(PassRefPtr<ReplayInputLog>);
 #endif
         const GlobalObjectMethodTable* globalObjectMethodTable() const { return m_globalObjectMethodTable; }
 

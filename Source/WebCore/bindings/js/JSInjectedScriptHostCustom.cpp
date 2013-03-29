@@ -71,7 +71,7 @@
 #include <runtime/RegExpObject.h>
 
 #if ENABLE(TIMELAPSE)
-#include <wtf/timelapse/DeterminismLog.h>
+#include <wtf/replay/ReplayInputLog.h>
 #endif
 
 using namespace JSC;
@@ -306,7 +306,7 @@ JSValue JSInjectedScriptHost::evaluate(ExecState* exec)
     bool wasEvalEnabled = globalObject->evalEnabled();
     globalObject->setEvalEnabled(true);
 #if ENABLE(TIMELAPSE)
-    RefPtr<DeterminismLog> log = globalObject->determinismLog();
+    RefPtr<ReplayInputLog> log = globalObject->replayInputLog();
     if (log)
         log->setIsActive(false);
 #endif

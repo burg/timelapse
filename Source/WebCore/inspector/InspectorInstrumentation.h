@@ -88,7 +88,7 @@ class WorkerContextProxy;
 class XMLHttpRequest;
 
 #if ENABLE(TIMELAPSE)
-class DispatchableAction;
+class EventLoopInput;
 class ReplayRecording;
 #endif
 
@@ -274,7 +274,7 @@ public:
     static void recordingUnloaded(Page*);
     static void recordingAdded(Page*, ReplayRecording*);
     static void recordingRemoved(Page*, ReplayRecording*);
-    static void capturedPageInput(Page*, DispatchableAction*);
+    static void capturedPageInput(Page*, EventLoopInput*);
     static void captureStarted(Page*);
     static void captureFinished(Page*);
     static void playbackStarted(Page*);
@@ -503,7 +503,7 @@ private:
     static void recordingUnloadedImpl(InstrumentingAgents*);
     static void recordingAddedImpl(InstrumentingAgents*, ReplayRecording*);
     static void recordingRemovedImpl(InstrumentingAgents*, ReplayRecording*);
-    static void capturedPageInputImpl(InstrumentingAgents*, DispatchableAction*);
+    static void capturedPageInputImpl(InstrumentingAgents*, EventLoopInput*);
     static void captureStartedImpl(InstrumentingAgents*);
     static void captureFinishedImpl(InstrumentingAgents*);
     static void playbackStartedImpl(InstrumentingAgents*);
@@ -2013,7 +2013,7 @@ inline void InspectorInstrumentation::recordingRemoved(Page* page, ReplayRecordi
 #endif
 }
 
-inline void InspectorInstrumentation::capturedPageInput(Page* page, DispatchableAction* action)
+inline void InspectorInstrumentation::capturedPageInput(Page* page, EventLoopInput* action)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))

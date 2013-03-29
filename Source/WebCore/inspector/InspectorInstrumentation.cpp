@@ -1269,7 +1269,7 @@ void InspectorInstrumentation::recordingRemovedImpl(InstrumentingAgents* instrum
         timelapseAgent->recordingRemoved(recording);
 }
 
-void InspectorInstrumentation::capturedPageInputImpl(InstrumentingAgents* instrumentingAgents, DispatchableAction* action)
+void InspectorInstrumentation::capturedPageInputImpl(InstrumentingAgents* instrumentingAgents, EventLoopInput* action)
 {
     if (InspectorTimelapseAgent* timelapseAgent = instrumentingAgents->inspectorTimelapseAgent())
         timelapseAgent->capturedPageInput(action);

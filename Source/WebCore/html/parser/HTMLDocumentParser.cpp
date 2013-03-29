@@ -48,7 +48,7 @@
 #include <wtf/Functional.h>
 
 #if ENABLE(TIMELAPSE)
-#include "DeterminismController.h"
+#include "ReplayController.h"
 #endif
 
 namespace WebCore {
@@ -621,8 +621,8 @@ void HTMLDocumentParser::append(const SegmentedString& source)
 
 #if ENABLE(TIMELAPSE)
     // The timing of yields is nondeterministic, so just don't yield during capture/replay
-    if (document()->page()->determinismController()->isCapturingDocument(document())
-        || document()->page()->determinismController()->isReplayingDocument(document())) {
+    if (document()->page()->replayController()->isCapturingDocument(document())
+        || document()->page()->replayController()->isReplayingDocument(document())) {
         pumpTokenizerIfPossible(ForceSynchronous);
     } else
 #endif
@@ -784,8 +784,8 @@ void HTMLDocumentParser::resumeParsingAfterScriptExecution()
 
 #if ENABLE(TIMELAPSE)
     // The timing of yields is nondeterministic, so just don't yield during capture/replay
-    if (document()->page()->determinismController()->isCapturingDocument(document())
-        || document()->page()->determinismController()->isReplayingDocument(document())) {
+    if (document()->page()->replayController()->isCapturingDocument(document())
+        || document()->page()->replayController()->isReplayingDocument(document())) {
         pumpTokenizerIfPossible(ForceSynchronous);
     } else
 #endif

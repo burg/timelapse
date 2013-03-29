@@ -36,11 +36,11 @@
 #include <wtf/StdLibExtras.h>
 
 #if ENABLE(TIMELAPSE)
-#include "DeterminismController.h"
-#include "ReplayableTypes.h"
+#include "ReplayController.h"
+#include "ReplayInputTypes.h"
 #include "TimerCreated.h"
-#include <wtf/timelapse/DeterminismLog.h>
-#include <wtf/timelapse/ReplayableAction.h>
+#include <wtf/replay/ReplayInputLog.h>
+#include <wtf/replay/NondeterministicInput.h>
 #endif
 
 using namespace std;
@@ -72,12 +72,12 @@ DOMTimer::DOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> 
     m_shouldScheduleNormally = true;
     if (scriptExecutionContext()->isDocument()) {
         Document* document = static_cast<Document*>(scriptExecutionContext());
-        if (document->page() && document->page()->determinismController()) {
-            DeterminismController* controller = document->page()->determinismController();
+        if (document->page() && document->page()->replayController()) {
+            ReplayController* controller = document->page()->replayController();
             if (controller->isCapturingDocument(document)) {
-                controller->determinismLog()->append(new TimerCreated(m_timeoutId, document));
+                controller->replayInputLog()->append(new TimerCreated(m_timeoutId, document));
             } else if (controller->isReplayingDocument(document)) {
-                ReplayableAction* loggedAction = controller->determinismLog()->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::TimerCreated);
+                NondeterministicInput* loggedAction = controller->replayInputLog()->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::TimerCreated);
                 TimerCreated* action = static_cast<TimerCreated*>(loggedAction);
                 // implicit error handling case: if fetch failed, then don't overwrite with memoized id
                 if (action) {

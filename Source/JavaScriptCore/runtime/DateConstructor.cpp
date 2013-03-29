@@ -36,7 +36,7 @@
 #include <math.h>
 #include <time.h>
 #include <wtf/MathExtras.h>
-#include <wtf/timelapse/DeterminismLog.h>
+#include <wtf/replay/ReplayInputLog.h>
 
 #if OS(WINCE) && !PLATFORM(QT)
 extern "C" time_t time(time_t* timer); // Provided by libce.
@@ -77,7 +77,7 @@ const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_inf
 #if ENABLE(TIMELAPSE)   
 static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
 {
-    RefPtr<DeterminismLog> log = globalObject->determinismLog();
+    RefPtr<ReplayInputLog> log = globalObject->replayInputLog();
 
     // if no determinism, get current time normally.
     if (!log || !log->isActive())
@@ -90,7 +90,7 @@ static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
         log->append(new GetCurrentTime(currentTime));
     } else {
         ASSERT(log->replaying());
-        GetCurrentTime* action = static_cast<GetCurrentTime*>(log->popExpectedAction(WTF::ScriptMemoizedDataQueue, ReplayableTypes::GetCurrentTime));
+        GetCurrentTime* action = static_cast<GetCurrentTime*>(log->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::GetCurrentTime));
         if (!action) // error handling case
             currentTime = jsCurrentTime();
         else

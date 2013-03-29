@@ -34,7 +34,7 @@
 
 #if ENABLE(INSPECTOR) && ENABLE(TIMELAPSE)
 
-#include "DeterminismController.h"
+#include "ReplayController.h"
 #include "DocumentLoader.h"
 #include "DOMWindow.h"
 #include "Element.h"
@@ -62,7 +62,7 @@
 #include "PlatformKeyboardEvent.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
-#include "ReplayableTypes.h"
+#include "ReplayInputTypes.h"
 #include "ReplayRecording.h"
 #include "ResourceDidFinishLoading.h"
 #include "ResourceDidReceiveData.h"
@@ -122,84 +122,84 @@ namespace WebCore {
 
 // this function is only necessary because we don't have 1:1 mapping between
 // replay action types and user-visible names. Disambiguations below.
-static const char* getFrontendTypeForAction(DispatchableAction* action)
+static const char* getFrontendTypeForAction(EventLoopInput* action)
 {
-    if (action->type() == ReplayableTypes::TimerFired)
+    if (action->type() == ReplayInputTypes::TimerFired)
         return ReplayActionType::TimerFire;
-    if (action->type() == ReplayableTypes::HandleMouseMove)
+    if (action->type() == ReplayInputTypes::HandleMouseMove)
         return ReplayActionType::MouseMove;
-    if (action->type() == ReplayableTypes::HandleMousePress)
+    if (action->type() == ReplayInputTypes::HandleMousePress)
         return ReplayActionType::MousePress;
-    if (action->type() == ReplayableTypes::HandleMouseRelease)
+    if (action->type() == ReplayInputTypes::HandleMouseRelease)
         return ReplayActionType::MouseRelease;
-    if (action->type() == ReplayableTypes::HandleWheelEvent)
+    if (action->type() == ReplayInputTypes::HandleWheelEvent)
         return ReplayActionType::MouseWheel;
-    if (action->type() == ReplayableTypes::HandleKeyPress)
+    if (action->type() == ReplayInputTypes::HandleKeyPress)
         return ReplayActionType::KeyPress;
-    if (action->type() == ReplayableTypes::ScrollPage)
+    if (action->type() == ReplayInputTypes::ScrollPage)
         return ReplayActionType::Scroll;
-    if (action->type() == ReplayableTypes::SendResizeEvent)
+    if (action->type() == ReplayInputTypes::SendResizeEvent)
         return ReplayActionType::Resize;
-    if (action->type() == ReplayableTypes::ResourceWillSendRequest)
+    if (action->type() == ReplayInputTypes::ResourceWillSendRequest)
         return ReplayActionType::RequestResource;
-    if (action->type() == ReplayableTypes::ResourceDidReceiveResponse)
+    if (action->type() == ReplayInputTypes::ResourceDidReceiveResponse)
         return ReplayActionType::ReceiveResponse;
-    if (action->type() == ReplayableTypes::ResourceDidReceiveData)
+    if (action->type() == ReplayInputTypes::ResourceDidReceiveData)
         return ReplayActionType::ReceiveData;
-    if (action->type() == ReplayableTypes::ResourceDidFinishLoading)
+    if (action->type() == ReplayInputTypes::ResourceDidFinishLoading)
         return ReplayActionType::ResourceLoaded;
     
-    if (action->type() == ReplayableTypes::FocusSetActive) {
+    if (action->type() == ReplayInputTypes::FocusSetActive) {
         bool toState = static_cast<FocusSetActive*>(action)->toState();
         return (toState) ? ReplayActionType::WindowActive
                          : ReplayActionType::WindowInactive;
     }
-    if (action->type() == ReplayableTypes::FocusSetFocused) {
+    if (action->type() == ReplayInputTypes::FocusSetFocused) {
         bool toState = static_cast<FocusSetFocused*>(action)->toState();
         return (toState) ? ReplayActionType::WindowFocused
                          : ReplayActionType::WindowUnfocused;
     }
     
-    // actions that should not be user visible must override DispatchableAction::isUserVisible()
+    // actions that should not be user visible must override EventLoopInput::isUserVisible()
     ASSERT_NOT_REACHED();
     return 0;
 }
 
-static PassRefPtr<InspectorObject> createFrontendDataForAction(DispatchableAction* action)
+static PassRefPtr<InspectorObject> createFrontendDataForAction(EventLoopInput* action)
 {
-    if (action->type() == ReplayableTypes::FocusSetActive ||
-        action->type() == ReplayableTypes::FocusSetFocused ||
-        action->type() == ReplayableTypes::TimerFired)
+    if (action->type() == ReplayInputTypes::FocusSetActive ||
+        action->type() == ReplayInputTypes::FocusSetFocused ||
+        action->type() == ReplayInputTypes::TimerFired)
         return ReplayActionFactory::createEmptyData();
-    if (action->type() == ReplayableTypes::HandleMouseMove)
+    if (action->type() == ReplayInputTypes::HandleMouseMove)
         return ReplayActionFactory::createMouseData(static_cast<HandleMouseMove*>(action)->platformEvent());
-    if (action->type() == ReplayableTypes::HandleMousePress)
+    if (action->type() == ReplayInputTypes::HandleMousePress)
         return ReplayActionFactory::createMouseData(static_cast<HandleMousePress*>(action)->platformEvent());
-    if (action->type() == ReplayableTypes::HandleMouseRelease)
+    if (action->type() == ReplayInputTypes::HandleMouseRelease)
         return ReplayActionFactory::createMouseData(static_cast<HandleMouseRelease*>(action)->platformEvent());
-    if (action->type() == ReplayableTypes::HandleWheelEvent)
+    if (action->type() == ReplayInputTypes::HandleWheelEvent)
         return ReplayActionFactory::createWheelData(static_cast<HandleWheelEvent*>(action)->platformEvent());
-    if (action->type() == ReplayableTypes::HandleKeyPress)
+    if (action->type() == ReplayInputTypes::HandleKeyPress)
         return ReplayActionFactory::createKeyPressData(static_cast<HandleKeyPress*>(action)->platformEvent());
-    if (action->type() == ReplayableTypes::ScrollPage)
+    if (action->type() == ReplayInputTypes::ScrollPage)
         return ReplayActionFactory::createScrollData(static_cast<ScrollPage*>(action));
-    if (action->type() == ReplayableTypes::SendResizeEvent)
+    if (action->type() == ReplayInputTypes::SendResizeEvent)
         return ReplayActionFactory::createResizeData(static_cast<SendResizeEvent*>(action));
-    if (action->type() == ReplayableTypes::ResourceWillSendRequest)
+    if (action->type() == ReplayInputTypes::ResourceWillSendRequest)
         return ReplayActionFactory::createRequestResourceData(static_cast<ResourceWillSendRequest*>(action));
-    if (action->type() == ReplayableTypes::ResourceDidReceiveResponse)
+    if (action->type() == ReplayInputTypes::ResourceDidReceiveResponse)
         return ReplayActionFactory::createReceiveResponseData(static_cast<ResourceDidReceiveResponse*>(action));
-    if (action->type() == ReplayableTypes::ResourceDidReceiveData)
+    if (action->type() == ReplayInputTypes::ResourceDidReceiveData)
         return ReplayActionFactory::createReceiveDataData(static_cast<ResourceDidReceiveData*>(action));
-    if (action->type() == ReplayableTypes::ResourceDidFinishLoading)
+    if (action->type() == ReplayInputTypes::ResourceDidFinishLoading)
         return ReplayActionFactory::createResourceLoadedData(static_cast<ResourceDidFinishLoading*>(action));
     
-    // actions that should not be user visible must override DispatchableAction::isUserVisible()
+    // actions that should not be user visible must override EventLoopInput::isUserVisible()
     ASSERT_NOT_REACHED();
     return 0;
 }
 
-static PassRefPtr<TypeBuilder::Timelapse::ReplayAction> createInspectorObjectForAction(DispatchableAction* action)
+static PassRefPtr<TypeBuilder::Timelapse::ReplayAction> createInspectorObjectForAction(EventLoopInput* action)
 {       
     RefPtr<TypeBuilder::Timelapse::Mark> markObject = TypeBuilder::Timelapse::Mark::create()
         .setTimestamp(action->mark().time())
@@ -219,11 +219,11 @@ public:
     ActionCollector()
     : m_actions(TypeBuilder::Array<TypeBuilder::Timelapse::ReplayAction>::create()) {}
     ~ActionCollector() {}
-    void operator()(size_t, ReplayableAction* replayAction)
+    void operator()(size_t, NondeterministicInput* replayAction)
     {
-        ASSERT(replayAction->queue() == DispatchableActionQueue);
+        ASSERT(replayAction->queue() == EventLoopInputQueue);
         
-        DispatchableAction* action = static_cast<DispatchableAction*>(replayAction);
+        EventLoopInput* action = static_cast<EventLoopInput*>(replayAction);
         if (!action->isUserVisible())
             return;
         
@@ -270,19 +270,19 @@ void InspectorTimelapseAgent::clearFrontend()
 void InspectorTimelapseAgent::willDispatchEvent(const Event& event, DOMWindow* window, Node* node)
 {
     if (capturing() || replaying())
-        m_inspectedPage->determinismController()->willDispatchEvent(event, window, node, reuseMark());
+        m_inspectedPage->replayController()->willDispatchEvent(event, window, node, reuseMark());
 }
 
 void InspectorTimelapseAgent::didDispatchEvent()
 {
     if (capturing() || replaying())
-        m_inspectedPage->determinismController()->didDispatchEvent();
+        m_inspectedPage->replayController()->didDispatchEvent();
 }
 
 void InspectorTimelapseAgent::willDispatchEventOnWindow(const Event& event, DOMWindow* window)
 {
     if (capturing() || replaying())
-        m_inspectedPage->determinismController()->willDispatchEvent(event, window, 0, reuseMark());
+        m_inspectedPage->replayController()->willDispatchEvent(event, window, 0, reuseMark());
 }
 
 void InspectorTimelapseAgent::didDispatchEventOnWindow()
@@ -293,13 +293,13 @@ void InspectorTimelapseAgent::didDispatchEventOnWindow()
 void InspectorTimelapseAgent::frameNavigated(DocumentLoader* loader)
 {
     if (capturing() || replaying())
-        m_inspectedPage->determinismController()->frameNavigated(loader);
+        m_inspectedPage->replayController()->frameNavigated(loader);
 }
 
 void InspectorTimelapseAgent::willFireTimer(int timerId, Frame* frame)
 {
     if (capturing() || replaying())
-        m_inspectedPage->determinismController()->willFireTimer(timerId, frame->document());
+        m_inspectedPage->replayController()->willFireTimer(timerId, frame->document());
 }
 
 void InspectorTimelapseAgent::recordingUnloaded()
@@ -326,7 +326,7 @@ void InspectorTimelapseAgent::recordingRemoved(ReplayRecording* recording)
         m_frontend->recordingRemoved(recording->uid());
 }
 
-void InspectorTimelapseAgent::capturedPageInput(DispatchableAction* action)
+void InspectorTimelapseAgent::capturedPageInput(EventLoopInput* action)
 {
     // this instrumentation should only fire when we are actually capturing.
     // if it's some transient state, the caller should know not to call.
@@ -478,13 +478,13 @@ void InspectorTimelapseAgent::startCapture(ErrorString*)
     m_nextMarkIndex = 0;
 
     PositionMark mark = createMark();
-    m_inspectedPage->determinismController()->beginCapturing(mark);
+    m_inspectedPage->replayController()->beginCapturing(mark);
 }
 
 void InspectorTimelapseAgent::stopCapture(ErrorString*, bool* wasAllowed)
 {
     PositionMark mark = createMark();
-    *wasAllowed = m_inspectedPage->determinismController()->endCapturing(mark);
+    *wasAllowed = m_inspectedPage->replayController()->endCapturing(mark);
 }
 
 void InspectorTimelapseAgent::replayUpToMarkIndex(ErrorString*, int markIndex, bool fastReplay)
@@ -495,7 +495,7 @@ void InspectorTimelapseAgent::replayUpToMarkIndex(ErrorString*, int markIndex, b
     ASSERT(!debuggerAgent || !debuggerAgent->isPaused());
 #endif
     m_stateMachine.advanceTo(TimelapseAgentStateMachine::WaitingForReplay);
-    m_inspectedPage->determinismController()->replayUpToMarkIndex((unsigned)markIndex, (fastReplay) ? FullSpeed : Realtime);
+    m_inspectedPage->replayController()->replayUpToMarkIndex((unsigned)markIndex, (fastReplay) ? FullSpeed : Realtime);
 }
 
 void InspectorTimelapseAgent::replayToCompletion(ErrorString*, bool fastReplay)
@@ -506,25 +506,25 @@ void InspectorTimelapseAgent::replayToCompletion(ErrorString*, bool fastReplay)
     ASSERT(!debuggerAgent || !debuggerAgent->isPaused());
 #endif
     m_stateMachine.advanceTo(TimelapseAgentStateMachine::WaitingForReplay);
-    m_inspectedPage->determinismController()->replayToCompletion((fastReplay) ? FullSpeed : Realtime);
+    m_inspectedPage->replayController()->replayToCompletion((fastReplay) ? FullSpeed : Realtime);
 }
 
 void InspectorTimelapseAgent::pausePlayback(ErrorString*)
 {
     // this will fire InspectorInstrumentation::playbackPaused, and our
     // listener for that will change state machine and tell frontend.
-    m_inspectedPage->determinismController()->pauseAtNextMark();
+    m_inspectedPage->replayController()->pauseAtNextMark();
 }
     
 void InspectorTimelapseAgent::stopPlayback(ErrorString*, bool shouldUnlock)
 {
     m_inputLocked = !shouldUnlock;   
-    m_inspectedPage->determinismController()->cancelPlayback();
+    m_inspectedPage->replayController()->cancelPlayback();
 }
 
 void InspectorTimelapseAgent::setPauseOnError(ErrorString*, bool shouldPause)
 {
-    m_inspectedPage->determinismController()->setErrorStrategy(shouldPause ? PauseOnError : ContinueOnError);
+    m_inspectedPage->replayController()->setErrorStrategy(shouldPause ? PauseOnError : ContinueOnError);
 }
 
 void InspectorTimelapseAgent::loadRecording(ErrorString*, int uid, bool* wasAllowed)
@@ -546,14 +546,14 @@ void InspectorTimelapseAgent::unloadRecording(ErrorString*, bool* wasAllowed)
 
 void InspectorTimelapseAgent::getRecording(ErrorString*, int uid, RefPtr<TypeBuilder::Timelapse::ReplayRecording>& recordingObject)
 {
-    ReplayRecording* recording = m_inspectedPage->determinismController()->loadedRecording();
+    ReplayRecording* recording = m_inspectedPage->replayController()->loadedRecording();
     ASSERT(uid == recording->uid());
 #if defined(NDEBUG)
     UNUSED_PARAM(uid);
 #endif
 
     ActionCollector collector;
-    RefPtr<TypeBuilder::Array<TypeBuilder::Timelapse::ReplayAction> > actions = recording->inputLog()->forEachInputInQueue(DispatchableActionQueue, collector);
+    RefPtr<TypeBuilder::Array<TypeBuilder::Timelapse::ReplayAction> > actions = recording->inputLog()->forEachInputInQueue(EventLoopInputQueue, collector);
 
     recordingObject = TypeBuilder::Timelapse::ReplayRecording::create()
                         .setUid(recording->uid())
@@ -565,7 +565,7 @@ void InspectorTimelapseAgent::getRecording(ErrorString*, int uid, RefPtr<TypeBui
 void InspectorTimelapseAgent::getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >& recordingsList)
 {
     recordingsList = TypeBuilder::Array<int>::create();
-    ReplayRecording* recording = m_inspectedPage->determinismController()->loadedRecording();
+    ReplayRecording* recording = m_inspectedPage->replayController()->loadedRecording();
     if (recording)
         recordingsList->addItem(recording->uid());
 }
