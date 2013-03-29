@@ -116,9 +116,8 @@ WebInspector.ReplayOverview = function(model, recording)
 
     // initialize slider position
     this.sliders.playback.enable();
-    this.sliders.playback.setPosition(1.0, true);
     this.sliders.playback.show();
-    
+    this._replayCursorChanged();
     this._scheduleRefresh();
 };
 
@@ -152,7 +151,7 @@ WebInspector.ReplayOverview.prototype = {
         this._callbacks.register(this._model, replayEvents.PlaybackStopped,    this._onPlaybackStopped);
         this._callbacks.register(this._model, replayEvents.PlaybackError,      this._onPlaybackError);
         this._callbacks.register(this._model, replayEvents.InputPaused,        this._onInputPaused);
-        this._callbacks.register(this._model, replayEvents.InputHit,           this._onInputHit);
+        this._callbacks.register(this._model, replayEvents.CursorChanged,      this._replayCursorChanged);
         this._callbacks.register(this._model, replayEvents.DebuggerPaused,     this._onDebuggerPaused);
 
         // TODO: these should instead listen to specific data provider events.
@@ -994,9 +993,9 @@ WebInspector.ReplayOverview.prototype = {
         this._scheduleRefresh();
     },
 
-    _onInputHit: function(eventData)
+    _replayCursorChanged: function(eventData)
     {
-        var markIndex = eventData.data;
+        var markIndex = this._model.currentMarkIndex;
         var actionIndex = this._recording.actionIndexFromMarkIndex(markIndex);
 
         // don't animate if this mark has no corresponding action (aka, not a user-visible mark)

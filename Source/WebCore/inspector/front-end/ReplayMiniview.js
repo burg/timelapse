@@ -114,7 +114,7 @@ WebInspector.ReplayMiniview = function(model, recording)
     this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this._onPlaybackDidStart);
     this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this._onPlaybackStopped);
     this._callbacks.register(this._model, replayEvents.InputPaused,      this._onInputPaused);
-    this._callbacks.register(this._model, replayEvents.InputHit,         this._onInputHit);
+    this._callbacks.register(this._model, replayEvents.CursorChanged,    this._onCursorChanged);
     this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._onDebuggerPaused);
 
     this._callbacks.register(this._recording, recordingEvents.ProviderAdded,  this._onProviderAdded);
@@ -147,8 +147,8 @@ WebInspector.ReplayMiniview = function(model, recording)
     
     // initialize slider position
     this.sliders.playback.enable();
-    this.sliders.playback.setPosition(1.0, true);
   	this.sliders.playback.show();
+    this._onCursorChanged();
     
     this._scheduleRefresh();
 };
@@ -624,9 +624,9 @@ WebInspector.ReplayMiniview.prototype = {
     },
 
 
-    _onInputHit: function(event)
+    _onCursorChanged: function()
     {
-	var markIndex = event.data;
+	var markIndex = this._model.currentMarkIndex;
 	var actionIndex = this._recording.actionIndexFromMarkIndex(markIndex);
 
 	// don't animate if this mark has no corresponding action (aka, not a user-visible mark)

@@ -106,10 +106,8 @@ WebInspector.ReplayModel.Events = {
     PlaybackWillStart: "ReplayPlaybackWillStart",
     PlaybackDidStart: "ReplayPlaybackDidStart",
     PlaybackStopped: "ReplayPlaybackStopped",
-
-    // Hits of actual breakpoints or inputs always trigger *Hit events.
+    CursorChanged: "ReplayCursorChanged",
     BreakpointHit: "ReplayBreakpointHit",
-    InputHit: "ReplayInputHit",
 
     // Debugger pauses or input pauses are preceded by the *Waiting events.
     // *Waiting events allow listeners to prevent the default actions, in
@@ -650,12 +648,12 @@ WebInspector.ReplayModel.prototype = {
         this.dispatchEventToListeners(WebInspector.ReplayModel.Events.InputUnlocked);
     },
 
-    _playbackHitInput: function(markIndex)
+    _setReplayCursor: function(markIndex)
     {
         if (this.loadedRecording.actionIndexFromMarkIndex(markIndex) > -1)
             this._currentMarkIndex = markIndex;
 
-        this.dispatchEventToListeners(WebInspector.ReplayModel.Events.InputHit, markIndex);
+        this.dispatchEventToListeners(WebInspector.ReplayModel.Events.CursorChanged);
     },
 
     _recordingUnloaded: function()
@@ -674,14 +672,14 @@ WebInspector.ReplayModel.prototype = {
         var setActiveRecording = function(error, uid) {
             this._canReplay = true;
             this._activeRecording = recording;
-            this._currentMarkIndex = recording.actions[0].mark.index || 0;
+            this._setReplayCursor(recording.actions[0].mark.index || 0);
             this.dispatchEventToListeners(WebInspector.ReplayModel.Events.RecordingLoaded, recording);
         };
         
         if (recording.dataLoaded())
             setActiveRecording.call(this);
         else
-            this.onceEventListener(WebInspector.ReplayModel.Events.RecordingAdded, setActiveRecording.bind(this));
+            this.onceEventListener(WebInspector.ReplayModel.Events.RecordingAdded, setActiveRecording, this);
     },
 
     _recordingAdded: function(uid)
@@ -859,7 +857,7 @@ WebInspector.ReplayDispatcher.prototype = {
 
     playbackHitMark: function(markIndex)
     {
-	this._model._playbackHitInput(markIndex);
+        this._model._setReplayCursor(markIndex);
     },
     
     recordingUnloaded: function()

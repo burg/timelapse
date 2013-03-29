@@ -52,7 +52,7 @@ WebInspector.ReplayBreakpointTracker = function(model)
     var replayEvents = WebInspector.ReplayModel.Events;
     replayCallbacks.register(this._model, replayEvents.PlaybackWillStart, this._playbackWillStart);
     replayCallbacks.register(this._model, replayEvents.PlaybackStopped,   this._endPendingInterval);
-    replayCallbacks.register(this._model, replayEvents.InputHit,          this._inputHit);
+    replayCallbacks.register(this._model, replayEvents.CursorChanged,     this._cursorChanged);
     replayCallbacks.register(this._model, replayEvents.InputPaused,       this._endPendingInterval);
 
     var debugEvents = WebInspector.DebuggerModel.Events;
@@ -150,7 +150,7 @@ WebInspector.ReplayBreakpointTracker.prototype = {
             this._exploredIntervals.startInterval(markIndex);
     },
 
-    _inputHit: function(event)
+    _cursorChanged: function(event)
     {
         this._breakpointHitIndex = -1;
         this._debuggerWaitIndex = -1;
