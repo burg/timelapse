@@ -48,6 +48,10 @@
 #include <wtf/RefPtr.h>
 #include <wtf/UnusedParam.h>
 
+#if ENABLE(TIMELAPSE)
+#include "ReplayRecording.h"
+#endif // ENABLE(TIMELAPSE)
+
 namespace WebCore {
 
 class CSSRule;
@@ -58,6 +62,7 @@ class Database;
 class Document;
 class Element;
 class EventContext;
+class EventLoopInput;
 class DocumentLoader;
 class DeviceOrientationData;
 class GeolocationPosition;
@@ -86,11 +91,6 @@ class ThreadableLoaderClient;
 class WorkerContext;
 class WorkerContextProxy;
 class XMLHttpRequest;
-
-#if ENABLE(TIMELAPSE)
-class EventLoopInput;
-class ReplayRecording;
-#endif
 
 #define FAST_RETURN_IF_NO_FRONTENDS(value) if (!hasFrontends()) return value;
 
@@ -270,10 +270,10 @@ public:
 #endif
 
 #if ENABLE(TIMELAPSE)
-    static void recordingLoaded(Page*, ReplayRecording*);
+    static void recordingLoaded(Page*, PassRefPtr<ReplayRecording>);
     static void recordingUnloaded(Page*);
-    static void recordingAdded(Page*, ReplayRecording*);
-    static void recordingRemoved(Page*, ReplayRecording*);
+    static void recordingAdded(Page*, PassRefPtr<ReplayRecording>);
+    static void recordingRemoved(Page*, PassRefPtr<ReplayRecording>);
     static void capturedPageInput(Page*, EventLoopInput*);
     static void captureStarted(Page*);
     static void captureFinished(Page*);
@@ -499,10 +499,10 @@ private:
 #endif
 
 #if ENABLE(TIMELAPSE)
-    static void recordingLoadedImpl(InstrumentingAgents*, ReplayRecording*);
+    static void recordingLoadedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
     static void recordingUnloadedImpl(InstrumentingAgents*);
-    static void recordingAddedImpl(InstrumentingAgents*, ReplayRecording*);
-    static void recordingRemovedImpl(InstrumentingAgents*, ReplayRecording*);
+    static void recordingAddedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
+    static void recordingRemovedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
     static void capturedPageInputImpl(InstrumentingAgents*, EventLoopInput*);
     static void captureStartedImpl(InstrumentingAgents*);
     static void captureFinishedImpl(InstrumentingAgents*);
@@ -1989,7 +1989,7 @@ inline void InspectorInstrumentation::recordingUnloaded(Page* page)
 #endif
 }
 
-inline void InspectorInstrumentation::recordingLoaded(Page* page, ReplayRecording* recording)
+inline void InspectorInstrumentation::recordingLoaded(Page* page, PassRefPtr<ReplayRecording> recording)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
@@ -1997,7 +1997,7 @@ inline void InspectorInstrumentation::recordingLoaded(Page* page, ReplayRecordin
 #endif
 }
 
-inline void InspectorInstrumentation::recordingAdded(Page* page, ReplayRecording* recording)
+inline void InspectorInstrumentation::recordingAdded(Page* page, PassRefPtr<ReplayRecording> recording)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
@@ -2005,7 +2005,7 @@ inline void InspectorInstrumentation::recordingAdded(Page* page, ReplayRecording
 #endif
 }
 
-inline void InspectorInstrumentation::recordingRemoved(Page* page, ReplayRecording* recording)
+inline void InspectorInstrumentation::recordingRemoved(Page* page, PassRefPtr<ReplayRecording> recording)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))

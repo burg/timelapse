@@ -306,7 +306,7 @@ JSValue JSInjectedScriptHost::evaluate(ExecState* exec)
     bool wasEvalEnabled = globalObject->evalEnabled();
     globalObject->setEvalEnabled(true);
 #if ENABLE(TIMELAPSE)
-    RefPtr<ReplayInputLog> log = globalObject->replayInputLog();
+    ReplayInputLog* log = globalObject->inputLog();
     if (log)
         log->setIsActive(false);
 #endif

@@ -77,7 +77,7 @@ const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_inf
 #if ENABLE(TIMELAPSE)   
 static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
 {
-    RefPtr<ReplayInputLog> log = globalObject->replayInputLog();
+    ReplayInputLog* log = globalObject->inputLog();
 
     // if no determinism, get current time normally.
     if (!log || !log->isActive())

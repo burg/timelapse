@@ -93,9 +93,9 @@ public:
     bool replaying() const { return m_stateMachine.replaying(); }
 
     void recordingUnloaded();
-    void recordingLoaded(ReplayRecording*);
-    void recordingAdded(ReplayRecording*);
-    void recordingRemoved(ReplayRecording*);
+    void recordingLoaded(PassRefPtr<ReplayRecording>);
+    void recordingAdded(PassRefPtr<ReplayRecording>);
+    void recordingRemoved(PassRefPtr<ReplayRecording>);
     void capturedPageInput(EventLoopInput*);
     void captureStarted();
     void captureFinished();

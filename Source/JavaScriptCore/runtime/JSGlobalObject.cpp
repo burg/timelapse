@@ -544,15 +544,15 @@ ExecState* JSGlobalObject::globalExec()
 }
 
 #if ENABLE(TIMELAPSE)
-void JSGlobalObject::setReplayInputLog(PassRefPtr<ReplayInputLog> prpReplayInputLog)
+void JSGlobalObject::setReplayInputLog(ReplayInputLog* inputLog)
 {
-    m_replayInputLog = prpReplayInputLog;
+    m_replayInputLog = inputLog;
     
     LOG(JSCDeterministicReplay, "%-30s Setting replay input log=%p for global object=%p\n",
-        "[ReplayInputLog]", (void*)m_replayInputLog.get(), (void*)this);
+        "[ReplayInputLog]", (void*)inputLog, (void*)this);
 
     //set up determinism elsewhere in JSC
-    m_weakRandom.setReplayInputLog(m_replayInputLog);
+    m_weakRandom.setReplayInputLog(inputLog);
 }
 #endif
 

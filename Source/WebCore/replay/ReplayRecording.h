@@ -36,7 +36,8 @@
 #if ENABLE(TIMELAPSE)
 
 #include <wtf/Vector.h>
-#include <wtf/Noncopyable.h>
+#include <wtf/RefCounted.h>
+#include <wtf/replay/ReplayInputLog.h>
 
 namespace WTF {
     class ReplayInputLog;
@@ -44,19 +45,22 @@ namespace WTF {
 
 namespace WebCore {
 
-class ReplayRecording {
-    WTF_MAKE_NONCOPYABLE(ReplayRecording);
+class ReplayRecording : public RefCounted<ReplayRecording> {
+    friend class ReplayController; // for capturing() / replaying()
 public:
-    ReplayRecording(PassRefPtr<WTF::ReplayInputLog>, int);
+    static PassRefPtr<ReplayRecording> createForCapture(int);
     ~ReplayRecording() {}
 
     int uid() const { return m_uid; }
-    // TODO: eventually, the input log lifetime should be tied to the recording.
-    // first, the ReplayController needs to actually use ReplayRecording.
-    PassRefPtr<WTF::ReplayInputLog> inputLog() const { return m_inputLog; }
+    ReplayInputLog* inputLog() const { return m_inputLog.get(); }
 
+protected:
+    bool capturing() const { return m_inputLog->capturing(); }
+    bool replaying() const { return m_inputLog->replaying(); }
+    
 private:
-    RefPtr<WTF::ReplayInputLog> m_inputLog;
+    ReplayRecording(int);
+    OwnPtr<ReplayInputLog> m_inputLog;
     int m_uid;
 };
 

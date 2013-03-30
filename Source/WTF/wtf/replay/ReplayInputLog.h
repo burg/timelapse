@@ -33,7 +33,9 @@
 #define ReplayInputLog_h
 
 #include "NondeterministicInput.h"
-#include <wtf/RefCounted.h>
+#include <wtf/Noncopyable.h>
+#include <wtf/OwnPtr.h>
+#include <wtf/PassOwnPtr.h>
 #include <wtf/Vector.h>
 
 namespace WTF {
@@ -65,10 +67,11 @@ struct ReplayErrorData {
     ReplayInputQueueType queue;
 };
 
-class ReplayInputLog : public RefCounted<ReplayInputLog> {
-
+class ReplayInputLog {
+    // TODO: (Issue #234): write a clone() method to duplicate recordings
+    WTF_MAKE_NONCOPYABLE(ReplayInputLog);
 public:
-    WTF_EXPORT_PRIVATE static PassRefPtr<ReplayInputLog> createLogForCapture();
+    WTF_EXPORT_PRIVATE static PassOwnPtr<ReplayInputLog> createForCapture();
 
     WTF_EXPORT_PRIVATE ~ReplayInputLog();
 

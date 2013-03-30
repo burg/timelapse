@@ -33,7 +33,6 @@
 
 #include "UserInputProxy.h"
 
-#include "ReplayController.h"
 #include "EventHandler.h"
 #include "FocusController.h"
 #include "FocusSetActive.h"
@@ -49,6 +48,8 @@
 #include "PlatformKeyboardEvent.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformWheelEvent.h"
+#include "ReplayController.h"
+#include "ReplayRecording.h"
 #include "ScrollPage.h"
 #include "SendResizeEvent.h"
 #include <wtf/PassOwnPtr.h>

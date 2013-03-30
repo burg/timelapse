@@ -35,12 +35,15 @@
 
 #include "ReplayRecording.h"
 
-#include <wtf/replay/ReplayInputLog.h>
-
 namespace WebCore {
 
-ReplayRecording::ReplayRecording(PassRefPtr<WTF::ReplayInputLog> inputLog, int uid)
-: m_inputLog(inputLog)
+PassRefPtr<ReplayRecording> ReplayRecording::createForCapture(int uid)
+{
+    return adoptRef(new ReplayRecording(uid));
+}
+
+ReplayRecording::ReplayRecording(int uid)
+: m_inputLog(ReplayInputLog::createForCapture())
 , m_uid(uid) { }
         
 }; // namespace WebCore

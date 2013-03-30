@@ -166,7 +166,7 @@ namespace JSC {
 
         Debugger* m_debugger;
 #if ENABLE(TIMELAPSE)
-        RefPtr<ReplayInputLog> m_replayInputLog;
+        ReplayInputLog* m_replayInputLog;
 #endif
         RefPtr<WatchpointSet> m_masqueradesAsUndefinedWatchpoint;
         RefPtr<WatchpointSet> m_havingABadTimeWatchpoint;
@@ -359,8 +359,8 @@ namespace JSC {
         void setDebugger(Debugger* debugger) { m_debugger = debugger; }
 
 #if ENABLE(TIMELAPSE)
-        PassRefPtr<ReplayInputLog> replayInputLog() const { return m_replayInputLog; }
-        JS_EXPORT_PRIVATE void setReplayInputLog(PassRefPtr<ReplayInputLog>);
+        ReplayInputLog* inputLog() const { return m_replayInputLog; }
+        JS_EXPORT_PRIVATE void setReplayInputLog(ReplayInputLog*);
 #endif
         const GlobalObjectMethodTable* globalObjectMethodTable() const { return m_globalObjectMethodTable; }
 

@@ -38,6 +38,7 @@
 #if ENABLE(TIMELAPSE)
 #include "ReplayController.h"
 #include "ReplayInputTypes.h"
+#include "ReplayRecording.h"
 #include "TimerCreated.h"
 #include <wtf/replay/ReplayInputLog.h>
 #include <wtf/replay/NondeterministicInput.h>
@@ -75,9 +76,9 @@ DOMTimer::DOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> 
         if (document->page() && document->page()->replayController()) {
             ReplayController* controller = document->page()->replayController();
             if (controller->isCapturingDocument(document)) {
-                controller->replayInputLog()->append(new TimerCreated(m_timeoutId, document));
+                controller->loadedRecording()->inputLog()->append(new TimerCreated(m_timeoutId, document));
             } else if (controller->isReplayingDocument(document)) {
-                NondeterministicInput* loggedAction = controller->replayInputLog()->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::TimerCreated);
+                NondeterministicInput* loggedAction = controller->loadedRecording()->inputLog()->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::TimerCreated);
                 TimerCreated* action = static_cast<TimerCreated*>(loggedAction);
                 // implicit error handling case: if fetch failed, then don't overwrite with memoized id
                 if (action) {

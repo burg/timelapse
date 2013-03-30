@@ -72,11 +72,11 @@
 
 namespace WebCore {
 
-static EventLoopInput* popDispatchInput(PassRefPtr<ReplayInputLog> log)
+static EventLoopInput* popDispatchInput(ReplayInputLog* log)
 {
-        NondeterministicInput* poppedInput = log->popInput(WTF::EventLoopInputQueue);
-        ASSERT(poppedInput);
-        return static_cast<EventLoopInput*>(poppedInput);
+    NondeterministicInput* poppedInput = log->popInput(WTF::EventLoopInputQueue);
+    ASSERT(poppedInput);
+    return static_cast<EventLoopInput*>(poppedInput);
 }
 
 #if !LOG_DISABLED
@@ -168,8 +168,9 @@ static bool debugHookOnDomEvents(const Event& event)
 
 ReplayController::ReplayController(Page* page)
     : m_page(page)
+    , m_nextRecordingId(1)
+    , m_loadedRecording(0)
     , m_timer(this, &ReplayController::timerFired)
-    , m_replayInputLog(0)
     , m_cacheController(adoptRef(new CacheController()))
     , m_previousInput(0)
     , m_waitingInput(0)
@@ -184,9 +185,7 @@ ReplayController::ReplayController(Page* page)
     , m_currentMark(0)
     , m_stopBeforeMarkIndex(0)
     , m_previousDispatchStartTime(0.0)
-    , m_previousMarkTime(0.0)
-    , m_nextRecordingId(1)
-    , m_loadedRecording(0) { }
+    , m_previousMarkTime(0.0) { }
 
 ReplayController::~ReplayController()
 {
@@ -196,15 +195,16 @@ ReplayController::~ReplayController()
     
 void ReplayController::beginCapturing(const PositionMark& mark)
 {
-    ASSERT(!capturing());
-    
-    if (replaying())
+    if (m_loadedRecording) {
+        LOG_ERROR("Tried to begin capturing a replay recording, but another recording is still loaded.");
         cancelPlayback();
+        return;
+    }
         
     m_status = CannotReplay;
     m_domEventDispatchCount = 0;
     m_previousInput = 0;
-    m_replayInputLog = ReplayInputLog::createLogForCapture();
+    m_loadedRecording = ReplayRecording::createForCapture(m_nextRecordingId++);
     changeProxyMode(ReplayProxy::Capturing);
 
     InspectorInstrumentation::captureStarted(m_page);
@@ -220,9 +220,9 @@ void ReplayController::beginCapturing(const PositionMark& mark)
     // also to use for the initial refresh.
     Frame* mainFrame = m_page->mainFrame();
     NavigateToPage* reloadInput = new NavigateToPage(mainFrame->document()->securityOrigin(),
-                                                      mainFrame->document()->url().string(),
-                                                      mainFrame->loader()->referrer(),
-                                                      m_domEventDispatchCount, m_currentMark);
+                                                     mainFrame->document()->url().string(),
+                                                     mainFrame->loader()->referrer(),
+                                                     m_domEventDispatchCount, m_currentMark);
     captureEventLoopInput(reloadInput);
 
     //The call to scheduleLocationChange should be the same on capture and replay.
@@ -251,7 +251,7 @@ bool ReplayController::endCapturing(const PositionMark& mark)
     //normally performed by captureEventLoopInput (called on following input), but this is last input.
     finalizePreviousInput(m_domEventDispatchCount);
 
-    m_replayInputLog->endCapturing();
+    m_loadedRecording->inputLog()->endCapturing();
     
     serialize();
 
@@ -265,17 +265,8 @@ bool ReplayController::endCapturing(const PositionMark& mark)
     m_status = PlaybackUninitialized;
     InspectorInstrumentation::captureFinished(m_page);
 
-    if (m_loadedRecording) {
-        InspectorInstrumentation::recordingUnloaded(m_page);
-        InspectorInstrumentation::recordingRemoved(m_page, m_loadedRecording);
-        delete m_loadedRecording;
-    }
-
-    m_loadedRecording = new ReplayRecording(m_replayInputLog, m_nextRecordingId++);
-    // TODO: actually load the new recording
     InspectorInstrumentation::recordingAdded(m_page, m_loadedRecording);
-    InspectorInstrumentation::recordingLoaded(m_page, m_loadedRecording);
-    return true;
+    return loadRecording(m_loadedRecording); // pretend to load the recording
 }
 
 //-- replay API
@@ -421,7 +412,7 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
     
     page()->networkProxy()->setExpectsPageLoad(false);
     page()->networkProxy()->setInitiatingPageLoad(false);
-    loader->frame()->script()->globalObject(mainThreadNormalWorld())->setReplayInputLog(m_replayInputLog);
+    loader->frame()->script()->globalObject(mainThreadNormalWorld())->setReplayInputLog(m_loadedRecording->inputLog());
 }
 
 void ReplayController::willFireTimer(int timerId, Document* document)
@@ -441,19 +432,19 @@ PassRefPtr<CacheController> ReplayController::cacheController() const
     return m_cacheController;
 }
 
-PassRefPtr<ReplayInputLog> ReplayController::replayInputLog() const
+PassRefPtr<ReplayRecording> ReplayController::loadedRecording() const
 {
-    return m_replayInputLog;
+    return m_loadedRecording;
 }
-    
+
 bool ReplayController::isCapturingDocument(Document* document) const
 {
     if (!capturing() || !document)
         return false;
     
     JSDOMWindow* window = toJSDOMWindow(document->frame(), mainThreadNormalWorld());
-    return window && window->replayInputLog() && 
-           window->replayInputLog()->isActive() && window->replayInputLog()->capturing();
+    return window && window->inputLog() && 
+           window->inputLog()->isActive() && window->inputLog()->capturing();
 }
 
 bool ReplayController::isReplayingDocument(Document* document) const
@@ -462,8 +453,8 @@ bool ReplayController::isReplayingDocument(Document* document) const
         return false;
     
     JSDOMWindow* window = toJSDOMWindow(document->frame(), mainThreadNormalWorld());
-    return window && window->replayInputLog() &&
-           window->replayInputLog()->isActive() && window->replayInputLog()->replaying();
+    return window && window->inputLog() &&
+           window->inputLog()->isActive() && window->inputLog()->replaying();
 }
 
 void ReplayController::capturePageInput(EventLoopInput* input)
@@ -514,7 +505,7 @@ void ReplayController::captureEventLoopInput(EventLoopInput* input)
     finalizePreviousInput(input->dispatchCount());
 
     m_currentMark = input->mark();
-    m_replayInputLog->append(input);
+    m_loadedRecording->inputLog()->append(input);
     m_previousInput = input;
 }
 
@@ -562,16 +553,16 @@ void ReplayController::maybeDispatchInput()
         return;
 
     // if there was an error between now the previous dispatch, report it now.
-    if (m_replayInputLog->hasError()) {
+    if (m_loadedRecording->inputLog()->hasError()) {
         // TODO: some of these should be recoverable, but for now they are all fatal.
         // we must clear the error
-        playbackError(true, m_replayInputLog->errorMessage());
+        playbackError(true, m_loadedRecording->inputLog()->errorMessage());
         return;
     }
 
     // if there is no waiting input, then get one.
     if (!m_waitingInput)
-        m_waitingInput = popDispatchInput(m_replayInputLog);
+        m_waitingInput = popDispatchInput(m_loadedRecording->inputLog());
 
     m_currentMark = m_waitingInput->mark();
     
@@ -699,7 +690,7 @@ void ReplayController::resetPlayback()
     m_currentMark = 0;
     m_previousMarkTime = 0.0;
     m_previousDispatchStartTime = 0.0;
-    m_replayInputLog->reset();
+    m_loadedRecording->inputLog()->reset();
 }
 
 void ReplayController::pauseReplay(PositionMarkIndex index)
@@ -723,7 +714,7 @@ void ReplayController::finishReplay()
 
 void ReplayController::serialize()
 {
-    JSONReplayInputSerializer serializer(m_replayInputLog);
+    JSONReplayInputSerializer serializer(m_loadedRecording->inputLog());
 
     LOG(DeterministicReplay, "%-30sMETRIC: memory overhead: %zu bytes\n", "[ReplayController]", serializer.memorySize());
 
@@ -741,6 +732,36 @@ void ReplayController::serialize()
     }
 }
 
+bool ReplayController::unloadRecording()
+{
+    if (!m_loadedRecording) {
+        LOG_ERROR("Tried to unload recording, but none was loaded.");
+        return false;
+    }
+    
+    if (m_loadedRecording->capturing() || m_loadedRecording->replaying()) {
+        LOG_ERROR("Tried to unload recording that was capturing or replaying.");
+        return false;
+    }
+    
+    m_loadedRecording = 0;
+    InspectorInstrumentation::recordingUnloaded(m_page);
+    return true;
+}
+
+bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> recording)
+{
+    ASSERT(!recording->capturing() && !recording->replaying());
+
+    if (m_loadedRecording && m_loadedRecording != recording) {
+        LOG_ERROR("Tried to load recording, but a recording is already loaded.");
+        return false;
+    }
+    m_loadedRecording = recording;
+    InspectorInstrumentation::recordingLoaded(m_page, recording);
+    return true;
+}
+
 void ReplayController::changeProxyMode(ReplayProxy::ProxyMode mode)
 {
     m_page->userInputProxy()->setProxyMode(mode);
@@ -750,14 +771,19 @@ void ReplayController::changeProxyMode(ReplayProxy::ProxyMode mode)
 
 bool ReplayController::capturing() const
 {
-    return m_status == CannotReplay && m_replayInputLog &&
-           m_replayInputLog->isActive() && m_replayInputLog->capturing();
+    return m_status == CannotReplay &&
+           m_loadedRecording &&
+           m_loadedRecording->inputLog()->isActive() &&
+           m_loadedRecording->capturing();
 }
 
 bool ReplayController::replaying() const
 {
-    return m_status != CannotReplay && m_status != PlaybackUninitialized &&
-           m_replayInputLog && m_replayInputLog->isActive() && m_replayInputLog->replaying();
+    return m_status != CannotReplay &&
+           m_status != PlaybackUninitialized &&
+           m_loadedRecording &&
+           m_loadedRecording->inputLog()->isActive() &&
+           m_loadedRecording->replaying();
 }
         
 }; // namespace WebCore

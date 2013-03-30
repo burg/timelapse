@@ -40,7 +40,7 @@ class RiggedWeakRandom {
 public:
     JS_EXPORT_PRIVATE RiggedWeakRandom();
     
-    void setReplayInputLog(PassRefPtr<ReplayInputLog>);
+    void setReplayInputLog(ReplayInputLog*);
     
     double get()
     {
@@ -57,7 +57,7 @@ private:
     unsigned advance();
 
 
-    RefPtr<ReplayInputLog> m_replayInputLog;
+    ReplayInputLog* m_replayInputLog;
     bool m_initialized;
     unsigned m_low;
     unsigned m_high;

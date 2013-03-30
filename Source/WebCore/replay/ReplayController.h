@@ -122,9 +122,10 @@ namespace WebCore {
 
         Page* page() const { return m_page; }
         PassRefPtr<CacheController> cacheController() const;
-        PassRefPtr<WTF::ReplayInputLog> replayInputLog() const;
-        // FIXME: temporary hack until some other object manages recordings
-        ReplayRecording* loadedRecording() const { return m_loadedRecording; }
+        PassRefPtr<ReplayRecording> loadedRecording() const;
+
+        bool loadRecording(PassRefPtr<ReplayRecording>);
+        bool unloadRecording();
 
     private:
         void captureEventLoopInput(EventLoopInput*);
@@ -149,9 +150,9 @@ namespace WebCore {
 
         Page* m_page;
 
-        //used to implement "async" input dispatch
+        int m_nextRecordingId;
+        RefPtr<ReplayRecording> m_loadedRecording;
         Timer<ReplayController> m_timer;
-        RefPtr<WTF::ReplayInputLog> m_replayInputLog;
         RefPtr<CacheController> m_cacheController;
 
         // During capture, the previously-captured input is stored to this variable. Upon
@@ -188,9 +189,6 @@ namespace WebCore {
         double m_previousDispatchStartTime;
         // the time specified by the last dispatched input's mark.
         double m_previousMarkTime;
-        
-        int m_nextRecordingId;
-        ReplayRecording* m_loadedRecording;
     };
 
 } // namespace WebCore

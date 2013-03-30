@@ -45,7 +45,7 @@ namespace WebCore {
     class JSONReplayInputSerializer : public ReplayInputSerializer {
         WTF_MAKE_NONCOPYABLE(JSONReplayInputSerializer);
     public:       
-        JSONReplayInputSerializer(PassRefPtr<ReplayInputLog>);
+        JSONReplayInputSerializer(ReplayInputLog*);
         virtual ~JSONReplayInputSerializer() {};
 
         // insert key-value pair into current object
@@ -76,7 +76,7 @@ namespace WebCore {
         size_t memorySize();
         bool serializeToFile(FILE*);
     private:
-        RefPtr<ReplayInputLog> m_recording;
+        ReplayInputLog* m_recording;
         RefPtr<InspectorObject> m_currentObject;
         RefPtr<InspectorArray> m_currentArray;
         Vector<RefPtr<InspectorValue> > m_stack;

@@ -308,19 +308,19 @@ void InspectorReplayAgent::recordingUnloaded()
         m_frontend->recordingUnloaded();
 }
 
-void InspectorReplayAgent::recordingLoaded(ReplayRecording* recording)
+void InspectorReplayAgent::recordingLoaded(PassRefPtr<ReplayRecording> recording)
 {
     if (m_frontend)
         m_frontend->recordingLoaded(recording->uid());
 }
 
-void InspectorReplayAgent::recordingAdded(ReplayRecording* recording)
+void InspectorReplayAgent::recordingAdded(PassRefPtr<ReplayRecording> recording)
 {
     if (m_frontend)
         m_frontend->recordingAdded(recording->uid());
 }
 
-void InspectorReplayAgent::recordingRemoved(ReplayRecording* recording)
+void InspectorReplayAgent::recordingRemoved(PassRefPtr<ReplayRecording> recording)
 {
     if (m_frontend)
         m_frontend->recordingRemoved(recording->uid());
@@ -529,14 +529,29 @@ void InspectorReplayAgent::setPauseOnError(ErrorString*, bool shouldPause)
 
 void InspectorReplayAgent::loadRecording(ErrorString*, int uid, bool* wasAllowed)
 {
+    /*
+    RefPtr<ReplayRecording> recording = m_recordingsByUID.find(uid);
+    if (!recording) {
+        *wasAllowed = false;
+        *errorMessage = "Couldn't find recording with specified uid";
+        return;
+    }
+    *wasAllowed = m_inspectedPage->replayController()->loadRecording(recording);
+    */
+    
     *wasAllowed = true;
-    // TODO: implement, add sanity checks
+
     if (m_frontend)
         m_frontend->recordingLoaded(uid);
 }
 
 void InspectorReplayAgent::unloadRecording(ErrorString*, bool* wasAllowed)
 {
+    /*
+    *wasAllowed = m_inspectedPage->replayController()->unloadRecording();
+    if (wasAllowed) // tell frontend
+    */
+
     // TODO: implement
     *wasAllowed = true;
     if (m_frontend)
@@ -546,7 +561,7 @@ void InspectorReplayAgent::unloadRecording(ErrorString*, bool* wasAllowed)
 
 void InspectorReplayAgent::getRecording(ErrorString*, int uid, RefPtr<TypeBuilder::Replay::ReplayRecording>& recordingObject)
 {
-    ReplayRecording* recording = m_inspectedPage->replayController()->loadedRecording();
+    RefPtr<ReplayRecording> recording = m_inspectedPage->replayController()->loadedRecording();
     ASSERT(uid == recording->uid());
 #if defined(NDEBUG)
     UNUSED_PARAM(uid);
@@ -565,7 +580,7 @@ void InspectorReplayAgent::getRecording(ErrorString*, int uid, RefPtr<TypeBuilde
 void InspectorReplayAgent::getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >& recordingsList)
 {
     recordingsList = TypeBuilder::Array<int>::create();
-    ReplayRecording* recording = m_inspectedPage->replayController()->loadedRecording();
+    RefPtr<ReplayRecording> recording = m_inspectedPage->replayController()->loadedRecording();
     if (recording)
         recordingsList->addItem(recording->uid());
 }

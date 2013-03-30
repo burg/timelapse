@@ -1251,19 +1251,19 @@ void InspectorInstrumentation::recordingUnloadedImpl(InstrumentingAgents* instru
         replayAgent->recordingUnloaded();
 }
 
-void InspectorInstrumentation::recordingLoadedImpl(InstrumentingAgents* instrumentingAgents, ReplayRecording* recording)
+void InspectorInstrumentation::recordingLoadedImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ReplayRecording> recording)
 {
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->recordingLoaded(recording);
 }
 
-void InspectorInstrumentation::recordingAddedImpl(InstrumentingAgents* instrumentingAgents, ReplayRecording* recording)
+void InspectorInstrumentation::recordingAddedImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ReplayRecording> recording)
 {
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->recordingAdded(recording);
 }
 
-void InspectorInstrumentation::recordingRemovedImpl(InstrumentingAgents* instrumentingAgents, ReplayRecording* recording)
+void InspectorInstrumentation::recordingRemovedImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ReplayRecording> recording)
 {
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
         replayAgent->recordingRemoved(recording);

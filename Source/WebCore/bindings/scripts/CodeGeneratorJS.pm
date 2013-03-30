@@ -1859,7 +1859,7 @@ sub GenerateImplementation
                     $implIncludes{"<wtf/replay/ReplayInputLog.h>"} = 1;
                     push(@implContent, "#if ENABLE(TIMELAPSE)\n");
                     push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
-                    push(@implContent, "    RefPtr<ReplayInputLog> log = globalObject->replayInputLog();\n");
+                    push(@implContent, "    ReplayInputLog* log = globalObject->inputLog();\n");
 
                     if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"}) {
                         $implIncludes{"PlaybackError.h"} = 1;
@@ -2323,7 +2323,7 @@ sub GenerateImplementation
                 $implIncludes{"<wtf/replay/ReplayInputLog.h>"} = 1;
                 push(@implContent, "#if ENABLE(TIMELAPSE)\n");
                 push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
-                push(@implContent, "    RefPtr<ReplayInputLog> log = globalObject->replayInputLog();\n");
+                push(@implContent, "    ReplayInputLog* log = globalObject->inputLog();\n");
                 push(@implContent, "    if (log && log->isActive() && log->capturing()) {\n");
                 push(@implContent, "        log->append(new PlaybackError(\"Replay is not implemented for $interfaceName." . $function->signature->name . "\"));\n");
                 push(@implContent, "    }\n");
@@ -3070,7 +3070,7 @@ sub GenerateImplementationFunctionCall()
         if ($nondeterministic) {
             $implIncludes{"<wtf/replay/ReplayInputLog.h>"} = 1;
             push(@implContent, "#if ENABLE(TIMELAPSE)\n");
-            push(@implContent, $indent . "RefPtr<ReplayInputLog> log = exec->lexicalGlobalObject()->replayInputLog();\n");
+            push(@implContent, $indent . "ReplayInputLog* log = exec->lexicalGlobalObject()->inputLog();\n");
             push(@implContent, $indent . "if (!log || !log->isActive() || log->capturing()) {\n");
             push(@implContent, $indent . "    $functionString;\n");
             push(@implContent, $indent . "}\n");
@@ -3099,7 +3099,7 @@ sub GenerateImplementationFunctionCall()
             my $memoizedType = GetNativeTypeForMemoization($function->signature->type);
             my $bindingName = $interfaceName . "." . $function->signature->name;
             push(@implContent, "#if ENABLE(TIMELAPSE)\n");
-            push(@implContent, $indent . "RefPtr<ReplayInputLog> log = exec->lexicalGlobalObject()->replayInputLog();\n");
+            push(@implContent, $indent . "ReplayInputLog* log = exec->lexicalGlobalObject()->inputLog();\n");
             push(@implContent, $indent . "JSC::JSValue result;\n");
             push(@implContent, $indent . "if (!log || !log->isActive()) {\n");
             push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $interfaceName, $functionString, $thisObject) . ";\n");

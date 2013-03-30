@@ -34,10 +34,11 @@
 #include "NetworkProxy.h"
 
 #include "CapturingResourceHandleClient.h"
-#include "ReplayController.h"
 #include "EmptyClients.h"
 #include "InspectorInstrumentation.h"
 #include "NetworkingContext.h"
+#include "ReplayController.h"
+#include "ReplayRecording.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleClient.h"
 #include "ResourceLoaderCreated.h"
@@ -83,16 +84,16 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
 {
     if (mode() == ReplayProxy::Capturing) {
         int freshId = m_nextId++;
-        controller()->replayInputLog()->append(new ResourceLoaderCreated(freshId, request));
+        controller()->loadedRecording()->inputLog()->append(new ResourceLoaderCreated(freshId, request));
 
         return freshId;
     }
 
     if (mode() == ReplayProxy::Replaying) {
-        RefPtr<ReplayInputLog> detLog = controller()->replayInputLog();
+        ReplayInputLog* inputLog = controller()->loadedRecording()->inputLog();
 
         int loaderId;
-        ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(detLog->popExpectedInput(WTF::LoaderMemoizedDataQueue, ReplayInputTypes::ResourceLoaderCreated));
+        ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(inputLog->popExpectedInput(WTF::LoaderMemoizedDataQueue, ReplayInputTypes::ResourceLoaderCreated));
         if (memoizedData)
             loaderId = memoizedData->id();
         else // error handling case

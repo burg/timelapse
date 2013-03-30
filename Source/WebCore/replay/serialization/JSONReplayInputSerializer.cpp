@@ -104,7 +104,7 @@ private:
     ReplayInputSerializer* m_serializer;
 };
 
-JSONReplayInputSerializer::JSONReplayInputSerializer(PassRefPtr<ReplayInputLog> log)
+JSONReplayInputSerializer::JSONReplayInputSerializer(ReplayInputLog* log)
     : m_recording(log)
     , m_currentObject(0)
     , m_currentArray(0) {}

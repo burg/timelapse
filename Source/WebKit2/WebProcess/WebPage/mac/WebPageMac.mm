@@ -67,6 +67,7 @@
 #if ENABLE(TIMELAPSE)
 #import <WebCore/InterpretedKeyCommands.h>
 #import <WebCore/ReplayController.h>
+#import <WebCore/ReplayRecording.h>
 #import <wtf/replay/ReplayInputLog.h>
 #import <wtf/replay/NondeterministicInput.h>
 #endif
@@ -220,8 +221,8 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
 #if ENABLE(TIMELAPSE)
         // if replaying, simply populate the commands from memoized state, and return.
         if (isReplaying) {
-            RefPtr<ReplayInputLog> detLog = controller->replayInputLog();
-            InterpretedKeyCommands* memoizedCommands = static_cast<InterpretedKeyCommands*>(detLog->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::InterpretedKeyCommands));
+            ReplayInputLog* inputLog = controller->loadedRecording()->inputLog();
+            InterpretedKeyCommands* memoizedCommands = static_cast<InterpretedKeyCommands*>(inputLog->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::InterpretedKeyCommands));
             if (memoizedCommands) {
                 commands = memoizedCommands->commands();
                 return eventWasHandled;
@@ -240,8 +241,8 @@ bool WebPage::handleEditingKeyboardEvent(KeyboardEvent* event, bool saveCommands
 #if ENABLE(TIMELAPSE)
         // if capturing, save away the key commands as memoized state.
         if (isCapturing) {
-            RefPtr<ReplayInputLog> detLog = controller->replayInputLog();
-            detLog->append(new InterpretedKeyCommands(commands));
+            ReplayInputLog* inputLog = controller->loadedRecording()->inputLog();
+            inputLog->append(new InterpretedKeyCommands(commands));
         }
 #endif
         

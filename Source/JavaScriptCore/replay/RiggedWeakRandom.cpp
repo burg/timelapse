@@ -78,11 +78,11 @@ void RiggedWeakRandom::setSeed()
     m_initialized = true;
 }
     
-void RiggedWeakRandom::setReplayInputLog(PassRefPtr<ReplayInputLog> prpReplayInputLog)
+void RiggedWeakRandom::setReplayInputLog(ReplayInputLog* inputLog)
 {
-    m_replayInputLog = prpReplayInputLog;
+    m_replayInputLog = inputLog;
     LOG(JSCDeterministicReplay, "%-30s Configured determinism. (ReplayInputLog=%p)\n",
-        "[RiggedWeakRandom]", (void*)m_replayInputLog.get());
+        "[RiggedWeakRandom]", (void*)inputLog);
 }
             
 unsigned RiggedWeakRandom::advance()

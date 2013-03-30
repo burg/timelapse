@@ -95,12 +95,12 @@ ReplayInputLog::~ReplayInputLog()
 //make object creation redirect through here. This will make it easier
 //to deserialize logs from file in the future, by calling a 
 //different factory method
-PassRefPtr<ReplayInputLog> ReplayInputLog::createLogForCapture()
+PassOwnPtr<ReplayInputLog> ReplayInputLog::createForCapture()
 {
     ReplayInputLog* newLog = new ReplayInputLog(true, false);
     LOG(TimelapseCapturing, "%-30s CAPTURE START\n", "[ReplayInputLog]");
                 
-    return adoptRef(newLog);
+    return adoptPtr(newLog);
 }
 
 void ReplayInputLog::endCapturing()
