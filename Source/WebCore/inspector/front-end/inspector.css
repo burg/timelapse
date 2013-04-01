@@ -3234,6 +3234,10 @@ button.breakpoint-radar-status-bar-item > .glyph {
     background-color: rgb(66, 129, 235) !important;
 }
 
+.replay-jump-button {
+    -webkit-mask-image: url(Images/replayJumpButton.png);
+}
+
 #replay-controller-view {
     position: absolute;
     top: 0px;
