@@ -63,8 +63,8 @@ WebInspector.BreakpointScanner.prototype = {
         if (!savedState)
             WebInspector.debuggerModel.disableDebugger();
         
-        this._model.addEventListener(WebInspector.ReplayModel.Events.DebuggerWaiting,
-                                     this._resumeFromBreakpointPause, this);
+        this._model.removeEventListener(WebInspector.ReplayModel.Events.DebuggerWaiting,
+                                        this._resumeFromBreakpointPause, this);
         cb();
     },
 
