@@ -46,10 +46,14 @@ WebInspector.BreakpointScanner.prototype = {
     scanDidStart: function(cb)
     {
         this._savedDebuggerState = WebInspector.debuggerModel.debuggerEnabled();
-        
+        this._savedBreakpointsState = WebInspector.debuggerModel.breakpointsActive();
+
         if (!WebInspector.debuggerModel.debuggerEnabled())
             WebInspector.debuggerModel.enableDebugger();
-        
+
+        if (!WebInspector.debuggerModel.breakpointsActive())
+            WebInspector.debuggerModel.setBreakpointsActive(true);
+
         this._model.addEventListener(WebInspector.ReplayModel.Events.DebuggerWaiting,
                                      this._resumeFromBreakpointPause, this);
         cb();
@@ -57,12 +61,16 @@ WebInspector.BreakpointScanner.prototype = {
     
     scanWillStop: function(cb)
     {
-        var savedState = this._savedDebuggerState;
+        var savedDebuggerState = this._savedDebuggerState;
+        var savedBreakpointsState = this._savedBreakpointsState;
         delete this._savedDebuggerState;
+        delete this._savedBreakpointsState;
         
-        if (!savedState)
+        if (!savedDebuggerState)
             WebInspector.debuggerModel.disableDebugger();
         
+        WebInspector.debuggerModel.setBreakpointsActive(savedBreakpointsState);
+
         this._model.removeEventListener(WebInspector.ReplayModel.Events.DebuggerWaiting,
                                         this._resumeFromBreakpointPause, this);
         cb();
