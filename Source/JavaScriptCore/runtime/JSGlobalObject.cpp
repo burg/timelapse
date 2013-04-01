@@ -114,6 +114,9 @@ static const int preferredScriptCheckTimeInterval = 1000;
 
 JSGlobalObject::JSGlobalObject(JSGlobalData& globalData, Structure* structure, const GlobalObjectMethodTable* globalObjectMethodTable)
     : Base(globalData, structure, 0)
+#if ENABLE(TIMELAPSE)
+    , m_replayInputLog(0)
+#endif
     , m_masqueradesAsUndefinedWatchpoint(adoptRef(new WatchpointSet(InitializedWatching)))
     , m_havingABadTimeWatchpoint(adoptRef(new WatchpointSet(InitializedWatching)))
 #if ENABLE(TIMELAPSE)
