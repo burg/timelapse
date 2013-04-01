@@ -39,6 +39,7 @@
 #include "InspectorFrontend.h"
 #include "ReplayAgentStateMachine.h"
 
+#include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PassOwnPtr.h>
 #include <wtf/PassRefPtr.h>
@@ -94,8 +95,7 @@ public:
 
     void recordingUnloaded();
     void recordingLoaded(PassRefPtr<ReplayRecording>);
-    void recordingAdded(PassRefPtr<ReplayRecording>);
-    void recordingRemoved(PassRefPtr<ReplayRecording>);
+    void recordingCreated(PassRefPtr<ReplayRecording>);
     void capturedPageInput(EventLoopInput*);
     void captureStarted();
     void captureFinished();
@@ -128,10 +128,8 @@ public:
 
 private:
     InspectorReplayAgent(InstrumentingAgents*, InspectorCompositeState*, Page*);
-
     PositionMark createMark();
     PositionMark reuseMark() const;
-    void pushRecordToFrontend(PassRefPtr<InspectorObject>, const String& type, const PositionMark&);
     
     InstrumentingAgents *m_instrumentingAgents;
     InspectorFrontend::Replay* m_frontend;
@@ -139,6 +137,9 @@ private:
     ReplayAgentStateMachine m_stateMachine;
     unsigned m_nextMarkIndex;
     unsigned m_lastHitMarkIndex;
+    typedef HashMap<int, RefPtr<ReplayRecording>, WTF::IntHash<int>, WTF::UnsignedWithZeroKeyHashTraits<int> > RecordingsMap;
+    RecordingsMap m_recordingsMap;
+
     bool m_inputLocked;
 };
 

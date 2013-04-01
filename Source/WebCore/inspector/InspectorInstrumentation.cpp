@@ -1257,16 +1257,10 @@ void InspectorInstrumentation::recordingLoadedImpl(InstrumentingAgents* instrume
         replayAgent->recordingLoaded(recording);
 }
 
-void InspectorInstrumentation::recordingAddedImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ReplayRecording> recording)
+void InspectorInstrumentation::recordingCreatedImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ReplayRecording> recording)
 {
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
-        replayAgent->recordingAdded(recording);
-}
-
-void InspectorInstrumentation::recordingRemovedImpl(InstrumentingAgents* instrumentingAgents, PassRefPtr<ReplayRecording> recording)
-{
-    if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
-        replayAgent->recordingRemoved(recording);
+        replayAgent->recordingCreated(recording);
 }
 
 void InspectorInstrumentation::capturedPageInputImpl(InstrumentingAgents* instrumentingAgents, EventLoopInput* action)

@@ -79,6 +79,13 @@ static EventLoopInput* popDispatchInput(ReplayInputLog* log)
     return static_cast<EventLoopInput*>(poppedInput);
 }
 
+static void unplugInputLogFromPage(Page* page)
+{
+    //unplug determinism log from all global objects in this Page.
+    for (Frame* frame = page->mainFrame(); frame; frame = frame->tree()->traverseNext())
+        frame->script()->globalObject(mainThreadNormalWorld())->setReplayInputLog(0);
+}
+
 #if !LOG_DISABLED
 static void dumpEventDispatchInfo(const Event& event, DOMWindow* window, Node* node, int eventCount, bool wasIgnored)
 {
@@ -252,21 +259,21 @@ bool ReplayController::endCapturing(const PositionMark& mark)
     finalizePreviousInput(m_domEventDispatchCount);
 
     m_loadedRecording->inputLog()->endCapturing();
-    
+    // TODO: (Issue #236): turn serialization into an API (that doesn't involve ReplayController)
     serialize();
 
-    // unsets "recording page events" and unplugs the determinism log from global object.
-    resetPlayback();
+    // hold on to a reference so unloading the recording doesn't deallocate it
+    RefPtr<ReplayRecording> recording = m_loadedRecording;
 
+    unloadRecording(true);
     m_cacheController->enableCache();
     changeProxyMode(ReplayProxy::Open);
     
     //now replay is possible, but requires a reset.
     m_status = PlaybackUninitialized;
     InspectorInstrumentation::captureFinished(m_page);
-
-    InspectorInstrumentation::recordingAdded(m_page, m_loadedRecording);
-    return loadRecording(m_loadedRecording); // pretend to load the recording
+    InspectorInstrumentation::recordingCreated(m_page, recording);
+    return true;
 }
 
 //-- replay API
@@ -295,7 +302,7 @@ void ReplayController::replayUpToMarkIndex(PositionMarkIndex index, ReplayMode m
     changeProxyMode(ReplayProxy::Replaying);
 
     if (m_status == PlaybackUninitialized || m_status == PlaybackFinished || index < m_currentMark.index())
-        resetPlayback();
+        resetPlaybackState();
 
     m_status = ReplayUpToMarkIndex;
     m_stopBeforeMarkIndex = index;
@@ -315,7 +322,7 @@ void ReplayController::replayToCompletion(ReplayMode mode)
     changeProxyMode(ReplayProxy::Replaying);
 
     if (m_status == PlaybackUninitialized || m_status == PlaybackFinished)
-        resetPlayback();
+        resetPlaybackState();
 
     m_replayMode = mode;
     m_status = ReplayToCompletion;
@@ -676,21 +683,20 @@ void ReplayController::syncDispatchInput()
 }
         
 
-void ReplayController::resetPlayback()
+void ReplayController::resetPlaybackState()
 {
     LOG(DeterministicReplay, "%-30s Resetting the replay log...\n", "[ReplayController]");
 
-    //unplug determinism log from all global objects in this Page.
-    for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree()->traverseNext())
-        frame->script()->globalObject(mainThreadNormalWorld())->setReplayInputLog(0);
-    
+    unplugInputLogFromPage(m_page);
+
     m_waitingInput = 0;
     m_runningInput = 0;
     m_domEventDispatchCount = 0;
     m_currentMark = 0;
     m_previousMarkTime = 0.0;
     m_previousDispatchStartTime = 0.0;
-    m_loadedRecording->inputLog()->reset();
+    if (m_loadedRecording)
+        m_loadedRecording->inputLog()->reset();
 }
 
 void ReplayController::pauseReplay(PositionMarkIndex index)
@@ -708,7 +714,7 @@ void ReplayController::finishReplay()
     
     // unplug the ReplayInputLog from JS global object so we don't accidentally 
     // try to pull events from it. Such attempts will fail, since the log is at the end.
-    resetPlayback();
+    resetPlaybackState();
     InspectorInstrumentation::playbackFinished(m_page);
 }
 
@@ -732,7 +738,7 @@ void ReplayController::serialize()
     }
 }
 
-bool ReplayController::unloadRecording()
+bool ReplayController::unloadRecording(bool suppressNotifications)
 {
     if (!m_loadedRecording) {
         LOG_ERROR("Tried to unload recording, but none was loaded.");
@@ -743,22 +749,35 @@ bool ReplayController::unloadRecording()
         LOG_ERROR("Tried to unload recording that was capturing or replaying.");
         return false;
     }
+
+    LOG(DeterministicReplay, "%-30sUnloading recording: %p.\n", "[ReplayController]", (void*)m_loadedRecording.get());
     
+    unplugInputLogFromPage(m_page);
     m_loadedRecording = 0;
-    InspectorInstrumentation::recordingUnloaded(m_page);
+
+    if (!suppressNotifications)
+        InspectorInstrumentation::recordingUnloaded(m_page);
     return true;
+
 }
 
-bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> recording)
+bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> prpRecording, bool suppressNotifications)
 {
+    RefPtr<ReplayRecording> recording = prpRecording;
     ASSERT(!recording->capturing() && !recording->replaying());
 
     if (m_loadedRecording && m_loadedRecording != recording) {
         LOG_ERROR("Tried to load recording, but a recording is already loaded.");
         return false;
     }
+    
+    LOG(DeterministicReplay, "%-30sLoading recording: %p.\n", "[ReplayController]", (void*)recording.get());
+    
+    resetPlaybackState();
+
     m_loadedRecording = recording;
-    InspectorInstrumentation::recordingLoaded(m_page, recording);
+    if (!suppressNotifications)
+        InspectorInstrumentation::recordingLoaded(m_page, recording);
     return true;
 }
 

@@ -77,14 +77,18 @@ WebInspector.ReplayModel.Events = {
     // Recording* events are coarse-grained, and control switching of entire views.
     // Capture{Will,Did}{Start,Stop} events are fine-grained, suitable for
     // updating capture-specific widget progress but not for creating them.
-    
-    // The ordering of these events during capture lifecycle is as follows:
+    //
+    // The ordering of these frontend events during capture events is below:
     // RecordingUnloaded (can only capture from here)
     // -> CaptureWillStart -> RecordingCreated -> CaptureDidStart
-    // -> CaptureWillStop  -> RecordingAdded   -> CaptureDidStop -> RecordingLoaded
+    // -> CaptureWillStop  -> CaptureDidStop -> RecordingAdded -> RecordingLoaded
     //
     // Recordings can be added independently or capture, replay, or load status.
     // A recording can only be loaded or unloaded from the opposite state.
+    //
+    // The ordering of backend events is different:
+    // RecordingUnloaded -> CaptureStarted -> CaptureStopped -> RecordingAdded -> RecordingLoaded
+    // InspectorReplayAgent will automatically load the created recording if none is loaded.
 
     // fires when a new recording is initialized for capturing.
     // this recording object does not exist in the backend.
@@ -234,16 +238,16 @@ WebInspector.ReplayModel.prototype = {
         .chain("resumeDebuggerIfPaused",
                WebInspector.ReplayModel.Steps.ResumeDebuggerIfPaused)
         .chain("requestStartCapture", function(cb) {
-            model.onceEventListener(events.CaptureDidStart, cb, this);
-
             // we must create recording before receiving CaptureDidStart, because
             // the recording needs to listen for that event as well.
             model._activeRecording = new WebInspector.ReplayLiveRecording(model);
+            model._capturing = true;
             model.dispatchEventToListeners(WebInspector.ReplayModel.Events.RecordingCreated, model._activeRecording);
+            model.onceEventListener(events.CaptureDidStart, cb, this);
             ReplayAgent.startCapture();
         })
         .chain("notifyDidStart", function(cb) {
-            model._capturing = true;
+            console.assert(model.createdRecording, "somehow lost created recording object");
             model.changeStatus("Capturing...");
             cb();
         });
@@ -666,15 +670,15 @@ WebInspector.ReplayModel.prototype = {
 
     _recordingLoaded: function(uid)
     {
+        var setActiveRecording = function() {
+            this._canReplay = true;
+            this._activeRecording = this._recordingsByUID[uid];
+            this._setReplayCursor(this.loadedRecording.actions[0].mark.index || 0);
+            this.dispatchEventToListeners(WebInspector.ReplayModel.Events.RecordingLoaded, this.loadedRecording);
+        };
+
         var recording = this._recordingsByUID[uid];
         console.assert(recording, "Unknown recording loaded!");
-
-        var setActiveRecording = function(error, uid) {
-            this._canReplay = true;
-            this._activeRecording = recording;
-            this._setReplayCursor(recording.actions[0].mark.index || 0);
-            this.dispatchEventToListeners(WebInspector.ReplayModel.Events.RecordingLoaded, recording);
-        };
         
         if (recording.dataLoaded())
             setActiveRecording.call(this);
@@ -684,11 +688,7 @@ WebInspector.ReplayModel.prototype = {
 
     _recordingAdded: function(uid)
     {
-        var recording = new WebInspector.SerializedRecording(this, uid);
-        this._recordingsByUID[uid] = recording;
-        this._recordings.push(recording);
-
-        var loadDataForRecording = function(error, data) {
+        var loadDataForRecording = function(recording, error, data) {
             if (error) {
                 console.error("Couldn't load data for recording "+recording.uid+":"+error);
                 return;
@@ -702,7 +702,11 @@ WebInspector.ReplayModel.prototype = {
         // it's added, and defer any events that cause the data to be accessed.
         // In the future, we could change the protocol so that the actual action data is
         // loaded lazily (in the case that it's too big for the inspector protocol)
-        ReplayAgent.getRecording(uid, loadDataForRecording.bind(this));
+        var newRecording = new WebInspector.SerializedRecording(this, uid);
+        this._recordingsByUID[uid] = newRecording;
+        this._recordings.push(newRecording);
+
+        ReplayAgent.getRecording(uid, loadDataForRecording.bind(this, newRecording));
     },
 
     _recordingRemoved: function(uid)
@@ -819,9 +823,6 @@ WebInspector.ReplayDispatcher.prototype = {
 
     capturedAction: function(action)
     {
-        if (!this._model.createdRecording)
-            console.log(this._model)
-            
         this._model.createdRecording.addAction(action);
     },
 

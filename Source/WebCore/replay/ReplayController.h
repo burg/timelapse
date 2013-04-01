@@ -124,8 +124,8 @@ namespace WebCore {
         PassRefPtr<CacheController> cacheController() const;
         PassRefPtr<ReplayRecording> loadedRecording() const;
 
-        bool loadRecording(PassRefPtr<ReplayRecording>);
-        bool unloadRecording();
+        bool loadRecording(PassRefPtr<ReplayRecording>, bool suppressNotifications = false);
+        bool unloadRecording(bool suppressNotifications = false);
 
     private:
         void captureEventLoopInput(EventLoopInput*);
@@ -136,7 +136,7 @@ namespace WebCore {
         void syncDispatchInput();
         void timerFired(Timer<ReplayController>*);
         
-        void resetPlayback();
+        void resetPlaybackState();
         void pauseReplay(PositionMarkIndex);
         void finishReplay();
 

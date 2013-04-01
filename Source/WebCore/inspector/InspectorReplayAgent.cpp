@@ -304,26 +304,38 @@ void InspectorReplayAgent::willFireTimer(int timerId, Frame* frame)
 
 void InspectorReplayAgent::recordingUnloaded()
 {
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
+
     if (m_frontend)
         m_frontend->recordingUnloaded();
 }
 
-void InspectorReplayAgent::recordingLoaded(PassRefPtr<ReplayRecording> recording)
+void InspectorReplayAgent::recordingLoaded(PassRefPtr<ReplayRecording> prpRecording)
 {
+    RefPtr<ReplayRecording> recording = prpRecording;
+    // in case we didn't know about the loaded recording, add here.
+    m_recordingsMap.add(recording->uid(), recording);
+    
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingLoaded);
+    
     if (m_frontend)
         m_frontend->recordingLoaded(recording->uid());
 }
 
-void InspectorReplayAgent::recordingAdded(PassRefPtr<ReplayRecording> recording)
+void InspectorReplayAgent::recordingCreated(PassRefPtr<ReplayRecording> prpRecording)
 {
+    RefPtr<ReplayRecording> recording = prpRecording;
+    RecordingsMap::AddResult result = m_recordingsMap.add(recording->uid(), recording);
+    // can't have two recordings with same uid
+    ASSERT_UNUSED(result, result.isNewEntry);
+
     if (m_frontend)
         m_frontend->recordingAdded(recording->uid());
-}
-
-void InspectorReplayAgent::recordingRemoved(PassRefPtr<ReplayRecording> recording)
-{
-    if (m_frontend)
-        m_frontend->recordingRemoved(recording->uid());
+    
+    // automatically load the created recording if nothing else is loaded.
+    if (m_stateMachine.inState(ReplayAgentStateMachine::RecordingUnloaded)) {
+        m_inspectedPage->replayController()->loadRecording(recording);
+    }
 }
 
 void InspectorReplayAgent::capturedPageInput(EventLoopInput* action)
@@ -358,7 +370,7 @@ void InspectorReplayAgent::captureFinished()
 {
     LOG(DeterministicReplay, "-----CAPTURE STOP-----");
     
-    m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingLoaded);
+    m_stateMachine.advanceTo(ReplayAgentStateMachine::RecordingUnloaded);
     
     if (m_frontend)
         m_frontend->captureStopped();
@@ -412,12 +424,12 @@ void InspectorReplayAgent::playbackCancelled()
         m_frontend->inputUnlocked();
 }
 
-void InspectorReplayAgent::playbackError(bool isFatal, const String& errorMessage)
+void InspectorReplayAgent::playbackError(bool isFatal, const String& errorString)
 {
     // NB. if instead you would like to debug the failure,
     // this is a decent breakpoint location.
     if (m_frontend)
-        m_frontend->playbackError(isFatal, errorMessage);
+        m_frontend->playbackError(isFatal, errorString);
 }
 
 PositionMark InspectorReplayAgent::createMark()
@@ -527,51 +539,44 @@ void InspectorReplayAgent::setPauseOnError(ErrorString*, bool shouldPause)
     m_inspectedPage->replayController()->setErrorStrategy(shouldPause ? PauseOnError : ContinueOnError);
 }
 
-void InspectorReplayAgent::loadRecording(ErrorString*, int uid, bool* wasAllowed)
+void InspectorReplayAgent::loadRecording(ErrorString* errorString, int uid, bool* wasAllowed)
 {
-    /*
-    RefPtr<ReplayRecording> recording = m_recordingsByUID.find(uid);
-    if (!recording) {
+    RecordingsMap::iterator it = m_recordingsMap.find(uid);
+    if (it == m_recordingsMap.end()) {
         *wasAllowed = false;
-        *errorMessage = "Couldn't find recording with specified uid";
+        *errorString = "Couldn't find recording with specified uid";
         return;
     }
-    *wasAllowed = m_inspectedPage->replayController()->loadRecording(recording);
-    */
-    
-    *wasAllowed = true;
+    *wasAllowed = m_inspectedPage->replayController()->loadRecording(it->value);
 
-    if (m_frontend)
+    if (wasAllowed && m_frontend)
         m_frontend->recordingLoaded(uid);
 }
 
-void InspectorReplayAgent::unloadRecording(ErrorString*, bool* wasAllowed)
+void InspectorReplayAgent::unloadRecording(ErrorString* errorString, bool* wasAllowed)
 {
-    /*
-    *wasAllowed = m_inspectedPage->replayController()->unloadRecording();
-    if (wasAllowed) // tell frontend
-    */
+    if (!m_inspectedPage->replayController()->loadedRecording().get()) {
+        *wasAllowed = false;
+        *errorString = "Tried to unload but no recording is currently loaded.";
+        return;
+    }
 
-    // TODO: implement
-    *wasAllowed = true;
-    if (m_frontend)
-        m_frontend->recordingUnloaded();
-    
+    *wasAllowed = m_inspectedPage->replayController()->unloadRecording();
 }
 
-void InspectorReplayAgent::getRecording(ErrorString*, int uid, RefPtr<TypeBuilder::Replay::ReplayRecording>& recordingObject)
+void InspectorReplayAgent::getRecording(ErrorString* errorString, int uid, RefPtr<TypeBuilder::Replay::ReplayRecording>& recordingObject)
 {
-    RefPtr<ReplayRecording> recording = m_inspectedPage->replayController()->loadedRecording();
-    ASSERT(uid == recording->uid());
-#if defined(NDEBUG)
-    UNUSED_PARAM(uid);
-#endif
+    RecordingsMap::iterator it = m_recordingsMap.find(uid);
+    if (it == m_recordingsMap.end()) {
+        *errorString = "Couldn't find recording with specified uid";
+        return;
+    }
 
     ActionCollector collector;
-    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > actions = recording->inputLog()->forEachInputInQueue(EventLoopInputQueue, collector);
+    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > actions = it->value->inputLog()->forEachInputInQueue(EventLoopInputQueue, collector);
 
     recordingObject = TypeBuilder::Replay::ReplayRecording::create()
-                        .setUid(recording->uid())
+                        .setUid(it->value->uid())
                         .setDateCreated("unknown")
                         .setName("Dummy replay name")
                         .setActions(actions);
@@ -580,9 +585,9 @@ void InspectorReplayAgent::getRecording(ErrorString*, int uid, RefPtr<TypeBuilde
 void InspectorReplayAgent::getAvailableRecordings(ErrorString*, RefPtr<TypeBuilder::Array<int> >& recordingsList)
 {
     recordingsList = TypeBuilder::Array<int>::create();
-    RefPtr<ReplayRecording> recording = m_inspectedPage->replayController()->loadedRecording();
-    if (recording)
-        recordingsList->addItem(recording->uid());
+    for (RecordingsMap::iterator it = m_recordingsMap.begin(); it != m_recordingsMap.end(); ++it) {
+        recordingsList->addItem(it->key);
+    }
 }
 
 }; // namespace WebCore

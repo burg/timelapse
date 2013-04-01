@@ -272,8 +272,7 @@ public:
 #if ENABLE(TIMELAPSE)
     static void recordingLoaded(Page*, PassRefPtr<ReplayRecording>);
     static void recordingUnloaded(Page*);
-    static void recordingAdded(Page*, PassRefPtr<ReplayRecording>);
-    static void recordingRemoved(Page*, PassRefPtr<ReplayRecording>);
+    static void recordingCreated(Page*, PassRefPtr<ReplayRecording>);
     static void capturedPageInput(Page*, EventLoopInput*);
     static void captureStarted(Page*);
     static void captureFinished(Page*);
@@ -501,8 +500,7 @@ private:
 #if ENABLE(TIMELAPSE)
     static void recordingLoadedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
     static void recordingUnloadedImpl(InstrumentingAgents*);
-    static void recordingAddedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
-    static void recordingRemovedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
+    static void recordingCreatedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
     static void capturedPageInputImpl(InstrumentingAgents*, EventLoopInput*);
     static void captureStartedImpl(InstrumentingAgents*);
     static void captureFinishedImpl(InstrumentingAgents*);
@@ -1997,19 +1995,11 @@ inline void InspectorInstrumentation::recordingLoaded(Page* page, PassRefPtr<Rep
 #endif
 }
 
-inline void InspectorInstrumentation::recordingAdded(Page* page, PassRefPtr<ReplayRecording> recording)
+inline void InspectorInstrumentation::recordingCreated(Page* page, PassRefPtr<ReplayRecording> recording)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        recordingAddedImpl(instrumentingAgents, recording);
-#endif
-}
-
-inline void InspectorInstrumentation::recordingRemoved(Page* page, PassRefPtr<ReplayRecording> recording)
-{
-#if ENABLE(INSPECTOR)
-    if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        recordingRemovedImpl(instrumentingAgents, recording);
+        recordingCreatedImpl(instrumentingAgents, recording);
 #endif
 }
 

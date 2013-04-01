@@ -129,14 +129,14 @@ void ReplayAgentStateMachine::advanceTo(State newState)
 
         break;
 
-    case RecordingUnloaded:
-        if (inState(Disabled) || inState(RecordingLoaded))
+    case RecordingUnloaded: // can always get to this state; not idempotent
+        if (!inState(RecordingLoaded))
             goto commit_transition;
 
         break;
 
     case RecordingLoaded:
-        if (inState(Capturing) || inState(Replaying) || inState(ReplayPaused) || inState(RecordingUnloaded))
+        if (inState(Replaying) || inState(ReplayPaused) || inState(RecordingUnloaded))
             goto commit_transition;
 
         break;
