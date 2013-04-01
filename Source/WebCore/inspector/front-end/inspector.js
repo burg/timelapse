@@ -510,6 +510,7 @@ WebInspector._doLoadedDoneWithCapabilities = function()
 
     this.breakpointManager = new WebInspector.BreakpointManager(WebInspector.settings.breakpoints, this.debuggerModel, this.workspace);
 
+    this.recordingsModel = new WebInspector.RecordingsModel();
     this.replayModel = new WebInspector.ReplayModel();
     this.replayControllerView = new WebInspector.ReplayControllerView(this.replayModel);
 

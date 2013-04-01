@@ -39,8 +39,7 @@ WebInspector.ReplayModel = function()
     this._dispatcher = new WebInspector.ReplayDispatcher(this);
 
     this._scanners = {};
-    this._recordings = [];
-    this._recordingsByUID = {};
+    this._recordingsModel = WebInspector.recordingsModel;
     this._capturing = false;
     this._replaying = false;
     this._inputPaused = false;
@@ -81,7 +80,7 @@ WebInspector.ReplayModel.Events = {
     // The ordering of these frontend events during capture events is below:
     // RecordingUnloaded (can only capture from here)
     // -> CaptureWillStart -> RecordingCreated -> CaptureDidStart
-    // -> CaptureWillStop  -> CaptureDidStop -> RecordingAdded -> RecordingLoaded
+    // -> CaptureWillStop  -> CaptureDidStop -> [RecordingAdded] -> RecordingLoaded
     //
     // Recordings can be added independently or capture, replay, or load status.
     // A recording can only be loaded or unloaded from the opposite state.
@@ -89,13 +88,12 @@ WebInspector.ReplayModel.Events = {
     // The ordering of backend events is different:
     // RecordingUnloaded -> CaptureStarted -> CaptureStopped -> RecordingAdded -> RecordingLoaded
     // InspectorReplayAgent will automatically load the created recording if none is loaded.
-
+    // The frontend RecordingsModel tracks available recordings and fires Recording{Added,Removed}.
+    
     // fires when a new recording is initialized for capturing.
     // this recording object does not exist in the backend.
     RecordingCreated: "ReplayRecordingCreated",
-    // fires when recording loaded from disk, or finished capturing it.
-    RecordingAdded: "ReplayRecordingAdded",
-    RecordingRemoved: "ReplayRecordingRemoved",
+
     // fired when activeRecording changes.
     RecordingLoaded: "ReplayRecordingLoaded",
     RecordingUnloaded: "ReplayRecordingUnloaded",
@@ -491,11 +489,6 @@ WebInspector.ReplayModel.prototype = {
     return this._activeRecording;
     },
     
-    get recordings()
-    {
-        return this._recordings.slice(0);
-    },
-    
     get isCapturing()
     {
 	return this._capturing;
@@ -672,54 +665,19 @@ WebInspector.ReplayModel.prototype = {
     {
         var setActiveRecording = function() {
             this._canReplay = true;
-            this._activeRecording = this._recordingsByUID[uid];
+            this._activeRecording = this._recordingsModel.getRecordingWithUID(uid);
             this._setReplayCursor(this.loadedRecording.actions[0].mark.index || 0);
             this.dispatchEventToListeners(WebInspector.ReplayModel.Events.RecordingLoaded, this.loadedRecording);
         };
 
-        var recording = this._recordingsByUID[uid];
+        var recording = this._recordingsModel.getRecordingWithUID(uid);
         console.assert(recording, "Unknown recording loaded!");
         
         if (recording.dataLoaded())
             setActiveRecording.call(this);
         else
-            this.onceEventListener(WebInspector.ReplayModel.Events.RecordingAdded, setActiveRecording, this);
-    },
-
-    _recordingAdded: function(uid)
-    {
-        var loadDataForRecording = function(recording, error, data) {
-            if (error) {
-                console.error("Couldn't load data for recording "+recording.uid+":"+error);
-                return;
-            }
-                
-            recording.loadData(data);
-            this.dispatchEventToListeners(WebInspector.ReplayModel.Events.RecordingAdded, recording);
-        };
-
-        // for now, just asynchronously load all data for each new recording as
-        // it's added, and defer any events that cause the data to be accessed.
-        // In the future, we could change the protocol so that the actual action data is
-        // loaded lazily (in the case that it's too big for the inspector protocol)
-        var newRecording = new WebInspector.SerializedRecording(this, uid);
-        this._recordingsByUID[uid] = newRecording;
-        this._recordings.push(newRecording);
-
-        ReplayAgent.getRecording(uid, loadDataForRecording.bind(this, newRecording));
-    },
-
-    _recordingRemoved: function(uid)
-    {
-        var recording = this._recordingsByUID[uid];
-        if (!recording)
-            return;
-        
-        console.assert(this._recordings.indexOf(recording) !== -1, "Can't remove recording that doesn't exist");
-
-        delete this._recordingsByUID[uid];
-        this._recordings.splice(this._recordings.indexOf(recording), 1);
-        this.dispatchEventToListeners(WebInspector.ReplayModel.Events.RecordingRemoved, recording);
+            this._recordingsModel.onceEventListener(WebInspector.RecordingsModel.Events.RecordingAdded,
+                                                    setActiveRecording, this);
     },
 
     // this is the raw DebuggerModel event. We translate into our own
@@ -873,12 +831,12 @@ WebInspector.ReplayDispatcher.prototype = {
     
     recordingAdded: function(uid)
     {
-        this._model._recordingAdded(uid);
+        WebInspector.recordingsModel.addRecording(uid);
     },
     
     recordingRemoved: function(uid)
     {
-        this._model._recordingRemoved(uid);
+        WebInspector.recordingsModel.removeRecording(uid);
     },
 };
 
