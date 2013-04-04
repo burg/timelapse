@@ -364,18 +364,18 @@ WebInspector.ReplayReplayView = function(model, recording)
     this._callbacks.register(this._recording.savepointList, savepointEvents.SavepointLabelChanged, this._savepointsChanged);
     this._callbacks.install();
 
-    this._splitView = new WebInspector.SplitView(true,
-                        "replayControllerSplitView", 200);
-    this._splitView.show(this.element);
+    this._sidebarView = new WebInspector.SidebarView(WebInspector.SidebarView.SidebarPosition.End,
+                        "replayControllerSidebarView", 200);
+    this._sidebarView.show(this.element);
 
     this._overviewWindow = new WebInspector.ReplayOverview(model, recording);
-    this._overviewWindow.show(this._splitView.firstElement());
+    this._overviewWindow.show(this._sidebarView.mainElement);
 
     this._miniview = new WebInspector.ReplayMiniview(model, recording);
-    this._miniview.show(this._splitView.firstElement());
+    this._miniview.show(this._sidebarView.mainElement);
 
     this._overviewPreview = new WebInspector.ReplayOverviewPreview(model, recording);
-    this._overviewPreview.show(this._splitView.secondElement());
+    this._overviewPreview.show(this._sidebarView.sidebarElement);
 
     this._registerShortcuts();
 };
