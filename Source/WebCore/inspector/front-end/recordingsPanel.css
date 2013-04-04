@@ -345,11 +345,13 @@
     content: url(Images/recordingsIcon.png);
 }
 
-.recording-sidebar-tree-item .icon {
+.recording-sidebar-tree-item .icon,
+.recording-capturing-sidebar-tree-item .icon {
     content: url(Images/sessionStorage.png);
 }
 
-.recording-sidebar-tree-item .status {
+.recording-sidebar-tree-item .status,
+.recording-capturing-sidebar-tree-item .status {
     width: 32px;
     height: 24px;
     position: absolute;
@@ -373,8 +375,9 @@
     background-position: -160px -48px !important;
 }
 
-.recording-sidebar-tree-item.loaded .status {
-    display: block;
+.recording-sidebar-tree-item.loaded .status,
+.recording-capturing-sidebar-tree-item .status {
+    display: block !important;
     background-image: url(Images/replayButtonGlyphs.png);
     background-position: -94px 0px;
 }

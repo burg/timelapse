@@ -44,8 +44,10 @@ WebInspector.RecordingsPanel = function()
     this._callbacks = new WebInspector.EventListenerGroup(this, "recordings panel listeners");
     var replayEvents = WebInspector.ReplayModel.Events;
     var recordingsEvents = WebInspector.RecordingsModel.Events;
+    this._callbacks.register(this._replayModel, replayEvents.RecordingLoaded,   this._recordingLoaded);
     this._callbacks.register(this._replayModel, replayEvents.RecordingUnloaded, this._recordingUnloaded);
     this._callbacks.register(this._replayModel, replayEvents.CaptureDidStart,   this._captureStarted);
+    this._callbacks.register(this._replayModel, replayEvents.CaptureDidStop,    this._captureStopped);
     this._callbacks.register(this._replayModel, replayEvents.PlaybackDidStart,  this._playbackStarted);
     this._callbacks.register(this._replayModel, replayEvents.InputPaused,       this._playbackPaused);
     this._callbacks.register(this._replayModel, replayEvents.DebuggerPaused,    this._playbackPaused);
@@ -61,8 +63,14 @@ WebInspector.RecordingsPanel = function()
     this.createSidebarViewWithTree(this.element, undefined, 220);
     this.landingItemTreeElement = new WebInspector.RecordingsSidebarTreeElement(this);
     this.sidebarTree.appendChild(this.landingItemTreeElement);
+    this.capturingItemTreeElement = new WebInspector.SidebarTreeElement("recording-capturing-sidebar-tree-item",
+                                                                        WebInspector.UIString("Capturing..."),
+                                                                        "", null, false);
     var sidebarGroup = new WebInspector.SidebarSectionTreeElement(WebInspector.UIString("AVAILABLE RECORDINGS"), null, true);
     this.sidebarTree.appendChild(sidebarGroup);
+
+    if (this._replayModel.isCapturing)
+        this.sidebarTree.appendChild(this.capturingItemTreeElement);
 
     this._landingView = new WebInspector.RecordingsPanel.LandingView();
     this.showLandingView();
@@ -142,12 +150,12 @@ WebInspector.RecordingsPanel.prototype = {
 
     _captureStarted: function()
     {
-        // XXX: create temporary recording tree item
+        this.sidebarTree.appendChild(this.capturingItemTreeElement);
     },
     
     _captureStopped: function()
     {
-        // XXX: remove temporary recording tree item
+        this.sidebarTree.removeChild(this.capturingItemTreeElement);
     },
 
     _playbackStarted: function()
@@ -184,7 +192,7 @@ WebInspector.RecordingsPanel.prototype = {
         var treeItem = new WebInspector.RecordingSidebarTreeElement(recording, "recording-sidebar-tree-item");
         this._treeElementsByUID[recording.uid] = treeItem;
 
-        if (!this.sidebarTree.hasChildren) {
+        if (!this._recordingsModel.recordings.length) {
             this.element.addStyleClass("recordings-available");
             this.element.removeStyleClass("recordings-unavailable");
         }
@@ -206,7 +214,7 @@ WebInspector.RecordingsPanel.prototype = {
         if (treeItem.selected)
             this.sidebarTree.selected = false;
         this.sidebarTree.removeChild(treeItem);
-        if (!this.sidebarTree.hasChildren) {
+        if (!this._recordingsModel.recordings.length) {
             this.element.addStyleClass("recordings-available");
             this.element.removeStyleClass("recordings-unavailable");
         }
