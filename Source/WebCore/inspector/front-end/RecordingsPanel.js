@@ -41,7 +41,7 @@ WebInspector.RecordingsPanel = function()
 
     this._replayModel = WebInspector.replayModel;
     this._recordingsModel = WebInspector.recordingsModel;
-    this._callbacks = new WebInspector.EventListenerGroup(this, "recordings panel listeners");
+    this._callbacks = new WebInspector.EventListenerGroup(this, "recordings panel static listeners");
     var replayEvents = WebInspector.ReplayModel.Events;
     var recordingsEvents = WebInspector.RecordingsModel.Events;
     this._callbacks.register(this._replayModel, replayEvents.RecordingLoaded,   this._recordingLoaded);

@@ -70,61 +70,59 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
     /* call to super with the constructed columns. */
     WebInspector.DataGrid.call(this, columns);
 
-    this._highlightedNodes = {};
-    this._sliders = {};
-
     this._model = model;
     this._recording = recording;
-    
-    this._sortingFunctions = {
-	index: WebInspector.RecordingInputsGridNode.IndexComparator,
-	group: WebInspector.RecordingInputsGridNode.GroupComparator,
-	type: WebInspector.RecordingInputsGridNode.TypeComparator,
-	timestamp: WebInspector.RecordingInputsGridNode.TimestampComparator,
-    };
-    this.resizeMethod = WebInspector.DataGrid.ResizeMethod.Last;
-
     this.element.classList.add("replay-inputs-grid");
-
-    // TODO: does this comment even make sense? It's copied from DataGrid
-    // Event listeners need to be added _after_ we attach to the document, so that owner document is properly update.
-    this.addEventListener("sorting changed", this._onSortingChanged, this);
-    this.scrollContainer.addEventListener("scroll", this._updateOffscreenRows.bind(this));
-
-    var sliderEventNames = WebInspector.RecordingInputsGridSlider.Events;
-    var playbackSlider = new WebInspector.RecordingInputsGridSlider(this, "playback", true);
-    playbackSlider.addEventListener(sliderEventNames.DragStart, this._onGridDragStart, this);
-    playbackSlider.addEventListener(sliderEventNames.DragEnd, this._onGridDragEnd, this);
-    playbackSlider.element.addEventListener("contextmenu", this._onPlaybackSliderContextMenu.bind(this));
-    this._addSlider(playbackSlider);
-    this._addSlider(new WebInspector.RecordingInputsGridSlider(this, "previous", false));
-    this._addSlider(new WebInspector.RecordingInputsGridSlider(this, "tentative", false));
-
-    this._providers = {};
-    this._providerListeners = {};
     this._refreshDelay = WebInspector.RecordingInputsGrid.DefaultRefreshDelay;
     this._maxMarkIndex = 0;
     this._gridNodes = {};
+    this._highlightedNodes = {};
+    this.resizeMethod = WebInspector.DataGrid.ResizeMethod.Last;
     
-    this._callbacks = new WebInspector.EventListenerGroup(this, "ReplayInputGrid static callbacks");
-    
-    var replayEvents = WebInspector.ReplayModel.Events;
-    this._callbacks.register(this._model, replayEvents.PlaybackDidStart, this._onPlaybackDidStart);
-    this._callbacks.register(this._model, replayEvents.PlaybackStopped,  this._onPlaybackStopped);
-    this._callbacks.register(this._model, replayEvents.InputPaused,      this._onInputPaused);
-    this._callbacks.register(this._model, replayEvents.DebuggerPaused,   this._onDebuggerPaused);
+    this._sortingFunctions = {
+        index: WebInspector.RecordingInputsGridNode.IndexComparator,
+        group: WebInspector.RecordingInputsGridNode.GroupComparator,
+        type: WebInspector.RecordingInputsGridNode.TypeComparator,
+        timestamp: WebInspector.RecordingInputsGridNode.TimestampComparator,
+    };
+
+    this._sliders = {};
+    this._addSlider(new WebInspector.RecordingInputsGridSlider(this, "playback", true));
+    this._addSlider(new WebInspector.RecordingInputsGridSlider(this, "previous", false));
+    this._addSlider(new WebInspector.RecordingInputsGridSlider(this, "tentative", false));
 
     var recordingEvents = WebInspector.ReplayRecording.Events;
+    var replayEvents = WebInspector.ReplayModel.Events;
+   
+    this._callbacks = new WebInspector.EventListenerGroup(this, "ReplayInputGrid static callbacks");
     this._callbacks.register(this._recording, recordingEvents.ProviderAdded,  this._onProviderAdded);
     this._callbacks.register(this._recording, recordingEvents.PreviewStarted, this._onPreviewStarted);
     this._callbacks.register(this._recording, recordingEvents.PreviewStopped, this._onPreviewStopped);
     this._callbacks.register(this._recording, recordingEvents.PreviewChanged, this._onPreviewChanged);
     this._callbacks.register(this._recording, recordingEvents.CircleSelected, this._onCircleSelected);
-
     this._callbacks.register(this._recording.calculator,
                              WebInspector.RecordingCalculator.Events.ZoomChanged, this._onZoomChanged);
+    this._callbacks.register(this._model, replayEvents.RecordingLoaded,   this._onRecordingLoaded);
+    this._callbacks.register(this._model, replayEvents.RecordingUnloaded, this._onRecordingUnloaded);
+    this._callbacks.register(this, "sorting changed", this._onSortingChanged);
+    this._callbacks.register(this.scrollContainer, "scroll", this._updateOffscreenRows);
     
     this._callbacks.install();
+   
+    this._whenLoadedCallbacks = new WebInspector.EventListenerGroup(this, "ReplayInputGrid static callbacks");
+    this._whenLoadedCallbacks.register(this._model, replayEvents.PlaybackDidStart, this._onPlaybackDidStart);
+    this._whenLoadedCallbacks.register(this._model, replayEvents.PlaybackStopped,  this._onPlaybackStopped);
+    this._whenLoadedCallbacks.register(this._model, replayEvents.InputPaused,      this._onInputPaused);
+    this._whenLoadedCallbacks.register(this._model, replayEvents.DebuggerPaused,   this._onDebuggerPaused);
+
+    var sliderEvents = WebInspector.RecordingInputsGridSlider.Events;
+    this._whenLoadedCallbacks.register(this.sliders.playback, sliderEvents.DragStart, this._onGridDragStart);
+    this._whenLoadedCallbacks.register(this.sliders.playback, sliderEvents.DragEnd,   this._onGridDragEnd);
+    this._whenLoadedCallbacks.register(this.sliders.playback.element, "contextmenu",
+                                       this._onPlaybackSliderContextMenu);
+
+    this._providers = {};
+    this._providerListeners = {};
 
     // add input providers that have already been created
     var inputProviders = this._recording.providersWithType(WebInspector.DataProvider.Types.ReplayInput);
@@ -148,13 +146,10 @@ WebInspector.RecordingInputsGrid = function(model, recording) {
 	    newNode.refreshAction();
 	}
     
-    // initialize slider position
     this._refreshIfNeeded();
-	var node = this._gridNodes[this._model.currentMarkIndex];
-	this.sliders.playback.placeAfter(node);
-	this.sliders.playback.enable();
-	this.sliders.playback.show();
-	//node.reveal();
+    
+    if (this._model.canReplay)
+        this._onRecordingLoaded();
 };
 
 WebInspector.RecordingInputsGrid.DefaultRefreshDelay = 150;
@@ -451,6 +446,29 @@ WebInspector.RecordingInputsGrid.prototype = {
 	this._updateZoomInterval();
 	this._updateOffscreenRows();
 	this._scheduleRefresh();
+    },
+    
+    _onRecordingLoaded: function()
+    {
+        if (this._model.loadedRecording !== this._recording)
+            return;
+        
+        this._whenLoadedCallbacks.install();
+        // initialize slider position
+        var node = this._gridNodes[this._model.currentMarkIndex];
+        this.sliders.playback.placeAfter(node);
+        this.sliders.playback.enable();
+        this.sliders.playback.show();
+    },
+
+    _onRecordingUnloaded: function(event)
+    {
+        var recording = event.data;
+        if (recording !== this._recording)
+            return;
+        
+        this._whenLoadedCallbacks.uninstall();
+        this.sliders.playback.hide();
     },
 
     _onPlaybackDidStart: function()
@@ -959,27 +977,27 @@ WebInspector.RecordingInputsGridNode = function(parentView, action)
 WebInspector.RecordingInputsGridNode.prototype = {
     get action()
     {
-	return this._action;
+        return this._action;
     },
 
     createCells: function()
     {
-	var group = WebInspector.ReplayInputDataProvider.InputStyles[this._action.type].group;
-
+        var group = WebInspector.ReplayInputDataProvider.InputStyles[this._action.type].group;
         // Out of sight, out of mind: create nodes offscreen to save on render tree update times when running updateOffscreenRows()
         this._element.addStyleClass("offscreen");
-	this._element.addStyleClass("replay-category-" + group);
-	this._gutterCell = this._createDivInTD("gutter");
+        this._element.addStyleClass("replay-category-" + group);
+        this._gutterCell = this._createDivInTD("gutter");
         this._indexCell = this._createDivInTD("index");
-	this._groupCell = this._createDivInTD("category");
+        this._groupCell = this._createDivInTD("category");
         this._typeCell = this._createDivInTD("type");
         this._timestampCell = this._createDivInTD("timestamp");
         this._previewCell = this._createDivInTD("preview");
-	this._element.addEventListener("dblclick", this._replayToThisNode.bind(this), false);
+        this._element.addEventListener("dblclick", this._replayToThisNode.bind(this), false);
     },
 
     isFilteredOut: function()
     {
+    
         return !this._parentView.providers[WebInspector.ReplayInputDataProvider.InputStyles[this._action.type].group].isEnabled() || this.element.classList.contains("hidden");
     },
 

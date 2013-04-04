@@ -59,38 +59,42 @@ WebInspector.ReplayRecording.Events = {
 
 WebInspector.ReplayRecording.prototype = {
     // Private API (helpers)
+    
+    // NB. this is extended by subclasses, so don't inline it into a constructor.
     registerListeners: function(group) {
-	// FIXME: (Issue #201): The BreakpointScanner should add the breakpoint provider, not the recording itself.
-	var scannerEvents = WebInspector.ReplayScanner.Events;
-	group.register(this._model.scanners.breakpoint, scannerEvents.ScanStarted, this._breakpointScanStarted);
-	var replayEvents = WebInspector.ReplayModel.Events;
-	// TODO: support re-loading the same recording instance. Need to set back up in RecordingLoaded callback.
-	group.register(this._model, replayEvents.RecordingUnloaded, this._recordingUnloaded);
-	var profileEvents = WebInspector.ProfilesModel.Events;
-	group.register(WebInspector.profilesModel, profileEvents.ProfileAdded,   this._profileAdded);
-	group.register(WebInspector.profilesModel, profileEvents.ProfileRemoved, this._profileRemoved);
+        // FIXME: (Issue #201): The BreakpointScanner should add the breakpoint provider, not the recording itself.
+        var scannerEvents = WebInspector.ReplayScanner.Events;
+        group.register(this._model.scanners.breakpoint, scannerEvents.ScanStarted, this._breakpointScanStarted);
+        var replayEvents = WebInspector.ReplayModel.Events;
+        // TODO: support re-loading the same recording instance. Need to set back up in RecordingLoaded callback.
+        group.register(this._model, replayEvents.RecordingUnloaded, this._recordingUnloaded);
+        var profileEvents = WebInspector.ProfilesModel.Events;
+        group.register(WebInspector.profilesModel, profileEvents.ProfileAdded,   this._profileAdded);
+        group.register(WebInspector.profilesModel, profileEvents.ProfileRemoved, this._profileRemoved);
     },
 
     // Private API (callbacks)
     _recordingUnloaded: function(event)
     {
-	var recording = event.data;
-	if (recording !== this)
+        var recording = event.data;
+        if (recording !== this)
             return;
         
         this._callbacks.uninstall();
+        this._model.onceEventListener(WebInspector.ReplayModel.Events.RecordingLoaded, this._recordingLoaded, this);
+    },
 
-	var providerTypes = WebInspector.DataProvider.Types;
-	for (var key in providerTypes) {
-            var providers = this.providersWithType(providerTypes[key]);
-            for (var i = 0; i < providers.length; i++)
-		this.removeProvider(providers[i]);
-	}
+    _recordingLoaded: function()
+    {
+        if (this._model.loadedRecording !== this)
+            return;
+        
+        this._callbacks.install();
     },
 
     _breakpointScanStarted: function()
     {
-	// TODO: manage multiple breakpoint providers
+	// TODO: (Issue #154): don't create new breakpoint providers, just add new data to one.
 	var breakpointProviders = this.providersWithType(WebInspector.DataProvider.Types.BreakpointHits);
 	if (breakpointProviders.length > 0)
 	    return;
