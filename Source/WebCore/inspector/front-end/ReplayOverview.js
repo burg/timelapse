@@ -1422,8 +1422,11 @@ WebInspector.ReplayCircleTimeline.prototype = {
 
         var timestamp = this.calculator.computeOverviewTimestamp(x / event.target.offsetWidth);
         var idx = this._data.centers.nearestBinaryIndexOf(timestamp, timestampComparator, timeDistanceFunction);
-        if (idx < 0 || idx >= this._data.centers.length)
+        if (idx < 0 || idx > this._data.centers.length)
             return -1;
+
+        if (idx === this._data.centers.length)
+            idx--;
 
         var nearestCenter = this.calculator.computeOverviewPercentage(this._data.centers[idx]) * this.element.clientWidth;
         var midHeight = this.element.clientHeight / 2;
