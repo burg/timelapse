@@ -1223,7 +1223,7 @@ WebInspector.ReplayCircleTimeline.prototype = {
 
     _selectCircle: function(circleIndex)
     {
-        if (this._selectedCircleIndex) {
+        if (typeof this._selectedCircleIndex === "number") {
             this.clearCursor();
             this.removeHighlight(this._selectedCircleIndex);
             delete this._selectedCircleIndex;
@@ -1260,7 +1260,7 @@ WebInspector.ReplayCircleTimeline.prototype = {
 
     _circleMouseOut: function(circleIndex)
     {
-        if (!this._hoveredCircleIndex)
+        if (typeof this._hoveredCircleIndex !== "number")
             return;
 
         this.clearCursor();
