@@ -331,3 +331,50 @@
     border-top: 4px solid rgba(255, 0, 0, 0.3);
     border-bottom: 1px solid rgba(0, 0, 0, 0.5);
 }
+
+.recordings-available .landing-view > .recording-unavailable-text {
+    display: none;
+}
+
+.recordings-unavailable .landing-view > .recording-available-text {
+    display: none;
+}
+
+/* static tree element that shows landing view */
+.recordings-landing-view-tree-item .icon {
+    content: url(Images/recordingsIcon.png);
+}
+
+.recording-sidebar-tree-item .icon {
+    content: url(Images/sessionStorage.png);
+}
+
+.recording-sidebar-tree-item .status {
+    width: 32px;
+    height: 24px;
+    position: absolute;
+    right: 5px;
+    display: none;
+    opacity: 0.5;
+    margin-top: 5px;
+    margin-left: 0;
+    float: none;
+}
+
+.recording-sidebar-tree-item.capturing .status {
+    background-position: -192px -48px !important;
+}
+
+.recording-sidebar-tree-item.replaying .status {
+    background-position: -128px -48px !important;
+}
+
+.recording-sidebar-tree-item.paused .status {
+    background-position: -160px -48px !important;
+}
+
+.recording-sidebar-tree-item.loaded .status {
+    display: block;
+    background-image: url(Images/replayButtonGlyphs.png);
+    background-position: -94px 0px;
+}

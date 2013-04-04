@@ -444,7 +444,7 @@ body.show-toolbar-icons #toolbar-dropdown .toolbar-label {
 }
 
 .toolbar-item.recordings .toolbar-icon {
-    background-image: url(Images/timelapseIcon.png);
+    background-image: url(Images/recordingsPanelIcon.png);
 }
 
 body.dock-to-bottom .toolbar-item.resources .toolbar-icon {

@@ -77,6 +77,8 @@ WebInspector.RecordingsModel.prototype = {
     removeRecording: function(uid) {
         console.assert(uid > 0, "tried to remove recording with invalid uid: "+uid);
 
+        // XXX: unload recording if it's loaded!!
+
         var recording = this._recordingsByUID[uid];
         this._recordings.splice(this._recordings.indexOf(recording), 1);
         delete this._recordingsByUID[uid];

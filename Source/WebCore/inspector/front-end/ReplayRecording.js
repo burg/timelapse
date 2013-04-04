@@ -328,7 +328,8 @@ WebInspector.SerializedRecording = function(model, uid)
 WebInspector.SerializedRecording.prototype = {
     loadData: function(data)
     {
-        this._dateCreated = data.dateCreated;
+        this._dateCreated = new Date(data.dateCreated);
+        // FIXME: this isn't actually used. Remove from protocol?
         this._displayName = data.name;
 
         this._initializeInputs();
@@ -346,9 +347,14 @@ WebInspector.SerializedRecording.prototype = {
         return this._dataLoaded;
     },
 
+    get dateCreated()
+    {
+        return this._dateCreated;
+    },
+
     displayName: function()
     {
-        return this._displayName || "(uninitialized)";
+        return WebInspector.UIString("Captured Recording %d", this.uid) || WebInspector.UIString("(uninitialized)");
     },
 
     __proto__: WebInspector.ReplayRecording.prototype

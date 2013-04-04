@@ -34,6 +34,7 @@
 #if ENABLE(TIMELAPSE)
 
 #include "ReplayRecording.h"
+#include <wtf/CurrentTime.h>
 
 namespace WebCore {
 
@@ -44,7 +45,8 @@ PassRefPtr<ReplayRecording> ReplayRecording::createForCapture(int uid)
 
 ReplayRecording::ReplayRecording(int uid)
 : m_inputLog(ReplayInputLog::createForCapture())
-, m_uid(uid) { }
+, m_uid(uid)
+, m_timestamp(WTF::currentTimeMS()) { }
         
 }; // namespace WebCore
 

@@ -52,6 +52,7 @@ public:
     ~ReplayRecording() {}
 
     int uid() const { return m_uid; }
+    double creationTimestamp() const { return m_timestamp; }
     ReplayInputLog* inputLog() const { return m_inputLog.get(); }
 
 protected:
@@ -62,6 +63,7 @@ private:
     ReplayRecording(int);
     OwnPtr<ReplayInputLog> m_inputLog;
     int m_uid;
+    double m_timestamp;
 };
 
 } // namespace WebCore

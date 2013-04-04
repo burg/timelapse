@@ -188,7 +188,7 @@ WebInspector.Panel.prototype = {
         if (this.splitView)
             return;
 
-        this.createSidebarView(parentElement, position);
+        this.createSidebarView(parentElement, position, defaultWidth);
 
         this.sidebarTreeElement = document.createElement("ol");
         this.sidebarTreeElement.className = "sidebar-tree";
