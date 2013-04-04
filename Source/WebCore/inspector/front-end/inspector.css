@@ -3487,7 +3487,7 @@ div.replay-overview-preview div.preview-message {
 .replay-overview-preview table tr:hover td:first-child,
 .replay-overview-preview table tr:hover td:last-child {
     text-decoration: underline;
-    cursor: default;
+    cursor: pointer;
 }
 
 .replay-overview-preview table .condition-row {
