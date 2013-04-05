@@ -745,7 +745,8 @@ bool ReplayController::unloadRecording(bool suppressNotifications)
         return false;
     }
     
-    if (m_loadedRecording->capturing() || m_loadedRecording->replaying()) {
+    if (m_loadedRecording->capturing() ||
+        !(m_status == PlaybackFinished || m_status == PlaybackUninitialized || m_status == CannotReplay)) {
         LOG_ERROR("Tried to unload recording that was capturing or replaying.");
         return false;
     }
@@ -764,7 +765,8 @@ bool ReplayController::unloadRecording(bool suppressNotifications)
 bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> prpRecording, bool suppressNotifications)
 {
     RefPtr<ReplayRecording> recording = prpRecording;
-    ASSERT(!recording->capturing() && !recording->replaying());
+    ASSERT(!recording->capturing());
+    ASSERT(m_status == PlaybackFinished || m_status == PlaybackUninitialized || m_status == CannotReplay);
 
     if (m_loadedRecording && m_loadedRecording != recording) {
         LOG_ERROR("Tried to load recording, but a recording is already loaded.");

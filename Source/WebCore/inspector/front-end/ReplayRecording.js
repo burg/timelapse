@@ -333,7 +333,7 @@ WebInspector.SerializedRecording.prototype = {
     loadData: function(data)
     {
         this._dateCreated = new Date(data.dateCreated);
-        // FIXME: this isn't actually used. Remove from protocol?
+        // TODO: (Issue #246): this isn't actually used. Remove from protocol?
         this._displayName = data.name;
 
         this._initializeInputs();
