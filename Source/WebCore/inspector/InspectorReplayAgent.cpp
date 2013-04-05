@@ -548,9 +548,6 @@ void InspectorReplayAgent::loadRecording(ErrorString* errorString, int uid, bool
         return;
     }
     *wasAllowed = m_inspectedPage->replayController()->loadRecording(it->value);
-
-    if (wasAllowed && m_frontend)
-        m_frontend->recordingLoaded(uid);
 }
 
 void InspectorReplayAgent::unloadRecording(ErrorString* errorString, bool* wasAllowed)

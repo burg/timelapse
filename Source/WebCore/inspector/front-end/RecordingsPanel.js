@@ -325,6 +325,17 @@ WebInspector.RecordingSidebarTreeElement.prototype = {
         return true;
     },
 
+    ondblclick: function()
+    {
+        var model = WebInspector.replayModel;
+        if (!model.canReplay)
+            return;
+        if (model.loadedRecording === this.recording)
+            return;
+        
+        model.scheduler.executeImmediately(model.switchRecordingTask(this.recording));
+    },
+
     /**
      * @param {!Event} event
      */

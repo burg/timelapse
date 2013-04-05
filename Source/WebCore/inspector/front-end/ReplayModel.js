@@ -476,6 +476,52 @@ WebInspector.ReplayModel.prototype = {
         return task;
     },
 
+    unloadRecordingTask: function()
+    {
+        var model = this;
+        return new WebInspector.ReplayTask("UnloadRecording")
+        .chain("stopPlaybackIfNeeded", function(cb) {
+            if (model.isReplaying)
+                model.stopPlaybackTask(true).run(cb);
+            else
+                cb();
+        })
+        .chain("unloadRecordingIfNeeded", function(cb) {
+            if (!model.canReplay)
+                return cb();
+               
+            model.onceEventListener(WebInspector.ReplayModel.Events.RecordingUnloaded, cb);
+            model._unloadRecording();
+        });
+    },
+    
+    loadRecordingTask: function(recording)
+    {
+        var model = this;
+        return new WebInspector.ReplayTask("LoadRecording")
+        .chain("requestRecordingLoad", function(cb) {
+            if (model.canReplay)
+                return cb();
+
+            model.onceEventListener(WebInspector.ReplayModel.Events.RecordingLoaded, cb);
+            model._loadRecording(recording);
+        });
+    },
+    
+    switchRecordingTask: function(recording)
+    {
+        var model = this;
+        return new WebInspector.ReplayTask("SwitchRecording")
+        .chain("unloadRecording", function(cb) {
+            var subtask = model.unloadRecordingTask();
+            subtask.run(cb);
+        })
+        .chain("loadRecording", function(cb) {
+            var subtask = model.loadRecordingTask(recording);
+            subtask.run(cb);
+        });
+    },
+
     // Public query API
     get createdRecording()
     {
@@ -563,17 +609,15 @@ WebInspector.ReplayModel.prototype = {
     _unloadRecording: function()
     {
         console.assert(this.loadedRecording, "Can't unload recording because none is loaded");
-        ReplayAgent.unloadRecording(function(error, wasAllowed) {
-            this._canReplay = !wasAllowed;
-        });
+        // TODO: receiving !wasAllowed should trigger task error.
+        ReplayAgent.unloadRecording();
     },
     
     _loadRecording: function(recording)
     {
         console.assert(!this._activeRecording, "Can't load recording because one is already loaded");
-        ReplayAgent.loadRecording(recording.uid, function(error, wasAllowed) {
-            this._canReplay = !!wasAllowed;
-        });
+        // TODO: receiving !wasAllowed should trigger task error.
+        ReplayAgent.loadRecording(recording.uid);
     },
     
     // Callbacks from the backend message dispatcher (ReplayDispatcher below)
