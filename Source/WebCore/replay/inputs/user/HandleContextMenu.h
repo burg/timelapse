@@ -52,6 +52,7 @@ public:
 
     // EventLoopInput API
     virtual void dispatch(ReplayController*) OVERRIDE;
+    virtual bool isUserVisible() const OVERRIDE { return false; }
     
     // NondeterministicInput API
     virtual size_t memorySize() const OVERRIDE

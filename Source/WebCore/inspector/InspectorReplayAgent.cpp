@@ -349,6 +349,8 @@ void InspectorReplayAgent::capturedPageInput(EventLoopInput* action)
 
     if (!m_frontend)
         return;
+    if (!action->isUserVisible())
+        return;
 
     m_frontend->capturedAction(createInspectorObjectForAction(action));
 }
