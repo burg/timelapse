@@ -32,6 +32,9 @@
 importScript("ProfileHeader.js");
 importScript("ProfileType.js");
 importScript("CPUProfile.js");
+importScript("HeapSnapshotProfile.js");
+importScript("NativeMemoryProfile.js");
+importScript("NativeSnapshotProfile.js");
 
 /**
  * @constructor
@@ -549,15 +552,11 @@ WebInspector.HeapProfilerDispatcher.prototype = {
     }
 }
 
-// TODO: (Issue #222): don't load any views in the profile model
 importScript("HeapSnapshot.js");
-importScript("HeapSnapshotDataGrids.js");
-importScript("HeapSnapshotGridNodes.js");
 importScript("HeapSnapshotLoader.js");
 importScript("HeapSnapshotProxy.js");
-importScript("HeapSnapshotView.js");
 importScript("HeapSnapshotWorkerDispatcher.js");
 importScript("JSHeapSnapshot.js");
 importScript("NativeHeapSnapshot.js");
-importScript("NativeMemorySnapshotView.js");
-importScript("CanvasProfileView.js");
+importScript("NativeMemoryProfile.js");
+importScript("NativeSnapshotProfile.js");
