@@ -38,7 +38,7 @@
 #include "ReplayController.h"
 #include "UserInputProxy.h"
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -55,7 +55,7 @@ String InitializeWindow::toString() const
     return makeString("InitializeWindow(size=[", String::number(m_width), ",", String::number(m_height), "])");
 }
 
-void InitializeWindow::serialize(ReplayInputSerializer* serializer) const
+void InitializeWindow::serialize(InputSerializer* serializer) const
 {
     serializer->putInt("width", m_width);
     serializer->putInt("height", m_height);

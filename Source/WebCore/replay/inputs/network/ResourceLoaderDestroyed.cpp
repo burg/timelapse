@@ -37,7 +37,7 @@
 
 #include "ReplayController.h"
 #include "NetworkProxy.h"
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -66,7 +66,7 @@ size_t ResourceLoaderDestroyed::memorySize() const
     return sizeof(ResourceLoaderDestroyed);
 }
 
-void ResourceLoaderDestroyed::serialize(ReplayInputSerializer* serializer) const
+void ResourceLoaderDestroyed::serialize(InputSerializer* serializer) const
 {
     serializer->putInt("loaderId", m_id);
 }

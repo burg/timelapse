@@ -572,7 +572,7 @@ void InspectorReplayAgent::getRecording(ErrorString* errorString, int uid, RefPt
     }
 
     ActionCollector collector;
-    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > actions = it->value->inputLog()->forEachInputInQueue(EventLoopInputQueue, collector);
+    RefPtr<TypeBuilder::Array<TypeBuilder::Replay::ReplayAction> > actions = it->value->forEachInputInQueue(EventLoopInputQueue, collector);
 
     recordingObject = TypeBuilder::Replay::ReplayRecording::create()
                         .setUid(it->value->uid())

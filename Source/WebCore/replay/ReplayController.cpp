@@ -37,6 +37,7 @@
 
 #include "AsyncEventProxy.h"
 #include "CacheController.h"
+#include "CaptureInputIterator.h"
 #include "DisableCache.h"
 #include "DocumentEventQueue.h"
 #include "DocumentLoader.h"
@@ -46,7 +47,7 @@
 #include "Event.h"
 #include "Frame.h"
 #include "FrameTree.h"
-#include "JSONReplayInputSerializer.h"
+#include "JSONInputSerializer.h"
 #include "InitializeFocus.h"
 #include "InitializeWindow.h"
 #include "InspectorInstrumentation.h"
@@ -58,6 +59,7 @@
 #include "NetworkProxy.h"
 #include "Node.h"
 #include "Page.h"
+#include "ReplayInputIterator.h"
 #include "ReplayRecording.h"
 #include "ResourceResponse.h"
 #include "RanPendingScripts.h"
@@ -67,24 +69,10 @@
 #include "TimerFired.h"
 #include "UserInputProxy.h"
 #include <stdarg.h>
-#include <wtf/replay/ReplayInputLog.h>
+#include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
-
-static EventLoopInput* popDispatchInput(ReplayInputLog* log)
-{
-    NondeterministicInput* poppedInput = log->popInput(WTF::EventLoopInputQueue);
-    ASSERT(poppedInput);
-    return static_cast<EventLoopInput*>(poppedInput);
-}
-
-static void unplugInputLogFromPage(Page* page)
-{
-    //unplug determinism log from all global objects in this Page.
-    for (Frame* frame = page->mainFrame(); frame; frame = frame->tree()->traverseNext())
-        frame->script()->globalObject(mainThreadNormalWorld())->setReplayInputLog(0);
-}
 
 #if !LOG_DISABLED
 static void dumpEventDispatchInfo(const Event& event, DOMWindow* window, Node* node, int eventCount, bool wasIgnored)
@@ -211,18 +199,19 @@ void ReplayController::beginCapturing(const PositionMark& mark)
     m_status = CannotReplay;
     m_domEventDispatchCount = 0;
     m_previousInput = 0;
-    m_loadedRecording = ReplayRecording::createForCapture(m_nextRecordingId++);
+    m_loadedRecording = ReplayRecording::create(m_nextRecordingId++);
+    m_activeIterator = m_loadedRecording->createCaptureIterator();
     changeProxyMode(ReplayProxy::Capturing);
 
     InspectorInstrumentation::captureStarted(m_page);
     
     // create begin sentinel
-    captureEventLoopInput(new BeginSentinel(m_domEventDispatchCount, mark));
+    captureEventLoopInput(adoptPtr(new BeginSentinel(m_domEventDispatchCount, mark)));
 
     m_cacheController->disableCache();
-    captureEventLoopInput(new DisableCache(m_domEventDispatchCount, m_currentMark));
-    captureEventLoopInput(new InitializeFocus(m_page, m_domEventDispatchCount, m_currentMark));
-    captureEventLoopInput(new InitializeWindow(m_page, m_domEventDispatchCount, m_currentMark));
+    captureEventLoopInput(adoptPtr(new DisableCache(m_domEventDispatchCount, m_currentMark)));
+    captureEventLoopInput(adoptPtr(new InitializeFocus(m_page, m_domEventDispatchCount, m_currentMark)));
+    captureEventLoopInput(adoptPtr(new InitializeWindow(m_page, m_domEventDispatchCount, m_currentMark)));
     // attempt to pull reasonable values here to save in the log, and 
     // also to use for the initial refresh.
     Frame* mainFrame = m_page->mainFrame();
@@ -230,7 +219,7 @@ void ReplayController::beginCapturing(const PositionMark& mark)
                                                      mainFrame->document()->url().string(),
                                                      mainFrame->loader()->referrer(),
                                                      m_domEventDispatchCount, m_currentMark);
-    captureEventLoopInput(reloadInput);
+    captureEventLoopInput(adoptPtr(reloadInput));
 
     //The call to scheduleLocationChange should be the same on capture and replay.
     page()->networkProxy()->setExpectsPageLoad(true);
@@ -247,18 +236,18 @@ bool ReplayController::endCapturing(const PositionMark& mark)
     // this protects against receiving stopRecording commands twice before
     // the UI is notified that recording is stopped (which disables that command).
     if (!capturing()) {
-        LOG(DeterministicReplay, "%-30sIgnored request to stop recording; not in a valid state to do so.\n", "[ReplayController]");
+        LOG(DeterministicReplay, "%-30sIgnored request to stop capturing; not in a valid state to do so.\n", "[ReplayController]");
         return false;
     }
 
     LOG(DeterministicReplay, "%-30sEnding capture.\n", "[ReplayController]");
 
-    captureEventLoopInput(new EnableCache(m_domEventDispatchCount, mark));
-    captureEventLoopInput(new EndSentinel(m_domEventDispatchCount, mark));
+    captureEventLoopInput(adoptPtr(new EnableCache(m_domEventDispatchCount, mark)));
+    captureEventLoopInput(adoptPtr(new EndSentinel(m_domEventDispatchCount, mark)));
     //normally performed by captureEventLoopInput (called on following input), but this is last input.
     finalizePreviousInput(m_domEventDispatchCount);
 
-    m_loadedRecording->inputLog()->endCapturing();
+    m_activeIterator = 0;
     // TODO: (Issue #236): turn serialization into an API (that doesn't involve ReplayController)
     serialize();
 
@@ -301,8 +290,10 @@ void ReplayController::replayUpToMarkIndex(PositionMarkIndex index, ReplayMode m
     // only undone by recording, or cancelling playback.
     changeProxyMode(ReplayProxy::Replaying);
 
-    if (m_status == PlaybackUninitialized || m_status == PlaybackFinished || index < m_currentMark.index())
-        resetPlaybackState();
+    if (m_status == PlaybackUninitialized || m_status == PlaybackFinished || index < m_currentMark.index()) {
+        resetReplayState();
+        m_activeIterator = m_loadedRecording->createReplayIterator();
+    }
 
     m_status = ReplayUpToMarkIndex;
     m_stopBeforeMarkIndex = index;
@@ -321,8 +312,10 @@ void ReplayController::replayToCompletion(ReplayMode mode)
     // only undone by recording, or cancelling playback.
     changeProxyMode(ReplayProxy::Replaying);
 
-    if (m_status == PlaybackUninitialized || m_status == PlaybackFinished)
-        resetPlaybackState();
+    if (m_status == PlaybackUninitialized || m_status == PlaybackFinished) {
+        resetReplayState();
+        m_activeIterator = m_loadedRecording->createReplayIterator();
+    }
 
     m_replayMode = mode;
     m_status = ReplayToCompletion;
@@ -419,18 +412,18 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
     
     page()->networkProxy()->setExpectsPageLoad(false);
     page()->networkProxy()->setInitiatingPageLoad(false);
-    loader->frame()->script()->globalObject(mainThreadNormalWorld())->setReplayInputLog(m_loadedRecording->inputLog());
+    loader->frame()->script()->globalObject(mainThreadNormalWorld())->setInputIterator(m_activeIterator.get());
 }
 
 void ReplayController::willFireTimer(int timerId, Document* document)
 {
     if (isCapturingDocument(document))
-        capturePageInput(new TimerFired(timerId, document)); // send to frontend, too.
+        capturePageInput(adoptPtr(new TimerFired(timerId, document))); // send to frontend, too.
 }
 
 void ReplayController::willRunPendingScriptsForDocument(Document* document) {
     if (isCapturingDocument(document))
-        captureEventLoopInput(new RanPendingScripts(document));
+        captureEventLoopInput(adoptPtr(new RanPendingScripts(document)));
 }
 
 //-- accessors
@@ -450,8 +443,7 @@ bool ReplayController::isCapturingDocument(Document* document) const
         return false;
     
     JSDOMWindow* window = toJSDOMWindow(document->frame(), mainThreadNormalWorld());
-    return window && window->inputLog() && 
-           window->inputLog()->isActive() && window->inputLog()->capturing();
+    return window && window->inputIterator() && window->inputIterator()->isCapturing();
 }
 
 bool ReplayController::isReplayingDocument(Document* document) const
@@ -460,11 +452,10 @@ bool ReplayController::isReplayingDocument(Document* document) const
         return false;
     
     JSDOMWindow* window = toJSDOMWindow(document->frame(), mainThreadNormalWorld());
-    return window && window->inputLog() &&
-           window->inputLog()->isActive() && window->inputLog()->replaying();
+    return window && window->inputIterator() && window->inputIterator()->isReplaying();
 }
 
-void ReplayController::capturePageInput(EventLoopInput* input)
+void ReplayController::capturePageInput(PassOwnPtr<EventLoopInput> input)
 {
     if (!capturing())
         return;
@@ -472,8 +463,10 @@ void ReplayController::capturePageInput(EventLoopInput* input)
     // flush document event queue, so event dispatch count reflects anything 
     // dispatched or queued before this input was captured.
     m_page->mainFrame()->document()->eventQueue()->flush();
+    // TODO: can avoid this if inspector instrumentation fires before handing off OwnPtr
+    EventLoopInput* inputPtr = input.get();
     captureEventLoopInput(input);
-    InspectorInstrumentation::capturedPageInput(m_page, input);
+    InspectorInstrumentation::capturedPageInput(m_page, inputPtr);
 }
 
 bool ReplayController::playbackError(bool isFatal, const String& errorMessage)
@@ -504,7 +497,7 @@ bool ReplayController::playbackError(bool isFatal, const String& errorMessage)
 
 // Private methods
 
-void ReplayController::captureEventLoopInput(EventLoopInput* input)
+void ReplayController::captureEventLoopInput(PassOwnPtr<EventLoopInput> input)
 {
     ASSERT(capturing());
     
@@ -512,8 +505,8 @@ void ReplayController::captureEventLoopInput(EventLoopInput* input)
     finalizePreviousInput(input->dispatchCount());
 
     m_currentMark = input->mark();
-    m_loadedRecording->inputLog()->append(input);
-    m_previousInput = input;
+    m_previousInput = input.get();
+    m_activeIterator->storeInput(input);
 }
 
 void ReplayController::finalizePreviousInput(int currentDispatchCount)
@@ -559,18 +552,22 @@ void ReplayController::maybeDispatchInput()
     if (m_runningInput)
         return;
 
+    ReplayInputIterator* it = static_cast<ReplayInputIterator*>(m_activeIterator.get());
+    ASSERT(it);
+
     // if there was an error between now the previous dispatch, report it now.
-    if (m_loadedRecording->inputLog()->hasError()) {
+    if (it->hasError()) {
         // TODO: some of these should be recoverable, but for now they are all fatal.
         // we must clear the error
-        playbackError(true, m_loadedRecording->inputLog()->errorMessage());
+        playbackError(true, it->errorMessage());
         return;
     }
 
     // if there is no waiting input, then get one.
     if (!m_waitingInput)
-        m_waitingInput = popDispatchInput(m_loadedRecording->inputLog());
+        m_waitingInput = static_cast<EventLoopInput*>(it->uncheckedLoadInput(WTF::EventLoopInputQueue));
 
+    ASSERT(m_waitingInput);
     m_currentMark = m_waitingInput->mark();
     
     // if running the waiting input would proceed past the desired mark, pause.
@@ -683,11 +680,9 @@ void ReplayController::syncDispatchInput()
 }
         
 
-void ReplayController::resetPlaybackState()
+void ReplayController::resetReplayState()
 {
-    LOG(DeterministicReplay, "%-30s Resetting the replay log...\n", "[ReplayController]");
-
-    unplugInputLogFromPage(m_page);
+    LOG(DeterministicReplay, "%-30s Clearing replay state and input iterator for page: %p\n", "[ReplayController]", (void*)m_page);
 
     m_waitingInput = 0;
     m_runningInput = 0;
@@ -695,8 +690,10 @@ void ReplayController::resetPlaybackState()
     m_currentMark = 0;
     m_previousMarkTime = 0.0;
     m_previousDispatchStartTime = 0.0;
-    if (m_loadedRecording)
-        m_loadedRecording->inputLog()->reset();
+    m_activeIterator = 0;
+
+    for (Frame* frame = m_page->mainFrame(); frame; frame = frame->tree()->traverseNext())
+        frame->script()->globalObject(mainThreadNormalWorld())->setInputIterator(0);
 }
 
 void ReplayController::pauseReplay(PositionMarkIndex index)
@@ -711,16 +708,13 @@ void ReplayController::pauseReplay(PositionMarkIndex index)
 void ReplayController::finishReplay()
 {
     m_status = PlaybackFinished;
-    
-    // unplug the ReplayInputLog from JS global object so we don't accidentally 
-    // try to pull events from it. Such attempts will fail, since the log is at the end.
-    resetPlaybackState();
+    resetReplayState();
     InspectorInstrumentation::playbackFinished(m_page);
 }
 
 void ReplayController::serialize()
 {
-    JSONReplayInputSerializer serializer(m_loadedRecording->inputLog());
+    JSONInputSerializer serializer(m_loadedRecording);
 
     LOG(DeterministicReplay, "%-30sMETRIC: memory overhead: %zu bytes\n", "[ReplayController]", serializer.memorySize());
 
@@ -740,20 +734,21 @@ void ReplayController::serialize()
 
 bool ReplayController::unloadRecording(bool suppressNotifications)
 {
+    ASSERT(!capturing());
+
     if (!m_loadedRecording) {
         LOG_ERROR("Tried to unload recording, but none was loaded.");
         return false;
     }
     
-    if (m_loadedRecording->capturing() ||
-        !(m_status == PlaybackFinished || m_status == PlaybackUninitialized || m_status == CannotReplay)) {
+    if (!(m_status == PlaybackFinished || m_status == PlaybackUninitialized || m_status == CannotReplay)) {
         LOG_ERROR("Tried to unload recording that was capturing or replaying.");
         return false;
     }
 
     LOG(DeterministicReplay, "%-30sUnloading recording: %p.\n", "[ReplayController]", (void*)m_loadedRecording.get());
     
-    unplugInputLogFromPage(m_page);
+    resetReplayState();
     m_loadedRecording = 0;
 
     if (!suppressNotifications)
@@ -764,8 +759,9 @@ bool ReplayController::unloadRecording(bool suppressNotifications)
 
 bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> prpRecording, bool suppressNotifications)
 {
+    ASSERT(!capturing());
+
     RefPtr<ReplayRecording> recording = prpRecording;
-    ASSERT(!recording->capturing());
     ASSERT(m_status == PlaybackFinished || m_status == PlaybackUninitialized || m_status == CannotReplay);
 
     if (m_loadedRecording && m_loadedRecording != recording) {
@@ -775,8 +771,6 @@ bool ReplayController::loadRecording(PassRefPtr<ReplayRecording> prpRecording, b
     
     LOG(DeterministicReplay, "%-30sLoading recording: %p.\n", "[ReplayController]", (void*)recording.get());
     
-    resetPlaybackState();
-
     m_loadedRecording = recording;
     if (!suppressNotifications)
         InspectorInstrumentation::recordingLoaded(m_page, recording);
@@ -792,19 +786,15 @@ void ReplayController::changeProxyMode(ReplayProxy::ProxyMode mode)
 
 bool ReplayController::capturing() const
 {
-    return m_status == CannotReplay &&
-           m_loadedRecording &&
-           m_loadedRecording->inputLog()->isActive() &&
-           m_loadedRecording->capturing();
+    return m_status == CannotReplay && m_activeIterator &&
+           m_activeIterator && m_activeIterator->isCapturing();
 }
 
 bool ReplayController::replaying() const
 {
     return m_status != CannotReplay &&
            m_status != PlaybackUninitialized &&
-           m_loadedRecording &&
-           m_loadedRecording->inputLog()->isActive() &&
-           m_loadedRecording->replaying();
+           m_activeIterator && m_activeIterator->isReplaying();
 }
         
 }; // namespace WebCore

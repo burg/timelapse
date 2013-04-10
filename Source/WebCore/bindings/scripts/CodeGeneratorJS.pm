@@ -1768,7 +1768,7 @@ sub GenerateImplementation
             push(@implContent, "    ASSERT_GC_OBJECT_INHERITS(thisObject, &s_info);\n");
             push(@implContent, GenerateGetOwnPropertyDescriptorBody($interface, $interfaceName, $className, $numAttributes > 0, 0));
             push(@implContent, "}\n\n");
-        }
+        } # attribute JSInlineGetOwnPropertySlot && !CustomGetOwnPropertySlot
 
         if ($interface->extendedAttributes->{"IndexedGetter"} || $interface->extendedAttributes->{"NumericIndexedGetter"}
                 || $interface->extendedAttributes->{"NamedGetter"} || $interface->extendedAttributes->{"CustomNamedGetter"}
@@ -1821,7 +1821,7 @@ sub GenerateImplementation
 
             push(@implContent, "    return Base::getOwnPropertySlotByIndex(thisObject, exec, index, slot);\n");
             push(@implContent, "}\n\n");
-        }
+        } # attribute IndexedGetter || NumericIndexedGetter || NamedGetter || CustomNamedGetter || JSCustonGetOwnPropertySlotAndDescriptor
 
         if ($numAttributes > 0) {
             foreach my $attribute (@{$interface->attributes}) {
@@ -1836,11 +1836,16 @@ sub GenerateImplementation
 
                 push(@implContent, "JSValue ${getFunctionName}(ExecState* exec, JSValue slotBase, PropertyName)\n");
                 push(@implContent, "{\n");
-
+                push(@implContent, "    JSValue result;\n");
                 if (!$attribute->isStatic || $attribute->signature->type =~ /Constructor$/) {
                     push(@implContent, "    ${className}* castedThis = jsCast<$className*>(asObject(slotBase));\n");
                 } else {
                     push(@implContent, "    UNUSED_PARAM(slotBase);\n");
+                }
+                my @arguments = ();
+                if (@{$attribute->getterExceptions} && !HasCustomGetter($attribute->signature->extendedAttributes)) {
+                    push(@arguments, "ec");
+                    push(@implContent, "    ExceptionCode ec = 0;\n");
                 }
 
                 if ($attribute->signature->extendedAttributes->{"CachedAttribute"}) {
@@ -1856,58 +1861,50 @@ sub GenerateImplementation
                 }
 
                 if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"} || $attribute->signature->extendedAttributes->{"Nondeterministic"}) {
-                    $implIncludes{"<wtf/replay/ReplayInputLog.h>"} = 1;
+                    $implIncludes{"<wtf/replay/InputIterator.h>"} = 1;
                     push(@implContent, "#if ENABLE(TIMELAPSE)\n");
                     push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
-                    push(@implContent, "    ReplayInputLog* log = globalObject->inputLog();\n");
+                    push(@implContent, "    InputIterator* it = globalObject->inputIterator();\n");
 
                     if ($attribute->signature->extendedAttributes->{"ReplayNotImplemented"}) {
                         $implIncludes{"PlaybackError.h"} = 1;
-                        push(@implContent, "    if (log && log->isActive() && log->capturing()) {\n");
-                        push(@implContent, "        log->append(new PlaybackError(\"Replay is not implemented for $interfaceName.$name\"));\n");
+                        push(@implContent, "    if (it && it->isCapturing()) {\n");
+                        push(@implContent, "        it->storeInput(adoptPtr(new PlaybackError(\"Replay is not implemented for $interfaceName.$name\")));\n");
                         push(@implContent, "    }\n");
                     }
 
-                    if ($attribute->signature->extendedAttributes->{"Nondeterministic"}) {
-                        my @arguments = ();
-                        if (@{$attribute->getterExceptions}) {
-                            push(@arguments, "ec");
-                            push(@implContent, "    ExceptionCode ec = 0;\n");
-                        }
-                        
+                    if ($attribute->signature->extendedAttributes->{"Nondeterministic"}) {                       
                         $implIncludes{"AutoMemoized.h"} = 1;
                         my $nativeType = GetNativeType($type);
                         my $memoizedType = GetNativeTypeForMemoization($type);
-                        push(@implContent, "    if (log && log->isActive()) {\n");
-                        push(@implContent, "        if (log->capturing()) {\n");
-                        push(@implContent, "            $nativeType memoizedResult = castedThis->impl()->$implGetterFunctionName(" . join(", ", @arguments) . ");\n");
+                        push(@implContent, "    if (it && it->isCapturing()) {\n");
+                        push(@implContent, "        $nativeType memoizedResult = castedThis->impl()->$implGetterFunctionName(" . join(", ", @arguments) . ");\n");
                         if (@{$attribute->getterExceptions}) {
-                            push(@implContent, "            log->append(new AutoMemoizedWithExceptionCode<$memoizedType>(\"$interfaceName.$name\", memoizedResult, ec));\n");
+                            push(@implContent, "        it->storeInput(adoptPtr(new AutoMemoizedWithExceptionCode<$memoizedType>(\"$interfaceName.$name\", memoizedResult, ec)));\n");
                         } else {
-                            push(@implContent, "            log->append(new AutoMemoized<$memoizedType>(\"$interfaceName.$name\", memoizedResult));\n");
+                            push(@implContent, "        it->storeInput(adoptPtr(new AutoMemoized<$memoizedType>(\"$interfaceName.$name\", memoizedResult)));\n");
                         }
-                        push(@implContent, "            JSC::JSValue result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "memoizedResult", "castedThis") . ";\n");
-                        push(@implContent, "            setDOMException(exec, ec);\n") if @{$attribute->getterExceptions};
+                        push(@implContent, "        result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "memoizedResult", "castedThis") . ";\n");
+                        push(@implContent, "        setDOMException(exec, ec);\n") if @{$attribute->getterExceptions};
+                        push(@implContent, "        return result;\n");
+                        push(@implContent, "     }\n");
+                        push(@implContent, "     if (it && it->isReplaying()) {\n");
+                        if (@{$attribute->getterExceptions}) {
+                            push(@implContent, "        AutoMemoizedWithExceptionCode<$memoizedType>* input = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
+                        } else {
+                            push(@implContent, "        AutoMemoized<$memoizedType>* input = static_cast<AutoMemoized<$memoizedType>*>(it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
+                        }
+                        push(@implContent, "        if (input) {\n");
+                        push(@implContent, "            ASSERT(input->attributeName() == \"$interfaceName.$name\");\n");
+                        push(@implContent, "            result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "input->result()", "castedThis") . ";\n");
+                        push(@implContent, "            setDOMException(exec, input->exceptionCode());\n") if @{$attribute->getterExceptions};
                         push(@implContent, "            return result;\n");
-                        push(@implContent, "        } else {\n");
-                        push(@implContent, "            ASSERT(log->replaying());\n");
-                        if (@{$attribute->getterExceptions}) {
-                            push(@implContent, "            AutoMemoizedWithExceptionCode<$memoizedType>* action = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(log->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
-                        } else {
-                            push(@implContent, "            AutoMemoized<$memoizedType>* action = static_cast<AutoMemoized<$memoizedType>*>(log->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
-                        }
-                        push(@implContent, "            if (action) {\n");
-                        push(@implContent, "                ASSERT(action->attributeName() == \"$interfaceName.$name\");\n");
-                        push(@implContent, "                JSC::JSValue result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "action->result()", "castedThis") . ";\n");
-                        push(@implContent, "                setDOMException(exec, action->exceptionCode());\n") if @{$attribute->getterExceptions};
-                        push(@implContent, "                return result;\n");
-                        push(@implContent, "            }\n");
-                        # if !action, there was an error, so obtain result normally
                         push(@implContent, "        }\n");
+                        # if !action, there was an error, so obtain result normally
                         push(@implContent, "    }\n");
                     }
                     push(@implContent, "#endif\n");
-                }
+                } # attribute ReplayNotImplemented || Nondeterminsitic
 
                 if (HasCustomGetter($attribute->signature->extendedAttributes)) {
                     push(@implContent, "    return castedThis->$implGetterFunctionName(exec);\n");
@@ -1955,16 +1952,16 @@ sub GenerateImplementation
                     my @callWithArgs = GenerateCallWith($attribute->signature->extendedAttributes->{"CallWith"}, \@implContent, "jsUndefined()");
 
                     if ($svgListPropertyType) {
-                        push(@implContent, "    JSValue result =  " . NativeToJSValue($attribute->signature, 0, $interfaceName, "castedThis->impl()->$implGetterFunctionName(" . (join ", ", @callWithArgs) . ")", "castedThis") . ";\n");
+                        push(@implContent, "    result =  " . NativeToJSValue($attribute->signature, 0, $interfaceName, "castedThis->impl()->$implGetterFunctionName(" . (join ", ", @callWithArgs) . ")", "castedThis") . ";\n");
                     } elsif ($svgPropertyOrListPropertyType) {
                         push(@implContent, "    $svgPropertyOrListPropertyType& impl = castedThis->impl()->propertyReference();\n");
                         if ($svgPropertyOrListPropertyType eq "float") { # Special case for JSSVGNumber
-                            push(@implContent, "    JSValue result =  " . NativeToJSValue($attribute->signature, 0, $interfaceName, "impl", "castedThis") . ";\n");
+                            push(@implContent, "    result =  " . NativeToJSValue($attribute->signature, 0, $interfaceName, "impl", "castedThis") . ";\n");
                         } else {
-                            push(@implContent, "    JSValue result =  " . NativeToJSValue($attribute->signature, 0, $interfaceName, "impl.$implGetterFunctionName(" . (join ", ", @callWithArgs) . ")", "castedThis") . ";\n");
+                            push(@implContent, "    result =  " . NativeToJSValue($attribute->signature, 0, $interfaceName, "impl.$implGetterFunctionName(" . (join ", ", @callWithArgs) . ")", "castedThis") . ";\n");
 
                         }
-                    } else {
+                    } else { # !$svgListPropertyType && !$svgPropertyOrListPropertyType
                         my ($functionName, @arguments) = $codeGenerator->GetterExpression(\%implIncludes, $interfaceName, $attribute);
                         if ($attribute->signature->extendedAttributes->{"ImplementedBy"}) {
                             my $implementedBy = $attribute->signature->extendedAttributes->{"ImplementedBy"};
@@ -1983,27 +1980,25 @@ sub GenerateImplementation
                         push(@implContent, "    $interfaceName* impl = static_cast<$interfaceName*>(castedThis->impl());\n") if !$attribute->isStatic;
                         if ($codeGenerator->IsSVGAnimatedType($type)) {
                             push(@implContent, "    RefPtr<$type> obj = $jsType;\n");
-                            push(@implContent, "    JSValue result =  toJS(exec, castedThis->globalObject(), obj.get());\n");
+                            push(@implContent, "    result =  toJS(exec, castedThis->globalObject(), obj.get());\n");
                         } else {
-                            push(@implContent, "    JSValue result = $jsType;\n");
+                            push(@implContent, "    result = $jsType;\n");
                         }
                     }
 
                     push(@implContent, "    castedThis->m_" . $attribute->signature->name . ".set(exec->globalData(), castedThis, result);\n") if ($attribute->signature->extendedAttributes->{"CachedAttribute"});
                     push(@implContent, "    return result;\n");
 
-                } else {
+                } else { # getterExceptions
                     my @arguments = ("ec");
-                    push(@implContent, "    ExceptionCode ec = 0;\n") if !$attribute->signature->extendedAttributes->{"Nondeterministic"};
-
                     unshift(@arguments, GenerateCallWith($attribute->signature->extendedAttributes->{"CallWith"}, \@implContent, "jsUndefined()"));
 
                     if ($svgPropertyOrListPropertyType) {
                         push(@implContent, "    $svgPropertyOrListPropertyType impl(*castedThis->impl());\n");
-                        push(@implContent, "    JSC::JSValue result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "impl.$implGetterFunctionName(" . join(", ", @arguments) . ")", "castedThis") . ";\n");
+                        push(@implContent, "    result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "impl.$implGetterFunctionName(" . join(", ", @arguments) . ")", "castedThis") . ";\n");
                     } else {
                         push(@implContent, "    $interfaceName* impl = static_cast<$interfaceName*>(castedThis->impl());\n");
-                        push(@implContent, "    JSC::JSValue result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "impl->$implGetterFunctionName(" . join(", ", @arguments) . ")", "castedThis") . ";\n");
+                        push(@implContent, "    result = " . NativeToJSValue($attribute->signature, 0, $interfaceName, "impl->$implGetterFunctionName(" . join(", ", @arguments) . ")", "castedThis") . ";\n");
                     }
 
                     push(@implContent, "    setDOMException(exec, ec);\n");
@@ -2033,7 +2028,7 @@ sub GenerateImplementation
                 push(@implContent, "    return ${className}::getConstructor(exec, domObject->globalObject());\n");
                 push(@implContent, "}\n\n");
             }
-        }
+        } # numAttributes > 0
 
         # Check if we have any writable attributes
         my $hasReadWriteProperties = 0;
@@ -2262,8 +2257,8 @@ sub GenerateImplementation
                 }
                 push(@implContent, "}\n\n");
             }        
-        }
-    }
+        } # hasSetter
+    } # hasGetter
 
     if (($interface->extendedAttributes->{"IndexedGetter"} || $interface->extendedAttributes->{"NumericIndexedGetter"}) && !$interface->extendedAttributes->{"CustomEnumerateProperty"}) {
         push(@implContent, "void ${className}::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)\n");
@@ -2315,17 +2310,18 @@ sub GenerateImplementation
 
             push(@implContent, "EncodedJSValue JSC_HOST_CALL ${functionName}(ExecState* exec)\n");
             push(@implContent, "{\n");
+            push(@implContent, "    JSValue result;\n");
 
             $implIncludes{"<runtime/Error.h>"} = 1;
 
             if ($function->signature->extendedAttributes->{"ReplayNotImplemented"}) {
                 $implIncludes{"PlaybackError.h"} = 1;
-                $implIncludes{"<wtf/replay/ReplayInputLog.h>"} = 1;
+                $implIncludes{"<wtf/replay/InputIterator.h>"} = 1;
                 push(@implContent, "#if ENABLE(TIMELAPSE)\n");
                 push(@implContent, "    JSGlobalObject* globalObject = exec->lexicalGlobalObject();\n");
-                push(@implContent, "    ReplayInputLog* log = globalObject->inputLog();\n");
-                push(@implContent, "    if (log && log->isActive() && log->capturing()) {\n");
-                push(@implContent, "        log->append(new PlaybackError(\"Replay is not implemented for $interfaceName." . $function->signature->name . "\"));\n");
+                push(@implContent, "    InputIterator* it = globalObject->inputIterator();\n");
+                push(@implContent, "    if (it && it->isCapturing()) {\n");
+                push(@implContent, "        it->storeInput(adoptPtr(new PlaybackError(\"Replay is not implemented for $interfaceName." . $function->signature->name . "\")));\n");
                 push(@implContent, "    }\n");
                 push(@implContent, "#endif\n");
             }
@@ -3068,10 +3064,10 @@ sub GenerateImplementationFunctionCall()
 
     if ($function->signature->type eq "void") {
         if ($nondeterministic) {
-            $implIncludes{"<wtf/replay/ReplayInputLog.h>"} = 1;
+            $implIncludes{"<wtf/replay/InputIterator.h>"} = 1;
             push(@implContent, "#if ENABLE(TIMELAPSE)\n");
-            push(@implContent, $indent . "ReplayInputLog* log = exec->lexicalGlobalObject()->inputLog();\n");
-            push(@implContent, $indent . "if (!log || !log->isActive() || log->capturing()) {\n");
+            push(@implContent, $indent . "InputIterator* it = exec->lexicalGlobalObject()->inputIterator();\n");
+            push(@implContent, $indent . "if (!it || !it->isCapturing()) {\n");
             push(@implContent, $indent . "    $functionString;\n");
             push(@implContent, $indent . "}\n");
             push(@implContent, "#else\n");
@@ -3094,41 +3090,40 @@ sub GenerateImplementationFunctionCall()
         my $thisObject = $function->isStatic ? 0 : "castedThis";
         if ($nondeterministic) {
             $implIncludes{"AutoMemoized.h"} = 1;
-            $implIncludes{"<wtf/replay/ReplayInputLog.h>"} = 1;
+            $implIncludes{"<wtf/replay/InputIterator.h>"} = 1;
             my $nativeType = GetNativeTypeFromSignature($function->signature);
             my $memoizedType = GetNativeTypeForMemoization($function->signature->type);
             my $bindingName = $interfaceName . "." . $function->signature->name;
             push(@implContent, "#if ENABLE(TIMELAPSE)\n");
-            push(@implContent, $indent . "ReplayInputLog* log = exec->lexicalGlobalObject()->inputLog();\n");
-            push(@implContent, $indent . "JSC::JSValue result;\n");
-            push(@implContent, $indent . "if (!log || !log->isActive()) {\n");
-            push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $interfaceName, $functionString, $thisObject) . ";\n");
-            push(@implContent, $indent . "} else if (log->capturing()) {\n");
+            push(@implContent, $indent . "InputIterator* it = exec->lexicalGlobalObject()->inputIterator();\n");
+            push(@implContent, $indent . "if (it && it->isCapturing()) {\n");
             push(@implContent, $indent . "    $nativeType memoizedResult = $functionString;\n");
             if (@{$function->raisesExceptions}) {
-                push(@implContent, $indent . "    log->append(new AutoMemoizedWithExceptionCode<$memoizedType>(\"$bindingName\", memoizedResult, ec));\n");
+                push(@implContent, $indent . "    it->storeInput(adoptPtr(new AutoMemoizedWithExceptionCode<$memoizedType>(\"$bindingName\", memoizedResult, ec)));\n");
             } else {
-                push(@implContent, $indent . "    log->append(new AutoMemoized<$memoizedType>(\"$bindingName\", memoizedResult));\n");
+                push(@implContent, $indent . "    it->storeInput(adoptPtr(new AutoMemoized<$memoizedType>(\"$bindingName\", memoizedResult)));\n");
             }
             push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $interfaceName, "memoizedResult", $thisObject) . ";\n");
-            push(@implContent, $indent . "} else {\n");
-            push(@implContent, $indent . "    ASSERT(log->replaying());\n");
+            push(@implContent, $indent . "} else if (it && it->isReplaying()) {\n");
             if (@{$function->raisesExceptions}) {
-                push(@implContent, $indent . "    AutoMemoizedWithExceptionCode<$memoizedType>* action = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(log->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
-		push(@implContent, $indent . "    ec = action->exceptionCode();\n")
-	    } else {
-                push(@implContent, $indent . "    AutoMemoized<$memoizedType>* action = static_cast<AutoMemoized<$memoizedType>*>(log->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
-	    }
-            push(@implContent, $indent . "    if (action) {\n");
-            push(@implContent, $indent . "        ASSERT(action->attributeName() == \"$bindingName\");\n");
-            push(@implContent, $indent . "        result = " . NativeToJSValue($function->signature, 1, $interfaceName, "action->result()", $thisObject) . ";\n");
+                push(@implContent, $indent . "    AutoMemoizedWithExceptionCode<$memoizedType>* input = static_cast<AutoMemoizedWithExceptionCode<$memoizedType>*>(it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
+                push(@implContent, $indent . "    ec = input->exceptionCode();\n")
+            } else {
+                push(@implContent, $indent . "    AutoMemoized<$memoizedType>* input = static_cast<AutoMemoized<$memoizedType>*>(it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::AutoMemoized));\n");
+            }
+            push(@implContent, $indent . "    if (input) {\n");
+            push(@implContent, $indent . "        ASSERT(input->attributeName() == \"$bindingName\");\n");
+            push(@implContent, $indent . "        result = " . NativeToJSValue($function->signature, 1, $interfaceName, "input->result()", $thisObject) . ";\n");
             push(@implContent, $indent . "    } else {  // error handling case\n");
             push(@implContent, $indent . "        result = " . NativeToJSValue($function->signature, 1, $interfaceName, $functionString, $thisObject) . ";\n");
             push(@implContent, $indent . "    }\n");
+            push(@implContent, $indent . "} else {\n");
+            # if !input on replay, error case obtains value normally
+            push(@implContent, $indent . "    result = " . NativeToJSValue($function->signature, 1, $interfaceName, $functionString, $thisObject) . ";\n");
             push(@implContent, $indent . "}\n");
-            push(@implContent, "#else");
+            push(@implContent, "#else\n");
         }
-        push(@implContent, "\n" . $indent . "JSC::JSValue result = " . NativeToJSValue($function->signature, 1, $interfaceName, $functionString, $thisObject) . ";\n");
+        push(@implContent, "\n" . $indent . "result = " . NativeToJSValue($function->signature, 1, $interfaceName, $functionString, $thisObject) . ";\n");
         push(@implContent, $indent . "setDOMException(exec, ec);\n") if @{$function->raisesExceptions};
         push(@implContent, "#endif\n") if $nondeterministic;
 

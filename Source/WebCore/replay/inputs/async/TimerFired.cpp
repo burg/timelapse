@@ -41,7 +41,7 @@
 #include "DOMTimer.h"
 #include <wtf/text/StringConcatenate.h>
 #include <wtf/replay/NondeterministicInput.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -55,7 +55,7 @@ String TimerFired::toString() const
     return makeString("TimerFired(", String::number(m_frameIndex), "/", String::number(m_timerId), ")");
 }
 
-void TimerFired::serialize(ReplayInputSerializer* serializer) const
+void TimerFired::serialize(InputSerializer* serializer) const
 {
     serializer->putInt("timerId", m_timerId);
     serializer->putInt("frameIndex", m_frameIndex);

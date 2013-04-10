@@ -55,7 +55,7 @@ public:
     virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE;
-    void serialize(WTF::ReplayInputSerializer*) const OVERRIDE;
+    void serialize(WTF::InputSerializer*) const OVERRIDE;
 
     const Vector<KeypressCommand>& commands() const { return m_commands; }
 

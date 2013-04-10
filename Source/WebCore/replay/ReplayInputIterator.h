@@ -29,60 +29,68 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#ifndef ReplayRecording_h
-#define ReplayRecording_h
+#ifndef ReplayInputIterator_h
+#define ReplayInputIterator_h
 
 #if ENABLE(TIMELAPSE)
 
-#include "InputStorage.h"
-
+#include <wtf/Noncopyable.h>
+#include <wtf/OwnPtr.h>
 #include <wtf/PassOwnPtr.h>
-#include <wtf/RefCounted.h>
-#include <wtf/Vector.h>
+#include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
-class CaptureInputIterator;
 class InputStorage;
-class ReplayInputIterator;
 
-class ReplayRecording : public RefCounted<ReplayRecording> {
-public:
-    static PassRefPtr<ReplayRecording> create(int);
-    ~ReplayRecording() {}
+typedef enum {
+    NoReplayError,
+    ErrorExhaustedQueue,
+    ErrorUnexpectedInputType,
+} ReplayErrorType;
 
-    int uid() const { return m_uid; }
-    double creationTimestamp() const { return m_timestamp; }
-    
-    PassOwnPtr<CaptureInputIterator> createCaptureIterator();
-    PassOwnPtr<ReplayInputIterator> createReplayIterator();
-    
-    template<typename Functor> typename Functor::ReturnType forEachInputInQueue(ReplayInputQueueType, Functor&);
-    
-private:
-    ReplayRecording(int);
-    OwnPtr<InputStorage> m_inputStorage;
-    int m_uid;
-    bool m_canCapture;
-    double m_timestamp;
+struct ReplayErrorData {
+    ReplayErrorType error;
+    NondeterministicInput::ReplayInputType expectedInput;
+    ReplayInputQueueType queue;
 };
 
-template<typename Functor> inline typename Functor::ReturnType ReplayRecording::forEachInputInQueue(ReplayInputQueueType queue, Functor& functor)
-{
-    ASSERT(!m_canCapture && m_inputStorage->isReadOnly());
-    ASSERT(queue < ReplayInputQueueTypeLength);
-    
-    for (size_t i = 0; i < m_inputStorage->m_queues[queue]->size(); i++) {
-        functor(i, m_inputStorage->m_queues[queue]->at(i).get());
-    }
-    
-    return functor.returnValue();
-}
+class ReplayInputIterator : public WTF::InputIterator {
+    WTF_MAKE_NONCOPYABLE(ReplayInputIterator);
+public:
+    static PassOwnPtr<ReplayInputIterator> create(InputStorage*);
+    virtual ~ReplayInputIterator();
+
+    // InputIterator API
+    virtual bool isCapturing() const { return false; }
+    virtual bool isReplaying() const { return m_isActive; }
+
+    virtual void storeInput(PassOwnPtr<NondeterministicInput>);
+    virtual NondeterministicInput* loadInput(ReplayInputQueueType, NondeterministicInput::ReplayInputType);
+    virtual NondeterministicInput* uncheckedLoadInput(ReplayInputQueueType);
+   
+    //used for temporary deactivation; e.g. when injected scripts are evaluated.
+    void setIsActive(bool);
+
+    //error handling
+    bool hasError() const { return m_errorData.error != NoReplayError; }
+    WTF_EXPORT_PRIVATE String errorMessage() const;
+    // TODO: if the previous error allocated any POD, must clean up here.
+    void clearError() { m_errorData.error = NoReplayError; }
+
+private:
+    ReplayInputIterator(InputStorage*);
+
+    bool m_isActive;
+    InputStorage* m_storage;
+    ReplayErrorData m_errorData;
+    Vector<size_t> m_positions;
+};
 
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
 
-#endif // ReplayRecording_h
+#endif // ReplayInputIterator_h

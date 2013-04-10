@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2013, Brian Burg.
+ *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,45 +29,47 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DispatchFakeMouseMove_h
-#define DispatchFakeMouseMove_h
+#ifndef InputStorage_h
+#define InputStorage_h
 
 #if ENABLE(TIMELAPSE)
 
-#include "EventLoopInput.h"
-#include "HandleMouseBase.h"
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/Noncopyable.h>
+#include <wtf/OwnPtr.h>
+#include <wtf/PassOwnPtr.h>
+#include <wtf/Vector.h>
+#include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
-    
-namespace ReplayInputTypes {
-    extern const char *DispatchFakeMouseMove;
-}
 
-class Frame;
-
-class DispatchFakeMouseMove : public HandleMouseBase {
+class InputStorage {
+    WTF_MAKE_NONCOPYABLE(InputStorage);
+    friend class ReplayRecording;
 public:
-    DispatchFakeMouseMove(Frame*, const PlatformMouseEvent&);
-    virtual ~DispatchFakeMouseMove() {}
-    
-    // EventLoopInput API
-    virtual void dispatch(ReplayController*) OVERRIDE;
-    virtual bool isUserVisible() const OVERRIDE { return false; }
-    
-    // NondeterministicInput API
-    virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE
+    static PassOwnPtr<InputStorage> create();
+    ~InputStorage();
+
+    bool isReadOnly() const { return m_readOnly; }
+    void freeze();
+    NondeterministicInput* load(ReplayInputQueueType, uint);
+    void store(PassOwnPtr<NondeterministicInput>);
+    uint queueSize(ReplayInputQueueType queue) const
     {
-        return HandleMouseBase::memorySize() + sizeof(m_frameIndex);
+        ASSERT(queue < ReplayInputQueueTypeLength);
+        return m_queues[queue]->size();
     }
-    virtual void serialize(InputSerializer*) const OVERRIDE;
-private:
-    int m_frameIndex;
-};
     
+private:
+    typedef Vector<OwnPtr<NondeterministicInput> > InputQueue;
+    InputStorage();
+
+    Vector<InputQueue*> m_queues;
+    unsigned m_inputCount;
+    bool m_readOnly;
+};
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
 
-#endif // DispatchFakeMouseMove_h
+#endif // InputStorage_h

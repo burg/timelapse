@@ -102,7 +102,7 @@ void AsyncEventProxy::dispatchFakeMouseMove(Frame* frame, const PlatformMouseEve
         return;
     
     if (mode() == ReplayProxy::Capturing)
-        m_page->replayController()->capturePageInput(new DispatchFakeMouseMove(frame, fakeMouseMove));
+        m_page->replayController()->capturePageInput(adoptPtr(new DispatchFakeMouseMove(frame, fakeMouseMove)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif // ENABLE(TIMELAPSE)
@@ -127,7 +127,7 @@ bool AsyncEventProxy::dispatchAsyncEvent(PassRefPtr<Event> prpEvent, PassRefPtr<
         return false;
         
     if (mode() == ReplayProxy::Capturing && isCapturableEventType(event->type()))
-        m_page->replayController()->capturePageInput(new DispatchAsyncEvent(event, eventTarget));
+        m_page->replayController()->capturePageInput(adoptPtr(new DispatchAsyncEvent(event, eventTarget)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif // ENABLE(TIMELAPSE)

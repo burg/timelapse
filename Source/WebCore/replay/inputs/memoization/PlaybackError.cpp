@@ -37,7 +37,7 @@
 
 #include "ReplayController.h"
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -52,7 +52,7 @@ String PlaybackError::toString() const
     return makeString("PlaybackError(", m_errorMessage,")");
 }
 
-void PlaybackError::serialize(ReplayInputSerializer* serializer) const
+void PlaybackError::serialize(InputSerializer* serializer) const
 {
     serializer->putString("errorMessage", m_errorMessage);
 }

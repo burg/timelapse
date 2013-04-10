@@ -29,24 +29,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JSONReplayInputSerializer_h
-#define JSONReplayInputSerializer_h
+#ifndef JSONInputSerializer_h
+#define JSONInputSerializer_h
 
 #if ENABLE(TIMELAPSE)
 
-#include "InspectorValues.h"
 #include <stdio.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/replay/ReplayInputSerializer.h>
-#include <wtf/replay/ReplayInputLog.h>
+#include <wtf/replay/InputSerializer.h>
+#include <wtf/replay/InputIterator.h>
 
 namespace WebCore {
+    class InspectorArray;
+    class InspectorObject;
+    class InspectorValue;
+    class ReplayRecording;
 
-    class JSONReplayInputSerializer : public ReplayInputSerializer {
-        WTF_MAKE_NONCOPYABLE(JSONReplayInputSerializer);
+    class JSONInputSerializer : public InputSerializer {
+        WTF_MAKE_NONCOPYABLE(JSONInputSerializer);
     public:       
-        JSONReplayInputSerializer(ReplayInputLog*);
-        virtual ~JSONReplayInputSerializer() {};
+        JSONInputSerializer(PassRefPtr<ReplayRecording>);
+        virtual ~JSONInputSerializer() {};
 
         // insert key-value pair into current object
         virtual void putString(const String&, const String&) OVERRIDE;
@@ -76,7 +79,7 @@ namespace WebCore {
         size_t memorySize();
         bool serializeToFile(FILE*);
     private:
-        ReplayInputLog* m_recording;
+        RefPtr<ReplayRecording> m_recording;
         RefPtr<InspectorObject> m_currentObject;
         RefPtr<InspectorArray> m_currentArray;
         Vector<RefPtr<InspectorValue> > m_stack;
@@ -86,4 +89,4 @@ namespace WebCore {
 
 #endif // ENABLE(TIMELAPSE)
 
-#endif // JSONReplayInputSerializer_h
+#endif // JSONInputSerializer_h

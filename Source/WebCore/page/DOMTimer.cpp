@@ -40,7 +40,7 @@
 #include "ReplayInputTypes.h"
 #include "ReplayRecording.h"
 #include "TimerCreated.h"
-#include <wtf/replay/ReplayInputLog.h>
+#include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
 #endif
 
@@ -76,15 +76,15 @@ DOMTimer::DOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> 
         if (document->page() && document->page()->replayController()) {
             ReplayController* controller = document->page()->replayController();
             if (controller->isCapturingDocument(document)) {
-                controller->loadedRecording()->inputLog()->append(new TimerCreated(m_timeoutId, document));
+                controller->activeIterator()->storeInput(adoptPtr(new TimerCreated(m_timeoutId, document)));
             } else if (controller->isReplayingDocument(document)) {
-                NondeterministicInput* loggedAction = controller->loadedRecording()->inputLog()->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::TimerCreated);
-                TimerCreated* action = static_cast<TimerCreated*>(loggedAction);
+                NondeterministicInput* input = controller->activeIterator()->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::TimerCreated);
+                TimerCreated* castedInput = static_cast<TimerCreated*>(input);
                 // implicit error handling case: if fetch failed, then don't overwrite with memoized id
-                if (action) {
+                if (castedInput) {
                     // check that this timer was created in the same Document as originally observed.
-                    ASSERT(action->document(document->page()) == document);
-                    m_timeoutId = action->timerId();
+                    ASSERT(castedInput->document(document->page()) == document);
+                    m_timeoutId = castedInput->timerId();
                 }
                 
                 m_shouldScheduleNormally = false;

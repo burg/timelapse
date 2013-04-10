@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2011, 2012, Brian Burg.
+ *  Copyright (C) 2011, 2012, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,45 +29,33 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DispatchFakeMouseMove_h
-#define DispatchFakeMouseMove_h
+#ifndef InputIterator_h
+#define InputIterator_h
 
-#if ENABLE(TIMELAPSE)
+#include <wtf/Noncopyable.h>
+#include <wtf/replay/NondeterministicInput.h>
+#include <wtf/OwnPtr.h>
+#include <wtf/PassOwnPtr.h>
+#include <wtf/Vector.h>
 
-#include "EventLoopInput.h"
-#include "HandleMouseBase.h"
-#include <wtf/replay/InputSerializer.h>
+namespace WTF {
 
-namespace WebCore {
-    
-namespace ReplayInputTypes {
-    extern const char *DispatchFakeMouseMove;
-}
-
-class Frame;
-
-class DispatchFakeMouseMove : public HandleMouseBase {
+class InputIterator {
+    WTF_MAKE_NONCOPYABLE(InputIterator);
 public:
-    DispatchFakeMouseMove(Frame*, const PlatformMouseEvent&);
-    virtual ~DispatchFakeMouseMove() {}
-    
-    // EventLoopInput API
-    virtual void dispatch(ReplayController*) OVERRIDE;
-    virtual bool isUserVisible() const OVERRIDE { return false; }
-    
-    // NondeterministicInput API
-    virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE
-    {
-        return HandleMouseBase::memorySize() + sizeof(m_frameIndex);
-    }
-    virtual void serialize(InputSerializer*) const OVERRIDE;
-private:
-    int m_frameIndex;
+    InputIterator() {}
+    virtual ~InputIterator() {}
+
+    virtual bool isCapturing() const =0;
+    virtual bool isReplaying() const =0;
+
+    WTF_EXPORT_PRIVATE virtual void storeInput(PassOwnPtr<NondeterministicInput>) =0;
+    WTF_EXPORT_PRIVATE virtual NondeterministicInput* loadInput(ReplayInputQueueType, NondeterministicInput::ReplayInputType) =0;
+    WTF_EXPORT_PRIVATE virtual NondeterministicInput* uncheckedLoadInput(ReplayInputQueueType) =0;
 };
-    
-} // namespace WebCore
 
-#endif // ENABLE(TIMELAPSE)
+} // namespace WTF
 
-#endif // DispatchFakeMouseMove_h
+using WTF::InputIterator;
+
+#endif // InputIterator_h

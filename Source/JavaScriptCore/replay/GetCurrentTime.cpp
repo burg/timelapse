@@ -34,7 +34,7 @@
 #include "GetCurrentTime.h"
 
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace JSC {
 
@@ -52,7 +52,7 @@ String GetCurrentTime::toString() const {
     return makeString("GetCurrentTime(", String::number(m_currentTime), ")");
 }
 
-void GetCurrentTime::serialize(ReplayInputSerializer* serializer) const
+void GetCurrentTime::serialize(InputSerializer* serializer) const
 {
     serializer->putString("randomSeed", String::number(m_currentTime));
 }

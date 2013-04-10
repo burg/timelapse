@@ -43,7 +43,7 @@
 #include "ResourceHandleClient.h"
 #include "ResourceLoaderCreated.h"
 #include "ResourceRequest.h"
-#include <wtf/replay/ReplayInputLog.h>
+#include <wtf/replay/InputIterator.h>
 
 /* We must always define these symbols even if Timelapse support is
    not compiled, because the embedding API (WebKit or WebKit2) may be
@@ -53,11 +53,14 @@ namespace WebCore {
 
 NetworkProxy::NetworkProxy(Page* page)
 : ReplayProxy(page)
+#if ENABLE(TIMELAPSE)
 // start at 1, since WTF::DefaultHash<unsigned> disallows UINT_MIN and UINT_MAX
 , m_nextId(1)
 , m_expectsPageLoad(false)
 , m_initiatingPageLoad(false)
-, m_replayHandleMap(HashMap<int, HandleContext>()) {} 
+, m_replayHandleMap(HashMap<int, HandleContext>())
+#endif // ENABLE(TIMELAPSE)
+{}
 
 PassOwnPtr<NetworkProxy> NetworkProxy::create(Page* page)
 {
@@ -84,16 +87,16 @@ int NetworkProxy::nextLoaderId(const ResourceRequest& request)
 {
     if (mode() == ReplayProxy::Capturing) {
         int freshId = m_nextId++;
-        controller()->loadedRecording()->inputLog()->append(new ResourceLoaderCreated(freshId, request));
+        controller()->activeIterator()->storeInput(adoptPtr(new ResourceLoaderCreated(freshId, request)));
 
         return freshId;
     }
 
     if (mode() == ReplayProxy::Replaying) {
-        ReplayInputLog* inputLog = controller()->loadedRecording()->inputLog();
+        InputIterator* it = controller()->activeIterator();
 
         int loaderId;
-        ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(inputLog->popExpectedInput(WTF::LoaderMemoizedDataQueue, ReplayInputTypes::ResourceLoaderCreated));
+        ResourceLoaderCreated* memoizedData = static_cast<ResourceLoaderCreated*>(it->loadInput(WTF::LoaderMemoizedDataQueue, ReplayInputTypes::ResourceLoaderCreated));
         if (memoizedData)
             loaderId = memoizedData->id();
         else // error handling case

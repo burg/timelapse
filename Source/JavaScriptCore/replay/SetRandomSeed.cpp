@@ -33,7 +33,7 @@
 
 #include "SetRandomSeed.h"
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace JSC {
 
@@ -51,7 +51,7 @@ String SetRandomSeed::toString() const {
     return makeString("SetRandomSeed(", String::number(m_randomSeed), ")");
 }
 
-void SetRandomSeed::serialize(ReplayInputSerializer* serializer) const
+void SetRandomSeed::serialize(InputSerializer* serializer) const
 {
     serializer->putString("randomSeed", String::number(m_randomSeed));
 }

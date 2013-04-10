@@ -77,7 +77,7 @@ size_t ResourceDidFinishLoading::memorySize() const
     return sizeof(ResourceDidFinishLoading);
 }
 
-void ResourceDidFinishLoading::serialize(ReplayInputSerializer* serializer) const
+void ResourceDidFinishLoading::serialize(InputSerializer* serializer) const
 {
     serializer->putInt("handleId", m_id);
     serializer->putDouble("finishTime", m_finishTime);

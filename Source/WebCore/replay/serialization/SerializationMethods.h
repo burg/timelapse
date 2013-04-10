@@ -34,7 +34,7 @@
 
 #if ENABLE(TIMELAPSE)
 
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -42,9 +42,9 @@ namespace WebCore {
     class ResourceRequest;
     class ResourceResponse;
 
-    void serializeResourceError(ReplayInputSerializer*, const ResourceError&);
-    void serializeResourceRequest(ReplayInputSerializer*, const ResourceRequest*);
-    void serializeResourceResponse(ReplayInputSerializer*, const ResourceResponse*);
+    void serializeResourceError(InputSerializer*, const ResourceError&);
+    void serializeResourceRequest(InputSerializer*, const ResourceRequest*);
+    void serializeResourceResponse(InputSerializer*, const ResourceResponse*);
 
 } // namespace WebCore
 

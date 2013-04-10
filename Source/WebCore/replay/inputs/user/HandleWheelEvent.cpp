@@ -41,7 +41,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -142,7 +142,7 @@ size_t HandleWheelEvent::memorySize() const
     return sizeof(HandleWheelEvent);
 }
 
-void HandleWheelEvent::serialize(ReplayInputSerializer* serializer) const
+void HandleWheelEvent::serialize(InputSerializer* serializer) const
 {
     serializer->putInt("positionX", m_platformEvent.position().x());
     serializer->putInt("positionY", m_platformEvent.position().y());

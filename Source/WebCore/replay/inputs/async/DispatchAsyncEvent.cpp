@@ -52,7 +52,7 @@
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -117,7 +117,7 @@ size_t DispatchAsyncEvent::memorySize() const
     return size;
 }
 
-void DispatchAsyncEvent::serialize(ReplayInputSerializer* serializer) const
+void DispatchAsyncEvent::serialize(InputSerializer* serializer) const
 {
     serializer->putString("eventType", m_event.type());
 

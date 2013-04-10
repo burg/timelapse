@@ -79,7 +79,9 @@ MainResourceLoader::MainResourceLoader(DocumentLoader* documentLoader)
     , m_loadingMultipartContent(false)
     , m_waitingForContentPolicy(false)
     , m_timeOfLastDataReceived(0.0)
+#if ENABLE(TIMELAPSE)
     , m_loaderId(0)
+#endif
     , m_identifierForLoadWithoutResourceLoader(0)
 {
 }

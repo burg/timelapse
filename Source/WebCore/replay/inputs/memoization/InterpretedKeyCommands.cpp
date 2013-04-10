@@ -33,7 +33,7 @@
 
 #include "InterpretedKeyCommands.h"
 #include <wtf/text/StringBuilder.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -74,7 +74,7 @@ size_t InterpretedKeyCommands::memorySize() const
     return size;
 }
 
-void InterpretedKeyCommands::serialize(ReplayInputSerializer* serializer) const
+void InterpretedKeyCommands::serialize(InputSerializer* serializer) const
 {
     serializer->pushArray();
     for (size_t i = 0; i < m_commands.size(); i++) {

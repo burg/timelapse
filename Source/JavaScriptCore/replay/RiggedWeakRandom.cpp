@@ -41,7 +41,7 @@ static unsigned createSeed()
 }
 
 RiggedWeakRandom::RiggedWeakRandom()
-    : m_replayInputLog(0)
+    : m_inputIterator(0)
     , m_initialized(false)
     , m_low(0)
     , m_high(0) { }
@@ -50,23 +50,14 @@ void RiggedWeakRandom::setSeed()
 {
     ASSERT(!m_initialized);
 
-    unsigned seed;
+    unsigned seed = createSeed();
 
-    // if no determinism, initialize seed normally.
-    if (!m_replayInputLog || !m_replayInputLog->isActive())
-        seed = createSeed();
-    else if (m_replayInputLog->capturing()) {
-        //get a seed, record it.
-        seed = createSeed();
-        m_replayInputLog->append(new SetRandomSeed(seed));
-    } else {
-        ASSERT(m_replayInputLog->replaying());
-
-        //recover seed
-        SetRandomSeed* action = static_cast<SetRandomSeed*>(m_replayInputLog->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::SetRandomSeed));
-        if (!action) // error handling case
-            seed = createSeed();
-        else
+    if (!m_inputIterator) {
+    } else if (m_inputIterator->isCapturing()) {
+        m_inputIterator->storeInput(adoptPtr(new SetRandomSeed(seed)));
+    } else if (m_inputIterator->isReplaying()) {
+        SetRandomSeed* action = static_cast<SetRandomSeed*>(m_inputIterator->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::SetRandomSeed));
+        if (action)
             seed = action->randomSeed();
 
         LOG(JSCDeterministicReplay, "%-30s Initialized random seed from captured value.", "[RiggedWeakRandom]");
@@ -78,11 +69,11 @@ void RiggedWeakRandom::setSeed()
     m_initialized = true;
 }
     
-void RiggedWeakRandom::setReplayInputLog(ReplayInputLog* inputLog)
+void RiggedWeakRandom::setInputIterator(InputIterator* it)
 {
-    m_replayInputLog = inputLog;
-    LOG(JSCDeterministicReplay, "%-30s Configured determinism. (ReplayInputLog=%p)\n",
-        "[RiggedWeakRandom]", (void*)inputLog);
+    m_inputIterator = it;
+    LOG(JSCDeterministicReplay, "%-30s Configured determinism. (InputIterator=%p)\n",
+        "[RiggedWeakRandom]", (void*)it);
 }
             
 unsigned RiggedWeakRandom::advance()

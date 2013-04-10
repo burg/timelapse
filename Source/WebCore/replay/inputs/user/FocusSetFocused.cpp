@@ -40,7 +40,7 @@
 #include "ReplayInputTypes.h"
 #include "UserInputProxy.h"
 #include <wtf/Assertions.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -52,7 +52,7 @@ String FocusSetFocused::toString() const
         return "FocusSetFocused(to=false)";
 }
 
-void FocusSetFocused::serialize(ReplayInputSerializer* serializer) const
+void FocusSetFocused::serialize(InputSerializer* serializer) const
 {
     serializer->putBoolean("toState", m_toState);
 }

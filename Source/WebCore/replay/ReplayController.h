@@ -42,7 +42,7 @@
 
 namespace WTF {
     class AtomicString;
-    class ReplayInputLog;
+    class InputIterator;
 }
 
 namespace WebCore {
@@ -100,7 +100,8 @@ namespace WebCore {
         void frameNavigated(DocumentLoader*);
         void willFireTimer(int, Document*);
         void willRunPendingScriptsForDocument(Document*);
-        void capturePageInput(EventLoopInput*);
+        // TODO: unify with captureEventLoopInput()
+        void capturePageInput(PassOwnPtr<EventLoopInput>);
         // callsites of this method are locations where replay errors are detected.
         // a true return value indicates playback has aborted or paused;
         // a false return value indicates that playback will continue unimpeded.
@@ -116,6 +117,7 @@ namespace WebCore {
         // the first document and true for the second document.
         bool isCapturingDocument(Document*) const;
         bool isReplayingDocument(Document*) const;
+        WTF::InputIterator* activeIterator() const { return m_activeIterator.get(); }
         
         ErrorMode errorStrategy() const { return m_errorStrategy; }
         void setErrorStrategy(ErrorMode mode) { m_errorStrategy = mode; }
@@ -128,7 +130,7 @@ namespace WebCore {
         bool unloadRecording(bool suppressNotifications = false);
 
     private:
-        void captureEventLoopInput(EventLoopInput*);
+        void captureEventLoopInput(PassOwnPtr<EventLoopInput>);
         void finalizePreviousInput(int currentDispatchCount);
 
         void maybeDispatchInput();
@@ -136,7 +138,7 @@ namespace WebCore {
         void syncDispatchInput();
         void timerFired(Timer<ReplayController>*);
         
-        void resetPlaybackState();
+        void resetReplayState();
         void pauseReplay(PositionMarkIndex);
         void finishReplay();
 
@@ -152,6 +154,7 @@ namespace WebCore {
 
         int m_nextRecordingId;
         RefPtr<ReplayRecording> m_loadedRecording;
+        OwnPtr<WTF::InputIterator> m_activeIterator;
         Timer<ReplayController> m_timer;
         RefPtr<CacheController> m_cacheController;
 
@@ -160,6 +163,7 @@ namespace WebCore {
         // previous and next input as a member of the previous input. Then, when replaying, we 
         // can cross-check that each DOM event we see is supposed to happen, and if not, a useful 
         // stack trace is available.
+        // TODO: (Issue #250): extract this member and related functionality to CaptureInputIterator
         EventLoopInput* m_previousInput;
 
         // this pointer contains the next input to dispatch. The input could either be

@@ -42,7 +42,7 @@
 #include "ResourceHandleClient.h"
 #include "SerializationMethods.h"
 #include <wtf/text/StringBuilder.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -92,7 +92,7 @@ size_t ResourceDidFail::memorySize() const
     return size;
 }
 
-void ResourceDidFail::serialize(ReplayInputSerializer* serializer) const
+void ResourceDidFail::serialize(InputSerializer* serializer) const
 {
     serializer->putInt("handleId", m_id);
 

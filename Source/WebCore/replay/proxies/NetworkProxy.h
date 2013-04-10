@@ -72,10 +72,12 @@ public:
 private:
     NetworkProxy(Page*);
 
+#if ENABLE(TIMELAPSE)
     int m_nextId;
     bool m_expectsPageLoad;
     bool m_initiatingPageLoad;
     HashMap<int, HandleContext> m_replayHandleMap;
+#endif // ENABLE(TIMELAPSE)
 };
     
 } // namespace WebCore

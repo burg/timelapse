@@ -40,7 +40,7 @@
 #include "DispatchEventBase.h"
 #include "Frame.h"
 #include "Page.h"
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -69,7 +69,7 @@ String DispatchFakeMouseMove::toString() const
     return makeString("DispatchFakeMouseMove(", String::number(m_frameIndex), "/_)");
 }
 
-void DispatchFakeMouseMove::serialize(ReplayInputSerializer* serializer) const
+void DispatchFakeMouseMove::serialize(InputSerializer* serializer) const
 {
     HandleMouseBase::serializeMouseInfo(serializer);
     serializer->putInt("frameIndex", m_frameIndex);

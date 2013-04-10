@@ -41,25 +41,25 @@
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
 
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
-static void serializeStringVector(ReplayInputSerializer* serializer, const Vector<String>& vec)
+static void serializeStringVector(InputSerializer* serializer, const Vector<String>& vec)
 {
     for (size_t i = 0; i < vec.size(); i++)
         serializer->putString(vec[i]);
 }
 
 /* map is serialized from a WTF::HashMap, which has unique keys. So, this can be stored in an object */
-static void serializeHTTPHeaderMap(ReplayInputSerializer* serializer, const HTTPHeaderMap& map)
+static void serializeHTTPHeaderMap(InputSerializer* serializer, const HTTPHeaderMap& map)
 {
     HTTPHeaderMap::const_iterator end_it = map.end();
     for (HTTPHeaderMap::const_iterator it = map.begin(); it != end_it; ++it)
         serializer->putString(it->key.string(), it->value);
 }
 
-static void serializeFormDataElement(ReplayInputSerializer* serializer, const FormDataElement& element)
+static void serializeFormDataElement(InputSerializer* serializer, const FormDataElement& element)
 {
     serializer->putInt("type", element.m_type);
     switch (element.m_type) {
@@ -89,7 +89,7 @@ static void serializeFormDataElement(ReplayInputSerializer* serializer, const Fo
 
 // This is based on FormData::encodeForBackForward, except we use key/value objects instead
 // of a byte array.
-static void serializeFormData(ReplayInputSerializer* serializer, FormData* data)
+static void serializeFormData(InputSerializer* serializer, FormData* data)
 {
     // sometimes, there's no form data.
     if (!data)
@@ -114,7 +114,7 @@ static void serializeFormData(ReplayInputSerializer* serializer, FormData* data)
     serializer->popArrayAsProperty("elements");
 }
 
-static void serializeResourceLoadTiming(ReplayInputSerializer* serializer, ResourceLoadTiming* data)
+static void serializeResourceLoadTiming(InputSerializer* serializer, ResourceLoadTiming* data)
 {
     serializer->putDouble("requestTime", data->requestTime);
     serializer->putInt("proxyStart", data->proxyStart);
@@ -130,7 +130,7 @@ static void serializeResourceLoadTiming(ReplayInputSerializer* serializer, Resou
     serializer->putInt("sslEnd", data->sslEnd);
 }
 
-void serializeResourceError(ReplayInputSerializer* serializer, const ResourceError& error)
+void serializeResourceError(InputSerializer* serializer, const ResourceError& error)
 {
     serializer->putString("domain", error.domain());
     serializer->putInt("errorCode", error.errorCode());
@@ -138,7 +138,7 @@ void serializeResourceError(ReplayInputSerializer* serializer, const ResourceErr
     serializer->putString("localizedDescription", error.localizedDescription());
 }
 
-void serializeResourceRequest(ReplayInputSerializer* serializer, const ResourceRequest* request)
+void serializeResourceRequest(InputSerializer* serializer, const ResourceRequest* request)
 {
     serializer->putString("url", request->url().string());
     serializer->putInt("cachePolicy", request->cachePolicy());
@@ -162,7 +162,7 @@ void serializeResourceRequest(ReplayInputSerializer* serializer, const ResourceR
     serializer->putInt("loadPriority", request->priority());
 }
 
-void serializeResourceResponse(ReplayInputSerializer* serializer, const ResourceResponse* response)
+void serializeResourceResponse(InputSerializer* serializer, const ResourceResponse* response)
 {
     serializer->putString("url", response->url().string());
     serializer->putString("mimeType", response->mimeType());

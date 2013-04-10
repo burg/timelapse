@@ -128,7 +128,9 @@ private:
     bool m_loadingMultipartContent;
     bool m_waitingForContentPolicy;
     double m_timeOfLastDataReceived;
+#if ENABLE(TIMELAPSE)
     int m_loaderId; // used by Timelapse to name resource loaders
+#endif
     unsigned long m_identifierForLoadWithoutResourceLoader;
 
 #if USE(CONTENT_FILTERING)

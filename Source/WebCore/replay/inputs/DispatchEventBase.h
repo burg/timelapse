@@ -63,7 +63,7 @@ public:
     
     static SerializedEventTarget serialize(EventTarget*);
     EventTarget* deserialize(Page*);
-    void serialize(WTF::ReplayInputSerializer*) const;
+    void serialize(WTF::InputSerializer*) const;
     
     Document* document(Page*);
 private:
@@ -90,7 +90,7 @@ const AtomicString& deserializeEventName(SerializedEventName);
 struct SerializedGenericEvent {
 public:
     static SerializedGenericEvent serialize(Event*);
-    void serialize(WTF::ReplayInputSerializer*) const;
+    void serialize(WTF::InputSerializer*) const;
     PassRefPtr<Event> deserialize(Page*);
     SerializedEventName name() const { return m_name; }
     const AtomicString& type() const { return deserializeEventName(m_name); }

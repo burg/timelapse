@@ -33,14 +33,14 @@
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/replay/ReplayInputLog.h>
+#include <wtf/replay/InputIterator.h>
 
 namespace JSC {
 class RiggedWeakRandom {
 public:
     JS_EXPORT_PRIVATE RiggedWeakRandom();
     
-    void setReplayInputLog(ReplayInputLog*);
+    void setInputIterator(InputIterator*);
     
     double get()
     {
@@ -57,7 +57,7 @@ private:
     unsigned advance();
 
 
-    ReplayInputLog* m_replayInputLog;
+    InputIterator* m_inputIterator;
     bool m_initialized;
     unsigned m_low;
     unsigned m_high;

@@ -59,7 +59,7 @@ public:
     {
         return HandleMouseBase::memorySize();
     }
-    virtual void serialize(WTF::ReplayInputSerializer*) const OVERRIDE;
+    virtual void serialize(WTF::InputSerializer*) const OVERRIDE;
 
 private:
     int m_frameIndex;

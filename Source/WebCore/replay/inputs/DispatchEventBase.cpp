@@ -49,7 +49,7 @@
 #include "Page.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -113,7 +113,7 @@ SerializedEventTarget SerializedEventTarget::serialize(EventTarget* target)
     return SerializedEventTarget(targetType, nodeIndex, frameIndex);
 }
 
-void SerializedEventTarget::serialize(ReplayInputSerializer* serializer) const
+void SerializedEventTarget::serialize(InputSerializer* serializer) const
 {
     serializer->putString("eventTarget_type", (m_targetType == NODE) ? "NODE" : "WINDOW");
     serializer->putInt("eventTarget_nodeIndex", m_nodeIndex);
@@ -149,7 +149,7 @@ SerializedGenericEvent SerializedGenericEvent::serialize(Event* event)
                                  event->cancelable());
 }
 
-void SerializedGenericEvent::serialize(ReplayInputSerializer* serializer) const
+void SerializedGenericEvent::serialize(InputSerializer* serializer) const
 {
     serializer->putString("event_name", deserializeEventName(m_name));
     serializer->putBoolean("event_canBubble", m_canBubble);

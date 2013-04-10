@@ -71,7 +71,8 @@
 #include <runtime/RegExpObject.h>
 
 #if ENABLE(TIMELAPSE)
-#include <wtf/replay/ReplayInputLog.h>
+#include "CaptureInputIterator.h"
+#include "ReplayInputIterator.h"
 #endif
 
 using namespace JSC;
@@ -306,14 +307,20 @@ JSValue JSInjectedScriptHost::evaluate(ExecState* exec)
     bool wasEvalEnabled = globalObject->evalEnabled();
     globalObject->setEvalEnabled(true);
 #if ENABLE(TIMELAPSE)
-    ReplayInputLog* log = globalObject->inputLog();
-    if (log)
-        log->setIsActive(false);
+    InputIterator* it = globalObject->inputIterator();
+    bool wasCapturing = it && it->isCapturing();
+    bool wasReplaying = it && it->isReplaying();
+    if (wasCapturing)
+        static_cast<CaptureInputIterator*>(it)->setIsActive(false);
+    if (wasReplaying)
+        static_cast<ReplayInputIterator*>(it)->setIsActive(false);
 #endif
     JSValue result = JSC::call(exec, evalFunction, callType, callData, exec->globalThisValue(), args);
 #if ENABLE(TIMELAPSE)
-    if (log)
-        log->setIsActive(true);
+    if (wasCapturing)
+        static_cast<CaptureInputIterator*>(it)->setIsActive(true);
+    if (wasReplaying)
+        static_cast<ReplayInputIterator*>(it)->setIsActive(true);
 #endif
     globalObject->setEvalEnabled(wasEvalEnabled);
 

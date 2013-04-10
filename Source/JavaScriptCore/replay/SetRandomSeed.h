@@ -50,7 +50,7 @@ public:
     virtual ReplayInputQueueType queue() const OVERRIDE { return WTF::ScriptMemoizedDataQueue; }
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE { return sizeof(SetRandomSeed); }
-    virtual void serialize(WTF::ReplayInputSerializer*) const OVERRIDE;
+    virtual void serialize(WTF::InputSerializer*) const OVERRIDE;
     
     uint64_t randomSeed() const { return m_randomSeed; }
     

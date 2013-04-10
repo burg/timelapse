@@ -69,7 +69,7 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     size_t memorySize() const OVERRIDE { return sizeof(ScrollPage); }
-    void serialize(WTF::ReplayInputSerializer*) const OVERRIDE;
+    void serialize(WTF::InputSerializer*) const OVERRIDE;
     
     bool isLogicalScroll() const { return m_isLogicalScroll; }
     ScrollDirection scrollDirection() const { ASSERT(!isLogicalScroll()); return m_direction.normal; }

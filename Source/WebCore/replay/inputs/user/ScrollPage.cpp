@@ -42,7 +42,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -100,7 +100,7 @@ String ScrollPage::toString() const
     return sb.toString();
 }
 
-void ScrollPage::serialize(ReplayInputSerializer* serializer) const
+void ScrollPage::serialize(InputSerializer* serializer) const
 {
     if (m_isLogicalScroll)
         serializer->putInt("scrollDirection", m_direction.normal);

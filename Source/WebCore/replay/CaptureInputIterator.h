@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2013, Brian Burg.
+ *  Copyright (C) 2013, University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,45 +29,48 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DispatchFakeMouseMove_h
-#define DispatchFakeMouseMove_h
+#ifndef CaptureInputIterator_h
+#define CaptureInputIterator_h
 
 #if ENABLE(TIMELAPSE)
 
-#include "EventLoopInput.h"
-#include "HandleMouseBase.h"
-#include <wtf/replay/InputSerializer.h>
+#include <wtf/Noncopyable.h>
+#include <wtf/OwnPtr.h>
+#include <wtf/PassOwnPtr.h>
+#include <wtf/replay/InputIterator.h>
+#include <wtf/replay/NondeterministicInput.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
-    
-namespace ReplayInputTypes {
-    extern const char *DispatchFakeMouseMove;
-}
 
-class Frame;
+class InputStorage;
 
-class DispatchFakeMouseMove : public HandleMouseBase {
+class CaptureInputIterator : public WTF::InputIterator {
+    WTF_MAKE_NONCOPYABLE(CaptureInputIterator);
 public:
-    DispatchFakeMouseMove(Frame*, const PlatformMouseEvent&);
-    virtual ~DispatchFakeMouseMove() {}
-    
-    // EventLoopInput API
-    virtual void dispatch(ReplayController*) OVERRIDE;
-    virtual bool isUserVisible() const OVERRIDE { return false; }
-    
-    // NondeterministicInput API
-    virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE
-    {
-        return HandleMouseBase::memorySize() + sizeof(m_frameIndex);
-    }
-    virtual void serialize(InputSerializer*) const OVERRIDE;
+    static PassOwnPtr<CaptureInputIterator> create(InputStorage*);
+    virtual ~CaptureInputIterator();
+
+    // InputIterator API
+    virtual bool isCapturing() const { return m_isActive; }
+    virtual bool isReplaying() const { return false; }
+
+    virtual void storeInput(PassOwnPtr<NondeterministicInput>);
+    virtual NondeterministicInput* loadInput(ReplayInputQueueType, NondeterministicInput::ReplayInputType);
+    virtual NondeterministicInput* uncheckedLoadInput(ReplayInputQueueType);
+   
+    //used for temporary deactivation; e.g. when injected scripts are evaluated.
+    void setIsActive(bool);
+
 private:
-    int m_frameIndex;
-};
+    CaptureInputIterator(InputStorage*);
     
+    bool m_isActive;
+    InputStorage* m_storage;
+};
+
 } // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)
 
-#endif // DispatchFakeMouseMove_h
+#endif // CaptureInputIterator_h

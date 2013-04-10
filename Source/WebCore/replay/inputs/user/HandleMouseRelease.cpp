@@ -38,7 +38,7 @@
 #include "ReplayController.h"
 #include "Page.h"
 #include "UserInputProxy.h"
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -51,7 +51,7 @@ void HandleMouseRelease::dispatch(ReplayController* controller)
     controller->didDispatch(this);
 }
 
-void HandleMouseRelease::serialize(ReplayInputSerializer* serializer) const
+void HandleMouseRelease::serialize(InputSerializer* serializer) const
 {
     HandleMouseBase::serializeMouseInfo(serializer);
 }

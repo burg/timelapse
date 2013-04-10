@@ -34,20 +34,37 @@
 #if ENABLE(TIMELAPSE)
 
 #include "ReplayRecording.h"
+
+#include "CaptureInputIterator.h"
+#include "InputStorage.h"
+#include "ReplayInputIterator.h"
 #include <wtf/CurrentTime.h>
 
 namespace WebCore {
 
-PassRefPtr<ReplayRecording> ReplayRecording::createForCapture(int uid)
+PassRefPtr<ReplayRecording> ReplayRecording::create(int uid)
 {
     return adoptRef(new ReplayRecording(uid));
 }
 
 ReplayRecording::ReplayRecording(int uid)
-: m_inputLog(ReplayInputLog::createForCapture())
+: m_inputStorage(InputStorage::create())
 , m_uid(uid)
+, m_canCapture(true)
 , m_timestamp(WTF::currentTimeMS()) { }
-        
+
+PassOwnPtr<CaptureInputIterator> ReplayRecording::createCaptureIterator()
+{
+    ASSERT(m_canCapture);
+    m_canCapture = false;
+    return CaptureInputIterator::create(m_inputStorage.get());
+}
+
+PassOwnPtr<ReplayInputIterator> ReplayRecording::createReplayIterator()
+{
+    return ReplayInputIterator::create(m_inputStorage.get());
+}
+    
 }; // namespace WebCore
 
 #endif // ENABLE(TIMELAPSE)

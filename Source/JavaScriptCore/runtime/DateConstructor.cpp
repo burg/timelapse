@@ -36,7 +36,7 @@
 #include <math.h>
 #include <time.h>
 #include <wtf/MathExtras.h>
-#include <wtf/replay/ReplayInputLog.h>
+#include <wtf/replay/InputIterator.h>
 
 #if OS(WINCE) && !PLATFORM(QT)
 extern "C" time_t time(time_t* timer); // Provided by libce.
@@ -77,24 +77,16 @@ const ClassInfo DateConstructor::s_info = { "Function", &InternalFunction::s_inf
 #if ENABLE(TIMELAPSE)   
 static double jsRiggedCurrentTime(JSGlobalObject* globalObject)
 {
-    ReplayInputLog* log = globalObject->inputLog();
+    double currentTime = jsCurrentTime();
+    InputIterator* it = globalObject->inputIterator();
 
-    // if no determinism, get current time normally.
-    if (!log || !log->isActive())
-        return jsCurrentTime();
-
-    double currentTime;
-
-    if (log->capturing()) {
-        currentTime = jsCurrentTime();
-        log->append(new GetCurrentTime(currentTime));
-    } else {
-        ASSERT(log->replaying());
-        GetCurrentTime* action = static_cast<GetCurrentTime*>(log->popExpectedInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::GetCurrentTime));
-        if (!action) // error handling case
-            currentTime = jsCurrentTime();
-        else
-            currentTime = action->currentTime();
+    if (!it) {
+    } else if (it->isCapturing()) {
+        it->storeInput(adoptPtr(new GetCurrentTime(currentTime)));
+    } else if (it->isReplaying()) {
+        GetCurrentTime* input = static_cast<GetCurrentTime*>(it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::GetCurrentTime));
+        if (input)
+            currentTime = input->currentTime();
     }
     return currentTime;
 }

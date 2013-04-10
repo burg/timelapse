@@ -5910,6 +5910,11 @@
 		C3CF17A515B0063F00276D39 /* IdTargetObserver.h in Headers */ = {isa = PBXBuildFile; fileRef = C3CF17A115B0063F00276D39 /* IdTargetObserver.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C3CF17A615B0063F00276D39 /* IdTargetObserverRegistry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C3CF17A215B0063F00276D39 /* IdTargetObserverRegistry.cpp */; };
 		C3CF17A715B0063F00276D39 /* IdTargetObserverRegistry.h in Headers */ = {isa = PBXBuildFile; fileRef = C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		C41D354E1711F57A00E40FB7 /* InputStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = C41D354C1711F57A00E40FB7 /* InputStorage.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		C41D35571712064900E40FB7 /* CaptureInputIterator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41D35531712064800E40FB7 /* CaptureInputIterator.cpp */; };
+		C41D35581712064900E40FB7 /* CaptureInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C41D35541712064800E40FB7 /* CaptureInputIterator.h */; };
+		C41D35591712064900E40FB7 /* ReplayInputIterator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C41D35551712064800E40FB7 /* ReplayInputIterator.cpp */; };
+		C41D355A1712064900E40FB7 /* ReplayInputIterator.h in Headers */ = {isa = PBXBuildFile; fileRef = C41D35561712064800E40FB7 /* ReplayInputIterator.h */; };
 		C42E409A1702201F00FB0F77 /* ReplayActionFactory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42E40981702201F00FB0F77 /* ReplayActionFactory.cpp */; };
 		C42E409B1702201F00FB0F77 /* ReplayActionFactory.h in Headers */ = {isa = PBXBuildFile; fileRef = C42E40991702201F00FB0F77 /* ReplayActionFactory.h */; };
 		C48108DF17052FF100AB4BAA /* CacheController.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087B17052FF100AB4BAA /* CacheController.h */; };
@@ -6001,8 +6006,9 @@
 		C481093817052FF100AB4BAA /* SerializationMethods.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108DC17052FF100AB4BAA /* SerializationMethods.h */; };
 		C481093D1705313100AB4BAA /* InterpretedKeyCommands.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481093B1705313100AB4BAA /* InterpretedKeyCommands.cpp */; };
 		C481093E1705313100AB4BAA /* InterpretedKeyCommands.h in Headers */ = {isa = PBXBuildFile; fileRef = C481093C1705313100AB4BAA /* InterpretedKeyCommands.h */; settings = {ATTRIBUTES = (Private, ); }; };
-		C4810941170536FA00AB4BAA /* JSONReplayInputSerializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481093F170536FA00AB4BAA /* JSONReplayInputSerializer.cpp */; };
-		C4810942170536FA00AB4BAA /* JSONReplayInputSerializer.h in Headers */ = {isa = PBXBuildFile; fileRef = C4810940170536FA00AB4BAA /* JSONReplayInputSerializer.h */; };
+		C49905E81714BC83000AEC13 /* JSONInputSerializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C49905E61714BC83000AEC13 /* JSONInputSerializer.cpp */; };
+		C49905E91714BC83000AEC13 /* JSONInputSerializer.h in Headers */ = {isa = PBXBuildFile; fileRef = C49905E71714BC83000AEC13 /* JSONInputSerializer.h */; };
+		C4B991FD17122B750029CA63 /* InputStorage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4B991FC17122B750029CA63 /* InputStorage.cpp */; };
 		C4F7F93A1705EA1F005AB205 /* InspectorReplayAgent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F7F9381705EA1F005AB205 /* InspectorReplayAgent.cpp */; };
 		C4F7F93B1705EA1F005AB205 /* InspectorReplayAgent.h in Headers */ = {isa = PBXBuildFile; fileRef = C4F7F9391705EA1F005AB205 /* InspectorReplayAgent.h */; };
 		C4F7F93E17060151005AB205 /* ReplayAgentStateMachine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4F7F93C17060151005AB205 /* ReplayAgentStateMachine.cpp */; };
@@ -13584,6 +13590,11 @@
 		C3CF17A115B0063F00276D39 /* IdTargetObserver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IdTargetObserver.h; sourceTree = "<group>"; };
 		C3CF17A215B0063F00276D39 /* IdTargetObserverRegistry.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IdTargetObserverRegistry.cpp; sourceTree = "<group>"; };
 		C3CF17A315B0063F00276D39 /* IdTargetObserverRegistry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = IdTargetObserverRegistry.h; sourceTree = "<group>"; };
+		C41D354C1711F57A00E40FB7 /* InputStorage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = InputStorage.h; path = replay/InputStorage.h; sourceTree = "<group>"; };
+		C41D35531712064800E40FB7 /* CaptureInputIterator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CaptureInputIterator.cpp; path = replay/CaptureInputIterator.cpp; sourceTree = "<group>"; };
+		C41D35541712064800E40FB7 /* CaptureInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CaptureInputIterator.h; path = replay/CaptureInputIterator.h; sourceTree = "<group>"; };
+		C41D35551712064800E40FB7 /* ReplayInputIterator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReplayInputIterator.cpp; path = replay/ReplayInputIterator.cpp; sourceTree = "<group>"; };
+		C41D35561712064800E40FB7 /* ReplayInputIterator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayInputIterator.h; path = replay/ReplayInputIterator.h; sourceTree = "<group>"; };
 		C42E40981702201F00FB0F77 /* ReplayActionFactory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReplayActionFactory.cpp; sourceTree = "<group>"; };
 		C42E40991702201F00FB0F77 /* ReplayActionFactory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReplayActionFactory.h; sourceTree = "<group>"; };
 		C481087B17052FF100AB4BAA /* CacheController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CacheController.h; path = replay/CacheController.h; sourceTree = "<group>"; };
@@ -13675,8 +13686,9 @@
 		C48108DC17052FF100AB4BAA /* SerializationMethods.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SerializationMethods.h; sourceTree = "<group>"; };
 		C481093B1705313100AB4BAA /* InterpretedKeyCommands.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InterpretedKeyCommands.cpp; sourceTree = "<group>"; };
 		C481093C1705313100AB4BAA /* InterpretedKeyCommands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InterpretedKeyCommands.h; sourceTree = "<group>"; };
-		C481093F170536FA00AB4BAA /* JSONReplayInputSerializer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSONReplayInputSerializer.cpp; sourceTree = "<group>"; };
-		C4810940170536FA00AB4BAA /* JSONReplayInputSerializer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSONReplayInputSerializer.h; sourceTree = "<group>"; };
+		C49905E61714BC83000AEC13 /* JSONInputSerializer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSONInputSerializer.cpp; sourceTree = "<group>"; };
+		C49905E71714BC83000AEC13 /* JSONInputSerializer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSONInputSerializer.h; sourceTree = "<group>"; };
+		C4B991FC17122B750029CA63 /* InputStorage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = InputStorage.cpp; path = replay/InputStorage.cpp; sourceTree = "<group>"; };
 		C4F7F9381705EA1F005AB205 /* InspectorReplayAgent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InspectorReplayAgent.cpp; sourceTree = "<group>"; };
 		C4F7F9391705EA1F005AB205 /* InspectorReplayAgent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InspectorReplayAgent.h; sourceTree = "<group>"; };
 		C4F7F93C17060151005AB205 /* ReplayAgentStateMachine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ReplayAgentStateMachine.cpp; path = replay/ReplayAgentStateMachine.cpp; sourceTree = "<group>"; };
@@ -21827,12 +21839,18 @@
 				C48108C817052FF100AB4BAA /* proxies */,
 				C48108D817052FF100AB4BAA /* serialization */,
 				C481087B17052FF100AB4BAA /* CacheController.h */,
+				C41D35531712064800E40FB7 /* CaptureInputIterator.cpp */,
+				C41D35541712064800E40FB7 /* CaptureInputIterator.h */,
 				C481087C17052FF100AB4BAA /* EventLoopInput.cpp */,
 				C481087D17052FF100AB4BAA /* EventLoopInput.h */,
+				C4B991FC17122B750029CA63 /* InputStorage.cpp */,
+				C41D354C1711F57A00E40FB7 /* InputStorage.h */,
 				C4F7F93C17060151005AB205 /* ReplayAgentStateMachine.cpp */,
 				C4F7F93D17060151005AB205 /* ReplayAgentStateMachine.h */,
 				C48108D217052FF100AB4BAA /* ReplayController.cpp */,
 				C48108D317052FF100AB4BAA /* ReplayController.h */,
+				C41D35551712064800E40FB7 /* ReplayInputIterator.cpp */,
+				C41D35561712064800E40FB7 /* ReplayInputIterator.h */,
 				C48108D417052FF100AB4BAA /* ReplayInputTypes.cpp */,
 				C48108D517052FF100AB4BAA /* ReplayInputTypes.h */,
 				C48108D617052FF100AB4BAA /* ReplayRecording.cpp */,
@@ -21979,8 +21997,8 @@
 		C48108D817052FF100AB4BAA /* serialization */ = {
 			isa = PBXGroup;
 			children = (
-				C481093F170536FA00AB4BAA /* JSONReplayInputSerializer.cpp */,
-				C4810940170536FA00AB4BAA /* JSONReplayInputSerializer.h */,
+				C49905E61714BC83000AEC13 /* JSONInputSerializer.cpp */,
+				C49905E71714BC83000AEC13 /* JSONInputSerializer.h */,
 				C48108DB17052FF100AB4BAA /* SerializationMethods.cpp */,
 				C48108DC17052FF100AB4BAA /* SerializationMethods.h */,
 			);
@@ -26912,10 +26930,13 @@
 				C481093417052FF100AB4BAA /* ReplayRecording.h in Headers */,
 				C481093817052FF100AB4BAA /* SerializationMethods.h in Headers */,
 				C481093E1705313100AB4BAA /* InterpretedKeyCommands.h in Headers */,
-				C4810942170536FA00AB4BAA /* JSONReplayInputSerializer.h in Headers */,
 				C4F7F93B1705EA1F005AB205 /* InspectorReplayAgent.h in Headers */,
 				C4F7F93F17060151005AB205 /* ReplayAgentStateMachine.h in Headers */,
 				C4F7F941170603B9005AB205 /* ReplayProxy.h in Headers */,
+				C41D354E1711F57A00E40FB7 /* InputStorage.h in Headers */,
+				C41D35581712064900E40FB7 /* CaptureInputIterator.h in Headers */,
+				C41D355A1712064900E40FB7 /* ReplayInputIterator.h in Headers */,
+				C49905E91714BC83000AEC13 /* JSONInputSerializer.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -30140,9 +30161,12 @@
 				C481093317052FF100AB4BAA /* ReplayRecording.cpp in Sources */,
 				C481093717052FF100AB4BAA /* SerializationMethods.cpp in Sources */,
 				C481093D1705313100AB4BAA /* InterpretedKeyCommands.cpp in Sources */,
-				C4810941170536FA00AB4BAA /* JSONReplayInputSerializer.cpp in Sources */,
 				C4F7F93A1705EA1F005AB205 /* InspectorReplayAgent.cpp in Sources */,
 				C4F7F93E17060151005AB205 /* ReplayAgentStateMachine.cpp in Sources */,
+				C41D35571712064900E40FB7 /* CaptureInputIterator.cpp in Sources */,
+				C41D35591712064900E40FB7 /* ReplayInputIterator.cpp in Sources */,
+				C4B991FD17122B750029CA63 /* InputStorage.cpp in Sources */,
+				C49905E81714BC83000AEC13 /* JSONInputSerializer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

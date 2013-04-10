@@ -42,7 +42,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -96,7 +96,7 @@ size_t HandleKeyPress::memorySize() const
     return size;
 }
 
-void HandleKeyPress::serialize(ReplayInputSerializer* serializer) const
+void HandleKeyPress::serialize(InputSerializer* serializer) const
 {
     serializer->putDouble("timestamp", m_platformEvent.timestamp());
     serializer->putInt("type", (int)m_platformEvent.type());

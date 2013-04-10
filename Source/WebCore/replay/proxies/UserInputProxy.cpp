@@ -74,13 +74,11 @@ bool UserInputProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent
     if (!fromReplay && m_mode == Replaying)
         return true;
 
-    if (m_mode == Capturing && m_page->replayController()) {
-        HandleContextMenu* input = new HandleContextMenu(mouseEvent, frame);
-        m_page->replayController()->capturePageInput(input);
-    }
+    if (m_mode == Capturing && m_page->replayController())
+        m_page->replayController()->capturePageInput(adoptPtr(new HandleContextMenu(mouseEvent, frame)));
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif
 
     // do dispatch
     return frame->eventHandler()->sendContextMenuEvent(mouseEvent);
@@ -92,13 +90,11 @@ bool UserInputProxy::handleMousePressEvent(const PlatformMouseEvent& mouseEvent,
     if (!fromReplay && m_mode == Replaying)
         return true;
         
-    if (m_mode == Capturing && m_page->replayController()) {
-        HandleMousePress* input = new HandleMousePress(mouseEvent);
-        m_page->replayController()->capturePageInput(input);
-    }
+    if (m_mode == Capturing && m_page->replayController())
+        m_page->replayController()->capturePageInput(adoptPtr(new HandleMousePress(mouseEvent)));
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif
 
     // do dispatch
     return m_page->mainFrame()->eventHandler()->handleMousePressEvent(mouseEvent);
@@ -110,13 +106,11 @@ bool UserInputProxy::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEven
     if (!fromReplay && m_mode == Replaying)
         return true;
         
-    if (m_mode == Capturing && m_page->replayController()) {
-        HandleMouseRelease* input = new HandleMouseRelease(mouseEvent);
-        m_page->replayController()->capturePageInput(input);
-    }
+    if (m_mode == Capturing && m_page->replayController())
+        m_page->replayController()->capturePageInput(adoptPtr(new HandleMouseRelease(mouseEvent)));
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif
 
     // do dispatch
     return m_page->mainFrame()->eventHandler()->handleMouseReleaseEvent(mouseEvent);
@@ -128,13 +122,11 @@ bool UserInputProxy::handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, 
     if (!fromReplay && m_mode == Replaying)
         return true;
         
-    if (m_mode == Capturing && m_page->replayController()) {
-        HandleMouseMove* input = new HandleMouseMove(mouseEvent, false);
-        m_page->replayController()->capturePageInput(input);
-    }
+    if (m_mode == Capturing && m_page->replayController())
+        m_page->replayController()->capturePageInput(adoptPtr(new HandleMouseMove(mouseEvent, false)));
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif
 
     // do dispatch
     return m_page->mainFrame()->eventHandler()->mouseMoved(mouseEvent);
@@ -146,13 +138,11 @@ bool UserInputProxy::handleMouseMoveOnScrollbarEvent(const PlatformMouseEvent& m
     if (!fromReplay && m_mode == Replaying)
         return true;
         
-    if (m_mode == Capturing && m_page->replayController()) {
-        HandleMouseMove* input = new HandleMouseMove(mouseEvent, true);
-        m_page->replayController()->capturePageInput(input);
-    }
+    if (m_mode == Capturing && m_page->replayController())
+        m_page->replayController()->capturePageInput(adoptPtr(new HandleMouseMove(mouseEvent, true)));
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif
 
     // do dispatch
     return m_page->mainFrame()->eventHandler()->passMouseMovedEventToScrollbars(mouseEvent);
@@ -164,13 +154,11 @@ bool UserInputProxy::handleKeyPressEvent(const PlatformKeyboardEvent& keyEvent, 
     if (!fromReplay && m_mode == Replaying)
         return true;
         
-    if (m_mode == Capturing && m_page->replayController()) {
-        HandleKeyPress* input = new HandleKeyPress(keyEvent);
-        m_page->replayController()->capturePageInput(input);
-    }
+    if (m_mode == Capturing && m_page->replayController())
+        m_page->replayController()->capturePageInput(adoptPtr(new HandleKeyPress(keyEvent)));
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif
 
     // do dispatch
     return m_page->focusController()->focusedOrMainFrame()->eventHandler()->keyEvent(keyEvent);
@@ -182,10 +170,8 @@ bool UserInputProxy::handleAccessKeyEvent(const PlatformKeyboardEvent& keyEvent,
     if (!fromReplay && m_mode == Replaying)
         return true;
         
-    if (m_mode == Capturing && m_page->replayController()) {
-        HandleKeyPress* input = new HandleKeyPress(mouseEvent);
-        m_page->replayController()->capturePageInput(input);
-    }
+    if (m_mode == Capturing && m_page->replayController())
+        m_page->replayController()->capturePageInput(adoptPtr(new HandleKeyPress(mouseEvent)));
 #endif*/
 
     // do dispatch
@@ -198,13 +184,11 @@ bool UserInputProxy::handleWheelEvent(const PlatformWheelEvent& wheelEvent, bool
     if (!fromReplay && m_mode == Replaying)
         return true;
         
-    if (m_mode == Capturing && m_page->replayController()) {
-        HandleWheelEvent* input = new HandleWheelEvent(wheelEvent);
-        m_page->replayController()->capturePageInput(input);
-    }
+    if (m_mode == Capturing && m_page->replayController())
+        m_page->replayController()->capturePageInput(adoptPtr(new HandleWheelEvent(wheelEvent)));
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif
 
     // do dispatch
     return m_page->mainFrame()->eventHandler()->handleWheelEvent(wheelEvent);
@@ -216,13 +200,11 @@ void UserInputProxy::focusSetActive(bool active, bool fromReplay)
     if (!fromReplay && m_mode == Replaying)
         return;
         
-    if (m_mode == Capturing && m_page->replayController()) {
-        FocusSetActive* input = new FocusSetActive(active);
-        m_page->replayController()->capturePageInput(input);
-    }
+    if (m_mode == Capturing && m_page->replayController())
+        m_page->replayController()->capturePageInput(adoptPtr(new FocusSetActive(active)));
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif
 
     m_page->focusController()->setActive(active);
 }
@@ -233,13 +215,11 @@ void UserInputProxy::focusSetFocused(bool focused, bool fromReplay)
     if (!fromReplay && m_mode == Replaying)
         return;
         
-    if (m_mode == Capturing && m_page->replayController()) {
-        FocusSetFocused* input = new FocusSetFocused(focused);
-        m_page->replayController()->capturePageInput(input);
-    }
+    if (m_mode == Capturing && m_page->replayController())
+        m_page->replayController()->capturePageInput(adoptPtr(new FocusSetFocused(focused)));
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif
 
     m_page->focusController()->setFocused(focused);
 }
@@ -250,13 +230,11 @@ void UserInputProxy::scrollRecursively(ScrollDirection direction, ScrollGranular
     if (!fromReplay && m_mode == Replaying)
         return;
         
-    if (m_mode == Capturing && m_page->replayController()) {
-        ScrollPage* input = new ScrollPage(direction, granularity);
-        m_page->replayController()->capturePageInput(input);
-    }
+    if (m_mode == Capturing && m_page->replayController())
+        m_page->replayController()->capturePageInput(adoptPtr(new ScrollPage(direction, granularity)));
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif
 
     m_page->focusController()->focusedOrMainFrame()->eventHandler()->scrollRecursively(direction, granularity, 0);
 }
@@ -267,13 +245,11 @@ void UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, 
     if (!fromReplay && m_mode == Replaying)
         return;
         
-    if (m_mode == Capturing && m_page->replayController()) {
-        ScrollPage* input = new ScrollPage(direction, granularity);
-        m_page->replayController()->capturePageInput(input);
-    }
+    if (m_mode == Capturing && m_page->replayController())
+        m_page->replayController()->capturePageInput(adoptPtr(new ScrollPage(direction, granularity)));
 #else
     UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif
 
     m_page->focusController()->focusedOrMainFrame()->eventHandler()->logicalScrollRecursively(direction, granularity, static_cast<Node*>(0));
 }        
@@ -284,13 +260,11 @@ void UserInputProxy::sendResizeEvent(const Frame* frame, bool fromReplay)
         if (!fromReplay && m_mode == Replaying)
             return;
         
-        if (m_mode == Capturing && m_page->replayController()) {
-            SendResizeEvent* input = new SendResizeEvent(frame);
-            m_page->replayController()->capturePageInput(input);
-        }
+        if (m_mode == Capturing && m_page->replayController())
+            m_page->replayController()->capturePageInput(adoptPtr(new SendResizeEvent(frame)));
 #else
         UNUSED_PARAM(fromReplay);
-#endif // ENABLE(TIMELAPSE)
+#endif
         
         frame->eventHandler()->sendResizeEvent();
     }

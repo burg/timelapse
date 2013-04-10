@@ -40,7 +40,7 @@
 #include <wtf/RandomNumber.h>
 
 #if ENABLE(TIMELAPSE)
-#include <wtf/replay/ReplayInputLog.h>
+#include <wtf/replay/InputIterator.h>
 #include "RiggedWeakRandom.h"
 #endif
 
@@ -166,7 +166,7 @@ namespace JSC {
 
         Debugger* m_debugger;
 #if ENABLE(TIMELAPSE)
-        ReplayInputLog* m_replayInputLog;
+        InputIterator* m_inputIterator;
 #endif
         RefPtr<WatchpointSet> m_masqueradesAsUndefinedWatchpoint;
         RefPtr<WatchpointSet> m_havingABadTimeWatchpoint;
@@ -359,8 +359,8 @@ namespace JSC {
         void setDebugger(Debugger* debugger) { m_debugger = debugger; }
 
 #if ENABLE(TIMELAPSE)
-        ReplayInputLog* inputLog() const { return m_replayInputLog; }
-        JS_EXPORT_PRIVATE void setReplayInputLog(ReplayInputLog*);
+        InputIterator* inputIterator() const { return m_inputIterator; }
+        JS_EXPORT_PRIVATE void setInputIterator(InputIterator*);
 #endif
         const GlobalObjectMethodTable* globalObjectMethodTable() const { return m_globalObjectMethodTable; }
 

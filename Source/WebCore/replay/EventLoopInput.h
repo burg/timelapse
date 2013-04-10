@@ -36,7 +36,7 @@
 
 #include <wtf/CurrentTime.h>
 #include <wtf/PassRefPtr.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 #include <wtf/replay/NondeterministicInput.h>
 
 namespace WebCore {
@@ -101,13 +101,13 @@ public:
     // NondeterministicInput API
     virtual String toString() const =0;
     virtual size_t memorySize() const =0;
-    virtual void serialize(ReplayInputSerializer*) const =0;
+    virtual void serialize(InputSerializer*) const =0;
     
     virtual void dispatch(ReplayController*) =0;
     
     virtual ReplayInputQueueType queue() const { return WTF::EventLoopInputQueue; }
     virtual bool isUserVisible() const { return true; }
-    virtual void serializeDispatchInfo(ReplayInputSerializer*) const OVERRIDE;
+    virtual void serializeDispatchInfo(InputSerializer*) const OVERRIDE;
     
     // mark, dispatch count, and quota are not always known at construction time. They can
     // only be set when the event is "unsealed".

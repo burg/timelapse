@@ -40,7 +40,7 @@
 #include <wtf/Assertions.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringConcatenate.h>
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
@@ -70,7 +70,7 @@ String HandleMouseBase::toString() const
     return sb.toString();
 }
 
-void HandleMouseBase::serializeMouseInfo(ReplayInputSerializer* serializer) const
+void HandleMouseBase::serializeMouseInfo(InputSerializer* serializer) const
 {
     serializer->putInt("positionX", m_platformEvent.position().x());
     serializer->putInt("positionY", m_platformEvent.position().y());

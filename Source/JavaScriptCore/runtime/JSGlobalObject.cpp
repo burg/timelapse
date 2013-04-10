@@ -115,7 +115,7 @@ static const int preferredScriptCheckTimeInterval = 1000;
 JSGlobalObject::JSGlobalObject(JSGlobalData& globalData, Structure* structure, const GlobalObjectMethodTable* globalObjectMethodTable)
     : Base(globalData, structure, 0)
 #if ENABLE(TIMELAPSE)
-    , m_replayInputLog(0)
+    , m_inputIterator(0)
 #endif
     , m_masqueradesAsUndefinedWatchpoint(adoptRef(new WatchpointSet(InitializedWatching)))
     , m_havingABadTimeWatchpoint(adoptRef(new WatchpointSet(InitializedWatching)))
@@ -547,15 +547,15 @@ ExecState* JSGlobalObject::globalExec()
 }
 
 #if ENABLE(TIMELAPSE)
-void JSGlobalObject::setReplayInputLog(ReplayInputLog* inputLog)
+void JSGlobalObject::setInputIterator(InputIterator* it)
 {
-    m_replayInputLog = inputLog;
+    m_inputIterator = it;
     
-    LOG(JSCDeterministicReplay, "%-30s Setting replay input log=%p for global object=%p\n",
-        "[ReplayInputLog]", (void*)inputLog, (void*)this);
+    LOG(JSCDeterministicReplay, "%-30s Setting input iterator=%p for global object=%p\n",
+        "[InputIterator]", (void*)it, (void*)this);
 
     //set up determinism elsewhere in JSC
-    m_weakRandom.setReplayInputLog(inputLog);
+    m_weakRandom.setInputIterator(it);
 }
 #endif
 

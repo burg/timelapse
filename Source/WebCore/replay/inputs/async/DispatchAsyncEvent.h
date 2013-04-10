@@ -60,7 +60,7 @@ public:
     // NondeterministicInput API
     virtual String toString() const OVERRIDE;
     virtual size_t memorySize() const OVERRIDE;
-    virtual void serialize(WTF::ReplayInputSerializer*) const OVERRIDE;
+    virtual void serialize(WTF::InputSerializer*) const OVERRIDE;
 
     bool isSimpleEvent() const;
     bool isPopstateEvent() const;

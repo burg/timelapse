@@ -35,11 +35,11 @@
 
 #include "EventLoopInput.h"
 
-#include <wtf/replay/ReplayInputSerializer.h>
+#include <wtf/replay/InputSerializer.h>
 
 namespace WebCore {
 
-void EventLoopInput::serializeDispatchInfo(ReplayInputSerializer* serializer) const
+void EventLoopInput::serializeDispatchInfo(InputSerializer* serializer) const
 {
     serializer->putInt("dispatchCount", m_dispatchCount);
     serializer->putInt("domEventQuota", m_domEventQuota);

@@ -1,6 +1,6 @@
 /*
- *  Copyright (C) 2012, Brian Burg.
- *  Copyright (C) 2012, University of Washington. All rights reserved.
+ *  Copyright (C) 2013 Brian Burg.
+ *  Copyright (C) 2013 University of Washington. All rights reserved.
  *
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,45 +29,65 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DispatchFakeMouseMove_h
-#define DispatchFakeMouseMove_h
-
 #if ENABLE(TIMELAPSE)
 
-#include "EventLoopInput.h"
-#include "HandleMouseBase.h"
-#include <wtf/replay/InputSerializer.h>
+#include "config.h"
+
+#include "CaptureInputIterator.h"
+#include "InputStorage.h"
+
+#include <wtf/replay/NondeterministicInput.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
-    
-namespace ReplayInputTypes {
-    extern const char *DispatchFakeMouseMove;
+
+CaptureInputIterator::CaptureInputIterator(InputStorage* storage)
+: m_isActive(true)
+, m_storage(storage)
+{
+    ASSERT(!m_storage->isReadOnly());
 }
 
-class Frame;
+CaptureInputIterator::~CaptureInputIterator()
+{
+    m_storage->freeze();
+}
 
-class DispatchFakeMouseMove : public HandleMouseBase {
-public:
-    DispatchFakeMouseMove(Frame*, const PlatformMouseEvent&);
-    virtual ~DispatchFakeMouseMove() {}
-    
-    // EventLoopInput API
-    virtual void dispatch(ReplayController*) OVERRIDE;
-    virtual bool isUserVisible() const OVERRIDE { return false; }
-    
-    // NondeterministicInput API
-    virtual String toString() const OVERRIDE;
-    virtual size_t memorySize() const OVERRIDE
-    {
-        return HandleMouseBase::memorySize() + sizeof(m_frameIndex);
-    }
-    virtual void serialize(InputSerializer*) const OVERRIDE;
-private:
-    int m_frameIndex;
-};
-    
-} // namespace WebCore
+PassOwnPtr<CaptureInputIterator> CaptureInputIterator::create(InputStorage* storage)
+{
+    CaptureInputIterator* it = new CaptureInputIterator(storage);
+    return adoptPtr(it);
+}
 
-#endif // ENABLE(TIMELAPSE)
+void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)
+{
+    ASSERT_ARG(input, input != NULL);
+    ASSERT(m_isActive);
 
-#endif // DispatchFakeMouseMove_h
+    m_storage->store(input);
+}
+
+NondeterministicInput* CaptureInputIterator::loadInput(ReplayInputQueueType,
+                                                       NondeterministicInput::ReplayInputType)
+{
+    // can't load inputs from capturing iterator.
+    ASSERT_NOT_REACHED();
+    return 0;
+}
+
+NondeterministicInput* CaptureInputIterator::uncheckedLoadInput(ReplayInputQueueType)
+{
+    // can't load inputs from capturing iterator.
+    ASSERT_NOT_REACHED();
+    return 0;
+}
+
+void CaptureInputIterator::setIsActive(bool state)
+{
+    ASSERT(m_isActive != state);
+    m_isActive = state;
+}
+    
+}; // namespace WebCore
+
+#endif // ENABLE(TIMEALPSE)
