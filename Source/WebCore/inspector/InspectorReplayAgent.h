@@ -96,7 +96,7 @@ public:
     void recordingUnloaded();
     void recordingLoaded(PassRefPtr<ReplayRecording>);
     void recordingCreated(PassRefPtr<ReplayRecording>);
-    void capturedPageInput(EventLoopInput*);
+    void capturedEventLoopInput(EventLoopInput*);
     void captureStarted();
     void captureFinished();
     void playbackStarted();

@@ -53,14 +53,14 @@ ReplayRecording::ReplayRecording(int uid)
 , m_canCapture(true)
 , m_timestamp(WTF::currentTimeMS()) { }
 
-PassOwnPtr<CaptureInputIterator> ReplayRecording::createCaptureIterator()
+PassOwnPtr<CaptureInputIterator> ReplayRecording::createCaptureIterator(Page* page)
 {
     ASSERT(m_canCapture);
     m_canCapture = false;
-    return CaptureInputIterator::create(m_inputStorage.get());
+    return CaptureInputIterator::create(m_inputStorage.get(), page);
 }
 
-PassOwnPtr<ReplayInputIterator> ReplayRecording::createReplayIterator()
+PassOwnPtr<ReplayInputIterator> ReplayRecording::createReplayIterator(Page*)
 {
     return ReplayInputIterator::create(m_inputStorage.get());
 }

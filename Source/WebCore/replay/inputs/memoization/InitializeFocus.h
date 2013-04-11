@@ -48,8 +48,8 @@ namespace WebCore {
 class InitializeFocus : public EventLoopInput { 
 
 public:
-    InitializeFocus(Page* page, unsigned dispatchCount, const PositionMark& mark)
-    : EventLoopInput(ReplayInputTypes::InitializeFocus, dispatchCount, mark)
+    InitializeFocus(Page* page)
+    : EventLoopInput(ReplayInputTypes::InitializeFocus)
     , m_focus(page->focusController()->isFocused())
     , m_active(page->focusController()->isActive())
     , m_frameIndex(SerializedEventTarget::frameIndexFromDocument(page->focusController()->focusedFrame()->document())) {}

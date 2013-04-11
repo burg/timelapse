@@ -44,6 +44,7 @@
 namespace WebCore {
 
 class InputStorage;
+class Page;
 
 typedef enum {
     NoReplayError,
@@ -83,8 +84,9 @@ public:
 private:
     ReplayInputIterator(InputStorage*);
 
-    bool m_isActive;
     InputStorage* m_storage;
+
+    bool m_isActive;
     ReplayErrorData m_errorData;
     Vector<size_t> m_positions;
 };

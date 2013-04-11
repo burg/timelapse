@@ -34,28 +34,44 @@
 #include "config.h"
 
 #include "CaptureInputIterator.h"
+#include "Document.h"
+#include "DocumentEventQueue.h"
+#include "EventLoopInput.h"
+#include "Frame.h"
 #include "InputStorage.h"
+#include "InspectorInstrumentation.h"
+#include "Logging.h"
+#include "Page.h"
 
 #include <wtf/replay/NondeterministicInput.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-CaptureInputIterator::CaptureInputIterator(InputStorage* storage)
-: m_isActive(true)
-, m_storage(storage)
+CaptureInputIterator::CaptureInputIterator(InputStorage* storage, Page* page)
+: m_storage(storage)
+, m_page(page)
+, m_previousEventLoopInput(0)
+, m_domEventDispatchCount(0)
+, m_isActive(true)
 {
-    ASSERT(!m_storage->isReadOnly());
+    ASSERT(m_page);
+    ASSERT(m_storage && !m_storage->isReadOnly());
 }
 
 CaptureInputIterator::~CaptureInputIterator()
 {
+    if (m_previousEventLoopInput)
+        finalizePreviousInput();
+    
     m_storage->freeze();
+    LOG(DeterministicReplay, "%-30sDestroyed capture iterator=%p.\n", "[ReplayController]", (void*)this);
 }
 
-PassOwnPtr<CaptureInputIterator> CaptureInputIterator::create(InputStorage* storage)
+PassOwnPtr<CaptureInputIterator> CaptureInputIterator::create(InputStorage* storage, Page* page)
 {
-    CaptureInputIterator* it = new CaptureInputIterator(storage);
+    CaptureInputIterator* it = new CaptureInputIterator(storage, page);
+    LOG(DeterministicReplay, "%-30sCreated capture iterator=%p.\n", "[ReplayController]", (void*)it);
     return adoptPtr(it);
 }
 
@@ -63,6 +79,19 @@ void CaptureInputIterator::storeInput(PassOwnPtr<NondeterministicInput> input)
 {
     ASSERT_ARG(input, input != NULL);
     ASSERT(m_isActive);
+
+    if (input->queue() == WTF::EventLoopInputQueue) {
+        // flush document event queue, so event dispatch count reflects anything
+        // dispatched or queued before this input was captured.
+        m_page->mainFrame()->document()->eventQueue()->flush();
+
+        EventLoopInput* eventLoopInput = static_cast<EventLoopInput*>(input.get());
+        eventLoopInput->setDispatchCount(m_domEventDispatchCount);
+        if (m_previousEventLoopInput)
+            finalizePreviousInput();
+        m_previousEventLoopInput = eventLoopInput;
+        InspectorInstrumentation::capturedEventLoopInput(m_page, eventLoopInput);
+    }
 
     m_storage->store(input);
 }
@@ -87,7 +116,14 @@ void CaptureInputIterator::setIsActive(bool state)
     ASSERT(m_isActive != state);
     m_isActive = state;
 }
-    
+
+void CaptureInputIterator::finalizePreviousInput()
+{
+    int eventQuota = m_domEventDispatchCount - m_previousEventLoopInput->dispatchCount();
+    m_previousEventLoopInput->setDOMEventQuota(eventQuota);
+    m_previousEventLoopInput->seal();
+}
+
 }; // namespace WebCore
 
 #endif // ENABLE(TIMEALPSE)

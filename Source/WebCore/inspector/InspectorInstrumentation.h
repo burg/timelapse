@@ -273,7 +273,7 @@ public:
     static void recordingLoaded(Page*, PassRefPtr<ReplayRecording>);
     static void recordingUnloaded(Page*);
     static void recordingCreated(Page*, PassRefPtr<ReplayRecording>);
-    static void capturedPageInput(Page*, EventLoopInput*);
+    static void capturedEventLoopInput(Page*, EventLoopInput*);
     static void captureStarted(Page*);
     static void captureFinished(Page*);
     static void playbackStarted(Page*);
@@ -501,7 +501,7 @@ private:
     static void recordingLoadedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
     static void recordingUnloadedImpl(InstrumentingAgents*);
     static void recordingCreatedImpl(InstrumentingAgents*, PassRefPtr<ReplayRecording>);
-    static void capturedPageInputImpl(InstrumentingAgents*, EventLoopInput*);
+    static void capturedEventLoopInputImpl(InstrumentingAgents*, EventLoopInput*);
     static void captureStartedImpl(InstrumentingAgents*);
     static void captureFinishedImpl(InstrumentingAgents*);
     static void playbackStartedImpl(InstrumentingAgents*);
@@ -2003,11 +2003,11 @@ inline void InspectorInstrumentation::recordingCreated(Page* page, PassRefPtr<Re
 #endif
 }
 
-inline void InspectorInstrumentation::capturedPageInput(Page* page, EventLoopInput* action)
+inline void InspectorInstrumentation::capturedEventLoopInput(Page* page, EventLoopInput* action)
 {
 #if ENABLE(INSPECTOR)
     if (InstrumentingAgents* instrumentingAgents = instrumentingAgentsForPage(page))
-        capturedPageInputImpl(instrumentingAgents, action);
+        capturedEventLoopInputImpl(instrumentingAgents, action);
 #endif
 }
     

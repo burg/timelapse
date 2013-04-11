@@ -53,6 +53,7 @@
 #include "ScrollPage.h"
 #include "SendResizeEvent.h"
 #include <wtf/PassOwnPtr.h>
+#include <wtf/replay/InputIterator.h>
 
 /* We must always define these symbols even if Timelapse support is
    not compiled, because the embedding API (WebKit or WebKit2) may be
@@ -75,7 +76,7 @@ bool UserInputProxy::handleContextMenuEvent(const PlatformMouseEvent& mouseEvent
         return true;
 
     if (m_mode == Capturing && m_page->replayController())
-        m_page->replayController()->capturePageInput(adoptPtr(new HandleContextMenu(mouseEvent, frame)));
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new HandleContextMenu(mouseEvent, frame)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -91,7 +92,7 @@ bool UserInputProxy::handleMousePressEvent(const PlatformMouseEvent& mouseEvent,
         return true;
         
     if (m_mode == Capturing && m_page->replayController())
-        m_page->replayController()->capturePageInput(adoptPtr(new HandleMousePress(mouseEvent)));
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new HandleMousePress(mouseEvent)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -107,7 +108,7 @@ bool UserInputProxy::handleMouseReleaseEvent(const PlatformMouseEvent& mouseEven
         return true;
         
     if (m_mode == Capturing && m_page->replayController())
-        m_page->replayController()->capturePageInput(adoptPtr(new HandleMouseRelease(mouseEvent)));
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new HandleMouseRelease(mouseEvent)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -123,7 +124,7 @@ bool UserInputProxy::handleMouseMoveEvent(const PlatformMouseEvent& mouseEvent, 
         return true;
         
     if (m_mode == Capturing && m_page->replayController())
-        m_page->replayController()->capturePageInput(adoptPtr(new HandleMouseMove(mouseEvent, false)));
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new HandleMouseMove(mouseEvent, false)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -139,7 +140,7 @@ bool UserInputProxy::handleMouseMoveOnScrollbarEvent(const PlatformMouseEvent& m
         return true;
         
     if (m_mode == Capturing && m_page->replayController())
-        m_page->replayController()->capturePageInput(adoptPtr(new HandleMouseMove(mouseEvent, true)));
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new HandleMouseMove(mouseEvent, true)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -155,7 +156,7 @@ bool UserInputProxy::handleKeyPressEvent(const PlatformKeyboardEvent& keyEvent, 
         return true;
         
     if (m_mode == Capturing && m_page->replayController())
-        m_page->replayController()->capturePageInput(adoptPtr(new HandleKeyPress(keyEvent)));
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new HandleKeyPress(keyEvent)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -171,7 +172,7 @@ bool UserInputProxy::handleAccessKeyEvent(const PlatformKeyboardEvent& keyEvent,
         return true;
         
     if (m_mode == Capturing && m_page->replayController())
-        m_page->replayController()->capturePageInput(adoptPtr(new HandleKeyPress(mouseEvent)));
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new HandleKeyPress(mouseEvent)));
 #endif*/
 
     // do dispatch
@@ -185,7 +186,7 @@ bool UserInputProxy::handleWheelEvent(const PlatformWheelEvent& wheelEvent, bool
         return true;
         
     if (m_mode == Capturing && m_page->replayController())
-        m_page->replayController()->capturePageInput(adoptPtr(new HandleWheelEvent(wheelEvent)));
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new HandleWheelEvent(wheelEvent)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -201,7 +202,7 @@ void UserInputProxy::focusSetActive(bool active, bool fromReplay)
         return;
         
     if (m_mode == Capturing && m_page->replayController())
-        m_page->replayController()->capturePageInput(adoptPtr(new FocusSetActive(active)));
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new FocusSetActive(active)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -216,7 +217,7 @@ void UserInputProxy::focusSetFocused(bool focused, bool fromReplay)
         return;
         
     if (m_mode == Capturing && m_page->replayController())
-        m_page->replayController()->capturePageInput(adoptPtr(new FocusSetFocused(focused)));
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new FocusSetFocused(focused)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -231,7 +232,7 @@ void UserInputProxy::scrollRecursively(ScrollDirection direction, ScrollGranular
         return;
         
     if (m_mode == Capturing && m_page->replayController())
-        m_page->replayController()->capturePageInput(adoptPtr(new ScrollPage(direction, granularity)));
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new ScrollPage(direction, granularity)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -246,7 +247,7 @@ void UserInputProxy::scrollRecursivelyLogical(ScrollLogicalDirection direction, 
         return;
         
     if (m_mode == Capturing && m_page->replayController())
-        m_page->replayController()->capturePageInput(adoptPtr(new ScrollPage(direction, granularity)));
+        m_page->replayController()->activeIterator()->storeInput(adoptPtr(new ScrollPage(direction, granularity)));
 #else
     UNUSED_PARAM(fromReplay);
 #endif
@@ -261,7 +262,7 @@ void UserInputProxy::sendResizeEvent(const Frame* frame, bool fromReplay)
             return;
         
         if (m_mode == Capturing && m_page->replayController())
-            m_page->replayController()->capturePageInput(adoptPtr(new SendResizeEvent(frame)));
+            m_page->replayController()->activeIterator()->storeInput(adoptPtr(new SendResizeEvent(frame)));
 #else
         UNUSED_PARAM(fromReplay);
 #endif

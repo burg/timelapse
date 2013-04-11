@@ -43,8 +43,8 @@ namespace WebCore {
 class DisableCache : public EventLoopInput { 
 
 public:
-    DisableCache(unsigned dispatchCount, const PositionMark& mark)
-    : EventLoopInput(ReplayInputTypes::DisableCache, dispatchCount, mark) {}
+    DisableCache()
+    : EventLoopInput(ReplayInputTypes::DisableCache) {}
     virtual ~DisableCache() {};
 
     // EventLoopInput API

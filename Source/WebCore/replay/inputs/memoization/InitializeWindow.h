@@ -46,8 +46,8 @@ namespace WebCore {
 class InitializeWindow : public EventLoopInput { 
 
 public:
-    InitializeWindow(Page* page, unsigned dispatchCount, const PositionMark& mark)
-    : EventLoopInput(ReplayInputTypes::InitializeWindow, dispatchCount, mark)
+    InitializeWindow(Page* page)
+    : EventLoopInput(ReplayInputTypes::InitializeWindow)
     , m_width(page->mainFrame()->document()->domWindow()->outerWidth())
     , m_height(page->mainFrame()->document()->domWindow()->outerHeight()) {}
 

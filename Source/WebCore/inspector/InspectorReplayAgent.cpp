@@ -338,21 +338,21 @@ void InspectorReplayAgent::recordingCreated(PassRefPtr<ReplayRecording> prpRecor
     }
 }
 
-void InspectorReplayAgent::capturedPageInput(EventLoopInput* action)
+void InspectorReplayAgent::capturedEventLoopInput(EventLoopInput* input)
 {
     // this instrumentation should only fire when we are actually capturing.
     // if it's some transient state, the caller should know not to call.
     ASSERT(capturing());
 
     PositionMark newMark = createMark();
-    action->setMark(newMark);
+    input->setMark(newMark);
 
     if (!m_frontend)
         return;
-    if (!action->isUserVisible())
+    if (!input->isUserVisible())
         return;
 
-    m_frontend->capturedAction(createInspectorObjectForAction(action));
+    m_frontend->capturedAction(createInspectorObjectForAction(input));
 }
     
 void InspectorReplayAgent::captureStarted()
@@ -491,14 +491,14 @@ void InspectorReplayAgent::startCapture(ErrorString*)
     m_stateMachine.advanceTo(ReplayAgentStateMachine::WaitingForCapture);
     m_nextMarkIndex = 0;
 
-    PositionMark mark = createMark();
-    m_inspectedPage->replayController()->beginCapturing(mark);
+    createMark();
+    m_inspectedPage->replayController()->beginCapturing();
 }
 
 void InspectorReplayAgent::stopCapture(ErrorString*, bool* wasAllowed)
 {
-    PositionMark mark = createMark();
-    *wasAllowed = m_inspectedPage->replayController()->endCapturing(mark);
+    createMark();
+    *wasAllowed = m_inspectedPage->replayController()->endCapturing();
 }
 
 void InspectorReplayAgent::replayUpToMarkIndex(ErrorString*, int markIndex, bool fastReplay)

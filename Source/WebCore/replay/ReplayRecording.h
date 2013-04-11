@@ -46,6 +46,7 @@ namespace WebCore {
 
 class CaptureInputIterator;
 class InputStorage;
+class Page;
 class ReplayInputIterator;
 
 class ReplayRecording : public RefCounted<ReplayRecording> {
@@ -56,8 +57,8 @@ public:
     int uid() const { return m_uid; }
     double creationTimestamp() const { return m_timestamp; }
     
-    PassOwnPtr<CaptureInputIterator> createCaptureIterator();
-    PassOwnPtr<ReplayInputIterator> createReplayIterator();
+    PassOwnPtr<CaptureInputIterator> createCaptureIterator(Page*);
+    PassOwnPtr<ReplayInputIterator> createReplayIterator(Page*);
     
     template<typename Functor> typename Functor::ReturnType forEachInputInQueue(ReplayInputQueueType, Functor&);
     

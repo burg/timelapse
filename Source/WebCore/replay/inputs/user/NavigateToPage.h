@@ -46,7 +46,7 @@ namespace WebCore {
 class NavigateToPage : public EventLoopInput { 
 
 public:
-    NavigateToPage(PassRefPtr<SecurityOrigin>, const String& url, const String& referrer, unsigned dispatchCount, const PositionMark&);
+    NavigateToPage(PassRefPtr<SecurityOrigin>, const String& url, const String& referrer);
     virtual ~NavigateToPage() {};
 
     PassRefPtr<SecurityOrigin> securityOrigin() const;

@@ -43,12 +43,14 @@
 
 namespace WebCore {
 
+class EventLoopInput;
 class InputStorage;
+class Page;
 
 class CaptureInputIterator : public WTF::InputIterator {
     WTF_MAKE_NONCOPYABLE(CaptureInputIterator);
 public:
-    static PassOwnPtr<CaptureInputIterator> create(InputStorage*);
+    static PassOwnPtr<CaptureInputIterator> create(InputStorage*, Page*);
     virtual ~CaptureInputIterator();
 
     // InputIterator API
@@ -61,12 +63,18 @@ public:
    
     //used for temporary deactivation; e.g. when injected scripts are evaluated.
     void setIsActive(bool);
+    void incrementDomEventCounter() { m_domEventDispatchCount++; }
 
 private:
-    CaptureInputIterator(InputStorage*);
-    
-    bool m_isActive;
+    CaptureInputIterator(InputStorage*, Page*);
+    void finalizePreviousInput();
+
     InputStorage* m_storage;
+    Page* m_page;
+    
+    EventLoopInput* m_previousEventLoopInput;
+    int m_domEventDispatchCount;
+    bool m_isActive;
 };
 
 } // namespace WebCore

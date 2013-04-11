@@ -44,8 +44,8 @@ namespace WebCore {
 class BeginSentinel : public EventLoopInput {
 
 public:
-    BeginSentinel(unsigned dispatchCount, const PositionMark& mark)
-    : EventLoopInput(ReplayInputTypes::BeginSentinel, dispatchCount, mark) {}
+    BeginSentinel()
+    : EventLoopInput(ReplayInputTypes::BeginSentinel) {}
     virtual ~BeginSentinel() {};
 
     // EventLoopInput API
@@ -65,8 +65,8 @@ public:
 class EndSentinel : public EventLoopInput {
 
 public:
-    EndSentinel(unsigned dispatchCount, const PositionMark& mark)
-    : EventLoopInput(ReplayInputTypes::EndSentinel, dispatchCount, mark) {}
+    EndSentinel()
+    : EventLoopInput(ReplayInputTypes::EndSentinel) {}
     virtual ~EndSentinel() {};
 
     // EventLoopInput API

@@ -87,8 +87,8 @@ namespace WebCore {
         ~ReplayController();
 
         // Main API
-        void beginCapturing(const PositionMark&);
-        bool endCapturing(const PositionMark&);
+        void beginCapturing();
+        bool endCapturing();
         void pauseAtNextMark();
         void replayUpToMarkIndex(PositionMarkIndex, ReplayMode mode = FullSpeed);
         void replayToCompletion(ReplayMode mode = FullSpeed);
@@ -100,8 +100,6 @@ namespace WebCore {
         void frameNavigated(DocumentLoader*);
         void willFireTimer(int, Document*);
         void willRunPendingScriptsForDocument(Document*);
-        // TODO: unify with captureEventLoopInput()
-        void capturePageInput(PassOwnPtr<EventLoopInput>);
         // callsites of this method are locations where replay errors are detected.
         // a true return value indicates playback has aborted or paused;
         // a false return value indicates that playback will continue unimpeded.
@@ -130,9 +128,6 @@ namespace WebCore {
         bool unloadRecording(bool suppressNotifications = false);
 
     private:
-        void captureEventLoopInput(PassOwnPtr<EventLoopInput>);
-        void finalizePreviousInput(int currentDispatchCount);
-
         void maybeDispatchInput();
         void asyncDispatchInput();
         void syncDispatchInput();
@@ -157,14 +152,6 @@ namespace WebCore {
         OwnPtr<WTF::InputIterator> m_activeIterator;
         Timer<ReplayController> m_timer;
         RefPtr<CacheController> m_cacheController;
-
-        // During capture, the previously-captured input is stored to this variable. Upon
-        // recording the next input, we save the number of DOM events dispatched between the
-        // previous and next input as a member of the previous input. Then, when replaying, we 
-        // can cross-check that each DOM event we see is supposed to happen, and if not, a useful 
-        // stack trace is available.
-        // TODO: (Issue #250): extract this member and related functionality to CaptureInputIterator
-        EventLoopInput* m_previousInput;
 
         // this pointer contains the next input to dispatch. The input could either be
         // waiting on a specific number of dom event dispatches, or on another input executing.

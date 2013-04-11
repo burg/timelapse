@@ -1263,10 +1263,10 @@ void InspectorInstrumentation::recordingCreatedImpl(InstrumentingAgents* instrum
         replayAgent->recordingCreated(recording);
 }
 
-void InspectorInstrumentation::capturedPageInputImpl(InstrumentingAgents* instrumentingAgents, EventLoopInput* action)
+void InspectorInstrumentation::capturedEventLoopInputImpl(InstrumentingAgents* instrumentingAgents, EventLoopInput* action)
 {
     if (InspectorReplayAgent* replayAgent = instrumentingAgents->inspectorReplayAgent())
-        replayAgent->capturedPageInput(action);
+        replayAgent->capturedEventLoopInput(action);
 }
     
 void InspectorInstrumentation::captureStartedImpl(InstrumentingAgents* instrumentingAgents)

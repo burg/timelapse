@@ -49,8 +49,8 @@
 
 namespace WebCore {
 
-NavigateToPage::NavigateToPage(PassRefPtr<SecurityOrigin> securityOrigin, const String& url, const String& referrer, unsigned dispatchCount, const PositionMark& mark)
-    : EventLoopInput(ReplayInputTypes::NavigateToPage, dispatchCount, mark)
+NavigateToPage::NavigateToPage(PassRefPtr<SecurityOrigin> securityOrigin, const String& url, const String& referrer)
+    : EventLoopInput(ReplayInputTypes::NavigateToPage)
     , m_securityOrigin(securityOrigin)
     , m_url(url)
     , m_referrer(referrer)

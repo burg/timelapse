@@ -54,8 +54,8 @@ static const char* queueTypeToString(ReplayInputQueueType queue) {
 namespace WebCore {
 
 ReplayInputIterator::ReplayInputIterator(InputStorage* storage)
-: m_isActive(true)
-, m_storage(storage)
+: m_storage(storage)
+, m_isActive(true)
 , m_positions(Vector<size_t>()) {
     ASSERT(m_storage->isReadOnly());
 
