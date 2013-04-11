@@ -5918,8 +5918,6 @@
 		C42E409A1702201F00FB0F77 /* ReplayActionFactory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C42E40981702201F00FB0F77 /* ReplayActionFactory.cpp */; };
 		C42E409B1702201F00FB0F77 /* ReplayActionFactory.h in Headers */ = {isa = PBXBuildFile; fileRef = C42E40991702201F00FB0F77 /* ReplayActionFactory.h */; };
 		C48108DF17052FF100AB4BAA /* CacheController.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087B17052FF100AB4BAA /* CacheController.h */; };
-		C48108E017052FF100AB4BAA /* EventLoopInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481087C17052FF100AB4BAA /* EventLoopInput.cpp */; };
-		C48108E117052FF100AB4BAA /* EventLoopInput.h in Headers */ = {isa = PBXBuildFile; fileRef = C481087D17052FF100AB4BAA /* EventLoopInput.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		C48108E217052FF100AB4BAA /* DispatchAsyncEvent.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481088017052FF100AB4BAA /* DispatchAsyncEvent.cpp */; };
 		C48108E317052FF100AB4BAA /* DispatchAsyncEvent.h in Headers */ = {isa = PBXBuildFile; fileRef = C481088117052FF100AB4BAA /* DispatchAsyncEvent.h */; };
 		C48108E417052FF100AB4BAA /* DispatchFakeMouseMove.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481088217052FF100AB4BAA /* DispatchFakeMouseMove.cpp */; };
@@ -6006,6 +6004,8 @@
 		C481093817052FF100AB4BAA /* SerializationMethods.h in Headers */ = {isa = PBXBuildFile; fileRef = C48108DC17052FF100AB4BAA /* SerializationMethods.h */; };
 		C481093D1705313100AB4BAA /* InterpretedKeyCommands.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C481093B1705313100AB4BAA /* InterpretedKeyCommands.cpp */; };
 		C481093E1705313100AB4BAA /* InterpretedKeyCommands.h in Headers */ = {isa = PBXBuildFile; fileRef = C481093C1705313100AB4BAA /* InterpretedKeyCommands.h */; settings = {ATTRIBUTES = (Private, ); }; };
+		C48EA713171776FA001A8BB4 /* EventLoopInput.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */; };
+		C48EA714171776FA001A8BB4 /* EventLoopInput.h in Headers */ = {isa = PBXBuildFile; fileRef = C48EA712171776FA001A8BB4 /* EventLoopInput.h */; };
 		C49905E81714BC83000AEC13 /* JSONInputSerializer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C49905E61714BC83000AEC13 /* JSONInputSerializer.cpp */; };
 		C49905E91714BC83000AEC13 /* JSONInputSerializer.h in Headers */ = {isa = PBXBuildFile; fileRef = C49905E71714BC83000AEC13 /* JSONInputSerializer.h */; };
 		C49905EB17163822000AEC13 /* ReplayUtilities.h in Headers */ = {isa = PBXBuildFile; fileRef = C49905EA17163821000AEC13 /* ReplayUtilities.h */; settings = {ATTRIBUTES = (Private, ); }; };
@@ -13600,8 +13600,6 @@
 		C42E40981702201F00FB0F77 /* ReplayActionFactory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ReplayActionFactory.cpp; sourceTree = "<group>"; };
 		C42E40991702201F00FB0F77 /* ReplayActionFactory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ReplayActionFactory.h; sourceTree = "<group>"; };
 		C481087B17052FF100AB4BAA /* CacheController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CacheController.h; path = replay/CacheController.h; sourceTree = "<group>"; };
-		C481087C17052FF100AB4BAA /* EventLoopInput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = EventLoopInput.cpp; path = replay/EventLoopInput.cpp; sourceTree = "<group>"; };
-		C481087D17052FF100AB4BAA /* EventLoopInput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = EventLoopInput.h; path = replay/EventLoopInput.h; sourceTree = "<group>"; };
 		C481088017052FF100AB4BAA /* DispatchAsyncEvent.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DispatchAsyncEvent.cpp; sourceTree = "<group>"; };
 		C481088117052FF100AB4BAA /* DispatchAsyncEvent.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DispatchAsyncEvent.h; sourceTree = "<group>"; };
 		C481088217052FF100AB4BAA /* DispatchFakeMouseMove.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DispatchFakeMouseMove.cpp; sourceTree = "<group>"; };
@@ -13688,6 +13686,8 @@
 		C48108DC17052FF100AB4BAA /* SerializationMethods.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SerializationMethods.h; sourceTree = "<group>"; };
 		C481093B1705313100AB4BAA /* InterpretedKeyCommands.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = InterpretedKeyCommands.cpp; sourceTree = "<group>"; };
 		C481093C1705313100AB4BAA /* InterpretedKeyCommands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = InterpretedKeyCommands.h; sourceTree = "<group>"; };
+		C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = EventLoopInput.cpp; sourceTree = "<group>"; };
+		C48EA712171776FA001A8BB4 /* EventLoopInput.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = EventLoopInput.h; sourceTree = "<group>"; };
 		C49905E61714BC83000AEC13 /* JSONInputSerializer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JSONInputSerializer.cpp; sourceTree = "<group>"; };
 		C49905E71714BC83000AEC13 /* JSONInputSerializer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JSONInputSerializer.h; sourceTree = "<group>"; };
 		C49905EA17163821000AEC13 /* ReplayUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ReplayUtilities.h; path = replay/ReplayUtilities.h; sourceTree = "<group>"; };
@@ -21845,8 +21845,6 @@
 				C481087B17052FF100AB4BAA /* CacheController.h */,
 				C41D35531712064800E40FB7 /* CaptureInputIterator.cpp */,
 				C41D35541712064800E40FB7 /* CaptureInputIterator.h */,
-				C481087C17052FF100AB4BAA /* EventLoopInput.cpp */,
-				C481087D17052FF100AB4BAA /* EventLoopInput.h */,
 				C4B991FC17122B750029CA63 /* InputStorage.cpp */,
 				C41D354C1711F57A00E40FB7 /* InputStorage.h */,
 				C4F7F93C17060151005AB205 /* ReplayAgentStateMachine.cpp */,
@@ -21876,6 +21874,8 @@
 				C481088A17052FF100AB4BAA /* DispatchEventBase.cpp */,
 				C481088B17052FF100AB4BAA /* DispatchEventBase.h */,
 				C481088C17052FF100AB4BAA /* EnableCache.h */,
+				C48EA711171776FA001A8BB4 /* EventLoopInput.cpp */,
+				C48EA712171776FA001A8BB4 /* EventLoopInput.h */,
 				C48108AC17052FF100AB4BAA /* SentinelActions.h */,
 			);
 			name = inputs;
@@ -26891,7 +26891,6 @@
 				FD537353137B651800008DCE /* ZeroPole.h in Headers */,
 				C42E409B1702201F00FB0F77 /* ReplayActionFactory.h in Headers */,
 				C48108DF17052FF100AB4BAA /* CacheController.h in Headers */,
-				C48108E117052FF100AB4BAA /* EventLoopInput.h in Headers */,
 				C48108E317052FF100AB4BAA /* DispatchAsyncEvent.h in Headers */,
 				C48108E517052FF100AB4BAA /* DispatchFakeMouseMove.h in Headers */,
 				C48108E717052FF100AB4BAA /* RanPendingScripts.h in Headers */,
@@ -26944,6 +26943,7 @@
 				C41D355A1712064900E40FB7 /* ReplayInputIterator.h in Headers */,
 				C49905E91714BC83000AEC13 /* JSONInputSerializer.h in Headers */,
 				C49905EB17163822000AEC13 /* ReplayUtilities.h in Headers */,
+				C48EA714171776FA001A8BB4 /* EventLoopInput.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -30126,7 +30126,6 @@
 				977E2E0E12F0FC9C00C13380 /* XSSAuditorDelegate.cpp in Sources */,
 				FD537352137B651800008DCE /* ZeroPole.cpp in Sources */,
 				C42E409A1702201F00FB0F77 /* ReplayActionFactory.cpp in Sources */,
-				C48108E017052FF100AB4BAA /* EventLoopInput.cpp in Sources */,
 				C48108E217052FF100AB4BAA /* DispatchAsyncEvent.cpp in Sources */,
 				C48108E417052FF100AB4BAA /* DispatchFakeMouseMove.cpp in Sources */,
 				C48108E617052FF100AB4BAA /* RanPendingScripts.cpp in Sources */,
@@ -30175,6 +30174,7 @@
 				C4B991FD17122B750029CA63 /* InputStorage.cpp in Sources */,
 				C49905E81714BC83000AEC13 /* JSONInputSerializer.cpp in Sources */,
 				C49905ED1716389E000AEC13 /* ReplayUtilities.cpp in Sources */,
+				C48EA713171776FA001A8BB4 /* EventLoopInput.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
