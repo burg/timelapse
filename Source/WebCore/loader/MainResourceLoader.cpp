@@ -68,7 +68,8 @@
 #endif
 
 #if ENABLE(TIMELAPSE)
-#include "ReplayController.h"
+#include "ReplayUtilities.h"
+#include <wtf/replay/InputIterator.h>
 #endif
 
 namespace WebCore {
@@ -671,13 +672,9 @@ void MainResourceLoader::load(const ResourceRequest& initialRequest, const Subst
 
 #if ENABLE(TIMELAPSE)
     Frame* frame = m_documentLoader->frame();
-    Document* rootDoc = frame->tree()->top()->document();
-    ReplayController* controller = frame->page()->replayController();
-
-    if (rootDoc && controller && (controller->isCapturingDocument(rootDoc) ||
-                                  controller->isReplayingDocument(rootDoc) ||
-                                  frame->page()->networkProxy()->expectsPageLoad())) {
-        
+    InputIterator* it = getInputIteratorForDocument(frame->tree()->top()->document());
+    if (it && (it->isCapturing() || it->isReplaying() ||
+               frame->page()->networkProxy()->expectsPageLoad())) {
         frame->page()->networkProxy()->setExpectsPageLoad(false);
         frame->page()->networkProxy()->setInitiatingPageLoad(true);
         m_loaderId = frame->page()->networkProxy()->nextLoaderId(request);

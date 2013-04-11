@@ -36,9 +36,8 @@
 #include <wtf/StdLibExtras.h>
 
 #if ENABLE(TIMELAPSE)
-#include "ReplayController.h"
 #include "ReplayInputTypes.h"
-#include "ReplayRecording.h"
+#include "ReplayUtilities.h"
 #include "TimerCreated.h"
 #include <wtf/replay/InputIterator.h>
 #include <wtf/replay/NondeterministicInput.h>
@@ -73,22 +72,22 @@ DOMTimer::DOMTimer(ScriptExecutionContext* context, PassOwnPtr<ScheduledAction> 
     m_shouldScheduleNormally = true;
     if (scriptExecutionContext()->isDocument()) {
         Document* document = static_cast<Document*>(scriptExecutionContext());
-        if (document->page() && document->page()->replayController()) {
-            ReplayController* controller = document->page()->replayController();
-            if (controller->isCapturingDocument(document)) {
-                controller->activeIterator()->storeInput(adoptPtr(new TimerCreated(m_timeoutId, document)));
-            } else if (controller->isReplayingDocument(document)) {
-                NondeterministicInput* input = controller->activeIterator()->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::TimerCreated);
-                TimerCreated* castedInput = static_cast<TimerCreated*>(input);
-                // implicit error handling case: if fetch failed, then don't overwrite with memoized id
-                if (castedInput) {
-                    // check that this timer was created in the same Document as originally observed.
-                    ASSERT(castedInput->document(document->page()) == document);
-                    m_timeoutId = castedInput->timerId();
-                }
-                
-                m_shouldScheduleNormally = false;
+        InputIterator* it = getInputIteratorForDocument(document);
+        bool isCapturing = it && it->isCapturing();
+        bool isReplaying = it && it->isReplaying();
+        if (isCapturing)
+            it->storeInput(adoptPtr(new TimerCreated(m_timeoutId, document)));
+        if (isReplaying) {
+            NondeterministicInput* input = it->loadInput(WTF::ScriptMemoizedDataQueue, ReplayInputTypes::TimerCreated);
+            TimerCreated* castedInput = static_cast<TimerCreated*>(input);
+            // implicit error handling case: if fetch failed, then don't overwrite with memoized id
+            if (castedInput) {
+                // check that this timer was created in the same Document as originally observed.
+                ASSERT(castedInput->document(document->page()) == document);
+                m_timeoutId = castedInput->timerId();
             }
+            
+            m_shouldScheduleNormally = false;
         }
     }
 #endif

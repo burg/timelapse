@@ -33,9 +33,9 @@
 #include "ScriptElement.h"
 
 #if ENABLE(TIMELAPSE)
-#include "ReplayController.h"
-#include "Logging.h"
-#include "Page.h"
+#include "RanPendingScripts.h"
+#include "ReplayUtilities.h"
+#include <wtf/replay/InputIterator.h>
 #endif
 
 namespace WebCore {
@@ -88,7 +88,8 @@ void ScriptRunner::resume()
 {
 #if ENABLE(TIMELAPSE)
     // timerFired will be called deterministically during replay, so don't start m_timer.
-    if (m_document->page()->replayController()->isReplayingDocument(m_document))
+    InputIterator* it = getInputIteratorForDocument(m_document);
+    if (it && it->isReplaying())
         return;
 #endif
     if (hasPendingScripts())
@@ -109,7 +110,8 @@ void ScriptRunner::notifyScriptReady(ScriptElement* scriptElement, ExecutionType
     }
 #if ENABLE(TIMELAPSE)
     // timerFired will be called deterministically during replay, so don't start m_timer.
-    if (m_document->page()->replayController()->isReplayingDocument(m_document))
+    InputIterator* it = getInputIteratorForDocument(m_document);
+    if (it && it->isReplaying())
         return;
 #endif
     m_timer.startOneShot(0);
@@ -119,7 +121,9 @@ void ScriptRunner::timerFired(Timer<ScriptRunner>* timer)
 {
     ASSERT_UNUSED(timer, timer == &m_timer);
 #if ENABLE(TIMELAPSE)
-    m_document->page()->replayController()->willRunPendingScriptsForDocument(m_document);
+    InputIterator* it = getInputIteratorForDocument(m_document);
+    if (it && it->isCapturing())
+        it->storeInput(adoptPtr(new RanPendingScripts(m_document)));
 #endif
 
     RefPtr<Document> protect(m_document);

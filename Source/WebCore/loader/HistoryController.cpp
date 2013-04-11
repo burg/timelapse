@@ -56,7 +56,8 @@
 #endif
 
 #if ENABLE(TIMELAPSE)
-#include "ReplayController.h"
+#include "ReplayUtilities.h"
+#include <wtf/replay/InputIterator.h>
 #endif
 
 namespace WebCore {
@@ -135,12 +136,9 @@ void HistoryController::restoreScrollPositionAndViewState()
         return;
     
 #if ENABLE(TIMELAPSE)
-    if (m_frame->page() && m_frame->page()->replayController()) {
-        ReplayController* controller = m_frame->page()->replayController();
-        if (controller->isCapturingDocument(m_frame->document()) ||
-            controller->isReplayingDocument(m_frame->document()))
-            return;
-    }
+    InputIterator* it = getInputIteratorForDocument(m_frame->document());
+    if (it && (it->isCapturing() || it->isReplaying()))
+        return;
 #endif
     
     // FIXME: It would be great to work out a way to put this code in WebCore instead of calling

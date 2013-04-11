@@ -52,9 +52,9 @@
 #include "SharedBuffer.h"
 
 #if ENABLE(TIMELAPSE)
-#include "Logging.h" // XXX remove me
-#include "ReplayController.h"
-#endif // ENABLE(TIMELAPSE)
+#include "ReplayUtilities.h"
+#include <wtf/replay/InputIterator.h>
+#endif
 
 namespace WebCore {
 
@@ -126,12 +126,9 @@ bool ResourceLoader::init(const ResourceRequest& r)
     ASSERT(!m_documentLoader->isSubstituteLoadPending(this));
         
 #if ENABLE(TIMELAPSE)
-    Document* rootDoc = m_frame->tree()->top()->document();
-    ReplayController* controller = m_frame->page()->replayController();
-    
-    if (rootDoc && controller && (controller->isCapturingDocument(rootDoc) ||
-                                  controller->isReplayingDocument(rootDoc) ||
-                                  m_frame->page()->networkProxy()->initiatingPageLoad())) {
+    InputIterator* it = getInputIteratorForDocument(m_frame->tree()->top()->document());
+    if (it && (it->isCapturing() || it->isReplaying() ||
+               m_frame->page()->networkProxy()->initiatingPageLoad())) {
         m_loaderId = m_frame->page()->networkProxy()->nextLoaderId(r);
     }
 #endif // ENABLE(TIMELAPSE)

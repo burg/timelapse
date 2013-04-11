@@ -42,7 +42,6 @@
 #include "DocumentEventQueue.h"
 #include "DocumentLoader.h"
 #include "DOMWindow.h"
-#include "DOMWrapperWorld.h"
 #include "EnableCache.h"
 #include "Event.h"
 #include "Frame.h"
@@ -61,8 +60,8 @@
 #include "Page.h"
 #include "ReplayInputIterator.h"
 #include "ReplayRecording.h"
+#include "ReplayUtilities.h"
 #include "ResourceResponse.h"
-#include "RanPendingScripts.h"
 #include "SecurityOrigin.h"
 #include "SentinelActions.h"
 #include "Timer.h"
@@ -352,8 +351,8 @@ void ReplayController::cancelPlayback()
 
 void ReplayController::willDispatchEvent(const Event& event, DOMWindow* window, Node* node, const PositionMark&)
 {
-    bool shouldIgnore = !window || (!isCapturingDocument(window->document()) &&
-                                    !isReplayingDocument(window->document()));
+    InputIterator* it = getInputIteratorForDocument(window->document());
+    bool shouldIgnore = !window || !it || (!it->isCapturing() && !it->isReplaying());
 
     m_domEventDispatchDepth++;
 #if !LOG_DISABLED
@@ -412,13 +411,9 @@ void ReplayController::frameNavigated(DocumentLoader* loader)
 
 void ReplayController::willFireTimer(int timerId, Document* document)
 {
-    if (isCapturingDocument(document))
+    InputIterator* it = getInputIteratorForDocument(document);
+    if (it && it->isCapturing())
         m_activeIterator->storeInput(adoptPtr(new TimerFired(timerId, document)));
-}
-
-void ReplayController::willRunPendingScriptsForDocument(Document* document) {
-    if (isCapturingDocument(document))
-        m_activeIterator->storeInput(adoptPtr(new RanPendingScripts(document)));
 }
 
 //-- accessors
@@ -430,24 +425,6 @@ PassRefPtr<CacheController> ReplayController::cacheController() const
 PassRefPtr<ReplayRecording> ReplayController::loadedRecording() const
 {
     return m_loadedRecording;
-}
-
-bool ReplayController::isCapturingDocument(Document* document) const
-{
-    if (!capturing() || !document)
-        return false;
-    
-    JSDOMWindow* window = toJSDOMWindow(document->frame(), mainThreadNormalWorld());
-    return window && window->inputIterator() && window->inputIterator()->isCapturing();
-}
-
-bool ReplayController::isReplayingDocument(Document* document) const
-{
-    if (!replaying() || !document)
-        return false;
-    
-    JSDOMWindow* window = toJSDOMWindow(document->frame(), mainThreadNormalWorld());
-    return window && window->inputIterator() && window->inputIterator()->isReplaying();
 }
 
 bool ReplayController::playbackError(bool isFatal, const String& errorMessage)

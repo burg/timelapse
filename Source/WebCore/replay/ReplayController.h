@@ -34,6 +34,7 @@
 
 #if ENABLE(TIMELAPSE)
 
+
 #include "EventLoopInput.h"
 #include "ReplayProxy.h"
 #include "Timer.h"
@@ -99,7 +100,6 @@ namespace WebCore {
         void didDispatchEvent();
         void frameNavigated(DocumentLoader*);
         void willFireTimer(int, Document*);
-        void willRunPendingScriptsForDocument(Document*);
         // callsites of this method are locations where replay errors are detected.
         // a true return value indicates playback has aborted or paused;
         // a false return value indicates that playback will continue unimpeded.
@@ -109,12 +109,6 @@ namespace WebCore {
         void didDispatch(EventLoopInput*);
         
         // Accessors and queries
-
-        // There can be several Documents/JSDOMWindows per Page. If the old document is about to unload and
-        // the new document has started recording the first resource, then replaying() should be false for
-        // the first document and true for the second document.
-        bool isCapturingDocument(Document*) const;
-        bool isReplayingDocument(Document*) const;
         WTF::InputIterator* activeIterator() const { return m_activeIterator.get(); }
         
         ErrorMode errorStrategy() const { return m_errorStrategy; }

@@ -48,7 +48,8 @@
 #include <wtf/Functional.h>
 
 #if ENABLE(TIMELAPSE)
-#include "ReplayController.h"
+#include "ReplayUtilities.h"
+#include <wtf/replay/InputIterator.h>
 #endif
 
 namespace WebCore {
@@ -621,10 +622,10 @@ void HTMLDocumentParser::append(const SegmentedString& source)
 
 #if ENABLE(TIMELAPSE)
     // The timing of yields is nondeterministic, so just don't yield during capture/replay
-    if (document()->page()->replayController()->isCapturingDocument(document())
-        || document()->page()->replayController()->isReplayingDocument(document())) {
+    InputIterator* it = getInputIteratorForDocument(document());
+    if (it && (it->isCapturing() || it->isReplaying()))
         pumpTokenizerIfPossible(ForceSynchronous);
-    } else
+    else
 #endif
     pumpTokenizerIfPossible(AllowYield);
 
@@ -784,10 +785,10 @@ void HTMLDocumentParser::resumeParsingAfterScriptExecution()
 
 #if ENABLE(TIMELAPSE)
     // The timing of yields is nondeterministic, so just don't yield during capture/replay
-    if (document()->page()->replayController()->isCapturingDocument(document())
-        || document()->page()->replayController()->isReplayingDocument(document())) {
+    InputIterator* it = getInputIteratorForDocument(document());
+    if (it && (it->isCapturing() || it->isReplaying()))
         pumpTokenizerIfPossible(ForceSynchronous);
-    } else
+    else
 #endif
     pumpTokenizerIfPossible(AllowYield);
     endIfDelayed();
